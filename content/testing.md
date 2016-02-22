@@ -4,21 +4,21 @@ title: "Testing"
 
 <h2 id="testing-applications">Testing your Application</h2>
 
-There are many benefits of testing your application to ensure it works the way you think it does. Reasons include maintaining a high level of quality (especially over time as your codebase changes), allowing you to refactor and rewrite code with confidence, and concrete documentation of expected behavior (other developers can figure out what parts of your app are supposed to do by reading the tests!).
+There are many benefits of testing your application to ensure it works the way you think it does. Reasons include maintaining a high level of quality (especially over time as your codebase changes), allowing you to refactor and rewrite code with confidence, and concrete documentation of expected behavior. (Other developers can figure out what parts of your app are supposed to do by reading the tests!)
 
-Automated testing allows you to do all of these things to a much greater degree and *run tests more often* which means your codebase will remain in better shape and regress less. 
+Automated testing allows you to do all of these things to a much greater degree and *run tests more often*, which means your codebase will remain in better shape and regress less. 
 
 <h3 id="testing-concepts">Testing concepts</h3>
 
-Entire books have been written on the subject of testing, so we will simply touch on some basic of testing here. The important thing to consider when writing a test is what part of the application you are trying to test, and how you are verifying the behaviour works.
+Entire books have been written on the subject of testing, so we will simply touch on some basics of testing here. The important thing to consider when writing a test is what part of the application you are trying to test, and how you are verifying the behaviour works.
 
-If you are testing simply one small module of your application, you are writing a *unit test* and you'll need to take steps to *stub* and *mock* other modules that your module usually leverages to *isolate* it. You'll typically need to *spy* on actions that the module takes to verify that it indeed takes the actions you expect.
+If you are testing one small module of your application, you are writing a *unit test*. You'll need to take steps to *stub* and *mock* other modules that your module usually leverages in order to *isolate* each test. You'll typically also need to *spy* on actions that the module takes to verify that they occur.
 
-If you are testing that multiple modules behave properly in concert, you are writing an *integration test*. Such tests are much more complex and may require running code both on the client on the server to verify that communication across that divide is working as expected. Typically a integration test will still isolate a part of the entire application and directly verify results in code.
+If you are testing that multiple modules behave properly in concert, you are writing an *integration test*. Such tests are much more complex and may require running code both on the client and on the server to verify that communication across that divide is working as expected. Typically an integration test will still isolate a part of the entire application and directly verify results in code.
 
 If you want to write a test that can be run against any running version of your app and verifies at the browser level that the right things happen when you push the right buttons, then you are writing an *acceptance* or *end-to-end (e2e) test*. Such tests typically try to hook into the application as little as possible, beyond perhaps setting up the right data to run a test against.
 
-Finally you may wish to test your application bears up properly to typical load or see how much load it can handle before it falls over. If so you are writing a *load or stress test*. Such tests can be challenging to setup and typically aren't run often, but are very important for confidence before a big production launch.
+Finally you may wish to test that your application works under typical load or see how much load it can handle before it falls over. This is called a *load test* or *stress test*. Such tests can be challenging to set up and typically aren't run often but are very important for confidence before a big production launch.
 
 <h3 id="isolation-techniques">Isolation techniques</h3>
 
@@ -33,11 +33,11 @@ http://martinfowler.com/articles/mocksArentStubs.html
 
 ## Unit testing in Meteor
 
-Unit testing is the process of isolating a module of code, and then testing the internals of that module work as you expect.
+Unit testing is the process of isolating a module of code and then testing that the internals of that module work as you expect.
 
 As we've organized our application into modules based on features, collections and utilities, it is natural to use that same breakdown to test those modules.
 
-### Unit testing via Mocha
+### Unit testing with Mocha
 
 We'll use the popular [Mocha](https://mochajs.org) test runner alongside the [Chai](http://chaijs.com) assertion library to test our application. In order to write tests in Mocha, we can add the [`practicalmeteor:mocha`](https://atmospherejs.com/practicalmeteor/mocha) package to our app.
 
@@ -45,11 +45,11 @@ We'll use the popular [Mocha](https://mochajs.org) test runner alongside the [Ch
 meteor add practicalmeteor:mocha
 ```
 
-This package provides a way for test files to register tests, and for a [test driver](#test-driver) to run them.
+This package provides a way for test files to register tests and for a [test driver](#test-driver) to run them.
 
 ### Defining a Mocha test
 
-In the Todos example app, we have a special `TodosCollection`, which set a `createdAt` field whenever we insert a new todo item. 
+In the Todos example app, we have a special `TodosCollection` that sets a `createdAt` field whenever we insert a new todo item. 
 
 ```js
 class TodosCollection extends Mongo.Collection {
@@ -63,7 +63,7 @@ export default Todos = new TodosCollection('Todos');
 ```
 [`imports/todos/Todos.js`]
 
-We should test that the `Todos` collection indeed behaves as we expect and sets that field when we insert a doc. To do that, we can write a file `imports/todos/todos.tests.js`, and define a mocha test:
+We should test that the `Todos` collection indeed behaves as we expect and sets that field when we insert a doc. To do that, we can write a file `imports/todos/todos.tests.js`, and define a Mocha test in it:
 
 ```js
 import {mocha, chai} from "practicalmeteor:mocha";
@@ -89,7 +89,7 @@ describe('todos', () => {
 
 There are a few things to note here. Firstly, we've imported from the Mocha and Factory packages, which are special packages that we can only use in test mode. Of course this test file will only be executed in test mode also!
 
-Secondly, we've used [Mocha's API](https://mochajs.org) as well as [Chai's assertions](http://chaijs.com/api/assert/) to define a test suite, and define a test that checks that `createdAt` gets set on a todo that the factory creates.
+Secondly, we've used [Mocha's API](https://mochajs.org) as well as [Chai's assertions](http://chaijs.com/api/assert/) to define a test suite and define a test that checks that `createdAt` gets set on a todo that the factory creates.
 
 ### Adding a test driver
 
@@ -103,7 +103,7 @@ While developing your app, chances are you'll want to run unit tests against a w
 meteor add practicalmeteor:mocha-web-reporter
 ```
 
-This package also doesn't do anything in development or production mode, but when our app is run in [unit](#unit-test-mode) or [integration](#integration-test-mode) test mode, it takes over, running test code on both the client and server and rendering results tothe browser.
+This package also doesn't do anything in development or production mode, but when our app is run in [unit](#unit-test-mode) or [integration](#integration-test-mode) test mode, it takes over, running test code on both the client and server, and rendering results to the browser.
 
 ### Unit test mode
 
@@ -113,7 +113,7 @@ To run the unit tests that our app defines, we can run a special instance of our
 meteor test --unit
 ```
 
-What this does is run a special version of our application that:
+This runs a special version of our application that:
 
  1. *Doesn't* eagerly load *any* of our application code as Meteor normally would.
  2. *Does* eagerly load any file in our application (including in `imports/` folders) that look like `*.tests.*`. 
@@ -122,11 +122,11 @@ What this does is run a special version of our application that:
 
 As we've defined a test file (`imports/todos/Todos.tests.js`), what this means is that the file above will be eagerly loaded, adding the `'builds correctly from factory'` test to the Mocha registry. 
 
-To run the tests, you visit http://localhost:3000 in your browser, which kicks off `mocha-web-reporter`, who runs tests both in the browser, and on the server. It also renders the test results in the browser in a Mocha test reporter:
+To run the tests, visit http://localhost:3000 in your browser. This kicks off `mocha-web-reporter`, which runs your unit tests both in the browser and on the server. It displays the test results in the browser in a Mocha test reporter:
 
 [IMAGE]
 
-Usually, while developing an application, it make sense to run `meteor test` on a second port (say `3100`), while also running your main application
+Usually, while developing an application, it make sense to run `meteor test` on a second port (say `3100`), while also running your main application in a separate process:
 
 ```bash
 # in one terminal window
@@ -136,7 +136,7 @@ meteor
 meteor test --port 3100
 ```
 
-Then you can open two browser windows to see the app in action as well as ensuring you don't break any tests as you develop it.
+Then you can open two browser windows to see the app in action while also ensuring that you don't break any tests as you make changes.
 
 ## Integration testing
 
@@ -146,13 +146,13 @@ Integration testing means invoking and asserting properties of your application 
 
 ### Integration test mode
 
-To run the integration tests in our application, we run
+To run the integration tests in our application, we run:
 
 ```
 meteor test --integration
 ```
 
-What this does is
+This does the following:
  
  1. *Does* eagerly load our application code as Meteor normally would.
  2. *Also* eagerly load any file in our application (including in `imports/` folders) that look like `*.tests.*`. 
@@ -161,7 +161,7 @@ What this does is
 
 The key difference is in point 1 --- our app code loads as normal. So our server runs completely as usual with the full DDP API available, for example. 
 
-On the client side, when we connect to the test instance in a browser, we want to render a testing UI rather than our apps UI, so the `mocha-web-reporter` package will remove any UI of our application and replace it with it's own. Also packages (such as `flow-router`) that might take actions based on browser connectivity should be careful to not do so when `Meteor.isTest` is set.
+When we connect to the test instance in a browser, we want to render a testing UI rather than our app UI, so the `mocha-web-reporter` package will remove any UI of our application and replace it with its own. Also packages (such as `flow-router`) that might take actions based on browser connectivity should be careful to not do so when `Meteor.isTest` is set.
 
 ### Writing an integration test
 
