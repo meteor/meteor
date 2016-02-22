@@ -43,9 +43,7 @@ const launchIosSizes = {
   'ipad_portrait': '768x1024',
   'ipad_portrait_2x': '1536x2048',
   'ipad_landscape': '1024x768',
-  'ipad_landscape_2x': '2048x1536',
-  'ipad_pro_portrait': '2048x2732',
-  'ipad_pro_landscape': '2732x2048'
+  'ipad_landscape_2x': '2048x1536'
 };
 
 const launchAndroidSizes = {
@@ -559,8 +557,6 @@ configuration. The key may be deprecated.`);
      * - `ipad_portrait_2x` (1536x2048)
      * - `ipad_landscape` (1024x768)
      * - `ipad_landscape_2x` (2048x1536)
-     * - `ipad_pro_portrait` (2048x2732)
-     * - `ipad_pro_landscape` (2732x2048)
      * - `android_mdpi_portrait` (320x470)
      * - `android_mdpi_landscape` (470x320)
      * - `android_hdpi_portrait` (480x640)
