@@ -17,6 +17,8 @@ var Profile = require('../tool-env/profile.js').Profile;
 
 import SourceArch from './source-arch.js';
 
+import { TEST_FILENAME_REGEXPS, TEST_DIRNAME_REGEXPS, isTestFilePath } from './app-test-files.js';
+
 // XXX: This is a medium-term hack, to avoid having the user set a package name
 // & test-name in package.describe. We will change this in the new control file
 // world in some way.
@@ -1345,12 +1347,7 @@ _.extend(PackageSource.prototype, {
     // If running in unit test mode (`meteor test-app --unit`), all
     // files other than test files should be loaded lazily
     if (global.testCommandMetadata && global.testCommandMetadata.isUnitTest) {
-      const isTestFile = _.any(relPath.split(files.pathSep), (comp) =>
-                               /\.tests?\./.test(comp) ||
-                               /^tests?\./.test(comp) ||
-                               /^tests$/.test(comp));
-
-      if (!isTestFile) {
+      if (!isTestFilePath(relPath)) {
         fileOptions.lazy = true;
       }
     }
@@ -1392,7 +1389,7 @@ _.extend(PackageSource.prototype, {
     // Unless we're running tests, ignore source files with name
     // "*test*.*", "*tests*.*", "test.*", "tests.*"
     if (!global.testCommandMetadata) {
-      sourceReadOptions.exclude.push(/\.tests?\./, /^tests?\./);
+      Array.prototype.push.apply(sourceReadOptions, TEST_FILENAME_REGEXPS);
     }
 
     // Read top-level source files, excluding control files that were not
@@ -1417,7 +1414,7 @@ _.extend(PackageSource.prototype, {
     ];
 
     if (!global.testCommandMetadata) {
-      anyLevelExcludes.push(/^tests\/$/);
+      Array.prototype.push.apply(anyLevelExcludes, TEST_DIRNAME_REGEXPS);
     }
 
     const topLevelExcludes = isApp ? [
