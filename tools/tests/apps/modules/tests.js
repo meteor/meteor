@@ -264,6 +264,21 @@ describe("Meteor packages", () => {
   });
 });
 
+describe("JSX syntax", () => {
+  it("should work in .js files on both client and server", () => {
+    const React = {
+      createElement: function (name, attrs, children) {
+        assert.strictEqual(name, "div");
+        assert.strictEqual(attrs, null);
+        assert.strictEqual(children, "hi");
+        return "all good";
+      }
+    };
+
+    assert.strictEqual(<div>hi</div>, "all good");
+  });
+});
+
 describe("async functions", () => {
   it("should work on the client and server", async () => {
     assert.strictEqual(
