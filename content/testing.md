@@ -39,10 +39,10 @@ As we've organized our application into modules based on features, collections a
 
 ### Unit testing with Mocha
 
-We'll use the popular [Mocha](https://mochajs.org) test runner alongside the [Chai](http://chaijs.com) assertion library to test our application. In order to write tests in Mocha, we can add the [`practicalmeteor:mocha`](https://atmospherejs.com/practicalmeteor/mocha) package to our app.
+We'll use the popular [Mocha](https://mochajs.org) test runner alongside the [Chai](http://chaijs.com) assertion library to test our application. In order to write tests in Mocha, we can add the [`avital:mocha`](https://atmospherejs.com/avital/mocha) package to our app.
 
 ```bash
-meteor add practicalmeteor:mocha
+meteor add avital:mocha
 ```
 
 This package provides a way for test files to register tests and for a [test driver](#test-driver) to run them.
@@ -66,7 +66,7 @@ export default Todos = new TodosCollection('Todos');
 We should test that the `Todos` collection indeed behaves as we expect and sets that field when we insert a doc. To do that, we can write a file `imports/todos/todos.tests.js`, and define a Mocha test in it:
 
 ```js
-import {mocha, chai} from "practicalmeteor:mocha";
+import {mocha, chai} from "avital:mocha";
 import Todos from './Todos.js'
 import Factory from "mdg:factory";
 
@@ -97,10 +97,10 @@ A test driver is a mini-application that runs in place of your app and runs each
 
 There are two main kinds of test driver packages; web-reporters which are Meteor applications and display a special test reporting web UI that you can view the test results in; and console-reporters that run completely on the command-line and are primary used for automated testing like [continuous integration](#ci) [XXX: we should probably explain more about how phantom is involved in command-line testing?]
 
-While developing your app, chances are you'll want to run unit tests against a web reporter; for our example we will use a reporter that renders to Mocha's default web UI. We can add the driver simply by adding the [`practicalmeteor:mocha-web-reporter`](https://atmospherejs.com/practicalmeteor/mocha-web-reporter) package to our app.
+While developing your app, chances are you'll want to run unit tests against a web reporter; for our example we will use a reporter that renders to Mocha's default web UI. We can add the driver simply by adding the [`avital:mocha`](https://atmospherejs.com/avital/mocha) package to our app.
 
 ```bash
-meteor add practicalmeteor:mocha-web-reporter
+meteor add avital:mocha
 ```
 
 This package also doesn't do anything in development or production mode, but when our app is run in [unit](#unit-test-mode) or [integration](#integration-test-mode) test mode, it takes over, running test code on both the client and server, and rendering results to the browser.
@@ -110,7 +110,7 @@ This package also doesn't do anything in development or production mode, but whe
 To run the unit tests that our app defines, we can run a special instance of our app in unit test mode. To do so, we run:
 
 ```
-meteor test --unit
+meteor test-app --unit
 ```
 
 This runs a special version of our application that:
@@ -118,7 +118,7 @@ This runs a special version of our application that:
  1. *Doesn't* eagerly load *any* of our application code as Meteor normally would.
  2. *Does* eagerly load any file in our application (including in `imports/` folders) that look like `*.tests.*`. 
  3. Sets the `Meteor.isTest` and `Meteor.isUnitTest` flags to be true.
- 4. Starts up the test reporter package that we've added to our app (`practicalmeteor:mocha-web-reporter`).
+ 4. Starts up the test reporter package that we've added to our app (`avital:mocha`).
 
 As we've defined a test file (`imports/todos/Todos.tests.js`), what this means is that the file above will be eagerly loaded, adding the `'builds correctly from factory'` test to the Mocha registry. 
 
@@ -126,14 +126,14 @@ To run the tests, visit http://localhost:3000 in your browser. This kicks off `m
 
 [IMAGE]
 
-Usually, while developing an application, it make sense to run `meteor test` on a second port (say `3100`), while also running your main application in a separate process:
+Usually, while developing an application, it make sense to run `meteor test-app` on a second port (say `3100`), while also running your main application in a separate process:
 
 ```bash
 # in one terminal window
 meteor
 
 # in another
-meteor test --port 3100
+meteor test-app --port 3100
 ```
 
 Then you can open two browser windows to see the app in action while also ensuring that you don't break any tests as you make changes.
@@ -149,7 +149,7 @@ Integration testing means invoking and asserting properties of your application 
 To run the integration tests in our application, we run:
 
 ```
-meteor test --integration
+meteor test-app --integration
 ```
 
 This does the following:
@@ -157,7 +157,7 @@ This does the following:
  1. *Does* eagerly load our application code as Meteor normally would.
  2. *Also* eagerly load any file in our application (including in `imports/` folders) that look like `*.tests.*`. 
  3. Sets the `Meteor.isTest` and `Meteor.isIntegrationTest` flags to be true.
- 4. Starts up the test reporter package that we've added to our app (`practicalmeteor:mocha-web-reporter`).
+ 4. Starts up the test reporter package that we've added to our app (`avital:mocha`).
 
 The key difference is in point 1 --- our app code loads as normal. So our server runs completely as usual with the full DDP API available, for example. 
 
