@@ -10,6 +10,8 @@
     "path": "^0.12.7",
     "regenerator": "^0.8.42",
     "stream-browserify": "^2.0.1",
+    "stream-http": "^2.1.1",
+    "url": "^0.11.0",
     "util": "^0.10.3"
   },
   "scripts": {

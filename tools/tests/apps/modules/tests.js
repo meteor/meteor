@@ -195,6 +195,17 @@ describe("native node_modules", () => {
     assert.strictEqual(typeof Stream, "function");
     assert.strictEqual(typeof Stream.Readable, "function");
   });
+
+  Meteor.isClient &&
+  it("can be installed with aliases", () => {
+    meteorInstall({
+      node_modules: {
+        http: "stream-http"
+      }
+    });
+
+    assert.strictEqual(require("http"), require("stream-http"));
+  });
 });
 
 describe("local node_modules", () => {
