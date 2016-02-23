@@ -544,12 +544,13 @@ which handles the task of running tests and displaying the results in the
 browser when you visit it.
 
 In unit test mode, no files in your application are eagerly loaded, aside
-from test files (in you tests/ directory or named *.tests.*). You can
-import your app's modules from within your tests and test them in isolation.
+from test files (in you tests/ directory or named test[s].* or *.test[s].*). 
+You can import your app's modules from within your tests and test them in 
+isolation.
 
-In integration test mode, your app is loaded as usual, and your tests can
-inspect and effect the running state. Test files are loaded similarly to in
-unit test mode.
+In integration test mode, your app is loaded as usual, and then made hidden,
+and your tests can inspect and effect the running state. Test files are
+loaded similarly to unit test mode.
 
 Open the test dashboard in your browser to run the tests and see the
 results. By default the URL is localhost:3000 but that can be changed
@@ -587,10 +588,7 @@ Options:
   --test-app-path   Set the directory in which to create a temporary app used
                     for tests. Defaults to the system's temporary directory,
                     usually /tmp.
-  --velocity        [Experimental] Execute tests using phantomjs and exit.
   --verbose         Print all output from builds logs.
-  --no-lint         Don't run linters used by the tested packages on every
-                    test app rebuild.
 
 >>> self-test
 Run tests of the 'meteor' tool.
