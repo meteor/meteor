@@ -260,12 +260,16 @@ class AssetBundleManager {
     }
 
     protected void didFinishDownloadingAssetBundle(AssetBundle assetBundle) {
+        assetBundleDownloader = null;
+
         if (callback != null) {
             callback.onFinishedDownloadingAssetBundle(assetBundle);
         }
     }
 
     protected void didFail(Throwable cause) {
+        assetBundleDownloader = null;
+
         if (callback != null) {
             callback.onDownloadFailure(cause);
         }
