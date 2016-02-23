@@ -609,7 +609,9 @@ exports.defineAutoTests = function() {
 
     describe("when downloading an index page with the wrong ROOT_URL", function() {
       beforeEach(function(done) {
-        WebAppMockRemoteServer.serveVersion("wrong_root_url", done);
+        downloadAndServeVersionLocally("127.0.0.1_root_url", function() {
+          WebAppMockRemoteServer.serveVersion("wrong_root_url", done);
+        });
       });
 
       afterEach(function(done) {
@@ -618,7 +620,7 @@ exports.defineAutoTests = function() {
 
       it("should invoke the onDownloadFailure callback with an error", function(done) {
         WebAppCordova.onDownloadFailure(function(error) {
-          expect(error.message).toContain("ROOT_URL in downloaded asset bundle does not match current ROOT_URL");
+          expect(error.message).toContain("ROOT_URL in downloaded asset bundle would change current ROOT_URL to localhost.");
           done();
         });
 

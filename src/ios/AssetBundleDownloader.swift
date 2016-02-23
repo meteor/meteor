@@ -347,8 +347,8 @@ final class AssetBundleDownloader: NSObject, NSURLSessionDelegate, NSURLSessionT
       throw WebAppError.UnsuitableAssetBundle(reason: "Could not find ROOT_URL in downloaded asset bundle", underlyingError: nil)
     }
     
-    if rootURL != configuration.rootURL {
-      throw WebAppError.UnsuitableAssetBundle(reason: "ROOT_URL in downloaded asset bundle does not match current ROOT_URL. Make sure ROOT_URL has been configured correctly on the server.", underlyingError: nil)
+    if configuration.rootURL?.host != "localhost" && rootURL.host == "localhost" {
+      throw WebAppError.UnsuitableAssetBundle(reason: "ROOT_URL in downloaded asset bundle would change current ROOT_URL to localhost. Make sure ROOT_URL has been configured correctly on the server.", underlyingError: nil)
     }
     
     guard let appId = runtimeConfig.appId else {

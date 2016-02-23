@@ -1,5 +1,6 @@
 package com.meteor.webapp;
 
+import android.net.Uri;
 import android.util.Log;
 
 import org.json.JSONException;
@@ -185,8 +186,10 @@ class AssetBundleDownloader {
         String rootUrlString;
         try {
             rootUrlString = runtimeConfig.getString("ROOT_URL");
-            if (!rootUrlString.equals(webAppConfiguration.getRootUrlString())) {
-                throw new DownloadFailureException("ROOT_URL in downloaded asset bundle does not match current ROOT_URL. Make sure ROOT_URL has been configured correctly on the server.");
+            Uri rootUrl = Uri.parse(rootUrlString);
+            Uri previousRootUrl = Uri.parse(webAppConfiguration.getRootUrlString());
+            if (!"localhost".equals(previousRootUrl.getHost()) && "localhost".equals(rootUrl.getHost())) {
+                throw new DownloadFailureException("ROOT_URL in downloaded asset bundle would change current ROOT_URL to localhost. Make sure ROOT_URL has been configured correctly on the server.");
             }
         } catch (JSONException e) {
             throw new DownloadFailureException("Could not find ROOT_URL in downloaded asset bundle");
