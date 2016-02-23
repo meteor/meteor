@@ -253,7 +253,6 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
   }
 
   private func didFailWithError(error: ErrorType) {
-    NSLog("didFailWithError: \(error)")
     delegate?.assetBundleManager(self, didFailDownloadingBundleWithError: error)
   }
 

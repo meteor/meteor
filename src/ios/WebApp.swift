@@ -271,7 +271,7 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
   }
 
   private func notifyDownloadFailure(error: ErrorType) {
-    NSLog("Failure: \(error)")
+    NSLog("Download failure: \(error)")
     
     guard let downloadFailureCallbackId = downloadFailureCallbackId else { return }
 
