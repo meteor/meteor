@@ -739,6 +739,10 @@ Accounts.sendVerificationEmail = function (userId, address) {
     var email = _.find(user.emails || [],
                        function (e) { return !e.verified; });
     address = (email || {}).address;
+
+    if (!address) {
+      throw new Error("That user has no unverified email addresses.");
+    }
   }
   // make sure we have a valid address
   if (!address || !_.contains(_.pluck(user.emails || [], 'address'), address))
