@@ -119,18 +119,16 @@ export class CordovaBuilder {
       this.additionalConfiguration.global.StatusBarStyle = 'default';
     }
 
-    // Default access rules for plain Meteor-Cordova apps.
-    // Rules can be extended with mobile-config API.
-    // The value is `true` if the protocol or domain should be allowed,
-    // 'external' if should handled externally.
+    // Default access rules.
+    // Rules can be extended with App.accesRule() in mobile-config.js.
     this.accessRules = {
-      // Allow external calls to things like email client or maps app or a
-      // phonebook app.
-      'tel:*': 'external',
-      'geo:*': 'external',
-      'mailto:*': 'external',
-      'sms:*': 'external',
-      'market:*': 'external',
+      // Allow the app to ask the system to open these types of URLs.
+      // (e.g. in the phone app or an email client)
+      'tel:*': 'intent',
+      'geo:*': 'intent',
+      'mailto:*': 'intent',
+      'sms:*': 'intent',
+      'market:*': 'intent',
 
       // Allow navigation to localhost, which is needed for the local server
       'http://localhost': 'navigation'
@@ -253,10 +251,10 @@ export class CordovaBuilder {
     config.element('content', { src: this.metadata.contentUrl });
 
     // Copy all the access rules
-    _.each(this.accessRules, (rule, pattern) => {
-      if (rule === 'external') {
+    _.each(this.accessRules, (type, pattern) => {
+      if (type === 'intent') {
         config.element('allow-intent', { href: pattern });
-      } else if (rule === 'navigation') {
+      } else if (type === 'navigation') {
         config.element('allow-navigation', { href: pattern });
       } else {
         config.element('access', { origin: pattern });
@@ -589,36 +587,39 @@ configuration. The key may be deprecated.`);
      * Default access rules:
      *
      * - `tel:*`, `geo:*`, `mailto:*`, `sms:*`, `market:*` are allowed and
-     *   launch externally (phone app, or an email client on Android)
-     * - `gap:*`, `cdv:*`, `file:` are allowed (protocols required to access
-     *   local file-system)
-     * - `http://meteor.local/*` is allowed (a domain Meteor uses to access
-     *   app's assets)
-     * - The domain of the server passed to the build process (or local ip
-     *   address in the development mode) is used to be able to contact the
-     *   Meteor app server.
+     *   are handled by the system (e.g. opened in the phone app or an email client)
+     * - `http://localhost:*` is used to serve the app's assets from.
+     * - The domain or address of the Meteor server to connect to for DDP and
+     *   hot code push of new versions.
      *
      * Read more about domain patterns in [Cordova
-     * docs](http://cordova.apache.org/docs/en/4.0.0/guide_appdev_whitelist_index.md.html).
+     * docs](http://cordova.apache.org/docs/en/6.0.0/guide_appdev_whitelist_index.md.html).
      *
      * Starting with Meteor 1.0.4 access rule for all domains and protocols
      * (`<access origin="*"/>`) is no longer set by default due to
      * [certain kind of possible
      * attacks](http://cordova.apache.org/announcements/2014/08/04/android-351.html).
      *
-     * @param {String} domainRule The pattern defining affected domains or URLs.
+     * @param {String} pattern The pattern defining affected domains or URLs.
      * @param {Object} [options]
-     * @param {Boolean} options.launchExternal Set to true if the matching URL
-     * should be handled externally (e.g. phone app or email client on Android).
+     * @param {String} options.type Possible values:
+     - **`'intent'`**: Controls which URLs the app is allowed to ask the system to open.
+       (e.g. in the phone app or an email client).
+     - **`'navigation'`**: Controls which URLs the WebView itself can be navigated to
+       (can also needed for iframes).
+     - **`'network'` or undefined**: Controls which network requests (images, XHRs, etc) are allowed to be made.
+     * @param {Boolean} options.launchExternal (Deprecated, use options.type `'intent'` instead.)
      * @memberOf App
      */
-    accessRule: function (domainRule, options) {
+    accessRule: function (pattern, options) {
       options = options || {};
-      options.launchExternal = !!options.launchExternal;
-      if (options.launchExternal) {
-        builder.accessRules[domainRule] = 'external';
+
+      if (options.type === "intent" || options.launchExternal) {
+        builder.accessRules[pattern] = 'intent';
+      } else if (options.type === "navigation") {
+        builder.accessRules[pattern] = 'navigation';
       } else {
-        builder.accessRules[domainRule] = true;
+        builder.accessRules[pattern] = true;
       }
     }
   };
