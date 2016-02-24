@@ -1,6 +1,6 @@
 allow-deny@1.0.1-beta.11
 autoupdate@1.2.5-beta.11
-babel-compiler@6.4.0-beta.11
+babel-compiler@6.5.0-beta.11
 babel-runtime@0.1.5-beta.11
 base64@1.0.5-beta.11
 binary-heap@1.0.5-beta.11
