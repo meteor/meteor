@@ -63,12 +63,13 @@ export default Todos = new TodosCollection('Todos');
 We should test that the `Todos` collection indeed behaves as we expect and sets that field when we insert a doc. To do that, we can write a file `imports/todos/todos.tests.js`, and define a Mocha test in it:
 
 ```js
-import {mocha, chai} from "avital:mocha";
+import { mocha } from "avital:mocha";
+import { chai } from "practicalmeteor:chai";
 import Todos from './Todos.js'
 import Factory from "mdg:factory";
 
-const {describe, it} = mocha;
-const {assert} = chai;
+const { describe, it } = mocha;
+const { assert } = chai;
 
 describe('todos', () => {
   describe('mutators', () => {
