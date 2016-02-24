@@ -129,27 +129,15 @@ _.extend(LivedataTest.ClientStream.prototype, {
       self.HEARTBEAT_TIMEOUT);
   },
 
-  _sockjsTransports: function () {
-    // only allow polling protocols. no streaming.  streaming
-    // makes safari spin.
-    var transports = [
-      'websocket', 'xdr-polling', 'xhr-polling', 'iframe-xhr-polling', 'jsonp-polling'];
-
-    return transports;
-  },
-
   _launchConnection: function () {
     var self = this;
     self._cleanup(); // cleanup the old socket, if there was one.
 
-    var options = _.extend({
-      transports: self._sockjsTransports()
-    }, self.options._sockjsOptions);
-
     // Convert raw URL to SockJS URL each time we open a connection, so that we
     // can connect to random hostnames and get around browser per-host
     // connection limits.
-    self.socket = new SockJS(toSockjsUrl(self.rawUrl), undefined, options);
+    self.socket = new SockJS(toSockjsUrl(self.rawUrl), undefined,
+      self.options._sockjsOptions);
     self.socket.onopen = function (data) {
       self._connected();
     };
