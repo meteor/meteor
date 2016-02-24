@@ -1073,10 +1073,10 @@ function getTestPreamble() {
   }
 
   return `\
-if (Package.meteor.Meteor.isClient) {
-  Package.meteor.Meteor.isTest = true;
-  ${setMeteorIntegrationOrUnitTest}
+Package.meteor.Meteor.isTest = true;
+${setMeteorIntegrationOrUnitTest}
 
+if (Package.meteor.Meteor.isClient) {
   Package.meteor.Meteor.startup(function() {
     var testDriverPackage = Package[\"${testDriverPackageName}\"];
     if (!testDriverPackage) {
