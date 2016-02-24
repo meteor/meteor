@@ -22,10 +22,7 @@ Finally you may wish to test that your application works under typical load or s
 
 <h3 id="isolation-techniques">Isolation techniques</h3>
 
-http://martinfowler.com/articles/mocksArentStubs.html
-
 <h3 id="challenges-with-meteor">Challenges of testing in Meteor</h3>
-
 
 
 <h2 id="generating-test-data">Generating test data</h2>
@@ -110,7 +107,7 @@ This package also doesn't do anything in development or production mode, but whe
 To run the unit tests that our app defines, we can run a special instance of our app in unit test mode. To do so, we run:
 
 ```
-meteor test-app --unit
+meteor test-app --unit --driver-package avital:mocha
 ```
 
 This runs a special version of our application that:
@@ -122,7 +119,7 @@ This runs a special version of our application that:
 
 As we've defined a test file (`imports/todos/Todos.tests.js`), what this means is that the file above will be eagerly loaded, adding the `'builds correctly from factory'` test to the Mocha registry. 
 
-To run the tests, visit http://localhost:3000 in your browser. This kicks off `mocha-web-reporter`, which runs your unit tests both in the browser and on the server. It displays the test results in the browser in a Mocha test reporter:
+To run the tests, visit http://localhost:3000 in your browser. This kicks off `avital:mocha`, which runs your unit tests both in the browser and on the server. It displays the test results in the browser in a Mocha test reporter:
 
 [IMAGE]
 
