@@ -58,6 +58,9 @@ exports.formatUrl = function (url) {
   if (url.port) {
     string += `:${url.port}`;
   }
+  // For consistency with `Meteor.absoluteUrl`, add a trailing slash to make
+  // this a valid URL
+  string += "/";
   return string;
 }
 
