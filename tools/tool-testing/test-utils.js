@@ -29,45 +29,6 @@ exports.randomUserEmail = function () {
   return 'selftest-user-' + randomString(15) + '@guerrillamail.com';
 };
 
-// Creates an app and deploys it. Assumes the sandbox is already logged
-// in. Returns the name of the deployed app. Options:
-//  - settingsFile: a path to a settings file to deploy with
-//  - appName: app name to use; will be generated randomly if not
-//    provided
-//  - templateApp: the name of the template app to use. defaults to 'empty'
-exports.createAndDeployApp = function (sandbox, options) {
-  options = options || {};
-  var name = options.appName || randomAppName();
-  sandbox.createApp(name, options.templateApp || 'empty');
-  sandbox.cd(name);
-
-  name = config.getFullAppName(name);
-  
-  var runArgs = ['deploy', name];
-  if (options.settingsFile) {
-    runArgs.push('--settings');
-    runArgs.push(options.settingsFile);
-  }
-  var run = sandbox.run.apply(sandbox, runArgs);
-  run.waitSecs(90);
-  run.match('Now serving at http://' + name);
-  run.waitSecs(10);
-  run.expectExit(0);
-  return name;
-};
-
-exports.cleanUpApp = function (sandbox, name) {
-  if (name.indexOf(".") === -1) {
-    name = name + "." + config.getDeployHostname();
-  }
-
-  var run = sandbox.run('deploy', '-D', name);
-  run.waitSecs(180);
-  run.match('Deleted');
-  run.expectExit(0);
-  return name;
-};
-
 exports.login = function (s, username, password) {
   var run = s.run('login');
   run.waitSecs(15);
@@ -95,35 +56,6 @@ exports.getUserId = function (s) {
 var registrationUrlRegexp =
       /https:\/\/www\.meteor\.com\/setPassword\?([a-zA-Z0-9\+\/]+)/;
 exports.registrationUrlRegexp = registrationUrlRegexp;
-
-// In the sandbox `s`, create and deploy a new app with an unregistered
-// email address. Returns the registration token from the printed URL in
-// the deploy message.
-exports.deployWithNewEmail = function (s, email, appName) {
-  s.createApp('deployapp', 'empty');
-  s.cd('deployapp');
-
-  if (appName.indexOf(".") === -1) {
-    appName = appName + "." + config.getDeployHostname();
-  }
-
-  var run = s.run('deploy', appName);
-  run.waitSecs(exports.accountsCommandTimeoutSecs);
-  run.matchErr('Email:');
-  run.write(email + '\n');
-  run.waitSecs(90);
-  // Check that we got a prompt to set a password on meteor.com.
-  run.matchErr('set a password');
-  var urlMatch = run.matchErr(registrationUrlRegexp);
-  if (! urlMatch || ! urlMatch.length || ! urlMatch[1]) {
-    throw new Error("Missing registration token");
-  }
-  var token = urlMatch[1];
-
-  run.expectExit(0);
-
-  return token;
-};
 
 var getLoadedPackages = function () {
   return isopackets.load('ddp');
