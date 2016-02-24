@@ -1391,7 +1391,7 @@ DocsData = {
     "name": "accessRule",
     "options": [
       {
-        "description": "<p>Possible values:</p>\n<pre class=\"prettyprint source\"><code> - **`'intent'`**: Controls which URLs the app is allowed to ask the system to open.\n   (e.g. in the phone app or an email client).\n - **`'navigation'`**: Controls which URLs the WebView itself can be navigated to\n   (can also needed for iframes).\n - **`'network'` or undefined**: Controls which network requests (images, XHRs, etc) are allowed to be made.</code></pre>",
+        "description": "<p>Possible values:</p>\n<ul>\n<li><strong><code>'intent'</code></strong>: Controls which URLs the app is allowed to ask the system to open.\n(e.g. in the phone app or an email client).</li>\n<li><strong><code>'navigation'</code></strong>: Controls which URLs the WebView itself can be navigated to\n(can also needed for iframes).</li>\n<li><strong><code>'network'</code> or undefined</strong>: Controls which network requests (images, XHRs, etc) are allowed to be made.</li>\n</ul>",
         "name": "type",
         "type": {
           "names": [
@@ -1400,7 +1400,7 @@ DocsData = {
         }
       },
       {
-        "description": "<p>(Deprecated, use options.type <code>'intent'</code> instead.)</p>",
+        "description": "<p>(Deprecated, use <code>type: 'intent'</code> instead.)</p>",
         "name": "launchExternal",
         "type": {
           "names": [

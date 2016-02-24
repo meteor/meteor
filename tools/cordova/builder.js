@@ -603,12 +603,12 @@ configuration. The key may be deprecated.`);
      * @param {String} pattern The pattern defining affected domains or URLs.
      * @param {Object} [options]
      * @param {String} options.type Possible values:
-     - **`'intent'`**: Controls which URLs the app is allowed to ask the system to open.
-       (e.g. in the phone app or an email client).
-     - **`'navigation'`**: Controls which URLs the WebView itself can be navigated to
-       (can also needed for iframes).
-     - **`'network'` or undefined**: Controls which network requests (images, XHRs, etc) are allowed to be made.
-     * @param {Boolean} options.launchExternal (Deprecated, use options.type `'intent'` instead.)
+     * - **`'intent'`**: Controls which URLs the app is allowed to ask the system to open.
+     *  (e.g. in the phone app or an email client).
+     * - **`'navigation'`**: Controls which URLs the WebView itself can be navigated to
+     *  (can also needed for iframes).
+     * - **`'network'` or undefined**: Controls which network requests (images, XHRs, etc) are allowed to be made.
+     * @param {Boolean} options.launchExternal (Deprecated, use `type: 'intent'` instead.)
      * @memberOf App
      */
     accessRule: function (pattern, options) {
