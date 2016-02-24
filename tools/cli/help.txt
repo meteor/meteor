@@ -540,8 +540,10 @@ Usage: meteor test-app --driver-package <driver> [options]
        
 Runs tests against the application, either in *unit* or *integration*
 (the default) test mode. meteor test-app will start a special app based on
-a test driver (specified with --driver-package) which handles the task of
-running tests and displaying the results in the browser when you visit it.
+a test driver (specified with --driver-package -- read more about driver 
+packages at http://guide.meteor.com/testing.html#driver-packages) 
+which handles the task of running tests and displaying the results in the 
+browser when you visit it.
 
 In unit test mode, no files in your application are eagerly loaded, aside
 from test files (in you tests/ directory or named test[s].* or *.test[s].*). 
