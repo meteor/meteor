@@ -258,7 +258,10 @@ Sp.startREPL = function startREPL(options) {
 
   // Use the same `require` function and `module` object visible to the
   // shell.js module.
-  repl.context.require = require;
+  repl.context.require = Package.modules
+    ? Package.modules.meteorInstall()
+    : require;
+
   repl.context.module = module;
   repl.context.repl = repl;
 
