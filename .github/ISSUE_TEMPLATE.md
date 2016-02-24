@@ -19,7 +19,7 @@ See [here](https://github.com/meteor/meteor/blob/devel/Contributing.md#reporting
 
 See [here](https://github.com/meteor/meteor/blob/devel/Contributing.md#feature-requests) for more detail on what is expected of a feature request.
 
-### Independant core packages
+### Independent core packages
 
 We've split some packages out of meteor/meteor in order to make it easier for community members to contribute and the MDG team to maintain a slimmer core (this enables us to untie package versions from Meteor releases). Please ensure your issue is opened against the appropriate repository. Packages that have been split from core and their repositories are:
 
