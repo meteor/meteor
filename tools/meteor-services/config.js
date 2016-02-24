@@ -162,14 +162,6 @@ _.extend(exports, {
     }
   },
 
-  getTestPackageServerUrl: function () {
-    if (isLocalUniverse()) {
-      return localhostOffset(20);
-    } else {
-      return addScheme(getUniverse().replace(/^www\./, 'test-packages.'));
-    }
-  },
-
   getPackageStatsServerUrl: function () {
     if (process.env.METEOR_PACKAGE_STATS_SERVER_URL) {
       return process.env.METEOR_PACKAGE_STATS_SERVER_URL;

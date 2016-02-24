@@ -59,24 +59,6 @@ var randomizedPackageName = function (username, start) {
 // on a module that has filenames with colons -- the module gets added, but
 // without the colon filenames.
 if (process.platform !== "win32") {
-  selftest.define("can't publish package with colons", ["net", "test-package-server"], function () {
-    var s = new Sandbox();
-
-    testUtils.login(s, username, password);
-    var packageName = randomizedPackageName(username, "package-with-colons");
-    var packageDirName = "package-with-colons";
-    s.createPackage(packageDirName, packageName, "package-with-colons");
-
-    s.cd(packageDirName, function () {
-      var run = s.run("publish", "--create");
-
-      run.matchErr("invalid characters");
-
-      // This error can basically only occur on files from npm
-      run.matchErr("NPM module");
-    });
-  });
-
   selftest.define("can't build local packages with colons", function () {
     var s = new Sandbox();
 
