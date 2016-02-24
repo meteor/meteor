@@ -23,8 +23,8 @@ import java.util.TimerTask;
 
 import okhttp3.HttpUrl;
 
-public class WebApp extends CordovaPlugin implements AssetBundleManager.Callback {
-    private static final String LOG_TAG = WebApp.class.getSimpleName();
+public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManager.Callback {
+    private static final String LOG_TAG = WebAppLocalServer.class.getSimpleName();
     public static final String PREFS_NAME = "MeteorWebApp";
 
     private static final long STARTUP_TIMEOUT = 10000;
@@ -149,7 +149,7 @@ public class WebApp extends CordovaPlugin implements AssetBundleManager.Callback
         }
 
         assetBundleManager = new AssetBundleManager(resourceApi, configuration, initialAssetBundle, versionsDirectory);
-        assetBundleManager.setCallback(WebApp.this);
+        assetBundleManager.setCallback(WebAppLocalServer.this);
 
         String lastDownloadedVersion = configuration.getLastDownloadedVersion();
         if (lastDownloadedVersion != null) {

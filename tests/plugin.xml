@@ -18,8 +18,8 @@
     <clobbers target="WebAppMockRemoteServer" />
   </js-module>
 
-  <js-module src="www/webapp_cordova_testing.js" name="MeteorWebAppTesting">
-    <merges target="WebAppCordova" />
+  <js-module src="www/webapp_local_server_testing.js" name="WebAppLocalServerTesting">
+    <merges target="WebAppLocalServer" />
   </js-module>
 
   <asset src="fixtures/bundled_www" target="." />
@@ -43,7 +43,7 @@
     <header-file src="src/ios/cordova-plugin-meteor-webapp-tests-Bridging-Header.h" />
 
     <source-file src="src/ios/WebAppMockRemoteServer.swift" />
-    <source-file src="src/ios/WebApp+Testing.swift" />
+    <source-file src="src/ios/WebAppLocalServer+Testing.swift" />
 
     <header-file src="src/ios/GCDWebServer+Testing.h" />
     <source-file src="src/ios/GCDWebServer+Testing.m" />

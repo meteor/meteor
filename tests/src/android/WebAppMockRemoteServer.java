@@ -31,8 +31,8 @@ import okhttp3.mockwebserver.RecordedRequest;
 import okio.Buffer;
 import okio.Okio;
 
-public class WebAppMockRemoteServer extends CordovaPlugin implements WebApp.TestingDelegate {
-    private static final String LOG_TAG = "WebAppMockRemoteServer";
+public class WebAppMockRemoteServer extends CordovaPlugin implements WebAppLocalServer.TestingDelegate {
+    private static final String LOG_TAG = WebAppMockRemoteServer.class.getSimpleName();
 
     private static final String BASE_PATH = "/__cordova/";
 
@@ -43,7 +43,7 @@ public class WebAppMockRemoteServer extends CordovaPlugin implements WebApp.Test
     private AssetManager assetManager;
     private AssetManagerCache assetManagerCache;
 
-    private WebApp webApp;
+    private WebAppLocalServer webAppLocalServer;
 
     private Uri downloadableVersionsUri;
     private Uri currentVersionUri;
@@ -56,13 +56,13 @@ public class WebAppMockRemoteServer extends CordovaPlugin implements WebApp.Test
 
         resourceApi = webView.getResourceApi();
 
-        webApp = (WebApp)webView.getPluginManager().getPlugin("MeteorWebApp");
-        webApp.setTestingDelegate(this);
+        webAppLocalServer = (WebAppLocalServer)webView.getPluginManager().getPlugin("WebAppLocalServer");
+        webAppLocalServer.setTestingDelegate(this);
 
         resourceApi = webView.getResourceApi();
 
         assetManager = cordova.getActivity().getAssets();
-        assetManagerCache = webApp.getAssetManagerCache();
+        assetManagerCache = webAppLocalServer.getAssetManagerCache();
 
         downloadableVersionsUri = Uri.withAppendedPath(ASSET_BASE_URI, "www/downloadable_versions");
 
@@ -208,14 +208,14 @@ public class WebAppMockRemoteServer extends CordovaPlugin implements WebApp.Test
     }
 
     private void simulatePageReload(final CallbackContext callbackContext) {
-        webApp.onReset();
+        webAppLocalServer.onReset();
 
         callbackContext.success();
     }
 
     private void simulateAppRestart(final CallbackContext callbackContext) {
-        webApp.initializeAssetBundles();
-        webApp.onReset();
+        webAppLocalServer.initializeAssetBundles();
+        webAppLocalServer.onReset();
 
         callbackContext.success();
     }
@@ -224,9 +224,9 @@ public class WebAppMockRemoteServer extends CordovaPlugin implements WebApp.Test
         cordova.getThreadPool().execute(new Runnable() {
             @Override
             public void run() {
-                webApp.getConfiguration().reset();
-                webApp.initializeAssetBundles();
-                webApp.onReset();
+                webAppLocalServer.getConfiguration().reset();
+                webAppLocalServer.initializeAssetBundles();
+                webAppLocalServer.onReset();
 
                 removeReceivedRequests();
 
@@ -236,7 +236,7 @@ public class WebAppMockRemoteServer extends CordovaPlugin implements WebApp.Test
     }
 
     private void downloadedVersionExists(String version, final CallbackContext callbackContext) {
-        boolean versionExists = webApp.getAssetBundleManager().downloadedAssetBundleWithVersion(version) != null;
+        boolean versionExists = webAppLocalServer.getAssetBundleManager().downloadedAssetBundleWithVersion(version) != null;
         PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, versionExists);
         callbackContext.sendPluginResult(pluginResult);
     }
@@ -247,7 +247,7 @@ public class WebAppMockRemoteServer extends CordovaPlugin implements WebApp.Test
             public void run() {
                 String sourcePath = "www/partially_downloaded_versions/" + version;
 
-                File destinationDirectory = webApp.getAssetBundleManager().getDownloadDirectory();
+                File destinationDirectory = webAppLocalServer.getAssetBundleManager().getDownloadDirectory();
                 if (destinationDirectory.exists()) {
                     IOUtils.deleteRecursively(destinationDirectory);
                 }

@@ -3,7 +3,7 @@ module.exports = {
     cordova.exec(
       callback,
       console.error,
-      "MeteorWebApp",
+      "WebAppLocalServer",
       "resetToInitialState",
       []);
   },
@@ -12,7 +12,7 @@ module.exports = {
     cordova.exec(
       callback,
       console.error,
-      "MeteorWebApp",
+      "WebAppLocalServer",
       "simulatePageReload",
       []);
   },
@@ -21,7 +21,7 @@ module.exports = {
     cordova.exec(
       callback,
       console.error,
-      "MeteorWebApp",
+      "WebAppLocalServer",
       "simulateAppRestart",
       []);
   },
@@ -30,7 +30,7 @@ module.exports = {
     cordova.exec(
       callback,
       console.error,
-      "MeteorWebApp",
+      "WebAppLocalServer",
       "getAuthTokenKeyValuePair",
       []);
   },
@@ -39,7 +39,7 @@ module.exports = {
     cordova.exec(
       callback,
       console.error,
-      "MeteorWebApp",
+      "WebAppLocalServer",
       "downloadedVersionExists",
       [version]);
   },
@@ -48,7 +48,7 @@ module.exports = {
     cordova.exec(
       callback,
       console.error,
-      "MeteorWebApp",
+      "WebAppLocalServer",
       "simulatePartialDownload",
       [version]);
   }

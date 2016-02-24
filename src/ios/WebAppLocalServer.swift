@@ -18,8 +18,8 @@ let authTokenKeyValuePair: String = {
   return "cdvToken=\(authToken)"
 }()
 
-@objc(METWebApp)
-final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
+@objc(METWebAppLocalServer)
+final public class WebAppLocalServer: CDVPlugin, AssetBundleManagerDelegate {
   /// The local web server responsible for serving assets to the web app
   private(set) var localServer: GCDWebServer!
 
@@ -61,7 +61,7 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
 
   /// Timer used to wait for startup to complete after a reload
   private var startupTimer: METTimer?
-  
+
   private var isTesting: Bool = false
 
   // MARK: - Lifecycle
@@ -69,14 +69,14 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
   /// Called by Cordova on plugin initialization
   override public func pluginInitialize() {
     super.pluginInitialize()
-    
+
     // Detect whether we are testing the app using
     // cordova-plugin-test-framework
     if let viewController = self.viewController as? CDVViewController
       where viewController.startPage == "cdvtests/index.html" {
         isTesting = true
     }
-    
+
     // FIXME: Due to what seems like a Swift bug, these properties are not
     // initialized to nil but to an empty string
     newVersionDownloadedCallbackId = nil
@@ -92,7 +92,7 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
     if let portString = (commandDelegate?.settings["WebAppLocalServerPort".lowercaseString] as? String) {
       localServerPort = UInt(portString) ?? 0
     // In all other cases, we use a listening port that has been set during build
-    // and that is determined based on the appId. Hopefully this will avoid 
+    // and that is determined based on the appId. Hopefully this will avoid
     // collisions between Meteor apps installed on the same device
     } else if let viewController = self.viewController as? CDVViewController,
         let port = NSURLComponents(string: viewController.startPage)?.port {
@@ -120,7 +120,7 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
 
   func initializeAssetBundles() {
     assetBundleManager = nil;
-    
+
     // The initial asset bundle consists of the assets bundled with the app
     let initialAssetBundle: AssetBundle
     do {
@@ -272,7 +272,7 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
 
   private func notifyDownloadFailure(error: ErrorType) {
     NSLog("Download failure: \(error)")
-    
+
     guard let downloadFailureCallbackId = downloadFailureCallbackId else { return }
 
     let errorMessage = String(error)

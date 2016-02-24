@@ -26,10 +26,10 @@ module.exports = [
     },
     {
         "file": "plugins/cordova-plugin-meteor-webapp/www/webapp_cordova.js",
-        "id": "cordova-plugin-meteor-webapp.WebAppCordova",
+        "id": "cordova-plugin-meteor-webapp.WebAppLocalServer",
         "pluginId": "cordova-plugin-meteor-webapp",
         "merges": [
-            "WebAppCordova"
+            "WebAppLocalServer"
         ]
     }
 ];

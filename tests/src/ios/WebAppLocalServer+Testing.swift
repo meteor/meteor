@@ -1,4 +1,4 @@
-extension WebApp {
+extension WebAppLocalServer {
   func simulatePageReload(command: CDVInvokedUrlCommand) {
     onReset()
 
@@ -13,13 +13,13 @@ extension WebApp {
     let result = CDVPluginResult(status: CDVCommandStatus_OK)
     commandDelegate?.sendPluginResult(result, callbackId:command.callbackId)
   }
-  
+
   func resetToInitialState(command: CDVInvokedUrlCommand) {
     commandDelegate?.runInBackground() {
       self.configuration.reset()
       self.initializeAssetBundles()
       self.onReset()
-      
+
       let result = CDVPluginResult(status: CDVCommandStatus_OK)
       self.commandDelegate?.sendPluginResult(result, callbackId:command.callbackId)
     }
@@ -60,11 +60,11 @@ extension WebApp {
       let downloadDirectoryURL = versionsDirectoryURL.URLByAppendingPathComponent("Downloading")
 
       let fileManager = NSFileManager.defaultManager()
-      
+
       if fileManager.fileExistsAtPath(downloadDirectoryURL.path!) {
         try! fileManager.removeItemAtURL(downloadDirectoryURL)
       }
-      
+
       try! fileManager.copyItemAtURL(versionDirectoryURL, toURL: downloadDirectoryURL)
 
       let result = CDVPluginResult(status: CDVCommandStatus_OK)

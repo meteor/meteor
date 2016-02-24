@@ -42,7 +42,7 @@ There is still a theoretical possibility of the selected port being in use. Curr
 
 Coordinating the download of files from JavaScript isn’t ideal, because calls over the JavaScript-native bridge are expensive and block the main thread. In addition, the Cordova file transfer plugin for iOS is based on an older networking mechanism (`NSURLConnection`) that has some efficiency issues of itself. As a result, downloads often fail, and the way this is dealt with in the existing code is to try again after a 30 second timeout. Therefore, downloads are very unpredictable and can sometimes take minutes even on a local network.
 
-The new plugin moves downloads to native code. The JavaScript code is only responsible for detecting new versions (by subscribing to `meteor_autoupdate_clientVersions`, the normal autoupdating behavior) and notifying the plugin (using `WebAppCordova.checkForUpdates()`). Besides avoiding a series of calls from JavaScript, this gives us more control over downloading mechanism. On iOS, we can now use `NSURLSession`, which allows for more customization and efficiently supports parallel downloads without blocking (it also supports SPDY and HTTP/2, which could make this even more efficient in the future).
+The new plugin moves downloads to native code. The JavaScript code is only responsible for detecting new versions (by subscribing to `meteor_autoupdate_clientVersions`, the normal autoupdating behavior) and notifying the plugin (using `WebAppLocalServer.checkForUpdates()`). Besides avoiding a series of calls from JavaScript, this gives us more control over downloading mechanism. On iOS, we can now use `NSURLSession`, which allows for more customization and efficiently supports parallel downloads without blocking (it also supports SPDY and HTTP/2, which could make this even more efficient in the future).
 
 Originally, we were hoping to take advantage of `NSURLSession`s support for background file transfers, which allows downloads to continue even if the app is not active. But it turns out these out of process transfers are much slower when downloading small files (in one test, 600ms vs 6000ms), so especially during development that would make updates unnecessarily slow. Instead, we're now creating a background task so downloads get to continue for another 3 minutes after the app goes into the background. That should be enough in most cases, but resuming is also pretty efficient (see below), so it doesn't seem not having real background transfers is a big loss.
 
@@ -86,7 +86,7 @@ When the app is updated on the App Store (which we detect by checking `lastSeenI
 
 As mentioned, a major problem of the old plugin is that faulty versions may require a reinstall of the app.
 
-To counteract this, we invoke `WebAppCordova.startupDidComplete()` after a successful startup. Currently, we only invoke this after all `Meteor.startup()` callbacks have been invoked, which seems like a safe point.
+To counteract this, we invoke `WebAppLocalServer.startupDidComplete()` after a successful startup. Currently, we only invoke this after all `Meteor.startup()` callbacks have been invoked, which seems like a safe point.
 
 If `startupDidComplete()` is not invoked within a certain time period, we consider the version faulty and will rollback to an earlier version. Alternatively, we may be able to detect faulty versions faster by hooking into `window.onError`, but I’m not sure if that won’t generate false alarms.
 

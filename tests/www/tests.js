@@ -3,11 +3,11 @@ var _ = require("cordova-plugin-meteor-webapp-tests.underscore");
 var localServerPort = 12000;
 
 exports.defineAutoTests = function() {
-  describe("WebAppCordova", function() {
+  describe("WebAppLocalServer", function() {
     beforeAll(function(done) {
       jasmine.addMatchers(customMatchers);
 
-      WebAppCordova.getAuthTokenKeyValuePair(function(authTokenKeyValuePair) {
+      WebAppLocalServer.getAuthTokenKeyValuePair(function(authTokenKeyValuePair) {
         if (authTokenKeyValuePair) {
           fetch("http://localhost:" + localServerPort + "?" + authTokenKeyValuePair).then(done);
         } else {
@@ -17,7 +17,7 @@ exports.defineAutoTests = function() {
     });
 
     it("should be defined", function() {
-      expect(WebAppCordova).toBeDefined();
+      expect(WebAppLocalServer).toBeDefined();
     });
 
     describe("the local server", function() {
@@ -235,23 +235,23 @@ exports.defineAutoTests = function() {
       });
 
       afterEach(function(done) {
-        WebAppCordova.resetToInitialState(done);
+        WebAppLocalServer.resetToInitialState(done);
       });
 
       it("should only serve the new verson after a page reload", function(done) {
-        WebAppCordova.onNewVersionDownloaded(function() {
+        WebAppLocalServer.onNewVersionDownloaded(function() {
           expectVersionServedToEqual("version1", function() {
-            WebAppCordova.simulatePageReload(function() {
+            WebAppLocalServer.simulatePageReload(function() {
               expectVersionServedToEqual("version2", done);
             });
           });
         });
 
-        WebAppCordova.checkForUpdates();
+        WebAppLocalServer.checkForUpdates();
       });
 
       it("should only download changed files", function(done) {
-        WebAppCordova.onNewVersionDownloaded(function() {
+        WebAppLocalServer.onNewVersionDownloaded(function() {
           WebAppMockRemoteServer.receivedRequests(expectPathsForRequestsToMatch([
             "/__cordova/manifest.json",
             "/__cordova/",
@@ -262,27 +262,27 @@ exports.defineAutoTests = function() {
             done));
         });
 
-        WebAppCordova.checkForUpdates();
+        WebAppLocalServer.checkForUpdates();
       });
 
       it("should still serve assets that haven't changed", function(done) {
-        WebAppCordova.onNewVersionDownloaded(function() {
-          WebAppCordova.simulatePageReload(function() {
+        WebAppLocalServer.onNewVersionDownloaded(function() {
+          WebAppLocalServer.simulatePageReload(function() {
             expectAssetToBeServed("some-text.txt", done);
           });
         });
 
-        WebAppCordova.checkForUpdates();
+        WebAppLocalServer.checkForUpdates();
       });
 
       it("should remember the new version after a restart", function(done) {
-        WebAppCordova.onNewVersionDownloaded(function() {
-          WebAppCordova.simulateAppRestart(function() {
+        WebAppLocalServer.onNewVersionDownloaded(function() {
+          WebAppLocalServer.simulateAppRestart(function() {
             expectVersionServedToEqual("version2", done);
           });
         });
 
-        WebAppCordova.checkForUpdates();
+        WebAppLocalServer.checkForUpdates();
       });
     });
 
@@ -294,23 +294,23 @@ exports.defineAutoTests = function() {
       });
 
       afterEach(function(done) {
-        WebAppCordova.resetToInitialState(done);
+        WebAppLocalServer.resetToInitialState(done);
       });
 
       it("should only serve the new verson after a page reload", function(done) {
-        WebAppCordova.onNewVersionDownloaded(function() {
+        WebAppLocalServer.onNewVersionDownloaded(function() {
           expectVersionServedToEqual("version2", function() {
-            WebAppCordova.simulatePageReload(function() {
+            WebAppLocalServer.simulatePageReload(function() {
               expectVersionServedToEqual("version3", done);
             });
           });
         });
 
-        WebAppCordova.checkForUpdates();
+        WebAppLocalServer.checkForUpdates();
       });
 
       it("should only download changed files", function(done) {
-        WebAppCordova.onNewVersionDownloaded(function() {
+        WebAppLocalServer.onNewVersionDownloaded(function() {
           WebAppMockRemoteServer.receivedRequests(expectPathsForRequestsToMatch([
             "/__cordova/manifest.json",
             "/__cordova/",
@@ -320,27 +320,27 @@ exports.defineAutoTests = function() {
             done));
         });
 
-        WebAppCordova.checkForUpdates();
+        WebAppLocalServer.checkForUpdates();
       });
 
       it("should still serve assets that haven't changed", function(done) {
-        WebAppCordova.onNewVersionDownloaded(function() {
-          WebAppCordova.simulatePageReload(function() {
+        WebAppLocalServer.onNewVersionDownloaded(function() {
+          WebAppLocalServer.simulatePageReload(function() {
             expectAssetToBeServed("some-text.txt", done);
           });
         });
 
-        WebAppCordova.checkForUpdates();
+        WebAppLocalServer.checkForUpdates();
       });
 
       it("should delete the old version after startup completes", function(done) {
-        WebAppCordova.onNewVersionDownloaded(function() {
-          WebAppCordova.simulatePageReload(function() {
-            WebAppCordova.downloadedVersionExists("version2", function(versionExists) {
+        WebAppLocalServer.onNewVersionDownloaded(function() {
+          WebAppLocalServer.simulatePageReload(function() {
+            WebAppLocalServer.downloadedVersionExists("version2", function(versionExists) {
               expect(versionExists).toBe(true);
 
-              WebAppCordova.startupDidComplete(function() {
-                WebAppCordova.downloadedVersionExists("version2", function(versionExists) {
+              WebAppLocalServer.startupDidComplete(function() {
+                WebAppLocalServer.downloadedVersionExists("version2", function(versionExists) {
                   expect(versionExists).toBe(false);
 
                   done();
@@ -350,17 +350,17 @@ exports.defineAutoTests = function() {
           });
         });
 
-        WebAppCordova.checkForUpdates();
+        WebAppLocalServer.checkForUpdates();
       });
 
       it("should remember the new version after a restart", function(done) {
-        WebAppCordova.onNewVersionDownloaded(function() {
-          WebAppCordova.simulateAppRestart(function() {
+        WebAppLocalServer.onNewVersionDownloaded(function() {
+          WebAppLocalServer.simulateAppRestart(function() {
             expectVersionServedToEqual("version3", done);
           });
         });
 
-        WebAppCordova.checkForUpdates();
+        WebAppLocalServer.checkForUpdates();
       });
     });
 
@@ -372,60 +372,60 @@ exports.defineAutoTests = function() {
       });
 
       afterEach(function(done) {
-        WebAppCordova.resetToInitialState(done);
+        WebAppLocalServer.resetToInitialState(done);
       });
 
       it("should only serve the new verson after a page reload", function(done) {
-        WebAppCordova.onNewVersionDownloaded(function() {
+        WebAppLocalServer.onNewVersionDownloaded(function() {
           expectVersionServedToEqual("version2", function() {
-            WebAppCordova.simulatePageReload(function() {
+            WebAppLocalServer.simulatePageReload(function() {
               expectVersionServedToEqual("version1", done);
             });
           });
         });
 
-        WebAppCordova.checkForUpdates();
+        WebAppLocalServer.checkForUpdates();
       });
 
       it("should only download the manifest", function(done) {
-        WebAppCordova.onNewVersionDownloaded(function() {
+        WebAppLocalServer.onNewVersionDownloaded(function() {
           WebAppMockRemoteServer.receivedRequests(expectPathsForRequestsToMatch([
             "/__cordova/manifest.json"],
             done));
         });
 
-        WebAppCordova.checkForUpdates();
+        WebAppLocalServer.checkForUpdates();
       });
 
       it("should still serve assets that haven't changed", function(done) {
-        WebAppCordova.onNewVersionDownloaded(function() {
-          WebAppCordova.simulatePageReload(function() {
+        WebAppLocalServer.onNewVersionDownloaded(function() {
+          WebAppLocalServer.simulatePageReload(function() {
             expectAssetToBeServed("some-text.txt", done);
           });
         });
 
-        WebAppCordova.checkForUpdates();
+        WebAppLocalServer.checkForUpdates();
       });
 
       it("should not redownload the bundled version", function(done) {
-        WebAppCordova.onNewVersionDownloaded(function() {
-          WebAppCordova.downloadedVersionExists("version1", function(versionExists) {
+        WebAppLocalServer.onNewVersionDownloaded(function() {
+          WebAppLocalServer.downloadedVersionExists("version1", function(versionExists) {
             expect(versionExists).toBe(false);
             done();
           });
         });
 
-        WebAppCordova.checkForUpdates();
+        WebAppLocalServer.checkForUpdates();
       });
 
       it("should delete the old version after startup completes", function(done) {
-        WebAppCordova.onNewVersionDownloaded(function() {
-          WebAppCordova.simulatePageReload(function() {
-            WebAppCordova.downloadedVersionExists("version2", function(versionExists) {
+        WebAppLocalServer.onNewVersionDownloaded(function() {
+          WebAppLocalServer.simulatePageReload(function() {
+            WebAppLocalServer.downloadedVersionExists("version2", function(versionExists) {
               expect(versionExists).toBe(true);
 
-              WebAppCordova.startupDidComplete(function() {
-                WebAppCordova.downloadedVersionExists("version2", function(versionExists) {
+              WebAppLocalServer.startupDidComplete(function() {
+                WebAppLocalServer.downloadedVersionExists("version2", function(versionExists) {
                   expect(versionExists).toBe(false);
 
                   done();
@@ -435,17 +435,17 @@ exports.defineAutoTests = function() {
           });
         });
 
-        WebAppCordova.checkForUpdates();
+        WebAppLocalServer.checkForUpdates();
       });
 
       it("should remember the new version after a restart", function(done) {
-        WebAppCordova.onNewVersionDownloaded(function() {
-          WebAppCordova.simulateAppRestart(function() {
+        WebAppLocalServer.onNewVersionDownloaded(function() {
+          WebAppLocalServer.simulateAppRestart(function() {
             expectVersionServedToEqual("version1", done);
           });
         });
 
-        WebAppCordova.checkForUpdates();
+        WebAppLocalServer.checkForUpdates();
       });
     });
 
@@ -457,11 +457,11 @@ exports.defineAutoTests = function() {
       });
 
       afterEach(function(done) {
-        WebAppCordova.resetToInitialState(done);
+        WebAppLocalServer.resetToInitialState(done);
       });
 
       it("should not invoke the onNewVersionDownloaded callback", function(done) {
-        WebAppCordova.onNewVersionDownloaded(function() {
+        WebAppLocalServer.onNewVersionDownloaded(function() {
           fail();
           done();
         });
@@ -469,7 +469,7 @@ exports.defineAutoTests = function() {
         // Wait 500ms for the test to fail
         waitForTestToFail(500, done);
 
-        WebAppCordova.checkForUpdates();
+        WebAppLocalServer.checkForUpdates();
       });
 
       it("should not download any files except for the manifest", function(done) {
@@ -479,7 +479,7 @@ exports.defineAutoTests = function() {
             done));
         }, 500);
 
-        WebAppCordova.checkForUpdates();
+        WebAppLocalServer.checkForUpdates();
       });
     });
 
@@ -489,20 +489,20 @@ exports.defineAutoTests = function() {
       });
 
       afterEach(function(done) {
-        WebAppCordova.resetToInitialState(done);
+        WebAppLocalServer.resetToInitialState(done);
       });
 
       it("should invoke the onDownloadFailure callback with an error", function(done) {
-        WebAppCordova.onDownloadFailure(function(error) {
+        WebAppLocalServer.onDownloadFailure(function(error) {
           expect(error.message).toEqual("Non-success status code 404 for asset: /app/template.mobileapp.js");
           done();
         });
 
-        WebAppCordova.checkForUpdates();
+        WebAppLocalServer.checkForUpdates();
       });
 
       it("should not invoke the onNewVersionDownloaded callback", function(done) {
-        WebAppCordova.onNewVersionDownloaded(function() {
+        WebAppLocalServer.onNewVersionDownloaded(function() {
           fail();
           done();
         });
@@ -510,7 +510,7 @@ exports.defineAutoTests = function() {
         // Wait 500ms for the test to fail
         waitForTestToFail(500, done);
 
-        WebAppCordova.checkForUpdates();
+        WebAppLocalServer.checkForUpdates();
       });
     });
 
@@ -520,20 +520,20 @@ exports.defineAutoTests = function() {
       });
 
       afterEach(function(done) {
-        WebAppCordova.resetToInitialState(done);
+        WebAppLocalServer.resetToInitialState(done);
       });
 
       it("should invoke the onDownloadFailure callback with an error", function(done) {
-        WebAppCordova.onDownloadFailure(function(error) {
+        WebAppLocalServer.onDownloadFailure(function(error) {
           expect(error.message).toEqual("Hash mismatch for asset: /app/template.mobileapp.js");
           done();
         });
 
-        WebAppCordova.checkForUpdates();
+        WebAppLocalServer.checkForUpdates();
       });
 
       it("should not invoke the onNewVersionDownloaded callback", function(done) {
-        WebAppCordova.onNewVersionDownloaded(function() {
+        WebAppLocalServer.onNewVersionDownloaded(function() {
           fail();
           done();
         });
@@ -541,7 +541,7 @@ exports.defineAutoTests = function() {
         // Wait 500ms for the test to fail
         waitForTestToFail(500, done);
 
-        WebAppCordova.checkForUpdates();
+        WebAppLocalServer.checkForUpdates();
       });
     });
 
@@ -551,20 +551,20 @@ exports.defineAutoTests = function() {
       });
 
       afterEach(function(done) {
-        WebAppCordova.resetToInitialState(done);
+        WebAppLocalServer.resetToInitialState(done);
       });
 
       it("should invoke the onDownloadFailure callback with an error", function(done) {
-        WebAppCordova.onDownloadFailure(function(error) {
+        WebAppLocalServer.onDownloadFailure(function(error) {
           expect(error.message).toEqual("Version mismatch for index page, expected: version2, actual: version3");
           done();
         });
 
-        WebAppCordova.checkForUpdates();
+        WebAppLocalServer.checkForUpdates();
       });
 
       it("should not invoke the onNewVersionDownloaded callback", function(done) {
-        WebAppCordova.onNewVersionDownloaded(function() {
+        WebAppLocalServer.onNewVersionDownloaded(function() {
           fail();
           done();
         });
@@ -572,7 +572,7 @@ exports.defineAutoTests = function() {
         // Wait 500ms for the test to fail
         waitForTestToFail(500, done);
 
-        WebAppCordova.checkForUpdates();
+        WebAppLocalServer.checkForUpdates();
       });
     });
 
@@ -582,20 +582,20 @@ exports.defineAutoTests = function() {
       });
 
       afterEach(function(done) {
-        WebAppCordova.resetToInitialState(done);
+        WebAppLocalServer.resetToInitialState(done);
       });
 
       it("should invoke the onDownloadFailure callback with an error", function(done) {
-        WebAppCordova.onDownloadFailure(function(error) {
+        WebAppLocalServer.onDownloadFailure(function(error) {
           expect(error.message).toEqual("Could not find ROOT_URL in downloaded asset bundle");
           done();
         });
 
-        WebAppCordova.checkForUpdates();
+        WebAppLocalServer.checkForUpdates();
       });
 
       it("should not invoke the onNewVersionDownloaded callback", function(done) {
-        WebAppCordova.onNewVersionDownloaded(function() {
+        WebAppLocalServer.onNewVersionDownloaded(function() {
           fail();
           done();
         });
@@ -603,7 +603,7 @@ exports.defineAutoTests = function() {
         // Wait 500ms for the test to fail
         waitForTestToFail(500, done);
 
-        WebAppCordova.checkForUpdates();
+        WebAppLocalServer.checkForUpdates();
       });
     });
 
@@ -615,20 +615,20 @@ exports.defineAutoTests = function() {
       });
 
       afterEach(function(done) {
-        WebAppCordova.resetToInitialState(done);
+        WebAppLocalServer.resetToInitialState(done);
       });
 
       it("should invoke the onDownloadFailure callback with an error", function(done) {
-        WebAppCordova.onDownloadFailure(function(error) {
+        WebAppLocalServer.onDownloadFailure(function(error) {
           expect(error.message).toContain("ROOT_URL in downloaded asset bundle would change current ROOT_URL to localhost.");
           done();
         });
 
-        WebAppCordova.checkForUpdates();
+        WebAppLocalServer.checkForUpdates();
       });
 
       it("should not invoke the onNewVersionDownloaded callback", function(done) {
-        WebAppCordova.onNewVersionDownloaded(function() {
+        WebAppLocalServer.onNewVersionDownloaded(function() {
           fail();
           done();
         });
@@ -636,7 +636,7 @@ exports.defineAutoTests = function() {
         // Wait 500ms for the test to fail
         waitForTestToFail(500, done);
 
-        WebAppCordova.checkForUpdates();
+        WebAppLocalServer.checkForUpdates();
       });
     });
 
@@ -646,20 +646,20 @@ exports.defineAutoTests = function() {
       });
 
       afterEach(function(done) {
-        WebAppCordova.resetToInitialState(done);
+        WebAppLocalServer.resetToInitialState(done);
       });
 
       it("should invoke the onDownloadFailure callback with an error", function(done) {
-        WebAppCordova.onDownloadFailure(function(error) {
+        WebAppLocalServer.onDownloadFailure(function(error) {
           expect(error.message).toEqual("Could not find appId in downloaded asset bundle");
           done();
         });
 
-        WebAppCordova.checkForUpdates();
+        WebAppLocalServer.checkForUpdates();
       });
 
       it("should not invoke the onNewVersionDownloaded callback", function(done) {
-        WebAppCordova.onNewVersionDownloaded(function() {
+        WebAppLocalServer.onNewVersionDownloaded(function() {
           fail();
           done();
         });
@@ -667,7 +667,7 @@ exports.defineAutoTests = function() {
         // Wait 500ms for the test to fail
         waitForTestToFail(500, done);
 
-        WebAppCordova.checkForUpdates();
+        WebAppLocalServer.checkForUpdates();
       });
     });
 
@@ -677,20 +677,20 @@ exports.defineAutoTests = function() {
       });
 
       afterEach(function(done) {
-        WebAppCordova.resetToInitialState(done);
+        WebAppLocalServer.resetToInitialState(done);
       });
 
       it("should invoke the onDownloadFailure callback with an error", function(done) {
-        WebAppCordova.onDownloadFailure(function(error) {
+        WebAppLocalServer.onDownloadFailure(function(error) {
           expect(error.message).toContain("appId in downloaded asset bundle does not match current appId");
           done();
         });
 
-        WebAppCordova.checkForUpdates();
+        WebAppLocalServer.checkForUpdates();
       });
 
       it("should not invoke the onNewVersionDownloaded callback", function(done) {
-        WebAppCordova.onNewVersionDownloaded(function() {
+        WebAppLocalServer.onNewVersionDownloaded(function() {
           fail();
           done();
         });
@@ -698,22 +698,22 @@ exports.defineAutoTests = function() {
         // Wait 500ms for the test to fail
         waitForTestToFail(500, done);
 
-        WebAppCordova.checkForUpdates();
+        WebAppLocalServer.checkForUpdates();
       });
     });
 
     describe("when resuming a partial download with the same version", function() {
       beforeEach(function(done) {
-        WebAppCordova.simulatePartialDownload("version2", function() {
+        WebAppLocalServer.simulatePartialDownload("version2", function() {
           WebAppMockRemoteServer.serveVersion("version2", function() {
-            WebAppCordova.onNewVersionDownloaded(done);
-            WebAppCordova.checkForUpdates();
+            WebAppLocalServer.onNewVersionDownloaded(done);
+            WebAppLocalServer.checkForUpdates();
           });
         });
       });
 
       afterEach(function(done) {
-        WebAppCordova.resetToInitialState(done);
+        WebAppLocalServer.resetToInitialState(done);
       });
 
       it("should only download the manifest, the index page, and the remaining assets", function(done) {
@@ -727,14 +727,14 @@ exports.defineAutoTests = function() {
 
       it("should only serve the new verson after a page reload", function(done) {
         expectVersionServedToEqual("version1", function() {
-          WebAppCordova.simulatePageReload(function() {
+          WebAppLocalServer.simulatePageReload(function() {
             expectVersionServedToEqual("version2", done);
           });
         });
       });
 
       it("should serve assets that have been downloaded before", function(done) {
-        WebAppCordova.simulatePageReload(function() {
+        WebAppLocalServer.simulatePageReload(function() {
           expectAssetToBeServed("some-file", "some-file (changed)", done);
         });
       });
@@ -742,16 +742,16 @@ exports.defineAutoTests = function() {
 
     describe("when resuming a partial download with a different version", function() {
       beforeEach(function(done) {
-        WebAppCordova.simulatePartialDownload("version2", function() {
+        WebAppLocalServer.simulatePartialDownload("version2", function() {
           WebAppMockRemoteServer.serveVersion("version3", function() {
-            WebAppCordova.onNewVersionDownloaded(done);
-            WebAppCordova.checkForUpdates();
+            WebAppLocalServer.onNewVersionDownloaded(done);
+            WebAppLocalServer.checkForUpdates();
           });
         });
       });
 
       afterEach(function(done) {
-        WebAppCordova.resetToInitialState(done);
+        WebAppLocalServer.resetToInitialState(done);
       });
 
       it("should only download the manifest, the index page, and both remaining and changed assets", function(done) {
@@ -766,20 +766,20 @@ exports.defineAutoTests = function() {
 
       it("should only serve the new verson after a page reload", function(done) {
         expectVersionServedToEqual("version1", function() {
-          WebAppCordova.simulatePageReload(function() {
+          WebAppLocalServer.simulatePageReload(function() {
             expectVersionServedToEqual("version3", done);
           });
         });
       });
 
       it("should serve assets that have been downloaded before", function(done) {
-        WebAppCordova.simulatePageReload(function() {
+        WebAppLocalServer.simulatePageReload(function() {
           expectAssetToBeServed("some-other-file", done);
         });
       });
 
       it("should serve changed assets even if they have been downloaded before", function(done) {
-        WebAppCordova.simulatePageReload(function() {
+        WebAppLocalServer.simulatePageReload(function() {
           expectAssetToBeServed("some-file", "some-file (changed again)", done);
         });
       });
@@ -842,11 +842,11 @@ function expectAssetToBeServed(filename, content, done) {
 
 function downloadAndServeVersionLocally(version, done) {
   WebAppMockRemoteServer.serveVersion(version, function() {
-    WebAppCordova.onNewVersionDownloaded(function() {
-      WebAppCordova.simulatePageReload(done);
+    WebAppLocalServer.onNewVersionDownloaded(function() {
+      WebAppLocalServer.simulatePageReload(done);
     });
 
-    WebAppCordova.checkForUpdates();
+    WebAppLocalServer.checkForUpdates();
   });
 }
 
