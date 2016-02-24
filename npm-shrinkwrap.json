@@ -1,6 +1,6 @@
 {
   "name": "babel-preset-meteor",
-  "version": "6.4.5",
+  "version": "6.4.7",
   "dependencies": {
     "amdefine": {
       "version": "1.0.0",
@@ -83,79 +83,86 @@
       "resolved": "https://registry.npmjs.org/babel-messages/-/babel-messages-6.3.18.tgz"
     },
     "babel-plugin-check-es2015-constants": {
-      "version": "6.3.13",
-      "from": "babel-plugin-check-es2015-constants@>=6.3.13 <7.0.0",
-      "resolved": "https://registry.npmjs.org/babel-plugin-check-es2015-constants/-/babel-plugin-check-es2015-constants-6.3.13.tgz"
+      "version": "6.5.0",
+      "from": "babel-plugin-check-es2015-constants@6.5.0",
+      "resolved": "https://registry.npmjs.org/babel-plugin-check-es2015-constants/-/babel-plugin-check-es2015-constants-6.5.0.tgz"
     },
     "babel-plugin-syntax-async-functions": {
-      "version": "6.3.13",
-      "from": "babel-plugin-syntax-async-functions@>=6.3.13 <7.0.0",
-      "resolved": "https://registry.npmjs.org/babel-plugin-syntax-async-functions/-/babel-plugin-syntax-async-functions-6.3.13.tgz"
+      "version": "6.5.0",
+      "from": "babel-plugin-syntax-async-functions@6.5.0",
+      "resolved": "https://registry.npmjs.org/babel-plugin-syntax-async-functions/-/babel-plugin-syntax-async-functions-6.5.0.tgz"
     },
     "babel-plugin-syntax-async-generators": {
-      "version": "6.3.13",
-      "from": "babel-plugin-syntax-async-generators@>=6.3.13 <7.0.0",
-      "resolved": "https://registry.npmjs.org/babel-plugin-syntax-async-generators/-/babel-plugin-syntax-async-generators-6.3.13.tgz"
+      "version": "6.5.0",
+      "from": "babel-plugin-syntax-async-generators@6.5.0",
+      "resolved": "https://registry.npmjs.org/babel-plugin-syntax-async-generators/-/babel-plugin-syntax-async-generators-6.5.0.tgz"
     },
     "babel-plugin-syntax-flow": {
-      "version": "6.3.13",
-      "from": "babel-plugin-syntax-flow@>=6.3.13 <7.0.0",
-      "resolved": "https://registry.npmjs.org/babel-plugin-syntax-flow/-/babel-plugin-syntax-flow-6.3.13.tgz"
+      "version": "6.5.0",
+      "from": "babel-plugin-syntax-flow@6.5.0",
+      "resolved": "https://registry.npmjs.org/babel-plugin-syntax-flow/-/babel-plugin-syntax-flow-6.5.0.tgz"
     },
     "babel-plugin-syntax-object-rest-spread": {
-      "version": "6.3.13",
-      "from": "babel-plugin-syntax-object-rest-spread@>=6.3.13 <7.0.0",
-      "resolved": "https://registry.npmjs.org/babel-plugin-syntax-object-rest-spread/-/babel-plugin-syntax-object-rest-spread-6.3.13.tgz"
+      "version": "6.5.0",
+      "from": "babel-plugin-syntax-object-rest-spread@6.5.0",
+      "resolved": "https://registry.npmjs.org/babel-plugin-syntax-object-rest-spread/-/babel-plugin-syntax-object-rest-spread-6.5.0.tgz"
     },
     "babel-plugin-syntax-trailing-function-commas": {
-      "version": "6.3.13",
-      "from": "babel-plugin-syntax-trailing-function-commas@>=6.3.13 <7.0.0",
-      "resolved": "https://registry.npmjs.org/babel-plugin-syntax-trailing-function-commas/-/babel-plugin-syntax-trailing-function-commas-6.3.13.tgz"
+      "version": "6.5.0",
+      "from": "babel-plugin-syntax-trailing-function-commas@6.5.0",
+      "resolved": "https://registry.npmjs.org/babel-plugin-syntax-trailing-function-commas/-/babel-plugin-syntax-trailing-function-commas-6.5.0.tgz"
     },
     "babel-plugin-transform-es2015-arrow-functions": {
-      "version": "6.4.0",
-      "from": "babel-plugin-transform-es2015-arrow-functions@>=6.4.0 <7.0.0",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-arrow-functions/-/babel-plugin-transform-es2015-arrow-functions-6.4.0.tgz"
+      "version": "6.5.2",
+      "from": "babel-plugin-transform-es2015-arrow-functions@6.5.2",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-arrow-functions/-/babel-plugin-transform-es2015-arrow-functions-6.5.2.tgz"
     },
     "babel-plugin-transform-es2015-block-scoped-functions": {
-      "version": "6.3.13",
-      "from": "babel-plugin-transform-es2015-block-scoped-functions@>=6.3.13 <7.0.0",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-block-scoped-functions/-/babel-plugin-transform-es2015-block-scoped-functions-6.3.13.tgz"
+      "version": "6.5.0",
+      "from": "babel-plugin-transform-es2015-block-scoped-functions@6.5.0",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-block-scoped-functions/-/babel-plugin-transform-es2015-block-scoped-functions-6.5.0.tgz"
     },
     "babel-plugin-transform-es2015-block-scoping": {
-      "version": "6.4.0",
-      "from": "babel-plugin-transform-es2015-block-scoping@>=6.4.0 <7.0.0",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-block-scoping/-/babel-plugin-transform-es2015-block-scoping-6.4.0.tgz"
+      "version": "6.5.0",
+      "from": "babel-plugin-transform-es2015-block-scoping@6.5.0",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-block-scoping/-/babel-plugin-transform-es2015-block-scoping-6.5.0.tgz"
     },
     "babel-plugin-transform-es2015-classes": {
-      "version": "6.4.5",
-      "from": "babel-plugin-transform-es2015-classes@>=6.4.5 <7.0.0",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-classes/-/babel-plugin-transform-es2015-classes-6.4.5.tgz"
+      "version": "6.5.2",
+      "from": "babel-plugin-transform-es2015-classes@6.5.2",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-classes/-/babel-plugin-transform-es2015-classes-6.5.2.tgz",
+      "dependencies": {
+        "babel-types": {
+          "version": "6.5.2",
+          "from": "babel-types@>=6.5.2 <7.0.0",
+          "resolved": "https://registry.npmjs.org/babel-types/-/babel-types-6.5.2.tgz"
+        }
+      }
     },
     "babel-plugin-transform-es2015-computed-properties": {
-      "version": "6.4.0",
-      "from": "babel-plugin-transform-es2015-computed-properties@>=6.4.0 <7.0.0",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-computed-properties/-/babel-plugin-transform-es2015-computed-properties-6.4.0.tgz"
+      "version": "6.5.2",
+      "from": "babel-plugin-transform-es2015-computed-properties@6.5.2",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-computed-properties/-/babel-plugin-transform-es2015-computed-properties-6.5.2.tgz"
     },
     "babel-plugin-transform-es2015-destructuring": {
-      "version": "6.4.0",
-      "from": "babel-plugin-transform-es2015-destructuring@>=6.4.0 <7.0.0",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-destructuring/-/babel-plugin-transform-es2015-destructuring-6.4.0.tgz"
+      "version": "6.5.0",
+      "from": "babel-plugin-transform-es2015-destructuring@6.5.0",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-destructuring/-/babel-plugin-transform-es2015-destructuring-6.5.0.tgz"
     },
     "babel-plugin-transform-es2015-for-of": {
-      "version": "6.3.13",
-      "from": "babel-plugin-transform-es2015-for-of@>=6.3.13 <7.0.0",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-for-of/-/babel-plugin-transform-es2015-for-of-6.3.13.tgz"
+      "version": "6.5.2",
+      "from": "babel-plugin-transform-es2015-for-of@6.5.2",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-for-of/-/babel-plugin-transform-es2015-for-of-6.5.2.tgz"
     },
     "babel-plugin-transform-es2015-function-name": {
-      "version": "6.4.0",
-      "from": "babel-plugin-transform-es2015-function-name@>=6.4.0 <7.0.0",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-function-name/-/babel-plugin-transform-es2015-function-name-6.4.0.tgz"
+      "version": "6.5.0",
+      "from": "babel-plugin-transform-es2015-function-name@6.5.0",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-function-name/-/babel-plugin-transform-es2015-function-name-6.5.0.tgz"
     },
     "babel-plugin-transform-es2015-literals": {
-      "version": "6.3.13",
-      "from": "babel-plugin-transform-es2015-literals@>=6.3.13 <7.0.0",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-literals/-/babel-plugin-transform-es2015-literals-6.3.13.tgz"
+      "version": "6.5.0",
+      "from": "babel-plugin-transform-es2015-literals@6.5.0",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-literals/-/babel-plugin-transform-es2015-literals-6.5.0.tgz"
     },
     "babel-plugin-transform-es2015-modules-commonjs": {
       "version": "6.4.5",
@@ -163,74 +170,95 @@
       "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-modules-commonjs/-/babel-plugin-transform-es2015-modules-commonjs-6.4.5.tgz"
     },
     "babel-plugin-transform-es2015-object-super": {
-      "version": "6.4.0",
-      "from": "babel-plugin-transform-es2015-object-super@>=6.4.0 <7.0.0",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-object-super/-/babel-plugin-transform-es2015-object-super-6.4.0.tgz"
+      "version": "6.5.0",
+      "from": "babel-plugin-transform-es2015-object-super@6.5.0",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-object-super/-/babel-plugin-transform-es2015-object-super-6.5.0.tgz"
     },
     "babel-plugin-transform-es2015-parameters": {
-      "version": "6.4.5",
-      "from": "babel-plugin-transform-es2015-parameters@>=6.4.5 <7.0.0",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-parameters/-/babel-plugin-transform-es2015-parameters-6.4.5.tgz"
+      "version": "6.5.0",
+      "from": "babel-plugin-transform-es2015-parameters@6.5.0",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-parameters/-/babel-plugin-transform-es2015-parameters-6.5.0.tgz"
     },
     "babel-plugin-transform-es2015-shorthand-properties": {
-      "version": "6.3.13",
-      "from": "babel-plugin-transform-es2015-shorthand-properties@>=6.3.13 <7.0.0",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-shorthand-properties/-/babel-plugin-transform-es2015-shorthand-properties-6.3.13.tgz"
+      "version": "6.5.0",
+      "from": "babel-plugin-transform-es2015-shorthand-properties@6.5.0",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-shorthand-properties/-/babel-plugin-transform-es2015-shorthand-properties-6.5.0.tgz"
     },
     "babel-plugin-transform-es2015-spread": {
-      "version": "6.4.0",
-      "from": "babel-plugin-transform-es2015-spread@>=6.4.0 <7.0.0",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-spread/-/babel-plugin-transform-es2015-spread-6.4.0.tgz"
+      "version": "6.5.2",
+      "from": "babel-plugin-transform-es2015-spread@6.5.2",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-spread/-/babel-plugin-transform-es2015-spread-6.5.2.tgz"
     },
     "babel-plugin-transform-es2015-sticky-regex": {
-      "version": "6.3.13",
-      "from": "babel-plugin-transform-es2015-sticky-regex@>=6.3.13 <7.0.0",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-sticky-regex/-/babel-plugin-transform-es2015-sticky-regex-6.3.13.tgz"
+      "version": "6.5.0",
+      "from": "babel-plugin-transform-es2015-sticky-regex@6.5.0",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-sticky-regex/-/babel-plugin-transform-es2015-sticky-regex-6.5.0.tgz"
     },
     "babel-plugin-transform-es2015-template-literals": {
-      "version": "6.3.13",
-      "from": "babel-plugin-transform-es2015-template-literals@>=6.3.13 <7.0.0",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-template-literals/-/babel-plugin-transform-es2015-template-literals-6.3.13.tgz"
+      "version": "6.5.2",
+      "from": "babel-plugin-transform-es2015-template-literals@6.5.2",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-template-literals/-/babel-plugin-transform-es2015-template-literals-6.5.2.tgz"
     },
     "babel-plugin-transform-es2015-typeof-symbol": {
-      "version": "6.4.3",
-      "from": "babel-plugin-transform-es2015-typeof-symbol@>=6.4.3 <7.0.0",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-typeof-symbol/-/babel-plugin-transform-es2015-typeof-symbol-6.4.3.tgz"
+      "version": "6.5.0",
+      "from": "babel-plugin-transform-es2015-typeof-symbol@6.5.0",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-typeof-symbol/-/babel-plugin-transform-es2015-typeof-symbol-6.5.0.tgz"
     },
     "babel-plugin-transform-es2015-unicode-regex": {
-      "version": "6.4.3",
-      "from": "babel-plugin-transform-es2015-unicode-regex@>=6.4.3 <7.0.0",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-unicode-regex/-/babel-plugin-transform-es2015-unicode-regex-6.4.3.tgz"
+      "version": "6.5.0",
+      "from": "babel-plugin-transform-es2015-unicode-regex@6.5.0",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-unicode-regex/-/babel-plugin-transform-es2015-unicode-regex-6.5.0.tgz"
     },
     "babel-plugin-transform-es3-member-expression-literals": {
-      "version": "6.3.13",
-      "from": "babel-plugin-transform-es3-member-expression-literals@>=6.3.13 <7.0.0",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es3-member-expression-literals/-/babel-plugin-transform-es3-member-expression-literals-6.3.13.tgz"
+      "version": "6.5.0",
+      "from": "babel-plugin-transform-es3-member-expression-literals@6.5.0",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es3-member-expression-literals/-/babel-plugin-transform-es3-member-expression-literals-6.5.0.tgz"
     },
     "babel-plugin-transform-es3-property-literals": {
-      "version": "6.3.13",
-      "from": "babel-plugin-transform-es3-property-literals@>=6.3.13 <7.0.0",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es3-property-literals/-/babel-plugin-transform-es3-property-literals-6.3.13.tgz"
+      "version": "6.5.0",
+      "from": "babel-plugin-transform-es3-property-literals@6.5.0",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es3-property-literals/-/babel-plugin-transform-es3-property-literals-6.5.0.tgz"
     },
     "babel-plugin-transform-flow-strip-types": {
-      "version": "6.4.0",
-      "from": "babel-plugin-transform-flow-strip-types@>=6.4.0 <7.0.0",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-flow-strip-types/-/babel-plugin-transform-flow-strip-types-6.4.0.tgz"
+      "version": "6.5.0",
+      "from": "babel-plugin-transform-flow-strip-types@6.5.0",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-flow-strip-types/-/babel-plugin-transform-flow-strip-types-6.5.0.tgz"
     },
     "babel-plugin-transform-object-rest-spread": {
-      "version": "6.3.13",
-      "from": "babel-plugin-transform-object-rest-spread@>=6.3.13 <7.0.0",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-object-rest-spread/-/babel-plugin-transform-object-rest-spread-6.3.13.tgz"
+      "version": "6.5.0",
+      "from": "babel-plugin-transform-object-rest-spread@6.5.0",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-object-rest-spread/-/babel-plugin-transform-object-rest-spread-6.5.0.tgz"
     },
     "babel-plugin-transform-regenerator": {
-      "version": "6.4.4",
-      "from": "babel-plugin-transform-regenerator@>=6.4.4 <7.0.0",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-regenerator/-/babel-plugin-transform-regenerator-6.4.4.tgz"
+      "version": "6.5.2",
+      "from": "babel-plugin-transform-regenerator@6.5.2",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-regenerator/-/babel-plugin-transform-regenerator-6.5.2.tgz",
+      "dependencies": {
+        "babel-core": {
+          "version": "6.5.2",
+          "from": "babel-core@>=6.5.2 <7.0.0",
+          "resolved": "https://registry.npmjs.org/babel-core/-/babel-core-6.5.2.tgz"
+        },
+        "babel-register": {
+          "version": "6.5.2",
+          "from": "babel-register@>=6.5.2 <7.0.0",
+          "resolved": "https://registry.npmjs.org/babel-register/-/babel-register-6.5.2.tgz"
+        },
+        "babel-types": {
+          "version": "6.5.2",
+          "from": "babel-types@>=6.5.2 <7.0.0"
+        },
+        "babylon": {
+          "version": "6.5.2",
+          "from": "babylon@>=6.5.2 <7.0.0",
+          "resolved": "https://registry.npmjs.org/babylon/-/babylon-6.5.2.tgz"
+        }
+      }
     },
     "babel-plugin-transform-runtime": {
-      "version": "6.4.3",
-      "from": "babel-plugin-transform-runtime@>=6.4.3 <7.0.0",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-runtime/-/babel-plugin-transform-runtime-6.4.3.tgz"
+      "version": "6.5.2",
+      "from": "babel-plugin-transform-runtime@6.5.2",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-runtime/-/babel-plugin-transform-runtime-6.5.2.tgz"
     },
     "babel-plugin-transform-strict-mode": {
       "version": "6.3.13",
