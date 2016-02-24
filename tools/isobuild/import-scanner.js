@@ -348,19 +348,24 @@ export default class ImportScanner {
     const isApp = ! this.name;
     const bundlingForWeb = archMatches(this.bundleArch, "web");
 
+    const topLevelDir = dirs[0];
+    if (topLevelDir === "private" ||
+        topLevelDir === "packages" ||
+        topLevelDir === "programs" ||
+        topLevelDir === "cordova-build-override") {
+      // Don't load anything from these special top-level directories
+      return;
+    }
+
     for (let dir of dirs) {
-      if (dir.charAt(0) === "." ||
-          dir === "packages" ||
-          dir === "programs" ||
-          dir === "cordova-build-override") {
-        // These directories are never loaded as part of an app.
+      if (dir.charAt(0) === ".") {
+        // Files/directories whose names start with a dot are never loaded
         return;
       }
 
       if (isApp) {
         if (bundlingForWeb) {
-          if (dir === "server" ||
-              dir === "private") {
+          if (dir === "server") {
             // If we're bundling an app for a client architecture, any files
             // contained by a server-only directory that is not contained by
             // a node_modules directory must be ignored.
