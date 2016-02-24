@@ -12,7 +12,7 @@ DocsData = {
   "Accounts.addEmail": {
     "filepath": "accounts-password/password_server.js",
     "kind": "function",
-    "lineno": 852,
+    "lineno": 856,
     "locus": "Server",
     "longname": "Accounts.addEmail",
     "memberof": "Accounts",
@@ -353,7 +353,7 @@ DocsData = {
   "Accounts.removeEmail": {
     "filepath": "accounts-password/password_server.js",
     "kind": "function",
-    "lineno": 935,
+    "lineno": 939,
     "locus": "Server",
     "longname": "Accounts.removeEmail",
     "memberof": "Accounts",
@@ -1391,7 +1391,16 @@ DocsData = {
     "name": "accessRule",
     "options": [
       {
-        "description": "<p>Set to true if the matching URL\nshould be handled externally (e.g. phone app or email client on Android).</p>",
+        "description": "<p>Possible values:</p>\n<pre class=\"prettyprint source\"><code> - **`'intent'`**: Controls which URLs the app is allowed to ask the system to open.\n   (e.g. in the phone app or an email client).\n - **`'navigation'`**: Controls which URLs the WebView itself can be navigated to\n   (can also needed for iframes).\n - **`'network'` or undefined**: Controls which network requests (images, XHRs, etc) are allowed to be made.</code></pre>",
+        "name": "type",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      },
+      {
+        "description": "<p>(Deprecated, use options.type <code>'intent'</code> instead.)</p>",
         "name": "launchExternal",
         "type": {
           "names": [
@@ -1403,7 +1412,7 @@ DocsData = {
     "params": [
       {
         "description": "<p>The pattern defining affected domains or URLs.</p>",
-        "name": "domainRule",
+        "name": "pattern",
         "type": {
           "names": [
             "String"
@@ -1421,7 +1430,7 @@ DocsData = {
       }
     ],
     "scope": "static",
-    "summary": "Set a new access rule based on origin domain for your app.\nBy default your application has a limited list of servers it can contact.\nUse this method to extend this list.\n\nDefault access rules:\n\n- `tel:*`, `geo:*`, `mailto:*`, `sms:*`, `market:*` are allowed and\n  launch externally (phone app, or an email client on Android)\n- `gap:*`, `cdv:*`, `file:` are allowed (protocols required to access\n  local file-system)\n- `http://meteor.local/*` is allowed (a domain Meteor uses to access\n  app's assets)\n- The domain of the server passed to the build process (or local ip\n  address in the development mode) is used to be able to contact the\n  Meteor app server.\n\nRead more about domain patterns in [Cordova\ndocs](http://cordova.apache.org/docs/en/4.0.0/guide_appdev_whitelist_index.md.html).\n\nStarting with Meteor 1.0.4 access rule for all domains and protocols\n(`<access origin=\"*\"/>`) is no longer set by default due to\n[certain kind of possible\nattacks](http://cordova.apache.org/announcements/2014/08/04/android-351.html)."
+    "summary": "Set a new access rule based on origin domain for your app.\nBy default your application has a limited list of servers it can contact.\nUse this method to extend this list.\n\nDefault access rules:\n\n- `tel:*`, `geo:*`, `mailto:*`, `sms:*`, `market:*` are allowed and\n  are handled by the system (e.g. opened in the phone app or an email client)\n- `http://localhost:*` is used to serve the app's assets from.\n- The domain or address of the Meteor server to connect to for DDP and\n  hot code push of new versions.\n\nRead more about domain patterns in [Cordova\ndocs](http://cordova.apache.org/docs/en/6.0.0/guide_appdev_whitelist_index.md.html).\n\nStarting with Meteor 1.0.4 access rule for all domains and protocols\n(`<access origin=\"*\"/>`) is no longer set by default due to\n[certain kind of possible\nattacks](http://cordova.apache.org/announcements/2014/08/04/android-351.html)."
   },
   "App.configurePlugin": {
     "kind": "function",
@@ -1510,7 +1519,7 @@ DocsData = {
     "options": [],
     "params": [
       {
-        "description": "<p>A dictionary where keys are different\ndevices, screen sizes, and orientations, and the values are image paths\nrelative to the project root directory.</p>\n<p>For Android, launch screen images should\nbe special &quot;Nine-patch&quot; image files that specify how they should be\nstretched. See the <a href=\"https://developer.android.com/guide/topics/graphics/2d-graphics.html#nine-patch\">Android docs</a>.</p>\n<p>Valid key values:</p>\n<ul>\n<li><code>iphone_2x</code> (640x960)</li>\n<li><code>iphone5</code> (640x1136)</li>\n<li><code>iphone6</code> (750x1334)</li>\n<li><code>iphone6p_portrait</code> (1242x2208)</li>\n<li><code>iphone6p_landscape</code> (2208x1242)</li>\n<li><code>ipad_portrait</code> (768x1024)</li>\n<li><code>ipad_portrait_2x</code> (1536x2048)</li>\n<li><code>ipad_landscape</code> (1024x768)</li>\n<li><code>ipad_landscape_2x</code> (2048x1536)</li>\n<li><code>ipad_pro_portrait</code> (2048x2732)</li>\n<li><code>ipad_pro_landscape</code> (2732x2048)</li>\n<li><code>android_mdpi_portrait</code> (320x470)</li>\n<li><code>android_mdpi_landscape</code> (470x320)</li>\n<li><code>android_hdpi_portrait</code> (480x640)</li>\n<li><code>android_hdpi_landscape</code> (640x480)</li>\n<li><code>android_xhdpi_portrait</code> (720x960)</li>\n<li><code>android_xhdpi_landscape</code> (960x720)</li>\n<li><code>android_xxhdpi_portrait</code> (1080x1440)</li>\n<li><code>android_xxhdpi_landscape</code> (1440x1080)</li>\n</ul>",
+        "description": "<p>A dictionary where keys are different\ndevices, screen sizes, and orientations, and the values are image paths\nrelative to the project root directory.</p>\n<p>For Android, launch screen images should\nbe special &quot;Nine-patch&quot; image files that specify how they should be\nstretched. See the <a href=\"https://developer.android.com/guide/topics/graphics/2d-graphics.html#nine-patch\">Android docs</a>.</p>\n<p>Valid key values:</p>\n<ul>\n<li><code>iphone_2x</code> (640x960)</li>\n<li><code>iphone5</code> (640x1136)</li>\n<li><code>iphone6</code> (750x1334)</li>\n<li><code>iphone6p_portrait</code> (1242x2208)</li>\n<li><code>iphone6p_landscape</code> (2208x1242)</li>\n<li><code>ipad_portrait</code> (768x1024)</li>\n<li><code>ipad_portrait_2x</code> (1536x2048)</li>\n<li><code>ipad_landscape</code> (1024x768)</li>\n<li><code>ipad_landscape_2x</code> (2048x1536)</li>\n<li><code>android_mdpi_portrait</code> (320x470)</li>\n<li><code>android_mdpi_landscape</code> (470x320)</li>\n<li><code>android_hdpi_portrait</code> (480x640)</li>\n<li><code>android_hdpi_landscape</code> (640x480)</li>\n<li><code>android_xhdpi_portrait</code> (720x960)</li>\n<li><code>android_xhdpi_landscape</code> (960x720)</li>\n<li><code>android_xxhdpi_portrait</code> (1080x1440)</li>\n<li><code>android_xxhdpi_landscape</code> (1440x1080)</li>\n</ul>",
         "name": "launchScreens",
         "type": {
           "names": [
@@ -2909,7 +2918,7 @@ DocsData = {
   "DDP.connect": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 1682,
+    "lineno": 1683,
     "locus": "Anywhere",
     "longname": "DDP.connect",
     "memberof": "DDP",
@@ -4448,7 +4457,7 @@ DocsData = {
   "Match.test": {
     "filepath": "check/match.js",
     "kind": "function",
-    "lineno": 92,
+    "lineno": 95,
     "locus": "Anywhere",
     "longname": "Match.test",
     "memberof": "Match",
@@ -4480,7 +4489,7 @@ DocsData = {
   "Meteor": {
     "filepath": "meteor/client_environment.js",
     "kind": "namespace",
-    "lineno": 3,
+    "lineno": 1,
     "longname": "Meteor",
     "name": "Meteor",
     "scope": "global",
@@ -4593,7 +4602,7 @@ DocsData = {
   "Meteor.apply": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 746,
+    "lineno": 747,
     "locus": "Anywhere",
     "longname": "Meteor.apply",
     "memberof": "Meteor",
@@ -4667,7 +4676,7 @@ DocsData = {
   "Meteor.call": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 704,
+    "lineno": 705,
     "locus": "Anywhere",
     "longname": "Meteor.call",
     "memberof": "Meteor",
@@ -4756,7 +4765,7 @@ DocsData = {
   "Meteor.disconnect": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 1059,
+    "lineno": 1060,
     "locus": "Client",
     "longname": "Meteor.disconnect",
     "memberof": "Meteor",
@@ -4769,7 +4778,7 @@ DocsData = {
   "Meteor.isClient": {
     "filepath": "meteor/client_environment.js",
     "kind": "member",
-    "lineno": 30,
+    "lineno": 28,
     "locus": "Anywhere",
     "longname": "Meteor.isClient",
     "memberof": "Meteor",
@@ -4801,7 +4810,7 @@ DocsData = {
   "Meteor.isDevelopment": {
     "filepath": "meteor/client_environment.js",
     "kind": "member",
-    "lineno": 22,
+    "lineno": 20,
     "locus": "Anywhere",
     "longname": "Meteor.isDevelopment",
     "memberof": "Meteor",
@@ -4817,7 +4826,7 @@ DocsData = {
   "Meteor.isProduction": {
     "filepath": "meteor/client_environment.js",
     "kind": "member",
-    "lineno": 14,
+    "lineno": 12,
     "locus": "Anywhere",
     "longname": "Meteor.isProduction",
     "memberof": "Meteor",
@@ -4833,7 +4842,7 @@ DocsData = {
   "Meteor.isServer": {
     "filepath": "meteor/client_environment.js",
     "kind": "member",
-    "lineno": 38,
+    "lineno": 36,
     "locus": "Anywhere",
     "longname": "Meteor.isServer",
     "memberof": "Meteor",
@@ -5119,7 +5128,7 @@ DocsData = {
   "Meteor.reconnect": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 1049,
+    "lineno": 1050,
     "locus": "Client",
     "longname": "Meteor.reconnect",
     "memberof": "Meteor",
@@ -5212,7 +5221,7 @@ DocsData = {
   "Meteor.settings": {
     "filepath": "meteor/client_environment.js",
     "kind": "member",
-    "lineno": 49,
+    "lineno": 47,
     "locus": "Anywhere",
     "longname": "Meteor.settings",
     "memberof": "Meteor",
@@ -5251,7 +5260,7 @@ DocsData = {
   "Meteor.status": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 1037,
+    "lineno": 1038,
     "locus": "Client",
     "longname": "Meteor.status",
     "memberof": "Meteor",
@@ -5264,7 +5273,7 @@ DocsData = {
   "Meteor.subscribe": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 519,
+    "lineno": 520,
     "locus": "Client",
     "longname": "Meteor.subscribe",
     "memberof": "Meteor",
@@ -5612,6 +5621,33 @@ DocsData = {
             "function"
           ]
         }
+      },
+      {
+        "description": "<p>(Server only) Pass true to disable oplog-tailing on this query. This affects the way server processes calls to <code>observe</code> on this query. Disabling the oplog can be useful when working with data that updates in large batches.</p>",
+        "name": "disableOplog",
+        "type": {
+          "names": [
+            "Boolean"
+          ]
+        }
+      },
+      {
+        "description": "<p>(Server only) How often to poll this query when observing on the server. In milliseconds. Defaults to 10 seconds.</p>",
+        "name": "pollingIntervalMs",
+        "type": {
+          "names": [
+            "Number"
+          ]
+        }
+      },
+      {
+        "description": "<p>(Server only) Minimum time to allow between re-polling. Increasing this will save CPU and mongo load at the expense of slower updates to users. Decreasing this is not recommended. In milliseconds. Defaults to 50 milliseconds.</p>",
+        "name": "pollingThrottleMs",
+        "type": {
+          "names": [
+            "Number"
+          ]
+        }
       }
     ],
     "params": [
@@ -5650,7 +5686,7 @@ DocsData = {
   "Mongo.Collection#findOne": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 295,
+    "lineno": 298,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#findOne",
     "memberof": "Mongo.Collection",
@@ -5738,7 +5774,7 @@ DocsData = {
   "Mongo.Collection#insert": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 434,
+    "lineno": 437,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#insert",
     "memberof": "Mongo.Collection",
@@ -5771,7 +5807,7 @@ DocsData = {
   "Mongo.Collection#rawCollection": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 686,
+    "lineno": 689,
     "locus": "Server",
     "longname": "Mongo.Collection#rawCollection",
     "memberof": "Mongo.Collection",
@@ -5784,7 +5820,7 @@ DocsData = {
   "Mongo.Collection#rawDatabase": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 698,
+    "lineno": 701,
     "locus": "Server",
     "longname": "Mongo.Collection#rawDatabase",
     "memberof": "Mongo.Collection",
@@ -5797,7 +5833,7 @@ DocsData = {
   "Mongo.Collection#remove": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 576,
+    "lineno": 579,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#remove",
     "memberof": "Mongo.Collection",
@@ -5830,7 +5866,7 @@ DocsData = {
   "Mongo.Collection#update": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 515,
+    "lineno": 518,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#update",
     "memberof": "Mongo.Collection",
@@ -5900,7 +5936,7 @@ DocsData = {
   "Mongo.Collection#upsert": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 640,
+    "lineno": 643,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#upsert",
     "memberof": "Mongo.Collection",
@@ -5962,7 +5998,7 @@ DocsData = {
     "filepath": "mongo/collection.js",
     "instancename": "cursor",
     "kind": "class",
-    "lineno": 720,
+    "lineno": 723,
     "longname": "Mongo.Cursor",
     "memberof": "Mongo",
     "name": "Cursor",
@@ -6130,7 +6166,7 @@ DocsData = {
   "Mongo.ObjectID": {
     "filepath": "mongo/collection.js",
     "kind": "class",
-    "lineno": 713,
+    "lineno": 716,
     "locus": "Anywhere",
     "longname": "Mongo.ObjectID",
     "memberof": "Mongo",
@@ -6272,6 +6308,15 @@ DocsData = {
       {
         "description": "<p>A package with this flag set to true\nwill ONLY be bundled into production builds.</p>",
         "name": "prodOnly",
+        "type": {
+          "names": [
+            "Boolean"
+          ]
+        }
+      },
+      {
+        "description": "<p>A package with this flag set to true\nwill ONLY be bundled as part of <code>meteor test-app</code>.</p>",
+        "name": "testOnly",
         "type": {
           "names": [
             "Boolean"
@@ -6538,7 +6583,7 @@ DocsData = {
       }
     ],
     "scope": "instance",
-    "summary": "Export package-level variables in your package. The specified\nvariables (declared without `var` in the source code) will be available\nto packages that use your package. If your package sets the `debugOnly`\nor `prodOnly` options to `true` when it calls `Package.describe()`, then\npackages that use your package will need to use\n`Package[\"package-name\"].ExportedVariableName` to access the value of an\nexported variable."
+    "summary": "Export package-level variables in your package. The specified\nvariables (declared without `var` in the source code) will be available\nto packages that use your package. If your package sets the `debugOnly`,\n`prodOnly` or `testOnly` options to `true` when it calls\n`Package.describe()`, then packages that use your package will need to use\n`Package[\"package-name\"].ExportedVariableName` to access the value of an\nexported variable."
   },
   "PackageAPI#imply": {
     "kind": "function",
@@ -7281,7 +7326,7 @@ DocsData = {
   "Template#events": {
     "filepath": "blaze/template.js",
     "kind": "function",
-    "lineno": 468,
+    "lineno": 472,
     "locus": "Client",
     "longname": "Template#events",
     "memberof": "Template",
@@ -7416,7 +7461,7 @@ DocsData = {
   "Template.currentData": {
     "filepath": "blaze/template.js",
     "kind": "function",
-    "lineno": 522,
+    "lineno": 530,
     "locus": "Client",
     "longname": "Template.currentData",
     "memberof": "Template",
@@ -7425,6 +7470,29 @@ DocsData = {
     "params": [],
     "scope": "static",
     "summary": "- Inside an `onCreated`, `onRendered`, or `onDestroyed` callback, returns\nthe data context of the template.\n- Inside an event handler, returns the data context of the template on which\nthis event handler was defined.\n- Inside a helper, returns the data context of the DOM node where the helper\nwas used.\n\nEstablishes a reactive dependency on the result."
+  },
+  "Template.deregisterHelper": {
+    "filepath": "blaze/template.js",
+    "kind": "function",
+    "lineno": 555,
+    "locus": "Client",
+    "longname": "Template.deregisterHelper",
+    "memberof": "Template",
+    "name": "deregisterHelper",
+    "options": [],
+    "params": [
+      {
+        "description": "<p>The name of the helper function you are defining.</p>",
+        "name": "name",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Removes a global [helper function](#template_helpers)."
   },
   "Template.dynamic": {
     "filepath": "templating/dynamic.js",
@@ -7463,7 +7531,7 @@ DocsData = {
   "Template.instance": {
     "filepath": "blaze/template.js",
     "kind": "function",
-    "lineno": 492,
+    "lineno": 500,
     "locus": "Client",
     "longname": "Template.instance",
     "memberof": "Template",
@@ -7485,7 +7553,7 @@ DocsData = {
   "Template.parentData": {
     "filepath": "blaze/template.js",
     "kind": "function",
-    "lineno": 530,
+    "lineno": 538,
     "locus": "Client",
     "longname": "Template.parentData",
     "memberof": "Template",
@@ -7509,7 +7577,7 @@ DocsData = {
   "Template.registerHelper": {
     "filepath": "blaze/template.js",
     "kind": "function",
-    "lineno": 539,
+    "lineno": 547,
     "locus": "Client",
     "longname": "Template.registerHelper",
     "memberof": "Template",

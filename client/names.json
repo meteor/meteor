@@ -257,6 +257,7 @@
   "Template#rendered",
   "Template.body",
   "Template.currentData",
+  "Template.deregisterHelper",
   "Template.dynamic",
   "Template.instance",
   "Template.parentData",
