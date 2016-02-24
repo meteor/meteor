@@ -63,7 +63,7 @@ Autoupdate._retrySubscription = function() {
 };
 
 Meteor.startup(function() {
-  WebAppCordova.onNewVersionDownloaded(function() {
+  WebAppLocalServer.onNewVersionDownloaded(function() {
     if (Package.reload) {
       Package.reload.Reload._reload();
     }
@@ -73,5 +73,5 @@ Meteor.startup(function() {
 });
 
 var newVersionAvailable = function() {
-  WebAppCordova.checkForUpdates();
+  WebAppLocalServer.checkForUpdates();
 }
