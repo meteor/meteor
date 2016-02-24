@@ -3,6 +3,7 @@ exports.getDefaults = function getDefaults(features) {
     compact: false,
     sourceMap: "inline",
     ast: false,
+    babelrc: false,
     // "Loose" mode gets us faster and more IE-compatible transpilations of:
     // classes, computed properties, modules, for-of, and template literals.
     // Basically all the transformers that support "loose".
