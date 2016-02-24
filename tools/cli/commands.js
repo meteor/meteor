@@ -1448,7 +1448,7 @@ testCommandOptions = {
     // doesn't do oplog tailing.)
     'disable-oplog': { type: Boolean },
     // Undocumented flag to use a different test driver.
-    'driver-package': { type: String, default: 'test-in-browser' },
+    'driver-package': { type: String },
 
     // Sets the path of where the temp app should be created
     'test-app-path': { type: String },
@@ -1544,7 +1544,7 @@ function doTestCommand(options) {
   var projectContext;
 
   if (options["test-packages"]) {
-    global.testCommandMetadata.driverPackage = options['driver-package'];
+    global.testCommandMetadata.driverPackage = options['driver-package'] || 'test-in-browser';
     projectContextOptions.projectDir = testRunnerAppDir;
     projectContextOptions.projectDirForLocalPackages = options.appDir;
 
@@ -1593,7 +1593,7 @@ function doTestCommand(options) {
     // Use the driver package if running `meteor test-packages`. For
     // `meteor test-app`, the driver package is expected to already
     // have been added to the app.
-    packagesToAdd.unshift(options['driver-package']);
+    packagesToAdd.unshift(global.testCommandMetadata.driverPackage);
 
     // Also, add `autoupdate` so that you don't have to manually refresh the tests
     packagesToAdd.unshift("autoupdate");
@@ -1614,8 +1614,11 @@ function doTestCommand(options) {
     // projectContext.reset.
     projectContext.projectConstraintsFile.writeIfModified();
   } else if (options["test-app"]) {
-    // XXX look in package list for testOnly packages
-    global.testCommandMetadata.driverPackage = options['driver-package'] || 'avital:mocha';
+    if (!options['driver-package']) {
+      throw new Error("You must specify a driver package with --driver-package");
+    }
+
+    global.testCommandMetadata.driverPackage = options['driver-package'];
 
     // Default to `--integration`
     if (!options.unit && !options.integration) {

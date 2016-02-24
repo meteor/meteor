@@ -534,12 +534,14 @@ Options:
                     test app rebuild.
 >>> test-app
 Test the application
-Usage: meteor test-app [options]
-       meteor test-app --unit [options]
-       meteor test-app --integration [options]
+Usage: meteor test-app --driver-package <driver> [options]
+       meteor test-app --driver-package <driver> --unit [options]
+       meteor test-app --driver-package <driver> --integration [options]
        
-Runs tests against the application, either in *unit* or *integration* 
-test mode. meteor test-app will start a special app based on a test driver
+Runs tests against the application, either in *unit* or *integration*
+(the default) test mode. meteor test-app will start a special app based on
+a test driver (specified with --driver-package -- read more about driver 
+packages at http://guide.meteor.com/testing.html#driver-packages) 
 which handles the task of running tests and displaying the results in the 
 browser when you visit it.
 
@@ -578,8 +580,6 @@ Options:
                     running locally.
   --production      Simulate production mode. Minify and bundle CSS, JS files.
   --settings        Set optional data for Meteor.settings on the server
-  --driver-package  Set the test driver package which displays tests results
-                    in a browser or in console logs.
 
   --ios,            Run tests in an emulator or on a mobile device. All of
   --android,        the tests for client and server will run in addition to
