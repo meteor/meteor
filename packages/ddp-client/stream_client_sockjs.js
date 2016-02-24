@@ -1,3 +1,5 @@
+import SockJS from './sockjs-1.0.3';
+
 // @param url {String} URL to Meteor app
 //   "http://subdomain.meteor.com/" or "/" or
 //   "ddp+sockjs://foo-**.meteor.com/sockjs"
@@ -127,10 +129,10 @@ _.extend(LivedataTest.ClientStream.prototype, {
       self.HEARTBEAT_TIMEOUT);
   },
 
-  _sockjsProtocolsWhitelist: function () {
+  _sockjsTransports: function () {
     // only allow polling protocols. no streaming.  streaming
     // makes safari spin.
-    var protocolsWhitelist = [
+    var transports = [
       'xdr-polling', 'xhr-polling', 'iframe-xhr-polling', 'jsonp-polling'];
 
     // iOS 4 and 5 and below crash when using websockets over certain
@@ -144,9 +146,9 @@ _.extend(LivedataTest.ClientStream.prototype, {
           /OS 4_|OS 5_/.test(navigator.userAgent);
 
     if (!noWebsockets)
-      protocolsWhitelist = ['websocket'].concat(protocolsWhitelist);
+      transports = ['websocket'].concat(transports);
 
-    return protocolsWhitelist;
+    return transports;
   },
 
   _launchConnection: function () {
@@ -154,7 +156,7 @@ _.extend(LivedataTest.ClientStream.prototype, {
     self._cleanup(); // cleanup the old socket, if there was one.
 
     var options = _.extend({
-      protocols_whitelist:self._sockjsProtocolsWhitelist()
+      transports: self._sockjsTransports()
     }, self.options._sockjsOptions);
 
     // Convert raw URL to SockJS URL each time we open a connection, so that we
