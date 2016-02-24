@@ -10,6 +10,7 @@ Npm.depends({
 });
 
 Package.onUse(function (api) {
+  api.use('ecmascript');
   api.use(['check', 'random', 'ejson', 'underscore', 'tracker',
            'retry', 'id-map'],
           ['client', 'server']);
@@ -27,7 +28,7 @@ Package.onUse(function (api) {
   api.addFiles('namespace.js', ['client', 'server']);
 
   api.addFiles('id_map.js', ['client', 'server']);
-  api.addFiles(['sockjs-0.3.4.js', 'stream_client_sockjs.js'], 'client');
+  api.addFiles('stream_client_sockjs.js', 'client');
   api.addFiles('stream_client_nodejs.js', 'server');
   api.addFiles('stream_client_common.js', ['client', 'server']);
 
