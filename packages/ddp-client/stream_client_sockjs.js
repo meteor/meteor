@@ -133,20 +133,7 @@ _.extend(LivedataTest.ClientStream.prototype, {
     // only allow polling protocols. no streaming.  streaming
     // makes safari spin.
     var transports = [
-      'xdr-polling', 'xhr-polling', 'iframe-xhr-polling', 'jsonp-polling'];
-
-    // iOS 4 and 5 and below crash when using websockets over certain
-    // proxies. this seems to be resolved with iOS 6. eg
-    // https://github.com/LearnBoost/socket.io/issues/193#issuecomment-7308865.
-    //
-    // iOS <4 doesn't support websockets at all so sockjs will just
-    // immediately fall back to http
-    var noWebsockets = navigator &&
-          /iPhone|iPad|iPod/.test(navigator.userAgent) &&
-          /OS 4_|OS 5_/.test(navigator.userAgent);
-
-    if (!noWebsockets)
-      transports = ['websocket'].concat(transports);
+      'websocket', 'xdr-polling', 'xhr-polling', 'iframe-xhr-polling', 'jsonp-polling'];
 
     return transports;
   },
