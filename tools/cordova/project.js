@@ -1,6 +1,5 @@
 import _ from 'underscore';
 import util from 'util';
-import path from 'path';
 import assert from 'assert';
 import chalk from 'chalk';
 import semver from 'semver';
@@ -463,7 +462,8 @@ from Cordova project`, async () => {
       // We need to check if the directory exists ourselves because Cordova
       // will try to install from npm (and fail with an unhelpful error message)
       // if the directory is not found
-      if (!cordova_util.isDirectory(pluginPath)) {
+      const stat = files.statOrNull(pluginPath);
+      if (!(stat && stat.isDirectory())) {
         buildmessage.error(`Couldn't find local directory \
 '${files.convertToOSPath(pluginPath)}' \
 (while attempting to install plugin ${id}).`);
@@ -480,7 +480,7 @@ from Cordova project`, async () => {
   resolveLocalPluginPath(pluginPath) {
     pluginPath = pluginPath.substr("file://".length);
     if (utils.isPathRelative(pluginPath)) {
-      return path.resolve(this.projectContext.projectDir, pluginPath);
+      return files.pathResolve(this.projectContext.projectDir, pluginPath);
     } else {
       return pluginPath;
     }
