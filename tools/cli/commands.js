@@ -785,6 +785,7 @@ var buildCommands = {
     debug: { type: Boolean },
     directory: { type: Boolean },
     architecture: { type: String },
+    "server-only": { type: Boolean },
     'mobile-settings': { type: String },
     server: { type: String },
     // XXX COMPAT WITH 0.9.2.2
@@ -815,7 +816,7 @@ main.registerCommand(_.extend({ name: 'bundle', hidden: true
       "a single tarball. See " + Console.command("'meteor help build'") + " " +
       "for more information.");
       Console.error();
-      return buildCommand(_.extend(options, { _serverOnly: true }));
+      return buildCommand(_.extend(options, { _bundleOnly: true }));
 });
 
 var buildCommand = function (options) {
@@ -848,6 +849,9 @@ var buildCommand = function (options) {
   });
   projectContext.packageMapDelta.displayOnConsole();
 
+  // _bundleOnly implies serverOnly
+  const serverOnly = options._bundleOnly || !!options['server-only'];
+
   // options['mobile-settings'] is used to set the initial value of
   // `Meteor.settings` on mobile apps. Pass it on to options.settings,
   // which is used in this command.
@@ -859,7 +863,7 @@ var buildCommand = function (options) {
 
   let cordovaPlatforms;
   let parsedMobileServerUrl;
-  if (!options._serverOnly) {
+  if (!serverOnly) {
     cordovaPlatforms = projectContext.platformList.getCordovaPlatforms();
 
     if (process.platform !== 'darwin' && _.contains(cordovaPlatforms, 'ios')) {
@@ -904,7 +908,7 @@ ${Console.command("meteor build ../output")}`,
   }
 
   var bundlePath = options.directory ?
-      (options._serverOnly ? outputPath :
+      (options._bundleOnly ? outputPath :
       files.pathJoin(outputPath, 'bundle')) :
       files.pathJoin(buildDir, 'bundle');
 
@@ -935,14 +939,14 @@ ${Console.command("meteor build ../output")}`,
     return 1;
   }
 
-  if (! options._serverOnly) {
+  if (!options._bundleOnly) {
     files.mkdir_p(outputPath);
   }
 
-  if (! options.directory) {
+  if (!options.directory) {
     main.captureAndExit('', 'creating server tarball', () => {
       try {
-        var outputTar = options._serverOnly ? outputPath :
+        var outputTar = options._bundleOnly ? outputPath :
           files.pathJoin(outputPath, appName + '.tar.gz');
 
         files.createTarball(files.pathJoin(buildDir, 'bundle'), outputTar);

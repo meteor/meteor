@@ -276,27 +276,31 @@ tarball. See 'meteor help build' for more information.
 
 >>> build
 Build this project for all platforms.
-Usage: meteor build <output path> [--debug] [--directory]
+Usage: meteor build <output path> [--debug] [--directory] [--server-only]
           [--mobile-settings settings.json] [--server http://example.com:3000]
 
 Package this project up for deployment. The command outputs a directory with
 builds for all platforms in this project.
-
-By default, the output directory will contain just a tarball that includes
-everything necessary to run the application server. (See README in the tarball
-for details.)
 
 If you have added mobile platforms to your project with the
 'meteor add-platform' command, then the output directory will contain
 subdirectories named 'android' (with the APK bundle and Android project
 source) and/or 'ios' (with the Xcode project source).
 
+Pass `--server-only` to skip building mobile apps, but still build the
+'web.cordova' client target so the server can support hot code push
+for Cordova apps.
+
+The output directory will contain a tarball that includes everything necessary
+to run the application server. (See README in the tarball for details.)
 
 Options:
   --debug             Build in debug mode (don't minify, etc).
   --directory         Output a directory (rather than a tarball) for the
                       application server bundle. If the output location exists,
                       it will be recursively deleted first.
+  --server-only       Skip building mobile apps even if mobile platforms have
+                      been added.
   --mobile-settings   Set optional data for the initial value of Meteor.settings
                       in your mobile application. A new value for
                       Meteor.settings can be set later by the server as part of
@@ -537,17 +541,17 @@ Test the application
 Usage: meteor test-app --driver-package <driver> [options]
        meteor test-app --driver-package <driver> --unit [options]
        meteor test-app --driver-package <driver> --integration [options]
-       
+
 Runs tests against the application, either in *unit* or *integration*
 (the default) test mode. meteor test-app will start a special app based on
-a test driver (specified with --driver-package -- read more about driver 
-packages at http://guide.meteor.com/testing.html#driver-packages) 
-which handles the task of running tests and displaying the results in the 
+a test driver (specified with --driver-package -- read more about driver
+packages at http://guide.meteor.com/testing.html#driver-packages)
+which handles the task of running tests and displaying the results in the
 browser when you visit it.
 
 In unit test mode, no files in your application are eagerly loaded, aside
-from test files (in you tests/ directory or named test[s].* or *.test[s].*). 
-You can import your app's modules from within your tests and test them in 
+from test files (in you tests/ directory or named test[s].* or *.test[s].*).
+You can import your app's modules from within your tests and test them in
 isolation.
 
 In integration test mode, your app is loaded as usual, and then made hidden,
@@ -561,7 +565,7 @@ deploy' server by using --deploy. This gives you a public URL that you
 can use in conjunction with a service like Browserling or BrowserStack
 to try the tests against many different browser versions.
 
-Read more about testing your application in the Testing Article of the 
+Read more about testing your application in the Testing Article of the
 Meteor Guide - https://guide.meteor.com/testing.html
 
 Options:
