@@ -1,6 +1,6 @@
 ---
 title: "Security"
-order: 8
+order: 10
 description: How to secure your Meteor app.
 ---
 
