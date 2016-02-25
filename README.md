@@ -99,7 +99,7 @@ sudo rm /usr/local/bin/meteor
 Building an application with Meteor?
 
 * Announcement list: sign up at http://www.meteor.com/
-* Ask a question: http://stackoverflow.com/questions/tagged/meteor
+* Having problems? Ask for help at: http://stackoverflow.com/questions/tagged/meteor
 * Discussion forums: https://forums.meteor.com/
 
 Interested in contributing to Meteor?
