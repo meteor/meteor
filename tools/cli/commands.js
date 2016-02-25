@@ -889,22 +889,18 @@ on an OS X system.");
   var buildDir = projectContext.getProjectLocalDirectory('build_tar');
   var outputPath = files.pathResolve(options.args[0]); // get absolute path
 
-  // Unless we're just making a tarball, warn if people try to build inside the
-  // app directory.
-  if (options.directory || ! _.isEmpty(cordovaPlatforms)) {
-    var relative = files.pathRelative(options.appDir, outputPath);
-    // We would like the output path to be outside the app directory, which
-    // means the first step to getting there is going up a level.
-    if (relative.substr(0, 3) !== ('..' + files.pathSep)) {
-      Console.warn();
-      Console.labelWarn(
-        "The output directory is under your source tree.",
-        "Your generated files may get interpreted as source code!",
-        "Consider building into a different directory instead (" +
-        Console.command("meteor build ../output") + ")",
-        Console.options({ indent: 2 }));
-      Console.warn();
-    }
+  // Warn if people try to build inside the app directory.
+  var relative = files.pathRelative(options.appDir, outputPath);
+  // We would like the output path to be outside the app directory, which
+  // means the first step to getting there is going up a level.
+  if (relative.substr(0, 2) !== '..') {
+    Console.warn();
+    Console.labelWarn(`The output directory is under your source tree.
+Your generated files may get interpreted as source code!
+Consider building into a different directory instead
+${Console.command("meteor build ../output")}`,
+      Console.options({ indent: 2 }));
+    Console.warn();
   }
 
   var bundlePath = options.directory ?
