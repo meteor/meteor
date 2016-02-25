@@ -107,10 +107,10 @@ var identifyBrowser = function (userAgentString) {
 WebAppInternals.identifyBrowser = identifyBrowser;
 
 WebApp.categorizeRequest = function (req) {
-  return {
+  return _.extend({
     browser: identifyBrowser(req.headers['user-agent']),
     url: url.parse(req.url, true)
-  };
+  }, _.pick(req, 'dynamicHead', 'dynamicBody'));
 };
 
 // HTML attribute hooks: functions to be called to determine any attributes to
@@ -236,30 +236,42 @@ WebApp._timeoutAdjustmentRequestCallback = function (req, res) {
 var boilerplateByArch = {};
 
 // Given a request (as returned from `categorizeRequest`), return the
-// boilerplate HTML to serve for that request. Memoizes on HTML
-// attributes (used by, eg, appcache) and whether inline scripts are
-// currently allowed.
+// boilerplate HTML to serve for that request.
+//
+// If a previous connect middleware has rendered content for the head or body,
+// returns the boilerplate with that content patched in otherwise
+// memoizes on HTML attributes (used by, eg, appcache) and whether inline 
+// scripts are currently allowed.
 // XXX so far this function is always called with arch === 'web.browser'
 var memoizedBoilerplate = {};
 var getBoilerplate = function (request, arch) {
-
+  var useMemoized = ! (request.dynamicHead || request.dynamicBody);
   var htmlAttributes = getHtmlAttributes(request);
-
-  // The only thing that changes from request to request (for now) are
-  // the HTML attributes (used by, eg, appcache) and whether inline
-  // scripts are allowed, so we can memoize based on that.
-  var memHash = JSON.stringify({
-    inlineScriptsAllowed: inlineScriptsAllowed,
-    htmlAttributes: htmlAttributes,
-    arch: arch
-  });
-
-  if (! memoizedBoilerplate[memHash]) {
-    memoizedBoilerplate[memHash] = boilerplateByArch[arch].toHTML({
-      htmlAttributes: htmlAttributes
+  
+  if (useMemoized) {
+    // The only thing that changes from request to request (unless extra 
+    // content is added to the head or body) are the HTML attributes 
+    // (used by, eg, appcache) and whether inline scripts are allowed, so we 
+    // can memoize based on that.
+    var memHash = JSON.stringify({
+      inlineScriptsAllowed: inlineScriptsAllowed,
+      htmlAttributes: htmlAttributes,
+      arch: arch
     });
+
+    if (! memoizedBoilerplate[memHash]) {
+      memoizedBoilerplate[memHash] = boilerplateByArch[arch].toHTML({
+        htmlAttributes: htmlAttributes
+      });
+    }
+    return memoizedBoilerplate[memHash];
   }
-  return memoizedBoilerplate[memHash];
+  
+  var boilerplateOptions = _.extend({ 
+    htmlAttributes: htmlAttributes 
+  }, _.pick(request, 'dynamicHead', 'dynamicBody'));
+  
+  return boilerplateByArch[arch].toHTML(boilerplateOptions);
 };
 
 WebAppInternals.generateBoilerplateInstance = function (arch,
