@@ -117,31 +117,30 @@ function parseMobileServerOption(mobileServerOption,
 }
 
 function detectMobileServerUrl(parsedServerUrl, isRunOnDeviceRequested) {
-  // If we are running on a device, use the auto-detected IP
-  if (isRunOnDeviceRequested) {
-    let myIp;
-    try {
-      myIp = utils.ipAddress();
-    } catch (error) {
+  // Always try to use an auto-detected IP first
+  try {
+    const myIp = utils.ipAddress();
+    return {
+      protocol: 'http://',
+      host: myIp,
+      port: parsedServerUrl.port
+    };
+  } catch (error) {
+    // Unless we are being asked to run on a device, use localhost as fallback
+    if (isRunOnDeviceRequested) {
       Console.error(
 `Error detecting IP address for mobile app to connect to:
 ${error.message}
 Please specify the address that the mobile app should connect
 to with --mobile-server.`);
       throw new main.ExitWithCode(1);
+    } else {
+      return {
+        protocol: 'http://',
+        host: 'localhost',
+        port: parsedServerUrl.port
+      };
     }
-    return {
-      protocol: 'http://',
-      host: myIp,
-      port: parsedServerUrl.port
-    };
-  } else {
-    // We are running a simulator, use localhost
-    return {
-      protocol: 'http://',
-      host: 'localhost',
-      port: parsedServerUrl.port
-    };
   }
 }
 
