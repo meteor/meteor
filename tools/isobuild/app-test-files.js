@@ -8,6 +8,18 @@ export const TEST_FILENAME_REGEXPS = [
   /^tests?./
 ];
 
+// Specific filename paths for unit or integration tests.
+// Note that imporatantly they both pass the TEST_FILENAME_REGEXPS above
+export const UNIT_TEST_FILENAME_REGEXPS = [
+  // "*.unit.test.*" or "*.unit.tests.*"
+  /\.unit\.tests?./,
+];
+
+export const INTEGRATION_TEST_FILENAME_REGEXPS = [
+  // "*.integration.test.*" or "*.integration.tests.*"
+  /\.integration\.tests?./,
+];
+
 export const TEST_DIRNAME_REGEXPS = [
   // a directory exactly named "tests"
   /^tests\/$/
