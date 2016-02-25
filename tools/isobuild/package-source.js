@@ -1389,7 +1389,7 @@ _.extend(PackageSource.prototype, {
     // Unless we're running tests, ignore source files with name
     // "*test*.*", "*tests*.*", "test.*", "tests.*"
     if (!global.testCommandMetadata) {
-      Array.prototype.push.apply(sourceReadOptions, TEST_FILENAME_REGEXPS);
+      Array.prototype.push.apply(sourceReadOptions.exclude, TEST_FILENAME_REGEXPS);
     }
 
     // Read top-level source files, excluding control files that were not
