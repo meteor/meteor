@@ -275,8 +275,8 @@ describe("Meteor packages", () => {
   });
 });
 
-describe("JSX syntax", () => {
-  it("should work in .js files on both client and server", () => {
+describe("ecmascript miscellany", () => {
+  it("JSX should work in .js files on both client and server", () => {
     const React = {
       createElement: function (name, attrs, children) {
         assert.strictEqual(name, "div");
@@ -288,14 +288,18 @@ describe("JSX syntax", () => {
 
     assert.strictEqual(<div>hi</div>, "all good");
   });
-});
 
-describe("async functions", () => {
-  it("should work on the client and server", async () => {
+  it("async functions should work on the client and server", async () => {
     assert.strictEqual(
       await 2 + 2,
       await new Promise(resolve => resolve(4))
     );
+  });
+
+  it("rest paramters in inner arrow functions (#6312)", () => {
+    const rev = (...args) => args.reverse();
+    assert.deepEqual(rev(1, 2, 3), [3, 2, 1]);
+    assert.ok(rev.toString().match(/\barguments\b/));
   });
 });
 
