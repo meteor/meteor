@@ -35,7 +35,7 @@ final class AssetManifest {
 
     public AssetManifest(String string) throws JSONException {
         JSONObject json = new JSONObject(string);
-        String format = json.optString("format");
+        String format = json.optString("format", null);
         if (format != null && !format.equals("web-program-pre1")) {
             throw new JSONException("The asset manifest format is incompatible: " + format);
         }
