@@ -77,10 +77,69 @@
 * Let users set the CAFILE environment variable to override the SSL
   root certificate list. #4757 #5523
 
+* `force-ssl` is now marked production only.
+
 ### Cordova
 
-* Don't always download a new version of a Cordova app when it is
-  first run.
+* Cordova dependencies have been upgraded to the latest versions
+  (`cordova-lib` 6.0.0, `cordova-ios` 4.0.1, and `cordova-android` 5.1.0).
+
+* iOS apps now require iOS 8 or higher, and building for iOS requires Xcode 7.2
+  to be installed.
+
+* Building for Android now requires Android SDK 23 to be installed. You may also
+  need to create a new AVD for the emulator.
+
+* Building Cordova Android apps on Windows is now supported. #4155
+
+* The Crosswalk plugin has been updated to 1.4.0.
+
+* Cordova core plugins are now pinned to minimal versions known to be compatible
+  with the included platforms. A warning is printed asking people to upgrade
+  their dependencies if they specify an older version, but we'll always use
+  the pinned version regardless.
+
+* The plugin used for file serving and hot code push has been completely
+  rewritten. Among many other improvements, it downloads updates incrementally,
+  can recover from downloading faulty JavaScript code, and is much more
+  reliable and performant.
+  See [`cordova-plugin-meteor-webapp`](https://github.com/meteor/cordova-plugin-meteor-webapp)
+  for more a more detailed description of the new design.
+
+* We now use `WKWebView` on iOS by default, even on iOS 8 (which works because
+  we do not use `file://` URLs).
+
+* We now use `localhost` instead of `meteor.local` to serve files from. Since
+  `localhost` is considered a secure origin, this means the web view won't
+  disable web platform features that it otherwise would.
+
+* The local server port now lies between 12000-13000 and is chosen based on
+  the `appId`, to both be consistent and lessen the chance of collisions between
+  multiple Meteor Cordova apps installed on the same device.
+
+* The plugin now allows for local file access on both iOS and Android, using a
+  special URL prefix (`http://localhost:<port>/local-filesystem/<path>`).
+
+* App icon and launch image sizes have been updated. Low resolution sizes for
+  now unsupported devices have been deprecated, and higher resolution versions
+  have been added.
+
+* We now support the modern Cordova whitelist mechanism. `App.accessRule` has
+  been updated with new options.
+
+* `meteor build` now supports a `--server-only` option to avoid building
+  the mobile apps when `ios` or `android` platforms have been added. It still
+  builds the `web.cordova` architecture in the server bundle however, so it can
+  be served for hot code pushes.
+
+* `meteor run` now always tries to use an autodetected IP address as the
+  mobile `ROOT_URL`, even if we're not running on a device. This avoids a situation
+  where an app already installed on a device connects to a restarted development
+  server and receives a `localhost` `ROOT_URL`. #5973
+
+* Fixed a discrepancy between the way we calculated client hashes during a mobile
+  build and on the server, which meant a Cordova app would always download a
+  new version the first time it started up.
 
 * In Cordova apps, `Meteor.startup()` now correctly waits for the
   device to be ready before firing the callback.
