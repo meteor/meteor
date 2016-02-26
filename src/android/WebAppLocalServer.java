@@ -276,7 +276,7 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
         errorCallbackContext = callbackContext;
     }
 
-    private void notifyDownloadFailure(Throwable cause) {
+    private void notifyError(Throwable cause) {
         if (errorCallbackContext != null) {
             PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, cause.getMessage());
             pluginResult.setKeepCallback(true);
@@ -369,7 +369,7 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
     @Override
     public void onError(Throwable cause) {
         Log.w(LOG_TAG, "Download failure", cause);
-        notifyDownloadFailure(cause);
+        notifyError(cause);
     }
 
     //endregion

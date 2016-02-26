@@ -270,7 +270,7 @@ final public class WebAppLocalServer: CDVPlugin, AssetBundleManagerDelegate {
     commandDelegate?.sendPluginResult(result, callbackId: errorCallbackId)
   }
 
-  private func notifyDownloadFailure(error: ErrorType) {
+  private func notifyError(error: ErrorType) {
     NSLog("Download failure: \(error)")
 
     guard let errorCallbackId = errorCallbackId else { return }
@@ -335,7 +335,7 @@ final public class WebAppLocalServer: CDVPlugin, AssetBundleManagerDelegate {
   }
 
   func assetBundleManager(assetBundleManager: AssetBundleManager, didFailDownloadingBundleWithError error: ErrorType) {
-    notifyDownloadFailure(error)
+    notifyError(error)
   }
 
   // MARK: - Local server
