@@ -492,8 +492,8 @@ exports.defineAutoTests = function() {
         WebAppLocalServer.resetToInitialState(done);
       });
 
-      it("should invoke the onDownloadFailure callback with an error", function(done) {
-        WebAppLocalServer.onDownloadFailure(function(error) {
+      it("should invoke the onError callback with an error", function(done) {
+        WebAppLocalServer.onError(function(error) {
           expect(error.message).toEqual("Non-success status code 404 for asset: /app/template.mobileapp.js");
           done();
         });
@@ -523,8 +523,8 @@ exports.defineAutoTests = function() {
         WebAppLocalServer.resetToInitialState(done);
       });
 
-      it("should invoke the onDownloadFailure callback with an error", function(done) {
-        WebAppLocalServer.onDownloadFailure(function(error) {
+      it("should invoke the onError callback with an error", function(done) {
+        WebAppLocalServer.onError(function(error) {
           expect(error.message).toEqual("Hash mismatch for asset: /app/template.mobileapp.js");
           done();
         });
@@ -554,8 +554,8 @@ exports.defineAutoTests = function() {
         WebAppLocalServer.resetToInitialState(done);
       });
 
-      it("should invoke the onDownloadFailure callback with an error", function(done) {
-        WebAppLocalServer.onDownloadFailure(function(error) {
+      it("should invoke the onError callback with an error", function(done) {
+        WebAppLocalServer.onError(function(error) {
           expect(error.message).toEqual("Version mismatch for index page, expected: version2, actual: version3");
           done();
         });
@@ -585,8 +585,8 @@ exports.defineAutoTests = function() {
         WebAppLocalServer.resetToInitialState(done);
       });
 
-      it("should invoke the onDownloadFailure callback with an error", function(done) {
-        WebAppLocalServer.onDownloadFailure(function(error) {
+      it("should invoke the onError callback with an error", function(done) {
+        WebAppLocalServer.onError(function(error) {
           expect(error.message).toEqual("Could not find ROOT_URL in downloaded asset bundle");
           done();
         });
@@ -618,8 +618,8 @@ exports.defineAutoTests = function() {
         WebAppLocalServer.resetToInitialState(done);
       });
 
-      it("should invoke the onDownloadFailure callback with an error", function(done) {
-        WebAppLocalServer.onDownloadFailure(function(error) {
+      it("should invoke the onError callback with an error", function(done) {
+        WebAppLocalServer.onError(function(error) {
           expect(error.message).toContain("ROOT_URL in downloaded asset bundle would change current ROOT_URL to localhost.");
           done();
         });
@@ -649,8 +649,8 @@ exports.defineAutoTests = function() {
         WebAppLocalServer.resetToInitialState(done);
       });
 
-      it("should invoke the onDownloadFailure callback with an error", function(done) {
-        WebAppLocalServer.onDownloadFailure(function(error) {
+      it("should invoke the onError callback with an error", function(done) {
+        WebAppLocalServer.onError(function(error) {
           expect(error.message).toEqual("Could not find appId in downloaded asset bundle");
           done();
         });
@@ -680,8 +680,8 @@ exports.defineAutoTests = function() {
         WebAppLocalServer.resetToInitialState(done);
       });
 
-      it("should invoke the onDownloadFailure callback with an error", function(done) {
-        WebAppLocalServer.onDownloadFailure(function(error) {
+      it("should invoke the onError callback with an error", function(done) {
+        WebAppLocalServer.onError(function(error) {
           expect(error.message).toContain("appId in downloaded asset bundle does not match current appId");
           done();
         });

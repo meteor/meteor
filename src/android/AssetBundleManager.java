@@ -26,7 +26,7 @@ class AssetBundleManager {
     public interface Callback {
         public boolean shouldDownloadBundleForManifest(AssetManifest manifest);
         public void onFinishedDownloadingAssetBundle(AssetBundle assetBundle);
-        public void onDownloadFailure(Throwable cause);
+        public void onError(Throwable cause);
     }
 
     private Callback callback;
@@ -271,7 +271,7 @@ class AssetBundleManager {
         assetBundleDownloader = null;
 
         if (callback != null) {
-            callback.onDownloadFailure(cause);
+            callback.onError(cause);
         }
     }
 

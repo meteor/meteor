@@ -60,7 +60,7 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
     private AssetBundle pendingAssetBundle;
 
     private CallbackContext newVersionDownloadedCallbackContext;
-    private CallbackContext downloadFailureCallbackContext;
+    private CallbackContext errorCallbackContext;
 
 
     /** Timer used to wait for startup to complete after a reload */
@@ -171,7 +171,7 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
 
         // Clear existing callbacks
         newVersionDownloadedCallbackContext = null;
-        downloadFailureCallbackContext = null;
+        errorCallbackContext = null;
 
         // If there is a pending asset bundle, we make it the current
         if (pendingAssetBundle != null) {
@@ -222,8 +222,8 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
         } else if ("onNewVersionDownloaded".equals(action)) {
             onNewVersionDownloaded(callbackContext);
             return true;
-        } else if ("onDownloadFailure".equals(action)) {
-            onDownloadFailure(callbackContext);
+        } else if ("onError".equals(action)) {
+            onError(callbackContext);
             return true;
         } else if ("startupDidComplete".equals(action)) {
             startupDidComplete(callbackContext);
@@ -268,19 +268,19 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
         }
     }
 
-    private void onDownloadFailure(CallbackContext callbackContext) {
+    private void onError(CallbackContext callbackContext) {
         PluginResult pluginResult = new PluginResult(PluginResult.Status.NO_RESULT);
         pluginResult.setKeepCallback(true);
         callbackContext.sendPluginResult(pluginResult);
 
-        downloadFailureCallbackContext = callbackContext;
+        errorCallbackContext = callbackContext;
     }
 
     private void notifyDownloadFailure(Throwable cause) {
-        if (downloadFailureCallbackContext != null) {
+        if (errorCallbackContext != null) {
             PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, cause.getMessage());
             pluginResult.setKeepCallback(true);
-            downloadFailureCallbackContext.sendPluginResult(pluginResult);
+            errorCallbackContext.sendPluginResult(pluginResult);
         }
     }
 
@@ -367,7 +367,7 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
     }
 
     @Override
-    public void onDownloadFailure(Throwable cause) {
+    public void onError(Throwable cause) {
         Log.w(LOG_TAG, "Download failure", cause);
         notifyDownloadFailure(cause);
     }

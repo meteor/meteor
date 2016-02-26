@@ -56,8 +56,8 @@ final public class WebAppLocalServer: CDVPlugin, AssetBundleManagerDelegate {
   /// Callback ID used to send a newVersionDownloaded notification to JavaScript
   var newVersionDownloadedCallbackId: String?
 
-  /// Callback ID used to send a downloadFailure notification to JavaScript
-  var downloadFailureCallbackId: String?
+  /// Callback ID used to send an error notification to JavaScript
+  var errorCallbackId: String?
 
   /// Timer used to wait for startup to complete after a reload
   private var startupTimer: METTimer?
@@ -80,7 +80,7 @@ final public class WebAppLocalServer: CDVPlugin, AssetBundleManagerDelegate {
     // FIXME: Due to what seems like a Swift bug, these properties are not
     // initialized to nil but to an empty string
     newVersionDownloadedCallbackId = nil
-    downloadFailureCallbackId = nil
+    errorCallbackId = nil
 
     configuration = WebAppConfiguration()
 
@@ -186,7 +186,7 @@ final public class WebAppLocalServer: CDVPlugin, AssetBundleManagerDelegate {
 
     // Clear existing callbacks
     newVersionDownloadedCallbackId = nil
-    downloadFailureCallbackId = nil
+    errorCallbackId = nil
 
     // If there is a pending asset bundle, we make it the current
     if let pendingAssetBundle = pendingAssetBundle {
@@ -261,25 +261,25 @@ final public class WebAppLocalServer: CDVPlugin, AssetBundleManagerDelegate {
     commandDelegate?.sendPluginResult(result, callbackId: newVersionDownloadedCallbackId)
   }
 
-  public func onDownloadFailure(command: CDVInvokedUrlCommand) {
-    downloadFailureCallbackId = command.callbackId
+  public func onError(command: CDVInvokedUrlCommand) {
+    errorCallbackId = command.callbackId
 
     let result = CDVPluginResult(status: CDVCommandStatus_NO_RESULT)
     // This allows us to invoke the callback later
     result.setKeepCallbackAsBool(true)
-    commandDelegate?.sendPluginResult(result, callbackId: downloadFailureCallbackId)
+    commandDelegate?.sendPluginResult(result, callbackId: errorCallbackId)
   }
 
   private func notifyDownloadFailure(error: ErrorType) {
     NSLog("Download failure: \(error)")
 
-    guard let downloadFailureCallbackId = downloadFailureCallbackId else { return }
+    guard let errorCallbackId = errorCallbackId else { return }
 
     let errorMessage = String(error)
     let result = CDVPluginResult(status: CDVCommandStatus_OK, messageAsString: errorMessage)
     // This allows us to invoke the callback later
     result.setKeepCallbackAsBool(true)
-    commandDelegate?.sendPluginResult(result, callbackId: downloadFailureCallbackId)
+    commandDelegate?.sendPluginResult(result, callbackId: errorCallbackId)
   }
 
   // MARK: - Managing Versions

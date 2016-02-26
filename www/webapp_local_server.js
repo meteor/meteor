@@ -28,7 +28,7 @@ module.exports = {
       []);
   },
 
-  onDownloadFailure: function(callback) {
+  onError: function(callback) {
     cordova.exec(
       function(errorMessage) {
         // Convert error message to a proper error object
@@ -37,7 +37,7 @@ module.exports = {
       },
       console.error,
       "WebAppLocalServer",
-      "onDownloadFailure",
+      "onError",
       []);
   },
 
