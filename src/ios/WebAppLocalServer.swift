@@ -53,8 +53,8 @@ final public class WebAppLocalServer: CDVPlugin, AssetBundleManagerDelegate {
   /// loading assets from different bundles.
   private var pendingAssetBundle: AssetBundle?
 
-  /// Callback ID used to send a newVersionDownloaded notification to JavaScript
-  var newVersionDownloadedCallbackId: String?
+  /// Callback ID used to send a newVersionReady notification to JavaScript
+  var newVersionReadyCallbackId: String?
 
   /// Callback ID used to send an error notification to JavaScript
   var errorCallbackId: String?
@@ -79,7 +79,7 @@ final public class WebAppLocalServer: CDVPlugin, AssetBundleManagerDelegate {
 
     // FIXME: Due to what seems like a Swift bug, these properties are not
     // initialized to nil but to an empty string
-    newVersionDownloadedCallbackId = nil
+    newVersionReadyCallbackId = nil
     errorCallbackId = nil
 
     configuration = WebAppConfiguration()
@@ -185,7 +185,7 @@ final public class WebAppLocalServer: CDVPlugin, AssetBundleManagerDelegate {
     super.onReset()
 
     // Clear existing callbacks
-    newVersionDownloadedCallbackId = nil
+    newVersionReadyCallbackId = nil
     errorCallbackId = nil
 
     // If there is a pending asset bundle, we make it the current
@@ -243,22 +243,22 @@ final public class WebAppLocalServer: CDVPlugin, AssetBundleManagerDelegate {
     commandDelegate?.sendPluginResult(result, callbackId: command.callbackId)
   }
 
-  public func onNewVersionDownloaded(command: CDVInvokedUrlCommand) {
-    newVersionDownloadedCallbackId = command.callbackId
+  public func onNewVersionReady(command: CDVInvokedUrlCommand) {
+    newVersionReadyCallbackId = command.callbackId
 
     let result = CDVPluginResult(status: CDVCommandStatus_NO_RESULT)
     // This allows us to invoke the callback later
     result.setKeepCallbackAsBool(true)
-    commandDelegate?.sendPluginResult(result, callbackId: newVersionDownloadedCallbackId)
+    commandDelegate?.sendPluginResult(result, callbackId: newVersionReadyCallbackId)
   }
 
-  private func notifyNewVersionDownloaded(version: String?) {
-    guard let newVersionDownloadedCallbackId = newVersionDownloadedCallbackId else { return }
+  private func notifyNewVersionReady(version: String?) {
+    guard let newVersionReadyCallbackId = newVersionReadyCallbackId else { return }
 
     let result = CDVPluginResult(status: CDVCommandStatus_OK, messageAsString: version)
     // This allows us to invoke the callback later
     result.setKeepCallbackAsBool(true)
-    commandDelegate?.sendPluginResult(result, callbackId: newVersionDownloadedCallbackId)
+    commandDelegate?.sendPluginResult(result, callbackId: newVersionReadyCallbackId)
   }
 
   public func onError(command: CDVInvokedUrlCommand) {
@@ -331,7 +331,7 @@ final public class WebAppLocalServer: CDVPlugin, AssetBundleManagerDelegate {
 
     configuration.lastDownloadedVersion = assetBundle.version
     pendingAssetBundle = assetBundle
-    notifyNewVersionDownloaded(assetBundle.version)
+    notifyNewVersionReady(assetBundle.version)
   }
 
   func assetBundleManager(assetBundleManager: AssetBundleManager, didFailDownloadingBundleWithError error: ErrorType) {

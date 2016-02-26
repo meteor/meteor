@@ -59,7 +59,7 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
      */
     private AssetBundle pendingAssetBundle;
 
-    private CallbackContext newVersionDownloadedCallbackContext;
+    private CallbackContext newVersionReadyCallbackContext;
     private CallbackContext errorCallbackContext;
 
 
@@ -170,7 +170,7 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
         super.onReset();
 
         // Clear existing callbacks
-        newVersionDownloadedCallbackContext = null;
+        newVersionReadyCallbackContext = null;
         errorCallbackContext = null;
 
         // If there is a pending asset bundle, we make it the current
@@ -219,8 +219,8 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
         if ("checkForUpdates".equals(action)) {
             checkForUpdates(callbackContext);
             return true;
-        } else if ("onNewVersionDownloaded".equals(action)) {
-            onNewVersionDownloaded(callbackContext);
+        } else if ("onNewVersionReady".equals(action)) {
+            onNewVersionReady(callbackContext);
             return true;
         } else if ("onError".equals(action)) {
             onError(callbackContext);
@@ -252,19 +252,19 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
         });
     }
 
-    private void onNewVersionDownloaded(CallbackContext callbackContext) {
+    private void onNewVersionReady(CallbackContext callbackContext) {
         PluginResult pluginResult = new PluginResult(PluginResult.Status.NO_RESULT);
         pluginResult.setKeepCallback(true);
         callbackContext.sendPluginResult(pluginResult);
 
-        newVersionDownloadedCallbackContext = callbackContext;
+        newVersionReadyCallbackContext = callbackContext;
     }
 
-    private void notifyNewVersionDownloaded(String version) {
-        if (newVersionDownloadedCallbackContext != null) {
+    private void notifyNewVersionReady(String version) {
+        if (newVersionReadyCallbackContext != null) {
             PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, version);
             pluginResult.setKeepCallback(true);
-            newVersionDownloadedCallbackContext.sendPluginResult(pluginResult);
+            newVersionReadyCallbackContext.sendPluginResult(pluginResult);
         }
     }
 
@@ -363,7 +363,7 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
     public void onFinishedDownloadingAssetBundle(AssetBundle assetBundle) {
         configuration.setLastDownloadedVersion(assetBundle.getVersion());
         pendingAssetBundle = assetBundle;
-        notifyNewVersionDownloaded(assetBundle.getVersion());
+        notifyNewVersionReady(assetBundle.getVersion());
     }
 
     @Override

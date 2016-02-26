@@ -239,7 +239,7 @@ exports.defineAutoTests = function() {
       });
 
       it("should only serve the new verson after a page reload", function(done) {
-        WebAppLocalServer.onNewVersionDownloaded(function() {
+        WebAppLocalServer.onNewVersionReady(function() {
           expectVersionServedToEqual("version1", function() {
             WebAppLocalServer.simulatePageReload(function() {
               expectVersionServedToEqual("version2", done);
@@ -251,7 +251,7 @@ exports.defineAutoTests = function() {
       });
 
       it("should only download changed files", function(done) {
-        WebAppLocalServer.onNewVersionDownloaded(function() {
+        WebAppLocalServer.onNewVersionReady(function() {
           WebAppMockRemoteServer.receivedRequests(expectPathsForRequestsToMatch([
             "/__cordova/manifest.json",
             "/__cordova/",
@@ -266,7 +266,7 @@ exports.defineAutoTests = function() {
       });
 
       it("should still serve assets that haven't changed", function(done) {
-        WebAppLocalServer.onNewVersionDownloaded(function() {
+        WebAppLocalServer.onNewVersionReady(function() {
           WebAppLocalServer.simulatePageReload(function() {
             expectAssetToBeServed("some-text.txt", done);
           });
@@ -276,7 +276,7 @@ exports.defineAutoTests = function() {
       });
 
       it("should remember the new version after a restart", function(done) {
-        WebAppLocalServer.onNewVersionDownloaded(function() {
+        WebAppLocalServer.onNewVersionReady(function() {
           WebAppLocalServer.simulateAppRestart(function() {
             expectVersionServedToEqual("version2", done);
           });
@@ -298,7 +298,7 @@ exports.defineAutoTests = function() {
       });
 
       it("should only serve the new verson after a page reload", function(done) {
-        WebAppLocalServer.onNewVersionDownloaded(function() {
+        WebAppLocalServer.onNewVersionReady(function() {
           expectVersionServedToEqual("version2", function() {
             WebAppLocalServer.simulatePageReload(function() {
               expectVersionServedToEqual("version3", done);
@@ -310,7 +310,7 @@ exports.defineAutoTests = function() {
       });
 
       it("should only download changed files", function(done) {
-        WebAppLocalServer.onNewVersionDownloaded(function() {
+        WebAppLocalServer.onNewVersionReady(function() {
           WebAppMockRemoteServer.receivedRequests(expectPathsForRequestsToMatch([
             "/__cordova/manifest.json",
             "/__cordova/",
@@ -324,7 +324,7 @@ exports.defineAutoTests = function() {
       });
 
       it("should still serve assets that haven't changed", function(done) {
-        WebAppLocalServer.onNewVersionDownloaded(function() {
+        WebAppLocalServer.onNewVersionReady(function() {
           WebAppLocalServer.simulatePageReload(function() {
             expectAssetToBeServed("some-text.txt", done);
           });
@@ -334,7 +334,7 @@ exports.defineAutoTests = function() {
       });
 
       it("should delete the old version after startup completes", function(done) {
-        WebAppLocalServer.onNewVersionDownloaded(function() {
+        WebAppLocalServer.onNewVersionReady(function() {
           WebAppLocalServer.simulatePageReload(function() {
             WebAppLocalServer.downloadedVersionExists("version2", function(versionExists) {
               expect(versionExists).toBe(true);
@@ -354,7 +354,7 @@ exports.defineAutoTests = function() {
       });
 
       it("should remember the new version after a restart", function(done) {
-        WebAppLocalServer.onNewVersionDownloaded(function() {
+        WebAppLocalServer.onNewVersionReady(function() {
           WebAppLocalServer.simulateAppRestart(function() {
             expectVersionServedToEqual("version3", done);
           });
@@ -376,7 +376,7 @@ exports.defineAutoTests = function() {
       });
 
       it("should only serve the new verson after a page reload", function(done) {
-        WebAppLocalServer.onNewVersionDownloaded(function() {
+        WebAppLocalServer.onNewVersionReady(function() {
           expectVersionServedToEqual("version2", function() {
             WebAppLocalServer.simulatePageReload(function() {
               expectVersionServedToEqual("version1", done);
@@ -388,7 +388,7 @@ exports.defineAutoTests = function() {
       });
 
       it("should only download the manifest", function(done) {
-        WebAppLocalServer.onNewVersionDownloaded(function() {
+        WebAppLocalServer.onNewVersionReady(function() {
           WebAppMockRemoteServer.receivedRequests(expectPathsForRequestsToMatch([
             "/__cordova/manifest.json"],
             done));
@@ -398,7 +398,7 @@ exports.defineAutoTests = function() {
       });
 
       it("should still serve assets that haven't changed", function(done) {
-        WebAppLocalServer.onNewVersionDownloaded(function() {
+        WebAppLocalServer.onNewVersionReady(function() {
           WebAppLocalServer.simulatePageReload(function() {
             expectAssetToBeServed("some-text.txt", done);
           });
@@ -408,7 +408,7 @@ exports.defineAutoTests = function() {
       });
 
       it("should not redownload the bundled version", function(done) {
-        WebAppLocalServer.onNewVersionDownloaded(function() {
+        WebAppLocalServer.onNewVersionReady(function() {
           WebAppLocalServer.downloadedVersionExists("version1", function(versionExists) {
             expect(versionExists).toBe(false);
             done();
@@ -419,7 +419,7 @@ exports.defineAutoTests = function() {
       });
 
       it("should delete the old version after startup completes", function(done) {
-        WebAppLocalServer.onNewVersionDownloaded(function() {
+        WebAppLocalServer.onNewVersionReady(function() {
           WebAppLocalServer.simulatePageReload(function() {
             WebAppLocalServer.downloadedVersionExists("version2", function(versionExists) {
               expect(versionExists).toBe(true);
@@ -439,7 +439,7 @@ exports.defineAutoTests = function() {
       });
 
       it("should remember the new version after a restart", function(done) {
-        WebAppLocalServer.onNewVersionDownloaded(function() {
+        WebAppLocalServer.onNewVersionReady(function() {
           WebAppLocalServer.simulateAppRestart(function() {
             expectVersionServedToEqual("version1", done);
           });
@@ -460,8 +460,8 @@ exports.defineAutoTests = function() {
         WebAppLocalServer.resetToInitialState(done);
       });
 
-      it("should not invoke the onNewVersionDownloaded callback", function(done) {
-        WebAppLocalServer.onNewVersionDownloaded(function() {
+      it("should not invoke the onNewVersionReady callback", function(done) {
+        WebAppLocalServer.onNewVersionReady(function() {
           fail();
           done();
         });
@@ -501,8 +501,8 @@ exports.defineAutoTests = function() {
         WebAppLocalServer.checkForUpdates();
       });
 
-      it("should not invoke the onNewVersionDownloaded callback", function(done) {
-        WebAppLocalServer.onNewVersionDownloaded(function() {
+      it("should not invoke the onNewVersionReady callback", function(done) {
+        WebAppLocalServer.onNewVersionReady(function() {
           fail();
           done();
         });
@@ -532,8 +532,8 @@ exports.defineAutoTests = function() {
         WebAppLocalServer.checkForUpdates();
       });
 
-      it("should not invoke the onNewVersionDownloaded callback", function(done) {
-        WebAppLocalServer.onNewVersionDownloaded(function() {
+      it("should not invoke the onNewVersionReady callback", function(done) {
+        WebAppLocalServer.onNewVersionReady(function() {
           fail();
           done();
         });
@@ -563,8 +563,8 @@ exports.defineAutoTests = function() {
         WebAppLocalServer.checkForUpdates();
       });
 
-      it("should not invoke the onNewVersionDownloaded callback", function(done) {
-        WebAppLocalServer.onNewVersionDownloaded(function() {
+      it("should not invoke the onNewVersionReady callback", function(done) {
+        WebAppLocalServer.onNewVersionReady(function() {
           fail();
           done();
         });
@@ -594,8 +594,8 @@ exports.defineAutoTests = function() {
         WebAppLocalServer.checkForUpdates();
       });
 
-      it("should not invoke the onNewVersionDownloaded callback", function(done) {
-        WebAppLocalServer.onNewVersionDownloaded(function() {
+      it("should not invoke the onNewVersionReady callback", function(done) {
+        WebAppLocalServer.onNewVersionReady(function() {
           fail();
           done();
         });
@@ -627,8 +627,8 @@ exports.defineAutoTests = function() {
         WebAppLocalServer.checkForUpdates();
       });
 
-      it("should not invoke the onNewVersionDownloaded callback", function(done) {
-        WebAppLocalServer.onNewVersionDownloaded(function() {
+      it("should not invoke the onNewVersionReady callback", function(done) {
+        WebAppLocalServer.onNewVersionReady(function() {
           fail();
           done();
         });
@@ -658,8 +658,8 @@ exports.defineAutoTests = function() {
         WebAppLocalServer.checkForUpdates();
       });
 
-      it("should not invoke the onNewVersionDownloaded callback", function(done) {
-        WebAppLocalServer.onNewVersionDownloaded(function() {
+      it("should not invoke the onNewVersionReady callback", function(done) {
+        WebAppLocalServer.onNewVersionReady(function() {
           fail();
           done();
         });
@@ -689,8 +689,8 @@ exports.defineAutoTests = function() {
         WebAppLocalServer.checkForUpdates();
       });
 
-      it("should not invoke the onNewVersionDownloaded callback", function(done) {
-        WebAppLocalServer.onNewVersionDownloaded(function() {
+      it("should not invoke the onNewVersionReady callback", function(done) {
+        WebAppLocalServer.onNewVersionReady(function() {
           fail();
           done();
         });
@@ -706,7 +706,7 @@ exports.defineAutoTests = function() {
       beforeEach(function(done) {
         WebAppLocalServer.simulatePartialDownload("version2", function() {
           WebAppMockRemoteServer.serveVersion("version2", function() {
-            WebAppLocalServer.onNewVersionDownloaded(done);
+            WebAppLocalServer.onNewVersionReady(done);
             WebAppLocalServer.checkForUpdates();
           });
         });
@@ -744,7 +744,7 @@ exports.defineAutoTests = function() {
       beforeEach(function(done) {
         WebAppLocalServer.simulatePartialDownload("version2", function() {
           WebAppMockRemoteServer.serveVersion("version3", function() {
-            WebAppLocalServer.onNewVersionDownloaded(done);
+            WebAppLocalServer.onNewVersionReady(done);
             WebAppLocalServer.checkForUpdates();
           });
         });
@@ -842,7 +842,7 @@ function expectAssetToBeServed(filename, content, done) {
 
 function downloadAndServeVersionLocally(version, done) {
   WebAppMockRemoteServer.serveVersion(version, function() {
-    WebAppLocalServer.onNewVersionDownloaded(function() {
+    WebAppLocalServer.onNewVersionReady(function() {
       WebAppLocalServer.simulatePageReload(done);
     });
 

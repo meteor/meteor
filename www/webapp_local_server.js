@@ -19,12 +19,12 @@ module.exports = {
       []);
   },
 
-  onNewVersionDownloaded: function(callback) {
+  onNewVersionReady: function(callback) {
     cordova.exec(
       callback,
       console.error,
       "WebAppLocalServer",
-      "onNewVersionDownloaded",
+      "onNewVersionReady",
       []);
   },
 
