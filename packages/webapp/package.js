@@ -20,6 +20,7 @@ Cordova.depends({
 });
 
 Package.onUse(function (api) {
+  api.use('ecmascript');
   api.use(['logging', 'underscore', 'routepolicy', 'boilerplate-generator',
            'webapp-hashing'], 'server');
   api.use(['underscore'], 'client');
@@ -33,6 +34,7 @@ Package.onUse(function (api) {
   api.export(['WebApp'], 'client');
   api.addFiles('webapp_server.js', 'server');
   api.addFiles('webapp_client.js', 'client');
+  api.addFiles('webapp_cordova.js', 'web.cordova');
 });
 
 Package.onTest(function (api) {
