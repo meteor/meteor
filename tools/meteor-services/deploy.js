@@ -144,7 +144,8 @@ var authedRpc = function (options) {
   var infoResult = deployRpc({
     operation: 'info',
     site: rpcOptions.site,
-    expectPayload: []
+    expectPayload: [],
+    qs: options.qs
   });
 
   if (infoResult.statusCode === 401 && rpcOptions.promptIfAuthFails) {
@@ -338,6 +339,7 @@ var canonicalizeSite = function (site) {
 //   send information about packages used by this app to the package
 //   stats server.
 // - buildOptions: the 'buildOptions' argument to the bundler
+// - rawOptions: any unknown options that were passed to the command line tool
 var bundleAndDeploy = function (options) {
   if (options.recordPackageUsage === undefined) {
     options.recordPackageUsage = true;
@@ -368,7 +370,8 @@ var bundleAndDeploy = function (options) {
   var preflight = authedRpc({
     site: site,
     preflight: true,
-    promptIfAuthFails: promptIfAuthFails
+    promptIfAuthFails: promptIfAuthFails,
+    qs: options.rawOptions
   });
 
   if (preflight.errorMessage) {
@@ -436,7 +439,7 @@ var bundleAndDeploy = function (options) {
       method: 'POST',
       operation: 'deploy',
       site: site,
-      qs: settings !== null ? {settings: settings} : {},
+      qs: _.extend({}, options.rawOptions, settings !== null ? {settings: settings} : {}),
       bodyStream: files.createTarGzStream(files.pathJoin(buildDir, 'bundle')),
       expectPayload: ['url'],
       preflightPassword: preflight.preflightPassword

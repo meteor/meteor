@@ -1242,12 +1242,13 @@ main.registerCommand({
     'override-architecture-with-local' : { type: Boolean },
     'allow-incompatible-update': { type: Boolean }
   },
+  allowUnrecognizedOptions: true,
   requiresApp: function (options) {
     return ! options.delete;
   },
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
   var site = qualifySitename(options.args[0]);
+}, function (options, {rawOptions}) {
   config.printUniverseBanner();
 
   if (options.delete) {
@@ -1306,7 +1307,8 @@ main.registerCommand({
     projectContext: projectContext,
     site: site,
     settingsFile: options.settings,
-    buildOptions: buildOptions
+    buildOptions: buildOptions,
+    rawOptions
   });
 
   if (deployResult === 0) {
