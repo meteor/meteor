@@ -446,33 +446,37 @@ var bundleAndDeploy = function (options) {
     });
   });
 
-
   if (result.errorMessage) {
     Console.error("\nError deploying application: " + result.errorMessage);
     return 1;
   }
 
-  var deployedAt = require('url').parse(result.payload.url);
-  var hostname = deployedAt.hostname;
+  if (result.payload.message) {
+    Console.info(result.payload.message);
+  } else {
+    var deployedAt = require('url').parse(result.payload.url);
+    var hostname = deployedAt.hostname;
 
-  Console.info('Now serving at http://' + hostname);
+    Console.info('Now serving at http://' + hostname);
 
-  if (! hostname.match(/meteor\.com$/)) {
-    var dns = require('dns');
-    dns.resolve(hostname, 'CNAME', function (err, cnames) {
-      if (err || cnames[0] !== 'origin.meteor.com') {
-        dns.resolve(hostname, 'A', function (err, addresses) {
-          if (err || addresses[0] !== '107.22.210.133') {
-            Console.info('-------------');
-            Console.info(
-              "You've deployed to a custom domain.",
-              "Please be sure to CNAME your hostname",
-              "to origin.meteor.com, or set an A record to 107.22.210.133.");
-            Console.info('-------------');
-          }
-        });
-      }
-    });
+    if (! hostname.match(/meteor\.com$/)) {
+      var dns = require('dns');
+      dns.resolve(hostname, 'CNAME', function (err, cnames) {
+        if (err || cnames[0] !== 'origin.meteor.com') {
+          dns.resolve(hostname, 'A', function (err, addresses) {
+            console.log('and here')
+            if (err || addresses[0] !== '107.22.210.133') {
+              Console.info('-------------');
+              Console.info(
+                "You've deployed to a custom domain.",
+                "Please be sure to CNAME your hostname",
+                "to origin.meteor.com, or set an A record to 107.22.210.133.");
+              Console.info('-------------');
+            }
+          });
+        }
+      });
+    }
   }
 
   return 0;
