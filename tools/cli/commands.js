@@ -1421,7 +1421,7 @@ main.registerCommand({
 });
 
 ///////////////////////////////////////////////////////////////////////////////
-// test-app and test-packages
+// test and test-packages
 ///////////////////////////////////////////////////////////////////////////////
 
 testCommandOptions = {
@@ -1479,20 +1479,19 @@ testCommandOptions = {
     'exclude': { type: String },
 
     // one of the following must be true
-    'test-app': { type: Boolean, 'default': false },
+    'test': { type: Boolean, 'default': false },
     'test-packages': { type: Boolean, 'default': false },
 
-    // For 'test-packages': Run in unit test or integration test mode
-    'unit': { type: Boolean, 'default': false },
-    'integration': { type: Boolean, 'default': false }
+    // For 'test-packages': Run in "full app" mode
+    'full-app': { type: Boolean, 'default': false }
   }
 };
 
 main.registerCommand(_.extend({
-  name: 'test-app',
+  name: 'test',
   requiresApp: true
 }, testCommandOptions), function (options) {
-  options['test-app'] = true;
+  options['test'] = true;
   return doTestCommand(options);
 });
 
@@ -1590,7 +1589,7 @@ function doTestCommand(options) {
     }
 
     // Use the driver package if running `meteor test-packages`. For
-    // `meteor test-app`, the driver package is expected to already
+    // `meteor test`, the driver package is expected to already
     // have been added to the app.
     packagesToAdd.unshift(global.testCommandMetadata.driverPackage);
 
@@ -1612,24 +1611,16 @@ function doTestCommand(options) {
     // the project for build hits errors, we don't lose them on
     // projectContext.reset.
     projectContext.projectConstraintsFile.writeIfModified();
-  } else if (options["test-app"]) {
+  } else if (options["test"]) {
     if (!options['driver-package']) {
       throw new Error("You must specify a driver package with --driver-package");
     }
 
     global.testCommandMetadata.driverPackage = options['driver-package'];
 
-    // Default to `--integration`
-    if (!options.unit && !options.integration) {
-      options.integration = true;
-    }
-
-    if (options.unit && options.integration) {
-      throw new Error("Can't pass both --unit and --integration");
-    }
-    global.testCommandMetadata.isUnitTest = options.unit;
-    global.testCommandMetadata.isIntegrationTest = options.integration;
-
+    global.testCommandMetadata.isAppTest = options['full-app'];
+    global.testCommandMetadata.isTest = !global.testCommandMetadata.isAppTest;
+    
     projectContextOptions.projectDir = options.appDir;
     projectContextOptions.projectLocalDir = files.pathJoin(testRunnerAppDir, '.meteor', 'local');
 
@@ -1664,7 +1655,7 @@ function doTestCommand(options) {
       projectContext.initializeCatalog();
     });
   } else {
-    throw new Error("Unexpected: neither test-packages nor test-app");
+    throw new Error("Unexpected: neither test-packages nor test");
   }
 
   // The rest of the projectContext preparation process will happen inside the
@@ -1761,10 +1752,10 @@ var runTestAppForPackages = function (projectContext, options) {
   };
   if (options["test-packages"]) {
     buildOptions.buildMode = buildOptions.minifyMode;
-  } else if (options["test-app"]) {
+  } else if (options["test"]) {
     buildOptions.buildMode = "test";
   } else {
-    throw new Error("Neither test-packages nor test-app in options");
+    throw new Error("Neither test-packages nor test in options");
   }
 
   if (options.deploy) {

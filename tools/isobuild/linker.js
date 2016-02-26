@@ -974,7 +974,7 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
 
   var prelinkedFiles = module.getPrelinkedFiles();
 
-  // are we running `meteor test-app` or `meteor test-packages`?
+  // are we running `meteor test` or `meteor test-packages`?
   // Include a short code snippet that sets `Meteor.isTest` and calls
   // `runTests`.
   if (global.testCommandMetadata) {
@@ -1073,16 +1073,15 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
 function getTestPreamble() {
   const testDriverPackageName = global.testCommandMetadata.driverPackage;
 
-  let setMeteorIntegrationOrUnitTest = "";
-  if (global.testCommandMetadata.isUnitTest) {
-    setMeteorIntegrationOrUnitTest = "Package.meteor.Meteor.isUnitTest = true;";
-  } else if (global.testCommandMetadata.isIntegrationTest) {
-    setMeteorIntegrationOrUnitTest = "Package.meteor.Meteor.isIntegrationTest = true;";
+  let setMeteorTest = "";
+  if (global.testCommandMetadata.isTest) {
+    setMeteorTest = "Package.meteor.Meteor.isTest = true;";
+  } else if (global.testCommandMetadata.isAppTest) {
+    setMeteorTest = "Package.meteor.Meteor.isAppTest = true;";
   }
 
   return `\
-Package.meteor.Meteor.isTest = true;
-${setMeteorIntegrationOrUnitTest}
+${setMeteorTest}
 
 if (Package.meteor.Meteor.isClient) {
   Package.meteor.Meteor.startup(function() {

@@ -160,7 +160,7 @@
 ### Testing
 
 * Packages can now be marked as `testOnly` to only run as part of app
-  testing with `meteor test-app`. This is achieved by setting
+  testing with `meteor test`. This is achieved by setting
   `testOnly: true` to `Package.describe`.
 
 

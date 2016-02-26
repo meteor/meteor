@@ -19,10 +19,8 @@ import SourceArch from './source-arch.js';
 
 import {
   TEST_FILENAME_REGEXPS,
-  UNIT_TEST_FILENAME_REGEXPS,
-  INTEGRATION_TEST_FILENAME_REGEXPS,
-  TEST_DIRNAME_REGEXPS,
-  isTestFilePath } from './app-test-files.js';
+  APP_TEST_FILENAME_REGEXPS,
+  isTestFilePath } from './test-files.js';
 
 // XXX: This is a medium-term hack, to avoid having the user set a package name
 // & test-name in package.describe. We will change this in the new control file
@@ -318,7 +316,7 @@ var PackageSource = function () {
   self.prodOnly = false;
 
   // A package marked testOnly is ONLY picked up by the bundler as
-  // part of the `meteor test-app` command.
+  // part of the `meteor test` command.
   self.testOnly = false;
 
   // If this is set, we will take the currently running git checkout and bundle
@@ -533,7 +531,7 @@ _.extend(PackageSource.prototype, {
        * @param {Boolean} options.prodOnly A package with this flag set to true
        * will ONLY be bundled into production builds.
        * @param {Boolean} options.testOnly A package with this flag set to true
-       * will ONLY be bundled as part of `meteor test-app`.
+       * will ONLY be bundled as part of `meteor test`.
        */
       describe: function (options) {
         _.each(options, function (value, key) {
@@ -591,7 +589,7 @@ _.extend(PackageSource.prototype, {
             // when set to true, they cause a package's code to be
             // only included (i.e. linked into the bundle) in dev
             // mode, prod mode (`meteor --production`) or app tests
-            // (`meteor test-app`), and excluded otherwise.
+            // (`meteor test`), and excluded otherwise.
             //
             // Notes:
             //
@@ -1349,9 +1347,9 @@ _.extend(PackageSource.prototype, {
       fileOptions.transpile = false;
     }
 
-    // If running in unit test mode (`meteor test-app --unit`), all
+    // If running in test mode (`meteor test`), all
     // files other than test files should be loaded lazily
-    if (global.testCommandMetadata && global.testCommandMetadata.isUnitTest) {
+    if (global.testCommandMetadata && global.testCommandMetadata.isTest) {
       if (!isTestFilePath(relPath)) {
         fileOptions.lazy = true;
       }
@@ -1393,12 +1391,11 @@ _.extend(PackageSource.prototype, {
 
     // Unless we're running tests, ignore all test filenames and if we are, ignore the
     // type of file we *aren't* running
-    if (!global.testCommandMetadata) {
+    if (!global.testCommandMetadata || global.testCommandMetadata.isTest) {
+      Array.prototype.push.apply(sourceReadOptions.exclude, APP_TEST_FILENAME_REGEXPS);
+    }
+    if (!global.testCommandMetadata || global.testCommandMetadata.isAppTest) {
       Array.prototype.push.apply(sourceReadOptions.exclude, TEST_FILENAME_REGEXPS);
-    } else if (global.testCommandMetadata.isUnitTest) {
-      Array.prototype.push.apply(sourceReadOptions.exclude, INTEGRATION_TEST_FILENAME_REGEXPS);
-    } else if (global.testCommandMetadata.isIntegrationTest) {
-      Array.prototype.push.apply(sourceReadOptions.exclude, UNIT_TEST_FILENAME_REGEXPS);
     }
 
     // Read top-level source files, excluding control files that were not
@@ -1418,13 +1415,10 @@ _.extend(PackageSource.prototype, {
 
     const anyLevelExcludes = [
       /^node_modules\/$/,
+      /^tests\/$/,
       arch === "os" ? /^client\/$/ : /^server\/$/,
       ...sourceReadOptions.exclude,
     ];
-
-    if (!global.testCommandMetadata) {
-      Array.prototype.push.apply(anyLevelExcludes, TEST_DIRNAME_REGEXPS);
-    }
 
     const topLevelExcludes = isApp ? [
       ...anyLevelExcludes,
