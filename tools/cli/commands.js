@@ -1267,8 +1267,7 @@ main.registerCommand({
   var loggedIn = auth.isLoggedIn();
   if (! loggedIn) {
     Console.error(
-      "To instantly deploy your app on a free testing server,",
-      "just enter your email address!");
+      "You must be logged in to deploy, just enter your email address.");
     Console.error();
     if (! auth.registerOrLogIn()) {
       return 1;
