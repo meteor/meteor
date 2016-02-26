@@ -13,7 +13,7 @@ var _ = require('underscore');
 var stats = require('./stats.js');
 var Console = require('../console/console.js').Console;
 
-const CAPABILITIES = ['showDeployMessages'];
+const CAPABILITIES = ['showDeployMessages', 'canTransferAuthorization'];
 
 // Make a synchronous RPC to the "classic" MDG deploy API. The deploy
 // API has the following contract:
@@ -664,7 +664,7 @@ var listAuthorized = function (site) {
   }
 };
 
-// action is "add" or "remove"
+// action is "add", "transfer" or "remove"
 var changeAuthorized = function (site, action, username) {
   site = canonicalizeSite(site);
   if (! site) {
@@ -676,7 +676,7 @@ var changeAuthorized = function (site, action, username) {
     method: 'POST',
     operation: 'authorized',
     site: site,
-    qs: action === "add" ? { add: username } : { remove: username },
+    qs: {[action]: username},
     promptIfAuthFails: true
   });
 
