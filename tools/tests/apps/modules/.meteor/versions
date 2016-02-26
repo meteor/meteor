@@ -36,10 +36,10 @@ livedata@1.0.15
 logging@1.0.9-beta.11
 meteor@1.1.11-beta.11
 meteor-base@1.0.1
-meteor-env-dev@0.0.1-beta.11
-meteor-env-prod@0.0.1-beta.11
-minifiers-css@1.1.8-beta.11
-minifiers-js@1.1.8-beta.11
+meteor-env-dev@0.0.2-beta.11
+meteor-env-prod@0.0.2-beta.11
+minifier-css@1.1.8-beta.11
+minifier-js@1.1.8-beta.11
 minimongo@1.0.11-beta.11
 mobile-experience@1.0.1
 mobile-status-bar@1.0.8-beta.11
@@ -66,9 +66,9 @@ routepolicy@1.0.7-beta.11
 session@1.1.2-beta.11
 spacebars@1.0.8-beta.11
 spacebars-compiler@1.0.8-beta.11
+standard-minifier-css@1.0.3-beta.11
+standard-minifier-js@1.0.3-beta.11
 standard-minifiers@1.0.3-beta.11
-standard-minifiers-css@1.0.3-beta.11
-standard-minifiers-js@1.0.3-beta.11
 templating@1.1.6-beta.11
 templating-tools@1.0.1-beta.11
 tracker@1.0.10-beta.11
