@@ -217,10 +217,14 @@
   `pollingThrottleMs` to `Cursor.find` for tuning observe parameters
   on the server.
 
+* Expose `dynamicHead` and `dynamicBody` hooks in boilerplate generation allowing code to inject content into the body and head tags from the server. #3860
+
+* Add methods of the form BrowserPolicy.content.allow<ContentType>BlobUrl() to BrowserPolicy #5141
+
 Patches contributed by GitHub users vereed, mitar, nathan-muir,
 robfallows, skishore, okland, Primigenus, zimme, welelay, rgoomar,
 bySabi, mbrookes, TomFreudenberg, TechPlexEngineer, zacharydenton,
-AlexeyMK, gwendall, dandv, devgrok.
+AlexeyMK, gwendall, dandv, devgrok, brianlukoff.
 
 
 ## v.1.2.1, 2015-Oct-26
