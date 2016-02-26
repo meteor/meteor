@@ -13,6 +13,8 @@ var _ = require('underscore');
 var stats = require('./stats.js');
 var Console = require('../console/console.js').Console;
 
+const CAPABILITIES = ['showDeployMessages'];
+
 // Make a synchronous RPC to the "classic" MDG deploy API. The deploy
 // API has the following contract:
 //
@@ -62,6 +64,7 @@ var deployRpc = function (options) {
   if (options.headers.cookie) {
     throw new Error("sorry, can't combine cookie headers yet");
   }
+  options.qs = _.extend({}, options.qs, {capabilities: CAPABILITIES});
 
   // XXX: Reintroduce progress for upload
   try {
