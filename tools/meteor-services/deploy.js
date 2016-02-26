@@ -396,7 +396,7 @@ var bundleAndDeploy = function (options) {
   var buildDir = files.mkdtemp('build_tar');
   var bundlePath = files.pathJoin(buildDir, 'bundle');
 
-  Console.info('Deploying to ' + site + '.');
+  Console.info('Deploying your app...');
 
   var settings = null;
   var messages = buildmessage.capture({

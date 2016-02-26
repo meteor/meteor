@@ -1247,8 +1247,8 @@ main.registerCommand({
     return ! options.delete;
   },
   catalogRefresh: new catalog.Refresh.Never()
-  var site = qualifySitename(options.args[0]);
 }, function (options, {rawOptions}) {
+  var site = options.args[0];
   config.printUniverseBanner();
 
   if (options.delete) {
