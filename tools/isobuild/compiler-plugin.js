@@ -852,13 +852,14 @@ export class PackageSourceBatch {
     const cacheKey = sha1(JSON.stringify({
       linkerOptions,
       files: jsResources.map((inputFile) => {
-        // Note that we don't use inputFile.sourceMap in this cache key. Maybe
-        // this isn't technically accurate? Is it likely that the source map
-        // will change but the file won't?
         return {
-          servePath: inputFile.servePath,
           hash: inputFile.hash,
-          bare: inputFile.bare
+          installPath: inputFile.installPath,
+          sourceMap: !! inputFile.sourceMap,
+          mainModule: inputFile.mainModule,
+          imported: inputFile.imported,
+          lazy: inputFile.lazy,
+          bare: inputFile.bare,
         };
       })
     }));
