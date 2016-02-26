@@ -29,14 +29,16 @@ Object.keys(process.binding("natives")).forEach(id => {
 });
 
 // Default handlers for well-known file extensions.
+// Note that these function expect strings, not Buffer objects.
 const extensions = {
-  ".js"(data) {
-    return data;
+  ".js"(dataString) {
+    // Strip any #! line from the beginning of the file.
+    return dataString.replace(/^#![^\n]*/, "");
   },
 
-  ".json"(data) {
+  ".json"(dataString) {
     return "module.exports = " +
-      JSON.stringify(JSON.parse(data), null, 2) +
+      JSON.stringify(JSON.parse(dataString), null, 2) +
       ";\n";
   }
 };
@@ -85,6 +87,13 @@ export default class ImportScanner {
   addInputFiles(files) {
     files.forEach(file => {
       const absPath = pathJoin(this.sourceRoot, file.sourcePath);
+
+      const dotExt = "." + file.type;
+      const dataString = file.data.toString("utf8");
+      file.dataString = extensions[dotExt](dataString);
+      if (file.dataString !== dataString) {
+        file.data = new Buffer(file.dataString, "utf8");
+      }
 
       // Files that are not eagerly evaluated (lazy) will only be included
       // in the bundle if they are actually imported. Files that are
@@ -172,7 +181,7 @@ export default class ImportScanner {
     }
 
     const result = keys(findImportedModuleIdentifiers(
-      file.data.toString("utf8"),
+      file.dataString,
       file.hash,
     ));
 
@@ -249,7 +258,8 @@ export default class ImportScanner {
         return;
       }
 
-      // The result of _readModule will have .data and .hash properties.
+      // The object returned by _readModule will have .data, .dataString,
+      // and .hash properties.
       const depFile = this._readModule(absImportedPath);
       depFile.type = "js"; // TODO Is this correct?
       depFile.sourcePath = pathRelative(this.sourceRoot, absImportedPath);
@@ -271,24 +281,30 @@ export default class ImportScanner {
       readAndWatchFileWithHash(this.watchSet, absPath);
 
     return {
-      data: contents.toString("utf8"),
-      hash,
+      data: contents,
+      dataString: contents.toString("utf8"),
+      hash
     };
   }
 
   _readModule(absPath) {
     const info = this._readFile(absPath);
+    const dataString = info.dataString;
 
     // Same logic/comment as stripBOM in node/lib/module.js:
     // Remove byte order marker. This catches EF BB BF (the UTF-8 BOM)
     // because the buffer-to-string conversion in `fs.readFileSync()`
     // translates it to FEFF, the UTF-16 BOM.
-    if (info.data.charCodeAt(0) === 0xfeff) {
-      info.data = info.data.slice(1);
+    if (info.dataString.charCodeAt(0) === 0xfeff) {
+      info.dataString = info.data.slice(1);
     }
 
     const ext = pathExtname(absPath).toLowerCase();
-    info.data = extensions[ext](info.data);
+    info.dataString = extensions[ext](info.dataString);
+
+    if (info.dataString !== dataString) {
+      info.data = new Buffer(info.dataString, "utf8");
+    }
 
     return info;
   }
@@ -548,7 +564,7 @@ export default class ImportScanner {
 
     let result = null;
     try {
-      result = JSON.parse(this._readFile(path).data);
+      result = JSON.parse(this._readFile(path).dataString);
     } catch (e) {
       // leave result null
     }
