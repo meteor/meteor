@@ -25,7 +25,12 @@ Object.keys(process.binding("natives")).forEach(id => {
     return;
   }
 
-  nativeModulesMap[id] = true;
+  // When a native Node module is imported, we register a dependency on a
+  // meteor-node-stubs/deps/* module of the same name, so that the
+  // necessary stub modules will be included in the bundle. This alternate
+  // identifier will not be imported at runtime, but the modules it
+  // depends on are necessary for the original import to succeed.
+  nativeModulesMap[id] =  "meteor-node-stubs/deps/" + id;
 });
 
 // Default handlers for well-known file extensions.
@@ -539,6 +544,10 @@ export default class ImportScanner {
     }
 
     if (! resolved) {
+      if (isNative && archMatches(this.bundleArch, "web")) {
+        id = nativeModulesMap[id];
+      }
+
       // If the imported identifier is neither absolute nor relative, but
       // top-level, then it might be satisfied by a package installed in
       // the top-level node_modules directory, and we should record the

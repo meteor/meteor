@@ -4,15 +4,9 @@
   "description": "Test app exercising many aspects of the Meteor module system.",
   "private": true,
   "dependencies": {
-    "buffer": "^4.4.0",
-    "events": "^1.1.0",
+    "meteor-node-stubs": "^0.1.0",
     "moment": "2.11.1",
-    "path": "^0.12.7",
-    "regenerator": "^0.8.42",
-    "stream-browserify": "^2.0.1",
-    "stream-http": "^2.1.1",
-    "url": "^0.11.0",
-    "util": "^0.10.3"
+    "regenerator": "^0.8.42"
   },
   "scripts": {
     "test": "METEOR_PROFILE=100 ../../../../meteor test-app --driver-package practicalmeteor:mocha"

@@ -196,15 +196,45 @@ describe("native node_modules", () => {
     assert.strictEqual(typeof Stream.Readable, "function");
   });
 
-  Meteor.isClient &&
-  it("can be installed with aliases", () => {
-    meteorInstall({
-      node_modules: {
-        http: "stream-http"
-      }
-    });
-
-    assert.strictEqual(require("http"), require("stream-http"));
+  it("can all be imported", () => {
+    require("_stream_duplex");
+    require("_stream_passthrough");
+    require("_stream_readable");
+    require("_stream_transform");
+    require("_stream_writable");
+    require("assert");
+    require("buffer");
+    require("child_process");
+    require("cluster");
+    require("console");
+    require("constants");
+    require("crypto");
+    require("dgram");
+    require("dns");
+    require("domain");
+    require("events");
+    require("fs");
+    require("http");
+    require("https");
+    require("module");
+    require("net");
+    require("os");
+    require("path");
+    require("process");
+    require("punycode");
+    require("querystring");
+    require("readline");
+    require("repl");
+    require("stream");
+    require("string_decoder");
+    require("sys");
+    require("timers");
+    require("tls");
+    require("tty");
+    require("url");
+    require("util");
+    require("vm");
+    require("zlib");
   });
 });
 
