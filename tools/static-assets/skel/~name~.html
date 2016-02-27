@@ -1,14 +1,37 @@
 <head>
+  <meta charset="utf-8">
   <title>~name~</title>
+  <meta name="description" content="">
+  <meta name="author" content="">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="//fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
 </head>
 
 <body>
-  <h1>Welcome to Meteor!</h1>
-
   {{> hello}}
 </body>
 
 <template name="hello">
-  <button>Click Me</button>
-  <p>You've pressed the button {{counter}} times.</p>
+  <div class="container">
+    <div class="row">
+      <div class="one-half column" style="margin-top: 25%">
+        <h4>Welcome to Meteor!</h4>
+        <button class="button-primary">Click me!</button>
+        <p>You've clicked the button {{counter}} times.</p>
+      </div>
+      <div class="one-half column" style="margin-top: 25%">
+        <h5>Getting started</h5>
+        <ul>
+          <li><a href="https://www.meteor.com/try">The Tutorial</a></li>
+          <li><a href="https://docs.meteor.com">Docs</a></li>
+          <li><a href="https://forums.meteor.com">Discussions</a></li>
+        </ul>
+        <h5>Or start building your app now</h5>
+        <pre><code>
+          meteor remove skeleton:skeleton
+          rm ~name~.*
+        </code></pre>
+      </div>
+    </div>
+  </div>
 </template>
