@@ -8,30 +8,28 @@
 </head>
 
 <body>
-  {{> hello}}
-</body>
-
-<template name="hello">
   <div class="container">
     <div class="row">
       <div class="one-half column" style="margin-top: 25%">
         <h4>Welcome to Meteor!</h4>
-        <button class="button-primary">Click me!</button>
-        <p>You've clicked the button {{counter}} times.</p>
+        {{> hello}}
       </div>
-      <div class="one-half column" style="margin-top: 5%">
+      <div class="one-half column" style="margin-top: 15%">
         <h5>Getting started</h5>
         <ul>
           <li><a href="https://www.meteor.com/try">The Tutorial</a></li>
           <li><a href="https://docs.meteor.com">Docs</a></li>
           <li><a href="https://forums.meteor.com">Discussions</a></li>
         </ul>
-        <h5>Or start building your app now</h5>
-        <pre><code>
-          meteor remove skeleton:skeleton
-          rm ~name~.*
-        </code></pre>
+        <h5>Serious app?</h5>
+        <pre><code>meteor remove skeleton:skeleton
+rm ~name~.*</code></pre>
       </div>
-    </div>
   </div>
+</div>
+</body>
+
+<template name="hello">
+  <button class="button-primary">Click me!</button>
+  <p>You've clicked the button {{counter}} times.</p>
 </template>
