@@ -76,7 +76,7 @@ _.extend(Roles, {
       // XXX string parsing sucks, maybe
       // https://jira.mongodb.org/browse/SERVER-3069 will get fixed one day
       if (e.name !== 'MongoError') throw e;
-      match = e.err.match(/E11000 duplicate key error index: ([^ ]+)/);
+      match = ( e.err || e.errmsg ).match(/E11000 duplicate key error index: ([^ ]+)/);
       if (!match) throw e;
       if (match[1].indexOf('$_id') !== -1) {
         if (options.unlessExists) return null;

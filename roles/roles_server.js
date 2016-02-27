@@ -5,9 +5,25 @@
 Meteor.users._ensureIndex({'roles._id': 1, 'roles.partition': 1});
 Meteor.users._ensureIndex({'roles.partition': 1});
 
+/**
+ * Utility function to drop obsolete indexes when migrating
+ *
+ * @param {Object} collection to be proceeded
+ * @param {String} indexName to drop
+ */
+dropCollectionIndex = function(collection,indexName){
+  try {
+    collection._dropIndex(indexName);
+  } catch (e) {
+    if (e.name !== 'MongoError') throw e;
+    match = (e.err || e.errmsg).match(/index not found/);
+    if (!match) throw e;
+  }
+};
+
 /*
  * Publish logged-in user's roles so client-side checks can work.
- * 
+ *
  * Use a named publish function so clients can check `ready()` state.
  */
 Meteor.publish('_roles', function () {
@@ -250,6 +266,9 @@ _.extend(Roles, {
     updateUser = updateUser || Roles._defaultUpdateUser;
     updateRole = updateRole || Roles._defaultUpdateRole;
 
+    // drop obsolete index name_1, preventing mongo duplicate key 'null' errors
+    dropCollectionIndex(Meteor.roles,"name_1");
+
     Meteor.roles.find().forEach(function (role, index, cursor) {
       if (!Roles._isNewRole(role)) {
         updateRole(role, Roles._convertToNewRole(role));
@@ -281,6 +300,10 @@ _.extend(Roles, {
   _backwardMigrate: function (updateUser, updateRole, usingGroups) {
     updateUser = updateUser || Roles._defaultUpdateUser;
     updateRole = updateRole || Roles._defaultUpdateRole;
+
+    // drop 'obsolete' users indexes
+    dropCollectionIndex(Meteor.users,"roles._id_1_roles.partition_1");
+    dropCollectionIndex(Meteor.users,"roles.partition_1");
 
     Meteor.roles.find().forEach(function (role, index, cursor) {
       if (!Roles._isOldRole(role)) {
