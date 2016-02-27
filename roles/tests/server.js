@@ -259,6 +259,10 @@
       test.isFalse(Roles.userIsInRole(users.eve, ['admin', 'user'], 'partition1'));
       test.isFalse(Roles.userIsInRole(users.eve, ['admin', 'user'], 'partition2'));
 
+      test.throws(function () {
+        Roles.renamePartition('partition3');
+      }, /Invalid partition name/);
+
       Roles.renamePartition('partition3', null);
 
       testUser(test, 'eve', ['admin', 'user', 'editor'], 'partition2');

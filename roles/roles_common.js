@@ -1096,9 +1096,6 @@ _.extend(Roles, {
   renamePartition: function (oldName, newName) {
     var count;
 
-    oldName = oldName || null;
-    newName = newName || null;
-
     Roles._checkPartitionName(oldName);
     Roles._checkPartitionName(newName);
 
@@ -1129,8 +1126,6 @@ _.extend(Roles, {
    * @static
    */
   removePartition: function (name) {
-    name = Roles._normalizePartitionName(name);
-
     Roles._checkPartitionName(name);
 
     Meteor.users.update({}, {
