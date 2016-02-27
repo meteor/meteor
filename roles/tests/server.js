@@ -225,6 +225,8 @@
 
       test.isFalse(Roles.userIsInRole(users.eve, ['user']));
       test.isFalse(Roles.userIsInRole(users.eve, ['editor']));
+      test.isFalse(Roles.userIsInRole(users.eve, ['user'], null));
+      test.isFalse(Roles.userIsInRole(users.eve, ['editor'], null));
 
       test.isFalse(Roles.userIsInRole(users.eve, ['user'], 'partition2'));
       test.isFalse(Roles.userIsInRole(users.eve, ['editor'], 'partition1'));
@@ -232,6 +234,7 @@
       test.isTrue(Roles.userIsInRole(users.eve, ['admin'], 'partition2'));
       test.isTrue(Roles.userIsInRole(users.eve, ['admin'], 'partition1'));
       test.isTrue(Roles.userIsInRole(users.eve, ['admin']));
+      test.isTrue(Roles.userIsInRole(users.eve, ['admin'], null));
     });
 
   Tinytest.add(
@@ -263,6 +266,9 @@
       test.isFalse(Roles.userIsInRole(users.eve, ['editor']));
       test.isTrue(Roles.userIsInRole(users.eve, ['admin']));
       test.isTrue(Roles.userIsInRole(users.eve, ['user']));
+      test.isFalse(Roles.userIsInRole(users.eve, ['editor'], null));
+      test.isTrue(Roles.userIsInRole(users.eve, ['admin'], null));
+      test.isTrue(Roles.userIsInRole(users.eve, ['user'], null));
 
       Roles.renamePartition(null, 'partition2');
 
@@ -271,6 +277,9 @@
       test.isFalse(Roles.userIsInRole(users.eve, ['editor']));
       test.isFalse(Roles.userIsInRole(users.eve, ['admin']));
       test.isFalse(Roles.userIsInRole(users.eve, ['user']));
+      test.isFalse(Roles.userIsInRole(users.eve, ['editor'], null));
+      test.isFalse(Roles.userIsInRole(users.eve, ['admin'], null));
+      test.isFalse(Roles.userIsInRole(users.eve, ['user'], null));
     });
 
   Tinytest.add(
