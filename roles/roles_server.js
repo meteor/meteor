@@ -5,22 +5,6 @@
 Meteor.users._ensureIndex({'roles._id': 1, 'roles.partition': 1});
 Meteor.users._ensureIndex({'roles.partition': 1});
 
-/**
- * Utility function to drop obsolete indexes when migrating
- *
- * @param {Object} collection to be proceeded
- * @param {String} indexName to drop
- */
-dropCollectionIndex = function(collection,indexName){
-  try {
-    collection._dropIndex(indexName);
-  } catch (e) {
-    if (e.name !== 'MongoError') throw e;
-    match = (e.err || e.errmsg).match(/index not found/);
-    if (!match) throw e;
-  }
-};
-
 /*
  * Publish logged-in user's roles so client-side checks can work.
  *
@@ -252,6 +236,23 @@ _.extend(Roles, {
   },
 
   /**
+   * @method _dropCollectionIndex
+   * @param {Object} collection Collection on which to drop the index.
+   * @param {String} indexName Name of the index to drop.
+   * @for Roles
+   * @private
+   * @static
+   */
+  _dropCollectionIndex: function (collection, indexName) {
+    try {
+      collection._dropIndex(indexName);
+    } catch (e) {
+      if (e.name !== 'MongoError') throw e;
+      if (!/index not found/.test(e.err || e.errmsg)) throw e;
+    }
+  },
+
+  /**
    * Migrates `Meteor.users` and `Meteor.roles` to the new format.
    *
    * @method _forwardMigrate
@@ -266,8 +267,7 @@ _.extend(Roles, {
     updateUser = updateUser || Roles._defaultUpdateUser;
     updateRole = updateRole || Roles._defaultUpdateRole;
 
-    // drop obsolete index name_1, preventing mongo duplicate key 'null' errors
-    dropCollectionIndex(Meteor.roles,"name_1");
+    Roles._dropCollectionIndex(Meteor.roles, 'name_1');
 
     Meteor.roles.find().forEach(function (role, index, cursor) {
       if (!Roles._isNewRole(role)) {
@@ -301,9 +301,8 @@ _.extend(Roles, {
     updateUser = updateUser || Roles._defaultUpdateUser;
     updateRole = updateRole || Roles._defaultUpdateRole;
 
-    // drop 'obsolete' users indexes
-    dropCollectionIndex(Meteor.users,"roles._id_1_roles.partition_1");
-    dropCollectionIndex(Meteor.users,"roles.partition_1");
+    Roles._dropCollectionIndex(Meteor.users, 'roles._id_1_roles.partition_1');
+    Roles._dropCollectionIndex(Meteor.users, 'roles.partition_1');
 
     Meteor.roles.find().forEach(function (role, index, cursor) {
       if (!Roles._isOldRole(role)) {
