@@ -3,21 +3,17 @@ if (Meteor.isClient) {
   let Counter = new ReactiveVar(0);
 
   Template.hello.helpers({
-    counter: function () {
-      return Counter.get();
-    }
+    counter: () => Counter.get()
   });
 
   Template.hello.events({
-    'click button': function () {
-      // increment the counter when button is clicked
-      Counter.set(Counter.get() + 1);
-    }
+    // increment the counter when button is clicked
+    'click button': () => Counter.set(Counter.get() + 1)
   });
 }
 
 if (Meteor.isServer) {
-  Meteor.startup(function () {
+  Meteor.startup(() => {
     // code to run on server at startup
     // remember, in a both-side file, these code will still be sent to client.
   });
