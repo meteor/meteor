@@ -21,7 +21,7 @@ Package.onUse(function (api) {
   api.imply('promise');
 
   api.addFiles("ecmascript.js", "server");
-  api.export("ECMAScript");
+  api.export("ECMAScript", "server");
 });
 
 Package.onTest(function (api) {
