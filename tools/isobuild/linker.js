@@ -159,14 +159,14 @@ _.extend(Module.prototype, {
 
     // An array of strings and SourceNode objects.
     let chunks = [];
+    let fileCount = 0;
 
     // Emit each file
     if (self.meteorInstallOptions) {
       const tree = self._buildModuleTree();
-      const moduleCount =
-        self._chunkifyModuleTree(tree, chunks, sourceWidth);
+      fileCount = self._chunkifyModuleTree(tree, chunks, sourceWidth);
       result.exportsName =
-        self._chunkifyEagerRequires(chunks, moduleCount, sourceWidth);
+        self._chunkifyEagerRequires(chunks, fileCount, sourceWidth);
 
     } else {
       _.each(self.files, function (file) {
@@ -183,6 +183,8 @@ _.extend(Module.prototype, {
           sourceWidth: sourceWidth,
           noLineNumbers: self.noLineNumbers
         }));
+
+        ++fileCount;
       });
     }
 
@@ -191,12 +193,18 @@ _.extend(Module.prototype, {
     Profile.time(
       'getPrelinkedFiles toStringWithSourceMap',
       function () {
-        const { code, map } = node.toStringWithSourceMap({
-          file: self.combinedServePath
-        });
-
-        result.source = code;
-        result.sourceMap = map.toJSON();
+        if (fileCount > 0) {
+          var swsm = node.toStringWithSourceMap({
+            file: self.combinedServePath
+          });
+          result.source = swsm.code;
+          result.sourceMap = swsm.map.toJSON();
+        } else {
+          // If there were no files in this bundle, we do not need to
+          // generate a source map.
+          result.source = node.toString();
+          result.sourceMap = null;
+        }
       }
     );
 
