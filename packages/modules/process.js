@@ -6,6 +6,17 @@ try {
   process = {};
 }
 
+if (Meteor.isServer) {
+  // Make require("process") work on the server in all versions of Node.
+  meteorInstall({
+    node_modules: {
+      "process.js": function (r, e, module) {
+        module.exports = process;
+      }
+    }
+  });
+}
+
 if (typeof process.env !== "object") {
   process.env = {};
 }

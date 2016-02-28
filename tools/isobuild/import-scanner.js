@@ -18,8 +18,13 @@ import {
 } from "../fs/files.js";
 
 const nativeModulesMap = Object.create(null);
+const nativeNames = Object.keys(process.binding("natives"));
 
-Object.keys(process.binding("natives")).forEach(id => {
+// Node 0.10 does not include process as a built-in module, but later
+// versions of Node do, and we provide a stub for it on the client.
+nativeNames.push("process");
+
+nativeNames.forEach(id => {
   if (id === "freelist" ||
       id.startsWith("internal/")) {
     return;
