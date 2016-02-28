@@ -176,8 +176,6 @@ describe("native node_modules", () => {
   it("are imported as stubs on the client", () => {
     const inherits = require("util").inherits;
     assert.strictEqual(typeof inherits, "function");
-    assert.strictEqual(require("util"),
-                       require("util/util.js"));
   });
 
   Meteor.isServer &&
