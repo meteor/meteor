@@ -15,6 +15,9 @@ if (Meteor.isServer) {
       }
     }
   });
+} else {
+  process.platform = "browser";
+  process.nextTick = process.nextTick || Meteor._setImmediate;
 }
 
 if (typeof process.env !== "object") {
@@ -25,4 +28,3 @@ Object.keys(meteorEnv).forEach(function (key) {
   process.env[key] = meteorEnv[key];
 });
 
-process.nextTick = process.nextTick || Meteor._setImmediate;
