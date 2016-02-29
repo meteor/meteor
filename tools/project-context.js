@@ -86,7 +86,7 @@ _.extend(ProjectContext.prototype, {
       options.explicitlyAddedLocalPackageDirs;
 
     // Used to override the directory that Meteor's build process
-    // writes to; used by `meteor test-app` so that you can test your
+    // writes to; used by `meteor test` so that you can test your
     // app in parallel to writing it, with an isolated database.
     self.projectLocalDir = options.projectLocalDir ||
       files.pathJoin(self.projectDir, '.meteor', 'local');

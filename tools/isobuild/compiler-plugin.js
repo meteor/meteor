@@ -14,7 +14,7 @@ import Fiber from 'fibers';
 import {sourceMapLength} from '../utils/utils.js';
 import ImportScanner from './import-scanner.js';
 
-import { isTestFilePath } from './app-test-files.js';
+import { isTestFilePath } from './test-files.js';
 
 // This file implements the new compiler plugins added in Meteor 1.2, which are
 // registered with the Plugin.registerCompiler API.
@@ -385,7 +385,7 @@ class ResourceSlot {
     // it is contained by an imports directory. Note that any files
     // contained by a node_modules directory will already have been
     // marked lazy in PackageSource#_inferFileOptions. Same for
-    // non-test files if running unit tests (`meteor test-app --unit`)
+    // non-test files if running (non-full-app) tests (`meteor test`)
     if (!this.packageSourceBatch.useMeteorInstall) {
       return false;
     }
@@ -394,8 +394,8 @@ class ResourceSlot {
     const isInImports = splitPath.indexOf("imports") >= 0;
 
     if (global.testCommandMetadata &&
-        (global.testCommandMetadata.isUnitTest ||
-         global.testCommandMetadata.isIntegrationTest)) {
+        (global.testCommandMetadata.isTest ||
+         global.testCommandMetadata.isAppTest)) {
       // test files should always be included, if we're running app
       // tests.
       return isInImports && !isTestFilePath(this.inputResource.path);
