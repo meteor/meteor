@@ -1242,12 +1242,13 @@ main.registerCommand({
     'override-architecture-with-local' : { type: Boolean },
     'allow-incompatible-update': { type: Boolean }
   },
+  allowUnrecognizedOptions: true,
   requiresApp: function (options) {
     return ! options.delete;
   },
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
-  var site = qualifySitename(options.args[0]);
+}, function (options, {rawOptions}) {
+  var site = options.args[0];
   config.printUniverseBanner();
 
   if (options.delete) {
@@ -1267,8 +1268,7 @@ main.registerCommand({
   var loggedIn = auth.isLoggedIn();
   if (! loggedIn) {
     Console.error(
-      "To instantly deploy your app on a free testing server,",
-      "just enter your email address!");
+      "You must be logged in to deploy, just enter your email address.");
     Console.error();
     if (! auth.registerOrLogIn()) {
       return 1;
@@ -1307,7 +1307,8 @@ main.registerCommand({
     projectContext: projectContext,
     site: site,
     settingsFile: options.settings,
-    buildOptions: buildOptions
+    buildOptions: buildOptions,
+    rawOptions
   });
 
   if (deployResult === 0) {
@@ -1348,27 +1349,21 @@ main.registerCommand({
   maxArgs: 1,
   options: {
     add: { type: String, short: "a" },
+    transfer: { type: String, short: "t" },
     remove: { type: String, short: "r" },
     list: { type: Boolean }
   },
   pretty: function (options) {
     // pretty if we're mutating; plain if we're listing (which is more likely to
     // be used by scripts)
-    return options.add || options.remove;
+    return options.add || options.remove || options.transfer;
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
 
-  if (options.add && options.remove) {
+  if (_.keys(_.pick(options, 'add', 'remove', 'transfer', 'list')).length > 1) {
     Console.error(
-      "Sorry, you can only add or remove one user at a time.");
-    return 1;
-  }
-
-  if ((options.add || options.remove) && options.list) {
-    Console.error(
-      "Sorry, you can't change the users at the same time as",
-      "you're listing them.");
+      "Sorry, you can only perform one authorization operation at a time.");
     return 1;
   }
 
@@ -1387,6 +1382,8 @@ main.registerCommand({
     return deploy.changeAuthorized(site, "add", options.add);
   } else if (options.remove) {
     return deploy.changeAuthorized(site, "remove", options.remove);
+  } else if (options.transfer) {
+    return deploy.changeAuthorized(site, "transfer", options.transfer);
   } else {
     return deploy.listAuthorized(site);
   }
