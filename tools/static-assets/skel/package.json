@@ -8,6 +8,6 @@
     "test": "meteor test-app --driver-package practicalmeteor:mocha"
   },
   "dependencies": {
-    "meteor-node-stubs": "~0.1.0"
+    "meteor-node-stubs": "~0.2.0"
   }
 }

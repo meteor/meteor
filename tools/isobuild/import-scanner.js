@@ -573,7 +573,22 @@ export default class ImportScanner {
     }
 
     if (! resolved) {
-      if (isNative && archMatches(this.bundleArch, "web")) {
+      const isApp = ! this.name;
+
+      // The reason `&& isApp` is required here is somewhat subtle: When a
+      // Meteor package imports a missing native Node module on the
+      // client, we should not assume the missing module will be
+      // implemented by /node_modules/meteor-node-stubs, because the app
+      // might have a custom stub package installed in its node_modules
+      // directory that should take precedence over meteor-node-stubs.
+      // Instead, we have to wait for computeJsOutputFilesMap to call
+      // addNodeModules against the app's ImportScanner, then fall back to
+      // meteor-node-stubs only if the app lookup fails. When isApp is
+      // true, however, we know that the app lookup just failed.
+      if (isNative && isApp) {
+        assert.ok(archMatches(this.bundleArch, "web"));
+        // To ensure the native module can be evaluated at runtime,
+        // register a dependency on meteor-node-stubs/defs/<id>.js.
         id = nativeModulesMap[id];
       }
 
