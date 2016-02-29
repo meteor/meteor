@@ -82,39 +82,33 @@ Below, you can find directions for setting up automatic linting at many differen
 
 <h3 id="eslint-installing">Installing and running ESLint</h3>
 
-To get ESLint up and running on your computer, install the command line tool with NPM:
+To setup ESLint in your application, you can install the following NPM packages:
 
 ```
-npm install -g eslint
-# if you are using react
-npm install -g eslint-plugin-react
-npm install -g eslint-config-airbnb
+npm install --save-dev eslint eslint-plugin-react eslint-config-airbnb
 ```
 
-XXX: should we install it locally in `package.json` and add a script to `package.json` so you can `npm run lint`? 
-
-Then you can create a `.eslintrc` file at the top of your project to set up your linting rules:
+You can also add a `eslintConfig` section to your `package.json` to specify that you'd like to use the AirBnB config. You can also setup any extra rules you want to change, as well as adding a lint NPM command:
 
 ```
 {
-  "extends": "airbnb/base",
-  "env": {},
-  "rules": {
-
-/**
-  * App Specific Overrides
-  */
-
+  ...
+  "scripts": {
+    "lint": "eslint . || true"
+  },
+  "eslintConfig": {
+    "extends": "airbnb/base",
+    "rules": {}
   }
 }
 ```
 
-Use `airbnb/base` for a normal ecmascript-based config and `airbnb` in a React project.
+Use `"airbnb/base"` for a normal ecmascript-based config and `"airbnb"` in a React project.
 
 To run the linter, you can now simply type:
 
 ```
-eslint .
+npm run lint
 ```
 
 For more details, read the [Getting Started](http://eslint.org/docs/user-guide/getting-started) directions from the ESLint website.
@@ -157,7 +151,7 @@ Then **restart Atom** to activate linting.
 
 <h4 id="eslint-webstorm">WebStorm</h4>
 
-WebStorm provides [these instructions for using ESLint](https://www.jetbrains.com/webstorm/help/eslint.html). After you install the ESLint Node packages and set up your `.eslintrc` file, just enable ESLint and click "Apply". You can configure how WebStorm should find your `.eslintrc` file, but on my machine it worked without any changes. It also automatically suggested switching to "JSX Harmony" syntax highlighting.
+WebStorm provides [these instructions for using ESLint](https://www.jetbrains.com/webstorm/help/eslint.html). After you install the ESLint Node packages and set up your `package.json`, just enable ESLint and click "Apply". You can configure how WebStorm should find your `.eslintrc` file, but on my machine it worked without any changes. It also automatically suggested switching to "JSX Harmony" syntax highlighting.
 
 ![Enable ESLint here.](images/webstorm-configuration.png)
 
