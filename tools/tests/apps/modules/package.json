@@ -9,6 +9,6 @@
     "regenerator": "^0.8.42"
   },
   "scripts": {
-    "test": "METEOR_PROFILE=100 ../../../../meteor test-app --driver-package practicalmeteor:mocha"
+    "test": "METEOR_PROFILE=100 ../../../../meteor test --full-app --driver-package practicalmeteor:mocha"
   }
 }
