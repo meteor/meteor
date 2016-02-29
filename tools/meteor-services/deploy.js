@@ -685,9 +685,12 @@ var changeAuthorized = function (site, action, username) {
     return 1;
   }
 
-  Console.info(site + ": " +
-               (action === "add" ? "added " : "removed ")
-                + username);
+  const verbs = {
+    add: "added",
+    remove: "removed",
+    transfer: "transferred"
+  };
+  Console.info(`${site}: ${verbs[action]} ${username}`);
   return 0;
 };
 
