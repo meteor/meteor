@@ -29,6 +29,7 @@
   6. Add `node_modules/` to `.gitignore` (don't ignore `node_shrinkpacks`).
   7. Node modules installed at the app level can be `import`-ed from at the app or package level.
     - Some packages may rely on you installing a certain version of a node module in your app.
+    - https://paper.dropbox.com/doc/node_modules-guidespec-HoFTXTb77FlFR287yYZYW
 4. Advanced Package use:
   1. Dealing w/ callbacks in NPM packages (content from http://guide.meteor.com/build-tool.html#npm-callbacks)
   2. Overriding core/3rd party Atmosphere packages (content from http://guide.meteor.com/build-tool.html#atmosphere
