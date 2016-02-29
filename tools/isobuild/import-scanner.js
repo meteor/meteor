@@ -103,7 +103,8 @@ export default class ImportScanner {
       const dotExt = "." + file.type;
       const dataString = file.data.toString("utf8");
       file.dataString = defaultExtensionHandlers[dotExt](dataString);
-      if (file.dataString !== dataString) {
+      if (! (file.data instanceof Buffer) ||
+          file.dataString !== dataString) {
         file.data = new Buffer(file.dataString, "utf8");
       }
 
