@@ -18,10 +18,13 @@
   3. Lifecycle
   4. Passing callbacks
   5. Stateless components
+    1. React terminology / approach, compare our UX guide
 
 4. Code Reuse
   1. Mixins
   2. Higher order components
+  3. Using 3rd party react components
+    1. From an Atmosphere package
 
 5. Getting Meteor Data into React Components
   1. The `ReactMeteorData` mixin
@@ -30,5 +33,7 @@
   4. Optimizing re-renders with `shouldComponentUpdate`
 
 6. Routing with React
-  1. `react-router`
   2. FlowRouter
+    1. Using mounter
+  1. `react-router`
+    1. Basic demo, "spirit" of our routing guide
