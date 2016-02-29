@@ -5,35 +5,18 @@
   2. Installing and using React in Meteor 1.3
   3. A simple example
 
-2. JSX in depth
-  1. What JSX really is (helping people understand it)
-  2. JSX workflow (transpiling - we've got it covered for you!)
-  3. JavaScript expressions inside JSX
-  4. Conditional and list rendering with JSX
-  5. Gotchas
+2. Meteor and React
+  1. JSX and the Meteor build tool (link to build tool article)
+  2. Using 3rd party react libs in apps and packages
 
-3. Components in depth
-  1. State
-  2. Props
-  3. Lifecycle
-  4. Passing callbacks
-  5. Stateless components
-    1. React terminology / approach, compare our UX guide
-
-4. Code Reuse
-  1. Mixins
-  2. Higher order components
-  3. Using 3rd party react components
-    1. From an Atmosphere package
-
-5. Getting Meteor Data into React Components
+3. Getting Meteor Data into React Components
   1. The `ReactMeteorData` mixin
   2. The `ReactMeteorDataContainer` higher order component
-  3. Containers vs. presentational components
+  3. Containers vs. presentational components [call out to UX guide]
   4. Optimizing re-renders with `shouldComponentUpdate`
 
 6. Routing with React
   2. FlowRouter
-    1. Using mounter
+    1. Using mounte
   1. `react-router`
     1. Basic demo, "spirit" of our routing guide
