@@ -13,6 +13,7 @@ import main from '../cli/main.js';
 import httpHelpers from '../utils/http-helpers.js';
 import { execFileSync, execFileAsync } from '../utils/processes.js';
 
+import './protect-string-proto.js'; // must always come before 'cordova-lib'
 import { cordova as cordova_lib, events as cordova_events, CordovaError }
   from 'cordova-lib';
 import cordova_util from 'cordova-lib/src/cordova/util.js';
