@@ -98,7 +98,7 @@ export default class ImportScanner {
 
   addInputFiles(files) {
     files.forEach(file => {
-      const absPath = pathJoin(this.sourceRoot, file.sourcePath);
+      const absPath = this._ensureSourcePath(file);
 
       const dotExt = "." + file.type;
       const dataString = file.data.toString("utf8");
@@ -186,6 +186,29 @@ export default class ImportScanner {
     return this.outputFiles.filter(file => {
       return file.installPath && (! file.lazy || file.imported);
     });
+  }
+
+  _ensureSourcePath(file) {
+    let sourcePath =
+      file.sourcePath ||
+      file.path ||
+      file.servePath;
+
+    if (sourcePath.startsWith("/")) {
+      sourcePath = pathRelative(this.sourceRoot, sourcePath);
+      if (sourcePath.startsWith("..")) {
+        throw new Error("sourcePath outside sourceRoot: " + sourcePath);
+      }
+    }
+
+    const info = this._joinAndStat(this.sourceRoot, sourcePath);
+    if (! info || ! info.stat.isFile()) {
+      throw new Error("sourcePath not a file: " + sourcePath);
+    }
+
+    file.sourcePath = sourcePath;
+
+    return info.path;
   }
 
   _findImportedModuleIdentifiers(file) {
