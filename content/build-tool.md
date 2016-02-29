@@ -82,13 +82,12 @@ One difference between pre-published packages and local app packages is that the
 To install an NPM package into your app, you can simply run NPM's standard install command:
 
 ```
-npm install --save-dev <package name>
+npm install --save <package name>
 ```
 
-XXX: Is it `meteor npm`
-XXX: Do we use --save-dev
-XXX: What about creating an initial `package.json`
-XXX: How do other developers get the packages?
+If the package is just a development dependency (i.e. it's used for testing, linting or the like), then you can use `--save-dev`. That way if you have some kind of build script, it can do `npm install --production` and avoid installing packages it doesn't need.
+
+Note that your colleagues will need to run `npm install` when they update their version of the app to get the NPM dependency. The Meteor tool will warn them if they fail to do so.
 
 <h4 id="npm-searching">Searching for packages</h4>
 
@@ -339,8 +338,6 @@ Then we can install any NPM CSS processing packages that we'd like to use and re
 ```
 
 After doing the above, you'll need to ensure you `npm install` and restart the `meteor` process running your app to make sure the PostCSS system has had a chance to set itself up.
-
-XXX: ensure the 1.3 version of this package has been release before publishing this?
 
 <h2 id="minification">Minification</h2>
 
