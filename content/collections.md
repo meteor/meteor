@@ -350,7 +350,7 @@ Migrations.add({
   version: 1,
   up() {
     // This is how to get access to the raw MongoDB node collection that the Meteor server collection wraps
-    const batch = Lists._collection.rawCollection().initializeUnorderedBulkOp();
+    const batch = Lists.rawCollection().initializeUnorderedBulkOp();
     Lists.find({todoCount: {$exists: false}}).forEach(list => {
       const todoCount = Todos.find({listId: list._id}).count();
       // We have to use pure MongoDB syntax here, thus the `{_id: X}`
