@@ -431,10 +431,12 @@ View or change authorized users and organizations for a site.
 Usage: meteor authorized <site> [--list]
        meteor authorized <site> --add <username>
        meteor authorized <site> --remove <username>
-       meteor authorized <site> --add <username>
+       meteor authorized <site> --transfer <username>
 
 Without an argument (or with --list), list the users and organizations that are
 administrators for a particular site that was deployed with 'meteor deploy'
+
+For free hosting:
 
 With --add, add an authorized user or organization to a site. Use this to give
 your collaborators the ability to work with your sites.
@@ -444,9 +446,14 @@ remove yourself. (Ask someone else who is an authorized user to do it.)
 
 You can only add or remove one authorized user at a time.
 
+For Galaxy:
+
+With --transfer, transfer the ownership of the application to a new user or
+organization.
+
 Options:
-  --add         add an authorized user or organization (for free apps)
-  --remove      remove an authorized user or organization (for free apps)
+  --add         add an authorized user or organization (for free hosting)
+  --remove      remove an authorized user or organization (for free hosting)
   --transfer    transfer the (Galaxy) app to a new user or organization
   --list        list authorized users and organizations (the default)
 
