@@ -18,6 +18,11 @@ Object.keys(map).forEach(function (id) {
 
 if (typeof meteorInstall === "function") {
   meteorInstall({
-    node_modules: meteorAliases
+    // Install the aliases into a node_modules directory one level up from
+    // the root directory, so that they do not clutter the namespace
+    // available to apps and packages.
+    "..": {
+      node_modules: meteorAliases
+    }
   });
 }
