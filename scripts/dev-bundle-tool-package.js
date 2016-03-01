@@ -24,7 +24,7 @@ var packageJson = {
     // and we want to make sure there are no dependencies on a higher version
     npm: "1.4.28",
     fibers: fibersVersion,
-    "meteor-babel": "0.8.0",
+    "meteor-babel": "0.8.1",
     "meteor-promise": "0.5.1",
     // So that Babel 6 can emit require("babel-runtime/helpers/...") calls.
     "babel-runtime": "5.8.35",
