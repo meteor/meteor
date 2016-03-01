@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Manage the configuration for third-party services",
-  version: "1.0.6-beta.11"
+  version: "1.0.6-beta.12"
 });
 
 Package.onUse(function(api) {
