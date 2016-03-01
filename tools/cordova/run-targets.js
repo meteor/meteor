@@ -120,7 +120,7 @@ export class AndroidRunTarget extends CordovaRunTarget {
       cordovaProject.projectRoot, 'platforms', this.platform,
       'cordova', 'lib', 'check_reqs');
     check_reqs_path = files.convertToOSPath(check_reqs_path);
-    const check_reqs = require(check_reqs_path);
+    let check_reqs = require(check_reqs_path);
     // We can't use check_reqs.run() because that will print the values of
     // JAVA_HOME and ANDROID_HOME to stdout.
     await Promise.all([check_reqs.check_java(),

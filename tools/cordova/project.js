@@ -231,9 +231,9 @@ ${displayNameForPlatform(platform)}`, async () => {
   async run(platform, isDevice, options = [], extraPaths = []) {
     options.push(isDevice ? '--device' : '--emulator');
 
-    const env = this.defaultEnvWithPathsAdded(...extraPaths);
+    let env = this.defaultEnvWithPathsAdded(...extraPaths);
 
-    const command = files.convertToOSPath(files.pathJoin(
+    let command = files.convertToOSPath(files.pathJoin(
       this.projectRoot, 'platforms', platform, 'cordova', 'run'));
 
     this.runCommands(`running Cordova app for platform \
@@ -242,8 +242,8 @@ ${displayNameForPlatform(platform)} with options ${options}`,
       env: env,
       cwd: this.projectRoot,
       stdio: Console.verbose ? 'inherit' : 'pipe',
-      waitForClose: false })
-    ), null, null;
+      waitForClose: false
+    }), null, null);
   }
 
   // Platforms
@@ -358,8 +358,8 @@ ${displayNamesForPlatforms(platforms)}`, async () => {
   addPlatform(platform) {
     this.runCommands(`adding platform ${displayNameForPlatform(platform)} \
 to Cordova project`, async () => {
-      const version = pinnedPlatformVersions[platform];
-      const platformSpec = version ? `${platform}@${version}` : platform;
+      let version = pinnedPlatformVersions[platform];
+      let platformSpec = version ? `${platform}@${version}` : platform;
       await cordova_lib.raw.platform('add', platformSpec, this.defaultOptions);
     });
   }
