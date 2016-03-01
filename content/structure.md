@@ -142,15 +142,13 @@ However there are some challenges to splitting your code in this way that should
 
 The primary challenge is properly sharing code between the different applications you are building. The simplest approach to deal with this issue is to simply deploy the *same* application on different web servers, controlling the behavior via different [settings](deployment.md#environment). This approach allows you to easily deploy different versions with different scaling behavior but doesn't enjoy most of the other advantages stated above.
 
-If you want to create Meteor applications with separate code, you are best sharing the code via a package system---either Meteor's package system or NPM. The easiest way to do this is to factor code that you'd like to share out into a Meteor package and add it directly into the app by placing it in the application's local `packages/` directory.
+If you want to create Meteor applications with separate code, you'll have some modules that you'd like to share between them. If those modules are something the wider world could use, you should consider publishing them to a package system, either NPM or Atmosphere, depending on whether the code is Meteor specific or otherwise.
 
-Then you have two approaches to share this package between applications:
+If the code is private, or of no interest to others, it typically makes sense to simply include the same module in both applications (you *can* do this with [private NPM modules however](https://www.npmjs.com/private-modules)). There are several ways to do this:
 
- 1. If you put both applications in a single repository (say at `app1/` and `app2/`), you can also include a directory of common packages (`packages/`) and create a symbolic link from `app1/packages/x` and `app2/packages/x` to `packages/x`.
+ - a straightforward approach is simply to include the common code as a [git submodule](https://git-scm.com/book/en/v2/Git-Tools-Submodules) of both applications.
 
- 2. If you'd prefer to put the applications in different repositories, you can use a [git submodule](https://git-scm.com/docs/git-submodule) to include the package (which would live in its own repository) in each app's `packages/` directory.
-
-You can also share a module (like `imports/some-module`) in a similar fashion.
+ - alternatively, if you include both applications in a single repository, you can use symbolic links to include the common module inside both apps.
 
 <h3 id="sharing-data">Sharing data</h3>
 
