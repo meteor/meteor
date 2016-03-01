@@ -79,7 +79,7 @@ One difference between pre-published packages and local app packages is that the
 
 <h4 id="npm-adding">Adding packages to your app</h4>
 
-To install an NPM package into your app, you can simply run NPM's standard install command:
+To install an NPM package into your app, you can simply run NPM's (we recommend using NPM3, although other versions of NPM should work with Meteor also) standard install command:
 
 ```
 npm install --save <package name>
