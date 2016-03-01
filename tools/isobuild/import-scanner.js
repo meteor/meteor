@@ -13,7 +13,9 @@ import {
   pathDirname,
   pathBasename,
   pathExtname,
+  pathIsAbsolute,
   statOrNull,
+  convertToOSPath,
   convertToPosixPath,
 } from "../fs/files.js";
 
@@ -191,14 +193,14 @@ export default class ImportScanner {
   _ensureSourcePath(file) {
     let sourcePath = file.sourcePath;
     if (sourcePath) {
-      if (sourcePath.startsWith("/")) {
+      if (pathIsAbsolute(sourcePath)) {
         sourcePath = pathRelative(this.sourceRoot, sourcePath);
         if (sourcePath.startsWith("..")) {
           throw new Error("sourcePath outside sourceRoot: " + sourcePath);
         }
       }
     } else if (file.servePath) {
-      sourcePath = file.servePath.replace(/^\//, "");
+      sourcePath = convertToOSPath(file.servePath.replace(/^\//, ""));
     } else if (file.path) {
       sourcePath = file.path;
     }
@@ -365,7 +367,8 @@ export default class ImportScanner {
       path = pathJoin("node_modules", "meteor", this.name, path);
     }
 
-    return path;
+    // Install paths should always be delimited by /.
+    return convertToPosixPath(path);
   }
 
   _getNodeModulesInstallPath(absPath) {
