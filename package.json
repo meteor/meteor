@@ -30,7 +30,7 @@
   },
   "dependencies": {
     "babel-core": "^6.5.2",
-    "babel-preset-meteor": "^6.5.0",
+    "babel-preset-meteor": "^6.6.0",
     "babel-preset-react": "^6.5.0",
     "babel-runtime": "^5.8.35",
     "babylon": "^6.5.2",
