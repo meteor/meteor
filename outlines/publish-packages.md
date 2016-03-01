@@ -21,6 +21,7 @@
   2. Tracking meteor + other package versions
   3. Changing your profile on Atmosphere
   4. Publicizing your package on forums + relevant issues on GH/forums
+  5. Using CI: https://medium.com/@sakulstra/meteor-ci-test-and-deploy-e779b62109a3#.7e6y8e3et
 6. Maintaining packages
   1. Dealing with issues and PRs in a respectful and efficient way
   2. Getting help from the community + finding co-maintainers
