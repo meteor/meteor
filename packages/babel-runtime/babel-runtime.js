@@ -342,6 +342,10 @@ var BabelRuntime = {
     return Array.from(arr);
   },
 
+  toArray: function (arr) {
+    return Array.isArray(arr) ? arr : Array.from(arr);
+  },
+
   slicedToArray: function (iterable, limit) {
     if (Array.isArray(iterable)) {
       return iterable;
