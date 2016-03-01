@@ -189,16 +189,18 @@ export default class ImportScanner {
   }
 
   _ensureSourcePath(file) {
-    let sourcePath =
-      file.sourcePath ||
-      file.path ||
-      file.servePath;
-
-    if (sourcePath.startsWith("/")) {
-      sourcePath = pathRelative(this.sourceRoot, sourcePath);
-      if (sourcePath.startsWith("..")) {
-        throw new Error("sourcePath outside sourceRoot: " + sourcePath);
+    let sourcePath = file.sourcePath;
+    if (sourcePath) {
+      if (sourcePath.startsWith("/")) {
+        sourcePath = pathRelative(this.sourceRoot, sourcePath);
+        if (sourcePath.startsWith("..")) {
+          throw new Error("sourcePath outside sourceRoot: " + sourcePath);
+        }
       }
+    } else if (file.servePath) {
+      sourcePath = file.servePath.replace(/^\//, "");
+    } else if (file.path) {
+      sourcePath = file.path;
     }
 
     const info = this._joinAndStat(this.sourceRoot, sourcePath);
