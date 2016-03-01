@@ -61,10 +61,9 @@
 * Upgraded Babel packages to ~6.5.0: 292824da3f8449afd1cd39fcd71acd415c809c0f
   Note: .babelrc files are now ignored (#6016), but may be reenabled (#6351).
 
-* Polyfills now provided for `process.nextTick` and `process.platform`.
-  #6167 #6198 #6055 efe53de492da6df785f1cbef2799d1d2b492a939
+* Polyfills now provided for `process.nextTick` and `process.platform`. #6167 #6198 #6055 efe53de492da6df785f1cbef2799d1d2b492a939
 
-* `meteor test-app` is now `meteor test [--full-app]`:
+* The `meteor test-app` command is now `meteor test [--full-app]`:
   ab5ab15768136d55c76d51072e746d80b45ec181
 
 * New apps now include a `package.json` file.
