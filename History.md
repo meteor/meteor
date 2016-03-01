@@ -52,6 +52,27 @@
 
 * Added support for wildcard import and export statements. #5872 #5897
 
+* Client-side stubs for built-in Node modules are now provided
+  automatically if the `meteor-node-stubs` npm package is installed. #6056
+
+* Imported file extensions are now optional for file types handled by
+  compiler plugins. #6151
+
+* Upgraded Babel packages to ~6.5.0: 292824da3f8449afd1cd39fcd71acd415c809c0f
+  Note: .babelrc files are now ignored (#6016), but may be reenabled (#6351).
+
+* Polyfills now provided for `process.nextTick` and `process.platform`.
+  #6167 #6198 #6055 efe53de492da6df785f1cbef2799d1d2b492a939
+
+* `meteor test-app` is now `meteor test [--full-app]`:
+  ab5ab15768136d55c76d51072e746d80b45ec181
+
+* New apps now include a `package.json` file.
+  c51b8cf7ffd8e7c9ca93768a2df93e4b552c199c
+
+* `require.resolve` is now supported.
+  https://github.com/benjamn/install/commit/ff6b25d6b5511d8a92930da41db73b93eb1d6cf8
+
 ### Performance
 
 * Don't reload package catalog from disk on rebuilds unless package
