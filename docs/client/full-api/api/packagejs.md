@@ -62,6 +62,15 @@ coffeescript package for an example. Build plugins are fully-fledged Meteor
 programs in their own right and have their own namespace, package dependencies,
 source files and npm requirements.
 
+{{#note}}
+You can use [local packages](#writingpackages) to define custom build plugins
+for your app, with one caveat. In published packages, build plugins are already
+bundled with their transitive dependencies. So if you want a dependency of a
+build plugin to be satisfied by a local package, you must use a local copy of
+the package that defines the plugin (even if you make no changes to that
+package) so that Meteor will pick up the local dependency.
+{{/note}}
+
 <h3 id="packagedescription"><span>Package Description</span></h3>
 
 Provide basic package information with `Package.describe(options)`. To publish a
