@@ -73,6 +73,9 @@
 * `require.resolve` is now supported.
   https://github.com/benjamn/install/commit/ff6b25d6b5511d8a92930da41db73b93eb1d6cf8
 
+* JSX now enabled in `.js` files processed by the `ecmascript` compiler
+  plugin. #6151
+
 ### Performance
 
 * Don't reload package catalog from disk on rebuilds unless package
