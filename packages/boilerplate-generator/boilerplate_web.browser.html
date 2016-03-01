@@ -1,7 +1,12 @@
 <html {{htmlAttributes}}>
 <head>
 {{#each css}}  <link rel="stylesheet" type="text/css" class="__meteor-css__" href="{{../bundledJsCssUrlRewriteHook url}}">{{/each}}
-
+{{{head}}}
+{{{dynamicHead}}}
+</head>
+<body>
+{{{body}}}
+{{{dynamicBody}}}
 {{#if inlineScriptsAllowed}}
 <script type='text/javascript'>__meteor_runtime_config__ = JSON.parse(decodeURIComponent({{meteorRuntimeConfig}}));</script>
 {{else}}
@@ -19,12 +24,5 @@
             src='{{rootUrlPathPrefix}}{{pathname}}'></script>
   {{/if}}
 {{/each}}
-
-{{{head}}}
-{{{dynamicHead}}}
-</head>
-<body>
-{{{body}}}
-{{{dynamicBody}}}
 </body>
 </html>
