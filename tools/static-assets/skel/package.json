@@ -2,10 +2,9 @@
   "name": "~name~",
   "private": true,
   "version": "0.0.1",
-  "main": "~name~.js",
+  "main": "server/main.js",
   "scripts": {
-    "start": "meteor run",
-    "test": "meteor test-app --driver-package practicalmeteor:mocha"
+    "start": "meteor run"
   },
   "dependencies": {
     "meteor-node-stubs": "~0.2.0"
