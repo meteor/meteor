@@ -5,11 +5,11 @@
 This plugin was originally developed to help beginners learn Meteor.
 It can further ensure best practices are followed by using certain rules.
 Since the creation of this plugin, ESLint and Meteor have changed heavily which broke the plugin.
-I am no longer using Meteor myself, so I'm not going to upgrade the plugin. A rather big rewrite would be required.
-If somebody wants to take over development, I'd be happy to share how to get started.
 
 **In the meantime: DO NOT USE THIS PLUGIN; IT IS BROKEN RIGHT NOW**.
 
+The plugin is currently being rewritten in the [dev branch](https://github.com/dferber90/eslint-plugin-meteor/tree/dev).
+You can track releases from there using `npm install eslint-plugin-meteor@next`.
 
 ---
 
