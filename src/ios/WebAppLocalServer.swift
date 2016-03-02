@@ -9,7 +9,7 @@ let localFileSystemPath = "/local-filesystem"
 
 /// The number of seconds to wait for startup to complete, after which
 /// we revert to the last known good version
-let startupTimeoutInterval = 10.0
+let startupTimeoutInterval = 20.0
 
 // For some reason, initializers in a CDVPlugin subclass do not seem to be
 // executed, so we'll make this a file local property for now

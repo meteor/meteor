@@ -27,7 +27,7 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
     private static final String LOG_TAG = WebAppLocalServer.class.getSimpleName();
     public static final String PREFS_NAME = "MeteorWebApp";
 
-    private static final long STARTUP_TIMEOUT = 10000;
+    private static final long STARTUP_TIMEOUT = 20000;
 
     private static final String LOCAL_FILESYSTEM_PATH = "/local-filesystem";
 
