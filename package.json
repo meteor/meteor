@@ -7,7 +7,7 @@
     "tag": "next"
   },
   "scripts": {
-    "build": "babel lib -d dist --optional runtime",
+    "build": "babel --version && babel lib -d dist --optional runtime",
     "build:w": "npm run build -- -w",
     "build:istanbul": "npm run build -- --auxiliary-comment-before \"istanbul ignore next\"",
     "check-coverage": "istanbul check-coverage",
