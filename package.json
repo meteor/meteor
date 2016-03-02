@@ -3,6 +3,7 @@
   "author": "Dominik Ferber <dominik.ferber+npm@gmail.com>",
   "description": "Meteor specific linting rules for ESLint",
   "main": "dist/index.js",
+  "publishConfig": { "tag": "next" },
   "scripts": {
     "build": "babel lib -d dist --optional runtime --auxiliary-comment-before \"istanbul ignore next\"",
     "build:w": "npm run build -- -w",
