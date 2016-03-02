@@ -18,8 +18,8 @@
     "rule": "babel scripts/new-rule.js | node",
     "semantic-release": "semantic-release pre && npm publish && semantic-release post",
     "test": "npm run lint && npm run build && npm run unit-test && npm run check-coverage",
-    "unit-test": "istanbul cover --dir reports/coverage node_modules/mocha/bin/_mocha tests/**/*.js -- -t 4000 --compilers js:babel-core/register",
-    "unit-test:w": "node_modules/mocha/bin/_mocha tests/**/*.js -t 4000 --compilers js:babel-core/register --watch"
+    "unit-test": "istanbul cover --dir reports/coverage node_modules/mocha/bin/_mocha tests/**/*.js -- -t 4000 --compilers js:babel-register",
+    "unit-test:w": "node_modules/mocha/bin/_mocha tests/**/*.js -t 4000 --compilers js:babel-register --watch"
   },
   "files": [
     "LICENSE",
@@ -33,6 +33,7 @@
   "homepage": "https://github.com/dferber90/eslint-plugin-meteor",
   "bugs": "https://github.com/dferber90/eslint-plugin-meteor/issues",
   "dependencies": {
+    "babel-register": "6.6.0",
     "babel-runtime": "6.6.1",
     "escope": "3.5.0",
     "invariant": "2.2.0",
@@ -42,7 +43,6 @@
   },
   "devDependencies": {
     "babel-cli": "6.6.0",
-    "babel-core": "6.6.0",
     "babel-eslint": "5.0.0",
     "babel-plugin-transform-object-rest-spread": "6.5.0",
     "babel-plugin-transform-runtime": "6.6.0",
