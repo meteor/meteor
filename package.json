@@ -46,7 +46,7 @@
     "path-exists": "2.1.0"
   },
   "devDependencies": {
-    "babel-cli": "6.6.0",
+    "babel-cli": "6.6.4",
     "babel-core": "6.6.4",
     "babel-eslint": "5.0.0",
     "babel-plugin-transform-object-rest-spread": "6.6.4",
