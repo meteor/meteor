@@ -1,57 +1,54 @@
-/* eslint-env mocha */
-
 import assert from 'assert'
 import isMeteorBlockOnlyTest from '../../../../dist/util/executors/isMeteorBlockOnlyTest'
 
-describe('isMeteorBlockOnlyTest', function () {
-
-  it('accepts a valid MemberExpression', function () {
+describe('isMeteorBlockOnlyTest', () => {
+  it('accepts a valid MemberExpression', () => {
     const result = isMeteorBlockOnlyTest({
       type: 'MemberExpression',
       object: {
         type: 'Identifier',
-        name: 'Meteor'
+        name: 'Meteor',
       },
       property: {
         type: 'Identifier',
-        name: 'isClient'
-      }
+        name: 'isClient',
+      },
     })
     assert.ok(result)
   })
 
-  it('accepts a valid computed MemberExpression', function () {
+  it('accepts a valid computed MemberExpression', () => {
     const result = isMeteorBlockOnlyTest({
       type: 'MemberExpression',
       computed: true,
       object: {
         type: 'Identifier',
-        name: 'Meteor'
+        name: 'Meteor',
       },
       property: {
         type: 'Literal',
-        value: 'isCordova'
-      }
+        value: 'isCordova',
+      },
     })
     assert.ok(result)
   })
 
-  it('does not accept an invalid MemberExpression', function () {
+  it('does not accept an invalid MemberExpression', () => {
     const result = isMeteorBlockOnlyTest({
       type: 'MemberExpression',
       object: {
         type: 'Identifier',
-        name: 'Foo'
+        name: 'Foo',
       },
       property: {
         type: 'Identifier',
-        name: 'isClient'
-      }
+        name: 'isClient',
+      },
     })
     assert.ok(!result)
   })
 
-  it('accepts a valid UnaryExpression', function () {
+  it('accepts a valid UnaryExpression', () => {
     const result = isMeteorBlockOnlyTest({
       type: 'UnaryExpression',
       operator: '!',
@@ -59,18 +56,18 @@ describe('isMeteorBlockOnlyTest', function () {
         type: 'MemberExpression',
         object: {
           type: 'Identifier',
-          name: 'Meteor'
+          name: 'Meteor',
         },
         property: {
           type: 'Identifier',
-          name: 'isServer'
-        }
-      }
+          name: 'isServer',
+        },
+      },
     })
     assert.ok(result)
   })
 
-  it('does not accept an invalid UnaryExpression', function () {
+  it('does not accept an invalid UnaryExpression', () => {
     const result = isMeteorBlockOnlyTest({
       type: 'UnaryExpression',
       operator: '!',
@@ -78,18 +75,18 @@ describe('isMeteorBlockOnlyTest', function () {
         type: 'MemberExpression',
         object: {
           type: 'Identifier',
-          name: 'Foo'
+          name: 'Foo',
         },
         property: {
           type: 'Identifier',
-          name: 'isClient'
-        }
-      }
+          name: 'isClient',
+        },
+      },
     })
     assert.ok(!result)
   })
 
-  it('accepts a valid LogicalExpression', function () {
+  it('accepts a valid LogicalExpression', () => {
     const result = isMeteorBlockOnlyTest({
       type: 'LogicalExpression',
       operator: '||',
@@ -100,41 +97,41 @@ describe('isMeteorBlockOnlyTest', function () {
           type: 'MemberExpression',
           object: {
             type: 'Identifier',
-            name: 'Meteor'
+            name: 'Meteor',
           },
           property: {
             type: 'Identifier',
-            name: 'isClient'
-          }
+            name: 'isClient',
+          },
         },
         right: {
           type: 'MemberExpression',
           object: {
             type: 'Identifier',
-            name: 'Meteor'
+            name: 'Meteor',
           },
           property: {
             type: 'Identifier',
-            name: 'isServer'
-          }
-        }
+            name: 'isServer',
+          },
+        },
       },
       right: {
         type: 'MemberExpression',
         object: {
           type: 'Identifier',
-          name: 'Meteor'
+          name: 'Meteor',
         },
         property: {
           type: 'Identifier',
-          name: 'isCordova'
-        }
-      }
+          name: 'isCordova',
+        },
+      },
     })
     assert.ok(result)
   })
 
-  it('does not accept an invalid LogicalExpression', function () {
+  it('does not accept an invalid LogicalExpression', () => {
     const result = isMeteorBlockOnlyTest({
       type: 'LogicalExpression',
       operator: '||',
@@ -145,46 +142,46 @@ describe('isMeteorBlockOnlyTest', function () {
           type: 'MemberExpression',
           object: {
             type: 'Identifier',
-            name: 'Foo'
+            name: 'Foo',
           },
           property: {
             type: 'Identifier',
-            name: 'isClient'
-          }
+            name: 'isClient',
+          },
         },
         right: {
           type: 'MemberExpression',
           object: {
             type: 'Identifier',
-            name: 'Meteor'
+            name: 'Meteor',
           },
           property: {
             type: 'Identifier',
-            name: 'isServer'
-          }
-        }
+            name: 'isServer',
+          },
+        },
       },
       right: {
         type: 'MemberExpression',
         object: {
           type: 'Identifier',
-          name: 'Meteor'
+          name: 'Meteor',
         },
         property: {
           type: 'Identifier',
-          name: 'isCordova'
-        }
-      }
+          name: 'isCordova',
+        },
+      },
     })
     assert.ok(!result)
   })
 
-  it('returns false for unresolvable expressions', function () {
-    const result = isMeteorBlockOnlyTest({type: 'Identifier'})
+  it('returns false for unresolvable expressions', () => {
+    const result = isMeteorBlockOnlyTest({ type: 'Identifier' })
     assert.ok(!result)
   })
 
-  it('returns false for invalid unary expressions', function () {
+  it('returns false for invalid unary expressions', () => {
     const result = isMeteorBlockOnlyTest({
       type: 'UnaryExpression',
       operator: '-',
@@ -192,15 +189,14 @@ describe('isMeteorBlockOnlyTest', function () {
         type: 'MemberExpression',
         object: {
           type: 'Identifier',
-          name: 'Foo'
+          name: 'Foo',
         },
         property: {
           type: 'Identifier',
-          name: 'isClient'
-        }
-      }
+          name: 'isClient',
+        },
+      },
     })
     assert.ok(!result)
   })
-
 })

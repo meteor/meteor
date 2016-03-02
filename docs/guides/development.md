@@ -56,13 +56,11 @@ After implementing the rules, the rule has to be exported from `lib/index.js`.
 Default options for the rule have to be set as well (also in `lib/index.js`).
 All rules must be disabled by default.
 
-## ESLint-plugin-Meteor
-
-Rules defined in this plugin differ from regular ESLint rules. Meteor treats files differently based on their name and location in the project. Rules defined in ESLint-plugin-Meteor can access this information through *getMeta*. This function takes the full filename and returns meta information based on it's location in the Meteor project. A look at the existing rules should explain the concept.
 
 ## Give back
 
 After making sure all tests pass and the test-coverage is at 100%, please send a PR to [dferber90/eslint-plugin-meteor](https://github.com/dferber90/eslint-plugin-meteor).
+
 
 ## Essential Development Resources
 

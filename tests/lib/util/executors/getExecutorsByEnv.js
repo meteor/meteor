@@ -1,5 +1,3 @@
-/* eslint-env mocha */
-
 import assert from 'assert'
 import getExecutorsByEnv from '../../../../dist/util/executors/getExecutorsByEnv'
 
@@ -15,63 +13,63 @@ import {
   PACKAGE_CONFIG,
   MOBILE_CONFIG,
   COMPATIBILITY,
-  NON_METEOR
+  NON_METEOR,
 } from '../../../../dist/util/environment'
 
-describe('getExecutorsByEnv', function () {
-  it('public', function () {
+describe('getExecutorsByEnv', () => {
+  it('public', () => {
     const result = getExecutorsByEnv(PUBLIC)
     assert.equal(result.size, 0)
   })
-  it('private', function () {
+  it('private', () => {
     const result = getExecutorsByEnv(PRIVATE)
     assert.equal(result.size, 0)
   })
-  it('client', function () {
+  it('client', () => {
     const result = getExecutorsByEnv(CLIENT)
     assert.equal(result.size, 2)
     assert.ok(result.has('browser'))
     assert.ok(result.has('cordova'))
   })
-  it('server', function () {
+  it('server', () => {
     const result = getExecutorsByEnv(SERVER)
     assert.equal(result.size, 1)
     assert.ok(result.has('server'))
   })
-  it('package', function () {
+  it('package', () => {
     const result = getExecutorsByEnv(PACKAGE)
     assert.equal(result.size, 0)
   })
-  it('test', function () {
+  it('test', () => {
     const result = getExecutorsByEnv(TEST)
     assert.equal(result.size, 0)
   })
-  it('node_module', function () {
+  it('node_module', () => {
     const result = getExecutorsByEnv(NODE_MODULE)
     assert.equal(result.size, 0)
   })
-  it('universal', function () {
+  it('universal', () => {
     const result = getExecutorsByEnv(UNIVERSAL)
     assert.equal(result.size, 3)
     assert.ok(result.has('browser'))
     assert.ok(result.has('server'))
     assert.ok(result.has('cordova'))
   })
-  it('packageConfig', function () {
+  it('packageConfig', () => {
     const result = getExecutorsByEnv(PACKAGE_CONFIG)
     assert.equal(result.size, 0)
   })
-  it('mobileConfig', function () {
+  it('mobileConfig', () => {
     const result = getExecutorsByEnv(MOBILE_CONFIG)
     assert.equal(result.size, 0)
   })
-  it('compatibility', function () {
+  it('compatibility', () => {
     const result = getExecutorsByEnv(COMPATIBILITY)
     assert.equal(result.size, 2)
     assert.ok(result.has('cordova'))
     assert.ok(result.has('browser'))
   })
-  it('nonMeteor', function () {
+  it('nonMeteor', () => {
     const result = getExecutorsByEnv(NON_METEOR)
     assert.equal(result.size, 0)
   })

@@ -1,4 +1,12 @@
+
 # Setup Meteor Project
+
+TODO
+
+*This document may be outdated. It will be rewritten as the [setup guide](/guides/setup.md).*
+
+---
+
 This document describes setting up linting with ESLint-plugin-Meteor in a Meteor project. After completing the steps, it will be possible to lint the project from the command line. Further, the editor will be able to share the settings with the Meteor project.
 
 The instructions here require a basic understanding of npm.
@@ -142,31 +150,6 @@ The *.eslintrc* file should now look like this:
   }
 }
 ```
-
-## Packages
-A common way to structure Meteor projects is to use packages. ESLint-plugin-Meteor can not determine where files in packages are going to be executed. All rules will be turned off inside package files by default, until an environment is specified through a comment.
-
-A hint about the environment of the file has to be included in each file that should be linted in a package.
-
-The following comment tells ESLint-plugin-Meteor that this file is going to be executed on the client.
-
-```js
-/* eslint-meteor-env client */
-```
-
-If a file is going to run on the client and the server, use the following instead.
-
-```js
-/* eslint-meteor-env client, server */
-```
-
-These environments can be combined in any way. Possible values are `client` and `server`.
-
-Environments from multiple comments in a single file will be merged. Specifying unknown environments will result in no environment being detected. Specifying environments in a file outside of a package will overwrite the environment detected by the file location.
-
-
-## Example
-A complete example of how to set up ESLint-plugin-Meteor in your project can be found [here](https://github.com/wekan/wekan/pull/370).
 
 ## Next steps
 Set up ESLint to work with your editor to benefit fully from linting.

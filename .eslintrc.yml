@@ -1,0 +1,8 @@
+root: true # ignore config in main folder
+extends: airbnb/base
+env:
+  node: true
+parser: babel-eslint
+
+rules:
+  semi: [2, "never"]
