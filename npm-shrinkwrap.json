@@ -1,6 +1,6 @@
 {
   "name": "babel-preset-meteor",
-  "version": "6.5.0",
+  "version": "6.6.0",
   "dependencies": {
     "amdefine": {
       "version": "1.0.0",
@@ -158,9 +158,9 @@
       "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-literals/-/babel-plugin-transform-es2015-literals-6.5.0.tgz"
     },
     "babel-plugin-transform-es2015-modules-commonjs": {
-      "version": "6.4.5",
-      "from": "babel-plugin-transform-es2015-modules-commonjs@6.4.5",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-modules-commonjs/-/babel-plugin-transform-es2015-modules-commonjs-6.4.5.tgz"
+      "version": "6.6.3",
+      "from": "babel-plugin-transform-es2015-modules-commonjs@6.6.3",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-modules-commonjs/-/babel-plugin-transform-es2015-modules-commonjs-6.6.3.tgz"
     },
     "babel-plugin-transform-es2015-object-super": {
       "version": "6.5.0",
