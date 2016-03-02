@@ -2,7 +2,6 @@
   "name": "~name~",
   "private": true,
   "version": "0.0.1",
-  "main": "server/main.js",
   "scripts": {
     "start": "meteor run"
   },
