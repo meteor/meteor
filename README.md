@@ -17,6 +17,7 @@
 Meteor specific linting rules for ESLint
 
 ![Example](docs/media/pub.gif)
+
 *This gif shows integration of ESLint-plugin-Meteor into Atom with [linter](https://atom.io/packages/linter) and [linter-eslint](https://atom.io/packages/linter-eslint). Find out more in the [integration guide](docs/guides/integration.md).*
 
 
