@@ -71,7 +71,7 @@ It will not warn when accessing client-only features on the server and vice vers
 
 # Contributing
 
-Read about [set up of the development environment](docs/SETUP_DEVELOPMENT.md).
+Read about [set up of the development environment](docs/guides/development.md).
 
 # Thanks
 
