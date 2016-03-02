@@ -7,8 +7,9 @@
     "tag": "next"
   },
   "scripts": {
-    "build": "babel lib -d dist --optional runtime --auxiliary-comment-before \"istanbul ignore next\"",
+    "build": "babel lib -d dist --optional runtime",
     "build:w": "npm run build -- -w",
+    "build:istanbul": "npm run build -- --auxiliary-comment-before \"istanbul ignore next\"",
     "check-coverage": "istanbul check-coverage",
     "clean": "rimraf dist",
     "coveralls": "cat ./reports/coverage/lcov.info | coveralls",
@@ -17,7 +18,7 @@
     "prepublish": "npm run build",
     "rule": "babel scripts/new-rule.js | node",
     "semantic-release": "semantic-release pre && npm publish && semantic-release post",
-    "test": "npm run lint && npm run build && npm run unit-test && npm run check-coverage",
+    "test": "npm run lint && npm run build:istanbul && npm run unit-test && npm run check-coverage",
     "unit-test": "istanbul cover --dir reports/coverage node_modules/mocha/bin/_mocha tests/**/*.js -- -t 4000 --compilers js:babel-register",
     "unit-test:w": "node_modules/mocha/bin/_mocha tests/**/*.js -t 4000 --compilers js:babel-register --watch"
   },
@@ -54,7 +55,7 @@
     "eslint": "2.2.0",
     "eslint-config-airbnb": "6.0.2",
     "ghooks": "1.0.3",
-    "istanbul": "0.4.2",
+    "istanbul": "1.0.0-alpha.2",
     "mocha": "2.4.5",
     "readline-sync": "1.4.1",
     "rewire": "2.5.1",
