@@ -68,7 +68,7 @@
     "validate-commit-msg": "2.1.0"
   },
   "peerDependencies": {
-    "eslint": ">=2.0.0"
+    "eslint": ">=0.8.0"
   },
   "engines": {},
   "keywords": [
