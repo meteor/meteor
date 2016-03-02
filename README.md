@@ -1,5 +1,7 @@
 # ESLint-plugin-Meteor
 
+Meteor specific linting rules for ESLint
+
 [![Build Status][travis-image]][travis-url]
 [![Coverage Status][coverage-image]][coverage-url]
 [![Code Climate][climate-image]][climate-url]
@@ -14,9 +16,8 @@
 [![NPM downloads][npm-downloads-image]][npm-url]
 
 
-Meteor specific linting rules for ESLint
 
-![Example](docs/media/pub.gif)
+![Example](docs/media/epm.gif)
 
 *This gif shows integration of ESLint-plugin-Meteor into Atom with [linter](https://atom.io/packages/linter) and [linter-eslint](https://atom.io/packages/linter-eslint). Find out more in the [integration guide](docs/guides/integration.md).*
 
@@ -51,15 +52,16 @@ For a more thorough introduction, read the [setup guide](/docs/guides/setup.md).
 
 # List of supported rules
 
-## Core API
-* *currently none*
-
 ## Best Practices
 * [audit-argument-checks](docs/rules/audit-argument-checks.md): Enforce check on all arguments passed to methods and publish functions
 * [no-session](docs/rules/no-session.md): Prevent usage of Session
 * [no-blaze-lifecycle-assignment](docs/rules/no-blaze-lifecycle-assignment.md): Prevent deprecated template lifecycle callback assignments
 * [no-zero-timeout](docs/rules/no-zero-timeout.md): Prevent usage of Meteor.setTimeout with zero delay
 * [blaze-consistent-eventmap-params](docs/rules/blaze-consistent-eventmap-params.md): Force consistent event handler parameters in event maps
+
+
+## Core API
+* *currently no rules implemented*
 
 [Any rule idea is welcome !](https://github.com/dferber90/eslint-plugin-meteor/issues)
 
