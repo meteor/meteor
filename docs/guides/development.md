@@ -29,7 +29,7 @@ $ npm run unit-test
 
 ## Linking
 
-npm can link packages. This makes version set up for development available in other projects. It enables testing new rules on real projects. To be able to link this package to another project, that one has to be [set up correctly first](SETUP_METEOR_PROJECT.md).
+npm can link packages. This makes version set up for development available in other projects. It enables testing new rules on real projects. To be able to link this package to another project, that one has to be [set up correctly first](/setup.md).
 
 ```bash
 # Make this package available globally
@@ -52,14 +52,14 @@ $ npm run rule
 
 This will scaffold all required files for the new rule. Add the implementation, tests and description of your rule to these files.
 
-After implementing the rules, the rule has to be exported from `lib/index.js`.
-Default options for the rule have to be set as well (also in `lib/index.js`).
-All rules must be disabled by default.
+After implementation, the rule has to be exported from `lib/index.js`.
+Recommended options for the rule should be set as well (also in `lib/index.js`).
 
 
 ## Give back
 
 After making sure all tests pass and the test-coverage is at 100%, please send a PR to [dferber90/eslint-plugin-meteor](https://github.com/dferber90/eslint-plugin-meteor).
+Git commits messages must follow the [conventional changelog](https://github.com/angular/angular.js/blob/master/CONTRIBUTING.md#-git-commit-guidelines) format.
 
 
 ## Essential Development Resources
