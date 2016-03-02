@@ -12,11 +12,11 @@
         "acorn": {
           "version": "2.4.0"
         },
-        "acorn-globals": {
-          "version": "1.0.6"
-        },
         "alter": {
           "version": "0.2.0"
+        },
+        "acorn-globals": {
+          "version": "1.0.6"
         },
         "amdefine": {
           "version": "1.0.0"
@@ -27,11 +27,11 @@
         "ansi-styles": {
           "version": "2.1.0"
         },
-        "asap": {
-          "version": "2.0.3"
-        },
         "ast-traverse": {
           "version": "0.1.1"
+        },
+        "asap": {
+          "version": "2.0.3"
         },
         "ast-types": {
           "version": "0.8.5"
@@ -102,17 +102,17 @@
         "camelcase": {
           "version": "1.2.1"
         },
-        "chalk": {
-          "version": "1.1.1"
-        },
         "character-parser": {
           "version": "1.2.1"
         },
-        "commander": {
-          "version": "2.5.1"
+        "chalk": {
+          "version": "1.1.1"
         },
         "commoner": {
           "version": "0.10.3"
+        },
+        "commander": {
+          "version": "2.5.1"
         },
         "concat-map": {
           "version": "0.0.1"
@@ -126,11 +126,11 @@
         "css": {
           "version": "1.0.8"
         },
-        "css-parse": {
-          "version": "1.0.4"
-        },
         "css-stringify": {
           "version": "1.0.5"
+        },
+        "css-parse": {
+          "version": "1.0.4"
         },
         "debug": {
           "version": "2.2.0"
@@ -141,11 +141,11 @@
         "detect-indent": {
           "version": "3.0.1"
         },
-        "diff": {
-          "version": "1.4.0"
-        },
         "escape-string-regexp": {
           "version": "1.0.3"
+        },
+        "diff": {
+          "version": "1.4.0"
         },
         "esprima-fb": {
           "version": "15001.1.0-dev-harmony-fb"
@@ -159,11 +159,11 @@
         "get-stdin": {
           "version": "4.0.1"
         },
-        "globals": {
-          "version": "6.4.1"
-        },
         "graceful-fs": {
           "version": "3.0.8"
+        },
+        "globals": {
+          "version": "6.4.1"
         },
         "graceful-readlink": {
           "version": "1.0.1"
@@ -252,11 +252,11 @@
         "path-is-absolute": {
           "version": "1.0.0"
         },
-        "private": {
-          "version": "0.1.6"
-        },
         "promise": {
           "version": "7.0.4"
+        },
+        "private": {
+          "version": "0.1.6"
         },
         "q": {
           "version": "1.1.2"
@@ -291,11 +291,11 @@
         "sigmund": {
           "version": "1.0.1"
         },
-        "simple-fmt": {
-          "version": "0.1.0"
-        },
         "simple-is": {
           "version": "0.2.0"
+        },
+        "simple-fmt": {
+          "version": "0.1.0"
         },
         "slash": {
           "version": "1.0.0"
@@ -306,11 +306,11 @@
         "stable": {
           "version": "0.1.5"
         },
-        "stringmap": {
-          "version": "0.2.2"
-        },
         "stringset": {
           "version": "0.2.1"
+        },
+        "stringmap": {
+          "version": "0.2.2"
         },
         "strip-ansi": {
           "version": "3.0.0"
@@ -339,11 +339,11 @@
         "user-home": {
           "version": "1.1.1"
         },
-        "void-elements": {
-          "version": "2.0.1"
-        },
         "window-size": {
           "version": "0.1.0"
+        },
+        "void-elements": {
+          "version": "2.0.1"
         },
         "wordwrap": {
           "version": "0.0.3"
