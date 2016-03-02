@@ -305,13 +305,7 @@ to build apps for ${displayNameForPlatform(platform)}.`);
 
       Console.info();
 
-      if (!Console.verbose) {
-        Console.info("Specify the --verbose option to see more details about \
-the status of individual requirements.");
-        return false;
-      }
-
-      Console.info("Status of the requirements:");
+      Console.info("Status of the individual requirements:");
       for (requirement of requirements) {
         const name = requirement.name;
         if (requirement.installed) {
