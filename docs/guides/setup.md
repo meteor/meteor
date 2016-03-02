@@ -9,7 +9,7 @@ TODO
 
 Minimal configuration should look like this:
 
-```js
+```json
 {
   "env": {
     "es6": true,
@@ -19,9 +19,9 @@ Minimal configuration should look like this:
   },
   "plugins": [
     "meteor"
-  ]
+  ],
   "extends": [
-    'plugin:meteor/recommended',
+    "plugin:meteor/recommended",
   ]
 }
 ```
