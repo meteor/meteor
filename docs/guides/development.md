@@ -29,7 +29,7 @@ $ npm run unit-test
 
 ## Linking
 
-npm can link packages. This makes version set up for development available in other projects. It enables testing new rules on real projects. To be able to link this package to another project, that one has to be [set up correctly first](/setup.md).
+npm can link packages. This makes version set up for development available in other projects. It enables testing new rules on real projects. To be able to link this package to another project, that one has to be [set up correctly first](/docs/guides/setup.md).
 
 ```bash
 # Make this package available globally
