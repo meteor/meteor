@@ -2,6 +2,17 @@ import assert from 'assert'
 import getExecutorsFromTest from '../../../../dist/util/executors/getExecutorsFromTest'
 
 describe('getExecutorsFromTest', () => {
+  it('throws for unkown type', () => {
+    assert.throws(
+      () => {
+        getExecutorsFromTest({
+          type: 'Identifier',
+          name: 'Meteor',
+        })
+      }
+    )
+  })
+
   describe('MemberExpression', () => {
     it('isClient', () => {
       const result = getExecutorsFromTest({
