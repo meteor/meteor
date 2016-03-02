@@ -11,14 +11,15 @@
 
 const rule = require('../../../dist/rules/no-blaze-lifecycle-assignment')
 const RuleTester = require('eslint').RuleTester
-import {NON_METEOR, CLIENT, SERVER} from '../../../dist/util/environment'
 
 // -----------------------------------------------------------------------------
 // Tests
 // -----------------------------------------------------------------------------
 
 const ruleTester = new RuleTester()
-ruleTester.run('no-blaze-lifecycle-assignment', rule(() => ({env: CLIENT})), {
+
+// CLIENT
+ruleTester.run('no-blaze-lifecycle-assignment', rule, {
 
   valid: [
     'x += 1',
@@ -26,14 +27,14 @@ ruleTester.run('no-blaze-lifecycle-assignment', rule(() => ({env: CLIENT})), {
     'Template.foo.bar = true',
     'Template.foo.onCreated(function () {})',
     'Template.foo.onRendered(function () {})',
-    'Template.foo.onDestroyed(function () {})'
+    'Template.foo.onDestroyed(function () {})',
   ],
 
   invalid: [
     {
       code: 'Template.foo.created = function () {}',
       errors: [{
-        message: 'Template callback assignment with `created` is deprecated. Use `onCreated` instead',
+        message: 'Template callback assignment with "created" is deprecated. Use "onCreated" instead',
         type: 'AssignmentExpression'
       }]
     },
@@ -44,56 +45,44 @@ ruleTester.run('no-blaze-lifecycle-assignment', rule(() => ({env: CLIENT})), {
         }
       `,
       errors: [{
-        message: 'Template callback assignment with `created` is deprecated. Use `onCreated` instead',
+        message: 'Template callback assignment with "created" is deprecated. Use "onCreated" instead',
         type: 'AssignmentExpression'
       }]
     },
     {
       code: 'Template.foo.rendered = function () {}',
       errors: [{
-        message: 'Template callback assignment with `rendered` is deprecated. Use `onRendered` instead',
+        message: 'Template callback assignment with "rendered" is deprecated. Use "onRendered" instead',
         type: 'AssignmentExpression'
       }]
     },
     {
       code: 'Template.foo.destroyed = function () {}',
       errors: [{
-        message: 'Template callback assignment with `destroyed` is deprecated. Use `onDestroyed` instead',
+        message: 'Template callback assignment with "destroyed" is deprecated. Use "onDestroyed" instead',
         type: 'AssignmentExpression'
       }]
     },
     {
       code: 'Template["foo"].created = function () {}',
       errors: [{
-        message: 'Template callback assignment with `created` is deprecated. Use `onCreated` instead',
+        message: 'Template callback assignment with "created" is deprecated. Use "onCreated" instead',
         type: 'AssignmentExpression'
       }]
     },
     {
       code: 'Template["foo"].rendered = function () {}',
       errors: [{
-        message: 'Template callback assignment with `rendered` is deprecated. Use `onRendered` instead',
+        message: 'Template callback assignment with "rendered" is deprecated. Use "onRendered" instead',
         type: 'AssignmentExpression'
       }]
     },
     {
       code: 'Template["foo"].destroyed = function () {}',
       errors: [{
-        message: 'Template callback assignment with `destroyed` is deprecated. Use `onDestroyed` instead',
+        message: 'Template callback assignment with "destroyed" is deprecated. Use "onDestroyed" instead',
         type: 'AssignmentExpression'
       }]
     }
   ]
-})
-
-ruleTester.run('no-blaze-lifecycle-assignment', rule(() => ({env: SERVER})), {
-  valid: ['Template.foo.created = function () {}'],
-  invalid: []
-})
-
-ruleTester.run('no-blaze-lifecycle-assignment', rule(() => ({env: NON_METEOR})), {
-  valid: [
-    'Template.foo.created = function () {}'
-  ],
-  invalid: []
 })

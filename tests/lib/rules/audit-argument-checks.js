@@ -16,7 +16,7 @@ import {NON_METEOR, SERVER} from '../../../dist/util/environment'
 // -----------------------------------------------------------------------------
 
 const ruleTester = new RuleTester()
-ruleTester.run('audit-argument-checks', rule(() => ({env: SERVER})), {
+ruleTester.run('audit-argument-checks', rule, {
 
   valid: [
     'foo()',
@@ -45,49 +45,49 @@ ruleTester.run('audit-argument-checks', rule(() => ({env: SERVER})), {
     {
       code: 'Meteor.publish("foo", function (bar) { foo(); })',
       errors: [{
-        message: 'bar is not checked',
+        message: '"bar" is not checked',
         type: 'Identifier'
       }]
     },
     {
       code: 'Meteor["publish"]("foo", function (bar) { foo(); })',
       errors: [{
-        message: 'bar is not checked',
+        message: '"bar" is not checked',
         type: 'Identifier'
       }]
     },
     {
       code: 'Meteor.publish("foo", function (bar) {})',
       errors: [{
-        message: 'bar is not checked',
+        message: '"bar" is not checked',
         type: 'Identifier'
       }]
     },
     {
       code: 'Meteor.publish("foo", function (bar, baz) { check(bar, Match.Any); })',
       errors: [{
-        message: 'baz is not checked',
+        message: '"baz" is not checked',
         type: 'Identifier'
       }]
     },
     {
       code: 'Meteor.methods({ foo: function (bar) {} })',
       errors: [{
-        message: 'bar is not checked',
+        message: '"bar" is not checked',
         type: 'Identifier'
       }]
     },
     {
       code: 'Meteor.methods({ foo: function () {}, foo2: function (bar) {} })',
       errors: [{
-        message: 'bar is not checked',
+        message: '"bar" is not checked',
         type: 'Identifier'
       }]
     },
     {
       code: 'Meteor.methods({ foo () {}, foo2 (bar) {} })',
       errors: [{
-        message: 'bar is not checked',
+        message: '"bar" is not checked',
         type: 'Identifier'
       }],
       parser: 'babel-eslint'
@@ -104,7 +104,7 @@ ruleTester.run('audit-argument-checks', rule(() => ({env: SERVER})), {
         })
       `,
       errors: [{
-        message: 'bar is not checked',
+        message: '"bar" is not checked',
         type: 'Identifier'
       }],
       parser: 'babel-eslint'
@@ -116,17 +116,10 @@ ruleTester.run('audit-argument-checks', rule(() => ({env: SERVER})), {
         })
       `,
       errors: [{
-        message: 'bar is not checked',
+        message: '"bar" is not checked',
         type: 'Identifier'
       }],
       parser: 'babel-eslint'
     }
   ]
-})
-
-ruleTester.run('audit-argument-checks', rule(() => ({env: NON_METEOR})), {
-  valid: [
-    'Meteor.publish("foo", function (bar) { foo(); })'
-  ],
-  invalid: []
 })

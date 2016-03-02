@@ -9,15 +9,13 @@
 
 const rule = require('../../../dist/rules/no-zero-timeout')
 const RuleTester = require('eslint').RuleTester
-import {NON_METEOR, CLIENT, SERVER} from '../../../dist/util/environment'
 
 // -----------------------------------------------------------------------------
 // Tests
 // -----------------------------------------------------------------------------
 
 const ruleTester = new RuleTester()
-ruleTester.run('no-zero-timeout', rule(() => ({env: CLIENT})), {
-
+ruleTester.run('no-zero-timeout', rule, {
   valid: [
     'Meteor.setTimeout()',
     'Meteor.setTimeout(function () {}, 1)',
@@ -25,7 +23,7 @@ ruleTester.run('no-zero-timeout', rule(() => ({env: CLIENT})), {
     'Meteor.defer(foo, 0)',
     'Meteor["setTimeout"](function () {}, 1)',
     'Meteor["setInterval"](function () {}, 1)',
-    'foo()'
+    'foo()',
   ],
 
   invalid: [
@@ -33,48 +31,36 @@ ruleTester.run('no-zero-timeout', rule(() => ({env: CLIENT})), {
       code: 'Meteor.setTimeout(function () {}, 0)',
       errors: [{
         message: 'Timeout of 0. Use `Meteor.defer` instead',
-        type: 'CallExpression'
-      }]
+        type: 'CallExpression',
+      }],
     },
     {
       code: 'Meteor["setTimeout"](function () {}, 0)',
       errors: [{
         message: 'Timeout of 0. Use `Meteor.defer` instead',
-        type: 'CallExpression'
-      }]
+        type: 'CallExpression',
+      }],
     },
     {
       code: 'Meteor.setTimeout(foo, 0)',
       errors: [{
         message: 'Timeout of 0. Use `Meteor.defer` instead',
-        type: 'CallExpression'
-      }]
+        type: 'CallExpression',
+      }],
     },
     {
       code: 'Meteor.setTimeout(function () {})',
       errors: [{
         message: 'Implicit timeout of 0',
-        type: 'CallExpression'
-      }]
+        type: 'CallExpression',
+      }],
     },
     {
       code: 'Meteor.setTimeout(foo)',
       errors: [{
         message: 'Implicit timeout of 0',
-        type: 'CallExpression'
-      }]
-    }
-  ]
-})
-
-ruleTester.run('no-zero-timeout', rule(() => ({env: SERVER})), {
-  valid: ['Meteor.setTimeout(function () {}, 0)'],
-  invalid: []
-})
-
-ruleTester.run('no-zero-timeout', rule(() => ({env: NON_METEOR})), {
-  valid: [
-    'Meteor.setTimeout(function () {}, 0)'
+        type: 'CallExpression',
+      }],
+    },
   ],
-  invalid: []
 })

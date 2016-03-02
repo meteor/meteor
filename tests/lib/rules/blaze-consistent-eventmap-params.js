@@ -9,11 +9,6 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-import {
-  CLIENT,
-  UNIVERSAL,
-  NON_METEOR
-} from '../../../dist/util/environment.js'
 const rule = require('../../../dist/rules/blaze-consistent-eventmap-params')
 const RuleTester = require('eslint').RuleTester
 
@@ -22,8 +17,7 @@ const RuleTester = require('eslint').RuleTester
 // -----------------------------------------------------------------------------
 
 const ruleTester = new RuleTester()
-ruleTester.run('blaze-consistent-eventmap-params', rule(() => ({env: CLIENT})), {
-
+ruleTester.run('blaze-consistent-eventmap-params', rule, {
   valid: [
     `
       Foo.bar.events({
@@ -70,8 +64,8 @@ ruleTester.run('blaze-consistent-eventmap-params', rule(() => ({env: CLIENT})), 
         })
       `,
       options: [{
-        eventParamName: 'evt'
-      }]
+        eventParamName: 'evt',
+      }],
     },
     {
       code: `
@@ -81,8 +75,8 @@ ruleTester.run('blaze-consistent-eventmap-params', rule(() => ({env: CLIENT})), 
       `,
       options: [{
         eventParamName: 'evt',
-        templateInstanceParamName: 'tmplInst'
-      }]
+        templateInstanceParamName: 'tmplInst',
+      }],
     },
     `
       Template.foo.events({
@@ -95,8 +89,8 @@ ruleTester.run('blaze-consistent-eventmap-params', rule(() => ({env: CLIENT})), 
           'submit form': (event, templateInstance) => {}
         })
       `,
-      parser: 'babel-eslint'
-    }
+      parser: 'babel-eslint',
+    },
   ],
 
   invalid: [
@@ -180,7 +174,8 @@ ruleTester.run('blaze-consistent-eventmap-params', rule(() => ({env: CLIENT})), 
 
 })
 
-ruleTester.run('blaze-consistent-eventmap-params', rule(() => ({env: UNIVERSAL})), {
+// universal
+ruleTester.run('blaze-consistent-eventmap-params', rule, {
 
   valid: [
     `
@@ -194,13 +189,6 @@ ruleTester.run('blaze-consistent-eventmap-params', rule(() => ({env: UNIVERSAL})
       if (Meteor.isCordova) {
         Template.foo.events({
           'submit form': function (event, templateInstance) {}
-        })
-      }
-    `,
-    `
-      if (Meteor.isServer) {
-        Template.foo.events({
-          'submit form': function (bar, baz) {}
         })
       }
     `,
@@ -237,17 +225,5 @@ ruleTester.run('blaze-consistent-eventmap-params', rule(() => ({env: UNIVERSAL})
         {message: 'Invalid parameter name, use "templateInstance" instead', type: 'Identifier'}
       ]
     }
-  ]
-
-})
-
-ruleTester.run('blaze-consistent-eventmap-params', rule(() => ({env: NON_METEOR})), {
-  valid: [
-    `
-      Template.foo.events({
-        'submit form': function (foo, bar) {}
-      })
-    `
   ],
-  invalid: []
 })
