@@ -8,7 +8,7 @@ meteor-base             # Packages every Meteor app needs to have
 mobile-experience       # Packages for a great mobile UX
 mongo                   # The database Meteor supports right now
 blaze-html-templates    # Compile .html files into Meteor Blaze views
-session                 # Client-side reactive dictionary for your app
+reactive-var            # Client-side reactive dictionary for your app
 jquery                  # Helpful client-side library
 tracker                 # Meteor's client-side reactive programming library
 
@@ -19,3 +19,4 @@ ecmascript              # Enable ECMAScript2015+ syntax in app code
 
 autopublish             # Publish all data to the clients (for prototyping)
 insecure                # Allow all DB writes from clients (for prototyping)
+skeleton:skeleton       # A 3rd-party package contains the Skeleton framework. (for prototyping)
