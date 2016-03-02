@@ -149,13 +149,13 @@ ESLint-plugin-Meteor is licensed under the [MIT License](http://www.opensource.o
 [npm-downloads-image]: https://img.shields.io/npm/dt/eslint-plugin-meteor.svg?style=flat-square
 
 [travis-url]: https://travis-ci.org/dferber90/eslint-plugin-meteor
-[travis-image]: http://img.shields.io/travis/dferber90/eslint-plugin-meteor/master.svg?style=flat-square
+[travis-image]: http://img.shields.io/travis/dferber90/eslint-plugin-meteor/next.svg?style=flat-square
 
 [deps-url]: https://david-dm.org/dferber90/eslint-plugin-meteor
 [deps-image]: https://img.shields.io/david/dev/dferber90/eslint-plugin-meteor.svg?style=flat-square
 
-[coverage-url]: https://coveralls.io/github/dferber90/eslint-plugin-meteor?branch=master
-[coverage-image]: http://img.shields.io/coveralls/dferber90/eslint-plugin-meteor/master.svg?style=flat-square
+[coverage-url]: https://coveralls.io/github/dferber90/eslint-plugin-meteor?branch=next
+[coverage-image]: http://img.shields.io/coveralls/dferber90/eslint-plugin-meteor/next.svg?style=flat-square
 
 [climate-url]: https://codeclimate.com/github/dferber90/eslint-plugin-meteor
 [climate-image]: http://img.shields.io/codeclimate/github/dferber90/eslint-plugin-meteor.svg?style=flat-square
