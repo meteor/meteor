@@ -21,7 +21,7 @@ import okhttp3.Request;
 import okhttp3.Response;
 
 class AssetBundleManager {
-    private static final String LOG_TAG = AssetBundleManager.class.getSimpleName();
+    private static final String LOG_TAG = "MeteorWebApp";
 
     public interface Callback {
         public boolean shouldDownloadBundleForManifest(AssetManifest manifest);
@@ -120,7 +120,7 @@ class AssetBundleManager {
 
                 final String version = manifest.version;
 
-                Log.v(LOG_TAG, "Downloaded asset manifest for version: " + version);
+                Log.d(LOG_TAG, "Downloaded asset manifest for version: " + version);
 
                 if (assetBundleDownloader != null && assetBundleDownloader.getAssetBundle().getVersion().equals(version)) {
                     Log.w(LOG_TAG, "Already downloading asset bundle version: " + version);

@@ -7,7 +7,7 @@ import java.io.ObjectInputStream;
 import java.util.Map;
 
 class AssetManagerCache {
-    private static final String LOG_TAG = AssetManagerCache.class.getSimpleName();
+    private static final String LOG_TAG = "MeteorWebApp";
 
     private AssetManager assetManager;
     private Map<String, String[]> listCache;

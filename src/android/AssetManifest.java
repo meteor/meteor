@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 final class AssetManifest {
-    private static final String LOG_TAG = AssetManifest.class.getSimpleName();
+    private static final String LOG_TAG = "MeteorWebApp";
 
     static final class Entry {
         final String filePath;

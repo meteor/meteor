@@ -24,7 +24,7 @@ import java.util.TimerTask;
 import okhttp3.HttpUrl;
 
 public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManager.Callback {
-    private static final String LOG_TAG = WebAppLocalServer.class.getSimpleName();
+    private static final String LOG_TAG = "MeteorWebApp";
     public static final String PREFS_NAME = "MeteorWebApp";
 
     private static final long STARTUP_TIMEOUT = 20000;
@@ -128,7 +128,7 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
         // version, we delete the versions directory and unset lastDownloadedVersion
         // and blacklistedVersions
         if (!initialAssetBundle.getVersion().equals(configuration.getLastSeenInitialVersion()))  {
-            Log.w(LOG_TAG, "Detected new bundled version, removing versions directory if it exists");
+            Log.d(LOG_TAG, "Detected new bundled version, removing versions directory if it exists");
             if (versionsDirectory.exists()) {
                 if (!IOUtils.deleteRecursively(versionsDirectory)) {
                     Log.w(LOG_TAG, "Could not remove versions directory");
@@ -179,7 +179,7 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
             pendingAssetBundle = null;
         }
 
-        Log.d(LOG_TAG, "Serving asset bundle with version: " + currentAssetBundle.getVersion());
+        Log.i(LOG_TAG, "Serving asset bundle with version: " + currentAssetBundle.getVersion());
 
         configuration.setAppId(currentAssetBundle.getAppId());
         configuration.setRootUrlString(currentAssetBundle.getRootUrlString());

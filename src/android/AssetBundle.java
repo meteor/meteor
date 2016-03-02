@@ -19,7 +19,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 class AssetBundle {
-    private static final String LOG_TAG = AssetBundle.class.getSimpleName();
+    private static final String LOG_TAG = "MeteorWebApp";
 
     static final Pattern runtimeConfigPattern = Pattern.compile("__meteor_runtime_config__ = JSON.parse\\(decodeURIComponent\\(\"([^\"]*)\"\\)\\)");
 

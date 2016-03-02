@@ -20,7 +20,7 @@ import okhttp3.Request;
 import okhttp3.Response;
 
 class AssetBundleDownloader {
-    private static final String LOG_TAG = AssetBundleDownloader.class.getSimpleName();
+    private static final String LOG_TAG = "MeteorWebApp";
 
     static final Pattern eTagWithSha1HashPattern = Pattern.compile("\"([0-9a-f]{40})\"");
 
@@ -61,7 +61,7 @@ class AssetBundleDownloader {
     }
 
     public void resume() {
-        Log.v(LOG_TAG, "Start downloading assets from bundle with version: " + assetBundle.getVersion());
+        Log.d(LOG_TAG, "Start downloading assets from bundle with version: " + assetBundle.getVersion());
 
         synchronized (missingAssets) {
             for (final AssetBundle.Asset asset : missingAssets) {
@@ -117,7 +117,7 @@ class AssetBundleDownloader {
                         missingAssets.remove(asset);
 
                         if (missingAssets.isEmpty()) {
-                            Log.i(LOG_TAG, "Finished downloading new asset bundle version: " + assetBundle.getVersion());
+                            Log.d(LOG_TAG, "Finished downloading new asset bundle version: " + assetBundle.getVersion());
 
                             if (callback != null) {
                                 callback.onFinished();
