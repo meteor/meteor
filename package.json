@@ -6,6 +6,9 @@
   "publishConfig": {
     "tag": "next"
   },
+  "release": {
+    "branch": "dev"
+  },
   "scripts": {
     "build": "babel --version && babel lib -d dist --optional runtime",
     "build:w": "npm run build -- -w",
@@ -74,9 +77,6 @@
     "eslintplugin",
     "meteor"
   ],
-  "release": {
-    "branch": "master"
-  },
   "config": {
     "ghooks": {
       "commit-msg": "node_modules/.bin/validate-commit-msg"
