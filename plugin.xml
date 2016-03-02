@@ -43,10 +43,12 @@
     <source-file src="src/ios/Errors.swift" />
     <source-file src="src/ios/Utility.swift" />
 
+    <header-file src="src/ios/METPlugin.h" />
     <header-file src="src/ios/METTimer.h" />
     <header-file src="src/ios/METRetryStrategy.h" />
     <header-file src="src/ios/METNetworkReachabilityManager.h" />
     <header-file src="src/ios/METRandomValueGenerator.h" />
+    <source-file src="src/ios/METPlugin.m" />
     <source-file src="src/ios/METTimer.m" />
     <source-file src="src/ios/METRetryStrategy.m" />
     <source-file src="src/ios/METNetworkReachabilityManager.m" />
