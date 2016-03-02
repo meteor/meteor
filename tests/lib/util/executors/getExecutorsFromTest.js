@@ -1,69 +1,67 @@
-/* eslint-env mocha */
-
 import assert from 'assert'
 import getExecutorsFromTest from '../../../../dist/util/executors/getExecutorsFromTest'
 
-describe('getExecutorsFromTest', function () {
-  describe('MemberExpression', function () {
-    it('isClient', function () {
+describe('getExecutorsFromTest', () => {
+  describe('MemberExpression', () => {
+    it('isClient', () => {
       const result = getExecutorsFromTest({
         type: 'MemberExpression',
         object: {
           type: 'Identifier',
-          name: 'Meteor'
+          name: 'Meteor',
         },
         property: {
           type: 'Identifier',
-          name: 'isClient'
-        }
+          name: 'isClient',
+        },
       })
       assert.equal(result.size, 2)
       assert.ok(result.has('browser'))
       assert.ok(result.has('cordova'))
     })
-    it('isServer', function () {
+    it('isServer', () => {
       const result = getExecutorsFromTest({
         type: 'MemberExpression',
         object: {
           type: 'Identifier',
-          name: 'Meteor'
+          name: 'Meteor',
         },
         property: {
           type: 'Identifier',
-          name: 'isServer'
-        }
+          name: 'isServer',
+        },
       })
       assert.equal(result.size, 1)
       assert.ok(result.has('server'))
     })
-    it('isCordova', function () {
+    it('isCordova', () => {
       const result = getExecutorsFromTest({
         type: 'MemberExpression',
         object: {
           type: 'Identifier',
-          name: 'Meteor'
+          name: 'Meteor',
         },
         property: {
           type: 'Identifier',
-          name: 'isCordova'
-        }
+          name: 'isCordova',
+        },
       })
       assert.equal(result.size, 1)
       assert.ok(result.has('cordova'))
     })
-    it('throws on unkown Meteor prop', function () {
+    it('throws on unkown Meteor prop', () => {
       assert.throws(
         () => {
           getExecutorsFromTest({
             type: 'MemberExpression',
             object: {
               type: 'Identifier',
-              name: 'Meteor'
+              name: 'Meteor',
             },
             property: {
               type: 'Identifier',
-              name: 'isNotAMeteorProp'
-            }
+              name: 'isNotAMeteorProp',
+            },
           })
         }
       )
@@ -71,8 +69,8 @@ describe('getExecutorsFromTest', function () {
   })
 
 
-  describe('LogicalExpression', function () {
-    it('resolves isServer AND isClient', function () {
+  describe('LogicalExpression', () => {
+    it('resolves isServer AND isClient', () => {
       const result = getExecutorsFromTest({
         type: 'LogicalExpression',
         operator: '&&',
@@ -80,29 +78,29 @@ describe('getExecutorsFromTest', function () {
           type: 'MemberExpression',
           object: {
             type: 'Identifier',
-            name: 'Meteor'
+            name: 'Meteor',
           },
           property: {
             type: 'Identifier',
-            name: 'isServer'
-          }
+            name: 'isServer',
+          },
         },
         right: {
           type: 'MemberExpression',
           object: {
             type: 'Identifier',
-            name: 'Meteor'
+            name: 'Meteor',
           },
           property: {
             type: 'Identifier',
-            name: 'isClient'
-          }
-        }
+            name: 'isClient',
+          },
+        },
       })
       assert.equal(result.size, 0)
     })
 
-    it('resolves isServer OR isClient', function () {
+    it('resolves isServer OR isClient', () => {
       const result = getExecutorsFromTest({
         type: 'LogicalExpression',
         operator: '||',
@@ -110,24 +108,24 @@ describe('getExecutorsFromTest', function () {
           type: 'MemberExpression',
           object: {
             type: 'Identifier',
-            name: 'Meteor'
+            name: 'Meteor',
           },
           property: {
             type: 'Identifier',
-            name: 'isServer'
-          }
+            name: 'isServer',
+          },
         },
         right: {
           type: 'MemberExpression',
           object: {
             type: 'Identifier',
-            name: 'Meteor'
+            name: 'Meteor',
           },
           property: {
             type: 'Identifier',
-            name: 'isClient'
-          }
-        }
+            name: 'isClient',
+          },
+        },
       })
       assert.equal(result.size, 3)
       assert.ok(result.has('browser'))
@@ -135,13 +133,13 @@ describe('getExecutorsFromTest', function () {
       assert.ok(result.has('cordova'))
     })
 
-    it('throws for unkown operator in LogicalExpression', function () {
+    it('throws for unkown operator in LogicalExpression', () => {
       assert.throws(() => {
         getExecutorsFromTest({
           type: 'LogicalExpression',
           operator: 'XY',
           left: {},
-          right: {}
+          right: {},
         })
       })
     })

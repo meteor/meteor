@@ -1,5 +1,3 @@
-/* eslint-env mocha */
-
 import assert from 'assert'
 import getExecutorsByEnv from '../../../../dist/util/executors/getExecutorsByEnv'
 

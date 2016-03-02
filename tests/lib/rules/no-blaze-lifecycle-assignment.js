@@ -18,9 +18,8 @@ const RuleTester = require('eslint').RuleTester
 
 const ruleTester = new RuleTester()
 
-// CLIENT
-ruleTester.run('no-blaze-lifecycle-assignment', rule, {
 
+ruleTester.run('no-blaze-lifecycle-assignment', rule, {
   valid: [
     'x += 1',
     'Template = true',
@@ -35,8 +34,8 @@ ruleTester.run('no-blaze-lifecycle-assignment', rule, {
       code: 'Template.foo.created = function () {}',
       errors: [{
         message: 'Template callback assignment with "created" is deprecated. Use "onCreated" instead',
-        type: 'AssignmentExpression'
-      }]
+        type: 'AssignmentExpression',
+      }],
     },
     {
       code: `
@@ -46,43 +45,43 @@ ruleTester.run('no-blaze-lifecycle-assignment', rule, {
       `,
       errors: [{
         message: 'Template callback assignment with "created" is deprecated. Use "onCreated" instead',
-        type: 'AssignmentExpression'
-      }]
+        type: 'AssignmentExpression',
+      }],
     },
     {
       code: 'Template.foo.rendered = function () {}',
       errors: [{
         message: 'Template callback assignment with "rendered" is deprecated. Use "onRendered" instead',
-        type: 'AssignmentExpression'
-      }]
+        type: 'AssignmentExpression',
+      }],
     },
     {
       code: 'Template.foo.destroyed = function () {}',
       errors: [{
         message: 'Template callback assignment with "destroyed" is deprecated. Use "onDestroyed" instead',
-        type: 'AssignmentExpression'
-      }]
+        type: 'AssignmentExpression',
+      }],
     },
     {
       code: 'Template["foo"].created = function () {}',
       errors: [{
         message: 'Template callback assignment with "created" is deprecated. Use "onCreated" instead',
-        type: 'AssignmentExpression'
-      }]
+        type: 'AssignmentExpression',
+      }],
     },
     {
       code: 'Template["foo"].rendered = function () {}',
       errors: [{
         message: 'Template callback assignment with "rendered" is deprecated. Use "onRendered" instead',
-        type: 'AssignmentExpression'
-      }]
+        type: 'AssignmentExpression',
+      }],
     },
     {
       code: 'Template["foo"].destroyed = function () {}',
       errors: [{
         message: 'Template callback assignment with "destroyed" is deprecated. Use "onDestroyed" instead',
-        type: 'AssignmentExpression'
-      }]
-    }
-  ]
+        type: 'AssignmentExpression',
+      }],
+    },
+  ],
 })

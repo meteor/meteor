@@ -1,8 +1,9 @@
-root: true # ignore config in main folder
 extends: airbnb/base
 env:
   node: true
+  mocha: true
 parser: babel-eslint
 
 rules:
   semi: [2, "never"]
+  max-len: [0]

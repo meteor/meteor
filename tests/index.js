@@ -1,5 +1,3 @@
-/* eslint-env mocha */
-
 const plugin = require('../dist/index.js')
 
 const assert = require('assert')

@@ -1,5 +1,3 @@
-/* eslint-env mocha */
-
 import assert from 'assert'
 import getExecutors from '../../../../dist/util/executors/getExecutors'
 import { UNIVERSAL } from '../../../../dist/util/environment'

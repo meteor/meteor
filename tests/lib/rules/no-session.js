@@ -36,6 +36,6 @@ ruleTester.run('no-session', rule, {
     { code: 'Session.set("foo", true)', errors: [{ message: 'Unexpected Session statement', type: 'MemberExpression' }] },
     { code: 'Session.get("foo")', errors: [{ message: 'Unexpected Session statement', type: 'MemberExpression' }] },
     { code: 'Session.clear("foo")', errors: [{ message: 'Unexpected Session statement', type: 'MemberExpression' }] },
-    { code: 'Session.all()', errors: [{ message: 'Unexpected Session statement', type: 'MemberExpression' }] }
-  ]
+    { code: 'Session.all()', errors: [{ message: 'Unexpected Session statement', type: 'MemberExpression' }] },
+  ],
 })

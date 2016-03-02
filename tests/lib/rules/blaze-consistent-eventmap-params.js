@@ -91,93 +91,6 @@ ruleTester.run('blaze-consistent-eventmap-params', rule, {
       `,
       parser: 'babel-eslint',
     },
-  ],
-
-  invalid: [
-    {
-      code: `
-        Template.foo.events({
-          'submit form': function (foo, bar) {}
-        })
-      `,
-      errors: [
-        {message: 'Invalid parameter name, use "event" instead', type: 'Identifier'},
-        {message: 'Invalid parameter name, use "templateInstance" instead', type: 'Identifier'}
-      ]
-    },
-    {
-      code: `
-        Template['foo'].events({
-          'submit form': function (foo, bar) {}
-        })
-      `,
-      errors: [
-        {message: 'Invalid parameter name, use "event" instead', type: 'Identifier'},
-        {message: 'Invalid parameter name, use "templateInstance" instead', type: 'Identifier'}
-      ]
-    },
-    {
-      code: `
-        Template['foo']['events']({
-          'submit form': function (foo, bar) {}
-        })
-      `,
-      errors: [
-        {message: 'Invalid parameter name, use "event" instead', type: 'Identifier'},
-        {message: 'Invalid parameter name, use "templateInstance" instead', type: 'Identifier'}
-      ]
-    },
-    {
-      code: `
-        Template.foo['events']({
-          'submit form': function (foo, bar) {}
-        })
-      `,
-      errors: [
-        {message: 'Invalid parameter name, use "event" instead', type: 'Identifier'},
-        {message: 'Invalid parameter name, use "templateInstance" instead', type: 'Identifier'}
-      ]
-    },
-    {
-      code: `
-        Template.foo.events({
-          'submit form': (foo, bar) => {}
-        })
-      `,
-      errors: [
-        {message: 'Invalid parameter name, use "event" instead', type: 'Identifier'},
-        {message: 'Invalid parameter name, use "templateInstance" instead', type: 'Identifier'}
-      ],
-      parser: 'babel-eslint'
-    },
-    {
-      code: `
-        Template.foo.events({
-          'submit form': function (foo, templateInstance) {}
-        })
-      `,
-      errors: [
-        {message: 'Invalid parameter name, use "event" instead', type: 'Identifier'}
-      ]
-    },
-    {
-      code: `
-        Template.foo.events({
-          'submit form': function (event, bar) {}
-        })
-      `,
-      errors: [
-        {message: 'Invalid parameter name, use "templateInstance" instead', type: 'Identifier'}
-      ]
-    }
-  ]
-
-})
-
-// universal
-ruleTester.run('blaze-consistent-eventmap-params', rule, {
-
-  valid: [
     `
       Nontemplate.foo.events({
         'submit form': function (bar, baz) {
@@ -207,11 +120,87 @@ ruleTester.run('blaze-consistent-eventmap-params', rule, {
           })
         }
       `,
-      parser: 'babel-eslint'
-    }
+      parser: 'babel-eslint',
+    },
   ],
 
   invalid: [
+    {
+      code: `
+        Template.foo.events({
+          'submit form': function (foo, bar) {}
+        })
+      `,
+      errors: [
+        { message: 'Invalid parameter name, use "event" instead', type: 'Identifier' },
+        { message: 'Invalid parameter name, use "templateInstance" instead', type: 'Identifier' },
+      ],
+    },
+    {
+      code: `
+        Template['foo'].events({
+          'submit form': function (foo, bar) {}
+        })
+      `,
+      errors: [
+        { message: 'Invalid parameter name, use "event" instead', type: 'Identifier' },
+        { message: 'Invalid parameter name, use "templateInstance" instead', type: 'Identifier' },
+      ],
+    },
+    {
+      code: `
+        Template['foo']['events']({
+          'submit form': function (foo, bar) {}
+        })
+      `,
+      errors: [
+        { message: 'Invalid parameter name, use "event" instead', type: 'Identifier' },
+        { message: 'Invalid parameter name, use "templateInstance" instead', type: 'Identifier' },
+      ],
+    },
+    {
+      code: `
+        Template.foo['events']({
+          'submit form': function (foo, bar) {}
+        })
+      `,
+      errors: [
+        { message: 'Invalid parameter name, use "event" instead', type: 'Identifier' },
+        { message: 'Invalid parameter name, use "templateInstance" instead', type: 'Identifier' },
+      ],
+    },
+    {
+      code: `
+        Template.foo.events({
+          'submit form': (foo, bar) => {}
+        })
+      `,
+      errors: [
+        { message: 'Invalid parameter name, use "event" instead', type: 'Identifier' },
+        { message: 'Invalid parameter name, use "templateInstance" instead', type: 'Identifier' },
+      ],
+      parser: 'babel-eslint',
+    },
+    {
+      code: `
+        Template.foo.events({
+          'submit form': function (foo, templateInstance) {}
+        })
+      `,
+      errors: [
+        { message: 'Invalid parameter name, use "event" instead', type: 'Identifier' },
+      ],
+    },
+    {
+      code: `
+        Template.foo.events({
+          'submit form': function (event, bar) {}
+        })
+      `,
+      errors: [
+        { message: 'Invalid parameter name, use "templateInstance" instead', type: 'Identifier' },
+      ],
+    },
     {
       code: `
         if (Meteor.isClient) {
@@ -221,9 +210,9 @@ ruleTester.run('blaze-consistent-eventmap-params', rule, {
         }
       `,
       errors: [
-        {message: 'Invalid parameter name, use "event" instead', type: 'Identifier'},
-        {message: 'Invalid parameter name, use "templateInstance" instead', type: 'Identifier'}
-      ]
-    }
+        { message: 'Invalid parameter name, use "event" instead', type: 'Identifier' },
+        { message: 'Invalid parameter name, use "templateInstance" instead', type: 'Identifier' },
+      ],
+    },
   ],
 })
