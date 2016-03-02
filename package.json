@@ -16,8 +16,8 @@
     "rule": "babel scripts/new-rule.js | node",
     "semantic-release": "semantic-release pre && npm publish && semantic-release post",
     "test": "npm run lint && npm run build && npm run unit-test && npm run check-coverage",
-    "unit-test": "istanbul cover --dir reports/coverage node_modules/mocha/bin/_mocha tests/**/*.js -- -t 4000 --compilers js:babel-register",
-    "unit-test:w": "node_modules/mocha/bin/_mocha tests/**/*.js -t 4000 --compilers js:babel-register --watch"
+    "unit-test": "istanbul cover --dir reports/coverage node_modules/mocha/bin/_mocha tests/**/*.js -- -t 4000 --compilers js:babel-core/register",
+    "unit-test:w": "node_modules/mocha/bin/_mocha tests/**/*.js -t 4000 --compilers js:babel-core/register --watch"
   },
   "files": [
     "LICENSE",
