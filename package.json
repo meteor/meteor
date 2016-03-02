@@ -3,7 +3,9 @@
   "author": "Dominik Ferber <dominik.ferber+npm@gmail.com>",
   "description": "Meteor specific linting rules for ESLint",
   "main": "dist/index.js",
-  "publishConfig": { "tag": "next" },
+  "publishConfig": {
+    "tag": "next"
+  },
   "scripts": {
     "build": "babel lib -d dist --optional runtime --auxiliary-comment-before \"istanbul ignore next\"",
     "build:w": "npm run build -- -w",
@@ -40,6 +42,7 @@
   },
   "devDependencies": {
     "babel-cli": "6.6.0",
+    "babel-core": "6.6.0",
     "babel-eslint": "5.0.0",
     "babel-plugin-transform-object-rest-spread": "6.5.0",
     "babel-plugin-transform-runtime": "6.6.0",
