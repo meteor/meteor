@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+/* eslint-disable no-console, max-len */
 
 const fs = require('fs')
 const readlineSync = require('readline-sync')
@@ -9,7 +9,7 @@ const authorName = readlineSync.question(colors.green('What is your name? '))
 const ruleId = readlineSync.question(colors.green('What is the rule ID? '))
 const desc = readlineSync.question(colors.green('Type a short description of this rule: '))
 const failingExample = readlineSync.question(colors.green('Type a short example of the code that will fail: '))
-const escapedFailingExample = failingExample.replace(`'`, `\\'`)
+const escapedFailingExample = failingExample.replace('\'', '\\\'')
 
 const doc = `# ${desc} (${ruleId})
 
@@ -54,7 +54,7 @@ If there are other links that describe the issue this rule addresses, please inc
 const rule = `/**
  * @fileoverview ${desc}
  * @author ${authorName}
- * @copyright 2015 ${authorName}. All rights reserved.
+ * @copyright 2016 ${authorName}. All rights reserved.
  * See LICENSE file in root directory for full license.
  */
 
@@ -62,12 +62,7 @@ const rule = `/**
 // Rule Definition
 // -----------------------------------------------------------------------------
 
-import {NON_METEOR} from '../util/environment'
-
-module.exports = getMeta => context => {
-
-  const {env} = getMeta(context)
-
+module.exports = context => {
   // ---------------------------------------------------------------------------
   // Helpers
   // ---------------------------------------------------------------------------
@@ -78,14 +73,8 @@ module.exports = getMeta => context => {
   // Public
   // ---------------------------------------------------------------------------
 
-  if (env === NON_METEOR) {
-    return {}
-  }
-
   return {
-
     // give me methods
-
   }
 
 }
@@ -99,7 +88,7 @@ module.exports.schema = [
 const test = `/**
  * @fileoverview ${desc}
  * @author ${authorName}
- * @copyright 2015 ${authorName}. All rights reserved.
+ * @copyright 2016 ${authorName}. All rights reserved.
  * See LICENSE file in root directory for full license.
  */
 
@@ -107,32 +96,16 @@ const test = `/**
 // Requirements
 // -----------------------------------------------------------------------------
 
-import {NON_METEOR, UNIVERSAL, CLIENT, SERVER} from '../../../dist/util/environment'
 const rule = require('../../../dist/rules/${ruleId}')
 const RuleTester = require('eslint').RuleTester
-
-const commonValidCode = [
-
-]
-
-const commonInvalidCode = [
-
-]
-
-
-// -----------------------------------------------------------------------------
-// Tests
-// -----------------------------------------------------------------------------
-
 const ruleTester = new RuleTester()
 
-ruleTester.run('${ruleId}', rule(() => ({env: SERVER})), {
+ruleTester.run('${ruleId}', rule, {
   valid: [
-    ...commonValidCode
+    // give me some valid tests
   ],
 
   invalid: [
-    ...commonInvalidCode,
     {
       code: '${escapedFailingExample}',
       errors: [
@@ -140,41 +113,6 @@ ruleTester.run('${ruleId}', rule(() => ({env: SERVER})), {
       ]
     }
   ]
-})
-
-ruleTester.run('${ruleId}', rule(() => ({env: CLIENT})), {
-  valid: [
-    ...commonValidCode
-  ],
-
-  invalid: [
-    ...commonInvalidCode
-  ]
-})
-
-ruleTester.run('${ruleId}', rule(() => ({env: UNIVERSAL})), {
-  valid: [
-    ...commonValidCode
-  ],
-
-  invalid: [
-    ...commonInvalidCode
-    {
-      code: '${escapedFailingExample}',
-      errors: [
-        {message: 'The error message', type: 'MemberExpression'}
-      ]
-    }
-  ]
-})
-
-ruleTester.run('${ruleId}', rule(() => ({env: NON_METEOR})), {
-  valid: [
-    ...commonValidCode,
-    ...commonInvalidCode
-  ],
-
-  invalid: []
 })
 
 `
@@ -185,7 +123,7 @@ const testFileName = `tests/lib/rules/${ruleId}.js`
 
 const writeOptions = {
   encoding: 'utf8',
-  flag: 'wx'
+  flag: 'wx',
 }
 
 try {
@@ -194,9 +132,9 @@ try {
   fs.writeFileSync(docFileName, doc, writeOptions)
 
   console.log('')
-  console.log(colors.green('✓ ') + colors.white('create ' + ruleFileName))
-  console.log(colors.green('✓ ') + colors.white('create ' + testFileName))
-  console.log(colors.green('✓ ') + colors.white('create ' + docFileName))
+  console.log(colors.green('✓ ') + colors.white(`create ${ruleFileName}`))
+  console.log(colors.green('✓ ') + colors.white(`create ${testFileName}`))
+  console.log(colors.green('✓ ') + colors.white(`create ${docFileName}`))
 } catch (e) {
   if (e.code === 'EEXIST') {
     console.log(colors.red(`Aborting because rule already exists (${e.path})`))
