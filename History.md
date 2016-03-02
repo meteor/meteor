@@ -129,6 +129,12 @@
   See [`cordova-plugin-meteor-webapp`](https://github.com/meteor/cordova-plugin-meteor-webapp)
   for more a more detailed description of the new design.
 
+* If the callbacks added with `Meteor.startup()` do not complete within a set
+  time, we consider a downloaded version faulty and will fallback to the last
+  known good version. The default timeout is 20 seconds, but this can be
+  configured by setting `App.setPreference("WebAppStartupTimeout", "10000");`
+  (in milliseconds) in `mobile-config.js`.
+
 * We now use `WKWebView` on iOS by default, even on iOS 8 (which works because
   we do not use `file://` URLs).
 
