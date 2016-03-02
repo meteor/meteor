@@ -36,13 +36,13 @@ $ npm install eslint-plugin-meteor --save-dev
 
 Add `plugins` section and specify ESLint-plugin-Meteor as a plugin, and enable the recommended rules of this plugin.
 
-```js
+```json
 {
   "plugins": [
     "meteor"
-  ]
+  ],
   "extends": [
-    'plugin:meteor/recommended',
+    "plugin:meteor/recommended",
   ]
 }
 ```
