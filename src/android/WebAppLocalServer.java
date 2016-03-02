@@ -27,8 +27,6 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
     private static final String LOG_TAG = "MeteorWebApp";
     public static final String PREFS_NAME = "MeteorWebApp";
 
-    private static final long STARTUP_TIMEOUT = 20000;
-
     private static final String LOCAL_FILESYSTEM_PATH = "/local-filesystem";
 
     private AssetManager assetManager;
@@ -42,7 +40,7 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
     private Uri applicationDirectoryUri;
 
     private String launchUrl;
-    private int localServerPort = 0;
+    private int localServerPort;
 
     private List<WebResourceHandler> resourceHandlers;
 
@@ -62,9 +60,9 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
     private CallbackContext newVersionReadyCallbackContext;
     private CallbackContext errorCallbackContext;
 
-
     /** Timer used to wait for startup to complete after a reload */
     private Timer startupTimer;
+    private long startupTimeout;
 
     WebAppConfiguration getConfiguration() {
         return configuration;
@@ -98,6 +96,7 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
         launchUrl = Config.getStartUrl();
 
         localServerPort = preferences.getInteger("WebAppLocalServerPort", Uri.parse(launchUrl).getPort());
+        startupTimeout = preferences.getInteger("WebAppStartupTimeout", 20000);
 
         SharedPreferences preferences = cordova.getActivity().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         configuration = new WebAppConfiguration(preferences);
@@ -200,7 +199,7 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
                 Log.w(LOG_TAG, "App startup timed out, reverting to last known good version");
                 revertToLastKnownGoodVersion();
             }
-        }, STARTUP_TIMEOUT);
+        }, startupTimeout);
     }
 
     private void removeStartupTimer() {

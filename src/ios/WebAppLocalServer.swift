@@ -14,15 +14,11 @@ public class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
 
   /// The listening port of the local web server
   private var localServerPort: UInt = 0
-  
+
   let authTokenKeyValuePair: String = {
     let authToken = NSProcessInfo.processInfo().globallyUniqueString
     return "cdvToken=\(authToken)"
   }()
-
-  /// The number of seconds to wait for startup to complete, after which
-  /// we revert to the last known good version
-  private var startupTimeoutInterval: NSTimeInterval = 20.0
 
   /// The www directory in the app bundle
   private(set) var wwwDirectoryURL: NSURL!
@@ -59,6 +55,10 @@ public class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
 
   /// Timer used to wait for startup to complete after a reload
   private var startupTimer: METTimer?
+
+  /// The number of seconds to wait for startup to complete, after which
+  /// we revert to the last known good version
+  private var startupTimeoutInterval: NSTimeInterval = 20.0
 
   private var isTesting: Bool = false
 
@@ -99,6 +99,13 @@ public class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
       NSLog("Could not start local server: \(error)")
       return
     }
+
+    if let startupTimeoutString = (commandDelegate?.settings["WebAppStartupTimeout".lowercaseString] as? String),
+       let startupTimeoutMilliseconds = UInt(startupTimeoutString) {
+      startupTimeoutInterval =  NSTimeInterval(startupTimeoutMilliseconds / 1000)
+    }
+
+    NSLog("startupTimeoutInterval: \(startupTimeoutInterval)")
 
     if !isTesting {
       startupTimer = METTimer(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)) { [weak self] in
