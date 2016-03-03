@@ -21,6 +21,8 @@ import { CordovaProject } from '../cordova/project.js';
 import { CordovaRunner } from '../cordova/runner.js';
 import { iOSRunTarget, AndroidRunTarget } from '../cordova/run-targets.js';
 
+import { EXAMPLE_REPOSITORIES } from './example-repositories.js';
+
 // The architecture used by MDG's hosted servers; it's the architecture used by
 // 'meteor deploy'.
 var DEPLOY_ARCH = 'os.linux.x86_64';
@@ -561,30 +563,47 @@ main.registerCommand({
     }
   }
 
-  var exampleDir = files.pathJoin(__dirnameConverted, '..', '..', 'examples');
-  var examples = _.reject(files.readdir(exampleDir), function (e) {
-    return (e === 'unfinished' || e === 'other'  || e[0] === '.');
-  });
-
   if (options.list) {
     Console.info("Available examples:");
-    _.each(examples, function (e) {
+    _.each(EXAMPLE_REPOSITORIES, function (repoInfo, name) {
+      const branchInfo = repoInfo.branch ? `#${repoInfo.branch}` : '';
       Console.info(
-        Console.command(e),
+        Console.command(`${name}: ${repoInfo.repo}${branchInfo}`),
         Console.options({ indent: 2 }));
     });
+
     Console.info();
-    Console.info(
-      "Create a project from an example with " +
-      Console.command("'meteor create --example <name>'") + ".");
+    Console.info("To create an example, simply", Console.command("git clone"),
+      "the relevant repository and branch (run", 
+      Console.command("'meteor create --example <name>'"),
+      " to see the full command).");
     return 0;
   };
+
+  if (options.example) {
+    const repoInfo = EXAMPLE_REPOSITORIES[options.example];
+    if (!repoInfo) {
+      Console.error(`${options.example}: no such example.`);
+      Console.error(
+        "List available applications with",
+        Console.command("'meteor create --list'") + ".");
+      return 1;
+    }
+
+    const branchOption = repoInfo.branch ? ` -b ${repoInfo.branch}` : '';
+    const path = options.args.length === 1 ? ` ${options.args[0]}` : '';
+
+    Console.info(`To create the ${options.example} example, please run:`)
+    Console.info(
+      Console.command(`git clone ${repoInfo.repo}${branchOption}${path}`),
+      Console.options({ indent: 2 }));
+
+    return 0;
+  }
 
   var appPathAsEntered;
   if (options.args.length === 1) {
     appPathAsEntered = options.args[0];
-  } else if (options.example) {
-    appPathAsEntered = options.example;
   } else {
     throw new main.ShowUsage;
   }
@@ -648,53 +667,26 @@ main.registerCommand({
     });
   }
 
-  if (options.example) {
-    if (destinationHasCodeFiles) {
-      Console.error(`When creating an example app, the destination directory \
-can only contain dot-files or files with the following extensions: \
-${nonCodeFileExts.join(', ')}
-`);
-      return 1;
-    }
-
-    if (examples.indexOf(options.example) === -1) {
-      Console.error(options.example + ": no such example.");
-      Console.error();
-      Console.error(
-        "List available applications with",
-        Console.command("'meteor create --list'") + ".");
-      return 1;
-    } else {
-      files.cp_r(files.pathJoin(exampleDir, options.example), appPath, {
-        // We try not to check the project ID into git, but it might still
-        // accidentally exist and get added (if running from checkout, for
-        // example). To be on the safe side, explicitly remove the project ID
-        // from example apps.
-        ignore: [/^local$/, /^\.id$/]
-      });
-    }
-  } else {
-    var toIgnore = [/^local$/, /^\.id$/]
-    if (destinationHasCodeFiles) {
-      // If there is already source code in the directory, don't copy our
-      // skeleton app code over it. Just create the .meteor folder and metadata
-      toIgnore.push(/(\.html|\.js|\.css)/)
-    }
-
-    files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets', 'skel'), appPath, {
-      transformFilename: function (f) {
-        return transform(f);
-      },
-      transformContents: function (contents, f) {
-        if ((/(\.html|\.js|\.css)/).test(f)) {
-          return new Buffer(transform(contents.toString()));
-        } else {
-          return contents;
-        }
-      },
-      ignore: toIgnore
-    });
+  var toIgnore = [/^local$/, /^\.id$/]
+  if (destinationHasCodeFiles) {
+    // If there is already source code in the directory, don't copy our
+    // skeleton app code over it. Just create the .meteor folder and metadata
+    toIgnore.push(/(\.html|\.js|\.css)/)
   }
+
+  files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets', 'skel'), appPath, {
+    transformFilename: function (f) {
+      return transform(f);
+    },
+    transformContents: function (contents, f) {
+      if ((/(\.html|\.js|\.css)/).test(f)) {
+        return new Buffer(transform(contents.toString()));
+      } else {
+        return contents;
+      }
+    },
+    ignore: toIgnore
+  });
 
   // We are actually working with a new meteor project at this point, so
   // set up its context.
@@ -734,10 +726,6 @@ ${nonCodeFileExts.join(', ')}
     "current directory" : `'${appPathAsEntered}'`;
 
   var message = `Created a new Meteor app in ${appNameToDisplay}`;
-
-  if (options.example && options.example !== appPathAsEntered) {
-    message += ` (from '${options.example}' template)`;
-  }
 
   message += ".";
 
