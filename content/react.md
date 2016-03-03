@@ -57,7 +57,7 @@ Meteor.startup(() => {
 
 You need to include a `<div id="app"/>` in your body's HTML somewhere of course.
 
-If you are not planning on [using both React and Blaze](#using-with-blaze) together, you can remove Blaze from your project (it's automatically added to all new projects), by running:
+Every new Meteor app includes Blaze, Meteor's default templating system, by default. If you are not planning on [using React and Blaze together](#using-with-blaze), you can remove Blaze from your project by running:
 
 ```sh
 meteor remove blaze-html-templates
