@@ -155,23 +155,23 @@ To use it in Blaze:
 
 <h2 id="livedata">Using Meteor's data system</h2>
 
-React is a front-end rendering library and as such doesn't concern itself with how data gets into and out of the component heirarchy. Meteor has strong opinions about data of course! Meteor's Livedata system defines a system [publications](data-loading.html) and [methods](methods.html) to subscribe to and modify the data in your application.
+React is a front-end rendering library and as such doesn't concern itself with how data gets into and out of components. On the other hand, Meteor has strong opinions about data! Meteor operates in terms of [publications](data-loading.html) and [methods](methods.html), used to subscribe to and modify the data in your application.
 
-To combine the two systems, we've developed a [`react-meteor-data`](https://atmospherejs.com/meteor/react-meteor-data) package which allows React components to respond to data changes via Meteor's [Tracker](https://www.meteor.com/tracker) reactivity system.
+To integrate the two systems, we've developed a [`react-meteor-data`](https://atmospherejs.com/meteor/react-meteor-data) package which allows React components to respond to data changes via Meteor's [Tracker](https://www.meteor.com/tracker) reactivity system.
 
 <h3 id="using-createContainer">Using `createContainer`</h3>
 
 Once you've run `meteor add react-meteor-data`, you'll be able to import the `createContainer` function, which allows you to create a [container component](https://medium.com/@dan_abramov/smart-and-dumb-components-7ca2f9a7c7d0#.by86emv9b) which provides data to your presentational components.
 
-(Note that "container components" are analogous to the "smart components" and "presentational components" to the "reusable components" in the pattern we document in the [UI/UX article](http://guide.meteor.com/ui-ux.html#components), if you'd like to read more about how this philosophy marries with Meteor).
+> Note that "container components" are analogous to the "smart components" and "presentational components" to the "reusable components" in the pattern we document in the [UI/UX article](http://guide.meteor.com/ui-ux.html#components), if you'd like to read more about how this philosophy relates to Meteor.
 
-For example, in the Todos example app, we have a `ListsShow` component, which renders the metadata about a list alongside the todos that are within it. In order to do so, it needs to [subscribe](data-loading.html#subscriptions) to the `todos.inList` publication, check that subscription's readiness, then fetch the list of todos from the `Todos` collection.
+For example, in the Todos example app, we have a `ListsShow` component, which renders list metadata and the tasks in the list. In order to do so, it needs to [subscribe](data-loading.html#subscriptions) to the `todos.inList` publication, check that subscription's readiness, then fetch the list of todos from the `Todos` collection.
 
 It also needs to be responsive to reactive changes in the state of those actions (for instance if a todo changes due to the action of another user). All this data loading complexity is a typical use-case for a container-presentational component split, and the `createContainer()` function makes it simple to do this.
 
-We simply define the `ListsShow` component to be a presentational component that expects it's data to be passed in as a property:
+We simply define the `ListsShow` component as a presentational component that expects its data to be passed in using React `props`:
 
-```jsx
+```js
 import React from 'react';
 
 export default class ListsShow extends React.Component {
@@ -188,7 +188,7 @@ ListsShow.propTypes = {
 
 Then we create a `ListsShowPage` container component which wraps it and provides a data source:
 
-```jsx
+```js
 import { Meteor } from 'meteor/meteor';
 import { Lists } from '../../api/lists/lists.js';
 import createContainer from 'meteor/react-meteor-data';
@@ -208,25 +208,25 @@ export default createContainer(({ params: { id } }) => {
 }, ListsShow);
 ```
 
-Note that the container created by `createContainer()` will be fully reactive to any changes to [reactive data sources](https://atmospherejs.com/meteor/tracker) call from inside the function provided to it.
+The container component created by `createContainer()` will reactively rerender the wrapped component in response to any changes to [reactive data sources](https://atmospherejs.com/meteor/tracker) accessed from inside the function provided to it.
 
 <h3 id="preventing-rerenders">Preventing re-renders</h3>
 
-Sometimes changes in your data can trigger re-computations which you know wont affect your UI. Although React is in general quite efficient in such unnecessary re-renders, if you need to control re-rendering, the above pattern allows you to easily use React's [`shouldComponentUpdate`](https://facebook.github.io/react/docs/component-specs.html#updating-shouldcomponentupdate) on the presentational component wrapped and avoid re-renders.
+Sometimes changes in your data can trigger re-computations which you know won't affect your UI. Although React is in general quite efficient in the face of unnecessary re-renders, if you need to control re-rendering, the above pattern allows you to easily use React's [`shouldComponentUpdate`](https://facebook.github.io/react/docs/component-specs.html#updating-shouldcomponentupdate) on the presentational component to avoid re-renders.
 
 <h2 id="routing">Routing</h2>
 
-To route in React and Meteor there are two main choices. In either case we recommend consulting our [Routing article](routing.html) for some general principles of routing in Meteor.
+There are two main options for routing with Meteor and React. Either way, we recommend consulting our [Routing article](routing.html) for some general principles of routing in Meteor before writing your app.
 
-  - [`kadira:flow-router`](https://atmospherejs.com/kadira/flow-router) is a Meteor specific Router that can be used to render to React and that we document in the [Routing article](routing.html).
+- [`kadira:flow-router`](https://atmospherejs.com/kadira/flow-router) is a Meteor specific router that can be used both with React and Blaze. It is documented in detail in the [Routing article](routing.html).
 
-  - [`react-router`](https://www.npmjs.com/package/react-router) is a pure-React Router that is very popular and which can also be used easily with Meteor.
+- [`react-router`](https://www.npmjs.com/package/react-router) is a React-specific router very popular in the React community. It can also be used easily with Meteor.
 
 <h3 id="using-flow-router">Flow Router</h3>
 
-Using Flow Router with React is almost exactly analogous to using it with Blaze. The only difference is that in your route actions, you should use the [`react-mounter`](https://www.npmjs.com/package/react-mounter) package to mount components into your layout. Once you `npm install --save react-mounter`, you can:
+Using Flow Router with React is very similar to using it with Blaze. The only difference is that in your route actions, you should use the [`react-mounter`](https://www.npmjs.com/package/react-mounter) package to mount components with a layout. Once you `npm install --save react-mounter`, you can do the following:
 
-```jsx
+```js
 import { FlowRouter } from 'meteor/kadira:flow-router';
 import { mount } from 'react-mounter';
 
@@ -250,7 +250,7 @@ Note that `react-mounter` automatically mounts the layout component on a `#react
 
 Using React Router is also straightforward. Once you `npm install --save react-router`, you can simply export a list of nested routes as you would in any other React Router driven React application:
 
-```jsx
+```js
 import React from 'react';
 import { Router, Route, browserHistory } from 'react-router';
 
@@ -273,9 +273,9 @@ export const renderRoutes = () => (
 );
 ```
 
-With React Router, you'll need to render the exported routes in a startup function:
+With React Router, you'll also need to explicity render the exported routes in a startup function:
 
-```jsx
+```js
 import { Meteor } from 'meteor/meteor';
 import { render } from 'react-dom';
 import { renderRoutes } from '../imports/startup/client/routes.jsx';
@@ -285,11 +285,11 @@ Meteor.startup(() => {
 });
 ```
 
-In general routing with React Router in Meteor follows generally the [same principles](routing.html) as using Flow Router, however you'll need to follow some of the idioms outlined in the [documentation](https://github.com/reactjs/react-router/blob/latest/docs/Introduction.md).
+When using React Router in Meteor, you can follow roughly the [same principles](routing.html) as when using Flow Router, but you should also consider the idioms outlined in React Router's own  [documentation](https://github.com/reactjs/react-router/blob/latest/docs/Introduction.md).
 
 These include some notable differences like:
- - React Router leads you to couple your URL design and layout heirarchy in the router definition. Flow Router is more flexible although it can involve much more boilerplate as a result.
- - React Router embraces React idioms like the use of [context](https://facebook.github.io/react/docs/context.html), although you can also explicitly pass your FlowRouter instance around in context if you'd like (in fact this is probably the best thing to do).
+ - React Router encourages you to couple your URL design and layout hierarchy in the route definition. Flow Router is more flexible, although it can involve much more boilerplate as a result.
+ - React Router embraces React-specific functionality like the use of [context](https://facebook.github.io/react/docs/context.html), although you can also explicitly pass your FlowRouter instance around in context if you'd like (in fact this is probably the best thing to do).
 
 <h2 id="meteor-and-react">Meteor and React</h2>
 
@@ -297,8 +297,8 @@ These include some notable differences like:
 
 If you are writing an Atmosphere package and want to depend on React or an NPM package that itself depends on React, you can't use `Npm.depends()` and `Npm.require()`, as this will result in *2* copies of React being installed into the application (and besides `Npm.require()` only works on the server).
 
-Instead, you need to check that users of your package have installed the correct packages at the application level. This will ensure a *single* copy of React is shipped to the client and all versions line up.
+Instead, you need to ask your users to install the correct NPM packages in the application itself. This will ensure that only one copy of React is shipped to the client and there are no version conflicts.
 
-In order to check that a user has installed the correct versions of NPM packages, you can use the [`tmeasday:check-npm-versions`](https://atmospherejs.com/tmeasday/check-npm-versions`) to check versions.
+In order to check that a user has installed the correct versions of NPM packages, you can use the [`tmeasday:check-npm-versions`](https://atmospherejs.com/tmeasday/check-npm-versions`) package to check dependency versions at runtime.
 
 XXX: not putting in code samples here as they may change and I don't want to have to remember to do it in two places.
