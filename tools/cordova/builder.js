@@ -129,7 +129,10 @@ export class CordovaBuilder {
       'mailto:*': 'intent',
       'sms:*': 'intent',
       'market:*': 'intent',
+      'itms:*': 'intent',
+      'itms-apps:*': 'intent',
 
+      'gap://ready': 'navigation',
       // Allow navigation to localhost, which is needed for the local server
       'http://localhost': 'navigation'
     };
