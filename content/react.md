@@ -25,7 +25,7 @@ To get started with React in Meteor, you can follow along the [React tutorial](h
 
 To install React in Meteor 1.3 you should simply add it as an NPM dependency:
 
-```
+```sh
 npm install --save react react-dom
 ```
 
@@ -151,7 +151,7 @@ To use it in Blaze:
 
 <h2 id="livedata">Using Meteor's data system</h2>
 
-React is a front-end rendering library and as such doesn't concern itself with how data gets into and out of the component heirarchy. Meteor has strong opinions about data of course! Meteor's Livedata system defines a system [publications](data-loading.html) and [methods](methods.html) to subscribe to and modify the data in your application. 
+React is a front-end rendering library and as such doesn't concern itself with how data gets into and out of the component heirarchy. Meteor has strong opinions about data of course! Meteor's Livedata system defines a system [publications](data-loading.html) and [methods](methods.html) to subscribe to and modify the data in your application.
 
 To combine the two systems, we've developed a [`react-meteor-data`](https://atmospherejs.com/meteor/react-meteor-data) package which allows React components to respond to data changes via Meteor's [Tracker](https://www.meteor.com/tracker) reactivity system.
 
@@ -293,9 +293,8 @@ These include some notable differences like:
 
 If you are writing an Atmosphere package and want to depend on React or an NPM package that itself depends on React, you can't use `Npm.depends()` and `Npm.require()`, as this will result in *2* copies of React being installed into the application (and besides `Npm.require()` only works on the server).
 
-Instead, you need to check that users of your package have installed the correct packages at the application level. This will ensure a *single* copy of React is shipped to the client and all versions line up. 
+Instead, you need to check that users of your package have installed the correct packages at the application level. This will ensure a *single* copy of React is shipped to the client and all versions line up.
 
 In order to check that a user has installed the correct versions of NPM packages, you can use the [`tmeasday:check-npm-versions`](https://atmospherejs.com/tmeasday/check-npm-versions`) to check versions.
 
 XXX: not putting in code samples here as they may change and I don't want to have to remember to do it in two places.
-
