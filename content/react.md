@@ -31,7 +31,7 @@ npm install --save react react-dom
 
 This will install `react` into your project and allow you to access it within your files with `import React from 'react'`. Most React code is written in [JSX](https://facebook.github.io/react/docs/jsx-in-depth.html), which you can use by [default in Meteor](http://guide.meteor.com/build-tool.html#react-jsx) if you include the `ecmascript` package (which is installed in all Meteor apps by default).
 
-```jsx
+```js
 import React from 'react';
 
 export default class HelloWorld extends React.Component {
@@ -43,7 +43,7 @@ export default class HelloWorld extends React.Component {
 
 You can render a component heirarchy to the DOM using the `react-dom` package:
 
-```jsx
+```js
 import { Meteor } from 'meteor/meteor';
 import { render } from 'react-dom';
 import HelloWorld from './HelloWorld.jsx';
