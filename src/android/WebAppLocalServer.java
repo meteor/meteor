@@ -276,6 +276,7 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
     }
 
     private void notifyError(Throwable cause) {
+        Log.e(LOG_TAG, "Download failure", cause);
         if (errorCallbackContext != null) {
             PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, cause.getMessage());
             pluginResult.setKeepCallback(true);
