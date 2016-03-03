@@ -440,8 +440,7 @@ main.registerCommand({
   if (options.package) {
     var packageName = options.args[0];
 
-    // No package examples exist yet.
-    if (options.list && options.example) {
+    if (options.list || options.example) {
       Console.error("No package examples exist at this time.");
       Console.error();
       throw new main.ShowUsage;
