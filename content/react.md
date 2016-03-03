@@ -70,11 +70,11 @@ If you'd like to use a third party React component that has been published on NP
 
 For example, to use the excellent [Griddle](http://griddlegriddle.github.io/Griddle/) React package, you could run
 
-```
+```sh
 npm install --save griddle-react
 ```
 
-Then, like any other [NPM package](#using-packages.html#npm), you can import from the package in your application:
+Then, like with any other [NPM package](using-packages.html#npm), you can import the component in your application:
 
 ```js
 import React from 'react';
@@ -87,11 +87,11 @@ export default class MyGriddler extends React.Component {
 }
 ```
 
-If you are looking to write a Atmosphere package that wraps such a component, you need to take some [further steps](#atmosphere-packages).
+If you are looking to write an Atmosphere package that wraps such a component, you need to take some [further steps](#atmosphere-packages).
 
 <h3 id="using-with-blaze">Using Blaze with React</h3>
 
-If you'd like to use React within a larger app built with [Blaze](#blaze.html) (which is a good strategy if you'd like migrate an app from Blaze to React), you can use the [`react-template-helper`](https://atmospherejs.com/meteor/react-template-helper) component which renders a react component inside a Blaze template. First run `meteor add react-template-helper`, then user the `React` helper in your template:
+If you'd like to use React within a larger app built with [Blaze](#blaze.html) (which is a good strategy if you'd like to incrementally migrate an app from Blaze to React), you can use the [`react-template-helper`](https://atmospherejs.com/meteor/react-template-helper) component which renders a react component inside a Blaze template. First run `meteor add react-template-helper`, then use the `React` helper in your template:
 
 ```html
 <template name="userDisplay">
@@ -105,7 +105,7 @@ You will need to pass in the component class with a helper:
 ```js
 import { Template } from 'meteor/templating';
 
-import 'userDisplay.html';
+import './userDisplay.html';
 import UserAvatar from './UserAvatar.jsx';
 
 Template.userDisplay.helpers({
