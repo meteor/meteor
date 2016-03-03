@@ -282,7 +282,7 @@ exports.run = function (options) {
   });
 
   runOptions.watchForChanges = ! once;
-  runOptions.quiet = once;
+  runOptions.quiet = false;
 
   var runner = new Runner(runOptions);
   runner.start();
