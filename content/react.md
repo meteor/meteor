@@ -1,14 +1,14 @@
 ---
 title: React
 order: 8
-description: How to use React, the frontend rendering library with Meteor.
+description: How to use React, Facebook's frontend rendering library, with Meteor.
 ---
 
 After reading this guide, you'll know:
 
 1. What React is, and why you would consider using it with Meteor.
 2. How to install React in your Meteor application, and how to use it correctly.
-3. How to integrate React with Livedata, Meteor's realtime data layer.
+3. How to integrate React with Meteor's realtime data layer.
 4. How to route in a React/Meteor application.
 
 <h2 id="introduction">Introduction</h2>
@@ -31,39 +31,65 @@ npm install --save react react-dom
 
 This will install `react` into your project and allow you to access it within your files with `import React from 'react'`. Most React code is written in [JSX](https://facebook.github.io/react/docs/jsx-in-depth.html), which you can use by [default in Meteor](http://guide.meteor.com/build-tool.html#react-jsx) if you include the `ecmascript` package (which is installed in all Meteor apps by default).
 
-```js
+```jsx
 import React from 'react';
 
 export default class HelloWorld extends React.Component {
   render() {
-    return <h1>Hello World</h1>;
+    return (<h1>Hello World</h1>);
   }
 }
 ```
 
 You can render a component heirarchy to the DOM using the `react-dom` package:
 
-```js
+```jsx
 import { Meteor } from 'meteor/meteor';
 import { render } from 'react-dom';
 import HelloWorld from './HelloWorld.jsx';
 
 Meteor.startup(() => {
-  render(HelloWorld, document.getElementById('app'));
+  render(<HelloWorld/>, document.getElementById('app'));
 });
 ```
 
-XXX: should we be getting rid of `blaze-html-templates` and replacing with `static-html`? The tutorial doesn't sem to do it..
+You need to include a `<div id="app"/>` in your body's HTML somewhere of course.
+
+If you are not planning on [using both React and Blaze](#using-with-blaze) together, you can remove Blaze from your project (it's automatically added to all new projects), by running:
+
+```
+meteor remote blaze-html-templates
+meteor add static-html
+```
 
 <h3 id="using-third-party-npm-packages">Using 3rd party packages</h3>
 
 If you'd like to use a third party React component that has been published on NPM (such as the ones you find on the [React Components site](http://react-components.com)), you can simple `npm install --save` them and `import` from within your app.
 
+For example, to use the excellent [Griddle](http://griddlegriddle.github.io/Griddle/) React package, you could run
+
+```
+npm install --save griddle-react
+```
+
+Then, like any other [NPM package](#using-packages.html#npm), you can import from the package in your application:
+
+```js
+import React from 'react';
+import Griddle from 'griddle-react';
+
+export default class MyGriddler extends React.Component {
+  render() {
+    return (<Griddle ..../>);
+  }
+}
+```
+
 If you are looking to write a Atmosphere package that wraps such a component, you need to take some [further steps](#atmosphere-packages).
 
 <h3 id="using-with-blaze">Using Blaze with React</h3>
 
-If you'd like to use React within a larger app built with [Blaze](#blaze.html), you can use the [`react-template-helper`](https://atmospherejs.com/meteor/react-template-helper) component which renders a react component inside a Blaze template. First run `meteor add react-template-helper`, then user the `React` helper in your template:
+If you'd like to use React within a larger app built with [Blaze](#blaze.html) (which is a good strategy if you'd like migrate an app from Blaze to React), you can use the [`react-template-helper`](https://atmospherejs.com/meteor/react-template-helper) component which renders a react component inside a Blaze template. First run `meteor add react-template-helper`, then user the `React` helper in your template:
 
 ```html
 <template name="userDisplay">
@@ -104,12 +130,12 @@ To pass a callback to a React component that you are including with this helper,
 ```js
 Template.userDisplay.helpers({
   onClick() {
-    var self = Template.instance();
+    var instance = Template.instance();
 
     // Return a function from this helper, where the template instance is in
     // a closure
-    return function () {
-      self.hasBeenClicked.set(true)
+    return () => {
+      instance.hasBeenClicked.set(true)
     }
   }
 });
@@ -123,7 +149,7 @@ To use it in Blaze:
 </template>
 ```
 
-<h2 id="livedata">Using data</h2>
+<h2 id="livedata">Using Meteor's data system</h2>
 
 React is a front-end rendering library and as such doesn't concern itself with how data gets into and out of the component heirarchy. Meteor has strong opinions about data of course! Meteor's Livedata system defines a system [publications](data-loading.html) and [methods](methods.html) to subscribe to and modify the data in your application. 
 
@@ -178,15 +204,15 @@ export default createContainer(({ params: { id } }) => {
 }, ListPage);
 ```
 
-Note that the `MeteorDataContainer` container created by `createContainer()` will be fully reactive to any changes to [reactive data sources](https://atmospherejs.com/meteor/tracker) call from inside the function provided to it.
+Note that the container created by `createContainer()` will be fully reactive to any changes to [reactive data sources](https://atmospherejs.com/meteor/tracker) call from inside the function provided to it.
 
 <h3 id="preventing-rerenders">Preventing re-renders</h3>
 
-Sometimes the Tracker system can lead to unnecessary re-computations, which when combined with `react-meteor-data` leads to unnecessary re-renders. Although React is in general quite efficient in such cases, if you need to control re-rendering, the above pattern allows you to easily use React's [`shouldComponentUpdate`](https://facebook.github.io/react/docs/component-specs.html#updating-shouldcomponentupdate) on the presentational component wrapped and avoid re-renders.
+Sometimes changes in your data can trigger re-computations which you know wont affect your UI. Although React is in general quite efficient in such unnecessary re-renders, if you need to control re-rendering, the above pattern allows you to easily use React's [`shouldComponentUpdate`](https://facebook.github.io/react/docs/component-specs.html#updating-shouldcomponentupdate) on the presentational component wrapped and avoid re-renders.
 
 <h2 id="routing">Routing</h2>
 
-To route in React there are two main choices: 
+To route in React and Meteor there are two main choices. In either case we recommend consulting our [Routing article](routing.html) for some general principles of routing in Meteor.
 
   - [`kadira:flow-router`](https://atmospherejs.com/kadira/flow-router) is a Meteor specific Router that can be used to render to React and that we document in the [Routing article](routing.html).
 
@@ -257,13 +283,17 @@ Meteor.startup(() => {
 
 In general routing with React Router in Meteor follows generally the [same principles](routing.html) as using Flow Router, however you'll need to follow some of the idioms outlined in the [documentation](https://github.com/reactjs/react-router/blob/latest/docs/Introduction.md).
 
+These include some notable differences like:
+ - React Router leads you to couple your URL design and layout heirarchy in the router definition. Flow Router is more flexible although it can involve much more boilerplate as a result.
+ - React Router embraces React idioms like the use of [context](https://facebook.github.io/react/docs/context.html), although you can also explicitly pass your FlowRouter instance around in context if you'd like (in fact this is probably the best thing to do).
+
 <h2 id="meteor-and-react">Meteor and React</h2>
 
 <h3 id="atmosphere-packages">Using React in Atmosphere Packages</h3>
 
 If you are writing an Atmosphere package and want to depend on React or an NPM package that itself depends on React, you can't use `Npm.depends()` and `Npm.require()`, as this will result in *2* copies of React being installed into the application (and besides `Npm.require()` only works on the server).
 
-Instead, you need to ensure that users of your package have installed the correct packages at the application level. This will ensure a *single* copy of React is shipped to the client and all versions line up. 
+Instead, you need to check that users of your package have installed the correct packages at the application level. This will ensure a *single* copy of React is shipped to the client and all versions line up. 
 
 In order to check that a user has installed the correct versions of NPM packages, you can use the [`tmeasday:check-npm-versions`](https://atmospherejs.com/tmeasday/check-npm-versions`) to check versions.
 
