@@ -376,11 +376,11 @@
             "babel-helper-define-map": {
               "version": "6.6.0"
             },
-            "babel-helper-function-name": {
-              "version": "6.6.0"
-            },
             "babel-helper-get-function-arity": {
               "version": "6.5.0"
+            },
+            "babel-helper-function-name": {
+              "version": "6.6.0"
             },
             "babel-helper-hoist-variables": {
               "version": "6.5.0"
@@ -424,11 +424,11 @@
             "color-convert": {
               "version": "1.0.0"
             },
-            "concat-map": {
-              "version": "0.0.1"
-            },
             "core-js": {
               "version": "1.2.6"
+            },
+            "concat-map": {
+              "version": "0.0.1"
             },
             "debug": {
               "version": "2.2.0"
@@ -451,11 +451,11 @@
             "has-ansi": {
               "version": "2.0.0"
             },
-            "home-or-tmp": {
-              "version": "1.0.0"
-            },
             "invariant": {
               "version": "2.2.0"
+            },
+            "home-or-tmp": {
+              "version": "1.0.0"
             },
             "is-finite": {
               "version": "1.0.1"
@@ -463,11 +463,11 @@
             "is-integer": {
               "version": "1.0.6"
             },
-            "js-tokens": {
-              "version": "1.0.2"
-            },
             "jsesc": {
               "version": "0.5.0"
+            },
+            "js-tokens": {
+              "version": "1.0.2"
             },
             "json5": {
               "version": "0.4.0"
