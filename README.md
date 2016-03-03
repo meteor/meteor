@@ -17,9 +17,9 @@ Meteor specific linting rules for ESLint
 
 
 
-![Example](docs/media/epm.gif)
+![Example](https://raw.githubusercontent.com/dferber90/eslint-plugin-meteor/master/docs/media/epm.gif)
 
-*This gif shows integration of ESLint-plugin-Meteor into Atom with [linter](https://atom.io/packages/linter) and [linter-eslint](https://atom.io/packages/linter-eslint). Find out more in the [integration guide](docs/guides/integration.md).*
+*This gif shows integration of ESLint-plugin-Meteor into Atom. Find out more in the [integration guide](docs/guides/integration.md).*
 
 
 # Quickstart
@@ -35,7 +35,7 @@ $ npm install eslint-plugin-meteor --save-dev
 
 ## Configuration
 
-Add `plugins` section and specify ESLint-plugin-Meteor as a plugin, and enable the recommended rules of this plugin.
+Add these keys to your `.eslintrc.json` file:
 
 ```json
 {
@@ -73,7 +73,7 @@ It will not warn when accessing client-only features on the server and vice vers
 
 # Contributing
 
-Read about [set up of the development environment](docs/guides/development.md).
+Read about [set up of the development environment](/docs/guides/development.md).
 
 # Thanks
 
