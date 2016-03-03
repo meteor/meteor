@@ -121,9 +121,9 @@ Every other argument is passed as a prop to the component when it is rendered.
 
 Note that there a few caveats:
 
- - React components must be the only thing in the wrapper element, due to a limitation of React (see facebook/react [#1970](https://github.com/facebook/react/issues/1970), [#2484](https://github.com/facebook/react/issues/2484)), a React component must be rendered as the only child of its parent node, meaning it cannot have any siblings.
+- React components must be the only thing in the wrapper element. Due to a limitation of React (see facebook/react [#1970](https://github.com/facebook/react/issues/1970), [#2484](https://github.com/facebook/react/issues/2484)), a React component must be rendered as the only child of its parent node, meaning it cannot have any siblings.
 
- - This means a component also can't be the only thing in a template, because it's impossible to tell where the template will be used.
+- This means a React component also can't be the only thing in a Blaze template, because it's impossible to tell where the template will be used.
 
 <h4 id="passing-callbacks-from-blaze">Passing callbacks to a React component</h4>
 
@@ -132,7 +132,7 @@ To pass a callback to a React component that you are including with this helper,
 ```js
 Template.userDisplay.helpers({
   onClick() {
-    var instance = Template.instance();
+    const instance = Template.instance();
 
     // Return a function from this helper, where the template instance is in
     // a closure
@@ -145,9 +145,11 @@ Template.userDisplay.helpers({
 
 To use it in Blaze:
 
-```js
+```html
 <template name="userDisplay">
-  <div>{{> React component=UserAvatar userId=_id onClick=onClick}}</div>
+  <div>
+    {{> React component=UserAvatar userId=_id onClick=onClick}}
+  </div>
 </template>
 ```
 
