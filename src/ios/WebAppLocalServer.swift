@@ -105,8 +105,6 @@ public class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
       startupTimeoutInterval =  NSTimeInterval(startupTimeoutMilliseconds / 1000)
     }
 
-    NSLog("startupTimeoutInterval: \(startupTimeoutInterval)")
-
     if !isTesting {
       startupTimer = METTimer(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)) { [weak self] in
         NSLog("App startup timed out, reverting to last known good version")

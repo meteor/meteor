@@ -248,7 +248,6 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
   }
 
   private func didFinishDownloadingAssetBundle(assetBundle: AssetBundle) {
-    NSLog("didFinishDownloadingAssetBundle: \(assetBundle.version)")
     delegate?.assetBundleManager(self, didFinishDownloadingBundle: assetBundle)
   }
 
