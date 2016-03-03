@@ -508,7 +508,7 @@ Meteor.publish('custom-publication', function() {
 
 From the client's perspective, data published like this doesn't look any different---there's actually no way for the client to know the difference as the DDP messages are the same. So even if you are connecting to, and mirroring, some esoteric data source, on the client it'll appear like any other Mongo collection.
 
-One point to be aware of is that if you allow the user to *modify* data in the "psuedo-collection" you are publishing in this fashion, you'll want to be sure to re-publish the modifications to them via the publication, to achieve an optimistic user experience.
+One point to be aware of is that if you allow the user to *modify* data in the "pseudo-collection" you are publishing in this fashion, you'll want to be sure to re-publish the modifications to them via the publication, to achieve an optimistic user experience.
 
 <h3 id="lifecycle">Subscription lifecycle</h3>
 

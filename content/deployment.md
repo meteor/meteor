@@ -1,6 +1,6 @@
 ---
 title: Deployment and Monitoring
-order: 9
+order: 11
 description: How to deploy, run, and monitor your Meteor app in production.
 ---
 

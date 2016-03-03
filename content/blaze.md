@@ -430,7 +430,7 @@ Template.Lists_show.helpers({
 
 Template.Todos_item.events({
   'focus input[type=text]'() {
-    this.onEditing(true);
+    this.onEditingChange(true);
   }
 });
 ```
