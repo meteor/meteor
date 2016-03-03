@@ -57,8 +57,8 @@ You need to include a `<div id="app"/>` in your body's HTML somewhere of course.
 
 If you are not planning on [using both React and Blaze](#using-with-blaze) together, you can remove Blaze from your project (it's automatically added to all new projects), by running:
 
-```
-meteor remote blaze-html-templates
+```sh
+meteor remove blaze-html-templates
 meteor add static-html
 ```
 
