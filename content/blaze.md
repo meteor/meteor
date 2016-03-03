@@ -347,11 +347,15 @@ Once the state dictionary has been created we can access it from helpers and mod
 If you have common functionality for a template instance that needs to be abstracted or called from multiple event handlers, it's sensible to attach it as functions directly to the template instance in the `onCreated()` callback:
 
 ```js
+import {
+  updateName,
+} from '../../api/lists/methods.js';
+
 Template.Lists_show.onCreated(function() {
   this.saveList = () => {
     this.state.set('editing', false);
 
-    Lists.methods.updateName.call({
+    updateName.call({
       listId: this.data.list._id,
       newName: this.$('[name=name]').val()
     }, (err) => {
@@ -456,14 +460,14 @@ All of the suggestions about reusable components apply to smart components. In a
 
 <h3 id="subscribing">Subscribe from `onCreated`</h3>
 
-You should subscribe to publications from the server from an `onCreated` callback (within an `autorun` block if you have reactively changing arguments). In the Todos example app, in the `Lists_show_page` template we subscribe to the `Todos.inList` publication based on the current `_id` FlowRouter param:
+You should subscribe to publications from the server from an `onCreated` callback (within an `autorun` block if you have reactively changing arguments). In the Todos example app, in the `Lists_show_page` template we subscribe to the `todos.inList` publication based on the current `_id` FlowRouter param:
 
 ```js
 Template.Lists_show_page.onCreated(function() {
   this.getListId = () => FlowRouter.getParam('_id');
 
   this.autorun(() => {
-    this.subscribe('Todos.inList', this.getListId());
+    this.subscribe('todos.inList', this.getListId());
   });
 });
 ```

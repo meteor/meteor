@@ -33,7 +33,7 @@ This example uses the `aldeed:simple-schema` package, which is recommended in se
 
 ```js
 Meteor.methods({
-  'Todos.methods.updateText'({ todoId, newText }) {
+  'todos.updateText'({ todoId, newText }) {
     new SimpleSchema({
       todoId: { type: String },
       newText: { type: String }
@@ -42,7 +42,7 @@ Meteor.methods({
     const todo = Todos.findOne(todoId);
 
     if (!todo.editableBy(this.userId)) {
-      throw new Meteor.Error('Todos.methods.updateText.unauthorized',
+      throw new Meteor.Error('todos.updateText.unauthorized',
         'Cannot edit todos in a private list that is not yours');
     }
 
@@ -60,7 +60,7 @@ This Method is callable from the client and server using [`Meteor.call`](http://
 Here's how you can call this Method from the client:
 
 ```js
-Meteor.call('Todos.methods.updateText', {
+Meteor.call('todos.updateText', {
   todoId: '12345',
   newText: 'This is a todo item.'
 }, (err, res) => {
@@ -90,12 +90,8 @@ Here's some of the functionality an ideal Method would have:
 <h4 id="advanced-boilerplate-defining">Defining</h4>
 
 ```js
-// Define a namespace for Methods related to the Todos collection
-// Allows overriding for tests by replacing the implementation (2)
-Todos.methods = {};
-
-Todos.methods.updateText = {
-  name: 'Todos.methods.updateText',
+export default updateText = {
+  name: 'todos.updateText',
 
   // Factor out validation so that it can be run independently (1)
   validate(args) {
@@ -110,7 +106,7 @@ Todos.methods.updateText = {
     const todo = Todos.findOne(todoId);
 
     if (!todo.editableBy(this.userId)) {
-      throw new Meteor.Error('Todos.methods.updateText.unauthorized',
+      throw new Meteor.Error('todos.updateText.unauthorized',
         'Cannot edit todos in a private list that is not yours');
     }
 
@@ -135,9 +131,9 @@ Todos.methods.updateText = {
 
 // Actually register the method with Meteor's DDP system
 Meteor.methods({
-  [Todos.methods.updateText.name]: function (args) {
-    Todos.methods.updateText.validate.call(this, args);
-    Todos.methods.updateText.run.call(this, args);
+  [updateText.name]: function (args) {
+    updateText.validate.call(this, args);
+    updateText.run.call(this, args);
   }
 })
 ```
@@ -147,8 +143,10 @@ Meteor.methods({
 Now calling the Method is as simple as calling a JavaScript function:
 
 ```js
+import { updateText } from './path/to/methods.js';
+
 // Call the Method
-Todos.methods.updateText.call({
+updateText.call({
   todoId: '12345',
   newText: 'This is a todo item.'
 }, (err, res) => {
@@ -160,10 +158,10 @@ Todos.methods.updateText.call({
 });
 
 // Call the validation only
-Todos.methods.updateText.validate({ wrong: 'args'});
+updateText.validate({ wrong: 'args'});
 
 // Call the Method with custom userId in a test
-Todos.methods.updateText.run.call({ userId: 'abcd' }, {
+updateText.run.call({ userId: 'abcd' }, {
   todoId: '12345',
   newText: 'This is a todo item.'
 });
@@ -176,8 +174,8 @@ As you can see, this approach to calling Methods results in a better development
 To alleviate some of the boilerplate that's involved in correct Method definitions, we've published a wrapper package called `mdg:validated-method` that does most of this for you. Here's the same Method as above, but defined with the package:
 
 ```js
-Todos.methods.updateText = new ValidatedMethod({
-  name: 'Todos.methods.updateText',
+export const updateText = new ValidatedMethod({
+  name: 'todos.updateText',
   validate: new SimpleSchema({
     todoId: { type: String },
     newText: { type: String }
@@ -186,7 +184,7 @@ Todos.methods.updateText = new ValidatedMethod({
     const todo = Todos.findOne(todoId);
 
     if (!todo.editableBy(this.userId)) {
-      throw new Meteor.Error('Todos.methods.updateText.unauthorized',
+      throw new Meteor.Error('todos.updateText.unauthorized',
         'Cannot edit todos in a private list that is not yours');
     }
 
@@ -217,7 +215,7 @@ When the server was not able to complete the user's desired action because of a 
 
 `Meteor.Error` takes three arguments: `error`, `reason`, and `details`.
 
-1. `error` should be a short, unique, machine-readable error code string that the client can interpret to understand what happened. It's good to prefix this with the name of the Method for easy internationalization, for example: `'Todos.methods.updateText.unauthorized'`.
+1. `error` should be a short, unique, machine-readable error code string that the client can interpret to understand what happened. It's good to prefix this with the name of the Method for easy internationalization, for example: `'todos.updateText.unauthorized'`.
 2. `reason` should be a short description of the error for the developer. It should give your coworker enough information to be able to debug the error. The `reason` parameter should not be printed to the end user directly, since this means you now have to do internationalization on the server before sending the error message, and the UI developer has to worry about the Method implementation when thinking about what will be displayed in the UI.
 3. `details` is optional, and can be used where extra data will help the client understand what is wrong. In particular, it can be combined with the `error` field to print a more helpful error message to the end user.
 
@@ -235,12 +233,12 @@ When you call a Method, any errors thrown by it will be returned in the callback
 
 ```js
 // Call the Method
-Todos.methods.updateText.call({
+updateText.call({
   todoId: '12345',
   newText: 'This is a todo item.'
 }, (err, res) => {
   if (err) {
-    if (err.error === 'Todos.methods.updateText.unauthorized') {
+    if (err.error === 'todos.updateText.unauthorized') {
       // Displaying an alert is probably not what you would do in
       // a real app; you should have some nice UI to display this
       // error, and probably use an i18n library to generate the
@@ -277,7 +275,7 @@ The main thing enabled by the `ValidationError` convention is simple integration
 // This Method encodes the form validation requirements.
 // By defining them in the Method, we do client and server-side
 // validation in one place.
-Invoices.methods.insert = new ValidatedMethod({
+export const insert = new ValidatedMethod({
   name: 'Invoices.methods.insert',
   validate: new SimpleSchema({
     email: { type: String, regEx: SimpleSchema.RegEx.Email },
@@ -327,6 +325,8 @@ Let's define a simple HTML form:
 Now, let's write some JavaScript to handle this form nicely:
 
 ```js
+import { insert } from '../api/invoices/methods.js';
+
 Template.Invoices_newInvoice.onCreated(function() {
   this.errors = new ReactiveDict();
 });
@@ -347,7 +347,7 @@ Template.Invoices_newInvoice.events({
       amount: event.target.amount.value
     };
 
-    Invoices.methods.insert.call(data, (err, res) => {
+    insert.call(data, (err, res) => {
       if (err) {
         if (err.error === 'validation-error') {
           // Initialize error object
@@ -395,12 +395,14 @@ ScoreAverages = new Mongo.Collection(null);
 Now, if you fetch data using a Method, you can put into this collection:
 
 ```js
+import { calculateAverages } from '../api/games/methods.js';
+
 function updateAverages() {
   // Clean out result cache
   ScoreAverages.remove({});
 
   // Call a Method that does an expensive computation
-  Games.methods.calculateAverages.call((err, res) => {
+  calculateAverages.call((err, res) => {
     res.forEach((item) => {
       ScoreAverages.insert(item);
     });

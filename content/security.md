@@ -115,21 +115,21 @@ The _only_ times you should be passing any user ID as an argument are the follow
 The best way to make your app secure is to understand all of the possible inputs that could come from an untrusted source, and make sure that they are all handled correctly. The easiest way to understand what inputs can come from the client is to restrict them to as small of a space as possible. This means your Methods should all be specific actions, and shouldn't take a multitude of options that change the behavior in significant ways. The end goal is that you can easily look at each Method in your app and validate or test that it is secure. Here's a secure example Method from the Todos example app:
 
 ```js
-Lists.methods.makePrivate = new ValidatedMethod({
-  name: 'Lists.methods.makePrivate',
-  validate: new SimpleSchema({
+export const makePrivate = new ValidatedMethod({
+  name: 'lists.makePrivate',
+  schema: new SimpleSchema({
     listId: { type: String }
   }).validator(),
   run({ listId }) {
     if (!this.userId) {
-      throw new Meteor.Error('Lists.methods.makePrivate.notLoggedIn',
+      throw new Meteor.Error('lists.makePrivate.notLoggedIn',
         'Must be logged in to make private lists.');
     }
 
     const list = Lists.findOne(listId);
 
     if (list.isLastPublicList()) {
-      throw new Meteor.Error('Lists.methods.makePrivate.lastPublicList',
+      throw new Meteor.Error('lists.makePrivate.lastPublicList',
         'Cannot make the last public list private.');
     }
 
@@ -174,8 +174,14 @@ Just like REST endpoints, Meteor Methods can easily be called from anywhere - a 
 In the Todos example app, we use the following code to set a basic rate limit on all Methods:
 
 ```js
-// Get list of all Method names on Lists
-const LISTS_METHODS = _.pluck(Lists.methods, 'name');
+// Get list of all method names on Lists
+const LISTS_METHODS = _.pluck([
+  insert,
+  makePublic,
+  makePrivate,
+  updateName,
+  remove,
+], 'name');
 
 // Only allow 5 list operations per connection per second
 DDPRateLimiter.addRule({
@@ -216,13 +222,13 @@ For example, you could write a publication, then later add a secret field to the
 ```js
 // #1: Bad! If we add a secret field to Lists later, the client
 // will see it
-Meteor.publish('Lists.public', function () {
+Meteor.publish('lists.public', function () {
   return Lists.find({userId: {$exists: false}});
 });
 
 // #2: Good, if we add a secret field to Lists later, the client
 // will only publish it if we add it to the list of fields
-Meteor.publish('Lists.public', function () {
+Meteor.publish('lists.public', function () {
   return Lists.find({userId: {$exists: false}}, {
     fields: {
       name: 1,
@@ -247,7 +253,7 @@ Lists.publicFields = {
 Now your code becomes a bit simpler:
 
 ```js
-Meteor.publish('Lists.public', function () {
+Meteor.publish('lists.public', function () {
   return Lists.find({userId: {$exists: false}}, {
     fields: Lists.publicFields
   });
