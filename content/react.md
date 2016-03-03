@@ -194,7 +194,8 @@ import { Lists } from '../../api/lists/lists.js';
 import createContainer from 'meteor/react-meteor-data';
 import ListsShow from '../pages/ListsShow.jsx';
 
-export default createContainer(({ params: { id } }) => {
+export default createContainer({ params } => {
+  const { id } = params;
   const todosHandle = Meteor.subscribe('todos.inList', id);
   const loading = !todosHandle.ready();
   const list = Lists.findOne(id);
@@ -209,6 +210,12 @@ export default createContainer(({ params: { id } }) => {
 ```
 
 The container component created by `createContainer()` will reactively rerender the wrapped component in response to any changes to [reactive data sources](https://atmospherejs.com/meteor/tracker) accessed from inside the function provided to it.
+
+Although this `ListsShowPage` container is intended to be instanciated by the React Router (which passes in the props automatically), if we did ever want to create one manually, we would need to pass in the props to the container component (which them get passed into our data function above):
+
+```js
+<ListsShowPage params={{id: '7'}}/>
+```
 
 <h3 id="preventing-rerenders">Preventing re-renders</h3>
 
