@@ -56,3 +56,4 @@ If you are not using Meteor's `check` package, then you should not use this rule
 ## Possible Improvements
 
 * Emulate behavior of Meteor's `audit-argument-checks` more closely
+* Support immediate destructuring of params

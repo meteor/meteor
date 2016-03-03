@@ -10,7 +10,6 @@ Prevent the use of differently named parameters in event handlers to achieve mor
 The following patterns are considered warnings:
 
 ```js
-// all on the client
 Template.foo.events({
   // 'foo' does not match 'event'
   'submit form': function (foo) {}
@@ -31,12 +30,10 @@ Template.foo.events({
 The following patterns are not warnings:
 
 ```js
-// on the client
 Template.foo.events({
   'submit form': function (event) {}
 })
 
-// on the client
 Template.foo.events({
   'submit form': function (event, templateInstance) {}
 })
@@ -72,11 +69,6 @@ Template.foo.events({
 })
 
 ```
-
-## Limitations
-
-Checks client-side only.  
-If you use an event map in a universal file (server and client) then the `Meteor.isClient` checks must happen in `if`-conditions with exactly one condition.
 
 ## Further Reading
 
