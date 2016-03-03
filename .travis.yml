@@ -6,7 +6,6 @@ cache:
 branches:
   only:
     - master
-    - dev
 notifications:
   email: false
 node_js:

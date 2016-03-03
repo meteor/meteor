@@ -7,7 +7,7 @@
     "tag": "next"
   },
   "release": {
-    "branch": "dev"
+    "branch": "master"
   },
   "scripts": {
     "build": "babel lib -d dist --optional runtime",
