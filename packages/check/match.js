@@ -318,7 +318,7 @@ var testSubtree = function (value, pattern) {
       path: ""
     };
   }
-  if (value.constructor !== Object) {
+  if (! jQuery.isPlainObject(value)) {
     return {
       message: "Expected plain object",
       path: ""

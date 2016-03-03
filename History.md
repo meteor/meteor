@@ -13,9 +13,9 @@
 * Move `DDPRateLimiter` to the server only, since it won't work if it is called from the client. It
   will now error if referenced from the client at all.
 
-* `check` will now check all keys of an object, including inherited ones #6140
+* `Match.ObjectIncluding` now really requires plain objects. #6140
 
-* Allow `git+` URL schemes for npm dependencies #844
+* Allow `git+` URL schemes for npm dependencies. #844
 
 * Expose options `disableOplog`, `pollingIntervalMs`, and `pollingThrottleMs` to `Cursor.find` for tuning observe parameters on the server.
 
