@@ -2,6 +2,8 @@
 title: "Testing"
 ---
 
+**NOTE** This is correct up to release 1.3-beta.12
+
 <h2 id="testing-applications">Testing your Application</h2>
 
 There are many benefits of testing your application to ensure it works the way you think it does. Reasons include maintaining a high level of quality (especially over time as your codebase changes), allowing you to refactor and rewrite code with confidence, and concrete documentation of expected behavior. (Other developers can figure out what parts of your app are supposed to do by reading the tests!)
@@ -101,71 +103,63 @@ While developing your app, chances are you'll want to run unit tests against a w
 meteor add avital:mocha
 ```
 
-This package also doesn't do anything in development or production mode, but when our app is run in [unit](#unit-test-mode) or [integration](#integration-test-mode) test mode, it takes over, running test code on both the client and server, and rendering results to the browser.
+This package also doesn't do anything in development or production mode, but when our app is run in [test](#test-mode) or [full-app](#full-app-test-mode) test mode, it takes over, running test code on both the client and server, and rendering results to the browser.
 
-### Unit test mode
+### Test mode
 
-To run the unit tests that our app defines, we can run a special instance of our app in unit test mode. To do so, we run:
+To run the tests that our app defines, we can run a special instance of our app in test mode. To do so, we run:
 
 ```
-meteor test-app --unit --driver-package avital:mocha
+meteor test --driver-package avital:mocha
 ```
 
 This runs a special version of our application that:
 
  1. *Doesn't* eagerly load *any* of our application code as Meteor normally would.
  2. *Does* eagerly load any file in our application (including in `imports/` folders) that look like `*.tests.*`. 
- 3. Sets the `Meteor.isTest` and `Meteor.isUnitTest` flags to be true.
+ 3. Sets the `Meteor.isTest` flag to be true.
  4. Starts up the test reporter package that we've added to our app (`avital:mocha`).
 
 As we've defined a test file (`imports/todos/Todos.tests.js`), what this means is that the file above will be eagerly loaded, adding the `'builds correctly from factory'` test to the Mocha registry. 
 
-To run the tests, visit http://localhost:3000 in your browser. This kicks off `avital:mocha`, which runs your unit tests both in the browser and on the server. It displays the test results in the browser in a Mocha test reporter:
+To run the tests, visit http://localhost:3000 in your browser. This kicks off `avital:mocha`, which runs your tests both in the browser and on the server. It displays the test results in the browser in a Mocha test reporter:
 
 [IMAGE]
 
-Usually, while developing an application, it make sense to run `meteor test-app` on a second port (say `3100`), while also running your main application in a separate process:
+Usually, while developing an application, it make sense to run `meteor test` on a second port (say `3100`), while also running your main application in a separate process:
 
 ```bash
 # in one terminal window
 meteor
 
 # in another
-meteor test-app --port 3100
+meteor test --driver-package avital:mocha --port 3100
 ```
 
 Then you can open two browser windows to see the app in action while also ensuring that you don't break any tests as you make changes.
 
-## Integration testing
+## Full-app testing
 
-XXX: This is still a very rough sketch at this point. I want to get more of a feel for what these tests look like and what should happen.
+### Full-app test mode
 
-Integration testing means invoking and asserting properties of your application while different modules work in concert. Meteor's integration testing mode runs your application as usual but replaces the user interface with a test reporter that can runs test cases both on the client and server.
-
-### Integration test mode
-
-To run the integration tests in our application, we run:
+To run the full-app tests in our application, we run:
 
 ```
-meteor test-app --integration
+meteor test --full-app --driver-package avital:mocha
 ```
 
 This does the following:
  
  1. *Does* eagerly load our application code as Meteor normally would.
- 2. *Also* eagerly load any file in our application (including in `imports/` folders) that look like `*.tests.*`. 
- 3. Sets the `Meteor.isTest` and `Meteor.isIntegrationTest` flags to be true.
+ 2. *Also* eagerly load any file in our application (including in `imports/` folders) that look like `*.app-tests.*`. 
+ 3. Sets the `Meteor.isAppTest` flag to be true.
  4. Starts up the test reporter package that we've added to our app (`avital:mocha`).
 
 The key difference is in point 1 --- our app code loads as normal. So our server runs completely as usual with the full DDP API available, for example. 
 
-When we connect to the test instance in a browser, we want to render a testing UI rather than our app UI, so the `mocha-web-reporter` package will remove any UI of our application and replace it with its own. Also packages (such as `flow-router`) that might take actions based on browser connectivity should be careful to not do so when `Meteor.isTest` is set.
+When we connect to the test instance in a browser, we want to render a testing UI rather than our app UI, so the `mocha-web-reporter` package will hide any UI of our application and overlay it with its own.
 
-### Writing an integration test
-
-To write an integration test in Mocha, we do something similar to our unit test but wrap it in a `describe('integration-test')`.
-
-[XXX: ensure this makes sense in Mocha, technically and semantically]
+### Writing an full app test
 
 ### Creating data in an integration test
 
