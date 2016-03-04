@@ -148,6 +148,7 @@
 // somewhere (decoupling target type from architecture) but it can
 // wait until later.
 
+var assert = require('assert');
 var util = require('util');
 var Fiber = require('fibers');
 var _ = require('underscore');
@@ -156,6 +157,7 @@ var compiler = require('./compiler.js');
 var PackageSource = require('./package-source.js');
 import Builder from './builder.js';
 var compilerPluginModule = require('./compiler-plugin.js');
+var meteorNpm = require('./meteor-npm.js');
 
 var files = require('../fs/files.js');
 var archinfo = require('../utils/archinfo.js');
@@ -175,11 +177,11 @@ exports.ignoreFiles = [
     /^\.git\/$/ /* often has too many files to watch */
 ];
 
-var rejectBadPath = function (p) {
-  if (p.match(/\.\./)) {
+function rejectBadPath(p) {
+  if (p.startsWith("..")) {
     throw new Error("bad path: " + p);
   }
-};
+}
 
 var stripLeadingSlash = function (p) {
   if (p.charAt(0) === '/') {
@@ -210,23 +212,147 @@ exports._mainJsContents = [
 
 // Represents a node_modules directory that we need to copy into the
 // bundle or otherwise make available at runtime.
-var NodeModulesDirectory = function (options) {
-  var self = this;
 
-  // The absolute path (on local disk) to a directory that contains
-  // the built node_modules to use.
-  self.sourcePath = options.sourcePath;
+export class NodeModulesDirectory {
+  constructor({
+    packageName,
+    sourceRoot,
+    sourcePath,
+    preferredBundlePath,
+    local = false,
+    npmDiscards = null,
+    writePackageJSON = false,
+  }) {
+    // Name of the package this node_modules directory belongs to, or null
+    // if it belongs to an application. Sometimes undefined when we don't
+    // know what package it belongs to, e.g. when reading node_modules
+    // from a program.json file.
+    assert.ok(typeof packageName === "string" ||
+              typeof packageName === "undefined" ||
+              packageName === null);
+    this.packageName = packageName;
 
-  // The path (relative to the bundle root) where we would preferably
-  // like the node_modules to be output (essentially cosmetic).
-  self.preferredBundlePath = options.preferredBundlePath;
+    // The absolute path of the root directory of the app or package that
+    // contains this node_modules directory.
+    assert.strictEqual(typeof sourceRoot, "string");
+    this.sourceRoot = sourceRoot;
 
-  // Optionally, files to discard.
-  self.npmDiscards = options.npmDiscards;
+    // The absolute path (on local disk) to a directory that contains
+    // the built node_modules to use.
+    assert.strictEqual(typeof sourcePath, "string");
+    this.sourcePath = sourcePath;
 
-  // Write a package.json file instead of copying the full directory.
-  self.writePackageJSON = !!options.writePackageJSON;
-};
+    // The path (relative to the bundle root) where we would preferably
+    // like the node_modules to be output.
+    this.preferredBundlePath = preferredBundlePath;
+
+    // Boolean indicating whether the node_modules directory is locally
+    // accessible from other modules in the app or package.
+    this.local = !! local;
+
+    // Optionally, files to discard.
+    this.npmDiscards = npmDiscards;
+
+    // Write a package.json file instead of copying the full directory.
+    this.writePackageJSON = writePackageJSON;
+  }
+
+  copy() {
+    return new this.constructor(this);
+  }
+
+  isPortable() {
+    return meteorNpm.dependenciesArePortable(this.sourcePath);
+  }
+
+  getPreferredBundlePath(kind) {
+    assert.ok(kind === "bundle" ||
+              kind === "isopack",
+              kind);
+
+    // Though we allow this.packageName to be undefined in the
+    // constructor, we must know the package that contains this
+    // node_modules directory to call getPreferredBundlePath.
+    const name = this.packageName;
+    assert.ok(typeof name === "string" || name === null);
+
+    let relPath = files.pathRelative(this.sourceRoot, this.sourcePath);
+    rejectBadPath(relPath);
+
+    const isApp = ! name;
+    if (! isApp) {
+      const relParts = relPath.split(files.pathSep);
+
+      if (relParts[0] === ".npm" &&
+          /^p(ackage|lugin)$/.test(relParts[1])) {
+        // Normalize .npm/package/node_modules/... paths so that they get
+        // copied into the bundle as if they were in the top-level local
+        // node_modules directory of the package.
+        relPath = relParts.slice(2).join(files.pathSep);
+      } else if (relParts[0] === "npm") {
+        const rootParts = this.sourceRoot.split(files.pathSep);
+        if (rootParts.indexOf(".meteor") >= 0) {
+          // If this.sourceRoot is inside a .meteor directory, then the
+          // npm/ at the beginning of the relPath must have been added by
+          // a previous call to getPreferredBundlePath, so we remove it
+          // here to avoid duplication.
+          relParts.shift();
+        }
+      }
+
+      if (kind === "bundle") {
+        relPath = files.pathJoin(
+          "node_modules",
+          "meteor",
+          colonConverter.convert(name),
+          ...relParts
+        );
+      }
+    }
+
+    // It's important not to put node_modules at the top level, so that it
+    // will not be visible from within plugins.
+    return files.pathJoin("npm", relPath);
+  }
+
+  toJSON() {
+    return {
+      packageName: this.packageName,
+      writePackageJSON: this.writePackageJSON,
+      local: this.local,
+    };
+  }
+
+  // Returns an object mapping from relative bundle paths to the kind of
+  // objects returned by the toJSON method above. Note that this works
+  // even if the node_modules parameter is a string, though that will only
+  // be the case for bundles built before Meteor 1.3.
+  static readDirsFromJSON(node_modules, callerInfo) {
+    assert.strictEqual(typeof callerInfo.sourceRoot, "string");
+
+    const nodeModulesDirectories = Object.create(null);
+
+    function add(moreInfo, relPath) {
+      rejectBadPath(relPath);
+      const sourcePath = files.pathJoin(callerInfo.sourceRoot, relPath);
+      nodeModulesDirectories[sourcePath] = new NodeModulesDirectory({
+        ...callerInfo,
+        ...moreInfo,
+        sourcePath,
+      });
+    }
+
+    if (typeof node_modules === "string") {
+      // Old-style node_modules strings were only ever for
+      // .npm/package/node_modules directories, which are non-local.
+      add({ local: false }, node_modules);
+    } else if (node_modules) {
+      _.each(node_modules, add);
+    }
+
+    return nodeModulesDirectories;
+  }
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // File
@@ -276,11 +402,11 @@ class File {
     // cached forever? Only makes sense of self.url is set.
     this.cacheable = options.cacheable || false;
 
-    // The node_modules directory that Npm.require() should search when
-    // called from inside this file, given as a NodeModulesDirectory, or
-    // null if Npm.depend() is not in effect for this file. Only works
-    // in the "server" architecture.
-    this.nodeModulesDirectory = null;
+    // The node_modules directories that Npm.require() should search when
+    // called from inside this file. Only includes non-local node_modules
+    // directories (e.g. .npm/package/node_modules), and only works on the
+    // server architecture.
+    this.nodeModulesDirectories = Object.create(null);
 
     // For server JS only. Assets associated with this slice; map from the path
     // that is the argument to Assets.getBinary, to a Buffer that is its contents.
@@ -467,7 +593,7 @@ class Target {
     // The NodeModulesDirectory objects in this map are de-duplicated
     // aliases to the objects in the nodeModulesDirectory fields of
     // the File objects in this.js.
-    this.nodeModulesDirectories = {};
+    this.nodeModulesDirectories = Object.create(null);
 
     // Static assets to include in the bundle. List of File.
     // For client targets, these are served over HTTP.
@@ -838,25 +964,7 @@ class Target {
               f.setAssets(unibuildAssets);
             }
 
-            if (! isApp && unibuild.nodeModulesPath) {
-              var nmd = this.nodeModulesDirectories[unibuild.nodeModulesPath];
-              if (! nmd) {
-                nmd = new NodeModulesDirectory({
-                  sourcePath: unibuild.nodeModulesPath,
-                  // It's important that this path end with
-                  // node_modules. Otherwise, if two modules in this package
-                  // depend on each other, they won't be able to find each
-                  // other!
-                  preferredBundlePath: files.pathJoin(
-                    'npm',
-                    colonConverter.convert(unibuild.pkg.name),
-                    'node_modules'),
-                  npmDiscards: unibuild.pkg.npmDiscards
-                });
-                this.nodeModulesDirectories[unibuild.nodeModulesPath] = nmd;
-              }
-              f.nodeModulesDirectory = nmd;
-
+            _.each(unibuild.nodeModulesDirectories, nmd => {
               if (!archinfo.matches(this.arch, unibuild.arch)) {
                 // The unibuild we're trying to include doesn't work for the
                 // bundle target (eg, os.osx.x86_64 instead of os.linux.x86_64)!
@@ -881,9 +989,14 @@ class Target {
                       unibuild.pkg.name + ": missing .npm-shrinkwrap.json");
                   return;
                 }
+
+                nmd = nmd.copy();
                 nmd.writePackageJSON = true;
               }
-            }
+
+              this.nodeModulesDirectories[nmd.sourcePath] = nmd;
+              f.nodeModulesDirectories[nmd.sourcePath] = nmd;
+            });
           }
 
           // Both CSS and JS files can have source maps
@@ -1283,8 +1396,9 @@ class JsImage {
     // Array of objects with keys:
     // - targetPath: relative path to use if saved to disk (or for stack traces)
     // - source: JS source code to load, as a string
-    // - nodeModulesDirectory: a NodeModulesDirectory indicating which
-    //   directory should be searched by Npm.require()
+    // - nodeModulesDirectories: map from absolute node_modules directory
+    //   paths to NodeModulesDirectory objects indicating which
+    //   directories should be searched by Npm.require()
     // - sourceMap: if set, source map for this code, as a string
     // note: this can't be called `load` at it would shadow `load()`
     this.jsToLoad = [];
@@ -1297,7 +1411,7 @@ class JsImage {
     // The NodeModulesDirectory objects in this map are de-duplicated
     // aliases to the objects in the nodeModulesDirectory fields of
     // the objects in this.jsToLoad.
-    this.nodeModulesDirectories = {};
+    this.nodeModulesDirectories = Object.create(null);
 
     // Architecture required by this image
     this.arch = null;
@@ -1377,19 +1491,29 @@ class JsImage {
         Package: ret,
         Npm: {
           require: function (name) {
-            if (! item.nodeModulesDirectory) {
-              // No Npm.depends associated with this package
-              return require(name);
-            }
+            let fullPath;
 
-            var nodeModuleDir =
-              files.pathJoin(item.nodeModulesDirectory.sourcePath, name);
-            var nodeModuleTopDir =
-              files.pathJoin(item.nodeModulesDirectory.sourcePath,
-                             name.split("/")[0]);
+            _.some(item.nodeModulesDirectories, nmd => {
+              if (nmd.local) {
+                // Npm.require doesn't consider local node_modules
+                // directories.
+                return false;
+              }
 
-            if (files.exists(nodeModuleTopDir)) {
-              return require(files.convertToOSPath(nodeModuleDir));
+              var nodeModulesTopDir = files.pathJoin(
+                nmd.sourcePath,
+                name.split("/")[0]
+              );
+
+              if (files.exists(nodeModulesTopDir)) {
+                return fullPath = files.convertToOSPath(
+                  files.pathJoin(nmd.sourcePath, name)
+                );
+              }
+            });
+
+            if (fullPath) {
+              return require(fullPath);
             }
 
             try {
@@ -1475,21 +1599,14 @@ class JsImage {
     // Finalize choice of paths for node_modules directories -- These
     // paths are no longer just "preferred"; they are the final paths
     // that we will use
-    var nodeModulesDirectories = [];
+    var nodeModulesDirectories = Object.create(null);
     _.each(self.nodeModulesDirectories || [], function (nmd) {
-      // We do a little manipulation to make sure that generateFilename only
-      // adds suffixes to parts of the path other than the final node_modules,
-      // which needs to stay node_modules.
-      var dirname = files.pathDirname(nmd.preferredBundlePath);
-      var base = files.pathBasename(nmd.preferredBundlePath);
-      var generatedDir = builder.generateFilename(dirname, {directory: true});
-
       // We need to find the actual file system location for the node modules
       // this JS Image uses, so that we can add it to nodeModulesDirectories
       var modulesPhysicalLocation;
       if (! options.includeNodeModules ||
           options.includeNodeModules === 'symlink') {
-        modulesPhysicalLocation = files.pathJoin(generatedDir, base);
+        modulesPhysicalLocation = nmd.getPreferredBundlePath("bundle");
       } else if (options.includeNodeModules === 'reference-directly') {
         modulesPhysicalLocation = nmd.sourcePath;
       } else {
@@ -1500,12 +1617,9 @@ class JsImage {
           "or 'reference-directly'. It was: " + options.includeNodeModules);
       }
 
-      nodeModulesDirectories.push(new NodeModulesDirectory({
-        sourcePath: nmd.sourcePath,
-        preferredBundlePath: modulesPhysicalLocation,
-        npmDiscards: nmd.npmDiscards,
-        writePackageJSON: nmd.writePackageJSON
-      }));
+      nmd = nmd.copy();
+      nmd.preferredBundlePath = modulesPhysicalLocation;
+      nodeModulesDirectories[nmd.sourcePath] = nmd;
     });
 
     // If multiple load files share the same asset, only write one copy of
@@ -1519,21 +1633,26 @@ class JsImage {
         throw new Error("No targetPath?");
       }
 
-      var loadItem = {};
+      var loadItem = {
+        node_modules: {}
+      };
 
-      if (item.nodeModulesDirectory) {
+      _.each(item.nodeModulesDirectories, nmd => {
         // We need to make sure to use the directory name we got from
         // builder.generateFilename here.
         // XXX these two parallel data structures of self.jsToLoad and
         //     self.nodeModulesDirectories are confusing
-        var generatedNMD = _.findWhere(
-          nodeModulesDirectories,
-          {sourcePath: item.nodeModulesDirectory.sourcePath}
-        );
+        const generatedNMD = nodeModulesDirectories[nmd.sourcePath];
         if (generatedNMD) {
-          loadItem.node_modules = generatedNMD.preferredBundlePath;
+          assert.strictEqual(
+            typeof generatedNMD.preferredBundlePath,
+            "string"
+          );
+
+          loadItem.node_modules[generatedNMD.preferredBundlePath] =
+            generatedNMD.toJSON();
         }
-      }
+      });
 
       if (item.sourceMap) {
         // Reference the source map in the source. Looked up later by
@@ -1598,6 +1717,8 @@ class JsImage {
     // arch-specific code then the target will end up having an
     // appropriately specific arch.
     _.each(nodeModulesDirectories, function (nmd) {
+      assert.strictEqual(typeof nmd.preferredBundlePath, "string");
+
       if (nmd.writePackageJSON) {
         // Make sure there's an empty node_modules directory at the right place
         // in the tree (so that npm install puts modules there instead of
@@ -1669,26 +1790,28 @@ class JsImage {
     _.each(json.load, function (item) {
       rejectBadPath(item.path);
 
-      var nmd = undefined;
+      let nodeModulesDirectories;
       if (item.node_modules) {
-        rejectBadPath(item.node_modules);
-        var node_modules = files.pathJoin(dir, item.node_modules);
-        if (! (node_modules in ret.nodeModulesDirectories)) {
-          ret.nodeModulesDirectories[node_modules] =
-            new NodeModulesDirectory({
-              sourcePath: node_modules,
-              preferredBundlePath: item.node_modules
-              // No npmDiscards, because we should have already discarded things
-              // when writing the image to disk.
-            });
-        }
-        nmd = ret.nodeModulesDirectories[node_modules];
+        _.extend(
+          ret.nodeModulesDirectories,
+          nodeModulesDirectories =
+            // If item.node_modules is just a string, rather than an
+            // object with information about more than one node_modules
+            // directory, then we have no good way of knowing the
+            // packageName, but that's fine because we don't need to copy
+            // this node_modules directory into the bundle, so we
+            // shouldn't need to call getPreferredBundlePath.
+            NodeModulesDirectory.readDirsFromJSON(item.node_modules, {
+              packageName: files.pathBasename(dir),
+              sourceRoot: dir
+            })
+        );
       }
 
       var loadItem = {
         targetPath: item.path,
         source: files.readFile(files.pathJoin(dir, item.path), 'utf8'),
-        nodeModulesDirectory: nmd
+        nodeModulesDirectories,
       };
 
       if (item.sourceMap) {
@@ -1740,7 +1863,7 @@ class JsImageTarget extends Target {
       ret.jsToLoad.push({
         targetPath: file.targetPath,
         source: file.contents().toString('utf8'),
-        nodeModulesDirectory: file.nodeModulesDirectory,
+        nodeModulesDirectories: file.nodeModulesDirectories,
         assets: file.assets,
         sourceMap: file.sourceMap,
         sourceMapRoot: file.sourceMapRoot
@@ -2498,7 +2621,8 @@ exports.buildJsImage = Profile("bundler.buildJsImage", function (options) {
     // url path and not a file system path
     serveRoot: options.serveRoot || '/',
     npmDependencies: options.npmDependencies,
-    npmDir: options.npmDir
+    npmDir: options.npmDir,
+    localNodeModulesDirs: options.localNodeModulesDirs,
   });
 
   var isopack = compiler.compile(packageSource, {

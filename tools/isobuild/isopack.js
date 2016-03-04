@@ -1,3 +1,4 @@
+var assert = require('assert');
 var compiler = require('./compiler.js');
 var archinfo = require('../utils/archinfo.js');
 var _ = require('underscore');
@@ -30,7 +31,7 @@ var rejectBadPath = function (p) {
 // - uses
 // - implies
 // - watchSet
-// - nodeModulesPath
+// - nodeModulesDirectories
 // - declaredExports
 // - resources
 
@@ -93,10 +94,9 @@ var Unibuild = function (isopack, options) {
   // against at build time. null if matched against a specific filename.
   self.resources = options.resources;
 
-  // Absolute path to the node_modules directory to use at runtime to
-  // resolve Npm.require() calls in this unibuild. null if this unibuild
-  // does not have a node_modules.
-  self.nodeModulesPath = options.nodeModulesPath;
+  // Map from absolute paths of node_modules directories to
+  // NodeModulesDirectory objects.
+  self.nodeModulesDirectories = options.nodeModulesDirectories;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -982,13 +982,6 @@ _.extend(Isopack.prototype, {
       var unibuildHasPrelink =
             unibuildJson.format === "unipackage-unibuild-pre1";
 
-      var nodeModulesPath = null;
-      if (unibuildJson.node_modules) {
-        rejectBadPath(unibuildJson.node_modules);
-        nodeModulesPath =
-          files.pathJoin(unibuildBasePath, unibuildJson.node_modules);
-      }
-
       var resources = [];
 
       _.each(unibuildJson.resources, function (resource) {
@@ -1080,6 +1073,12 @@ _.extend(Isopack.prototype, {
         }
       });
 
+      const nodeModulesDirectories =
+        bundler.NodeModulesDirectory.readDirsFromJSON(
+          unibuildJson.node_modules,
+          { packageName: self.name,
+            sourceRoot: unibuildBasePath });
+
       self.unibuilds.push(new Unibuild(self, {
         // At some point we stopped writing 'kind's to the metadata file, so
         // default to main.
@@ -1088,7 +1087,7 @@ _.extend(Isopack.prototype, {
         uses: unibuildJson.uses,
         implies: unibuildJson.implies,
         watchSet: unibuildWatchSets[unibuildMeta.path],
-        nodeModulesPath: nodeModulesPath,
+        nodeModulesDirectories,
         declaredExports: declaredExports,
         resources: resources
       }));
@@ -1225,7 +1224,7 @@ _.extend(Isopack.prototype, {
       // have been separated?), but also there can be different sets of
       // directories as well (eg, for a isopack merged with from multiple
       // isopacks with _loadUnibuildsFromPath).
-      var npmDirectories = {};
+      const npmDirsToCopy = Object.create(null);
 
       // Pre-linker versions of Meteor expect all packages in the warehouse to
       // contain a file called "package.js"; they use this as part of deciding
@@ -1269,20 +1268,17 @@ _.extend(Isopack.prototype, {
         }
 
         // Figure out where the npm dependencies go.
-        var nodeModulesPath = undefined;
-        var needToCopyNodeModules = false;
-        if (unibuild.nodeModulesPath) {
-          if (_.has(npmDirectories, unibuild.nodeModulesPath)) {
+        const node_modules = {};
+        _.each(unibuild.nodeModulesDirectories, nmd => {
+          const bundlePath = _.has(npmDirsToCopy, nmd.sourcePath)
             // We already have this npm directory from another unibuild.
-            nodeModulesPath = npmDirectories[unibuild.nodeModulesPath];
-          } else {
-            // It's important not to put node_modules at the top level of the
-            // isopack, so that it is not visible from within plugins.
-            nodeModulesPath = npmDirectories[unibuild.nodeModulesPath] =
-              builder.generateFilename("npm/node_modules", {directory: true});
-            needToCopyNodeModules = true;
-          }
-        }
+            ? npmDirsToCopy[nmd.sourcePath]
+            : npmDirsToCopy[nmd.sourcePath] = builder.generateFilename(
+              nmd.getPreferredBundlePath("isopack"),
+              { directory: true }
+            );
+          node_modules[bundlePath] = nmd.toJSON();
+        });
 
         // Construct unibuild metadata
         var unibuildJson = {
@@ -1299,7 +1295,7 @@ _.extend(Isopack.prototype, {
             };
           }),
           implies: (_.isEmpty(unibuild.implies) ? undefined : unibuild.implies),
-          node_modules: nodeModulesPath,
+          node_modules,
           resources: []
         };
 
@@ -1377,22 +1373,22 @@ _.extend(Isopack.prototype, {
           });
         });
 
-        // If unibuild has included node_modules, copy them in
-        if (needToCopyNodeModules) {
-          builder.copyDirectory({
-            from: unibuild.nodeModulesPath,
-            to: nodeModulesPath,
-            npmDiscards: self.npmDiscards,
-            symlink: false
-          });
-        }
-
         // Control file for unibuild
         builder.writeJson(unibuildJsonFile, unibuildJson);
         unibuildInfos.push({
           unibuild: unibuild,
           unibuildJson: unibuildJson,
           jsResourcesForLegacyPrelink: jsResourcesForLegacyPrelink
+        });
+      });
+
+      // If unibuilds included node_modules, copy them in.
+      _.each(npmDirsToCopy, (bundlePath, sourcePath) => {
+        builder.copyDirectory({
+          from: sourcePath,
+          to: bundlePath,
+          npmDiscards: self.npmDiscards,
+          symlink: false
         });
       });
 

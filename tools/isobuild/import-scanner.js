@@ -78,7 +78,7 @@ export default class ImportScanner {
     extensions = [".js", ".json"],
     sourceRoot,
     usedPackageNames = {},
-    nodeModulesPath,
+    nodeModulesPaths = [],
     watchSet,
   }) {
     assert.ok(isString(sourceRoot));
@@ -88,7 +88,7 @@ export default class ImportScanner {
     this.extensions = extensions;
     this.sourceRoot = sourceRoot;
     this.usedPackageNames = usedPackageNames;
-    this.nodeModulesPath = nodeModulesPath;
+    this.nodeModulesPaths = nodeModulesPaths;
     this.watchSet = watchSet;
     this.absPathToOutputIndex = Object.create(null);
     this.allMissingNodeModules = Object.create(null);
@@ -372,12 +372,13 @@ export default class ImportScanner {
   }
 
   _getNodeModulesInstallPath(absPath) {
-    if (this.nodeModulesPath) {
-      const relPathWithinNodeModules =
-        pathRelative(this.nodeModulesPath, absPath);
+    let installPath;
+
+    this.nodeModulesPaths.some(path => {
+      const relPathWithinNodeModules = pathRelative(path, absPath);
 
       if (relPathWithinNodeModules.startsWith("..")) {
-        // absPath is not a subdirectory of this.nodeModulesPath.
+        // absPath is not a subdirectory of path.
         return;
       }
 
@@ -389,8 +390,13 @@ export default class ImportScanner {
 
       // Install the module into the local node_modules directory within
       // this app or package.
-      return pathJoin("node_modules", relPathWithinNodeModules);
-    }
+      return installPath = pathJoin(
+        "node_modules",
+        relPathWithinNodeModules
+      );
+    });
+
+    return installPath;
   }
 
   _getSourceRootInstallPath(absPath) {
@@ -571,10 +577,12 @@ export default class ImportScanner {
       dir = pathDirname(dir);
     }
 
-    if (! resolved && this.nodeModulesPath) {
+    if (! resolved) {
       // After checking any local node_modules directories, fall back to
       // the package NPM directory, if one was specified.
-      resolved = this._joinAndStat(this.nodeModulesPath, id);
+      this.nodeModulesPaths.some(path => {
+        return resolved = this._joinAndStat(path, id);
+      });
     }
 
     if (! resolved) {

@@ -139,6 +139,23 @@ var startCheckForLiveParent = function (parentPid) {
 Fiber(function () {
   _.each(serverJson.load, function (fileInfo) {
     var code = fs.readFileSync(path.resolve(serverDir, fileInfo.path));
+    var nonLocalNodeModulesPaths = [];
+
+    function addNodeModulesPath(path) {
+      nonLocalNodeModulesPaths.push(
+        files.pathResolve(serverDir, path)
+      );
+    }
+
+    if (typeof fileInfo.node_modules === "string") {
+      addNodeModulesPath(fileInfo.node_modules);
+    } else if (fileInfo.node_modules) {
+      _.each(fileInfo.node_modules, function (info, path) {
+        if (! info.local) {
+          addNodeModulesPath(path);
+        }
+      });
+    }
 
     var Npm = {
       /**
@@ -149,20 +166,25 @@ Fiber(function () {
        * @memberOf Npm
        */
       require: function (name) {
-        if (! fileInfo.node_modules) {
+        if (nonLocalNodeModulesPaths.length === 0) {
           return require(name);
         }
 
-        var nodeModuleBase = path.resolve(serverDir,
-          files.convertToOSPath(fileInfo.node_modules));
-        var nodeModuleDir = path.resolve(nodeModuleBase, name);
+        var fullPath;
 
-        // If the user does `Npm.require('foo/bar')`, then we should resolve to
-        // the package's node modules if `foo` was one of the modules we
-        // installed.  (`foo/bar` might be implemented as `foo/bar.js` so we
-        // can't just naively see if all of nodeModuleDir exists.
-        if (fs.existsSync(path.resolve(nodeModuleBase, name.split("/")[0]))) {
-          return require(nodeModuleDir);
+        nonLocalNodeModulesPaths.some(function (nodeModuleBase) {
+          var packageBase = files.pathResolve(
+            nodeModuleBase,
+            name.split("/", 1)[0]
+          );
+
+          if (fs.existsSync(packageBase)) {
+            return fullPath = files.pathResolve(nodeModuleBase, name);
+          }
+        });
+
+        if (fullPath) {
+          return require(fullPath);
         }
 
         try {

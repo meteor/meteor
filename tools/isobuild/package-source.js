@@ -367,6 +367,7 @@ _.extend(PackageSource.prototype, {
   // - npmDependencies
   // - cordovaDependencies
   // - npmDir
+  // - localNodeModulesDirs
   initFromOptions: function (name, options) {
     var self = this;
     self.name = name;
@@ -403,6 +404,7 @@ _.extend(PackageSource.prototype, {
     const sourceArch = new SourceArch(self, {
       kind: options.kind,
       arch: "os",
+      sourceRoot: self.sourceRoot,
       uses: _.map(options.use, splitConstraint),
       getFiles() {
         return {
@@ -410,6 +412,11 @@ _.extend(PackageSource.prototype, {
         }
       }
     });
+
+    if (options.localNodeModulesDirs) {
+      _.extend(sourceArch.localNodeModulesDirs,
+               options.localNodeModulesDirs);
+    }
 
     self.architectures.push(sourceArch);
 
@@ -1190,6 +1197,7 @@ _.extend(PackageSource.prototype, {
       self.architectures.push(new SourceArch(self, {
         kind: "main",
         arch: arch,
+        sourceRoot: self.sourceRoot,
         uses: api.uses[arch],
         implies: api.implies[arch],
         getFiles(sourceProcessorSet, watchSet) {
@@ -1206,7 +1214,7 @@ _.extend(PackageSource.prototype, {
           self._findSources({
             sourceProcessorSet,
             watchSet,
-            arch,
+            sourceArch: this,
             isApp: false
           }).forEach(relPath => {
             if (! _.has(relPathToSourceObj, relPath)) {
@@ -1282,6 +1290,7 @@ _.extend(PackageSource.prototype, {
       var sourceArch = new SourceArch(self, {
         kind: 'app',
         arch: arch,
+        sourceRoot: self.sourceRoot,
         uses: uses,
         getFiles(sourceProcessorSet, watchSet) {
           sourceProcessorSet.watchSet = watchSet;
@@ -1289,7 +1298,7 @@ _.extend(PackageSource.prototype, {
           const findOptions = {
             sourceProcessorSet,
             watchSet,
-            arch,
+            sourceArch: this,
             ignoreFiles,
             isApp: true,
             loopChecker: new SymlinkLoopChecker(self.sourceRoot)
@@ -1376,10 +1385,11 @@ _.extend(PackageSource.prototype, {
     sourceProcessorSet,
     watchSet,
     isApp,
-    arch,
+    sourceArch,
     loopChecker = new SymlinkLoopChecker(this.sourceRoot),
     ignoreFiles = []
   }) {
+    const arch = sourceArch.arch;
     const sourceReadOptions =
       sourceProcessorSet.appReadDirectoryOptions(arch);
 
@@ -1414,7 +1424,6 @@ _.extend(PackageSource.prototype, {
     );
 
     const anyLevelExcludes = [
-      /^node_modules\/$/,
       /^tests\/$/,
       arch === "os" ? /^client\/$/ : /^server\/$/,
       ...sourceReadOptions.exclude,
@@ -1440,6 +1449,10 @@ _.extend(PackageSource.prototype, {
 
     while (!_.isEmpty(sourceDirectories)) {
       var dir = sourceDirectories.shift();
+      if (/(^|\/)node_modules\/$/.test(dir)) {
+        sourceArch.localNodeModulesDirs[dir] = true;
+        continue;
+      }
 
       // remove trailing slash
       dir = dir.substr(0, dir.length - 1);
@@ -1469,11 +1482,12 @@ _.extend(PackageSource.prototype, {
     sourceProcessorSet,
     watchSet,
     isApp,
-    arch,
+    sourceArch,
     loopChecker = new SymlinkLoopChecker(this.sourceRoot),
     ignoreFiles = [],
   }) {
     // Now look for assets for this unibuild.
+    const arch = sourceArch.arch;
     const assetDir = archinfo.matches(arch, "web") ? "public/" : "private/";
     var assetDirs = this._readAndWatchDirectory('', watchSet, {
       names: [assetDir]

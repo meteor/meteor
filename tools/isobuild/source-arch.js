@@ -14,6 +14,7 @@ export default class SourceArch {
   constructor(pkg, {
     kind, // required
     arch, // required
+    sourceRoot, // required
     getFiles, // required
     uses = [],
     implies = [],
@@ -24,6 +25,7 @@ export default class SourceArch {
   }) {
     isString(kind) || reportMissingOption('kind');
     isString(arch) || reportMissingOption('arch');
+    isString(sourceRoot) || reportMissingOption('sourceRoot');
     isFunction(getFiles) || reportMissingOption('getFiles');
 
     this.pkg = pkg;
@@ -35,6 +37,9 @@ export default class SourceArch {
     // The architecture (fully or partially qualified) that can use this
     // unibuild.
     this.arch = arch;
+
+    // Absolute path of the root directory of this package or application.
+    this.sourceRoot = sourceRoot;
 
     // Packages used. The ordering is significant only for determining
     // import symbol priority (it doesn't affect load order), and a given
@@ -87,6 +92,13 @@ export default class SourceArch {
     // time (after we have loaded any plugins, including local plugins in
     // this package) to compute this.
     this.getFiles = getFiles;
+
+    // Object whose keys are relative paths of local node_modules
+    // directories in this package or application, for the given
+    // architecture. Does not include the .npm/package/node_modules
+    // directory installed by Npm.depends. Should be populated when
+    // getFiles is called.
+    this.localNodeModulesDirs = Object.create(null);
 
     // Symbols that this architecture should export. List of symbols (as
     // strings).

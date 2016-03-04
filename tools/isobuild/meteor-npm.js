@@ -3,6 +3,7 @@
 /// and a variety of related commands. Notably, we use `npm shrinkwrap`
 /// to ensure we get consistent versions of npm sub-dependencies.
 
+var assert = require('assert');
 var cleanup = require('../tool-env/cleanup.js');
 var files = require('../fs/files.js');
 var os = require('os');
@@ -117,13 +118,18 @@ meteorNpm.updateDependencies = function (packageName,
 // expect it to work, rather than containing native extensions that
 // were built just for our architecture), else
 // false. updateDependencies should first be used to bring
-// packageNpmDir up to date.
-meteorNpm.dependenciesArePortable = function (packageNpmDir) {
+// nodeModulesDir up to date.
+meteorNpm.dependenciesArePortable = function (nodeModulesDir) {
   // We use a simple heuristic: we check to see if a package (or any
   // of its transitive depedencies) contains any *.node files. .node
   // is the extension that signals to Node that it should load a file
   // as a shared object rather than as JavaScript, so this should work
   // in the vast majority of cases.
+
+  assert.strictEqual(
+    files.pathBasename(nodeModulesDir),
+    "node_modules"
+  );
 
   var search = function (dir) {
     return _.find(files.readdir(dir), function (itemName) {
@@ -137,7 +143,7 @@ meteorNpm.dependenciesArePortable = function (packageNpmDir) {
     }) || false;
   };
 
-  return ! search(files.pathJoin(packageNpmDir, 'node_modules'));
+  return ! search(nodeModulesDir);
 };
 
 var makeNewPackageNpmDir = function (newPackageNpmDir) {
