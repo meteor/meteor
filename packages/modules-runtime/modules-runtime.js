@@ -37,6 +37,44 @@ options.fallback = function (id, dir, error) {
   throw error;
 };
 
+if (Meteor.isServer) {
+  // Defining Module.prototype.useNode allows the module system to
+  // delegate evaluation to Node, unless useNode returns false.
+  (options.Module = function Module(id) {
+    // Same as the default Module constructor implementation.
+    this.id = id;
+  }).prototype.useNode = function () {
+    if (typeof npmRequire !== "function") {
+      // Can't use Node if npmRequire is not defined.
+      return false;
+    }
+
+    var parts = this.id.split("/");
+    var start = 0;
+    if (parts[start] === "") ++start;
+    if (parts[start] === "node_modules" &&
+        parts[start + 1] === "meteor") {
+      start += 2;
+    }
+
+    if (parts.indexOf("node_modules", start) < 0) {
+      // Don't try to use Node for modules that aren't in node_modules
+      // directories.
+      return false;
+    }
+
+    try {
+      npmRequire.resolve(this.id);
+    } catch (e) {
+      return false;
+    }
+
+    this.exports = npmRequire(this.id);
+
+    return true;
+  };
+}
+
 var install = makeInstaller(options);
 
 (install.addExtension = function (ext) {

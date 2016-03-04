@@ -7,6 +7,7 @@ var sourcemap_support = require('source-map-support');
 
 var bootUtils = require('./boot-utils.js');
 var files = require('./mini-files.js');
+var npmRequire = require('./npm-require.js').require;
 
 // This code is duplicated in tools/main.js.
 var MIN_NODE_VERSION = 'v0.10.41';
@@ -246,8 +247,15 @@ Fiber(function () {
       }
     };
 
+    var baseName = fileInfo.path.split(files.pathSep).pop();
+    var isModulesRuntime = baseName === "modules-runtime.js";
+    var wrapParts = ["(function(Npm, Assets"];
+    if (isModulesRuntime) {
+      wrapParts.push(", npmRequire");
+    }
     // \n is necessary in case final line is a //-comment
-    var wrapped = "(function(Npm, Assets){" + code + "\n})";
+    wrapParts.push("){", code, "\n})");
+    var wrapped = wrapParts.join("");
 
     // It is safer to use the absolute path when source map is present as
     // different tooling, such as node-inspector, can get confused on relative
@@ -264,7 +272,11 @@ Fiber(function () {
     // causes it to print out a descriptive error message on parse error. It's
     // what require() uses to generate its errors.
     var func = require('vm').runInThisContext(wrapped, scriptPath, true);
-    func.call(global, Npm, Assets); // Coffeescript
+    var args = [Npm, Assets];
+    if (isModulesRuntime) {
+      args.push(npmRequire);
+    }
+    func.apply(global, args);
   });
 
   // run the user startup hooks.  other calls to startup() during this can still

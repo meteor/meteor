@@ -1972,6 +1972,7 @@ class ServerTarget extends JsImageTarget {
       "boot-utils.js",
       "shell-server.js",
       "mini-files.js",
+      "npm-require.js",
     ], function (filename) {
       builder.write(filename, {
         file: files.pathJoin(
