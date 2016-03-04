@@ -385,7 +385,7 @@ _.extend(PkgDependencies.prototype, {
 //   - showArchitecturesOS: collect and process data on OS
 //     architectures that are available for different versions of this package.
 //   - showHiddenVersions: return information about all the versions of the
-//     package, including pre-releases and un-migrate versions.
+//     package, including pre-releases and unmigrated versions.
 //   - showDependencies: return information about
 //     versions' dependencies.
 var PackageQuery = function (options) {
