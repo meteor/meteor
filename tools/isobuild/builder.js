@@ -401,13 +401,21 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   //   entries that end with a slash if it's a directory.
   // - specificFiles: just copy these paths (specified as relative to 'to').
   // - symlink: true if the directory should be symlinked instead of copying
-  copyDirectory({from, to, ignore, specificFiles, symlink, npmDiscards}) {
+  copyDirectory({
+    from, to,
+    ignore,
+    specificFiles,
+    symlink,
+    npmDiscards,
+  }) {
     if (to.slice(-1) === files.pathSep) {
       to = to.slice(0, -1);
     }
 
     const absPathTo = files.pathJoin(this.buildPath, to);
-    if (symlink) {
+
+    let canSymlink = !! symlink;
+    if (canSymlink) {
       if (specificFiles) {
         throw new Error("can't copy only specific paths with a single symlink");
       }
@@ -417,32 +425,10 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
                         " but it is is already a file");
       }
 
-      let canSymlink = true;
       // Symlinks don't work exactly the same way on Windows, and furthermore
       // they request Admin permissions to set.
       if (process.platform === 'win32') {
         canSymlink = false;
-      } else if (to in this.usedAsFile) {
-        // It's already here and is a directory, maybe because of a call to
-        // reserve with {directory: true}. If it's an empty directory, this is
-        // salvageable. The directory should exist, because all code paths which
-        // set usedAsFile to false create the directory.
-        //
-        // XXX This is somewhat broken: what if the reason we're in
-        // self.usedAsFile is because an immediate child of ours was reserved as
-        // a file but not actually written yet?
-        const children = files.readdir(absPathTo);
-        if (Object.keys(children).length === 0) {
-          files.rmdir(absPathTo);
-        } else {
-          canSymlink = false;
-        }
-      }
-
-      if (canSymlink) {
-        this._ensureDirectory(files.pathDirname(to));
-        symlinkWithOverwrite(files.pathResolve(from), absPathTo);
-        return;
       }
     }
 
@@ -459,6 +445,13 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     }
 
     let walk = (absFrom, relTo) => {
+      if (canSymlink && ! (relTo in this.usedAsFile)) {
+        this._ensureDirectory(files.pathDirname(relTo));
+        const absTo = files.pathResolve(this.buildPath, relTo);
+        symlinkWithOverwrite(absFrom, absTo);
+        return;
+      }
+
       this._ensureDirectory(relTo);
 
       files.readdir(absFrom).forEach(item => {
@@ -489,18 +482,26 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
         if (isDirectory) {
           walk(thisAbsFrom, thisRelTo);
-        } else if (fileStatus.isSymbolicLink()) {
-          symlinkWithOverwrite(files.readlink(thisAbsFrom),
-                               files.pathResolve(this.buildPath, thisRelTo));
+
+        } else if (canSymlink) {
+          symlinkWithOverwrite(
+            fileStatus.isSymbolicLink()
+              ? files.readlink(thisAbsFrom)
+              : thisAbsFrom,
+            files.pathResolve(this.buildPath, thisRelTo)
+          );
+
           // A symlink counts as a file, as far as "can you put something under
           // it" goes.
           this.usedAsFile[thisRelTo] = true;
+
         } else {
           // XXX can't really optimize this copying without reading
           // the file into memory to calculate the hash.
           files.copyFile(thisAbsFrom,
                          files.pathResolve(this.buildPath, thisRelTo),
                          fileStatus.mode);
+
           this.usedAsFile[thisRelTo] = true;
         }
       });
