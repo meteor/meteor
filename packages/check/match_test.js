@@ -172,11 +172,17 @@ Tinytest.add("check - check", function (test) {
   fails(new Date, Match.Integer);
 
 
-  // Test objects that have a prototype
-  var parentObj = {foo:"bar"};
-  var childObj = Object.assign(Object.create(parentObj),{bar:"foo"});
-  matches(childObj,{foo:String,bar:String});
-  fails(childObj,{bar:String});
+  // Test non-plain objects.
+  var parentObj = {foo: "bar"};
+  var childObj = Object.assign(Object.create(parentObj), {bar: "foo"});
+  matches(parentObj, Object);
+  fails(parentObj, {foo: String, bar: String});
+  fails(parentObj, {bar: String});
+  matches(parentObj, {foo: String});
+  fails(childObj, Object);
+  fails(childObj, {foo: String, bar: String});
+  fails(childObj, {bar: String});
+  fails(childObj, {foo: String});
 
 
   // Test that "arguments" is treated like an array.
