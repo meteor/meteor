@@ -342,8 +342,8 @@ function doRunCommand(options) {
     velocity.runVelocity(serverUrlForVelocity);
   }
 
+  let webArchs = ['web.browser'];
   let cordovaRunner;
-
   if (!_.isEmpty(runTargets)) {
     main.captureAndExit('', 'preparing Cordova project', () => {
       const cordovaProject = new CordovaProject(projectContext, {
@@ -354,6 +354,7 @@ function doRunCommand(options) {
       cordovaRunner = new CordovaRunner(cordovaProject, runTargets);
       cordovaRunner.checkPlatformsForRunTargets();
     });
+    webArchs.push("web.cordova");
   }
 
   var runAll = require('../runners/run-all.js');
@@ -367,7 +368,8 @@ function doRunCommand(options) {
     settingsFile: options.settings,
     buildOptions: {
       minifyMode: options.production ? 'production' : 'development',
-      buildMode: options.production ? 'production' : 'development'
+      buildMode: options.production ? 'production' : 'development',
+      webArchs: webArchs
     },
     rootUrl: process.env.ROOT_URL,
     mongoUrl: process.env.MONGO_URL,
