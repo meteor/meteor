@@ -89,7 +89,7 @@ Template.Todos_item.helpers({
     const classname = options.hash.classname || 'checked';
     if (todo.checked) {
       return classname;
-    } else if (kws.hash.noClass) {
+    } else if (options.hash.noClass) {
       return `no-${classname}`;
     }
   }
