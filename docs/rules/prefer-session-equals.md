@@ -1,11 +1,11 @@
 # Prefer `Session.equals` in conditions (prefer-session-equals)
 
-Using `Session.equals('foo', bar)` toggles fewer invalidations compared to `Session.get('foo') === bar`.
+Using `Session.equals('foo', bar)` toggles fewer invalidations compared to `Session.get('foo') === bar`. This rule warns when unnecessary invalidations would be triggered.
 
 
 ## Rule Details
 
-While the above is only true for scalar types, this rule encourages use over `Session.equals` in all conditional statements.
+While the above is only true for scalar types, this rule encourages use of `Session.equals` in all conditionals.
 
 The following patterns are considered warnings:
 
