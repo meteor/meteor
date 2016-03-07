@@ -238,9 +238,9 @@
 
 * Detect new Facebook user-agent in the `spiderable` package. #5516
 
-* `check` will now check all keys of an object, including inherited ones #6140
+* `Match.ObjectIncluding` now really requires plain objects. #6140
 
-* Allow `git+` URL schemes for npm dependencies #844
+* Allow `git+` URL schemes for npm dependencies. #844
 
 * Expose options `disableOplog`, `pollingIntervalMs`, and
   `pollingThrottleMs` to `Cursor.find` for tuning observe parameters
