@@ -153,7 +153,7 @@ To use it in Blaze:
 </template>
 ```
 
-<h2 id="livedata">Using Meteor's data system</h2>
+<h2 id="data">Using Meteor's data system</h2>
 
 React is a front-end rendering library and as such doesn't concern itself with how data gets into and out of components. On the other hand, Meteor has strong opinions about data! Meteor operates in terms of [publications](data-loading.html) and [methods](methods.html), used to subscribe to and modify the data in your application.
 
