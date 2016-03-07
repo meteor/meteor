@@ -360,3 +360,11 @@ describe("circular package.json resolution chains", () => {
     );
   });
 });
+
+describe("PixiJS", () => {
+  Meteor.isClient &&
+  it("should be importable on the client", () => {
+    import PIXI from "pixi.js";
+    assert.strictEqual(require("PIXI"), PIXI);
+  });
+});

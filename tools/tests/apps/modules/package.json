@@ -6,7 +6,8 @@
   "dependencies": {
     "meteor-node-stubs": "^0.2.0",
     "moment": "2.11.1",
-    "regenerator": "^0.8.42"
+    "regenerator": "^0.8.42",
+    "pixi.js": "^3.0.9"
   },
   "scripts": {
     "test": "METEOR_PROFILE=100 ../../../../meteor test --full-app --driver-package practicalmeteor:mocha"
