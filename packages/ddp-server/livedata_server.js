@@ -573,7 +573,7 @@ _.extend(Session.prototype, {
       if (!self.server.publish_handlers[msg.name]) {
         self.send({
           msg: 'nosub', id: msg.id,
-          error: new Meteor.Error(404, "Subscription not found")});
+          error: new Meteor.Error(404, `Subscription '${msg.name}' not found`)});
         return;
       }
 
@@ -660,7 +660,7 @@ _.extend(Session.prototype, {
       if (!handler) {
         self.send({
           msg: 'result', id: msg.id,
-          error: new Meteor.Error(404, "Method not found")});
+          error: new Meteor.Error(404, `Method '${msg.method}' not found`)});
         fence.arm();
         return;
       }
@@ -1583,7 +1583,7 @@ _.extend(Server.prototype, {
     var handler = self.method_handlers[name];
     var exception;
     if (!handler) {
-      exception = new Meteor.Error(404, "Method not found");
+      exception = new Meteor.Error(404, `Method '${name}' not found`);
     } else {
       // If this is a method call from within another method, get the
       // user state from the outer method, otherwise don't allow
