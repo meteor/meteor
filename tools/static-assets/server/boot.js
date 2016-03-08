@@ -247,11 +247,12 @@ Fiber(function () {
       }
     };
 
-    var baseName = fileInfo.path.split(files.pathSep).pop();
-    var isModulesRuntime = baseName === "modules-runtime.js";
-    var wrapParts = ["(function(Npm, Assets"];
+    var isModulesRuntime =
+      fileInfo.path === "packages/modules-runtime.js";
+
+    var wrapParts = ["(function(Npm,Assets"];
     if (isModulesRuntime) {
-      wrapParts.push(", npmRequire");
+      wrapParts.push(",npmRequire");
     }
     // \n is necessary in case final line is a //-comment
     wrapParts.push("){", code, "\n})");

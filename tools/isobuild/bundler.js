@@ -224,12 +224,8 @@ export class NodeModulesDirectory {
     writePackageJSON = false,
   }) {
     // Name of the package this node_modules directory belongs to, or null
-    // if it belongs to an application. Sometimes undefined when we don't
-    // know what package it belongs to, e.g. when reading node_modules
-    // from a program.json file.
-    assert.ok(typeof packageName === "string" ||
-              typeof packageName === "undefined" ||
-              packageName === null);
+    // if it belongs to an application.
+    assert.ok(typeof packageName === "string" || packageName === null);
     this.packageName = packageName;
 
     // The absolute path of the root directory of the app or package that
@@ -270,11 +266,7 @@ export class NodeModulesDirectory {
               kind === "isopack",
               kind);
 
-    // Though we allow this.packageName to be undefined in the
-    // constructor, we must know the package that contains this
-    // node_modules directory to call getPreferredBundlePath.
     const name = this.packageName;
-    assert.ok(typeof name === "string" || name === null);
 
     let relPath = files.pathRelative(this.sourceRoot, this.sourcePath);
     rejectBadPath(relPath);
@@ -288,7 +280,8 @@ export class NodeModulesDirectory {
         // Normalize .npm/package/node_modules/... paths so that they get
         // copied into the bundle as if they were in the top-level local
         // node_modules directory of the package.
-        relPath = relParts.slice(2).join(files.pathSep);
+        relParts.shift();
+        relParts.shift();
       } else if (relParts[0] === "npm") {
         const rootParts = this.sourceRoot.split(files.pathSep);
         if (rootParts.indexOf(".meteor") >= 0) {
@@ -301,13 +294,14 @@ export class NodeModulesDirectory {
       }
 
       if (kind === "bundle") {
-        relPath = files.pathJoin(
+        relParts.unshift(
           "node_modules",
           "meteor",
-          colonConverter.convert(name),
-          ...relParts
+          colonConverter.convert(name)
         );
       }
+
+      relPath = files.pathJoin(...relParts);
     }
 
     // It's important not to put node_modules at the top level, so that it
@@ -1795,12 +1789,6 @@ class JsImage {
         _.extend(
           ret.nodeModulesDirectories,
           nodeModulesDirectories =
-            // If item.node_modules is just a string, rather than an
-            // object with information about more than one node_modules
-            // directory, then we have no good way of knowing the
-            // packageName, but that's fine because we don't need to copy
-            // this node_modules directory into the bundle, so we
-            // shouldn't need to call getPreferredBundlePath.
             NodeModulesDirectory.readDirsFromJSON(item.node_modules, {
               packageName: files.pathBasename(dir),
               sourceRoot: dir
