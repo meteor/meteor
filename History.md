@@ -75,6 +75,9 @@
 * JSX now enabled in `.js` files processed by the `ecmascript` compiler
   plugin. #6151
 
+* On the server, modules contained within `node_modules` directories are
+  now loaded using the native Node `require` function. #6398
+
 ### Performance
 
 * Don't reload package catalog from disk on rebuilds unless package
