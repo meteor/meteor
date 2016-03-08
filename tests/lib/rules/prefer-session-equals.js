@@ -15,6 +15,10 @@ const ruleTester = new RuleTester()
 
 ruleTester.run('prefer-session-equals', rule, {
   valid: [
+    'var x = 1',
+    'if(x()) {}',
+    'if (true) {}',
+    'if (Session["equals"]("foo", true)) {}',
     'if (Session.equals("foo", true)) {}',
     'if (Session.equals("foo", false)) {}',
     'if (Session.equals("foo", 1)) {}',

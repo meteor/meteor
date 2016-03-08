@@ -94,6 +94,13 @@ ruleTester.run('template-naming-convention', rule, {
       ],
     },
     {
+      code: 'Template.foo_bar.helpers({})',
+      options: ['pascal-case'],
+      errors: [
+        { message: 'Invalid template naming convention, expected "pascal-case"', type: 'MemberExpression' },
+      ],
+    },
+    {
       code: 'Template.fooBar.helpers({})',
       options: ['snake-case'],
       errors: [
