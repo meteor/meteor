@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "meteor-babel": {
-      "version": "0.8.1",
+      "version": "0.8.2",
       "dependencies": {
         "babel-core": {
           "version": "6.6.5",
@@ -131,7 +131,7 @@
               "version": "6.6.5",
               "dependencies": {
                 "core-js": {
-                  "version": "2.1.3"
+                  "version": "2.1.4"
                 },
                 "home-or-tmp": {
                   "version": "1.0.0",
@@ -263,10 +263,10 @@
           }
         },
         "babel-preset-meteor": {
-          "version": "6.6.1",
+          "version": "6.6.5",
           "dependencies": {
             "babel-plugin-check-es2015-constants": {
-              "version": "6.5.0"
+              "version": "6.6.5"
             },
             "babel-plugin-syntax-async-functions": {
               "version": "6.5.0"
@@ -287,19 +287,88 @@
               "version": "6.5.2"
             },
             "babel-plugin-transform-es2015-block-scoped-functions": {
-              "version": "6.5.0"
+              "version": "6.6.5"
             },
             "babel-plugin-transform-es2015-block-scoping": {
-              "version": "6.6.0"
+              "version": "6.6.5",
+              "dependencies": {
+                "babel-traverse": {
+                  "version": "6.6.5"
+                },
+                "babel-types": {
+                  "version": "6.6.5"
+                },
+                "babel-template": {
+                  "version": "6.6.5"
+                },
+                "babel-code-frame": {
+                  "version": "6.6.5"
+                },
+                "babel-messages": {
+                  "version": "6.6.5"
+                },
+                "babylon": {
+                  "version": "6.6.5"
+                }
+              }
             },
             "babel-plugin-transform-es2015-classes": {
-              "version": "6.6.0"
+              "version": "6.6.5",
+              "dependencies": {
+                "babel-helper-replace-supers": {
+                  "version": "6.6.5"
+                },
+                "babel-template": {
+                  "version": "6.6.5"
+                },
+                "babel-traverse": {
+                  "version": "6.6.5"
+                },
+                "babel-helper-define-map": {
+                  "version": "6.6.5"
+                },
+                "babel-messages": {
+                  "version": "6.6.5"
+                },
+                "babel-types": {
+                  "version": "6.6.5"
+                },
+                "babel-code-frame": {
+                  "version": "6.6.5"
+                },
+                "babylon": {
+                  "version": "6.6.5"
+                }
+              }
             },
             "babel-plugin-transform-es2015-computed-properties": {
-              "version": "6.5.2"
+              "version": "6.6.5",
+              "dependencies": {
+                "babel-helper-define-map": {
+                  "version": "6.6.5"
+                },
+                "babel-template": {
+                  "version": "6.6.5"
+                },
+                "babel-code-frame": {
+                  "version": "6.6.5"
+                },
+                "babel-messages": {
+                  "version": "6.6.5"
+                },
+                "babel-traverse": {
+                  "version": "6.6.5"
+                },
+                "babel-types": {
+                  "version": "6.6.5"
+                },
+                "babylon": {
+                  "version": "6.6.5"
+                }
+              }
             },
             "babel-plugin-transform-es2015-destructuring": {
-              "version": "6.6.0"
+              "version": "6.6.5"
             },
             "babel-plugin-transform-es2015-for-of": {
               "version": "6.6.0"
@@ -311,25 +380,100 @@
               "version": "6.5.0"
             },
             "babel-plugin-transform-es2015-modules-commonjs": {
-              "version": "6.6.3"
+              "version": "6.6.5",
+              "dependencies": {
+                "babel-types": {
+                  "version": "6.6.5"
+                },
+                "babel-template": {
+                  "version": "6.6.5"
+                },
+                "babel-plugin-transform-strict-mode": {
+                  "version": "6.6.5"
+                },
+                "babel-code-frame": {
+                  "version": "6.6.5"
+                },
+                "babel-messages": {
+                  "version": "6.6.5"
+                },
+                "babel-traverse": {
+                  "version": "6.6.5"
+                },
+                "babylon": {
+                  "version": "6.6.5"
+                }
+              }
             },
             "babel-plugin-transform-es2015-object-super": {
-              "version": "6.5.0"
+              "version": "6.6.5",
+              "dependencies": {
+                "babel-helper-replace-supers": {
+                  "version": "6.6.5"
+                },
+                "babel-code-frame": {
+                  "version": "6.6.5"
+                },
+                "babel-messages": {
+                  "version": "6.6.5"
+                },
+                "babel-template": {
+                  "version": "6.6.5"
+                },
+                "babel-traverse": {
+                  "version": "6.6.5"
+                },
+                "babel-types": {
+                  "version": "6.6.5"
+                },
+                "babylon": {
+                  "version": "6.6.5"
+                }
+              }
             },
             "babel-plugin-transform-es2015-parameters": {
-              "version": "6.6.0"
+              "version": "6.6.5",
+              "dependencies": {
+                "babel-traverse": {
+                  "version": "6.6.5"
+                },
+                "babel-helper-call-delegate": {
+                  "version": "6.6.5"
+                },
+                "babel-helper-get-function-arity": {
+                  "version": "6.6.5"
+                },
+                "babel-template": {
+                  "version": "6.6.5"
+                },
+                "babel-types": {
+                  "version": "6.6.5"
+                },
+                "babel-code-frame": {
+                  "version": "6.6.5"
+                },
+                "babel-helper-hoist-variables": {
+                  "version": "6.6.5"
+                },
+                "babel-messages": {
+                  "version": "6.6.5"
+                },
+                "babylon": {
+                  "version": "6.6.5"
+                }
+              }
             },
             "babel-plugin-transform-es2015-shorthand-properties": {
               "version": "6.5.0"
             },
             "babel-plugin-transform-es2015-spread": {
-              "version": "6.5.2"
+              "version": "6.6.5"
             },
             "babel-plugin-transform-es2015-sticky-regex": {
               "version": "6.5.0"
             },
             "babel-plugin-transform-es2015-template-literals": {
-              "version": "6.6.0"
+              "version": "6.6.5"
             },
             "babel-plugin-transform-es2015-typeof-symbol": {
               "version": "6.6.0"
@@ -344,13 +488,45 @@
               "version": "6.5.0"
             },
             "babel-plugin-transform-flow-strip-types": {
-              "version": "6.5.0"
+              "version": "6.6.5"
             },
             "babel-plugin-transform-object-rest-spread": {
-              "version": "6.5.0"
+              "version": "6.6.5"
             },
             "babel-plugin-transform-regenerator": {
-              "version": "6.6.0"
+              "version": "6.6.5",
+              "dependencies": {
+                "babel-core": {
+                  "version": "6.6.5"
+                },
+                "babel-traverse": {
+                  "version": "6.6.5"
+                },
+                "babel-types": {
+                  "version": "6.6.5"
+                },
+                "babylon": {
+                  "version": "6.6.5"
+                },
+                "babel-code-frame": {
+                  "version": "6.6.5"
+                },
+                "babel-generator": {
+                  "version": "6.6.5"
+                },
+                "babel-messages": {
+                  "version": "6.6.5"
+                },
+                "babel-register": {
+                  "version": "6.6.5"
+                },
+                "babel-template": {
+                  "version": "6.6.5"
+                },
+                "core-js": {
+                  "version": "2.1.4"
+                }
+              }
             },
             "babel-plugin-transform-runtime": {
               "version": "6.6.0"
@@ -367,16 +543,10 @@
             "babel-code-frame": {
               "version": "6.6.0"
             },
-            "babel-generator": {
-              "version": "6.6.0"
-            },
             "babel-core": {
               "version": "6.6.0"
             },
-            "babel-helper-call-delegate": {
-              "version": "6.6.0"
-            },
-            "babel-helper-define-map": {
+            "babel-generator": {
               "version": "6.6.0"
             },
             "babel-helper-function-name": {
@@ -385,16 +555,10 @@
             "babel-helper-get-function-arity": {
               "version": "6.5.0"
             },
-            "babel-helper-hoist-variables": {
-              "version": "6.5.0"
-            },
             "babel-helper-optimise-call-expression": {
               "version": "6.6.0"
             },
             "babel-helper-regex": {
-              "version": "6.6.0"
-            },
-            "babel-helper-replace-supers": {
               "version": "6.6.0"
             },
             "babel-helpers": {
@@ -402,9 +566,6 @@
             },
             "babel-messages": {
               "version": "6.6.0"
-            },
-            "babel-plugin-transform-strict-mode": {
-              "version": "6.5.2"
             },
             "babel-template": {
               "version": "6.6.0"
@@ -517,14 +678,14 @@
             "regenerate": {
               "version": "1.2.1"
             },
+            "regexpu-core": {
+              "version": "1.0.0"
+            },
             "regjsgen": {
               "version": "0.2.0"
             },
             "regjsparser": {
               "version": "0.1.5"
-            },
-            "regexpu-core": {
-              "version": "1.0.0"
             },
             "repeating": {
               "version": "1.1.3"
@@ -553,19 +714,19 @@
             "user-home": {
               "version": "1.1.1"
             },
-            "mkdirp": {
-              "version": "0.5.1",
-              "dependencies": {
-                "minimist": {
-                  "version": "0.0.8"
-                }
-              }
-            },
             "babel-register": {
               "version": "6.6.0",
               "dependencies": {
                 "core-js": {
                   "version": "2.1.3"
+                }
+              }
+            },
+            "mkdirp": {
+              "version": "0.5.1",
+              "dependencies": {
+                "minimist": {
+                  "version": "0.0.8"
                 }
               }
             },
