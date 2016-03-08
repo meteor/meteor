@@ -558,12 +558,14 @@ task of running tests and displaying the results in the browser when you
 visit it.
 
 In normal test mode, no files in your application are eagerly loaded, aside
-from test files (files named *.test[s].* placed anywhere in your application).
-You can import your app's modules from within your tests and test them in
+from test files (files named *.test[s].* or *.spec[s].* placed anywhere 
+in your application). You can import your app's modules from within your 
+tests and use them as normal.
 
 In "full app" test mode, your app is loaded as usual, and then made hidden,
 and your tests can inspect and effect the running state. Test files are
-loaded similarly to unit test mode, but must be called *.app-test[s].*.
+loaded similarly to unit test mode, but must be called *.app-test[s].* or
+*.app-spec[s].*.
 
 Open the test dashboard in your browser to run the tests and see the
 results. By default the URL is localhost:3000 but that can be changed

@@ -3,13 +3,15 @@ import { pathSep } from '../fs/files';
 
 // We have two things "tests" and "app-tests".
 export const TEST_FILENAME_REGEXPS = [
-  // "*.unit.test.*" or "*.tests.*"
+  // "*.test[s].*" or "*.spec[s].*"
   /\.tests?./,
+  /\.specs?./,
 ];
 
 export const APP_TEST_FILENAME_REGEXPS = [
-  // "*.integration.test.*" or "*.app-tests.*"
+  // "*.app-tests.*" or "*.app-specs.*"
   /\.app-tests?./,
+  /\.app-specs?./,
 ];
 
 // Given a path to a file in an app (relative to the app root
