@@ -281,7 +281,8 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
 
   var runtimeConfig = _.extend(
     _.clone(__meteor_runtime_config__),
-    additionalOptions.runtimeConfigOverrides || {}
+    additionalOptions.runtimeConfigOverrides || {},
+    { meteorEnv }
   );
 
   var jsCssUrlRewriteHook = bundledJsCssUrlRewriteHook || function (url) {

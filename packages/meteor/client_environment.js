@@ -17,7 +17,7 @@ Meteor = {
    * @static
    * @type {Boolean}
    */
-  isDevelopment: meteorEnv.NODE_ENV === "development",
+  isDevelopment: meteorEnv.NODE_ENV !== "production",
 
   /**
    * @summary Boolean variable.  True if running in client environment.

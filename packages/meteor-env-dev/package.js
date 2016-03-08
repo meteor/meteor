@@ -8,6 +8,9 @@ Package.describe({
 
 Package.onUse(function(api) {
   api.use('meteor', { unordered: true });
-  api.addFiles('env.js');
-  api.export("meteorEnv");
+
+  api.addFiles('client.js', 'client');
+  api.addFiles('server.js', 'server');
+
+  api.export('meteorEnv');
 });

@@ -24,7 +24,4 @@ if (typeof process.env !== "object") {
   process.env = {};
 }
 
-Object.keys(meteorEnv).forEach(function (key) {
-  process.env[key] = meteorEnv[key];
-});
-
+_.extend(process.env, meteorEnv);

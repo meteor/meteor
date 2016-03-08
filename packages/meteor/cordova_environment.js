@@ -7,4 +7,4 @@
 Meteor.isCordova = true;
 
 Meteor.isProduction = meteorEnv.NODE_ENV === "production";
-Meteor.isDevelopment = meteorEnv.NODE_ENV === "development";
+Meteor.isDevelopment = meteorEnv.NODE_ENV !== "production";

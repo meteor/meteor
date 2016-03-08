@@ -36,14 +36,6 @@ if (!process.env.APP_ID) {
   process.env.APP_ID = configJson.appId;
 }
 
-// connect (and some other NPM modules) use $NODE_ENV to make some decisions;
-// eg, if $NODE_ENV is not production, they send stack traces on error. connect
-// considers 'development' to be the default mode, but that's less safe than
-// assuming 'production' to be the default. If you really want development mode,
-// set it in your wrapper script (eg, run-app.js).
-if (!process.env.NODE_ENV)
-  process.env.NODE_ENV = 'production';
-
 // Map from load path to its source map.
 var parsedSourceMaps = {};
 

@@ -357,6 +357,19 @@ function doRunCommand(options) {
     webArchs.push("web.cordova");
   }
 
+  let nodeEnv = process.env.NODE_ENV;
+  if (options.production) {
+    // If options.production, make sure $NODE_ENV === "production".
+    process.env.NODE_ENV = "production";
+  } else if (nodeEnv) {
+    // If $NODE_ENV is set, override options.production according to that.
+    options.production = nodeEnv === "production";
+  } else {
+    // Otherwise make sure $NODE_ENV is set according to
+    // options.production.
+    process.env.NODE_ENV = "development";
+  }
+
   var runAll = require('../runners/run-all.js');
   return runAll.run({
     projectContext: projectContext,

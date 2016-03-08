@@ -1,6 +1,6 @@
 Meteor = {
   isProduction: meteorEnv.NODE_ENV === "production",
-  isDevelopment: meteorEnv.NODE_ENV === "development",
+  isDevelopment: meteorEnv.NODE_ENV !== "production",
   isClient: false,
   isServer: true,
   isCordova: false
