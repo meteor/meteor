@@ -367,7 +367,14 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
       if (typeof options.data !== "string") {
         throw new Error("'data' option to addJavaScript must be a string");
       }
-      if (typeof options.sourcePath !== "string") {
+
+      let sourcePath = this.inputPath;
+      if (_.has(options, "sourcePath") &&
+          typeof options.sourcePath === "string") {
+        sourcePath = options.sourcePath;
+      }
+
+      if (typeof sourcePath !== "string") {
         throw new Error("'sourcePath' option must be supplied to addJavaScript. Consider passing inputPath.");
       }
 
@@ -376,7 +383,7 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
       resources.push({
         type: "js",
         data: data,
-        sourcePath: options.sourcePath,
+        sourcePath,
         servePath: colonConverter.convert(
           files.pathJoin(
             inputSourceArch.pkg.serveRoot,

@@ -453,6 +453,12 @@ class ResourceSlot {
       throw Error("addJavaScript on non-source ResourceSlot?");
     }
 
+    let sourcePath = self.inputResource.path;
+    if (_.has(options, "sourcePath") &&
+        typeof options.sourcePath === "string") {
+      sourcePath = options.sourcePath;
+    }
+
     var data = new Buffer(
       files.convertToStandardLineEndings(options.data), 'utf8');
     self.jsOutputResources.push({
@@ -460,7 +466,7 @@ class ResourceSlot {
       data: data,
       // The sourcePath should not be alterable by plugins, so it makes
       // sense to set it unconditionally here.
-      sourcePath: self.inputResource.path,
+      sourcePath,
       servePath: self.packageSourceBatch.unibuild.pkg._getServePath(
         options.path),
       // XXX should we allow users to be trusted and specify a hash?

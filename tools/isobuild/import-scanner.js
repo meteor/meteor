@@ -205,14 +205,13 @@ export default class ImportScanner {
       sourcePath = file.path;
     }
 
-    const info = this._joinAndStat(this.sourceRoot, sourcePath);
-    if (! info || ! info.stat.isFile()) {
-      throw new Error("sourcePath not a file: " + sourcePath);
-    }
-
     file.sourcePath = sourcePath;
 
-    return info.path;
+    // Note: this absolute path may not necessarily exist on the file
+    // system, but any import statements or require calls in file.data
+    // will be interpreted relative to this path, so it needs to be
+    // something plausible. #6411 #6383
+    return pathJoin(this.sourceRoot, sourcePath);
   }
 
   _findImportedModuleIdentifiers(file) {
