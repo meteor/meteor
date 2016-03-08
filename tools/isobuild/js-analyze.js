@@ -83,10 +83,6 @@ export function findImportedModuleIdentifiers(source, hash) {
       while (left < right && end < possibleIndexes[right - 1]) --right;
 
       if (left < right) {
-        if (isFunctionWithParameter(node, "require")) {
-          return;
-        }
-
         let id = getRequiredModuleId(node);
         if (typeof id === "string") {
           identifiers[id] = node;
@@ -127,18 +123,6 @@ function isNode(value) {
     && typeof value.type === "string"
     && typeof value.start === "number"
     && typeof value.end === "number";
-}
-
-function isFunctionWithParameter(node, name) {
-  if (node.type === "FunctionExpression" ||
-      node.type === "FunctionDeclaration" ||
-      node.type === "ArrowFunctionExpression") {
-    return node.params.some(
-      param =>
-        param.type === "Identifier" &&
-        param.name === name
-    );
-  }
 }
 
 function getRequiredModuleId(node) {
