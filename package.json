@@ -23,7 +23,8 @@
     "semantic-release": "semantic-release pre && npm publish && semantic-release post",
     "test": "npm run lint && npm run build:istanbul && npm run unit-test && npm run check-coverage",
     "unit-test": "istanbul cover --dir reports/coverage node_modules/mocha/bin/_mocha tests/ -- --recursive  --timeout 4000 --compilers js:babel-register",
-    "unit-test:w": "node_modules/mocha/bin/_mocha tests/ --recursive --timeoutt 4000 --compilers js:babel-register --watch"
+    "unit-test:s": "node_modules/mocha/bin/_mocha tests/ --recursive --timeoutt 4000 --compilers js:babel-register",
+    "unit-test:w": "npm run unit-test:s -s -- --watch"
   },
   "files": [
     "LICENSE",
