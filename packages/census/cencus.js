@@ -4,69 +4,61 @@ const Os = Npm.require('os');
 const name = 'census';
 const version = '0.0.1';
 
-// env variables
-let appId;
-let rootUrl;
-let reportRate;
-let autoSample;
-
-// helper vriables
 let currentSessionsNum;
 let maxSessionsNum;
 let onConnectListener;
 let reportIntervalId;
 
 Meteor.startup(function() {
-  appId = process.env.APP_ID;
-  rootUrl = process.env.ROOT_URL;
-  reportRate = process.env.CENSUS_REPORT_RATE || 24 * 60 * 60 * 1000;
-  autoSample = Utils.bool(process.env.CENSUS_AUTO_SAMPLE || true);
-
-  if (autoSample) startSampling();
+  if (Config.autoSample) startSampling();
 });
 
+// Starts sampling
 function startSampling() {
-  reportIntervalId = Meteor.setInterval(report, reportRate);
+  reportIntervalId = Meteor.setInterval(report, Config.reportRate);
   onConnectListener = Meteor.onConnection(onConnectHandler);
   maxSessionsNum = currentSessionsNum = 0;
 }
 
+// Stops sampling
 function stopSampling() {
   clearInterval(reportIntervalId);
   onConnectListener.stop();
 }
 
+// Sends stats
 function report() {
   const stats = composeStats();
 
   Stats.send(stats, (err, response, body) => {
     err = err || (response.statusCode != 200 && body);
 
-    if (err) {
-      process.stderr.write('Failed to send stats\n');
+    if (err)
       Census.emit('report:fail', err);
-    }
-    else {
-      process.stdout.write('Stats have been sent\n');
+    else
       Census.emit('report:success', body);
-    }
   });
 }
 
+// Once a connection has been made
 function onConnectHandler(connection) {
   connection.onClose(onDisconnectHandler);
+  // Update max sessions as well if needed
   if (++currentSessionsNum > maxSessionsNum) ++maxSessionsNum;
 }
 
+// Once a connection has been remoed
 function onDisconnectHandler() {
   --currentSessionsNum;
 }
 
+// Composes statistics object
 function composeStats() {
   return {
     properties: {
-      appId: appId,
-      rootUrl: rootUrl,
+      appId: Config.appId,
+      appSecret: Config.appSecret,
+      rootUrl: Config.rootUrl,
       version: Meteor.release,
       maxSessions: maxSessionsNum
     },
@@ -84,7 +76,18 @@ function composeStats() {
   };
 }
 
-Census = _.extend(new Events.EventEmitter(), {
+Census = new Events.EventEmitter()
+
+// Report events loggers
+  .on('report:success', function() {
+    process.stdout.write('Stats have been sent\n');
+  })
+
+  .on('report:fail', function() {
+    process.stderr.write('Failed to send stats\n');
+  });
+
+_.extend(Census, {
   name,
   version,
   startSampling,

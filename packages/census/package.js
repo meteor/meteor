@@ -6,7 +6,7 @@ Package.describe({
 });
 
 Npm.depends({
-  request: "2.53.0"
+  request: '2.53.0'
 });
 
 Package.onUse(function(api) {
@@ -16,9 +16,10 @@ Package.onUse(function(api) {
   ]);
 
   api.addFiles([
-    './cencus.js',
+    './utils.js',
+    './config.js',
     './stats.js',
-    './utils.js'
+    './cencus.js'
   ], 'server');
 
   api.export('Census', 'server');
