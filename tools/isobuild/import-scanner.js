@@ -6,6 +6,7 @@ import {findImportedModuleIdentifiers} from "./js-analyze.js";
 import buildmessage from "../utils/buildmessage.js";
 import LRU from "lru-cache";
 import {Profile} from "../tool-env/profile.js";
+import {SourceNode, SourceMapConsumer} from "source-map";
 import {
   pathJoin,
   pathRelative,
@@ -118,8 +119,11 @@ export default class ImportScanner {
       file.installPath = this._getInstallPath(absPath);
 
       if (has(this.absPathToOutputIndex, absPath)) {
+        // Collisions can happen if a compiler plugin calls addJavaScript
+        // multiple times with the same sourcePath. #6422
         const index = this.absPathToOutputIndex[absPath];
-        this.outputFiles[index] = file;
+        this._combineFiles(this.outputFiles[index], file);
+
       } else {
         this.absPathToOutputIndex[absPath] =
           this.outputFiles.push(file) - 1;
@@ -127,6 +131,44 @@ export default class ImportScanner {
     });
 
     return this;
+  }
+
+  // Concatenate the contents of oldFile and newFile, combining source
+  // maps and updating all other properties appropriately. Once this
+  // combination is done, oldFile should be kept and newFile discarded.
+  _combineFiles(oldFile, newFile) {
+    // Since we're concatenating the files together, they must be either
+    // both lazy or both eager. Same for bareness.
+    assert.strictEqual(oldFile.lazy, newFile.lazy);
+    assert.strictEqual(oldFile.bare, newFile.bare);
+
+    function getChunk(file) {
+      const consumer = file.sourceMap &&
+        new SourceMapConsumer(file.sourceMap);
+      const node = consumer &&
+        SourceNode.fromStringWithSourceMap(file.dataString, consumer);
+      return node || file.dataString;
+    }
+
+    const {
+      code: combinedDataString,
+      map: combinedSourceMap,
+    } = new SourceNode(null, null, null, [
+      getChunk(oldFile),
+      "\n\n",
+      getChunk(newFile)
+    ]).toStringWithSourceMap({
+      file: oldFile.servePath || newFile.servePath
+    });
+
+    oldFile.dataString = combinedDataString;
+    oldFile.data = new Buffer(oldFile.dataString, "utf8");
+    oldFile.hash = sha1(oldFile.data);
+    oldFile.imported = oldFile.imported || newFile.imported;
+    oldFile.sourceMap = combinedSourceMap.toJSON();
+    if (! oldFile.sourceMap.mappings) {
+      oldFile.sourceMap = null;
+    }
   }
 
   scanImports() {
