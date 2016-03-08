@@ -27,7 +27,7 @@ if (process.platform === "win32") {
 }
 
 // node (v8) defaults to only recording 10 lines of stack trace. This
-// in especially insufficient when using fibers, because you get
+// is especially insufficient when using fibers, because you get
 // proper call stacks instead of only seeing the stack up to the most
 // recent callback invocation. Increase the limit (for the `meteor` tool
 // itself, not for apps).
