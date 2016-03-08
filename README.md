@@ -59,6 +59,7 @@ For a more thorough introduction, read the [setup guide](/docs/guides/setup.md).
 * [no-zero-timeout](docs/rules/no-zero-timeout.md): Prevent usage of Meteor.setTimeout with zero delay
 * [blaze-consistent-eventmap-params](docs/rules/blaze-consistent-eventmap-params.md): Force consistent event handler parameters in event maps
 * [prefer-session-equals](docs/prefer-session-equals.md): Prefer `Session.equals` in conditions
+* [template-naming-convention](docs/template-naming-convention.md): Naming convention for templates
 
 
 ## Core API

@@ -1,0 +1,104 @@
+/**
+ * @fileoverview Force a naming convention for templates
+ * @author Dominik Ferber
+ * @copyright 2016 Dominik Ferber. All rights reserved.
+ * See LICENSE file in root directory for full license.
+ */
+
+// -----------------------------------------------------------------------------
+// Requirements
+// -----------------------------------------------------------------------------
+
+const rule = require('../../../dist/rules/template-naming-convention')
+const RuleTester = require('eslint').RuleTester
+const ruleTester = new RuleTester()
+
+ruleTester.run('template-naming-convention', rule, {
+  valid: [
+    'Template.foo.helpers',
+    'Template.foo01.helpers',
+    'Template.foo19bar.helpers',
+    'Template.fooBar.helpers',
+    'Template.fooBar.helpers({})',
+    {
+      code: 'Template.FooBar.helpers({})',
+      options: ['pascal-case'],
+    },
+    {
+      code: 'Template.foo_bar.helpers({})',
+      options: ['snake-case'],
+    },
+    {
+      code: 'Template.fooBar.helpers({})',
+      options: ['camel-case'],
+    },
+    {
+      code: 'Template.fooBar.helpers({})',
+      options: [],
+    },
+  ],
+
+  invalid: [
+    {
+      code: 'Template.foo_bar.onCreated',
+      errors: [
+        { message: 'Invalid template naming convention, expected "camel-case"', type: 'MemberExpression' },
+      ],
+    },
+    {
+      code: 'Template.foo_bar.onRendered',
+      errors: [
+        { message: 'Invalid template naming convention, expected "camel-case"', type: 'MemberExpression' },
+      ],
+    },
+    {
+      code: 'Template.foo_bar.onDestroyed',
+      errors: [
+        { message: 'Invalid template naming convention, expected "camel-case"', type: 'MemberExpression' },
+      ],
+    },
+    {
+      code: 'Template.foo_bar.events',
+      errors: [
+        { message: 'Invalid template naming convention, expected "camel-case"', type: 'MemberExpression' },
+      ],
+    },
+    {
+      code: 'Template.foo_bar.helpers',
+      errors: [
+        { message: 'Invalid template naming convention, expected "camel-case"', type: 'MemberExpression' },
+      ],
+    },
+    {
+      code: 'Template.foo_bar.created',
+      errors: [
+        { message: 'Invalid template naming convention, expected "camel-case"', type: 'MemberExpression' },
+      ],
+    },
+    {
+      code: 'Template.foo_bar.rendered',
+      errors: [
+        { message: 'Invalid template naming convention, expected "camel-case"', type: 'MemberExpression' },
+      ],
+    },
+    {
+      code: 'Template.foo_bar.destroyed',
+      errors: [
+        { message: 'Invalid template naming convention, expected "camel-case"', type: 'MemberExpression' },
+      ],
+    },
+    {
+      code: 'Template.foo_bar.helpers({})',
+      errors: [
+        { message: 'Invalid template naming convention, expected "camel-case"', type: 'MemberExpression' },
+      ],
+    },
+    {
+      code: 'Template.fooBar.helpers({})',
+      options: ['snake-case'],
+      errors: [
+        { message: 'Invalid template naming convention, expected "snake-case"', type: 'MemberExpression' },
+      ],
+    },
+  ],
+})
