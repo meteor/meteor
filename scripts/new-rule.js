@@ -62,7 +62,7 @@ const rule = `/**
 // Rule Definition
 // -----------------------------------------------------------------------------
 
-module.exports = context => {
+export default context => {
   // ---------------------------------------------------------------------------
   // Helpers
   // ---------------------------------------------------------------------------
@@ -79,7 +79,7 @@ module.exports = context => {
 
 }
 
-module.exports.schema = [
+export const schema = [
   // fill in your schema
 ]
 
@@ -96,8 +96,8 @@ const test = `/**
 // Requirements
 // -----------------------------------------------------------------------------
 
-const rule = require('../../../dist/rules/${ruleId}')
-const RuleTester = require('eslint').RuleTester
+import rule from '../../../lib/rules/${ruleId}')
+import { RuleTester } from 'eslint'
 const ruleTester = new RuleTester()
 
 ruleTester.run('${ruleId}', rule, {

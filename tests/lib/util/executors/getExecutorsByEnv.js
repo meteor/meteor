@@ -1,5 +1,5 @@
 import assert from 'assert'
-import getExecutorsByEnv from '../../../../dist/util/executors/getExecutorsByEnv'
+import getExecutorsByEnv from '../../../../lib/util/executors/getExecutorsByEnv'
 
 import {
   PUBLIC,
@@ -14,7 +14,7 @@ import {
   MOBILE_CONFIG,
   COMPATIBILITY,
   NON_METEOR,
-} from '../../../../dist/util/environment'
+} from '../../../../lib/util/environment'
 
 describe('getExecutorsByEnv', () => {
   it('public', () => {

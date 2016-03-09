@@ -23,7 +23,7 @@ before_script:
 script:
   - npm run test
 after_success:
-  - codeclimate-test-reporter < ./reports/coverage/lcov.info
+  - codeclimate-test-reporter < ./coverage/lcov.info
   - python travis_after_all.py
   - export $(cat .to_export_back)
   - npm run semantic-release

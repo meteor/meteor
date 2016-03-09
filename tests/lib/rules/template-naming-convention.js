@@ -9,8 +9,8 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-const rule = require('../../../dist/rules/template-naming-convention')
-const RuleTester = require('eslint').RuleTester
+import rule from '../../../lib/rules/template-naming-convention'
+import { RuleTester } from 'eslint'
 const ruleTester = new RuleTester()
 
 ruleTester.run('template-naming-convention', rule, {

@@ -1,5 +1,5 @@
 import assert from 'assert'
-import { difference, union, intersection } from '../../../../dist/util/executors/sets'
+import { difference, union, intersection } from '../../../../lib/util/executors/sets'
 
 describe('executors', () => {
   describe('union', () => {

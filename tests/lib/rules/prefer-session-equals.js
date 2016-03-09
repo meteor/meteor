@@ -9,8 +9,8 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-const rule = require('../../../dist/rules/prefer-session-equals')
-const RuleTester = require('eslint').RuleTester
+import rule from '../../../lib/rules/prefer-session-equals'
+import { RuleTester } from 'eslint'
 const ruleTester = new RuleTester()
 
 ruleTester.run('prefer-session-equals', rule, {

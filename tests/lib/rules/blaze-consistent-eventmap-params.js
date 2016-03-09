@@ -9,8 +9,8 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-const rule = require('../../../dist/rules/blaze-consistent-eventmap-params')
-const RuleTester = require('eslint').RuleTester
+import rule from '../../../lib/rules/blaze-consistent-eventmap-params'
+import { RuleTester } from 'eslint'
 
 // -----------------------------------------------------------------------------
 // Tests

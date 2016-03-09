@@ -1,5 +1,5 @@
 import assert from 'assert'
-import filterExecutorsByAncestors from '../../../../dist/util/executors/filterExecutorsByAncestors'
+import filterExecutorsByAncestors from '../../../../lib/util/executors/filterExecutorsByAncestors'
 
 describe('filterExecutorsByAncestors', () => {
   it('filters on MemberExpression for isClient', () => {
