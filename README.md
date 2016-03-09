@@ -67,6 +67,30 @@ For a more thorough introduction, read the [setup guide](/docs/guides/setup.md).
 
 [Any rule idea is welcome !](https://github.com/dferber90/eslint-plugin-meteor/issues)
 
+## Recommended Configuration
+
+This plugin exports a recommended configuration that enforce good Meteor practices.
+
+To enable this configuration use the extends property in your `.eslintrc` config file:
+
+```json
+{
+  "plugins": [
+    "meteor"
+  ],
+  "extends": ["eslint:recommended", "plugin:meteor/recommended"]
+}
+```
+
+See [ESLint documentation](http://eslint.org/docs/user-guide/configuring#extending-configuration-files) for more information about extending configuration files.
+
+The rules enabled in this configuration are:
+- [audit-argument-checks](docs/rules/audit-argument-checks.md)
+- [no-session](docs/rules/no-session.md)
+- [no-blaze-lifecycle-assignment](docs/rules/no-blaze-lifecycle-assignment.md)
+- [no-zero-timeout](docs/rules/no-zero-timeout.md)
+- [blaze-consistent-eventmap-params](docs/rules/blaze-consistent-eventmap-params.md)
+- [template-naming-convention](docs/rules/template-naming-convention.md)
 
 ## Limitations
 
