@@ -974,19 +974,6 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
 
   var prelinkedFiles = module.getPrelinkedFiles();
 
-  // are we running `meteor test` or `meteor test-packages`?
-  // Include a short code snippet that sets `Meteor.isTest` and calls
-  // `runTests`.
-  if (global.testCommandMetadata) {
-    var weAreLinkingTheApp = (name === null);
-    if (weAreLinkingTheApp) {
-      prelinkedFiles.unshift({
-        source: getTestPreamble(),
-        servePath: "/packages/runTests.js"
-      });
-    }
-  }
-
   // If we're in the app, then we just add the import code as its own file in
   // the front.
   if (useGlobalNamespace) {

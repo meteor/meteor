@@ -66,6 +66,7 @@ var AppProcess = function (options) {
   self.nodePath = options.nodePath || [];
   self.debugPort = options.debugPort;
   self.settings = options.settings;
+  self.testMetadata = options.testMetadata;
 
   self.proc = null;
   self.madeExitCallback = false;
@@ -192,6 +193,11 @@ _.extend(AppProcess.prototype, {
       env.METEOR_SETTINGS = self.settings;
     } else {
       delete env.METEOR_SETTINGS;
+    }
+    if (self.testMetadata) {
+      env.TEST_METADATA = JSON.stringify(self.testMetadata);
+    } else {
+     delete env.TEST_METADATA; 
     }
     if (self.listenHost) {
       env.BIND_IP = self.listenHost;
@@ -357,6 +363,7 @@ var AppRunner = function (options) {
   self.mobileServerUrl = options.mobileServerUrl;
   self.cordovaRunner = options.cordovaRunner;
   self.settingsFile = options.settingsFile;
+  self.testMetadata = options.testMetadata;
   self.debugPort = options.debugPort;
   self.proxy = options.proxy;
   self.watchForChanges =
@@ -740,6 +747,7 @@ _.extend(AppRunner.prototype, {
       nodeOptions: getNodeOptionsFromEnvironment(),
       nodePath: _.map(bundleResult.nodePath, files.convertToOSPath),
       settings: settings,
+      testMetadata: self.testMetadata,
       ipcPipe: self.watchForChanges
     });
 
