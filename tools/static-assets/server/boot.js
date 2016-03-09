@@ -236,7 +236,16 @@ Fiber(function () {
       },
       getBinary: function (assetPath, callback) {
         return getAsset(assetPath, undefined, callback);
-      }
+      },
+      absoluteFilePath: function (assetPath) {
+        if (!fileInfo.assets || !_.has(fileInfo.assets, assetPath)) {
+          throw new Error("Unknown asset: " + assetPath);
+        }
+
+        assetPath = files.convertToStandardPath(assetPath);
+        var filePath = path.join(serverDir, fileInfo.assets[assetPath]);
+        return files.convertToOSPath(filePath);
+      },
     };
 
     var isModulesRuntime =
