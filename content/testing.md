@@ -2,7 +2,7 @@
 title: "Testing"
 ---
 
-**NOTE** This is correct up to release 1.3-beta.12
+**NOTE** This is correct up to release 1.3-beta.12. Apologies that this is still a work in progress.
 
 <h2 id="testing-applications">Testing your Application</h2>
 
@@ -41,15 +41,12 @@ Finally you may wish to test that your application works under typical load or s
 
 <h3 id="driver-packages">Driver packages</h3>
 
-- Test modes involve a client (typically a browser) connecting to the app, then launching a test driver.
-
-- Most drivers display some kind of UI for passing and failing tests and can be used to drive a TDD process or develop tests. [SS]
-
-- Console drivers simply log the test results to the client console and are typically driven by a phantomjs process
-
 A test driver is a mini-application that runs in place of your app and runs each of your defined tests (each of which `import` relevant sections of your app), whilst reporting the results in some kind of user interface.
 
-There are two main kinds of test driver packages; web-reporters which are Meteor applications and display a special test reporting web UI that you can view the test results in; and console-reporters that run completely on the command-line and are primary used for automated testing like [continuous integration](#ci) [XXX: we should probably explain more about how phantom is involved in command-line testing?]
+There are two main kinds of test driver packages:
+  -web-reporters which are Meteor applications and display a special test reporting web UI that you can view the test results in [include a SS]
+
+  - console-reporters that run completely on the command-line and are primary used for automated testing like [continuous integration](#ci) (as we'll see, typically PhantomJS is used to drive such tests).
 
 While developing your app, chances are you'll want to run unit tests against a web reporter; for our example we will use a reporter that renders to Mocha's default web UI. We can add the driver simply by adding the [`avital:mocha`](https://atmospherejs.com/avital/mocha) package to our app.
 
@@ -193,7 +190,7 @@ Then you can open two browser windows to see the app in action while also ensuri
 
 An integration test is a test that crosses module boundaries. In the simplest case, this simply means something very similar to a unit test, where you perform your isolation around multiple modules, creating a non-singular "system under test". 
 
-Although conceptually different to unit tests, such tests typically do not need to be run any differently to unit tests and can use the same `meteor test` mode and isolation infrastructure as we use for unit tests.
+Although conceptually different to unit tests, such tests typically do not need to be run any differently to unit tests and can use the same [`meteor test` mode](#running-unit-tests) and [isolation techniques](#meteor-specific-isolation) as we use for unit tests.
 
 However, an integration test that crosses the client-server boundary of a Meteor application (where the modules under test cross that boundary) requires a different testing infrastructure, namely Meteor's "full app" testing mode. 
 
