@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Simulates local storage on IE 6,7 using userData",
-  version: "1.0.6-beta.13"
+  version: "1.0.6-beta.15"
 });
 
 Package.onUse(function (api) {
