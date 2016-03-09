@@ -78,6 +78,12 @@
 * On the server, modules contained within `node_modules` directories are
   now loaded using the native Node `require` function. #6398
 
+* All `<script>` tag(s) for application and package code now appear at the
+  end of the `<body>` rather than in the `<head>`. #6375
+
+* The client-side version of `process.env.NODE_ENV` (and other environment
+  variables) now matches the corresponding server-side values. #6399
+
 ### Performance
 
 * Don't reload package catalog from disk on rebuilds unless package
