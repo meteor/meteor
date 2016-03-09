@@ -11,6 +11,7 @@
   },
   "scripts": {
     "build": "babel lib -d dist --optional runtime",
+    "build:w": "npm run build -- --watch",
     "coverage:check": "nyc check-coverage --lines 100 --functions 100 --branches 100",
     "coverage:report": "nyc report",
     "clean": "rimraf dist",
