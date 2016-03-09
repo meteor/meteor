@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Compile-time tools for Blaze",
-  version: '1.0.5-beta.13'
+  version: '1.0.5-beta.14'
 });
 
 Package.onUse(function (api) {

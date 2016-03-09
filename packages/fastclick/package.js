@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Faster touch events on mobile",
-  version: '1.0.8-beta.13'
+  version: '1.0.8-beta.14'
 });
 
 Package.onUse(function (api) {
