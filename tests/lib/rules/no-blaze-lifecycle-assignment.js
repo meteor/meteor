@@ -9,7 +9,7 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-const rule = require('../../../dist/rules/no-blaze-lifecycle-assignment')
+const rule = require('../../../lib/rules/no-blaze-lifecycle-assignment')
 const RuleTester = require('eslint').RuleTester
 
 // -----------------------------------------------------------------------------

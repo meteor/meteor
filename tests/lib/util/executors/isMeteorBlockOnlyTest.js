@@ -1,5 +1,5 @@
 import assert from 'assert'
-import isMeteorBlockOnlyTest from '../../../../dist/util/executors/isMeteorBlockOnlyTest'
+import isMeteorBlockOnlyTest from '../../../../lib/util/executors/isMeteorBlockOnlyTest'
 
 describe('isMeteorBlockOnlyTest', () => {
   it('accepts a valid MemberExpression', () => {

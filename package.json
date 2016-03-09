@@ -11,20 +11,18 @@
   },
   "scripts": {
     "build": "babel lib -d dist --optional runtime",
-    "build:w": "npm run build -- -w",
-    "build:istanbul": "npm run build -- --auxiliary-comment-before \"istanbul ignore next\"",
-    "check-coverage": "istanbul check-coverage",
+    "check-coverage": "nyc check-coverage --lines 100 --functions 100 --branches 100",
     "clean": "rimraf dist",
     "coveralls": "cat ./coverage/lcov.info | coveralls",
     "lint": "eslint ./",
     "prebuild": "npm run clean && mkdir dist",
     "prepublish": "npm run build",
+    "pretest": "npm run lint",
     "rule": "babel scripts/new-rule.js | node",
     "semantic-release": "semantic-release pre && npm publish && semantic-release post",
-    "test": "npm run lint && npm run build:istanbul && npm run unit-test && npm run check-coverage",
-    "unit-test": "istanbul cover --dir coverage node_modules/mocha/bin/_mocha tests/ -- --recursive  --timeout 4000 --compilers js:babel-register",
-    "unit-test:s": "node_modules/mocha/bin/_mocha tests/ --recursive --timeoutt 4000 --compilers js:babel-register",
-    "unit-test:w": "npm run unit-test:s -s -- --watch"
+    "test": "npm run unit-test && npm run check-coverage",
+    "unit-test": "nyc --require=babel-register --reporter=lcov mocha tests --recursive",
+    "unit-test:w": "npm run unit-test -s -- --watch"
   },
   "files": [
     "LICENSE",
@@ -60,7 +58,6 @@
     "eslint": "2.2.0",
     "eslint-config-airbnb": "6.1.0",
     "ghooks": "1.0.3",
-    "istanbul": "1.0.0-alpha.2",
     "mocha": "2.4.5",
     "nyc": "6.0.0",
     "readline-sync": "1.4.1",

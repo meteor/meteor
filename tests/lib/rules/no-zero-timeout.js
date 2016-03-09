@@ -7,7 +7,7 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-const rule = require('../../../dist/rules/no-zero-timeout')
+const rule = require('../../../lib/rules/no-zero-timeout')
 const RuleTester = require('eslint').RuleTester
 
 // -----------------------------------------------------------------------------

@@ -7,7 +7,7 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-const rule = require('../../../dist/rules/audit-argument-checks')
+const rule = require('../../../lib/rules/audit-argument-checks')
 const RuleTester = require('eslint').RuleTester
 
 // -----------------------------------------------------------------------------

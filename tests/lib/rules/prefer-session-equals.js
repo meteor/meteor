@@ -9,7 +9,7 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-const rule = require('../../../dist/rules/prefer-session-equals')
+const rule = require('../../../lib/rules/prefer-session-equals')
 const RuleTester = require('eslint').RuleTester
 const ruleTester = new RuleTester()
 

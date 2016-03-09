@@ -9,7 +9,7 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-const rule = require('../../../dist/rules/no-session')
+const rule = require('../../../lib/rules/no-session')
 const RuleTester = require('eslint').RuleTester
 
 // -----------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 import assert from 'assert'
-import getPropertyName from '../../../../dist/util/ast/getPropertyName'
+import getPropertyName from '../../../../lib/util/ast/getPropertyName'
 
 describe('getPropertyName', () => {
   it('returns false if property type is not Literal or Identifier', () => {

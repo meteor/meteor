@@ -96,7 +96,7 @@ const test = `/**
 // Requirements
 // -----------------------------------------------------------------------------
 
-const rule = require('../../../dist/rules/${ruleId}')
+const rule = require('../../../lib/rules/${ruleId}')
 const RuleTester = require('eslint').RuleTester
 const ruleTester = new RuleTester()
 

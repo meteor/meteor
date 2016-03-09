@@ -1,5 +1,5 @@
 import assert from 'assert'
-import * as astUtils from '../../../../dist/util/ast/index'
+import * as astUtils from '../../../../lib/util/ast/index'
 
 describe('ast utils', () => {
   it('exports isMeteorCall', () => {

@@ -9,7 +9,7 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-const rule = require('../../../dist/rules/template-naming-convention')
+const rule = require('../../../lib/rules/template-naming-convention')
 const RuleTester = require('eslint').RuleTester
 const ruleTester = new RuleTester()
 
