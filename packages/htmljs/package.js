@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Small library for expressing HTML trees",
-  version: '1.0.6-beta.12'
+  version: '1.0.6-beta.13'
 });
 
 Package.onUse(function (api) {
