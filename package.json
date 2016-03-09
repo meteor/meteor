@@ -41,7 +41,7 @@
     "babel-register": "6.6.5",
     "babel-runtime": "6.6.1",
     "escope": "3.5.0",
-    "invariant": "2.2.0",
+    "invariant": "2.2.1",
     "lodash.find": "4.2.0",
     "lodash.memoize": "4.0.1",
     "path-exists": "2.1.0"
