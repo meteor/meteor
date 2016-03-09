@@ -9,11 +9,11 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-import rule from '../../../lib/rules/template-naming-convention'
+import rule from '../../../lib/rules/template-names'
 import { RuleTester } from 'eslint'
 const ruleTester = new RuleTester()
 
-ruleTester.run('template-naming-convention', rule, {
+ruleTester.run('template-names', rule, {
   valid: [
     'Template.foo.helpers',
     'Template.foo01.helpers',

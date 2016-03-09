@@ -9,7 +9,7 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-import rule from '../../../lib/rules/blaze-consistent-eventmap-params'
+import rule from '../../../lib/rules/eventmap-params'
 import { RuleTester } from 'eslint'
 
 // -----------------------------------------------------------------------------
@@ -17,7 +17,7 @@ import { RuleTester } from 'eslint'
 // -----------------------------------------------------------------------------
 
 const ruleTester = new RuleTester()
-ruleTester.run('blaze-consistent-eventmap-params', rule, {
+ruleTester.run('eventmap-params', rule, {
   valid: [
     `
       Foo.bar.events({

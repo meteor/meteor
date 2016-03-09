@@ -1,4 +1,4 @@
-#  Prevent deprecated template lifecycle callback assignments (no-blaze-lifecycle-assignment)
+#  Prevent deprecated template lifecycle callback assignments (no-template-lifecycle-assignments)
 
 Assigning lifecycle callbacks to template properties has been deprecated in favor of the more robust template lifecycle callback registration functions.
 

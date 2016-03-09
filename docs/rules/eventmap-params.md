@@ -1,4 +1,4 @@
-# Consistent event handler parameters (blaze-consistent-eventmap-params)
+# Consistent event handler parameters (eventmap-params)
 
 Force consistent event handler parameters in [event maps](http://docs.meteor.com/#/full/eventmaps)
 
@@ -48,21 +48,21 @@ Here are examples of how to do this:
 
 ```js
 /*
- eslint meteor/blaze-consistent-eventmap-params: [2, {"eventParamName": "evt"}]
+ eslint meteor/eventmap-params: [2, {"eventParamName": "evt"}]
  */
 Template.foo.events({
   'submit form': function (evt) {}
 })
 
 /*
- eslint meteor/blaze-consistent-eventmap-params: [2, {"templateInstanceParamName": "tmplInst"}]
+ eslint meteor/eventmap-params: [2, {"templateInstanceParamName": "tmplInst"}]
  */
 Template.foo.events({
   'submit form': function (event, tmplInst) {}
 })
 
 /*
- eslint meteor/blaze-consistent-eventmap-params: [2, {"eventParamName": "evt", "templateInstanceParamName": "tmplInst"}]
+ eslint meteor/eventmap-params: [2, {"eventParamName": "evt", "templateInstanceParamName": "tmplInst"}]
  */
 Template.foo.events({
   'submit form': function (evt, tmplInst) {}

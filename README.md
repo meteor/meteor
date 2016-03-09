@@ -53,14 +53,18 @@ For a more thorough introduction, read the [setup guide](/docs/guides/setup.md).
 # List of supported rules
 
 ## Best Practices
-* [audit-argument-checks](docs/rules/audit-argument-checks.md): Enforce check on all arguments passed to methods and publish functions
-* [no-session](docs/rules/no-session.md): Prevent usage of Session
-* [no-blaze-lifecycle-assignment](docs/rules/no-blaze-lifecycle-assignment.md): Prevent deprecated template lifecycle callback assignments
-* [no-zero-timeout](docs/rules/no-zero-timeout.md): Prevent usage of Meteor.setTimeout with zero delay
-* [blaze-consistent-eventmap-params](docs/rules/blaze-consistent-eventmap-params.md): Force consistent event handler parameters in event maps
-* [prefer-session-equals](docs/prefer-session-equals.md): Prefer `Session.equals` in conditions
-* [template-naming-convention](docs/template-naming-convention.md): Naming convention for templates
 
+* General
+  * [no-zero-timeout](docs/rules/no-zero-timeout.md): Prevent usage of Meteor.setTimeout with zero delay
+* Session
+  * [no-session](docs/rules/no-session.md): Prevent usage of Session
+  * [prefer-session-equals](docs/prefer-session-equals.md): Prefer `Session.equals` in conditions
+* Security
+  * [audit-argument-checks](docs/rules/audit-argument-checks.md): Enforce check on all arguments passed to methods and publish functions
+* Blaze
+  * [template-names](docs/template-names.md): Naming convention for templates
+  * [no-template-lifecycle-assignments](docs/rules/no-template-lifecycle-assignments.md): Prevent deprecated template lifecycle callback assignments
+  * [eventmap-params](docs/rules/eventmap-params.md): Force consistent event handler parameter names in event maps
 
 ## Core API
 * *currently no rules implemented*
@@ -87,10 +91,10 @@ See [ESLint documentation](http://eslint.org/docs/user-guide/configuring#extendi
 The rules enabled in this configuration are:
 - [audit-argument-checks](docs/rules/audit-argument-checks.md)
 - [no-session](docs/rules/no-session.md)
-- [no-blaze-lifecycle-assignment](docs/rules/no-blaze-lifecycle-assignment.md)
+- [no-template-lifecycle-assignments](docs/rules/no-template-lifecycle-assignments.md)
 - [no-zero-timeout](docs/rules/no-zero-timeout.md)
-- [blaze-consistent-eventmap-params](docs/rules/blaze-consistent-eventmap-params.md)
-- [template-naming-convention](docs/rules/template-naming-convention.md)
+- [eventmap-params](docs/rules/eventmap-params.md)
+- [template-names](docs/rules/template-names.md)
 
 ## Limitations
 

@@ -9,7 +9,7 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-import rule from '../../../lib/rules/no-blaze-lifecycle-assignment'
+import rule from '../../../lib/rules/no-template-lifecycle-assignments'
 import { RuleTester } from 'eslint'
 
 // -----------------------------------------------------------------------------
@@ -19,7 +19,7 @@ import { RuleTester } from 'eslint'
 const ruleTester = new RuleTester()
 
 
-ruleTester.run('no-blaze-lifecycle-assignment', rule, {
+ruleTester.run('no-template-lifecycle-assignments', rule, {
   valid: [
     'x += 1',
     'Template = true',

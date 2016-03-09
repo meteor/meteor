@@ -1,4 +1,4 @@
-# Force a naming convention for templates (template-naming-convention)
+# Force a naming convention for templates (template-names)
 
 When it comes to naming templates there are multiple naming conventions available. Enforce one of them with this rule.
 
@@ -14,7 +14,7 @@ The following patterns are considered warnings:
 
 ```js
 
-/*eslint meteor/template-naming-convention: [2, "camel-case"]*/
+/*eslint meteor/template-names: [2, "camel-case"]*/
 Template.foo_bar.onCreated
 Template.foo_bar.onRendered
 Template.foo_bar.onDestroyed
@@ -33,18 +33,18 @@ The following patterns are not warnings:
 
 ```js
 
-/*eslint meteor/template-naming-convention: [2, "camel-case"]*/
+/*eslint meteor/template-names: [2, "camel-case"]*/
 Template.fooBar.onCreated
 Template.fooBar.onRendered
 Template.fooBar.onDestroyed
 Template.fooBar.events
 Template.fooBar.helpers
 
-/*eslint meteor/template-naming-convention: [2, "pascal-case"]*/
+/*eslint meteor/template-names: [2, "pascal-case"]*/
 Template.FooBar.onCreated
 /* .. */
 
-/*eslint meteor/template-naming-convention: [2, "snake-case"]*/
+/*eslint meteor/template-names: [2, "snake-case"]*/
 Template.foo.onCreated
 Template.foo_bar.onCreated
 
@@ -57,7 +57,7 @@ This rule accepts a single options argument with the following defaults:
 ```json
 {
     "rules": {
-        "template-naming-convention": [2, "camel-case"]
+        "template-names": [2, "camel-case"]
     }
 }
 ```
