@@ -1631,6 +1631,8 @@ class JsImage {
         node_modules: {}
       };
 
+      const nonLocalNodeModulesPaths = [];
+
       _.each(item.nodeModulesDirectories, nmd => {
         // We need to make sure to use the directory name we got from
         // builder.generateFilename here.
@@ -1645,8 +1647,20 @@ class JsImage {
 
           loadItem.node_modules[generatedNMD.preferredBundlePath] =
             generatedNMD.toJSON();
+
+          if (nmd.packageName && ! nmd.local) {
+            nonLocalNodeModulesPaths.push(generatedNMD.preferredBundlePath);
+          }
         }
       });
+
+      if (nonLocalNodeModulesPaths.length > 0) {
+        // For backwards compatibility, we unfortunately can only write
+        // node_modules as a single string.
+        loadItem.node_modules = nonLocalNodeModulesPaths[0];
+      } else {
+        delete loadItem.node_modules;
+      }
 
       if (item.sourceMap) {
         // Reference the source map in the source. Looked up later by

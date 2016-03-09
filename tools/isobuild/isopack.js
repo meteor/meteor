@@ -1268,7 +1268,8 @@ _.extend(Isopack.prototype, {
         }
 
         // Figure out where the npm dependencies go.
-        const node_modules = {};
+        let node_modules = {};
+        const nonLocalNodeModulesPaths = [];
         _.each(unibuild.nodeModulesDirectories, nmd => {
           const bundlePath = _.has(npmDirsToCopy, nmd.sourcePath)
             // We already have this npm directory from another unibuild.
@@ -1278,7 +1279,19 @@ _.extend(Isopack.prototype, {
               { directory: true }
             );
           node_modules[bundlePath] = nmd.toJSON();
+
+          if (nmd.packageName && ! nmd.local) {
+            nonLocalNodeModulesPaths.push(bundlePath);
+          }
         });
+
+        if (nonLocalNodeModulesPaths.length > 0) {
+          // For backwards compatibility, we unfortunately can only write
+          // node_modules as a single string.
+          node_modules = nonLocalNodeModulesPaths[0];
+        } else {
+          node_modules = undefined;
+        }
 
         // Construct unibuild metadata
         var unibuildJson = {
