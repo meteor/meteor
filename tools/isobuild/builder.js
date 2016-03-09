@@ -483,11 +483,9 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         if (isDirectory) {
           walk(thisAbsFrom, thisRelTo);
 
-        } else if (canSymlink) {
+        } else if (fileStatus.isSymbolicLink()) {
           symlinkWithOverwrite(
-            fileStatus.isSymbolicLink()
-              ? files.readlink(thisAbsFrom)
-              : thisAbsFrom,
+            files.readlink(thisAbsFrom),
             files.pathResolve(this.buildPath, thisRelTo)
           );
 
