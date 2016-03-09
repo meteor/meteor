@@ -9,8 +9,8 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-const rule = require('../../../lib/rules/no-blaze-lifecycle-assignment')
-const RuleTester = require('eslint').RuleTester
+import rule from '../../../lib/rules/no-blaze-lifecycle-assignment'
+import { RuleTester } from 'eslint'
 
 // -----------------------------------------------------------------------------
 // Tests
