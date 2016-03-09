@@ -455,14 +455,23 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       this._ensureDirectory(relTo);
 
       files.readdir(absFrom).forEach(item => {
-        const thisAbsFrom = files.pathResolve(absFrom, item);
         const thisRelTo = files.pathJoin(relTo, item);
 
         if (specificPaths && !(thisRelTo in specificPaths)) {
           return;
         }
 
-        const fileStatus = files.lstat(thisAbsFrom);
+        let thisAbsFrom = files.pathResolve(absFrom, item);
+        let fileStatus = files.lstat(thisAbsFrom);
+
+        while (fileStatus.isSymbolicLink()) {
+          thisAbsFrom = files.pathResolve(
+            files.pathDirname(thisAbsFrom),
+            files.readlink(thisAbsFrom)
+          );
+
+          fileStatus = files.lstat(thisAbsFrom);
+        }
 
         let itemForMatch = item;
         const isDirectory = fileStatus.isDirectory();
