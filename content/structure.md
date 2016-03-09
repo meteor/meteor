@@ -27,6 +27,29 @@ You can read about the module system in detail in the [`modules` package README]
 
 In Meteor, it is also simple and straightforward to use the `import` syntax to load NPM packages on the client or server, and access the package's exported symbols as you would with any other module. You can also import from Atmosphere packages, but the import path must be prefixed with `meteor` to avoid conflict with the NPM package namespace. For example, to import `HTTP` you can do `import { HTTP } from 'meteor/http'`.
 
+<h3 id="using-require">Using `require`</h3>
+
+In Meteor, `import` statements compile to CommonJS `require` syntax. However, we encourage you to use `import`. 
+
+With that said, in some situations you may need to call out to `require` directly. One notable example is when requiring client or server-only code from a common file. As `import`s must be at the top-level scope, you may not place them within an `if` statement, so you'll need to write code like:
+
+```js
+if (Meteor.isClient) {
+  require('./client-only-file.js');
+}
+```
+
+Note that dynamic calls to `require()` (where the name being required can change at runtime) cannot be analyzed correctly and may result in broken client bundles. 
+
+If you need to `require` from a ES2015 module with a `default` export, you can grab the export with `require("package").default`.
+
+Another situation where you'll need to use `require` is in CoffeScript files. As CS doesn't support the `import` syntax yet, you should use `require` (read more about it in the [modules documentation](https://github.com/meteor/meteor/tree/release-1.3/packages/modulescoffeescript-syntax)):
+
+```cs
+{ FlowRouter } = require 'meteor/kadira:flow-router'
+React = require 'react'
+```
+
 <h2 id="javascript-structure">File structure</h2>
 
 To fully use the module system and ensure that our code only runs when we ask it to, we recommend that all of your application code should be placed in the `imports/` directory. This means that the Meteor build system will only bundle and include that file if it is referenced from another file using an `import`.
