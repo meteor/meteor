@@ -39,12 +39,8 @@ Add these keys to your `.eslintrc.json` file:
 
 ```json
 {
-  "plugins": [
-    "meteor"
-  ],
-  "extends": [
-    "plugin:meteor/recommended",
-  ]
+  "plugins": ["meteor"],
+  "extends": ["plugin:meteor/recommended"]
 }
 ```
 
