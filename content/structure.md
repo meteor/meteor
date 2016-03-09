@@ -31,7 +31,7 @@ In Meteor, it is also simple and straightforward to use the `import` syntax to l
 
 In Meteor, `import` statements compile to CommonJS `require` syntax. However, we encourage you to use `import`. 
 
-However, in some situations you may need to call out to `require` directly. One notable example is when requiring client or server-only code from a common file. As `import`s must be at the top-level scope, you may not place them within an `if` statement, so you'll need to write code like:
+With that said, in some situations you may need to call out to `require` directly. One notable example is when requiring client or server-only code from a common file. As `import`s must be at the top-level scope, you may not place them within an `if` statement, so you'll need to write code like:
 
 ```js
 if (Meteor.isClient) {
@@ -40,6 +40,8 @@ if (Meteor.isClient) {
 ```
 
 Note that dynamic calls to `require()` (where the name being required can change at runtime) cannot be analyzed correctly and may result in broken client bundles. 
+
+If you need to `require` from a ES2015 module with a `default` export, you can grab the export with `require("package").default`.
 
 Another situation where you'll need to use `require` is in CoffeScript files. As CS doesn't support the `import` syntax yet, you should use `require` (read more about it in the [modules documentation](https://github.com/meteor/meteor/tree/release-1.3/packages/modulescoffeescript-syntax)):
 
