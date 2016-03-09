@@ -15,4 +15,6 @@ Package.onUse(function (api) {
 
   // This is to be run by phantomjs, not as part of normal package code.
   api.addAssets('runner.js', 'server');
+
+  api.export('runTests');
 });
