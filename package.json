@@ -80,7 +80,8 @@
   ],
   "config": {
     "ghooks": {
-      "commit-msg": "node_modules/.bin/validate-commit-msg"
+      "commit-msg": "node_modules/.bin/validate-commit-msg",
+      "pre-push": "npm test"
     },
     "commitizen": {
       "path": "node_modules/cz-conventional-changelog/"
