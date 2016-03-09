@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Retry logic with exponential backoff",
-  version: '1.0.4-beta.13'
+  version: '1.0.4-beta.16'
 });
 
 Package.onUse(function (api) {
