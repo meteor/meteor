@@ -1,4 +1,11 @@
-var TEST_METADATA = process.env.TEST_METADATA || {};
+var TEST_METADATA_STR;
+if (Meteor.isClient) {
+  TEST_METADATA_STR = meteorEnv.TEST_METADATA;
+} else {
+  TEST_METADATA_STR = process.env.TEST_METADATA;
+}
+
+var TEST_METADATA = JSON.parse(TEST_METADATA_STR || "{}");
 
 Meteor.isTest = !!TEST_METADATA.isTest;
 Meteor.isAppTest = !!TEST_METADATA.isAppTest;
