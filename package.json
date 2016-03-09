@@ -11,7 +11,8 @@
   },
   "scripts": {
     "build": "babel lib -d dist --optional runtime",
-    "check-coverage": "nyc check-coverage --lines 100 --functions 100 --branches 100",
+    "coverage:check": "nyc check-coverage --lines 100 --functions 100 --branches 100",
+    "coverage:report": "nyc report",
     "clean": "rimraf dist",
     "coveralls": "cat ./coverage/lcov.info | coveralls",
     "lint": "eslint ./",
@@ -20,7 +21,7 @@
     "pretest": "npm run lint",
     "rule": "babel scripts/new-rule.js | node",
     "semantic-release": "semantic-release pre && npm publish && semantic-release post",
-    "test": "npm run unit-test && npm run check-coverage",
+    "test": "npm run unit-test && npm run coverage:report && npm run coverage:check",
     "unit-test": "nyc --require=babel-register --reporter=lcov mocha tests --recursive",
     "unit-test:w": "npm run unit-test -s -- --watch"
   },
