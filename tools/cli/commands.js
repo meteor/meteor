@@ -1781,6 +1781,7 @@ var runTestAppForPackages = function (projectContext, options) {
       debugPort: options['debug-port'],
       disableOplog: options['disable-oplog'],
       settingsFile: options.settings,
+      testMetadata: global.testCommandMetadata,
       banner: options['show-test-app-path'] ? null : "Tests",
       buildOptions: buildOptions,
       rootUrl: process.env.ROOT_URL,
