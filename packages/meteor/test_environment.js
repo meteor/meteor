@@ -15,7 +15,7 @@ if (Meteor.isClient && (Meteor.isTest || Meteor.isAppTest)) {
   Meteor.startup(function() {
     var testDriverPackage = Package[TEST_METADATA.driverPackage];
     if (!testDriverPackage) {
-      throw new Error("Can't find test driver package: " + TEST_METADATA.driverPackage + "}");
+      throw new Error("Can't find test driver package: " + TEST_METADATA.driverPackage);
     }
 
     if (!testDriverPackage.runTests) {

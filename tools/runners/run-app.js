@@ -197,7 +197,7 @@ _.extend(AppProcess.prototype, {
     if (self.testMetadata) {
       env.TEST_METADATA = JSON.stringify(self.testMetadata);
     } else {
-     delete env.TEST_METADATA; 
+      delete env.TEST_METADATA; 
     }
     if (self.listenHost) {
       env.BIND_IP = self.listenHost;
