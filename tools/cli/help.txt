@@ -512,10 +512,7 @@ then all available packages will be tested.
 
 Open the test dashboard in your browser to run the tests and see the
 results. By default the URL is localhost:3000 but that can be changed
-with --port. Alternatively, you can deploy the tests onto the 'meteor
-deploy' server by using --deploy. This gives you a public URL that you
-can use in conjunction with a service like Browserling or BrowserStack
-to try the tests against many different browser versions.
+with --port. 
 
 Options:
   --port, -p        Port to listen on (instead of the default 3000). Also
@@ -529,8 +526,6 @@ Options:
                     port that the Meteor server binds to. Can include a
                     URL scheme (for example,
                     --mobile-server=https://example.com:443).
-  --deploy          Optionally, specify a domain to deploy to, rather than
-                    running locally.
   --production      Simulate production mode. Minify and bundle CSS, JS files.
   --settings        Set optional data for Meteor.settings on the server
 
@@ -569,10 +564,7 @@ loaded similarly to unit test mode, but must be called *.app-test[s].* or
 
 Open the test dashboard in your browser to run the tests and see the
 results. By default the URL is localhost:3000 but that can be changed
-with --port. Alternatively, you can deploy the tests onto the 'meteor
-deploy' server by using --deploy. This gives you a public URL that you
-can use in conjunction with a service like Browserling or BrowserStack
-to try the tests against many different browser versions.
+with --port. 
 
 Read more about testing your application in the Testing Article of the
 Meteor Guide - https://guide.meteor.com/testing.html
@@ -589,8 +581,6 @@ Options:
                     port that the Meteor server binds to. Can include a
                     URL scheme (for example,
                     --mobile-server=https://example.com:443).
-  --deploy          Optionally, specify a domain to deploy to, rather than
-                    running locally.
   --production      Simulate production mode. Minify and bundle CSS, JS files.
   --settings        Set optional data for Meteor.settings on the server
 
