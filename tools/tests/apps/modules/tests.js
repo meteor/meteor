@@ -141,28 +141,20 @@ describe("css modules", () => {
   });
 
   it("should be importable by an app", () => {
-    assert.strictEqual(
-      $(".app-lazy-css").css("display"),
-      "block"
-    );
-
+    assert.strictEqual($(".app-lazy-css").css("padding"), "0px");
     require("./imports/lazy.css");
-
-    assert.strictEqual(
-      $(".app-lazy-css").css("display"),
-      "none"
-    );
+    assert.strictEqual($(".app-lazy-css").css("padding"), "10px");
   });
 
   it("should be importable by a package", () => {
     assert.strictEqual(
-      $(".pkg-lazy-css.imported").css("display"),
-      "none"
+      $(".pkg-lazy-css.imported").css("padding"),
+      "20px"
     );
 
     assert.strictEqual(
-      $(".pkg-lazy-css.not-imported").css("display"),
-      "block"
+      $(".pkg-lazy-css.not-imported").css("padding"),
+      "0px"
     );
   });
 });
