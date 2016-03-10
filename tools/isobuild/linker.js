@@ -588,11 +588,15 @@ _.extend(File.prototype, {
       noLineNumbers = true;
     }
 
+    let consumer;
+
     if (self.sourceMap) {
       result = {
         code: self.source,
         map: self.sourceMap
       };
+
+      consumer = new sourcemap.SourceMapConsumer(result.map);
 
     } else if (noLineNumbers && preserveLineNumbers) {
       // No need to generate a source map if we don't want line numbers.
@@ -602,40 +606,23 @@ _.extend(File.prototype, {
       };
 
     } else {
-      // If we're planning to annotate the source with line number
-      // comments (e.g. because we're combining this file with others in a
-      // package), and we don't already have a source map, then we need to
-      // generate one, so that we don't have to write two different
-      // versions of the code for annotating line numbers, and also so
-      // that browsers that support source maps can display a prettier
-      // version of this file without the line number comments.
-      var smg = new sourcemap.SourceMapGenerator({
-        file: self.servePath
-      });
-
-      lines = self.source.split("\n");
-
-      _.each(lines, function (line, i) {
-        var start = { line: i + 1, column: 0 };
-        smg.addMapping({
-          original: start,
-          generated: start,
-          source: self.servePath
-        });
-      });
-
-      smg.setSourceContent(self.servePath, self.source);
-
       result = {
         code: self.source,
-        map: smg.toJSON()
+        map: null
       };
+
+      // Generating line number comments for really big files is not
+      // really worth it when there's no meaningful self.sourceMap.
+      if (self.source.length < 500000) {
+        consumer = {
+          originalPositionFor(pos) {
+            return pos;
+          }
+        };
+      }
     }
 
-    var smc = result.map &&
-      new sourcemap.SourceMapConsumer(result.map);
-
-    if (smc && ! noLineNumbers) {
+    if (consumer && ! noLineNumbers) {
       var padding = bannerPadding(bannerWidth);
 
       // We might have already done this split above.
@@ -643,25 +630,27 @@ _.extend(File.prototype, {
 
       // Use the SourceMapConsumer object to compute the original line
       // number for each line of result.code.
-      _.each(lines, function (line, i) {
+      for (var i = 0, lineCount = lines.length; i < lineCount; ++i) {
+        var line = lines[i];
         var len = line.length;
         if (len < width &&
             line[len - 1] !== "\\") {
-          var pos = smc.originalPositionFor({
+          var pos = consumer.originalPositionFor({
             line: i + 1,
             column: 0
           });
 
           if (pos) {
-            lines[i] += padding.slice(len, width) + " //";
+            line += padding.slice(len, width) + " //";
             // Not all source maps define a mapping for every line in the
             // output. This is perfectly normal.
             if (typeof pos.line === "number") {
-              lines[i] += " " + pos.line;
+              line += " " + pos.line;
             }
+            lines[i] = line;
           }
         }
-      });
+      }
 
       result.code = lines.join("\n");
     }
@@ -693,13 +682,16 @@ _.extend(File.prototype, {
     }
 
     if (result.code) {
-      chunks.push(
-        // If we have a source map for result.code, push a SourceNode onto
-        // the chunks array that encapsulates that source map. If we don't
-        // have a source map, just push result.code.
-        smc ? sourcemap.SourceNode.fromStringWithSourceMap(result.code, smc)
-            : result.code
-      );
+      // If we have a source map for result.code, push a SourceNode onto
+      // the chunks array that encapsulates that source map. If we don't
+      // have a source map, just push result.code.
+      if (consumer instanceof sourcemap.SourceMapConsumer) {
+        chunks.push(sourcemap.SourceNode.fromStringWithSourceMap(
+          result.code, consumer
+        ));
+      } else {
+        chunks.push(result.code);
+      }
 
       // It's important for the code to end with a newline, so that a
       // trailing // comment can't snarf code appended after it.
