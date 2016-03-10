@@ -1641,8 +1641,7 @@ function doTestCommand(options) {
     copyDirIntoTestRunnerApp('.meteor', 'local', 'bundler-cache');
     copyDirIntoTestRunnerApp('.meteor', 'local', 'isopacks');
     copyDirIntoTestRunnerApp('.meteor', 'local', 'plugin-cache');
-    copyDirIntoTestRunnerApp('.meteor', 'local', 'build');
-
+    
     projectContext = new projectContextModule.ProjectContext(projectContextOptions);
 
     main.captureAndExit("=> Errors while setting up tests:", function () {
