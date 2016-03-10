@@ -1,5 +1,6 @@
 allow-deny@1.0.1-beta.16
 autoupdate@1.2.5-beta.16
+avital:mocha@2.1.0_10
 babel-compiler@6.5.0-beta.16
 babel-runtime@0.1.5-beta.16
 base64@1.0.5-beta.16
@@ -53,7 +54,6 @@ observe-sequence@1.0.8-beta.16
 ordered-dict@1.0.4-beta.16
 practicalmeteor:chai@2.1.0_1
 practicalmeteor:loglevel@1.2.0_2
-practicalmeteor:mocha@2.1.0_7
 practicalmeteor:mocha-core@0.1.4
 practicalmeteor:sinon@1.14.1_2
 promise@0.5.2-beta.16
@@ -71,6 +71,7 @@ standard-minifier-js@1.0.3-beta.16
 standard-minifiers@1.0.3-beta.16
 templating@1.1.6-beta.16
 templating-tools@1.0.1-beta.16
+tmeasday:test-reporter-helpers@0.2.0
 tracker@1.0.10-beta.16
 ui@1.0.8-beta.16
 underscore@1.0.5-beta.16
