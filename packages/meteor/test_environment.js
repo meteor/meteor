@@ -13,15 +13,21 @@ Meteor.isAppTest = !!TEST_METADATA.isAppTest;
 
 if (Meteor.isClient && (Meteor.isTest || Meteor.isAppTest)) {
   Meteor.startup(function() {
-    var testDriverPackage = Package[TEST_METADATA.driverPackage];
-    if (!testDriverPackage) {
-      throw new Error("Can't find test driver package: " + TEST_METADATA.driverPackage);
+    var testDriverPackageName = TEST_METADATA.driverPackage;
+    if (typeof testDriverPackageName !== "string") {
+      throw new Error("No --driver-package specified for `meteor test`");
     }
 
-    if (!testDriverPackage.runTests) {
+    var testDriverPackage = Package[testDriverPackageName];
+    if (! testDriverPackage) {
+      throw new Error("Can't find test driver package: " + testDriverPackageName);
+    }
+
+    if (typeof testDriverPackage.runTests !== "function") {
       throw new Error("Test driver package " + testDriverPackageName
         + " missing `runTests` export");
     }
+
     testDriverPackage.runTests();
   });
 }
