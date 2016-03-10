@@ -48,7 +48,7 @@
   },
   "devDependencies": {
     "babel-cli": "6.6.5",
-    "babel-core": "6.7.0",
+    "babel-core": "6.7.2",
     "babel-eslint": "5.0.0",
     "babel-plugin-transform-object-rest-spread": "6.6.5",
     "babel-plugin-transform-runtime": "6.6.0",
