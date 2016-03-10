@@ -14,67 +14,118 @@ Automated testing allows you to do all of these things to a much greater degree 
 
 Entire books have been written on the subject of testing, so we will simply touch on some basics of testing here. The important thing to consider when writing a test is what part of the application you are trying to test, and how you are verifying the behaviour works.
 
-If you are testing one small module of your application, you are writing a *unit test*. You'll need to take steps to *stub* and *mock* other modules that your module usually leverages in order to *isolate* each test. You'll typically also need to *spy* on actions that the module takes to verify that they occur.
+ - If you are testing one small module of your application, you are writing a **unit test**. You'll need to take steps to *stub* and *mock* other modules that your module usually leverages in order to *isolate* each test. You'll typically also need to *spy* on actions that the module takes to verify that they occur.
 
-If you are testing that multiple modules behave properly in concert, you are writing an *integration test*. Such tests are much more complex and may require running code both on the client and on the server to verify that communication across that divide is working as expected. Typically an integration test will still isolate a part of the entire application and directly verify results in code.
+ - If you are testing that multiple modules behave properly in concert, you are writing an **integration test**. Such tests are much more complex and may require running code both on the client and on the server to verify that communication across that divide is working as expected. Typically an integration test will still isolate a part of the entire application and directly verify results in code.
 
-If you want to write a test that can be run against any running version of your app and verifies at the browser level that the right things happen when you push the right buttons, then you are writing an *acceptance* or *end-to-end (e2e) test*. Such tests typically try to hook into the application as little as possible, beyond perhaps setting up the right data to run a test against.
+ - If you want to write a test that can be run against any running version of your app and verifies at the browser level that the right things happen when you push the right buttons, then you are writing an **acceptance test** (sometimes called "end to end test". Such tests typically try to hook into the application as little as possible, beyond perhaps setting up the right data to run a test against.
 
-Finally you may wish to test that your application works under typical load or see how much load it can handle before it falls over. This is called a *load test* or *stress test*. Such tests can be challenging to set up and typically aren't run often but are very important for confidence before a big production launch.
+ - Finally you may wish to test that your application works under typical load or see how much load it can handle before it falls over. This is called a **load test** or **stress test**. Such tests can be challenging to set up and typically aren't run often but are very important for confidence before a big production launch.
 
 <h3 id="challenges-with-meteor">Challenges of testing in Meteor</h3>
 
-2. Challenges of testing a Meteor application
-  1. The client/server divide, ensuring data is available on the client
-  2. Reactivity + testing the system responds to changing data properly
+In some ways, testing a Meteor is no different to testing any other client-server, JavaScript heavy application. However, especially compared to a more backend focussed, traditional framework, the client-server divide and the reactive nature of code can add extra challenges to testing.
 
+As Meteor's data system makes it simple to bridge the client-server gap and often allows you to create your application without thinking about how data moves around, it becomes critical to test that your code does actually work correctly across that gap. In traditional frameworks where you spend a lot of time thinking about interfaces between client and server, you can often get away with testing both sides of the interface in isolation.
+
+The good news is that you can easily use Meteor's [full app test mode](#test-modes) to write [integration tests](#full-app-integration-test) that bridge both sides of the gap relatively easily.
+
+Another challenge is creating test data in the client context; we'll discuss ways to do this in the [section on generating test data](#generating-test-data) below. 
+
+As Meteor's reactivity system is "eventually consistent" in the sense that when you change an reactive input to the system, some time later you'll see the user interface change to reflect this. This is a challenge when testing, however there are some ways to wait until those changes should have happened and verify the results, as we'll see in the [Blaze unit test](XXX link) below.
 
 <h2 id="test-modes">Test modes in Meteor</h2>
 
-- Various ways to run your application that allows different testing modalities
+The primary way to test your application in Meteor is the `meteor test` command. 
 
-- `meteor test` simply loads your test files and allows you to import modules you want to test
+This loads your application in a special "test mode". What this does is:
 
-- `meteor test --full-app` runs your app as usual with extra test files included
+ 1. *Doesn't* eagerly load *any* of our application code as Meteor normally would.
+ 2. *Does* eagerly load any file in our application (including in `imports/` folders) that look like `*.test[s].*`, or `*.spec[s].*`
+ 3. Sets the `Meteor.isTest` flag to be true.
+ 4. Starts up the test driver package ([see below](#driver-package)).
 
-- `meteor test-packages` is a way of testing Atmosphere packages, which we'll discuss in more detail in the [Writing Packages Article](writing-packages.html).
+What this means is that you can write tests in files with a certain filename pattern and know they'll not be included in normal builds of your app. When your app runs in test mode, those files will be loaded (and nothing else will), and they can import the modules you want to test. As we'll see this is ideal for [unit tests](#unit-testing) and [simple integration tests](#simple-integration-test).
+
+Additionally, Meteor offers a "full application" test mode. You can run this with `meteor test --full-app`.
+
+This is similar to test mode, with key differences:
+
+ 1. It loads test files matching `*.app-test[s].*` and `*.app-spec[s].*`.
+ 2. It **does** eagerly load our application code as Meteor normally would.
+
+This means that the entirety of your application (including for instance the web server and client side router) is loaded and will run as normal. This enables you to write much more [complex integration tests](#full-app-integration-test) and also load additional files for [acceptance tests](#acceptance-test).
+
+Note that there is another test command in the Meteor tool; `meteor test-packages` is a way of testing Atmosphere packages, which we'll discuss in more detail in the [Writing Packages Article](writing-packages.html#testing).
 
 <h3 id="driver-packages">Driver packages</h3>
 
-A test driver is a mini-application that runs in place of your app and runs each of your defined tests (each of which `import` relevant sections of your app), whilst reporting the results in some kind of user interface.
+When you run a `meteor test` command, you must provide a `--driver-package` argument. A test driver is a mini-application that runs in place of your app and runs each of your defined tests, whilst reporting the results in some kind of user interface.
 
 There are two main kinds of test driver packages:
   -web-reporters which are Meteor applications and display a special test reporting web UI that you can view the test results in [include a SS]
 
   - console-reporters that run completely on the command-line and are primary used for automated testing like [continuous integration](#ci) (as we'll see, typically PhantomJS is used to drive such tests).
 
-While developing your app, chances are you'll want to run unit tests against a web reporter; for our example we will use a reporter that renders to Mocha's default web UI. We can add the driver simply by adding the [`avital:mocha`](https://atmospherejs.com/avital/mocha) package to our app.
+In this article, we'll use the popular [Mocha](https://mochajs.org) test runner alongside the [Chai](http://chaijs.com) assertion library to test our application. In order to write tests in Mocha, we can add the [`avital:mocha`](https://atmospherejs.com/avital/mocha) package to our app.
 
 ```bash
 meteor add avital:mocha
 ```
 
-This package also doesn't do anything in development or production mode, but when our app is run in [test](#test-mode) or [full-app](#full-app-test-mode) test mode, it takes over, running test code on both the client and server, and rendering results to the browser.
+This package also doesn't do anything in development or production mode (in fact it declares itself `testOnly` so it is not even included in those modes), but when our app is run in [test mode](#test-modes), it takes over, executing test code on both the client and server, and rendering results to the browser.
 
-In this article, we'll use the popular [Mocha](https://mochajs.org) test runner alongside the [Chai](http://chaijs.com) assertion library to test our application. In order to write tests in Mocha, we can add the [`avital:mocha`](https://atmospherejs.com/avital/mocha) package to our app.
+Test files themselves (files named `*.[app]-test[s].*` or `*.[app]-spec[s].*`) can register themselves to be run by the test driver in the usual way for that testing library. For Mocha, that's by using `describe` and `it`:
 
+```js
+describe('my module', () => {
+  it('does something that should be tested', () => {
+    // This code will be executed by the test driver when the app is started in the correct mode
+  })
+})
 ```
-meteor add avital:mocha
+
+<h2 id="test-data">Test data</h2>
+
+When your app is run in test mode, it is initialized with a clean test database.
+
+If you are running a test that relies on using the database, and specifically the content of the database, you'll need to perform some *setup* steps in your test to ensure the database is in the state you expect. There are some tools you can use to do this.
+
+To ensure the database is clean, the [`xolvio:cleaner`](https://atmospherejs.com/xolvio/cleaner) package is useful. You can use it to reset the database in a `beforeEach` block:
+
+```js
+import { resetDatabase } from 'meteor/xolvio:cleaner';
+
+describe('my module', () => {
+  beforeEach(() => {
+    resetDatabase();
+  });
+});
 ```
 
-<h3 id="testing-externally">Testing externally</h3>
+This technique will only work simply on the server. If you need to reset the database from a client test, you can use a method to do so:
 
-- Some testing utilities expect to connect to a "standard" running meteor process and "poke" it from the outside
+```js
+import { resetDatabase } from 'meteor/xolvio:cleaner';
 
-- E2e tests are typically run in this fashion
+Meteor.methods({
+  'test.resetDatabase': () => resetDatabase();
+});
 
-- You may want a way within the application to generate data for such tests. Typically you'd share such code with test mode (null test driver?)
+describe('my module', done => {
+  beforeEach(() => {
+    // We need to wait until the method call is done before moving on, so we
+    // use Mocha's async mechanism (calling a done callback)
+    Meteor.call('test.resetDatabase', done);
+  });
+});
+```
 
-<h2 id="generating-test-data">Generating test data</h2>
+As we've placed the code above in a test file, it *will not* load in normal development or production mode (which would a bad thing!). If you'd like to create a Atmosphere package with a similar feature, you should mark it as `testOnly` and it will similarly only load in test mode.
 
-- Describe testing database
+<h3 id="generating-test-data">Generating test data</h3>
 
-- Using xolvio:cleaner
+Often it's sensible to create a set of data to run your test against. You can use standard `insert()` calls against your collections to do this, but often it's easier to create *factories* which help encode random test data. A great package to use to do this is [`dburles:factory`](https://atmospherejs.com/dburles/factory).
 
 - Using factories (`dburles:factory`)
 
