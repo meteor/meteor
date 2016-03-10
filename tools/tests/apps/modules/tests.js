@@ -1,3 +1,4 @@
+import assert from "assert";
 import moment from "moment";
 import shared from "./imports/shared";
 import {Meteor as ImportedMeteor} from "meteor/meteor";
