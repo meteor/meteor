@@ -122,6 +122,26 @@ ruleTester.run('eventmap-params', rule, {
       `,
       parser: 'babel-eslint',
     },
+    {
+      code: `
+        Template.foo.events({
+          'submit form': function (evt, templateInstance) {}
+        })
+      `,
+      options: [{
+        eventParamName: 'evt',
+      }],
+    },
+    {
+      code: `
+        Template.foo.events({
+          'submit form': function (event, tmplInst) {}
+        })
+      `,
+      options: [{
+        templateInstanceParamName: 'tmplInst',
+      }],
+    },
   ],
 
   invalid: [
@@ -212,6 +232,58 @@ ruleTester.run('eventmap-params', rule, {
       errors: [
         { message: 'Invalid parameter name, use "event" instead', type: 'Identifier' },
         { message: 'Invalid parameter name, use "templateInstance" instead', type: 'Identifier' },
+      ],
+    },
+    {
+      code: `
+        Template.foo.events({
+          'submit form': function (foo, templateInstance) {}
+        })
+      `,
+      options: [{
+        eventParamName: 'evt',
+      }],
+      errors: [
+        { message: 'Invalid parameter name, use "evt" instead', type: 'Identifier' },
+      ],
+    },
+    {
+      code: `
+        Template.foo.events({
+          'submit form': function (foo, instance) {}
+        })
+      `,
+      options: [{
+        templateInstanceParamName: 'instance',
+      }],
+      errors: [
+        { message: 'Invalid parameter name, use "event" instead', type: 'Identifier' },
+      ],
+    },
+    {
+      code: `
+      Template.foo.events({
+        'submit form': function (evt, foo) {}
+      })
+      `,
+      options: [{
+        eventParamName: 'evt',
+      }],
+      errors: [
+        { message: 'Invalid parameter name, use "templateInstance" instead', type: 'Identifier' },
+      ],
+    },
+    {
+      code: `
+      Template.foo.events({
+        'submit form': function (event, foo) {}
+      })
+      `,
+      options: [{
+        templateInstanceParamName: 'instance',
+      }],
+      errors: [
+        { message: 'Invalid parameter name, use "instance" instead', type: 'Identifier' },
       ],
     },
   ],
