@@ -106,64 +106,6 @@ If you are using Galaxy (or need a production quality, managed MongoDB for one o
 
 You can obtain a server running Ubuntu or Debian from many generic hosting providers. Mup can SSH into your server with the keys you provide in the config. You can also [watch this video](https://www.youtube.com/watch?v=WLGdXtZMmiI) for a more complete walkthrough on how to do it.
 
-<h3 id="free-hosting">Basic meteor.com hosting</h3>
-
-If you are in the process of developing your application and want to see how it behaves online, or share it with a small group without needing a full production setup, you can get started quickly on the free hosting available at `meteor.com`. We do **not** recommend hosting critical apps on a subdomain of meteor.com. Each app runs in a single process, and this free service is not capable of scaling to support production workloads.
-
-Deploying is simple, just type:
-
-```bash
-meteor deploy your-app.meteor.com
-```
-
-This will bundle your application from the current directory, upload it, and serve it from https://your-app.meteor.com. Along the way it'll provision you with a MongoDB database and mail setup and configure (via the ENV) your app to run.
-
-To enable SSL for your free-hosted app, simply add the `force-ssl` package to your app:
-
-```bash
-meteor add force-ssl
-```
-
-We provide this as a free service so you can try Meteor. It is also helpful for quickly putting up internal betas, demos, and so on. It is not intended to deploy production applications. Also note that if your application does not receive any traffic for six months it will be deleted.
-
-<h4 id="managing-free-hosting">Managing your meteor.com app</h4>
-
-There are few handy tips for managing your deployed application. To deploy with a `settings.json` file, use:
-
-```bash
-meteor deploy your-app.meteor.com --settings settings.json
-```
-
-To delete the app, you can type:
-
-```bash
-meteor deploy --delete your-app.meteor.com
-```
-
-To allow others to deploy the app, you can add them to the authorized user list with:
-
-```bash
-meteor authorized your-app.meteor.com --add <user-or-organization>
-```
-
-You can view the latest logs with
-
-```bash
-meteor logs your-app.meteor.com
-```
-
-Finally, if you want to access the mongo database for your app directly, you can use
-
-```bash
-meteor mongo your-app.meteor.com
-```
-
-You can read more details about how to use these commands by using the help command:
-
-```bash
-meteor help deploy
-```
-
 <h3 id="custom-deployment">Custom deployment</h3>
 
 If you want to figure out your hosting solution completely from scratch, the Meteor tool has a command `meteor build` that creates a deployment bundle that contains a plain Node.js application. You can host this application wherever you like and there are many options in terms of how you set it up and configure it.
