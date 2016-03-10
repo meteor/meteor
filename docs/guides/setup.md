@@ -8,7 +8,7 @@ This document describes how to set up ESLint and ESLint-plugin-Meteor in Meteor 
 This guide assumes you have [npm](https://www.npmjs.com/) installed.
 
 ## Setup
-Meteor 1.3 supports npm packages out of the box. If you don't have a `package.json` at the root of your Meteor project, create one with `npm init --yes`. Next, add `private: true` to your package (to avoid some warnings and prevent publishing your project to npm's registry accidentally).
+If you don't have a `package.json` at the root of your Meteor project, create one with `npm init --yes`. Next, add `private: true` to your package (to avoid some warnings and prevent publishing your project to npm's registry accidentally).
 
 Now, install ESLint and ESLint-plugin-Meteor as development dependencies:
 
@@ -38,6 +38,8 @@ And that's it 🎉!
 
 More information on setting up ESLint can be found [here](http://eslint.org/docs/user-guide/configuring).
 
+An article with detailed setup instructions specifically for Meteor projects can be found [here](https://medium.com/@dferber90/linting-meteor-8f229ebc7942).
+
 ## Tips
 
 Here are some more tips to further improve the setup.
@@ -45,11 +47,15 @@ Here are some more tips to further improve the setup.
 
 ### Add environments
 An environment tells ESLint about defined globals.
-Since Meteor code can run in the browser and on the server, it's wise to add `browser` and `node`. As Meteor supports ES2015, `es6` should be added as well. And of course the `meteor` environment itself.
+Since Meteor code can run in the browser and on the server, it's wise to add `browser` and `node`. As Meteor supports ES2015, `es6` should be added as well. And of course the `meteor` environment itself. Since Meteor 1.3 applications can use modules, they should be enabled for ESLint as well.
 
 ```js
 {
   /* ... */
+  "parserOptions": {
+    "ecmaVersion": 6,
+    "sourceType": "module",
+  },
   "env": {
     "es6": true,
     "browser": true,
@@ -135,7 +141,3 @@ If `.eslintrc.json` is renamed to `.eslint.yaml` then the full configuration can
     moment: false # exported by momentjs:moment
     # ..
 ```
-
-### Meteor 1.2 and lower
-
-Read through [Using npm modules for Meteor tooling](https://medium.com/@dferber90/using-npm-modules-for-meteor-tooling-d70c162d058#.ro83m7f48) and create a similar file structure. Then follow the steps outlined above.

@@ -46,6 +46,8 @@ Add these keys to your `.eslintrc.json` file:
 
 For a more thorough introduction, read the [setup guide](/docs/guides/setup.md).
 
+An article with detailed setup instructions can be found [here](https://medium.com/@dferber90/linting-meteor-8f229ebc7942).
+
 # List of supported rules
 
 ## Best Practices
