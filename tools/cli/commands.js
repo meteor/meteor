@@ -1624,28 +1624,24 @@ function doTestCommand(options) {
     projectContextOptions.projectLocalDir = files.pathJoin(testRunnerAppDir, '.meteor', 'local');
 
     // Copy the existing build and isopacks to speed up the initial start
-    if (files.exists(files.pathJoin(options.appDir, '.meteor', 'local'))) {
-      files.cp_r(
-        files.pathJoin(options.appDir, '.meteor', 'local', 'build'),
-        files.pathJoin(testRunnerAppDir, '.meteor', 'local', 'build'),
-        {preserveSymlinks: true}
-      );
-      files.cp_r(
-        files.pathJoin(options.appDir, '.meteor', 'local', 'bundler-cache'),
-        files.pathJoin(testRunnerAppDir, '.meteor', 'local', 'bundler-cache'),
-        {preserveSymlinks: true}
-      );
-      files.cp_r(
-        files.pathJoin(options.appDir, '.meteor', 'local', 'isopacks'),
-        files.pathJoin(testRunnerAppDir, '.meteor', 'local', 'isopacks'),
-        {preserveSymlinks: true}
-      );
-      files.cp_r(
-        files.pathJoin(options.appDir, '.meteor', 'local', 'plugin-cache'),
-        files.pathJoin(testRunnerAppDir, '.meteor', 'local', 'plugin-cache'),
-        {preserveSymlinks: true}
-      );
+    const copyDirIntoTestRunnerApp = (...parts) => {
+      // Depending on whether the user has run `meteor run` or other commands, they
+      // may or may not exist yet
+      const appDirPath = files.pathJoin(options.appDir, ...parts);
+      if (files.exists(appDirPath)) {
+        files.cp_r(
+          appDirPath,
+          files.pathJoin(testRunnerAppDir, ...parts),
+          {preserveSymlinks: true}
+        );
+      }
     }
+
+    copyDirIntoTestRunnerApp('.meteor', 'local', 'build');
+    copyDirIntoTestRunnerApp('.meteor', 'local', 'bundler-cache');
+    copyDirIntoTestRunnerApp('.meteor', 'local', 'isopacks');
+    copyDirIntoTestRunnerApp('.meteor', 'local', 'plugin-cache');
+    copyDirIntoTestRunnerApp('.meteor', 'local', 'build');
 
     projectContext = new projectContextModule.ProjectContext(projectContextOptions);
 
