@@ -600,6 +600,8 @@ export default class ImportScanner {
   }
 
   _resolveNodeModule(file, id) {
+    let resolved = null;
+
     const isNative = has(nativeModulesMap, id);
     if (isNative && archMatches(this.bundleArch, "os")) {
       // Forbid installing any server module with the same name as a
@@ -607,15 +609,48 @@ export default class ImportScanner {
       return null;
     }
 
-    let dir = pathJoin(this.sourceRoot, file.sourcePath);
-    let resolved = this._joinAndStat(dir);
-    if (! resolved || ! resolved.stat.isDirectory()) {
-      dir = pathDirname(dir);
+    const absPath = pathJoin(this.sourceRoot, file.sourcePath);
+
+    let sourceRoot;
+    if (! file.sourcePath.startsWith("..")) {
+      // If the file is contained by this.sourceRoot, then it's safe to
+      // use this.sourceRoot as the limiting ancestor directory in the
+      // while loop below, but we're still going to check whether the file
+      // resides in an external node_modules directory, since "external"
+      // .npm/package/node_modules directories are technically contained
+      // within the root directory of their packages.
+      sourceRoot = this.sourceRoot;
     }
 
-    while (! (resolved = this._joinAndStat(dir, "node_modules", id)) &&
-           dir !== this.sourceRoot) {
-      dir = pathDirname(dir);
+    this.nodeModulesPaths.some(path => {
+      if (! pathRelative(path, absPath).startsWith("..")) {
+        // If the file is inside an external node_modules directory,
+        // consider the rootDir to be the parent directory of that
+        // node_modules directory, rather than this.sourceRoot.
+        return sourceRoot = pathDirname(path);
+      }
+    });
+
+    if (sourceRoot) {
+      let dir = absPath; // It's ok for absPath to be a directory!
+      let info = this._joinAndStat(dir);
+      if (! info || ! info.stat.isDirectory()) {
+        dir = pathDirname(dir);
+      }
+
+      while (! (resolved = this._joinAndStat(dir, "node_modules", id))) {
+        if (dir === sourceRoot) {
+          break;
+        }
+
+        const parentDir = pathDirname(dir);
+        if (dir === parentDir) {
+          // We've reached the root of the file system??
+          break;
+        }
+
+        dir = parentDir;
+      }
     }
 
     if (! resolved) {
@@ -704,10 +739,10 @@ export default class ImportScanner {
       const resolved = this._joinAndStat(dirPath, main) ||
         // The _tryToResolveImportedPath method takes a file object as its
         // first parameter, but only the .sourcePath property is ever
-        // used, so we can get away with passing a fake directory file
-        // object with only that property.
+        // used, so we can get away with passing a fake file object with
+        // only that property.
         this._tryToResolveImportedPath({
-          sourcePath: pathRelative(this.sourceRoot, dirPath),
+          sourcePath: pathRelative(this.sourceRoot, pkgJsonPath),
         }, main, seenDirPaths);
 
       if (resolved) {
