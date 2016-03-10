@@ -98,7 +98,7 @@ Once you are setup with Galaxy, deployment is simple (just re-run the `meteor de
 
 <h4 id="galaxy-mongo">MongoDB hosting services to use with Galaxy</h4>
 
-If you are using Galaxy (or need a production quality, managed MongoDB for one of the other options listed here), it's usually a good idea to use a [MongoDB hosting provider](https://galaxy.meteor.com/help/configuring-mongodb). There are a variety of options out there, but a good choice is [Compose](https://compose.io). The main things to look for are support for oplog tailing, and a presence in the us-east-1 AWS region.
+If you are using Galaxy (or need a production quality, managed MongoDB for one of the other options listed here), it's usually a good idea to use a [MongoDB hosting provider](https://galaxy.meteor.com/help/configuring-mongodb). There are a variety of options out there, but a good choice is [mLab](https://mlab.com/). The main things to look for are support for oplog tailing, and a presence in the us-east-1 AWS region.
 
 <h3 id="mup">Meteor Up</h3>
 
