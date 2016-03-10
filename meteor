@@ -130,6 +130,15 @@ if [ "$(ulimit -n)" != "unlimited" ] ; then
     ulimit -n 512 > /dev/null 2>&1
 fi
 
+# Make it very easy to run Meteor's exact versions of node and npm with
+# the commands `meteor node ...` and `meteor npm ...`
+BUNDLE_CMD="$DEV_BUNDLE/bin/$1"
+if [ -x "$BUNDLE_CMD" ]
+then
+    shift
+    exec "$BUNDLE_CMD" "$@"
+fi
+
 # We used to set $NODE_PATH here to include the node_modules from the dev
 # bundle, but now we just get them from the symlink at tools/node_modules. This
 # is better because node_modules directories found via the ancestor walk from
