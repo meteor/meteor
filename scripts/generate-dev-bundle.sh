@@ -44,12 +44,6 @@ else
     curl "${MONGO_URL}" | tar zx
 fi
 
-# Copy bundled npm to temporary directory so we can restore it later
-# We do this because the bundled node is built using PORTABLE=1,
-# which makes npm look for node relative to it's own directory
-# See build-node-for-dev-bundle.sh
-cp -R "$DIR/lib/node_modules/npm" "$DIR/bundled-npm"
-
 # export path so we use the downloaded node and npm
 export PATH="$DIR/bin:$PATH"
 
@@ -161,10 +155,6 @@ if [ "$INSTALLED_NPM_VERSION" != "2.14.22" ]; then
   echo "Update this check if you know what you're doing."
   exit 1
 fi
-
-# Overwrite lib/modules/npm with bundled npm from temporary directory
-rm -rf "$DIR/lib/node_modules/npm"
-mv -f "$DIR/bundled-npm" "$DIR/lib/node_modules/npm"
 
 echo BUNDLING
 
