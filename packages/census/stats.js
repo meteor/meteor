@@ -1,16 +1,17 @@
 const Os = Npm.require('os');
 
 Stats = {
-  // Stats data variables which will be updated by other modules
-  currSessions: 0,
-  maxSessions: 0,
+  // Returns current sessions number
+  get currSessions() {
+    return _.size(Meteor.default_server.sessions);
+  },
 
   // Sends a request to stats server
   send(data, cb) {
     const options = {
       data: data,
       attempts: Config.reportAttempts
-    }
+    };
 
     Utils.request('PUT', Config.statsServerUrl, options, cb);
   },
@@ -23,7 +24,7 @@ Stats = {
         appSecret: Config.appSecret,
         rootUrl: Config.rootUrl,
         version: Meteor.release,
-        maxSessions: Stats._maxSessions
+        maxSessions: Stats.maxSessions
       },
       context: {
         app:{

@@ -2,16 +2,16 @@ const Os = Npm.require('os');
 
 Utils = {
   // Sends a non-blocking request
-  request(method, url, options, callback) {
+  request(method, url, options, cb) {
     options = _.clone(options);
 
     HTTP.call(method, url, options, Meteor.bindEnvironment((err, result) => {
       // If attempts are still left, keep trying
       if (err && options.attempts--)
-        Utils.request(options, callback);
+        Utils.request(options, cb);
       // If request has been succeeded or no more attempts left, invoke callback
       else
-        callback(err, result);
+        cb(err, result);
     }));
   },
 

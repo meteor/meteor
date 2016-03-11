@@ -8,7 +8,7 @@ Census = {
 
   // Starts sampling app stats
   startSampling() {
-    Stats.maxSessions = Stats.currSessions = 0;
+    Stats.maxSessions = Stats.currSessions;
     reportIntervalId = Meteor.setInterval(Reporter, Config.reportRate);
     onConnectListener = Meteor.onConnection(onConnectHandler);
   },
@@ -21,13 +21,7 @@ Census = {
 };
 
 // Once a connection has been made
-onConnectHandler = (connection) => {
-  connection.onClose(onDisconnectHandler);
+const onConnectHandler = () => {
   // Update max sessions as well if needed
-  if (++Stats.currSessions > Stats.maxSessions) ++Stats.maxSessions;
-};
-
-// Once a connection has been closed
-onDisconnectHandler = () => {
-  --Stats.currSessions;
+  if (Stats.currSessions > Stats.maxSessions) Stats.maxSessions++;
 };
