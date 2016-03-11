@@ -1,17 +1,14 @@
 # Census
 
-Meteor data sampler and reporter.
+Meteor stats sampler and reporter.
 
 #### API
 
 - report(callback) - Sends statistics collected so far. Invoke callback with error and result once finished.
+- report.onSuccess(callback) - Registers a callback which will be invoked with the result on success.
+- report.onFail(callback) - Registers a callback which will be invoked with the error on fail.
 - startSampling() - Starts sampling.
 - stopSampling() - Stops sampling.
-
-#### Events
-
-- 'report:success' - Emitted once report has been succeeded. Invokes listener with result.
-- 'report:fail' - Emitted once report has been faile. Invokes listener with error.
 
 #### Config
 

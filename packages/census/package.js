@@ -1,22 +1,24 @@
 Package.describe({
   name: 'census',
   version: '0.0.1',
-  summary: 'Meteor data sampler and reporter',
+  summary: 'Meteor stats sampler and reporter',
   documentation: 'README.md'
 });
 
 Package.onUse(function(api) {
   api.use([
+    'callback-hook',
     'ecmascript',
-    'underscore',
-    'http'
-  ]);
+    'http',
+    'underscore'
+  ], 'server');
 
   api.addFiles([
+    './setup.js',
     './utils.js',
-    './config.js',
     './stats.js',
-    './cencus.js'
+    './reporter.js',
+    './census.js'
   ], 'server');
 
   api.export('Census', 'server');
@@ -27,10 +29,10 @@ Package.onTest(function(api) {
     'census',
     'ddp',
     'ecmascript',
-    'underscore',
     'tinytest',
+    'underscore',
     'webapp'
-  ]);
+  ], 'server');
 
   api.addFiles([
     './tests/config.js',

@@ -1,4 +1,4 @@
-Tinytest.addAsync('census - maxSessions (callback)', function(test, done) {
+Tinytest.addAsync('census - maxSessions (callback)', (test, done) => {
   let onConnectListener = Meteor.onConnection((connection) => {
     onConnectListener.stop();
 
@@ -7,6 +7,7 @@ Tinytest.addAsync('census - maxSessions (callback)', function(test, done) {
         Census.stopSampling();
 
         let body = response.data.body;
+        console.log(body);
         test.equal(body.properties.maxSessions, 1);
 
         done();
@@ -18,14 +19,15 @@ Tinytest.addAsync('census - maxSessions (callback)', function(test, done) {
   DDP.connect(process.env.ROOT_URL).disconnect();
 });
 
-Tinytest.addAsync('census - maxSessions (event)', function(test, done) {
+Tinytest.addAsync('census - maxSessions (hook)', (test, done) => {
   let onConnectListener = Meteor.onConnection((connection) => {
     onConnectListener.stop();
 
     connection.onClose(() => {
       Census.report();
 
-      Census.once('report:success', (response) => {
+      let onReportListener = Census.report.onSuccess((response) => {
+        onReportListener.stop();
         Census.stopSampling();
 
         let body = response.data.body;
@@ -40,11 +42,9 @@ Tinytest.addAsync('census - maxSessions (event)', function(test, done) {
   DDP.connect(process.env.ROOT_URL).disconnect();
 });
 
-Tinytest.addAsync('census - maxSessions zeroing', function(test, done) {
-  primaryReport();
-
-  // Should have had a single collection at the peak
-  function primaryReport() {
+Tinytest.addAsync('census - maxSessions zeroing', (test, done) => {
+  // Should have had a single connection at the peak
+  let primaryReport = () => {
     let onConnectListener = Meteor.onConnection((connection) => {
       onConnectListener.stop();
 
@@ -62,14 +62,16 @@ Tinytest.addAsync('census - maxSessions zeroing', function(test, done) {
 
     Census.startSampling();
     DDP.connect(process.env.ROOT_URL).disconnect();
-  }
+  };
 
   // Should have had no connections at all
-  function secondaryReport() {
+  let secondaryReport = () => {
     Census.report((err, response) => {
       let body = response.data.body;
       test.equal(body.properties.maxSessions, 0);
       done()
     });
-  }
+  };
+
+  primaryReport();
 });
