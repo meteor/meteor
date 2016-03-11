@@ -9,7 +9,7 @@ const authorName = readlineSync.question(colors.green('What is your name? '))
 const ruleId = readlineSync.question(colors.green('What is the rule ID? '))
 const desc = readlineSync.question(colors.green('Type a short description of this rule: '))
 const failingExample = readlineSync.question(colors.green('Type a short example of the code that will fail: '))
-const escapedFailingExample = failingExample.replace('\'', '\\\'')
+const escapedFailingExample = failingExample.replace(/'/g, '\\\'')
 
 const doc = `# ${desc} (${ruleId})
 
@@ -58,10 +58,6 @@ const rule = `/**
  * See LICENSE file in root directory for full license.
  */
 
-// -----------------------------------------------------------------------------
-// Rule Definition
-// -----------------------------------------------------------------------------
-
 export default context => {
   // ---------------------------------------------------------------------------
   // Helpers
@@ -76,7 +72,6 @@ export default context => {
   return {
     // give me methods
   }
-
 }
 
 export const schema = [
@@ -92,11 +87,7 @@ const test = `/**
  * See LICENSE file in root directory for full license.
  */
 
-// -----------------------------------------------------------------------------
-// Requirements
-// -----------------------------------------------------------------------------
-
-import rule from '../../../lib/rules/${ruleId}')
+import rule from '../../../lib/rules/${ruleId}'
 import { RuleTester } from 'eslint'
 const ruleTester = new RuleTester()
 
@@ -109,10 +100,10 @@ ruleTester.run('${ruleId}', rule, {
     {
       code: '${escapedFailingExample}',
       errors: [
-        {message: 'The error message', type: 'MemberExpression'}
-      ]
-    }
-  ]
+        { message: 'The error message', type: 'MemberExpression' },
+      ],
+    },
+  ],
 })
 
 `
