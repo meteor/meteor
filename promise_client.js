@@ -17,4 +17,4 @@ function raise(exception) {
   throw exception;
 }
 
-Promise = MeteorPromise;
+module.exports = exports = MeteorPromise;
