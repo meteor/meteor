@@ -70,7 +70,7 @@ function shallowClone(value) {
 }
 
 // Yield the current Fiber until the given Promise has been fulfilled.
-function await(promise) {
+function awaitPromise(promise) {
   var Promise = promise.constructor;
   var Fiber = Promise.Fiber;
 
@@ -119,15 +119,15 @@ function tryCatchNextTick(object, method, args) {
 }
 
 MeteorPromise.awaitAll = function (args) {
-  return await(this.all(args));
+  return awaitPromise(this.all(args));
 };
 
 MeteorPromise.await = function (arg) {
-  return await(this.resolve(arg));
+  return awaitPromise(this.resolve(arg));
 };
 
 MeteorPromise.prototype.await = function () {
-  return await(this);
+  return awaitPromise(this);
 };
 
 // Return a wrapper function that returns a Promise for the eventual
