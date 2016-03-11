@@ -130,7 +130,8 @@ var ROOT_PACKAGES_TO_BUILD_IN_SANDBOX = [
   "insecure",
   "standard-minifier-css",
   "standard-minifier-js",
-  "es5-shim"
+  "es5-shim",
+  "census"
 ];
 
 var setUpBuiltPackageTropohouse = function () {
