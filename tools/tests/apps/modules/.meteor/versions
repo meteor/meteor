@@ -23,7 +23,7 @@ diff-sequence@1.0.2-beta.16
 ecmascript@0.4.0-beta.16
 ecmascript-runtime@0.2.7-beta.16
 ejson@1.0.8-beta.16
-es5-shim@4.3.2-beta.16
+es5-shim@4.5.7-beta.16
 fastclick@1.0.8-beta.16
 geojson-utils@1.0.5-beta.16
 hot-code-push@1.0.1-beta.16
@@ -45,7 +45,7 @@ minimongo@1.0.11-beta.16
 mobile-experience@1.0.1-beta.16
 mobile-status-bar@1.0.8-beta.16
 modules@0.5.0-beta.16
-modules-runtime@0.5.0-beta.16
+modules-runtime@0.6.0-beta.16
 modules-test-package@0.0.1
 mongo@1.1.4-beta.16
 mongo-id@1.0.1-beta.16
@@ -56,7 +56,7 @@ practicalmeteor:chai@2.1.0_1
 practicalmeteor:loglevel@1.2.0_2
 practicalmeteor:mocha-core@0.1.4
 practicalmeteor:sinon@1.14.1_2
-promise@0.5.2-beta.16
+promise@0.6.2-beta.16
 random@1.0.6-beta.16
 reactive-dict@1.1.4-beta.16
 reactive-var@1.0.6-beta.16
