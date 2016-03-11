@@ -191,7 +191,7 @@ Then we create a `ListsShowPage` container component which wraps it and provides
 ```js
 import { Meteor } from 'meteor/meteor';
 import { Lists } from '../../api/lists/lists.js';
-import createContainer from 'meteor/react-meteor-data';
+import { createContainer } from 'meteor/react-meteor-data';
 import ListsShow from '../pages/ListsShow.jsx';
 
 export default createContainer({ params } => {
