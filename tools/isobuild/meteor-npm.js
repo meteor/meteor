@@ -458,21 +458,45 @@ var constructPackageJson = function (packageName, newPackageNpmDir,
 //     }
 //   }
 // }
-var getInstalledDependenciesTree = function (dir) {
-  var result = runNpmCommand(["ls", "--json"], dir);
-
-  try {
-    return JSON.parse(result.stdout);
-  } catch (e) {
-    if (! result.success) {
-      buildmessage.error(`couldn\'t read npm version lock information: ${result.error}`);
-      // Recover by returning false from updateDependencies
-      throw new NpmFailure;
+function getInstalledDependenciesTree(dir) {
+  function ls(nodeModulesDir) {
+    try {
+      var contents = files.readdir(nodeModulesDir).sort();
+    } catch (e) {
+      return;
     }
 
-    throw e;
+    const result = Object.create(null);
+
+    contents.forEach(item => {
+      if (item.startsWith(".")) {
+        return;
+      }
+
+      const pkgDir = files.pathJoin(nodeModulesDir, item);
+      const pkgJsonPath = files.pathJoin(pkgDir, "package.json");
+
+      try {
+        result[item] = {
+          version: JSON.parse(files.readFile(pkgJsonPath)).version
+        };
+      } catch (e) {
+        return;
+      }
+
+      const deps = ls(files.pathJoin(pkgDir, "node_modules"));
+      if (deps && ! _.isEmpty(deps)) {
+        result[item].dependencies = deps;
+      }
+    });
+
+    return result;
   }
-};
+
+  return {
+    dependencies: ls(files.pathJoin(dir, "node_modules"))
+  };
+}
 
 var getShrinkwrappedDependenciesTree = function (dir) {
   var shrinkwrapFile = files.readFile(files.pathJoin(dir, 'npm-shrinkwrap.json'));
@@ -608,51 +632,16 @@ var ensureConnected = function () {
 };
 
 // `npm shrinkwrap`
-var shrinkwrap = function (dir) {
-  function shrink(nodeModulesDir) {
-    try {
-      var contents = files.readdir(nodeModulesDir);
-    } catch (e) {
-      return;
-    }
-
-    const result = Object.create(null);
-
-    contents.forEach(item => {
-      if (item.startsWith(".")) {
-        return;
-      }
-
-      const pkgDir = files.pathJoin(nodeModulesDir, item);
-      const pkgJsonPath = files.pathJoin(pkgDir, "package.json");
-
-      try {
-        result[item] = {
-          version: JSON.parse(files.readFile(pkgJsonPath)).version
-        };
-      } catch (e) {
-        return;
-      }
-
-      const deps = shrink(files.pathJoin(pkgDir, "node_modules"));
-      if (deps && ! _.isEmpty(deps)) {
-        result[item].dependencies = deps;
-      }
-    });
-
-    return result;
-  }
-
-  const topLevelNodeModulesDir =
-    files.pathJoin(dir, "node_modules");
+function shrinkwrap(dir) {
+  const tree = getInstalledDependenciesTree(dir);
 
   files.writeFile(
     files.pathJoin(dir, "npm-shrinkwrap.json"),
-    JSON.stringify({
-      dependencies: shrink(topLevelNodeModulesDir)
-    }, null, 2) + "\n"
+    JSON.stringify(tree, null, 2) + "\n"
   );
-};
+
+  return tree;
+}
 
 // Reduces a dependency tree (as read from a just-made npm-shrinkwrap.json or
 // from npm ls --json) to just the versions we want. Returns an object that does
