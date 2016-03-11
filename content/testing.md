@@ -127,15 +127,42 @@ As we've placed the code above in a test file, it *will not* load in normal deve
 
 Often it's sensible to create a set of data to run your test against. You can use standard `insert()` calls against your collections to do this, but often it's easier to create *factories* which help encode random test data. A great package to use to do this is [`dburles:factory`](https://atmospherejs.com/dburles/factory).
 
-- Using factories (`dburles:factory`)
+In the Todos example app, we define a factory to describe how to create a test todo item, using the [`faker`](https://www.npmjs.com/package/Faker) NPM package:
 
-- Stubbing collections w/ factories
+```js
+import faker from 'faker';
+
+Factory.define('todo', Todos, {
+  listId: () => Factory.get('list'),
+  text: () => faker.lorem.sentence(),
+  createdAt: () => new Date(),
+});
+```
+
+To use the factory in a test, we simply call `Factory.create`:
+
+```js
+// This creates a todo and a list in the database and returns the todo.
+const todo = Factory.create('todo');
+
+// If we have a list already, we can pass in the id and avoid creating another:
+const list = Factory.create('list');
+const todoInList = Factory.create('todo', { listId: list._id });
+```
+
+<h3 id="mocking-the-database">Mocking the database</h3>
+
+As `Factory.create` directly inserts documents into the collection that's passed into the `Factory.define` function, it can be a problem to use it on the client. However there's a neat isolation trick that you can do to replace the server-backed `Todos` [client collection](collections.html#client-collections) with a mocked out [local collection](#collections.html#local-collections):
+
+```js
+// XXX: Still figuring out the best way to do this, you can use stub-collections for now
+```
 
 <h2 id="unit-testing">Unit testing</h2>
 
 Unit testing is the process of isolating a module of code and then testing that the internals of that module work as you expect. As [we've split our code base up into ES2015 modules](structure.html) it's natural to test those modules one at a time.
 
-By isolating a module and simply test its internal functionality, we can write tests that are *fast* and *accurate*---they can quickly tell you where a problem in your application lies. Note however that incomplete unit tests can often hide bugs because of the way they stub out dependencies. For that reason it's useful to combine unit tests with slower (and perhaps less commonly run) integration and end-to-end tests.
+By isolating a module and simply test its internal functionality, we can write tests that are *fast* and *accurate*---they can quickly tell you where a problem in your application lies. Note however that incomplete unit tests can often hide bugs because of the way they stub out dependencies. For that reason it's useful to combine unit tests with slower (and perhaps less commonly run) integration and acceptance tests.
 
 <h3 id="simple-unit-test">A simple unit test</h3>
 
@@ -184,20 +211,13 @@ Secondly, we've used [Mocha's API](https://mochajs.org) as well as [Chai's asser
 
 <h3 id="running-unit-tests">Running unit tests</h3>
 
-To run the tests that our app defines, we can run a special instance of our app in test mode. To do so, we run:
+To run the tests that our app defines, we run our app in [test mode](#test-modes):
 
 ```
 meteor test --driver-package avital:mocha
 ```
 
-This runs a special version of our application that:
-
- 1. *Doesn't* eagerly load *any* of our application code as Meteor normally would.
- 2. *Does* eagerly load any file in our application (including in `imports/` folders) that look like `*.tests.*`. 
- 3. Sets the `Meteor.isTest` flag to be true.
- 4. Starts up the test reporter package that we've added to our app (`avital:mocha`).
-
-As we've defined a test file (`imports/todos/Todos.tests.js`), what this means is that the file above will be eagerly loaded, adding the `'builds correctly from factory'` test to the Mocha registry. 
+As we've defined a test file (`imports/todos/todos.tests.js`), what this means is that the file above will be eagerly loaded, adding the `'builds correctly from factory'` test to the Mocha registry. 
 
 To run the tests, visit http://localhost:3000 in your browser. This kicks off `avital:mocha`, which runs your tests both in the browser and on the server. It displays the test results in the browser in a Mocha test reporter:
 
@@ -255,53 +275,271 @@ This integration test can be run the exact same way as we ran [unit tests above]
 
 <h3 id="full-app-integration-test">Full-app integration test</h3>
 
-XXX: example
+In the Todos example application, we have a integration test which ensures that we see the full contents of a list when we route to it, which demonstrates a few techniques of integration tests:
+
+```js
+/* eslint-env mocha */
+
+import { Meteor } from 'meteor/meteor';
+import { Tracker } from 'meteor/tracker';
+import { DDP } from 'meteor/ddp-client';
+import { FlowRouter } from 'meteor/kadira:flow-router';
+import { assert } from 'meteor/practicalmeteor:chai';
+import { $ } from 'meteor/jquery';
+
+import { generateData } from './../../api/generate-data.app-tests.js';
+import { Lists } from '../../api/lists/lists.js';
+import { Todos } from '../../api/todos/todos.js';
+
+// Utility function to wait for subscriptions
+const waitForSubscriptions = (done) => {
+  const poll = Meteor.setInterval(() => {
+    if (DDP._allSubscriptionsReady()) {
+      clearInterval(poll);
+      done();
+    }
+  }, 200);
+};
+
+// Utility to allow throwing inside callback
+const catchAsync = (done, cb) => () => {
+  try {
+    cb();
+  } catch (e) {
+    done(e);
+  }
+};
+
+if (Meteor.isClient) {
+  describe('data available when routed', () => {
+    beforeEach(done => {
+      generateData()
+        .then(() => FlowRouter.go('/'))
+        .nodeify(done);
+    });
+
+    describe('when logged out', () => {
+      it('has all public lists at homepage', () => {
+        assert.equal(Lists.find().count(), 3);
+      });
+
+      it('renders the correct list when routed to', done => {
+        const list = Lists.findOne();
+        FlowRouter.go('Lists.show', { _id: list._id });
+
+        // Wait for the router change to take affect
+        Tracker.afterFlush(catchAsync(done, () => {
+          assert.equal($('.title-wrapper').html(), list.name);
+
+          // Wait for all subscriptions triggered by this route to complete
+          waitForSubscriptions(catchAsync(done, () => {
+            assert.equal(Todos.find({listId: list._id}).count(), 3);
+            done();
+          }));
+        }));
+      });
+    });
+  });
+}
+```
+
+Of note here:
+
+ - Before running, each test sets up the data it needs using the `generateData` helper (see [the section on creating integration test data](#creating-integration-test-data)) for more detail) then goes to the homepage.
+
+ - Although Flow Router doesn't take a done callback, we can use `Tracker.afterFlush` to wait for all it's reactive consequences to occur.
+
+ - Here we wrote a little utility (which could be abstracted into a general package) to wait for all the subscriptions which are created by the route change (the `todos.inList` subscription in this case) to become ready before checking their data.
+
+ - The `catchAsync` utility is useful because otherwise we don't see the results of failures inside callbacks. XXX: perhaps this test should be rewritten with promises to avoid this?
+
 
 <h3 id="running-full-app-tests">Running full-app tests</h3>
 
-To run the full-app tests in our application, we run:
+To run the [full-app tests](#test-modes) in our application, we run:
 
 ```
 meteor test --full-app --driver-package avital:mocha
 ```
 
-This does the following:
- 
- 1. *Does* eagerly load our application code as Meteor normally would.
- 2. *Also* eagerly load any file in our application (including in `imports/` folders) that look like `*.app-tests.*`. 
- 3. Sets the `Meteor.isAppTest` flag to be true.
- 4. Starts up the test reporter package that we've added to our app (`avital:mocha`).
+When we connect to the test instance in a browser, we want to render a testing UI rather than our app UI, so the `mocha-web-reporter` package will hide any UI of our application and overlay it with its own. However the app continues to behave as normal, so we are able to route around and check the correct data is loaded.
 
-The key difference is in point 1 --- our app code loads as normal. So our server runs completely as usual with the full DDP API available, for example. 
+<h3 id="creating-integration-test-data">Creating data</h3>
 
-When we connect to the test instance in a browser, we want to render a testing UI rather than our app UI, so the `mocha-web-reporter` package will hide any UI of our application and overlay it with its own.
+To create test data in full-app test mode, it usually makes sense to create some special test methods which we can call from the client side. Similar to the way we cleared the database using a method in the `beforeEach` in the [test data](#test-data) section above, we can call that method before running our tests. 
+
+In the case of our routing tests, we've used a file called `imports/api/generate-data.app-tests.js` which defines this method (and will only be loaded in full app test mode, so is not available in general!):
+
+```js
+// This file will be auto-imported in the app-test context, ensuring the method is always available
+
+import { Meteor } from 'meteor/meteor';
+import { Factory } from 'meteor/factory';
+import { resetDatabase } from 'meteor/xolvio:cleaner';
+import { Random } from 'meteor/random';
+import { _ } from 'meteor/underscore';
+
+const createList = (userId) => {
+  const list = Factory.create('list', { userId });
+  _.times(3, () => Factory.create('todo', { listId: list._id }));
+  return list;
+};
+
+Meteor.methods({
+  generateFixtures() {
+    resetDatabase();
+
+    // create 3 public lists
+    _.times(3, () => createList());
+
+    // create 3 private lists
+    _.times(3, () => createList(Random.id()));
+  },
+});
+
+let generateData;
+if (Meteor.isClient) {
+  // Create a second connection to the server to use to call test data methods
+  // We do this so there's no contention w/ the currently tested user's connection
+  const testConnection = Meteor.connect(Meteor.absoluteUrl());
+
+  generateData = () => Promise.denodeify((cb) => {
+    testConnection.call('generateFixtures', cb);
+  })();
+}
+
+export { generateData };
+```
+
+Note that we've exported a client-side symbol `generateData` which is a promisified version of the method call, which makes it simpler to use this sequentially in tests.
+
+XXX: is this a good idea? 
+
+Also of note is the way we use a second DDP connection to the server in order to send these test "control" method calls.
+
+<h2 id="acceptance-testing">Acceptance testing</h2>
+
+Acceptance testing is the process of taking an unmodified version of our application and testing it from the "outside" to make sure it behaves in a way we expect. Typically if an app passes acceptance tests, we have done our job properly from a product perspective.
+
+As acceptance tests test the behavior of the application in a full browser context in a generic way, there are a range of tools that you can to specify and run such tests. In this guide we'll demonstrate using [Chimp](https://chimp.readme.io), an acceptance testing tool with a few neat Meteor-specific features that makes it easy to use.
+
+We can make Chimp a dependency of our app by installing it as an NPM development dependency:
+
+```
+npm install --save-dev chimp
+```
+
+Chimp has a variety of options for setting it up, but as a simple start, we can simply add an NPM script called `chimp-watch` which will run the currently "watched" acceptance tests in a development mode:
+
+```json
+{
+  "scripts": {
+    ...
+    "chimp-watch": "chimp --ddp=http://localhost:3000 --watch --mocha --path=tests",
+    "chimp": "chimp --mocha --path=tests"
+  },
+```
+[`package.json`]
+
+Chimp will now look in the `tests/` directory (otherwise ignored by the Meteor tool) for files in which you define acceptance tests. In the Todos example app, we define a simple test that ensures we can click the "create list" button:
+
+```js
+/* eslint-env mocha */
+
+// These are Chimp globals
+/* globals browser assert */
+
+const countLists = () => {
+  browser.waitForExist('.list-todo');
+  const elements = browser.elements('.list-todo');
+  return elements.value.length;
+};
+
+describe('list ui', () => {
+  beforeEach(() => {
+    browser.url('http://localhost:3000');
+    server.call('generateFixtures');
+  });
+
+  it('can create a list @watch', () => {
+    const initialCount = countLists();
+
+    browser.click('.js-new-list');
+
+    assert.equal(countLists(), initialCount + 1);
+  });
+});
+```
+
+<h3 id="running-acceptance-tests">Running acceptance tests</h3>
+
+To run the acceptance test, we first start our meteor server with a special test driver, `tmeasday:acceptance-test-driver`. (You'll need to `meteor add` it to your app). 
+
+This test driver literally does nothing, but by running our app in full app test mode, we make all of our [test data creating methods](#creating-integration-test-data) available:
+
+```
+meteor test --full-app --driver-package tmeasday:acceptance-test-driver
+```
+
+To run the test, we can then run `npm run chimp-watch` in another terminal window. The `chimp-watch` command will then run the test in a browser, and continue to re-run it as we change the test or the application. (Note that the test assumes we are running the app on port `3000`).
+
+Thus it's a good way to develop the test---this is why chimp has a feature where we mark tests with a `@watch` in the name to call out the tests we want to work on (running our entire acceptance test suite can be time consuming in a large application).
+
+The `chimp-test` command will run all of the tests *once only* and is good for testing that our suite passes, either as a manual step, or as part of a [continuous integration](#ci) process.
+
+<h3 id="creating-acceptance-test-data">Creating data</h3>
+
+The advantage of running our acceptance test suite pointed at an app that runs in full app test mode is that all of the [data generating methods](#creating-integration-test-data) that we've created remain available. 
+
+In Chimp tests, you have a DDP connection to the server available on the `server` variable. You can thus use `server.call()` (which is wrapped to be synchronous in Chimp tests) to call these methods. This is a convenient way to share data preparation code between acceptance and integration tests. 
 
 
-### Creating data in an integration test
+<h2 id="ci">Continuous Integration</h2>
 
-### Asserting client and server side in an integration test
+XXX: Note these are not yet working with the new system
+
+Continuous integration testing is the process of running tests on every commit of your project.
+
+There are two principal ways to do it: on the developer's machine before allowing them to push code to the central repository, and on a dedicated CI server after each push. Both techniques are useful, and both require running tests in a commandline-only fashion.
+
+<h3 id="command-line">Command Line</h3>
+
+We've seen one example of running tests on the command line, using our `npm run chimp-test` mode. 
+
+XXX: write this when the tools have caught up
+
+<h3 id="pre-push">Setting up a pre-push hook</h3>
+
+In the Todos example app, we run our normal (non-full-app) tests before every push to the repository. To do this with Git, we can simple create the following file in `.git/pre-push`:
+
+```bash
+#!/bin/sh
+
+## XXX: something like this
+spacejam test --driver-package avital:mocha
+```
+
+<h3 id="using-circle-ci">Circle CI</h3>
+
+[Circle](https://circleci.com) is a great continuous integration service that allows us to run (possibly time consuming) tests on every push to a repository like GitHub. To use it with the tests we've defined above, we can follow their standard [getting started tutorial](https://circleci.com/docs/getting-started) and use a `circle.yml` file similar to this:
+
+XXX: fix up when tools catch up
+
+```yaml
+machine:
+  node:
+    version: 0.10.40
+dependencies:
+  override:
+    - curl https://install.meteor.com | /bin/sh
+    - npm install -g spacejam
+checkout:
+  post:
+    - git submodule update --init
+test:
+  override:
+    - spacejam test-packages --driver-package practicalmeteor:mocha-console-reporter
+```
 
 
-6. Acceptance testing - let's use Selenium but in a general sense, talking about:
-  1. Waiting for data to load
-  2. Ensuring fixture data exists to allow test scripts to run
-  3. Using 3rd party services test services like SauceLabs
 
-7. Load testing
-  1. Recap on Meteor application performance (see APM section of deployment article)
-  2. Using Meteor Down to test your app using DDP
-    1. Determining relevant publications
-    2. Determining relevant methods
-    3. Generating test data
-    4. Basic structure of a test
-  3. Using Selenese and Load Booster to run browser-based load tests
-    1. Explanation of potential benefit over DDP-based tests
-    2. Example test script
-
-8. Continous Integration testing
-  1. Command line testing + phantomjs
-  2. Running Spacejam + CircleCI
-
-9. More resources / alternatives
-  1. Jasmine stuff
-  2. Books/etc
