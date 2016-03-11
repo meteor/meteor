@@ -23,9 +23,7 @@ Run the project with Node Inspector attached, so that you can step through your 
 
 #### `meteor deploy <site>`
 
-Bundle your app and deploy it to `<site>`. Meteor provides free hosting if
-you deploy to `<your app>.meteor.com` as long as `<your app>` is a name
-that has not been claimed by someone else.
+Bundle your app and deploy it to `<site>` on Galaxy.
 
 #### `meteor update`
 
