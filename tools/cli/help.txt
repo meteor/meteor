@@ -581,7 +581,6 @@ Options:
                     port that the Meteor server binds to. Can include a
                     URL scheme (for example,
                     --mobile-server=https://example.com:443).
-  --production      Simulate production mode. Minify and bundle CSS, JS files.
   --settings        Set optional data for Meteor.settings on the server
 
   --ios,            Run tests in an emulator or on a mobile device. All of
