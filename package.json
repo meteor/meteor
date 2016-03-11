@@ -35,5 +35,24 @@
   },
   "devDependencies": {
     "rimraf": "^2.5.2"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/meteor/node-stubs.git"
+  },
+  "keywords": [
+    "stubs",
+    "shims",
+    "node",
+    "builtins",
+    "core",
+    "modules",
+    "browserify",
+    "webpack",
+    "meteor"
+  ],
+  "bugs": {
+    "url": "https://github.com/meteor/node-stubs/issues"
+  },
+  "homepage": "https://github.com/meteor/node-stubs#readme"
 }
