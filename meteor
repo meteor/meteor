@@ -133,7 +133,7 @@ fi
 # Make it very easy to run Meteor's exact versions of node and npm with
 # the commands `meteor node ...` and `meteor npm ...`
 BUNDLE_CMD="$DEV_BUNDLE/bin/$1"
-if [ -x "$BUNDLE_CMD" ]
+if [ -n "$1" ] && [ -x "$BUNDLE_CMD" ]
 then
     shift
     exec "$BUNDLE_CMD" "$@"
