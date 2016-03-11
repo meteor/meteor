@@ -461,13 +461,17 @@ var constructPackageJson = function (packageName, newPackageNpmDir,
 var getInstalledDependenciesTree = function (dir) {
   var result = runNpmCommand(["ls", "--json"], dir);
 
-  if (result.success) {
+  try {
     return JSON.parse(result.stdout);
-  }
+  } catch (e) {
+    if (! result.success) {
+      buildmessage.error(`couldn\'t read npm version lock information: ${result.error}`);
+      // Recover by returning false from updateDependencies
+      throw new NpmFailure;
+    }
 
-  buildmessage.error(`couldn't read npm version lock information: ${result.error}`);
-  // Recover by returning false from updateDependencies
-  throw new NpmFailure;
+    throw e;
+  }
 };
 
 var getShrinkwrappedDependenciesTree = function (dir) {
