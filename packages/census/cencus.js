@@ -9,6 +9,8 @@ let maxSessionsNum;
 let onConnectListener;
 let reportIntervalId;
 
+Census = new Events.EventEmitter();
+
 Meteor.startup(function() {
   if (Config.autoSample) startSampling();
 });
@@ -27,14 +29,21 @@ function stopSampling() {
 }
 
 // Sends stats
-function report() {
+function report(callback = _.identity) {
   const stats = composeStats();
 
   Stats.send(stats, (err, result) => {
-    if (err)
+    // Resetting max sessions counter
+    maxSessionsNum = currentSessionsNum;
+
+    if (err) {
+      callback(err);
       Census.emit('report:fail', err);
-    else
+    }
+    else {
+      callback(null, result);
       Census.emit('report:success', result);
+    }
   });
 }
 
@@ -74,20 +83,10 @@ function composeStats() {
   };
 }
 
-Census = new Events.EventEmitter()
-
-// Report events loggers
-  .on('report:success', function() {
-    process.stdout.write('Stats have been sent\n');
-  })
-
-  .on('report:fail', function() {
-    process.stderr.write('Failed to send stats\n');
-  });
-
 _.extend(Census, {
   name,
   version,
   startSampling,
-  stopSampling
+  stopSampling,
+  report
 });

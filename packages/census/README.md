@@ -4,8 +4,14 @@ Meteor data sampler and reporter.
 
 #### API
 
-- startSampling() - starts sampling.
-- stopSampling() - stops sampling.
+- report(callback) - Sends statistics collected so far. Invoke callback with error and result once finished.
+- startSampling() - Starts sampling.
+- stopSampling() - Stops sampling.
+
+#### Events
+
+- 'report:success' - Emitted once report has been succeeded. Invokes listener with result.
+- 'report:fail' - Emitted once report has been faile. Invokes listener with error.
 
 #### Config
 

@@ -21,3 +21,20 @@ Package.onUse(function(api) {
 
   api.export('Census', 'server');
 });
+
+Package.onTest(function(api) {
+  api.use([
+    'census',
+    'ddp',
+    'ecmascript',
+    'underscore',
+    'tinytest',
+    'webapp'
+  ]);
+
+  api.addFiles([
+    './tests/config.js',
+    './tests/server.js',
+    './tests/census.test.js'
+  ], 'server');
+});
