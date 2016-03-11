@@ -63,6 +63,7 @@ Note that there is another test command in the Meteor tool; `meteor test-package
 When you run a `meteor test` command, you must provide a `--driver-package` argument. A test driver is a mini-application that runs in place of your app and runs each of your defined tests, whilst reporting the results in some kind of user interface.
 
 There are two main kinds of test driver packages:
+
   -web-reporters which are Meteor applications and display a special test reporting web UI that you can view the test results in [include a SS]
 
   - console-reporters that run completely on the command-line and are primary used for automated testing like [continuous integration](#ci) (as we'll see, typically PhantomJS is used to drive such tests).
@@ -103,7 +104,7 @@ describe('my module', () => {
 });
 ```
 
-This technique will only work simply on the server. If you need to reset the database from a client test, you can use a method to do so:
+This technique will only work on the server. If you need to reset the database from a client test, you can use a method to do so:
 
 ```js
 import { resetDatabase } from 'meteor/xolvio:cleaner';
@@ -121,7 +122,7 @@ describe('my module', done => {
 });
 ```
 
-As we've placed the code above in a test file, it *will not* load in normal development or production mode (which would a bad thing!). If you'd like to create a Atmosphere package with a similar feature, you should mark it as `testOnly` and it will similarly only load in test mode.
+As we've placed the code above in a test file, it *will not* load in normal development or production mode (which would a bad thing!). If you create a Atmosphere package with a similar feature, you should mark it as `testOnly` and it will similarly only load in test mode.
 
 <h3 id="generating-test-data">Generating test data</h3>
 
@@ -429,14 +430,14 @@ We can make Chimp a dependency of our app by installing it as an NPM development
 npm install --save-dev chimp
 ```
 
-Chimp has a variety of options for setting it up, but as a simple start, we can simply add an NPM script called `chimp-watch` which will run the currently "watched" acceptance tests in a development mode:
+Chimp has a variety of options for setting it up, but we can add some NPM scripts which will run the currently tests we define in Chimp's two main modes:
 
 ```json
 {
   "scripts": {
     ...
     "chimp-watch": "chimp --ddp=http://localhost:3000 --watch --mocha --path=tests",
-    "chimp": "chimp --mocha --path=tests"
+    "chimp-test": "chimp --mocha --path=tests"
   },
 ```
 [`package.json`]
@@ -447,7 +448,7 @@ Chimp will now look in the `tests/` directory (otherwise ignored by the Meteor t
 /* eslint-env mocha */
 
 // These are Chimp globals
-/* globals browser assert */
+/* globals browser assert server */
 
 const countLists = () => {
   browser.waitForExist('.list-todo');
