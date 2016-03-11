@@ -11,11 +11,12 @@ Npm.depends({
 });
 
 Package.onUse(function(api) {
-  api.use("modules");
-  api.use("promise");
+  // If the es5-shim package is installed, make sure it loads before
+  // ecmascript-runtime, since ecmascript-runtime uses some ES5 APIs like
+  // Object.defineProperties that are buggy in older browsers.
+  api.use("es5-shim", { weak: true });
 
-  // Regenerator, which we use to transpile ES2016 async/await, needs
-  // a promise implementation
+  api.use("modules");
   api.use("promise");
 
   api.mainModule("runtime.js");

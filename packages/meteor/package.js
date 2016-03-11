@@ -15,11 +15,6 @@ Npm.depends({
 });
 
 Package.onUse(function (api) {
-  // If the es5-shim package is installed, make sure it is evaluated
-  // before all other packages. Note that es5-shim registers an unordered
-  // dependency on the meteor package.
-  api.use('es5-shim', { weak: true });
-
   // Provide appropriate values for `process.env` properties.
   api.use("meteor-env-dev");
   api.use("meteor-env-prod");
