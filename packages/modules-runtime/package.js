@@ -1,13 +1,13 @@
 Package.describe({
   name: "modules-runtime",
-  version: "0.5.0-beta.16",
+  version: "0.6.0-beta.16",
   summary: "CommonJS module system",
   git: "https://github.com/benjamn/install",
   documentation: "README.md"
 });
 
 Npm.depends({
-  install: "0.5.6"
+  install: "0.6.0"
 });
 
 Package.onUse(function(api) {

@@ -1,9 +1,4 @@
-var options = {
-  // File extensions to try when an imported module identifier does not
-  // exactly match any installed file.
-  extensions: []
-};
-
+var options = {};
 var hasOwn = options.hasOwnProperty;
 
 // RegExp matching strings that don't start with a `.` or a `/`.
@@ -43,6 +38,7 @@ if (Meteor.isServer) {
   (options.Module = function Module(id) {
     // Same as the default Module constructor implementation.
     this.id = id;
+    this.children = [];
   }).prototype.useNode = function () {
     if (typeof npmRequire !== "function") {
       // Can't use Node if npmRequire is not defined.
@@ -75,22 +71,4 @@ if (Meteor.isServer) {
   };
 }
 
-var install = makeInstaller(options);
-
-(install.addExtension = function (ext) {
-  var args = arguments;
-  for (var i = 0; i < args.length; ++i) {
-    ext = args[i].toLowerCase();
-
-    if (! /^\.\w+/.test(ext)) {
-      throw new Error("bad module extension: " + ext);
-    }
-
-    var extensions = options.extensions;
-    if (extensions.indexOf(ext) < 0) {
-      extensions.push(ext);
-    }
-  }
-})(".js", ".json");
-
-meteorInstall = install;
+meteorInstall = makeInstaller(options);
