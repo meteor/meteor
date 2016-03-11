@@ -1,20 +1,16 @@
 const Os = Npm.require('os');
-const Request = Npm.require('request');
 
 // Sends a non-blocking request
-function request(options, callback) {
+function request(method, url, options, callback) {
   options = _.clone(options);
 
-  // Bind the callback to the environment to prevent blockade
-  Request(options, Meteor.bindEnvironment((err, response, body) => {
-    const failed = err || response.statusCode != 200;
-
+  HTTP.call(method, url, options, Meteor.bindEnvironment((err, result) => {
     // If attempts are still left, keep trying
-    if (failed && options.attempts--)
+    if (err && options.attempts--)
       Utils.request(options, callback);
     // If request has been succeeded or no more attempts left, invoke callback
     else
-      callback(err, response, body);
+      callback(err, result);
   }));
 }
 

@@ -30,13 +30,11 @@ function stopSampling() {
 function report() {
   const stats = composeStats();
 
-  Stats.send(stats, (err, response, body) => {
-    err = err || (response.statusCode != 200 && body);
-
+  Stats.send(stats, (err, result) => {
     if (err)
       Census.emit('report:fail', err);
     else
-      Census.emit('report:success', body);
+      Census.emit('report:success', result);
   });
 }
 

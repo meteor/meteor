@@ -5,14 +5,11 @@ Package.describe({
   documentation: 'README.md'
 });
 
-Npm.depends({
-  request: '2.53.0'
-});
-
 Package.onUse(function(api) {
   api.use([
     'ecmascript',
-    'underscore'
+    'underscore',
+    'http'
   ]);
 
   api.addFiles([
