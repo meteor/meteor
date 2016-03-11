@@ -4,7 +4,7 @@
 # Note: 0.5.20 and 0.5.25 used on branch origin/cordova-improvements
 # Note: 0.5.21 used on branch release-1.2.2
 # Note: 0.5.23 used on branch release-1.3
-BUNDLE_VERSION=0.5.27
+BUNDLE_VERSION=0.5.28
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.

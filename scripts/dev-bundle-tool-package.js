@@ -22,7 +22,7 @@ var packageJson = {
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
-    npm: "1.4.28",
+    npm: "2.14.22",
     fibers: fibersVersion,
     "meteor-babel": "0.8.1",
     "meteor-promise": "0.5.1",

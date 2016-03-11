@@ -153,7 +153,7 @@ rm -rf "$DIR/bin/npm3"
 # Sanity check to see if we're not breaking anything by replacing npm
 INSTALLED_NPM_VERSION=$(cat "$DIR/lib/node_modules/npm/package.json" |
 xargs -0 node -e "console.log(JSON.parse(process.argv[1]).version)")
-if [ "$INSTALLED_NPM_VERSION" != "1.4.28" ]; then
+if [ "$INSTALLED_NPM_VERSION" != "2.14.22" ]; then
   echo "Unexpected NPM version in lib/node_modules: $INSTALLED_NPM_VERSION"
   echo "We will be replacing it with our own version because the bundled node"
   echo "is built using PORTABLE=1, which makes npm look for node relative to"

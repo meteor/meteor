@@ -3,7 +3,7 @@
 $PLATFORM = "windows_x86"
 $MONGO_VERSION = "2.6.7"
 $NODE_VERSION = "0.10.41"
-$NPM_VERSION = "1.4.9"
+$NPM_VERSION = "2.14.22"
 
 # take it form the environment if exists
 if (Test-Path env:PLATFORM) {
