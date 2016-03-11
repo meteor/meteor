@@ -284,6 +284,24 @@ exports.run = function (options) {
   runOptions.watchForChanges = ! once;
   runOptions.quiet = false;
 
+  // Ensure process.env.NODE_ENV matches the build mode, with the following precedence:
+  // 1. Passed in build mode (if development or production)
+  // 2. Existing process.env.NODE_ENV (if it's valid) 
+  // 3. Default to development
+  let nodeEnv = process.env.NODE_ENV;
+  let buildMode = runOptions.buildOptions.buildMode;
+  if (buildMode) {
+    if (buildMode === "development" || buildMode === "production") {
+      process.env.NODE_ENV = buildMode;
+    } else if (!nodeEnv) {
+      process.env.NODE_ENV = "development";
+    }
+  } else if (nodeEnv === "development" || nodeEnv === "production") {
+    runOptions.buildOptions.buildMode = nodeEnv;
+  } else {
+    runOptions.buildOptions.buildMode = process.env.NODE_ENV = "development";
+  }
+
   var runner = new Runner(runOptions);
   runner.start();
   var result = promise.await();
