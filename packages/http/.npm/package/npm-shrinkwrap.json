@@ -3,6 +3,9 @@
     "request": {
       "version": "2.53.0",
       "dependencies": {
+        "aws-sign2": {
+          "version": "0.5.0"
+        },
         "bl": {
           "version": "0.9.4",
           "dependencies": {
@@ -12,14 +15,14 @@
                 "core-util-is": {
                   "version": "1.0.1"
                 },
+                "inherits": {
+                  "version": "2.0.1"
+                },
                 "isarray": {
                   "version": "0.0.1"
                 },
                 "string_decoder": {
                   "version": "0.10.31"
-                },
-                "inherits": {
-                  "version": "2.0.1"
                 }
               }
             }
@@ -27,6 +30,14 @@
         },
         "caseless": {
           "version": "0.9.0"
+        },
+        "combined-stream": {
+          "version": "0.0.7",
+          "dependencies": {
+            "delayed-stream": {
+              "version": "0.0.5"
+            }
+          }
         },
         "forever-agent": {
           "version": "0.5.2"
@@ -38,6 +49,40 @@
               "version": "0.9.0"
             }
           }
+        },
+        "hawk": {
+          "version": "2.3.1",
+          "dependencies": {
+            "boom": {
+              "version": "2.6.1"
+            },
+            "cryptiles": {
+              "version": "2.0.4"
+            },
+            "hoek": {
+              "version": "2.11.1"
+            },
+            "sntp": {
+              "version": "1.0.9"
+            }
+          }
+        },
+        "http-signature": {
+          "version": "0.10.1",
+          "dependencies": {
+            "asn1": {
+              "version": "0.1.11"
+            },
+            "assert-plus": {
+              "version": "0.1.5"
+            },
+            "ctype": {
+              "version": "0.5.3"
+            }
+          }
+        },
+        "isstream": {
+          "version": "0.1.1"
         },
         "json-stringify-safe": {
           "version": "5.0.0"
@@ -53,11 +98,14 @@
         "node-uuid": {
           "version": "1.4.2"
         },
+        "oauth-sign": {
+          "version": "0.6.0"
+        },
         "qs": {
           "version": "2.3.3"
         },
-        "tunnel-agent": {
-          "version": "0.4.0"
+        "stringstream": {
+          "version": "0.0.4"
         },
         "tough-cookie": {
           "version": "0.12.1",
@@ -67,56 +115,8 @@
             }
           }
         },
-        "http-signature": {
-          "version": "0.10.1",
-          "dependencies": {
-            "assert-plus": {
-              "version": "0.1.5"
-            },
-            "asn1": {
-              "version": "0.1.11"
-            },
-            "ctype": {
-              "version": "0.5.3"
-            }
-          }
-        },
-        "oauth-sign": {
-          "version": "0.6.0"
-        },
-        "hawk": {
-          "version": "2.3.1",
-          "dependencies": {
-            "hoek": {
-              "version": "2.11.1"
-            },
-            "boom": {
-              "version": "2.6.1"
-            },
-            "cryptiles": {
-              "version": "2.0.4"
-            },
-            "sntp": {
-              "version": "1.0.9"
-            }
-          }
-        },
-        "aws-sign2": {
-          "version": "0.5.0"
-        },
-        "stringstream": {
-          "version": "0.0.4"
-        },
-        "combined-stream": {
-          "version": "0.0.7",
-          "dependencies": {
-            "delayed-stream": {
-              "version": "0.0.5"
-            }
-          }
-        },
-        "isstream": {
-          "version": "0.1.1"
+        "tunnel-agent": {
+          "version": "0.4.0"
         }
       }
     }

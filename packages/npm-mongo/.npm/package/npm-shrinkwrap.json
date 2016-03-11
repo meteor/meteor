@@ -1,10 +1,10 @@
 {
   "dependencies": {
     "mongodb": {
-      "version": "https://github.com/meteor/node-mongodb-native/tarball/9c7441e87fbec059dc0b70bbb70734404b994d71",
+      "version": "1.4.39",
       "dependencies": {
         "bson": {
-          "version": "https://github.com/meteor/js-bson/tarball/0103b53",
+          "version": "0.2.18",
           "dependencies": {
             "nan": {
               "version": "1.5.1"
@@ -12,10 +12,10 @@
           }
         },
         "readable-stream": {
-          "version": "2.0.2",
+          "version": "2.0.5",
           "dependencies": {
             "core-util-is": {
-              "version": "1.0.1"
+              "version": "1.0.2"
             },
             "inherits": {
               "version": "2.0.1"
@@ -24,13 +24,13 @@
               "version": "0.0.1"
             },
             "process-nextick-args": {
-              "version": "1.0.2"
+              "version": "1.0.6"
             },
             "string_decoder": {
               "version": "0.10.31"
             },
             "util-deprecate": {
-              "version": "1.0.1"
+              "version": "1.0.2"
             }
           }
         }

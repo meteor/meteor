@@ -39,15 +39,6 @@
         "bytes": {
           "version": "2.1.0"
         },
-        "cookie": {
-          "version": "0.1.3"
-        },
-        "cookie-parser": {
-          "version": "1.3.5"
-        },
-        "cookie-signature": {
-          "version": "1.0.6"
-        },
         "compression": {
           "version": "1.5.2",
           "dependencies": {
@@ -90,6 +81,15 @@
         },
         "content-type": {
           "version": "1.0.1"
+        },
+        "cookie": {
+          "version": "0.1.3"
+        },
+        "cookie-parser": {
+          "version": "1.3.5"
+        },
+        "cookie-signature": {
+          "version": "1.0.6"
         },
         "csurf": {
           "version": "1.8.3",
@@ -233,14 +233,14 @@
                 "core-util-is": {
                   "version": "1.0.2"
                 },
+                "inherits": {
+                  "version": "2.0.1"
+                },
                 "isarray": {
                   "version": "0.0.1"
                 },
                 "string_decoder": {
                   "version": "0.10.31"
-                },
-                "inherits": {
-                  "version": "2.0.1"
                 }
               }
             },

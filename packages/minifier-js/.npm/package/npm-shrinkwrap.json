@@ -14,6 +14,9 @@
             }
           }
         },
+        "uglify-to-browserify": {
+          "version": "1.0.2"
+        },
         "yargs": {
           "version": "3.5.4",
           "dependencies": {
@@ -30,9 +33,6 @@
               "version": "0.0.2"
             }
           }
-        },
-        "uglify-to-browserify": {
-          "version": "1.0.2"
         }
       }
     }

@@ -224,11 +224,11 @@
         "recast": {
           "version": "0.10.33",
           "dependencies": {
-            "source-map": {
-              "version": "0.5.3"
-            },
             "ast-types": {
               "version": "0.8.12"
+            },
+            "source-map": {
+              "version": "0.5.3"
             }
           }
         },
