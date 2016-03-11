@@ -12,14 +12,10 @@ meteor add email
 The server reads from the `MAIL_URL` environment variable to determine how to
 send mail. Currently, Meteor supports sending mail over SMTP; the `MAIL_URL`
 environment variable should be of the form
-`smtp://USERNAME:PASSWORD@HOST:PORT/`. For apps deployed with `meteor deploy`,
-`MAIL_URL` defaults to an account (provided by
-[Mailgun](http://www.mailgun.com/)) which allows apps to send up to 200 emails
-per day; you may override this default by assigning to `process.env.MAIL_URL`
-before your first call to `Email.send`.
+`smtp://USERNAME:PASSWORD@HOST:PORT/`.
 
-If `MAIL_URL` is not set (eg, when running your application locally),
-`Email.send` outputs the message to standard output instead.
+If `MAIL_URL` is not set, `Email.send` outputs the message to standard output
+instead.
 
 {{> autoApiBox "Email.send"}}
 

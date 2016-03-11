@@ -364,7 +364,6 @@ var toc = [
     "meteor create",
     "meteor login / logout",
     "meteor deploy",
-    "meteor logs",
     "meteor update",
     "meteor add",
     "meteor remove",
