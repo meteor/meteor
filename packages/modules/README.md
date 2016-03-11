@@ -159,7 +159,7 @@ meteor
 
 When you run this app, the `moment` library will be imported on both the client and the server, and both consoles will log output similar to: `Today at 7:51 PM`. Our hope is that the possibility of installing Node modules directly within an app will reduce the need for npm wrapper packages such as https://atmospherejs.com/momentjs/moment.
 
-Note: in the beta release of Meteor 1.3, Node modules are imported using the same entry point on both the client and the server (either the module identified by the `main` field of the `package.json` file, or `index.js`). For this reason, you should only import npm libraries on the client if you are sure they will work in a browser environment. We are considering implementing support for [the `browser` field in `package.json` files](https://github.com/substack/node-browserify#browser-field), but we didn’t want to delay the beta release just for that.
+A version of the `npm` command comes bundled with every Meteor installation, and (as of Meteor 1.3) it's quite easy to use: `meteor npm ...` is synonymous with `npm ...`, so `meteor npm install moment` will work in the example above. (Likewise, if you don't have a version of `node` installed, or you want to be sure you're using the exact same version of `node` that Meteor uses, `meteor node ...` is a convenient shortcut.) That said, you can use any version of `npm` that you happen to have available. Meteor's module system only cares about the files installed by `npm`, not the details of how `npm` installs those files.
 
 ## File load order
 
