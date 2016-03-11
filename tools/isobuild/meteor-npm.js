@@ -460,13 +460,14 @@ var constructPackageJson = function (packageName, newPackageNpmDir,
 // }
 function getInstalledDependenciesTree(dir) {
   function ls(nodeModulesDir) {
+    let contents;
     try {
-      var contents = files.readdir(nodeModulesDir).sort();
-    } catch (e) {
-      return;
+      contents = files.readdir(nodeModulesDir).sort();
+    } finally {
+      if (! contents) return;
     }
 
-    const result = Object.create(null);
+    const result = {};
 
     contents.forEach(item => {
       if (item.startsWith(".")) {
@@ -476,17 +477,28 @@ function getInstalledDependenciesTree(dir) {
       const pkgDir = files.pathJoin(nodeModulesDir, item);
       const pkgJsonPath = files.pathJoin(pkgDir, "package.json");
 
+      let pkg;
       try {
-        result[item] = {
-          version: JSON.parse(files.readFile(pkgJsonPath)).version
-        };
-      } catch (e) {
-        return;
+        pkg = JSON.parse(files.readFile(pkgJsonPath));
+      } finally {
+        if (! pkg) return;
       }
+
+      const info = result[item] = {};
+
+      function copy(name) {
+        if (pkg[name]) {
+          info[name] = pkg[name];
+        }
+      }
+
+      copy("version");
+      copy("resolved");
+      copy("from");
 
       const deps = ls(files.pathJoin(pkgDir, "node_modules"));
       if (deps && ! _.isEmpty(deps)) {
-        result[item].dependencies = deps;
+        info.dependencies = deps;
       }
     });
 
@@ -633,7 +645,9 @@ var ensureConnected = function () {
 
 // `npm shrinkwrap`
 function shrinkwrap(dir) {
-  const tree = getInstalledDependenciesTree(dir);
+  const tree = minimizeDependencyTree(
+    getInstalledDependenciesTree(dir)
+  );
 
   files.writeFile(
     files.pathJoin(dir, "npm-shrinkwrap.json"),
