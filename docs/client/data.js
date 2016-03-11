@@ -1639,6 +1639,27 @@ DocsData = {
     "scope": "static",
     "summary": "Retrieve the contents of the static server asset as a UTF8-encoded string."
   },
+  "Assets.absoluteFilePath": {
+    "kind": "function",
+    "locus": "Server",
+    "longname": "Assets.absoluteFilePath",
+    "memberof": "Assets",
+    "name": "absoluteFilePath",
+    "options": [],
+    "params": [
+      {
+        "description": "<p>The path of the asset, relative to the application's <code>private</code> subdirectory.</p>",
+        "name": "assetPath",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Get the absolute path to the static server asset. Note that assets are read-only."
+  },
   "Blaze": {
     "filepath": "blaze/preamble.js",
     "kind": "namespace",
