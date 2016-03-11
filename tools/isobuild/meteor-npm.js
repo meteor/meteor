@@ -609,42 +609,49 @@ var ensureConnected = function () {
 
 // `npm shrinkwrap`
 var shrinkwrap = function (dir) {
-  // We don't use npm.commands.shrinkwrap for two reasons:
-  // 1. As far as we could tell there's no way to completely silence the output
-  //    (the `silent` flag isn't piped in to the call to npm.commands.ls)
-  // 2. In various (non-deterministic?) cases we observed the
-  //    npm-shrinkwrap.json file not being updated
-  var result = runNpmCommand(["shrinkwrap"], dir);
+  function shrink(nodeModulesDir) {
+    try {
+      var contents = files.readdir(nodeModulesDir);
+    } catch (e) {
+      return;
+    }
 
-  if (! result.success) {
-    buildmessage.error(`couldn't run \`npm shrinkwrap\`: ${result.error}`);
-    // Recover by returning false from updateDependencies
-    throw new NpmFailure;
+    const result = Object.create(null);
+
+    contents.forEach(item => {
+      if (item.startsWith(".")) {
+        return;
+      }
+
+      const pkgDir = files.pathJoin(nodeModulesDir, item);
+      const pkgJsonPath = files.pathJoin(pkgDir, "package.json");
+
+      try {
+        result[item] = {
+          version: JSON.parse(files.readFile(pkgJsonPath)).version
+        };
+      } catch (e) {
+        return;
+      }
+
+      const deps = shrink(files.pathJoin(pkgDir, "node_modules"));
+      if (deps && ! _.isEmpty(deps)) {
+        result[item].dependencies = deps;
+      }
+    });
+
+    return result;
   }
 
-  minimizeShrinkwrap(dir);
-};
-
-// The shrinkwrap file format contains a lot of extra data that can
-// change as you re-run the NPM-update process without actually
-// affecting what is installed. This step trims everything but the
-// most important bits from the file, so that the file doesn't change
-// unnecessary.
-//
-// This is based on an analysis of install.js in the npm module:
-//   https://github.com/isaacs/npm/blob/master/lib/install.js
-// It appears that the only things actually read from a given
-// dependency are its sub-dependencies and a single version, which is
-// read by the readWrap function; and furthermore, we can just put all
-// versions in the "version" field.
-var minimizeShrinkwrap = function (dir) {
-  var topLevel = getShrinkwrappedDependenciesTree(dir);
-  var minimized = minimizeDependencyTree(topLevel);
+  const topLevelNodeModulesDir =
+    files.pathJoin(dir, "node_modules");
 
   files.writeFile(
-    files.pathJoin(dir, 'npm-shrinkwrap.json'),
-    // Matches the formatting done by 'npm shrinkwrap'.
-    JSON.stringify(minimized, null, 2) + '\n');
+    files.pathJoin(dir, "npm-shrinkwrap.json"),
+    JSON.stringify({
+      dependencies: shrink(topLevelNodeModulesDir)
+    }, null, 2) + "\n"
+  );
 };
 
 // Reduces a dependency tree (as read from a just-made npm-shrinkwrap.json or
