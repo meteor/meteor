@@ -136,6 +136,7 @@ BUNDLE_CMD="$DEV_BUNDLE/bin/$1"
 if [ -n "$1" ] && [ -x "$BUNDLE_CMD" ]
 then
     shift
+    export PATH="${DEV_BUNDLE}/bin:${PATH}"
     exec "$BUNDLE_CMD" "$@"
 fi
 
