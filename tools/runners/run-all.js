@@ -283,16 +283,15 @@ exports.run = function (options) {
   // 3. Default to development
   let nodeEnv = process.env.NODE_ENV;
   let buildMode = runOptions.buildOptions.buildMode;
-  if (buildMode) {
-    if (buildMode === "development" || buildMode === "production") {
-      process.env.NODE_ENV = buildMode;
-    } else if (!nodeEnv) {
-      process.env.NODE_ENV = "development";
-    }
+  if (buildMode === "development" || buildMode === "production") {
+    process.env.NODE_ENV = buildMode;
   } else if (nodeEnv === "development" || nodeEnv === "production") {
     runOptions.buildOptions.buildMode = nodeEnv;
   } else {
-    runOptions.buildOptions.buildMode = process.env.NODE_ENV = "development";
+    runOptions.buildOptions.buildMode = "development";
+    if (! nodeEnv) {
+      process.env.NODE_ENV = "development";
+    }
   }
 
   var runner = new Runner(runOptions);
