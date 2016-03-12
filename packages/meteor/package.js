@@ -15,12 +15,6 @@ Npm.depends({
 });
 
 Package.onUse(function (api) {
-  // Provide appropriate values for `process.env` properties.
-  api.use("meteor-env-dev");
-  api.use("meteor-env-prod");
-  api.addFiles("import_meteorEnv.js");
-  api.export("meteorEnv");
-
   api.use('underscore', ['client', 'server']);
 
   api.use('isobuild:compiler-plugin@1.0.0');
@@ -31,8 +25,11 @@ Package.onUse(function (api) {
   api.export('global');
 
   api.addFiles('client_environment.js', 'client');
-  api.addFiles('cordova_environment.js', 'web.cordova');
   api.addFiles('server_environment.js', 'server');
+  // Defined by client_environment.js and server_environment.js.
+  api.export("meteorEnv");
+
+  api.addFiles('cordova_environment.js', 'web.cordova');
   api.addFiles('helpers.js', ['client', 'server']);
   api.addFiles('setimmediate.js', ['client', 'server']);
   api.addFiles('timers.js', ['client', 'server']);

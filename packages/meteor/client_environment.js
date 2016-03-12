@@ -1,3 +1,5 @@
+meteorEnv = __meteor_runtime_config__.meteorEnv;
+
 /**
  * @summary The Meteor namespace
  * @namespace Meteor

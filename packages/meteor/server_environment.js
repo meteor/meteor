@@ -1,3 +1,8 @@
+meteorEnv = {
+  NODE_ENV: process.env.NODE_ENV || "production",
+  TEST_METADATA: process.env.TEST_METADATA || "{}"
+};
+
 Meteor = {
   isProduction: meteorEnv.NODE_ENV === "production",
   isDevelopment: meteorEnv.NODE_ENV !== "production",
