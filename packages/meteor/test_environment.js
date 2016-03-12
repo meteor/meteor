@@ -7,12 +7,14 @@ if (Meteor.isClient) {
 
 var TEST_METADATA = JSON.parse(TEST_METADATA_STR || "{}");
 
+// Note that if we are in test-packages mode neither of these will be set,
+// but we will have a test driver package
 Meteor.isTest = !!TEST_METADATA.isTest;
 Meteor.isAppTest = !!TEST_METADATA.isAppTest;
 
-if (Meteor.isTest || Meteor.isAppTest) {
+var testDriverPackageName = TEST_METADATA.driverPackage;
+if (testDriverPackageName) {
   Meteor.startup(function() {
-    var testDriverPackageName = TEST_METADATA.driverPackage;
     if (typeof testDriverPackageName !== "string") {
       throw new Error("No --driver-package specified for `meteor test`");
     }

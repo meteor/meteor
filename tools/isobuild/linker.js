@@ -1048,31 +1048,3 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
     }
   });
 });
-
-function getTestPreamble() {
-  const testDriverPackageName = global.testCommandMetadata.driverPackage;
-
-  let setMeteorTest = "";
-  if (global.testCommandMetadata.isTest) {
-    setMeteorTest = "Package.meteor.Meteor.isTest = true;";
-  } else if (global.testCommandMetadata.isAppTest) {
-    setMeteorTest = "Package.meteor.Meteor.isAppTest = true;";
-  }
-
-  return `\
-${setMeteorTest}
-
-if (Package.meteor.Meteor.isClient) {
-  Package.meteor.Meteor.startup(function() {
-    var testDriverPackage = Package[\"${testDriverPackageName}\"];
-    if (!testDriverPackage) {
-      throw new Error(\"Can\'t find test driver package: ${testDriverPackageName}\");
-    }
-
-    if (!testDriverPackage.runTests) {
-      throw new Error("Test driver package ${testDriverPackageName} missing \`runTests\` export");
-    }
-    testDriverPackage.runTests();
-  });
-}`;
-}
