@@ -4618,7 +4618,7 @@ DocsData = {
       }
     ],
     "scope": "static",
-    "summary": "Generate an absolute URL pointing to the application. The server reads from the `ROOT_URL` environment variable to determine where it is running. This is taken care of automatically for apps deployed with `meteor deploy`, but must be provided when using `meteor build`."
+    "summary": "Generate an absolute URL pointing to the application. The server reads from the `ROOT_URL` environment variable to determine where it is running. This is taken care of automatically for apps deployed to Galaxy, but must be provided when using `meteor build`."
   },
   "Meteor.apply": {
     "filepath": "ddp-client/livedata_connection.js",
@@ -6336,7 +6336,7 @@ DocsData = {
         }
       },
       {
-        "description": "<p>A package with this flag set to true\nwill ONLY be bundled as part of <code>meteor test-app</code>.</p>",
+        "description": "<p>A package with this flag set to true\nwill ONLY be bundled as part of <code>meteor test</code>.</p>",
         "name": "testOnly",
         "type": {
           "names": [
