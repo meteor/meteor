@@ -359,7 +359,7 @@ commands can be accessed by pressing the up arrow.
 
 >>> mongo
 Connect to the Mongo database for the specified site.
-Usage: meteor mongo [--url] [site]
+Usage: meteor mongo [--url]
 
 Opens a Mongo shell to view or manipulate collections.
 
