@@ -7,7 +7,7 @@ const onFailHook = new Hook({
 });
 
 // Sends stats data to stats server and invokes callbacks
-function report(callback = _.identity) {
+function report(cb = _.identity) {
   const stats = Stats.compose();
 
   Stats.send(stats, (err, result) => {
@@ -15,25 +15,25 @@ function report(callback = _.identity) {
     Stats.maxSessions = Stats.currSessions;
 
     if (err) {
-      callback(err);
-      onFailHook.each(callback => callback(err));
+      cb(err);
+      onFailHook.each(fn => fn(err));
     }
     else {
-      callback(null, result);
-      onSuccessHook.each(cb => cb(result));
+      cb(null, result);
+      onSuccessHook.each(fn => fn(result));
     }
   });
 }
 
 _.extend(report, {
   // Registers a callback for success
-  onSuccess(cb) {
-    return onSuccessHook.register(cb);
+  onSuccess(fn) {
+    return onSuccessHook.register(fn);
   },
 
   // Registers a callbacks for fail
-  onFail(cb) {
-    return onFailHook.register(cb);
+  onFail(fn) {
+    return onFailHook.register(fn);
   }
 });
 
