@@ -234,15 +234,14 @@ var updateExistingNpmDirectory = function (packageName, newPackageNpmDir,
   //     be careful not to make the common case of no changes too
   //     slow.
   if (_.isEqual(installedDependencies, npmDependencies)) {
-    // OK, so what we have installed matches the top-level dependencies
-    // specified in `Npm.depends`. But what if we just pulled a change in
-    // npm-shrinkwrap.json to an indirectly used module version? We'll have to
-    // compare more carefully.  First, normalize the tree (strip irrelevant
-    // fields and normalize to 'version').
-    var minimizedInstalled = minimizeDependencyTree(installedDependenciesTree);
-    // If what we have installed is the same as what we have shrinkwrapped, then
-    // we're done.
-    if (_.isEqual(minimizedInstalled, shrinkwrappedDependenciesTree)) {
+    // What we have installed matches the top-level dependencies specified
+    // in `Npm.depends`. But what if we just pulled a change in
+    // npm-shrinkwrap.json to an indirectly used module version? We'll
+    // have to compare more carefully. First, normalize the tree (strip
+    // irrelevant fields and normalize to 'version'). If what we have
+    // installed is the same as what we have shrinkwrapped, we're done.
+    if (_.isEqual(minimizeDependencyTree(installedDependenciesTree),
+                  minimizeDependencyTree(shrinkwrappedDependenciesTree))) {
       return;
     }
   }
@@ -484,17 +483,19 @@ function getInstalledDependenciesTree(dir) {
         if (! pkg) return;
       }
 
-      const info = result[item] = {};
+      const info = result[item] = {
+        version: pkg.version
+      };
 
-      function copy(name) {
-        if (pkg[name]) {
-          info[name] = pkg[name];
-        }
+      const resolved = pkg._resolved || pkg.resolved;
+      if (resolved) {
+        info.resolved = resolved;
       }
 
-      copy("version");
-      copy("resolved");
-      copy("from");
+      const from = pkg._from || pkg.from;
+      if (from) {
+        info.from = from;
+      }
 
       const deps = ls(files.pathJoin(pkgDir, "node_modules"));
       if (deps && ! _.isEmpty(deps)) {
@@ -645,9 +646,7 @@ var ensureConnected = function () {
 
 // `npm shrinkwrap`
 function shrinkwrap(dir) {
-  const tree = minimizeDependencyTree(
-    getInstalledDependenciesTree(dir)
-  );
+  const tree = getInstalledDependenciesTree(dir);
 
   files.writeFile(
     files.pathJoin(dir, "npm-shrinkwrap.json"),
@@ -664,7 +663,7 @@ var minimizeDependencyTree = function (tree) {
   var minimizeModule = function (module) {
     var version;
     if (module.resolved &&
-        !module.resolved.match(/^https:\/\/registry.npmjs.org\//)) {
+        !module.resolved.match(/^https?:\/\/registry.npmjs.org\//)) {
       version = module.resolved;
     } else if (utils.isNpmUrl(module.from)) {
       version = module.from;
