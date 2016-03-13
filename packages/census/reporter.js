@@ -16,24 +16,24 @@ function report(cb = _.identity) {
 
     if (err) {
       cb(err);
-      onFailHook.each(fn => fn(err));
+      onFailHook.each(callback => callback(err));
     }
     else {
       cb(null, result);
-      onSuccessHook.each(fn => fn(result));
+      onSuccessHook.each(cb => cb(result));
     }
   });
 }
 
 _.extend(report, {
   // Registers a callback for success
-  onSuccess(fn) {
-    return onSuccessHook.register(fn);
+  onSuccess(cb) {
+    return onSuccessHook.register(cb);
   },
 
   // Registers a callbacks for fail
-  onFail(fn) {
-    return onFailHook.register(fn);
+  onFail(cb) {
+    return onFailHook.register(cb);
   }
 });
 

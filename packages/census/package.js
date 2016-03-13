@@ -1,6 +1,6 @@
 Package.describe({
   name: 'census',
-  version: '0.0.1',
+  version: '0.0.2',
   summary: 'Meteor stats sampler and reporter',
   documentation: 'README.md'
 });

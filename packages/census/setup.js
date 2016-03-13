@@ -10,14 +10,12 @@ Meteor.startup(() => {
     reportAttempts: process.env.CENSUS_REPORT_ATTEMPTS || 3
   };
 
-  if (!Config.appId)
-    Utils.warn("App id is not provided, sampling won't start");
-  else if (!Config.appSecret)
-    Utils.warn("App secret is not provided, sampling won't start");
-  else if (!Config.rootUrl)
-    Utils.warn("Root url is not provided, sampling won't start");
-  else if (!Config.statsServerUrl)
-    Utils.warn("Stats server url is not provided, sampling won't start");
-  else if (Config.autoSample)
-    Census.startSampling();
+  let shouldSample =
+    Config.appId &&
+    Config.appSecret &&
+    Config.rootUrl &&
+    Config.statsServerUrl &&
+    Config.autoSample;
+
+  if (shouldSample) Census.startSampling();
 });

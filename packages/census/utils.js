@@ -25,11 +25,6 @@ Utils = {
       .value();
   },
 
-  // Prints a warning to console
-  warn(msg) {
-    console.warn(`Census warning: ${msg}`);
-  },
-
   // Converts string to boolean
   bool(str) {
     return !!JSON.parse(str);
