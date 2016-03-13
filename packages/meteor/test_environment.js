@@ -13,12 +13,8 @@ Meteor.isTest = !!TEST_METADATA.isTest;
 Meteor.isAppTest = !!TEST_METADATA.isAppTest;
 
 var testDriverPackageName = TEST_METADATA.driverPackage;
-if (testDriverPackageName) {
+if (typeof testDriverPackageName === "string") {
   Meteor.startup(function() {
-    if (typeof testDriverPackageName !== "string") {
-      throw new Error("No --driver-package specified for `meteor test`");
-    }
-
     var testDriverPackage = Package[testDriverPackageName];
     if (! testDriverPackage) {
       throw new Error("Can't find test driver package: " + testDriverPackageName);
@@ -30,7 +26,7 @@ if (testDriverPackageName) {
         throw new Error("Test driver package " + testDriverPackageName
           + " missing `runTests` export");
       }
-      testDriverPackage.runTests();  
+      testDriverPackage.runTests();
     } else {
       // The server can optionally define `start`
       if (typeof testDriverPackage.start === "function") {
@@ -38,4 +34,6 @@ if (testDriverPackageName) {
       }
     }
   });
+} else {
+  throw new Error("No --driver-package specified for `meteor test`");
 }
