@@ -17,6 +17,7 @@ Package.onUse(function(api) {
 });
 
 Package.onTest(function(api) {
+  api.use("modules");
   api.use("tinytest");
   api.use("promise");
   api.addFiles("promise-tests.js");
