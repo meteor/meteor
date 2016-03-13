@@ -717,7 +717,7 @@ function runLinters({inputSourceArch, isopackCache, sources,
   // sourceProcessor.id -> {sourceProcessor, sources: [WrappedSourceItem]}
   const sourceItemsForLinter = {};
   _.values(sources).forEach((sourceItem) => {
-    const { relPath } = sourceItem;
+    const { relPath, fileOptions } = sourceItem;
     const classification = sourceProcessorSet.classifyFilename(
       files.pathBasename(relPath), inputSourceArch.arch);
 
@@ -739,7 +739,7 @@ function runLinters({inputSourceArch, isopackCache, sources,
       watchSet,
       files.pathResolve(inputSourceArch.sourceRoot, relPath));
     const wrappedSource = {
-      relPath, contents, hash,
+      relPath, contents, hash, fileOptions,
       arch: inputSourceArch.arch,
       'package': inputSourceArch.pkg.name
     };

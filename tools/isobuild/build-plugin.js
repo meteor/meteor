@@ -461,6 +461,17 @@ _.extend(exports.InputFile.prototype, {
     var self = this;
     return files.pathDirname(self.getPathInPackage());
   },
+
+  /**
+   * @summary Returns an object of file options such as those passed as the
+   *          third argument to api.addFiles.
+   * @memberof InputFile
+   * @returns {Object}
+   */
+  getFileOptions: function () {
+    throw new Error("Not Implemented");
+  },
+
   /**
    * @summary Call this method to raise a compilation or linting error for the
    * file.
