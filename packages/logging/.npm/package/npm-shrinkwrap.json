@@ -2,18 +2,28 @@
   "dependencies": {
     "cli-color": {
       "version": "0.2.3",
+      "resolved": "https://registry.npmjs.org/cli-color/-/cli-color-0.2.3.tgz",
+      "from": "cli-color@0.2.3",
       "dependencies": {
         "es5-ext": {
-          "version": "0.9.2"
+          "version": "0.9.2",
+          "resolved": "https://registry.npmjs.org/es5-ext/-/es5-ext-0.9.2.tgz",
+          "from": "es5-ext@0.9.2"
         },
         "memoizee": {
           "version": "0.2.5",
+          "resolved": "https://registry.npmjs.org/memoizee/-/memoizee-0.2.5.tgz",
+          "from": "memoizee@0.2.5",
           "dependencies": {
             "event-emitter": {
-              "version": "0.2.2"
+              "version": "0.2.2",
+              "resolved": "https://registry.npmjs.org/event-emitter/-/event-emitter-0.2.2.tgz",
+              "from": "event-emitter@0.2.2"
             },
             "next-tick": {
-              "version": "0.1.0"
+              "version": "0.1.0",
+              "resolved": "https://registry.npmjs.org/next-tick/-/next-tick-0.1.0.tgz",
+              "from": "next-tick@0.1.0"
             }
           }
         }
