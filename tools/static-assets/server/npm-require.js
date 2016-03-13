@@ -1,4 +1,5 @@
 var assert = require("assert");
+var topLevelIdPattern = /^[^./]/;
 
 function getRelID(id) {
   assert.strictEqual(id.charAt(0), "/");
@@ -6,7 +7,15 @@ function getRelID(id) {
 }
 
 function npmRequire(id) {
-  return require(getRelID(id));
+  try {
+    var absId = resolve(id);
+  } finally {
+    if (absId) return require(absId);
+    if (topLevelIdPattern.test(id)) {
+      // Fall back to dev_bundle/lib/node_modules and built-in modules.
+      return require(id);
+    }
+  }
 }
 
 function resolve(id) {
