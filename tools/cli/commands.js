@@ -1731,14 +1731,8 @@ var runTestAppForPackages = function (projectContext, options) {
   var buildOptions = {
     minifyMode: options.production ? 'production' : 'development'
   };
-  if (options["test-packages"]) {
-    buildOptions.buildMode = buildOptions.minifyMode;
-  } else if (options["test"]) {
-    buildOptions.buildMode = "test";
-  } else {
-    throw new Error("Neither test-packages nor test in options");
-  }
-
+  buildOptions.buildMode = "test";
+  
   if (options.deploy) {
     // Run the constraint solver and build local packages.
     main.captureAndExit("=> Errors while initializing project:", function () {
