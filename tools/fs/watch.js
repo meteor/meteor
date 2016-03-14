@@ -698,10 +698,10 @@ export class Watcher {
 }
 
 // Given a WatchSet, returns true if it currently describes the state of
-// the disk. If mtimeWindowMs is a number, return true if none of the
+// the disk. If buildStartTime is a number, return true if none of the
 // watched files were touched since that many milliseconds ago.
-export function isUpToDate(watchSet, mtimeWindowMs) {
-  if (typeof mtimeWindowMs === "number") {
+export function isUpToDate(watchSet, buildStartTime) {
+  if (typeof buildStartTime === "number") {
     const now = +new Date;
     let recentlyChanged = false;
 
@@ -719,7 +719,12 @@ export function isUpToDate(watchSet, mtimeWindowMs) {
         break;
       }
 
-      if (stat && (now - stat.mtime < mtimeWindowMs)) {
+      // Add a ten-second buffer to account for changes that happened just
+      // before the build started. This is perfectly safe because using a
+      // more distant time in the past only increases the chances that we
+      // will fall back to the full isUpToDate check.
+      const tenSecondsBeforeBuildStartTime = buildStartTime - 10 * 1000;
+      if (stat && stat.mtime > tenSecondsBeforeBuildStartTime) {
         recentlyChanged = true;
         break;
       }
