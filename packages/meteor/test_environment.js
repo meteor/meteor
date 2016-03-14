@@ -34,6 +34,4 @@ if (typeof testDriverPackageName === "string") {
       }
     }
   });
-} else {
-  throw new Error("No --driver-package specified for `meteor test`");
 }
