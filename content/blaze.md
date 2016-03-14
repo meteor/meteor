@@ -321,7 +321,7 @@ Template.Lists_show.helpers({
 
 Template.Lists_show.events({
   'click .js-cancel'(event, instance) {
-    instance.state.set('editing', false);
+    instance.state.set('editingTodo', false);
   }
 });
 ```
