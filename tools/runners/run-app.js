@@ -888,6 +888,7 @@ _.extend(AppRunner.prototype, {
         onListen: function () {
           if (! self.noRestartBanner && ! firstRun) {
             runLog.logRestart();
+            Console.enableProgressDisplay(false);
           }
         },
         beforeRun: resetCrashCount,

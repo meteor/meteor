@@ -419,7 +419,7 @@ var StatusPoller = function (console) {
 
   self._console = console;
 
-  self._pollFiber = null;
+  self._pollPromise = null;
   self._throttledStatusPoll = new utils.Throttled({
     interval: STATUS_INTERVAL_MS
   });
@@ -436,9 +436,10 @@ _.extend(StatusPoller.prototype, {
     }
 
     self._pollPromise = (async() => {
+      utils.sleepMs(STATUS_INTERVAL_MS);
       while (! self._stop) {
-        utils.sleepMs(STATUS_INTERVAL_MS);
         self.statusPoll();
+        utils.sleepMs(STATUS_INTERVAL_MS);
       }
     })();
   },
