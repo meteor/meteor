@@ -25,18 +25,18 @@ ruleTester.run('audit-argument-checks', rule, {
     'Meteor["publish"]()',
     'Meteor.publish()',
 
-    { code: 'Meteor.publish("foo", function ({ x }) {})', parser: 'babel-eslint' },
-    { code: 'Meteor.publish("foo", () => {})', parser: 'babel-eslint' },
+    { code: 'Meteor.publish("foo", function ({ x }) {})', parserOptions: { ecmaVersion: 6 } },
+    { code: 'Meteor.publish("foo", () => {})', parserOptions: { ecmaVersion: 6 } },
     'Meteor.publish("foo", function () {})',
     'Meteor.publish("foo", function (bar) { check(bar, Match.Any); })',
-    { code: 'Meteor.publish("foo", (bar) =>  { check(bar, Match.Any); })', parser: 'babel-eslint' },
+    { code: 'Meteor.publish("foo", (bar) =>  { check(bar, Match.Any); })', parserOptions: { ecmaVersion: 6 } },
     'Meteor.publish("foo", function (bar, baz) { check(bar, Match.Any); check(baz, Match.Any); })',
 
     'Meteor.methods()',
     'Meteor.methods({ x: function () {} })',
     'Meteor["methods"]({ x: function () {} })',
     'Meteor.methods({ x: true })',
-    { code: 'Meteor.methods({ x () {} })', parser: 'babel-eslint' },
+    { code: 'Meteor.methods({ x () {} })', parserOptions: { ecmaVersion: 6 } },
     'Meteor.methods({ x: function (bar) { check(bar, Match.Any); } })',
     'Meteor.methods({ x: function (bar, baz) { check(bar, Match.Any); check(baz, Match.Any); } })',
   ],
@@ -90,7 +90,7 @@ ruleTester.run('audit-argument-checks', rule, {
         message: '"bar" is not checked',
         type: 'Identifier',
       }],
-      parser: 'babel-eslint',
+      parserOptions: { ecmaVersion: 6 },
     },
     {
       code: `
@@ -107,7 +107,7 @@ ruleTester.run('audit-argument-checks', rule, {
         message: '"bar" is not checked',
         type: 'Identifier',
       }],
-      parser: 'babel-eslint',
+      parserOptions: { ecmaVersion: 6 },
     },
     {
       code: `
@@ -119,7 +119,7 @@ ruleTester.run('audit-argument-checks', rule, {
         message: '"bar" is not checked',
         type: 'Identifier',
       }],
-      parser: 'babel-eslint',
+      parserOptions: { ecmaVersion: 6 },
     },
   ],
 })
