@@ -63,6 +63,7 @@ An article with detailed setup instructions can be found [here](https://medium.c
   * [template-names](docs/template-names.md): Naming convention for templates
   * [no-template-lifecycle-assignments](docs/rules/no-template-lifecycle-assignments.md): Prevent deprecated template lifecycle callback assignments
   * [eventmap-params](docs/rules/eventmap-params.md): Force consistent event handler parameter names in event maps
+  * [prefix-eventmap-selectors](docs/rules/prefix-eventmap-selectors.md): Convention for eventmap selectors
 
 ## Core API
 * *currently no rules implemented*
