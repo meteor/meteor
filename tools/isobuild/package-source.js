@@ -1154,18 +1154,6 @@ _.extend(PackageSource.prototype, {
 
     self.cordovaDependencies = cordovaDependencies;
 
-    // If this package was previously built with pre-linker versions,
-    // it may have files directly inside `.npm` instead of nested
-    // inside `.npm/package`. Clean them up if they are there. (Kind
-    // of grody to do this here but it'll be fine for now, especially
-    // since this is only for compatibility with very old versions of
-    // Meteor.)
-    var preLinkerFiles = [
-      'npm-shrinkwrap.json', 'README', '.gitignore', 'node_modules'];
-    _.each(preLinkerFiles, function (f) {
-      files.rm_recursive(files.pathJoin(self.sourceRoot, '.npm', f));
-    });
-
     // Create source architectures, one for the server and one for each web
     // arch.
     _.each(compiler.ALL_ARCHES, function (arch) {
