@@ -131,19 +131,36 @@ meteorNpm.dependenciesArePortable = function (nodeModulesDir) {
     "node_modules"
   );
 
-  var search = function (dir) {
+  var search = function (dir, shouldCache) {
     return _.find(files.readdir(dir), function (itemName) {
       if (itemName.match(/\.node$/)) {
         return true;
       }
       var item = files.pathJoin(dir, itemName);
       if (files.lstat(item).isDirectory()) {
-        return search(item);
+        if (shouldCache) {
+          // Cache previous results by writing a boolean value to a hidden
+          // file called .meteor-portable. Although it's tempting to write
+          // this file once for the whole node_modules directory, it's
+          // important that we put separate files in the individual
+          // top-level package directories so that they will get cleared
+          // away the next time those packages are (re)installed.
+          const portableFile = files.pathJoin(item, ".meteor-portable");
+          if (files.exists(portableFile)) {
+            return JSON.parse(files.readFile(portableFile));
+          }
+          const portable = ! search(item);
+          files.writeFile(portableFile, JSON.stringify(portable) + "\n");
+          return portable;
+        }
+        return ! search(item);
       }
     }) || false;
   };
 
-  return ! search(nodeModulesDir);
+  // Only check/write .meteor-portable files in each of the top-level
+  // package directories.
+  return ! search(nodeModulesDir, true);
 };
 
 var makeNewPackageNpmDir = function (newPackageNpmDir) {
