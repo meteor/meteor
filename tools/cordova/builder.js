@@ -409,7 +409,11 @@ export class CordovaBuilder {
       ROOT_URL_PATH_PREFIX: '',
       DDP_DEFAULT_CONNECTION_URL: mobileServerUrl,
       autoupdateVersionCordova: autoupdateVersion,
-      appId: this.projectContext.appIdentifier
+      appId: this.projectContext.appIdentifier,
+      meteorEnv: {
+        NODE_ENV: process.env.NODE_ENV || "production",
+        TEST_METADATA: process.env.TEST_METADATA || "{}"
+      }
     };
 
     if (publicSettings) {
