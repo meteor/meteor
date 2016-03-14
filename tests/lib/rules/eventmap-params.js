@@ -89,7 +89,7 @@ ruleTester.run('eventmap-params', rule, {
           'submit form': (event, templateInstance) => {}
         })
       `,
-      parser: 'babel-eslint',
+      parserOptions: { ecmaVersion: 6 },
     },
     `
       Nontemplate.foo.events({
@@ -120,7 +120,7 @@ ruleTester.run('eventmap-params', rule, {
           })
         }
       `,
-      parser: 'babel-eslint',
+      parserOptions: { ecmaVersion: 6 },
     },
     {
       code: `
@@ -199,7 +199,7 @@ ruleTester.run('eventmap-params', rule, {
         { message: 'Invalid parameter name, use "event" instead', type: 'Identifier' },
         { message: 'Invalid parameter name, use "templateInstance" instead', type: 'Identifier' },
       ],
-      parser: 'babel-eslint',
+      parserOptions: { ecmaVersion: 6 },
     },
     {
       code: `

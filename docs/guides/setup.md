@@ -86,22 +86,9 @@ Here, you can define all globals your application uses. This is also the place t
 
 
 ### Usage with React
-If you are using React, you need to add a custom parser.
-
-```bash
-$ npm install babel-eslint --save-dev
-```
-
-
-Add it to `.eslintrc.json`
-
-```js
-{
-  /* ... */
-  "parser": "babel-eslint",
-  /* ... */
-}
-```
+If you are using React, you should:
+-  enable JSX syntax (see: [ESLint configuration documentation](http://eslint.org/docs/user-guide/configuring#specifying-parser-options))
+- use ESLint-plugin-React (see: [eslint-plugin-react](https://github.com/yannickcr/eslint-plugin-react))
 
 
 ## ESLint-config-airbnb
@@ -123,7 +110,11 @@ If `.eslintrc.json` is renamed to `.eslint.yaml` then the full configuration can
     node: true
     meteor: true
 
-  parser: babel-eslint
+  parserOptions:
+    ecmaVersion: 6
+    sourceType: module
+    ecmaFeatures:
+      jsx: true
 
   plugins:
     - meteor
