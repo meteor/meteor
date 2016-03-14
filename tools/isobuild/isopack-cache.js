@@ -410,7 +410,11 @@ _.extend(exports.IsopackCache.prototype, {
     // Merge in the watchsets for all unibuilds and plugins in the package, then
     // check it once.
     var watchSet = previousIsopack.getMergedWatchSet();
-    return watch.isUpToDate(watchSet);
+
+    // Since we've checked this isopack previously, take a shortcut by not
+    // considering it out of date unless any of its files have mtimes
+    // within the last 30 seconds.
+    return watch.isUpToDate(watchSet, 30 * 1000);
   },
 
   _isopackDir: function (packageName) {

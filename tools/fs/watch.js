@@ -697,9 +697,39 @@ export class Watcher {
   }
 }
 
-// Given a WatchSet, returns true if it currently describes the state of the
-// disk.
-export function isUpToDate(watchSet) {
+// Given a WatchSet, returns true if it currently describes the state of
+// the disk. If mtimeWindowMs is a number, return true if none of the
+// watched files were touched since that many milliseconds ago.
+export function isUpToDate(watchSet, mtimeWindowMs) {
+  if (typeof mtimeWindowMs === "number") {
+    const now = +new Date;
+    let recentlyChanged = false;
+
+    for (var file in watchSet.files) {
+      var stat = files.statOrNull(file);
+      var hash = watchSet.files[file];
+
+      if (typeof hash === "string") {
+        if (! stat || stat.isDirectory()) {
+          recentlyChanged = true;
+          break;
+        }
+      } else if (stat) {
+        recentlyChanged = true;
+        break;
+      }
+
+      if (stat && (now - stat.mtime < mtimeWindowMs)) {
+        recentlyChanged = true;
+        break;
+      }
+    }
+
+    if (! recentlyChanged) {
+      return true;
+    }
+  }
+
   return Profile.time('watch.isUpToDate', () => {
     var upToDate = true;
     var watcher = new Watcher({
