@@ -39,7 +39,10 @@ $webclient.DownloadFile($node_link, "$DIR\bin\node.exe")
 
 # download initial version of npm
 $npm_zip = "$DIR\bin\npm.zip"
-$npm_link = "https://nodejs.org/dist/npm/npm-${NPM_VERSION}.zip"
+
+# These dist/npm archives were only published for 1.x versions of npm, and
+# this is the most recent one.
+$npm_link = "https://nodejs.org/dist/npm/npm-1.4.12.zip"
 $webclient.DownloadFile($npm_link, $npm_zip)
 
 $zip = $shell.NameSpace($npm_zip)
@@ -51,6 +54,14 @@ rm -Recurse -Force $npm_zip
 
 # add bin to the front of the path so we can use our own node for building
 $env:PATH = "${DIR}\bin;${env:PATH}"
+
+# Install the version of npm that we're actually going to expose from the
+# dev bundle. Note that we use npm@1.4.12 to install npm@${NPM_VERSION},
+# but we use npm@3.1.2 to install dev_bundle\lib\node_modules, so that the
+# dev bundle packages have a flatter structure. Three different versions!
+cd "${DIR}\lib"
+npm install npm@${NPM_VERSION}
+npm version
 
 mkdir "${DIR}\bin\npm3"
 cd "${DIR}\bin\npm3"
