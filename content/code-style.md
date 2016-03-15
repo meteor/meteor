@@ -94,7 +94,8 @@ You can also add a `eslintConfig` section to your `package.json` to specify that
 {
   ...
   "scripts": {
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "pretest": "npm run lint --silent"
   },
   "eslintConfig": {
     "plugins": [
