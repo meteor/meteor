@@ -272,7 +272,7 @@ We can use the [Factory package's](#generating-data) `.build()` API to create a 
 
 To run the tests that our app defines, we run our app in [test mode](#test-modes):
 
-```
+```txt
 meteor test --driver-package avital:mocha
 ```
 
@@ -284,7 +284,7 @@ To run the tests, visit http://localhost:3000 in your browser. This kicks off `a
 
 Usually, while developing an application, it make sense to run `meteor test` on a second port (say `3100`), while also running your main application in a separate process:
 
-```bash
+```txt
 # in one terminal window
 meteor
 
@@ -498,7 +498,7 @@ Of note here:
 
 To run the [full-app tests](#test-modes) in our application, we run:
 
-```
+```txt
 meteor test --full-app --driver-package avital:mocha
 ```
 
@@ -615,7 +615,7 @@ To run the acceptance test, we first start our meteor server with a special test
 
 This test driver literally does nothing, but by running our app in full app test mode, we make all of our [test data creating methods](#creating-integration-test-data) available:
 
-```
+```txt
 meteor test --full-app --driver-package tmeasday:acceptance-test-driver
 ```
 
