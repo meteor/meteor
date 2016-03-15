@@ -80,7 +80,7 @@ meteor add avital:mocha
 
 This package also doesn't do anything in development or production mode (in fact it declares itself `testOnly` so it is not even included in those modes), but when our app is run in [test mode](#test-modes), it takes over, executing test code on both the client and server, and rendering results to the browser.
 
-Test files themselves (files named `*.[app]-test[s].*` or `*.[app]-spec[s].*`) can register themselves to be run by the test driver in the usual way for that testing library. For Mocha, that's by using `describe` and `it`:
+Test files themselves (for example a file named `todos-item.test.js` or `routing.app-specs.coffee`) can register themselves to be run by the test driver in the usual way for that testing library. For Mocha, that's by using `describe` and `it`:
 
 ```js
 describe('my module', () => {
@@ -113,6 +113,8 @@ This technique will only work on the server. If you need to reset the database f
 ```js
 import { resetDatabase } from 'meteor/xolvio:cleaner';
 
+// NOTE: Before writing a method like this you'll want to double check this file is only going 
+// to be loaded in test mode!!
 Meteor.methods({
   'test.resetDatabase': () => resetDatabase();
 });
@@ -126,7 +128,7 @@ describe('my module', done => {
 });
 ```
 
-As we've placed the code above in a test file, it *will not* load in normal development or production mode (which would a bad thing!). If you create a Atmosphere package with a similar feature, you should mark it as `testOnly` and it will similarly only load in test mode.
+As we've placed the code above in a test file, it *will not* load in normal development or production mode (which would a incredibly bad thing!). If you create a Atmosphere package with a similar feature, you should mark it as `testOnly` and it will similarly only load in test mode.
 
 <h3 id="generating-test-data">Generating test data</h3>
 
@@ -423,36 +425,37 @@ import { Tracker } from 'meteor/tracker';
 import { DDP } from 'meteor/ddp-client';
 import { FlowRouter } from 'meteor/kadira:flow-router';
 import { assert } from 'meteor/practicalmeteor:chai';
+import { Promise } from 'meteor/promise';
 import { $ } from 'meteor/jquery';
 
 import { generateData } from './../../api/generate-data.app-tests.js';
 import { Lists } from '../../api/lists/lists.js';
 import { Todos } from '../../api/todos/todos.js';
 
-// Utility function to wait for subscriptions
-const waitForSubscriptions = (done) => {
+
+// Utility -- returns a promise which resolves when all subscriptions are done
+const waitForSubscriptions = () => new Promise(resolve => {
   const poll = Meteor.setInterval(() => {
     if (DDP._allSubscriptionsReady()) {
       clearInterval(poll);
-      done();
+      resolve();
     }
   }, 200);
-};
+});
 
-// Utility to allow throwing inside callback
-const catchAsync = (done, cb) => () => {
-  try {
-    cb();
-  } catch (e) {
-    done(e);
-  }
-};
+// Tracker.afterFlush runs code when all consequent of a tracker based change
+//   (such as a route change) have occured. This makes it a promise.
+const afterFlushPromise = Promise.denodeify(Tracker.afterFlush);
 
 if (Meteor.isClient) {
   describe('data available when routed', () => {
     beforeEach(done => {
+      // First, ensure the data that we expect is loaded on the server
       generateData()
+        // Then, route the app to the homepage
         .then(() => FlowRouter.go('/'))
+        // Nodeify is a API to return any error from the promise
+        // to the node-style done callback in the style it expects
         .nodeify(done);
     });
 
@@ -465,16 +468,15 @@ if (Meteor.isClient) {
         const list = Lists.findOne();
         FlowRouter.go('Lists.show', { _id: list._id });
 
-        // Wait for the router change to take affect
-        Tracker.afterFlush(catchAsync(done, () => {
-          assert.equal($('.title-wrapper').html(), list.name);
-
-          // Wait for all subscriptions triggered by this route to complete
-          waitForSubscriptions(catchAsync(done, () => {
-            assert.equal(Todos.find({listId: list._id}).count(), 3);
-            done();
-          }));
-        }));
+        afterFlushPromise()
+          .then(() => {
+            assert.equal($('.title-wrapper').html(), list.name);
+          })
+          .then(() => waitForSubscriptions())
+          .then(() => {
+            assert.equal(Todos.find({ listId: list._id }).count(), 3);
+          })
+          .nodeify(done);
       });
     });
   });
@@ -541,9 +543,9 @@ if (Meteor.isClient) {
   // We do this so there's no contention w/ the currently tested user's connection
   const testConnection = Meteor.connect(Meteor.absoluteUrl());
 
-  generateData = () => Promise.denodeify((cb) => {
+  generateData = Promise.denodeify((cb) => {
     testConnection.call('generateFixtures', cb);
-  })();
+  });
 }
 
 export { generateData };
@@ -567,17 +569,15 @@ We can make Chimp a dependency of our app by installing it as an NPM development
 npm install --save-dev chimp
 ```
 
-Chimp has a variety of options for setting it up, but we can add some NPM scripts which will run the currently tests we define in Chimp's two main modes:
+Chimp has a variety of options for setting it up, but we can add some NPM scripts which will run the currently tests we define in Chimp's two main modes. We can add them to our `package.json`:
 
 ```json
 {
   "scripts": {
-    ...
     "chimp-watch": "chimp --ddp=http://localhost:3000 --watch --mocha --path=tests",
     "chimp-test": "chimp --mocha --path=tests"
   },
 ```
-[`package.json`]
 
 Chimp will now look in the `tests/` directory (otherwise ignored by the Meteor tool) for files in which you define acceptance tests. In the Todos example app, we define a simple test that ensures we can click the "create list" button:
 
