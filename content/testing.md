@@ -288,27 +288,31 @@ meteor test --driver-package avital:mocha --port 3100
 
 Then you can open two browser windows to see the app in action while also ensuring that you don't break any tests as you make changes.
 
-<h3 id="meteor-specific-isolation">Meteor specific isolation</h3>
+<h3 id="isolation-techniques">Isolation Techniques</h3>
 
-- JS has a tradition of test isolation techniques. Notable packages include `sinon`
+In the [unit test above](#simple-unit-test) we saw a very limited example of how to isolate a module from the larger app. This is critical for proper unit testing. Some other utilities and techniques include:
 
-- Sometimes you need something Meteor specific: (XXX: should this be in unit testing section)
-  - "stub collections" -- XXX: try and use sinon on the require instead?
-  - "publication collector"
-  - Everything with https://github.com/meteor-velocity/meteor-stubs
-1. Other packages w/ sinon
-    3. Collections with stub collections
-    4. Publications with stub subscriptions
-    5. Methods? w/ (something like https://github.com/meteor/meteor/pull/5561)
-    6. Other bits of Meteor (e.g. `Meteor.userId()`) -- on an adhoc basis?
+  - The [`velocity:meteor-stubs`](https://atmospherejs.com/velocity/meteor-stubs) package, which creates simple stubs for most Meteor core objects.
 
-  4. Testing various kinds of things:
-    1. General utilities
-    2. Collections / Models
-    3. Methods -- how to simulate `userId`
-    4. Publications via calling the publish fuction, and collecting results (w/ something like https://github.com/stubailo/meteor-rest/blob/devel/packages/rest/http-subscription.js)
-  5. UI components (see blaze guide and client side data stuff above)
+  - Alternatively, you can also use tools like [Sinon](http://sinonjs.org) to stub things directly, as we'll see for example in our [simple integration test](#simple-integration-test).
 
+  - The `stub-collections` package from the Todos example app we mentioned [above](#mocking-the-database).
+
+  - Using another package from the example app to isolate a publication, the `publication-collector` package:
+
+    ```js
+    describe('lists.public', () => {
+      it('sends all public lists', (done) => {
+        // Allows us to look at the output of a publication without needing a client connection
+        const collector = new PublicationCollector();
+        collector.collect('lists.public', (collections) => {
+          chai.assert.equal(collections.Lists.length, 3);
+          done();
+        });
+      });
+    });
+
+There's a lot of scope for better isolation and testing utilities (the two packages from the example app above could be improved greatly!). We encourage the community to take the lead on making these things great!
 
 <h2 id="integration-testing">Integration testing</h2>
 
@@ -318,11 +322,89 @@ Although conceptually different to unit tests, such tests typically do not need 
 
 However, an integration test that crosses the client-server boundary of a Meteor application (where the modules under test cross that boundary) requires a different testing infrastructure, namely Meteor's "full app" testing mode. 
 
-Let's take a look at example of both kinds of tests
+Let's take a look at example of both kinds of tests.
 
 <h3 id="simple-integration-test">Simple integration test</h3>
 
-XXX: example of this
+Our resuable components we a natural fit for a unit test; similarly our smart components tend to require an integration test to really be exercised properly; because the job of a smart component is to bring data together and supply it to a reusable component.
+
+In the Todos example app, we have an integration test for the `Lists_show_page` smart component. This test simply ensures that when the correct data is present in the database, the template renders correctly -- that it is gathering the correct data as we expect. It isolates the rendering tree from the more complex data subscription part of the Meteor stack. If we wanted to test that the subscription side of things was working in concert with the smart component, we'd need to write a [full app integration test](#full-app-integration-test).
+
+```js
+/* eslint-env mocha */
+
+import { Meteor } from 'meteor/meteor';
+import { Factory } from 'meteor/factory';
+import { Random } from 'meteor/random';
+import { chai } from 'meteor/practicalmeteor:chai';
+import { StubCollections } from 'meteor/stub-collections';
+import { Template } from 'meteor/templating';
+import { _ } from 'meteor/underscore';
+import { $ } from 'meteor/jquery';
+import { FlowRouter } from 'meteor/kadira:flow-router';
+import { sinon } from 'meteor/practicalmeteor:sinon';
+
+
+import { withRenderedTemplate } from '../../test-helpers.js';
+import '../lists-show-page.js';
+
+import { Todos } from '../../../api/todos/todos.js';
+import { Lists } from '../../../api/lists/lists.js';
+
+describe('Lists_show_page', () => {
+  const listId = Random.id();
+
+  beforeEach(() => {
+    StubCollections.stub([Todos, Lists]);
+    Template.registerHelper('_', key => key);
+    sinon.stub(FlowRouter, 'getParam', () => listId);
+    sinon.stub(Meteor, 'subscribe', () => ({
+      subscriptionId: 0,
+      ready: () => true,
+    }));
+  });
+
+  afterEach(() => {
+    StubCollections.restore();
+    Template.deregisterHelper('_');
+    FlowRouter.getParam.restore();
+    Meteor.subscribe.restore();
+  });
+
+  it('renders correctly with simple data', () => {
+    Factory.create('list', { _id: listId });
+    const timestamp = new Date();
+    const todos = _.times(3, i => Factory.create('todo', {
+      listId,
+      createdAt: new Date(timestamp - (3 - i)),
+    }));
+
+    withRenderedTemplate('Lists_show_page', {}, el => {
+      const todosText = todos.map(t => t.text).reverse();
+      const renderedText = $(el).find('.list-items input[type=text]')
+        .map((i, e) => $(e).val())
+        .toArray();
+      chai.assert.deepEqual(renderedText, todosText);
+    });
+  });
+});
+```
+
+Of particular interest in this test is the following:
+
+<h4 id="simple-integration-test-importing">Importing</h4>
+
+As we'll run this test in the same way that we did our unit test, we need to `import` the relevant modules under test in the same way that we [did in the unit test](#simple-integration-test-importing).
+
+<h4 id="simple-integration-test-stubbing">Stubbing</h4>
+
+As the system under test in our integration test has a larger surface area, we need to stub out a few more points of integration with the rest of the stack. Of particular interest here is our use of the [`stub-collections`](#mocking-the-database) and of [Sinon](https://sinonjs.org) to stub out Flow Router and our Subscription.
+
+<h4 id="simple-integration-test-data">Creating data</h4>
+
+In this test, we used [Factory package's](#generating-data) `.create()` API, which inserts data into the real collection. However, as we've proxied all of the `Todos` and `Lists` collection methods onto a local collection (this is what `stub-collections` is doing), we won't run into any problems with trying to perform inserts from the client.
+
+
 
 This integration test can be run the exact same way as we ran [unit tests above](#running-unit-tests).
 
