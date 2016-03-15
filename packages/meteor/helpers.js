@@ -11,10 +11,10 @@ if (typeof __meteor_runtime_config__ === 'object' &&
   Meteor.release = __meteor_runtime_config__.meteorRelease;
 }
 
-// XXX find a better home for these? Ideally they would be _.get,
-// _.ensure, _.delete..
+// XXX find a better home for these? Ideally they would be __.get,
+// __.ensure, __.delete..
 
-_.extend(Meteor, {
+__.extend(Meteor, {
   // _get(a,b,c,d) returns a[b][c][d], or else undefined if a[b] or
   // a[b][c] doesn't exist.
   //
@@ -90,7 +90,7 @@ _.extend(Meteor, {
   wrapAsync: function (fn, context) {
     return function (/* arguments */) {
       var self = context || this;
-      var newArgs = _.toArray(arguments);
+      var newArgs = __.toArray(arguments);
       var callback;
 
       for (var i = newArgs.length - 1; i >= 0; --i) {
@@ -123,14 +123,14 @@ _.extend(Meteor, {
   // Sets child's prototype to a new object whose prototype is parent's
   // prototype. Used as:
   //   Meteor._inherits(ClassB, ClassA).
-  //   _.extend(ClassB.prototype, { ... })
+  //   __.extend(ClassB.prototype, { ... })
   // Inspired by CoffeeScript's `extend` and Google Closure's `goog.inherits`.
   _inherits: function (Child, Parent) {
     // copy Parent static properties
     for (var key in Parent) {
       // make sure we only copy hasOwnProperty properties vs. prototype
       // properties
-      if (_.has(Parent, key))
+      if (__.has(Parent, key))
         Child[key] = Parent[key];
     }
 

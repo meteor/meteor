@@ -1,6 +1,6 @@
 Tinytest.add("absolute-url - basics", function(test) {
 
-  _.each(['', 'http://'], function (prefix) {
+  __.each(['', 'http://'], function (prefix) {
 
     test.equal(Meteor.absoluteUrl({rootUrl: prefix + 'asdf.com'}),
                'http://asdf.com/');

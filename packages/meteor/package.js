@@ -15,7 +15,7 @@ Npm.depends({
 });
 
 Package.onUse(function (api) {
-  api.use('underscore', ['client', 'server']);
+  api.use('underscore-base', ['client', 'server']);
 
   api.use('isobuild:compiler-plugin@1.0.0');
 
@@ -41,7 +41,7 @@ Package.onUse(function (api) {
   api.addFiles('debug.js', ['client', 'server']);
   api.addFiles('string_utils.js', ['client', 'server']);
   api.addFiles('test_environment.js', ['client', 'server']);
-  
+
   // dynamic variables, bindEnvironment
   // XXX move into a separate package?
   api.addFiles('dynamics_browser.js', 'client');
@@ -58,7 +58,7 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
-  api.use(['underscore', 'tinytest', 'test-helpers']);
+  api.use(['underscore-base', 'tinytest', 'test-helpers']);
 
   api.addFiles('browser_environment_test.js', 'web.browser');
   api.addFiles('client_environment_test.js', 'client');

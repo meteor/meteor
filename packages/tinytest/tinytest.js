@@ -18,7 +18,7 @@ TestCaseResults = function (test_case, onEvent, onException, stop_at_offset) {
   self.extraDetails = {};
 };
 
-_.extend(TestCaseResults.prototype, {
+__.extend(TestCaseResults.prototype, {
   ok: function (doc) {
     var self = this;
     var ok = {type: "ok"};
@@ -46,7 +46,7 @@ _.extend(TestCaseResults.prototype, {
       doc = { type: "fail", message: doc };
     }
 
-    doc = _.extend({}, doc, self.extraDetails);
+    doc = __.extend({}, doc, self.extraDetails);
 
     if (self.stop_at_offset === 0) {
       if (Meteor.isClient) {
@@ -122,7 +122,7 @@ _.extend(TestCaseResults.prototype, {
     }
 
     /* If expected is a DOM node, do a literal '===' comparison with
-     * actual. Otherwise do a deep comparison, as implemented by _.isEqual.
+     * actual. Otherwise do a deep comparison, as implemented by __.isEqual.
      */
 
     var matched;
@@ -132,9 +132,9 @@ _.extend(TestCaseResults.prototype, {
       expected = "[Node]";
       actual = "[Unknown]";
     } else if (typeof Uint8Array !== 'undefined' && expected instanceof Uint8Array) {
-      // I have no idea why but _.isEqual on Chrome horks completely on Uint8Arrays.
+      // I have no idea why but __.isEqual on Chrome horks completely on Uint8Arrays.
       // and the symptom is the chrome renderer taking up an entire CPU and freezing
-      // your web page, but not pausing anywhere in _.isEqual.  I don't understand it
+      // your web page, but not pausing anywhere in __.isEqual.  I don't understand it
       // but we fall back to a manual comparison
       if (!(actual instanceof Uint8Array))
         this.fail({type: "assert_equal", message: "found object is not a typed array",
@@ -214,9 +214,9 @@ _.extend(TestCaseResults.prototype, {
       predicate = function (actual) {
         return true;
       };
-    else if (_.isString(expected))
+    else if (__.isString(expected))
       predicate = function (actual) {
-        return _.isString(actual.message) &&
+        return __.isString(actual.message) &&
                actual.message.indexOf(expected) !== -1;
       };
     else if (expected instanceof RegExp)
@@ -304,7 +304,7 @@ _.extend(TestCaseResults.prototype, {
   include: function (s, v, message, not) {
     var pass = false;
     if (s instanceof Array)
-      pass = _.any(s, function(it) {return _.isEqual(v, it);});
+      pass = __.any(s, function(it) {return __.isEqual(v, it);});
     else if (typeof s === "object")
       pass = v in s;
     else if (typeof s === "string")
@@ -360,7 +360,7 @@ TestCase = function (name, func) {
   self.name = name;
   self.func = func;
 
-  var nameParts = _.map(name.split(" - "), function(s) {
+  var nameParts = __.map(name.split(" - "), function(s) {
     return s.replace(/^\s*|\s*$/g, ""); // trim
   });
   self.shortName = nameParts.pop();
@@ -368,7 +368,7 @@ TestCase = function (name, func) {
   self.groupPath = nameParts;
 };
 
-_.extend(TestCase.prototype, {
+__.extend(TestCase.prototype, {
   // Run the test asynchronously, delivering results via onEvent;
   // then call onComplete() on success, or else onException(e) if the
   // test raised (or voluntarily reported) an exception.
@@ -430,7 +430,7 @@ if (Meteor.isServer && process.env.TINYTEST_FILTER) {
   __meteor_runtime_config__.tinytestFilter = process.env.TINYTEST_FILTER;
 }
 
-_.extend(TestManager.prototype, {
+__.extend(TestManager.prototype, {
   addCase: function (test) {
     var self = this;
     if (test.name in self.tests)
@@ -464,13 +464,13 @@ TestRun = function (manager, onReport, pathPrefix) {
   self.onReport = onReport;
   self.next_sequence_number = 0;
   self._pathPrefix = pathPrefix || [];
-  _.each(self.manager.ordered_tests, function (test) {
+  __.each(self.manager.ordered_tests, function (test) {
     if (self._prefixMatch(test.groupPath))
       self._report(test);
   });
 };
 
-_.extend(TestRun.prototype, {
+__.extend(TestRun.prototype, {
 
   _prefixMatch: function (testPath) {
     var self = this;
@@ -576,7 +576,7 @@ _.extend(TestRun.prototype, {
 
   run: function (onComplete) {
     var self = this;
-    var tests = _.clone(self.manager.ordered_tests);
+    var tests = __.clone(self.manager.ordered_tests);
     var reportCurrent = function (name) {
       if (Meteor.isClient)
         Tinytest._onCurrentClientTest(name);
@@ -610,7 +610,7 @@ _.extend(TestRun.prototype, {
   _report: function (test, event) {
     var self = this;
     if (event)
-      var events = [_.extend({sequence: self.next_sequence_number++}, event)];
+      var events = [__.extend({sequence: self.next_sequence_number++}, event)];
     else
       var events = [];
     self.onReport({

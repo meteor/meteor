@@ -5,14 +5,14 @@ var reportsForRun = {};
 Meteor.publish(Meteor._ServerTestResultsSubscription, function (runId) {
   check(runId, String);
   var self = this;
-  if (!_.has(handlesForRun, runId))
+  if (!__.has(handlesForRun, runId))
     handlesForRun[runId] = [self];
   else
     handlesForRun[runId].push(self);
   self.onStop(function () {
-    handlesForRun[runId] = _.without(handlesForRun[runId], self);
+    handlesForRun[runId] = __.without(handlesForRun[runId], self);
   });
-  if (_.has(reportsForRun, runId)) {
+  if (__.has(reportsForRun, runId)) {
     self.added(Meteor._ServerTestResultsCollection, runId,
                reportsForRun[runId]);
   } else {
@@ -32,7 +32,7 @@ Meteor.methods({
     var addReport = function (key, report) {
       var fields = {};
       fields[key] = report;
-      _.each(handlesForRun[runId], function (handle) {
+      __.each(handlesForRun[runId], function (handle) {
         handle.changed(Meteor._ServerTestResultsCollection, runId, fields);
       });
       // Save for future subscriptions.
@@ -61,7 +61,7 @@ Meteor.methods({
   },
   'tinytest/clearResults': function (runId) {
     check(runId, String);
-    _.each(handlesForRun[runId], function (handle) {
+    __.each(handlesForRun[runId], function (handle) {
       // XXX this doesn't actually notify the client that it has been
       // unsubscribed.
       handle.stop();

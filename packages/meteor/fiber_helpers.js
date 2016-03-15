@@ -54,7 +54,7 @@ Meteor._SynchronousQueue = function () {
   self._draining = false;
 };
 
-_.extend(Meteor._SynchronousQueue.prototype, {
+__.extend(Meteor._SynchronousQueue.prototype, {
   runTask: function (task) {
     var self = this;
 

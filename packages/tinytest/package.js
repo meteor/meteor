@@ -6,7 +6,7 @@ Package.describe({
 Package.onUse(function (api) {
   api.use([
     'ejson',
-    'underscore',
+    'underscore-base',
     'random',
     'ddp',
     'mongo',

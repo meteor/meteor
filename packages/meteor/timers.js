@@ -13,7 +13,7 @@ var bindAndCatch = function (context, f) {
   return Meteor.bindEnvironment(withoutInvocation(f), context);
 };
 
-_.extend(Meteor, {
+__.extend(Meteor, {
   // Meteor.setTimeout and Meteor.setInterval callbacks scheduled
   // inside a server method are not part of the method invocation and
   // should clear out the CurrentInvocation environment variable.
