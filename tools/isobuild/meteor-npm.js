@@ -147,13 +147,13 @@ meteorNpm.dependenciesArePortable = function (nodeModulesDir) {
           // away the next time those packages are (re)installed.
           const portableFile = files.pathJoin(item, ".meteor-portable");
           if (files.exists(portableFile)) {
-            return JSON.parse(files.readFile(portableFile));
+            return ! JSON.parse(files.readFile(portableFile));
           }
-          const portable = ! search(item);
-          files.writeFile(portableFile, JSON.stringify(portable) + "\n");
-          return portable;
+          const result = search(item);
+          files.writeFile(portableFile, JSON.stringify(! result) + "\n");
+          return result;
         }
-        return ! search(item);
+        return search(item);
       }
     }) || false;
   };
