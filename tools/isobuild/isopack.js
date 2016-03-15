@@ -363,6 +363,12 @@ _.extend(Isopack.prototype, {
     var anySourceFiles = false;
     var addSourceFilesFromWatchSet = function (watchSet) {
       _.each(watchSet.files, function (hash, filename) {
+        if (! hash) {
+          // If a file has a falsy hash, that means the file does/should
+          // not exist.
+          return;
+        }
+
         anySourceFiles = true;
         var relativePath = files.pathRelative(sourceRoot, filename);
         // We only want files that are actually under sourceRoot.

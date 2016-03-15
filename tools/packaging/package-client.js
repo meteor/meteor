@@ -267,8 +267,11 @@ var bundleSource = function (isopack, includeSources, packageDir) {
   // directory structure that we want (<package name>-<version-source/
   // at the top level).
   _.each(includeSources, function (f) {
-    files.copyFile(files.pathJoin(packageDir, f),
-                   files.pathJoin(sourcePackageDir, f));
+    const from = files.pathJoin(packageDir, f);
+    const to = files.pathJoin(sourcePackageDir, f);
+    if (files.exists(from)) {
+      files.copyFile(from, to);
+    }
   });
 
   // Write a package map to `.versions` inside the source tarball.  Note that
