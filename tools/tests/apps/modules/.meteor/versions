@@ -37,8 +37,6 @@ livedata@1.0.15-beta.16
 logging@1.0.9-beta.16
 meteor@1.1.11-beta.16
 meteor-base@1.0.1-beta.16
-meteor-env-dev@0.0.2-beta.16
-meteor-env-prod@0.0.2-beta.16
 minifier-css@1.1.8-beta.16
 minifier-js@1.1.8-beta.16
 minimongo@1.0.11-beta.16
