@@ -8,7 +8,7 @@ title: "Testing"
 
 There are many benefits of testing your application to ensure it works the way you think it does. Reasons include maintaining a high level of quality (especially over time as your codebase changes), allowing you to refactor and rewrite code with confidence, and concrete documentation of expected behavior. (Other developers can figure out what parts of your app are supposed to do by reading the tests!)
 
-Automated testing allows you to do all of these things to a much greater degree and *run tests more often*, which means your codebase will remain in better shape and regress less. 
+Automated testing allows you to do all of these things to a much greater degree and *run tests more often*, which means your codebase will remain in better shape and regress less.
 
 <h3 id="testing-concepts">Testing concepts</h3>
 
@@ -30,7 +30,7 @@ As Meteor's data system makes it simple to bridge the client-server gap and ofte
 
 The good news is that you can easily use Meteor's [full app test mode](#test-modes) to write [integration tests](#full-app-integration-test) that bridge both sides of the gap relatively easily.
 
-Another challenge is creating test data in the client context; we'll discuss ways to do this in the [section on generating test data](#generating-test-data) below. 
+Another challenge is creating test data in the client context; we'll discuss ways to do this in the [section on generating test data](#generating-test-data) below.
 
 As Meteor's reactivity system is "eventually consistent" in the sense that when you change an reactive input to the system, some time later you'll see the user interface change to reflect this. This can be a challenge when testing, however there are some ways to wait until those changes should have happened and verify the results, such as using `Tracker.flush()`.
 
@@ -38,7 +38,7 @@ XXX: say more about this?
 
 <h2 id="test-modes">Test modes in Meteor</h2>
 
-The primary way to test your application in Meteor is the `meteor test` command. 
+The primary way to test your application in Meteor is the `meteor test` command.
 
 This loads your application in a special "test mode". What this does is:
 
@@ -113,7 +113,7 @@ This technique will only work on the server. If you need to reset the database f
 ```js
 import { resetDatabase } from 'meteor/xolvio:cleaner';
 
-// NOTE: Before writing a method like this you'll want to double check this file is only going 
+// NOTE: Before writing a method like this you'll want to double check this file is only going
 // to be loaded in test mode!!
 Meteor.methods({
   'test.resetDatabase': () => resetDatabase();
@@ -185,7 +185,7 @@ By isolating a module and simply test its internal functionality, we can write t
 
 <h3 id="simple-unit-test">A simple unit test</h3>
 
-In the Todos example application, thanks to the fact that we've split our User Interface into [smart and resuable components](ui-ux.html#components), it's natural to want to unit test some of our reusable components (we'll see below how to [integration test](#simple-integration-test) our smart components).
+In the Todos example application, thanks to the fact that we've split our User Interface into [smart and reusable components](ui-ux.html#components), it's natural to want to unit test some of our reusable components (we'll see below how to [integration test](#simple-integration-test) our smart components).
 
 To do so, we'll use a very simple test helper that renders a Blaze component off-screen with a given data context (note that the [React test utils](https://facebook.github.io/react/docs/test-utils.html) can do a similar thing for React). As we place it in `imports/ui/test-helpers.js` it won't load in our app by in normal mode (as it's not required anywhere):
 
@@ -266,7 +266,7 @@ To be a unit test, we must stub out the dependencies of the module. In this case
 
 <h4 id="unit-test-data">Creating data</h4>
 
-We can use the [Factory package's](#generating-data) `.build()` API to create a test document without inserting it into any collection. As we've been careful not to call out to any collections directly in the resuable component, we can pass the built `todo` document directly into the template.
+We can use the [Factory package's](#generating-data) `.build()` API to create a test document without inserting it into any collection. As we've been careful not to call out to any collections directly in the reusable component, we can pass the built `todo` document directly into the template.
 
 <h3 id="running-unit-tests">Running unit tests</h3>
 
@@ -276,7 +276,7 @@ To run the tests that our app defines, we run our app in [test mode](#test-modes
 meteor test --driver-package avital:mocha
 ```
 
-As we've defined a test file (`imports/todos/todos.tests.js`), what this means is that the file above will be eagerly loaded, adding the `'builds correctly from factory'` test to the Mocha registry. 
+As we've defined a test file (`imports/todos/todos.tests.js`), what this means is that the file above will be eagerly loaded, adding the `'builds correctly from factory'` test to the Mocha registry.
 
 To run the tests, visit http://localhost:3000 in your browser. This kicks off `avital:mocha`, which runs your tests both in the browser and on the server. It displays the test results in the browser in a Mocha test reporter:
 
@@ -323,17 +323,17 @@ There's a lot of scope for better isolation and testing utilities (the two packa
 
 <h2 id="integration-testing">Integration testing</h2>
 
-An integration test is a test that crosses module boundaries. In the simplest case, this simply means something very similar to a unit test, where you perform your isolation around multiple modules, creating a non-singular "system under test". 
+An integration test is a test that crosses module boundaries. In the simplest case, this simply means something very similar to a unit test, where you perform your isolation around multiple modules, creating a non-singular "system under test".
 
 Although conceptually different to unit tests, such tests typically do not need to be run any differently to unit tests and can use the same [`meteor test` mode](#running-unit-tests) and [isolation techniques](#meteor-specific-isolation) as we use for unit tests.
 
-However, an integration test that crosses the client-server boundary of a Meteor application (where the modules under test cross that boundary) requires a different testing infrastructure, namely Meteor's "full app" testing mode. 
+However, an integration test that crosses the client-server boundary of a Meteor application (where the modules under test cross that boundary) requires a different testing infrastructure, namely Meteor's "full app" testing mode.
 
 Let's take a look at example of both kinds of tests.
 
 <h3 id="simple-integration-test">Simple integration test</h3>
 
-Our resuable components were a natural fit for a unit test; similarly our smart components tend to require an integration test to really be exercised properly, as the job of a smart component is to bring data together and supply it to a reusable component.
+Our reusable components were a natural fit for a unit test; similarly our smart components tend to require an integration test to really be exercised properly, as the job of a smart component is to bring data together and supply it to a reusable component.
 
 In the Todos example app, we have an integration test for the `Lists_show_page` smart component. This test simply ensures that when the correct data is present in the database, the template renders correctly -- that it is gathering the correct data as we expect. It isolates the rendering tree from the more complex data subscription part of the Meteor stack. If we wanted to test that the subscription side of things was working in concert with the smart component, we'd need to write a [full app integration test](#full-app-integration-test).
 
@@ -506,7 +506,7 @@ When we connect to the test instance in a browser, we want to render a testing U
 
 <h3 id="creating-integration-test-data">Creating data</h3>
 
-To create test data in full-app test mode, it usually makes sense to create some special test methods which we can call from the client side. Similar to the way we cleared the database using a method in the `beforeEach` in the [test data](#test-data) section above, we can call that method before running our tests. 
+To create test data in full-app test mode, it usually makes sense to create some special test methods which we can call from the client side. Similar to the way we cleared the database using a method in the `beforeEach` in the [test data](#test-data) section above, we can call that method before running our tests.
 
 In the case of our routing tests, we've used a file called `imports/api/generate-data.app-tests.js` which defines this method (and will only be loaded in full app test mode, so is not available in general!):
 
@@ -553,7 +553,7 @@ export { generateData };
 
 Note that we've exported a client-side symbol `generateData` which is a promisified version of the method call, which makes it simpler to use this sequentially in tests.
 
-XXX: is this a good idea? 
+XXX: is this a good idea?
 
 Also of note is the way we use a second DDP connection to the server in order to send these test "control" method calls.
 
@@ -611,7 +611,7 @@ describe('list ui', () => {
 
 <h3 id="running-acceptance-tests">Running acceptance tests</h3>
 
-To run the acceptance test, we first start our meteor server with a special test driver, `tmeasday:acceptance-test-driver`. (You'll need to `meteor add` it to your app). 
+To run the acceptance test, we first start our meteor server with a special test driver, `tmeasday:acceptance-test-driver`. (You'll need to `meteor add` it to your app).
 
 This test driver literally does nothing, but by running our app in full app test mode, we make all of our [test data creating methods](#creating-integration-test-data) available:
 
@@ -627,9 +627,9 @@ The `chimp-test` command will run all of the tests *once only* and is good for t
 
 <h3 id="creating-acceptance-test-data">Creating data</h3>
 
-The advantage of running our acceptance test suite pointed at an app that runs in full app test mode is that all of the [data generating methods](#creating-integration-test-data) that we've created remain available. 
+The advantage of running our acceptance test suite pointed at an app that runs in full app test mode is that all of the [data generating methods](#creating-integration-test-data) that we've created remain available.
 
-In Chimp tests, you have a DDP connection to the server available on the `server` variable. You can thus use `server.call()` (which is wrapped to be synchronous in Chimp tests) to call these methods. This is a convenient way to share data preparation code between acceptance and integration tests. 
+In Chimp tests, you have a DDP connection to the server available on the `server` variable. You can thus use `server.call()` (which is wrapped to be synchronous in Chimp tests) to call these methods. This is a convenient way to share data preparation code between acceptance and integration tests.
 
 
 <h2 id="ci">Continuous Integration</h2>
@@ -642,7 +642,7 @@ There are two principal ways to do it: on the developer's machine before allowin
 
 <h3 id="command-line">Command Line</h3>
 
-We've seen one example of running tests on the command line, using our `npm run chimp-test` mode. 
+We've seen one example of running tests on the command line, using our `npm run chimp-test` mode.
 
 XXX: write this when the tools have caught up
 
@@ -678,6 +678,3 @@ test:
   override:
     - spacejam test-packages --driver-package practicalmeteor:mocha-console-reporter
 ```
-
-
-
