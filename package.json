@@ -26,7 +26,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "promise": "7.0.4"
+    "promise": "7.1.1"
   },
   "devDependencies": {
     "fibers": "1.0.7",
