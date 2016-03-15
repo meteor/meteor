@@ -4,7 +4,7 @@ title: "Testing"
 
 **NOTE** This is correct up to release 1.3-beta.12. Apologies that this is still a work in progress.
 
-<h2 id="testing-applications">Testing your Application</h2>
+<h2 id="introduction">Introduction</h2>
 
 There are many benefits of testing your application to ensure it works the way you think it does. Reasons include maintaining a high level of quality (especially over time as your codebase changes), allowing you to refactor and rewrite code with confidence, and concrete documentation of expected behavior. (Other developers can figure out what parts of your app are supposed to do by reading the tests!)
 
@@ -14,13 +14,13 @@ Automated testing allows you to do all of these things to a much greater degree 
 
 Entire books have been written on the subject of testing, so we will simply touch on some basics of testing here. The important thing to consider when writing a test is what part of the application you are trying to test, and how you are verifying the behaviour works.
 
- - If you are testing one small module of your application, you are writing a **unit test**. You'll need to take steps to *stub* and *mock* other modules that your module usually leverages in order to *isolate* each test. You'll typically also need to *spy* on actions that the module takes to verify that they occur.
+- If you are testing one small module of your application, you are writing a **unit test**. You'll need to take steps to *stub* and *mock* other modules that your module usually leverages in order to *isolate* each test. You'll typically also need to *spy* on actions that the module takes to verify that they occur.
 
- - If you are testing that multiple modules behave properly in concert, you are writing an **integration test**. Such tests are much more complex and may require running code both on the client and on the server to verify that communication across that divide is working as expected. Typically an integration test will still isolate a part of the entire application and directly verify results in code.
+- If you are testing that multiple modules behave properly in concert, you are writing an **integration test**. Such tests are much more complex and may require running code both on the client and on the server to verify that communication across that divide is working as expected. Typically an integration test will still isolate a part of the entire application and directly verify results in code.
 
- - If you want to write a test that can be run against any running version of your app and verifies at the browser level that the right things happen when you push the right buttons, then you are writing an **acceptance test** (sometimes called "end to end test". Such tests typically try to hook into the application as little as possible, beyond perhaps setting up the right data to run a test against.
+- If you want to write a test that can be run against any running version of your app and verifies at the browser level that the right things happen when you push the right buttons, then you are writing an **acceptance test** (sometimes called "end to end test". Such tests typically try to hook into the application as little as possible, beyond perhaps setting up the right data to run a test against.
 
- - Finally you may wish to test that your application works under typical load or see how much load it can handle before it falls over. This is called a **load test** or **stress test**. Such tests can be challenging to set up and typically aren't run often but are very important for confidence before a big production launch.
+- Finally you may wish to test that your application works under typical load or see how much load it can handle before it falls over. This is called a **load test** or **stress test**. Such tests can be challenging to set up and typically aren't run often but are very important for confidence before a big production launch.
 
 <h3 id="challenges-with-meteor">Challenges of testing in Meteor</h3>
 
@@ -32,16 +32,16 @@ In most ways, testing a Meteor app is no different from testing any other full s
 
 XXX: say more about this?
 
-<h2 id="test-modes">Test modes in Meteor</h2>
+<h2 id="test-modes">The 'meteor test' command</h2>
 
 The primary way to test your application in Meteor is the `meteor test` command.
 
 This loads your application in a special "test mode". What this does is:
 
- 1. *Doesn't* eagerly load *any* of our application code as Meteor normally would.
- 2. *Does* eagerly load any file in our application (including in `imports/` folders) that look like `*.test[s].*`, or `*.spec[s].*`
- 3. Sets the `Meteor.isTest` flag to be true.
- 4. Starts up the test driver package ([see below](#driver-package)).
+1. *Doesn't* eagerly load *any* of our application code as Meteor normally would.
+2. *Does* eagerly load any file in our application (including in `imports/` folders) that look like `*.test[s].*`, or `*.spec[s].*`
+3. Sets the `Meteor.isTest` flag to be true.
+4. Starts up the test driver package ([see below](#driver-package)).
 
 What this means is that you can write tests in files with a certain filename pattern and know they'll not be included in normal builds of your app. When your app runs in test mode, those files will be loaded (and nothing else will), and they can import the modules you want to test. As we'll see this is ideal for [unit tests](#unit-testing) and [simple integration tests](#simple-integration-test).
 
@@ -49,8 +49,8 @@ Additionally, Meteor offers a "full application" test mode. You can run this wit
 
 This is similar to test mode, with key differences:
 
- 1. It loads test files matching `*.app-test[s].*` and `*.app-spec[s].*`.
- 2. It **does** eagerly load our application code as Meteor normally would.
+1. It loads test files matching `*.app-test[s].*` and `*.app-spec[s].*`.
+2. It **does** eagerly load our application code as Meteor normally would.
 
 This means that the entirety of your application (including for instance the web server and client side router) is loaded and will run as normal. This enables you to write much more [complex integration tests](#full-app-integration-test) and also load additional files for [acceptance tests](#acceptance-testing).
 
@@ -62,11 +62,13 @@ When you run a `meteor test` command, you must provide a `--driver-package` argu
 
 There are two main kinds of test driver packages:
 
-  - web-reporters which are Meteor applications and display a special test reporting web UI that you can view the test results in.
+- **Web reporters**: Meteor applications that display a special test reporting web UI that you can view the test results in.
 
-  <img src="images/mocha-test-results.png">
+<img src="images/mocha-test-results.png">
 
-  - console-reporters that run completely on the command-line and are primary used for automated testing like [continuous integration](#ci) (as we'll see, typically PhantomJS is used to drive such tests).
+- **Console reporters**: These run completely on the command-line and are primary used for automated testing like [continuous integration](#ci) (as we'll see, typically PhantomJS is used to drive such tests).
+
+<h3 id="mocha">Recommended: Mocha</h3>
 
 In this article, we'll use the popular [Mocha](https://mochajs.org) test runner alongside the [Chai](http://chaijs.com) assertion library to test our application. In order to write tests in Mocha, we can add the [`avital:mocha`](https://atmospherejs.com/avital/mocha) package to our app.
 
