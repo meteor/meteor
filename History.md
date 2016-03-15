@@ -259,7 +259,7 @@
 
 * Add methods of the form BrowserPolicy.content.allow<ContentType>BlobUrl() to BrowserPolicy #5141
 
-* Move <script> tags to end of <body> to enable 'loading' UI to be inserted into the boilerplate #6375
+* Move `<script>` tags to end of <body> to enable 'loading' UI to be inserted into the boilerplate #6375
 
 Patches contributed by GitHub users vereed, mitar, nathan-muir,
 robfallows, skishore, okland, Primigenus, zimme, welelay, rgoomar,
