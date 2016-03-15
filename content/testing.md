@@ -576,7 +576,8 @@ Chimp has a variety of options for setting it up, but we can add some NPM script
   "scripts": {
     "chimp-watch": "chimp --ddp=http://localhost:3000 --watch --mocha --path=tests",
     "chimp-test": "chimp --mocha --path=tests"
-  },
+  }
+}
 ```
 
 Chimp will now look in the `tests/` directory (otherwise ignored by the Meteor tool) for files in which you define acceptance tests. In the Todos example app, we define a simple test that ensures we can click the "create list" button:
