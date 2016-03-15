@@ -213,7 +213,6 @@ A simple example of a reusable component to test is the `Todos_item` template. H
 
 ```js
 /* eslint-env mocha */
-/* global Todos Lists Factory chai withRenderedTemplate */
 
 import { Factory } from 'meteor/factory';
 import { chai } from 'meteor/practicalmeteor:chai';
