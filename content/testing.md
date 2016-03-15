@@ -153,62 +153,115 @@ const todoInList = Factory.create('todo', { listId: list._id });
 
 <h3 id="mocking-the-database">Mocking the database</h3>
 
-As `Factory.create` directly inserts documents into the collection that's passed into the `Factory.define` function, it can be a problem to use it on the client. However there's a neat isolation trick that you can do to replace the server-backed `Todos` [client collection](collections.html#client-collections) with a mocked out [local collection](#collections.html#local-collections):
+As `Factory.create` directly inserts documents into the collection that's passed into the `Factory.define` function, it can be a problem to use it on the client. However there's a neat isolation trick that you can do to replace the server-backed `Todos` [client collection](collections.html#client-collections) with a mocked out [local collection](#collections.html#local-collections), that's encoded in the `stub-collections` package (currently a local package in the Todos example application).
 
 ```js
-// XXX: Still figuring out the best way to do this, you can use stub-collections for now
+import { StubCollections } from 'meteor/stub-collections';
+import { Todos } from 'path/to/todos.js';
+
+StubCollections.stub(Todos);
+
+// Now Todos is stubbed to a simple local collection mock,
+//   so for instance on the client we can do:
+Todos.insert({a: 'document'});
+
+// Restore the `Todos` collection
+StubCollections.restore();
 ```
+
+In a Mocha test, it makes sense to use `stub-collections` in a `beforeEach`/`afterEach` block.
 
 <h2 id="unit-testing">Unit testing</h2>
 
-Unit testing is the process of isolating a module of code and then testing that the internals of that module work as you expect. As [we've split our code base up into ES2015 modules](structure.html) it's natural to test those modules one at a time.
+Unit testing is the process of isolating a section of code and then testing that the internals of that section work as you expect. As [we've split our code base up into ES2015 modules](structure.html) it's natural to test those modules one at a time.
 
 By isolating a module and simply test its internal functionality, we can write tests that are *fast* and *accurate*---they can quickly tell you where a problem in your application lies. Note however that incomplete unit tests can often hide bugs because of the way they stub out dependencies. For that reason it's useful to combine unit tests with slower (and perhaps less commonly run) integration and acceptance tests.
 
 <h3 id="simple-unit-test">A simple unit test</h3>
 
-In the Todos example app, we have a special `TodosCollection` that sets a `createdAt` field whenever we insert a new todo item. 
+In the Todos example application, thanks to the fact that we've split our User Interface into [smart and resuable components](ui-ux.html#components), it's natural to want to unit test some of our reusable components (we'll see below how to [integration test](#simple-integration-test) our smart components).
+
+To do so, we'll use a very simple test helper that renders a Blaze component off-screen with a given data context (note that the [React test utils](https://facebook.github.io/react/docs/test-utils.html) can do a similar thing for React). As we place it in `imports/ui/test-helpers.js` it won't load in our app by in normal mode (as it's not required anywhere):
 
 ```js
-class TodosCollection extends Mongo.Collection {
-  insert(doc, callback) {
-    doc.createdAt = doc.createdAt || new Date();
-    return super(doc, callback);
+import { _ } from 'meteor/underscore';
+import { Template } from 'meteor/templating';
+import { Blaze } from 'meteor/blaze';
+import { Tracker } from 'meteor/tracker';
+
+const withDiv = function withDiv(callback) {
+  const el = document.createElement('div');
+  document.body.appendChild(el);
+  try {
+    callback(el);
+  } finally {
+    document.body.removeChild(el);
   }
-}
+};
 
-export default Todos = new TodosCollection('Todos');
+export const withRenderedTemplate = function withRenderedTemplate(template, data, callback) {
+  withDiv((el) => {
+    const ourTemplate = _.isString(template) ? Template[template] : template;
+    Blaze.renderWithData(ourTemplate, data, el);
+    Tracker.flush();
+    callback(el);
+  });
+};
 ```
-[`imports/todos/Todos.js`]
 
-We should test that the `Todos` collection indeed behaves as we expect and sets that field when we insert a doc. To do that, we can write a file `imports/todos/todos.tests.js`, and define a Mocha test in it:
+A simple example of a reusable component to test is the `Todos_item` template. Here's what a unit test looks like (you can see some [others in the app repository](https://github.com/meteor/todos/blob/master/imports/ui/components/client/todos-item.tests.js)):
 
 ```js
-import { mocha } from "avital:mocha";
-import { chai } from "practicalmeteor:chai";
-import Todos from './Todos.js'
-import Factory from "mdg:factory";
+/* eslint-env mocha */
+/* global Todos Lists Factory chai withRenderedTemplate */
 
-const { describe, it } = mocha;
-const { assert } = chai;
+import { Factory } from 'meteor/factory';
+import { chai } from 'meteor/practicalmeteor:chai';
+import { Template } from 'meteor/templating';
+import { $ } from 'meteor/jquery';
 
-describe('todos', () => {
-  describe('mutators', () => {
-    it('builds correctly from factory', () => {
-      const todoId = Todos.insert(Factory.build('todo'));
-      const todo = Todos.findOne(todoId);
-      assert.typeOf(todo, 'object');
-      assert.typeOf(todo.createdAt, 'date');
+
+import { withRenderedTemplate } from '../../test-helpers.js';
+import '../todos-item.js';
+
+describe('Todos_item', () => {
+  beforeEach(() => {
+    Template.registerHelper('_', key => key);
+  });
+
+  afterEach(() => {
+    Template.deregisterHelper('_');
+  });
+
+  it('renders correctly with simple data', () => {
+    const todo = Factory.build('todo', { checked: false });
+    const data = {
+      todo,
+      onEditingChange: () => 0,
+    };
+
+    withRenderedTemplate('Todos_item', data, el => {
+      chai.assert.equal($(el).find('input[type=text]').val(), todo.text);
+      chai.assert.equal($(el).find('.list-item.checked').length, 0);
+      chai.assert.equal($(el).find('.list-item.editing').length, 0);
     });
   });
 });
 ```
-[`imports/todos/Todos.tests.js`]
 
+Of particular interest in this test is the following:
 
-There are a few things to note here. Firstly, we've imported from the Mocha and Factory packages, which are special packages that we can only use in test mode. Of course this test file will only be executed in test mode also!
+<h4 id="unit-test-importing">Importing</h4>
 
-Secondly, we've used [Mocha's API](https://mochajs.org) as well as [Chai's assertions](http://chaijs.com/api/assert/) to define a test suite and define a test that checks that `createdAt` gets set on a todo that the factory creates.
+When we run our app in test mode, only our test files will be eagerly loaded. In particular, this means that in order to use our templates, we need to import them! In this test, we import `todos-item.js`, which itself imports 'todos.html' (yes, you do need to `import` the HTML files of your Blaze templates!)
+
+<h4 id="unit-test-stubbing">Stubbing</h4>
+
+To be a unit test, we must stub out the dependencies of the module. In this case, thanks to the way we've isolated our code into a reusable component, there's not much to do; principally we need to stub out the `{% raw %}{{_}}{% endraw %}` helper that's created by the [`tap:i18n`](ui-ux.html#i18n) system. Note that we stub it out in a `beforeEach` and restore it the `afterEach`.
+
+<h4 id="unit-test-data">Creating data</h4>
+
+We can use the [Factory package's](#generating-data) `.build()` API to create a test document without inserting it into any collection. As we've been careful not to call out to any collections directly in the resuable component, we can pass the built `todo` document directly into the template, and it's simple.
 
 <h3 id="running-unit-tests">Running unit tests</h3>
 
@@ -222,7 +275,7 @@ As we've defined a test file (`imports/todos/todos.tests.js`), what this means i
 
 To run the tests, visit http://localhost:3000 in your browser. This kicks off `avital:mocha`, which runs your tests both in the browser and on the server. It displays the test results in the browser in a Mocha test reporter:
 
-[IMAGE]
+<img src="images/mocha-test-results.png">
 
 Usually, while developing an application, it make sense to run `meteor test` on a second port (say `3100`), while also running your main application in a separate process:
 
