@@ -565,7 +565,7 @@ As acceptance tests test the behavior of the application in a full browser conte
 
 We can make Chimp a dependency of our app by installing it as an NPM development dependency:
 
-```
+```txt
 npm install --save-dev chimp
 ```
 
