@@ -588,7 +588,7 @@ Chimp will now look in the `tests/` directory (otherwise ignored by the Meteor t
 // These are Chimp globals
 /* globals browser assert server */
 
-const countLists = () => {
+function countLists() {
   browser.waitForExist('.list-todo');
   const elements = browser.elements('.list-todo');
   return elements.value.length;
