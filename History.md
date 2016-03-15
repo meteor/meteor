@@ -2,6 +2,8 @@
 
 ### ES2015/Modules
 
+* Testing, ignore please..
+
 * Enable ES2015 and CommonJS modules in Meteor apps and packages, on
   both client and server. Also let you install modules in apps and
   package by running `npm install`. XXX link to paper document
