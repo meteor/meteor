@@ -1,7 +1,7 @@
 /**
  * @fileoverview Prevent usage of Session
  * @author Dominik Ferber
- * @copyright 2015 Dominik Ferber. All rights reserved.
+ * @copyright 2016 Dominik Ferber. All rights reserved.
  * See LICENSE file in root directory for full license.
  */
 
