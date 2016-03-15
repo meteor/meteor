@@ -317,7 +317,7 @@ In the [unit test above](#simple-unit-test) we saw a very limited example of how
     });
     ```
 
-There's a lot of scope for better isolation and testing utilities (the two packages from the example app above could be improved greatly!). We encourage the community to take the lead on making these things great!
+There's a lot of scope for better isolation and testing utilities (the two packages from the example app above could be improved greatly!). We encourage the community to take the lead on these!
 
 <h2 id="integration-testing">Integration testing</h2>
 
@@ -331,7 +331,7 @@ Let's take a look at example of both kinds of tests.
 
 <h3 id="simple-integration-test">Simple integration test</h3>
 
-Our resuable components we a natural fit for a unit test; similarly our smart components tend to require an integration test to really be exercised properly; because the job of a smart component is to bring data together and supply it to a reusable component.
+Our resuable components were a natural fit for a unit test; similarly our smart components tend to require an integration test to really be exercised properly, as the job of a smart component is to bring data together and supply it to a reusable component.
 
 In the Todos example app, we have an integration test for the `Lists_show_page` smart component. This test simply ensures that when the correct data is present in the database, the template renders correctly -- that it is gathering the correct data as we expect. It isolates the rendering tree from the more complex data subscription part of the Meteor stack. If we wanted to test that the subscription side of things was working in concert with the smart component, we'd need to write a [full app integration test](#full-app-integration-test).
 
@@ -483,7 +483,7 @@ if (Meteor.isClient) {
 
 Of note here:
 
- - Before running, each test sets up the data it needs using the `generateData` helper (see [the section on creating integration test data](#creating-integration-test-data)) for more detail) then goes to the homepage.
+ - Before running, each test sets up the data it needs using the `generateData` helper (see [the section on creating integration test data](#creating-integration-test-data) for more detail) then goes to the homepage.
 
  - Although Flow Router doesn't take a done callback, we can use `Tracker.afterFlush` to wait for all it's reactive consequences to occur.
 
