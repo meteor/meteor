@@ -1,7 +1,7 @@
 /**
  * @fileoverview Ensures that the names of the arguments of event handlers are always the same
  * @author Philipp Sporrer, Dominik Ferber
- * @copyright 2015 Philipp Sporrer. All rights reserved.
+ * @copyright 2016 Philipp Sporrer. All rights reserved.
  * See LICENSE file in root directory for full license.
  */
 
