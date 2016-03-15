@@ -533,15 +533,17 @@ Ap._initServerMethods = function () {
   };
 
   methods.logout = function () {
-    var user = accounts.users.findOne(this.userId)
+    var userId = this.userId;
     var token = accounts._getLoginToken(this.connection.id);
     accounts._setLoginToken(this.userId, this.connection, null);
     if (token && this.userId)
       accounts.destroyToken(this.userId, token);
     this.setUserId(null);
 
-    if(accounts._onLogoutHook)
-      accounts._onLogoutHook(user)
+    if(accounts._onLogoutHook) {
+      var user = accounts.users.findOne(userId);
+      accounts._onLogoutHook(user);
+    }
   };
 
   // Delete all the current user's tokens and close all open connections logged
