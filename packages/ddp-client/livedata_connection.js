@@ -1258,8 +1258,12 @@ _.extend(Connection.prototype, {
     }
 
     self._bufferedWritesFlushAt = null;
-    self._performWrites(self._bufferedWrites);
+    // We need to clear the buffer before passing it to
+    //  performWrites. As there's no guarantee that it
+    //  will exit cleanly.
+    var writes = self._bufferedWrites;
     self._bufferedWrites = {};
+    self._performWrites(writes);
   },
 
   _performWrites: function(updates){
