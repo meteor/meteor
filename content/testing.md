@@ -24,15 +24,11 @@ Entire books have been written on the subject of testing, so we will simply touc
 
 <h3 id="challenges-with-meteor">Challenges of testing in Meteor</h3>
 
-In some ways, testing a Meteor is no different to testing any other client-server, JavaScript heavy application. However, especially compared to a more backend focussed, traditional framework, the client-server divide and the reactive nature of code can add extra challenges to testing.
+In most ways, testing a Meteor app is no different from testing any other full stack JavaScript application. However, compared to more traditional backend or frontend focused frameworks, two factors can make testing a little more challenging:
 
-As Meteor's data system makes it simple to bridge the client-server gap and often allows you to create your application without thinking about how data moves around, it becomes critical to test that your code does actually work correctly across that gap. In traditional frameworks where you spend a lot of time thinking about interfaces between client and server, you can often get away with testing both sides of the interface in isolation.
+- **Client/server data**: Meteor's data system makes it simple to bridge the client-server gap and often allows you to build your application without thinking about how data moves around. It becomes critical to test that your code does actually work correctly across that gap. In traditional frameworks where you spend a lot of time thinking about interfaces between client and server you can often get away with testing both sides of the interface in isolation, but Meteor's [full app test mode](#test-modes) makes it easy to write [integration tests](#full-app-integration-test) that cover the full stack. Another challenge here is creating test data in the client context; we'll discuss ways to do this in the [section on generating test data](#generating-test-data) below.
 
-The good news is that you can easily use Meteor's [full app test mode](#test-modes) to write [integration tests](#full-app-integration-test) that bridge both sides of the gap relatively easily.
-
-Another challenge is creating test data in the client context; we'll discuss ways to do this in the [section on generating test data](#generating-test-data) below.
-
-As Meteor's reactivity system is "eventually consistent" in the sense that when you change an reactive input to the system, some time later you'll see the user interface change to reflect this. This can be a challenge when testing, however there are some ways to wait until those changes should have happened and verify the results, such as using `Tracker.flush()`.
+- **Reactivity**: Meteor's reactivity system is "eventually consistent" in the sense that when you change a reactive input to the system, you'll see the user interface change to reflect this some time later. This can be a challenge when testing, but there are some ways to wait until those changes happen to verify the results, for example `Tracker.afterFlush()`.
 
 XXX: say more about this?
 
