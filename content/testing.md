@@ -32,7 +32,9 @@ The good news is that you can easily use Meteor's [full app test mode](#test-mod
 
 Another challenge is creating test data in the client context; we'll discuss ways to do this in the [section on generating test data](#generating-test-data) below. 
 
-As Meteor's reactivity system is "eventually consistent" in the sense that when you change an reactive input to the system, some time later you'll see the user interface change to reflect this. This is a challenge when testing, however there are some ways to wait until those changes should have happened and verify the results, as we'll see in the [Blaze unit test](XXX link) below.
+As Meteor's reactivity system is "eventually consistent" in the sense that when you change an reactive input to the system, some time later you'll see the user interface change to reflect this. This can be a challenge when testing, however there are some ways to wait until those changes should have happened and verify the results, such as using `Tracker.flush()`.
+
+XXX: say more about this?
 
 <h2 id="test-modes">Test modes in Meteor</h2>
 
@@ -54,7 +56,7 @@ This is similar to test mode, with key differences:
  1. It loads test files matching `*.app-test[s].*` and `*.app-spec[s].*`.
  2. It **does** eagerly load our application code as Meteor normally would.
 
-This means that the entirety of your application (including for instance the web server and client side router) is loaded and will run as normal. This enables you to write much more [complex integration tests](#full-app-integration-test) and also load additional files for [acceptance tests](#acceptance-test).
+This means that the entirety of your application (including for instance the web server and client side router) is loaded and will run as normal. This enables you to write much more [complex integration tests](#full-app-integration-test) and also load additional files for [acceptance tests](#acceptance-testing).
 
 Note that there is another test command in the Meteor tool; `meteor test-packages` is a way of testing Atmosphere packages, which we'll discuss in more detail in the [Writing Packages Article](writing-packages.html#testing).
 
@@ -64,7 +66,9 @@ When you run a `meteor test` command, you must provide a `--driver-package` argu
 
 There are two main kinds of test driver packages:
 
-  -web-reporters which are Meteor applications and display a special test reporting web UI that you can view the test results in [include a SS]
+  - web-reporters which are Meteor applications and display a special test reporting web UI that you can view the test results in.
+
+  <img src="images/mocha-test-results.png">
 
   - console-reporters that run completely on the command-line and are primary used for automated testing like [continuous integration](#ci) (as we'll see, typically PhantomJS is used to drive such tests).
 
@@ -252,7 +256,7 @@ Of particular interest in this test is the following:
 
 <h4 id="unit-test-importing">Importing</h4>
 
-When we run our app in test mode, only our test files will be eagerly loaded. In particular, this means that in order to use our templates, we need to import them! In this test, we import `todos-item.js`, which itself imports 'todos.html' (yes, you do need to `import` the HTML files of your Blaze templates!)
+When we run our app in test mode, only our test files will be eagerly loaded. In particular, this means that in order to use our templates, we need to import them! In this test, we import `todos-item.js`, which itself imports `todos.html` (yes, you do need to import the HTML files of your Blaze templates!)
 
 <h4 id="unit-test-stubbing">Stubbing</h4>
 
@@ -260,7 +264,7 @@ To be a unit test, we must stub out the dependencies of the module. In this case
 
 <h4 id="unit-test-data">Creating data</h4>
 
-We can use the [Factory package's](#generating-data) `.build()` API to create a test document without inserting it into any collection. As we've been careful not to call out to any collections directly in the resuable component, we can pass the built `todo` document directly into the template, and it's simple.
+We can use the [Factory package's](#generating-data) `.build()` API to create a test document without inserting it into any collection. As we've been careful not to call out to any collections directly in the resuable component, we can pass the built `todo` document directly into the template.
 
 <h3 id="running-unit-tests">Running unit tests</h3>
 
@@ -311,6 +315,7 @@ In the [unit test above](#simple-unit-test) we saw a very limited example of how
         });
       });
     });
+    ```
 
 There's a lot of scope for better isolation and testing utilities (the two packages from the example app above could be improved greatly!). We encourage the community to take the lead on making these things great!
 
@@ -403,8 +408,6 @@ As the system under test in our integration test has a larger surface area, we n
 <h4 id="simple-integration-test-data">Creating data</h4>
 
 In this test, we used [Factory package's](#generating-data) `.create()` API, which inserts data into the real collection. However, as we've proxied all of the `Todos` and `Lists` collection methods onto a local collection (this is what `stub-collections` is doing), we won't run into any problems with trying to perform inserts from the client.
-
-
 
 This integration test can be run the exact same way as we ran [unit tests above](#running-unit-tests).
 
