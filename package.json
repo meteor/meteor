@@ -59,7 +59,7 @@
     "cz-conventional-changelog": "1.1.5",
     "eslint": "2.4.0",
     "eslint-config-airbnb": "6.1.0",
-    "eslint-plugin-react": "4.2.2",
+    "eslint-plugin-react": "4.2.3",
     "ghooks": "1.0.3",
     "mocha": "2.4.5",
     "nyc": "6.1.1",
