@@ -13,44 +13,44 @@
             "nan": {
               "version": "1.5.1",
               "resolved": "https://registry.npmjs.org/nan/-/nan-1.5.1.tgz",
-              "from": "nan@1.5.1"
+              "from": "https://registry.npmjs.org/nan/-/nan-1.5.1.tgz"
             }
           }
         },
         "readable-stream": {
           "version": "2.0.6",
           "resolved": "https://registry.npmjs.org/readable-stream/-/readable-stream-2.0.6.tgz",
-          "from": "readable-stream@latest",
+          "from": "https://registry.npmjs.org/readable-stream/-/readable-stream-2.0.6.tgz",
           "dependencies": {
             "core-util-is": {
               "version": "1.0.2",
               "resolved": "https://registry.npmjs.org/core-util-is/-/core-util-is-1.0.2.tgz",
-              "from": "core-util-is@>=1.0.0 <1.1.0"
+              "from": "https://registry.npmjs.org/core-util-is/-/core-util-is-1.0.2.tgz"
             },
             "inherits": {
               "version": "2.0.1",
               "resolved": "https://registry.npmjs.org/inherits/-/inherits-2.0.1.tgz",
-              "from": "inherits@>=2.0.1 <2.1.0"
+              "from": "https://registry.npmjs.org/inherits/-/inherits-2.0.1.tgz"
             },
             "isarray": {
               "version": "1.0.0",
               "resolved": "https://registry.npmjs.org/isarray/-/isarray-1.0.0.tgz",
-              "from": "isarray@>=1.0.0 <1.1.0"
+              "from": "https://registry.npmjs.org/isarray/-/isarray-1.0.0.tgz"
             },
             "process-nextick-args": {
               "version": "1.0.6",
               "resolved": "https://registry.npmjs.org/process-nextick-args/-/process-nextick-args-1.0.6.tgz",
-              "from": "process-nextick-args@>=1.0.6 <1.1.0"
+              "from": "https://registry.npmjs.org/process-nextick-args/-/process-nextick-args-1.0.6.tgz"
             },
             "string_decoder": {
               "version": "0.10.31",
               "resolved": "https://registry.npmjs.org/string_decoder/-/string_decoder-0.10.31.tgz",
-              "from": "string_decoder@>=0.10.0 <0.11.0"
+              "from": "https://registry.npmjs.org/string_decoder/-/string_decoder-0.10.31.tgz"
             },
             "util-deprecate": {
               "version": "1.0.2",
               "resolved": "https://registry.npmjs.org/util-deprecate/-/util-deprecate-1.0.2.tgz",
-              "from": "util-deprecate@>=1.0.1 <1.1.0"
+              "from": "https://registry.npmjs.org/util-deprecate/-/util-deprecate-1.0.2.tgz"
             }
           }
         }

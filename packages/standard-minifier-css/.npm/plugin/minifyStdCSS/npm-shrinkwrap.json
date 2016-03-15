@@ -3,7 +3,7 @@
     "source-map": {
       "version": "0.5.3",
       "resolved": "https://registry.npmjs.org/source-map/-/source-map-0.5.3.tgz",
-      "from": "source-map@0.5.3"
+      "from": "https://registry.npmjs.org/source-map/-/source-map-0.5.3.tgz"
     }
   }
 }
