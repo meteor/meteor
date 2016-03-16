@@ -59,6 +59,7 @@ class AssetBundle {
     private final AssetBundle parentAssetBundle;
 
     private final String version;
+    private final String cordovaCompatibilityVersion;
 
     private Map<String, Asset> ownAssetsByURLPath;
     private Asset indexFile;
@@ -67,15 +68,15 @@ class AssetBundle {
     private String appId;
     private String rootUrlString;
 
-    public AssetBundle(CordovaResourceApi resourceApi, Uri directoryUri) {
+    public AssetBundle(CordovaResourceApi resourceApi, Uri directoryUri) throws WebAppException {
         this(resourceApi, directoryUri, null, null);
     }
 
-    public AssetBundle(CordovaResourceApi resourceApi, Uri directoryUri, AssetBundle parentAssetBundle) {
+    public AssetBundle(CordovaResourceApi resourceApi, Uri directoryUri, AssetBundle parentAssetBundle) throws WebAppException {
         this(resourceApi, directoryUri, null, parentAssetBundle);
     }
 
-    public AssetBundle(CordovaResourceApi resourceApi, Uri directoryUri, AssetManifest manifest, AssetBundle parentAssetBundle) {
+    public AssetBundle(CordovaResourceApi resourceApi, Uri directoryUri, AssetManifest manifest, AssetBundle parentAssetBundle) throws WebAppException {
         this.resourceApi = resourceApi;
         this.directoryUri = directoryUri;
         this.parentAssetBundle = parentAssetBundle;
@@ -85,6 +86,7 @@ class AssetBundle {
         }
 
         version = manifest.version;
+        cordovaCompatibilityVersion = manifest.cordovaCompatibilityVersion;
 
         ownAssetsByURLPath = new HashMap<String, Asset>();
         for (AssetManifest.Entry entry : manifest.entries) {
@@ -142,6 +144,10 @@ class AssetBundle {
         return version;
     }
 
+    public String getCordovaCompatibilityVersion() {
+        return cordovaCompatibilityVersion;
+    }
+
     public Asset getIndexFile() {
         return indexFile;
     }
@@ -185,15 +191,13 @@ class AssetBundle {
         this.directoryUri = directoryUri;
     }
 
-    private AssetManifest loadAssetManifest() {
+    private AssetManifest loadAssetManifest() throws WebAppException {
         Uri manifestUri = Uri.withAppendedPath(directoryUri, "program.json");
         try {
             String string = stringFromUri(manifestUri);
             return new AssetManifest(string);
         } catch (IOException e) {
-            throw new RuntimeException("Error loading asset manifest", e);
-        } catch (JSONException e) {
-            throw new RuntimeException("Error parsing asset manifest", e);
+            throw new WebAppException("Error loading asset manifest", e);
         }
     }
 

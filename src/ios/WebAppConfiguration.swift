@@ -37,6 +37,24 @@ final class WebAppConfiguration {
     }
   }
   
+  /// The Cordova compatibility version as specified in the asset manifest
+  var cordovaCompatibilityVersion: String? {
+    get {
+      return userDefaults.stringForKey("MeteorWebAppCordovaCompatibilityVersion")
+    }
+    
+    set {
+      if newValue != cordovaCompatibilityVersion {
+        if newValue == nil {
+          userDefaults.removeObjectForKey("MeteorWebAppCordovaCompatibilityVersion")
+        } else {
+          userDefaults.setObject(newValue, forKey: "MeteorWebAppCordovaCompatibilityVersion")
+        }
+        userDefaults.synchronize()
+      }
+    }
+  }
+  
   /// The last seen initial version of the asset bundle
   var lastSeenInitialVersion: String? {
     get {
@@ -117,6 +135,7 @@ final class WebAppConfiguration {
   }
   
   func reset() {
+    cordovaCompatibilityVersion = nil
     lastSeenInitialVersion = nil
     lastDownloadedVersion = nil
     lastKnownGoodVersion = nil

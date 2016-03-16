@@ -702,6 +702,69 @@ exports.defineAutoTests = function() {
       });
     });
 
+    describe("when downloading a version with a missing cordovaCompatibilityVersion", function() {
+      beforeEach(function(done) {
+        WebAppMockRemoteServer.serveVersion("missing_cordova_compatibility_version", done);
+      });
+
+      afterEach(function(done) {
+        WebAppLocalServer.resetToInitialState(done);
+      });
+
+      it("should invoke the onError callback with an error", function(done) {
+        WebAppLocalServer.onError(function(error) {
+          expect(error.message).toEqual("Asset manifest does not have a cordovaCompatibilityVersion");
+          done();
+        });
+
+        WebAppLocalServer.checkForUpdates();
+      });
+
+      it("should not invoke the onNewVersionReady callback", function(done) {
+        WebAppLocalServer.onNewVersionReady(function() {
+          fail();
+          done();
+        });
+
+        // Wait 500ms for the test to fail
+        waitForTestToFail(500, done);
+
+        WebAppLocalServer.checkForUpdates();
+      });
+    });
+
+    describe("when downloading a version with a different cordovaCompatibilityVersion", function() {
+      beforeEach(function(done) {
+        WebAppMockRemoteServer.serveVersion("different_cordova_compatibility_version", done);
+      });
+
+      afterEach(function(done) {
+        WebAppLocalServer.resetToInitialState(done);
+      });
+
+      it("should invoke the onError callback with an error", function(done) {
+        WebAppLocalServer.onError(function(error) {
+          expect(error.message).toEqual("Skipping downloading new version because \
+the Cordova platform version or plugin versions have changed and are potentially incompatible");
+          done();
+        });
+
+        WebAppLocalServer.checkForUpdates();
+      });
+
+      it("should not invoke the onNewVersionReady callback", function(done) {
+        WebAppLocalServer.onNewVersionReady(function() {
+          fail();
+          done();
+        });
+
+        // Wait 500ms for the test to fail
+        waitForTestToFail(500, done);
+
+        WebAppLocalServer.checkForUpdates();
+      });
+    });
+
     describe("when resuming a partial download with the same version", function() {
       beforeEach(function(done) {
         WebAppLocalServer.simulatePartialDownload("version2", function() {

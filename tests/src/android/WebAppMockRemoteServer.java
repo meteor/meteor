@@ -214,7 +214,13 @@ public class WebAppMockRemoteServer extends CordovaPlugin implements WebAppLocal
     }
 
     private void simulateAppRestart(final CallbackContext callbackContext) {
-        webAppLocalServer.initializeAssetBundles();
+        try {
+            webAppLocalServer.initializeAssetBundles();
+        } catch (WebAppException e) {
+            Log.e(LOG_TAG, "Could not initialize asset bundles", e);
+            callbackContext.error(e.getMessage());
+            return;
+        }
         webAppLocalServer.onReset();
 
         callbackContext.success();
@@ -225,7 +231,13 @@ public class WebAppMockRemoteServer extends CordovaPlugin implements WebAppLocal
             @Override
             public void run() {
                 webAppLocalServer.getConfiguration().reset();
-                webAppLocalServer.initializeAssetBundles();
+                try {
+                    webAppLocalServer.initializeAssetBundles();
+                } catch (WebAppException e) {
+                    Log.e(LOG_TAG, "Could not initialize asset bundles", e);
+                    callbackContext.error(e.getMessage());
+                    return;
+                }
                 webAppLocalServer.onReset();
 
                 removeReceivedRequests();

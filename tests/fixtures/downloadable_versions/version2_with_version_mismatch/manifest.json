@@ -1,6 +1,10 @@
 {
   "format": "web-program-pre1",
   "version": "version2",
+  "cordovaCompatibilityVersions": {
+    "android": "4017747ca6b4f460f33b121e439b7a11a070205a",
+    "ios": "0abe549f2adbcf6cd295428aefea628ebe69666a"
+  },
   "manifest": [
     {
       "path": "packages/meteor.js",

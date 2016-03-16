@@ -36,7 +36,8 @@ public class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
       if currentAssetBundle != nil {
         configuration.appId = currentAssetBundle.appId
         configuration.rootURL = currentAssetBundle.rootURL
-
+        configuration.cordovaCompatibilityVersion = currentAssetBundle.cordovaCompatibilityVersion
+        
         NSLog("Serving asset bundle version: \(currentAssetBundle.version)")
       }
     }
@@ -319,6 +320,13 @@ public class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
 
     // Don't download blacklisted versions
     if configuration.blacklistedVersions.contains(manifest.version) {
+      notifyError(WebAppError.UnsuitableAssetBundle(reason: "Skipping downloading blacklisted version", underlyingError: nil))
+      return false
+    }
+    
+    // Don't download versions potentially incompatible with the bundled native code
+    if manifest.cordovaCompatibilityVersion != configuration.cordovaCompatibilityVersion {
+      notifyError(WebAppError.UnsuitableAssetBundle(reason: "Skipping downloading new version because the Cordova platform version or plugin versions have changed and are potentially incompatible", underlyingError: nil))
       return false
     }
 

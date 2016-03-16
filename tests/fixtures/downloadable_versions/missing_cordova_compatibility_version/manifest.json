@@ -1,10 +1,6 @@
 {
   "format": "web-program-pre1",
-  "version": "version2",
-  "cordovaCompatibilityVersions": {
-    "android": "4017747ca6b4f460f33b121e439b7a11a070205a",
-    "ios": "0abe549f2adbcf6cd295428aefea628ebe69666a"
-  },
+  "version": "missing_cordova_compatibility_version",
   "manifest": [
     {
       "path": "packages/meteor.js",
@@ -22,11 +18,11 @@
       "where": "client",
       "type": "js",
       "cacheable": true,
-      "url": "/app/template.mobileapp.js?3f6275657e6db3a21acb37d0f6c207cf83871e90",
+      "url": "/app/template.mobileapp.js?979b20f66caf126704c250fbd29ce253c6cb490e",
       "sourceMap": "app/template.mobileapp.js.map",
-      "sourceMapUrl": "/app/3f6275657e6db3a21acb37d0f6c207cf83871e90.map",
-      "size": 584,
-      "hash": "3f6275657e6db3a21acb37d0f6c207cf83871e90"
+      "sourceMapUrl": "/app/979b20f66caf126704c250fbd29ce253c6cb490e.map",
+      "size": 578,
+      "hash": "979b20f66caf126704c250fbd29ce253c6cb490e"
     },
     {
       "path": "app/mobileapp.js",
@@ -65,17 +61,8 @@
       "type": "asset",
       "cacheable": false,
       "url": "/some-file",
-      "size": 20,
-      "hash": "20242aa2ac9c728ca21c7cbbee841fd87e8277aa"
-    },
-    {
-      "path": "app/some-other-file",
-      "where": "client",
-      "type": "asset",
-      "cacheable": false,
-      "url": "/some-other-file",
-      "size": 16,
-      "hash": "aa4405bb6a2eb7d79af8488b44d91e5c66c123a5"
+      "size": 10,
+      "hash": "23300652a57f3e819038d9a268ba36af0e25d33b"
     },
     {
       "path": "app/some-font.woff",

@@ -51,7 +51,7 @@ class AssetBundleManager {
     /** The initial asset bundle included in the app bundle */
     public final AssetBundle initialAssetBundle;
 
-    public AssetBundleManager(CordovaResourceApi resourceApi, WebAppConfiguration webAppConfiguration, AssetBundle initialAssetBundle, File versionsDirectory) {
+    public AssetBundleManager(CordovaResourceApi resourceApi, WebAppConfiguration webAppConfiguration, AssetBundle initialAssetBundle, File versionsDirectory) throws WebAppException {
         this.resourceApi = resourceApi;
         this.webAppConfiguration = webAppConfiguration;
         this.initialAssetBundle = initialAssetBundle;
@@ -65,7 +65,7 @@ class AssetBundleManager {
         httpClient = new OkHttpClient();
     }
 
-    private void loadDownloadedAssetBundles() {
+    private void loadDownloadedAssetBundles() throws WebAppException {
         for (File file: versionsDirectory.listFiles()) {
             if (downloadDirectory.equals(file)) continue;
             if (partialDownloadDirectory.equals(file)) continue;
@@ -94,14 +94,14 @@ class AssetBundleManager {
             @Override
             public void onFailure(Call call, IOException e) {
                 if (!call.isCanceled()) {
-                    didFail(new DownloadFailureException("Error downloading asset manifest", e));
+                    didFail(new WebAppException("Error downloading asset manifest", e));
                 }
             }
 
             @Override
             public void onResponse(Call call, Response response) {
                 if (!response.isSuccessful()) {
-                    didFail(new DownloadFailureException("Non-success status code " + response.code() + "for asset manifest"));
+                    didFail(new WebAppException("Non-success status code " + response.code() + "for asset manifest"));
                     return;
                 }
 
@@ -110,8 +110,8 @@ class AssetBundleManager {
                 try {
                     manifestBytes = response.body().bytes();
                     manifest = new AssetManifest(new String(manifestBytes));
-                } catch (JSONException e) {
-                    didFail(new DownloadFailureException("Error parsing asset manifest", e));
+                } catch (WebAppException e) {
+                    didFail(e);
                     return;
                 } catch (IOException e) {
                     didFail(e);
@@ -171,7 +171,13 @@ class AssetBundleManager {
                     return;
                 }
 
-                AssetBundle assetBundle = new AssetBundle(resourceApi, Uri.fromFile(downloadDirectory), manifest, initialAssetBundle);
+                AssetBundle assetBundle = null;
+                try {
+                    assetBundle = new AssetBundle(resourceApi, Uri.fromFile(downloadDirectory), manifest, initialAssetBundle);
+                } catch (WebAppException e) {
+                    didFail(e);
+                    return;
+                }
                 downloadAssetBundle(assetBundle, baseUrl);
             }
         });

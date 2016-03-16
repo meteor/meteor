@@ -10,6 +10,7 @@ struct AssetManifest {
   }
 
   let version: String
+  let cordovaCompatibilityVersion: String
   var entries: [Entry]
 
   init(fileURL: NSURL) throws {
@@ -33,7 +34,14 @@ struct AssetManifest {
     }
     
     self.version = version
-
+    
+    guard let cordovaCompatibilityVersions = JSON["cordovaCompatibilityVersions"] as? JSONObject,
+      let cordovaCompatibilityVersion = cordovaCompatibilityVersions["ios"] as? String else {
+      throw WebAppError.InvalidAssetManifest(reason: "Asset manifest does not have a cordovaCompatibilityVersion", underlyingError: nil)
+    }
+    
+    self.cordovaCompatibilityVersion = cordovaCompatibilityVersion
+    
     let entriesJSON = JSON["manifest"] as? [JSONObject] ?? []
     entries = []
     for entryJSON in entriesJSON {

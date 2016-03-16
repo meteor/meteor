@@ -110,13 +110,18 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
             return;
         }
 
-        initializeAssetBundles();
+        try {
+            initializeAssetBundles();
+        } catch (WebAppException e) {
+            Log.e(LOG_TAG, "Could not initialize asset bundles", e);
+            return;
+        }
 
         resourceHandlers = new ArrayList<WebResourceHandler>();
         initializeResourceHandlers();
     }
 
-    void initializeAssetBundles() {
+    void initializeAssetBundles() throws WebAppException {
         // The initial asset bundle consists of the assets bundled with the app
         AssetBundle initialAssetBundle = new AssetBundle(resourceApi, applicationDirectoryUri);
 
@@ -182,6 +187,7 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
 
         configuration.setAppId(currentAssetBundle.getAppId());
         configuration.setRootUrlString(currentAssetBundle.getRootUrlString());
+        configuration.setCordovaCompatibilityVersion(currentAssetBundle.getCordovaCompatibilityVersion());
 
         // Don't start startup timer when running a test
         if (testingDelegate == null) {
@@ -352,7 +358,13 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
 
         // Don't download blacklisted versions
         if (configuration.getBlacklistedVersions().contains(version)) {
-            Log.i(LOG_TAG, "Skipping downloading blacklisted version: " + version);
+            notifyError(new WebAppException("Skipping downloading blacklisted version: " + version));
+            return false;
+        }
+
+        // Don't download versions potentially incompatible with the bundled native code
+        if (!configuration.getCordovaCompatibilityVersion().equals(manifest.cordovaCompatibilityVersion)) {
+            notifyError(new WebAppException("Skipping downloading new version because the Cordova platform version or plugin versions have changed and are potentially incompatible"));
             return false;
         }
 

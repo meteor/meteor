@@ -77,7 +77,7 @@ class AssetBundleDownloader {
                         assetsDownloading.remove(asset);
 
                         if (!call.isCanceled()) {
-                            didFail(new DownloadFailureException("Error downloading asset: " + asset, e));
+                            didFail(new WebAppException("Error downloading asset: " + asset, e));
                         }
                     }
 
@@ -87,7 +87,7 @@ class AssetBundleDownloader {
 
                         try {
                             verifyResponse(response, asset);
-                        } catch (DownloadFailureException e) {
+                        } catch (WebAppException e) {
                             didFail(e);
                             return;
                         }
@@ -107,7 +107,7 @@ class AssetBundleDownloader {
                             if (runtimeConfig != null) {
                                 try {
                                     verifyRuntimeConfig(runtimeConfig);
-                                } catch (DownloadFailureException e) {
+                                } catch (WebAppException e) {
                                     didFail(e);
                                     return;
                                 }
@@ -150,9 +150,9 @@ class AssetBundleDownloader {
         return  builder.build();
     }
 
-    protected void verifyResponse(Response response, AssetBundle.Asset asset) throws DownloadFailureException {
+    protected void verifyResponse(Response response, AssetBundle.Asset asset) throws WebAppException {
         if (!response.isSuccessful()) {
-            throw new DownloadFailureException("Non-success status code " + response.code() + " for asset: " + asset);
+            throw new WebAppException("Non-success status code " + response.code() + " for asset: " + asset);
         }
 
         // If we have a hash for the asset, and the ETag header also specifies
@@ -167,19 +167,19 @@ class AssetBundleDownloader {
                     String actualHash = matcher.group(1);
 
                     if (!actualHash.equals(expectedHash)) {
-                        throw new DownloadFailureException("Hash mismatch for asset: " + asset);
+                        throw new WebAppException("Hash mismatch for asset: " + asset);
                     }
                 }
             }
         }
     }
 
-    protected void verifyRuntimeConfig(JSONObject runtimeConfig) throws DownloadFailureException {
+    protected void verifyRuntimeConfig(JSONObject runtimeConfig) throws WebAppException {
         String expectedVersion = assetBundle.getVersion();
         String actualVersion = runtimeConfig.optString("autoupdateVersionCordova", null);
         if (actualVersion != null) {
             if (!actualVersion.equals(expectedVersion)) {
-                throw new DownloadFailureException("Version mismatch for index page, expected: " + expectedVersion + ", actual: " + actualVersion);
+                throw new WebAppException("Version mismatch for index page, expected: " + expectedVersion + ", actual: " + actualVersion);
             }
         }
 
@@ -189,19 +189,19 @@ class AssetBundleDownloader {
             Uri rootUrl = Uri.parse(rootUrlString);
             Uri previousRootUrl = Uri.parse(webAppConfiguration.getRootUrlString());
             if (!"localhost".equals(previousRootUrl.getHost()) && "localhost".equals(rootUrl.getHost())) {
-                throw new DownloadFailureException("ROOT_URL in downloaded asset bundle would change current ROOT_URL to localhost. Make sure ROOT_URL has been configured correctly on the server.");
+                throw new WebAppException("ROOT_URL in downloaded asset bundle would change current ROOT_URL to localhost. Make sure ROOT_URL has been configured correctly on the server.");
             }
         } catch (JSONException e) {
-            throw new DownloadFailureException("Could not find ROOT_URL in downloaded asset bundle");
+            throw new WebAppException("Could not find ROOT_URL in downloaded asset bundle");
         }
 
         try {
             String appId = runtimeConfig.getString("appId");
             if (!appId.equals(webAppConfiguration.getAppId())) {
-                throw new DownloadFailureException("appId in downloaded asset bundle does not match current appId. Make sure the server at " + rootUrlString + " is serving the right app.");
+                throw new WebAppException("appId in downloaded asset bundle does not match current appId. Make sure the server at " + rootUrlString + " is serving the right app.");
             }
         } catch (JSONException e) {
-            throw new DownloadFailureException("Could not find appId in downloaded asset bundle");
+            throw new WebAppException("Could not find appId in downloaded asset bundle");
         }
     }
 

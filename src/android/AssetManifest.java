@@ -31,37 +31,53 @@ final class AssetManifest {
     }
 
     final String version;
+    final String cordovaCompatibilityVersion;
     final List<Entry> entries;
 
-    public AssetManifest(String string) throws JSONException {
-        JSONObject json = new JSONObject(string);
-        String format = json.optString("format", null);
-        if (format != null && !format.equals("web-program-pre1")) {
-            throw new JSONException("The asset manifest format is incompatible: " + format);
-        }
+    public AssetManifest(String string) throws WebAppException {
+        try {
+            JSONObject json = new JSONObject(string);
+            String format = json.optString("format", null);
+            if (format != null && !format.equals("web-program-pre1")) {
+                throw new WebAppException("The asset manifest format is incompatible: " + format);
+            }
 
-        version = json.getString("version");
+            try {
+                version = json.getString("version");
+            } catch (JSONException e) {
+                throw new WebAppException("Asset manifest does not have a version", e);
+            }
 
-        JSONArray entriesJSON = json.getJSONArray("manifest");
+            try {
+                JSONObject cordovaCompatibilityVersions = json.getJSONObject("cordovaCompatibilityVersions");
+                cordovaCompatibilityVersion = cordovaCompatibilityVersions.getString("android");
+            } catch (JSONException e) {
+                throw new WebAppException("Asset manifest does not have a cordovaCompatibilityVersion", e);
+            }
 
-        entries = new ArrayList<Entry>(entriesJSON.length());
+            JSONArray entriesJSON = json.getJSONArray("manifest");
 
-        for (int i = 0; i < entriesJSON.length(); i++) {
-            JSONObject entryJSON = entriesJSON.getJSONObject(i);
+            entries = new ArrayList<Entry>(entriesJSON.length());
 
-            if (!entryJSON.getString("where").equals("client")) continue;
+            for (int i = 0; i < entriesJSON.length(); i++) {
+                JSONObject entryJSON = entriesJSON.getJSONObject(i);
 
-            String filePath = entryJSON.getString("path");
-            String urlPath = entryJSON.getString("url");
+                if (!entryJSON.getString("where").equals("client")) continue;
 
-            String fileType = entryJSON.getString("type");
-            boolean cacheable = entryJSON.getBoolean("cacheable");
-            String hash = entryJSON.optString("hash", null);
-            String sourceMapFilePath = entryJSON.optString("sourceMap", null);
-            String sourceMapUrlPath = entryJSON.optString("sourceMapUrl", null);
+                String filePath = entryJSON.getString("path");
+                String urlPath = entryJSON.getString("url");
 
-            Entry entry = new Entry(filePath, urlPath, fileType, cacheable, hash, sourceMapFilePath, sourceMapUrlPath);
-            entries.add(entry);
+                String fileType = entryJSON.getString("type");
+                boolean cacheable = entryJSON.getBoolean("cacheable");
+                String hash = entryJSON.optString("hash", null);
+                String sourceMapFilePath = entryJSON.optString("sourceMap", null);
+                String sourceMapUrlPath = entryJSON.optString("sourceMapUrl", null);
+
+                Entry entry = new Entry(filePath, urlPath, fileType, cacheable, hash, sourceMapFilePath, sourceMapUrlPath);
+                entries.add(entry);
+            }
+        } catch (JSONException e) {
+            throw new WebAppException("Error parsing asset manifest", e);
         }
     }
 }

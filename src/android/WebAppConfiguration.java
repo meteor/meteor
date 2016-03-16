@@ -29,6 +29,14 @@ class WebAppConfiguration {
         preferences.edit().putString("rootUrl", rootUrlString).commit();
     }
 
+    public String getCordovaCompatibilityVersion() {
+        return preferences.getString("cordovaCompatibilityVersion", null);
+    }
+
+    public void setCordovaCompatibilityVersion(String version) {
+        preferences.edit().putString("cordovaCompatibilityVersion", version).commit();
+    }
+
     public String getLastDownloadedVersion() {
         return preferences.getString("lastDownloadedVersion", null);
     }

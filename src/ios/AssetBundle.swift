@@ -22,7 +22,8 @@ func loadRuntimeConfigFromIndexFileAtURL(fileURL: NSURL) throws -> AssetBundle.R
 final class AssetBundle {
   private(set) var directoryURL: NSURL
 
-  var version: String
+  let version: String
+  let cordovaCompatibilityVersion: String
 
   private var parentAssetBundle: AssetBundle?
   private var ownAssetsByURLPath: [String: Asset] = [:]
@@ -43,6 +44,7 @@ final class AssetBundle {
     self.parentAssetBundle = parentAssetBundle
     
     self.version = manifest.version
+    self.cordovaCompatibilityVersion = manifest.cordovaCompatibilityVersion
 
     for entry in manifest.entries {
       let URLPath = URLPathByRemovingQueryString(entry.URLPath)
