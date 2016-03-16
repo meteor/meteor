@@ -206,7 +206,7 @@
 
 * Remove warning in the `simple-todos-react` example app. #5716
 
-* Fix interaction bwteen `browser-policy` and `oauth` packages. #5628
+* Fix interaction between `browser-policy` and `oauth` packages. #5628
 
 * Add README.md to the `tinytest` package. #5750
 
