@@ -201,7 +201,9 @@ _.extend(AppProcess.prototype, {
     env.APP_ID = self.projectContext.appIdentifier;
 
     // Display errors from (eg) the NPM connect module over the network.
-    env.NODE_ENV = 'development';
+    if (!env.NODE_ENV) {
+      env.NODE_ENV = 'development';
+    }
     // We run the server behind our own proxy, so we need to increment
     // the HTTP forwarded count.
     env.HTTP_FORWARDED_COUNT =
