@@ -24,4 +24,4 @@ if (typeof process.env !== "object") {
   process.env = {};
 }
 
-_.extend(process.env, meteorEnv);
+__.extend(process.env, meteorEnv);

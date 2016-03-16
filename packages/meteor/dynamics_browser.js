@@ -7,7 +7,7 @@ Meteor.EnvironmentVariable = function () {
   this.slot = nextSlot++;
 };
 
-_.extend(Meteor.EnvironmentVariable.prototype, {
+__.extend(Meteor.EnvironmentVariable.prototype, {
   get: function () {
     return currentValues[this.slot];
   },
@@ -32,7 +32,7 @@ Meteor.bindEnvironment = function (func, onException, _this) {
   // needed in order to be able to create closures inside func and
   // have the closed variables not change back to their original
   // values
-  var boundValues = _.clone(currentValues);
+  var boundValues = __.clone(currentValues);
 
   if (!onException || typeof(onException) === 'string') {
     var description = onException || "callback of async function";
@@ -48,7 +48,7 @@ Meteor.bindEnvironment = function (func, onException, _this) {
     var savedValues = currentValues;
     try {
       currentValues = boundValues;
-      var ret = func.apply(_this, _.toArray(arguments));
+      var ret = func.apply(_this, __.toArray(arguments));
     } catch (e) {
       // note: callback-hook currently relies on the fact that if onException
       // throws in the browser, the wrapped call throws.

@@ -14,7 +14,7 @@ Tinytest._runTestsEverywhere = function (onReport, onComplete, pathPrefix, optio
   var remoteComplete = false;
   var done = false;
 
-  options = _.extend({
+  options = __.extend({
     serial: true
   }, options);
   var serial = !!options.serial;
@@ -47,12 +47,12 @@ Tinytest._runTestsEverywhere = function (onReport, onComplete, pathPrefix, optio
         return;
       // This will only work for added & changed messages.
       // hope that is all you get.
-      _.each(msg.fields, function (report, key) {
+      __.each(msg.fields, function (report, key) {
         // Skip the 'complete' report (deal with it last)
         if (key === 'complete') {
           return;
         }
-        _.each(report.events, function (event) {
+        __.each(report.events, function (event) {
           delete event.cookie; // can't debug a server test on the client..
         });
         report.server = true;
@@ -60,7 +60,7 @@ Tinytest._runTestsEverywhere = function (onReport, onComplete, pathPrefix, optio
       });
       // Now that we've processed all the other messages,
       // check if we have the 'complete' message
-      if (msg.fields && _.has(msg.fields, 'complete')) {
+      if (msg.fields && __.has(msg.fields, 'complete')) {
         remoteComplete = true;
         handle.stop();
         Meteor.call('tinytest/clearResults', runId);

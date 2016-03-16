@@ -16,7 +16,7 @@ Meteor.EnvironmentVariable = function () {
   this.slot = nextSlot++;
 };
 
-_.extend(Meteor.EnvironmentVariable.prototype, {
+__.extend(Meteor.EnvironmentVariable.prototype, {
   get: function () {
     Meteor._nodeCodeMustBeInFiber();
 
@@ -84,7 +84,7 @@ _.extend(Meteor.EnvironmentVariable.prototype, {
 Meteor.bindEnvironment = function (func, onException, _this) {
   Meteor._nodeCodeMustBeInFiber();
 
-  var boundValues = _.clone(Fiber.current._meteor_dynamics || []);
+  var boundValues = __.clone(Fiber.current._meteor_dynamics || []);
 
   if (!onException || typeof(onException) === 'string') {
     var description = onException || "callback of async function";
@@ -99,14 +99,14 @@ Meteor.bindEnvironment = function (func, onException, _this) {
   }
 
   return function (/* arguments */) {
-    var args = _.toArray(arguments);
+    var args = __.toArray(arguments);
 
     var runWithEnvironment = function () {
       var savedValues = Fiber.current._meteor_dynamics;
       try {
         // Need to clone boundValues in case two fibers invoke this
         // function at the same time
-        Fiber.current._meteor_dynamics = _.clone(boundValues);
+        Fiber.current._meteor_dynamics = __.clone(boundValues);
         var ret = func.apply(_this, args);
       } catch (e) {
         // note: callback-hook currently relies on the fact that if onException

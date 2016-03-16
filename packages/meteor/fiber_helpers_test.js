@@ -9,7 +9,7 @@ Tinytest.add("fibers - synchronous queue", function (test) {
     };
   };
   var outputIsUpTo = function (n) {
-    test.equal(output, _.range(1, n+1));
+    test.equal(output, __.range(1, n+1));
   };
 
   // Queue a task. It cannot run until we yield.
