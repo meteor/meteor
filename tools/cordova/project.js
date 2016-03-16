@@ -54,7 +54,7 @@ const pinnedPlatformVersions = CORDOVA_PLATFORM_VERSIONS;
 // when we update to a newer version of cordova-lib.
 const pinnedPluginVersions = {
   "cordova-plugin-battery-status": "1.1.1",
-  "cordova-plugin-camera": "2.1.0",
+  "cordova-plugin-camera": "2.1.1",
   "cordova-plugin-console": "1.0.2",
   "cordova-plugin-contacts": "2.0.1",
   "cordova-plugin-device": "1.1.1",
@@ -64,14 +64,14 @@ const pinnedPluginVersions = {
   "cordova-plugin-file": "4.1.1",
   "cordova-plugin-file-transfer": "1.5.0",
   "cordova-plugin-geolocation": "2.1.0",
-  "cordova-plugin-globalization": "1.0.2",
+  "cordova-plugin-globalization": "1.0.3",
   "cordova-plugin-inappbrowser": "1.3.0",
   "cordova-plugin-legacy-whitelist": "1.1.1",
   "cordova-plugin-media": "2.2.0",
   "cordova-plugin-media-capture": "1.2.0",
   "cordova-plugin-network-information": "1.2.0",
-  "cordova-plugin-splashscreen": "3.2.0",
-  "cordova-plugin-statusbar": "2.1.1",
+  "cordova-plugin-splashscreen": "3.2.1",
+  "cordova-plugin-statusbar": "2.1.2",
   "cordova-plugin-test-framework": "1.1.1",
   "cordova-plugin-vibration": "2.1.0",
   "cordova-plugin-whitelist": "1.2.1"
