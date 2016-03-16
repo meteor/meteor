@@ -403,10 +403,6 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
     res.setHeader("Content-Type", "text/css; charset=UTF-8");
   } else if (info.type === "json") {
     res.setHeader("Content-Type", "application/json; charset=UTF-8");
-    // XXX if it is a manifest we are serving, set additional headers
-    if (/\/manifest\.json$/.test(pathname)) {
-      res.setHeader("Access-Control-Allow-Origin", "*");
-    }
   }
 
   if (info.hash) {
