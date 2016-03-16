@@ -64,6 +64,7 @@ An article with detailed setup instructions can be found [here](https://medium.c
   * [no-template-lifecycle-assignments](docs/rules/no-template-lifecycle-assignments.md): Prevent deprecated template lifecycle callback assignments
   * [eventmap-params](docs/rules/eventmap-params.md): Force consistent event handler parameter names in event maps
   * [prefix-eventmap-selectors](docs/rules/prefix-eventmap-selectors.md): Convention for eventmap selectors
+  * [scope-dom-lookups](docs/rules/scope-dom-lookups.md): Scope DOM lookups to the template instance
 
 ## Core API
 * *currently no rules implemented*
