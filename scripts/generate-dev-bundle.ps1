@@ -26,6 +26,7 @@ cmd /c rmdir "$DIR" /s /q
 mkdir "$DIR"
 cd "$DIR"
 
+mkdir lib
 mkdir lib\node_modules
 mkdir bin
 cd bin
@@ -62,10 +63,8 @@ $env:PATH = "${DIR}\bin;${env:PATH}"
 # dev bundle packages have a flatter structure. Three different versions!
 cd "${DIR}\lib"
 npm install npm@${NPM_VERSION}
-cd "${DIR}\bin"
-rm -Recurse -Force node_modules
-rm npm.cmd
-echo '"%~dp0\node.exe" "%~dp0\..\lib\node_modules\npm\bin\npm-cli.js" %*' > npm.cmd
+rm -Recurse -Force "${DIR}\bin\node_modules"
+copy "${CHECKOUT_DIR}\scripts\npm.cmd" "${DIR}\bin\npm.cmd"
 npm version
 
 mkdir "${DIR}\bin\npm3"
