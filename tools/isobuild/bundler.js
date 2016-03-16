@@ -167,6 +167,8 @@ var colonConverter = require('../utils/colon-converter.js');
 var Profile = require('../tool-env/profile.js').Profile;
 var packageVersionParser = require('../packaging/package-version-parser.js');
 var release = require('../packaging/release.js');
+import isopackets from '../tool-env/isopackets.js';
+import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
 
 // files to ignore when bundling. node has no globs, so use regexps
 exports.ignoreFiles = [
@@ -1344,10 +1346,25 @@ class ClientTarget extends Target {
     });
 
     // Control file
-    builder.writeJson('program.json', {
+    const program = {
       format: "web-program-pre1",
       manifest: manifest
-    });
+    }
+
+    if (this.arch === 'web.cordova') {
+      const { WebAppHashing } =
+        isopackets.load('cordova-support')['webapp-hashing'];
+      const cordovaCompatibilityVersions =
+        _.object(_.map(CORDOVA_PLATFORM_VERSIONS, (version, platform) => {
+          const hash = WebAppHashing.calculateCordovaCompatibilityHash(
+            version,
+            this.cordovaDependencies);
+          return [platform, hash];
+        }));
+      program.cordovaCompatibilityVersions = cordovaCompatibilityVersions;
+    }
+
+    builder.writeJson('program.json', program);
 
     return {
       controlFile: "program.json",

@@ -10,6 +10,11 @@ export const CORDOVA_ARCH = "web.cordova";
 
 export const CORDOVA_PLATFORMS = ['ios', 'android'];
 
+export const CORDOVA_PLATFORM_VERSIONS = {
+  'android': '5.1.1',
+  'ios': '4.1.0'
+};
+
 const PLATFORM_TO_DISPLAY_NAME_MAP = {
   'ios': 'iOS',
   'android': 'Android'

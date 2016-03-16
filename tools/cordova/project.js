@@ -20,7 +20,7 @@ import cordova_util from 'cordova-lib/src/cordova/util.js';
 import superspawn from 'cordova-lib/node_modules/cordova-common/src/superspawn.js';
 import PluginInfoProvider from 'cordova-lib/node_modules/cordova-common/src/PluginInfo/PluginInfoProvider.js';
 
-import { CORDOVA_PLATFORMS, displayNameForPlatform, displayNamesForPlatforms,
+import { CORDOVA_PLATFORMS, CORDOVA_PLATFORM_VERSIONS, displayNameForPlatform, displayNamesForPlatforms,
   newPluginId, convertPluginVersions, convertToGitUrl,
   installationInstructionsUrlForPlatform } from './index.js';
 import { CordovaBuilder } from './builder.js';
@@ -46,10 +46,7 @@ function log(...args) {
 // We pin platform versions ourselves instead of relying on cordova-lib
 // so we we can update them independently (e.g. use Cordova iOS 4.0.1
 // with Cordova 5.4.1)
-const pinnedPlatformVersions = {
-  'android': '5.1.1',
-  'ios': '4.1.0'
-}
+const pinnedPlatformVersions = CORDOVA_PLATFORM_VERSIONS;
 
 // We pin plugin versions to make sure we do not install versions that are
 // incompatible with the current platform versions.

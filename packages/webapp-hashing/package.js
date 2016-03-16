@@ -4,6 +4,7 @@ Package.describe({
 });
 
 Package.onUse(function(api) {
+  api.use('ecmascript');
   api.use('underscore', 'server');
   api.addFiles('webapp-hashing.js', 'server');
   api.export('WebAppHashing');
