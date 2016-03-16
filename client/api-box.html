@@ -5,7 +5,9 @@
     </div>
 
     <a class="name selflink" href="{{link}}">{{{name}}}</a>
-    <code class="subtext">import { {{importName}} } from 'meteor/{{module}}'</code>
+    {{#if importName}}
+      <code class="subtext">import { {{importName}} } from 'meteor/{{module}}'</code>
+    {{/if}}
 
     {{#if fullApi}}
       {{#if filepath}}
