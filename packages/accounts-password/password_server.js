@@ -119,6 +119,7 @@ Accounts._findUserByQuery = function (query) {
  * @locus Server
  * @param {String} username The username to look for
  * @returns {Object} A user if found, else null
+ * @importFromPackage accounts-base
  */
 Accounts.findUserByUsername = function (username) {
   return Accounts._findUserByQuery({
@@ -134,6 +135,7 @@ Accounts.findUserByUsername = function (username) {
  * @locus Server
  * @param {String} email The email address to look for
  * @returns {Object} A user if found, else null
+ * @importFromPackage accounts-base
  */
 Accounts.findUserByEmail = function (email) {
   return Accounts._findUserByQuery({
@@ -368,6 +370,7 @@ Accounts.registerLoginHandler("password", function (options) {
  * @locus Server
  * @param {String} userId The ID of the user to update.
  * @param {String} newUsername A new username for the user.
+ * @importFromPackage accounts-base
  */
 Accounts.setUsername = function (userId, newUsername) {
   check(userId, NonEmptyString);
@@ -467,6 +470,7 @@ Meteor.methods({changePassword: function (oldPassword, newPassword) {
  * @param {String} newPassword A new password for the user.
  * @param {Object} [options]
  * @param {Object} options.logout Logout all current connections with this userId (default: true)
+ * @importFromPackage accounts-base
  */
 Accounts.setPassword = function (userId, newPlaintextPassword, options) {
   options = _.extend({logout: true}, options);
@@ -520,6 +524,7 @@ Meteor.methods({forgotPassword: function (options) {
  * @locus Server
  * @param {String} userId The id of the user to send email to.
  * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.
+ * @importFromPackage accounts-base
  */
 Accounts.sendResetPasswordEmail = function (userId, email) {
   // Make sure the user exists, and email is one of their addresses.
@@ -585,6 +590,7 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
  * @locus Server
  * @param {String} userId The id of the user to send email to.
  * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.
+ * @importFromPackage accounts-base
  */
 Accounts.sendEnrollmentEmail = function (userId, email) {
   // XXX refactor! This is basically identical to sendResetPasswordEmail.
@@ -724,6 +730,7 @@ Meteor.methods({resetPassword: function (token, newPassword) {
  * @locus Server
  * @param {String} userId The id of the user to send email to.
  * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first unverified email in the list.
+ * @importFromPackage accounts-base
  */
 Accounts.sendVerificationEmail = function (userId, address) {
   // XXX Also generate a link using which someone can delete this
@@ -852,6 +859,7 @@ Meteor.methods({verifyEmail: function (token) {
  * @param {String} newEmail A new email address for the user.
  * @param {Boolean} [verified] Optional - whether the new email address should
  * be marked as verified. Defaults to false.
+ * @importFromPackage accounts-base
  */
 Accounts.addEmail = function (userId, newEmail, verified) {
   check(userId, NonEmptyString);
@@ -935,6 +943,7 @@ Accounts.addEmail = function (userId, newEmail, verified) {
  * @locus Server
  * @param {String} userId The ID of the user to update.
  * @param {String} email The email address to remove.
+ * @importFromPackage accounts-base
  */
 Accounts.removeEmail = function (userId, email) {
   check(userId, NonEmptyString);

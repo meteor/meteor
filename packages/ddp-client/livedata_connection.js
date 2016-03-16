@@ -505,6 +505,7 @@ _.extend(Connection.prototype, {
 
   /**
    * @memberOf Meteor
+   * @importFromPackage meteor
    * @summary Subscribe to a record set.  Returns a handle that provides
    * `stop()` and `ready()` methods.
    * @locus Client
@@ -696,6 +697,7 @@ _.extend(Connection.prototype, {
 
   /**
    * @memberOf Meteor
+   * @importFromPackage meteor
    * @summary Invokes a method passing any number of arguments.
    * @locus Anywhere
    * @param {String} name Name of method to invoke
@@ -734,6 +736,7 @@ _.extend(Connection.prototype, {
 
   /**
    * @memberOf Meteor
+   * @importFromPackage meteor
    * @summary Invoke a method passing an array of arguments.
    * @locus Anywhere
    * @param {String} name Name of method to invoke
@@ -1034,6 +1037,7 @@ _.extend(Connection.prototype, {
    * @summary Get the current connection status. A reactive data source.
    * @locus Client
    * @memberOf Meteor
+   * @importFromPackage meteor
    */
   status: function (/*passthrough args*/) {
     var self = this;
@@ -1046,6 +1050,7 @@ _.extend(Connection.prototype, {
   This method does nothing if the client is already connected.
    * @locus Client
    * @memberOf Meteor
+   * @importFromPackage meteor
    */
   reconnect: function (/*passthrough args*/) {
     var self = this;
@@ -1056,6 +1061,7 @@ _.extend(Connection.prototype, {
    * @summary Disconnect the client from the server.
    * @locus Client
    * @memberOf Meteor
+   * @importFromPackage meteor
    */
   disconnect: function (/*passthrough args*/) {
     var self = this;
