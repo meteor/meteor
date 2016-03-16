@@ -504,9 +504,9 @@ When we connect to the test instance in a browser, we want to render a testing U
 
 <h3 id="creating-integration-test-data">Creating data</h3>
 
-To create test data in full-app test mode, it usually makes sense to create some special test methods which we can call from the client side. Similar to the way we cleared the database using a method in the `beforeEach` in the [test data](#test-data) section above, we can call that method before running our tests.
+To create test data in full-app test mode, it usually makes sense to create some special test methods which we can call from the client side. Usually when testing a full app, we want to make sure the publications are sending through the correct data (as we do in this test), and so it's not sufficient to stub out the collections and place synthetic data in them. Instead we'll want to actually create data on the server and let it be published.
 
-In the case of our routing tests, we've used a file called `imports/api/generate-data.app-tests.js` which defines this method (and will only be loaded in full app test mode, so is not available in general!):
+Similar to the way we cleared the database using a method in the `beforeEach` in the [test data](#test-data) section above, we can call a method to do that before running our tests. In the case of our routing tests, we've used a file called `imports/api/generate-data.app-tests.js` which defines this method (and will only be loaded in full app test mode, so is not available in general!):
 
 ```js
 // This file will be auto-imported in the app-test context, ensuring the method is always available
@@ -523,8 +523,9 @@ const createList = (userId) => {
   return list;
 };
 
+// Remember to double check this is a test-only file before adding a method like this!
 Meteor.methods({
-  generateFixtures() {
+  generateFixtures: function generateFixturesMethod() {
     resetDatabase();
 
     // create 3 public lists
@@ -550,8 +551,6 @@ export { generateData };
 ```
 
 Note that we've exported a client-side symbol `generateData` which is a promisified version of the method call, which makes it simpler to use this sequentially in tests.
-
-XXX: is this a good idea?
 
 Also of note is the way we use a second DDP connection to the server in order to send these test "control" method calls.
 
@@ -610,21 +609,35 @@ describe('list ui', () => {
 
 <h3 id="running-acceptance-tests">Running acceptance tests</h3>
 
-To run the acceptance test, we first start our meteor server with a special test driver, `tmeasday:acceptance-test-driver`. (You'll need to `meteor add` it to your app).
+To run acceptance tests, we simply need to start our Meteor app as usual, and point Chimp at it.
 
-This test driver literally does nothing, but by running our app in full app test mode, we make all of our [test data creating methods](#creating-integration-test-data) available:
+In one terminal, we can do:
 
-```txt
-meteor test --full-app --driver-package tmeasday:acceptance-test-driver
+```
+meteor
 ```
 
-To run the test, we can then run `npm run chimp-watch` in another terminal window. The `chimp-watch` command will then run the test in a browser, and continue to re-run it as we change the test or the application. (Note that the test assumes we are running the app on port `3000`).
+In another:
+
+```
+npm run chimp-watch
+```
+
+The `chimp-watch` command will then run the test in a browser, and continue to re-run it as we change the test or the application. (Note that the test assumes we are running the app on port `3000`).
+
 
 Thus it's a good way to develop the test---this is why chimp has a feature where we mark tests with a `@watch` in the name to call out the tests we want to work on (running our entire acceptance test suite can be time consuming in a large application).
 
 The `chimp-test` command will run all of the tests *once only* and is good for testing that our suite passes, either as a manual step, or as part of a [continuous integration](#ci) process.
 
+
 <h3 id="creating-acceptance-test-data">Creating data</h3>
+
+Although we can run the acceptance test against our "pure" Meteor app, as we've done above, it often makes sense to start our meteor server with a special test driver, `tmeasday:acceptance-test-driver`. (You'll need to `meteor add` it to your app). This test driver literally does nothing, but by running our app in full app test mode, we make all of our [test data creating methods](#creating-integration-test-data) available:
+
+```txt
+meteor test --full-app --driver-package tmeasday:acceptance-test-driver
+```
 
 The advantage of running our acceptance test suite pointed at an app that runs in full app test mode is that all of the [data generating methods](#creating-integration-test-data) that we've created remain available.
 
