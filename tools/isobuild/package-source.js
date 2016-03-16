@@ -196,6 +196,7 @@ var getExcerptFromReadme = function (text) {
 // - arch [required]
 // - uses
 // - implies
+// - archDependencies
 // - getFiles
 // - declaredExports
 // - watchSet
@@ -249,6 +250,9 @@ var SourceArch = function (pkg, options) {
   // of the same type as the elements of self.uses (although for now
   // unordered and weak are not allowed).
   self.implies = options.implies || [];
+
+  // Architecture dependencies.
+  self.archDependencies = options.archDependencies || [];
 
   // A function that returns the source files for this architecture. Object with
   // keys `sources` and `assets`, where each is an array of objects with keys
@@ -1231,6 +1235,7 @@ _.extend(PackageSource.prototype, {
         arch: arch,
         uses: api.uses[arch],
         implies: api.implies[arch],
+        archDependencies: api.archDependencies[arch],
         getFiles: function () {
           return api.files[arch];
         },

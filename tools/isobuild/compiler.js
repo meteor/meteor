@@ -606,6 +606,7 @@ api.addAssets('${relPath}', 'client').`);
     arch: arch,
     uses: inputSourceArch.uses,
     implies: inputSourceArch.implies,
+    archDependencies: inputSourceArch.archDependencies,
     watchSet: watchSet,
     nodeModulesPath: nodeModulesPathOrUndefined,
     declaredExports: declaredExports,

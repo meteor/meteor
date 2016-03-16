@@ -422,6 +422,7 @@ class Target {
 
     // the architecture to build
     arch,
+    allArchitectures,
     // projectContextModule.CordovaPluginsFile object
     cordovaPluginsFile,
     // 'development' or 'production'; determines whether debugOnly
@@ -438,6 +439,7 @@ class Target {
 
     // Something like "web.browser" or "os" or "os.osx.x86_64"
     this.arch = arch;
+    this.allArchitectures = allArchitectures;
 
     // All of the Unibuilds that are to go into this target, in the order
     // that they are to be loaded.
@@ -554,6 +556,98 @@ class Target {
     });
   }
 
+  // Computes initial set of app packages. Often just [app], but if some packages
+  // define architectural dependencies on this target, then initial set of app
+  // packages is extended with those dependencies.
+  appPackages(app) {
+    const packages = [app];
+
+    _.each(_.without(this.allArchitectures, this.arch), (otherArchitecture) => {
+      if (buildmessage.jobHasMessages())
+        return;
+
+     const result = this._usedUnibuilds(packages, otherArchitecture);
+
+      if (buildmessage.jobHasMessages())
+        return;
+
+      const usedUnibuilds = result.usedUnibuilds;
+
+      _.each(usedUnibuilds, (unibuild, name) => {
+        unibuild.archDependencies.forEach((archDependency) => {
+          // Does any of the unibuilds from other architectures depend
+          // on this unibuild? If so, add it to app packages.
+          if (archinfo.matches(this.arch, archDependency)) {
+            packages.push(unibuild.pkg.name);
+          }
+        });
+      });
+    });
+
+    return packages;
+  }
+
+  // Recursively creates a list of all used unibuilds for a given
+  // set of initial packages and an architecture.
+  // Returns {usedUnibuilds, usedPackages}.
+  _usedUnibuilds(packages, arch) {
+    const isopackCache = this.isopackCache;
+
+    // Find the roots
+    const rootUnibuilds = [];
+    packages.forEach((p) => {
+      if (typeof p === 'string') {
+        p = isopackCache.getIsopack(p);
+      }
+      if (p.debugOnly && this.buildMode !== 'development') {
+        return;
+      }
+      if (p.prodOnly && this.buildMode !== 'production') {
+        return;
+      }
+      const unibuild = p.getUnibuildAtArch(arch, {
+        allowWrongPlatform: this.providePackageJSONForUnavailableBinaryDeps
+      });
+      unibuild && rootUnibuilds.push(unibuild);
+    });
+
+    if (buildmessage.jobHasMessages())
+      return {};
+
+    // PHASE 1: Which unibuilds will be used?
+    //
+    // Figure out which unibuilds are going to be used in the target,
+    // regardless of order. We ignore weak dependencies here, because they
+    // don't actually create a "must-use" constraint, just an ordering
+    // constraint.
+
+    // What unibuilds will be used in the target? Built in Phase 1, read in
+    // Phase 2.
+    const usedUnibuilds = {};  // Map from unibuild.id to Unibuild.
+    const usedPackages = {};  // Map from package name to true;
+    const addToGetsUsed = function (unibuild) {
+      if (_.has(usedUnibuilds, unibuild.id))
+        return;
+      usedUnibuilds[unibuild.id] = unibuild;
+      if (unibuild.kind === 'main') {
+        // Only track real packages, not plugin pseudo-packages.
+        usedPackages[unibuild.pkg.name] = true;
+      }
+      compiler.eachUsedUnibuild({
+        dependencies: unibuild.uses,
+        arch: arch,
+        isopackCache: isopackCache,
+        skipDebugOnly: this.buildMode !== 'development',
+        skipProdOnly: this.buildMode !== 'production',
+        allowWrongPlatform: this.providePackageJSONForUnavailableBinaryDeps,
+      }, addToGetsUsed);
+    }.bind(this);
+
+    rootUnibuilds.forEach(addToGetsUsed);
+
+    return {usedUnibuilds, usedPackages};
+  }
+
   // Determine the packages to load, create Unibuilds for
   // them, put them in load order, save in unibuilds.
   //
@@ -567,63 +661,14 @@ class Target {
     const isopackCache = this.isopackCache;
 
     buildmessage.enterJob('linking the program', () => {
-      // Find the roots
-      const rootUnibuilds = [];
-      packages.forEach((p) => {
-        if (typeof p === 'string') {
-          p = isopackCache.getIsopack(p);
-        }
-        if (p.debugOnly && this.buildMode !== 'development') {
-          return;
-        }
-        if (p.prodOnly && this.buildMode !== 'production') {
-          return;
-        }
-        const unibuild = p.getUnibuildAtArch(this.arch, {
-          allowWrongPlatform: this.providePackageJSONForUnavailableBinaryDeps
-        });
-        unibuild && rootUnibuilds.push(unibuild);
-      });
+      const result = this._usedUnibuilds(packages, this.arch);
 
       if (buildmessage.jobHasMessages()) {
         return;
       }
 
-      // PHASE 1: Which unibuilds will be used?
-      //
-      // Figure out which unibuilds are going to be used in the target,
-      // regardless of order. We ignore weak dependencies here, because they
-      // don't actually create a "must-use" constraint, just an ordering
-      // constraint.
-
-      // What unibuilds will be used in the target? Built in Phase 1, read in
-      // Phase 2.
-      const usedUnibuilds = {};  // Map from unibuild.id to Unibuild.
-      this.usedPackages = {};  // Map from package name to true;
-      const addToGetsUsed = function (unibuild) {
-        if (_.has(usedUnibuilds, unibuild.id)) {
-          return;
-        }
-        usedUnibuilds[unibuild.id] = unibuild;
-        if (unibuild.kind === 'main') {
-          // Only track real packages, not plugin pseudo-packages.
-          this.usedPackages[unibuild.pkg.name] = true;
-        }
-        compiler.eachUsedUnibuild({
-          dependencies: unibuild.uses,
-          arch: this.arch,
-          isopackCache: isopackCache,
-          skipDebugOnly: this.buildMode !== 'development',
-          skipProdOnly: this.buildMode !== 'production',
-          allowWrongPlatform: this.providePackageJSONForUnavailableBinaryDeps,
-        }, addToGetsUsed);
-      }.bind(this);
-
-      rootUnibuilds.forEach(addToGetsUsed);
-
-      if (buildmessage.jobHasMessages()) {
-        return;
-      }
+      const usedUnibuilds = result.usedUnibuilds;
+      this.usedPackages = result.usedPackages;
 
       // PHASE 2: In what order should we load the unibuilds?
       //
@@ -2171,6 +2216,8 @@ exports.bundle = function ({
     throw new Error('Unrecognized build mode: ' + buildMode);
   }
 
+  var allArchitectures = _.clone(webArchs).concat([serverArch]);
+
   var messages = buildmessage.capture({
     title: "building the application"
   }, function () {
@@ -2183,11 +2230,12 @@ exports.bundle = function ({
         arch: webArch,
         cordovaPluginsFile: (webArch === 'web.cordova'
                              ? projectContext.cordovaPluginsFile : null),
-        buildMode: buildOptions.buildMode
+        buildMode: buildOptions.buildMode,
+        allArchitectures
       });
 
       client.make({
-        packages: [app],
+        packages: client.appPackages(app),
         minifyMode: minifyMode,
         minifiers: options.minifiers || [],
         addCacheBusters: true
@@ -2205,7 +2253,8 @@ exports.bundle = function ({
         arch: serverArch,
         releaseName: releaseName,
         buildMode: buildOptions.buildMode,
-        providePackageJSONForUnavailableBinaryDeps
+        providePackageJSONForUnavailableBinaryDeps,
+        allArchitectures
       };
       if (clientTargets) {
         targetOptions.clientTargets = clientTargets;
@@ -2214,7 +2263,7 @@ exports.bundle = function ({
       var server = new ServerTarget(targetOptions);
 
       server.make({
-        packages: [app]
+        packages: server.appPackages(app)
       });
 
       return server;
