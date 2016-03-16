@@ -72,9 +72,10 @@ An article with detailed setup instructions can be found [here](https://medium.c
 
 ## Recommended Configuration
 
-This plugin exports a recommended configuration that enforce good Meteor practices.
+This plugin exports a recommended configuration which enforces good Meteor practices.
+The rules enabled in this configuration can be found in [`lib/index.js`](https://github.com/dferber90/eslint-plugin-meteor/blob/master/lib/index.js).
 
-To enable this configuration use the extends property in your `.eslintrc` config file:
+To enable the recommended configuration use the extends property in your `.eslintrc` config file:
 
 ```json
 {
@@ -86,14 +87,6 @@ To enable this configuration use the extends property in your `.eslintrc` config
 ```
 
 See [ESLint documentation](http://eslint.org/docs/user-guide/configuring#extending-configuration-files) for more information about extending configuration files.
-
-The rules enabled in this configuration are:
-- [audit-argument-checks](docs/rules/audit-argument-checks.md)
-- [no-session](docs/rules/no-session.md)
-- [no-template-lifecycle-assignments](docs/rules/no-template-lifecycle-assignments.md)
-- [no-zero-timeout](docs/rules/no-zero-timeout.md)
-- [eventmap-params](docs/rules/eventmap-params.md)
-- [template-names](docs/rules/template-names.md)
 
 ## Limitations
 
