@@ -334,7 +334,7 @@ selftest.define("add package with both debugOnly and prodOnly", [], function () 
   s.cd("myapp");
   run = s.run("--prepare-app");
   run.waitSecs(20);
-  run.matchErr("can't have both debugOnly and prodOnly");
+  run.matchErr("can't have more than one of: debugOnly, prodOnly, testOnly");
   run.expectExit(1);
 });
 

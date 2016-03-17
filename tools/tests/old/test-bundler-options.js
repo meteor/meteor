@@ -74,7 +74,7 @@ var runTest = function () {
                                         "programs", "server", "node_modules")));
     // yes package node_modules directory
     assert(files.lstat(files.pathJoin(
-      tmpOutputDir, "programs", "server", "npm", "ddp-server"))
+      tmpOutputDir, "programs", "server", "npm", "node_modules", "meteor", "ddp-server"))
            .isDirectory());
 
     // verify that contents are minified

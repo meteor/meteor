@@ -443,7 +443,6 @@ selftest.define("old cli tests (converted)", function () {
   run.expectExit(0);
 
   selftest.expectTrue(files.stat(files.pathJoin(s.home, dir)).isDirectory());
-  selftest.expectTrue(files.stat(files.pathJoin(s.home, dir, dir + ".js")).isFile());
 
   s.cd(dir);
 
