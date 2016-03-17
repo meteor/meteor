@@ -2008,6 +2008,7 @@ class ServerTarget extends JsImageTarget {
       "boot.js",
       "boot-utils.js",
       "shell-server.js",
+      "server-json.js",
       "mini-files.js",
       "npm-require.js",
     ], function (filename) {

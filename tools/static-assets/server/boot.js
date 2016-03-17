@@ -21,7 +21,7 @@ if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
 // read our control files
 var serverJsonPath = path.resolve(process.argv[2]);
 var serverDir = path.dirname(serverJsonPath);
-var serverJson = JSON.parse(fs.readFileSync(serverJsonPath, 'utf8'));
+var serverJson = require("./server-json.js");
 var configJson =
   JSON.parse(fs.readFileSync(path.resolve(serverDir, 'config.json'), 'utf8'));
 
