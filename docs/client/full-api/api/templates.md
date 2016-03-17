@@ -18,9 +18,8 @@ or replaced and should be cleaned up.  You can associate data with a
 template instance, and you can access its DOM nodes when it is in the
 document.
 
-XXX: Link to spacebars docs
-
-Read more about templates and how to use them in the [Blaze](http://guide.meteor.com/blaze.html) article in the Meteor Guide.
+Read more about templates and how to use them in the [Spacebars](#pkg_spacebars) 
+package README and the [Blaze](http://guide.meteor.com/blaze.html) article in the Meteor Guide.
 
 {{> autoApiBox "Template#events"}}
 
@@ -509,6 +508,6 @@ browsers.
 
 Spacebars is the language used to write Meteor templates. It is inspired by [Handlebars](http://handlebarsjs.com/). It shares some of the spirit and syntax of Handlebars, but has been tailored to produce reactive Meteor templates when compiled.
 
-For more information about Spacebars, see the [Spacebars README](https://github.com/meteor/meteor/blob/master/packages/spacebars/README.md).
+For more information about Spacebars, see the [Spacebars README](#pkg_spacebars).
 
 {{/template}}
