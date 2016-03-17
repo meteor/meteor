@@ -328,9 +328,16 @@ export class NodeModulesDirectory {
 
     const nodeModulesDirectories = Object.create(null);
 
-    function add(moreInfo, relPath) {
-      rejectBadPath(relPath);
-      const sourcePath = files.pathJoin(callerInfo.sourceRoot, relPath);
+    function add(moreInfo, path) {
+      let sourcePath;
+
+      if (files.pathIsAbsolute(path)) {
+        sourcePath = path;
+      } else {
+        rejectBadPath(path);
+        sourcePath = files.pathJoin(callerInfo.sourceRoot, path);
+      }
+
       nodeModulesDirectories[sourcePath] = new NodeModulesDirectory({
         ...callerInfo,
         ...moreInfo,
