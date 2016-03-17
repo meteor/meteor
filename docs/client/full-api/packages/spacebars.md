@@ -1,5 +1,5 @@
 {{#template name="pkg_spacebars"}}
-<h2 id="pkg_spacebars">`spacebars`</h2>
+<h2 id="pkg_spacebars"><code>spacebars</code></h2>
 
 Spacebars is a Meteor template language inspired by
 [Handlebars](http://handlebarsjs.com/).  It shares some of the spirit and syntax
@@ -9,43 +9,43 @@ when compiled.
 ### Getting Started
 
 A Spacebars template consists of HTML interspersed with template tags, which are
-delimited by `{{dstache}}` and `}}` (two curly braces).
+delimited by `{{|` and `}}` (two curly braces).
 
-```html
+```
 <template name="myPage">
-  <h1>{{pageTitle}}</h1>
+  <h1>{{|pageTitle}}</h1>
 
-  {{> nav}}
+  {{|> nav}}
 
-  {{#each posts}}
+  {{|#each posts}}
     <div class="post">
-      <h3>{{title}}</h3>
+      <h3>{{|title}}</h3>
       <div class="post-content">
-        {{{content}}}
+        {{|{content}}}
       </div>
     </div>
-  {{/each}}
+  {{|/each}}
 </template>
 ```
 
 As illustrated by the above example, there are four major types of template
 tags:
 
-* `{{dstache}}pageTitle}}` - Double-braced template tags are used to insert a string of
+* `{{|pageTitle}}` - Double-braced template tags are used to insert a string of
   text.  The text is automatically made safe.  It may contain any characters
   (like `<`) and will never produce HTML tags.
 
-* `{{dstache}}> nav}}` - Inclusion template tags are used to insert another template by
+* `{{|> nav}}` - Inclusion template tags are used to insert another template by
   name.
 
-* `{{dstache}}#each}}` - Block template tags are notable for having a block of content.
+* `{{|#each}}` - Block template tags are notable for having a block of content.
   The block tags `#if`, `#each`, `#with`, and `#unless` are built in, and it is
   also possible define custom ones.  Some block tags, like `#each` and `#with`,
   establish a new data context for evaluating their contents.  In the above
-  example, `{{dstache}}title}}` and `{{dstache}}content}}` most likely refer to properties of the
+  example, `{{|title}}` and `{{|content}}` most likely refer to properties of the
   current post (though they could also refer to template helpers).
 
-* `{{dstache}}{content}}}` - Triple-braced template tags are used to insert raw HTML.  Be
+* `{{|{content}}}` - Triple-braced template tags are used to insert raw HTML.  Be
   careful with these!  It's your job to make sure the HTML is safe, either by
   generating it yourself or sanitizing it if it came from a user input.
 
@@ -94,7 +94,7 @@ When evaluating a path, identifiers after the first are used to index into the
 object so far, like JavaScript's `.`.  However, an error is never thrown when
 trying to index into a non-object or an undefined value.
 
-In addition, Spacebars will call functions for you, so `{{dstache}}foo.bar}}` may be
+In addition, Spacebars will call functions for you, so `{{|foo.bar}}` may be
 taken to mean `foo().bar`, `foo.bar()`, or `foo().bar()` as appropriate.
 
 ### Helper Arguments
@@ -106,7 +106,7 @@ Double-braced and triple-braced template tags take any number of positional and
 keyword arguments:
 
 ```
-{{frob a b c verily=true}}
+{{|frob a b c verily=true}}
 ```
 calls:
 ```javascript
@@ -120,12 +120,12 @@ The helper's implementation can access the current data context as `this`.
 
 ### Inclusion and Block Arguments
 
-Inclusion tags (`{{dstache}}> foo}}`) and block tags (`{{dstache}}#foo}}`) take a single
+Inclusion tags (`{{|> foo}}`) and block tags (`{{|#foo}}`) take a single
 data argument, or no argument.  Any other form of arguments will be interpreted
 as an *object specification* or a *nested helper*:
 
-* **Object specification**: If there are only keyword arguments, as in `{{dstache}}#with
-  x=1 y=2}}` or `{{dstache}}> prettyBox color=red}}`, the keyword arguments will be
+* **Object specification**: If there are only keyword arguments, as in `{{|#with
+  x=1 y=2}}` or `{{|> prettyBox color=red}}`, the keyword arguments will be
   assembled into a data object with properties named after the keywords.
 
 * **Nested Helper**: If there is a positional argument followed by other
@@ -172,7 +172,7 @@ is safe to insert.
 A double-braced tag may be part of, or all of, an HTML attribute value:
 
 ```
-<input type="checkbox" class="checky {{dstache}}moreClasses}}" checked={{dstache}}isChecked}}>
+<input type="checkbox" class="checky {{|moreClasses}}" checked={{|isChecked}}>
 ```
 
 An attribute value that consists entirely of template tags that return `null`,
@@ -185,9 +185,9 @@ A double-braced tag can be used in an HTML start tag to specify an arbitrary set
 of attributes:
 
 ```
-<div {{dstache}}attrs}}>...</div>
+<div {{|attrs}}>...</div>
 
-<input type=checkbox {{dstache}}isChecked}}>
+<input type=checkbox {{|isChecked}}>
 ```
 
 The tag must evaluate to an object that serves as a dictionary of attribute name
@@ -204,23 +204,23 @@ To summarize:
     <tr><th>Return Value</th><th>Equivalent HTML</th></tr>
   </thead>
   <tbody>
-    <tr><td>`""` or `null` or `{}`</td></tr>
-    <tr><td>`"checked"` or `{checked: ""}`</td><td>`checked`</td></tr>
-    <tr><td>`{checked: "", 'class': "foo"}`</td><td>`checked  class=foo`</td></tr>
-    <tr><td>`"checked class=foo"`</td><td>ERROR, string is not an attribute name</td></tr>
+    <tr><td><code>""</code> or <code>null</code> or <code>{}</code></td></tr>
+    <tr><td><code>"checked"</code> or <code>{checked: ""}</code></td><td><code>checked</code></td></tr>
+    <tr><td><code>{checked: "", 'class': "foo"}</code></td><td><code>checked  class=foo</code></td></tr>
+    <tr><td><code>"checked class=foo"</code></td><td>ERROR, string is not an attribute name</td></tr>
   </tbody>
 </table>
 
 You can combine multiple dynamic attributes tags with other attributes:
 
 ```
-<div id=foo class={{dstache}}myClass}} {{dstache}}attrs1}} {{dstache}}attrs2}}>...</div>
+<div id=foo class={{|myClass}} {{|attrs1}} {{|attrs2}}>...</div>
 ```
 
 Attributes from dynamic attribute tags are combined from left to right, after
 normal attributes, with later attribute values overwriting previous ones.
 Multiple values for the same attribute are not merged in any way, so if `attrs1`
-specifies a value for the `class` attribute, it will overwrite `{{dstache}}myClass}}`.
+specifies a value for the `class` attribute, it will overwrite `{{|myClass}}`.
 As always, Spacebars takes care of recalculating the element's attributes if any
 of `myClass`, `attrs1`, or `attrs2` changes reactively.
 
@@ -231,7 +231,7 @@ Triple-braced tags are used to insert raw HTML into a template:
 
 ```
 <div class="snippet">
-  {{{snippetBody}}}
+  {{|{snippetBody}}}
 </div>
 ```
 
@@ -242,7 +242,7 @@ This template tag cannot be used in attributes or in an HTML start tag.
 
 ### Inclusion Tags
 
-An inclusion tag takes the form `{{dstache}}> templateName}}` or `{{dstache}}> templateName
+An inclusion tag takes the form `{{|> templateName}}` or `{{|> templateName
 dataObj}}`.  Other argument forms are syntactic sugar for constructing a data
 object (see Inclusion and Block Arguments).
 
@@ -251,9 +251,9 @@ location.  If there is an argument, it becomes the data context, much as if the
 following code were used:
 
 ```
-{{dstache}}#with dataObj}}
-  {{dstache}}> templateName}}
-{{dstache}}/with}}
+{{|#with dataObj}}
+  {{|> templateName}}
+{{|/with}}
 ```
 
 Instead of simply naming a template, an inclusion tag can also specify a path
@@ -262,10 +262,10 @@ object.
 
 Note that the above two points interact in a way that can be surprising!
 If `foo` is a template helper function that returns another template, then
-`{{dstache}}>foo bar}}` will _first_ push `bar` onto the data context stack _then_ call
+`{{|>foo bar}}` will _first_ push `bar` onto the data context stack _then_ call
 `foo()`, due to the way this line is expanded as shown above. You will need to
 use `Template.parentData(1)` to access the original context. This differs
-from regular helper calls like `{{dstache}}foo bar}}`, in which `bar` is passed as a
+from regular helper calls like `{{|foo bar}}`, in which `bar` is passed as a
 parameter rather than pushed onto the data context stack.
 
 ### Function Returning a Template
@@ -281,20 +281,20 @@ of template content that may be instantiated once, more than once, or not at all
 by the directive or helper.
 
 ```
-{{#block}}
+{{|#block}}
   <p>Hello</p>
-{{/block}}
+{{|/block}}
 ```
 
 Block tags may also specify "else" content, separated from the main content by
-the special template tag `{{dstache}}else}}`.
+the special template tag `{{|else}}`.
 
 A block tag's content must consist of HTML with balanced tags.
 
 Block tags can be used inside attribute values:
 
 ```
-<div class="{{dstache}}#if done}}done{{dstache}}else}}notdone{{dstache}}/if}}">
+<div class="{{|#if done}}done{{|else}}notdone{{|/if}}">
   ...
 </div>
 ```
@@ -307,11 +307,11 @@ depending on the value of its data argument.  Any falsy JavaScript value
 well as the empty array, while any other value is considered true.
 
 ```
-{{#if something}}
+{{|#if something}}
   <p>It's true</p>
-{{else}}
+{{|else}}
   <p>It's false</p>
-{{/if}}
+{{|/if}}
 ```
 
 `#unless` is just `#if` with the condition inverted.
@@ -323,19 +323,19 @@ The properties of the data context object are where Spacebars looks when
 resolving template tag names.
 
 ```
-{{#with employee}}
-  <div>Name: {{name}}</div>
-  <div>Age: {{age}}</div>
-{{/with}}
+{{|#with employee}}
+  <div>Name: {{|name}}</div>
+  <div>Age: {{|age}}</div>
+{{|/with}}
 ```
 
 We can take advantage of the object specification form of a block tag to define
 an object with properties we name:
 
 ```
-{{#with x=1 y=2}}
-  {{{getHTMLForPoint this}}}
-{{/with}}
+{{|#with x=1 y=2}}
+  {{|{getHTMLForPoint this}}}
+{{|/with}}
 ```
 
 If the argument to `#with` is falsy (by the same rules as for `#if`), the
@@ -355,9 +355,9 @@ each item in the sequence, setting the data context to the value of that item:
 
 ```
 <ul>
-{{#each people}}
-  <li>{{name}}</li>
-{{/each}}
+{{|#each people}}
+  <li>{{|name}}</li>
+{{|/each}}
 </ul>
 ```
 
@@ -366,9 +366,9 @@ new variable that can be used in the body to refer to the current item:
 
 ```
 <ul>
-{{#each person in people}}
-  <li>{{person.name}}</li>
-{{/each}}
+{{|#each person in people}}
+  <li>{{|person.name}}</li>
+{{|/each}}
 </ul>
 ```
 
@@ -417,9 +417,9 @@ doesn't change the data context, it allows to refer to an expression (helper,
 data context, another variable) with a short-hand within the template:
 
 ```
-{{#let name=person.bio.firstName color=generateColor}}
-  <div>{{name}} gets a {{color}} card!</div>
-{{/let}}
+{{|#let name=person.bio.firstName color=generateColor}}
+  <div>{{|name}} gets a {{|color}} card!</div>
+{{|/let}}
 ```
 
 Variables introduced this way take precedence over names of templates, global
@@ -429,11 +429,11 @@ variables with the same name.
 ### Custom Block Helpers
 
 To define your own block helper, simply declare a template, and then invoke it
-using `{{dstache}}#someTemplate}}` (block) instead of `{{dstache}}> someTemplate}}` (inclusion)
+using `{{|#someTemplate}}` (block) instead of `{{|> someTemplate}}` (inclusion)
 syntax.
 
-When a template is invoked as a block helper, it can use `{{dstache}}>
-Template.contentBlock}}` and `{{dstache}}> Template.elseBlock}}` to include the block
+When a template is invoked as a block helper, it can use `{{|>
+Template.contentBlock}}` and `{{|> Template.elseBlock}}` to include the block
 content it was passed.
 
 Here is a simple block helper that wraps its content in a div:
@@ -441,7 +441,7 @@ Here is a simple block helper that wraps its content in a div:
 ```
 <template name="note">
   <div class="note">
-    {{> Template.contentBlock}}
+    {{|> Template.contentBlock}}
   </div>
 </template>
 ```
@@ -449,9 +449,9 @@ Here is a simple block helper that wraps its content in a div:
 You would invoke it as:
 
 ```
-{{#note}}
+{{|#note}}
   Any content here
-{{/note}}
+{{|/note}}
 ```
 
 Here is an example of implementing `#unless` in terms of `#if` (ignoring for the
@@ -459,11 +459,11 @@ moment that `unless` is a built-in directive):
 
 ```
 <template name="unless">
-  {{#if this}}
-    {{> Template.elseBlock}}
-  {{else}}
-    {{> Template.contentBlock}}
-  {{/if}}
+  {{|#if this}}
+    {{|> Template.elseBlock}}
+  {{|else}}
+    {{|> Template.contentBlock}}
+  {{|/if}}
 </template>
 ```
 
@@ -472,38 +472,38 @@ the `unless` template and is accessed via `this`.  However, it would not work
 very well if this data context was visible to `Template.contentBlock`, which is
 supplied by the user of `unless`.
 
-Therefore, when you include `{{dstache}}> Template.contentBlock}}`, Spacebars hides the
+Therefore, when you include `{{|> Template.contentBlock}}`, Spacebars hides the
 data context of the calling template, and any data contexts established in the
 template by `#each` and `#with`.  They are not visible to the content block,
-even via `..`.  Put another way, it's as if the `{{dstache}}> Template.contentBlock}}`
-inclusion occurred at the location where `{{dstache}}#unless}}` was invoked, as far as
+even via `..`.  Put another way, it's as if the `{{|> Template.contentBlock}}`
+inclusion occurred at the location where `{{|#unless}}` was invoked, as far as
 the data context stack is concerned.
 
-You can pass an argument to `{{dstache}}> Template.contentBlock}}` or `{{dstache}}>
+You can pass an argument to `{{|> Template.contentBlock}}` or `{{|>
 Template.elseBlock}}` to invoke it with a data context of your choice.  You can
-also use `{{dstache}}#if Template.contentBlock}}` to see if the current template was
+also use `{{|#if Template.contentBlock}}` to see if the current template was
 invoked as a block helper rather than an inclusion.
 
 ### Comment Tags
 
-Comment template tags begin with `{{dstache}}!` and can contain any characters except for
+Comment template tags begin with `{{|!` and can contain any characters except for
 `}}`.  Comments are removed upon compilation and never appear in the compiled
 template code or the generated HTML.
 
 ```
-{{! Start of a section}}
+{{|! Start of a section}}
 <div class="section">
   ...
 </div>
 ```
 
 Comment tags also come in a "block comment" form.  Block comments may contain
-`{{dstache}}` and `}}`:
+`{{|` and `}}`:
 
 ```
-{{!-- This is a block comment.
-We can write {{foo}} and it doesn't matter.
-{{#with x}}This code is commented out.{{/with}}
+{{|!-- This is a block comment.
+We can write {{|foo}} and it doesn't matter.
+{{|#with x}}This code is commented out.{{|/with}}
 --}}
 ```
 
@@ -516,7 +516,7 @@ some other expression. For this and other cases, one can use parentheses to
 express the evaluation order of nested expressions.
 
 ```
-{{capitalize (getSummary post)}}
+{{|capitalize (getSummary post)}}
 ```
 
 In this example, the result of the `getSummary` helper call will be passed to
@@ -525,7 +525,7 @@ the `capitalize` helper.
 Sub-expressions can be used to calculate key-word arguments, too:
 
 ```
-{{dstache}}> tmpl arg=(helper post)}}
+{{|> tmpl arg=(helper post)}}
 ```
 
 ### HTML Dialect
@@ -575,8 +575,8 @@ following elements:
 
 ### Escaping Curly Braces
 
-To insert a literal `{{dstache}}`, `{{dstache}}{`, or any number of curly braces, put a
-vertical bar after it.  So `{{dstache}}|` will show up as `{{dstache}}`, `{{dstache}}{|` will
-show up as `{{dstache}}{`, and so on.
+To insert a literal `{{|`, `{{|{`, or any number of curly braces, put a
+vertical bar after it.  So `{{||` will show up as `{{|`, `{{|{|` will
+show up as `{{|{`, and so on.
 
 {{/template}}
