@@ -155,7 +155,7 @@ Template.autoApiBox.helpers({
 
     return signature;
   },
-  importName() {
+  importName: function () {
     const noImportNeeded = !this.module
       || this.scope === 'instance' 
       || this.ishelper
