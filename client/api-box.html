@@ -5,17 +5,19 @@
     </div>
 
     <a class="name selflink" href="{{link}}">{{{name}}}</a>
-    {{#if importName}}
-      <code class="subtext">import { {{importName}} } from 'meteor/{{module}}'</code>
-    {{/if}}
-
-    {{#if fullApi}}
-      {{#if filepath}}
-        <a class="subtext src-code" href="https://github.com/meteor/meteor/blob/master/packages/{{filepath}}#L{{lineno}}" target="_blank">
-          {{filepath}}, line {{lineno}}
-        </a>
+    <div class="subtext">
+      {{#if importName}}
+        <code>import { {{importName}} } from 'meteor/{{module}}'</code>
       {{/if}}
-    {{/if}}
+
+      {{#if fullApi}}
+        {{#if filepath}}
+          <a class="src-code" href="https://github.com/meteor/meteor/blob/master/packages/{{filepath}}#L{{lineno}}" target="_blank">
+            ({{filepath}}, line {{lineno}})
+          </a>
+        {{/if}}
+      {{/if}}
+    </div>
   </h3>
 </template>
 
