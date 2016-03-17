@@ -109,41 +109,48 @@ class Runner {
 
   // XXX leave a pidfile and check if we are already running
   start() {
-    this.proxy.start();
+    const self = this;
+
+    self.proxy.start();
 
     // print the banner only once we've successfully bound the port
-    if (! this.quiet && ! this.stopped) {
-      runLog.log("[[[[[ " + this.banner + " ]]]]]\n");
+    if (! self.quiet && ! self.stopped) {
+      runLog.log("[[[[[ " + self.banner + " ]]]]]\n");
       runLog.log("Started proxy.",  { arrow: true });
     }
 
-    const unblockAppRunner = this.appRunner.makeBeforeStartPromise();
-    this._startMongoAsync().then(unblockAppRunner);
+    var unblockAppRunner = self.appRunner.makeBeforeStartPromise();
+    self._startMongoAsync().then(unblockAppRunner);
 
-    if (! this.stopped) {
-      this.updater.start();
-      buildmessage.enterJob({ title: "starting your app" }, () => {
-        this.appRunner.start();
+    if (! self.stopped) {
+      self.updater.start();
+    }
+
+    if (! self.stopped) {
+      buildmessage.enterJob({ title: "starting your app" }, function () {
+        self.appRunner.start();
       });
-
-      if (! this.quiet) {
+      if (! self.quiet && ! self.stopped) {
         runLog.log("Started your app.",  { arrow: true });
-        runLog.log("");
-        runLog.log("App running at: " + this.rootUrl,  { arrow: true });
-
-        if (process.platform === "win32") {
-          runLog.log("   Type Control-C twice to stop.");
-          runLog.log("");
-        }
       }
+    }
 
-      if (this.selenium) {
-        buildmessage.enterJob({ title: "starting Selenium" }, () => {
-          this.selenium.start();
-        });
-        if (! this.quiet) {
-          runLog.log("Started Selenium.", { arrow: true });
-        }
+    if (! self.stopped && ! self.quiet) {
+      runLog.log("");
+      runLog.log("App running at: " + self.rootUrl,  { arrow: true });
+
+      if (process.platform === "win32") {
+        runLog.log("   Type Control-C twice to stop.");
+        runLog.log("");
+      }
+    }
+
+    if (self.selenium && ! self.stopped) {
+      buildmessage.enterJob({ title: "starting Selenium" }, function () {
+        self.selenium.start();
+      });
+      if (! self.quiet && ! self.stopped) {
+        runLog.log("Started Selenium.", { arrow: true });
       }
     }
 
