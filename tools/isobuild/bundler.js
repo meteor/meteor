@@ -2332,8 +2332,15 @@ exports.bundle = function ({
   buildOptions = buildOptions || {};
 
   var serverArch = buildOptions.serverArch || archinfo.host();
-  var webArchs = buildOptions.webArchs ||
-        projectContext.platformList.getWebArchs();
+  var webArchs;
+  if (buildOptions.webArchs) {
+    // Don't attempt to build web.cordova when platforms have been removed
+    webArchs = _.intersection(
+      buildOptions.webArchs,
+      projectContext.platformList.getWebArchs());
+  } else {
+    webArchs = projectContext.platformList.getWebArchs();
+  }
   const minifyMode = buildOptions.minifyMode || 'development';
   const buildMode = buildOptions.buildMode || 'production';
 
