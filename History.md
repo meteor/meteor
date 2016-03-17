@@ -261,6 +261,8 @@
 
 * Move `<script>` tags to end of <body> to enable 'loading' UI to be inserted into the boilerplate #6375
 
+* Includes fix for apps on Galaxy that use a CDN. The fix ensures the CDN won't cache broken js/css resources during an app upgrade.
+
 Patches contributed by GitHub users vereed, mitar, nathan-muir,
 robfallows, skishore, okland, Primigenus, zimme, welelay, rgoomar,
 bySabi, mbrookes, TomFreudenberg, TechPlexEngineer, zacharydenton,
