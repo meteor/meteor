@@ -110,7 +110,7 @@ export class AndroidRunTarget extends CordovaRunTarget {
     let target = this.isDevice ? "-d" : "-e";
 
     // Clear logs
-    await execFileAsync('adb', [target, 'logcat', '-c']);
+    execFileAsync('adb', [target, 'logcat', '-c']);
 
     await cordovaProject.run(this.platform, this.isDevice);
 
