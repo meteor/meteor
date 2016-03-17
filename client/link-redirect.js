@@ -138,7 +138,6 @@ Meteor.startup(function () {
 
   var curLink = window.location.hash.slice(1);
   var redirect = getRedirect(curLink);
-  console.log(redirect)
 
   if (redirect) {
     window.location = "#" + redirect;
