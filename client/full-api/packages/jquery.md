@@ -1,5 +1,4 @@
-<template name="pkg_jquery">
-{{#markdown}}
+{{#template name="pkg_jquery"}}
 
 ## `jquery`
 
@@ -17,5 +16,4 @@ plugins as separate packages. These include:
 * [`jquery-layout`](http://layout.jquery-dev.net/)
 * [`jquery-waypoints`](http://imakewebthings.com/jquery-waypoints/)
 
-{{/markdown}}
-</template>
+{{/template}}

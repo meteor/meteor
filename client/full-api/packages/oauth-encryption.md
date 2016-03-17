@@ -1,5 +1,4 @@
-<template name="pkg_oauth_encryption">
-{{#markdown}}
+{{#template name="pkg_oauth_encryption"}}
 ## `oauth-encryption`
 
 Encrypts sensitive login secrets stored in the database such as a
@@ -79,5 +78,4 @@ You can decrypt them using `OAuth.openSecrets`:
 
 This package depends on [npm-node-aes-gcm](https://github.com/meteor/meteor/tree/devel/packages/non-core/npm-node-aes-gcm), which requires you to have OpenSSL installed on your system to run. To install OpenSSL on Windows, use one of the binaries on [this page](http://slproweb.com/products/Win32OpenSSL.html). Don't forget to install the Visual Studio 2008 redistributables if you don't have them yet.
 
-{{/markdown}}
-</template>
+{{/template}}

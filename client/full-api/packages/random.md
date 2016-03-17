@@ -1,5 +1,4 @@
-<template name="pkg_random">
-{{#markdown}}
+{{#template name="pkg_random"}}
 ## `random`
 
 The `random` package provides several functions for generating random
@@ -37,5 +36,4 @@ Returns a random string of `n` hexadecimal digits.
 {{/dtdd}}
 </dl>
 
-{{/markdown}}
-</template>
+{{/template}}
