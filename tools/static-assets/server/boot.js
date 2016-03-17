@@ -166,13 +166,15 @@ Fiber(function () {
         var fullPath;
 
         nonLocalNodeModulesPaths.some(function (nodeModuleBase) {
-          var packageBase = files.pathResolve(
+          var packageBase = files.convertToOSPath(files.pathResolve(
             nodeModuleBase,
             name.split("/", 1)[0]
-          );
+          ));
 
           if (fs.existsSync(packageBase)) {
-            return fullPath = files.pathResolve(nodeModuleBase, name);
+            return fullPath = files.convertToOSPath(
+              files.pathResolve(nodeModuleBase, name)
+            );
           }
         });
 
