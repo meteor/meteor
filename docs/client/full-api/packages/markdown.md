@@ -1,5 +1,4 @@
-<template name="pkg_markdown">
-{{#markdown}}
+{{#template name="pkg_markdown"}}
 
 ## `markdown`
 
@@ -17,5 +16,4 @@ outputs
 
     <p>I am using <strong>markdown</strong>.</p>
 
-{{/markdown}}
-</template>
+{{/template}}

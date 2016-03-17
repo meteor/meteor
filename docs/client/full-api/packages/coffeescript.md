@@ -1,5 +1,4 @@
-<template name="pkg_coffeescript">
-{{#markdown}}
+{{#template name="pkg_coffeescript"}}
 ## `coffeescript`
 
 [CoffeeScript](http://coffeescript.org/) is a little language that
@@ -48,5 +47,4 @@ Heavy CoffeeScript users, please let us know how this arrangement
 works for you, whether `share` is helpful for you, and anything else
 you'd like to see changed.
 
-{{/markdown}}
-</template>
+{{/template}}

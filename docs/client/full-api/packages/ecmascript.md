@@ -1,6 +1,5 @@
-<template name="pkg_ecmascript">
-{{#markdown}}
-## ecmascript
+{{#template name="pkg_ecmascript"}}
+## `ecmascript`
 
 This package lets you use new JavaScript language features that are part
 of the [ECMAScript 2015
@@ -313,5 +312,4 @@ package is installed:
 
   Complete reference [here](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array).
 
-{{/markdown}}
-</template>
+{{/template}}
