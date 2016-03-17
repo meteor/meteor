@@ -10,7 +10,7 @@ var files = require('./mini-files.js');
 var npmRequire = require('./npm-require.js').require;
 
 // This code is duplicated in tools/main.js.
-var MIN_NODE_VERSION = 'v0.10.41';
+var MIN_NODE_VERSION = 'v0.10.43';
 
 if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
   process.stderr.write(
