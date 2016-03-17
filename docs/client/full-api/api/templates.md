@@ -95,9 +95,9 @@ template is rendered for the first time.
 ```html
 <template name="myPictures">
   <div class="container">
-    {{#each pictures}}
-      <img class=".item" src="/{{.}}"/>
-    {{/each}}
+    {{dstache}}#each pictures}}
+      <img class="item" src="/{{dstache}}.}}"/>
+    {{dstache}}/each}}
   </div>
 </template>
 ```
