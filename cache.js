@@ -54,8 +54,8 @@ Cp.loadCacheFromDisk = function () {
   return cache;
 };
 
-Cp.get = function (source, options) {
-  var cacheHash = util.deepHash(meteorBabelVersion, source, options);
+Cp.get = function (source, options, deps) {
+  var cacheHash = util.deepHash(meteorBabelVersion, source, options, deps);
   var cacheFile = cacheHash + ".json";
   var fullCacheFile = path.join(this.dir, cacheFile);
   var result;

@@ -35,12 +35,12 @@ function parse(source) {
 }
 exports.parse = parse;
 
-exports.compile = function compile(source, options) {
+exports.compile = function compile(source, options, deps) {
   options = options || getDefaultOptions();
   if (! compileCache) {
     setCacheDir();
   }
-  return compileCache.get(source, options);
+  return compileCache.get(source, options, deps);
 };
 
 function setCacheDir(cacheDir) {
