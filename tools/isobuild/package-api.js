@@ -343,7 +343,7 @@ _.extend(PackageAPI.prototype, {
     forAllMatchingArchs(arch, a => {
       const filesForArch = this.files[a];
       const source = {
-        relPath: path,
+        relPath: files.pathRelative(".", path),
         fileOptions: {
           mainModule: true
         }
@@ -406,10 +406,14 @@ _.extend(PackageAPI.prototype, {
     // and break it. e.g.: 'some\folder/anotherFolder' is a valid path
     // consisting of two components. #WindowsPathApi
     paths = _.map(paths, function (p) {
+      // Normalize ./foo.js to foo.js.
+      p = files.pathRelative(".", p);
+
       if (p.indexOf('/') !== -1) {
         // it is already a Unix-style path most likely
         return p;
       }
+
       return files.convertToPosixPath(p, true);
     });
 
