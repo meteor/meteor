@@ -836,6 +836,8 @@ _.extend(AppRunner.prototype, {
 
         maybePrintLintWarnings(bundleResult);
 
+        runLog.logClientRestart();
+
         var oldPromise = self.runPromise = self._makePromise("run");
 
         // Notify the server that new client assets have been added to the
@@ -846,8 +848,6 @@ _.extend(AppRunner.prototype, {
 
         // Establish a watcher on the new files.
         setupClientWatcher();
-
-        runLog.logClientRestart();
 
         // Wait until another file changes.
         ret = oldPromise.await();
