@@ -209,7 +209,7 @@ my-package`);
     run.match("packageVar: foo");
 
     s.write("packages/my-package/foo.js", "packageVar = 'bar'");
-    run.match("client connected: 1");
+    run.match("client connected: 0");
     run.match("jsVar: undefined");
     run.match("packageVar: bar");
 
@@ -221,11 +221,6 @@ appcache`);
     run.match("server restarted");
     run.match("client connected: 0");
     run.match("jsVar: undefined");
-
-    // XXX: Remove me.  This shouldn't be needed, but sometimes
-    // if we run too quickly on fast (or Linux?) machines, it looks
-    // like there's a race and we see a weird state
-    utils.sleepMs(10000);
 
     s.write("client/test.js", "jsVar = 'bar'");
     run.match("client connected: 1");

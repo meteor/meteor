@@ -286,7 +286,7 @@ exports.run = function (options) {
 
   // Ensure process.env.NODE_ENV matches the build mode, with the following precedence:
   // 1. Passed in build mode (if development or production)
-  // 2. Existing process.env.NODE_ENV (if it's valid) 
+  // 2. Existing process.env.NODE_ENV (if it's valid)
   // 3. Default to development (in both cases) otherwise
 
   // NOTE: because this code only runs when using `meteor run` or `meteor test[-packages`,
