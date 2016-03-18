@@ -97,6 +97,15 @@ var Unibuild = function (isopack, options) {
   // Map from absolute paths of node_modules directories to
   // NodeModulesDirectory objects.
   self.nodeModulesDirectories = options.nodeModulesDirectories;
+
+  // Provided for backwards compatibility; please use
+  // unibuild.nodeModulesDirectories instead!
+  _.some(self.nodeModulesDirectories, (nmd, nodeModulesPath) => {
+    if (! nmd.local) {
+      self.nodeModulesPath = nodeModulesPath;
+      return true;
+    }
+  });
 };
 
 ///////////////////////////////////////////////////////////////////////////////

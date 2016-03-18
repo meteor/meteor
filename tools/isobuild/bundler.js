@@ -285,14 +285,10 @@ export class NodeModulesDirectory {
         relParts.shift();
         relParts.shift();
       } else if (relParts[0] === "npm") {
-        const rootParts = this.sourceRoot.split(files.pathSep);
-        if (rootParts.indexOf(".meteor") >= 0) {
-          // If this.sourceRoot is inside a .meteor directory, then the
-          // npm/ at the beginning of the relPath must have been added by
-          // a previous call to getPreferredBundlePath, so we remove it
-          // here to avoid duplication.
-          relParts.shift();
-        }
+        // The npm/ at the beginning of the relPath was probably added by
+        // a previous call to getPreferredBundlePath, so we remove it here
+        // to avoid duplication.
+        relParts.shift();
       }
 
       if (kind === "bundle") {
