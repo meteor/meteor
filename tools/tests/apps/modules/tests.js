@@ -322,6 +322,20 @@ describe("ecmascript miscellany", () => {
     assert.deepEqual(rev(1, 2, 3), [3, 2, 1]);
     assert.ok(rev.toString().match(/\barguments\b/));
   });
+
+  it("rest parameters in property arrow functions (#6514)", () => {
+    const obj = {
+      method: (a, b, ...rest) => {
+        rest.push(a, b);
+        return rest.reverse();
+      }
+    };
+
+    assert.deepEqual(
+      obj.method(1, 2, 3, 4),
+      [2, 1, 4, 3]
+    );
+  });
 });
 
 Meteor.isClient &&
