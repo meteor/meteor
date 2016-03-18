@@ -2,6 +2,7 @@
 title: "Security"
 order: 12
 description: How to secure your Meteor app.
+discourseTopicId: 19667
 ---
 
 After reading this guide, you'll know:
