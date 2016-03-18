@@ -12,8 +12,6 @@ way.
 2015 Meteor Devshop gives an overview of how the package works, and what
 it provides.
 
-Read more at http://docs.meteor.com/#/full/ecmascript
-
 ### Usage
 
 The `ecmascript` package registers a compiler plugin that transpiles
