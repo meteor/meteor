@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Handlebars-like template language for Meteor",
-  version: '1.0.9-rc.2'
+  version: '1.0.9-rc.3'
 });
 
 // For more, see package `spacebars-compiler`, which is used by

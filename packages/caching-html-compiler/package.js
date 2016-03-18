@@ -1,5 +1,5 @@
 Package.describe({
-  version: '1.0.4-rc.2',
+  version: '1.0.4-rc.3',
   // Brief, one-line summary of the package.
   summary: 'Pluggable class for compiling HTML into templates',
   // By default, Meteor will default to using README.md for documentation.
