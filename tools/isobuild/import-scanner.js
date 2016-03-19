@@ -377,7 +377,7 @@ export default class ImportScanner {
     // because the buffer-to-string conversion in `fs.readFileSync()`
     // translates it to FEFF, the UTF-16 BOM.
     if (info.dataString.charCodeAt(0) === 0xfeff) {
-      info.dataString = info.data.slice(1);
+      info.dataString = info.dataString.slice(1);
     }
 
     const ext = pathExtname(absPath).toLowerCase();
