@@ -248,6 +248,7 @@ Package.onTest(function(api) {
   // Finally add an entry point for tests
   api.mainModule('my-package-tests.js');
 });
+```
 
 From within your test entry point, you can import other files as you would in the package proper.
 
