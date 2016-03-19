@@ -306,6 +306,6 @@ If you are writing an Atmosphere package and want to depend on React or an NPM p
 
 Instead, you need to ask your users to install the correct NPM packages in the application itself. This will ensure that only one copy of React is shipped to the client and there are no version conflicts.
 
-In order to check that a user has installed the correct versions of NPM packages, you can use the [`tmeasday:check-npm-versions`](https://atmospherejs.com/tmeasday/check-npm-versions`) package to check dependency versions at runtime.
+In order to check that a user has installed the correct versions of NPM packages, you can use the [`tmeasday:check-npm-versions`](https://atmospherejs.com/tmeasday/check-npm-versions) package to check dependency versions at runtime.
 
 XXX: not putting in code samples here as they may change and I don't want to have to remember to do it in two places.
