@@ -25,7 +25,7 @@ This article will cover some tips on how to do that.
 
 To get started writing a package, use the Meteor command line tool:
 
-```
+```bash
 meteor create --package my-package
 ```
 
@@ -164,7 +164,7 @@ const React = require('react');
 
 To depend on another Atmosphere package, use [`api.use`](http://docs.meteor.com/#/full/pack_use):
 
-```
+```js
 Package.onUse(function(api) {
   // This package needs to be able to use 1.3.3 or above of simple-schema
   api.use('aldeed:simple-schema@1.3.3');
@@ -237,7 +237,7 @@ This will run a special app containing only a "test" version of your package and
 
 When your package starts in test mode, rather than loading the `onUse` block, Meteor loads the `onTest` block:
 
-```
+```js
 Package.onTest(function(api) {
   // You almost definitely want to depend on the package, this is what you are testing!
   api.use('my-package');
