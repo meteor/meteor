@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Enable the application cache in the browser",
-  version: "1.0.8-rc.3"
+  version: "1.0.8-rc.4"
 });
 
 Package.onUse(function (api) {

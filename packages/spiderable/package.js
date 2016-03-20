@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Makes the application crawlable to web spiders",
-  version: "1.0.11-rc.3"
+  version: "1.0.11-rc.4"
 });
 
 Package.onUse(function (api) {

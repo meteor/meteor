@@ -1,6 +1,6 @@
 Package.describe({
   summary: "(For prototyping only) Publish the entire database to all clients",
-  version: '1.0.5-rc.3'
+  version: '1.0.5-rc.4'
 });
 
 // This package is empty; its presence is detected by several other packages

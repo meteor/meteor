@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Meteor's latency-compensated distributed data framework",
-  version: '1.2.3-rc.3'
+  version: '1.2.3-rc.4'
 });
 
 Package.onUse(function (api) {
