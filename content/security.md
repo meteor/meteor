@@ -117,7 +117,7 @@ The best way to make your app secure is to understand all of the possible inputs
 ```js
 export const makePrivate = new ValidatedMethod({
   name: 'lists.makePrivate',
-  schema: new SimpleSchema({
+  validate: new SimpleSchema({
     listId: { type: String }
   }).validator(),
   run({ listId }) {
