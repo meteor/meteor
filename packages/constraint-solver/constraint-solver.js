@@ -59,7 +59,6 @@ CS.PackagesResolver.prototype.resolve = function (dependencies, constraints,
                                 'upgradeIndirectDepPatchVersions'));
   });
 
-
   var resultCache = self._options.resultCache;
   if (resultCache && resultCache.lastInput &&
       input.isEqual(resultCache.lastInput)) {
@@ -98,10 +97,12 @@ CS.PackagesResolver.prototype.resolve = function (dependencies, constraints,
   };
 
   var output = null;
-  if (options.previousSolution) {
-    // try solving first with just the versions from previousSolution in
+  if (options.previousSolution && !input.upgrade && !input.upgradeIndirectDepPatchVersions) {
+    // Try solving first with just the versions from previousSolution in
     // the catalogCache, so that we don't have to solve the big problem
-    // if we don't have to.
+    // if we don't have to. But don't do this if we're attempting to upgrade
+    // packages, because that would always result in just using the current
+    // version, hence disabling upgrades.
     try {
       output = CS.PackagesResolver._resolveWithInput(input, resolveOptions);
     } catch (e) {
