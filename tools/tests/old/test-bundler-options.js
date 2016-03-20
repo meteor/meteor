@@ -142,7 +142,7 @@ var runTest = function () {
       // package node_modules directory also a symlink
       // XXX might be breaking this
       assert(files.lstat(files.pathJoin(
-        tmpOutputDir, "programs", "server", "npm", "ddp-server", "node_modules"))
+        tmpOutputDir, "programs", "server", "npm", "node_modules", "meteor", "ddp-server", "node_modules"))
              .isSymbolicLink());
     });
   }
