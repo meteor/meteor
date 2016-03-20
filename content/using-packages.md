@@ -43,7 +43,7 @@ To use an NPM package from a file in your application, you simple `import` the n
 ```js
 import moment from 'moment';
 
-# this is equivalent to the standard node require:
+// this is equivalent to the standard node require:
 const moment = require('moment');
 ```
 
@@ -107,7 +107,7 @@ import { SimpleSchema } from 'meteor/aldeed:simple-schema';
 
 Typically a package will export one or more symbols which you'll need to grab with the descructuring syntax. Sometimes a package will have no exports and simply have side effects when included in your app. In such cases you don't need to import the package at all.
 
-<h3 id="peer-npm-dependencies">Peer NPM Dependencies</h4>
+<h3 id="peer-npm-dependencies">Peer NPM Dependencies</h3>
 
 Atmosphere Packages can ship with contained [NPM dependencies](writing-packages.html#npm-dependencies), in which case you don't need to take any extra steps. However, some Atmosphere packages will expect that you have installed certain "peer" NPM dependencies in your application.
 
