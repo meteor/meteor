@@ -1,4 +1,19 @@
-# Using packages
+---
+title: Using Packages
+---
+
+After reading this article, you'll know:
+
+1. 
+2. The basics of writing an Atmosphere package
+3. How to depend on other packages, both from Atmopshere and NPM
+4. How you can integrate with Meteor's build system as an Atmosphere package.
+
+The Meteor framework supports two packaging systems: the [NPM](https://www.npmjs.com) package system---a repository of general JavaScript modules, both for node and increasingly, for the client---and the [Atmosphere](https://atmospherejs.com) package system---which is a repository of packages written solely for the Meteor framework.
+
+
+
+
 
 1. Npm vs Atmosphere
   1. Npm packages:
@@ -37,7 +52,7 @@
   4. Using `shrinkpack` to avoid depending on npm for deployments etc.
 
 
-  
+
 
 ### Converting between callbacks and Fibers
 

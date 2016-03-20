@@ -1,5 +1,5 @@
 ---
-title: Building Packages
+title: Writing Packages
 ---
 
 After reading this article, you'll know:
@@ -11,7 +11,7 @@ After reading this article, you'll know:
 
 The Meteor framework supports two packaging systems: the [NPM](https://www.npmjs.com) package system---a repository of general JavaScript modules, both for node and increasingly, for the client---and the [Atmosphere](https://atmospherejs.com) package system---which is a repository of packages written solely for the Meteor framework.
 
-With the release of version 1.3, Meteor has put increasing emphasis on the NPM package system, and in the future plans to migrate all packages into that system.
+With the release of version 1.3, Meteor has put increasing emphasis on the NPM package system, and in the future plans to migrate all packages into that system. You can read more about the tradeoffs between the package systems in the [Using Packages article](using-packages.html).
 
 If you want to distribute and reuse code that you've written for a Meteor application, then you should consider first publishing that code on NPM, especially if it's general enough to be consumed by a wider JavaScript audience. It's simple to [use NPM packages from Meteor applications](using-packages.html#npm), and possible to [use NPM packages from Atmosphere packages](#npm-dependencies), so even if your main audience is Meteor applications, there's no reason to stay away. 
 
