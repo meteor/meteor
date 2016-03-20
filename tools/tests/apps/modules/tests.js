@@ -18,6 +18,16 @@ describe("app modules", () => {
       require("./eager-coffee").extension,
       ".coffee"
     );
+
+    assert.strictEqual(
+      require("/eager-jsx").extension,
+      ".jsx"
+    );
+
+    assert.strictEqual(
+      require("/eager-coffee").extension,
+      ".coffee"
+    );
   });
 
   it("are eagerly evaluated if outside imports/", () => {
