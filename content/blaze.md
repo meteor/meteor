@@ -245,7 +245,7 @@ To insert literal curly braces: `{% raw %}{{ }}{% endraw %}` and the like, add a
 
 <h2 id="reusable-components">Reusable components in Blaze</h2>
 
-In <a href="ui-ux">the UI/UX article</a> we discussed the merits of creating reusable components that interact with their environment in clear and minimal ways.
+In [UI/UX article](ui-ux.html#smart-components) we discussed the merits of creating reusable components that interact with their environment in clear and minimal ways.
 
 Although Blaze, which is a simple template-based rendering engine, doesn't enforce a lot of these principles (unlike other frameworks like React and Angular) you can enjoy most of the same benefits by following some conventions when writing your Blaze components. This section will outline some of these "best practices" for writing reusable Blaze components.
 
