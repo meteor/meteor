@@ -277,18 +277,20 @@ export class NodeModulesDirectory {
     if (! isApp) {
       const relParts = relPath.split(files.pathSep);
 
-      if (relParts[0] === ".npm" &&
-          /^p(ackage|lugin)$/.test(relParts[1])) {
+      if (relParts[0] === ".npm") {
         // Normalize .npm/package/node_modules/... paths so that they get
         // copied into the bundle as if they were in the top-level local
         // node_modules directory of the package.
-        relParts.shift();
-        relParts.shift();
+        if (relParts[1] === "package") {
+          relParts.splice(0, 2);
+        } else if (relParts[1] === "plugin") {
+          relParts.splice(0, 3);
+        }
       } else if (relParts[0] === "npm") {
         // The npm/ at the beginning of the relPath was probably added by
         // a previous call to getPreferredBundlePath, so we remove it here
         // to avoid duplication.
-        relParts.shift();
+        relParts.splice(0, 1);
       }
 
       if (kind === "bundle") {

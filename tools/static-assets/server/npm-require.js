@@ -64,9 +64,11 @@ function registerNodeModules(name, node_modules) {
         if (part === "npm") {
           addByParts(parts.slice(i + 1), node_modules);
         } else if (part === ".npm") {
-          if (parts[i + 1] === "package" ||
-              parts[i + 1] === "plugin") {
+          if (parts[i + 1] === "package") {
             addByParts(parts.slice(i + 2), node_modules);
+          } else if (parts[i + 1] === "plugin") {
+            assert.strictEqual(parts[i + 2], name);
+            addByParts(parts.slice(i + 3), node_modules);
           }
         }
       });
