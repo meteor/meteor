@@ -1501,6 +1501,28 @@ class JsImage {
       }
     };
 
+    const nodeModulesDirsByPackageName = Object.create(null);
+    _.each(self.jsToLoad, item => {
+      _.each(item.nodeModulesDirectories, nmd => {
+        if (nmd.local) {
+          // Consider only non-local node_modules directories for build
+          // plugins.
+          return;
+        }
+
+        const name = nmd.packageName;
+        if (! name) {
+          return;
+        }
+
+        if (_.has(nodeModulesDirsByPackageName, name)) {
+          nodeModulesDirsByPackageName[name].push(nmd.sourcePath);
+        } else {
+          nodeModulesDirsByPackageName[name] = [nmd.sourcePath];
+        }
+      });
+    });
+
     // Eval each JavaScript file, providing a 'Npm' symbol in the same
     // way that the server environment would, a 'Package' symbol
     // so the loaded image has its own private universe of loaded
@@ -1583,6 +1605,10 @@ class JsImage {
         }
       }, bindings || {});
 
+      if (item.targetPath === "packages/modules-runtime.js") {
+        env.npmRequire = self._makeNpmRequire(nodeModulesDirsByPackageName);
+      }
+
       try {
         // XXX XXX Get the actual source file path -- item.targetPath
         // is not actually correct (it's the path in the bundle rather
@@ -1602,6 +1628,58 @@ class JsImage {
     });
 
     return ret;
+  }
+
+  // Create an npmRequire function suitable for use in the
+  // packages/modules-runtime/modules-runtime.js implementation of
+  // Module.prototype.useNode. This function accepts module identifiers of
+  // the form /node_modules/meteor/*/node_modules/... and loads the
+  // corresponding packages using Node's native require function.
+  _makeNpmRequire(nodeModulesDirsByPackageName) {
+    function npmRequire(id) {
+      return require(npmResolve(id));
+    }
+
+    const resolveCache = Object.create(null);
+
+    function npmResolve(id) {
+      if (id in resolveCache) {
+        return resolveCache[id];
+      }
+
+      const parts = id.split("/");
+
+      if (parts[0] === "") parts.shift();
+      if (parts[0] === "node_modules" &&
+          parts[1] === "meteor") {
+        const packageName = parts[2];
+        const dirs = nodeModulesDirsByPackageName[packageName];
+
+        if (dirs && parts[3] === "node_modules") {
+          let fullPath;
+
+          _.some(dirs, dir => {
+            const osPath = files.convertToOSPath(
+              files.pathJoin(dir, parts.slice(4).join("/"))
+            );
+
+            if (files.exists(osPath)) {
+              return fullPath = osPath;
+            }
+          });
+
+          if (fullPath) {
+            return resolveCache[id] = fullPath;
+          }
+        }
+      }
+
+      throw new Error("Cannot find module '" + id + "'");
+    }
+
+    npmRequire.resolve = npmResolve;
+
+    return npmRequire;
   }
 
   // Write this image out to disk
