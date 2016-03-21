@@ -168,12 +168,19 @@ meteor help deploy
 
 If you want to figure out your hosting solution completely from scratch, the Meteor tool has a command `meteor build` that creates a deployment bundle that contains a plain Node.js application. You can host this application wherever you like and there are many options in terms of how you set it up and configure it.
 
-To run this application, you need to provide Node.js 0.10.x and a MongoDB server. The current release of Meteor has been tested with Node 0.10.41. You can then run the application by invoking `node`, specifying the HTTP port for the application to listen on, and the MongoDB endpoint.
+**NOTE** it's important that you build your bundle for the correct architecture. If you are building on your development machine, there's a good chance you are deploying to a different server architecture. You'll want to specify the correct arcitecture with `--architecture`:
+
+```bash
+# for example if deploying to a Ubuntu linux server:
+meteor build /path/to/build --architecture os.linux.x86_64
+```
+
+To run this application, you need to provide Node.js 0.10.x and a MongoDB server. The current release of Meteor has been tested with Node 0.10.43. You can then run the application by invoking `node`, a ROOT_URL, and the MongoDB endpoint.
 
 ```bash
 cd my_directory
 (cd programs/server && npm install)
-env PORT=3000 MONGO_URL=mongodb://localhost:27017/myapp node main.js
+MONGO_URL=mongodb://localhost:27017/myapp ROOT_URL=http://my-app.com node main.js
 ```
 
 However, unless you have a specific need to roll your own hosting environment, the other options here are definitely easier, and probably make for a better setup than doing everything from scratch. Operating a Meteor app in a way that it works correctly for everyone can be complex, and [Galaxy](#galaxy) handles a lot of the specifics like routing clients to the right containers and handling coordinated version updates for you.
