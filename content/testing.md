@@ -28,8 +28,6 @@ In most ways, testing a Meteor app is no different from testing any other full s
 
 - **Reactivity**: Meteor's reactivity system is "eventually consistent" in the sense that when you change a reactive input to the system, you'll see the user interface change to reflect this some time later. This can be a challenge when testing, but there are some ways to wait until those changes happen to verify the results, for example `Tracker.afterFlush()`.
 
-XXX: say more about this?
-
 <h2 id="test-modes">The 'meteor test' command</h2>
 
 The primary way to test your application in Meteor is the `meteor test` command.
@@ -489,9 +487,6 @@ Of note here:
 
  - Here we wrote a little utility (which could be abstracted into a general package) to wait for all the subscriptions which are created by the route change (the `todos.inList` subscription in this case) to become ready before checking their data.
 
- - The `catchAsync` utility is useful because otherwise we don't see the results of failures inside callbacks. XXX: perhaps this test should be rewritten with promises to avoid this?
-
-
 <h3 id="running-full-app-tests">Running full-app tests</h3>
 
 To run the [full-app tests](#test-modes) in our application, we run:
@@ -650,8 +645,6 @@ In Chimp tests, you have a DDP connection to the server available on the `server
 
 
 <h2 id="ci">Continuous Integration</h2>
-
-XXX: Note these are not yet working with the new system
 
 Continuous integration testing is the process of running tests on every commit of your project.
 
