@@ -2,8 +2,6 @@
 title: "Testing"
 ---
 
-**NOTE** This is correct up to release 1.3-beta.12. Apologies that this is still a work in progress.
-
 <h2 id="introduction">Introduction</h2>
 
 There are many benefits of testing your application to ensure it works the way you think it does. Reasons include maintaining a high level of quality (especially over time as your codebase changes), allowing you to refactor and rewrite code with confidence, and concrete documentation of expected behavior. (Other developers can figure out what parts of your app are supposed to do by reading the tests!)
@@ -292,7 +290,7 @@ meteor test --driver-package practicalmeteor:mocha --port 3100
 
 Then you can open two browser windows to see the app in action while also ensuring that you don't break any tests as you make changes.
 
-<h3 id="isolation-techniques">Isolation Techniques</h3>
+<h3 id="isolation-techniques">Isolation techniques</h3>
 
 In the [unit test above](#simple-unit-test) we saw a very limited example of how to isolate a module from the larger app. This is critical for proper unit testing. Some other utilities and techniques include:
 
@@ -654,7 +652,7 @@ Continuous integration testing is the process of running tests on every commit o
 
 There are two principal ways to do it: on the developer's machine before allowing them to push code to the central repository, and on a dedicated CI server after each push. Both techniques are useful, and both require running tests in a commandline-only fashion.
 
-<h3 id="command-line">Command Line</h3>
+<h3 id="command-line">Command line</h3>
 
 We've seen one example of running tests on the command line, using our `meteor npm run chimp-test` mode.
 
@@ -667,7 +665,7 @@ meteor add dispatch:mocha-phantomjs
 meteor test --once --driver-package dispatch:mocha-phantomjs
 ```
 
-(The `--once` argument ensures the Meteor process stops once the test is done). 
+(The `--once` argument ensures the Meteor process stops once the test is done).
 
 We can also add that command to our `package.json` as a `test` script:
 
@@ -681,9 +679,9 @@ We can also add that command to our `package.json` as a `test` script:
 
 Now we can run the tests with `meteor npm test`.
 
-<h3 id="using-circle-ci">Circle CI</h3>
+<h3 id="using-circle-ci">CircleCI</h3>
 
-[Circle](https://circleci.com) is a great continuous integration service that allows us to run (possibly time consuming) tests on every push to a repository like GitHub. To use it with the the commandline test we've defined above, we can follow their standard [getting started tutorial](https://circleci.com/docs/getting-started) and use a `circle.yml` file similar to this:
+[CircleCI](https://circleci.com) is a great continuous integration service that allows us to run (possibly time consuming) tests on every push to a repository like GitHub. To use it with the the commandline test we've defined above, we can follow their standard [getting started tutorial](https://circleci.com/docs/getting-started) and use a `circle.yml` file similar to this:
 
 ```yaml
 machine:
