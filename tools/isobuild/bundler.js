@@ -327,20 +327,29 @@ export class NodeModulesDirectory {
     const nodeModulesDirectories = Object.create(null);
 
     function add(moreInfo, path) {
-      let sourcePath;
-
-      if (files.pathIsAbsolute(path)) {
-        sourcePath = path;
-      } else {
-        rejectBadPath(path);
-        sourcePath = files.pathJoin(callerInfo.sourceRoot, path);
-      }
-
-      nodeModulesDirectories[sourcePath] = new NodeModulesDirectory({
+      const info = {
         ...callerInfo,
         ...moreInfo,
-        sourcePath,
-      });
+      };
+
+      if (! info.packageName) {
+        const parts = path.split("/");
+        if (parts[0] === "npm" &&
+            parts[1] === "node_modules" &&
+            parts[2] === "meteor") {
+          info.packageName = parts[3];
+        }
+      }
+
+      if (files.pathIsAbsolute(path)) {
+        info.sourcePath = path;
+      } else {
+        rejectBadPath(path);
+        info.sourcePath = files.pathJoin(callerInfo.sourceRoot, path);
+      }
+
+      nodeModulesDirectories[info.sourcePath] =
+        new NodeModulesDirectory(info);
     }
 
     if (typeof node_modules === "string") {
@@ -1837,7 +1846,6 @@ class JsImage {
           ret.nodeModulesDirectories,
           nodeModulesDirectories =
             NodeModulesDirectory.readDirsFromJSON(item.node_modules, {
-              packageName: files.pathBasename(dir),
               sourceRoot: dir
             })
         );
