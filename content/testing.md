@@ -81,7 +81,8 @@ Test files themselves (for example a file named `todos-item.test.js` or `routing
 ```js
 describe('my module', () => {
   it('does something that should be tested', () => {
-    // This code will be executed by the test driver when the app is started in the correct mode
+    // This code will be executed by the test driver when the app is started
+    // in the correct mode
   })
 })
 ```
@@ -109,8 +110,8 @@ This technique will only work on the server. If you need to reset the database f
 ```js
 import { resetDatabase } from 'meteor/xolvio:cleaner';
 
-// NOTE: Before writing a method like this you'll want to double check this file is only going
-// to be loaded in test mode!!
+// NOTE: Before writing a method like this you'll want to double check
+// that this file is only going to be loaded in test mode!!
 Meteor.methods({
   'test.resetDatabase': () => resetDatabase();
 });
@@ -201,7 +202,7 @@ const withDiv = function withDiv(callback) {
   }
 };
 
-export const withRenderedTemplate = function withRenderedTemplate(template, data, callback) {
+export const function withRenderedTemplate(template, data, callback) {
   withDiv((el) => {
     const ourTemplate = _.isString(template) ? Template[template] : template;
     Blaze.renderWithData(ourTemplate, data, el);
@@ -305,7 +306,8 @@ In the [unit test above](#simple-unit-test) we saw a very limited example of how
     ```js
     describe('lists.public', () => {
       it('sends all public lists', (done) => {
-        // Allows us to look at the output of a publication without needing a client connection
+        // Allows us to look at the output of a publication without
+        // needing a client connection
         const collector = new PublicationCollector();
         collector.collect('lists.public', (collections) => {
           chai.assert.equal(collections.Lists.length, 3);
@@ -507,7 +509,8 @@ To create test data in full-app test mode, it usually makes sense to create some
 Similar to the way we cleared the database using a method in the `beforeEach` in the [test data](#test-data) section above, we can call a method to do that before running our tests. In the case of our routing tests, we've used a file called `imports/api/generate-data.app-tests.js` which defines this method (and will only be loaded in full app test mode, so is not available in general!):
 
 ```js
-// This file will be auto-imported in the app-test context, ensuring the method is always available
+// This file will be auto-imported in the app-test context,
+// ensuring the method is always available
 
 import { Meteor } from 'meteor/meteor';
 import { Factory } from 'meteor/factory';
@@ -521,7 +524,8 @@ const createList = (userId) => {
   return list;
 };
 
-// Remember to double check this is a test-only file before adding a method like this!
+// Remember to double check this is a test-only file before
+// adding a method like this!
 Meteor.methods({
   generateFixtures: function generateFixturesMethod() {
     resetDatabase();
@@ -536,8 +540,9 @@ Meteor.methods({
 
 let generateData;
 if (Meteor.isClient) {
-  // Create a second connection to the server to use to call test data methods
-  // We do this so there's no contention w/ the currently tested user's connection
+  // Create a second connection to the server to use to call
+  // test data methods. We do this so there's no contention
+  // with the currently tested user's connection.
   const testConnection = Meteor.connect(Meteor.absoluteUrl());
 
   generateData = Promise.denodeify((cb) => {
@@ -683,7 +688,7 @@ Now we can run the tests with `meteor npm test`.
 
 [CircleCI](https://circleci.com) is a great continuous integration service that allows us to run (possibly time consuming) tests on every push to a repository like GitHub. To use it with the the commandline test we've defined above, we can follow their standard [getting started tutorial](https://circleci.com/docs/getting-started) and use a `circle.yml` file similar to this:
 
-```yaml
+```
 machine:
   node:
     version: 0.10.43
