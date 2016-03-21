@@ -372,16 +372,6 @@ public class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
       // cordova-plugin-test-framework
       viewController.startPage = "http://localhost:\(localServerPort)?\(authTokenKeyValuePair)"
     }
-
-    commandDelegate?.urlTransformer = { (URL: NSURL!) -> NSURL! in
-      guard let path = URL.path else { return URL }
-
-      if URL.scheme == "file" {
-        return NSURL(string: "\(localFileSystemPath)\(path)", relativeToURL: self.localServer.serverURL)
-      } else {
-        return URL
-      }
-    }
   }
 
   // MARK: Request Handlers
