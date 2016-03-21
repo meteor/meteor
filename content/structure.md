@@ -21,7 +21,7 @@ In ES2015, you can make variables available outside a file using the `export` ke
 
 Since this is a new feature introduced in Meteor 1.3, you will find a lot of code online that uses the older, more centralized conventions built around packages and apps declaring global symbols. This old system still works, so to opt-in to the new module system code must be placed in the `imports/` directory in your application. We expect a future release of Meteor will turn on modules by default for all code, because this is more aligned with how developers in the wider JavaScript community write their code.
 
-You can read about the module system in detail in the [`modules` package README](https://github.com/meteor/meteor/tree/release-1.3/packages/modules). This package is automatically included in every new Meteor app as part of the `ecmascript` meta-package, so most apps won't need to do anything to start using modules right away.
+You can read about the module system in detail in the [`modules` package README](https://docs.meteor.com/#/full/modules). This package is automatically included in every new Meteor app as part of the `ecmascript` meta-package, so most apps won't need to do anything to start using modules right away.
 
 <h3 id="importing-from-packages">Importing from packages</h3>
 
