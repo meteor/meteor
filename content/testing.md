@@ -70,10 +70,10 @@ There are two main kinds of test driver packages:
 
 <h3 id="mocha">Recommended: Mocha</h3>
 
-In this article, we'll use the popular [Mocha](https://mochajs.org) test runner alongside the [Chai](http://chaijs.com) assertion library to test our application. In order to write tests in Mocha, we can add the [`avital:mocha`](https://atmospherejs.com/avital/mocha) package to our app.
+In this article, we'll use the popular [Mocha](https://mochajs.org) test runner alongside the [Chai](http://chaijs.com) assertion library to test our application. In order to write tests in Mocha, we can add the [`practicalmeteor:mocha`](https://atmospherejs.com/avital/mocha) package to our app.
 
 ```bash
-meteor add avital:mocha
+meteor add practicalmeteor:mocha
 ```
 
 This package also doesn't do anything in development or production mode (in fact it declares itself `testOnly` so it is not even included in those modes), but when our app is run in [test mode](#test-modes), it takes over, executing test code on both the client and server, and rendering results to the browser.
@@ -271,12 +271,12 @@ We can use the [Factory package's](#generating-data) `.build()` API to create a 
 To run the tests that our app defines, we run our app in [test mode](#test-modes):
 
 ```txt
-meteor test --driver-package avital:mocha
+meteor test --driver-package practicalmeteor:mocha
 ```
 
 As we've defined a test file (`imports/todos/todos.tests.js`), what this means is that the file above will be eagerly loaded, adding the `'builds correctly from factory'` test to the Mocha registry.
 
-To run the tests, visit http://localhost:3000 in your browser. This kicks off `avital:mocha`, which runs your tests both in the browser and on the server. It displays the test results in the browser in a Mocha test reporter:
+To run the tests, visit http://localhost:3000 in your browser. This kicks off `practicalmeteor:mocha`, which runs your tests both in the browser and on the server. It displays the test results in the browser in a Mocha test reporter:
 
 <img src="images/mocha-test-results.png">
 
@@ -287,7 +287,7 @@ Usually, while developing an application, it make sense to run `meteor test` on 
 meteor
 
 # in another
-meteor test --driver-package avital:mocha --port 3100
+meteor test --driver-package practicalmeteor:mocha --port 3100
 ```
 
 Then you can open two browser windows to see the app in action while also ensuring that you don't break any tests as you make changes.
@@ -497,7 +497,7 @@ Of note here:
 To run the [full-app tests](#test-modes) in our application, we run:
 
 ```txt
-meteor test --full-app --driver-package avital:mocha
+meteor test --full-app --driver-package practicalmeteor:mocha
 ```
 
 When we connect to the test instance in a browser, we want to render a testing UI rather than our app UI, so the `mocha-web-reporter` package will hide any UI of our application and overlay it with its own. However the app continues to behave as normal, so we are able to route around and check the correct data is loaded.
@@ -622,7 +622,7 @@ meteor
 In another:
 
 ```
-npm run chimp-watch
+meteor npm run chimp-watch
 ```
 
 The `chimp-watch` command will then run the test in a browser, and continue to re-run it as we change the test or the application. (Note that the test assumes we are running the app on port `3000`).
@@ -656,39 +656,44 @@ There are two principal ways to do it: on the developer's machine before allowin
 
 <h3 id="command-line">Command Line</h3>
 
-We've seen one example of running tests on the command line, using our `npm run chimp-test` mode.
+We've seen one example of running tests on the command line, using our `meteor npm run chimp-test` mode.
 
-XXX: write this when the tools have caught up
+We can also use a command-line driver for Mocha [`dispatch:mocha-phantomjs`](http://atmospherejs.com/dispatch/mocha-phantomjs) to run our standard tests on the command line.
 
-<h3 id="pre-push">Setting up a pre-push hook</h3>
-
-In the Todos example app, we run our normal (non-full-app) tests before every push to the repository. To do this with Git, we can simple create the following file in `.git/pre-push`:
+Adding and using the package is straightforward:
 
 ```bash
-#!/bin/sh
-
-## XXX: something like this
-spacejam test --driver-package avital:mocha
+meteor add dispatch:mocha-phantomjs
+meteor test --once --driver-package dispatch:mocha-phantomjs
 ```
+
+(The `--once` argument ensures the Meteor process stops once the test is done). 
+
+We can also add that command to our `package.json` as a `test` script:
+
+```json
+{
+  "scripts": {
+    "test": "meteor test --once --driver-package dispatch:mocha-phantomjs"
+  }
+}
+```
+
+Now we can run the tests with `meteor npm test`.
 
 <h3 id="using-circle-ci">Circle CI</h3>
 
-[Circle](https://circleci.com) is a great continuous integration service that allows us to run (possibly time consuming) tests on every push to a repository like GitHub. To use it with the tests we've defined above, we can follow their standard [getting started tutorial](https://circleci.com/docs/getting-started) and use a `circle.yml` file similar to this:
-
-XXX: fix up when tools catch up
+[Circle](https://circleci.com) is a great continuous integration service that allows us to run (possibly time consuming) tests on every push to a repository like GitHub. To use it with the the commandline test we've defined above, we can follow their standard [getting started tutorial](https://circleci.com/docs/getting-started) and use a `circle.yml` file similar to this:
 
 ```yaml
 machine:
   node:
-    version: 0.10.40
+    version: 0.10.43
 dependencies:
   override:
     - curl https://install.meteor.com | /bin/sh
-    - npm install -g spacejam
+    - npm install
 checkout:
   post:
     - git submodule update --init
-test:
-  override:
-    - spacejam test-packages --driver-package practicalmeteor:mocha-console-reporter
 ```
