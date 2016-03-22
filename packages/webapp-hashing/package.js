@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Used internally by WebApp. Knows how to hash programs from manifests.",
-  version: "1.0.7-rc.4"
+  version: "1.0.7-rc.6"
 });
 
 Package.onUse(function(api) {

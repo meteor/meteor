@@ -1,5 +1,5 @@
 Package.describe({
-  version: '1.0.5-rc.4',
+  version: '1.0.5-rc.6',
   // Brief, one-line summary of the package.
   summary: 'Define static page content in .html files',
   git: 'https://github.com/meteor/meteor',

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Disables oplog tailing",
-  version: '1.0.5-rc.4'
+  version: '1.0.5-rc.6'
 });
 
 // This package is empty; its presence is detected by mongo-livedata.
