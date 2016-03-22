@@ -1,6 +1,6 @@
 ---
 title: Code style
-index: 2
+order: 2
 description: Suggested style guidelines for your code.
 ---
 
