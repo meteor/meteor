@@ -26,7 +26,7 @@ if (!(s3Options.key && s3Options.secret)) {
 }
 
 getGitBranch()
-  // .then(updateHexoConfig)
+  .then(updateHexoConfig)
   .then(generateSite)
   .then(deployToS3)
   .catch(function (err) {
