@@ -18,7 +18,7 @@ Entire books have been written on the subject of testing, so we will simply touc
 
 - **Integration test**: If you are testing that multiple modules behave properly in concert, you are writing an integration test. Such tests are much more complex and may require running code both on the client and on the server to verify that communication across that divide is working as expected. Typically an integration test will still isolate a part of the entire application and directly verify results in code.
 
-- **Acceptance test**: If you want to write a test that can be run against any running version of your app and verifies at the browser level that the right things happen when you push the right buttons, then you are writing an acceptance test (sometimes called "end to end test". Such tests typically try to hook into the application as little as possible, beyond perhaps setting up the right data to run a test against.
+- **Acceptance test**: If you want to write a test that can be run against any running version of your app and verifies at the browser level that the right things happen when you push the right buttons, then you are writing an acceptance test (sometimes called "end to end test"). Such tests typically try to hook into the application as little as possible, beyond perhaps setting up the right data to run a test against.
 
 - **Load test**: Finally you may wish to test that your application works under typical load or see how much load it can handle before it falls over. This is called a load test or stress test. Such tests can be challenging to set up and typically aren't run often but are very important for confidence before a big production launch.
 
@@ -117,7 +117,7 @@ Meteor.methods({
 });
 
 describe('my module', done => {
-  beforeEach(() => {
+  beforeEach(done => {
     // We need to wait until the method call is done before moving on, so we
     // use Mocha's async mechanism (calling a done callback)
     Meteor.call('test.resetDatabase', done);
@@ -166,7 +166,7 @@ StubCollections.stub(Todos);
 
 // Now Todos is stubbed to a simple local collection mock,
 //   so for instance on the client we can do:
-Todos.insert({a: 'document'});
+Todos.insert({ a: 'document' });
 
 // Restore the `Todos` collection
 StubCollections.restore();
@@ -281,7 +281,7 @@ To run the tests, visit http://localhost:3000 in your browser. This kicks off `p
 
 Usually, while developing an application, it make sense to run `meteor test` on a second port (say `3100`), while also running your main application in a separate process:
 
-```txt
+```bash
 # in one terminal window
 meteor
 
@@ -301,7 +301,7 @@ In the [unit test above](#simple-unit-test) we saw a very limited example of how
 
   - The `stub-collections` package from the Todos example app we mentioned [above](#mocking-the-database).
 
-  - Using another package from the example app to isolate a publication, the `publication-collector` package:
+  - (Using another package from the example app) to isolate a publication, the `publication-collector` package:
 
     ```js
     describe('lists.public', () => {
@@ -317,7 +317,7 @@ In the [unit test above](#simple-unit-test) we saw a very limited example of how
     });
     ```
 
-There's a lot of scope for better isolation and testing utilities (the two packages from the example app above could be improved greatly!). We encourage the community to take the lead on these!
+There's a lot of scope for better isolation and testing utilities (the two packages from the example app above could be improved greatly!). We encourage the community to take the lead on these.
 
 <h2 id="integration-testing">Integration testing</h2>
 
@@ -615,13 +615,13 @@ To run acceptance tests, we simply need to start our Meteor app as usual, and po
 
 In one terminal, we can do:
 
-```
+```bash
 meteor
 ```
 
 In another:
 
-```
+```bash
 meteor npm run chimp-watch
 ```
 
@@ -635,13 +635,13 @@ The `chimp-test` command will run all of the tests *once only* and is good for t
 
 <h3 id="creating-acceptance-test-data">Creating data</h3>
 
-Although we can run the acceptance test against our "pure" Meteor app, as we've done above, it often makes sense to start our meteor server with a special test driver, `tmeasday:acceptance-test-driver`. (You'll need to `meteor add` it to your app). This test driver literally does nothing, but by running our app in full app test mode, we make all of our [test data creating methods](#creating-integration-test-data) available:
+Although we can run the acceptance test against our "pure" Meteor app, as we've done above, it often makes sense to start our meteor server with a special test driver, `tmeasday:acceptance-test-driver`. (You'll need to `meteor add` it to your app):
 
 ```txt
 meteor test --full-app --driver-package tmeasday:acceptance-test-driver
 ```
 
-The advantage of running our acceptance test suite pointed at an app that runs in full app test mode is that all of the [data generating methods](#creating-integration-test-data) that we've created remain available.
+The advantage of running our acceptance test suite pointed at an app that runs in full app test mode is that all of the [data generating methods](#creating-integration-test-data) that we've created remain available. Otherwise the `acceptance-test-driver` does nothing.
 
 In Chimp tests, you have a DDP connection to the server available on the `server` variable. You can thus use `server.call()` (which is wrapped to be synchronous in Chimp tests) to call these methods. This is a convenient way to share data preparation code between acceptance and integration tests.
 
