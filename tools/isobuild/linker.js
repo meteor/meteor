@@ -131,7 +131,11 @@ _.extend(Module.prototype, {
             }); // results has 'code' and 'map' attributes
           }
         );
-        const sourceMap = results.map.toJSON();
+
+        let sourceMap = results.map.toJSON();
+        if (! sourceMap.mappings) {
+          sourceMap = null;
+        }
 
         const prelinked = {
           source: results.code,
@@ -199,6 +203,9 @@ _.extend(Module.prototype, {
           });
           result.source = swsm.code;
           result.sourceMap = swsm.map.toJSON();
+          if (! result.sourceMap.mappings) {
+            result.sourceMap = null;
+          }
         } else {
           // If there were no files in this bundle, we do not need to
           // generate a source map.
