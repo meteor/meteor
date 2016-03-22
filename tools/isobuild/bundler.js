@@ -1712,8 +1712,7 @@ class JsImage {
       // We need to find the actual file system location for the node modules
       // this JS Image uses, so that we can add it to nodeModulesDirectories
       var modulesPhysicalLocation;
-      if (nmd.local ||
-          ! options.includeNodeModules ||
+      if (! options.includeNodeModules ||
           options.includeNodeModules === 'symlink') {
         modulesPhysicalLocation = nmd.getPreferredBundlePath("bundle");
       } else if (options.includeNodeModules === 'reference-directly') {
