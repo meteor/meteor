@@ -339,6 +339,11 @@ export class NodeModulesDirectory {
             parts[2] === "meteor") {
           info.packageName = parts[3];
         }
+        else if (parts.length === 3 && 
+                 parts[0] === "npm" && 
+                 parts[2] === "node_modules") {
+          info.packageName = parts[1];
+        }
       }
 
       if (files.pathIsAbsolute(path)) {
