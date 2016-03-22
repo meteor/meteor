@@ -87,11 +87,6 @@ function deployToS3 (branch) {
   console.log('deploying to S3...')
   s3Options.prefix = branch ? branch + '/' : ''
   var fileOptions = { root: 'public' }
-  // for non-master branches, we can skip assets
-  // and just upload html files.
-  if (branch) {
-    fileOptions.fileFilter = '*.html'
-  }
   readdirp(fileOptions)
     .pipe(s3sync(s3Options).on('data', function(file) {
       console.log(file.path + ' -> ' + file.url)
