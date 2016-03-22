@@ -99,6 +99,22 @@ export default class ImportScanner {
     this._pkgJsonCache = new Map;
   }
 
+  _getFile(absPath) {
+    absPath = absPath.toLowerCase();
+    if (has(this.absPathToOutputIndex, absPath)) {
+      return this.outputFiles[this.absPathToOutputIndex[absPath]];
+    }
+  }
+
+  _addFile(absPath, file) {
+    absPath = absPath.toLowerCase();
+    if (! has(this.absPathToOutputIndex, absPath)) {
+      this.absPathToOutputIndex[absPath] =
+        this.outputFiles.push(file) - 1;
+      return file;
+    }
+  }
+
   addInputFiles(files) {
     files.forEach(file => {
       const absPath = this._ensureSourcePath(file);
@@ -118,15 +134,10 @@ export default class ImportScanner {
 
       file.installPath = this._getInstallPath(absPath);
 
-      if (has(this.absPathToOutputIndex, absPath)) {
+      if (! this._addFile(absPath, file)) {
         // Collisions can happen if a compiler plugin calls addJavaScript
         // multiple times with the same sourcePath. #6422
-        const index = this.absPathToOutputIndex[absPath];
-        this._combineFiles(this.outputFiles[index], file);
-
-      } else {
-        this.absPathToOutputIndex[absPath] =
-          this.outputFiles.push(file) - 1;
+        this._combineFiles(this._getFile(absPath), file);
       }
     });
 
@@ -299,26 +310,23 @@ export default class ImportScanner {
 
       const absImportedPath = resolved.path;
 
-      if (has(this.absPathToOutputIndex, absImportedPath)) {
+      let depFile = this._getFile(absImportedPath);
+      if (depFile) {
         // Avoid scanning files that we've scanned before, but mark them
         // as imported so we know to include them in the bundle if they
-        // are lazy.
-        const index = this.absPathToOutputIndex[absImportedPath];
-        const file = this.outputFiles[index];
-
-        // Eager files and files that we have imported before do not need
-        // to be scanned again. Lazy files that we have not imported
-        // before still need to be scanned, however.
-        const alreadyScanned = ! file.lazy || file.imported;
+        // are lazy. Eager files and files that we have imported before do
+        // not need to be scanned again. Lazy files that we have not
+        // imported before still need to be scanned, however.
+        const alreadyScanned = ! depFile.lazy || depFile.imported;
 
         // Whether the file is eager or lazy, mark it as imported. For
         // lazy files, this makes the difference between being included in
         // or omitted from the bundle. For eager files, this just ensures
         // we won't scan them again.
-        file.imported = true;
+        depFile.imported = true;
 
         if (! alreadyScanned) {
-          this._scanFile(file);
+          this._scanFile(depFile);
         }
 
         return;
@@ -341,7 +349,7 @@ export default class ImportScanner {
 
       // The object returned by _readModule will have .data, .dataString,
       // and .hash properties.
-      const depFile = this._readModule(absImportedPath);
+      depFile = this._readModule(absImportedPath);
       depFile.type = "js"; // TODO Is this correct?
       depFile.sourcePath = pathRelative(this.sourceRoot, absImportedPath);
       depFile.installPath = installPath;
@@ -350,8 +358,7 @@ export default class ImportScanner {
       depFile.imported = true;
 
       // Append this file to the output array and record its index.
-      this.absPathToOutputIndex[absImportedPath] =
-        this.outputFiles.push(depFile) - 1;
+      this._addFile(absImportedPath, depFile);
 
       this._scanFile(depFile);
     });
@@ -768,7 +775,7 @@ export default class ImportScanner {
   }
 
   _addPkgJsonToOutput(pkgJsonPath, pkg) {
-    if (! has(this.absPathToOutputIndex, pkgJsonPath)) {
+    if (! this._getFile(pkgJsonPath)) {
       const data = new Buffer(map(pkg, (value, key) => {
         return `exports.${key} = ${JSON.stringify(value)};\n`;
       }).join(""));
@@ -787,8 +794,7 @@ export default class ImportScanner {
         imported: true,
       };
 
-      this.absPathToOutputIndex[pkgJsonPath] =
-        this.outputFiles.push(pkgFile) - 1;
+      this._addFile(pkgJsonPath, pkgFile);
     }
   }
 }
