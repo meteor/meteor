@@ -334,15 +334,35 @@ export class NodeModulesDirectory {
 
       if (! info.packageName) {
         const parts = path.split("/");
+
         if (parts[0] === "npm" &&
             parts[1] === "node_modules" &&
             parts[2] === "meteor") {
           info.packageName = parts[3];
-        }
-        else if (parts.length === 3 && 
-                 parts[0] === "npm" && 
-                 parts[2] === "node_modules") {
+
+        } else if (parts.length === 3 &&
+                   parts[0] === "npm" &&
+                   parts[2] === "node_modules") {
           info.packageName = parts[1];
+
+        } else {
+          parts.some(function (part, i) {
+            if (i > 0 && part === ".npm") {
+              if (parts[i + 1] === "package") {
+                info.packageName = parts[i - 1];
+                return true;
+              }
+
+              if (parts[i + 1] === "plugin") {
+                info.packageName = parts[i + 2];
+                return true;
+              }
+            }
+          });
+        }
+
+        if (! info.packageName) {
+          throw new Error("No package name inferred from " + path);
         }
       }
 
