@@ -59,7 +59,7 @@ Here at Meteor, we strongly believe that JavaScript is the best language to buil
 
 ECMAScript, the language standard on which every browser's JavaScript implementation is based, has moved to yearly standards releases. The newest complete standard is ES2015, which includes some long-awaited and very significant improvements to the JavaScript language. Meteor's `ecmascript` package compiles this standard down to regular JavaScript that all browsers can understand using the [popular Babel compiler](https://babeljs.io/). It's fully backwards compatible to "regular" JavaScript, so you don't have to use any new features if you don't want to. We've put a lot of effort into making advanced browser features like source maps work great with this package, so that you can debug your code using your favorite developer tools without having to see any of the compiled output.
 
-The `ecmascript` package is included in all new apps and packages by default, and compiles all files with the `.js` file extension automatically. See the [list of all ES2015 features supported by the ecmascript package](https://github.com/meteor/meteor/tree/master/packages/ecmascript#supported-es2015-features).
+The `ecmascript` package is included in all new apps and packages by default, and compiles all files with the `.js` file extension automatically. See the [list of all ES2015 features supported by the ecmascript package](https://docs.meteor.com/#/full/supportedes2015features).
 
 To get the full experience, you should also use the `es5-shim` package which is included in all new apps by default. This means you can rely on runtime features like `Array#forEach` without worrying about which browsers support them.
 
@@ -115,7 +115,7 @@ Use `"airbnb/base"` for a normal ecmascript-based config and `"airbnb"` in a Rea
 
 To run the linter, you can now simply type:
 
-```
+```bash
 npm run lint
 ```
 
@@ -142,13 +142,17 @@ A side note for Emmet users: You can use *\<ctrl-e\>* to expand HTML tags in .js
 
 Install the following three Atom packages. Here's how to install them from the terminal, but you can also select them from within Atom:
 
-    apm install language-babel
-    apm install linter
-    apm install linter-eslint
+```bash
+apm install language-babel
+apm install linter
+apm install linter-eslint
+```
 
 Go to *Settings -> Packages.* Under "linter-eslint", click the *Settings* button. To allow atom to see ESLint, you need to set "Global Node Path" to your Node path. As indicated in Atom, you can find this out with the following command in the terminal:
 
-    npm config get prefix
+```
+meteor npm config get prefix
+```
 
 This will return something like `/usr/local`. Add this to the "Global Node Path", and check "Use Global Eslint":
 
@@ -207,7 +211,7 @@ Here's how this naming convention looks when applied to a publication:
 
 ```js
 // Naming a publication
-Meteor.publish('lists.public', function() {
+Meteor.publish('lists.public', function listsPublic() {
   // ...
 });
 ```
@@ -221,16 +225,26 @@ Each file in your app should represent one logical module. Avoid having catch-al
 When a file represents a single class or UI component, the file should be named the same as the thing it defines, with the same capitalization. So if you have a file that exports a class:
 
 ```js
-export class ClickCounter { ... }
+export default class ClickCounter { ... }
 ```
 
 This class should be defined inside a file called `ClickCounter.js`. When you import it, it'll look like this:
 
 ```js
-import { ClickCounter } from './ClickCounter.js';
+import ClickCounter from './ClickCounter.js';
 ```
 
 Note that imports use relative paths, and include the file extension at the end of the file name.
+
+For [Atmosphere packages](using-packages.html), as the older pre-1.3 `api.export` syntax allowed more than one export per package, you'll tend to see non-default exports used for symbols. For instance:
+
+```js
+// You'll need to destructure here, as Meteor could export more symbols
+import { Meteor } from 'meteor/meteor';
+
+// This will not work
+import Meteor from 'meteor/meteor';
+```
 
 <h3 id="templates-and-components">Templates and components</h3>
 
