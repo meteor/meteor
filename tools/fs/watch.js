@@ -697,44 +697,9 @@ export class Watcher {
   }
 }
 
-// Given a WatchSet, returns true if it currently describes the state of
-// the disk. If buildStartTime is a number, return true if none of the
-// watched files were touched since that many milliseconds ago.
-export function isUpToDate(watchSet, buildStartTime) {
-  if (typeof buildStartTime === "number") {
-    const now = +new Date;
-    let recentlyChanged = false;
-
-    for (var file in watchSet.files) {
-      var stat = files.statOrNull(file);
-      var hash = watchSet.files[file];
-
-      if (typeof hash === "string") {
-        if (! stat || stat.isDirectory()) {
-          recentlyChanged = true;
-          break;
-        }
-      } else if (stat) {
-        recentlyChanged = true;
-        break;
-      }
-
-      // Add a ten-second buffer to account for changes that happened just
-      // before the build started. This is perfectly safe because using a
-      // more distant time in the past only increases the chances that we
-      // will fall back to the full isUpToDate check.
-      const tenSecondsBeforeBuildStartTime = buildStartTime - 10 * 1000;
-      if (stat && stat.mtime > tenSecondsBeforeBuildStartTime) {
-        recentlyChanged = true;
-        break;
-      }
-    }
-
-    if (! recentlyChanged) {
-      return true;
-    }
-  }
-
+// Given a WatchSet, returns true if it currently describes the state of the
+// disk.
+export function isUpToDate(watchSet) {
   return Profile.time('watch.isUpToDate', () => {
     var upToDate = true;
     var watcher = new Watcher({

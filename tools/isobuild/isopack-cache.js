@@ -61,8 +61,6 @@ _.extend(exports.IsopackCache.prototype, {
     var self = this;
     buildmessage.assertInCapture();
 
-    const buildStartTime = Date.now();
-
     if (self.cacheDir) {
       files.mkdir_p(self.cacheDir);
     }
@@ -70,11 +68,11 @@ _.extend(exports.IsopackCache.prototype, {
     var onStack = {};
     if (rootPackageNames) {
       _.each(rootPackageNames, function (name) {
-        self._ensurePackageLoaded(name, {onStack, buildStartTime});
+        self._ensurePackageLoaded(name, onStack);
       });
     } else {
       self._packageMap.eachPackage(function (name, packageInfo) {
-        self._ensurePackageLoaded(name, {onStack, buildStartTime});
+        self._ensurePackageLoaded(name, onStack);
       });
     }
   },
@@ -142,10 +140,7 @@ _.extend(exports.IsopackCache.prototype, {
     return null;
   },
 
-  _ensurePackageLoaded: function (name, {
-    onStack,
-    buildStartTime,
-  }) {
+  _ensurePackageLoaded: function (name, onStack) {
     var self = this;
     buildmessage.assertInCapture();
     if (_.has(self._isopacks, name)) {
@@ -160,7 +155,7 @@ _.extend(exports.IsopackCache.prototype, {
         return;
       }
       onStack[depName] = true;
-      self._ensurePackageLoaded(depName, {onStack, buildStartTime});
+      self._ensurePackageLoaded(depName, onStack);
       delete onStack[depName];
     };
 
@@ -196,11 +191,7 @@ _.extend(exports.IsopackCache.prototype, {
           return;
         }
         Profile.time('IsopackCache Build local isopack', () => {
-          self._loadLocalPackage(name, {
-            packageInfo,
-            previousIsopack,
-            buildStartTime,
-          });
+          self._loadLocalPackage(name, packageInfo, previousIsopack);
         });
       });
     } else if (packageInfo.kind === 'versioned') {
@@ -263,17 +254,12 @@ _.extend(exports.IsopackCache.prototype, {
     }
   },
 
-  _loadLocalPackage: function (name, {
-    packageInfo,
-    previousIsopack,
-    buildStartTime,
-  }) {
+  _loadLocalPackage: function (name, packageInfo, previousIsopack) {
     var self = this;
     buildmessage.assertInCapture();
     buildmessage.enterJob("building package " + name, function () {
       var isopack;
-      if (previousIsopack &&
-          self._checkUpToDatePreloaded(previousIsopack, buildStartTime)) {
+      if (previousIsopack && self._checkUpToDatePreloaded(previousIsopack)) {
         isopack = previousIsopack;
         // We don't need to call self._lintLocalPackage here, because
         // lintingMessages is saved on the isopack.
@@ -403,7 +389,7 @@ _.extend(exports.IsopackCache.prototype, {
     return watch.isUpToDate(watchSet);
   },
 
-  _checkUpToDatePreloaded: function (previousIsopack, buildStartTime) {
+  _checkUpToDatePreloaded: function (previousIsopack) {
     var self = this;
 
     // If we include Cordova but this Isopack doesn't, or via versa, then we're
@@ -424,11 +410,7 @@ _.extend(exports.IsopackCache.prototype, {
     // Merge in the watchsets for all unibuilds and plugins in the package, then
     // check it once.
     var watchSet = previousIsopack.getMergedWatchSet();
-
-    // Since we've checked this isopack previously, take a shortcut by not
-    // considering it out of date unless any of its files have mtimes
-    // within the last 30 seconds.
-    return watch.isUpToDate(watchSet, buildStartTime);
+    return watch.isUpToDate(watchSet);
   },
 
   _isopackDir: function (packageName) {
