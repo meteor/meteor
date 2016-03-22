@@ -1,6 +1,6 @@
 ---
 title: React
-order: 8
+order: 10
 description: How to use React, Facebook's frontend rendering library, with Meteor.
 ---
 

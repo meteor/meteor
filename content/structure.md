@@ -1,5 +1,6 @@
 ---
 title: Application structure
+order: 1
 description: How to structure your Meteor app with ES2015 modules, ship code to the client and server, and split your code into multiple apps.
 ---
 

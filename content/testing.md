@@ -1,5 +1,7 @@
 ---
 title: "Testing"
+order: 7
+description: How to test your Meteor application
 ---
 
 <h2 id="introduction">Introduction</h2>

@@ -1,6 +1,6 @@
 ---
 title: "Methods"
-order: 3
+order: 5
 description: How to use Methods, Meteor's remote procedure call system, to write to the database.
 ---
 

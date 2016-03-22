@@ -1,6 +1,6 @@
 ---
 title: Angular
-order: 9
+order: 11
 description: The correct place to find details about using Angular with Meteor
 ---
 

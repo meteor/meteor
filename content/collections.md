@@ -1,6 +1,6 @@
 ---
 title: Collections and Schemas
-order: 1
+order: 3
 description: How to define, use, and maintain MongoDB collections in Meteor.
 ---
 
