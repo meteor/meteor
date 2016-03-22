@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Moved to the 'ddp' package",
-  version: '1.0.16-rc.6'
+  version: '1.0.16-rc.7'
 });
 
 Package.onUse(function (api) {
