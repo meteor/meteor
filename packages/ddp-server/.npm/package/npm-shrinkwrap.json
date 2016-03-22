@@ -1,9 +1,9 @@
 {
   "dependencies": {
     "permessage-deflate": {
-      "version": "0.1.3",
-      "resolved": "https://registry.npmjs.org/permessage-deflate/-/permessage-deflate-0.1.3.tgz",
-      "from": "https://registry.npmjs.org/permessage-deflate/-/permessage-deflate-0.1.3.tgz"
+      "version": "0.1.5",
+      "resolved": "https://registry.npmjs.org/permessage-deflate/-/permessage-deflate-0.1.5.tgz",
+      "from": "permessage-deflate@0.1.5"
     },
     "sockjs": {
       "version": "0.3.14",
