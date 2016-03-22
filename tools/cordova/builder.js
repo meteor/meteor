@@ -124,17 +124,16 @@ export class CordovaBuilder {
     this.accessRules = {
       // Allow the app to ask the system to open these types of URLs.
       // (e.g. in the phone app or an email client)
-      'tel:*': 'intent',
-      'geo:*': 'intent',
-      'mailto:*': 'intent',
-      'sms:*': 'intent',
-      'market:*': 'intent',
-      'itms:*': 'intent',
-      'itms-apps:*': 'intent',
+      'tel:*': { type: 'intent' },
+      'geo:*': { type: 'intent' },
+      'mailto:*': { type: 'intent' },
+      'sms:*': { type: 'intent' },
+      'market:*': { type: 'intent' },
+      'itms:*': { type: 'intent' },
+      'itms-apps:*': { type: 'intent' },
 
-      'gap://ready': 'navigation',
       // Allow navigation to localhost, which is needed for the local server
-      'http://localhost': 'navigation'
+      'http://localhost': { type: 'navigation' }
     };
 
     const mobileServerUrl = this.options.mobileServerUrl;
@@ -148,15 +147,15 @@ export class CordovaBuilder {
       // to give access to IP addresses (just domains). So we allow access to
       // everything if we don't have a domain, which sets NSAllowsArbitraryLoads.
       if (utils.isIPv4Address(serverDomain)) {
-        this.accessRules['*'] = true;
+        this.accessRules['*'] = { type: 'network' };
       } else {
-        this.accessRules['*://' + serverDomain] = true;
+        this.accessRules['*://' + serverDomain] = { type: 'network' };
 
         // Android talks to localhost over 10.0.2.2. This config file is used for
         // multiple platforms, so any time that we say the server is on localhost we
         // should also say it is on 10.0.2.2.
         if (serverDomain === 'localhost') {
-          this.accessRules['*://10.0.2.2'] = true;
+          this.accessRules['*://10.0.2.2'] = { type: 'network' };
         }
       }
     }
@@ -254,13 +253,16 @@ export class CordovaBuilder {
     config.element('content', { src: this.metadata.contentUrl });
 
     // Copy all the access rules
-    _.each(this.accessRules, (type, pattern) => {
+    _.each(this.accessRules, (options, pattern) => {
+      const type = options.type;
+      options = _.omit(options, 'type');
+
       if (type === 'intent') {
         config.element('allow-intent', { href: pattern });
       } else if (type === 'navigation') {
-        config.element('allow-navigation', { href: pattern });
+        config.element('allow-navigation', _.extend({ href: pattern }, options));
       } else {
-        config.element('access', { origin: pattern });
+        config.element('access', _.extend({ origin: pattern }, options));
       }
     });
 
@@ -621,13 +623,11 @@ configuration. The key may be deprecated.`);
     accessRule: function (pattern, options) {
       options = options || {};
 
-      if (options.type === "intent" || options.launchExternal) {
-        builder.accessRules[pattern] = 'intent';
-      } else if (options.type === "navigation") {
-        builder.accessRules[pattern] = 'navigation';
-      } else {
-        builder.accessRules[pattern] = true;
+      if (options.launchExternal) {
+        options.type = 'intent';
       }
+
+      builder.accessRules[pattern] = options;
     }
   };
 }
