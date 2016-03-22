@@ -66,6 +66,7 @@ An article with detailed setup instructions can be found [here](https://medium.c
   * [prefix-eventmap-selectors](docs/rules/prefix-eventmap-selectors.md): Convention for eventmap selectors
   * [scope-dom-lookups](docs/rules/scope-dom-lookups.md): Scope DOM lookups to the template instance
   * [no-dom-lookup-on-created](docs/rules/no-dom-lookup-on-created.md): Forbid DOM lookups in template creation callback
+  * [no-template-parent-data](docs/rules/no-template-parent-data.md): Avoid accessing template parent data
 
 ## Core API
 * *currently no rules implemented*
