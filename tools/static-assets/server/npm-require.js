@@ -1,21 +1,21 @@
 var assert = require("assert");
+var fs = require("fs");
 var _ = require('underscore');
 var files = require('./mini-files.js');
 var serverJson = require("./server-json.js");
 var topLevelIdPattern = /^[^./]/;
 
-function findAppDir() {
-  if ("found" in findAppDir) {
-    return findAppDir.found;
+function findAppDir(absPath) {
+  if (fs.statSync(absPath).isDirectory()) {
+    var dotMeteorPath = files.pathJoin(absPath, ".meteor");
+    if (fs.existsSync(files.convertToOSPath(dotMeteorPath))) {
+      return absPath;
+    }
   }
 
-  var dirParts = files.convertToPosixPath(__dirname).split("/");
-
-  while (dirParts.length > 0) {
-    var part = dirParts.pop();
-    if (part === ".meteor") {
-      return findAppDir.found = dirParts.join("/");
-    }
+  var parentDir = files.pathDirname(absPath);
+  if (parentDir !== absPath) {
+    return findAppDir(parentDir);
   }
 
   throw new Error("Cannot find application root directory");
@@ -55,7 +55,8 @@ function registerNodeModules(name, node_modules) {
 
     if (files.pathIsAbsolute(node_modules)) {
       if (! name) {
-        var relPathWithinApp = files.pathRelative(findAppDir(), node_modules);
+        var appDir = findAppDir(node_modules);
+        var relPathWithinApp = files.pathRelative(appDir, node_modules);
         addByParts(relPathWithinApp.split(files.pathSep), node_modules);
         return;
       }
