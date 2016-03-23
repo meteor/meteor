@@ -8,13 +8,14 @@ After reading this article, you'll know:
 2. How to use NPM packages and deal with callback-based APIs
 3. How to use Atmosphere packages in your Meteor application
 
-The Meteor platform supports two package systems: [NPM](https://www.npmjs.com), a repository of JavaScript modules for Node.js and the browser, and [Atmosphere](https://atmospherejs.com), a repository of packages written specifically for Meteor.
+Building an application completely from scratch is a tall order. This is one of the main reasons you might consider using Meteor in the first place - you can focus on writing the code that is specific to your app, instead of reinventing wheels like user login and data synchronization. To streamline your workflow even further, it makes sense to use community packages from [NPM](https://www.npmjs.com) and [Atmosphere](https://atmospherejs.com). Many of these packages are recommended in the guide, and you can find more in the online directories.
 
 <h2 id="npm">NPM</h2>
 
 NPM is a repository of general JavaScript packages. These packages were originally intended solely for the Node.js server-side environment, but as the JavaScript ecosystem matured, solutions arose to enable the use of NPM packages in other environments such the browser. Today, NPM is used for all types of JavaScript packages.
 
-You can search for NPM packages at the [NPM website](https://www.npmjs.com).
+The best way to find NPM packages is by searching on [npmjs.com](https://www.npmjs.com/). There are also some websites that have special search features specifically for certain kinds of packages, like the aptly named [react-components.com](http://react-components.com/).
+
 
 <h3 id="client-npm">NPM on the client</h3>
 
@@ -35,6 +36,8 @@ This will both update your `package.json` with information about the dependency,
 ```bash
 meteor npm install
 ```
+
+If the package is just a development dependency (i.e. it's used for testing, linting or the like), then you can use `--save-dev`. That way if you have some kind of build script, it can do `npm install --production` and avoid installing packages it doesn't need.
 
 For more information about `npm install`, check out the [official documentation](https://docs.npmjs.com/getting-started/installing-npm-packages-locally).
 
@@ -88,19 +91,35 @@ Atmosphere packages are packages written specifically for Meteor. Atmosphere pac
 - Include build plugins for Meteor's build system
 - Include pre-built binary code for different server architectures, such as Linux or Windows
 
-You can search for Atmosphere Packages at the [Atmosphere website](https://atmospherejs.com).
+<h4 id="atmosphere-searching">Searching for packages</h4>
+
+There are a few ways to search for Meteor packages published to Atmosphere:
+
+1. Search on the [Atmosphere website](https://atmospherejs.com/).
+2. Use `meteor search` from the command line.
+3. Use a community package search website like [Fastosphere](http://fastosphere.meteor.com/).
+
+The main Atmosphere website provides additional curation features like trending packages, package stars, and flags, but some of the other options can be faster if you're trying to find a specific package. For example, you can use `meteor show kadira:flow-router` from the command line to see the description of that package and different available versions.
+
+<h4 id="atmosphere-naming">Package naming</h4>
+
+You may notice that, with the exception of Meteor platform packages, all packages on Atmosphere have a name of the form `prefix:name`. The prefix is the name of the organization or user that published the package. Meteor uses such a convention of package naming to make sure that it's clear who has published a certain package, and to avoid an ad-hoc namespacing convention. Meteor platform packages do not have any `prefix:`.
 
 <h3 id="installing-atmosphere">Installing Atmosphere Packages</h3>
 
 To install an Atmosphere package, you simply run `meteor add`:
 
 ```bash
-meteor add aldeed:simple-schema
+meteor add kadira:flow-router
 ```
 
-This will add an entry in your `.meteor/packages` file, and when the Meteor tool runs, dependencies will be resolved and written to the `.meteor/versions` file. You should check both files into source control. This will ensure all members of the team use the same versions.
+This will add the newest version of the desired package that is compatible with the other packages in your app. If you want to specify a particular version, you can specify it by adding a suffix to the package name, like so: `meteor add kadira:flow-router@2.10.0`.
 
-The actual files for a given version of an Atmosphere package are stored in your local `~/.meteor/packages` directory.
+Regardless of how you add the package to your app, its actual version will be tracked in the file at `.meteor/versions`. This means that anybody collaborating with you on the same app is guaranteed to have the same package versions as you. If you want to update to a newer version of a package after installing it, use `meteor update`. You can run `meteor update` without any arguments to update all packages and Meteor itself to their latest versions, or pass a specific package to update just that one, for example `meteor update kadira:flow-router`.
+
+If your app is running when you add a new package, Meteor will automatically download it and restart your app for you.
+
+> The actual files for a given version of an Atmosphere package are stored in your local `~/.meteor/packages` directory.
 
 <h3 id="using-atmosphere">Using Atmosphere Packages</h3>
 
@@ -210,6 +229,18 @@ sendTextMessage() {
   return Promise.await(promise);
 }
 ```
+
+<h2 id="atmosphere-overriding">Overriding packages from Atmosphere with a local version</h2>
+
+A Meteor app can load packages in one of three ways, and it looks for a matching package name in the following order:
+
+1. Package source code in the `packages/` directory inside your app.
+2. Package source code in directories indicated by setting a `PACKAGE_DIRS` environment variable before running any `meteor` command. You can add multiple directories by separating the paths with a `:` on OSX or Linux, or a `;` on Windows. For example: `PACKAGE_DIRS=../first/directory:../second/directory`, or on Windows: `set PACKAGE_DIRS=..\first\directory;..\second\directory`.
+3. Pre-built package from Atmosphere. The package is cached in `~/.meteor/packages` on Mac/Linux or `%LOCALAPPDATA%\.meteor\packages` on Windows, and only loaded into your app as it is built.
+
+If you need to patch a package to do something that the published version doesn't do, then you can use (1) or (2) to override the version from Atmosphere. You can even do this to load patched versions of Meteor core packages - just copy the code of the package from [Meteor's GitHub repository](https://github.com/meteor/meteor/tree/devel/packages), and edit away.
+
+One difference between pre-published packages and local app packages is that the published packages have any binary dependencies pre-built. This should only affect a small subset of packages. If you clone the source code into your app, you need to make sure you have any compilers required by that package.
 
 <h2 id="npm-shrinkpack">Using Shrinkpack</h2>
 
