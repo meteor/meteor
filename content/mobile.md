@@ -72,7 +72,7 @@ In order to build and run mobile apps, you will need to install some prerequisit
 
 <h3 id="installing-prerequisites-ios-on-mac">iOS on Mac</h3>
 
-In order to build and run iOS apps, you will need a Mac with Xcode 7.2 installed.
+In order to build and run iOS apps, you will need a Mac with Xcode 7.2 or higher installed.
 
 <h4>Installing Xcode from the App Store</h4>
 
