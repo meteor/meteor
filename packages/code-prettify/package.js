@@ -8,7 +8,7 @@ var path = Npm.require('path');
 
 Package.describe({
   summary: "Syntax highlighting of code, from Google",
-  version: "1.0.7-rc.8"
+  version: "1.0.7-rc.9"
 });
 
 // XXX this code dumps symbols into the global namespace (directly
