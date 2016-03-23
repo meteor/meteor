@@ -42,12 +42,16 @@ Cordova apps don’t load web content over the network, but rely on locally stor
 
 <h3 id="what-environment">What environment does your Cordova app run in?</h3>
 
-<h4 id="wkwebview">WKWebView</h4>
+Cordova apps run in a web view. A web view is basically a browser without the browser UI.
 
-On iOS, Meteor uses WKWebView by default, on both iOS 8 and iOS 9.
-[...]
+<h4 id="what-environment-ios">iOS</h4>
+
+On iOS, Meteor uses WKWebView by default, on both iOS 8 and iOS 9. WKWebView is part of the modern WebKit API introduced in iOS 8, and replaces UIWebView, which has been in iOS from the beginning. Its main benefit is that it runs in a separate process, allowing for much higher JavaScript performance (3–4x in some benchmarks!) because it can take advantage of Just-In-Time compilation (which UIWebView, running in the same process as your app, cannot do for security reasons).
 
 <h4 id="crosswalk">Crosswalk</h4>
+> You may be aware that WKWebView on iOS 8 doesn't allow files to be loaded from the local filesystem. This is problematic for standard Cordova apps, because these use `file://` URLs to load the locally stored assets. But because the Meteor integration serves assets from `localhost`, WKWebView works fine on both iOS 8 and iOS 9.
+
+<h4 id="what-environment-android">Android</h4>
 
 The [Crosswalk plugin](https://crosswalk-project.org/documentation/cordova/cordova_4.html) offers a hugely improved web view on older Android versions. It replaces the standard Android WebView with a version based on Chromium, the open source project behind Google Chrome. You can add the plugin to your app with `meteor add crosswalk`.
 [...]
