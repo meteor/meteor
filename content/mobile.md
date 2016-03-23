@@ -22,7 +22,7 @@ Meteor integrates with [Cordova](https://cordova.apache.org), a well-known Apach
 
 A Cordova app is a web app written using HTML, CSS, and JavaScript as usual, but it runs in a web view embedded in a native app instead of in a stand-alone mobile browser. An important benefit of packaging up your web app as a Cordova app is that all your assets are bundled with the app. This ensures your app will load faster than a web app running on a remote server could, which can make a huge difference for users on slow mobile connections. Another feature of the Cordova integration in Meteor is support for [hot code push](#hot-code-push), which allows you to update your app on users' devices without going through the usual app store review process.
 
-The Cordova platform also opens up access to certain device-native features through a [plugin architecture](#cordova-plugins). These plugins offer a JavaScript interface to native code interacting with platform APIs. This allows you to use the device camera, access the file system, interact with barcode or NFC readers, etc.
+Cordova also opens up access to certain native device features through a [plugin architecture](#cordova-plugins). Plugins allow you to use features not usually available to web apps, such as accessing the device camera or the local file system, interact with barcode or NFC readers, etc.
 
 Because a Cordova app is  a web app, this means you use standard web elements to create your user interface instead of relying on platform-specific native UI components. Creating a good [mobile user experience](#mobile-ux) is an art in itself, but is fortunately helped by the availability of various frameworks and libraries.
 
@@ -34,7 +34,7 @@ Because a Cordova app is  a web app, this means you use standard web elements to
 
 With Meteor, there is no need to install Cordova yourself, or use the `cordova` command directly. Cordova project creation happens as part of the Meteor run and build commands, and the project itself is considered a build artifact (stored in `.meteor/local/cordova-build` in your app directory) that can be deleted and recreated at any time. Instead of having you modify Cordova's `config.xml` file, Meteor reads a [`mobile-config.js`](http://docs.meteor.com/#/full/mobileconfigjs) file in the root of your app directory and uses the settings specified there to configure the generated project.
 
-Cordova apps don’t load web content over the network, but rely on locally stored HTML, CSS, JavaScript code and other assets. While Cordova by default uses `file://` URLs to serve the app, Meteor includes an integrated file serving mechanism on the device to support both bundling the initial assets and incrementally updating your app through [hot code push](#hot-code-push). This means your app will be served from `http://localhost:<port>`, which also has the benefit that web views consider it a [secure origin](https://www.chromium.org/Home/chromium-security/prefer-secure-origins-for-powerful-new-features) and won't block any sensitive features (which they increasingly do for `file://` URLs).
+Cordova apps don’t load web content over the network, but rely on locally stored HTML, CSS, JavaScript code and other assets. While Cordova by default uses `file://` URLs to load the app, Meteor includes an integrated file serving mechanism on the device to support both bundling the initial assets and incrementally updating your app through [hot code push](#hot-code-push). This means your app will be served from `http://localhost:<port>`, which also has the benefit that web views consider it a [secure origin](https://www.chromium.org/Home/chromium-security/prefer-secure-origins-for-powerful-new-features) and won't block any sensitive features (which they increasingly do for `file://` URLs).
 
 > <h4 id="what-port">What port will your app be served from?</h4>
 
@@ -48,7 +48,6 @@ Cordova apps run in a web view. A web view is basically a browser without the br
 
 On iOS, Meteor uses WKWebView by default, on both iOS 8 and iOS 9. WKWebView is part of the modern WebKit API introduced in iOS 8, and replaces UIWebView, which has been in iOS from the beginning. Its main benefit is that it runs in a separate process, allowing for much higher JavaScript performance (3–4x in some benchmarks!) because it can take advantage of Just-In-Time compilation (which UIWebView, running in the same process as your app, cannot do for security reasons).
 
-<h4 id="crosswalk">Crosswalk</h4>
 > You may be aware that WKWebView on iOS 8 doesn't allow files to be loaded from the local filesystem. This is problematic for standard Cordova apps, because these use `file://` URLs to load the locally stored assets. But because the Meteor integration serves assets from `localhost`, WKWebView works fine on both iOS 8 and iOS 9.
 
 <h4 id="what-environment-android">Android</h4>
@@ -255,23 +254,27 @@ By default, the startup timeout is set to 20 seconds. If your app needs more tim
 
 <h2 id="cordova-plugins">Using native device features with Cordova plugins</h2>
 
-[This has been copied from the existing Wiki and still needs to be rewritten.]
+Cordova comes with a plugin architecture that opens up access to features not usually available to web apps. Plugins are installable add-ons that contain both JavaScript and native code, which allows them to translate calls from your web app to platform-specific APIs.
 
-Any functionality which relies on a Cordova plugin should wrap code in a `Meteor.startup()` block to make sure the plugin has been fully initialized. For example, when using the Cordova geolocation plugin:
+The Apache Cordova project maintains a set of [core plugins](https://cordova.apache.org/docs/en/dev/guide/support/index.html#core-plugin-apis) that provide access to various native device features such as the camera, contacts, or access to the file system. But anyone can write a Cordova plugin to do basically anything that can be done from native code, and many third-party plugins are available. You can [search for plugins on the Cordova website](https://cordova.apache.org/plugins/) or directly on [NPM](https://www.npmjs.com/search?q=ecosystem%3Acordova).
 
-```js
-Meteor.startup(function() {
-    // Here we can be sure the plugin has been initialized
-    navigator.geolocation.getCurrentPosition(success);
-});
+Be warned however, that although the core plugins are generally well maintained and up to date with the rest of Cordova, the quality of third-party plugins can be a bit of a gamble. You also have to make sure the plugin you want to use is [compatible with the Cordova platform versions Meteor bundles](#plugin-compatibility).
 
-// The plugin may not have been initialized here
-navigator.geolocation.getCurrentPosition(success);
+<h3 id="installing-plugins">Installing plugins</h3>
+
+Plugins are identified by a name, which is generally the same as their NPM package name. The current convention is for plugin names to start with `cordova-plugin-`, but not all third-party plugins adhere to this.
+
+You can add Cordova plugins to your project either directly, or as a dependency of a Meteor package.
+
+If you want to add a plugin to your project directly, you use the same `meteor add` command you use for Meteor packages, but with a `cordova:` prefix:
+
+```sh
+meteor add cordova:cordova-plugin-camera@1.2.0
 ```
 
-<h3>Adding Cordova plugin dependencies to Meteor packages</h3>
+In contrast to Meteor packages, you'll have to specify the exact version of the plugin. This can be a bit of a pain because you first need to look up what the most recent [(compatible)](#plugin-compatibility) version of a plugin is before you can add it.
 
-A Meteor package can register a dependency on a Cordova plugin with the `Cordova.depends()` syntax. For example, a Meteor package that depends on the Cordova 'camera' plugin would add the following to its `package.js`:
+A Meteor package can register a dependency on a Cordova plugin with the `Cordova.depends()` syntax. For example, a Meteor package that depends on the Cordova camera plugin would add the following to its `package.js`:
 
 ```js
 Cordova.depends({
@@ -279,9 +282,37 @@ Cordova.depends({
 });
 ```
 
-Any project that includes this package will now have the `navigator.camera` object in its global scope. Note that this will pollute the global scope, so be careful to include all the necessary plugins when developing a package.
+This means adding the Meteor package to your project would also install the specified Cordova plugin.
 
-If the desired plugin version is not published on [npm](https://www.npmjs.com/search?q=ecosystem%3Acordova) yet, you can specify a Git URL for obtaining the plugin:
+> Note: If multiple Meteor packages add the same Cordova plugin but at different versions, there is no clear way of telling which version will end up being installed. Plugins added to your project directly however, will always override versions of the same plugin added as a dependency of packages.
+
+Because installing plugins into a Cordova project already containing plugins can lead to indeterminate results, Meteor will remove and add back all plugins whenever a change to any of the plugins in your project is made.
+
+Cordova downloads plugins from NPM, and caches them (in `~/.cordova/lib/npm_cache`) so they don't have to be downloaded repeatedly if you rebuild or use them again in another project.
+
+> <h4 id="plugin-compatibility">Making sure a plugin is compatible with the bundled Cordova platform versions</h4>
+
+> Because there is a tight coupling between plugin versions and Cordova platform versions, you may encounter build time or runtime errors as a result of incompatible plugins. If this happens, you will have to install a different plugin version, or it may turn out a plugin is not (yet) compatible with the Cordova platform versions we bundle.
+
+> In order to help with this, we pin core plugins to a minimum version known to work with the Cordova versions we bundle. This mechanism doesn't apply to third-party plugins however, so you'll have to assess compatibility for these yourself.
+
+> There is ongoing work in the Cordova project that will improve this situation and make it easier for plugins to specify their platform dependencies, so Cordova can determine compatible versions.
+
+<h4>Setting plugin parameters</h4>
+
+Some Cordova plugins require certain parameters to be set as part of the build process. For example, `com-phonegap-plugins-facebookconnect` requires you to specify an `APP_ID` and `APP_NAME`. You can set these using `App.configurePlugin` in your [mobile-config.js](http://docs.meteor.com/#mobileconfigjs).
+
+<h4>Installing a plugin from Git</h4>
+
+Alternatively, if unreleased changes have been made to a plugin you'd like to use, you can also have Cordova download plugin code from a Git repository. Note that this will clone the plugin repository on every rebuild however, so this can be rather slow and should be avoided where possible. In contrast to default Cordova, Meteor requires you to specify the exact SHA hash for a commit, rather than allow you to refer to a branch or tag. This is done to guarantee repeatable builds and also avoids unnecessary reinstallation of all plugins because as long as the SHA is the same we know nothing has changed.
+
+The syntax to add a plugin from Git is kind of awkward. The name (the part before the `@`) is the plugin ID and will have to match what is specified in the plugin's `plugin.xml`. Instead of a version, you specify a URL to a Git repository with the SHA hash as an anchor (the part after the `#`):
+
+```sh
+meteor add cordova:com.phonegap.plugins.facebookconnect@https://github.com/Wizcorp/phonegap-facebook-plugin.git#5dbb1583168558b4447a13235283803151cb04ec
+```
+
+Meteor packages can also depend on plugins downloaded from Git:
 
 ```js
 Cordova.depends({
@@ -289,38 +320,51 @@ Cordova.depends({
 });
 ```
 
-A GitHub URL would look like this: `https://github.com/organization/repo.git#SHA`. Meteor uses URLs with SHAs, so it is easy to ensure repeatable builds (SHAs always point at the same commit, tags and branches can point to different commits over time).
+<h4>Installing a plugin from the local file system</h4>
 
-<h3>Adding Cordova plugins directly to your application</h3>
+Finally, especially if you're developing your own plugin, installing it from the local filesystem can be a convenient way to keep up with changes you make to plugin code. The downside of this is that Meteor will reinstall all plugins on every build however, so this could really slow things down. We do add local plugins with the `--link` option however, so Cordova will try to install the plugin's files using symlinks instead of copying them, which means changes to files will be reflected in the generated native project (e.g. an Xcode project) and may not require a rebuild.
 
-You can use Cordova plugins directly in your application without wrapping the plugin into a Meteor package.
-Similar to Meteor packages, you can add them to your application with `meteor add` command prepending the plugin names with the `cordova` namespace:
+You install plugins from the local file system by specifying a `file://` URL, which gets interpreted relative to the project directory:
 
 ```sh
-# Add plugin from npm
-meteor add cordova:cordova-plugin-camera@1.2.0
-
-# Add plugin from a Git URL
-# (make sure you use the correct plugin ID from plugin.xml)
-meteor add cordova:com.phonegap.plugins.facebookconnect@https://github.com/Wizcorp/phonegap-facebook-plugin.git#5dbb1583168558b4447a13235283803151cb04ec
-
-# The list of added plugins will also show up in meteor list
-meteor list
-
-# Remove plugins
-meteor remove cordova:org.apache.cordova.cam
-meteor remove cordova:com.phonegap.plugins.facebookconnect
+meteor add cordova:cordova-plugin-underdevelopment@file://../plugins/cordova-plugin-underdevelopment
 ```
 
-Note: right now we don't resolve any versions conflicts between plugins directly added to your app and plugins used by Meteor packages. One will most likely override another but in not a particularly intelligent way.
+Meteor packages can also depend on plugins installed from the local file system, although this probably only makes sense for local packages:
 
-<h3>Cordova plugins configuration</h3>
+```js
+Cordova.depends({
+    'cordova-plugin-underdevelopment': 'file://../plugins/cordova-plugin-underdevelopment'
+});
+```
 
-Some Cordova plugins, such as the 'Facebook Connect' plugin, require build-time variables such as an `APP_ID` or `APP_NAME`. To include these variables in your Cordova build, set them up in your [mobile-config.js](http://docs.meteor.com/#mobileconfigjs).
+<h4>Removing directly installed plugins</h4>
 
-<h3>Adding Cordova-specific Javascript code to your application</h3>
+You can remove a previously added plugin using `meteor remove`:
 
-The same way you can use `Meteor.isServer` and `Meteor.isClient` booleans to separate your client-side code and server-side code, you can use `Meteor.isCordova` to separate your Cordova-specific code from the rest of your code.
+```sh
+meteor remove cordova:cordova-plugin-camera
+meteor remove cordova:com.phonegap.plugins.facebookconnect
+meteor remove cordova:cordova-plugin-underdevelopment
+```
+
+<h3 id="using-plugins">Using plugins</h3>
+
+You should wrap any functionality which relies on a Cordova plugin in a `Meteor.startup()` block to make sure the plugin has been fully initialized (by listening to the `deviceready` event). For example, when using the Cordova geolocation plugin:
+
+```js
+// The plugin may not have been initialized here
+navigator.geolocation.getCurrentPosition(success);
+
+Meteor.startup(function() {
+    // Here we can be sure the plugin has been initialized
+    navigator.geolocation.getCurrentPosition(success);
+});
+```
+
+<h3 id="cordova-specific-javascript">Adding Cordova-specific Javascript code to your application</h3>
+
+Just as you can use `Meteor.isServer` and `Meteor.isClient` to separate your client-side and server-side code, you can use `Meteor.isCordova` to separate your Cordova-specific code from the rest of your code.
 
 ```js
 if (Meteor.isServer) {
@@ -343,10 +387,6 @@ In addition, packages can include a different set of files for Cordova builds an
 - `api.addFiles('baz.js', 'web')`: includes `baz.js` in all client builds.
 
 The same syntax can be used for `api.use`, `api.imply`, and `api.export`.
-
-<h3>Using Meteor packages with mobile functionality</h3>
-
-Ideally a good Meteor package would work well on both mobile platforms and on the web. Some isomorphic packages providing functionality like geolocation and camera support are built by MDG and are available on Atmosphere and GitHub: https://github.com/meteor/mobile-packages
 
 <h2 id="accessing-local-files-and-remote-resources">Accessing local files and remote resources</h2>
 
