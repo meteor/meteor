@@ -4,23 +4,25 @@ title: Using Packages
 
 After reading this article, you'll know:
 
-1. The third party packages systems you can use with Meteor, NPM and Atmosphere
-2. How to use NPM packages and deal with asyncronous APIs in synchronous contexts
+1. About NPM and Atmosphere, two JavaScript package systems you can use with Meteor
+2. How to use NPM packages and deal with callback-based APIs
 3. How to use Atmosphere packages in your Meteor application
 
-The Meteor framework supports two packaging systems: the [NPM](https://www.npmjs.com) package system---a repository of general JavaScript modules, both for node and increasingly, for the client---and the [Atmosphere](https://atmospherejs.com) package system---which is a repository of packages written solely for the Meteor framework.
+The Meteor platform supports two package systems: [NPM](https://www.npmjs.com), a repository of JavaScript modules for Node.js and the browser, and [Atmosphere](https://atmospherejs.com), a repository of packages written specifically for Meteor.
 
-<h2 id="npm">NPM Packages</h2>
+<h2 id="npm">NPM</h2>
 
-NPM is a repository of general JavaScript packages originally intended solely for the node (i.e. server) environment. As the JavaScript ecosystem has matured, and solutions arisen to enable the use of NPM packages in other environments such as browser clients, increasingly NPM is used for all types of JavaScript packages.
-
-Tools like [browserify](http://browserify.org) and [webpack](https://webpack.github.io) are designed to provide a node-like environment on the client so that many NPM packages can run unmodified when bundled correctly. Luckily, Meteor's ES2015 module system works in a similar way, and in many cases, you can simply import NPM dependencies from a client file, just as you would on the server.
+NPM is a repository of general JavaScript packages. These packages were originally intended solely for the Node.js server-side environment, but as the JavaScript ecosystem matured, solutions arose to enable the use of NPM packages in other environments such the browser. Today, NPM is used for all types of JavaScript packages.
 
 You can search for NPM packages at the [NPM website](https://www.npmjs.com).
 
+<h3 id="client-npm">NPM on the client</h3>
+
+Tools like [browserify](http://browserify.org) and [webpack](https://webpack.github.io) are designed to provide a Node-like environment on the client so that many NPM packages, even ones originally intended for the server, can run unmodified. Meteor's ES2015 module system does this for you out of the box with no additional configuration necessary. In most cases, you can simply import NPM dependencies from a client file, just as you would on the server.
+
 <h3 id="installing-npm">Installing NPM Packages</h3>
 
-NPM Packages are configured inside a project by the `package.json` control file. If you create a new Meteor project, you will have such a file created for you; if not you can run `meteor npm init` to create one.
+NPM packages are configured in a `package.json` file at the root of your project. If you create a new Meteor project, you will have such a file created for you; if not you can run `meteor npm init` to create one.
 
 To install a package into your app, you can run the `npm install` command with the `--save` flag:
 
@@ -28,7 +30,7 @@ To install a package into your app, you can run the `npm install` command with t
 meteor npm install --save moment
 ```
 
-This will both update your `package.json` with information about the dependency, and download the package into your app's local `node_modules/` directory. Typically, you would not check the `node_modules/` directory into source control, and your team mates would run `meteor npm install` to get up to date:
+This will both update your `package.json` with information about the dependency, and download the package into your app's local `node_modules/` directory. Typically, you don't check the `node_modules/` directory into source control, and your teammates run `meteor npm install` to get up to date when dependencies change:
 
 ```bash
 meteor npm install
@@ -36,9 +38,11 @@ meteor npm install
 
 For more information about `npm install`, check out the [official documentation](https://docs.npmjs.com/getting-started/installing-npm-packages-locally).
 
+> Meteor comes with NPM bundled so that you can type `meteor npm` without worrying about installing it yourself. If you like, you can also use a globally installed NPM to manage your packages.
+
 <h3 id="using-npm">Using NPM Packages</h3>
 
-To use an NPM package from a file in your application, you simple `import` the name of the package:
+To use an NPM package from a file in your application, you simply `import` the name of the package:
 
 ```js
 import moment from 'moment';
@@ -47,23 +51,23 @@ import moment from 'moment';
 const moment = require('moment');
 ```
 
-This imports the full exports from the package into the symbol `moment`.
+This imports the default export from the package into the symbol `moment`.
 
-You can also import sub-properties of the exports using the destructuring API:
+You can also import specific functions from a package using the destructuring syntax:
 
 ```js
-import { now } from 'moment';
+import { isArray } from 'lodash';
 ```
 
-You can also import other files or JS entrypoints from the package:
+You can also import other files or JS entry points from a package:
 
 ```js
-import { name } from 'moment/package.json';
+import { parse } from 'graphql/language';
 ```
 
 <h3 id="npm-shrinkwrap">NPM Shrinkwrap</h3>
 
-In order to ensure that you and the rest of your team is using the same exact same version of each package that you depend on (`package.json` typically encodes a version range, and so each `npm install` command can sometimes lead to a different result if new versions have been published in the meantime), it's a good idea to use `npm shrinkwrap` after making any dependency changes to `package.json`:
+`package.json` typically encodes a version range, and so each `npm install` command can sometimes lead to a different result if new versions have been published in the meantime. In order to ensure that you and the rest of your team are using the same exact same version of each package, it's a good idea to use `npm shrinkwrap` after making any dependency changes to `package.json`:
 
 ```bash
 # after installing
@@ -71,19 +75,20 @@ meteor npm install --save moment
 meteor npm shrinkwrap
 ```
 
-This will create an `npm-shrinkwrap.json` file containing the exact versions of each depedency, and you should check this file into source control. For even more precision (the contents of a given version of a package *can* change), and to avoid a reliance on the NPM server during deployment, you can consider using [`npm shrinkpack`](#npm-shrinkpack) also. We'll cover that in the advanced section.
+This will create an `npm-shrinkwrap.json` file containing the exact versions of each dependency, and you should check this file into source control. For even more precision (the contents of a given version of a package *can* change), and to avoid a reliance on the NPM server during deployment, you can consider using [`npm shrinkpack`](#npm-shrinkpack) also. We'll cover that in the advanced section.
 
 <h2 id="atmosphere">Atmosphere Packages</h2>
 
-Atmosphere Packages are packages written directly for Meteor. Aside from being the only way to depend on core Meteor packages, such as `ddp` and `blaze`, there are good reasons why packages have been written for the Atmosphere system:
+Atmosphere packages are packages written specifically for Meteor. Atmosphere packages have several advantages over NPM when used with Meteor. In particular, Atmosphere packages can:
 
- - Atmosphere packages can include other file, including CSS, and static assets.
- - Atmosphere packages can take advantage of Meteor's [build system](build-tool.html) and be written in different languages such as CoffeeScript.
- - Atmosphere packages have a well defined way to set out different entrypoints for client and server code, enabling different behaviour in each context (and shipping client-only code).
- - Atmosphere packages can themselves be build plugins for Meteor's build system.
- - Atmosphere packages can include pre-built binary code for the different server architectures Meteor runs on.
+- Depend on core Meteor packages, such as `ddp` and `blaze`
+- Include non-javascript files including CSS and static assets
+- Take advantage of Meteor's [build system](build-tool.html) to be automatically transpiled from languages like CoffeeScript and SASS
+- Have a well defined way to ship different code for client and server, enabling different behavior in each context
+- Include build plugins for Meteor's build system
+- Include pre-built binary code for different server architectures, such as Linux or Windows
 
- You can search for Atmosphere Packages at the [Atmosphere website](https://atmospherejs.com).
+You can search for Atmosphere Packages at the [Atmosphere website](https://atmospherejs.com).
 
 <h3 id="installing-atmosphere">Installing Atmosphere Packages</h3>
 
@@ -95,7 +100,7 @@ meteor add aldeed:simple-schema
 
 This will add an entry in your `.meteor/packages` file, and when the Meteor tool runs, dependencies will be resolved and written to the `.meteor/versions` file. You should check both files into source control. This will ensure all members of the team use the same versions.
 
-The actual files for a given version of an Atmosphere package are stored in you `~/.meteor/versions` directory.
+The actual files for a given version of an Atmosphere package are stored in your local `~/.meteor/packages` directory.
 
 <h3 id="using-atmosphere">Using Atmosphere Packages</h3>
 
@@ -105,11 +110,11 @@ To use an Atmosphere Package, you can import it with the `meteor/` prefix:
 import { SimpleSchema } from 'meteor/aldeed:simple-schema';
 ```
 
-Typically a package will export one or more symbols which you'll need to grab with the descructuring syntax. Sometimes a package will have no exports and simply have side effects when included in your app. In such cases you don't need to import the package at all.
+Typically a package will export one or more symbols which you'll need to grab with the destructuring syntax. Sometimes a package will have no exports and simply have side effects when included in your app. In such cases you don't need to import the package at all.
 
 <h3 id="peer-npm-dependencies">Peer NPM Dependencies</h3>
 
-Atmosphere Packages can ship with contained [NPM dependencies](writing-packages.html#npm-dependencies), in which case you don't need to take any extra steps. However, some Atmosphere packages will expect that you have installed certain "peer" NPM dependencies in your application.
+Atmosphere packages can ship with contained [NPM dependencies](writing-packages.html#npm-dependencies), in which case you don't need to do anything to make them work. However, some Atmosphere packages will expect that you have installed certain "peer" NPM dependencies in your application.
 
 Typically the package will warn you if you have not done so. For example, if you install the [`react-meteor-data`](https://atmospherejs.com/meteor/react-meteor-data) package into your app, you'll also need to [install](#installing-npm) the [`react`](https://www.npmjs.com/package/react) and the [`react-addons-pure-render-mixin`](https://www.npmjs.com/package/react-addons-pure-render-mixin) packages:
 
@@ -158,7 +163,7 @@ updateGitHubFollowers() {
 However, this won't work in all cases - since the code runs asynchronously, we can't use anything we got from an API in the method return value. We need a different approach that will convert the async API to a synchronous-looking one that will allow us to return a value.
 
 <h3 id="wrap-async">`Meteor.wrapAsync`</h3>
- 
+
 Many NPM packages adopt the convention of taking a callback that accepts `(err, res)` arguments. If your asynchronous function fits this description, like the one above, you can use `Meteor.wrapAsync` to convert to a fiberized API that uses return values and exceptions instead of callbacks, like so:
 
 ```js
@@ -208,7 +213,7 @@ sendTextMessage() {
 
 <h2 id="npm-shrinkpack">Using Shrinkpack</h2>
 
-[Shrinkpack](https://github.com/JamieMason/shrinkpack) is a tool that is used for even more bulletproof and repeatable builds than you get by using [`npm shrinkwrap`](#npm-shrinkwrap) alone. 
+[Shrinkpack](https://github.com/JamieMason/shrinkpack) is a tool that gives you more bulletproof and repeatable builds than you get by using [`npm shrinkwrap`](#npm-shrinkwrap) alone.
 
 Essentially it copies a tarball of the contents of each of your NPM dependencies into your application source repository. This is essentially a more robust version of the `npm-shrinkwrap.json` file that shrinkwrap creates, because it means your application's NPM dependencies can be assembled without the need or reliance on the NPM servers being available or reliable. This is good for repeatable builds especially when deploying.
 
@@ -226,7 +231,6 @@ meteor npm shrinkwrap
 shrinkpack
 ```
 
-You *should* then check the generated `node_shrinkwrap/` directory into source control, but ensure it is ignored by your text editor.
+You should then check the generated `node_shrinkwrap/` directory into source control, but ensure it is ignored by your text editor.
 
 **NOTE**: Although this is a good idea for projects with a lot of NPM dependencies, it will not affect Atmosphere dependencies, even if they themselves have direct NPM dependencies.
-
