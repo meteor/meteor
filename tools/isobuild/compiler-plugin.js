@@ -12,6 +12,7 @@ import {sha1} from  '../fs/watch.js';
 import LRU from 'lru-cache';
 import Fiber from 'fibers';
 import {sourceMapLength} from '../utils/utils.js';
+import {Console} from '../console/console.js';
 import ImportScanner from './import-scanner.js';
 
 import { isTestFilePath } from './test-files.js';
@@ -824,7 +825,55 @@ export class PackageSourceBatch {
   }
 
   static _warnAboutMissingModules(missingNodeModules) {
-    // TODO
+    const topLevelMissingIDs = {};
+    const warnings = [];
+
+    _.each(missingNodeModules, (info, id) => {
+      const parts = id.split("/");
+
+      if ("./".indexOf(id.charAt(0)) < 0) {
+        const packageDir = parts[0];
+        if (packageDir === "meteor") {
+          // Don't print warnings for uninstalled Meteor packages.
+          return;
+        }
+
+        if (packageDir === "babel-runtime") {
+          // Don't print warnings for babel-runtime/helpers/* modules,
+          // since we provide most of those.
+          return;
+        }
+
+        if (! _.has(topLevelMissingIDs, packageDir)) {
+          // This information will be used to recommend installing npm
+          // packages below.
+          topLevelMissingIDs[packageDir] = id;
+        }
+
+        if (id.startsWith("meteor-node-stubs/deps/")) {
+          // Instead of printing a warning that meteor-node-stubs/deps/fs
+          // is missing, warn about the "fs" module, but still recommend
+          // installing meteor-node-stubs via npm below.
+          id = parts.slice(2).join("/");
+        }
+      }
+
+      warnings.push(`  ${JSON.stringify(id)} in ${
+        info.parentPath} (${info.bundleArch})`);
+    });
+
+    if (warnings.length > 0) {
+      Console.rawWarn("\nUnable to resolve some modules:\n\n");
+      warnings.forEach(text => Console.warn(text));
+      Console.warn();
+
+      const topLevelKeys = Object.keys(topLevelMissingIDs);
+      if (topLevelKeys.length > 0) {
+        Console.warn("Consider running: meteor npm install --save " +
+                     topLevelKeys.join(" "));
+        Console.warn();
+      }
+    }
   }
 
   // Called by bundler's Target._emitResources.  It returns the actual resources
