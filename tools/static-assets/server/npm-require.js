@@ -1,24 +1,28 @@
 var assert = require("assert");
 var fs = require("fs");
+var path = require("path");
 var _ = require('underscore');
 var files = require('./mini-files.js');
 var serverJson = require("./server-json.js");
 var topLevelIdPattern = /^[^./]/;
 
-function findAppDir(absPath) {
-  if (fs.statSync(absPath).isDirectory()) {
-    var dotMeteorPath = files.pathJoin(absPath, ".meteor");
-    if (fs.existsSync(files.convertToOSPath(dotMeteorPath))) {
-      return absPath;
-    }
+function findAppDirHelper(absOSPath) {
+  if (fs.statSync(absOSPath).isDirectory() &&
+      fs.existsSync(path.join(absOSPath, ".meteor"))) {
+    return absOSPath;
   }
 
-  var parentDir = files.pathDirname(absPath);
-  if (parentDir !== absPath) {
-    return findAppDir(parentDir);
+  var parentDir = path.dirname(absOSPath);
+  if (parentDir !== absOSPath) {
+    return findAppDirHelper(parentDir);
   }
 
   throw new Error("Cannot find application root directory");
+}
+
+function findAppDir(absPath) {
+  return files.convertToPosixPath(
+    findAppDirHelper(files.convertToOSPath(absPath)));
 }
 
 // Map from virtual module identifiers for node_modules directories (like
