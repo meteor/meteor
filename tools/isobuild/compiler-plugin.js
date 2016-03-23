@@ -829,6 +829,14 @@ export class PackageSourceBatch {
     const warnings = [];
 
     _.each(missingNodeModules, (info, id) => {
+      if (id === "meteor-node-stubs" &&
+          info.packageName === "modules" &&
+          info.parentPath.endsWith("stubs.js")) {
+        // Don't warn about the require("meteor-node-stubs") call in
+        // packages/modules/stubs.js.
+        return;
+      }
+
       const parts = id.split("/");
 
       if ("./".indexOf(id.charAt(0)) < 0) {
