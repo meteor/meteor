@@ -193,7 +193,8 @@ export default class ImportScanner {
   }
 
   addNodeModules(identifiers) {
-    const newMissingNodeModules = Object.create(null);
+    const newlyMissing = Object.create(null);
+    const newlyAdded = Object.create(null);
 
     if (identifiers) {
       if (typeof identifiers === "object" &&
@@ -203,7 +204,7 @@ export default class ImportScanner {
 
       if (identifiers.length > 0) {
         const previousAllMissingNodeModules = this.allMissingNodeModules;
-        this.allMissingNodeModules = newMissingNodeModules;
+        this.allMissingNodeModules = newlyMissing;
 
         try {
           this._scanFile({
@@ -217,22 +218,31 @@ export default class ImportScanner {
         } finally {
           this.allMissingNodeModules = previousAllMissingNodeModules;
 
+          identifiers.forEach(id => {
+            if (! has(newlyMissing, id)) {
+              newlyAdded[id] = this.name;
+            }
+          });
+
           // Remove previously seen missing module identifiers from
-          // newMissingNodeModules and merge the new identifiers back into
+          // newlyMissing and merge the new identifiers back into
           // this.allMissingNodeModules.
-          each(keys(newMissingNodeModules), key => {
+          each(keys(newlyMissing), key => {
             if (has(previousAllMissingNodeModules, key)) {
-              delete newMissingNodeModules[key];
+              delete newlyMissing[key];
             } else {
               previousAllMissingNodeModules[key] =
-                newMissingNodeModules[key];
+                newlyMissing[key];
             }
           });
         }
       }
     }
 
-    return newMissingNodeModules;
+    return {
+      newlyAdded,
+      newlyMissing,
+    };
   }
 
   getOutputFiles(options) {
@@ -670,22 +680,10 @@ export default class ImportScanner {
 
     if (! resolved) {
       const isApp = ! this.name;
-
-      // The reason `&& isApp` is required here is somewhat subtle: When a
-      // Meteor package imports a missing native Node module on the
-      // client, we should not assume the missing module will be
-      // implemented by /node_modules/meteor-node-stubs, because the app
-      // might have a custom stub package installed in its node_modules
-      // directory that should take precedence over meteor-node-stubs.
-      // Instead, we have to wait for computeJsOutputFilesMap to call
-      // addNodeModules against the app's ImportScanner, then fall back to
-      // meteor-node-stubs only if the app lookup fails. When isApp is
-      // true, however, we know that the app lookup just failed.
-      if (isNative && isApp) {
-        assert.ok(archMatches(this.bundleArch, "web"));
+      if (isApp && isNative && archMatches(this.bundleArch, "web")) {
         // To ensure the native module can be evaluated at runtime,
         // register a dependency on meteor-node-stubs/defs/<id>.js.
-        id = nativeModulesMap[id];
+        return this._resolveNodeModule(file, nativeModulesMap[id]);
       }
 
       // If the imported identifier is neither absolute nor relative, but
@@ -693,8 +691,12 @@ export default class ImportScanner {
       // the top-level node_modules directory, and we should record the
       // missing dependency so that we can include it in the app bundle.
       const missing = file.missingNodeModules || Object.create(null);
-      this.allMissingNodeModules[id] = missing[id] = true;
       file.missingNodeModules = missing;
+      this.allMissingNodeModules[id] = missing[id] = {
+        packageName: this.name,
+        parentPath: absPath,
+        bundleArch: this.bundleArch,
+      };
     }
 
     // If the dependency is still not resolved, it might be handled by the

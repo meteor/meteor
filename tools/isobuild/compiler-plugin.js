@@ -691,6 +691,9 @@ export class PackageSourceBatch {
     }
 
     const allMissingNodeModules = Object.create(null);
+    // Records the subset of allMissingNodeModules that were successfully
+    // relocated to a source batch that could handle them.
+    const allRelocatedNodeModules = Object.create(null);
     const scannerMap = new Map;
 
     sourceBatches.forEach(batch => {
@@ -764,8 +767,10 @@ export class PackageSourceBatch {
       const nextMissingNodeModules = Object.create(null);
 
       missingMap.forEach((ids, name) => {
-        _.extend(nextMissingNodeModules,
-                 scannerMap.get(name).addNodeModules(ids));
+        const { newlyAdded, newlyMissing } =
+          scannerMap.get(name).addNodeModules(ids);
+        _.extend(allRelocatedNodeModules, newlyAdded);
+        _.extend(nextMissingNodeModules, newlyMissing);
       });
 
       if (! _.isEmpty(nextMissingNodeModules)) {
@@ -774,6 +779,12 @@ export class PackageSourceBatch {
     }
 
     handleMissing(allMissingNodeModules);
+
+    _.each(allRelocatedNodeModules, (packageName, id) => {
+      delete allMissingNodeModules[id];
+    });
+
+    this._warnAboutMissingModules(allMissingNodeModules);
 
     scannerMap.forEach((scanner, name) => {
       const isApp = ! name;
@@ -810,6 +821,10 @@ export class PackageSourceBatch {
     });
 
     return map;
+  }
+
+  static _warnAboutMissingModules(missingNodeModules) {
+    // TODO
   }
 
   // Called by bundler's Target._emitResources.  It returns the actual resources
