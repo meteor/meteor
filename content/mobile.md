@@ -42,18 +42,26 @@ Cordova apps don’t load web content over the network, but rely on locally stor
 
 <h3 id="what-environment">What environment does your Cordova app run in?</h3>
 
-Cordova apps run in a web view. A web view is basically a browser without the browser UI.
+Cordova apps run in a web view. A web view is basically a browser without the browser UI. Browser engines differ in their underlying implementation and in what web standards they support. As a result, what web view your app runs on can have a huge impact on your app's performance and on the features you get to use. (If you want to know what features are supported on what browsers and versions, [caniuse.com](http://caniuse.com) is a great resource.)
 
 <h4 id="what-environment-ios">iOS</h4>
 
-On iOS, Meteor uses WKWebView by default, on both iOS 8 and iOS 9. WKWebView is part of the modern WebKit API introduced in iOS 8, and replaces UIWebView, which has been in iOS from the beginning. Its main benefit is that it runs in a separate process, allowing for much higher JavaScript performance (3–4x in some benchmarks!) because it can take advantage of Just-In-Time compilation (which UIWebView, running in the same process as your app, cannot do for security reasons).
+The browser on iOS is Safari, which is based on the open source WebKit project, but tends to be somewhat slow in enabling new features. Because they use the same underlying framework, the features available to a web view match the features supported by Safari on the iOS release you're running on.
 
-> You may be aware that WKWebView on iOS 8 doesn't allow files to be loaded from the local filesystem. This is problematic for standard Cordova apps, because these use `file://` URLs to load the locally stored assets. But because the Meteor integration serves assets from `localhost`, WKWebView works fine on both iOS 8 and iOS 9.
+Meteor uses WKWebView by default, on both iOS 8 and iOS 9. WKWebView is part of the modern WebKit API introduced in iOS 8, and replaces UIWebView, which has been in iOS from the beginning. Its main benefit is that it runs in a separate process, allowing for much higher JavaScript performance (3–4x in some benchmarks!) because it can take advantage of Just-In-Time compilation (which UIWebView, running in the same process as your app, cannot do for security reasons).
+
+> You may be aware that WKWebView on iOS 8 doesn't allow files to be loaded from the local filesystem. This is problematic for standard Cordova apps, because these use `file://` URLs to load the app. But because the Meteor integration serves assets from `localhost`, WKWebView works fine on both iOS 8 and iOS 9.
 
 <h4 id="what-environment-android">Android</h4>
 
-The [Crosswalk plugin](https://crosswalk-project.org/documentation/cordova/cordova_4.html) offers a hugely improved web view on older Android versions. It replaces the standard Android WebView with a version based on Chromium, the open source project behind Google Chrome. You can add the plugin to your app with `meteor add crosswalk`.
-[...]
+The web view situation on Android is a little more complicated. On older Android versions, the included web view is known to be rather slow and buggy. That improved somewhat with Android 4.4, which includes a web view based on Chromium, the open source project behind the Chrome browser.
+
+Android 5.0 also comes with a web view based on Chromium known as the [Android System Web View](https://play.google.com/store/apps/details?id=com.google.android.webview&hl=en), but a big improvement is that it can be automatically updated through the Play Store. This means updates to the web view happen more regularly and are independent of OS updates.
+
+This threatens to leave many older Android devices behind however, because they would be stuck on the web view included with the OS and are often unable to update to newer OS versions. Fortunately, the [Crosswalk plugin](https://crosswalk-project.org/documentation/cordova.html) allows you to embed Chromium in your app and use it instead of the web view that comes with the OS on any of the Android versions supported by Cordova (currently Android 4.0 or higher). Embedding Chromium means the size of your APK will grow by about 20MB, but the benefit is that you can rely on a consistent web view with considerably better performance and enhanced standards support.
+
+You can add the Crosswalk plugin to your app with `meteor add crosswalk`.
+> If you receive an error message trying to run the app on your device after adding or removing the Crosswalk plugin, you may have to remove the existing app from your device first.
 
 <h3 id="adding-platforms">Adding Cordova platforms to your app</h3>
 
