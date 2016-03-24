@@ -1,6 +1,6 @@
 Package.describe({
   name: "ecmascript-runtime",
-  version: "0.2.8-rc.11",
+  version: "0.2.8-rc.12",
   summary: "Polyfills for new ECMAScript 2015 APIs like Map and Set",
   git: "https://github.com/meteor/ecmascript-runtime",
   documentation: "README.md"

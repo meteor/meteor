@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Password support for accounts",
-  version: "1.1.6-rc.11"
+  version: "1.1.6-rc.12"
 });
 
 Package.onUse(function(api) {

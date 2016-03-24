@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Require this application to use HTTPS",
-  version: "1.0.9-rc.11",
+  version: "1.0.9-rc.12",
   prodOnly: true
 });
 
