@@ -257,9 +257,17 @@ export default class ImportScanner {
     let sourcePath = file.sourcePath;
     if (sourcePath) {
       if (pathIsAbsolute(sourcePath)) {
-        sourcePath = pathRelative(this.sourceRoot, sourcePath);
-        if (sourcePath.startsWith("..")) {
-          throw new Error("sourcePath outside sourceRoot: " + sourcePath);
+        const relPath = pathRelative(this.sourceRoot, sourcePath);
+        if (relPath.startsWith("..")) {
+          if (this._joinAndStat(this.sourceRoot, sourcePath)) {
+            // If sourcePath exists as a path relative to this.sourceRoot,
+            // strip away the leading / that made it look absolute.
+            sourcePath = pathJoin(".", sourcePath);
+          } else {
+            throw new Error("sourcePath outside sourceRoot: " + sourcePath);
+          }
+        } else {
+          sourcePath = relPath;
         }
       }
     } else if (file.servePath) {
