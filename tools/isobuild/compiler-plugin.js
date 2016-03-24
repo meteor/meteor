@@ -69,6 +69,32 @@ const LINKER_CACHE = new LRU({
   }
 });
 
+const serverLibPackages = {
+  // Make sure fibers is defined, if nothing else.
+  fibers: true
+};
+
+function populateServerLibPackages() {
+  const devBundlePath = files.getDevBundle();
+  const nodeModulesPath = files.pathJoin(
+    devBundlePath, "server-lib", "node_modules"
+  );
+
+  files.readdir(nodeModulesPath).forEach(packageName => {
+    const packagePath = files.pathJoin(nodeModulesPath, packageName);
+    const packageStat = files.statOrNull(packagePath);
+    if (packageStat && packageStat.isDirectory()) {
+      serverLibPackages[packageName] = true;
+    }
+  });
+}
+
+try {
+  populateServerLibPackages();
+} catch (e) {
+  // At least we tried!
+}
+
 export class CompilerPluginProcessor {
   constructor({
     unibuilds,
@@ -829,6 +855,14 @@ export class PackageSourceBatch {
     const warnings = [];
 
     _.each(missingNodeModules, (info, id) => {
+      if (id in serverLibPackages &&
+          archinfo.matches(info.bundleArch, "os")) {
+        // Packages in dev_bundle/server-lib/node_modules can always be
+        // resolved at runtime on the server, so we don't need to warn
+        // about them here.
+        return;
+      }
+
       if (id === "meteor-node-stubs" &&
           info.packageName === "modules" &&
           info.parentPath.endsWith("stubs.js")) {
