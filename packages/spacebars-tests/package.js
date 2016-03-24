@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Additional tests for Spacebars",
-  version: '1.0.6-rc.10'
+  version: '1.0.6-rc.11'
 });
 
 // These tests are in a separate package to avoid a circular dependency

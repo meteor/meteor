@@ -1,6 +1,6 @@
 Package.describe({
   name: 'standard-minifier-js',
-  version: '1.0.4-rc.10',
+  version: '1.0.4-rc.11',
   summary: 'Standard javascript minifiers used with Meteor apps by default.',
   documentation: 'README.md'
 });
