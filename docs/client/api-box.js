@@ -155,6 +155,21 @@ Template.autoApiBox.helpers({
 
     return signature;
   },
+  importName: function () {
+    const noImportNeeded = !this.module
+      || this.scope === 'instance' 
+      || this.ishelper
+      || this.istemplate;
+    
+    // override the above we've explicitly decided to (i.e. Template.foo.X)
+    if (!noImportNeeded || this.importfrompackage) {
+      if (this.memberof) {
+        return this.memberof.split('.')[0];  
+      } else {
+        return this.name;
+      }
+    }
+  },
   id: function () {
     if (Session.get("fullApi") && nameToId[this.longname]) {
       return nameToId[this.longname];

@@ -1,5 +1,4 @@
-<template name="pkg_appcache">
-{{#markdown}}
+{{#template name="pkg_appcache"}}
 
 ## `appcache`
 
@@ -80,5 +79,4 @@ cache, see the
 [AppCache page](https://github.com/meteor/meteor/wiki/AppCache)
 in the Meteor wiki.
 
-{{/markdown}}
-</template>
+{{/template}}

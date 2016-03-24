@@ -1,5 +1,4 @@
-<template name="pkg_accounts_ui">
-{{#markdown}}
+{{#template name="pkg_accounts_ui"}}
 ## `accounts-ui`
 
 A turn-key user interface for Meteor Accounts.
@@ -27,7 +26,6 @@ and [`sendEnrollmentEmail`](#accounts_sendenrollmentemail). These
 do not have to be manually placed in HTML: they are automatically activated
 when the URLs are loaded.
 
+If you want to control the look and feel of your accounts system a little more, we recommend reading the [useraccounts](http://guide.meteor.com/accounts.html#useraccounts) section of the Meteor Guide.
 
-
-{{/markdown}}
-</template>
+{{/template}}

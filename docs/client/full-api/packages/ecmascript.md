@@ -1,4 +1,5 @@
-# [ecmascript](https://github.com/meteor/meteor/tree/devel/packages/ecmascript)
+{{#template name="pkg_ecmascript"}}
+## `ecmascript`
 
 This package lets you use new JavaScript language features that are part
 of the [ECMAScript 2015
@@ -11,9 +12,7 @@ way.
 2015 Meteor Devshop gives an overview of how the package works, and what
 it provides.
 
-Read more at http://docs.meteor.com/#/full/ecmascript
-
-## Usage
+### Usage
 
 The `ecmascript` package registers a compiler plugin that transpiles
 ECMAScript 2015+ to ECMAScript 5 (standard JS) in all `.js` files. By
@@ -36,9 +35,9 @@ Package.onUse(function (api) {
 });
 ```
 
-## Supported ES2015 Features
+### Supported ES2015 Features
 
-### Syntax
+#### Syntax
 
 The `ecmascript` package uses [Babel](http://babeljs.io/) to compile
 ES2015 syntax to ES5 syntax. Many but not all ES2015 features can be
@@ -243,7 +242,7 @@ Here is a list of the Babel transformers that are currently enabled:
   the code's behavior, but you can run the `flow` tool over your code to
   check the types if desired.
 
-### Polyfills
+#### Polyfills
 
 The ECMAScript 2015 standard library has grown to include new APIs and
 data structures, some of which can be implemented ("polyfilled") using
@@ -310,3 +309,5 @@ package is installed:
   * `Function.prototype[Symbol.hasInstance]` (fixes IE9+)
 
   Complete reference [here](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array).
+
+{{/template}}

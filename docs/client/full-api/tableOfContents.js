@@ -1,19 +1,8 @@
 var toc = [
   [
-    "Quick start",
-    "Resources"
+    "Meteor Guide",
   ],
-  "Concepts", [
-    "Structuring your app",
-    "Data and security",
-    "Reactivity",
-    "Live HTML templates",
-    "Using packages",
-    "Namespacing",
-    "Deploying",
-    "Writing packages"
-  ],
-
+  
   "API", [
     "Core", [
       "Meteor.isClient",
@@ -347,11 +336,14 @@ var toc = [
     "accounts-ui",
     "audit-argument-checks",
     "coffeescript",
+    "ecmascript",
     "jquery",
     "less",
     "markdown",
+    "modules",
     "oauth-encryption",
     "random",
+    {name: "spacebars", id: "pkg_spacebars"},
     {name: "spiderable", link: "https://atmospherejs.com/meteor/spiderable"},
     "underscore",
     "webapp"

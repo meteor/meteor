@@ -1,5 +1,4 @@
-<template name="pkg_underscore">
-{{#markdown}}
+{{#template name="pkg_underscore"}}
 ## `underscore`
 
 [Underscore](http://underscorejs.org/) is a utility-belt library for 
@@ -30,5 +29,4 @@ are treated as objects if they have no prototype (specifically, if
 {{/warning}}
 
 
-{{/markdown}}
-</template>
+{{/template}}

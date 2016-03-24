@@ -16,7 +16,8 @@ Accounts = new AccountsServer(Meteor.server);
  * @summary A [Mongo.Collection](#collections) containing user documents.
  * @locus Anywhere
  * @type {Mongo.Collection}
- */
+ * @importFromPackage meteor
+*/
 Meteor.users = Accounts.users;
 
 export {

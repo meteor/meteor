@@ -16,6 +16,7 @@ Thanks.
 /**
  * @summary Options to customize emails sent from the Accounts system.
  * @locus Server
+ * @importFromPackage accounts-base
  */
 Accounts.emailTemplates = {
   from: "Meteor Accounts <no-reply@meteor.com>",

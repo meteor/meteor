@@ -57,6 +57,12 @@
 
     entry.meta = undefined;
 
+    if (!entry.importfrompackage && entry.filepath) {
+      entry.module = entry.filepath.split('/')[0];
+    } else {
+      entry.module = entry.importfrompackage;
+    }
+
     names.push(entry.longname);
     dataContents[entry.longname] = entry;
   };

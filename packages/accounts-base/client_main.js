@@ -12,6 +12,7 @@ Accounts = new AccountsClient();
  * @summary A [Mongo.Collection](#collections) containing user documents.
  * @locus Anywhere
  * @type {Mongo.Collection}
+ * @importFromPackage meteor
  */
 Meteor.users = Accounts.users;
 

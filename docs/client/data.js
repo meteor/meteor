@@ -5,17 +5,20 @@ DocsData = {
     "kind": "namespace",
     "lineno": 5,
     "longname": "Accounts",
+    "module": "accounts-base",
     "name": "Accounts",
     "scope": "global",
     "summary": "The namespace for all server-side accounts-related methods."
   },
   "Accounts.addEmail": {
     "filepath": "accounts-password/password_server.js",
+    "importfrompackage": "accounts-base",
     "kind": "function",
-    "lineno": 856,
+    "lineno": 864,
     "locus": "Server",
     "longname": "Accounts.addEmail",
     "memberof": "Accounts",
+    "module": "accounts-base",
     "name": "addEmail",
     "options": [],
     "params": [
@@ -53,11 +56,13 @@ DocsData = {
   },
   "Accounts.changePassword": {
     "filepath": "accounts-password/password_client.js",
+    "importfrompackage": "accounts-base",
     "kind": "function",
-    "lineno": 148,
+    "lineno": 151,
     "locus": "Client",
     "longname": "Accounts.changePassword",
     "memberof": "Accounts",
+    "module": "accounts-base",
     "name": "changePassword",
     "options": [],
     "params": [
@@ -95,11 +100,13 @@ DocsData = {
   },
   "Accounts.createUser": {
     "filepath": "accounts-password/password_client.js",
+    "importfrompackage": "accounts-base",
     "kind": "function",
-    "lineno": 113,
+    "lineno": 115,
     "locus": "Anywhere",
     "longname": "Accounts.createUser",
     "memberof": "Accounts",
+    "module": "accounts-base",
     "name": "createUser",
     "options": [
       {
@@ -164,22 +171,26 @@ DocsData = {
   },
   "Accounts.emailTemplates": {
     "filepath": "accounts-password/email_templates.js",
+    "importfrompackage": "accounts-base",
     "kind": "member",
-    "lineno": 20,
+    "lineno": 21,
     "locus": "Server",
     "longname": "Accounts.emailTemplates",
     "memberof": "Accounts",
+    "module": "accounts-base",
     "name": "emailTemplates",
     "scope": "static",
     "summary": "Options to customize emails sent from the Accounts system."
   },
   "Accounts.findUserByEmail": {
     "filepath": "accounts-password/password_server.js",
+    "importfrompackage": "accounts-base",
     "kind": "function",
-    "lineno": 138,
+    "lineno": 140,
     "locus": "Server",
     "longname": "Accounts.findUserByEmail",
     "memberof": "Accounts",
+    "module": "accounts-base",
     "name": "findUserByEmail",
     "options": [],
     "params": [
@@ -208,11 +219,13 @@ DocsData = {
   },
   "Accounts.findUserByUsername": {
     "filepath": "accounts-password/password_server.js",
+    "importfrompackage": "accounts-base",
     "kind": "function",
-    "lineno": 123,
+    "lineno": 124,
     "locus": "Server",
     "longname": "Accounts.findUserByUsername",
     "memberof": "Accounts",
+    "module": "accounts-base",
     "name": "findUserByUsername",
     "options": [],
     "params": [
@@ -241,11 +254,13 @@ DocsData = {
   },
   "Accounts.forgotPassword": {
     "filepath": "accounts-password/password_client.js",
+    "importfrompackage": "accounts-base",
     "kind": "function",
-    "lineno": 210,
+    "lineno": 214,
     "locus": "Client",
     "longname": "Accounts.forgotPassword",
     "memberof": "Accounts",
+    "module": "accounts-base",
     "name": "forgotPassword",
     "options": [
       {
@@ -289,6 +304,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Accounts.onEmailVerificationLink",
     "memberof": "Accounts",
+    "module": "accounts-base",
     "name": ".onEmailVerificationLink",
     "params": [
       {
@@ -312,6 +328,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Accounts.onEnrollmentLink",
     "memberof": "Accounts",
+    "module": "accounts-base",
     "name": ".onEnrollmentLink",
     "params": [
       {
@@ -335,6 +352,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Accounts.onResetPasswordLink",
     "memberof": "Accounts",
+    "module": "accounts-base",
     "name": ".onResetPasswordLink",
     "params": [
       {
@@ -352,11 +370,13 @@ DocsData = {
   },
   "Accounts.removeEmail": {
     "filepath": "accounts-password/password_server.js",
+    "importfrompackage": "accounts-base",
     "kind": "function",
-    "lineno": 939,
+    "lineno": 948,
     "locus": "Server",
     "longname": "Accounts.removeEmail",
     "memberof": "Accounts",
+    "module": "accounts-base",
     "name": "removeEmail",
     "options": [],
     "params": [
@@ -384,11 +404,13 @@ DocsData = {
   },
   "Accounts.resetPassword": {
     "filepath": "accounts-password/password_client.js",
+    "importfrompackage": "accounts-base",
     "kind": "function",
-    "lineno": 230,
+    "lineno": 235,
     "locus": "Client",
     "longname": "Accounts.resetPassword",
     "memberof": "Accounts",
+    "module": "accounts-base",
     "name": "resetPassword",
     "options": [],
     "params": [
@@ -426,11 +448,13 @@ DocsData = {
   },
   "Accounts.sendEnrollmentEmail": {
     "filepath": "accounts-password/password_server.js",
+    "importfrompackage": "accounts-base",
     "kind": "function",
-    "lineno": 589,
+    "lineno": 595,
     "locus": "Server",
     "longname": "Accounts.sendEnrollmentEmail",
     "memberof": "Accounts",
+    "module": "accounts-base",
     "name": "sendEnrollmentEmail",
     "options": [],
     "params": [
@@ -459,11 +483,13 @@ DocsData = {
   },
   "Accounts.sendResetPasswordEmail": {
     "filepath": "accounts-password/password_server.js",
+    "importfrompackage": "accounts-base",
     "kind": "function",
-    "lineno": 524,
+    "lineno": 529,
     "locus": "Server",
     "longname": "Accounts.sendResetPasswordEmail",
     "memberof": "Accounts",
+    "module": "accounts-base",
     "name": "sendResetPasswordEmail",
     "options": [],
     "params": [
@@ -492,11 +518,13 @@ DocsData = {
   },
   "Accounts.sendVerificationEmail": {
     "filepath": "accounts-password/password_server.js",
+    "importfrompackage": "accounts-base",
     "kind": "function",
-    "lineno": 728,
+    "lineno": 735,
     "locus": "Server",
     "longname": "Accounts.sendVerificationEmail",
     "memberof": "Accounts",
+    "module": "accounts-base",
     "name": "sendVerificationEmail",
     "options": [],
     "params": [
@@ -525,11 +553,13 @@ DocsData = {
   },
   "Accounts.setPassword": {
     "filepath": "accounts-password/password_server.js",
+    "importfrompackage": "accounts-base",
     "kind": "function",
-    "lineno": 471,
+    "lineno": 475,
     "locus": "Server",
     "longname": "Accounts.setPassword",
     "memberof": "Accounts",
+    "module": "accounts-base",
     "name": "setPassword",
     "options": [
       {
@@ -576,11 +606,13 @@ DocsData = {
   },
   "Accounts.setUsername": {
     "filepath": "accounts-password/password_server.js",
+    "importfrompackage": "accounts-base",
     "kind": "function",
-    "lineno": 372,
+    "lineno": 375,
     "locus": "Server",
     "longname": "Accounts.setUsername",
     "memberof": "Accounts",
+    "module": "accounts-base",
     "name": "setUsername",
     "options": [],
     "params": [
@@ -608,21 +640,25 @@ DocsData = {
   },
   "Accounts.ui": {
     "filepath": "accounts-ui-unstyled/accounts_ui.js",
+    "importfrompackage": "accounts-base",
     "kind": "namespace",
-    "lineno": 6,
+    "lineno": 7,
     "longname": "Accounts.ui",
     "memberof": "Accounts",
+    "module": "accounts-base",
     "name": "ui",
     "scope": "static",
     "summary": "Accounts UI"
   },
   "Accounts.ui.config": {
     "filepath": "accounts-ui-unstyled/accounts_ui.js",
+    "importfrompackage": "accounts-base",
     "kind": "function",
-    "lineno": 25,
+    "lineno": 27,
     "locus": "Client",
     "longname": "Accounts.ui.config",
     "memberof": "Accounts.ui",
+    "module": "accounts-base",
     "name": "config",
     "options": [
       {
@@ -677,11 +713,13 @@ DocsData = {
   },
   "Accounts.verifyEmail": {
     "filepath": "accounts-password/password_client.js",
+    "importfrompackage": "accounts-base",
     "kind": "function",
-    "lineno": 257,
+    "lineno": 263,
     "locus": "Client",
     "longname": "Accounts.verifyEmail",
     "memberof": "Accounts",
+    "module": "accounts-base",
     "name": "verifyEmail",
     "options": [],
     "params": [
@@ -718,6 +756,7 @@ DocsData = {
     "lineno": 3,
     "locus": "Client",
     "longname": "AccountsClient",
+    "module": "accounts-base",
     "name": "AccountsClient",
     "options": [
       {
@@ -762,6 +801,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "AccountsClient#config",
     "memberof": "AccountsClient",
+    "module": "accounts-base",
     "name": "config",
     "options": [
       {
@@ -831,6 +871,7 @@ DocsData = {
     "locus": "Client",
     "longname": "AccountsClient#loggingIn",
     "memberof": "AccountsClient",
+    "module": "accounts-base",
     "name": "loggingIn",
     "options": [],
     "params": [],
@@ -844,6 +885,7 @@ DocsData = {
     "locus": "Client",
     "longname": "AccountsClient#logout",
     "memberof": "AccountsClient",
+    "module": "accounts-base",
     "name": "logout",
     "options": [],
     "params": [
@@ -868,6 +910,7 @@ DocsData = {
     "locus": "Client",
     "longname": "AccountsClient#logoutOtherClients",
     "memberof": "AccountsClient",
+    "module": "accounts-base",
     "name": "logoutOtherClients",
     "options": [],
     "params": [
@@ -894,6 +937,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "AccountsClient#onLogin",
     "memberof": "AccountsClient",
+    "module": "accounts-base",
     "name": "onLogin",
     "options": [],
     "params": [
@@ -919,6 +963,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "AccountsClient#onLoginFailure",
     "memberof": "AccountsClient",
+    "module": "accounts-base",
     "name": "onLoginFailure",
     "options": [],
     "params": [
@@ -944,6 +989,7 @@ DocsData = {
     "locus": "Anywhere but publish functions",
     "longname": "AccountsClient#user",
     "memberof": "AccountsClient",
+    "module": "accounts-base",
     "name": "user",
     "options": [],
     "params": [],
@@ -959,6 +1005,7 @@ DocsData = {
     "locus": "Anywhere but publish functions",
     "longname": "AccountsClient#userId",
     "memberof": "AccountsClient",
+    "module": "accounts-base",
     "name": "userId",
     "options": [],
     "overrides": "AccountsCommon#userId",
@@ -973,6 +1020,7 @@ DocsData = {
     "lineno": 1,
     "locus": "Anywhere",
     "longname": "AccountsCommon",
+    "module": "accounts-base",
     "name": "AccountsCommon",
     "options": [],
     "params": [
@@ -996,6 +1044,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "AccountsCommon#config",
     "memberof": "AccountsCommon",
+    "module": "accounts-base",
     "name": "config",
     "options": [
       {
@@ -1065,6 +1114,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "AccountsCommon#onLogin",
     "memberof": "AccountsCommon",
+    "module": "accounts-base",
     "name": "onLogin",
     "options": [],
     "params": [
@@ -1088,6 +1138,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "AccountsCommon#onLoginFailure",
     "memberof": "AccountsCommon",
+    "module": "accounts-base",
     "name": "onLoginFailure",
     "options": [],
     "params": [
@@ -1111,6 +1162,7 @@ DocsData = {
     "locus": "Anywhere but publish functions",
     "longname": "AccountsCommon#user",
     "memberof": "AccountsCommon",
+    "module": "accounts-base",
     "name": "user",
     "options": [],
     "params": [],
@@ -1124,6 +1176,7 @@ DocsData = {
     "locus": "Anywhere but publish functions",
     "longname": "AccountsCommon#userId",
     "memberof": "AccountsCommon",
+    "module": "accounts-base",
     "name": "userId",
     "options": [],
     "params": [],
@@ -1140,6 +1193,7 @@ DocsData = {
     "lineno": 5,
     "locus": "Server",
     "longname": "AccountsServer",
+    "module": "accounts-base",
     "name": "AccountsServer",
     "options": [],
     "params": [
@@ -1165,6 +1219,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "AccountsServer#config",
     "memberof": "AccountsServer",
+    "module": "accounts-base",
     "name": "config",
     "options": [
       {
@@ -1234,6 +1289,7 @@ DocsData = {
     "locus": "Server",
     "longname": "AccountsServer#onCreateUser",
     "memberof": "AccountsServer",
+    "module": "accounts-base",
     "name": "onCreateUser",
     "options": [],
     "params": [
@@ -1259,6 +1315,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "AccountsServer#onLogin",
     "memberof": "AccountsServer",
+    "module": "accounts-base",
     "name": "onLogin",
     "options": [],
     "params": [
@@ -1284,6 +1341,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "AccountsServer#onLoginFailure",
     "memberof": "AccountsServer",
+    "module": "accounts-base",
     "name": "onLoginFailure",
     "options": [],
     "params": [
@@ -1309,6 +1367,7 @@ DocsData = {
     "locus": "Anywhere but publish functions",
     "longname": "AccountsServer#user",
     "memberof": "AccountsServer",
+    "module": "accounts-base",
     "name": "user",
     "options": [],
     "params": [],
@@ -1324,6 +1383,7 @@ DocsData = {
     "locus": "Anywhere but publish functions",
     "longname": "AccountsServer#userId",
     "memberof": "AccountsServer",
+    "module": "accounts-base",
     "name": "userId",
     "options": [],
     "overrides": "AccountsCommon#userId",
@@ -1338,6 +1398,7 @@ DocsData = {
     "locus": "Server",
     "longname": "AccountsServer#validateLoginAttempt",
     "memberof": "AccountsServer",
+    "module": "accounts-base",
     "name": "validateLoginAttempt",
     "options": [],
     "params": [
@@ -1361,6 +1422,7 @@ DocsData = {
     "locus": "Server",
     "longname": "AccountsServer#validateNewUser",
     "memberof": "AccountsServer",
+    "module": "accounts-base",
     "name": "validateNewUser",
     "options": [],
     "params": [
@@ -1639,32 +1701,12 @@ DocsData = {
     "scope": "static",
     "summary": "Retrieve the contents of the static server asset as a UTF8-encoded string."
   },
-  "Assets.absoluteFilePath": {
-    "kind": "function",
-    "locus": "Server",
-    "longname": "Assets.absoluteFilePath",
-    "memberof": "Assets",
-    "name": "absoluteFilePath",
-    "options": [],
-    "params": [
-      {
-        "description": "<p>The path of the asset, relative to the application's <code>private</code> subdirectory.</p>",
-        "name": "assetPath",
-        "type": {
-          "names": [
-            "String"
-          ]
-        }
-      }
-    ],
-    "scope": "static",
-    "summary": "Get the absolute path to the static server asset. Note that assets are read-only."
-  },
   "Blaze": {
     "filepath": "blaze/preamble.js",
     "kind": "namespace",
     "lineno": 1,
     "longname": "Blaze",
+    "module": "blaze",
     "name": "Blaze",
     "scope": "global",
     "summary": "The namespace for all Blaze-related methods and classes."
@@ -1676,6 +1718,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Blaze.Each",
     "memberof": "Blaze",
+    "module": "blaze",
     "name": "Each",
     "options": [],
     "params": [
@@ -1718,6 +1761,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Blaze.If",
     "memberof": "Blaze",
+    "module": "blaze",
     "name": "If",
     "options": [],
     "params": [
@@ -1759,6 +1803,7 @@ DocsData = {
     "lineno": 59,
     "longname": "Blaze.Let",
     "memberof": "Blaze",
+    "module": "blaze",
     "name": "Let",
     "options": [],
     "params": [
@@ -1791,6 +1836,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Blaze.Template",
     "memberof": "Blaze",
+    "module": "blaze",
     "name": "Template",
     "options": [],
     "params": [
@@ -1821,9 +1867,10 @@ DocsData = {
     "filepath": "blaze/template.js",
     "instancename": "template",
     "kind": "class",
-    "lineno": 230,
+    "lineno": 233,
     "longname": "Blaze.TemplateInstance",
     "memberof": "Blaze",
+    "module": "blaze",
     "name": "TemplateInstance",
     "options": [],
     "params": [
@@ -1842,10 +1889,11 @@ DocsData = {
   "Blaze.TemplateInstance#$": {
     "filepath": "blaze/template.js",
     "kind": "function",
-    "lineno": 288,
+    "lineno": 291,
     "locus": "Client",
     "longname": "Blaze.TemplateInstance#$",
     "memberof": "Blaze.TemplateInstance",
+    "module": "blaze",
     "name": "$",
     "options": [],
     "params": [
@@ -1874,10 +1922,11 @@ DocsData = {
   "Blaze.TemplateInstance#autorun": {
     "filepath": "blaze/template.js",
     "kind": "function",
-    "lineno": 321,
+    "lineno": 324,
     "locus": "Client",
     "longname": "Blaze.TemplateInstance#autorun",
     "memberof": "Blaze.TemplateInstance",
+    "module": "blaze",
     "name": "autorun",
     "options": [],
     "params": [
@@ -1897,10 +1946,11 @@ DocsData = {
   "Blaze.TemplateInstance#data": {
     "filepath": "blaze/template.js",
     "kind": "member",
-    "lineno": 158,
+    "lineno": 161,
     "locus": "Client",
     "longname": "Blaze.TemplateInstance#data",
     "memberof": "Blaze.TemplateInstance",
+    "module": "blaze",
     "name": "data",
     "scope": "instance",
     "summary": "The data context of this instance's latest invocation."
@@ -1908,10 +1958,11 @@ DocsData = {
   "Blaze.TemplateInstance#find": {
     "filepath": "blaze/template.js",
     "kind": "function",
-    "lineno": 311,
+    "lineno": 314,
     "locus": "Client",
     "longname": "Blaze.TemplateInstance#find",
     "memberof": "Blaze.TemplateInstance",
+    "module": "blaze",
     "name": "find",
     "options": [],
     "params": [
@@ -1940,10 +1991,11 @@ DocsData = {
   "Blaze.TemplateInstance#findAll": {
     "filepath": "blaze/template.js",
     "kind": "function",
-    "lineno": 301,
+    "lineno": 304,
     "locus": "Client",
     "longname": "Blaze.TemplateInstance#findAll",
     "memberof": "Blaze.TemplateInstance",
+    "module": "blaze",
     "name": "findAll",
     "options": [],
     "params": [
@@ -1972,10 +2024,11 @@ DocsData = {
   "Blaze.TemplateInstance#firstNode": {
     "filepath": "blaze/template.js",
     "kind": "member",
-    "lineno": 251,
+    "lineno": 254,
     "locus": "Client",
     "longname": "Blaze.TemplateInstance#firstNode",
     "memberof": "Blaze.TemplateInstance",
+    "module": "blaze",
     "name": "firstNode",
     "scope": "instance",
     "summary": "The first top-level DOM node in this template instance.",
@@ -1988,10 +2041,11 @@ DocsData = {
   "Blaze.TemplateInstance#lastNode": {
     "filepath": "blaze/template.js",
     "kind": "member",
-    "lineno": 261,
+    "lineno": 264,
     "locus": "Client",
     "longname": "Blaze.TemplateInstance#lastNode",
     "memberof": "Blaze.TemplateInstance",
+    "module": "blaze",
     "name": "lastNode",
     "scope": "instance",
     "summary": "The last top-level DOM node in this template instance.",
@@ -2004,10 +2058,11 @@ DocsData = {
   "Blaze.TemplateInstance#subscribe": {
     "filepath": "blaze/template.js",
     "kind": "function",
-    "lineno": 344,
+    "lineno": 347,
     "locus": "Client",
     "longname": "Blaze.TemplateInstance#subscribe",
     "memberof": "Blaze.TemplateInstance",
+    "module": "blaze",
     "name": "subscribe",
     "options": [
       {
@@ -2089,9 +2144,10 @@ DocsData = {
   "Blaze.TemplateInstance#subscriptionsReady": {
     "filepath": "blaze/template.js",
     "kind": "function",
-    "lineno": 424,
+    "lineno": 427,
     "longname": "Blaze.TemplateInstance#subscriptionsReady",
     "memberof": "Blaze.TemplateInstance",
+    "module": "blaze",
     "name": "subscriptionsReady",
     "options": [],
     "params": [],
@@ -2111,10 +2167,11 @@ DocsData = {
   "Blaze.TemplateInstance#view": {
     "filepath": "blaze/template.js",
     "kind": "member",
-    "lineno": 240,
+    "lineno": 243,
     "locus": "Client",
     "longname": "Blaze.TemplateInstance#view",
     "memberof": "Blaze.TemplateInstance",
+    "module": "blaze",
     "name": "view",
     "scope": "instance",
     "summary": "The [View](#blaze_view) object for this invocation of the template.",
@@ -2131,6 +2188,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Blaze.Unless",
     "memberof": "Blaze",
+    "module": "blaze",
     "name": "Unless",
     "options": [],
     "params": [
@@ -2173,6 +2231,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Blaze.View",
     "memberof": "Blaze",
+    "module": "blaze",
     "name": "View",
     "options": [],
     "params": [
@@ -2206,6 +2265,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Blaze.With",
     "memberof": "Blaze",
+    "module": "blaze",
     "name": "With",
     "options": [],
     "params": [
@@ -2239,6 +2299,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Blaze.currentView",
     "memberof": "Blaze",
+    "module": "blaze",
     "name": "currentView",
     "scope": "static",
     "summary": "The View corresponding to the current template helper, event handler, callback, or autorun.  If there isn't one, `null`.",
@@ -2255,6 +2316,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Blaze.getData",
     "memberof": "Blaze",
+    "module": "blaze",
     "name": "getData",
     "options": [],
     "params": [
@@ -2280,6 +2342,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Blaze.getView",
     "memberof": "Blaze",
+    "module": "blaze",
     "name": "getView",
     "options": [],
     "params": [
@@ -2304,6 +2367,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Blaze.isTemplate",
     "memberof": "Blaze",
+    "module": "blaze",
     "name": "isTemplate",
     "options": [],
     "params": [
@@ -2327,6 +2391,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Blaze.remove",
     "memberof": "Blaze",
+    "module": "blaze",
     "name": "remove",
     "options": [],
     "params": [
@@ -2350,6 +2415,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Blaze.render",
     "memberof": "Blaze",
+    "module": "blaze",
     "name": "render",
     "options": [],
     "params": [
@@ -2403,6 +2469,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Blaze.renderWithData",
     "memberof": "Blaze",
+    "module": "blaze",
     "name": "renderWithData",
     "options": [],
     "params": [
@@ -2466,6 +2533,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Blaze.toHTML",
     "memberof": "Blaze",
+    "module": "blaze",
     "name": "toHTML",
     "options": [],
     "params": [
@@ -2490,6 +2558,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Blaze.toHTMLWithData",
     "memberof": "Blaze",
+    "module": "blaze",
     "name": "toHTMLWithData",
     "options": [],
     "params": [
@@ -2932,6 +3001,7 @@ DocsData = {
     "kind": "namespace",
     "lineno": 1,
     "longname": "DDP",
+    "module": "ddp-client",
     "name": "DDP",
     "scope": "global",
     "summary": "Namespace for DDP-related methods/classes."
@@ -2939,10 +3009,11 @@ DocsData = {
   "DDP.connect": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 1683,
+    "lineno": 1689,
     "locus": "Anywhere",
     "longname": "DDP.connect",
     "memberof": "DDP",
+    "module": "ddp-client",
     "name": "connect",
     "options": [],
     "params": [
@@ -2964,6 +3035,7 @@ DocsData = {
     "kind": "namespace",
     "lineno": 1,
     "longname": "DDPCommon",
+    "module": "ddp-common",
     "name": "DDPCommon",
     "scope": "global",
     "summary": "Namespace for DDPCommon-related methods/classes. Shared between \n`ddp-client` and `ddp-server`, where the ddp-client is the implementation\nof a ddp client for both client AND server; and the ddp server is the\nimplementation of the livedata server and stream server. Common \nfunctionality shared between both can be shared under this namespace"
@@ -2975,6 +3047,7 @@ DocsData = {
     "lineno": 9,
     "longname": "DDPCommon.MethodInvocation",
     "memberof": "DDPCommon",
+    "module": "ddp-common",
     "name": "MethodInvocation",
     "options": [],
     "params": [
@@ -2997,6 +3070,7 @@ DocsData = {
     "locus": "Server",
     "longname": "DDPCommon.MethodInvocation#connection",
     "memberof": "DDPCommon.MethodInvocation",
+    "module": "ddp-common",
     "name": "connection",
     "scope": "instance",
     "summary": "Access inside a method invocation. The [connection](#meteor_onconnection) that this method was received on. `null` if the method is not associated with a connection, eg. a server initiated method call."
@@ -3008,6 +3082,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "DDPCommon.MethodInvocation#isSimulation",
     "memberof": "DDPCommon.MethodInvocation",
+    "module": "ddp-common",
     "name": "isSimulation",
     "scope": "instance",
     "summary": "Access inside a method invocation.  Boolean value, true if this invocation is a stub.",
@@ -3024,6 +3099,7 @@ DocsData = {
     "locus": "Server",
     "longname": "DDPCommon.MethodInvocation#setUserId",
     "memberof": "DDPCommon.MethodInvocation",
+    "module": "ddp-common",
     "name": "setUserId",
     "options": [],
     "params": [
@@ -3048,6 +3124,7 @@ DocsData = {
     "locus": "Server",
     "longname": "DDPCommon.MethodInvocation#unblock",
     "memberof": "DDPCommon.MethodInvocation",
+    "module": "ddp-common",
     "name": "unblock",
     "options": [],
     "params": [],
@@ -3061,6 +3138,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "DDPCommon.MethodInvocation#userId",
     "memberof": "DDPCommon.MethodInvocation",
+    "module": "ddp-common",
     "name": "userId",
     "scope": "instance",
     "summary": "The id of the user that made this method call, or `null` if no user was logged in."
@@ -3072,6 +3150,7 @@ DocsData = {
     "locus": "Server",
     "longname": "DDPRateLimiter.addRule",
     "memberof": "DDPRateLimiter",
+    "module": "ddp-rate-limiter",
     "name": "addRule",
     "options": [],
     "params": [
@@ -3113,6 +3192,7 @@ DocsData = {
     "locus": "Server",
     "longname": "DDPRateLimiter.removeRule",
     "memberof": "DDPRateLimiter",
+    "module": "ddp-rate-limiter",
     "name": "removeRule",
     "options": [],
     "params": [
@@ -3146,6 +3226,7 @@ DocsData = {
     "locus": "Server",
     "longname": "DDPRateLimiter.setErrorMessage",
     "memberof": "DDPRateLimiter",
+    "module": "ddp-rate-limiter",
     "name": "setErrorMessage",
     "options": [],
     "params": [
@@ -3168,6 +3249,7 @@ DocsData = {
     "kind": "namespace",
     "lineno": 5,
     "longname": "EJSON",
+    "module": "ejson",
     "name": "EJSON",
     "scope": "global",
     "summary": "Namespace for EJSON functions"
@@ -3179,6 +3261,7 @@ DocsData = {
     "lineno": 11,
     "longname": "EJSON.CustomType",
     "memberof": "EJSON",
+    "module": "ejson",
     "name": "CustomType",
     "options": [],
     "params": [],
@@ -3192,6 +3275,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "EJSON.CustomType#clone",
     "memberof": "EJSON.CustomType",
+    "module": "ejson",
     "name": "clone",
     "options": [],
     "params": [],
@@ -3205,6 +3289,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "EJSON.CustomType#equals",
     "memberof": "EJSON.CustomType",
+    "module": "ejson",
     "name": "equals",
     "options": [],
     "params": [
@@ -3228,6 +3313,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "EJSON.CustomType#toJSONValue",
     "memberof": "EJSON.CustomType",
+    "module": "ejson",
     "name": "toJSONValue",
     "options": [],
     "params": [],
@@ -3241,6 +3327,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "EJSON.CustomType#typeName",
     "memberof": "EJSON.CustomType",
+    "module": "ejson",
     "name": "typeName",
     "options": [],
     "params": [],
@@ -3254,6 +3341,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "EJSON.addType",
     "memberof": "EJSON",
+    "module": "ejson",
     "name": "addType",
     "options": [],
     "params": [
@@ -3286,6 +3374,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "EJSON.clone",
     "memberof": "EJSON",
+    "module": "ejson",
     "name": "clone",
     "options": [],
     "params": [
@@ -3309,6 +3398,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "EJSON.equals",
     "memberof": "EJSON",
+    "module": "ejson",
     "name": "equals",
     "options": [
       {
@@ -3358,6 +3448,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "EJSON.fromJSONValue",
     "memberof": "EJSON",
+    "module": "ejson",
     "name": "fromJSONValue",
     "options": [],
     "params": [
@@ -3381,6 +3472,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "EJSON.isBinary",
     "memberof": "EJSON",
+    "module": "ejson",
     "name": "isBinary",
     "options": [],
     "params": [
@@ -3404,6 +3496,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "EJSON.newBinary",
     "memberof": "EJSON",
+    "module": "ejson",
     "name": "newBinary",
     "params": [
       {
@@ -3426,6 +3519,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "EJSON.parse",
     "memberof": "EJSON",
+    "module": "ejson",
     "name": "parse",
     "options": [],
     "params": [
@@ -3449,6 +3543,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "EJSON.stringify",
     "memberof": "EJSON",
+    "module": "ejson",
     "name": "stringify",
     "options": [
       {
@@ -3502,6 +3597,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "EJSON.toJSONValue",
     "memberof": "EJSON",
+    "module": "ejson",
     "name": "toJSONValue",
     "options": [],
     "params": [
@@ -3525,6 +3621,7 @@ DocsData = {
     "locus": "Server",
     "longname": "Email.send",
     "memberof": "Email",
+    "module": "email",
     "name": "send",
     "options": [
       {
@@ -3617,6 +3714,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "HTTP.call",
     "memberof": "HTTP",
+    "module": "http",
     "name": "call",
     "options": [
       {
@@ -3759,6 +3857,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "HTTP.del",
     "memberof": "HTTP",
+    "module": "http",
     "name": "del",
     "options": [],
     "params": [
@@ -3802,6 +3901,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "HTTP.get",
     "memberof": "HTTP",
+    "module": "http",
     "name": "get",
     "options": [],
     "params": [
@@ -3845,6 +3945,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "HTTP.patch",
     "memberof": "HTTP",
+    "module": "http",
     "name": "patch",
     "options": [],
     "params": [
@@ -3888,6 +3989,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "HTTP.post",
     "memberof": "HTTP",
+    "module": "http",
     "name": "post",
     "options": [],
     "params": [
@@ -3931,6 +4033,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "HTTP.put",
     "memberof": "HTTP",
+    "module": "http",
     "name": "put",
     "options": [],
     "params": [
@@ -4378,6 +4481,25 @@ DocsData = {
     "scope": "static",
     "summary": "Returns a relative path that can be used to form error messages or\nother display properties. Can be used as an input to a source map."
   },
+  "InputFile.getFileOptions": {
+    "kind": "function",
+    "longname": "InputFile.getFileOptions",
+    "memberof": "InputFile",
+    "name": "getFileOptions",
+    "options": [],
+    "params": [],
+    "returns": [
+      {
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Returns an object of file options such as those passed as the\n         third argument to api.addFiles."
+  },
   "InputFile.getPackageName": {
     "kind": "function",
     "longname": "InputFile.getPackageName",
@@ -4440,6 +4562,7 @@ DocsData = {
     "kind": "typedef",
     "lineno": 140,
     "longname": "IterationCallback",
+    "module": "minimongo",
     "name": "IterationCallback",
     "params": [
       {
@@ -4471,6 +4594,7 @@ DocsData = {
     "kind": "namespace",
     "lineno": 42,
     "longname": "Match",
+    "module": "check",
     "name": "Match",
     "scope": "global",
     "summary": "The namespace for all Match types and methods."
@@ -4482,6 +4606,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "Match.test",
     "memberof": "Match",
+    "module": "check",
     "name": "test",
     "options": [],
     "params": [
@@ -4510,8 +4635,9 @@ DocsData = {
   "Meteor": {
     "filepath": "meteor/client_environment.js",
     "kind": "namespace",
-    "lineno": 1,
+    "lineno": 3,
     "longname": "Meteor",
+    "module": "meteor",
     "name": "Meteor",
     "scope": "global",
     "summary": "The Meteor namespace"
@@ -4523,6 +4649,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "Meteor.Error",
     "memberof": "Meteor",
+    "module": "meteor",
     "name": "Error",
     "options": [],
     "params": [
@@ -4566,6 +4693,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "Meteor.absoluteUrl",
     "memberof": "Meteor",
+    "module": "meteor",
     "name": "absoluteUrl",
     "options": [
       {
@@ -4622,11 +4750,13 @@ DocsData = {
   },
   "Meteor.apply": {
     "filepath": "ddp-client/livedata_connection.js",
+    "importfrompackage": "meteor",
     "kind": "function",
-    "lineno": 747,
+    "lineno": 750,
     "locus": "Anywhere",
     "longname": "Meteor.apply",
     "memberof": "Meteor",
+    "module": "meteor",
     "name": "apply",
     "options": [
       {
@@ -4696,11 +4826,13 @@ DocsData = {
   },
   "Meteor.call": {
     "filepath": "ddp-client/livedata_connection.js",
+    "importfrompackage": "meteor",
     "kind": "function",
-    "lineno": 705,
+    "lineno": 707,
     "locus": "Anywhere",
     "longname": "Meteor.call",
     "memberof": "Meteor",
+    "module": "meteor",
     "name": "call",
     "options": [],
     "params": [
@@ -4744,6 +4876,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "Meteor.clearInterval",
     "memberof": "Meteor",
+    "module": "meteor",
     "name": "clearInterval",
     "options": [],
     "params": [
@@ -4767,6 +4900,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "Meteor.clearTimeout",
     "memberof": "Meteor",
+    "module": "meteor",
     "name": "clearTimeout",
     "options": [],
     "params": [
@@ -4785,11 +4919,13 @@ DocsData = {
   },
   "Meteor.disconnect": {
     "filepath": "ddp-client/livedata_connection.js",
+    "importfrompackage": "meteor",
     "kind": "function",
-    "lineno": 1060,
+    "lineno": 1066,
     "locus": "Client",
     "longname": "Meteor.disconnect",
     "memberof": "Meteor",
+    "module": "meteor",
     "name": "disconnect",
     "options": [],
     "params": [],
@@ -4799,10 +4935,11 @@ DocsData = {
   "Meteor.isClient": {
     "filepath": "meteor/client_environment.js",
     "kind": "member",
-    "lineno": 28,
+    "lineno": 30,
     "locus": "Anywhere",
     "longname": "Meteor.isClient",
     "memberof": "Meteor",
+    "module": "meteor",
     "name": "isClient",
     "scope": "static",
     "summary": "Boolean variable.  True if running in client environment.",
@@ -4819,6 +4956,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "Meteor.isCordova",
     "memberof": "Meteor",
+    "module": "meteor",
     "name": "isCordova",
     "scope": "static",
     "summary": "Boolean variable.  True if running in a Cordova mobile environment.",
@@ -4831,10 +4969,11 @@ DocsData = {
   "Meteor.isDevelopment": {
     "filepath": "meteor/client_environment.js",
     "kind": "member",
-    "lineno": 20,
+    "lineno": 22,
     "locus": "Anywhere",
     "longname": "Meteor.isDevelopment",
     "memberof": "Meteor",
+    "module": "meteor",
     "name": "isDevelopment",
     "scope": "static",
     "summary": "Boolean variable.  True if running in development environment.",
@@ -4847,10 +4986,11 @@ DocsData = {
   "Meteor.isProduction": {
     "filepath": "meteor/client_environment.js",
     "kind": "member",
-    "lineno": 12,
+    "lineno": 14,
     "locus": "Anywhere",
     "longname": "Meteor.isProduction",
     "memberof": "Meteor",
+    "module": "meteor",
     "name": "isProduction",
     "scope": "static",
     "summary": "Boolean variable.  True if running in production environment.",
@@ -4863,10 +5003,11 @@ DocsData = {
   "Meteor.isServer": {
     "filepath": "meteor/client_environment.js",
     "kind": "member",
-    "lineno": 36,
+    "lineno": 38,
     "locus": "Anywhere",
     "longname": "Meteor.isServer",
     "memberof": "Meteor",
+    "module": "meteor",
     "name": "isServer",
     "scope": "static",
     "summary": "Boolean variable.  True if running in server environment.",
@@ -4878,11 +5019,13 @@ DocsData = {
   },
   "Meteor.loggingIn": {
     "filepath": "accounts-base/accounts_client.js",
+    "importfrompackage": "meteor",
     "kind": "function",
-    "lineno": 136,
+    "lineno": 137,
     "locus": "Client",
     "longname": "Meteor.loggingIn",
     "memberof": "Meteor",
+    "module": "meteor",
     "name": "loggingIn",
     "options": [],
     "params": [],
@@ -4891,11 +5034,13 @@ DocsData = {
   },
   "Meteor.loginWith<ExternalService>": {
     "filepath": "accounts-oauth/oauth_client.js",
+    "importfrompackage": "meteor",
     "kind": "function",
     "lineno": 3,
     "locus": "Client",
     "longname": "Meteor.loginWith<ExternalService>",
     "memberof": "Meteor",
+    "module": "meteor",
     "name": "loginWith<ExternalService>",
     "options": [
       {
@@ -4979,11 +5124,13 @@ DocsData = {
   },
   "Meteor.loginWithPassword": {
     "filepath": "accounts-password/password_client.js",
+    "importfrompackage": "meteor",
     "kind": "function",
-    "lineno": 23,
+    "lineno": 24,
     "locus": "Client",
     "longname": "Meteor.loginWithPassword",
     "memberof": "Meteor",
+    "module": "meteor",
     "name": "loginWithPassword",
     "options": [],
     "params": [
@@ -5022,11 +5169,13 @@ DocsData = {
   },
   "Meteor.logout": {
     "filepath": "accounts-base/accounts_client.js",
+    "importfrompackage": "meteor",
     "kind": "function",
-    "lineno": 336,
+    "lineno": 338,
     "locus": "Client",
     "longname": "Meteor.logout",
     "memberof": "Meteor",
+    "module": "meteor",
     "name": "logout",
     "options": [],
     "params": [
@@ -5046,11 +5195,13 @@ DocsData = {
   },
   "Meteor.logoutOtherClients": {
     "filepath": "accounts-base/accounts_client.js",
+    "importfrompackage": "meteor",
     "kind": "function",
-    "lineno": 345,
+    "lineno": 348,
     "locus": "Client",
     "longname": "Meteor.logoutOtherClients",
     "memberof": "Meteor",
+    "module": "meteor",
     "name": "logoutOtherClients",
     "options": [],
     "params": [
@@ -5070,11 +5221,13 @@ DocsData = {
   },
   "Meteor.methods": {
     "filepath": "ddp-server/livedata_server.js",
+    "importfrompackage": "meteor",
     "kind": "function",
-    "lineno": 1539,
+    "lineno": 1542,
     "locus": "Anywhere",
     "longname": "Meteor.methods",
     "memberof": "Meteor",
+    "module": "meteor",
     "name": "methods",
     "options": [],
     "params": [
@@ -5093,11 +5246,13 @@ DocsData = {
   },
   "Meteor.onConnection": {
     "filepath": "ddp-server/livedata_server.js",
+    "importfrompackage": "meteor",
     "kind": "function",
-    "lineno": 1400,
+    "lineno": 1401,
     "locus": "Server",
     "longname": "Meteor.onConnection",
     "memberof": "Meteor",
+    "module": "meteor",
     "name": "onConnection",
     "options": [],
     "params": [
@@ -5116,11 +5271,13 @@ DocsData = {
   },
   "Meteor.publish": {
     "filepath": "ddp-server/livedata_server.js",
+    "importfrompackage": "meteor",
     "kind": "function",
-    "lineno": 1474,
+    "lineno": 1476,
     "locus": "Server",
     "longname": "Meteor.publish",
     "memberof": "Meteor",
+    "module": "meteor",
     "name": "publish",
     "options": [],
     "params": [
@@ -5148,11 +5305,13 @@ DocsData = {
   },
   "Meteor.reconnect": {
     "filepath": "ddp-client/livedata_connection.js",
+    "importfrompackage": "meteor",
     "kind": "function",
-    "lineno": 1050,
+    "lineno": 1055,
     "locus": "Client",
     "longname": "Meteor.reconnect",
     "memberof": "Meteor",
+    "module": "meteor",
     "name": "reconnect",
     "options": [],
     "params": [],
@@ -5166,6 +5325,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "Meteor.release",
     "memberof": "Meteor",
+    "module": "meteor",
     "name": "release",
     "scope": "static",
     "summary": "`Meteor.release` is a string containing the name of the [release](#meteorupdate) with which the project was built (for example, `\"1.2.3\"`). It is `undefined` if the project was built using a git checkout of Meteor.",
@@ -5182,6 +5342,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "Meteor.setInterval",
     "memberof": "Meteor",
+    "module": "meteor",
     "name": "setInterval",
     "options": [],
     "params": [
@@ -5214,6 +5375,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "Meteor.setTimeout",
     "memberof": "Meteor",
+    "module": "meteor",
     "name": "setTimeout",
     "options": [],
     "params": [
@@ -5242,10 +5404,11 @@ DocsData = {
   "Meteor.settings": {
     "filepath": "meteor/client_environment.js",
     "kind": "member",
-    "lineno": 47,
+    "lineno": 49,
     "locus": "Anywhere",
     "longname": "Meteor.settings",
     "memberof": "Meteor",
+    "module": "meteor",
     "name": "settings",
     "scope": "static",
     "summary": "`Meteor.settings` contains deployment-specific configuration options. You can initialize settings by passing the `--settings` option (which takes the name of a file containing JSON data) to `meteor run` or `meteor deploy`. When running your server directly (e.g. from a bundle), you instead specify settings by putting the JSON directly into the `METEOR_SETTINGS` environment variable. If the settings object contains a key named `public`, then `Meteor.settings.public` will be available on the client as well as the server.  All other properties of `Meteor.settings` are only defined on the server.  You can rely on `Meteor.settings` and `Meteor.settings.public` being defined objects (not undefined) on both client and server even if there are no settings specified.  Changes to `Meteor.settings.public` at runtime will be picked up by new client connections.",
@@ -5262,6 +5425,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "Meteor.startup",
     "memberof": "Meteor",
+    "module": "meteor",
     "name": "startup",
     "options": [],
     "params": [
@@ -5280,11 +5444,13 @@ DocsData = {
   },
   "Meteor.status": {
     "filepath": "ddp-client/livedata_connection.js",
+    "importfrompackage": "meteor",
     "kind": "function",
-    "lineno": 1038,
+    "lineno": 1042,
     "locus": "Client",
     "longname": "Meteor.status",
     "memberof": "Meteor",
+    "module": "meteor",
     "name": "status",
     "options": [],
     "params": [],
@@ -5293,11 +5459,13 @@ DocsData = {
   },
   "Meteor.subscribe": {
     "filepath": "ddp-client/livedata_connection.js",
+    "importfrompackage": "meteor",
     "kind": "function",
-    "lineno": 520,
+    "lineno": 521,
     "locus": "Client",
     "longname": "Meteor.subscribe",
     "memberof": "Meteor",
+    "module": "meteor",
     "name": "subscribe",
     "options": [],
     "params": [
@@ -5337,11 +5505,13 @@ DocsData = {
   },
   "Meteor.user": {
     "filepath": "accounts-base/accounts_common.js",
+    "importfrompackage": "meteor",
     "kind": "function",
-    "lineno": 229,
+    "lineno": 231,
     "locus": "Anywhere but publish functions",
     "longname": "Meteor.user",
     "memberof": "Meteor",
+    "module": "meteor",
     "name": "user",
     "options": [],
     "params": [],
@@ -5350,11 +5520,13 @@ DocsData = {
   },
   "Meteor.userId": {
     "filepath": "accounts-base/accounts_common.js",
+    "importfrompackage": "meteor",
     "kind": "function",
-    "lineno": 221,
+    "lineno": 222,
     "locus": "Anywhere but publish functions",
     "longname": "Meteor.userId",
     "memberof": "Meteor",
+    "module": "meteor",
     "name": "userId",
     "options": [],
     "params": [],
@@ -5363,11 +5535,13 @@ DocsData = {
   },
   "Meteor.users": {
     "filepath": "accounts-base/server_main.js",
+    "importfrompackage": "meteor",
     "kind": "member",
-    "lineno": 20,
+    "lineno": 21,
     "locus": "Anywhere",
     "longname": "Meteor.users",
     "memberof": "Meteor",
+    "module": "meteor",
     "name": "users",
     "scope": "static",
     "summary": "A [Mongo.Collection](#collections) containing user documents.",
@@ -5384,6 +5558,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "Meteor.wrapAsync",
     "memberof": "Meteor",
+    "module": "meteor",
     "name": "wrapAsync",
     "options": [],
     "params": [
@@ -5415,6 +5590,7 @@ DocsData = {
     "kind": "namespace",
     "lineno": 8,
     "longname": "Mongo",
+    "module": "mongo",
     "name": "Mongo",
     "scope": "global",
     "summary": "Namespace for MongoDB-related items"
@@ -5427,6 +5603,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "Mongo.Collection",
     "memberof": "Mongo",
+    "module": "mongo",
     "name": "Collection",
     "options": [
       {
@@ -5487,6 +5664,7 @@ DocsData = {
     "locus": "Server",
     "longname": "Mongo.Collection#allow",
     "memberof": "Mongo.Collection",
+    "module": "allow-deny",
     "name": "allow",
     "options": [
       {
@@ -5537,6 +5715,7 @@ DocsData = {
     "locus": "Server",
     "longname": "Mongo.Collection#deny",
     "memberof": "Mongo.Collection",
+    "module": "allow-deny",
     "name": "deny",
     "options": [
       {
@@ -5587,6 +5766,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "Mongo.Collection#find",
     "memberof": "Mongo.Collection",
+    "module": "mongo",
     "name": "find",
     "options": [
       {
@@ -5711,6 +5891,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "Mongo.Collection#findOne",
     "memberof": "Mongo.Collection",
+    "module": "mongo",
     "name": "findOne",
     "options": [
       {
@@ -5799,6 +5980,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "Mongo.Collection#insert",
     "memberof": "Mongo.Collection",
+    "module": "mongo",
     "name": "insert",
     "options": [],
     "params": [
@@ -5832,6 +6014,7 @@ DocsData = {
     "locus": "Server",
     "longname": "Mongo.Collection#rawCollection",
     "memberof": "Mongo.Collection",
+    "module": "mongo",
     "name": "rawCollection",
     "options": [],
     "params": [],
@@ -5845,6 +6028,7 @@ DocsData = {
     "locus": "Server",
     "longname": "Mongo.Collection#rawDatabase",
     "memberof": "Mongo.Collection",
+    "module": "mongo",
     "name": "rawDatabase",
     "options": [],
     "params": [],
@@ -5858,6 +6042,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "Mongo.Collection#remove",
     "memberof": "Mongo.Collection",
+    "module": "mongo",
     "name": "remove",
     "options": [],
     "params": [
@@ -5891,6 +6076,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "Mongo.Collection#update",
     "memberof": "Mongo.Collection",
+    "module": "mongo",
     "name": "update",
     "options": [
       {
@@ -5961,6 +6147,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "Mongo.Collection#upsert",
     "memberof": "Mongo.Collection",
+    "module": "mongo",
     "name": "upsert",
     "options": [
       {
@@ -6022,6 +6209,7 @@ DocsData = {
     "lineno": 723,
     "longname": "Mongo.Cursor",
     "memberof": "Mongo",
+    "module": "mongo",
     "name": "Cursor",
     "options": [],
     "params": [],
@@ -6035,6 +6223,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "Mongo.Cursor#count",
     "memberof": "Mongo.Cursor",
+    "module": "minimongo",
     "name": "count",
     "options": [],
     "params": [],
@@ -6057,6 +6246,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "Mongo.Cursor#fetch",
     "memberof": "Mongo.Cursor",
+    "module": "minimongo",
     "name": "fetch",
     "options": [],
     "params": [],
@@ -6079,6 +6269,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "Mongo.Cursor#forEach",
     "memberof": "Mongo.Cursor",
+    "module": "minimongo",
     "name": "forEach",
     "options": [],
     "params": [
@@ -6112,6 +6303,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "Mongo.Cursor#map",
     "memberof": "Mongo.Cursor",
+    "module": "minimongo",
     "name": "map",
     "options": [],
     "params": [
@@ -6145,6 +6337,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "Mongo.Cursor#observe",
     "memberof": "Mongo.Cursor",
+    "module": "minimongo",
     "name": "observe",
     "options": [],
     "params": [
@@ -6168,6 +6361,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "Mongo.Cursor#observeChanges",
     "memberof": "Mongo.Cursor",
+    "module": "minimongo",
     "name": "observeChanges",
     "options": [],
     "params": [
@@ -6191,6 +6385,7 @@ DocsData = {
     "locus": "Anywhere",
     "longname": "Mongo.ObjectID",
     "memberof": "Mongo",
+    "module": "mongo",
     "name": "ObjectID",
     "options": [],
     "params": [
@@ -6902,6 +7097,7 @@ DocsData = {
     "lineno": 37,
     "locus": "Client",
     "longname": "ReactiveVar",
+    "module": "reactive-var",
     "name": "ReactiveVar",
     "options": [],
     "params": [
@@ -6935,6 +7131,7 @@ DocsData = {
     "locus": "Client",
     "longname": "ReactiveVar#get",
     "memberof": "ReactiveVar",
+    "module": "reactive-var",
     "name": "get",
     "options": [],
     "params": [],
@@ -6948,6 +7145,7 @@ DocsData = {
     "locus": "Client",
     "longname": "ReactiveVar#set",
     "memberof": "ReactiveVar",
+    "module": "reactive-var",
     "name": "set",
     "options": [],
     "params": [
@@ -6970,6 +7168,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Session.equals",
     "memberof": "Session",
+    "module": "session",
     "name": "equals",
     "options": [],
     "params": [
@@ -7006,6 +7205,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Session.get",
     "memberof": "Session",
+    "module": "session",
     "name": "get",
     "options": [],
     "params": [
@@ -7029,6 +7229,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Session.set",
     "memberof": "Session",
+    "module": "session",
     "name": "set",
     "options": [],
     "params": [
@@ -7062,6 +7263,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Session.setDefault",
     "memberof": "Session",
+    "module": "session",
     "name": "setDefault",
     "options": [],
     "params": [
@@ -7094,6 +7296,7 @@ DocsData = {
     "kind": "class",
     "lineno": 936,
     "longname": "Subscription",
+    "module": "ddp-server",
     "name": "Subscription",
     "options": [],
     "params": [],
@@ -7107,6 +7310,7 @@ DocsData = {
     "locus": "Server",
     "longname": "Subscription#added",
     "memberof": "Subscription",
+    "module": "ddp-server",
     "name": "added",
     "options": [],
     "params": [
@@ -7148,6 +7352,7 @@ DocsData = {
     "locus": "Server",
     "longname": "Subscription#changed",
     "memberof": "Subscription",
+    "module": "ddp-server",
     "name": "changed",
     "options": [],
     "params": [
@@ -7189,6 +7394,7 @@ DocsData = {
     "locus": "Server",
     "longname": "Subscription#connection",
     "memberof": "Subscription",
+    "module": "ddp-server",
     "name": "connection",
     "scope": "instance",
     "summary": "Access inside the publish function. The incoming [connection](#meteor_onconnection) for this subscription."
@@ -7200,6 +7406,7 @@ DocsData = {
     "locus": "Server",
     "longname": "Subscription#error",
     "memberof": "Subscription",
+    "module": "ddp-server",
     "name": "error",
     "options": [],
     "params": [
@@ -7223,6 +7430,7 @@ DocsData = {
     "locus": "Server",
     "longname": "Subscription#onStop",
     "memberof": "Subscription",
+    "module": "ddp-server",
     "name": "onStop",
     "options": [],
     "params": [
@@ -7246,6 +7454,7 @@ DocsData = {
     "locus": "Server",
     "longname": "Subscription#ready",
     "memberof": "Subscription",
+    "module": "ddp-server",
     "name": "ready",
     "options": [],
     "params": [],
@@ -7259,6 +7468,7 @@ DocsData = {
     "locus": "Server",
     "longname": "Subscription#removed",
     "memberof": "Subscription",
+    "module": "ddp-server",
     "name": "removed",
     "options": [],
     "params": [
@@ -7291,6 +7501,7 @@ DocsData = {
     "locus": "Server",
     "longname": "Subscription#stop",
     "memberof": "Subscription",
+    "module": "ddp-server",
     "name": "stop",
     "options": [],
     "params": [],
@@ -7304,6 +7515,7 @@ DocsData = {
     "locus": "Server",
     "longname": "Subscription#userId",
     "memberof": "Subscription",
+    "module": "ddp-server",
     "name": "userId",
     "scope": "instance",
     "summary": "Access inside the publish function. The id of the logged-in user, or `null` if no user is logged in."
@@ -7314,6 +7526,7 @@ DocsData = {
     "kind": "class",
     "lineno": 9,
     "longname": "Template",
+    "module": "templating",
     "name": "Template",
     "options": [],
     "params": [],
@@ -7324,10 +7537,11 @@ DocsData = {
     "deprecated": "in 1.1",
     "filepath": "blaze/template.js",
     "kind": "member",
-    "lineno": 179,
+    "lineno": 182,
     "locus": "Client",
     "longname": "Template#created",
     "memberof": "Template",
+    "module": "blaze",
     "name": "created",
     "scope": "instance",
     "summary": "Provide a callback when an instance of a template is created."
@@ -7336,21 +7550,24 @@ DocsData = {
     "deprecated": "in 1.1",
     "filepath": "blaze/template.js",
     "kind": "member",
-    "lineno": 208,
+    "lineno": 211,
     "locus": "Client",
     "longname": "Template#destroyed",
     "memberof": "Template",
+    "module": "blaze",
     "name": "destroyed",
     "scope": "instance",
     "summary": "Provide a callback when an instance of a template is destroyed."
   },
   "Template#events": {
     "filepath": "blaze/template.js",
+    "importfrompackage": "templating",
     "kind": "function",
-    "lineno": 472,
+    "lineno": 477,
     "locus": "Client",
     "longname": "Template#events",
     "memberof": "Template",
+    "module": "templating",
     "name": "events",
     "options": [],
     "params": [
@@ -7369,11 +7586,13 @@ DocsData = {
   },
   "Template#helpers": {
     "filepath": "blaze/template.js",
+    "importfrompackage": "templating",
     "kind": "function",
-    "lineno": 439,
+    "lineno": 443,
     "locus": "Client",
     "longname": "Template#helpers",
     "memberof": "Template",
+    "module": "templating",
     "name": "helpers",
     "options": [],
     "params": [
@@ -7392,11 +7611,13 @@ DocsData = {
   },
   "Template#onCreated": {
     "filepath": "blaze/template.js",
+    "importfrompackage": "templating",
     "kind": "member",
     "lineno": 65,
     "locus": "Client",
     "longname": "Template#onCreated",
     "memberof": "Template",
+    "module": "templating",
     "name": "onCreated",
     "params": [
       {
@@ -7414,11 +7635,13 @@ DocsData = {
   },
   "Template#onDestroyed": {
     "filepath": "blaze/template.js",
+    "importfrompackage": "templating",
     "kind": "member",
-    "lineno": 89,
+    "lineno": 91,
     "locus": "Client",
     "longname": "Template#onDestroyed",
     "memberof": "Template",
+    "module": "templating",
     "name": "onDestroyed",
     "params": [
       {
@@ -7436,11 +7659,13 @@ DocsData = {
   },
   "Template#onRendered": {
     "filepath": "blaze/template.js",
+    "importfrompackage": "templating",
     "kind": "member",
-    "lineno": 77,
+    "lineno": 78,
     "locus": "Client",
     "longname": "Template#onRendered",
     "memberof": "Template",
+    "module": "templating",
     "name": "onRendered",
     "params": [
       {
@@ -7460,10 +7685,11 @@ DocsData = {
     "deprecated": "in 1.1",
     "filepath": "blaze/template.js",
     "kind": "member",
-    "lineno": 195,
+    "lineno": 198,
     "locus": "Client",
     "longname": "Template#rendered",
     "memberof": "Template",
+    "module": "blaze",
     "name": "rendered",
     "scope": "instance",
     "summary": "Provide a callback when an instance of a template is rendered."
@@ -7475,17 +7701,20 @@ DocsData = {
     "locus": "Client",
     "longname": "Template.body",
     "memberof": "Template",
+    "module": "templating",
     "name": "body",
     "scope": "static",
     "summary": "The [template object](#templates_api) representing your `<body>`\ntag."
   },
   "Template.currentData": {
     "filepath": "blaze/template.js",
+    "importfrompackage": "templating",
     "kind": "function",
-    "lineno": 530,
+    "lineno": 537,
     "locus": "Client",
     "longname": "Template.currentData",
     "memberof": "Template",
+    "module": "templating",
     "name": "currentData",
     "options": [],
     "params": [],
@@ -7494,11 +7723,13 @@ DocsData = {
   },
   "Template.deregisterHelper": {
     "filepath": "blaze/template.js",
+    "importfrompackage": "templating",
     "kind": "function",
-    "lineno": 555,
+    "lineno": 565,
     "locus": "Client",
     "longname": "Template.deregisterHelper",
     "memberof": "Template",
+    "module": "templating",
     "name": "deregisterHelper",
     "options": [],
     "params": [
@@ -7523,6 +7754,7 @@ DocsData = {
     "locus": "Templates",
     "longname": "Template.dynamic",
     "memberof": "Template",
+    "module": "templating",
     "name": "dynamic",
     "options": [],
     "params": [
@@ -7551,11 +7783,13 @@ DocsData = {
   },
   "Template.instance": {
     "filepath": "blaze/template.js",
+    "importfrompackage": "templating",
     "kind": "function",
-    "lineno": 500,
+    "lineno": 505,
     "locus": "Client",
     "longname": "Template.instance",
     "memberof": "Template",
+    "module": "templating",
     "name": "instance",
     "options": [],
     "params": [],
@@ -7573,11 +7807,13 @@ DocsData = {
   },
   "Template.parentData": {
     "filepath": "blaze/template.js",
+    "importfrompackage": "templating",
     "kind": "function",
-    "lineno": 538,
+    "lineno": 546,
     "locus": "Client",
     "longname": "Template.parentData",
     "memberof": "Template",
+    "module": "templating",
     "name": "parentData",
     "options": [],
     "params": [
@@ -7597,11 +7833,13 @@ DocsData = {
   },
   "Template.registerHelper": {
     "filepath": "blaze/template.js",
+    "importfrompackage": "templating",
     "kind": "function",
-    "lineno": 547,
+    "lineno": 556,
     "locus": "Client",
     "longname": "Template.registerHelper",
     "memberof": "Template",
+    "module": "templating",
     "name": "registerHelper",
     "options": [],
     "params": [
@@ -7632,6 +7870,7 @@ DocsData = {
     "kind": "namespace",
     "lineno": 5,
     "longname": "Tracker",
+    "module": "tracker",
     "name": "Tracker",
     "scope": "global",
     "summary": "The namespace for Tracker-related methods."
@@ -7643,6 +7882,7 @@ DocsData = {
     "lineno": 153,
     "longname": "Tracker.Computation",
     "memberof": "Tracker",
+    "module": "tracker",
     "name": "Computation",
     "options": [],
     "params": [],
@@ -7656,6 +7896,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Tracker.Computation#firstRun",
     "memberof": "Tracker.Computation",
+    "module": "tracker",
     "name": "firstRun",
     "scope": "instance",
     "summary": "True during the initial run of the computation at the time `Tracker.autorun` is called, and false on subsequent reruns and at other times.",
@@ -7672,6 +7913,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Tracker.Computation#invalidate",
     "memberof": "Tracker.Computation",
+    "module": "tracker",
     "name": "invalidate",
     "options": [],
     "params": [],
@@ -7685,6 +7927,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Tracker.Computation#invalidated",
     "memberof": "Tracker.Computation",
+    "module": "tracker",
     "name": "invalidated",
     "scope": "instance",
     "summary": "True if this computation has been invalidated (and not yet rerun), or if it has been stopped.",
@@ -7701,6 +7944,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Tracker.Computation#onInvalidate",
     "memberof": "Tracker.Computation",
+    "module": "tracker",
     "name": "onInvalidate",
     "options": [],
     "params": [
@@ -7724,6 +7968,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Tracker.Computation#onStop",
     "memberof": "Tracker.Computation",
+    "module": "tracker",
     "name": "onStop",
     "options": [],
     "params": [
@@ -7747,6 +7992,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Tracker.Computation#stop",
     "memberof": "Tracker.Computation",
+    "module": "tracker",
     "name": "stop",
     "options": [],
     "params": [],
@@ -7760,6 +8006,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Tracker.Computation#stopped",
     "memberof": "Tracker.Computation",
+    "module": "tracker",
     "name": "stopped",
     "scope": "instance",
     "summary": "True if this computation has been stopped."
@@ -7770,6 +8017,7 @@ DocsData = {
     "lineno": 538,
     "longname": "Tracker.ComputationFunction",
     "memberof": "Tracker",
+    "module": "tracker",
     "name": "ComputationFunction",
     "params": [
       {
@@ -7794,6 +8042,7 @@ DocsData = {
     "lineno": 368,
     "longname": "Tracker.Dependency",
     "memberof": "Tracker",
+    "module": "tracker",
     "name": "Dependency",
     "options": [],
     "params": [],
@@ -7807,6 +8056,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Tracker.Dependency#changed",
     "memberof": "Tracker.Dependency",
+    "module": "tracker",
     "name": "changed",
     "options": [],
     "params": [],
@@ -7820,6 +8070,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Tracker.Dependency#depend",
     "memberof": "Tracker.Dependency",
+    "module": "tracker",
     "name": "depend",
     "options": [],
     "params": [
@@ -7853,6 +8104,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Tracker.Dependency#hasDependents",
     "memberof": "Tracker.Dependency",
+    "module": "tracker",
     "name": "hasDependents",
     "options": [],
     "params": [],
@@ -7875,6 +8127,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Tracker.active",
     "memberof": "Tracker",
+    "module": "tracker",
     "name": "active",
     "scope": "static",
     "summary": "True if there is a current computation, meaning that dependencies on reactive data sources will be tracked and potentially cause the current computation to be rerun.",
@@ -7891,6 +8144,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Tracker.afterFlush",
     "memberof": "Tracker",
+    "module": "tracker",
     "name": "afterFlush",
     "options": [],
     "params": [
@@ -7914,6 +8168,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Tracker.autorun",
     "memberof": "Tracker",
+    "module": "tracker",
     "name": "autorun",
     "options": [
       {
@@ -7965,6 +8220,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Tracker.currentComputation",
     "memberof": "Tracker",
+    "module": "tracker",
     "name": "currentComputation",
     "scope": "static",
     "summary": "The current computation, or `null` if there isn't one.  The current computation is the [`Tracker.Computation`](#tracker_computation) object created by the innermost active call to `Tracker.autorun`, and it's the computation that gains dependencies when reactive data sources are accessed.",
@@ -7981,6 +8237,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Tracker.flush",
     "memberof": "Tracker",
+    "module": "tracker",
     "name": "flush",
     "options": [],
     "params": [],
@@ -7994,6 +8251,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Tracker.nonreactive",
     "memberof": "Tracker",
+    "module": "tracker",
     "name": "nonreactive",
     "options": [],
     "params": [
@@ -8017,6 +8275,7 @@ DocsData = {
     "locus": "Client",
     "longname": "Tracker.onInvalidate",
     "memberof": "Tracker",
+    "module": "tracker",
     "name": "onInvalidate",
     "options": [],
     "params": [
@@ -8039,6 +8298,7 @@ DocsData = {
     "lineno": 19,
     "locus": "Anywhere",
     "longname": "check",
+    "module": "check",
     "name": "check",
     "options": [],
     "params": [
@@ -8068,8 +8328,9 @@ DocsData = {
     "filepath": "accounts-base/accounts_client.js",
     "ishelper": "true",
     "kind": "member",
-    "lineno": 412,
+    "lineno": 415,
     "longname": "currentUser",
+    "module": "accounts-base",
     "name": "currentUser",
     "scope": "global",
     "summary": "Calls [Meteor.user()](#meteor_user). Use `{{#if currentUser}}` to check whether the user is logged in."
@@ -8295,8 +8556,9 @@ DocsData = {
     "filepath": "accounts-base/accounts_client.js",
     "ishelper": "true",
     "kind": "member",
-    "lineno": 422,
+    "lineno": 425,
     "longname": "loggingIn",
+    "module": "accounts-base",
     "name": "loggingIn",
     "scope": "global",
     "summary": "Calls [Meteor.loggingIn()](#meteor_loggingin)."

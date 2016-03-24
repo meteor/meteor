@@ -1,5 +1,4 @@
-<template name="pkg_audit_argument_checks">
-{{#markdown}}
+{{#template name="pkg_audit_argument_checks"}}
 
 ## `audit-argument-checks`
 
@@ -14,5 +13,4 @@ Methods and publish functions that do not need to validate their arguments can
 simply run `check(arguments, [Match.Any])` to satisfy the
 `audit-argument-checks` coverage checker.
 
-{{/markdown}}
-</template>
+{{/template}}
