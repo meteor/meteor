@@ -20,7 +20,7 @@ After reading this guide, you'll know:
 
 Meteor integrates with [Cordova](https://cordova.apache.org), a well-known Apache open source project, to build mobile apps from the same codebase you use to create regular web apps. With the Cordova integration in Meteor, you can take your existing app and run it on an iOS or Android device with a few simple commands.
 
-A Cordova app is a web app written using HTML, CSS, and JavaScript as usual, but it runs in a web view embedded in a native app instead of in a stand-alone mobile browser. An important benefit of packaging up your web app as a Cordova app is that all your assets are bundled with the app. This ensures your app will load faster than a web app running on a remote server could, which can make a huge difference for users on slow mobile connections. Another feature of the Cordova integration in Meteor is support for [hot code push](#hot-code-push), which allows you to update your app on users' devices without going through the usual app store review process.
+A Cordova app is a web app written using HTML, CSS, and JavaScript as usual, but it runs in a [web view](#what-environment) embedded in a native app instead of in a stand-alone mobile browser. An important benefit of packaging up your web app as a Cordova app is that all your assets are bundled with the app. This ensures your app will load faster than a web app running on a remote server could, which can make a huge difference for users on slow mobile connections. Another feature of the Cordova integration in Meteor is support for [hot code push](#hot-code-push), which allows you to update your app on users' devices without going through the usual app store review process.
 
 Cordova also opens up access to certain native device features through a [plugin architecture](#cordova-plugins). Plugins allow you to use features not usually available to web apps, such as accessing the device camera or the local file system, interact with barcode or NFC readers, etc.
 
@@ -78,7 +78,7 @@ If your local machine does not (yet) fulfill the [prerequisites](#installing-pre
 
 In order to build and run mobile apps, you will need to install some prerequisites on your local machine.
 
-<h3 id="installing-prerequisites-ios-on-mac">iOS on Mac</h3>
+<h3 id="installing-prerequisites-ios">iOS</h3>
 
 In order to build and run iOS apps, you will need a Mac with Xcode 7.2 or higher installed.
 
@@ -92,30 +92,50 @@ After the download and installation completes, you will need to accept the licen
 
 A shortcut is to run `sudo xcodebuild -license accept` from the command line. (You will still be expected to have read and understood the [Xcode and Apple SDKs Agreement](https://www.apple.com/legal/sla/docs/xcode.pdf)).
 
-<h3 id="installing-prerequisites-android-on-mac">Android on Mac</h3>
+<h3 id="installing-prerequisites-android">Android</h3>
 
-In order to build and run Android apps on a Mac, you will need to:
+In order to build and run Android apps, you will need to:
 
 - Install a Java Development Kit (JDK)
 - Install the Android SDK and download the required tools, platforms, and other components (which is done most easily by installing Android Studio)
-- Optionally: Set `ANDROID_HOME` and add the tools directories to your `PATH`
+- Set `ANDROID_HOME` and add the tools directories to your `PATH`
 - Optionally: Create an Android Virtual Device to run apps on an emulator
 
 <h4>Installing the Java Development Kit (JDK)</h4>
 
-1. Open the [Oracle Java website](http://www.oracle.com/technetwork/java/javase/downloads/index.html), and select the Java Platform (JDK)
-1. Check the box to accept the license agreement, and select the Mac OS X disk image file (`jdk-8u**-macosx-x64.dmg`)
-1. Open the downloaded disk image, launch the installer, and complete the installation steps.
+> On Linux, you may want to use your distribution's package manager to install a JDK; on Ubuntu, you can even use [Ubuntu Make](#ubuntu-make) to install Android Studio and all dependencies at the same time.
 
-<h4>Installing the Android SDK and download the required tools, platforms, and other components</h4>
+1. Open the [Oracle Java website](http://www.oracle.com/technetwork/java/javase/downloads/index.html), and select the Java Platform (JDK)
+1. Check the box to accept the license agreement, and select the correct download for your platform
+1. After it has downloaded, launch the installer, and complete the installation steps
+
+<h4>Installing Android Studio</h4>
 
 The easiest way to get a working Android development environment is by installing [Android Studio](http://developer.android.com/sdk/index.html), which offers a setup wizard on first launch that installs the Android SDK for you, and downloads a default set of tools, platforms, and other components that you will need to start developing.
 
-There is no need to use Android Studio if you prefer a stand-alone install however. Just make sure you install the most recent versions of the [Android SDK Tools](http://developer.android.com/sdk/index.html#Other) and download the required [additional packages](http://developer.android.com/sdk/installing/adding-packages.html) yourself using the Android SDK Manager. Make sure to select SDK Platform API 23, because that is what the version of Cordova we bundle requires.
+Please refer to [the Android Studio installation instructions](http://developer.android.com/sdk/installing/index.html?pkg=studio) for more details on the exact steps to follow.
 
-<h4>Optionally: Setting `ANDROID_HOME` and adding the tools directories to your `PATH`</h4>
+> There is no need to use Android Studio if you prefer a stand-alone install. Just make sure you install the most recent versions of the [Android SDK Tools](http://developer.android.com/sdk/index.html#Other) and download the required [additional packages](http://developer.android.com/sdk/installing/adding-packages.html) yourself using the [Android SDK Manager](http://developer.android.com/tools/help/sdk-manager.html). Make sure to select SDK Platform API 23, because that is what the version of Cordova we bundle requires.
+
+<h4 id="ubuntu-make">Using Ubuntu Make</h4>
+
+If you're running Ubuntu, the easiest way to install both a Java Development Kit and Android Studio is by using [Ubuntu Make](https://wiki.ubuntu.com/ubuntu-make), a command line tool that sets up development environments and dependencies for you.
+
+If you're on Ubuntu 14.04 LTS, you'll have to add the Ubuntu Make ppa first:
+* `sudo add-apt-repository ppa:ubuntu-desktop/ubuntu-make`
+* `sudo apt-get update`
+
+Then, you can install Ubuntu Make itself:
+* `sudo apt-get install ubuntu-make`
+
+And finally you use Ubuntu Make to install Android Studio and all dependencies:
+* `umake android`
+
+<h4>Setting `ANDROID_HOME` and adding the tools directories to your `PATH`</h4>
 
 Cordova will detect an Android SDK installed in various standard locations automatically, but in order to use tools like `android` or `adb` from the terminal, you will have to make some changes to your environment.
+
+<h5>Mac</h5>
 
 - Set the `ANDROID_HOME` environment variable to the location of the Android SDK. If you've used the Android Studio setup wizard, it should be installed in `~/Library/Android/sdk` by default.
 - Add `$ANDROID_HOME/tools`, and `$ANDROID_HOME/platform-tools` to your `PATH`
@@ -134,14 +154,6 @@ You will then have to reload `.bash_profile` (by executing `source ~./bash_profi
 The current Android emulator tends to be rather slow and can be unstable, so our recommendation is to run your app on a physical device instead.
 
 If you do want to run on an emulator however, you will have to create an Android Virtual Device (AVD) using the [AVD Manager](http://developer.android.com/tools/devices/managing-avds.html). Make sure to configure one with API level 23, because that is what the version of Cordova we bundle requires.
-
-<h3 id="installing-prerequisites-android-on-linux">Android on Linux</h3>
-
-[...]
-
-<h3 id="installing-prerequisites-android-on-windows">Android on Windows</h3>
-
-[...]
 
 <h2 id ="running-your-app">Running your app on a mobile device for development</h2>
 
