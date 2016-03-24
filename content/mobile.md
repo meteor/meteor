@@ -414,21 +414,21 @@ The same syntax can be used for `api.use`, `api.imply`, and `api.export`.
 
 <h3 id="accessing-local-files">Accessing local files</h3>
 
-[...]
+[Most of this section still needs to be written.]
 
 The plugin allows for local file access on both iOS and Android. You can construct file system URLs manually (`http://localhost:<port>/local-filesystem/<path>`) or use `WebAppLocalServer.localFileSystemUrl()` to convert `file://` URLs received from plugins like `cordova-plugin-file` and `cordova-plugin-camera`.
 
 <h3 id="cors">Understanding cross-origin resource sharing (CORS)</h3>
 
-[...]
+[This section still needs to be written.]
 
 <h2 id="mobile-ux">Creating a good mobile user experience</h2>
 
-[...]
+[This section still needs to be written.]
 
 <h2 id="configuring-your-app">Configuring your app</h2>
 
-[...]
+[This section still needs to be written. For now, refer to the documentation for [`mobile-config.js`](http://docs.meteor.com/#/full/mobileconfigjs).]
 
 <h2 id="building-and-submitting">Submitting your mobile app to the store</h2>
 
