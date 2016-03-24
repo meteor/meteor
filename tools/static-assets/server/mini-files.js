@@ -90,7 +90,7 @@ var wrapPathFunction = function (name, partialPaths) {
 
 files.pathJoin = wrapPathFunction("join", true);
 files.pathNormalize = wrapPathFunction("normalize");
-files.pathRelative = wrapPathFunction("relative", true);
+files.pathRelative = wrapPathFunction("relative");
 files.pathResolve = wrapPathFunction("resolve");
 files.pathDirname = wrapPathFunction("dirname");
 files.pathBasename = wrapPathFunction("basename");

@@ -153,7 +153,11 @@ function resolveInNodeModules(id) {
   var absId;
 
   sortedNodeModulesPaths.some(function (prefix) {
-    var relId = files.pathRelative(prefix, id);
+    var relId = files.pathRelative(
+      files.pathJoin(".", prefix),
+      files.pathJoin(".", id)
+    );
+
     if (relId.slice(0, 2) !== "..") {
       return absId =
         files.pathJoin(nodeModulesRegistry[prefix], relId);
