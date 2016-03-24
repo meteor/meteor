@@ -256,6 +256,8 @@ However, it is important to realize that hot code push can only be used to updat
 
 In order to avoid a situation where JavaScript code that relies on changed native code is pushed to a client, we calculate a compatibility version from the Cordova platform and plugin versions, and only download a new version to a device when there is an exact match. This means any change to the list of plugins, or updating to a Meteor release which contains a new platform version, will block hot code push to existing mobile clients until the app has been updated from the store.
 
+Something else to keep in mind is that your server-side code should be prepared to handle requests from older client versions, which may not yet have been updated. As you make changes to your data schema or publication functions for example, you may want to reflect on how this will impact backwards compatibility.
+
 <h3 id="configuring-server-for-hot-code-push">Configuring your server for hot code push</h3>
 
 As mentioned before, mobile apps need to be able to [connect to a server](#connecting-to-the-server) to support hot code push. In production, you will need to specify which server to connect to [when building the app](#building-for-production) using the `--server` option. The specified server address is used to set `ROOT_URL` in `__meteor_runtime_config__`, which is defined as part of the generated `index.html` in the app bundle.
