@@ -4,7 +4,7 @@
 
 * Enable ES2015 and CommonJS modules in Meteor apps and packages, on
   both client and server. Also let you install modules in apps and
-  package by running `npm install`. See: https://github.com/meteor/meteor/blob/release-1.3/packages/modules/README.md
+  package by running `npm install`. See: https://github.com/meteor/meteor/blob/master/packages/modules/README.md
 
 * Enable ES2015 generators and ES2016 async/await in the `ecmascript`
   package.
