@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Collection of small helpers: _.map, _.each, ...",
-  version: '1.0.6-rc.9'
+  version: '1.0.6-rc.10'
 });
 
 Package.onUse(function (api) {
