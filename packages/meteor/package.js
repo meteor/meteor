@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Core Meteor environment",
-  version: '1.1.12-rc.9'
+  version: '1.1.12-rc.10'
 });
 
 Package.registerBuildPlugin({

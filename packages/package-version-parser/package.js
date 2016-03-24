@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Parses Meteor Smart Package version strings",
-  version: "3.0.6-rc.9"
+  version: "3.0.6-rc.10"
 });
 
 Package.onUse(function (api) {
