@@ -3728,7 +3728,7 @@ milesmatthias, Primigenus, raix, timhaines, and xenolf.
   slashes.
 
 * Spark improvements:
-  * Improve rendering of <SELECT> elements on IE.  [#496](https://github.com/meteor/meteor/issues/496)
+  * Improve rendering of `<SELECT>` elements on IE.  [#496](https://github.com/meteor/meteor/issues/496)
   * Don't lose nested data contexts in IE9/10 after two seconds.  [#458](https://github.com/meteor/meteor/issues/458)
   * Don't print a stack trace if DOM nodes are manually removed
     from the document without calling `Spark.finalize`.  [#392](https://github.com/meteor/meteor/issues/392)
