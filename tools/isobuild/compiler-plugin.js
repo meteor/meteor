@@ -851,6 +851,12 @@ export class PackageSourceBatch {
   }
 
   static _warnAboutMissingModules(missingNodeModules) {
+    if (! Console.isLevelEnabled(Console.LEVEL_WARN)) {
+      // These are only warnings, so don't spend any more time here if
+      // warnings are not enabled.
+      return;
+    }
+
     const topLevelMissingIDs = {};
     const warnings = [];
 
