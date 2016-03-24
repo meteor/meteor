@@ -21,8 +21,7 @@ import superspawn from 'cordova-lib/node_modules/cordova-common/src/superspawn.j
 import PluginInfoProvider from 'cordova-lib/node_modules/cordova-common/src/PluginInfo/PluginInfoProvider.js';
 
 import { CORDOVA_PLATFORMS, CORDOVA_PLATFORM_VERSIONS, displayNameForPlatform, displayNamesForPlatforms,
-  newPluginId, convertPluginVersions, convertToGitUrl,
-  installationInstructionsUrlForPlatform } from './index.js';
+  newPluginId, convertPluginVersions, convertToGitUrl } from './index.js';
 import { CordovaBuilder } from './builder.js';
 
 cordova_events.on('verbose', logIfVerbose);
@@ -306,12 +305,9 @@ ${displayNameForPlatform(platform)}`);
       Console.info(`Your system does not yet seem to fulfill all requirements \
 to build apps for ${displayNameForPlatform(platform)}.`);
 
-      const url = installationInstructionsUrlForPlatform(platform);
-      if (url) {
-        Console.info();
-        Console.info("Please follow the installation instructions here:");
-        Console.info(Console.url(url));
-      }
+      Console.info();
+      Console.info("Please follow the installation instructions in the mobile guide:");
+      Console.info(Console.url("http://guide.meteor.com/mobile.html#installing-prerequisites"));
 
       Console.info();
 
