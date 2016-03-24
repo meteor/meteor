@@ -740,12 +740,28 @@ export default class ImportScanner {
       main = pkg.browser;
     }
 
+    // Output a JS module that exports just the "name", "version", and
+    // "main" properties defined in the package.json file.
+    const pkgSubset = {
+      name: pkg.name,
+    };
+
+    if (has(pkg, "version")) {
+      pkgSubset.version = pkg.version;
+    }
+
+    if (isString(main)) {
+      pkgSubset.main = main;
+    }
+
+    this._addPkgJsonToOutput(pkgJsonPath, pkgSubset);
+
     if (isString(main)) {
       // The "main" field of package.json does not have to begin with ./
       // to be considered relative, so first we try simply appending it to
       // the directory path before falling back to a full resolve, which
       // might return a package from a node_modules directory.
-      const resolved = this._joinAndStat(dirPath, main) ||
+      return this._joinAndStat(dirPath, main) ||
         // The _tryToResolveImportedPath method takes a file object as its
         // first parameter, but only the .sourcePath property is ever
         // used, so we can get away with passing a fake file object with
@@ -753,24 +769,6 @@ export default class ImportScanner {
         this._tryToResolveImportedPath({
           sourcePath: pathRelative(this.sourceRoot, pkgJsonPath),
         }, main, seenDirPaths);
-
-      if (resolved) {
-        // Output a JS module that exports just the "name", "version", and
-        // "main" properties defined in the package.json file.
-        const pkgSubset = {
-          name: pkg.name,
-        };
-
-        if (has(pkg, "version")) {
-          pkgSubset.version = pkg.version;
-        }
-
-        pkgSubset.main = main;
-
-        this._addPkgJsonToOutput(pkgJsonPath, pkgSubset);
-
-        return resolved;
-      }
     }
 
     return null;
