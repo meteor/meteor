@@ -156,11 +156,11 @@ function resolveInNodeModules(id) {
     var relId = files.pathRelative(prefix, id);
     if (relId.slice(0, 2) !== "..") {
       return absId =
-        files.pathResolve(nodeModulesRegistry[prefix], relId);
+        files.pathJoin(nodeModulesRegistry[prefix], relId);
     }
   });
 
-  return absId && tryResolve(absId);
+  return absId && tryResolve(files.convertToOSPath(absId));
 }
 
 function resolveInDevBundle(id) {
