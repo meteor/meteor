@@ -58,7 +58,7 @@ meteor
 
 5. [Atmosphere](https://atmospherejs.com) is the repository of community packages designed especially for Meteor.
 
-6. The [projects](https://www.meteor.com/projects) section of the Meteor website describes the projects that make up the Meteor platform. 
+6. The [projects](https://www.meteor.com/projects) section of the Meteor website describes the projects that make up the Meteor platform.
 
 <h2 id="what-is-it">What is the Meteor Guide?</h2>
 
@@ -91,3 +91,10 @@ An important function of the guide is to **shape future development** in the Met
 Similarly, gaps in the platform highlighted by the guide can often be plugged by **community packages**; we hope that if you see an opportunity to improve the Meteor workflow by writing a package, that you take it! If you're not sure how best to design or architect your package, reach out on the forums and start a discussion.
 
 
+3. Visit the [Meteor discussion forums](https://forums.meteor.com) to announce projects, get help, talk about the community, or discuss changes to core.
+
+4. The [Meteor docs](https://docs.meteor.com) is the best place to find the core API documentation of the platform.
+
+5. [Atmosphere](https://atmospherejs.com) is the repository of community packages designed especially for Meteor.
+
+6. The [projects](https://www.meteor.com/projects) section of the Meteor website describes the projects that make up the Meteor platform.

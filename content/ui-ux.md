@@ -2,6 +2,7 @@
 title: User Interfaces
 order: 8
 description: General tips for structuring your UI code, independent of your view rendering technology.
+discourseTopicId: 19665
 ---
 
 After reading this guide, you'll know:
@@ -17,17 +18,17 @@ After reading this guide, you'll know:
 
 In Meteor, we officially support three user interface (UI) rendering libraries, [Blaze](blaze.html), [React](http://react-in-meteor.readthedocs.org/en/latest/) and [Angular](http://www.angular-meteor.com).
 
-Regardless of the rendering library that you are using, there are some patterns in how you build your User Interface (UI) that will help make your app's code easier to understand, test, and maintain. These patterns, much like general patterns of modularity, revolve around making the interfaces to your UI elements very clear, and avoiding using techniques that bypass these known interfaces.
+Regardless of the rendering library that you are using, there are some patterns in how you build your User Interface (UI) that will help make your app's code easier to understand, test, and maintain. These patterns, much like general patterns of modularity, revolve around making the interfaces to your UI elements very clear and avoiding using techniques that bypass these known interfaces.
 
-In this article, we'll refer to the elements in your user interface as "components". Although in some systems, you may refer to them as "templates", it can be a good idea to think of them as something more like a component which has an API and internal logic, rather than a template which is just a bit of HTML.
+In this article, we'll refer to the elements in your user interface as "components". Although in some systems, you may refer to them as "templates", it can be a good idea to think of them as something more like a component, which has an API and internal logic, rather than a template, which is just a bit of HTML.
 
-To begin with, let's consider two categories of UI components that are useful to think about, "smart" and "reusable":
+To begin with, let's consider two categories of UI components that are useful to think about, "reusable" and "smart":
 
 <h3 id="reusable-components">Reusable components</h3>
 
 A "reusable" component is a component which doesn't rely on anything from the environment it renders in. It renders purely based on its direct inputs (its *template arguments* in Blaze, or *props* in React) and internal state.
 
-In Meteor specifically, this means a component which does not access data from any global sources---Collections, Stores, routers, user data, or similar. For instance, in the Todos example app, the `Lists_show` template takes in the list it is rendering and the set of todos for that list, and does not ever look directly in the `Todos` or `Lists` collections.
+In Meteor specifically, this means a component which does not access data from any global sources---Collections, Stores, routers, user data, or similar. For instance, in the Todos example app, the `Lists_show` template takes in the list it is rendering and the set of todos for that list, and it never looks directly in the `Todos` or `Lists` collections.
 
 Reusable components have many advantages:
 

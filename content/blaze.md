@@ -2,6 +2,7 @@
 title: Blaze
 order: 9
 description: How to use Blaze, Meteor's frontend rendering system, to build usable and maintainable user interfaces.
+discourseTopicId: 19666
 ---
 
 After reading this guide, you'll know:
@@ -89,7 +90,7 @@ Template.Todos_item.helpers({
     const classname = options.hash.classname || 'checked';
     if (todo.checked) {
       return classname;
-    } else if (kws.hash.noClass) {
+    } else if (options.hash.noClass) {
       return `no-${classname}`;
     }
   }
@@ -321,7 +322,7 @@ Template.Lists_show.helpers({
 
 Template.Lists_show.events({
   'click .js-cancel'(event, instance) {
-    instance.state.set('editing', false);
+    instance.state.set('editingTodo', false);
   }
 });
 ```
