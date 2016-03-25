@@ -24,7 +24,7 @@ A Cordova app is a web app written using HTML, CSS, and JavaScript as usual, but
 
 Cordova also opens up access to certain native device features through a [plugin architecture](#cordova-plugins). Plugins allow you to use features not usually available to web apps, such as accessing the device camera or the local file system, interact with barcode or NFC readers, etc.
 
-Because a Cordova app is  a web app, this means you use standard web elements to create your user interface instead of relying on platform-specific native UI components. Creating a good [mobile user experience](#mobile-ux) is an art in itself, but is fortunately helped by the availability of various frameworks and libraries.
+Because a Cordova app is  a web app, this means you use standard web elements to create your user interface instead of relying on platform-specific native UI components. Creating a good mobile user experience is an art in itself, but is fortunately helped by the availability of various frameworks and libraries.
 
 > <h4 id="what-about-phonegap">What about PhoneGap?</h4>
 
@@ -445,10 +445,6 @@ In addition to the domain whitelisting mechanism Cordova implements, the web vie
 What is often confusing to people is that setting `App.accessRule` is not enough to allow access to remote resources. While domain whitelisting allows the client to control which domains it can connect to, additional restrictions based on the [same-origin policy](https://developer.mozilla.org/en-US/docs/Web/Security/Same-origin_policy) also apply. By default, web views will not allow  cross-origin HTTP requests initiated from JavaScript for instance, so you will likely run into this when using [`XMLHttpRequest`](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest).
 
 To get around these restrictions, you'll have to use what is known as [Cross-Origin Resource Sharing (CORS)](https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS). In contrast to the whitelisting mechanism configured on the client, CORS relies on headers set by the server. In other words, in order to allow access to a remote resource, you may have to make configuration changes on the server, such as setting a `Access-Control-Allow-Origin` header.
-
-<h2 id="mobile-ux">Creating a good mobile user experience</h2>
-
-[This section still needs to be written.]
 
 <h2 id="configuring-your-app">Configuring your app</h2>
 
