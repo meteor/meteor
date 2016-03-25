@@ -5,6 +5,7 @@
 
 var assert = require('assert');
 var cleanup = require('../tool-env/cleanup.js');
+var fs = require('fs');
 var files = require('../fs/files.js');
 var os = require('os');
 var _ = require('underscore');
@@ -131,36 +132,50 @@ meteorNpm.dependenciesArePortable = function (nodeModulesDir) {
     "node_modules"
   );
 
-  var search = function (dir, shouldCache) {
-    return _.find(files.readdir(dir), function (itemName) {
-      if (itemName.match(/\.node$/)) {
-        return true;
+  function isPortable(dir, shouldCache) {
+    return files.readdir(dir).every(itemName => {
+      const item = files.pathJoin(dir, itemName);
+
+      if (! files.lstat(item).isDirectory()) {
+        // Non-directory files are portable unless they end with .node.
+        return ! itemName.endsWith(".node");
       }
-      var item = files.pathJoin(dir, itemName);
-      if (files.lstat(item).isDirectory()) {
-        if (shouldCache) {
-          // Cache previous results by writing a boolean value to a hidden
-          // file called .meteor-portable. Although it's tempting to write
-          // this file once for the whole node_modules directory, it's
-          // important that we put separate files in the individual
-          // top-level package directories so that they will get cleared
-          // away the next time those packages are (re)installed.
-          const portableFile = files.pathJoin(item, ".meteor-portable");
-          if (files.exists(portableFile)) {
-            return ! JSON.parse(files.readFile(portableFile));
-          }
-          const result = search(item);
-          files.writeFile(portableFile, JSON.stringify(! result) + "\n");
-          return result;
-        }
-        return search(item);
+
+      if (! shouldCache) {
+        // Once we stop caching, we keep calling isPortable recursively
+        // without caching.
+        return isPortable(item);
       }
-    }) || false;
-  };
+
+      // Cache previous results by writing a boolean value to a hidden
+      // file called .meteor-portable. Although it's tempting to write
+      // this file once for the whole node_modules directory, it's
+      // important that we put separate files in the individual top-level
+      // package directories so that they will get cleared away the next
+      // time those packages are (re)installed.
+      const portableFile = files.pathJoin(item, ".meteor-portable");
+      if (files.exists(portableFile)) {
+        return JSON.parse(files.readFile(portableFile));
+      }
+
+      const result = isPortable(item);
+
+      // Write the .meteor-portable file asynchronously, and don't worry
+      // if it fails, e.g. because the file system is read-only (#6591).
+      // Failing to write the file only means more work next time.
+      fs.writeFile(
+        portableFile,
+        JSON.stringify(result) + "\n",
+        (error) => {}
+      );
+
+      return result;
+    });
+  }
 
   // Only check/write .meteor-portable files in each of the top-level
   // package directories.
-  return ! search(nodeModulesDir, true);
+  return isPortable(nodeModulesDir, true);
 };
 
 var makeNewPackageNpmDir = function (newPackageNpmDir) {
