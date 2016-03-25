@@ -412,15 +412,39 @@ The same syntax can be used for `api.use`, `api.imply`, and `api.export`.
 
 <h2 id="accessing-local-files-and-remote-resources">Accessing local files and remote resources</h2>
 
+As a web app, Cordova apps are subject to various security mechanisms designed to protect the integrity of your code and to avoid certain types of attacks. Which security mechanisms are in use may depend on the type and version of the web view your app runs in. In addition, Cordova itself, and in some cases the OS, adds different levels of access control that may also affect what content can and cannot be loaded. All this can make it fairly confusing to understand why something is not working, and even harder to understand the security implications of the various ways of configuring these mechanisms.
+
 <h3 id="accessing-local-files">Accessing local files</h3>
 
-[Most of this section still needs to be written.]
+Because the Cordova integration in Meteor does not serve your app from `file://` URLs, access to local files through `file://` URLs is not allowed either due to the [same-origin policy](https://developer.mozilla.org/en-US/docs/Web/Security/Same-origin_policy).
 
-The plugin allows for local file access on both iOS and Android. You can construct file system URLs manually (`http://localhost:<port>/local-filesystem/<path>`) or use `WebAppLocalServer.localFileSystemUrl()` to convert `file://` URLs received from plugins like `cordova-plugin-file` and `cordova-plugin-camera`.
+The file serving mechanism used in Meteor allows for local file access through URLs of the form `http://localhost:<port>/local-filesystem/<path>`) however. You can construct these file system URLs manually, or use `WebAppLocalServer.localFileSystemUrl()` to convert `file://` URLs. You can use this to convert URLs received from plugins like `cordova-plugin-file` and `cordova-plugin-camera` for example.
 
-<h3 id="cors">Understanding cross-origin resource sharing (CORS)</h3>
+<h3 id="accessing-local-files">Domain whitelisting</h3>
 
-[This section still needs to be written.]
+Cordova controls access to external domains through a whitelisting mechanism, which is implemented as [`cordova-plugin-whitelist`](https://github.com/apache/cordova-plugin-whitelist) in the version of Cordova we bundle.
+
+By default, Cordova apps in Meteor are only allowed access to `localhost` (to serve the app from) and the server your app connects to for data loading and hot code push (either an automatically detected IP address an explicitly configured mobile server domain).
+
+In Meteor, you use [`App.accessRule`](http://docs.meteor.com/#/full/App-accessRule) in `mobile-config.js` to set additional rules. (These correspond to `<access>`, `<allow-navigation>` and `<allow-intent>` tags in the generated`config.xml`.)
+
+> On iOS, these settings also control [Application Transport Security (ATS)](https://developer.apple.com/library/prerelease/ios/documentation/General/Reference/InfoPlistKeyReference/Articles/CocoaKeys.html#//apple_ref/doc/uid/TP40009251-SW33), which is an OS level mechanism to enforce security best practices new to iOS 9. If the server you're connecting to does not (yet) fulfill these requirements, you can use additional options to override them for specific domains:
+> ```js
+App.accessRule('https://domain.com', {
+  'minimum-tls-version': 'TLSv1.0',
+  'requires-forward-secrecy': false,
+});
+```
+
+<h3 id="csp">Content Security Policy (CSP)</h3>
+
+In addition to the domain whitelisting mechanism Cordova implements, the web view itself may also enforce access rules through [Content Security Policy (CSP)](https://developer.mozilla.org/en-US/docs/Web/Security/CSP). For now, Meteor adds a permissive `<meta http-equiv="Content-Security-Policy" content="..."` header to the generated index page. We may want to allow more fine grained control in the future (through integrating with the `browser-policy` package for instance.)
+
+<h3 id="cors">Cross-Origin Resource Sharing (CORS)</h3>
+
+What is often confusing to people is that setting `App.accessRule` is not enough to allow access to remote resources. While domain whitelisting allows the client to control which domains it can connect to, additional restrictions based on the [same-origin policy](https://developer.mozilla.org/en-US/docs/Web/Security/Same-origin_policy) also apply. By default, web views will not allow  cross-origin HTTP requests initiated from JavaScript for instance, so you will likely run into this when using [`XMLHttpRequest`](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest).
+
+To get around these restrictions, you'll have to use what is known as [Cross-Origin Resource Sharing (CORS)](https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS). In contrast to the whitelisting mechanism configured on the client, CORS relies on headers set by the server. In other words, in order to allow access to a remote resource, you may have to make configuration changes on the server, such as setting a `Access-Control-Allow-Origin` header.
 
 <h2 id="mobile-ux">Creating a good mobile user experience</h2>
 
