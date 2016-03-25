@@ -109,6 +109,13 @@ describe("app modules", () => {
       "tests.js"
     );
   });
+
+  it("can be implemented by directories", () => {
+    assert.strictEqual(
+      require("./imports/dir").fellBackTo,
+      "/imports/dir/index.js"
+    );
+  });
 });
 
 describe("template modules", () => {
