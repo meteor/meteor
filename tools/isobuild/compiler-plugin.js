@@ -855,6 +855,13 @@ export class PackageSourceBatch {
     const warnings = [];
 
     _.each(missingNodeModules, (info, id) => {
+      if (info.packageName === "avital:mocha") {
+        // Silence warnings for the avital:mocha package, because we know
+        // they're spurious, and it seems poor form to spew a bunch of
+        // warnings from a package that we're recommending for testing.
+        return;
+      }
+
       if (id in serverLibPackages &&
           archinfo.matches(info.bundleArch, "os")) {
         // Packages in dev_bundle/server-lib/node_modules can always be
@@ -898,6 +905,12 @@ export class PackageSourceBatch {
           // installing meteor-node-stubs via npm below.
           id = parts.slice(2).join("/");
         }
+
+      } else if (info.packageName) {
+        // Disable warnings about relative module resolution failures in
+        // Meteor packages, since there's not much the application
+        // developer can do about those.
+        return;
       }
 
       warnings.push(`  ${JSON.stringify(id)} in ${
