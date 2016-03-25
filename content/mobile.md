@@ -452,7 +452,35 @@ To get around these restrictions, you'll have to use what is known as [Cross-Ori
 
 <h2 id="configuring-your-app">Configuring your app</h2>
 
-[This section still needs to be written. For now, refer to the documentation for [`mobile-config.js`](http://docs.meteor.com/#/full/mobileconfigjs).]
+Meteor reads a [`mobile-config.js`](http://docs.meteor.com/#/full/mobileconfigjs) file in the root of your app directory during build, and uses the settings specified there to generate Cordova's [`config.xml`](https://cordova.apache.org/docs/en/dev/config_ref/index.html).
+
+<h3 id="configuring-metadata">Metadata</h3>
+
+```js
+App.info({
+  id: 'com.meteor.examples.todos',
+  name: 'Todos',
+  version: "0.0.1"
+});
+```
+
+<h3 id="configuring-preferences">Preferences</h3>
+
+```
+App.setPreference('BackgroundColor', '0xff0000ff');
+App.setPreference('Orientation', 'default');
+App.setPreference('Orientation', 'all', 'ios');
+```
+
+Refer to the [preferences section](https://cordova.apache.org/docs/en/dev/config_ref/index.html#preference) of the Cordova documentation for more information about supported options.
+
+<h3 id="configuring-app-icons-and-launch-screens">App icons and launch screens</h3>
+
+Although Meteor includes a standard set of app icons and launch screens, you'll most likely want to configure your own images.
+
+You configure these images with [`App.icons`](http://docs.meteor.com/#/full/App-icons) and [`App.launchScreens`](http://docs.meteor.com/#/full/App-launchScreens), which both use names to refer to the various supported image sizes (see API documentation).
+
+For iOS, you can also refer to the [Icon and image sizes](https://developer.apple.com/library/ios/documentation/UserExperience/Conceptual/MobileHIG/IconMatrix.html) in the iOS Human Interface Guidelines for more information about the way these different sizes are used.
 
 <h2 id="building-and-submitting">Submitting your mobile app to the store</h2>
 
