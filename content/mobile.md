@@ -278,13 +278,13 @@ By default, the startup timeout is set to 20 seconds. If your app needs more tim
 
 Cordova comes with a plugin architecture that opens up access to features not usually available to web apps. Plugins are installable add-ons that contain both JavaScript and native code, which allows them to translate calls from your web app to platform-specific APIs.
 
-The Apache Cordova project maintains a set of [core plugins](https://cordova.apache.org/docs/en/dev/guide/support/index.html#core-plugin-apis) that provide access to various native device features such as the camera, contacts, or access to the file system. But anyone can write a Cordova plugin to do basically anything that can be done from native code, and many third-party plugins are available. You can [search for plugins on the Cordova website](https://cordova.apache.org/plugins/) or directly on [NPM](https://www.npmjs.com/search?q=ecosystem%3Acordova).
+The Apache Cordova project maintains a set of [core plugins](https://cordova.apache.org/docs/en/dev/guide/support/index.html#core-plugin-apis) that provide access to various native device features such as the camera, contacts, or access to the file system. But anyone can write a Cordova plugin to do basically anything that can be done from native code, and many third-party plugins are available. You can [search for plugins on the Cordova website](https://cordova.apache.org/plugins/) or directly on [npm](https://www.npmjs.com/search?q=ecosystem%3Acordova).
 
 Be warned however, that although the core plugins are generally well maintained and up to date with the rest of Cordova, the quality of third-party plugins can be a bit of a gamble. You also have to make sure the plugin you want to use is [compatible with the Cordova platform versions Meteor bundles](#plugin-compatibility).
 
 <h3 id="installing-plugins">Installing plugins</h3>
 
-Plugins are identified by a name, which is generally the same as their NPM package name. The current convention is for plugin names to start with `cordova-plugin-`, but not all third-party plugins adhere to this.
+Plugins are identified by a name, which is generally the same as their npm package name. The current convention is for plugin names to start with `cordova-plugin-`, but not all third-party plugins adhere to this.
 
 You can add Cordova plugins to your project either directly, or as a dependency of a Meteor package.
 
@@ -310,7 +310,7 @@ This means adding the Meteor package to your project would also install the spec
 
 Because installing plugins into a Cordova project already containing plugins can lead to indeterminate results, Meteor will remove and add back all plugins whenever a change to any of the plugins in your project is made.
 
-Cordova downloads plugins from NPM, and caches them (in `~/.cordova/lib/npm_cache`) so they don't have to be downloaded repeatedly if you rebuild or use them again in another project.
+Cordova downloads plugins from npm, and caches them (in `~/.cordova/lib/npm_cache`) so they don't have to be downloaded repeatedly if you rebuild or use them again in another project.
 
 > <h4 id="plugin-compatibility">Making sure a plugin is compatible with the bundled Cordova platform versions</h4>
 

@@ -23,7 +23,7 @@ To get started with React in Meteor, you can follow along the [React tutorial](h
 
 <h3 id="using-with-meteor">Installing and using React</h3>
 
-To install React in Meteor 1.3 you should simply add it as an NPM dependency:
+To install React in Meteor 1.3 you should simply add it as an npm dependency:
 
 ```sh
 npm install --save react react-dom
@@ -66,7 +66,7 @@ meteor add static-html
 
 <h3 id="using-third-party-npm-packages">Using 3rd party packages</h3>
 
-If you'd like to use a third party React component that has been published on NPM (such as the ones you find on the [React Components site](http://react-components.com)), you can simple `npm install --save` them and `import` from within your app.
+If you'd like to use a third party React component that has been published on npm (such as the ones you find on the [React Components site](http://react-components.com)), you can simple `npm install --save` them and `import` from within your app.
 
 For example, to use the excellent [Griddle](http://griddlegriddle.github.io/Griddle/) React package, you could run
 
@@ -74,7 +74,7 @@ For example, to use the excellent [Griddle](http://griddlegriddle.github.io/Grid
 npm install --save griddle-react
 ```
 
-Then, like with any other [NPM package](using-packages.html#npm), you can import the component in your application:
+Then, like with any other [npm package](using-packages.html#npm), you can import the component in your application:
 
 ```js
 import React from 'react';
@@ -302,10 +302,10 @@ These include some notable differences like:
 
 <h3 id="atmosphere-packages">Using React in Atmosphere Packages</h3>
 
-If you are writing an Atmosphere package and want to depend on React or an NPM package that itself depends on React, you can't use `Npm.depends()` and `Npm.require()`, as this will result in *2* copies of React being installed into the application (and besides `Npm.require()` only works on the server).
+If you are writing an Atmosphere package and want to depend on React or an npm package that itself depends on React, you can't use `Npm.depends()` and `Npm.require()`, as this will result in *2* copies of React being installed into the application (and besides `Npm.require()` only works on the server).
 
-Instead, you need to ask your users to install the correct NPM packages in the application itself. This will ensure that only one copy of React is shipped to the client and there are no version conflicts.
+Instead, you need to ask your users to install the correct npm packages in the application itself. This will ensure that only one copy of React is shipped to the client and there are no version conflicts.
 
-In order to check that a user has installed the correct versions of NPM packages, you can use the [`tmeasday:check-npm-versions`](https://atmospherejs.com/tmeasday/check-npm-versions) package to check dependency versions at runtime.
+In order to check that a user has installed the correct versions of npm packages, you can use the [`tmeasday:check-npm-versions`](https://atmospherejs.com/tmeasday/check-npm-versions) package to check dependency versions at runtime.
 
 XXX: not putting in code samples here as they may change and I don't want to have to remember to do it in two places.

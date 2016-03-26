@@ -83,13 +83,13 @@ Below, you can find directions for setting up automatic linting at many differen
 
 <h3 id="eslint-installing">Installing and running ESLint</h3>
 
-To setup ESLint in your application, you can install the following NPM packages:
+To setup ESLint in your application, you can install the following npm packages:
 
 ```
 npm install --save-dev eslint eslint-plugin-react eslint-plugin-meteor eslint-config-airbnb
 ```
 
-You can also add a `eslintConfig` section to your `package.json` to specify that you'd like to use the AirBnB config, and to enable [ESLint-plugin-Meteor](https://github.com/dferber90/eslint-plugin-meteor). You can also setup any extra rules you want to change, as well as adding a lint NPM command:
+You can also add a `eslintConfig` section to your `package.json` to specify that you'd like to use the AirBnB config, and to enable [ESLint-plugin-Meteor](https://github.com/dferber90/eslint-plugin-meteor). You can also setup any extra rules you want to change, as well as adding a lint npm command:
 
 ```
 {

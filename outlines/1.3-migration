@@ -3,9 +3,9 @@
 2. Recommended changes : Modules [link to app structure guide]
   1. Applications: Move all files to imports, initialize in one spot, link via `import`
   2. Import *all* symbols from packages, including meteor core packages.
-  3. No longer use `api.exports()` in packages (?), publish to NPM if not Meteor specific (?)
+  3. No longer use `api.exports()` in packages (?), publish to npm if not Meteor specific (?)
   4. Install npm packages directly, instead of using wrapper packages (unless the wrapper package adds a synchronous API).
-  5. Install React from NPM (remove `react` package?), see React guide for more.
+  5. Install React from npm (remove `react` package?), see React guide for more.
 
 3. Recommended changes: Testing [link to testing guide]
   1. Integration testing: Migrating from velocity

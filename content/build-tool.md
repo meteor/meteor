@@ -1,7 +1,7 @@
 ---
 title: Build system
 order: 12
-description: How to use Meteor's build system to compile your app, and use packages from Atmosphere and NPM.
+description: How to use Meteor's build system to compile your app, and use packages from Atmosphere and npm.
 discourseTopicId: 19669
 ---
 
@@ -151,7 +151,7 @@ meteor add juliancwirko:postcss
 meteor add standard-minifiers-js
 ```
 
-Then we can install any NPM CSS processing packages that we'd like to use and reference them from a `postcss` section of our `package.json`. In the Todos example app, we use `autoprefixer` package to increase browser support:
+Then we can install any npm CSS processing packages that we'd like to use and reference them from a `postcss` section of our `package.json`. In the Todos example app, we use `autoprefixer` package to increase browser support:
 
 ```
 {

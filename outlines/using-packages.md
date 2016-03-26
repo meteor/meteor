@@ -21,7 +21,7 @@
   3. `.meteor/versions` means repeatable builds (?)
   4. Atmosphere packages can include npm dependencies, managed for you.
 3. Installing and using Npm packages
-  1. You should install NPM 2.
+  1. You should install npm 2.
   2. You should create a `package.json` -- `npm init`
   3. Install with `npm install --save package-name`
   4. Then run `npm-shinkwrap`
@@ -31,7 +31,7 @@
     - Some packages may rely on you installing a certain version of a node module in your app.
     - https://paper.dropbox.com/doc/node_modules-guidespec-HoFTXTb77FlFR287yYZYW
 4. Advanced Package use:
-  1. Dealing w/ callbacks in NPM packages (content from http://guide.meteor.com/build-tool.html#npm-callbacks)
+  1. Dealing w/ callbacks in npm packages (content from http://guide.meteor.com/build-tool.html#npm-callbacks)
   2. Overriding core/3rd party Atmosphere packages (content from http://guide.meteor.com/build-tool.html#atmosphere
   3. Overriding npm packages? (actually I don't know how to do this)
   4. Using `shrinkpack` to avoid depending on npm for deployments etc.
