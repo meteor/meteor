@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Allows templates to be defined in .html files",
-  version: '1.1.7-rc.12'
+  version: '1.1.7-rc.13'
 });
 
 // Today, this package is closely intertwined with Handlebars, meaning
