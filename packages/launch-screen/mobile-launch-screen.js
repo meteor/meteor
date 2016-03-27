@@ -24,6 +24,7 @@ LaunchScreen = {
         return;
 
       if (! released) {
+        released = true;
         holdCount--;
         if (holdCount === 0 &&
             typeof navigator !== 'undefined' && navigator.splashscreen) {
