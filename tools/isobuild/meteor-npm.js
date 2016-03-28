@@ -3,7 +3,9 @@
 /// and a variety of related commands. Notably, we use `npm shrinkwrap`
 /// to ensure we get consistent versions of npm sub-dependencies.
 
+var assert = require('assert');
 var cleanup = require('../tool-env/cleanup.js');
+var fs = require('fs');
 var files = require('../fs/files.js');
 var os = require('os');
 var _ = require('underscore');
@@ -117,27 +119,63 @@ meteorNpm.updateDependencies = function (packageName,
 // expect it to work, rather than containing native extensions that
 // were built just for our architecture), else
 // false. updateDependencies should first be used to bring
-// packageNpmDir up to date.
-meteorNpm.dependenciesArePortable = function (packageNpmDir) {
+// nodeModulesDir up to date.
+meteorNpm.dependenciesArePortable = function (nodeModulesDir) {
   // We use a simple heuristic: we check to see if a package (or any
   // of its transitive depedencies) contains any *.node files. .node
   // is the extension that signals to Node that it should load a file
   // as a shared object rather than as JavaScript, so this should work
   // in the vast majority of cases.
 
-  var search = function (dir) {
-    return _.find(files.readdir(dir), function (itemName) {
-      if (itemName.match(/\.node$/)) {
-        return true;
-      }
-      var item = files.pathJoin(dir, itemName);
-      if (files.lstat(item).isDirectory()) {
-        return search(item);
-      }
-    }) || false;
-  };
+  assert.strictEqual(
+    files.pathBasename(nodeModulesDir),
+    "node_modules"
+  );
 
-  return ! search(files.pathJoin(packageNpmDir, 'node_modules'));
+  function isPortable(dir, shouldCache) {
+    return files.readdir(dir).every(itemName => {
+      const item = files.pathJoin(dir, itemName);
+
+      if (! files.lstat(item).isDirectory()) {
+        // Non-directory files are portable unless they end with .node.
+        return ! itemName.endsWith(".node");
+      }
+
+      if (! shouldCache) {
+        // Once we stop caching, we keep calling isPortable recursively
+        // without caching.
+        return isPortable(item);
+      }
+
+      // Cache previous results by writing a boolean value to a hidden
+      // file called .meteor-portable. Although it's tempting to write
+      // this file once for the whole node_modules directory, it's
+      // important that we put separate files in the individual top-level
+      // package directories so that they will get cleared away the next
+      // time those packages are (re)installed.
+      const portableFile = files.pathJoin(item, ".meteor-portable");
+      if (files.exists(portableFile)) {
+        return JSON.parse(files.readFile(portableFile));
+      }
+
+      const result = isPortable(item);
+
+      // Write the .meteor-portable file asynchronously, and don't worry
+      // if it fails, e.g. because the file system is read-only (#6591).
+      // Failing to write the file only means more work next time.
+      fs.writeFile(
+        portableFile,
+        JSON.stringify(result) + "\n",
+        (error) => {}
+      );
+
+      return result;
+    });
+  }
+
+  // Only check/write .meteor-portable files in each of the top-level
+  // package directories.
+  return isPortable(nodeModulesDir, true);
 };
 
 var makeNewPackageNpmDir = function (newPackageNpmDir) {
@@ -228,15 +266,14 @@ var updateExistingNpmDirectory = function (packageName, newPackageNpmDir,
   //     be careful not to make the common case of no changes too
   //     slow.
   if (_.isEqual(installedDependencies, npmDependencies)) {
-    // OK, so what we have installed matches the top-level dependencies
-    // specified in `Npm.depends`. But what if we just pulled a change in
-    // npm-shrinkwrap.json to an indirectly used module version? We'll have to
-    // compare more carefully.  First, normalize the tree (strip irrelevant
-    // fields and normalize to 'version').
-    var minimizedInstalled = minimizeDependencyTree(installedDependenciesTree);
-    // If what we have installed is the same as what we have shrinkwrapped, then
-    // we're done.
-    if (_.isEqual(minimizedInstalled, shrinkwrappedDependenciesTree)) {
+    // What we have installed matches the top-level dependencies specified
+    // in `Npm.depends`. But what if we just pulled a change in
+    // npm-shrinkwrap.json to an indirectly used module version? We'll
+    // have to compare more carefully. First, normalize the tree (strip
+    // irrelevant fields and normalize to 'version'). If what we have
+    // installed is the same as what we have shrinkwrapped, we're done.
+    if (_.isEqual(minimizeDependencyTree(installedDependenciesTree),
+                  minimizeDependencyTree(shrinkwrappedDependenciesTree))) {
       return;
     }
   }
@@ -452,17 +489,59 @@ var constructPackageJson = function (packageName, newPackageNpmDir,
 //     }
 //   }
 // }
-var getInstalledDependenciesTree = function (dir) {
-  var result = runNpmCommand(["ls", "--json"], dir);
+function getInstalledDependenciesTree(dir) {
+  function ls(nodeModulesDir) {
+    let contents;
+    try {
+      contents = files.readdir(nodeModulesDir).sort();
+    } finally {
+      if (! contents) return;
+    }
 
-  if (result.success) {
-    return JSON.parse(result.stdout);
+    const result = {};
+
+    contents.forEach(item => {
+      if (item.startsWith(".")) {
+        return;
+      }
+
+      const pkgDir = files.pathJoin(nodeModulesDir, item);
+      const pkgJsonPath = files.pathJoin(pkgDir, "package.json");
+
+      let pkg;
+      try {
+        pkg = JSON.parse(files.readFile(pkgJsonPath));
+      } finally {
+        if (! pkg) return;
+      }
+
+      const info = result[item] = {
+        version: pkg.version
+      };
+
+      const resolved = pkg._resolved || pkg.resolved;
+      if (resolved) {
+        info.resolved = resolved;
+      }
+
+      const from = pkg._from || pkg.from;
+      if (from) {
+        info.from = from;
+      }
+
+      const deps = ls(files.pathJoin(pkgDir, "node_modules"));
+      if (deps && ! _.isEmpty(deps)) {
+        info.dependencies = deps;
+      }
+    });
+
+    return result;
   }
 
-  buildmessage.error(`couldn't read npm version lock information: ${result.error}`);
-  // Recover by returning false from updateDependencies
-  throw new NpmFailure;
-};
+  return {
+    dependencies: ls(files.pathJoin(dir, "node_modules"))
+  };
+}
 
 var getShrinkwrappedDependenciesTree = function (dir) {
   var shrinkwrapFile = files.readFile(files.pathJoin(dir, 'npm-shrinkwrap.json'));
@@ -598,44 +677,16 @@ var ensureConnected = function () {
 };
 
 // `npm shrinkwrap`
-var shrinkwrap = function (dir) {
-  // We don't use npm.commands.shrinkwrap for two reasons:
-  // 1. As far as we could tell there's no way to completely silence the output
-  //    (the `silent` flag isn't piped in to the call to npm.commands.ls)
-  // 2. In various (non-deterministic?) cases we observed the
-  //    npm-shrinkwrap.json file not being updated
-  var result = runNpmCommand(["shrinkwrap"], dir);
-
-  if (! result.success) {
-    buildmessage.error(`couldn't run \`npm shrinkwrap\`: ${result.error}`);
-    // Recover by returning false from updateDependencies
-    throw new NpmFailure;
-  }
-
-  minimizeShrinkwrap(dir);
-};
-
-// The shrinkwrap file format contains a lot of extra data that can
-// change as you re-run the NPM-update process without actually
-// affecting what is installed. This step trims everything but the
-// most important bits from the file, so that the file doesn't change
-// unnecessary.
-//
-// This is based on an analysis of install.js in the npm module:
-//   https://github.com/isaacs/npm/blob/master/lib/install.js
-// It appears that the only things actually read from a given
-// dependency are its sub-dependencies and a single version, which is
-// read by the readWrap function; and furthermore, we can just put all
-// versions in the "version" field.
-var minimizeShrinkwrap = function (dir) {
-  var topLevel = getShrinkwrappedDependenciesTree(dir);
-  var minimized = minimizeDependencyTree(topLevel);
+function shrinkwrap(dir) {
+  const tree = getInstalledDependenciesTree(dir);
 
   files.writeFile(
-    files.pathJoin(dir, 'npm-shrinkwrap.json'),
-    // Matches the formatting done by 'npm shrinkwrap'.
-    JSON.stringify(minimized, null, 2) + '\n');
-};
+    files.pathJoin(dir, "npm-shrinkwrap.json"),
+    JSON.stringify(tree, null, 2) + "\n"
+  );
+
+  return tree;
+}
 
 // Reduces a dependency tree (as read from a just-made npm-shrinkwrap.json or
 // from npm ls --json) to just the versions we want. Returns an object that does
@@ -644,7 +695,7 @@ var minimizeDependencyTree = function (tree) {
   var minimizeModule = function (module) {
     var version;
     if (module.resolved &&
-        !module.resolved.match(/^https:\/\/registry.npmjs.org\//)) {
+        !module.resolved.match(/^https?:\/\/registry.npmjs.org\//)) {
       version = module.resolved;
     } else if (utils.isNpmUrl(module.from)) {
       version = module.from;

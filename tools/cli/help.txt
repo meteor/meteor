@@ -276,27 +276,31 @@ tarball. See 'meteor help build' for more information.
 
 >>> build
 Build this project for all platforms.
-Usage: meteor build <output path> [--debug] [--directory]
+Usage: meteor build <output path> [--debug] [--directory] [--server-only]
           [--mobile-settings settings.json] [--server http://example.com:3000]
 
 Package this project up for deployment. The command outputs a directory with
 builds for all platforms in this project.
-
-By default, the output directory will contain just a tarball that includes
-everything necessary to run the application server. (See README in the tarball
-for details.)
 
 If you have added mobile platforms to your project with the
 'meteor add-platform' command, then the output directory will contain
 subdirectories named 'android' (with the APK bundle and Android project
 source) and/or 'ios' (with the Xcode project source).
 
+Pass `--server-only` to skip building mobile apps, but still build the
+'web.cordova' client target so the server can support hot code push
+for Cordova apps.
+
+The output directory will contain a tarball that includes everything necessary
+to run the application server. (See README in the tarball for details.)
 
 Options:
   --debug             Build in debug mode (don't minify, etc).
   --directory         Output a directory (rather than a tarball) for the
                       application server bundle. If the output location exists,
                       it will be recursively deleted first.
+  --server-only       Skip building mobile apps even if mobile platforms have
+                      been added.
   --mobile-settings   Set optional data for the initial value of Meteor.settings
                       in your mobile application. A new value for
                       Meteor.settings can be set later by the server as part of
@@ -355,7 +359,7 @@ commands can be accessed by pressing the up arrow.
 
 >>> mongo
 Connect to the Mongo database for the specified site.
-Usage: meteor mongo [--url] [site]
+Usage: meteor mongo [--url]
 
 Opens a Mongo shell to view or manipulate collections.
 
@@ -427,9 +431,12 @@ View or change authorized users and organizations for a site.
 Usage: meteor authorized <site> [--list]
        meteor authorized <site> --add <username>
        meteor authorized <site> --remove <username>
+       meteor authorized <site> --transfer <username>
 
 Without an argument (or with --list), list the users and organizations that are
 administrators for a particular site that was deployed with 'meteor deploy'
+
+For free hosting:
 
 With --add, add an authorized user or organization to a site. Use this to give
 your collaborators the ability to work with your sites.
@@ -439,9 +446,15 @@ remove yourself. (Ask someone else who is an authorized user to do it.)
 
 You can only add or remove one authorized user at a time.
 
+For Galaxy:
+
+With --transfer, transfer the ownership of the application to a new user or
+organization.
+
 Options:
-  --add         add an authorized user or organization
-  --remove      remove an authorized user or organization
+  --add         add an authorized user or organization (for free hosting)
+  --remove      remove an authorized user or organization (for free hosting)
+  --transfer    transfer the (Galaxy) app to a new user or organization
   --list        list authorized users and organizations (the default)
 
 
@@ -499,10 +512,7 @@ then all available packages will be tested.
 
 Open the test dashboard in your browser to run the tests and see the
 results. By default the URL is localhost:3000 but that can be changed
-with --port. Alternatively, you can deploy the tests onto the 'meteor
-deploy' server by using --deploy. This gives you a public URL that you
-can use in conjunction with a service like Browserling or BrowserStack
-to try the tests against many different browser versions.
+with --port. 
 
 Options:
   --port, -p        Port to listen on (instead of the default 3000). Also
@@ -516,8 +526,6 @@ Options:
                     port that the Meteor server binds to. Can include a
                     URL scheme (for example,
                     --mobile-server=https://example.com:443).
-  --deploy          Optionally, specify a domain to deploy to, rather than
-                    running locally.
   --production      Simulate production mode. Minify and bundle CSS, JS files.
   --settings        Set optional data for Meteor.settings on the server
 
@@ -532,7 +540,57 @@ Options:
   --verbose         Print all output from builds logs.
   --no-lint         Don't run linters used by the tested packages on every
                     test app rebuild.
+>>> test
+Test the application
+Usage: meteor test --driver-package <driver> [options]
+       meteor test --full-app --driver-package <driver> [options]
 
+Runs tests against the application.
+Will start a special app based on a test driver (specified with
+--driver-package -- read more about driver packages at
+http://guide.meteor.com/testing.html#driver-packages) which handles the
+task of running tests and displaying the results in the browser when you
+visit it.
+
+In normal test mode, no files in your application are eagerly loaded, aside
+from test files (files named *.test[s].* or *.spec[s].* placed anywhere 
+in your application). You can import your app's modules from within your 
+tests and use them as normal.
+
+In "full app" test mode, your app is loaded as usual, and then made hidden,
+and your tests can inspect and effect the running state. Test files are
+loaded similarly to unit test mode, but must be called *.app-test[s].* or
+*.app-spec[s].*.
+
+Open the test dashboard in your browser to run the tests and see the
+results. By default the URL is localhost:3000 but that can be changed
+with --port. 
+
+Read more about testing your application in the Testing Article of the
+Meteor Guide - https://guide.meteor.com/testing.html
+
+Options:
+  --port, -p        Port to listen on (instead of the default 3000). Also
+                    uses port N+1 and N+2.
+  --debug-port      Specify a port to enable server-side debugging. The
+                    server will be paused before any tests run, waiting
+                    for incoming connections from debugger clients.
+  --mobile-server   If running tests in an emulator or on a mobile device,
+                    the location where mobile builds connect to the
+                    Meteor server. Defaults to your local IP and the
+                    port that the Meteor server binds to. Can include a
+                    URL scheme (for example,
+                    --mobile-server=https://example.com:443).
+  --settings        Set optional data for Meteor.settings on the server
+
+  --ios,            Run tests in an emulator or on a mobile device. All of
+  --android,        the tests for client and server will run in addition to
+  --ios-device,     mobile-specific tests.
+  --android-device
+  --test-app-path   Set the directory in which to create a temporary app used
+                    for tests. Defaults to the system's temporary directory,
+                    usually /tmp.
+  --verbose         Print all output from builds logs.
 
 >>> self-test
 Run tests of the 'meteor' tool.

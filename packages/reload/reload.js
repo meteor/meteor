@@ -218,10 +218,16 @@ Reload._reload = function (options) {
 
   var tryReload = function () { _.defer(function () {
     if (Reload._migrate(tryReload, options)) {
-      // Make the browser reload the page
-      // Using location.replace() instead of location.reload() avoids
-      // validating assets with the server if we still have a fresh cached copy.
-      window.location.replace(window.location.href);
+      // We'd like to make the browser reload the page using location.replace()
+      // instead of location.reload(), because this avoids validating assets
+      // with the server if we still have a valid cached copy. This doesn't work
+      // when the location contains a hash however, because that wouldn't reload
+      // the page and just scroll to the hash location instead.
+      if (window.location.hash) {
+        window.location.reload();
+      } else {
+        window.location.replace(window.location.href);
+      }
     }
   }); };
 

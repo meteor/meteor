@@ -317,14 +317,22 @@ ol {
     font-style: italic;
 }
 
-.api-title .src-code {
+.api-title .subtext {
     font-size: 11px;
-    color: #20338A !important;
     text-align: left;
     clear: both;
-    border-bottom: none !important;
     display: block;
     font-weight: normal;
+}
+
+.api-title .subtext > code {
+  font-size: 11px;
+  margin-right: 12px;
+}
+
+.api-title .src-code {
+    color: #20338A !important;
+    border-bottom: none !important;
 }
 
 .or {
@@ -729,4 +737,23 @@ pre {
 
 .hamburger-menu:before {
     top: @hamburger-icon-size / 1.5;
+}
+
+table {
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+table th, table td {
+    border: 1px solid #ddd;
+    padding: 5px 10px;
+}
+
+table th {
+    font-weight: bold;
+    text-align: left;
+}
+
+table tr:nth-child(even) {
+    background-color: #f8f8f8;
 }

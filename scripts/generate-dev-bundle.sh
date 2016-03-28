@@ -20,8 +20,8 @@ S3_HOST="s3.amazonaws.com/com.meteor.jenkins"
 
 # Update these values after building the dev-bundle-node Jenkins project.
 # Also make sure to update NODE_VERSION in generate-dev-bundle.ps1.
-NODE_VERSION=0.10.41
-NODE_BUILD_NUMBER=19
+NODE_VERSION=0.10.43
+NODE_BUILD_NUMBER=22
 NODE_TGZ="node_${PLATFORM}_v${NODE_VERSION}.tar.gz"
 if [ -f "${CHECKOUT_DIR}/${NODE_TGZ}" ] ; then
     tar zxf "${CHECKOUT_DIR}/${NODE_TGZ}"
@@ -43,12 +43,6 @@ else
     echo "Downloading Mongo from ${MONGO_URL}"
     curl "${MONGO_URL}" | tar zx
 fi
-
-# Copy bundled npm to temporary directory so we can restore it later
-# We do this because the bundled node is built using PORTABLE=1,
-# which makes npm look for node relative to it's own directory
-# See build-node-for-dev-bundle.sh
-cp -R "$DIR/lib/node_modules/npm" "$DIR/bundled-npm"
 
 # export path so we use the downloaded node and npm
 export PATH="$DIR/bin:$PATH"
@@ -153,7 +147,7 @@ rm -rf "$DIR/bin/npm3"
 # Sanity check to see if we're not breaking anything by replacing npm
 INSTALLED_NPM_VERSION=$(cat "$DIR/lib/node_modules/npm/package.json" |
 xargs -0 node -e "console.log(JSON.parse(process.argv[1]).version)")
-if [ "$INSTALLED_NPM_VERSION" != "1.4.28" ]; then
+if [ "$INSTALLED_NPM_VERSION" != "2.14.22" ]; then
   echo "Unexpected NPM version in lib/node_modules: $INSTALLED_NPM_VERSION"
   echo "We will be replacing it with our own version because the bundled node"
   echo "is built using PORTABLE=1, which makes npm look for node relative to"
@@ -161,10 +155,6 @@ if [ "$INSTALLED_NPM_VERSION" != "1.4.28" ]; then
   echo "Update this check if you know what you're doing."
   exit 1
 fi
-
-# Overwrite lib/modules/npm with bundled npm from temporary directory
-rm -rf "$DIR/lib/node_modules/npm"
-mv -f "$DIR/bundled-npm" "$DIR/lib/node_modules/npm"
 
 echo BUNDLING
 

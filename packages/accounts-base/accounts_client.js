@@ -1,14 +1,16 @@
+import {AccountsCommon} from "./accounts_common.js";
+
 /**
  * @summary Constructor for the `Accounts` object on the client.
  * @locus Client
- * @class
+ * @class AccountsClient
  * @extends AccountsCommon
  * @instancename accountsClient
  * @param {Object} options an object with fields:
  * @param {Object} options.connection Optional DDP connection to reuse.
  * @param {String} options.ddpUrl Optional URL for creating a new DDP connection.
  */
-AccountsClient = class AccountsClient extends AccountsCommon {
+export class AccountsClient extends AccountsCommon {
   constructor(options) {
     super(options);
 
@@ -130,6 +132,7 @@ var Ap = AccountsClient.prototype;
 /**
  * @summary True if a login method (such as `Meteor.loginWithPassword`, `Meteor.loginWithFacebook`, or `Accounts.createUser`) is currently in progress. A reactive data source.
  * @locus Client
+ * @importFromPackage meteor
  */
 Meteor.loggingIn = function () {
   return Accounts.loggingIn();
@@ -330,6 +333,7 @@ Ap.makeClientLoggedIn = function (userId, token, tokenExpires) {
  * @summary Log the user out.
  * @locus Client
  * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ * @importFromPackage meteor
  */
 Meteor.logout = function (callback) {
   return Accounts.logout(callback);
@@ -339,6 +343,7 @@ Meteor.logout = function (callback) {
  * @summary Log out other clients logged in as the current user, but does not log out the client that calls this function.
  * @locus Client
  * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ * @importFromPackage meteor
  */
 Meteor.logoutOtherClients = function (callback) {
   return Accounts.logoutOtherClients(callback);

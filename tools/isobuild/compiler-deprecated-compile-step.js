@@ -271,6 +271,14 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
       return ret;
     },
 
+    _getOption(name, options) {
+      if (options && _.has(options, name)) {
+        return options[name];
+      }
+      const fileOptions = this.fileOptions;
+      return fileOptions && fileOptions[name];
+    },
+
     /**
      * @summary Works in web targets only. Add markup to the `head` or `body`
      * section of the document.
@@ -294,7 +302,8 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
       }
       resources.push({
         type: options.section,
-        data: new Buffer(files.convertToStandardLineEndings(options.data), 'utf8')
+        data: new Buffer(files.convertToStandardLineEndings(options.data), 'utf8'),
+        lazy: this._getOption("lazy", options),
       });
     },
 
@@ -334,7 +343,8 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
             inputSourceArch.pkg.serveRoot,
             files.convertToStandardPath(options.path, true))),
         sourceMap: convertSourceMapPaths(options.sourceMap,
-                                         files.convertToStandardPath)
+                                         files.convertToStandardPath),
+        lazy: this._getOption("lazy", options),
       });
     },
 
@@ -357,15 +367,15 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
       if (typeof options.data !== "string") {
         throw new Error("'data' option to addJavaScript must be a string");
       }
-      if (typeof options.sourcePath !== "string") {
-        throw new Error("'sourcePath' option must be supplied to addJavaScript. Consider passing inputPath.");
+
+      let sourcePath = this.inputPath;
+      if (_.has(options, "sourcePath") &&
+          typeof options.sourcePath === "string") {
+        sourcePath = options.sourcePath;
       }
 
-      // By default, use fileOptions for the `bare` option but also allow
-      // overriding it with the options
-      var bare = fileOptions.bare;
-      if (options.hasOwnProperty("bare")) {
-        bare = options.bare;
+      if (typeof sourcePath !== "string") {
+        throw new Error("'sourcePath' option must be supplied to addJavaScript. Consider passing inputPath.");
       }
 
       var data = new Buffer(
@@ -373,10 +383,7 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
       resources.push({
         type: "js",
         data: data,
-        // XXX Weirdly, we now ignore sourcePath even though we required
-        //     it before. We used to use it as the source path in source map
-        //     generated in linker. We now use the servePath for that, as of
-        //     b556e622. Not sure this is actually correct...
+        sourcePath,
         servePath: colonConverter.convert(
           files.pathJoin(
             inputSourceArch.pkg.serveRoot,
@@ -384,7 +391,9 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
         hash: watch.sha1(data),
         sourceMap: convertSourceMapPaths(options.sourceMap,
                                          files.convertToStandardPath),
-        bare: !! bare
+        lazy: this._getOption("lazy", options),
+        bare: !! this._getOption("bare", options),
+        mainModule: !! this._getOption("mainModule", options),
       });
     },
 

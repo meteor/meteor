@@ -17,9 +17,6 @@ var copyFile = function(from, to, sand) {
   sand.write(to, contents);
 };
 
-var localCordova = files.pathJoin(files.getDevBundle(), 'lib/node_modules/cordova/bin/cordova');
-
-
 // Given a sandbox, that has the app as its currend cwd, read the versions file
 // and read the plugins list.
 //
@@ -28,7 +25,7 @@ var getCordovaPluginsList = function(sand) {
   var env = files.currentEnvWithPathsAdded(files.getCurrentNodeBinDir());
   env.METEOR_WAREHOUSE_DIR = sand.warehouse;
 
-  var lines = selftest.execFileSync(localCordova, ['plugins'],
+  var lines = selftest.execFileSync('cordova', ['plugins'],
     {
       cwd: files.pathJoin(sand.cwd, '.meteor', 'local', 'cordova-build'),
       env: env
@@ -119,7 +116,7 @@ var checkUserPlugins = function(sand, plugins) {
 var startAppOnAndroidEmulator = function (s) {
   var run = s.run("run", "android");
   // Building and running the app on the Android Emulator can take a long time.
-  run.waitSecs(240);
+  run.waitSecs(60);
   run.match("Started app on Android Emulator");
   return run;
 }
@@ -191,7 +188,7 @@ selftest.define("add cordova plugins", ["slow", "cordova"], function () {
   run.expectExit(0);
 
   run = s.run("add", "cordova:cordova-plugin-file");
-  run.matchErr("valid version");
+  run.matchErr("exact version");
   run.expectExit(1);
 
   // The current behavior doesn't fail if a plugin is not in the registry until
@@ -258,7 +255,7 @@ selftest.define("add cordova plugins", ["slow", "cordova"], function () {
   run.expectExit(0);
 
   run = s.run("add", "cordova:com.example.plugin@file://");
-  run.matchErr("valid version");
+  run.matchErr("exact version");
   run.expectExit(1);
 
   run = s.run("add", "cordova:com.example.plugin@file://../../plugin_directory");

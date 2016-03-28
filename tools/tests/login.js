@@ -122,26 +122,3 @@ selftest.define("login", ['net'], function () {
   run.matchErr("Login failed");
   run.expectExit(1);
 });
-
-selftest.define('whoami - no username', ['net', 'slow'], function () {
-  var s = new Sandbox;
-  var email = testUtils.randomUserEmail();
-  var username = testUtils.randomString(10);
-  var appName = testUtils.randomAppName();
-  var token = testUtils.deployWithNewEmail(s, email, appName);
-
-  var run = s.run('whoami');
-  run.waitSecs(commandTimeoutSecs);
-  run.matchErr('You haven\'t chosen your username yet');
-  run.matchErr(testUtils.registrationUrlRegexp);
-  run.expectExit(1);
-  testUtils.registerWithToken(token, username, 'test', email);
-
-  run = s.run('whoami');
-  run.waitSecs(commandTimeoutSecs);
-  run.read(username);
-  run.expectExit(0);
-
-  testUtils.cleanUpApp(s, appName);
-  testUtils.logout(s);
-});

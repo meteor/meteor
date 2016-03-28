@@ -12,7 +12,7 @@ if (process.platform === "win32") {
   // Duplicated in dev-bundle-tool-package.js
   fibersVersion = "https://github.com/meteor/node-fibers/tarball/d519f0c5971c33d99c902dad346b817e84bab001";
 } else {
-  fibersVersion = "1.0.5";
+  fibersVersion = "1.0.8";
 }
 
 var packageJson = {
@@ -21,7 +21,7 @@ var packageJson = {
   version: "0.0.0",
   dependencies: {
     fibers: fibersVersion,
-    "meteor-promise": "0.5.0",
+    "meteor-promise": "0.5.1",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
     // in the package too) because we should consider using lodash instead
     // (and there are backwards-incompatible changes either way).

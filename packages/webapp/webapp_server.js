@@ -402,10 +402,6 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
     res.setHeader("Content-Type", "text/css; charset=UTF-8");
   } else if (info.type === "json") {
     res.setHeader("Content-Type", "application/json; charset=UTF-8");
-    // XXX if it is a manifest we are serving, set additional headers
-    if (/\/manifest\.json$/.test(pathname)) {
-      res.setHeader("Access-Control-Allow-Origin", "*");
-    }
   }
 
   if (info.hash) {
@@ -503,9 +499,11 @@ var runWebAppServer = function () {
         });
 
         var program = {
+          format: "web-program-pre1",
           manifest: manifest,
           version: WebAppHashing.calculateClientHash(manifest, null, _.pick(
             __meteor_runtime_config__, 'PUBLIC_SETTINGS')),
+          cordovaCompatibilityVersions: clientJson.cordovaCompatibilityVersions,
           PUBLIC_SETTINGS: __meteor_runtime_config__.PUBLIC_SETTINGS
         };
 
@@ -726,7 +724,7 @@ var runWebAppServer = function () {
       try {
         boilerplate = getBoilerplate(request, archKey);
       } catch (e) {
-        Log.error("Error running template: " + e);
+        Log.error("Error running template: " + e.stack);
         res.writeHead(500, headers);
         res.end();
         return undefined;

@@ -211,6 +211,8 @@ the guide about breaking changes here:`,
   },
 
   "1.3.0-split-minifiers-package": function (projectContext) {
+    const packagesFile = projectContext.projectConstraintsFile;
+
     // Minifiers are extracted into a new package called "standard-minifiers"
 
     if (packagesFile.getConstraint('standard-minifiers')) {
@@ -222,7 +224,7 @@ the guide about breaking changes here:`,
         'standard-minifier-js',
       ]);
     }
-    projectContext.projectConstraintsFile.writeIfModified();
+    packagesFile.writeIfModified();
   },
 
   ////////////

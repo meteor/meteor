@@ -502,30 +502,6 @@ var Sandbox = function (options) {
   self.env = {};
   self.fakeMongo = options.fakeMongo;
 
-  // By default, tests use the package server that this meteor binary is built
-  // with. If a test is tagged 'test-package-server', it uses the test
-  // server. Tests that publish packages should have this flag; tests that
-  // assume that the release's packages can be found on the server should not.
-  // Note that this only affects subprocess meteor runs, not direct invocation
-  // of packageClient!
-  if (_.contains(runningTest.tags, 'test-package-server')) {
-    if (_.has(options, 'warehouse')) {
-      // test-package-server and warehouse are basically two different ways of
-      // sort of faking out the package system for tests.  test-package-server
-      // means "use a specific production test server"; warehouse means "use
-      // some fake files we put on disk and never sync" (see _makeEnv where the
-      // offline flag is set).  Combining them doesn't make sense: either you
-      // don't sync, in which case you don't see the stuff you published, or you
-      // do sync, and suddenly the mock catalog we built is overridden by
-      // test-package-server.
-      // XXX we should just run servers locally instead of either of these
-      //     strategies
-      throw Error("test-package-server and warehouse cannot be combined");
-    }
-
-    self.set('METEOR_PACKAGE_SERVER_URL', exports.testPackageServerUrl);
-  }
-
   if (_.has(options, 'warehouse')) {
     if (!files.inCheckout()) {
       throw Error("make only use a fake warehouse in a checkout");
@@ -2011,6 +1987,5 @@ _.extend(exports, {
   expectTrue: expectTrue,
   expectFalse: expectFalse,
   execFileSync: execFileSync,
-  doOrThrow: doOrThrow,
-  testPackageServerUrl: config.getTestPackageServerUrl()
+  doOrThrow: doOrThrow
 });

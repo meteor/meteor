@@ -419,7 +419,7 @@ var StatusPoller = function (console) {
 
   self._console = console;
 
-  self._pollFiber = null;
+  self._pollPromise = null;
   self._throttledStatusPoll = new utils.Throttled({
     interval: STATUS_INTERVAL_MS
   });
@@ -436,9 +436,10 @@ _.extend(StatusPoller.prototype, {
     }
 
     self._pollPromise = (async() => {
+      utils.sleepMs(STATUS_INTERVAL_MS);
       while (! self._stop) {
-        utils.sleepMs(STATUS_INTERVAL_MS);
         self.statusPoll();
+        utils.sleepMs(STATUS_INTERVAL_MS);
       }
     })();
   },
@@ -901,11 +902,18 @@ _.extend(Console.prototype, {
   // with the CHECKMARK as the bullet point in front of it.
   success: function (message) {
     var self = this;
+    var checkmark;
 
     if (! self._pretty) {
       return self.info(message);
     }
-    var checkmark = chalk.green('\u2713'); // CHECKMARK
+
+    if (process.platform === "win32") {
+      checkmark = chalk.green('SUCCESS');
+    } else {
+      checkmark = chalk.green('\u2713'); // CHECKMARK
+    }
+
     return self.info(
         chalk.green(message),
         self.options({ bulletPoint: checkmark  + " "}));

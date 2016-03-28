@@ -1,12 +1,9 @@
 {
   "dependencies": {
     "source-map": {
-      "version": "0.4.2",
-      "dependencies": {
-        "amdefine": {
-          "version": "1.0.0"
-        }
-      }
+      "version": "0.5.3",
+      "resolved": "https://registry.npmjs.org/source-map/-/source-map-0.5.3.tgz",
+      "from": "https://registry.npmjs.org/source-map/-/source-map-0.5.3.tgz"
     }
   }
 }

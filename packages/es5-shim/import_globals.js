@@ -1,5 +1,3 @@
-var global = this;
-
 // Because the es5-{shim,sham}.js code assigns to Date and parseInt,
 // Meteor treats them as package variables, and so declares them as
 // variables in package scope, which causes some references to Date and
@@ -8,6 +6,7 @@ var global = this;
 // variables to their appropriate global values.
 Date = global.Date;
 parseInt = global.parseInt;
+parseFloat = global.parseFloat;
 
 // Save the original String#replace method, because es5-shim's
 // reimplementation of it causes problems in markdown/showdown.js.

@@ -85,6 +85,15 @@ CssTools = {
   }
 };
 
+if (typeof Profile !== 'undefined') {
+  _.each(['parseCss', 'stringifyCss', 'minifyCss',
+          'minifyCssAst', 'mergeCssAsts', 'rewriteCssUrls'],
+         function (funcName) {
+           CssTools[funcName] = Profile('CssTools.'+funcName,
+                                        CssTools[funcName]);
+         });
+}
+
 var rewriteRules = function (rules) {
   _.each(rules, function(rule, ruleIndex) {
 
@@ -168,4 +177,3 @@ var pathJoin = function (a, b) {
 var pathDirname = function (p) {
   return toStandardPath(path.dirname(toOSPath(p)));
 };
-

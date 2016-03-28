@@ -71,7 +71,7 @@ class Runner {
       oplogUrl = disableOplog ? null : oplogUrl;
     } else {
       self.mongoRunner = new MongoRunner({
-        appDir: self.projectContext.projectDir,
+        projectLocalDir: self.projectContext.projectLocalDir,
         port: mongoPort,
         onFailure,
         // For testing mongod failover, run with 3 mongod if the env var is
@@ -282,7 +282,36 @@ exports.run = function (options) {
   });
 
   runOptions.watchForChanges = ! once;
-  runOptions.quiet = once;
+  runOptions.quiet = false;
+
+  // Ensure process.env.NODE_ENV matches the build mode, with the following precedence:
+  // 1. Passed in build mode (if development or production)
+  // 2. Existing process.env.NODE_ENV (if it's valid)
+  // 3. Default to development (in both cases) otherwise
+
+  // NOTE: because this code only runs when using `meteor run` or `meteor test[-packages`,
+  // We *don't* end up defaulting NODE_ENV in this way when bundling/deploying.
+  // In those cases, it will default to "production" in packages/meteor/*_env.js
+
+  // We *override* NODE_ENV if build mode is one of these values
+  let buildMode = runOptions.buildOptions.buildMode;
+  if (buildMode === "development" || buildMode === "production") {
+    process.env.NODE_ENV = buildMode;
+  }
+
+  let nodeEnv = process.env.NODE_ENV;
+  // We *never* override buildMode (it can be "test")
+  if (!buildMode) {
+    if (nodeEnv === "development" || nodeEnv === "production") {
+      runOptions.buildOptions.buildMode = nodeEnv;
+    } else {
+      runOptions.buildOptions.buildMode = "development";
+    }
+  }
+
+  if (!nodeEnv) {
+    process.env.NODE_ENV = "development";
+  }
 
   var runner = new Runner(runOptions);
   runner.start();

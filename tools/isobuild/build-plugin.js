@@ -461,6 +461,17 @@ _.extend(exports.InputFile.prototype, {
     var self = this;
     return files.pathDirname(self.getPathInPackage());
   },
+
+  /**
+   * @summary Returns an object of file options such as those passed as the
+   *          third argument to api.addFiles.
+   * @memberof InputFile
+   * @returns {Object}
+   */
+  getFileOptions: function () {
+    throw new Error("Not Implemented");
+  },
+
   /**
    * @summary Call this method to raise a compilation or linting error for the
    * file.
@@ -473,6 +484,17 @@ _.extend(exports.InputFile.prototype, {
    */
   error: function (options) {
     var self = this;
+    if (self.getFileOptions().lazy === true) {
+      // Files with fileOptions.lazy === true were not explicitly added to
+      // the source batch via api.addFiles or api.mainModule, so any
+      // compilation errors should not be fatal. Attempting compilation is
+      // still important for lazy files that might end up being imported
+      // later, which is why we defang the error here, instead of avoiding
+      // compilation preemptively. Note also that actual exceptions will
+      // still cause build errors.
+      return;
+    }
+
     var path = self.getPathInPackage();
     var packageName = self.getPackageName();
     if (packageName) {

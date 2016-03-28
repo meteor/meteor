@@ -3,33 +3,17 @@ import utils from '../utils/utils.js';
 import { parseServerOptionsForRunCommand, parseRunTargets } from '../cli/commands.js';
 
 selftest.define('get mobile server argument for meteor run', ['cordova'], function () {
-  // on emulator
-
   // meteor run -p 3000
-  // => mobile server should be localhost:3000
+  // => mobile server should be <detected ip>:3000
   selftest.expectEqual(parseServerOptionsForRunCommand({
     port: "3000"
-  }).parsedMobileServerUrl, { host: "localhost", port: "3000", protocol: "http://" });
+  }).parsedMobileServerUrl, { host: utils.ipAddress(), port: "3000", protocol: "http://" });
 
   // meteor run -p example.com:3000
-  // => mobile server should be localhost:3000
-  selftest.expectEqual(parseServerOptionsForRunCommand({
-    port: "example.com:3000"
-  }).parsedMobileServerUrl, { host: "localhost", port: "3000", protocol: "http://" });
-
-  // on device
-
-  // meteor run -p 3000 on device
-  // => mobile server should be <detected ip>:3000
-  selftest.expectEqual(parseServerOptionsForRunCommand({
-    port: "3000"
-  }, parseRunTargets(["ios-device"])).parsedMobileServerUrl, { host: utils.ipAddress(), port: "3000", protocol: "http://" });
-
-  // meteor run -p example.com:3000 on device
   // => mobile server should be <detected ip>:3000
   selftest.expectEqual(parseServerOptionsForRunCommand({
     port: "example.com:3000"
-  }, parseRunTargets(["android-device"])).parsedMobileServerUrl, { host: utils.ipAddress(), port: "3000", protocol: "http://" });
+  }).parsedMobileServerUrl, { host: utils.ipAddress(), port: "3000", protocol: "http://" });
 
   // meteor run -p example.com:3000 --mobile-server 4000 => error, mobile
   // server must include a hostname

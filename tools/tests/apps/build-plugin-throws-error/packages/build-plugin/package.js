@@ -12,5 +12,6 @@ Package.describe({
 
 Package.registerBuildPlugin({
   name: "build-plugin-itself",
-  sources: [ "build-plugin.js" ]
+  sources: ["build-plugin.js"],
+  use: ["ecmascript"]
 });

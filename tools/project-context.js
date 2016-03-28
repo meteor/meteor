@@ -15,6 +15,7 @@ var tropohouse = require('./packaging/tropohouse.js');
 var utils = require('./utils/utils.js');
 var watch = require('./fs/watch.js');
 var Profile = require('./tool-env/profile.js').Profile;
+import { KNOWN_ISOBUILD_FEATURE_PACKAGES } from './isobuild/compiler.js';
 
 // The ProjectContext represents all the context associated with an app:
 // metadata files in the `.meteor` directory, the choice of package versions
@@ -83,6 +84,12 @@ _.extend(ProjectContext.prototype, {
       options.projectDir;
     self._explicitlyAddedLocalPackageDirs =
       options.explicitlyAddedLocalPackageDirs;
+
+    // Used to override the directory that Meteor's build process
+    // writes to; used by `meteor test` so that you can test your
+    // app in parallel to writing it, with an isolated database.
+    self.projectLocalDir = options.projectLocalDir ||
+      files.pathJoin(self.projectDir, '.meteor', 'local');
 
     // Used by 'meteor rebuild'; true to rebuild all packages, or a list of
     // package names.  Deletes the isopacks and their plugin caches.
@@ -217,27 +224,41 @@ _.extend(ProjectContext.prototype, {
   },
 
   readProjectMetadata: function () {
+    // don't generate a profiling report for this stage (Profile.run),
+    // because all we do here is read a handful of files.
     this._completeStagesThrough(STAGE.READ_PROJECT_METADATA);
   },
   initializeCatalog: function () {
-    this._completeStagesThrough(STAGE.INITIALIZE_CATALOG);
+    Profile.run('ProjectContext initializeCatalog', () => {
+      this._completeStagesThrough(STAGE.INITIALIZE_CATALOG);
+    });
   },
   resolveConstraints: function () {
-    this._completeStagesThrough(STAGE.RESOLVE_CONSTRAINTS);
+    Profile.run('ProjectContext resolveConstraints', () => {
+      this._completeStagesThrough(STAGE.RESOLVE_CONSTRAINTS);
+    });
   },
   downloadMissingPackages: function () {
-    this._completeStagesThrough(STAGE.DOWNLOAD_MISSING_PACKAGES);
+    Profile.run('ProjectContext downloadMissingPackages', () => {
+      this._completeStagesThrough(STAGE.DOWNLOAD_MISSING_PACKAGES);
+    });
   },
   buildLocalPackages: function () {
-    this._completeStagesThrough(STAGE.BUILD_LOCAL_PACKAGES);
+    Profile.run('ProjectContext buildLocalPackages', () => {
+      this._completeStagesThrough(STAGE.BUILD_LOCAL_PACKAGES);
+    });
   },
   saveChangedMetadata: function () {
-    this._completeStagesThrough(STAGE.SAVE_CHANGED_METADATA);
+    Profile.run('ProjectContext saveChangedMetadata', () => {
+      this._completeStagesThrough(STAGE.SAVE_CHANGED_METADATA);
+    });
   },
   prepareProjectForBuild: function () {
     // This is the same as saveChangedMetadata, but if we insert stages after
     // that one it will continue to mean "fully finished".
-    this.saveChangedMetadata();
+    Profile.run('ProjectContext prepareProjectForBuild', () => {
+      this._completeStagesThrough(STAGE.SAVE_CHANGED_METADATA);
+    });
   },
 
   _completeStagesThrough: function (targetStage) {
@@ -263,19 +284,20 @@ _.extend(ProjectContext.prototype, {
 
   getProjectLocalDirectory: function (subdirectory) {
     var self = this;
-    return files.pathJoin(self.projectDir, '.meteor', 'local', subdirectory);
+    return files.pathJoin(self.projectLocalDir, subdirectory);
   },
 
   getMeteorShellDirectory: function(projectDir) {
     return this.getProjectLocalDirectory("shell");
   },
 
-  // You can call this manually if you want to do some work before resolving
-  // constraints, or you can let prepareProjectForBuild do it for you.
+  // You can call this manually (that is, the public version without
+  // an `_`) if you want to do some work before resolving constraints,
+  // or you can let prepareProjectForBuild do it for you.
   //
   // This should be pretty fast --- for example, we shouldn't worry about
   // needing to wait for it to be done before we open the runner proxy.
-  _readProjectMetadata: function () {
+  _readProjectMetadata: Profile('_readProjectMetadata', function () {
     var self = this;
     buildmessage.assertInCapture();
 
@@ -335,7 +357,7 @@ _.extend(ProjectContext.prototype, {
     });
 
     self._completedStage = STAGE.READ_PROJECT_METADATA;
-  },
+  }),
 
   _ensureProjectDir: function () {
     var self = this;
@@ -427,7 +449,7 @@ _.extend(ProjectContext.prototype, {
     self.appIdentifier = appId;
   },
 
-  _resolveConstraints: function () {
+  _resolveConstraints: Profile('_resolveConstraints', function () {
     var self = this;
     buildmessage.assertInJob();
 
@@ -477,7 +499,8 @@ _.extend(ProjectContext.prototype, {
           // of it yet.  It's not actually fatal, though, for previousSolution
           // to refer to package versions that we don't have access to or don't
           // exist.  They'll end up getting changed or removed if possible.
-          missingPreviousVersionIsError: canRetry
+          missingPreviousVersionIsError: canRetry,
+          supportedIsobuildFeaturePackages: KNOWN_ISOBUILD_FEATURE_PACKAGES,
         };
         if (self._upgradePackageNames) {
           resolveOptions.upgrade = self._upgradePackageNames;
@@ -490,7 +513,7 @@ _.extend(ProjectContext.prototype, {
 
         var solution;
         try {
-          Profile.run(
+          Profile.time(
             "Select Package Versions" +
               (resolverRunCount > 1 ? (" (Try " + resolverRunCount + ")") : ""),
             function () {
@@ -530,7 +553,7 @@ _.extend(ProjectContext.prototype, {
         self._completedStage = STAGE.RESOLVE_CONSTRAINTS;
       });
     });
-  },
+  }),
 
   _localPackageSearchDirs: function () {
     var self = this;
@@ -557,7 +580,7 @@ _.extend(ProjectContext.prototype, {
   // but does not compile the packages.
   //
   // Must be run in a buildmessage context. On build error, returns null.
-  _initializeCatalog: function () {
+  _initializeCatalog: Profile('_initializeCatalog', function () {
     var self = this;
     buildmessage.assertInJob();
 
@@ -594,7 +617,7 @@ _.extend(ProjectContext.prototype, {
         }
       );
     });
-  },
+  }),
 
   _getRootDepsAndConstraints: function () {
     var self = this;
@@ -691,7 +714,7 @@ _.extend(ProjectContext.prototype, {
     return resolver;
   },
 
-  _downloadMissingPackages: function () {
+  _downloadMissingPackages: Profile('_downloadMissingPackages', function () {
     var self = this;
     buildmessage.assertInJob();
     if (!self.packageMap)
@@ -707,9 +730,9 @@ _.extend(ProjectContext.prototype, {
         self._completedStage = STAGE.DOWNLOAD_MISSING_PACKAGES;
       });
     });
-  },
+  }),
 
-  _buildLocalPackages: function () {
+  _buildLocalPackages: Profile('_buildLocalPackages', function () {
     var self = this;
     buildmessage.assertInCapture();
 
@@ -735,9 +758,9 @@ _.extend(ProjectContext.prototype, {
       self.isopackCache.buildLocalPackages();
     });
     self._completedStage = STAGE.BUILD_LOCAL_PACKAGES;
-  },
+  }),
 
-  _saveChangedMetadata: function () {
+  _saveChangedMetadata: Profile('_saveChangedMetadata', function () {
     var self = this;
 
     // Save any changes to .meteor/packages.
@@ -756,7 +779,7 @@ _.extend(ProjectContext.prototype, {
     }
 
     self._completedStage = STAGE.SAVE_CHANGED_METADATA;
-  }
+  })
 });
 
 

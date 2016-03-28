@@ -11,6 +11,7 @@ var authClient = require('../meteor-services/auth-client.js');
 var catalog = require('./catalog/catalog.js');
 var projectContextModule = require('../project-context.js');
 var colonConverter = require('../utils/colon-converter.js');
+var Profile = require('../tool-env/profile.js').Profile;
 
 // Opens a DDP connection to a package server. Loads the packages needed for a
 // DDP connection, then calls DDP connect to the package server URL in config,
@@ -223,6 +224,9 @@ var _updateServerPackageData = function (dataStore, options) {
   return ret;
 };
 
+_updateServerPackageData = Profile('package-client _updateServerPackageData',
+                                   _updateServerPackageData);
+
 // Returns a logged-in DDP connection to the package server, or null if
 // we cannot log in. If an error unrelated to login occurs
 // (e.g. connection to package server times out), then it will be
@@ -263,8 +267,11 @@ var bundleSource = function (isopack, includeSources, packageDir) {
   // directory structure that we want (<package name>-<version-source/
   // at the top level).
   _.each(includeSources, function (f) {
-    files.copyFile(files.pathJoin(packageDir, f),
-                   files.pathJoin(sourcePackageDir, f));
+    const from = files.pathJoin(packageDir, f);
+    const to = files.pathJoin(sourcePackageDir, f);
+    if (files.exists(from)) {
+      files.copyFile(from, to);
+    }
   });
 
   // Write a package map to `.versions` inside the source tarball.  Note that
@@ -775,6 +782,7 @@ exports.publishPackage = function (options) {
         containsPlugins: packageSource.containsPlugins(),
         debugOnly: packageSource.debugOnly,
         prodOnly: packageSource.prodOnly,
+        testOnly: packageSource.testOnly,
         exports: packageSource.getExports(),
         releaseName: release.current.name,
         dependencies: packageDeps

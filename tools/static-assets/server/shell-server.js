@@ -6,7 +6,7 @@ var net = require("net");
 var tty = require("tty");
 var vm = require("vm");
 var _ = require("underscore");
-var INFO_FILE_MODE = 0600; // Only the owner can read or write.
+var INFO_FILE_MODE = parseInt("600", 8); // Only the owner can read or write.
 var EXITING_MESSAGE =
   // Exported so that ./client.js can know what to expect.
   exports.EXITING_MESSAGE = "Shell exiting...";
@@ -258,7 +258,10 @@ Sp.startREPL = function startREPL(options) {
 
   // Use the same `require` function and `module` object visible to the
   // shell.js module.
-  repl.context.require = require;
+  repl.context.require = Package.modules
+    ? Package.modules.meteorInstall()
+    : require;
+
   repl.context.module = module;
   repl.context.repl = repl;
 

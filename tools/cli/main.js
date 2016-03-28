@@ -45,6 +45,7 @@ function Command(options) {
   options = _.extend({
     minArgs: 0,
     options: {},
+    allowUnrecognizedOptions: false,
     requiresApp: false,
     requiresPackage: false,
     requiresAppOrPackage: false,
@@ -551,7 +552,7 @@ Fiber(function () {
   // Set up git hooks, but not on Windows because they don't work there and it;s
   // not worth setting it up at the moment
   if (files.inCheckout() && process.platform !== "win32") {
-    var installGitHooks = require('../tool-env/install-git-hooks.js');
+    var installGitHooks = require('../tool-env/install-git-hooks.js')['default'];
     installGitHooks();
   }
 
@@ -1265,7 +1266,7 @@ Fiber(function () {
   });
 
   // Check for unrecognized options.
-  if (_.keys(rawOptions).length > 0) {
+  if (_.keys(rawOptions).length > 0 && !command.allowUnrecognizedOptions) {
     Console.error(
       Console.command(_.keys(rawOptions)[0]) + ": unknown option.");
     Console.rawError(
@@ -1404,7 +1405,7 @@ Fiber(function () {
       });
     }
 
-    var ret = command.func(options);
+    var ret = command.func(options, {rawOptions});
   } catch (e) {
     Console.enableProgressDisplay(false);
 

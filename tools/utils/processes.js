@@ -1,5 +1,6 @@
 import _ from 'underscore';
 import child_process from 'child_process';
+import files from '../fs/mini-files';
 
 // The execFileSync function is meant to resemble the similarly-named Node 0.12
 // synchronous process creation API, but instead of being fully blocking it
@@ -59,7 +60,9 @@ export function execFileAsync(command, args,
     options = _.extend(options, args);
     args = [];
   }
-
+  if (options.cwd) {
+    options.cwd = files.convertToOSPath(options.cwd);
+  }
   // The child process close event is emitted when the stdio streams
   // have all terminated. If those streams are shared with other
   // processes, that means we won't receive a 'close' until all processes
@@ -70,8 +73,19 @@ export function execFileAsync(command, args,
   const exitEvent = options.waitForClose ? 'close' : 'exit';
 
   return new Promise((resolve, reject) => {
-    const child = child_process.spawn(command, args,
+    var child; 
+
+    if (process.platform !== 'win32') {
+      child = child_process.spawn(command, args,
       { cwd, env, stdio } = options);
+    } else {
+      // https://github.com/nodejs/node-v0.x-archive/issues/2318
+      args.forEach(arg => {
+        command += ' ' + arg;
+      });
+      child = child_process.exec(command,
+      { cwd, env, stdio } = options);
+    }
 
     let capturedStdout = '';
     if (child.stdout) {

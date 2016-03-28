@@ -1,4 +1,4 @@
-// This file is in tools/package-version-parser.js and is symlinked into
+// This file is in tools/packaging/package-version-parser.js and is symlinked to
 // packages/package-version-parser/package-version-parser.js. It's part of both
 // the tool and the package!  We don't use an isopacket for it because it used
 // to be required as part of building isopackets (though that may no longer be
@@ -104,6 +104,8 @@ var PV = function (versionString) {
   // everything but the wrapnum ("_123")
   this.semver = semverParse.version + (
     semverParse.build.length ? '+' + semverParse.build.join('.') : '');
+
+  this._semverParsed = null; // populate lazily
 };
 
 PV.parse = function (versionString) {
@@ -216,7 +218,13 @@ PV.compare = function (versionOne, versionTwo) {
   // ignoring wrap numbers.  (The semver library will ignore the build ID
   // per the semver spec.)
   if (v1.semver !== v2.semver) {
-    return semver.compare(v1.semver, v2.semver);
+    if (! v1._semverParsed) {
+      v1._semverParsed = new semver(v1.semver);
+    }
+    if (! v2._semverParsed) {
+      v2._semverParsed = new semver(v2.semver);
+    }
+    return semver.compare(v1._semverParsed, v2._semverParsed);
   } else {
     // If the semver components are equal, then the one with the smaller wrap
     // numbers is smaller.

@@ -9,6 +9,7 @@ into your application's bundle.
 
 {{> autoApiBox "Assets.getText"}}
 {{> autoApiBox "Assets.getBinary"}}
+{{> autoApiBox "Assets.absoluteFilePath"}}
 
 Static server assets are included by placing them in the application's `private`
 subdirectory. For example, if an application's `private` subdirectory includes a

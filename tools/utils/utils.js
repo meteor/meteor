@@ -58,6 +58,9 @@ exports.formatUrl = function (url) {
   if (url.port) {
     string += `:${url.port}`;
   }
+  // For consistency with `Meteor.absoluteUrl`, add a trailing slash to make
+  // this a valid URL
+  string += "/";
   return string;
 }
 
@@ -107,6 +110,15 @@ ${addressEntries.map(entry => entry.address).join(', ')}`);
 exports.hasScheme = function (str) {
   return !! str.match(/^[A-Za-z][A-Za-z0-9+-\.]*\:\/\//);
 };
+
+
+exports.hasScheme = function (str) {
+  return !! str.match(/^[A-Za-z][A-Za-z0-9+-\.]*\:\/\//);
+};
+
+exports.isIPv4Address = function (str) {
+  return str.match(/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/);
+}
 
 // XXX: Move to e.g. formatters.js?
 // Prints a package list in a nice format.
@@ -472,7 +484,7 @@ exports.isUrlWithFileScheme = function (x) {
 
 exports.isUrlWithSha = function (x) {
   // Is a URL with a fixed SHA? We use this for Cordova -- although theoretically we could use
-  // a URL like isNpmUrl(), there are a variety of problems with this, 
+  // a URL like isNpmUrl(), there are a variety of problems with this,
   // see https://github.com/meteor/meteor/pull/5562
   return /^https?:\/\/.*[0-9a-f]{40}/.test(x);
 }

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Moved to the 'markdown' package",
-  version: '1.0.5'
+  version: '1.0.6'
 });
 
 Package.onUse(function (api) {
