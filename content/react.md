@@ -2,6 +2,7 @@
 title: React
 order: 10
 description: How to use React, Facebook's frontend rendering library, with Meteor.
+discourseTopicId: 20192
 ---
 
 After reading this guide, you'll know:

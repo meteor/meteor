@@ -2,6 +2,7 @@
 title: "Testing"
 order: 7
 description: How to test your Meteor application
+discourseTopicId: 20191
 ---
 
 <h2 id="introduction">Introduction</h2>

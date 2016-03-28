@@ -2,6 +2,7 @@
 title: Mobile
 order: 13
 description: How to build mobile apps using Meteor's Cordova integration.
+discourseTopicId: 20195
 ---
 
 After reading this guide, you'll know:

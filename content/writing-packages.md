@@ -1,5 +1,6 @@
 ---
 title: Writing Packages
+discourseTopicId: 20194
 ---
 
 After reading this article, you'll know:
