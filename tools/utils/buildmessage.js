@@ -1,5 +1,3 @@
-var Fiber = require('fibers');
-var Future = require('fibers/future');
 var _ = require('underscore');
 var files = require('../fs/files.js');
 var parseStack = require('./parse-stack.js');
@@ -102,14 +100,17 @@ _.extend(Job.prototype, {
             }
           }
 
-          if (! frame.func && ! where)
-            return; // that's a pretty lame stack frame
+          if (! frame.func && ! where) {
+            // that's a pretty lame stack frame
+            return;
+          }
 
           line += "  at ";
-          if (frame.func)
+          if (frame.func) {
             line += frame.func + " (" + where + ")\n";
-          else
+          } else {
             line += where + "\n";
+          }
         });
         line += "\n";
       }
@@ -223,8 +224,9 @@ var getCurrentProgressTracker = function () {
 
 var addChildTracker = function (title) {
   var options = {};
-  if (title !== undefined)
+  if (title !== undefined) {
     options.title = title;
+  }
   return getCurrentProgressTracker().addChildTask(options);
 };
 
@@ -242,8 +244,9 @@ var capture = function (options, f) {
   var parentMessageSet = currentMessageSet.get();
 
   var title;
-  if (typeof options === "object" && options.title)
+  if (typeof options === "object" && options.title) {
     title = options.title;
+  }
   var progress = addChildTracker(title);
 
   currentProgress.withValue(progress, function () {
@@ -371,8 +374,9 @@ var enterJob = function (options, f) {
 // (including subjobs created inside this job), else false.
 var jobHasMessages = function () {
   var search = function (job) {
-    if (job.hasMessages())
+    if (job.hasMessages()) {
       return true;
+    }
     return !! _.find(job.children, search);
   };
 
@@ -418,14 +422,18 @@ var markBoundary = function (f) {
 var error = function (message, options) {
   options = options || {};
 
-  if (options.downcase)
+  if (options.downcase) {
     message = message.slice(0,1).toLowerCase() + message.slice(1);
+  }
 
-  if (! currentJob.get())
+  if (! currentJob.get()) {
     throw new Error("Error: " + message);
+  }
 
-  if (options.secondary && jobHasMessages())
-    return; // skip it
+  if (options.secondary && jobHasMessages()) {
+    // skip it
+    return;
+  }
 
   var info = _.extend({
     message: message
@@ -510,22 +518,26 @@ var exception = function (error) {
 };
 
 var assertInJob = function () {
-  if (! currentJob.get())
+  if (! currentJob.get()) {
     throw new Error("Expected to be in a buildmessage job");
+  }
 };
 
 var assertInCapture = function () {
-  if (! currentMessageSet.get())
+  if (! currentMessageSet.get()) {
     throw new Error("Expected to be in a buildmessage capture");
+  }
 };
 
 var mergeMessagesIntoCurrentJob = function (innerMessages) {
   var outerMessages = currentMessageSet.get();
-  if (! outerMessages)
+  if (! outerMessages) {
     throw new Error("Expected to be in a buildmessage capture");
+  }
   var outerJob = currentJob.get();
-  if (! outerJob)
+  if (! outerJob) {
     throw new Error("Expected to be in a buildmessage job");
+  }
   _.each(innerMessages.jobs, function (j) {
     outerJob.children.push(j);
   });
@@ -540,75 +552,49 @@ var forkJoin = function (options, iterable, fn) {
     options = {};
   }
 
-  var futures = [];
-  var results = [];
-  // XXX: We could check whether the sub-jobs set estimates, and if not
-  // assume they each take the same amount of time and auto-report their completion
-  var errors = [];
-  var firstError = null;
-
   options.forkJoin = true;
 
-  enterJob(options, function () {
-    var parallel = (options.parallel !== undefined) ? options.parallel : true;
+  const enterJobAsync = Promise.denodeify(enterJob);
+  const parallel = (options.parallel !== undefined) ? options.parallel : true;
+
+  return enterJobAsync(options).then(() => {
+    const errors = [];
+    let results = _.map(iterable, (...args) => {
+      const promise = enterJobAsync({
+        title: (options.title || "") + " child"
+      }).then(() => fn(...args))
+        // Collect any errors thrown (and later re-throw the first one),
+        // but don't stop processing remaining jobs.
+        .catch(error => (errors.push(error), null));
+
+      if (parallel) {
+        // If the jobs are intended to run in parallel, return each
+        // promise without awaiting it, so that Promise.all can wait for
+        // them all to be fulfilled.
+        return promise;
+      }
+
+      // By awaiting the promise during each iteration, we effectively
+      // serialize the execution of the jobs.
+      return promise.await();
+    });
+
     if (parallel) {
-      var runOne = fiberHelpers.bindEnvironment(function (fut, fnArguments) {
-        try {
-          var result = enterJob({title: (options.title || '') + ' child'}, function () {
-            return fn.apply(null, fnArguments);
-          });
-          fut['return'](result);
-        } catch (e) {
-          fut['throw'](e);
-        }
-      });
-
-      _.each(iterable, function (...args) {
-        var fut = new Future();
-        Fiber(function () {
-          runOne(fut, args);
-        }).run();
-        futures.push(fut);
-      });
-
-      _.each(futures, function (future) {
-        try {
-          var result = future.wait();
-          results.push(result);
-          errors.push(null);
-        } catch (e) {
-          results.push(null);
-          errors.push(e);
-
-          if (firstError === null) {
-            firstError = e;
-          }
-        }
-      });
-    } else {
-      // not parallel
-      _.each(iterable, function (...args) {
-        try {
-          var result = fn(...args);
-          results.push(result);
-          errors.push(null);
-        } catch (e) {
-          results.push(null);
-          errors.push(e);
-
-          if (firstError === null) {
-            firstError = e;
-          }
-        }
-      });
+      // If the jobs ran in parallel, then results is an array of Promise
+      // objects that still need to be resolved.
+      results = Promise.all(results).await();
     }
-  });
 
-  if (firstError) {
-    throw firstError;
-  }
+    if (errors.length > 0) {
+      // If any errors were thrown, re-throw the first one. Note that this
+      // allows jobs to complete successfully (and have whatever
+      // side-effects they should have) after the first error is thrown,
+      // though the final results will not be returned below.
+      throw errors[0];
+    }
 
-  return results;
+    return results;
+  }).await();
 };
 
 

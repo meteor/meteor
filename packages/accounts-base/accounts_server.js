@@ -1,14 +1,16 @@
 var crypto = Npm.require('crypto');
 
+import {AccountsCommon} from "./accounts_common.js";
+
 /**
  * @summary Constructor for the `Accounts` namespace on the server.
  * @locus Server
- * @class
+ * @class AccountsServer
  * @extends AccountsCommon
  * @instancename accountsServer
  * @param {Object} server A server object such as `Meteor.server`.
  */
-AccountsServer = class AccountsServer extends AccountsCommon {
+export class AccountsServer extends AccountsCommon {
   // Note that this constructor is less likely to be instantiated multiple
   // times than the `AccountsClient` constructor, because a single server
   // can provide only one set of methods.

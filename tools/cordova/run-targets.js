@@ -104,9 +104,17 @@ export class AndroidRunTarget extends CordovaRunTarget {
   }
 
   async start(cordovaProject) {
+    // XXX This only works if we have at most one device or one emulator
+    // connected. We should find a way to get the target ID from run and use
+    // it instead of -d or -e.
+    let target = this.isDevice ? "-d" : "-e";
+
+    // Clear logs
+    execFileAsync('adb', [target, 'logcat', '-c']);
+
     await cordovaProject.run(this.platform, this.isDevice);
 
-    this.tailLogs(cordovaProject).done();
+    this.tailLogs(cordovaProject, target).done();
   }
 
   async checkPlatformRequirementsAndSetEnv(cordovaProject) {
@@ -116,29 +124,26 @@ export class AndroidRunTarget extends CordovaRunTarget {
     // Unfortunately, this is intertwined with checking requirements, so the
     // only way to get access to this functionality is to run check_reqs and
     // let it modify process.env
-    const check_reqs = require(files.pathJoin(
+    var check_reqs_path = files.pathJoin(
       cordovaProject.projectRoot, 'platforms', this.platform,
-      'cordova', 'lib', 'check_reqs'));
+      'cordova', 'lib', 'check_reqs');
+    check_reqs_path = files.convertToOSPath(check_reqs_path);
+    let check_reqs = require(check_reqs_path);
     // We can't use check_reqs.run() because that will print the values of
     // JAVA_HOME and ANDROID_HOME to stdout.
     await Promise.all([check_reqs.check_java(),
       check_reqs.check_android().then(check_reqs.check_android_target)]);
   }
 
-  async tailLogs(cordovaProject) {
+  async tailLogs(cordovaProject, target) {
     cordovaProject.runCommands(`tailing logs for ${this.displayName}`, async () => {
       await this.checkPlatformRequirementsAndSetEnv(cordovaProject);
 
-      // XXX This only works if we have at most one device or one emulator
-      // connected. We should find a way to get the target ID from run and use
-      // it instead of -d or -e.
-      const target = this.isDevice ? "-d" : "-e";
+      const logLevel = Console.verbose ? "V" : "I";
 
-      // Clear logs
-      await execFileAsync('adb', [target, 'logcat', '-c']);
-
-      const filterExpressions = ['CordovaLog:D', 'chromium:I',
-        'SystemWebViewClient:I', '*:S'];
+      const filterExpressions = [`MeteorWebApp:${logLevel}`,
+        `CordovaLog:${logLevel}`, `chromium:${logLevel}`,
+        `SystemWebViewClient:${logLevel}`, '*:F'];
 
       const { Log } =
           isopackets.load('cordova-support')['logging'];
@@ -161,7 +166,9 @@ export class AndroidRunTarget extends CordovaRunTarget {
 
 function logFromAndroidLogcatLine(Log, line) {
   // Ignore lines indicating beginning of logging
-  if (line.match(/^--------- beginning of /)) return null;
+  if (line.match(/^--------- beginning of /)) {
+    return null;
+  }
 
   // Matches logcat brief format
   // "I/Tag(  PID): message"
@@ -200,16 +207,13 @@ function logFromAndroidLogcatLine(Log, line) {
     }
   }
 
-  if (Console.verbose) {
-    return Log.format(
-    Log.objFromText(line), { metaColor: 'green', color: true });
-  } else {
-    return null;
-  }
+  return Log.format(Log.objFromText(line), { metaColor: 'green', color: true });
 };
 
 function logFromConsoleOutput(Log, message, filename, lineNumber) {
-  if (isDebugOutput(message) && !Console.verbose) return null;
+  if (isDebugOutput(message) && !Console.verbose) {
+    return null;
+  }
 
   filename = filename.replace(/\?.*$/, '');
 

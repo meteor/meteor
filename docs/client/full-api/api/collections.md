@@ -165,6 +165,8 @@ issue, since it's unusual for a client to have enough data that an
 index is worthwhile.
 {{/warning}}
 
+Read more about collections and how to use them in the [Collections](http://guide.meteor.com/collections.html) article in the Meteor Guide.
+
 {{> autoApiBox "Mongo.Collection#find"}}
 
 `find` returns a cursor.  It does not immediately access the database or return
@@ -803,6 +805,10 @@ The last form will only work if your JavaScript implementation
 preserves the order of keys in objects. Most do, most of the time, but
 it's up to you to be sure.
 
+For local collections you can pass a comparator function which receives two
+document objects, and returns -1 if the first document comes first in order,
+1 if the second document comes first, or 0 if neither document comes before
+the other. This is a Minimongo extension to MongoDB.
 
 
 {{> apiBoxTitle name="Field Specifiers" id="fieldspecifiers"}}

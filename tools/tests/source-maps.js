@@ -4,8 +4,9 @@ var files = require('../fs/files.js');
 var catalog = require('../packaging/catalog/catalog.js');
 
 function matchPath (text, doubleBS) {
-  if (process.platform === 'win32')
+  if (process.platform === 'win32') {
     return text.replace(/\//g, doubleBS ? '\\\\' : '\\');
+  }
   return text;
  }
  function matchPathRegexp (regexp) {
@@ -17,7 +18,7 @@ selftest.define("source maps from checkout", ['checkout'], function () {
     throw new Error();
   } catch (e) {
     var index = (process.platform === 'win32') ? 2 : 1;
-    selftest.expectEqual(e.stack.split(":")[index], "17");
+    selftest.expectEqual(e.stack.split(":")[index], "18");
   }
 });
 
@@ -102,6 +103,6 @@ selftest.define("source maps from a build plugin implementation", ['checkout'], 
   // XXX This is wrong! The path on disk is
   // packages/build-plugin/build-plugin.js, but at some point we switched to the
   // servePath which is based on the *plugin*'s "package" name.
-  run.match(matchPathRegexp('packages/build-plugin-itself/build-plugin\\.js:2:1\\b'));
+  run.match(matchPathRegexp('packages/build-plugin-itself/build-plugin\\.js:2:'));
   run.stop();
 });

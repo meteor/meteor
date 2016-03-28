@@ -1,0 +1,120 @@
+{
+  "dependencies": {
+    "css-parse": {
+      "version": "2.0.0",
+      "resolved": "https://registry.npmjs.org/css-parse/-/css-parse-2.0.0.tgz",
+      "from": "https://registry.npmjs.org/css-parse/-/css-parse-2.0.0.tgz",
+      "dependencies": {
+        "css": {
+          "version": "2.2.0",
+          "resolved": "https://registry.npmjs.org/css/-/css-2.2.0.tgz",
+          "from": "https://registry.npmjs.org/css/-/css-2.2.0.tgz",
+          "dependencies": {
+            "inherits": {
+              "version": "2.0.1",
+              "resolved": "https://registry.npmjs.org/inherits/-/inherits-2.0.1.tgz",
+              "from": "https://registry.npmjs.org/inherits/-/inherits-2.0.1.tgz"
+            },
+            "source-map": {
+              "version": "0.1.43",
+              "resolved": "https://registry.npmjs.org/source-map/-/source-map-0.1.43.tgz",
+              "from": "https://registry.npmjs.org/source-map/-/source-map-0.1.43.tgz",
+              "dependencies": {
+                "amdefine": {
+                  "version": "0.1.1",
+                  "resolved": "https://registry.npmjs.org/amdefine/-/amdefine-0.1.1.tgz",
+                  "from": "https://registry.npmjs.org/amdefine/-/amdefine-0.1.1.tgz"
+                }
+              }
+            },
+            "source-map-resolve": {
+              "version": "0.3.1",
+              "resolved": "https://registry.npmjs.org/source-map-resolve/-/source-map-resolve-0.3.1.tgz",
+              "from": "https://registry.npmjs.org/source-map-resolve/-/source-map-resolve-0.3.1.tgz",
+              "dependencies": {
+                "atob": {
+                  "version": "1.1.2",
+                  "resolved": "https://registry.npmjs.org/atob/-/atob-1.1.2.tgz",
+                  "from": "https://registry.npmjs.org/atob/-/atob-1.1.2.tgz"
+                },
+                "resolve-url": {
+                  "version": "0.2.1",
+                  "resolved": "https://registry.npmjs.org/resolve-url/-/resolve-url-0.2.1.tgz",
+                  "from": "https://registry.npmjs.org/resolve-url/-/resolve-url-0.2.1.tgz"
+                },
+                "source-map-url": {
+                  "version": "0.3.0",
+                  "resolved": "https://registry.npmjs.org/source-map-url/-/source-map-url-0.3.0.tgz",
+                  "from": "https://registry.npmjs.org/source-map-url/-/source-map-url-0.3.0.tgz"
+                }
+              }
+            },
+            "urix": {
+              "version": "0.1.0",
+              "resolved": "https://registry.npmjs.org/urix/-/urix-0.1.0.tgz",
+              "from": "https://registry.npmjs.org/urix/-/urix-0.1.0.tgz"
+            }
+          }
+        }
+      }
+    },
+    "css-stringify": {
+      "version": "2.0.0",
+      "resolved": "https://registry.npmjs.org/css-stringify/-/css-stringify-2.0.0.tgz",
+      "from": "https://registry.npmjs.org/css-stringify/-/css-stringify-2.0.0.tgz",
+      "dependencies": {
+        "css": {
+          "version": "2.2.0",
+          "resolved": "https://registry.npmjs.org/css/-/css-2.2.0.tgz",
+          "from": "https://registry.npmjs.org/css/-/css-2.2.0.tgz",
+          "dependencies": {
+            "inherits": {
+              "version": "2.0.1",
+              "resolved": "https://registry.npmjs.org/inherits/-/inherits-2.0.1.tgz",
+              "from": "https://registry.npmjs.org/inherits/-/inherits-2.0.1.tgz"
+            },
+            "source-map": {
+              "version": "0.1.43",
+              "resolved": "https://registry.npmjs.org/source-map/-/source-map-0.1.43.tgz",
+              "from": "https://registry.npmjs.org/source-map/-/source-map-0.1.43.tgz",
+              "dependencies": {
+                "amdefine": {
+                  "version": "0.1.1",
+                  "resolved": "https://registry.npmjs.org/amdefine/-/amdefine-0.1.1.tgz",
+                  "from": "https://registry.npmjs.org/amdefine/-/amdefine-0.1.1.tgz"
+                }
+              }
+            },
+            "source-map-resolve": {
+              "version": "0.3.1",
+              "resolved": "https://registry.npmjs.org/source-map-resolve/-/source-map-resolve-0.3.1.tgz",
+              "from": "https://registry.npmjs.org/source-map-resolve/-/source-map-resolve-0.3.1.tgz",
+              "dependencies": {
+                "atob": {
+                  "version": "1.1.2",
+                  "resolved": "https://registry.npmjs.org/atob/-/atob-1.1.2.tgz",
+                  "from": "https://registry.npmjs.org/atob/-/atob-1.1.2.tgz"
+                },
+                "resolve-url": {
+                  "version": "0.2.1",
+                  "resolved": "https://registry.npmjs.org/resolve-url/-/resolve-url-0.2.1.tgz",
+                  "from": "https://registry.npmjs.org/resolve-url/-/resolve-url-0.2.1.tgz"
+                },
+                "source-map-url": {
+                  "version": "0.3.0",
+                  "resolved": "https://registry.npmjs.org/source-map-url/-/source-map-url-0.3.0.tgz",
+                  "from": "https://registry.npmjs.org/source-map-url/-/source-map-url-0.3.0.tgz"
+                }
+              }
+            },
+            "urix": {
+              "version": "0.1.0",
+              "resolved": "https://registry.npmjs.org/urix/-/urix-0.1.0.tgz",
+              "from": "https://registry.npmjs.org/urix/-/urix-0.1.0.tgz"
+            }
+          }
+        }
+      }
+    }
+  }
+}

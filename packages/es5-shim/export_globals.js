@@ -1,11 +1,13 @@
-var global = this;
-
 if (global.Date !== Date) {
   global.Date = Date;
 }
 
 if (global.parseInt !== parseInt) {
   global.parseInt = parseInt;
+}
+
+if (global.parseFloat !== parseFloat) {
+  global.parseFloat = parseFloat;
 }
 
 var Sp = String.prototype;

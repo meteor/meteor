@@ -6,6 +6,7 @@ var files = require('../fs/files.js');
 var isopackModule = require('./isopack.js');
 var watch = require('../fs/watch.js');
 var colonConverter = require('../utils/colon-converter.js');
+var Profile = require('../tool-env/profile.js').Profile;
 
 exports.IsopackCache = function (options) {
   var self = this;
@@ -60,8 +61,9 @@ _.extend(exports.IsopackCache.prototype, {
     var self = this;
     buildmessage.assertInCapture();
 
-    if (self.cacheDir)
+    if (self.cacheDir) {
       files.mkdir_p(self.cacheDir);
+    }
 
     var onStack = {};
     if (rootPackageNames) {
@@ -104,8 +106,9 @@ _.extend(exports.IsopackCache.prototype, {
   // package whose dependencies have all already been built.
   getIsopack: function (name) {
     var self = this;
-    if (! _.has(self._isopacks, name))
+    if (! _.has(self._isopacks, name)) {
       throw Error("isopack " + name + " not yet loaded?");
+    }
     return self._isopacks[name];
   },
 
@@ -116,11 +119,33 @@ _.extend(exports.IsopackCache.prototype, {
     });
   },
 
+  getSourceRoot(name, arch) {
+    const packageInfo = this._packageMap.getInfo(name);
+
+    if (packageInfo) {
+      if (packageInfo.kind === "local") {
+        return packageInfo.packageSource.sourceRoot;
+      }
+
+      if (packageInfo.kind === "versioned") {
+        const isopackPath = this._tropohouse.packagePath(
+          name,
+          packageInfo.version
+        );
+
+        return files.realpath(files.pathJoin(isopackPath, arch));
+      }
+    }
+
+    return null;
+  },
+
   _ensurePackageLoaded: function (name, onStack) {
     var self = this;
     buildmessage.assertInCapture();
-    if (_.has(self._isopacks, name))
+    if (_.has(self._isopacks, name)) {
       return;
+    }
 
     var ensureLoaded = function (depName) {
       if (_.has(onStack, depName)) {
@@ -135,8 +160,9 @@ _.extend(exports.IsopackCache.prototype, {
     };
 
     var packageInfo = self._packageMap.getInfo(name);
-    if (! packageInfo)
+    if (! packageInfo) {
       throw Error("Depend on unknown package " + name + "?");
+    }
     var previousIsopack = null;
     if (self._previousIsopackCache &&
         _.has(self._previousIsopackCache._isopacks, name)) {
@@ -161,9 +187,12 @@ _.extend(exports.IsopackCache.prototype, {
         });
         // If we failed to load something that this package depends on, don't
         // load it.
-        if (buildmessage.jobHasMessages())
+        if (buildmessage.jobHasMessages()) {
           return;
-        self._loadLocalPackage(name, packageInfo, previousIsopack);
+        }
+        Profile.time('IsopackCache Build local isopack', () => {
+          self._loadLocalPackage(name, packageInfo, previousIsopack);
+        });
       });
     } else if (packageInfo.kind === 'versioned') {
       // We don't have to build this package, and we don't have to build its
@@ -174,40 +203,44 @@ _.extend(exports.IsopackCache.prototype, {
       }
 
       var isopack = null, packagesToLoad = [];
-      if (previousIsopack) {
-        // We can always reuse a previous Isopack for a versioned package, since
-        // we assume that it never changes.  (Admittedly, this means we won't
-        // notice if we download an additional build for the package.)
-        isopack = previousIsopack;
-        packagesToLoad = isopack.getStrongOrderedUsedAndImpliedPackages();
-      }
-      if (! isopack) {
-        // Load the isopack from disk.
-        buildmessage.enterJob(
-          "loading package " + name + "@" + packageInfo.version,
-          function () {
-            var pluginCacheDir;
-            if (self._pluginCacheDirRoot) {
-              pluginCacheDir = self._pluginCacheDirForVersion(
-                name, packageInfo.version);
-              files.mkdir_p(pluginCacheDir);
-            }
-            var isopackPath = self._tropohouse.packagePath(
-              name, packageInfo.version);
 
-            var Isopack = isopackModule.Isopack;
-            isopack = new Isopack();
-            isopack.initFromPath(name, isopackPath, {
-              pluginCacheDir: pluginCacheDir
+      Profile.time('IsopackCache Load local isopack', () => {
+        if (previousIsopack) {
+          // We can always reuse a previous Isopack for a versioned package, since
+          // we assume that it never changes.  (Admittedly, this means we won't
+          // notice if we download an additional build for the package.)
+          isopack = previousIsopack;
+          packagesToLoad = isopack.getStrongOrderedUsedAndImpliedPackages();
+        }
+        if (! isopack) {
+          // Load the isopack from disk.
+          buildmessage.enterJob(
+            "loading package " + name + "@" + packageInfo.version,
+            function () {
+              var pluginCacheDir;
+              if (self._pluginCacheDirRoot) {
+                pluginCacheDir = self._pluginCacheDirForVersion(
+                  name, packageInfo.version);
+                files.mkdir_p(pluginCacheDir);
+              }
+              var isopackPath = self._tropohouse.packagePath(
+                name, packageInfo.version);
+
+              var Isopack = isopackModule.Isopack;
+              isopack = new Isopack();
+              isopack.initFromPath(name, isopackPath, {
+                pluginCacheDir: pluginCacheDir
+              });
+              // If loading the isopack fails, then we don't need to look for more
+              // packages to load, but we should still recover by putting it in
+              // self._isopacks.
+              if (buildmessage.jobHasMessages()) {
+                return;
+              }
+              packagesToLoad = isopack.getStrongOrderedUsedAndImpliedPackages();
             });
-            // If loading the isopack fails, then we don't need to look for more
-            // packages to load, but we should still recover by putting it in
-            // self._isopacks.
-            if (buildmessage.jobHasMessages())
-              return;
-            packagesToLoad = isopack.getStrongOrderedUsedAndImpliedPackages();
-          });
-      }
+        }
+      });
 
       self._isopacks[name] = isopack;
       // Also load its dependencies. This is so that if this package is being
@@ -253,8 +286,9 @@ _.extend(exports.IsopackCache.prototype, {
           // _checkUpToDate already verified that
           // isopackBuildInfoJson.pluginProviderPackageMap is a subset of
           // self._packageMap, so this operation is correct. (It can't be done
-          // by isopack.initFromPath, because Isopack doesn't have access to the
-          // PackageMap, and specifically to the local catalog it knows about.)
+          // by isopack.initFromPath, because Isopack doesn't have access to
+          // the PackageMap, and specifically to the local catalog it knows
+          // about.)
           isopack.setPluginProviderPackageMap(
             self._packageMap.makeSubsetMap(
               _.keys(isopackBuildInfoJson.pluginProviderPackageMap)));
@@ -322,8 +356,9 @@ _.extend(exports.IsopackCache.prototype, {
     var self = this;
     // If there isn't an isopack-buildinfo.json file, then we definitely aren't
     // up to date!
-    if (! isopackBuildInfoJson)
+    if (! isopackBuildInfoJson) {
       return false;
+    }
 
     // If we include Cordova but this Isopack doesn't, or via versa, then we're
     // not up to date.
@@ -414,10 +449,12 @@ _.extend(exports.IsopackCache.prototype, {
   },
 
   _shouldLintPackage(packageSource) {
-    if (this._lintLocalPackages)
+    if (this._lintLocalPackages) {
       return true;
-    if (! this._lintPackageWithSourceRoot)
+    }
+    if (! this._lintPackageWithSourceRoot) {
       return false;
+    }
     return this._lintPackageWithSourceRoot === packageSource.sourceRoot;
   },
 

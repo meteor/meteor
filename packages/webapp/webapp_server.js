@@ -8,6 +8,7 @@ var url = Npm.require("url");
 var crypto = Npm.require("crypto");
 
 var connect = Npm.require('connect');
+var parseurl = Npm.require('parseurl');
 var useragent = Npm.require('useragent');
 var send = Npm.require('send');
 
@@ -35,7 +36,7 @@ WebApp.clientPrograms = {};
 // XXX maps archs to program path on filesystem
 var archPath = {};
 
-var bundledJsCssPrefix;
+var bundledJsCssUrlRewriteHook;
 
 var sha1 = function (contents) {
   var hash = crypto.createHash('sha1');
@@ -106,10 +107,10 @@ var identifyBrowser = function (userAgentString) {
 WebAppInternals.identifyBrowser = identifyBrowser;
 
 WebApp.categorizeRequest = function (req) {
-  return {
+  return _.extend({
     browser: identifyBrowser(req.headers['user-agent']),
     url: url.parse(req.url, true)
-  };
+  }, _.pick(req, 'dynamicHead', 'dynamicBody'));
 };
 
 // HTML attribute hooks: functions to be called to determine any attributes to
@@ -235,30 +236,42 @@ WebApp._timeoutAdjustmentRequestCallback = function (req, res) {
 var boilerplateByArch = {};
 
 // Given a request (as returned from `categorizeRequest`), return the
-// boilerplate HTML to serve for that request. Memoizes on HTML
-// attributes (used by, eg, appcache) and whether inline scripts are
-// currently allowed.
+// boilerplate HTML to serve for that request.
+//
+// If a previous connect middleware has rendered content for the head or body,
+// returns the boilerplate with that content patched in otherwise
+// memoizes on HTML attributes (used by, eg, appcache) and whether inline 
+// scripts are currently allowed.
 // XXX so far this function is always called with arch === 'web.browser'
 var memoizedBoilerplate = {};
 var getBoilerplate = function (request, arch) {
-
+  var useMemoized = ! (request.dynamicHead || request.dynamicBody);
   var htmlAttributes = getHtmlAttributes(request);
-
-  // The only thing that changes from request to request (for now) are
-  // the HTML attributes (used by, eg, appcache) and whether inline
-  // scripts are allowed, so we can memoize based on that.
-  var memHash = JSON.stringify({
-    inlineScriptsAllowed: inlineScriptsAllowed,
-    htmlAttributes: htmlAttributes,
-    arch: arch
-  });
-
-  if (! memoizedBoilerplate[memHash]) {
-    memoizedBoilerplate[memHash] = boilerplateByArch[arch].toHTML({
-      htmlAttributes: htmlAttributes
+  
+  if (useMemoized) {
+    // The only thing that changes from request to request (unless extra 
+    // content is added to the head or body) are the HTML attributes 
+    // (used by, eg, appcache) and whether inline scripts are allowed, so we 
+    // can memoize based on that.
+    var memHash = JSON.stringify({
+      inlineScriptsAllowed: inlineScriptsAllowed,
+      htmlAttributes: htmlAttributes,
+      arch: arch
     });
+
+    if (! memoizedBoilerplate[memHash]) {
+      memoizedBoilerplate[memHash] = boilerplateByArch[arch].toHTML({
+        htmlAttributes: htmlAttributes
+      });
+    }
+    return memoizedBoilerplate[memHash];
   }
-  return memoizedBoilerplate[memHash];
+  
+  var boilerplateOptions = _.extend({ 
+    htmlAttributes: htmlAttributes 
+  }, _.pick(request, 'dynamicHead', 'dynamicBody'));
+  
+  return boilerplateByArch[arch].toHTML(boilerplateOptions);
 };
 
 WebAppInternals.generateBoilerplateInstance = function (arch,
@@ -271,16 +284,11 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
     additionalOptions.runtimeConfigOverrides || {}
   );
 
-  var jsCssPrefix;
-  if (arch === 'web.cordova') {
-    // in cordova we serve assets up directly from disk so it doesn't make
-    // sense to use the prefix (ordinarily something like a CDN) and go out
-    // to the internet for those files.
-    jsCssPrefix = '';
-  } else {
-    jsCssPrefix = bundledJsCssPrefix ||
-      __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '';
-  }
+  var jsCssUrlRewriteHook = bundledJsCssUrlRewriteHook || function (url) {
+    var bundledPrefix =
+       __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '';
+    return bundledPrefix + url;
+  };
 
   return new Boilerplate(arch, manifest,
     _.extend({
@@ -305,7 +313,7 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
         meteorRuntimeConfig: JSON.stringify(
           encodeURIComponent(JSON.stringify(runtimeConfig))),
         rootUrlPathPrefix: __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
-        bundledJsCssPrefix: jsCssPrefix,
+        bundledJsCssUrlRewriteHook: jsCssUrlRewriteHook,
         inlineScriptsAllowed: WebAppInternals.inlineScriptsAllowed(),
         inline: additionalOptions.inline
       }
@@ -327,11 +335,11 @@ var staticFiles;
 // Serve static files from the manifest or added with
 // `addStaticJs`. Exported for tests.
 WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
-  if ('GET' != req.method && 'HEAD' != req.method) {
+  if ('GET' != req.method && 'HEAD' != req.method && 'OPTIONS' != req.method) {
     next();
     return;
   }
-  var pathname = connect.utils.parseUrl(req).pathname;
+  var pathname = parseurl(req).pathname;
   try {
     pathname = decodeURIComponent(pathname);
   } catch (e) {
@@ -372,17 +380,9 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
   // Cacheable files are files that should never change. Typically
   // named by their hash (eg meteor bundled js and css files).
   // We cache them ~forever (1yr).
-  //
-  // We cache non-cacheable files anyway. This isn't really correct, as users
-  // can change the files and changes won't propagate immediately. However, if
-  // we don't cache them, browsers will 'flicker' when rerendering
-  // images. Eventually we will probably want to rewrite URLs of static assets
-  // to include a query parameter to bust caches. That way we can both get
-  // good caching behavior and allow users to change assets without delay.
-  // https://github.com/meteor/meteor/issues/773
   var maxAge = info.cacheable
         ? 1000 * 60 * 60 * 24 * 365
-        : 1000 * 60 * 60 * 24;
+        : 0;
 
   // Set the X-SourceMap header, which current Chrome, FireFox, and Safari
   // understand.  (The SourceMap header is slightly more spec-correct but FF
@@ -402,20 +402,21 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
     res.setHeader("Content-Type", "text/css; charset=UTF-8");
   } else if (info.type === "json") {
     res.setHeader("Content-Type", "application/json; charset=UTF-8");
-    // XXX if it is a manifest we are serving, set additional headers
-    if (/\/manifest.json$/.test(pathname)) {
-      res.setHeader("Access-Control-Allow-Origin", "*");
-    }
+  }
+
+  if (info.hash) {
+    res.setHeader('ETag', '"' + info.hash + '"');
   }
 
   if (info.content) {
     res.write(info.content);
     res.end();
   } else {
-    send(req, info.absolutePath)
-      .maxage(maxAge)
-      .hidden(true)  // if we specified a dotfile in the manifest, serve it
-      .on('error', function (err) {
+    send(req, info.absolutePath, {
+        maxage: maxAge,
+        dotfiles: 'allow', // if we specified a dotfile in the manifest, serve it
+        lastModified: false // don't set last-modified based on the file date
+      }).on('error', function (err) {
         Log.error("Error serving static file " + err);
         res.writeHead(500);
         res.end();
@@ -480,6 +481,7 @@ var runWebAppServer = function () {
             staticFiles[urlPrefix + getItemPathname(item.url)] = {
               absolutePath: path.join(clientDir, item.path),
               cacheable: item.cacheable,
+              hash: item.hash,
               // Link from source to its map
               sourceMapUrl: item.sourceMapUrl,
               type: item.type
@@ -497,9 +499,11 @@ var runWebAppServer = function () {
         });
 
         var program = {
+          format: "web-program-pre1",
           manifest: manifest,
           version: WebAppHashing.calculateClientHash(manifest, null, _.pick(
             __meteor_runtime_config__, 'PUBLIC_SETTINGS')),
+          cordovaCompatibilityVersions: clientJson.cordovaCompatibilityVersions,
           PUBLIC_SETTINGS: __meteor_runtime_config__.PUBLIC_SETTINGS
         };
 
@@ -507,9 +511,10 @@ var runWebAppServer = function () {
 
         // Serve the program as a string at /foo/<arch>/manifest.json
         // XXX change manifest.json -> program.json
-        staticFiles[path.join(urlPrefix, 'manifest.json')] = {
+        staticFiles[urlPrefix + getItemPathname('/manifest.json')] = {
           content: JSON.stringify(program),
-          cacheable: true,
+          cacheable: false,
+          hash: program.version,
           type: "json"
         };
       };
@@ -654,69 +659,83 @@ var runWebAppServer = function () {
   });
 
   app.use(function (req, res, next) {
-    if (! appUrl(req.url))
-      return next();
+    Fiber(function () {
+      if (!appUrl(req.url))
+        return next();
 
-    var headers = {
-      'Content-Type':  'text/html; charset=utf-8'
-    };
-    if (shuttingDown)
-      headers['Connection'] = 'Close';
+      var headers = {
+        'Content-Type': 'text/html; charset=utf-8'
+      };
+      if (shuttingDown)
+        headers['Connection'] = 'Close';
 
-    var request = WebApp.categorizeRequest(req);
+      var request = WebApp.categorizeRequest(req);
 
-    if (request.url.query && request.url.query['meteor_css_resource']) {
-      // In this case, we're requesting a CSS resource in the meteor-specific
-      // way, but we don't have it.  Serve a static css file that indicates that
-      // we didn't have it, so we can detect that and refresh.  Make sure
-      // that any proxies or CDNs don't cache this error!  (Normally proxies
-      // or CDNs are smart enough not to cache error pages, but in order to
-      // make this hack work, we need to return the CSS file as a 200, which
-      // would otherwise be cached.)
-      headers['Content-Type'] = 'text/css; charset=utf-8';
-      headers['Cache-Control'] = 'no-cache';
-      res.writeHead(200, headers);
-      res.write(".meteor-css-not-found-error { width: 0px;}");
+      if (request.url.query && request.url.query['meteor_css_resource']) {
+        // In this case, we're requesting a CSS resource in the meteor-specific
+        // way, but we don't have it.  Serve a static css file that indicates that
+        // we didn't have it, so we can detect that and refresh.  Make sure
+        // that any proxies or CDNs don't cache this error!  (Normally proxies
+        // or CDNs are smart enough not to cache error pages, but in order to
+        // make this hack work, we need to return the CSS file as a 200, which
+        // would otherwise be cached.)
+        headers['Content-Type'] = 'text/css; charset=utf-8';
+        headers['Cache-Control'] = 'no-cache';
+        res.writeHead(200, headers);
+        res.write(".meteor-css-not-found-error { width: 0px;}");
+        res.end();
+        return undefined;
+      }
+
+      if (request.url.query && request.url.query['meteor_js_resource']) {
+        // Similarly, we're requesting a JS resource that we don't have.
+        // Serve an uncached 404. (We can't use the same hack we use for CSS,
+        // because actually acting on that hack requires us to have the JS
+        // already!)
+        headers['Cache-Control'] = 'no-cache';
+        res.writeHead(404, headers);
+        res.end("404 Not Found");
+        return undefined;
+      }
+
+      if (request.url.query && request.url.query['meteor_dont_serve_index']) {
+        // When downloading files during a Cordova hot code push, we need
+        // to detect if a file is not available instead of inadvertently
+        // downloading the default index page.
+        // So similar to the situation above, we serve an uncached 404.
+        headers['Cache-Control'] = 'no-cache';
+        res.writeHead(404, headers);
+        res.end("404 Not Found");
+        return undefined;
+      }
+
+      // /packages/asdfsad ... /__cordova/dafsdf.js
+      var pathname = parseurl(req).pathname;
+      var archKey = pathname.split('/')[1];
+      var archKeyCleaned = 'web.' + archKey.replace(/^__/, '');
+
+      if (!/^__/.test(archKey) || !_.has(archPath, archKeyCleaned)) {
+        archKey = WebApp.defaultArch;
+      } else {
+        archKey = archKeyCleaned;
+      }
+
+      var boilerplate;
+      try {
+        boilerplate = getBoilerplate(request, archKey);
+      } catch (e) {
+        Log.error("Error running template: " + e.stack);
+        res.writeHead(500, headers);
+        res.end();
+        return undefined;
+      }
+
+      var statusCode = res.statusCode ? res.statusCode : 200;
+      res.writeHead(statusCode, headers);
+      res.write(boilerplate);
       res.end();
       return undefined;
-    }
-
-    if (request.url.query && request.url.query['meteor_js_resource']) {
-      // Similarly, we're requesting a JS resource that we don't have.
-      // Serve an uncached 404. (We can't use the same hack we use for CSS,
-      // because actually acting on that hack requires us to have the JS
-      // already!)
-      headers['Cache-Control'] = 'no-cache';
-      res.writeHead(404, headers);
-      res.end("404 Not Found");
-      return undefined;
-    }
-
-    // /packages/asdfsad ... /__cordova/dafsdf.js
-    var pathname = connect.utils.parseUrl(req).pathname;
-    var archKey = pathname.split('/')[1];
-    var archKeyCleaned = 'web.' + archKey.replace(/^__/, '');
-
-    if (! /^__/.test(archKey) || ! _.has(archPath, archKeyCleaned)) {
-      archKey = WebApp.defaultArch;
-    } else {
-      archKey = archKeyCleaned;
-    }
-
-    var boilerplate;
-    try {
-      boilerplate = getBoilerplate(request, archKey);
-    } catch (e) {
-      Log.error("Error running template: " + e);
-      res.writeHead(500, headers);
-      res.end();
-      return undefined;
-    }
-
-    res.writeHead(200, headers);
-    res.write(boilerplate);
-    res.end();
-    return undefined;
+    }).run();
   });
 
   // Return 404 by default, if no other handlers serve this URL.
@@ -799,9 +818,18 @@ WebAppInternals.setInlineScriptsAllowed = function (value) {
   WebAppInternals.generateBoilerplate();
 };
 
-WebAppInternals.setBundledJsCssPrefix = function (prefix) {
-  bundledJsCssPrefix = prefix;
+
+WebAppInternals.setBundledJsCssUrlRewriteHook = function (hookFn) {
+  bundledJsCssUrlRewriteHook = hookFn;
   WebAppInternals.generateBoilerplate();
+};
+
+WebAppInternals.setBundledJsCssPrefix = function (prefix) {
+  var self = this;
+  self.setBundledJsCssUrlRewriteHook(
+    function (url) {
+      return prefix + url;
+  });
 };
 
 // Packages can call `WebAppInternals.addStaticJs` to specify static

@@ -1,13 +1,17 @@
 Package.describe({
   summary: "Make HTTP calls to remote servers",
-  version: '1.1.1'
+  version: '1.1.3'
 });
 
 Npm.depends({request: "2.53.0"});
 
 Package.onUse(function (api) {
-  api.use('underscore');
-  api.use('url');
+  api.use([
+    'underscore',
+    'url',
+    'ecmascript'
+  ]);
+
   api.export('HTTP');
   api.export('HTTPInternals', 'server');
   api.addFiles('httpcall_common.js', ['client', 'server']);

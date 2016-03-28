@@ -681,7 +681,7 @@ ELEMENT_OPERATORS = {
         throw Error("$elemMatch need an object");
 
       var subMatcher, isDocMatcher;
-      if (isOperatorObject(operand, true)) {
+      if (isOperatorObject(_.omit(operand, _.keys(LOGICAL_OPERATORS)), true)) {
         subMatcher = compileValueSelector(operand, matcher);
         isDocMatcher = false;
       } else {

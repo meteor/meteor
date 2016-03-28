@@ -8,8 +8,9 @@ var files = require('../fs/files.js');
 var catalog = require('../packaging/catalog/catalog.js');
 
 function toArray (x) {
-  if (_.isArray(x))
+  if (_.isArray(x)) {
     return x;
+  }
   return x ? [x] : [];
 }
 
@@ -94,7 +95,8 @@ function PackageAPI (options) {
   _.each(compiler.ALL_ARCHES, function (arch) {
     self.files[arch] = {
       assets: [],
-      sources: []
+      sources: [],
+      main: null,
     };
 
     self.exports[arch] = [];
@@ -205,8 +207,9 @@ _.extend(PackageAPI.prototype, {
       try {
         var parsed = utils.parsePackageConstraint(name);
       } catch (e) {
-        if (!e.versionParserError)
+        if (!e.versionParserError) {
           throw e;
+        }
         buildmessage.error(e.message, {useMyCaller: true});
         // recover by ignoring
         continue;
@@ -247,13 +250,14 @@ _.extend(PackageAPI.prototype, {
   imply: function (names, arch) {
     var self = this;
 
-    // We currently disallow build plugins in debugOnly packages; but if
-    // you could use imply in a debugOnly package, you could pull in the
-    // build plugin from an implied package, which would have the same
-    // problem as allowing build plugins directly in the package. So no
-    // imply either!
-    if (self.debugOnly) {
-      buildmessage.error("can't use imply in debugOnly packages");
+    // We currently disallow build plugins in
+    // debugOnly/prodOnly/testOnly packages; but if you could use
+    // imply in a debugOnly package, you could pull in the build
+    // plugin from an implied package, which would have the same
+    // problem as allowing build plugins directly in the package. So
+    // no imply either!
+    if (self.debugOnly || self.prodOnly || self.testOnly) {
+      buildmessage.error("can't use imply in packages that are debugOnly, prodOnly or testOnly");
       // recover by ignoring
       return;
     }
@@ -267,8 +271,9 @@ _.extend(PackageAPI.prototype, {
       try {
         var parsed = utils.parsePackageConstraint(name);
       } catch (e) {
-        if (!e.versionParserError)
+        if (!e.versionParserError) {
           throw e;
+        }
         buildmessage.error(e.message, {useMyCaller: true});
         // recover by ignoring
         continue;
@@ -333,6 +338,29 @@ _.extend(PackageAPI.prototype, {
     this._addFiles("sources", paths, arch, fileOptions);
   },
 
+  mainModule(path, arch) {
+    arch = toArchArray(arch);
+    forAllMatchingArchs(arch, a => {
+      const filesForArch = this.files[a];
+      const source = {
+        relPath: files.pathRelative(".", path),
+        fileOptions: {
+          mainModule: true
+        }
+      };
+
+      const oldMain = filesForArch.main;
+      if (oldMain) {
+        // It's not an error to call api.mainModule multiple times, but
+        // the last call takes precedence over the earlier calls.
+        oldMain.fileOptions.mainModule = false;
+      }
+
+      filesForArch.main = source;
+      filesForArch.sources.push(source);
+    });
+  },
+
   /**
    * @memberOf PackageAPI
    * @instance
@@ -378,10 +406,14 @@ _.extend(PackageAPI.prototype, {
     // and break it. e.g.: 'some\folder/anotherFolder' is a valid path
     // consisting of two components. #WindowsPathApi
     paths = _.map(paths, function (p) {
+      // Normalize ./foo.js to foo.js.
+      p = files.pathRelative(".", p);
+
       if (p.indexOf('/') !== -1) {
         // it is already a Unix-style path most likely
         return p;
       }
+
       return files.convertToPosixPath(p, true);
     });
 
@@ -410,7 +442,7 @@ _.extend(PackageAPI.prototype, {
           source.fileOptions = fileOptions;
         }
 
-        filesOfType[path] = source;
+        filesOfType.push(source);
       });
     });
 
@@ -506,9 +538,9 @@ _.extend(PackageAPI.prototype, {
    * @instance
    * @summary Export package-level variables in your package. The specified
    * variables (declared without `var` in the source code) will be available
-   * to packages that use your package. If your package sets the `debugOnly`
-   * or `prodOnly` options to `true` when it calls `Package.describe()`, then
-   * packages that use your package will need to use
+   * to packages that use your package. If your package sets the `debugOnly`,
+   * `prodOnly` or `testOnly` options to `true` when it calls
+   * `Package.describe()`, then packages that use your package will need to use
    * `Package["package-name"].ExportedVariableName` to access the value of an
    * exported variable.
    * @locus package.js

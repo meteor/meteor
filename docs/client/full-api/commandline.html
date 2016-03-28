@@ -70,27 +70,22 @@ You can use the `--package` option, to create a new package. If used in an
 existing app, this command will create a package in the packages
 directory.
 
+<h3 id="meteorloginlogout">meteor login / logout</h3>
+
+Log in and out of your account using Meteor's authentication system.
+
+You can pass `METEOR_SESSION_FILE=token.json` before `meteor login` to generate
+a login session token so you don't have to share your login credentials with
+third-party service providers. You can revoke the token at any time from your
+[accounts settings page](https://www.meteor.com/account-settings/login-locations).
+
+Once you have your account you can log in and log out from the command line, and
+check your username with `meteor whoami`.
+
 <h3 id="meteordeploy">meteor deploy <i>site</i></h3>
 
-Deploy the project in your current directory to Meteor's servers.
-
-
-You can deploy to any available name
-under `meteor.com` without any additional
-configuration, for example, `myapp.meteor.com`.  If
-you deploy to a custom domain, such as `myapp.mydomain.com`,
-then you'll need to make sure the DNS for that domain is configured to
-point at `origin.meteor.com`.
-
-
-The first time you deploy an app you'll be prompted for an email address &mdash;
-follow the link in your email to finish setting up your account.
-
-
-Once you have your account you can log in and log out from the command line,
-check your username with `meteor whoami`, and run `meteor authorized` to give
-other Meteor developers permissions to deploy your app and access its database
-and logs.
+Deploy the project in your current directory to
+<a href="https://www.meteor.com/galaxy" target="_blank">Galaxy</a>.
 
 
 You can deploy in debug mode by passing `--debug`. This
@@ -104,16 +99,6 @@ the `--delete` option along with the site.
 
 
 
-{{#warning}}
-If you use a domain name other than `meteor.com`
-you must ensure that the name resolves
-to `origin.meteor.com`.  If you want a top-level
-domain like myapp.com, you'll need a DNS A record, matching the IP
-address of origin.meteor.com.
-{{/warning}}
-
-
-
 You can add information specific to a particular deployment of your application
 by using the `--settings` option.  The argument to `--settings` is a file
 containing any JSON string.  The object in your settings file will appear on the
@@ -122,17 +107,6 @@ server side of your application in [`Meteor.settings`](#meteor_settings).
 Settings are persistent.  When you redeploy your app, the old value will be
 preserved unless you explicitly pass new settings using the `--settings` option.
 To unset `Meteor.settings`, pass an empty settings file.
-
-<h3 id="meteorlogs">meteor logs <i>site</i></h3>
-
-Retrieves the server logs for the named Meteor application.
-
-
-Meteor redirects the output of `console.log()` in your
-server code into a logging server.  `meteor logs`
-displays those logs.  In client code, the output
-of `console.log()` is available in your web browser's
-inspector, just like any other client-side JavaScript.
 
 
 <h3 id="meteorupdate">meteor update</h3>
@@ -265,9 +239,9 @@ build artifacts:
   platform</li></ul>
 
 You can use the application server bundle to host a Meteor application on your
-own server, instead of deploying to Meteor's servers.  You will have to deal
+own server, instead of deploying to Galaxy.  You will have to deal
 with logging, monitoring, backups, load-balancing, etc, all of which we handle
-for you if you use `meteor deploy`.
+for you if you use Galaxy.
 
 The unsigned `apk` bundle and the outputted Xcode project can be used to deploy
 your mobile apps to Android Play Store and Apple App Store.
@@ -329,7 +303,7 @@ are on a linux machine, and that there is no Linux-compatible build for your pac
 and publish one.
 
 Currently, the supported architectures for Meteor are 32-bit Linux, 64-bit Linux
-and Mac OS. The servers for `meteor deploy` run 64-bit Linux.
+and Mac OS. Galaxy's servers run 64-bit Linux.
 
 
 <h3 id="meteorpublishrelease">meteor publish-release</h3>
@@ -368,6 +342,27 @@ Some example uses of `meteor admin` include adding and removing package
 maintainers and setting a homepage for a package. It also includes various
 helpful functions for managing a Meteor release.  Run `meteor help admin` for
 more information.
+
+<h3 id="meteorshell">meteor shell</h3>
+
+When `meteor shell` is executed in an application directory where a server
+is already running, it connects to the server and starts an interactive
+shell for evaluating server-side code.
+
+Multiple shells can be attached to the same server. If no server is
+currently available, `meteor shell` will keep trying to connect until it
+succeeds.
+
+Exiting the shell does not terminate the server. If the server restarts
+because a change was made in server code, or a fatal exception was
+encountered, the shell will restart along with the server. This behavior
+can be simulated by typing `.reload` in the shell.
+
+The shell supports tab completion for global variables like `Meteor`,
+`Mongo`, and `Package`. Try typing `Meteor.is` and then pressing tab.
+
+The shell maintains a persistent history across sessions. Previously-run
+commands can be accessed by pressing the up arrow.
 
 
 {{/markdown}}

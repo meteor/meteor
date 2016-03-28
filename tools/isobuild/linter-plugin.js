@@ -1,37 +1,39 @@
-var buildPluginModule = require('./build-plugin.js');
-var util = require('util');
-var _ = require('underscore');
+import { InputFile } from "./build-plugin.js";
 
-exports.LinterPlugin = function (pluginDefinition, userPlugin) {
-  var self = this;
-  self.userPlugin = userPlugin;
-  self.pluginDefinition = pluginDefinition;
-};
+export class LinterPlugin {
+  constructor(pluginDefinition, userPlugin) {
+    this.pluginDefinition = pluginDefinition;
+    this.userPlugin = userPlugin;
+  }
+}
 
-var LintingFile = exports.LintingFile = function (source) {
-  buildPluginModule.InputFile.call(this);
+export class LintingFile extends InputFile {
+  constructor(source) {
+    super();
+    this._source = source;
+  }
 
-  var self = this;
-  self._source = source;
-};
-
-util.inherits(LintingFile, buildPluginModule.InputFile);
-
-_.extend(LintingFile.prototype, {
-  getContentsAsBuffer: function () {
+  getContentsAsBuffer() {
     return this._source.contents;
-  },
-  getPathInPackage: function () {
+  }
+
+  getPathInPackage() {
     return this._source.relPath;
-  },
-  getPackageName: function () {
-    return this._source['package'];
-  },
-  getSourceHash: function () {
+  }
+
+  getPackageName() {
+    return this._source["package"];
+  }
+
+  getSourceHash() {
     return this._source.hash;
-  },
-  getArch: function () {
+  }
+
+  getArch() {
     return this._source.arch;
   }
-});
 
+  getFileOptions() {
+    return this._source.fileOptions || {};
+  }
+}

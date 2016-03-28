@@ -1,7 +1,7 @@
 var _ = require('underscore');
 
 var bundler = require('../isobuild/bundler.js');
-var Builder = require('../isobuild/builder.js');
+import Builder from '../isobuild/builder.js';
 var compiler = require('../isobuild/compiler.js');
 var isopackCacheModule = require('../isobuild/isopack-cache.js');
 
@@ -12,6 +12,7 @@ var watch = require('../fs/watch.js');
 var Console = require('../console/console.js').Console;
 var fiberHelpers = require('../utils/fiber-helpers.js');
 var packageMapModule = require('../packaging/package-map.js');
+var Profile = require('./profile.js').Profile;
 
 // TL;DR: Isopacket is a set of isopacks. Isopackets are used only inside
 // meteor-tool.
@@ -129,8 +130,9 @@ var ensureIsopacketsLoadable = function () {
   var messages = Console.withProgressDisplayVisible(function () {
     return buildmessage.capture(function () {
       _.each(ISOPACKETS, function (packages, isopacketName) {
-        if (failedPackageBuild)
+        if (failedPackageBuild) {
           return;
+        }
 
         var isopacketRoot = isopacketPath(isopacketName);
         var existingBuildinfo = files.readJSONOrNull(
@@ -162,8 +164,9 @@ var ensureIsopacketsLoadable = function () {
         }, function () {
           // Build the packages into the in-memory IsopackCache.
           isopacketBuildContext.isopackCache.buildLocalPackages(packages);
-          if (buildmessage.jobHasMessages())
+          if (buildmessage.jobHasMessages()) {
             return;
+          }
 
           // Now bundle them into a program.
           var built = bundler.buildJsImage({
@@ -172,8 +175,9 @@ var ensureIsopacketsLoadable = function () {
             isopackCache: isopacketBuildContext.isopackCache,
             use: packages
           });
-          if (buildmessage.jobHasMessages())
+          if (buildmessage.jobHasMessages()) {
             return;
+          }
 
           var builder = new Builder({outputPath: isopacketRoot});
           builder.writeJson('isopacket-buildinfo.json', {
@@ -200,8 +204,9 @@ var ensureIsopacketsLoadable = function () {
 
 // Returns a new all-local-packages catalog to be used for building isopackets.
 var newIsopacketBuildingCatalog = function () {
-  if (! files.inCheckout())
+  if (! files.inCheckout()) {
     throw Error("No need to build isopackets unless in checkout!");
+  }
 
   var catalogLocal = require('../packaging/catalog/catalog-local.js');
   var isopacketCatalog = new catalogLocal.LocalCatalog;
@@ -264,6 +269,7 @@ var loadIsopacketFromDisk = function (isopacketName) {
     __meteor_bootstrap__: { startupHooks: [] },
     __meteor_runtime_config__: { meteorRelease: "ISOPACKET" }
   };
+  env.Profile = Profile;
 
   var ret;
   var messages = buildmessage.capture({

@@ -18,6 +18,9 @@ var SessionDocumentView = function () {
   self.dataByKey = {}; // key-> [ {subscriptionHandle, value} by precedence]
 };
 
+DDPServer._SessionDocumentView = SessionDocumentView;
+
+
 _.extend(SessionDocumentView.prototype, {
 
   getFields: function () {
@@ -570,7 +573,7 @@ _.extend(Session.prototype, {
       if (!self.server.publish_handlers[msg.name]) {
         self.send({
           msg: 'nosub', id: msg.id,
-          error: new Meteor.Error(404, "Subscription not found")});
+          error: new Meteor.Error(404, `Subscription '${msg.name}' not found`)});
         return;
       }
 
@@ -657,7 +660,7 @@ _.extend(Session.prototype, {
       if (!handler) {
         self.send({
           msg: 'result', id: msg.id,
-          error: new Meteor.Error(404, "Method not found")});
+          error: new Meteor.Error(404, `Method '${msg.method}' not found`)});
         fence.arm();
         return;
       }
@@ -1393,6 +1396,7 @@ _.extend(Server.prototype, {
    * @locus Server
    * @param {function} callback The function to call when a new DDP connection is established.
    * @memberOf Meteor
+   * @importFromPackage meteor
    */
   onConnection: function (fn) {
     var self = this;
@@ -1464,6 +1468,7 @@ _.extend(Server.prototype, {
   /**
    * @summary Publish a record set.
    * @memberOf Meteor
+   * @importFromPackage meteor
    * @locus Server
    * @param {String} name Name of the record set.  If `null`, the set has no name, and the record set is automatically sent to all connected clients.
    * @param {Function} func Function called on the server each time a client subscribes.  Inside the function, `this` is the publish handler object, described below.  If the client passed arguments to `subscribe`, the function is called with the same arguments.
@@ -1532,6 +1537,7 @@ _.extend(Server.prototype, {
    * @locus Anywhere
    * @param {Object} methods Dictionary whose keys are method names and values are functions.
    * @memberOf Meteor
+   * @importFromPackage meteor
    */
   methods: function (methods) {
     var self = this;
@@ -1580,7 +1586,7 @@ _.extend(Server.prototype, {
     var handler = self.method_handlers[name];
     var exception;
     if (!handler) {
-      exception = new Meteor.Error(404, "Method not found");
+      exception = new Meteor.Error(404, `Method '${name}' not found`);
     } else {
       // If this is a method call from within another method, get the
       // user state from the outer method, otherwise don't allow

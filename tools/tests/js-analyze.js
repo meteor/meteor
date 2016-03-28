@@ -16,7 +16,7 @@ selftest.define('findAssignedGlobals', () => {
   run('for (var x in y);', {});
   // Update operators cause ReferenceError if the left-hand is not defined.
   run('x++', {});
-  run('x += 5', {});
+  run('x += 5', {x: true});
   run('var x = y', {});
   run('a.b[c.d]', {});
   run('foo.bar[baz][c.d].z = 3', {});

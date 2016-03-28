@@ -19,6 +19,7 @@
  * @param {Function} [callback] Optional callback.
  *   Called with no arguments on success, or with a single `Error` argument
  *   on failure.
+ * @importFromPackage meteor
  */
 Meteor.loginWithPassword = function (selector, password, callback) {
   if (typeof selector === 'string')
@@ -109,6 +110,7 @@ var srpUpgradePath = function (options, callback) {
  * @param {String} options.password The user's password. This is __not__ sent in plain text over the wire.
  * @param {Object} options.profile The user's profile, typically including the `name` field.
  * @param {Function} [callback] Client only, optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ * @importFromPackage accounts-base
  */
 Accounts.createUser = function (options, callback) {
   options = _.clone(options); // we'll be modifying options
@@ -144,6 +146,7 @@ Accounts.createUser = function (options, callback) {
  * @param {String} oldPassword The user's current password. This is __not__ sent in plain text over the wire.
  * @param {String} newPassword A new password for the user. This is __not__ sent in plain text over the wire.
  * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ * @importFromPackage accounts-base
  */
 Accounts.changePassword = function (oldPassword, newPassword, callback) {
   if (!Meteor.user()) {
@@ -206,6 +209,7 @@ Accounts.changePassword = function (oldPassword, newPassword, callback) {
  * @param {Object} options
  * @param {String} options.email The email address to send a password reset link.
  * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ * @importFromPackage accounts-base
  */
 Accounts.forgotPassword = function(options, callback) {
   if (!options.email)
@@ -226,6 +230,7 @@ Accounts.forgotPassword = function(options, callback) {
  * @param {String} token The token retrieved from the reset password URL.
  * @param {String} newPassword A new password for the user. This is __not__ sent in plain text over the wire.
  * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ * @importFromPackage accounts-base
  */
 Accounts.resetPassword = function(token, newPassword, callback) {
   check(token, String);
@@ -253,6 +258,7 @@ Accounts.resetPassword = function(token, newPassword, callback) {
  * @locus Client
  * @param {String} token The token retrieved from the verification URL.
  * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ * @importFromPackage accounts-base
  */
 Accounts.verifyEmail = function(token, callback) {
   if (!token)

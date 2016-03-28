@@ -6,7 +6,6 @@ var os = require('os');
 var util = require('util');
 
 var _ = require('underscore');
-var Future = require('fibers/future');
 
 var files = require('../fs/files.js');
 var auth = require('../meteor-services/auth.js');
@@ -64,15 +63,16 @@ _.extend(WritableWithProgress.prototype, {
 var getUserAgent = function () {
   var version;
 
-  if (release.current)
+  if (release.current) {
     version = release.current.isCheckout() ? 'checkout' : release.current.name;
-  else
+  } else {
     // This happens when we haven't finished starting up yet (say, the
     // user passed --release 1.2.3 and we have to download 1.2.3
     // before we can get going), or if we are using an installed copy
     // of Meteor to 'meteor update'ing a project that was created by a
     // checkout and doesn't have a version yet.
     version = files.inCheckout() ? 'checkout' : files.getToolsVersion();
+  }
 
   return util.format('Meteor/%s OS/%s (%s; %s; %s;)', version,
                      os.platform(), os.type(), os.release(), os.arch());
@@ -121,10 +121,11 @@ _.extend(exports, {
   // the session file afterwards.
   request: function (urlOrOptions, callback) {
     var options;
-    if (!_.isObject(urlOrOptions))
+    if (!_.isObject(urlOrOptions)) {
       options = { url: urlOrOptions };
-    else
+    } else {
       options = _.clone(urlOrOptions);
+    }
 
     var bodyStream;
     if (_.has(options, 'bodyStream')) {
@@ -169,6 +170,9 @@ _.extend(exports, {
 
     // This should never, ever be false, or else why are you using SSL?
     options.forceSSL = true;
+    if (process.env.CAFILE) {
+      options.ca = files.readFile(process.env.CAFILE);
+    }
 
     // followRedirect is very dangerous because request does not
     // appear to segregate cookies by origin, so any cookies (and
@@ -184,44 +188,49 @@ _.extend(exports, {
     delete options.useAuthHeader;
     if (useSessionHeader || useAuthHeader) {
       var sessionHeader = auth.getSessionId(config.getAccountsDomain());
-      if (sessionHeader)
+      if (sessionHeader) {
         options.headers['X-Meteor-Session'] = sessionHeader;
-      if (callback)
+      }
+      if (callback) {
         throw new Error("session header can't be used with callback");
+      }
     }
     if (useAuthHeader) {
       var authHeader = auth.getSessionToken(config.getAccountsDomain());
-      if (authHeader)
+      if (authHeader) {
         options.headers['X-Meteor-Auth'] = authHeader;
+      }
     }
 
-    var fut;
+    var promise;
     if (! callback) {
-      fut = new Future();
-      callback = function (err, response, body) {
-        if (err) {
-          fut['throw'](err);
-          return;
-        }
+      promise = new Promise(function (resolve, reject) {
+        callback = function (err, response, body) {
+          if (err) {
+            reject(err);
+            return;
+          }
 
-        var setCookie = {};
-        _.each(response.headers["set-cookie"] || [], function (h) {
-          var match = h.match(/^([^=\s]+)=([^;\s]+)/);
-          if (match)
-            setCookie[match[1]] = match[2];
-        });
+          var setCookie = {};
+          _.each(response.headers["set-cookie"] || [], function (h) {
+            var match = h.match(/^([^=\s]+)=([^;\s]+)/);
+            if (match) {
+              setCookie[match[1]] = match[2];
+            }
+          });
 
-        if (useSessionHeader && _.has(response.headers, "x-meteor-session")) {
-          auth.setSessionId(config.getAccountsDomain(),
-                            response.headers['x-meteor-session']);
-        }
+          if (useSessionHeader && _.has(response.headers, "x-meteor-session")) {
+            auth.setSessionId(config.getAccountsDomain(),
+                              response.headers['x-meteor-session']);
+          }
 
-        fut['return']({
-          response: response,
-          body: body,
-          setCookie: setCookie
-        });
-      };
+          resolve({
+            response: response,
+            body: body,
+            setCookie: setCookie
+          });
+        };
+      });
     }
 
     // try to get proxy from environment.
@@ -270,9 +279,9 @@ _.extend(exports, {
       });
     }
 
-    if (fut) {
+    if (promise) {
       try {
-        return fut.wait();
+        return promise.await();
       } finally {
         if (progress) {
           progress.reportProgressDone();

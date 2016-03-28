@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Run this script on Mac/Linux, not on Windows
 # Requires awscli to be installed and an appropriate ~/.aws/config.

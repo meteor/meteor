@@ -38,11 +38,8 @@
     <div class="main-content">
       <div id="main">
         <div><div id="top"></div></div>
-        <div class="{{layoutHidden 'full'}}">
+        <div>
           {{> fullApiContent}}
-        </div>
-        <div class="{{layoutHidden 'basic'}}">
-          {{> basicContent}}
         </div>
       </div>
     </div>
@@ -52,16 +49,14 @@
 <template name="sidebar">
   <div id="nav-inner">
     <h1>
-      <a href="{{topLink}}">
+      <a href="#/full">
         <img src="/logo.png" class="logo" alt="Meteor" />
         <div>{{release}} Docs</div>
       </a>
     </h1>
 
-    {{> basicOrFullSelect}}
 
     {{> tableOfContents}}
-    {{> basicTableOfContents}}
   </div>
 </template>
 
@@ -74,11 +69,4 @@
       <img src="/logo.png" class="logo" alt="Meteor" /> {{release}} Docs
     </h1>
   </div>
-</template>
-
-<template name="basicOrFullSelect">
-  <select class="basic-or-full">
-    <option value="basic" selected="{{isBasic}}">Basic Docs</option>
-    <option value="full" selected="{{isFull}}">Full API</option>
-  </select>
 </template>

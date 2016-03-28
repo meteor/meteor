@@ -47,6 +47,9 @@ Match = {
   Optional: function (pattern) {
     return new Optional(pattern);
   },
+  Maybe: function (pattern) {
+    return new Maybe(pattern);
+  },
   OneOf: function (/*arguments*/) {
     return new OneOf(_.toArray(arguments));
   },
@@ -112,6 +115,8 @@ var Optional = function (pattern) {
   this.pattern = pattern;
 };
 
+var Maybe = Optional;
+
 var OneOf = function (choices) {
   if (_.isEmpty(choices))
     throw new Error("Must provide at least one choice to Match.OneOf");
@@ -152,7 +157,7 @@ var testSubtree = function (value, pattern) {
       if (typeof value === typeofChecks[i][1])
         return false;
       return {
-        message: "Expected " + typeofChecks[i][1] + ", got " + typeof value,
+        message: "Expected " + typeofChecks[i][1] + ", got " + (value === null ? "null" : typeof value),
         path: ""
       };
     }
@@ -235,7 +240,7 @@ var testSubtree = function (value, pattern) {
         path: err.path
       };
     }
-    if (pattern.condition(value))
+    if (result)
       return false;
     // XXX this error is terrible
     return {
@@ -245,8 +250,12 @@ var testSubtree = function (value, pattern) {
   }
 
 
-  if (pattern instanceof Optional)
+  if (pattern instanceof Maybe) {
+    pattern = Match.OneOf(undefined, null, pattern.pattern);
+  }
+  else if (pattern instanceof Optional) {
     pattern = Match.OneOf(undefined, pattern.pattern);
+  }
 
   if (pattern instanceof OneOf) {
     for (var i = 0; i < pattern.choices.length; ++i) {
@@ -259,7 +268,7 @@ var testSubtree = function (value, pattern) {
     }
     // XXX this error is terrible
     return {
-      message: "Failed Match.OneOf or Match.Optional validation",
+      message: "Failed Match.OneOf, Match.Maybe or Match.Optional validation",
       path: ""
     };
   }
@@ -309,7 +318,7 @@ var testSubtree = function (value, pattern) {
       path: ""
     };
   }
-  if (value.constructor !== Object) {
+  if (! jQuery.isPlainObject(value)) {
     return {
       message: "Expected plain object",
       path: ""
@@ -319,13 +328,22 @@ var testSubtree = function (value, pattern) {
   var requiredPatterns = {};
   var optionalPatterns = {};
   _.each(pattern, function (subPattern, key) {
-    if (subPattern instanceof Optional)
+    if (subPattern instanceof Optional || subPattern instanceof Maybe)
       optionalPatterns[key] = subPattern.pattern;
     else
       requiredPatterns[key] = subPattern;
   });
 
-  for (var keys = _.keys(value), i = 0, length = keys.length; i < length; i++) {
+  //XXX: replace with underscore's _.allKeys if Meteor updates underscore to 1.8+ (or lodash)
+  var allKeys = function(obj){
+    var keys = [];
+    if (_.isObject(obj)){
+      for (var key in obj) keys.push(key);
+    }
+    return keys;
+  }
+
+  for (var keys = allKeys(value), i = 0, length = keys.length; i < length; i++) {
     var key = keys[i];
     var subValue = value[key];
     if (_.has(requiredPatterns, key)) {

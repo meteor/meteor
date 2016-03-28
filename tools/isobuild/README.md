@@ -88,7 +88,7 @@ remained the same over and over again.
 
 It is even OK to do when an app process serving these files is still running, on
 Unix, the process can retain files by their inodes (not by file paths) and then
-once the process release them, the FS will clean up unliked files.
+once the process release them, the FS will clean up unlinked files.
 
 ### Linker
 

@@ -4,11 +4,16 @@ import utils from '../utils/utils.js';
 import buildmessage from '../utils/buildmessage.js';
 
 import { oldToNew as oldToNewPluginIds, newToOld as newToOldPluginIds }
-  from 'cordova-registry-mapper';
+  from 'cordova-lib/node_modules/cordova-registry-mapper';
 
 export const CORDOVA_ARCH = "web.cordova";
 
-export const AVAILABLE_PLATFORMS = ['ios', 'android'];
+export const CORDOVA_PLATFORMS = ['ios', 'android'];
+
+export const CORDOVA_PLATFORM_VERSIONS = {
+  'android': '5.1.1',
+  'ios': '4.1.0'
+};
 
 const PLATFORM_TO_DISPLAY_NAME_MAP = {
   'ios': 'iOS',
@@ -28,7 +33,7 @@ export function displayNamesForPlatforms(platforms) {
 // Right now, the only other platforms are the default browser and server
 // platforms.
 export function filterPlatforms(platforms) {
-  return _.intersection(platforms, AVAILABLE_PLATFORMS);
+  return _.intersection(platforms, CORDOVA_PLATFORMS);
 }
 
 export function splitPluginsAndPackages(packages) {
@@ -37,13 +42,13 @@ export function splitPluginsAndPackages(packages) {
     packages: []
   };
 
-  for (package of packages) {
-    const [namespace, ...rest] = package.split(':');
+  for (let pkg of packages) {
+    const [namespace, ...rest] = pkg.split(':');
     if (namespace === 'cordova') {
       const name = rest.join(':');
       result.plugins.push(name);
     } else {
-      result.packages.push(package);
+      result.packages.push(pkg);
     }
   }
 
@@ -124,15 +129,5 @@ function displayNameForHostPlatform(platform = process.platform) {
       return "Linux";
     case 'win32':
       return "Windows";
-  }
-}
-
-export function installationInstructionsUrlForPlatform(platform) {
-  const hostPlatformName = displayNameForHostPlatform();
-
-  if (hostPlatformName) {
-    const page = `Mobile-Development-Install:-${displayNameForPlatform(platform)}-on-${hostPlatformName}`;
-    const url = `https://github.com/meteor/meteor/wiki/${page}`;
-    return url;
   }
 }

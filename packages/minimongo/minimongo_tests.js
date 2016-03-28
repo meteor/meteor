@@ -1135,12 +1135,27 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
         {a: [{x: 1, b: 1}]});
   match({a: {$elemMatch: {$or: [{a: 1}, {b: 1}], x: 1}}},
         {a: [{x: 1, b: 1}]});
+  match({a: {$elemMatch: {$or: [{a: 1}, {b: 1}]}}},
+        {a: [{x: 1, b: 1}]});
+  match({a: {$elemMatch: {$or: [{a: 1}, {b: 1}]}}},
+        {a: [{x: 1, b: 1}]});
+  match({a: {$elemMatch: {$and: [{b: 1}, {x: 1}]}}},
+        {a: [{x: 1, b: 1}]});
   nomatch({a: {$elemMatch: {x: 1, $or: [{a: 1}, {b: 1}]}}},
           {a: [{b: 1}]});
   nomatch({a: {$elemMatch: {x: 1, $or: [{a: 1}, {b: 1}]}}},
           {a: [{x: 1}]});
   nomatch({a: {$elemMatch: {x: 1, $or: [{a: 1}, {b: 1}]}}},
           {a: [{x: 1}, {b: 1}]});
+
+  test.throws(function () {
+    match({a: {$elemMatch: {$gte: 1, $or: [{a: 1}, {b: 1}]}}},
+          {a: [{x: 1, b: 1}]});
+  });
+
+  test.throws(function () {
+    match({x: {$elemMatch: {$and: [{$gt: 5, $lt: 9}]}}}, {x: [8]});
+  });
 
   // $comment
   match({a: 5, $comment: "asdf"}, {a: 5});
@@ -1967,6 +1982,26 @@ Tinytest.add("minimongo - sort key filter", function (test) {
   // constrained.
   keyCompatible({a: 1, b: 1, c: 1},
                 {c: {$lt: 3}}, [3, "bla", 4], true);
+});
+
+Tinytest.add("minimongo - sort function", function (test) {
+  var c = new LocalCollection();
+
+  c.insert({a: 1});
+  c.insert({a: 10});
+  c.insert({a: 5});
+  c.insert({a: 7});
+  c.insert({a: 2});
+  c.insert({a: 4});
+  c.insert({a: 3});
+
+  var sortFunction = function (doc1, doc2) {
+    return doc2.a - doc1.a;
+  };
+
+  test.equal(c.find({}, {sort: sortFunction}).fetch(), c.find({}).fetch().sort(sortFunction));
+  test.notEqual(c.find({}).fetch(), c.find({}).fetch().sort(sortFunction));
+  test.equal(c.find({}, {sort: {a: -1}}).fetch(), c.find({}).fetch().sort(sortFunction));
 });
 
 Tinytest.add("minimongo - binary search", function (test) {
@@ -3045,4 +3080,37 @@ Tinytest.add("minimongo - fine-grained reactivity of query with fields projectio
   test.isTrue(callbackInvoked);
 
   computation.stop();
+});
+
+// Tests that the logic in `LocalCollection.prototype.update`
+// correctly deals with count() on a cursor with skip or limit (since
+// then the result set is an IdMap, not an array)
+Tinytest.add("minimongo - reactive skip/limit count while updating", function(test) {
+  var X = new LocalCollection;
+  var count = -1;
+
+  var c = Tracker.autorun(function() {
+    count = X.find({}, {skip: 1, limit: 1}).count();
+  });
+
+  test.equal(count, 0);
+
+  X.insert({});
+  Tracker.flush({_throwFirstError: true});
+  test.equal(count, 0);
+
+  X.insert({});
+  Tracker.flush({_throwFirstError: true});
+  test.equal(count, 1);
+
+  X.update({}, {$set: {foo: 1}});
+  Tracker.flush({_throwFirstError: true});
+  test.equal(count, 1);
+
+  // Make sure a second update also works
+  X.update({}, {$set: {foo: 2}});
+  Tracker.flush({_throwFirstError: true});
+  test.equal(count, 1);
+
+  c.stop();
 });

@@ -30,7 +30,7 @@ main.registerCommand({
   maxArgs: Infinity,
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.Never(),
-  notOnWindows: true
+  notOnWindows: false
 }, function (options) {
   Console.setVerbose(!!options.verbose);
 
@@ -43,27 +43,34 @@ main.registerCommand({
     for (platform of platformsToAdd) {
       if (_.contains(installedPlatforms, platform)) {
         buildmessage.error(`${platform}: platform is already added`);
-      } else if (!_.contains(cordova.AVAILABLE_PLATFORMS, platform)) {
+      } else if (!_.contains(cordova.CORDOVA_PLATFORMS, platform)) {
         buildmessage.error(`${platform}: no such platform`);
       }
     }
 
-    if (buildmessage.jobHasMessages()) return;
+    if (buildmessage.jobHasMessages()) {
+      return;
+    }
 
     const cordovaProject = new CordovaProject(projectContext);
+    if (buildmessage.jobHasMessages()) return;
 
     installedPlatforms = installedPlatforms.concat(platformsToAdd)
     const cordovaPlatforms = cordova.filterPlatforms(installedPlatforms);
     cordovaProject.ensurePlatformsAreSynchronized(cordovaPlatforms);
 
-    if (buildmessage.jobHasMessages()) return;
+    if (buildmessage.jobHasMessages()) {
+      return;
+    }
 
     // Only write the new platform list when we have succesfully synchronized
     projectContext.platformList.write(installedPlatforms);
 
     for (platform of platformsToAdd) {
       Console.info(`${platform}: added platform`);
-      cordovaProject.checkPlatformRequirements(platform);
+      if (_.contains(cordovaPlatforms, platform)) {
+        cordovaProject.checkPlatformRequirements(platform);
+      }
     }
   });
 });
@@ -92,7 +99,9 @@ version of Meteor`);
       }
     }
 
-    if (buildmessage.jobHasMessages()) return;
+    if (buildmessage.jobHasMessages()) {
+      return;
+    }
 
     installedPlatforms = _.without(installedPlatforms, ...platformsToRemove);
     projectContext.platformList.write(installedPlatforms);
@@ -103,6 +112,7 @@ version of Meteor`);
 
     if (process.platform !== 'win32') {
       const cordovaProject = new CordovaProject(projectContext);
+      if (buildmessage.jobHasMessages()) return;
       const cordovaPlatforms = cordova.filterPlatforms(installedPlatforms);
       cordovaProject.ensurePlatformsAreSynchronized(cordovaPlatforms);
     }
@@ -126,30 +136,16 @@ main.registerCommand({
   options: {
     verbose: { type: Boolean, short: "v" }
   },
-  minArgs: 1,
-  maxArgs: 1,
+  minArgs: 0,
+  maxArgs: Infinity,
   catalogRefresh: new catalog.Refresh.Never(),
   hidden: true,
   notOnWindows: true
 }, function (options) {
   Console.setVerbose(!!options.verbose);
 
-  const platform = options.args[0];
-
-  if (!_.contains(cordova.AVAILABLE_PLATFORMS, platform)) {
-    Console.warn(`Unknown platform: ${platform}`);
-    Console.info(`Valid platforms are: \
-${cordova.AVAILABLE_PLATFORMS.join(', ')}`);
-    return 1;
-  }
-
-  const url = cordova.installationInstructionsUrlForPlatform(platform);
-  if (url) {
-    Console.info("Please follow the instructions here:");
-    Console.info(Console.url(url));
-  } else {
-    Console.info("We don't have installation instructions for your platform");
-  }
+  Console.info("Please follow the installation instructions in the mobile guide:");
+  Console.info(Console.url("http://guide.meteor.com/mobile.html#installing-prerequisites"));
 
   return 0;
 });

@@ -33,6 +33,7 @@ var Connection = function (url, options) {
     },
     heartbeatInterval: 17500,
     heartbeatTimeout: 15000,
+    npmFayeOptions: {},
     // These options are only for testing.
     reloadWithOutstanding: false,
     supportedDDPVersions: DDPCommon.SUPPORTED_DDP_VERSIONS,
@@ -59,7 +60,8 @@ var Connection = function (url, options) {
       // should have a real API for handling client-stream-level
       // errors.
       _dontPrintErrors: options._dontPrintErrors,
-      connectTimeoutMs: options.connectTimeoutMs
+      connectTimeoutMs: options.connectTimeoutMs,
+      npmFayeOptions: options.npmFayeOptions
     });
   }
 
@@ -272,11 +274,47 @@ var Connection = function (url, options) {
     msg.support = self._supportedDDPVersions;
     self._send(msg);
 
+    // Mark non-retry calls as failed. This has to be done early as getting these methods out of the
+    // current block is pretty important to making sure that quiescence is properly calculated, as
+    // well as possibly moving on to another useful block.
+
+    // Only bother testing if there is an outstandingMethodBlock (there might not be, especially if
+    // we are connecting for the first time.
+    if (self._outstandingMethodBlocks.length > 0) {
+      // If there is an outstanding method block, we only care about the first one as that is the
+      // one that could have already sent messages with no response, that are not allowed to retry.
+      _.each(self._outstandingMethodBlocks[0].methods, function(methodInvoker) {
+        // If the message wasn't sent or it's allowed to retry, do nothing.
+        if (methodInvoker.sentMessage && methodInvoker.noRetry) {
+          // The next loop serves to get the index in the current method block of this method.
+          var currentMethodBlock = self._outstandingMethodBlocks[0].methods;
+          var loopMethod;
+          for (var i = 0; i < currentMethodBlock.length; i++) {
+            loopMethod = currentMethodBlock[i];
+            if (loopMethod.methodId === methodInvoker.methodId) {
+              break;
+            }
+          }
+
+          // Remove from current method block. This may leave the block empty, but we
+          // don't move on to the next block until the callback has been delivered, in
+          // _outstandingMethodFinished.
+          currentMethodBlock.splice(i, 1);
+
+          // Make sure that the method is told that it failed.
+          methodInvoker.receiveResult(Meteor.Error('invocation-failed',
+            'Method invocation might have failed due to dropped connection. ' +
+            'Failing because `noRetry` option was passed to Meteor.apply.'));
+        }
+      });
+    }
+
     // Now, to minimize setup latency, go ahead and blast out all of
     // our pending methods ands subscriptions before we've even taken
     // the necessary RTT to know if we successfully reconnected. (1)
-    // They're supposed to be idempotent; (2) even if we did
-    // reconnect, we're not sure what messages might have gotten lost
+    // They're supposed to be idempotent, and where they are not,
+    // they can block retry in apply; (2) even if we did reconnect,
+    // we're not sure what messages might have gotten lost
     // (in either direction) since we were disconnected (TCP being
     // sloppy about that.)
 
@@ -350,6 +388,7 @@ var MethodInvoker = function (options) {
   self._message = options.message;
   self._onResultReceived = options.onResultReceived || function () {};
   self._wait = options.wait;
+  self.noRetry = options.noRetry;
   self._methodResult = null;
   self._dataVisible = false;
 
@@ -367,10 +406,10 @@ _.extend(MethodInvoker.prototype, {
     if (self.gotResult())
       throw new Error("sendingMethod is called on method with result");
 
+
     // If we're re-sending it, it doesn't matter if data was written the first
     // time.
     self._dataVisible = false;
-
     self.sentMessage = true;
 
     // If this is a wait method, make all data messages be buffered until it is
@@ -440,7 +479,8 @@ _.extend(Connection.prototype, {
     // implemented by 'store' into a no-op.
     var store = {};
     _.each(['update', 'beginUpdate', 'endUpdate', 'saveOriginals',
-            'retrieveOriginals', 'getDoc'], function (method) {
+            'retrieveOriginals', 'getDoc',
+			'_getCollection'], function (method) {
               store[method] = function () {
                 return (wrappedStore[method]
                         ? wrappedStore[method].apply(wrappedStore, arguments)
@@ -465,12 +505,13 @@ _.extend(Connection.prototype, {
 
   /**
    * @memberOf Meteor
+   * @importFromPackage meteor
    * @summary Subscribe to a record set.  Returns a handle that provides
    * `stop()` and `ready()` methods.
    * @locus Client
    * @param {String} name Name of the subscription.  Matches the name of the
    * server's `publish()` call.
-   * @param {Any} [arg1,arg2...] Optional arguments passed to publisher
+   * @param {EJSONable} [arg1,arg2...] Optional arguments passed to publisher
    * function on server.
    * @param {Function|Object} [callbacks] Optional. May include `onStop`
    * and `onReady` callbacks. If there is an error, it is passed as an
@@ -656,6 +697,7 @@ _.extend(Connection.prototype, {
 
   /**
    * @memberOf Meteor
+   * @importFromPackage meteor
    * @summary Invokes a method passing any number of arguments.
    * @locus Anywhere
    * @param {String} name Name of method to invoke
@@ -694,6 +736,7 @@ _.extend(Connection.prototype, {
 
   /**
    * @memberOf Meteor
+   * @importFromPackage meteor
    * @summary Invoke a method passing an array of arguments.
    * @locus Anywhere
    * @param {String} name Name of method to invoke
@@ -701,6 +744,7 @@ _.extend(Connection.prototype, {
    * @param {Object} [options]
    * @param {Boolean} options.wait (Client only) If true, don't send this method until all previous method calls have completed, and don't send any subsequent method calls until this one is completed.
    * @param {Function} options.onResultReceived (Client only) This callback is invoked with the error or result of the method (just like `asyncCallback`) as soon as the error or result is available. The local cache may not yet reflect the writes performed by the method.
+   * @param (Boolean) options.noRetry (Client only) if true, don't send this method again on reload, simply call the callback an error with the error code 'invocation-failed'.
    * @param {Function} [asyncCallback] Optional callback; same semantics as in [`Meteor.call`](#meteor_call).
    */
   apply: function (name, args, options, callback) {
@@ -883,7 +927,8 @@ _.extend(Connection.prototype, {
       connection: self,
       onResultReceived: options.onResultReceived,
       wait: !!options.wait,
-      message: message
+      message: message,
+      noRetry: !!options.noRetry
     });
 
     if (options.wait) {
@@ -992,6 +1037,7 @@ _.extend(Connection.prototype, {
    * @summary Get the current connection status. A reactive data source.
    * @locus Client
    * @memberOf Meteor
+   * @importFromPackage meteor
    */
   status: function (/*passthrough args*/) {
     var self = this;
@@ -1004,6 +1050,7 @@ _.extend(Connection.prototype, {
   This method does nothing if the client is already connected.
    * @locus Client
    * @memberOf Meteor
+   * @importFromPackage meteor
    */
   reconnect: function (/*passthrough args*/) {
     var self = this;
@@ -1014,6 +1061,7 @@ _.extend(Connection.prototype, {
    * @summary Disconnect the client from the server.
    * @locus Client
    * @memberOf Meteor
+   * @importFromPackage meteor
    */
   disconnect: function (/*passthrough args*/) {
     var self = this;

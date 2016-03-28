@@ -7,7 +7,7 @@
  * - connection {Object} Optional DDP connection to reuse.
  * - ddpUrl {String} Optional URL for creating a new DDP connection.
  */
-AccountsCommon = class AccountsCommon {
+export class AccountsCommon {
   constructor(options) {
     // Currently this is read directly by packages like accounts-password
     // and accounts-ui-unstyled.
@@ -217,6 +217,7 @@ var Ap = AccountsCommon.prototype;
 /**
  * @summary Get the current user id, or `null` if no user is logged in. A reactive data source.
  * @locus Anywhere but publish functions
+ * @importFromPackage meteor
  */
 Meteor.userId = function () {
   return Accounts.userId();
@@ -225,6 +226,7 @@ Meteor.userId = function () {
 /**
  * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.
  * @locus Anywhere but publish functions
+ * @importFromPackage meteor
  */
 Meteor.user = function () {
   return Accounts.user();

@@ -13,6 +13,8 @@ var _ = require('underscore');
 var stats = require('./stats.js');
 var Console = require('../console/console.js').Console;
 
+const CAPABILITIES = ['showDeployMessages', 'canTransferAuthorization'];
+
 // Make a synchronous RPC to the "classic" MDG deploy API. The deploy
 // API has the following contract:
 //
@@ -59,8 +61,10 @@ var deployRpc = function (options) {
 
   options = _.clone(options);
   options.headers = _.clone(options.headers || {});
-  if (options.headers.cookie)
+  if (options.headers.cookie) {
     throw new Error("sorry, can't combine cookie headers yet");
+  }
+  options.qs = _.extend({}, options.qs, {capabilities: CAPABILITIES});
 
   // XXX: Reintroduce progress for upload
   try {
@@ -143,7 +147,8 @@ var authedRpc = function (options) {
   var infoResult = deployRpc({
     operation: 'info',
     site: rpcOptions.site,
-    expectPayload: []
+    expectPayload: [],
+    qs: options.qs
   });
 
   if (infoResult.statusCode === 401 && rpcOptions.promptIfAuthFails) {
@@ -172,8 +177,9 @@ var authedRpc = function (options) {
     return preflight ? { } : deployRpc(rpcOptions);
   }
 
-  if (infoResult.errorMessage)
+  if (infoResult.errorMessage) {
     return infoResult;
+  }
   var info = infoResult.payload;
 
   if (! _.has(info, 'protection')) {
@@ -301,8 +307,9 @@ var canonicalizeSite = function (site) {
   }
 
   var url = site;
-  if (!url.match(':\/\/'))
+  if (!url.match(':\/\/')) {
     url = 'http://' + url;
+  }
 
   var parsed = require('url').parse(url);
 
@@ -335,13 +342,16 @@ var canonicalizeSite = function (site) {
 //   send information about packages used by this app to the package
 //   stats server.
 // - buildOptions: the 'buildOptions' argument to the bundler
+// - rawOptions: any unknown options that were passed to the command line tool
 var bundleAndDeploy = function (options) {
-  if (options.recordPackageUsage === undefined)
+  if (options.recordPackageUsage === undefined) {
     options.recordPackageUsage = true;
+  }
 
   var site = canonicalizeSite(options.site);
-  if (! site)
+  if (! site) {
     return 1;
+  }
 
   // We should give a username/password prompt if the user was logged in
   // but the credentials are expired, unless the user is logged in but
@@ -363,7 +373,8 @@ var bundleAndDeploy = function (options) {
   var preflight = authedRpc({
     site: site,
     preflight: true,
-    promptIfAuthFails: promptIfAuthFails
+    promptIfAuthFails: promptIfAuthFails,
+    qs: options.rawOptions
   });
 
   if (preflight.errorMessage) {
@@ -385,15 +396,16 @@ var bundleAndDeploy = function (options) {
   var buildDir = files.mkdtemp('build_tar');
   var bundlePath = files.pathJoin(buildDir, 'bundle');
 
-  Console.info('Deploying to ' + site + '.');
+  Console.info('Deploying your app...');
 
   var settings = null;
   var messages = buildmessage.capture({
     title: "preparing to deploy",
     rootPath: process.cwd()
   }, function () {
-    if (options.settingsFile)
+    if (options.settingsFile) {
       settings = files.getSettings(options.settingsFile);
+    }
   });
 
   if (! messages.hasMessages()) {
@@ -406,8 +418,9 @@ var bundleAndDeploy = function (options) {
       providePackageJSONForUnavailableBinaryDeps: !!process.env.METEOR_BINARY_DEP_WORKAROUND,
     });
 
-    if (bundleResult.errors)
+    if (bundleResult.errors) {
       messages = bundleResult.errors;
+    }
   }
 
   if (messages.hasMessages()) {
@@ -429,40 +442,44 @@ var bundleAndDeploy = function (options) {
       method: 'POST',
       operation: 'deploy',
       site: site,
-      qs: settings !== null ? {settings: settings} : {},
+      qs: _.extend({}, options.rawOptions, settings !== null ? {settings: settings} : {}),
       bodyStream: files.createTarGzStream(files.pathJoin(buildDir, 'bundle')),
       expectPayload: ['url'],
       preflightPassword: preflight.preflightPassword
     });
   });
 
-
   if (result.errorMessage) {
     Console.error("\nError deploying application: " + result.errorMessage);
     return 1;
   }
 
-  var deployedAt = require('url').parse(result.payload.url);
-  var hostname = deployedAt.hostname;
+  if (result.payload.message) {
+    Console.info(result.payload.message);
+  } else {
+    var deployedAt = require('url').parse(result.payload.url);
+    var hostname = deployedAt.hostname;
 
-  Console.info('Now serving at http://' + hostname);
+    Console.info('Now serving at http://' + hostname);
 
-  if (! hostname.match(/meteor\.com$/)) {
-    var dns = require('dns');
-    dns.resolve(hostname, 'CNAME', function (err, cnames) {
-      if (err || cnames[0] !== 'origin.meteor.com') {
-        dns.resolve(hostname, 'A', function (err, addresses) {
-          if (err || addresses[0] !== '107.22.210.133') {
-            Console.info('-------------');
-            Console.info(
-              "You've deployed to a custom domain.",
-              "Please be sure to CNAME your hostname",
-              "to origin.meteor.com, or set an A record to 107.22.210.133.");
-            Console.info('-------------');
-          }
-        });
-      }
-    });
+    if (! hostname.match(/meteor\.com$/)) {
+      var dns = require('dns');
+      dns.resolve(hostname, 'CNAME', function (err, cnames) {
+        if (err || cnames[0] !== 'origin.meteor.com') {
+          dns.resolve(hostname, 'A', function (err, addresses) {
+            console.log('and here')
+            if (err || addresses[0] !== '107.22.210.133') {
+              Console.info('-------------');
+              Console.info(
+                "You've deployed to a custom domain.",
+                "Please be sure to CNAME your hostname",
+                "to origin.meteor.com, or set an A record to 107.22.210.133.");
+              Console.info('-------------');
+            }
+          });
+        }
+      });
+    }
   }
 
   return 0;
@@ -470,8 +487,9 @@ var bundleAndDeploy = function (options) {
 
 var deleteApp = function (site) {
   site = canonicalizeSite(site);
-  if (! site)
+  if (! site) {
     return 1;
+  }
 
   var result = authedRpc({
     method: 'DELETE',
@@ -568,9 +586,10 @@ var checkAuthThenSendRpc = function (site, operation, what) {
 // site's database.
 var temporaryMongoUrl = function (site) {
   site = canonicalizeSite(site);
-  if (! site)
+  if (! site) {
     // canonicalizeSite printed an error
     return null;
+  }
 
   var result = checkAuthThenSendRpc(site, 'mongo', 'open a mongo connection');
 
@@ -583,8 +602,9 @@ var temporaryMongoUrl = function (site) {
 
 var logs = function (site) {
   site = canonicalizeSite(site);
-  if (! site)
+  if (! site) {
     return 1;
+  }
 
   var result = checkAuthThenSendRpc(site, 'logs', 'view logs');
 
@@ -599,8 +619,9 @@ var logs = function (site) {
 
 var listAuthorized = function (site) {
   site = canonicalizeSite(site);
-  if (! site)
+  if (! site) {
     return 1;
+  }
 
   var result = deployRpc({
     operation: 'info',
@@ -632,28 +653,30 @@ var listAuthorized = function (site) {
 
     Console.info((auth.loggedInUsername() || "<you>"));
     _.each(info.authorized, function (username) {
-      if (username)
+      if (username) {
         // Current username rules don't let you register anything that we might
         // want to split over multiple lines (ex: containing a space), but we
         // don't want confusion if we ever change some implementation detail.
         Console.rawInfo(username + "\n");
+      }
     });
     return 0;
   }
 };
 
-// action is "add" or "remove"
+// action is "add", "transfer" or "remove"
 var changeAuthorized = function (site, action, username) {
   site = canonicalizeSite(site);
-  if (! site)
+  if (! site) {
     // canonicalizeSite will have already printed an error
     return 1;
+  }
 
   var result = authedRpc({
     method: 'POST',
     operation: 'authorized',
     site: site,
-    qs: action === "add" ? { add: username } : { remove: username },
+    qs: {[action]: username},
     promptIfAuthFails: true
   });
 
@@ -662,17 +685,21 @@ var changeAuthorized = function (site, action, username) {
     return 1;
   }
 
-  Console.info(site + ": " +
-               (action === "add" ? "added " : "removed ")
-                + username);
+  const verbs = {
+    add: "added",
+    remove: "removed",
+    transfer: "transferred"
+  };
+  Console.info(`${site}: ${verbs[action]} ${username}`);
   return 0;
 };
 
 var claim = function (site) {
   site = canonicalizeSite(site);
-  if (! site)
+  if (! site) {
     // canonicalizeSite will have already printed an error
     return 1;
+  }
 
   // Check to see if it's even a claimable site, so that we can print
   // a more appropriate message than we'd get if we called authedRpc
@@ -690,10 +717,11 @@ var claim = function (site) {
   }
 
   if (infoResult.payload && infoResult.payload.protection === "account") {
-    if (infoResult.payload.authorized)
+    if (infoResult.payload.authorized) {
       Console.error("That site already belongs to you.\n");
-    else
+    } else {
       Console.error("Sorry, that site belongs to someone else.\n");
+    }
     return 1;
   }
 

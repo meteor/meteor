@@ -1,21 +1,21 @@
+const MAX_LENGTH = 500; // if you change this, also change the appropriate test
+
 makeErrorByStatus = function(statusCode, content) {
-  var MAX_LENGTH = 500; // if you change this, also change the appropriate test
+  let message = `failed [${statusCode}]`;
 
-  var truncate = function(str, length) {
-    return str.length > length ? str.slice(0, length) + '...' : str;
-  };
+  if (content) {
+    const stringContent = typeof content == "string" ?
+      content : content.toString();
 
-  var contentToCheck = typeof content == "string" ? content : content.toString();
-
-  var message = "failed [" + statusCode + "]";
-
-  if (contentToCheck) {
-    message += " " + truncate(contentToCheck.replace(/\n/g, " "), MAX_LENGTH);
+    message += ' ' + truncate(stringContent.replace(/\n/g, ' '), MAX_LENGTH);
   }
 
   return new Error(message);
 };
 
+function truncate(str, length) {
+  return str.length > length ? str.slice(0, length) + '...' : str;
+}
 
 // Fill in `response.data` if the content-type is JSON.
 populateData = function(response) {
@@ -73,7 +73,7 @@ HTTP.put = function (/* varargs */) {
 };
 
 /**
- * @summary Send an HTTP `DELETE` request. Equivalent to calling [`HTTP.call`](#http_call) with "DELETE" as the first argument. (Named `del` to avoid conflic with the Javascript keyword `delete`)
+ * @summary Send an HTTP `DELETE` request. Equivalent to calling [`HTTP.call`](#http_call) with "DELETE" as the first argument. (Named `del` to avoid conflict with the Javascript keyword `delete`)
  * @param {String} url The URL to which the request should be sent.
  * @param {Object} [callOptions] Options passed on to [`HTTP.call`](#http_call).
  * @param {Function} [asyncCallback] Callback that is called when the request is completed. Required on the client.
@@ -81,4 +81,15 @@ HTTP.put = function (/* varargs */) {
  */
 HTTP.del = function (/* varargs */) {
   return HTTP.call.apply(this, ["DELETE"].concat(_.toArray(arguments)));
+};
+
+/**
+ * @summary Send an HTTP `PATCH` request. Equivalent to calling [`HTTP.call`](#http_call) with "PATCH" as the first argument.
+ * @param {String} url The URL to which the request should be sent.
+ * @param {Object} [callOptions] Options passed on to [`HTTP.call`](#http_call).
+ * @param {Function} [asyncCallback] Callback that is called when the request is completed. Required on the client.
+ * @locus Anywhere
+ */
+HTTP.patch = function (/* varargs */) {
+  return HTTP.call.apply(this, ["PATCH"].concat(_.toArray(arguments)));
 };

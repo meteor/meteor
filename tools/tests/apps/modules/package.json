@@ -1,0 +1,19 @@
+{
+  "name": "modules-test-app",
+  "author": "Ben Newman <ben@meteor.com>",
+  "description": "Test app exercising many aspects of the Meteor module system.",
+  "private": true,
+  "dependencies": {
+    "aws-sdk": "^2.2.41",
+    "github": "^0.2.4",
+    "meteor-node-stubs": "^0.2.0",
+    "moment": "2.11.1",
+    "mssql": "^3.1.1",
+    "regenerator": "^0.8.42",
+    "stripe": "^4.4.0",
+    "winston": "^2.2.0"
+  },
+  "scripts": {
+    "test": "METEOR_PROFILE=100 ../../../../meteor test --full-app --driver-package avital:mocha"
+  }
+}

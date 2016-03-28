@@ -40,6 +40,12 @@ Tinytest.add('ReactiveDict - clear() works', function (test) {
   var dict = new ReactiveDict;
   dict.set('foo', 'bar');
 
+  // Clear should not throw an error now
+  // See issue #5530
+  dict.clear();
+
+  dict.set('foo', 'bar');
+
   var val, equals, equalsUndefined, all;
   Tracker.autorun(function() {
     val = dict.get('foo');

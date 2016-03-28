@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This used to be run standalone, but now it's intended to always be
 # invoked by 'meteor self-test' (and eventually we should port the

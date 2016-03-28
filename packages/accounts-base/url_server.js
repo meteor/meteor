@@ -1,3 +1,5 @@
+import {AccountsServer} from "./accounts_server.js";
+
 // XXX These should probably not actually be public?
 
 AccountsServer.prototype.urls = {

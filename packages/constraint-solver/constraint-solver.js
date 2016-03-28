@@ -39,6 +39,9 @@ CS.PackagesResolver = function (catalog, options) {
 //    to newer patch versions, proactively
 //  - missingPreviousVersionIsError - throw an error if a package version in
 //    previousSolution is not found in the catalog
+//  - supportedIsobuildFeaturePackages - map from package name to list of
+//    version strings of isobuild feature packages that are available in the
+//    catalog
 CS.PackagesResolver.prototype.resolve = function (dependencies, constraints,
                                                   options) {
   var self = this;
@@ -56,19 +59,28 @@ CS.PackagesResolver.prototype.resolve = function (dependencies, constraints,
                                 'upgradeIndirectDepPatchVersions'));
   });
 
-  Profile.time(
-    "Input#loadFromCatalog (sqlite)",
-    function () {
-      input.loadFromCatalog(self.catalogLoader);
-    });
-
   var resultCache = self._options.resultCache;
   if (resultCache && resultCache.lastInput &&
       input.isEqual(resultCache.lastInput)) {
     return resultCache.lastOutput;
   }
 
+  if (options.supportedIsobuildFeaturePackages) {
+    _.each(options.supportedIsobuildFeaturePackages, function (versions, pkg) {
+      _.each(versions, function (version) {
+        input.catalogCache.addPackageVersion(pkg, version, []);
+      });
+    });
+  }
+
+  Profile.time(
+    "Input#loadOnlyPreviousSolution",
+    function () {
+      input.loadOnlyPreviousSolution(self.catalogLoader);
+    });
+
   if (options.previousSolution && options.missingPreviousVersionIsError) {
+    // see comment where missingPreviousVersionIsError is passed in
     Profile.time("check for previous versions in catalog", function () {
       _.each(options.previousSolution, function (version, pkg) {
         if (! input.catalogCache.hasPackageVersion(pkg, version)) {
@@ -79,10 +91,40 @@ CS.PackagesResolver.prototype.resolve = function (dependencies, constraints,
     });
   }
 
-  var output = CS.PackagesResolver._resolveWithInput(input, {
+  var resolveOptions = {
     nudge: self._options.nudge,
     Profile: self._options.Profile
-  });
+  };
+
+  var output = null;
+  if (options.previousSolution && !input.upgrade && !input.upgradeIndirectDepPatchVersions) {
+    // Try solving first with just the versions from previousSolution in
+    // the catalogCache, so that we don't have to solve the big problem
+    // if we don't have to. But don't do this if we're attempting to upgrade
+    // packages, because that would always result in just using the current
+    // version, hence disabling upgrades.
+    try {
+      output = CS.PackagesResolver._resolveWithInput(input, resolveOptions);
+    } catch (e) {
+      if (e.constraintSolverError) {
+        output = null;
+      } else {
+        throw e;
+      }
+    }
+  }
+
+  if (! output) {
+    // do a solve with all package versions available in the catalog.
+    Profile.time(
+      "Input#loadFromCatalog",
+      function () {
+        input.loadFromCatalog(self.catalogLoader);
+      });
+
+    // if we fail to find a solution this time, this will throw.
+    output = CS.PackagesResolver._resolveWithInput(input, resolveOptions);
+  }
 
   if (resultCache) {
     resultCache.lastInput = input;
@@ -169,6 +211,12 @@ CS.throwConstraintSolverError = function (message) {
   e.constraintSolverError = true;
   throw e;
 };
+
+// This function is duplicated in tools/compiler.js.
+CS.isIsobuildFeaturePackage = function (packageName) {
+  return /^isobuild:/.test(packageName);
+};
+
 
 // Implements the Profile interface (as we use it) but doesn't do
 // anything.

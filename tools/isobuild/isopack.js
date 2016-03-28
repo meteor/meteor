@@ -1,9 +1,10 @@
+var assert = require('assert');
 var compiler = require('./compiler.js');
 var archinfo = require('../utils/archinfo.js');
 var _ = require('underscore');
 var linker = require('./linker.js');
 var buildmessage = require('../utils/buildmessage.js');
-var Builder = require('./builder.js');
+import Builder from './builder.js';
 var bundler = require('./bundler.js');
 var watch = require('../fs/watch.js');
 var files = require('../fs/files.js');
@@ -15,8 +16,9 @@ var Console = require('../console/console.js').Console;
 var Profile = require('../tool-env/profile.js').Profile;
 
 var rejectBadPath = function (p) {
-  if (p.match(/\.\./))
+  if (p.match(/\.\./)) {
     throw new Error("bad path: " + p);
+  }
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -29,7 +31,7 @@ var rejectBadPath = function (p) {
 // - uses
 // - implies
 // - watchSet
-// - nodeModulesPath
+// - nodeModulesDirectories
 // - declaredExports
 // - resources
 
@@ -92,10 +94,18 @@ var Unibuild = function (isopack, options) {
   // against at build time. null if matched against a specific filename.
   self.resources = options.resources;
 
-  // Absolute path to the node_modules directory to use at runtime to
-  // resolve Npm.require() calls in this unibuild. null if this unibuild
-  // does not have a node_modules.
-  self.nodeModulesPath = options.nodeModulesPath;
+  // Map from absolute paths of node_modules directories to
+  // NodeModulesDirectory objects.
+  self.nodeModulesDirectories = options.nodeModulesDirectories;
+
+  // Provided for backwards compatibility; please use
+  // unibuild.nodeModulesDirectories instead!
+  _.some(self.nodeModulesDirectories, (nmd, nodeModulesPath) => {
+    if (! nmd.local) {
+      self.nodeModulesPath = nodeModulesPath;
+      return true;
+    }
+  });
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -125,6 +135,7 @@ var Isopack = function () {
   self.isTest = false;
   self.debugOnly = false;
   self.prodOnly = false;
+  self.testOnly = false;
 
   // Unibuilds, an array of class Unibuild.
   self.unibuilds = [];
@@ -239,10 +250,12 @@ Isopack.convertIsopackFormat = Profile(
   var toPos = _.indexOf(Isopack.knownFormats, toFormat);
   var step = fromPos < toPos ? 1 : -1;
 
-  if (fromPos === -1)
+  if (fromPos === -1) {
     throw new Error("Can't convert from unknown Isopack format: " + fromFormat);
-  if (toPos === -1)
+  }
+  if (toPos === -1) {
     throw new Error("Can't convert to unknown Isopack format: " + toFormat);
+  }
 
   while (fromPos !== toPos) {
     if (step > 0) {
@@ -333,6 +346,7 @@ _.extend(Isopack.prototype, {
     self.includeTool = options.includeTool;
     self.debugOnly = options.debugOnly;
     self.prodOnly = options.prodOnly;
+    self.testOnly = options.testOnly;
     self.pluginCacheDir = options.pluginCacheDir || null;
     self.isobuildFeatures = options.isobuildFeatures;
   },
@@ -358,11 +372,18 @@ _.extend(Isopack.prototype, {
     var anySourceFiles = false;
     var addSourceFilesFromWatchSet = function (watchSet) {
       _.each(watchSet.files, function (hash, filename) {
+        if (! hash) {
+          // If a file has a falsy hash, that means the file does/should
+          // not exist.
+          return;
+        }
+
         anySourceFiles = true;
         var relativePath = files.pathRelative(sourceRoot, filename);
         // We only want files that are actually under sourceRoot.
-        if (relativePath.substr(0, 3) === '..' + files.pathSep)
+        if (relativePath.substr(0, 3) === '..' + files.pathSep) {
           return;
+        }
         sourceFiles[relativePath] = true;
       });
     };
@@ -374,8 +395,9 @@ _.extend(Isopack.prototype, {
     // Were we actually built from source or loaded from an IsopackCache? If so
     // then there should be at least one source file in some WatchSet. If not,
     // return null.
-    if (! anySourceFiles)
+    if (! anySourceFiles) {
       return null;
+    }
     return _.keys(sourceFiles);
   }),
 
@@ -467,8 +489,9 @@ _.extend(Isopack.prototype, {
 
   _checkPluginsInitialized: function () {
     var self = this;
-    if (self._pluginsInitialized)
+    if (self._pluginsInitialized) {
       return;
+    }
     throw Error("plugins not yet initialized?");
   },
 
@@ -479,8 +502,9 @@ _.extend(Isopack.prototype, {
 
     buildmessage.assertInJob();
 
-    if (self._pluginsInitialized)
+    if (self._pluginsInitialized) {
       return;
+    }
 
     self.sourceProcessors.compiler = new buildPluginModule.SourceProcessorSet(
       self.displayName(), { hardcodeJs: true, singlePackage: true });
@@ -511,7 +535,7 @@ _.extend(Isopack.prototype, {
       }, function () {
         // Make a new Plugin API object for this plugin.
         var Plugin = self._makePluginApi();
-        plugin.load({ Plugin: Plugin });
+        plugin.load({ Plugin: Plugin, Profile: Profile });
       });
     });
 
@@ -892,8 +916,9 @@ _.extend(Isopack.prototype, {
     // PackageMap which can be subset to create a new PackageMap object.)
     var unibuildWatchSets = {};
     if (options.isopackBuildInfoJson) {
-      if (! options.firstIsopack)
+      if (! options.firstIsopack) {
         throw Error("can't merge isopacks with buildinfo");
+      }
 
       // XXX should comprehensively sanitize (eg, typecheck) everything
       // read from json files
@@ -924,6 +949,7 @@ _.extend(Isopack.prototype, {
       self.isTest = mainJson.isTest;
       self.debugOnly = !!mainJson.debugOnly;
       self.prodOnly = !!mainJson.prodOnly;
+      self.testOnly = !!mainJson.testOnly;
     }
     _.each(mainJson.plugins, function (pluginMeta) {
       rejectBadPath(pluginMeta.path);
@@ -948,8 +974,9 @@ _.extend(Isopack.prototype, {
       var alreadyHaveUnibuild = _.find(self.unibuilds, function (unibuild) {
         return unibuild.arch === unibuildMeta.arch;
       });
-      if (alreadyHaveUnibuild)
+      if (alreadyHaveUnibuild) {
         return;
+      }
 
       var unibuildJson = JSON.parse(
         files.readFile(files.pathJoin(dir, unibuildMeta.path)));
@@ -969,13 +996,6 @@ _.extend(Isopack.prototype, {
       // a "declaredExports" field)?
       var unibuildHasPrelink =
             unibuildJson.format === "unipackage-unibuild-pre1";
-
-      var nodeModulesPath = null;
-      if (unibuildJson.node_modules) {
-        rejectBadPath(unibuildJson.node_modules);
-        nodeModulesPath =
-          files.pathJoin(unibuildBasePath, unibuildJson.node_modules);
-      }
 
       var resources = [];
 
@@ -1038,9 +1058,10 @@ _.extend(Isopack.prototype, {
             servePath: resource.servePath || undefined,
             path: resource.path || undefined
           });
-        } else
+        } else {
           throw new Error("bad resource type in isopack: " +
                           JSON.stringify(resource.type));
+        }
       });
 
       var declaredExports;
@@ -1067,6 +1088,12 @@ _.extend(Isopack.prototype, {
         }
       });
 
+      const nodeModulesDirectories =
+        bundler.NodeModulesDirectory.readDirsFromJSON(
+          unibuildJson.node_modules,
+          { packageName: self.name,
+            sourceRoot: unibuildBasePath });
+
       self.unibuilds.push(new Unibuild(self, {
         // At some point we stopped writing 'kind's to the metadata file, so
         // default to main.
@@ -1075,7 +1102,7 @@ _.extend(Isopack.prototype, {
         uses: unibuildJson.uses,
         implies: unibuildJson.implies,
         watchSet: unibuildWatchSets[unibuildMeta.path],
-        nodeModulesPath: nodeModulesPath,
+        nodeModulesDirectories,
         declaredExports: declaredExports,
         resources: resources
       }));
@@ -1169,6 +1196,9 @@ _.extend(Isopack.prototype, {
       if (self.prodOnly) {
         mainJson.prodOnly = true;
       }
+      if (self.testOnly) {
+        mainJson.testOnly = true;
+      }
       if (! _.isEmpty(self.cordovaDependencies)) {
         mainJson.cordovaDependencies = self.cordovaDependencies;
       }
@@ -1209,7 +1239,7 @@ _.extend(Isopack.prototype, {
       // have been separated?), but also there can be different sets of
       // directories as well (eg, for a isopack merged with from multiple
       // isopacks with _loadUnibuildsFromPath).
-      var npmDirectories = {};
+      const npmDirsToCopy = Object.create(null);
 
       // Pre-linker versions of Meteor expect all packages in the warehouse to
       // contain a file called "package.js"; they use this as part of deciding
@@ -1253,19 +1283,40 @@ _.extend(Isopack.prototype, {
         }
 
         // Figure out where the npm dependencies go.
-        var nodeModulesPath = undefined;
-        var needToCopyNodeModules = false;
-        if (unibuild.nodeModulesPath) {
-          if (_.has(npmDirectories, unibuild.nodeModulesPath)) {
+        let node_modules = {};
+        const nodeModulesPaths = [];
+        _.each(unibuild.nodeModulesDirectories, nmd => {
+          const bundlePath = _.has(npmDirsToCopy, nmd.sourcePath)
             // We already have this npm directory from another unibuild.
-            nodeModulesPath = npmDirectories[unibuild.nodeModulesPath];
+            ? npmDirsToCopy[nmd.sourcePath]
+            : npmDirsToCopy[nmd.sourcePath] = builder.generateFilename(
+              nmd.getPreferredBundlePath("isopack"),
+              { directory: true }
+            );
+
+          // Eventually we would prefer to write these node_modules
+          // properties with object values instead of string values, like
+          // we're doing here, but older versions of meteor-tool won't be
+          // able to load unibuilds like that, so we have to wait until
+          // everyone is using a version of the tool that knows how to
+          // read object-valued node_modules properties.
+          node_modules[bundlePath] = nmd.toJSON();
+
+          if (nmd.local) {
+            nodeModulesPaths.push(bundlePath);
           } else {
-            // It's important not to put node_modules at the top level of the
-            // isopack, so that it is not visible from within plugins.
-            nodeModulesPath = npmDirectories[unibuild.nodeModulesPath] =
-              builder.generateFilename("npm/node_modules", {directory: true});
-            needToCopyNodeModules = true;
+            // Give .npm/package/node_modules directories preference in
+            // the selection of a single bundle path below.
+            nodeModulesPaths.unshift(bundlePath);
           }
+        });
+
+        if (nodeModulesPaths.length > 0) {
+          // For backwards compatibility, we unfortunately can only write
+          // node_modules as a single string.
+          node_modules = nodeModulesPaths[0];
+        } else {
+          node_modules = undefined;
         }
 
         // Construct unibuild metadata
@@ -1283,7 +1334,7 @@ _.extend(Isopack.prototype, {
             };
           }),
           implies: (_.isEmpty(unibuild.implies) ? undefined : unibuild.implies),
-          node_modules: nodeModulesPath,
+          node_modules,
           resources: []
         };
 
@@ -1296,8 +1347,9 @@ _.extend(Isopack.prototype, {
               concat[resource.type].push(new Buffer("\n", "utf8"));
               offset[resource.type]++;
             }
-            if (! (resource.data instanceof Buffer))
+            if (! (resource.data instanceof Buffer)) {
               throw new Error("Resource data must be a Buffer");
+            }
             unibuildJson.resources.push({
               type: resource.type,
               file: files.pathJoin(unibuildDir, resource.type),
@@ -1318,8 +1370,10 @@ _.extend(Isopack.prototype, {
 
         // Output other resources each to their own file
         _.each(unibuild.resources, function (resource) {
-          if (_.contains(["head", "body"], resource.type))
-            return; // already did this one
+          if (_.contains(["head", "body"], resource.type)) {
+            // already did this one
+            return;
+          }
 
           // If we're going to write a legacy prelink file later, track the
           // original form of the resource object (with the source in a Buffer,
@@ -1358,22 +1412,22 @@ _.extend(Isopack.prototype, {
           });
         });
 
-        // If unibuild has included node_modules, copy them in
-        if (needToCopyNodeModules) {
-          builder.copyDirectory({
-            from: unibuild.nodeModulesPath,
-            to: nodeModulesPath,
-            npmDiscards: self.npmDiscards,
-            symlink: false
-          });
-        }
-
         // Control file for unibuild
         builder.writeJson(unibuildJsonFile, unibuildJson);
         unibuildInfos.push({
           unibuild: unibuild,
           unibuildJson: unibuildJson,
           jsResourcesForLegacyPrelink: jsResourcesForLegacyPrelink
+        });
+      });
+
+      // If unibuilds included node_modules, copy them in.
+      _.each(npmDirsToCopy, (bundlePath, sourcePath) => {
+        builder.copyDirectory({
+          from: sourcePath,
+          to: bundlePath,
+          npmDiscards: self.npmDiscards,
+          symlink: false
         });
       });
 
@@ -1481,8 +1535,9 @@ _.extend(Isopack.prototype, {
             packageVariables = [];
             var packageVariableNames = {};
             _.each(unibuild.declaredExports, function (symbol) {
-              if (_.has(packageVariableNames, symbol.name))
+              if (_.has(packageVariableNames, symbol.name)) {
                 return;
+              }
               packageVariables.push({
                 name: symbol.name,
                 export: symbol.testOnly? "tests" : true
@@ -1512,8 +1567,9 @@ _.extend(Isopack.prototype, {
               prelinkData = new Buffer(prelinkFile.source, 'utf8');
 
               _.each(results.assignedVariables, function (name) {
-                if (_.has(packageVariableNames, name))
+                if (_.has(packageVariableNames, name)) {
                   return;
+                }
                 packageVariables.push({
                   name: name
                 });
@@ -1664,14 +1720,12 @@ _.extend(Isopack.prototype, {
         inputFileContents = inputFileContents.replace(/^.*#RemoveInProd.*$/mg, "");
       }
 
-      var babelOptions = babel.getDefaultOptions(
-        require('../tool-env/babel-features.js')
-      );
+      var babelOptions = babel.getDefaultOptions();
 
       _.extend(babelOptions, {
         filename: path,
         sourceFileName: "/" + path,
-        sourceMapName: path + ".map",
+        sourceMapTarget: path + ".map",
         sourceMap: true
       });
 
@@ -1724,8 +1778,9 @@ _.extend(Isopack.prototype, {
           title: "compiling " + isopacketName + " packages for the tool"
         }, function () {
           isopacketBuildContext.isopackCache.buildLocalPackages(packages);
-          if (buildmessage.jobHasMessages())
+          if (buildmessage.jobHasMessages()) {
             return;
+          }
 
           var image = bundler.buildJsImage({
             name: "isopacket-" + isopacketName,
@@ -1733,8 +1788,9 @@ _.extend(Isopack.prototype, {
             isopackCache: isopacketBuildContext.isopackCache,
             use: packages
           }).image;
-          if (buildmessage.jobHasMessages())
+          if (buildmessage.jobHasMessages()) {
             return;
+          }
 
           image.write(
             builder.enter(files.pathJoin('isopackets', isopacketName)));
@@ -1798,8 +1854,9 @@ _.extend(Isopack.prototype, {
     var self = this;
     var packages = {};
     var processUse = function (use) {
-      if (use.weak || use.unordered)
+      if (use.weak || use.unordered) {
         return;
+      }
       // Only include real packages, not isobuild:* pseudo-packages.
       if (compiler.isIsobuildFeaturePackage(use.package)) {
         return;

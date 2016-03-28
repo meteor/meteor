@@ -959,7 +959,8 @@ OplogObserveDriver.cursorSupported = function (cursorDescription, matcher) {
   var options = cursorDescription.options;
 
   // Did the user say no explicitly?
-  if (options._disableOplog)
+  // underscored version of the option is COMPAT with 1.2
+  if (options.disableOplog || options._disableOplog)
     return false;
 
   // skip is not supported: to support it we would need to keep track of all

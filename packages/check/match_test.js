@@ -41,6 +41,9 @@ Tinytest.add("check - check", function (test) {
         matches(pair[0], type);
         matches(pair[0], Match.Optional(type));
         matches(undefined, Match.Optional(type));
+        matches(pair[0], Match.Maybe(type));
+        matches(undefined, Match.Maybe(type));
+        matches(null, Match.Maybe(type));
         matches(pair[0], Match.Where(function () {
           check(pair[0], type);
           return true;
@@ -98,9 +101,16 @@ Tinytest.add("check - check", function (test) {
   matches({}, {a: Match.Optional(Number)});
   matches({a: 1}, {a: Match.Optional(Number)});
   fails({a: true}, {a: Match.Optional(Number)});
+  matches({}, {a: Match.Maybe(Number)});
+  matches({a: 1}, {a: Match.Maybe(Number)});
+  fails({a: true}, {a: Match.Maybe(Number)});
   // Match.Optional means "or undefined" at the top level but "or absent" in
   // objects.
   fails({a: undefined}, {a: Match.Optional(Number)});
+  // Match.Maybe should behave the same as Match.Optional in objects
+  // including handling nulls
+  fails({a: undefined}, {a: Match.Maybe(Number)});
+  fails({a: null}, {a: Match.Maybe(Number)});
   var F = function () {
     this.x = 123;
   };
@@ -160,6 +170,20 @@ Tinytest.add("check - check", function (test) {
   fails([], Match.Integer);
   fails(function () {}, Match.Integer);
   fails(new Date, Match.Integer);
+
+
+  // Test non-plain objects.
+  var parentObj = {foo: "bar"};
+  var childObj = Object.assign(Object.create(parentObj), {bar: "foo"});
+  matches(parentObj, Object);
+  fails(parentObj, {foo: String, bar: String});
+  fails(parentObj, {bar: String});
+  matches(parentObj, {foo: String});
+  fails(childObj, Object);
+  fails(childObj, {foo: String, bar: String});
+  fails(childObj, {bar: String});
+  fails(childObj, {foo: String});
+
 
   // Test that "arguments" is treated like an array.
   var argumentsMatches = function () {
@@ -280,6 +304,37 @@ Tinytest.add("check - Match error path", function (test) {
 
   // JS keyword
   match({ "return": 0 }, { "return": String }, "[\"return\"]");
+});
+
+Tinytest.add("check - Match error message", function (test) {
+  var match = function (value, pattern, expectedMessage) {
+    try {
+      check(value, pattern);
+    } catch (err) {
+      if (err.message !== "Match error: " + expectedMessage)
+        test.fail({
+          type: "match-error-message",
+          message: "The message of Match.Error doesn't match.",
+          pattern: JSON.stringify(pattern),
+          value: JSON.stringify(value),
+          errorMessage: err.message,
+          expectedErrorMessage: expectedMessage
+        });
+    }
+  };
+
+  match(2, String, "Expected string, got number");
+  match({key: 0}, Number, "Expected number, got object");
+  match(null, Boolean, "Expected boolean, got null");
+  match("string", undefined, "Expected undefined, got string");
+  match(true, null, "Expected null, got true");
+  match("bar", "foo", "Expected foo, got \"bar\"");
+  match(3.14, Match.Integer, "Expected Integer, got 3.14");
+  match(false, [Boolean], "Expected array, got false");
+  match([null, null], [String], "Expected string, got null in field [0]");
+  match(2, {key: 2}, "Expected object, got number");
+  match(null, {key: 2}, "Expected object, got null");
+  match(new Date, {key: 2}, "Expected plain object");
 });
 
 // Regression test for https://github.com/meteor/meteor/issues/2136

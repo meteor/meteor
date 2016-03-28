@@ -210,6 +210,23 @@ the guide about breaking changes here:`,
     );
   },
 
+  "1.3.0-split-minifiers-package": function (projectContext) {
+    const packagesFile = projectContext.projectConstraintsFile;
+
+    // Minifiers are extracted into a new package called "standard-minifiers"
+
+    if (packagesFile.getConstraint('standard-minifiers')) {
+      packagesFile.removePackages(['standard-minifiers']);
+
+      packagesFile.addPackages([
+        // These packages replace meteor-platform in newly created apps
+        'standard-minifier-css',
+        'standard-minifier-js',
+      ]);
+    }
+    packagesFile.writeIfModified();
+  },
+
   ////////////
   // PLEASE. When adding new upgraders that print mesasges, follow the
   // examples for 0.9.0 and 0.9.1 above. Specifically, formatting

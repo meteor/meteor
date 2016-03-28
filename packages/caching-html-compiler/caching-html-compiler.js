@@ -108,8 +108,13 @@ CachingHtmlCompiler = class CachingHtmlCompiler extends CachingCompiler {
       });
 
       // Add JavaScript code to set attributes on body
-      allJavaScript += `
-Meteor.startup(function() { $('body').attr(${JSON.stringify(compileResult.bodyAttrs)}); });
+      allJavaScript +=
+`Meteor.startup(function() {
+  var attrs = ${JSON.stringify(compileResult.bodyAttrs)};
+  for (var prop in attrs) {
+    document.body.setAttribute(prop, attrs[prop]);
+  }
+});
 `;
     }
     

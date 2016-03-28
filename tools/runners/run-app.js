@@ -1,5 +1,4 @@
 var _ = require('underscore');
-var Future = require('fibers/future');
 var Fiber = require('fibers');
 var fiberHelpers = require('../utils/fiber-helpers.js');
 var files = require('../fs/files.js');
@@ -67,6 +66,7 @@ var AppProcess = function (options) {
   self.nodePath = options.nodePath || [];
   self.debugPort = options.debugPort;
   self.settings = options.settings;
+  self.testMetadata = options.testMetadata;
 
   self.proc = null;
   self.madeExitCallback = false;
@@ -78,15 +78,20 @@ _.extend(AppProcess.prototype, {
   start: function () {
     var self = this;
 
-    if (self.proc)
+    if (self.proc) {
       throw new Error("already started?");
+    }
 
     // Start the app!
     self.proc = self._spawn();
 
     // Send stdout and stderr to the runLog
-    var eachline = require('eachline');
-    eachline(self.proc.stdout, 'utf8', fiberHelpers.inBareFiber(function (line) {
+    var realEachline = require('eachline');
+    function eachline(stream, encoding, callback) {
+      realEachline(stream, encoding, (...args) => void(callback(...args)));
+    }
+
+    eachline(self.proc.stdout, 'utf8', async function (line) {
       if (line.match(/^LISTENING\s*$/)) {
         // This is the child process telling us that it's ready to receive
         // connections.  (It does this because we told it to with
@@ -96,9 +101,9 @@ _.extend(AppProcess.prototype, {
       } else {
         runLog.logAppOutput(line);
       }
-    }));
+    });
 
-    eachline(self.proc.stderr, 'utf8', fiberHelpers.inBareFiber(function (line) {
+    eachline(self.proc.stderr, 'utf8', async function (line) {
       if (self.debugPort &&
           line.indexOf("debugger listening on port ") >= 0) {
         Console.enableProgressDisplay(false);
@@ -106,15 +111,15 @@ _.extend(AppProcess.prototype, {
       }
 
       runLog.logAppOutput(line, true);
-    }));
+    });
 
     // Watch for exit and for stdio to be fully closed (so that we don't miss
     // log lines).
-    self.proc.on('close', fiberHelpers.inBareFiber(function (code, signal) {
+    self.proc.on('close', async function (code, signal) {
       self._maybeCallOnExit(code, signal);
-    }));
+    });
 
-    self.proc.on('error', fiberHelpers.inBareFiber(function (err) {
+    self.proc.on('error', async function (err) {
       // if the error is the result of .send command over ipc pipe, ignore it
       if (self._refreshing) {
         return;
@@ -126,7 +131,7 @@ _.extend(AppProcess.prototype, {
       // 'close' callback, so we use a guard to make sure we only call
       // onExit once.
       self._maybeCallOnExit();
-    }));
+    });
 
     // This happens sometimes when we write a keepalive after the app
     // is dead. If we don't register a handler, we get a top level
@@ -146,8 +151,9 @@ _.extend(AppProcess.prototype, {
 
   _maybeCallOnExit: function (code, signal) {
     var self = this;
-    if (self.madeExitCallback)
+    if (self.madeExitCallback) {
       return;
+    }
     self.madeExitCallback = true;
     self.onExit && self.onExit(code, signal);
   },
@@ -188,6 +194,11 @@ _.extend(AppProcess.prototype, {
     } else {
       delete env.METEOR_SETTINGS;
     }
+    if (self.testMetadata) {
+      env.TEST_METADATA = JSON.stringify(self.testMetadata);
+    } else {
+      delete env.TEST_METADATA; 
+    }
     if (self.listenHost) {
       env.BIND_IP = self.listenHost;
     } else {
@@ -195,8 +206,6 @@ _.extend(AppProcess.prototype, {
     }
     env.APP_ID = self.projectContext.appIdentifier;
 
-    // Display errors from (eg) the NPM connect module over the network.
-    env.NODE_ENV = 'development';
     // We run the server behind our own proxy, so we need to increment
     // the HTTP forwarded count.
     env.HTTP_FORWARDED_COUNT =
@@ -354,6 +363,7 @@ var AppRunner = function (options) {
   self.mobileServerUrl = options.mobileServerUrl;
   self.cordovaRunner = options.cordovaRunner;
   self.settingsFile = options.settingsFile;
+  self.testMetadata = options.testMetadata;
   self.debugPort = options.debugPort;
   self.proxy = options.proxy;
   self.watchForChanges =
@@ -366,18 +376,23 @@ var AppRunner = function (options) {
     options.omitPackageMapDeltaDisplayOnFirstRun;
 
   self.fiber = null;
-  self.startFuture = null;
-  self.runFuture = null;
-  self.exitFuture = null;
-  self.watchFuture = null;
+  self.startPromise = null;
+  self.runPromise = null;
+  self.exitPromise = null;
+  self.watchPromise = null;
+  self._promiseResolvers = {};
 
-  // If this future is set with self.awaitFutureBeforeStart, then for the first
+  // If this promise is set with self.makeBeforeStartPromise, then for the first
   // run, we will wait on it just before self.appProcess.start() is called.
-  self._beforeStartFuture = null;
+  self._beforeStartPromise = null;
   // A hacky state variable that indicates that the proxy process (this process)
   // is communicating to the app process over ipc. If an error in communication
   // occurs, we can distinguish it in a callback handling the 'error' event.
   self._refreshing = false;
+
+  // Builders saved across rebuilds, so that targets can be re-written in
+  // place instead of created again from scratch.
+  self.builders = {};
 };
 
 _.extend(AppRunner.prototype, {
@@ -386,18 +401,43 @@ _.extend(AppRunner.prototype, {
   start: function () {
     var self = this;
 
-    if (self.fiber)
+    if (self.fiber) {
       throw new Error("already started?");
+    }
 
-    self.startFuture = new Future;
-    // XXX I think it's correct to not try to use bindEnvironment here:
-    //     the extra fiber should be independent of this one.
+    self.startPromise = self._makePromise("start");
+
     self.fiber = Fiber(function () {
       self._fiber();
     });
     self.fiber.run();
-    self.startFuture.wait();
-    self.startFuture = null;
+
+    self.startPromise.await();
+    self.startPromise = null;
+  },
+
+  _makePromise: function (name) {
+    var self = this;
+    return new Promise(function (resolve) {
+      self._promiseResolvers[name] = resolve;
+    });
+  },
+
+  _resolvePromise: function (name, value) {
+    var resolve = this._promiseResolvers[name];
+    if (resolve) {
+      this._promiseResolvers[name] = null;
+      resolve(value);
+    }
+  },
+
+  _cleanUpPromises: function () {
+    if (this._promiseResolvers) {
+      _.each(this._promiseResolvers, function (resolve) {
+        resolve && resolve();
+      });
+      this._promiseResolvers = null;
+    }
   },
 
   // Shut down the app. stop() will block until the app is shut
@@ -407,35 +447,38 @@ _.extend(AppRunner.prototype, {
   stop: function () {
     var self = this;
 
-    if (! self.fiber)
-      return; // nothing to do
+    if (! self.fiber) {
+      // nothing to do
+      return;
+    }
 
-    if (self.exitFuture)
+    if (self.exitPromise) {
       throw new Error("another fiber already stopping?");
+    }
 
-    // The existence of this future makes the fiber break out of its loop.
-    self.exitFuture = new Future;
+    // The existence of this promise makes the fiber break out of its loop.
+    self.exitPromise = self._makePromise("exit");
 
-    self._runFutureReturn({ outcome: 'stopped' });
-    self._watchFutureReturn();
-    if (self._beforeStartFuture && ! self._beforeStartFuture.isResolved()) {
+    self._resolvePromise("run", { outcome: 'stopped' });
+    self._resolvePromise("watch");
+
+    if (self._beforeStartPromise) {
       // If we stopped before mongod started (eg, due to mongod startup
       // failure), unblock the runner fiber from waiting for mongod to start.
-      self._beforeStartFuture.return(true);
+      self._resolvePromise("beforeStart", true);
     }
-    self.exitFuture.wait();
-    self.exitFuture = null;
+
+    self.exitPromise.await();
+    self.exitPromise = null;
   },
 
-  awaitFutureBeforeStart: function(future) {
-    var self = this;
-    if (self._beforeStartFuture) {
-      throw new Error("awaitFutureBeforeStart called twice?");
-    } else if (future instanceof Future) {
-      self._beforeStartFuture = future;
-    } else {
-      throw new Error("non-Future passed to awaitFutureBeforeStart");
+  // Returns a function that can be called to resolve _beforeStartPromise.
+  makeBeforeStartPromise: function () {
+    if (this._beforeStartPromise) {
+      throw new Error("makeBeforeStartPromise called twice?");
     }
+    this._beforeStartPromise = this._makePromise("beforeStart");
+    return this._promiseResolvers["beforeStart"];
   },
 
   // Run the program once, wait for it to exit, and then return. The
@@ -456,9 +499,6 @@ _.extend(AppRunner.prototype, {
     // Cache the server target because the server will not change inside
     // a single invocation of _runOnce().
     var cachedServerWatchSet;
-
-    // Builders saved from previous iterations
-    var builders = {};
 
     var bundleApp = function () {
       if (! firstRun) {
@@ -538,7 +578,7 @@ _.extend(AppRunner.prototype, {
         });
       }
 
-      var bundleResult = Profile.run("Rebuild App", function () {
+      var bundleResult = Profile.run((firstRun?"B":"Reb")+"uild App", () => {
         var includeNodeModules = 'symlink';
 
         // On Windows we cannot symlink node_modules. Copying them is too slow.
@@ -554,11 +594,11 @@ _.extend(AppRunner.prototype, {
           includeNodeModules: includeNodeModules,
           buildOptions: self.buildOptions,
           hasCachedBundle: !! cachedServerWatchSet,
-          previousBuilders: builders
+          previousBuilders: self.builders
         });
 
         // save new builders with their caches
-        ({builders} = bundleResult);
+        self.builders = bundleResult.builders;
 
         return bundleResult;
       });
@@ -592,8 +632,9 @@ _.extend(AppRunner.prototype, {
 
     var bundleResult;
     var bundleResultOrRunResult = bundleApp();
-    if (bundleResultOrRunResult.runResult)
+    if (bundleResultOrRunResult.runResult) {
       return bundleResultOrRunResult.runResult;
+    }
     bundleResult = bundleResultOrRunResult.bundleResult;
 
     firstRun = false;
@@ -605,8 +646,9 @@ _.extend(AppRunner.prototype, {
       title: "preparing to run",
       rootPath: process.cwd()
     }, function () {
-      if (self.settingsFile)
+      if (self.settingsFile) {
         settings = files.getSettings(self.settingsFile, settingsWatchSet);
+      }
     });
     if (settingsMessages.hasMessages()) {
       return {
@@ -666,12 +708,16 @@ _.extend(AppRunner.prototype, {
     }
 
     // Atomically (1) see if we've been stop()'d, (2) if not, create a
-    // future that can be used to stop() us once we start running.
-    if (self.exitFuture)
+    // promise that can be used to stop() us once we start running.
+    if (self.exitPromise) {
       return { outcome: 'stopped' };
-    if (self.runFuture)
-      throw new Error("already have future?");
-    var runFuture = self.runFuture = new Future;
+    }
+
+    if (self.runPromise) {
+      throw new Error("already have promise?");
+    }
+
+    var runPromise = self.runPromise = self._makePromise("run");
 
     // Run the program
     options.beforeRun && options.beforeRun();
@@ -685,7 +731,7 @@ _.extend(AppRunner.prototype, {
       oplogUrl: self.oplogUrl,
       mobileServerUrl: self.mobileServerUrl,
       onExit: function (code, signal) {
-        self._runFutureReturn({
+        self._resolvePromise("run", {
           outcome: 'terminated',
           code: code,
           signal: signal,
@@ -696,18 +742,17 @@ _.extend(AppRunner.prototype, {
       onListen: function () {
         self.proxy.setMode("proxy");
         options.onListen && options.onListen();
-        if (self.startFuture)
-          self.startFuture['return']();
+        self._resolvePromise("start");
       },
       nodeOptions: getNodeOptionsFromEnvironment(),
       nodePath: _.map(bundleResult.nodePath, files.convertToOSPath),
       settings: settings,
+      testMetadata: self.testMetadata,
       ipcPipe: self.watchForChanges
     });
 
-    // Empty self._beforeStartFutures and await its elements.
-    if (firstRun && self._beforeStartFuture) {
-      var stopped = self._beforeStartFuture.wait();
+    if (options.firstRun && self._beforeStartPromise) {
+      var stopped = self._beforeStartPromise.await();
       if (stopped) {
         return true;
       }
@@ -746,7 +791,7 @@ _.extend(AppRunner.prototype, {
       serverWatcher = new watch.Watcher({
         watchSet: serverWatchSet,
         onChange: function () {
-          self._runFutureReturn({
+          self._resolvePromise("run", {
             outcome: 'changed'
           });
         }
@@ -761,7 +806,7 @@ _.extend(AppRunner.prototype, {
           var outcome = watch.isUpToDate(serverWatchSet)
                       ? 'changed-refreshable' // only a client asset has changed
                       : 'changed'; // both a client and server asset changed
-          self._runFutureReturn({ outcome: outcome });
+          self._resolvePromise('run', { outcome: outcome });
          }
       });
     };
@@ -773,23 +818,27 @@ _.extend(AppRunner.prototype, {
 
     // Wait for either the process to exit, or (if watchForChanges) a
     // source file to change. Or, for stop() to be called.
-    var ret = runFuture.wait();
+    var ret = runPromise.await();
 
     try {
       while (ret.outcome === 'changed-refreshable') {
-        if (! canRefreshClient)
+        if (! canRefreshClient) {
           throw Error("Can't refresh client?");
+        }
 
         // We stay in this loop as long as only refreshable assets have changed.
         // When ret.refreshable becomes false, we restart the server.
         bundleResultOrRunResult = bundleApp();
-        if (bundleResultOrRunResult.runResult)
+        if (bundleResultOrRunResult.runResult) {
           return bundleResultOrRunResult.runResult;
+        }
         bundleResult = bundleResultOrRunResult.bundleResult;
 
         maybePrintLintWarnings(bundleResult);
 
-        var oldFuture = self.runFuture = new Future;
+        runLog.logClientRestart();
+
+        var oldPromise = self.runPromise = self._makePromise("run");
 
         // Notify the server that new client assets have been added to the
         // build.
@@ -800,13 +849,11 @@ _.extend(AppRunner.prototype, {
         // Establish a watcher on the new files.
         setupClientWatcher();
 
-        runLog.logClientRestart();
-
         // Wait until another file changes.
-        ret = oldFuture.wait();
+        ret = oldPromise.await();
       }
     } finally {
-      self.runFuture = null;
+      self.runPromise = null;
 
       if (ret.outcome === 'changed') {
         runLog.logTemporary("=> Server modified -- restarting...");
@@ -822,24 +869,6 @@ _.extend(AppRunner.prototype, {
     return ret;
   },
 
-  _runFutureReturn: function (value) {
-    var self = this;
-    if (!self.runFuture)
-      return;
-    var runFuture = self.runFuture;
-    self.runFuture = null;
-    runFuture['return'](value);
-  },
-
-  _watchFutureReturn: function () {
-    var self = this;
-    if (!self.watchFuture)
-      return;
-    var watchFuture = self.watchFuture;
-    self.watchFuture = null;
-    watchFuture.return();
-  },
-
   _fiber: function () {
     var self = this;
 
@@ -852,13 +881,15 @@ _.extend(AppRunner.prototype, {
       var resetCrashCount = function () {
         crashTimer = setTimeout(function () {
           crashCount = 0;
-        }, 3000);
+        }, 8000);
       };
 
       var runResult = self._runOnce({
         onListen: function () {
-          if (! self.noRestartBanner && ! firstRun)
+          if (! self.noRestartBanner && ! firstRun) {
             runLog.logRestart();
+            Console.enableProgressDisplay(false);
+          }
         },
         beforeRun: resetCrashCount,
         firstRun: firstRun
@@ -866,12 +897,14 @@ _.extend(AppRunner.prototype, {
       firstRun = false;
 
       clearTimeout(crashTimer);
-      if (runResult.outcome !== "terminated")
+      if (runResult.outcome !== "terminated") {
         crashCount = 0;
+      }
 
       var wantExit = self.onRunEnd ? !self.onRunEnd(runResult) : false;
-      if (wantExit || self.exitFuture || runResult.outcome === "stopped")
+      if (wantExit || self.exitPromise || runResult.outcome === "stopped") {
         break;
+      }
 
       if (runResult.outcome === "wrong-release" ||
           runResult.outcome === "conflicting-versions") {
@@ -893,10 +926,9 @@ _.extend(AppRunner.prototype, {
         }
       }
 
-      else if (runResult.outcome === "changed")
+      else if (runResult.outcome === "changed") {
         continue;
-
-      else if (runResult.outcome === "terminated") {
+      } else if (runResult.outcome === "terminated") {
         if (runResult.signal) {
           runLog.log('Exited from signal: ' + runResult.signal, { arrow: true });
         } else if (runResult.code !== undefined) {
@@ -906,8 +938,9 @@ _.extend(AppRunner.prototype, {
         }
 
         crashCount ++;
-        if (crashCount < 3)
+        if (crashCount < 3) {
           continue;
+        }
 
         if (self.watchForChanges) {
           runLog.log("Your application is crashing. " +
@@ -922,24 +955,26 @@ _.extend(AppRunner.prototype, {
       }
 
       if (self.watchForChanges) {
-        self.watchFuture = new Future;
+        self.watchPromise = self._makePromise("watch");
 
-        if (!runResult.watchSet)
+        if (!runResult.watchSet) {
           throw Error("watching for changes with no watchSet?");
+        }
         // XXX reference to watcher is lost later?
         var watcher = new watch.Watcher({
           watchSet: runResult.watchSet,
           onChange: function () {
-            self._watchFutureReturn();
+            self._resolvePromise("watch");
           }
         });
         self.proxy.setMode("errorpage");
-        // If onChange wasn't called synchronously (clearing watchFuture), wait
+        // If onChange wasn't called synchronously (clearing watchPromise), wait
         // on it.
-        self.watchFuture && self.watchFuture.wait();
+        self.watchPromise && self.watchPromise.await();
         // While we were waiting, did somebody stop() us?
-        if (self.exitFuture)
+        if (self.exitPromise) {
           break;
+        }
         runLog.log("Modified -- restarting.",  { arrow: true });
         Console.enableProgressDisplay(true);
         continue;
@@ -949,10 +984,7 @@ _.extend(AppRunner.prototype, {
     }
 
     // Giving up for good.
-    if (self.exitFuture)
-      self.exitFuture['return']();
-    if (self.startFuture)
-      self.startFuture['return']();
+    self._cleanUpPromises();
 
     self.fiber = null;
   }

@@ -103,7 +103,8 @@ var sendReports = function (callback) {
   else
     callback();
 };
-Meteor.startup(function () {
+
+runTests = function () {
   setTimeout(sendReports, 500);
   setInterval(sendReports, 2000);
 
@@ -234,4 +235,4 @@ Meteor.startup(function () {
       logMagic('state', 'done');
     },
     ["tinytest"]);
-});
+}

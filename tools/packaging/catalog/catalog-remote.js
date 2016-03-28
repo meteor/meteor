@@ -1,4 +1,3 @@
-var Future = require('fibers/future');
 var _ = require('underscore');
 var sqlite3 = require('sqlite3');
 
@@ -12,7 +11,7 @@ var Console = require('../../console/console.js').Console;
 var tropohouse = require('../tropohouse.js');
 var packageClient = require('../package-client.js');
 var VersionParser = require('../package-version-parser.js');
-
+var Profile = require('../../tool-env/profile.js').Profile;
 
 // XXX: Rationalize these flags.  Maybe use the logger?
 var DEBUG_SQL = !!process.env.METEOR_DEBUG_SQL;
@@ -29,7 +28,7 @@ var Mutex = function () {
 
   self._locked = false;
 
-  self._waiters = [];
+  self._resolvers = [];
 };
 
 _.extend(Mutex.prototype, {
@@ -42,9 +41,9 @@ _.extend(Mutex.prototype, {
         return;
       }
 
-      var fut = new Future();
-      self._waiters.push(fut);
-      fut.wait();
+      new Promise(function (resolve) {
+        self._resolvers.push(resolve);
+      }).await();
     }
   },
 
@@ -56,9 +55,9 @@ _.extend(Mutex.prototype, {
     }
 
     self._locked = false;
-    var waiter = self._waiters.shift();
-    if (waiter) {
-      waiter['return']();
+    var resolve = self._resolvers.shift();
+    if (resolve) {
+      resolve();
     }
   }
 });
@@ -188,18 +187,14 @@ _.extend(Db.prototype, {
     self._closePreparedStatements();
     var db = self._db;
     self._db = null;
-    var future = new Future;
-    db.close(future.resolver());
-    future.wait();
+    Promise.denodeify(db.close).call(db).await();
   },
 
   // Runs the function inside a transaction block
   runInTransaction: function (action) {
     var self = this;
 
-    var runOnce = function () {
-      var future = new Future();
-
+    var runOnce = Profile("sqlite query", function () {
       var txn = new Txn(self);
 
       var t1 = Date.now();
@@ -232,12 +227,11 @@ _.extend(Db.prototype, {
       }
 
       if (resultError) {
-        future['throw'](resultError);
-      } else {
-        future['return'](result);
+        throw resultError;
       }
-      return future.wait();
-    };
+
+      return result;
+    });
 
     for (var attempt = 0; ; attempt++) {
       try {
@@ -293,25 +287,13 @@ _.extend(Db.prototype, {
       var t1 = Date.now();
     }
 
-    var future = new Future();
-
     //Console.debug("Executing SQL ", sql, params);
 
-    var callback = function (err, rows) {
-      if (err) {
-        future['throw'](err);
-      } else {
-        future['return'](rows);
-      }
-    };
+    var promise = prepared
+      ? Promise.denodeify(prepared.all).call(prepared, params)
+      : Promise.denodeify(self._db.all).call(self._db, sql, params);
 
-    if (prepared) {
-      prepared.all(params, callback);
-    } else {
-      self._db.all(sql, params, callback);
-    }
-
-    var ret = future.wait();
+    var rows = promise.await();
 
     if (DEBUG_SQL) {
       var t2 = Date.now();
@@ -321,7 +303,7 @@ _.extend(Db.prototype, {
       }
     }
 
-    return ret;
+    return rows;
   },
 
   // Runs a query synchronously, returning no rows
@@ -346,26 +328,23 @@ _.extend(Db.prototype, {
       var t1 = Date.now();
     }
 
-    var future = new Future();
-
     //Console.debug("Executing SQL ", sql, params);
 
-    var callback = function (err) {
-      if (err) {
-        future['throw'](err);
-      } else {
-        // Yes, lastID & changes are on this(!)
-        future['return']({ lastID: this.lastID, changes: this.changes });
+    var ret = new Promise(function (resolve, reject) {
+      function callback(err) {
+        err ? reject(err) : resolve({
+          // Yes, lastID & changes are on this(!)
+          lastID: this.lastID,
+          changes: this.changes
+        });
       }
-    };
 
-    if (prepared) {
-      prepared.run(params, callback);
-    } else {
-      self._db.run(sql, params, callback);
-    }
-
-    var ret = future.wait();
+      if (prepared) {
+        prepared.run(params, callback);
+      } else {
+        self._db.run(sql, params, callback);
+      }
+    }).await();
 
     if (DEBUG_SQL) {
       var t2 = Date.now();
@@ -384,17 +363,15 @@ _.extend(Db.prototype, {
     var prepared = self._prepared[sql];
     if (!prepared) {
       //Console.debug("Preparing statement: ", sql);
-      var future = new Future();
-      prepared = self._db.prepare(sql, function (err) {
-        if (err) {
-          future['throw'](err);
-        } else {
-          future['return']();
-        }
-      });
-      future.wait();
+      new Promise(function (resolve, reject) {
+        prepared = self._db.prepare(sql, function (err) {
+          err ? reject(err) : resolve();
+        });
+      }).await();
+
       self._prepared[sql] = prepared;
     }
+
     return prepared;
   },
 
@@ -407,12 +384,12 @@ _.extend(Db.prototype, {
     self._prepared = {};
 
     _.each(prepared, function (statement) {
-      var future = new Future();
-      statement.finalize(function (err) {
-        // We return, not throw it, because we don't want to throw
-        future['return'](err);
-      });
-      var err = future.wait();
+      var err = new Promise(function (resolve) {
+        // We resolve the promise with an error instead of rejecting it,
+        // because we don't want to throw.
+        statement.finalize(resolve);
+      }).await();
+
       if (err) {
         Console.warn("Error finalizing statement ", err);
       }
@@ -570,7 +547,10 @@ _.extend(RemoteCatalog.prototype, {
       "SELECT version FROM versions WHERE packageName=?", name);
     if (match === null)
       return [];
-    return _.pluck(match, 'version').sort(VersionParser.compare);
+    var pvParse = _.memoize(VersionParser.parse);
+    return _.pluck(match, 'version').sort(function (a, b) {
+      return VersionParser.compare(pvParse(a), pvParse(b));
+    });
   },
 
   // Just getVersion mapped over getSortedVersions, but only makes one round
@@ -581,8 +561,11 @@ _.extend(RemoteCatalog.prototype, {
       "SELECT content FROM versions WHERE packageName=?", [name]);
     if (! versionRecords)
       return [];
+
+    var pvParse = _.memoize(VersionParser.parse);
     versionRecords.sort(function (a, b) {
-      return VersionParser.compare(a.version, b.version);
+      return VersionParser.compare(pvParse(a.version),
+                                   pvParse(b.version));
     });
     return versionRecords;
   },

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Common code for OAuth-based services",
-  version: "1.1.6"
+  version: "1.1.8"
 });
 
 Package.onUse(function (api) {
@@ -35,6 +35,11 @@ Package.onUse(function (api) {
     'end_of_redirect_response.html'
   ], 'server');
 
+  api.addAssets([
+    'end_of_popup_response.js',
+    'end_of_redirect_response.js'
+  ], 'client');
+
   api.addFiles('oauth_common.js');
 
   // XXX COMPAT WITH 0.8.0
@@ -52,5 +57,5 @@ Package.onTest(function (api) {
 });
 
 Cordova.depends({
-  'cordova-plugin-inappbrowser': '1.0.1'
+  'cordova-plugin-inappbrowser': '1.3.0'
 });
