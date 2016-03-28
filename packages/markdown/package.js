@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Markdown-to-HTML processor",
-  version: "1.0.7-rc.13"
+  version: "1.0.7"
 });
 
 Package.onUse(function (api) {
