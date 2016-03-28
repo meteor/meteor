@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/usr/bin/env bash
 echo "Please run this script from the docs app folder."
 echo "Make sure you have phantomjs installed!"
 

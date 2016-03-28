@@ -1,5 +1,4 @@
-<template name="pkg_less">
-{{#markdown}}
+{{#template name="pkg_less"}}
 ## `less`
 
 [LESS](http://lesscss.org/) extends CSS with dynamic behavior such as variables, mixins,
@@ -15,5 +14,4 @@ If you want to `@import` a file, give it the extension `.import.less`
 to prevent Meteor from processing it independently.
 {{/note}}
 
-{{/markdown}}
-</template>
+{{/template}}

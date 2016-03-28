@@ -5,21 +5,33 @@
     </div>
 
     <a class="name selflink" href="{{link}}">{{{name}}}</a>
-
-    {{#if fullApi}}
-      {{#if filepath}}
-        <a class="src-code" href="https://github.com/meteor/meteor/blob/master/packages/{{filepath}}#L{{lineno}}" target="_blank">
-          {{filepath}}, line {{lineno}}
-        </a>
+    <div class="subtext">
+      {{#if importName}}
+        <code>import { {{importName}} } from 'meteor/{{module}}'</code>
       {{/if}}
-    {{/if}}
+
+      {{#if fullApi}}
+        {{#if filepath}}
+          <a class="src-code" href="https://github.com/meteor/meteor/blob/master/packages/{{filepath}}#L{{lineno}}" target="_blank">
+            ({{filepath}}, line {{lineno}})
+          </a>
+        {{/if}}
+      {{/if}}
+    </div>
   </h3>
 </template>
 
 <template name="autoApiBox">
 {{#with apiData this}}
 <div class="api {{bare}} new-api-box">
-  {{> apiBoxTitle name=signature locus=locus id=id filepath=filepath lineno=lineno}}
+  {{> apiBoxTitle
+    name=signature
+    importName=importName
+    module=module
+    locus=locus
+    id=id filepath=filepath
+    lineno=lineno
+  }}
 
   <div class="desc">
     {{#markdown}}{{summary}}{{/markdown}}

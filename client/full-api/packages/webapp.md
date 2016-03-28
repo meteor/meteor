@@ -1,5 +1,4 @@
-<template name="pkg_webapp">
-{{#markdown}}
+{{#template name="pkg_webapp"}}
 ## `webapp`
 
 The `webapp` package is what lets your Meteor app serve content to a web
@@ -43,5 +42,4 @@ object. Use this to write data that should be sent in response to the
 request, and call `res.end()` when you are done.
 - **next** - a function. Calling this function will pass on the handling of
 this request to the next relevant handler.
-{{/markdown}}
-</template>
+{{/template}}

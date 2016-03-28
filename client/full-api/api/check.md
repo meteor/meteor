@@ -2,34 +2,35 @@
 
 <h2 id="check_package"><span>Check</span></h2>
 
-The `check` package includes pattern checking functions useful for checking
-the types and structure of variables and an [extensible
-library of patterns](#matchpatterns) to specify which types you are expecting.
+The `check` package includes pattern checking functions useful for checking the types and structure
+of variables and an [extensible library of patterns](#matchpatterns) to specify which types you are
+expecting.
 
 {{> autoApiBox "check"}}
 
-Meteor methods and publish functions take arbitrary [EJSON](#ejson) types as
-arguments, but most arguments are expected to be of a particular type. `check`
-is a lightweight function for checking that arguments and other
-values are of the expected type. For example:
+Meteor methods and publish functions can take arbitrary [EJSON](#ejson) types as arguments, but most
+functions expect their arguments to be of a particular type. `check` is a lightweight function for
+checking that arguments and other values are of the expected type. For example:
 
-    Meteor.publish("chats-in-room", function (roomId) {
-      // Make sure roomId is a string, not an arbitrary mongo selector object.
-      check(roomId, String);
-      return Chats.find({room: roomId});
-    });
+```js
+Meteor.publish("chats-in-room", function (roomId) {
+  // Make sure roomId is a string, not an arbitrary mongo selector object.
+  check(roomId, String);
+  return Chats.find({room: roomId});
+});
 
-    Meteor.methods({addChat: function (roomId, message) {
-      check(roomId, String);
-      check(message, {
-        text: String,
-        timestamp: Date,
-        // Optional, but if present must be an array of strings.
-        tags: Match.Optional([String])
-      });
+Meteor.methods({addChat: function (roomId, message) {
+  check(roomId, String);
+  check(message, {
+    text: String,
+    timestamp: Date,
+    // Optional, but if present must be an array of strings.
+    tags: Match.Maybe([String])
+  });
 
-      // ... do something with the message ...
-    }});
+  // ... do something with the message ...
+}});
+```
 
 If the match fails, `check` throws a `Match.Error` describing how it failed. If
 this error gets sent over the wire to the client, it will appear only as
@@ -81,7 +82,7 @@ A one-element array matches an array of elements, each of which match
 
 {{#dtdd "<code>{<em>key1</em>: <em>pattern1</em>, <em>key2</em>: <em>pattern2</em>, ...}</code>"}}
 Matches an Object with the given keys, with values matching the given patterns.
-If any *pattern* is a `Match.Optional`, that key does not need to exist
+If any *pattern* is a `Match.Maybe` or `Match.Optional`, that key does not need to exist
 in the object. The value may not contain any keys not listed in the pattern.
 The value must be a plain Object with no special prototype.
 {{/dtdd}}
@@ -96,18 +97,33 @@ Matches any plain Object with any keys; equivalent to
 `Match.ObjectIncluding({})`.
 {{/dtdd}}
 
-{{#dtdd "<code>Match.Optional(<em>pattern</em>)</code>"}} Matches either
-`undefined` or something that matches pattern. If used in an object this matches
-only if the key is not set as opposed to the value being set to `undefined`.
 
-    // In an object
-    var pat = { name: Match.Optional(String) };
-    check({ name: "something" }, pat) // OK
-    check({}, pat) // OK
-    check({ name: undefined }, pat) // Throws an exception
 
-    // Outside an object
-    check(undefined, Match.Optional(String)); // OK
+{{#dtdd "<code>Match.Maybe(<em>pattern</em>)</code>"}}
+
+Matches either `undefined`, `null`, or _pattern_. If used in an object, matches only if the key is
+not set as opposed to the value being set to `undefined` or `null`. This set of conditions was
+chosen because `undefined` arguments to Meteor Methods are converted to `null` when sent over the
+wire.
+
+```js
+// In an object
+var pattern = { name: Match.Maybe(String) };
+check({ name: "something" }, pattern) // OK
+check({}, pattern) // OK
+check({ name: undefined }, pattern) // Throws an exception
+check({ name: null }, pattern) // Throws an exception
+
+// Outside an object
+check(null, Match.Maybe(String)); // OK
+check(undefined, Match.Maybe(String)); // OK
+```
+{{/dtdd}}
+
+{{#dtdd "<code>Match.Optional(<em>pattern</em>)</code>"}}
+
+Behaves like `Match.Maybe` except it doesn't accept `null`. If used in an object, the behavior is
+identical to `Match.Maybe`.
 
 {{/dtdd}}
 
