@@ -194,7 +194,7 @@ import { Lists } from '../../api/lists/lists.js';
 import createContainer from 'meteor/react-meteor-data';
 import ListsShow from '../pages/ListsShow.jsx';
 
-export default createContainer({ params } => {
+export default createContainer(({ params }) => {
   const { id } = params;
   const todosHandle = Meteor.subscribe('todos.inList', id);
   const loading = !todosHandle.ready();
