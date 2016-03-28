@@ -210,12 +210,14 @@ import { checkNpmVersions } from 'meteor/tmeasday:check-npm-versions';
 
 checkNpmVersions({
   'react': '0.14.x'
-});
+}, 'my:awesome-package');
 
 // If you are using the dependency in the same file, you'll need to use require, otherwise
 // you can continue to `import` in another file.
 const React = require('react');
 ```
+
+> Note that `checkNpmVersions` will only output a warning if the user has installed a incompatible version of the npm package. So your `require` call may not give you what you expect. This is consistent with npm's handling of [peer dependencies](http://blog.npmjs.org/post/110924823920/npm-weekly-5).
 
 <h2 id="exporting-css-preprocessor-code">LESS, SCSS, or Stylus mixins/variables</h2>
 
