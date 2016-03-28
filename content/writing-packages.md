@@ -11,7 +11,7 @@ After reading this article, you'll know:
 
 The Meteor platform supports two package systems: [npm](https://www.npmjs.com), a repository of JavaScript modules for Node.js and the browser, and [Atmosphere](https://atmospherejs.com), a repository of packages written specifically for Meteor.
 
-<h3 id="npm-vs-atmosphere">npm vs. Atmosphere</h3>
+<h2 id="npm-vs-atmosphere">npm vs. Atmosphere</h2>
 
 With the release of version 1.3, Meteor has full support for npm. In the future, there will be a time when all packages will be migrated to npm, but currently there are benefits to both systems. You can read more about the tradeoffs between Atmosphere and npm in the [Using Packages article](using-packages.html).
 
