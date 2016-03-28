@@ -13,8 +13,8 @@
     4. About architectures
     5. Semver and the constraint solver
     6. Cordova plugins
-    7. NPM packages
-        1. NPM on the client with Browserify
+    7. npm packages
+        1. npm on the client with Browserify
         2. Converting asynchronous Node APIs to synchronous-looking Fiber APIs
             1. Meteor.bindEnvironment
             1. Meteor.wrapAsync

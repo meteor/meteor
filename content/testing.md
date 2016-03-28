@@ -131,7 +131,7 @@ As we've placed the code above in a test file, it *will not* load in normal deve
 
 Often it's sensible to create a set of data to run your test against. You can use standard `insert()` calls against your collections to do this, but often it's easier to create *factories* which help encode random test data. A great package to use to do this is [`dburles:factory`](https://atmospherejs.com/dburles/factory).
 
-In the Todos example app, we define a factory to describe how to create a test todo item, using the [`faker`](https://www.npmjs.com/package/Faker) NPM package:
+In the Todos example app, we define a factory to describe how to create a test todo item, using the [`faker`](https://www.npmjs.com/package/Faker) npm package:
 
 ```js
 import faker from 'faker';
@@ -568,7 +568,7 @@ meteor npm install --global chimp
 
 > Note that you can also install Chimp as a `devDependency` in your `package.json` but you may run into problems deploying your application as it includes binary dependencies. You can avoid such problems by running `meteor npm prune` to remove non-production dependencies before deploying.
 
-Chimp has a variety of options for setting it up, but we can add some NPM scripts which will run the currently tests we define in Chimp's two main modes. We can add them to our `package.json`:
+Chimp has a variety of options for setting it up, but we can add some npm scripts which will run the currently tests we define in Chimp's two main modes. We can add them to our `package.json`:
 
 ```json
 {

@@ -6,7 +6,7 @@
   3. Is the code complete enough to be useful, or does it need work to be made generic?
 2. How to decide what's in a package / more than one
   1. Is there any core functionality that could be reused elsewhere? (e.g. route matching)
-  2. Is there pure JS code that could be published to NPM?
+  2. Is there pure JS code that could be published to npm?
   3. Principle of a single symbol per package could help (see structure chapter).
 3. How to write great documentation.
   1. README vs longer documentation/guide

@@ -148,7 +148,7 @@ Meteor brings sane, zero-configuration defaults to the previously tedious tasks 
 2. How to use packages from other packaging systems:
     1. Compatibility directory and 'bare' files
     2. Bower
-    3. NPM
+    3. npm
 
 ### Blaze guide: The Tracker-based reactive templating system
 

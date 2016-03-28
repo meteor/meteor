@@ -284,17 +284,17 @@ Forum post here: https://forums.meteor.com/t/ideas-from-mdg-meteor-1-3-the-meteo
 - **Build plugins**: Do build plugins work as-is? how do you use modules with CoffeeScript, does this open up TypeScript? Have we compared what we are building to what is needed by the Angular/Angular2 community? What about CSS pre-processors?
   - The dependency tree is analyzed based on the output code - so as long as the CoffeeScript compiler outputs `require(‘myFile.coffee’)`, we’ll detect that dependency.
   - LESS does all of its own importing and exports CSS, which could either be added as a style tag or a JavaScript resource. The CSS pre-processor stuff isn't affected by ES2015 module work for Meteor 1.3, and will work just as before.
-- **Meteor package system**: What’s it for? Should people start shipping reusable Meteor code on NPM as of 1.3?
+- **Meteor package system**: What’s it for? Should people start shipping reusable Meteor code on npm as of 1.3?
   - Meteor packages are really good at doing totally different things on the client and the server - you can set up the full stack just by adding the package
   - For example, for DDP, you’d need to `import ‘ddp/client’` on the client and `import ‘ddp/server’` on the server if you want different functionality, but in a Meteor package you can just use `ddp` and it does the right thing.
-  - `client/` and `server/` directories in NPM packages don’t have a special meaning at the moment, but they could - or we could have a special `package.json` format. Probably won't tackle this for 1.3.
-  - If you don’t have the above special build system requirements, there is basically no reason you need to publish your package on Atmosphere over NPM - this also removes the need for robotic wrapper packages that just re-bundle the same code that's already on NPM.
+  - `client/` and `server/` directories in npm packages don’t have a special meaning at the moment, but they could - or we could have a special `package.json` format. Probably won't tackle this for 1.3.
+  - If you don’t have the above special build system requirements, there is basically no reason you need to publish your package on Atmosphere over npm - this also removes the need for robotic wrapper packages that just re-bundle the same code that's already on npm.
 - **Assets**: What about assets like fonts and images? In the current package system, you can organize them in `package.js`, but in a Meteor app today you'd have to put everything in `public/`. What do you do in module world?
   - Modules are about loading things that compile to JavaScript code
   - Images aren’t something you would ‘require’ since there is no JavaScript content involved
   - Perhaps you should be able to stick images anywhere in the app (not just `public/`), and have a sane way of referring to them
   - Idea from Sashko: Perhaps we want `getPathToAsset(‘../relative/path’);`, so that you can put images next to templates and refer to them without having to know the absolute path to the containing directory.
-- **Apps with multiple entry points/UIs/services**: Right now, you can have lots of packages and lots of apps, is this possible with modules? Do you need to make modules into NPM packages for this? Are Meteor packages still the way to go? If so, do you still need to list all of the files?
+- **Apps with multiple entry points/UIs/services**: Right now, you can have lots of packages and lots of apps, is this possible with modules? Do you need to make modules into npm packages for this? Are Meteor packages still the way to go? If so, do you still need to list all of the files?
   - Didn't have time to address this in the meeting.
 - **Cordova**: Can you import Cordova plugins?
   - We don’t yet have a good mental model here yet. It would be nice if you could import a cordova plugin, and make sure the necessary side effects run.

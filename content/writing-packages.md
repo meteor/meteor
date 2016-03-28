@@ -4,20 +4,20 @@ title: Writing Packages
 
 After reading this article, you'll know:
 
-1. When to create an NPM package and when to create an Atmosphere package
+1. When to create an npm package and when to create an Atmosphere package
 2. The basics of writing an Atmosphere package
-3. How to depend on other packages, both from Atmosphere and NPM
+3. How to depend on other packages, both from Atmosphere and npm
 4. How an Atmosphere package can integrate with Meteor's build system
 
-The Meteor platform supports two package systems: [NPM](https://www.npmjs.com), a repository of JavaScript modules for Node.js and the browser, and [Atmosphere](https://atmospherejs.com), a repository of packages written specifically for Meteor.
+The Meteor platform supports two package systems: [npm](https://www.npmjs.com), a repository of JavaScript modules for Node.js and the browser, and [Atmosphere](https://atmospherejs.com), a repository of packages written specifically for Meteor.
 
-<h3 id="npm-vs-atmosphere">NPM vs. Atmosphere</h3>
+<h2 id="npm-vs-atmosphere">npm vs. Atmosphere</h2>
 
-With the release of version 1.3, Meteor has full support for NPM. In the future, there will be a time when all packages will be migrated to NPM, but currently there are benefits to both systems. You can read more about the tradeoffs between Atmosphere and NPM in the [Using Packages article](using-packages.html).
+With the release of version 1.3, Meteor has full support for npm. In the future, there will be a time when all packages will be migrated to npm, but currently there are benefits to both systems. You can read more about the tradeoffs between Atmosphere and npm in the [Using Packages article](using-packages.html).
 
-If you want to distribute and reuse code that you've written for a Meteor application, then you should consider publishing that code on NPM if it's general enough to be consumed by a wider JavaScript audience. It's simple to [use NPM packages from Meteor applications](using-packages.html#npm), and possible to [use NPM packages from Atmosphere packages](#npm-dependencies), so even if your main audience is Meteor developers, NPM might be the best choice.
+If you want to distribute and reuse code that you've written for a Meteor application, then you should consider publishing that code on npm if it's general enough to be consumed by a wider JavaScript audience. It's simple to [use npm packages from Meteor applications](using-packages.html#npm), and possible to [use npm packages from Atmosphere packages](#npm-dependencies), so even if your main audience is Meteor developers, npm might be the best choice.
 
-The practice of writing NPM packages is [well documented](https://docs.npmjs.com/getting-started/creating-node-modules) and we won't cover it here.
+The practice of writing npm packages is [well documented](https://docs.npmjs.com/getting-started/creating-node-modules) and we won't cover it here.
 
 However, if your package depends on an Atmosphere package (which, in Meteor 1.3, includes the Meteor core packages), or needs to take advantage of Meteor's [build system](#build-packages), then writing an Atmosphere package might be the best option.
 
@@ -41,7 +41,7 @@ my-package
 └── my-package.js
 ```
 
-The `package.js` file is the main file in every Meteor package. This is a JavaScript file that defines the metadata, files loaded, architectures, NPM packages, and Cordova packages for your Meteor package.
+The `package.js` file is the main file in every Meteor package. This is a JavaScript file that defines the metadata, files loaded, architectures, npm packages, and Cordova packages for your Meteor package.
 
 In this guide article, we will go over some important points for building packages, but we won't explain every part of the `package.js` API. To learn about all of the options, [read about the `package.js` API in the Meteor docs.](http://docs.meteor.com/#/full/packagejs)
 
@@ -121,7 +121,7 @@ import { name } from 'meteor/username:my-package';
 
 <h2 id="dependencies">Dependencies</h2>
 
-Chances are your package will want to make use of other packages---to ensure they are available, you can declare dependencies. Atmosphere packages can depend both on other Atmosphere packages, as well as packages from NPM.
+Chances are your package will want to make use of other packages---to ensure they are available, you can declare dependencies. Atmosphere packages can depend both on other Atmosphere packages, as well as packages from npm.
 
 <h3 id="atmosphere-dependencies">Atmosphere dependencies</h3>
 
@@ -179,11 +179,11 @@ The constraint solver is necessary because Meteor's package system is **single-l
 
 Note that the version solver also has a concept of "gravity" - when many solutions are possible for a certain set of dependencies, it always selects the oldest possible version. This is helpful if you are trying to develop a package to ship to lots of users, since it ensures your package will be compatible with the lowest common denominator of a dependency. If your package needs a newer version than is currently being selected for a certain dependency, you need to update your `package.js` to have a newer version constraint.
 
-<h3 id="npm-dependencies">NPM dependencies</h3>
+<h3 id="npm-dependencies">npm dependencies</h3>
 
-Meteor packages can include [NPM packages](https://www.npmjs.com/) to use JavaScript code from outside the Meteor package ecosystem, or to include JavaScript code with native dependencies.
+Meteor packages can include [npm packages](https://www.npmjs.com/) to use JavaScript code from outside the Meteor package ecosystem, or to include JavaScript code with native dependencies.
 
-If your package is using a dependency on the server then you can include NPM packages in your Meteor package by using [Npm.depends](http://docs.meteor.com/#/full/Npm-depends). For example, here's how you could include the `github` package from NPM in your `package.js`:
+If your package is using a dependency on the server then you can include npm packages in your Meteor package by using [Npm.depends](http://docs.meteor.com/#/full/Npm-depends). For example, here's how you could include the `github` package from npm in your `package.js`:
 
 ```js
 Npm.depends({
@@ -197,11 +197,11 @@ You can import the dependency from within you package code in the same way that 
 import github from 'github';
 ```
 
-<h3 id="npm-peer-dependencies">Peer NPM dependencies</h3>
+<h3 id="npm-peer-dependencies">Peer npm dependencies</h3>
 
-`Npm.depends()` is fairly rigid (you can only depend on an exact version), and will typically result in multiple versions of a package being installed if many different Atmosphere packages depend on the same NPM package. This makes it less than ideal to use on the client, where it's impractical to ship multiple copies of the same package code to the browser. Client-side packages are also often written with the assumption that only a single copy will be loaded. For example, React will complain if it is included more than once in an application bundle.
+`Npm.depends()` is fairly rigid (you can only depend on an exact version), and will typically result in multiple versions of a package being installed if many different Atmosphere packages depend on the same npm package. This makes it less than ideal to use on the client, where it's impractical to ship multiple copies of the same package code to the browser. Client-side packages are also often written with the assumption that only a single copy will be loaded. For example, React will complain if it is included more than once in an application bundle.
 
-To avoid this problem as a package author, you can request that users of your package have installed the NPM package you want to use at the application level. This is similar to a [peer dependency](https://nodejs.org/en/blog/npm/peer-dependencies/) of an NPM package (although with less support in the tool). You can use the [`tmeasday:check-npm-versions`](https://atmospherejs.com/tmeasday/check-npm-versions) package to ensure that they've done this, and to warn them if not.
+To avoid this problem as a package author, you can request that users of your package have installed the npm package you want to use at the application level. This is similar to a [peer dependency](https://nodejs.org/en/blog/npm/peer-dependencies/) of an npm package (although with less support in the tool). You can use the [`tmeasday:check-npm-versions`](https://atmospherejs.com/tmeasday/check-npm-versions) package to ensure that they've done this, and to warn them if not.
 
 For instance, if you are writing a React package, you should not directly depend on [`react`](https://www.npmjs.com/package/react), but instead use `check-npm-versions` to check the user has installed it:
 
@@ -210,12 +210,14 @@ import { checkNpmVersions } from 'meteor/tmeasday:check-npm-versions';
 
 checkNpmVersions({
   'react': '0.14.x'
-});
+}, 'my:awesome-package');
 
 // If you are using the dependency in the same file, you'll need to use require, otherwise
 // you can continue to `import` in another file.
 const React = require('react');
 ```
+
+> Note that `checkNpmVersions` will only output a warning if the user has installed a incompatible version of the npm package. So your `require` call may not give you what you expect. This is consistent with npm's handling of [peer dependencies](http://blog.npmjs.org/post/110924823920/npm-weekly-5).
 
 <h2 id="exporting-css-preprocessor-code">LESS, SCSS, or Stylus mixins/variables</h2>
 
@@ -258,6 +260,12 @@ Package.onTest(function(api) {
 From within your test entry point, you can import other files as you would in the package proper.
 
 You can read more about testing in Meteor in the [Testing article](testing.html).
+
+<h3 id="testing-with-peer-dependencies">Peer npm dependencies</h3>
+
+If your package makes use of [peer npm dependencies](#peer-npm-dependencies), you cannot currently use `test-packages` to write package tests (as the dependencies will not be included in the special test app).
+
+To work around this, you can create a "scaffolding" test application, which is a simple app which simply includes the package and uses standard [tests](testing.html) to run tests against the package. You can see examples of these kind of scaffold test apps in the [React packages repository](https://github.com/meteor/react-packages/tree/devel/tests).
 
 <h2 id="local-vs-published">Local packages vs. published packages</h2>
 

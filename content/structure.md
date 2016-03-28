@@ -26,7 +26,7 @@ You can read about the module system in detail in the [`modules` package README]
 
 <h3 id="importing-from-packages">Importing from packages</h3>
 
-In Meteor, it is also simple and straightforward to use the `import` syntax to load NPM packages on the client or server, and access the package's exported symbols as you would with any other module. You can also import from Atmosphere packages, but the import path must be prefixed with `meteor` to avoid conflict with the NPM package namespace. For example, to import `HTTP` you can do `import { HTTP } from 'meteor/http'`.
+In Meteor, it is also simple and straightforward to use the `import` syntax to load npm packages on the client or server, and access the package's exported symbols as you would with any other module. You can also import from Atmosphere packages, but the import path must be prefixed with `meteor` to avoid conflict with the npm package namespace. For example, to import `HTTP` you can do `import { HTTP } from 'meteor/http'`.
 
 <h3 id="using-require">Using `require`</h3>
 
@@ -166,9 +166,9 @@ However there are some challenges to splitting your code in this way that should
 
 The primary challenge is properly sharing code between the different applications you are building. The simplest approach to deal with this issue is to simply deploy the *same* application on different web servers, controlling the behavior via different [settings](deployment.md#environment). This approach allows you to easily deploy different versions with different scaling behavior but doesn't enjoy most of the other advantages stated above.
 
-If you want to create Meteor applications with separate code, you'll have some modules that you'd like to share between them. If those modules are something the wider world could use, you should consider [publishing them to a package system](writing-packages.html), either NPM or Atmosphere, depending on whether the code is Meteor specific or otherwise.
+If you want to create Meteor applications with separate code, you'll have some modules that you'd like to share between them. If those modules are something the wider world could use, you should consider [publishing them to a package system](writing-packages.html), either npm or Atmosphere, depending on whether the code is Meteor specific or otherwise.
 
-If the code is private, or of no interest to others, it typically makes sense to simply include the same module in both applications (you *can* do this with [private NPM modules](https://www.npmjs.com/private-modules)). There are several ways to do this:
+If the code is private, or of no interest to others, it typically makes sense to simply include the same module in both applications (you *can* do this with [private npm modules](https://www.npmjs.com/private-modules)). There are several ways to do this:
 
  - a straightforward approach is simply to include the common code as a [git submodule](https://git-scm.com/book/en/v2/Git-Tools-Submodules) of both applications.
 
