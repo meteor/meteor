@@ -259,6 +259,12 @@ From within your test entry point, you can import other files as you would in th
 
 You can read more about testing in Meteor in the [Testing article](testing.html).
 
+<h3 id="testing-with-peer-dependencies">Peer npm dependencies</h3>
+
+If your package makes use of [peer npm dependencies](#peer-npm-dependencies), you cannot currently use `test-packages` to write package tests (as the dependencies will not be included in the special test app).
+
+To work around this, you can create a "scaffolding" test application, which is a simple app which simply includes the package and uses standard [tests](testing.html) to run tests against the package. You can see examples of these kind of scaffold test apps in the [React packages repository](https://github.com/meteor/react-packages/tree/devel/tests).
+
 <h2 id="local-vs-published">Local packages vs. published packages</h2>
 
 If you've ever looked inside Meteor's package cache at `~/.meteor/packages`, you know that the on-disk format of a built Meteor package is completely different from the way the source code looks when you're developing the package. The idea is that the target format of a package can remain consistent even if the API for development changes.
