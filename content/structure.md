@@ -45,7 +45,7 @@ Note that dynamic calls to `require()` (where the name being required can change
 
 If you need to `require` from a ES2015 module with a `default` export, you can grab the export with `require("package").default`.
 
-Another situation where you'll need to use `require` is in CoffeScript files. As CS doesn't support the `import` syntax yet, you should use `require` (read more about it in the [modules documentation](https://github.com/meteor/meteor/tree/release-1.3/packages/modulescoffeescript-syntax)):
+Another situation where you'll need to use `require` is in CoffeScript files. As CS doesn't support the `import` syntax yet, you should use `require`:
 
 ```cs
 { FlowRouter } = require 'meteor/kadira:flow-router'
