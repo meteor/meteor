@@ -1,6 +1,6 @@
 # Code style
 
-1. Benefits of consistent code style
+1. Benefits of strict code style
   1. Integration with default linters, checkers, transpilers, etc
   2. Easy for new people to get started on your code
   3. All Meteor code samples can follow your style

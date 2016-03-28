@@ -1,6 +1,6 @@
 ---
 title: Publications and Data Loading
-order: 2
+order: 4
 description: How and where to load data in your Meteor app using publications and subscriptions.
 discourseTopicId: 19661
 ---
@@ -33,7 +33,7 @@ So a subscription can be thought of as a set of data that changes over time. Typ
 A publication should be defined in a server-only file. For instance, in the Todos example app, we want to publish the set of public lists to all users:
 
 ```js
-Meteor.publish('Lists.public', function() {
+Meteor.publish('lists.public', function() {
   return Lists.find({
     userId: {$exists: false}
   }, {
@@ -56,7 +56,7 @@ Every publication takes two types of parameters:
 In this publication, which loads private lists, we need to use `this.userId` to get only the todo lists that belong to a specific user.
 
 ```js
-Meteor.publish('Lists.private', function() {
+Meteor.publish('lists.private', function() {
   if (!this.userId) {
     return this.ready();
   }
@@ -76,7 +76,7 @@ In the case of a logged-out user, we explicitly call `this.ready()`, which indic
 Here's an example of a publication which takes a named argument. Note that it's important to check the types of arguments that come in over the network.
 
 ```js
-Meteor.publish('Todos.inList', function(listId) {
+Meteor.publish('todos.inList', function(listId) {
   // We need to check the `listId` is the type we expect
   new SimpleSchema({
     listId: {type: String}
@@ -89,14 +89,14 @@ Meteor.publish('Todos.inList', function(listId) {
 When we subscribe to this publication on the client, we can provide this argument via the `Meteor.subscribe()` call:
 
 ```js
-Meteor.subscribe('Todos.inList', list._id);
+Meteor.subscribe('todos.inList', list._id);
 ```
 
 <h3 id="organization-publications">Organizing publications</h3>
 
 It makes sense to place a publication alongside the feature that it's targeted for. For instance, sometimes publications provide very specific data that's only really useful for the view for which they were developed. In that case, placing the publication in the same module or directory as the view code makes perfect sense.
 
-Often, however, a publication is more general. For example in the Todos example application, we create a `Todos.inList` publication, which publishes all the todos in a list. Although in the application we only use this in one place (in the `Lists_show` template), in a larger app, there's a good chance we might need to access all the todos for a list in other places. So putting the publication in the `todos` package is a sensible approach.
+Often, however, a publication is more general. For example in the Todos example application, we create a `todos.inList` publication, which publishes all the todos in a list. Although in the application we only use this in one place (in the `Lists_show` template), in a larger app, there's a good chance we might need to access all the todos for a list in other places. So putting the publication in the `todos` package is a sensible approach.
 
 <h2 id="subscriptions">Subscribing to data</h2>
 
@@ -105,7 +105,7 @@ To use publications, you need to create a subscription to it on the client. To d
 `Meteor.subscribe()` also returns a "subscription handle" with a property called `.ready()`. This is a reactive function that returns `true` when the publication is marked ready (either you call `this.ready()` explicitly, or the initial contents of a returned cursor are sent over).
 
 ```js
-const handle = Meteor.subscribe('Lists.public');
+const handle = Meteor.subscribe('lists.public');
 ```
 
 <h3 id="stopping-subscriptions">Stopping Subscriptions</h3>
@@ -125,7 +125,7 @@ Template.Lists_show_page.onCreated(function() {
   this.getListId = () => FlowRouter.getParam('_id');
 
   this.autorun(() => {
-    this.subscribe('Todos.inList', this.getListId());
+    this.subscribe('todos.inList', this.getListId());
   });
 });
 ```
@@ -175,7 +175,7 @@ Although the Tracker system means you often don't *need* to think too much about
 To find that out, `Meteor.subscribe()` and (`this.subscribe()` in Blaze components) returns a "subscription handle", which contains a reactive data source called `.ready()`:
 
 ```js
-const handle = Meteor.subscribe('Lists.public');
+const handle = Meteor.subscribe('lists.public');
 Tracker.autorun(() => {
   const isReady = handle.ready();
   console.log(`Handle is ${isReady ? 'ready' : 'not ready'}`);  
@@ -193,7 +193,7 @@ Template.Lists_show_page.onCreated(function() {
   this.getListId = () => FlowRouter.getParam('_id');
 
   this.autorun(() => {
-    this.subscribe('Todos.inList', this.getListId());
+    this.subscribe('todos.inList', this.getListId());
   });
 });
 ```
@@ -236,7 +236,7 @@ In an infinite scroll publication, we simply need to add a new argument to our p
 ```js
 const MAX_TODOS = 1000;
 
-Meteor.publish('Todos.inList', function(listId, limit) {
+Meteor.publish('todos.inList', function(listId, limit) {
   new SimpleSchema({
     listId: { type: String },
     limit: { type: Number }
@@ -260,7 +260,7 @@ Template.Lists_show_page.onCreated(function() {
   this.getListId = () => FlowRouter.getParam('_id');
 
   this.autorun(() => {
-    this.subscribe('Todos.inList',
+    this.subscribe('todos.inList',
       this.getListId(), this.state.get('requestedTodos'));
   });
 });
@@ -360,7 +360,7 @@ It's common to need related sets of data from multiple collections on a given pa
 One way you might do this is to return more than one cursor from your publication function:
 
 ```js
-Meteor.publish('Todos.inList', function(listId) {
+Meteor.publish('todos.inList', function(listId) {
   new SimpleSchema({
     listId: {type: String}
   }).validate({ listId });
@@ -391,7 +391,7 @@ However, we can write publications that are properly reactive to changes across 
 The way this package works is to first establish a cursor on one collection, and then explicitly set up a second level of cursors on a second collection with the results of the first cursor. The package uses a query observer behind the scenes to trigger the subscription to change and queries to re-run whenever the source data changes.
 
 ```js
-Meteor.publishComposite('Todos.inList', function(listId) {
+Meteor.publishComposite('todos.inList', function(listId) {
   new SimpleSchema({
     listId: {type: String}
   }).validate({ listId });
@@ -609,7 +609,7 @@ The opposite scenario occurs when you want to publish data to be consumed by a 3
 In the Todos example app, we have done this, and you can now access our publications over HTTP:
 
 ```bash
-$ curl localhost:3000/publications/Lists.public
+$ curl localhost:3000/publications/lists.public
 {
   "Lists": [
     {
@@ -631,7 +631,7 @@ $ curl localhost:3000/publications/Lists.public
 }
 ```
 
-You can also access authenticated publications (such as `Lists.private`). Suppose we've signed up (via the web UI) as `user@example.com`, with the password `password`, and created a private list. Then we can access it as follows:
+You can also access authenticated publications (such as `lists.private`). Suppose we've signed up (via the web UI) as `user@example.com`, with the password `password`, and created a private list. Then we can access it as follows:
 
 ```bash
 # First, we need to "login" on the commandline to get an access token
@@ -643,7 +643,7 @@ $ curl localhost:3000/users/login  -H "Content-Type: application/json" --data '{
 }
 
 # Then, we can make an authenticated API call
-$ curl localhost:3000/publications/Lists.private -H "Authorization: Bearer 6PN4EIlwxuVua9PFoaImEP9qzysY64zM6AfpBJCE6bs"
+$ curl localhost:3000/publications/lists.private -H "Authorization: Bearer 6PN4EIlwxuVua9PFoaImEP9qzysY64zM6AfpBJCE6bs"
 {
   "Lists": [
     {

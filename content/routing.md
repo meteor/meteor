@@ -302,9 +302,11 @@ Now that you have this package, you can use helpers in your templates to display
 In some cases you want to change routes based on user action outside of them clicking on a link. For instance, in the example app, when a user creates a new list, we want to route them to the list they just created. We do this by calling `FlowRouter.go()` once we know the id of the new list:
 
 ```js
+import { insert } from '../../api/lists/methods.js';
+
 Template.App_body.events({
   'click .js-new-list'() {
-    const listId = Lists.methods.insert.call();
+    const listId = insert.call();
     FlowRouter.go('Lists.show', { _id: listId });
   }
 });
@@ -380,7 +382,7 @@ If you need to wait on specific data that you aren't already subscribed to at cr
 ```js
 Template.App_rootRedirector.onCreated(() => {
   // If we needed to open this subscription here
-  this.subscribe('Lists.public');
+  this.subscribe('lists.public');
 
   // Now we need to wait for the above subscription. We'll need the template to
   // render some kind of loading state while we wait, too.
@@ -401,7 +403,7 @@ However, if we wanted to wait for the method to return from the server, we can p
 ```js
 Template.App_body.events({
   'click .js-new-list'() {
-    Lists.methods.insert.call((err, listId) => {
+    lists.insert.call((err, listId) => {
       if (!err) {
         FlowRouter.go('Lists.show', { _id: listId });  
       }
