@@ -57,6 +57,8 @@ Call `SyncedCron.stop()` to remove and stop all jobs.
 
 Call `SyncedCron.pause()` to stop all jobs without removing them.  The existing jobs can be rescheduled (i.e. restarted) with `SyncedCron.start()`.
 
+To schedule a once off (i.e not recurring) event, create a job with a schedule like this `parser.recur().on(date).fullDate();`
+
 ### Configuration
 
 You can configure SyncedCron with the `config` method. Defaults are:
