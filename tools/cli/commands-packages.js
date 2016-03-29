@@ -1302,10 +1302,16 @@ var maybeUpdateRelease = function (options) {
         // the old tool.
         //
         // We'll still springboard forwards out of an RC, just not backwards.
-        Console.info("Not updating the release, because this app is at a " +
-                     "newer release (" + release.current.name + ") than " +
-                     "the latest recommended release " +
-                     "(" + latestRelease + ").");
+        // There still has a possibility of already on the latest.
+        if (release.current.name === latestRelease) {
+          Console.info("Already on the latest recommended release" +
+                      "(" + latestRelease + "). Not updating.");
+        } else {
+          Console.info("Not updating the release, because this app is at a " +
+                      "newer release (" + release.current.name + ") than " +
+                      "the latest recommended release " +
+                      "(" + latestRelease + ").");
+        }
         return 0;
       }
     }
