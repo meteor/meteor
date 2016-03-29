@@ -145,10 +145,8 @@ Currently, Meteor doesn't have a separate build step for post-processing CSS, so
 Use the package [juliancwirko:postcss](https://atmospherejs.com/juliancwirko/postcss) to your app to enable PostCSS for your Meteor app. To do so, we remove the standard CSS minifier and replace it with the postcss package:
 
 ```
-meteor remove standard-minifiers
+meteor remove standard-minifier-css
 meteor add juliancwirko:postcss
-# We still want Meteor's built in JS minifiers
-meteor add standard-minifiers-js
 ```
 
 Then we can install any npm CSS processing packages that we'd like to use and reference them from a `postcss` section of our `package.json`. In the Todos example app, we use `autoprefixer` package to increase browser support:
