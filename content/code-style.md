@@ -159,7 +159,7 @@ This will return something like `/usr/local`. Add this to the "Global Node Path"
 
 ![Set your "Global Node Path" and check "Use Global Eslint"](images/atom-configuration.png)
 
-Then **restart Atom** to activate linting.
+Then **restart** (or **reload** by pressing Ctrl+Alt+R / Cmd+Opt+R) Atom to activate linting.
 
 
 <h4 id="eslint-webstorm">WebStorm</h4>
