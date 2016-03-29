@@ -24,8 +24,5 @@ Package.onUse(function(api) {
     // The protocol and client/server libraries that Meteor uses to send data
     'ddp',
     'livedata', // XXX COMPAT WITH PACKAGES BUILT FOR 0.9.0.
-
-    // Push code changes to the client and automatically reload the page
-    'hot-code-push'
   ]);
 });
