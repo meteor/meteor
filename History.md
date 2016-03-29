@@ -257,9 +257,9 @@
 
 * Expose `dynamicHead` and `dynamicBody` hooks in boilerplate generation allowing code to inject content into the body and head tags from the server. #3860
 
-* Add methods of the form BrowserPolicy.content.allow<ContentType>BlobUrl() to BrowserPolicy #5141
+* Add methods of the form `BrowserPolicy.content.allow<ContentType>BlobUrl()` to BrowserPolicy #5141
 
-* Move `<script>` tags to end of <body> to enable 'loading' UI to be inserted into the boilerplate #6375
+* Move `<script>` tags to end of `<body>` to enable 'loading' UI to be inserted into the boilerplate #6375
 
 * Adds WebAppInternals.setBundledJsCssUrlRewriteHook allowing apps to supply a hook function that can create a dynamic bundledJsCssPrefix at runtime. This is useful if you're using a CDN by giving you a way to ensure the CDN won't cache broken js/css resources during an app upgrade.
 
@@ -1110,7 +1110,7 @@ romanzolotarev, Siilwyn, and tmeasday.
 
 * Add `meteor test-packages --velocity` (similar to `meteor run --test`).  [#3330](https://github.com/meteor/meteor/issues/3330)
 
-* Fix `meteor update <packageName>` to update <packageName> even if it's an
+* Fix `meteor update <packageName>` to update `<packageName>` even if it's an
   indirect dependency of your app.  [#3282](https://github.com/meteor/meteor/issues/3282)
 
 * Fix stack trace when a browser tries to use the server like a proxy.  [#1212](https://github.com/meteor/meteor/issues/1212)
@@ -3695,7 +3695,7 @@ milesmatthias, Primigenus, raix, timhaines, and xenolf.
 * Re-rendering a template with Spark no longer reverts changes made by
   users to a `preserve`d form element. Instead, the newly rendered value
   is only applied if it is different from the previously rendered value.
-  Additionally, <INPUT> elements with type other than TEXT can now have
+  Additionally, `<INPUT>` elements with type other than TEXT can now have
   reactive values (eg, the labels on submit buttons can now be
   reactive).  [#510](https://github.com/meteor/meteor/issues/510) [#514](https://github.com/meteor/meteor/issues/514) [#523](https://github.com/meteor/meteor/issues/523) [#537](https://github.com/meteor/meteor/issues/537) [#558](https://github.com/meteor/meteor/issues/558)
 
@@ -3728,7 +3728,7 @@ milesmatthias, Primigenus, raix, timhaines, and xenolf.
   slashes.
 
 * Spark improvements:
-  * Improve rendering of <SELECT> elements on IE.  [#496](https://github.com/meteor/meteor/issues/496)
+  * Improve rendering of `<SELECT>` elements on IE.  [#496](https://github.com/meteor/meteor/issues/496)
   * Don't lose nested data contexts in IE9/10 after two seconds.  [#458](https://github.com/meteor/meteor/issues/458)
   * Don't print a stack trace if DOM nodes are manually removed
     from the document without calling `Spark.finalize`.  [#392](https://github.com/meteor/meteor/issues/392)
