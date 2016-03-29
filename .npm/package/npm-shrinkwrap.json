@@ -1,7 +1,9 @@
 {
   "dependencies": {
     "later": {
-      "version": "1.1.6"
+      "version": "1.1.6",
+      "resolved": "https://registry.npmjs.org/later/-/later-1.1.6.tgz",
+      "from": "later@1.1.6"
     }
   }
 }
