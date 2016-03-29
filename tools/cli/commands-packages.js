@@ -1304,7 +1304,7 @@ var maybeUpdateRelease = function (options) {
         // We'll still springboard forwards out of an RC, just not backwards.
         // There still has a possibility of already on the latest.
         if (release.current.name === latestRelease) {
-          Console.info("Already on the latest recommended release" +
+          Console.info("Already on the latest recommended release " +
                       "(" + latestRelease + "). Not updating.");
         } else {
           Console.info("Not updating the release, because this app is at a " +
