@@ -245,7 +245,7 @@ import ListContainer from '../../ui/containers/ListContainer.jsx';
 FlowRouter.route('/lists/:_id', {
   name: 'Lists.show',
   action() {
-    mount(AppCountainer, {
+    mount(AppContainer, {
       main: () => <ListContainer/>,
     });
   },
