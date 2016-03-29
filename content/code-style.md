@@ -72,13 +72,13 @@ All of the code samples in this guide and future Meteor tutorials will use all o
 
 <h3 id="style-guide">Follow a JavaScript style guide</h3>
 
-We recommend choosing and sticking to a JavaScript style guide and enforcing it with tools. A popular option that we recommend is the [AirBnB style guide](https://github.com/airbnb/javascript) with the ES6 extensions (and optionally React extensions).
+We recommend choosing and sticking to a JavaScript style guide and enforcing it with tools. A popular option that we recommend is the [Airbnb style guide](https://github.com/airbnb/javascript) with the ES6 extensions (and optionally React extensions).
 
 <h2 id="eslint">Check your code with ESLint</h2>
 
 "Code linting" is the process of automatically checking your code for common errors or style problems. For example, ESLint can determine if you have made a typo in a variable name, or some part of your code is unreachable because of a poorly written `if` condition.
 
-We recommend using the [AirBnB eslint configuration](https://github.com/airbnb/javascript/tree/master/packages/eslint-config-airbnb) which verifies the AirBnB styleguide.
+We recommend using the [Airbnb eslint configuration](https://github.com/airbnb/javascript/tree/master/packages/eslint-config-airbnb) which verifies the Airbnb styleguide.
 
 Below, you can find directions for setting up automatic linting at many different stages of development. In general, you want to run the linter as often as possible, because it's the fastest and easiest way to identify typos and small errors.
 
@@ -90,7 +90,7 @@ To setup ESLint in your application, you can install the following npm packages:
 npm install --save-dev eslint eslint-plugin-react eslint-plugin-meteor eslint-config-airbnb
 ```
 
-You can also add a `eslintConfig` section to your `package.json` to specify that you'd like to use the AirBnB config, and to enable [ESLint-plugin-Meteor](https://github.com/dferber90/eslint-plugin-meteor). You can also setup any extra rules you want to change, as well as adding a lint npm command:
+You can also add a `eslintConfig` section to your `package.json` to specify that you'd like to use the Airbnb config, and to enable [ESLint-plugin-Meteor](https://github.com/dferber90/eslint-plugin-meteor). You can also setup any extra rules you want to change, as well as adding a lint npm command:
 
 ```
 {
