@@ -56,7 +56,7 @@ React = require 'react'
 
 To fully use the module system and ensure that our code only runs when we ask it to, we recommend that all of your application code should be placed inside the `imports/` directory. This means that the Meteor build system will only bundle and include that file if it is referenced from another file using an `import`.
 
-Meteor will eagerly load any files outside of `imports/` in the application, but it's recommended that you create exactly two eagerly loaded files: `client/main.js` and `server/main.js`, in order to define explicit entry points. Meteor ensures that any file in a directory named `server/` will only be available on the server, and likewise for files in `client/`.
+Meteor will eagerly load any files outside of any directory named `imports/` in the application. It is recommended that you create exactly two eagerly loaded files, `client/main.js` and `server/main.js`, in order to define explicit entry points for both the client and the server. Meteor ensures that any file in any directory named `server/` will only be available on the server, and likewise for files in any directory named `client/`. This also precludes trying to `import` a file to be used on the server from any directory named `client/` even if it is nested in an `imports/` directory and vice versa for importing client files from `server/`.
 
 These `main.js` files won't do anything themselves, but they should import some _startup_ modules which will run immediately, on client and server respectively, when the app loads. These modules should do any configuration necessary for the packages you are using in your app, and import the rest of your app's code.
 
