@@ -423,7 +423,13 @@ var File = function (inputFile, module) {
   self.servePath = inputFile.servePath;
 
   // Module identifiers imported or required by this module, if any.
-  self.deps = inputFile.deps || [];
+  if (Array.isArray(inputFile.deps)) {
+    self.deps = inputFile.deps;
+  } else if (inputFile.deps && typeof inputFile.deps === "object") {
+    self.deps = Object.keys(inputFile.deps);
+  } else {
+    self.deps = [];
+  }
 
   // True if the input file should not be evaluated eagerly.
   self.lazy = inputFile.lazy; // could be `true`, `false` or `undefined` <sigh>

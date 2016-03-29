@@ -57,7 +57,7 @@ import { isTestFilePath } from './test-files.js';
 // Cache the (slightly post-processed) results of linker.fullLink.
 const CACHE_SIZE = process.env.METEOR_LINKER_CACHE_SIZE || 1024*1024*100;
 const CACHE_DEBUG = !! process.env.METEOR_TEST_PRINT_LINKER_CACHE_DEBUG;
-const LINKER_CACHE_SALT = 2; // Increment this number to force relinking.
+const LINKER_CACHE_SALT = 3; // Increment this number to force relinking.
 const LINKER_CACHE = new LRU({
   max: CACHE_SIZE,
   // Cache is measured in bytes. We don't care about servePath.
@@ -766,7 +766,7 @@ export class PackageSourceBatch {
     function handleMissing(missingNodeModules) {
       const missingMap = new Map;
 
-      Object.keys(missingNodeModules).forEach(id => {
+      _.each(missingNodeModules, (info, id) => {
         const parts = id.split("/");
         let name = null;
 
@@ -784,10 +784,16 @@ export class PackageSourceBatch {
           return;
         }
 
-        if (missingMap.has(name)) {
-          missingMap.get(name).push(id);
-        } else {
-          missingMap.set(name, [id]);
+        if (! missingMap.has(name)) {
+          missingMap.set(name, {});
+        }
+
+        const missing = missingMap.get(name);
+        if (! _.has(missing, id) ||
+            ! info.possiblySpurious) {
+          // Allow any non-spurious identifier to replace an existing
+          // possibly spurious identifier.
+          missing[id] = info;
         }
       });
 
@@ -807,7 +813,7 @@ export class PackageSourceBatch {
 
     handleMissing(allMissingNodeModules);
 
-    _.each(allRelocatedNodeModules, (packageName, id) => {
+    _.each(allRelocatedNodeModules, (info, id) => {
       delete allMissingNodeModules[id];
     });
 
@@ -855,6 +861,13 @@ export class PackageSourceBatch {
     const warnings = [];
 
     _.each(missingNodeModules, (info, id) => {
+      if (info.possiblySpurious) {
+        // Silence warnings for missing dependencies in Browserify/Webpack
+        // bundles, since we can reasonably conclude at this point that
+        // they are false positives.
+        return;
+      }
+
       if (info.packageName === "avital:mocha") {
         // Silence warnings for the avital:mocha package, because we know
         // they're spurious, and it seems poor form to spew a bunch of
