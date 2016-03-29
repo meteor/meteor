@@ -31,7 +31,7 @@ In Meteor, it is also simple and straightforward to use the `import` syntax to l
 
 <h3 id="using-require">Using `require`</h3>
 
-In Meteor, `import` statements compile to CommonJS `require` syntax. However, as a cenvention we encourage you to use `import`. 
+In Meteor, `import` statements compile to CommonJS `require` syntax. However, as a convention we encourage you to use `import`. 
 
 With that said, in some situations you may need to call out to `require` directly. One notable example is when requiring client or server-only code from a common file. As `import`s must be at the top-level scope, you may not place them within an `if` statement, so you'll need to write code like:
 
