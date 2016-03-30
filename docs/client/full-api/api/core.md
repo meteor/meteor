@@ -40,6 +40,8 @@ followed by your application code.
 
 {{> autoApiBox "Meteor.wrapAsync"}}
 
+{{> auotApiBox "Meteor.defer"}}
+
 {{> autoApiBox "Meteor.absoluteUrl"}}
 
 {{> autoApiBox "Meteor.settings"}}
