@@ -45,3 +45,7 @@ Here's how CoffeeScript works with Meteor's namespacing.
 Heavy CoffeeScript users, please let us know how this arrangement
 works for you, whether `share` is helpful for you, and anything else
 you'd like to see changed.
+
+### Modules and CoffeeScript
+
+See [Modules » CoffeeScript Syntax](http://docs.meteor.com/packages/modules.html#CoffeeScript).
