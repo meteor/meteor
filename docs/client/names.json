@@ -164,6 +164,7 @@
   "Meteor.call",
   "Meteor.clearInterval",
   "Meteor.clearTimeout",
+  "Meteor.defer",
   "Meteor.disconnect",
   "Meteor.isClient",
   "Meteor.isCordova",
