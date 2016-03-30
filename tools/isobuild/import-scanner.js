@@ -117,7 +117,13 @@ export default class ImportScanner {
 
   addInputFiles(files) {
     files.forEach(file => {
-      const absPath = this._ensureSourcePath(file);
+      file.sourcePath = this._getSourcePath(file);
+
+      // Note: this absolute path may not necessarily exist on the file
+      // system, but any import statements or require calls in file.data
+      // will be interpreted relative to this path, so it needs to be
+      // something plausible. #6411 #6383
+      const absPath = pathJoin(this.sourceRoot, file.sourcePath);
 
       const dotExt = "." + file.type;
       const dataString = file.data.toString("utf8");
@@ -253,36 +259,42 @@ export default class ImportScanner {
     });
   }
 
-  _ensureSourcePath(file) {
+  _getSourcePath(file) {
     let sourcePath = file.sourcePath;
     if (sourcePath) {
       if (pathIsAbsolute(sourcePath)) {
-        const relPath = pathRelative(this.sourceRoot, sourcePath);
-        if (relPath.startsWith("..")) {
-          if (this._joinAndStat(this.sourceRoot, sourcePath)) {
-            // If sourcePath exists as a path relative to this.sourceRoot,
-            // strip away the leading / that made it look absolute.
-            sourcePath = pathJoin(".", sourcePath);
-          } else {
-            throw new Error("sourcePath outside sourceRoot: " + sourcePath);
+        try {
+          var relPath = pathRelative(this.sourceRoot, sourcePath);
+
+        } finally {
+          if (! relPath || relPath.startsWith("..")) {
+            if (this._joinAndStat(this.sourceRoot, sourcePath)) {
+              // If sourcePath exists as a path relative to this.sourceRoot,
+              // strip away the leading / that made it look absolute.
+              return pathJoin(".", sourcePath);
+            }
+
+            if (relPath) {
+              throw new Error("sourcePath outside sourceRoot: " + sourcePath);
+            }
+
+            // If pathRelative threw an exception above, and we were not
+            // able to handle the problem, it will continue propagating
+            // from this finally block.
           }
-        } else {
-          sourcePath = relPath;
         }
+
+        sourcePath = relPath;
       }
+
     } else if (file.servePath) {
       sourcePath = convertToOSPath(file.servePath.replace(/^\//, ""));
+
     } else if (file.path) {
       sourcePath = file.path;
     }
 
-    file.sourcePath = sourcePath;
-
-    // Note: this absolute path may not necessarily exist on the file
-    // system, but any import statements or require calls in file.data
-    // will be interpreted relative to this path, so it needs to be
-    // something plausible. #6411 #6383
-    return pathJoin(this.sourceRoot, sourcePath);
+    return sourcePath;
   }
 
   _findImportedModuleIdentifiers(file) {
