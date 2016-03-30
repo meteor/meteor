@@ -940,8 +940,9 @@ export class PackageSourceBatch {
 
       const topLevelKeys = Object.keys(topLevelMissingIDs);
       if (topLevelKeys.length > 0) {
-        Console.warn("Consider running: meteor npm install --save " +
-                     topLevelKeys.join(" "));
+        Console.warn("If you notice problems related to these missing modules, consider running:");
+        Console.warn();
+        Console.warn("  meteor npm install --save " + topLevelKeys.join(" "));
         Console.warn();
       }
     }
