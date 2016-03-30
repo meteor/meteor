@@ -12,6 +12,7 @@ var toc = [
       { name: "Meteor.isProduction", id: "Meteor-isProduction" },
       "Meteor.startup",
       "Meteor.wrapAsync",
+      "Meteor.defer",
       "Meteor.absoluteUrl",
       "Meteor.settings",
       "Meteor.release"
