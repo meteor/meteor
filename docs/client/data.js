@@ -3617,7 +3617,7 @@ DocsData = {
   "Email.send": {
     "filepath": "email/email.js",
     "kind": "function",
-    "lineno": 151,
+    "lineno": 154,
     "locus": "Server",
     "longname": "Email.send",
     "memberof": "Email",
@@ -4935,6 +4935,30 @@ DocsData = {
     ],
     "scope": "static",
     "summary": "Cancel a function call scheduled by `Meteor.setTimeout`."
+  },
+  "Meteor.defer": {
+    "filepath": "meteor/timers.js",
+    "kind": "function",
+    "lineno": 74,
+    "locus": "Anywhere",
+    "longname": "Meteor.defer",
+    "memberof": "Meteor",
+    "module": "meteor",
+    "name": "defer",
+    "options": [],
+    "params": [
+      {
+        "description": "<p>The function to run</p>",
+        "name": "func",
+        "type": {
+          "names": [
+            "function"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Defer execution of a function to run asynchronously in the background (similar to `Meteor.setTimeout(func, 0)`."
   },
   "Meteor.disconnect": {
     "filepath": "ddp-client/livedata_connection.js",
