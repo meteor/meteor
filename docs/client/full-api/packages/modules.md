@@ -15,7 +15,7 @@ Now, you might be wondering what good the `modules` package is without the `ecma
 
 While the `modules` package is useful by itself, we very much encourage using the `ecmascript` package (and thus `import` and `export`) instead of using `require` and `exports` directly. If you need convincing, here’s a presentation that explains the differences: http://benjamn.github.io/empirenode-2015
 
-### Basic syntax
+### Basic ES2015 syntax
 
 Although there are a number of different variations of `import` and `export` syntax, this section describes the essential forms that everyone should know.
 
@@ -96,6 +96,44 @@ import {default as Value, a, F} from "./exporter";
 ```
 
 These examples should get you started with `import` and `export` syntax. For further reading, here is a very detailed [explanation](http://www.2ality.com/2014/09/es6-modules-final.html) by [Axel Rauschmayer](https://twitter.com/rauschma) of every variation of `import` and `export` syntax.
+
+### CoffeeScript syntax
+
+CoffeeScript has been a first-class supported language since Meteor’s early days. Even though today we recommend ES2015, we still intend to support CoffeeScript fully.
+
+CoffeeScript lacks support for `import` and `export`, though [the project maintainers are in the early stages of working to change that](https://github.com/jashkenas/coffeescript/issues/4078). In the meantime, CoffeeScript users can enjoy Meteor’s new modules support by using CommonJS syntax. If you use CoffeeScript’s [destructuring](http://coffeescript.org/#destructuring), the syntax is remarkably similar to the ES2015 examples you see above. For example, ES2015 `import` lines like these:
+
+```js
+import { AccountsTemplates } from 'meteor/useraccounts:core';
+import '../imports/startup/client/routes.js';
+```
+
+can be written in CoffeeScript using CommonJS `require` like this:
+
+```coffeescript
+{ AccountsTemplates } = require 'meteor/useraccounts:core'
+require '../imports/startup/client/routes.coffee'
+```
+
+(assuming you rename `routes.js` to `routes.coffee`). Note that files don’t need a `module.exports` if they’re required like `routes.coffee` is in this example, without assignment to any variable. The code in `routes.coffee` will simply be included and executed in place of the above `require` statement.
+
+ES2015 `export` statements like these:
+
+```js
+export const insert = new ValidatedMethod({ // ...
+export default incompleteCountDenormalizer;
+```
+
+can be rewritten to use CommonJS `module.exports`:
+
+```coffeescript
+module.exports.insert = new ValidatedMethod # ...
+module.exports = incompleteCountDenormalizer
+```
+
+You can also simply write `exports` instead of `module.exports` if you prefer.
+
+Note that [backticks](http://coffeescript.org/#embedded) do *[not](https://github.com/meteor/meteor/issues/6000)* work; your `.coffee` files will be transpiled into JavaScript, but not then handed off to the `ecmascript` package for further transpiling. Any JavaScript you type in backticks will be passed through unmodified all the way to the browser or Node.js runtime.
 
 ### Modular application structure
 
