@@ -10,6 +10,7 @@ var toc = [
       "Meteor.isCordova",
       "Meteor.startup",
       "Meteor.wrapAsync",
+      "Meteor.defer",
       "Meteor.absoluteUrl",
       "Meteor.settings",
       "Meteor.release"
