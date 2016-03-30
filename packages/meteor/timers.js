@@ -64,6 +64,13 @@ _.extend(Meteor, {
   // Tracker.afterFlush or Node's nextTick (in practice). Then tests can do:
   //    callSomethingThatDefersSomeWork();
   //    Meteor.defer(expect(somethingThatValidatesThatTheWorkHappened));
+  
+  /**
+   * @memberOf Meteor
+   * @summary Defer execution of a function to run asynchronously in the background.
+   * @locus Anywhere
+   * @param {Function} func The function to run
+   */
   defer: function (f) {
     Meteor._setImmediate(bindAndCatch("defer callback", f));
   }
