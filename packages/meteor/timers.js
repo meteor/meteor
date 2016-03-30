@@ -67,7 +67,7 @@ _.extend(Meteor, {
   
   /**
    * @memberOf Meteor
-   * @summary Defer execution of a function to run asynchronously in the background.
+   * @summary Defer execution of a function to run asynchronously in the background (similar to `Meteor.setTimeout(func, 0)`.
    * @locus Anywhere
    * @param {Function} func The function to run
    */
