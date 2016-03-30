@@ -966,8 +966,7 @@ ${Console.command("meteor build ../output")}`,
           { title: `building Cordova app for \
 ${cordova.displayNameForPlatform(platform)}` }, () => {
             let buildOptions = { release: !options.debug };
-            cordovaProject.buildForPlatform(platform, buildOptions);
-
+            
             const buildPath = files.pathJoin(
               projectContext.getProjectLocalDirectory('cordova-build'),
               'platforms', platform);
@@ -977,6 +976,8 @@ ${cordova.displayNameForPlatform(platform)}` }, () => {
               files.pathJoin(platformOutputPath, 'project'));
 
             if (platform === 'ios') {
+              cordovaProject.prepareForPlatform(platform, buildOptions);
+
               files.writeFile(
                 files.pathJoin(platformOutputPath, 'README'),
 `This is an auto-generated XCode project for your iOS application.
@@ -985,6 +986,8 @@ Instructions for publishing your iOS app to App Store can be found at:
 https://github.com/meteor/meteor/wiki/How-to-submit-your-iOS-app-to-App-Store
 `, "utf8");
             } else if (platform === 'android') {
+              cordovaProject.buildForPlatform(platform, buildOptions);
+
               const apkPath = files.pathJoin(buildPath, 'build/outputs/apk',
                 options.debug ? 'android-debug.apk' : 'android-release-unsigned.apk')
 
