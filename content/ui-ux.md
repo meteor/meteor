@@ -115,21 +115,25 @@ Template.Lists_show_page.helpers({
 
 <h2 id="styleguides">Visually testing reusable components</h2>
 
-A useful property of reusable components is that you can render them anywhere because they don't rely on complicated environments. One very useful thing that this enables is a component _style guide_ or harness.
+A useful property of reusable components is that you can render them anywhere because they don't rely on complicated environments. This is very useful when paired with component explorers, debug-only apps that allow you to explore, visualize, and test your UI components.
 
-To use a style guide, you need to add two things to your app:
+<img src="images/chromatic-how-it-works.png">
 
-1. A list of "entries", where each entry is a component with a list of specifications. Each specification is a list of arguments which trigger different behavior when passed to the component.
+A component explorer does two things:
 
-2. A special route in the development version of the application that renders each of the components for each specification.
+1. <b>Indexes</b> your apps components so they are easy to find
+2. <b>Renders</b> components using developer-defined states and stubbed data
 
-For instance, in Galaxy, we have a component style guide that renders each reusable component either one specification at a time, or with all specifications at once.
+For instance, in Galaxy, we use a component explorer called Chromatic to render each component one specification at a time or with all specifications at once.
 
-<img src="images/galaxy-styleguide.png">
 
-Such rendering enables very quick development of visual aspects of the component in all possible states. Typically in a complex application, it can be quite difficult to achieve certain states of components purely by "using" the application. For example, in Galaxy, the component screen enters a very complex state if two deploys to the same application are happening simultaneously. It would be hard to test this component by using the application and trying to get it into that state.
+<iframe width="560" height="315" src="https://www.youtube.com/embed/SRXvg-_Suo0" frameborder="0" allowfullscreen></iframe>
 
-You can learn more about this technique from [this talk](https://www.youtube.com/watch?v=bTQOvYy_Z3w&app=desktop) by Phil Cockfield from Respondly.
+
+Using Chromatic enables rapid development of complex components. Typically in a large application, it can be quite difficult to achieve certain states of components purely by "using" the application. For example, a component in Galaxy can enter a complex state if two deploys of the same app happen simultaneously. With Chromatic we're able to define this state at the component level and test it independently of the application logic.
+
+You can use [Chromatic component explorer](https://github.com/meteor/chromatic) in your Meteor + React app with `meteor add mdg:chromatic`. Similar projects built in React are [UI Harness](http://www.uiharness.com/) by Phil Cockfield and [React Storybook](https://github.com/kadirahq/react-storybook) by Arunoda Susiripala.
+
 
 <h2 id="ui-patterns">User interface patterns</h2>
 
@@ -184,7 +188,7 @@ The `error.error` field is the first argument to the `Meteor.Error` constructor,
 
 <h4 id="tap-i18n-blaze">Using `tap:i18n` in Blaze</h4>
 
-We can also easily use translations in Blaze templates. To do so, we can use the `{% raw %}{{_ }}{% endraw %}` helper. In the Todos app we use the actual string that we want to output in English as the i18n key, which means we don't need to provide an English translation, although perhaps in a real app you might want to provide keys from the beginning. 
+We can also easily use translations in Blaze templates. To do so, we can use the `{% raw %}{{_ }}{% endraw %}` helper. In the Todos app we use the actual string that we want to output in English as the i18n key, which means we don't need to provide an English translation, although perhaps in a real app you might want to provide keys from the beginning.
 
 For example in `app-not-found.html`:
 
