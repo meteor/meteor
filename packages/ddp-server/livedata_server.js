@@ -294,7 +294,7 @@ var Session = function (server, version, socket, options) {
     httpHeaders: self.socket.headers
   };
 
-  self.send({msg: 'connected', session: self.id});
+  self.send({ msg: 'connected', session: self.id });
 
   // On initial connect, spin up all the universal publishers.
   Fiber(function () {
