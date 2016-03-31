@@ -125,6 +125,11 @@ AccountsServer = class AccountsServer extends AccountsCommon {
   /// LOGOUT HOOK
   ///
 
+  /**
+   * @summary Register a callback to be called after a logged in user logs out.
+   * @locus Server
+   * @param {Function} func The callback to be called after a logged in user logs out. Takes the logged out user as parameter.
+   */
   onLogout(func) {
     this._onLogoutHook = func;
   }
