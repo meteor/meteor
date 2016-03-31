@@ -7,6 +7,7 @@ var isopackModule = require('./isopack.js');
 var watch = require('../fs/watch.js');
 var colonConverter = require('../utils/colon-converter.js');
 var Profile = require('../tool-env/profile.js').Profile;
+var archinfo = require('../utils/archinfo.js');
 
 export class IsopackCache {
   constructor(options) {
@@ -47,7 +48,7 @@ export class IsopackCache {
     }
 
     // Map from package name to Isopack.
-    self._isopacks = {};
+    self._isopacks = Object.create(null);
 
     self._noLineNumbers = !! options.noLineNumbers;
 
@@ -138,6 +139,46 @@ export class IsopackCache {
     }
 
     return null;
+  }
+
+  uses(isopack, name, arch) {
+    return isopack && _.some(isopack.unibuilds, u => {
+      if (arch && ! archinfo.matches(u.arch, arch)) {
+        return false;
+      }
+
+      return _.some(u.uses, use => {
+        if (use.package === name) {
+          return true;
+        }
+
+        return this.implies(
+          this._isopacks[use.package],
+          name,
+          arch,
+        );
+      });
+    });
+  }
+
+  implies(isopack, name, arch) {
+    return isopack && _.some(isopack.unibuilds, u => {
+      if (arch && ! archinfo.matches(u.arch, arch)) {
+        return false;
+      }
+
+      return _.some(u.implies, imp => {
+        if (imp.package === name) {
+          return true;
+        }
+
+        return this.implies(
+          this._isopacks[imp.package],
+          name,
+          arch,
+        );
+      });
+    });
   }
 
   _ensurePackageLoaded(name, onStack) {
