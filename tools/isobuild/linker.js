@@ -641,7 +641,7 @@ _.extend(File.prototype, {
         var line = lines[i];
         var len = line.length;
         if (len < width &&
-            line[len - 1] !== "\\") {
+            !line.trim().endsWith("\\")) {
           var pos = consumer.originalPositionFor({
             line: i + 1,
             column: 0
