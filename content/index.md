@@ -25,7 +25,7 @@ On Windows?  [Download the official Meteor installer here](https://install.meteo
 On OS X or Linux?  Install the latest official Meteor release from your terminal:
 
 ```bash
-$ curl https://install.meteor.com/ | sh
+curl https://install.meteor.com/ | sh
 ```
 
 The Windows installer supports Windows 7, Windows 8.1, Windows Server
@@ -42,6 +42,7 @@ Run it locally:
 
 ```bash
 cd myapp
+npm install
 meteor
 # Meteor server running on: http://localhost:3000/
 ```
