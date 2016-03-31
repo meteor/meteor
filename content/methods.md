@@ -373,7 +373,7 @@ Template.Invoices_newInvoice.events({
 });
 ```
 
-As you can see, there is a fair amount of boilerplate to handle errors nicely in a form, but most of it can be easily abstracted by an off-the-shelf form framework or a simple application-specific wrapper of your own design. The final released version of the Meteor guide will have a new article about forms.
+As you can see, there is a fair amount of boilerplate to handle errors nicely in a form, but most of it can be easily abstracted by an off-the-shelf form framework or a simple application-specific wrapper of your own design.
 
 <h2 id="loading-data">Loading data with Methods</h2>
 
