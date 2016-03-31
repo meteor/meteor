@@ -355,7 +355,16 @@ export default class ImportScanner {
         depFile.imported = true;
 
         if (! alreadyScanned) {
-          this._scanFile(depFile);
+          if (depFile.error) {
+            // Since this file is lazy, it might never have been imported,
+            // so any errors reported to InputFile#error were saved but
+            // not reported at compilation time. Now that we know the file
+            // has been imported, it's time to report those errors.
+            buildmessage.error(depFile.error.message,
+                               depFile.error.info);
+          } else {
+            this._scanFile(depFile);
+          }
         }
 
         return;

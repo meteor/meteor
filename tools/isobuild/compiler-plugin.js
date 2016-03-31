@@ -195,47 +195,53 @@ export class CompilerPluginProcessor {
   }
 }
 
-var InputFile = function (resourceSlot) {
-  var self = this;
-  // We use underscored attributes here because this is user-visible code and we
-  // don't want users to be accessing anything that we don't document.
-  self._resourceSlot = resourceSlot;
-};
-util.inherits(InputFile, buildPluginModule.InputFile);
-_.extend(InputFile.prototype, {
-  getContentsAsBuffer: function () {
+class InputFile extends buildPluginModule.InputFile {
+  constructor(resourceSlot) {
+    super();
+    // We use underscored attributes here because this is user-visible
+    // code and we don't want users to be accessing anything that we don't
+    // document.
+    this._resourceSlot = resourceSlot;
+  }
+
+  getContentsAsBuffer() {
     var self = this;
     return self._resourceSlot.inputResource.data;
-  },
-  getPackageName: function () {
+  }
+
+  getPackageName() {
     var self = this;
     return self._resourceSlot.packageSourceBatch.unibuild.pkg.name;
-  },
-  getPathInPackage: function () {
+  }
+
+  getPathInPackage() {
     var self = this;
     return self._resourceSlot.inputResource.path;
-  },
-  getFileOptions: function () {
+  }
+
+  getFileOptions() {
     var self = this;
     // XXX fileOptions only exists on some resources (of type "source"). The JS
     // resources might not have this property.
     return self._resourceSlot.inputResource.fileOptions || {};
-  },
-  getArch: function () {
+  }
+
+  getArch() {
     return this._resourceSlot.packageSourceBatch.processor.arch;
-  },
-  getSourceHash: function () {
+  }
+
+  getSourceHash() {
     return this._resourceSlot.inputResource.hash;
-  },
+  }
 
   /**
    * @summary Returns the extension that matched the compiler plugin.
    * The longest prefix is preferred.
    * @returns {String}
    */
-  getExtension: function () {
+  getExtension() {
     return this._resourceSlot.inputResource.extension;
-  },
+  }
 
   /**
    * @summary Returns a list of symbols declared as exports in this target. The
@@ -244,10 +250,10 @@ _.extend(InputFile.prototype, {
    * @memberof InputFile
    * @returns {String[]}
    */
-  getDeclaredExports: function () {
+  getDeclaredExports() {
     var self = this;
     return self._resourceSlot.packageSourceBatch.unibuild.declaredExports;
-  },
+  }
 
   /**
    * @summary Returns a relative path that can be used to form error messages or
@@ -255,10 +261,10 @@ _.extend(InputFile.prototype, {
    * @memberof InputFile
    * @returns {String}
    */
-  getDisplayPath: function () {
+  getDisplayPath() {
     var self = this;
     return self._resourceSlot.packageSourceBatch.unibuild.pkg._getServePath(self.getPathInPackage());
-  },
+  }
 
   /**
    * @summary Web targets only. Add a stylesheet to the document. Not available
@@ -274,14 +280,15 @@ _.extend(InputFile.prototype, {
    * @memberOf InputFile
    * @instance
    */
-  addStylesheet: function (options) {
+  addStylesheet(options) {
     var self = this;
     if (options.sourceMap && typeof options.sourceMap === 'string') {
       // XXX remove an anti-XSSI header? ")]}'\n"
       options.sourceMap = JSON.parse(options.sourceMap);
     }
     self._resourceSlot.addStylesheet(options);
-  },
+  }
+
   /**
    * @summary Add JavaScript code. The code added will only see the
    * namespaces imported by this package as runtime dependencies using
@@ -298,14 +305,15 @@ _.extend(InputFile.prototype, {
    * @memberOf InputFile
    * @instance
    */
-  addJavaScript: function (options) {
+  addJavaScript(options) {
     var self = this;
     if (options.sourceMap && typeof options.sourceMap === 'string') {
       // XXX remove an anti-XSSI header? ")]}'\n"
       options.sourceMap = JSON.parse(options.sourceMap);
     }
     self._resourceSlot.addJavaScript(options);
-  },
+  }
+
   /**
    * @summary Add a file to serve as-is to the browser or to include on
    * the browser, depending on the target. On the web, it will be served
@@ -320,10 +328,10 @@ _.extend(InputFile.prototype, {
    * @memberOf InputFile
    * @instance
    */
-  addAsset: function (options) {
+  addAsset(options) {
     var self = this;
     self._resourceSlot.addAsset(options);
-  },
+  }
 
   /**
    * @summary Works in web targets only. Add markup to the `head` or `body`
@@ -335,11 +343,27 @@ _.extend(InputFile.prototype, {
    * @memberOf InputFile
    * @instance
    */
-  addHtml: function (options) {
+  addHtml(options) {
     var self = this;
     self._resourceSlot.addHtml(options);
   }
-});
+
+  _reportError(message, info) {
+    if (this.getFileOptions().lazy === true) {
+      // Files with fileOptions.lazy === true were not explicitly added to
+      // the source batch via api.addFiles or api.mainModule, so any
+      // compilation errors should not be fatal until the files are
+      // actually imported by the ImportScanner. Attempting compilation is
+      // still important for lazy files that might end up being imported
+      // later, which is why we defang the error here, instead of avoiding
+      // compilation preemptively. Note also that exceptions thrown by the
+      // compiler will still cause build errors.
+      this._resourceSlot.addError(message, info);
+    } else {
+      super._reportError(message, info);
+    }
+  }
+}
 
 class ResourceSlot {
   constructor(unibuildResourceInfo,
@@ -492,8 +516,6 @@ class ResourceSlot {
     self.jsOutputResources.push({
       type: "js",
       data: data,
-      // The sourcePath should not be alterable by plugins, so it makes
-      // sense to set it unconditionally here.
       sourcePath,
       servePath: self.packageSourceBatch.unibuild.pkg._getServePath(
         options.path),
@@ -556,6 +578,22 @@ class ResourceSlot {
       type: options.section,
       data: new Buffer(files.convertToStandardLineEndings(options.data), 'utf8'),
       lazy: self._isLazy(options),
+    });
+  }
+
+  addError(message, info) {
+    // If this file is ever actually imported, only then will we report
+    // the error. Use this.jsOutputResources because that's what the
+    // ImportScanner deals with.
+    this.jsOutputResources.push({
+      type: "js",
+      sourcePath: this.inputResource.path,
+      servePath: this.inputResource.path,
+      data: new Buffer(
+        "throw new Error(" + JSON.stringify(message) + ");\n",
+        "utf8"),
+      lazy: true,
+      error: { message, info },
     });
   }
 }
