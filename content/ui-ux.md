@@ -115,7 +115,7 @@ Template.Lists_show_page.helpers({
 
 <h2 id="styleguides">Visually testing reusable components</h2>
 
-A useful property of reusable components is that you can render them anywhere because they don’t rely on complicated environments. This is very useful when paired with component explorers, debug-only apps that allow you to explore, visualize, and test your UI components.
+A useful property of reusable components is that you can render them anywhere because they don't rely on complicated environments. This is very useful when paired with component explorers, debug-only apps that allow you to explore, visualize, and test your UI components.
 
 <img src="images/chromatic-how-it-works.png">
 
@@ -130,7 +130,7 @@ For instance, in Galaxy, we use a component explorer called Chromatic to render 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/SRXvg-_Suo0" frameborder="0" allowfullscreen></iframe>
 
 
-Using Chromatic enables rapid development of complex components. Typically in a large application, it can be quite difficult to achieve certain states of components purely by “using” the application. For example, a component in Galaxy can enter a complex state if two deploys of the same app happen simultaneously. With Chromatic we’re able to define this state at the component level and test it independently of the application logic.
+Using Chromatic enables rapid development of complex components. Typically in a large application, it can be quite difficult to achieve certain states of components purely by "using" the application. For example, a component in Galaxy can enter a complex state if two deploys of the same app happen simultaneously. With Chromatic we're able to define this state at the component level and test it independently of the application logic.
 
 You can use [Chromatic component explorer](https://github.com/meteor/chromatic) in your Meteor + React app with `meteor add mdg:chromatic`. Similar projects built in React are [UI Harness](http://www.uiharness.com/) by Phil Cockfield and [React Storybook](https://github.com/kadirahq/react-storybook) by Arunoda Susiripala.
 
