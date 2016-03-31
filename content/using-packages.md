@@ -188,7 +188,7 @@ Many npm packages adopt the convention of taking a callback that accepts `(err, 
 
 ```js
 // Setup sync API
-const getFollowingFromUser =
+const getFollowingFromUserFiber =
   Meteor.wrapAsync(github.user.getFollowingFromUser, github.user);
 
 // Inside a Meteor method definition
