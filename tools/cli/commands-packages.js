@@ -675,7 +675,8 @@ main.registerCommand({
     ("publishing package " + name + " for architecture "
      + isopk.buildArchitectures()),
     function () {
-      packageClient.createAndPublishBuiltPackage(conn, isopk);
+      packageClient.createAndPublishBuiltPackage(
+        conn, isopk, projectContext.isopackCache);
     }
   );
 
@@ -939,7 +940,11 @@ main.registerCommand({
               somethingChanged = true;
             } else {
               // Save the isopack, just to get its hash.
-              var bundleBuildResult = packageClient.bundleBuild(isopk);
+              var bundleBuildResult = packageClient.bundleBuild(
+                isopk,
+                projectContext.isopackCache,
+              );
+
               somethingChanged =
                 (bundleBuildResult.treeHash !== existingBuild.build.treeHash);
             }

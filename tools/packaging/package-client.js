@@ -344,7 +344,7 @@ var uploadFile = function (putUrl, filepath) {
 
 exports.uploadFile = uploadFile;
 
-var bundleBuild = function (isopack) {
+export function bundleBuild(isopack, isopackCache) {
   buildmessage.assertInJob();
 
   var tempDir = files.mkdtemp('bp-');
@@ -358,7 +358,8 @@ var bundleBuild = function (isopack) {
   isopack.saveToPath(tarInputDir, {
     // When publishing packages that don't use new registerCompiler plugins,
     // make sure that old Meteors can use it too
-    includePreCompilerPluginIsopackVersions: true
+    includePreCompilerPluginIsopackVersions: true,
+    usesModules: isopackCache.uses(isopack, "modules"),
   });
 
   var buildTarball = files.pathJoin(tempDir, packageTarName + '.tgz');
@@ -384,11 +385,9 @@ var bundleBuild = function (isopack) {
     tarballHash: tarballHash,
     treeHash: treeHash
   };
-};
+}
 
-exports.bundleBuild = bundleBuild;
-
-var createBuiltPackage = function (conn, isopack) {
+function createBuiltPackage(isopack, isopackCache) {
   buildmessage.assertInJob();
   var name = isopack.name;
 
@@ -396,14 +395,14 @@ var createBuiltPackage = function (conn, isopack) {
   // we get from createPackageBuild will expire!
   var bundleResult;
   buildmessage.enterJob("bundling build for " + name, function () {
-    bundleResult = bundleBuild(isopack);
+    bundleResult = bundleBuild(isopack, isopackCache);
   });
   if (buildmessage.jobHasMessages()) {
     return;
   }
 
   return bundleResult;
-};
+}
 
 var publishBuiltPackage = function (conn, isopack, bundleResult) {
   buildmessage.assertInJob();
@@ -440,11 +439,13 @@ var publishBuiltPackage = function (conn, isopack, bundleResult) {
   }
 };
 
-var createAndPublishBuiltPackage = function (conn, isopack) {
-  publishBuiltPackage(conn, isopack, createBuiltPackage(conn, isopack));
-};
-
-exports.createAndPublishBuiltPackage = createAndPublishBuiltPackage;
+export function createAndPublishBuiltPackage(conn, isopack, isopackCache) {
+  publishBuiltPackage(
+    conn,
+    isopack,
+    createBuiltPackage(isopack, isopackCache),
+  );
+}
 
 // Handle an error thrown on trying to connect to the package server.
 exports.handlePackageServerConnectionError = function (error) {
@@ -762,7 +763,9 @@ exports.publishPackage = function (options) {
     }
 
     if (! options.doNotPublishBuild) {
-      createAndPublishBuiltPackage(conn, isopack);
+      createAndPublishBuiltPackage(
+        conn, isopack, projectContext.isopackCache);
+
       if (buildmessage.jobHasMessages()) {
         return;
       }
@@ -814,7 +817,11 @@ exports.publishPackage = function (options) {
     }
 
     if (! options.doNotPublishBuild) {
-      var bundleResult = createBuiltPackage(conn, isopack);
+      var bundleResult = createBuiltPackage(
+        isopack,
+        projectContext.isopackCache,
+      );
+
       if (buildmessage.jobHasMessages()) {
         return;
       }

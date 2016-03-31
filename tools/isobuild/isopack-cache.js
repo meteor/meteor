@@ -362,7 +362,8 @@ export class IsopackCache {
             if (self.cacheDir) {
               // Save to disk, for next time!
               isopack.saveToPath(self._isopackDir(name), {
-                includeIsopackBuildInfo: true
+                includeIsopackBuildInfo: true,
+                usesModules: self.uses(isopack, "modules"),
               });
             }
           }
