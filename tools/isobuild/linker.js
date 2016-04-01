@@ -573,11 +573,9 @@ _.extend(File.prototype, {
     var self = this;
     var width = options.sourceWidth || 70;
     var bannerWidth = width + 3;
-    var result;
-    var lines;
-
     var noLineNumbers = options.noLineNumbers;
     var preserveLineNumbers = options.preserveLineNumbers;
+    var result;
 
     if (self.sourceMap) {
       // If we have a source map, it is also important to annotate line
@@ -639,7 +637,7 @@ _.extend(File.prototype, {
       var padding = bannerPadding(bannerWidth);
 
       // We might have already done this split above.
-      lines = lines || result.code.split("\n");
+      const lines = result.code.split(/\r?\n/);
 
       // Use the SourceMapConsumer object to compute the original line
       // number for each line of result.code.
