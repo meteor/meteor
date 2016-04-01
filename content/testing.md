@@ -80,6 +80,8 @@ This package also doesn't do anything in development or production mode (in fact
 Test files themselves (for example a file named `todos-item.test.js` or `routing.app-specs.coffee`) can register themselves to be run by the test driver in the usual way for that testing library. For Mocha, that's by using `describe` and `it`:
 
 ```js
+// Note: Arrow function use with Mocha is discouraged.
+// (see http://mochajs.org/#arrow-functions)
 describe('my module', function () {
   it('does something that should be tested', function () {
     // This code will be executed by the test driver when the app is started
