@@ -80,8 +80,8 @@ This package also doesn't do anything in development or production mode (in fact
 Test files themselves (for example a file named `todos-item.test.js` or `routing.app-specs.coffee`) can register themselves to be run by the test driver in the usual way for that testing library. For Mocha, that's by using `describe` and `it`:
 
 ```js
-describe('my module', () => {
-  it('does something that should be tested', () => {
+describe('my module', function () {
+  it('does something that should be tested', function () {
     // This code will be executed by the test driver when the app is started
     // in the correct mode
   })
@@ -99,8 +99,8 @@ To ensure the database is clean, the [`xolvio:cleaner`](https://atmospherejs.com
 ```js
 import { resetDatabase } from 'meteor/xolvio:cleaner';
 
-describe('my module', () => {
-  beforeEach(() => {
+describe('my module', function () {
+  beforeEach(function () {
     resetDatabase();
   });
 });
@@ -117,8 +117,8 @@ Meteor.methods({
   'test.resetDatabase': () => resetDatabase();
 });
 
-describe('my module', done => {
-  beforeEach(done => {
+describe('my module', function (done) {
+  beforeEach(function (done) {
     // We need to wait until the method call is done before moving on, so we
     // use Mocha's async mechanism (calling a done callback)
     Meteor.call('test.resetDatabase', done);
@@ -217,6 +217,7 @@ A simple example of a reusable component to test is the `Todos_item` template. H
 
 ```js
 /* eslint-env mocha */
+/* eslint-disable func-names, prefer-arrow-callback */
 
 import { Factory } from 'meteor/factory';
 import { chai } from 'meteor/practicalmeteor:chai';
@@ -227,16 +228,16 @@ import { $ } from 'meteor/jquery';
 import { withRenderedTemplate } from '../../test-helpers.js';
 import '../todos-item.js';
 
-describe('Todos_item', () => {
-  beforeEach(() => {
+describe('Todos_item', function () {
+  beforeEach(function () {
     Template.registerHelper('_', key => key);
   });
 
-  afterEach(() => {
+  afterEach(function () {
     Template.deregisterHelper('_');
   });
 
-  it('renders correctly with simple data', () => {
+  it('renders correctly with simple data', function () {
     const todo = Factory.build('todo', { checked: false });
     const data = {
       todo,
@@ -305,8 +306,8 @@ In the [unit test above](#simple-unit-test) we saw a very limited example of how
   - (Using another package from the example app) to isolate a publication, the `publication-collector` package:
 
     ```js
-    describe('lists.public', () => {
-      it('sends all public lists', (done) => {
+    describe('lists.public', function () {
+      it('sends all public lists', function (done) {
         // Allows us to look at the output of a publication without
         // needing a client connection
         const collector = new PublicationCollector();
@@ -338,6 +339,7 @@ In the Todos example app, we have an integration test for the `Lists_show_page` 
 
 ```js
 /* eslint-env mocha */
+/* eslint-disable func-names, prefer-arrow-callback */
 
 import { Meteor } from 'meteor/meteor';
 import { Factory } from 'meteor/factory';
@@ -357,10 +359,10 @@ import '../lists-show-page.js';
 import { Todos } from '../../../api/todos/todos.js';
 import { Lists } from '../../../api/lists/lists.js';
 
-describe('Lists_show_page', () => {
+describe('Lists_show_page', function () {
   const listId = Random.id();
 
-  beforeEach(() => {
+  beforeEach(function () {
     StubCollections.stub([Todos, Lists]);
     Template.registerHelper('_', key => key);
     sinon.stub(FlowRouter, 'getParam', () => listId);
@@ -370,14 +372,14 @@ describe('Lists_show_page', () => {
     }));
   });
 
-  afterEach(() => {
+  afterEach(function () {
     StubCollections.restore();
     Template.deregisterHelper('_');
     FlowRouter.getParam.restore();
     Meteor.subscribe.restore();
   });
 
-  it('renders correctly with simple data', () => {
+  it('renders correctly with simple data', function () {
     Factory.create('list', { _id: listId });
     const timestamp = new Date();
     const todos = _.times(3, i => Factory.create('todo', {
@@ -418,6 +420,7 @@ In the Todos example application, we have a integration test which ensures that 
 
 ```js
 /* eslint-env mocha */
+/* eslint-disable func-names, prefer-arrow-callback */
 
 import { Meteor } from 'meteor/meteor';
 import { Tracker } from 'meteor/tracker';
@@ -447,8 +450,8 @@ const waitForSubscriptions = () => new Promise(resolve => {
 const afterFlushPromise = Promise.denodeify(Tracker.afterFlush);
 
 if (Meteor.isClient) {
-  describe('data available when routed', () => {
-    beforeEach(done => {
+  describe('data available when routed', function () {
+    beforeEach(function (done) {
       // First, ensure the data that we expect is loaded on the server
       generateData()
         // Then, route the app to the homepage
@@ -458,12 +461,12 @@ if (Meteor.isClient) {
         .nodeify(done);
     });
 
-    describe('when logged out', () => {
-      it('has all public lists at homepage', () => {
+    describe('when logged out', function () {
+      it('has all public lists at homepage', function () {
         assert.equal(Lists.find().count(), 3);
       });
 
-      it('renders the correct list when routed to', done => {
+      it('renders the correct list when routed to', function (done) {
         const list = Lists.findOne();
         FlowRouter.go('Lists.show', { _id: list._id });
 
@@ -584,6 +587,7 @@ Chimp will now look in the `tests/` directory (otherwise ignored by the Meteor t
 
 ```js
 /* eslint-env mocha */
+/* eslint-disable func-names, prefer-arrow-callback */
 
 // These are Chimp globals
 /* globals browser assert server */
@@ -594,13 +598,13 @@ function countLists() {
   return elements.value.length;
 };
 
-describe('list ui', () => {
-  beforeEach(() => {
+describe('list ui', function () {
+  beforeEach(function () {
     browser.url('http://localhost:3000');
     server.call('generateFixtures');
   });
 
-  it('can create a list @watch', () => {
+  it('can create a list @watch', function () {
     const initialCount = countLists();
 
     browser.click('.js-new-list');
