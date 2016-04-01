@@ -90,7 +90,8 @@ export default class MyGriddler extends React.Component {
 
 If you are looking to write an Atmosphere package that wraps such a component, you need to take some [further steps](#atmosphere-packages).
 
-<h3 id="using-with-blaze">Using Blaze with React</h3>
+<span id="using-with-blaze"><!-- don't break old links --></span>
+<h3 id="react-in-blaze">React Components in Blaze</h3>
 
 If you'd like to use React within a larger app built with [Blaze](#blaze.html) (which is a good strategy if you'd like to incrementally migrate an app from Blaze to React), you can use the [`react-template-helper`](https://atmospherejs.com/meteor/react-template-helper) component which renders a react component inside a Blaze template. First run `meteor add react-template-helper`, then use the `React` helper in your template:
 
@@ -153,6 +154,25 @@ To use it in Blaze:
   </div>
 </template>
 ```
+
+<h3 id="blaze-in-react">Blaze Templates in React</h3>
+
+Just like we can use React components in Blaze templates, we can also use Blaze templates in React components.  This is simularly useful for a gradual transition strategy; but more importantly, it allows us to continue to use the multitude of Atmosphere packages built for Blaze in our React projects, as well as core packages like `accounts-ui`.
+
+One easy way to do this is with the [`gadicc:blaze-react-component`](https://atmospherejs.com/gadicc/blaze-react-component) package.  First run `meteor add gadicc:blaze-react-component`, then import and use it in your components as follows:
+
+```js
+import React from 'react';
+import Blaze from 'meteor/gadicc:blaze-react-component';
+
+const App = () => (
+  <div>
+    <Blaze template="itemsList" items={items} />
+  </div>
+);
+```
+
+The `<Blaze template="itemsList" items={items} />` line is the same as if you had written `{% raw %}{{> itemsList items=items}}{% endraw %}` inside of a Blaze template.  For other options and further information, see the package's [project page](https://github.com/gadicc/meteor-blaze-react-component).
 
 <h2 id="data">Using Meteor's data system</h2>
 
