@@ -50,3 +50,9 @@ Render multiple items in your template with `{{#each}}`
 // good
 Render multiple items in your template with `{% raw %}{{#each}}{% endraw %}`
 ```
+
+## Changelog
+
+- 2016/05/31: Added Chromatic demo video and React Storybook to User Interfaces article.
+
+Changelog is only tracked since the Meteor 1.3 release.
