@@ -1,6 +1,6 @@
 ---
 title: "Testing"
-order: 7
+order: 14
 description: How to test your Meteor application
 discourseTopicId: 20191
 ---

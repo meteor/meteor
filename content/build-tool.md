@@ -1,6 +1,6 @@
 ---
 title: Build system
-order: 12
+order: 33
 description: How to use Meteor's build system to compile your app.
 discourseTopicId: 19669
 ---
