@@ -17,10 +17,11 @@ npm is a repository of general JavaScript packages. These packages were original
 
 The best way to find npm packages is by searching on [npmjs.com](https://www.npmjs.com/). There are also some websites that have special search features specifically for certain kinds of packages, like the aptly named [react-components.com](http://react-components.com/).
 
-
 <h3 id="client-npm">npm on the client</h3>
 
 Tools like [browserify](http://browserify.org) and [webpack](https://webpack.github.io) are designed to provide a Node-like environment on the client so that many npm packages, even ones originally intended for the server, can run unmodified. Meteor's ES2015 module system does this for you out of the box with no additional configuration necessary. In most cases, you can simply import npm dependencies from a client file, just as you would on the server.
+
+> When creating a new application Meteor installs the `meteor-node-stubs` npm package to help provide this client browser compatibility. If you are upgrading an application to Meteor 1.3 you may have to run `meteor npm install --save meteor-node-stubs` manually.
 
 <h3 id="installing-npm">Installing npm Packages</h3>
 
