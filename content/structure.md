@@ -52,6 +52,14 @@ Another situation where you'll need to use `require` is in CoffeeScript files. A
 React = require 'react'
 ```
 
+<h3 id="exporting-from-coffeescript">Exporting with CoffeeScript</h3>
+
+When using CoffeeScript, not only the syntax to import variables is different, but also the export has to be done in a different way. Variables to be exported are put in the `exports` object:
+
+```cs
+exports.Lists = ListsCollection 'Lists'
+```
+
 <h2 id="javascript-structure">File structure</h2>
 
 To fully use the module system and ensure that our code only runs when we ask it to, we recommend that all of your application code should be placed inside the `imports/` directory. This means that the Meteor build system will only bundle and include that file if it is referenced from another file using an `import`.
