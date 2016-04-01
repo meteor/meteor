@@ -47,6 +47,8 @@ meteor
 # Meteor server running on: http://localhost:3000/
 ```
 
+> Meteor comes with npm bundled so that you can type `meteor npm` without worrying about installing it yourself. If you like, you can also use a globally installed npm to manage your packages.
+
 <h2 id="learning-more">Meteor resources</h2>
 
 1. The place to get started with Meteor is the [official tutorial](https://www.meteor.com/tutorials/blaze/creating-an-app).
