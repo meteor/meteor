@@ -42,7 +42,7 @@ Run it locally:
 
 ```bash
 cd myapp
-npm install
+meteor npm install
 meteor
 # Meteor server running on: http://localhost:3000/
 ```
