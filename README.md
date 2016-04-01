@@ -53,6 +53,7 @@ Render multiple items in your template with `{% raw %}{{#each}}{% endraw %}`
 
 ## Changelog
 
-- 2016/05/31: Added Chromatic demo video and React Storybook to User Interfaces article.
+- 2016/04/01: Added `gadicc:blaze-react-component` in a new "Blaze in React" section of the React article. [PR #325](https://github.com/meteor/guide/pull/325)
+- 2016/05/31: Added Chromatic demo video and React Storybook to User Interfaces article. [PR #320](https://github.com/meteor/guide/pull/320)
 
 Changelog is only tracked since the Meteor 1.3 release.
