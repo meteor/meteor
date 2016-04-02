@@ -148,7 +148,7 @@ export ANDROID_HOME="/Users/<username>/Library/Android/sdk"
 export PATH=$PATH:$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools
 ```
 
-You will then have to reload `.bash_profile` (by executing `source ~./bash_profile`) or open a new terminal session to apply the new environment.
+You will then have to reload `.bash_profile` (by executing `source ~/.bash_profile`) or open a new terminal session to apply the new environment.
 
 <h4>Optionally: Creating an Android Virtual Device (AVD) to run apps on an emulator</h4>
 
