@@ -142,16 +142,21 @@ export class IsopackCache {
   }
 
   uses(isopack, name, arch) {
-    return isopack && _.some(isopack.unibuilds, u => {
+    if (! isopack) {
+      return false;
+    }
+
+    if (isopack.name === name) {
+      // Packages use themselves.
+      return true;
+    }
+
+    return _.some(isopack.unibuilds, u => {
       if (arch && ! archinfo.matches(u.arch, arch)) {
         return false;
       }
 
       return _.some(u.uses, use => {
-        if (use.package === name) {
-          return true;
-        }
-
         return this.implies(
           this._isopacks[use.package],
           name,
@@ -162,16 +167,21 @@ export class IsopackCache {
   }
 
   implies(isopack, name, arch) {
-    return isopack && _.some(isopack.unibuilds, u => {
+    if (! isopack) {
+      return false;
+    }
+
+    if (isopack.name === name) {
+      // Packages imply themselves.
+      return true;
+    }
+
+    return _.some(isopack.unibuilds, u => {
       if (arch && ! archinfo.matches(u.arch, arch)) {
         return false;
       }
 
       return _.some(u.implies, imp => {
-        if (imp.package === name) {
-          return true;
-        }
-
         return this.implies(
           this._isopacks[imp.package],
           name,
