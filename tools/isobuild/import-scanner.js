@@ -80,7 +80,6 @@ export default class ImportScanner {
     bundleArch,
     extensions = [".js", ".json"],
     sourceRoot,
-    usedPackageNames = {},
     nodeModulesPaths = [],
     watchSet,
   }) {
@@ -90,7 +89,6 @@ export default class ImportScanner {
     this.bundleArch = bundleArch;
     this.extensions = extensions;
     this.sourceRoot = sourceRoot;
-    this.usedPackageNames = usedPackageNames;
     this.nodeModulesPaths = nodeModulesPaths;
     this.watchSet = watchSet;
     this.absPathToOutputIndex = Object.create(null);

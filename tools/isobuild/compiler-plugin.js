@@ -57,7 +57,7 @@ import { isTestFilePath } from './test-files.js';
 // Cache the (slightly post-processed) results of linker.fullLink.
 const CACHE_SIZE = process.env.METEOR_LINKER_CACHE_SIZE || 1024*1024*100;
 const CACHE_DEBUG = !! process.env.METEOR_TEST_PRINT_LINKER_CACHE_DEBUG;
-const LINKER_CACHE_SALT = 3; // Increment this number to force relinking.
+const LINKER_CACHE_SALT = 4; // Increment this number to force relinking.
 const LINKER_CACHE = new LRU({
   max: CACHE_SIZE,
   // Cache is measured in bytes. We don't care about servePath.
@@ -661,7 +661,6 @@ export class PackageSourceBatch {
     // decision of whether or not an unrelated package in the target
     // depends on something).
     self.importedSymbolToPackageName = {}; // map from symbol to supplying package name
-    self.usedPackageNames = {};
 
     compiler.eachUsedUnibuild({
       dependencies: self.unibuild.uses,
@@ -684,15 +683,11 @@ export class PackageSourceBatch {
           self.importedSymbolToPackageName[symbol.name] = depUnibuild.pkg.name;
         }
       });
-
-      self.usedPackageNames[depUnibuild.pkg.name] = true;
     });
 
     self.useMeteorInstall =
-      _.isString(self.sourceRoot) && (
-        self.unibuild.pkg.name === "modules" ||
-        _.has(self.usedPackageNames, "modules")
-      );
+      _.isString(self.sourceRoot) &&
+      self.processor.isopackCache.uses(self.unibuild.pkg, "modules");
   }
 
   addImportExtension(extension) {
@@ -786,7 +781,6 @@ export class PackageSourceBatch {
         bundleArch: batch.processor.arch,
         extensions: batch.importExtensions,
         sourceRoot: batch.sourceRoot,
-        usedPackageNames: batch.usedPackageNames,
         nodeModulesPaths,
         watchSet: batch.unibuild.watchSet,
       });
