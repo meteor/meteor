@@ -1,6 +1,6 @@
 Package.describe({
   name: "promise",
-  version: "0.6.5",
+  version: "0.6.6-rc.0",
   summary: "ECMAScript 2015 Promise polyfill with Fiber support",
   git: "https://github.com/meteor/promise",
   documentation: "README.md"
