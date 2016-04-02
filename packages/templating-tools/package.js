@@ -1,6 +1,6 @@
 Package.describe({
   name: 'templating-tools',
-  version: '1.0.3-rc.0',
+  version: '1.0.3-rc.1',
   // Brief, one-line summary of the package.
   summary: 'Tools to scan HTML and compile tags when building a templating package',
   // URL to the Git repository containing the source code for this package.
