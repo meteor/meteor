@@ -233,7 +233,7 @@ Spacebars has a very strict HTML parser. For instance, you can't self-close a `d
 
 <h4 id="escaping">Escaping</h4>
 
-To insert literal curly braces: `{% raw %}{{ }}{% endraw %}` and the like, add a pipe character, `|`:
+To insert literal curly braces: `{% raw %}{{ }}{% endraw %}` and the like, add a pipe character, `|`, to the opening braces:
 
 ```
 <!-- will render as <h1>All about {{</h1> -->
