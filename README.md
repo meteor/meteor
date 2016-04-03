@@ -34,12 +34,6 @@ cd try-meteor
 meteor
 ```
 
-Deploy it to the world, for free:
-
-```bash
-meteor deploy try-meteor.meteor.com
-```
-
 ## Slow Start (for developers)
 
 If you want to run on the bleeding edge, or help develop Meteor, you
