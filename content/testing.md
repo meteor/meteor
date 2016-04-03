@@ -128,7 +128,7 @@ describe('my module', function (done) {
 });
 ```
 
-As we've placed the code above in a test file, it *will not* load in normal development or production mode (which would a incredibly bad thing!). If you create a Atmosphere package with a similar feature, you should mark it as `testOnly` and it will similarly only load in test mode.
+As we've placed the code above in a test file, it *will not* load in normal development or production mode (which would be an incredibly bad thing!). If you create a Atmosphere package with a similar feature, you should mark it as `testOnly` and it will similarly only load in test mode.
 
 <h3 id="generating-test-data">Generating test data</h3>
 
