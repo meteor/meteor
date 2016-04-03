@@ -301,11 +301,7 @@ export class NodeModulesDirectory {
       }
 
       if (kind === "bundle") {
-        relParts.unshift(
-          "node_modules",
-          "meteor",
-          colonConverter.convert(name)
-        );
+        relParts.unshift("node_modules", "meteor", name);
       }
 
       relPath = files.pathJoin(...relParts);
