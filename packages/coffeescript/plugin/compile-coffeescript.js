@@ -1,5 +1,6 @@
 import sourcemap from "source-map";
 import coffee from "coffee-script";
+import { ECMAScript } from "meteor/ecmascript";
 
 // The coffee-script compiler overrides Error.prepareStackTrace, mostly for the
 // use of coffee.run which we don't use.  This conflicts with the tool's use of
@@ -65,6 +66,13 @@ export class CoffeeCompiler extends CachingCompiler {
         column: e.location && (e.location.first_column + 1)
       });
       return null;
+    }
+
+    if (source.indexOf('`') !== -1) {
+      // If source contains backticks, pass the coffee output through ecmascript
+      try {
+        output.js = ECMAScript.compileForShell(output.js);
+      } catch (e) {}
     }
 
     const stripped = stripExportedVars(
