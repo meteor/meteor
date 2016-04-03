@@ -4,6 +4,7 @@ order: 1001
 description: A log of significant changes to the Meteor Guide.
 ---
 
+- 2016/04/04: Add more content on writing and publishing Atmosphere packages. [PR #339](https://github.com/meteor/guide/pull/339)
 - 2016/04/03: Add back in build tool default loading order rules. [PR #340](https://github.com/meteor/guide/pull/340)
 - 2016/04/01: Added CoffeeScript exports syntax. [PR #328](https://github.com/meteor/guide/pull/328)
 - 2016/04/01: Changed Mocha test code snippets to use function expressions instead of arrow functions, after the discussion on [Issue #318](https://github.com/meteor/guide/issues/318). [PR #323](https://github.com/meteor/guide/pull/323)
