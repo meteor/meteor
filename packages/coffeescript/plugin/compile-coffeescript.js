@@ -68,7 +68,7 @@ export class CoffeeCompiler extends CachingCompiler {
       return null;
     }
 
-    if ( source.indexOf('`') !== -1 ) {
+    if (source.indexOf('`') !== -1) {
       // If source contains backticks, pass the coffee output through ecmascript
       try {
         output.js = ECMAScript.compileForShell(output.js);
