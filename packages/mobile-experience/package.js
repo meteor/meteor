@@ -1,6 +1,6 @@
 Package.describe({
   name: 'mobile-experience',
-  version: '1.0.3-rc.1',
+  version: '1.0.3-rc.3',
   // Brief, one-line summary of the package.
   summary: 'Packages for a great mobile user experience',
   // By default, Meteor will default to using README.md for documentation.

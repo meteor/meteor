@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Session variable",
-  version: '1.1.4-rc.1'
+  version: '1.1.4-rc.3'
 });
 
 Package.onUse(function (api) {
