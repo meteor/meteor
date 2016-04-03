@@ -47,8 +47,4 @@ Heavy CoffeeScript users, please let us know how this arrangement
 works for you, whether `share` is helpful for you, and anything else
 you'd like to see changed.
 
-### Modules and CoffeeScript
-
-See [Modules » CoffeeScript Syntax](#coffeescriptsyntax).
-
 {{/template}}
