@@ -8,7 +8,7 @@ Package.registerBuildPlugin({
   use: ['caching-compiler', 'ecmascript'],
   sources: ['plugin/compile-coffeescript.js'],
   npmDependencies: {
-    "coffee-script": "1.9.2",
+    "coffee-script": "1.10.0",
     "source-map": "0.5.3"
   }
 });
