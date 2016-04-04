@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Compiler for Spacebars template language",
-  version: '1.0.10-rc.3'
+  version: '1.0.10'
 });
 
 Package.onUse(function (api) {
