@@ -191,9 +191,9 @@ You'll have the best chance of getting a change into core if you can
 build consensus in the community for it and eventually get a core
 developer on board.  It is very unlikely that we'll take a patch that adds a feature
 without seeing some initial discussion about it.  Probably the best way
-to get consensus is to join the `meteor-core` mailing list, search the
+to get consensus is to discuss it on [Meteor Forums](https://forums.meteor.com), search the
 archives for anything relevant, and then post your proposal there.  It's
-okay to post an idea to `meteor-core` without having a design or some
+okay to post an idea to [Meteor Forums](https://forums.meteor.com) without having a design or some
 initial code &mdash; others may be interested in helping.
 
 Another option is to come to [Devshop](https://devshop.meteor.com/) in
@@ -203,18 +203,13 @@ of the design in person.
 Most non-trivial changes need more discussion than comfortably fits
 inside GitHub's issue tracker, so that is not a good place to propose a
 new idea.  We will probably close most "surprise" PRs that we find there
-with a note to start a discussion on `meteor-core`.
+with a note to start a discussion on [Meteor Forums](https://forums.meteor.com).
 
 Small changes, especially if they don't affect APIs or documentation,
-may not really need a thread on `meteor-core` first.  But a new feature
+may not really need a thread on [Meteor Forums](https://forums.meteor.com) first.  But a new feature
 that's small enough not to need discussion probably isn't super
 valuable.  It may not get the highest priority from the core team, or we
 may just close it.
-
-> During the runup to 1.0, we are going to focus on buttoning up the
-> remaining big ticket items and closing bugs.  We'll probably have to
-> defer some good ideas and smaller, uncontroversial changes until after
-> 1.0 is out.
 
 #### Submitting pull requests
 

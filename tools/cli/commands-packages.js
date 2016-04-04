@@ -675,7 +675,8 @@ main.registerCommand({
     ("publishing package " + name + " for architecture "
      + isopk.buildArchitectures()),
     function () {
-      packageClient.createAndPublishBuiltPackage(conn, isopk);
+      packageClient.createAndPublishBuiltPackage(
+        conn, isopk, projectContext.isopackCache);
     }
   );
 
@@ -939,7 +940,11 @@ main.registerCommand({
               somethingChanged = true;
             } else {
               // Save the isopack, just to get its hash.
-              var bundleBuildResult = packageClient.bundleBuild(isopk);
+              var bundleBuildResult = packageClient.bundleBuild(
+                isopk,
+                projectContext.isopackCache,
+              );
+
               somethingChanged =
                 (bundleBuildResult.treeHash !== existingBuild.build.treeHash);
             }
@@ -1302,10 +1307,16 @@ var maybeUpdateRelease = function (options) {
         // the old tool.
         //
         // We'll still springboard forwards out of an RC, just not backwards.
-        Console.info("Not updating the release, because this app is at a " +
-                     "newer release (" + release.current.name + ") than " +
-                     "the latest recommended release " +
-                     "(" + latestRelease + ").");
+        // There still has a possibility of already on the latest.
+        if (release.current.name === latestRelease) {
+          Console.info("Already on the latest recommended release " +
+                      "(" + latestRelease + "). Not updating.");
+        } else {
+          Console.info("Not updating the release, because this app is at a " +
+                      "newer release (" + release.current.name + ") than " +
+                      "the latest recommended release " +
+                      "(" + latestRelease + ").");
+        }
         return 0;
       }
     }

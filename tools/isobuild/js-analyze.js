@@ -2,6 +2,8 @@ import { parse } from 'meteor-babel';
 import { analyze as analyzeScope } from 'escope';
 import LRU from "lru-cache";
 
+const hasOwn = Object.prototype.hasOwnProperty;
+
 var AST_CACHE = new LRU({
   max: Math.pow(2, 12),
   length(ast) {
@@ -65,13 +67,13 @@ export function findImportedModuleIdentifiers(source, hash) {
 
   const ast = tryToParse(source, hash);
 
-  function walk(node, left, right) {
+  function walk(node, left, right, requireIsBound) {
     if (left >= right) {
       // The window of possible indexes is empty, so we can ignore
       // the entire subtree rooted at this node.
     } else if (Array.isArray(node)) {
       for (var i = 0, len = node.length; i < len; ++i) {
-        walk(node[i], left, right);
+        walk(node[i], left, right, requireIsBound);
       }
     } else if (isNode(node)) {
       const start = node.start;
@@ -83,16 +85,19 @@ export function findImportedModuleIdentifiers(source, hash) {
       while (left < right && end < possibleIndexes[right - 1]) --right;
 
       if (left < right) {
+        if (! requireIsBound &&
+            isFunctionWithParameter(node, "require")) {
+          requireIsBound = true;
+        }
+
         let id = getRequiredModuleId(node);
         if (typeof id === "string") {
-          identifiers[id] = node;
-          return;
+          return addIdentifier(id, "require", requireIsBound);
         }
 
         id = getImportedModuleId(node);
         if (typeof id === "string") {
-          identifiers[id] = node;
-          return;
+          return addIdentifier(id, "import", requireIsBound);
         }
 
         // Continue traversing the children of this node.
@@ -106,13 +111,30 @@ export function findImportedModuleIdentifiers(source, hash) {
             continue;
           }
 
-          walk(node[key], left, right);
+          walk(node[key], left, right, requireIsBound);
         }
       }
     }
   }
 
-  walk(ast, 0, possibleIndexes.length);
+  function addIdentifier(id, type, requireIsBound) {
+    const entry = hasOwn.call(identifiers, id)
+      ? identifiers[id]
+      : identifiers[id] = { possiblySpurious: true };
+
+    if (type === "require") {
+      // If the identifier comes from a require call, but require is not a
+      // free variable, then this dependency might be spurious.
+      entry.possiblySpurious =
+        entry.possiblySpurious && requireIsBound;
+    } else {
+      // The import keyword can't be shadowed, so any dependencies
+      // registered by import statements should be trusted absolutely.
+      entry.possiblySpurious = false;
+    }
+  }
+
+  walk(ast, 0, possibleIndexes.length, false);
 
   return identifiers;
 }
@@ -123,6 +145,18 @@ function isNode(value) {
     && typeof value.type === "string"
     && typeof value.start === "number"
     && typeof value.end === "number";
+}
+
+function isFunctionWithParameter(node, name) {
+  if (node.type === "FunctionExpression" ||
+      node.type === "FunctionDeclaration" ||
+      node.type === "ArrowFunctionExpression") {
+    return node.params.some(
+      param =>
+        param.type === "Identifier" &&
+        param.name === name
+    );
+  }
 }
 
 function getRequiredModuleId(node) {
