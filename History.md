@@ -1,3 +1,28 @@
+## v1.3.1
+
+* Long isopacket node_modules paths have been shortened, fixing upgrade
+  problems on Windows. #6609
+
+* Version 1.3.1 of Meteor can now publish packages for earlier versions of
+  Meteor, provided those packages do not rely on modules. #6484 #6618
+
+* The meteor-babel npm package used by babel-compiler has been upgraded to
+  version 0.8.4. c8d12aed4e725217efbe86fa35de5d5e56d73c83
+
+* The `meteor node` and `meteor npm` commands now return the same exit
+  codes as their child processes. #6673 #6675
+
+* Missing module warnings are no longer printed for Meteor packages, or
+  for `require` calls when `require` is not a free variable, fixing
+  https://github.com/practicalmeteor/meteor-mocha/issues/19.
+
+* Cordova iOS builds are no longer built by Meteor, but merely prepared
+  for building. 88d43a0f16a484a5716050cb7de8066b126c7b28
+
+* Compiler plugin errors were formerly silenced for files not explicitly
+  added in package.js. Now those errors are reported when/if the files are
+  imported by the ImportScanner. be986fd70926c9dd8eff6d8866205f236c8562c4
+
 ## v1.3
 
 ### ES2015/Modules
