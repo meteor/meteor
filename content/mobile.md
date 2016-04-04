@@ -479,6 +479,12 @@ You configure these images with [`App.icons`](http://docs.meteor.com/#/full/App-
 
 For iOS, you can also refer to the [Icon and image sizes](https://developer.apple.com/library/ios/documentation/UserExperience/Conceptual/MobileHIG/IconMatrix.html) in the iOS Human Interface Guidelines for more information about the way these different sizes are used.
 
+<h3 id="advanced-build">Advanced build customization</h3>
+
+There is a special top-level directory named `cordova-build-override/` that allows you to override, in an ad-hoc way, parts of your Cordova project that Meteor generates for you in the `.meteor/local/cordova-build` directory. For example, if you want to have a customized `config.xml` file, you can put it in `cordova-build-override/config.xml` and this file, along with the entire file tree of this directory, will be `cp -R` (copied overwriting existing files) to the Cordova project right before the build and compilation step.
+
+> We recommend using this approach only if absolutely required and if your customizations can not be handled by standard configuration options.
+
 <h2 id="building-and-submitting">Submitting your mobile app to the store</h2>
 
 <h3 id="building-for-production">Building your mobile app for production</h3>

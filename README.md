@@ -53,6 +53,7 @@ Render multiple items in your template with `{% raw %}{{#each}}{% endraw %}`
 
 ## Changelog
 
+- 2016/04/03: Add back in build tool default loading order rules. [PR #340](https://github.com/meteor/guide/pull/340)
 - 2016/04/01: Added CoffeeScript exports syntax. [PR #328](https://github.com/meteor/guide/pull/328)
 - 2016/04/01: Changed Mocha test code snippets to use function expressions instead of arrow functions, after the discussion on [Issue #318](https://github.com/meteor/guide/issues/318). [PR #323](https://github.com/meteor/guide/pull/323)
 - 2016/04/01: Added `gadicc:blaze-react-component` in a new "Blaze in React" section of the React article. [PR #325](https://github.com/meteor/guide/pull/325)

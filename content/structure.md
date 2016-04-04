@@ -13,7 +13,7 @@ After reading this article, you'll know:
 
 <h2 id="meteor-structure">Universal JavaScript</h2>
 
-Meteor is a *full-stack* framework for building applications; this means Meteor applications differ from most applications in that they include code that runs on the client, code that runs on the server, and _common_ code that runs in both places. The Meteor build tool enables you to run JavaScript code easily and consistenly in both client and server environments, and includes some application structure conventions to make it easy to specify which code should run where.
+Meteor is a *full-stack* framework for building JavaScript applications. This means Meteor applications differ from most applications in that they include code that runs on the client, inside a web browser or Cordova mobile app, code that runs on the server, inside a [Node.js](http://nodejs.org/) container, and _common_ code that runs in both environments. The [Meteor build tool](build-tool.html) allows you to easily specify what JavaScript code, including any supporting UI templates, CSS rules, and static assets, to run in each environment using a combination of ES2015 `import` and `export` and the Meteor build system [default file load order](#load-order) rules.
 
 <h3 id="es2015-modules">ES2015 modules</h3>
 
@@ -62,15 +62,15 @@ exports.Lists = ListsCollection 'Lists'
 
 <h2 id="javascript-structure">File structure</h2>
 
-To fully use the module system and ensure that our code only runs when we ask it to, we recommend that all of your application code should be placed inside the `imports/` directory. This means that the Meteor build system will only bundle and include that file if it is referenced from another file using an `import`.
+To fully use the module system and ensure that our code only runs when we ask it to, we recommend that all of your application code should be placed inside the `imports/` directory. This means that the Meteor build system will only bundle and include that file if it is referenced from another file using an `import` (also called "lazy evaluation or loading").
 
-Meteor will eagerly load any files outside of any directory named `imports/` in the application. It is recommended that you create exactly two eagerly loaded files, `client/main.js` and `server/main.js`, in order to define explicit entry points for both the client and the server. Meteor ensures that any file in any directory named `server/` will only be available on the server, and likewise for files in any directory named `client/`. This also precludes trying to `import` a file to be used on the server from any directory named `client/` even if it is nested in an `imports/` directory and vice versa for importing client files from `server/`.
+Meteor will load all files outside of any directory named `imports/` in the application using the [default file load order](#load-order) rules (also called "eager evaluation or loading"). It is recommended that you create exactly two eagerly loaded files, `client/main.js` and `server/main.js`, in order to define explicit entry points for both the client and the server. Meteor ensures that any file in any directory named `server/` will only be available on the server, and likewise for files in any directory named `client/`. This also precludes trying to `import` a file to be used on the server from any directory named `client/` even if it is nested in an `imports/` directory and vice versa for importing client files from `server/`.
 
 These `main.js` files won't do anything themselves, but they should import some _startup_ modules which will run immediately, on client and server respectively, when the app loads. These modules should do any configuration necessary for the packages you are using in your app, and import the rest of your app's code.
 
 <h3 id="example-app-structure">Example directory layout</h3>
 
-To start, let's look at our Todos example application, which is a great example to follow when structuring your app. Here's an overview of its directory structure:
+To start, let's look at our [Todos example application](https://github.com/meteor/todos), which is a great example to follow when structuring your app. Here's an overview of its directory structure:
 
 ```sh
 imports/
@@ -115,6 +115,15 @@ Within the `imports/ui` directory it typically makes sense to group files into d
 
 For each module defined above, it makes sense to co-locate the various auxiliary files with the base JavaScript file. For instance, a Blaze UI component should have its template HTML, JavaScript logic, and CSS rules in the same directory. A JavaScript module with some business logic should be co-located with the unit tests for that module.
 
+<h3 id="importing-meteor-globals">Importing Meteor "pseudo-globals"</h3>
+
+For backwards compatibility Meteor 1.3 still provides Meteor's global namespacing for the Meteor core package as well as for other Meteor packages you include in your application. You can also still directly call functions such as [`Meteor.publish`](http://docs.meteor.com/#/full/meteor_publish), as in previous versions of Meteor, without first importing them. However, it is recommended best practice that you first load all the Meteor "pseudo-globals" using the `import { Name } from 'meteor/package'` syntax before using them. For instance:
+
+```js
+import { Meteor } from 'meteor/meteor';
+import { EJSON } from 'meteor/ejson';
+```
+
 <h3 id="startup-files">Startup files</h3>
 
 Some of your code isn't going to be a unit of business logic or UI, it's just some setup or configuration code that needs to run in the context of the app when it starts up. In the Todos example app, the `imports/startup/client/useraccounts-configuration.js` file configures the `useraccounts` login templates and the routes (see the [Accounts](accounts.html) article for more information about `useraccounts`). The `imports/startup/client/routes.js` configures all of the routes and then imports *all* other code that is required on the client, forming the main entry point for the rest of the client application:
@@ -154,6 +163,91 @@ import '../imports/api/api.js';
 ```
 
 You can see that here we don't actually import any variables from these files - we just import them so that they execute in this order.
+
+<h2 id="load-order">Default file load order</h2>
+
+Even though it is recommended that you write your application to use ES2015 modules and the `imports/` directory, Meteor 1.3 continues to support eager loading of files, using these default load order rules, to provide backwards compatibility with applications written for Meteor 1.2 and earlier.
+
+There are several load order rules. They are *applied sequentially* to all applicable files in the application, in the priority given below:
+
+1. HTML template files are *always* loaded before everything else
+2. Files beginning with `main.` are loaded **last**
+3. Files inside **any** `lib/` directory are loaded next
+4. Files with deeper paths are loaded next
+5. Files are then loaded in alphabetical order of the entire path
+
+```js
+  nav.html
+  main.html
+  client/lib/methods.js
+  client/lib/styles.js
+  lib/feature/styles.js
+  lib/collections.js
+  client/feature-y.js
+  feature-x.js
+  client/main.js
+```
+
+For example, the files above are arranged in the correct load order. `main.html` is loaded second because HTML templates are always loaded first, even if it begins with `main.`, since rule 1 has priority over rule 2. However, it will be loaded after `nav.html` because rule 2 has priority over rule 5.
+
+`client/lib/styles.js` and `lib/feature/styles.js` have identical load order up to rule 4; however, since `client` comes before `lib` alphabetically, it will be loaded first.
+
+> You can also use [Meteor.startup](http://docs.meteor.com/#/full/meteor_startup) to control when run code is run on both the server and the client.
+
+<h3 id="special-directories">Special directories</h3>
+
+By default, any JavaScript files in your Meteor application folder are bundled and loaded on both the client and the server. However, the names of the files and directories inside your project can affect their load order, where they are loaded, and some other characteristics. Here is a list of file and directory names that are treated specially by Meteor:
+
+- **imports**
+
+    Any directory named `imports/` is not loaded anywhere and files must be imported using `import`.
+
+- **node_modules**
+
+    Any directory named `node_modules/` is not loaded anywhere. node.js packages installed into `node_modules` directories must be imported using `import` or by using `Npm.depends` in `package.js`.
+
+- **client**
+
+    Any directory named `client/` is not loaded on the server. Similar to wrapping your code in `if (Meteor.isClient) { ... }`. All files loaded on the client are automatically concatenated and minified when in production mode. In development mode, JavaScript and CSS files are not minified, to make debugging easier. CSS files are still combined into a single file for consistency between production and development, because changing the CSS file's URL affects how URLs in it are processed.
+
+    > HTML files in a Meteor application are treated quite a bit differently from a server-side framework.  Meteor scans all the HTML files in your directory for three top-level elements: `<head>`, `<body>`, and `<template>`.  The head and body sections are separately concatenated into a single head and body, which are transmitted to the client on initial page load.
+
+- **server**
+
+    Any directory named `server/` is not loaded on the client. Similar to wrapping your code in `if (Meteor.isServer) { ... }`, except the client never even receives the code. Any sensitive code that you don't want served to the client, such as code containing passwords or authentication mechanisms, should be kept in the `server/` directory.
+
+    Meteor gathers all your JavaScript files, excluding anything under the `client`, `public`, and `private` subdirectories, and loads them into a Node.js server instance. In Meteor, your server code runs in a single thread per request, not in the asynchronous callback style typical of Node.
+
+- **public**
+
+    All files inside a top-level directory called `public/` are served as-is to the client. When referencing these assets, do not include `public/` in the URL, write the URL as if they were all in the top level. For example, reference `public/bg.png` as `<img src='/bg.png' />`. This is the best place for `favicon.ico`, `robots.txt`, and similar files.
+
+- **private**
+
+    All files inside a top-level directory called `private/` are only accessible from server code and can be loaded via the [`Assets`](http://docs.meteor.com/#/full/assets_getText) API. This can be used for private data files and any files that are in your project directory that you don't want to be accessible from the outside.
+
+- **client/compatibility**
+
+    This folder is for compatibility with JavaScript libraries that rely on variables declared with var at the top level being exported as globals. Files in this  directory are executed without being wrapped in a new variable scope. These files are executed before other client-side JavaScript files.
+
+    > It is recommended to use npm for 3rd party JavaScript libraries and use `import` to control when files are loaded.
+
+- **tests**
+
+    Any directory named `tests/` is not loaded anywhere. Use this for any test code you want to run using a test runner outside of [Meteor's built-in test tools](testing.html).
+
+The following directories are also not loaded as part of your app code:
+
+- Files/directories whose names start with a dot, like `.meteor` and `.git`
+- `packages/`: Used for local packages
+- `cordova-build-override/`: Used for [advanced mobile build customizations](mobile.html#advanced-build)
+- `programs`: For legacy reasons
+
+<h3 id="files-outside">Files outside special directories</h3>
+
+All JavaScript files outside special directories are loaded on both the client and the server. Meteor provides the variables [`Meteor.isClient`](http://docs.meteor.com/#/full/meteor_isserver) and [`Meteor.isServer`](http://docs.meteor.com/#/full/meteor_isserver) so that your code can alter its behavior depending on whether it's running on the client or the server.
+
+CSS and HTML files outside special directories are loaded on the client only and cannot be used from server code.
 
 <h2 id="splitting-your-app">Splitting into multiple apps</h2>
 
