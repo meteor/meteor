@@ -109,12 +109,13 @@ You can obtain a server running Ubuntu or Debian from many generic hosting provi
 
 <h3 id="custom-deployment">Custom deployment</h3>
 
-If you want to figure out your hosting solution completely from scratch, the Meteor tool has a command `meteor build` that creates a deployment bundle that contains a plain Node.js application. You can host this application wherever you like and there are many options in terms of how you set it up and configure it.
+If you want to figure out your hosting solution completely from scratch, the Meteor tool has a command `meteor build` that creates a deployment bundle that contains a plain Node.js application. Any npm dependencies must be installed before issuing the `meteor build` command to be included in the bundle. You can host this application wherever you like and there are many options in terms of how you set it up and configure it.
 
-**NOTE** it's important that you build your bundle for the correct architecture. If you are building on your development machine, there's a good chance you are deploying to a different server architecture. You'll want to specify the correct arcitecture with `--architecture`:
+**NOTE** it's important that you build your bundle for the correct architecture. If you are building on your development machine, there's a good chance you are deploying to a different server architecture. You'll want to specify the correct architecture with `--architecture`:
 
 ```bash
 # for example if deploying to a Ubuntu linux server:
+npm install --production
 meteor build /path/to/build --architecture os.linux.x86_64
 ```
 
@@ -122,7 +123,7 @@ To run this application, you need to provide Node.js 0.10.x and a MongoDB server
 
 ```bash
 cd my_directory
-(cd programs/server && npm install)
+(cd programs/server && npm install --production)
 MONGO_URL=mongodb://localhost:27017/myapp ROOT_URL=http://my-app.com node main.js
 ```
 
