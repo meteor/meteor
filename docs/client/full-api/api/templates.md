@@ -103,7 +103,7 @@ template is rendered for the first time.
 ```
 
 ```javascript
-Template.myPictures.onRendered( () => {
+Template.myPictures.onRendered(function () {
   // Use the Packery jQuery plugin
   this.$('.container').packery({
     itemSelector: '.item',
@@ -125,7 +125,7 @@ Handling the `created` event is a useful way to set up values on template
 instance that are read from template helpers using `Template.instance()`.
 
 ```javascript
-Template.myPictures.onCreated( () => {
+Template.myPictures.onCreated(function () {
   // set up local reactive variables
   this.highlightedPicture = new ReactiveVar(null);
 
@@ -146,7 +146,7 @@ effects of `created` or `rendered` groups. This group fires once and is the last
 callback to fire.
 
 ```javascript
-Template.myPictures.onDestroyed( () => {
+Template.myPictures.onDestroyed(function () {
   // deregister from some central store
   GalleryTemplates = _.without(GalleryTemplates, this);
 });
@@ -241,7 +241,7 @@ indicators in your templates when they depend on data loaded from subscriptions.
 Example:
 
 ```js
-Template.notifications.onCreated( () => {
+Template.notifications.onCreated(function () {
   // Use this.subscribe inside onCreated callback
   this.subscribe("notifications");
 });
@@ -263,9 +263,9 @@ Template.notifications.onCreated( () => {
 Another example where the subscription depends on the data context:
 
 ```js
-Template.comments.onCreated( () => {
+Template.comments.onCreated(function () {
   // Use this.subscribe with the data context reactively
-  this.autorun( () => {
+  this.autorun( ()=> {
     var dataContext = Template.currentData();
     this.subscribe("comments", dataContext.postId);
   });
@@ -282,7 +282,7 @@ Another example where you want to initialize a plugin when the subscription is
 done:
 
 ```js
-Template.listing.onRendered( () => {
+Template.listing.onRendered(function () {
   var template = this;
 
   template.subscribe('listOfThings', () => {
