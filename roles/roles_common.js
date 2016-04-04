@@ -75,14 +75,13 @@ _.extend(Roles, {
       // (from Meteor accounts-base package, insertUserDoc func)
       // XXX string parsing sucks, maybe
       // https://jira.mongodb.org/browse/SERVER-3069 will get fixed one day
-      if (e.name !== 'MongoError') throw e;
-      match = (e.err || e.errmsg).match(/E11000 duplicate key error index: ([^ ]+)/);
-      if (!match) throw e;
-      if (match[1].indexOf('$_id') !== -1) {
+      if (/E11000 duplicate key error.*(index.*roles|roles.*index).*_id/.test(e.err || e.errmsg)) {
         if (options.unlessExists) return null;
         throw new Error("Role '" + roleName + "' already exists.");
       }
-      throw e;
+      else {
+        throw e;
+      }
     }
   },
 
