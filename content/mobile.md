@@ -481,9 +481,13 @@ For iOS, you can also refer to the [Icon and image sizes](https://developer.appl
 
 <h3 id="advanced-build">Advanced build customization</h3>
 
-There is a special top-level directory named `cordova-build-override/` that allows you to override, in an ad-hoc way, parts of your Cordova project that Meteor generates for you in the `.meteor/local/cordova-build` directory. For example, if you want to have a customized `config.xml` file, you can put it in `cordova-build-override/config.xml` and this file, along with the entire file tree of this directory, will be `cp -R` (copied overwriting existing files) to the Cordova project right before the build and compilation step.
+There is a special top-level directory named `cordova-build-override/` that allows you to override, in an ad-hoc way, parts of your Cordova project that Meteor generates for you in the `.meteor/local/cordova-build` directory. The entire file tree of this directory will be `cp -R` (copied overwriting existing files) to the Cordova project right before the build and compilation step.
 
-> We recommend using this approach only if absolutely required and if your customizations can not be handled by standard configuration options.
+The problem with this mechanism is that it overrides complete files, so it is not a good solution for customizing `config.xml`. Replacing the generated version with your own file means you lose all configuration information set by the build process and by installed plugins, which will likely break your app.
+
+If you need to customize configuration files, a workaround is to create a dummy Cordova plugin. In its `plugin.xml`, you can specify a [`config-file` element](https://cordova.apache.org/docs/en/dev/plugin_ref/spec.html#config-file) to selectively change parts of configuration files, including `config.xml`.
+
+> We recommend using these approaches only if absolutely required and if your customizations can not be handled by standard configuration options.
 
 <h2 id="building-and-submitting">Submitting your mobile app to the store</h2>
 
