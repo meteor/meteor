@@ -32,8 +32,7 @@ To get started writing a package, use the Meteor command line tool:
 ```bash
 meteor create --package my-package
 ```
-> It is required that your `my-package` name take the form of `username:my-package`, where `username` is your Meteor
-Developer username, if you plan to publish your package to Atmosphere.
+> It is required that your `my-package` name take the form of `username:my-package`, where `username` is your Meteor Developer username, if you plan to publish your package to Atmosphere.
 
 If you run this inside an app, it will place the newly generated package in that app's `packages/` directory. Outside an app, it will just create a standalone package directory. The command also generates some boilerplate files for you:
 
