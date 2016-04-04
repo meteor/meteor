@@ -21,7 +21,7 @@ If you want to distribute and reuse code that you've written for a Meteor applic
 
 The practice of writing npm packages is [well documented](https://docs.npmjs.com/getting-started/creating-node-modules) and we won't cover it here.
 
-However, if your package depends on an Atmosphere package (which, in Meteor 1.3, includes the Meteor core packages), or needs to take advantage of Meteor's [build system](#build-packages), then writing an Atmosphere package might be the best option.
+However, if your package depends on an Atmosphere package (which, in Meteor 1.3, includes the Meteor core packages), or needs to take advantage of Meteor's [build system](build-tool.html), then writing an Atmosphere package might be the best option.
 
 This article will cover some tips on how to do that.
 
