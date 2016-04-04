@@ -114,13 +114,13 @@ While some packages exist just to provide side effects to the app, most packages
 
 ```js
 // in my-package.js:
-export const name = 'my-package';
+export const myName = 'my-package';
 ```
 
 Now users of your package can import the symbol with:
 
 ```js
-import { name } from 'meteor/username:my-package';
+import { myName } from 'meteor/username:my-package';
 ```
 
 <h2 id="dependencies">Dependencies</h2>
