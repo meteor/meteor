@@ -123,7 +123,7 @@ To run this application, you need to provide Node.js 0.10.x and a MongoDB server
 
 ```bash
 cd my_directory
-(cd programs/server && npm install --production)
+(cd programs/server && npm install)
 MONGO_URL=mongodb://localhost:27017/myapp ROOT_URL=http://my-app.com node main.js
 ```
 
