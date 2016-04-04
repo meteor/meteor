@@ -1,8 +1,0 @@
-site_name: Meteor Guide
-theme: readthedocs
-pages:
-- Getting started: index.md
-- Application structure: structure.md
-- Routing and URLs: routing.md
-- Building packages: packages.md
-docs_dir: content
