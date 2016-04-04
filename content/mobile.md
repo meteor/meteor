@@ -425,9 +425,7 @@ The file serving mechanism used in Meteor allows for local file access through U
 
 Cordova controls access to external domains through a whitelisting mechanism, which is implemented as [`cordova-plugin-whitelist`](https://github.com/apache/cordova-plugin-whitelist) in the version of Cordova we bundle.
 
-By default, Cordova apps in Meteor are only allowed access to `localhost` (to serve the app from) and the server your app connects to for data loading and hot code push (either an automatically detected IP address an explicitly configured mobile server domain).
-
-In Meteor, you use [`App.accessRule`](http://docs.meteor.com/#/full/App-accessRule) in `mobile-config.js` to set additional rules. (These correspond to `<access>`, `<allow-navigation>` and `<allow-intent>` tags in the generated`config.xml`.)
+In Meteor, you use [`App.accessRule`](http://docs.meteor.com/#/full/App-accessRule) in `mobile-config.js` to set additional rules. (These correspond to `<access>`, `<allow-navigation>` and `<allow-intent>` tags in the generated `config.xml`.)
 
 > On iOS, these settings also control [Application Transport Security (ATS)](https://developer.apple.com/library/prerelease/ios/documentation/General/Reference/InfoPlistKeyReference/Articles/CocoaKeys.html#//apple_ref/doc/uid/TP40009251-SW33), which is an OS level mechanism to enforce security best practices new to iOS 9. If the server you're connecting to does not (yet) fulfill these requirements, you can use additional options to override them for specific domains:
 > ```js
@@ -435,6 +433,13 @@ App.accessRule('https://domain.com', {
   'minimum-tls-version': 'TLSv1.0',
   'requires-forward-secrecy': false,
 });
+```
+
+By default, Cordova apps in Meteor are only allowed access to `localhost` (the device itself, to serve the app from) and the server your app connects to for data loading and hot code push (either an automatically detected IP address an explicitly configured mobile server domain). These restrictions also apply to loading files in iframes and to opening files in other apps (including the mobile browser).
+
+> Note that these restrictions mean you will have to explicitly allow loading `data:` URLs. For example, to allow loading `data:` URLs in iframes you would add:
+> ```js
+App.accessRule('data:*', { type: 'navigation' });
 ```
 
 <h3 id="csp">Content Security Policy (CSP)</h3>
