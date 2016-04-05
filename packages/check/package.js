@@ -1,16 +1,18 @@
 Package.describe({
   summary: "Check whether a value matches a pattern",
-  version: '1.1.2'
+  version: '1.1.3'
 });
 
 Package.onUse(function (api) {
   api.use(['underscore', 'ejson'], ['client', 'server']);
-  api.use('jquery', 'client');
 
   api.export(['check', 'Match']);
 
-  api.addFiles('jquery.js', 'server');
   api.addFiles('match.js', ['client', 'server']);
+});
+
+Npm.depends({
+  'lodash.isplainobject': '4.0.4'
 });
 
 Package.onTest(function (api) {
