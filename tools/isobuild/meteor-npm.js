@@ -234,15 +234,6 @@ var updateExistingNpmDirectory = function (packageName, newPackageNpmDir,
     }
   }
 
-  // If the node modules directory exists but doesn't have .package.json and
-  // .npm-shrinkwrap.json, recreate.  This is to ensure that
-  // providePackageJSONForUnavailableBinaryDeps works.
-  if (files.exists(nodeModulesDir) &&
-      (!files.exists(files.pathJoin(nodeModulesDir, '.package.json')) ||
-       !files.exists(files.pathJoin(nodeModulesDir, '.npm-shrinkwrap.json')))) {
-    files.rm_recursive(nodeModulesDir);
-  }
-
   // Make sure node_modules is present (fix for #1761). Prevents npm install
   // from installing to an existing node_modules dir higher up in the
   // filesystem.  node_modules may be absent due to a change in Node version or

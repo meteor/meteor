@@ -681,9 +681,6 @@ export class PackageSourceBatch {
       skipDebugOnly: true,
       skipProdOnly: true,
       skipTestOnly: true,
-      // We only care about getting exports here, so it's OK if we get the Mac
-      // version when we're bundling for Linux.
-      allowWrongPlatform: true,
     }, depUnibuild => {
       _.each(depUnibuild.declaredExports, function (symbol) {
         // Slightly hacky implementation of test-only exports.
