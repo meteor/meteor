@@ -460,19 +460,16 @@ _.extend(Isopack.prototype, {
   // Return the unibuild of the package to use for a given target architecture
   // (eg, 'os.linux.x86_64' or 'web'), or throw an exception if that
   // packages can't be loaded under these circumstances.
-  getUnibuildAtArch: Profile("Isopack#getUnibuildAtArch", function (
-    arch, {allowWrongPlatform} = {}) {
+  getUnibuildAtArch: Profile("Isopack#getUnibuildAtArch", function (arch) {
     var self = this;
 
     let chosenArch = archinfo.mostSpecificMatch(
       arch, _.pluck(self.unibuilds, 'arch'));
-    if (! chosenArch && allowWrongPlatform && arch.match(/^os\./)) {
-      // Special-case: we're looking for a specific server platform and it's
-      // not available. (eg, we're deploying from a Mac to Linux and are
-      // processing a local package with binary npm deps).  If we have "allow
-      // wrong platform" turned on, search again for the host version, which
-      // might find the Mac version.  We'll detect this case later and provide
-      // package.json instead of Mac binaries.
+    if (! chosenArch && arch.match(/^os\./)) {
+      // Special-case: we're looking for a specific server platform and
+      // it's not available. (eg, we're deploying from a Mac to Linux and
+      // are processing a local package with binary npm deps).  Search
+      // again for the host version, which might find the Mac version.
       chosenArch =
         archinfo.mostSpecificMatch(archinfo.host(), _.pluck(self.unibuilds, 'arch'));
     }

@@ -415,7 +415,6 @@ var bundleAndDeploy = function (options) {
       projectContext: options.projectContext,
       outputPath: bundlePath,
       buildOptions: options.buildOptions,
-      providePackageJSONForUnavailableBinaryDeps: !!process.env.METEOR_BINARY_DEP_WORKAROUND,
     });
 
     if (bundleResult.errors) {

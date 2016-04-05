@@ -919,7 +919,6 @@ ${Console.command("meteor build ../output")}`,
       serverArch: bundleArch,
       buildMode: options.debug ? 'development' : 'production',
     },
-    providePackageJSONForUnavailableBinaryDeps: !!process.env.METEOR_BINARY_DEP_WORKAROUND,
   });
   if (bundleResult.errors) {
     Console.error("Errors prevented bundling:");
