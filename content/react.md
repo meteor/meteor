@@ -186,20 +186,20 @@ Once you've run `meteor add react-meteor-data`, you'll be able to import the `cr
 
 > Note that "container components" are analogous to the "smart components" and "presentational components" to the "reusable components" in the pattern we document in the [UI/UX article](http://guide.meteor.com/ui-ux.html#components), if you'd like to read more about how this philosophy relates to Meteor.
 
-For example, in the Todos example app, we have a `ListsShow` component, which renders list metadata and the tasks in the list. In order to do so, it needs to [subscribe](data-loading.html#subscriptions) to the `todos.inList` publication, check that subscription's readiness, then fetch the list of todos from the `Todos` collection.
+For example, in the Todos example app, we have a `ListPage` component, which renders list metadata and the tasks in the list. In order to do so, it needs to [subscribe](data-loading.html#subscriptions) to the `todos.inList` publication, check that subscription's readiness, then fetch the list of todos from the `Todos` collection.
 
 It also needs to be responsive to reactive changes in the state of those actions (for instance if a todo changes due to the action of another user). All this data loading complexity is a typical use-case for a container-presentational component split, and the `createContainer()` function makes it simple to do this.
 
-We simply define the `ListsShow` component as a presentational component that expects its data to be passed in using React `props`:
+We simply define the `ListPage` component as a presentational component that expects its data to be passed in using React `props`:
 
 ```js
 import React from 'react';
 
-export default class ListsShow extends React.Component {
+export default class ListPage extends React.Component {
   ...
 }
 
-ListsShow.propTypes = {
+ListPage.propTypes = {
   list: React.PropTypes.object,
   todos: React.PropTypes.array,
   loading: React.PropTypes.bool,
@@ -207,13 +207,13 @@ ListsShow.propTypes = {
 };
 ```
 
-Then we create a `ListsShowPage` container component which wraps it and provides a data source:
+Then we create a `ListContainer` container component which wraps it and provides a data source:
 
 ```js
 import { Meteor } from 'meteor/meteor';
 import { Lists } from '../../api/lists/lists.js';
 import { createContainer } from 'meteor/react-meteor-data';
-import ListsShow from '../pages/ListsShow.jsx';
+import ListPage from '../pages/ListPage.jsx';
 
 export default createContainer(({ params }) => {
   const { id } = params;
@@ -227,15 +227,15 @@ export default createContainer(({ params }) => {
     listExists,
     todos: listExists ? list.todos().fetch() : [],
   };
-}, ListsShow);
+}, ListPage);
 ```
 
 The container component created by `createContainer()` will reactively rerender the wrapped component in response to any changes to [reactive data sources](https://atmospherejs.com/meteor/tracker) accessed from inside the function provided to it.
 
-Although this `ListsShowPage` container is intended to be instantiated by the React Router (which passes in the props automatically), if we did ever want to create one manually, we would need to pass in the props to the container component (which then get passed into our data function above):
+Although this `ListContainer` container is intended to be instantiated by the React Router (which passes in the props automatically), if we did ever want to create one manually, we would need to pass in the props to the container component (which then get passed into our data function above):
 
 ```js
-<ListsShowPage params={{id: '7'}}/>
+<ListContainer params={{id: '7'}}/>
 ```
 
 <h3 id="preventing-rerenders">Preventing re-renders</h3>
