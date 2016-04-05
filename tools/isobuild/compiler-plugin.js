@@ -14,6 +14,7 @@ import Fiber from 'fibers';
 import {sourceMapLength} from '../utils/utils.js';
 import {Console} from '../console/console.js';
 import ImportScanner from './import-scanner.js';
+import {cssToCommonJS} from "./css-modules.js";
 
 import { isTestFilePath } from './test-files.js';
 
@@ -482,15 +483,22 @@ class ResourceSlot {
       // unconditionally as a CSS resource, so that it can be imported
       // when needed.
       resource.type = "js";
-      resource.data = new Buffer(
-        'module.exports = require("meteor/modules").addStyles(' +
-          JSON.stringify(data) + ');\n',
-        'utf8'
-      );
+      resource.data =
+        new Buffer(cssToCommonJS(data, resource.hash), "utf8");
 
       self.jsOutputResources.push(resource);
 
     } else {
+      // Eager CSS is added unconditionally to a combined <style> tag at
+      // the beginning of the <head>. If the corresponding module ever
+      // gets imported, its module.exports object should be an empty stub,
+      // rather than a <style> node added dynamically to the <head>.
+      self.addJavaScript({
+        ...options,
+        data: "// These styles have already been applied to the document.\n",
+        lazy: true
+      });
+
       resource.type = "css";
       resource.data = new Buffer(data, 'utf8'),
 

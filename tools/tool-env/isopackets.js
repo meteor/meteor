@@ -47,14 +47,15 @@ var Profile = require('./profile.js').Profile;
 
 // All of the defined isopackets. Whenever they are being built, they will be
 // built in the order listed here.
-var ISOPACKETS = {
+const ISOPACKETS = {
   'ddp': ['ddp-client'],
   'mongo': ['npm-mongo'],
   'ejson': ['ejson'],
   'constraint-solver': ['constraint-solver'],
   'cordova-support': ['boilerplate-generator', 'logging', 'webapp-hashing',
                       'xmlbuilder'],
-  'logging': ['logging']
+  'logging': ['logging'],
+  'css-tools': ['minifier-css'],
 };
 
 // Caches isopackets in memory (each isopacket only needs to be loaded
@@ -76,7 +77,7 @@ var loadedIsopackets = {};
 // The main entry point: loads and returns an isopacket from cache or from
 // disk. Does not do a build step: ensureIsopacketsLoadable must be called
 // first!
-var load = function (isopacketName) {
+export function load(isopacketName) {
   return fiberHelpers.noYieldsAllowed(function () {
     if (_.has(loadedIsopackets, isopacketName)) {
       if (loadedIsopackets[isopacketName]) {
@@ -97,7 +98,7 @@ var load = function (isopacketName) {
 
     throw Error("Unknown isopacket: " + isopacketName);
   });
-};
+}
 
 var isopacketPath = function (isopacketName) {
   return files.pathJoin(config.getIsopacketRoot(), isopacketName);

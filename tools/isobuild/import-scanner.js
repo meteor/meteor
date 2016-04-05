@@ -5,6 +5,7 @@ import {
 import {sha1, readAndWatchFileWithHash} from "../fs/watch.js";
 import {matches as archMatches} from "../utils/archinfo.js";
 import {findImportedModuleIdentifiers} from "./js-analyze.js";
+import {cssToCommonJS} from "./css-modules.js";
 import buildmessage from "../utils/buildmessage.js";
 import LRU from "lru-cache";
 import {Profile} from "../tool-env/profile.js";
@@ -55,6 +56,10 @@ const defaultExtensionHandlers = {
     return "module.exports = " +
       JSON.stringify(JSON.parse(dataString), null, 2) +
       ";\n";
+  },
+
+  ".css"(dataString, hash) {
+    return cssToCommonJS(dataString, hash);
   }
 };
 
@@ -127,7 +132,9 @@ export default class ImportScanner {
 
       const dotExt = "." + file.type;
       const dataString = file.data.toString("utf8");
-      file.dataString = defaultExtensionHandlers[dotExt](dataString);
+      file.dataString = defaultExtensionHandlers[dotExt](
+        dataString, file.hash);
+
       if (! (file.data instanceof Buffer) ||
           file.dataString !== dataString) {
         file.data = new Buffer(file.dataString, "utf8");
@@ -424,7 +431,10 @@ export default class ImportScanner {
     }
 
     const ext = pathExtname(absPath).toLowerCase();
-    info.dataString = defaultExtensionHandlers[ext](info.dataString);
+    info.dataString = defaultExtensionHandlers[ext](
+      info.dataString,
+      info.hash,
+    );
 
     if (info.dataString !== dataString) {
       info.data = new Buffer(info.dataString, "utf8");
