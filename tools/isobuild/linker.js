@@ -423,7 +423,13 @@ var File = function (inputFile, module) {
   self.servePath = inputFile.servePath;
 
   // Module identifiers imported or required by this module, if any.
-  self.deps = inputFile.deps || [];
+  if (Array.isArray(inputFile.deps)) {
+    self.deps = inputFile.deps;
+  } else if (inputFile.deps && typeof inputFile.deps === "object") {
+    self.deps = Object.keys(inputFile.deps);
+  } else {
+    self.deps = [];
+  }
 
   // True if the input file should not be evaluated eagerly.
   self.lazy = inputFile.lazy; // could be `true`, `false` or `undefined` <sigh>
@@ -567,11 +573,9 @@ _.extend(File.prototype, {
     var self = this;
     var width = options.sourceWidth || 70;
     var bannerWidth = width + 3;
-    var result;
-    var lines;
-
     var noLineNumbers = options.noLineNumbers;
     var preserveLineNumbers = options.preserveLineNumbers;
+    var result;
 
     if (self.sourceMap) {
       // If we have a source map, it is also important to annotate line
@@ -633,7 +637,7 @@ _.extend(File.prototype, {
       var padding = bannerPadding(bannerWidth);
 
       // We might have already done this split above.
-      lines = lines || result.code.split("\n");
+      const lines = result.code.split(/\r?\n/);
 
       // Use the SourceMapConsumer object to compute the original line
       // number for each line of result.code.

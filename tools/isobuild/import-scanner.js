@@ -1,5 +1,7 @@
 import assert from "assert";
-import {isString, has, keys, each, map, without} from "underscore";
+import {
+  isString, isEmpty, has, keys, each, map, without
+} from "underscore";
 import {sha1, readAndWatchFileWithHash} from "../fs/watch.js";
 import {matches as archMatches} from "../utils/archinfo.js";
 import {findImportedModuleIdentifiers} from "./js-analyze.js";
@@ -65,9 +67,9 @@ const defaultExtensionHandlers = {
 // of ImportScanner (which do not persist across builds).
 const IMPORT_SCANNER_CACHE = new LRU({
   max: 1024*1024,
-  length(value) {
+  length(ids) {
     let total = 40; // size of key
-    value.forEach(str => { total += str.length; });
+    each(ids, (info, id) => { total += id.length; });
     return total;
   }
 });
@@ -78,7 +80,6 @@ export default class ImportScanner {
     bundleArch,
     extensions = [".js", ".json"],
     sourceRoot,
-    usedPackageNames = {},
     nodeModulesPaths = [],
     watchSet,
   }) {
@@ -88,7 +89,6 @@ export default class ImportScanner {
     this.bundleArch = bundleArch;
     this.extensions = extensions;
     this.sourceRoot = sourceRoot;
-    this.usedPackageNames = usedPackageNames;
     this.nodeModulesPaths = nodeModulesPaths;
     this.watchSet = watchSet;
     this.absPathToOutputIndex = Object.create(null);
@@ -117,7 +117,13 @@ export default class ImportScanner {
 
   addInputFiles(files) {
     files.forEach(file => {
-      const absPath = this._ensureSourcePath(file);
+      file.sourcePath = this._getSourcePath(file);
+
+      // Note: this absolute path may not necessarily exist on the file
+      // system, but any import statements or require calls in file.data
+      // will be interpreted relative to this path, so it needs to be
+      // something plausible. #6411 #6383
+      const absPath = pathJoin(this.sourceRoot, file.sourcePath);
 
       const dotExt = "." + file.type;
       const dataString = file.data.toString("utf8");
@@ -193,49 +199,46 @@ export default class ImportScanner {
   }
 
   addNodeModules(identifiers) {
+    assert.ok(identifiers);
+    assert.ok(typeof identifiers === "object");
+    assert.ok(! Array.isArray(identifiers));
+
     const newlyMissing = Object.create(null);
     const newlyAdded = Object.create(null);
 
-    if (identifiers) {
-      if (typeof identifiers === "object" &&
-          ! Array.isArray(identifiers)) {
-        identifiers = Object.keys(identifiers);
-      }
+    if (! isEmpty(identifiers)) {
+      const previousAllMissingNodeModules = this.allMissingNodeModules;
+      this.allMissingNodeModules = newlyMissing;
 
-      if (identifiers.length > 0) {
-        const previousAllMissingNodeModules = this.allMissingNodeModules;
-        this.allMissingNodeModules = newlyMissing;
+      try {
+        this._scanFile({
+          sourcePath: "fake.js",
+          // By specifying the .deps property of this fake file ahead of
+          // time, we can avoid calling findImportedModuleIdentifiers in the
+          // _scanFile method.
+          deps: identifiers,
+        });
 
-        try {
-          this._scanFile({
-            sourcePath: "fake.js",
-            // By specifying the .deps property of this fake file ahead of
-            // time, we can avoid calling findImportedModuleIdentifiers in the
-            // _scanFile method.
-            deps: identifiers,
-          });
+      } finally {
+        this.allMissingNodeModules = previousAllMissingNodeModules;
 
-        } finally {
-          this.allMissingNodeModules = previousAllMissingNodeModules;
+        each(identifiers, (info, id) => {
+          if (! has(newlyMissing, id)) {
+            newlyAdded[id] = info;
+          }
+        });
 
-          identifiers.forEach(id => {
-            if (! has(newlyMissing, id)) {
-              newlyAdded[id] = this.name;
-            }
-          });
-
-          // Remove previously seen missing module identifiers from
-          // newlyMissing and merge the new identifiers back into
-          // this.allMissingNodeModules.
-          each(keys(newlyMissing), key => {
-            if (has(previousAllMissingNodeModules, key)) {
-              delete newlyMissing[key];
-            } else {
-              previousAllMissingNodeModules[key] =
-                newlyMissing[key];
-            }
-          });
-        }
+        // Remove previously seen missing module identifiers from
+        // newlyMissing and merge the new identifiers back into
+        // this.allMissingNodeModules.
+        each(keys(newlyMissing), key => {
+          if (has(previousAllMissingNodeModules, key)) {
+            delete newlyMissing[key];
+          } else {
+            previousAllMissingNodeModules[key] =
+              newlyMissing[key];
+          }
+        });
       }
     }
 
@@ -253,36 +256,42 @@ export default class ImportScanner {
     });
   }
 
-  _ensureSourcePath(file) {
+  _getSourcePath(file) {
     let sourcePath = file.sourcePath;
     if (sourcePath) {
       if (pathIsAbsolute(sourcePath)) {
-        const relPath = pathRelative(this.sourceRoot, sourcePath);
-        if (relPath.startsWith("..")) {
-          if (this._joinAndStat(this.sourceRoot, sourcePath)) {
-            // If sourcePath exists as a path relative to this.sourceRoot,
-            // strip away the leading / that made it look absolute.
-            sourcePath = pathJoin(".", sourcePath);
-          } else {
-            throw new Error("sourcePath outside sourceRoot: " + sourcePath);
+        try {
+          var relPath = pathRelative(this.sourceRoot, sourcePath);
+
+        } finally {
+          if (! relPath || relPath.startsWith("..")) {
+            if (this._joinAndStat(this.sourceRoot, sourcePath)) {
+              // If sourcePath exists as a path relative to this.sourceRoot,
+              // strip away the leading / that made it look absolute.
+              return pathJoin(".", sourcePath);
+            }
+
+            if (relPath) {
+              throw new Error("sourcePath outside sourceRoot: " + sourcePath);
+            }
+
+            // If pathRelative threw an exception above, and we were not
+            // able to handle the problem, it will continue propagating
+            // from this finally block.
           }
-        } else {
-          sourcePath = relPath;
         }
+
+        sourcePath = relPath;
       }
+
     } else if (file.servePath) {
       sourcePath = convertToOSPath(file.servePath.replace(/^\//, ""));
+
     } else if (file.path) {
       sourcePath = file.path;
     }
 
-    file.sourcePath = sourcePath;
-
-    // Note: this absolute path may not necessarily exist on the file
-    // system, but any import statements or require calls in file.data
-    // will be interpreted relative to this path, so it needs to be
-    // something plausible. #6411 #6383
-    return pathJoin(this.sourceRoot, sourcePath);
+    return sourcePath;
   }
 
   _findImportedModuleIdentifiers(file) {
@@ -290,10 +299,10 @@ export default class ImportScanner {
       return IMPORT_SCANNER_CACHE.get(file.hash);
     }
 
-    const result = keys(findImportedModuleIdentifiers(
+    const result = findImportedModuleIdentifiers(
       file.dataString,
       file.hash,
-    ));
+    );
 
     // there should always be file.hash, but better safe than sorry
     if (file.hash) {
@@ -320,7 +329,7 @@ export default class ImportScanner {
       throw e;
     }
 
-    each(file.deps, id => {
+    each(file.deps, (info, id) => {
       const resolved = this._tryToResolveImportedPath(file, id);
       if (! resolved) {
         return;
@@ -344,7 +353,16 @@ export default class ImportScanner {
         depFile.imported = true;
 
         if (! alreadyScanned) {
-          this._scanFile(depFile);
+          if (depFile.error) {
+            // Since this file is lazy, it might never have been imported,
+            // so any errors reported to InputFile#error were saved but
+            // not reported at compilation time. Now that we know the file
+            // has been imported, it's time to report those errors.
+            buildmessage.error(depFile.error.message,
+                               depFile.error.info);
+          } else {
+            this._scanFile(depFile);
+          }
         }
 
         return;
@@ -690,8 +708,12 @@ export default class ImportScanner {
       const isApp = ! this.name;
       if (isApp && isNative && archMatches(this.bundleArch, "web")) {
         // To ensure the native module can be evaluated at runtime,
-        // register a dependency on meteor-node-stubs/defs/<id>.js.
-        return this._resolveNodeModule(file, nativeModulesMap[id]);
+        // register a dependency on meteor-node-stubs/deps/<id>.js.
+        const stubsId = nativeModulesMap[id];
+        if (isString(stubsId) && stubsId !== id) {
+          file.deps[stubsId] = file.deps[id];
+          return this._resolveNodeModule(file, stubsId);
+        }
       }
 
       // If the imported identifier is neither absolute nor relative, but
@@ -700,11 +722,24 @@ export default class ImportScanner {
       // missing dependency so that we can include it in the app bundle.
       const missing = file.missingNodeModules || Object.create(null);
       file.missingNodeModules = missing;
-      this.allMissingNodeModules[id] = missing[id] = {
+
+      const possiblySpurious =
+        has(file.deps, id) &&
+        file.deps[id].possiblySpurious;
+
+      const info = missing[id] = {
         packageName: this.name,
         parentPath: absPath,
         bundleArch: this.bundleArch,
+        possiblySpurious,
       };
+
+      if (! has(this.allMissingNodeModules, id) ||
+          ! info.possiblySpurious) {
+        // Allow any non-spurious identifier to replace an existing
+        // possibly spurious identifier.
+        this.allMissingNodeModules[id] = info;
+      }
     }
 
     // If the dependency is still not resolved, it might be handled by the
@@ -793,7 +828,7 @@ export default class ImportScanner {
       const pkgFile = {
         type: "js", // We represent the JSON module with JS.
         data,
-        deps: [], // Avoid accidentally re-scanning this file.
+        deps: {}, // Avoid accidentally re-scanning this file.
         sourcePath: relPkgJsonPath,
         installPath: this._getInstallPath(pkgJsonPath),
         servePath: relPkgJsonPath,

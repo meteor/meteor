@@ -37,7 +37,7 @@ and this call specifies helpers to add to the template's dictionary.
 Example:
 
     Template.myTemplate.helpers({
-      foo: function () {
+      foo() {
         return Session.get("foo");
       }
     });
@@ -49,7 +49,7 @@ Helpers can accept positional and keyword arguments:
 
 ```javascript
 Template.myTemplate.helpers({
-  displayName: function (firstName, lastName, keyword) {
+  displayName(firstName, lastName, keyword) {
     var prefix = keyword.hash.title ? keyword.hash.title + " " : "";
     return prefix + firstName + " " + lastName;
   }
@@ -264,12 +264,10 @@ Another example where the subscription depends on the data context:
 
 ```js
 Template.comments.onCreated(function () {
-  var self = this;
-
-  // Use self.subscribe with the data context reactively
-  self.autorun(function () {
+  // Use this.subscribe with the data context reactively
+  this.autorun(() => {
     var dataContext = Template.currentData();
-    self.subscribe("comments", dataContext.postId);
+    this.subscribe("comments", dataContext.postId);
   });
 });
 ```
@@ -287,9 +285,9 @@ done:
 Template.listing.onRendered(function () {
   var template = this;
 
-  template.subscribe('listOfThings', function () {
+  template.subscribe('listOfThings', () => {
     // Wait for the data to load using the callback
-    Tracker.afterFlush(function () {
+    Tracker.afterFlush(() => {
       // Use Tracker.afterFlush to wait for the UI to re-render
       // then use highlight.js to highlight a code snippet
       highlightBlock(template.find('.code'));
@@ -373,13 +371,13 @@ Example:
 
     {
       // Fires when any element is clicked
-      'click': function (event) { ... },
+      'click'(event) { ... },
 
       // Fires when any element with the 'accept' class is clicked
-      'click .accept': function (event) { ... },
+      'click .accept'(event) { ... },
 
       // Fires when 'accept' is clicked or focused, or a key is pressed
-      'click .accept, focus .accept, keypress': function (event) { ... }
+      'click .accept, focus .accept, keypress'(event) { ... }
     }
 
 Most events bubble up the document tree from their originating
@@ -390,7 +388,7 @@ is available as the `target` property, while the element that matched
 the selector and is currently handling it is called `currentTarget`.
 
     {
-      'click p': function (event) {
+      'click p'(event) {
         var paragraph = event.currentTarget; // always a P
         var clickedElement = event.target; // could be the P or a child element
       }

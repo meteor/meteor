@@ -28,4 +28,10 @@ if (win32Extensions.hasOwnProperty(devBundleBinCommand)) {
       PATH: { value: binDir + ":" + process.env.PATH }
     })
   });
+
+  require("./flush-buffers-on-exit-in-windows.js");
+
+  exports.process.on("exit", function (exitCode) {
+    process.exit(exitCode);
+  });
 }

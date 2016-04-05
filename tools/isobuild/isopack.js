@@ -1174,10 +1174,15 @@ _.extend(Isopack.prototype, {
   //   format, this function silently only saves the newer format.  (The point
   //   of this flag is allow us to optimize cases that never need to write the
   //   older format, such as the per-app isopack cache.)
-  saveToPath: Profile("Isopack#saveToPath", function (outputDir, options) {
+  // - usesModules: boolean indicating whether this isopack uses the
+  //   Meteor module system
+  saveToPath: Profile("Isopack#saveToPath", function (outputDir, {
+    includePreCompilerPluginIsopackVersions,
+    includeIsopackBuildInfo,
+    usesModules = true,
+  } = {}) {
     var self = this;
     var outputPath = outputDir;
-    options = options || {};
 
     var builder = new Builder({ outputPath: outputPath });
     try {
@@ -1204,11 +1209,11 @@ _.extend(Isopack.prototype, {
       }
 
       const writeLegacyBuilds = (
-        options.includePreCompilerPluginIsopackVersions
+        includePreCompilerPluginIsopackVersions
           && self.canWriteLegacyBuilds());
 
       var isopackBuildInfoJson = null;
-      if (options.includeIsopackBuildInfo) {
+      if (includeIsopackBuildInfo) {
         isopackBuildInfoJson = {
           builtBy: compiler.BUILT_BY,
           unibuildDependencies: {},
@@ -1350,16 +1355,26 @@ _.extend(Isopack.prototype, {
             if (! (resource.data instanceof Buffer)) {
               throw new Error("Resource data must be a Buffer");
             }
+
+            if (! usesModules &&
+                resource.fileOptions &&
+                resource.fileOptions.lazy) {
+              // Omit lazy resources from the unibuild JSON file.
+              return;
+            }
+
             unibuildJson.resources.push({
               type: resource.type,
               file: files.pathJoin(unibuildDir, resource.type),
               length: resource.data.length,
               offset: offset[resource.type]
             });
+
             concat[resource.type].push(resource.data);
             offset[resource.type] += resource.data.length;
           }
         });
+
         _.each(concat, function (parts, type) {
           if (parts.length) {
             builder.write(files.pathJoin(unibuildDir, type), {
@@ -1372,6 +1387,20 @@ _.extend(Isopack.prototype, {
         _.each(unibuild.resources, function (resource) {
           if (_.contains(["head", "body"], resource.type)) {
             // already did this one
+            return;
+          }
+
+          const generatedFilename =
+            builder.writeToGeneratedFilename(
+              files.pathJoin(unibuildDir,
+                             resource.servePath || resource.path),
+              { data: resource.data });
+
+          if (! usesModules &&
+              resource.fileOptions &&
+              resource.fileOptions.lazy) {
+            // Omit lazy resources from the unibuild JSON file, but only
+            // after they are copied into the bundle (immediately above).
             return;
           }
 
@@ -1397,10 +1426,7 @@ _.extend(Isopack.prototype, {
           unibuildJson.resources.push({
             type: resource.type,
             extension: resource.extension,
-            file: builder.writeToGeneratedFilename(
-              files.pathJoin(unibuildDir,
-                             resource.servePath || resource.path),
-              { data: resource.data }),
+            file: generatedFilename,
             length: resource.data.length,
             offset: 0,
             usesDefaultSourceProcessor:

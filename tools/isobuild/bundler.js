@@ -268,13 +268,12 @@ export class NodeModulesDirectory {
               kind === "isopack",
               kind);
 
-    const name = this.packageName;
-
     let relPath = files.pathRelative(this.sourceRoot, this.sourcePath);
     rejectBadPath(relPath);
 
-    const isApp = ! name;
+    const isApp = ! this.packageName;
     if (! isApp) {
+      const name = colonConverter.convert(this.packageName);
       const relParts = relPath.split(files.pathSep);
 
       if (relParts[0] === ".npm") {
@@ -290,15 +289,19 @@ export class NodeModulesDirectory {
         // The npm/ at the beginning of the relPath was probably added by
         // a previous call to getPreferredBundlePath, so we remove it here
         // to avoid duplication.
-        relParts.splice(0, 1);
+        let spliceCount = 1;
+        if (relParts[1] === "node_modules" &&
+            relParts[2] === "meteor" &&
+            relParts[3] === name) {
+          // Same with node_modules/meteor/<package name>/, which was
+          // almost certainly added by the code immediately below.
+          spliceCount += 3;
+        }
+        relParts.splice(0, spliceCount);
       }
 
       if (kind === "bundle") {
-        relParts.unshift(
-          "node_modules",
-          "meteor",
-          colonConverter.convert(name)
-        );
+        relParts.unshift("node_modules", "meteor", name);
       }
 
       relPath = files.pathJoin(...relParts);
