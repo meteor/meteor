@@ -57,7 +57,7 @@
     "colors": "1.1.2",
     "coveralls": "2.11.9",
     "cz-conventional-changelog": "1.1.5",
-    "eslint": "2.5.3",
+    "eslint": "2.7.0",
     "eslint-config-airbnb": "6.2.0",
     "eslint-plugin-react": "4.2.3",
     "ghooks": "1.1.1",
