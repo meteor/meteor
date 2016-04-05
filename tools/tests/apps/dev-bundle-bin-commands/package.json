@@ -1,0 +1,12 @@
+{
+  "name": "dev-bundle-bin-commands",
+  "private": true,
+  "scripts": {
+    "start": "meteor run",
+    "exit-with-status": "echo \"This script has an exit status\" && exit 1",
+    "exit-normally": "echo \"This script will exit normally\" && exit 0"
+  },
+  "dependencies": {
+    "meteor-node-stubs": "~0.2.0"
+  }
+}

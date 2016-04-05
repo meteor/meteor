@@ -385,82 +385,86 @@ class SourceClassification {
 
 
 // This is the base class of the object presented to the user's plugin code.
-exports.InputFile = function (resourceSlot) {
-};
-_.extend(exports.InputFile.prototype, {
+export class InputFile {
   /**
    * @summary Returns the full contents of the file as a buffer.
    * @memberof InputFile
    * @returns {Buffer}
    */
-  getContentsAsBuffer: function () {
+  getContentsAsBuffer() {
     throw new Error("Not Implemented");
-  },
+  }
+
   /**
    * @summary Returns the name of the package or `null` if the file is not in a
    * package.
    * @memberof InputFile
    * @returns {String}
    */
-  getPackageName: function () {
+  getPackageName() {
     throw new Error("Not Implemented");
-  },
+  }
+
   /**
    * @summary Returns the relative path of file to the package or app root
    * directory. The returned path always uses forward slashes.
    * @memberof InputFile
    * @returns {String}
    */
-  getPathInPackage: function () {
+  getPathInPackage() {
     throw new Error("Not Implemented");
-  },
+  }
+
   /**
    * @summary Returns a hash string for the file that can be used to implement
    * caching.
    * @memberof InputFile
    * @returns {String}
    */
-  getSourceHash: function () {
+  getSourceHash() {
     throw new Error("Not Implemented");
-  },
+  }
+
   /**
    * @summary Returns the architecture that is targeted while processing this
    * file.
    * @memberof InputFile
    * @returns {String}
    */
-  getArch: function () {
+  getArch() {
     throw new Error("Not Implemented");
-  },
+  }
 
   /**
    * @summary Returns the full contents of the file as a string.
    * @memberof InputFile
    * @returns {String}
    */
-  getContentsAsString: function () {
+  getContentsAsString() {
     var self = this;
     return self.getContentsAsBuffer().toString('utf8');
-  },
+  }
+
   /**
    * @summary Returns the filename of the file.
    * @memberof InputFile
    * @returns {String}
    */
-  getBasename: function () {
+  getBasename() {
     var self = this;
     return files.pathBasename(self.getPathInPackage());
-  },
+  }
+
   /**
    * @summary Returns the directory path relative to the package or app root.
    * The returned path always uses forward slashes.
    * @memberof InputFile
    * @returns {String}
    */
-  getDirname: function () {
+  getDirname() {
     var self = this;
     return files.pathDirname(self.getPathInPackage());
-  },
+  }
 
   /**
    * @summary Returns an object of file options such as those passed as the
@@ -468,9 +472,9 @@ _.extend(exports.InputFile.prototype, {
    * @memberof InputFile
    * @returns {Object}
    */
-  getFileOptions: function () {
+  getFileOptions() {
     throw new Error("Not Implemented");
-  },
+  }
 
   /**
    * @summary Call this method to raise a compilation or linting error for the
@@ -482,30 +486,24 @@ _.extend(exports.InputFile.prototype, {
    * @param {String} options.func The function name to display in the error message.
    * @memberof InputFile
    */
-  error: function (options) {
+  error(options) {
     var self = this;
-    if (self.getFileOptions().lazy === true) {
-      // Files with fileOptions.lazy === true were not explicitly added to
-      // the source batch via api.addFiles or api.mainModule, so any
-      // compilation errors should not be fatal. Attempting compilation is
-      // still important for lazy files that might end up being imported
-      // later, which is why we defang the error here, instead of avoiding
-      // compilation preemptively. Note also that actual exceptions will
-      // still cause build errors.
-      return;
-    }
-
     var path = self.getPathInPackage();
     var packageName = self.getPackageName();
     if (packageName) {
       path = "packages/" + packageName + "/" + path;
     }
 
-    buildmessage.error(options.message || ("error building " + path), {
+    self._reportError(options.message || ("error building " + path), {
       file: options.sourcePath || path,
       line: options.line ? options.line : undefined,
       column: options.column ? options.column : undefined,
       func: options.func ? options.func : undefined
     });
   }
-});
+
+  // Default implementation. May be overridden by subclasses.
+  _reportError(message, info) {
+    buildmessage.error(message, info);
+  }
+}

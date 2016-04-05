@@ -670,9 +670,9 @@ Blaze.renderWithData = function (content, data, parentElement, nextNode, parentV
 };
 
 /**
- * @summary Removes a rendered View from the DOM, stopping all reactive updates and event listeners on it.
+ * @summary Removes a rendered View from the DOM, stopping all reactive updates and event listeners on it. Also destroys the Blaze.Template instance associated with the view.
  * @locus Client
- * @param {Blaze.View} renderedView The return value from `Blaze.render` or `Blaze.renderWithData`.
+ * @param {Blaze.View} renderedView The return value from `Blaze.render` or `Blaze.renderWithData`, or the `view` property of a Blaze.Template instance. Calling `Blaze.remove(Template.instance().view)` from within a template event handler will destroy the view as well as that template and trigger the template's `onDestroyed` handlers.
  */
 Blaze.remove = function (view) {
   if (! (view && (view._domrange instanceof Blaze._DOMRange)))
