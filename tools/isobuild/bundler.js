@@ -1866,6 +1866,7 @@ class JsImage {
     });
 
     const setupScriptPieces = [];
+    const rebuildDirs = Object.create(null);
     // node_modules resources from the packages. Due to appropriate
     // builder configuration, 'meteor bundle' and 'meteor deploy' copy
     // them, and 'meteor run' symlinks them. If these contain
@@ -1873,6 +1874,11 @@ class JsImage {
     // appropriately specific arch.
     _.each(nodeModulesDirectories, function (nmd) {
       assert.strictEqual(typeof nmd.preferredBundlePath, "string");
+
+      if (! nmd.isPortable()) {
+        const parentDir = files.pathDirname(nmd.preferredBundlePath);
+        rebuildDirs[parentDir] = parentDir;
+      }
 
       if (nmd.writePackageJSON) {
         // Make sure there's an empty node_modules directory at the right place
@@ -1895,7 +1901,7 @@ class JsImage {
         // XXX does not support npmDiscards!
 
         setupScriptPieces.push(
-          '(cd ', nmd.preferredBundlePath, ' && npm install)\n\n');
+          '(cd ', nmd.preferredBundlePath, ' && npm install)\n');
       } else if (nmd.sourcePath !== nmd.preferredBundlePath) {
         builder.copyDirectory({
           from: nmd.sourcePath,
@@ -1904,6 +1910,10 @@ class JsImage {
           symlink: (options.includeNodeModules === 'symlink')
         });
       }
+    });
+
+    _.each(rebuildDirs, dir => {
+      setupScriptPieces.push("(cd ", dir, " && npm rebuild)\n");
     });
 
     if (setupScriptPieces.length) {
