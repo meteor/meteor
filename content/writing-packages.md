@@ -225,7 +225,7 @@ const React = require('react');
 
 <h2 id="exporting-css-preprocessor-code">LESS, SCSS, or Stylus mixins/variables</h2>
 
-Just like packages can export JavaScript code, they can export reusable bits of CSS pre-processor code. You can have a package that doesn't actually include any CSS, but just exports different bits of reusable mixins and variables. Learn more about this in the [article about the Meteor build system](build-tool.html), which includes a section about CSS compilers.
+Just like packages can export JavaScript code, they can export reusable bits of CSS pre-processor code. You can have a package that doesn't actually include any CSS, but just exports different bits of reusable mixins and variables. To learn more see the Meteor build system section on [CSS pre-processors](build-tool.html#css).
 
 <h2 id="cordova-plugins">Cordova plugins</h2>
 
