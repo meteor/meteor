@@ -8,8 +8,10 @@ try {
   if (e.code !== "MODULE_NOT_FOUND") {
     throw e;
   }
+
   // If npm-rebuilds.json was not written, assume there is nothing that
   // needs to be rebuilt.
+  process.exit(0);
 }
 
 // Make sure the npm finds this exact version of node in its $PATH.
