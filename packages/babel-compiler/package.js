@@ -6,7 +6,7 @@ Package.describe({
   // isn't possible because you can't publish a non-recommended
   // release with package versions that don't have a pre-release
   // identifier at the end (eg, -dev)
-  version: '6.6.1'
+  version: '6.6.2'
 });
 
 Npm.depends({
@@ -18,8 +18,6 @@ Package.onUse(function (api) {
     'babel.js',
     'babel-compiler.js'
   ], 'server');
-
-  api.use('check@1.1.0');
 
   api.export('Babel', 'server');
   api.export('BabelCompiler', 'server');
