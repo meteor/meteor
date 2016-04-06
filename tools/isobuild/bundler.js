@@ -1817,8 +1817,8 @@ class JsImage {
       load.push(loadItem);
     });
 
-    const setupScriptPieces = [];
     const rebuildDirs = Object.create(null);
+
     // node_modules resources from the packages. Due to appropriate
     // builder configuration, 'meteor bundle' and 'meteor deploy' copy
     // them, and 'meteor run' symlinks them. If these contain
@@ -1842,17 +1842,14 @@ class JsImage {
       }
     });
 
-    _.each(rebuildDirs, dir => {
-      setupScriptPieces.push("(cd ", dir, " && npm rebuild)\n");
+    // This JSON file will be read by npm-rebuild.js, which is executed to
+    // trigger rebuilds for all non-portable npm packages.
+    builder.write("npm-rebuilds.json", {
+      data: new Buffer(
+        JSON.stringify(Object.keys(rebuildDirs), null, 2) + "\n",
+        "utf8"
+      )
     });
-
-    if (setupScriptPieces.length) {
-      setupScriptPieces.unshift('#!/usr/bin/env bash\n', 'set -e\n\n');
-      builder.write('setup.sh', {
-        data: new Buffer(setupScriptPieces.join(''), 'utf8'),
-        executable: true
-      });
-    }
 
     // Control file
     builder.writeJson('program.json', {
@@ -2062,6 +2059,7 @@ class ServerTarget extends JsImageTarget {
       "server-json.js",
       "mini-files.js",
       "npm-require.js",
+      "npm-rebuild.js",
     ], function (filename) {
       builder.write(filename, {
         file: files.pathJoin(
