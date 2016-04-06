@@ -425,9 +425,7 @@ The file serving mechanism used in Meteor allows for local file access through U
 
 Cordova controls access to external domains through a whitelisting mechanism, which is implemented as [`cordova-plugin-whitelist`](https://github.com/apache/cordova-plugin-whitelist) in the version of Cordova we bundle.
 
-By default, Cordova apps in Meteor are only allowed access to `localhost` (to serve the app from) and the server your app connects to for data loading and hot code push (either an automatically detected IP address an explicitly configured mobile server domain).
-
-In Meteor, you use [`App.accessRule`](http://docs.meteor.com/#/full/App-accessRule) in `mobile-config.js` to set additional rules. (These correspond to `<access>`, `<allow-navigation>` and `<allow-intent>` tags in the generated`config.xml`.)
+In Meteor, you use [`App.accessRule`](http://docs.meteor.com/#/full/App-accessRule) in `mobile-config.js` to set additional rules. (These correspond to `<access>`, `<allow-navigation>` and `<allow-intent>` tags in the generated `config.xml`.)
 
 > On iOS, these settings also control [Application Transport Security (ATS)](https://developer.apple.com/library/prerelease/ios/documentation/General/Reference/InfoPlistKeyReference/Articles/CocoaKeys.html#//apple_ref/doc/uid/TP40009251-SW33), which is an OS level mechanism to enforce security best practices new to iOS 9. If the server you're connecting to does not (yet) fulfill these requirements, you can use additional options to override them for specific domains:
 > ```js
@@ -435,6 +433,13 @@ App.accessRule('https://domain.com', {
   'minimum-tls-version': 'TLSv1.0',
   'requires-forward-secrecy': false,
 });
+```
+
+By default, Cordova apps in Meteor are only allowed access to `localhost` (the device itself, to serve the app from) and the server your app connects to for data loading and hot code push (either an automatically detected IP address an explicitly configured mobile server domain). These restrictions also apply to loading files in iframes and to opening files in other apps (including the mobile browser).
+
+> Note that these restrictions mean you will have to explicitly allow loading `data:` URLs. For example, to allow loading `data:` URLs in iframes you would add:
+> ```js
+App.accessRule('data:*', { type: 'navigation' });
 ```
 
 <h3 id="csp">Content Security Policy (CSP)</h3>
@@ -478,6 +483,16 @@ Although Meteor includes a standard set of app icons and launch screens, you'll 
 You configure these images with [`App.icons`](http://docs.meteor.com/#/full/App-icons) and [`App.launchScreens`](http://docs.meteor.com/#/full/App-launchScreens), which both use names to refer to the various supported image sizes (see API documentation).
 
 For iOS, you can also refer to the [Icon and image sizes](https://developer.apple.com/library/ios/documentation/UserExperience/Conceptual/MobileHIG/IconMatrix.html) in the iOS Human Interface Guidelines for more information about the way these different sizes are used.
+
+<h3 id="advanced-build">Advanced build customization</h3>
+
+There is a special top-level directory named `cordova-build-override/` that allows you to override, in an ad-hoc way, parts of your Cordova project that Meteor generates for you in the `.meteor/local/cordova-build` directory. The entire file tree of this directory will be `cp -R` (copied overwriting existing files) to the Cordova project right before the build and compilation step.
+
+The problem with this mechanism is that it overrides complete files, so it is not a good solution for customizing `config.xml`. Replacing the generated version with your own file means you lose all configuration information set by the build process and by installed plugins, which will likely break your app.
+
+If you need to customize configuration files, a workaround is to create a dummy Cordova plugin. In its `plugin.xml`, you can specify a [`config-file` element](https://cordova.apache.org/docs/en/dev/plugin_ref/spec.html#config-file) to selectively change parts of configuration files, including `config.xml`.
+
+> We recommend using these approaches only if absolutely required and if your customizations can not be handled by standard configuration options.
 
 <h2 id="building-and-submitting">Submitting your mobile app to the store</h2>
 

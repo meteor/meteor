@@ -152,7 +152,7 @@ apm install linter-eslint
 Go to *Settings -> Packages.* Under "linter-eslint", click the *Settings* button. To allow atom to see ESLint, you need to set "Global Node Path" to your Node path. As indicated in Atom, you can find this out with the following command in the terminal:
 
 ```
-meteor npm config get prefix
+npm get prefix
 ```
 
 This will return something like `/usr/local`. Add this to the "Global Node Path", and check "Use Global Eslint":

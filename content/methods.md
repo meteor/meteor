@@ -28,7 +28,7 @@ In a basic app, defining a Meteor Method is as simple as defining a function. In
 
 <h4 id="basic-defining">Defining</h4>
 
-Here's how you can use the built-in [`Meteor.methods` API](http://docs.meteor.com/#/full/meteor_methods) to define a Method. Note that Methods should always be defined in common code loaded on the client and the server to enable Optimistic UI. If you have some secret code in your Method, consult the [Security article](security.md#secret-code) for how to hide it from the client.
+Here's how you can use the built-in [`Meteor.methods` API](http://docs.meteor.com/#/full/meteor_methods) to define a Method. Note that Methods should always be defined in common code loaded on the client and the server to enable Optimistic UI. If you have some secret code in your Method, consult the [Security article](security.html#secret-code) for how to hide it from the client.
 
 This example uses the `aldeed:simple-schema` package, which is recommended in several other articles, to validate the Method arguments.
 
