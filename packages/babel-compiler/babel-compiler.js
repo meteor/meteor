@@ -4,7 +4,6 @@
  * @param {Object} extraFeatures The same object that getDefaultOptions takes
  */
 BabelCompiler = function BabelCompiler(extraFeatures) {
-  Babel.validateExtraFeatures(extraFeatures);
   this.extraFeatures = extraFeatures;
 };
 
