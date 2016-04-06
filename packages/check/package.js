@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
-  api.use(['underscore', 'ejson'], ['client', 'server']);
+  api.use(['underscore', 'modules', 'ejson'], ['client', 'server']);
 
   api.export(['check', 'Match']);
 
