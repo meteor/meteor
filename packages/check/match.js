@@ -4,7 +4,7 @@
 //    - heterogenous arrays
 
 //XXX: import from main lodash library if Meteor updates to use lodash instead of underscore
-const isPlainObject = Npm.require('lodash.isplainobject');
+const isPlainObject = require('lodash.isplainobject');
 
 var currentArgumentChecker = new Meteor.EnvironmentVariable;
 
