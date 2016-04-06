@@ -1,4 +1,5 @@
 import assert from "assert";
+import {Script} from "vm";
 import {
   isString, isEmpty, has, keys, each, map, without
 } from "underscore";
@@ -62,6 +63,28 @@ const defaultExtensionHandlers = {
     return cssToCommonJS(dataString, hash);
   }
 };
+
+// This is just a map from hashes to booleans, so it doesn't need full LRU
+// eviction logic.
+const scriptParseCache = Object.create(null);
+
+function canBeParsedAsPlainJS(dataString, hash) {
+  if (hash && has(scriptParseCache, hash)) {
+    return scriptParseCache[hash];
+  }
+
+  try {
+    var result = !! new Script(dataString);
+  } catch (e) {
+    result = false;
+  }
+
+  if (hash) {
+    scriptParseCache[hash] = result;
+  }
+
+  return result;
+}
 
 // Map from SHA (which is already calculated, so free for us)
 // to the results of calling findImportedModuleIdentifiers.
@@ -375,24 +398,20 @@ export default class ImportScanner {
         return;
       }
 
-      if (! this._hasDefaultExtension(absImportedPath)) {
-        // The _readModule method provides hardcoded support for files
-        // with known extensions, but any other type of file must be
-        // ignored at this point, because it was not in the set of input
-        // files and therefore must not have been processed by a compiler
-        // plugin for the current architecture (this.bundleArch).
-        return;
-      }
-
       const installPath = this._getInstallPath(absImportedPath);
       if (! installPath) {
         // The given path cannot be installed on this architecture.
         return;
       }
 
-      // The object returned by _readModule will have .data, .dataString,
+      // If the module is not readable, _readModule may return
+      // null. Otherwise it will return an object with .data, .dataString,
       // and .hash properties.
       depFile = this._readModule(absImportedPath);
+      if (! depFile) {
+        return;
+      }
+
       depFile.type = "js"; // TODO Is this correct?
       depFile.sourcePath = pathRelative(this.sourceRoot, absImportedPath);
       depFile.installPath = installPath;
@@ -430,7 +449,15 @@ export default class ImportScanner {
       info.dataString = info.dataString.slice(1);
     }
 
-    const ext = pathExtname(absPath).toLowerCase();
+    let ext = pathExtname(absPath).toLowerCase();
+    if (! has(defaultExtensionHandlers, ext)) {
+      if (canBeParsedAsPlainJS(dataString)) {
+        ext = ".js";
+      } else {
+        return null;
+      }
+    }
+
     info.dataString = defaultExtensionHandlers[ext](
       info.dataString,
       info.hash,
@@ -473,12 +500,6 @@ export default class ImportScanner {
 
       if (relPathWithinNodeModules.startsWith("..")) {
         // absPath is not a subdirectory of path.
-        return;
-      }
-
-      if (! this._hasDefaultExtension(relPathWithinNodeModules)) {
-        // Only accept files within node_modules directories if they
-        // have one of the known extensions.
         return;
       }
 
@@ -537,26 +558,12 @@ export default class ImportScanner {
       }
 
       if (dir === "node_modules") {
-        if (! this._hasDefaultExtension(installPath)) {
-          // Reject any files within node_modules directories that do
-          // not have one of the known extensions.
-          return;
-        }
-
-        // Accept any file within a node_modules directory if it has a
-        // known file extension.
+        // Accept any file within a node_modules directory.
         return installPath;
       }
     }
 
     return installPath;
-  }
-
-  _hasDefaultExtension(path) {
-    return has(
-      defaultExtensionHandlers,
-      pathExtname(path).toLowerCase()
-    );
   }
 
   _splitPath(path) {
