@@ -741,7 +741,7 @@ export default class ImportScanner {
       file.missingNodeModules = missing;
 
       const possiblySpurious =
-        has(file.deps, id) &&
+        file.deps && has(file.deps, id) &&
         file.deps[id].possiblySpurious;
 
       const info = missing[id] = {
@@ -823,11 +823,12 @@ export default class ImportScanner {
       // might return a package from a node_modules directory.
       return this._joinAndStat(dirPath, main) ||
         // The _tryToResolveImportedPath method takes a file object as its
-        // first parameter, but only the .sourcePath property is ever
-        // used, so we can get away with passing a fake file object with
-        // only that property.
+        // first parameter, but only the .sourcePath and .deps properties
+        // are ever used, so we can get away with passing a fake file
+        // object with only those properties.
         this._tryToResolveImportedPath({
           sourcePath: pathRelative(this.sourceRoot, pkgJsonPath),
+          deps: {},
         }, main, seenDirPaths);
     }
 
