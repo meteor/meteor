@@ -19,6 +19,9 @@ var packageJson = {
   name: "meteor-dev-bundle",
   // Version is not important but is needed to prevent warnings.
   version: "0.0.0",
+  scripts: {
+    install: "node npm-rebuild.js"
+  },
   dependencies: {
     fibers: fibersVersion,
     "meteor-promise": "0.5.1",
