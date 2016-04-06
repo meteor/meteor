@@ -1,16 +1,17 @@
 Package.describe({
   summary: "Check whether a value matches a pattern",
-  version: '1.1.3'
+  version: '1.2.0'
 });
 
 Package.onUse(function (api) {
-  api.use(['underscore', 'ejson'], ['client', 'server']);
-  api.use('jquery', 'client');
+  api.use('modules');
+  api.use('underscore');
+  api.use('ejson');
 
-  api.export(['check', 'Match']);
+  api.mainModule('match.js');
 
-  api.addFiles('jquery.js', 'server');
-  api.addFiles('match.js', ['client', 'server']);
+  api.export('check');
+  api.export('Match');
 });
 
 Package.onTest(function (api) {
