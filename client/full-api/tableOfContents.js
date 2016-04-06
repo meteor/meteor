@@ -2,12 +2,14 @@ var toc = [
   [
     "Meteor Guide",
   ],
-  
+
   "API", [
     "Core", [
       "Meteor.isClient",
       "Meteor.isServer",
       "Meteor.isCordova",
+      { name: "Meteor.isDevelopment", id: "Meteor-isDevelopment" },
+      { name: "Meteor.isProduction", id: "Meteor-isProduction" },
       "Meteor.startup",
       "Meteor.wrapAsync",
       "Meteor.absoluteUrl",
