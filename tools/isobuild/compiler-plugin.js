@@ -755,6 +755,37 @@ export class PackageSourceBatch {
       return map;
     }
 
+    // Append install(<name>) calls to the install-packages.js file in the
+    // modules package for every Meteor package name used.
+    map.get("modules").files.some(file => {
+      if (file.sourcePath !== "install-packages.js") {
+        return false;
+      }
+
+      const meteorPackageInstalls = [];
+
+      map.forEach((info, name) => {
+        if (! name) return;
+        meteorPackageInstalls.push(
+          "install(" + JSON.stringify(name) + ");\n"
+        );
+      });
+
+      if (meteorPackageInstalls.length === 0) {
+        return false;
+      }
+
+      file.data = new Buffer(
+        file.data.toString("utf8") + "\n" +
+          meteorPackageInstalls.join(""),
+        "utf8"
+      );
+
+      file.hash = sha1(file.data);
+
+      return true;
+    });
+
     const allMissingNodeModules = Object.create(null);
     // Records the subset of allMissingNodeModules that were successfully
     // relocated to a source batch that could handle them.
