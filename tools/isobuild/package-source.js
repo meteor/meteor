@@ -201,7 +201,7 @@ class SymlinkLoopChecker {
     this._realpathCache = {};
   }
 
-  check(relDir, quietly) {
+  check(relDir, quietly = true) {
     const absPath = files.pathJoin(this.sourceRoot, relDir);
 
     try {
@@ -213,7 +213,7 @@ class SymlinkLoopChecker {
       // else leave realPath undefined
     }
 
-    if (realPath === undefined || _.has(this._seenPaths, realPath)) {
+    if (! realPath || _.has(this._seenPaths, realPath)) {
       if (! quietly) {
         buildmessage.error("Symlink cycle detected at " + relDir);
       }
