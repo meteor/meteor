@@ -20,24 +20,34 @@ function canDefineNonEnumerableProperties() {
   return testObj[testPropName] === testObj;
 }
 
+function sanitizeEasy(value) {
+  return value;
+}
+
+function sanitizeHard(obj) {
+  if (Array.isArray(obj)) {
+    var newObj = {};
+    var keys = Object.keys(obj);
+    var keyCount = keys.length;
+    for (var i = 0; i < keyCount; ++i) {
+      var key = keys[i];
+      newObj[key] = obj[key];
+    }
+    return newObj;
+  }
+
+  return obj;
+}
+
 meteorBabelHelpers = module.exports = {
   // Meteor-specific runtime helper for wrapping the object of for-in
   // loops, so that inherited Array methods defined by es5-shim can be
   // ignored in browsers where they cannot be defined as non-enumerable.
   sanitizeForInObject: canDefineNonEnumerableProperties()
-    ? function (value) { return value; }
-    : function (obj) {
-      if (Array.isArray(obj)) {
-        var newObj = {};
-        var keys = Object.keys(obj);
-        var keyCount = keys.length;
-        for (var i = 0; i < keyCount; ++i) {
-          var key = keys[i];
-          newObj[key] = obj[key];
-        }
-        return newObj;
-      }
+    ? sanitizeEasy
+    : sanitizeHard,
 
-      return obj;
-    }
+  // Exposed so that we can test sanitizeForInObject in environments that
+  // support defining non-enumerable properties.
+  _sanitizeForInObjectHard: sanitizeHard
 };
