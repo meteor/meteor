@@ -67,6 +67,21 @@ You want to put your CDN in front of the static assets that Meteor knows about. 
 
 If you are following the above approach, you may also want to manually add the CDN's hostname whenever you put an image/other asset URL in your application's code. To do this throughout your app, you can write a generic helper like `imageUrl()`.
 
+<h4 id="cdn-webfonts">CDNs and webfonts</h4>
+
+If you are hosting a webfont as part of your application and serving it via a CDN, you may need to configure the served headers for the font to allow cross-origin resource sharing (as the webfont is now served from a different origin to your site itself). You can do this easily enough in Meteor by adding a handler (you'll need to ensure your CDN is passing the header through):
+
+```js
+import { WebApp } from 'meteor/webapp';
+
+WebApp.rawConnectHandlers.use(function(req, res, next) {
+  if (req._parsedUrl.pathname.match(/\.(ttf|ttc|otf|eot|woff|font\.css|css)$/) {
+    res.setHeader('Access-Control-Allow-Origin', /* your hostname, or just '*' */);
+  }
+  next();
+});
+```
+
 <h2 id="deployment-options">Deployment options</h2>
 
 Meteor is an open source platform, and you can run the apps that you make with Meteor anywhere just like regular Node.js applications. But operating Meteor apps *correctly*, so that your apps work for everyone, can be tricky if you are managing your infrastructure manually. This is why we recommend running production Meteor apps on Galaxy.
