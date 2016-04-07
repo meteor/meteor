@@ -11,7 +11,7 @@ With Meteor you write apps:
 
 Try the getting started [tutorial](https://www.meteor.com/try).
 
-Next, read the [guide](http://guide.meteor.com) or our reference documentation at http://docs.meteor.com/.
+Next, read the [guide](http://guide.meteor.com) or the reference documentation at http://docs.meteor.com/.
 
 ## Quick Start
 
