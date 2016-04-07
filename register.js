@@ -112,9 +112,5 @@ function getBabelResult(filename) {
     babelOptions.sourceMapTarget = filename + ".map";
   }
 
-  var result = meteorBabel.compile(source, babelOptions);
-
-  require("./runtime.js");
-
-  return result;
+  return meteorBabel.compile(source, babelOptions);
 }
