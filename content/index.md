@@ -18,7 +18,7 @@ Meteor is a full-stack JavaScript platform for developing modern web and mobile 
 
 <h3 id="quickstart">Quick start</h3>
 
-Meteor supports [OS X, Windows, and Linux](https://github.com/meteor/meteor/wiki/Supported-Platforms).
+Meteor supports [OS X, Windows, and Linux](https://www.meteor.com/install).
 
 On Windows?  [Download the official Meteor installer here](https://install.meteor.com/windows).
 
