@@ -1,16 +1,43 @@
-meteorBabelHelpers = module.exports = {
-  sanitizeForInObject: function (obj) {
-    if (Array.isArray(obj)) {
-      var newObj = {};
-      var keys = Object.keys(obj);
-      var keyCount = keys.length;
-      for (var i = 0; i < keyCount; ++i) {
-        var key = keys[i];
-        newObj[key] = obj[key];
-      }
-      return newObj;
-    }
+function canDefineNonEnumerableProperties() {
+  var testObj = {};
+  var testPropName = "t";
 
-    return obj;
+  try {
+    Object.defineProperty(testObj, testPropName, {
+      enumerable: false,
+      value: testObj
+    });
+
+    for (var k in testObj) {
+      if (k === testPropName) {
+        return false;
+      }
+    }
+  } catch (e) {
+    return false;
   }
+
+  return testObj[testPropName] === testObj;
+}
+
+meteorBabelHelpers = module.exports = {
+  // Meteor-specific runtime helper for wrapping the object of for-in
+  // loops, so that inherited Array methods defined by es5-shim can be
+  // ignored in browsers where they cannot be defined as non-enumerable.
+  sanitizeForInObject: canDefineNonEnumerableProperties()
+    ? function (value) { return value; }
+    : function (obj) {
+      if (Array.isArray(obj)) {
+        var newObj = {};
+        var keys = Object.keys(obj);
+        var keyCount = keys.length;
+        for (var i = 0; i < keyCount; ++i) {
+          var key = keys[i];
+          newObj[key] = obj[key];
+        }
+        return newObj;
+      }
+
+      return obj;
+    }
 };
