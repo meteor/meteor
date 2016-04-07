@@ -2028,7 +2028,10 @@ class ServerTarget extends JsImageTarget {
     serverPkgJson.scripts.install = "node npm-rebuild.js";
 
     builder.write('package.json', {
-      data: new Buffer(JSON.stringify(serverPkgJson, null, 2), "utf8")
+      data: new Buffer(
+        JSON.stringify(serverPkgJson, null, 2) + "\n",
+        "utf8"
+      )
     });
 
     builder.write('npm-shrinkwrap.json', {
