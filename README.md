@@ -9,6 +9,10 @@ With Meteor you write apps:
 * that send data over the wire, rather than HTML
 * using your choice of popular open-source libraries
 
+Meteor is an open source JavaScript ecosystem that enables you to build web applications. Its two most important features are firstly, it's isomorphic, which means that the same javascript code can be used at the front and back end. Therefore, saving time and effort. And, secondly it is an ecosystem. Unlike a framework such as Angular.js or a library such as JQuery, Meteor contains tools, libraries and package managers. This means you have at your disposal everything to code a web app from start to end within the Meteor ecosystem. 
+
+ Meteor has many advantages to offer developers. It has a one step installation from the CLI and an API that allows the front and back end to communicate. Meteor also has it's own templating engine (Blaze) and comes with core packages such as signup, login, email etc. Therefore, speeding up development time. 
+ 
 Documentation is available at http://docs.meteor.com/.
 
 Try the getting started [tutorial](https://www.meteor.com/try).
