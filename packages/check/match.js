@@ -116,7 +116,9 @@ var Optional = function (pattern) {
   this.pattern = pattern;
 };
 
-var Maybe = Optional;
+var Maybe = function (pattern) {
+  this.pattern = pattern;
+};
 
 var OneOf = function (choices) {
   if (_.isEmpty(choices))
