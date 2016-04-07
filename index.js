@@ -59,3 +59,7 @@ exports.runtime = // Legacy name; prefer installRuntime.
 exports.installRuntime = function installRuntime() {
   return require("./runtime.js");
 };
+
+exports.defineHelpers = function defineHelpers() {
+  return require("./helpers.js");
+};
