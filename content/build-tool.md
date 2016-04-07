@@ -21,7 +21,7 @@ The main function of the Meteor build tool is to run "build plugins" - these plu
 
 <h3 id="concatenate-and-minify">Combines and minifies code</h3>
 
-Another important feature of the Meteor build tool is that it automatically concatenates and minifies all of your files in production mode. This is enabled by the `standard-minifiers` package, which is in all Meteor apps by default. If you need different minification behavior, you can replace this package. Below, we'll talk about how to [switch out your minifier to add PostCSS to your build process](#postcss).
+Another important feature of the Meteor build tool is that it automatically concatenates and minifies all of your files in production mode. This is enabled by the [`standard-minifier-js`](https://atmospherejs.com/meteor/standard-minifiers-js) and [`standard-minifier-css`](https://atmospherejs.com/meteor/standard-minifiers-css) packages, which are in all Meteor apps by default. If you need different minification behavior, you can replace these packages. Below, we'll talk about how to [switch out a minifier to add PostCSS to your build process](#postcss).
 
 <h3 id="dev-vs-prod">Development vs. production</h3>
 
@@ -39,7 +39,7 @@ The `ecmascript` package (which is installed into all new apps and packages by d
 
 While we recommend using ES2015 with the `ecmascript` package as the best development experience for Meteor, everything in the platform is 100% compatible with [CoffeeScript](http://coffeescript.org/) and many people in the Meteor community prefer it.
 
-All you need to do to use CoffeeScript is add the right package:
+All you need to do to use CoffeeScript is add the right Meteor package:
 
 ```sh
 meteor add coffeescript
@@ -96,29 +96,31 @@ An important feature shared by all of the available CSS pre-processors is the ab
 1. You can control the load order of files by encoding dependencies through imports, since the load order of CSS matters.
 2. You can create reusable CSS "modules" that just have variables and mixins, and don't actually generate any CSS.
 
-In Meteor, each of your `.scss`, `.less`, or `.styl` source files will be one of two types: "source", or "import".
+In Meteor, each of your `.scss`, `.less`, or `.styl` source files will be one of two types: "source" or "import".
 
-A "source" file is evaluated eagerly, and adds its compiled form to the CSS of the app immediately.
+A "source" file is evaluated eagerly and adds its compiled form to the CSS of the app immediately.
 
-An "import" file is evaluated only if imported from some other file, and can be used to share common mixins and variables between different CSS files in your app.
+An "import" file is evaluated only if imported from some other file and can be used to share common mixins and variables between different CSS files in your app.
 
 Read the documentation for each package listed below to see how to indicate which files are source files vs. imports.
 
-<h3 id="css-importing-from-package">Importing from a package</h3>
+<h3 id="css-importing">Importing styles</h3>
 
-In all three Meteor-supported CSS pre-processors, you can import files from packages using a special syntax:
-
-```less
-@import "{my-package:pretty-buttons}/buttons/styles.import.less"
-```
-
-You can also import files with an absolute path in the app by using `{}` instead of a package name:
+In all three Meteor-supported CSS pre-processors you can import files from an absolute path in your app by using the special `{}` syntax:
 
 ```less
-@import "{}/client/styles/imports/colors.less"
+@import '{}/imports/ui/stylesheets/button.less';
 ```
 
-Read the documentation for your favorite CSS pre-processor package to learn more about the details.
+To import files from a Meteor Atmosphere packages using this special package name syntax:
+
+```less
+@import "{my-package:pretty-buttons}/buttons/styles.import.less";
+```
+
+> It is currently not possible to import non-CSS assets from npm packages in `node_modules` using the Meteor build tool. There are various potential workarounds such as creating a symbolic link to the asset file in node_modules from somewhere else in your app `ln -s /path/to/node_modules/package-name/style.scss /path/to/app/imports/ui/style.scss` and importing it from there `@import '{}/imports/ui/style.scss';` or try using an alternative pre-processor tool with [npm scripts](https://github.com/tableflip/meteor-sass-bootstrap4) or try using this configuration of [PostCSS](https://github.com/juliancwirko/meteor-bootstrap-postcss-test).
+
+For more details using `@imports` with packages see [Using Packages](using-packages.html) in the Meteor Guide.
 
 <h3 id="sass">Sass</h3>
 
@@ -170,6 +172,6 @@ After doing the above, you'll need to ensure you `npm install` and restart the `
 
 The current best practice for deploying web production applications is to concatenate and minify all of your app assets. This lets you add all of the comments and whitespace you want to your source code, and split it into as many files as is necessary without worrying about app performance.
 
-Every Meteor app comes with production minification by default with the `standard-minifiers` package. This minifier goes to some extra effort to do a good job - for example, Meteor automatically splits up your files if they get too big to maintain support for older versions of Internet Explorer which had a limit on the number of CSS rules per file.
+Every Meteor app comes with production minification by default with the `standard-minifier-js` and `standard-minifier-css` packages. These minifiers go to some extra effort to do a good job - for example, Meteor automatically splits up your files if they get too big to maintain support for older versions of Internet Explorer which had a limit on the number of CSS rules per file.
 
 Minification usually happens when you `meteor deploy` or `meteor build` your app. If you have an error in production that you suspect is related to minification, you can run the minified version of your app locally with `meteor --production`.
