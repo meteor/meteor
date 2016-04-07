@@ -34,7 +34,8 @@
     "babel-preset-react": "^6.5.0",
     "babel-runtime": "^5.8.38",
     "babylon": "^6.6.5",
-    "convert-source-map": "^1.1.3"
+    "convert-source-map": "^1.1.3",
+    "meteor-babel-helpers": "^0.0.1"
   },
   "devDependencies": {
     "fibers": "^1.0.10",

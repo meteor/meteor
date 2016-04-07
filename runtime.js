@@ -1,4 +1,4 @@
-require("./helpers.js");
+require("meteor-babel-helpers");
 
 var MeteorPromise = require("meteor-promise");
 MeteorPromise.Fiber = require("fibers");

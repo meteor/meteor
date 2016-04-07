@@ -61,5 +61,5 @@ exports.installRuntime = function installRuntime() {
 };
 
 exports.defineHelpers = function defineHelpers() {
-  return require("./helpers.js");
+  return require("meteor-babel-helpers");
 };

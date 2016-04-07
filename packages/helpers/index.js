@@ -1,4 +1,4 @@
-meteorBabelHelpers = {
+meteorBabelHelpers = module.exports = {
   sanitizeForInObject: function (obj) {
     if (Array.isArray(obj)) {
       var newObj = {};
