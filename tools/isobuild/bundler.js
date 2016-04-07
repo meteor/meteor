@@ -2020,9 +2020,17 @@ class ServerTarget extends JsImageTarget {
 
     // Write package.json and npm-shrinkwrap.json for the dependencies of
     // boot.js.
+    const serverPkgJson = JSON.parse(files.readFile(
+      files.pathJoin(files.getDevBundle(), 'etc', 'package.json')
+    ));
+
+    serverPkgJson.scripts = serverPkgJson.scripts || {};
+    serverPkgJson.scripts.install = "node npm-rebuild.js";
+
     builder.write('package.json', {
-      file: files.pathJoin(files.getDevBundle(), 'etc', 'package.json')
+      data: new Buffer(JSON.stringify(serverPkgJson, null, 2), "utf8")
     });
+
     builder.write('npm-shrinkwrap.json', {
       file: files.pathJoin(files.getDevBundle(), 'etc', 'npm-shrinkwrap.json')
     });
