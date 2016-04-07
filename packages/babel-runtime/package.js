@@ -6,7 +6,8 @@ Package.describe({
 });
 
 Npm.depends({
-  regenerator: "0.8.42"
+  regenerator: "0.8.42",
+  "meteor-babel-helpers": "0.0.3"
 });
 
 Package.onUse(function (api) {
