@@ -278,6 +278,12 @@ val = "zxcv";`;
   it("for-in loop sanitization", function loop() {
     Array.prototype.dummy = () => {};
 
+    // Use the full version of sanitizeForInObject even though these tests
+    // are almost certainly running in an environment that supports
+    // defining non-enumerable properties.
+    meteorBabelHelpers.sanitizeForInObject =
+      meteorBabelHelpers._sanitizeForInObjectHard;
+
     let sparseArray = [];
     sparseArray[2] = "c";
     sparseArray[0] = "a";
