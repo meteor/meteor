@@ -1,6 +1,6 @@
 {
   "name": "meteor-babel-helpers",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Independent helpers package for meteor-babel.",
   "author": "Ben Newman <ben@meteor.com>",
   "main": "index.js",
