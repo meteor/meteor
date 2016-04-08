@@ -25,7 +25,7 @@ However, if your package depends on an Atmosphere package (which, in Meteor 1.3,
 
 This article will cover some tips on how to do that.
 
-<h2 id="creating">Creating an Atmosphere Package</h2>
+<h2 id="creating">Creating an Atmosphere package</h2>
 
 To get started writing a package, use the Meteor command line tool:
 
@@ -79,27 +79,46 @@ You can also add any source file that would be compiled to a JS file (such as a 
 
 <h3 id="adding-css">Adding CSS</h3>
 
-To include CSS files with yor package, you can use [`api.addFiles()`](http://docs.meteor.com/#/full/pack_addFiles):
+To include CSS files with your package you can use [`api.addFiles()`](http://docs.meteor.com/#/full/pack_addFiles):
 
 ```js
 Package.onUse(function(api) {
-  api.addFiles('my-package.css');
+  api.addFiles('my-package.css', 'client');
 });
 ```
 
 The CSS file will be automatically loaded into any app that uses your package.
 
-<h3 id="adding-assets">Adding other Assets</h3>
+<h3 id="adding-style">Adding Sass, Less, or Stylus mixins/variables</h3>
 
-You can include other assets in your package, which you can later access with the [Assets API](http://docs.meteor.com/#/full/assets_getText) on the server, or via URL on the client, using [`api.addAssets`](http://docs.meteor.com/#/full/PackageAPI-addAssets):
+Just like packages can export JavaScript code, they can export reusable bits of CSS pre-processor code. You can also have a package that doesn't actually include any CSS, but just exports different bits of reusable mixins and variables. To get more details see Meteor [build tool CSS pre-processors](build-tool.html#css):
+
+```js
+Package.onUse(function(api) {
+  api.addFiles('my-package.scss', 'client');
+});
+```
+
+This Sass file will be eagerly evaluated and its compiled form will be added to the CSS of the app immediately.
+
+```js
+Package.onUse(function(api) {
+  api.addFiles([
+    'stylesheets/_util.scss',
+    'stylesheets/_variables.scss'
+  ], 'client', {isImport: true});
+});
+```
+
+These two Sass files will be lazily evaluated and only included in the CSS of the app if imported from some other file.
+
+<h3 id="adding-assets">Adding other assets</h3>
+
+You can include other assets, such as fonts, icons or images, to your package using [`api.addAssets`](http://docs.meteor.com/#/full/PackageAPI-addAssets):
 
 ```js
 Package.onUse(function(api) {
   api.addAssets([
-    'font/OpenSans-Light-webfont.eot',
-    'font/OpenSans-Light-webfont.svg',
-    'font/OpenSans-Light-webfont.ttf',
-    'font/OpenSans-Light-webfont.woff',
     'font/OpenSans-Regular-webfont.eot',
     'font/OpenSans-Regular-webfont.svg',
     'font/OpenSans-Regular-webfont.ttf',
@@ -107,6 +126,8 @@ Package.onUse(function(api) {
   ], 'client');
 });
 ```
+
+You can then access these files from the client from a URL `/packages/username_my-package/font/OpenSans-Regular-webfont.eot` or from the server using the [Assets API](http://docs.meteor.com/#/full/assets_getText).
 
 <h2 id="exporting">Exporting</h2>
 
@@ -140,7 +161,7 @@ Package.onUse(function(api) {
 
 One important feature of the Atmosphere package system is that it is single-loading: no two packages in the same app can have dependencies on conflicting versions of a single package. Read more about that in the section about version constraints below.
 
-<h4 id="meteor-version-dependencies">Depending on Meteor Version</h4>
+<h4 id="meteor-version-dependencies">Depending on Meteor version</h4>
 
 Note that the Meteor release version number is mostly a marketing artifact---the core Meteor packages themselves typically don't share this version number. This means packages can only depend on specific versions of the packages inside a Meteor release, but can't depend on a specific release itself. We have a helpful shorthand api called [`api.versionsFrom`](http://docs.meteor.com/#/full/pack_versions) that handles this for you by automatically filling in package version numbers from a particular release:
 
@@ -222,10 +243,6 @@ const React = require('react');
 ```
 
 > Note that `checkNpmVersions` will only output a warning if the user has installed a incompatible version of the npm package. So your `require` call may not give you what you expect. This is consistent with npm's handling of [peer dependencies](http://blog.npmjs.org/post/110924823920/npm-weekly-5).
-
-<h2 id="exporting-css-preprocessor-code">LESS, SCSS, or Stylus mixins/variables</h2>
-
-Just like packages can export JavaScript code, they can export reusable bits of CSS pre-processor code. You can have a package that doesn't actually include any CSS, but just exports different bits of reusable mixins and variables. To learn more see the Meteor build system section on [CSS pre-processors](build-tool.html#css).
 
 <h2 id="cordova-plugins">Cordova plugins</h2>
 
