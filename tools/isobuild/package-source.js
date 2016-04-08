@@ -1386,6 +1386,7 @@ _.extend(PackageSource.prototype, {
     loopChecker = new SymlinkLoopChecker(this.sourceRoot),
     ignoreFiles = []
   }) {
+    const self = this;
     const arch = sourceArch.arch;
     const sourceReadOptions =
       sourceProcessorSet.appReadDirectoryOptions(arch);
@@ -1413,16 +1414,11 @@ _.extend(PackageSource.prototype, {
       controlFiles.push('package.js');
     }
 
-    const sources = _.difference(
-      this._readAndWatchDirectory('', watchSet, {
-        ...sourceReadOptions,
-      }),
-      controlFiles
-    );
-
     const anyLevelExcludes = [
       /^tests\/$/,
-      arch === "os" ? /^client\/$/ : /^server\/$/,
+      archinfo.matches(arch, "os")
+        ? /^client\/$/
+        : /^server\/$/,
       ...sourceReadOptions.exclude,
     ];
 
@@ -1435,44 +1431,66 @@ _.extend(PackageSource.prototype, {
       /^acceptance-tests\/$/,
     ] : anyLevelExcludes;
 
-    // Read top-level subdirectories. Ignore subdirectories that have
-    // special handling.
-    var sourceDirectories = this._readAndWatchDirectory('', watchSet, {
-      include: [/\/$/],
-      exclude: topLevelExcludes,
-    });
-
-    loopChecker.check('');
-
-    while (!_.isEmpty(sourceDirectories)) {
-      var dir = sourceDirectories.shift();
-      if (/(^|\/)node_modules\/$/.test(dir)) {
-        sourceArch.localNodeModulesDirs[dir] = true;
-        continue;
-      }
-
-      // remove trailing slash
-      dir = dir.substr(0, dir.length - 1);
+    function find(dir, depth, inNodeModules) {
+      // Remove trailing slash.
+      dir = dir.replace(/\/$/, "");
 
       if (loopChecker.check(dir)) {
-        // pretend we found no files
+        // Pretend we found no files.
         return [];
       }
 
-      // Find source files in this directory.
-      sources.push(...this._readAndWatchDirectory(
-        dir, watchSet, sourceReadOptions
-      ));
+      let { include, exclude } = sourceReadOptions;
 
-      // Find sub-sourceDirectories. Note that we DON'T need to ignore the
-      // directory names that are only special at the top level.
-      sourceDirectories.push(...this._readAndWatchDirectory(dir, watchSet, {
+      if (inNodeModules) {
+        // When we're in a node_modules directory, we can avoid collecting
+        // .js and .json files, because (unlike .less or .coffee files)
+        // they are allowed to be imported later by the ImportScanner, as
+        // they do not require custom processing by compiler plugins.
+        exclude = exclude.concat(/\.js(on)?$/i);
+      }
+
+      const sources = _.difference(
+        self._readAndWatchDirectory(dir, watchSet, { include, exclude }),
+        depth > 0 ? [] : controlFiles
+      );
+
+      const subdirectories = self._readAndWatchDirectory(dir, watchSet, {
         include: [/\/$/],
-        exclude: anyLevelExcludes,
-      }));
+        exclude: depth > 0
+          ? anyLevelExcludes
+          : topLevelExcludes
+      });
+
+      subdirectories.forEach(subdir => {
+        if (/(^|\/)node_modules\/$/.test(subdir)) {
+          if (inNodeModules) {
+            // Don't descend into nested node_modules directories on any
+            // platform, package or app.
+            return;
+          }
+
+          // Record this local node_modules directory so that we can copy
+          // it into programs/server/npm later.
+          sourceArch.localNodeModulesDirs[subdir] = true;
+
+          if (isApp && archinfo.matches(arch, "web")) {
+            // If we're building an app for the web, treat direct
+            // node_modules dependencies as part of the app, so that files
+            // other than .js and .json can be imported from node_modules.
+            // In particular, this enables .css, .less, etc. (#6037).
+            sources.push(...find(subdir, depth + 1, true));
+          }
+
+        } else {
+          sources.push(...find(subdir, depth + 1, inNodeModules));
+        }
+      });
+
+      return sources;
     }
 
-    return sources;
+    return find("", 0, false);
   },
 
   _findAssets({
