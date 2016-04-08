@@ -70,8 +70,7 @@ Meteor is a big project with [many](https://www.meteor.com/projects)
 doesn't have as many
 [core developers (we're hiring!)](https://www.meteor.com/jobs/core-developer)
 as subprojects, so we're not able to work on every single subproject every
-month.  We use our [roadmap](https://roadmap.meteor.com/) to communicate what
-we're actually working on now, and what things we might be working on soon.
+month.  We use our [roadmap](Roadmap.md) to communicate the high level features we're prioritizing over the near and medium term.
 
 Every additional feature adds a maintenance cost in addition to its value. This
 cost starts with the work of writing the feature or reviewing a community pull
@@ -97,11 +96,6 @@ to express their desires around features. We now organize issues using subprojec
 labels, so it's easier for a core developer to find all the feature requests for
 a subproject and think of ways to holistically address multiple feature
 requests.
-
-(We will close feature requests that are entire new subprojects that are already on the
-[roadmap](https://roadmap.meteor.com/); discuss them on the roadmap! Many of these projects can be
-achieved (or at least prototyped) as non-core packages; the best way to influence the future of
-Meteor core on these future projects is to build a package that implements it yourself.)
 
 In general, if a feature can be implemented as an external Atmosphere package by
 our community, that's better than building it in to core, since future changes
