@@ -34,11 +34,7 @@ export function cssToCommonJS(css, hash) {
     if (rule.type === "import") {
       // Require the imported .css file, but omit the @import directive
       // from earlyRules, so that it won't be loaded that way.
-      lines.push("require(" + rule.import + ");");
-
-      // TODO Handle url(...).
-      // TODO Convert to CommonJS relative identifier syntax.
-      // TODO Handle media queries with matchMedia.
+      lines.push("require(" + JSON.stringify(rule.moduleIdentifier) + ");");
     } else {
       // Early rules (i.e. rules that come before the first normal CSS
       // rule) are typically either @import directives or comments.
@@ -48,9 +44,7 @@ export function cssToCommonJS(css, hash) {
 
   lines.push(
     'module.exports = require("meteor/modules").addStyles(',
-    "  " + JSON.stringify(stringifyCss(ast, {
-      // TODO Only compress if building a production bundle.
-      compress: true })),
+    "  " + JSON.stringify(stringifyCss(ast)),
     ");",
     ""
   );

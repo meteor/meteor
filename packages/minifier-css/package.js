@@ -5,7 +5,8 @@ Package.describe({
 
 Npm.depends({
   "css-parse": "2.0.0",
-  "css-stringify": "2.0.0"
+  "css-stringify": "2.0.0",
+  "cssom": "0.3.1"
 });
 
 Npm.strip({

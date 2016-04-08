@@ -1,10 +1,38 @@
 var cssParse = Npm.require('css-parse');
 var cssStringify = Npm.require('css-stringify');
+var cssom = Npm.require('cssom');
 var url = Npm.require('url');
 var path = Npm.require('path');
 
 CssTools = {
-  parseCss: cssParse,
+  parseCss: function () {
+    var ast = cssParse.apply(this, arguments);
+
+    // Use a more powerful CSS parser to extract more information about
+    // @import directives and annotate the appropriate rules.
+    ast.stylesheet.rules.some(function (rule) {
+      if (rule.type === "rule") {
+        // No more @import directives can appear after the first actual
+        // CSS rule.
+        return true;
+      }
+
+      if (rule.type === "import") {
+        var om = cssom.parse(
+          "@import " + rule.import + ";"
+        ).cssRules[0];
+
+        rule.href = om.href;
+        rule.media = Array.from(om.media);
+        rule.moduleIdentifier = /^\.\.?\//.test(rule.href)
+          ? rule.href
+          : "./" + rule.href;
+      }
+    });
+
+    return ast;
+  },
+
   stringifyCss: cssStringify,
   minifyCss: function (cssText) {
     return CssTools.minifyCssAst(cssParse(cssText));

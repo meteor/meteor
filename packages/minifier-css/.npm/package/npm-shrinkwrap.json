@@ -115,6 +115,11 @@
           }
         }
       }
+    },
+    "cssom": {
+      "version": "0.3.1",
+      "resolved": "https://registry.npmjs.org/cssom/-/cssom-0.3.1.tgz",
+      "from": "cssom@0.3.1"
     }
   }
 }
