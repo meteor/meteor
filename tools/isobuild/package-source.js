@@ -1462,30 +1462,38 @@ _.extend(PackageSource.prototype, {
           : topLevelExcludes
       });
 
+      let nodeModulesDir;
+
       subdirectories.forEach(subdir => {
         if (/(^|\/)node_modules\/$/.test(subdir)) {
-          if (inNodeModules) {
-            // Don't descend into nested node_modules directories on any
-            // platform, package or app.
-            return;
+          if (! inNodeModules) {
+            sourceArch.localNodeModulesDirs[subdir] = true;
           }
 
-          // Record this local node_modules directory so that we can copy
-          // it into programs/server/npm later.
-          sourceArch.localNodeModulesDirs[subdir] = true;
-
-          if (isApp && archinfo.matches(arch, "web")) {
-            // If we're building an app for the web, treat direct
-            // node_modules dependencies as part of the app, so that files
-            // other than .js and .json can be imported from node_modules.
-            // In particular, this enables .css, .less, etc. (#6037).
-            sources.push(...find(subdir, depth + 1, true));
-          }
+          // Defer handling node_modules until after we handle all other
+          // subdirectories, so that we know whether we need to descend
+          // further. If sources is still empty after we handle everything
+          // else in dir, then nothing in this node_modules subdir can be
+          // imported by anthing outside of it, so we can ignore it.
+          nodeModulesDir = subdir;
 
         } else {
           sources.push(...find(subdir, depth + 1, inNodeModules));
         }
       });
+
+      if (isApp &&
+          nodeModulesDir &&
+          (! inNodeModules || sources.length > 0)) {
+        // If we found a node_modules subdirectory above, and either we
+        // are not already inside another node_modules directory or we
+        // found source files elsewhere in this directory or its other
+        // subdirectories, and we're building an app (as opposed to a
+        // Meteor package), continue searching this node_modules
+        // directory, so that any non-.js(on) files it contains can be
+        // imported by the app (#6037).
+        sources.push(...find(nodeModulesDir, depth + 1, true));
+      }
 
       return sources;
     }
