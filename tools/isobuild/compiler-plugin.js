@@ -470,9 +470,6 @@ class ResourceSlot {
       sourcePath: this.inputResource.path,
       servePath: self.packageSourceBatch.unibuild.pkg
         ._getServePath(options.path),
-      // XXX do we need to call convertSourceMapPaths here like we did
-      //     in legacy handlers?
-      sourceMap: options.sourceMap,
       hash: sha1(data),
       lazy: this._isLazy(options),
     };
@@ -501,6 +498,10 @@ class ResourceSlot {
 
       resource.type = "css";
       resource.data = new Buffer(data, 'utf8'),
+
+      // XXX do we need to call convertSourceMapPaths here like we did
+      //     in legacy handlers?
+      resource.sourceMap = options.sourceMap;
 
       self.outputResources.push(resource);
     }
