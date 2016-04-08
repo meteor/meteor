@@ -23,15 +23,42 @@ In ES2015, you can make variables available outside a file using the `export` ke
 
 Since this is a new feature introduced in Meteor 1.3, you will find a lot of code online that uses the older, more centralized conventions built around packages and apps declaring global symbols. This old system still works, so to opt-in to the new module system code must be placed inside the `imports/` directory in your application. We expect a future release of Meteor will turn on modules by default for all code, because this is more aligned with how developers in the wider JavaScript community write their code.
 
-You can read about the module system in detail in the [`modules` package README](https://docs.meteor.com/#/full/modules). This package is automatically included in every new Meteor app as part of the `ecmascript` meta-package, so most apps won't need to do anything to start using modules right away.
+You can read about the module system in detail in the [`modules` package README](https://docs.meteor.com/#/full/modules). This package is automatically included in every new Meteor app as part of the [`ecmascript` meta-package](https://docs.meteor.com/#/full/ecmascript), so most apps won't need to do anything to start using modules right away.
 
-<h3 id="importing-from-packages">Importing from packages</h3>
+<h3 id="intro-to-import-export">Introduction to using `import` and `export`</h3>
 
-In Meteor, it is also simple and straightforward to use the `import` syntax to load npm packages on the client or server, and access the package's exported symbols as you would with any other module. You can also import from Atmosphere packages, but the import path must be prefixed with `meteor/` to avoid conflict with the npm package namespace. For example, to import `HTTP` you could use `import { HTTP } from 'meteor/http'`.
+Meteor allows you to `import` not only JavaScript in your application, but also CSS and HTML to control load order:
 
-<h3 id="using-require">Using `require`</h3>
+```js
+import '../../api/lists/methods.js';  // import from relative path
+import '/imports/startup/client';     // import module with index.js from absolute path
+import './loading.html';              // import Blaze compiled HTML from relative path
+import '/imports/ui/style.css';       // import CSS from absolute path
+```
 
-In Meteor, `import` statements compile to CommonJS `require` syntax. However, as a convention we encourage you to use `import`. 
+Meteor also supports the standard E2015 modules `export` syntax:
+
+```js
+export const listRenderHold = LaunchScreen.hold();  // named export
+export { Todos };                                   // named export
+export default Lists;                               // default export
+export default new Collection('lists');             // default export
+```
+
+<h4 id="importing-from-packages">Importing from packages</h4>
+
+In Meteor, it is also simple and straightforward to use the `import` syntax to load npm packages on the client or server and access the package's exported symbols as you would with any other module. You can also import from Meteor Atmosphere packages, but the import path must be prefixed with `meteor/` to avoid conflict with the npm package namespace. For example, to import `moment` from npm and `HTTP` from Atmosphere:
+
+```js
+import moment from 'moment';          // default import from npm
+import { HTTP } from 'meteor/http';   // named import from Atmosphere
+```
+
+For more details using `imports` with packages see [Using Packages](using-packages.html) in the Meteor Guide.
+
+<h4 id="using-require">Using `require`</h4>
+
+In Meteor, `import` statements compile to CommonJS `require` syntax. However, as a convention we encourage you to use `import`.
 
 With that said, in some situations you may need to call out to `require` directly. One notable example is when requiring client or server-only code from a common file. As `import`s must be at the top-level scope, you may not place them within an `if` statement, so you'll need to write code like:
 
@@ -41,7 +68,7 @@ if (Meteor.isClient) {
 }
 ```
 
-Note that dynamic calls to `require()` (where the name being required can change at runtime) cannot be analyzed correctly and may result in broken client bundles. 
+Note that dynamic calls to `require()` (where the name being required can change at runtime) cannot be analyzed correctly and may result in broken client bundles.
 
 If you need to `require` from an ES2015 module with a `default` export, you can grab the export with `require("package").default`.
 
@@ -52,7 +79,7 @@ Another situation where you'll need to use `require` is in CoffeeScript files. A
 React = require 'react'
 ```
 
-<h3 id="exporting-from-coffeescript">Exporting with CoffeeScript</h3>
+<h4 id="exporting-from-coffeescript">Exporting with CoffeeScript</h4>
 
 When using CoffeeScript, not only the syntax to import variables is different, but also the export has to be done in a different way. Variables to be exported are put in the `exports` object:
 
@@ -76,9 +103,12 @@ To start, let's look at our [Todos example application](https://github.com/meteo
 imports/
   startup/
     client/
+      index.js                 # import client startup through a single index entry point
       routes.js                # set up all routes in the app
+      useraccounts-configuration.js # configure login templates
     server/
       fixtures.js              # fill the DB with example data on startup
+      index.js                 # import server startup through a single index entry point
 
   api/
     lists/                     # a unit of domain logic
@@ -115,18 +145,9 @@ Within the `imports/ui` directory it typically makes sense to group files into d
 
 For each module defined above, it makes sense to co-locate the various auxiliary files with the base JavaScript file. For instance, a Blaze UI component should have its template HTML, JavaScript logic, and CSS rules in the same directory. A JavaScript module with some business logic should be co-located with the unit tests for that module.
 
-<h3 id="importing-meteor-globals">Importing Meteor "pseudo-globals"</h3>
-
-For backwards compatibility Meteor 1.3 still provides Meteor's global namespacing for the Meteor core package as well as for other Meteor packages you include in your application. You can also still directly call functions such as [`Meteor.publish`](http://docs.meteor.com/#/full/meteor_publish), as in previous versions of Meteor, without first importing them. However, it is recommended best practice that you first load all the Meteor "pseudo-globals" using the `import { Name } from 'meteor/package'` syntax before using them. For instance:
-
-```js
-import { Meteor } from 'meteor/meteor';
-import { EJSON } from 'meteor/ejson';
-```
-
 <h3 id="startup-files">Startup files</h3>
 
-Some of your code isn't going to be a unit of business logic or UI, it's just some setup or configuration code that needs to run in the context of the app when it starts up. In the Todos example app, the `imports/startup/client/useraccounts-configuration.js` file configures the `useraccounts` login templates and the routes (see the [Accounts](accounts.html) article for more information about `useraccounts`). The `imports/startup/client/routes.js` configures all of the routes and then imports *all* other code that is required on the client, forming the main entry point for the rest of the client application:
+Some of your code isn't going to be a unit of business logic or UI, it's just some setup or configuration code that needs to run in the context of the app when it starts up. In the Todos example app, the `imports/startup/client/useraccounts-configuration.js` file configures the `useraccounts` login templates (see the [Accounts](accounts.html) article for more information about `useraccounts`). The `imports/startup/client/routes.js` configures all of the routes and then imports *all* other code that is required on the client:
 
 ```js
 import { FlowRouter } from 'meteor/kadira:flow-router';
@@ -145,7 +166,20 @@ import '../../ui/accounts/accounts-templates.js';
 // Below here are the route definitions
 ```
 
-On the server, we import various modules into our `server/main.js` to set up the server environment:
+We then import both of these files in `imports/startup/client/index.js`:
+
+```js
+import './useraccounts-configuration.js';
+import './routes.js';
+```
+
+This makes it easy to then import all the client startup code with a single import as a module from our main eagerly loaded client entry point `client/main.js`:
+
+```js
+import '/imports/startup/client';
+```
+
+On the server, we use the same technique of importing all the startup code in `imports/startup/server/index.js`:
 
 ```js
 // This defines a starting set of data to be loaded if the app is loaded with an empty db.
@@ -162,15 +196,24 @@ import '../imports/startup/server/security.js';
 import '../imports/api/api.js';
 ```
 
-You can see that here we don't actually import any variables from these files - we just import them so that they execute in this order.
+Our main server entry point `server/main.js` then imports this startup module. You can see that here we don't actually import any variables from these files - we just import them so that they execute in this order.
+
+<h3 id="importing-meteor-globals">Importing Meteor "pseudo-globals"</h3>
+
+For backwards compatibility Meteor 1.3 still provides Meteor's global namespacing for the Meteor core package as well as for other Meteor packages you include in your application. You can also still directly call functions such as [`Meteor.publish`](http://docs.meteor.com/#/full/meteor_publish), as in previous versions of Meteor, without first importing them. However, it is recommended best practice that you first load all the Meteor "pseudo-globals" using the `import { Name } from 'meteor/package'` syntax before using them. For instance:
+
+```js
+import { Meteor } from 'meteor/meteor';
+import { EJSON } from 'meteor/ejson';
+```
 
 <h2 id="load-order">Default file load order</h2>
 
-Even though it is recommended that you write your application to use ES2015 modules and the `imports/` directory, Meteor 1.3 continues to support eager loading of files, using these default load order rules, to provide backwards compatibility with applications written for Meteor 1.2 and earlier.
+Even though it is recommended that you write your application to use ES2015 modules and the `imports/` directory, Meteor 1.3 continues to support eager loading of files, using these default load order rules, to provide backwards compatibility with applications written for Meteor 1.2 and earlier. You may combine both eager loading and lazy loading using `import` in a single app. Any import statements are evaluated in the order they are listed in a file when that file is loaded and evaluated using these rules.
 
 There are several load order rules. They are *applied sequentially* to all applicable files in the application, in the priority given below:
 
-1. HTML template files are *always* loaded before everything else
+1. HTML template files are **always** loaded before everything else
 2. Files beginning with `main.` are loaded **last**
 3. Files inside **any** `lib/` directory are loaded next
 4. Files with deeper paths are loaded next

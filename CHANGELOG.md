@@ -4,6 +4,7 @@ order: 1001
 description: A log of significant changes to the Meteor Guide.
 ---
 
+- 2016/04/07: Add more examples and details on application structure using imports. [PR #356](https://github.com/meteor/guide/pull/356)
 - 2016/04/04: Add more content on writing and publishing Atmosphere packages. [PR #339](https://github.com/meteor/guide/pull/339)
 - 2016/04/03: Add back in build tool default loading order rules. [PR #340](https://github.com/meteor/guide/pull/340)
 - 2016/04/01: Added CoffeeScript exports syntax. [PR #328](https://github.com/meteor/guide/pull/328)
