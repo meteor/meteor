@@ -19,5 +19,5 @@ deployment:
   s3:
     branch: /^(master|version-.*)/
     commands:
-      - node deploy:
+      - npm run deploy:
           pwd: site
