@@ -1,3 +1,8 @@
+## v.NEXT
+
+* You can now pick where the `.meteor/local` directory is created by setting the `METEOR_LOCAL_DIR` environment variable. This lets you run multiple instances of the same Meteor app.
+  [PR #6760](https://github.com/meteor/meteor/pull/6760) [Issue #6532](https://github.com/meteor/meteor/issues/6532)
+
 ## v1.3.2.3
 
 * Reverted accidental changes included in 1.3.2.1 and 1.3.2.2 that
