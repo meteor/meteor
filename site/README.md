@@ -11,6 +11,8 @@ This is a setup to generate a static site from the markdown files location in `/
 ### Theme Development
 
 ``` bash
+git submodule update --init
+
 npm install -g hexo-cli
 
 # in /site
