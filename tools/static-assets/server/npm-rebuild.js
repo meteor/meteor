@@ -1,3 +1,10 @@
+// If a developer wants to go to the trouble of building on exactly the
+// same architecture as the production machine, then it should be possible
+// to skip running `npm rebuild`.
+if (process.env.METEOR_SKIP_NPM_REBUILD) {
+  process.exit(0);
+}
+
 var path = require("path");
 var spawn = require("child_process").spawn;
 
