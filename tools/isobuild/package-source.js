@@ -1329,40 +1329,49 @@ _.extend(PackageSource.prototype, {
     const fileOptions = {};
     const dirs = files.pathDirname(relPath).split(files.pathSep);
 
-    // If the file is restricted to the opposite architecture, make sure
-    // it is not evaluated eagerly.
-    if (arch === "os") {
-      if (dirs.indexOf("client") >= 0) {
-        fileOptions.lazy = true;
-      }
-    } else if (dirs.indexOf("server") >= 0) {
-      fileOptions.lazy = true;
-    }
-
-    if (dirs.indexOf("node_modules") >= 0) {
-      fileOptions.lazy = true;
-      fileOptions.transpile = false;
-    }
-
-    // If running in test mode (`meteor test`), all
-    // files other than test files should be loaded lazily
+    // If running in test mode (`meteor test`), all files other than test
+    // files should be loaded lazily.
     if (global.testCommandMetadata && global.testCommandMetadata.isTest) {
       if (!isTestFilePath(relPath)) {
         fileOptions.lazy = true;
       }
     }
 
-    // Special case: in app code on the client, JavaScript files in a
-    // `client/compatibility` directory don't get wrapped in a closure.
-    if (isApp && // Skip this check for packages.
-        archinfo.matches(arch, "web") &&
-        relPath.endsWith(".js")) {
-      for (var i = 1; i < dirs.length; ++i) {
-        if (dirs[i - 1] === "client" &&
-            dirs[i] === "compatibility") {
-          fileOptions.bare = true;
-          break;
+    for (var i = 0; i < dirs.length; ++i) {
+      let dir = dirs[i];
+
+      if (dir === "node_modules") {
+        fileOptions.lazy = true;
+        fileOptions.transpile = false;
+
+        // Return immediately so that we don't apply special meanings to
+        // client or server directories inside node_modules directories.
+        return fileOptions;
+      }
+
+      if (isApp && dir === "imports") {
+        fileOptions.lazy = true;
+      }
+
+      // If the file is restricted to the opposite architecture, make sure
+      // it is not evaluated eagerly.
+      if (archinfo.matches(arch, "os")) {
+        if (dir === "client") {
+          fileOptions.lazy = true;
         }
+      } else if (dir === "server") {
+        fileOptions.lazy = true;
+      }
+
+      // Special case: in app code on the client, JavaScript files in a
+      // `client/compatibility` directory don't get wrapped in a closure.
+      if (i > 0 &&
+          dirs[i - 1] === "client" &&
+          dir === "compatibility" &&
+          isApp && // Skip this check for packages.
+          archinfo.matches(arch, "web") &&
+          relPath.endsWith(".js")) {
+        fileOptions.bare = true;
       }
     }
 
