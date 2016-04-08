@@ -2,6 +2,10 @@ machine:
   node:
     version: 0.12
 
+checkout:
+  post:
+    - git submodule update --init
+
 dependencies:
   cache_directories:
     - "site/node_modules"
