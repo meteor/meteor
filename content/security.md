@@ -395,7 +395,7 @@ Here's what a settings file with some API keys might look like:
 
 In your app's JavaScript code, these settings can be accessed from the variable `Meteor.settings`.
 
-[Read more about managing keys and settings in the Deployment article.](#environment)
+[Read more about managing keys and settings in the Deployment article.](deployment.html#environment)
 
 <h3 id="client-settings">Settings on the client</h3>
 
