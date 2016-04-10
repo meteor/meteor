@@ -1,10 +1,19 @@
 {
   "dependencies": {
     "bcrypt": {
-      "version": "0.7.8",
+      "version": "0.8.5",
+      "resolved": "https://registry.npmjs.org/bcrypt/-/bcrypt-0.8.5.tgz",
+      "from": "bcrypt@0.8.5",
       "dependencies": {
         "bindings": {
-          "version": "1.0.0"
+          "version": "1.2.1",
+          "resolved": "https://registry.npmjs.org/bindings/-/bindings-1.2.1.tgz",
+          "from": "bindings@1.2.1"
+        },
+        "nan": {
+          "version": "2.0.5",
+          "resolved": "https://registry.npmjs.org/nan/-/nan-2.0.5.tgz",
+          "from": "nan@2.0.5"
         }
       }
     }
