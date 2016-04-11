@@ -153,9 +153,15 @@ meteorNpm.dependenciesArePortable = function (nodeModulesDir) {
       // important that we put separate files in the individual top-level
       // package directories so that they will get cleared away the next
       // time those packages are (re)installed.
+
       const portableFile = files.pathJoin(item, ".meteor-portable");
-      if (files.exists(portableFile)) {
+      try {
         return JSON.parse(files.readFile(portableFile));
+      } catch (e) {
+        if (! (e instanceof SyntaxError ||
+               e.code === "ENOENT")) {
+          throw e;
+        }
       }
 
       const result = isPortable(item);
