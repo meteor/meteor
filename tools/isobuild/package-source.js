@@ -1431,6 +1431,15 @@ _.extend(PackageSource.prototype, {
       /^acceptance-tests\/$/,
     ] : anyLevelExcludes;
 
+    const nodeModulesReadOptions = {
+      ...sourceReadOptions,
+      // When we're in a node_modules directory, we can avoid collecting
+      // .js and .json files, because (unlike .less or .coffee files) they
+      // are allowed to be imported later by the ImportScanner, as they do
+      // not require custom processing by compiler plugins.
+      exclude: sourceReadOptions.exclude.concat(/\.js(on)?$/i),
+    };
+
     function find(dir, depth, inNodeModules) {
       // Remove trailing slash.
       dir = dir.replace(/\/$/, "");
@@ -1440,18 +1449,12 @@ _.extend(PackageSource.prototype, {
         return [];
       }
 
-      let { include, exclude } = sourceReadOptions;
-
-      if (inNodeModules) {
-        // When we're in a node_modules directory, we can avoid collecting
-        // .js and .json files, because (unlike .less or .coffee files)
-        // they are allowed to be imported later by the ImportScanner, as
-        // they do not require custom processing by compiler plugins.
-        exclude = exclude.concat(/\.js(on)?$/i);
-      }
+      const readOptions = inNodeModules
+        ? nodeModulesReadOptions
+        : sourceReadOptions;
 
       const sources = _.difference(
-        self._readAndWatchDirectory(dir, watchSet, { include, exclude }),
+        self._readAndWatchDirectory(dir, watchSet, readOptions),
         depth > 0 ? [] : controlFiles
       );
 
