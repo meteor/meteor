@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Run a function when the user scrolls past an element",
-  version: "1.0.8-rc.2"
+  version: "1.0.8-rc.4"
 });
 
 Package.onUse(function (api) {

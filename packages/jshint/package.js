@@ -1,6 +1,6 @@
 Package.describe({
   name: 'jshint',
-  version: '1.0.4-rc.2',
+  version: '1.0.4-rc.4',
   summary: 'Lint all your JavaScript files with JSHint.',
   documentation: 'README.md'
 });

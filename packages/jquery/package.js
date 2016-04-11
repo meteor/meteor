@@ -5,7 +5,7 @@ Package.describe({
   // patch number instead of the wrap number, we're higher than that.
   // In fairness, there's no way to make an RC of a new version without
   // bumping the patch number.
-  version: '1.11.8-rc.2'
+  version: '1.11.8-rc.4'
 });
 
 Package.onUse(function (api) {
