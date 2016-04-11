@@ -14,6 +14,8 @@ versions:
 sidebar_categories:
   null:
     - index
+api_box:
+  data_file: 'data.js'
 
 # URL
 ## If your site is put in a subdirectory, set url as 'http://yoursite.com/child' and root as '/child/'
