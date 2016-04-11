@@ -1,7 +1,8 @@
 import assert from "assert";
+import {inspect} from "util";
 import {Script} from "vm";
 import {
-  isString, isEmpty, has, keys, each, map, without
+  isString, isEmpty, has, keys, each, map, omit,
 } from "underscore";
 import {sha1, readAndWatchFileWithHash} from "../fs/watch.js";
 import {matches as archMatches} from "../utils/archinfo.js";
@@ -184,10 +185,28 @@ export default class ImportScanner {
   // maps and updating all other properties appropriately. Once this
   // combination is done, oldFile should be kept and newFile discarded.
   _combineFiles(oldFile, newFile) {
+    function checkProperty(name) {
+      if (has(oldFile, name)) {
+        if (! has(newFile, name)) {
+          newFile[name] = oldFile[name];
+        }
+      } else if (has(newFile, name)) {
+        oldFile[name] = newFile[name];
+      }
+
+      if (oldFile[name] !== newFile[name]) {
+        throw new Error(
+          "Attempting to combine different files:\n" +
+            inspect(omit(oldFile, "dataString")) + "\n" +
+            inspect(omit(newFile, "dataString")) + "\n"
+        );
+      }
+    }
+
     // Since we're concatenating the files together, they must be either
     // both lazy or both eager. Same for bareness.
-    assert.strictEqual(oldFile.lazy, newFile.lazy);
-    assert.strictEqual(oldFile.bare, newFile.bare);
+    checkProperty("lazy");
+    checkProperty("bare");
 
     function getChunk(file) {
       const consumer = file.sourceMap &&
