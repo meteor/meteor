@@ -269,7 +269,7 @@ To be a unit test, we must stub out the dependencies of the module. In this case
 
 <h4 id="unit-test-data">Creating data</h4>
 
-We can use the [Factory package's](#generating-data) `.build()` API to create a test document without inserting it into any collection. As we've been careful not to call out to any collections directly in the reusable component, we can pass the built `todo` document directly into the template.
+We can use the [Factory package's](#test-data) `.build()` API to create a test document without inserting it into any collection. As we've been careful not to call out to any collections directly in the reusable component, we can pass the built `todo` document directly into the template.
 
 <h3 id="running-unit-tests">Running unit tests</h3>
 
@@ -329,7 +329,7 @@ There's a lot of scope for better isolation and testing utilities (the two packa
 
 An integration test is a test that crosses module boundaries. In the simplest case, this simply means something very similar to a unit test, where you perform your isolation around multiple modules, creating a non-singular "system under test".
 
-Although conceptually different to unit tests, such tests typically do not need to be run any differently to unit tests and can use the same [`meteor test` mode](#running-unit-tests) and [isolation techniques](#meteor-specific-isolation) as we use for unit tests.
+Although conceptually different to unit tests, such tests typically do not need to be run any differently to unit tests and can use the same [`meteor test` mode](#running-unit-tests) and [isolation techniques](#isolation-techniques) as we use for unit tests.
 
 However, an integration test that crosses the client-server boundary of a Meteor application (where the modules under test cross that boundary) requires a different testing infrastructure, namely Meteor's "full app" testing mode.
 
@@ -414,7 +414,7 @@ As the system under test in our integration test has a larger surface area, we n
 
 <h4 id="simple-integration-test-data">Creating data</h4>
 
-In this test, we used [Factory package's](#generating-data) `.create()` API, which inserts data into the real collection. However, as we've proxied all of the `Todos` and `Lists` collection methods onto a local collection (this is what `stub-collections` is doing), we won't run into any problems with trying to perform inserts from the client.
+In this test, we used [Factory package's](#test-data) `.create()` API, which inserts data into the real collection. However, as we've proxied all of the `Todos` and `Lists` collection methods onto a local collection (this is what `stub-collections` is doing), we won't run into any problems with trying to perform inserts from the client.
 
 This integration test can be run the exact same way as we ran [unit tests above](#running-unit-tests).
 
