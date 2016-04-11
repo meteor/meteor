@@ -6,4 +6,4 @@ description: These are Meteor Docs!!
 
 ### DOCS
 
-docs
+{% apibox "Meteor.user" %}
