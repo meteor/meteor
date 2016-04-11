@@ -167,7 +167,7 @@ var colonConverter = require('../utils/colon-converter.js');
 var Profile = require('../tool-env/profile.js').Profile;
 var packageVersionParser = require('../packaging/package-version-parser.js');
 var release = require('../packaging/release.js');
-import isopackets from '../tool-env/isopackets.js';
+import { load as loadIsopacket } from '../tool-env/isopackets.js';
 import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
 
 // files to ignore when bundling. node has no globs, so use regexps
@@ -1349,7 +1349,7 @@ class ClientTarget extends Target {
 
     if (this.arch === 'web.cordova') {
       const { WebAppHashing } =
-        isopackets.load('cordova-support')['webapp-hashing'];
+        loadIsopacket('cordova-support')['webapp-hashing'];
       const cordovaCompatibilityVersions =
         _.object(_.map(CORDOVA_PLATFORM_VERSIONS, (version, platform) => {
           const hash = WebAppHashing.calculateCordovaCompatibilityHash(
