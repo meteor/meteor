@@ -274,6 +274,6 @@ show.js
 show.less
 ```
 
-The whole directory or path should indicate that these templates are related to the `Lists` module, so it's not necessary to reproduce that information in the file name. Read more about directory structure [above](#javascript-structure).
+The whole directory or path should indicate that these templates are related to the `Lists` module, so it's not necessary to reproduce that information in the file name. Read more about directory structure [above](structure.html#javascript-structure).
 
 If you are writing your UI in React, you don't need to use the underscore-split names because you can import and export your components using the JavaScript module system.

@@ -40,7 +40,7 @@ This loads your application in a special "test mode". What this does is:
 1. *Doesn't* eagerly load *any* of our application code as Meteor normally would.
 2. *Does* eagerly load any file in our application (including in `imports/` folders) that look like `*.test[s].*`, or `*.spec[s].*`
 3. Sets the `Meteor.isTest` flag to be true.
-4. Starts up the test driver package ([see below](#driver-package)).
+4. Starts up the test driver package ([see below](#driver-packages)).
 
 > The [Meteor build tool](build-tool.html#what-it-does) and the `meteor test` command ignore any files located in any `tests/` directory. This allows you to put tests in this directory that you can run using a test runner outside of Meteor's built-in test tools and still not have those files loaded in your application. See Meteor's [default file load order](structure.html#load-order) rules.
 

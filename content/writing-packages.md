@@ -222,7 +222,7 @@ You can import the dependency from within you package code in the same way that 
 import github from 'github';
 ```
 
-<h3 id="npm-peer-dependencies">Peer npm dependencies</h3>
+<h3 id="peer-npm-dependencies">Peer npm dependencies</h3>
 
 `Npm.depends()` is fairly rigid (you can only depend on an exact version), and will typically result in multiple versions of a package being installed if many different Atmosphere packages depend on the same npm package. This makes it less than ideal to use on the client, where it's impractical to ship multiple copies of the same package code to the browser. Client-side packages are also often written with the assumption that only a single copy will be loaded. For example, React will complain if it is included more than once in an application bundle.
 

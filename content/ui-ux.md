@@ -145,7 +145,7 @@ Internationalization (i18n) is the process of generalizing the UI of your app in
 
 <h4 id="places-to-i18n">Places to translate</h4>
 
-It's useful to consider the various places in the system that user-readable strings exist and make sure that you are properly using the i18n system to generate those strings in each case. We'll go over the implementation for each case in the section about [`tap:i18n`](#tap-i18n) below.
+It's useful to consider the various places in the system that user-readable strings exist and make sure that you are properly using the i18n system to generate those strings in each case. We'll go over the implementation for each case in the section about [`tap:i18n`](#tap-i18n-js) below.
 
 1. **HTML templates.** This is the most obvious place---in the content of UI components that the user sees.
 2. **Client JavaScript messages.** Alerts or other messages that are generated on the client side are shown to the user, and should also be translated.
