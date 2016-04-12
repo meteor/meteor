@@ -13,7 +13,7 @@ For the meantime, MDG won't be accepting PR's for changes to the roadmap. We hop
 
 The mongo driver that currently ships with Meteor is quite old and users are finding issues with connecting to MongoDB 3.2 databases (e.g [#6258](https://github.com/meteor/meteor/issues/6258)). We want to update to the latest driver [#5763](https://github.com/meteor/meteor/issues/5763).
 
-In addition, we'd like to update the dev bundle to ship with the latest stable version of MongoDB (3.2) [#5809](https://github.com/meteor/meteor/issues/5809).
+In addition, we'd like to update the dev bundle to ship with the latest stable version of MongoDB (3.2) [#5809](https://github.com/meteor/meteor/issues/5809) as MongoDB 2.6 will be officially sunsetted at the end of October, 2016.
 
 ## Support for Node 4 and beyond
 
