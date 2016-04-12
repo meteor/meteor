@@ -1,10 +1,10 @@
 <div class="api {{bare}} new-api-box">
-  <h3 id="{{id}}" class="api-title">
+  <div id="{{id}}" class="api-title">
     <div class="locus">
       {{locus}}
     </div>
 
-    <a class="name selflink" href="{{link}}">{{{name}}}</a>
+    <h2 class="name selflink" href="{{link}}">{{{name}}}</h2>
     <div class="subtext">
       {{#if importName}}
         <code>import { {{importName}} } from 'meteor/{{module}}'</code>
@@ -16,7 +16,7 @@
         </a>
       {{/if}}
     </div>
-  </h3>
+  </div>
 
   <div class="desc">
     {{{markdown summary}}}

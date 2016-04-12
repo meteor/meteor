@@ -14,6 +14,8 @@ versions:
 sidebar_categories:
   null:
     - index
+  API:
+    - core
 github_repo: 'meteor/meteor'
 content_root: 'docs/source'
 

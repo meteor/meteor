@@ -8,4 +8,3 @@ description: These are Meteor Docs!!
 
 
 {% apibox "Template#onRendered" %}
-
