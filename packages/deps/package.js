@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Deprecated: Use the 'tracker' package instead.",
-  version: '1.0.12-rc.4'
+  version: '1.0.12-rc.5'
 });
 
 Package.onUse(function (api) {
