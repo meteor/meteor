@@ -6,4 +6,6 @@ description: These are Meteor Docs!!
 
 ### DOCS
 
-{% apibox "Meteor.user" %}
+
+{% apibox "Template#onRendered" %}
+
