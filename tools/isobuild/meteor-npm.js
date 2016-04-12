@@ -127,9 +127,9 @@ meteorNpm.dependenciesArePortable = function (nodeModulesDir) {
   // as a shared object rather than as JavaScript, so this should work
   // in the vast majority of cases.
 
-  assert.strictEqual(
-    files.pathBasename(nodeModulesDir),
-    "node_modules"
+  assert.ok(
+    files.pathBasename(nodeModulesDir).startsWith("node_modules"),
+    "Bad node_modules directory: " + nodeModulesDir,
   );
 
   function isPortable(dir, shouldCache) {

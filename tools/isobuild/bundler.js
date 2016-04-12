@@ -300,6 +300,20 @@ export class NodeModulesDirectory {
         relParts.unshift("node_modules", "meteor", name);
       }
 
+      let lastPart = relParts.pop();
+      if (lastPart !== "node_modules") {
+        // Sometimes when building an app bundle for a different
+        // architecture, the isopacket source directory ends up with
+        // different npm/node_modules directories for each architecture,
+        // distinguished by numerical suffixes (e.g. npm/node_modules1).
+        // While this is important to keep the built binary files
+        // distinct, we definitely don't want node_modules1 to show up in
+        // the final build.
+        assert.ok(lastPart.startsWith("node_modules"), lastPart);
+        lastPart = "node_modules";
+      }
+      relParts.push(lastPart);
+
       relPath = files.pathJoin(...relParts);
     }
 
