@@ -105,7 +105,7 @@ You can also add a `eslintConfig` section to your `package.json` to specify that
     ],
     "extends": [
       "airbnb/base",
-      "plugin:meteor/guide"
+      "plugin:meteor/recommended"
     ],
     "rules": {}
   }
