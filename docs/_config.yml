@@ -14,8 +14,8 @@ versions:
 sidebar_categories:
   null:
     - index
-api_box:
-  data_file: 'data.js'
+github_repo: 'meteor/meteor'
+content_root: 'docs/source'
 
 # URL
 ## If your site is put in a subdirectory, set url as 'http://yoursite.com/child' and root as '/child/'
@@ -71,6 +71,8 @@ pagination_dir: page
 ## Plugins: http://hexo.io/plugins/
 ## Themes: http://hexo.io/themes/
 theme: meteor
+api_box:
+  data_file: 'data.js'
 
 # Deployment
 ## Docs: http://hexo.io/docs/deployment.html
