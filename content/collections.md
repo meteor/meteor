@@ -216,7 +216,7 @@ class ListsCollection extends Mongo.Collection {
 
     // Call the original `insert` method, which will validate
     // against the schema
-    return super(list, callback);
+    return super.insert(list, callback);
   }
 }
 
@@ -234,7 +234,7 @@ class ListsCollection extends Mongo.Collection {
   // ...
   remove(selector, callback) {
     Package.todos.Todos.remove({listId: selector});
-    return super(selector, callback);
+    return super.remove(selector, callback);
   }
 }
 ```
