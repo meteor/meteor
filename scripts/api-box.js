@@ -21,7 +21,7 @@ var DocsData = require(dataPath);
 
 hexo.extend.tag.register('apibox', function(args) {
   var name = args[0];
-  var data = apiData({ name: name });
+  var data = _.clone(apiData({ name: name }));
 
   if (nameToId[data.longname]) {
     data.id = nameToId[data.longname];
@@ -124,14 +124,14 @@ var signature = function (data) {
 
 var importName = function(doc) {
   const noImportNeeded = !doc.module
-    || doc.scope === 'instance' 
+    || doc.scope === 'instance'
     || doc.ishelper
     || doc.istemplate;
-  
+
   // override the above we've explicitly decided to (i.e. Template.foo.X)
   if (!noImportNeeded || doc.importfrompackage) {
     if (doc.memberof) {
-      return doc.memberof.split('.')[0];  
+      return doc.memberof.split('.')[0];
     } else {
       return doc.name;
     }
