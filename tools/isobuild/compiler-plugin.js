@@ -412,6 +412,9 @@ class ResourceSlot {
         if (! _.isString(resource.sourcePath)) {
           resource.sourcePath = self.inputResource.path;
         }
+        if (! _.isString(resource.targetPath)) {
+          resource.targetPath = resource.sourcePath;
+        }
         self.jsOutputResources.push(resource);
       } else {
         self.outputResources.push(self.inputResource);
@@ -465,11 +468,13 @@ class ResourceSlot {
 
     const data = files.convertToStandardLineEndings(options.data);
     const useMeteorInstall = self.packageSourceBatch.useMeteorInstall;
+    const sourcePath = this.inputResource.path;
+    const targetPath = options.path || sourcePath;
     const resource = {
       refreshable: true,
-      sourcePath: this.inputResource.path,
-      servePath: self.packageSourceBatch.unibuild.pkg
-        ._getServePath(options.path),
+      sourcePath,
+      targetPath,
+      servePath: self.packageSourceBatch.unibuild.pkg._getServePath(targetPath),
       hash: sha1(data),
       lazy: this._isLazy(options),
     };
@@ -520,14 +525,17 @@ class ResourceSlot {
       sourcePath = options.sourcePath;
     }
 
+    const targetPath = options.path || sourcePath;
+
     var data = new Buffer(
       files.convertToStandardLineEndings(options.data), 'utf8');
+
     self.jsOutputResources.push({
       type: "js",
       data: data,
       sourcePath,
-      servePath: self.packageSourceBatch.unibuild.pkg._getServePath(
-        options.path),
+      targetPath,
+      servePath: self.packageSourceBatch.unibuild.pkg._getServePath(targetPath),
       // XXX should we allow users to be trusted and specify a hash?
       hash: sha1(data),
       // XXX do we need to call convertSourceMapPaths here like we did
@@ -597,6 +605,7 @@ class ResourceSlot {
     this.jsOutputResources.push({
       type: "js",
       sourcePath: this.inputResource.path,
+      targetPath: this.inputResource.path,
       servePath: this.inputResource.path,
       data: new Buffer(
         "throw new Error(" + JSON.stringify(message) + ");\n",

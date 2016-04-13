@@ -374,6 +374,8 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
         sourcePath = options.sourcePath;
       }
 
+      const targetPath = options.path || sourcePath;
+
       if (typeof sourcePath !== "string") {
         throw new Error("'sourcePath' option must be supplied to addJavaScript. Consider passing inputPath.");
       }
@@ -384,10 +386,11 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
         type: "js",
         data: data,
         sourcePath,
+        targetPath,
         servePath: colonConverter.convert(
           files.pathJoin(
             inputSourceArch.pkg.serveRoot,
-            files.convertToStandardPath(options.path, true))),
+            files.convertToStandardPath(targetPath, true))),
         hash: watch.sha1(data),
         sourceMap: convertSourceMapPaths(options.sourceMap,
                                          files.convertToStandardPath),
@@ -452,6 +455,7 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
         resources.push({
           type: "js",
           sourcePath,
+          targetPath: sourcePath,
           servePath: sourcePath,
           data: new Buffer(
             "throw new Error(" + JSON.stringify(message) + ");\n",
