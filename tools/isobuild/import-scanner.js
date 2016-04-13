@@ -156,7 +156,7 @@ export default class ImportScanner {
 
   addInputFiles(files) {
     files.forEach(file => {
-      file.sourcePath = this._getSourcePath(file);
+      this._checkSourceAndTargetPaths(file);
 
       // Note: this absolute path may not necessarily exist on the file
       // system, but any import statements or require calls in file.data
@@ -179,7 +179,7 @@ export default class ImportScanner {
       // eagerly evaluated are effectively "imported" as entry points.
       file.imported = ! file.lazy;
 
-      file.installPath = this._getInstallPath(absPath);
+      file.installPath = file.installPath || this._getInstallPath(absPath);
 
       if (! this._addFile(absPath, file)) {
         // Collisions can happen if a compiler plugin calls addJavaScript
@@ -189,6 +189,67 @@ export default class ImportScanner {
     });
 
     return this;
+  }
+
+  // Make sure file.sourcePath is defined, and handle the possibility that
+  // file.targetPath differs from file.sourcePath.
+  _checkSourceAndTargetPaths(file) {
+    file.sourcePath = this._getSourcePath(file);
+
+    if (isString(file.targetPath) &&
+        file.targetPath !== file.sourcePath) {
+      const absSourcePath = pathJoin(this.sourceRoot, file.sourcePath);
+      const absTargetPath = pathJoin(this.sourceRoot, file.targetPath);
+
+      // If file.targetPath differs from file.sourcePath, generate a new
+      // file object with that .sourcePath that imports the original file.
+      // This allows either the .sourcePath or the .targetPath to be used
+      // when importing the original file, and also allows multiple files
+      // to have the same .sourcePath but different .targetPaths.
+      let sourceFile = this._getFile(absSourcePath);
+      if (! sourceFile) {
+        const installPath = this._getInstallPath(absSourcePath);
+        sourceFile = this._addFile(absSourcePath, {
+          type: file.type,
+          sourcePath: file.sourcePath,
+          servePath: installPath,
+          installPath,
+          dataString: "",
+          deps: {},
+          lazy: true,
+        });
+      }
+
+      // Make sure the original file gets installed at the target path
+      // instead of the source path.
+      file.installPath = this._getInstallPath(absTargetPath);
+      file.sourcePath = file.targetPath;
+
+      let relativeId = convertToPosixPath(pathRelative(
+        pathDirname(absSourcePath),
+        absTargetPath
+      ));
+
+      // If the result of pathRelative does not already start with a "."
+      // or a "/", prepend a "./" to make it a valid relative identifier
+      // according to CommonJS syntax.
+      if ("./".indexOf(relativeId.charAt(0)) < 0) {
+        relativeId = "./" + relativeId;
+      }
+
+      // Set the contents of the source module to import the target
+      // module(s). Note that module.exports will be set to the exports of
+      // the last target module. This is not perfect, but (1) it's better
+      // than trying to merge exports, (2) it does the right thing when
+      // there's only one target module, (3) the plugin author can easily
+      // control which file comes last, and (4) it's always possible to
+      // import the target modules individually.
+      sourceFile.dataString += "module.exports = require(" +
+        JSON.stringify(relativeId) + ");\n";
+      sourceFile.data = new Buffer(sourceFile.dataString, "utf8");
+      sourceFile.hash = sha1(sourceFile.data);
+      sourceFile.deps[relativeId] = {};
+    }
   }
 
   // Concatenate the contents of oldFile and newFile, combining source
