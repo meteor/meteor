@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Simple templates to add login widgets to an app",
-  version: "1.1.9-rc.5"
+  version: "1.1.9-rc.6"
 });
 
 Package.onUse(function (api) {

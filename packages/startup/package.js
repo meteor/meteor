@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Deprecated package (now empty)",
-  version: "1.0.7-rc.5"
+  version: "1.0.7-rc.6"
 });
 
 Package.onUse(function (api) {
