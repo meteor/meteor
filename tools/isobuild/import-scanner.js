@@ -25,6 +25,16 @@ import {
   convertToPosixPath,
 } from "../fs/files.js";
 
+const fakeFileStat = {
+  isFile() {
+    return true;
+  },
+
+  isDirectory() {
+    return false;
+  }
+};
+
 const nativeModulesMap = Object.create(null);
 const nativeNames = Object.keys(process.binding("natives"));
 
@@ -631,6 +641,15 @@ export default class ImportScanner {
     return resolved;
   }
 
+  _statOrNull(absPath) {
+    const file = this._getFile(absPath);
+    if (file) {
+      return fakeFileStat;
+    }
+
+    return statOrNull(absPath);
+  }
+
   _joinAndStat(...joinArgs) {
     const joined = pathJoin(...joinArgs);
     if (this._statCache.has(joined)) {
@@ -638,7 +657,7 @@ export default class ImportScanner {
     }
 
     const path = pathNormalize(joined);
-    const exactStat = statOrNull(path);
+    const exactStat = this._statOrNull(path);
     const exactResult = exactStat && { path, stat: exactStat };
     let result = null;
     if (exactResult && exactStat.isFile()) {
@@ -648,7 +667,7 @@ export default class ImportScanner {
     if (! result) {
       this.extensions.some(ext => {
         const pathWithExt = path + ext;
-        const stat = statOrNull(pathWithExt);
+        const stat = this._statOrNull(pathWithExt);
         if (stat) {
           return result = { path: pathWithExt, stat };
         }
