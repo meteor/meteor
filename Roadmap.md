@@ -19,11 +19,18 @@ We want to be able to update the version of Node that ships with Meteor to 4 and
 
 # Full transition to npm
 
-1.3 introduced `npm install` support along with ES2015 modules. With 1.4, we would like to transition the Meteor package ecosystem over entirely from Atmosphere to npm. We are still in the early conceptual design phase and expect to update the roadmap once we have a design in place that will underpin further development. 
+The community has rallied around npm as the de-facto standard package manager for JavaScript. We believe committing fully to npm will strengthen the entire JavaScript ecosystem by removing fragmentation, will benefit existing Meteor developers by making it seamless to use any JavaScript package and increase Meteor adoption by aligning it with JavaScript best practices.
 
-# Data
+1.3 introduced `npm install` support along with ES2015 modules. With 1.4, we would like to transition the Meteor package ecosystem over entirely from Atmosphere to npm. We are still in the early conceptual design phase and expect to update the roadmap once we have a design in place that will underpin further development.
 
-We're building the next generation data stack for modern applications called [Apollo](https://github.com/apollostack/apollo). We believe the data part of the Meteor stack is impactful enough to deserve it's own fully fledged sub-project that will be compatible with other languages and frameworks. Apollo is born from the Meteor project and is naturally designed to work perfectly with Meteor.
+# Project Governance/Community Contribution
+
+Currently, it’s difficult for external developers to make meaningful contributions to Meteor as there is no clear guidance on what to work on, how best to do that work and signals around what will/won’t get merged. We plan on fixing this by creating tight documentation around how the project is developed (e.g the [Swift contribution guidelines](https://swift.org/contributing/)) and giving contributors a path towards earning increased privileges that culminate in full commit access. We’re also aiming to move more sub-projects into their own repositories that can be released on their own release schedule and more easily maintained by the community.
+
+# Data (SQL, REST, Performance)
+
+We're building the next generation data stack for modern applications called [Apollo](https://github.com/apollostack/apollo). We believe the data part of the Meteor stack is impactful enough to deserve it's own fully fledged sub-project that will be compatible with other languages and frameworks. Apollo is born from the Meteor project and is naturally designed to work perfectly with Meteor. It is GraphQL based and will work with multiple data sources starting with REST. Apollo is our answer to bringing SQL and improved performance analysis to Meteor.
+
 
 # View Layer
 
