@@ -16,6 +16,7 @@ sidebar_categories:
     - index
   API:
     - core
+    - pubsub
 github_repo: 'meteor/meteor'
 content_root: 'docs/source'
 
