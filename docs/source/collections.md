@@ -838,7 +838,7 @@ the keys must either be all 1 or all 0.  The exception is that you may specify
 object as well.  However, such field specifiers can not be used with
 [`observeChanges`](#observe_changes), [`observe`](#observe), cursors returned
 from a [publish function](#meteor_publish), or cursors used in
-`{{dstache}}#each}}` in a template. They may be used with [`fetch`](#fetch),
+`{% raw %}{{#each}}{% endraw %}` in a template. They may be used with [`fetch`](#fetch),
 [`findOne`](#findone), [`forEach`](#foreach), and [`map`](#map).
 
 

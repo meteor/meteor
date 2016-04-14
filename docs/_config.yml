@@ -21,9 +21,9 @@ sidebar_categories:
     - check
     - connections
     - collections
-    # - session
-    # - accounts
-    # - accounts-multi
+    - session
+    - accounts
+    - accounts-multi
     # - passwords
     # - templates
     # - blaze
