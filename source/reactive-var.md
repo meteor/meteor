@@ -1,7 +1,7 @@
-
-
-
-<h2 id="reactivevar_pkg"><span>ReactiveVar</span></h2>
+---
+title: ReactiveVar
+order: 15
+---
 
 To use `ReactiveVar`, add the `reactive-var` package to your project by running
 in your terminal:
@@ -41,5 +41,3 @@ using the `equalsFunc` argument.
 {% apibox "ReactiveVar#get" %}
 
 {% apibox "ReactiveVar#set" %}
-
-

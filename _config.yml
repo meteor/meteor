@@ -24,18 +24,18 @@ sidebar_categories:
     - session
     - accounts
     - accounts-multi
-    # - passwords
-    # - templates
-    # - blaze
-    # - timers
-    # - tracker
-    # - reactive-var
-    # - ejson
-    # - http
-    # - email
-    # - assets
-    # - packagejs
-    # - mobile-config
+    - passwords
+    - templates
+    - blaze
+    - timers
+    - tracker
+    - reactive-var
+    - ejson
+    - http
+    - email
+    - assets
+    - packagejs
+    - mobile-config
 github_repo: 'meteor/meteor'
 content_root: 'docs/source'
 

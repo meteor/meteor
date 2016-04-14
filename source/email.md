@@ -1,6 +1,7 @@
-
-
-<h2 id="email"><span>Email</span></h2>
+---
+title: Email
+order: 17
+---
 
 The `email` package allows sending email from a Meteor app. To use it, add the
 package to your project by running in your terminal:
@@ -28,30 +29,29 @@ application, you'd need to be careful to limit the emails that a
 client could send, to prevent your server from being used as a relay
 by spammers.)
 
-    // In your server code: define a method that the client can call
-    Meteor.methods({
-      sendEmail: function (to, from, subject, text) {
-        check([to, from, subject, text], [String]);
+```js
+// In your server code: define a method that the client can call
+Meteor.methods({
+  sendEmail: function (to, from, subject, text) {
+    check([to, from, subject, text], [String]);
 
-        // Let other method calls from the same client start running,
-        // without waiting for the email sending to complete.
-        this.unblock();
+    // Let other method calls from the same client start running,
+    // without waiting for the email sending to complete.
+    this.unblock();
 
-        Email.send({
-          to: to,
-          from: from,
-          subject: subject,
-          text: text
-        });
-      }
+    Email.send({
+      to: to,
+      from: from,
+      subject: subject,
+      text: text
     });
+  }
+});
 
-    // In your client code: asynchronously send an email
-    Meteor.call('sendEmail',
-                'alice@example.com',
-                'bob@example.com',
-                'Hello from Meteor!',
-                'This is a test of Email.send.');
-
-
-
+// In your client code: asynchronously send an email
+Meteor.call('sendEmail',
+            'alice@example.com',
+            'bob@example.com',
+            'Hello from Meteor!',
+            'This is a test of Email.send.');
+```
