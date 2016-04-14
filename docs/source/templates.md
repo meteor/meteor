@@ -1,11 +1,9 @@
+---
+title: Templates
+order: 11
+---
 
-
-
-<h2 id="templates_api"><span>Templates</span></h2>
-
-
-When you write a template as `<{{! }}template name="foo"> ... <{{!
-}}/template>` in an HTML file in your app, Meteor generates a
+When you write a template as `<template name="foo"> ... </template>` in an HTML file in your app, Meteor generates a
 "template object" named `Template.foo`. Note that template name cannot
 contain hyphens and other special characters.
 
@@ -18,10 +16,12 @@ or replaced and should be cleaned up.  You can associate data with a
 template instance, and you can access its DOM nodes when it is in the
 document.
 
-Read more about templates and how to use them in the [Spacebars](#pkg_spacebars) 
+Read more about templates and how to use them in the [Spacebars](#pkg_spacebars)
 package README and the [Blaze](http://guide.meteor.com/blaze.html) article in the Meteor Guide.
 
-{% apibox "Template#events" %}
+<h2 title="Template.<em>myTemplate</em>" id="template_myTemplate">Template Declarations</h2>
+
+{% apibox "Template#events" instanceDelimiter:. %}
 
 Declare event handlers for instances of this template. Multiple calls add
 new event handlers in addition to the existing ones.
@@ -29,25 +29,27 @@ new event handlers in addition to the existing ones.
 See [Event Maps](#eventmaps) for a detailed description of the event
 map format and how event handling works in Meteor.
 
-{% apibox "Template#helpers" %}
+{% apibox "Template#helpers" instanceDelimiter:. %}
 
 Each template has a local dictionary of helpers that are made available to it,
 and this call specifies helpers to add to the template's dictionary.
 
 Example:
 
-    Template.myTemplate.helpers({
-      foo() {
-        return Session.get("foo");
-      }
-    });
+```js
+Template.myTemplate.helpers({
+  foo() {
+    return Session.get("foo");
+  }
+});
+```
 
-Now you can invoke this helper with `{{dstache}}foo}}` in the template defined
-with `<{{! }}template name="myTemplate">`.
+Now you can invoke this helper with `{% raw %}{{foo}}{% endraw %}` in the template defined
+with `<template name="myTemplate">`.
 
 Helpers can accept positional and keyword arguments:
 
-```javascript
+```js
 Template.myTemplate.helpers({
   displayName(firstName, lastName, keyword) {
     var prefix = keyword.hash.title ? keyword.hash.title + " " : "";
@@ -59,7 +61,7 @@ Template.myTemplate.helpers({
 Then you can call this helper from template like this:
 
 ```
-{{dstache}}displayName "John" "Doe" title="President"}}
+{{displayName "John" "Doe" title="President"}}
 ```
 
 You can learn more about arguments to helpers in [Spacebars
@@ -75,7 +77,7 @@ To create a helper that can be used in any template, use
 [`Template.registerHelper`](#template_registerhelper).
 
 
-{% apibox "Template#onRendered" %}
+{% apibox "Template#onRendered" instanceDelimiter:. %}
 
 Callbacks added with this method are called once when an instance of
 Template.*myTemplate* is rendered into DOM nodes and put into the document for
@@ -95,14 +97,14 @@ template is rendered for the first time.
 ```html
 <template name="myPictures">
   <div class="container">
-    {{dstache}}#each pictures}}
-      <img class="item" src="/{{dstache}}.}}"/>
-    {{dstache}}/each}}
+    {{#each pictures}}
+      <img class="item" src="/{{.}}"/>
+    {{/each}}
   </div>
 </template>
 ```
 
-```javascript
+```js
 Template.myPictures.onRendered(function () {
   // Use the Packery jQuery plugin
   this.$('.container').packery({
@@ -112,7 +114,7 @@ Template.myPictures.onRendered(function () {
 });
 ```
 
-{% apibox "Template#onCreated" %}
+{% apibox "Template#onCreated" instanceDelimiter:. %}
 
 Callbacks added with this method are called before your template's logic is
 evaluated for the first time. Inside a callback, `this` is the new [template
@@ -124,7 +126,7 @@ These callbacks fire once and are the first group of callbacks to fire.
 Handling the `created` event is a useful way to set up values on template
 instance that are read from template helpers using `Template.instance()`.
 
-```javascript
+```js
 Template.myPictures.onCreated(function () {
   // set up local reactive variables
   this.highlightedPicture = new ReactiveVar(null);
@@ -134,7 +136,7 @@ Template.myPictures.onCreated(function () {
 });
 ```
 
-{% apibox "Template#onDestroyed" %}
+{% apibox "Template#onDestroyed" instanceDelimiter:. %}
 
 These callbacks are called when an occurrence of a template is taken off
 the page for any reason and not replaced with a re-rendering.  Inside
@@ -145,7 +147,7 @@ This group of callbacks is most useful for cleaning up or undoing any external
 effects of `created` or `rendered` groups. This group fires once and is the last
 callback to fire.
 
-```javascript
+```js
 Template.myPictures.onDestroyed(function () {
   // deregister from some central store
   GalleryTemplates = _.without(GalleryTemplates, this);
@@ -153,7 +155,7 @@ Template.myPictures.onDestroyed(function () {
 ```
 
 
-<h2 id="template_inst"><span>Template instances</span></h2>
+<h2 id="template_inst">Template instances</h2>
 
 A template instance object represents an occurrence of a template in
 the document.  It can be used to access the DOM and it can be
@@ -249,14 +251,14 @@ Template.notifications.onCreated(function () {
 
 ```html
 <template name="notifications">
-  {{dstache}}#if Template.subscriptionsReady}}
+  {{#if Template.subscriptionsReady}}
     <!-- This is displayed when all data is ready. -->
-    {{dstache}}#each notifications}}
-      {{dstache}}> notification}}
-    {{dstache}}/each}}
-  {{dstache}}else}}
+    {{#each notifications}}
+      {{> notification}}
+    {{/each}}
+  {{else}}
     Loading...
-  {{dstache}}/if}}
+  {{/if}}
 </template>
 ```
 
@@ -273,9 +275,9 @@ Template.comments.onCreated(function () {
 ```
 
 ```html
-{{dstache}}#with post}}
-  {{dstache}}> comments postId=_id}}
-{{dstache}}/with}}
+{{#with post}}
+  {{> comments postId=_id}}
+{{/with}}
 ```
 
 Another example where you want to initialize a plugin when the subscription is
@@ -307,7 +309,7 @@ Template.listing.onRendered(function () {
 {% apibox "Template.parentData" %}
 
 For example, `Template.parentData(0)` is equivalent to `Template.currentData()`.  `Template.parentData(2)`
-is equivalent to `{{dstache}}../..}}` in a template.
+is equivalent to `{% raw %}{{../..}}{% endraw %}` in a template.
 
 {% apibox "Template.body" %}
 
@@ -328,14 +330,14 @@ or the DOM API.
 may be calculated by a helper and may change reactively.  The `data`
 argument is optional, and if it is omitted, the current data context
 is used. It's also possible, to use `Template.dynamic` as a block helper
-(`{{dstache}}#Template.dynamic}} ... {{dstache}}/Template.dynamic}}`)
+(`{% raw %}{{#Template.dynamic}} ... {{/Template.dynamic}}{% endraw %}`)
 
-For example, if there is a template named "foo", `{{dstache}}> Template.dynamic
-template="foo"}}` is equivalent to `{{dstache}}> foo}}` and
-`{{dstache}}#Template.dynamic template="foo"}} ... {{dstache}}/Template.dynamic}}`
-is equivalent to `{{dstache}}#foo}} ... {{dstache}}/foo}}`.
+For example, if there is a template named "foo", `{% raw %}{{> Template.dynamic
+template="foo"}}{% endraw %}` is equivalent to `{% raw %}{{> foo}}{% endraw %}` and
+`{% raw %}{{#Template.dynamic template="foo"}} ... {{/Template.dynamic}}{% endraw %}`
+is equivalent to `{% raw %}{{#foo}} ... {{/foo}}{% endraw %}`.
 
-{{> apiBoxTitle name="Event Maps" id="eventmaps"}}
+<h2 id="eventmaps">Event Maps</h2>
 
 An event map is an object where
 the properties specify a set of events to handle, and the values are
@@ -369,16 +371,18 @@ block helpers such as `#with` and `#each`.
 
 Example:
 
-    {
-      // Fires when any element is clicked
-      'click'(event) { ... },
+```js
+{
+  // Fires when any element is clicked
+  'click'(event) { ... },
 
-      // Fires when any element with the 'accept' class is clicked
-      'click .accept'(event) { ... },
+  // Fires when any element with the 'accept' class is clicked
+  'click .accept'(event) { ... },
 
-      // Fires when 'accept' is clicked or focused, or a key is pressed
-      'click .accept, focus .accept, keypress'(event) { ... }
-    }
+  // Fires when 'accept' is clicked or focused, or a key is pressed
+  'click .accept, focus .accept, keypress'(event) { ... }
+}
+```
 
 Most events bubble up the document tree from their originating
 element.  For example, `'click p'` catches a click anywhere in a
@@ -387,12 +391,14 @@ element inside the paragraph.  The originating element of the event
 is available as the `target` property, while the element that matched
 the selector and is currently handling it is called `currentTarget`.
 
-    {
-      'click p'(event) {
-        var paragraph = event.currentTarget; // always a P
-        var clickedElement = event.target; // could be the P or a child element
-      }
-    }
+```js
+{
+  'click p'(event) {
+    var paragraph = event.currentTarget; // always a P
+    var clickedElement = event.target; // could be the P or a child element
+  }
+}
+```
 
 If a selector matches multiple elements that an event bubbles to, it
 will be called multiple times, for example in the case of `'click
@@ -502,10 +508,8 @@ Other DOM events are available as well, but for the events above,
 Meteor has taken some care to ensure that they work uniformly in all
 browsers.
 
-{{> apiBoxTitle name="Spacebars" id="spacebars"}}
+<h2 id="spacebars">Spacebars</h2>
 
 Spacebars is the language used to write Meteor templates. It is inspired by [Handlebars](http://handlebarsjs.com/). It shares some of the spirit and syntax of Handlebars, but has been tailored to produce reactive Meteor templates when compiled.
 
 For more information about Spacebars, see the [Spacebars README](#pkg_spacebars).
-
-

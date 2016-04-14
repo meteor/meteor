@@ -1,6 +1,7 @@
-
-
-<h2 id="ejson"><span>EJSON</span></h2>
+---
+title: EJSON
+order: 16
+---
 
 EJSON is an extension of JSON to support more types. It supports all JSON-safe
 types, as well as:
@@ -14,10 +15,12 @@ types, as well as:
 All EJSON serializations are also valid JSON.  For example an object with a date
 and a binary buffer would be serialized in EJSON as:
 
-    {
-      "d": {"$date": 1358205756553},
-      "b": {"$binary": "c3VyZS4="}
-    }
+```json
+{
+  "d": {"$date": 1358205756553},
+  "b": {"$binary": "c3VyZS4="}
+}
+```
 
 Meteor supports all built-in EJSON data types in publishers, method arguments
 and results, Mongo databases, and [`Session`](#session) variables.
@@ -65,9 +68,11 @@ default implementations are not sufficient.
 For example, the `toJSONValue` method for
 [`Mongo.ObjectID`](#mongo_object_id) could be:
 
-    function () {
-      return this.toHexString();
-    };
+```js
+function () {
+  return this.toHexString();
+};
+```
 
 {% apibox "EJSON.CustomType#clone" %}
 
@@ -86,4 +91,3 @@ the following properties:
 
 If your type does not have an `equals` method, `EJSON.equals` will compare the
 result of calling [`toJSONValue`](#ejson_type_toJSONValue) instead.
-

@@ -1,6 +1,7 @@
-
-
-<h2 id="tracker"><span>Tracker</span></h2>
+---
+title: Tracker
+order: 14
+---
 
 Meteor has a simple dependency tracking system which allows it to
 automatically rerun templates and other computations whenever
@@ -21,7 +22,7 @@ advanced facilities such as `Tracker.Dependency` and `onInvalidate`
 callbacks are intended primarily for package authors implementing new
 reactive data sources.
 
-{% apibox "Tracker.autorun"  %}
+{% apibox "Tracker.autorun" %}
 
 `Tracker.autorun` allows you to run a function that depends on reactive data
 sources, in such a way that if there are changes to the data later,
@@ -30,25 +31,29 @@ the function will be rerun.
 For example, you can monitor a cursor (which is a reactive data
 source) and aggregate it into a session variable:
 
-    Tracker.autorun(function () {
-      var oldest = _.max(Monkeys.find().fetch(), function (monkey) {
-        return monkey.age;
-      });
-      if (oldest)
-        Session.set("oldest", oldest.name);
-    });
+```js
+Tracker.autorun(function () {
+  var oldest = _.max(Monkeys.find().fetch(), function (monkey) {
+    return monkey.age;
+  });
+  if (oldest)
+    Session.set("oldest", oldest.name);
+});
+```
 
 Or you can wait for a session variable to have a certain value, and do
 something the first time it does, calling `stop` on the computation to
 prevent further rerunning:
 
-    Tracker.autorun(function (c) {
-      if (! Session.equals("shouldAlert", true))
-        return;
+```js
+Tracker.autorun(function (c) {
+  if (! Session.equals("shouldAlert", true))
+    return;
 
-      c.stop();
-      alert("Oh no!");
-    });
+  c.stop();
+  alert("Oh no!");
+});
+```
 
 The function is invoked immediately, at which point it may alert and
 stop right away if `shouldAlert` is already true.  If not, the
@@ -71,7 +76,7 @@ subscriptions and reactivity.
 If the initial run of an autorun throws an exception, the computation
 is automatically stopped and won't be rerun.
 
-{% apibox "Tracker.flush"  %}
+{% apibox "Tracker.flush" %}
 
 Normally, when you make changes (like writing to the database),
 their impact (like updating the DOM) is delayed until the system is
@@ -100,19 +105,19 @@ The <a href="http://manual.meteor.com/#tracker-theflushcycle">Meteor Manual</a>
 describes the motivation for the flush cycle and the guarantees made by
 `Tracker.flush` and `Tracker.afterFlush`.
 
-{% apibox "Tracker.nonreactive"  %}
+{% apibox "Tracker.nonreactive" %}
 
 Calls `func` with `Tracker.currentComputation` temporarily set to `null`
 and returns `func`'s own return value.  If `func` accesses reactive data
 sources, these data sources will never cause a rerun of the enclosing
 computation.
 
-{% apibox "Tracker.active"  %}
+{% apibox "Tracker.active" %}
 
 This value is useful for data source implementations to determine
 whether they are being accessed reactively or not.
 
-{% apibox "Tracker.currentComputation"  %}
+{% apibox "Tracker.currentComputation" %}
 
 It's very rare to need to access `currentComputation` directly.  The
 current computation is used implicitly by
@@ -121,12 +126,12 @@ current computation is used implicitly by
 dependency), and [`Tracker.onInvalidate`](#tracker_oninvalidate) (which
 registers a callback with it).
 
-{% apibox "Tracker.onInvalidate"  %}
+{% apibox "Tracker.onInvalidate" %}
 
 See [*`computation`*`.onInvalidate`](#computation_oninvalidate) for more
 details.
 
-{% apibox "Tracker.afterFlush"  %}
+{% apibox "Tracker.afterFlush" %}
 
 Functions scheduled by multiple calls to `afterFlush` are guaranteed
 to run in the order that `afterFlush` was called.  Functions are
@@ -171,15 +176,17 @@ of calling callbacks, but ensures that it will never be rerun.
 
 Example:
 
-    // if we're in a computation, then perform some clean-up
-    // when the current computation is invalidated (rerun or
-    // stopped)
-    if (Tracker.active) {
-      Tracker.onInvalidate(function () {
-        x.destroy();
-        y.finalize();
-      });
-    }
+```js
+// if we're in a computation, then perform some clean-up
+// when the current computation is invalidated (rerun or
+// stopped)
+if (Tracker.active) {
+  Tracker.onInvalidate(function () {
+    x.destroy();
+    y.finalize();
+  });
+}
+```
 
 {% apibox "Tracker.Computation#stop" %}
 
@@ -195,7 +202,7 @@ immediately if it is not currently invalidated, as well as its
 Nested computations are stopped automatically when their enclosing
 computation is rerun.
 
-{% apibox "Tracker.Computation#invalidate"  %}
+{% apibox "Tracker.Computation#invalidate" %}
 
 Invalidating a computation marks it to be rerun at
 [flush time](#tracker_flush), at
@@ -211,7 +218,7 @@ currently invalidated or is stopped has no effect.  A computation can
 invalidate itself, but if it continues to do so indefinitely, the
 result will be an infinite loop.
 
-{% apibox "Tracker.Computation#onInvalidate"  %}
+{% apibox "Tracker.Computation#onInvalidate" %}
 
 `onInvalidate` registers a one-time callback that either fires
 immediately or as soon as the computation is next invalidated or
@@ -221,17 +228,17 @@ break dependencies when a computation is rerun or stopped.
 To get a callback after a computation has been recomputed, you can
 call [`Tracker.afterFlush`](#tracker_afterflush) from `onInvalidate`.
 
-{% apibox "Tracker.Computation#onStop"  %}
+{% apibox "Tracker.Computation#onStop" %}
 
-{% apibox "Tracker.Computation#stopped"  %}
+{% apibox "Tracker.Computation#stopped" %}
 
-{% apibox "Tracker.Computation#invalidated"  %}
+{% apibox "Tracker.Computation#invalidated" %}
 
 This property is initially false.  It is set to true by `stop()` and
 `invalidate()`.  It is reset to false when the computation is
 recomputed at flush time.
 
-{% apibox "Tracker.Computation#firstRun"  %}
+{% apibox "Tracker.Computation#firstRun" %}
 
 This property is a convenience to support the common pattern where a
 computation has logic specific to the first run.
@@ -250,20 +257,22 @@ invalidate if something changes.  Typically, a data value will be
 accompanied by a Dependency object that tracks the computations that depend
 on it, as in this example:
 
-    var weather = "sunny";
-    var weatherDep = new Tracker.Dependency;
+```js
+var weather = "sunny";
+var weatherDep = new Tracker.Dependency;
 
-    var getWeather = function () {
-      weatherDep.depend()
-      return weather;
-    };
+var getWeather = function () {
+  weatherDep.depend()
+  return weather;
+};
 
-    var setWeather = function (w) {
-      weather = w;
-      // (could add logic here to only call changed()
-      // if the new value is different from the old)
-      weatherDep.changed();
-    };
+var setWeather = function (w) {
+  weather = w;
+  // (could add logic here to only call changed()
+  // if the new value is different from the old)
+  weatherDep.changed();
+};
+```
 
 This example implements a weather data source with a simple getter and
 setter.  The getter records that the current computation depends on
@@ -294,18 +303,16 @@ See the <a href="http://manual.meteor.com/#tracker-reactivevaluewithdependency">
 Meteor Manual</a> to learn how to create a reactive data source using
   Tracker.Dependency.
 
-{% apibox "Tracker.Dependency#changed"  %}
+{% apibox "Tracker.Dependency#changed" %}
 
-{% apibox "Tracker.Dependency#depend"  %}
+{% apibox "Tracker.Dependency#depend" %}
 
 `dep.depend()` is used in reactive data source implementations to record
 the fact that `dep` is being accessed from the current computation.
 
-{% apibox "Tracker.Dependency#hasDependents"  %}
+{% apibox "Tracker.Dependency#hasDependents" %}
 
 For reactive data sources that create many internal Dependencies,
 this function is useful to determine whether a particular Dependency is
 still tracking any dependency relationships or if it can be cleaned up
 to save memory.
-
-

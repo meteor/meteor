@@ -1,6 +1,7 @@
-
-
-<h2 id="blaze"><span>Blaze</span></h2>
+---
+title: Blaze
+order: 12
+---
 
 Blaze is the package that makes reactive templates possible.
 You can use the Blaze API directly in order to render templates programmatically
@@ -20,14 +21,14 @@ will update reactively in response to data changes until the View is
 removed using [`Blaze.remove`](#blaze_remove) or the View's
 parent element is removed by Meteor or jQuery.
 
-{{#warning}}
+{% pullquote warning %}
 If the View is removed by some other mechanism
 besides Meteor or jQuery (which Meteor integrates with by default),
 the View may continue to update indefinitely.  Most users will not need to
 manually render templates and insert them into the DOM, but if you do,
 be mindful to always call [`Blaze.remove`](#blaze_remove) when the View is
 no longer needed.
-{{/warning}}
+{% endpullquote %}
 
 {% apibox "Blaze.renderWithData" %}
 
@@ -59,7 +60,7 @@ updating these nodes.
 
 Rendering a template to HTML loses all fine-grained reactivity.  The
 normal way to render a template is to either include it from another
-template (`{{dstache}}> myTemplate}}`) or render and insert it
+template (`{% raw %}{{> myTemplate}}{% endraw %}`) or render and insert it
 programmatically using `Blaze.render`.  Only occasionally
 is generating HTML useful.
 
@@ -72,7 +73,7 @@ changes will invalidate the current Computation if there is one
 
 {% apibox "Blaze.View" %}
 
-Behind every template or part of a template &mdash; a template tag, say, like `{{dstache}}foo}}` or `{{dstache}}#if}}` &mdash; is
+Behind every template or part of a template &mdash; a template tag, say, like `{% raw %}{{foo}}{% endraw %}` or `{% raw %}{{#if}}{% endraw %}` &mdash; is
 a View object, which is a reactively updating region of DOM.
 
 Most applications do not need to be aware of these Views, but they offer a
@@ -205,8 +206,8 @@ For Views created by invoking templates, the original Template
 object.  For example, `Blaze.render(Template.foo).template === Template.foo`.
 {% enddtdd %}
 
-{{#dtdd name="templateInstance()" type="Template instance"
-id="view_templateinstance"}} For Views created by invoking templates,
+{% dtdd name:"templateInstance()" type:"Template instance" id:"view_templateinstance" %}
+For Views created by invoking templates,
 returns the [template instance](#template_inst) object for this
 particular View.  For example, in a [`created`](#template_created)
 callback, `this.view.templateInstance() === this`.
@@ -220,43 +221,43 @@ be updated.
 
 </dl>
 
-{% apibox "Blaze.currentView" %}
+{% apibox "Blaze.currentView" nested:true %}
 
 The "current view" is used by [`Template.currentData()`](#template_currentdata) and
 [`Template.instance()`](#template_instance) to determine
 the contextually relevant data context and template instance.
 
-{% apibox "Blaze.getView" %}
+{% apibox "Blaze.getView" nested:true %}
 
 If you don't specify an `element`, there must be a current View or an
 error will be thrown.  This is in contrast to
 [`Blaze.currentView`](#blaze_currentview).
 
-{% apibox "Blaze.With" %}
+{% apibox "Blaze.With" nested:true %}
 
 Returns an unrendered View object you can pass to `Blaze.render`.
 
-Unlike `{{dstache}}#with}}` (as used in templates), `Blaze.With` has no "else" case, and
+Unlike `{% raw %}{{#with}}{% endraw %}` (as used in templates), `Blaze.With` has no "else" case, and
 a falsy value for the data context will not prevent the content from
 rendering.
 
-{% apibox "Blaze.If" %}
+{% apibox "Blaze.If" nested:true %}
 
 Returns an unrendered View object you can pass to `Blaze.render`.
 
-Matches the behavior of `{{dstache}}#if}}` in templates.
+Matches the behavior of `{% raw %}{{#if}}{% endraw %}` in templates.
 
-{% apibox "Blaze.Unless" %}
-
-Returns an unrendered View object you can pass to `Blaze.render`.
-
-Matches the behavior of `{{dstache}}#unless}}` in templates.
-
-{% apibox "Blaze.Each" %}
+{% apibox "Blaze.Unless" nested:true %}
 
 Returns an unrendered View object you can pass to `Blaze.render`.
 
-Matches the behavior of `{{dstache}}#each}}` in templates.
+Matches the behavior of `{% raw %}{{#unless}}{% endraw %}` in templates.
+
+{% apibox "Blaze.Each" nested:true %}
+
+Returns an unrendered View object you can pass to `Blaze.render`.
+
+Matches the behavior of `{% raw %}{{#each}}{% endraw %}` in templates.
 
 {% apibox "Blaze.Template" %}
 
@@ -280,7 +281,7 @@ present on template objects:
 {% dtdd name:"constructView()" id:"template_constructview" %}
   Constructs and returns an unrendered View object.  This method is invoked
   by Meteor whenever the template is used, such as by `Blaze.render` or by
-  `{{dstache}}> foo}}` where `foo` resolves to a Template object.
+  `{% raw %}{{> foo}}{% endraw %}` where `foo` resolves to a Template object.
 
   `constructView()` constructs a View using `viewName` and `renderFunction`
   as constructor arguments, and then configures it as a template
@@ -291,7 +292,7 @@ present on template objects:
 
 {% apibox "Blaze.isTemplate" %}
 
-{{> apiBoxTitle name="Renderable Content" id="renderable_content"}}
+<h2 id="renderable_content">Renderable Content</h2>
 
 A value is *renderable content* if it is one of the following:
 
@@ -299,10 +300,6 @@ A value is *renderable content* if it is one of the following:
 * An unrendered [View](#blaze_view) object, like the return value of `Blaze.With`
 * `null` or `undefined`
 
-{{#note}}
-Internally, renderable content includes objects representing HTML tags
+> Internally, renderable content includes objects representing HTML tags
 as well, but these objects are not yet part of the officially-supported,
 public API.
-{{/note}}
-
-

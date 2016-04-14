@@ -1,6 +1,7 @@
-
-
-<h2 id="accounts_passwords"><span>Passwords</span></h2>
+---
+title: Passwords
+order: 10
+---
 
 The `accounts-password` package contains a full system for password-based
 authentication. In addition to the basic username and password-based
@@ -21,7 +22,6 @@ meteor add accounts-password
 You can construct your own user interface using the
 functions below, or use the [`accounts-ui` package](#accountsui) to
 include a turn-key user interface for password-based sign-in.
-
 
 {% apibox "Accounts.createUser" %}
 
@@ -48,8 +48,6 @@ override this behavior, use [`Accounts.onCreateUser`](#accounts_oncreateuser).
 This function is only used for creating users with passwords. The external
 service login flows do not use this function.
 
-### Managing usernames and emails
-
 Instead of modifying documents in the [`Meteor.users`](#meteor_users) collection
 directly, use these convenience functions which correctly check for case
 insensitive duplicates before updates.
@@ -72,8 +70,6 @@ This function accepts tokens passed into the callback registered with
 {% apibox "Accounts.findUserByUsername" %}
 
 {% apibox "Accounts.findUserByEmail" %}
-
-### Managing passwords
 
 Use the below functions to initiate password changes or resets from the server
 or the client.
@@ -99,10 +95,6 @@ This function accepts tokens passed into the callbacks registered with
 [`Accounts.onEnrollmentLink`](#Accounts-onEnrollmentLink).
 
 {% apibox "Accounts.setPassword" %}
-
-
-
-<h3 id="sending-emails"><span>Sending emails</span></h3>
 
 {% apibox "Accounts.sendResetPasswordEmail" %}
 
@@ -136,9 +128,6 @@ To customize the contents of the email, see
 
 {% apibox "Accounts.onEmailVerificationLink" %}
 
-
-
-
 {% apibox "Accounts.emailTemplates" %}
 
 This is an `Object` with several fields that are used to generate text/html
@@ -169,7 +158,6 @@ Override fields of the object by assigning to them:
 - `verifyEmail`: Same as `resetPassword`, but for verifying the users email
    address.
 
-
 Example:
 
 ```js
@@ -184,5 +172,3 @@ Accounts.emailTemplates.enrollAccount.text = function (user, url) {
      + url;
 };
 ```
-
-

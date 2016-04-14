@@ -1,5 +1,7 @@
-
-<h2 id="timers"><span>Timers</span></h2>
+---
+title: Timers
+order: 13
+---
 
 Meteor uses global environment variables
 to keep track of things like the current request's user.  To make sure

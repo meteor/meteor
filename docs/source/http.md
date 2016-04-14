@@ -1,6 +1,7 @@
-
-
-<h2 id="http"><span>HTTP</span></h2>
+---
+title: HTTP
+order: 16
+---
 
 `HTTP` provides an HTTP request API on the client and server.  To use
 these functions, add the HTTP package to your project by running in your
@@ -76,32 +77,34 @@ Contents of the result object:
 
 Example server method:
 
-    Meteor.methods({checkTwitter: function (userId) {
-      check(userId, String);
-      this.unblock();
-      try {
-        var result = HTTP.call("GET", "http://api.twitter.com/xyz",
-                               {params: {user: userId}});
-        return true;
-      } catch (e) {
-        // Got a network error, time-out or HTTP error in the 400 or 500 range.
-        return false;
-      }
-    }});
+```js
+Meteor.methods({checkTwitter: function (userId) {
+  check(userId, String);
+  this.unblock();
+  try {
+    var result = HTTP.call("GET", "http://api.twitter.com/xyz",
+                           {params: {user: userId}});
+    return true;
+  } catch (e) {
+    // Got a network error, time-out or HTTP error in the 400 or 500 range.
+    return false;
+  }
+}});
+```
 
 Example asynchronous HTTP call:
 
-    HTTP.call("POST", "http://api.twitter.com/xyz",
-              {data: {some: "json", stuff: 1}},
-              function (error, result) {
-                if (!error) {
-                  Session.set("twizzled", true);
-                }
-              });
-
+```js
+HTTP.call("POST", "http://api.twitter.com/xyz",
+          {data: {some: "json", stuff: 1}},
+          function (error, result) {
+            if (!error) {
+              Session.set("twizzled", true);
+            }
+          });
+```
 
 {% apibox "HTTP.get" %}
 {% apibox "HTTP.post" %}
 {% apibox "HTTP.put" %}
 {% apibox "HTTP.del" %}
-

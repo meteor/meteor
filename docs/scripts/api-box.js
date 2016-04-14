@@ -25,7 +25,8 @@ hexo.extend.tag.register('apibox', function(args) {
   var options = parseTagOptions(args)
   var defaults = {
     // by default, nest if it's a instance method
-    nested: name.indexOf('#') !== -1
+    nested: name.indexOf('#') !== -1,
+    instanceDelimiter: '#'
   };
   var data = _.extend({}, defaults, options, apiData({ name: name }));
 
@@ -37,7 +38,10 @@ hexo.extend.tag.register('apibox', function(args) {
   }
 
   data.signature = signature(data, { short: false});
-  data.title = signature(data, { short: true });
+  data.title = signature(data, {
+    short: true,
+    instanceDelimiter: data.instanceDelimiter,
+  });
   data.importName = importName(data);
   data.paramsNoOptions = paramsNoOptions(data);
 
@@ -124,7 +128,7 @@ signature = function (data, options) {
       escapedLongname = "<em>this</em>." + data.name;
     } else if (data.scope === "instance" && options.short) {
       // Something#foo => #foo
-      return '<em>#</em>' + escapedLongname.split('#')[1];
+      return '<em>' + options.instanceDelimiter + '</em>' + escapedLongname.split('#')[1];
     }
 
     return escapedLongname + paramsStr;

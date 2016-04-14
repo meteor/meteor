@@ -1,7 +1,7 @@
-
-
-
-<h2 id="mobileconfigjs"><span>Mobile Config File</span></h2>
+---
+title: Mobile Configuration
+order: 20
+---
 
 If your Meteor application targets mobile platforms such as iOS or
 Android, you can configure your app's metadata and build process
@@ -12,7 +12,7 @@ for this configuration.
 The code snippet below is an example `mobile-config.js` file. The rest of this
 section will explain the specific API commands in greater detail.
 
-```javascript
+```js
 // This section sets up some basic app metadata,
 // the entire section is optional.
 App.info({
@@ -50,11 +50,9 @@ App.configurePlugin('com.phonegap.plugins.facebookconnect', {
 });
 ```
 
-
 {% apibox "App.info" %}
 {% apibox "App.setPreference" %}
 {% apibox "App.accessRule" %}
 {% apibox "App.configurePlugin" %}
 {% apibox "App.icons" %}
 {% apibox "App.launchScreens" %}
-
