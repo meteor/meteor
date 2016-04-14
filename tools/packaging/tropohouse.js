@@ -511,10 +511,10 @@ _.extend(exports.Tropohouse.prototype, {
         // We need to turn our builds into a single isopack.
         var isopack = new Isopack();
         _.each(buildInputDirs, function (buildTempDir, i) {
-          isopack._loadUnibuildsFromPath(
-            packageName,
-            buildTempDir,
-            {firstIsopack: i === 0});
+          isopack._loadUnibuildsFromPath(packageName, buildTempDir, {
+            firstIsopack: i === 0,
+            justDownloaded: true,
+          });
         });
 
         self._saveIsopack(isopack, packageName, version);
