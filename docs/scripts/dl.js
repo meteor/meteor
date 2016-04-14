@@ -1,12 +1,9 @@
 /* global hexo */
 
-var showdown  = require('showdown');
-var converter = new showdown.Converter();
+var parseTagOptions = require('./parseTagOptions');
 
 hexo.extend.tag.register('dtdd', function(args, content) {
-  // sort of hacky but allows x:y
-  var argsJson = '{"' + args.join('","').replace(':', '":"') + '"}';
-  var options = JSON.parse(argsJson);
+  var options = parseTagOptions(args);
 
   var typespan = '';
   if (options.type) {
@@ -19,6 +16,8 @@ hexo.extend.tag.register('dtdd', function(args, content) {
   }
   var namespan = '<span class="name" ' + idstr + '>' + options.name + '</span>';
 
-  var markdownContent = converter.makeHtml(content);
-  return '<dt>' + namespan + typespan + '</dt><dd>' + markdownContent + '</dd>';
-}, {ends: true});
+  return hexo.render.render({text: content, engine: 'md'})
+    .then(function(markdownContent) {
+      return '<dt>' + namespan + typespan + '</dt><dd>' + markdownContent + '</dd>';
+    });
+}, { ends: true, async: true });

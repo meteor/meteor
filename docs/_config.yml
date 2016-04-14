@@ -18,6 +18,7 @@ sidebar_categories:
     - core
     - pubsub
     - methods
+    - check
 github_repo: 'meteor/meteor'
 content_root: 'docs/source'
 

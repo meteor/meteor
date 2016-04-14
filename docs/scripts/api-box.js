@@ -5,6 +5,7 @@ var fs = require('fs');
 var handlebars = require('handlebars');
 var _ = require('underscore');
 var nameToId = require(path.join(__dirname, 'nameToId.js'));
+var parseTagOptions = require('./parseTagOptions');
 var showdown  = require('showdown');
 var converter = new showdown.Converter();
 
@@ -20,9 +21,9 @@ var dataPath = path.join(hexo.base_dir, hexo.config.api_box.data_file);
 var DocsData = require(dataPath);
 
 hexo.extend.tag.register('apibox', function(args) {
-  var name = args[0];
-  var nested = !!args[1];
-  var data = _.extend({ nested: nested }, apiData({ name: name }));
+  var name = args.shift();
+  var options = parseTagOptions(args)
+  var data = _.extend(options, apiData({ name: name }));
 
   if (nameToId[data.longname]) {
     data.id = nameToId[data.longname];

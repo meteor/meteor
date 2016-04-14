@@ -76,13 +76,13 @@ with this ID has already been made.  Alternatively, you can use
 
 Read more about methods and how to use them in the [Methods](http://guide.meteor.com/methods.html) article in the Meteor Guide.
 
-{% apibox "DDPCommon.MethodInvocation#userId" true %}
+{% apibox "DDPCommon.MethodInvocation#userId" nested:true %}
 
 The user id is an arbitrary string &mdash; typically the id of the user record
 in the database. You can set it with the `setUserId` function. If you're using
 the [Meteor accounts system](#accounts_api) then this is handled for you.
 
-{% apibox "DDPCommon.MethodInvocation#setUserId" true %}
+{% apibox "DDPCommon.MethodInvocation#setUserId" nested:true %}
 
 Call this function to change the currently logged in user on the
 connection that made this method call. This simply sets the value of
@@ -98,16 +98,16 @@ any future method calls on the connection. Any previous method calls on
 this connection will still see the value of `userId` that was in effect
 when they started.
 
-{% apibox "DDPCommon.MethodInvocation#isSimulation" true %}
+{% apibox "DDPCommon.MethodInvocation#isSimulation" nested:true %}
 
-{% apibox "DDPCommon.MethodInvocation#unblock" true %}
+{% apibox "DDPCommon.MethodInvocation#unblock" nested:true %}
 
 On the server, methods from a given client run one at a time. The N+1th
 invocation from a client won't start until the Nth invocation
 returns. However, you can change this by calling `this.unblock`. This
 will allow the N+1th invocation to start running in a new fiber.
 
-{% apibox "DDPCommon.MethodInvocation#connection" true %}
+{% apibox "DDPCommon.MethodInvocation#connection" nested:true %}
 
 {% apibox "Meteor.Error" %}
 
@@ -189,7 +189,7 @@ limits login attempts, new user creation, and password resets to 5 attempts
 every 10 seconds per connection. It can be removed by calling
 `Accounts.removeDefaultRateLimit()`.
 
-{% apibox "DDPRateLimiter.addRule" true %}
+{% apibox "DDPRateLimiter.addRule" nested:true %}
 
 Custom rules can be added by calling `DDPRateLimiter.addRule`. The rate
 limiter is called on every method and subscription invocation.
@@ -213,5 +213,5 @@ var loginRule = {
 // Add the rule, allowing up to 5 messages every 1000 milliseconds.
 DDPRateLimiter.addRule(loginRule, 5, 1000);
 ```
-{% apibox "DDPRateLimiter.removeRule" true %}
-{% apibox "DDPRateLimiter.setErrorMessage" true %}
+{% apibox "DDPRateLimiter.removeRule" nested:true %}
+{% apibox "DDPRateLimiter.setErrorMessage" nested:true %}
