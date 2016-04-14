@@ -49,4 +49,5 @@ if (Meteor.isServer) {
 
 {% apibox "Meteor.settings" %}
 
+
 {% apibox "Meteor.release" %}
