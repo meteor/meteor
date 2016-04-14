@@ -23,8 +23,12 @@ var DocsData = require(dataPath);
 hexo.extend.tag.register('apibox', function(args) {
   var name = args.shift();
   var options = parseTagOptions(args)
-  var data = _.extend(options, apiData({ name: name }));
-
+  var defaults = {
+    // by default, nest if it's a instance method
+    nested: name.indexOf('#') !== -1
+  };
+  var data = _.extend({}, defaults, options, apiData({ name: name }));
+  
   if (nameToId[data.longname]) {
     data.id = nameToId[data.longname];
   } else {

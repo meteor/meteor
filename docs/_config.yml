@@ -20,7 +20,7 @@ sidebar_categories:
     - methods
     - check
     - connections
-    # - collections
+    - collections
     # - session
     # - accounts
     # - accounts-multi

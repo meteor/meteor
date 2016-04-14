@@ -76,13 +76,13 @@ with this ID has already been made.  Alternatively, you can use
 
 Read more about methods and how to use them in the [Methods](http://guide.meteor.com/methods.html) article in the Meteor Guide.
 
-{% apibox "DDPCommon.MethodInvocation#userId" nested:true %}
+{% apibox "DDPCommon.MethodInvocation#userId" %}
 
 The user id is an arbitrary string &mdash; typically the id of the user record
 in the database. You can set it with the `setUserId` function. If you're using
 the [Meteor accounts system](#accounts_api) then this is handled for you.
 
-{% apibox "DDPCommon.MethodInvocation#setUserId" nested:true %}
+{% apibox "DDPCommon.MethodInvocation#setUserId" %}
 
 Call this function to change the currently logged in user on the
 connection that made this method call. This simply sets the value of
@@ -98,16 +98,16 @@ any future method calls on the connection. Any previous method calls on
 this connection will still see the value of `userId` that was in effect
 when they started.
 
-{% apibox "DDPCommon.MethodInvocation#isSimulation" nested:true %}
+{% apibox "DDPCommon.MethodInvocation#isSimulation" %}
 
-{% apibox "DDPCommon.MethodInvocation#unblock" nested:true %}
+{% apibox "DDPCommon.MethodInvocation#unblock" %}
 
 On the server, methods from a given client run one at a time. The N+1th
 invocation from a client won't start until the Nth invocation
 returns. However, you can change this by calling `this.unblock`. This
 will allow the N+1th invocation to start running in a new fiber.
 
-{% apibox "DDPCommon.MethodInvocation#connection" nested:true %}
+{% apibox "DDPCommon.MethodInvocation#connection" %}
 
 {% apibox "Meteor.Error" %}
 
