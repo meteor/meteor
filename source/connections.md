@@ -1,6 +1,7 @@
-
-
-<h2 id="connections"><span>Server connections</span></h2>
+---
+title: Server Connections
+order: 5
+---
 
 These functions manage and inspect the network connection between the
 Meteor client and server.
@@ -114,20 +115,18 @@ connection is already closed, the callback will be called immediately.
 {% enddtdd %}
 </dl>
 
-{{#note}}
 
-Currently when a client reconnects to the server (such as after
+
+> Currently when a client reconnects to the server (such as after
 temporarily losing its Internet connection), it will get a new
 connection each time.  The `onConnection` callbacks will be called
 again, and the new connection will have a new connection `id`.
 
-In the future, when client reconnection is fully implemented,
+> In the future, when client reconnection is fully implemented,
 reconnecting from the client will reconnect to the same connection on
 the server: the `onConnection` callback won't be called for that
 connection again, and the connection will still have the same
 connection `id`.
-
-{{/note}}
 
 
 {% apibox "DDP.connect" %}
@@ -163,5 +162,3 @@ By default, clients open a connection to the server from which they're loaded.
 When you call `Meteor.subscribe`, `Meteor.status`, `Meteor.call`, and
 `Meteor.apply`, you are using a connection back to that default
 server.
-
-
