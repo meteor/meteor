@@ -119,7 +119,7 @@ signature = function (data, options) {
       escapedLongname = "<em>this</em>." + data.name;
     } else if (data.scope === "instance" && options.short) {
       // Something#foo => #foo
-      return '#' + escapedLongname.split('#')[1];
+      return '<em>#</em>' + escapedLongname.split('#')[1];
     }
 
     return escapedLongname + paramsStr;
