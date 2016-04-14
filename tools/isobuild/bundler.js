@@ -333,7 +333,13 @@ export class NodeModulesDirectory {
   // objects returned by the toJSON method above. Note that this works
   // even if the node_modules parameter is a string, though that will only
   // be the case for bundles built before Meteor 1.3.
-  static readDirsFromJSON(node_modules, callerInfo) {
+  static readDirsFromJSON(node_modules, {
+    rebuildBinaries = false,
+    // Options consumed by readDirsFromJSON are listed above. Any other
+    // options will be passed on to NodeModulesDirectory constructor via
+    // this callerInfo object:
+    ...callerInfo,
+  }) {
     assert.strictEqual(typeof callerInfo.sourceRoot, "string");
 
     const nodeModulesDirectories = Object.create(null);
@@ -395,6 +401,12 @@ export class NodeModulesDirectory {
       add({ local: false }, node_modules);
     } else if (node_modules) {
       _.each(node_modules, add);
+    }
+
+    if (rebuildBinaries) {
+      _.each(nodeModulesDirectories, (info, path) => {
+        meteorNpm.rebuildIfNonPortable(path);
+      });
     }
 
     return nodeModulesDirectories;

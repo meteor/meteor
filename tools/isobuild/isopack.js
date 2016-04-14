@@ -1085,11 +1085,15 @@ _.extend(Isopack.prototype, {
         }
       });
 
-      const nodeModulesDirectories =
-        bundler.NodeModulesDirectory.readDirsFromJSON(
-          unibuildJson.node_modules,
-          { packageName: self.name,
-            sourceRoot: unibuildBasePath });
+      const nodeModulesDirectories = bundler.NodeModulesDirectory
+        .readDirsFromJSON(unibuildJson.node_modules, {
+          packageName: self.name,
+          sourceRoot: unibuildBasePath,
+          // Rebuild binaries only when the isopack is first downloaded,
+          // and only when the unibuild arch matches the host arch.
+          rebuildBinaries: options.justDownloaded &&
+            archinfo.matches(archinfo.host(), unibuildMeta.arch)
+        });
 
       self.unibuilds.push(new Unibuild(self, {
         // At some point we stopped writing 'kind's to the metadata file, so

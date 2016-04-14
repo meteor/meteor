@@ -114,6 +114,22 @@ meteorNpm.updateDependencies = function (packageName,
   return true;
 };
 
+meteorNpm.rebuildIfNonPortable = function (nodeModulesDir) {
+  if (meteorNpm.dependenciesArePortable(nodeModulesDir)) {
+    return false;
+  }
+
+  const parentDir = files.pathDirname(nodeModulesDir);
+  const result = runNpmCommand(["rebuild"], parentDir);
+
+  if (! result.success) {
+    buildmessage.error(result.error);
+    return false;
+  }
+
+  return true;
+};
+
 // Return true if all of a package's npm dependencies are portable
 // (that is, if the node_modules can be copied anywhere and we'd
 // expect it to work, rather than containing native extensions that
