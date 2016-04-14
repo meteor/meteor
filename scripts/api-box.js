@@ -21,7 +21,8 @@ var DocsData = require(dataPath);
 
 hexo.extend.tag.register('apibox', function(args) {
   var name = args[0];
-  var data = _.clone(apiData({ name: name }));
+  var nested = !!args[1];
+  var data = _.extend({ nested: nested }, apiData({ name: name }));
 
   if (nameToId[data.longname]) {
     data.id = nameToId[data.longname];
@@ -215,10 +216,6 @@ handlebars.registerHelper('typeNames', function typeNames (nameList) {
   nameList = _.flatten(nameList);
 
   return toOrSentence(nameList);
-});
-
-handlebars.registerHelper('link', function () {
-  return '#/full/' + this.id;
 });
 
 handlebars.registerHelper('markdown', function(text) {

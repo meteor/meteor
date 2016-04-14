@@ -135,23 +135,23 @@ will still work.
 
 Read more about publications and how to use them in the [Data Loading](http://guide.meteor.com/data-loading.html) article in the Meteor Guide.
 
-{% apibox "Subscription#userId" %}
+{% apibox "Subscription#userId" true %}
 
 This is constant. However, if the logged-in user changes, the publish
 function is rerun with the new value.
 
-{% apibox "Subscription#added" %}
-{% apibox "Subscription#changed" %}
-{% apibox "Subscription#removed" %}
-{% apibox "Subscription#ready" %}
-{% apibox "Subscription#onStop" %}
+{% apibox "Subscription#added" true %}
+{% apibox "Subscription#changed" true %}
+{% apibox "Subscription#removed" true %}
+{% apibox "Subscription#ready" true %}
+{% apibox "Subscription#onStop" true %}
 
 If you call [`observe`](#observe) or [`observeChanges`](#observe_changes) in your
 publish handler, this is the place to stop the observes.
 
-{% apibox "Subscription#error" %}
-{% apibox "Subscription#stop" %}
-{% apibox "Subscription#connection" %}
+{% apibox "Subscription#error" true %}
+{% apibox "Subscription#stop" true %}
+{% apibox "Subscription#connection" true %}
 
 {% apibox "Meteor.subscribe" %}
 

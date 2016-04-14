@@ -1,10 +1,16 @@
 <div class="api {{bare}} new-api-box">
-  <div id="{{id}}" class="api-title">
+  <div class="api-title">
     <div class="locus">
       {{locus}}
     </div>
 
-    <h2 class="name selflink" href="{{link}}">{{{name}}}</h2>
+    {{! XXX: Is there a DRY to do this? }}
+    {{#if nested}}
+      <h3 class="name selflink" id={{id}}>{{{name}}}</h3>
+    {{else}}
+      <h2 class="name selflink" id={{id}}>{{{name}}}</h2>
+    {{/if}}
+
     <div class="subtext">
       {{#if importName}}
         <code>import { {{importName}} } from 'meteor/{{module}}'</code>
