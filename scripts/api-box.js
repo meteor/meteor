@@ -28,7 +28,7 @@ hexo.extend.tag.register('apibox', function(args) {
     nested: name.indexOf('#') !== -1
   };
   var data = _.extend({}, defaults, options, apiData({ name: name }));
-  
+
   if (nameToId[data.longname]) {
     data.id = nameToId[data.longname];
   } else {
@@ -109,9 +109,9 @@ signature = function (data, options) {
   }
 
   if (data.istemplate) {
-    return '{{> ' + escapedLongname + paramsStr + '}}';
+    return '{{> ' + escapedLongname + paramsStr + ' }}';
   } else if (data.ishelper){
-    return '{{ ' + escapedLongname + paramsStr + '}}';
+    return '{{ ' + escapedLongname + paramsStr + ' }}';
   } else {
     if (data.kind === "class" && !options.short) {
       escapedLongname = 'new ' + escapedLongname;
