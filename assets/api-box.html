@@ -4,12 +4,7 @@
       {{locus}}
     </div>
 
-    {{! XXX: Is there a DRY to do this? }}
-    {{#if nested}}
-      <h3 class="name selflink" id={{id}}>{{{name}}}</h3>
-    {{else}}
-      <h2 class="name selflink" id={{id}}>{{{name}}}</h2>
-    {{/if}}
+    <{{hTag}} title="{{title}}" class="name selflink" id={{id}}>{{{signature}}}</{{hTag}}>
 
     <div class="subtext">
       {{#if importName}}

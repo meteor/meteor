@@ -31,7 +31,8 @@ hexo.extend.tag.register('apibox', function(args) {
     data.id = data.longname.replace(/[.#]/g, "-");
   }
 
-  data.name = signature(data);
+  data.signature = signature(data, { short: false});
+  data.title = signature(data, { short: true });
   data.importName = importName(data);
   data.paramsNoOptions = paramsNoOptions(data);
 
@@ -62,65 +63,67 @@ var apiData = function (options) {
   return root;
 };
 
-var signature = function (data) {
-  var signature;
+signature = function (data, options) {
   var escapedLongname = _.escape(data.longname);
 
-  if (data.istemplate || data.ishelper) {
-    if (data.istemplate) {
-      signature = "{{> ";
-    } else {
-      signature = "{{ ";
-    }
+  var paramsStr = '';
 
-    signature += escapedLongname;
-
-    var params = data.params;
-
-    var paramNames = _.map(params, function (param) {
-      var name = param.name;
-
-      name = name + "=" + name;
-
-      if (param.optional) {
-        return "[" + name + "]";
-      }
-
-      return name;
-    });
-
-    signature += " " + paramNames.join(" ");
-
-    signature += " }}";
-  } else {
-    var beforeParens;
-    if (data.scope === "instance") {
-      beforeParens = "<em>" + apiData(data.memberof).instancename + "</em>." + data.name;
-    } else if (data.kind === "class") {
-      beforeParens = "new " + escapedLongname;
-    } else {
-      beforeParens = escapedLongname;
-    }
-
-    signature = beforeParens;
-
-    // if it is a function, and therefore has arguments
-    if (_.contains(["function", "class"], data.kind)) {
+  if (!options.short) {
+    if (data.istemplate || data.ishelper) {
       var params = data.params;
 
       var paramNames = _.map(params, function (param) {
+        var name = param.name;
+
+        name = name + "=" + name;
+
         if (param.optional) {
-          return "[" + param.name + "]";
+          return "[" + name + "]";
         }
 
-        return param.name;
+        return name;
       });
 
-      signature += "(" + paramNames.join(", ") + ")";
+      paramsStr = ' ' + paramNames.join(" ") + ' ';
+    } else {
+      // if it is a function, and therefore has arguments
+      if (_.contains(["function", "class"], data.kind)) {
+        var params = data.params;
+
+        var paramNames = _.map(params, function (param) {
+          if (param.optional) {
+            return "[" + param.name + "]";
+          }
+
+          return param.name;
+        });
+
+        paramsStr= "(" + paramNames.join(", ") + ")";
+      }
     }
   }
 
-  return signature;
+  if (data.istemplate) {
+    return '{{> ' + escapedLongname + paramsStr + '}}';
+  } else if (data.ishelper){
+    return '{{ ' + escapedLongname + paramsStr + '}}';
+  } else {
+    if (data.kind === "class" && !options.short) {
+      escapedLongname = 'new ' + escapedLongname;
+    }
+
+    // In general, if we are looking at an instance method, we want to show it as
+    //   Something#foo or #foo (if short). However, when it's on something called
+    //   `this`, we'll do the slightly weird thing of showing `this.foo` in both cases.
+    if (data.scope === "instance" && apiData(data.memberof).instancename === 'this') {
+      escapedLongname = "<em>this</em>." + data.name;
+    } else if (data.scope === "instance" && options.short) {
+      // Something#foo => #foo
+      return '#' + escapedLongname.split('#')[1];
+    }
+
+    return escapedLongname + paramsStr;
+  }
 };
 
 var importName = function(doc) {
@@ -220,4 +223,8 @@ handlebars.registerHelper('typeNames', function typeNames (nameList) {
 
 handlebars.registerHelper('markdown', function(text) {
   return converter.makeHtml(text);
+});
+
+handlebars.registerHelper('hTag', function() {
+  return this.nested ? 'h3' : 'h2';
 });
