@@ -67,7 +67,7 @@
     "rewire": "2.5.1",
     "rimraf": "2.5.2",
     "semantic-release": "4.3.5",
-    "validate-commit-msg": "2.5.0"
+    "validate-commit-msg": "2.6.0"
   },
   "peerDependencies": {
     "eslint": ">=0.8.0"
