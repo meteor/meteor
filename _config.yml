@@ -36,6 +36,23 @@ sidebar_categories:
     - api/assets
     - api/packagejs
     - api/mobile-config
+  Packages:
+    - packages/appcache
+    - packages/accounts-ui
+    - packages/audit-argument-checks
+    - packages/coffeescript
+    - packages/ecmascript
+    - packages/jquery
+    - packages/less
+    - packages/markdown
+    - packages/modules
+    - packages/oauth-encryption
+    - packages/random
+    - packages/spacebars
+    - packages/underscore
+    - packages/webapp
+  Command Line:
+    - commandline
 github_repo: 'meteor/meteor'
 content_root: 'docs/source'
 
