@@ -53,6 +53,7 @@
   "App.launchScreens",
   "App.setPreference",
   "Assets",
+  "Assets.absoluteFilePath",
   "Assets.getBinary",
   "Assets.getText",
   "Blaze",
