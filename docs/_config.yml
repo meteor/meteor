@@ -15,27 +15,27 @@ sidebar_categories:
   null:
     - index
   API:
-    - core
-    - pubsub
-    - methods
-    - check
-    - connections
-    - collections
-    - session
-    - accounts
-    - accounts-multi
-    - passwords
-    - templates
-    - blaze
-    - timers
-    - tracker
-    - reactive-var
-    - ejson
-    - http
-    - email
-    - assets
-    - packagejs
-    - mobile-config
+    - api/core
+    - api/pubsub
+    - api/methods
+    - api/check
+    - api/connections
+    - api/collections
+    - api/session
+    - api/accounts
+    - api/accounts-multi
+    - api/passwords
+    - api/templates
+    - api/blaze
+    - api/timers
+    - api/tracker
+    - api/reactive-var
+    - api/ejson
+    - api/http
+    - api/email
+    - api/assets
+    - api/packagejs
+    - api/mobile-config
 github_repo: 'meteor/meteor'
 content_root: 'docs/source'
 
