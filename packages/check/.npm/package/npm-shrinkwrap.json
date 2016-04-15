@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "lodash.isplainobject": {
+      "version": "4.0.4",
+      "resolved": "https://registry.npmjs.org/lodash.isplainobject/-/lodash.isplainobject-4.0.4.tgz",
+      "from": "lodash.isplainobject@4.0.4"
+    }
+  }
+}

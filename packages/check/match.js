@@ -3,6 +3,9 @@
 // Things we explicitly do NOT support:
 //    - heterogenous arrays
 
+//XXX: import from main lodash library if Meteor updates to use lodash instead of underscore
+var isPlainObject = require('lodash.isplainobject');
+
 var currentArgumentChecker = new Meteor.EnvironmentVariable;
 
 /**
@@ -320,7 +323,7 @@ var testSubtree = function (value, pattern) {
       path: ""
     };
   }
-  if (! jQuery.isPlainObject(value)) {
+  if (! isPlainObject(value)) {
     return {
       message: "Expected plain object",
       path: ""
@@ -453,4 +456,3 @@ var _prependPath = function (key, base) {
     return key + '.' + base;
   return key + base;
 };
-

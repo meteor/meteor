@@ -4,13 +4,15 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
-  api.use(['underscore', 'ejson'], ['client', 'server']);
-  api.use('jquery', 'client');
+  api.use(['underscore', 'modules', 'ejson'], ['client', 'server']);
 
   api.export(['check', 'Match']);
 
-  api.addFiles('jquery.js', 'server');
   api.addFiles('match.js', ['client', 'server']);
+});
+
+Npm.depends({
+  'lodash.isplainobject': '4.0.4'
 });
 
 Package.onTest(function (api) {
