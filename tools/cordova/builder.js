@@ -6,7 +6,7 @@ import files from '../fs/files.js';
 import bundler from '../isobuild/bundler.js';
 import archinfo from '../utils/archinfo.js';
 import release from '../packaging/release.js';
-import isopackets from '../tool-env/isopackets.js';
+import { load as loadIsopacket } from '../tool-env/isopackets.js';
 import utils from '../utils/utils.js';
 
 import { CORDOVA_ARCH } from './index.js';
@@ -216,7 +216,7 @@ export class CordovaBuilder {
   }
 
   writeConfigXmlAndCopyResources(shouldCopyResources = true) {
-    const { XmlBuilder } = isopackets.load('cordova-support')['xmlbuilder'];
+    const { XmlBuilder } = loadIsopacket('cordova-support')['xmlbuilder'];
 
     let config = XmlBuilder.create('widget');
 
@@ -390,7 +390,7 @@ export class CordovaBuilder {
     configDummy.PUBLIC_SETTINGS = publicSettings || {};
 
     const { WebAppHashing } =
-      isopackets.load('cordova-support')['webapp-hashing'];
+      loadIsopacket('cordova-support')['webapp-hashing'];
     program.version =
       WebAppHashing.calculateClientHash(program.manifest, null, configDummy);
   }
@@ -423,7 +423,7 @@ export class CordovaBuilder {
     }
 
     const { Boilerplate } =
-      isopackets.load('cordova-support')['boilerplate-generator'];
+      loadIsopacket('cordova-support')['boilerplate-generator'];
     const boilerplate = new Boilerplate(CORDOVA_ARCH, manifest, {
       urlMapper: _.identity,
       pathMapper: (path) => files.convertToOSPath(

@@ -4,6 +4,7 @@
 //    - heterogenous arrays
 
 var currentArgumentChecker = new Meteor.EnvironmentVariable;
+var isPlainObject = require("./isPlainObject.js").isPlainObject;
 
 /**
  * @summary Check that a value matches a [pattern](#matchpatterns).
@@ -16,7 +17,7 @@ var currentArgumentChecker = new Meteor.EnvironmentVariable;
  * @param {MatchPattern} pattern The pattern to match
  * `value` against
  */
-check = function (value, pattern) {
+var check = exports.check = function (value, pattern) {
   // Record that check got called, if somebody cared.
   //
   // We use getOrNullIfOutsideFiber so that it's OK to call check()
@@ -43,7 +44,7 @@ check = function (value, pattern) {
  * @namespace Match
  * @summary The namespace for all Match types and methods.
  */
-Match = {
+var Match = exports.Match = {
   Optional: function (pattern) {
     return new Optional(pattern);
   },
@@ -115,7 +116,9 @@ var Optional = function (pattern) {
   this.pattern = pattern;
 };
 
-var Maybe = Optional;
+var Maybe = function (pattern) {
+  this.pattern = pattern;
+};
 
 var OneOf = function (choices) {
   if (_.isEmpty(choices))
@@ -318,7 +321,7 @@ var testSubtree = function (value, pattern) {
       path: ""
     };
   }
-  if (! jQuery.isPlainObject(value)) {
+  if (! isPlainObject(value)) {
     return {
       message: "Expected plain object",
       path: ""
