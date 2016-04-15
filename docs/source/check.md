@@ -80,17 +80,19 @@ A one-element array matches an array of elements, each of which match
 `[Match.Any]` matches any array.
 {% enddtdd %}
 
-{% dtdd name:"<code>{<em>key1</em>: <em>pattern1</em>, <em>key2</em>: <em>pattern2</em>, ...}</code>" %}
+<dt><span class="name"><code>{<em>key1</em>\\: <em>pattern1</em>, <em>key2</em>\\: <em>pattern2</em>, ...}</code></span></dt>
+<dd>
 Matches an Object with the given keys, with values matching the given patterns.
 If any *pattern* is a `Match.Maybe` or `Match.Optional`, that key does not need to exist
 in the object. The value may not contain any keys not listed in the pattern.
 The value must be a plain Object with no special prototype.
-{% enddtdd %}
+</dd>
 
-{% dtdd name:"<code>Match.ObjectIncluding({<em>key1</em>: <em>pattern1</em>, <em>key2</em>: <em>pattern2</em>, ...})</code>" %}
+<dt><span class="name"><code>Match.ObjectIncluding({<em>key1</em>\: <em>pattern1</em>, <em>key2</em>\: <em>pattern2</em>, ...})</code></span></dt>
+<dd>
 Matches an Object with the given keys; the value may also have other keys
 with arbitrary values.
-{% enddtdd %}
+</dd>
 
 {% dtdd name:"<code>Object</code>" %}
 Matches any plain Object with any keys; equivalent to
