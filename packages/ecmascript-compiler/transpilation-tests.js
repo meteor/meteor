@@ -10,7 +10,7 @@ function contains(haystack, needle) {
   return haystack.indexOf(needle) >= 0;
 };
 
-Tinytest.add("ecmascript - transpilation - const", (test) => {
+Tinytest.add("ecmascript-compiler - transpilation - const", (test) => {
   // make sure `const` is turned into `var` (rather than passing
   // through, such as when you have es6.blockScoping on but
   // es6.constants off)
@@ -19,7 +19,7 @@ Tinytest.add("ecmascript - transpilation - const", (test) => {
   test.isTrue(contains(output, 'var'));
 });
 
-Tinytest.add("ecmascript - transpilation - class methods", (test) => {
+Tinytest.add("ecmascript-compiler - transpilation - class methods", (test) => {
   const output = transform(
 `class Foo {
   static staticMethod() {
@@ -44,7 +44,7 @@ Tinytest.add("ecmascript - transpilation - class methods", (test) => {
   test.isFalse(contains(output, 'createClass'));
 });
 
-Tinytest.add("ecmascript - transpilation - helpers - classCallCheck", (test) => {
+Tinytest.add("ecmascript-compiler - transpilation - helpers - classCallCheck", (test) => {
   const output = transform(`
 class Foo {
   constructor(x) {
@@ -56,7 +56,7 @@ class Foo {
   test.isTrue(contains(output, 'helpers/classCallCheck'));
 });
 
-Tinytest.add("ecmascript - transpilation - helpers - inherits", (test) => {
+Tinytest.add("ecmascript-compiler - transpilation - helpers - inherits", (test) => {
   const output = transform(`
 class Foo {}
 class Bar extends Foo {}
@@ -65,7 +65,7 @@ class Bar extends Foo {}
   test.isTrue(contains(output, 'helpers/inherits'));
 });
 
-Tinytest.add("ecmascript - transpilation - helpers - bind", (test) => {
+Tinytest.add("ecmascript-compiler - transpilation - helpers - bind", (test) => {
   const output = transform(`
   var foo = new Foo(...oneTwo, 3);
 `);
@@ -73,7 +73,7 @@ Tinytest.add("ecmascript - transpilation - helpers - bind", (test) => {
   test.isTrue(output.match(/\.bind\b/));
 });
 
-Tinytest.add("ecmascript - transpilation - helpers - extends", (test) => {
+Tinytest.add("ecmascript-compiler - transpilation - helpers - extends", (test) => {
   const output = transform(`
   var full = {a:1, ...middle, d:4};
 `);
@@ -81,7 +81,7 @@ Tinytest.add("ecmascript - transpilation - helpers - extends", (test) => {
   test.isTrue(contains(output, 'helpers/extends'));
 });
 
-Tinytest.add("ecmascript - transpilation - helpers - objectWithoutProperties", (test) => {
+Tinytest.add("ecmascript-compiler - transpilation - helpers - objectWithoutProperties", (test) => {
   const output = transform(`
 var {a, ...rest} = obj;
 `);
@@ -89,7 +89,7 @@ var {a, ...rest} = obj;
   test.isTrue(contains(output, 'helpers/objectWithoutProperties'));
 });
 
-Tinytest.add("ecmascript - transpilation - helpers - objectDestructuringEmpty", (test) => {
+Tinytest.add("ecmascript-compiler - transpilation - helpers - objectDestructuringEmpty", (test) => {
   const output = transform(`
 var {} = null;
 `);
@@ -97,7 +97,7 @@ var {} = null;
   test.isTrue(contains(output, 'helpers/objectDestructuringEmpty'));
 });
 
-Tinytest.add("ecmascript - transpilation - helpers - taggedTemplateLiteralLoose", (test) => {
+Tinytest.add("ecmascript-compiler - transpilation - helpers - taggedTemplateLiteralLoose", (test) => {
   const output = transform(`
 var x = asdf\`A\${foo}C\`
 `);
@@ -105,7 +105,7 @@ var x = asdf\`A\${foo}C\`
   test.isTrue(contains(output, 'helpers/taggedTemplateLiteralLoose'));
 });
 
-Tinytest.add("ecmascript - transpilation - helpers - createClass", (test) => {
+Tinytest.add("ecmascript-compiler - transpilation - helpers - createClass", (test) => {
   const output = transform(`
 class Foo {
   get blah() { return 123; }
@@ -115,7 +115,7 @@ class Foo {
   test.isTrue(contains(output, 'helpers/createClass'));
 });
 
-Tinytest.add("ecmascript - transpilation - flow", (test) => {
+Tinytest.add("ecmascript-compiler - transpilation - flow", (test) => {
   const output = transform(
     'var foo = function (one: any, two: number, three?): string {};');
   test.isTrue(contains(output, '(one, two, three)'));
