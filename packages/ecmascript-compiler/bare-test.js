@@ -1,4 +1,4 @@
-Tinytest.add("ecmascript - bare files work", function (test) {
+Tinytest.add("ecmascript-compiler - bare files work", function (test) {
   // This is defined in bare-file.js
   test.equal(exportedFromBareFile, "Yes");
 });
