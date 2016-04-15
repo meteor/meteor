@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import child_process from 'child_process';
 import eachline from 'eachline';
 
-import isopackets from '../tool-env/isopackets.js';
+import { load as loadIsopacket } from '../tool-env/isopackets.js';
 import runLog from '../runners/run-log.js';
 import { Console } from '../console/console.js';
 import files from '../fs/files.js';
@@ -146,7 +146,7 @@ export class AndroidRunTarget extends CordovaRunTarget {
         `SystemWebViewClient:${logLevel}`, '*:F'];
 
       const { Log } =
-          isopackets.load('cordova-support')['logging'];
+          loadIsopacket('cordova-support')['logging'];
 
       const logStream = eachline((line) => {
         const logEntry = logFromAndroidLogcatLine(Log, line);

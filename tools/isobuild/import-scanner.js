@@ -1,10 +1,13 @@
 import assert from "assert";
+import {inspect} from "util";
+import {Script} from "vm";
 import {
-  isString, isEmpty, has, keys, each, map, without
+  isString, isEmpty, has, keys, each, map, omit,
 } from "underscore";
 import {sha1, readAndWatchFileWithHash} from "../fs/watch.js";
 import {matches as archMatches} from "../utils/archinfo.js";
 import {findImportedModuleIdentifiers} from "./js-analyze.js";
+import {cssToCommonJS} from "./css-modules.js";
 import buildmessage from "../utils/buildmessage.js";
 import LRU from "lru-cache";
 import {Profile} from "../tool-env/profile.js";
@@ -21,6 +24,16 @@ import {
   convertToOSPath,
   convertToPosixPath,
 } from "../fs/files.js";
+
+const fakeFileStat = {
+  isFile() {
+    return true;
+  },
+
+  isDirectory() {
+    return false;
+  }
+};
 
 const nativeModulesMap = Object.create(null);
 const nativeNames = Object.keys(process.binding("natives"));
@@ -55,8 +68,34 @@ const defaultExtensionHandlers = {
     return "module.exports = " +
       JSON.stringify(JSON.parse(dataString), null, 2) +
       ";\n";
+  },
+
+  ".css"(dataString, hash) {
+    return cssToCommonJS(dataString, hash);
   }
 };
+
+// This is just a map from hashes to booleans, so it doesn't need full LRU
+// eviction logic.
+const scriptParseCache = Object.create(null);
+
+function canBeParsedAsPlainJS(dataString, hash) {
+  if (hash && has(scriptParseCache, hash)) {
+    return scriptParseCache[hash];
+  }
+
+  try {
+    var result = !! new Script(dataString);
+  } catch (e) {
+    result = false;
+  }
+
+  if (hash) {
+    scriptParseCache[hash] = result;
+  }
+
+  return result;
+}
 
 // Map from SHA (which is already calculated, so free for us)
 // to the results of calling findImportedModuleIdentifiers.
@@ -117,7 +156,7 @@ export default class ImportScanner {
 
   addInputFiles(files) {
     files.forEach(file => {
-      file.sourcePath = this._getSourcePath(file);
+      this._checkSourceAndTargetPaths(file);
 
       // Note: this absolute path may not necessarily exist on the file
       // system, but any import statements or require calls in file.data
@@ -127,7 +166,9 @@ export default class ImportScanner {
 
       const dotExt = "." + file.type;
       const dataString = file.data.toString("utf8");
-      file.dataString = defaultExtensionHandlers[dotExt](dataString);
+      file.dataString = defaultExtensionHandlers[dotExt](
+        dataString, file.hash);
+
       if (! (file.data instanceof Buffer) ||
           file.dataString !== dataString) {
         file.data = new Buffer(file.dataString, "utf8");
@@ -138,7 +179,7 @@ export default class ImportScanner {
       // eagerly evaluated are effectively "imported" as entry points.
       file.imported = ! file.lazy;
 
-      file.installPath = this._getInstallPath(absPath);
+      file.installPath = file.installPath || this._getInstallPath(absPath);
 
       if (! this._addFile(absPath, file)) {
         // Collisions can happen if a compiler plugin calls addJavaScript
@@ -150,14 +191,93 @@ export default class ImportScanner {
     return this;
   }
 
+  // Make sure file.sourcePath is defined, and handle the possibility that
+  // file.targetPath differs from file.sourcePath.
+  _checkSourceAndTargetPaths(file) {
+    file.sourcePath = this._getSourcePath(file);
+
+    if (isString(file.targetPath) &&
+        file.targetPath !== file.sourcePath) {
+      const absSourcePath = pathJoin(this.sourceRoot, file.sourcePath);
+      const absTargetPath = pathJoin(this.sourceRoot, file.targetPath);
+
+      // If file.targetPath differs from file.sourcePath, generate a new
+      // file object with that .sourcePath that imports the original file.
+      // This allows either the .sourcePath or the .targetPath to be used
+      // when importing the original file, and also allows multiple files
+      // to have the same .sourcePath but different .targetPaths.
+      let sourceFile = this._getFile(absSourcePath);
+      if (! sourceFile) {
+        const installPath = this._getInstallPath(absSourcePath);
+        sourceFile = this._addFile(absSourcePath, {
+          type: file.type,
+          sourcePath: file.sourcePath,
+          servePath: installPath,
+          installPath,
+          dataString: "",
+          deps: {},
+          lazy: true,
+        });
+      }
+
+      // Make sure the original file gets installed at the target path
+      // instead of the source path.
+      file.installPath = this._getInstallPath(absTargetPath);
+      file.sourcePath = file.targetPath;
+
+      let relativeId = convertToPosixPath(pathRelative(
+        pathDirname(absSourcePath),
+        absTargetPath
+      ));
+
+      // If the result of pathRelative does not already start with a "."
+      // or a "/", prepend a "./" to make it a valid relative identifier
+      // according to CommonJS syntax.
+      if ("./".indexOf(relativeId.charAt(0)) < 0) {
+        relativeId = "./" + relativeId;
+      }
+
+      // Set the contents of the source module to import the target
+      // module(s). Note that module.exports will be set to the exports of
+      // the last target module. This is not perfect, but (1) it's better
+      // than trying to merge exports, (2) it does the right thing when
+      // there's only one target module, (3) the plugin author can easily
+      // control which file comes last, and (4) it's always possible to
+      // import the target modules individually.
+      sourceFile.dataString += "module.exports = require(" +
+        JSON.stringify(relativeId) + ");\n";
+      sourceFile.data = new Buffer(sourceFile.dataString, "utf8");
+      sourceFile.hash = sha1(sourceFile.data);
+      sourceFile.deps[relativeId] = {};
+    }
+  }
+
   // Concatenate the contents of oldFile and newFile, combining source
   // maps and updating all other properties appropriately. Once this
   // combination is done, oldFile should be kept and newFile discarded.
   _combineFiles(oldFile, newFile) {
+    function checkProperty(name) {
+      if (has(oldFile, name)) {
+        if (! has(newFile, name)) {
+          newFile[name] = oldFile[name];
+        }
+      } else if (has(newFile, name)) {
+        oldFile[name] = newFile[name];
+      }
+
+      if (oldFile[name] !== newFile[name]) {
+        throw new Error(
+          "Attempting to combine different files:\n" +
+            inspect(omit(oldFile, "dataString")) + "\n" +
+            inspect(omit(newFile, "dataString")) + "\n"
+        );
+      }
+    }
+
     // Since we're concatenating the files together, they must be either
     // both lazy or both eager. Same for bareness.
-    assert.strictEqual(oldFile.lazy, newFile.lazy);
-    assert.strictEqual(oldFile.bare, newFile.bare);
+    checkProperty("lazy");
+    checkProperty("bare");
 
     function getChunk(file) {
       const consumer = file.sourceMap &&
@@ -368,24 +488,20 @@ export default class ImportScanner {
         return;
       }
 
-      if (! this._hasDefaultExtension(absImportedPath)) {
-        // The _readModule method provides hardcoded support for files
-        // with known extensions, but any other type of file must be
-        // ignored at this point, because it was not in the set of input
-        // files and therefore must not have been processed by a compiler
-        // plugin for the current architecture (this.bundleArch).
-        return;
-      }
-
       const installPath = this._getInstallPath(absImportedPath);
       if (! installPath) {
         // The given path cannot be installed on this architecture.
         return;
       }
 
-      // The object returned by _readModule will have .data, .dataString,
+      // If the module is not readable, _readModule may return
+      // null. Otherwise it will return an object with .data, .dataString,
       // and .hash properties.
       depFile = this._readModule(absImportedPath);
+      if (! depFile) {
+        return;
+      }
+
       depFile.type = "js"; // TODO Is this correct?
       depFile.sourcePath = pathRelative(this.sourceRoot, absImportedPath);
       depFile.installPath = installPath;
@@ -423,8 +539,19 @@ export default class ImportScanner {
       info.dataString = info.dataString.slice(1);
     }
 
-    const ext = pathExtname(absPath).toLowerCase();
-    info.dataString = defaultExtensionHandlers[ext](info.dataString);
+    let ext = pathExtname(absPath).toLowerCase();
+    if (! has(defaultExtensionHandlers, ext)) {
+      if (canBeParsedAsPlainJS(dataString)) {
+        ext = ".js";
+      } else {
+        return null;
+      }
+    }
+
+    info.dataString = defaultExtensionHandlers[ext](
+      info.dataString,
+      info.hash,
+    );
 
     if (info.dataString !== dataString) {
       info.data = new Buffer(info.dataString, "utf8");
@@ -463,12 +590,6 @@ export default class ImportScanner {
 
       if (relPathWithinNodeModules.startsWith("..")) {
         // absPath is not a subdirectory of path.
-        return;
-      }
-
-      if (! this._hasDefaultExtension(relPathWithinNodeModules)) {
-        // Only accept files within node_modules directories if they
-        // have one of the known extensions.
         return;
       }
 
@@ -527,26 +648,12 @@ export default class ImportScanner {
       }
 
       if (dir === "node_modules") {
-        if (! this._hasDefaultExtension(installPath)) {
-          // Reject any files within node_modules directories that do
-          // not have one of the known extensions.
-          return;
-        }
-
-        // Accept any file within a node_modules directory if it has a
-        // known file extension.
+        // Accept any file within a node_modules directory.
         return installPath;
       }
     }
 
     return installPath;
-  }
-
-  _hasDefaultExtension(path) {
-    return has(
-      defaultExtensionHandlers,
-      pathExtname(path).toLowerCase()
-    );
   }
 
   _splitPath(path) {
@@ -595,6 +702,15 @@ export default class ImportScanner {
     return resolved;
   }
 
+  _statOrNull(absPath) {
+    const file = this._getFile(absPath);
+    if (file) {
+      return fakeFileStat;
+    }
+
+    return statOrNull(absPath);
+  }
+
   _joinAndStat(...joinArgs) {
     const joined = pathJoin(...joinArgs);
     if (this._statCache.has(joined)) {
@@ -602,7 +718,7 @@ export default class ImportScanner {
     }
 
     const path = pathNormalize(joined);
-    const exactStat = statOrNull(path);
+    const exactStat = this._statOrNull(path);
     const exactResult = exactStat && { path, stat: exactStat };
     let result = null;
     if (exactResult && exactStat.isFile()) {
@@ -612,7 +728,7 @@ export default class ImportScanner {
     if (! result) {
       this.extensions.some(ext => {
         const pathWithExt = path + ext;
-        const stat = statOrNull(pathWithExt);
+        const stat = this._statOrNull(pathWithExt);
         if (stat) {
           return result = { path: pathWithExt, stat };
         }
@@ -724,7 +840,7 @@ export default class ImportScanner {
       file.missingNodeModules = missing;
 
       const possiblySpurious =
-        has(file.deps, id) &&
+        file.deps && has(file.deps, id) &&
         file.deps[id].possiblySpurious;
 
       const info = missing[id] = {
@@ -806,11 +922,12 @@ export default class ImportScanner {
       // might return a package from a node_modules directory.
       return this._joinAndStat(dirPath, main) ||
         // The _tryToResolveImportedPath method takes a file object as its
-        // first parameter, but only the .sourcePath property is ever
-        // used, so we can get away with passing a fake file object with
-        // only that property.
+        // first parameter, but only the .sourcePath and .deps properties
+        // are ever used, so we can get away with passing a fake file
+        // object with only those properties.
         this._tryToResolveImportedPath({
           sourcePath: pathRelative(this.sourceRoot, pkgJsonPath),
+          deps: {},
         }, main, seenDirPaths);
     }
 

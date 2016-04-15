@@ -700,9 +700,6 @@ function runLinters({inputSourceArch, isopackCache, sources,
     skipDebugOnly: true,
     skipProdOnly: true,
     skipTestOnly: true,
-    // We only care about getting exports here, so it's OK if we get the Mac
-    // version when we're bundling for Linux.
-    allowWrongPlatform: true,
   }, (unibuild) => {
     if (unibuild.pkg.name === inputSourceArch.pkg.name) {
       return;
@@ -866,7 +863,6 @@ compiler.eachUsedUnibuild = function (
   var dependencies = options.dependencies;
   var arch = options.arch;
   var isopackCache = options.isopackCache;
-  const allowWrongPlatform = options.allowWrongPlatform;
 
   var acceptableWeakPackages = options.acceptableWeakPackages || {};
 
@@ -906,7 +902,7 @@ compiler.eachUsedUnibuild = function (
       continue;
     }
 
-    var unibuild = usedPackage.getUnibuildAtArch(arch, {allowWrongPlatform});
+    var unibuild = usedPackage.getUnibuildAtArch(arch);
     if (!unibuild) {
       // The package exists but there's no unibuild for us. A buildmessage has
       // already been issued. Recover by skipping.
