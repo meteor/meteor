@@ -183,7 +183,7 @@ In a Mocha test, it makes sense to use `stub-collections` in a `beforeEach`/`aft
 
 Unit testing is the process of isolating a section of code and then testing that the internals of that section work as you expect. As [we've split our code base up into ES2015 modules](structure.html) it's natural to test those modules one at a time.
 
-By isolating a module and simply test its internal functionality, we can write tests that are *fast* and *accurate*---they can quickly tell you where a problem in your application lies. Note however that incomplete unit tests can often hide bugs because of the way they stub out dependencies. For that reason it's useful to combine unit tests with slower (and perhaps less commonly run) integration and acceptance tests.
+By isolating a module and simply testing its internal functionality, we can write tests that are *fast* and *accurate*---they can quickly tell you where a problem in your application lies. Note however that incomplete unit tests can often hide bugs because of the way they stub out dependencies. For that reason it's useful to combine unit tests with slower (and perhaps less commonly run) integration and acceptance tests.
 
 <h3 id="simple-unit-test">A simple unit test</h3>
 
@@ -493,7 +493,7 @@ Of note here:
 
  - Before running, each test sets up the data it needs using the `generateData` helper (see [the section on creating integration test data](#creating-integration-test-data) for more detail) then goes to the homepage.
 
- - Although Flow Router doesn't take a done callback, we can use `Tracker.afterFlush` to wait for all it's reactive consequences to occur.
+ - Although Flow Router doesn't take a done callback, we can use `Tracker.afterFlush` to wait for all its reactive consequences to occur.
 
  - Here we wrote a little utility (which could be abstracted into a general package) to wait for all the subscriptions which are created by the route change (the `todos.inList` subscription in this case) to become ready before checking their data.
 
