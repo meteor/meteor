@@ -31,7 +31,8 @@
   allow `undefined`. #6735
 
 * Compiler plugins can call `addJavaScript({ path })` multiple times with
-  different paths for the same source file. #6806
+  different paths for the same source file, and `module.id` will reflect
+  this `path` instead of the source path, if they are different. #6806
 
 * Fixed bugs: https://github.com/meteor/meteor/milestones/Release%201.3.2
 
