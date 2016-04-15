@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Encrypt account secrets stored in the database",
-  version: '1.0.10-rc.6'
+  version: '1.0.10'
 });
 
 Package.onUse(function (api) {

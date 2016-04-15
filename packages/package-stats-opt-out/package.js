@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Opt out of sending package stats",
-  version: '1.0.7-rc.6'
+  version: '1.0.7'
 });
 
 Package.onUse(function (api) {
