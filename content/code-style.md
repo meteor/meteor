@@ -143,23 +143,13 @@ A side note for Emmet users: You can use *\<ctrl-e\>* to expand HTML tags in .js
 
 <h4 id="eslint-atom">Atom</h4>
 
-Install the following three Atom packages. Here's how to install them from the terminal, but you can also select them from within Atom:
+Using ESLint with Atom is simple. Just install these three packages:
 
 ```bash
 apm install language-babel
 apm install linter
 apm install linter-eslint
 ```
-
-Go to *Settings -> Packages.* Under "linter-eslint", click the *Settings* button. To allow atom to see ESLint, you need to set "Global Node Path" to your Node path. As indicated in Atom, you can find this out with the following command in the terminal:
-
-```
-npm get prefix
-```
-
-This will return something like `/usr/local`. Add this to the "Global Node Path", and check "Use Global Eslint":
-
-![Set your "Global Node Path" and check "Use Global Eslint"](images/atom-configuration.png)
 
 Then **restart** (or **reload** by pressing Ctrl+Alt+R / Cmd+Opt+R) Atom to activate linting.
 
