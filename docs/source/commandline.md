@@ -85,6 +85,8 @@ check your username with `meteor whoami`.
 Deploy the project in your current directory to
 <a href="https://www.meteor.com/galaxy" target="_blank">Galaxy</a>.
 
+Use `--owner` to decide which organization or user account you'd like to deploy
+a new app to if you are a member of more than one Galaxy-enabled account.
 
 You can deploy in debug mode by passing `--debug`. This
 will leave your source code readable by your favorite in-browser
