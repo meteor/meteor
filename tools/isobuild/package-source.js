@@ -1310,6 +1310,25 @@ _.extend(PackageSource.prototype, {
         }
       });
 
+      const origAppDir = projectContext.getOriginalAppDirForTestPackages();
+
+      const origNodeModulesDir = origAppDir &&
+        files.pathJoin(origAppDir, "node_modules");
+
+      const origNodeModulesStat = origNodeModulesDir &&
+        files.statOrNull(origNodeModulesDir);
+
+      if (origNodeModulesStat &&
+          origNodeModulesStat.isDirectory()) {
+        sourceArch.localNodeModulesDirs["node_modules"] = {
+          // Override these properties when calling
+          // addNodeModulesDirectory in compileUnibuild.
+          sourceRoot: origAppDir,
+          sourcePath: origNodeModulesDir,
+          local: false,
+        };
+      }
+
       self.architectures.push(sourceArch);
 
       // sourceArch's WatchSet should include all the project metadata files
