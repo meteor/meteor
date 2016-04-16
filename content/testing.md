@@ -454,35 +454,28 @@ const waitForSubscriptions = () => new Promise(resolve => {
 const afterFlushPromise = Promise.denodeify(Tracker.afterFlush);
 
 if (Meteor.isClient) {
-  describe('data available when routed', function () {
-    beforeEach(function (done) {
-      // First, ensure the data that we expect is loaded on the server
-      generateData()
-        // Then, route the app to the homepage
-        .then(() => FlowRouter.go('/'))
-        // Nodeify is a API to return any error from the promise
-        // to the node-style done callback in the style it expects
-        .nodeify(done);
-    });
+    describe('data available when routed', () => {
+    // First, ensure the data that we expect is loaded on the server
+    //   Then, route the app to the homepage
+    beforeEach(() => generateData().then(() => FlowRouter.go('/')));
 
-    describe('when logged out', function () {
-      it('has all public lists at homepage', function () {
+    describe('when logged out', () => {
+      it('has all public lists at homepage', () => {
         assert.equal(Lists.find().count(), 3);
       });
 
-      it('renders the correct list when routed to', function (done) {
+      it('renders the correct list when routed to', () => {
         const list = Lists.findOne();
         FlowRouter.go('Lists.show', { _id: list._id });
 
-        afterFlushPromise()
+        return afterFlushPromise()
           .then(() => {
             assert.equal($('.title-wrapper').html(), list.name);
           })
           .then(() => waitForSubscriptions())
           .then(() => {
             assert.equal(Todos.find({ listId: list._id }).count(), 3);
-          })
-          .nodeify(done);
+          });
       });
     });
   });
