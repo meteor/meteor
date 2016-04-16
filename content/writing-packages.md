@@ -7,9 +7,10 @@ discourseTopicId: 20194
 After reading this article, you'll know:
 
 1. When to create an npm package and when to create an Atmosphere package
-2. The basics of writing an Atmosphere package
-3. How to depend on other packages, both from Atmosphere and npm
-4. How an Atmosphere package can integrate with Meteor's build system
+1. The basics of writing an npm package
+1. The basics of writing an Atmosphere package
+1. How to depend on other packages, both from Atmosphere and npm
+1. How an Atmosphere package can integrate with Meteor's build system
 
 The Meteor platform supports two package systems: [npm](https://www.npmjs.com), a repository of JavaScript modules for Node.js and the browser, and [Atmosphere](https://atmospherejs.com), a repository of packages written specifically for Meteor.
 
@@ -19,11 +20,72 @@ With the release of version 1.3, Meteor has full support for npm. In the future,
 
 If you want to distribute and reuse code that you've written for a Meteor application, then you should consider publishing that code on npm if it's general enough to be consumed by a wider JavaScript audience. It's simple to [use npm packages from Meteor applications](using-packages.html#npm), and possible to [use npm packages from Atmosphere packages](#npm-dependencies), so even if your main audience is Meteor developers, npm might be the best choice.
 
-The practice of writing npm packages is [well documented](https://docs.npmjs.com/getting-started/creating-node-modules) and we won't cover it here.
-
 However, if your package depends on an Atmosphere package (which, in Meteor 1.3, includes the Meteor core packages), or needs to take advantage of Meteor's [build system](build-tool.html), then writing an Atmosphere package might be the best option.
 
-This article will cover some tips on how to do that.
+<h2 id="creating-npm">Creating an npm package</h2>
+
+```bash
+mkdir my-package
+cd my-package/
+meteor npm init
+```
+
+The last command creates a `package.json` file and prompts you for the package information. You may skip everything but `name`, `version`, and `entry point`. You can use the default `index.js` for `entry point`. This file is where you set your package's exports:
+
+```js
+// my-package/index.js
+exports.myPackageLog = function() {
+  console.log("logged from my-package");
+};
+```
+
+Now apps that include this package can do:
+
+```js
+import { myPackageLog } from 'my-package'
+
+myPackageLog(); // > "logged from my-package"
+```
+
+<h3 id="including-in-app">Including in your app</h3>
+
+When you are developing a new npm package for your app, there are a couple ways to include the package in your app:
+
+1. Place the package in your app's `node_modules/` directory, and add the package to source control. Do this when you want everything in a single repository.
+1. Place the package outside your app's directory in a separate repository and use `npm link`. Do this when you want to use the package in multiple apps.
+
+<h4 id="inside-node-modules">Placing inside node_modules</h3>
+
+```bash
+cd my-app/node_modules/
+mkdir my-package
+cd my-package/
+meteor npm init
+git add -f ./ # (or use a git submodule)
+```
+
+Then edit the `dependencies` object of `my-app/package.json`, adding `"my-package": "1.0.0"` (use the same version number you chose during `meteor npm init`).
+
+<h4 id="using-npm-link">Using npm link</h3>
+
+```bash
+cd ~/
+mkdir my-package
+cd my-package/
+meteor npm init
+cd ~/my-app/
+meteor npm link ~/my-package
+```
+
+Then edit the `dependencies` object of `my-app/package.json`, adding `"my-package": "1.0.0"` (use the same version number you chose during `meteor npm init`).
+
+<h3 id="publishing-npm">Publishing your package</h3>
+
+You can share your package with others by publishing it to the npm registry. While most packages are public, you can control who may view and use your package with [private modules](https://docs.npmjs.com/private-modules/intro)).
+
+To publish publicly, [follow these instructions](https://docs.npmjs.com/getting-started/publishing-npm-packages). When you're done, anyone can add your package to their app with `npm install --save your-package`.
+
+If you want to share packages during development, we recommend using source control instead of the registry. If you use the registry, then every time you change the package, you need to increment the version number, publish, and then `npm update my-package` inside your app.
 
 <h2 id="creating">Creating an Atmosphere package</h2>
 

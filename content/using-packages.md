@@ -233,15 +233,47 @@ sendTextMessage() {
 }
 ```
 
-<h2 id="atmosphere-overriding">Overriding packages from Atmosphere with a local version</h2>
+<h2 id="overriding-packages">Overriding packages with a local version</h2>
 
-A Meteor app can load packages in one of three ways, and it looks for a matching package name in the following order:
+If you need to modify a package to do something that the published version doesn't do, you can edit a local version of the package on your computer.
+
+<h3 id="npm-overriding">npm</h3>
+
+Let's say you want to modify the `left-pad` npm package. If you haven't already, run inside your app directory:
+
+```bash
+meteor npm install --save left-pad
+```
+
+Now `left-pad` is included in your `package.json`, and the code has been downloaded to `node_modules/left_pad/`. Add the new directory to source control with:
+
+```bash
+git add -f node_modules/left_pad/
+```
+
+Now you can edit the package, commit, and push, and your teammates will get your version of the package. To ensure that your package doesn't get overwritten during an `npm update`, change the default caret version range in your `package.json` to an exact version. Before:
+
+```json
+"left-pad": "^1.0.2",
+```
+
+After:
+
+```json
+"left-pad": "1.0.2",
+```
+
+An alternative method is maintaining a separate repository for the package and changing the `package.json` version number [to a git URL or tarball](http://debuggable.com/posts/how-to-fork-patch-npm-modules:4e2eb9f3-e584-44be-b1a9-3db7cbdd56cb), but every time you edit the separate repo, you'll need to commit, push, and `npm update left-pad`.
+
+<h3 id="atmosphere-overriding">Atmosphere</h3>
+
+A Meteor app can load Atmosphere packages in one of three ways, and it looks for a matching package name in the following order:
 
 1. Package source code in the `packages/` directory inside your app.
 2. Package source code in directories indicated by setting a `PACKAGE_DIRS` environment variable before running any `meteor` command. You can add multiple directories by separating the paths with a `:` on OSX or Linux, or a `;` on Windows. For example: `PACKAGE_DIRS=../first/directory:../second/directory`, or on Windows: `set PACKAGE_DIRS=..\first\directory;..\second\directory`.
 3. Pre-built package from Atmosphere. The package is cached in `~/.meteor/packages` on Mac/Linux or `%LOCALAPPDATA%\.meteor\packages` on Windows, and only loaded into your app as it is built.
 
-If you need to patch a package to do something that the published version doesn't do, then you can use (1) or (2) to override the version from Atmosphere. You can even do this to load patched versions of Meteor core packages - just copy the code of the package from [Meteor's GitHub repository](https://github.com/meteor/meteor/tree/devel/packages), and edit away.
+You can use (1) or (2) to override the version from Atmosphere. You can even do this to load patched versions of Meteor core packages - just copy the code of the package from [Meteor's GitHub repository](https://github.com/meteor/meteor/tree/devel/packages), and edit away.
 
 One difference between pre-published packages and local app packages is that the published packages have any binary dependencies pre-built. This should only affect a small subset of packages. If you clone the source code into your app, you need to make sure you have any compilers required by that package.
 
