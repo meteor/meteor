@@ -196,8 +196,13 @@ export default class ImportScanner {
   _checkSourceAndTargetPaths(file) {
     file.sourcePath = this._getSourcePath(file);
 
-    if (isString(file.targetPath) &&
-        file.targetPath !== file.sourcePath) {
+    if (! isString(file.targetPath)) {
+      return;
+    }
+
+    file.targetPath = pathNormalize(pathJoin(".", file.targetPath));
+
+    if (file.targetPath !== file.sourcePath) {
       const absSourcePath = pathJoin(this.sourceRoot, file.sourcePath);
       const absTargetPath = pathJoin(this.sourceRoot, file.targetPath);
 
@@ -388,7 +393,7 @@ export default class ImportScanner {
             if (this._joinAndStat(this.sourceRoot, sourcePath)) {
               // If sourcePath exists as a path relative to this.sourceRoot,
               // strip away the leading / that made it look absolute.
-              return pathJoin(".", sourcePath);
+              return pathNormalize(pathJoin(".", sourcePath));
             }
 
             if (relPath) {
@@ -411,7 +416,7 @@ export default class ImportScanner {
       sourcePath = file.path;
     }
 
-    return sourcePath;
+    return pathNormalize(pathJoin(".", sourcePath));
   }
 
   _findImportedModuleIdentifiers(file) {
