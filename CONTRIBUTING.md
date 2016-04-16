@@ -56,6 +56,7 @@ Render multiple items in your template with `{% raw %}{{#each}}{% endraw %}`
 The site is built using hexo, a static site generator. You'll need to `npm install -g hexo`, then
 
 ```
+git submodule update --init --recursive
 cd site
 npm install
 hexo server
