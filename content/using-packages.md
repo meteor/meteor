@@ -251,7 +251,9 @@ Now `left-pad` is included in your `package.json`, and the code has been downloa
 git add -f node_modules/left_pad/
 ```
 
-Now you can edit the package, commit, and push, and your teammates will get your version of the package. To ensure that your package doesn't get overwritten during an `npm update`, change the default [caret version range](https://docs.npmjs.com/misc/semver#caret-ranges-123-025-004) in your `package.json` to an exact version. Before:
+Now you can edit the package, commit, and push, and your teammates will get your version of the package. To ensure that your package doesn't get overwritten during an `npm update`, change the default [caret version range](https://docs.npmjs.com/misc/semver#caret-ranges-123-025-004) in your `package.json` to an exact version.
+
+Before:
 
 ```json
 "left-pad": "^1.0.2",
