@@ -19,8 +19,8 @@ versions:
 sidebar_categories:
   null:
     - index
-    - structure
     - code-style
+    - structure
     - 1.3-migration
   Data:
     - collections
