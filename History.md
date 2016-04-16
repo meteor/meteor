@@ -1,3 +1,9 @@
+## v1.3.2.1
+
+* Fixed faulty comparison of .sourcePath and .targetPath properties of
+  files scanned by the ImportScanner, which caused problems for apps using
+  the `tap:i18n` package. 6e792a7cf25847b8cd5d5664a0ff45c9fffd9e57
+
 ## v1.3.2
 
 * The `meteor/meteor` repository now includes a `Roadmap.md` file:
