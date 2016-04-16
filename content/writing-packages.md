@@ -24,6 +24,10 @@ However, if your package depends on an Atmosphere package (which, in Meteor 1.3,
 
 <h2 id="creating-npm">Creating an npm package</h2>
 
+If you want to override a package that already exists in the npm registry, [use this method](using-packages.html#npm-overriding).
+
+To create a new package:
+
 ```bash
 mkdir my-package
 cd my-package/
