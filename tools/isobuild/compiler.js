@@ -402,7 +402,7 @@ var compileUnibuild = Profile(function (options) {
     nodeModulesDirectories[nmd.sourcePath] = nmd;
   }
 
-  Object.keys(inputSourceArch.localNodeModulesDirs).forEach(dir => {
+  _.each(inputSourceArch.localNodeModulesDirs, (info, dir) => {
     addNodeModulesDirectory({
       packageName: inputSourceArch.pkg.name,
       sourceRoot: inputSourceArch.sourceRoot,
@@ -411,6 +411,10 @@ var compileUnibuild = Profile(function (options) {
       // packages, as well as .npm/package/node_modules directories.
       npmDiscards: isopk.npmDiscards,
       local: true,
+      // The values of inputSourceArch.localNodeModulesDirs are usually
+      // just `true`, but if `info` is an object, then we let its
+      // properties override the properties defined above.
+      ...(_.isObject(info) ? info : Object.prototype),
     });
   });
 

@@ -555,6 +555,16 @@ _.extend(ProjectContext.prototype, {
     });
   }),
 
+  // When running test-packages for an app with local packages, this
+  // method will return the original app dir, as opposed to the temporary
+  // testRunnerAppDir created for the tests.
+  getOriginalAppDirForTestPackages() {
+    const appDir = this._projectDirForLocalPackages;
+    if (_.isString(appDir) && appDir !== this.projectDir) {
+      return appDir;
+    }
+  },
+
   _localPackageSearchDirs: function () {
     var self = this;
     var searchDirs = [files.pathJoin(self._projectDirForLocalPackages, 'packages')];
