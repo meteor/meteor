@@ -664,6 +664,11 @@ Meteor.methods({resetPassword: function (token, newPassword) {
         "services.password.reset.token": token});
       if (!user)
         throw new Meteor.Error(403, "Token expired");
+      var when = user.services.password.reset.when;
+      var tokenLifetimeMs = self._getPasswordResetTokenLifetimeMs();
+      var currentTimeMs = Date.now();
+      if((currentTimeMs - when) > tokenLifetimeMs)
+        throw new Meteor.Error(403, "Token expired");
       var email = user.services.password.reset.email;
       if (!_.include(_.pluck(user.emails || [], 'address'), email))
         return {
