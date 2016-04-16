@@ -228,7 +228,7 @@ Template.Lists_show_page.helpers({
 
 It's the `listShow` component (a reusuable component) that actually handles the job of rendering the content of the page. As the page component is passing the arguments into the reusuable component, it is able to be quite mechanical and the concerns of talking to the router and rendering the page have been separated.
 
-<h3 id="route-rendering-logic">Different pages for a URL</h3>
+<h3 id="route-rendering-logic">Changing page when logged out</h3>
 
 There are types of rendering logic that appear related to the route but which also seem related to user interface rendering. A classic example is authorization; for instance, you may want to render a login form for some subset of your pages if the user is not yet logged in.
 
