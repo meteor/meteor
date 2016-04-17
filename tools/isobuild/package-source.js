@@ -1327,15 +1327,21 @@ _.extend(PackageSource.prototype, {
 
   _inferFileOptions(relPath, {arch, isApp}) {
     const fileOptions = {};
-    const dirs = files.pathDirname(relPath).split(files.pathSep);
+    const isTest = global.testCommandMetadata &&
+      global.testCommandMetadata.isTest;
 
-    // If running in test mode (`meteor test`), all files other than test
-    // files should be loaded lazily.
-    if (global.testCommandMetadata && global.testCommandMetadata.isTest) {
-      if (!isTestFilePath(relPath)) {
-        fileOptions.lazy = true;
+    if (isTest) {
+      if (isTestFilePath(relPath)) {
+        // When running tests, test files should not be loaded lazily.
+        return fileOptions;
       }
+
+      // If running in test mode (`meteor test`), all files other than
+      // test files should be loaded lazily.
+      fileOptions.lazy = true;
     }
+
+    const dirs = files.pathDirname(relPath).split(files.pathSep);
 
     for (var i = 0; i < dirs.length; ++i) {
       let dir = dirs[i];
