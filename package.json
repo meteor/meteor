@@ -1,11 +1,10 @@
 {
   "name": "eslint-plugin-meteor",
-  "version": "3.5.2",
   "author": "Dominik Ferber <dominik.ferber+npm@gmail.com>",
   "description": "Meteor specific linting rules for ESLint",
   "main": "dist/index.js",
   "publishConfig": {
-    "tag": "latest"
+    "tag": "next"
   },
   "release": {
     "branch": "master"
