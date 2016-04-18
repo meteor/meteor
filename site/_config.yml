@@ -10,8 +10,8 @@ author:
 language:
 timezone:
 apis:
+  segment: zQx6cQifkTU79E3L0XAnmrOXP2A5bC6r
   ga: UA-30093278-6
-  marketo: 627-RVJ-941
   swiftype: h1KW95Mz3fNyf4cnqVtr
 versions:
   - '1.3'
