@@ -294,7 +294,7 @@ We are then able to wire in the denormalizer into the mutations of the `Todos` c
 class TodosCollection extends Mongo.Collection {
   insert(doc, callback) {
     doc.createdAt = doc.createdAt || new Date();
-    const result = super(doc, callback);
+    const result = super.insert(doc, callback);
     incompleteCountDenormalizer.afterInsertTodo(doc);
     return result;
   }
