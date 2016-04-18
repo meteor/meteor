@@ -23,7 +23,7 @@ This rule takes two arguments:
 Examples of **incorrect** code for the default `"relaxed"` mode:
 
 ```js
-/*eslint comma-dangle: [2, "js-", "relaxed"]*/
+/*eslint prefix-eventmap-selectors: [2, "js-", "relaxed"]*/
 
 Template.foo.events({
   'click .foo': function () {}
@@ -34,7 +34,7 @@ Template.foo.events({
 Examples of **correct** code for the default `"relaxed"` mode:
 
 ```js
-/*eslint comma-dangle: [2, "js-", "relaxed"]*/
+/*eslint prefix-eventmap-selectors: [2, "js-", "relaxed"]*/
 
 Template.foo.events({
   'click .js-foo': function () {},
@@ -52,7 +52,7 @@ Template.foo.events({
 Examples of **incorrect** code for the `"strict"` mode:
 
 ```js
-/*eslint comma-dangle: [2, "js-", "strict"]*/
+/*eslint prefix-eventmap-selectors: [2, "js-", "strict"]*/
 
 Template.foo.events({
   'click .foo': function () {},
@@ -67,7 +67,7 @@ Template.foo.events({
 Examples of **correct** code for the default `"relaxed"` mode:
 
 ```js
-/*eslint comma-dangle: [2, "js-", "strict"]*/
+/*eslint prefix-eventmap-selectors: [2, "js-", "strict"]*/
 
 Template.foo.events({
   'click .js-foo': function () {}
