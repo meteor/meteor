@@ -1,3 +1,7 @@
+## v1.3.2.2
+
+* Fixed bugs #6819 and #6831.
+
 ## v1.3.2.1
 
 * Fixed faulty comparison of `.sourcePath` and `.targetPath` properties of
