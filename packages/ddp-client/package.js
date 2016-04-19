@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Meteor's latency-compensated distributed data client",
-  version: '1.2.6',
+  version: '1.2.7',
   documentation: null
 });
 
