@@ -178,8 +178,14 @@ _.extend(PollingObserveDriver.prototype, {
 
     // Run diffs.
     if (!self._stopped) {
+      // Notify that update started
+      self._multiplexer._beginUpdate && self._multiplexer._beginUpdate();
+
       LocalCollection._diffQueryChanges(
         self._ordered, oldResults, newResults, self._multiplexer);
+
+      // Notify that update started
+      self._multiplexer._endUpdate && self._multiplexer._endUpdate();
     }
 
     // Signals the multiplexer to allow all observeChanges calls that share this

@@ -141,9 +141,9 @@ _.extend(ObserveMultiplexer.prototype, {
   callbackNames: function () {
     var self = this;
     if (self._ordered)
-      return ["addedBefore", "changed", "movedBefore", "removed"];
+      return ["addedBefore", "changed", "movedBefore", "removed", "startUpdate", "endUpdate"];
     else
-      return ["added", "changed", "removed"];
+      return ["added", "changed", "removed", "startUpdate", "endUpdate"];
   },
   _ready: function () {
     return this._readyFuture.isResolved();
@@ -160,12 +160,15 @@ _.extend(ObserveMultiplexer.prototype, {
       // state from their arguments (assuming that their supplied callbacks
       // don't) and skip this clone. Currently 'changed' hangs on to state
       // though.
-      self._cache.applyChange[callbackName].apply(null, EJSON.clone(args));
-
+      // Ignore startUpdate and endUpdate callbacks
+      if (!_.contains(["startUpdate", "endUpdate"], callbackName)) {
+      	self._cache.applyChange[callbackName].apply(null, EJSON.clone(args));
+      }
       // If we haven't finished the initial adds, then we should only be getting
       // adds.
       if (!self._ready() &&
-          (callbackName !== 'added' && callbackName !== 'addedBefore')) {
+          !_.contains(["added", "addedBefore", "startUpdate", "endUpdate"], callbackName)
+         ) {
         throw new Error("Got " + callbackName + " during initial adds");
       }
 
@@ -196,6 +199,9 @@ _.extend(ObserveMultiplexer.prototype, {
     var add = self._ordered ? handle._addedBefore : handle._added;
     if (!add)
       return;
+    
+    // Notify about update start
+    handle._startUpdate && handle._startUpdate();
     // note: docs may be an _IdMap or an OrderedDict
     self._cache.docs.forEach(function (doc, id) {
       if (!_.has(self._handles, handle._id))
@@ -207,6 +213,8 @@ _.extend(ObserveMultiplexer.prototype, {
       else
         add(id, fields);
     });
+    // Notify about update ended
+    handle._endUpdate && handle._endUpdate();
   }
 });
 
