@@ -1508,14 +1508,14 @@ Tinytest.add("logic-solver - toy packages", function (test) {
 
     var solver = new Logic.Solver();
 
-    _.each(allPackageVersions, function (versions, package) {
+    _.each(allPackageVersions, function (versions, pkg) {
       versions = _.map(versions, function (v) {
-        return package + "@" + v;
+        return pkg + "@" + v;
       });
       // e.g. atMostOne(["foo@1.0.0", "foo@1.0.1", "foo@2.0.0"])
       solver.require(Logic.atMostOne(versions));
       // e.g. equiv("foo", or(["foo@1.0.0", ...]))
-      solver.require(Logic.equiv(package, Logic.or(versions)));
+      solver.require(Logic.equiv(pkg, Logic.or(versions)));
     });
 
     _.each(dependencies, function (depMap, packageVersion) {

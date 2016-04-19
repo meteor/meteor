@@ -4,7 +4,6 @@
  * @param {Object} extraFeatures The same object that getDefaultOptions takes
  */
 BabelCompiler = function BabelCompiler(extraFeatures) {
-  Babel.validateExtraFeatures(extraFeatures);
   this.extraFeatures = extraFeatures;
 };
 
@@ -16,8 +15,9 @@ BCp.processFilesForTarget = function (inputFiles) {
 
   inputFiles.forEach(function (inputFile) {
     var source = inputFile.getContentsAsString();
+    var packageName = inputFile.getPackageName();
     var inputFilePath = inputFile.getPathInPackage();
-    var outputFilePath = inputFile.getPathInPackage();
+    var outputFilePath = inputFilePath;
     var fileOptions = inputFile.getFileOptions();
     var toBeAdded = {
       sourcePath: inputFilePath,
@@ -50,17 +50,21 @@ BCp.processFilesForTarget = function (inputFiles) {
       var babelOptions = Babel.getDefaultOptions(self.extraFeatures);
 
       babelOptions.sourceMap = true;
-      babelOptions.filename = inputFilePath;
-      babelOptions.sourceFileName = "/" + inputFilePath;
-      babelOptions.sourceMapName = "/" + outputFilePath + ".map";
+      babelOptions.filename =
+      babelOptions.sourceFileName = packageName
+        ? "/packages/" + packageName + "/" + inputFilePath
+        : "/" + inputFilePath;
+
+      babelOptions.sourceMapTarget = babelOptions.filename + ".map";
 
       try {
-        var result = Babel.compile(source, babelOptions);
+        var result = profile('Babel.compile', function () {
+          return Babel.compile(source, babelOptions);
+        });
       } catch (e) {
         if (e.loc) {
           inputFile.error({
             message: e.message,
-            sourcePath: inputFilePath,
             line: e.loc.line,
             column: e.loc.column,
           });
@@ -82,4 +86,12 @@ BCp.processFilesForTarget = function (inputFiles) {
 
 BCp.setDiskCacheDirectory = function (cacheDir) {
   Babel.setCacheDir(cacheDir);
+};
+
+function profile(name, func) {
+  if (typeof Profile !== 'undefined') {
+    return Profile.time(name, func);
+  } else {
+    return func();
+  }
 };

@@ -1,5 +1,7 @@
 Plugin.registerCompiler({
-  extensions: ['js'],
+  extensions: ['js', 'jsx'],
 }, function () {
-  return new BabelCompiler();
+  return new BabelCompiler({
+    react: true
+  });
 });

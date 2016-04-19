@@ -37,7 +37,6 @@
 /// environment variable). The setup of that is handled by release.js.
 
 var os = require("os");
-var Future = require("fibers/future");
 var _ = require("underscore");
 
 var files = require('../fs/files.js');
@@ -58,14 +57,16 @@ _.extend(warehouse, {
   // $HOME/.meteor.
   getWarehouseDir: function () {
     // a hook for tests, or i guess for users.
-    if (process.env.METEOR_WAREHOUSE_DIR)
+    if (process.env.METEOR_WAREHOUSE_DIR) {
       return files.convertToStandardPath(process.env.METEOR_WAREHOUSE_DIR);
+    }
 
     // This function should never be called unless we have a warehouse
     // (an installed version, or with process.env.METEOR_WAREHOUSE_DIR
     // set)
-    if (!files.usesWarehouse())
+    if (!files.usesWarehouse()) {
       throw new Error("There's no warehouse in a git checkout");
+    }
 
     return files.pathJoin(files.getHomeDir(), '.meteor');
   },
@@ -97,8 +98,9 @@ _.extend(warehouse, {
   // - warehouse.NoSuchReleaseError if we talked to the server and it
   //   told us that no release named 'release' exists.
   ensureReleaseExistsAndReturnManifest: function (release, quiet) {
-    if (!files.usesWarehouse())
+    if (!files.usesWarehouse()) {
       throw new Error("Not in a warehouse but requesting a manifest!");
+    }
 
     return warehouse._populateWarehouseForRelease(release, !quiet);
   },
@@ -161,8 +163,9 @@ _.extend(warehouse, {
         newPieces.packages[name] = {version: version, needsDownload: false};
       }
     });
-    if (newPieces.tools || !_.isEmpty(newPieces.packages))
+    if (newPieces.tools || !_.isEmpty(newPieces.packages)) {
       return newPieces;
+    }
     return null;
   },
 
@@ -186,7 +189,6 @@ _.extend(warehouse, {
   // all of the missing versioned packages referenced from the release manifest
   // @param releaseVersion {String} eg "0.1"
   _populateWarehouseForRelease: function (releaseVersion, showInstalling) {
-    var future = new Future;
     var releasesDir = files.pathJoin(warehouse.getWarehouseDir(), 'releases');
     files.mkdir_p(releasesDir, 0o755);
     var releaseManifestPath = files.pathJoin(releasesDir,
@@ -208,10 +210,12 @@ _.extend(warehouse, {
 
       // For automated self-test. If METEOR_TEST_FAIL_RELEASE_DOWNLOAD
       // is 'offline' or 'not-found', make release downloads fail.
-      if (process.env.METEOR_TEST_FAIL_RELEASE_DOWNLOAD === "offline")
+      if (process.env.METEOR_TEST_FAIL_RELEASE_DOWNLOAD === "offline") {
         throw new files.OfflineError(new Error("scripted failure for tests"));
-      if (process.env.METEOR_TEST_FAIL_RELEASE_DOWNLOAD === "not-found")
+      }
+      if (process.env.METEOR_TEST_FAIL_RELEASE_DOWNLOAD === "not-found") {
         throw new warehouse.NoSuchReleaseError;
+      }
 
       try {
         var result = httpHelpers.request(
@@ -220,10 +224,11 @@ _.extend(warehouse, {
         throw new files.OfflineError(e);
       }
 
-      if (result.response.statusCode !== 200)
+      if (result.response.statusCode !== 200) {
         // We actually got some response, so we're probably online and we
         // just can't find the release.
         throw new warehouse.NoSuchReleaseError;
+      }
 
       releaseManifestText = result.body;
     }
@@ -232,8 +237,9 @@ _.extend(warehouse, {
 
     var newPieces = warehouse._calculateNewPiecesForRelease(releaseManifest);
 
-    if (releaseAlreadyExists && !newPieces)
+    if (releaseAlreadyExists && !newPieces) {
       return releaseManifest;
+    }
 
     if (newPieces && showInstalling) {
       console.log("Installing Meteor %s:", releaseVersion);
@@ -256,8 +262,9 @@ _.extend(warehouse, {
             warehouse._platform(),
             warehouse.getWarehouseDir());
         } catch (e) {
-          if (showInstalling)
+          if (showInstalling) {
             console.error("Failed to load tools for release " + releaseVersion);
+          }
           throw e;
         }
 
@@ -272,8 +279,9 @@ _.extend(warehouse, {
 
       var packagesToDownload = {};
       _.each(newPieces && newPieces.packages, function (packageInfo, name) {
-        if (packageInfo.needsDownload)
+        if (packageInfo.needsDownload) {
           packagesToDownload[name] = packageInfo.version;
+        }
       });
       if (!_.isEmpty(packagesToDownload)) {
         try {
@@ -281,9 +289,10 @@ _.extend(warehouse, {
                                                 warehouse._platform(),
                                                 warehouse.getWarehouseDir());
         } catch (e) {
-          if (showInstalling)
+          if (showInstalling) {
             console.error("Failed to load packages for release " +
                           releaseVersion);
+          }
           throw e;
         }
       }
@@ -328,8 +337,9 @@ _.extend(warehouse, {
         } catch (e) {
           // If two processes populate the warehouse in parallel, the other
           // process may have deleted the fresh file. That's OK!
-          if (e.code === "ENOENT")
+          if (e.code === "ENOENT") {
             return;
+          }
           throw e;
         }
       };
@@ -364,8 +374,9 @@ _.extend(warehouse, {
     });
     files.extractTarGz(
       toolsTarball, files.pathJoin(warehouseDirectory, 'tools', toolsVersion));
-    if (!dontWriteFreshFile)
+    if (!dontWriteFreshFile) {
       files.writeFile(warehouse.getToolsFreshFile(toolsVersion), '');
+    }
   },
 
   // this function is also used by bless-release.js
@@ -383,20 +394,22 @@ _.extend(warehouse, {
 
         var tarball = httpHelpers.getUrl({url: packageUrl, encoding: null});
         files.extractTarGz(tarball, packageDir);
-        if (!dontWriteFreshFile)
+        if (!dontWriteFreshFile) {
           files.writeFile(warehouse.getPackageFreshFile(name, version), '');
+        }
       });
   },
 
   _platform: function () {
     // Normalize from Node "os.arch()" to "uname -m".
     var arch = os.arch();
-    if (arch === "ia32")
+    if (arch === "ia32") {
       arch = "i686";
-    else if (arch === "x64")
+    } else if (arch === "x64") {
       arch = "x86_64";
-    else
+    } else {
       throw new Error("Unsupported architecture " + arch);
+    }
     return os.type() + "_" + arch;
   }
 });

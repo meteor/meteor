@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "install": {
+      "version": "0.6.1",
+      "resolved": "https://registry.npmjs.org/install/-/install-0.6.1.tgz",
+      "from": "install@0.6.1"
+    }
+  }
+}

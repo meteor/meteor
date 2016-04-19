@@ -1,4 +1,4 @@
-release = Meteor.release ? "1.2.0.2" : "(checkout)";
+release = Meteor.release ? "1.3" : "(checkout)";
 
 Template.registerHelper("release", release);
 

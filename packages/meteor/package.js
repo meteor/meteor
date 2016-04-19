@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Core Meteor environment",
-  version: '1.1.9'
+  version: '1.1.14'
 });
 
 Package.registerBuildPlugin({
@@ -15,20 +15,21 @@ Npm.depends({
 });
 
 Package.onUse(function (api) {
-  // If the es5-shim package is installed, make sure it is evaluated
-  // before all other packages. Note that es5-shim registers an unordered
-  // dependency on the meteor package.
-  api.use('es5-shim', { weak: true });
-
   api.use('underscore', ['client', 'server']);
 
   api.use('isobuild:compiler-plugin@1.0.0');
 
   api.export('Meteor');
 
+  api.addFiles('global.js', ['client', 'server']);
+  api.export('global');
+
   api.addFiles('client_environment.js', 'client');
-  api.addFiles('cordova_environment.js', 'web.cordova');
   api.addFiles('server_environment.js', 'server');
+  // Defined by client_environment.js and server_environment.js.
+  api.export("meteorEnv");
+
+  api.addFiles('cordova_environment.js', 'web.cordova');
   api.addFiles('helpers.js', ['client', 'server']);
   api.addFiles('setimmediate.js', ['client', 'server']);
   api.addFiles('timers.js', ['client', 'server']);
@@ -39,7 +40,8 @@ Package.onUse(function (api) {
   api.addFiles('startup_server.js', ['server']);
   api.addFiles('debug.js', ['client', 'server']);
   api.addFiles('string_utils.js', ['client', 'server']);
-
+  api.addFiles('test_environment.js', ['client', 'server']);
+  
   // dynamic variables, bindEnvironment
   // XXX move into a separate package?
   api.addFiles('dynamics_browser.js', 'client');

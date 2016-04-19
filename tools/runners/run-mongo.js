@@ -7,7 +7,6 @@ var child_process = require('child_process');
 
 var _ = require('underscore');
 var isopackets = require('../tool-env/isopackets.js');
-var Future = require('fibers/future');
 
 // Given a Mongo URL, open an interative Mongo shell on this terminal
 // on that database.
@@ -21,9 +20,15 @@ var runMongoShell = function (url) {
   var ssl = require('querystring').parse(mongoUrl.query).ssl === "true";
 
   var args = [];
-  if (ssl) args.push('--ssl');
-  if (auth) args.push('-u', auth[0]);
-  if (auth) args.push('-p', auth[1]);
+  if (ssl) {
+    args.push('--ssl');
+  }
+  if (auth) {
+    args.push('-u', auth[0]);
+  }
+  if (auth) {
+    args.push('-p', auth[1]);
+  }
   args.push(mongoUrl.hostname + ':' + mongoUrl.port + mongoUrl.pathname);
 
   child_process.spawn(files.convertToOSPath(mongoPath),
@@ -64,15 +69,15 @@ var spawnMongod = function (mongodPath, port, dbPath, replSetName) {
 
 // Find all running Mongo processes that were started by this program
 // (even by other simultaneous runs of this program). If passed,
-// appDir and port act as filters on the list of running mongos.
+// dbDir and port act as filters on the list of running mongos.
 //
-// Yields. Returns an array of objects with keys pid, port, appDir.
+// Yields. Returns an array of objects with keys pid, port, dbDir.
 var findMongoPids;
 if (process.platform === 'win32') {
   // Windows doesn't have a ps equivalent that (reliably) includes the command
   // line, so approximate using the combined output of tasklist and netstat.
-  findMongoPids = function (app_dir, port) {
-    var fut = new Future;
+  findMongoPids = function (dbDir_unused, port) {
+    var promise = fiberHelpers.makeFulfillablePromise();
 
     child_process.exec('tasklist /fi "IMAGENAME eq mongod.exe"',
       function (error, stdout, stderr) {
@@ -81,8 +86,9 @@ if (process.platform === 'win32') {
           if (error.code === 'ENOENT') {
             additionalInfo = "tasklist wasn't found on your system, it usually can be found at C:\\Windows\\System32\\.";
           }
-          fut['throw'](new Error("Couldn't run tasklist.exe: " +
-            additionalInfo));
+          promise.reject(
+            new Error("Couldn't run tasklist.exe: " + additionalInfo)
+          );
           return;
         } else {
           // Find the pids of all mongod processes
@@ -100,8 +106,10 @@ if (process.platform === 'win32') {
             {maxBuffer: 1024 * 1024 * 10},
             function (error, stdout, stderr) {
             if (error) {
-              fut['throw'](new Error("Couldn't run netstat -ano: " +
-                JSON.stringify(error)));
+              promise.reject(
+                new Error("Couldn't run netstat -ano: " +
+                          JSON.stringify(error))
+              );
               return;
             } else {
               var pids = [];
@@ -125,17 +133,17 @@ if (process.platform === 'win32') {
                 }
               });
 
-              fut['return'](pids);
+              promise.resolve(pids);
             }
           });
         }
       });
 
-    return fut.wait();
+    return promise.await();
   };
 } else {
-  findMongoPids = function (appDir, port) {
-    var fut = new Future;
+  findMongoPids = function (dbDir, port) {
+    var promise = fiberHelpers.makeFulfillablePromise();
 
     // 'ps ax' should be standard across all MacOS and Linux.
     // However, ps on OS X corrupts some non-ASCII characters in arguments,
@@ -175,8 +183,11 @@ if (process.platform === 'win32') {
       {maxBuffer: 1024 * 1024 * 10},
       function (error, stdout, stderr) {
         if (error) {
-          fut['throw'](new Error("Couldn't run ps ax: " +
-            JSON.stringify(error) + "; " + error.message));
+          promise.reject(
+            new Error("Couldn't run ps ax: " +
+                      JSON.stringify(error) + "; " +
+                      error.message)
+          );
           return;
         }
 
@@ -185,34 +196,34 @@ if (process.platform === 'win32') {
           // Matches mongos we start. Note that this matches
           // 'fake-mongod' (our mongod stub for automated tests) as well
           // as 'mongod'.
-          var m = line.match(/^\s*(\d+).+mongod .+--port (\d+) --dbpath (.+)(?:\/|\\)\.meteor(?:\/|\\)local(?:\/|\\)db/);
+          var m = line.match(/^\s*(\d+).+mongod .+--port (\d+) --dbpath (.+(?:\/|\\)db)/);
           if (m && m.length === 4) {
             var foundPid =  parseInt(m[1], 10);
             var foundPort = parseInt(m[2], 10);
             var foundPath = m[3];
 
             if ( (! port || port === foundPort) &&
-                 (! appDir || appDir === foundPath)) {
+                 (! dbDir || dbDir === foundPath)) {
               ret.push({
                 pid: foundPid,
                 port: foundPort,
-                appDir: foundPath
+                dbDir: foundPath
               });
             }
           }
         });
 
-        fut['return'](ret);
+        promise.resolve(ret);
       });
 
-    return fut.wait();
+    return promise.await();
   };
 }
 
 // See if mongo is running already. Yields. Returns the port that
 // mongo is running on or null if mongo is not running.
-var findMongoPort = function (appDir) {
-  var pids = findMongoPids(appDir);
+var findMongoPort = function (dbDir) {
+  var pids = findMongoPids(dbDir);
 
   if (pids.length !== 1) {
     return null;
@@ -241,10 +252,10 @@ if (process.platform === 'win32') {
   // where we try to connect to a mongod that is not running, or a wrong
   // mongod if our current app is not running but there is a left-over file
   // lying around. This still can be better than always failing to connect.
-  findMongoPort = function (appDir) {
+  findMongoPort = function (dbPath) {
     var mongoPort = null;
 
-    var portFile = files.pathJoin(appDir, '.meteor/local/db/METEOR-PORT');
+    var portFile = files.pathJoin(dbPath, 'METEOR-PORT');
     if (files.exists(portFile)) {
       mongoPort = files.readFile(portFile, 'utf8').replace(/\s/g, '');
     }
@@ -253,19 +264,17 @@ if (process.platform === 'win32') {
     // (The METEOR-PORT file may point to an old Mongo server that's now
     // stopped)
     var net = require('net');
-    var mongoTestConnectFuture = new Future;
-    var client = net.connect({port: mongoPort}, function() {
-      // The server is running.
-      client.end();
-      mongoTestConnectFuture.isResolved() || mongoTestConnectFuture.return();
-    });
-    client.on('error', function () {
-      mongoPort = null;
-      mongoTestConnectFuture.isResolved() || mongoTestConnectFuture.return();
-    });
-    mongoTestConnectFuture.wait();
 
-    return mongoPort;
+    return new Promise(resolve => {
+      var client = net.connect({
+        port: mongoPort
+      }, () => {
+        // The server is running.
+        client.end();
+        resolve(mongoPort);
+      });
+      client.on('error', () => resolve(null));
+    }).await();
   }
 }
 
@@ -288,10 +297,11 @@ var findMongoAndKillItDead = function (port, dbPath) {
     // dead.
     for (var attempts = 1; attempts <= 40; attempts ++) {
       var signal = 0;
-      if (attempts === 1)
+      if (attempts === 1) {
         signal = 'SIGINT';
-      else if (attempts === 20 || attempts === 30)
+      } else if (attempts === 20 || attempts === 30) {
         signal = 'SIGKILL';
+      }
 
       try {
         process.kill(pid, signal);
@@ -347,8 +357,9 @@ var launchMongo = function (options) {
   // start our stub (fake-mongod) which can then be remote-controlled
   // by the test.
   if (process.env.METEOR_TEST_FAKE_MONGOD_CONTROL_PORT) {
-    if (options.multiple)
+    if (options.multiple) {
       throw Error("Can't specify multiple with fake mongod");
+    }
 
     var fakeMongodCommand =
       process.platform === "win32" ? "fake-mongod.bat" : "fake-mongod";
@@ -361,32 +372,32 @@ var launchMongo = function (options) {
     noOplog = true;
   }
 
-  // add .gitignore if needed.
-  files.addToGitignore(files.pathJoin(options.appDir, '.meteor'), 'local');
-
   var subHandles = [];
   var stopped = false;
-  var stopFuture = new Future;
-
-  // Like Future.wrap and _.bind in one.
-  var yieldingMethod = function (object, methodName, ...args) {
-    var f = new Future;
-    args.push(f.resolver());
-    object[methodName](...args);
-    return fiberHelpers.waitForOne(stopFuture, f);
-  };
-
-  var handle = {
-    stop: function () {
-      if (stopped)
+  var handle = {};
+  var stopPromise = new Promise((resolve, reject) => {
+    handle.stop = function () {
+      if (stopped) {
         return;
+      }
       stopped = true;
       _.each(subHandles, function (handle) {
         handle.stop();
       });
 
-      stopFuture.throw(new StoppedDuringLaunch);
-    }
+      if (options.onStopped) {
+        options.onStopped();
+      }
+
+      reject(new StoppedDuringLaunch);
+    };
+  });
+
+  var yieldingMethod = function (object, methodName, ...args) {
+    return Promise.race([
+      stopPromise,
+      Promise.denodeify(object[methodName]).apply(object, args)
+    ]).await();
   };
 
   var launchOneMongoAndWaitForReadyForInitiate = function (dbPath, port,
@@ -394,7 +405,6 @@ var launchMongo = function (options) {
     files.mkdir_p(dbPath, 0o755);
 
     var proc = null;
-    var procExitHandler;
 
     if (options.allowKilling) {
       findMongoAndKillItDead(port, dbPath);
@@ -412,8 +422,9 @@ var launchMongo = function (options) {
         matchingPortFileExists = +(files.readFile(portFile)) === port;
         portFileExists = true;
       } catch (e) {
-        if (!e || e.code !== 'ENOENT')
+        if (!e || e.code !== 'ENOENT') {
           throw e;
+        }
       }
 
       // If this is the first time we're using this DB, or we changed port since
@@ -428,14 +439,16 @@ var launchMongo = function (options) {
       if (!matchingPortFileExists) {
         // Delete the port file if it exists, so we don't mistakenly believe
         // that the DB is still configured.
-        if (portFileExists)
+        if (portFileExists) {
           files.unlink(portFile);
+        }
 
         try {
           var dbFiles = files.readdir(dbPath);
         } catch (e) {
-          if (!e || e.code !== 'ENOENT')
+          if (!e || e.code !== 'ENOENT') {
             throw e;
+          }
         }
         _.each(dbFiles, function (dbFile) {
           if (/^local\./.test(dbFile)) {
@@ -448,8 +461,9 @@ var launchMongo = function (options) {
     // Let's not actually start a process if we yielded (eg during
     // findMongoAndKillItDead) and we decided to stop in the middle (eg, because
     // we're in multiple mode and another process exited).
-    if (stopped)
+    if (stopped) {
       return;
+    }
 
     proc = spawnMongod(mongod_path, port, dbPath, replSetName);
 
@@ -463,7 +477,7 @@ var launchMongo = function (options) {
       }
     });
 
-    procExitHandler = fiberHelpers.bindEnvironment(function (code, signal) {
+    var procExitHandler = fiberHelpers.bindEnvironment(function (code, signal) {
       // Defang subHandle.stop().
       proc = null;
 
@@ -481,16 +495,23 @@ var launchMongo = function (options) {
     var replSetReadyToBeInitiated = false;
     var replSetReady = false;
 
-    var readyToTalkFuture = new Future;
+    var maybeReadyToTalk;
+    var readyToTalkPromise = new Promise(function (resolve) {
+      maybeReadyToTalk = function () {
+        if (resolve &&
+            listening &&
+            (noOplog || replSetReadyToBeInitiated || replSetReady)) {
+          proc.stdout.removeListener('data', stdoutOnData);
+          resolve();
+          resolve = null;
+        }
+      };
+    });
 
-    var maybeReadyToTalk = function () {
-      if (readyToTalkFuture.isResolved())
-        return;
-      if (listening && (noOplog || replSetReadyToBeInitiated || replSetReady)) {
-        proc.stdout.removeListener('data', stdoutOnData);
-        readyToTalkFuture.return();
-      }
-    };
+    var stopOrReadyPromise = Promise.race([
+      stopPromise,
+      readyToTalkPromise,
+    ]);
 
     var detectedErrors = {};
     var stdoutOnData = fiberHelpers.bindEnvironment(function (data) {
@@ -528,7 +549,7 @@ var launchMongo = function (options) {
       stderrOutput += data;
     });
 
-    fiberHelpers.waitForOne(stopFuture, readyToTalkFuture);
+    stopOrReadyPromise.await();
   };
 
 
@@ -544,8 +565,9 @@ var launchMongo = function (options) {
         new mongoNpmModule.Server('127.0.0.1', options.port, {poolSize: 1}),
         {safe: true});
       yieldingMethod(db, 'open');
-      if (stopped)
+      if (stopped) {
         return;
+      }
       var configuration = {
         _id: replSetName,
         members: [{_id: 0, host: '127.0.0.1:' + options.port, priority: 100}]
@@ -564,8 +586,9 @@ var launchMongo = function (options) {
 
       var initiateResult = yieldingMethod(
         db.admin(), 'command', {replSetInitiate: configuration});
-      if (stopped)
+      if (stopped) {
         return;
+      }
       // why this isn't in the error is unclear.
       if (initiateResult && initiateResult.documents
           && initiateResult.documents[0]
@@ -580,8 +603,9 @@ var launchMongo = function (options) {
       while (!stopped) {
         var status = yieldingMethod(db.admin(), 'command',
                                     {replSetGetStatus: 1});
-        if (!(status && status.documents && status.documents[0]))
+        if (!(status && status.documents && status.documents[0])) {
           throw status;
+        }
         status = status.documents[0];
         if (!status.ok) {
           if (status.startupStatus === 6) {  // "SOON"
@@ -631,27 +655,29 @@ var launchMongo = function (options) {
     } catch (e) {
       // If the process has exited, we're doing another form of error
       // handling. No need to throw random low-level errors farther.
-      if (!stopped || (e instanceof StoppedDuringLaunch))
+      if (!stopped || (e instanceof StoppedDuringLaunch)) {
         throw e;
+      }
     }
   };
 
   try {
     if (options.multiple) {
-      var dbBasePath = files.pathJoin(options.appDir, '.meteor', 'local', 'dbs');
+      var dbBasePath = files.pathJoin(options.projectLocalDir, 'dbs');
       _.each(_.range(3), function (i) {
         // Did we get stopped (eg, by one of the processes exiting) by now? Then
         // don't start anything new.
-        if (stopped)
+        if (stopped) {
           return;
-        var dbPath = files.pathJoin(options.appDir, '.meteor', 'local', 'dbs', ''+i);
+        }
+        var dbPath = files.pathJoin(options.projectLocalDir, 'dbs', ''+i);
         launchOneMongoAndWaitForReadyForInitiate(dbPath, options.port + i);
       });
       if (!stopped) {
         initiateReplSetAndWaitForReady();
       }
     } else {
-      var dbPath = files.pathJoin(options.appDir, '.meteor', 'local', 'db');
+      var dbPath = files.pathJoin(options.projectLocalDir, 'db');
       var portFile = !noOplog && files.pathJoin(dbPath, 'METEOR-PORT');
       launchOneMongoAndWaitForReadyForInitiate(dbPath, options.port, portFile);
       if (!stopped && !noOplog) {
@@ -663,12 +689,14 @@ var launchMongo = function (options) {
       }
     }
   } catch (e) {
-    if (!(e instanceof StoppedDuringLaunch))
+    if (!(e instanceof StoppedDuringLaunch)) {
       throw e;
+    }
   }
 
-  if (stopped)
+  if (stopped) {
     return null;
+  }
 
   return handle;
 };
@@ -677,17 +705,17 @@ var launchMongo = function (options) {
 // restarts too often, we give up on restarting it, diagnostics are
 // logged, and onFailure is called.
 //
-// options: appDir, port, onFailure, multiple
+// options: projectLocalDir, port, onFailure, multiple
 var MongoRunner = function (options) {
   var self = this;
-  self.appDir = options.appDir;
+  self.projectLocalDir = options.projectLocalDir;
   self.port = options.port;
   self.onFailure = options.onFailure;
   self.multiple = options.multiple;
 
   self.handle = null;
   self.shuttingDown = false;
-  self.startupFuture = null;
+  self.resolveStartupPromise = null;
 
   self.errorCount = 0;
   self.errorTimer = null;
@@ -708,23 +736,27 @@ _.extend(MRp, {
   start: function () {
     var self = this;
 
-    if (self.handle)
+    if (self.handle) {
       throw new Error("already running?");
+    }
 
     self._startOrRestart();
 
     // Did we properly start up? Great!
-    if (self.handle)
+    if (self.handle) {
       return;
+    }
 
     // Are we shutting down? OK.
-    if (self.shuttingDown)
+    if (self.shuttingDown) {
       return;
+    }
 
     // Otherwise, wait for a successful _startOrRestart, or a failure.
-    if (!self.startupFuture) {
-      self.startupFuture = new Future;
-      self.startupFuture.wait();
+    if (! self.resolveStartupPromise) {
+      new Promise(function (resolve) {
+        self.resolveStartupPromise = resolve;
+      }).await();
     }
   },
 
@@ -742,8 +774,9 @@ _.extend(MRp, {
   _startOrRestart: function () {
     var self = this;
 
-    if (self.handle)
+    if (self.handle) {
       throw new Error("already running?");
+    }
 
     var allowKilling = self.multiple || self.firstStart;
     self.firstStart = false;
@@ -754,11 +787,14 @@ _.extend(MRp, {
     }
 
     self.handle = launchMongo({
-      appDir: self.appDir,
+      projectLocalDir: self.projectLocalDir,
       port: self.port,
       multiple: self.multiple,
       allowKilling: allowKilling,
-      onExit: _.bind(self._exited, self)
+      onExit: _.bind(self._exited, self),
+      onStopped() {
+        self.suppressExitMessage = false;
+      },
     });
 
     // It has successfully started up, so if it exits after this point, that
@@ -778,8 +814,9 @@ _.extend(MRp, {
     // If Mongo exited because (or rather, anytime after) we told it
     // to exit, great, nothing to do. Otherwise, we'll print an error
     // and try to restart.
-    if (self.shuttingDown)
+    if (self.shuttingDown) {
       return;
+    }
 
     // Only print an error if we tried to kill Mongo and something went
     // wrong. If we didn't try to kill Mongo, we'll do that on the next
@@ -805,8 +842,9 @@ _.extend(MRp, {
     // timer instead of looking at the current date, we avoid getting
     // confused by time changes.)
     self.errorCount ++;
-    if (self.errorTimer)
+    if (self.errorTimer) {
       clearTimeout(self.errorTimer);
+    }
     self.errorTimer = setTimeout(function () {
       self.errorTimer = null;
       self.errorCount = 0;
@@ -861,8 +899,9 @@ _.extend(MRp, {
   stop: function () {
     var self = this;
 
-    if (self.shuttingDown)
+    if (self.shuttingDown) {
       return;
+    }
 
     self.shuttingDown = true;
 
@@ -877,10 +916,10 @@ _.extend(MRp, {
 
   _allowStartupToReturn: function () {
     var self = this;
-    if (self.startupFuture) {
-      var startupFuture = self.startupFuture;
-      self.startupFuture = null;
-      startupFuture.return();
+    if (self.resolveStartupPromise) {
+      var resolve = self.resolveStartupPromise;
+      self.resolveStartupPromise = null;
+      resolve();
     }
   },
 

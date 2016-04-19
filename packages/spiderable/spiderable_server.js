@@ -14,6 +14,7 @@ var urlParser = Npm.require('url');
 // here. I shed a silent tear.
 Spiderable.userAgentRegExps = [
   /^facebookexternalhit/i,
+  /^Facebot/,
   /^linkedinbot/i,
   /^twitterbot/i,
   /^slackbot-linkexpanding/i
@@ -108,8 +109,8 @@ WebApp.connectHandlers.use(function (req, res, next) {
     // instead, but that meant we couldn't use exec and had to manage several
     // processes.)
     child_process.execFile(
-      '/bin/bash',
-      ['-c',
+      '/usr/bin/env',
+      ['bash', '-c',
        ("exec phantomjs " + phantomJsArgs + " /dev/stdin <<'END'\n" +
         phantomScript + "END\n")],
       {timeout: Spiderable.requestTimeoutMs, maxBuffer: MAX_BUFFER},

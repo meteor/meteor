@@ -9,9 +9,9 @@ With Meteor you write apps:
 * that send data over the wire, rather than HTML
 * using your choice of popular open-source libraries
 
-Documentation is available at http://docs.meteor.com/.
-
 Try the getting started [tutorial](https://www.meteor.com/try).
+
+Next, read the [guide](http://guide.meteor.com) or the reference documentation at http://docs.meteor.com/.
 
 ## Quick Start
 
@@ -32,12 +32,6 @@ Run it:
 ```bash
 cd try-meteor
 meteor
-```
-
-Deploy it to the world, for free:
-
-```bash
-meteor deploy try-meteor.meteor.com
 ```
 
 ## Slow Start (for developers)
@@ -99,7 +93,7 @@ sudo rm /usr/local/bin/meteor
 Building an application with Meteor?
 
 * Announcement list: sign up at http://www.meteor.com/
-* Ask a question: http://stackoverflow.com/questions/tagged/meteor
+* Having problems? Ask for help at: http://stackoverflow.com/questions/tagged/meteor
 * Discussion forums: https://forums.meteor.com/
 
 Interested in contributing to Meteor?

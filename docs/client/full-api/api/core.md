@@ -13,12 +13,16 @@ authentication mechanisms, should be kept in the `server` directory.
 {{/note}}
 
 {{> autoApiBox "Meteor.isCordova"}}
+{{> autoApiBox "Meteor.isDevelopment"}}
+{{> autoApiBox "Meteor.isProduction"}}
 
 {{> autoApiBox "Meteor.startup"}}
 
 On a server, the function will run as soon as the server process is
 finished starting. On a client, the function will run as soon as the DOM
-is ready.
+is ready. Code wrapped in `Meteor.startup` always runs after all app
+files have loaded, so you should put code here if you want to access
+shared variables from other files.
 
 The `startup` callbacks are called in the same order as the calls to
 `Meteor.startup` were made.
@@ -37,6 +41,8 @@ followed by your application code.
     }
 
 {{> autoApiBox "Meteor.wrapAsync"}}
+
+{{> autoApiBox "Meteor.defer"}}
 
 {{> autoApiBox "Meteor.absoluteUrl"}}
 

@@ -41,15 +41,17 @@ _.extend(Release.prototype, {
 
   getReleaseTrack: function () {
     var self = this;
-    if (! self.isProperRelease())
+    if (! self.isProperRelease()) {
       throw new Error("not a proper release?");
+    }
     return self.name.split('@')[0];
   },
 
   getReleaseVersion: function () {
     var self = this;
-    if (! self.isProperRelease())
+    if (! self.isProperRelease()) {
       throw new Error("not a proper release?");
+    }
     return self.name.split('@')[1];
   },
 
@@ -58,8 +60,9 @@ _.extend(Release.prototype, {
   getToolsPackage: function () {
     var self = this;
 
-    if (! self.isProperRelease())
+    if (! self.isProperRelease()) {
       throw new Error("not a proper release?");
+    }
     // XXX validate
     return self._manifest.tool.split('@')[0];
   },
@@ -69,8 +72,9 @@ _.extend(Release.prototype, {
   getToolsVersion: function () {
     var self = this;
 
-    if (! self.isProperRelease())
+    if (! self.isProperRelease()) {
       throw new Error("not a proper release?");
+    }
     // XXX validate
     return self._manifest.tool.split('@')[1];
   },
@@ -80,8 +84,9 @@ _.extend(Release.prototype, {
   getToolsPackageAtVersion: function () {
     var self = this;
 
-    if (! self.isProperRelease())
+    if (! self.isProperRelease()) {
       throw new Error("not a proper release?");
+    }
     return self._manifest.tool;
   },
 
@@ -104,23 +109,26 @@ _.extend(Release.prototype, {
   getUpgraders: function () {
     var self = this;
 
-    if (! self.isProperRelease())
+    if (! self.isProperRelease()) {
       throw new Error("not a proper release?");
+    }
     return self._manifest.upgraders || [];
   },
 
   getPackages: function () {
     var self = this;
 
-    if (! self.isProperRelease())
+    if (! self.isProperRelease()) {
       throw new Error("not a proper release?");
+    }
     return self._manifest.packages;
   },
 
   getCatalogReleaseData: function () {
     var self = this;
-    if (! self.isProperRelease())
+    if (! self.isProperRelease()) {
       throw new Error("not a proper release?");
+    }
     return self._manifest;
   },
 
@@ -166,11 +174,13 @@ release.explicit = null;
 // in the current project. (taking into account release.forced and whether we're
 // currently running from a checkout).
 release.usingRightReleaseForApp = function (projectContext) {
-  if (release.current === null)
+  if (release.current === null) {
     throw new Error("no release?");
+  }
 
-  if (! files.usesWarehouse() || release.forced)
+  if (! files.usesWarehouse() || release.forced) {
     return true;
+  }
 
   return release.current.name === projectContext.releaseFile.fullReleaseName;
 };
@@ -179,11 +189,13 @@ release.usingRightReleaseForApp = function (projectContext) {
 // for use. May not be called when running from a checkout.
 // 'track' is optional (it defaults to the default track).
 release.latestKnown = function (track) {
-  if (! files.usesWarehouse())
+  if (! files.usesWarehouse()) {
     throw new Error("called from checkout?");
+  }
   // For self-test only.
-  if (process.env.METEOR_TEST_LATEST_RELEASE)
+  if (process.env.METEOR_TEST_LATEST_RELEASE) {
     return process.env.METEOR_TEST_LATEST_RELEASE;
+  }
 
 
   var defaultRelease = catalog.official.getDefaultReleaseVersion(track);
@@ -253,8 +265,9 @@ release.load = function (name, options) {
 //   line (by the user or by the update springboard).
 // - explicit: true if the release was specifically requested by the user.
 release.setCurrent = function (releaseObject, forced, explicit) {
-  if (release.current)
+  if (release.current) {
     throw new Error("release set twice?");
+  }
 
   release.current = releaseObject;
   release.forced = !! forced;

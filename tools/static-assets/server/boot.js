@@ -7,9 +7,10 @@ var sourcemap_support = require('source-map-support');
 
 var bootUtils = require('./boot-utils.js');
 var files = require('./mini-files.js');
+var npmRequire = require('./npm-require.js').require;
 
 // This code is duplicated in tools/main.js.
-var MIN_NODE_VERSION = 'v0.10.40';
+var MIN_NODE_VERSION = 'v0.10.41';
 
 if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
   process.stderr.write(
@@ -20,7 +21,7 @@ if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
 // read our control files
 var serverJsonPath = path.resolve(process.argv[2]);
 var serverDir = path.dirname(serverJsonPath);
-var serverJson = JSON.parse(fs.readFileSync(serverJsonPath, 'utf8'));
+var serverJson = require("./server-json.js");
 var configJson =
   JSON.parse(fs.readFileSync(path.resolve(serverDir, 'config.json'), 'utf8'));
 
@@ -31,14 +32,9 @@ __meteor_bootstrap__ = {
   configJson: configJson };
 __meteor_runtime_config__ = { meteorRelease: configJson.meteorRelease };
 
-
-// connect (and some other NPM modules) use $NODE_ENV to make some decisions;
-// eg, if $NODE_ENV is not production, they send stack traces on error. connect
-// considers 'development' to be the default mode, but that's less safe than
-// assuming 'production' to be the default. If you really want development mode,
-// set it in your wrapper script (eg, run-app.js).
-if (!process.env.NODE_ENV)
-  process.env.NODE_ENV = 'production';
+if (!process.env.APP_ID) {
+  process.env.APP_ID = configJson.appId;
+}
 
 // Map from load path to its source map.
 var parsedSourceMaps = {};
@@ -136,6 +132,23 @@ var startCheckForLiveParent = function (parentPid) {
 Fiber(function () {
   _.each(serverJson.load, function (fileInfo) {
     var code = fs.readFileSync(path.resolve(serverDir, fileInfo.path));
+    var nonLocalNodeModulesPaths = [];
+
+    function addNodeModulesPath(path) {
+      nonLocalNodeModulesPaths.push(
+        files.pathResolve(serverDir, path)
+      );
+    }
+
+    if (typeof fileInfo.node_modules === "string") {
+      addNodeModulesPath(fileInfo.node_modules);
+    } else if (fileInfo.node_modules) {
+      _.each(fileInfo.node_modules, function (info, path) {
+        if (! info.local) {
+          addNodeModulesPath(path);
+        }
+      });
+    }
 
     var Npm = {
       /**
@@ -146,20 +159,27 @@ Fiber(function () {
        * @memberOf Npm
        */
       require: function (name) {
-        if (! fileInfo.node_modules) {
+        if (nonLocalNodeModulesPaths.length === 0) {
           return require(name);
         }
 
-        var nodeModuleBase = path.resolve(serverDir,
-          files.convertToOSPath(fileInfo.node_modules));
-        var nodeModuleDir = path.resolve(nodeModuleBase, name);
+        var fullPath;
 
-        // If the user does `Npm.require('foo/bar')`, then we should resolve to
-        // the package's node modules if `foo` was one of the modules we
-        // installed.  (`foo/bar` might be implemented as `foo/bar.js` so we
-        // can't just naively see if all of nodeModuleDir exists.
-        if (fs.existsSync(path.resolve(nodeModuleBase, name.split("/")[0]))) {
-          return require(nodeModuleDir);
+        nonLocalNodeModulesPaths.some(function (nodeModuleBase) {
+          var packageBase = files.convertToOSPath(files.pathResolve(
+            nodeModuleBase,
+            name.split("/", 1)[0]
+          ));
+
+          if (fs.existsSync(packageBase)) {
+            return fullPath = files.convertToOSPath(
+              files.pathResolve(nodeModuleBase, name)
+            );
+          }
+        });
+
+        if (fullPath) {
+          return require(fullPath);
         }
 
         try {
@@ -218,11 +238,28 @@ Fiber(function () {
       },
       getBinary: function (assetPath, callback) {
         return getAsset(assetPath, undefined, callback);
-      }
+      },
+      absoluteFilePath: function (assetPath) {
+        if (!fileInfo.assets || !_.has(fileInfo.assets, assetPath)) {
+          throw new Error("Unknown asset: " + assetPath);
+        }
+
+        assetPath = files.convertToStandardPath(assetPath);
+        var filePath = path.join(serverDir, fileInfo.assets[assetPath]);
+        return files.convertToOSPath(filePath);
+      },
     };
 
+    var isModulesRuntime =
+      fileInfo.path === "packages/modules-runtime.js";
+
+    var wrapParts = ["(function(Npm,Assets"];
+    if (isModulesRuntime) {
+      wrapParts.push(",npmRequire");
+    }
     // \n is necessary in case final line is a //-comment
-    var wrapped = "(function(Npm, Assets){" + code + "\n})";
+    wrapParts.push("){", code, "\n})");
+    var wrapped = wrapParts.join("");
 
     // It is safer to use the absolute path when source map is present as
     // different tooling, such as node-inspector, can get confused on relative
@@ -239,7 +276,11 @@ Fiber(function () {
     // causes it to print out a descriptive error message on parse error. It's
     // what require() uses to generate its errors.
     var func = require('vm').runInThisContext(wrapped, scriptPath, true);
-    func.call(global, Npm, Assets); // Coffeescript
+    var args = [Npm, Assets];
+    if (isModulesRuntime) {
+      args.push(npmRequire);
+    }
+    func.apply(global, args);
   });
 
   // run the user startup hooks.  other calls to startup() during this can still

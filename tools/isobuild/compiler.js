@@ -29,7 +29,7 @@ var compiler = exports;
 // dependencies. (At least for now, packages only used in target creation (eg
 // minifiers) don't require you to update BUILT_BY, though you will need to quit
 // and rerun "meteor run".)
-compiler.BUILT_BY = 'meteor/17';
+compiler.BUILT_BY = 'meteor/20';
 
 // This is a list of all possible architectures that a build can target. (Client
 // is expanded into 'web.browser' and 'web.cordova')
@@ -86,16 +86,18 @@ compiler.compile = Profile(function (packageSource, options) {
       // and have the runner restart.
       pluginWatchSet.merge(buildResult.watchSet);
 
-      if (buildmessage.jobHasMessages())
+      if (buildmessage.jobHasMessages()) {
         return;
+      }
 
       _.each(buildResult.usedPackageNames, function (packageName) {
         pluginProviderPackageNames[packageName] = true;
       });
 
       // Register the built plugin's code.
-      if (!_.has(plugins, info.name))
+      if (!_.has(plugins, info.name)) {
         plugins[info.name] = {};
+      }
       plugins[info.name][buildResult.image.arch] = buildResult.image;
     });
   });
@@ -112,18 +114,15 @@ compiler.compile = Profile(function (packageSource, options) {
   //
   // We run this even if we have no dependencies, because we might
   // need to delete dependencies we used to have.
-  var isPortable = true;
   var nodeModulesPath = null;
   if (packageSource.npmCacheDirectory) {
     if (meteorNpm.updateDependencies(packageSource.name,
                                      packageSource.npmCacheDirectory,
                                      packageSource.npmDependencies)) {
-      nodeModulesPath = files.pathJoin(packageSource.npmCacheDirectory,
-                                  'node_modules');
-      if (! process.env.METEOR_FORCE_PORTABLE &&
-          ! meteorNpm.dependenciesArePortable(packageSource.npmCacheDirectory)) {
-        isPortable = false;
-      }
+      nodeModulesPath = files.pathJoin(
+        packageSource.npmCacheDirectory,
+        'node_modules'
+      );
     }
   }
 
@@ -164,22 +163,24 @@ compiler.compile = Profile(function (packageSource, options) {
     includeTool: packageSource.includeTool,
     debugOnly: packageSource.debugOnly,
     prodOnly: packageSource.prodOnly,
+    testOnly: packageSource.testOnly,
     pluginCacheDir: options.pluginCacheDir,
     isobuildFeatures
   });
 
   _.each(packageSource.architectures, function (architecture) {
-    if (architecture.arch === 'web.cordova' && ! includeCordovaUnibuild)
+    if (architecture.arch === 'web.cordova' && ! includeCordovaUnibuild) {
       return;
+    }
 
     var unibuildResult = compileUnibuild({
       isopack: isopk,
       sourceArch: architecture,
       isopackCache: isopackCache,
       nodeModulesPath: nodeModulesPath,
-      isPortable: isPortable,
       noLineNumbers: options.noLineNumbers
     });
+
     _.extend(pluginProviderPackageNames,
              unibuildResult.pluginProviderPackageNames);
   });
@@ -196,7 +197,9 @@ compiler.compile = Profile(function (packageSource, options) {
 // - isopack
 // - isopackCache
 // - includeCordovaUnibuild
-compiler.lint = function (packageSource, options) {
+compiler.lint = Profile(function (packageSource, options) {
+  return `compiler.lint(${ packageSource.name || 'the app' })`;
+}, function (packageSource, options) {
   // Note: the buildmessage context of compiler.lint and lintUnibuild is a
   // normal error message context (eg, there might be errors from initializing
   // plugins in getLinterSourceProcessorSet).  We return the linter warnings as
@@ -223,7 +226,7 @@ compiler.lint = function (packageSource, options) {
     }
   });
   return {warnings, linted};
-};
+});
 
 compiler.getMinifiers = function (packageSource, options) {
   buildmessage.assertInJob();
@@ -320,14 +323,15 @@ var lintUnibuild = function ({isopack, isopackCache, sourceArch}) {
 // options.isopack.
 //
 // Returns a list of source files that were used in the compilation.
-var compileUnibuild = function (options) {
+var compileUnibuild = Profile(function (options) {
+  return `compileUnibuild (${options.isopack.name || 'the app'})`;
+}, function (options) {
   buildmessage.assertInCapture();
 
   const isopk = options.isopack;
   const inputSourceArch = options.sourceArch;
   const isopackCache = options.isopackCache;
   const nodeModulesPath = options.nodeModulesPath;
-  const isPortable = options.isPortable;
   const noLineNumbers = options.noLineNumbers;
 
   const isApp = ! inputSourceArch.pkg.name;
@@ -386,13 +390,39 @@ var compileUnibuild = function (options) {
   // things that the getFiles consulted (such as directory
   // listings or, in some hypothetical universe, control files) to
   // determine its source files.
-  const {
-    sources = [],
-    assets = []
-  } = sourceProcessorSet ?
-    inputSourceArch.getFiles(sourceProcessorSet, watchSet) : {};
+  const sourceProcessorFiles = sourceProcessorSet
+    ? inputSourceArch.getFiles(sourceProcessorSet, watchSet) : {};
+  const sources = sourceProcessorFiles.sources || [];
+  const assets = sourceProcessorFiles.assets || [];
+
+  const nodeModulesDirectories = Object.create(null);
+
+  function addNodeModulesDirectory(options) {
+    const nmd = new bundler.NodeModulesDirectory(options);
+    nodeModulesDirectories[nmd.sourcePath] = nmd;
+  }
+
+  Object.keys(inputSourceArch.localNodeModulesDirs).forEach(dir => {
+    addNodeModulesDirectory({
+      packageName: inputSourceArch.pkg.name,
+      sourceRoot: inputSourceArch.sourceRoot,
+      sourcePath: files.pathJoin(inputSourceArch.sourceRoot, dir),
+      // Npm.strip applies to local node_modules directories of Meteor
+      // packages, as well as .npm/package/node_modules directories.
+      npmDiscards: isopk.npmDiscards,
+      local: true,
+    });
+  });
 
   if (nodeModulesPath) {
+    addNodeModulesDirectory({
+      packageName: inputSourceArch.pkg.name,
+      sourceRoot: inputSourceArch.sourceRoot,
+      sourcePath: nodeModulesPath,
+      npmDiscards: isopk.npmDiscards,
+      local: false,
+    });
+
     // If this slice has node modules, we should consider the shrinkwrap file
     // to be part of its inputs. (This is a little racy because there's no
     // guarantee that what we read here is precisely the version that's used,
@@ -431,7 +461,7 @@ var compileUnibuild = function (options) {
   // Add all assets
   _.values(assets).forEach((asset) => {
     const relPath = asset.relPath;
-    const absPath = files.pathResolve(inputSourceArch.pkg.sourceRoot, relPath);
+    const absPath = files.pathResolve(inputSourceArch.sourceRoot, relPath);
 
     // readAndWatchFileWithHash returns an object carrying a buffer with the
     // file-contents. The buffer contains the original data of the file (no EOL
@@ -447,7 +477,7 @@ var compileUnibuild = function (options) {
   _.values(sources).forEach((source) => {
     const relPath = source.relPath;
     const fileOptions = _.clone(source.fileOptions) || {};
-    const absPath = files.pathResolve(inputSourceArch.pkg.sourceRoot, relPath);
+    const absPath = files.pathResolve(inputSourceArch.sourceRoot, relPath);
     const filename = files.pathBasename(relPath);
 
     // Find the handler for source files with this extension
@@ -563,8 +593,12 @@ api.addAssets('${relPath}', 'client').`);
         addAsset: addAsset
       });
 
+    const handler = buildmessage.markBoundary(classification.legacyHandler);
+
     try {
-      (buildmessage.markBoundary(classification.legacyHandler))(compileStep);
+      Profile.time(`legacy handler (.${classification.extension})`, () => {
+        handler(compileStep);
+      });
     } catch (e) {
       e.message = e.message + " (compiling " + relPath + ")";
       buildmessage.exception(e);
@@ -579,6 +613,9 @@ api.addAssets('${relPath}', 'client').`);
     return _.pick(symbol, ['name', 'testOnly']);
   });
 
+  const isPortable = process.env.METEOR_FORCE_PORTABLE ||
+    _.every(nodeModulesDirectories, nmd => nmd.isPortable());
+
   // *** Consider npm dependencies and portability
   var arch = inputSourceArch.arch;
   if (arch === "os" && ! isPortable) {
@@ -586,10 +623,10 @@ api.addAssets('${relPath}', 'client').`);
     arch = archinfo.host();
   }
 
-  let nodeModulesPathOrUndefined = nodeModulesPath;
-  if (! archinfo.matches(arch, "os")) {
-    // npm modules only work on server architectures
-    nodeModulesPathOrUndefined = undefined;
+  let nodeModulesDirsOrUndefined = nodeModulesDirectories;
+  if (! archinfo.matches(arch, "os") && ! isPortable) {
+    // non-portable npm modules only work on server architectures
+    nodeModulesDirsOrUndefined = undefined;
   }
 
   // *** Output unibuild object
@@ -599,7 +636,7 @@ api.addAssets('${relPath}', 'client').`);
     uses: inputSourceArch.uses,
     implies: inputSourceArch.implies,
     watchSet: watchSet,
-    nodeModulesPath: nodeModulesPathOrUndefined,
+    nodeModulesDirectories: nodeModulesDirsOrUndefined,
     declaredExports: declaredExports,
     resources: resources
   });
@@ -607,7 +644,7 @@ api.addAssets('${relPath}', 'client').`);
   return {
     pluginProviderPackageNames: pluginProviderPackageNames
   };
-};
+});
 
 function runLinters({inputSourceArch, isopackCache, sources,
                      sourceProcessorSet, watchSet}) {
@@ -656,17 +693,17 @@ function runLinters({inputSourceArch, isopackCache, sources,
     arch: whichArch,
     isopackCache: isopackCache,
     skipUnordered: true,
-    // don't import symbols from debugOnly and prodOnly packages, because
-    // if the package is not linked it will cause a runtime error.
-    // the code must access them with `Package["my-package"].MySymbol`.
+    // don't import symbols from debugOnly, prodOnly and testOnly
+    // packages, because if the package is not linked it will cause a
+    // runtime error.  the code must access them with
+    // `Package["my-package"].MySymbol`.
     skipDebugOnly: true,
     skipProdOnly: true,
-    // We only care about getting exports here, so it's OK if we get the Mac
-    // version when we're bundling for Linux.
-    allowWrongPlatform: true,
+    skipTestOnly: true,
   }, (unibuild) => {
-    if (unibuild.pkg.name === inputSourceArch.pkg.name)
+    if (unibuild.pkg.name === inputSourceArch.pkg.name) {
       return;
+    }
     _.each(unibuild.declaredExports, (symbol) => {
       if (! symbol.testOnly || inputSourceArch.isTest) {
         globalImports.push(symbol.name);
@@ -677,15 +714,16 @@ function runLinters({inputSourceArch, isopackCache, sources,
   // sourceProcessor.id -> {sourceProcessor, sources: [WrappedSourceItem]}
   const sourceItemsForLinter = {};
   _.values(sources).forEach((sourceItem) => {
-    const { relPath } = sourceItem;
+    const { relPath, fileOptions } = sourceItem;
     const classification = sourceProcessorSet.classifyFilename(
       files.pathBasename(relPath), inputSourceArch.arch);
 
     // If we don't have a linter for this file (or we do but it's only on
     // another arch), skip without even reading the file into a WatchSet.
     if (classification.type === 'wrong-arch' ||
-        classification.type === 'unmatched')
+        classification.type === 'unmatched') {
       return;
+    }
     // We shouldn't ever add a legacy handler and we're not hardcoding JS for
     // linters, so we should always have SourceProcessor if anything matches.
     if (! classification.sourceProcessors) {
@@ -696,9 +734,9 @@ function runLinters({inputSourceArch, isopackCache, sources,
     // Read the file and add it to the WatchSet.
     const {hash, contents} = watch.readAndWatchFileWithHash(
       watchSet,
-      files.pathResolve(inputSourceArch.pkg.sourceRoot, relPath));
+      files.pathResolve(inputSourceArch.sourceRoot, relPath));
     const wrappedSource = {
-      relPath, contents, hash,
+      relPath, contents, hash, fileOptions,
       arch: inputSourceArch.arch,
       'package': inputSourceArch.pkg.name
     };
@@ -724,12 +762,15 @@ function runLinters({inputSourceArch, isopackCache, sources,
     const linter = sourceProcessor.userPlugin.processFilesForPackage;
 
     function archToString(arch) {
-      if (arch.match(/web\.cordova/))
+      if (arch.match(/web\.cordova/)) {
         return "Cordova";
-      if (arch.match(/web\..*/))
+      }
+      if (arch.match(/web\..*/)) {
         return "Client";
-      if (arch.match(/os.*/))
+      }
+      if (arch.match(/os.*/)) {
         return "Server";
+      }
       throw new Error("Don't know how to display the arch: " + arch);
     }
 
@@ -770,8 +811,9 @@ export function getActivePluginPackages(isopk, {
   // the implies field is on the target unibuild, but we really only care
   // about packages.)
   var activePluginPackages = [isopk];
-  if (pluginProviderPackageNames)
+  if (pluginProviderPackageNames) {
     pluginProviderPackageNames[isopk.name] = true;
+  }
 
   // We don't use plugins from weak dependencies, because the ability
   // to compile a certain type of file shouldn't depend on whether or
@@ -791,16 +833,18 @@ export function getActivePluginPackages(isopk, {
     skipUnordered: true
     // implicitly skip weak deps by not specifying acceptableWeakPackages option
   }, function (unibuild) {
-    if (unibuild.pkg.name === isopk.name)
+    if (unibuild.pkg.name === isopk.name) {
       return;
+    }
     if (pluginProviderPackageNames) {
       pluginProviderPackageNames[unibuild.pkg.name] = true;
     }
     if (pluginProviderWatchSet) {
       pluginProviderWatchSet.merge(unibuild.pkg.pluginWatchSet);
     }
-    if (_.isEmpty(unibuild.pkg.plugins))
+    if (_.isEmpty(unibuild.pkg.plugins)) {
       return;
+    }
     activePluginPackages.push(unibuild.pkg);
   });
 
@@ -819,17 +863,18 @@ compiler.eachUsedUnibuild = function (
   var dependencies = options.dependencies;
   var arch = options.arch;
   var isopackCache = options.isopackCache;
-  const allowWrongPlatform = options.allowWrongPlatform;
 
   var acceptableWeakPackages = options.acceptableWeakPackages || {};
 
   var processedUnibuildId = {};
   var usesToProcess = [];
   _.each(dependencies, function (use) {
-    if (options.skipUnordered && use.unordered)
+    if (options.skipUnordered && use.unordered) {
       return;
-    if (use.weak && !_.has(acceptableWeakPackages, use.package))
+    }
+    if (use.weak && !_.has(acceptableWeakPackages, use.package)) {
       return;
+    }
     usesToProcess.push(use);
   });
 
@@ -837,28 +882,36 @@ compiler.eachUsedUnibuild = function (
     var use = usesToProcess.shift();
 
     // We only care about real packages, not isobuild:* psuedo-packages.
-    if (isIsobuildFeaturePackage(use.package))
+    if (isIsobuildFeaturePackage(use.package)) {
       continue;
+    }
 
     var usedPackage = isopackCache.getIsopack(use.package);
 
     // Ignore this package if we were told to skip debug-only packages and it is
     // debug-only.
-    if (usedPackage.debugOnly && options.skipDebugOnly)
+    if (usedPackage.debugOnly && options.skipDebugOnly) {
       continue;
+    }
     // Ditto prodOnly.
-    if (usedPackage.prodOnly && options.skipProdOnly)
+    if (usedPackage.prodOnly && options.skipProdOnly) {
       continue;
+    }
+    // Ditto testOnly.
+    if (usedPackage.testOnly && options.skipTestOnly) {
+      continue;
+    }
 
-    var unibuild = usedPackage.getUnibuildAtArch(arch, {allowWrongPlatform});
+    var unibuild = usedPackage.getUnibuildAtArch(arch);
     if (!unibuild) {
       // The package exists but there's no unibuild for us. A buildmessage has
       // already been issued. Recover by skipping.
       continue;
     }
 
-    if (_.has(processedUnibuildId, unibuild.id))
+    if (_.has(processedUnibuildId, unibuild.id)) {
       continue;
+    }
     processedUnibuildId[unibuild.id] = true;
 
     callback(unibuild, {
@@ -924,8 +977,8 @@ export const KNOWN_ISOBUILD_FEATURE_PACKAGES = {
   // explicitly depend on this feature package to indicate that they are not
   // compatible with earlier Cordova versions, which is most likely a result of
   // the Cordova plugins they depend on.
-  // A common scenario is a package depending on a Cordova plugin or version
+  // One scenario is a package depending on a Cordova plugin or version
   // that is only available on npm, which means downloading the plugin is not
   // supported on versions of Cordova below 5.0.0.
-  'isobuild:cordova': ['5.2.0']
+  'isobuild:cordova': ['5.4.0']
 };

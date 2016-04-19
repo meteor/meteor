@@ -1,6 +1,8 @@
 Accounts._noConnectionCloseDelayForTest = true;
-Accounts.removeDefaultRateLimit();
+
 if (Meteor.isServer) {
+  Accounts.removeDefaultRateLimit();
+  
   Meteor.methods({
     getResetToken: function () {
       var token = Meteor.users.findOne(this.userId).services.password.reset;
@@ -26,11 +28,11 @@ if (Meteor.isClient) (function () {
   Accounts._isolateLoginTokenForTest();
 
   var addSkipCaseInsensitiveChecksForTest = function (value, test, expect) {
-    Meteor.call('addSkipCaseInsensitiveChecksForTest', value, expect);
+    Meteor.call('addSkipCaseInsensitiveChecksForTest', value);
   };
 
   var removeSkipCaseInsensitiveChecksForTest = function (value, test, expect) {
-    Meteor.call('removeSkipCaseInsensitiveChecksForTest', value, expect);
+    Meteor.call('removeSkipCaseInsensitiveChecksForTest', value);
   };
 
   var createUserStep = function (test, expect) {

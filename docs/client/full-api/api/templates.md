@@ -18,6 +18,9 @@ or replaced and should be cleaned up.  You can associate data with a
 template instance, and you can access its DOM nodes when it is in the
 document.
 
+Read more about templates and how to use them in the [Spacebars](#pkg_spacebars) 
+package README and the [Blaze](http://guide.meteor.com/blaze.html) article in the Meteor Guide.
+
 {{> autoApiBox "Template#events"}}
 
 Declare event handlers for instances of this template. Multiple calls add
@@ -34,7 +37,7 @@ and this call specifies helpers to add to the template's dictionary.
 Example:
 
     Template.myTemplate.helpers({
-      foo: function () {
+      foo() {
         return Session.get("foo");
       }
     });
@@ -46,7 +49,7 @@ Helpers can accept positional and keyword arguments:
 
 ```javascript
 Template.myTemplate.helpers({
-  displayName: function (firstName, lastName, keyword) {
+  displayName(firstName, lastName, keyword) {
     var prefix = keyword.hash.title ? keyword.hash.title + " " : "";
     return prefix + firstName + " " + lastName;
   }
@@ -92,9 +95,9 @@ template is rendered for the first time.
 ```html
 <template name="myPictures">
   <div class="container">
-    {{#each pictures}}
-      <img class=".item" src="/{{.}}"/>
-    {{/each}}
+    {{dstache}}#each pictures}}
+      <img class="item" src="/{{dstache}}.}}"/>
+    {{dstache}}/each}}
   </div>
 </template>
 ```
@@ -261,12 +264,10 @@ Another example where the subscription depends on the data context:
 
 ```js
 Template.comments.onCreated(function () {
-  var self = this;
-
-  // Use self.subscribe with the data context reactively
-  self.autorun(function () {
+  // Use this.subscribe with the data context reactively
+  this.autorun(() => {
     var dataContext = Template.currentData();
-    self.subscribe("comments", dataContext.postId);
+    this.subscribe("comments", dataContext.postId);
   });
 });
 ```
@@ -284,9 +285,9 @@ done:
 Template.listing.onRendered(function () {
   var template = this;
 
-  template.subscribe('listOfThings', function () {
+  template.subscribe('listOfThings', () => {
     // Wait for the data to load using the callback
-    Tracker.afterFlush(function () {
+    Tracker.afterFlush(() => {
       // Use Tracker.afterFlush to wait for the UI to re-render
       // then use highlight.js to highlight a code snippet
       highlightBlock(template.find('.code'));
@@ -327,7 +328,7 @@ or the DOM API.
 may be calculated by a helper and may change reactively.  The `data`
 argument is optional, and if it is omitted, the current data context
 is used. It's also possible, to use `Template.dynamic` as a block helper
-(`{{#Template.dynamic}} ... {{/Template.dynamic}}`)
+(`{{dstache}}#Template.dynamic}} ... {{dstache}}/Template.dynamic}}`)
 
 For example, if there is a template named "foo", `{{dstache}}> Template.dynamic
 template="foo"}}` is equivalent to `{{dstache}}> foo}}` and
@@ -370,13 +371,13 @@ Example:
 
     {
       // Fires when any element is clicked
-      'click': function (event) { ... },
+      'click'(event) { ... },
 
       // Fires when any element with the 'accept' class is clicked
-      'click .accept': function (event) { ... },
+      'click .accept'(event) { ... },
 
       // Fires when 'accept' is clicked or focused, or a key is pressed
-      'click .accept, focus .accept, keypress': function (event) { ... }
+      'click .accept, focus .accept, keypress'(event) { ... }
     }
 
 Most events bubble up the document tree from their originating
@@ -387,7 +388,7 @@ is available as the `target` property, while the element that matched
 the selector and is currently handling it is called `currentTarget`.
 
     {
-      'click p': function (event) {
+      'click p'(event) {
         var paragraph = event.currentTarget; // always a P
         var clickedElement = event.target; // could be the P or a child element
       }
@@ -505,6 +506,6 @@ browsers.
 
 Spacebars is the language used to write Meteor templates. It is inspired by [Handlebars](http://handlebarsjs.com/). It shares some of the spirit and syntax of Handlebars, but has been tailored to produce reactive Meteor templates when compiled.
 
-For more information about Spacebars, see the [Spacebars README](https://github.com/meteor/meteor/blob/master/packages/spacebars/README.md).
+For more information about Spacebars, see the [Spacebars README](#pkg_spacebars).
 
 {{/template}}

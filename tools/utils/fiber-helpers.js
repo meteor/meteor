@@ -1,55 +1,27 @@
 var _ = require("underscore");
 var Fiber = require("fibers");
-var Future = require("fibers/future");
 
 exports.parallelEach = function (collection, callback, context) {
-  var futures = _.map(collection, function (...args) {
-    return function () {
+  const errors = [];
+  context = context || null;
+
+  const results = Promise.all(_.map(collection, (...args) => {
+    async function run() {
       return callback.apply(context, args);
-    }.future()();
-  });
-  Future.wait(futures);
-  // Throw if any threw.
-  _.each(futures, function (f) { f.get(); });
-};
-
-exports.firstTimeResolver = function (fut) {
-  var resolver = fut.resolver();
-  return function (err, val) {
-    if (fut.isResolved())
-      return;
-    resolver(err, val);
-  };
-};
-
-// Waits for one future given as an argument to be resolved. Throws if it threw,
-// otherwise returns whichever one returns first.  (Because of this, you
-// probably want at most one of the futures to be capable of returning, and have
-// the other be throw-only.)
-exports.waitForOne = function (...futures) {
-  var fiber = Fiber.current;
-  if (!fiber)
-    throw Error("Can't waitForOne without a fiber");
-  if (futures.length === 0)
-    throw Error("Must wait for at least one future");
-
-  var combinedFuture = new Future;
-  for (var i = 0; i < futures.length; ++i) {
-    var f = futures[i];
-    if (f.isResolved()) {
-      // Move its value into combinedFuture.
-      f.resolve(combinedFuture.resolver());
-      break;
     }
-    // Otherwise, this function will be invoked when the future is resolved.
-    f.resolve(function (err, result) {
-      if (!combinedFuture.isResolved()) {
-        combinedFuture.resolver()(err, result);
-      }
+
+    return run().catch(error => {
+      // Collect the errors but do not propagate them so that we can
+      // re-throw the first error after all iterations have completed.
+      errors.push(error);
     });
+  })).await();
+
+  if (errors.length > 0) {
+    throw errors[0];
   }
 
-  return combinedFuture.wait();
+  return results;
 };
 
 function disallowedYield() {
@@ -91,10 +63,12 @@ _.extend(exports.EnvironmentVariable.prototype, {
     var self = this;
     exports.nodeCodeMustBeInFiber();
 
-    if (!Fiber.current._meteorDynamics)
+    if (!Fiber.current._meteorDynamics) {
       return self.defaultValue;
-    if (!_.has(Fiber.current._meteorDynamics, self.slot))
+    }
+    if (!_.has(Fiber.current._meteorDynamics, self.slot)) {
       return self.defaultValue;
+    }
     return Fiber.current._meteorDynamics[self.slot];
   },
 
@@ -102,8 +76,9 @@ _.extend(exports.EnvironmentVariable.prototype, {
     var self = this;
     exports.nodeCodeMustBeInFiber();
 
-    if (!Fiber.current._meteorDynamics)
+    if (!Fiber.current._meteorDynamics) {
       Fiber.current._meteorDynamics = {};
+    }
     var currentValues = Fiber.current._meteorDynamics;
 
     var saved = _.has(currentValues, self.slot)
@@ -140,22 +115,21 @@ exports.bindEnvironment = function (func) {
       }
     };
 
-    if (Fiber.current)
+    if (Fiber.current) {
       return runWithEnvironment();
+    }
     Fiber(runWithEnvironment).run();
   };
 };
 
-// An alternative to bindEnvironment for the rare case where you
-// want the callback you're passing to some Node function to start
-// a new fiber but *NOT* to inherit the current environment.
-// Eg, if you are trying to do the equivalent of start a background
-// thread.
-exports.inBareFiber = function (func) {
-  return function (...args) {
-    var self = this;
-    new Fiber(function () {
-      func.apply(self, args);
-    }).run();
-  };
+// Returns a Promise that supports .resolve(result) and .reject(error).
+exports.makeFulfillablePromise = function () {
+  var resolve, reject;
+  var promise = new Promise(function (res, rej) {
+    resolve = res;
+    reject = rej;
+  });
+  promise.resolve = resolve;
+  promise.reject = reject;
+  return promise;
 };

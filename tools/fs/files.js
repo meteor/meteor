@@ -13,7 +13,6 @@ var Fiber = require('fibers');
 var crypto = require('crypto');
 
 var rimraf = require('rimraf');
-var Future = require('fibers/future');
 var sourcemap = require('source-map');
 var sourceMapRetrieverStack = require('../tool-env/source-map-retriever-stack.js');
 
@@ -67,8 +66,9 @@ var findUpwards = function (predicate, startPath) {
       testDir = newDir;
     }
   }
-  if (!testDir)
+  if (!testDir) {
     return null;
+  }
 
   return testDir;
 };
@@ -124,7 +124,9 @@ files.addToGitignore = function (dirPath, entry) {
       // already there do nothing
     } else {
       // rewrite file w/ new entry.
-      if (data.substr(-1) !== "\n") data = data + "\n";
+      if (data.substr(-1) !== "\n") {
+        data = data + "\n";
+      }
       data = data + entry + "\n";
       files.writeFile(filepath, data, 'utf8');
     }
@@ -137,8 +139,9 @@ files.addToGitignore = function (dirPath, entry) {
 // Are we running Meteor from a git checkout?
 files.inCheckout = _.once(function () {
   try {
-    if (files.exists(files.pathJoin(files.getCurrentToolsDir(), '.git')))
+    if (files.exists(files.pathJoin(files.getCurrentToolsDir(), '.git'))) {
       return true;
+    }
   } catch (e) { console.log(e); }
 
   return false;
@@ -150,10 +153,11 @@ files.inCheckout = _.once(function () {
 files.usesWarehouse = function () {
   // Test hook: act like we're "installed" using a non-homedir warehouse
   // directory.
-  if (process.env.METEOR_WAREHOUSE_DIR)
+  if (process.env.METEOR_WAREHOUSE_DIR) {
     return true;
-  else
+  } else {
     return ! files.inCheckout();
+  }
 };
 
 // Read the '.tools_version.txt' file. If in a checkout, throw an error.
@@ -243,11 +247,13 @@ files.getSettings = function (filename, watchSet) {
 files.prettyPath = function (p) {
   p = files.realpath(p);
   var home = files.getHomeDir();
-  if (! home)
+  if (! home) {
     return p;
+  }
   var relativeToHome = files.pathRelative(home, p);
-  if (relativeToHome.substr(0, 3) === ('..' + files.pathSep))
+  if (relativeToHome.substr(0, 3) === ('..' + files.pathSep)) {
     return p;
+  }
   return files.pathJoin('~', relativeToHome);
 };
 
@@ -256,8 +262,9 @@ files.statOrNull = function (path) {
   try {
     return files.stat(path);
   } catch (e) {
-    if (e.code == "ENOENT")
+    if (e.code == "ENOENT") {
       return null;
+    }
     throw e;
   }
 };
@@ -265,9 +272,7 @@ files.statOrNull = function (path) {
 // Like rm -r.
 files.rm_recursive = Profile("files.rm_recursive", function (p) {
   if (Fiber.current && Fiber.yield && ! Fiber.yield.disallowed) {
-    var fut = new Future();
-    rimraf(files.convertToOSPath(p), fut.resolver());
-    fut.wait();
+    Promise.denodeify(rimraf)(files.convertToOSPath(p)).await();
   } else {
     rimraf.sync(files.convertToOSPath(p));
   }
@@ -279,8 +284,9 @@ var makeTreeReadOnly = function (p) {
     // the l in lstat is critical -- we want to ignore symbolic links
     var stat = files.lstat(p);
   } catch (e) {
-    if (e.code == "ENOENT")
+    if (e.code == "ENOENT") {
       return;
+    }
     throw e;
   }
 
@@ -292,8 +298,9 @@ var makeTreeReadOnly = function (p) {
   if (stat.isFile()) {
     var permissions = stat.mode & 0o777;
     var readOnlyPermissions = permissions & 0o555;
-    if (permissions !== readOnlyPermissions)
+    if (permissions !== readOnlyPermissions) {
       files.chmod(p, readOnlyPermissions);
+    }
   }
 };
 
@@ -303,13 +310,13 @@ files.fileHash = function (filename) {
   var hash = crypto.createHash('sha256');
   hash.setEncoding('base64');
   var rs = files.createReadStream(filename);
-  var fut = new Future();
-  rs.on('end', function () {
-    rs.close();
-    fut.return(hash.digest('base64'));
-  });
-  rs.pipe(hash, { end: false });
-  return fut.wait();
+  return new Promise(function (resolve) {
+    rs.on('end', function () {
+      rs.close();
+      resolve(hash.digest('base64'));
+    });
+    rs.pipe(hash, { end: false });
+  }).await();
 };
 
 // This is the result of running fileHash on a blank file.
@@ -446,11 +453,14 @@ files.cp_r = function (from, to, options) {
   _.each(files.readdir(from), function (f) {
     if (_.any(options.ignore || [], function (pattern) {
       return f.match(pattern);
-    })) return;
+    })) {
+      return;
+    }
 
     var fullFrom = files.pathJoin(from, f);
-    if (options.transformFilename)
+    if (options.transformFilename) {
       f = options.transformFilename(f);
+    }
     var fullTo = files.pathJoin(to, f);
     var stats = options.preserveSymlinks
           ? files.lstat(fullFrom) : files.stat(fullFrom);
@@ -543,12 +553,15 @@ files.findPathsWithRegex = function (dir, regex, options) {
 // Copies a file, which is expected to exist. Parent directories of "to" do not
 // have to exist. Treats symbolic links transparently (copies the contents, not
 // the link itself, and it's an error if the link doesn't point to a file).
-files.copyFile = function (from, to) {
+files.copyFile = function (from, to, origMode=null) {
   files.mkdir_p(files.pathDirname(files.pathResolve(to)), 0o755);
 
-  var stats = files.stat(from);
-  if (!stats.isFile()) {
-    throw Error("cannot copy non-files");
+  if (origMode === null) {
+    var stats = files.stat(from);
+    if (!stats.isFile()) {
+      throw Error("cannot copy non-files");
+    }
+    origMode = stats.mode;
   }
 
   // Create the file as readable and writable by everyone, and executable by
@@ -556,27 +569,23 @@ files.copyFile = function (from, to) {
   // modified by umask.) We don't copy the mode *directly* because this function
   // is used by 'meteor create' which is copying from the read-only tools tree
   // into a writable app.
-  var mode = (stats.mode & 0o100) ? 0o777 : 0o666;
+  var mode = (origMode & 0o100) ? 0o777 : 0o666;
 
   copyFileHelper(from, to, mode);
 };
+files.copyFile = Profile("files.copyFile", files.copyFile);
 
 var copyFileHelper = function (from, to, mode) {
   var readStream = files.createReadStream(from);
   var writeStream = files.createWriteStream(to, { mode: mode });
-  var future = new Future;
-  var onError = function (e) {
-    future.isResolved() || future.throw(e);
-  };
-  readStream.on('error', onError);
-  writeStream.on('error', onError);
-  writeStream.on('open', function () {
-    readStream.pipe(writeStream);
-  });
-  writeStream.once('finish', function () {
-    future.isResolved() || future.return();
-  });
-  future.wait();
+  new Promise(function (resolve, reject) {
+    readStream.on('error', reject);
+    writeStream.on('error', reject);
+    writeStream.on('open', function () {
+      readStream.pipe(writeStream);
+    });
+    writeStream.once('finish', resolve);
+  }).await();
 };
 
 // Make a temporary directory. Returns the path to the newly created
@@ -592,11 +601,13 @@ files.mkdtemp = function (prefix) {
       return process.env[t];
     }).filter(_.identity));
 
-    if (! tmpDir && process.platform !== 'win32')
+    if (! tmpDir && process.platform !== 'win32') {
       tmpDir = '/tmp';
+    }
 
-    if (! tmpDir)
+    if (! tmpDir) {
       throw new Error("Couldn't create a temporary directory.");
+    }
 
     tmpDir = files.realpath(tmpDir);
 
@@ -623,10 +634,12 @@ files.mkdtemp = function (prefix) {
 // Call this if you're done using a temporary directory. It will asynchronously
 // be deleted.
 files.freeTempDir = function (tempDir) {
-  if (! _.contains(tempDirs, tempDir))
+  if (! _.contains(tempDirs, tempDir)) {
     throw Error("not a tracked temp dir: " + tempDir);
-  if (process.env.METEOR_SAVE_TMPDIRS)
+  }
+  if (process.env.METEOR_SAVE_TMPDIRS) {
     return;
+  }
   setImmediate(function () {
     // note: rm_recursive can yield, so it's possible that during this
     // rm_recursive call, the onExit rm_recursive fires too.  (Or it could even
@@ -677,43 +690,37 @@ files.extractTarGz = function (buffer, destPath, options) {
   var tempDir = files.pathJoin(parentDir, '.tmp' + utils.randomToken());
   files.mkdir_p(tempDir);
 
-  var future = new Future;
-
   var tar = require("tar");
   var zlib = require("zlib");
-  var gunzip = zlib.createGunzip()
-    .on('error', function (e) {
-      future.isResolved() || future.throw(e);
-    });
 
-  var extractor = new tar.Extract({ path: files.convertToOSPath(tempDir) })
-    .on('entry', function (e) {
+  new Promise(function (resolve, reject) {
+    var gunzip = zlib.createGunzip().on('error', reject);
+
+    var extractor = new tar.Extract({
+      path: files.convertToOSPath(tempDir)
+    }).on('entry', function (e) {
       if (process.platform === "win32" || options.forceConvert) {
         // On Windows, try to convert old packages that have colons in paths
         // by blindly replacing all of the paths. Otherwise, we can't even
         // extract the tarball
         e.path = colonConverter.convert(e.path);
       }
-    })
-    .on('error', function (e) {
-      future.isResolved() || future.throw(e);
-    })
-    .on('end', function () {
-      future.isResolved() || future.return();
-    });
+    }).on('error', reject)
+      .on('end', resolve);
 
-  // write the buffer to the (gunzip|untar) pipeline; these calls
-  // cause the tar to be extracted to disk.
-  gunzip.pipe(extractor);
-  gunzip.write(buffer);
-  gunzip.end();
-  future.wait();
+    // write the buffer to the (gunzip|untar) pipeline; these calls
+    // cause the tar to be extracted to disk.
+    gunzip.pipe(extractor);
+    gunzip.write(buffer);
+    gunzip.end();
+  }).await();
 
   // succeed!
   var topLevelOfArchive = files.readdir(tempDir);
-  if (topLevelOfArchive.length !== 1)
+  if (topLevelOfArchive.length !== 1) {
     throw new Error(
       "Extracted archive '" + tempDir + "' should only contain one entry");
+  }
 
   var extractDir = files.pathJoin(tempDir, topLevelOfArchive[0]);
   makeTreeReadOnly(extractDir);
@@ -783,17 +790,12 @@ files.createTarGzStream = function (dirPath, options) {
 // Tar-gzips a directory into a tarball on disk, synchronously.
 // The tar archive will contain a top-level directory named after dirPath.
 files.createTarball = function (dirPath, tarball, options) {
-  var future = new Future;
   var out = files.createWriteStream(tarball);
-  out.on('error', function (err) {
-    future.throw(err);
-  });
-  out.on('close', function () {
-    future.return();
-  });
-
-  files.createTarGzStream(dirPath, options).pipe(out);
-  future.wait();
+  new Promise(function (resolve, reject) {
+    out.on('error', reject);
+    out.on('close', resolve);
+    files.createTarGzStream(dirPath, options).pipe(out);
+  }).await();
 };
 
 // Use this if you'd like to replace a directory with another
@@ -811,8 +813,9 @@ files.renameDirAlmostAtomically = function (fromDir, toDir) {
   try {
     files.rename(toDir, garbageDir);
   } catch (e) {
-    if (e.code !== 'ENOENT')
+    if (e.code !== 'ENOENT') {
       throw e;
+    }
     movedOldDir = false;
   }
 
@@ -820,9 +823,12 @@ files.renameDirAlmostAtomically = function (fromDir, toDir) {
   files.rename(fromDir, toDir);
 
   // ... and delete the old one.
-  if (movedOldDir)
+  if (movedOldDir) {
     files.rm_recursive(garbageDir);
+  }
 };
+files.renameDirAlmostAtomically = Profile("files.renameDirAlmostAtomically",
+                                          files.renameDirAlmostAtomically);
 
 files.writeFileAtomically = function (filename, contents) {
   var tmpFile = files.pathJoin(
@@ -831,6 +837,8 @@ files.writeFileAtomically = function (filename, contents) {
   files.writeFile(tmpFile, contents);
   files.rename(tmpFile, filename);
 };
+files.writeFileAtomically = Profile("files.writeFileAtomically",
+                                    files.writeFileAtomically);
 
 // Like fs.symlinkSync, but creates a temporay link and renames it over the
 // file; this means it works even if the file already exists.
@@ -865,130 +873,136 @@ files.symlinkOverSync = function (linkText, file) {
 // underlying V8 issue is:
 //   https://code.google.com/p/v8/issues/detail?id=1281
 files.runJavaScript = function (code, options) {
-  if (typeof code !== 'string')
+  if (typeof code !== 'string') {
     throw new Error("code must be a string");
+  }
 
   options = options || {};
   var filename = options.filename || "<anonymous>";
-  var keys = [], values = [];
-  // don't assume that _.keys and _.values are guaranteed to
-  // enumerate in the same order
-  _.each(options.symbols, function (value, name) {
-    keys.push(name);
-    values.push(value);
-  });
 
-  var stackFilename = filename;
-  if (options.sourceMap) {
-    // We want to generate an arbitrary filename that we use to associate the
-    // file with its source map.
-    stackFilename = "<runJavaScript-" + nextStackFilenameCounter++ + ">";
-  }
+  return Profile.time('runJavaScript ' + filename, () => {
 
-  var chunks = [];
-  var header = "(function(" + keys.join(',') + "){";
-  chunks.push(header);
-  if (options.sourceMap) {
-    var consumer = new sourcemap.SourceMapConsumer(options.sourceMap);
-    chunks.push(sourcemap.SourceNode.fromStringWithSourceMap(
-      code, consumer));
-  } else {
-    chunks.push(code);
-  }
-  // \n is necessary in case final line is a //-comment
-  chunks.push("\n})");
-
-  var wrapped;
-  var parsedSourceMap = null;
-  if (options.sourceMap) {
-    var node = new sourcemap.SourceNode(null, null, null, chunks);
-    var results = node.toStringWithSourceMap({
-      file: stackFilename
+    var keys = [], values = [];
+    // don't assume that _.keys and _.values are guaranteed to
+    // enumerate in the same order
+    _.each(options.symbols, function (value, name) {
+      keys.push(name);
+      values.push(value);
     });
-    wrapped = results.code;
-    parsedSourceMap = results.map.toJSON();
-    if (options.sourceMapRoot) {
-      // Add the specified root to any root that may be in the file.
-      parsedSourceMap.sourceRoot = files.pathJoin(
-        options.sourceMapRoot, parsedSourceMap.sourceRoot || '');
-    }
-    // source-map-support doesn't ever look at the sourcesContent field, so
-    // there's no point in keeping it in memory.
-    delete parsedSourceMap.sourcesContent;
-    parsedSourceMaps[stackFilename] = parsedSourceMap;
-  } else {
-    wrapped = chunks.join('');
-  };
 
-  try {
-    // See #runInThisContext
-    //
-    // XXX it'd be nice to runInNewContext so that the code can't mess
-    // with our globals, but objects that come out of runInNewContext
-    // have bizarro antimatter prototype chains and break 'instanceof
-    // Array'. for now, steer clear
-    //
-    // Pass 'true' as third argument if we want the parse error on
-    // stderr (which we don't).
-    var script = require('vm').createScript(wrapped, stackFilename);
-  } catch (nodeParseError) {
-    if (!(nodeParseError instanceof SyntaxError))
-      throw nodeParseError;
-    // Got a parse error. Unfortunately, we can't actually get the
-    // location of the parse error from the SyntaxError; Node has some
-    // hacky support for displaying it over stderr if you pass an
-    // undocumented third argument to stackFilename, but that's not
-    // what we want. See
-    //    https://github.com/joyent/node/issues/3452
-    // for more information. One thing to try (and in fact, what an
-    // early version of this function did) is to actually fork a new
-    // node to run the code and parse its output. We instead run an
-    // entirely different JS parser, from the Babel project, but
-    // which at least has a nice API for reporting errors.
-    var parse = require('meteor-babel').parse;
+    var stackFilename = filename;
+    if (options.sourceMap) {
+      // We want to generate an arbitrary filename that we use to associate the
+      // file with its source map.
+      stackFilename = "<runJavaScript-" + nextStackFilenameCounter++ + ">";
+    }
+
+    var chunks = [];
+    var header = "(function(" + keys.join(',') + "){";
+    chunks.push(header);
+    if (options.sourceMap) {
+      var consumer = new sourcemap.SourceMapConsumer(options.sourceMap);
+      chunks.push(sourcemap.SourceNode.fromStringWithSourceMap(
+        code, consumer));
+    } else {
+      chunks.push(code);
+    }
+    // \n is necessary in case final line is a //-comment
+    chunks.push("\n})");
+
+    var wrapped;
+    var parsedSourceMap = null;
+    if (options.sourceMap) {
+      var node = new sourcemap.SourceNode(null, null, null, chunks);
+      var results = node.toStringWithSourceMap({
+        file: stackFilename
+      });
+      wrapped = results.code;
+      parsedSourceMap = results.map.toJSON();
+      if (options.sourceMapRoot) {
+        // Add the specified root to any root that may be in the file.
+        parsedSourceMap.sourceRoot = files.pathJoin(
+          options.sourceMapRoot, parsedSourceMap.sourceRoot || '');
+      }
+      // source-map-support doesn't ever look at the sourcesContent field, so
+      // there's no point in keeping it in memory.
+      delete parsedSourceMap.sourcesContent;
+      parsedSourceMaps[stackFilename] = parsedSourceMap;
+    } else {
+      wrapped = chunks.join('');
+    };
+
     try {
-      parse(wrapped, { strictMode: false });
-    } catch (parseError) {
-      if (typeof parseError.loc !== "object") {
-        throw parseError;
+      // See #runInThisContext
+      //
+      // XXX it'd be nice to runInNewContext so that the code can't mess
+      // with our globals, but objects that come out of runInNewContext
+      // have bizarro antimatter prototype chains and break 'instanceof
+      // Array'. for now, steer clear
+      //
+      // Pass 'true' as third argument if we want the parse error on
+      // stderr (which we don't).
+      var script = require('vm').createScript(wrapped, stackFilename);
+    } catch (nodeParseError) {
+      if (!(nodeParseError instanceof SyntaxError)) {
+        throw nodeParseError;
       }
-
-      var err = new files.FancySyntaxError;
-      err.message = parseError.message;
-
-      if (parsedSourceMap) {
-        // XXX this duplicates code in computeGlobalReferences
-        var consumer2 = new sourcemap.SourceMapConsumer(parsedSourceMap);
-        var original = consumer2.originalPositionFor(parseError.loc);
-        if (original.source) {
-          err.file = original.source;
-          err.line = original.line;
-          err.column = original.column;
-          throw err;
+      // Got a parse error. Unfortunately, we can't actually get the
+      // location of the parse error from the SyntaxError; Node has some
+      // hacky support for displaying it over stderr if you pass an
+      // undocumented third argument to stackFilename, but that's not
+      // what we want. See
+      //    https://github.com/joyent/node/issues/3452
+      // for more information. One thing to try (and in fact, what an
+      // early version of this function did) is to actually fork a new
+      // node to run the code and parse its output. We instead run an
+      // entirely different JS parser, from the Babel project, but
+      // which at least has a nice API for reporting errors.
+      var parse = require('meteor-babel').parse;
+      try {
+        parse(wrapped, { strictMode: false });
+      } catch (parseError) {
+        if (typeof parseError.loc !== "object") {
+          throw parseError;
         }
+
+        var err = new files.FancySyntaxError;
+        err.message = parseError.message;
+
+        if (parsedSourceMap) {
+          // XXX this duplicates code in computeGlobalReferences
+          var consumer2 = new sourcemap.SourceMapConsumer(parsedSourceMap);
+          var original = consumer2.originalPositionFor(parseError.loc);
+          if (original.source) {
+            err.file = original.source;
+            err.line = original.line;
+            err.column = original.column;
+            throw err;
+          }
+        }
+
+        err.file = filename;  // *not* stackFilename
+        err.line = parseError.loc.line;
+        err.column = parseError.loc.column;
+
+        // adjust errors on line 1 to account for our header
+        if (err.line === 1) {
+          err.column -= header.length;
+        }
+
+        throw err;
       }
 
-      err.file = filename;  // *not* stackFilename
-      err.line = parseError.loc.line;
-      err.column = parseError.loc.column;
-
-      // adjust errors on line 1 to account for our header
-      if (err.line === 1) {
-        err.column -= header.length;
-      }
-
-      throw err;
+      // What? Node thought that this was a parse error and Babel didn't?
+      // Eh, just throw Node's error and don't care too much about the line
+      // numbers being right.
+      throw nodeParseError;
     }
 
-    // What? Node thought that this was a parse error and Babel didn't?
-    // Eh, just throw Node's error and don't care too much about the line
-    // numbers being right.
-    throw nodeParseError;
-  }
+    var func = script.runInThisContext();
 
-  var func = script.runInThisContext();
-
-  return (buildmessage.markBoundary(func)).apply(null, values);
+    return (buildmessage.markBoundary(func)).apply(null, values);
+  });
 };
 
 // - message: an error message from the parser
@@ -1010,8 +1024,9 @@ files.readdirNoDots = function (path) {
   try {
     var entries = files.readdir(path);
   } catch (e) {
-    if (e.code === 'ENOENT')
+    if (e.code === 'ENOENT') {
       return [];
+    }
     throw e;
   }
   return _.filter(entries, function (entry) {
@@ -1029,8 +1044,9 @@ var getLines = function (file) {
   // strip blank lines at the end
   while (lines.length) {
     var line = lines[lines.length - 1];
-    if (line.match(/\S/))
+    if (line.match(/\S/)) {
       break;
+    }
     lines.pop();
   }
 
@@ -1048,8 +1064,9 @@ exports.getLinesOrEmpty = function (file) {
   try {
     return getLines(file);
   } catch (e) {
-    if (e && e.code === 'ENOENT')
+    if (e && e.code === 'ENOENT') {
       return [];
+    }
     throw e;
   }
 };
@@ -1060,8 +1077,9 @@ exports.readJSONOrNull = function (file) {
   try {
     var raw = files.readFile(file, 'utf8');
   } catch (e) {
-    if (e && e.code === 'ENOENT')
+    if (e && e.code === 'ENOENT') {
       return null;
+    }
     throw e;
   }
   return JSON.parse(raw);
@@ -1070,8 +1088,9 @@ exports.readJSONOrNull = function (file) {
 // Trims whitespace & other filler characters of a line in a project file.
 files.trimSpaceAndComments = function (line) {
   var match = line.match(/^([^#]*)#/);
-  if (match)
+  if (match) {
     line = match[1];
+  }
   return files.trimSpace(line);
 };
 
@@ -1142,7 +1161,9 @@ files.currentEnvWithPathsAdded = function (...paths) {
     pathPropertyName = _.find(Object.keys(env), (key) => {
       return key.toUpperCase() === 'PATH';
     });
-    if (!pathPropertyName) pathPropertyName = 'Path';
+    if (!pathPropertyName) {
+      pathPropertyName = 'Path';
+    }
   } else {
     pathPropertyName = 'PATH';
   }
@@ -1312,45 +1333,61 @@ function wrapFsFunc(fsFuncName, pathArgIndices, options) {
 
       const canYield = Fiber.current && Fiber.yield && ! Fiber.yield.disallowed;
       const shouldBeSync = alwaysSync || sync;
+      // There's some overhead in awaiting a Promise of an async call,
+      // vs just doing the sync call, which for a call like "stat"
+      // takes longer than the call itself.  Different parts of the tool
+      // may perform 1,000s or 10,000s of stats each under certain
+      // conditions, so we get a nice performance boost from making
+      // these calls sync.
+      const isQuickie = (fsFuncName === 'stat');
 
-      if (canYield && shouldBeSync) {
-        const fut = new Future;
+      if (canYield && shouldBeSync && !isQuickie) {
+        const promise = new Promise((resolve, reject) => {
+          args.push((err, value) => {
+            if (options.noErr) {
+              resolve(err);
+            } else if (err) {
+              reject(err);
+            } else {
+              resolve(value);
+            }
+          });
 
-        args.push(function callback(err, value) {
-          if (options.noErr) {
-            fut.return(err);
-          } else if (err) {
-            fut.throw(err);
-          } else {
-            fut.return(value);
-          }
+          fsFunc.apply(fs, args);
         });
 
-        fsFunc.apply(fs, args);
+        const result = promise.await();
 
-        const result = fut.wait();
         return options.modifyReturnValue
           ? options.modifyReturnValue(result)
           : result;
+
       } else if (shouldBeSync) {
         // Should be sync but can't yield: we are not in a Fiber.
         // Run the sync version of the fs.* method.
         const result = fsFuncSync.apply(fs, args);
         return options.modifyReturnValue ?
                options.modifyReturnValue(result) : result;
+
       } else if (! sync) {
         // wrapping a plain async version
-        const cb = args[fsFunc.length - 1];
-        if (typeof cb === 'function') {
-          args[fsFunc.length - 1] = function (err, res) {
+        let cb = args[args.length - 1];
+        if (typeof cb === "function") {
+          args.pop();
+        } else {
+          cb = null;
+        }
+
+        Promise.denodeify(fsFunc)
+          .apply(fs, args)
+          .then(function (res) {
             if (options.modifyReturnValue) {
               res = options.modifyReturnValue(res);
             }
-            Fiber(cb.bind(null, err, res)).run();
-          };
-        }
-        fsFunc.apply(fs, args);
-        return null;
+            cb && cb(null, res);
+          }, cb);
+
+        return;
       }
 
       throw new Error('unexpected');
@@ -1397,8 +1434,9 @@ if (process.platform === "win32") {
         rename(from, to);
         success = true;
       } catch (err) {
-        if (err.code !== 'EPERM')
+        if (err.code !== 'EPERM') {
           throw err;
+        }
       }
     }
     if (! success) {
@@ -1478,8 +1516,9 @@ files.readBufferWithLengthAndOffset = function (filename, length, offset) {
     } finally {
       files.close(fd);
     }
-    if (count !== length)
+    if (count !== length) {
       throw new Error("couldn't read entire resource");
+    }
   }
   return data;
 };

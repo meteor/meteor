@@ -1,6 +1,6 @@
 Package.describe({
   name: 'less',
-  version: '2.5.0_3',
+  version: '2.6.0',
   summary: 'Leaner CSS language',
   documentation: 'README.md'
 });
@@ -26,11 +26,15 @@ Package.onTest(function(api) {
   api.use(['tinytest', 'test-helpers']);
   api.addFiles(['tests/top.import.less',
                 'tests/top3.import.less',
-                'tests/imports/not-included.less',
                 'tests/dir/in-dir.import.less',
                 'tests/dir/in-dir2.import.less',
                 'tests/dir/root.less',
                 'tests/dir/subdir/in-subdir.import.less']);
+
+  api.addFiles('tests/imports/not-included.less', 'client', {
+    lazy: true
+  });
+
   api.addFiles('tests/top2.less', 'client', {isImport: true});
 
   api.addFiles('less_tests.js', 'client');

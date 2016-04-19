@@ -1,6 +1,6 @@
 Package.describe({
   name: 'templating-tools',
-  version: '1.0.0',
+  version: '1.0.4',
   // Brief, one-line summary of the package.
   summary: 'Tools to scan HTML and compile tags when building a templating package',
   // URL to the Git repository containing the source code for this package.
@@ -16,13 +16,13 @@ Package.onUse(function(api) {
     'ecmascript',
     'spacebars-compiler',
 
-    // minifiers is a weak dependency of spacebars-compiler; adding it here
+    // minifier-js is a weak dependency of spacebars-compiler; adding it here
     // ensures that the output is minified.  (Having it as a weak dependency means
     // that we don't ship uglify etc with built apps just because
     // boilerplate-generator uses spacebars-compiler.)
     // XXX maybe uglify should be applied by this plugin instead of via magic
     // weak dependency.
-    'minifiers'
+    'minifier-js'
   ]);
 
   api.addFiles([

@@ -118,25 +118,38 @@ CS.Input.prototype.isInPreviousSolution = function (p) {
   return !! (this.previousSolution && _.has(this.previousSolution, p));
 };
 
-CS.Input.prototype.loadFromCatalog = function (catalogLoader) {
-  var self = this;
+function getMentionedPackages(input) {
+  var packages = {}; // package -> true
 
-  var packagesToLoad = {}; // package -> true
-
-  _.each(self.dependencies, function (pkg) {
-    packagesToLoad[pkg] = true;
+  _.each(input.dependencies, function (pkg) {
+    packages[pkg] = true;
   });
-  _.each(self.constraints, function (constraint) {
-    packagesToLoad[constraint.package] = true;
+  _.each(input.constraints, function (constraint) {
+    packages[constraint.package] = true;
   });
-  if (self.previousSolution) {
-    _.each(self.previousSolution, function (version, pkg) {
-      packagesToLoad[pkg] = true;
+  if (input.previousSolution) {
+    _.each(input.previousSolution, function (version, pkg) {
+      packages[pkg] = true;
     });
   }
 
+  return _.keys(packages);
+}
+
+CS.Input.prototype.loadFromCatalog = function (catalogLoader) {
   // Load packages into the cache (if they aren't loaded already).
-  catalogLoader.loadAllVersionsRecursive(_.keys(packagesToLoad));
+  catalogLoader.loadAllVersionsRecursive(getMentionedPackages(this));
+};
+
+CS.Input.prototype.loadOnlyPreviousSolution = function (catalogLoader) {
+  var self = this;
+
+  // load just the exact versions from the previousSolution
+  if (self.previousSolution) {
+    _.each(self.previousSolution, function (version, pkg) {
+      catalogLoader.loadSingleVersion(pkg, version);
+    });
+  }
 };
 
 CS.Input.prototype.isEqual = function (otherInput) {
@@ -148,7 +161,19 @@ CS.Input.prototype.isEqual = function (otherInput) {
   // This equality test is also overly sensitive to order,
   // missing opportunities to declare two inputs equal when only
   // the order has changed.
-  return _.isEqual(a.toJSONable(), b.toJSONable());
+
+  // Omit `catalogCache` -- it's not actually part of the serialized
+  // input object (it's only in `toJSONable()` for tests).
+  //
+  // Moreover, catalogCache is populated as-needed so their values for
+  // `a` and `b` will very likely be different even if they represent
+  // the same input. So by omitting `catalogCache` we no longer need
+  // to reload the entire relevant part of the catalog from SQLite on
+  // every rebuild!
+  return _.isEqual(
+    _.omit(a.toJSONable(), "catalogCache"),
+    _.omit(b.toJSONable(), "catalogCache")
+  );
 };
 
 CS.Input.prototype.toJSONable = function () {

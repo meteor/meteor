@@ -1,19 +1,6 @@
 var toc = [
   [
-    "Quick start",
-    "Seven principles",
-    "Resources"
-  ],
-  "Concepts", [
-    "What is Meteor?",
-    "Structuring your app",
-    "Data and security",
-    "Reactivity",
-    "Live HTML templates",
-    "Using packages",
-    "Namespacing",
-    "Deploying",
-    "Writing packages"
+    "Meteor Guide",
   ],
 
   "API", [
@@ -21,8 +8,11 @@ var toc = [
       "Meteor.isClient",
       "Meteor.isServer",
       "Meteor.isCordova",
+      { name: "Meteor.isDevelopment", id: "Meteor-isDevelopment" },
+      { name: "Meteor.isProduction", id: "Meteor-isProduction" },
       "Meteor.startup",
       "Meteor.wrapAsync",
+      "Meteor.defer",
       "Meteor.absoluteUrl",
       "Meteor.settings",
       "Meteor.release"
@@ -349,11 +339,14 @@ var toc = [
     "accounts-ui",
     "audit-argument-checks",
     "coffeescript",
+    "ecmascript",
     "jquery",
     "less",
     "markdown",
+    "modules",
     "oauth-encryption",
     "random",
+    {name: "spacebars", id: "pkg_spacebars"},
     {name: "spiderable", link: "https://atmospherejs.com/meteor/spiderable"},
     "underscore",
     "webapp"
@@ -364,8 +357,8 @@ var toc = [
     "meteor run",
     "meteor debug",
     "meteor create",
+    "meteor login / logout",
     "meteor deploy",
-    "meteor logs",
     "meteor update",
     "meteor add",
     "meteor remove",
@@ -380,7 +373,8 @@ var toc = [
     "meteor publish-for-arch",
     "meteor publish-release",
     "meteor test-packages",
-    "meteor admin"
+    "meteor admin",
+    "meteor shell"
   ] ]
 ];
 

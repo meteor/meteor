@@ -1,3 +1,5 @@
+import {AccountsClient} from "./accounts_client.js";
+
 var Ap = AccountsClient.prototype;
 
 // All of the special hash URLs we support for accounts interactions
@@ -76,7 +78,7 @@ function defaultSuccessHandler(token, urlPart) {
 }
 
 // Export for testing
-AccountsTest = {
+export var AccountsTest = {
   attemptToMatchHash: function (hash, success) {
     return attemptToMatchHash(Accounts, hash, success);
   }

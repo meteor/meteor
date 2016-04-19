@@ -12,7 +12,7 @@ if (process.platform === "win32") {
   // Duplicated in dev-bundle-server-package.js
   fibersVersion = "https://github.com/meteor/node-fibers/tarball/d519f0c5971c33d99c902dad346b817e84bab001";
 } else {
-  fibersVersion = "1.0.5";
+  fibersVersion = "1.0.8";
 }
 
 var packageJson = {
@@ -22,10 +22,12 @@ var packageJson = {
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
-    npm: "1.4.28",
+    npm: "2.14.22",
     fibers: fibersVersion,
-    "meteor-babel": "0.5.8",
-    "meteor-promise": "0.5.0",
+    "meteor-babel": "0.9.2",
+    "meteor-promise": "0.5.1",
+    // So that Babel 6 can emit require("babel-runtime/helpers/...") calls.
+    "babel-runtime": "5.8.35",
     // For various ES2015 polyfills, such as Map and Set.
     "meteor-ecmascript-runtime": "0.2.6",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
@@ -38,7 +40,7 @@ var packageJson = {
     fstream: "https://github.com/meteor/fstream/tarball/d11b9ec4a13918447c8af7559c243c190744dd1c",
     tar: "1.0.2",
     kexec: "0.2.0",
-    "source-map": "0.1.43",
+    "source-map": "0.5.3",
     "browserstack-webdriver": "2.41.1",
     "node-inspector": "0.7.4",
     chalk: "0.5.1",
@@ -59,22 +61,12 @@ var packageJson = {
     eachline: "https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da",
     pathwatcher: "4.1.0",
     'lru-cache': '2.6.4',
-    // We use our own fork because cordova-lib does not respect a silent
-    // option and by defaults outputs all command output to stdout/stderr.
-    // We can't download the tarball from GitHub because the package.json is
-    // in a subdirectory. See tools/cordova/README.md for instructions on how
-    // to build and upload our own tarball.
-    // https://github.com/meteor/cordova-lib/tree/respect-silent/cordova-lib
-    "cordova-lib": "http://com.meteor.static.s3.amazonaws.com/cordova-lib-1512fc069c7ea51c7a112cf14a8d93d69726a6f7.tar.gz",
-    // Also include the Cordova CLI because it is used in tests
-    "cordova": "5.2.0",
-    "ios-sim": "4.1.1",
+    'cordova-lib': "6.0.0"
   }
 };
 
 if (process.platform === 'win32') {
   // Remove dependencies that do not work on Windows
-  delete packageJson.dependencies['ios-sim'];
   delete packageJson.dependencies.netroute;
   delete packageJson.dependencies.kexec;
 }

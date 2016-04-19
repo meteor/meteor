@@ -71,7 +71,10 @@ CS.CatalogCache.prototype.getPackageVersions = function (pkg) {
   } else {
     // sort in place, and record so that we don't sort redundantly
     // (we'll sort again if more versions are pushed onto the array)
-    result.sort(PV.compare);
+    var pvParse = _.memoize(PV.parse);
+    result.sort(function (a, b) {
+      return PV.compare(pvParse(a), pvParse(b));
+    });
     result.sorted = true;
     return result;
   }

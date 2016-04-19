@@ -2,6 +2,7 @@
  * @summary Accounts UI
  * @namespace
  * @memberOf Accounts
+ * @importFromPackage accounts-base
  */
 Accounts.ui = {};
 
@@ -21,6 +22,7 @@ Accounts.ui._options = {
  * @param {Object} options.requestOfflineToken To ask the user for permission to act on their behalf when offline, map the relevant external service to `true`. Currently only supported with Google. See [Meteor.loginWithExternalService](#meteor_loginwithexternalservice) for more details.
  * @param {Object} options.forceApprovalPrompt If true, forces the user to approve the app's permissions, even if previously approved. Currently only supported with Google.
  * @param {String} options.passwordSignupFields Which fields to display in the user creation form. One of '`USERNAME_AND_EMAIL`', '`USERNAME_AND_OPTIONAL_EMAIL`', '`USERNAME_ONLY`', or '`EMAIL_ONLY`' (default).
+ * @importFromPackage accounts-base
  */
 Accounts.ui.config = function(options) {
   // validate options keys

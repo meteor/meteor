@@ -8,8 +8,9 @@ var release = require('../packaging/release.js');
 
 // old tests don't get to test --release, and always run this release
 var maybeFixRelease = function (env) {
-  if (release.current && release.current.isProperRelease())
+  if (release.current && release.current.isProperRelease()) {
     env.METEOR_SPRINGBOARD_RELEASE = release.current.name;
+  }
   return env;
 };
 

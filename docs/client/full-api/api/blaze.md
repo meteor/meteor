@@ -144,7 +144,7 @@ by Meteor have names like "Template.foo" and "if".
 
 {{#dtdd name="renderCount" type="Integer" id="view_rendercount"}}
   The number of times the View has been rendered, including the
-  current time is the View is in the process of being rendered
+  current time if the View is in the process of being rendered
   or re-rendered.
 {{/dtdd}}
 

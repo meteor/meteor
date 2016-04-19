@@ -6,62 +6,65 @@ var files = require('../fs/files.js');
 var isopackModule = require('./isopack.js');
 var watch = require('../fs/watch.js');
 var colonConverter = require('../utils/colon-converter.js');
+var Profile = require('../tool-env/profile.js').Profile;
+var archinfo = require('../utils/archinfo.js');
 
-exports.IsopackCache = function (options) {
-  var self = this;
-  options = options || {};
+export class IsopackCache {
+  constructor(options) {
+    var self = this;
+    options = options || {};
 
-  // cacheDir may be null; in this case, we just don't ever save things to disk.
-  self.cacheDir = options.cacheDir;
+    // cacheDir may be null; in this case, we just don't ever save things to disk.
+    self.cacheDir = options.cacheDir;
 
-  // Root directory for caches used by build plugins.  Can be null, in which
-  // case we never give the build plugins a cache.  The directory structure is:
-  // <pluginCacheDirRoot>/<escapedPackageName>/<version>, where <version> is
-  // either the package's version if it's a versioned package, or "local" if
-  // it's a local package.  In the latter case, we make sure to empty it any
-  // time we rebuild the package.
-  self._pluginCacheDirRoot = options.pluginCacheDirRoot;
+    // Root directory for caches used by build plugins.  Can be null, in which
+    // case we never give the build plugins a cache.  The directory structure is:
+    // <pluginCacheDirRoot>/<escapedPackageName>/<version>, where <version> is
+    // either the package's version if it's a versioned package, or "local" if
+    // it's a local package.  In the latter case, we make sure to empty it any
+    // time we rebuild the package.
+    self._pluginCacheDirRoot = options.pluginCacheDirRoot;
 
-  // This is a bit of a hack, but basically: we really don't want to spend time
-  // building web.cordova unibuilds in a project that doesn't have any Cordova
-  // platforms. (Note that we need to be careful with 'meteor publish' to still
-  // publish a web.cordova unibuild!)
-  self._includeCordovaUnibuild = !! options.includeCordovaUnibuild;
+    // This is a bit of a hack, but basically: we really don't want to spend time
+    // building web.cordova unibuilds in a project that doesn't have any Cordova
+    // platforms. (Note that we need to be careful with 'meteor publish' to still
+    // publish a web.cordova unibuild!)
+    self._includeCordovaUnibuild = !! options.includeCordovaUnibuild;
 
-  // Defines the versions of packages that we build. Must be set.
-  self._packageMap = options.packageMap;
+    // Defines the versions of packages that we build. Must be set.
+    self._packageMap = options.packageMap;
 
-  // tropohouse may be null; in this case, we can't load versioned packages.
-  // eg, for building isopackets.
-  self._tropohouse = options.tropohouse;
+    // tropohouse may be null; in this case, we can't load versioned packages.
+    // eg, for building isopackets.
+    self._tropohouse = options.tropohouse;
 
-  // If provided, this is another IsopackCache for the same cache dir; when
-  // loading Isopacks, if they are definitely unchanged we can load the
-  // in-memory objects from this cache instead of recompiling.
-  self._previousIsopackCache = options.previousIsopackCache;
-  if (self._previousIsopackCache &&
-      self._previousIsopackCache.cacheDir !== self.cacheDir) {
-    throw Error("previousIsopackCache has different cacheDir!");
+    // If provided, this is another IsopackCache for the same cache dir; when
+    // loading Isopacks, if they are definitely unchanged we can load the
+    // in-memory objects from this cache instead of recompiling.
+    self._previousIsopackCache = options.previousIsopackCache;
+    if (self._previousIsopackCache &&
+        self._previousIsopackCache.cacheDir !== self.cacheDir) {
+      throw Error("previousIsopackCache has different cacheDir!");
+    }
+
+    // Map from package name to Isopack.
+    self._isopacks = Object.create(null);
+
+    self._noLineNumbers = !! options.noLineNumbers;
+
+    self._lintLocalPackages = !! options.lintLocalPackages;
+    self._lintPackageWithSourceRoot = options.lintPackageWithSourceRoot;
+
+    self.allLoadedLocalPackagesWatchSet = new watch.WatchSet;
   }
 
-  // Map from package name to Isopack.
-  self._isopacks = {};
-
-  self._noLineNumbers = !! options.noLineNumbers;
-
-  self._lintLocalPackages = !! options.lintLocalPackages;
-  self._lintPackageWithSourceRoot = options.lintPackageWithSourceRoot;
-
-  self.allLoadedLocalPackagesWatchSet = new watch.WatchSet;
-};
-
-_.extend(exports.IsopackCache.prototype, {
-  buildLocalPackages: function (rootPackageNames) {
+  buildLocalPackages(rootPackageNames) {
     var self = this;
     buildmessage.assertInCapture();
 
-    if (self.cacheDir)
+    if (self.cacheDir) {
       files.mkdir_p(self.cacheDir);
+    }
 
     var onStack = {};
     if (rootPackageNames) {
@@ -73,9 +76,9 @@ _.extend(exports.IsopackCache.prototype, {
         self._ensurePackageLoaded(name, onStack);
       });
     }
-  },
+  }
 
-  wipeCachedPackages: function (packages) {
+  wipeCachedPackages(packages) {
     var self = this;
     if (packages) {
       // Wipe specific packages.
@@ -96,31 +99,104 @@ _.extend(exports.IsopackCache.prototype, {
         files.rm_recursive(self._pluginCacheDirRoot);
       }
     }
-  },
+  }
 
   // Returns the isopack (already loaded in memory) for a given name. It is an
   // error to call this if it's not already loaded! So it should only be called
   // after buildLocalPackages has returned, or in the process of building a
   // package whose dependencies have all already been built.
-  getIsopack: function (name) {
+  getIsopack(name) {
     var self = this;
-    if (! _.has(self._isopacks, name))
+    if (! _.has(self._isopacks, name)) {
       throw Error("isopack " + name + " not yet loaded?");
+    }
     return self._isopacks[name];
-  },
+  }
 
-  eachBuiltIsopack: function (iterator) {
+  eachBuiltIsopack(iterator) {
     var self = this;
     _.each(self._isopacks, function (isopack, packageName) {
       iterator(packageName, isopack);
     });
-  },
+  }
 
-  _ensurePackageLoaded: function (name, onStack) {
+  getSourceRoot(name, arch) {
+    const packageInfo = this._packageMap.getInfo(name);
+
+    if (packageInfo) {
+      if (packageInfo.kind === "local") {
+        return packageInfo.packageSource.sourceRoot;
+      }
+
+      if (packageInfo.kind === "versioned") {
+        const isopackPath = this._tropohouse.packagePath(
+          name,
+          packageInfo.version
+        );
+
+        return files.realpath(files.pathJoin(isopackPath, arch));
+      }
+    }
+
+    return null;
+  }
+
+  uses(isopack, name, arch) {
+    if (! isopack) {
+      return false;
+    }
+
+    if (isopack.name === name) {
+      // Packages use themselves.
+      return true;
+    }
+
+    return _.some(isopack.unibuilds, u => {
+      if (arch && ! archinfo.matches(u.arch, arch)) {
+        return false;
+      }
+
+      return _.some(u.uses, use => {
+        return this.implies(
+          this._isopacks[use.package],
+          name,
+          arch,
+        );
+      });
+    });
+  }
+
+  implies(isopack, name, arch) {
+    if (! isopack) {
+      return false;
+    }
+
+    if (isopack.name === name) {
+      // Packages imply themselves.
+      return true;
+    }
+
+    return _.some(isopack.unibuilds, u => {
+      if (arch && ! archinfo.matches(u.arch, arch)) {
+        return false;
+      }
+
+      return _.some(u.implies, imp => {
+        return this.implies(
+          this._isopacks[imp.package],
+          name,
+          arch,
+        );
+      });
+    });
+  }
+
+  _ensurePackageLoaded(name, onStack) {
     var self = this;
     buildmessage.assertInCapture();
-    if (_.has(self._isopacks, name))
+    if (_.has(self._isopacks, name)) {
       return;
+    }
 
     var ensureLoaded = function (depName) {
       if (_.has(onStack, depName)) {
@@ -135,8 +211,9 @@ _.extend(exports.IsopackCache.prototype, {
     };
 
     var packageInfo = self._packageMap.getInfo(name);
-    if (! packageInfo)
+    if (! packageInfo) {
       throw Error("Depend on unknown package " + name + "?");
+    }
     var previousIsopack = null;
     if (self._previousIsopackCache &&
         _.has(self._previousIsopackCache._isopacks, name)) {
@@ -161,9 +238,12 @@ _.extend(exports.IsopackCache.prototype, {
         });
         // If we failed to load something that this package depends on, don't
         // load it.
-        if (buildmessage.jobHasMessages())
+        if (buildmessage.jobHasMessages()) {
           return;
-        self._loadLocalPackage(name, packageInfo, previousIsopack);
+        }
+        Profile.time('IsopackCache Build local isopack', () => {
+          self._loadLocalPackage(name, packageInfo, previousIsopack);
+        });
       });
     } else if (packageInfo.kind === 'versioned') {
       // We don't have to build this package, and we don't have to build its
@@ -174,40 +254,44 @@ _.extend(exports.IsopackCache.prototype, {
       }
 
       var isopack = null, packagesToLoad = [];
-      if (previousIsopack) {
-        // We can always reuse a previous Isopack for a versioned package, since
-        // we assume that it never changes.  (Admittedly, this means we won't
-        // notice if we download an additional build for the package.)
-        isopack = previousIsopack;
-        packagesToLoad = isopack.getStrongOrderedUsedAndImpliedPackages();
-      }
-      if (! isopack) {
-        // Load the isopack from disk.
-        buildmessage.enterJob(
-          "loading package " + name + "@" + packageInfo.version,
-          function () {
-            var pluginCacheDir;
-            if (self._pluginCacheDirRoot) {
-              pluginCacheDir = self._pluginCacheDirForVersion(
-                name, packageInfo.version);
-              files.mkdir_p(pluginCacheDir);
-            }
-            var isopackPath = self._tropohouse.packagePath(
-              name, packageInfo.version);
 
-            var Isopack = isopackModule.Isopack;
-            isopack = new Isopack();
-            isopack.initFromPath(name, isopackPath, {
-              pluginCacheDir: pluginCacheDir
+      Profile.time('IsopackCache Load local isopack', () => {
+        if (previousIsopack) {
+          // We can always reuse a previous Isopack for a versioned package, since
+          // we assume that it never changes.  (Admittedly, this means we won't
+          // notice if we download an additional build for the package.)
+          isopack = previousIsopack;
+          packagesToLoad = isopack.getStrongOrderedUsedAndImpliedPackages();
+        }
+        if (! isopack) {
+          // Load the isopack from disk.
+          buildmessage.enterJob(
+            "loading package " + name + "@" + packageInfo.version,
+            function () {
+              var pluginCacheDir;
+              if (self._pluginCacheDirRoot) {
+                pluginCacheDir = self._pluginCacheDirForVersion(
+                  name, packageInfo.version);
+                files.mkdir_p(pluginCacheDir);
+              }
+              var isopackPath = self._tropohouse.packagePath(
+                name, packageInfo.version);
+
+              var Isopack = isopackModule.Isopack;
+              isopack = new Isopack();
+              isopack.initFromPath(name, isopackPath, {
+                pluginCacheDir: pluginCacheDir
+              });
+              // If loading the isopack fails, then we don't need to look for more
+              // packages to load, but we should still recover by putting it in
+              // self._isopacks.
+              if (buildmessage.jobHasMessages()) {
+                return;
+              }
+              packagesToLoad = isopack.getStrongOrderedUsedAndImpliedPackages();
             });
-            // If loading the isopack fails, then we don't need to look for more
-            // packages to load, but we should still recover by putting it in
-            // self._isopacks.
-            if (buildmessage.jobHasMessages())
-              return;
-            packagesToLoad = isopack.getStrongOrderedUsedAndImpliedPackages();
-          });
-      }
+        }
+      });
 
       self._isopacks[name] = isopack;
       // Also load its dependencies. This is so that if this package is being
@@ -219,9 +303,9 @@ _.extend(exports.IsopackCache.prototype, {
     } else {
       throw Error("unknown packageInfo kind?");
     }
-  },
+  }
 
-  _loadLocalPackage: function (name, packageInfo, previousIsopack) {
+  _loadLocalPackage(name, packageInfo, previousIsopack) {
     var self = this;
     buildmessage.assertInCapture();
     buildmessage.enterJob("building package " + name, function () {
@@ -253,8 +337,9 @@ _.extend(exports.IsopackCache.prototype, {
           // _checkUpToDate already verified that
           // isopackBuildInfoJson.pluginProviderPackageMap is a subset of
           // self._packageMap, so this operation is correct. (It can't be done
-          // by isopack.initFromPath, because Isopack doesn't have access to the
-          // PackageMap, and specifically to the local catalog it knows about.)
+          // by isopack.initFromPath, because Isopack doesn't have access to
+          // the PackageMap, and specifically to the local catalog it knows
+          // about.)
           isopack.setPluginProviderPackageMap(
             self._packageMap.makeSubsetMap(
               _.keys(isopackBuildInfoJson.pluginProviderPackageMap)));
@@ -287,7 +372,8 @@ _.extend(exports.IsopackCache.prototype, {
             if (self.cacheDir) {
               // Save to disk, for next time!
               isopack.saveToPath(self._isopackDir(name), {
-                includeIsopackBuildInfo: true
+                includeIsopackBuildInfo: true,
+                usesModules: self.uses(isopack, "modules"),
               });
             }
           }
@@ -297,7 +383,7 @@ _.extend(exports.IsopackCache.prototype, {
       self.allLoadedLocalPackagesWatchSet.merge(isopack.getMergedWatchSet());
       self._isopacks[name] = isopack;
     });
-  },
+  }
 
   // Runs appropriate linters on a package. It also augments their unibuilds'
   // WatchSets with files used by the linter.
@@ -316,14 +402,15 @@ _.extend(exports.IsopackCache.prototype, {
     if (linted) {
       isopack.lintingMessages = warnings;
     }
-  },
+  }
 
-  _checkUpToDate: function (isopackBuildInfoJson) {
+  _checkUpToDate(isopackBuildInfoJson) {
     var self = this;
     // If there isn't an isopack-buildinfo.json file, then we definitely aren't
     // up to date!
-    if (! isopackBuildInfoJson)
+    if (! isopackBuildInfoJson) {
       return false;
+    }
 
     // If we include Cordova but this Isopack doesn't, or via versa, then we're
     // not up to date.
@@ -352,9 +439,9 @@ _.extend(exports.IsopackCache.prototype, {
       watchSet.merge(watch.WatchSet.fromJSON(deps));
     });
     return watch.isUpToDate(watchSet);
-  },
+  }
 
-  _checkUpToDatePreloaded: function (previousIsopack) {
+  _checkUpToDatePreloaded(previousIsopack) {
     var self = this;
 
     // If we include Cordova but this Isopack doesn't, or via versa, then we're
@@ -376,52 +463,54 @@ _.extend(exports.IsopackCache.prototype, {
     // check it once.
     var watchSet = previousIsopack.getMergedWatchSet();
     return watch.isUpToDate(watchSet);
-  },
+  }
 
-  _isopackDir: function (packageName) {
+  _isopackDir(packageName) {
     var self = this;
     return files.pathJoin(self.cacheDir, colonConverter.convert(packageName));
-  },
+  }
 
-  _pluginCacheDirForPackage: function (packageName) {
+  _pluginCacheDirForPackage(packageName) {
     var self = this;
     return files.pathJoin(self._pluginCacheDirRoot,
                           colonConverter.convert(packageName));
-  },
+  }
 
-  _pluginCacheDirForVersion: function (packageName, version) {
+  _pluginCacheDirForVersion(packageName, version) {
     var self = this;
     return files.pathJoin(
       self._pluginCacheDirForPackage(packageName), version);
-  },
+  }
 
-  _pluginCacheDirForLocal: function (packageName) {
+  _pluginCacheDirForLocal(packageName) {
     var self = this;
     // assumes that `local` is not a valid package version.
     return files.pathJoin(
       self._pluginCacheDirForPackage(packageName), 'local');
-  },
+  }
 
-  _isopackBuildInfoPath: function (packageName) {
+  _isopackBuildInfoPath(packageName) {
     var self = this;
     return files.pathJoin(
       self._isopackDir(packageName), 'isopack-buildinfo.json');
-  },
+  }
 
-  forgetPreviousIsopackCache: function () {
+  forgetPreviousIsopackCache() {
     var self = this;
     self._previousIsopackCache = null;
-  },
+  }
 
   _shouldLintPackage(packageSource) {
-    if (this._lintLocalPackages)
+    if (this._lintLocalPackages) {
       return true;
-    if (! this._lintPackageWithSourceRoot)
+    }
+    if (! this._lintPackageWithSourceRoot) {
       return false;
+    }
     return this._lintPackageWithSourceRoot === packageSource.sourceRoot;
-  },
+  }
 
-  getLintingMessagesForLocalPackages: function () {
+  getLintingMessagesForLocalPackages() {
     const messages = new buildmessage._MessageSet();
     let anyLinters = false;
 
@@ -444,4 +533,4 @@ _.extend(exports.IsopackCache.prototype, {
 
     return messages;
   }
-});
+}

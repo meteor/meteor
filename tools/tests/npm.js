@@ -28,7 +28,6 @@ selftest.define("npm", ["net"], function () {
     }
     run.waitSecs(15);
     run.match("null; From shell script\n");
-    run.expectEnd();
     run.expectExit(0);
   });
 });

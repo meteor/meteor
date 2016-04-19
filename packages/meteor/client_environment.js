@@ -1,8 +1,25 @@
+meteorEnv = __meteor_runtime_config__.meteorEnv;
+
 /**
  * @summary The Meteor namespace
  * @namespace Meteor
  */
 Meteor = {
+  /**
+   * @summary Boolean variable.  True if running in production environment.
+   * @locus Anywhere
+   * @static
+   * @type {Boolean}
+   */
+  isProduction: meteorEnv.NODE_ENV === "production",
+
+  /**
+   * @summary Boolean variable.  True if running in development environment.
+   * @locus Anywhere
+   * @static
+   * @type {Boolean}
+   */
+  isDevelopment: meteorEnv.NODE_ENV !== "production",
 
   /**
    * @summary Boolean variable.  True if running in client environment.

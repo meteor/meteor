@@ -14,10 +14,11 @@ var _ = require('underscore');
 //   ]
 // }
 var convertBySchema = function (val, schema) {
-  if (schema === true)
+  if (schema === true) {
     return convert(val);
-  else if (schema === false)
+  } else if (schema === false) {
     return val;
+  }
 
   if (_.isArray(schema)) {
     if (schema.length !== 1) {
@@ -33,13 +34,15 @@ var convertBySchema = function (val, schema) {
     });
   }
 
-  if (! _.isObject(schema))
+  if (! _.isObject(schema)) {
     throw new Error("Unexpected type of schema: " + typeof(schema));
+  }
 
   var ret = _.clone(val);
   _.each(schema, function (subschema, key) {
-    if (_.has(ret, key))
+    if (_.has(ret, key)) {
       ret[key] = convertBySchema(val[key], subschema);
+    }
   });
 
   return ret;

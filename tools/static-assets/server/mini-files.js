@@ -98,6 +98,9 @@ files.pathExtname = wrapPathFunction("extname");
 files.pathSep = '/';
 files.pathDelimiter = ':';
 files.pathOsDelimiter = path.delimiter;
+files.pathIsAbsolute = function (path) {
+  return toPosixPath(path).charAt(0) === '/';
+};
 
 files.convertToStandardPath = convertToStandardPath;
 files.convertToOSPath = convertToOSPath;

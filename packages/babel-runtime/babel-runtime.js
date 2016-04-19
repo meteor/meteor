@@ -1,50 +1,10 @@
 var hasOwn = Object.prototype.hasOwnProperty;
+var S = typeof Symbol === "function" ? Symbol : {};
+var iteratorSymbol = S.iterator || "@@iterator";
 
-function canDefineNonEnumerableProperties() {
-  var testObj = {};
-  var testPropName = "t";
+meteorBabelHelpers = require("meteor-babel-helpers");
 
-  try {
-    Object.defineProperty(testObj, testPropName, {
-      enumerable: false,
-      value: testObj
-    });
-
-    for (var k in testObj) {
-      if (k === testPropName) {
-        return false;
-      }
-    }
-  } catch (e) {
-    return false;
-  }
-
-  return testObj[testPropName] === testObj;
-}
-
-// The name `babelHelpers` is hard-coded in Babel.  Otherwise we would make it
-// something capitalized and more descriptive, like `BabelRuntime`.
-babelHelpers = {
-  // Meteor-specific runtime helper for wrapping the object of for-in
-  // loops, so that inherited Array methods defined by es5-shim can be
-  // ignored in browsers where they cannot be defined as non-enumerable.
-  sanitizeForInObject: canDefineNonEnumerableProperties()
-    ? function (value) { return value; }
-    : function (obj) {
-      if (Array.isArray(obj)) {
-        var newObj = {};
-        var keys = Object.keys(obj);
-        var keyCount = keys.length;
-        for (var i = 0; i < keyCount; ++i) {
-          var key = keys[i];
-          newObj[key] = obj[key];
-        }
-        return newObj;
-      }
-
-      return obj;
-    },
-
+var BabelRuntime = {
   // es6.templateLiterals
   // Constructs the object passed to the tag function in a tagged
   // template literal.
@@ -111,11 +71,28 @@ babelHelpers = {
       //
       // For correctness when writing code, don't add static methods to a class
       // after you subclass it.
-      for (var k in superClass) {
-        if (hasOwn.call(superClass, k)) {
-          subClass[k] = superClass[k];
+
+      // The ecmascript-runtime package provides adequate polyfills for
+      // all of these Object.* functions (and Array#forEach), and anyone
+      // using babel-runtime is almost certainly using it because of the
+      // ecmascript package, which also implies ecmascript-runtime.
+      Object.getOwnPropertyNames(superClass).forEach(function (k) {
+        // This property descriptor dance preserves getter/setter behavior
+        // in browsers that support accessor properties (all except
+        // IE8). In IE8, the superClass can't have accessor properties
+        // anyway, so this code is still safe.
+        var descriptor = Object.getOwnPropertyDescriptor(superClass, k);
+        if (descriptor && typeof descriptor === "object") {
+          if (Object.getOwnPropertyDescriptor(subClass, k)) {
+            // If subClass already has a property by this name, then it
+            // would not be inherited, so it should not be copied. This
+            // notably excludes properties like .prototype and .name.
+            return;
+          }
+
+          Object.defineProperty(subClass, k, descriptor);
         }
-      }
+      });
     }
   },
 
@@ -156,8 +133,69 @@ babelHelpers = {
     };
   })(),
 
+  "typeof": function (obj) {
+    return obj && obj.constructor === Symbol ? "symbol" : typeof obj;
+  },
+
+  possibleConstructorReturn: function (self, call) {
+    if (! self) {
+      throw new ReferenceError(
+        "this hasn't been initialised - super() hasn't been called"
+      );
+    }
+
+    var callType = typeof call;
+    if (call &&
+        callType === "function" ||
+        callType === "object") {
+      return call;
+    }
+
+    return self;
+  },
+
+  interopRequireDefault: function (obj) {
+    return obj && obj.__esModule ? obj : { 'default': obj };
+  },
+
+  interopRequireWildcard: function (obj) {
+    if (obj && obj.__esModule) {
+      return obj;
+    }
+
+    var newObj = {};
+
+    if (obj != null) {
+      for (var key in obj) {
+        if (hasOwn.call(obj, key)) {
+          newObj[key] = obj[key];
+        }
+      }
+    }
+
+    newObj["default"] = obj;
+    return newObj;
+  },
+
+  interopExportWildcard: function (obj, defaults) {
+    var newObj = defaults({}, obj);
+    delete newObj["default"];
+    return newObj;
+  },
+
+  defaults: function (obj, defaults) {
+    Object.getOwnPropertyNames(defaults).forEach(function (key) {
+      var desc = Object.getOwnPropertyDescriptor(defaults, key);
+      if (desc && desc.configurable && typeof obj[key] === "undefined") {
+        Object.defineProperty(obj, key, desc);
+      }
+    });
+
+    return obj;
+  },
+
   // es7.objectRestSpread and react (JSX)
-  _extends: Object.assign || (function (target) {
+  "extends": Object.assign || (function (target) {
     for (var i = 1; i < arguments.length; i++) {
       var source = arguments[i];
       for (var key in source) {
@@ -250,5 +288,93 @@ babelHelpers = {
 
   })(),
 
+  toConsumableArray: function (arr) {
+    if (Array.isArray(arr)) {
+      for (var i = arr.length - 1, arr2 = Array(i + 1); i >= 0; --i) {
+        arr2[i] = arr[i];
+      }
+
+      return arr2;
+    }
+
+    return Array.from(arr);
+  },
+
+  toArray: function (arr) {
+    return Array.isArray(arr) ? arr : Array.from(arr);
+  },
+
+  slicedToArray: function (iterable, limit) {
+    if (Array.isArray(iterable)) {
+      return iterable;
+    }
+
+    if (iterable) {
+      var it = iterable[iteratorSymbol]();
+      var result = [];
+      var info;
+
+      if (typeof limit !== "number") {
+        limit = Infinity;
+      }
+
+      while (result.length < limit &&
+             ! (info = it.next()).done) {
+        result.push(info.value);
+      }
+
+      return result;
+    }
+
+    throw new TypeError(
+      "Invalid attempt to destructure non-iterable instance"
+    );
+  },
+
   slice: Array.prototype.slice
 };
+
+// Use meteorInstall to install all of the above helper functions within
+// node_modules/babel-runtime/helpers.
+Object.keys(BabelRuntime).forEach(function (helperName) {
+  var helpers = {};
+
+  helpers[helperName + ".js"] = function (require, exports, module) {
+    module.exports = BabelRuntime[helperName];
+  };
+
+  meteorInstall({
+    node_modules: {
+      "babel-runtime": {
+        helpers: helpers
+      }
+    }
+  });
+});
+
+// Use meteorInstall to install the regenerator runtime at
+// node_modules/babel-runtime/regenerator.
+meteorInstall({
+  node_modules: {
+    "babel-runtime": {
+      "regenerator.js": function (r, e, module) {
+        // Note that we use the require function provided to the
+        // babel-runtime.js file, not the one named 'r' above.
+        var runtime = require("regenerator/runtime-module");
+
+        // If Promise.asyncApply is defined, use it to wrap calls to
+        // runtime.async so that the entire async function will run in its
+        // own Fiber, not just the code that comes after the first await.
+        if (typeof Promise === "function" &&
+            typeof Promise.asyncApply === "function") {
+          var realAsync = runtime.async;
+          runtime.async = function () {
+            return Promise.asyncApply(realAsync, runtime, arguments);
+          };
+        }
+
+        module.exports = runtime;
+      }
+    }
+  }
+});

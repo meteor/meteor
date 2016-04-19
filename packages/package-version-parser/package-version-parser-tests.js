@@ -47,6 +47,8 @@ Tinytest.add("package-version-parser - parse", function (test) {
     }, re);
   };
   var formatPV = function (pv) {
+    pv = JSON.parse(JSON.stringify(pv));
+    delete pv._semverParsed;
     return (JSON.stringify(pv)
             .replace(/,(?="prerelease"|"raw")/g, ',\n')
             .replace(/,/g, ', ')

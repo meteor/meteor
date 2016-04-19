@@ -1,12 +1,12 @@
 Package.describe({
   summary: "Collection of small helpers: _.map, _.each, ...",
-  version: '1.0.4'
+  version: '1.0.8'
 });
 
 Package.onUse(function (api) {
   // Like all packages, we have an implicit depedency on the 'meteor'
   // package, which provides such things as the *.js file handler. Use
-  // an undocumented API to allow 'meteor' to after us even though we
+  // an undocumented API to allow 'meteor' to alter us even though we
   // depend on it. This is necessary since 'meteor' depends on us. One
   // day we will avoid this problem by refactor, but for now this is a
   // practical and expedient solution.
