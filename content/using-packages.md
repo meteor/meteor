@@ -10,13 +10,15 @@ After reading this article, you'll know:
 2. How to use npm packages and deal with callback-based APIs
 3. How to use Atmosphere packages in your Meteor application
 
-Building an application completely from scratch is a tall order. This is one of the main reasons you might consider using Meteor in the first place - you can focus on writing the code that is specific to your app, instead of reinventing wheels like user login and data synchronization. To streamline your workflow even further, it makes sense to use community packages from [npm](https://www.npmjs.com) and [Atmosphere](https://atmospherejs.com). Many of these packages are recommended in the guide, and you can find more in the online directories.
+Building an application completely from scratch is a tall order. This is one of the main reasons you might consider using Meteor in the first place - you can focus on writing the code that is specific to your app, instead of reinventing wheels like user login and data synchronization. To streamline your workflow even further, it makes sense to use community packages from [npm](https://www.npmjs.com) and [Atmosphere](https://atmospherejs.com). Many of these packages are recommended in the guide and you can find more in the online directories.
 
 <h2 id="npm">npm</h2>
 
-npm is a repository of general JavaScript packages. These packages were originally intended solely for the Node.js server-side environment, but as the JavaScript ecosystem matured, solutions arose to enable the use of npm packages in other environments such the browser. Today, npm is used for all types of JavaScript packages.
+npm is a repository of general JavaScript packages. These packages were originally intended solely for the Node.js server-side environment, but as the JavaScript ecosystem matured, solutions arose to enable the use of npm packages in other environments such as a web browser. Today, npm is used for all types of JavaScript packages.
 
 The best way to find npm packages is by searching on [npmjs.com](https://www.npmjs.com/). There are also some websites that have special search features specifically for certain kinds of packages, like the aptly named [react-components.com](http://react-components.com/).
+
+> Meteor comes with npm bundled so that you can type `meteor npm` without worrying about installing it yourself. If you like, you can also use a globally installed npm to manage your packages.
 
 <h3 id="client-npm">npm on the client</h3>
 
@@ -24,36 +26,40 @@ Tools like [browserify](http://browserify.org) and [webpack](https://webpack.git
 
 > When creating a new application Meteor installs the `meteor-node-stubs` npm package to help provide this client browser compatibility. If you are upgrading an application to Meteor 1.3 you may have to run `meteor npm install --save meteor-node-stubs` manually.
 
-<h3 id="installing-npm">Installing npm Packages</h3>
+<h3 id="installing-npm">Installing npm packages</h3>
 
-npm packages are configured in a `package.json` file at the root of your project. If you create a new Meteor project, you will have such a file created for you; if not you can run `meteor npm init` to create one.
+npm packages are configured in a `package.json` file at the root of your project. If you create a new Meteor project, you will have such a file created for you. If not you can run `meteor npm init` to create one.
 
-To install a package into your app, you can run the `npm install` command with the `--save` flag:
+To install a package into your app you run the `npm install` command with the `--save` flag:
 
 ```bash
 meteor npm install --save moment
 ```
 
-This will both update your `package.json` with information about the dependency, and download the package into your app's local `node_modules/` directory. Typically, you don't check the `node_modules/` directory into source control, and your teammates run `meteor npm install` to get up to date when dependencies change:
+This will both update your `package.json` with information about the dependency and download the package into your app's local `node_modules/` directory. Typically, you don't check the `node_modules/` directory into source control and your teammates run `meteor npm install` to get up to date when dependencies change:
 
 ```bash
 meteor npm install
 ```
 
-If the package is just a development dependency (i.e. it's used for testing, linting or the like), then you can use `--save-dev`. That way if you have some kind of build script, it can do `npm install --production` and avoid installing packages it doesn't need.
+If the package is just a development dependency (i.e. it's used for testing, linting or the like) then you should use `--save-dev`. That way if you have some kind of build script it can do `npm install --production` and avoid installing packages it doesn't need.
 
 For more information about `npm install`, check out the [official documentation](https://docs.npmjs.com/getting-started/installing-npm-packages-locally).
 
-> Meteor comes with npm bundled so that you can type `meteor npm` without worrying about installing it yourself. If you like, you can also use a globally installed npm to manage your packages.
+To remove an unwanted npm package run:
 
-<h3 id="using-npm">Using npm Packages</h3>
+```bash
+meteor npm uninstall moment
+```
 
-To use an npm package from a file in your application, you simply `import` the name of the package:
+<h3 id="using-npm">Using npm packages</h3>
+
+To use an npm package from a file in your application you simply `import` the name of the package:
 
 ```js
 import moment from 'moment';
 
-// this is equivalent to the standard node require:
+// this is equivalent to the standard node require
 const moment = require('moment');
 ```
 
@@ -71,7 +77,37 @@ You can also import other files or JS entry points from a package:
 import { parse } from 'graphql/language';
 ```
 
-<h3 id="npm-shrinkwrap">npm Shrinkwrap</h3>
+<h4 id="npm-styles">Importing styles from npm</h4>
+
+Using any of Meteor's [supported CSS pre-processors](build-tool.htm#css) you can import other style files from both relative and absolute paths from an npm package.
+
+Importing styles from an npm package with an absolute path using the `{}` syntax:
+
+```less
+@import '{}/node_modules/npm-package-name/button.less';
+```
+
+Importing styles from an npm package with a relative path:
+
+```less
+@import '../../node_modules/npm-package-name/colors.less';
+```
+
+Importing CSS from an npm package from another style file;
+```js
+@import 'npm-package-name/stylesheets/styles.css';
+```
+
+You can also import CSS directly from a JavaScript file to control load order if you have the `ecmascript` package installed.
+
+Importing CSS from an npm package in a JavaScript file using ES2015 `import`;
+```js
+import 'npm-package-name/stylesheets/styles.css';
+```
+
+> When importing CSS from a JavaScript file that CSS is not bundled with the rest of the CSS processed with the Meteor Build tool, but instead is put in your app's `<head>` tag inside `<style>...</style>` after the main concatenated CSS file. 
+
+<h3 id="npm-shrinkwrap">npm shrinkwrap</h3>
 
 `package.json` typically encodes a version range, and so each `npm install` command can sometimes lead to a different result if new versions have been published in the meantime. In order to ensure that you and the rest of your team are using the same exact same version of each package, it's a good idea to use `npm shrinkwrap` after making any dependency changes to `package.json`:
 
@@ -81,17 +117,19 @@ meteor npm install --save moment
 meteor npm shrinkwrap
 ```
 
-This will create an `npm-shrinkwrap.json` file containing the exact versions of each dependency, and you should check this file into source control. For even more precision (the contents of a given version of a package *can* change), and to avoid a reliance on the npm server during deployment, you can consider using [`npm shrinkpack`](#npm-shrinkpack) also. We'll cover that in the advanced section.
+This will create an `npm-shrinkwrap.json` file containing the exact versions of each dependency and you should check this file into source control. For even more precision (the contents of a given version of a package *can* change) and to avoid a reliance on the npm server during deployment, you should consider using [`npm shrinkpack`](#npm-shrinkpack).
 
-<h2 id="atmosphere">Atmosphere Packages</h2>
+<h2 id="atmosphere">Atmosphere packages</h2>
 
 Atmosphere packages are packages written specifically for Meteor. Atmosphere packages have several advantages over npm when used with Meteor. In particular, Atmosphere packages can:
 
 - Depend on core Meteor packages, such as `ddp` and `blaze`
-- Include non-javascript files including CSS and static assets
-- Take advantage of Meteor's [build system](build-tool.html) to be automatically transpiled from languages like CoffeeScript and SASS
+- Explicitly include non-javascript files including CSS, Less, Sass, Stylus and static assets
+- Take advantage of Meteor's [build system](build-tool.html) to be automatically transpiled from languages like CoffeeScript
 - Have a well defined way to ship different code for client and server, enabling different behavior in each context
-- Include build plugins for Meteor's build system
+- Get direct access to Meteor's [package namespacing](#package-namespacing) and package global exports without having to explicitly use ES2015 `import`
+- Enforce exact version dependencies between packages using Meteor's [constraint resolver](writing-packages.html#version-constraints)
+- Include [build plugins](build-tool.html#compiles-with-build-plugins) for Meteor's build system
 - Include pre-built binary code for different server architectures, such as Linux or Windows
 
 <h4 id="atmosphere-searching">Searching for packages</h4>
@@ -106,33 +144,61 @@ The main Atmosphere website provides additional curation features like trending 
 
 <h4 id="atmosphere-naming">Package naming</h4>
 
-You may notice that, with the exception of Meteor platform packages, all packages on Atmosphere have a name of the form `prefix:name`. The prefix is the name of the organization or user that published the package. Meteor uses such a convention of package naming to make sure that it's clear who has published a certain package, and to avoid an ad-hoc namespacing convention. Meteor platform packages do not have any `prefix:`.
+You may notice that, with the exception of Meteor platform packages, all packages on Atmosphere have a name of the form `prefix:package-name`. The prefix is the Meteor Developer username of the organization or user that published the package. Meteor uses such a convention for package naming to make sure that it's clear who has published a certain package and to avoid an ad-hoc namespacing convention. Meteor platform packages do not have any `prefix:`.
 
-<h3 id="installing-atmosphere">Installing Atmosphere Packages</h3>
+<h3 id="installing-atmosphere">Installing Atmosphere packages</h3>
 
-To install an Atmosphere package, you simply run `meteor add`:
+To install an Atmosphere package run `meteor add`:
 
 ```bash
 meteor add kadira:flow-router
 ```
 
-This will add the newest version of the desired package that is compatible with the other packages in your app. If you want to specify a particular version, you can specify it by adding a suffix to the package name, like so: `meteor add kadira:flow-router@2.10.0`.
+This will add the newest version of the desired package that is compatible with the other packages in your app. If you want to specify a particular version, you can specify it by adding a suffix to the package name like `meteor add kadira:flow-router@2.10.0`.
 
-Regardless of how you add the package to your app, its actual version will be tracked in the file at `.meteor/versions`. This means that anybody collaborating with you on the same app is guaranteed to have the same package versions as you. If you want to update to a newer version of a package after installing it, use `meteor update`. You can run `meteor update` without any arguments to update all packages and Meteor itself to their latest versions, or pass a specific package to update just that one, for example `meteor update kadira:flow-router`.
+Regardless of how you add the package to your app, its actual version will be tracked in the file `.meteor/versions`. This means that anybody collaborating with you on the same app is guaranteed to have the same package versions as you. If you want to update to a newer version of a package after installing it use `meteor update`. You can run `meteor update` without any arguments to update all packages and Meteor itself to their latest versions or pass a specific package to update just that one, for example `meteor update kadira:flow-router`.
 
 If your app is running when you add a new package, Meteor will automatically download it and restart your app for you.
 
 > The actual files for a given version of an Atmosphere package are stored in your local `~/.meteor/packages` directory.
 
+To see all the Atmosphere packages installed run:
+
+```bash
+meteor list
+```
+
+To remove an unwanted Atmosphere package run:
+
+```bash
+meteor remove kadira:flow-router
+```
+
+You can get more details on all the package commands in the [Meteor Command line documentation](http://docs.meteor.com/#/full/meteorhelp).
+
 <h3 id="using-atmosphere">Using Atmosphere Packages</h3>
 
-To use an Atmosphere Package, you can import it with the `meteor/` prefix:
+To use an Atmosphere Package you can import it with the `meteor/` prefix:
 
 ```js
 import { SimpleSchema } from 'meteor/aldeed:simple-schema';
 ```
 
-Typically a package will export one or more symbols which you'll need to grab with the destructuring syntax. Sometimes a package will have no exports and simply have side effects when included in your app. In such cases you don't need to import the package at all.
+Typically a package will export one or more symbols, which you'll need to reference with the destructuring syntax. You can find these exported symbols by either looking in that package's `package.js` file for [`api.export`](http://docs.meteor.com/#/full/pack_export) calls or by looking in that package's main JavaScript file for ES2015 `export ` calls like `export const packageName = 'package-name';`.
+
+Sometimes a package will have no exports and simply have side effects when included in your app. In such cases you don't need to import the package at all after installing.
+
+> For backwards compatibility with Meteor 1.2 and early releases, Meteor by default makes available directly to your app all symbols referenced in `api.export` in any packages you have installed. However, it is recommended that you import these symbols first before using them.
+
+<h4 id="">Importing styles from Atmosphere</h3>
+
+Using any of Meteor's supported CSS pre-processors you can import other style files using the `{package-name}` syntax as long as those files are designated to be lazily evaluated as "import" files. To get more details on how to determine this see [CSS source versus import](build-tool.html#css-source-vs-import) files.
+
+```less
+@import '{prefix:package-name}/buttons/styles.import.less';
+```
+
+> CSS files in an Atmosphere package are declared with `api.addFiles`, and therefore will be eagerly evaluated by default, and then bundled with all the other CSS in your app.
 
 <h3 id="peer-npm-dependencies">Peer npm Dependencies</h3>
 
@@ -144,6 +210,32 @@ Typically the package will warn you if you have not done so. For example, if you
 meteor npm install --save react react-addons-pure-render-mixin
 meteor add react-meteor-data
 ```
+
+<h3 id="package-namespacing">Atmosphere package namespacing</h3>
+
+Each Atmosphere package that you use in your app exists in its own separate namespace, meaning that it sees only its own global variables and any variables provided by the packages that it specifically uses. When a top-level variable is defined in a package, it is either declared with local scope or package scope.
+
+```js
+/**
+ * local scope - this variable is not visible outside of the block it is
+ * declared in and other packages and your app won't see it
+ */
+const alicePerson = {name: "alice"};
+
+/**
+ * package scope - this variable is visible to every file inside of the
+ * package where it is declared and to your app
+ */
+bobPerson = {name: "bob"};
+```
+
+Notice that this is just the normal JavaScript syntax for declaring a variable that is local or global. Meteor scans your source code for global variable assignments and generates a wrapper that makes sure that your globals don't escape their appropriate namespace.
+
+In addition to local scope and package scope, there are also package exports. A package export is a "pseudo global" variable that a package makes available for you to use when you install that package. For example, the `email` package exports the `Email` variable. If your app uses the `email` package (and _only_ if it uses the `email` package!) then your app can access the `Email` symbol and you can call `Email.send`. Most packages have only one export, but some packages might have two or three (for example, a package that provides several classes that work together).
+
+> It is recommended that you use the `ecmascript` package and first call `import { Email } from 'meteor/email';` before calling `Email.send` in your app. It is also recommended that package developers now use ES2015 `export` from their main JavaScript file instead of `api.export`.
+
+Your app sees only the exports of the packages that you use directly. If you use package A, and package A uses package B, then you only see package A's exports. Package B's exports don't "leak" into your namespace just because you used package A. Each app or package only sees their own globals plus the APIs of the packages that they specifically use and depend upon.
 
 <h2 id="async-callbacks">Asyncronous Callbacks</h2>
 
