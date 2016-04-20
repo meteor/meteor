@@ -17,7 +17,7 @@ When you run `meteor`, the tool starts up, and you should leave it running conti
 
 <h3 id="compiles-with-build-plugins">Compiles files with build plugins</h3>
 
-The main function of the Meteor build tool is to run "build plugins" - these plugins define different parts of your app build process. Meteor puts heavy emphasis on reducing or removing build configuration files, so you won't see any large build process config files like you would in Gulp or Webpack. The Meteor build process is configured almost entirely through adding and removing packages to your app, and putting files in specially named directories. For example, to get all of the newest stable ES2015 JavaScript features in your app, you just add the `ecmascript` package. As new Meteor releases add new features to this package, you'll get them for free.
+The main function of the Meteor build tool is to run "build plugins". These plugins define different parts of your app build process. Meteor puts heavy emphasis on reducing or removing build configuration files, so you won't see any large build process config files like you would in Gulp or Webpack. The Meteor build process, and [file load order](structure.html#load-order), is configured almost entirely through adding and removing packages to your app and putting files in specially named directories. For example, to get all of the newest stable ES2015 JavaScript features in your app, you just add the [`ecmascript` package](http://docs.meteor.com/#/full/ecmascript). This package provides support for ES2015 modules, which gives you even more fine grained control over file load order using ES2015 `import` and `export`. As new Meteor releases add new features to this package you just get them for free.
 
 <h3 id="concatenate-and-minify">Combines and minifies code</h3>
 
@@ -73,9 +73,9 @@ If you want to use React but don't want to deal with JSX and prefer a more HTML-
 
 If you would like to write your UI in Angular, you will need to switch out Meteor's Blaze template compiler which comes by default with the Angular one. Read about how to do this in the [Angular-Meteor tutorial](https://www.meteor.com/tutorials/angular/templates).
 
-<h2 id="css">CSS pre-processors</h2>
+<h2 id="css">CSS and CSS pre-processors</h2>
 
-It's no secret that writing raw CSS can often be a hassle - there's no way to share common CSS code between different selectors or have a consistent color scheme between different elements. CSS compilers or pre-processors solve these issues by adding extra features on top of the CSS language like variables, mixins, math, and more, and in some cases also significantly change the syntax of CSS to be easier to read and write.
+All your CSS style files will processed using Meteor's default file load order rules along with any import statements and concatenated, and in a production build also minified. However, it's no secret that writing plain CSS can often be a hassle as there's no way to share common CSS code between different selectors or have a consistent color scheme between different elements. CSS compilers, or pre-processors, solve these issues by adding extra features on top of the CSS language like variables, mixins, math, and more, and in some cases also significantly change the syntax of CSS to be easier to read and write.
 
 <h3 id="css-which-preprocessor">Sass, Less, or Stylus?</h3>
 
@@ -94,7 +94,7 @@ CSS framework compatibility should be a primary concern when picking a pre-proce
 An important feature shared by all of the available CSS pre-processors is the ability to import files. This lets you split your CSS into smaller pieces, and provides a lot of the same benefits that you get from JavaScript modules:
 
 1. You can control the load order of files by encoding dependencies through imports, since the load order of CSS matters.
-2. You can create reusable CSS "modules" that just have variables and mixins, and don't actually generate any CSS.
+2. You can create reusable CSS "modules" that just have variables and mixins and don't actually generate any CSS.
 
 In Meteor, each of your `.scss`, `.less`, or `.styl` source files will be one of two types: "source" or "import".
 
@@ -106,21 +106,36 @@ Read the documentation for each package listed below to see how to indicate whic
 
 <h3 id="css-importing">Importing styles</h3>
 
-In all three Meteor-supported CSS pre-processors you can import files from an absolute path in your app by using the special `{}` syntax:
+In all three Meteor supported CSS pre-processors you can import other style files from both relative and absolute paths in your app and from both npm and Meteor Atmosphere packages. You can also import CSS from a JavaScript file if you have the `ecmascript` package installed.
+
+Importing styles from your app:
 
 ```less
-@import '{}/imports/ui/stylesheets/button.less';
+@import '../stylesheets/colors.less';   // a relative path
+@import '{}/imports/ui/stylesheets/button.less';   // absolute path with `{}` syntax
+```
+```js
+import '../stylesheets/styles.css';  // import CSS from JS
 ```
 
-To import files from a Meteor Atmosphere packages using this special package name syntax:
+Importing styles from an Atmosphere package using the `{}` package name syntax:
 
 ```less
-@import "{my-package:pretty-buttons}/buttons/styles.import.less";
+@import '{my-package:pretty-buttons}/buttons/styles.import.less';
 ```
 
-> It is currently not possible to import non-CSS assets from npm packages in `node_modules` using the Meteor build tool. There are various potential workarounds such as creating a symbolic link to the asset file in node_modules from somewhere else in your app `ln -s /path/to/node_modules/package-name/style.scss /path/to/app/imports/ui/style.scss` and importing it from there `@import '{}/imports/ui/style.scss';` or try using an alternative pre-processor tool with [npm scripts](https://github.com/tableflip/meteor-sass-bootstrap4) or try using this configuration of [PostCSS](https://github.com/juliancwirko/meteor-bootstrap-postcss-test).
+> CSS files in an Atmosphere package are declared with `api.addFiles`, and therefore will be eagerly evaluated, and automatically bundled with all the other CSS in your app.
 
-For more details using `@imports` with packages see [Using Packages](using-packages.html) in the Meteor Guide.
+Importing styles from an npm package using the `{}` syntax:
+
+```less
+@import '{}/node_modules/npm-package-name/button.less';
+```
+```js
+import 'npm-package-name/stylesheets/styles.css';  // import CSS from JS
+```
+
+For more examples and details on importing styles and using `@imports` with packages see [Using Packages](using-packages.html) in the Meteor Guide.
 
 <h3 id="sass">Sass</h3>
 
