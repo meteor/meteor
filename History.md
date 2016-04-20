@@ -1,3 +1,11 @@
+## v1.3.2.3
+
+* Reverted accidental changes included in 1.3.2.1 and 1.3.2.2 that
+  improved DDP performance by batching updates, but broke some packages
+  that relied on private methods of the DDP client Connection class. See
+  https://github.com/meteor/meteor/pull/5680 for more details. These
+  changes will be reinstated in 1.3.3.
+
 ## v1.3.2.2
 
 * Fixed bugs #6819 and #6831.
