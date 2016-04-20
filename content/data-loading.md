@@ -531,7 +531,7 @@ Then when a client calls `Meteor.subscribe('Posts.all')` the following things ha
 
 3. The publication handler identifies that the return value is a cursor. This enables a convenient mode for publishing cursors.
 
-4. The server sets up a query observer on that cursor, unless a such an observer already exists on the server (for any user), in which case that observer is re-used.
+4. The server sets up a query observer on that cursor, unless such an observer already exists on the server (for any user), in which case that observer is re-used.
 
 5. The observer fetches the current set of documents matching the cursor, and passes them back to the subscription (via the `this.added()` callback).
 
