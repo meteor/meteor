@@ -266,13 +266,32 @@ FlowRouter.route('/lists/:_id', {
   name: 'Lists.show',
   action() {
     mount(AppContainer, {
-      main: () => <ListContainer/>,
+      main: <ListContainer/>,
     });
   },
 });
 ```
 
 Note that `react-mounter` automatically mounts the layout component on a `#react-root` node, which you can change by using the `withOptions()` function.
+
+In this example, your `App` component would receive a `main` prop with a instantiated React Element to render:
+
+```js
+const App = (props) => (
+  <div>
+    <section id="menu"><..></section>
+    {props.main}
+  </div>
+);
+
+export default AppContainer = createContainer(props => {
+  // props here will have `main`, passed from the router
+  // anything we return from this function will be *added* to it
+  return {
+    user: Meteor.user(),
+  };
+}, App);
+```
 
 <h3 id="using-react-router">React Router</h3>
 
