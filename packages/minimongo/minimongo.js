@@ -328,7 +328,6 @@ _.extend(LocalCollection.Cursor.prototype, {
       throw Error("You may not observe a cursor with {fields: {_id: 0}}");
 
     var query = {
-      dirty: false,
       matcher: self.matcher, // not fast pathed
       sorter: ordered && self.sorter,
       distances: (
@@ -562,7 +561,6 @@ LocalCollection.prototype.insert = function (doc, callback) {
   // trigger live queries that match
   for (var qid in self.queries) {
     var query = self.queries[qid];
-    if (query.dirty) continue;
     var matchResult = query.matcher.documentMatches(doc);
     if (matchResult.result) {
       if (query.distances && matchResult.distance !== undefined)
@@ -648,8 +646,6 @@ LocalCollection.prototype.remove = function (selector, callback) {
     var removeId = remove[i];
     var removeDoc = self._docs.get(removeId);
     _.each(self.queries, function (query, qid) {
-      if (query.dirty) return;
-
       if (query.matcher.documentMatches(removeDoc).result) {
         if (query.cursor.skip || query.cursor.limit)
           queriesToRecompute.push(qid);
@@ -827,8 +823,6 @@ LocalCollection.prototype._modifyAndNotify = function (
   var matched_before = {};
   for (var qid in self.queries) {
     var query = self.queries[qid];
-    if (query.dirty) continue;
-
     if (query.ordered) {
       matched_before[qid] = query.matcher.documentMatches(doc).result;
     } else {
@@ -844,8 +838,6 @@ LocalCollection.prototype._modifyAndNotify = function (
 
   for (qid in self.queries) {
     query = self.queries[qid];
-    if (query.dirty) continue;
-
     var before = matched_before[qid];
     var afterMatch = query.matcher.documentMatches(doc);
     var after = afterMatch.result;
@@ -965,14 +957,6 @@ LocalCollection._updateInResults = function (query, doc, old_doc) {
 // oldResults is guaranteed to be ignored if the query is not paused.
 LocalCollection.prototype._recomputeResults = function (query, oldResults) {
   var self = this;
-  if (self.paused) {
-    // There's no reason to recompute the results now as we're still paused.
-    // By flagging the query as "dirty", the recompute will be performed
-    // when resumeObservers is called.
-    query.dirty = true;
-    return;
-  }
-
   if (! self.paused && ! oldResults)
     oldResults = query.results;
   if (query.distances)
@@ -1095,17 +1079,11 @@ LocalCollection.prototype.resumeObservers = function () {
 
   for (var qid in this.queries) {
     var query = self.queries[qid];
-    if (query.dirty) {
-      query.dirty = false;
-      // re-compute results will perform `LocalCollection._diffQueryChanges` automatically.
-      self._recomputeResults(query, query.resultsSnapshot);
-    } else {
-      // Diff the current results against the snapshot and send to observers.
-      // pass the query object for its observer callbacks.
-      LocalCollection._diffQueryChanges(
-        query.ordered, query.resultsSnapshot, query.results, query,
-        {projectionFn: query.projectionFn});
-    }
+    // Diff the current results against the snapshot and send to observers.
+    // pass the query object for its observer callbacks.
+    LocalCollection._diffQueryChanges(
+      query.ordered, query.resultsSnapshot, query.results, query,
+      { projectionFn: query.projectionFn });
     query.resultsSnapshot = null;
   }
   self._observeQueue.drain();
