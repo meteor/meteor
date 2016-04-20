@@ -10,3 +10,7 @@ test:
   override:
     - ./scripts/ci.sh :
         parallel: true
+test:
+  override:
+    - ./scripts/ci.sh :
+        parallel: true
