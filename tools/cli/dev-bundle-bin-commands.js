@@ -12,12 +12,19 @@ var win32Extensions = {
 var devBundleBinCommand = process.argv[2];
 
 if (win32Extensions.hasOwnProperty(devBundleBinCommand)) {
+  var path = require("path");
+  var devBundleDir = path.resolve(__dirname, "..", "..", "dev_bundle");
+  var binDir = path.join(devBundleDir, "bin");
+  var PATH = binDir;
+
   if (process.platform === "win32") {
     devBundleBinCommand += win32Extensions[devBundleBinCommand];
+
+    // On Windows we provide a reliable version of python.exe for use by
+    // node-gyp (the tool that rebuilds binary node modules). #WinPy
+    PATH += ":" + path.join(devBundleDir, "python");
   }
 
-  var path = require("path");
-  var binDir = path.resolve(__dirname, "..", "..", "dev_bundle", "bin");
   var cmd = path.join(binDir, devBundleBinCommand);
   var args = process.argv.slice(3);
 
@@ -25,7 +32,7 @@ if (win32Extensions.hasOwnProperty(devBundleBinCommand)) {
     stdio: "inherit",
     env: Object.create(process.env, {
       // When npm looks for node, it must find dev_bundle/bin/node.
-      PATH: { value: binDir + ":" + process.env.PATH }
+      PATH: { value: PATH + ":" + process.env.PATH }
     })
   });
 
