@@ -1,3 +1,7 @@
+# Call for maintainers
+
+Since I'm no longer actively developing an app that uses `migrations`, I've lost touch with the codebase and the project. I'm looking for folks to take over development and maintenance, please raise your hand if you're interested via [this issue](https://github.com/percolatestudio/meteor-migrations/issues/59).
+
 # percolate:migrations
 
 [![Build Status](https://travis-ci.org/percolatestudio/meteor-migrations.svg?branch=master)](https://travis-ci.org/percolatestudio/meteor-migrations)
