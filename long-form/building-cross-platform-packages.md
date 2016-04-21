@@ -1,0 +1,4 @@
+While working on making Meteor compatible with Windows in addition to Mac and Linux, we have come across some advice to help make your package compatible with all operating systems.
+
+1. **Setting up Git line endings** - If you want your package to build with the same result on Mac, Linux, and Windows, you should set your Git to not convert to Windows line endings on pull by setting the config option core.autoclrf to input or false.
+2. **Build plugin input paths** - In build plugins, you will get an input path that has the operating system format, meaning it will have backslashes on Windows. Beware that this means that your package might end up with different contents if you use this input path in the output of your build. We have fixed this issue in the most common case of source maps, but you might need to think about it in some cases - for example, if you display the file path of input files in error messages.
