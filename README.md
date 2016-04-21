@@ -1,3 +1,7 @@
+# Call for maintainers
+
+Since I'm no longer actively developing an app that uses `synced-cron`, I've lost touch with the codebase and the project. I'm looking for folks to take over development and maintenance, please raise your hand if you're interested via [this issue](https://github.com/percolatestudio/meteor-synced-cron/issues/91).
+
 # percolate:synced-cron
 
 A simple cron system for [Meteor](http://meteor.com). It supports syncronizing jobs between multiple processes. In other words, if you add a job that runs every hour and your deployment consists of multiple app servers, only one of the app servers will execute the job each time (whichever tries first).
