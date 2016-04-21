@@ -10,14 +10,20 @@ Package.describe({
 });
 
 Npm.depends({
-  'meteor-babel': '0.9.2'
+  'meteor-babel': '0.9.2',
+  'json5': '0.5.0',
+  'mkdirp': '0.5.1'
 });
 
 Package.onUse(function (api) {
+  api.use('tmeasday:check-npm-versions@0.3.1', 'server');
+
   api.addFiles([
     'babel.js',
     'babel-compiler.js'
   ], 'server');
+
+  api.addAssets('babelrc-skel', 'server');
 
   api.export('Babel', 'server');
   api.export('BabelCompiler', 'server');

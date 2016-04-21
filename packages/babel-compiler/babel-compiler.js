@@ -48,6 +48,8 @@ BCp.processFilesForTarget = function (inputFiles) {
       }
 
       var babelOptions = Babel.getDefaultOptions(self.extraFeatures);
+      var deps = mergeBabelrcOptions(babelOptions, inputFile);
+      deps.sourceHash = toBeAdded.hash;
 
       babelOptions.sourceMap = true;
       babelOptions.filename =
@@ -59,7 +61,7 @@ BCp.processFilesForTarget = function (inputFiles) {
 
       try {
         var result = profile('Babel.compile', function () {
-          return Babel.compile(source, babelOptions);
+          return Babel.compile(source, babelOptions, deps);
         });
       } catch (e) {
         if (e.loc) {
