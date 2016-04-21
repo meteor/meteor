@@ -382,7 +382,7 @@ Accounts.setUsername = function (userId, newUsername) {
 
   var oldUsername = user.username;
 
-  // Perform a case insensitive check fro duplicates before update
+  // Perform a case insensitive check for duplicates before update
   checkForCaseInsensitiveDuplicates('username', 'Username', newUsername, user._id);
 
   Meteor.users.update({_id: user._id}, {$set: {username: newUsername}});
