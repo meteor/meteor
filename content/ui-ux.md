@@ -437,7 +437,7 @@ Template.Lists_show_page.onCreated(function() {
   this.visibleTodos = new Mongo.Collection();
 
   this.getTodos = () => {
-    const list = Lists.findOne(this.this.getListId());
+    const list = Lists.findOne(this.getListId());
     return list.todos({}, {limit: instance.state.get('requested')});
   };
   // When the user requests it, we should sync the visible todos to reflect the true state of the world
