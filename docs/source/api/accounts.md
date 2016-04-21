@@ -166,7 +166,7 @@ with the provider, the pop-up window is closed and the Meteor client
 logs in to the Meteor server with the information provided by the external
 service.
 
-<a id="requestpermissions" name="requestpermissions"></a>
+<h3 id="requestpermissions" name="requestpermissions">Requesting Permissions</h3>
 
 In addition to identifying the user to your application, some services
 have APIs that allow you to take action on behalf of the user. To
@@ -191,6 +191,8 @@ your application before use. The easiest way to do this is with the
 to configuring each service. However, the data can be also be entered
 manually in the `ServiceConfiguration.configurations` collection, which
 is exported by the `service-configuration` package.
+
+<h3 id="service-configuration">Configuring Services</h3>
 
 First, add the service configuration package:
 
@@ -241,6 +243,17 @@ Ensure that your [`$ROOT_URL`](#meteor_absoluteurl) matches the authorized
 domain and callback URL that you configure with the external service (for
 instance, if you are running Meteor behind a proxy server, `$ROOT_URL` should be
 the externally-accessible URL, not the URL inside your proxy).
+
+<h3 id="popup-vs-redirect-flow">Popup versus redirect flow</h3>
+
+When configuring OAuth login with a provider (such as Facebook or Google), Meteor lets you choose a popup- or redirect-based flow. In a popup-based flow, when a user logs in, they will be prompted to login at the provider in a popup window. In a redirect-based flow, the user's whole browser window will be redirected to the login provider, and the window will redirect back to your app when the login is completed.
+
+You can also pick which type of login to do by passing an option to [`Meteor.loginWith<ExternalService>`](#meteor_loginwithexternalservice)
+
+Usually, the popup-based flow is preferable because the user will not have to reload your whole app at the end of the login flow. However, the popup-based flow requires browser features such as `window.close` and `window.opener` that are not available in all mobile environments. In particular, we recommend using `Meteor.loginWith<ExternalService>({ loginStyle: "redirect" })` in the following environments:
+
+* Inside UIWebViews (when your app is loaded inside a mobile app)
+* In Safari on iOS8 (`window.close` is not supported due to a bug)
 
 {% apibox "currentUser" %}
 
