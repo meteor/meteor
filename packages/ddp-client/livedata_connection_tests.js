@@ -1,11 +1,11 @@
-var newConnection = function (stream) {
+var newConnection = function (stream, options) {
   // Some of these tests leave outstanding methods with no result yet
   // returned. This should not block us from re-running tests when sources
   // change.
-  return new LivedataTest.Connection(stream, {
+  return new LivedataTest.Connection(stream, _.extend({
     reloadWithOutstanding: true,
     bufferedWritesInterval: 0
-  });
+  }, options));
 };
 
 var makeConnectMessage = function (session) {
@@ -93,6 +93,92 @@ Tinytest.add("livedata stub - receive data", function (test) {
                   fields: {a:2}});
   test.equal(coll.find({}).fetch(), [{_id:'1234', a:2}]);
   test.isUndefined(conn._updatesForUnknownStores[coll_name]);
+});
+
+Tinytest.add("livedata stub - buffering data", function (test) {
+  var lolex = Npm.require('lolex');
+  var stream = new StubStream();
+
+  // Install special setTimeout that lets us control it in tests, courtesy of sinon's lolex
+  // This needs to be before the connection is instantiated.
+  var clock = lolex.install();
+
+  var conn = newConnection(stream, {
+    bufferedWritesInterval: 10,
+    bufferedWritesMaxAge: 40
+  });
+
+  startAndConnect(test, stream);
+
+  var coll_name = Random.id();
+  var coll = new Mongo.Collection(coll_name, conn);
+
+  var testCount = function(count) {
+    test.equal(coll.find({}).count(), count);
+  };
+
+  var wait = function(timeout) {
+    clock.tick(timeout);
+  };
+
+  var addDocument = function() {
+    stream.receive({
+      msg: 'added',
+      collection: coll_name,
+      id: Random.id(),
+      fields: {}
+    });
+  };
+
+  addDocument(); // 1 doc
+  testCount(0);
+  wait(1) // 1 tick
+
+  // We don't have the document yet as we have buffered it for 1ms
+  testCount(0);
+  wait(5); // 6 ticks
+
+  testCount(0);
+  wait(4) // 10 ticks
+
+  // Nothing else arrived in 10ms so we've flushed and go the first doc
+  testCount(1);
+  addDocument(); // 2 doc
+  wait(1); // 11 ticks
+
+  // Again, nothing's been added yet
+  testCount(1);
+  wait(6); // 17 ticks
+
+  // Haven't hit the max age yet
+  testCount(1);
+  wait(3); // 20 ticks (10 ticks since last flush & the 2nd 10-tick interval)
+
+  // Ok, now we're here and got the second document.
+  testCount(2);
+
+  // Do it a bunch more times, frequently enough that we keep buffering
+  addDocument(); // 3 doc
+  wait(6); // 26 ticks
+  addDocument(); // 4 doc
+  wait(6); // 32 ticks
+  addDocument(); // 5 doc
+  wait(6); // 38 ticks
+  addDocument(); // 6 doc
+  wait(6); // 44 ticks
+  addDocument(); // 7 doc
+  wait(6); // 50 ticks
+  addDocument(); // 8 doc
+  wait(6); // 56 ticks! (36 ticks since last flush)
+
+  // We're just shy of the max age (40) right now, so still shouldn't have flushed.
+  testCount(2);
+  // Now we're over the max.
+  wait(4); // Ok, 60 ticks (40 ticks since the last flush and the max we're allowed)
+  testCount(8);
+
+  // Put things back how they were.
+  clock.uninstall();
 });
 
 Tinytest.add("livedata stub - subscribe", function (test) {
