@@ -187,3 +187,17 @@ mergeBabelrcOptions = function(options, inputFile) {
     BABEL_ENV: process.env.BABEL_ENV || process.env.NODE_ENV || 'development'
   };
 }
+
+/*
+ * Use production babelrc env for testing, since some dev plugins (e.g. the old
+ * version of the react hotloading transforms) could break tests. 
+ *
+ * Meteor.isTest isn't available in a build plugin.  Does Meteor allow
+ * --options in between 'meteor test' ?
+ *
+ * Previously this was configurable via package.json's "ecmascript-hot"
+ * section, with options to 1) not change anything, 2) explicitly set to the
+ * desired setting, e.g. "testing" instead of "production".
+ */
+if (process.argv[2] === 'test' || process.argv[2] === 'test-packages')
+  process.env.BABEL_ENV = 'production';
