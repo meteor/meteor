@@ -69,20 +69,14 @@ _.extend(Roles, {
       unlessExists: false
     });
 
-    try {
-      return Meteor.roles.insert({_id: roleName, children: []});
-    } catch (e) {
-      // (from Meteor accounts-base package, insertUserDoc func)
-      // XXX string parsing sucks, maybe
-      // https://jira.mongodb.org/browse/SERVER-3069 will get fixed one day
-      if (/E11000 duplicate key error.*(index.*roles|roles.*index).*_id/.test(e.err || e.errmsg)) {
-        if (options.unlessExists) return null;
-        throw new Error("Role '" + roleName + "' already exists.");
-      }
-      else {
-        throw e;
-      }
+    var result = Meteor.roles.upsert({_id: roleName}, {$setOnInsert: {children: []}});
+
+    if (!result.insertedId) {
+      if (options.unlessExists) return null;
+      throw new Error("Role '" + roleName + "' already exists.");
     }
+
+    return result.insertedId;
   },
 
   /**
