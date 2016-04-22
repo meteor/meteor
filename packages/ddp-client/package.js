@@ -6,6 +6,7 @@ Package.describe({
 
 Npm.depends({
   "faye-websocket": "0.9.4",
+  "lolex": "1.4.0",
   "permessage-deflate": "0.1.3"
 });
 
