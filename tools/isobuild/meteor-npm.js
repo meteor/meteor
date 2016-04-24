@@ -421,17 +421,12 @@ const npmUserConfigFile = files.pathJoin(
 
 var runNpmCommand = function (args, cwd) {
   const nodeBinDir = files.getCurrentNodeBinDir();
-  const paths = [nodeBinDir];
+  const isWindows = process.platform === "win32";
   var npmPath;
 
-  if (os.platform() === "win32") {
+  if (isWindows) {
     npmPath = files.convertToOSPath(
       files.pathJoin(nodeBinDir, "npm.cmd"));
-
-    // On Windows we provide a reliable version of python.exe for use by
-    // node-gyp (the tool that rebuilds binary node modules). #WinPy
-    paths.push(files.pathJoin(files.getDevBundle(), "python"));
-
   } else {
     npmPath = files.pathJoin(nodeBinDir, "npm");
   }
@@ -454,7 +449,18 @@ var runNpmCommand = function (args, cwd) {
   // containing the node binary we are running in right now as the highest
   // priority.
   // This hack is confusing as npm is supposed to do it already.
-  const env = files.currentEnvWithPathsAdded(...paths);
+  const env = files.currentEnvWithPathsAdded(nodeBinDir);
+
+  if (isWindows) {
+    // On Windows we provide a reliable version of python.exe for use by
+    // node-gyp (the tool that rebuilds binary node modules). #WinPy
+    env.PYTHON = env.PYTHON || files.pathJoin(
+      files.getDevBundle(), "python", "python.exe");
+
+    // We don't try to install a compiler toolchain on the developer's
+    // behalf, but setting GYP_MSVS_VERSION helps select the right one.
+    env.GYP_MSVS_VERSION = env.GYP_MSVS_VERSION || "2015";
+  }
 
   // Make sure we don't honor any user-provided configuration files.
   env.npm_config_userconfig = npmUserConfigFile;
