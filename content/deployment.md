@@ -61,11 +61,37 @@ It's always a good idea to use SSL for Meteor applications (see the [Security Ar
 
 <h3 id="cdn">CDN</h3>
 
-It's not strictly required, but often a good idea to setup a Content Delivery Network (CDN) for your site. A CDN is a proxy that sits in front of the static assets of your site (such as JavaScript, CSS files, and some images) and caches copies of those files in locations that are closer to the location of the user. For example, if the actual web server for your application is on the east coast of the USA, if a user is in Australia, a CDN could host a copy of the JavaScript of the site within Australia or even in the city the user is in. This has huge benefits for the initial loading time for your site.
+It's not strictly required, but often a good idea to set up a Content Delivery Network (CDN) for your site. A CDN is a network of servers that hosts the static assets of your site (such as JavaScript, CSS, and images) in numerous locations around the world and uses the server closest to your user to provide those files in order to speed up their delivery. For example, if the actual web server for your application is on the east coast of the USA and your user is in Australia, a CDN could host a copy of the JavaScript of the site within Australia or even in the city the user is in. This has huge benefits for the initial loading time for your site.
 
-You want to put your CDN in front of the static assets that Meteor knows about. You can use `WebAppInternals.setBundledJsCssPrefix(DNS_HOSTNAME)` to set a prefix that applies to all of the bundled JS and CSS assets that the Meteor app serves. In particular, this means if you have relative image URLs inside your CSS files, they will also be served from the CDN.
+The basic way to use a CDN is to upload your files to the CDN and change your URLs to point at the CDN (for instance if your Meteor app is at `http://myapp.com`, changing your image URL from `<img src="http://myapp.com/cats.gif">` to `<img src="http://mycdn.com/cats.gif">`). However, this would be hard to do with Meteor, since the largest file – your Javascript bundle – changes every time you edit your app.
 
-If you are following the above approach, you may also want to manually add the CDN's hostname whenever you put an image/other asset URL in your application's code. To do this throughout your app, you can write a generic helper like `imageUrl()`.
+For Meteor, we recommend using a CDN with "origin" support (like [CloudFront](http://joshowens.me/using-a-cdn-with-your-production-meteor-app/)), which means that instead of uploading your files in advance, the CDN automatically fetches them from your server. You put your files in `public/` (in this case `public/cats.gif`), and when your Australian user asks the CDN for `http://mycdn.com/cats.gif`, the CDN, behind the scenes, fetches `http://myapp.com/cats.gif` and then delivers it to the user. While this is slightly slower than getting `http://myapp.com/cats.gif` directly, it only happens one time, because the CDN saves the file, and all subsequent Australians who ask for the file get it quickly.
+
+To get Meteor to use the CDN for your Javascript and CSS bundles, call `WebAppInternals.setBundledJsCssPrefix("mycdn.com")` on the server. This will also take care of relative image URLs inside your CSS files. For all your other files in `public/`, change their URLs to point at the CDN. You can use a helper like `assetUrl`.
+
+Before:
+
+```html
+<img src="http://myapp.com/cats.gif">
+```  
+
+After:
+
+```js
+Template.registerHelper("assetUrl", (asset) => {
+  return "http://mycdn.com/" + asset
+});
+```
+
+```html
+<img src="{{assetUrl "cats.gif"}}">
+```
+
+<h4 id="cordova-assets">Cordova assets</h4>
+
+In Meteor versions 1.3 and up, if your app is mainly meant to be used inside Cordova, we recommend **not** using a CDN. Meteor Cordova caches your `myapp.com/*` files on the phone, so it's much faster to get those files than request them from a CDN.
+
+Pre-1.3 Meteor Cordova still cached your files on the phone, but it re-downloaded *all* the files during each hot code push, and it did so from main-thread Javascript, which froze the UI. In order to shorten the duration of the UI freeze, you had to remove the files from `public/` and upload them to a CDN. 
 
 <h4 id="cdn-webfonts">CDNs and webfonts</h4>
 
