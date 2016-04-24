@@ -441,26 +441,7 @@ var runNpmCommand = function (args, cwd) {
     cwd = files.convertToOSPath(cwd);
   }
 
-  // It looks like some npm commands (such as build commands, specifically on
-  // Windows) rely on having a global node binary present.
-  // Sometimes users have a global node installed, so it is not
-  // a problem, but a) it can be outdated and b) it can not be installed.
-  // To solve this problem, we set the PATH env variable to have the path
-  // containing the node binary we are running in right now as the highest
-  // priority.
-  // This hack is confusing as npm is supposed to do it already.
-  const env = files.currentEnvWithPathsAdded(nodeBinDir);
-
-  if (isWindows) {
-    // On Windows we provide a reliable version of python.exe for use by
-    // node-gyp (the tool that rebuilds binary node modules). #WinPy
-    env.PYTHON = env.PYTHON || files.pathJoin(
-      files.getDevBundle(), "python", "python.exe");
-
-    // We don't try to install a compiler toolchain on the developer's
-    // behalf, but setting GYP_MSVS_VERSION helps select the right one.
-    env.GYP_MSVS_VERSION = env.GYP_MSVS_VERSION || "2015";
-  }
+  const env = require("../cli/dev-bundle-bin-helpers.js").getEnv();
 
   // Make sure we don't honor any user-provided configuration files.
   env.npm_config_userconfig = npmUserConfigFile;
