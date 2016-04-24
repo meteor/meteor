@@ -198,16 +198,6 @@ Ap.callLoginMethod = function (options) {
     options.userCallback.apply(this, arguments);
   });
 
-  // Prepare callbacks: user provided and onLogout hook.
-  var logoutCallbacks = _.once(function (error) {
-    if (!error) {
-      self._onLogoutHook.each(function (callback) {
-        callback();
-        return true;
-      });
-    }
-  });
-
   var reconnected = false;
 
   // We want to set up onReconnect as soon as we get a result token back from
@@ -243,7 +233,7 @@ Ap.callLoginMethod = function (options) {
         if (! result.tokenExpires)
           result.tokenExpires = self._tokenExpiration(new Date());
         if (self._tokenExpiresSoon(result.tokenExpires)) {
-          self.makeClientLoggedOut(logoutCallbacks);
+          self.makeClientLoggedOut();
         } else {
           self.callLoginMethod({
             methodArguments: [{resume: result.token}],
@@ -272,7 +262,7 @@ Ap.callLoginMethod = function (options) {
                 // periodic localStorage poll will call `makeClientLoggedOut`
                 // eventually if another tab wiped the token from storage.
                 if (storedTokenNow && storedTokenNow === result.token) {
-                  self.makeClientLoggedOut(logoutCallbacks);
+                  self.makeClientLoggedOut();
                 }
               }
               // Possibly a weird callback to call, but better than nothing if
