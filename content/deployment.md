@@ -61,7 +61,7 @@ It's always a good idea to use SSL for Meteor applications (see the [Security Ar
 
 <h3 id="cdn">CDN</h3>
 
-It's not strictly required, but often a good idea to set up a Content Delivery Network (CDN) for your site. A CDN is a network of servers that hosts the static assets of your site (such as JavaScript, CSS, and images) in numerous locations around the world and uses the server closest to your user to provide those files in order to speed up their delivery. For example, if the actual web server for your application is on the east coast of the USA and your user is in Australia, a CDN could host a copy of the JavaScript of the site within Australia or even in the city the user is in. This has huge benefits for the initial loading time for your site.
+It's not strictly required, but often a good idea to set up a Content Delivery Network (CDN) for your site. A CDN is a network of servers that hosts the static assets of your site (such as JavaScript, CSS, and images) in numerous locations around the world and uses the server closest to your user to provide those files in order to speed up their delivery. For example, if the actual web server for your application is on the east coast of the USA and your user is in Australia, a CDN could host a copy of the JavaScript of the site within Australia or even in the city the user is in. This has huge benefits for the initial loading time of your site.
 
 The basic way to use a CDN is to upload your files to the CDN and change your URLs to point at the CDN (for instance if your Meteor app is at `http://myapp.com`, changing your image URL from `<img src="http://myapp.com/cats.gif">` to `<img src="http://mycdn.com/cats.gif">`). However, this would be hard to do with Meteor, since the largest file – your Javascript bundle – changes every time you edit your app.
 
@@ -89,7 +89,7 @@ Template.registerHelper("assetUrl", (asset) => {
 
 <h4 id="cordova-assets">Cordova assets</h4>
 
-In Meteor versions 1.3 and up, if your app is mainly meant to be used inside Cordova, we recommend **not** using a CDN. Meteor Cordova caches your `myapp.com/*` files on the phone, so it's much faster to get those files than request them from a CDN.
+In Meteor versions 1.3 and up, if your app is mainly meant to be used inside Cordova, we recommend **not** using a CDN. Meteor Cordova caches your `myapp.com/*` files on the phone, and it's much faster to get the phone copies than request them from a CDN.
 
 Pre-1.3 Meteor Cordova still cached your files on the phone, but it re-downloaded *all* the files during each hot code push, and it did so from main-thread Javascript, which froze the UI. In order to shorten the duration of the UI freeze, you had to remove the files from `public/` and upload them to a CDN. 
 
