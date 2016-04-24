@@ -176,6 +176,12 @@ Ap._failedLogin = function (connection, attempt) {
   });
 };
 
+Ap._successfulLogout = function () {
+  this._onLogoutHook.each(function (callback) {
+    callback();
+    return true;
+  });
+};
 
 ///
 /// LOGIN METHODS
@@ -532,6 +538,7 @@ Ap._initServerMethods = function () {
     if (token && this.userId)
       accounts.destroyToken(this.userId, token);
     this.setUserId(null);
+    accounts._successfulLogout();
   };
 
   // Delete all the current user's tokens and close all open connections logged
