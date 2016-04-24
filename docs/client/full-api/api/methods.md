@@ -84,7 +84,7 @@ the [Meteor accounts system](#accounts_api) then this is handled for you.
 
 {{> autoApiBox "DDPCommon.MethodInvocation#setUserId"}}
 
-Call this function to change the currently logged in user on the
+Call this function to change the currently logged-in user on the
 connection that made this method call. This simply sets the value of
 `userId` for future method calls received on this connection. Pass
 `null` to log out the connection.
@@ -98,7 +98,7 @@ any future method calls on the connection. Any previous method calls on
 this connection will still see the value of `userId` that was in effect
 when they started.
 
-If you also want to change the logged in user on the client, then after calling
+If you also want to change the logged-in user on the client, then after calling
 `setUserId` on the server, call `Meteor.connection.setUserId(userId)` on the
 client.
 
