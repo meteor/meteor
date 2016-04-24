@@ -15,14 +15,22 @@ if (win32Extensions.hasOwnProperty(devBundleBinCommand)) {
   var path = require("path");
   var devBundleDir = path.resolve(__dirname, "..", "..", "dev_bundle");
   var binDir = path.join(devBundleDir, "bin");
-  var PATH = binDir;
+  var env = Object.create(process.env);
+
+  // When npm looks for node, it must find dev_bundle/bin/node.
+  env.PATH = binDir + ":" + env.PATH;
 
   if (process.platform === "win32") {
-    devBundleBinCommand += win32Extensions[devBundleBinCommand];
-
     // On Windows we provide a reliable version of python.exe for use by
     // node-gyp (the tool that rebuilds binary node modules). #WinPy
-    PATH += ":" + path.join(devBundleDir, "python");
+    env.PYTHON = env.PYTHON || path.join(
+      devBundleDir, "python", "python.exe");
+
+    // We don't try to install a compiler toolchain on the developer's
+    // behalf, but setting GYP_MSVS_VERSION helps select the right one.
+    env.GYP_MSVS_VERSION = env.GYP_MSVS_VERSION || "2015";
+
+    devBundleBinCommand += win32Extensions[devBundleBinCommand];
   }
 
   var cmd = path.join(binDir, devBundleBinCommand);
@@ -30,10 +38,7 @@ if (win32Extensions.hasOwnProperty(devBundleBinCommand)) {
 
   exports.process = require("child_process").spawn(cmd, args, {
     stdio: "inherit",
-    env: Object.create(process.env, {
-      // When npm looks for node, it must find dev_bundle/bin/node.
-      PATH: { value: PATH + ":" + process.env.PATH }
-    })
+    env: env
   });
 
   require("./flush-buffers-on-exit-in-windows.js");
