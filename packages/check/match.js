@@ -1,3 +1,5 @@
+import {Meteor} from 'meteor/meteor'
+
 // XXX docs
 
 // Things we explicitly do NOT support:
