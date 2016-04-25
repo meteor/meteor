@@ -24,17 +24,16 @@ require("meteor-ecmascript-runtime");
 
 // Install a global ES2015-compliant Promise constructor that knows how to
 // run all its callbacks in Fibers.
-var Promise = global.Promise = require('meteor-promise');
-
-// Allow all Promise callbacks to be run in a Fiber.
-Promise.Fiber = require('fibers');
+var Promise = global.Promise = global.Promise ||
+  require("promise/lib/es6-extensions");
+require("meteor-promise").makeCompatible(Promise, require("fibers"));
 
 // Verify that the babel-runtime package is available to be required.
 var regeneratorRuntime = require("babel-runtime/regenerator").default;
 
-// If Promise.asyncApply is defined, use it to wrap calls to runtime.async
-// so that the entire async function will run in its own Fiber, not just
-// the code that comes after the first await.
+// Use Promise.asyncApply to wrap calls to runtime.async so that the
+// entire async function will run in its own Fiber, not just the code that
+// comes after the first await.
 var realAsync = regeneratorRuntime.async;
 regeneratorRuntime.async = function () {
   return Promise.asyncApply(realAsync, regeneratorRuntime, arguments);
