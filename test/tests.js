@@ -1,6 +1,6 @@
 var assert = require("assert");
 var Fiber = require("fibers");
-var Promise = require("../promise.js");
+var Promise = require("promise");
 
 require("../promise_server.js").makeCompatible(Promise, Fiber);
 
