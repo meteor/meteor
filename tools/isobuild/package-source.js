@@ -1328,7 +1328,8 @@ _.extend(PackageSource.prototype, {
   _inferFileOptions(relPath, {arch, isApp}) {
     const fileOptions = {};
     const isTest = global.testCommandMetadata &&
-      global.testCommandMetadata.isTest;
+      (global.testCommandMetadata.isTest ||
+       global.testCommandMetadata.isAppTest);
 
     if (isTest) {
       if (isTestFilePath(relPath)) {
