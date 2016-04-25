@@ -49,6 +49,7 @@ Package.onTest(function (api) {
   api.use('mongo', ['client', 'server']);
   api.use('test-helpers', ['client', 'server']);
   api.use([
+    'ecmascript',
     'underscore',
     'tinytest',
     'random',
