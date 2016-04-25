@@ -4,8 +4,8 @@ order: 1001
 description: A log of significant changes to the Meteor Guide.
 ---
 
-- 2016/04/16: Switch order of Code Style and Application structure sections. [PR #381](https://github.com/meteor/guide/pull/383)
-- 2016/04/16: Added "Writing Packages - Creating an npm package" and "Using Packages - Overriding packages - npm". [PR #381](https://github.com/meteor/guide/pull/381)
+- 2016/04/16: Switch order of Code Style and Application structure sections. [PR #383](https://github.com/meteor/guide/pull/383)
+- 2016/04/16: Added [Writing Packages - Creating an npm package](https://guide.meteor.com/writing-packages.html#creating-npm) and [Using Packages - Overriding packages - npm](https://guide.meteor.com/using-packages.html#npm-overriding). [PR #381](https://github.com/meteor/guide/pull/381)
 - 2016/04/07: Add more examples and details on application structure using imports. [PR #356](https://github.com/meteor/guide/pull/356)
 - 2016/04/04: Add more content on writing and publishing Atmosphere packages. [PR #339](https://github.com/meteor/guide/pull/339)
 - 2016/04/03: Add back in build tool default loading order rules. [PR #340](https://github.com/meteor/guide/pull/340)
