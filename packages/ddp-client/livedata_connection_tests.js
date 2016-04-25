@@ -1,11 +1,13 @@
-var newConnection = function (stream) {
+import lolex from 'lolex';
+
+var newConnection = function (stream, options) {
   // Some of these tests leave outstanding methods with no result yet
   // returned. This should not block us from re-running tests when sources
   // change.
-  return new LivedataTest.Connection(stream, {
+  return new LivedataTest.Connection(stream, _.extend({
     reloadWithOutstanding: true,
     bufferedWritesInterval: 0
-  });
+  }, options));
 };
 
 var makeConnectMessage = function (session) {
@@ -93,6 +95,70 @@ Tinytest.add("livedata stub - receive data", function (test) {
                   fields: {a:2}});
   test.equal(coll.find({}).fetch(), [{_id:'1234', a:2}]);
   test.isUndefined(conn._updatesForUnknownStores[coll_name]);
+});
+
+Tinytest.add("livedata stub - buffering data", function (test) {
+  // Install special setTimeout that allows tick-by-tick control in tests using sinonjs 'lolex'
+  // This needs to be before the connection is instantiated.
+  const clock = lolex.install();
+  const tick = (timeout) => clock.tick(timeout);
+
+  const stream = new StubStream();
+  const conn = newConnection(stream, {
+    bufferedWritesInterval: 10,
+    bufferedWritesMaxAge: 40,
+  });
+
+  startAndConnect(test, stream);
+
+  const coll_name = Random.id();
+  const coll = new Mongo.Collection(coll_name, conn);
+
+  const testDocCount = (count) => test.equal(coll.find({}).count(), count);
+
+  const addDoc = () => {
+    stream.receive({
+      msg: 'added',
+      collection: coll_name,
+      id: Random.id(),
+      fields: {}
+    });
+  };
+
+  // Starting at 0 ticks.  At this point we haven't advanced the fake clock at all.
+
+  addDoc(); // 1st Doc
+  testDocCount(0);  // No doc been recognized yet because it's buffered, waiting for more.
+  tick(6); // 6 total ticks
+  testDocCount(0); // Ensure that the doc still hasn't shown up, despite the clock moving forward.
+  tick(4) // 10 total ticks, 1st buffer interval
+  testDocCount(1); // No other docs have arrived, so we 'see' the 1st doc.
+
+  addDoc(); // 2nd doc
+  tick(1); // 11 total ticks (1 since last flush)
+  testDocCount(1); // Again, second doc hasn't arrived because we're waiting for more...
+  tick(9); // 20 total ticks (10 ticks since last flush & the 2nd 10-tick interval)
+  testDocCount(2); // Now we're here and got the second document.
+
+  // Add several docs, frequently enough that we buffer multiple times before the next flush.
+  addDoc(); // 3 docs
+  tick(6); // 26 ticks (6 since last flush)
+  addDoc(); // 4 docs
+  tick(6); // 32 ticks (12 since last flush)
+  addDoc(); // 5 docs
+  tick(6); // 38 ticks (18 since last flush)
+  addDoc(); // 6 docs
+  tick(6); // 44 ticks (24 since last flush)
+  addDoc(); // 7 docs
+  tick(9); // 53 ticks (33 since last flush)
+  addDoc(); // 8 docs
+  tick(9); // 62 ticks! (42 ticks since last flush, over max-age - next interval triggers flush)
+  testDocCount(2); // Still at 2 from before! (Just making sure)
+  tick(1); // Ok, 63 ticks (10 since last doc, so this should cause the flush of all the docs)
+  testDocCount(8); // See all the docs.
+
+  // Put things back how they were.
+  clock.uninstall();
 });
 
 Tinytest.add("livedata stub - subscribe", function (test) {
