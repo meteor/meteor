@@ -1,3 +1,5 @@
+import lolex from 'lolex';
+
 var newConnection = function (stream, options) {
   // Some of these tests leave outstanding methods with no result yet
   // returned. This should not block us from re-running tests when sources
@@ -96,7 +98,6 @@ Tinytest.add("livedata stub - receive data", function (test) {
 });
 
 Tinytest.add("livedata stub - buffering data", function (test) {
-  var lolex = Npm.require('lolex');
   var stream = new StubStream();
 
   // Install special setTimeout that lets us control it in tests, courtesy of sinon's lolex
