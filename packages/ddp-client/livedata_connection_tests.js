@@ -98,31 +98,25 @@ Tinytest.add("livedata stub - receive data", function (test) {
 });
 
 Tinytest.add("livedata stub - buffering data", function (test) {
-  var stream = new StubStream();
-
-  // Install special setTimeout that lets us control it in tests, courtesy of sinon's lolex
+  // Install special setTimeout that allows tick-by-tick control in tests using sinonjs 'lolex'
   // This needs to be before the connection is instantiated.
-  var clock = lolex.install();
+  const clock = lolex.install();
+  const tick = (timeout) => clock.tick(timeout);
 
-  var conn = newConnection(stream, {
+  const stream = new StubStream();
+  const conn = newConnection(stream, {
     bufferedWritesInterval: 10,
-    bufferedWritesMaxAge: 40
+    bufferedWritesMaxAge: 40,
   });
 
   startAndConnect(test, stream);
 
-  var coll_name = Random.id();
-  var coll = new Mongo.Collection(coll_name, conn);
+  const coll_name = Random.id();
+  const coll = new Mongo.Collection(coll_name, conn);
 
-  var testCount = function(count) {
-    test.equal(coll.find({}).count(), count);
-  };
+  const testDocCount = (count) => test.equal(coll.find({}).count(), count);
 
-  var wait = function(timeout) {
-    clock.tick(timeout);
-  };
-
-  var addDocument = function() {
+  const addDoc = () => {
     stream.receive({
       msg: 'added',
       collection: coll_name,
@@ -131,52 +125,37 @@ Tinytest.add("livedata stub - buffering data", function (test) {
     });
   };
 
-  addDocument(); // 1 doc
-  testCount(0);
-  wait(1) // 1 tick
+  // Starting at 0 ticks.  At this point we haven't advanced the fake clock at all.
 
-  // We don't have the document yet as we have buffered it for 1ms
-  testCount(0);
-  wait(5); // 6 ticks
+  addDoc(); // 1st Doc
+  testDocCount(0);  // No doc been recognized yet because it's buffered, waiting for more.
+  tick(6); // 6 total ticks
+  testDocCount(0); // Ensure that the doc still hasn't shown up, despite the clock moving forward.
+  tick(4) // 10 total ticks, 1st buffer interval
+  testDocCount(1); // No other docs have arrived, so we 'see' the 1st doc.
 
-  testCount(0);
-  wait(4) // 10 ticks
+  addDoc(); // 2nd doc
+  tick(1); // 11 total ticks (1 since last flush)
+  testDocCount(1); // Again, second doc hasn't arrived because we're waiting for more...
+  tick(9); // 20 total ticks (10 ticks since last flush & the 2nd 10-tick interval)
+  testDocCount(2); // Now we're here and got the second document.
 
-  // Nothing else arrived in 10ms so we've flushed and go the first doc
-  testCount(1);
-  addDocument(); // 2 doc
-  wait(1); // 11 ticks
-
-  // Again, nothing's been added yet
-  testCount(1);
-  wait(6); // 17 ticks
-
-  // Haven't hit the max age yet
-  testCount(1);
-  wait(3); // 20 ticks (10 ticks since last flush & the 2nd 10-tick interval)
-
-  // Ok, now we're here and got the second document.
-  testCount(2);
-
-  // Do it a bunch more times, frequently enough that we keep buffering
-  addDocument(); // 3 doc
-  wait(6); // 26 ticks
-  addDocument(); // 4 doc
-  wait(6); // 32 ticks
-  addDocument(); // 5 doc
-  wait(6); // 38 ticks
-  addDocument(); // 6 doc
-  wait(6); // 44 ticks
-  addDocument(); // 7 doc
-  wait(6); // 50 ticks
-  addDocument(); // 8 doc
-  wait(6); // 56 ticks! (36 ticks since last flush)
-
-  // We're just shy of the max age (40) right now, so still shouldn't have flushed.
-  testCount(2);
-  // Now we're over the max.
-  wait(4); // Ok, 60 ticks (40 ticks since the last flush and the max we're allowed)
-  testCount(8);
+  // Add several docs, frequently enough that we buffer multiple times before the next flush.
+  addDoc(); // 3 docs
+  tick(6); // 26 ticks (6 since last flush)
+  addDoc(); // 4 docs
+  tick(6); // 32 ticks (12 since last flush)
+  addDoc(); // 5 docs
+  tick(6); // 38 ticks (18 since last flush)
+  addDoc(); // 6 docs
+  tick(6); // 44 ticks (24 since last flush)
+  addDoc(); // 7 docs
+  tick(9); // 53 ticks (33 since last flush)
+  addDoc(); // 8 docs
+  tick(9); // 62 ticks! (42 ticks since last flush, over max-age - next interval triggers flush)
+  testDocCount(2); // Still at 2 from before! (Just making sure)
+  tick(1); // Ok, 63 ticks (10 since last doc, so this should cause the flush of all the docs)
+  testDocCount(8); // See all the docs.
 
   // Put things back how they were.
   clock.uninstall();
