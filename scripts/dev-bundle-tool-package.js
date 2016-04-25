@@ -42,14 +42,14 @@ var packageJson = {
     request: "2.47.0",
     fstream: "https://github.com/meteor/fstream/tarball/d11b9ec4a13918447c8af7559c243c190744dd1c",
     tar: "1.0.2",
-    kexec: "0.2.0",
+    kexec: "2.0.2",
     "source-map": "0.5.3",
     "browserstack-webdriver": "2.41.1",
     "node-inspector": "0.7.4",
     chalk: "0.5.1",
-    sqlite3: "3.0.2",
-    netroute: "0.2.5",
-    phantomjs: "1.9.12",
+    sqlite3: "3.1.3",
+    netroute: "1.0.2",
+    "phantomjs-prebuilt": "2.1.7",
     "http-proxy": "1.11.1",
     "wordwrap": "0.0.2",
     "moment": "2.8.4",
@@ -62,7 +62,8 @@ var packageJson = {
     // 2.4.0 (more or less, the package.json change isn't committed) plus our PR
     // https://github.com/williamwicks/node-eachline/pull/4
     eachline: "https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da",
-    pathwatcher: "4.1.0",
+    pathwatcher: "6.5.0",
+    runas: "3.1.1",
     'lru-cache': '2.6.4',
     'cordova-lib': "6.0.0",
     longjohn: '0.2.11'
