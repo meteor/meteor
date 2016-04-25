@@ -229,3 +229,36 @@ describe("uncaught exceptions", function () {
     });
   });
 });
+
+describe("promise_client.js", function () {
+  it("should use Meteor.bindEnvironment", function () {
+    var savedMeteor = global.Meteor;
+    var calledBindEnvironment = false;
+    var calledBoundFunction = false;
+
+    global.Meteor = {
+      bindEnvironment: function (handler) {
+        calledBindEnvironment = true;
+        return function () {
+          calledBoundFunction = true;
+          return handler.apply(this, arguments);
+        };
+      }
+    };
+
+    var Promise = require("promise");
+    require("../promise_client.js").makeCompatible(Promise);
+
+    var p = Promise.resolve(1234).then(function (value) {
+      assert.strictEqual(value, 1234);
+      assert.strictEqual(calledBindEnvironment, true);
+      assert.strictEqual(calledBoundFunction, true);
+      global.Meteor = savedMeteor;
+    });
+
+    assert.strictEqual(calledBindEnvironment, true);
+    assert.strictEqual(calledBoundFunction, false);
+
+    return p;
+  });
+});
