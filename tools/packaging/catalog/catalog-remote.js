@@ -187,7 +187,9 @@ _.extend(Db.prototype, {
     self._closePreparedStatements();
     var db = self._db;
     self._db = null;
-    Promise.denodeify(db.close).call(db).await();
+    new Promise((resolve, reject) => {
+      db.close(err => err ? reject(err) : resolve());
+    }).await();
   },
 
   // Runs the function inside a transaction block
@@ -289,11 +291,17 @@ _.extend(Db.prototype, {
 
     //Console.debug("Executing SQL ", sql, params);
 
-    var promise = prepared
-      ? Promise.denodeify(prepared.all).call(prepared, params)
-      : Promise.denodeify(self._db.all).call(self._db, sql, params);
+    var rows = new Promise((resolve, reject) => {
+      function callback(err, rows) {
+        err ? reject(err) : resolve(rows);
+      }
 
-    var rows = promise.await();
+      if (prepared) {
+        prepared.all(params, callback);
+      } else {
+        self._db.all(sql, params, callback);
+      }
+    }).await();
 
     if (DEBUG_SQL) {
       var t2 = Date.now();

@@ -11,9 +11,8 @@ var EXITING_MESSAGE =
   // Exported so that ./client.js can know what to expect.
   exports.EXITING_MESSAGE = "Shell exiting...";
 
-var Promise = require("meteor-promise");
-// Only require("fibers") if somehow Promise.Fiber is not yet defined.
-Promise.Fiber = Promise.Fiber || require("fibers");
+var Promise = require("promise/lib/es6-extensions");
+require("meteor-promise").makeCompatible(Promise, require("fibers"));
 
 // Invoked by the server process to listen for incoming connections from
 // shell clients. Each connection gets its own REPL instance.
