@@ -554,7 +554,14 @@ var forkJoin = function (options, iterable, fn) {
 
   options.forkJoin = true;
 
-  const enterJobAsync = Promise.denodeify(enterJob);
+  function enterJobAsync(options) {
+    return new Promise((resolve, reject) => {
+      enterJob(options, err => {
+        err ? reject(err) : resolve();
+      });
+    });
+  }
+
   const parallel = (options.parallel !== undefined) ? options.parallel : true;
 
   return enterJobAsync(options).then(() => {

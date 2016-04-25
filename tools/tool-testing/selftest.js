@@ -13,6 +13,7 @@ var Console = require('../console/console.js').Console;
 var archinfo = require('../utils/archinfo.js');
 var config = require('../meteor-services/config.js');
 var buildmessage = require('../utils/buildmessage.js');
+var execFileSync = require('../utils/processes.js').execFileSync;
 
 var catalog = require('../packaging/catalog/catalog.js');
 var catalogRemote = require('../packaging/catalog/catalog-remote.js');
@@ -84,13 +85,6 @@ var expectThrows = markStack(function (f) {
     throw new TestFailure("expected-exception");
   }
 });
-
-// Execute a command synchronously, discarding stderr.
-var execFileSync = function (binary, args, opts) {
-  return Promise.denodeify(child_process.execFile)(
-    binary, args, opts
-  ).await();
-};
 
 var doOrThrow = function (f) {
   var ret;
