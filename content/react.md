@@ -20,7 +20,7 @@ React has a vibrant and growing ecosystem and is used widely in production in a 
 
 To learn more about using React in general and coming up to speed with the library, you should check out the [React documentation](https://facebook.github.io/react/docs/getting-started.html), especially the [thinking in React](https://facebook.github.io/react/docs/thinking-in-react.html) post, which explains the React philosophy well.
 
-To get started with React in Meteor, you can follow along the [React tutorial](https://www.meteor.com/tutorials/react/creating-an-app). To see an example of a more complete Meteor application built with React, check out the [`react` branch](https://github.com/meteor/todos/tree/react) of the Todos exmaple application. Where applicable, code examples in this article will reference that app.
+To get started with React in Meteor, you can follow along the [React tutorial](https://www.meteor.com/tutorials/react/creating-an-app). To see an example of a more complete Meteor application built with React, check out the [`react` branch](https://github.com/meteor/todos/tree/react) of the Todos example application. Where applicable, code examples in this article will reference that app.
 
 <h3 id="using-with-meteor">Installing and using React</h3>
 
@@ -67,9 +67,9 @@ meteor add static-html
 
 <h3 id="using-third-party-npm-packages">Using 3rd party packages</h3>
 
-If you'd like to use a third party React component that has been published on npm (such as the ones you find on the [React Components site](http://react-components.com)), you can simple `npm install --save` them and `import` from within your app.
+If you'd like to use a third party React component that has been published on npm (such as the ones you find on the [React Components site](http://react-components.com)), you can `npm install --save` them and `import` from within your app.
 
-For example, to use the excellent [Griddle](http://griddlegriddle.github.io/Griddle/) React package, you could run
+For example, to use the excellent [Griddle](http://griddlegriddle.github.io/Griddle/) React package for making tables, you could run
 
 ```sh
 npm install --save griddle-react
@@ -274,7 +274,7 @@ FlowRouter.route('/lists/:_id', {
 
 Note that `react-mounter` automatically mounts the layout component on a `#react-root` node, which you can change by using the `withOptions()` function.
 
-In this example, your `App` component would receive a `main` prop with a instantiated React Element to render:
+In the below example, your `App` component would receive a `main` prop with a instantiated React Element to render:
 
 ```js
 const App = (props) => (
