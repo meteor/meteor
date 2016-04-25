@@ -176,7 +176,7 @@ meteor remove kadira:flow-router
 
 You can get more details on all the package commands in the [Meteor Command line documentation](http://docs.meteor.com/#/full/meteorhelp).
 
-<h3 id="using-atmosphere">Using Atmosphere packages</h3>
+<h3 id="using-atmosphere">Using Atmosphere Packages</h3>
 
 To use an Atmosphere Package you can import it with the `meteor/` prefix:
 
@@ -190,7 +190,7 @@ Sometimes a package will have no exports and simply have side effects when inclu
 
 > For backwards compatibility with Meteor 1.2 and early releases, Meteor by default makes available directly to your app all symbols referenced in `api.export` in any packages you have installed. However, it is recommended that you import these symbols first before using them.
 
-<h4 id="">Importing styles from Atmosphere packages</h4>
+<h4 id="">Importing styles from Atmosphere</h3>
 
 Using any of Meteor's supported CSS pre-processors you can import other style files using the `{package-name}` syntax as long as those files are designated to be lazily evaluated as "import" files. To get more details on how to determine this see [CSS source versus import](build-tool.html#css-source-vs-import) files.
 
@@ -200,7 +200,7 @@ Using any of Meteor's supported CSS pre-processors you can import other style fi
 
 > CSS files in an Atmosphere package are declared with `api.addFiles`, and therefore will be eagerly evaluated by default, and then bundled with all the other CSS in your app.
 
-<h3 id="peer-npm-dependencies">Peer npm dependencies</h3>
+<h3 id="peer-npm-dependencies">Peer npm Dependencies</h3>
 
 Atmosphere packages can ship with contained [npm dependencies](writing-packages.html#npm-dependencies), in which case you don't need to do anything to make them work. However, some Atmosphere packages will expect that you have installed certain "peer" npm dependencies in your application.
 
@@ -302,26 +302,21 @@ If you wanted to refactor this and create a completely fiber-wrapper GitHub clie
 
 <h3 id="promises">Promises</h3>
 
-Recently, a lot of npm packages have been moving to Promises instead of callbacks for their API. This means you actually get a return value from the asynchronous function, but it's just an empty shell where the real value is filled in later. If you are using a package that has a promise-based API, you can convert it to synchronous-looking code very easily.
+Recently, a lot of npm packages have been moving to Promises instead of callbacks for their API. This means you actually get a return value from the asynchronous function, but it's just an empty shell where the real value is filled in later. 
 
-First, add the Meteor promise package:
+The good news is that Promises can be used with the new ES2015 `async/await` syntax (available in the `ecmascript` package since Meteor 1.3) in a natural and synchronous-looking style on both the client and the server. 
 
-```sh
-meteor add promise
-```
+If you declare your function `async` (which ends up meaning it returns a Promise itself), then you can use the `await` keyword to wait on other promise inside. This makes it very easy to serially call Promise-based libraries:
 
-Now, you can use `Promise.await` to get a return value from a promise-returning function. For example, here is how you could send a text message using the Node Twilio API:
 
 ```js
-sendTextMessage() {
-  const promise = client.sendMessage({
-    to:'+16515556677',
+async function sendTextMessage(user) {
+  const toNumber = await phoneLookup.findFromEmail(user.emails[0].address);
+  return await client.sendMessage({
+    to: toNumber,
     from: '+14506667788',
     body: 'Hello world!'
   });
-
-  // Wait for and return the result
-  return Promise.await(promise);
 }
 ```
 
