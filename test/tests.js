@@ -1,17 +1,17 @@
 var assert = require("assert");
 var Fiber = require("fibers");
-var Promise = require("../promise_server.js");
+var Promise = require("../promise.js");
 
-Promise.Fiber = Fiber;
+require("../promise_server.js").makeCompatible(Promise, Fiber);
 
 describe("Promise.await", function () {
-  it("should work inside an existing Fiber", function () {
+  it("should work inside an existing Fiber", Promise.async(function () {
     assert.strictEqual(Promise.await(42), 42);
     assert.strictEqual(Promise.await(Promise.resolve("asdf")), "asdf");
 
     var obj = {};
     assert.strictEqual(Promise.resolve(obj).await(), obj);
-  }.async());
+  }));
 
   it("should not switch Fibers", Promise.async(function () {
     var originalFiber = Fiber.current;
@@ -228,14 +228,4 @@ describe("uncaught exceptions", function () {
       fiber.run();
     });
   });
-});
-
-describe("Promise.denodeify", function () {
-  it("should produce Meteor-compatible Promise objects", Promise.async(function () {
-    function go(arg, callback) {
-      callback(null, arg + 1);
-    }
-
-    assert.strictEqual(Promise.denodeify(go)(1).await(), 2);
-  }));
 });

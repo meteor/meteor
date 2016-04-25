@@ -25,11 +25,9 @@
     "url": "https://github.com/meteor/promise/issues"
   },
   "license": "MIT",
-  "dependencies": {
-    "promise": "7.1.1"
-  },
   "devDependencies": {
-    "fibers": "1.0.7",
+    "promise": "~7.1.1",
+    "fibers": "~1.0.10",
     "mocha": "~2.3.3"
   }
 }
