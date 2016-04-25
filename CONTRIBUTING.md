@@ -53,7 +53,7 @@ Render multiple items in your template with `{% raw %}{{#each}}{% endraw %}`
 
 ### Running the static site generator locally
 
-The site is built using hexo, a static site generator. You'll need to `npm install -g hexo`, then
+The site is built using hexo, a static site generator. You'll need to `npm install -g hexo-cli`, then
 
 ```
 git submodule update --init --recursive
