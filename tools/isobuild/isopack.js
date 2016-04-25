@@ -1617,6 +1617,11 @@ _.extend(Isopack.prototype, {
             };
             if (prelinkFile.sourceMap) {
               // Write the source map.
+
+              if (typeof prelinkFile.sourceMap !== "string") {
+                prelinkFile.sourceMap = JSON.stringify(prelinkFile.sourceMap);
+              }
+
               prelinkResource.sourceMap = builder.writeToGeneratedFilename(
                 files.pathJoin(legacyDir, prelinkFile.servePath + '.map'),
                 { data: new Buffer(prelinkFile.sourceMap, 'utf8') }
