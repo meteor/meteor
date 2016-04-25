@@ -3,7 +3,7 @@ var util = require('util');
 var Future = require('fibers/future');
 var fiberHelpers = require('../utils/fiber-helpers.js');
 var child_process = require('child_process');
-var phantomjs = require('phantomjs');
+var phantomjs = require('phantomjs-prebuilt');
 var webdriver = require('browserstack-webdriver');
 
 var files = require('../fs/files.js');

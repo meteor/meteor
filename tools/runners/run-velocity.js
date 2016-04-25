@@ -1,7 +1,7 @@
 var Console = require('../console/console.js').Console;
 var isopackets = require('../tool-env/isopackets.js');
 
-var phantomjs = require('phantomjs');
+var phantomjs = require('phantomjs-prebuilt');
 var child_process = require('child_process');
 var _ = require('underscore');
 
