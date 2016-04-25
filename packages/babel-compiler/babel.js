@@ -21,9 +21,9 @@ Babel = {
   // Deprecated, now a no-op.
   validateExtraFeatures: Function.prototype,
 
-  compile: function (source, options) {
+  compile: function (source, options, deps) {
     options = options || getDefaultOptions();
-    return meteorBabel.compile(source, options);
+    return meteorBabel.compile(source, options, deps);
   },
 
   setCacheDir: function (cacheDir) {

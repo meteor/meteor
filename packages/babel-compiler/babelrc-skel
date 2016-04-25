@@ -1,0 +1,10 @@
+{
+
+  "presets": [
+    "meteor"
+  ],
+
+  "plugins": [
+  ]
+
+}
