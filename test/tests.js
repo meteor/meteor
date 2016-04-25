@@ -229,3 +229,13 @@ describe("uncaught exceptions", function () {
     });
   });
 });
+
+describe("Promise.denodeify", function () {
+  it("should produce Meteor-compatible Promise objects", Promise.async(function () {
+    function go(arg, callback) {
+      callback(null, arg + 1);
+    }
+
+    assert.strictEqual(Promise.denodeify(go)(1).await(), 2);
+  }));
+});
