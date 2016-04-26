@@ -265,10 +265,15 @@ Sp.startREPL = function startREPL(options) {
   repl.context.repl = repl;
 
   // Some improvements to the existing help messages.
-  repl.commands[".break"].help =
-    "Terminate current command input and display new prompt";
-  repl.commands[".exit"].help = "Disconnect from server and leave shell";
-  repl.commands[".help"].help = "Show this help information";
+  function addHelp(cmd, helpText) {
+    var info = repl.commands[cmd] || repl.commands["." + cmd];
+    if (info) {
+      info.help = helpText;
+    }
+  }
+  addHelp("break", "Terminate current command input and display new prompt");
+  addHelp("exit", "Disconnect from server and leave shell");
+  addHelp("help", "Show this help information");
 
   // When the REPL exits, signal the attached client to exit by sending it
   // the special EXITING_MESSAGE.
