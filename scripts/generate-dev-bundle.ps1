@@ -37,7 +37,7 @@ $shell = New-Object -com shell.application
 
 # download node
 # same node on 32bit vs 64bit?
-$node_link = "http://nodejs.org/dist/v${NODE_VERSION}/node.exe"
+$node_link = "http://nodejs.org/dist/v${NODE_VERSION}/win-x86/node.exe"
 $webclient.DownloadFile($node_link, "$DIR\bin\node.exe")
 
 # On Windows we provide a reliable version of python.exe for use by
