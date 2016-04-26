@@ -20,16 +20,9 @@ S3_HOST="s3.amazonaws.com/com.meteor.jenkins"
 
 # Update these values after building the dev-bundle-node Jenkins project.
 # Also make sure to update NODE_VERSION in generate-dev-bundle.ps1.
-NODE_VERSION=0.10.43
-NODE_BUILD_NUMBER=22
-NODE_TGZ="node_${PLATFORM}_v${NODE_VERSION}.tar.gz"
-if [ -f "${CHECKOUT_DIR}/${NODE_TGZ}" ] ; then
-    tar zxf "${CHECKOUT_DIR}/${NODE_TGZ}"
-else
-    NODE_URL="https://${S3_HOST}/dev-bundle-node-${NODE_BUILD_NUMBER}/${NODE_TGZ}"
-    echo "Downloading Node from ${NODE_URL}"
-    curl "${NODE_URL}" | tar zx
-fi
+NODE_URL="https://nodejs.org/dist/v${NODE_VERSION}/${NODE_TGZ}"
+echo "Downloading Node from ${NODE_URL}"
+curl "${NODE_URL}" | tar zx --strip-components 1
 
 # Update these values after building the dev-bundle-mongo Jenkins project.
 # Also make sure to update MONGO_VERSION in generate-dev-bundle.ps1.
@@ -80,6 +73,7 @@ mkdir -p "${DIR}/server-lib/node_modules"
 # This ignores the stuff in node_modules/.bin, but that's OK.
 cp -R node_modules/* "${DIR}/server-lib/node_modules/"
 
+mkdir -p "${DIR}/etc"
 mv package.json npm-shrinkwrap.json "${DIR}/etc/"
 
 # Fibers ships with compiled versions of its C code for a dozen platforms. This
@@ -160,7 +154,7 @@ echo BUNDLING
 
 cd "$DIR"
 echo "${BUNDLE_VERSION}" > .bundle_version.txt
-rm -rf build
+rm -rf build CHANGELOG.md ChangeLog LICENSE README.md
 
 tar czf "${CHECKOUT_DIR}/dev_bundle_${PLATFORM}_${BUNDLE_VERSION}.tar.gz" .
 
