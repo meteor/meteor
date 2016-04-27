@@ -215,7 +215,7 @@ SyncedCron._entryWrapper = function(entry) {
     // run and record the job
     try {
       log.info('Starting "' + entry.name + '".');
-      var output = entry.job(intendedAt); // <- Run the actual job
+      var output = entry.job(intendedAt,entry.name); // <- Run the actual job
 
       log.info('Finished "' + entry.name + '".');
       self._collection.update({_id: jobHistory._id}, {
