@@ -4,24 +4,13 @@
 // We put this in a JS file so that it can contain comments. It is processed
 // into a package.json file by generate-dev-bundle.sh.
 
-var fibersVersion;
-if (process.platform === "win32") {
-  // We have a fork of fibers off of version 1.0.5 that searches farther for
-  // the isolate thread. This problem is a result of antivirus programs messing
-  // with the thread counts on Windows.
-  // Duplicated in dev-bundle-tool-package.js
-  fibersVersion = "https://github.com/meteor/node-fibers/tarball/d519f0c5971c33d99c902dad346b817e84bab001";
-} else {
-  fibersVersion = "1.0.8";
-}
-
 var packageJson = {
   name: "meteor-dev-bundle",
   // Version is not important but is needed to prevent warnings.
   version: "0.0.0",
   dependencies: {
-    fibers: fibersVersion,
     "meteor-promise": "0.7.2",
+    fibers: "1.0.10",
     promise: "7.1.1",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
     // in the package too) because we should consider using lodash instead
