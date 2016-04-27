@@ -269,9 +269,7 @@ Note that the version solver also has a concept of "gravity" - when many solutio
 
 <h3 id="npm-dependencies">npm dependencies</h3>
 
-Meteor packages can include [npm packages](https://www.npmjs.com/) to use JavaScript code from outside the Meteor package ecosystem, or to include JavaScript code with native dependencies.
-
-If your package is using a dependency on the server then you can include npm packages in your Meteor package by using [Npm.depends](http://docs.meteor.com/#/full/Npm-depends). For example, here's how you could include the `github` package from npm in your `package.js`:
+Meteor packages can include [npm packages](https://www.npmjs.com/) to use JavaScript code from outside the Meteor package ecosystem or to include JavaScript code with native dependencies. Use [Npm.depends](http://docs.meteor.com/#/full/Npm-depends) at the top level of your `package.js` file. For example, here's how you would include the `github` npm package:
 
 ```js
 Npm.depends({
@@ -334,7 +332,7 @@ Package.onTest(function(api) {
   api.use('my-package');
 
   // You should also include any packages you need to use in the test code
-  api.use(['ecmascript', 'random', 'practicalmeteor:mocha@2.1.1']);
+  api.use(['ecmascript', 'random', 'practicalmeteor:mocha']);
 
   // Finally add an entry point for tests
   api.mainModule('my-package-tests.js');
