@@ -86,7 +86,6 @@ cd "$DIR\b\t"
 npm config set loglevel error
 node "${CHECKOUT_DIR}\scripts\dev-bundle-server-package.js" | Out-File -FilePath package.json -Encoding ascii
 npm install
-npm dedupe
 npm shrinkwrap
 
 mkdir -Force "${DIR}\server-lib\node_modules"
@@ -100,7 +99,6 @@ mkdir -Force "${DIR}\b\p"
 cd "${DIR}\b\p"
 node "${CHECKOUT_DIR}\scripts\dev-bundle-tool-package.js" | Out-File -FilePath package.json -Encoding ascii
 npm install
-npm dedupe
 cmd /c robocopy "${DIR}\b\p\node_modules" "${DIR}\lib\node_modules" /e /nfl /ndl
 cd "$DIR"
 cmd /c rmdir "${DIR}\b" /s /q
