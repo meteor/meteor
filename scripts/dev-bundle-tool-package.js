@@ -4,17 +4,6 @@
 // We put this in a JS file so that it can contain comments. It is processed
 // into a package.json file by generate-dev-bundle.sh.
 
-var fibersVersion;
-if (process.platform === "win32") {
-  // We have a fork of fibers off of version 1.0.5 that searches farther for
-  // the isolate thread. This problem is a result of antivirus programs messing
-  // with the thread counts on Windows.
-  // Duplicated in dev-bundle-server-package.js
-  fibersVersion = "https://github.com/meteor/node-fibers/tarball/d519f0c5971c33d99c902dad346b817e84bab001";
-} else {
-  fibersVersion = "1.0.8";
-}
-
 var packageJson = {
   name: "meteor-dev-bundle-tool",
   // Version is not important but is needed to prevent warnings.
@@ -25,7 +14,7 @@ var packageJson = {
     npm: "2.14.22",
     "node-gyp": "3.3.1",
     "node-pre-gyp": "0.6.26",
-    fibers: fibersVersion,
+    fibers: "1.0.10",
     "meteor-babel": "0.9.2",
     "meteor-promise": "0.7.1",
     promise: "7.1.1",
