@@ -122,6 +122,38 @@ To run the linter, you can now simply type:
 meteor npm run lint
 ```
 
+If you get errors from the default `meteor create myapp` such as:
+
+```bash
+/opt/www/sites/me/myapp/client/main.js
+   1:26  error  Unable to resolve path to module 'meteor/templating'    import/no-unresolved
+   2:29  error  Unable to resolve path to module 'meteor/reactive-var'  import/no-unresolved
+  18:25  error  Invalid parameter name, use "templateInstance" instead  meteor/eventmap-params
+
+/opt/www/sites/me/myapp/server/main.js
+  1:24  error  Unable to resolve path to module 'meteor/meteor'  import/no-unresolved
+```
+
+then you can quiet them by adding to `rules` in `eslintConfig`, for instance:
+
+```
+{
+  ...
+  "eslintConfig": {
+   ...
+    "rules": {
+      "meteor/eventmap-params": [
+        2, { "templateInstanceParamName": "instance" }
+      ],
+      "import/no-unresolved": [
+        2, { "ignore": ["^meteor/"] }
+      ]
+    }
+  }
+}
+```
+
+
 For more details, read the [Getting Started](http://eslint.org/docs/user-guide/getting-started) directions from the ESLint website.
 
 <h3 id="eslint-editor">Integrating with your editor</h3>
