@@ -432,15 +432,17 @@ However, it is possible to do this thanks to our split between smart and reusabl
 Template.Lists_show_page.onCreated(function() {
   // ...
 
-  // The visible todos are the todos that the user can actually see on the screen
-  // (whereas Todos are the todos that actually exist)
+  // The visible todos are the todos that the user can
+  // actually see on the screen (whereas Todos are the
+  // todos that actually exist)
   this.visibleTodos = new Mongo.Collection();
 
   this.getTodos = () => {
     const list = Lists.findOne(this.getListId());
     return list.todos({}, {limit: instance.state.get('requested')});
   };
-  // When the user requests it, we should sync the visible todos to reflect the true state of the world
+  // When the user requests it, we should sync the visible todos to
+  // reflect the true state of the world
   this.syncTodos = (todos) => {
     todos.forEach(todo => this.visibleTodos.insert(todo));
     this.state.set('hasChanges', false);
@@ -452,8 +454,9 @@ Template.Lists_show_page.onCreated(function() {
   this.autorun((computation) => {
     const todos = this.getTodos();
 
-    // If this autorun re-runs, the list id or set of todos must have changed, so we should
-    // flag it to the user so they know there are changes to be seen.
+    // If this autorun re-runs, the list id or set of todos must have 
+    // changed, so we should flag it to the user so they know there
+    // are changes to be seen.
     if (!computation.firstRun) {
       this.state.set('hasChanges', true);
     } else {
@@ -475,8 +478,8 @@ Template.Lists_show_page.helpers({
       countReady: instance.countSub.ready(),
       count: Counts.get(`list/todoCount${listId}`),
       onNextPage: instance.onNextPage,
-      // These two properties allow the user to know that there are changes to be viewed
-      // and allow them to view them
+      // These two properties allow the user to know that there
+      // are changes to be viewed and allow them to view them
       hasChanges: instance.state.get('hasChanges'),
       onShowChanges:instance.onShowChanges
     };
