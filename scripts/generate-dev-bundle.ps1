@@ -77,21 +77,6 @@ rm -Recurse -Force "${DIR}\bin\node_modules"
 copy "${CHECKOUT_DIR}\scripts\npm.cmd" "${DIR}\bin\npm.cmd"
 npm version
 
-mkdir "${DIR}\bin\npm3"
-cd "${DIR}\bin\npm3"
-echo "{}" | Out-File package.json -Encoding ascii # otherwise it doesn't install in local dir
-npm install npm@3.1.2
-
-# add bin\npm3 to the front of the path so we can use npm 3 for building
-$env:PATH = "${DIR}\bin\npm3;${env:PATH}"
-
-# npm depends on a hardcoded file path to node-gyp, so we need this to be
-# un-flattened
-cd node_modules\npm
-npm install node-gyp
-cd ..\..
-cp node_modules\npm\bin\npm.cmd
-
 # install dev-bundle-package.json
 # use short folder names
 # b for build
@@ -101,6 +86,7 @@ cd "$DIR\b\t"
 npm config set loglevel error
 node "${CHECKOUT_DIR}\scripts\dev-bundle-server-package.js" | Out-File -FilePath package.json -Encoding ascii
 npm install
+npm dedupe
 npm shrinkwrap
 
 mkdir -Force "${DIR}\server-lib\node_modules"
@@ -114,6 +100,7 @@ mkdir -Force "${DIR}\b\p"
 cd "${DIR}\b\p"
 node "${CHECKOUT_DIR}\scripts\dev-bundle-tool-package.js" | Out-File -FilePath package.json -Encoding ascii
 npm install
+npm dedupe
 cmd /c robocopy "${DIR}\b\p\node_modules" "${DIR}\lib\node_modules" /e /nfl /ndl
 cd "$DIR"
 cmd /c rmdir "${DIR}\b" /s /q
@@ -143,9 +130,6 @@ cp "$DIR\mongodb\$mongo_name\bin\mongo.exe" $DIR\mongodb\bin
 
 rm -Recurse -Force $mongo_zip
 rm -Recurse -Force "$DIR\mongodb\$mongo_name"
-
-# Remove npm 3 before we package the dev bundle
-rm -Recurse -Force "${DIR}\bin\npm3"
 
 rm -Recurse -Force "$py_msi"
 python --version
