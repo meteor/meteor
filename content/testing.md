@@ -55,7 +55,7 @@ This is similar to test mode, with key differences:
 
 This means that the entirety of your application (including for instance the web server and client side router) is loaded and will run as normal. This enables you to write much more [complex integration tests](#full-app-integration-test) and also load additional files for [acceptance tests](#acceptance-testing).
 
-Note that there is another test command in the Meteor tool; `meteor test-packages` is a way of testing Atmosphere packages, which we'll discuss in more detail in an upcoming article about writing packages.
+Note that there is another test command in the Meteor tool; `meteor test-packages` is a way of testing Atmosphere packages, which is discussed in the [Writing Packages article](writing-packages.html#testing).
 
 <h3 id="driver-packages">Driver packages</h3>
 
@@ -71,7 +71,7 @@ There are two main kinds of test driver packages:
 
 <h3 id="mocha">Recommended: Mocha</h3>
 
-In this article, we'll use the popular [Mocha](https://mochajs.org) test runner alongside the [Chai](http://chaijs.com) assertion library to test our application. In order to write tests in Mocha, we can add the [`practicalmeteor:mocha`](https://atmospherejs.com/avital/mocha) package to our app.
+In this article, we'll use the popular [Mocha](https://mochajs.org) test runner alongside the [Chai](http://chaijs.com) assertion library to test our application. In order to write tests in Mocha, we can add the [`practicalmeteor:mocha`](https://atmospherejs.com/practicalmeteor/mocha) package to our app.
 
 ```bash
 meteor add practicalmeteor:mocha
