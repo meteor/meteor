@@ -344,7 +344,7 @@ function doRunCommand(options) {
 
   let webArchs = ['web.browser'];
   let cordovaRunner;
-  if (!_.isEmpty(runTargets)) {
+  if (!_.isEmpty(runTargets) || options['mobile-server']) {
     main.captureAndExit('', 'preparing Cordova project', () => {
       const cordovaProject = new CordovaProject(projectContext, {
         settingsFile: options.settings,
