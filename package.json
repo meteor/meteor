@@ -59,7 +59,7 @@
     "cz-conventional-changelog": "1.1.6",
     "eslint": "2.8.0",
     "eslint-config-airbnb": "8.0.0",
-    "eslint-plugin-import": "1.5.0",
+    "eslint-plugin-import": "1.6.1",
     "eslint-plugin-react": "5.0.1",
     "ghooks": "1.2.1",
     "mocha": "2.4.5",
