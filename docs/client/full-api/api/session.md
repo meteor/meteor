@@ -1,7 +1,13 @@
 {{#template name="apiSession"}}
 
-
 <h2 id="session"><span>Session</span></h2>
+
+To use `Session`, add the `session` package to your project by running
+in your terminal:
+
+```bash
+meteor add session
+```
 
 `Session` provides a global object on the client that you can use to
 store an arbitrary set of key-value pairs. Use it to store things like
