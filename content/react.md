@@ -32,7 +32,7 @@ npm install --save react react-dom
 
 This will install `react` into your project and allow you to access it within your files with `import React from 'react'`. Most React code is written in [JSX](https://facebook.github.io/react/docs/jsx-in-depth.html), which you can use by [default in Meteor](http://guide.meteor.com/build-tool.html#react-jsx) if you include the `ecmascript` package (which is installed in all Meteor apps by default).
 
-```js
+```jsx
 import React from 'react';
 
 export default class HelloWorld extends React.Component {
@@ -46,7 +46,7 @@ export default class HelloWorld extends React.Component {
 
 You can render a component heirarchy to the DOM using the `react-dom` package:
 
-```js
+```jsx
 import { Meteor } from 'meteor/meteor';
 import { render } from 'react-dom';
 import HelloWorld from './HelloWorld.js';
@@ -77,7 +77,7 @@ npm install --save griddle-react
 
 Then, like with any other [npm package](using-packages.html#npm), you can import the component in your application:
 
-```js
+```jsx
 import React from 'react';
 import Griddle from 'griddle-react';
 
@@ -161,7 +161,7 @@ Just like we can use React components in Blaze templates, we can also use Blaze 
 
 One easy way to do this is with the [`gadicc:blaze-react-component`](https://atmospherejs.com/gadicc/blaze-react-component) package.  First run `meteor add gadicc:blaze-react-component`, then import and use it in your components as follows:
 
-```js
+```jsx
 import React from 'react';
 import Blaze from 'meteor/gadicc:blaze-react-component';
 
@@ -192,7 +192,7 @@ It also needs to be responsive to reactive changes in the state of those actions
 
 We simply define the `ListPage` component as a presentational component that expects its data to be passed in using React `props`:
 
-```js
+```jsx
 import React from 'react';
 
 export default class ListPage extends React.Component {
@@ -234,7 +234,7 @@ The container component created by `createContainer()` will reactively rerender 
 
 Although this `ListContainer` container is intended to be instantiated by the React Router (which passes in the props automatically), if we did ever want to create one manually, we would need to pass in the props to the container component (which then get passed into our data function above):
 
-```js
+```jsx
 <ListContainer params={{id: '7'}}/>
 ```
 

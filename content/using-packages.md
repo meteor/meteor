@@ -308,7 +308,6 @@ The good news is that Promises can be used with the new ES2015 `async/await` syn
 
 If you declare your function `async` (which ends up meaning it returns a Promise itself), then you can use the `await` keyword to wait on other promises inside. This makes it very easy to serially call Promise-based libraries:
 
-
 ```js
 async function sendTextMessage(user) {
   const toNumber = await phoneLookup.findFromEmail(user.emails[0].address);
