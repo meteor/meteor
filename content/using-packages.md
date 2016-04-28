@@ -79,7 +79,7 @@ import { parse } from 'graphql/language';
 
 <h4 id="npm-styles">Importing styles from npm</h4>
 
-Using any of Meteor's [supported CSS pre-processors](build-tool.htm#css) you can import other style files from both relative and absolute paths from an npm package.
+Using any of Meteor's [supported CSS pre-processors](build-tool.html#css) you can import other style files from both relative and absolute paths from an npm package.
 
 Importing styles from an npm package with an absolute path using the `{}` syntax:
 
