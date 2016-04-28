@@ -89,12 +89,6 @@ Template.registerHelper("assetUrl", (asset) => {
 <img src="{{assetUrl "cats.gif"}}">
 ```
 
-<h4 id="cordova-assets">Cordova assets</h4>
-
-In Meteor versions 1.3 and up, if your app is mainly meant to be used inside Cordova, we recommend **not** using a CDN. Meteor Cordova caches your `myapp.com/*` files on the phone, and it's much faster to get the phone copies than request them from a CDN.
-
-Pre-1.3 Meteor Cordova still cached your files on the phone, but it re-downloaded *all* the files during each hot code push, and it did so from main-thread Javascript, which froze the UI. In order to shorten the duration of the UI freeze, you had to remove the files from `public/` and upload them to a CDN. 
-
 <h4 id="cdn-webfonts">CDNs and webfonts</h4>
 
 If you are hosting a webfont as part of your application and serving it via a CDN, you may need to configure the served headers for the font to allow cross-origin resource sharing (as the webfont is now served from a different origin to your site itself). You can do this easily enough in Meteor by adding a handler (you'll need to ensure your CDN is passing the header through):
