@@ -1,5 +1,6 @@
 // On page load, check the hash fragment and redirect to the right place
 var KNOWN_ID_PAGES = require('./redirects.js');
+var oldRedirects = require('./old-redirects.js');
 
 // Figure out which page that id lives on based on the old toc
 var src =
@@ -10,5 +11,9 @@ var src =
   '}';
 
 hexo.extend.tag.register('followRedirects', function(args) {
-  return '<script>\n' + src + '\n</script>';
+  return '<script>\n' +
+    'var oldRedirects = ' + oldRedirects + ';\n' +
+    'oldRedirects();\n' +
+    src + '\n' +
+    '</script>';
 });
