@@ -88,8 +88,11 @@ _.extend(ProjectContext.prototype, {
     // Used to override the directory that Meteor's build process
     // writes to; used by `meteor test` so that you can test your
     // app in parallel to writing it, with an isolated database.
-    self.projectLocalDir = options.projectLocalDir ||
-      files.pathJoin(self.projectDir, '.meteor', 'local');
+    // You can override the default .meteor/local by specifying
+    // METEOR_LOCAL_DIR.
+    self.projectLocalDir = process.env.METEOR_LOCAL_DIR ?
+      process.env.METEOR_LOCAL_DIR : (options.projectLocalDir ||
+      files.pathJoin(self.projectDir, '.meteor', 'local'));
 
     // Used by 'meteor rebuild'; true to rebuild all packages, or a list of
     // package names.  Deletes the isopacks and their plugin caches.
