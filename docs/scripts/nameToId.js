@@ -1,5 +1,5 @@
 // get the docs id from the name
-module.exports.nameToId = {
+module.exports = {
   "Meteor.isClient": "meteor_isclient",
   "Meteor.isServer": "meteor_isserver",
   "Meteor.startup": "meteor_startup",
