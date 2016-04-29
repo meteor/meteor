@@ -7,6 +7,12 @@ The `check` package includes pattern checking functions useful for checking the 
 of variables and an [extensible library of patterns](#matchpatterns) to specify which types you are
 expecting.
 
+To add `check` (or `Match`) to your application, run this command in your terminal:
+
+```bash
+meteor add check
+```
+
 {% apibox "check" %}
 
 Meteor methods and publish functions can take arbitrary [EJSON](#ejson) types as arguments, but most

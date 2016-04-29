@@ -12,6 +12,12 @@ you call [`Session.get`](#session_get)`("currentList")`
 from inside a template, the template will automatically be rerendered
 whenever [`Session.set`](#session_set)`("currentList", x)` is called.
 
+To add `Session` to your application, run this command in your terminal:
+
+```bash
+meteor add session
+```
+
 {% apibox "Session.set" %}
 
 Example:
