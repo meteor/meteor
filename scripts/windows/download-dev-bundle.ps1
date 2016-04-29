@@ -17,7 +17,7 @@ echo "Going to download the dependency kit from the Internet"
 $ErrorActionPreference = "Stop"
 
 # duplicated in top-level meteor script:
-$DEV_BUNDLE_URL_ROOT="https://d3sqy0vbqsdhku.cloudfront.net/"
+$DEV_BUNDLE_URL_ROOT="https://static-meteor.netdna-ssl.com/"
 # If you set $USE_TEST_DEV_BUNDLE_SERVER then we will download
 # dev bundles copied by copy-dev-bundle-from-jenkins.sh without --prod.
 # It still only does this if the version number has changed
