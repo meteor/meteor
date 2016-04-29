@@ -27,7 +27,7 @@ A minimal configuration should look like this:
     "meteor"
   ],
   "extends": [
-    "plugin:meteor/recommended",
+    "plugin:meteor/recommended"
   ]
 }
 ```
@@ -54,7 +54,7 @@ Since Meteor code can run in the browser and on the server, it's wise to add `br
   /* ... */
   "parserOptions": {
     "ecmaVersion": 6,
-    "sourceType": "module",
+    "sourceType": "module"
   },
   "env": {
     "es6": true,
@@ -76,8 +76,8 @@ Add the globals key to `.eslintrc.json`:
   /* ... */
   "globals": {
     "MyCollection": true,
-    "moment": false,
-  }
+    "moment": false
+  },
   /* ... */
 }
 ```
