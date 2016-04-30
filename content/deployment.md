@@ -74,7 +74,7 @@ For all your files in `public/`, change their URLs to point at the CDN. You can 
 Before:
 
 ```html
-<img src="http://myapp.com/cats.gif"></img>
+<img src="http://myapp.com/cats.gif">
 ```
 
 After:
