@@ -67,15 +67,15 @@ The basic way to use a CDN is to upload your files to the CDN and change your UR
 
 For Meteor, we recommend using a CDN with "origin" support (like [CloudFront](http://joshowens.me/using-a-cdn-with-your-production-meteor-app/)), which means that instead of uploading your files in advance, the CDN automatically fetches them from your server. You put your files in `public/` (in this case `public/cats.gif`), and when your Australian user asks the CDN for `http://mycdn.com/cats.gif`, the CDN, behind the scenes, fetches `http://myapp.com/cats.gif` and then delivers it to the user. While this is slightly slower than getting `http://myapp.com/cats.gif` directly, it only happens one time, because the CDN saves the file, and all subsequent Australians who ask for the file get it quickly.
 
-To get Meteor to use the CDN for your Javascript and CSS bundles, call `WebAppInternals.setBundledJsCssPrefix("mycdn.com")` on the server. This will also take care of relative image URLs inside your CSS files. If you need to use a dynamic prefix, you can return the prefix from a function passed to `WebAppInternals.setBundledJsCssUrlRewriteHook()`.
+To get Meteor to use the CDN for your Javascript and CSS bundles, call `WebAppInternals.setBundledJsCssPrefix("http://mycdn.com")` on the server. This will also take care of relative image URLs inside your CSS files. If you need to use a dynamic prefix, you can return the prefix from a function passed to `WebAppInternals.setBundledJsCssUrlRewriteHook()`.
 
 For all your files in `public/`, change their URLs to point at the CDN. You can use a helper like `assetUrl`.
 
 Before:
 
 ```html
-<img src="http://myapp.com/cats.gif">
-```  
+<img src="http://myapp.com/cats.gif"></img>
+```
 
 After:
 
@@ -86,7 +86,7 @@ Template.registerHelper("assetUrl", (asset) => {
 ```
 
 ```html
-<img src="{{assetUrl "cats.gif"}}">
+<img src="{{assetUrl 'cats.gif'}}">
 ```
 
 <h4 id="cdn-webfonts">CDNs and webfonts</h4>
