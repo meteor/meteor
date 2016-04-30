@@ -64,7 +64,7 @@
     "ghooks": "1.2.1",
     "mocha": "2.4.5",
     "nyc": "6.4.0",
-    "readline-sync": "1.4.1",
+    "readline-sync": "1.4.2",
     "rewire": "2.5.1",
     "rimraf": "2.5.2",
     "semantic-release": "4.3.5",
