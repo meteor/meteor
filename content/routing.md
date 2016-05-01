@@ -433,7 +433,7 @@ The second is when the URL is valid, but doesn't actually match any data. In thi
 
 ```html
 <template name="Lists_show_page">
-    {{#each listId in listIdArray}}
+  {{#each listId in listIdArray}}
     {{> Lists_show (listArgs listId)}}
   {{else}}
     {{> App_notFound}}
