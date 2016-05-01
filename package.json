@@ -45,7 +45,7 @@
     "invariant": "2.2.1",
     "lodash.find": "4.3.0",
     "lodash.memoize": "4.0.3",
-    "path-exists": "2.1.0"
+    "path-exists": "3.0.0"
   },
   "devDependencies": {
     "babel-cli": "6.7.7",
