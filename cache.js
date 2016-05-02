@@ -70,7 +70,7 @@ Cp.get = function (source, options) {
         fs.unlinkSync(fullCacheFile);
         result = this.cache[cacheFile] = false;
 
-        if (error.message.indexOf("Unexpected end of input") >= 0) {
+        if (/Unexpected end of (JSON )?input/.test(error.message)) {
           // The cache file was not written completely, probably because
           // we use the asynchronous version of fs.writeFile, and the
           // program exited too soon. Fall through to transform again.
