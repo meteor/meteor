@@ -1,3 +1,6 @@
+## v.NEXT
+* Now can use your own `.meteor/local` by specifying `METEOR_LOCAL_PATH`.
+  #6760 #6532
 ## v1.3.1
 
 * Long isopacket node_modules paths have been shortened, fixing upgrade
