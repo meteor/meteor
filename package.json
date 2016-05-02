@@ -39,7 +39,8 @@
   },
   "devDependencies": {
     "fibers": "^1.0.10",
-    "meteor-promise": "^0.5.1",
-    "mocha": "^2.4.5"
+    "meteor-promise": "^0.7.2",
+    "mocha": "^2.4.5",
+    "promise": "^7.1.1"
   }
 }

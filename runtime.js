@@ -1,8 +1,10 @@
 require("meteor-babel-helpers");
 
-var MeteorPromise = require("meteor-promise");
-MeteorPromise.Fiber = require("fibers");
-Promise = MeteorPromise;
+require("meteor-promise").makeCompatible(
+  global.Promise = global.Promise ||
+    require("promise/lib/es6-extensions"),
+  require("fibers")
+);
 
 // If Promise.asyncApply is defined, use it to wrap calls to
 // regeneratorRuntime.async so that the entire async function will run in
