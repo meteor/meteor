@@ -25,14 +25,30 @@ options.fallback = function (id, dir, error) {
   throw error;
 };
 
+meteorInstall = makeInstaller(options);
+
+var Mp = meteorInstall.Module.prototype;
+
+// The Module.prototype.get method is called to lookup exported properties
+// by name when using the require(id, setters) style. This implementation
+// takes into account Babel-specific conventions around .default exports
+// and the .__esModule flag.
+Mp.get = function (key) {
+  var exports = this.exports;
+
+  if (key === "*" ||
+      (key === "default" &&
+       ! (exports && exports.__esModule))) {
+    return exports;
+  }
+
+  return exports[key];
+};
+
 if (Meteor.isServer) {
   // Defining Module.prototype.useNode allows the module system to
   // delegate evaluation to Node, unless useNode returns false.
-  (options.Module = function Module(id) {
-    // Same as the default Module constructor implementation.
-    this.id = id;
-    this.children = [];
-  }).prototype.useNode = function () {
+  Mp.useNode = function () {
     if (typeof npmRequire !== "function") {
       // Can't use Node if npmRequire is not defined.
       return false;
@@ -63,5 +79,3 @@ if (Meteor.isServer) {
     return true;
   };
 }
-
-meteorInstall = makeInstaller(options);
