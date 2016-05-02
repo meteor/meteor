@@ -1,5 +1,5 @@
 ---
-title: Change log
+title: Changelog
 order: 1001
 description: A log of significant changes to the Meteor Guide.
 ---

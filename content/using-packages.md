@@ -81,7 +81,7 @@ import { parse } from 'graphql/language';
 
 Using any of Meteor's [supported CSS pre-processors](build-tool.html#css) you can import other style files from both relative and absolute paths from an npm package.
 
-Importing styles from an npm package with an absolute path using the `{}` syntax:
+Importing styles from an npm package with an absolute path using the `{}` syntax, for instance with Less:
 
 ```less
 @import '{}/node_modules/npm-package-name/button.less';
@@ -93,19 +93,13 @@ Importing styles from an npm package with a relative path:
 @import '../../node_modules/npm-package-name/colors.less';
 ```
 
-Importing CSS from an npm package from another style file;
-```js
-@import 'npm-package-name/stylesheets/styles.css';
-```
+You can also import CSS directly from a JavaScript file to control load order if you have the `ecmascript` package installed:
 
-You can also import CSS directly from a JavaScript file to control load order if you have the `ecmascript` package installed.
-
-Importing CSS from an npm package in a JavaScript file using ES2015 `import`;
 ```js
 import 'npm-package-name/stylesheets/styles.css';
 ```
 
-> When importing CSS from a JavaScript file that CSS is not bundled with the rest of the CSS processed with the Meteor Build tool, but instead is put in your app's `<head>` tag inside `<style>...</style>` after the main concatenated CSS file.
+> When importing CSS from a JavaScript file, that CSS is not bundled with the rest of the CSS processed with the Meteor Build tool, but instead is put in your app's `<head>` tag inside `<style>...</style>` after the main concatenated CSS file.
 
 <h3 id="npm-shrinkwrap">npm shrinkwrap</h3>
 

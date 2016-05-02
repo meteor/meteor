@@ -1,5 +1,5 @@
 ---
-title: Build system
+title: Build System
 order: 33
 description: How to use Meteor's build system to compile your app.
 discourseTopicId: 19669
@@ -106,17 +106,20 @@ Read the documentation for each package listed below to see how to indicate whic
 
 <h3 id="css-importing">Importing styles</h3>
 
-In all three Meteor supported CSS pre-processors you can import other style files from both relative and absolute paths in your app and from both npm and Meteor Atmosphere packages. You can also import CSS from a JavaScript file if you have the `ecmascript` package installed.
-
-Importing styles from your app:
+In all three Meteor supported CSS pre-processors you can import other style files from both relative and absolute paths in your app and from both npm and Meteor Atmosphere packages. 
 
 ```less
 @import '../stylesheets/colors.less';   // a relative path
 @import '{}/imports/ui/stylesheets/button.less';   // absolute path with `{}` syntax
 ```
+
+You can also import CSS from a JavaScript file if you have the `ecmascript` package installed:
+
 ```js
-import '../stylesheets/styles.css';  // import CSS from JS
+import '../stylesheets/styles.css';
 ```
+
+> When importing CSS from a JavaScript file, that CSS is not bundled with the rest of the CSS processed with the Meteor Build tool, but instead is put in your app's `<head>` tag inside `<style>...</style>` after the main concatenated CSS file.
 
 Importing styles from an Atmosphere package using the `{}` package name syntax:
 
@@ -124,7 +127,7 @@ Importing styles from an Atmosphere package using the `{}` package name syntax:
 @import '{my-package:pretty-buttons}/buttons/styles.import.less';
 ```
 
-> CSS files in an Atmosphere package are declared with `api.addFiles`, and therefore will be eagerly evaluated, and automatically bundled with all the other CSS in your app.
+> CSS files in an Atmosphere package are declared with [`api.addFiles`](http://docs.meteor.com/#/full/pack_addFiles), and therefore will be eagerly evaluated, and automatically bundled with all the other CSS in your app.
 
 Importing styles from an npm package using the `{}` syntax:
 
@@ -132,10 +135,10 @@ Importing styles from an npm package using the `{}` syntax:
 @import '{}/node_modules/npm-package-name/button.less';
 ```
 ```js
-import 'npm-package-name/stylesheets/styles.css';  // import CSS from JS
+import 'npm-package-name/stylesheets/styles.css';
 ```
 
-For more examples and details on importing styles and using `@imports` with packages see [Using Packages](using-packages.html) in the Meteor Guide.
+For more examples and details on importing styles and using `@imports` with packages see the [Using Packages](using-packages.html#npm-styles) article.
 
 <h3 id="sass">Sass</h3>
 

@@ -1,5 +1,5 @@
 ---
-title: Application structure
+title: Application Structure
 order: 2
 description: How to structure your Meteor app with ES2015 modules, ship code to the client and server, and split your code into multiple apps.
 discourseTopicId: 20187
@@ -35,6 +35,8 @@ import '/imports/startup/client';     // import module with index.js from absolu
 import './loading.html';              // import Blaze compiled HTML from relative path
 import '/imports/ui/style.css';       // import CSS from absolute path
 ```
+
+> For more ways to import styles, see the [Build System](build-tool.html#css-importing) article.
 
 Meteor also supports the standard E2015 modules `export` syntax:
 
