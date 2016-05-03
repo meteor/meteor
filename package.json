@@ -38,7 +38,7 @@
   "homepage": "https://github.com/dferber90/eslint-plugin-meteor",
   "bugs": "https://github.com/dferber90/eslint-plugin-meteor/issues",
   "dependencies": {
-    "babel-polyfill": "6.7.4",
+    "babel-polyfill": "6.8.0",
     "babel-register": "6.8.0",
     "babel-runtime": "6.6.1",
     "escope": "3.6.0",
