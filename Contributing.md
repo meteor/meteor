@@ -136,8 +136,7 @@ Once your feature has been labelled with `pull-requests-encouraged`, leave a com
 
 ### Submitting pull requests
 
-Once you've hammered out a good design and gotten at least one core
-developer on board, go ahead and submit a pull request.  Please follow
+Once you've hammered out a good design go ahead and submit a pull request. If your PR isn't against a bug with the `confirmed` label or a feature request with the `pull-requests-encouraged` label, don't expect your PR to be merged unless it's a trivial and obvious fix (e.g documentation). When submitting a PR, please follow
 these guidelines:
 
  * Sign the [contributor's agreement](http://contribute.meteor.com/).
