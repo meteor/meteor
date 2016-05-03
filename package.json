@@ -1,6 +1,6 @@
 {
   "name": "babel-preset-meteor",
-  "version": "6.6.7",
+  "version": "6.6.8",
   "description": "Babel preset for ES2015+ features supported by Meteor",
   "author": "Ben Newman <ben@meteor.com>",
   "license": "MIT",
