@@ -1,13 +1,13 @@
 Package.describe({
   name: "promise",
-  version: "0.7.1",
+  version: "0.7.2",
   summary: "ECMAScript 2015 Promise polyfill with Fiber support",
   git: "https://github.com/meteor/promise",
   documentation: "README.md"
 });
 
 Npm.depends({
-  "meteor-promise": "0.7.1",
+  "meteor-promise": "0.7.2",
   "promise": "7.1.1"
 });
 
