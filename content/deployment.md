@@ -9,7 +9,7 @@ After reading this guide, you'll know:
 
 1. What to consider before you deploy a Meteor application.
 2. How to deploy to some common Meteor hosting environments.
-3. How to design a deployment process to make sure your application's quality is maintained.
+3. How to design a deployment process to make sure yomur application's quality is maintained.
 4. How to monitor user behavior with analytics tools.
 5. How to monitor your application with Kadira.
 6. How to make sure your site is discoverable by search engines.
@@ -140,7 +140,7 @@ If you are using Galaxy (or need a production quality, managed MongoDB for one o
 
 <h3 id="mup">Meteor Up</h3>
 
-[Meteor Up](https://github.com/arunoda/meteor-up), often referred to as "mup", is an open source tool that can be used to deploy Meteor application to any online server over SSH. Mup handles some of the essential deployment requirements, but you will still need to do a lot of work to get your load balancing and version updates working smoothly - it's essentially a way to automate the manual steps of using `meteor build` and putting that bundle on your server.
+[Meteor Up X](https://github.com/arunoda/meteor-up/tree/mupx), often referred to as "mupx", is an open source tool that can be used to deploy Meteor application to any online server over SSH. Mup handles some of the essential deployment requirements, but you will still need to do a lot of work to get your load balancing and version updates working smoothly - it's essentially a way to automate the manual steps of using `meteor build` and putting that bundle on your server.
 
 You can obtain a server running Ubuntu or Debian from many generic hosting providers. Mup can SSH into your server with the keys you provide in the config. You can also [watch this video](https://www.youtube.com/watch?v=WLGdXtZMmiI) for a more complete walkthrough on how to do it.
 
