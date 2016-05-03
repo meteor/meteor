@@ -10,7 +10,7 @@ var packageJson = {
   version: "0.0.0",
   dependencies: {
     fibers: "1.0.10",
-    "meteor-promise": "0.7.1",
+    "meteor-promise": "0.7.2",
     promise: "7.1.1",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
     // in the package too) because we should consider using lodash instead
