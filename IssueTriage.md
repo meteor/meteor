@@ -1,6 +1,6 @@
 # Issue Triage
 
-This document describes the process Meteor contributors use to organize issues. We use Github [issues](https://github.com/meteor/meteor/issues) to track bugs and feature requests. Our goal is to maintain a list of issues that are relevant and well defined (and [labeled](https://github.com/meteor/meteor/labels)) such that a contributor can immediately begin working on the code for a fix or feature request. Contributors who want to dive in and write code aren't likely to prioritize working issues that are ambiguous and have low impact.
+This document describes the process Meteor contributors use to organize issues. We use Github [issues](https://github.com/meteor/meteor/issues) to track bugs and feature requests. Our goal is to maintain a list of issues that are relevant and well defined (and [labeled](https://github.com/meteor/meteor/labels)) such that a contributor can immediately begin working on the code for a fix or feature request. Contributors who want to dive in and write code aren't likely to prioritize working on issues that are ambiguous and have low impact.
 
 We would love to have more contributors who are willing to help out with triaging issues. You can begin by helping issue requesters create good reproductions and by confirming those reproductions on your own machine. It won't be long before the core maintainers notice your work and ask whether you'd like to be promoted to an issue maintainer.
 
@@ -48,17 +48,7 @@ _[Severity:has-workaround, Severity:production, Severity:blocks-development]_
 ### Impact
 _[Impact:few, Impact:some, Impact:most]_
 
-This is a somewhat subjective label and is interpreted in conjunction with Github's upvotes. As a general guideline:
-
-- `Impact:few` issues would go unnoticed by almost all users, apart from those using a very niche feature, or a feature in an unusual way.
-- `Impact:some` issues would impact users using a feature that is commonly but not universally used.
-- `Impact:most` issues would impact more or less every user of the framework.
-
-### Miscellany
-
-Although this should have already been done by this stage, ensure the issue is
-correctly labelled and the title/description have been updated to reflect an
-accurate summary of the issue.
+This is a somewhat subjective label and is interpreted in conjunction with Github's upvotes. As a general guideline, `Impact:few` issues would go unnoticed by almost all users.
 
 ## Issues ready to claim
 
