@@ -1,5 +1,4 @@
 var assert = require("assert");
-var undefined;
 
 function FiberPool(targetFiberCount) {
   assert.ok(this instanceof FiberPool);
@@ -30,10 +29,13 @@ function FiberPool(targetFiberCount) {
         }
 
         try {
-          entry.resolve(entry.callback.apply(
+          var result = entry.callback.apply(
             entry.context || null,
             entry.args || []
-          ));
+          );
+
+          setImmediate(entry.resolve.bind(entry, result));
+
         } catch (error) {
           entry.reject(error);
         }
