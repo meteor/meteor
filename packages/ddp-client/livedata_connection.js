@@ -302,7 +302,7 @@ var Connection = function (url, options) {
           currentMethodBlock.splice(i, 1);
 
           // Make sure that the method is told that it failed.
-          methodInvoker.receiveResult(Meteor.Error('invocation-failed',
+          methodInvoker.receiveResult(new Meteor.Error('invocation-failed',
             'Method invocation might have failed due to dropped connection. ' +
             'Failing because `noRetry` option was passed to Meteor.apply.'));
         }
