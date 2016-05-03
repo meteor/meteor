@@ -37,7 +37,7 @@ function FiberPool(targetFiberCount) {
           setImmediate(entry.resolve.bind(entry, result));
 
         } catch (error) {
-          entry.reject(error);
+          setImmediate(entry.reject.bind(entry, error));
         }
 
         // Remove all own properties of the fiber before returning it to
