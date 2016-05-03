@@ -6,7 +6,7 @@ hard for the community to help you with your issue or pull request.
 We are excited to have your help building Meteor &mdash; both the platform and the
 community behind it. Here's how you can help with bug reports and new code.
 
-## Reporting a bug in Meteor
+<h2 id="reporting-bug">Reporting a bug in Meteor</h2>
 
 We welcome clear bug reports.  If you've found a bug in Meteor that
 isn't a security risk, please file a report in
@@ -56,7 +56,7 @@ better.  We love getting bugfix pull requests.  Just make sure they're
 written to the MDG style guide and *come with tests*.  Read further down
 for more details on proposing changes to core code.
 
-## Feature requests
+<h2 id="feature-requests">Feature requests</h2>
 
 As of May 2016, we use GitHub to track feature requests. Feature request issues get the `feature` label, as well as a label
 corresponding to the Meteor subproject that they are a part of.
