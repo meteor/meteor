@@ -140,7 +140,7 @@ function resolve(id) {
           meteorAddTip = ". Try `meteor add " + idParts[1] + "` " +
           "as it looks like you tried to import it without adding " +
           "to the project.";
-        }
+    }
     res = new Error("Cannot find module '" + id + "'" + meteorAddTip);
     res.code = "MODULE_NOT_FOUND";
     throw res;
