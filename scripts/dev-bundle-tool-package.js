@@ -26,11 +26,11 @@ var packageJson = {
     "node-gyp": "3.3.1",
     "node-pre-gyp": "0.6.26",
     fibers: fibersVersion,
-    "meteor-babel": "0.9.2",
-    "meteor-promise": "0.7.1",
+    "meteor-babel": "0.9.3",
+    "meteor-promise": "0.7.2",
     promise: "7.1.1",
     // So that Babel 6 can emit require("babel-runtime/helpers/...") calls.
-    "babel-runtime": "5.8.35",
+    "babel-runtime": "5.8.38",
     // For various ES2015 polyfills, such as Map and Set.
     "meteor-ecmascript-runtime": "0.2.6",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
