@@ -1,6 +1,6 @@
 # Issue Triage
 
-This document describes the process Meteor contributors use to organize issues. We use Github [issues](https://github.com/meteor/meteor/issues) to track bugs and feature requests. Our goal is to maintain a list of issues that are relevant and well defined such that a contributor can immediately begin working on the code for a fix or feature request. Contributors who want to dive in and write code aren't likely to prioritize working issues that are ambiguous and have low impact.
+This document describes the process Meteor contributors use to organize issues. We use Github [issues](https://github.com/meteor/meteor/issues) to track bugs and feature requests. Our goal is to maintain a list of issues that are relevant and well defined (and [labeled](https://github.com/meteor/meteor/labels)) such that a contributor can immediately begin working on the code for a fix or feature request. Contributors who want to dive in and write code aren't likely to prioritize working issues that are ambiguous and have low impact.
 
 We would love to have more contributors who are willing to help out with triaging issues. You can begin by helping issue requesters create good reproductions and by confirming those reproductions on your own machine. It won't be long before the core maintainers notice your work and ask whether you'd like to be promoted to an issue maintainer.
 
@@ -15,9 +15,10 @@ The first step is in determining whether the issue is a bug, help question or fe
 ### Bugs
 
 1. Duplicates should be closed and marked as such.
-2. Bugs should have a high quality reproduction as described [here](Contributing.md#reporting-bug). You may need to help the reporter reduce their bug to a minimal reproduction.
-3. A reproduction should be confirmed by at least one person other than the original reporter. Run the reproduction and validate that the bug exists, make a note of your findings on the issue.
-4. Finally, [classify](#classification) the issue.
+2. Add the `bug` label and `Project:*` labels that apply (a best guess on the `Project:` is fine, sometimes it's hard to tell exactly which project the issue falls under).
+3. Bugs should have a high quality reproduction as described [here](Contributing.md#reporting-bug). You may need to help the reporter reduce their bug to a minimal reproduction.
+4. A reproduction should be confirmed by at least one person other than the original reporter. Run the reproduction and validate that the bug exists, make a note of your findings on the issue. If a reproduction is supplied but doesn't work, add the `can't-reproduce` label and make a comment describing what happened.
+5. Finally, once you've confirmed the reproduction add the `confirmed` label and [classify](#classification) the issue (removing the `can't-reproduce` label if it exists).
 
 ### Help questions
 
@@ -26,29 +27,42 @@ The first step is in determining whether the issue is a bug, help question or fe
 ### Feature requests
 
 1. For reasons described [here](Contributing.md#feature-requests), we would prefer features to be built as separate packages. If the feature can clearly be built as a package, explain this to the requester and close the issue.
-2. If it's not possible to build the feature as a package, explore whether creating hooks in core would make it possible to do so. If the answer is yes, redefine the issue as such.
-3. Work with the requester and others in the community to build a clear specification for the feature and update the issue description accordingly.
+2. Add the `feature` label and `Project:*` labels that apply (a best guess on the `Project:` is fine, sometimes it's hard to tell exactly which project the issue falls under).
+3. If it's not possible to build the feature as a package, explore whether creating hooks in core would make it possible to do so. If the answer is yes, redefine the issue as such.
+4. Work with the requester and others in the community to build a clear specification for the feature and update the issue description accordingly.
+5. Finally, add the `confirmed` label and [classify](#classification) the issue.
+
+Core contributors may add the `pull-requests-encouraged` label to feature requests. This indicates the feature is aligned with the project roadmap and a high quality pull request will almost certainly be merged.
 
 <h2 id="classification">Classification</h2>
 
-We assign a classification (e.g via GH labels) that enables the community to determine which issues are worth working on. The classification is based on *Severity x Impact x Effort*
+Assign a classification (via GH labels) that enables the community to determine how to prioritize which issues to work on. The classification is based on *Severity x Impact* .
 
-#### Severity
+### Severity
+_[Severity:has-workaround, Severity:production, Severity:blocks-development]_
 
-- Is there a workaround?
-- Does it impact production apps or only development?
+- If there is a workaround, apply the `Severity:has-workaround` label.
+- If the issue affects production apps, apply the `Severity:production` label.
+- If the issue blocks development (e.g you can't `meteor run` is broken), apply the `Severity:blocks-development` label.
 
-#### Impact
+### Impact
+_[Impact:few, Impact:some, Impact:most]_
 
-- What % of the community does this benefit? (ballpark)
-- Is the issue highly voted?
+This is a somewhat subjective label and is interpreted in conjunction with Github's upvotes. As a general guideline, `Impact:few` issues would go unnoticed by almost all users.
 
-#### Effort (MDG internal)
+### Miscellany
 
-- How much work is it to implement?
+Although this should have already been done by this stage, ensure the issue is
+correctly labelled and the title/description have been updated to reflect an
+accurate summary of the issue.
 
-* Update title/description ?
-* Add labels - which?
+## Issues ready to claim
 
+This state indicates that bugs/feature requests have reached the level of quality
+required for a contributor to begin writing code against (you can easily filter for this list by using the `confirmed` label).
 
-XXX!
+Although this should have already been done by this stage, ensure the issue is
+correctly labeled and the title/description have been updated to reflect an
+accurate summary of the issue.
+
+Contributors should assign themselves and/or comment on an issue if they begin working on it so that others know work is in progress.
