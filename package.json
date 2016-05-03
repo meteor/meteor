@@ -14,7 +14,7 @@
   "main": "promise_server.js",
   "browser": "promise_client.js",
   "scripts": {
-    "test": "mocha --harmony --reporter spec --full-trace"
+    "test": "test/run.sh"
   },
   "homepage": "https://github.com/meteor/promise",
   "repository": {

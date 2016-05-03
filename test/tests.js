@@ -1,6 +1,12 @@
 var assert = require("assert");
 var Fiber = require("fibers");
-var Promise = require("promise");
+var Promise = process.env.USE_GLOBAL_PROMISE
+  ? global.Promise
+  : require("promise/lib/es6-extensions");
+
+if (! Promise) {
+  process.exit(0);
+}
 
 require("../promise_server.js").makeCompatible(Promise, Fiber);
 
