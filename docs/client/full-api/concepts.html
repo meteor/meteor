@@ -477,10 +477,10 @@ debugger, you've got two options:
   don't use the `email` package directly.
 
 When declaring functions, keep in mind that `function x () {}` is just
-shorthand for `var x = function x () {}` in JavaScript. Consider these
+shorthand for `var x = function () {}` in JavaScript. Consider these
 examples:
 
-    // This is the same as 'var x = function x () ...'. So x() is
+    // This is the same as 'var x = function () ...'. So x() is
     // file-scope and can be called only from within this one file.
     function x () { ... }
 
