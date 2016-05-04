@@ -1,11 +1,17 @@
 ## v.NEXT
 
+## v1.3.3
+
 * `*.min.js` files are no longer minified during the build process.
   [PR #6986](https://github.com/meteor/meteor/pull/6986) [Issue #5363](https://github.com/meteor/meteor/issues/5363)
+
 * You can now pick where the `.meteor/local` directory is created by setting the `METEOR_LOCAL_DIR` environment variable. This lets you run multiple instances of the same Meteor app.
   [PR #6760](https://github.com/meteor/meteor/pull/6760) [Issue #6532](https://github.com/meteor/meteor/issues/6532)
+
 * Allow using authType in Facebook login [PR #5694](https://github.com/meteor/meteor/pull/5694)
 * Adds flush() method to Tracker to force recomputation [PR #4710](https://github.com/meteor/meteor/pull/4710)
+
+* DDP callbacks are now batched on the client side. This means that after a DDP message arrives, the local DDP client will batch changes for a minimum of 5ms (configurable via `bufferedWritesInterval`) and a maximum of 500ms (configurable via `bufferedWritesMaxAge`) before calling any callbacks (such as cursor observe callbacks).
 
 ## v1.3.2.3
 
