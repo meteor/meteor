@@ -8,18 +8,32 @@
 
 var _ = require('underscore');
 var nameToId = require('../scripts/nameToId.js');
+var idToName = {};
+_.each(nameToId, function(id, name) {
+  idToName[id] = name;
+});
 var oldToc = require('./old-toc.js');
 
+// these point to X.html
+var idsToPagesWithNoHash = {};
+// these point to X.html#name where name is generated from id below
 var idsToPages = {};
 
 runList = (dir, as) => {
   _.each(as, a => {
+    var aId;
     if (!_.isArray(a) && _.isObject(a)){
+      aId = a.id;
       a = a.name;
     }
 
     if (_.isString(a)) {
-      currFile = `${dir}/${a.toLowerCase()}.html`;
+      var name = a.toLowerCase();
+      currFile = `${dir}/${name}.html`;
+      idsToPagesWithNoHash[name] = currFile;
+      if (aId) {
+        idsToPagesWithNoHash[aId] = currFile;
+      }
     } else {
       addIds = (ids) => {
         _.each(ids, (id) => {
@@ -32,7 +46,8 @@ runList = (dir, as) => {
               }
               id = id.id || id.name;
             }
-            idsToPages[nameToId[id] || id] = currFile;
+            var ourId = (nameToId[id] || id).toLowerCase();
+            idsToPages[ourId] = currFile;
           }
         });
       }
@@ -42,10 +57,24 @@ runList = (dir, as) => {
 };
 
 runList('api', oldToc[2]);
-runList('packages', oldToc[4]);
+
+_.each(oldToc[4][0], id => {
+  var name = id.name || id;
+  idsToPagesWithNoHash[name] = 'packages/' + name + '.html';
+});
 
 _.each(oldToc[6][0], id => {
   idsToPages[id.replace(/\s|\-|\//g, '')] = 'commandline.html';
 });
 
-console.log(JSON.stringify(idsToPages, null, 2));
+_.each(_.union(_.keys(idsToPages), _.keys(idsToPagesWithNoHash)), id => {
+  if (idsToPages[id]) {
+    var page = idsToPages[id];
+    var name = idToName[id] || id;
+    var nameId = name.replace(/[.#]/g, "-");
+    console.log(`  full/${id}: '${page}#${nameId}'`);
+  } else {
+    var page = idsToPagesWithNoHash[id];
+    console.log(`  full/${id}: '${page}'`);
+  }
+});
