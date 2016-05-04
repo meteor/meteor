@@ -305,7 +305,7 @@ module.exports = [
       {name: "Assets.getBinary", id: "assets_getBinary"}
     ],
 
-    {name: "package.js", id: "packagejs"}, [
+    "packagejs", [
       {name: "Package.describe", id: "packagedescription"},
       {name: "Package.onUse", id: "packagedefinition"}, [
         {name: "api.versionsFrom", id: "pack_versions"},
@@ -324,7 +324,7 @@ module.exports = [
       ]
     ],
 
-    {name: "mobile-config.js", id: "mobileconfigjs"}, [
+    "mobile-config", [
       {name: "App.info", id: "App-info"},
       {name: "App.setPreference", id: "App-setPreference"},
       {name: "App.accessRule", id: "App-accessRule"},

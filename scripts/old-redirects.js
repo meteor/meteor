@@ -1,6 +1,5 @@
 // These are the redirects that were previously setup for the docs
-
-module.exports = function() {
+var oldRedirects = function() {
   // make links backwards compatible - for example, #deps -> #tracker
 
   // Links from the old basic API into the closest full-api section
@@ -145,3 +144,10 @@ module.exports = function() {
     window.location = "#" + redirect;
   }
 }
+
+hexo.extend.tag.register('oldRedirects', function(args) {
+  return '<script>\n' +
+    'var oldRedirects = ' + oldRedirects + ';\n' +
+    'oldRedirects();\n' +
+    '</script>';
+});

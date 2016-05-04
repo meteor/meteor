@@ -30,12 +30,7 @@ hexo.extend.tag.register('apibox', function(args) {
   };
   var data = _.extend({}, defaults, options, apiData({ name: name }));
 
-  if (nameToId[data.longname]) {
-    data.id = nameToId[data.longname];
-  } else {
-    // fallback
-    data.id = data.longname.replace(/[.#]/g, "-");
-  }
+  data.id = data.longname.replace(/[.#]/g, "-");
 
   data.signature = signature(data, { short: false});
   data.title = signature(data, {
