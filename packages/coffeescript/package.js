@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Javascript dialect with fewer braces and semicolons",
-  version: "1.0.17"
+  version: "1.0.18-ddp-batching-beta.0"
 });
 
 Package.registerBuildPlugin({

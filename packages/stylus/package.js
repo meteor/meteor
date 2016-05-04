@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'Expressive, dynamic, robust CSS',
-  version: "2.511.5"
+  version: "2.511.6-ddp-batching-beta.0"
 });
 
 Package.registerBuildPlugin({
