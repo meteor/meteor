@@ -161,10 +161,10 @@ const todoInList = Factory.create('todo', { listId: list._id });
 
 <h3 id="mocking-the-database">Mocking the database</h3>
 
-As `Factory.create` directly inserts documents into the collection that's passed into the `Factory.define` function, it can be a problem to use it on the client. However there's a neat isolation trick that you can do to replace the server-backed `Todos` [client collection](collections.html#client-collections) with a mocked out [local collection](#collections.html#local-collections), that's encoded in the `stub-collections` package (currently a local package in the Todos example application).
+As `Factory.create` directly inserts documents into the collection that's passed into the `Factory.define` function, it can be a problem to use it on the client. However there's a neat isolation trick that you can do to replace the server-backed `Todos` [client collection](collections.html#client-collections) with a mocked out [local collection](#collections.html#local-collections), that's encoded in the [`hwillson:stub-collections`](https://atmospherejs.com/hwillson/stub-collections) package.
 
 ```js
-import { StubCollections } from 'meteor/stub-collections';
+import StubCollections from 'meteor/hwillson:stub-collections';
 import { Todos } from 'path/to/todos.js';
 
 StubCollections.stub(Todos);
@@ -305,7 +305,7 @@ In the [unit test above](#simple-unit-test) we saw a very limited example of how
 
   - Alternatively, you can also use tools like [Sinon](http://sinonjs.org) to stub things directly, as we'll see for example in our [simple integration test](#simple-integration-test).
 
-  - The `stub-collections` package from the Todos example app we mentioned [above](#mocking-the-database).
+  - The [`hwillson:stub-collections`](https://atmospherejs.com/hwillson/stub-collections) package we mentioned [above](#mocking-the-database).
 
   - (Using another package from the example app) to isolate a publication, the `publication-collector` package:
 
@@ -349,7 +349,7 @@ import { Meteor } from 'meteor/meteor';
 import { Factory } from 'meteor/factory';
 import { Random } from 'meteor/random';
 import { chai } from 'meteor/practicalmeteor:chai';
-import { StubCollections } from 'meteor/stub-collections';
+import StubCollections from 'meteor/hwillson:stub-collections';
 import { Template } from 'meteor/templating';
 import { _ } from 'meteor/underscore';
 import { $ } from 'meteor/jquery';
@@ -410,11 +410,11 @@ As we'll run this test in the same way that we did our unit test, we need to `im
 
 <h4 id="simple-integration-test-stubbing">Stubbing</h4>
 
-As the system under test in our integration test has a larger surface area, we need to stub out a few more points of integration with the rest of the stack. Of particular interest here is our use of the [`stub-collections`](#mocking-the-database) and of [Sinon](https://sinonjs.org) to stub out Flow Router and our Subscription.
+As the system under test in our integration test has a larger surface area, we need to stub out a few more points of integration with the rest of the stack. Of particular interest here is our use of the [`hwillson:stub-collections`](#mocking-the-database) package and of [Sinon](https://sinonjs.org) to stub out Flow Router and our Subscription.
 
 <h4 id="simple-integration-test-data">Creating data</h4>
 
-In this test, we used [Factory package's](#test-data) `.create()` API, which inserts data into the real collection. However, as we've proxied all of the `Todos` and `Lists` collection methods onto a local collection (this is what `stub-collections` is doing), we won't run into any problems with trying to perform inserts from the client.
+In this test, we used [Factory package's](#test-data) `.create()` API, which inserts data into the real collection. However, as we've proxied all of the `Todos` and `Lists` collection methods onto a local collection (this is what `hwillson:stub-collections` is doing), we won't run into any problems with trying to perform inserts from the client.
 
 This integration test can be run the exact same way as we ran [unit tests above](#running-unit-tests).
 
