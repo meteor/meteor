@@ -72,9 +72,9 @@ _.each(_.union(_.keys(idsToPages), _.keys(idsToPagesWithNoHash)), id => {
     var page = idsToPages[id];
     var name = idToName[id] || id;
     var nameId = name.replace(/[.#]/g, "-");
-    console.log(`  full/${id}: '${page}#${nameId}'`);
+    console.log(`  /#/full/${id}: '${page}#${nameId}'`);
   } else {
     var page = idsToPagesWithNoHash[id];
-    console.log(`  full/${id}: '${page}'`);
+    console.log(`  /#/full/${id}: '${page}'`);
   }
 });
