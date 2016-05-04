@@ -5,7 +5,7 @@
 * You can now pick where the `.meteor/local` directory is created by setting the `METEOR_LOCAL_DIR` environment variable. This lets you run multiple instances of the same Meteor app.
   [PR #6760](https://github.com/meteor/meteor/pull/6760) [Issue #6532](https://github.com/meteor/meteor/issues/6532)
 
-* DDP callbacks are now batched on the client side. This means that after a DDP message arrives, the local DDP client will batch changes for a minimum of 5ms (configurable via `bufferedWritesInterval`) and a maximum of 500ms (configurable via `bufferedWritesMaxAge`) before calling any callbacks (such as cursor observe callbacks).
+* DDP callbacks are now batched on the client side. This means that after a DDP message arrives, the local DDP client will batch changes for a minimum of 5ms (configurable via `bufferedWritesInterval`) and a maximum of 500ms (configurable via `bufferedWritesMaxAge`) of sustained series of changes before calling any callbacks (such as cursor observe callbacks).
 
 ## v1.3.2.3
 
