@@ -2,7 +2,10 @@ var newConnection = function (stream) {
   // Some of these tests leave outstanding methods with no result yet
   // returned. This should not block us from re-running tests when sources
   // change.
-  return new LivedataTest.Connection(stream, {reloadWithOutstanding: true});
+  return new LivedataTest.Connection(stream, {
+    reloadWithOutstanding: true,
+    bufferedWritesInterval: 0
+  });
 };
 
 var makeConnectMessage = function (session) {
