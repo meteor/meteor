@@ -15,7 +15,7 @@ const _ = require('underscore');
 // return anything past that function. We call this the "user portion"
 // of the stack.
 export function parse(err) {
-  var frames = err.stack.split('\n');
+  let frames = err.stack.split('\n');
 
   frames.shift(); // at least the first line is the exception
 
