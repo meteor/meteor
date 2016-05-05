@@ -50,7 +50,11 @@ _[Severity:has-workaround, Severity:production, Severity:blocks-development]_
 ### Impact
 _[Impact:few, Impact:some, Impact:most]_
 
-This is a somewhat subjective label and is interpreted in conjunction with Github's upvotes. As a general guideline, `Impact:few` issues would go unnoticed by almost all users.
+This is a somewhat subjective label and is interpreted in conjunction with Github's upvotes. As a general guideline:
+
+- `Impact:few` issues would go unnoticed by almost all users, apart from those using a very niche feature, or a feature in an unusual way.
+- `Impact:some` issues would impact users using a feature that is commonly but not universally used.
+- `Impact:most` issues would impact more or less every user of the framework.
 
 ## Issues ready to claim
 
