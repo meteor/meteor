@@ -26,6 +26,9 @@ var release = require('../packaging/release.js');
 var projectContextModule = require('../project-context.js');
 var upgraders = require('../upgraders.js');
 
+// To allow long stack traces that cross async boundaries
+require('longjohn');
+
 // Exception representing a test failure
 var TestFailure = function (reason, details) {
   var self = this;
