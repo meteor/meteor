@@ -1587,6 +1587,11 @@ main.registerCommand({
   // If you are specifying packages individually, you probably don't want to
   // update the release.
   if (options.args.length > 0) {
+    // In the case that user specified the package but not in a app.
+    if (! options.appDir) {
+      Console.error("You're not in a Meteor project directory.");
+      return 1;
+    }
     options["packages-only"] = true;
   }
 
