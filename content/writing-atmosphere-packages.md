@@ -1,94 +1,8 @@
 ---
-title: Writing Packages
-order: 31
+title: Writing Atmosphere Packages
+order: 29
 discourseTopicId: 20194
 ---
-
-After reading this article, you'll know:
-
-1. When to create an npm package and when to create an Atmosphere package
-1. The basics of writing an npm package
-1. The basics of writing an Atmosphere package
-1. How to depend on other packages, both from Atmosphere and npm
-1. How an Atmosphere package can integrate with Meteor's build system
-
-The Meteor platform supports two package systems: [npm](https://www.npmjs.com), a repository of JavaScript modules for Node.js and the browser, and [Atmosphere](https://atmospherejs.com), a repository of packages written specifically for Meteor.
-
-<h2 id="npm-vs-atmosphere">npm vs. Atmosphere</h2>
-
-With the release of version 1.3, Meteor has full support for npm. In the future, there will be a time when all packages will be migrated to npm, but currently there are benefits to both systems. You can read more about the tradeoffs between Atmosphere and npm in the [Using Packages article](using-packages.html).
-
-If you want to distribute and reuse code that you've written for a Meteor application, then you should consider publishing that code on npm if it's general enough to be consumed by a wider JavaScript audience. It's simple to [use npm packages from Meteor applications](using-packages.html#npm), and possible to [use npm packages from Atmosphere packages](#npm-dependencies), so even if your main audience is Meteor developers, npm might be the best choice.
-
-However, if your package depends on an Atmosphere package (which, in Meteor 1.3, includes the Meteor core packages), or needs to take advantage of Meteor's [build system](build-tool.html), then writing an Atmosphere package might be the best option.
-
-<h2 id="creating-npm">Creating an npm package</h2>
-
-If you want to override a package that already exists in the npm registry, [use this method](using-packages.html#npm-overriding).
-
-To create a new package:
-
-```bash
-mkdir my-package
-cd my-package/
-meteor npm init
-```
-
-The last command creates a `package.json` file and prompts you for the package information. You may skip everything but `name`, `version`, and `entry point`. You can use the default `index.js` for `entry point`. This file is where you set your package's exports:
-
-```js
-// my-package/index.js
-exports.myPackageLog = function() {
-  console.log("logged from my-package");
-};
-```
-
-Now apps that include this package can do:
-
-```js
-import { myPackageLog } from 'my-package'
-
-myPackageLog(); // > "logged from my-package"
-```
-
-<h3 id="including-in-app">Including in your app</h3>
-
-When you are developing a new npm package for your app, there are a couple methods for including the package in your app:
-
-- **Inside node_modules**: Place the package in your app's `node_modules/` directory, and add the package to source control. Do this when you want everything in a single repository.
-
-```bash
-cd my-app/node_modules/
-mkdir my-package
-cd my-package/
-meteor npm init
-git add -f ./ # or use a git submodule
-```
-
-- **npm link**: Place the package outside your app's directory in a separate repository and use [`npm link`](https://docs.npmjs.com/cli/link). Do this when you want to use the package in multiple apps.
-
-```bash
-cd ~/
-mkdir my-package
-cd my-package/
-meteor npm init
-cd ~/my-app/
-meteor npm link ~/my-package
-```
-
-Other developers will also need to run the `npm link` command.
-
-After either method, edit the `dependencies` attribute of `my-app/package.json`, adding `"my-package": "1.0.0"` (use the same version number you chose during `meteor npm init`).
-
-<h3 id="publishing-npm">Publishing your package</h3>
-
-You can share your package with others by publishing it to the npm registry. While most packages are public, you can control who may view and use your package with [private modules](https://docs.npmjs.com/private-modules/intro)).
-
-To publish publicly, [follow these instructions](https://docs.npmjs.com/getting-started/publishing-npm-packages). When you're done, anyone can add your package to their app with `npm install --save your-package`.
-
-If you want to share packages during development, we recommend using the [above methods](#including-in-app) instead of the registry. If you use the registry, then every time you change the package, you need to increment the version number, publish, and then `npm update my-package` inside your app.
-
-<h2 id="creating">Creating an Atmosphere package</h2>
 
 To get started writing a package, use the Meteor command line tool:
 
@@ -209,7 +123,7 @@ import { myName } from 'meteor/username:my-package';
 
 <h2 id="dependencies">Dependencies</h2>
 
-Chances are your package will want to make use of other packages---to ensure they are available, you can declare dependencies. Atmosphere packages can depend both on other Atmosphere packages, as well as packages from npm.
+Chances are your package will want to make use of other packages.  To ensure they are available, you can declare dependencies. Atmosphere packages can depend both on other Atmosphere packages, as well as packages from npm.
 
 <h3 id="atmosphere-dependencies">Atmosphere dependencies</h3>
 
@@ -226,7 +140,7 @@ One important feature of the Atmosphere package system is that it is single-load
 
 <h4 id="meteor-version-dependencies">Depending on Meteor version</h4>
 
-Note that the Meteor release version number is mostly a marketing artifact---the core Meteor packages themselves typically don't share this version number. This means packages can only depend on specific versions of the packages inside a Meteor release, but can't depend on a specific release itself. We have a helpful shorthand api called [`api.versionsFrom`](http://docs.meteor.com/#/full/pack_versions) that handles this for you by automatically filling in package version numbers from a particular release:
+Note that the Meteor release version number is mostly a marketing artifact - the core Meteor packages themselves typically don't share this version number. This means packages can only depend on specific versions of the packages inside a Meteor release, but can't depend on a specific release itself. We have a helpful shorthand api called [`api.versionsFrom`](http://docs.meteor.com/#/full/pack_versions) that handles this for you by automatically filling in package version numbers from a particular release:
 
 ```js
 // Use versions of core packages from Meteor 1.2.1
@@ -277,7 +191,7 @@ Npm.depends({
 });
 ```
 
-You can import the dependency from within you package code in the same way that you would inside an [application](using-packages.html#using-npm):
+You can import the dependency from within you package code in the same way that you would inside an [application](using-npm-packages.html#using-npm):
 
 ```js
 import github from 'github';
@@ -307,7 +221,7 @@ const React = require('react');
 
 <h2 id="cordova-plugins">Cordova plugins</h2>
 
-Meteor packages can include [Cordova plugins](http://cordova.apache.org/plugins/) to ship native code for the Meteor mobile app container. This way, you can interact with the native camera interface, use the gyroscope, save files locally, and more.
+Atmosphere packages can include [Cordova plugins](http://cordova.apache.org/plugins/) to ship native code for the Meteor mobile app container. This way, you can interact with the native camera interface, use the gyroscope, save files locally, and more.
 
 Include Cordova plugins in your Meteor package by using [Cordova.depends](http://docs.meteor.com/#/full/Cordova-depends).
 
@@ -343,36 +257,33 @@ From within your test entry point, you can import other files as you would in th
 
 You can read more about testing in Meteor in the [Testing article](testing.html).
 
-<h3 id="testing-with-peer-dependencies">Peer npm dependencies</h3>
+<h3 id="testing-with-peer-dependencies">Testing with peer npm dependencies</h3>
 
 If your package makes use of [peer npm dependencies](#peer-npm-dependencies), you cannot currently use `test-packages` to write package tests (as the dependencies will not be included in the special test app).
 
 To work around this, you can create a "scaffolding" test application, which is a simple app which simply includes the package and uses standard [tests](testing.html) to run tests against the package. You can see examples of these kind of scaffold test apps in the [React packages repository](https://github.com/meteor/react-packages/tree/devel/tests).
 
-<h2 id="local-vs-published">Local packages vs. published packages</h2>
-
-If you've ever looked inside Meteor's package cache at `~/.meteor/packages`, you know that the on-disk format of a built Meteor package is completely different from the way the source code looks when you're developing the package. The idea is that the target format of a package can remain consistent even if the API for development changes.
+<h2 id="publishing-atmosphere">Publishing your package</h2>
 
 To publish your package to Atmosphere, run [`meteor publish`](http://docs.meteor.com/#/full/meteorpublish) from the package directory. To publish a package the package name must follow the format of `username:my-package` and the package must contain a [SemVer version number](#version-constraints).
 
-<h2 id="build-plugins">Build plugins</h2>
+<h3 id="local-vs-published">Local vs. published packages</h3>
 
-The most powerful feature of Meteor's build system is the ability to define custom build plugins. If you find yourself writing scripts that mangle one type of file into another, merge multiple files, or something else, it's likely that these scripts would be better implemented as a build plugin. The `ecmascript`, `templating`, and `coffeescript` packages are all implemented as build plugins, so you can replace them with your own versions if you want to!
+If you've ever looked inside Meteor's package cache at `~/.meteor/packages`, you know that the on-disk format of a built Meteor package is completely different from the way the source code looks when you're developing the package. The idea is that the target format of a package can remain consistent even if the API for development changes.
 
-[Read the documentation about build plugins.](https://github.com/meteor/meteor/wiki/Build-Plugins-API)
+<h2 id="overriding-atmosphere-packages">Overriding packages with a local version</h2>
 
-<h3 id="types-of-build-plugins">Types of build plugins</h3>
+If you need to modify a package to do something that the published version doesn't do, you can edit a local version of the package on your computer.
 
-There are three types of build plugins supported by Meteor today:
+A Meteor app can load Atmosphere packages in one of three ways, and it looks for a matching package name in the following order:
 
-1. Compiler plugin - compiles source files (LESS, CoffeeScript) into built output (JS, CSS, asset files, and HTML). Only one compiler plugin can handle a single file extension.
-2. Minifier plugin - compiles lots of built CSS or JS files into one or more minified files, for example `standard-minifiers`. Only one minifier can handle each of `js` and `css`.
-3. Linter plugin - processes any number of files, and can print lint errors. Multiple linters can process the same files.
+1. Package source code in the `packages/` directory inside your app.
+2. Package source code in directories indicated by setting a `PACKAGE_DIRS` environment variable before running any `meteor` command. You can add multiple directories by separating the paths with a `:` on OSX or Linux, or a `;` on Windows. For example: `PACKAGE_DIRS=../first/directory:../second/directory`, or on Windows: `set PACKAGE_DIRS=..\first\directory;..\second\directory`.
+3. Pre-built package from Atmosphere. The package is cached in `~/.meteor/packages` on Mac/Linux or `%LOCALAPPDATA%\.meteor\packages` on Windows, and only loaded into your app as it is built.
 
-<h3 id="writing-build-plugins">Writing your own build plugin</h3>
+You can use (1) or (2) to override the version from Atmosphere. You can even do this to load patched versions of Meteor core packages - just copy the code of the package from [Meteor's GitHub repository](https://github.com/meteor/meteor/tree/devel/packages), and edit away.
 
-Writing a build plugin is a very advanced task that only the most advanced Meteor users should get into. The best place to start is to copy a different plugin that is the most similar to what you are trying to do. For example, if you wanted to make a new CSS compiler plugin, you could fork the `less` package; if you wanted to make your own JS transpiler, you could fork `ecmascript`. A good example of a linter is the `jshint` package, and for a minifier you can look at `standard-minifiers-js` and `standard-minifiers-css`.
+One difference between pre-published packages and local app packages is that the published packages have any binary dependencies pre-built. This should only affect a small subset of packages. If you clone the source code into your app, you need to make sure you have any compilers required by that package.
 
-<h3 id="caching-build-plugins">Caching</h3>
 
-The best way to make your build plugin fast is to use caching anywhere you can - the best way to save time is to do less work! Check out the [documentation about CachingCompiler](https://github.com/meteor/meteor/wiki/Build-Plugins-API#caching) to learn more. It's used in all of the above examples, so you can see how to use it by looking at them.
+

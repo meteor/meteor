@@ -193,3 +193,26 @@ The current best practice for deploying web production applications is to concat
 Every Meteor app comes with production minification by default with the `standard-minifier-js` and `standard-minifier-css` packages. These minifiers go to some extra effort to do a good job - for example, Meteor automatically splits up your files if they get too big to maintain support for older versions of Internet Explorer which had a limit on the number of CSS rules per file.
 
 Minification usually happens when you `meteor deploy` or `meteor build` your app. If you have an error in production that you suspect is related to minification, you can run the minified version of your app locally with `meteor --production`.
+
+<h2 id="build-plugins">Build plugins</h2>
+
+The most powerful feature of Meteor's build system is the ability to define custom build plugins. If you find yourself writing scripts that mangle one type of file into another, merge multiple files, or something else, it's likely that these scripts would be better implemented as a build plugin. The `ecmascript`, `templating`, and `coffeescript` packages are all implemented as build plugins, so you can replace them with your own versions if you want to!
+
+[Read the documentation about build plugins.](https://github.com/meteor/meteor/wiki/Build-Plugins-API)
+
+<h3 id="types-of-build-plugins">Types of build plugins</h3>
+
+There are three types of build plugins supported by Meteor today:
+
+1. Compiler plugin - compiles source files (LESS, CoffeeScript) into built output (JS, CSS, asset files, and HTML). Only one compiler plugin can handle a single file extension.
+2. Minifier plugin - compiles lots of built CSS or JS files into one or more minified files, for example `standard-minifiers`. Only one minifier can handle each of `js` and `css`.
+3. Linter plugin - processes any number of files, and can print lint errors. Multiple linters can process the same files.
+
+<h3 id="writing-build-plugins">Writing your own build plugin</h3>
+
+Writing a build plugin is a very advanced task that only the most advanced Meteor users should get into. The best place to start is to copy a different plugin that is the most similar to what you are trying to do. For example, if you wanted to make a new CSS compiler plugin, you could fork the `less` package; if you wanted to make your own JS transpiler, you could fork `ecmascript`. A good example of a linter is the `jshint` package, and for a minifier you can look at `standard-minifiers-js` and `standard-minifiers-css`.
+
+<h3 id="caching-build-plugins">Caching</h3>
+
+The best way to make your build plugin fast is to use caching anywhere you can - the best way to save time is to do less work! Check out the [documentation about CachingCompiler](https://github.com/meteor/meteor/wiki/Build-Plugins-API#caching) to learn more. It's used in all of the above examples, so you can see how to use it by looking at them.
+

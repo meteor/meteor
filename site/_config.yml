@@ -35,8 +35,11 @@ sidebar_categories:
     - react
     - angular
   Build:
-    - using-packages
-    - writing-packages
+    - atmosphere-vs-npm
+    - using-atmosphere-packages
+    - writing-atmosphere-packages
+    - using-npm-packages
+    - writing-npm-packages
     - mobile
     - build-tool
   Production:
