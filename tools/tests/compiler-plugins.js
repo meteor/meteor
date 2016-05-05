@@ -103,8 +103,13 @@ selftest.define("compiler plugin caching - coffee", () => {
     });
 
     // First program built (web.browser) compiles everything.
-    cacheMatch('Ran (#1) on: ' + JSON.stringify(
-      ["/subdir/nested-root." + extension, "/top." + extension]));
+    cacheMatch('Ran (#1) on: ' + JSON.stringify([
+      // Though files in imports directories are compiled, they are marked
+      // as lazy so they will not be loaded unless imported.
+      "/imports/dotdot." + extension,
+      "/subdir/nested-root." + extension,
+      "/top." + extension
+    ]));
     // There is no render execution in the server program, because it has
     // archMatching:'web'.  We'll see this more clearly when the next call later
     // is "#2" --- we didn't miss a call!
