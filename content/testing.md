@@ -561,10 +561,16 @@ Acceptance testing is the process of taking an unmodified version of our applica
 
 As acceptance tests test the behavior of the application in a full browser context in a generic way, there are a range of tools that you can to specify and run such tests. In this guide we'll demonstrate using [Chimp](https://chimp.readme.io), an acceptance testing tool with a few neat Meteor-specific features that makes it easy to use.
 
-We can install the Chimp tool globally using:
+Chimp requires node version 4 or above. You can check your node version by running:
 
-```bash
-meteor npm install --global chimp
+```sh
+node -v
+```
+
+If it's under `4.0.0`, [install a recent version](https://nodejs.org/en/download/current/). Then we can install the Chimp tool globally using:
+
+```sh
+npm install --global chimp
 ```
 
 > Note that you can also install Chimp as a `devDependency` in your `package.json` but you may run into problems deploying your application as it includes binary dependencies. You can avoid such problems by running `meteor npm prune` to remove non-production dependencies before deploying.
