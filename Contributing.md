@@ -130,7 +130,7 @@ You'll have the best chance of getting a change into core if you can build conse
 
 Help drive discussion and advocate for your feature on the Github ticket (and perhaps the forums). The higher the demand for the feature and the greater the clarity of it's specification will determine the likelihood of a core contributor prioritizing your feature by flagging it with the `pull-requests-encouraged` label.
 
-Split features up into smaller, logically seperable chunks. It is unlikely that large and complicated PRs  will be merged.
+Split features up into smaller, logically separable chunks. It is unlikely that large and complicated PRs  will be merged.
 
 Once your feature has been labelled with `pull-requests-encouraged`, leave a comment letting people know you're working on it and you can begin work on the code.
 
@@ -165,7 +165,7 @@ Meteor now has groups defined to cover different areas of the codebase. If you n
 
 * Meteor Data Team - This includes DDP, tracker, mongo, accounts, etc. You can mention @data in the PR.
 * Blaze - This includes Spacebars, Blaze, etc. You can mention @view-layer in the PR.
-* Build tools - This includes modules, build tool changes, etc. You can memtion @platform in the PR.
+* Build tools - This includes modules, build tool changes, etc. You can mention @platform in the PR.
 * Mobile integration - This includes Cordova, React Native, etc. You can mention @mobile in the PR.
 * Documentation - This includes the Guide, the Docs, and any supporting material. You can mention @guide in the PR.
 
