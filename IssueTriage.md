@@ -4,6 +4,15 @@ This document describes the process Meteor contributors use to organize issues. 
 
 We would love to have more contributors who are willing to help out with triaging issues. You can begin by helping issue requesters create good reproductions and by confirming those reproductions on your own machine. It won't be long before the core maintainers notice your work and ask whether you'd like to be promoted to an issue maintainer.
 
+- [Issue lifecycle](#issue-lifecycle)
+  - [Bugs](#bugs)
+  - [Help questions](#help-questions)
+  - [Feature requests](#feature-requests)
+- [Classification](#classification)
+  - [Severity](#severity)
+  - [Impact](#impact)
+- [Issues ready to claim](#issues-ready-to-claim)
+
 ## Issue lifecycle
 
 All issues follow the flow outlined below. Your job as an issue maintainer is to work with the requester and others within the community towards the goal of having an issue either become 'claimable' or closed. Read on for more details on the process.
