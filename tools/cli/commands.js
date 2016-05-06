@@ -169,7 +169,7 @@ function parsePortOption(portOption) {
   }
   // Give a hint when user tries to use Chrome blocked ports.
   if (_.contains(blockedPorts, parsedServerUrl.port)) {
-      Console.info("Port ${parsedServerUrl.port} is blocked by Chrome " +
+      Console.info(`Port ${parsedServerUrl.port} is blocked by Chrome ` +
       "for some safety reasons. Meteor may still runs on this port but " +
       "you may not be able to visit it.");
       Console.info("See: https://src.chromium.org/viewvc/chrome/trunk/src/net/base/net_util.cc");
