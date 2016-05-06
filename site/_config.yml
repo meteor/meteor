@@ -67,7 +67,7 @@ i18n_dir: :lang
 skip_render:
 
 # Writing
-new_post_name: :title.md # File name of new posts
+new_post_name: :title.html # File name of new posts
 default_layout: post
 titlecase: false # Transform title into titlecase
 external_link: true # Open external links in new tab
@@ -108,3 +108,52 @@ theme: meteor
 ## Docs: http://hexo.io/docs/deployment.html
 deploy:
   type:
+
+redirects:
+  '/using-packages.html#npm': using-npm-packages.html
+  '/using-packages.html#client-npm': using-npm-packages.html#client-npm
+  '/using-packages.html#installing-npm': using-npm-packages.html#installing-npm
+  '/using-packages.html#using-npm': using-npm-packages.html#using-npm
+  '/using-packages.html#npm-styles': using-npm-packages.html#npm-styles
+  '/using-packages.html#npm-shrinkwrap': using-npm-packages.html#npm-shrinkwrap
+  '/using-packages.html#atmosphere':  using-atmosphere-packages.html
+  '/using-packages.html#atmosphere-searching': using-atmosphere-packages.html#atmosphere-searching
+  '/using-packages.html#atmosphere-naming': using-atmosphere-packages.html#atmosphere-naming
+  '/using-packages.html#installing-atmosphere': using-atmosphere-packages.html#installing-atmosphere
+  '/using-packages.html#using-atmosphere': using-atmosphere-packages.html#using-atmosphere
+  '/using-packages.html#importing-atmosphere-styles': using-atmosphere-packages.html#importing-atmosphere-styles
+  '/using-packages.html#peer-npm-dependencies': using-atmosphere-packages.html#peer-npm-dependencies
+  '/using-packages.html#package-namespacing': using-atmosphere-packages.html#package-namespacing
+  '/using-packages.html#async-callbacks': using-npm-packages.html#async-callbacks
+  '/using-packages.html#bind-environment': using-npm-packages.html#bind-environment
+  '/using-packages.html#wrap-async': using-npm-packages.html#wrap-async
+  '/using-packages.html#promises': using-npm-packages.html#promises
+  '/using-packages.html#overriding-packages':  writing-npm-packages.html#overriding-npm-packages
+  '/using-packages.html#npm-overriding': writing-npm-packages.html#overriding-npm-packages
+  '/using-packages.html#atmosphere-overriding': writing-atmosphere-packages.html#overriding-atmosphere-packages
+  '/using-packages.html#npm-shrinkpack': using-npm-packages.html#npm-shrinkpack
+  '/writing-packages.html#npm-vs-atmosphere': npm-vs-atmosphere.html
+  '/writing-packages.html#creating-npm': writing-npm-packages.html
+  '/writing-packages.html#including-in-app': writing-npm-packages.html#including-in-app
+  '/writing-packages.html#publishing-npm': writing--packages.html#publishing-npm
+  '/writing-packages.html#creating': writing-atmosphere-packages.html
+  '/writing-packages.html#adding-files': writing-atmosphere-packages.html#adding-files
+  '/writing-packages.html#adding-javascript': writing-atmosphere-packages.html#adding-javascript
+  '/writing-packages.html#adding-css': writing-atmosphere-packages.html#adding-css
+  '/writing-packages.html#adding-style': writing-atmosphere-packages.html#adding-style
+  '/writing-packages.html#adding-assests': writing-atmosphere-packages.html#adding-assets
+  '/writing-packages.html#exporting': writing-atmosphere-packages.html#exporting
+  '/writing-packages.html#dependencies': writing-atmosphere-packages.html#dependencies
+  '/writing-packages.html#atmosphere-dependencies': writing-atmosphere--packages.html#atmosphere-dependencies
+  '/writing-packages.html#meteor-version-dependencies': writing-atmosphere-packages.html#meteor-version-dependencies
+  '/writing-packages.html#version-constraints': writing-atmosphere-packages.html#version-constraints
+  '/writing-packages.html#npm-dependencies': writing-atmosphere-packages.html#npm-dependencies
+  '/writing-packages.html#peer-npm-dependencies': writing-atmosphere-packages.html#peer-npm-dependencies
+  '/writing-packages.html#cordova-plugins': writing-atmosphere-packages.html#cordova-plugins
+  '/writing-packages.html#testing': writing-atmosphere-packages.html#testing
+  '/writing-packages.html#testing-with-peer-dependencies': writing-atmosphere-packages.html#testing-with-peer-dependencies
+  '/writing-packages.html#local-vs-published': writing-atmosphere-packages.html#local-vs-published
+  '/writing-packages.html#build-plugins': build-tool.html#build-plugins
+  '/writing-packages.html#types-of-build-plugins': build-tool.html#types-of-build-plugins
+  '/writing-packages.html#writing-build-plugins': build-tool.html#writing-build-plugins
+  '/writing-packages.html#caching-build-plugins': build-tool.html#caching-build-plugins
