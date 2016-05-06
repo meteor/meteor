@@ -435,7 +435,7 @@ Template.Lists_show_page.onCreated(function() {
   // The visible todos are the todos that the user can
   // actually see on the screen (whereas Todos are the
   // todos that actually exist)
-  this.visibleTodos = new Mongo.Collection();
+  this.visibleTodos = new Mongo.Collection(null);
 
   this.getTodos = () => {
     const list = Lists.findOne(this.getListId());
@@ -487,7 +487,7 @@ Template.Lists_show_page.helpers({
 });
 ```
 
-The reusable sub-component can then use the `hasChanges` argument to determine if it show some kind of callout to the user to indicate changes are available, and then use the `onShowChanges` callback to trigger them to be shown.
+The reusable sub-component can then use the `hasChanges` argument to determine if it should show some kind of callout to the user to indicate changes are available, and then use the `onShowChanges` callback to trigger them to be shown.
 
 <h3 id="optimistic-ui">Optimistic UI</h3>
 
