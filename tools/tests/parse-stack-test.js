@@ -12,8 +12,11 @@ selftest.define("parse-stack - parse stack traces without fibers", () => {
   const firstFilePath = files.convertToStandardPath(parsedStack[0].file);
   selftest.expectEqual(_.last(firstFilePath.split("/")), "parse-stack-test.js");
 
-  const lastFilePath = files.convertToStandardPath(_.last(parsedStack).file);
-  selftest.expectEqual(_.last(lastFilePath.split("/")), "main.js");
+  // This is no longer true as longjohn adds a bunch of pre-app frames to the
+  // call stack. However it doesn't seem we actually rely on this behavior
+  // anywhere
+  // const lastFilePath = files.convertToStandardPath(_.last(parsedStack).file);
+  // selftest.expectEqual(_.last(lastFilePath.split("/")), "main.js");
 
   markBottom(() => {
     const markedErr = new Error();
