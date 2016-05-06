@@ -1851,7 +1851,10 @@ var runTests = function (options) {
     try {
       runningTest = test;
       var startTime = +(new Date);
-      test.f(options);
+      // ensure we mark the bottom of the stack each time we start a new test
+      parseStack.markBottom(() => {
+        test.f(options);
+      })();
     } catch (e) {
       failure = e;
     } finally {
