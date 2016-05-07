@@ -1425,8 +1425,13 @@ wrapFsFunc("readFile", [0], {
 });
 wrapFsFunc("stat", [0]);
 wrapFsFunc("lstat", [0]);
-wrapFsFunc("exists", [0], {noErr: true});
 wrapFsFunc("rename", [0, 1]);
+
+// The fs.exists method is deprecated in Node v4:
+// https://nodejs.org/api/fs.html#fs_fs_exists_path_callback
+files.exists = function (path) {
+  return !! files.statOrNull(path);
+};
 
 if (process.platform === "win32") {
   var rename = files.rename;
