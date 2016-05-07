@@ -79,8 +79,18 @@ _.extend(ReactiveDict.prototype, {
     }
   },
 
-  setDefault: function (key, value) {
+  setDefault: function (keyOrObject, value) {
     var self = this;
+
+    if ((typeof keyOrObject === 'object') && (value === undefined)) {
+      // Called as `dict.setDefault({...})`
+      self._setDefaultObject(keyOrObject);
+      return;
+    }
+    // the input isn't an object, so it must be a key
+    // and we resume with the rest of the function
+    var key = keyOrObject;
+
     if (! _.has(self.keys, key)) {
       self.set(key, value);
     }
@@ -195,6 +205,14 @@ _.extend(ReactiveDict.prototype, {
 
     _.each(object, function (value, key){
       self.set(key, value);
+    });
+  },
+
+  _setDefaultObject: function (object) {
+    var self = this;
+
+    _.each(object, function (value, key){
+      self.setDefault(key, value);
     });
   },
 
