@@ -227,7 +227,9 @@ DEp.stop = function stop() {
   var proc = this.inspectorProcess;
   if (proc && proc.kill) {
     this.inspectorProcess = null;
-    proc.kill();
+    // The .kill method now requires a numeric argument:
+    // https://github.com/nodejs/node/commit/832ec1cd50
+    proc.kill(proc.pid);
   }
 
   if (this.interceptServer) {

@@ -166,7 +166,9 @@ _.extend(AppProcess.prototype, {
     if (self.proc && self.proc.pid) {
       self.proc.removeAllListeners('close');
       self.proc.removeAllListeners('error');
-      self.proc.kill();
+      // The .kill method now requires a numeric argument:
+      // https://github.com/nodejs/node/commit/832ec1cd50
+      self.proc.kill(self.proc.pid);
     }
     self.proc = null;
 

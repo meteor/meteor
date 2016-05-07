@@ -966,7 +966,9 @@ _.extend(PhantomClient.prototype, {
     var self = this;
     // Suppress the expected SIGTERM exit 'failure'
     self._logError = false;
-    self.process && self.process.kill();
+    // The .kill method now requires a numeric first argument:
+    // https://github.com/nodejs/node/commit/832ec1cd50
+    self.process && self.process.kill(self.process.pid);
     self.process = null;
   }
 });
@@ -1031,7 +1033,10 @@ _.extend(BrowserStackClient.prototype, {
 
   stop: function() {
     var self = this;
-    self.tunnelProcess && self.tunnelProcess.kill();
+    // The .kill method now requires a numeric first argument:
+    // https://github.com/nodejs/node/commit/832ec1cd50
+    self.tunnelProcess &&
+      self.tunnelProcess.kill(self.tunnelProcess.pid);
     self.tunnelProcess = null;
 
     self.driver && self.driver.quit();
@@ -1406,7 +1411,9 @@ _.extend(Run.prototype, {
       // processes.
       utils.execFileSync("taskkill", ["/pid", this.proc.pid, '/f', '/t']);
     } else {
-      this.proc.kill();
+      // The .kill method now requires a numeric first argument:
+      // https://github.com/nodejs/node/commit/832ec1cd50
+      this.proc.kill(this.proc.pid);
     }
   },
 
