@@ -27,10 +27,10 @@ class StylusCompiler extends MultiFileCachingCompiler {
       this.sourceMapSize(compileResult.sourceMap);
   }
 
-  // The heuristic is that a file is an import (ie, is not itself processed as a
-  // root) if it is in a subdirectory named 'imports' or if it matches
-  // *.import.styl. This can be overridden in either direction via an explicit
-  // `isImport` file option in api.addFiles.
+  // The heuristic is that a file is an import (ie, is not itself
+  // processed as a root) if it matches *.import.styl.  This can be
+  // overridden in either direction via an explicit `isImport` file option
+  // in api.addFiles.
   isRoot(inputFile) {
     const fileOptions = inputFile.getFileOptions();
     if (fileOptions.hasOwnProperty('isImport')) {
@@ -38,8 +38,7 @@ class StylusCompiler extends MultiFileCachingCompiler {
     }
 
     const pathInPackage = inputFile.getPathInPackage();
-    return !(/\.import\.styl$/.test(pathInPackage) ||
-             /(?:^|\/)imports\//.test(pathInPackage));
+    return ! /\.import\.styl$/.test(pathInPackage);
   }
 
   compileOneFile(inputFile, allFiles) {

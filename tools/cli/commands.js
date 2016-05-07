@@ -344,7 +344,7 @@ function doRunCommand(options) {
 
   let webArchs = ['web.browser'];
   let cordovaRunner;
-  if (!_.isEmpty(runTargets)) {
+  if (!_.isEmpty(runTargets) || options['mobile-server']) {
     main.captureAndExit('', 'preparing Cordova project', () => {
       const cordovaProject = new CordovaProject(projectContext, {
         settingsFile: options.settings,
@@ -1671,7 +1671,12 @@ function doTestCommand(options) {
 
   return runTestAppForPackages(projectContext, _.extend(
     options,
-    { mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) }));
+    {
+      mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
+      proxyPort: parsedServerUrl.port,
+      proxyHost: parsedServerUrl.host,
+    }
+  ));
 }
 
 // Returns the "local-test:*" package names for the given package names (or for
@@ -1755,7 +1760,8 @@ var runTestAppForPackages = function (projectContext, options) {
     var runAll = require('../runners/run-all.js');
     return runAll.run({
       projectContext: projectContext,
-      proxyPort: options.port,
+      proxyPort: options.proxyPort,
+      proxyHost: options.proxyHost,
       debugPort: options['debug-port'],
       disableOplog: options['disable-oplog'],
       settingsFile: options.settings,

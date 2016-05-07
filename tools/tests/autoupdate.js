@@ -57,8 +57,8 @@ selftest.define("autoupdate", ['checkout'], function () {
     // Run it and see the banner for the current version.
     run = s.run("--port", "21000");
     run.waitSecs(30);
-    run.match("running at");
     run.match("New hotness v2 being downloaded");
+    run.match("running at");
     require('../utils/utils.js').sleepMs(500);
     run.stop();
 

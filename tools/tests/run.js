@@ -391,11 +391,11 @@ selftest.define("run and SIGKILL parent process", ["yet-unsolved-windows-failure
   run.stop();
 });
 
-selftest.define("'meteor run --port' requires a port", function () {
+selftest.define("'meteor run --port' accepts/rejects proper values", function () {
   var s = new Sandbox();
   var run;
 
-  s.createApp("myapp", "app-prints-pid");
+  s.createApp("myapp", "standard-app");
   s.cd("myapp");
 
   run = s.run("run", "--port", "example.com");
@@ -407,6 +407,37 @@ selftest.define("'meteor run --port' requires a port", function () {
   run.waitSecs(30);
   run.matchErr("--port must include a port");
   run.expectExit(1);
+
+  run = s.run("run", "--port", "3500");
+  run.match('App running at: http://localhost:3500/');
+  run.stop();
+
+  run = s.run("run", "--port", "127.0.0.1:3500");
+  run.match('App running at: http://127.0.0.1:3500/');
+  run.stop();
+});
+
+selftest.define("'meteor test --port' accepts/rejects proper values", function () {
+  var s = new Sandbox();
+  var run;
+
+  s.createApp("myapp", "standard-app");
+  s.cd("myapp");
+
+  var runAddPackage = s.run("add", "practicalmeteor:mocha");
+  runAddPackage.waitSecs(30);
+  runAddPackage.match(/practicalmeteor:mocha\b.*?added/)
+  runAddPackage.expectExit(0);
+
+  run = s.run("test", "--port", "3700", "--driver-package", "practicalmeteor:mocha");
+  run.waitSecs(60);
+  run.match('App running at: http://localhost:3700/');
+  run.stop();
+
+  run = s.run("test", "--port", "127.0.0.1:3700", "--driver-package", "practicalmeteor:mocha");
+  run.waitSecs(60);
+  run.match('App running at: http://127.0.0.1:3700/');
+  run.stop();
 });
 
 // Regression test for #3582.  Previously, meteor run would ignore changes to

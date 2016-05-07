@@ -27,6 +27,9 @@ var release = require('../packaging/release.js');
 var projectContextModule = require('../project-context.js');
 var upgraders = require('../upgraders.js');
 
+// To allow long stack traces that cross async boundaries
+require('longjohn');
+
 // Exception representing a test failure
 var TestFailure = function (reason, details) {
   var self = this;
@@ -797,6 +800,13 @@ _.extend(Sandbox.prototype, {
     if (!self.warehouse && release.current.isProperRelease()) {
       env.METEOR_TEST_LATEST_RELEASE = release.current.name;
     }
+
+    // Allow user to set TOOL_NODE_FLAGS for self-test app.
+    if (process.env.TOOL_NODE_FLAGS && ! process.env.SELF_TEST_TOOL_NODE_FLAGS)
+      console.log('Consider setting SELF_TEST_TOOL_NODE_FLAGS to configure ' +
+                  'self-test test applicaion spawns');
+    env.TOOL_NODE_FLAGS = process.env.SELF_TEST_TOOL_NODE_FLAGS || '';
+
     return env;
   },
 
@@ -1835,7 +1845,10 @@ var runTests = function (options) {
     try {
       runningTest = test;
       var startTime = +(new Date);
-      test.f(options);
+      // ensure we mark the bottom of the stack each time we start a new test
+      parseStack.markBottom(() => {
+        test.f(options);
+      })();
     } catch (e) {
       failure = e;
     } finally {
