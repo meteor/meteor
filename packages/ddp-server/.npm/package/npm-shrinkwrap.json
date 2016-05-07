@@ -3,36 +3,36 @@
     "permessage-deflate": {
       "version": "0.1.5",
       "resolved": "https://registry.npmjs.org/permessage-deflate/-/permessage-deflate-0.1.5.tgz",
-      "from": "permessage-deflate@0.1.5"
+      "from": "https://registry.npmjs.org/permessage-deflate/-/permessage-deflate-0.1.5.tgz"
     },
     "sockjs": {
-      "version": "0.3.14",
-      "resolved": "https://registry.npmjs.org/sockjs/-/sockjs-0.3.14.tgz",
-      "from": "https://registry.npmjs.org/sockjs/-/sockjs-0.3.14.tgz",
+      "version": "0.3.17",
+      "resolved": "https://registry.npmjs.org/sockjs/-/sockjs-0.3.17.tgz",
+      "from": "sockjs@0.3.17",
       "dependencies": {
         "faye-websocket": {
-          "version": "0.9.4",
-          "resolved": "https://registry.npmjs.org/faye-websocket/-/faye-websocket-0.9.4.tgz",
-          "from": "https://registry.npmjs.org/faye-websocket/-/faye-websocket-0.9.4.tgz",
+          "version": "0.10.0",
+          "resolved": "https://registry.npmjs.org/faye-websocket/-/faye-websocket-0.10.0.tgz",
+          "from": "faye-websocket@>=0.10.0 <0.11.0",
           "dependencies": {
             "websocket-driver": {
-              "version": "0.5.4",
-              "resolved": "https://registry.npmjs.org/websocket-driver/-/websocket-driver-0.5.4.tgz",
-              "from": "https://registry.npmjs.org/websocket-driver/-/websocket-driver-0.5.4.tgz",
+              "version": "0.6.4",
+              "resolved": "https://registry.npmjs.org/websocket-driver/-/websocket-driver-0.6.4.tgz",
+              "from": "websocket-driver@>=0.5.1",
               "dependencies": {
                 "websocket-extensions": {
                   "version": "0.1.1",
                   "resolved": "https://registry.npmjs.org/websocket-extensions/-/websocket-extensions-0.1.1.tgz",
-                  "from": "https://registry.npmjs.org/websocket-extensions/-/websocket-extensions-0.1.1.tgz"
+                  "from": "websocket-extensions@>=0.1.1"
                 }
               }
             }
           }
         },
-        "node-uuid": {
-          "version": "1.4.3",
-          "resolved": "https://registry.npmjs.org/node-uuid/-/node-uuid-1.4.3.tgz",
-          "from": "https://registry.npmjs.org/node-uuid/-/node-uuid-1.4.3.tgz"
+        "uuid": {
+          "version": "2.0.2",
+          "resolved": "https://registry.npmjs.org/uuid/-/uuid-2.0.2.tgz",
+          "from": "uuid@>=2.0.2 <3.0.0"
         }
       }
     }
