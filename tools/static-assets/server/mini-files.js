@@ -1,6 +1,7 @@
 var _ = require("underscore");
 var os = require("os");
 var path = require("path");
+var assert = require("assert");
 
 // All of these functions are attached to files.js for the tool;
 // they live here because we need them in boot.js as well to avoid duplicating
@@ -73,6 +74,8 @@ var convertToStandardLineEndings = function (fileContents) {
 // forward slashes)
 var wrapPathFunction = function (name, partialPaths) {
   var f = path[name];
+  assert.strictEqual(typeof f, "function");
+
   return function (/* args */) {
     if (process.platform === 'win32') {
       var args = _.toArray(arguments);
@@ -95,12 +98,11 @@ files.pathResolve = wrapPathFunction("resolve");
 files.pathDirname = wrapPathFunction("dirname");
 files.pathBasename = wrapPathFunction("basename");
 files.pathExtname = wrapPathFunction("extname");
+// The path.isAbsolute function is implemented in Node v4.
+files.pathIsAbsolute = wrapPathFunction("isAbsolute");
 files.pathSep = '/';
 files.pathDelimiter = ':';
 files.pathOsDelimiter = path.delimiter;
-files.pathIsAbsolute = function (path) {
-  return toPosixPath(path).charAt(0) === '/';
-};
 
 files.convertToStandardPath = convertToStandardPath;
 files.convertToOSPath = convertToOSPath;
