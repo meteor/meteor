@@ -82,8 +82,6 @@ This package also doesn't do anything in development or production mode (in fact
 Test files themselves (for example a file named `todos-item.test.js` or `routing.app-specs.coffee`) can register themselves to be run by the test driver in the usual way for that testing library. For Mocha, that's by using `describe` and `it`:
 
 ```js
-// Note: Arrow function use with Mocha is discouraged.
-// (see http://mochajs.org/#arrow-functions)
 describe('my module', function () {
   it('does something that should be tested', function () {
     // This code will be executed by the test driver when the app is started
@@ -91,6 +89,8 @@ describe('my module', function () {
   })
 })
 ```
+
+Note that arrow function use with Mocha [is discouraged](http://mochajs.org/#arrow-functions).
 
 <h2 id="test-data">Test data</h2>
 
@@ -189,7 +189,9 @@ By isolating a module and simply testing its internal functionality, we can writ
 
 In the Todos example application, thanks to the fact that we've split our User Interface into [smart and reusable components](ui-ux.html#components), it's natural to want to unit test some of our reusable components (we'll see below how to [integration test](#simple-integration-test) our smart components).
 
-To do so, we'll use a very simple test helper that renders a Blaze component off-screen with a given data context (note that the [React test utils](https://facebook.github.io/react/docs/test-utils.html) can do a similar thing for React). As we place it in `imports/ui/test-helpers.js` it won't load in our app by in normal mode (as it's not required anywhere):
+To do so, we'll use a very simple test helper that renders a Blaze component off-screen with a given data context (note that the [React test utils](https://facebook.github.io/react/docs/test-utils.html) can do a similar thing for React). As we place it in `imports`, it won't load in our app by in normal mode (as it's not required anywhere).
+
+[`imports/ui/test-helpers.js`](https://github.com/meteor/todos/blob/master/imports/ui/test-helpers.js):
 
 ```js
 import { _ } from 'meteor/underscore';
@@ -217,7 +219,9 @@ export const function withRenderedTemplate(template, data, callback) {
 };
 ```
 
-A simple example of a reusable component to test is the `Todos_item` template. Here's what a unit test looks like (you can see some [others in the app repository](https://github.com/meteor/todos/blob/master/imports/ui/components/client/todos-item.tests.js)):
+A simple example of a reusable component to test is the [`Todos_item`](https://github.com/meteor/todos/blob/master/imports/ui/components/todos-item.html) template. Here's what a unit test looks like (you can see some [others in the app repository](https://github.com/meteor/todos/blob/master/imports/ui/components/client)).
+
+[`imports/ui/components/client/todos-item.tests.js`](https://github.com/meteor/todos/blob/master/imports/ui/components/client/todos-item.tests.js):
 
 ```js
 /* eslint-env mocha */
@@ -341,6 +345,8 @@ Our reusable components were a natural fit for a unit test; similarly our smart 
 
 In the Todos example app, we have an integration test for the `Lists_show_page` smart component. This test simply ensures that when the correct data is present in the database, the template renders correctly -- that it is gathering the correct data as we expect. It isolates the rendering tree from the more complex data subscription part of the Meteor stack. If we wanted to test that the subscription side of things was working in concert with the smart component, we'd need to write a [full app integration test](#full-app-integration-test).
 
+[`imports/ui/components/client/todos-item.tests.js`](https://github.com/meteor/todos/blob/master/imports/ui/components/client/todos-item.tests.js):
+
 ```js
 /* eslint-env mocha */
 /* eslint-disable func-names, prefer-arrow-callback */
@@ -420,7 +426,9 @@ This integration test can be run the exact same way as we ran [unit tests above]
 
 <h3 id="full-app-integration-test">Full-app integration test</h3>
 
-In the Todos example application, we have a integration test which ensures that we see the full contents of a list when we route to it, which demonstrates a few techniques of integration tests:
+In the Todos example application, we have a integration test which ensures that we see the full contents of a list when we route to it, which demonstrates a few techniques of integration tests.
+
+[`imports/startup/client/routes.app-test.js`](https://github.com/meteor/todos/blob/master/imports/startup/client/routes.app-test.js):
 
 ```js
 /* eslint-env mocha */
@@ -454,7 +462,7 @@ const waitForSubscriptions = () => new Promise(resolve => {
 const afterFlushPromise = Promise.denodeify(Tracker.afterFlush);
 
 if (Meteor.isClient) {
-    describe('data available when routed', () => {
+  describe('data available when routed', () => {
     // First, ensure the data that we expect is loaded on the server
     //   Then, route the app to the homepage
     beforeEach(() => generateData().then(() => FlowRouter.go('/')));
@@ -504,7 +512,7 @@ When we connect to the test instance in a browser, we want to render a testing U
 
 To create test data in full-app test mode, it usually makes sense to create some special test methods which we can call from the client side. Usually when testing a full app, we want to make sure the publications are sending through the correct data (as we do in this test), and so it's not sufficient to stub out the collections and place synthetic data in them. Instead we'll want to actually create data on the server and let it be published.
 
-Similar to the way we cleared the database using a method in the `beforeEach` in the [test data](#test-data) section above, we can call a method to do that before running our tests. In the case of our routing tests, we've used a file called `imports/api/generate-data.app-tests.js` which defines this method (and will only be loaded in full app test mode, so is not available in general!):
+Similar to the way we cleared the database using a method in the `beforeEach` in the [test data](#test-data) section above, we can call a method to do that before running our tests. In the case of our routing tests, we've used a file called [`imports/api/generate-data.app-tests.js`](https://github.com/meteor/todos/blob/master/imports/api/generate-data.app-tests.js) which defines this method (and will only be loaded in full app test mode, so is not available in general!):
 
 ```js
 // This file will be auto-imported in the app-test context,
@@ -586,7 +594,9 @@ Chimp has a variety of options for setting it up, but we can add some npm script
 }
 ```
 
-Chimp will now look in the `tests/` directory (otherwise ignored by the Meteor tool) for files in which you define acceptance tests. In the Todos example app, we define a simple test that ensures we can click the "create list" button:
+Chimp will now look in the `tests/` directory (otherwise ignored by the Meteor tool) for files in which you define acceptance tests. In the Todos example app, we define a simple test that ensures we can click the "create list" button.
+
+[`tests/lists.js`](https://github.com/meteor/todos/blob/master/tests/lists.js):
 
 ```js
 /* eslint-env mocha */
