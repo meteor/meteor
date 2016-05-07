@@ -1429,7 +1429,11 @@ wrapFsFunc("rename", [0, 1]);
 
 // The fs.exists method is deprecated in Node v4:
 // https://nodejs.org/api/fs.html#fs_fs_exists_path_callback
-files.exists = function (path) {
+files.exists =
+files.existsSync = function (path, callback) {
+  if (typeof callback === "function") {
+    throw new Error("Passing a callback to files.exists is no longer supported");
+  }
   return !! files.statOrNull(path);
 };
 

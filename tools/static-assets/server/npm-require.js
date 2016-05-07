@@ -6,9 +6,17 @@ var files = require('./mini-files.js');
 var serverJson = require("./server-json.js");
 var topLevelIdPattern = /^[^./]/;
 
+function statOrNull(path) {
+  try {
+    return fs.statSync(path);
+  } catch (e) {
+    return null;
+  }
+}
+
 function findAppDirHelper(absOSPath) {
   if (fs.statSync(absOSPath).isDirectory() &&
-      fs.existsSync(path.join(absOSPath, ".meteor"))) {
+      statOrNull(path.join(absOSPath, ".meteor"))) {
     return absOSPath;
   }
 
