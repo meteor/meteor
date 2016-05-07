@@ -475,9 +475,7 @@ var launchMongo = function (options) {
       stop: function () {
         if (proc) {
           proc.removeListener('exit', procExitHandler);
-          // The .kill method now requires a numeric first argument:
-          // https://github.com/nodejs/node/commit/832ec1cd50
-          proc.kill(proc.pid, 'SIGINT');
+          proc.kill('SIGINT');
           proc = null;
         }
       }

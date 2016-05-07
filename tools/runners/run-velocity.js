@@ -30,9 +30,7 @@ var runVelocity = function (url) {
 
   var killBrowserProcesses = function () {
     browserProcesses.forEach(function (browserProcess) {
-      // The .kill method now requires a numeric first argument:
-      // https://github.com/nodejs/node/commit/832ec1cd50
-      browserProcess.kill(browserProcess.pid, 'SIGINT');
+      browserProcess.kill('SIGINT');
     });
     browserProcesses = [];
   };
