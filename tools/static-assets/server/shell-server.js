@@ -31,7 +31,7 @@ exports.listen = function listen(shellDir) {
       hooks.push(callback);
     } else {
       // As a fallback, just call the callback asynchronously.
-      process.nextTick(callback);
+      setImmediate(callback);
     }
   }
 };
