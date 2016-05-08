@@ -13,6 +13,8 @@ authentication mechanisms, should be kept in the `server` directory.
 {{/note}}
 
 {{> autoApiBox "Meteor.isCordova"}}
+{{> autoApiBox "Meteor.isDevelopment"}}
+{{> autoApiBox "Meteor.isProduction"}}
 
 {{> autoApiBox "Meteor.startup"}}
 
@@ -39,6 +41,8 @@ followed by your application code.
     }
 
 {{> autoApiBox "Meteor.wrapAsync"}}
+
+{{> autoApiBox "Meteor.defer"}}
 
 {{> autoApiBox "Meteor.absoluteUrl"}}
 

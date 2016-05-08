@@ -1,3 +1,66 @@
+## v.NEXT
+
+* `*.min.js` files are no longer minified during the build process. 
+  [PR #6986](https://github.com/meteor/meteor/pull/6986) [Issue #5363](https://github.com/meteor/meteor/issues/5363)
+* You can now pick where the `.meteor/local` directory is created by setting the `METEOR_LOCAL_DIR` environment variable. This lets you run multiple instances of the same Meteor app.
+  [PR #6760](https://github.com/meteor/meteor/pull/6760) [Issue #6532](https://github.com/meteor/meteor/issues/6532)
+
+## v1.3.2.3
+
+* Reverted accidental changes included in 1.3.2.1 and 1.3.2.2 that
+  improved DDP performance by batching updates, but broke some packages
+  that relied on private methods of the DDP client Connection class. See
+  https://github.com/meteor/meteor/pull/5680 for more details. These
+  changes will be reinstated in 1.3.3.
+
+## v1.3.2.2
+
+* Fixed bugs #6819 and #6831.
+
+## v1.3.2.1
+
+* Fixed faulty comparison of `.sourcePath` and `.targetPath` properties of
+  files scanned by the `ImportScanner`, which caused problems for apps
+  using the `tap:i18n` package. 6e792a7cf25847b8cd5d5664a0ff45c9fffd9e57
+
+## v1.3.2
+
+* The `meteor/meteor` repository now includes a `Roadmap.md` file:
+  https://github.com/meteor/meteor/blob/devel/Roadmap.md
+
+* Running `npm install` in `bundle/programs/server` when deploying an app
+  also rebuilds any binary npm dependencies, fixing #6537. Set
+  METEOR_SKIP_NPM_REBUILD=1 to disable this behavior if necessary.
+
+* Non-.js(on) files in `node_modules` (such as `.less` and `.scss`) are
+  now processed by compiler plugins and may be imported by JS. #6037
+
+* The `jquery` package can now be completely removed from any app (#6563),
+  and uses `<app>/node_modules/jquery` if available (#6626).
+
+* Source maps are once again generated for all bundled JS files, even if
+  they are merely identity mappings, so that the files appear distinct in
+  the browser, and stack traces make more sense. #6639
+
+* All application files in `imports` directories are now considered lazy,
+  regardless of whether the app is using the `modules` package. This could
+  be a breaking change for 1.3.2 apps that do not use `modules` or
+  `ecmascript` but contain `imports` directories. Workaround: move files
+  out of `imports`, or rename `imports` to something else.
+
+* The `npm-bcrypt` package has been upgraded to use the latest version
+  (0.8.5) of the `bcrypt` npm package.
+
+* `Match.Optional` only passes if the value is `null` or the specified
+  type, whereas previously it accepted `undefined`. Use `Match.Maybe` to
+  allow `undefined`. #6735
+
+* Compiler plugins can call `addJavaScript({ path })` multiple times with
+  different paths for the same source file, and `module.id` will reflect
+  this `path` instead of the source path, if they are different. #6806
+
+* Fixed bugs: https://github.com/meteor/meteor/milestones/Release%201.3.2
+
 ## v1.3.1
 
 * Long isopacket node_modules paths have been shortened, fixing upgrade

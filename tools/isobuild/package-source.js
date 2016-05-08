@@ -201,7 +201,7 @@ class SymlinkLoopChecker {
     this._realpathCache = {};
   }
 
-  check(relDir, quietly) {
+  check(relDir, quietly = true) {
     const absPath = files.pathJoin(this.sourceRoot, relDir);
 
     try {
@@ -213,7 +213,7 @@ class SymlinkLoopChecker {
       // else leave realPath undefined
     }
 
-    if (realPath === undefined || _.has(this._seenPaths, realPath)) {
+    if (! realPath || _.has(this._seenPaths, realPath)) {
       if (! quietly) {
         buildmessage.error("Symlink cycle detected at " + relDir);
       }
@@ -1327,42 +1327,57 @@ _.extend(PackageSource.prototype, {
 
   _inferFileOptions(relPath, {arch, isApp}) {
     const fileOptions = {};
+    const isTest = global.testCommandMetadata &&
+      global.testCommandMetadata.isTest;
+
+    if (isTest) {
+      if (isTestFilePath(relPath)) {
+        // When running tests, test files should not be loaded lazily.
+        return fileOptions;
+      }
+
+      // If running in test mode (`meteor test`), all files other than
+      // test files should be loaded lazily.
+      fileOptions.lazy = true;
+    }
+
     const dirs = files.pathDirname(relPath).split(files.pathSep);
 
-    // If the file is restricted to the opposite architecture, make sure
-    // it is not evaluated eagerly.
-    if (arch === "os") {
-      if (dirs.indexOf("client") >= 0) {
+    for (var i = 0; i < dirs.length; ++i) {
+      let dir = dirs[i];
+
+      if (dir === "node_modules") {
+        fileOptions.lazy = true;
+        fileOptions.transpile = false;
+
+        // Return immediately so that we don't apply special meanings to
+        // client or server directories inside node_modules directories.
+        return fileOptions;
+      }
+
+      if (isApp && dir === "imports") {
         fileOptions.lazy = true;
       }
-    } else if (dirs.indexOf("server") >= 0) {
-      fileOptions.lazy = true;
-    }
 
-    if (dirs.indexOf("node_modules") >= 0) {
-      fileOptions.lazy = true;
-      fileOptions.transpile = false;
-    }
-
-    // If running in test mode (`meteor test`), all
-    // files other than test files should be loaded lazily
-    if (global.testCommandMetadata && global.testCommandMetadata.isTest) {
-      if (!isTestFilePath(relPath)) {
-        fileOptions.lazy = true;
-      }
-    }
-
-    // Special case: in app code on the client, JavaScript files in a
-    // `client/compatibility` directory don't get wrapped in a closure.
-    if (isApp && // Skip this check for packages.
-        archinfo.matches(arch, "web") &&
-        relPath.endsWith(".js")) {
-      for (var i = 1; i < dirs.length; ++i) {
-        if (dirs[i - 1] === "client" &&
-            dirs[i] === "compatibility") {
-          fileOptions.bare = true;
-          break;
+      // If the file is restricted to the opposite architecture, make sure
+      // it is not evaluated eagerly.
+      if (archinfo.matches(arch, "os")) {
+        if (dir === "client") {
+          fileOptions.lazy = true;
         }
+      } else if (dir === "server") {
+        fileOptions.lazy = true;
+      }
+
+      // Special case: in app code on the client, JavaScript files in a
+      // `client/compatibility` directory don't get wrapped in a closure.
+      if (i > 0 &&
+          dirs[i - 1] === "client" &&
+          dir === "compatibility" &&
+          isApp && // Skip this check for packages.
+          archinfo.matches(arch, "web") &&
+          relPath.endsWith(".js")) {
+        fileOptions.bare = true;
       }
     }
 
@@ -1377,6 +1392,7 @@ _.extend(PackageSource.prototype, {
     loopChecker = new SymlinkLoopChecker(this.sourceRoot),
     ignoreFiles = []
   }) {
+    const self = this;
     const arch = sourceArch.arch;
     const sourceReadOptions =
       sourceProcessorSet.appReadDirectoryOptions(arch);
@@ -1404,16 +1420,11 @@ _.extend(PackageSource.prototype, {
       controlFiles.push('package.js');
     }
 
-    const sources = _.difference(
-      this._readAndWatchDirectory('', watchSet, {
-        ...sourceReadOptions,
-      }),
-      controlFiles
-    );
-
     const anyLevelExcludes = [
       /^tests\/$/,
-      arch === "os" ? /^client\/$/ : /^server\/$/,
+      archinfo.matches(arch, "os")
+        ? /^client\/$/
+        : /^server\/$/,
       ...sourceReadOptions.exclude,
     ];
 
@@ -1426,44 +1437,77 @@ _.extend(PackageSource.prototype, {
       /^acceptance-tests\/$/,
     ] : anyLevelExcludes;
 
-    // Read top-level subdirectories. Ignore subdirectories that have
-    // special handling.
-    var sourceDirectories = this._readAndWatchDirectory('', watchSet, {
-      include: [/\/$/],
-      exclude: topLevelExcludes,
-    });
+    const nodeModulesReadOptions = {
+      ...sourceReadOptions,
+      // When we're in a node_modules directory, we can avoid collecting
+      // .js and .json files, because (unlike .less or .coffee files) they
+      // are allowed to be imported later by the ImportScanner, as they do
+      // not require custom processing by compiler plugins.
+      exclude: sourceReadOptions.exclude.concat(/\.js(on)?$/i),
+    };
 
-    loopChecker.check('');
-
-    while (!_.isEmpty(sourceDirectories)) {
-      var dir = sourceDirectories.shift();
-      if (/(^|\/)node_modules\/$/.test(dir)) {
-        sourceArch.localNodeModulesDirs[dir] = true;
-        continue;
-      }
-
-      // remove trailing slash
-      dir = dir.substr(0, dir.length - 1);
+    function find(dir, depth, inNodeModules) {
+      // Remove trailing slash.
+      dir = dir.replace(/\/$/, "");
 
       if (loopChecker.check(dir)) {
-        // pretend we found no files
+        // Pretend we found no files.
         return [];
       }
 
-      // Find source files in this directory.
-      sources.push(...this._readAndWatchDirectory(
-        dir, watchSet, sourceReadOptions
-      ));
+      const readOptions = inNodeModules
+        ? nodeModulesReadOptions
+        : sourceReadOptions;
 
-      // Find sub-sourceDirectories. Note that we DON'T need to ignore the
-      // directory names that are only special at the top level.
-      sourceDirectories.push(...this._readAndWatchDirectory(dir, watchSet, {
+      const sources = _.difference(
+        self._readAndWatchDirectory(dir, watchSet, readOptions),
+        depth > 0 ? [] : controlFiles
+      );
+
+      const subdirectories = self._readAndWatchDirectory(dir, watchSet, {
         include: [/\/$/],
-        exclude: anyLevelExcludes,
-      }));
+        exclude: depth > 0
+          ? anyLevelExcludes
+          : topLevelExcludes
+      });
+
+      let nodeModulesDir;
+
+      subdirectories.forEach(subdir => {
+        if (/(^|\/)node_modules\/$/.test(subdir)) {
+          if (! inNodeModules) {
+            sourceArch.localNodeModulesDirs[subdir] = true;
+          }
+
+          // Defer handling node_modules until after we handle all other
+          // subdirectories, so that we know whether we need to descend
+          // further. If sources is still empty after we handle everything
+          // else in dir, then nothing in this node_modules subdir can be
+          // imported by anthing outside of it, so we can ignore it.
+          nodeModulesDir = subdir;
+
+        } else {
+          sources.push(...find(subdir, depth + 1, inNodeModules));
+        }
+      });
+
+      if (isApp &&
+          nodeModulesDir &&
+          (! inNodeModules || sources.length > 0)) {
+        // If we found a node_modules subdirectory above, and either we
+        // are not already inside another node_modules directory or we
+        // found source files elsewhere in this directory or its other
+        // subdirectories, and we're building an app (as opposed to a
+        // Meteor package), continue searching this node_modules
+        // directory, so that any non-.js(on) files it contains can be
+        // imported by the app (#6037).
+        sources.push(...find(nodeModulesDir, depth + 1, true));
+      }
+
+      return sources;
     }
 
-    return sources;
+    return find("", 0, false);
   },
 
   _findAssets({

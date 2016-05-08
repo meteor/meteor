@@ -13,7 +13,7 @@ selftest.define("parse-stack - parse stack traces without fibers", () => {
   selftest.expectEqual(_.last(firstFilePath.split("/")), "parse-stack-test.js");
 
   const lastFilePath = files.convertToStandardPath(_.last(parsedStack).file);
-  selftest.expectEqual(_.last(lastFilePath.split("/")), "main.js");
+  selftest.expectEqual(_.last(lastFilePath.split("/")), "selftest.js");
 
   markBottom(() => {
     const markedErr = new Error();

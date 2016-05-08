@@ -69,8 +69,8 @@ if [ ! -x "$METEOR_WAREHOUSE_DIR/meteor" ]; then
 
   # This returns something like:
   #   https://asdfasdfasdf.cloudfront.net/packages-bootstrap/1.2.3
-  ROOT_URL="$(curl -s --fail $BOOTSTRAP_URL)"
-  TARBALL_URL="${ROOT_URL}/meteor-bootstrap-${PLATFORM}.tar.gz"
+  TMP_ROOT_URL="$(curl -s --fail $BOOTSTRAP_URL)"
+  TARBALL_URL="${TMP_ROOT_URL}/meteor-bootstrap-${PLATFORM}.tar.gz"
 
   INSTALL_TMPDIR="$(dirname "$METEOR_WAREHOUSE_DIR")/.meteor-install-tmp"
   rm -rf "$INSTALL_TMPDIR"
@@ -81,7 +81,15 @@ if [ ! -x "$METEOR_WAREHOUSE_DIR/meteor" ]; then
     echo "This is your first time using Meteor!" 1>&2
   fi
   echo "Installing a Meteor distribution in your home directory." 1>&2
-  curl --progress-bar --fail "$TARBALL_URL" | tar -xzf - -C "$INSTALL_TMPDIR"
+
+  # Only show progress bar animations if we have a tty
+  # (Prevents tons of console junk when installing within a pipe)
+  if [[ -t 1 ]]; then
+    curl --progress-bar --fail "$TARBALL_URL" | tar -xzf - -C "$INSTALL_TMPDIR"
+  else
+    curl -s --fail "$TARBALL_URL" | tar -xzf - -C "$INSTALL_TMPDIR"
+  fi
+
   # bomb out if it didn't work, eg no net
   test -x "${INSTALL_TMPDIR}/.meteor/meteor"
   mv "${INSTALL_TMPDIR}/.meteor" "$METEOR_WAREHOUSE_DIR"

@@ -2396,7 +2396,7 @@ DocsData = {
     "options": [],
     "params": [
       {
-        "description": "<p>The return value from <code>Blaze.render</code> or <code>Blaze.renderWithData</code>.</p>",
+        "description": "<p>The return value from <code>Blaze.render</code> or <code>Blaze.renderWithData</code>, or the <code>view</code> property of a Blaze.Template instance. Calling <code>Blaze.remove(Template.instance().view)</code> from within a template event handler will destroy the view as well as that template and trigger the template's <code>onDestroyed</code> handlers.</p>",
         "name": "renderedView",
         "type": {
           "names": [
@@ -2406,7 +2406,7 @@ DocsData = {
       }
     ],
     "scope": "static",
-    "summary": "Removes a rendered View from the DOM, stopping all reactive updates and event listeners on it."
+    "summary": "Removes a rendered View from the DOM, stopping all reactive updates and event listeners on it. Also destroys the Blaze.Template instance associated with the view."
   },
   "Blaze.render": {
     "filepath": "blaze/view.js",
@@ -3617,7 +3617,7 @@ DocsData = {
   "Email.send": {
     "filepath": "email/email.js",
     "kind": "function",
-    "lineno": 151,
+    "lineno": 154,
     "locus": "Server",
     "longname": "Email.send",
     "memberof": "Email",
@@ -4253,47 +4253,9 @@ DocsData = {
     "scope": "instance",
     "summary": "Web targets only. Add a stylesheet to the document. Not available\nfor linter build plugins."
   },
-  "InputFile#getPathInBundle": {
+  "InputFile#error": {
     "kind": "function",
-    "longname": "InputFile#getPathInBundle",
-    "memberof": "InputFile",
-    "name": "getPathInBundle",
-    "options": [],
-    "params": [],
-    "returns": [
-      {
-        "type": {
-          "names": [
-            "String"
-          ]
-        }
-      }
-    ],
-    "scope": "instance",
-    "summary": "Returns the path of the compiled file in the bundle."
-  },
-  "InputFile#getSourceMap": {
-    "kind": "function",
-    "longname": "InputFile#getSourceMap",
-    "memberof": "InputFile",
-    "name": "getSourceMap",
-    "options": [],
-    "params": [],
-    "returns": [
-      {
-        "type": {
-          "names": [
-            "String"
-          ]
-        }
-      }
-    ],
-    "scope": "instance",
-    "summary": "Returns the source-map associated with the file."
-  },
-  "InputFile.error": {
-    "kind": "function",
-    "longname": "InputFile.error",
+    "longname": "InputFile#error",
     "memberof": "InputFile",
     "name": "error",
     "options": [
@@ -4345,12 +4307,12 @@ DocsData = {
         }
       }
     ],
-    "scope": "static",
+    "scope": "instance",
     "summary": "Call this method to raise a compilation or linting error for the\nfile."
   },
-  "InputFile.getArch": {
+  "InputFile#getArch": {
     "kind": "function",
-    "longname": "InputFile.getArch",
+    "longname": "InputFile#getArch",
     "memberof": "InputFile",
     "name": "getArch",
     "options": [],
@@ -4364,12 +4326,12 @@ DocsData = {
         }
       }
     ],
-    "scope": "static",
+    "scope": "instance",
     "summary": "Returns the architecture that is targeted while processing this\nfile."
   },
-  "InputFile.getBasename": {
+  "InputFile#getBasename": {
     "kind": "function",
-    "longname": "InputFile.getBasename",
+    "longname": "InputFile#getBasename",
     "memberof": "InputFile",
     "name": "getBasename",
     "options": [],
@@ -4383,12 +4345,12 @@ DocsData = {
         }
       }
     ],
-    "scope": "static",
+    "scope": "instance",
     "summary": "Returns the filename of the file."
   },
-  "InputFile.getContentsAsBuffer": {
+  "InputFile#getContentsAsBuffer": {
     "kind": "function",
-    "longname": "InputFile.getContentsAsBuffer",
+    "longname": "InputFile#getContentsAsBuffer",
     "memberof": "InputFile",
     "name": "getContentsAsBuffer",
     "options": [],
@@ -4402,12 +4364,12 @@ DocsData = {
         }
       }
     ],
-    "scope": "static",
+    "scope": "instance",
     "summary": "Returns the full contents of the file as a buffer."
   },
-  "InputFile.getContentsAsString": {
+  "InputFile#getContentsAsString": {
     "kind": "function",
-    "longname": "InputFile.getContentsAsString",
+    "longname": "InputFile#getContentsAsString",
     "memberof": "InputFile",
     "name": "getContentsAsString",
     "options": [],
@@ -4421,12 +4383,12 @@ DocsData = {
         }
       }
     ],
-    "scope": "static",
+    "scope": "instance",
     "summary": "Returns the full contents of the file as a string."
   },
-  "InputFile.getDeclaredExports": {
+  "InputFile#getDeclaredExports": {
     "kind": "function",
-    "longname": "InputFile.getDeclaredExports",
+    "longname": "InputFile#getDeclaredExports",
     "memberof": "InputFile",
     "name": "getDeclaredExports",
     "options": [],
@@ -4440,12 +4402,12 @@ DocsData = {
         }
       }
     ],
-    "scope": "static",
+    "scope": "instance",
     "summary": "Returns a list of symbols declared as exports in this target. The\nresult of `api.export('symbol')` calls in target's control file such as\npackage.js."
   },
-  "InputFile.getDirname": {
+  "InputFile#getDirname": {
     "kind": "function",
-    "longname": "InputFile.getDirname",
+    "longname": "InputFile#getDirname",
     "memberof": "InputFile",
     "name": "getDirname",
     "options": [],
@@ -4459,12 +4421,12 @@ DocsData = {
         }
       }
     ],
-    "scope": "static",
+    "scope": "instance",
     "summary": "Returns the directory path relative to the package or app root.\nThe returned path always uses forward slashes."
   },
-  "InputFile.getDisplayPath": {
+  "InputFile#getDisplayPath": {
     "kind": "function",
-    "longname": "InputFile.getDisplayPath",
+    "longname": "InputFile#getDisplayPath",
     "memberof": "InputFile",
     "name": "getDisplayPath",
     "options": [],
@@ -4478,12 +4440,31 @@ DocsData = {
         }
       }
     ],
-    "scope": "static",
+    "scope": "instance",
     "summary": "Returns a relative path that can be used to form error messages or\nother display properties. Can be used as an input to a source map."
   },
-  "InputFile.getFileOptions": {
+  "InputFile#getExtension": {
     "kind": "function",
-    "longname": "InputFile.getFileOptions",
+    "longname": "InputFile#getExtension",
+    "memberof": "InputFile",
+    "name": "getExtension",
+    "options": [],
+    "params": [],
+    "returns": [
+      {
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      }
+    ],
+    "scope": "instance",
+    "summary": "Returns the extension that matched the compiler plugin.\nThe longest prefix is preferred."
+  },
+  "InputFile#getFileOptions": {
+    "kind": "function",
+    "longname": "InputFile#getFileOptions",
     "memberof": "InputFile",
     "name": "getFileOptions",
     "options": [],
@@ -4497,12 +4478,12 @@ DocsData = {
         }
       }
     ],
-    "scope": "static",
+    "scope": "instance",
     "summary": "Returns an object of file options such as those passed as the\n         third argument to api.addFiles."
   },
-  "InputFile.getPackageName": {
+  "InputFile#getPackageName": {
     "kind": "function",
-    "longname": "InputFile.getPackageName",
+    "longname": "InputFile#getPackageName",
     "memberof": "InputFile",
     "name": "getPackageName",
     "options": [],
@@ -4516,12 +4497,31 @@ DocsData = {
         }
       }
     ],
-    "scope": "static",
+    "scope": "instance",
     "summary": "Returns the name of the package or `null` if the file is not in a\npackage."
   },
-  "InputFile.getPathInPackage": {
+  "InputFile#getPathInBundle": {
     "kind": "function",
-    "longname": "InputFile.getPathInPackage",
+    "longname": "InputFile#getPathInBundle",
+    "memberof": "InputFile",
+    "name": "getPathInBundle",
+    "options": [],
+    "params": [],
+    "returns": [
+      {
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      }
+    ],
+    "scope": "instance",
+    "summary": "Returns the path of the compiled file in the bundle."
+  },
+  "InputFile#getPathInPackage": {
+    "kind": "function",
+    "longname": "InputFile#getPathInPackage",
     "memberof": "InputFile",
     "name": "getPathInPackage",
     "options": [],
@@ -4535,12 +4535,12 @@ DocsData = {
         }
       }
     ],
-    "scope": "static",
+    "scope": "instance",
     "summary": "Returns the relative path of file to the package or app root\ndirectory. The returned path always uses forward slashes."
   },
-  "InputFile.getSourceHash": {
+  "InputFile#getSourceHash": {
     "kind": "function",
-    "longname": "InputFile.getSourceHash",
+    "longname": "InputFile#getSourceHash",
     "memberof": "InputFile",
     "name": "getSourceHash",
     "options": [],
@@ -4554,8 +4554,27 @@ DocsData = {
         }
       }
     ],
-    "scope": "static",
+    "scope": "instance",
     "summary": "Returns a hash string for the file that can be used to implement\ncaching."
+  },
+  "InputFile#getSourceMap": {
+    "kind": "function",
+    "longname": "InputFile#getSourceMap",
+    "memberof": "InputFile",
+    "name": "getSourceMap",
+    "options": [],
+    "params": [],
+    "returns": [
+      {
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      }
+    ],
+    "scope": "instance",
+    "summary": "Returns the source-map associated with the file."
   },
   "IterationCallback": {
     "filepath": "minimongo/minimongo.js",
@@ -4916,6 +4935,30 @@ DocsData = {
     ],
     "scope": "static",
     "summary": "Cancel a function call scheduled by `Meteor.setTimeout`."
+  },
+  "Meteor.defer": {
+    "filepath": "meteor/timers.js",
+    "kind": "function",
+    "lineno": 74,
+    "locus": "Anywhere",
+    "longname": "Meteor.defer",
+    "memberof": "Meteor",
+    "module": "meteor",
+    "name": "defer",
+    "options": [],
+    "params": [
+      {
+        "description": "<p>The function to run</p>",
+        "name": "func",
+        "type": {
+          "names": [
+            "function"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Defer execution of a function to run asynchronously in the background (similar to `Meteor.setTimeout(func, 0)`."
   },
   "Meteor.disconnect": {
     "filepath": "ddp-client/livedata_connection.js",
@@ -8533,24 +8576,6 @@ DocsData = {
     ],
     "scope": "global",
     "summary": "Executes a command synchronously, returning either the captured\nstdout output or throwing an error containing the stderr output as part of\nthe message. In addition, the error will contain fields pid, stderr, stdout,\nstatus and signal."
-  },
-  "getExtension": {
-    "kind": "function",
-    "longname": "getExtension",
-    "name": "getExtension",
-    "options": [],
-    "params": [],
-    "returns": [
-      {
-        "type": {
-          "names": [
-            "String"
-          ]
-        }
-      }
-    ],
-    "scope": "global",
-    "summary": "Returns the extension that matched the compiler plugin.\nThe longest prefix is preferred."
   },
   "loggingIn": {
     "filepath": "accounts-base/accounts_client.js",

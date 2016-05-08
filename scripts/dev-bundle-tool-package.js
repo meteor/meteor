@@ -24,7 +24,7 @@ var packageJson = {
     // and we want to make sure there are no dependencies on a higher version
     npm: "2.14.22",
     fibers: fibersVersion,
-    "meteor-babel": "0.8.1",
+    "meteor-babel": "0.9.2",
     "meteor-promise": "0.5.1",
     // So that Babel 6 can emit require("babel-runtime/helpers/...") calls.
     "babel-runtime": "5.8.35",
@@ -61,7 +61,8 @@ var packageJson = {
     eachline: "https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da",
     pathwatcher: "4.1.0",
     'lru-cache': '2.6.4',
-    'cordova-lib': "6.0.0"
+    'cordova-lib': "6.0.0",
+    longjohn: '0.2.11'
   }
 };
 

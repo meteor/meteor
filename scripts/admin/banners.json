@@ -9,9 +9,9 @@
       "text": "=> Meteor 1.3: ES2015 modules, npm integration, app testing, mobile\n   improvements, and more.\n\n   This release is being downloaded in the background. Update your app to\n   Meteor 1.3 by running 'meteor update'."
     }
   }, {
-    "versions": ["1.3"],
+    "versions": ["1.3", "1.3.1", "1.3.2", "1.3.2.1", "1.3.2.2", "1.3.2.3"],
     "banner": {
-      "text": "=> Meteor 1.3.1: Minor bug fixes following the 1.3 release.\n\n   This release is being downloaded in the background. Update your app to\n   Meteor 1.3.1 by running 'meteor update'."
+      "text": "=> Meteor 1.3.2.4: Improvements to deploying binary npm packages,\n   importing stylesheets from node_modules, and more:\n   https://github.com/meteor/meteor/blob/master/History.md#v1324\n\n   This release is being downloaded in the background. Update your app to\n   Meteor 1.3.2.4 by running 'meteor update'."
     }
   }]
 }

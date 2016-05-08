@@ -164,7 +164,7 @@ A version of the `npm` command comes bundled with every Meteor installation, and
 
 ### File load order
 
-Before Meteor 1.3, the order in which application files were evaluated was dictated by a set of rules described in the [Structuring Your Application](http://docs.meteor.com/#/full/structuringyourapp) section of the docs (see **File Load Order** subheading). These rules could become frustrating when one file depended on a variable defined by another file, particularly when the first file was evaluated after the second file.
+Before Meteor 1.3, the order in which application files were evaluated was dictated by a set of rules described in the [Application Structure - Default file load order](http://guide.meteor.com/structure.html#load-order) section of the Meteor Guide. These rules could become frustrating when one file depended on a variable defined by another file, particularly when the first file was evaluated after the second file.
 
 Thanks to modules, any load-order dependency you might imagine can be resolved by adding an `import` statement. So if `a.js` loads before `b.js` because of their file names, but `a.js` needs something defined by `b.js`, then `a.js` can simply `import` that value from `b.js`:
 

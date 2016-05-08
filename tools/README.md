@@ -110,14 +110,26 @@ call. Otherwise, it won't start measuring anything.
 Currently, to debug the tool with `node-inspector`, you can set the `
 TOOL_NODE_FLAGS` environment variable to be `--debug` or `--debug-brk`. This
 will modify the `meteor` bash script and run the tool with debugging enabled.
- Note that `node-inspector` should be compatible with the `node`
-version in the `dev_bundle`.
+The debugger will be listening to port 5858 by default, but it could be
+changed using the notation `--debug=6060` or `--debug-brk=6060`. Note that
+`node-inspector` should be compatible with the `node` version in the
+`dev_bundle`.
 
 Next, start `node-inspector` from your checkout by going to
 `path/to/your/meteor/dev_bundle/lib/node_modules/node-inspector/bin` and
 run `inspector.js`.
 This will tell you the URL of the node inspector. If used with `--
 debug-brk`, the script will pause on the first line.
+
+In order to debug the test apps that `self-test` will spawn, the env
+variable `SELF_TEST_TOOL_NODE_FLAGS` could be used the same way
+`TOOL_NODE_FLAGS` is used. If you are setting the env variable
+`SELF_TEST_TOOL_NODE_FLAGS` with `TOOL_NODE_FLAGS`, consider specifying a
+custom port, as they could collide trying to listen to the same port.
+To set a custom port, you could set the variable in the followind manner
+`SELF_TEST_TOOL_NODE_FLAGS="--debug-brk=5859"` and the debugger will
+listen to the port 5859 and not the default 5858.
+
 
 ## Development
 
