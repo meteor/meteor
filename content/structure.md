@@ -38,7 +38,7 @@ import '/imports/ui/style.css';       // import CSS from absolute path
 
 > For more ways to import styles, see the [Build System](build-tool.html#css-importing) article.
 
-Meteor also supports the standard E2015 modules `export` syntax:
+Meteor also supports the standard ES2015 modules `export` syntax:
 
 ```js
 export const listRenderHold = LaunchScreen.hold();  // named export
