@@ -41,14 +41,17 @@ var makePool = function (mailUrlString) {
   return pool;
 };
 
-var getPool = _.once(function () {
+var getPool = function() {
   // We delay this check until the first call to Email.send, in case someone
-  // set process.env.MAIL_URL in startup code.
+  // set process.env.MAIL_URL in startup code. Then we store in a cache until
+  // process.env.MAIL_URL changes.
   var url = process.env.MAIL_URL;
-  if (! url)
-    return null;
-  return makePool(url);
-});
+  if (this.cacheKey === undefined || this.cacheKey !== url) {
+    this.cacheKey = url;
+    this.cache = url ? makePool(url) : null;
+  }
+  return this.cache;
+}
 
 var next_devmode_mail_id = 0;
 var output_stream = process.stdout;

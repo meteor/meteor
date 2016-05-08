@@ -5,7 +5,7 @@
   "readme": "no warn",
   "repository": "no warn",
   "dependencies": {
-    "jsdoc": "3.4.0",
+    "jsdoc": "git+https://github.com/jsdoc3/jsdoc.git",
     "canonical-json": "0.0.4"
   }
 }

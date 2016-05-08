@@ -14,6 +14,7 @@ import Fiber from 'fibers';
 import {sourceMapLength} from '../utils/utils.js';
 import {Console} from '../console/console.js';
 import ImportScanner from './import-scanner.js';
+import {cssToCommonJS} from "./css-modules.js";
 
 import { isTestFilePath } from './test-files.js';
 
@@ -57,7 +58,7 @@ import { isTestFilePath } from './test-files.js';
 // Cache the (slightly post-processed) results of linker.fullLink.
 const CACHE_SIZE = process.env.METEOR_LINKER_CACHE_SIZE || 1024*1024*100;
 const CACHE_DEBUG = !! process.env.METEOR_TEST_PRINT_LINKER_CACHE_DEBUG;
-const LINKER_CACHE_SALT = 4; // Increment this number to force relinking.
+const LINKER_CACHE_SALT = 6; // Increment this number to force relinking.
 const LINKER_CACHE = new LRU({
   max: CACHE_SIZE,
   // Cache is measured in bytes. We don't care about servePath.
@@ -411,6 +412,9 @@ class ResourceSlot {
         if (! _.isString(resource.sourcePath)) {
           resource.sourcePath = self.inputResource.path;
         }
+        if (! _.isString(resource.targetPath)) {
+          resource.targetPath = resource.sourcePath;
+        }
         self.jsOutputResources.push(resource);
       } else {
         self.outputResources.push(self.inputResource);
@@ -464,14 +468,13 @@ class ResourceSlot {
 
     const data = files.convertToStandardLineEndings(options.data);
     const useMeteorInstall = self.packageSourceBatch.useMeteorInstall;
+    const sourcePath = this.inputResource.path;
+    const targetPath = options.path || sourcePath;
     const resource = {
       refreshable: true,
-      sourcePath: this.inputResource.path,
-      servePath: self.packageSourceBatch.unibuild.pkg
-        ._getServePath(options.path),
-      // XXX do we need to call convertSourceMapPaths here like we did
-      //     in legacy handlers?
-      sourceMap: options.sourceMap,
+      sourcePath,
+      targetPath,
+      servePath: self.packageSourceBatch.unibuild.pkg._getServePath(targetPath),
       hash: sha1(data),
       lazy: this._isLazy(options),
     };
@@ -482,17 +485,28 @@ class ResourceSlot {
       // unconditionally as a CSS resource, so that it can be imported
       // when needed.
       resource.type = "js";
-      resource.data = new Buffer(
-        'module.exports = require("meteor/modules").addStyles(' +
-          JSON.stringify(data) + ');\n',
-        'utf8'
-      );
+      resource.data =
+        new Buffer(cssToCommonJS(data, resource.hash), "utf8");
 
       self.jsOutputResources.push(resource);
 
     } else {
+      // Eager CSS is added unconditionally to a combined <style> tag at
+      // the beginning of the <head>. If the corresponding module ever
+      // gets imported, its module.exports object should be an empty stub,
+      // rather than a <style> node added dynamically to the <head>.
+      self.addJavaScript({
+        ...options,
+        data: "// These styles have already been applied to the document.\n",
+        lazy: true
+      });
+
       resource.type = "css";
       resource.data = new Buffer(data, 'utf8'),
+
+      // XXX do we need to call convertSourceMapPaths here like we did
+      //     in legacy handlers?
+      resource.sourceMap = options.sourceMap;
 
       self.outputResources.push(resource);
     }
@@ -511,14 +525,17 @@ class ResourceSlot {
       sourcePath = options.sourcePath;
     }
 
+    const targetPath = options.path || sourcePath;
+
     var data = new Buffer(
       files.convertToStandardLineEndings(options.data), 'utf8');
+
     self.jsOutputResources.push({
       type: "js",
       data: data,
       sourcePath,
-      servePath: self.packageSourceBatch.unibuild.pkg._getServePath(
-        options.path),
+      targetPath,
+      servePath: self.packageSourceBatch.unibuild.pkg._getServePath(targetPath),
       // XXX should we allow users to be trusted and specify a hash?
       hash: sha1(data),
       // XXX do we need to call convertSourceMapPaths here like we did
@@ -588,6 +605,7 @@ class ResourceSlot {
     this.jsOutputResources.push({
       type: "js",
       sourcePath: this.inputResource.path,
+      targetPath: this.inputResource.path,
       servePath: this.inputResource.path,
       data: new Buffer(
         "throw new Error(" + JSON.stringify(message) + ");\n",
@@ -673,9 +691,6 @@ export class PackageSourceBatch {
       skipDebugOnly: true,
       skipProdOnly: true,
       skipTestOnly: true,
-      // We only care about getting exports here, so it's OK if we get the Mac
-      // version when we're bundling for Linux.
-      allowWrongPlatform: true,
     }, depUnibuild => {
       _.each(depUnibuild.declaredExports, function (symbol) {
         // Slightly hacky implementation of test-only exports.
@@ -749,6 +764,37 @@ export class PackageSourceBatch {
       // do any import scanning.
       return map;
     }
+
+    // Append install(<name>) calls to the install-packages.js file in the
+    // modules package for every Meteor package name used.
+    map.get("modules").files.some(file => {
+      if (file.sourcePath !== "install-packages.js") {
+        return false;
+      }
+
+      const meteorPackageInstalls = [];
+
+      map.forEach((info, name) => {
+        if (! name) return;
+        meteorPackageInstalls.push(
+          "install(" + JSON.stringify(name) + ");\n"
+        );
+      });
+
+      if (meteorPackageInstalls.length === 0) {
+        return false;
+      }
+
+      file.data = new Buffer(
+        file.data.toString("utf8") + "\n" +
+          meteorPackageInstalls.join(""),
+        "utf8"
+      );
+
+      file.hash = sha1(file.data);
+
+      return true;
+    });
 
     const allMissingNodeModules = Object.create(null);
     // Records the subset of allMissingNodeModules that were successfully

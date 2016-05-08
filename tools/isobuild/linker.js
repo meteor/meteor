@@ -600,6 +600,7 @@ _.extend(File.prototype, {
     }
 
     let consumer;
+    let lines;
 
     if (self.sourceMap) {
       result = {
@@ -617,9 +618,34 @@ _.extend(File.prototype, {
       };
 
     } else {
+      // If we're planning to annotate the source with line number
+      // comments (e.g. because we're combining this file with others in a
+      // package), and we don't already have a source map, then we need to
+      // generate one, but it doesn't have to be very detailed, since we
+      // we can use a dumb implementation of originalPositionFor.
+      const smg = new sourcemap.SourceMapGenerator({
+        file: self.servePath
+      });
+
+      lines = self.source.split(/\r?\n/);
+
+      function addIdentityMapping(pos) {
+        smg.addMapping({
+          original: pos,
+          generated: pos,
+          source: self.servePath,
+        });
+      }
+
+      for (var line = 1; line <= lines.length; ++line) {
+        addIdentityMapping({ line, column: 0 });
+      }
+
+      smg.setSourceContent(self.servePath, self.source);
+
       result = {
         code: self.source,
-        map: null
+        map: smg.toJSON(),
       };
 
       // Generating line number comments for really big files is not
@@ -637,7 +663,7 @@ _.extend(File.prototype, {
       var padding = bannerPadding(bannerWidth);
 
       // We might have already done this split above.
-      const lines = result.code.split(/\r?\n/);
+      lines = lines || result.code.split(/\r?\n/);
 
       // Use the SourceMapConsumer object to compute the original line
       // number for each line of result.code.
@@ -696,13 +722,21 @@ _.extend(File.prototype, {
       // If we have a source map for result.code, push a SourceNode onto
       // the chunks array that encapsulates that source map. If we don't
       // have a source map, just push result.code.
+
+      let chunk = result.code;
+
       if (consumer instanceof sourcemap.SourceMapConsumer) {
-        chunks.push(sourcemap.SourceNode.fromStringWithSourceMap(
-          result.code, consumer
-        ));
-      } else {
-        chunks.push(result.code);
+        chunk = sourcemap.SourceNode.fromStringWithSourceMap(
+          result.code, consumer);
+
+      } else if (consumer && result.map) {
+        chunk = sourcemap.SourceNode.fromStringWithSourceMap(
+          result.code,
+          new sourcemap.SourceMapConsumer(result.map),
+        );
       }
+
+      chunks.push(chunk);
 
       // It's important for the code to end with a newline, so that a
       // trailing // comment can't snarf code appended after it.

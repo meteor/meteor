@@ -16,13 +16,6 @@ options.fallback = function (id, dir, error) {
   // some arbitrary location on the file system), and we only really need
   // the fallback for dependencies installed in node_modules directories.
   if (topLevelIdPattern.test(id)) {
-    var parts = id.split("/");
-    if (parts.length === 2 &&
-        parts[0] === "meteor" &&
-        hasOwn.call(Package, parts[1])) {
-      return Package[parts[1]];
-    }
-
     if (typeof Npm === "object" &&
         typeof Npm.require === "function") {
       return Npm.require(id);

@@ -374,6 +374,8 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
         sourcePath = options.sourcePath;
       }
 
+      const targetPath = options.path || sourcePath;
+
       if (typeof sourcePath !== "string") {
         throw new Error("'sourcePath' option must be supplied to addJavaScript. Consider passing inputPath.");
       }
@@ -384,10 +386,11 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
         type: "js",
         data: data,
         sourcePath,
+        targetPath,
         servePath: colonConverter.convert(
           files.pathJoin(
             inputSourceArch.pkg.serveRoot,
-            files.convertToStandardPath(options.path, true))),
+            files.convertToStandardPath(targetPath, true))),
         hash: watch.sha1(data),
         sourceMap: convertSourceMapPaths(options.sourceMap,
                                          files.convertToStandardPath),
@@ -432,12 +435,39 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
      * @instance
      */
     error: function (options) {
-      buildmessage.error(options.message || ("error building " + relPath), {
-        file: options.sourcePath,
-        line: options.line ? options.line : undefined,
-        column: options.column ? options.column : undefined,
-        func: options.func ? options.func : undefined
-      });
+      let sourcePath = this.inputPath;
+      if (_.has(options, "sourcePath") &&
+          typeof options.sourcePath === "string") {
+        sourcePath = options.sourcePath;
+      }
+
+      const message = options.message || ("error building " + relPath);
+
+      const info = { file: sourcePath };
+      if (options.line) info.line = options.line;
+      if (options.column) info.column = options.column;
+      if (options.func) info.func = options.func;
+
+      if (compileStep._getOption("lazy") === true) {
+        // Because this file is lazy, it might not have been explicitly
+        // added in package.js, so we should ignore compilation errors
+        // until and unless it is ever actually imported.
+        resources.push({
+          type: "js",
+          sourcePath,
+          targetPath: sourcePath,
+          servePath: sourcePath,
+          data: new Buffer(
+            "throw new Error(" + JSON.stringify(message) + ");\n",
+            "utf8"),
+          lazy: true,
+          error: { message, info },
+        });
+
+        return;
+      }
+
+      buildmessage.error(message, info);
     }
   };
 
