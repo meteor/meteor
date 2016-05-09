@@ -1,3 +1,6 @@
 [submodule "themes/meteor"]
 	path = themes/meteor
 	url = https://github.com/meteor/hexo-theme-meteor.git
+[submodule "code"]
+	path = code
+	url = https://github.com/meteor/meteor.git

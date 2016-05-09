@@ -1639,27 +1639,6 @@ module.exports = {
     "scope": "global",
     "summary": "The namespace for Assets functions, lives in the bundler."
   },
-  "Assets.absoluteFilePath": {
-    "kind": "function",
-    "locus": "Server [not build plugins]",
-    "longname": "Assets.absoluteFilePath",
-    "memberof": "Assets",
-    "name": "absoluteFilePath",
-    "options": [],
-    "params": [
-      {
-        "description": "<p>The path of the asset, relative to the application's <code>private</code> subdirectory.</p>",
-        "name": "assetPath",
-        "type": {
-          "names": [
-            "String"
-          ]
-        }
-      }
-    ],
-    "scope": "static",
-    "summary": "Retrieve the full file path of a file on disk"
-  },
   "Assets.getBinary": {
     "kind": "function",
     "locus": "Server",
@@ -4632,7 +4611,7 @@ module.exports = {
   "Match": {
     "filepath": "check/match.js",
     "kind": "namespace",
-    "lineno": 42,
+    "lineno": 43,
     "longname": "Match",
     "module": "check",
     "name": "Match",
@@ -4642,7 +4621,7 @@ module.exports = {
   "Match.test": {
     "filepath": "check/match.js",
     "kind": "function",
-    "lineno": 95,
+    "lineno": 96,
     "locus": "Anywhere",
     "longname": "Match.test",
     "memberof": "Match",
@@ -8358,13 +8337,12 @@ module.exports = {
   },
   "check": {
     "filepath": "check/match.js",
-    "kind": "function",
-    "lineno": 19,
+    "kind": "member",
+    "lineno": 20,
     "locus": "Anywhere",
     "longname": "check",
     "module": "check",
     "name": "check",
-    "options": [],
     "params": [
       {
         "description": "<p>The value to check</p>",

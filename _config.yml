@@ -56,8 +56,8 @@ sidebar_categories:
     - packages/webapp
   Command Line:
     - commandline
-github_repo: 'meteor/meteor'
-content_root: 'docs/source'
+github_repo: 'meteor/docs'
+content_root: 'source'
 
 # URL
 ## If your site is put in a subdirectory, set url as 'http://yoursite.com/child' and root as '/child/'
@@ -114,7 +114,7 @@ pagination_dir: page
 ## Themes: http://hexo.io/themes/
 theme: meteor
 api_box:
-  data_file: 'data.js'
+  data_file: 'data/data.js'
 marked:
   breaks: false
 
