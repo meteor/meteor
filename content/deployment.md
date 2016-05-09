@@ -9,7 +9,7 @@ After reading this guide, you'll know:
 
 1. What to consider before you deploy a Meteor application.
 2. How to deploy to some common Meteor hosting environments.
-3. How to design a deployment process to make sure yomur application's quality is maintained.
+3. How to design a deployment process to make sure your application's quality is maintained.
 4. How to monitor user behavior with analytics tools.
 5. How to monitor your application with Kadira.
 6. How to make sure your site is discoverable by search engines.
