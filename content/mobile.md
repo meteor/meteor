@@ -385,7 +385,7 @@ Meteor.startup(function() {
 });
 ```
 
-<h3 id="cordova-specific-javascript">Adding Cordova-specific Javascript code to your application</h3>
+<h3 id="cordova-specific-javascript">Adding Cordova-specific JavaScript code to your application</h3>
 
 Just as you can use `Meteor.isServer` and `Meteor.isClient` to separate your client-side and server-side code, you can use `Meteor.isCordova` to separate your Cordova-specific code from the rest of your code.
 

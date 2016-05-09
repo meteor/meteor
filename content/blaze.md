@@ -14,7 +14,7 @@ After reading this guide, you'll know:
 
 Blaze is Meteor's built-in reactive rendering library. Usually, templates are written in [Spacebars](https://github.com/meteor/meteor/blob/devel/packages/spacebars/README.md), a variant of [Handlebars](http://handlebarsjs.com) designed to take advantage of [Tracker](https://github.com/meteor/meteor/tree/devel/packages/tracker), Meteor's reactivity system. These templates are compiled into JavaScript UI components that are rendered by the Blaze library.
 
-Blaze is not required to build applications in Meteor---you can also easily use [React](http://react-in-meteor.readthedocs.org/en/latest/) or [Angular](http://www.angular-meteor.com) to develop your UI. However, this particular article will take you through best practices in building an application in Blaze, which is used as the UI engine in all of the other articles.
+Blaze is not required to build applications in Meteor---you can also easily use [React](http://react-in-meteor.readthedocs.org/en/latest/) or [Angular](http://www.angular-meteor.com) to develop your UI ([here's a comparison](ui-ux.html#view-layers)). However, this particular article will take you through best practices in building an application in Blaze, which is used as the UI engine in all of the other articles.
 
 <h2 id="spacebars">Spacebars</h2>
 

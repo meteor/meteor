@@ -14,7 +14,7 @@ After reading this guide, you'll know:
 
 <h2 id="introduction">Introduction</h2>
 
-[React](https://facebook.github.io/react/) is a JavaScript library for building reactive user interfaces developed and distributed by the Facebook team. React is one of the three rendering libraries supported by Meteor; it is an alterative to [Blaze](blaze.html) and [Angular](angular.html).
+[React](https://facebook.github.io/react/) is a JavaScript library for building reactive user interfaces developed and distributed by the Facebook team. React is one of the three rendering libraries supported by Meteor; the alteratives are [Blaze](blaze.html) and [Angular](angular.html). [Here's a comparison](ui-ux.html#view-layers) of all three.
 
 React has a vibrant and growing ecosystem and is used widely in production in a variety of combinations with different frameworks.
 
