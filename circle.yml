@@ -8,11 +8,9 @@ checkout:
 
 dependencies:
   cache_directories:
-    - "site/node_modules"
+    - "node_modules"
   override:
     - npm install -g hexo-cli
-    - npm install:
-        pwd: site
 
 test:
   override:
@@ -23,5 +21,4 @@ deployment:
   s3:
     branch: /^(master|version-.*)/
     commands:
-      - npm run deploy:
-          pwd: site
+      - npm run deploy
