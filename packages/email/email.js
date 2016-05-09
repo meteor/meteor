@@ -25,8 +25,8 @@ var makePool = function (mailUrlString) {
   var auth = false;
   if (mailUrl.auth) {
     var parts = mailUrl.auth.split(':', 2);
-    auth = {user: parts[0] && decodeURIComponent(parts[0]),
-            pass: parts[1] && decodeURIComponent(parts[1])};
+    auth = {user: parts[0],
+            pass: parts[1]};
   }
 
   var simplesmtp = Npm.require('simplesmtp');
