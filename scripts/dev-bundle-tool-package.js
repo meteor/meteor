@@ -33,7 +33,7 @@ var packageJson = {
     "browserstack-webdriver": "2.41.1",
     "node-inspector": "0.7.4",
     chalk: "0.5.1",
-    sqlite3: "3.0.2",
+    sqlite3: "3.1.3",
     netroute: "0.2.5",
     phantomjs: "1.9.12",
     "http-proxy": "1.11.1",
