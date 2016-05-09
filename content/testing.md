@@ -271,6 +271,37 @@ When we run our app in test mode, only our test files will be eagerly loaded. In
 
 To be a unit test, we must stub out the dependencies of the module. In this case, thanks to the way we've isolated our code into a reusable component, there's not much to do; principally we need to stub out the `{% raw %}{{_}}{% endraw %}` helper that's created by the [`tap:i18n`](ui-ux.html#i18n) system. Note that we stub it out in a `beforeEach` and restore it the `afterEach`.
 
+If you're testing code that makes use of globals, you'll need to import those globals. For instance if you have a global `Todos` collection and are testing this file:
+
+```js
+// logging.js
+export const function logTodos() {
+  console.log(Todos.findOne());
+}
+```
+
+then you'll need to import `Todos` both in that file and in the test:
+
+```js
+// logging.js
+import { Todos } from './todos.js'
+export const function logTodos() {
+  console.log(Todos.findOne());
+}
+```
+
+```js
+// logging.test.js
+import { Todos } from './todos.js'
+Todos.findOne = () => { 
+  return {text: "write a guide"}
+}
+
+import { logTodos } from './logging.js'
+// then test logTodos
+...
+```
+
 <h4 id="unit-test-data">Creating data</h4>
 
 We can use the [Factory package's](#test-data) `.build()` API to create a test document without inserting it into any collection. As we've been careful not to call out to any collections directly in the reusable component, we can pass the built `todo` document directly into the template.
