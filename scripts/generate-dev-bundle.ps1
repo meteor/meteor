@@ -2,8 +2,8 @@
 # use 32bit by default
 $PLATFORM = "windows_x86"
 $MONGO_VERSION = "2.6.7"
-$NODE_VERSION = "0.10.43"
-$NPM_VERSION = "2.14.22"
+$NODE_VERSION = "0.10.45"
+$NPM_VERSION = "2.15.1"
 
 # take it form the environment if exists
 if (Test-Path env:PLATFORM) {
