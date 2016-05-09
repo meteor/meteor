@@ -114,21 +114,151 @@ meteorNpm.updateDependencies = function (packageName,
   return true;
 };
 
+const lastRebuildJSONFilename = ".meteor-last-rebuild-version.json";
+
+// Rebuilds any binary dependencies in the given node_modules directory,
+// and returns true iff anything was rebuilt.
 meteorNpm.rebuildIfNonPortable = function (nodeModulesDir) {
-  if (meteorNpm.dependenciesArePortable(nodeModulesDir)) {
+  const dirsToRebuild = [];
+
+  files.readdir(nodeModulesDir).forEach(function (pkg) {
+    const pkgPath = files.pathJoin(nodeModulesDir, pkg);
+
+    if (isPortable(pkgPath, true)) {
+      return;
+    }
+
+    const versionFile =
+      files.pathJoin(pkgPath, lastRebuildJSONFilename);
+
+    try {
+      var versions = JSON.parse(files.readFile(versionFile));
+    } catch (e) {
+      if (! (e instanceof SyntaxError ||
+             e.code === "ENOENT")) {
+        throw e;
+      }
+    }
+
+    if (_.isEqual(versions, process.versions)) {
+      return;
+    }
+
+    dirsToRebuild.push(pkgPath);
+  });
+
+  if (dirsToRebuild.length === 0) {
     return false;
   }
 
-  const parentDir = files.pathDirname(nodeModulesDir);
-  const result = runNpmCommand(["rebuild"], parentDir);
+  const currentVersionsJSON =
+    JSON.stringify(process.versions, null, 2) + "\n";
 
-  if (! result.success) {
-    buildmessage.error(result.error);
+  const tempDir = files.pathJoin(
+    nodeModulesDir,
+    ".temp-" + utils.randomToken()
+  );
+
+  // There's a chance the basename of the original nodeModulesDir isn't
+  // actually "node_modules", which will confuse the `npm rebuild`
+  // command, but fortunately we can ensure this temporary directory has
+  // exactly that basename.
+  const tempNodeModules = files.pathJoin(tempDir, "node_modules");
+  files.mkdir_p(tempNodeModules);
+
+  // Map from original package directory paths to temporary package
+  // directory paths.
+  const tempPkgDirs = {};
+
+  dirsToRebuild.forEach(function (pkgPath) {
+    const tempPkgDir = tempPkgDirs[pkgPath] = files.pathJoin(
+      tempNodeModules,
+      files.pathBasename(pkgPath)
+    );
+
+    // Copy instead of rename so that the original package directories
+    // will be left untouched if the rebuild fails.
+    files.cp_r(pkgPath, tempPkgDir);
+
+    // Record the current process.versions so that we can avoid
+    // copying/rebuilding/renaming next time.
+    files.writeFile(
+      files.pathJoin(tempPkgDir, lastRebuildJSONFilename),
+      currentVersionsJSON,
+      "utf8"
+    );
+  });
+
+  // The `npm rebuild` command must be run in the parent directory of the
+  // relevant node_modules directory, which in this case is tempDir.
+  const rebuildResult = runNpmCommand(["rebuild"], tempDir);
+  if (! rebuildResult.success) {
+    buildmessage.error(rebuildResult.error);
+    files.rm_recursive(tempDir);
     return false;
   }
+
+  // If the `npm rebuild` command succeeded, overwrite the original
+  // package directories with the rebuilt package directories.
+  dirsToRebuild.forEach(function (pkgPath) {
+    files.renameDirAlmostAtomically(tempPkgDirs[pkgPath], pkgPath);
+  });
+
+  files.rm_recursive(tempDir);
 
   return true;
 };
+
+function isPortable(dir, shouldCache) {
+  if (! files.lstat(dir).isDirectory()) {
+    return true;
+  }
+
+  return files.readdir(dir).every(itemName => {
+    const item = files.pathJoin(dir, itemName);
+
+    if (! files.lstat(item).isDirectory()) {
+      // Non-directory files are portable unless they end with .node.
+      return ! itemName.endsWith(".node");
+    }
+
+    if (! shouldCache) {
+      // Once we stop caching, we keep calling isPortable recursively
+      // without caching.
+      return isPortable(item);
+    }
+
+    // Cache previous results by writing a boolean value to a hidden
+    // file called .meteor-portable. Although it's tempting to write
+    // this file once for the whole node_modules directory, it's
+    // important that we put separate files in the individual top-level
+    // package directories so that they will get cleared away the next
+    // time those packages are (re)installed.
+
+    const portableFile = files.pathJoin(item, ".meteor-portable");
+    try {
+      return JSON.parse(files.readFile(portableFile));
+    } catch (e) {
+      if (! (e instanceof SyntaxError ||
+             e.code === "ENOENT")) {
+        throw e;
+      }
+    }
+
+    const result = isPortable(item);
+
+    // Write the .meteor-portable file asynchronously, and don't worry
+    // if it fails, e.g. because the file system is read-only (#6591).
+    // Failing to write the file only means more work next time.
+    fs.writeFile(
+      portableFile,
+      JSON.stringify(result) + "\n",
+      (error) => {}
+    );
+
+    return result;
+  });
+}
 
 // Return true if all of a package's npm dependencies are portable
 // (that is, if the node_modules can be copied anywhere and we'd
@@ -147,53 +277,6 @@ meteorNpm.dependenciesArePortable = function (nodeModulesDir) {
     files.pathBasename(nodeModulesDir).startsWith("node_modules"),
     "Bad node_modules directory: " + nodeModulesDir,
   );
-
-  function isPortable(dir, shouldCache) {
-    return files.readdir(dir).every(itemName => {
-      const item = files.pathJoin(dir, itemName);
-
-      if (! files.lstat(item).isDirectory()) {
-        // Non-directory files are portable unless they end with .node.
-        return ! itemName.endsWith(".node");
-      }
-
-      if (! shouldCache) {
-        // Once we stop caching, we keep calling isPortable recursively
-        // without caching.
-        return isPortable(item);
-      }
-
-      // Cache previous results by writing a boolean value to a hidden
-      // file called .meteor-portable. Although it's tempting to write
-      // this file once for the whole node_modules directory, it's
-      // important that we put separate files in the individual top-level
-      // package directories so that they will get cleared away the next
-      // time those packages are (re)installed.
-
-      const portableFile = files.pathJoin(item, ".meteor-portable");
-      try {
-        return JSON.parse(files.readFile(portableFile));
-      } catch (e) {
-        if (! (e instanceof SyntaxError ||
-               e.code === "ENOENT")) {
-          throw e;
-        }
-      }
-
-      const result = isPortable(item);
-
-      // Write the .meteor-portable file asynchronously, and don't worry
-      // if it fails, e.g. because the file system is read-only (#6591).
-      // Failing to write the file only means more work next time.
-      fs.writeFile(
-        portableFile,
-        JSON.stringify(result) + "\n",
-        (error) => {}
-      );
-
-      return result;
-    });
-  }
 
   // Only check/write .meteor-portable files in each of the top-level
   // package directories.

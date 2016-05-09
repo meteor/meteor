@@ -1089,10 +1089,9 @@ _.extend(Isopack.prototype, {
         .readDirsFromJSON(unibuildJson.node_modules, {
           packageName: self.name,
           sourceRoot: unibuildBasePath,
-          // Rebuild binaries only when the isopack is first downloaded,
-          // and only when the unibuild arch matches the host arch.
-          rebuildBinaries: options.justDownloaded &&
-            archinfo.matches(archinfo.host(), unibuildMeta.arch)
+          // Rebuild binaries if unibuild arch matches host arch.
+          rebuildBinaries: archinfo.matches(
+            archinfo.host(), unibuildMeta.arch)
         });
 
       self.unibuilds.push(new Unibuild(self, {
