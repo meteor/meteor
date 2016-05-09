@@ -513,7 +513,6 @@ _.extend(exports.Tropohouse.prototype, {
         _.each(buildInputDirs, function (buildTempDir, i) {
           isopack._loadUnibuildsFromPath(packageName, buildTempDir, {
             firstIsopack: i === 0,
-            justDownloaded: true,
           });
         });
 
