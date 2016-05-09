@@ -85,6 +85,10 @@ Finally, you can show your support for features you would like by commenting wit
 
 A great way to contribute to Meteor is by helping keep the issues in the repository clean and well organized. This process is called 'issue triage' and the steps are described [here](IssueTriage.md).
 
+## Documentation
+
+If you'd like to contribution to Meteor's documentation, head over to https://github.com/meteor/docs and create issues or pull requests there.
+
 ## Making changes to Meteor core
 
 Eventually you may want to change something in a core Meteor package, or
