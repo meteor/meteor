@@ -635,7 +635,7 @@ _.extend(Sandbox.prototype, {
       // multiple calls to createApp with the same template get the same cache?
       // This is a little tricky because isopack-buildinfo.json uses absolute
       // paths.
-      run.waitSecs(20);
+      run.waitSecs(120);
       run.expectExit(0);
     });
   },
