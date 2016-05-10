@@ -104,6 +104,16 @@ WebApp.rawConnectHandlers.use(function(req, res, next) {
 });
 ```
 
+And then for example with Cloudfront, you would:
+
+- Select your distribution
+- Behavior tab
+- Select your app origin
+- Edit button
+- Under "Whitelist Headers", scroll down to select "Origin"
+- Add button
+- "Yes, Edit" button
+
 <h2 id="deployment-options">Deployment options</h2>
 
 Meteor is an open source platform, and you can run the apps that you make with Meteor anywhere just like regular Node.js applications. But operating Meteor apps *correctly*, so that your apps work for everyone, can be tricky if you are managing your infrastructure manually. This is why we recommend running production Meteor apps on Galaxy.
