@@ -239,6 +239,12 @@ Fiber(function () {
       getBinary: function (assetPath, callback) {
         return getAsset(assetPath, undefined, callback);
       },
+      /**
+       * @summary Retrieve the full file path of a file on disk
+       * @locus Server [not build plugins]
+       * @memberOf Assets
+       * @param {String} assetPath The path of the asset, relative to the application's `private` subdirectory.
+       */
       absoluteFilePath: function (assetPath) {
         if (!fileInfo.assets || !_.has(fileInfo.assets, assetPath)) {
           throw new Error("Unknown asset: " + assetPath);
