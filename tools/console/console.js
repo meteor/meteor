@@ -214,6 +214,7 @@ var SpinnerRenderer = function () {
   self.frames = ['-', '\\', '|', '/'];
   self.start = +(new Date);
   self.interval = 250;
+  self.enabled = true;
   //// I looked at some Unicode indeterminate progress indicators, such as:
   ////
   //// spinner = "▁▃▄▅▆▇▆▅▄▃".split('');
@@ -352,6 +353,14 @@ _.extend(ProgressDisplayFull.prototype, {
     self._render();
   },
 
+  enableSpinner() {
+    this._spinnerRenderer.enabled = true;
+  },
+
+  disableSpinner() {
+    this._spinnerRenderer.enabled = false;
+  },
+
   _render: function () {
     var self = this;
 
@@ -379,7 +388,9 @@ _.extend(ProgressDisplayFull.prototype, {
     if (self._fraction !== undefined && progressColumns > 16) {
       // 16 is a heuristic number that allows enough space for a meaningful progress bar
       progressGraphic = "  " + self._progressBarRenderer.asString(progressColumns - 2);
-    } else if (progressColumns > 3) {
+    } else if (self._spinnerRenderer &&
+               self._spinnerRenderer.enabled &&
+               progressColumns > 3) {
       // 3 = 2 spaces + 1 spinner character
       progressGraphic = "  " + self._spinnerRenderer.asString();
     } else {
@@ -1243,6 +1254,20 @@ _.extend(Console.prototype, {
     }
 
     self._setProgressDisplay(newProgressDisplay);
+  },
+
+  enableSpinner() {
+    if (this._progressDisplay &&
+        this._progressDisplay.enableSpinner) {
+      this._progressDisplay.enableSpinner();
+    }
+  },
+
+  disableSpinner() {
+    if (this._progressDisplay &&
+        this._progressDisplay.disableSpinner) {
+      this._progressDisplay.disableSpinner();
+    }
   },
 
   _setProgressDisplay: function (newProgressDisplay) {
