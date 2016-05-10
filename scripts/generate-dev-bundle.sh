@@ -40,16 +40,6 @@ fi
 # export path so we use the downloaded node and npm
 export PATH="$DIR/bin:$PATH"
 
-# install npm 3 in a temporary directory
-mkdir "$DIR/bin/npm3"
-cd "$DIR/bin/npm3"
-npm install npm@3.1.2
-cp node_modules/npm/bin/npm .
-
-# export path again with our temporary npm3 directory first,
-# so we can use npm 3 during builds
-export PATH="$DIR/bin/npm3:$PATH"
-
 which node
 which npm
 
@@ -135,13 +125,10 @@ gunzip BrowserStackLocal*
 mv BrowserStackLocal* BrowserStackLocal
 mv BrowserStackLocal "$DIR/bin/"
 
-# remove our temporary npm3 directory
-rm -rf "$DIR/bin/npm3"
-
 # Sanity check to see if we're not breaking anything by replacing npm
 INSTALLED_NPM_VERSION=$(cat "$DIR/lib/node_modules/npm/package.json" |
 xargs -0 node -e "console.log(JSON.parse(process.argv[1]).version)")
-if [ "$INSTALLED_NPM_VERSION" != "2.14.22" ]; then
+if [ "$INSTALLED_NPM_VERSION" != "2.15.1" ]; then
   echo "Unexpected NPM version in lib/node_modules: $INSTALLED_NPM_VERSION"
   echo "We will be replacing it with our own version because the bundled node"
   echo "is built using PORTABLE=1, which makes npm look for node relative to"

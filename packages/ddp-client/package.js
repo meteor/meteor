@@ -1,11 +1,11 @@
 Package.describe({
   summary: "Meteor's latency-compensated distributed data client",
-  version: '1.2.7',
+  version: '1.3.0',
   documentation: null
 });
 
 Npm.depends({
-  "faye-websocket": "0.9.4",
+  "faye-websocket": "0.11.0",
   "lolex": "1.4.0",
   "permessage-deflate": "0.1.3"
 });

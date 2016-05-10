@@ -1089,10 +1089,9 @@ _.extend(Isopack.prototype, {
         .readDirsFromJSON(unibuildJson.node_modules, {
           packageName: self.name,
           sourceRoot: unibuildBasePath,
-          // Rebuild binaries only when the isopack is first downloaded,
-          // and only when the unibuild arch matches the host arch.
-          rebuildBinaries: options.justDownloaded &&
-            archinfo.matches(archinfo.host(), unibuildMeta.arch)
+          // Rebuild binaries if unibuild arch matches host arch.
+          rebuildBinaries: archinfo.matches(
+            archinfo.host(), unibuildMeta.arch)
         });
 
       self.unibuilds.push(new Unibuild(self, {
@@ -1616,6 +1615,19 @@ _.extend(Isopack.prototype, {
               servePath: prelinkFile.servePath || undefined
             };
             if (prelinkFile.sourceMap) {
+              // It appears in node v0.10.x, `new Buffer({someobject: 1})`
+              // would be silently swallowed. (leaving an empty buffer)
+              // In node v4+ this same code throws an error.
+              // XX - Not 100% sure what prelinkFile.sourceMap _can_ be,
+              //      so here's some exhaustive checking of things buffer
+              //      _will_ accept.
+              var acceptedByBuffer = _.isString(prelinkFile.sourceMap)
+                    || _.isNumber(prelinkFile.sourceMap)
+                    || _.isArray(prelinkFile.sourceMap)
+                    || (prelinkFile.sourceMap instanceof Buffer);
+              if (!acceptedByBuffer) {
+                prelinkFile.sourceMap = JSON.stringify(prelinkFile.sourceMap);
+              }
               // Write the source map.
 
               if (typeof prelinkFile.sourceMap !== "string") {
