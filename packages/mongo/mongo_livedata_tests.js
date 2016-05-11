@@ -2953,8 +2953,8 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - drop collection/db", f
     output[0] = output[1];
     output[1] = tmp;
   }
-  test.equal(output.shift(), ['removed', doc1Id]);
-  test.equal(output.shift(), ['removed', doc3Id]);
+  test.equal(output.shift(), ['removed', doc1Id], "didn't find doc1Id in " + JSON.stringify(output));
+  test.equal(output.shift(), ['removed', doc3Id], "didn't find doc3Id in " + JSON.stringify(output));
 
   // Put something back in.
   var doc4Id;
@@ -2971,7 +2971,7 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - drop collection/db", f
   });
 
   test.length(output, 1);
-  test.equal(output.shift(), ['removed', doc4Id]);
+  test.equal(output.shift(), ['removed', doc4Id], "didn't find doc4Id in " + JSON.stringify(output));
 
   handle.stop();
   driver.mongo.close();
