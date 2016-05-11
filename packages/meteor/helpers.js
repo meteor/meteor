@@ -82,7 +82,7 @@ _.extend(Meteor, {
 
   /**
    * @memberOf Meteor
-   * @summary Wrap a function that takes a callback function as its final parameter. The signature of the callback of the wrapped function should be `function(error, result){}`. On the server, the wrapped function can be used either synchronously (without passing a callback) or asynchronously (when a callback is passed). On the client, a callback is always required; errors will be logged if there is no callback. If a callback is provided, the environment captured when the original function was called will be restored in the callback.
+   * @summary Wrap a function that takes a callback function as its final parameter. The signature of the callback of the wrapped function should be `function(error, result){}`. On the server, the wrapped function can be used either synchronously (by omitting the callback or passing the value `null` for the callback) or asynchronously (when a callback is passed). If the last argument passed to the wrapped function is a function, it will be used as the callback. On the client, a callback is always required; errors will be logged if there is no callback. If a callback is provided, the environment captured when the original function was called will be restored in the callback.
    * @locus Anywhere
    * @param {Function} func A function that takes a callback as its final parameter
    * @param {Object} [context] Optional `this` object against which the original function will be invoked
@@ -99,6 +99,8 @@ _.extend(Meteor, {
         if (type !== "undefined") {
           if (type === "function") {
             callback = arg;
+          } else if (arg === null) {
+            --i; // replace the null value with callback in the function call
           }
           break;
         }
