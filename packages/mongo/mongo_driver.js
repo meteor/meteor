@@ -1054,9 +1054,9 @@ _.extend(SynchronousCursor.prototype, {
     return self.map(_.identity);
   },
 
-  count: function () {
+  count: function (applySkipLimit) {
     var self = this;
-    return self._synchronousCount().wait();
+    return self._synchronousCount(applySkipLimit).wait();
   },
 
   // This method is NOT wrapped in Cursor.
