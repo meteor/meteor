@@ -2013,6 +2013,10 @@ main.registerCommand({
     slow: { type: Boolean },
     galaxy: { type: Boolean },
     browserstack: { type: Boolean },
+    // Indicates whether these self-tests are running headless, e.g. in a
+    // continuous integration testing environment, where visual niceties
+    // like progress bars and spinners are unimportant.
+    headless: { type: Boolean },
     history: { type: Number },
     list: { type: Boolean },
     file: { type: String },
@@ -2092,6 +2096,12 @@ main.registerCommand({
   var clients = {
     browserstack: options.browserstack
   };
+
+  if (options.headless) {
+    // There's no point in spinning the spinner when we're running
+    // continuous integration tests.
+    Console.disableSpinner();
+  }
 
   return selftest.runTests({
     // filtering options
