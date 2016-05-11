@@ -6269,7 +6269,18 @@ DocsData = {
     "module": "minimongo",
     "name": "count",
     "options": [],
-    "params": [],
+    "params": [
+      {
+        "description": "<p>Optional. Specifies whether to consider the effects of the <code>skip</code> and <code>limit</code> options.\nBy default, the <code>count()</code> method ignores the effects of the <code>skip</code> and <code>limit</code> options.\nSet <code>applySkipLimit</code> to true to consider the effect of these options.</p>",
+        "name": "applySkipLimit",
+        "optional": true,
+        "type": {
+          "names": [
+            "Boolean"
+          ]
+        }
+      }
+    ],
     "returns": [
       {
         "type": {
@@ -6376,7 +6387,7 @@ DocsData = {
   "Mongo.Cursor#observe": {
     "filepath": "minimongo/minimongo.js",
     "kind": "function",
-    "lineno": 303,
+    "lineno": 318,
     "locus": "Anywhere",
     "longname": "Mongo.Cursor#observe",
     "memberof": "Mongo.Cursor",
@@ -6400,7 +6411,7 @@ DocsData = {
   "Mongo.Cursor#observeChanges": {
     "filepath": "minimongo/minimongo.js",
     "kind": "function",
-    "lineno": 315,
+    "lineno": 330,
     "locus": "Anywhere",
     "longname": "Mongo.Cursor#observeChanges",
     "memberof": "Mongo.Cursor",

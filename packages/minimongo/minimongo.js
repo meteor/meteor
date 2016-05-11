@@ -219,16 +219,31 @@ LocalCollection.Cursor.prototype.fetch = function () {
  * @method  count
  * @instance
  * @locus Anywhere
+ * @param {Boolean} [applySkipLimit] Optional. Specifies whether to consider the effects of the `skip` and `limit` options.
+ * By default, the `count()` method ignores the effects of the `skip` and `limit` options.
+ * Set `applySkipLimit` to true to consider the effect of these options.
  * @returns {Number}
  */
-LocalCollection.Cursor.prototype.count = function () {
+LocalCollection.Cursor.prototype.count = function (applySkipLimit) {
   var self = this;
+  // Have to respect `applySkipLimit`, so we remove limit & skip if `applySkipLimit`
+  // is not true and then restore limit & skip once we've got the count
+  var originalLimit = self.limit;
+  var originalSkip = self.skip;
+  if (! applySkipLimit) {
+    self.limit = undefined;
+    self.skip = undefined;
+  }
 
   if (self.reactive)
     self._depend({added: true, removed: true},
                  true /* allow the observe to be unordered */);
 
-  return self._getRawObjects({ordered: true}).length;
+  var count = self._getRawObjects({ordered: true}).length;
+  self.limit = originalLimit;
+  self.skip = originalSkip;
+
+  return count;
 };
 
 LocalCollection.Cursor.prototype._publishCursor = function (sub) {
