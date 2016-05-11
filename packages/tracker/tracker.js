@@ -353,6 +353,23 @@ Tracker.Computation.prototype._recompute = function () {
   }
 };
 
+// http://docs.meteor.com/#computation_flush
+
+/**
+ * @summary Process the reactive updates for this computation immediately
+ * and ensure that the computation is rerun. The computation is rerun only
+ * if it is invalidated.
+ * @locus Client
+ */
+Tracker.Computation.prototype.flush = function () {
+  var self = this;
+
+  if (self._recomputing)
+    return;
+
+  self._recompute();
+};
+
 //
 // http://docs.meteor.com/#tracker_dependency
 
