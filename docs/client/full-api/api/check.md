@@ -2,6 +2,13 @@
 
 <h2 id="check_package"><span>Check</span></h2>
 
+To use `check` or `Match`, add the `check` package to your project by running
+in your terminal:
+
+```bash
+meteor add check
+```
+
 The `check` package includes pattern checking functions useful for checking the types and structure
 of variables and an [extensible library of patterns](#matchpatterns) to specify which types you are
 expecting.
