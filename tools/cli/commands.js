@@ -344,7 +344,7 @@ function doRunCommand(options) {
 
   let webArchs = ['web.browser'];
   let cordovaRunner;
-  if (!_.isEmpty(runTargets)) {
+  if (!_.isEmpty(runTargets) || options['mobile-server']) {
     main.captureAndExit('', 'preparing Cordova project', () => {
       const cordovaProject = new CordovaProject(projectContext, {
         settingsFile: options.settings,
@@ -919,7 +919,6 @@ ${Console.command("meteor build ../output")}`,
       serverArch: bundleArch,
       buildMode: options.debug ? 'development' : 'production',
     },
-    providePackageJSONForUnavailableBinaryDeps: !!process.env.METEOR_BINARY_DEP_WORKAROUND,
   });
   if (bundleResult.errors) {
     Console.error("Errors prevented bundling:");
@@ -1672,7 +1671,12 @@ function doTestCommand(options) {
 
   return runTestAppForPackages(projectContext, _.extend(
     options,
-    { mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) }));
+    {
+      mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
+      proxyPort: parsedServerUrl.port,
+      proxyHost: parsedServerUrl.host,
+    }
+  ));
 }
 
 // Returns the "local-test:*" package names for the given package names (or for
@@ -1756,7 +1760,8 @@ var runTestAppForPackages = function (projectContext, options) {
     var runAll = require('../runners/run-all.js');
     return runAll.run({
       projectContext: projectContext,
-      proxyPort: options.port,
+      proxyPort: options.proxyPort,
+      proxyHost: options.proxyHost,
       debugPort: options['debug-port'],
       disableOplog: options['disable-oplog'],
       settingsFile: options.settings,
@@ -2008,6 +2013,10 @@ main.registerCommand({
     slow: { type: Boolean },
     galaxy: { type: Boolean },
     browserstack: { type: Boolean },
+    // Indicates whether these self-tests are running headless, e.g. in a
+    // continuous integration testing environment, where visual niceties
+    // like progress bars and spinners are unimportant.
+    headless: { type: Boolean },
     history: { type: Number },
     list: { type: Boolean },
     file: { type: String },
@@ -2087,6 +2096,12 @@ main.registerCommand({
   var clients = {
     browserstack: options.browserstack
   };
+
+  if (options.headless) {
+    // There's no point in spinning the spinner when we're running
+    // continuous integration tests.
+    Console.disableSpinner();
+  }
 
   return selftest.runTests({
     // filtering options

@@ -12,6 +12,4 @@ This package is automatically included in every new Meteor app by `meteor create
 In addition to the `jquery` package, Meteor provides several jQuery
 plugins as separate packages. These include:
 
-* [`jquery-history`](https://github.com/balupton/history.js)
-* [`jquery-layout`](http://layout.jquery-dev.net/)
 * [`jquery-waypoints`](http://imakewebthings.com/jquery-waypoints/)

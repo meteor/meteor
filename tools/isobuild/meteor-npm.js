@@ -127,9 +127,9 @@ meteorNpm.dependenciesArePortable = function (nodeModulesDir) {
   // as a shared object rather than as JavaScript, so this should work
   // in the vast majority of cases.
 
-  assert.strictEqual(
-    files.pathBasename(nodeModulesDir),
-    "node_modules"
+  assert.ok(
+    files.pathBasename(nodeModulesDir).startsWith("node_modules"),
+    "Bad node_modules directory: " + nodeModulesDir,
   );
 
   function isPortable(dir, shouldCache) {
@@ -153,9 +153,15 @@ meteorNpm.dependenciesArePortable = function (nodeModulesDir) {
       // important that we put separate files in the individual top-level
       // package directories so that they will get cleared away the next
       // time those packages are (re)installed.
+
       const portableFile = files.pathJoin(item, ".meteor-portable");
-      if (files.exists(portableFile)) {
+      try {
         return JSON.parse(files.readFile(portableFile));
+      } catch (e) {
+        if (! (e instanceof SyntaxError ||
+               e.code === "ENOENT")) {
+          throw e;
+        }
       }
 
       const result = isPortable(item);
@@ -232,15 +238,6 @@ var updateExistingNpmDirectory = function (packageName, newPackageNpmDir,
     if (oldNodeVersion !== currentNodeCompatibilityVersion()) {
       files.rm_recursive(nodeModulesDir);
     }
-  }
-
-  // If the node modules directory exists but doesn't have .package.json and
-  // .npm-shrinkwrap.json, recreate.  This is to ensure that
-  // providePackageJSONForUnavailableBinaryDeps works.
-  if (files.exists(nodeModulesDir) &&
-      (!files.exists(files.pathJoin(nodeModulesDir, '.package.json')) ||
-       !files.exists(files.pathJoin(nodeModulesDir, '.npm-shrinkwrap.json')))) {
-    files.rm_recursive(nodeModulesDir);
   }
 
   // Make sure node_modules is present (fix for #1761). Prevents npm install

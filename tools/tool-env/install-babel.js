@@ -24,17 +24,25 @@ require("meteor-ecmascript-runtime");
 
 // Install a global ES2015-compliant Promise constructor that knows how to
 // run all its callbacks in Fibers.
-global.Promise = require('meteor-promise');
+var Promise = global.Promise = require('meteor-promise');
 
 // Allow all Promise callbacks to be run in a Fiber.
-global.Promise.Fiber = require('fibers');
+Promise.Fiber = require('fibers');
 
 // Verify that the babel-runtime package is available to be required.
-require('babel-runtime/helpers/typeof');
+var regeneratorRuntime = require("babel-runtime/regenerator").default;
 
-// Include helpers from NPM so that the compiler doesn't need to add boilerplate
-// at the top of every file
-meteorBabel.installRuntime();
+// If Promise.asyncApply is defined, use it to wrap calls to runtime.async
+// so that the entire async function will run in its own Fiber, not just
+// the code that comes after the first await.
+var realAsync = regeneratorRuntime.async;
+regeneratorRuntime.async = function () {
+  return Promise.asyncApply(realAsync, regeneratorRuntime, arguments);
+};
+
+// Install global.meteorBabelHelpers so that the compiler doesn't need to
+// add boilerplate at the top of every file
+meteorBabel.defineHelpers();
 
 // Installs source map support with a hook to add functions to look for source
 // maps in custom places

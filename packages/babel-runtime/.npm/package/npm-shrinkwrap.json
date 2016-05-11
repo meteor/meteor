@@ -1,5 +1,10 @@
 {
   "dependencies": {
+    "meteor-babel-helpers": {
+      "version": "0.0.3",
+      "resolved": "https://registry.npmjs.org/meteor-babel-helpers/-/meteor-babel-helpers-0.0.3.tgz",
+      "from": "meteor-babel-helpers@0.0.3"
+    },
     "regenerator": {
       "version": "0.8.42",
       "resolved": "https://registry.npmjs.org/regenerator/-/regenerator-0.8.42.tgz",

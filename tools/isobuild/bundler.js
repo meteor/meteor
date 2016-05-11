@@ -167,7 +167,7 @@ var colonConverter = require('../utils/colon-converter.js');
 var Profile = require('../tool-env/profile.js').Profile;
 var packageVersionParser = require('../packaging/package-version-parser.js');
 var release = require('../packaging/release.js');
-import isopackets from '../tool-env/isopackets.js';
+import { load as loadIsopacket } from '../tool-env/isopackets.js';
 import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
 
 // files to ignore when bundling. node has no globs, so use regexps
@@ -223,7 +223,6 @@ export class NodeModulesDirectory {
     preferredBundlePath,
     local = false,
     npmDiscards = null,
-    writePackageJSON = false,
   }) {
     // Name of the package this node_modules directory belongs to, or null
     // if it belongs to an application.
@@ -250,9 +249,6 @@ export class NodeModulesDirectory {
 
     // Optionally, files to discard.
     this.npmDiscards = npmDiscards;
-
-    // Write a package.json file instead of copying the full directory.
-    this.writePackageJSON = writePackageJSON;
   }
 
   copy() {
@@ -304,6 +300,20 @@ export class NodeModulesDirectory {
         relParts.unshift("node_modules", "meteor", name);
       }
 
+      let lastPart = relParts.pop();
+      if (lastPart !== "node_modules") {
+        // Sometimes when building an app bundle for a different
+        // architecture, the isopacket source directory ends up with
+        // different npm/node_modules directories for each architecture,
+        // distinguished by numerical suffixes (e.g. npm/node_modules1).
+        // While this is important to keep the built binary files
+        // distinct, we definitely don't want node_modules1 to show up in
+        // the final build.
+        assert.ok(lastPart.startsWith("node_modules"), lastPart);
+        lastPart = "node_modules";
+      }
+      relParts.push(lastPart);
+
       relPath = files.pathJoin(...relParts);
     }
 
@@ -315,7 +325,6 @@ export class NodeModulesDirectory {
   toJSON() {
     return {
       packageName: this.packageName,
-      writePackageJSON: this.writePackageJSON,
       local: this.local,
     };
   }
@@ -597,8 +606,6 @@ class Target {
     buildMode,
     // directory on disk where to store the cache for things like linker
     bundlerCacheDir,
-    // whether to substitute a package.json for unavailable binary deps
-    providePackageJSONForUnavailableBinaryDeps,
     // ... see subclasses for additional options
   }) {
     this.packageMap = packageMap;
@@ -647,9 +654,6 @@ class Target {
     this.buildMode = buildMode || 'production';
 
     this.bundlerCacheDir = bundlerCacheDir;
-
-    this.providePackageJSONForUnavailableBinaryDeps
-      = providePackageJSONForUnavailableBinaryDeps;
   }
 
   // Top-level entry point for building a target. Generally to build a
@@ -755,9 +759,7 @@ class Target {
         if (p.testOnly && this.buildMode !== 'test') {
           return;
         }
-        const unibuild = p.getUnibuildAtArch(this.arch, {
-          allowWrongPlatform: this.providePackageJSONForUnavailableBinaryDeps
-        });
+        const unibuild = p.getUnibuildAtArch(this.arch);
         unibuild && rootUnibuilds.push(unibuild);
       });
 
@@ -794,7 +796,6 @@ class Target {
           skipDebugOnly: this.buildMode === 'production',
           skipProdOnly: this.buildMode !== 'production',
           skipTestOnly: this.buildMode !== 'test',
-          allowWrongPlatform: this.providePackageJSONForUnavailableBinaryDeps,
         }, addToGetsUsed);
       }.bind(this);
 
@@ -864,7 +865,6 @@ class Target {
           skipDebugOnly: this.buildMode === 'production',
           skipProdOnly: this.buildMode !== 'production',
           skipTestOnly: this.buildMode !== 'test',
-          allowWrongPlatform: this.providePackageJSONForUnavailableBinaryDeps,
         }, processUnibuild);
         this.unibuilds.push(unibuild);
         delete needed[unibuild.id];
@@ -1003,35 +1003,6 @@ class Target {
             }
 
             _.each(unibuild.nodeModulesDirectories, nmd => {
-              if (!archinfo.matches(this.arch, unibuild.arch)) {
-                // The unibuild we're trying to include doesn't work for the
-                // bundle target (eg, os.osx.x86_64 instead of os.linux.x86_64)!
-                // Hopefully this is because we specially enabled the feature
-                // that leads to this.
-                if (!this.providePackageJSONForUnavailableBinaryDeps) {
-                  throw Error("mismatched arch without special feature enabled "
-                              + unibuild.pkg.name + " / " + this.arch + " / " +
-                              unibuild.arch);
-                }
-                if (!files.exists(
-                  files.pathJoin(nmd.sourcePath, '.package.json'))) {
-                  buildmessage.error(
-                    "Can't cross-compile package " +
-                      unibuild.pkg.name + ": missing .package.json");
-                  return;
-                }
-                if (!files.exists(
-                  files.pathJoin(nmd.sourcePath, '.npm-shrinkwrap.json'))) {
-                  buildmessage.error(
-                    "Can't cross-compile package " +
-                      unibuild.pkg.name + ": missing .npm-shrinkwrap.json");
-                  return;
-                }
-
-                nmd = nmd.copy();
-                nmd.writePackageJSON = true;
-              }
-
               this.nodeModulesDirectories[nmd.sourcePath] = nmd;
               f.nodeModulesDirectories[nmd.sourcePath] = nmd;
             });
@@ -1213,14 +1184,11 @@ class Target {
   // including anything that was specific to Linux, the return value
   // would be 'os'.
   mostCompatibleArch() {
-    let arches = _.pluck(this.unibuilds, 'arch');
-    if (this.providePackageJSONForUnavailableBinaryDeps) {
-      // Filter out incompatible arches.
-      arches = arches.filter(
-        (arch) => archinfo.matches(this.arch, arch)
-      );
-    }
-    return archinfo.leastSpecificDescription(arches);
+    return archinfo.leastSpecificDescription(
+      _.pluck(this.unibuilds, 'arch').filter(
+        arch => archinfo.matches(this.arch, arch)
+      )
+    );
   }
 }
 
@@ -1395,7 +1363,7 @@ class ClientTarget extends Target {
 
     if (this.arch === 'web.cordova') {
       const { WebAppHashing } =
-        isopackets.load('cordova-support')['webapp-hashing'];
+        loadIsopacket('cordova-support')['webapp-hashing'];
       const cordovaCompatibilityVersions =
         _.object(_.map(CORDOVA_PLATFORM_VERSIONS, (version, platform) => {
           const hash = WebAppHashing.calculateCordovaCompatibilityHash(
@@ -1468,8 +1436,6 @@ class JsImage {
 
     // Architecture required by this image
     this.arch = null;
-
-    this.providePackageJSONForUnavailableBinaryDeps = false;
   }
 
   // Load the image into the current process. It gets its own unique
@@ -1865,7 +1831,8 @@ class JsImage {
       load.push(loadItem);
     });
 
-    const setupScriptPieces = [];
+    const rebuildDirs = Object.create(null);
+
     // node_modules resources from the packages. Due to appropriate
     // builder configuration, 'meteor bundle' and 'meteor deploy' copy
     // them, and 'meteor run' symlinks them. If these contain
@@ -1874,29 +1841,12 @@ class JsImage {
     _.each(nodeModulesDirectories, function (nmd) {
       assert.strictEqual(typeof nmd.preferredBundlePath, "string");
 
-      if (nmd.writePackageJSON) {
-        // Make sure there's an empty node_modules directory at the right place
-        // in the tree (so that npm install puts modules there instead of
-        // elsewhere).
-        builder.reserve(
-          nmd.preferredBundlePath, {directory: true});
-        // We check that these source files exist in _emitResources when
-        // writePackageJSON is initially set.
-        builder.write(
-          files.pathJoin(files.pathDirname(nmd.preferredBundlePath),
-                         'package.json'),
-          { file: files.pathJoin(nmd.sourcePath, '.package.json') }
-        );
-        builder.write(
-          files.pathJoin(files.pathDirname(nmd.preferredBundlePath),
-                         'npm-shrinkwrap.json'),
-          { file: files.pathJoin(nmd.sourcePath, '.npm-shrinkwrap.json') }
-        );
-        // XXX does not support npmDiscards!
+      if (! nmd.isPortable()) {
+        const parentDir = files.pathDirname(nmd.preferredBundlePath);
+        rebuildDirs[parentDir] = parentDir;
+      }
 
-        setupScriptPieces.push(
-          '(cd ', nmd.preferredBundlePath, ' && npm install)\n\n');
-      } else if (nmd.sourcePath !== nmd.preferredBundlePath) {
+      if (nmd.sourcePath !== nmd.preferredBundlePath) {
         builder.copyDirectory({
           from: nmd.sourcePath,
           to: nmd.preferredBundlePath,
@@ -1906,13 +1856,14 @@ class JsImage {
       }
     });
 
-    if (setupScriptPieces.length) {
-      setupScriptPieces.unshift('#!/usr/bin/env bash\n', 'set -e\n\n');
-      builder.write('setup.sh', {
-        data: new Buffer(setupScriptPieces.join(''), 'utf8'),
-        executable: true
-      });
-    }
+    // This JSON file will be read by npm-rebuild.js, which is executed to
+    // trigger rebuilds for all non-portable npm packages.
+    builder.write("npm-rebuilds.json", {
+      data: new Buffer(
+        JSON.stringify(Object.keys(rebuildDirs), null, 2) + "\n",
+        "utf8"
+      )
+    });
 
     // Control file
     builder.writeJson('program.json', {
@@ -2083,9 +2034,20 @@ class ServerTarget extends JsImageTarget {
 
     // Write package.json and npm-shrinkwrap.json for the dependencies of
     // boot.js.
+    const serverPkgJson = JSON.parse(files.readFile(
+      files.pathJoin(files.getDevBundle(), 'etc', 'package.json')
+    ));
+
+    serverPkgJson.scripts = serverPkgJson.scripts || {};
+    serverPkgJson.scripts.install = "node npm-rebuild.js";
+
     builder.write('package.json', {
-      file: files.pathJoin(files.getDevBundle(), 'etc', 'package.json')
+      data: new Buffer(
+        JSON.stringify(serverPkgJson, null, 2) + "\n",
+        "utf8"
+      )
     });
+
     builder.write('npm-shrinkwrap.json', {
       file: files.pathJoin(files.getDevBundle(), 'etc', 'npm-shrinkwrap.json')
     });
@@ -2122,6 +2084,7 @@ class ServerTarget extends JsImageTarget {
       "server-json.js",
       "mini-files.js",
       "npm-require.js",
+      "npm-rebuild.js",
     ], function (filename) {
       builder.write(filename, {
         file: files.pathJoin(
@@ -2446,7 +2409,6 @@ exports.bundle = function ({
   buildOptions,
   previousBuilders,
   hasCachedBundle,
-  providePackageJSONForUnavailableBinaryDeps
 }) {
   buildOptions = buildOptions || {};
 
@@ -2530,7 +2492,6 @@ exports.bundle = function ({
         releaseName: releaseName,
         appIdentifier: appIdentifier,
         buildMode: buildOptions.buildMode,
-        providePackageJSONForUnavailableBinaryDeps
       };
       if (clientTargets) {
         targetOptions.clientTargets = clientTargets;
