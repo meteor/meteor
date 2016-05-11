@@ -122,7 +122,7 @@ check(undefined, Match.Maybe(String)); // OK
 
 {{#dtdd "<code>Match.Optional(<em>pattern</em>)</code>"}}
 
-Behaves like `Match.Maybe` except it doesn't accept `null`. If used in an object, the behavior is
+Behaves like `Match.Maybe` except it doesn't accept `undefined`. If used in an object, the behavior is
 identical to `Match.Maybe`.
 
 {{/dtdd}}
