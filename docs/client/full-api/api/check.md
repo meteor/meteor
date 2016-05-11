@@ -6,6 +6,8 @@ The `check` package includes pattern checking functions useful for checking the 
 of variables and an [extensible library of patterns](#matchpatterns) to specify which types you are
 expecting.
 
+> To use it, `meteor add check` first.
+
 {{> autoApiBox "check"}}
 
 Meteor methods and publish functions can take arbitrary [EJSON](#ejson) types as arguments, but most

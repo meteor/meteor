@@ -183,6 +183,8 @@ options about how the client executes the method.
 
 Customize rate limiting for methods and subscriptions.
 
+> To use it, `meteor add ddp-rate-limiter` first.
+
 By default, `DDPRateLimiter` is configured with a single rule. This rule
 limits login attempts, new user creation, and password resets to 5 attempts
 every 10 seconds per connection. It can be removed by calling
