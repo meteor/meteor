@@ -8,3 +8,4 @@ cache:
     - ".babel-cache"
 install: ./meteor --get-ready
 script: CIRCLE_NODE_INDEX=0 ./scripts/ci.sh
+sudo: false
