@@ -1,0 +1,10 @@
+language: node_js
+node_js:
+  - "0.10"
+cache:
+  directories:
+    - "dev_bundle"
+    - ".meteor"
+    - ".babel-cache"
+install: ./meteor --get-ready
+test: CIRCLE_NODE_INDEX=0 ./scripts/ci.sh
