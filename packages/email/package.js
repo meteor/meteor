@@ -7,7 +7,7 @@ Npm.depends({
   // Pinned at older version. 0.1.16+ uses mimelib, not mimelib-noiconv which is
   // much bigger. We need a better solution.
   mailcomposer: "0.1.15",
-  simplesmtp: "0.3.10",
+  simplesmtp: "0.3.35",
   "stream-buffers": "0.2.5"});
 
 Package.onUse(function (api) {
