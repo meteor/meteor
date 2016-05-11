@@ -33,6 +33,11 @@
 /// general it's good for functions that create Views to set the name.
 /// Views associated with templates have names of the form "Template.foo".
 
+// We are running materialization inside Tracker.nonreactive, but we still
+// want to know which computation is triggering materialization so that
+// we can add view's onRendered callback as computation's afterRun callback.
+var currentComputationMaterializing = null;
+
 /**
  * @class
  * @summary Constructor for a View, which represents a reactive region of DOM.
@@ -101,7 +106,14 @@ Blaze.View.prototype._onViewRendered = function (cb) {
 Blaze.View.prototype.onViewReady = function (cb) {
   var self = this;
   var fire = function () {
-    Tracker.afterFlush(function () {
+    var delayCall;
+    if (currentComputationMaterializing) {
+      delayCall = _.bind(currentComputationMaterializing.afterRun, currentComputationMaterializing);
+    }
+    else {
+      delayCall = Tracker.afterFlush;
+    }
+    delayCall(function () {
       if (! self.isDestroyed) {
         Blaze._withCurrentView(self, function () {
           cb.call(self);
@@ -352,14 +364,20 @@ Blaze._materializeView = function (view, parentView, _workStack, _intoArray) {
       view._isInRender = false;
 
       if (! c.firstRun) {
-        Tracker.nonreactive(function doMaterialize() {
-          // re-render
-          var rangesAndNodes = Blaze._materializeDOM(htmljs, [], view);
-          if (! Blaze._isContentEqual(lastHtmljs, htmljs)) {
-            domrange.setMembers(rangesAndNodes);
-            Blaze._fireCallbacks(view, 'rendered');
-          }
-        });
+        var previousComputation = currentComputationMaterializing;
+        currentComputationMaterializing = Tracker.currentComputation;
+        try {
+          Tracker.nonreactive(function doMaterialize() {
+            // re-render
+            var rangesAndNodes = Blaze._materializeDOM(htmljs, [], view);
+            if (! Blaze._isContentEqual(lastHtmljs, htmljs)) {
+              domrange.setMembers(rangesAndNodes);
+              Blaze._fireCallbacks(view, 'rendered');
+            }
+          });
+        } finally {
+          currentComputationMaterializing = previousComputation;
+        }
       }
       lastHtmljs = htmljs;
 

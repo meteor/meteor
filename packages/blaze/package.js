@@ -52,4 +52,6 @@ Package.onTest(function (api) {
 
   api.addFiles('view_tests.js');
   api.addFiles('render_tests.js', 'client');
+  api.addFiles('template_tests.html', 'client');
+  api.addFiles('template_tests.js', 'client');
 });

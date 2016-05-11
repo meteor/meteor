@@ -495,3 +495,23 @@ testAsyncMulti('tracker - Tracker.autorun, onError option', [function (test, exp
   Tracker.flush();
 }]);
 
+Tinytest.add('tracker - afterRun', function (test) {
+  var buf = '';
+  var i = 0;
+  var j = 5;
+  var c = Tracker.autorun(function (c) {
+    if (i < 3) {
+      c.invalidate();
+    }
+    c.afterRun(function () {
+      buf += i;
+      i++;
+    });
+    Tracker.afterFlush(function () {
+      buf += j;
+      j++;
+    });
+  });
+  Tracker.flush();
+  test.equal(buf, "01235678");
+});
