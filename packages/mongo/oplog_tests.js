@@ -134,7 +134,7 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
       // the test fails).
       pollUntil(expect, function () {
         return gotSpot;
-      }, 2000);
+      }, 3000);
     },
     function (test, expect) {
       var self = this;
