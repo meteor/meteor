@@ -139,21 +139,6 @@ _.extend(ProjectContext.prototype, {
     // to using the web.browser slice instead or make a common 'web' slice).
     self._forceIncludeCordovaUnibuild = options.forceIncludeCordovaUnibuild;
 
-    // If explicitly specified as null, use no release for constraints.
-    // If specified non-null, should be a release version catalog record.
-    // If not specified, defaults to release.current.
-    //
-    // Note that NONE of these cases are "use the release from
-    // self.releaseFile"; after all, if you are explicitly running `meteor
-    // --release foo` it will override what is found in .meteor/releases.
-    if (_.has(options, 'releaseForConstraints')) {
-      self._releaseForConstraints = options.releaseForConstraints || null;
-    } else if (release.current.isCheckout()) {
-      self._releaseForConstraints = null;
-    } else {
-      self._releaseForConstraints = release.current.getCatalogReleaseData();
-    }
-
     if (resetOptions.preservePackageMap && self.packageMap) {
       self._cachedVersionsBeforeReset = self.packageMap.toVersionMap();
       // packageMapFile should always exist if packageMap does
@@ -629,7 +614,6 @@ _.extend(ProjectContext.prototype, {
 
     self._addAppConstraints(depsAndConstraints);
     self._addLocalPackageConstraints(depsAndConstraints);
-    self._addReleaseConstraints(depsAndConstraints);
     return depsAndConstraints;
   },
 
@@ -650,19 +634,6 @@ _.extend(ProjectContext.prototype, {
       var versionRecord = self.localCatalog.getLatestVersion(packageName);
       var constraint = utils.parsePackageConstraint(
         packageName + "@=" + versionRecord.version);
-      // Add a constraint ("this is the only version available") but no
-      // dependency (we don't automatically use all local packages!)
-      depsAndConstraints.constraints.push(constraint);
-    });
-  },
-
-  _addReleaseConstraints: function (depsAndConstraints) {
-    var self = this;
-    if (! self._releaseForConstraints)
-      return;
-    _.each(self._releaseForConstraints.packages, function (version, packageName) {
-      var constraint = utils.parsePackageConstraint(
-        packageName + "@=" + version);
       // Add a constraint ("this is the only version available") but no
       // dependency (we don't automatically use all local packages!)
       depsAndConstraints.constraints.push(constraint);
