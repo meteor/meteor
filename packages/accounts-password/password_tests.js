@@ -2,7 +2,7 @@ Accounts._noConnectionCloseDelayForTest = true;
 
 if (Meteor.isServer) {
   Accounts.removeDefaultRateLimit();
-  
+
   Meteor.methods({
     getResetToken: function () {
       var token = Meteor.users.findOne(this.userId).services.password.reset;
@@ -16,6 +16,9 @@ if (Meteor.isServer) {
     },
     countUsersOnServer: function (query) {
       return Meteor.users.find(query).count();
+    },
+    getUserByUsername: function (username) {
+      return Meteor.users.findOne({username: username});
     }
   });
 }
@@ -588,6 +591,24 @@ if (Meteor.isClient) (function () {
       test.equal(Meteor.user().profile.touchedByOnCreateUser, true);
     },
     logoutStep
+  ]);
+
+  testAsyncMulti("passwords - onLogout hook", [
+    function (test, expect) {
+      this.username = Random.id();
+      this.password = "password";
+      Accounts.createUser(
+        {username: this.username, password: this.password,
+        profile: { testOnLogoutHook: true }},
+        loggedInAs(this.username, test, expect));
+    },
+    logoutStep,
+    function (test, expect) {
+      Meteor.call('getUserByUsername', this.username,
+        expect(function(error, result) {
+          test.equal(result.profile.touchedByOnLogout, true);
+        }));
+    }
   ]);
 
 

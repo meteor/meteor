@@ -122,6 +122,19 @@ export class AccountsServer extends AccountsCommon {
 
     this._onCreateUserHook = func;
   }
+
+  ///
+  /// LOGOUT HOOK
+  ///
+
+  /**
+   * @summary Register a callback to be called after a logged in user logs out.
+   * @locus Server
+   * @param {Function} func The callback to be called after a logged in user logs out. Takes the logged out user as parameter.
+   */
+  onLogout(func) {
+    this._onLogoutHook = func;
+  }
 };
 
 var Ap = AccountsServer.prototype;
@@ -527,11 +540,17 @@ Ap._initServerMethods = function () {
   };
 
   methods.logout = function () {
+    var userId = this.userId;
     var token = accounts._getLoginToken(this.connection.id);
     accounts._setLoginToken(this.userId, this.connection, null);
     if (token && this.userId)
       accounts.destroyToken(this.userId, token);
     this.setUserId(null);
+
+    if(accounts._onLogoutHook) {
+      var user = accounts.users.findOne(userId);
+      accounts._onLogoutHook(user);
+    }
   };
 
   // Delete all the current user's tokens and close all open connections logged

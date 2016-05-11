@@ -14,6 +14,13 @@ Accounts.onCreateUser(function (options, user) {
   }
 });
 
+Accounts.onLogout(function (user) {
+  if(user && user.profile && user.profile.testOnLogoutHook) {
+    Meteor.users.update(user._id, {
+      $set: {"profile.touchedByOnLogout": true}
+    });
+  }
+});
 
 // connection id -> action
 var invalidateLogins = {};
