@@ -130,6 +130,7 @@ var toc = [
       { name: "AccountsCommon#config", id: "accounts_config" },
       { name: "AccountsCommon#onLogin", id: "accounts_onlogin" },
       { name: "AccountsCommon#onLoginFailure", id: "accounts_onloginfailure" },
+      { name: "AccountsCommon#onLogout", id: "accounts_onlogout" },
       {type: "spacer"},
 
       { name: "AccountsClient#loggingIn", id: "accounts_loggingin" },

@@ -980,6 +980,32 @@ DocsData = {
     "scope": "instance",
     "summary": "Register a callback to be called after a login attempt fails."
   },
+  "AccountsClient#onLogout": {
+    "filepath": "accounts-base/accounts_common.js",
+    "inherited": true,
+    "inherits": "AccountsCommon#onLogout",
+    "kind": "function",
+    "lineno": 164,
+    "locus": "Anywhere",
+    "longname": "AccountsClient#onLogout",
+    "memberof": "AccountsClient",
+    "module": "accounts-base",
+    "name": "onLogout",
+    "options": [],
+    "params": [
+      {
+        "description": "<p>The callback to be called after the logout has finished.</p>",
+        "name": "func",
+        "type": {
+          "names": [
+            "function"
+          ]
+        }
+      }
+    ],
+    "scope": "instance",
+    "summary": "Register a callback to be called after a logout attempt succeeds."
+  },
   "AccountsClient#user": {
     "filepath": "accounts-base/accounts_common.js",
     "inherited": true,
@@ -1154,6 +1180,32 @@ DocsData = {
     ],
     "scope": "instance",
     "summary": "Register a callback to be called after a login attempt fails."
+  },
+  "AccountsCommon#onLogout": {
+    "filepath": "accounts-base/accounts_common.js",
+    "inherited": true,
+    "inherits": "AccountsCommon#onLogout",
+    "kind": "function",
+    "lineno": 164,
+    "locus": "Anywhere",
+    "longname": "AccountsCommon#onLogout",
+    "memberof": "AccountsCommon",
+    "module": "accounts-base",
+    "name": "onLogout",
+    "options": [],
+    "params": [
+      {
+        "description": "<p>The callback to be called after the logout has finished.</p>",
+        "name": "func",
+        "type": {
+          "names": [
+            "function"
+          ]
+        }
+      }
+    ],
+    "scope": "instance",
+    "summary": "Register a callback to be called after a logout attempt succeeds."
   },
   "AccountsCommon#user": {
     "filepath": "accounts-base/accounts_common.js",
@@ -1357,6 +1409,32 @@ DocsData = {
     ],
     "scope": "instance",
     "summary": "Register a callback to be called after a login attempt fails."
+  },
+  "AccountsServer#onLogout": {
+    "filepath": "accounts-base/accounts_common.js",
+    "inherited": true,
+    "inherits": "AccountsCommon#onLogout",
+    "kind": "function",
+    "lineno": 164,
+    "locus": "Anywhere",
+    "longname": "AccountsServer#onLogout",
+    "memberof": "AccountsServer",
+    "module": "accounts-base",
+    "name": "onLogout",
+    "options": [],
+    "params": [
+      {
+        "description": "<p>The callback to be called after the logout has finished.</p>",
+        "name": "func",
+        "type": {
+          "names": [
+            "function"
+          ]
+        }
+      }
+    ],
+    "scope": "instance",
+    "summary": "Register a callback to be called after a logout attempt succeeds."
   },
   "AccountsServer#user": {
     "filepath": "accounts-base/accounts_common.js",

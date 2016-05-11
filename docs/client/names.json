@@ -34,6 +34,7 @@
   "AccountsCommon#config",
   "AccountsCommon#onLogin",
   "AccountsCommon#onLoginFailure",
+  "AccountsCommon#onLogout",
   "AccountsCommon#user",
   "AccountsCommon#userId",
   "AccountsServer",

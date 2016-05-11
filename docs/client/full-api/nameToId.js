@@ -50,6 +50,7 @@ nameToId = {
   "AccountsCommon#config": "accounts_config",
   "AccountsCommon#onLogin": "accounts_onlogin",
   "AccountsCommon#onLoginFailure": "accounts_onloginfailure",
+  "AccountsCommon#onLogout": "accounts_onlogout",
   "AccountsClient#loggingIn": "accounts_loggingin",
   "AccountsServer#validateLoginAttempt": "accounts_validateloginattempt",
   "AccountsServer#validateNewUser": "accounts_validatenewuser",

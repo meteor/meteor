@@ -462,6 +462,8 @@ On the server, the callbacks get a single argument, the same attempt info
 object as [`validateLoginAttempt`](#accounts_validateloginattempt). On the
 client, no arguments are passed.
 
+{{> autoApiBox "AccountsCommon#onLogout"}}
+
 <h3 id="accounts_rate_limit"><span>Rate Limiting</span></h3>
 
 By default, there are rules added to the [`DDPRateLimiter`](#ddpratelimiter)
