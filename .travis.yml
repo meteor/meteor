@@ -7,4 +7,4 @@ cache:
     - ".meteor"
     - ".babel-cache"
 install: ./meteor --get-ready
-test: CIRCLE_NODE_INDEX=0 ./scripts/ci.sh
+script: CIRCLE_NODE_INDEX=0 ./scripts/ci.sh
