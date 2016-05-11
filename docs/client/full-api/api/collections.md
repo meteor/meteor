@@ -475,7 +475,7 @@ Posts.deny({
     // can't remove locked documents
     return doc.locked;
   },
-  fetch: ['locked'] // no need to fetch 'owner'
+  fetch: ['locked'] // no need to fetch 'locked'
 });
 ```
 
