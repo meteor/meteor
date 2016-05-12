@@ -33,7 +33,7 @@ var makePool = function (mailUrlString) {
   var pool = simplesmtp.createClientPool(
     port,  // Defaults to 25
     mailUrl.hostname,  // Defaults to "localhost"
-    { secureConnection: (port === 465),
+    { secureConnection: (port === 465) || (mailUrl.protocol === 'smtps:'),
       // XXX allow maxConnections to be configured?
       auth: auth });
 
