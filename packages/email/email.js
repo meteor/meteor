@@ -17,9 +17,9 @@ var MailComposer = EmailInternals.NpmModules.mailcomposer.module.MailComposer;
 
 var makePool = function (mailUrlString) {
   var mailUrl = urlModule.parse(mailUrlString);
-  if (mailUrl.protocol !== 'smtp:')
+  if (mailUrl.protocol !== 'smtp:' && mailUrl.protocol !== 'smtps:')
     throw new Error("Email protocol in $MAIL_URL (" +
-                    mailUrlString + ") must be 'smtp'");
+                    mailUrlString + ") must be 'smtp' or 'smtps'");
 
   var port = +(mailUrl.port);
   var auth = false;
