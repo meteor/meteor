@@ -50,7 +50,10 @@ function setCacheDir(cacheDir) {
 
   compileCache = new Cache(function (source, options) {
     var ast = parse(source); // TODO Cache parsed ASTs somehow?
-    return require("babel-core").transformFromAst(ast, source, options);
+    var result = require("babel-core")
+      .transformFromAst(ast, source, options);
+    result.code = require("reify/lib/compiler").compile(result.code);
+    return result;
   }, cacheDir);
 }
 exports.setCacheDir = setCacheDir;

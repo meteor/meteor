@@ -1,4 +1,5 @@
 require("meteor-babel-helpers");
+require("reify/node/runtime");
 
 require("meteor-promise").makeCompatible(
   global.Promise = global.Promise ||

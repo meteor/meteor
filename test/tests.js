@@ -6,7 +6,7 @@ import {
 } from "./test-module";
 
 describe("meteor-babel", () => {
-  const meteorBabel = require("../index.js");
+  import meteorBabel from "../index.js";
 
   it("should be able to parse non-standard syntax", () => {
     const ast = meteorBabel.parse("const copy = {...obj};");

@@ -7,6 +7,8 @@ var convertSourceMap = require("convert-source-map");
 var meteorBabel = require("./index.js");
 var util = require("./util.js");
 
+require("reify/node/runtime");
+
 var config = {
   sourceMapRootPath: null,
   allowedDirectories: Object.create(null),
