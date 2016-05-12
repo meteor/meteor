@@ -1,5 +1,4 @@
 var _ = require('underscore');
-var process = require('process');
 var selftest = require('../tool-testing/selftest.js');
 var Run = selftest.Run;
 var testUtils = require('../tool-testing/test-utils.js');
