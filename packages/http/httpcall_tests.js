@@ -90,15 +90,16 @@ testAsyncMulti("httpcall - errors", [
       test.isFalse(error.response);
     };
 
-    // 0.0.0.0 is an illegal IP address, and thus should always give an error.
+    const invalidIp = "0.0.0.199";
+    // This is an invalid destination IP address, and thus should always give an error.
     // If your ISP is intercepting DNS misses and serving ads, an obviously
     // invalid URL (http://asdf.asdf) might produce an HTTP response.
-    HTTP.call("GET", "http://0.0.0.0/", expect(unknownServerCallback));
+    HTTP.call("GET", `http://${invalidIp}/`, expect(unknownServerCallback));
 
     if (Meteor.isServer) {
       // test sync version
       try {
-        var unknownServerResult = HTTP.call("GET", "http://0.0.0.0/");
+        var unknownServerResult = HTTP.call("GET", `http://${invalidIp}/`);
         unknownServerCallback(undefined, unknownServerResult);
       } catch (e) {
         unknownServerCallback(e, e.response);
