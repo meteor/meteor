@@ -5,6 +5,7 @@
 * You can now pick where the `.meteor/local` directory is created by setting the `METEOR_LOCAL_DIR` environment variable. This lets you run multiple instances of the same Meteor app.
   [PR #6760](https://github.com/meteor/meteor/pull/6760) [Issue #6532](https://github.com/meteor/meteor/issues/6532)
 * Allow using authType in Facebook login [PR #5694](https://github.com/meteor/meteor/pull/5694)
+* Adds flush() method to Tracker to force recomputation [PR #4710](https://github.com/meteor/meteor/pull/4710)
 
 ## v1.3.2.3
 
