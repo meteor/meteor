@@ -43,7 +43,7 @@
     "babel-runtime": "6.6.1",
     "escope": "3.6.0",
     "invariant": "2.2.1",
-    "lodash.find": "4.3.0",
+    "lodash.find": "4.4.0",
     "lodash.memoize": "4.0.3",
     "path-exists": "3.0.0"
   },
