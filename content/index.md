@@ -63,6 +63,8 @@ meteor
 
 6. The [projects](https://www.meteor.com/projects) section of the Meteor website describes the projects that make up the Meteor platform.
 
+7. [Awesome Meteor](https://github.com/Urigo/awesome-meteor) is a community-curated list of [packages](https://github.com/Urigo/awesome-meteor#getting-started) and [resources](https://github.com/Urigo/awesome-meteor#resources).
+
 <h2 id="what-is-it">What is the Meteor Guide?</h2>
 
 This is a set of articles outlining opinions on best-practice application development using the [Meteor](https://meteor.com) platform. Our aim is to cover patterns that are common to the development of all modern web and mobile applications, so many concepts documented here are not necessarily Meteor specific and could be applied to any application built with a focus on modern, interactive user interfaces.
