@@ -61,6 +61,10 @@ GraphQL is a query language for apps to get the data they want. Instead of the s
 
 <h3 id="advanced">Advanced<h3>
 
+<h4 id="latency">Latency</h4>
+
+Meteor publications are blocking, whereas multiple GraphQL queries are executed in parallel. Publications stream data to the client as it arrives, whereas all the resolvers in a GraphQL query have to return before the data is sent to the client. (Although GraphQL is discussing adding the ability to stream results to the client as they come in.)
+
 <h4></h4>
 
 section on being more transparent and configurable?
