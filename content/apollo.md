@@ -9,9 +9,11 @@ discourseTopicId: TODO
 
 Apollo is Meteor's next-generation data stack, built with GraphQL. While it doesn't yet have all the features that Meteor's pub/sub system has, it provides a way to get data from any database – not just MongoDB.
 
-[Apollo docs](http://docs.apollostack.com/)
+- [Apollo docs](http://docs.apollostack.com/)
+- [Including Apollo in Meteor](http://docs.apollostack.com/apollo-client/meteor.html#Using-Express-with-WebApp)
+- Using Meteor Accounts with Apollo: [on the client](http://docs.apollostack.com/apollo-client/meteor.html#Using-with-Meteor-Accounts) and [on the server](http://docs.apollostack.com/apollo-client/meteor.html#Getting-the-current-user)
 
-<h3 id="client">Client</h3>
+<h3 id="client">Apollo Client</h3>
 
 [Apollo client docs](http://docs.apollostack.com/apollo-client/index.html)
 
@@ -38,7 +40,7 @@ Currently mutators are only run on the server, but running them client-side on t
 
 Apollo currently has integrations with [React](http://docs.apollostack.com/apollo-client/react.html) and [Angular](http://docs.apollostack.com/apollo-client/angular2.html), and an integration with Blaze is planned.
 
-<h3 id="server">Server</h3>
+<h3 id="server">Apollo Server</h3>
 
 [Apollo server docs](http://docs.apollostack.com/apollo-server/index.html)
 
@@ -70,3 +72,7 @@ Lower CPU and memory usage on app servers because instead of mergebox and diffin
 <h4 id="hydration">Hydration<h4>
 
 Easy b/c Redux
+
+<h4></h4>
+
+Anything else?
