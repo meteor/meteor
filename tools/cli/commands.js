@@ -1145,7 +1145,6 @@ to this command.`);
   } else {
     // remote mode
     var site = qualifySitename(options.args[0]);
-    config.printUniverseBanner();
 
     mongoUrl = deploy.temporaryMongoUrl(site);
     usedMeteorAccount = true;
@@ -1240,7 +1239,6 @@ main.registerCommand({
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options, {rawOptions}) {
   var site = options.args[0];
-  config.printUniverseBanner();
 
   if (options.delete) {
     return deploy.deleteApp(site);
@@ -1358,7 +1356,6 @@ main.registerCommand({
     return 1;
   }
 
-  config.printUniverseBanner();
   auth.pollForRegistrationCompletion();
   var site = qualifySitename(options.args[0]);
 
@@ -1390,7 +1387,6 @@ main.registerCommand({
   maxArgs: 1,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
-  config.printUniverseBanner();
   auth.pollForRegistrationCompletion();
   var site = qualifySitename(options.args[0]);
 
@@ -1955,8 +1951,6 @@ main.registerCommand({
       "Sorry, you can only add or remove one member at a time.");
     throw new main.ShowUsage;
   }
-
-  config.printUniverseBanner();
 
   var username = options.add || options.remove;
 
