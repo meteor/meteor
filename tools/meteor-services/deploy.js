@@ -466,7 +466,6 @@ var bundleAndDeploy = function (options) {
       dns.resolve(hostname, 'CNAME', function (err, cnames) {
         if (err || cnames[0] !== 'origin.meteor.com') {
           dns.resolve(hostname, 'A', function (err, addresses) {
-            console.log('and here')
             if (err || addresses[0] !== '107.22.210.133') {
               Console.info('-------------');
               Console.info(
