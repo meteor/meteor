@@ -30,6 +30,10 @@ client). By default the server publishes `username`, `emails`, and
 `profile` (writable by user). See [`Meteor.users`](#meteor_users) for more on
 the fields used in user documents.
 
+On the server, this will fetch the record from the database. To improve the
+latency of a method that uses the user document multiple times, save the
+returned record to a variable instead of re-calling `Meteor.user()`.
+
 {% apibox "Meteor.userId" %}
 
 {% apibox "Meteor.users" %}
