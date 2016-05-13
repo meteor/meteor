@@ -264,7 +264,7 @@ Note that imports use relative paths, and include the file extension at the end 
 For [Atmosphere packages](using-packages.html), as the older pre-1.3 `api.export` syntax allowed more than one export per package, you'll tend to see non-default exports used for symbols. For instance:
 
 ```js
-// You'll need to deconstruct here, as Meteor could export more symbols
+// You'll need to destructure here, as Meteor could export more symbols
 import { Meteor } from 'meteor/meteor';
 
 // This will not work
