@@ -9,18 +9,6 @@ var tropohouse = require('../packaging/tropohouse.js');
 // getting an ssh access to a build farm. These functions need
 // configuration.
 
-// Given a hostname, add "http://" or "https://" as
-// appropriate. (localhost gets http; anything else is always https.)
-var addScheme = function (hostOrURL) {
-  if (hostOrURL.match(/^http/)) {
-    return hostOrURL;
-  } else if (hostOrURL.match(/^localhost(:\d+)?$/)) {
-    return "http://" + hostOrURL;
-  } else {
-    return "https://" + hostOrURL;
-  }
-};
-
 var config = exports;
 _.extend(exports, {
   // Base URL for Meteor Accounts OAuth services. Endpoints include /authorize
@@ -134,15 +122,6 @@ _.extend(exports, {
   // login token.
   getAccountsDomain: function () {
     return "www.meteor.com";
-  },
-
-  // Deploy URL for Galaxy deployment
-  getDeployUrl: function () {
-    if (process.env.DEPLOY_HOSTNAME) {
-      return addScheme(process.env.DEPLOY_HOSTNAME);
-    } else {
-      return "https://deploy.meteor.com";
-    }
   },
 
   // Path to file that contains our credentials for any services that
