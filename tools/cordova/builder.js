@@ -104,6 +104,9 @@ export class CordovaBuilder {
       }
     };
 
+    // Custom elements that will be appended into config.xml's widgets
+    this.custom = [];
+
     const packageMap = this.projectContext.packageMap;
 
     if (packageMap && packageMap.getInfo('launch-screen')) {
@@ -247,6 +250,17 @@ export class CordovaBuilder {
       config.element('preference', {
         name: key,
         value: value.toString()
+      });
+    });
+
+    // Set custom tags into widget element
+    _.each(this.custom, elementSet => {
+      let tag = config
+        .element(elementSet.name, elementSet.contents.attrs);
+
+      _.each(elementSet.contents.children, child => {
+        tag.element(child.name, child.attrs);
+        if(child.txt) tag.txt(child.txt);
       });
     });
 
@@ -628,6 +642,22 @@ configuration. The key may be deprecated.`);
       }
 
       builder.accessRules[pattern] = options;
+    },
+
+    /**
+     * @summary Append custom tags into config's widget element.
+     *
+     * `App.appendToConfig('custom-tag', {attrs: '', children: {}});`
+     *
+     * @param  {String} elementName The tag name
+     * @param  {Object} contents    The contents
+     * @memberOf App
+     */
+    appendToConfig: function (name, contents) {
+      builder.custom.push({
+        name,
+        contents
+      });
     }
   };
 }
