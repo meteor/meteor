@@ -126,7 +126,7 @@ Galaxy is a distributed system that runs on Amazon AWS. If you understand what i
 
 In order to deploy to Galaxy, you'll need to sign up for an account [here](https://www.meteor.com/why-meteor/pricing), and separately provision a MongoDB database (see below).
 
-Once you've done that, it's easy to [deploy to Galaxy](https://galaxy.meteor.com/help/deploying-to-galaxy). You just need to [add some environment variables to your settings file](https://galaxy.meteor.com/help/setting-environment-variables) to point it at your MongoDB, and you can deploy with:
+Once you've done that, it's easy to [deploy to Galaxy](https://galaxy.meteor.com/help/deploying-to-galaxy). You just need to [add some environment variables to your settings file](http://galaxy-guide.meteor.com/environment-variables.html) to point it at your MongoDB, and you can deploy with:
 
 ```bash
 DEPLOY_HOSTNAME=galaxy.meteor.com meteor deploy your-app.com --settings production-settings.json
