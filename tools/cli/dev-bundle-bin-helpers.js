@@ -1,8 +1,23 @@
+var fs = require("fs");
 var path = require("path");
 var devBundleDir = path.resolve(__dirname, "..", "..", "dev_bundle");
 var binDir = path.join(devBundleDir, "bin");
+var hasOwn = Object.prototype.hasOwnProperty;
+
+var win32Extensions = {
+  node: ".exe",
+  npm: ".cmd"
+};
 
 exports.getCommandPath = function (command) {
+  if (! hasOwn.call(win32Extensions, command)) {
+    return;
+  }
+
+  if (process.platform === "win32") {
+    command += win32Extensions[command];
+  }
+
   return path.join(binDir, command);
 };
 
@@ -40,4 +55,32 @@ exports.getEnv = function () {
   }
 
   return env;
+};
+
+exports.spawn = function (command, args) {
+  var child = require("child_process").spawn(command, args, {
+    stdio: "inherit",
+    env: exports.getEnv()
+  });
+
+  require("./flush-buffers-on-exit-in-windows.js");
+
+  return child;
+};
+
+exports.npmInstall = function () {
+  var nodeModulesPath = path.join(__dirname, "..", "..", "node_modules");
+  try {
+    var stat = fs.statSync(nodeModulesPath);
+    if (stat.isDirectory()) {
+      return;
+    }
+  } catch (e) {}
+
+  console.error("Running 'npm install' since node_modules does not exist...");
+
+  return exports.spawn(
+    exports.getCommandPath("npm"),
+    ["install"]
+  );
 };

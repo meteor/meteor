@@ -1,0 +1,60 @@
+{
+  "name": "meteor-tools",
+  "version": "1.5.0-alpha.1",
+  "description": "Meteor is an open source platform for building web, mobile, and desktop apps in pure JavaScript.",
+  "main": "index.js",
+  "bin": {
+    "meteor": "tools/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/meteor/meteor.git"
+  },
+  "keywords": [
+    "meteor",
+    "javascript",
+    "platform"
+  ],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/meteor/meteor/issues"
+  },
+  "homepage": "https://github.com/meteor/meteor#readme",
+  "dependencies": {
+    "babel-runtime": "5.8.38",
+    "browserstack-webdriver": "2.41.1",
+    "chalk": "0.5.1",
+    "commonmark": "0.15.0",
+    "cordova-lib": "6.0.0",
+    "eachline": "https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da",
+    "escope": "3.2.0",
+    "fibers": "1.0.10",
+    "fstream": "https://github.com/meteor/fstream/tarball/d11b9ec4a13918447c8af7559c243c190744dd1c",
+    "http-proxy": "1.11.1",
+    "kexec": "2.0.2",
+    "longjohn": "0.2.11",
+    "lru-cache": "2.6.4",
+    "meteor-babel": "0.9.3",
+    "meteor-ecmascript-runtime": "0.2.6",
+    "meteor-promise": "0.7.2",
+    "moment": "2.8.4",
+    "netroute": "1.0.2",
+    "node-gyp": "3.3.1",
+    "node-inspector": "0.7.4",
+    "node-pre-gyp": "0.6.26",
+    "pathwatcher": "6.5.0",
+    "phantomjs-prebuilt": "2.1.7",
+    "promise": "7.1.1",
+    "request": "2.47.0",
+    "rimraf": "2.4.3",
+    "runas": "3.1.1",
+    "semver": "4.1.0",
+    "source-map": "0.5.3",
+    "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e",
+    "sqlite3": "3.1.4",
+    "tar": "1.0.2",
+    "underscore": "1.5.2",
+    "wordwrap": "0.0.2"
+  }
+}

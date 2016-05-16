@@ -87,35 +87,6 @@ node "${CHECKOUT_DIR}/scripts/dev-bundle-tool-package.js" >package.json
 npm install
 cp -R node_modules/* "${DIR}/lib/node_modules/"
 
-cd "${DIR}/lib"
-
-# Clean up some bulky stuff.
-cd node_modules
-
-# Used to delete bulky subtrees. It's an error (unlike with rm -rf) if they
-# don't exist, because that might mean it moved somewhere else and we should
-# update the delete line.
-delete () {
-    if [ ! -e "$1" ]; then
-        echo "Missing (moved?): $1"
-        exit 1
-    fi
-    rm -rf "$1"
-}
-
-delete browserstack-webdriver/docs
-delete browserstack-webdriver/lib/test
-
-delete sqlite3/deps
-delete wordwrap/test
-delete moment/min
-
-# Remove esprima tests to reduce the size of the dev bundle
-find . -path '*/esprima-fb/test' | xargs rm -rf
-
-cd "$DIR/lib/node_modules/fibers/bin"
-shrink_fibers
-
 # Download BrowserStackLocal binary.
 BROWSER_STACK_LOCAL_URL="https://browserstack-binaries.s3.amazonaws.com/BrowserStackLocal-07-03-14-$OS-$ARCH.gz"
 
