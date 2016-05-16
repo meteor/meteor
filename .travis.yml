@@ -1,6 +1,6 @@
 language: node_js
 node_js:
-  - "0.10"
+  - "4.0"
 cache:
   directories:
     - "dev_bundle"
@@ -9,3 +9,11 @@ cache:
 install: ./meteor --get-ready
 script: CIRCLE_NODE_INDEX=0 ./scripts/ci.sh
 sudo: false
+env:
+  - CXX=g++-4.8
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - g++-4.8
