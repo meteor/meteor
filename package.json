@@ -1,6 +1,6 @@
 {
   "name": "meteor-tools",
-  "version": "1.5.0-alpha.0",
+  "version": "1.5.0-alpha.1",
   "description": "Meteor is an open source platform for building web, mobile, and desktop apps in pure JavaScript.",
   "main": "index.js",
   "bin": {
