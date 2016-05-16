@@ -13,43 +13,43 @@ case $CIRCLE_NODE_INDEX in
   ;;
 1)
   echo "Running self-test (1): A-Com"
-  ./meteor self-test \
+  ./meteor self-test --headless \
       --file "^[a-b]|^c[a-n]|^co[a-l]|^compiler-plugins" \
       --exclude "$SELF_TEST_EXCLUDE"
   ;;
 2)
   echo "Running self-test (2): Con-K"
-  ./meteor self-test \
+  ./meteor self-test --headless \
       --file "^co[n-z]|^c[p-z]|^[d-k]" \
       --exclude "$SELF_TEST_EXCLUDE"
   ;;
 3)
   echo "Running self-test (3): L-O"
-  ./meteor self-test \
+  ./meteor self-test --headless \
       --file "^[l-o]" \
       --exclude "$SELF_TEST_EXCLUDE"
   ;;
 4)
   echo "Running self-test (4): P"
-  ./meteor self-test \
+  ./meteor self-test --headless \
       --file "^p" \
       --exclude "$SELF_TEST_EXCLUDE"
   ;;
 5)
   echo "Running self-test (5): Run"
-  ./meteor self-test \
+  ./meteor self-test --headless \
       --file "^run" \
       --exclude "$SELF_TEST_EXCLUDE"
   ;;
 6)
   echo "Running self-test (6): R-So"
-  ./meteor self-test \
+  ./meteor self-test --headless \
       --file "^r(?!un)|^s[a-o]" \
       --exclude "$SELF_TEST_EXCLUDE"
   ;;
 7)
   echo "Running self-test (7): Sp-Z"
-  ./meteor self-test \
+  ./meteor self-test --headless \
       --file "^s[p-z]|^[t-z]|^command-line" \
       --exclude "$SELF_TEST_EXCLUDE"
   ;;

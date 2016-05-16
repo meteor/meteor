@@ -10,3 +10,4 @@ test:
   override:
     - ./scripts/ci.sh :
         parallel: true
+        timeout: 1800
