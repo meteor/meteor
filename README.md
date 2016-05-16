@@ -56,11 +56,11 @@ An article with detailed setup instructions can be found [here](https://medium.c
   * [no-zero-timeout](docs/rules/no-zero-timeout.md): Prevent usage of Meteor.setTimeout with zero delay
 * Session
   * [no-session](docs/rules/no-session.md): Prevent usage of Session
-  * [prefer-session-equals](docs/prefer-session-equals.md): Prefer `Session.equals` in conditions
+  * [prefer-session-equals](docs/rules/prefer-session-equals.md): Prefer `Session.equals` in conditions
 * Security
   * [audit-argument-checks](docs/rules/audit-argument-checks.md): Enforce check on all arguments passed to methods and publish functions
 * Blaze
-  * [template-names](docs/template-names.md): Naming convention for templates
+  * [template-names](docs/rules/template-names.md): Naming convention for templates
   * [no-template-lifecycle-assignments](docs/rules/no-template-lifecycle-assignments.md): Prevent deprecated template lifecycle callback assignments
   * [eventmap-params](docs/rules/eventmap-params.md): Force consistent event handler parameter names in event maps
   * [prefix-eventmap-selectors](docs/rules/prefix-eventmap-selectors.md): Convention for eventmap selectors
