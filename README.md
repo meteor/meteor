@@ -1,3 +1,10 @@
+# WARNING
+
+**This npm package is a very early prototype that is unlikely to work
+  reliably until Meteor 1.5 is released. Please refer to the official
+  installation [instructions](https://www.meteor.com/install) in the
+  meantime.**
+
 # Meteor
 
 https://circleci.com/gh/meteor/meteor/tree/devel.svg?style=shield&circle-token=c2d3c041506bd493ef3795ffa4448684cfce97b8
