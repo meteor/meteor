@@ -4,11 +4,8 @@
 // to be required as part of building isopackets (though that may no longer be
 // true).
 var inTool = typeof Package === 'undefined';
-
-
-var semver = inTool ?
-  require ('../../dev_bundle/lib/node_modules/semver') : SemVer410;
-var __ = inTool ? require('../../dev_bundle/lib/node_modules/underscore') : _;
+var semver = inTool ? require('semver') : SemVer410;
+var __ = inTool ? require('underscore') : _;
 
 // Takes in a meteor version string, for example 1.2.3-rc.5_1+12345.
 //
