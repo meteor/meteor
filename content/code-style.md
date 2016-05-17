@@ -87,7 +87,7 @@ Below, you can find directions for setting up automatic linting at many differen
 To setup ESLint in your application, you can install the following [npm](https://docs.npmjs.com/getting-started/what-is-npm) packages:
 
 ```
-meteor npm install --save-dev eslint eslint-plugin-react eslint-plugin-meteor eslint-config-airbnb
+meteor npm install --save-dev eslint-config-airbnb eslint-plugin-import eslint-plugin-meteor eslint-plugin-react eslint-plugin-jsx-a11y eslint
 ```
 
 > Meteor comes with npm bundled so that you can type meteor npm without worrying about installing it yourself. If you like, you can also use a globally installed npm command.
@@ -106,15 +106,13 @@ You can also add a `eslintConfig` section to your `package.json` to specify that
       "meteor"
     ],
     "extends": [
-      "airbnb/base",
+      "airbnb",
       "plugin:meteor/recommended"
     ],
     "rules": {}
   }
 }
 ```
-
-Use `"airbnb/base"` for a normal ecmascript-based config and `"airbnb"` in a React project.
 
 To run the linter, you can now simply type:
 
