@@ -147,9 +147,26 @@ export default class ImportScanner {
 
   _addFile(absPath, file) {
     absPath = absPath.toLowerCase();
-    if (! has(this.absPathToOutputIndex, absPath)) {
+    const old = this.absPathToOutputIndex[absPath];
+
+    if (old) {
+      // If the old file is just an empty stub, let the new file take
+      // precedence over it.
+      if (old.emptyStub === true) {
+        return this.absPathToOutputIndex[absPath] = file;
+      }
+
+      // If the new file is just an empty stub, pretend the _addFile
+      // succeeded by returning the old file, so that we won't try to call
+      // _combineFiles needlessly.
+      if (file.emptyStub === true) {
+        return old;
+      }
+
+    } else {
       this.absPathToOutputIndex[absPath] =
         this.outputFiles.push(file) - 1;
+
       return file;
     }
   }

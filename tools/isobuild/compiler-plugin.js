@@ -495,10 +495,17 @@ class ResourceSlot {
       // the beginning of the <head>. If the corresponding module ever
       // gets imported, its module.exports object should be an empty stub,
       // rather than a <style> node added dynamically to the <head>.
-      self.addJavaScript({
-        ...options,
-        data: "// These styles have already been applied to the document.\n",
-        lazy: true
+      self.jsOutputResources.push({
+        ...resource,
+        type: "js",
+        data: new Buffer(
+          "// These styles have already been applied to the document.\n",
+          "utf8"),
+        // If a compiler plugin calls addJavaScript with the same
+        // sourcePath, that code should take precedence over this empty
+        // stub, so this property marks the resource as disposable.
+        emtpyStub: true,
+        lazy: true,
       });
 
       resource.type = "css";
