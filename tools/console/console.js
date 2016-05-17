@@ -214,7 +214,6 @@ var SpinnerRenderer = function () {
   self.frames = ['-', '\\', '|', '/'];
   self.start = +(new Date);
   self.interval = 250;
-  self.enabled = true;
   //// I looked at some Unicode indeterminate progress indicators, such as:
   ////
   //// spinner = "▁▃▄▅▆▇▆▅▄▃".split('');
@@ -310,6 +309,8 @@ var ProgressDisplayFull = function (console) {
   self._progressBarRenderer = new ProgressBarRenderer(PROGRESS_BAR_FORMAT, options);
   self._progressBarRenderer.start = new Date();
 
+  self._headless = false;
+
   self._spinnerRenderer = new SpinnerRenderer();
 
   self._fraction = undefined;
@@ -356,12 +357,8 @@ _.extend(ProgressDisplayFull.prototype, {
     self._render();
   },
 
-  enableSpinner() {
-    this._spinnerRenderer.enabled = true;
-  },
-
-  disableSpinner() {
-    this._spinnerRenderer.enabled = false;
+  setHeadless(headless) {
+    this._headless = !! headless;
   },
 
   _render: function () {
@@ -390,9 +387,7 @@ _.extend(ProgressDisplayFull.prototype, {
       // 16 is a heuristic number that allows enough space for a meaningful progress bar
       progressGraphic = "  " + self._progressBarRenderer.asString(progressColumns - 2);
 
-    } else if (self._spinnerRenderer &&
-               self._spinnerRenderer.enabled &&
-               progressColumns > 3) {
+    } else if (! self._headless && progressColumns > 3) {
       // 3 = 2 spaces + 1 spinner character
       progressGraphic = "  " + self._spinnerRenderer.asString();
 
@@ -420,12 +415,13 @@ _.extend(ProgressDisplayFull.prototype, {
       line += progressGraphic + CARRIAGE_RETURN;
       length += progressGraphic.length;
 
-      self.depaint();
-
-      if (line === self._lastWrittenLine) {
+      if (self._headless &&
+          line === self._lastWrittenLine) {
         // Don't write the exact same line twice in a row.
         return;
       }
+
+      self.depaint();
 
       self._stream.write(line);
       self._lastWrittenLine = line;
@@ -1269,17 +1265,12 @@ _.extend(Console.prototype, {
     self._setProgressDisplay(newProgressDisplay);
   },
 
-  enableSpinner() {
+  setHeadless(headless) {
+    if (typeof headless === "undefined") headless = true;
+    headless = !! headless;
     if (this._progressDisplay &&
-        this._progressDisplay.enableSpinner) {
-      this._progressDisplay.enableSpinner();
-    }
-  },
-
-  disableSpinner() {
-    if (this._progressDisplay &&
-        this._progressDisplay.disableSpinner) {
-      this._progressDisplay.disableSpinner();
+        this._progressDisplay.setHeadless) {
+      this._progressDisplay.setHeadless(headless);
     }
   },
 
