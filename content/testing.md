@@ -598,7 +598,7 @@ Also of note is the way we use a second DDP connection to the server in order to
 
 Acceptance testing is the process of taking an unmodified version of our application and testing it from the "outside" to make sure it behaves in a way we expect. Typically if an app passes acceptance tests, we have done our job properly from a product perspective.
 
-As acceptance tests test the behavior of the application in a full browser context in a generic way, there are a range of tools that you can to specify and run such tests. In this guide we'll demonstrate using [Chimp](https://chimp.readme.io), an acceptance testing tool with a few neat Meteor-specific features that makes it easy to use.
+As acceptance tests test the behavior of the application in a full browser context in a generic way, there are a range of tools that you can use to specify and run such tests. In this guide we'll demonstrate using [Chimp](https://chimp.readme.io), an acceptance testing tool with a few neat Meteor-specific features that makes it easy to use.
 
 Chimp requires node version 4 or 5. You can check your node version by running:
 
