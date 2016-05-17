@@ -52,6 +52,7 @@ This is similar to test mode, with key differences:
 
 1. It loads test files matching `*.app-test[s].*` and `*.app-spec[s].*`.
 2. It **does** eagerly load our application code as Meteor normally would.
+3. Sets the `Meteor.isAppTest` flag to be true (instead of the `Meteor.isTest` flag).
 
 This means that the entirety of your application (including for instance the web server and client side router) is loaded and will run as normal. This enables you to write much more [complex integration tests](#full-app-integration-test) and also load additional files for [acceptance tests](#acceptance-testing).
 
