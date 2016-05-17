@@ -299,7 +299,11 @@ var lintUnibuild = function ({isopack, isopackCache, sourceArch}) {
     return null;
   }
 
-  const unibuild = _.findWhere(isopack.unibuilds, {arch: sourceArch.arch});
+  const unibuild = _.find(
+    isopack.unibuilds,
+    unibuild => archinfo.matches(unibuild.arch, sourceArch.arch)
+  );
+
   if (! unibuild) {
     throw Error(`No ${ sourceArch.arch } unibuild for ${ isopack.name }!`);
   }
