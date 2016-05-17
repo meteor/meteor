@@ -12,6 +12,7 @@ timezone:
 apis:
   ga: UA-30093278-6
   marketo: 627-RVJ-941
+  segment: zQx6cQifkTU79E3L0XAnmrOXP2A5bC6r
 versions:
   - '1.3'
 sidebar_categories:
