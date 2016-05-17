@@ -110,6 +110,7 @@ deploy:
   type:
 
 redirects:
+  '/using-packages.html': atmosphere-vs-npm.html
   '/using-packages.html#npm': using-npm-packages.html
   '/using-packages.html#client-npm': using-npm-packages.html#client-npm
   '/using-packages.html#installing-npm': using-npm-packages.html#installing-npm
