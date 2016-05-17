@@ -48,7 +48,7 @@
     "path-exists": "3.0.0"
   },
   "devDependencies": {
-    "babel-cli": "6.8.0",
+    "babel-cli": "6.9.0",
     "babel-core": "6.8.0",
     "babel-plugin-transform-object-rest-spread": "6.8.0",
     "babel-plugin-transform-runtime": "6.8.0",
