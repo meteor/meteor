@@ -151,6 +151,8 @@ export class IsopackCache {
       return true;
     }
 
+    arch = arch && archinfo.withoutSpecificOs(arch);
+
     return _.some(isopack.unibuilds, u => {
       if (arch && ! archinfo.matches(u.arch, arch)) {
         return false;
@@ -175,6 +177,8 @@ export class IsopackCache {
       // Packages imply themselves.
       return true;
     }
+
+    arch = arch && archinfo.withoutSpecificOs(arch);
 
     return _.some(isopack.unibuilds, u => {
       if (arch && ! archinfo.matches(u.arch, arch)) {
@@ -373,7 +377,7 @@ export class IsopackCache {
               // Save to disk, for next time!
               isopack.saveToPath(self._isopackDir(name), {
                 includeIsopackBuildInfo: true,
-                usesModules: self.uses(isopack, "modules"),
+                isopackCache: self,
               });
             }
           }

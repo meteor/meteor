@@ -709,7 +709,11 @@ export class PackageSourceBatch {
 
     self.useMeteorInstall =
       _.isString(self.sourceRoot) &&
-      self.processor.isopackCache.uses(self.unibuild.pkg, "modules");
+      self.processor.isopackCache.uses(
+        self.unibuild.pkg,
+        "modules",
+        self.unibuild.arch
+      );
   }
 
   addImportExtension(extension) {

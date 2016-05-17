@@ -20,3 +20,4 @@ modules-test-package
 avital:mocha
 standard-minifier-css
 standard-minifier-js
+client-only-ecmascript

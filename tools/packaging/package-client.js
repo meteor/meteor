@@ -362,7 +362,7 @@ export function bundleBuild(isopack, isopackCache) {
     // When publishing packages that don't use new registerCompiler plugins,
     // make sure that old Meteors can use it too
     includePreCompilerPluginIsopackVersions: true,
-    usesModules: isopackCache.uses(isopack, "modules"),
+    isopackCache,
   });
 
   var buildTarball = files.pathJoin(tempDir, packageTarName + '.tgz');

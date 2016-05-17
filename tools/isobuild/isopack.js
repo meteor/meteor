@@ -1174,12 +1174,11 @@ _.extend(Isopack.prototype, {
   //   format, this function silently only saves the newer format.  (The point
   //   of this flag is allow us to optimize cases that never need to write the
   //   older format, such as the per-app isopack cache.)
-  // - usesModules: boolean indicating whether this isopack uses the
-  //   Meteor module system
+  // - isopackCache: isopack cache in which this isopack is registered
   saveToPath: Profile("Isopack#saveToPath", function (outputDir, {
     includePreCompilerPluginIsopackVersions,
     includeIsopackBuildInfo,
-    usesModules = true,
+    isopackCache = null,
   } = {}) {
     var self = this;
     var outputPath = outputDir;
@@ -1342,6 +1341,9 @@ _.extend(Isopack.prototype, {
           node_modules,
           resources: []
         };
+
+        const usesModules = ! isopackCache ||
+          isopackCache.uses(self, "modules", unibuild.arch);
 
         // Output 'head', 'body' resources nicely
         var concat = { head: [], body: [] };
