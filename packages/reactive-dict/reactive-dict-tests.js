@@ -16,6 +16,18 @@ Tinytest.add('ReactiveDict - setDefault', function (test) {
   dict.setDefault('D', undefined);
   test.equal(dict.all(), {A: 'blah', B: undefined,
                           C: 'default', D: undefined});
+
+  dict = new ReactiveDict;
+  dict.set('A', 'blah');
+  dict.set('B', undefined);
+  dict.setDefault({
+    A: 'default',
+    B: 'defualt',
+    C: 'default',
+    D: undefined
+  });
+  test.equal(dict.all(), {A: 'blah', B: undefined,
+                          C: 'default', D: undefined});
 });
 
 Tinytest.add('ReactiveDict - all() works', function (test) {
