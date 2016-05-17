@@ -114,6 +114,29 @@ meteorNpm.updateDependencies = function (packageName,
   return true;
 };
 
+// Returns a flattened list of npm package names used in production.
+meteorNpm.getProdPackageNames = function (nodeModulesDir) {
+  var names = Object.create(null);
+  var lsResult = runNpmCommand([
+    "ls", "--json", "--production"
+  ], nodeModulesDir);
+
+  function walk(deps) {
+    if (! deps) {
+      return;
+    }
+
+    Object.keys(deps).forEach(function (name) {
+      names[name] = true;
+      walk(deps[name].dependencies);
+    });
+  }
+
+  walk(JSON.parse(lsResult.stdout).dependencies);
+
+  return names;
+};
+
 const lastRebuildJSONFilename = ".meteor-last-rebuild-version.json";
 
 // Rebuilds any binary dependencies in the given node_modules directory,

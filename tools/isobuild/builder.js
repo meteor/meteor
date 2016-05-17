@@ -407,6 +407,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     specificFiles,
     symlink,
     npmDiscards,
+    directoryFilter,
   }) {
     if (to.slice(-1) === files.pathSep) {
       to = to.slice(0, -1);
@@ -481,7 +482,10 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         }
 
         if (isDirectory) {
-          walk(thisAbsFrom, thisRelTo);
+          if (typeof directoryFilter !== "function" ||
+              directoryFilter(thisAbsFrom)) {
+            walk(thisAbsFrom, thisRelTo);
+          }
 
         } else if (fileStatus.isSymbolicLink()) {
           symlinkWithOverwrite(

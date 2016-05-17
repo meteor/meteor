@@ -1859,12 +1859,36 @@ class JsImage {
       }
 
       if (nmd.sourcePath !== nmd.preferredBundlePath) {
-        builder.copyDirectory({
+        var copyOptions = {
           from: nmd.sourcePath,
           to: nmd.preferredBundlePath,
           npmDiscards: nmd.npmDiscards,
           symlink: (options.includeNodeModules === 'symlink')
-        });
+        };
+
+        if (nmd.local) {
+          var prodPackageNames =
+            meteorNpm.getProdPackageNames(nmd.sourcePath);
+
+          // When copying a local node_modules directory, ignore any npm
+          // package directories not in the list of production package
+          // names, as determined by meteorNpm.getProdPackageNames. Note
+          // that we always copy a package directory if any package of the
+          // same name is listed as a production dependency anywhere in
+          // nmd.sourcePath. In other words, if you list a package in your
+          // "devDependencies", but it also gets listed in some other
+          // package's "dependencies", then every copy of that package
+          // will be copied to the destination directory. A little bit of
+          // overcopying vastly simplifies the job of directoryFilter.
+          copyOptions.directoryFilter = function (dir) {
+            var base = files.pathBasename(dir);
+            var parentBase = files.pathBasename(files.pathDirname(dir));
+            return parentBase !== "node_modules" ||
+              _.has(prodPackageNames, base);
+          };
+        }
+
+        builder.copyDirectory(copyOptions);
       }
     });
 
