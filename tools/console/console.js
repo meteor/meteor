@@ -315,6 +315,9 @@ var ProgressDisplayFull = function (console) {
   self._fraction = undefined;
 
   self._printedLength = 0;
+
+  self._lastWrittenLine = null;
+  self._lastWrittenTime = 0;
 };
 
 _.extend(ProgressDisplayFull.prototype, {
@@ -364,8 +367,6 @@ _.extend(ProgressDisplayFull.prototype, {
   _render: function () {
     var self = this;
 
-    var text = self._status;
-
     // XXX: Throttle these updates?
     // XXX: Or maybe just jump to the correct position?
     var progressGraphic = '';
@@ -388,16 +389,20 @@ _.extend(ProgressDisplayFull.prototype, {
     if (self._fraction !== undefined && progressColumns > 16) {
       // 16 is a heuristic number that allows enough space for a meaningful progress bar
       progressGraphic = "  " + self._progressBarRenderer.asString(progressColumns - 2);
+
     } else if (self._spinnerRenderer &&
                self._spinnerRenderer.enabled &&
                progressColumns > 3) {
       // 3 = 2 spaces + 1 spinner character
       progressGraphic = "  " + self._spinnerRenderer.asString();
-    } else {
-      // Don't show any progress graphic - no room!
+
+    } else if (new Date - self._lastWrittenTime > 5 * 60 * 1000) {
+      // Print something every five minutes, to avoid test timeouts.
+      progressGraphic = "  [ProgressDisplayFull keepalive]";
+      self._lastWrittenLine = null; // Force printing.
     }
 
-    if (text || progressGraphic) {
+    if (self._status || progressGraphic) {
       // XXX: Just update the graphic, to avoid text flicker?
 
       var line = spacesString(indentColumns);
@@ -416,7 +421,15 @@ _.extend(ProgressDisplayFull.prototype, {
       length += progressGraphic.length;
 
       self.depaint();
+
+      if (line === self._lastWrittenLine) {
+        // Don't write the exact same line twice in a row.
+        return;
+      }
+
       self._stream.write(line);
+      self._lastWrittenLine = line;
+      self._lastWrittenTime = +new Date;
       self._printedLength = length;
     }
   }
