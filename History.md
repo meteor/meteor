@@ -6,6 +6,7 @@
   [PR #6760](https://github.com/meteor/meteor/pull/6760) [Issue #6532](https://github.com/meteor/meteor/issues/6532)
 * Allow using authType in Facebook login [PR #5694](https://github.com/meteor/meteor/pull/5694)
 * Adds flush() method to Tracker to force recomputation [PR #4710](https://github.com/meteor/meteor/pull/4710)
+* Allow overridding the default warehouse url by specifying `METEOR_WAREHOUSE_URLBASE` [PR #7054](https://github.com/meteor/meteor/pull/7054)
 
 ## v1.3.2.3
 
