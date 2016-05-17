@@ -8,6 +8,7 @@
 * Adds flush() method to Tracker to force recomputation [PR #4710](https://github.com/meteor/meteor/pull/4710)
 * Adds `defineMutationMethods` option (default: true) to `new Mongo.Collection` to override default behavior that sets up mutation methods (/collection/[insert|update...]) [PR #5778](https://github.com/meteor/meteor/pull/5778)
 * Allow overridding the default warehouse url by specifying `METEOR_WAREHOUSE_URLBASE` [PR #7054](https://github.com/meteor/meteor/pull/7054)
+* Allow `_id` in `$setOnInsert` in Minimongo: https://github.com/meteor/meteor/pull/7066
 
 ## v1.3.2.3
 
