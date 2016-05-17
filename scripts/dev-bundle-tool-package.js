@@ -38,7 +38,6 @@ var packageJson = {
     chalk: "0.5.1",
     sqlite3: "3.1.3",
     netroute: "1.0.2",
-    "phantomjs-prebuilt": "2.1.7",
     "http-proxy": "1.11.1",
     "wordwrap": "0.0.2",
     "moment": "2.8.4",

@@ -14,9 +14,16 @@
   [PR #6760](https://github.com/meteor/meteor/pull/6760) [Issue #6532](https://github.com/meteor/meteor/issues/6532)
 
 * Allow using authType in Facebook login [PR #5694](https://github.com/meteor/meteor/pull/5694)
+
 * Adds flush() method to Tracker to force recomputation [PR #4710](https://github.com/meteor/meteor/pull/4710)
 
 * DDP callbacks are now batched on the client side. This means that after a DDP message arrives, the local DDP client will batch changes for a minimum of 5ms (configurable via `bufferedWritesInterval`) and a maximum of 500ms (configurable via `bufferedWritesMaxAge`) before calling any callbacks (such as cursor observe callbacks).
+
+* PhantomJS is no longer included in the Meteor dev bundle (#6905). If you
+  previously relied on PhantomJS for local testing, the `spiderable`
+  package, Velocity tests, or testing Meteor from a checkout, you should
+  now install PhantomJS yourself, by running the following commmand:
+  `meteor npm install -g phantomjs-prebuilt`
 
 ## v1.3.2.3
 

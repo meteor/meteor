@@ -3,7 +3,6 @@ var util = require('util');
 var Future = require('fibers/future');
 var fiberHelpers = require('../utils/fiber-helpers.js');
 var child_process = require('child_process');
-var phantomjs = require('phantomjs-prebuilt');
 var webdriver = require('browserstack-webdriver');
 
 var files = require('../fs/files.js');
@@ -26,6 +25,17 @@ var release = require('../packaging/release.js');
 
 var projectContextModule = require('../project-context.js');
 var upgraders = require('../upgraders.js');
+
+try {
+  var phantomjs = require('phantomjs-prebuilt');
+} catch (e) {
+  throw new Error([
+    "Please install PhantomJS by running the following command:",
+    "",
+    "  meteor npm install -g phantomjs-prebuilt",
+    ""
+  ].join("\n"));
+}
 
 // To allow long stack traces that cross async boundaries
 require('longjohn');
