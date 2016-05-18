@@ -32,4 +32,4 @@ With those rights you can merge the Pull Requests of others as well as commit di
 
 ### Current community maintainers
 
-- [Lorens Sands-Ramshaw](http://github.com/lorensr)
+- [Loren Sands-Ramshaw](http://github.com/lorensr)
