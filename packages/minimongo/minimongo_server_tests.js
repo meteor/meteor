@@ -527,6 +527,9 @@ Tinytest.add("minimongo - sorter and projection combination", function (test) {
     // XXX this test should be F, but since it is so hard to be precise in
     // floating point math, the current implementation falls back to T
     T({ a: { $gt: 9.999999999999999, $lt: 10 }, x: 1 }, { $set: { x: 1 } }, "very close $gt and $lt");
+    T({ a: { $eq: 5 } }, { $set: { a: 5 } }, "set of $eq");
+    F({ a: { $eq: 5 } }, { $set: { a: 4 } }, "set below of $eq");
+    F({ a: { $eq: 5 } }, { $set: { a: 6 } }, "set above of $eq");
     T({ a: { $ne: 5 } }, { $unset: { a: 1 } }, "unset of $ne");
     T({ a: { $ne: 5 } }, { $set: { a: 1 } }, "set of $ne");
     T({ a: { $ne: "some string" }, x: 1 }, { $set: { x: 1 } }, "$ne dummy");
@@ -549,6 +552,11 @@ Tinytest.add("minimongo - sorter and projection combination", function (test) {
 
   Tinytest.add("minimongo - can selector become true by modifier - $-nonscalar selectors and simple tests", function (t) {
     test = t;
+    T({ a: { $eq: { x: 5 } } }, { $set: { 'a.x': 5 } }, "set of $eq");
+    // XXX this test should be F, but it is not implemented yet
+    T({ a: { $eq: { x: 5 } } }, { $set: { 'a.x': 4 } }, "set of $eq");
+    // XXX this test should be F, but it is not implemented yet
+    T({ a: { $eq: { x: 5 } } }, { $set: { 'a.y': 4 } }, "set of $eq");
     T({ a: { $ne: { x: 5 } } }, { $set: { 'a.x': 3 } }, "set of $ne");
     // XXX this test should be F, but it is not implemented yet
     T({ a: { $ne: { x: 5 } } }, { $set: { 'a.x': 5 } }, "set of $ne");
