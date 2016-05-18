@@ -102,7 +102,7 @@ after processing outstanding invalidations.
 It is illegal to call `flush` from inside a `flush` or from a running
 computation.
 
-The <a href="http://manual.meteor.com/#tracker-theflushcycle">Meteor Manual</a>
+The <a href="https://github.com/meteor/docs/blob/master/long-form/tracker-manual.md#the-flush-cycle">Tracker manual<a>
 describes the motivation for the flush cycle and the guarantees made by
 `Tracker.flush` and `Tracker.afterFlush`.
 
