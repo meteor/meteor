@@ -13,6 +13,7 @@ var httpHelpers = require('../utils/http-helpers.js');
 var buildmessage = require('../utils/buildmessage.js');
 var utils = require('../utils/utils.js');
 var runLog = require('../runners/run-log.js');
+var Profile = require('../tool-env/profile.js').Profile;
 
 var meteorNpm = exports;
 
@@ -141,7 +142,8 @@ const lastRebuildJSONFilename = ".meteor-last-rebuild-version.json";
 
 // Rebuilds any binary dependencies in the given node_modules directory,
 // and returns true iff anything was rebuilt.
-meteorNpm.rebuildIfNonPortable = function (nodeModulesDir) {
+meteorNpm.rebuildIfNonPortable =
+Profile("meteorNpm.rebuildIfNonPortable", function (nodeModulesDir) {
   const dirsToRebuild = [];
 
   files.readdir(nodeModulesDir).forEach(function (pkg) {
@@ -230,7 +232,7 @@ meteorNpm.rebuildIfNonPortable = function (nodeModulesDir) {
   files.rm_recursive(tempDir);
 
   return true;
-};
+});
 
 function isPortable(dir, shouldCache) {
   if (! files.lstat(dir).isDirectory()) {
@@ -525,7 +527,8 @@ const npmUserConfigFile = files.pathJoin(
   "meteor-npm-userconfig"
 );
 
-var runNpmCommand = function (args, cwd) {
+var runNpmCommand = meteorNpm.runNpmCommand =
+Profile("meteorNpm.runNpmCommand", function (args, cwd) {
   const nodeBinDir = files.getCurrentNodeBinDir();
   const isWindows = process.platform === "win32";
   var npmPath;
@@ -570,7 +573,7 @@ var runNpmCommand = function (args, cwd) {
       }
     );
   }).await();
-}
+});
 
 var constructPackageJson = function (packageName, newPackageNpmDir,
                                      npmDependencies) {
@@ -836,5 +839,3 @@ var logUpdateDependencies = function (packageName, npmDependencies) {
   runLog.log(packageName + ': updating npm dependencies -- ' +
              _.keys(npmDependencies).join(', ') + '...');
 };
-
-exports.runNpmCommand = runNpmCommand;
