@@ -203,6 +203,15 @@ class InputFile extends buildPluginModule.InputFile {
     // code and we don't want users to be accessing anything that we don't
     // document.
     this._resourceSlot = resourceSlot;
+
+    // This `false` means we haven't read the package.json file governing
+    // this InputFile yet. Once we read it, this cached value will be
+    // either an object or null (meaning there was no package.json file).
+    this._packageJson = false;
+
+    // Map from imported module identifier strings (possibly relative) to
+    // fully require.resolve'd module identifiers.
+    this._resolveCache = Object.create(null);
   }
 
   getContentsAsBuffer() {
@@ -225,6 +234,90 @@ class InputFile extends buildPluginModule.InputFile {
     // XXX fileOptions only exists on some resources (of type "source"). The JS
     // resources might not have this property.
     return self._resourceSlot.inputResource.fileOptions || {};
+  }
+
+  getPackageJson() {
+    if (typeof this._packageJson === "object") {
+      // Note that this._packageJson could be either an actual object or
+      // null at this point, which may be the first time I've ever been
+      // glad that typeof null === "object".
+      return this._packageJson;
+    }
+
+    const sourceRoot = this._resourceSlot.packageSourceBatch.sourceRoot;
+    if (! _.isString(sourceRoot)) {
+      return this._packageJson = null;
+    }
+
+    let dir = files.pathDirname(this.getPathInPackage());
+    while (true) {
+      const pkgJsonId = files.convertToPosixPath(
+        files.pathJoin(sourceRoot, dir, "package.json"));
+
+      try {
+        // The require function will cache results across the process.
+        return this._packageJson = require(pkgJsonId);
+      } catch (e) {
+        if (e.code !== "MODULE_NOT_FOUND") {
+          throw e;
+        }
+      }
+
+      if (files.pathBasename(dir) === "node_modules") {
+        return this._packageJson = null;
+      }
+
+      let parentDir = files.pathDirname(dir);
+      if (parentDir === dir) break;
+      dir = parentDir;
+    }
+
+    return this._packageJson = null;
+  }
+
+  resolve(id) {
+    if (_.has(this._resolveCache, id)) {
+      return this._resolveCache[id];
+    }
+
+    const sourceBatch = this._resourceSlot.packageSourceBatch;
+    const parentId = files.convertToPosixPath(files.pathJoin(
+      sourceBatch.sourceRoot,
+      this.getPathInPackage()
+    ));
+    const Module = module.constructor;
+    const parent = new Module(parentId);
+
+    // We only need to populate parent.paths if id is top-level, meaning
+    // that it could potentially be found in a node_modules directory.
+    const isTopLevelId = "./".indexOf(id.charAt(0)) < 0;
+    if (isTopLevelId) {
+      parent.paths = [];
+      const nmds = sourceBatch.unibuild.nodeModulesDirectories;
+
+      // Add any local node_modules directory paths that are both ancestors
+      // of this file and included in this PackageSourceBatch.
+      Module._nodeModulePaths(parentId).forEach(path => {
+        if (_.has(nmds, path)) {
+          parent.paths.push(path);
+        }
+      });
+
+      // Now add any non-local node_modules directories that are used by
+      // this PackageSourceBatch.
+      _.each(nmds, (nmd, path) => {
+        if (! nmd.local) {
+          parent.paths.push(path);
+        }
+      });
+    }
+
+    return this._resolveCache[id] =
+      Module._resolveFilename(id, parent);
+  }
+
+  require(id) {
+    return require(this.resolve(id));
   }
 
   getArch() {

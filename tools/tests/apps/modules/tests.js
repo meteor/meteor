@@ -360,6 +360,18 @@ describe("Meteor packages", () => {
       });
     }
   });
+
+  it("can define complex compiler plugins", () => {
+    const { one, array } = require("meteor/modules-test-plugin");
+
+    assert.strictEqual(one.string, "one");
+    assert.strictEqual(one.number, 1);
+    assert.strictEqual(one.self, one)
+
+    assert.strictEqual(array[0], "asdf");
+    assert.strictEqual(array[1], array);
+    assert.strictEqual(array[2], Infinity);
+  });
 });
 
 describe("ecmascript miscellany", () => {
