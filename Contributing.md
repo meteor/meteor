@@ -26,7 +26,7 @@ Larger changes like section rewrites, new sections and even entirely new article
 
 ### Becoming a documentation maintainer
 
-If you make larger contributions to the above properties, you may be invited to become a community documentation maintainer. This is both a recognition of your contribution (thankyou!) and the granting of commit rights on the above repositories.
+If you make larger contributions to the above properties, you may be invited to become a community documentation maintainer. This is both a recognition of your contribution (thank you!) and the granting of commit rights on the above repositories.
 
 With those rights you can merge the Pull Requests of others as well as commit directly to the repository (and in some cases deploy the site). So please use your discretion and be courteous.
 
