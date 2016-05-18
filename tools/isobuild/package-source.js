@@ -480,17 +480,32 @@ _.extend(PackageSource.prototype, {
     var npmDependencies = null;
     var cordovaDependencies = null;
 
-    var packageJsPath = files.pathJoin(self.sourceRoot, 'package.js');
-    var code = files.readFile(packageJsPath);
-    var packageJsHash = watch.sha1(code);
+    const packageFileHashes = Object.create(null);
+    const packageJsPath = files.pathJoin(self.sourceRoot, 'package.js');
+    const packageJsCode = files.readFile(packageJsPath);
+    packageFileHashes[packageJsPath] = watch.sha1(packageJsCode);
 
-    var hasTests = false;
+    const pkgJsonPath = files.pathJoin(self.sourceRoot, 'package.json');
+    const pkgJsonStat = files.statOrNull(pkgJsonPath);
+    if (pkgJsonStat &&
+        pkgJsonStat.isFile()) {
+      packageFileHashes[pkgJsonPath] =
+        watch.sha1(files.readFile(pkgJsonPath));
+    }
+
+    function watchPackageFiles(watchSet) {
+      _.each(packageFileHashes, (hash, path) => {
+        watchSet.addFile(path, hash);
+      });
+    }
 
     // Any package that depends on us needs to be rebuilt if our package.js file
     // changes, because a change to package.js might add or remove a plugin,
     // which could change a file from being handled by plugin vs treated as
     // an asset.
-    self.pluginWatchSet.addFile(packageJsPath, packageJsHash);
+    watchPackageFiles(self.pluginWatchSet);
+
+    var hasTests = false;
 
     // == 'Package' object visible in package.js ==
 
@@ -968,7 +983,7 @@ _.extend(PackageSource.prototype, {
     };
 
     try {
-      files.runJavaScript(code.toString('utf8'), {
+      files.runJavaScript(packageJsCode.toString('utf8'), {
         filename: 'package.js',
         symbols: { Package: Package, Npm: Npm, Cordova: Cordova }
       });
@@ -1180,7 +1195,7 @@ _.extend(PackageSource.prototype, {
       // pluginWatchSet of a package that uses it: only the use unibuild's
       // dependencies need to go there!
       var watchSet = new watch.WatchSet();
-      watchSet.addFile(packageJsPath, packageJsHash);
+      watchPackageFiles(watchSet);
 
       self.architectures.push(new SourceArch(self, {
         kind: "main",
