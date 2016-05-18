@@ -180,8 +180,10 @@ MongoConnection = function (url, options) {
         }
 
         // First, figure out what the current primary is, if any.
-        if (db.serverConfig._state.master)
-          self._primary = db.serverConfig._state.master.name;
+        if (db.serverConfig.isMasterDoc) {
+          self._primary = db.serverConfig.isMasterDoc.primary;
+        }
+
         db.serverConfig.on(
           'joined', Meteor.bindEnvironment(function (kind, doc) {
             if (kind === 'primary') {
