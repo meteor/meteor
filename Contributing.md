@@ -10,7 +10,7 @@ The simplest way to contribute to a project is to open an issue or a pull reques
 
 ### Pull Requests
 
-We welcome changes both large and small. Larger changes may require some discussion and buy in from the documentation maintainers before being accepted---if you are unsure, it may be sensible to open an issue discussing the changes before making them.
+We welcome changes both large and small. Larger changes may require some discussion and buy in from the documentation maintainers before being accepted—if you are unsure, it may be sensible to open an issue discussing the changes before making them.
 
 ### Becoming a documentation maintainer
 
