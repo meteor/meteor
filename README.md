@@ -1,10 +1,10 @@
-## Meteor Documentation - http://docs.meteor.com
+## Meteor API Documentation - http://docs.meteor.com
 
-This is a [hexo](https://hexo.io) static site used to generate the [Meteor Docs](http://docs.meteor.com).
+This is a [hexo](https://hexo.io) static site used to generate the [Meteor API Docs](http://docs.meteor.com).
 
 ## Contributing
 
-We'd love your contributions! Please send us Pull Requests or open issues on [github](https://github.com/meteor/docs).
+We'd love your contributions! Please send us Pull Requests or open issues on [github](https://github.com/meteor/docs). Also, read the [contribution guidelines](https://github.com/meteor/docs/blob/master/Contributing.md).
 
 If you are making a larger contribution, you may need to run the site locally:
 
