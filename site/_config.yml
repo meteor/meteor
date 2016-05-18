@@ -56,21 +56,24 @@ logo:
   sidebar: '../images/icon-white.svg'
   url: 'http://www.meteor.com/developers'
   title: 'Meteor Developers'
+  target: _new
 
 nav_links:
   'Tutorials':
     url: http://www.meteor.com/tutorials
     partial: illustration-guide
+    target: _new
   'Guide':
     url: http://guide.meteor.com
     partial: illustration-compass
     active: true
-  'Docs':
+  'API Docs':
     url: http://docs.meteor.com
     partial: illustration-logs
   'Forums':
     url: https://forums.meteor.com/
     partial: illustration-support
+    target: _new
 
 social_links:
   github: 'https://github.com/meteor'
