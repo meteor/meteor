@@ -25,7 +25,7 @@ If your package depends on an Atmosphere package (which, in Meteor 1.3, includes
 
 <h2 id="when-npm">When to use npm packages</h2>
 
-npm is a repository of general JavaScript packages. These packages were originally intended solely for the Node.js server-side environment, but as the JavaScript ecosystem matured, solutions arose to enable the use of npm packages in other environments such the browser. Today, npm is used for all types of JavaScript packages.
+npm is a repository of general JavaScript packages. These packages were originally intended solely for the Node.js server-side environment, but as the JavaScript ecosystem matured, solutions arose to enable the use of npm packages in other environments such as the browser. Today, npm is used for all types of JavaScript packages.
 
 If you want to distribute and reuse code that you've written for a Meteor application, then you should consider publishing that code on npm if it's general enough to be consumed by a wider JavaScript audience. It's simple to [use npm packages in Meteor applications](using-npm-packages.html#using-npm), and possible to [use npm packages within Atmosphere packages](writing-atmosphere-packages.html#npm-dependencies), so even if your main audience is Meteor developers, npm might be the best choice.
 
