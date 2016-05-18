@@ -1,7 +1,7 @@
 ---
 title: Introduction
 order: 0
-description: This is the guide for using Meteor, a full-stack JavaScript platform for developing modern web and mobile applications. Meteor includes a key set of technologies for building connected-client reactive applications, a build tool, and a curated set of packages from the Node.js and general JavaScript community.
+description: This is the guide for using Meteor, a full-stack JavaScript platform for developing modern web and mobile applications.
 ---
 
 <h2 id="what-is-meteor">What is Meteor?</h2>
