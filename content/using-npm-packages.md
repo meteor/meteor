@@ -186,7 +186,7 @@ async function sendTextMessage(user) {
 
 Essentially it copies a tarball of the contents of each of your npm dependencies into your application source repository. This is essentially a more robust version of the `npm-shrinkwrap.json` file that shrinkwrap creates, because it means your application's npm dependencies can be assembled without the need or reliance on the npm servers being available or reliable. This is good for repeatable builds especially when deploying.
 
-To use shrinkpack, first globalling install it:
+To use shrinkpack, first globally install it:
 
 ```bash
 npm install -g shrinkpack
