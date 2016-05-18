@@ -12,7 +12,6 @@ timezone:
 apis:
   segment: zQx6cQifkTU79E3L0XAnmrOXP2A5bC6r
   ga: UA-30093278-6
-  swiftype: h1KW95Mz3fNyf4cnqVtr
 versions:
   - '1.3'
   - '1.2'
@@ -48,6 +47,35 @@ sidebar_categories:
   Meta:
     - CONTRIBUTING
     - CHANGELOG
+
+# themeing
+favicon: '../images/favicon.png'
+
+logo:
+  nav_mobile: '../images/logo-coralspace.svg'
+  sidebar: '../images/icon-white.svg'
+  url: 'http://developers.meteor.com'
+  title: 'Meteor Developers'
+
+nav_links:
+  'Tutorials':
+    url: http://tutorials.meteor.com
+    partial: illustration-guide
+  'Guide':
+    url: http://guide.meteor.com
+    partial: illustration-compass
+    active: true
+  'Docs':
+    url: http://docs.meteor.com
+    partial: illustration-logs
+  'Forums':
+    url: https://forums.meteor.com/
+    partial: illustration-support
+
+social_links:
+  github: 'https://github.com/meteor'
+  twitter: '@meteor'
+
 
 # URL
 ## If your site is put in a subdirectory, set url as 'http://yoursite.com/child' and root as '/child/'
