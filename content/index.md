@@ -4,6 +4,7 @@ order: 0
 description: This is the guide for using Meteor, a full-stack JavaScript platform for developing modern web and mobile applications.
 ---
 
+<!--  XXX: note that this content is somewhat duplicated on the docs, and should be updated in parallel -->
 <h2 id="what-is-meteor">What is Meteor?</h2>
 
 Meteor is a full-stack JavaScript platform for developing modern web and mobile applications. Meteor includes a key set of technologies for building connected-client reactive applications, a build tool, and a curated set of packages from the Node.js and general JavaScript community.
@@ -16,7 +17,7 @@ Meteor is a full-stack JavaScript platform for developing modern web and mobile 
 
 - Meteor provides **full stack reactivity**, allowing your UI to seamlessly reflect the true state of the world with minimal development effort.
 
-<h3 id="quickstart">Quick start</h3>
+<h2 id="quickstart">Quick start</h2>
 
 Meteor supports [OS X, Windows, and Linux](https://www.meteor.com/install).
 
@@ -61,9 +62,7 @@ meteor
 
 5. [Atmosphere](https://atmospherejs.com) is the repository of community packages designed especially for Meteor.
 
-6. The [projects](https://www.meteor.com/projects) section of the Meteor website describes the projects that make up the Meteor platform.
-
-7. [Awesome Meteor](https://github.com/Urigo/awesome-meteor) is a community-curated list of [packages](https://github.com/Urigo/awesome-meteor#getting-started) and [resources](https://github.com/Urigo/awesome-meteor#resources).
+6. [Awesome Meteor](https://github.com/Urigo/awesome-meteor) is a community-curated list of [packages](https://github.com/Urigo/awesome-meteor#getting-started) and [resources](https://github.com/Urigo/awesome-meteor#resources).
 
 <h2 id="what-is-it">What is the Meteor Guide?</h2>
 
