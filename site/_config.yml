@@ -164,7 +164,8 @@ redirects:
   '/using-packages.html#npm-overriding': writing-npm-packages.html#overriding-npm-packages
   '/using-packages.html#atmosphere-overriding': writing-atmosphere-packages.html#overriding-atmosphere-packages
   '/using-packages.html#npm-shrinkpack': using-npm-packages.html#npm-shrinkpack
-  '/writing-packages.html#npm-vs-atmosphere': npm-vs-atmosphere.html
+  '/writing-packages.html': writing-atmosphere-packages.html
+  '/writing-packages.html#npm-vs-atmosphere': atmosphere-vs-npm.html
   '/writing-packages.html#creating-npm': writing-npm-packages.html
   '/writing-packages.html#including-in-app': writing-npm-packages.html#including-in-app
   '/writing-packages.html#publishing-npm': writing--packages.html#publishing-npm
