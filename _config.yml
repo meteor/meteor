@@ -71,7 +71,7 @@ logo:
 
 nav_links:
   'Tutorials':
-    url: http://tutorials.meteor.com
+    url: https://www.meteor.com/tutorials
     partial: illustration-guide
   'Guide':
     url: http://guide.meteor.com
