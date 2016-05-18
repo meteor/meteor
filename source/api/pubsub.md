@@ -1,6 +1,7 @@
 ---
 title: Publish and subscribe
 order: 2
+description: Documentation of Meteor's publication and subscription API.
 ---
 
 These functions control how Meteor servers publish sets of records and

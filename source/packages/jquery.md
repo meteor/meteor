@@ -1,6 +1,7 @@
 ---
 title: jquery
 order: 26
+description: Documentation of Meteor's `jquery` package.
 ---
 
 [jQuery](http://jquery.com/) is a fast and concise JavaScript

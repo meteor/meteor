@@ -1,6 +1,7 @@
 ---
 title: random
 order: 31
+description: Documentation of Meteor's `random` package.
 ---
 
 The `random` package provides several functions for generating random

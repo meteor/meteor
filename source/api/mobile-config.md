@@ -1,6 +1,7 @@
 ---
 title: Mobile Configuration
 order: 20
+description: Documentation of Meteor's Cordova configuration API.
 ---
 
 If your Meteor application targets mobile platforms such as iOS or

@@ -1,6 +1,7 @@
 ---
 title: Templates
 order: 11
+description: Documentation of Meteor's template API.
 ---
 
 When you write a template as `<template name="foo"> ... </template>` in an HTML file in your app, Meteor generates a

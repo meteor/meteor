@@ -1,6 +1,7 @@
 ---
 title: appcache
 order: 22
+description: Documentation of Meteor's `appcache` package.
 ---
 
 The `appcache` package stores the static parts of a Meteor application

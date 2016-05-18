@@ -1,6 +1,7 @@
 ---
 title: webapp
 order: 34
+description: Documentation of Meteor's `webapp` package.
 ---
 
 The `webapp` package is what lets your Meteor app serve content to a web

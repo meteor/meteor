@@ -1,6 +1,7 @@
 ---
 title: underscore
 order: 33
+description: Documentation of Meteor's `underscore` package.
 ---
 
 [Underscore](http://underscorejs.org/) is a utility-belt library for

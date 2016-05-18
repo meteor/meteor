@@ -1,6 +1,7 @@
 ---
 title: HTTP
 order: 16
+description: Documentation of Meteor's HTTP API.
 ---
 
 `HTTP` provides an HTTP request API on the client and server.  To use

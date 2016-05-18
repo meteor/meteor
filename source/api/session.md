@@ -1,6 +1,7 @@
 ---
 title: Session
 order: 7
+description: Documentation of Meteor's client-side session API.
 ---
 
 `Session` provides a global object on the client that you can use to

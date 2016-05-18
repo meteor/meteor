@@ -1,6 +1,7 @@
 ---
 title: Tracker
 order: 14
+description: Documentation of Tracker, Meteor's reactive system.
 ---
 
 Meteor has a simple dependency tracking system which allows it to

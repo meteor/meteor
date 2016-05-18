@@ -1,6 +1,7 @@
 ---
 title: Passwords
 order: 10
+description: Documentation of Meteor's password-based accounts API.
 ---
 
 The `accounts-password` package contains a full system for password-based

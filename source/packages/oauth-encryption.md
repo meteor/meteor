@@ -1,6 +1,7 @@
 ---
 title: oauth-encryption
 order: 30
+description: Documentation of Meteor's `oauth-encryption` package.
 ---
 
 Encrypts sensitive login secrets stored in the database such as a

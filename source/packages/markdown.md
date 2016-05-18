@@ -1,6 +1,7 @@
 ---
 title: markdown
 order: 28
+description: Documentation of Meteor's `markdown` package.
 ---
 
 This package lets you use Markdown in your templates. It's easy: just

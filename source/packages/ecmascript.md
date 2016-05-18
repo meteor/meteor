@@ -1,6 +1,7 @@
 ---
 title: ecmascript
 order: 25
+description: Documentation of Meteor's `ecmascript` package.
 ---
 
 This package lets you use new JavaScript language features that are part

@@ -1,6 +1,7 @@
 ---
 title: modules
 order: 29
+description: Documentation of Meteor's `modules` package.
 ---
 
 Though Meteor 1.2 introduced support for [many new ECMAScript 2015 features](https://github.com/meteor/meteor/blob/devel/packages/ecmascript/README.md#supported-es2015-features), one of the most notable omissions was [ES2015 `import` and `export` syntax](http://exploringjs.com/es6/ch_modules.html). Meteor 1.3 fills that gap with a fully standards-compliant module system that works on both the client and the server, solves multiple long-standing problems for Meteor applications (such as controlling file load order), and yet maintains full backwards compatibility with existing Meteor code. This document explains the usage and key features of the new module system.

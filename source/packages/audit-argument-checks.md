@@ -1,6 +1,7 @@
 ---
 title: audit-argument-checks
 order: 23
+description: Documentation of Meteor's `audit-argument-checks` package.
 ---
 
 This package causes Meteor to require that all arguments passed to methods and

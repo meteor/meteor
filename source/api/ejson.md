@@ -1,6 +1,7 @@
 ---
 title: EJSON
 order: 16
+description: Documentation of EJSON, Meteor's JSON extension.
 ---
 
 EJSON is an extension of JSON to support more types. It supports all JSON-safe

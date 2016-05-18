@@ -1,6 +1,7 @@
 ---
 title: coffeescript
 order: 24
+description: Documentation of Meteor's `coffeescript` package.
 ---
 
 [CoffeeScript](http://coffeescript.org/) is a little language that

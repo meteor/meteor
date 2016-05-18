@@ -1,6 +1,7 @@
 ---
 title: Email
 order: 17
+description: Documentation of Meteor's email API.
 ---
 
 The `email` package allows sending email from a Meteor app. To use it, add the

@@ -1,6 +1,7 @@
 ---
 title: Accounts
 order: 8
+description: Documentation of how to use Meteor's accounts functionality.
 ---
 
 The Meteor Accounts system builds on top of the `userId` support in

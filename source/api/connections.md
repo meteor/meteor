@@ -1,6 +1,7 @@
 ---
 title: Server Connections
 order: 5
+description: Documentation on how to use Meteor's client-server connection.
 ---
 
 These functions manage and inspect the network connection between the

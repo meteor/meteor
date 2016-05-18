@@ -1,6 +1,7 @@
 ---
 title: ReactiveVar
 order: 15
+description: Documentation of ReactiveVar, a simple reactive variable package.
 ---
 
 To use `ReactiveVar`, add the `reactive-var` package to your project by running

@@ -1,6 +1,7 @@
 ---
 title: Assets
 order: 18
+description: Documentation of how to use assets in Meteor.
 ---
 
 `Assets` allows server code in a Meteor application to access static server

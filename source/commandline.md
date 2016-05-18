@@ -1,6 +1,7 @@
 ---
 title: Command Line
 order: 35
+description: Documentation of the various command line options of the Meteor tool.
 ---
 
 The following are some of the more commonly used commands in the `meteor`

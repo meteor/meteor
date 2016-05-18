@@ -1,6 +1,7 @@
 ---
 title: Methods
 order: 3
+description: Documentation of Meteor's Method (Remote Procedure Call) API.
 ---
 
 Methods are remote functions that Meteor clients can invoke.
