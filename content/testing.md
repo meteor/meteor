@@ -119,7 +119,7 @@ import { resetDatabase } from 'meteor/xolvio:cleaner';
 // NOTE: Before writing a method like this you'll want to double check
 // that this file is only going to be loaded in test mode!!
 Meteor.methods({
-  'test.resetDatabase': () => resetDatabase();
+  'test.resetDatabase': () => resetDatabase(),
 });
 
 describe('my module', function (done) {
