@@ -54,12 +54,12 @@ favicon: '../images/favicon.png'
 logo:
   nav_mobile: '../images/logo-coralspace.svg'
   sidebar: '../images/icon-white.svg'
-  url: 'http://developers.meteor.com'
+  url: 'http://www.meteor.com/developers'
   title: 'Meteor Developers'
 
 nav_links:
   'Tutorials':
-    url: http://tutorials.meteor.com
+    url: http://www.meteor.com/tutorials
     partial: illustration-guide
   'Guide':
     url: http://guide.meteor.com
