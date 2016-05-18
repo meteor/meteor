@@ -10,11 +10,19 @@ Package.describe({
 Package.registerBuildPlugin({
   name: "compile-arson",
   use: ["ecmascript"],
-  sources: ["plugin.js"]
+  sources: ["plugin.js"],
+  npmDependencies: {
+    // TODO Figure out what to do about the duplication between this list
+    // and the Npm.depends list below.
+    "babel-plugin-transform-class-properties": "6.9.0",
+    "babel-plugin-transform-strict-mode": "6.8.0"
+  }
 });
 
 Npm.depends({
-  arson: "0.2.3"
+  arson: "0.2.3",
+  "babel-plugin-transform-class-properties": "6.9.0",
+  "babel-plugin-transform-strict-mode": "6.8.0"
 });
 
 Package.onUse(function(api) {

@@ -1,13 +1,30 @@
 import assert from "assert";
 
+// This verifies that babel-plugin-transform-strict-mode is enabled.
+let expected;
+try {
+  console.log(arguments.callee.toString());
+} catch (e) {
+  expected = e;
+}
+assert.ok(expected instanceof TypeError);
+assert.ok(/callee/.test(expected.message));
+
 Plugin.registerCompiler({
   extensions: ["arson"]
 }, () => new ArsonCompiler);
 
 class ArsonCompiler {
+  // This verifies that the babel-plugin-transform-class-properties plugin
+  // enabled by package.json is respected.
+  expectedName = "compile-arson";
+
   processFilesForTarget(inputFiles) {
     inputFiles.forEach(file => {
-      assert.strictEqual(file.getPackageJson().name, "compile-arson");
+      assert.strictEqual(
+        file.getPackageJson().name,
+        this.expectedName
+      );
 
       const arson = file.require("arson");
       let encoded = file.getContentsAsString();

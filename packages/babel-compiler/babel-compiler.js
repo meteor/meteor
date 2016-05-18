@@ -48,6 +48,7 @@ BCp.processFilesForTarget = function (inputFiles) {
       }
 
       var babelOptions = Babel.getDefaultOptions(self.extraFeatures);
+      inferExtraBabelOptions(inputFile, babelOptions);
 
       babelOptions.sourceMap = true;
       babelOptions.filename =
@@ -95,3 +96,51 @@ function profile(name, func) {
     return func();
   }
 };
+
+function inferExtraBabelOptions(inputFile, babelOptions) {
+  const pkgJson =
+    inputFile.require &&
+    inputFile.getPathInPackage &&
+    inputFile.getPackageJson();
+
+  if (! pkgJson || ! pkgJson.babel) {
+    return;
+  }
+
+  function infer(listName, prefix) {
+    const list = pkgJson.babel[listName];
+    if (! Array.isArray(list)) {
+      return;
+    }
+
+    function addPrefix(id) {
+      return isTopLevel ? prefix + id : id;
+    }
+
+    function req(id) {
+      const isTopLevel = "./".indexOf(id.charAt(0)) < 0;
+      if (isTopLevel) {
+        // If the identifier is top-level, it will be prefixed with
+        // "babel-plugin-" or "babel-preset-". If the identifier is not
+        // top-level, but relative or absolute, then it will be required
+        // as-is, so that you can implement your own Babel plugins
+        // locally, rather than always using plugins installed from npm.
+        id = prefix + id;
+      }
+      return inputFile.require(id);
+    }
+
+    list.forEach(function (item) {
+      if (typeof item === "string") {
+        item = req(item);
+      } else if (Array.isArray(item) &&
+                 typeof item[0] === "string") {
+        item[0] = req(item[0]);
+      }
+      babelOptions[listName].push(item);
+    });
+  }
+
+  infer("presets", "babel-preset-");
+  infer("plugins", "babel-plugin-");
+}
