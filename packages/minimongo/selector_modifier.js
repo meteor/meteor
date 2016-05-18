@@ -142,8 +142,7 @@ Minimongo.Matcher.prototype.matchingDocument = function () {
         // chance we can use one of those as "matching"
         // dummy value
         if (valueSelector.$eq) {
-          var matcher = new Minimongo.Matcher({ placeholder: valueSelector });
-          return matcher.documentMatches({ placeholder: valueSelector.$eq });
+          return valueSelector.$eq;
         } else if (valueSelector.$in) {
           var matcher = new Minimongo.Matcher({ placeholder: valueSelector });
 
@@ -220,4 +219,3 @@ var startsWith = function(str, starts) {
   return str.length >= starts.length &&
     str.substring(0, starts.length) === starts;
 };
-

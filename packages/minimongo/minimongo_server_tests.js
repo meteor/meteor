@@ -528,6 +528,7 @@ Tinytest.add("minimongo - sorter and projection combination", function (test) {
     // floating point math, the current implementation falls back to T
     T({ a: { $gt: 9.999999999999999, $lt: 10 }, x: 1 }, { $set: { x: 1 } }, "very close $gt and $lt");
     T({ a: { $eq: 5 } }, { $set: { a: 5 } }, "set of $eq");
+    T({ a: { $eq: 5 }, b: { $eq: 7 } }, { $set: { a: 5 } }, "set of $eq with other $eq");
     F({ a: { $eq: 5 } }, { $set: { a: 4 } }, "set below of $eq");
     F({ a: { $eq: 5 } }, { $set: { a: 6 } }, "set above of $eq");
     T({ a: { $ne: 5 } }, { $unset: { a: 1 } }, "unset of $ne");
@@ -568,4 +569,3 @@ Tinytest.add("minimongo - sorter and projection combination", function (test) {
     T({ a: { $ne: { a: 2 } } }, { $set: { a: { a: 2 } } }, "$ne object");
   });
 })();
-
