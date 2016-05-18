@@ -1122,23 +1122,25 @@ main.registerCommand({
       require('../runners/run-mongo.js').findMongoPort;
     var mongoPort = findMongoPort(files.pathJoin(options.appDir, ".meteor", "local", "db"));
 
-    // XXX detect the case where Meteor is running, but MONGO_URL was
-    // specified?
-
     if (! mongoPort) {
-      Console.info("mongo: Meteor isn't running a local MongoDB server.");
-      Console.info();
-      Console.info(`\
+      if (process.env.MONGO_URL) {
+        //Meteor is running, but MONGO_URL was specified
+        mongoUrl = process.env.MONGO_URL;
+      } else {
+        Console.info("mongo: Meteor isn't running a local MongoDB server.");
+        Console.info();
+        Console.info(`\
 This command only works while Meteor is running your application locally. \
 Start your application first with 'meteor' and then run this command in a new \
 terminal. This error will also occur if you asked Meteor to use a different \
 MongoDB server with $MONGO_URL when you ran your application.`);
-      Console.info();
-      Console.info(`\
+        Console.info();
+        Console.info(`\
 If you're trying to connect to the database of an app you deployed with \
 ${Console.command("'meteor deploy'")}, specify your site's name as an argument \
 to this command.`);
-      return 1;
+        return 1;
+      }
     }
     mongoUrl = "mongodb://127.0.0.1:" + mongoPort + "/meteor";
 
