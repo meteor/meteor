@@ -18,7 +18,6 @@ MongoTest = {};
 MongoInternals.NpmModules = {
   mongodb: {
     version: NpmModuleMongodbVersion,
-    module: MongoDB
   }
 };
 
@@ -559,9 +558,8 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
       collection.update(
         mongoSelector, mongoMod, mongoOpts,
         bindEnvironmentForWrite(function (err, result) {
-          var meteorResult;
           if (! err) {
-            meteorResult = transformResult(result);
+            var meteorResult = transformResult(result);
             if (meteorResult && options._returnObject) {
               // If this was an upsert() call, and we ended up
               // inserting a new doc and we know its id, then
@@ -570,8 +568,8 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
               //transformResult was able to provide an id for some cases
               //where the API did not wanted an ID. This needs furter looking
               //but it fully complies with the test suite.
-              if(options.upsert){
-                if(meteorResult.insertedId && knownId){
+              if (options.upsert) {
+                if (meteorResult.insertedId && knownId) {
                   meteorResult.insertedId = knownId;
                 } else {
                   delete meteorResult.insertedId;
