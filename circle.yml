@@ -11,6 +11,7 @@ dependencies:
     - "node_modules"
   override:
     - npm install -g hexo-cli
+    - npm install
 
 test:
   override:
