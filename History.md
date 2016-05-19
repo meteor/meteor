@@ -1,3 +1,15 @@
+## v.NEXT
+
+* `*.min.js` files are no longer minified during the build process.
+  [PR #6986](https://github.com/meteor/meteor/pull/6986) [Issue #5363](https://github.com/meteor/meteor/issues/5363)
+* You can now pick where the `.meteor/local` directory is created by setting the `METEOR_LOCAL_DIR` environment variable. This lets you run multiple instances of the same Meteor app.
+  [PR #6760](https://github.com/meteor/meteor/pull/6760) [Issue #6532](https://github.com/meteor/meteor/issues/6532)
+* Allow using authType in Facebook login [PR #5694](https://github.com/meteor/meteor/pull/5694)
+* Adds flush() method to Tracker to force recomputation [PR #4710](https://github.com/meteor/meteor/pull/4710)
+* Adds `defineMutationMethods` option (default: true) to `new Mongo.Collection` to override default behavior that sets up mutation methods (/collection/[insert|update...]) [PR #5778](https://github.com/meteor/meteor/pull/5778)
+* Allow overridding the default warehouse url by specifying `METEOR_WAREHOUSE_URLBASE` [PR #7054](https://github.com/meteor/meteor/pull/7054)
+* Allow `_id` in `$setOnInsert` in Minimongo: https://github.com/meteor/meteor/pull/7066
+
 ## v1.3.2.3
 
 * Reverted accidental changes included in 1.3.2.1 and 1.3.2.2 that

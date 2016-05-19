@@ -15,10 +15,15 @@ const _ = require('underscore');
 // return anything past that function. We call this the "user portion"
 // of the stack.
 export function parse(err) {
-  const frames = err.stack.split('\n');
-
-  frames.shift(); // at least the first line is the exception
-
+  // at least the first line is the exception
+  const frames = err.stack.split("\n").slice(1)
+    // longjohn adds lines of the form '---' (45 times) to separate
+    // the trace across async boundaries. It's not clear if we need to
+    // separate the trace in the same way we do for future boundaries below
+    // (it's not clear that that code is still useful either)
+    // so for now, we'll just remove such lines
+    .filter(f => ! f.match(/^\-{45}$/));
+  
   // "    - - - - -"
   // This is something added when you throw an Error through a Future. The
   // stack above the dashes is the stack of the 'wait' call; the stack below

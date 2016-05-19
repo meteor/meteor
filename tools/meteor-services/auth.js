@@ -555,8 +555,6 @@ exports.doInteractivePasswordLogin = doInteractivePasswordLogin;
 
 exports.loginCommand = withAccountsConnection(function (options,
                                                         connection) {
-  config.printUniverseBanner();
-
   var data = readSessionData();
 
   if (! getSession(data, config.getAccountsDomain()).token ||
@@ -593,8 +591,6 @@ exports.loginCommand = withAccountsConnection(function (options,
 });
 
 exports.logoutCommand = function (options) {
-  config.printUniverseBanner();
-
   var data = readSessionData();
   var wasLoggedIn = !! loggedIn(data);
   logOutAllSessions(data);
@@ -686,7 +682,6 @@ exports.registrationUrl = function () {
 };
 
 exports.whoAmICommand = function (options) {
-  config.printUniverseBanner();
   auth.pollForRegistrationCompletion();
 
   var data = readSessionData();

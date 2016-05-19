@@ -2085,6 +2085,23 @@ Tinytest.add("minimongo - modify", function (test) {
     exceptionWithQuery(doc, {}, mod);
   };
 
+  var upsert = function (query, mod, expected) {
+    var coll = new LocalCollection;
+    
+    var result = coll.upsert(query, mod);
+    
+    var actual = coll.findOne();
+    
+    if (expected._id) {
+      test.equal(result.insertedId, expected._id);
+    }
+    else {
+      delete actual._id;
+    }
+    
+    test.equal(actual, expected);
+  };
+  
   // document replacement
   modify({}, {}, {});
   modify({a: 12}, {}, {}); // tested against mongodb
@@ -2406,6 +2423,13 @@ Tinytest.add("minimongo - modify", function (test) {
   exception({}, {$rename: {'a.b': 'a.b'}});
   modify({a: 12, b: 13}, {$rename: {a: 'b'}}, {b: 12});
 
+  // $setOnInsert
+  modify({a: 0}, {$setOnInsert: {a: 12}}, {a: 0});
+  upsert({a: 12}, {$setOnInsert: {b: 12}}, {a: 12, b: 12});
+  upsert({a: 12}, {$setOnInsert: {_id: 'test'}}, {_id: 'test', a: 12});
+  
+  exception({}, {$set: {_id: 'bad'}});
+  
   // $bit
   // unimplemented
 
