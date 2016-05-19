@@ -834,12 +834,13 @@ _.extend(Sandbox.prototype, {
     var serverUrl = self.env.METEOR_PACKAGE_SERVER_URL;
     var packagesDirectoryName = config.getPackagesDirectoryName(serverUrl);
 
-    var builder = new Builder({outputPath: files.pathJoin(self.warehouse)});
+    var builder = new Builder({outputPath: self.warehouse});
     builder.copyDirectory({
       from: files.pathJoin(builtPackageTropohouseDir, 'packages'),
       to: packagesDirectoryName,
       symlink: true
     });
+    builder.complete();
 
     var stubCatalog = {
       syncToken: {},
