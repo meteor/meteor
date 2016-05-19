@@ -566,7 +566,7 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
               // inserting a new doc and we know its id, then
               // return that id as well.
 
-              if (options.upsert && knownId) {
+              if (options.upsert && meteorResult.insertedId && knownId) {
                 meteorResult.insertedId = knownId;
               }
               callback(err, meteorResult);
