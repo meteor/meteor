@@ -13,7 +13,10 @@ Tinytest.add("email - dev mode smoke test", function (test) {
       cc: ["friends@example.com", "enemies@example.com"],
       subject: "This is the subject",
       text: "This is the body\nof the message\nFrom us.",
-      headers: {'X-Meteor-Test': 'a custom header'}
+      headers: {
+        'X-Meteor-Test': 'a custom header',
+        'Date': 'dummy',
+      },
     });
     // XXX brittle if mailcomposer changes header order, etc
     test.equal(stream.getContentsAsString("utf8"),
@@ -22,6 +25,7 @@ Tinytest.add("email - dev mode smoke test", function (test) {
                  "environment variable.)\n" +
                "MIME-Version: 1.0\r\n" +
                "X-Meteor-Test: a custom header\r\n" +
+               "Date: dummy\r\n" +
                "From: foo@example.com\r\n" +
                "To: bar@example.com\r\n" +
                "Cc: friends@example.com, enemies@example.com\r\n" +
@@ -52,6 +56,20 @@ Tinytest.add("email - dev mode smoke test", function (test) {
                "\r\n" +
                "body\r\n" +
                "====== END MAIL #1 ======\n");
+    
+    // Test if date header is automaticall generated, if not specified
+    Email.send({
+      from: "foo@example.com",
+      to: "bar@example.com",
+      subject: "This is the subject",
+      text: "This is the body\nof the message\nFrom us.",
+      headers: {
+        'X-Meteor-Test': 'a custom header',
+      },
+    });
+
+    test.matches(stream.getContentsAsString("utf8"),
+                 /^Date: .+$/m);
   } finally {
     EmailTest.restoreOutputStream();
   }

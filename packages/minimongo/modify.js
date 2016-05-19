@@ -49,7 +49,7 @@ LocalCollection._modify = function (doc, mod, options) {
           throw MinimongoError("An empty update path is not valid.");
         }
 
-        if (keypath === '_id') {
+        if (keypath === '_id' && op !== '$setOnInsert') {
           throw MinimongoError("Mod on _id not allowed");
         }
 

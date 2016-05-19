@@ -13,6 +13,7 @@ var archinfo = require('../utils/archinfo.js');
 var config = require('../meteor-services/config.js');
 var buildmessage = require('../utils/buildmessage.js');
 var execFileSync = require('../utils/processes.js').execFileSync;
+var Builder = require('../isobuild/builder.js').default;
 
 var catalog = require('../packaging/catalog/catalog.js');
 var catalogRemote = require('../packaging/catalog/catalog-remote.js');
@@ -836,9 +837,14 @@ _.extend(Sandbox.prototype, {
 
     var serverUrl = self.env.METEOR_PACKAGE_SERVER_URL;
     var packagesDirectoryName = config.getPackagesDirectoryName(serverUrl);
-    files.cp_r(files.pathJoin(builtPackageTropohouseDir, 'packages'),
-               files.pathJoin(self.warehouse, packagesDirectoryName),
-               { preserveSymlinks: true });
+
+    var builder = new Builder({outputPath: self.warehouse});
+    builder.copyDirectory({
+      from: files.pathJoin(builtPackageTropohouseDir, 'packages'),
+      to: packagesDirectoryName,
+      symlink: true
+    });
+    builder.complete();
 
     var stubCatalog = {
       syncToken: {},
