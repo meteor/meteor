@@ -25,6 +25,10 @@ var parseOptions = {
   ]
 };
 
+// Make sure that module.import and module.export are defined in the
+// current Node process.
+require("reify/node/runtime");
+
 // Options passed to compile will completely replace the default options,
 // so if you only want to modify the default options, call this function
 // first, modify the result, and then pass those options to compile.
@@ -48,11 +52,13 @@ function setCacheDir(cacheDir) {
     return;
   }
 
+  var reifyCompiler = require("reify/lib/compiler");
+
   compileCache = new Cache(function (source, options) {
     var ast = parse(source); // TODO Cache parsed ASTs somehow?
     var result = require("babel-core")
       .transformFromAst(ast, source, options);
-    result.code = require("reify/lib/compiler").compile(result.code);
+    result.code = reifyCompiler.compile(result.code);
     return result;
   }, cacheDir);
 }
