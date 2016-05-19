@@ -58,15 +58,13 @@
 * The `npm-bcrypt` package has been upgraded to use the latest version
   (0.8.5) of the `bcrypt` npm package.
 
-* `Match.Optional` only passes if the value is `null` or the specified
-  type, whereas previously it accepted `undefined`. Use `Match.Maybe` to
-  allow `undefined`. #6735
-
 * Compiler plugins can call `addJavaScript({ path })` multiple times with
   different paths for the same source file, and `module.id` will reflect
   this `path` instead of the source path, if they are different. #6806
 
 * Fixed bugs: https://github.com/meteor/meteor/milestones/Release%201.3.2
+
+* Fixed unintended change to `Match.Optional` which caused it to behave the same as the new `Match.Maybe` and incorrectly matching `null` where it previously would not have allowed it. #6735
 
 ## v1.3.1
 
@@ -289,6 +287,10 @@
 
 * Improve automatic blocking of URLs in attribute values to also
   include `vbscript:` URLs.
+
+### Check
+
+* Introduced new matcher `Match.Maybe(type)` which will also match (permit) `null` in addition to `undefined`.  This is a suggested replacement (where appropriate) for `Match.Optional` which did not permit `null`.  This prevents the need to use `Match.OneOf(null, undefined, type)`. #6220 
 
 ### Testing
 
