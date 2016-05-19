@@ -10,6 +10,7 @@
 * Allow overridding the default warehouse url by specifying `METEOR_WAREHOUSE_URLBASE` [PR #7054](https://github.com/meteor/meteor/pull/7054)
 * Allow `_id` in `$setOnInsert` in Minimongo: https://github.com/meteor/meteor/pull/7066
 * Added support for `$eq` to Minimongo: https://github.com/meteor/meteor/pull/4235
+* Insert a `Date` header into emails by default: https://github.com/meteor/meteor/pull/6916/files
 
 ## v1.3.2.3
 
