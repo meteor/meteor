@@ -13,10 +13,11 @@ selftest.define("'meteor update' alters `.meteor/packages`", () => {
     fakeMongo: true
   });
 
-  s.createApp("myapp", "very-simple-app-with-no-package-constraints");
+  s.createApp("myapp", "very-simple-app-with-no-package-constraints", {
+    release: DEFAULT_RELEASE_TRACK + '@v1'
+  });
   s.cd("myapp");
 
-  s.write('.meteor/release', DEFAULT_RELEASE_TRACK + '@v1');
   run = s.run("update");
   run.match("updated to Meteor v2");
   run.expectExit(0);
