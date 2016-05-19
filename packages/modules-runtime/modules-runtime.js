@@ -8,7 +8,7 @@ var topLevelIdPattern = /^[^./]/;
 // been installed is required. For backwards compatibility, and so that we
 // can require binary dependencies on the server, we implement the
 // fallback in terms of Npm.require.
-options.fallback = function (id, dir, error) {
+options.fallback = function (id, parentId, error) {
   // For simplicity, we honor only top-level module identifiers here.
   // We could try to honor relative and absolute module identifiers by
   // somehow combining `id` with `dir`, but we'd have to be really careful
@@ -20,6 +20,17 @@ options.fallback = function (id, dir, error) {
         typeof Npm.require === "function") {
       return Npm.require(id);
     }
+  }
+
+  throw error;
+};
+
+options.fallback.resolve = function (id, parentId, error) {
+  if (Meteor.isServer &&
+      topLevelIdPattern.test(id)) {
+    // Allow any top-level identifier to resolve to itself on the server,
+    // so that options.fallback can have a chance to handle it.
+    return id;
   }
 
   throw error;
