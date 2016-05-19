@@ -104,7 +104,7 @@ OAuth1Binding.prototype._buildHeader = function(headers) {
 
 OAuth1Binding.prototype._getSignature = function(method, url, rawHeaders, accessTokenSecret, params) {
   var self = this;
-  var headers = self._encodeHeader(_.extend(rawHeaders, params));
+  var headers = self._encodeHeader(_.extend({}, rawHeaders, params));
 
   var parameters = _.map(headers, function(val, key) {
     return key + '=' + val;

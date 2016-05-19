@@ -1,14 +1,18 @@
 Package.describe({
   summary: "Common code for OAuth1-based login services",
-  version: "1.1.3"
+  version: "1.1.9"
 });
 
 Package.onUse(function (api) {
   api.use('random');
   api.use('service-configuration', ['client', 'server']);
   api.use('oauth', ['client', 'server']);
-  api.use('underscore', 'server');
-  api.use('http', 'server');
+  api.use([
+    'underscore',
+    'check',
+    'http'
+  ], 'server');
+
   api.use('mongo');
 
   api.export('OAuth1Binding', 'server');

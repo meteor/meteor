@@ -1,4 +1,5 @@
 Package.describe({
+  name: "~package-name~", // replaced via `Sandbox.prototype.createPackage`
   summary: 'This is a test package with dependencies',
   version: '1.2.0',
   git: 'www.github.com/meteor/meteor',

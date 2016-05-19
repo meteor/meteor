@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-BUNDLE_VERSION=0.3.84
+BUNDLE_VERSION=0.5.38
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
@@ -60,7 +60,7 @@ function install_dev_bundle {
     rm -rf "$BUNDLE_TMPDIR"
     mkdir "$BUNDLE_TMPDIR"
 
-    # fyi: URL duplicated in packages/dev-bundle-fetcher/dev-bundle
+    # duplicated in scripts/windows/download-dev-bundle.ps1:
     DEV_BUNDLE_URL_ROOT="https://d3sqy0vbqsdhku.cloudfront.net/"
     # If you set $USE_TEST_DEV_BUNDLE_SERVER then we will download
     # dev bundles copied by copy-dev-bundle-from-jenkins.sh without --prod.
@@ -106,10 +106,12 @@ if [ -d "$SCRIPT_DIR/.git" ] || [ -f "$SCRIPT_DIR/.git" ]; then
         echo "Your dependency kit is out of date. I will download the new one." >&2
         install_dev_bundle
     fi
+
+    export BABEL_CACHE_DIR="$SCRIPT_DIR/.babel-cache"
 fi
 
 DEV_BUNDLE="$SCRIPT_DIR/dev_bundle"
-METEOR="$SCRIPT_DIR/tools/main.js"
+METEOR="$SCRIPT_DIR/tools/index.js"
 
 
 # Bump our file descriptor ulimit as high as it will go. This is a
@@ -130,4 +132,4 @@ fi
 # the script take precedence over $NODE_PATH; it used to be that users would
 # screw up their meteor installs by have a ~/node_modules
 
-exec "$DEV_BUNDLE/bin/node" "$METEOR" "$@"
+exec "$DEV_BUNDLE/bin/node" ${TOOL_NODE_FLAGS} "$METEOR" "$@"

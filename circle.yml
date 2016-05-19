@@ -1,0 +1,13 @@
+dependencies:
+  cache_directories:
+    - "dev_bundle"
+    - ".meteor"
+    - ".babel-cache"
+  override:
+    - ./meteor --get-ready
+
+test:
+  override:
+    - ./scripts/ci.sh :
+        parallel: true
+        timeout: 1200

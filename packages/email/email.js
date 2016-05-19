@@ -1,9 +1,19 @@
 var Future = Npm.require('fibers/future');
 var urlModule = Npm.require('url');
-var MailComposer = Npm.require('mailcomposer').MailComposer;
 
 Email = {};
 EmailTest = {};
+
+EmailInternals = {
+  NpmModules: {
+    mailcomposer: {
+      version: Npm.require('mailcomposer/package.json').version,
+      module: Npm.require('mailcomposer')
+    }
+  }
+};
+
+var MailComposer = EmailInternals.NpmModules.mailcomposer.module.MailComposer;
 
 var makePool = function (mailUrlString) {
   var mailUrl = urlModule.parse(mailUrlString);
@@ -31,29 +41,17 @@ var makePool = function (mailUrlString) {
   return pool;
 };
 
-// We construct smtpPool at the first call to Email.send, so that
-// Meteor.startup code can set $MAIL_URL.
-var smtpPoolFuture = new Future;;
-var configured = false;
-
-var getPool = function () {
-  // We check MAIL_URL in case someone else set it in Meteor.startup code.
-  if (!configured) {
-    configured = true;
-    AppConfig.configurePackage('email', function (config) {
-      // XXX allow reconfiguration when the app config changes
-      if (smtpPoolFuture.isResolved())
-        return;
-      var url = config.url || process.env.MAIL_URL;
-      var pool = null;
-      if (url)
-        pool = makePool(url);
-      smtpPoolFuture.return(pool);
-    });
+var getPool = function() {
+  // We delay this check until the first call to Email.send, in case someone
+  // set process.env.MAIL_URL in startup code. Then we store in a cache until
+  // process.env.MAIL_URL changes.
+  var url = process.env.MAIL_URL;
+  if (this.cacheKey === undefined || this.cacheKey !== url) {
+    this.cacheKey = url;
+    this.cache = url ? makePool(url) : null;
   }
-
-  return smtpPoolFuture.wait();
-};
+  return this.cache;
+}
 
 var next_devmode_mail_id = 0;
 var output_stream = process.stdout;
@@ -129,39 +127,61 @@ EmailTest.hookSend = function (f) {
  * @summary Send an email. Throws an `Error` on failure to contact mail server
  * or if mail server returns an error. All fields should match
  * [RFC5322](http://tools.ietf.org/html/rfc5322) specification.
+ *
+ * If the `MAIL_URL` environment variable is set, actually sends the email.
+ * Otherwise, prints the contents of the email to standard out.
+ *
+ * Note that this package is based on mailcomposer version `0.1.15`, so make
+ * sure to refer to the documentation for that version if using the
+ * `attachments` or `mailComposer` options.
+ * [Click here to read the mailcomposer 0.1.15 docs](https://github.com/andris9/mailcomposer/blob/7c0422b2de2dc61a60ba27cfa3353472f662aeb5/README.md).
+ *
  * @locus Server
  * @param {Object} options
  * @param {String} options.from "From:" address (required)
  * @param {String|String[]} options.to,cc,bcc,replyTo
  *   "To:", "Cc:", "Bcc:", and "Reply-To:" addresses
  * @param {String} [options.subject]  "Subject:" line
- * @param {String} [options.text|html] Mail body (in plain text or HTML)
+ * @param {String} [options.text|html] Mail body (in plain text and/or HTML)
  * @param {Object} [options.headers] Dictionary of custom headers
+ * @param {Object[]} [options.attachments] Array of attachment objects, as
+ * described in the [mailcomposer documentation](https://github.com/andris9/mailcomposer/blob/7c0422b2de2dc61a60ba27cfa3353472f662aeb5/README.md#add-attachments).
+ * @param {MailComposer} [options.mailComposer] A [MailComposer](https://github.com/andris9/mailcomposer)
+ * object representing the message to be sent. Overrides all other options. You
+ * can access the `mailcomposer` npm module at
+ * `EmailInternals.NpmModules.mailcomposer.module`.
  */
 Email.send = function (options) {
   for (var i = 0; i < sendHooks.length; i++)
     if (! sendHooks[i](options))
       return;
 
-  var mc = new MailComposer();
+  var mc;
+  if (options.mailComposer) {
+    mc = options.mailComposer;
+  } else {
+    mc = new MailComposer();
 
-  // setup message data
-  // XXX support attachments (once we have a client/server-compatible binary
-  //     Buffer class)
-  mc.setMessageOption({
-    from: options.from,
-    to: options.to,
-    cc: options.cc,
-    bcc: options.bcc,
-    replyTo: options.replyTo,
-    subject: options.subject,
-    text: options.text,
-    html: options.html
-  });
+    // setup message data
+    mc.setMessageOption({
+      from: options.from,
+      to: options.to,
+      cc: options.cc,
+      bcc: options.bcc,
+      replyTo: options.replyTo,
+      subject: options.subject,
+      text: options.text,
+      html: options.html
+    });
 
-  _.each(options.headers, function (value, name) {
-    mc.addHeader(name, value);
-  });
+    _.each(options.headers, function (value, name) {
+      mc.addHeader(name, value);
+    });
+
+    _.each(options.attachments, function(attachment){
+      mc.addAttachment(attachment);
+    });
+  }
 
   var pool = getPool();
   if (pool) {

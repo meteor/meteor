@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -e
 set -u
@@ -14,60 +14,49 @@ source "$(dirname $0)/build-dev-bundle-common.sh"
 echo CHECKOUT DIR IS "$CHECKOUT_DIR"
 echo BUILDING DEV BUNDLE "$BUNDLE_VERSION" IN "$DIR"
 
-# ios-sim is used to run iPhone simulator from the command-line. Doesn't make
-# sense to build it for linux.
-if [ "$OS" == "osx" ]; then
-    # the build from source is not going to work on old OS X versions, until we
-    # upgrade our Mac OS X Jenkins machine, download the precompiled tarball
-
-    # which rake # rake is required to build ios-sim
-    # git clone https://github.com/phonegap/ios-sim.git
-    # cd ios-sim
-    # git checkout 2.0.1
-    # rake build
-    # which build/Release/ios-sim # check that we have in fact got the binary
-    # mkdir -p "$DIR/lib/ios-sim"
-    # cp -r build/Release/* "$DIR/lib/ios-sim/"
-
-    # Download the precompiled tarball
-    IOS_SIM_URL="http://android-bundle.s3.amazonaws.com/ios-sim.tgz"
-    curl "$IOS_SIM_URL" | tar xfz -
-    mkdir -p "$DIR/lib/ios-sim"
-    cp -r ios-sim/ios-sim "$DIR/lib/ios-sim"
-fi
-
 cd "$DIR"
 
 S3_HOST="s3.amazonaws.com/com.meteor.jenkins"
 
 # Update these values after building the dev-bundle-node Jenkins project.
-NODE_BUILD_NUMBER=8
-NODE_VERSION=0.10.33
+# Also make sure to update NODE_VERSION in generate-dev-bundle.ps1.
+NODE_VERSION=0.10.43
+NODE_BUILD_NUMBER=22
 NODE_TGZ="node_${PLATFORM}_v${NODE_VERSION}.tar.gz"
 if [ -f "${CHECKOUT_DIR}/${NODE_TGZ}" ] ; then
     tar zxf "${CHECKOUT_DIR}/${NODE_TGZ}"
 else
-    NODE_URL="http://${S3_HOST}/dev-bundle-node-${NODE_BUILD_NUMBER}/${NODE_TGZ}"
+    NODE_URL="https://${S3_HOST}/dev-bundle-node-${NODE_BUILD_NUMBER}/${NODE_TGZ}"
     echo "Downloading Node from ${NODE_URL}"
     curl "${NODE_URL}" | tar zx
 fi
 
 # Update these values after building the dev-bundle-mongo Jenkins project.
-MONGO_BUILD_NUMBER=3
-MONGO_VERSION=2.4.12
+# Also make sure to update MONGO_VERSION in generate-dev-bundle.ps1.
+MONGO_VERSION=2.6.7
+MONGO_BUILD_NUMBER=6
 MONGO_TGZ="mongo_${PLATFORM}_v${MONGO_VERSION}.tar.gz"
 if [ -f "${CHECKOUT_DIR}/${MONGO_TGZ}" ] ; then
     tar zxf "${CHECKOUT_DIR}/${MONGO_TGZ}"
 else
-    MONGO_URL="http://${S3_HOST}/dev-bundle-mongo-${MONGO_BUILD_NUMBER}/${MONGO_TGZ}"
+    MONGO_URL="https://${S3_HOST}/dev-bundle-mongo-${MONGO_BUILD_NUMBER}/${MONGO_TGZ}"
     echo "Downloading Mongo from ${MONGO_URL}"
     curl "${MONGO_URL}" | tar zx
 fi
 
-cd "$DIR/build"
-
-# export path so we use our new node for later builds
+# export path so we use the downloaded node and npm
 export PATH="$DIR/bin:$PATH"
+
+# install npm 3 in a temporary directory
+mkdir "$DIR/bin/npm3"
+cd "$DIR/bin/npm3"
+npm install npm@3.1.2
+cp node_modules/npm/bin/npm .
+
+# export path again with our temporary npm3 directory first,
+# so we can use npm 3 during builds
+export PATH="$DIR/bin/npm3:$PATH"
+
 which node
 which npm
 
@@ -91,7 +80,6 @@ mkdir -p "${DIR}/server-lib/node_modules"
 # This ignores the stuff in node_modules/.bin, but that's OK.
 cp -R node_modules/* "${DIR}/server-lib/node_modules/"
 
-mkdir "${DIR}/etc"
 mv package.json npm-shrinkwrap.json "${DIR}/etc/"
 
 # Fibers ships with compiled versions of its C code for a dozen platforms. This
@@ -113,19 +101,9 @@ mkdir "${DIR}/build/npm-tool-install"
 cd "${DIR}/build/npm-tool-install"
 node "${CHECKOUT_DIR}/scripts/dev-bundle-tool-package.js" >package.json
 npm install
-# Refactor node modules to top level and remove unnecessary duplicates.
-npm dedupe
 cp -R node_modules/* "${DIR}/lib/node_modules/"
 
 cd "${DIR}/lib"
-
-# TODO Move this into dev-bundle-tool-package.js when it can be safely
-# installed that way (i.e. without build nan/runas build errors).
-# XXX This contains a patch to expose the errno from failed syscalls, so
-# we can better understand why some users can't use pathwatcher.
-# We have to install from the npm registry in order to get coffeescript
-# output.  The patch is https://github.com/atom/node-pathwatcher/pull/53
-npm install meteor-pathwatcher-tweaks@2.3.5
 
 # Clean up some bulky stuff.
 cd node_modules
@@ -148,33 +126,35 @@ delete sqlite3/deps
 delete wordwrap/test
 delete moment/min
 
-# dedupe isn't good enough to eliminate 3 copies of esprima, sigh.
-find . -path '*/esprima/test' | xargs rm -rf
+# Remove esprima tests to reduce the size of the dev bundle
 find . -path '*/esprima-fb/test' | xargs rm -rf
-
-# dedupe isn't good enough to eliminate 4 copies of JSONstream, sigh.
-find . -path '*/JSONStream/test/fixtures' | xargs rm -rf
-
-# Not sure why dedupe doesn't lift these to the top.
-pushd cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules
-delete browserify-zlib/node_modules/pako/benchmark
-delete browserify-zlib/node_modules/pako/test
-delete buffer/perf
-delete crypto-browserify/test
-delete umd/node_modules/ruglify/test
-popd
 
 cd "$DIR/lib/node_modules/fibers/bin"
 shrink_fibers
 
 # Download BrowserStackLocal binary.
-BROWSER_STACK_LOCAL_URL="http://browserstack-binaries.s3.amazonaws.com/BrowserStackLocal-07-03-14-$OS-$ARCH.gz"
+BROWSER_STACK_LOCAL_URL="https://browserstack-binaries.s3.amazonaws.com/BrowserStackLocal-07-03-14-$OS-$ARCH.gz"
 
 cd "$DIR/build"
 curl -O $BROWSER_STACK_LOCAL_URL
 gunzip BrowserStackLocal*
 mv BrowserStackLocal* BrowserStackLocal
 mv BrowserStackLocal "$DIR/bin/"
+
+# remove our temporary npm3 directory
+rm -rf "$DIR/bin/npm3"
+
+# Sanity check to see if we're not breaking anything by replacing npm
+INSTALLED_NPM_VERSION=$(cat "$DIR/lib/node_modules/npm/package.json" |
+xargs -0 node -e "console.log(JSON.parse(process.argv[1]).version)")
+if [ "$INSTALLED_NPM_VERSION" != "2.14.22" ]; then
+  echo "Unexpected NPM version in lib/node_modules: $INSTALLED_NPM_VERSION"
+  echo "We will be replacing it with our own version because the bundled node"
+  echo "is built using PORTABLE=1, which makes npm look for node relative to"
+  echo "its own directory."
+  echo "Update this check if you know what you're doing."
+  exit 1
+fi
 
 echo BUNDLING
 

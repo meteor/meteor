@@ -10,7 +10,8 @@ var builtInBlockHelpers = SpacebarsCompiler._builtInBlockHelpers = {
   'if': 'Blaze.If',
   'unless': 'Blaze.Unless',
   'with': 'Spacebars.With',
-  'each': 'Blaze.Each'
+  'each': 'Blaze.Each',
+  'let': 'Blaze.Let'
 };
 
 
@@ -27,8 +28,16 @@ var builtInTemplateMacros = {
   // Confusingly, this makes `{{> Template.dynamic}}` an alias
   // for `{{> __dynamic}}`, where "__dynamic" is the template that
   // implements the dynamic template feature.
-  'dynamic': 'Template.__dynamic'
+  'dynamic': 'Template.__dynamic',
+
+  'subscriptionsReady': 'view.templateInstance().subscriptionsReady()'
 };
+
+var additionalReservedNames = ["body", "toString", "instance",  "constructor",
+  "toString", "toLocaleString", "valueOf", "hasOwnProperty", "isPrototypeOf",
+  "propertyIsEnumerable", "__defineGetter__", "__lookupGetter__",
+  "__defineSetter__", "__lookupSetter__", "__proto__", "dynamic",
+  "registerHelper", "currentData", "parentData"];
 
 // A "reserved name" can't be used as a <template> name.  This
 // function is used by the template file scanner.
@@ -38,7 +47,8 @@ var builtInTemplateMacros = {
 // like "toString".
 SpacebarsCompiler.isReservedName = function (name) {
   return builtInBlockHelpers.hasOwnProperty(name) ||
-    builtInTemplateMacros.hasOwnProperty(name);
+    builtInTemplateMacros.hasOwnProperty(name) ||
+    _.indexOf(additionalReservedNames, name) > -1;
 };
 
 var makeObjectLiteral = function (obj) {
@@ -67,11 +77,14 @@ _.extend(CodeGen.prototype, {
           // Reactive attributes are already wrapped in a function,
           // and there's no fine-grained reactivity.
           // Anywhere else, we need to create a View.
-          code = 'Blaze.View(function () { return ' + code + '; })';
+          code = 'Blaze.View(' +
+            BlazeTools.toJSLiteral('lookup:' + tag.path.join('.')) + ', ' +
+            'function () { return ' + code + '; })';
         }
         return BlazeTools.EmitCode(code);
       } else if (tag.type === 'INCLUSION' || tag.type === 'BLOCKOPEN') {
         var path = tag.path;
+        var args = tag.args;
 
         if (tag.type === 'BLOCKOPEN' &&
             builtInBlockHelpers.hasOwnProperty(path[0])) {
@@ -84,11 +97,55 @@ _.extend(CodeGen.prototype, {
           // provide nice line numbers.
           if (path.length > 1)
             throw new Error("Unexpected dotted path beginning with " + path[0]);
-          if (! tag.args.length)
+          if (! args.length)
             throw new Error("#" + path[0] + " requires an argument");
 
-          // `args` must exist (tag.args.length > 0)
-          var dataCode = self.codeGenInclusionDataFunc(tag.args) || 'null';
+          var dataCode = null;
+          // #each has a special treatment as it features two different forms:
+          // - {{#each people}}
+          // - {{#each person in people}}
+          if (path[0] === 'each' && args.length >= 2 && args[1][0] === 'PATH' &&
+              args[1][1].length && args[1][1][0] === 'in') {
+            // minimum conditions are met for each-in.  now validate this
+            // isn't some weird case.
+            var eachUsage = "Use either {{#each items}} or " +
+                  "{{#each item in items}} form of #each.";
+            var inArg = args[1];
+            if (! (args.length >= 3 && inArg[1].length === 1)) {
+              // we don't have at least 3 space-separated parts after #each, or
+              // inArg doesn't look like ['PATH',['in']]
+              throw new Error("Malformed #each. " + eachUsage);
+            }
+            // split out the variable name and sequence arguments
+            var variableArg = args[0];
+            if (! (variableArg[0] === "PATH" && variableArg[1].length === 1 &&
+                   variableArg[1][0].replace(/\./g, ''))) {
+              throw new Error("Bad variable name in #each");
+            }
+            var variable = variableArg[1][0];
+            dataCode = 'function () { return { _sequence: ' +
+              self.codeGenInclusionData(args.slice(2)) +
+              ', _variable: ' + BlazeTools.toJSLiteral(variable) + ' }; }';
+          } else if (path[0] === 'let') {
+            var dataProps = {};
+            _.each(args, function (arg) {
+              if (arg.length !== 3) {
+                // not a keyword arg (x=y)
+                throw new Error("Incorrect form of #let");
+              }
+              var argKey = arg[2];
+              dataProps[argKey] =
+                'function () { return Spacebars.call(' +
+                self.codeGenArgValue(arg) + '); }';
+            });
+            dataCode = makeObjectLiteral(dataProps);
+          }
+
+          if (! dataCode) {
+            // `args` must exist (tag.args.length > 0)
+            dataCode = self.codeGenInclusionDataFunc(args) || 'null';
+          }
+
           // `content` must exist
           var contentBlock = (('content' in tag) ?
                               self.codeGenBlock(tag.content) : null);
@@ -225,6 +282,10 @@ _.extend(CodeGen.prototype, {
     case 'PATH':
       argCode = self.codeGenPath(argValue);
       break;
+    case 'EXPR':
+      // The format of EXPR is ['EXPR', { type: 'EXPR', path: [...], args: { ... } }]
+      argCode = self.codeGenMustache(argValue.path, argValue.args, 'dataMustache');
+      break;
     default:
       // can't get here
       throw new Error("Unexpected arg type: " + argType);
@@ -283,10 +344,8 @@ _.extend(CodeGen.prototype, {
     return SpacebarsCompiler.codeGen(content);
   },
 
-  codeGenInclusionDataFunc: function (args) {
+  codeGenInclusionData: function (args) {
     var self = this;
-
-    var dataFuncCode = null;
 
     if (! args.length) {
       // e.g. `{{#foo}}`
@@ -298,24 +357,33 @@ _.extend(CodeGen.prototype, {
         var argKey = arg[2];
         dataProps[argKey] = 'Spacebars.call(' + self.codeGenArgValue(arg) + ')';
       });
-      dataFuncCode = makeObjectLiteral(dataProps);
+      return makeObjectLiteral(dataProps);
     } else if (args[0][0] !== 'PATH') {
       // literal first argument, e.g. `{{> foo "blah"}}`
       //
       // tag validation has confirmed, in this case, that there is only
       // one argument (`args.length === 1`)
-      dataFuncCode = self.codeGenArgValue(args[0]);
+      return self.codeGenArgValue(args[0]);
     } else if (args.length === 1) {
       // one argument, must be a PATH
-      dataFuncCode = 'Spacebars.call(' + self.codeGenPath(args[0][1]) + ')';
+      return 'Spacebars.call(' + self.codeGenPath(args[0][1]) + ')';
     } else {
       // Multiple positional arguments; treat them as a nested
       // "data mustache"
-      dataFuncCode = self.codeGenMustache(args[0][1], args.slice(1),
-                                          'dataMustache');
+      return self.codeGenMustache(args[0][1], args.slice(1),
+                                  'dataMustache');
     }
 
-    return 'function () { return ' + dataFuncCode + '; }';
+  },
+
+  codeGenInclusionDataFunc: function (args) {
+    var self = this;
+    var dataCode = self.codeGenInclusionData(args);
+    if (dataCode) {
+      return 'function () { return ' + dataCode + '; }';
+    } else {
+      return null;
+    }
   }
 
 });

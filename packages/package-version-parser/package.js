@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Parses Meteor Smart Package version strings",
-  version: "3.0.0"
+  version: "3.0.8"
 });
 
 Package.onUse(function (api) {
@@ -12,6 +12,6 @@ Package.onUse(function (api) {
 
 Package.onTest(function (api) {
   api.use('package-version-parser');
-  api.use(['tinytest']);
+  api.use(['tinytest', 'underscore']);
   api.addFiles('package-version-parser-tests.js', 'server');
 });

@@ -15,15 +15,6 @@ var nodesToArray = function (array) {
   return _.map(array, _.identity);
 };
 
-var clickIt = function (elem) {
-  // jQuery's bubbling change event polyfill for IE 8 seems
-  // to require that the element in question have focus when
-  // it receives a simulated click.
-  if (elem.focus)
-    elem.focus();
-  clickElement(elem);
-};
-
 Tinytest.add("spacebars-tests - old - template_tests - simple helper", function (test) {
   var tmpl = Template.old_spacebars_template_test_simple_helper;
   var R = ReactiveVar(1);

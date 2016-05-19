@@ -1,0 +1,9 @@
+@el1-style: dotted;
+
+/* Test that package-relative imports work from within a
+ * package-relative-imported file */
+@import "/tests/top3.import.less";
+
+// Make sure regular CSS import doesn't make the compiler explode - this was
+// a regression from 1.1.0.3 caught in QA
+@import url("http://hello.myfonts.net/count/2c4b9d");

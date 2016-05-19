@@ -1,0 +1,61 @@
+<template name="ui_dynamic_test">
+  {{> Template.dynamic template=templateName data=templateData}}
+</template>
+
+<template name="ui_dynamic_test_no_data">
+  {{> Template.dynamic template=templateName}}
+</template>
+
+<template name="ui_dynamic_test_inherited_data">
+  {{#with context}}
+    {{> Template.dynamic template=templateName}}
+  {{else}}
+    {{> Template.dynamic template=templateName}}
+  {{/with}}
+</template>
+
+<template name="ui_dynamic_test_sub">
+  test{{foo}}
+</template>
+
+<template name="ui_dynamic_test_contentblock">
+  {{#Template.dynamic template=templateName data=templateData}}contentBlock{{/Template.dynamic}}
+</template>
+
+<template name="ui_dynamic_test_contentblock_no_data">
+  {{# Template.dynamic template=templateName}}contentBlock{{/Template.dynamic}}
+</template>
+
+<template name="ui_dynamic_test_sub_contentblock">
+  test{{foo}}{{>Template.contentBlock}}
+</template>
+
+<template name="ui_dynamic_test_falsey_inner_context">
+  {{#with foo="bar"}}
+    {{> Template.dynamic template=templateName data=context}}
+  {{/with}}
+</template>
+
+<template name="ui_dynamic_test_bad_args0">
+  {{> Template.dynamic}}
+</template>
+
+<template name="ui_dynamic_test_bad_args1">
+  {{> Template.dynamic foo="bar"}}
+</template>
+
+<template name="ui_dynamic_test_bad_args2">
+  {{> Template.dynamic template="ui_dynamic_test_sub" foo="bar"}}
+</template>
+
+<template name="ui_dynamic_test_falsey_context">
+  {{> Template.dynamic template="ui_dynamic_test_falsey_context_sub"}}
+</template>
+
+<template name="ui_dynamic_test_falsey_context_sub">
+  {{foo}}
+</template>
+
+<template name="ui_dynamic_backcompat">
+  {{> UI.dynamic template=templateName data=templateData}}
+</template>

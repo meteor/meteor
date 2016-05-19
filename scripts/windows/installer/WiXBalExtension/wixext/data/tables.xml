@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  <copyright file="tables.xml" company="Outercurve Foundation">
+    Copyright (c) 2004, Outercurve Foundation.
+    This software is released under Microsoft Reciprocal License (MS-RL).
+    The license and further copyright text can be found in the file
+    LICENSE.TXT at the root directory of the distribution.
+  </copyright>
+-->
+<!--
+    The table definitions for the Windows Installer XML Toolset Bal Extension.
+-->
+<tableDefinitions xmlns="http://schemas.microsoft.com/wix/2006/tables">
+    <tableDefinition name="WixBalCondition" bootstrapperApplicationData="yes">
+        <columnDefinition name="Condition" type="string" length="255" primaryKey="yes" localizable="yes"
+                category="condition" description="Expression which must evaluate to TRUE in order for install to commence."/>
+        <columnDefinition name="Message" type="localized" length="255" escapeIdtCharacters="yes"
+                category="formatted" description="Localizable text to display when condition fails and install must abort."/>
+    </tableDefinition>
+
+    <tableDefinition name="WixExtbaOptions" bootstrapperApplicationData="yes">
+        <columnDefinition name="SuppressOptionsUI" type="number" length="2" nullable="yes"
+                maxValue="1" description="If 1, don't show Options button during install."/>
+        <columnDefinition name="SuppressDowngradeFailure" type="number" length="2" nullable="yes"
+                maxValue="1" description="If 1, attempts to downgrade are treated as a successful no-op."/>
+        <columnDefinition name="SuppressRepair" type="number" length="2" nullable="yes"
+                maxValue="1" description="If 1, don't show Repair button during maintenance."/>
+    </tableDefinition>
+
+    <tableDefinition name="WixStdbaOverridableVariable" bootstrapperApplicationData="yes">
+        <columnDefinition name="Name" type="string" length="255" primaryKey="yes" 
+                category="identifier" description="Variable name user can override."/>
+    </tableDefinition>
+</tableDefinitions>

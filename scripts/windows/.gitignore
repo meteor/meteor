@@ -1,0 +1,4 @@
+*.tar.gz
+*.exe
+*.pdb
+*_.cs

@@ -1,0 +1,28 @@
+{
+  "dependencies": {
+    "faye-websocket": {
+      "version": "0.9.4",
+      "resolved": "https://registry.npmjs.org/faye-websocket/-/faye-websocket-0.9.4.tgz",
+      "from": "https://registry.npmjs.org/faye-websocket/-/faye-websocket-0.9.4.tgz",
+      "dependencies": {
+        "websocket-driver": {
+          "version": "0.5.4",
+          "resolved": "https://registry.npmjs.org/websocket-driver/-/websocket-driver-0.5.4.tgz",
+          "from": "https://registry.npmjs.org/websocket-driver/-/websocket-driver-0.5.4.tgz",
+          "dependencies": {
+            "websocket-extensions": {
+              "version": "0.1.1",
+              "resolved": "https://registry.npmjs.org/websocket-extensions/-/websocket-extensions-0.1.1.tgz",
+              "from": "https://registry.npmjs.org/websocket-extensions/-/websocket-extensions-0.1.1.tgz"
+            }
+          }
+        }
+      }
+    },
+    "permessage-deflate": {
+      "version": "0.1.3",
+      "resolved": "https://registry.npmjs.org/permessage-deflate/-/permessage-deflate-0.1.3.tgz",
+      "from": "https://registry.npmjs.org/permessage-deflate/-/permessage-deflate-0.1.3.tgz"
+    }
+  }
+}

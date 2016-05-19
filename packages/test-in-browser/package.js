@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Run tests interactively in the browser",
-  version: '1.0.6'
+  version: '1.0.12',
+  documentation: null
 });
 
 Package.onUse(function (api) {
@@ -12,21 +13,22 @@ Package.onUse(function (api) {
 
   api.use('session');
   api.use('reload');
+  api.use('jquery');
 
-  api.use(['blaze', 'templating', 'spacebars',
+  api.use(['webapp', 'blaze', 'templating', 'spacebars',
            'ddp', 'tracker'], 'client');
 
   api.addFiles('diff_match_patch_uncompressed.js', 'client');
 
-  api.addFiles('diff_match_patch_uncompressed.js', 'client');
-
   api.addFiles([
-    'driver.css',
     'driver.html',
-    'driver.js'
+    'driver.js',
+    'driver.css'
   ], "client");
 
   api.use('autoupdate', 'server', {weak: true});
   api.use('random', 'server');
   api.addFiles('autoupdate.js', 'server');
+
+  api.export('runTests');
 });

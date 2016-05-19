@@ -43,6 +43,9 @@ CanOptimizeVisitor.def({
       // optimizing into a TEXTAREA's RCDATA would require being a little
       // more clever.
       return OPTIMIZABLE.NONE;
+    } else if (tagName === 'script') {
+      // script tags don't work when rendered from strings
+      return OPTIMIZABLE.NONE;
     } else if (! (HTML.isKnownElement(tagName) &&
                   ! HTML.isKnownSVGElement(tagName))) {
       // foreign elements like SVG can't be stringified for innerHTML.

@@ -9,11 +9,11 @@
 
 Package.describe({
   summary: "Adaptor for using MongoDB and Minimongo over DDP",
-  version: '1.0.11'
+  version: '1.1.7'
 });
 
 Npm.depends({
-  mongodb: "https://github.com/meteor/node-mongodb-native/tarball/cbd6220ee17c3178d20672b4a1df80f82f97d4c1"
+  "mongodb-uri": "0.9.7"
 });
 
 Npm.strip({
@@ -21,10 +21,21 @@ Npm.strip({
 });
 
 Package.onUse(function (api) {
-  api.use(['random', 'ejson', 'json', 'underscore', 'minimongo', 'logging',
-           'ddp', 'tracker', 'application-configuration'],
-          ['client', 'server']);
-  api.use('check', ['client', 'server']);
+  api.use('npm-mongo', 'server');
+  api.use('allow-deny');
+
+  api.use([
+    'random',
+    'ejson',
+    'underscore',
+    'minimongo',
+    'ddp',
+    'tracker',
+    'diff-sequence',
+    'mongo-id',
+    'check',
+    'ecmascript'
+  ]);
 
   // Binary Heap data structure is used to optimize oplog observe driver
   // performance.

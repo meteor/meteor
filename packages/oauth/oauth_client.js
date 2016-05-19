@@ -38,7 +38,7 @@ OAuth._loginStyle = function (service, config, options) {
   return loginStyle;
 };
 
-OAuth._stateParam = function (loginStyle, credentialToken) {
+OAuth._stateParam = function (loginStyle, credentialToken, redirectUrl) {
   var state = {
     loginStyle: loginStyle,
     credentialToken: credentialToken,
@@ -46,7 +46,7 @@ OAuth._stateParam = function (loginStyle, credentialToken) {
   };
 
   if (loginStyle === 'redirect')
-    state.redirectUrl = '' + window.location;
+    state.redirectUrl = redirectUrl || ('' + window.location);
 
   // Encode base64 as not all login services URI-encode the state
   // parameter when they pass it back to us.

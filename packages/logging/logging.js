@@ -97,7 +97,7 @@ Log._getCallerDetails = function () {
       return {file: "eval"};
     }
 
-    if (!line.match(/packages\/(?:local-test:)?logging(?:\/|\.js)/))
+    if (!line.match(/packages\/(?:local-test[:_])?logging(?:\/|\.js)/))
       break;
   }
 

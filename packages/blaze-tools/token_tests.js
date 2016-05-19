@@ -25,6 +25,7 @@ Tinytest.add("blaze-tools - token parsers", function (test) {
 
   var parseNumber = BlazeTools.parseNumber;
   var parseIdentifierName = BlazeTools.parseIdentifierName;
+  var parseExtendedIdentifierName = BlazeTools.parseExtendedIdentifierName;
   var parseStringLiteral = BlazeTools.parseStringLiteral;
 
   runValue(parseNumber, "0", 0);
@@ -39,16 +40,22 @@ Tinytest.add("blaze-tools - token parsers", function (test) {
   runValue(parseNumber, "-0xa", -10);
   runValue(parseNumber, "1e+1", 10);
 
-  run(parseIdentifierName, "a", "a");
-  run(parseIdentifierName, "true", "true");
-  run(parseIdentifierName, "null", "null");
-  run(parseIdentifierName, "if", "if");
-  run(parseIdentifierName, "1", null);
-  run(parseIdentifierName, "1a", null);
-  run(parseIdentifierName, "+a", null);
-  run(parseIdentifierName, "a1", "a1");
-  run(parseIdentifierName, "a1a", "a1a");
-  run(parseIdentifierName, "_a8f_f8d88_", "_a8f_f8d88_");
+  _.each([parseIdentifierName, parseExtendedIdentifierName], function (f) {
+    run(f, "a", "a");
+    run(f, "true", "true");
+    run(f, "null", "null");
+    run(f, "if", "if");
+    run(f, "1", null);
+    run(f, "1a", null);
+    run(f, "+a", null);
+    run(f, "a1", "a1");
+    run(f, "a1a", "a1a");
+    run(f, "_a8f_f8d88_", "_a8f_f8d88_");
+  });
+  run(parseIdentifierName, "@index", null);
+  run(parseExtendedIdentifierName, "@index", "@index");
+  run(parseExtendedIdentifierName, "@something", "@something");
+  run(parseExtendedIdentifierName, "@", null);
 
   runValue(parseStringLiteral, '"a"', 'a');
   runValue(parseStringLiteral, '"\'"', "'");
@@ -64,4 +71,8 @@ Tinytest.add("blaze-tools - token parsers", function (test) {
   runValue(parseStringLiteral, "'\\\\'", '\\');
   runValue(parseStringLiteral, "'\\\"'", '\"');
   runValue(parseStringLiteral, "'\\\''", '\'');
+
+  test.throws(function () {
+    run(parseStringLiteral, "'this is my string");
+  }, /Unterminated string literal/);
 });

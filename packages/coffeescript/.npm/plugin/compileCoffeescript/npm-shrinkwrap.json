@@ -1,20 +1,14 @@
 {
   "dependencies": {
     "coffee-script": {
-      "version": "1.7.1",
-      "dependencies": {
-        "mkdirp": {
-          "version": "0.3.5"
-        }
-      }
+      "version": "1.9.2",
+      "resolved": "https://registry.npmjs.org/coffee-script/-/coffee-script-1.9.2.tgz",
+      "from": "https://registry.npmjs.org/coffee-script/-/coffee-script-1.9.2.tgz"
     },
     "source-map": {
-      "version": "0.1.32",
-      "dependencies": {
-        "amdefine": {
-          "version": "0.1.0"
-        }
-      }
+      "version": "0.5.3",
+      "resolved": "https://registry.npmjs.org/source-map/-/source-map-0.5.3.tgz",
+      "from": "https://registry.npmjs.org/source-map/-/source-map-0.5.3.tgz"
     }
   }
 }

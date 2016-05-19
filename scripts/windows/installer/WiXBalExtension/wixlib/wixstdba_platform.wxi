@@ -1,0 +1,32 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!--
+  <copyright file="wixstdba_platform.wxi" company="Outercurve Foundation">
+    Copyright (c) 2004, Outercurve Foundation.
+    This software is released under Microsoft Reciprocal License (MS-RL).
+    The license and further copyright text can be found in the file
+    LICENSE.TXT at the root directory of the distribution.
+  </copyright>
+-->
+<Include xmlns='http://schemas.microsoft.com/wix/2006/wi'>
+  <Fragment>
+    <BootstrapperApplication Id='WixExtendedBootstrapperApplication.RtfLicense' SourceFile='$(var.wixextba.TargetDir)wixextba.dll'>
+      <PayloadGroupRef Id='WixExtbaRtfLicensePayloads' />
+    </BootstrapperApplication>
+  </Fragment>
+
+  <Fragment>
+    <BootstrapperApplication Id='WixExtendedBootstrapperApplication.HyperlinkLicense' SourceFile='$(var.wixextba.TargetDir)wixextba.dll'>
+      <PayloadGroupRef Id='WixExtbaHyperlinkLicensePayloads' />
+    </BootstrapperApplication>
+  </Fragment>
+
+  <Fragment>
+    <BootstrapperApplication Id='WixExtendedBootstrapperApplication.Hyperlink2License' SourceFile='$(var.wixextba.TargetDir)wixextba.dll'>
+      <PayloadGroupRef Id='WixExtbaHyperlink2LicensePayloads' />
+    </BootstrapperApplication>
+  </Fragment>
+
+  <Fragment>
+    <BootstrapperApplication Id='WixExtendedBootstrapperApplication.Foundation' SourceFile='$(var.wixextba.TargetDir)wixextba.dll' />
+  </Fragment>
+</Include>

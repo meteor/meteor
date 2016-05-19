@@ -21,6 +21,8 @@ var finishIfNeedToPollQuery = function (f) {
   };
 };
 
+var currentId = 0;
+
 // OplogObserveDriver is an alternative to PollingObserveDriver which follows
 // the Mongo operation log instead of just re-polling the query. It obeys the
 // same simple interface: constructing it starts sending observeChanges
@@ -29,6 +31,9 @@ var finishIfNeedToPollQuery = function (f) {
 OplogObserveDriver = function (options) {
   var self = this;
   self._usesOplog = true;  // tests look at this
+
+  self._id = currentId;
+  currentId++;
 
   self._cursorDescription = options.cursorDescription;
   self._mongoHandle = options.mongoHandle;
@@ -100,12 +105,20 @@ OplogObserveDriver = function (options) {
   self._requeryWhenDoneThisQuery = false;
   self._writesToCommitWhenWeReachSteady = [];
 
+  // If the oplog handle tells us that it skipped some entries (because it got
+  // behind, say), re-poll.
+  self._stopHandles.push(self._mongoHandle._oplogHandle.onSkippedEntries(
+    finishIfNeedToPollQuery(function () {
+      self._needToPollQuery();
+    })
+  ));
+
   forEachTrigger(self._cursorDescription, function (trigger) {
     self._stopHandles.push(self._mongoHandle._oplogHandle.onOplogEntry(
       trigger, function (notification) {
         Meteor._noYieldsAllowed(finishIfNeedToPollQuery(function () {
           var op = notification.op;
-          if (notification.dropCollection) {
+          if (notification.dropCollection || notification.dropDatabase) {
             // Note: this call is not allowed to block on anything (especially
             // on waiting for oplog entries to catch up) because that will block
             // onOplogEntry!
@@ -125,28 +138,43 @@ OplogObserveDriver = function (options) {
   // XXX ordering w.r.t. everything else?
   self._stopHandles.push(listenAll(
     self._cursorDescription, function (notification) {
-      // If we're not in a write fence, we don't have to do anything.
+      // If we're not in a pre-fire write fence, we don't have to do anything.
       var fence = DDPServer._CurrentWriteFence.get();
-      if (!fence)
+      if (!fence || fence.fired)
         return;
-      var write = fence.beginWrite();
-      // This write cannot complete until we've caught up to "this point" in the
-      // oplog, and then made it back to the steady state.
-      Meteor.defer(function () {
+
+      if (fence._oplogObserveDrivers) {
+        fence._oplogObserveDrivers[self._id] = self;
+        return;
+      }
+
+      fence._oplogObserveDrivers = {};
+      fence._oplogObserveDrivers[self._id] = self;
+
+      fence.onBeforeFire(function () {
+        var drivers = fence._oplogObserveDrivers;
+        delete fence._oplogObserveDrivers;
+
+        // This fence cannot fire until we've caught up to "this point" in the
+        // oplog, and all observers made it back to the steady state.
         self._mongoHandle._oplogHandle.waitUntilCaughtUp();
-        if (self._stopped) {
-          // We're stopped, so just immediately commit.
-          write.committed();
-        } else if (self._phase === PHASE.STEADY) {
-          // Make sure that all of the callbacks have made it through the
-          // multiplexer and been delivered to ObserveHandles before committing
-          // writes.
-          self._multiplexer.onFlush(function () {
-            write.committed();
-          });
-        } else {
-          self._writesToCommitWhenWeReachSteady.push(write);
-        }
+
+        _.each(drivers, function (driver) {
+          if (driver._stopped)
+            return;
+
+          var write = fence.beginWrite();
+          if (driver._phase === PHASE.STEADY) {
+            // Make sure that all of the callbacks have made it through the
+            // multiplexer and been delivered to ObserveHandles before committing
+            // writes.
+            driver._multiplexer.onFlush(function () {
+              write.committed();
+            });
+          } else {
+            driver._writesToCommitWhenWeReachSteady.push(write);
+          }
+        });
       });
     }
   ));
@@ -254,8 +282,10 @@ _.extend(OplogObserveDriver.prototype, {
     var self = this;
     Meteor._noYieldsAllowed(function () {
       self._published.set(id, self._sharedProjectionFn(newDoc));
-      var changed = LocalCollection._makeChangedFields(_.clone(newDoc), oldDoc);
-      changed = self._projectionFn(changed);
+      var projectedNew = self._projectionFn(newDoc);
+      var projectedOld = self._projectionFn(oldDoc);
+      var changed = DiffSequence.makeChangedFields(
+        projectedNew, projectedOld);
       if (!_.isEmpty(changed))
         self._multiplexer.changed(id, changed);
     });
@@ -594,7 +624,18 @@ _.extend(OplogObserveDriver.prototype, {
           newDoc = EJSON.clone(newDoc);
 
           newDoc._id = id;
-          LocalCollection._modify(newDoc, op.o);
+          try {
+            LocalCollection._modify(newDoc, op.o);
+          } catch (e) {
+            if (e.name !== "MinimongoError")
+              throw e;
+            // We didn't understand the modifier.  Re-fetch.
+            self._needToFetch.set(id, op.ts.toString());
+            if (self._phase === PHASE.STEADY) {
+              self._fetchModifiedDocuments();
+            }
+            return;
+          }
           self._handleDoc(id, self._sharedProjectionFn(newDoc));
         } else if (!canDirectlyModifyDoc ||
                    self._matcher.canBecomeTrueByModifier(op.o) ||
@@ -614,10 +655,11 @@ _.extend(OplogObserveDriver.prototype, {
     if (self._stopped)
       throw new Error("oplog stopped surprisingly early");
 
-    self._runQuery();  // yields
+    self._runQuery({initial: true});  // yields
 
     if (self._stopped)
-      throw new Error("oplog stopped quite early");
+      return;  // can happen on queryError
+
     // Allow observeChanges calls to return. (After this, it's possible for
     // stop() to be called.)
     self._multiplexer.ready();
@@ -661,8 +703,9 @@ _.extend(OplogObserveDriver.prototype, {
   },
 
   // Yields!
-  _runQuery: function () {
+  _runQuery: function (options) {
     var self = this;
+    options = options || {};
     var newResults, newBuffer;
 
     // This while loop is just to retry failures.
@@ -691,6 +734,16 @@ _.extend(OplogObserveDriver.prototype, {
         });
         break;
       } catch (e) {
+        if (options.initial && typeof(e.code) === 'number') {
+          // This is an error document sent to us by mongod, not a connection
+          // error generated by the client. And we've never seen this query work
+          // successfully. Probably it's a bad selector or something, so we
+          // should NOT retry. Instead, we should halt the observe (which ends
+          // up calling `stop` on us).
+          self._multiplexer.queryError(e);
+          return;
+        }
+
         // During failover (eg) if we get an exception we should log and retry
         // instead of crashing.
         Meteor._debug("Got exception while polling query: " + e);
@@ -906,7 +959,8 @@ OplogObserveDriver.cursorSupported = function (cursorDescription, matcher) {
   var options = cursorDescription.options;
 
   // Did the user say no explicitly?
-  if (options._disableOplog)
+  // underscored version of the option is COMPAT with 1.2
+  if (options.disableOplog || options._disableOplog)
     return false;
 
   // skip is not supported: to support it we would need to keep track of all

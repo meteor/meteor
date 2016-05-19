@@ -9,9 +9,10 @@
 // conditionally decide not to call the callback (if, for example, the
 // observed object has been closed or terminated).
 //
-// Callbacks are bound with `Meteor.bindEnvironment`, so they will be
+// By default, callbacks are bound with `Meteor.bindEnvironment`, so they will be
 // called with the Meteor environment of the calling code that
-// registered the callback.
+// registered the callback. Override by passing { bindEnvironment: false }
+// to the constructor.
 //
 // Registering a callback returns an object with a single `stop`
 // method which unregisters the callback.
@@ -40,6 +41,10 @@ Hook = function (options) {
   options = options || {};
   self.nextCallbackId = 0;
   self.callbacks = {};
+  // Whether to wrap callbacks with Meteor.bindEnvironment
+  self.bindEnvironment = true;
+  if (options.bindEnvironment === false)
+    self.bindEnvironment = false;
 
   if (options.exceptionHandler)
     self.exceptionHandler = options.exceptionHandler;
@@ -53,16 +58,18 @@ Hook = function (options) {
 _.extend(Hook.prototype, {
   register: function (callback) {
     var self = this;
+    var exceptionHandler =  self.exceptionHandler || function (exception) {
+      // Note: this relies on the undocumented fact that if bindEnvironment's
+      // onException throws, and you are invoking the callback either in the
+      // browser or from within a Fiber in Node, the exception is propagated.
+      throw exception;
+    };
 
-    callback = Meteor.bindEnvironment(
-      callback,
-      self.exceptionHandler || function (exception) {
-        // Note: this relies on the undocumented fact that if bindEnvironment's
-        // onException throws, and you are invoking the callback either in the
-        // browser or from within a Fiber in Node, the exception is propagated.
-        throw exception;
-      }
-    );
+    if (self.bindEnvironment) {
+      callback = Meteor.bindEnvironment(callback, exceptionHandler);
+    } else {
+      callback = dontBindEnvironment(callback, exceptionHandler);
+    }
 
     var id = self.nextCallbackId++;
     self.callbacks[id] = callback;
@@ -105,3 +112,31 @@ _.extend(Hook.prototype, {
     }
   }
 });
+
+// Copied from Meteor.bindEnvironment and removed all the env stuff.
+var dontBindEnvironment = function (func, onException, _this) {
+  if (!onException || typeof(onException) === 'string') {
+    var description = onException || "callback of async function";
+    onException = function (error) {
+      Meteor._debug(
+        "Exception in " + description + ":",
+        error && error.stack || error
+      );
+    };
+  }
+
+  return function (/* arguments */) {
+    var args = _.toArray(arguments);
+
+    var runAndHandleExceptions = function () {
+      try {
+        var ret = func.apply(_this, args);
+      } catch (e) {
+        onException(e);
+      }
+      return ret;
+    };
+
+    return runAndHandleExceptions();
+  };
+};

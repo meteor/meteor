@@ -1,0 +1,16 @@
+{
+  "dependencies": {
+    "meteor-ecmascript-runtime": {
+      "version": "0.2.6",
+      "resolved": "https://registry.npmjs.org/meteor-ecmascript-runtime/-/meteor-ecmascript-runtime-0.2.6.tgz",
+      "from": "https://registry.npmjs.org/meteor-ecmascript-runtime/-/meteor-ecmascript-runtime-0.2.6.tgz",
+      "dependencies": {
+        "core-js": {
+          "version": "1.2.1",
+          "resolved": "https://registry.npmjs.org/core-js/-/core-js-1.2.1.tgz",
+          "from": "https://registry.npmjs.org/core-js/-/core-js-1.2.1.tgz"
+        }
+      }
+    }
+  }
+}

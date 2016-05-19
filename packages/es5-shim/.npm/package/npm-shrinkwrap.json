@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "es5-shim": {
+      "version": "4.5.7",
+      "resolved": "https://registry.npmjs.org/es5-shim/-/es5-shim-4.5.7.tgz",
+      "from": "https://registry.npmjs.org/es5-shim/-/es5-shim-4.5.7.tgz"
+    }
+  }
+}

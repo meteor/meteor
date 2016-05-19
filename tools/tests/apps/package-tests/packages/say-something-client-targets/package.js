@@ -4,6 +4,7 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
+  api.use("ddp");
   api.addFiles('all-clients.js', ['client']);
   api.addFiles('browser-client.js', ['web.browser']);
   api.addFiles('cordova-client.js', ['web.cordova']);

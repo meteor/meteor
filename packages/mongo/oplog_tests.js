@@ -52,3 +52,97 @@ Tinytest.add("mongo-livedata - oplog - cursorSupported", function (test) {
   supported(false, {}, { skip: 2, limit: 5 });
   supported(false, {}, { skip: 2 });
 });
+
+process.env.MONGO_OPLOG_URL && testAsyncMulti(
+  "mongo-livedata - oplog - entry skipping", [
+    function (test, expect) {
+      var self = this;
+      self.collectionName = Random.id();
+      self.collection = new Mongo.Collection(self.collectionName);
+      self.collection._ensureIndex({species: 1});
+
+      // Fill collection with lots of irrelevant objects (red cats) and some
+      // relevant ones (blue dogs).
+      self.IRRELEVANT_SIZE = 15000;
+      self.RELEVANT_SIZE = 10;
+      var docs = [];
+      var i;
+      for (i = 0; i < self.IRRELEVANT_SIZE; ++i) {
+        docs.push({
+          name: "cat " + i,
+          species: 'cat',
+          color: 'red'
+        });
+      }
+      for (i = 0; i < self.RELEVANT_SIZE; ++i) {
+        docs.push({
+          name: "dog " + i,
+          species: 'dog',
+          color: 'blue'
+        });
+      }
+      // XXX implement bulk insert #1255
+      var rawCollection = self.collection.rawCollection();
+      rawCollection.insert(docs, Meteor.bindEnvironment(expect(function (err) {
+        test.isFalse(err);
+      })));
+    },
+    function (test, expect) {
+      var self = this;
+
+      test.equal(self.collection.find().count(),
+                 self.IRRELEVANT_SIZE + self.RELEVANT_SIZE);
+
+      var blueDog5Id = null;
+      var gotSpot = false;
+
+      // Watch for blue dogs.
+      self.subHandle =
+        self.collection.find({species: 'dog', color: 'blue'}).observeChanges({
+          added: function (id, fields) {
+            if (fields.name === 'dog 5')
+              blueDog5Id = id;
+          },
+          changed: function (id, fields) {
+            if (EJSON.equals(id, blueDog5Id) && fields.name === 'spot')
+              gotSpot = true;
+          }
+        });
+      test.isTrue(self.subHandle._multiplexer._observeDriver._usesOplog);
+      test.isTrue(blueDog5Id);
+      test.isFalse(gotSpot);
+
+      self.skipped = false;
+      self.skipHandle =
+        MongoInternals.defaultRemoteCollectionDriver().mongo
+        ._oplogHandle.onSkippedEntries(function () {
+          self.skipped = true;
+        });
+
+      // Dye all the cats blue. This adds lots of oplog mentries that look like
+      // they might in theory be relevant (since they say "something you didn't
+      // know about is now blue", and who knows, maybe it's a dog) which puts
+      // the OplogObserveDriver into FETCHING mode, which performs poorly.
+      self.collection.update({species: 'cat'},
+                             {$set: {color: 'blue'}},
+                             {multi: true});
+      self.collection.update(blueDog5Id, {$set: {name: 'spot'}});
+
+      // We ought to see the spot change soon!  It's important to keep this
+      // timeout relatively small (ie, small enough that if we set
+      // $METEOR_OPLOG_TOO_FAR_BEHIND to something enormous, say 200000, that
+      // the test fails).
+      pollUntil(expect, function () {
+        return gotSpot;
+      }, 2000);
+    },
+    function (test, expect) {
+      var self = this;
+      test.isTrue(self.skipped);
+
+      self.skipHandle.stop();
+      self.subHandle.stop();
+      self.collection.remove({});
+    }
+  ]
+);

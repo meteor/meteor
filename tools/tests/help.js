@@ -1,4 +1,4 @@
-var selftest = require('../selftest.js');
+var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 
 selftest.define("help", function () {
@@ -9,8 +9,9 @@ selftest.define("help", function () {
     run.read("Usage: meteor");
     run.match("Commands:");
     run.match(/create\s*Create a new project/);
+    run.match(/\s*admin\s/);
     run.expectExit(0);
-    run.forbidAll(/^\s*admin\s/); // no subcommands
+    run.forbidAll(/^\s*maintainers\s/); // no subcommands
     run.forbidAll(/^\s*dummy\s/); // no hidden commands
   };
 

@@ -1,0 +1,14 @@
+{
+  "dependencies": {
+    "async": {
+      "version": "1.4.0",
+      "resolved": "https://registry.npmjs.org/async/-/async-1.4.0.tgz",
+      "from": "https://registry.npmjs.org/async/-/async-1.4.0.tgz"
+    },
+    "lru-cache": {
+      "version": "2.6.4",
+      "resolved": "https://registry.npmjs.org/lru-cache/-/lru-cache-2.6.4.tgz",
+      "from": "https://registry.npmjs.org/lru-cache/-/lru-cache-2.6.4.tgz"
+    }
+  }
+}

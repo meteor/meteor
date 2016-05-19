@@ -4,55 +4,72 @@
 // We put this in a JS file so that it can contain comments. It is processed
 // into a package.json file by generate-dev-bundle.sh.
 
+var fibersVersion;
+if (process.platform === "win32") {
+  // We have a fork of fibers off of version 1.0.5 that searches farther for
+  // the isolate thread. This problem is a result of antivirus programs messing
+  // with the thread counts on Windows.
+  // Duplicated in dev-bundle-server-package.js
+  fibersVersion = "https://github.com/meteor/node-fibers/tarball/d519f0c5971c33d99c902dad346b817e84bab001";
+} else {
+  fibersVersion = "1.0.8";
+}
+
 var packageJson = {
   name: "meteor-dev-bundle-tool",
   // Version is not important but is needed to prevent warnings.
   version: "0.0.0",
   dependencies: {
-    // Fibers 1.0.2 is out but introduces a bug that's been fixed on master
-    // but unreleased: https://github.com/laverdet/node-fibers/pull/189
-    // We will definitely need to upgrade in order to support Node 0.12 when
-    // it's out, though.
-    fibers: "1.0.1",
+    // Explicit dependency because we are replacing it with a bundled version
+    // and we want to make sure there are no dependencies on a higher version
+    npm: "2.14.22",
+    fibers: fibersVersion,
+    "meteor-babel": "0.9.2",
+    "meteor-promise": "0.5.1",
+    // So that Babel 6 can emit require("babel-runtime/helpers/...") calls.
+    "babel-runtime": "5.8.35",
+    // For various ES2015 polyfills, such as Map and Set.
+    "meteor-ecmascript-runtime": "0.2.6",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
     // in the package too) because we should consider using lodash instead
     // (and there are backwards-incompatible changes either way).
     underscore: "1.5.2",
-    "source-map-support": "0.2.8",
+    "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e",
     semver: "4.1.0",
     request: "2.47.0",
-    fstream: "1.0.2",
+    fstream: "https://github.com/meteor/fstream/tarball/d11b9ec4a13918447c8af7559c243c190744dd1c",
     tar: "1.0.2",
     kexec: "0.2.0",
-    "source-map": "0.1.40",
+    "source-map": "0.5.3",
     "browserstack-webdriver": "2.41.1",
     "node-inspector": "0.7.4",
     chalk: "0.5.1",
     sqlite3: "3.0.2",
     netroute: "0.2.5",
     phantomjs: "1.9.12",
-    "http-proxy": "1.6.0",
+    "http-proxy": "1.11.1",
     "wordwrap": "0.0.2",
     "moment": "2.8.4",
+    "rimraf": "2.4.3",
     // XXX: When we update this, see if it fixes this Github issue:
     // https://github.com/jgm/CommonMark/issues/276 . If it does, remove the
     // workaround from the tool.
     "commonmark": "0.15.0",
-    // XXX We ought to be able to get this from the copy in js-analyze rather
-    // than in the dev bundle.)
-    esprima: "1.2.2",
+    escope: "3.2.0",
     // 2.4.0 (more or less, the package.json change isn't committed) plus our PR
     // https://github.com/williamwicks/node-eachline/pull/4
     eachline: "https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da",
-
-    // XXX We install our own fork of cordova because we need a particular patch that
-    // didn't land to cordova-android yet. As soon as it lands, we can switch back to
-    // upstream.
-    // https://github.com/apache/cordova-android/commit/445ddd89fb3269a772978a9860247065e5886249
-    //    npm install cordova@3.5.0-0.2.6
-    "cordova": "https://github.com/meteor/cordova-cli/tarball/0c9b3362c33502ef8f6dba514b87279b9e440543"
+    pathwatcher: "4.1.0",
+    'lru-cache': '2.6.4',
+    'cordova-lib': "6.0.0",
+    longjohn: '0.2.11'
   }
 };
 
+if (process.platform === 'win32') {
+  // Remove dependencies that do not work on Windows
+  delete packageJson.dependencies.netroute;
+  delete packageJson.dependencies.kexec;
+}
 
 process.stdout.write(JSON.stringify(packageJson, null, 2) + '\n');

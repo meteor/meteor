@@ -79,6 +79,9 @@ Blaze.View = function (name, render) {
   // this information to be available on views to make smarter decisions. For
   // example: removing the generated parent view with the view on Blaze.remove.
   this._hasGeneratedParent = false;
+  // Bindings accessible to children views (via view.lookup('name')) within the
+  // closest template view.
+  this._scopeBindings = {};
 
   this.renderCount = 0;
 };
@@ -120,6 +123,19 @@ Blaze.View.prototype.onViewDestroyed = function (cb) {
   this._callbacks.destroyed = this._callbacks.destroyed || [];
   this._callbacks.destroyed.push(cb);
 };
+Blaze.View.prototype.removeViewDestroyedListener = function (cb) {
+  var destroyed = this._callbacks.destroyed;
+  if (! destroyed)
+    return;
+  var index = _.lastIndexOf(destroyed, cb);
+  if (index !== -1) {
+    // XXX You'd think the right thing to do would be splice, but _fireCallbacks
+    // gets sad if you remove callbacks while iterating over the list.  Should
+    // change this to use callback-hook or EventEmitter or something else that
+    // properly supports removal.
+    destroyed[index] = null;
+  }
+};
 
 /// View#autorun(func)
 ///
@@ -140,7 +156,7 @@ Blaze.View.prototype.onViewDestroyed = function (cb) {
 /// callback.  Autoruns that update the DOM should be started
 /// from either onViewCreated (guarded against the absence of
 /// view._domrange), or onViewReady.
-Blaze.View.prototype.autorun = function (f, _inViewScope) {
+Blaze.View.prototype.autorun = function (f, _inViewScope, displayName) {
   var self = this;
 
   // The restrictions on when View#autorun can be called are in order
@@ -174,14 +190,71 @@ Blaze.View.prototype.autorun = function (f, _inViewScope) {
     throw new Error("Can't call View#autorun from a Tracker Computation; try calling it from the created or rendered callback");
   }
 
-  var c = Tracker.autorun(function viewAutorun(c) {
-    return Blaze._withCurrentView(_inViewScope || self, function () {
-      return f.call(self, c);
-    });
-  });
-  self.onViewDestroyed(function () { c.stop(); });
+  var templateInstanceFunc = Blaze.Template._currentTemplateInstanceFunc;
 
-  return c;
+  var func = function viewAutorun(c) {
+    return Blaze._withCurrentView(_inViewScope || self, function () {
+      return Blaze.Template._withTemplateInstanceFunc(
+        templateInstanceFunc, function () {
+          return f.call(self, c);
+        });
+    });
+  };
+
+  // Give the autorun function a better name for debugging and profiling.
+  // The `displayName` property is not part of the spec but browsers like Chrome
+  // and Firefox prefer it in debuggers over the name function was declared by.
+  func.displayName =
+    (self.name || 'anonymous') + ':' + (displayName || 'anonymous');
+  var comp = Tracker.autorun(func);
+
+  var stopComputation = function () { comp.stop(); };
+  self.onViewDestroyed(stopComputation);
+  comp.onStop(function () {
+    self.removeViewDestroyedListener(stopComputation);
+  });
+
+  return comp;
+};
+
+Blaze.View.prototype._errorIfShouldntCallSubscribe = function () {
+  var self = this;
+
+  if (! self.isCreated) {
+    throw new Error("View#subscribe must be called from the created callback at the earliest");
+  }
+  if (self._isInRender) {
+    throw new Error("Can't call View#subscribe from inside render(); try calling it from the created or rendered callback");
+  }
+  if (self.isDestroyed) {
+    throw new Error("Can't call View#subscribe from inside the destroyed callback, try calling it inside created or rendered.");
+  }
+};
+
+/**
+ * Just like Blaze.View#autorun, but with Meteor.subscribe instead of
+ * Tracker.autorun. Stop the subscription when the view is destroyed.
+ * @return {SubscriptionHandle} A handle to the subscription so that you can
+ * see if it is ready, or stop it manually
+ */
+Blaze.View.prototype.subscribe = function (args, options) {
+  var self = this;
+  options = options || {};
+
+  self._errorIfShouldntCallSubscribe();
+
+  var subHandle;
+  if (options.connection) {
+    subHandle = options.connection.subscribe.apply(options.connection, args);
+  } else {
+    subHandle = Meteor.subscribe.apply(Meteor, args);
+  }
+
+  self.onViewDestroyed(function () {
+    subHandle.stop();
+  });
+
+  return subHandle;
 };
 
 Blaze.View.prototype.firstNode = function () {
@@ -203,7 +276,7 @@ Blaze._fireCallbacks = function (view, which) {
     Tracker.nonreactive(function fireCallbacks() {
       var cbs = view._callbacks[which];
       for (var i = 0, N = (cbs && cbs.length); i < N; i++)
-        cbs[i].call(view);
+        cbs[i] && cbs[i].call(view);
     });
   });
 };
@@ -220,7 +293,48 @@ Blaze._createView = function (view, parentView, forExpansion) {
   Blaze._fireCallbacks(view, 'created');
 };
 
-Blaze._materializeView = function (view, parentView) {
+var doFirstRender = function (view, initialContent) {
+  var domrange = new Blaze._DOMRange(initialContent);
+  view._domrange = domrange;
+  domrange.view = view;
+  view.isRendered = true;
+  Blaze._fireCallbacks(view, 'rendered');
+
+  var teardownHook = null;
+
+  domrange.onAttached(function attached(range, element) {
+    view._isAttached = true;
+
+    teardownHook = Blaze._DOMBackend.Teardown.onElementTeardown(
+      element, function teardown() {
+        Blaze._destroyView(view, true /* _skipNodes */);
+      });
+  });
+
+  // tear down the teardown hook
+  view.onViewDestroyed(function () {
+    teardownHook && teardownHook.stop();
+    teardownHook = null;
+  });
+
+  return domrange;
+};
+
+// Take an uncreated View `view` and create and render it to DOM,
+// setting up the autorun that updates the View.  Returns a new
+// DOMRange, which has been associated with the View.
+//
+// The private arguments `_workStack` and `_intoArray` are passed in
+// by Blaze._materializeDOM and are only present for recursive calls
+// (when there is some other _materializeView on the stack).  If
+// provided, then we avoid the mutual recursion of calling back into
+// Blaze._materializeDOM so that deep View hierarchies don't blow the
+// stack.  Instead, we push tasks onto workStack for the initial
+// rendering and subsequent setup of the View, and they are done after
+// we return.  When there is a _workStack, we do not return the new
+// DOMRange, but instead push it into _intoArray from a _workStack
+// task.
+Blaze._materializeView = function (view, parentView, _workStack, _intoArray) {
   Blaze._createView(view, parentView);
 
   var domrange;
@@ -237,21 +351,16 @@ Blaze._materializeView = function (view, parentView) {
       var htmljs = view._render();
       view._isInRender = false;
 
-      Tracker.nonreactive(function doMaterialize() {
-        var materializer = new Blaze._DOMMaterializer({parentView: view});
-        var rangesAndNodes = materializer.visit(htmljs, []);
-        if (c.firstRun || ! Blaze._isContentEqual(lastHtmljs, htmljs)) {
-          if (c.firstRun) {
-            domrange = new Blaze._DOMRange(rangesAndNodes);
-            view._domrange = domrange;
-            domrange.view = view;
-            view.isRendered = true;
-          } else {
+      if (! c.firstRun) {
+        Tracker.nonreactive(function doMaterialize() {
+          // re-render
+          var rangesAndNodes = Blaze._materializeDOM(htmljs, [], view);
+          if (! Blaze._isContentEqual(lastHtmljs, htmljs)) {
             domrange.setMembers(rangesAndNodes);
+            Blaze._fireCallbacks(view, 'rendered');
           }
-          Blaze._fireCallbacks(view, 'rendered');
-        }
-      });
+        });
+      }
       lastHtmljs = htmljs;
 
       // Causes any nested views to stop immediately, not when we call
@@ -259,29 +368,44 @@ Blaze._materializeView = function (view, parentView) {
       // helpers in the DOM tree to be replaced might be scheduled
       // to re-run before we have a chance to stop them.
       Tracker.onInvalidate(function () {
-        domrange.destroyMembers();
+        if (domrange) {
+          domrange.destroyMembers();
+        }
       });
-    });
+    }, undefined, 'materialize');
 
-    var teardownHook = null;
-
-    domrange.onAttached(function attached(range, element) {
-      view._isAttached = true;
-
-      teardownHook = Blaze._DOMBackend.Teardown.onElementTeardown(
-        element, function teardown() {
-          Blaze._destroyView(view, true /* _skipNodes */);
-        });
-    });
-
-    // tear down the teardown hook
-    view.onViewDestroyed(function () {
-      teardownHook && teardownHook.stop();
-      teardownHook = null;
-    });
+    // first render.  lastHtmljs is the first htmljs.
+    var initialContents;
+    if (! _workStack) {
+      initialContents = Blaze._materializeDOM(lastHtmljs, [], view);
+      domrange = doFirstRender(view, initialContents);
+      initialContents = null; // help GC because we close over this scope a lot
+    } else {
+      // We're being called from Blaze._materializeDOM, so to avoid
+      // recursion and save stack space, provide a description of the
+      // work to be done instead of doing it.  Tasks pushed onto
+      // _workStack will be done in LIFO order after we return.
+      // The work will still be done within a Tracker.nonreactive,
+      // because it will be done by some call to Blaze._materializeDOM
+      // (which is always called in a Tracker.nonreactive).
+      initialContents = [];
+      // push this function first so that it happens last
+      _workStack.push(function () {
+        domrange = doFirstRender(view, initialContents);
+        initialContents = null; // help GC because of all the closures here
+        _intoArray.push(domrange);
+      });
+      // now push the task that calculates initialContents
+      _workStack.push(_.bind(Blaze._materializeDOM, null,
+                             lastHtmljs, initialContents, view, _workStack));
+    }
   });
 
-  return domrange;
+  if (! _workStack) {
+    return domrange;
+  } else {
+    return null;
+  }
 };
 
 // Expands a View to HTMLjs, calling `render` recursively on all
@@ -546,9 +670,9 @@ Blaze.renderWithData = function (content, data, parentElement, nextNode, parentV
 };
 
 /**
- * @summary Removes a rendered View from the DOM, stopping all reactive updates and event listeners on it.
+ * @summary Removes a rendered View from the DOM, stopping all reactive updates and event listeners on it. Also destroys the Blaze.Template instance associated with the view.
  * @locus Client
- * @param {Blaze.View} renderedView The return value from `Blaze.render` or `Blaze.renderWithData`.
+ * @param {Blaze.View} renderedView The return value from `Blaze.render` or `Blaze.renderWithData`, or the `view` property of a Blaze.Template instance. Calling `Blaze.remove(Template.instance().view)` from within a template event handler will destroy the view as well as that template and trigger the template's `onDestroyed` handlers.
  */
 Blaze.remove = function (view) {
   if (! (view && (view._domrange instanceof Blaze._DOMRange)))

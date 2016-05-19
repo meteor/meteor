@@ -8,6 +8,7 @@ var url = Npm.require("url");
 var crypto = Npm.require("crypto");
 
 var connect = Npm.require('connect');
+var parseurl = Npm.require('parseurl');
 var useragent = Npm.require('useragent');
 var send = Npm.require('send');
 
@@ -20,6 +21,13 @@ var LONG_SOCKET_TIMEOUT = 120*1000;
 WebApp = {};
 WebAppInternals = {};
 
+WebAppInternals.NpmModules = {
+  connect: {
+    version: Npm.require('connect/package.json').version,
+    module: connect
+  }
+};
+
 WebApp.defaultArch = 'web.browser';
 
 // XXX maps archs to manifests
@@ -28,7 +36,7 @@ WebApp.clientPrograms = {};
 // XXX maps archs to program path on filesystem
 var archPath = {};
 
-var bundledJsCssPrefix;
+var bundledJsCssUrlRewriteHook;
 
 var sha1 = function (contents) {
   var hash = crypto.createHash('sha1');
@@ -99,10 +107,10 @@ var identifyBrowser = function (userAgentString) {
 WebAppInternals.identifyBrowser = identifyBrowser;
 
 WebApp.categorizeRequest = function (req) {
-  return {
+  return _.extend({
     browser: identifyBrowser(req.headers['user-agent']),
     url: url.parse(req.url, true)
-  };
+  }, _.pick(req, 'dynamicHead', 'dynamicBody'));
 };
 
 // HTML attribute hooks: functions to be called to determine any attributes to
@@ -228,30 +236,42 @@ WebApp._timeoutAdjustmentRequestCallback = function (req, res) {
 var boilerplateByArch = {};
 
 // Given a request (as returned from `categorizeRequest`), return the
-// boilerplate HTML to serve for that request. Memoizes on HTML
-// attributes (used by, eg, appcache) and whether inline scripts are
-// currently allowed.
+// boilerplate HTML to serve for that request.
+//
+// If a previous connect middleware has rendered content for the head or body,
+// returns the boilerplate with that content patched in otherwise
+// memoizes on HTML attributes (used by, eg, appcache) and whether inline 
+// scripts are currently allowed.
 // XXX so far this function is always called with arch === 'web.browser'
 var memoizedBoilerplate = {};
 var getBoilerplate = function (request, arch) {
-
+  var useMemoized = ! (request.dynamicHead || request.dynamicBody);
   var htmlAttributes = getHtmlAttributes(request);
-
-  // The only thing that changes from request to request (for now) are
-  // the HTML attributes (used by, eg, appcache) and whether inline
-  // scripts are allowed, so we can memoize based on that.
-  var memHash = JSON.stringify({
-    inlineScriptsAllowed: inlineScriptsAllowed,
-    htmlAttributes: htmlAttributes,
-    arch: arch
-  });
-
-  if (! memoizedBoilerplate[memHash]) {
-    memoizedBoilerplate[memHash] = boilerplateByArch[arch].toHTML({
-      htmlAttributes: htmlAttributes
+  
+  if (useMemoized) {
+    // The only thing that changes from request to request (unless extra 
+    // content is added to the head or body) are the HTML attributes 
+    // (used by, eg, appcache) and whether inline scripts are allowed, so we 
+    // can memoize based on that.
+    var memHash = JSON.stringify({
+      inlineScriptsAllowed: inlineScriptsAllowed,
+      htmlAttributes: htmlAttributes,
+      arch: arch
     });
+
+    if (! memoizedBoilerplate[memHash]) {
+      memoizedBoilerplate[memHash] = boilerplateByArch[arch].toHTML({
+        htmlAttributes: htmlAttributes
+      });
+    }
+    return memoizedBoilerplate[memHash];
   }
-  return memoizedBoilerplate[memHash];
+  
+  var boilerplateOptions = _.extend({ 
+    htmlAttributes: htmlAttributes 
+  }, _.pick(request, 'dynamicHead', 'dynamicBody'));
+  
+  return boilerplateByArch[arch].toHTML(boilerplateOptions);
 };
 
 WebAppInternals.generateBoilerplateInstance = function (arch,
@@ -264,16 +284,11 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
     additionalOptions.runtimeConfigOverrides || {}
   );
 
-  var jsCssPrefix;
-  if (arch === 'web.cordova') {
-    // in cordova we serve assets up directly from disk so it doesn't make
-    // sense to use the prefix (ordinarily something like a CDN) and go out 
-    // to the internet for those files.
-    jsCssPrefix = '';
-  } else {
-    jsCssPrefix = bundledJsCssPrefix ||
-      __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '';
-  }
+  var jsCssUrlRewriteHook = bundledJsCssUrlRewriteHook || function (url) {
+    var bundledPrefix =
+       __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '';
+    return bundledPrefix + url;
+  };
 
   return new Boilerplate(arch, manifest,
     _.extend({
@@ -289,9 +304,16 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
             };
           }
         ),
-        meteorRuntimeConfig: JSON.stringify(runtimeConfig),
+        // Convert to a JSON string, then get rid of most weird characters, then
+        // wrap in double quotes. (The outermost JSON.stringify really ought to
+        // just be "wrap in double quotes" but we use it to be safe.) This might
+        // end up inside a <script> tag so we need to be careful to not include
+        // "</script>", but normal {{spacebars}} escaping escapes too much! See
+        // https://github.com/meteor/meteor/issues/3730
+        meteorRuntimeConfig: JSON.stringify(
+          encodeURIComponent(JSON.stringify(runtimeConfig))),
         rootUrlPathPrefix: __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
-        bundledJsCssPrefix: jsCssPrefix,
+        bundledJsCssUrlRewriteHook: jsCssUrlRewriteHook,
         inlineScriptsAllowed: WebAppInternals.inlineScriptsAllowed(),
         inline: additionalOptions.inline
       }
@@ -313,11 +335,11 @@ var staticFiles;
 // Serve static files from the manifest or added with
 // `addStaticJs`. Exported for tests.
 WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
-  if ('GET' != req.method && 'HEAD' != req.method) {
+  if ('GET' != req.method && 'HEAD' != req.method && 'OPTIONS' != req.method) {
     next();
     return;
   }
-  var pathname = connect.utils.parseUrl(req).pathname;
+  var pathname = parseurl(req).pathname;
   try {
     pathname = decodeURIComponent(pathname);
   } catch (e) {
@@ -358,17 +380,9 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
   // Cacheable files are files that should never change. Typically
   // named by their hash (eg meteor bundled js and css files).
   // We cache them ~forever (1yr).
-  //
-  // We cache non-cacheable files anyway. This isn't really correct, as users
-  // can change the files and changes won't propagate immediately. However, if
-  // we don't cache them, browsers will 'flicker' when rerendering
-  // images. Eventually we will probably want to rewrite URLs of static assets
-  // to include a query parameter to bust caches. That way we can both get
-  // good caching behavior and allow users to change assets without delay.
-  // https://github.com/meteor/meteor/issues/773
   var maxAge = info.cacheable
         ? 1000 * 60 * 60 * 24 * 365
-        : 1000 * 60 * 60 * 24;
+        : 0;
 
   // Set the X-SourceMap header, which current Chrome, FireFox, and Safari
   // understand.  (The SourceMap header is slightly more spec-correct but FF
@@ -388,20 +402,21 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
     res.setHeader("Content-Type", "text/css; charset=UTF-8");
   } else if (info.type === "json") {
     res.setHeader("Content-Type", "application/json; charset=UTF-8");
-    // XXX if it is a manifest we are serving, set additional headers
-    if (/\/manifest.json$/.test(pathname)) {
-      res.setHeader("Access-Control-Allow-Origin", "*");
-    }
+  }
+
+  if (info.hash) {
+    res.setHeader('ETag', '"' + info.hash + '"');
   }
 
   if (info.content) {
     res.write(info.content);
     res.end();
   } else {
-    send(req, info.absolutePath)
-      .maxage(maxAge)
-      .hidden(true)  // if we specified a dotfile in the manifest, serve it
-      .on('error', function (err) {
+    send(req, info.absolutePath, {
+        maxage: maxAge,
+        dotfiles: 'allow', // if we specified a dotfile in the manifest, serve it
+        lastModified: false // don't set last-modified based on the file date
+      }).on('error', function (err) {
         Log.error("Error serving static file " + err);
         res.writeHead(500);
         res.end();
@@ -423,6 +438,15 @@ var getUrlPrefixForArch = function (arch) {
   // to Meteor internals.
   return arch === WebApp.defaultArch ?
     '' : '/' + '__' + arch.replace(/^web\./, '');
+};
+
+// parse port to see if its a Windows Server style named pipe. If so, return as-is (String), otherwise return as Int
+WebAppInternals.parsePort = function (port) {
+  if( /\\\\?.+\\pipe\\?.+/.test(port) ) {
+    return port;
+  }
+
+  return parseInt(port);
 };
 
 var runWebAppServer = function () {
@@ -457,6 +481,7 @@ var runWebAppServer = function () {
             staticFiles[urlPrefix + getItemPathname(item.url)] = {
               absolutePath: path.join(clientDir, item.path),
               cacheable: item.cacheable,
+              hash: item.hash,
               // Link from source to its map
               sourceMapUrl: item.sourceMapUrl,
               type: item.type
@@ -474,9 +499,11 @@ var runWebAppServer = function () {
         });
 
         var program = {
+          format: "web-program-pre1",
           manifest: manifest,
           version: WebAppHashing.calculateClientHash(manifest, null, _.pick(
             __meteor_runtime_config__, 'PUBLIC_SETTINGS')),
+          cordovaCompatibilityVersions: clientJson.cordovaCompatibilityVersions,
           PUBLIC_SETTINGS: __meteor_runtime_config__.PUBLIC_SETTINGS
         };
 
@@ -484,9 +511,10 @@ var runWebAppServer = function () {
 
         // Serve the program as a string at /foo/<arch>/manifest.json
         // XXX change manifest.json -> program.json
-        staticFiles[path.join(urlPrefix, 'manifest.json')] = {
+        staticFiles[urlPrefix + getItemPathname('/manifest.json')] = {
           content: JSON.stringify(program),
-          cacheable: true,
+          cacheable: false,
+          hash: program.version,
           type: "json"
         };
       };
@@ -631,53 +659,83 @@ var runWebAppServer = function () {
   });
 
   app.use(function (req, res, next) {
-    if (! appUrl(req.url))
-      return next();
+    Fiber(function () {
+      if (!appUrl(req.url))
+        return next();
 
-    var headers = {
-      'Content-Type':  'text/html; charset=utf-8'
-    };
-    if (shuttingDown)
-      headers['Connection'] = 'Close';
+      var headers = {
+        'Content-Type': 'text/html; charset=utf-8'
+      };
+      if (shuttingDown)
+        headers['Connection'] = 'Close';
 
-    var request = WebApp.categorizeRequest(req);
+      var request = WebApp.categorizeRequest(req);
 
-    if (request.url.query && request.url.query['meteor_css_resource']) {
-      // In this case, we're requesting a CSS resource in the meteor-specific
-      // way, but we don't have it.  Serve a static css file that indicates that
-      // we didn't have it, so we can detect that and refresh.
-      headers['Content-Type'] = 'text/css; charset=utf-8';
-      res.writeHead(200, headers);
-      res.write(".meteor-css-not-found-error { width: 0px;}");
+      if (request.url.query && request.url.query['meteor_css_resource']) {
+        // In this case, we're requesting a CSS resource in the meteor-specific
+        // way, but we don't have it.  Serve a static css file that indicates that
+        // we didn't have it, so we can detect that and refresh.  Make sure
+        // that any proxies or CDNs don't cache this error!  (Normally proxies
+        // or CDNs are smart enough not to cache error pages, but in order to
+        // make this hack work, we need to return the CSS file as a 200, which
+        // would otherwise be cached.)
+        headers['Content-Type'] = 'text/css; charset=utf-8';
+        headers['Cache-Control'] = 'no-cache';
+        res.writeHead(200, headers);
+        res.write(".meteor-css-not-found-error { width: 0px;}");
+        res.end();
+        return undefined;
+      }
+
+      if (request.url.query && request.url.query['meteor_js_resource']) {
+        // Similarly, we're requesting a JS resource that we don't have.
+        // Serve an uncached 404. (We can't use the same hack we use for CSS,
+        // because actually acting on that hack requires us to have the JS
+        // already!)
+        headers['Cache-Control'] = 'no-cache';
+        res.writeHead(404, headers);
+        res.end("404 Not Found");
+        return undefined;
+      }
+
+      if (request.url.query && request.url.query['meteor_dont_serve_index']) {
+        // When downloading files during a Cordova hot code push, we need
+        // to detect if a file is not available instead of inadvertently
+        // downloading the default index page.
+        // So similar to the situation above, we serve an uncached 404.
+        headers['Cache-Control'] = 'no-cache';
+        res.writeHead(404, headers);
+        res.end("404 Not Found");
+        return undefined;
+      }
+
+      // /packages/asdfsad ... /__cordova/dafsdf.js
+      var pathname = parseurl(req).pathname;
+      var archKey = pathname.split('/')[1];
+      var archKeyCleaned = 'web.' + archKey.replace(/^__/, '');
+
+      if (!/^__/.test(archKey) || !_.has(archPath, archKeyCleaned)) {
+        archKey = WebApp.defaultArch;
+      } else {
+        archKey = archKeyCleaned;
+      }
+
+      var boilerplate;
+      try {
+        boilerplate = getBoilerplate(request, archKey);
+      } catch (e) {
+        Log.error("Error running template: " + e.stack);
+        res.writeHead(500, headers);
+        res.end();
+        return undefined;
+      }
+
+      var statusCode = res.statusCode ? res.statusCode : 200;
+      res.writeHead(statusCode, headers);
+      res.write(boilerplate);
       res.end();
       return undefined;
-    }
-
-    // /packages/asdfsad ... /__cordova/dafsdf.js
-    var pathname = connect.utils.parseUrl(req).pathname;
-    var archKey = pathname.split('/')[1];
-    var archKeyCleaned = 'web.' + archKey.replace(/^__/, '');
-
-    if (! /^__/.test(archKey) || ! _.has(archPath, archKeyCleaned)) {
-      archKey = WebApp.defaultArch;
-    } else {
-      archKey = archKeyCleaned;
-    }
-
-    var boilerplate;
-    try {
-      boilerplate = getBoilerplate(request, archKey);
-    } catch (e) {
-      Log.error("Error running template: " + e);
-      res.writeHead(500, headers);
-      res.end();
-      return undefined;
-    }
-
-    res.writeHead(200, headers);
-    res.write(boilerplate);
-    res.end();
-    return undefined;
+    }).run();
   });
 
   // Return 404 by default, if no other handlers serve this URL.
@@ -701,39 +759,6 @@ var runWebAppServer = function () {
   httpServer.on('request', WebApp._timeoutAdjustmentRequestCallback);
 
 
-  // For now, handle SIGHUP here.  Later, this should be in some centralized
-  // Meteor shutdown code.
-  process.on('SIGHUP', Meteor.bindEnvironment(function () {
-    shuttingDown = true;
-    // tell others with websockets open that we plan to close this.
-    // XXX: Eventually, this should be done with a standard meteor shut-down
-    // logic path.
-    httpServer.emit('meteor-closing');
-
-    httpServer.close(Meteor.bindEnvironment(function () {
-      if (proxy) {
-        try {
-          proxy.call('removeBindingsForJob', process.env.GALAXY_JOB);
-        } catch (e) {
-          Log.error("Error removing bindings: " + e.message);
-          process.exit(1);
-        }
-      }
-      process.exit(0);
-
-    }, "On http server close failed"));
-
-    // Ideally we will close before this hits.
-    Meteor.setTimeout(function () {
-      Log.warn("Closed by SIGHUP but one or more HTTP requests may not have finished.");
-      process.exit(1);
-    }, 5000);
-
-  }, function (err) {
-    console.log(err);
-    process.exit(1);
-  }));
-
   // start up app
   _.extend(WebApp, {
     connectHandlers: packageAndAppHandlers,
@@ -748,73 +773,22 @@ var runWebAppServer = function () {
         onListeningCallbacks.push(f);
       else
         f();
-    },
-    // Hack: allow http tests to call connect.basicAuth without making them
-    // Npm.depends on another copy of connect. (That would be fine if we could
-    // have test-only NPM dependencies but is overkill here.)
-    __basicAuth__: connect.basicAuth
+    }
   });
 
   // Let the rest of the packages (and Meteor.startup hooks) insert connect
   // middlewares and update __meteor_runtime_config__, then keep going to set up
   // actually serving HTML.
   main = function (argv) {
-    // main happens post startup hooks, so we don't need a Meteor.startup() to
-    // ensure this happens after the galaxy package is loaded.
-    var AppConfig = Package["application-configuration"].AppConfig;
-
     WebAppInternals.generateBoilerplate();
 
     // only start listening after all the startup code has run.
-    var localPort = parseInt(process.env.PORT) || 0;
+    var localPort = WebAppInternals.parsePort(process.env.PORT) || 0;
     var host = process.env.BIND_IP;
     var localIp = host || '0.0.0.0';
     httpServer.listen(localPort, localIp, Meteor.bindEnvironment(function() {
       if (process.env.METEOR_PRINT_ON_LISTEN)
         console.log("LISTENING"); // must match run-app.js
-      var proxyBinding;
-
-      AppConfig.configurePackage('webapp', function (configuration) {
-        if (proxyBinding)
-          proxyBinding.stop();
-        if (configuration && configuration.proxy) {
-          // TODO: We got rid of the place where this checks the app's
-          // configuration, because this wants to be configured for some things
-          // on a per-job basis.  Discuss w/ teammates.
-          proxyBinding = AppConfig.configureService(
-            "proxy",
-            "pre0",
-            function (proxyService) {
-              if (proxyService && ! _.isEmpty(proxyService)) {
-                var proxyConf;
-                // XXX Figure out a per-job way to specify bind location
-                // (besides hardcoding the location for ADMIN_APP jobs).
-                if (process.env.ADMIN_APP) {
-                  var bindPathPrefix = "";
-                  if (process.env.GALAXY_APP !== "panel") {
-                    bindPathPrefix = "/" + bindPathPrefix +
-                      encodeURIComponent(
-                        process.env.GALAXY_APP
-                      ).replace(/\./g, '_');
-                  }
-                  proxyConf = {
-                    bindHost: process.env.GALAXY_NAME,
-                    bindPathPrefix: bindPathPrefix,
-                    requiresAuth: true
-                  };
-                } else {
-                  proxyConf = configuration.proxy;
-                }
-                Log("Attempting to bind to proxy at " +
-                    proxyService);
-                WebAppInternals.bindToProxy(_.extend({
-                  proxyEndpoint: proxyService
-                }, proxyConf));
-              }
-            }
-          );
-        }
-      });
 
       var callbacks = onListeningCallbacks;
       onListeningCallbacks = null;
@@ -830,289 +804,6 @@ var runWebAppServer = function () {
 };
 
 
-var proxy;
-WebAppInternals.bindToProxy = function (proxyConfig) {
-  var securePort = proxyConfig.securePort || 4433;
-  var insecurePort = proxyConfig.insecurePort || 8080;
-  var bindPathPrefix = proxyConfig.bindPathPrefix || "";
-  // XXX also support galaxy-based lookup
-  if (!proxyConfig.proxyEndpoint)
-    throw new Error("missing proxyEndpoint");
-  if (!proxyConfig.bindHost)
-    throw new Error("missing bindHost");
-  if (!process.env.GALAXY_JOB)
-    throw new Error("missing $GALAXY_JOB");
-  if (!process.env.GALAXY_APP)
-    throw new Error("missing $GALAXY_APP");
-  if (!process.env.LAST_START)
-    throw new Error("missing $LAST_START");
-
-  // XXX rename pid argument to bindTo.
-  // XXX factor out into a 'getPid' function in a 'galaxy' package?
-  var pid = {
-    job: process.env.GALAXY_JOB,
-    lastStarted: +(process.env.LAST_START),
-    app: process.env.GALAXY_APP
-  };
-  var myHost = os.hostname();
-
-  WebAppInternals.usingDdpProxy = true;
-
-  // This is run after packages are loaded (in main) so we can use
-  // Follower.connect.
-  if (proxy) {
-    // XXX the concept here is that our configuration has changed and
-    // we have connected to an entirely new follower set, which does
-    // not have the state that we set up on the follower set that we
-    // were previously connected to, and so we need to recreate all of
-    // our bindings -- analogous to getting a SIGHUP and rereading
-    // your configuration file. so probably this should actually tear
-    // down the connection and make a whole new one, rather than
-    // hot-reconnecting to a different URL.
-    proxy.reconnect({
-      url: proxyConfig.proxyEndpoint
-    });
-  } else {
-    proxy = Package["follower-livedata"].Follower.connect(
-      proxyConfig.proxyEndpoint, {
-        group: "proxy"
-      }
-    );
-  }
-
-  var route = process.env.ROUTE;
-  var ourHost = route.split(":")[0];
-  var ourPort = +route.split(":")[1];
-
-  var outstanding = 0;
-  var startedAll = false;
-  var checkComplete = function () {
-    if (startedAll && ! outstanding)
-      Log("Bound to proxy.");
-  };
-  var makeCallback = function () {
-    outstanding++;
-    return function (err) {
-      if (err)
-        throw err;
-      outstanding--;
-      checkComplete();
-    };
-  };
-
-  // for now, have our (temporary) requiresAuth flag apply to all
-  // routes created by this process.
-  var requiresDdpAuth = !! proxyConfig.requiresAuth;
-  var requiresHttpAuth = (!! proxyConfig.requiresAuth) &&
-        (pid.app !== "panel" && pid.app !== "auth");
-
-  // XXX a current limitation is that we treat securePort and
-  // insecurePort as a global configuration parameter -- we assume
-  // that if the proxy wants us to ask for 8080 to get port 80 traffic
-  // on our default hostname, that's the same port that we would use
-  // to get traffic on some other hostname that our proxy listens
-  // for. Likewise, we assume that if the proxy can receive secure
-  // traffic for our domain, it can assume secure traffic for any
-  // domain! Hopefully this will get cleaned up before too long by
-  // pushing that logic into the proxy service, so we can just ask for
-  // port 80.
-
-  // XXX BUG: if our configuration changes, and bindPathPrefix
-  // changes, it appears that we will not remove the routes derived
-  // from the old bindPathPrefix from the proxy (until the process
-  // exits). It is not actually normal for bindPathPrefix to change,
-  // certainly not without a process restart for other reasons, but
-  // it'd be nice to fix.
-
-  _.each(routes, function (route) {
-    var parsedUrl = url.parse(route.url, /* parseQueryString */ false,
-                              /* slashesDenoteHost aka workRight */ true);
-    if (parsedUrl.protocol || parsedUrl.port || parsedUrl.search)
-      throw new Error("Bad url");
-    parsedUrl.host = null;
-    parsedUrl.path = null;
-    if (! parsedUrl.hostname) {
-      parsedUrl.hostname = proxyConfig.bindHost;
-      if (! parsedUrl.pathname)
-        parsedUrl.pathname = "";
-      if (! parsedUrl.pathname.indexOf("/") !== 0) {
-        // Relative path
-        parsedUrl.pathname = bindPathPrefix + parsedUrl.pathname;
-      }
-    }
-    var version = "";
-
-    var AppConfig = Package["application-configuration"].AppConfig;
-    version = AppConfig.getStarForThisJob() || "";
-
-
-    var parsedDdpUrl = _.clone(parsedUrl);
-    parsedDdpUrl.protocol = "ddp";
-    // Node has a hardcoded list of protocols that get '://' instead
-    // of ':'. ddp needs to be added to that whitelist. Until then, we
-    // can set the undocumented attribute 'slashes' to get the right
-    // behavior. It's not clear whether than is by design or accident.
-    parsedDdpUrl.slashes = true;
-    parsedDdpUrl.port = '' + securePort;
-    var ddpUrl = url.format(parsedDdpUrl);
-
-    var proxyToHost, proxyToPort, proxyToPathPrefix;
-    if (! _.has(route, 'forwardTo')) {
-      proxyToHost = ourHost;
-      proxyToPort = ourPort;
-      proxyToPathPrefix = parsedUrl.pathname;
-    } else {
-      var parsedFwdUrl = url.parse(route.forwardTo, false, true);
-      if (! parsedFwdUrl.hostname || parsedFwdUrl.protocol)
-        throw new Error("Bad forward url");
-      proxyToHost = parsedFwdUrl.hostname;
-      proxyToPort = parseInt(parsedFwdUrl.port || "80");
-      proxyToPathPrefix = parsedFwdUrl.pathname || "";
-    }
-
-    if (route.ddp) {
-      proxy.call('bindDdp', {
-        pid: pid,
-        bindTo: {
-          ddpUrl: ddpUrl,
-          insecurePort: insecurePort
-        },
-        proxyTo: {
-          tags: [version],
-          host: proxyToHost,
-          port: proxyToPort,
-          pathPrefix: proxyToPathPrefix + '/websocket'
-        },
-        requiresAuth: requiresDdpAuth
-      }, makeCallback());
-    }
-
-    if (route.http) {
-      proxy.call('bindHttp', {
-        pid: pid,
-        bindTo: {
-          host: parsedUrl.hostname,
-          port: insecurePort,
-          pathPrefix: parsedUrl.pathname
-        },
-        proxyTo: {
-          tags: [version],
-          host: proxyToHost,
-          port: proxyToPort,
-          pathPrefix: proxyToPathPrefix
-        },
-        requiresAuth: requiresHttpAuth
-      }, makeCallback());
-
-      // Only make the secure binding if we've been told that the
-      // proxy knows how terminate secure connections for us (has an
-      // appropriate cert, can bind the necessary port..)
-      if (proxyConfig.securePort !== null) {
-        proxy.call('bindHttp', {
-          pid: pid,
-          bindTo: {
-            host: parsedUrl.hostname,
-            port: securePort,
-            pathPrefix: parsedUrl.pathname,
-            ssl: true
-          },
-          proxyTo: {
-            tags: [version],
-            host: proxyToHost,
-            port: proxyToPort,
-            pathPrefix: proxyToPathPrefix
-          },
-          requiresAuth: requiresHttpAuth
-        }, makeCallback());
-      }
-    }
-  });
-
-  startedAll = true;
-  checkComplete();
-};
-
-// (Internal, unsupported interface -- subject to change)
-//
-// Listen for HTTP and/or DDP traffic and route it somewhere. Only
-// takes effect when using a proxy service.
-//
-// 'url' is the traffic that we want to route, interpreted relative to
-// the default URL where this app has been told to serve itself. It
-// may not have a scheme or port, but it may have a host and a path,
-// and if no host is provided the path need not be absolute. The
-// following cases are possible:
-//
-//   //somehost.com
-//     All incoming traffic for 'somehost.com'
-//   //somehost.com/foo/bar
-//     All incoming traffic for 'somehost.com', but only when
-//     the first two path components are 'foo' and 'bar'.
-//   /foo/bar
-//     Incoming traffic on our default host, but only when the
-//     first two path components are 'foo' and 'bar'.
-//   foo/bar
-//     Incoming traffic on our default host, but only when the path
-//     starts with our default path prefix, followed by 'foo' and
-//     'bar'.
-//
-// (Yes, these scheme-less URLs that start with '//' are legal URLs.)
-//
-// You can select either DDP traffic, HTTP traffic, or both. Both
-// secure and insecure traffic will be gathered (assuming the proxy
-// service is capable, eg, has appropriate certs and port mappings).
-//
-// With no 'forwardTo' option, the traffic is received by this process
-// for service by the hooks in this 'webapp' package. The original URL
-// is preserved (that is, if you bind "/a", and a user visits "/a/b",
-// the app receives a request with a path of "/a/b", not a path of
-// "/b").
-//
-// With 'forwardTo', the process is instead sent to some other remote
-// host. The URL is adjusted by stripping the path components in 'url'
-// and putting the path components in the 'forwardTo' URL in their
-// place. For example, if you forward "//somehost/a" to
-// "//otherhost/x", and the user types "//somehost/a/b" into their
-// browser, then otherhost will receive a request with a Host header
-// of "somehost" and a path of "/x/b".
-//
-// The routing continues until this process exits. For now, all of the
-// routes must be set up ahead of time, before the initial
-// registration with the proxy. Calling addRoute from the top level of
-// your JS should do the trick.
-//
-// When multiple routes are present that match a given request, the
-// most specific route wins. When routes with equal specificity are
-// present, the proxy service will distribute the traffic between
-// them.
-//
-// options may be:
-// - ddp: if true, the default, include DDP traffic. This includes
-//   both secure and insecure traffic, and both websocket and sockjs
-//   transports.
-// - http: if true, the default, include HTTP/HTTPS traffic.
-// - forwardTo: if provided, should be a URL with a host, optional
-//   path and port, and no scheme (the scheme will be derived from the
-//   traffic type; for now it will always be a http or ws connection,
-//   never https or wss, but we could add a forwardSecure flag to
-//   re-encrypt).
-var routes = [];
-WebAppInternals.addRoute = function (url, options) {
-  options = _.extend({
-    ddp: true,
-    http: true
-  }, options || {});
-
-  if (proxy)
-    // In the future, lift this restriction
-    throw new Error("Too late to add routes");
-
-  routes.push(_.extend({ url: url }, options));
-};
-
-// Receive traffic on our default URL.
-WebAppInternals.addRoute("");
-
 runWebAppServer();
 
 
@@ -1127,9 +818,18 @@ WebAppInternals.setInlineScriptsAllowed = function (value) {
   WebAppInternals.generateBoilerplate();
 };
 
-WebAppInternals.setBundledJsCssPrefix = function (prefix) {
-  bundledJsCssPrefix = prefix;
+
+WebAppInternals.setBundledJsCssUrlRewriteHook = function (hookFn) {
+  bundledJsCssUrlRewriteHook = hookFn;
   WebAppInternals.generateBoilerplate();
+};
+
+WebAppInternals.setBundledJsCssPrefix = function (prefix) {
+  var self = this;
+  self.setBundledJsCssUrlRewriteHook(
+    function (url) {
+      return prefix + url;
+  });
 };
 
 // Packages can call `WebAppInternals.addStaticJs` to specify static

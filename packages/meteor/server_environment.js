@@ -1,30 +1,23 @@
+meteorEnv = {
+  NODE_ENV: process.env.NODE_ENV || "production",
+  TEST_METADATA: process.env.TEST_METADATA || "{}"
+};
+
+if (typeof __meteor_runtime_config__ === "object") {
+  __meteor_runtime_config__.meteorEnv = meteorEnv;
+}
+
 Meteor = {
+  isProduction: meteorEnv.NODE_ENV === "production",
+  isDevelopment: meteorEnv.NODE_ENV !== "production",
   isClient: false,
-  isServer: true
+  isServer: true,
+  isCordova: false
 };
 
 Meteor.settings = {};
 
-if (process.env.APP_CONFIG) {
-  // put settings from the app configuration in the settings.  Don't depend on
-  // the Galaxy package for now, to avoid silly loops.
- try {
-   var appConfig = JSON.parse(process.env.APP_CONFIG);
-   if (!appConfig.settings) {
-     Meteor.settings = {};
-   } else if (typeof appConfig.settings === "string") {
-     Meteor.settings = JSON.parse(appConfig.settings);
-   } else {
-     // Old versions of Galaxy may store settings in MongoDB as objects. Newer
-     // versions store it as strings (so that we aren't restricted to
-     // MongoDB-compatible objects). This line makes it work on older Galaxies.
-     // XXX delete this eventually
-     Meteor.settings = appConfig.settings;
-   }
-  } catch (e) {
-    throw new Error("Settings from APP_CONFIG are not valid JSON: " + process.env.APP_CONFIG);
-  }
-} else if (process.env.METEOR_SETTINGS) {
+if (process.env.METEOR_SETTINGS) {
   try {
     Meteor.settings = JSON.parse(process.env.METEOR_SETTINGS);
   } catch (e) {
@@ -32,8 +25,17 @@ if (process.env.APP_CONFIG) {
   }
 }
 
-// Push a subset of settings to the client.
-if (Meteor.settings && Meteor.settings.public &&
-    typeof __meteor_runtime_config__ === "object") {
+// Make sure that there is always a public attribute
+// to enable Meteor.settings.public on client
+if (! Meteor.settings.public) {
+    Meteor.settings.public = {};
+}
+
+// Push a subset of settings to the client.  Note that the way this
+// code is written, if the app mutates `Meteor.settings.public` on the
+// server, it also mutates
+// `__meteor_runtime_config__.PUBLIC_SETTINGS`, and the modified
+// settings will be sent to the client.
+if (typeof __meteor_runtime_config__ === "object") {
   __meteor_runtime_config__.PUBLIC_SETTINGS = Meteor.settings.public;
 }

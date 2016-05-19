@@ -487,7 +487,7 @@ Tinytest.add("blaze - render - templates and views", function (test) {
       buf.push('created ' + Template.currentData());
     };
 
-    myTemplate.rendered = function () {
+    myTemplate.onRendered(function () {
       test.isFalse(Tracker.active);
       var nodeDescr = function (node) {
         if (node.nodeType === 8) // comment
@@ -510,12 +510,12 @@ Tinytest.add("blaze - render - templates and views", function (test) {
       buf.push('dom-' + Template.currentData() +
                ' is ' + nodeDescr(start) +'..' +
                nodeDescr(end));
-    };
+    });
 
-    myTemplate.destroyed = function () {
+    myTemplate.onDestroyed(function () {
       test.isFalse(Tracker.active);
       buf.push('destroyed ' + Template.currentData());
-    };
+    });
 
     var makeView = function () {
       var number = counter++;

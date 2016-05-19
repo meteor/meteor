@@ -1,13 +1,14 @@
-var selftest = require('../selftest.js');
-var Sandbox = selftest.Sandbox;
-var files = require('../files.js');
-var testUtils = require('../test-utils.js');
-var utils = require('../utils.js');
 var _= require('underscore');
-var packageClient = require("../package-client.js");
+
+var selftest = require('../tool-testing/selftest.js');
+var Sandbox = selftest.Sandbox;
+var files = require('../fs/files.js');
+var testUtils = require('../tool-testing/test-utils.js');
+var utils = require('../utils/utils.js');
+var packageClient = require('../packaging/package-client.js');
+var catalog = require('../packaging/catalog/catalog.js');
 
 var username = "test";
-var password = "testtest";
 
 // Returns a random package name.
 var randomizedPackageName = function (username, start) {
@@ -17,21 +18,13 @@ var randomizedPackageName = function (username, start) {
   return username + ":" + startStr + utils.randomToken().substring(0, 6);
 }
 
-// Returns a random release name.
-var randomizedReleaseName = function (username) {
-  // We often use package names in long, wrapped string output, so having them
-  // be the same length is very useful.
-  return username + ":TEST-" +
-    utils.randomToken().substring(0, 6).toUpperCase();
-}
-
 // Given a sandbox, that has the app as its currend cwd, read the packages file
 // and check that it contains exactly the packages specified, in order.
 //
 // sand: a sandbox, that has the main app directory as its cwd.
 // packages: an array of packages in order. Packages can be of the form:
 //
-//    meteor-platform (ie: name), in which case this will match any
+//    meteor-base (ie: name), in which case this will match any
 //    version of that package as long as it is included.
 //
 //    awesome-pack@1.0.0 (ie: name@version) to match that name at that
@@ -41,7 +34,9 @@ var checkPackages = selftest.markStack(function(sand, packages) {
   var lines = sand.read(".meteor/packages").split("\n");
   var i = 0;
   _.each(lines, function(line) {
-    if (!line) return;
+    if (!line) {
+      return;
+    }
     // If the specified package contains an @ sign, then it has a version
     // number, so we should match everything.
     if (packages[i].split('@').length > 1) {
@@ -63,7 +58,7 @@ var checkPackages = selftest.markStack(function(sand, packages) {
 // sand: a sandbox, that has the main app directory as its cwd.
 // packages: an array of packages in order. Packages can be of the form:
 //
-//    meteor-platform (ie: name), in which case this will match any
+//    meteor-base (ie: name), in which case this will match any
 //    version of that package as long as it is included. This is for packages
 //    external to the app, since we don't want this test to fail when we push a
 //    new version.
@@ -76,7 +71,9 @@ var checkVersions = selftest.markStack(function(sand, packages) {
   var lines = sand.read(".meteor/versions").split("\n");
   var depend = {};
   _.each(lines, function(line) {
-    if (!line) return;
+    if (!line) {
+      return;
+    }
     // Packages are stored of the form foo@1.0.0, so this should give us an
     // array [foo, 1.0.0].
     var split = line.split('@');
@@ -95,72 +92,6 @@ var checkVersions = selftest.markStack(function(sand, packages) {
     i++;
   });
   selftest.expectEqual(packages.length, i);
-});
-
-// Takes in a remote catalog. Returns an object that can sort of immitate the
-// catalog. We don't bother to copy all of the information for memory/efficiency
-// reasons; the new 'catalog' has the following methods, which correspond to the
-// same methods on the normal catalog.
-//
-//  getAllPackageNames () - list of package names
-//  getPackage (p) - given a package name, return its record
-//  getSortedVersions (p) - given a package name, return a sorted list of its versions
-//  getAllReleaseTracks () - list of release tracks
-//  getSortedRecommendedReleaseVersions (t) - given a track name, get (see method name)
-//  getReleaseVersion (t, v) - given track & version, return the document record
-var DataStub = function (remoteCatalog) {
-  var self = this;
-  var packageNames = remoteCatalog.getAllPackageNames();
-  self.packages = {};
-  _.each(packageNames, function (p) {
-    var versions = remoteCatalog.getSortedVersions(p);
-    var record = remoteCatalog.getPackage(p);
-    self.packages[p] = { versions: versions, record: record };
-  });
-  var releaseTracks = remoteCatalog.getAllReleaseTracks();
-  self.releases = {};
-  _.each(releaseTracks, function (t) {
-    var versions =
-          remoteCatalog.getSortedRecommendedReleaseVersions(t);
-    var records = {};
-    _.each(versions, function (v) {
-      records[v] = remoteCatalog.getReleaseVersion(t, v);
-    });
-    self.releases[t] = { versions: versions, records: records };
-  });
-};
-
-_.extend(DataStub.prototype, {
-  getAllPackageNames: function () {
-    return _.keys(this.packages);
-  },
-  getSortedVersions: function (p) {
-    var self = this;
-    var rec = self.packages[p];
-    if (!rec) return null;
-    return rec.versions;
-  },
-  getPackage: function (p) {
-    var self = this;
-    var rec = self.packages[p];
-    if (!rec) return null;
-    return rec.record;
-  },
-  getAllReleaseTracks: function () {
-    return _.keys(this.releases);
-  },
-  getSortedRecommendedReleaseVersions: function (t) {
-    var self = this;
-    var rec = self.releases[t];
-    if (!rec) return null;
-    return rec.versions;
-  },
-  getReleaseVersion: function (t, v) {
-    var self = this;
-    var rec = self.releases[t];
-    if (!rec) return null;
-    return rec.records[v];
-  }
 });
 
 // Add packages to an app. Change the contents of the packages and their
@@ -183,7 +114,7 @@ selftest.define("change packages during hot code push", [], function () {
   run.match("running at");
   run.match("localhost");
   // Add the local package 'say-something'. It should print a message.
-  s.write(".meteor/packages", "meteor-platform \n say-something");
+  s.write(".meteor/packages", "meteor-base \n say-something");
   run.waitSecs(3);
   run.match("initial");
 
@@ -195,7 +126,7 @@ selftest.define("change packages during hot code push", [], function () {
   run.match("another");
 
   // Add a local package depends-on-plugin.
-  s.write(".meteor/packages", "meteor-platform \n depends-on-plugin");
+  s.write(".meteor/packages", "meteor-base \n depends-on-plugin");
   run.waitSecs(2);
   run.match("foobar");
 
@@ -207,28 +138,19 @@ selftest.define("change packages during hot code push", [], function () {
   run.match("edit");
   run.match("foobar!");
 
-  // In a local package, add a dependency on a different package.  In this case,
-  // package2.js contains an onUse call that tells it to use accounts-base (a
-  // core package that is not already included in the app)
-  s.cp('packages/contains-plugin/package2.js',
-         'packages/contains-plugin/package.js');
-  run.waitSecs(2);
-  run.match("edit");
-  run.match("foobar!");
-
   // Check that we are watching the versions file, as well as the packages file.
   s.unlink('.meteor/versions');
   run.waitSecs(10);
   run.match("restarted");
 
   // Switch back to say-something for a moment.
-  s.write(".meteor/packages", "meteor-platform \n say-something");
+  s.write(".meteor/packages", "meteor-base \n say-something");
   run.waitSecs(3);
   run.match("another");
   run.stop();
 
   s.rename('packages/say-something', 'packages/shout-something');
-  s.write(".meteor/packages", "meteor-platform \n shout-something");
+  s.write(".meteor/packages", "meteor-base \n shout-something");
   s.cd("packages/shout-something", function () {
     s.write("foo.js", "console.log(\"louder\");");
   });
@@ -247,7 +169,7 @@ selftest.define("change packages during hot code push", [], function () {
     s.write("package.js", "]");
     run.waitSecs(3);
     run.match("=> Errors prevented startup");
-    run.match("package.js:1:1: Unexpected token ]");
+    run.match("package.js:1: Unexpected token");
     run.match("Waiting for file change");
 
     s.write("package.js", packageJs);
@@ -259,8 +181,7 @@ selftest.define("change packages during hot code push", [], function () {
 });
 
 // Add packages through the command line. Make sure that the correct set of
-// changes is reflected in .meteor/packages, .meteor/versions and list. Make
-// sure that debugOnly packages don't show up in production mode.
+// changes is reflected in .meteor/packages, .meteor/versions and list.
 selftest.define("add packages to app", [], function () {
   var s = new Sandbox();
   var run;
@@ -290,7 +211,7 @@ selftest.define("add packages to app", [], function () {
   run.expectExit(0);
 
   checkPackages(s,
-                ["meteor-platform", "accounts-base"]);
+                ["meteor-base", "accounts-base"]);
 
   // Adding the nonexistent version now should still say "no such
   // version". Regression test for
@@ -308,26 +229,26 @@ selftest.define("add packages to app", [], function () {
   run.expectExit(0);
 
   checkPackages(s,
-                ["meteor-platform", "accounts-base",  "say-something@1.0.0"]);
+                ["meteor-base", "accounts-base",  "say-something@1.0.0"]);
 
   run = s.run("add", "depends-on-plugin");
   run.match(/depends-on-plugin.*added,/);
   run.expectExit(0);
 
   checkPackages(s,
-                ["meteor-platform", "accounts-base",
+                ["meteor-base", "accounts-base",
                  "say-something@1.0.0", "depends-on-plugin"]);
 
   checkVersions(s,
                 ["accounts-base",  "depends-on-plugin",
-                 "say-something",  "meteor-platform",
+                 "say-something",  "meteor-base",
                  "contains-plugin@1.1.0"]);
 
   run = s.run("remove", "say-something");
   run.match("say-something: removed dependency");
   checkVersions(s,
                 ["accounts-base",  "depends-on-plugin",
-                 "meteor-platform",
+                 "meteor-base",
                  "contains-plugin"]);
 
   run = s.run("remove", "depends-on-plugin");
@@ -337,10 +258,10 @@ selftest.define("add packages to app", [], function () {
 
   checkVersions(s,
                 ["accounts-base",
-                 "meteor-platform"]);
+                 "meteor-base"]);
   run = s.run("list");
   run.match("accounts-base");
-  run.match("meteor-platform");
+  run.match("meteor-base");
 
   // Add a description-less package. Check that no weird things get
   // printed (like "added no-description: undefined").
@@ -348,15 +269,25 @@ selftest.define("add packages to app", [], function () {
   run.match("no-description\n");
   run.expectEnd();
   run.expectExit(0);
+});
 
-  // Add a debugOnly package. It should work during a normal run, but print
+selftest.define("add debugOnly and prodOnly packages", [], function () {
+  var s = new Sandbox();
+  var run;
+
+  // Starting a run
+  s.createApp("myapp", "package-tests");
+  s.cd("myapp");
+  s.set("METEOR_OFFLINE_CATALOG", "t");
+
+    // Add a debugOnly package. It should work during a normal run, but print
   // nothing in production mode.
   run = s.run("add", "debug-only");
   run.match("debug-only");
   run.expectExit(0);
 
   s.mkdir("server");
-  s.write("server/debug.js",
+  s.write("server/exit-test.js",
           "process.exit(global.DEBUG_ONLY_LOADED ? 234 : 235)");
 
   run = s.run("--once");
@@ -366,7 +297,38 @@ selftest.define("add packages to app", [], function () {
   run = s.run("--once", "--production");
   run.waitSecs(15);
   run.expectExit(235);
+
+  // Add prod-only package, which sets GLOBAL.PROD_ONLY_LOADED.
+  run = s.run("add", "prod-only");
+  run.match("prod-only");
+  run.expectExit(0);
+
+  s.mkdir("server");
+  s.write("server/exit-test.js", // overwrite
+          "process.exit(global.PROD_ONLY_LOADED ? 234 : 235)");
+
+  run = s.run("--once");
+  run.waitSecs(15);
+  run.expectExit(235);
+
+  run = s.run("--once", "--production");
+  run.waitSecs(15);
+  run.expectExit(234);
 });
+
+selftest.define("add package with both debugOnly and prodOnly", [], function () {
+  var s = new Sandbox();
+  var run;
+
+  // Add an app with a package with prodOnly and debugOnly set (an error)
+  s.createApp("myapp", "debug-only-test", {dontPrepareApp: true});
+  s.cd("myapp");
+  run = s.run("--prepare-app");
+  run.waitSecs(20);
+  run.matchErr("can't have more than one of: debugOnly, prodOnly, testOnly");
+  run.expectExit(1);
+});
+
 
 // Add a package that adds files to specific client architectures.
 selftest.define("add packages client archs", function (options) {
@@ -383,7 +345,7 @@ selftest.define("add packages client archs", function (options) {
     var outerRun = s.run("add", "say-something-client-targets");
     outerRun.match(/say-something-client-targets.*added,/);
     outerRun.expectExit(0);
-    checkPackages(s, ["meteor-platform", "say-something-client-targets"]);
+    checkPackages(s, ["meteor-base", "say-something-client-targets"]);
 
     var expectedLogNum = 0;
     s.testWithAllClients(function (run) {
@@ -407,437 +369,17 @@ selftest.define("add packages client archs", function (options) {
   runTestWithArgs("browser", [], 3000);
 });
 
-// Removes the local data.json file from disk.
-var cleanLocalCache = function () {
-  var config = require("../config.js");
-  var storage =  config.getPackageStorage();
-  if (files.exists(storage)) {
-    files.unlink(storage);
-  }
-};
-
-var publishReleaseInNewTrack = selftest.markStack(function (s, releaseTrack, tool, packages) {
-  var relConf = {
-    track: releaseTrack,
-    version: "0.9",
-    recommended: "true",
-    description: "a test release",
-    tool: tool + "@1.0.0",
-    packages: packages
-  };
-  s.write("release.json", JSON.stringify(relConf, null, 2));
-  var run = s.run("publish-release", "release.json", "--create-track");
-  run.waitSecs(15);
-  run.match("Done");
-  run.expectExit(0);
-});
-
-// Add packages through the command line, and make sure that the correct set of
-// changes is reflected in .meteor/packages, .meteor/versions and list
-selftest.define("sync local catalog", ["slow", "net", "test-package-server"],  function () {
-  selftest.fail("this test is broken and breaks other tests by deleting their catalog.");
-  return;
-
-
-  var s = new Sandbox();
-  var run;
-
-  testUtils.login(s, username, password);
-  var packageName = randomizedPackageName(username);
-  var fullPackageName =  packageName + "-a";
-  var releaseTrack = randomizedReleaseName(username);
-
-  // First test -- pretend that the user has downloaded meteor for the purpose
-  // of running a package or an app. Create a package. Clean out the
-  // data.json, then try to do things with them.
-
-  createAndPublishPackage(s, fullPackageName);
-
-  // Publish a release.  This release is super-fake: the tool is a package that
-  // is not actually a tool, for example. That's OK for our purposes for now,
-  // because we only care about the tool version if we run an app from it.
-  var packages = {};
-  packages[fullPackageName] = "1.0.0";
-  publishReleaseInNewTrack(s, releaseTrack, fullPackageName /*tool*/, packages);
-
-  // Create a package that has a versionsFrom for the just-published release.
-  var newPack = packageName + "-b";
-  s.createPackage(newPack, "package-of-two-versions");
-  s.cd(newPack, function() {
-    var packOpen = s.read("package.js");
-    packOpen = packOpen + "\nPackage.onUse(function(api) { \n" +
-      "api.versionsFrom(\"" + releaseTrack + "@0.9\");\n" +
-      "api.use(\"" + fullPackageName + "\"); });";
-    s.write("package.js", packOpen);
-  });
-
-  // Clear the local data cache by deleting the data.json file that we are
-  // reading our package data from. We now have no data about server contents,
-  // including the release that we just published, so we have to sync to the
-  // server to get that information.
-  cleanLocalCache();
-
-  // Try to publish the package. Since the package references the release that
-  // we just published, it needs to resync with the server in order to be able
-  // to compile itself.
-  s.cd(newPack, function() {
-    run = s.run("publish", "--create");
-    run.waitSecs(20);
-    run.match("Done");
-    run.expectExit(0);
-  });
-
-  // Part 2.
-  // Make an app. It is basically an app.
-  cleanLocalCache();
-  run = s.run("create", "testApp");
-  run.waitSecs(10);
-  run.expectExit(0);
-
-  // Remove data.json again.
-  cleanLocalCache();
-
-  // Add our newly-created package to the app. That package only exists on the
-  // server, so we need to sync to get it.
-  s.cd("testApp", function () {
-    run = s.run("add", newPack);
-    run.waitSecs(5);
-    var match1 = run.match(/  added .*-([ab]) at version 1.0.0/);
-    var match2 = run.match(/  added .*-([ab]) at version 1.0.0/);
-    // the lines should be different:
-    selftest.expectEqual(match1[1] !== match2[1], true);
-    run.match("Test package");
-    run.expectExit(0);
-
-    // Run the app!
-    run = s.run();
-    run.waitSecs(15);
-    run.match("running at");
-    run.match("localhost");
-    run.stop();
-
-    // Remove data.json; run again! Make sure that we sync, because we are using
-    // a package that we don't know about. This is a pretty good imitation of
-    // the following workflow: you check out your friend's app from github, then
-    // run your newly installed meteor. So, clearly, it should not fail.
-    cleanLocalCache();
-    run = s.run();
-    run.waitSecs(15);
-    run.match("running at");
-    run.match("localhost");
-    run.stop();
-  });
-
-});
-
 // `packageName` should be a full package name (i.e. <username>:<package
 // name>), and the sandbox should be logged in as that username.
 var createAndPublishPackage = selftest.markStack(function (s, packageName) {
-  s.createPackage(packageName, "package-of-two-versions");
-  s.cd(packageName, function (){
+  var packageDirName = "package-of-two-versions";
+  s.createPackage(packageDirName, packageName, "package-of-two-versions");
+  s.cd(packageDirName, function (){
     var run = s.run("publish", "--create");
     run.waitSecs(25);
     run.expectExit(0);
   });
-});
-
-selftest.define("release track defaults to METEOR",
-                ["net", "test-package-server", "checkout"], function () {
-
-  var s = new Sandbox();
-  testUtils.login(s, username, password);
-  var fullPackageName = randomizedPackageName(username);
-  var releaseVersion = utils.randomToken();
-
-  // Create a package that has a versionsFrom for the just-published
-  // release, but without the release track present in the call to
-  // `versionsFrom`. This implies that it should be prefixed
-  // by "METEOR@"
-  var newPack = fullPackageName;
-  s.createPackage(newPack, "package-of-two-versions");
-  s.cd(newPack, function() {
-    var packOpen = s.read("package.js");
-    packOpen = packOpen + "\nPackage.onUse(function(api) { \n" +
-      "api.versionsFrom(\"" + releaseVersion + "\");\n" +
-      "api.use(\"" + fullPackageName + "\"); });";
-    s.write("package.js", packOpen);
-  });
-
-  // Try to publish the package. The error message should demonstrate
-  // that we indeed default to the METEOR release track when not
-  // specified.
-  s.cd(newPack, function() {
-    var run = s.run("publish", "--create");
-    run.waitSecs(20);
-    run.matchErr("Unknown release METEOR@" + releaseVersion);
-    run.expectExit(1);
-  });
-});
-
-//
-// THIS TEST RELIES ON THE TEST SERVER HAVING THE SAME RELEASE AS THE PRODUCTION
-// SERVER. YOU *CAN* RUN IT FROM RELEASE IFF YOU PUBLISH A CORRESPONDING RELEASE
-// TO THE TEST SERVER. (XXX: fix this post-0.9.0)
-//
-// XXX: This test is going to take progressively more time as we run more
-// tests, and perhaps checks too much information. We should consider
-// rethinking it in the future.
-selftest.define("update server package data unit test",
-                ["net", "test-package-server", "checkout", "slow"],
-                function () {
-  var s = new Sandbox();
-  var run;
-
-  var packageStorageFileDir = files.mkdtemp("update-server-package-data");
-
-  var rC = require('../catalog-remote.js');
-  var config = require('../config.js');
-  var packageStorage = new rC.RemoteCatalog();
-  var packageStorageFile = config.getPackageStorage({
-    root: packageStorageFileDir,
-    serverUrl: s.env.METEOR_PACKAGE_SERVER_URL
-  });
-  packageStorage.initialize({
-    packageStorage : packageStorageFile,
-    // Don't let this catalog refresh: we do that manually, and in any case the
-    // catalog isn't smart enough to refresh with the right URL.
-    offline: true
-  });
-  testUtils.login(s, username, password);
-
-  // Get the current data from the server. Once we publish new packages,
-  // we'll check that all this data still appears on disk and hasn't
-  // been overwritten.
-  packageClient.updateServerPackageData(packageStorage, {
-    packageServerUrl: selftest.testPackageServerUrl
-  });
-
-  var oldStorage = new DataStub(packageStorage);
-
-  var newPackageNames = [];
-  // Publish more than a (small) page worth of packages. When we pass the
-  // `useShortPages` option to updateServerPackageData, the server will send 3
-  // records at a time instead of 100, so this is more than a page.
-  _.times(5, function (i) {
-    var packageName = randomizedPackageName(username);
-    createAndPublishPackage(s, packageName);
-    newPackageNames.push(packageName);
-  });
-
-  packageClient.updateServerPackageData(packageStorage, {
-    packageServerUrl: selftest.testPackageServerUrl,
-    useShortPages: true
-  });
-
-  var packages = oldStorage.getAllPackageNames();
-  _.each(packages, function (p) {
-    // We could be more pedantic about comparing all the records, but it
-    // is a significant effort, time-wise to do that.
-    selftest.expectEqual(
-      packageStorage.getPackage(p), oldStorage.getPackage(p));
-    selftest.expectEqual(
-      packageStorage.getSortedVersions(p),
-      oldStorage.getSortedVersions(p));
-  });
-  var releaseTracks = oldStorage.getAllReleaseTracks;
-  _.each(releaseTracks, function (t) {
-    _.each(oldStorage.getSortedRecommendedReleaseVersions(t),
-           function (v) {
-             selftest.expectEqual(
-               packageStorage.getReleaseVersion(t, v),
-               oldStorage.getReleaseVersion(t, v));
-           });
-  });
-
-  // Check that our newly published packages appear in newData and on disk.
-  _.each(newPackageNames, function (name) {
-    var found = packageStorage.getPackage(name);
-    selftest.expectEqual(!! found, true);
-  });
-});
-
-
-// Add packages to an app. Change the contents of the packages and their
-// dependencies, make sure that the app still refreshes.
-selftest.define("package specifying a name",
-    ['test-package-server', "checkout"], function () {
-  var s = new Sandbox();
-  var run;
-
-  // Starting a run; introducing a new package overriding a core package.
-  s.createApp("myapp", "package-tests");
-  s.cd("myapp");
-  run = s.run("add", "accounts-base");
-  run.waitSecs(40);
-  run.match("accounts-base");
-
-  run = s.run();
-  run.waitSecs(5);
-  run.match("myapp");
-  run.match("proxy");
-  run.match("MongoDB.\n");
-  run.waitSecs(10);
-  run.match("running at");
-  run.match("localhost");
-
-  s.cd("packages", function () {
-    s.createPackage("ac-fake", "fake-accounts-base");
-  });
-
-  run.waitSecs(5);
-  run.match("overriding accounts-base!");
-  run.stop();
-
-  run = s.run('list');
-  run.match("accounts-base");
-  run.match("meteor");
-
-  // What about test-packages?
-  s.cd('packages');
-  s.cd('ac-fake');
-  // note: use test-in-console because test-in-browser depends on bootstrap
-  // and we don't need an atmosphere dependency.
-  run = s.run('test-packages', './', '--driver-package=test-in-console');
-  run.waitSecs(15);
-  run.match("overriding accounts-base!");
-  run.stop();
-});
-
-selftest.define("talk to package server with expired or no accounts token",
-                ['net', 'test-package-server', 'slow'], function () {
-  var s = new Sandbox();
-  testUtils.login(s, "test", "testtest");
-
-  // Revoke our credential by logging out.
-  var session = s.readSessionFile();
-  testUtils.logout(s);
-
-  testUtils.login(s, "testtest", "testtest");
-  var packageName = "testtest:" + utils.randomToken();
-  createAndPublishPackage(s, packageName);
-  testUtils.logout(s);
-
-  // When we are not logged in, we should get prompted to log in when we
-  // run 'meteor admin maintainers --add'.
-  var run = s.run("admin", "maintainers", packageName,
-                  "--add", "foo");
-  run.waitSecs(15);
-  run.matchErr("Username:");
-  run.write("test\n");
-  run.matchErr("Password:");
-  run.write("testtest\n");
-  run.waitSecs(15);
-  // The 'test' user should not be a maintainer of
-  // meteor-platform. So this command should fail.
-  run.matchErr("You are not an authorized maintainer");
-  run.expectExit(1);
-
-  // Now restore our previous session, so that we now have an expired
-  // accounts token.
-  s.writeSessionFile(session);
-
-  run = s.run("admin", "maintainers", packageName, "--add", "foo");
-  run.waitSecs(15);
-  run.matchErr("have been logged out");
-  run.matchErr("Please log in");
-  run.matchErr("Username");
-  run.write("test\n");
-  run.matchErr("Password:");
-  run.write("testtest\n");
-  run.waitSecs(15);
-
-  run.matchErr("You are not an authorized maintainer");
-  run.expectExit(1);
-});
-
-// The cwd of 's' should be a package directory (i.e. with a package.js
-// file). Pass 'expectAuthorizationFailure' if you expect the publish
-// command to fail because the currently logged-in user is not an
-// authorized maintainer of the package.
-var changeVersionAndPublish = function (s, expectAuthorizationFailure) {
-  var packageJs = s.read("package.js");
-  // XXX Hack
-  var versionMatch = packageJs.match(/version: \"(\d\.\d\.\d)\"/);
-  if (! versionMatch) {
-    selftest.fail("package.js does not match version field: " + packageJs);
-  }
-  var version = versionMatch[1];
-  var versionParts = version.split(".");
-  versionParts[0] = parseInt(versionParts[0]) + 1;
-  packageJs = packageJs.replace(version, versionParts.join("."));
-  s.write("package.js", packageJs);
-
-  var run = s.run("publish");
-  run.waitSecs(120);
-  if (expectAuthorizationFailure) {
-    run.matchErr("not an authorized maintainer");
-    run.expectExit(1);
-  } else {
-    run.match("Published");
-    run.expectExit(0);
-  }
-};
-
-selftest.define("packages with organizations",
-    ["net", "test-package-server", "slow"], function () {
-  var s = new Sandbox();
-  testUtils.login(s, "test", "testtest");
-
-  var orgName = testUtils.createOrganization("test", "testtest");
-
-  // Publish a package with 'orgName' as the prefix.
-  var packageName = utils.randomToken();
-  var fullPackageName = orgName + ":" + packageName;
-  createAndPublishPackage(s, fullPackageName);
-  s.cd(fullPackageName);
-
-  // 'test' should be a maintainer, as well as 'testtest', once
-  // 'testtest' is added to the org.
-  changeVersionAndPublish(s);
-  testUtils.login(s, "testtest", "testtest");
-  changeVersionAndPublish(s, true /* expect authorization failure */);
-  testUtils.login(s, "test", "testtest");
-  var run = s.run("admin", "members", orgName, "--add", "testtest");
-  run.waitSecs(15);
-  run.expectExit(0);
-  testUtils.login(s, "testtest", "testtest");
-  changeVersionAndPublish(s);
-
-  // Removing 'orgName' as a maintainer should fail.
-  run = s.run("admin", "maintainers", fullPackageName, "--remove", orgName);
-  run.waitSecs(15);
-  run.matchErr("remove the maintainer in the package");
-  run.expectExit(1);
-
-  // Publish a package with 'test' as the prefix.
-  s.cd("..");
-  testUtils.login(s, "test", "testtest");
-  fullPackageName = "test:" + utils.randomToken();
-  createAndPublishPackage(s, fullPackageName);
-  s.cd(fullPackageName);
-
-  // Add 'orgName' as a maintainer.
-  run = s.run("admin", "maintainers", fullPackageName, "--add", orgName);
-  run.waitSecs(15);
-  run.match("The maintainers for " + fullPackageName + " are");
-  run.match(orgName);
-  run.expectExit(0);
-
-  // 'testtest' should now be authorized.
-  testUtils.login(s, "testtest", "testtest");
-  changeVersionAndPublish(s);
-
-  // Remove 'orgName' as a maintainer: 'testtest' should no longer be
-  // authorized.
-  testUtils.login(s, "test", "testtest");
-  run = s.run("admin", "maintainers", fullPackageName, "--remove", orgName);
-  run.waitSecs(15);
-  run.match("The maintainers for " + fullPackageName + " are");
-  run.forbid(orgName);
-  run.expectExit(0);
-
-  testUtils.login(s, "testtest", "testtest");
-  changeVersionAndPublish(s, true /* expect authorization failure */);
+  return packageDirName;
 });
 
 selftest.define("add package with no builds", ["net"], function () {
@@ -851,19 +393,22 @@ selftest.define("add package with no builds", ["net"], function () {
   var run = s.run("add", "glasser:binary-package-with-no-builds");
   run.waitSecs(10);
   run.matchErr("glasser:binary-package-with-no-builds@1.0.0");
-  run.matchErr("No compatible build found");
+  run.matchErr("No compatible binary build found");
   run.expectExit(1);
 });
 
 selftest.define("package skeleton creates correct versionsFrom", function () {
   var s = new Sandbox({ warehouse: { v1: { recommended: true } } });
-  var fullPackageName = "test:" + utils.randomToken();
+  var token = utils.randomToken();
+  var fullPackageName = "test:" + token;
+  var fsPackageName = token;
 
   var run = s.run("create", "--package", fullPackageName);
   run.waitSecs(15);
+  run.match(fullPackageName);
   run.expectExit(0);
 
-  s.cd(fullPackageName);
+  s.cd(fsPackageName);
   var packageJs = s.read("package.js");
   if (! packageJs.match(/api.versionsFrom\('v1'\);/)) {
     selftest.fail("package.js missing correct 'api.versionsFrom':\n" +
@@ -875,9 +420,9 @@ selftest.define("show unknown version of package", function () {
   var s = new Sandbox();
 
   // This version doesn't exist and is unlikely to exist.
-  var run = s.run("show", "meteor-platform@0.123.456");
+  var run = s.run("show", "meteor-base@0.123.456");
   run.waitSecs(5);
-  run.matchErr("meteor-platform@0.123.456: not found");
+  run.matchErr("meteor-base@0.123.456: not found");
   run.expectExit(1);
 
   // This package exists in the server (we need it to publish the tool), but is
@@ -1047,7 +592,7 @@ var testShowPackageVersion =  selftest.markStack(function (s, options) {
   var run = s.run("show", name + "@" + version);
   run.match("Package: " + name + "@" + version + "\n");
   if (options.directory) {
-    run.match("Directory:\n" + options.directory + "\n");
+    run.match("Directory: " + options.directory + "\n");
   }
   if (options.exports) {
     run.read("Exports: " + options.exports + "\n");
@@ -1103,11 +648,11 @@ selftest.define("show local package w/o version",  function () {
 
   // Create a package without version or summary; check that we can show its
   // information without crashing.
-  s.createPackage(name, "package-for-show");
+  s.createPackage(name, name, "package-for-show");
   var packageDir = files.pathJoin(s.root, "home", name);
 
   s.cd(name, function () {
-    s.cp("completely-empty-package.js", "package.js");
+    s.cp("package-completely-empty.js", "package.js");
     testShowPackage(s, name, {
       defaultVersion: "local",
       versions: [{ version: "local", directory: packageDir }]
@@ -1122,7 +667,7 @@ selftest.define("show local package w/o version",  function () {
     // Test that running without any arguments also shows this package.
     var run = s.run("show");
     run.match("Package: " + name + "@local\n");
-    run.match("Directory:\n" + packageDir + "\n");
+    run.match("Directory: " + packageDir + "\n");
     run.expectExit(0);
   });
 
@@ -1132,12 +677,6 @@ selftest.define("show local package w/o version",  function () {
   run.matchErr("specify a package or release name");
   run.expectExit(1);
 });
-
-// Return a formatted string of today’s date.
-var longformToday = function () {
-  var today = new Date();
-  return utils.longformDate(today);
-};
 
 // Make sure that a local-only package shows up correctly in show and search
 // results.
@@ -1150,7 +689,7 @@ selftest.define("show and search local package",  function () {
   s.cd("myapp");
   s.mkdir("packages");
   s.cd("packages", function () {
-    s.createPackage(name, "package-for-show");
+    s.createPackage(name, name, "package-for-show");
   });
 
   var packageDir = files.pathJoin(s.root, "home", "myapp", "packages", name);
@@ -1192,15 +731,13 @@ selftest.define("show and search local package",  function () {
   summary = "This is a test package";
   name = "my-local-exports";
   packageDir = files.pathJoin(s.root, "home", "myapp", "packages", name);
-  s.createPackage(name, "package-for-show");
+  s.createPackage(name, name, "package-for-show");
   s.cd(name, function () {
     s.cp("package-with-exports.js", "package.js");
   });
 
   var exportStr =
-    "A, B (server), C (web.browser, web.cordova)," +
-    " D (web.browser),\n"  + "         " +
-    "E (web.cordova), G (server, web.cordova)";
+    "A, B (server), C (web.browser, web.cordova), D (web.browser), E (web.cordova), G (server, web.cordova)";
   var description = "Test package.";
 
   testShowPackage(s, name, {
@@ -1251,8 +788,8 @@ selftest.define("show and search local package",  function () {
     return d.label ? d.name + " (" + d.label + ")" : d.name;
   });
   var impStr =
-    impArr[0] + ", " + impArr[1] + ",\n" + "         " +
-    impArr[2] + ", " + impArr[3] + ",\n" + "         " +
+    impArr[0] + ", " + impArr[1] + ", " +
+    impArr[2] + ", " + impArr[3] + ", " +
     impArr[4] + ", " + impArr[5];
 
   testShowPackage(s, name, {
@@ -1281,935 +818,6 @@ selftest.define("show and search local package",  function () {
   });
 });
 
-// Make sure that if a package exists both locally, and on the server, 'meteor
-// show' and 'meteor search' correctly assign precedence to the local package
-// (but still show that the server package exists).
-selftest.define("show and search local overrides server",
-  ['net', 'test-package-server', 'slow'], function () {
-  // Now, for something more interesting. We are going to publish a version of a
-  // package, and have a local version available. We want to make sure that all
-  // the commands handle this correctly.
-  var s = new Sandbox();
-
-  // Technically, this could make our test a little flaky if run at exactly
-  // 11:59:59 PM, since the day will switch over before the test is finished. We
-  // will never eliminate that possibility completely though, and running this
-  // every time we want to check a publication date is sort of expensive.
-  var today = longformToday();
-  var run;
-
-  testUtils.login(s, username, password);
-  var fullPackageName =  randomizedPackageName(username);
-  // Publish the first version of this package.
-  createAndPublishPackage(s, fullPackageName);
-
-  // Create a second version of this package. Inside that package directory, we
-  // should be able to see the local package.
-  var packageDir =  files.pathJoin(s.root, "home", fullPackageName);
-  s.createPackage(fullPackageName, "package-for-show");
-  s.cd(fullPackageName, function() {
-    s.cp("package-with-git.js", "package.js");
-    var summary = "This is a test package";
-    var git = "www.github.com/meteor/meteor";
-    testShowPackage(s, fullPackageName, {
-      maintainers: username,
-      summary: summary,
-      git: git,
-      defaultVersion: "local",
-      versions: [
-        { version: "1.0.0", date: today },
-        { version: "1.0.0", directory: packageDir }
-      ]
-    });
-
-    // When we ask for version 1.0.0, we get the local version.
-    var addendum =
-      "This package version is built locally from source. " +
-      "The same version of this\npackage also exists on the package server. " +
-      "To view its metadata, run\n'meteor show " + fullPackageName +
-      "@1.0.0' from outside the project.";
-    testShowPackageVersion(s, {
-      packageName: fullPackageName,
-      version: "1.0.0",
-      summary: summary,
-      git: git,
-      directory: packageDir,
-      addendum: addendum
-    });
-
-    // The description in 'search' should come from the local package.
-    run = s.run("search", fullPackageName);
-    run.waitSecs(15);
-    run.match(summary);
-    run.expectExit(0);
-
-    // Test that running without any arguments still gives us the local version.
-    run = s.run("show");
-    run.match("Package: " + fullPackageName + "@1.0.0\n");
-    run.match("Directory:\n" + packageDir + "\n");
-    run.match("Git: " + git + "\n");
-    run.read("\n" + summary + "\n");
-    run.read("\n" + addendum + "\n");
-    run.expectEnd(0);
-  });
-
-  // When we run outside of the package directory, we do not see the local
-  // versions of this package, and get our information from the server.
-  var summary = "Test package.";
-  testShowPackage(s, fullPackageName, {
-    summary: summary,
-    defaultVersion: "1.0.0",
-    maintainers: username,
-    versions: [
-      { version: "1.0.0", date: today }
-    ]
-  });
-
-  run = s.run("search", fullPackageName);
-  run.waitSecs(15);
-  run.match(summary);
-  run.expectExit(0);
-});
-
-// Make sure that we display server packages correctly. Various types of
-// packages can exist on the server (and be missing various fields). We should
-// be able to handle that properly.
-selftest.define("show server package",
-  ['net', 'test-package-server', 'slow'], function () {
-
-  // Technically, this could make our test a little flaky if run at exactly
-  // 11:59:59 PM, since the day will switch over before the test is finished. We
-  // could try to recalculate this after each publication, but we would still
-  // run that risk and the test will take even longer.
-  var today = longformToday();
-
-  var s = new Sandbox();
-  testUtils.login(s, username, password);
-  var fullPackageName = randomizedPackageName(username);
-  var versions = [];
-
-  // Publish a version the package without git or any dependencies. Make sure
-  // that 'show' renders it correctly.
-  s.createPackage(fullPackageName, "package-for-show");
-  s.cd(fullPackageName, function () {
-    var run = s.run("publish", "--create");
-    run.waitSecs(30);
-    run.expectExit(0);
-  });
-
-  var summary = "This is a test package";
-  versions.push({ version: "0.9.9", date: today });
-  testShowPackage(s, fullPackageName, {
-    summary: summary,
-    maintainers: username,
-    versions: versions,
-    defaultVersion: _.last(versions).version,
-    description: "Test package."
-  });
-
-  testShowPackageVersion(s, {
-    packageName: fullPackageName,
-    version: "0.9.9",
-    publishedBy: username,
-    publishedOn: today,
-    summary: summary,
-    description: "Test package."
-  });
-
-  // Publish a version of the package with git, but without any dependencies.
-  s.cd(fullPackageName, function () {
-    s.cp("package-with-git.js", "package.js");
-    var run = s.run("publish");
-    run.waitSecs(30);
-    run.expectExit(0);
-  });
-  versions.push({ version: "1.0.0", date: today });
-
-  testShowPackage(s, fullPackageName, {
-    defaultVersion: _.last(versions).version,
-    summary: summary,
-    maintainers: username,
-    git: "www.github.com/meteor/meteor",
-    versions: versions
-  });
-
-  testShowPackageVersion(s, {
-    packageName: fullPackageName,
-    version: "1.0.0",
-    publishedBy: username,
-    publishedOn: today,
-    summary: summary,
-    git: "www.github.com/meteor/meteor"
-  });
-
-  // Publish a version of the package with exports, and see that they show up.
-  s.cd(fullPackageName, function () {
-    s.cp("package-with-exports.js", "package.js");
-    var run = s.run("publish");
-    run.waitSecs(30);
-    run.expectExit(0);
-  });
-  versions.push({ version: "1.0.1", date: today });
-  var exportStr =
-    "A, B (server), C (web.browser, web.cordova)," +
-    " D (web.browser),\n"  + "         " +
-    "E (web.cordova), G (server, web.cordova)";
-
-  testShowPackage(s, fullPackageName, {
-    summary: summary,
-    maintainers: username,
-    exports: exportStr,
-    defaultVersion: _.last(versions).version,
-    description: "Test package.",
-    git: "www.github.com/meteor/meteor",
-    versions: versions
-  });
-
-  testShowPackageVersion(s, {
-    packageName: fullPackageName,
-    version: "1.0.1",
-    publishedBy: username,
-    publishedOn: today,
-    exports: exportStr,
-    summary: summary,
-    git: "www.github.com/meteor/meteor",
-    description: "Test package."
-  });
-
-  // Publish a version of the package with git that depends on other
-  // packages. To do this, we need to publish two other packages (since we don't
-  // want to rely on specific packages existing on the test server).
-  var baseDependency = randomizedPackageName(username, "base");
-  createAndPublishPackage(s, baseDependency);
-  var weakDependency = randomizedPackageName(username, "weak");
-  createAndPublishPackage(s, weakDependency);
-  s.cd(fullPackageName, function () {
-    // Replace the dependencies placeholders in the package.js file with the
-    // packages that we have just published.
-    s.cp("package-with-deps.js", "package.js");
-    var packOpen = s.read("package.js");
-    packOpen = packOpen.replace(/~baseDependency~/g, baseDependency);
-    packOpen = packOpen.replace(/~weakDependency~/g, weakDependency);
-    s.write("package.js", packOpen);
-    var run = s.run("publish");
-    run.waitSecs(30);
-    run.expectExit(0);
-  });
-
-  var newVersions = _.union(versions, [{ version: "1.2.0", date: today }]);
-  var newSummary = "This is a test package with dependencies";
-  testShowPackage(s, fullPackageName, {
-    summary: newSummary,
-    maintainers: username,
-    defaultVersion: "1.2.0",
-    git: "www.github.com/meteor/meteor",
-    versions: newVersions
-  });
-
-  testShowPackageVersion(s, {
-    packageName: fullPackageName,
-    version: "1.2.0",
-    publishedBy: username,
-    publishedOn: today,
-    summary: newSummary,
-    git: "www.github.com/meteor/meteor",
-    dependencies: [
-      { name: baseDependency, constraint: "1.0.0" },
-      { name: weakDependency, constraint: "=1.0.0", weak: true }
-    ]
-  });
-
-  // Publish a version of the package with git that implies other packages.
-
-  // Test showing implies. Since we are not going to build the package, we don't
-  // have to publish any of the things that we imply.
-  var impRaw = {
-    A: "",
-    B: "server",
-    C: "web.browser, web.cordova",
-    D: "web.browser",
-    E: "web.cordova",
-    G: "server, web.cordova"
-  };
-  var impliesData = _.sortBy(_.map(impRaw, function (label, placeholder) {
-    var name =  randomizedPackageName(username, placeholder.toLowerCase());
-    createAndPublishPackage(s, name);
-    return { placeholder: placeholder, name: name, label: label};
-  }), 'name');
-
-  s.cd(fullPackageName, function () {
-    // Replace the dependencies placeholders in the package.js file with the
-    // packages that we have just published.
-    s.cp("package-with-implies.js", "package.js");
-    var packOpen = s.read("package.js");
-    _.each(impliesData, function (d) {
-       var repReg = new RegExp("~" + d.placeholder + "~", "g");
-       packOpen = packOpen.replace(repReg, d.name);
-    });
-    s.write("package.js", packOpen);
-    var run = s.run("publish");
-    run.waitSecs(30);
-    run.expectExit(0);
-  });
-
-  summary = "This is a test package";
-  var impArr = _.map(impliesData, function (d) {
-    return d.label ? d.name + " (" + d.label + ")" : d.name;
-  });
-  var impStr =
-    impArr[0] + ", " + impArr[1] + ",\n" + "         " +
-    impArr[2] + ", " + impArr[3] + ",\n" + "         " +
-    impArr[4] + ", " + impArr[5];
-
-  // Implies are also dependencies.
-  var deps = _.map(impliesData, function (d) {
-    return { name: d.name, constraint: "1.0.0" };
-  });
-  versions.push({ version: "1.2.1", date: today });
-  newVersions.push({ version: "1.2.1", date: today });
-  summary = "This is a test package";
-  var description = "Test package.";
-  testShowPackage(s, fullPackageName, {
-    summary: summary,
-    maintainers: username,
-    defaultVersion: "1.2.1",
-    implies: impStr,
-    description: description,
-    git: "www.github.com/meteor/meteor",
-    versions: versions
-  });
-
-  testShowPackageVersion(s, {
-    packageName: fullPackageName,
-    version: "1.2.1",
-    publishedBy: username,
-    publishedOn: today,
-    summary: summary,
-    description: description,
-    git: "www.github.com/meteor/meteor",
-    implies: impStr,
-    dependencies: deps
-  });
-
-  // Set a homepage.
-  var run = s.run("admin", "change-homepage", fullPackageName, "www.meteor.com");
-  run.waitSecs(10);
-  run.match("done");
-  run.expectExit(0);
-
-  testShowPackage(s, fullPackageName, {
-    summary: summary,
-    maintainers: username,
-    defaultVersion: "1.2.1",
-    git: "www.github.com/meteor/meteor",
-    homepage: "www.meteor.com",
-    versions: versions,
-    implies: impStr,
-    description: description
-  });
-
-  // Add this package to an app, forcing us to download the isopack. Check that
-  // the version that we added is marked as installed.
-  run = s.run("create", "myApp");
-  run.waitSecs(30);
-  run.expectExit(0);
-  s.cd("myApp", function () {
-    var run = s.run("add", fullPackageName + "@1.2.0");
-    run.waitSecs(30);
-    run.expectExit(0);
-  });
-
-  versions = _.initial(versions);
-  versions.push({ version: "1.2.1", date: today, label: "installed" });
-  testShowPackage(s, fullPackageName, {
-    summary: summary,
-    maintainers: username,
-    defaultVersion: _.last(versions).version,
-    git: "www.github.com/meteor/meteor",
-    homepage: "www.meteor.com",
-    versions: versions,
-    implies: impStr,
-    description: description
-  });
-
-  // Publish a pre-release version of the package.
-  s.cd(fullPackageName, function () {
-    s.cp("package-rc-version.js", "package.js");
-    var run = s.run("publish");
-    run.waitSecs(30);
-    run.expectExit(0);
-  });
-  // Mark a version of the package as unmigrated.
-  run = s.run("admin", "set-unmigrated", fullPackageName + "@1.0.0");
-  run.waitSecs(10);
-  run.expectExit(0);
-
-  // Neither of these versions should show up.
-  var moreAvailable =
-    "Pre-release and unmigrated versions of " + fullPackageName +
-    " have been hidden. To see all\n" + "6" +
-    " versions, run 'meteor show --show-all " + fullPackageName + "'.";
-  testShowPackage(s, fullPackageName, {
-    summary: newSummary,
-    maintainers: username,
-    defaultVersion: _.last(versions).version,
-    git: "www.github.com/meteor/meteor",
-    homepage: "www.meteor.com",
-    versions: [
-      { version: "0.9.9", date: today },
-      { version: "1.0.1", date: today },
-      { version: "1.2.0", date: today },
-      { version: "1.2.1", date: today, label: "installed" }
-    ],
-    implies: impStr,
-    description: description,
-    addendum: moreAvailable
-  });
-
-  newVersions =
-    _.union(versions, [{ version: "1.3.0-rc.1", date: today }]);
-  // All the versions will show up when we run with the 'show-all' flag.
-  testShowPackage(s, fullPackageName, {
-    summary: newSummary,
-    maintainers: username,
-    git: "www.github.com/meteor/meteor",
-    homepage: "www.meteor.com",
-    versions: newVersions,
-    all: true,
-    implies: impStr,
-    description: description,
-    defaultVersion: "1.2.1"
-  });
-
-  // If we just query for a specific version, it shows up.
-  testShowPackageVersion(s, {
-    packageName: fullPackageName,
-    version: "1.3.0-rc.1",
-    publishedBy: username,
-    publishedOn: today,
-    // This version is using a different git & description than the previous
-    // versions. If this git and/or description ever shows up in the
-    // non-version-specific show, that's wrong!
-    summary: 'This is a pre-release version of this package!',
-    git: "www.github.com/fake-user/meteor"
-  });
-
-});
-
-// By default, we don't show unofficial package versions. Make sure that a
-// package with only hidden versions is shown in a reasonable manner.
-selftest.define("show rc-only package",
-  ['net', 'test-package-server', 'slow'], function () {
-  var s = new Sandbox();
-  testUtils.login(s, username, password);
-  var fullPackageName = randomizedPackageName(username);
-
-  // Create a package that has only an rc version.
-  s.createPackage(fullPackageName, "package-for-show");
-  s.cd(fullPackageName, function () {
-    s.cp("package-rc-version.js", "package.js");
-    var run = s.run("publish", "--create");
-    run.waitSecs(30);
-    run.expectExit(0);
-  });
-
-  // Run 'meteor show'. There should not be any versions showing up, or any sort
-  // of a version header. But we should get an addendum saying that more
-  // versions are available.
-  var moreAvailable =
-    "One pre-release version of " + fullPackageName + " has been hidden. To see " +
-    "the hidden\nversion, run 'meteor show --show-all " + fullPackageName + "'.";
-  testShowPackage(s, fullPackageName, {
-    maintainers: username,
-    addendum: moreAvailable
-  });
-});
-
-// Publishes a release. Takes in a sandbox, a release configuration, and options:
-//  - new: create a new track with this release version
-var publishRelease = selftest.markStack(function (s, releaseConfig, options) {
-  options = options || {};
-  var releaseFile = "relconf.json";
-  s.write(releaseFile, JSON.stringify(releaseConfig));
-  var run;
-  if (options.new) {
-    run = s.run("publish-release", releaseFile, "--create-track");
-  } else {
-    run = s.run("publish-release", releaseFile);
-  }
-  run.match("Done");
-  run.expectExit(0);
-});
-
-// Tests that 'meteor show <releaseName>' works properly.
-// Takes in the following options:
-//  - name: release name
-//  - maintainers: string of maintainers
-//  - description: release description
-//  - versions: array of versions that we expect to display, in order. Each
-//    version is an object with the following keys:
-//    - version (version number)
-//    - date  (date published)
-//  - addendum: a message to display at the bottom.
-var testShowRelease = selftest.markStack(function (s, options) {
-  var run = s.run("show", options.name);
-  run.waitSecs(10);
-  run.match("Release: " + options.name + "\n");
-  run.read("Maintainers: " + options.maintainers + "\n");
-  run.read("\n");
-  if (options.description) {
-    run.read(options.description + "\n\n");
-  }
-  if (options.versions) {
-    run.read("Recommended versions:\n");
-    _.each(options.versions, function (v) {
-      run.match(v.version);
-      run.match(v.date + "\n");
-    });
-    run.read("\n");
-  }
-  if (options.addendum) {
-    run.read(options.addendum + "\n");
-  }
-  run.expectEnd(0);
-});
-
-// Tests that 'meteor show --show-all <releaseName>' works properly.
-// Takes in the following options:
-//  - name: release name
-//  - maintainers: string of maintainers
-//  - description: release description
-//  - keyedVersions: array of versions with order keys that we expect to
-//    display, in order. Each version is an object with the following keys:
-//    - version (version number)
-//    - date  (date published)
-//    - label (such as "(recommended"))
-//  - experimentalVersions: an array of versions without order keys that we
-//    expect to display, in order. Have the same keys as keyedVersions, except
-//    without a label.
-//  - addendum: a message to display at the bottom.
-var testShowLongRelease = selftest.markStack(function (s, options) {
-  var run = s.run("show", "--show-all", options.name);
-  run.waitSecs(10);
-  run.match("Release: " + options.name + "\n");
-  run.read("Maintainers: " + options.maintainers + "\n");
-  if (options.description) {
-    run.read("\n" + options.description + "\n");
-  }
-  run.read("\n");
-  if (options.keyedVersions) {
-    run.read("Versions:\n");
-    _.each(options.keyedVersions, function (v) {
-      run.match(v.version);
-      run.match(v.date);
-      if (v.label) {
-        run.match(v.label);
-      }
-      run.match("\n");
-    });
-    run.match("\n");
-  }
-  if (options.experimentalVersions) {
-    run.read("Experimental versions:\n");
-    _.each(options.experimentalVersions, function (v) {
-      run.match(v.version);
-      run.match(v.date);
-      if (v.label) {
-        run.match(v.label);
-      }
-      run.match("\n");
-    });
-    run.match("\n");
-  }
-  run.expectEnd(0);
-});
-
-// Tests that 'meteor show <track>@<version>' works and prints out reasonable
-// output. Takes in the following options:
-//  - name: track name
-//  - version: release version to test
-//  - publishedBy: username of publisher
-//  - publishedOn: date string of publication time
-//  - tool: tool package string
-//  - recommended: "yes"  for recommended releases, "no" otherwise
-//  - packages: an array of objects, with keys "name" (package name) and
-//    "version (package version) representing the packages that belong to this
-//    release.
-var testShowReleaseVersion = selftest.markStack(function (s, options) {
-  var run = s.run(
-    "show", options.name + "@" + options.version);
-  run.waitSecs(10);
-  run.match("Release: " + options.name + "@" + options.version + "\n");
-  run.read("Recommended: " + options.recommended + "\n");
-  run.read("Tool package: " + options.tool + "\n");
-  run.read("\n" + options.description + "\n");
-  run.read("\n");
-  if (options.packages) {
-    run.read("Packages:\n");
-    _.each(options.packages, function (pkg) {
-      run.read("  " + pkg.name + ": " + pkg.version + "\n");
-    });
-    run.read("\n");
-  };
-  run.read(
-    "Published by " + options.publishedBy + " on " + options.publishedOn + "\n");
-  run.expectEnd(0);
-});
-
-// Make sure that we show releases and release versions properly.
-selftest.define("show release",
-  ['net', 'test-package-server', 'slow'], function () {
-
-  var s = new Sandbox();
-  testUtils.login(s, username, password);
-
-  // Technically, this could make our test a little flaky if run at exactly
-  // 11:59:59 PM, since the day will switch over before the test is finished. We
-  // will never eliminate that possibility completely though, and running this
-  // every time we want to check a publication date is sort of expensive.
-  var today = longformToday();
-
-  // In order to publish a release, we need a package to use as the
-  // tool. Publish a package, and use it as the tool. (This release will not
-  // actually run, but we are not testing that.)
-  var fullPackageName = randomizedPackageName(username);
-  createAndPublishPackage(s, fullPackageName);
-
-  // Some base variables that we will use to create a release track.
-  var releaseTrack = randomizedReleaseName(username);
-  var tool = fullPackageName + "@1.0.0";
-  var packages = {};
-  packages[fullPackageName] = "1.0.0";
-  var baseConfig = {
-    track: releaseTrack,
-    tool: tool
-  };
-
-  // Publish a new release track, and on it, a new recommended release version
-  // with this tool and without any packages.
-  var recommendedDesc = "first test version";
-  var releaseConfig = _.extend(baseConfig, {
-    version: "0.0.1",
-    recommended: true,
-    description: recommendedDesc,
-    packages: {}
-  });
-  publishRelease(s, releaseConfig, { new: true });
-  testShowRelease(s, {
-    name: releaseTrack,
-    description: releaseConfig.description,
-    maintainers: username,
-    versions: [{ version: "0.0.1", date: today }]
-  });
-  testShowReleaseVersion(s, {
-    name: releaseTrack,
-    version: "0.0.1",
-    description: releaseConfig.description,
-    publishedBy: username,
-    publishedOn: today,
-    tool: tool,
-    recommended: "yes"
-  });
-
-  // Publish a non-recommended release version on the same release track. Have
-  // this release version contain some packages. (This version was published
-  // second, but has a smaller orderKey, so it should show up above the previous
-  // version in the results of ‘meteor show’).
-  releaseConfig = _.extend(baseConfig, {
-    version: "0.0.0.1",
-    recommended: false,
-    packages: packages,
-    description: "second test version"
-  });
-  publishRelease(s, releaseConfig);
-  var moreVersions =
-    "One non-recommended version of " + releaseConfig.track + " has been hidden. " +
-    "To see all 2\n" +
-    "versions, run 'meteor show --show-all " + releaseConfig.track + "'.";
-  testShowRelease(s, {
-    name: releaseTrack,
-    description: recommendedDesc,
-    maintainers: username,
-    versions: [{ version: "0.0.1", date: today }],
-    addendum: moreVersions
-  });
-  testShowLongRelease(s, {
-    name: releaseTrack,
-    description: recommendedDesc,
-    maintainers: username,
-    keyedVersions: [
-      { version: "0.0.0.1", date: today},
-      { version: "0.0.1", date: today, label: "(recommended)" }
-    ]
-  });
-  testShowReleaseVersion(s, {
-    name: releaseTrack,
-    version: "0.0.0.1",
-    description: releaseConfig.description,
-    publishedBy: username,
-    publishedOn: today,
-    tool: tool,
-    recommended: "no",
-    packages: [{ name: fullPackageName, version: "1.0.0" }]
-  });
-
-  // Publish two experimental release versions (no order key at all) and check
-  // that they are correctly shown by 'meteor show'.
-  releaseConfig = _.extend(baseConfig, {
-    version: "cheesecake",
-    recommended: false,
-    packages: packages,
-    description: "just cake"
-  });
-  publishRelease(s, releaseConfig);
-  testShowReleaseVersion(s, {
-    name: releaseTrack,
-    version: "cheesecake",
-    description: releaseConfig.description,
-    publishedBy: username,
-    publishedOn: today,
-    tool: tool,
-    recommended: "no",
-    packages: [{ name: fullPackageName, version: "1.0.0" }]
-  });
-
-  releaseConfig = _.extend(baseConfig, {
-    version: "apricot",
-    recommended: false,
-    packages: packages,
-    description: "nom nom nom"
-  });
-  publishRelease(s, releaseConfig);
-  testShowReleaseVersion(s, {
-    name: releaseTrack,
-    version: "apricot",
-    description: releaseConfig.description,
-    publishedBy: username,
-    publishedOn: today,
-    tool: tool,
-    recommended: "no",
-    packages: [{ name: fullPackageName, version: "1.0.0" }]
-  });
-
-  moreVersions =
-    "Non-recommended versions of " + releaseConfig.track + " have been hidden. To see all 4\n" +
-    "versions, run 'meteor show --show-all " + releaseConfig.track + "'.";
-  testShowRelease(s, {
-    name: releaseTrack,
-    description: recommendedDesc,
-    maintainers: username,
-    versions: [{ version: "0.0.1", date: today }],
-    addendum: moreVersions
-  });
-
-  testShowLongRelease(s, {
-    name: releaseTrack,
-    description: recommendedDesc,
-    maintainers: username,
-    keyedVersions: [
-      { version: "0.0.0.1", date: today},
-      { version: "0.0.1", date: today, label: "(recommended)" }
-    ],
-    experimentalVersions: [
-      { version: "cheesecake", date: today},
-      { version: "apricot", date: today }
-    ]
-  });
-});
-
-selftest.define("show release w/o recommended versions",
-  ['net', 'test-package-server', 'slow'], function () {
-
-  var s = new Sandbox();
-  testUtils.login(s, username, password);
-
-  // Technically, this could make our test a little flaky if run at exactly
-  // 11:59:59 PM, since the day will switch over before the test is finished. We
-  // will never eliminate that possibility completely though, and running this
-  // every time we want to check a publication date is sort of expensive.
-  var today = longformToday();
-
-  // In order to publish a release, we need a package to use as the
-  // tool. Publish a package, and use it as the tool. (This release will not
-  // actually run, but we are not testing that.)
-  var fullPackageName = randomizedPackageName(username);
-  createAndPublishPackage(s, fullPackageName);
-
-  // Some base variables that we will use to create a release track.
-  var releaseTrack = randomizedReleaseName(username);
-  var tool = fullPackageName + "@1.0.0";
-  var packages = {};
-  packages[fullPackageName] = "1.0.0";
-  var baseConfig = {
-    track: releaseTrack,
-    packages: packages,
-    tool: tool
-  };
-
-  // Publish two experimental release versions (no order key at all) and check
-  // that they are correctly shown by 'meteor show'.
-  var releaseConfig = _.extend(baseConfig, {
-    version: "cheesecake",
-    recommended: false,
-    description: "just cake"
-  });
-  publishRelease(s, releaseConfig, { new: true });
-
-  releaseConfig = _.extend(releaseConfig, {
-    version: "apricot",
-    recommended: false,
-    description: "nom nom nom"
-  });
-  publishRelease(s, releaseConfig);
-  var moreVersions =
-    "Non-recommended versions of " + releaseConfig.track + " have been hidden. To see all 2\n" +
-    "versions, run 'meteor show --show-all " + releaseConfig.track + "'.";
-
-  testShowRelease(s, {
-    name: releaseTrack,
-    maintainers: username,
-    addendum: moreVersions
-  });
-
-  testShowLongRelease(s, {
-    name: releaseTrack,
-    maintainers: username,
-    experimentalVersions: [
-      { version: "cheesecake", date: today},
-      { version: "apricot", date: today }
-    ]
-  });
-
-  testShowReleaseVersion(s, {
-    name: releaseTrack,
-    version: "apricot",
-    description: releaseConfig.description,
-    publishedBy: username,
-    publishedOn: today,
-    tool: tool,
-    recommended: "no",
-    packages: [{ name: fullPackageName, version: "1.0.0" }]
-  });
-});
-
-selftest.define("show package w/many versions",
-  ['net', 'test-package-server', 'slow'], function () {
-
-  var s = new Sandbox();
-  testUtils.login(s, username, password);
-
-  // Technically, this could make our test a little flaky if run at exactly
-  // 11:59:59 PM, since the day will switch over before the test is finished. We
-  // will never eliminate that possibility completely though, and running this
-  // every time we want to check a publication date is sort of expensive.
-  var today = longformToday();
-
-  // Set package version and publish the package.
-  var setVersionAndPublish = function (version) {
-    var packOpen = s.read("package-version.js");
-    packOpen = packOpen.replace(/~version~/g, version);
-    s.write("package.js", packOpen);
-    var run = s.run("publish");
-    run.waitSecs(30);
-    run.expectExit(0);
-  };
-  var fullPackageName = randomizedPackageName(username);
-  s.createPackage(fullPackageName, "package-of-two-versions");
-  var packageDir = files.pathJoin(s.root, "home", fullPackageName);
-  s.cd(fullPackageName, function () {
-    var run = s.run("publish", "--create");
-    run.waitSecs(30);
-    run.expectExit(0);
-
-    // Publish a couple more versions.
-    setVersionAndPublish("1.0.1");
-    setVersionAndPublish("1.0.2-rc.1");
-    setVersionAndPublish("1.0.5");
-    setVersionAndPublish("1.0.6");
-    setVersionAndPublish("1.0.7");
-    setVersionAndPublish("2.0.0");
-    setVersionAndPublish("2.0.1");
-
-    // Make sure that the right versions show up when the local package is visible.
-    var moreAvailable =
-          "Older versions of " + fullPackageName + " have been hidden. To see " +
-          "all 9 versions, run\n'meteor show --show-all " + fullPackageName + "'.";
-    testShowPackage(s, fullPackageName, {
-      maintainers: username,
-      summary: "Test package.",
-      addendum: moreAvailable,
-      defaultVersion: "local",
-      versions: [
-        { version: "1.0.5", date: today },
-        { version: "1.0.6", date: today },
-        { version: "1.0.7", date: today },
-        { version: "2.0.0", date: today },
-        { version: "2.0.1", date: today },
-        { version: "2.0.1", directory: packageDir }
-      ]
-    });
-
-    // Make sure that we list the pre-release version in the list of versions
-    // that have been hidden.
-    setVersionAndPublish("2.0.0-rc.1");
-    setVersionAndPublish("2.0.2");
-    moreAvailable =
-          "Older and pre-release versions of " + fullPackageName +
-          " have been hidden. To see all 11\n" +
-          "versions, run 'meteor show --show-all " + fullPackageName + "'.";
-    testShowPackage(s, fullPackageName, {
-      maintainers: username,
-      summary: "Test package.",
-      defaultVersion: "local",
-      addendum: moreAvailable,
-      versions: [
-        { version: "1.0.6", date: today },
-        { version: "1.0.7", date: today },
-        { version: "2.0.0", date: today },
-        { version: "2.0.1", date: today },
-        { version: "2.0.2", date: today },
-        { version: "2.0.2", directory: packageDir }
-      ]
-    });
-
-  });
-
-  // Make sure that the right versions show up when the local package is NOT visible.
-  var moreAvailable =
-     "Older and pre-release versions of " + fullPackageName + " have been hidden. " +
-     "To see all 10\nversions, run 'meteor show --show-all " + fullPackageName + "'.";
-  testShowPackage(s, fullPackageName, {
-    maintainers: username,
-    summary: "Test package.",
-    defaultVersion: "2.0.2",
-    addendum: moreAvailable,
-    versions: [
-      { version: "1.0.6", date: today },
-      { version: "1.0.7", date: today },
-      { version: "2.0.0", date: today },
-      { version: "2.0.1", date: today },
-      { version: "2.0.2", date: today }
-    ]
-  });
-  testShowPackage(s, fullPackageName, {
-    all: true,
-    maintainers: username,
-    summary: "Test package.",
-    defaultVersion: "2.0.2",
-    versions: [
-      { version: "1.0.0", date: today },
-      { version: "1.0.1", date: today },
-      { version: "1.0.5", date: today },
-      { version: "1.0.6", date: today },
-      { version: "1.0.7", date: today },
-      { version: "2.0.0", date: today },
-      { version: "2.0.1", date: today },
-      { version: "2.0.2", date: today }
-    ]
-  });
- });
-
-
 // This tests that we get the right excerpt out of the Readme.md in different
 // combinations. It doesn't test publication, because publishing is slow --
 // that's covered in a different test.
@@ -2219,7 +827,7 @@ selftest.define("show readme excerpt",  function () {
 
   // Create a package without version or summary; check that we can show its
   // information without crashing.
-  s.createPackage(name, "package-for-show");
+  s.createPackage(name, name, "package-for-show");
   var packageDir = files.pathJoin(s.root, "home", name);
 
   // We are just going to change the description in the Readme. Some things
@@ -2350,463 +958,5 @@ selftest.define("show readme excerpt",  function () {
   run.expectExit(1);
   run = s.run("show", name + "@1.0.0");
   run.matchErr("Documentation not found");
-  run.expectExit(1);
-});
-
-// Show publication with different types of readme files.
-selftest.define("show server readme",
-  ['net', 'test-package-server', 'slow'], function () {
-
-  var s = new Sandbox();
-  testUtils.login(s, username, password);
-
-  // Technically, this could make our test a little flaky if run at exactly
-  // 11:59:59 PM, since the day will switch over before the test is finished. We
-  // will never eliminate that possibility completely though, and running this
-  // every time we want to check a publication date is sort of expensive.
-  var today = longformToday();
-  var fullPackageName = username + ":" + utils.randomToken();
-  s.createPackage(fullPackageName, "package-for-show");
-  var summary = "This is a test package";
-
-  // Publish fullPackageName.
-  // - isNew: (optional) if true, no other versions of fullPackageName exist, so
-  //   run 'publish --create instad of 'publish'.
-  var publish = function(isNew) {
-    var run;
-    if (isNew) {
-      run = s.run("publish", "--create");
-    } else {
-      run = s.run("publish");
-    }
-    run.waitSecs(30);
-    run.expectExit(0);
-  };
-
-  // Default docs.
-  s.cd(fullPackageName, function () {
-    publish(true);
-  });
-  testShowPackageVersion(s, {
-    summary: summary,
-    publishedBy: username,
-    publishedOn: today,
-    packageName: fullPackageName,
-    version:  "0.9.9",
-    description: "Test package."
-  });
-  testShowPackage(s, fullPackageName, {
-    summary: summary,
-    defaultVersion: "0.9.9",
-    maintainers: username,
-    versions: [{ version: "0.9.9", date: today }],
-    description: "Test package."
-  });
-
-  // Custom Readme! Publish works.
-  var git = "https:ilovegit.git";
-  var staging;
-  s.cd(fullPackageName, function () {
-    staging = s.read("package-customizable.js");
-    staging = staging.replace(/~git~/g, git);
-    staging = staging.replace(/~summary~/g, summary);
-    var current = staging.replace(/~version~/g, "1.0.0");
-    s.write("package.js", current.replace(/~documentation~/g, "'MINE.md'"));
-    s.write("MINE.md", "Foobar\n====\nNew test!\n\n# Something\n");
-    publish();
-  });
-  testShowPackageVersion(s, {
-    summary: summary,
-    git: git,
-    publishedBy: username,
-    publishedOn: today,
-    packageName: fullPackageName,
-    version:  "1.0.0",
-    description: "New test!"
-  });
-  testShowPackage(s, fullPackageName, {
-    summary: summary,
-    git: git,
-    defaultVersion: "1.0.0",
-    maintainers: username,
-    description: "New test!",
-    versions: [
-      { version: "0.9.9", date: today },
-      { version: "1.0.0", date: today }
-    ]
-  });
-
-  // Null Readme! Publish works.
-  s.cd(fullPackageName, function () {
-    var current = staging.replace(/~version~/g, "1.0.0_1");
-    s.write("package.js", current.replace(/~documentation~/g, "null"));
-    publish();
-  });
-  testShowPackageVersion(s, {
-    summary: summary,
-    git: git,
-    packageName: fullPackageName,
-    version:  "1.0.0_1",
-    publishedBy: username,
-    publishedOn: today
-  });
-  testShowPackage(s, fullPackageName, {
-    summary: summary,
-    git: git,
-    maintainers: username,
-    defaultVersion: "1.0.0_1",
-    versions: [
-      { version: "0.9.9", date: today },
-      { version: "1.0.0", date: today },
-      { version: "1.0.0_1", date: today }
-    ]
-  });
-
-  // These cause the publish to fail.
-  s.cd(fullPackageName, function () {
-    // README is blank.
-    var current = staging.replace(/~version~/g, "1.0.0_2");
-    s.write("package.js", current.replace(/~documentation~/g, "'blank'"));
-    s.write("blank", "");
-    var run = s.run("publish");
-    run.matchErr("Your documentation file is blank");
-    run.expectExit(1);
-
-    // README does not exist.
-    s.write("package.js", current.replace(/~documentation~/g, "'none'"));
-    run = s.run("publish");
-    run.matchErr("Documentation not found");
-    run.expectExit(1);
-
-    // README is too long.
-    s.write("package.js", current.replace(/~documentation~/g, "'long'"));
-    var longReadme = Array(75).join(" please do not read me! ");
-    s.write("long", "Heading\n===\n" + longReadme);
-    run = s.run("publish");
-    run.matchErr("Longform package description is too long");
-    run.expectExit(1);
-  });
-
-  // If you didn't format things properly, we will still publish and use that as
-  // an excerpt.
-  s.cd(fullPackageName, function () {
-    var current = staging.replace(/~version~/g, "1.0.0_2");
-    s.write("package.js", current.replace(/~documentation~/g, "'unformat'"));
-    s.write("unformat", "I did not format this readme");
-    publish();
-  });
-  testShowPackageVersion(s, {
-    summary: summary,
-    git: git,
-    packageName: fullPackageName,
-    version:  "1.0.0_2",
-    description: "I did not format this readme",
-    publishedBy: username,
-    publishedOn: today
-  });
-  testShowPackage(s, fullPackageName, {
-    summary: summary,
-    git: git,
-    maintainers: username,
-    defaultVersion: "1.0.0_2",
-    description: "I did not format this readme",
-    versions: [
-      { version: "0.9.9", date: today },
-      { version: "1.0.0", date: today },
-      { version: "1.0.0_1", date: today },
-      { version: "1.0.0_2", date: today }
-    ]
-  });
-
-});
-
-
-// Show publication with different types of readme files.
-selftest.define("update package metadata",
-  ['net', 'test-package-server', 'slow'], function () {
-
-  var s = new Sandbox();
-  testUtils.login(s, username, password);
-
-  // Technically, this could make our test a little flaky if run at exactly
-  // 11:59:59 PM, since the day will switch over before the test is finished. We
-  // will never eliminate that possibility completely though, and running this
-  // every time we want to check a publication date is sort of expensive.
-  var today = longformToday();
-  var fullPackageName = username + ":" + utils.randomToken();
-  s.createPackage(fullPackageName, "package-for-show");
-  var summary = "This is a test package";
-  var desc = "Test package.";
-  var git = "www.iheartgit.git";
-  var basePackageVersion = {
-    publishedBy: username,
-    publishedOn: today,
-    packageName: fullPackageName,
-    version:  "0.9.9"
-  };
-  var basePackage = {
-    maintainers: username,
-    defaultVersion: "0.9.9",
-    versions: [{ version: "0.9.9", date: today }]
-  };
-
-  var update = function () {
-    var run = s.run("publish", "--update");
-    run.waitSecs(30);
-    run.match("Success.");
-    run.expectExit(0);
-  };
-
-  // Publish the basic show package, using the default settings.
-  s.cd(fullPackageName, function () {
-    var run = s.run("publish", "--create");
-    run.waitSecs(30);
-    run.expectExit(0);
-  });
-
-  testShowPackageVersion(s, _.extend({
-    summary: summary,
-    description: desc
-  }, basePackageVersion));
-  testShowPackage(s, fullPackageName, _.extend({
-    summary: summary,
-    description: desc
-  }, basePackage));
-
-  // add git
-  s.cd(fullPackageName, function () {
-    var staging = s.read("package-customizable.js");
-    staging = staging.replace(/~git~/g, git);
-    staging = staging.replace(/~summary~/g, summary);
-    staging = staging.replace(/~version~/g, "0.9.9");
-    staging = staging.replace(/~documentation~/g, "'README.md'");
-    s.write("package.js", staging);
-    update();
-  });
-
-  testShowPackageVersion(s, _.extend({
-    summary: summary,
-    git: git,
-    description: desc
-  }, basePackageVersion));
-  testShowPackage(s, fullPackageName,  _.extend({
-    summary: summary,
-    git: git,
-    description: desc
-  }, basePackage));
-
-  // change git & summary
-  git = "https://www.idoNOTheartgit.com";
-  summary = "awesome test";
-  s.cd(fullPackageName, function () {
-    var staging = s.read("package-customizable.js");
-    staging = staging.replace(/~git~/g, git);
-    staging = staging.replace(/~summary~/g, summary);
-    staging = staging.replace(/~version~/g, "0.9.9");
-    staging = staging.replace(/~documentation~/g, "'README.md'");
-    s.write("package.js", staging);
-    update();
-  });
-
-  testShowPackageVersion(s, _.extend({
-    summary: summary,
-    git: git,
-    description: desc
-  }, basePackageVersion));
-  testShowPackage(s, fullPackageName,  _.extend({
-    summary: summary,
-    git: git,
-    description: desc
-  }, basePackage));
-
-  // change readme contents & summary
-  desc = "This test package is super super awesome";
-  summary = "more awesome test";
-  s.cd(fullPackageName, function () {
-    var staging = s.read("package-customizable.js");
-    staging = staging.replace(/~git~/g, git);
-    staging = staging.replace(/~summary~/g, summary);
-    staging = staging.replace(/~version~/g, "0.9.9");
-    staging = staging.replace(/~documentation~/g, "'README.md'");
-    s.write("package.js", staging);
-    s.write("README.md", "Test\n===\n"+ desc);
-    update();
-  });
-  testShowPackageVersion(s, _.extend({
-    summary: summary,
-    git: git,
-    description: desc
-  }, basePackageVersion));
-  testShowPackage(s, fullPackageName,  _.extend({
-    summary: summary,
-    git: git,
-    description: desc
-  }, basePackage));
-
-  // change readme contents
-  desc = "Actually this test package is OK";
-  s.cd(fullPackageName, function () {
-    s.write("README.md", "OKTest\n===\n"+ desc);
-    update();
-  });
-  testShowPackageVersion(s, _.extend({
-    summary: summary,
-    git: git,
-    description: desc
-  }, basePackageVersion));
-  testShowPackage(s, fullPackageName,  _.extend({
-    summary: summary,
-    git: git,
-    description: desc
-  }, basePackage));
-
-  // change readme file
-  desc = "description from new file";
-  s.cd(fullPackageName, function () {
-    var staging = s.read("package-customizable.js");
-    staging = staging.replace(/~git~/g, git);
-    staging = staging.replace(/~summary~/g, summary);
-    staging = staging.replace(/~version~/g, "0.9.9");
-    staging = staging.replace(/~documentation~/g, "'NEW-README.md'");
-    s.write("package.js", staging);
-    s.write("NEW-README.md", "Test\n===\n"+ desc);
-    update();
-  });
-  testShowPackageVersion(s, _.extend({
-    summary: summary,
-    git: git,
-    description: desc
-  }, basePackageVersion));
-  testShowPackage(s, fullPackageName,  _.extend({
-    summary: summary,
-    git: git,
-    description: desc
-  }, basePackage));
-
-  // remove readme
-  s.cd(fullPackageName, function () {
-    var staging = s.read("package-customizable.js");
-    staging = staging.replace(/~git~/g, git);
-    staging = staging.replace(/~summary~/g, summary);
-    staging = staging.replace(/~version~/g, "0.9.9");
-    staging = staging.replace(/~documentation~/g, "null");
-    s.write("package.js", staging);
-    update();
-  });
-  testShowPackageVersion(s, _.extend({
-    summary: summary,
-    git: git
-  }, basePackageVersion));
-  testShowPackage(s, fullPackageName,  _.extend({
-    summary: summary,
-    git: git
-  }, basePackage));
-
-  // try to set an invalid summary
-  s.cd(fullPackageName, function () {
-    // Long summary
-    var staging = s.read("package-customizable.js");
-    staging = staging.replace(/~git~/g, git);
-    var longSummary = Array(30).join(summary);
-    staging = staging.replace(/~summary~/g, longSummary);
-    staging = staging.replace(/~version~/g, "0.9.9");
-    staging = staging.replace(/~documentation~/g, "null");
-    s.write("package.js", staging);
-
-    var run = s.run("publish", "--update");
-    run.matchErr("Summary must be under");
-    run.expectExit(1);
-
-    // Blank summary.
-    staging = s.read("package-customizable.js");
-    staging = staging.replace(/~git~/g, git);
-    staging = staging.replace(/~summary~/g, "");
-    staging = staging.replace(/~version~/g, "0.9.9");
-    staging = staging.replace(/~documentation~/g, "null");
-    s.write("package.js", staging);
-    run = s.run("publish", "--update");
-    run.matchErr("Please provide");
-    run.expectExit(1);
-
-  });
-  testShowPackageVersion(s, _.extend({
-    summary: summary,
-    git: git
-  }, basePackageVersion));
-  testShowPackage(s, fullPackageName,  _.extend({
-    summary: summary,
-    git: git
-  }, basePackage));
-
-
-  // try to set an invalid readme
-  s.cd(fullPackageName, function () {
-    var staging = s.read("package-customizable.js");
-    staging = staging.replace(/~git~/g, git);
-    var longSummary = Array(30).join(summary);
-    staging = staging.replace(/~summary~/g, summary);
-    staging = staging.replace(/~version~/g, "0.9.9");
-    staging = staging.replace(/~documentation~/g, "'longReadme.md'");
-    s.write("package.js", staging);
-    var longDesc = Array(75).join("this is a very long text ");
-    s.write("longReadme.md", "Heading\n===\n" + longDesc);
-
-    var run = s.run("publish", "--update");
-    run.matchErr("Longform package description is too long.");
-    run.expectExit(1);
-  });
-
-  // try to update non-existent version
-  s.cd(fullPackageName, function () {
-    var staging = s.read("package-customizable.js");
-    staging = staging.replace(/~git~/g, git);
-    staging = staging.replace(/~summary~/g, summary);
-    staging = staging.replace(/~version~/g, "2.0.0");
-    staging = staging.replace(/~documentation~/g, "null");
-    s.write("package.js", staging);
-
-    var run = s.run("publish", "--update");
-    run.matchErr("without publishing it first");
-    run.expectExit(1);
-  });
-
-  // try to update non-existent package
-  var newPackageName = username + ":" + utils.randomToken();
-  s.createPackage(newPackageName, "package-for-show");
-  s.cd(newPackageName, function () {
-    var run = s.run("publish", "--update");
-    run.matchErr("without publishing it first");
-    run.expectExit(1);
-
-    run = s.run("publish", "--create");
-    run.waitSecs(30);
-    run.expectExit(0);
-  });
-
-  // try to update dependencies, they don't get upated! (But it still goes
-  // through, for now).
-  s.cd(fullPackageName, function () {
-    var staging = s.read("package-customizable.js");
-    staging = staging.replace(/~git~/g, git);
-    staging = staging.replace(/~summary~/g, summary);
-    staging = staging.replace(/~version~/g, "0.9.9");
-    staging = staging.replace(/~documentation~/g, "null");
-    staging = staging + "\nPackage.onUse(function (api) {\n" +
-      "api.use('" + newPackageName + "@1.0.0');\n})\n";
-    s.write("package.js", staging);
-    update();
- });
-  testShowPackageVersion(s, _.extend({
-    summary: summary,
-    git: git
-  }, basePackageVersion));
-  testShowPackage(s, fullPackageName,  _.extend({
-    summary: summary,
-    git: git
-  }, basePackage));
-
-  // By the way, you can't update from outside a Meteor package directory.
-  var run = s.run("publish", "--update");
-  run.matchErr("You're not in a Meteor package directory");
   run.expectExit(1);
 });

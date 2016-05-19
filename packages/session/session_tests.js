@@ -180,3 +180,13 @@ Tinytest.add(
     Tracker.flush();
     test.equal(yEqualsExecutions, 3);
   });
+
+Tinytest.add('session - parse an object of key/value pairs', function (test) {
+  Session._setObject({fruit: 'apple', vegetable: 'potato'});
+
+  test.equal(Session.get('fruit'), 'apple');
+  test.equal(Session.get('vegetable'), 'potato');
+
+  delete Session.keys['fruit'];
+  delete Session.keys['vegetable'];
+});

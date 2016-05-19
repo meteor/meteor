@@ -1,6 +1,6 @@
-var selftest = require('../selftest.js');
+var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
-var testUtils = require('../test-utils.js');
+var testUtils = require('../tool-testing/test-utils.js');
 
 var commandTimeoutSecs = testUtils.accountsCommandTimeoutSecs;
 var loginTimeoutSecs = 2;
@@ -121,27 +121,4 @@ selftest.define("login", ['net'], function () {
   run.waitSecs(commandTimeoutSecs);
   run.matchErr("Login failed");
   run.expectExit(1);
-});
-
-selftest.define('whoami - no username', ['net', 'slow'], function () {
-  var s = new Sandbox;
-  var email = testUtils.randomUserEmail();
-  var username = testUtils.randomString(10);
-  var appName = testUtils.randomAppName();
-  var token = testUtils.deployWithNewEmail(s, email, appName);
-
-  var run = s.run('whoami');
-  run.waitSecs(commandTimeoutSecs);
-  run.matchErr('You haven\'t chosen your username yet');
-  run.matchErr(testUtils.registrationUrlRegexp);
-  run.expectExit(1);
-  testUtils.registerWithToken(token, username, 'test', email);
-
-  run = s.run('whoami');
-  run.waitSecs(commandTimeoutSecs);
-  run.read(username);
-  run.expectExit(0);
-
-  testUtils.cleanUpApp(s, appName);
-  testUtils.logout(s);
 });

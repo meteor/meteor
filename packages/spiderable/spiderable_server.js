@@ -13,10 +13,16 @@ var urlParser = Npm.require('url');
 // the _escaped_fragment_ protocol, so we need to hardcode a list
 // here. I shed a silent tear.
 Spiderable.userAgentRegExps = [
-    /^facebookexternalhit/i, /^linkedinbot/i, /^twitterbot/i];
+  /^facebookexternalhit/i,
+  /^Facebot/,
+  /^linkedinbot/i,
+  /^twitterbot/i,
+  /^slackbot-linkexpanding/i
+];
 
-// how long to let phantomjs run before we kill it
-var REQUEST_TIMEOUT = 15*1000;
+// how long to let phantomjs run before we kill it (and send down the
+// regular page instead). Users may modify this number.
+Spiderable.requestTimeoutMs = 15*1000;
 // maximum size of result HTML. node's default is 200k which is too
 // small for our docs.
 var MAX_BUFFER = 5*1024*1024; // 5MB
@@ -26,6 +32,7 @@ Spiderable._urlForPhantom = function (siteAbsoluteUrl, requestUrl) {
   // reassembling url without escaped fragment if exists
   var parsedUrl = urlParser.parse(requestUrl);
   var parsedQuery = querystring.parse(parsedUrl.query);
+  var escapedFragment = parsedQuery['_escaped_fragment_'];
   delete parsedQuery['_escaped_fragment_'];
 
   var parsedAbsoluteUrl = urlParser.parse(siteAbsoluteUrl);
@@ -42,6 +49,10 @@ Spiderable._urlForPhantom = function (siteAbsoluteUrl, requestUrl) {
   // `url.format` will only use `query` if `search` is absent
   parsedAbsoluteUrl.search = null;
 
+  if (escapedFragment !== undefined && escapedFragment !== null && escapedFragment.length > 0) {
+    parsedAbsoluteUrl.hash = '!' + decodeURIComponent(escapedFragment);
+  }
+
   return urlParser.format(parsedAbsoluteUrl);
 };
 
@@ -50,11 +61,6 @@ var PHANTOM_SCRIPT = Assets.getText("phantom_script.js");
 WebApp.connectHandlers.use(function (req, res, next) {
   // _escaped_fragment_ comes from Google's AJAX crawling spec:
   // https://developers.google.com/webmasters/ajax-crawling/docs/specification
-  // This spec was designed during the brief era where using "#!" URLs was
-  // common, so it mostly describes how to translate "#!" URLs into
-  // _escaped_fragment_ URLs. Since then, "#!" URLs have gone out of style, but
-  // the <meta name="fragment" content="!"> (see spiderable.html) approach also
-  // described in the spec is still common and used by several crawlers.
   if (/\?.*_escaped_fragment_=/.test(req.url) ||
       _.any(Spiderable.userAgentRegExps, function (re) {
         return re.test(req.headers['user-agent']); })) {
@@ -103,11 +109,11 @@ WebApp.connectHandlers.use(function (req, res, next) {
     // instead, but that meant we couldn't use exec and had to manage several
     // processes.)
     child_process.execFile(
-      '/bin/bash',
-      ['-c',
+      '/usr/bin/env',
+      ['bash', '-c',
        ("exec phantomjs " + phantomJsArgs + " /dev/stdin <<'END'\n" +
         phantomScript + "END\n")],
-      {timeout: REQUEST_TIMEOUT, maxBuffer: MAX_BUFFER},
+      {timeout: Spiderable.requestTimeoutMs, maxBuffer: MAX_BUFFER},
       function (error, stdout, stderr) {
         if (!error && /<html/i.test(stdout)) {
           res.writeHead(200, {'Content-Type': 'text/html; charset=UTF-8'});
@@ -118,7 +124,7 @@ WebApp.connectHandlers.use(function (req, res, next) {
           if (error && error.code === 127)
             Meteor._debug("spiderable: phantomjs not installed. Download and install from http://phantomjs.org/");
           else
-            Meteor._debug("spiderable: phantomjs failed:", error, "\nstderr:", stderr);
+            Meteor._debug("spiderable: phantomjs failed at " + url + ":", error, "\nstderr:", stderr, "\nstdout:", stdout);
 
           next();
         }

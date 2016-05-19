@@ -1,12 +1,16 @@
 Package.describe({
   summary: "Encrypt account secrets stored in the database",
-  version: '1.0.2'
+  version: '1.0.10'
 });
 
 Package.onUse(function (api) {
-  api.use('npm-node-aes-gcm@=0.1.3');
+  api.use("npm-node-aes-gcm@=0.1.3_6");
+
   api.export("OAuthEncryption", ["server"]);
-  api.use("underscore");
+  api.use([
+    "underscore",
+    "ejson"
+  ]);
   api.addFiles("encrypt.js", ["server"]);
 });
 

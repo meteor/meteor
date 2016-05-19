@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix
+    xmlns="http://schemas.microsoft.com/wix/2006/wi"
+    xmlns:util="http://schemas.microsoft.com/wix/UtilExtension"
+    xmlns:fire="http://schemas.microsoft.com/wix/FirewallExtension"
+    xmlns:sql="http://schemas.microsoft.com/wix/SqlExtension">
+
+    <?include Configuration.wxi?>
+
+    <Product Id="*" Name="$(var.METEOR_ProductName)" Language="1033" Version="1.0" Manufacturer="$(var.METEOR_Manufacturer)" UpgradeCode="$(var.METEOR_UpgradeCode)">
+        <Package Description="This package will install Meteor on your computer." InstallerVersion="300" Compressed="yes" InstallScope="perUser" InstallPrivileges="limited"/>
+
+        <!-- This will allow a new msi package to upgrade an existing older version (in case patch is not used) -->
+        <MajorUpgrade DowngradeErrorMessage="A later version of [ProductName] is already installed. Setup will now exit." AllowSameVersionUpgrades="yes"/>
+
+        <Media Id="1" Cabinet="product.cab" EmbedCab="yes"/>
+
+        <Property Id="DiskPrompt" Value="$(var.METEOR_ProductName) Installation [1]"/>
+        <Property Id="ARPURLINFOABOUT" Value="$(var.METEOR_ProductName)"/>
+        <Property Id="ARPURLUPDATEINFO" Value="$(var.METEOR_ProductName)"/>
+        <Property Id="ARPHELPLINK" Value="$(var.METEOR_ProductName)"/>
+
+        <?if $(var.Platform)="x86"?>
+            <Binary Id="WiXHelper"        SourceFile="..\WiXHelper\bin\Release\Win32\WiXHelper.dll"/>
+        <?else?>
+            <Binary Id="WiXHelper"        SourceFile="..\WiXHelper\bin\Release\Win64\WiXHelper.dll"/>
+        <?endif?>
+
+        <Binary Id="SevenZip"  SourceFile="Resources\7za.exe" />
+
+
+
+        <Feature Id="ProductFiles" Title="Meteor Product Files" Level="1">
+            <ComponentGroupRef Id="CG_MeteorConfiguration"/>
+        </Feature>
+
+
+        <!-- Directory structure -->
+        <Directory Id="TARGETDIR" Name="SourceDir">
+            <Directory Id="METEOR_DIR">
+                <Directory Id="P_METEOR_DIR" Name=".meteor" />
+            </Directory>
+        </Directory>
+
+
+        <CustomAction Id="Download_MeteorPackage" BinaryKey="WiXHelper" Return="check" DllEntry="Download_MeteorPackage" />
+        <CustomAction Id="Extract_MeteorFiles"    BinaryKey="WiXHelper" Return="check" DllEntry="Extract_MeteorFiles" />
+        <CustomAction Id="BulkRemoveMeteorFiles"  BinaryKey="WiXHelper" Return="check" DllEntry="BulkRemoveMeteorFiles" />
+        <CustomAction Id="SetFolderPackages"  Property="METEORDIR_PACKAGES" Value="[METEOR_DIR].meteor\packages" />
+        <CustomAction Id="SetFolderPkg_Meta"  Property="METEORDIR_PKG_META" Value="[METEOR_DIR].meteor\package-metadata" />
+
+        <InstallExecuteSequence>
+            <Custom Action="Download_MeteorPackage"  After="InstallFiles">NOT Installed</Custom>
+            <Custom Action="Extract_MeteorFiles"     After="Download_MeteorPackage">NOT Installed</Custom>
+            <Custom Action="SetFolderPackages"       After="InstallInitialize">REMOVE~="ALL"</Custom>
+            <Custom Action="SetFolderPkg_Meta"       After="InstallInitialize">REMOVE~="ALL"</Custom>
+            <Custom Action="BulkRemoveMeteorFiles"   Before="RemoveFiles">REMOVE~="ALL"</Custom>
+        </InstallExecuteSequence>
+
+        <UI>
+            <ProgressText Action="Extract_MeteorFiles">Installing Meteor... please wait.  (This may take a minute or two.)</ProgressText>
+            <ProgressText Action="BulkRemoveMeteorFiles">Removing Meteor...</ProgressText>
+        </UI>
+    </Product>
+
+
+    <Fragment>
+        <ComponentGroup Id="CG_MeteorConfiguration">
+            <Component Id="UserEnvironmentsVar" Guid="{6222C645-5576-468F-A776-9FE7BA2FF465}" Directory="TARGETDIR">
+                <Condition>NOT Installed AND PERUSER_INSTALL</Condition>
+                <Environment Id="UserEnvPATH" Name="PATH" Value="[P_METEOR_DIR]" Separator=";" Action="set" Part="last" Permanent="yes" System="no" />
+            </Component>
+
+            <Component Id="SystemEnvironmentsVar" Guid="{6222C645-5576-468F-A776-9FE7BA2FF465}" Directory="TARGETDIR">
+                <Condition>NOT Installed AND PERMACHINE_INSTALL</Condition>
+                <Environment Id="SystemEnvPATH" Name="PATH" Value="[P_METEOR_DIR]" Separator=";" Action="set" Part="last" Permanent="yes" System="yes" />
+            </Component>
+
+            <Component Id="UninstallMeteorFilesAndFolders" Guid="{989BB4D9-78CE-4230-A2AB-292998A88B82}" Directory="TARGETDIR">
+				<RemoveFile   Id="RemoveRootBatch" On="uninstall" Directory="P_METEOR_DIR" Name="meteor.bat" />
+				<RemoveFolder Id="RemoveRootFolder" On="uninstall" Directory="P_METEOR_DIR" />
+            </Component>
+
+			<Component Id="MeteorDir_Permission" Guid="{62B0F582-C3E3-45E7-A0F9-1517773340EB}" Directory="P_METEOR_DIR">
+                <Condition>NOT Installed AND PERMACHINE_INSTALL</Condition>
+                <CreateFolder>
+                    <util:PermissionEx User="Everyone" GenericAll="yes"/>
+                </CreateFolder>
+            </Component>
+        </ComponentGroup>
+
+    </Fragment>
+</Wix>

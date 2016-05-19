@@ -20,11 +20,45 @@ Blaze.With = function (data, contentFunc) {
       // `data` is a reactive function
       view.autorun(function () {
         view.dataVar.set(data());
-      }, view.parentView);
+      }, view.parentView, 'setData');
     } else {
       view.dataVar.set(data);
     }
   });
+
+  return view;
+};
+
+/**
+ * Attaches bindings to the instantiated view.
+ * @param {Object} bindings A dictionary of bindings, each binding name
+ * corresponds to a value or a function that will be reactively re-run.
+ * @param {View} view The target.
+ */
+Blaze._attachBindingsToView = function (bindings, view) {
+  view.onViewCreated(function () {
+    _.each(bindings, function (binding, name) {
+      view._scopeBindings[name] = new ReactiveVar;
+      if (typeof binding === 'function') {
+        view.autorun(function () {
+          view._scopeBindings[name].set(binding());
+        }, view.parentView);
+      } else {
+        view._scopeBindings[name].set(binding);
+      }
+    });
+  });
+};
+
+/**
+ * @summary Constructs a View setting the local lexical scope in the block.
+ * @param {Function} bindings Dictionary mapping names of bindings to
+ * values or computations to reactively re-run.
+ * @param {Function} contentFunc A Function that returns [*renderable content*](#renderable_content).
+ */
+Blaze.Let = function (bindings, contentFunc) {
+  var view = Blaze.View('let', contentFunc);
+  Blaze._attachBindingsToView(bindings, view);
 
   return view;
 };
@@ -48,7 +82,7 @@ Blaze.If = function (conditionFunc, contentFunc, elseFunc, _not) {
     this.autorun(function () {
       var cond = Blaze._calculateCondition(conditionFunc());
       conditionVar.set(_not ? (! cond) : cond);
-    }, this.parentView);
+    }, this.parentView, 'condition');
   });
 
   return view;
@@ -68,9 +102,22 @@ Blaze.Unless = function (conditionFunc, contentFunc, elseFunc) {
 /**
  * @summary Constructs a View that renders `contentFunc` for each item in a sequence.
  * @locus Client
- * @param {Function} argFunc A function to reactively re-run.  The function may return a Cursor, an array, null, or undefined.
- * @param {Function} contentFunc A Function that returns [*renderable content*](#renderable_content).
- * @param {Function} [elseFunc] Optional.  A Function that returns [*renderable content*](#renderable_content) to display in the case when there are no items to display.
+ * @param {Function} argFunc A function to reactively re-run. The function can
+ * return one of two options:
+ *
+ * 1. An object with two fields: '_variable' and '_sequence'. Each iterates over
+ *   '_sequence', it may be a Cursor, an array, null, or undefined. Inside the
+ *   Each body you will be able to get the current item from the sequence using
+ *   the name specified in the '_variable' field.
+ *
+ * 2. Just a sequence (Cursor, array, null, or undefined) not wrapped into an
+ *   object. Inside the Each body, the current item will be set as the data
+ *   context.
+ * @param {Function} contentFunc A Function that returns  [*renderable
+ * content*](#renderable_content).
+ * @param {Function} [elseFunc] A Function that returns [*renderable
+ * content*](#renderable_content) to display in the case when there are no items
+ * in the sequence.
  */
 Blaze.Each = function (argFunc, contentFunc, elseFunc) {
   var eachView = Blaze.View('each', function () {
@@ -89,22 +136,58 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
   eachView.contentFunc = contentFunc;
   eachView.elseFunc = elseFunc;
   eachView.argVar = new ReactiveVar;
+  eachView.variableName = null;
+
+  // update the @index value in the scope of all subviews in the range
+  var updateIndices = function (from, to) {
+    if (to === undefined) {
+      to = eachView.numItems - 1;
+    }
+
+    for (var i = from; i <= to; i++) {
+      var view = eachView._domrange.members[i].view;
+      view._scopeBindings['@index'].set(i);
+    }
+  };
 
   eachView.onViewCreated(function () {
     // We evaluate argFunc in an autorun to make sure
     // Blaze.currentView is always set when it runs (rather than
     // passing argFunc straight to ObserveSequence).
     eachView.autorun(function () {
-      eachView.argVar.set(argFunc());
-    }, eachView.parentView);
+      // argFunc can return either a sequence as is or a wrapper object with a
+      // _sequence and _variable fields set.
+      var arg = argFunc();
+      if (_.isObject(arg) && _.has(arg, '_sequence')) {
+        eachView.variableName = arg._variable || null;
+        arg = arg._sequence;
+      }
+
+      eachView.argVar.set(arg);
+    }, eachView.parentView, 'collection');
 
     eachView.stopHandle = ObserveSequence.observe(function () {
       return eachView.argVar.get();
     }, {
       addedAt: function (id, item, index) {
         Tracker.nonreactive(function () {
-          var newItemView = Blaze.With(item, eachView.contentFunc);
+          var newItemView;
+          if (eachView.variableName) {
+            // new-style #each (as in {{#each item in items}})
+            // doesn't create a new data context
+            newItemView = Blaze.View('item', eachView.contentFunc);
+          } else {
+            newItemView = Blaze.With(item, eachView.contentFunc);
+          }
+
           eachView.numItems++;
+
+          var bindings = {};
+          bindings['@index'] = index;
+          if (eachView.variableName) {
+            bindings[eachView.variableName] = item;
+          }
+          Blaze._attachBindingsToView(bindings, newItemView);
 
           if (eachView.expandedValueDep) {
             eachView.expandedValueDep.changed();
@@ -116,6 +199,7 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
 
             var range = Blaze._materializeView(newItemView, eachView);
             eachView._domrange.addMember(range, index);
+            updateIndices(index);
           } else {
             eachView.initialSubviews.splice(index, 0, newItemView);
           }
@@ -128,6 +212,7 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
             eachView.expandedValueDep.changed();
           } else if (eachView._domrange) {
             eachView._domrange.removeMember(index);
+            updateIndices(index);
             if (eachView.elseFunc && eachView.numItems === 0) {
               eachView.inElseMode = true;
               eachView._domrange.addMember(
@@ -142,15 +227,21 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
       },
       changedAt: function (id, newItem, oldItem, index) {
         Tracker.nonreactive(function () {
-          var itemView;
           if (eachView.expandedValueDep) {
             eachView.expandedValueDep.changed();
-          } else if (eachView._domrange) {
-            itemView = eachView._domrange.getMember(index).view;
           } else {
-            itemView = eachView.initialSubviews[index];
+            var itemView;
+            if (eachView._domrange) {
+              itemView = eachView._domrange.getMember(index).view;
+            } else {
+              itemView = eachView.initialSubviews[index];
+            }
+            if (eachView.variableName) {
+              itemView._scopeBindings[eachView.variableName].set(newItem);
+            } else {
+              itemView.dataVar.set(newItem);
+            }
           }
-          itemView.dataVar.set(newItem);
         });
       },
       movedTo: function (id, item, fromIndex, toIndex) {
@@ -159,6 +250,8 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
             eachView.expandedValueDep.changed();
           } else if (eachView._domrange) {
             eachView._domrange.moveMember(fromIndex, toIndex);
+            updateIndices(
+              Math.min(fromIndex, toIndex), Math.max(fromIndex, toIndex));
           } else {
             var subviews = eachView.initialSubviews;
             var itemView = subviews[fromIndex];
@@ -252,6 +345,7 @@ Blaze._InOuterTemplateScope = function (templateView, contentFunc) {
   view.onViewCreated(function () {
     this.originalParentView = this.parentView;
     this.parentView = parentView;
+    this.__childDoesntStartNewLexicalScope = true;
   });
   return view;
 };

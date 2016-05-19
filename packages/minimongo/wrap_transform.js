@@ -8,10 +8,14 @@
 //   original _id field
 // - If the return value doesn't have an _id field, add it back.
 LocalCollection.wrapTransform = function (transform) {
-  if (!transform)
+  if (! transform)
     return null;
 
-  return function (doc) {
+  // No need to doubly-wrap transforms.
+  if (transform.__wrappedTransform__)
+    return transform;
+
+  var wrapped = function (doc) {
     if (!_.has(doc, '_id')) {
       // XXX do we ever have a transform on the oplog's collection? because that
       // collection has no _id.
@@ -37,4 +41,6 @@ LocalCollection.wrapTransform = function (transform) {
     }
     return transformed;
   };
+  wrapped.__wrappedTransform__ = true;
+  return wrapped;
 };

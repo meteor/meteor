@@ -209,30 +209,53 @@ if (Meteor.isServer) {
       onComplete();
     });
   });
-
-  Tinytest.addAsync("observeChanges - unordered - specific fields + modify on excluded fields", function (test, onComplete) {
-    var c = makeCollection();
-    withCallbackLogger(test, ["added", "changed", "removed"], Meteor.isServer, function (logger) {
-      var handle = c.find({ mac: 1, cheese: 2 },
-                          {fields:{noodles: 1, bacon: 1, eggs: 1}}).observeChanges(logger);
-      var fooid = c.insert({noodles: "good", bacon: "bad", apples: "ok", mac: 1, cheese: 2});
-
-      logger.expectResultOnly("added", [fooid, {noodles: "good", bacon: "bad"}]);
-
-
-      // Noodles go into shadow, mac appears as eggs
-      c.update(fooid, {$rename: { noodles: 'shadow', apples: 'eggs' }});
-      logger.expectResultOnly("changed",
-                              [fooid, {eggs:"ok", noodles: undefined}]);
-
-      c.remove(fooid);
-      logger.expectResultOnly("removed", [fooid]);
-      logger.expectNoResult();
-      handle.stop();
-      onComplete();
-    });
-  });
 }
+
+Tinytest.addAsync("observeChanges - unordered - specific fields + modify on excluded fields", function (test, onComplete) {
+  var c = makeCollection();
+  withCallbackLogger(test, ["added", "changed", "removed"], Meteor.isServer, function (logger) {
+    var handle = c.find({ mac: 1, cheese: 2 },
+                        {fields:{noodles: 1, bacon: 1, eggs: 1}}).observeChanges(logger);
+    var fooid = c.insert({noodles: "good", bacon: "bad", apples: "ok", mac: 1, cheese: 2});
+
+    logger.expectResultOnly("added", [fooid, {noodles: "good", bacon: "bad"}]);
+
+
+    // Noodles go into shadow, mac appears as eggs
+    c.update(fooid, {$rename: { noodles: 'shadow', apples: 'eggs' }});
+    logger.expectResultOnly("changed",
+                            [fooid, {eggs:"ok", noodles: undefined}]);
+
+    c.remove(fooid);
+    logger.expectResultOnly("removed", [fooid]);
+    logger.expectNoResult();
+    handle.stop();
+    onComplete();
+  });
+});
+
+Tinytest.addAsync(
+  "observeChanges - unordered - unset parent of observed field",
+  function (test, onComplete) {
+    var c = makeCollection();
+    withCallbackLogger(
+      test, ['added', 'changed', 'removed'], Meteor.isServer,
+      function (logger) {
+        var handle = c.find({}, {fields: {'type.name': 1}}).observeChanges(logger);
+        var id = c.insert({ type: { name: 'foobar' } });
+        logger.expectResultOnly('added', [id, { type: { name: 'foobar' } }]);
+
+        c.update(id, { $unset: { type: 1 } });
+        test.equal(c.find().fetch(), [{ _id: id }]);
+        logger.expectResultOnly('changed', [id, { type: undefined }]);
+
+        handle.stop();
+        onComplete();
+      }
+    );
+  }
+);
+
 
 
 Tinytest.addAsync("observeChanges - unordered - enters and exits result set through change", function (test, onComplete) {
@@ -327,3 +350,45 @@ if (Meteor.isServer) {
     }
   ]);
 }
+
+
+testAsyncMulti("observeChanges - bad query", [
+  function (test, expect) {
+    var c = makeCollection();
+    var observeThrows = function () {
+      test.throws(function () {
+        c.find({__id: {$in: null}}).observeChanges({
+          added: function () {
+            test.fail("added shouldn't be called");
+          }
+        });
+      }, '$in needs an array');
+    };
+
+    if (Meteor.isClient) {
+      observeThrows();
+      return;
+    }
+
+    // Test that if two copies of the same bad observeChanges run in parallel
+    // and are de-duped, both observeChanges calls will throw.
+    var Fiber = Npm.require('fibers');
+    var Future = Npm.require('fibers/future');
+    var f1 = new Future;
+    var f2 = new Future;
+    Fiber(function () {
+      // The observeChanges call in here will yield when we talk to mongod,
+      // which will allow the second Fiber to start and observe a duplicate
+      // query.
+      observeThrows();
+      f1['return']();
+    }).run();
+    Fiber(function () {
+      test.isFalse(f1.isResolved());  // first observe hasn't thrown yet
+      observeThrows();
+      f2['return']();
+    }).run();
+    f1.wait();
+    f2.wait();
+  }
+]);

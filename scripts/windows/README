@@ -1,0 +1,17 @@
+To build the Windows installer, run .\build-installer.ps1 from within
+PowerShell.
+
+Prerequisites:
+==============
+
+Install Visual C++ 2010 Express, which can be found here:
+* http://www.visualstudio.com/downloads/download-visual-studio-vs
+
+Then, install Visual Studio 2010 Service Pack 1 here:
+* http://www.microsoft.com/en-us/download/details.aspx?id=23691
+
+Now, install WiX Toolset 3.8 from here:
+* https://wix.codeplex.com/releases/view/115492
+
+Now restart your command line process before running the build script
+again.

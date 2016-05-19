@@ -55,10 +55,13 @@ Tinytest.add("htmljs - construction", function (test) {
   test.equal(a2.children[2], {o:3});
   test.equal(a2.children[3], 'foo');
 
+  // tests of HTML.isConstructedObject (indirectly)
   test.equal(A({x:1}).children.length, 0);
   var f = function () {};
   test.equal(A(new f).children.length, 1);
   test.equal(A(new Date).children.length, 1);
+  test.equal(A({constructor: 'blah'}).children.length, 0);
+  test.equal(A({constructor: Object}).children.length, 0);
 
   test.equal(HTML.toHTML(HTML.CharRef({html: '&amp;', str: '&'})), '&amp;');
   test.throws(function () {

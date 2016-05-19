@@ -1,5 +1,11 @@
+/* eslint no-console: 0 */
+
 var _ = require('underscore');
-var files = require('./files.js');
+var files = require('./fs/files.js');
+var Console = require('./console/console.js').Console;
+import main from './cli/main.js';
+import buildmessage from './utils/buildmessage.js';
+import * as cordova from './cordova';
 
 // This file implements "upgraders" --- functions which upgrade a Meteor app to
 // a new version. Each upgrader has a name (registered in upgradersByName).
@@ -17,11 +23,26 @@ var printedNoticeHeaderThisProcess = false;
 var maybePrintNoticeHeader = function () {
   if (printedNoticeHeaderThisProcess)
     return;
-  console.log();
-  console.log("-- Notice --");
-  console.log();
+  Console.info();
+  Console.info("-- Notice --");
+  Console.info();
   printedNoticeHeaderThisProcess = true;
 };
+
+// How to do package-specific notices:
+// (a) A notice that occurs if a package is used indirectly or directly.
+//     if (projectContext.packageMap.getInfo('accounts-ui')) {
+//       console.log(
+// "\n" +
+// "       Accounts UI has totally changed, yo.");
+//     }
+//
+// (b) A notice that occurs if a package is used directly.
+//     if (projectContext.projectConstraintsFile.getConstraint('accounts-ui')) {
+//       console.log(
+// "\n" +
+// "       Accounts UI has totally changed, yo.");
+//     }
 
 var upgradersByName = {
    "notices-for-0.9.0": function (projectContext) {
@@ -52,20 +73,6 @@ var upgradersByName = {
 "       out the available packages by typing 'meteor search <term>' or by\n" +
 "       visiting atmospherejs.com.\n");
      }
-     // How to do package-specific notices:
-     // (a) A notice that occurs if a package is used indirectly or directly.
-     //     if (projectContext.packageMap.getInfo('accounts-ui')) {
-     //       console.log(
-     // "\n" +
-     // "       Accounts UI has totally changed, yo.");
-     //     }
-     //
-     // (b) A notice that occurs if a package is used directly.
-     //     if (projectContext.projectConstraintsFile.getConstraint('accounts-ui')) {
-     //       console.log(
-     // "\n" +
-     // "       Accounts UI has totally changed, yo.");
-     //     }
     console.log();
   },
 
@@ -100,7 +107,125 @@ var upgradersByName = {
     // This method will automatically add "server" and "browser" and sort, etc.
     projectContext.platformList.write(oldPlatforms);
     files.unlink(oldPlatformsPath);
-  }
+  },
+
+  "notices-for-facebook-graph-api-2": function (projectContext) {
+    // Note: this will print if the app has facebook as a dependency, whether
+    // direct or indirect. (This is good, since most apps will be pulling it in
+    // indirectly via accounts-facebook.)
+    if (projectContext.packageMap.getInfo('facebook')) {
+      maybePrintNoticeHeader();
+      Console.info(
+        "This version of Meteor now uses version 2.2 of the Facebook API",
+        "for authentication, instead of 1.0. If you use additional Facebook",
+        "API methods beyond login, you may need to request new",
+        "permissions.\n\n",
+        "Facebook will automatically switch all apps to API",
+        "version 2.0 on April 30th, 2015. Please make sure to update your",
+        "application's permissions and API calls by that date.\n\n",
+        "For more details, see",
+        "https://github.com/meteor/meteor/wiki/Facebook-Graph-API-Upgrade",
+        Console.options({ bulletPoint: "1.0.5: " })
+      );
+    }
+  },
+
+  "1.2.0-standard-minifiers-package": function (projectContext) {
+    // Minifiers are extracted into a new package called "standard-minifiers"
+    projectContext.projectConstraintsFile.addPackages(
+      ['standard-minifiers']);
+    projectContext.projectConstraintsFile.writeIfModified();
+  },
+
+  "1.2.0-meteor-platform-split": function (projectContext) {
+    const packagesFile = projectContext.projectConstraintsFile;
+    // meteor-platform is split into a series of smaller umbrella packages
+    // Only run this upgrader if the app has meteor-platform
+    if (packagesFile.getConstraint('meteor-platform')) {
+      packagesFile.removePackages(['meteor-platform']);
+
+      packagesFile.addPackages([
+        // These packages replace meteor-platform in newly created apps
+        'meteor-base',
+        'mobile-experience',
+        'mongo',
+        'blaze-html-templates',
+        'session',
+        'jquery',
+        'tracker',
+
+        // These packages are not in newly created apps, but were in
+        // meteor-platform so we need to add them just in case
+        'logging',
+        'reload',
+        'random',
+        'ejson',
+        'spacebars',
+        'check',
+      ]);
+
+      packagesFile.writeIfModified();
+    }
+  },
+
+  "1.2.0-cordova-changes": function (projectContext) {
+    // Remove Cordova project directory to start afresh
+    // and avoid a broken project
+    files.rm_recursive(projectContext.getProjectLocalDirectory(
+       'cordova-build'));
+
+    // Cordova plugin IDs have changed as part of moving to npm, so we convert
+    // old plugin IDs to new IDs. We also convert old-style GitHub tarball URLs
+    // to new Git URLs, and check if other Git URLs contain a SHA reference.
+    const pluginsFile = projectContext.cordovaPluginsFile;
+    let messages;
+    if (files.exists(pluginsFile.filename)) {
+      messages = buildmessage.capture(
+        { title: `converting Cordova plugins` }, () => {
+        let pluginVersions = pluginsFile.getPluginVersions();
+        pluginVersions = cordova.convertPluginVersions(pluginVersions);
+        pluginsFile.write(pluginVersions);
+      });
+    }
+
+    // Don't display notice if the project has no Cordova platforms added
+    if (_.isEmpty(projectContext.platformList.getCordovaPlatforms())) return;
+
+    maybePrintNoticeHeader();
+
+    // Print error messages generated during plugin conversion, if any
+    if (messages && messages.hasMessages()) {
+      Console.printMessages(messages);
+    }
+  },
+
+  "1.2.0-breaking-changes": function () {
+    maybePrintNoticeHeader();
+    Console.info(
+`Meteor 1.2 includes many changes and improvements to the build system, \
+some of which might require small changes to apps and packages. Please read \
+the guide about breaking changes here:`,
+      Console.url("https://github.com/meteor/meteor/wiki/Breaking-changes-in-Meteor-1.2"),
+      Console.options({ bulletPoint: "1.2: " })
+    );
+  },
+
+  "1.3.0-split-minifiers-package": function (projectContext) {
+    const packagesFile = projectContext.projectConstraintsFile;
+
+    // Minifiers are extracted into a new package called "standard-minifiers"
+
+    if (packagesFile.getConstraint('standard-minifiers')) {
+      packagesFile.removePackages(['standard-minifiers']);
+
+      packagesFile.addPackages([
+        // These packages replace meteor-platform in newly created apps
+        'standard-minifier-css',
+        'standard-minifier-js',
+      ]);
+    }
+    packagesFile.writeIfModified();
+  },
 
   ////////////
   // PLEASE. When adding new upgraders that print mesasges, follow the
@@ -109,6 +234,8 @@ var upgradersByName = {
   //
   // 1.x.y: Lorem ipsum messages go here...
   //        ...and linewrapped on the right column
+  //
+  // (Or just use Console.info with bulletPoint)
   ////////////
 };
 

@@ -1,0 +1,23 @@
+{
+  "dependencies": {
+    "meteor-promise": {
+      "version": "0.6.3",
+      "resolved": "https://registry.npmjs.org/meteor-promise/-/meteor-promise-0.6.3.tgz",
+      "from": "meteor-promise@0.6.3",
+      "dependencies": {
+        "promise": {
+          "version": "7.1.1",
+          "resolved": "https://registry.npmjs.org/promise/-/promise-7.1.1.tgz",
+          "from": "promise@7.1.1",
+          "dependencies": {
+            "asap": {
+              "version": "2.0.3",
+              "resolved": "https://registry.npmjs.org/asap/-/asap-2.0.3.tgz",
+              "from": "asap@>=2.0.3 <2.1.0"
+            }
+          }
+        }
+      }
+    }
+  }
+}

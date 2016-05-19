@@ -3,7 +3,7 @@
 set -e
 set -u
 
-MONGO_VERSION="2.4.12"
+MONGO_VERSION="2.6.7"
 
 source "$(dirname $0)/build-dev-bundle-common.sh"
 echo CHECKOUT DIR IS "$CHECKOUT_DIR"
@@ -13,7 +13,7 @@ echo BUILDING MONGO "v$MONGO_VERSION" IN "$DIR"
 # We want to build a binary that includes SSL support but does not depend on a
 # particular version of openssl on the host system.
 
-OPENSSL="openssl-1.0.1j"
+OPENSSL="openssl-1.0.2"
 OPENSSL_URL="http://www.openssl.org/source/$OPENSSL.tar.gz"
 wget $OPENSSL_URL || curl -O $OPENSSL_URL
 tar xzf $OPENSSL.tar.gz

@@ -1,10 +1,11 @@
 Package.describe({
   summary: "Wrapper around the bcrypt npm package",
-  version: '0.7.7'
+  version: '0.8.5',
+  documentation: null
 });
 
 Npm.depends({
-  bcrypt: '0.7.7'
+  bcrypt: '0.8.5'
 });
 
 Package.onUse(function (api) {

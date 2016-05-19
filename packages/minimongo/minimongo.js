@@ -40,15 +40,6 @@ Minimongo = {};
 // Use it to export private functions to test in Tinytest.
 MinimongoTest = {};
 
-LocalCollection._applyChanges = function (doc, changeFields) {
-  _.each(changeFields, function (value, key) {
-    if (value === undefined)
-      delete doc[key];
-    else
-      doc[key] = value;
-  });
-};
-
 MinimongoError = function (message) {
   var e = new Error(message);
   e.name = "MinimongoError";
@@ -92,25 +83,27 @@ LocalCollection.Cursor = function (collection, selector, options) {
 
   self.collection = collection;
   self.sorter = null;
+  self.matcher = new Minimongo.Matcher(selector);
 
   if (LocalCollection._selectorIsId(selector)) {
     // stash for fast path
     self._selectorId = selector;
-    self.matcher = new Minimongo.Matcher(selector, self);
+  } else if (LocalCollection._selectorIsIdPerhapsAsObject(selector)) {
+    // also do the fast path for { _id: idString }
+    self._selectorId = selector._id;
   } else {
     self._selectorId = undefined;
-    self.matcher = new Minimongo.Matcher(selector, self);
     if (self.matcher.hasGeoQuery() || options.sort) {
       self.sorter = new Minimongo.Sorter(options.sort || [],
                                          { matcher: self.matcher });
     }
   }
+
   self.skip = options.skip;
   self.limit = options.limit;
   self.fields = options.fields;
 
-  if (self.fields)
-    self.projectionFn = LocalCollection._compileProjection(self.fields);
+  self._projectionFn = LocalCollection._compileProjection(self.fields || {});
 
   self._transform = LocalCollection.wrapTransform(options.transform);
 
@@ -145,12 +138,17 @@ LocalCollection.prototype.findOne = function (selector, options) {
 };
 
 /**
+ * @callback IterationCallback
+ * @param {Object} doc
+ * @param {Number} index
+ */
+/**
  * @summary Call `callback` once for each matching document, sequentially and synchronously.
  * @locus Anywhere
  * @method  forEach
  * @instance
  * @memberOf Mongo.Cursor
- * @param {Function} callback Function to call. It will be called with three arguments: the document, a 0-based index, and <em>cursor</em> itself.
+ * @param {IterationCallback} callback Function to call. It will be called with three arguments: the document, a 0-based index, and <em>cursor</em> itself.
  * @param {Any} [thisArg] An object which will be the value of `this` inside `callback`.
  */
 LocalCollection.Cursor.prototype.forEach = function (callback, thisArg) {
@@ -167,13 +165,8 @@ LocalCollection.Cursor.prototype.forEach = function (callback, thisArg) {
   }
 
   _.each(objects, function (elt, i) {
-    if (self.projectionFn) {
-      elt = self.projectionFn(elt);
-    } else {
-      // projection functions always clone the pieces they use, but if not we
-      // have to do it here.
-      elt = EJSON.clone(elt);
-    }
+    // This doubles as a clone operation.
+    elt = self._projectionFn(elt);
 
     if (self._transform)
       elt = self._transform(elt);
@@ -191,7 +184,7 @@ LocalCollection.Cursor.prototype.getTransform = function () {
  * @method map
  * @instance
  * @memberOf Mongo.Cursor
- * @param {Function} callback Function to call. It will be called with three arguments: the document, a 0-based index, and <em>cursor</em> itself.
+ * @param {IterationCallback} callback Function to call. It will be called with three arguments: the document, a 0-based index, and <em>cursor</em> itself.
  * @param {Any} [thisArg] An object which will be the value of `this` inside `callback`.
  */
 LocalCollection.Cursor.prototype.map = function (callback, thisArg) {
@@ -226,6 +219,7 @@ LocalCollection.Cursor.prototype.fetch = function () {
  * @method  count
  * @instance
  * @locus Anywhere
+ * @returns {Number}
  */
 LocalCollection.Cursor.prototype.count = function () {
   var self = this;
@@ -244,7 +238,11 @@ LocalCollection.Cursor.prototype._publishCursor = function (sub) {
   var collection = self.collection.name;
 
   // XXX minimongo should not depend on mongo-livedata!
-  return Mongo.Collection._publishCursor(self, sub, collection);
+  if (! Package.mongo) {
+    throw new Error("Can't publish from Minimongo without the `mongo` package.");
+  }
+
+  return Package.mongo.Mongo.Collection._publishCursor(self, sub, collection);
 };
 
 LocalCollection.Cursor.prototype._getCollectionName = function () {
@@ -337,7 +335,7 @@ _.extend(LocalCollection.Cursor.prototype, {
       resultsSnapshot: null,
       ordered: ordered,
       cursor: self,
-      projectionFn: self.projectionFn
+      projectionFn: self._projectionFn
     };
     var qid;
 
@@ -359,7 +357,7 @@ _.extend(LocalCollection.Cursor.prototype, {
 
     // furthermore, callbacks enqueue until the operation we're working on is
     // done.
-    var wrapCallback = function (f, fieldsIndex, ignoreEmptyFields) {
+    var wrapCallback = function (f) {
       if (!f)
         return function () {};
       return function (/*args*/) {
@@ -369,22 +367,16 @@ _.extend(LocalCollection.Cursor.prototype, {
         if (self.collection.paused)
           return;
 
-        if (fieldsIndex !== undefined && self.projectionFn) {
-          args[fieldsIndex] = self.projectionFn(args[fieldsIndex]);
-          if (ignoreEmptyFields && _.isEmpty(args[fieldsIndex]))
-            return;
-        }
-
         self.collection._observeQueue.queueTask(function () {
           f.apply(context, args);
         });
       };
     };
-    query.added = wrapCallback(options.added, 1);
-    query.changed = wrapCallback(options.changed, 1, true);
+    query.added = wrapCallback(options.added);
+    query.changed = wrapCallback(options.changed);
     query.removed = wrapCallback(options.removed);
     if (ordered) {
-      query.addedBefore = wrapCallback(options.addedBefore, 1);
+      query.addedBefore = wrapCallback(options.addedBefore);
       query.movedBefore = wrapCallback(options.movedBefore);
     }
 
@@ -398,8 +390,8 @@ _.extend(LocalCollection.Cursor.prototype, {
 
         delete fields._id;
         if (ordered)
-          query.addedBefore(doc._id, fields, null);
-        query.added(doc._id, fields);
+          query.addedBefore(doc._id, self._projectionFn(fields), null);
+        query.added(doc._id, self._projectionFn(fields));
       });
     }
 
@@ -554,7 +546,7 @@ LocalCollection.prototype.insert = function (doc, callback) {
   if (!_.has(doc, '_id')) {
     // if you really want to use ObjectIDs, set this global.
     // Mongo.Collection specifies its own ids and does not use this code.
-    doc._id = LocalCollection._useOID ? new LocalCollection._ObjectID()
+    doc._id = LocalCollection._useOID ? new MongoID.ObjectID()
                                       : Random.id();
   }
   var id = doc._id;
@@ -582,7 +574,7 @@ LocalCollection.prototype.insert = function (doc, callback) {
 
   _.each(queriesToRecompute, function (qid) {
     if (self.queries[qid])
-      LocalCollection._recomputeResults(self.queries[qid]);
+      self._recomputeResults(self.queries[qid]);
   });
   self._observeQueue.drain();
 
@@ -641,7 +633,7 @@ LocalCollection.prototype.remove = function (selector, callback) {
     return result;
   }
 
-  var matcher = new Minimongo.Matcher(selector, self);
+  var matcher = new Minimongo.Matcher(selector);
   var remove = [];
   self._eachPossiblyMatchingDoc(selector, function (doc, id) {
     if (matcher.documentMatches(doc).result)
@@ -676,7 +668,7 @@ LocalCollection.prototype.remove = function (selector, callback) {
   _.each(queriesToRecompute, function (qid) {
     var query = self.queries[qid];
     if (query)
-      LocalCollection._recomputeResults(query);
+      self._recomputeResults(query);
   });
   self._observeQueue.drain();
   result = remove.length;
@@ -697,7 +689,7 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   }
   if (!options) options = {};
 
-  var matcher = new Minimongo.Matcher(selector, self);
+  var matcher = new Minimongo.Matcher(selector);
 
   // Save the original results of any query that we might need to
   // _recomputeResults on, because _modifyAndNotify will mutate the objects in
@@ -705,11 +697,51 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   // they already have a resultsSnapshot and we won't be diffing in
   // _recomputeResults.)
   var qidToOriginalResults = {};
+  // We should only clone each document once, even if it appears in multiple queries
+  var docMap = new LocalCollection._IdMap;
+  var idsMatchedBySelector = LocalCollection._idsMatchedBySelector(selector);
+
   _.each(self.queries, function (query, qid) {
-    // XXX for now, skip/limit implies ordered observe, so query.results is
-    // always an array
-    if ((query.cursor.skip || query.cursor.limit) && !query.paused)
-      qidToOriginalResults[qid] = EJSON.clone(query.results);
+    if ((query.cursor.skip || query.cursor.limit) && ! self.paused) {
+      // Catch the case of a reactive `count()` on a cursor with skip
+      // or limit, which registers an unordered observe. This is a
+      // pretty rare case, so we just clone the entire result set with
+      // no optimizations for documents that appear in these result
+      // sets and other queries.
+      if (query.results instanceof LocalCollection._IdMap) {
+        qidToOriginalResults[qid] = query.results.clone();
+        return;
+      }
+
+      if (!(query.results instanceof Array)) {
+        throw new Error("Assertion failed: query.results not an array");
+      }
+
+      // Clones a document to be stored in `qidToOriginalResults`
+      // because it may be modified before the new and old result sets
+      // are diffed. But if we know exactly which document IDs we're
+      // going to modify, then we only need to clone those.
+      var memoizedCloneIfNeeded = function(doc) {
+        if (docMap.has(doc._id)) {
+          return docMap.get(doc._id);
+        } else {
+          var docToMemoize;
+
+          if (idsMatchedBySelector && !_.any(idsMatchedBySelector, function(id) {
+            return EJSON.equals(id, doc._id);
+          })) {
+            docToMemoize = doc;
+          } else {
+            docToMemoize = EJSON.clone(doc);
+          }
+
+          docMap.set(doc._id, docToMemoize);
+          return docToMemoize;
+        }
+      };
+
+      qidToOriginalResults[qid] = query.results.map(memoizedCloneIfNeeded);
+    }
   });
   var recomputeQids = {};
 
@@ -731,8 +763,7 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   _.each(recomputeQids, function (dummy, qid) {
     var query = self.queries[qid];
     if (query)
-      LocalCollection._recomputeResults(query,
-                                        qidToOriginalResults[qid]);
+      self._recomputeResults(query, qidToOriginalResults[qid]);
   });
   self._observeQueue.drain();
 
@@ -844,7 +875,7 @@ LocalCollection._insertInResults = function (query, doc) {
   delete fields._id;
   if (query.ordered) {
     if (!query.sorter) {
-      query.addedBefore(doc._id, fields, null);
+      query.addedBefore(doc._id, query.projectionFn(fields), null);
       query.results.push(doc);
     } else {
       var i = LocalCollection._insertInSortedList(
@@ -855,11 +886,11 @@ LocalCollection._insertInResults = function (query, doc) {
         next = next._id;
       else
         next = null;
-      query.addedBefore(doc._id, fields, next);
+      query.addedBefore(doc._id, query.projectionFn(fields), next);
     }
-    query.added(doc._id, fields);
+    query.added(doc._id, query.projectionFn(fields));
   } else {
-    query.added(doc._id, fields);
+    query.added(doc._id, query.projectionFn(fields));
     query.results.set(doc._id, doc);
   }
 };
@@ -879,7 +910,10 @@ LocalCollection._removeFromResults = function (query, doc) {
 LocalCollection._updateInResults = function (query, doc, old_doc) {
   if (!EJSON.equals(doc._id, old_doc._id))
     throw new Error("Can't change a doc's _id while updating");
-  var changedFields = LocalCollection._makeChangedFields(doc, old_doc);
+  var projectionFn = query.projectionFn;
+  var changedFields = DiffSequence.makeChangedFields(
+    projectionFn(doc), projectionFn(old_doc));
+
   if (!query.ordered) {
     if (!_.isEmpty(changedFields)) {
       query.changed(doc._id, changedFields);
@@ -919,17 +953,21 @@ LocalCollection._updateInResults = function (query, doc, old_doc) {
 // old results (and there's no need to pass in oldResults), because these
 // operations don't mutate the documents in the collection. Update needs to pass
 // in an oldResults which was deep-copied before the modifier was applied.
-LocalCollection._recomputeResults = function (query, oldResults) {
-  if (!oldResults)
+//
+// oldResults is guaranteed to be ignored if the query is not paused.
+LocalCollection.prototype._recomputeResults = function (query, oldResults) {
+  var self = this;
+  if (! self.paused && ! oldResults)
     oldResults = query.results;
   if (query.distances)
     query.distances.clear();
   query.results = query.cursor._getRawObjects({
     ordered: query.ordered, distances: query.distances});
 
-  if (!query.paused) {
+  if (! self.paused) {
     LocalCollection._diffQueryChanges(
-      query.ordered, oldResults, query.results, query);
+      query.ordered, oldResults, query.results, query,
+      { projectionFn: query.projectionFn });
   }
 };
 
@@ -1044,68 +1082,10 @@ LocalCollection.prototype.resumeObservers = function () {
     // Diff the current results against the snapshot and send to observers.
     // pass the query object for its observer callbacks.
     LocalCollection._diffQueryChanges(
-      query.ordered, query.resultsSnapshot, query.results, query);
+      query.ordered, query.resultsSnapshot, query.results, query,
+      { projectionFn: query.projectionFn });
     query.resultsSnapshot = null;
   }
   self._observeQueue.drain();
 };
 
-
-// NB: used by livedata
-LocalCollection._idStringify = function (id) {
-  if (id instanceof LocalCollection._ObjectID) {
-    return id.valueOf();
-  } else if (typeof id === 'string') {
-    if (id === "") {
-      return id;
-    } else if (id.substr(0, 1) === "-" || // escape previously dashed strings
-               id.substr(0, 1) === "~" || // escape escaped numbers, true, false
-               LocalCollection._looksLikeObjectID(id) || // escape object-id-form strings
-               id.substr(0, 1) === '{') { // escape object-form strings, for maybe implementing later
-      return "-" + id;
-    } else {
-      return id; // other strings go through unchanged.
-    }
-  } else if (id === undefined) {
-    return '-';
-  } else if (typeof id === 'object' && id !== null) {
-    throw new Error("Meteor does not currently support objects other than ObjectID as ids");
-  } else { // Numbers, true, false, null
-    return "~" + JSON.stringify(id);
-  }
-};
-
-
-// NB: used by livedata
-LocalCollection._idParse = function (id) {
-  if (id === "") {
-    return id;
-  } else if (id === '-') {
-    return undefined;
-  } else if (id.substr(0, 1) === '-') {
-    return id.substr(1);
-  } else if (id.substr(0, 1) === '~') {
-    return JSON.parse(id.substr(1));
-  } else if (LocalCollection._looksLikeObjectID(id)) {
-    return new LocalCollection._ObjectID(id);
-  } else {
-    return id;
-  }
-};
-
-LocalCollection._makeChangedFields = function (newDoc, oldDoc) {
-  var fields = {};
-  LocalCollection._diffObjects(oldDoc, newDoc, {
-    leftOnly: function (key, value) {
-      fields[key] = undefined;
-    },
-    rightOnly: function (key, value) {
-      fields[key] = value;
-    },
-    both: function (key, leftValue, rightValue) {
-      if (!EJSON.equals(leftValue, rightValue))
-        fields[key] = rightValue;
-    }
-  });
-  return fields;
-};

@@ -18,7 +18,7 @@ is five times longer than the Tracker source code itself. You can also browse th
 
 Take this ordinary JavaScript function:
 
-```
+```javascript
 var currentTemperatureFahrenheit = function () {
   return currentTemperatureCelsius() * 9/5 + 32;
 };
@@ -49,7 +49,7 @@ The function passed to `Tracker.autorun` is called once immediately, and then it
 
 Or, instead of calling `Tracker.autorun` ourselves, we might use `currentTemperatureFahrenheit` in a [Blaze](https://www.meteor.com/blaze) template:
 
-```
+```handlebars
 <!-- In demo.html -->
 <template name="demo">
   The current temperature is {{currentTemp}} degrees Fahrenheit.
@@ -59,7 +59,7 @@ Or, instead of calling `Tracker.autorun` ourselves, we might use `currentTempera
 </templates>
 ```
 
-```
+```javascript
 // In demo.js
 Template.demo.helpers({
   currentTemp: function () {
@@ -76,7 +76,7 @@ When this template is shown, the temperature shown on the screen will update liv
 
 What does it look like on the other side, for package authors that are creating new reactive data sources? Here's what the implementation of `currentTemperatureCelsius` might look like (supposing you had an object `Thermometer`, with methods `read` and `onChange`):
 
-```
+```javascript
 var temperatureDep = new Tracker.Dependency;
 
 var currentTemperatureCelsius = function () {

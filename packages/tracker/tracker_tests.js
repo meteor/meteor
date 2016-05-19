@@ -326,18 +326,21 @@ Tinytest.add("tracker - onInvalidate", function (test) {
     buf += "*";
   });
 
-  var append = function (x) {
-    return function () {
+  var append = function (x, expectedComputation) {
+    return function (givenComputation) {
       test.isFalse(Tracker.active);
+      test.equal(givenComputation, expectedComputation || c1);
       buf += x;
     };
   };
+
+  c1.onStop(append('s'));
 
   c1.onInvalidate(append('a'));
   c1.onInvalidate(append('b'));
   test.equal(buf, '*');
   Tracker.autorun(function (me) {
-    Tracker.onInvalidate(append('z'));
+    Tracker.onInvalidate(append('z', me));
     me.stop();
     test.equal(buf, '*z');
     c1.invalidate();
@@ -354,17 +357,17 @@ Tinytest.add("tracker - onInvalidate", function (test) {
   c1.onInvalidate(append('a'));
   c1.onInvalidate(append('b'));
   Tracker.afterFlush(function () {
-    append('x')();
+    append('x')(c1);
     c1.onInvalidate(append('c'));
     c1.invalidate();
     Tracker.afterFlush(function () {
-      append('y')();
+      append('y')(c1);
       c1.onInvalidate(append('d'));
       c1.invalidate();
     });
   });
   Tracker.afterFlush(function () {
-    append('z')();
+    append('z')(c1);
     c1.onInvalidate(append('e'));
     c1.invalidate();
   });
@@ -375,9 +378,14 @@ Tinytest.add("tracker - onInvalidate", function (test) {
 
   buf = "";
   c1.onInvalidate(append('m'));
-  c1.stop();
-  test.equal(buf, 'm');
   Tracker.flush();
+  test.equal(buf, '');
+  c1.stop();
+  test.equal(buf, 'ms');  // s is from onStop
+  Tracker.flush();
+  test.equal(buf, 'ms');
+  c1.onStop(append('S'));
+  test.equal(buf, 'msS');
 });
 
 Tinytest.add('tracker - invalidate at flush time', function (test) {
@@ -434,4 +442,104 @@ Tinytest.add('tracker - throwFirstError', function (test) {
   test.throws(function () {
     Tracker.flush({_throwFirstError: true});
   }, /foo/);
+});
+
+Tinytest.addAsync('tracker - no infinite recomputation', function (test, onComplete) {
+  var reran = false;
+  var c = Tracker.autorun(function (c) {
+    if (! c.firstRun)
+      reran = true;
+    c.invalidate();
+  });
+  test.isFalse(reran);
+  Meteor.setTimeout(function () {
+    c.stop();
+    Tracker.afterFlush(function () {
+      test.isTrue(reran);
+      test.isTrue(c.stopped);
+      onComplete();
+    });
+  }, 100);
+});
+
+Tinytest.add('tracker - Tracker.flush finishes', function (test) {
+  // Currently, _runFlush will "yield" every 1000 computations... unless run in
+  // Tracker.flush. So this test validates that Tracker.flush is capable of
+  // running 2000 computations. Which isn't quite the same as infinity, but it's
+  // getting there.
+  var n = 0;
+  var c = Tracker.autorun(function (c) {
+    if (++n < 2000) {
+      c.invalidate();
+    }
+  });
+  test.equal(n, 1);
+  Tracker.flush();
+  test.equal(n, 2000);
+});
+
+testAsyncMulti('tracker - Tracker.autorun, onError option', [function (test, expect) {
+  var d = new Tracker.Dependency;
+  var c = Tracker.autorun(function (c) {
+    d.depend();
+
+    if (! c.firstRun)
+      throw new Error("foo");
+  }, {
+    onError: expect(function (err) {
+      test.equal(err.message, "foo");
+    })
+  });
+
+  d.changed();
+  Tracker.flush();
+}]);
+
+Tinytest.add('computation - #flush', function (test) {
+  var i = 0, j = 0, d = new Tracker.Dependency;
+  var c1 = Tracker.autorun(function () {
+    d.depend();
+    i = i + 1;
+  });
+  var c2 = Tracker.autorun(function () {
+    d.depend();
+    j = j + 1;
+  });
+  test.equal(i,1);
+  test.equal(j,1);
+
+  d.changed();
+  c1.flush();
+  test.equal(i, 2);
+  test.equal(j, 1);
+
+  Tracker.flush();
+  test.equal(i, 2);
+  test.equal(j, 2);
+});
+
+Tinytest.add('computation - #run', function (test) {
+  var i = 0, d = new Tracker.Dependency, d2 = new Tracker.Dependency;
+  var computation = Tracker.autorun(function (c) {
+    d.depend();
+    i = i + 1;
+    //when #run() is called, this dependency should be picked up
+    if (i>=2 && i<4) { d2.depend(); }
+  });
+  test.equal(i,1);
+  computation.run();
+  test.equal(i,2);
+
+  d.changed(); Tracker.flush();
+  test.equal(i,3);
+
+  //we expect to depend on d2 at this point
+  d2.changed(); Tracker.flush();
+  test.equal(i,4);
+
+  //we no longer depend on d2, only d
+  d2.changed(); Tracker.flush();
+  test.equal(i,4);
+  d.changed(); Tracker.flush();
+  test.equal(i,5);
 });

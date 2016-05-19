@@ -1,13 +1,15 @@
+require('../../tool-env/install-babel.js');
+
 var _ = require('underscore');
 var assert = require('assert');
 var Fiber = require('fibers');
-var files = require('../../files.js');
-var bundler = require('../../bundler.js');
-var release = require('../../release.js');
-var catalog = require('../../catalog.js');
-var buildmessage = require('../../buildmessage.js');
-var meteorNpm = require('../../meteor-npm.js');
-var isopackets = require("../../isopackets.js");
+var files = require('../../fs/files.js');
+var bundler = require('../../isobuild/bundler.js');
+var release = require('../../packaging/release.js');
+var catalog = require('../../packaging/catalog/catalog.js');
+var buildmessage = require('../../utils/buildmessage.js');
+var meteorNpm = require('../../isobuild/meteor-npm.js');
+var isopackets = require('../../tool-env/isopackets.js');
 var projectContextModule = require('../../project-context.js');
 
 var lastTmpDir = null;
@@ -17,7 +19,8 @@ var tmpDir = function () {
 
 var makeProjectContext = function (appName) {
   var projectDir = files.mkdtemp("test-bundler-assets");
-  files.cp_r(files.pathJoin(__dirname, appName), projectDir);
+  files.cp_r(files.pathJoin(files.convertToStandardPath(__dirname), appName),
+    projectDir);
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: projectDir
   });
@@ -223,17 +226,17 @@ var runTest = function () {
     // and installing each package separately could unintentionally bump
     // subdependency versions. (to intentionally bump subdependencies,
     // just remove all of the .npm directory)
-    var bareExecFileSync = meteorNpm._execFileSync;
-    meteorNpm._execFileSync = function (file, args, opts) {
+    var bareRunNpmCommand = meteorNpm.runNpmCommand;
+    meteorNpm.runNpmCommand = function (file, args, opts) {
       if (args.length > 1 && args[0] === 'install')
         assert.fail("shouldn't be installing specific npm packages: " + args[1]);
-      return bareExecFileSync(file, args, opts);
+      return bareRunNpmCommand(file, args, opts);
     };
     var result = bundler.bundle({
       projectContext: projectContext,
       outputPath: tmpOutputDir
     });
-    meteorNpm._execFileSync = bareExecFileSync;
+    meteorNpm.runNpmCommand = bareRunNpmCommand;
 
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
     _assertCorrectPackageNpmDir(projectContext, {gcd: '0.0.0'});

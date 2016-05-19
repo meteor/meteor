@@ -1,4 +1,4 @@
-var selftest = require('../selftest.js');
+var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 var _ = require('underscore');
 
@@ -28,7 +28,6 @@ selftest.define("npm", ["net"], function () {
     }
     run.waitSecs(15);
     run.match("null; From shell script\n");
-    run.expectEnd();
     run.expectExit(0);
   });
 });

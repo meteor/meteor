@@ -1,11 +1,13 @@
+require('../../tool-env/install-babel.js');
+
 var _ = require('underscore');
 var assert = require('assert');
-var bundler = require('../../bundler.js');
-var release = require('../../release.js');
-var files = require('../../files.js');
-var catalog = require('../../catalog.js');
-var buildmessage = require('../../buildmessage.js');
-var isopackets = require("../../isopackets.js");
+var bundler = require('../../isobuild/bundler.js');
+var release = require('../../packaging/release.js');
+var files = require('../../fs/files.js');
+var catalog = require('../../packaging/catalog/catalog.js');
+var buildmessage = require('../../utils/buildmessage.js');
+var isopackets = require('../../tool-env/isopackets.js');
 var projectContextModule = require('../../project-context.js');
 
 
@@ -16,7 +18,8 @@ var tmpDir = function () {
 
 var makeProjectContext = function (appName) {
   var projectDir = files.mkdtemp("test-bundler-options");
-  files.cp_r(files.pathJoin(__dirname, appName), projectDir);
+  files.cp_r(files.pathJoin(files.convertToStandardPath(__dirname), appName),
+    projectDir);
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: projectDir
   });
@@ -58,7 +61,7 @@ var runTest = function () {
     var result = bundler.bundle({
       projectContext: projectContext,
       outputPath: tmpOutputDir,
-      buildOptions: { minify: true }
+      buildOptions: { minifyMode: 'production' }
     });
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
 
@@ -71,7 +74,7 @@ var runTest = function () {
                                         "programs", "server", "node_modules")));
     // yes package node_modules directory
     assert(files.lstat(files.pathJoin(
-      tmpOutputDir, "programs", "server", "npm", "ddp"))
+      tmpOutputDir, "programs", "server", "npm", "node_modules", "meteor", "ddp-server"))
            .isDirectory());
 
     // verify that contents are minified
@@ -80,7 +83,7 @@ var runTest = function () {
       if (item.type !== 'js')
         return;
       // Just a hash, and no "packages/".
-      assert(/^[0-9a-f]{40,40}\.js$/.test(item.path));
+      assert(/^[0-9a-f]{40,40}\.js$/.test(item.path), item.path);
     });
   });
 
@@ -90,7 +93,7 @@ var runTest = function () {
     var result = bundler.bundle({
       projectContext: projectContext,
       outputPath: tmpOutputDir,
-      buildOptions: { minify: false }
+      buildOptions: { minifyMode: 'development' }
     });
     assert.strictEqual(result.errors, false);
 
@@ -118,29 +121,31 @@ var runTest = function () {
     assert(foundTracker);
   });
 
-  console.log("includeNodeModulesSymlink");
-  assert.doesNotThrow(function () {
-    var tmpOutputDir = tmpDir();
-    var result = bundler.bundle({
-      projectContext: projectContext,
-      outputPath: tmpOutputDir,
-      includeNodeModulesSymlink: true
-    });
-    assert.strictEqual(result.errors, false);
+  if (process.platform !== "win32") { // Windows doesn't have symlinks
+    console.log("includeNodeModules");
+    assert.doesNotThrow(function () {
+      var tmpOutputDir = tmpDir();
+      var result = bundler.bundle({
+        projectContext: projectContext,
+        outputPath: tmpOutputDir,
+        includeNodeModules: 'symlink'
+      });
+      assert.strictEqual(result.errors, false);
 
-    // sanity check -- main.js has expected contents.
-    assert.strictEqual(files.readFile(files.pathJoin(tmpOutputDir, "main.js"), "utf8"),
-                       bundler._mainJsContents);
-    // node_modules directory exists and is a symlink
-    assert(files.lstat(files.pathJoin(tmpOutputDir, "programs", "server", "node_modules")).isSymbolicLink());
-    // node_modules contains fibers
-    assert(files.exists(files.pathJoin(tmpOutputDir, "programs", "server", "node_modules", "fibers")));
-    // package node_modules directory also a symlink
-    // XXX might be breaking this
-    assert(files.lstat(files.pathJoin(
-      tmpOutputDir, "programs", "server", "npm", "ddp", "node_modules"))
-           .isSymbolicLink());
-  });
+      // sanity check -- main.js has expected contents.
+      assert.strictEqual(files.readFile(files.pathJoin(tmpOutputDir, "main.js"), "utf8"),
+                         bundler._mainJsContents);
+      // node_modules directory exists and is a symlink
+      assert(files.lstat(files.pathJoin(tmpOutputDir, "programs", "server", "node_modules")).isSymbolicLink());
+      // node_modules contains fibers
+      assert(files.exists(files.pathJoin(tmpOutputDir, "programs", "server", "node_modules", "fibers")));
+      // package node_modules directory also a symlink
+      // XXX might be breaking this
+      assert(files.lstat(files.pathJoin(
+        tmpOutputDir, "programs", "server", "npm", "node_modules", "meteor", "ddp-server", "node_modules"))
+             .isSymbolicLink());
+    });
+  }
 };
 
 

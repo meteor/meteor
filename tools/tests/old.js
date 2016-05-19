@@ -1,15 +1,16 @@
 var _ = require('underscore');
 var Future = require('fibers/future');
-var selftest = require('../selftest.js');
+var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 var Run = selftest.Run;
-var files = require('../files.js');
-var release = require('../release.js');
+var files = require('../fs/files.js');
+var release = require('../packaging/release.js');
 
 // old tests don't get to test --release, and always run this release
 var maybeFixRelease = function (env) {
-  if (release.current && release.current.isProperRelease())
+  if (release.current && release.current.isProperRelease()) {
     env.METEOR_SPRINGBOARD_RELEASE = release.current.name;
+  }
   return env;
 };
 
@@ -21,13 +22,18 @@ var maybeFixRelease = function (env) {
 // filename is interpreted relative to tools/selftests/old.
 var runOldTest = function (filename, extraEnv) {
   var s = new Sandbox;
-  var run = new Run(process.execPath, {
-    args: [files.pathResolve(__dirname, 'old', filename)],
+
+  // 'Run' assumes that the first argument is a standard path,
+  var run = new Run(files.convertToStandardPath(process.execPath), {
+    // 'args' are treated as-is, so need to be converted before passing into
+    // 'Run'
+    args: [files.convertToOSPath(files.pathResolve(
+      files.convertToStandardPath(__dirname), 'old', filename))],
     env: maybeFixRelease(_.extend({
       METEOR_TOOL_PATH: s.execPath
     }, extraEnv))
   });
-  run.waitSecs(40);
+  run.waitSecs(120);
   run.expectExit(0);
 };
 
@@ -81,9 +87,11 @@ selftest.define("bundler-npm", ["slow", "net", "checkout"], function () {
 // in release mode. If we're not running from a checkout, just run it
 // against the installed copy.
 
-selftest.define("old cli tests", ["slow", "net"], function () {
+selftest.define("old cli tests (bash)", ["slow", "net", "yet-unsolved-windows-failure"], function () {
   var s = new Sandbox;
-  var run = new Run(files.pathJoin(__dirname, 'old', 'cli-test.sh'), {
+  var scriptToRun = files.pathJoin(files.convertToStandardPath(__dirname),
+    'old', 'cli-test.sh');
+  var run = new Run(scriptToRun, {
     env: maybeFixRelease({
       METEOR_TOOL_PATH: s.execPath,
       NODE: process.execPath

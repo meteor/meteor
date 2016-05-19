@@ -70,19 +70,24 @@ splitArgs = function (deps) {
       dependencies.push(dep);
     }
     if (constr) {
-      constraints.push(PV.parseConstraint(dep + "@" + constr));
+      constraints.push(PV.parsePackageConstraint(dep + "@" + constr));
     }
   });
   return {dependencies: dependencies, constraints: constraints};
 };
 
 var testWithResolver = function (test, resolver, f) {
+  var answerToString = function (answer) {
+    var pvs = _.map(answer, function (v, p) { return p + ' ' + v; });
+    return pvs.sort().join('\n');
+  };
   var t = function (deps, expected, options) {
     var dependencies = splitArgs(deps).dependencies;
     var constraints = splitArgs(deps).constraints;
 
     var resolvedDeps = resolver.resolve(dependencies, constraints, options);
-    test.equal(resolvedDeps.answer, expected);
+    test.equal(answerToString(resolvedDeps.answer),
+               answerToString(expected));
   };
 
   var FAIL = function (deps, regexp) {
@@ -102,7 +107,7 @@ Tinytest.add("constraint solver - simple exact + regular deps", function (test) 
       "sparky-forms": "1.1.2",
       "forms": "1.0.1",
       "sparkle": "2.1.1",
-      "jquery-widgets": "1.0.0",
+      "jquery-widgets": "1.0.2",
       "jquery": "1.8.2"
     });
 
@@ -110,7 +115,7 @@ Tinytest.add("constraint solver - simple exact + regular deps", function (test) 
       "sparky-forms": "1.1.2",
       "forms": "1.0.1",
       "sparkle": "2.1.1",
-      "jquery-widgets": "1.0.0",
+      "jquery-widgets": "1.0.2",
       "jquery": "1.8.2",
       "awesome-dropdown": "1.5.0",
       "dropdown": "1.2.2"
@@ -128,7 +133,7 @@ Tinytest.add("constraint solver - non-exact direct dependency", function (test) 
       "sparky-forms": "1.1.2",
       "forms": "1.0.1",
       "sparkle": "2.1.1",
-      "jquery-widgets": "1.0.0",
+      "jquery-widgets": "1.0.2",
       "jquery": "1.8.2",
       "awesome-dropdown": "1.5.0",
       "dropdown": "1.2.2"
@@ -141,22 +146,18 @@ Tinytest.add("constraint solver - no results", function (test) {
     ["bad-1", "1.0.0", {indirect: "1.0.0"}],
     ["bad-2", "1.0.0", {indirect: "2.0.0"}],
     ["indirect", "1.0.0"],
-    ["indirect", "2.0.0"]
+    ["indirect", "2.0.0"],
+    ["mytoplevel", "1.0.0", {"bad-1": "1.0.0", "bad-2": ""}]
   ]);
   testWithResolver(test, resolver, function (t, FAIL) {
-    FAIL({ "bad-1": "1.0.0", "bad-2": "" }, function (error) {
-      return error.message.match(/indirect@2\.0\.0 is not satisfied by 1\.0\.0/)
-        && error.message.match(/bad-1@1\.0\.0/)
-        && error.message.match(/bad-2@1\.0\.0/)
-        // We shouldn't get shown indirect itself in a pathway: that would just
-        // be an artifact of there being a path that passes through another
-        // package.  (Note: we might change our mind and decide that all these
-        // lines should end in the relevant constraint, which would probably be
-        // nice! But in that case, we should test that no line ends with TWO
-        // mentions of indirect.)
-        && ! error.message.match(/-> indirect/)
-        // Lines should be unique.
-        && ! error.message.match(/bad-1[^]+bad-1/);
+    FAIL({ "mytoplevel": "" }, function (error) {
+      return error.message.match(/indirect@2\.0\.0 is not satisfied by indirect 1\.0\.0/)
+        && error.message.match(/^\* indirect@1\.0\.0 <- bad-1 1\.0\.0 <- mytoplevel 1.0.0$/m)
+        && error.message.match(/^\* indirect@2\.0\.0 <- bad-2 1\.0\.0 <- mytoplevel 1.0.0$/m)
+      // Lines should be unique.
+        && ! error.message.match(/bad-1[^]+bad-1/)
+      // only two constraints listed
+        && ! error.message.match(/onstraints on package "foo":[^]+@[^]+@[^]+@/);
     });
   });
 
@@ -168,12 +169,14 @@ Tinytest.add("constraint solver - no results", function (test) {
     ["bar", "1.0.0", {foo: "1.0.0"}]
   ]);
   testWithResolver(test, resolver, function (t, FAIL) {
-    FAIL({foo: "2.0.0", bar: "1.0.0"},
-         /constraints on foo[^]+top level[^]+bar@1.0.0/);
+    FAIL({foo: "2.0.0", bar: "1.0.0"}, function (error) {
+      return error.message.match(/Constraints on package "foo":[^]+top level/) &&
+        error.message.match(/Constraints on package "foo":[^]+bar 1.0.0/);
+    });
   });
 
   testWithResolver(test, makeResolver([]), function (t, FAIL) {
-    FAIL({foo: "1.0.0"}, /unknown package: foo/);
+    FAIL({foo: "1.0.0"}, /unknown package in top-level dependencies: foo/);
   });
 
   resolver = makeResolver([
@@ -182,7 +185,7 @@ Tinytest.add("constraint solver - no results", function (test) {
   ]);
   testWithResolver(test, resolver, function (t, FAIL) {
     FAIL({foo: "w1.0.0", bar: "1.0.0"},
-         /constraints on foo[^]+top level/);
+         /No version of foo satisfies all constraints: @1.0.0/);
   });
 });
 
@@ -232,9 +235,10 @@ Tinytest.add("constraint solver - any-of constraint", function (test) {
 
     FAIL({"one-of-equal": "1.0.0",
           "one-of": "1.0.0",
-          "indirect" : "=2.0.0"},
-         /constraints on indirect[^]+top level[^]+one-of-equal@1.0.0/
-    );
+          "indirect" : "=2.0.0"}, function (error) {
+            return error.message.match(/Constraints on package "indirect":[^]+top level/) &&
+              error.message.match(/Constraints on package "indirect":[^]+one-of-equal 1.0.0/);
+          });
   });
 });
 
@@ -245,7 +249,7 @@ Tinytest.add("constraint solver - previousSolution", function (test) {
       "sparky-forms": "1.0.0",
       "awesome-dropdown": "1.4.0",
       "dropdown": "1.2.2",
-      "jquery-widgets": "1.0.0",
+      "jquery-widgets": "1.0.2",
       "jquery": "1.8.2",
       "sparkle": "2.1.1"
     });
@@ -256,7 +260,7 @@ Tinytest.add("constraint solver - previousSolution", function (test) {
       "sparky-forms": "1.1.2",
       "forms": "1.0.1",
       "sparkle": "2.1.1",
-      "jquery-widgets": "1.0.0",
+      "jquery-widgets": "1.0.2",
       "jquery": "1.8.2"
     });
 
@@ -266,7 +270,7 @@ Tinytest.add("constraint solver - previousSolution", function (test) {
       "sparky-forms": "1.0.0",
       "awesome-dropdown": "1.4.0",
       "dropdown": "1.2.2",
-      "jquery-widgets": "1.0.0",
+      "jquery-widgets": "1.0.2",
       "jquery": "1.8.2",
       "sparkle": "2.1.1"
     }, { previousSolution: {
@@ -280,7 +284,7 @@ Tinytest.add("constraint solver - previousSolution", function (test) {
       "sparky-forms": "1.1.2",
       "forms": "1.0.1",
       "sparkle": "2.1.1",
-      "jquery-widgets": "1.0.0",
+      "jquery-widgets": "1.0.2",
       "jquery": "1.8.2"
     }, { previousSolution: {
       "sparky-forms": "1.0.0"
@@ -298,19 +302,8 @@ Tinytest.add("constraint solver - no constraint dependency - anything", function
 Tinytest.add("constraint solver - no constraint dependency - transitive dep still picked right", function (test) {
   var versions = defaultResolver.resolve(
     ["sparkle", "sparky-forms"],
-    [PV.parseConstraint("sparky-forms@1.1.2")]).answer;
+    [PV.parsePackageConstraint("sparky-forms@1.1.2")]).answer;
   test.equal(versions.sparkle, "2.1.1");
-});
-
-Tinytest.add("constraint solver - build IDs", function (test) {
-  // build IDs in suffixes like "+local" don't show up in output
-  testWithResolver(test, makeResolver([
-    ["foo", "1.0.1+local"]
-  ]), function (t) {
-    t({ "foo": "1.0.0" }, {
-      "foo": "1.0.1"
-    });
-  });
 });
 
 Tinytest.add("constraint solver - input serialization", function (test) {
@@ -325,6 +318,8 @@ Tinytest.add("constraint solver - input serialization", function (test) {
   test.equal(input1.upgrade, []);
   test.equal(input1.anticipatedPrereleases, {});
   test.equal(input1.previousSolution, null);
+  test.equal(input1.allowIncompatibleUpdate, false);
+  test.equal(input1.upgradeIndirectDepPatchVersions, false);
 
   var obj1 = input1.toJSONable();
   test.isFalse(_.has(obj1, 'upgrade'));
@@ -335,4 +330,40 @@ Tinytest.add("constraint solver - input serialization", function (test) {
 
   test.equal(JSON.stringify(obj1), json);
   test.equal(JSON.stringify(obj2), json);
+
+  ///// Now a different case:
+
+  var input2 = new CS.Input(
+    ['foo'], [PV.parsePackageConstraint('foo@1.0.0')],
+    new CS.CatalogCache(), {
+      upgrade: ['foo'],
+      anticipatedPrereleases: { foo: { '1.0.0-rc.0': true } },
+      previousSolution: { foo: '1.0.0' },
+      allowIncompatibleUpdate: true,
+      upgradeIndirectDepPatchVersions: true
+    });
+
+  var json2 = JSON.stringify(input2.toJSONable());
+  var input2prime = CS.Input.fromJSONable(JSON.parse(json2));
+  test.equal(input2prime.toJSONable(), {
+    dependencies: ["foo"],
+    constraints: ["foo@1.0.0"],
+    catalogCache: { data: {} },
+    upgrade: ['foo'],
+    anticipatedPrereleases: { foo: { '1.0.0-rc.0': true } },
+    previousSolution: { foo: '1.0.0' },
+    allowIncompatibleUpdate: true,
+    upgradeIndirectDepPatchVersions: true
+  });
+});
+
+Tinytest.add("constraint solver - non-existent indirect package", function (test) {
+  var resolver = makeResolver([
+    ["foo", "1.0.0", {bar: "1.0.0"}]
+  ]);
+  testWithResolver(test, resolver, function (t, FAIL) {
+    FAIL({ "foo": "1.0.0" }, function (error) {
+      return error.message.match(/unknown package: bar/);
+    });
+  });
 });

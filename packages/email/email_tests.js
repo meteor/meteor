@@ -33,6 +33,25 @@ Tinytest.add("email - dev mode smoke test", function (test) {
                "of the message\r\n" +
                "From us.\r\n" +
                "====== END MAIL #0 ======\n");
+
+    // Test direct MailComposer usage.
+    var mc = new EmailInternals.NpmModules.mailcomposer.module.MailComposer;
+    mc.setMessageOption({
+      from: "a@b.com",
+      text: "body"
+    });
+    Email.send({mailComposer: mc});
+    test.equal(stream.getContentsAsString("utf8"),
+               "====== BEGIN MAIL #1 ======\n" +
+               "(Mail not sent; to enable sending, set the MAIL_URL " +
+                 "environment variable.)\n" +
+               "MIME-Version: 1.0\r\n" +
+               "From: a@b.com\r\n" +
+               "Content-Type: text/plain; charset=utf-8\r\n" +
+               "Content-Transfer-Encoding: quoted-printable\r\n" +
+               "\r\n" +
+               "body\r\n" +
+               "====== END MAIL #1 ======\n");
   } finally {
     EmailTest.restoreOutputStream();
   }

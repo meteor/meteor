@@ -123,7 +123,7 @@ Tinytest.add('accounts - insertUserDoc username', function (test) {
       {profile: {name: 'Foo Bar'}},
       userIn
     );
-  });
+  }, 'Username already exists.');
 
   // cleanup
   Meteor.users.remove(userId);
@@ -156,20 +156,20 @@ Tinytest.add('accounts - insertUserDoc email', function (test) {
       {profile: {name: 'Foo Bar'}},
       userIn
     );
-  });
+  }, 'Email already exists.');
 
   // now with only one of them.
   test.throws(function () {
     Accounts.insertUserDoc(
       {}, {emails: [{address: email1}]}
     );
-  });
+  }, 'Email already exists.');
 
   test.throws(function () {
     Accounts.insertUserDoc(
       {}, {emails: [{address: email2}]}
     );
-  });
+  }, 'Email already exists.');
 
 
   // a third email works.
@@ -371,5 +371,46 @@ Tinytest.addAsync(
         throw new Error("accounts - remove other tokens timed out");
       }
     );
+  }
+);
+
+Tinytest.add(
+  'accounts - hook callbacks can access Meteor.userId()',
+  function (test) {
+    var userId = Accounts.insertUserDoc({}, { username: Random.id() });
+    var stampedToken = Accounts._generateStampedLoginToken();
+    Accounts._insertLoginToken(userId, stampedToken);
+
+    var validateStopper = Accounts.validateLoginAttempt(function(attempt) {
+      test.equal(Meteor.userId(), validateAttemptExpectedUserId, "validateLoginAttempt");
+      return true;
+    });
+    var onLoginStopper = Accounts.onLogin(function(attempt) {
+      test.equal(Meteor.userId(), onLoginExpectedUserId, "onLogin");
+    });
+    var onLoginFailureStopper = Accounts.onLoginFailure(function(attempt) {
+      test.equal(Meteor.userId(), onLoginFailureExpectedUserId, "onLoginFailure");
+    });
+
+    var conn = DDP.connect(Meteor.absoluteUrl());
+
+    // On a new connection, Meteor.userId() should be null until logged in.
+    var validateAttemptExpectedUserId = null;
+    var onLoginExpectedUserId = userId;
+    conn.call('login', { resume: stampedToken.token });
+
+    // Now that the user is logged in on the connection, Meteor.userId() should
+    // return that user.
+    validateAttemptExpectedUserId = userId;
+    conn.call('login', { resume: stampedToken.token });
+
+    // Trigger onLoginFailure callbacks
+    var onLoginFailureExpectedUserId = userId;
+    test.throws(function() { conn.call('login', { resume: "bogus" }) }, '403');
+
+    conn.disconnect();
+    validateStopper.stop();
+    onLoginStopper.stop();
+    onLoginFailureStopper.stop();
   }
 );

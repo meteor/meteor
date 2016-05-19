@@ -25,12 +25,21 @@ var requestCredential = function (options, credentialRequestCompleteCallback) {
   var loginUrl =
         MeteorDeveloperAccounts._server +
         "/oauth2/authorize?" +
-        "state=" + OAuth._stateParam(loginStyle, credentialToken) +
+        "state=" + OAuth._stateParam(loginStyle, credentialToken, options && options.redirectUrl) +
         "&response_type=code&" +
         "client_id=" + config.clientId;
 
-  if (options && options.userEmail)
-    loginUrl += '&user_email=' + encodeURIComponent(options.userEmail);
+  /**
+   * @deprecated in 1.3.0
+   */
+  if (options && options.userEmail && !options.loginHint) {
+    options.loginHint = options.userEmail;
+    delete options.userEmail;
+  }
+
+  if (options && options.loginHint) {
+    loginUrl += '&user_email=' + encodeURIComponent(options.loginHint);
+  }
 
   loginUrl += "&redirect_uri=" + OAuth._redirectUri('meteor-developer', config);
 
@@ -40,7 +49,7 @@ var requestCredential = function (options, credentialRequestCompleteCallback) {
     loginUrl: loginUrl,
     credentialRequestCompleteCallback: credentialRequestCompleteCallback,
     credentialToken: credentialToken,
-    popupOptions: {width: 470, height: 420}
+    popupOptions: {width: 470, height: 490}
   });
 };
 

@@ -33,6 +33,12 @@ Blaze.Template = function (viewName, renderFunction) {
 
   this.__helpers = new HelperMap;
   this.__eventMaps = [];
+
+  this._callbacks = {
+    created: [],
+    rendered: [],
+    destroyed: []
+  };
 };
 var Template = Blaze.Template;
 
@@ -54,6 +60,65 @@ HelperMap.prototype.has = function (name) {
  */
 Blaze.isTemplate = function (t) {
   return (t instanceof Blaze.Template);
+};
+
+/**
+ * @name  onCreated
+ * @instance
+ * @memberOf Template
+ * @summary Register a function to be called when an instance of this template is created.
+ * @param {Function} callback A function to be added as a callback.
+ * @locus Client
+ * @importFromPackage templating
+ */
+Template.prototype.onCreated = function (cb) {
+  this._callbacks.created.push(cb);
+};
+
+/**
+ * @name  onRendered
+ * @instance
+ * @memberOf Template
+ * @summary Register a function to be called when an instance of this template is inserted into the DOM.
+ * @param {Function} callback A function to be added as a callback.
+ * @locus Client
+ * @importFromPackage templating
+ */
+Template.prototype.onRendered = function (cb) {
+  this._callbacks.rendered.push(cb);
+};
+
+/**
+ * @name  onDestroyed
+ * @instance
+ * @memberOf Template
+ * @summary Register a function to be called when an instance of this template is removed from the DOM and destroyed.
+ * @param {Function} callback A function to be added as a callback.
+ * @locus Client
+ * @importFromPackage templating
+ */
+Template.prototype.onDestroyed = function (cb) {
+  this._callbacks.destroyed.push(cb);
+};
+
+Template.prototype._getCallbacks = function (which) {
+  var self = this;
+  var callbacks = self[which] ? [self[which]] : [];
+  // Fire all callbacks added with the new API (Template.onRendered())
+  // as well as the old-style callback (e.g. Template.rendered) for
+  // backwards-compatibility.
+  callbacks = callbacks.concat(self._callbacks[which]);
+  return callbacks;
+};
+
+var fireCallbacks = function (callbacks, template) {
+  Template._withTemplateInstanceFunc(
+    function () { return template; },
+    function () {
+      for (var i = 0, N = callbacks.length; i < N; i++) {
+        callbacks[i].call(template);
+      }
+    });
 };
 
 Template.prototype.constructView = function (contentFunc, elseFunc) {
@@ -120,12 +185,15 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
    * @memberOf Template
    * @summary Provide a callback when an instance of a template is created.
    * @locus Client
+   * @deprecated in 1.1
    */
-  if (self.created) {
-    view.onViewCreated(function () {
-      self.created.call(view.templateInstance());
-    });
-  }
+  // To avoid situations when new callbacks are added in between view
+  // instantiation and event being fired, decide on all callbacks to fire
+  // immediately and then fire them on the event.
+  var createdCallbacks = self._getCallbacks('created');
+  view.onViewCreated(function () {
+    fireCallbacks(createdCallbacks, view.templateInstance());
+  });
 
   /**
    * @name  rendered
@@ -133,12 +201,12 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
    * @memberOf Template
    * @summary Provide a callback when an instance of a template is rendered.
    * @locus Client
+   * @deprecated in 1.1
    */
-  if (self.rendered) {
-    view.onViewReady(function () {
-      self.rendered.call(view.templateInstance());
-    });
-  }
+  var renderedCallbacks = self._getCallbacks('rendered');
+  view.onViewReady(function () {
+    fireCallbacks(renderedCallbacks, view.templateInstance());
+  });
 
   /**
    * @name  destroyed
@@ -146,12 +214,12 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
    * @memberOf Template
    * @summary Provide a callback when an instance of a template is destroyed.
    * @locus Client
+   * @deprecated in 1.1
    */
-  if (self.destroyed) {
-    view.onViewDestroyed(function () {
-      self.destroyed.call(view.templateInstance());
-    });
-  }
+  var destroyedCallbacks = self._getCallbacks('destroyed');
+  view.onViewDestroyed(function () {
+    fireCallbacks(destroyedCallbacks, view.templateInstance());
+  });
 
   return view;
 };
@@ -202,6 +270,16 @@ Blaze.TemplateInstance = function (view) {
    * @type {DOMNode}
    */
   this.lastNode = null;
+
+  // This dependency is used to identify state transitions in
+  // _subscriptionHandles which could cause the result of
+  // TemplateInstance#subscriptionsReady to change. Basically this is triggered
+  // whenever a new subscription handle is added or when a subscription handle
+  // is removed and they are not ready.
+  this._allSubsReadyDep = new Tracker.Dependency();
+  this._allSubsReady = false;
+
+  this._subscriptionHandles = {};
 };
 
 /**
@@ -248,21 +326,159 @@ Blaze.TemplateInstance.prototype.autorun = function (f) {
 };
 
 /**
+ * @summary A version of [Meteor.subscribe](#meteor_subscribe) that is stopped
+ * when the template is destroyed.
+ * @return {SubscriptionHandle} The subscription handle to the newly made
+ * subscription. Call `handle.stop()` to manually stop the subscription, or
+ * `handle.ready()` to find out if this particular subscription has loaded all
+ * of its inital data.
+ * @locus Client
+ * @param {String} name Name of the subscription.  Matches the name of the
+ * server's `publish()` call.
+ * @param {Any} [arg1,arg2...] Optional arguments passed to publisher function
+ * on server.
+ * @param {Function|Object} [options] If a function is passed instead of an
+ * object, it is interpreted as an `onReady` callback.
+ * @param {Function} [options.onReady] Passed to [`Meteor.subscribe`](#meteor_subscribe).
+ * @param {Function} [options.onStop] Passed to [`Meteor.subscribe`](#meteor_subscribe).
+ * @param {DDP.Connection} [options.connection] The connection on which to make the
+ * subscription.
+ */
+Blaze.TemplateInstance.prototype.subscribe = function (/* arguments */) {
+  var self = this;
+
+  var subHandles = self._subscriptionHandles;
+  var args = _.toArray(arguments);
+
+  // Duplicate logic from Meteor.subscribe
+  var options = {};
+  if (args.length) {
+    var lastParam = _.last(args);
+
+    // Match pattern to check if the last arg is an options argument
+    var lastParamOptionsPattern = {
+      onReady: Match.Optional(Function),
+      // XXX COMPAT WITH 1.0.3.1 onError used to exist, but now we use
+      // onStop with an error callback instead.
+      onError: Match.Optional(Function),
+      onStop: Match.Optional(Function),
+      connection: Match.Optional(Match.Any)
+    };
+
+    if (_.isFunction(lastParam)) {
+      options.onReady = args.pop();
+    } else if (lastParam && ! _.isEmpty(lastParam) && Match.test(lastParam, lastParamOptionsPattern)) {
+      options = args.pop();
+    }
+  }
+
+  var subHandle;
+  var oldStopped = options.onStop;
+  options.onStop = function (error) {
+    // When the subscription is stopped, remove it from the set of tracked
+    // subscriptions to avoid this list growing without bound
+    delete subHandles[subHandle.subscriptionId];
+
+    // Removing a subscription can only change the result of subscriptionsReady
+    // if we are not ready (that subscription could be the one blocking us being
+    // ready).
+    if (! self._allSubsReady) {
+      self._allSubsReadyDep.changed();
+    }
+
+    if (oldStopped) {
+      oldStopped(error);
+    }
+  };
+
+  var connection = options.connection;
+  var callbacks = _.pick(options, ["onReady", "onError", "onStop"]);
+
+  // The callbacks are passed as the last item in the arguments array passed to
+  // View#subscribe
+  args.push(callbacks);
+
+  // View#subscribe takes the connection as one of the options in the last
+  // argument
+  subHandle = self.view.subscribe.call(self.view, args, {
+    connection: connection
+  });
+
+  if (! _.has(subHandles, subHandle.subscriptionId)) {
+    subHandles[subHandle.subscriptionId] = subHandle;
+
+    // Adding a new subscription will always cause us to transition from ready
+    // to not ready, but if we are already not ready then this can't make us
+    // ready.
+    if (self._allSubsReady) {
+      self._allSubsReadyDep.changed();
+    }
+  }
+
+  return subHandle;
+};
+
+/**
+ * @summary A reactive function that returns true when all of the subscriptions
+ * called with [this.subscribe](#TemplateInstance-subscribe) are ready.
+ * @return {Boolean} True if all subscriptions on this template instance are
+ * ready.
+ */
+Blaze.TemplateInstance.prototype.subscriptionsReady = function () {
+  this._allSubsReadyDep.depend();
+
+  this._allSubsReady = _.all(this._subscriptionHandles, function (handle) {
+    return handle.ready();
+  });
+
+  return this._allSubsReady;
+};
+
+/**
  * @summary Specify template helpers available to this template.
  * @locus Client
  * @param {Object} helpers Dictionary of helper functions by name.
+ * @importFromPackage templating
  */
 Template.prototype.helpers = function (dict) {
+  if (! _.isObject(dict)) {
+    throw new Error("Helpers dictionary has to be an object");
+  }
+
   for (var k in dict)
     this.__helpers.set(k, dict[k]);
+};
+
+// Kind of like Blaze.currentView but for the template instance.
+// This is a function, not a value -- so that not all helpers
+// are implicitly dependent on the current template instance's `data` property,
+// which would make them dependenct on the data context of the template
+// inclusion.
+Template._currentTemplateInstanceFunc = null;
+
+Template._withTemplateInstanceFunc = function (templateInstanceFunc, func) {
+  if (typeof func !== 'function')
+    throw new Error("Expected function, got: " + func);
+  var oldTmplInstanceFunc = Template._currentTemplateInstanceFunc;
+  try {
+    Template._currentTemplateInstanceFunc = templateInstanceFunc;
+    return func();
+  } finally {
+    Template._currentTemplateInstanceFunc = oldTmplInstanceFunc;
+  }
 };
 
 /**
  * @summary Specify event handlers for this template.
  * @locus Client
  * @param {EventMap} eventMap Event handlers to associate with this template.
+ * @importFromPackage templating
  */
 Template.prototype.events = function (eventMap) {
+  if (! _.isObject(eventMap)) {
+    throw new Error("Event map has to be an object");
+  }
+
   var template = this;
   var eventMap2 = {};
   for (var k in eventMap) {
@@ -273,9 +489,12 @@ Template.prototype.events = function (eventMap) {
         if (data == null)
           data = {};
         var args = Array.prototype.slice.call(arguments);
-        var tmplInstance = view.templateInstance();
-        args.splice(1, 0, tmplInstance);
-        return v.apply(data, args);
+        var tmplInstanceFunc = _.bind(view.templateInstance, view);
+        args.splice(1, 0, tmplInstanceFunc());
+
+        return Template._withTemplateInstanceFunc(tmplInstanceFunc, function () {
+          return v.apply(data, args);
+        });
       };
     })(k, eventMap[k]);
   }
@@ -289,27 +508,31 @@ Template.prototype.events = function (eventMap) {
  * @memberOf Template
  * @summary The [template instance](#template_inst) corresponding to the current template helper, event handler, callback, or autorun.  If there isn't one, `null`.
  * @locus Client
- * @returns Blaze.TemplateInstance
+ * @returns {Blaze.TemplateInstance}
+ * @importFromPackage templating
  */
 Template.instance = function () {
-  var view = Blaze.currentView;
-
-  while (view && ! view.template)
-    view = view.parentView;
-
-  if (! view)
-    return null;
-
-  return view.templateInstance();
+  return Template._currentTemplateInstanceFunc
+    && Template._currentTemplateInstanceFunc();
 };
 
 // Note: Template.currentData() is documented to take zero arguments,
 // while Blaze.getData takes up to one.
 
 /**
- * @summary Returns the data context of the current helper, or the data context of the template that declares the current event handler or callback.  Establishes a reactive dependency on the result.
+ * @summary
+ *
+ * - Inside an `onCreated`, `onRendered`, or `onDestroyed` callback, returns
+ * the data context of the template.
+ * - Inside an event handler, returns the data context of the template on which
+ * this event handler was defined.
+ * - Inside a helper, returns the data context of the DOM node where the helper
+ * was used.
+ *
+ * Establishes a reactive dependency on the result.
  * @locus Client
  * @function
+ * @importFromPackage templating
  */
 Template.currentData = Blaze.getData;
 
@@ -318,6 +541,7 @@ Template.currentData = Blaze.getData;
  * @locus Client
  * @function
  * @param {Integer} [numLevels] The number of levels beyond the current data context to look. Defaults to 1.
+ * @importFromPackage templating
  */
 Template.parentData = Blaze._parentData;
 
@@ -327,5 +551,15 @@ Template.parentData = Blaze._parentData;
  * @function
  * @param {String} name The name of the helper function you are defining.
  * @param {Function} function The helper function itself.
+ * @importFromPackage templating
  */
 Template.registerHelper = Blaze.registerHelper;
+
+/**
+ * @summary Removes a global [helper function](#template_helpers).
+ * @locus Client
+ * @function
+ * @param {String} name The name of the helper function you are defining.
+ * @importFromPackage templating
+ */
+Template.deregisterHelper = Blaze.deregisterHelper;

@@ -6,8 +6,6 @@ var loginButtonsSession = Accounts._loginButtonsSession;
 Template.loginButtons.events({
   'click #login-name-link, click #login-sign-in-link': function () {
     loginButtonsSession.set('dropdownVisible', true);
-    Tracker.flush();
-    correctDropdownZIndexes();
   },
   'click .login-close-text': function () {
     loginButtonsSession.closeDropdown();
@@ -148,13 +146,18 @@ Template._loginButtonsLoggedOutDropdown.events({
     // force the ui to update so that we have the approprate fields to fill in
     Tracker.flush();
 
-    if (document.getElementById('login-username'))
+    if (document.getElementById('login-username') && username !== null)
       document.getElementById('login-username').value = username;
-    if (document.getElementById('login-email'))
+    if (document.getElementById('login-email') && email !== null)
       document.getElementById('login-email').value = email;
 
-    if (document.getElementById('login-username-or-email'))
-      document.getElementById('login-username-or-email').value = email || username;
+    var usernameOrEmailInput = document.getElementById('login-username-or-email');
+    if (usernameOrEmailInput) {
+      if (email !== null)
+        usernameOrEmailInput.value = email;
+      if (username !== null)
+        usernameOrEmailInput.value = username;
+    }
 
     if (password !== null)
       document.getElementById('login-password').value = password;
@@ -492,21 +495,4 @@ var matchPasswordAgainIfPresent = function () {
     }
   }
   return true;
-};
-
-var correctDropdownZIndexes = function () {
-  // IE <= 7 has a z-index bug that means we can't just give the
-  // dropdown a z-index and expect it to stack above the rest of
-  // the page even if nothing else has a z-index.  The nature of
-  // the bug is that all positioned elements are considered to
-  // have z-index:0 (not auto) and therefore start new stacking
-  // contexts, with ties broken by page order.
-  //
-  // The fix, then is to give z-index:1 to all ancestors
-  // of the dropdown having z-index:0.
-  for(var n = document.getElementById('login-dropdown-list').parentNode;
-      n.nodeName !== 'BODY';
-      n = n.parentNode)
-    if (n.style.zIndex === 0)
-      n.style.zIndex = 1;
 };

@@ -10,7 +10,9 @@ Spacebars.include = function (templateOrFunction, contentFunc, elseFunc) {
     var template = templateOrFunction;
     if (! Blaze.isTemplate(template))
       throw new Error("Expected template or null, found: " + template);
-    return templateOrFunction.constructView(contentFunc, elseFunc);
+    var view = templateOrFunction.constructView(contentFunc, elseFunc);
+    view.__startsNewLexicalScope = true;
+    return view;
   }
 
   var templateVar = Blaze.ReactiveVar(null, tripleEquals);
@@ -30,6 +32,7 @@ Spacebars.include = function (templateOrFunction, contentFunc, elseFunc) {
       templateVar.set(templateOrFunction());
     });
   });
+  view.__startsNewLexicalScope = true;
 
   return view;
 };
@@ -114,13 +117,16 @@ Spacebars.makeRaw = function (value) {
     return HTML.Raw(value);
 };
 
-// If `value` is a function, called it on the `args`, after
-// evaluating the args themselves (by calling them if they are
-// functions).  Otherwise, simply return `value` (and assert that
-// there are no args).
+// If `value` is a function, evaluate its `args` (by calling them, if they
+// are functions), and then call it on them. Otherwise, return `value`.
+//
+// If `value` is not a function and is not null, then this method will assert
+// that there are no args. We check for null before asserting because a user
+// may write a template like {{user.fullNameWithPrefix 'Mr.'}}, where the
+// function will be null until data is ready.
 Spacebars.call = function (value/*, args*/) {
   if (typeof value === 'function') {
-    // evaluate arguments if they are functions (by calling them)
+    // Evaluate arguments by calling them if they are functions.
     var newArgs = [];
     for (var i = 1; i < arguments.length; i++) {
       var arg = arguments[i];
@@ -129,9 +135,9 @@ Spacebars.call = function (value/*, args*/) {
 
     return value.apply(null, newArgs);
   } else {
-    if (arguments.length > 1)
+    if (value != null && arguments.length > 1) {
       throw new Error("Can't call non-function: " + value);
-
+    }
     return value;
   }
 };

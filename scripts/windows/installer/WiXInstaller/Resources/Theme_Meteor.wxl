@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WixLocalization Culture="en-us" Language="1033" xmlns="http://schemas.microsoft.com/wix/2006/localization">
+    <String Id="Caption">Install [WixBundleName]</String>
+    <String Id="Title">[WixBundleName]</String>
+    <String Id="InstallHeader">Welcome to the [WixBundleName] Setup</String>
+    <String Id="InstallMessage">Setup will install [WixBundleName] on your computer. During the wizard, you will be able to adjust product features and settings that fit best to your needs.</String>
+    <String Id="InstallVersion">Version [WixBundleVersion]</String>
+    <String Id="InstallLicenseLinkText"></String>
+    <String Id="ConfirmCancelMessage">Are you sure you want to cancel?</String>
+    <String Id="HelpHeader">Setup Help</String>
+    <String Id="HelpText">
+        /passive | /quiet -  displays minimal UI with no prompts or displays no UI and no prompts. By default UI and all prompts are displayed.
+
+        /toconsole   - similar to /quiet except that progress is redirected to console.
+
+        /log log.txt - logs to a specific file. By default a log file is created in %TEMP%.
+    </String>
+    <String Id="HelpCloseButton">&amp;Close</String>
+    <String Id="InstallAcceptCheckbox">I &amp;agree to the license terms and conditions</String>
+    <String Id="InstallOptionsButton">&amp;Options</String>
+    <String Id="InstallInstallButton">&amp;Install</String>
+    <String Id="InstallCloseButton">&amp;Cancel</String>
+    <String Id="BackButton">&lt; Back</String>
+    <String Id="NextButton">Next &gt;</String>
+    <String Id="SkipButton">Skip this step</String>
+    <String Id="Install">Install</String>
+    <String Id="InstallMeteor">Install Meteor</String>
+
+    <String Id="InstallUpgradeLinkText">Version [WixBundleVersion] &lt;a href="#"&gt;upgrade available&lt;/a&gt;</String>
+    <String Id="CurrentUserPass">Current user password:</String>
+
+    <String Id="InstallDirHeader">[WixBundleName] install directory</String>
+    <String Id="InstallDirMessage">Please select the way you want [WixBundleName] to be installed on your computer.</String>
+    <String Id="InstallDirPathLabel">Install location:</String>
+    <String Id="InstallScopeLabel">Install this application for:</String>
+    <String Id="PerMachineInstallRButton">For all users on this computer (recommended)</String>
+    <String Id="PerUserInstallRButton">Only for me ([LogonUser])</String>
+
+    <String Id="RegistrationHeader">[WixBundleName] registration</String>
+    <String Id="RegistrationInfo">Sign in with your Meteor developer account or create a new one now.</String>
+    <String Id="CreateRButton">Sign up for a new account</String>
+    <String Id="SignInRButton">Sign in with an existing account</String>
+    <String Id="RegisterEmail">Email Address</String>
+    <String Id="RegisterUser">Username</String>
+    <String Id="RegisterUsernameOrEmail">Username or Email</String>
+    <String Id="RegisterPass">Password</String>
+    <String Id="SkipRegistration">Skip [WixBundleName] registration and continue with setup</String>
+
+
+
+    <String Id="OptionsHeader">Setup Options</String>
+    <String Id="OptionsInfo">Adjust setup parameters in order to your needs.</String>
+    <String Id="OptionsLocationLabel">Install location:</String>
+    <String Id="OptionsBrowseButton">&amp;Browse...</String>
+    <String Id="OptionsLocationLabel2">Database location:</String>
+    <String Id="OptionsBrowseButton2">B&amp;rowse...</String>
+    <String Id="OptionsOkButton">&amp;OK</String>
+    <String Id="OptionsCancelButton">&amp;Cancel</String>
+
+
+
+
+    <String Id="ProgressHeader">Installing [WixBundleName]</String>
+    <String Id="ProgressHeaderRepair">Repairing [WixBundleName]</String>
+    <String Id="ProgressHeaderUninstall">Uninstalling [WixBundleName]</String>
+    <String Id="ProgressInfo">Please wait while Setup installs [WixBundleName] on your computer.</String>
+    <String Id="ProgressInfoRepair">Please wait while Setup repairs [WixBundleName] installed on your computer.</String>
+    <String Id="ProgressInfoUninstall">Please wait while [WixBundleName] is removed from your computer.</String>
+    <String Id="ProgressLabel">Processing:</String>
+    <String Id="OverallProgressPackageText">Initializing...</String>
+    <String Id="ExecuteProgressText">Initializing...</String>
+    <String Id="OverallProgressText">Initializing...</String>
+    <String Id="ExecuteProgressActionDataText"></String>
+    <String Id="ProgressCancelButton">&amp;Cancel</String>
+    <String Id="ModifyHeader">[WixBundleName] Maintenance</String>
+    <String Id="ModifyInfo">The setup wizard allows you to repair or remove [WixBundleName] from your computer. If you have a [WixBundleName] application currently running, it is recommended to close it.&#13;&#13;&#10;Click Repair if you want to repair [WixBundleName], Uninstall to remove it or click Cancel to close this maintenance wizard.</String>
+    <String Id="ModifyRepairButton">&amp;Repair</String>
+    <String Id="ModifyUninstallButton">&amp;Uninstall</String>
+    <String Id="ModifyCloseButton">&amp;Close</String>
+    <String Id="SuccessHeader">Meteor is now installed on your computer.</String>
+    <String Id="SuccessHeaderRepair">Repair Successful</String>
+    <String Id="SuccessHeaderUninstall">Meteor has been uninstalled.</String>
+    <String Id="SuccessInfo">
+To get started, open a new command prompt and type "meteor". If you're running Windows 8.1, you may need to restart your machine.
+
+To learn more about Meteor, check out the &lt;a href="https://www.meteor.com/try"&gt;Meteor tutorial&lt;/a&gt; and read the &lt;a href="https://docs.meteor.com"&gt;official documentation&lt;/a&gt;. If you need help, ask a question on the official forums at &lt;a href="https://forums.meteor.com"&gt;forums.meteor.com&lt;/a&gt; or &lt;a href="https://stackoverflow.com/questions/tagged/meteor"&gt;Stack Overflow&lt;/a&gt;.
+
+Check out the &lt;a href="https://github.com/meteor/meteor/wiki/Preview-of-Meteor-on-Windows"&gt;Wiki page on GitHub&lt;/a&gt; to learn more about the Meteor Windows preview.
+    </String>
+    <String Id="SuccessErrorInfoText">Following non critical errors occured:</String>
+    <String Id="SuccessInfoRepair">Setup has finished repairing [WixBundleName] installed on your computer. The application may be launched by selecting the installed icons.</String>
+    <String Id="SuccessInfoUninstall">We hope to see you again soon!</String>
+    <String Id="SuccessLaunchButton">&amp;Launch</String>
+    <String Id="SuccessRestartText">You must restart your computer before you can use the software.</String>
+    <String Id="SuccessRestartButton">&amp;Restart</String>
+    <String Id="SuccessCloseButton">&amp;Close</String>
+    <String Id="FailureHeader">Setup Failed</String>
+    <String Id="FailureHeaderRepair">Repair Failed</String>
+    <String Id="FailureHeaderUninstall">Uninstall Failed</String>
+    <String Id="FailureHyperlinkLogText">One or more issues caused the setup to fail. Please fix the issues and then retry setup. For more information see the &lt;a href="#"&gt;log file&lt;/a&gt;.</String>
+    <String Id="FailureRestartText">You must restart your computer to complete the rollback of the software.</String>
+    <String Id="FailureRestartButton">&amp;Restart</String>
+    <String Id="FailureCloseButton">&amp;Close</String>
+</WixLocalization>

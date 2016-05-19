@@ -20,7 +20,7 @@ Tinytest.add("spacebars-compiler - compiler output", function (test) {
       var postProcess = function (string) {
         // remove initial and trailing parens
         string = string.replace(/^\(([\S\s]*)\)$/, '$1');
-        if (! (Package.minifiers && Package.minifiers.UglifyJSMinify)) {
+        if (! (Package['minifier-js'] && Package['minifier-js'].UglifyJSMinify)) {
           // these tests work a lot better with access to beautification,
           // but let's at least do some sort of test without it.
           // These regexes may have to be adjusted if new tests are added.
@@ -57,6 +57,7 @@ Tinytest.add("spacebars-compiler - compiler errors", function (test) {
       return e.message;
     }
     test.fail("Didn't throw an error: " + input);
+    return '';
   };
 
   var assertStartsWith = function (a, b) {
@@ -92,4 +93,22 @@ Tinytest.add("spacebars-compiler - compiler errors", function (test) {
           'asdf</a>', '{{!foo}}</a>', '{{!foo}} </a>'], function (badFrag) {
             isError(badFrag, "Unexpected HTML close tag");
           });
+
+  isError("{{#let myHelper}}{{/let}}", "Incorrect form of #let");
+  isError("{{#each foo in.in bar}}{{/each}}", "Malformed #each");
+  isError("{{#each foo.bar in baz}}{{/each}}", "Bad variable name in #each");
+  isError("{{#each ../foo in baz}}{{/each}}", "Bad variable name in #each");
+  isError("{{#each 3 in baz}}{{/each}}", "Bad variable name in #each");
+
+  // errors using `{{> React}}`
+  isError("{{> React component=emptyComponent}}",
+          "{{> React}} must be used in a container element");
+  isError("<div>{{#if include}}{{> React component=emptyComponent}}{{/if}}</div>",
+          "{{> React}} must be used in a container element");
+  isError("<div><div>Sibling</div>{{> React component=emptyComponent}}</div>",
+          "{{> React}} must be used as the only child in a container element");
+  isError("<div>Sibling{{> React component=emptyComponent}}</div>",
+          "{{> React}} must be used as the only child in a container element");
+  isError("<div>{{#if sibling}}Sibling{{/if}}{{> React component=emptyComponent}}</div>",
+          "{{> React}} must be used as the only child in a container element");
 });

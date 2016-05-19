@@ -1,10 +1,13 @@
-var selftest = require('../selftest.js');
+var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
-var utils = require('../utils.js');
+var utils = require('../utils/utils.js');
 var net = require('net');
 var Future = require('fibers/future');
 var _ = require('underscore');
-var files = require('../files.js');
+var files = require('../fs/files.js');
+var catalog = require('../packaging/catalog/catalog.js');
+
+var DEFAULT_RELEASE_TRACK = catalog.DEFAULT_TRACK;
 
 var MONGO_LISTENING =
   { stdout: " [initandlisten] waiting for connections on port" };
@@ -22,7 +25,7 @@ selftest.define("run", function () {
   // Starting a run
   s.createApp("myapp", "standard-app");
   s.cd("myapp");
-  s.set("METEOR_TEST_TMP", files.mkdtemp());
+  s.set("METEOR_TEST_TMP", files.convertToOSPath(files.mkdtemp()));
   run = s.run();
   run.match("myapp");
   run.match("proxy");
@@ -60,51 +63,61 @@ selftest.define("run", function () {
   run.match("restarted");
   s.write("crash.js", "process.kill(process.pid, 'SIGKILL');");
   run.waitSecs(5);
-  run.match("from signal: SIGKILL");
-  run.waitSecs(5);
+  run.match("Exited");
   run.match("is crashing");
 
   // Bundle failure
   s.unlink("crash.js");
-  s.write("junk.js", "]");
+  s.write("junk.css", "/*");
   run.waitSecs(5);
   run.match("Modified");
   run.match("prevented startup");
-  run.match("Unexpected token");
+  run.match("End of comment missing");
   run.match("file change");
 
   // Back to working
-  s.unlink("junk.js");
+  s.unlink("junk.css");
   run.waitSecs(5);
   run.match("restarted");
 
   // Crash just once, then restart successfully
-  s.write("crash.js",
-"var fs = Npm.require('fs')\n" +
-"var path = Npm.require('path')\n" +
-"var crashmark = path.join(process.env.METEOR_TEST_TMP, 'crashed');\n" +
-"try {\n" +
-"  fs.readFileSync(crashmark);\n" +
-"} catch (e) {\n" +
-"  fs.writeFileSync(crashmark);\n" +
-"  process.exit(137);\n" +
-"}\n");
+  s.write("crash.js", `
+var fs = Npm.require('fs');
+var path = Npm.require('path');
+var crashmark = path.join(process.env.METEOR_TEST_TMP, 'crashed');
+try {
+  fs.readFileSync(crashmark);
+} catch (e) {
+  fs.writeFileSync(crashmark);
+  process.exit(137);
+}`);
   run.waitSecs(5);
   run.match("with code: 137");
   run.waitSecs(5);
   run.match("restarted");
   run.stop();
+  s.unlink("crash.js");
+
+  run = s.run('--settings', 's.json');
+  run.waitSecs(5);
+  run.match('s.json: file not found (settings file)');
+  run.match('Waiting for file change');
+  s.write('s.json', '}');
+  run.match('s.json: parse error reading settings file');
+  run.match('Waiting for file change');
+  s.write('s.json', '{}');
+  run.match('App running at');
+  run.stop();
 
   // How about a bundle failure right at startup
-  s.unlink("crash.js");
-  s.write("junk.js", "]");
+  s.write("junk.css", "/*");
   run = s.run();
   run.tellMongo(MONGO_LISTENING);
   run.waitSecs(5);
   run.match("prevented startup");
-  run.match("Unexpected token");
+  run.match("End of comment missing");
   run.match("file change");
-  s.unlink("junk.js");
+  s.unlink("junk.css");
   run.waitSecs(5);
   run.match("restarted");
   run.stop();
@@ -112,7 +125,7 @@ selftest.define("run", function () {
 // XXX --port, --production, --raw-logs, --settings, --program
 });
 
-selftest.define("run --once", function () {
+selftest.define("run --once", ["yet-unsolved-windows-failure"], function () {
   var s = new Sandbox({ fakeMongo: true });
   var run;
 
@@ -138,13 +151,13 @@ selftest.define("run --once", function () {
 
   // run --once, bundle failure
   s.set("RUN_ONCE_OUTCOME", "exit");
-  s.write("junk.js", "]");
+  s.write("junk.css", "/*");
   run = s.run("--once");
   run.waitSecs(5);
   run.matchErr("Build failed");
-  run.matchErr("Unexpected token");
+  run.matchErr("End of comment missing");
   run.expectExit(254);
-  s.unlink("junk.js");
+  s.unlink("junk.css");
 
   // file changes don't make it restart
   s.set("RUN_ONCE_OUTCOME", "hang");
@@ -224,7 +237,7 @@ selftest.define("update during run", ["checkout"], function () {
   });
   var run;
 
-  s.createApp("myapp", "packageless", { release: 'METEOR@v1' });
+  s.createApp("myapp", "packageless", { release: DEFAULT_RELEASE_TRACK + '@v1' });
   s.cd("myapp");
 
   // If the app version changes, we exit with an error message.
@@ -232,17 +245,17 @@ selftest.define("update during run", ["checkout"], function () {
   run.tellMongo(MONGO_LISTENING);
   run.waitSecs(10);
   run.match('localhost:3000');
-  s.write('.meteor/release', 'METEOR@v2');
+  s.write('.meteor/release', DEFAULT_RELEASE_TRACK + '@v2');
   run.matchErr('to Meteor v2 from Meteor v1');
   run.expectExit(254);
 
   // But not if the release was forced (case 1)
-  s.write('.meteor/release', 'METEOR@v1');
-  run = s.run("--release", "METEOR@v3");
+  s.write('.meteor/release', DEFAULT_RELEASE_TRACK + '@v1');
+  run = s.run("--release", DEFAULT_RELEASE_TRACK + "@v3");
   run.tellMongo(MONGO_LISTENING);
   run.waitSecs(2);
   run.match('localhost:3000');
-  s.write('.meteor/release', 'METEOR@v2');
+  s.write('.meteor/release', DEFAULT_RELEASE_TRACK + '@v2');
   s.write('empty.js', '');
   run.waitSecs(2);
   run.match('restarted');
@@ -250,12 +263,12 @@ selftest.define("update during run", ["checkout"], function () {
   run.forbidAll("updated");
 
   // But not if the release was forced (case 2)
-  s.write('.meteor/release', 'METEOR@v1');
-  run = s.run("--release", "METEOR@v1");
+  s.write('.meteor/release', DEFAULT_RELEASE_TRACK + '@v1');
+  run = s.run("--release", DEFAULT_RELEASE_TRACK + "@v1");
   run.tellMongo(MONGO_LISTENING);
   run.waitSecs(2);
   run.match('localhost:3000');
-  s.write('.meteor/release', 'METEOR@v2');
+  s.write('.meteor/release', DEFAULT_RELEASE_TRACK + '@v2');
   s.write('empty.js', '');
   run.waitSecs(2);
   run.match('restarted');
@@ -267,12 +280,12 @@ selftest.define("update during run", ["checkout"], function () {
   s.createApp("myapp", "standard-app");
   s.cd("myapp");
 
-  s.write('.meteor/release', 'METEOR@v1');
+  s.write('.meteor/release', DEFAULT_RELEASE_TRACK + '@v1');
   run = s.run();
   run.tellMongo(MONGO_LISTENING);
   run.waitSecs(2);
   run.match('localhost:3000');
-  s.write('.meteor/release', 'METEOR@v2');
+  s.write('.meteor/release', DEFAULT_RELEASE_TRACK + '@v2');
   s.write('empty.js', '');
   run.waitSecs(2);
   run.match('restarted');
@@ -292,6 +305,11 @@ selftest.define("run with mongo crash", ["checkout"], function () {
   run.tellMongo(MONGO_LISTENING);
   run.waitSecs(2);
   run.match('localhost:3000/\n');
+
+  if (process.platform === "win32") {
+    run.match('Type Control-C twice to stop.\n\n');
+  }
+
   run.tellMongo({exit: 23});
   run.read('Unexpected mongo exit code 23. Restarting.\n');
   run.tellMongo({exit: 46});
@@ -305,7 +323,7 @@ selftest.define("run with mongo crash", ["checkout"], function () {
 
   // Now create a build failure. Make sure that killing mongod three times
   // *also* successfully quits even if we're waiting on file change.
-  s.write('bad.js', ']');
+  s.write('bad.css', '/*');
   run = s.run();
   run.tellMongo(MONGO_LISTENING);
   run.waitSecs(2);
@@ -325,7 +343,7 @@ selftest.define("run with mongo crash", ["checkout"], function () {
 
 // Test that when the parent runner process is SIGKILLed, the child
 // process exits also.
-selftest.define("run and SIGKILL parent process", function () {
+selftest.define("run and SIGKILL parent process", ["yet-unsolved-windows-failure"], function () {
   var s = new Sandbox();
   var run;
 
@@ -373,11 +391,11 @@ selftest.define("run and SIGKILL parent process", function () {
   run.stop();
 });
 
-selftest.define("'meteor run --port' requires a port", function () {
+selftest.define("'meteor run --port' accepts/rejects proper values", function () {
   var s = new Sandbox();
   var run;
 
-  s.createApp("myapp", "app-prints-pid");
+  s.createApp("myapp", "standard-app");
   s.cd("myapp");
 
   run = s.run("run", "--port", "example.com");
@@ -389,4 +407,72 @@ selftest.define("'meteor run --port' requires a port", function () {
   run.waitSecs(30);
   run.matchErr("--port must include a port");
   run.expectExit(1);
+
+  run = s.run("run", "--port", "3500");
+  run.match('App running at: http://localhost:3500/');
+  run.stop();
+
+  run = s.run("run", "--port", "127.0.0.1:3500");
+  run.match('App running at: http://127.0.0.1:3500/');
+  run.stop();
+});
+
+selftest.define("'meteor test --port' accepts/rejects proper values", function () {
+  var s = new Sandbox();
+  var run;
+
+  s.createApp("myapp", "standard-app");
+  s.cd("myapp");
+
+  var runAddPackage = s.run("add", "practicalmeteor:mocha");
+  runAddPackage.waitSecs(30);
+  runAddPackage.match(/practicalmeteor:mocha\b.*?added/)
+  runAddPackage.expectExit(0);
+
+  run = s.run("test", "--port", "3700", "--driver-package", "practicalmeteor:mocha");
+  run.waitSecs(60);
+  run.match('App running at: http://localhost:3700/');
+  run.stop();
+
+  run = s.run("test", "--port", "127.0.0.1:3700", "--driver-package", "practicalmeteor:mocha");
+  run.waitSecs(60);
+  run.match('App running at: http://127.0.0.1:3700/');
+  run.stop();
+});
+
+// Regression test for #3582.  Previously, meteor run would ignore changes to
+// .meteor/versions that originate outside of the process.
+selftest.define("update package during run", function () {
+  var s = new Sandbox();
+
+  s.createApp("myapp", "app-with-atmosphere-package");
+  s.cd("myapp", function () {
+    // The app starts with this package at 0.0.1 (based on its
+    // .meteor/versions).  0.0.2 exists too.  (These are on the real atmosphere
+    // server.)
+    var listRun = s.run("list");
+    listRun.waitSecs(3);
+    listRun.match(/glasser:package-for-selftest.*0.0.1\*/);
+    listRun.match(/\* New versions/);
+    listRun.expectExit(0);
+
+    var runRun = s.run();
+    runRun.waitSecs(3);
+    runRun.match("App running at:");
+
+    var updateRun = s.run("update", "glasser:package-for-selftest");
+    updateRun.match(
+        /glasser:package-for-selftest.*upgraded from 0.0.1 to 0.0.2/);
+    updateRun.expectExit(0);
+
+    runRun.match("restarted");
+
+    listRun = s.run("list");
+    // When #3582 existed, the `meteor run` would revert this back to 0.0.1
+    // before it restarted.
+    listRun.match(/glasser:package-for-selftest.*0.0.2 /);
+    listRun.expectExit(0);
+
+    runRun.stop();
+  });
 });

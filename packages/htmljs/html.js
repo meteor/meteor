@@ -92,7 +92,7 @@ HTML.getSymbolName = function (tagName) {
 HTML.knownElementNames = 'a abbr acronym address applet area article aside audio b base basefont bdi bdo big blockquote body br button canvas caption center cite code col colgroup command data datagrid datalist dd del details dfn dir div dl dt em embed eventsource fieldset figcaption figure font footer form frame frameset h1 h2 h3 h4 h5 h6 head header hgroup hr html i iframe img input ins isindex kbd keygen label legend li link main map mark menu meta meter nav noframes noscript object ol optgroup option output p param pre progress q rp rt ruby s samp script section select small source span strike strong style sub summary sup table tbody td textarea tfoot th thead time title tr track tt u ul var video wbr'.split(' ');
 // (we add the SVG ones below)
 
-HTML.knownSVGElementNames = 'altGlyph altGlyphDef altGlyphItem animate animateColor animateMotion animateTransform circle clipPath color-profile cursor defs desc ellipse feBlend feColorMatrix feComponentTransfer feComposite feConvolveMatrix feDiffuseLighting feDisplacementMap feDistantLight feFlood feFuncA feFuncB feFuncG feFuncR feGaussianBlur feImage feMerge feMergeNode feMorphology feOffset fePointLight feSpecularLighting feSpotLight feTile feTurbulence filter font font-face font-face-format font-face-name font-face-src font-face-uri foreignObject g glyph glyphRef hkern image line linearGradient marker mask metadata missing-glyph path pattern polygon polyline radialGradient rect script set stop style svg switch symbol text textPath title tref tspan use view vkern'.split(' ');
+HTML.knownSVGElementNames = 'altGlyph altGlyphDef altGlyphItem animate animateColor animateMotion animateTransform circle clipPath color-profile cursor defs desc ellipse feBlend feColorMatrix feComponentTransfer feComposite feConvolveMatrix feDiffuseLighting feDisplacementMap feDistantLight feFlood feFuncA feFuncB feFuncG feFuncR feGaussianBlur feImage feMerge feMergeNode feMorphology feOffset fePointLight feSpecularLighting feSpotLight feTile feTurbulence filter font font-face font-face-format font-face-name font-face-src font-face-uri foreignObject g glyph glyphRef hkern image line linearGradient marker mask metadata missing-glyph path pattern polygon polyline radialGradient rect set stop style svg switch symbol text textPath title tref tspan use view vkern'.split(' ');
 // Append SVG element names to list of known element names
 HTML.knownElementNames = HTML.knownElementNames.concat(HTML.knownSVGElementNames);
 
@@ -178,9 +178,17 @@ HTML.isArray = function (x) {
 };
 
 HTML.isConstructedObject = function (x) {
+  // Figure out if `x` is "an instance of some class" or just a plain
+  // object literal.  It correctly treats an object literal like
+  // `{ constructor: ... }` as an object literal.  It won't detect
+  // instances of classes that lack a `constructor` property (e.g.
+  // if you assign to a prototype when setting up the class as in:
+  // `Foo = function () { ... }; Foo.prototype = { ... }`, then
+  // `(new Foo).constructor` is `Object`, not `Foo`).
   return (x && (typeof x === 'object') &&
           (x.constructor !== Object) &&
-          (! Object.prototype.hasOwnProperty.call(x, 'constructor')));
+          (typeof x.constructor === 'function') &&
+          (x instanceof x.constructor));
 };
 
 HTML.isNully = function (node) {

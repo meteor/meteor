@@ -6,6 +6,8 @@ OAuth._redirectUri = function (serviceName, config, params, absoluteUrlOptions) 
   // detect whether we need to be backwards compatible by checking for
   // the absence of the `loginStyle` field, which wasn't used in the
   // code which had the "?close" argument.
+  // This logic is duplicated in the tool so that the tool can do OAuth
+  // flow with <= 0.9.0 servers (tools/auth.js).
   var query = config.loginStyle ? null : "close";
 
   // Clone because we're going to mutate 'params'. The 'cordova' and

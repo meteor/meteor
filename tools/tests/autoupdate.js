@@ -1,8 +1,10 @@
-var selftest = require('../selftest.js');
-var config = require("../config.js");
-var catalogRemote = require("../catalog-remote.js");
-var buildmessage = require("../buildmessage.js");
+var selftest = require('../tool-testing/selftest.js');
+var config = require('../meteor-services/config.js');
+var catalogRemote = require('../packaging/catalog/catalog-remote.js');
+var buildmessage = require('../utils/buildmessage.js');
 var Sandbox = selftest.Sandbox;
+
+var DEFAULT_RELEASE_TRACK = catalogRemote.DEFAULT_TRACK;
 
 var getCatalog = function (sandbox) {
   var dataFile = config.getPackageStorage({ root: sandbox.warehouse });
@@ -14,7 +16,7 @@ var getCatalog = function (sandbox) {
 var setBanner = function (sandbox, version, banner) {
   var messages = buildmessage.capture(function () {
     var catalog = getCatalog(sandbox);
-    var release = catalog.getReleaseVersion("METEOR", version);
+    var release = catalog.getReleaseVersion(DEFAULT_RELEASE_TRACK, version);
     release.banner = { text: banner, lastUpdated: new Date };
     catalog._insertReleaseVersions([release]); //This is a hack
   });
@@ -23,7 +25,7 @@ var setBanner = function (sandbox, version, banner) {
 var recommend = function (sandbox, version) {
   var messages = buildmessage.capture(function () {
     var catalog = getCatalog(sandbox);
-    var release = catalog.getReleaseVersion('METEOR', version);
+    var release = catalog.getReleaseVersion(DEFAULT_RELEASE_TRACK, version);
     release.recommended = true;
     catalog._insertReleaseVersions([release]);
   });
@@ -45,18 +47,19 @@ selftest.define("autoupdate", ['checkout'], function () {
   // manages to run. So stop mongo from starting so that it goes faster.
   s.set("MONGO_URL", "whatever");
 
-  s.createApp('myapp', 'packageless', { release: 'METEOR@v2' });
+  s.createApp('myapp', 'packageless', { release: DEFAULT_RELEASE_TRACK + '@v2' });
   s.cd('myapp', function () {
     setBanner(s, "v2", "=> New hotness v2 being downloaded.\n");
 
     // console.log("WE ARE READY NOW", s.warehouse, s.cwd)
-    // require('../utils.js').sleepMs(1000*10000)
+    // require('../utils/utils.js').sleepMs(1000*10000)
 
     // Run it and see the banner for the current version.
     run = s.run("--port", "21000");
     run.waitSecs(30);
     run.match("New hotness v2 being downloaded");
     run.match("running at");
+    require('../utils/utils.js').sleepMs(500);
     run.stop();
 
     // We won't see the banner a second time, or any other message about
@@ -70,7 +73,7 @@ selftest.define("autoupdate", ['checkout'], function () {
 
     // If we are not at the latest version of Meteor, at startup, we get a
     // boring prompt to update (not a banner since we didn't set one for v1).
-    s.write('.meteor/release', 'METEOR@v1');
+    s.write('.meteor/release', DEFAULT_RELEASE_TRACK + '@v1');
 
     // We don't see any information if we run a simple command like list.
     run = s.run("list");
@@ -92,7 +95,7 @@ selftest.define("autoupdate", ['checkout'], function () {
     run.stop();
 
     // .. unless we explicitly forced this release. Then, no prompt.
-    s.write('.meteor/release', 'METEOR@somethingelse');
+    s.write('.meteor/release', DEFAULT_RELEASE_TRACK + '@somethingelse');
     run = s.run("--release", "v1", "--port", "23000");
     run.waitSecs(5);
     run.match("running at");
@@ -129,15 +132,16 @@ selftest.define("autoupdate", ['checkout'], function () {
     // and the downloading code turns out to be a noop if we already
     // have that version).
     recommend(s, "v3");
-    s.write('.meteor/release', 'METEOR@v2');
+    s.write('.meteor/release', DEFAULT_RELEASE_TRACK + '@v2');
     run = s.run("--port", "26000");
     run.match("Meteor v3 is available");
     run.match("meteor update");
     run.stop();
 
     run = s.run("update");
-    run.read("myapp: updated to Meteor v3.");
-    run.match("Your packages are at their latest compatible versions.\n");
+    run.match("myapp: updated to Meteor v3.\n");
+    run.match("Your top-level dependencies are at their latest compatible " +
+              "versions.\n");
     run.expectExit(0);
 
     run = s.run("--version");

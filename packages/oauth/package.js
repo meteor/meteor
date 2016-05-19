@@ -1,16 +1,20 @@
 Package.describe({
   summary: "Common code for OAuth-based services",
-  version: "1.1.3"
+  version: "1.1.10"
 });
 
 Package.onUse(function (api) {
+  api.use('check');
+  api.use('underscore');
+
   api.use('routepolicy', 'server');
   api.use('webapp', 'server');
   api.use('mongo', 'server');
+
   api.use('reload', 'client');
   api.use('base64', 'client');
 
-  api.use(['underscore', 'service-configuration', 'logging'], 'server');
+  api.use(['service-configuration', 'logging'], 'server');
 
   api.use('oauth-encryption', 'server', {weak: true});
 
@@ -26,8 +30,15 @@ Package.onUse(function (api) {
   api.addFiles('oauth_server.js', 'server');
   api.addFiles('pending_credentials.js', 'server');
 
-  api.addFiles('end_of_popup_response.html', 'server', { isAsset: true });
-  api.addFiles('end_of_redirect_response.html', 'server', {isAsset: true});
+  api.addAssets([
+    'end_of_popup_response.html',
+    'end_of_redirect_response.html'
+  ], 'server');
+
+  api.addAssets([
+    'end_of_popup_response.js',
+    'end_of_redirect_response.js'
+  ], 'client');
 
   api.addFiles('oauth_common.js');
 
@@ -46,5 +57,5 @@ Package.onTest(function (api) {
 });
 
 Cordova.depends({
-  'org.apache.cordova.inappbrowser': '0.5.1'
+  'cordova-plugin-inappbrowser': '1.3.0'
 });

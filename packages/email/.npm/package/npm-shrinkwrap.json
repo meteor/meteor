@@ -2,25 +2,37 @@
   "dependencies": {
     "mailcomposer": {
       "version": "0.1.15",
+      "resolved": "https://registry.npmjs.org/mailcomposer/-/mailcomposer-0.1.15.tgz",
+      "from": "https://registry.npmjs.org/mailcomposer/-/mailcomposer-0.1.15.tgz",
       "dependencies": {
         "mimelib-noiconv": {
-          "version": "0.1.9"
+          "version": "0.1.9",
+          "resolved": "https://registry.npmjs.org/mimelib-noiconv/-/mimelib-noiconv-0.1.9.tgz",
+          "from": "https://registry.npmjs.org/mimelib-noiconv/-/mimelib-noiconv-0.1.9.tgz"
         }
       }
     },
     "simplesmtp": {
       "version": "0.3.10",
+      "resolved": "https://registry.npmjs.org/simplesmtp/-/simplesmtp-0.3.10.tgz",
+      "from": "https://registry.npmjs.org/simplesmtp/-/simplesmtp-0.3.10.tgz",
       "dependencies": {
         "rai": {
-          "version": "0.1.7"
+          "version": "0.1.7",
+          "resolved": "https://registry.npmjs.org/rai/-/rai-0.1.7.tgz",
+          "from": "https://registry.npmjs.org/rai/-/rai-0.1.7.tgz"
         },
         "xoauth2": {
-          "version": "0.1.8"
+          "version": "0.1.8",
+          "resolved": "https://registry.npmjs.org/xoauth2/-/xoauth2-0.1.8.tgz",
+          "from": "https://registry.npmjs.org/xoauth2/-/xoauth2-0.1.8.tgz"
         }
       }
     },
     "stream-buffers": {
-      "version": "0.2.5"
+      "version": "0.2.5",
+      "resolved": "https://registry.npmjs.org/stream-buffers/-/stream-buffers-0.2.5.tgz",
+      "from": "https://registry.npmjs.org/stream-buffers/-/stream-buffers-0.2.5.tgz"
     }
   }
 }

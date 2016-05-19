@@ -1,15 +1,20 @@
 Package.describe({
   summary: "Javascript dialect with fewer braces and semicolons",
-  version: "1.0.5"
+  version: "1.0.17"
 });
 
 Package.registerBuildPlugin({
   name: "compileCoffeescript",
-  use: [],
-  sources: [
-    'plugin/compile-coffeescript.js'
-  ],
-  npmDependencies: {"coffee-script": "1.7.1", "source-map": "0.1.32"}
+  use: ['caching-compiler', 'ecmascript'],
+  sources: ['plugin/compile-coffeescript.js'],
+  npmDependencies: {
+    "coffee-script": "1.9.2",
+    "source-map": "0.5.3"
+  }
+});
+
+Package.onUse(function (api) {
+  api.use('isobuild:compiler-plugin@1.0.0');
 });
 
 Package.onTest(function (api) {

@@ -36,27 +36,25 @@ Template.__define__ = function (name, renderFunc) {
 };
 
 // Define a template `Template.body` that renders its
-// `contentViews`.  `<body>` tags (of which there may be
+// `contentRenderFuncs`.  `<body>` tags (of which there may be
 // multiple) will have their contents added to it.
 
 /**
- * @summary The [template object](#templates_api) representing your `<body>` tag.
+ * @summary The [template object](#templates_api) representing your `<body>`
+ * tag.
  * @locus Client
  */
 Template.body = new Template('body', function () {
-  var parts = Template.body.contentViews;
-  // enable lookup by setting `view.template`
-  for (var i = 0; i < parts.length; i++)
-    parts[i].template = Template.body;
-  return parts;
+  var view = this;
+  return _.map(Template.body.contentRenderFuncs, function (func) {
+    return func.apply(view);
+  });
 });
-Template.body.contentViews = []; // array of Blaze.Views
+Template.body.contentRenderFuncs = []; // array of Blaze.Views
 Template.body.view = null;
 
 Template.body.addContent = function (renderFunc) {
-  var kind = 'body_content_' + Template.body.contentViews.length;
-
-  Template.body.contentViews.push(Blaze.View(kind, renderFunc));
+  Template.body.contentRenderFuncs.push(renderFunc);
 };
 
 // This function does not use `this` and so it may be called

@@ -32,12 +32,20 @@
   {{/if}}
 </template>
 
+<template name="spacebars_template_test_bracketed_foo">
+  [{{foo}}]
+</template>
+
 <!-- -->
 
 
 
 <template name="spacebars_template_test_simple_helper">
   {{foo bar}}
+</template>
+
+<template name="spacebars_template_test_member_helper">
+  {{user.prefixName 'Mr.'}}
 </template>
 
 <template name="spacebars_template_test_dynamic_template">
@@ -1014,4 +1022,139 @@ Hi there!
 
 <template name="spacebars_template_test_inclusion_with_data_remove_inner">
   <b>{{.}}</b>
+</template>
+
+<!-- issue meteor/meteor #3540 -->
+<template name="spacebars_template_test_template_instance_wrapper_outer">
+  {{#spacebars_template_test_template_instance_wrapper_wrapper}}
+    {{thisShouldOutputHello}}
+  {{/spacebars_template_test_template_instance_wrapper_wrapper}}
+  {{thisShouldOutputHello}}
+</template>
+
+<template name="spacebars_template_test_template_instance_wrapper_wrapper">
+  {{> Template.contentBlock}}
+</template>
+
+<template name="spacebars_template_test_template_level_subscriptions">
+  {{#if Template.subscriptionsReady}}
+    ready!
+  {{/if}}
+  {{Template.subscriptionsReady}}
+</template>
+
+<template name="spacebars_template_test_template_level_subs_resubscribe">
+  {{#if ifArg}}
+    {{subscribingHelper1}}
+  {{else}}
+    {{subscribingHelper2}}
+  {{/if}}
+</template>
+
+<template name="spacebars_template_test_old_each_data_context">
+  {{#each items}}
+    <div>{{text}}</div>
+  {{/each}}
+</template>
+
+<template name="spacebars_template_test_new_each_data_context">
+  {{#with dataContext}}
+    {{#each item in items}}
+      <div>{{item.text}} -- {{toplevel}}</div>
+    {{/each}}
+  {{/with}}
+</template>
+
+<template name="spacebars_template_test_new_each_data_context_subexpr">
+  {{#with dataContext}}
+    {{#each item in (items)}}
+      <div>{{item.text}} -- {{toplevel}}</div>
+    {{/each}}
+  {{/with}}
+</template>
+
+<template name="spacebars_template_test_new_each_lookup_top_level">
+  {{#with dataContext}}
+    {{#each item in letter_a}}
+      {{#spacebars_template_test_new_each_lookup_block_helper}}
+        <div>
+          {{item}}
+        </div>
+      {{/spacebars_template_test_new_each_lookup_block_helper}}
+    {{/each}}
+  {{/with}}
+</template>
+
+<template name="spacebars_template_test_new_each_lookup_block_helper">
+  {{#with subcontext}}
+    {{#each item in letter_b}}
+      {{> Template.contentBlock}}
+    {{/each}}
+  {{/with}}
+</template>
+
+<template name="spacebars_template_test_let_bindings">
+  {{#with dataContext}}
+    {{#let alias=helper anotherVarFromContext="override"}}
+      <div>{{alias}} -- {{helper}} -- {{varFromContext}} -- {{anotherVarFromContext}}</div>
+    {{/let}}
+  {{/with}}
+</template>
+
+<template name="spacebars_template_test_each_index">
+  {{#each things}}
+    <span>{{@index}} - {{num}}</span>
+  {{/each}}
+</template>
+
+<template name="spacebars_template_test_nested_exprs">
+  {{add (add 1 2) 3}}
+</template>
+
+<template name="spacebars_template_test_nested_subexprs">
+  {{capitalize (firstWord generateSentence)}}
+</template>
+
+<template name="spacebars_template_test_exprs_keyword_callable">
+  {{stuff}} {{another}}
+</template>
+
+<template name="spacebars_template_test_exprs_keyword">
+  {{> spacebars_template_test_exprs_keyword_callable stuff=(capitalize name) another=(capitalize "mello")}}
+</template>
+
+<template name="spacebars_template_test_with_rerender">
+  <input type="text" class="foo">
+  {{#with y=x}}
+    <span class="bar">{{y}}</span>
+  {{/with}}
+</template>
+
+<template name="spacebars_template_test_let_rerender">
+  <input type="text" class="foo">
+  {{#let y=x}}
+    <span class="bar">{{y}}</span>
+  {{/let}}
+</template>
+
+<template name="spacebars_template_test_each_multiarg">
+  {{#each helper arg}}
+    <div>{{this}}</div>
+  {{/each}}
+</template>
+
+<template name="spacebars_template_test_lexical_leakage">
+  {{#each list}}
+    <div><span>{{@index}}</span>{{> spacebars_template_test_get_index}}</div>
+  {{/each}}
+</template>
+
+<template name="spacebars_template_test_get_index">
+  <span>{{@index}}</span>
+</template>
+
+<template name="spacebars_template_test_each_in_multi_args">
+  {{#each item in helper list}}
+    <div>{{item}}</div>
+  {{/each}}
 </template>

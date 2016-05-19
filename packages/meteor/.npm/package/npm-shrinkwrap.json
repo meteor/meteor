@@ -1,0 +1,16 @@
+{
+  "dependencies": {
+    "meteor-deque": {
+      "version": "2.1.0",
+      "resolved": "https://registry.npmjs.org/meteor-deque/-/meteor-deque-2.1.0.tgz",
+      "from": "https://registry.npmjs.org/meteor-deque/-/meteor-deque-2.1.0.tgz",
+      "dependencies": {
+        "double-ended-queue": {
+          "version": "2.1.0-0",
+          "resolved": "https://registry.npmjs.org/double-ended-queue/-/double-ended-queue-2.1.0-0.tgz",
+          "from": "https://registry.npmjs.org/double-ended-queue/-/double-ended-queue-2.1.0-0.tgz"
+        }
+      }
+    }
+  }
+}
