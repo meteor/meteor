@@ -68,6 +68,8 @@
 
 * Fixed bugs: https://github.com/meteor/meteor/milestones/Release%201.3.2
 
+* Fixed unintended change to `Match.Optional` which caused it to behave the same as the new `Match.Maybe` and incorrectly matching `null` where it previously would not have allowed it. #6735 
+
 ## v1.3.1
 
 * Long isopacket node_modules paths have been shortened, fixing upgrade
@@ -289,6 +291,10 @@
 
 * Improve automatic blocking of URLs in attribute values to also
   include `vbscript:` URLs.
+
+### Check
+
+* Introduced new matcher `Match.Maybe(type)` which will also match (permit) `null` in addition to `undefined`.  This is a suggested replacement (where appropriate) for `Match.Optional` which did not permit `null`.  This prevents the need to use `Match.OneOf(null, undefined, type)`. #6220 
 
 ### Testing
 
