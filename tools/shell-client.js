@@ -1,5 +1,6 @@
 var assert = require("assert");
 var fs = require("fs");
+var files = require("./fs/files.js");
 var net = require("net");
 var eachline = require("eachline");
 var chalk = require("chalk");
@@ -10,14 +11,20 @@ var getInfoFile = server.getInfoFile;
 
 // Invoked by the process running `meteor shell` to attempt to connect to
 // the server via the socket file.
-exports.connect = function connect(shellDir) {
-  new Client(shellDir).connect();
+exports.connect = function connect(projectContext) {
+  var replId = files.convertToPosixPath(projectContext.projectDir) +
+    "/meteor-shell-" + Math.random().toString(36).slice(2) + ".js";
+
+  var shellDir = projectContext.getMeteorShellDirectory();
+
+  new Client(replId, shellDir).connect();
 };
 
-function Client(shellDir) {
+function Client(replId, shellDir) {
   var self = this;
   assert.ok(self instanceof Client);
 
+  self.replId = replId;
   self.shellDir = shellDir;
   self.exitOnClose = false;
   self.firstTimeConnecting = true;
@@ -132,6 +139,7 @@ Cp.setUpSocket = function setUpSocket(sock, key) {
     // Sending a JSON-stringified options object (even just an empty
     // object) over the socket is required to start the REPL session.
     sock.write(JSON.stringify({
+      replId: self.replId,
       terminal: ! process.env.EMACS,
       key: key
     }));
