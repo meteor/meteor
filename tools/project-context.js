@@ -60,8 +60,7 @@ var STAGE = {
 _.extend(ProjectContext.prototype, {
   reset: function (moreOptions, resetOptions) {
     var self = this;
-    // Allow overriding some options until the next call to reset; used by
-    // 'meteor update' code to try various values of releaseForConstraints.
+    // Allow overriding some options until the next call to reset;
     var options = _.extend({}, self.originalOptions, moreOptions);
     // This is options that are actually directed at reset itself.
     resetOptions = resetOptions || {};
@@ -931,6 +930,18 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
       utils.validatePackageName(packageName);
       return utils.parsePackageConstraint(packageName);
     }));
+  },
+
+  // For every package we already have, update the constraint to be semver>=
+  // the constraint from the release
+  updateReleaseConstraints: function (releaseRecord) {
+    this.addConstraints(
+      _.compact(_.map(releaseRecord.packages, (version, packageName) => {
+        if (this.getConstraint(packageName)) {
+          return utils.parsePackageConstraint(packageName + '@' + version);
+        }
+      }))
+    );
   },
 
   // The packages in packagesToRemove are expected to actually be in the file;

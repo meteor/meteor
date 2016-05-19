@@ -1488,13 +1488,7 @@ var maybeUpdateRelease = function (options) {
   // Update every package in .meteor/packages to be (semver)>= the version
   // set for that package in the release we are updating to
   var releaseRecord = catalog.official.getReleaseVersion(releaseTrack, releaseVersion);
-  projectContext.projectConstraintsFile.addConstraints(
-    _.compact(_.map(releaseRecord.packages, function(version, packageName) {
-      if (projectContext.projectConstraintsFile.getConstraint(packageName)) {
-        return utils.parsePackageConstraint(packageName + '@' + version);
-      }
-    }))
-  );
+  projectContext.projectConstraintsFile.updateReleaseConstraints(releaseRecord);
 
   // Download and build packages and write the new versions to .meteor/versions.
   // XXX It's a little weird that we do a full preparation for build

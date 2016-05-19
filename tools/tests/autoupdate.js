@@ -34,7 +34,7 @@ var recommend = function (sandbox, version) {
 selftest.define("autoupdate", ['checkout'], function () {
   var s = new Sandbox({
     warehouse: {
-      v1: { recommended: true},
+      v1: { recommended: true },
       v2: { recommended: true },
       v3: { },
       v4: { }
