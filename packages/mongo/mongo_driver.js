@@ -18,6 +18,7 @@ MongoTest = {};
 MongoInternals.NpmModules = {
   mongodb: {
     version: NpmModuleMongodbVersion,
+    module: MongoDB,
   }
 };
 
