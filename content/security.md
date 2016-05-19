@@ -274,7 +274,7 @@ Meteor.publish('list', function (listId) {
 
   const list = Lists.findOne(listId);
 
-  if (! list.userId === this.userId) {
+  if (list.userId !== this.userId) {
     throw new Meteor.Error('list.unauthorized',
       'This list doesn\'t belong to you.');
   }
