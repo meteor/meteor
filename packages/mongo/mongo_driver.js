@@ -610,23 +610,23 @@ var isModificationMod = function (mod) {
 var transformResult = function (driverResult) {
   var meteorResult = { numberAffected: 0 };
   if (driverResult) {
-    mongoResult = driverResult.result;
+    var mongoResult = driverResult.result;
 
-    //The remove call, resturns only {ok: 1, n: [number of removed documents]}
-    //update apis return the nModified with the number of changed documents
-    if(mongoResult.nModified != null){
-      meteorResult.numberAffected += mongoResult.nModified;
-    } else if(mongoResult.n) {
-      meteorResult.numberAffected += mongoResult.n;
-    }
-
-    //On updates with upsert:true, the inserted values come as a list of upserted values
-    //Even with multi, when the upsert does insert, it only inserts one element
-    if(mongoResult.upserted){
+    if (mongoResult.upserted) {
+      //On updates with upsert:true, the inserted values come as a list of upserted values
+      //Even with multi, when the upsert does insert, it only inserts one element
       meteorResult.numberAffected += mongoResult.upserted.length;
 
       if(mongoResult.upserted.length == 1){
         meteorResult.insertedId = mongoResult.upserted[0]._id;
+      }
+    } else {
+      //The remove call, resturns only {ok: 1, n: [number of removed documents]}
+      //update apis return the nModified with the number of changed documents
+      if(mongoResult.nModified != null){
+        meteorResult.numberAffected += mongoResult.nModified;
+      } else if(mongoResult.n) {
+        meteorResult.numberAffected += mongoResult.n;
       }
     }
   }
