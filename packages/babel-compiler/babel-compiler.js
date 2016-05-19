@@ -10,6 +10,25 @@ BabelCompiler = function BabelCompiler(extraFeatures) {
 var BCp = BabelCompiler.prototype;
 var excludedFileExtensionPattern = /\.es5\.js$/i;
 
+var strictModulesPluginFactory =
+  Npm.require("babel-plugin-transform-es2015-modules-commonjs");
+
+var babelModulesPlugin = [function () {
+  var plugin = strictModulesPluginFactory.apply(this, arguments);
+  // Since babel-preset-meteor uses an exact version of the
+  // babel-plugin-transform-es2015-modules-commonjs transform (6.8.0), we
+  // can be sure this plugin.inherits property is indeed the
+  // babel-plugin-transform-strict-mode transform that we wish to disable.
+  // Otherwise it would be difficult to know exactly what we're deleting
+  // here, since plugins don't provide much identifying information.
+  delete plugin.inherits;
+  return plugin;
+}, {
+  allowTopLevelThis: true,
+  strict: false,
+  loose: true
+}];
+
 BCp.processFilesForTarget = function (inputFiles) {
   var self = this;
 
@@ -48,6 +67,23 @@ BCp.processFilesForTarget = function (inputFiles) {
       }
 
       var babelOptions = Babel.getDefaultOptions(self.extraFeatures);
+
+      if (inputFile.isPackageFile()) {
+        // When compiling package files, handle import/export syntax using
+        // the official Babel plugin, so that package authors won't
+        // publish code that relies on module.import and module.export,
+        // because such code would fail on Meteor versions before 1.3.3.
+        // When compiling application files, however, it's fine to rely on
+        // module.import and module.export, and the developer experience
+        // will be much better for it: faster compilation, real variables,
+        // import statements inside conditional statements, etc.
+        //
+        // TODO Remove this once we are confident enough developers have
+        // updated to a version of Meteor that supports module.import and
+        // module.export.
+        babelOptions.plugins.push(babelModulesPlugin);
+      }
+
       inferExtraBabelOptions(inputFile, babelOptions);
 
       babelOptions.sourceMap = true;

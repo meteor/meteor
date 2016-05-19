@@ -224,6 +224,27 @@ class InputFile extends buildPluginModule.InputFile {
     return self._resourceSlot.packageSourceBatch.unibuild.pkg.name;
   }
 
+  isPackageFile() {
+    return !! this.getPackageName();
+  }
+
+  isApplicationFile() {
+    return ! this.getPackageName();
+  }
+
+  getSourceRoot() {
+    const sourceRoot = this._resourceSlot.packageSourceBatch.sourceRoot;
+
+    if (! _.isString(sourceRoot)) {
+      const name = this.getPackageName();
+      throw new Error(
+        "Unknown source root for " + (
+          name ? "package " + name : "app"));
+    }
+
+    return sourceRoot;
+  }
+
   getPathInPackage() {
     var self = this;
     return self._resourceSlot.inputResource.path;
