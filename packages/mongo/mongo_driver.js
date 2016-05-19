@@ -566,15 +566,8 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
               // inserting a new doc and we know its id, then
               // return that id as well.
 
-              //transformResult was able to provide an id for some cases
-              //where the API did not wanted an ID. This needs furter looking
-              //but it fully complies with the test suite.
-              if (options.upsert) {
-                if (meteorResult.insertedId && knownId) {
-                  meteorResult.insertedId = knownId;
-                } else {
-                  delete meteorResult.insertedId;
-                }
+              if (options.upsert && knownId) {
+                meteorResult.insertedId = knownId;
               }
               callback(err, meteorResult);
             } else {
@@ -616,18 +609,18 @@ var transformResult = function (driverResult) {
     if (mongoResult.upserted) {
       //On updates with upsert:true, the inserted values come as a list of upserted values
       //Even with multi, when the upsert does insert, it only inserts one element
-      meteorResult.numberAffected += mongoResult.upserted.length;
+      meteorResult.numberAffected = mongoResult.upserted.length;
 
-      if(mongoResult.upserted.length == 1){
+      if (mongoResult.upserted.length == 1) {
         meteorResult.insertedId = mongoResult.upserted[0]._id;
       }
     } else {
       //The remove call, resturns only {ok: 1, n: [number of removed documents]}
       //update apis return the nModified with the number of changed documents
       if(mongoResult.nModified != null){
-        meteorResult.numberAffected += mongoResult.nModified;
-      } else if(mongoResult.n) {
-        meteorResult.numberAffected += mongoResult.n;
+        meteorResult.numberAffected = mongoResult.nModified;
+      } else if (mongoResult.n) {
+        meteorResult.numberAffected = mongoResult.n;
       }
     }
   }
