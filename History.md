@@ -296,8 +296,6 @@
 
 * Introduced new matcher `Match.Maybe(type)` which will also match (permit) `null` in addition to `undefined`.  This is a suggested replacement (where appropriate) for `Match.Optional` which did not permit `null`.  This prevents the need to use `Match.OneOf(null, undefined, type)`. #6220 
 
-#### Change 1.3.2
-
 ### Testing
 
 * Packages can now be marked as `testOnly` to only run as part of app
