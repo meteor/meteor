@@ -194,7 +194,7 @@ limits login attempts, new user creation, and password resets to 5 attempts
 every 10 seconds per connection. It can be removed by calling
 `Accounts.removeDefaultRateLimit()`.
 
-{% apibox "DDPRateLimiter.addRule" nested:true %}
+{% apibox "DDPRateLimiter.addRule" nested:true instanceDelimiter:. %}
 
 Custom rules can be added by calling `DDPRateLimiter.addRule`. The rate
 limiter is called on every method and subscription invocation.
@@ -218,5 +218,5 @@ var loginRule = {
 // Add the rule, allowing up to 5 messages every 1000 milliseconds.
 DDPRateLimiter.addRule(loginRule, 5, 1000);
 ```
-{% apibox "DDPRateLimiter.removeRule" nested:true %}
-{% apibox "DDPRateLimiter.setErrorMessage" nested:true %}
+{% apibox "DDPRateLimiter.removeRule" nested:true instanceDelimiter:. %}
+{% apibox "DDPRateLimiter.setErrorMessage" nested:true instanceDelimiter:. %}

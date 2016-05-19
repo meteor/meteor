@@ -31,7 +31,7 @@ hexo.extend.tag.register('apibox', function(args) {
 
   data.id = data.longname.replace(/[.#]/g, "-");
 
-  data.signature = signature(data, { short: false});
+  data.signature = signature(data, { short: false });
   data.title = signature(data, {
     short: true,
     instanceDelimiter: data.instanceDelimiter,
@@ -123,6 +123,13 @@ signature = function (data, options) {
     } else if (data.scope === "instance" && options.short) {
       // Something#foo => #foo
       return '<em>' + options.instanceDelimiter + '</em>' + escapedLongname.split('#')[1];
+    }
+
+    // If the user passes in a instanceDelimiter and we are a static method,
+    // we are probably underneath a heading that defines the object (e.g. DDPRateLimiter)
+    if (data.scope === "static" && options.instanceDelimiter && options.short) {
+      // Something.foo => .foo
+      return '<em>' + options.instanceDelimiter + '</em>' + escapedLongname.split('.')[1];
     }
 
     return escapedLongname + paramsStr;
