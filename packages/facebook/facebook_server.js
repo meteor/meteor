@@ -3,7 +3,7 @@ Facebook = {};
 var querystring = Npm.require('querystring');
 
 OAuth.registerService('facebook', 2, null, function(query) {
-  
+
 
   var response = getTokenResponse(query);
   var accessToken = response.accessToken;
@@ -60,14 +60,14 @@ var getTokenResponse = function (query) {
           }
         }).content;
       response = JSON.parse(response);
-	  if (response.id == config.appId) {
-        responseContent = "access_token=" + query.accessToken + "&expires=5184000";
-	  } else {
-		throw new Error("Failed to complete OAuth handshake with Facebook. The access token's app ID and the server's app ID did not match.");
-	  }
+  	  if (response.id == config.appId) {
+          responseContent = "access_token=" + query.accessToken + "&expires=5184000";
+  	  } else {
+  		    throw new Error("Failed to complete OAuth handshake with Facebook. The access token's app ID and the server's app ID did not match.");
+  	  }
     } else {
       responseContent = HTTP.get(
-        "https://graph.facebook.com/oauth/access_token", {
+        "https://graph.facebook.com/v2.2/oauth/access_token", {
           params: {
             client_id: config.appId,
             redirect_uri: OAuth._redirectUri('facebook', config),
