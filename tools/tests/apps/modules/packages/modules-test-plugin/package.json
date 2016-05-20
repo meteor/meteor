@@ -1,9 +1,0 @@
-{
-  "name": "compile-arson",
-  "babel": {
-    "plugins": [
-      "transform-class-properties",
-      ["transform-strict-mode", { "strict": true }]
-    ]
-  }
-}

@@ -20,12 +20,9 @@ class ArsonCompiler {
   expectedName = "compile-arson";
 
   processFilesForTarget(inputFiles) {
-    inputFiles.forEach(file => {
-      assert.strictEqual(
-        file.getPackageJson().name,
-        this.expectedName
-      );
+    assert.strictEqual(this.expectedName, "compile-arson");
 
+    inputFiles.forEach(file => {
       const arson = file.require("arson");
       let encoded = file.getContentsAsString();
       const decoded = arson.decode(encoded);
