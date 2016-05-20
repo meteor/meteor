@@ -5,12 +5,11 @@
  */
 BabelCompiler = function BabelCompiler(extraFeatures) {
   this.extraFeatures = extraFeatures;
-  this._babelrcCache = Object.create(null);
+  this._babelrcCache = null;
 };
 
 var BCp = BabelCompiler.prototype;
 var excludedFileExtensionPattern = /\.es5\.js$/i;
-var fs = Npm.require("fs");
 var hasOwn = Object.prototype.hasOwnProperty;
 
 var strictModulesPluginFactory =
@@ -34,6 +33,9 @@ var babelModulesPlugin = [function () {
 
 BCp.processFilesForTarget = function (inputFiles) {
   var self = this;
+
+  // Reset this cache for each batch processed.
+  this._babelrcCache = Object.create(null);
 
   inputFiles.forEach(function (inputFile) {
     var source = inputFile.getContentsAsString();
@@ -138,7 +140,8 @@ function profile(name, func) {
 
 BCp.inferExtraBabelOptions = function (inputFile, babelOptions) {
   if (! inputFile.require ||
-      ! inputFile.findControlFile) {
+      ! inputFile.findControlFile ||
+      ! inputFile.readAndWatchFile) {
     return false;
   }
 
@@ -154,7 +157,7 @@ BCp._inferFromBabelRc = function (inputFile, babelOptions) {
   if (babelrcPath) {
     if (! hasOwn.call(this._babelrcCache, babelrcPath)) {
       this._babelrcCache[babelrcPath] =
-        JSON.parse(fs.readFileSync(babelrcPath));
+        JSON.parse(inputFile.readAndWatchFile(babelrcPath));
     }
 
     return this._inferHelper(
@@ -169,8 +172,9 @@ BCp._inferFromPackageJson = function (inputFile, babelOptions) {
   var pkgJsonPath = inputFile.findControlFile(".babelrc");
   if (pkgJsonPath) {
     if (! hasOwn.call(this._babelrcCache, pkgJsonPath)) {
-      this._babelrcCache[pkgJsonPath] =
-        JSON.parse(fs.readFileSync(pkgJsonPath)).babel || null;
+      this._babelrcCache[pkgJsonPath] = JSON.parse(
+        inputFile.readAndWatchFile(pkgJsonPath)
+      ).babel || null;
     }
 
     return this._inferHelper(
