@@ -617,7 +617,7 @@ var transformResult = function (driverResult) {
     } else {
       //The remove call, resturns only {ok: 1, n: [number of removed documents]}
       //update apis return the nModified with the number of changed documents
-      if(mongoResult.nModified != null){
+      if (mongoResult.nModified != null) {
         meteorResult.numberAffected = mongoResult.nModified;
       } else if (mongoResult.n) {
         meteorResult.numberAffected = mongoResult.n;
