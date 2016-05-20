@@ -24,18 +24,19 @@ NODE_URL="https://nodejs.org/dist/v${NODE_VERSION}/${NODE_TGZ}"
 echo "Downloading Node from ${NODE_URL}"
 curl "${NODE_URL}" | tar zx --strip-components 1
 
-# Update these values after building the dev-bundle-mongo Jenkins project.
-# Also make sure to update MONGO_VERSION in generate-dev-bundle.ps1.
-MONGO_VERSION=2.6.7
-MONGO_BUILD_NUMBER=6
-MONGO_TGZ="mongo_${PLATFORM}_v${MONGO_VERSION}.tar.gz"
-if [ -f "${CHECKOUT_DIR}/${MONGO_TGZ}" ] ; then
-    tar zxf "${CHECKOUT_DIR}/${MONGO_TGZ}"
-else
-    MONGO_URL="https://${S3_HOST}/dev-bundle-mongo-${MONGO_BUILD_NUMBER}/${MONGO_TGZ}"
-    echo "Downloading Mongo from ${MONGO_URL}"
-    curl "${MONGO_URL}" | tar zx
-fi
+# Download Mongo from mongodb.com
+MONGO_VERSION=3.2.6
+MONGO_NAME="mongodb-${OS}-${ARCH}-${MONGO_VERSION}"
+MONGO_TGZ="${MONGO_NAME}.tgz"
+MONGO_URL="http://fastdl.mongodb.org/${OS}/${MONGO_TGZ}"
+echo "Downloading Mongo from ${MONGO_URL}"
+curl "${MONGO_URL}" | tar zx
+
+# Put Mongo binaries in the right spot (mongodb/bin)
+mkdir -p mongodb/bin
+mv "${MONGO_NAME}/bin/mongod" mongodb/bin
+mv "${MONGO_NAME}/bin/mongo" mongodb/bin
+rm -rf "${MONGO_NAME}"
 
 # export path so we use the downloaded node and npm
 export PATH="$DIR/bin:$PATH"
