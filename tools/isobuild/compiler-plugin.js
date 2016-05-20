@@ -204,10 +204,9 @@ class InputFile extends buildPluginModule.InputFile {
     // document.
     this._resourceSlot = resourceSlot;
 
-    // This `false` means we haven't read the package.json file governing
-    // this InputFile yet. Once we read it, this cached value will be
-    // either an object or null (meaning there was no package.json file).
-    this._packageJson = false;
+    // Map from control file names (e.g. package.json, .babelrc) to
+    // absolute paths, or null to indicate absence.
+    this._controlFileCache = Object.create(null);
 
     // Map from imported module identifier strings (possibly relative) to
     // fully require.resolve'd module identifiers.
@@ -257,35 +256,32 @@ class InputFile extends buildPluginModule.InputFile {
     return self._resourceSlot.inputResource.fileOptions || {};
   }
 
-  getPackageJson() {
-    if (typeof this._packageJson === "object") {
-      // Note that this._packageJson could be either an actual object or
-      // null at this point, which may be the first time I've ever been
-      // glad that typeof null === "object".
-      return this._packageJson;
+  // Search ancestor directories for control files (e.g. package.json,
+  // .babelrc), and return the absolute path of the first one found, or
+  // null if the search failed.
+  findControlFile(basename) {
+    let absPath = this._controlFileCache[basename];
+    if (typeof absPath === "string") {
+      return absPath;
     }
 
     const sourceRoot = this._resourceSlot.packageSourceBatch.sourceRoot;
     if (! _.isString(sourceRoot)) {
-      return this._packageJson = null;
+      return this._controlFileCache[basename] = null;
     }
 
     let dir = files.pathDirname(this.getPathInPackage());
     while (true) {
-      const pkgJsonId = files.convertToPosixPath(
-        files.pathJoin(sourceRoot, dir, "package.json"));
+      absPath = files.pathJoin(sourceRoot, dir, basename);
 
-      try {
-        // The require function will cache results across the process.
-        return this._packageJson = require(pkgJsonId);
-      } catch (e) {
-        if (e.code !== "MODULE_NOT_FOUND") {
-          throw e;
-        }
+      const stat = files.statOrNull(absPath);
+      if (stat && stat.isFile()) {
+        return this._controlFileCache[basename] = absPath;
       }
 
       if (files.pathBasename(dir) === "node_modules") {
-        return this._packageJson = null;
+        // The search for control files should not escape node_modules.
+        return this._controlFileCache[basename] = null;
       }
 
       let parentDir = files.pathDirname(dir);
@@ -293,7 +289,7 @@ class InputFile extends buildPluginModule.InputFile {
       dir = parentDir;
     }
 
-    return this._packageJson = null;
+    return this._controlFileCache[basename] = null;
   }
 
   resolve(id) {
