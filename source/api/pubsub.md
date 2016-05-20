@@ -26,9 +26,10 @@ different collections. We hope to lift this restriction in a future release.
 
 A client will see a document if the document is currently in the published
 record set of any of its subscriptions. If multiple publications publish a
-document with the same `_id` to the same collection the client will merge
-the documents. If the values of any of the top level fields conflict, the
-resulting value will be one of the published values, chosen arbitrarily.
+document with the same `_id` to the same collection the documents will be
+merged for the client. If the values of any of the top level fields
+conflict, the resulting value will be one of the published values, chosen
+arbitrarily.
 
 ```js
 // server: publish the rooms collection, minus secret info...
@@ -142,7 +143,8 @@ project that includes the `autopublish` package.  Your publish function
 will still work.
 {% endpullquote %}
 
-Read more about publications and how to use them in the [Data Loading](http://guide.meteor.com/data-loading.html) article in the Meteor Guide.
+Read more about publications and how to use them in the [Data Loading]
+(http://guide.meteor.com/data-loading.html) article in the Meteor Guide.
 
 {% apibox "Subscription#userId" %}
 
@@ -185,8 +187,8 @@ Players = new Mongo.Collection("players");
 ```
 
 The client will see a document if the document is currently in the published
-record set of any of its subscriptions. If multiple subscriptions recieve a
-document with the same `_id` for the same collection the documents are merged on
+record set of any of its subscriptions. If multiple publications publish a
+document with the same `_id` for the same collection the documents are merged for
 the client. If the values of any of the top level fields conflict, the resulting
 value will be one of the published values, chosen arbitrarily.
 
