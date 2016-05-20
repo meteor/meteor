@@ -58,7 +58,6 @@ selftest.define("autoupdate", ['checkout'], function () {
     run = s.run("--port", "21000");
     run.waitSecs(30);
     run.match("New hotness v2 being downloaded");
-    run.match("running at");
     require('../utils/utils.js').sleepMs(500);
     run.stop();
 
