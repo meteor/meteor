@@ -2,6 +2,17 @@
 
 ## v1.3.3
 
+* Node has been upgraded from 0.10.43 to 0.10.45.
+
+* `npm` has been upgraded from 2.14.22 to 2.15.1.
+
+* The `fibers` package has been upgraded to 1.0.10.
+
+* The `meteor-promise` package has been upgraded to 0.7.1, a breaking
+  change for code that uses `Promise.denodeify`, `Promise.nodeify`,
+  `Function.prototype.async`, or `Function.prototype.asyncApply`, since
+  those APIs have been removed.
+
 * Meteor packages with binary npm dependencies are now automatically
   rebuilt using `npm rebuild` whenever the version of Node or V8 changes,
   making it much simpler to use Meteor with different versions of Node.
@@ -16,10 +27,15 @@
 * Allow using authType in Facebook login [PR #5694](https://github.com/meteor/meteor/pull/5694)
 
 * Adds flush() method to Tracker to force recomputation [PR #4710](https://github.com/meteor/meteor/pull/4710)
+
 * Adds `defineMutationMethods` option (default: true) to `new Mongo.Collection` to override default behavior that sets up mutation methods (/collection/[insert|update...]) [PR #5778](https://github.com/meteor/meteor/pull/5778)
+
 * Allow overridding the default warehouse url by specifying `METEOR_WAREHOUSE_URLBASE` [PR #7054](https://github.com/meteor/meteor/pull/7054)
+
 * Allow `_id` in `$setOnInsert` in Minimongo: https://github.com/meteor/meteor/pull/7066
+
 * Added support for `$eq` to Minimongo: https://github.com/meteor/meteor/pull/4235
+
 * Insert a `Date` header into emails by default: https://github.com/meteor/meteor/pull/6916/files
 
 * DDP callbacks are now batched on the client side. This means that after a DDP message arrives, the local DDP client will batch changes for a minimum of 5ms (configurable via `bufferedWritesInterval`) and a maximum of 500ms (configurable via `bufferedWritesMaxAge`) before calling any callbacks (such as cursor observe callbacks).
@@ -29,6 +45,41 @@
   package, Velocity tests, or testing Meteor from a checkout, you should
   now install PhantomJS yourself, by running the following commmand:
   `meteor npm install -g phantomjs-prebuilt`
+
+* The `babel-compiler` package now looks for `.babelrc` files and
+  `package.json` files with a "babel" section. If found, these files may
+  contribute additional Babel transforms that run before the usual
+  `babel-preset-meteor` set of transforms. In other words, if you don't
+  like the way `babel-preset-meteor` handles a particular kind of syntax,
+  you can add your preferred transform plugins to the "presets" or
+  "plugins" section of your `.babelrc` or `package.json` file. #6351
+
+* Compiler plugins can now import npm packages that are visible to their
+  input files using `inputFile.require(id)`. b16e8d50194b37d3511889b316345f31d689b020
+
+* `import` statements in application modules now declare normal variables
+  for the symbols that are imported, making it significantly easier to
+  inspect imported variables when debugging in the browser console or in
+  `meteor shell`.
+
+* `import` statements in application modules are no longer restricted to
+  the top level, and may now appear inside conditional statements
+  (e.g. `if (Meteor.isServer) { import ... }`) or in nested scopes.
+
+* `import` statements now work as expected in `meteor shell`. #6271
+
+* Commands installed in `dev_bundle/lib/node_modules/.bin` (such as
+  `node-gyp` and `node-pre-gyp`) are now available to scripts run by
+  `meteor npm`. e95dfe410e1b43e8131bc2df9d2c29decdd1eaf6
+
+* When building an application using `meteor build`, "devDependencies"
+  listed in `package.json` are no longer copied into the bundle. #6750
+
+* Packages tested with `meteor test-packages` now have access to local
+  `node_modules` directories installed in the parent application or in the
+  package directory itself. #6827
+
+* Miscellaneous fixed bugs: #6877 #6843 #6881
 
 ## v1.3.2.3
 
