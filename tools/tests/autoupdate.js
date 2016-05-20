@@ -34,7 +34,7 @@ var recommend = function (sandbox, version) {
 selftest.define("autoupdate", ['checkout'], function () {
   var s = new Sandbox({
     warehouse: {
-      v1: { recommended: true},
+      v1: { recommended: true },
       v2: { recommended: true },
       v3: { },
       v4: { }
@@ -58,7 +58,6 @@ selftest.define("autoupdate", ['checkout'], function () {
     run = s.run("--port", "21000");
     run.waitSecs(30);
     run.match("New hotness v2 being downloaded");
-    run.match("running at");
     require('../utils/utils.js').sleepMs(500);
     run.stop();
 
