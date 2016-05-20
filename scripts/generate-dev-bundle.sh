@@ -31,18 +31,12 @@ else
     curl "${NODE_URL}" | tar zx
 fi
 
-# Update these values after building the dev-bundle-mongo Jenkins project.
-# Also make sure to update MONGO_VERSION in generate-dev-bundle.ps1.
-MONGO_VERSION=2.6.7
-MONGO_BUILD_NUMBER=6
-MONGO_TGZ="mongo_${PLATFORM}_v${MONGO_VERSION}.tar.gz"
-if [ -f "${CHECKOUT_DIR}/${MONGO_TGZ}" ] ; then
-    tar zxf "${CHECKOUT_DIR}/${MONGO_TGZ}"
-else
-    MONGO_URL="https://${S3_HOST}/dev-bundle-mongo-${MONGO_BUILD_NUMBER}/${MONGO_TGZ}"
-    echo "Downloading Mongo from ${MONGO_URL}"
-    curl "${MONGO_URL}" | tar zx
-fi
+MONGO_VERSION=3.2.6
+MONGO_NAME="mongodb-${OS}-${ARCH}-${MONGO_VERSION}"
+MONGO_TGZ="${MONGO_NAME}.tgz"
+MONGO_URL="http://fastdl.mongodb.org/${OS}/${MONGO_TGZ}"
+echo "Downloading Mongo from ${MONGO_URL}"
+curl "${MONGO_URL}" | tar zx
 
 # export path so we use the downloaded node and npm
 export PATH="$DIR/bin:$PATH"
