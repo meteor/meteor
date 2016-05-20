@@ -24,8 +24,15 @@ If you return multiple cursors in an array, they currently must all be from
 different collections. We hope to lift this restriction in a future release.
 {% endpullquote %}
 
+A client will see a document if the document is currently in the published
+record set of any of its subscriptions. If multiple publications publish a
+document with the same `_id` to the same collection the documents will be
+merged for the client. If the values of any of the top level fields
+conflict, the resulting value will be one of the published values, chosen
+arbitrarily.
+
 ```js
-// server: publish the rooms collection, minus secret info.
+// server: publish the rooms collection, minus secret info...
 Meteor.publish("rooms", function () {
   return Rooms.find({}, {fields: {secretInfo: 0}});
 });
@@ -33,6 +40,8 @@ Meteor.publish("rooms", function () {
 // ... and publish secret info for rooms where the logged-in user
 // is an admin. If the client subscribes to both streams, the records
 // are merged together into the same documents in the Rooms collection.
+// Note that currently object values are not recursively merged, so the
+// fields that differ must be top level fields.
 Meteor.publish("adminSecretInfo", function () {
   return Rooms.find({admin: this.userId}, {fields: {secretInfo: 1}});
 });
@@ -134,7 +143,8 @@ project that includes the `autopublish` package.  Your publish function
 will still work.
 {% endpullquote %}
 
-Read more about publications and how to use them in the [Data Loading](http://guide.meteor.com/data-loading.html) article in the Meteor Guide.
+Read more about publications and how to use them in the [Data Loading]
+(http://guide.meteor.com/data-loading.html) article in the Meteor Guide.
 
 {% apibox "Subscription#userId" %}
 
@@ -177,7 +187,17 @@ Players = new Mongo.Collection("players");
 ```
 
 The client will see a document if the document is currently in the published
-record set of any of its subscriptions.
+record set of any of its subscriptions. If multiple publications publish a
+document with the same `_id` for the same collection the documents are merged for
+the client. If the values of any of the top level fields conflict, the resulting
+value will be one of the published values, chosen arbitrarily.
+
+{% pullquote 'warning' %}
+Currently, when multiple subscriptions publish the same document *only the top
+level fields* are compared during the merge. This means that if the documents
+include different sub-fields of the same top level field, not all of them will
+be available on the client. We hope to lift this restriction in a future release.
+{% endpullquote %}
 
 The `onReady` callback is called with no arguments when the server [marks the
 subscription as ready](#publish_ready). The `onStop` callback is called with
@@ -229,7 +249,3 @@ messages. When you change rooms by calling `Session.set("current-room",
 "new-room")`, Meteor will subscribe to the new room's chat messages,
 unsubscribe from the original room's chat messages, and continue to
 stay subscribed to your private messages.
-
-If more than one subscription sends conflicting values for a field (same
-collection name, document ID, and field name), then the value on the client will
-be one of the published values, chosen arbitrarily.
