@@ -194,6 +194,13 @@ limits login attempts, new user creation, and password resets to 5 attempts
 every 10 seconds per connection. It can be removed by calling
 `Accounts.removeDefaultRateLimit()`.
 
+To use `DDPRateLimiter` for modifying the default rate-limiting rules,
+add the `ddp-rate-limiter` package to your project in your terminal:
+
+```bash
+meteor add ddp-rate-limiter
+```
+
 {% apibox "DDPRateLimiter.addRule" nested:true %}
 
 Custom rules can be added by calling `DDPRateLimiter.addRule`. The rate
