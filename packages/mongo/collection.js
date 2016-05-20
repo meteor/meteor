@@ -22,6 +22,7 @@ Mongo = {};
 
 The default id generation technique is `'STRING'`.
  * @param {Function} options.transform An optional transformation function. Documents will be passed through this function before being returned from `fetch` or `findOne`, and before being passed to callbacks of `observe`, `map`, `forEach`, `allow`, and `deny`. Transforms are *not* applied for the callbacks of `observeChanges` or to cursors returned from publish functions.
+ * @param {Boolean} options.defineMutationMethods Set to `false` to skip setting up the mutation methods that enable insert/update/remove from client code. Default `true`.
  */
 Mongo.Collection = function (name, options) {
   var self = this;
@@ -209,21 +210,41 @@ Mongo.Collection = function (name, options) {
       getDoc: function(id) {
         return self.findOne(id);
       },
-      
+
       // To be able to get back to the collection from the store.
       _getCollection: function () {
         return self;
       }
     });
 
-    if (!ok)
-      throw new Error("There is already a collection named '" + name + "'");
+    if (!ok) {
+      const message = `There is already a collection named "${name}"`;
+      if (options._suppressSameNameError === true) {
+        // XXX In theory we do not have to throw when `ok` is falsy. The store is already defined
+        // for this collection name, but this will simply be another reference to it and everything
+        // should work. However, we have historically thrown an error here, so for now we will
+        // skip the error only when `_suppressSameNameError` is `true`, allowing people to opt in
+        // and give this some real world testing.
+        console.warn ? console.warn(message) : console.log(message);
+      } else {
+        throw new Error(message);
+      }
+    }
   }
 
   // XXX don't define these until allow or deny is actually used for this
   // collection. Could be hard if the security rules are only defined on the
   // server.
-  self._defineMutationMethods();
+  if (options.defineMutationMethods !== false) {
+    try {
+      self._defineMutationMethods({ useExisting: (options._suppressSameNameError === true) });
+    } catch (error) {
+      // Throw a more understandable error on the server for same collection name
+      if (error.message === `A method named '/${name}/insert' is already defined`)
+        throw new Error(`There is already a collection named "${name}"`);
+      throw error;
+    }
+  }
 
   // autopublish
   if (Package.autopublish && !options._preventAutopublish && self._connection

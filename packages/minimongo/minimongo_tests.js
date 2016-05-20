@@ -510,6 +510,23 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
     });
   });
 
+  // $eq
+  nomatch({a: {$eq: 1}}, {a: 2});
+  match({a: {$eq: 2}}, {a: 2});
+  nomatch({a: {$eq: [1]}}, {a: [2]});
+
+  match({a: {$eq: [1, 2]}}, {a: [1, 2]});
+  match({a: {$eq: 1}}, {a: [1, 2]});
+  match({a: {$eq: 2}}, {a: [1, 2]});
+  nomatch({a: {$eq: 3}}, {a: [1, 2]});
+  match({'a.b': {$eq: 1}}, {a: [{b: 1}, {b: 2}]});
+  match({'a.b': {$eq: 2}}, {a: [{b: 1}, {b: 2}]});
+  nomatch({'a.b': {$eq: 3}}, {a: [{b: 1}, {b: 2}]});
+
+  match({a: {$eq: {x: 1}}}, {a: {x: 1}});
+  nomatch({a: {$eq: {x: 1}}}, {a: {x: 2}});
+  nomatch({a: {$eq: {x: 1}}}, {a: {x: 1, y: 2}});
+
   // $ne
   match({a: {$ne: 1}}, {a: 2});
   nomatch({a: {$ne: 2}}, {a: 2});
@@ -2085,6 +2102,23 @@ Tinytest.add("minimongo - modify", function (test) {
     exceptionWithQuery(doc, {}, mod);
   };
 
+  var upsert = function (query, mod, expected) {
+    var coll = new LocalCollection;
+    
+    var result = coll.upsert(query, mod);
+    
+    var actual = coll.findOne();
+    
+    if (expected._id) {
+      test.equal(result.insertedId, expected._id);
+    }
+    else {
+      delete actual._id;
+    }
+    
+    test.equal(actual, expected);
+  };
+  
   // document replacement
   modify({}, {}, {});
   modify({a: 12}, {}, {}); // tested against mongodb
@@ -2406,6 +2440,13 @@ Tinytest.add("minimongo - modify", function (test) {
   exception({}, {$rename: {'a.b': 'a.b'}});
   modify({a: 12, b: 13}, {$rename: {a: 'b'}}, {b: 12});
 
+  // $setOnInsert
+  modify({a: 0}, {$setOnInsert: {a: 12}}, {a: 0});
+  upsert({a: 12}, {$setOnInsert: {b: 12}}, {a: 12, b: 12});
+  upsert({a: 12}, {$setOnInsert: {_id: 'test'}}, {_id: 'test', a: 12});
+  
+  exception({}, {$set: {_id: 'bad'}});
+  
   // $bit
   // unimplemented
 

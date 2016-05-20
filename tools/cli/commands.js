@@ -1145,7 +1145,6 @@ to this command.`);
   } else {
     // remote mode
     var site = qualifySitename(options.args[0]);
-    config.printUniverseBanner();
 
     mongoUrl = deploy.temporaryMongoUrl(site);
     usedMeteorAccount = true;
@@ -1240,7 +1239,6 @@ main.registerCommand({
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options, {rawOptions}) {
   var site = options.args[0];
-  config.printUniverseBanner();
 
   if (options.delete) {
     return deploy.deleteApp(site);
@@ -1358,7 +1356,6 @@ main.registerCommand({
     return 1;
   }
 
-  config.printUniverseBanner();
   auth.pollForRegistrationCompletion();
   var site = qualifySitename(options.args[0]);
 
@@ -1390,7 +1387,6 @@ main.registerCommand({
   maxArgs: 1,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
-  config.printUniverseBanner();
   auth.pollForRegistrationCompletion();
   var site = qualifySitename(options.args[0]);
 
@@ -1956,8 +1952,6 @@ main.registerCommand({
     throw new main.ShowUsage;
   }
 
-  config.printUniverseBanner();
-
   var username = options.add || options.remove;
 
   var conn = loggedInAccountsConnectionOrPrompt(
@@ -2013,6 +2007,10 @@ main.registerCommand({
     slow: { type: Boolean },
     galaxy: { type: Boolean },
     browserstack: { type: Boolean },
+    // Indicates whether these self-tests are running headless, e.g. in a
+    // continuous integration testing environment, where visual niceties
+    // like progress bars and spinners are unimportant.
+    headless: { type: Boolean },
     history: { type: Number },
     list: { type: Boolean },
     file: { type: String },
@@ -2092,6 +2090,12 @@ main.registerCommand({
   var clients = {
     browserstack: options.browserstack
   };
+
+  if (options.headless) {
+    // There's no point in spinning the spinner when we're running
+    // continuous integration tests.
+    Console.disableSpinner();
+  }
 
   return selftest.runTests({
     // filtering options

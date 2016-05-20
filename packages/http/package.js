@@ -21,6 +21,7 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
+  api.use('ecmascript');
   api.use('webapp', 'server');
   api.use('underscore');
   api.use('random');
