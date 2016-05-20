@@ -319,7 +319,8 @@ class InputFile extends buildPluginModule.InputFile {
       // Add any local node_modules directory paths that are both ancestors
       // of this file and included in this PackageSourceBatch.
       Module._nodeModulePaths(parentId).forEach(path => {
-        if (_.has(nmds, path)) {
+        if (_.has(nmds, path.replace(/\/*$/, "/")) ||
+            _.has(nmds, path.replace(/\/+$/, ""))) {
           parent.paths.push(path);
         }
       });
