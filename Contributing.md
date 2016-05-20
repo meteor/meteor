@@ -71,19 +71,23 @@ month.  We use our [roadmap](Roadmap.md) to communicate the high level features 
 Every additional feature adds a maintenance cost in addition to its value. This
 cost starts with the work of writing the feature or reviewing a community pull
 request. In addition to the core code change, attention needs to be paid to
-documentation, tests, maintability, how the feature interacts with existing and
+documentation, tests, maintainability, how the feature interacts with existing and
 speculative Meteor features, cross-browser/platform support, user experience/API
 considerations, etc.  Once the feature is shipped, it then becomes the community's responsibility to fix future bugs related to the feature. In case the original author disappears, it's important that the feature has good tests and is widely used in order to be maintainable by other contributors.
 
 For these reasons, we strongly encourage features to be implemented as [Atmosphere or npm packages](http://guide.meteor.com/writing-packages.html) rather than changes to core. Try to re-work your feature request as a minimal set of hooks to core that enable the feature to be implemented as a package.
 
-Feature requests should be well specified and un-ambigous to have the greatest chance of being worked on by a contributor.
+Feature requests should be well specified and unambiguous to have the greatest chance of being worked on by a contributor.
 
 Finally, you can show your support for features you would like by commenting with a +1 or up-voting the issue.
 
 ## Triaging issues
 
 A great way to contribute to Meteor is by helping keep the issues in the repository clean and well organized. This process is called 'issue triage' and the steps are described [here](IssueTriage.md).
+
+## Documentation
+
+If you'd like to contribution to Meteor's documentation, head over to https://github.com/meteor/docs and create issues or pull requests there.
 
 ## Making changes to Meteor core
 
@@ -128,9 +132,9 @@ incredibly rewarding.  We hope you come to feel the same way.
 
 You'll have the best chance of getting a change into core if you can build consensus in the community for it. Start by creating a well specified feature request as a Github issue.
 
-Help drive discussion and advocate for your feature on the Github ticket (and perhaps the forums). The higher the demand for the feature and the greater the clarity of it's specification will determine the likelyhood of a core contributor prioritizing your feature by flagging it with the `pull-requests-encouraged` label.
+Help drive discussion and advocate for your feature on the Github ticket (and perhaps the forums). The higher the demand for the feature and the greater the clarity of it's specification will determine the likelihood of a core contributor prioritizing your feature by flagging it with the `pull-requests-encouraged` label.
 
-Split features up into smaller, logically seperable chunks. It is unlikely that large and complicated PRs  will be merged.
+Split features up into smaller, logically separable chunks. It is unlikely that large and complicated PRs  will be merged.
 
 Once your feature has been labelled with `pull-requests-encouraged`, leave a comment letting people know you're working on it and you can begin work on the code.
 
@@ -165,7 +169,7 @@ Meteor now has groups defined to cover different areas of the codebase. If you n
 
 * Meteor Data Team - This includes DDP, tracker, mongo, accounts, etc. You can mention @data in the PR.
 * Blaze - This includes Spacebars, Blaze, etc. You can mention @view-layer in the PR.
-* Build tools - This includes modules, build tool changes, etc. You can memtion @platform in the PR.
+* Build tools - This includes modules, build tool changes, etc. You can mention @platform in the PR.
 * Mobile integration - This includes Cordova, React Native, etc. You can mention @mobile in the PR.
 * Documentation - This includes the Guide, the Docs, and any supporting material. You can mention @guide in the PR.
 
