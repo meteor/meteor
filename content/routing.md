@@ -418,7 +418,7 @@ You will also want to show some kind of indication that the method is working in
 
 <h3 id="404s">Missing pages</h3>
 
-If a user types an incorrect URL, chances are you want to show them some kind of amusing not found page. There are actually two categories of "not found" pages. The first is when the URL typed in doesn't match any of your route definitions. You can use `FlowRouter.notFound` to handle this:
+If a user types an incorrect URL, chances are you want to show them some kind of amusing not-found page. There are actually two categories of not-found pages. The first is when the URL typed in doesn't match any of your route definitions. You can use `FlowRouter.notFound` to handle this:
 
 ```js
 // the App_notFound template is used for unknown routes and missing lists
@@ -429,7 +429,7 @@ FlowRouter.notFound = {
 };
 ```
 
-The second is when the URL is valid, but doesn't actually match any data. In this case, the URL matches a route, but once the route has successfully subscribed, it discovers there is no data. It usually makes sense in this case for the page component (which subscribes and fetches the data) to render a not found template instead of the usual template for the page:
+The second is when the URL is valid, but doesn't actually match any data. In this case, the URL matches a route, but once the route has successfully subscribed, it discovers there is no data. It usually makes sense in this case for the page component (which subscribes and fetches the data) to render a not-found template instead of the usual template for the page:
 
 ```html
 <template name="Lists_show_page">
@@ -451,7 +451,7 @@ As we've discussed, Meteor is a framework for client rendered applications, but 
 
 <h4 id="server-side-apis">Server Routing for API access</h4>
 
-Although Meteor allows you to [write low-level connect handlers](http://docs.meteor.com/#/full/webapp) to create any kind of API you like on the server-side, if you all you want to do is create a RESTful version of your Methods and Publications, you can often use the [`simple:rest`](http://atmospherejs.com/simple/rest) package to do this easily. See the [Data Loading](data-loading.html#publications-as-rest) and [Methods](methods.html) articles for more information.
+Although Meteor allows you to [write low-level connect handlers](http://docs.meteor.com/#/full/webapp) to create any kind of API you like on the server-side, if all you want to do is create a RESTful version of your Methods and Publications, you can often use the [`simple:rest`](http://atmospherejs.com/simple/rest) package to do this easily. See the [Data Loading](data-loading.html#publications-as-rest) and [Methods](methods.html) articles for more information.
 
 If you need more control, you can use the comprehensive [`nimble:restivus`](https://atmospherejs.com/nimble/restivus) package to create more or less whatever you need in whatever ontology you require.
 
