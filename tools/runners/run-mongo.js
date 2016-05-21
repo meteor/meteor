@@ -517,7 +517,7 @@ var launchMongo = function (options) {
     var stdoutOnData = fiberHelpers.bindEnvironment(function (data) {
       // note: don't use "else ifs" in this, because 'data' can have multiple
       // lines
-      if (/config from self or any seed \(EMPTYCONFIG\)/.test(data)) {
+      if (/\[initandlisten\] Did not find local replica set configuration document at startup/.test(data)) {
         replSetReadyToBeInitiated = true;
         maybeReadyToTalk();
       }
@@ -527,7 +527,7 @@ var launchMongo = function (options) {
         maybeReadyToTalk();
       }
 
-      if (/ \[rsMgr\] replSet (PRIMARY|SECONDARY)/.test(data)) {
+      if (/ \[rsSync\] transition to primary complete/.test(data)) {
         replSetReady = true;
         maybeReadyToTalk();
       }
