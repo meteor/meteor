@@ -43,8 +43,7 @@ curl "${MONGO_URL}" | tar zx
 mkdir -p mongodb/bin
 mv "${MONGO_NAME}/bin/mongod" mongodb/bin
 mv "${MONGO_NAME}/bin/mongo" mongodb/bin
-
-rm -rf "${MONGO_NAME} ${MONGO_TGZ}"
+rm -rf "${MONGO_NAME}"
 
 # export path so we use the downloaded node and npm
 export PATH="$DIR/bin:$PATH"
