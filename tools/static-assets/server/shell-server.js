@@ -255,13 +255,23 @@ Sp.startREPL = function startREPL(options) {
     configurable: true
   });
 
-  // Use the same `require` function and `module` object visible to the
-  // shell.js module.
-  repl.context.require = Package.modules
-    ? Package.modules.meteorInstall()
-    : require;
+  if (Package.modules) {
+    // Use the same `require` function and `module` object visible to the
+    // application.
+    var toBeInstalled = {};
+    var shellModuleName = "meteor-shell-" +
+      Math.random().toString(36).slice(2) + ".js";
 
-  repl.context.module = module;
+    toBeInstalled[shellModuleName] = function (require, exports, module) {
+      repl.context.module = module;
+      repl.context.require = require;
+    };
+
+    // This populates repl.context.{module,require} by evaluating the
+    // module defined above.
+    Package.modules.meteorInstall(toBeInstalled)("./" + shellModuleName);
+  }
+
   repl.context.repl = repl;
 
   // Some improvements to the existing help messages.
