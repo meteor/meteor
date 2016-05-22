@@ -22,8 +22,7 @@ Here's how CoffeeScript works with Meteor's namespacing.
   they are defined.)
 
 * When writing a package, CoffeeScript-defined variables can be
-  exported like any other variable (see [Writing
-  Packages](#writingpackages)). Exporting a variable pulls it up to
+  exported like any other variable (see [Package.js](/api/packagejs.html)). Exporting a variable pulls it up to
   package scope, meaning that it will be visible to all of the code in
   your app or package (both `.js` and `.coffee` files).
 
@@ -49,3 +48,7 @@ Here's how CoffeeScript works with Meteor's namespacing.
 Heavy CoffeeScript users, please let us know how this arrangement
 works for you, whether `share` is helpful for you, and anything else
 you'd like to see changed.
+
+### Modules and CoffeeScript
+
+See [Modules » Syntax » CoffeeScript](/packages/modules.html#CoffeeScript).
