@@ -255,19 +255,13 @@ Sp.startREPL = function startREPL(options) {
     configurable: true
   });
 
-  if (Package.modules) {
-    // Use the same `require` function and `module` object visible to the
-    // application.
-    var meteorInstall = Package.modules.meteorInstall;
-    var module = repl.context.module =
-      new meteorInstall.Module(options.replId);
-    module.require = repl.context.require = meteorInstall();
-  } else {
-    var module = repl.context.module =
-      new module.constructor(options.replId);
-    module.require = repl.context.require = require;
-  }
+  // Use the same `require` function and `module` object visible to the
+  // shell.js module.
+  repl.context.require = Package.modules
+    ? Package.modules.meteorInstall()
+    : require;
 
+  repl.context.module = module;
   repl.context.repl = repl;
 
   // Some improvements to the existing help messages.

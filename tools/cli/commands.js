@@ -415,7 +415,9 @@ main.registerCommand({
 
     // Convert to OS path here because shell/server.js doesn't know how to
     // convert paths, since it exists in the app and in the tool.
-    require('../shell-client.js').connect(projectContext);
+    require('../shell-client.js').connect(
+      files.convertToOSPath(projectContext.getMeteorShellDirectory())
+    );
 
     throw new main.WaitForExit;
   }
