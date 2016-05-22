@@ -56,6 +56,8 @@ Here at Meteor, we strongly believe that JavaScript is the best language to buil
 
 ![](images/ben-es2015-demo.gif)
 
+> An example of refactoring from JavaScript to ES2015
+
 <h3 id="ecmascript">Use the `ecmascript` package</h3>
 
 ECMAScript, the language standard on which every browser's JavaScript implementation is based, has moved to yearly standards releases. The newest complete standard is ES2015, which includes some long-awaited and very significant improvements to the JavaScript language. Meteor's `ecmascript` package compiles this standard down to regular JavaScript that all browsers can understand using the [popular Babel compiler](https://babeljs.io/). It's fully backwards compatible to "regular" JavaScript, so you don't have to use any new features if you don't want to. We've put a lot of effort into making advanced browser features like source maps work great with this package, so that you can debug your code using your favorite developer tools without having to see any of the compiled output.
