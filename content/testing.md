@@ -150,7 +150,7 @@ As we've placed the code above in a test file, it *will not* load in normal deve
 
 Often it's sensible to create a set of data to run your test against. You can use standard `insert()` calls against your collections to do this, but often it's easier to create *factories* which help encode random test data. A great package to use to do this is [`dburles:factory`](https://atmospherejs.com/dburles/factory).
 
-In the Todos example app, we define a factory to describe how to create a test todo item, using the [`faker`](https://www.npmjs.com/package/faker) npm package:
+In the [Todos](https://github.com/meteor/todos) example app, we define a factory to describe how to create a test todo item, using the [`faker`](https://www.npmjs.com/package/faker) npm package:
 
 ```js
 import faker from 'faker';
@@ -201,7 +201,7 @@ By isolating a module and simply testing its internal functionality, we can writ
 
 <h3 id="simple-unit-test">A simple unit test</h3>
 
-In the Todos example application, thanks to the fact that we've split our User Interface into [smart and reusable components](ui-ux.html#components), it's natural to want to unit test some of our reusable components (we'll see below how to [integration test](#simple-integration-test) our smart components).
+In the [Todos](https://github.com/meteor/todos) example app, thanks to the fact that we've split our User Interface into [smart and reusable components](ui-ux.html#components), it's natural to want to unit test some of our reusable components (we'll see below how to [integration test](#simple-integration-test) our smart components).
 
 To do so, we'll use a very simple test helper that renders a Blaze component off-screen with a given data context (note that the [React test utils](https://facebook.github.io/react/docs/test-utils.html) can do a similar thing for React). As we place it in `imports`, it won't load in our app by in normal mode (as it's not required anywhere).
 
@@ -356,7 +356,7 @@ In the [unit test above](#simple-unit-test) we saw a very limited example of how
 
   - The [`hwillson:stub-collections`](https://atmospherejs.com/hwillson/stub-collections) package we mentioned [above](#mocking-the-database).
 
-  - (Using another package from the example app) to isolate a publication, the `publication-collector` package:
+  - (Using another package from the [Todos](https://github.com/meteor/todos) example app) to isolate a publication, the `publication-collector` package:
 
     ```js
     describe('lists.public', function () {
@@ -388,7 +388,7 @@ Let's take a look at example of both kinds of tests.
 
 Our reusable components were a natural fit for a unit test; similarly our smart components tend to require an integration test to really be exercised properly, as the job of a smart component is to bring data together and supply it to a reusable component.
 
-In the Todos example app, we have an integration test for the `Lists_show_page` smart component. This test simply ensures that when the correct data is present in the database, the template renders correctly -- that it is gathering the correct data as we expect. It isolates the rendering tree from the more complex data subscription part of the Meteor stack. If we wanted to test that the subscription side of things was working in concert with the smart component, we'd need to write a [full app integration test](#full-app-integration-test).
+In the [Todos](https://github.com/meteor/todos) example app, we have an integration test for the `Lists_show_page` smart component. This test simply ensures that when the correct data is present in the database, the template renders correctly -- that it is gathering the correct data as we expect. It isolates the rendering tree from the more complex data subscription part of the Meteor stack. If we wanted to test that the subscription side of things was working in concert with the smart component, we'd need to write a [full app integration test](#full-app-integration-test).
 
 [`imports/ui/components/client/todos-item.tests.js`](https://github.com/meteor/todos/blob/master/imports/ui/components/client/todos-item.tests.js):
 
@@ -471,7 +471,7 @@ This integration test can be run the exact same way as we ran [unit tests above]
 
 <h3 id="full-app-integration-test">Full-app integration test</h3>
 
-In the Todos example application, we have a integration test which ensures that we see the full contents of a list when we route to it, which demonstrates a few techniques of integration tests.
+In the [Todos](https://github.com/meteor/todos) example application, we have a integration test which ensures that we see the full contents of a list when we route to it, which demonstrates a few techniques of integration tests.
 
 [`imports/startup/client/routes.app-test.js`](https://github.com/meteor/todos/blob/master/imports/startup/client/routes.app-test.js):
 
@@ -639,7 +639,7 @@ Chimp has a variety of options for setting it up, but we can add some npm script
 }
 ```
 
-Chimp will now look in the `tests/` directory (otherwise ignored by the Meteor tool) for files in which you define acceptance tests. In the Todos example app, we define a simple test that ensures we can click the "create list" button.
+Chimp will now look in the `tests/` directory (otherwise ignored by the Meteor tool) for files in which you define acceptance tests. In the [Todos](https://github.com/meteor/todos) example app, we define a simple test that ensures we can click the "create list" button.
 
 [`tests/lists.js`](https://github.com/meteor/todos/blob/master/tests/lists.js):
 
