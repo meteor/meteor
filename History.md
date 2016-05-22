@@ -9,6 +9,8 @@
 * Adds `defineMutationMethods` option (default: true) to `new Mongo.Collection` to override default behavior that sets up mutation methods (/collection/[insert|update...]) [PR #5778](https://github.com/meteor/meteor/pull/5778)
 * Allow overridding the default warehouse url by specifying `METEOR_WAREHOUSE_URLBASE` [PR #7054](https://github.com/meteor/meteor/pull/7054)
 * Allow `_id` in `$setOnInsert` in Minimongo: https://github.com/meteor/meteor/pull/7066
+* Added support for `$eq` to Minimongo: https://github.com/meteor/meteor/pull/4235
+* Insert a `Date` header into emails by default: https://github.com/meteor/meteor/pull/6916/files
 
 ## v1.3.2.3
 
@@ -56,15 +58,13 @@
 * The `npm-bcrypt` package has been upgraded to use the latest version
   (0.8.5) of the `bcrypt` npm package.
 
-* `Match.Optional` only passes if the value is `null` or the specified
-  type, whereas previously it accepted `undefined`. Use `Match.Maybe` to
-  allow `undefined`. #6735
-
 * Compiler plugins can call `addJavaScript({ path })` multiple times with
   different paths for the same source file, and `module.id` will reflect
   this `path` instead of the source path, if they are different. #6806
 
 * Fixed bugs: https://github.com/meteor/meteor/milestones/Release%201.3.2
+
+* Fixed unintended change to `Match.Optional` which caused it to behave the same as the new `Match.Maybe` and incorrectly matching `null` where it previously would not have allowed it. #6735
 
 ## v1.3.1
 
@@ -287,6 +287,10 @@
 
 * Improve automatic blocking of URLs in attribute values to also
   include `vbscript:` URLs.
+
+### Check
+
+* Introduced new matcher `Match.Maybe(type)` which will also match (permit) `null` in addition to `undefined`.  This is a suggested replacement (where appropriate) for `Match.Optional` which did not permit `null`.  This prevents the need to use `Match.OneOf(null, undefined, type)`. #6220 
 
 ### Testing
 
