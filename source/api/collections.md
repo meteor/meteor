@@ -1,7 +1,7 @@
 ---
 title: Collections
 order: 6
-description: Documentaton on how to use Meteor's database collections.
+description: Documentation on how to use Meteor's database collections.
 ---
 
 Meteor stores data in *collections*.  To get started, declare a

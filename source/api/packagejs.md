@@ -33,10 +33,10 @@ Package.onUse(function (api) {
   // Use Underscore package, but only on the server.
   // Version not specified, so it will be as of Meteor 0.9.0.
   api.use('underscore', 'server');
-  // Use iron:router package, version 1.0.0 or newer.
-  api.use('iron:router@1.0.0');
-  // Give users of this package access to the Templating package.
-  api.imply('templating')
+  // Use kadira:flow-router, version 1.0.0 or newer.
+  api.use('kadira:flow-router@2.12.1');
+  // Give users of this package access to active-route's Javascript helpers
+  api.imply('zimme:active-route@2.3.2')
   // Export the object 'Email' to packages or apps that use this package.
   api.export('Email', 'server');
   // Specify the source code for the package.
@@ -47,13 +47,13 @@ Package.onUse(function (api) {
 Package.onTest(function (api) {
   // Sets up a dependency on this package
   api.use('username:package-name');
-  // Allows you to use the 'tinytest' framework
-  api.use('tinytest@1.0.0');
+  // Allows you to use the mocha test framework
+  api.use('practicalmeteor:mocha@2.4.5_2');
   // Specify the source code for the package tests
   api.addFiles('email_tests.js', 'server');
 });
 
-/* This lets you use npm packages in your package*/
+/* This lets you use npm packages in your package */
 Npm.depends({
   simplesmtp: "0.3.10",
   "stream-buffers": "0.2.5"});

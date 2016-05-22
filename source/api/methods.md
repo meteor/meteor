@@ -225,5 +225,5 @@ var loginRule = {
 // Add the rule, allowing up to 5 messages every 1000 milliseconds.
 DDPRateLimiter.addRule(loginRule, 5, 1000);
 ```
-{% apibox "DDPRateLimiter.removeRule" nested:true %}
-{% apibox "DDPRateLimiter.setErrorMessage" nested:true %}
+{% apibox "DDPRateLimiter.removeRule" nested:true instanceDelimiter:. %}
+{% apibox "DDPRateLimiter.setErrorMessage" nested:true instanceDelimiter:. %}
