@@ -322,5 +322,11 @@ _.extend(OplogHandle.prototype, {
       var sequencer = self._catchingUpFutures.shift();
       sequencer.future.return();
     }
+  },
+  _defineTooFarBehind: function(value) {
+    TOO_FAR_BEHIND = value;
+  },
+  _resetTooFarBehind: function() {
+    TOO_FAR_BEHIND = process.env.METEOR_OPLOG_TOO_FAR_BEHIND || 2000;
   }
 });
