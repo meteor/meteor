@@ -169,7 +169,7 @@ BCp._inferFromBabelRc = function (inputFile, babelOptions) {
 };
 
 BCp._inferFromPackageJson = function (inputFile, babelOptions) {
-  var pkgJsonPath = inputFile.findControlFile(".babelrc");
+  var pkgJsonPath = inputFile.findControlFile("package.json");
   if (pkgJsonPath) {
     if (! hasOwn.call(this._babelrcCache, pkgJsonPath)) {
       this._babelrcCache[pkgJsonPath] = JSON.parse(
