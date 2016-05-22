@@ -339,9 +339,7 @@ Template.Invoices_newInvoice.helpers({
 });
 
 Template.Invoices_newInvoice.events({
-  'submit .Invoices_newInvoice'(event) {
-    const instance = Template.instance();
-
+  'submit .Invoices_newInvoice'(event, instance) {
     const data = {
       email: event.target.email.value,
       description: event.target.description.value,
