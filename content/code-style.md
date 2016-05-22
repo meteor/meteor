@@ -194,6 +194,14 @@ WebStorm provides [these instructions for using ESLint](https://www.jetbrains.co
 
 Linting can be activated on WebStorm on a project-by-project basis, or you can set ESLint as a default under Editor > Inspections, choosing the Default profile, checking "ESLint", and applying.
 
+<h4 id="eslint-vscode">Visual Studio Code</h4>
+
+Using ESLint in VS Code requires installation of the 3rd party [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) extension.  In order to install the extension, follow these steps:
+
+1. Launch VS Code and open the quick open menu by typing `Ctrl+P`
+2. Paste `ext install vscode-eslint` in the command window and press `Enter`
+3. Restart VS Code
+
 
 <h2 id="meteor-features">Meteor code style</h2>
 
