@@ -62,7 +62,7 @@
     "eslint-plugin-import": "1.8.0",
     "eslint-plugin-react": "5.1.1",
     "ghooks": "1.2.1",
-    "mocha": "2.4.5",
+    "mocha": "2.5.1",
     "nyc": "6.4.4",
     "readline-sync": "1.4.2",
     "rewire": "2.5.1",
