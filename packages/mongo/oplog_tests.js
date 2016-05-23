@@ -66,7 +66,8 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
 
       // After updating to mongo 3.2 with the 2.1.18 driver it was no longer
       // possible to make this test fail with TOO_FAR_BEHIND = 2000.
-      // It would hardly go above 1000 on a macbook pro 2016.
+      // The documents waiting to be processed would hardly go beyond 1000
+      // using mongo 3.2 with WiredTiger
       MongoInternals.defaultRemoteCollectionDriver().mongo
       ._oplogHandle._defineTooFarBehind(800);
 
