@@ -142,6 +142,48 @@ ruleTester.run('eventmap-params', rule, {
         templateInstanceParamName: 'tmplInst',
       }],
     },
+    {
+      code: `
+        Template.foo.events({
+          'submit form': ({ target: form }, { data }) => {}
+        })
+      `,
+      parserOptions: { ecmaVersion: 6 },
+    },
+    {
+      code: `
+        Template.foo.events({
+          'submit form': (event, { data }) => {}
+        })
+      `,
+      parserOptions: { ecmaVersion: 6 },
+      options: [{
+        preventDestructuring: 'event',
+      }],
+    },
+    {
+      code: `
+        Template.foo.events({
+          'submit form': (evt, { data }) => {}
+        })
+      `,
+      parserOptions: { ecmaVersion: 6 },
+      options: [{
+        preventDestructuring: 'event',
+        eventParamName: 'evt',
+      }],
+    },
+    {
+      code: `
+        Template.foo.events({
+          'submit form': ({ target: form }, templateInstance) => {}
+        })
+      `,
+      parserOptions: { ecmaVersion: 6 },
+      options: [{
+        preventDestructuring: 'templateInstance',
+      }],
+    },
   ],
 
   invalid: [
@@ -284,6 +326,63 @@ ruleTester.run('eventmap-params', rule, {
       }],
       errors: [
         { message: 'Invalid parameter name, use "instance" instead', type: 'Identifier' },
+      ],
+    },
+    {
+      code: `
+        Template.foo.events({
+          'submit form': ({ target: form }, templateInstance) => {}
+        })
+      `,
+      parserOptions: { ecmaVersion: 6 },
+      options: [{
+        preventDestructuring: 'event',
+      }],
+      errors: [
+        { message: 'Unexpected destructuring, use name "event"', type: 'ObjectPattern' },
+      ],
+    },
+    {
+      code: `
+        Template.foo.events({
+          'submit form': (event, { data }) => {}
+        })
+      `,
+      parserOptions: { ecmaVersion: 6 },
+      options: [{
+        preventDestructuring: 'templateInstance',
+      }],
+      errors: [
+        { message: 'Unexpected destructuring, use name "templateInstance"', type: 'ObjectPattern' },
+      ],
+    },
+    {
+      code: `
+        Template.foo.events({
+          'submit form': ({ target: form }, templateInstance) => {}
+        })
+      `,
+      parserOptions: { ecmaVersion: 6 },
+      options: [{
+        preventDestructuring: 'both',
+      }],
+      errors: [
+        { message: 'Unexpected destructuring, use name "event"', type: 'ObjectPattern' },
+      ],
+    },
+    {
+      code: `
+        Template.foo.events({
+          'submit form': (event, { data }) => {}
+        })
+      `,
+      parserOptions: { ecmaVersion: 6 },
+      options: [{
+        preventDestructuring: 'both',
+        templateInstanceParamName: 'instance',
+      }],
+      errors: [
+        { message: 'Unexpected destructuring, use name "instance"', type: 'ObjectPattern' },
       ],
     },
   ],

@@ -38,9 +38,15 @@ Template.foo.events({
   'submit form': function (event, templateInstance) {}
 })
 
+Template.foo.events({
+  'submit form': function ({ target: form }, { data }) {}
+})
+
 ```
 
 ### Options
+
+#### Parameter names
 
 You can optionally set the names of the parameters.  
 You can set the name of the event parameter using `eventParamName` and the name of the template-instance parameterusing `templateInstanceParamName`.  
@@ -68,6 +74,54 @@ Template.foo.events({
   'submit form': function (evt, tmplInst) {}
 })
 
+```
+
+#### Destructuring
+
+You can optionally forbid destructuring the parameters.  
+You can set `preventDestructuring` to `"event"`, `"templateInstance"`, or `"both"`, to force no destructuring on the event parameter, template-instance parameter, or both respectively.
+
+The following patterns are considered problems:
+
+```js
+/*
+ eslint meteor/eventmap-params: [2, {"preventDestructuring": "event"}]
+ */
+Template.foo.events({
+  'submit form': function ({ target: form }, templateInstance) {}
+})
+
+/*
+ eslint meteor/eventmap-params: [2, {"preventDestructuring": "templateInstance"}]
+ */
+Template.foo.events({
+  'submit form': function (event, { data }) {}
+})
+
+/*
+ eslint meteor/eventmap-params: [2, {"preventDestructuring": "both"}]
+ */
+Template.foo.events({
+  'submit form': function (event, { data }) {}
+})
+```
+
+The following patterns are not considered problems:
+
+```js
+/*
+ eslint meteor/eventmap-params: [2, {"preventDestructuring": "event"}]
+ */
+Template.foo.events({
+  'submit form': function (event, { data }) {}
+})
+
+/*
+ eslint meteor/eventmap-params: [2, {"preventDestructuring": "templateInstance"}]
+ */
+Template.foo.events({
+  'submit form': function ({ target: form }, templateInstance) {}
+})
 ```
 
 ## Further Reading
