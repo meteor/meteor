@@ -4,6 +4,8 @@ order: 18
 description: Documentation of how to use assets in Meteor.
 ---
 
+> Currently, it is not possible to import `Assets` as an ES6 module.  Any of the `Assets` methods below can simply be called directly in any Meteor server code.
+
 `Assets` allows server code in a Meteor application to access static server
 assets, which are located in the `private` subdirectory of an application's
 tree. Assets are not processed as source files and are copied directly
