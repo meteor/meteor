@@ -114,10 +114,6 @@ var oldRedirects = function() {
       return "/full/tracker";
     }
 
-    if (hash.indexOf('accounts_') !== -1) {
-      return '/full/' + hash;
-    }
-
     var parts = hash.split('/');
     if (parts[1] === 'basic') {
       var fullLink = BASIC_TO_FULL_LINKS[parts[2]];
