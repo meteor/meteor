@@ -360,7 +360,7 @@ There's a lot of scope for better isolation and testing utilities.
 
 <h4 id="testing-publications">Testing publications</h4>
 
-Using the [`johanbrook:publication-collector` package](https://atmospherejs.com/johanbrook/publication-collector), you're able to test individual publication's output without needing to create a traditional subscription:
+Using the [`johanbrook:publication-collector`](https://atmospherejs.com/johanbrook/publication-collector) package, you're able to test individual publication's output without needing to create a traditional subscription:
 
 ```js
 describe('lists.public', function () {
