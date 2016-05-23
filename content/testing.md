@@ -355,24 +355,34 @@ In the [unit test above](#simple-unit-test) we saw a very limited example of how
   - Alternatively, you can also use tools like [Sinon](http://sinonjs.org) to stub things directly, as we'll see for example in our [simple integration test](#simple-integration-test).
 
   - The [`hwillson:stub-collections`](https://atmospherejs.com/hwillson/stub-collections) package we mentioned [above](#mocking-the-database).
+  
+There's a lot of scope for better isolation and testing utilities.
 
-  - (Using another package from the [Todos](https://github.com/meteor/todos) example app) to isolate a publication, the `publication-collector` package:
+<h4 id="testing-publications">Testing publications</h4>
 
-    ```js
-    describe('lists.public', function () {
-      it('sends all public lists', function (done) {
-        // Allows us to look at the output of a publication without
-        // needing a client connection
-        const collector = new PublicationCollector();
-        collector.collect('lists.public', (collections) => {
-          chai.assert.equal(collections.Lists.length, 3);
-          done();
-        });
-      });
+Using the [`johanbrook:publication-collector` package](https://atmospherejs.com/johanbrook/publication-collector), you're able to test individual publication's output without needing to create a traditional subscription:
+
+```js
+describe('lists.public', function () {
+  it('sends all public lists', function (done) {
+    // Set a user id that will be provided to the publish function as `this.userId`,
+    // in case you want to test authentication.
+    const collector = new PublicationCollector({userId: 'some-id'});
+  
+    // Collect the data published from the `lists.public` publication.
+    collector.collect('lists.public', (collections) => {
+      // `collections` is a dictionary with collection names as keys,
+      // and their published documents as values in an array.
+      // Here, documents from the collection 'Lists' are published.
+      chai.assert.typeOf(collections.Lists, 'array');
+      chai.assert.equal(collections.Lists.length, 3);
+      done();
     });
-    ```
+  });
+});
+```
 
-There's a lot of scope for better isolation and testing utilities (the two packages from the example app above could be improved greatly!). We encourage the community to take the lead on these.
+Note that user documents – ones that you would normally query with `Meteor.users.find()` – will be available as the key `users` on the dictionary passed from a `PublicationCollector.collect()` call. See the [tests](https://github.com/johanbrook/meteor-publication-collector/blob/master/tests/publication-collector.test.js) in the package for more details.
 
 <h2 id="integration-testing">Integration testing</h2>
 
