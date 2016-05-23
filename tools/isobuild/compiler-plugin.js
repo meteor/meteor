@@ -311,10 +311,12 @@ class InputFile extends buildPluginModule.InputFile {
     }
 
     const sourceBatch = this._resourceSlot.packageSourceBatch;
-    const parentId = files.convertToPosixPath(files.pathJoin(
+    const parentPath = files.convertToOSPath(files.pathJoin(
       sourceBatch.sourceRoot,
       this.getPathInPackage()
     ));
+    // Absolute CommonJS module identifier of the parent module.
+    const parentId = files.convertToPosixPath(parentPath, true);
     const Module = module.constructor;
     const parent = new Module(parentId);
 
@@ -322,25 +324,31 @@ class InputFile extends buildPluginModule.InputFile {
     // that it could potentially be found in a node_modules directory.
     const isTopLevelId = "./".indexOf(id.charAt(0)) < 0;
     if (isTopLevelId) {
-      parent.paths = [];
       const nmds = sourceBatch.unibuild.nodeModulesDirectories;
+      const osPaths = Object.create(null);
+      const nonLocalPaths = [];
 
-      // Add any local node_modules directory paths that are both ancestors
-      // of this file and included in this PackageSourceBatch.
-      Module._nodeModulePaths(parentId).forEach(path => {
-        if (_.has(nmds, path.replace(/\/*$/, "/")) ||
-            _.has(nmds, path.replace(/\/+$/, ""))) {
+      _.each(nmds, (nmd, path) => {
+        path = files.convertToOSPath(path.replace(/\/$/g, ""));
+        osPaths[path] = true;
+        if (! nmd.local) {
+          nonLocalPaths.push(path);
+        }
+      });
+
+      parent.paths = [];
+
+      // Add any local node_modules directory paths that are both
+      // ancestors of this file and included in this PackageSourceBatch.
+      Module._nodeModulePaths(parentPath).forEach(path => {
+        if (_.has(osPaths, path)) {
           parent.paths.push(path);
         }
       });
 
       // Now add any non-local node_modules directories that are used by
       // this PackageSourceBatch.
-      _.each(nmds, (nmd, path) => {
-        if (! nmd.local) {
-          parent.paths.push(path);
-        }
-      });
+      parent.paths.push(...nonLocalPaths);
     }
 
     return this._resolveCache[id] =
