@@ -178,7 +178,7 @@ Email.send = function (options) {
       mc.addHeader(name, value);
     });
 
-    if (!options.headers.hasOwnProperty('Date')) {
+    if (!options.headers || !options.headers.hasOwnProperty('Date')) {
       mc.addHeader('Date', new Date().toUTCString().replace(/GMT/, '+0000'));
     }
 
