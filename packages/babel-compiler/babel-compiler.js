@@ -45,10 +45,16 @@ BCp.processFilesForTarget = function (inputFiles) {
 
 // Returns an object suitable for passing to inputFile.addJavaScript, or
 // null to indicate there was an error, and nothing should be added.
-BCp.processOneFileForTarget = function (inputFile) {
+BCp.processOneFileForTarget = function (inputFile, source) {
   this._babelrcCache = this._babelrcCache || Object.create(null);
 
-  var source = inputFile.getContentsAsString();
+  if (typeof source !== "string") {
+    // Other compiler plugins can call processOneFileForTarget with a
+    // source string that's different from inputFile.getContentsAsString()
+    // if they've already done some processing.
+    source = inputFile.getContentsAsString();
+  }
+
   var packageName = inputFile.getPackageName();
   var inputFilePath = inputFile.getPathInPackage();
   var outputFilePath = inputFilePath;
