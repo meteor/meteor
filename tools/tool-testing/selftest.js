@@ -1598,7 +1598,10 @@ var tagDescriptions = {
   // --changed, --file, or a pattern argument
   unchanged: 'unchanged since last pass',
   'non-matching': "don't match specified pattern",
-  'in other files': ""
+  'in other files': "",
+  // These tests require a setup step which can be amortized across multiple
+  // similar tests, so it makes sense to segregate them
+  'custom-warehouse': "requires a custom warehouse"
 };
 
 // Returns a TestList object representing a filtered list of tests,
@@ -1676,6 +1679,10 @@ var getFilteredTests = function (options) {
     }
   }
 
+  if (options['without-tag']) {
+    tagsToSkip.push(options['without-tag']);
+  }
+
   if (process.platform === "win32") {
     tagsToSkip.push("cordova");
     tagsToSkip.push("yet-unsolved-windows-failure");
@@ -1683,7 +1690,8 @@ var getFilteredTests = function (options) {
     tagsToSkip.push("windows");
   }
 
-  return new TestList(allTests, tagsToSkip, testState);
+  var tagsToMatch = options['with-tag'] ? [options['with-tag']] : [];
+  return new TestList(allTests, tagsToSkip, tagsToMatch, testState);
 };
 
 // A TestList is the result of getFilteredTests.  It holds the original
@@ -1694,7 +1702,7 @@ var getFilteredTests = function (options) {
 // ran and passed (for the `--changed` option).  If a testState is
 // provided, the notifyFailed and saveTestState can be used to modify
 // the testState appropriately and write it out.
-var TestList = function (allTests, tagsToSkip, testState) {
+var TestList = function (allTests, tagsToSkip, tagsToMatch, testState) {
   tagsToSkip = (tagsToSkip || []);
   testState = (testState || null); // optional
 
@@ -1720,6 +1728,15 @@ var TestList = function (allTests, tagsToSkip, testState) {
       };
     }
     var fileInfo = self.fileInfo[test.file];
+
+    if (tagsToMatch.length) {
+      var matches = _.any(tagsToMatch, function(tag) {
+        return _.contains(test.tags, tag);
+      })
+      if (!matches) {
+        return false;
+      }
+    }
 
     // We look for tagsToSkip *in order*, and when we decide to
     // skip a test, we don't keep looking at more tags, and we don't
