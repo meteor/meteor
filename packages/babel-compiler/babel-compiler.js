@@ -190,6 +190,8 @@ BCp._inferHelper = function (inputFile, babelOptions, babelrc) {
     return false;
   }
 
+  var inferredPresets = [];
+
   function infer(listName, prefix) {
     var list = babelrc[listName];
     if (! Array.isArray(list) || list.length === 0) {
@@ -198,15 +200,31 @@ BCp._inferHelper = function (inputFile, babelOptions, babelrc) {
 
     function req(id) {
       var isTopLevel = "./".indexOf(id.charAt(0)) < 0;
+      var presetOrPlugin;
+
       if (isTopLevel) {
-        // If the identifier is top-level, it will be prefixed with
-        // "babel-plugin-" or "babel-preset-". If the identifier is not
-        // top-level, but relative or absolute, then it will be required
-        // as-is, so that you can implement your own Babel plugins
-        // locally, rather than always using plugins installed from npm.
-        id = prefix + id;
+        try {
+          // If the identifier is top-level, try to prefix it with
+          // "babel-plugin-" or "babel-preset-".
+          presetOrPlugin = inputFile.require(prefix + id);
+        } catch (e) {
+          if (e.code !== "MODULE_NOT_FOUND") {
+            throw e;
+          }
+          // Fall back to requiring the plugin as-is if the prefix failed.
+          presetOrPlugin = inputFile.require(id);
+        }
+      } else {
+        // If the identifier is not top-level, but relative or absolute,
+        // then it will be required as-is, so that you can implement your
+        // own Babel plugins locally, rather than always using plugins
+        // installed from npm.
+        presetOrPlugin = inputFile.require(id);
       }
-      return inputFile.require(id);
+
+      return presetOrPlugin.__esModule
+        ? presetOrPlugin.default
+        : presetOrPlugin;
     }
 
     list.forEach(function (item, i) {
@@ -220,16 +238,26 @@ BCp._inferHelper = function (inputFile, babelOptions, babelrc) {
       list[i] = item;
     });
 
-    // PREPEND additional plugins to the existing babelOptions[listName]
-    // list, so that they have a chance to handle syntax differently than
-    // babel-preset-meteor normally would.
-    var target = babelOptions[listName] || [];
-    target.unshift.apply(target, list);
-    babelOptions[listName] = target;
+    if (listName === "plugins") {
+      // Turn any additional plugins into their own preset, so that they
+      // can come before babel-preset-meteor.
+      inferredPresets.push({ plugins: list });
+    } else if (listName === "presets") {
+      inferredPresets.push.apply(inferredPresets, list);
+    }
   }
 
   infer("presets", "babel-preset-");
   infer("plugins", "babel-plugin-");
 
-  return true;
+  if (inferredPresets.length > 0) {
+    babelOptions.presets.push.apply(
+      babelOptions.presets,
+      inferredPresets
+    );
+
+    return true;
+  }
+
+  return false;
 };
