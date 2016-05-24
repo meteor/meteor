@@ -385,7 +385,7 @@ selftest.define("run and SIGKILL parent process", ["yet-unsolved-windows-failure
   // immediately.
   s.set("METEOR_BAD_PARENT_PID_FOR_TEST", "t");
   run = s.run();
-  run.waitSecs(60);
+  run.waitSecs(120);
   run.match("must be a valid process ID");
   run.match("Your application is crashing");
   run.stop();
