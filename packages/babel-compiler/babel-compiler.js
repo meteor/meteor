@@ -32,98 +32,107 @@ var babelModulesPlugin = [function () {
 }];
 
 BCp.processFilesForTarget = function (inputFiles) {
-  var self = this;
-
   // Reset this cache for each batch processed.
-  this._babelrcCache = Object.create(null);
+  this._babelrcCache = null;
 
   inputFiles.forEach(function (inputFile) {
-    var source = inputFile.getContentsAsString();
-    var packageName = inputFile.getPackageName();
-    var inputFilePath = inputFile.getPathInPackage();
-    var outputFilePath = inputFilePath;
-    var fileOptions = inputFile.getFileOptions();
-    var toBeAdded = {
-      sourcePath: inputFilePath,
-      path: outputFilePath,
-      data: source,
-      hash: inputFile.getSourceHash(),
-      sourceMap: null,
-      bare: !! fileOptions.bare
-    };
+    var toBeAdded = this.processOneFileForTarget(inputFile);
+    if (toBeAdded) {
+      inputFile.addJavaScript(toBeAdded);
+    }
+  }, this);
+};
 
-    // If you need to exclude a specific file within a package from Babel
-    // compilation, pass the { transpile: false } options to api.addFiles
-    // when you add that file.
-    if (fileOptions.transpile !== false &&
-        // If you need to exclude a specific file within an app from Babel
-        // compilation, give it the following file extension: .es5.js
-        ! excludedFileExtensionPattern.test(inputFilePath)) {
+// Returns an object suitable for passing to inputFile.addJavaScript, or
+// null to indicate there was an error, and nothing should be added.
+BCp.processOneFileForTarget = function (inputFile) {
+  this._babelrcCache = this._babelrcCache || Object.create(null);
 
-      var targetCouldBeInternetExplorer8 =
-        inputFile.getArch() === "web.browser";
+  var source = inputFile.getContentsAsString();
+  var packageName = inputFile.getPackageName();
+  var inputFilePath = inputFile.getPathInPackage();
+  var outputFilePath = inputFilePath;
+  var fileOptions = inputFile.getFileOptions();
+  var toBeAdded = {
+    sourcePath: inputFilePath,
+    path: outputFilePath,
+    data: source,
+    hash: inputFile.getSourceHash(),
+    sourceMap: null,
+    bare: !! fileOptions.bare
+  };
 
-      self.extraFeatures = self.extraFeatures || {};
-      if (! self.extraFeatures.hasOwnProperty("jscript")) {
-        // Perform some additional transformations to improve
-        // compatibility in older browsers (e.g. wrapping named function
-        // expressions, per http://kiro.me/blog/nfe_dilemma.html).
-        self.extraFeatures.jscript = targetCouldBeInternetExplorer8;
-      }
+  // If you need to exclude a specific file within a package from Babel
+  // compilation, pass the { transpile: false } options to api.addFiles
+  // when you add that file.
+  if (fileOptions.transpile !== false &&
+      // If you need to exclude a specific file within an app from Babel
+      // compilation, give it the following file extension: .es5.js
+      ! excludedFileExtensionPattern.test(inputFilePath)) {
 
-      var babelOptions = Babel.getDefaultOptions(self.extraFeatures);
+    var targetCouldBeInternetExplorer8 =
+      inputFile.getArch() === "web.browser";
 
-      if (inputFile.isPackageFile()) {
-        // When compiling package files, handle import/export syntax using
-        // the official Babel plugin, so that package authors won't
-        // publish code that relies on module.import and module.export,
-        // because such code would fail on Meteor versions before 1.3.3.
-        // When compiling application files, however, it's fine to rely on
-        // module.import and module.export, and the developer experience
-        // will be much better for it: faster compilation, real variables,
-        // import statements inside conditional statements, etc.
-        //
-        // TODO Remove this once we are confident enough developers have
-        // updated to a version of Meteor that supports module.import and
-        // module.export.
-        babelOptions.plugins.push(babelModulesPlugin);
-      }
-
-      self.inferExtraBabelOptions(inputFile, babelOptions);
-
-      babelOptions.sourceMap = true;
-      babelOptions.filename =
-      babelOptions.sourceFileName = packageName
-        ? "/packages/" + packageName + "/" + inputFilePath
-        : "/" + inputFilePath;
-
-      babelOptions.sourceMapTarget = babelOptions.filename + ".map";
-
-      try {
-        var result = profile('Babel.compile', function () {
-          return Babel.compile(source, babelOptions);
-        });
-      } catch (e) {
-        if (e.loc) {
-          inputFile.error({
-            message: e.message,
-            line: e.loc.line,
-            column: e.loc.column,
-          });
-
-          return;
-        }
-
-        throw e;
-      }
-
-      toBeAdded.data = result.code;
-      toBeAdded.hash = result.hash;
-      toBeAdded.sourceMap = result.map;
+    this.extraFeatures = this.extraFeatures || {};
+    if (! this.extraFeatures.hasOwnProperty("jscript")) {
+      // Perform some additional transformations to improve compatibility
+      // in older browsers (e.g. wrapping named function expressions, per
+      // http://kiro.me/blog/nfe_dilemma.html).
+      this.extraFeatures.jscript = targetCouldBeInternetExplorer8;
     }
 
-    inputFile.addJavaScript(toBeAdded);
-  });
+    var babelOptions = Babel.getDefaultOptions(this.extraFeatures);
+
+    if (inputFile.isPackageFile()) {
+      // When compiling package files, handle import/export syntax using
+      // the official Babel plugin, so that package authors won't publish
+      // code that relies on module.import and module.export, because such
+      // code would fail on Meteor versions before 1.3.3.  When compiling
+      // application files, however, it's fine to rely on module.import
+      // and module.export, and the developer experience will be much
+      // better for it: faster compilation, real variables, import
+      // statements inside conditional statements, etc.
+      //
+      // TODO Remove this once we are confident enough developers have
+      // updated to a version of Meteor that supports module.import and
+      // module.export.
+      babelOptions.plugins.push(babelModulesPlugin);
+    }
+
+    this.inferExtraBabelOptions(inputFile, babelOptions);
+
+    babelOptions.sourceMap = true;
+    babelOptions.filename =
+      babelOptions.sourceFileName = packageName
+      ? "/packages/" + packageName + "/" + inputFilePath
+      : "/" + inputFilePath;
+
+    babelOptions.sourceMapTarget = babelOptions.filename + ".map";
+
+    try {
+      var result = profile('Babel.compile', function () {
+        return Babel.compile(source, babelOptions);
+      });
+    } catch (e) {
+      if (e.loc) {
+        inputFile.error({
+          message: e.message,
+          line: e.loc.line,
+          column: e.loc.column,
+        });
+
+        return null;
+      }
+
+      throw e;
+    }
+
+    toBeAdded.data = result.code;
+    toBeAdded.hash = result.hash;
+    toBeAdded.sourceMap = result.map;
+  }
+
+  return toBeAdded;
 };
 
 BCp.setDiskCacheDirectory = function (cacheDir) {
