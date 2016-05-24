@@ -50,7 +50,7 @@ insensitive duplicates before updates.
 
 By default, an email address is added with `{ verified: false }`. Use
 [`Accounts.sendVerificationEmail`](#Accounts-sendVerificationEmail) to send an
-email with a link the user can use verify their email address.
+email with a link the user can use to verify their email address.
 
 {% apibox "Accounts.removeEmail" %}
 
