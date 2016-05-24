@@ -230,7 +230,7 @@ selftest.define("run errors", function () {
   f.wait();
 });
 
-selftest.define("update during run", ["checkout"], function () {
+selftest.define("update during run", ["checkout", 'custom-warehouse'], function () {
   var s = new Sandbox({
     warehouse: SIMPLE_WAREHOUSE,
     fakeMongo: true
