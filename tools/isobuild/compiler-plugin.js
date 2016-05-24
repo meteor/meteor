@@ -937,6 +937,7 @@ export class PackageSourceBatch {
   static _warnAboutMissingModules(missingNodeModules) {
     const topLevelMissingIDs = {};
     const warnings = [];
+    const uninstalledMeteorPackages = [];
 
     _.each(missingNodeModules, (info, id) => {
       if (info.packageName) {
@@ -977,8 +978,8 @@ export class PackageSourceBatch {
       if ("./".indexOf(id.charAt(0)) < 0) {
         const packageDir = parts[0];
         if (packageDir === "meteor") {
-          // Don't print warnings for uninstalled Meteor packages.
-          return;
+          warnings.push(`  ${parts[1]} wasn't installed`);
+          uninstalledMeteorPackages.push(parts[1]);
         }
 
         if (packageDir === "babel-runtime") {
@@ -1017,6 +1018,13 @@ export class PackageSourceBatch {
       Console.warn();
 
       const topLevelKeys = Object.keys(topLevelMissingIDs);
+      if (uninstalledMeteorPackages.length > 0) {
+        Console.warn("Looks like you imported some packages wasn't installed.");
+        Console.warn("Consider running:");
+        Console.warn();
+        Console.warn("  meteor add " + uninstalledMeteorPackages.join(" "));
+        Console.warn();
+      }
       if (topLevelKeys.length > 0) {
         Console.warn("If you notice problems related to these missing modules, consider running:");
         Console.warn();
