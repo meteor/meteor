@@ -1192,10 +1192,8 @@ main.registerCommand({
   }
   
   if (process.env.MONGO_URL) {
-    Console.error("meteor reset won't reset the DB provided by MONGO_URL, as it can be dangerous " +
-                  "if you specify MONGO_URL to your production server. If you are sure to do that, " +
-                  "do it yourself by raw mongo queries.");
-    return 1;
+    Console.info("meteor reset won't reset the DB provided by MONGO_URL, while other project" +
+                 "things get reset. If you are sure to reset DB, do it yourself by raw mongo queries.");
   }
 
   // XXX detect the case where Meteor is running the app, but
