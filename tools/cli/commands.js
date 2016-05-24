@@ -1190,6 +1190,13 @@ main.registerCommand({
       Console.command("meteor deploy appname"), Console.options({ indent: 2 }));
     return 1;
   }
+  
+  if (process.env.MONGO_URL) {
+    Console.error("meteor reset won't reset the DB provided by MONGO_URL, as it can be dangerous " +
+                  "if you specify MONGO_URL to your production server. If you are sure to do that, " +
+                  "do it yourself by raw mongo queries.");
+    return 1;
+  }
 
   // XXX detect the case where Meteor is running the app, but
   // MONGO_URL was set, so we don't see a Mongo process
