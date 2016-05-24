@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Given the set of the constraints, picks a satisfying configuration",
-  version: "1.0.26-beta.0"
+  version: "1.0.26-beta.1"
 });
 
 Package.onUse(function (api) {
