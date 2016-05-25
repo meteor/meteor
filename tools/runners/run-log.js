@@ -16,15 +16,17 @@ var Console = require('../console/console.js').Console;
 // process.std{out,err} or to console.log; we should be careful to not do that
 // anywhere that may overlap with use of runLog.
 
-
-var getLoggingPackage = function () {
-  var Log = isopackets.load('logging').logging.Log;
+let _Log;
+function getLoggingPackage() {
+  if (! _Log) {
+    _Log = isopackets.load('logging').logging.Log;
+  }
 
   // Since no other process will be listening to stdout and parsing it,
   // print directly in the same format as log messages from other apps
-  Log.outputFormat = 'colored-text';
+  _Log.outputFormat = 'colored-text';
 
-  return Log;
+  return _Log;
 };
 
 var RunLog = function () {
