@@ -36,24 +36,30 @@ var runMongoShell = function (url) {
 };
 
 // Start mongod with a dummy replSet and wait for it to listen.
-var spawnMongod = function (mongodPath, port, dbPath, replSetName) {
-  var child_process = require('child_process');
+function spawnMongod(mongodPath, port, dbPath, replSetName) {
+  const child_process = require('child_process');
 
   mongodPath = files.convertToOSPath(mongodPath);
   dbPath = files.convertToOSPath(dbPath);
 
-  return child_process.spawn(mongodPath, [
-      // nb: cli-test.sh and findMongoPids make strong assumptions about the
-      // order of the arguments! Check them before changing any arguments.
-      '--bind_ip', '127.0.0.1',
-      '--smallfiles',
-      '--port', port,
-      '--dbpath', dbPath,
-      // Use an 8MB oplog rather than 256MB. Uses less space on disk and
-      // initializes faster. (Not recommended for production!)
-      '--oplogSize', '8',
-      '--replSet', replSetName
-  ], {
+  const args = [
+    // nb: cli-test.sh and findMongoPids make strong assumptions about the
+    // order of the arguments! Check them before changing any arguments.
+    '--bind_ip', '127.0.0.1',
+    '--smallfiles',
+    '--port', port,
+    '--dbpath', dbPath,
+    // Use an 8MB oplog rather than 256MB. Uses less space on disk and
+    // initializes faster. (Not recommended for production!)
+    '--oplogSize', '8',
+    '--replSet', replSetName
+  ];
+
+  if (process.platform === "win32") {
+    args.push('--storageEngine', 'mmapv1');
+  }
+
+  return child_process.spawn(mongodPath, args, {
     // Apparently in some contexts, Mongo crashes if your locale isn't set up
     // right. I wasn't able to reproduce it, but many people on #4019
     // were. Let's default a couple environment variables to English UTF-8 if
@@ -65,7 +71,7 @@ var spawnMongod = function (mongodPath, port, dbPath, replSetName) {
       LC_ALL: 'en_US.UTF-8'
     }, process.env)
   });
-};
+}
 
 // Find all running Mongo processes that were started by this program
 // (even by other simultaneous runs of this program). If passed,
