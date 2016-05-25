@@ -1192,8 +1192,9 @@ main.registerCommand({
   }
   
   if (process.env.MONGO_URL) {
-    Console.info("meteor reset won't reset the DB provided by MONGO_URL, while other project" +
-                 "things get reset. If you are sure to reset DB, do it yourself by raw mongo queries.");
+    Console.info("As a precaution, meteor reset only clears the local database that is " +
+                 "provided by meteor run for development. The database specified with " +
+                 "MONGO_URL will NOT be reset.");
   }
 
   // XXX detect the case where Meteor is running the app, but
