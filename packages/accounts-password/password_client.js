@@ -156,7 +156,7 @@ Accounts.changePassword = function (oldPassword, newPassword, callback) {
 
   check(newPassword, String);
   if (!newPassword) {
-    callback(new Meteor.Error(400, "Password may not be empty"));
+    callback && callback(new Meteor.Error(400, "Password may not be empty"));
     return;
   }
 
