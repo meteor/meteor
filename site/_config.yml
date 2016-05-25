@@ -11,9 +11,6 @@ language:
 timezone:
 apis:
   segment: zQx6cQifkTU79E3L0XAnmrOXP2A5bC6r
-  docsearch:
-    indexName: meteor_guide
-    apiKey: ccee06ad1a884cf67686f7574d6f8594
 versions:
   - '1.3'
   - '1.2'
