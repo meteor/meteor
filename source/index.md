@@ -1,5 +1,5 @@
 ---
-title: Introduction
+title: Introducing Meteor API Docs
 order: 0
 ---
 
