@@ -67,12 +67,12 @@
     <Fragment>
         <ComponentGroup Id="CG_MeteorConfiguration">
             <Component Id="UserEnvironmentsVar" Guid="{6222C645-5576-468F-A776-9FE7BA2FF465}" Directory="TARGETDIR">
-                <Condition>NOT Installed AND PERUSER_INSTALL</Condition>
+                <Condition>PERUSER_INSTALL</Condition>
                 <Environment Id="UserEnvPATH" Name="PATH" Value="[P_METEOR_DIR]" Separator=";" Action="set" Part="last" Permanent="yes" System="no" />
             </Component>
 
             <Component Id="SystemEnvironmentsVar" Guid="{6222C645-5576-468F-A776-9FE7BA2FF465}" Directory="TARGETDIR">
-                <Condition>NOT Installed AND PERMACHINE_INSTALL</Condition>
+                <Condition>PERMACHINE_INSTALL</Condition>
                 <Environment Id="SystemEnvPATH" Name="PATH" Value="[P_METEOR_DIR]" Separator=";" Action="set" Part="last" Permanent="yes" System="yes" />
             </Component>
 
@@ -82,7 +82,7 @@
             </Component>
 
 			<Component Id="MeteorDir_Permission" Guid="{62B0F582-C3E3-45E7-A0F9-1517773340EB}" Directory="P_METEOR_DIR">
-                <Condition>NOT Installed AND PERMACHINE_INSTALL</Condition>
+                <Condition>PERMACHINE_INSTALL</Condition>
                 <CreateFolder>
                     <util:PermissionEx User="Everyone" GenericAll="yes"/>
                 </CreateFolder>
