@@ -118,7 +118,7 @@ Accounts.createUser = function (options, callback) {
   if (typeof options.password !== 'string')
     throw new Error("options.password must be a string");
   if (!options.password) {
-    callback(new Meteor.Error(400, "Password may not be empty"));
+    callback && callback(new Meteor.Error(400, "Password may not be empty"));
     return;
   }
 
@@ -212,8 +212,10 @@ Accounts.changePassword = function (oldPassword, newPassword, callback) {
  * @importFromPackage accounts-base
  */
 Accounts.forgotPassword = function(options, callback) {
-  if (!options.email)
-    throw new Error("Must pass options.email");
+  if (!options.email) {
+    callback && callback(new Meteor.Error(400, "Must pass options.email"));
+    return;
+  }
   Accounts.connection.call("forgotPassword", options, callback);
 };
 
@@ -237,7 +239,7 @@ Accounts.resetPassword = function(token, newPassword, callback) {
   check(newPassword, String);
 
   if (!newPassword) {
-    callback(new Meteor.Error(400, "Password may not be empty"));
+    callback && callback(new Meteor.Error(400, "Password may not be empty"));
     return;
   }
 
@@ -261,8 +263,10 @@ Accounts.resetPassword = function(token, newPassword, callback) {
  * @importFromPackage accounts-base
  */
 Accounts.verifyEmail = function(token, callback) {
-  if (!token)
-    throw new Error("Need to pass token");
+  if (!token) {
+    callback && callback(new Meteor.Error(400, "Need to pass token"));
+    return;
+  }
 
   Accounts.callLoginMethod({
     methodName: 'verifyEmail',
