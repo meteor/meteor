@@ -476,3 +476,28 @@ selftest.define("update package during run", function () {
     runRun.stop();
   });
 });
+
+selftest.define("run logging in order", function () {
+  var s = new Sandbox({ fakeMongo: true });
+  var run;
+
+  // Starting a run
+  s.createApp("myapp", "standard-app");
+  s.cd("myapp");
+  s.write('packageless.js', `
+    Meteor.startup(function() {
+      for (var i = 0; i < 100000; i++) {
+        console.log('line: ' + i + '.');
+      }
+    });
+  `);
+  run = s.run();
+  run.match("myapp");
+  run.match("proxy");
+  run.tellMongo(MONGO_LISTENING);
+  run.match("MongoDB");
+  run.waitSecs(5);
+  for (var i = 0; i < 100000; i++) {
+    run.match(`line: ${i}.`);
+  }
+});
