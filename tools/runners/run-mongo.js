@@ -47,7 +47,6 @@ function spawnMongod(mongodPath, port, dbPath, replSetName) {
     // nb: cli-test.sh and findMongoPids make strong assumptions about the
     // order of the arguments! Check them before changing any arguments.
     '--bind_ip', '127.0.0.1',
-    '--smallfiles',
     '--port', port,
     '--dbpath', dbPath,
     // Use an 8MB oplog rather than 256MB. Uses less space on disk and
@@ -56,8 +55,12 @@ function spawnMongod(mongodPath, port, dbPath, replSetName) {
     '--replSet', replSetName
   ];
 
+  // Use mmapv1 on windows, as our binary doesn't support WT
   if (process.platform === "win32") {
-    args.push('--storageEngine', 'mmapv1');
+    args.push('--storageEngine', 'mmapv1', '--smallfiles');
+  } else {
+    // The WT journal seems to be at least 300MB, which is just too much
+    args.push('--nojournal');
   }
 
   return child_process.spawn(mongodPath, args, {
