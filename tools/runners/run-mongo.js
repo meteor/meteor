@@ -7,6 +7,7 @@ var child_process = require('child_process');
 
 var _ = require('underscore');
 var isopackets = require('../tool-env/isopackets.js');
+var Console = require('../console/console.js').Console;
 
 // Given a Mongo URL, open an interative Mongo shell on this terminal
 // on that database.
@@ -540,6 +541,19 @@ var launchMongo = function (options) {
 
       if (/Insufficient free space/.test(data)) {
         detectedErrors.freeSpace = true;
+      }
+
+      // Running against a old mmapv1 engine, probably from pre-mongo-3.2 Meteor
+      if (/created by the 'mmapv1' storage engine, so setting the active storage engine to 'mmapv1'/.test(data)) {
+        Console.warn();
+        Console.warn('Your development database is using mmapv1, '
+          + 'the old, pre-MongoDB 3.0 database engine. '
+          + 'You should consider upgrading to Wired Tiger, the new engine. '
+          + 'The easiest way to do so in development is to run '
+          + Console.command('meteor reset') + '. '
+          + "If you'd like to migrate your database, please consult "
+          + Console.url('https://docs.mongodb.org/v3.0/release-notes/3.0-upgrade/'))
+        Console.warn();
       }
 
       if (/Invalid or no user locale set/.test(data)) {
