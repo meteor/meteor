@@ -1,4 +1,6 @@
 import assert from "assert";
+import fs from "fs";
+import path from "path";
 import moment from "moment";
 import shared from "./imports/shared";
 import {Meteor as ImportedMeteor} from "meteor/meteor";
@@ -308,6 +310,67 @@ describe("Meteor packages", () => {
       osStub.name,
       "/node_modules/meteor/modules-test-package/os-stub.js"
     );
+  });
+
+  it("should only include lazy files if platform uses modules", function () {
+    if (Meteor.isServer) {
+      const clientOnlyIsopackPath = path.join(
+        // Currently process.cwd is .meteor/local/build/programs/server.
+        "..", "..", "..", "isopacks", "client-only-ecmascript"
+      );
+
+      const webJsonPath = path.join(
+        clientOnlyIsopackPath,
+        "web.browser.json"
+      );
+
+      const osJsonPath = path.join(
+        clientOnlyIsopackPath,
+        "os.json"
+      );
+
+      const web = JSON.parse(fs.readFileSync(webJsonPath));
+      assert.deepEqual(web.resources.map(function (res) {
+        return res.path;
+      }), ["client.js", "imported.js", "server.js"]);
+      assert.strictEqual(web.resources[0].fileOptions.mainModule, true);
+      assert.strictEqual(web.resources[1].fileOptions.lazy, true);
+      assert.strictEqual(web.resources[2].fileOptions.lazy, true);
+
+      const os = JSON.parse(fs.readFileSync(osJsonPath));
+      assert.deepEqual(os.resources.map(function (res) {
+        return res.path;
+      }), ["server.js"]);
+      assert.deepEqual(os.resources[0].fileOptions, {});
+
+      assert.deepEqual(ServerTypeof, {
+        require: "undefined",
+        exports: "undefined"
+      });
+
+    } else {
+      assert.deepEqual(require("meteor/client-only-ecmascript"), {
+        __esModule: true,
+        name: "client-only-ecmascript",
+        imported: "/node_modules/meteor/client-only-ecmascript/imported.js",
+        ClientTypeof: {
+          require: "function",
+          exports: "object"
+        }
+      });
+    }
+  });
+
+  it("can define complex compiler plugins", () => {
+    const { one, array } = require("meteor/modules-test-plugin");
+
+    assert.strictEqual(one.string, "one");
+    assert.strictEqual(one.number, 1);
+    assert.strictEqual(one.self, one)
+
+    assert.strictEqual(array[0], "asdf");
+    assert.strictEqual(array[1], array);
+    assert.strictEqual(array[2], Infinity);
   });
 });
 

@@ -2094,7 +2094,7 @@ main.registerCommand({
   if (options.headless) {
     // There's no point in spinning the spinner when we're running
     // continuous integration tests.
-    Console.disableSpinner();
+    Console.setHeadless(true);
   }
 
   return selftest.runTests({

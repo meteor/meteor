@@ -20,16 +20,9 @@ S3_HOST="s3.amazonaws.com/com.meteor.jenkins"
 
 # Update these values after building the dev-bundle-node Jenkins project.
 # Also make sure to update NODE_VERSION in generate-dev-bundle.ps1.
-NODE_VERSION=0.10.43
-NODE_BUILD_NUMBER=22
-NODE_TGZ="node_${PLATFORM}_v${NODE_VERSION}.tar.gz"
-if [ -f "${CHECKOUT_DIR}/${NODE_TGZ}" ] ; then
-    tar zxf "${CHECKOUT_DIR}/${NODE_TGZ}"
-else
-    NODE_URL="https://${S3_HOST}/dev-bundle-node-${NODE_BUILD_NUMBER}/${NODE_TGZ}"
-    echo "Downloading Node from ${NODE_URL}"
-    curl "${NODE_URL}" | tar zx
-fi
+NODE_URL="https://nodejs.org/dist/v${NODE_VERSION}/${NODE_TGZ}"
+echo "Downloading Node from ${NODE_URL}"
+curl "${NODE_URL}" | tar zx --strip-components 1
 
 # Update these values after building the dev-bundle-mongo Jenkins project.
 # Also make sure to update MONGO_VERSION in generate-dev-bundle.ps1.
@@ -46,16 +39,6 @@ fi
 
 # export path so we use the downloaded node and npm
 export PATH="$DIR/bin:$PATH"
-
-# install npm 3 in a temporary directory
-mkdir "$DIR/bin/npm3"
-cd "$DIR/bin/npm3"
-npm install npm@3.1.2
-cp node_modules/npm/bin/npm .
-
-# export path again with our temporary npm3 directory first,
-# so we can use npm 3 during builds
-export PATH="$DIR/bin/npm3:$PATH"
 
 which node
 which npm
@@ -80,6 +63,7 @@ mkdir -p "${DIR}/server-lib/node_modules"
 # This ignores the stuff in node_modules/.bin, but that's OK.
 cp -R node_modules/* "${DIR}/server-lib/node_modules/"
 
+mkdir -p "${DIR}/etc"
 mv package.json npm-shrinkwrap.json "${DIR}/etc/"
 
 # Fibers ships with compiled versions of its C code for a dozen platforms. This
@@ -102,6 +86,9 @@ cd "${DIR}/build/npm-tool-install"
 node "${CHECKOUT_DIR}/scripts/dev-bundle-tool-package.js" >package.json
 npm install
 cp -R node_modules/* "${DIR}/lib/node_modules/"
+# Also include node_modules/.bin, so that `meteor npm` can make use of
+# commands like node-gyp and node-pre-gyp.
+cp -R node_modules/.bin "${DIR}/lib/node_modules/"
 
 cd "${DIR}/lib"
 
@@ -141,13 +128,10 @@ gunzip BrowserStackLocal*
 mv BrowserStackLocal* BrowserStackLocal
 mv BrowserStackLocal "$DIR/bin/"
 
-# remove our temporary npm3 directory
-rm -rf "$DIR/bin/npm3"
-
 # Sanity check to see if we're not breaking anything by replacing npm
 INSTALLED_NPM_VERSION=$(cat "$DIR/lib/node_modules/npm/package.json" |
 xargs -0 node -e "console.log(JSON.parse(process.argv[1]).version)")
-if [ "$INSTALLED_NPM_VERSION" != "2.14.22" ]; then
+if [ "$INSTALLED_NPM_VERSION" != "2.15.1" ]; then
   echo "Unexpected NPM version in lib/node_modules: $INSTALLED_NPM_VERSION"
   echo "We will be replacing it with our own version because the bundled node"
   echo "is built using PORTABLE=1, which makes npm look for node relative to"
@@ -160,7 +144,7 @@ echo BUNDLING
 
 cd "$DIR"
 echo "${BUNDLE_VERSION}" > .bundle_version.txt
-rm -rf build
+rm -rf build CHANGELOG.md ChangeLog LICENSE README.md
 
 tar czf "${CHECKOUT_DIR}/dev_bundle_${PLATFORM}_${BUNDLE_VERSION}.tar.gz" .
 

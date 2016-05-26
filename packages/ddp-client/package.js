@@ -1,11 +1,12 @@
 Package.describe({
   summary: "Meteor's latency-compensated distributed data client",
-  version: '1.2.7',
+  version: '1.2.8-beta.1',
   documentation: null
 });
 
 Npm.depends({
   "faye-websocket": "0.9.4",
+  "lolex": "1.4.0",
   "permessage-deflate": "0.1.3"
 });
 
@@ -48,6 +49,7 @@ Package.onTest(function (api) {
   api.use('mongo', ['client', 'server']);
   api.use('test-helpers', ['client', 'server']);
   api.use([
+    'ecmascript',
     'underscore',
     'tinytest',
     'random',

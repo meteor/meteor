@@ -272,7 +272,11 @@ files.statOrNull = function (path) {
 // Like rm -r.
 files.rm_recursive = Profile("files.rm_recursive", function (p) {
   if (Fiber.current && Fiber.yield && ! Fiber.yield.disallowed) {
-    Promise.denodeify(rimraf)(files.convertToOSPath(p)).await();
+    new Promise((resolve, reject) => {
+      rimraf(files.convertToOSPath(p), err => {
+        err ? reject(err) : resolve();
+      });
+    }).await();
   } else {
     rimraf.sync(files.convertToOSPath(p));
   }
@@ -1378,14 +1382,17 @@ function wrapFsFunc(fsFuncName, pathArgIndices, options) {
           cb = null;
         }
 
-        Promise.denodeify(fsFunc)
-          .apply(fs, args)
-          .then(function (res) {
-            if (options.modifyReturnValue) {
-              res = options.modifyReturnValue(res);
-            }
-            cb && cb(null, res);
-          }, cb);
+        new Promise((resolve, reject) => {
+          args.push((err, res) => {
+            err ? reject(err) : resolve(res);
+          });
+          fsFunc.apply(fs, args);
+        }).then(res => {
+          if (options.modifyReturnValue) {
+            res = options.modifyReturnValue(res);
+          }
+          cb && cb(null, res);
+        }, cb);
 
         return;
       }
@@ -1418,8 +1425,17 @@ wrapFsFunc("readFile", [0], {
 });
 wrapFsFunc("stat", [0]);
 wrapFsFunc("lstat", [0]);
-wrapFsFunc("exists", [0], {noErr: true});
 wrapFsFunc("rename", [0, 1]);
+
+// The fs.exists method is deprecated in Node v4:
+// https://nodejs.org/api/fs.html#fs_fs_exists_path_callback
+files.exists =
+files.existsSync = function (path, callback) {
+  if (typeof callback === "function") {
+    throw new Error("Passing a callback to files.exists is no longer supported");
+  }
+  return !! files.statOrNull(path);
+};
 
 if (process.platform === "win32") {
   var rename = files.rename;

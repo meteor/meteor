@@ -396,7 +396,11 @@ var launchMongo = function (options) {
   var yieldingMethod = function (object, methodName, ...args) {
     return Promise.race([
       stopPromise,
-      Promise.denodeify(object[methodName]).apply(object, args)
+      new Promise((resolve, reject) => {
+        object[methodName](...args, (err, res) => {
+          err ? reject(err) : resolve(res);
+        });
+      })
     ]).await();
   };
 

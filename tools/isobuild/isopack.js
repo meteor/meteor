@@ -1085,11 +1085,14 @@ _.extend(Isopack.prototype, {
         }
       });
 
-      const nodeModulesDirectories =
-        bundler.NodeModulesDirectory.readDirsFromJSON(
-          unibuildJson.node_modules,
-          { packageName: self.name,
-            sourceRoot: unibuildBasePath });
+      const nodeModulesDirectories = bundler.NodeModulesDirectory
+        .readDirsFromJSON(unibuildJson.node_modules, {
+          packageName: self.name,
+          sourceRoot: unibuildBasePath,
+          // Rebuild binaries if unibuild arch matches host arch.
+          rebuildBinaries: archinfo.matches(
+            archinfo.host(), unibuildMeta.arch)
+        });
 
       self.unibuilds.push(new Unibuild(self, {
         // At some point we stopped writing 'kind's to the metadata file, so
@@ -1171,12 +1174,11 @@ _.extend(Isopack.prototype, {
   //   format, this function silently only saves the newer format.  (The point
   //   of this flag is allow us to optimize cases that never need to write the
   //   older format, such as the per-app isopack cache.)
-  // - usesModules: boolean indicating whether this isopack uses the
-  //   Meteor module system
+  // - isopackCache: isopack cache in which this isopack is registered
   saveToPath: Profile("Isopack#saveToPath", function (outputDir, {
     includePreCompilerPluginIsopackVersions,
     includeIsopackBuildInfo,
-    usesModules = true,
+    isopackCache = null,
   } = {}) {
     var self = this;
     var outputPath = outputDir;
@@ -1339,6 +1341,9 @@ _.extend(Isopack.prototype, {
           node_modules,
           resources: []
         };
+
+        const usesModules = ! isopackCache ||
+          isopackCache.uses(self, "modules", unibuild.arch);
 
         // Output 'head', 'body' resources nicely
         var concat = { head: [], body: [] };
@@ -1613,6 +1618,11 @@ _.extend(Isopack.prototype, {
             };
             if (prelinkFile.sourceMap) {
               // Write the source map.
+
+              if (typeof prelinkFile.sourceMap !== "string") {
+                prelinkFile.sourceMap = JSON.stringify(prelinkFile.sourceMap);
+              }
+
               prelinkResource.sourceMap = builder.writeToGeneratedFilename(
                 files.pathJoin(legacyDir, prelinkFile.servePath + '.map'),
                 { data: new Buffer(prelinkFile.sourceMap, 'utf8') }

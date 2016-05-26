@@ -3,7 +3,6 @@ var util = require('util');
 var Future = require('fibers/future');
 var fiberHelpers = require('../utils/fiber-helpers.js');
 var child_process = require('child_process');
-var phantomjs = require('phantomjs');
 var webdriver = require('browserstack-webdriver');
 
 var files = require('../fs/files.js');
@@ -13,6 +12,7 @@ var Console = require('../console/console.js').Console;
 var archinfo = require('../utils/archinfo.js');
 var config = require('../meteor-services/config.js');
 var buildmessage = require('../utils/buildmessage.js');
+var execFileSync = require('../utils/processes.js').execFileSync;
 var Builder = require('../isobuild/builder.js').default;
 
 var catalog = require('../packaging/catalog/catalog.js');
@@ -26,6 +26,17 @@ var release = require('../packaging/release.js');
 
 var projectContextModule = require('../project-context.js');
 var upgraders = require('../upgraders.js');
+
+try {
+  var phantomjs = require('phantomjs-prebuilt');
+} catch (e) {
+  throw new Error([
+    "Please install PhantomJS by running the following command:",
+    "",
+    "  meteor npm install -g phantomjs-prebuilt",
+    ""
+  ].join("\n"));
+}
 
 // To allow long stack traces that cross async boundaries
 require('longjohn');
@@ -88,13 +99,6 @@ var expectThrows = markStack(function (f) {
     throw new TestFailure("expected-exception");
   }
 });
-
-// Execute a command synchronously, discarding stderr.
-var execFileSync = function (binary, args, opts) {
-  return Promise.denodeify(child_process.execFile)(
-    binary, args, opts
-  ).await();
-};
 
 var doOrThrow = function (f) {
   var ret;
