@@ -49,16 +49,16 @@ case $CIRCLE_NODE_INDEX in
       --exclude "$SELF_TEST_EXCLUDE"
   ;;
 6)
-  echo "Running self-test (6): R-So"
+  echo "Running self-test (6): R-S"
   ./meteor self-test --headless \
-      --file "^r(?!un)|^s[a-o]" \
+      --file "^r(?!un)|^s" \
       --without-tag "custom-warehouse" \
       --exclude "$SELF_TEST_EXCLUDE"
   ;;
 7)
   echo "Running self-test (7): Sp-Z"
   ./meteor self-test --headless \
-      --file "^s[p-z]|^[t-z]|^command-line" \
+      --file "^[t-z]|^command-line" \
       --without-tag "custom-warehouse" \
       --exclude "$SELF_TEST_EXCLUDE"
   ;;
