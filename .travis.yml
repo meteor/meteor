@@ -7,5 +7,5 @@ cache:
     - ".meteor"
     - ".babel-cache"
 install: ./meteor --get-ready
-script: CIRCLE_NODE_INDEX=0 ./scripts/ci.sh
+script: TEST_PACKAGES_EXCLUDE="less" ./packages/test-in-console/run.sh
 sudo: false

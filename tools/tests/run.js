@@ -230,7 +230,7 @@ selftest.define("run errors", function () {
   f.wait();
 });
 
-selftest.define("update during run", ["checkout"], function () {
+selftest.define("update during run", ["checkout", 'custom-warehouse'], function () {
   var s = new Sandbox({
     warehouse: SIMPLE_WAREHOUSE,
     fakeMongo: true
@@ -385,7 +385,7 @@ selftest.define("run and SIGKILL parent process", ["yet-unsolved-windows-failure
   // immediately.
   s.set("METEOR_BAD_PARENT_PID_FOR_TEST", "t");
   run = s.run();
-  run.waitSecs(30);
+  run.waitSecs(120);
   run.match("must be a valid process ID");
   run.match("Your application is crashing");
   run.stop();
@@ -414,29 +414,6 @@ selftest.define("'meteor run --port' accepts/rejects proper values", function ()
 
   run = s.run("run", "--port", "127.0.0.1:3500");
   run.match('App running at: http://127.0.0.1:3500/');
-  run.stop();
-});
-
-selftest.define("'meteor test --port' accepts/rejects proper values", function () {
-  var s = new Sandbox();
-  var run;
-
-  s.createApp("myapp", "standard-app");
-  s.cd("myapp");
-
-  var runAddPackage = s.run("add", "practicalmeteor:mocha");
-  runAddPackage.waitSecs(30);
-  runAddPackage.match(/practicalmeteor:mocha\b.*?added/)
-  runAddPackage.expectExit(0);
-
-  run = s.run("test", "--port", "3700", "--driver-package", "practicalmeteor:mocha");
-  run.waitSecs(60);
-  run.match('App running at: http://localhost:3700/');
-  run.stop();
-
-  run = s.run("test", "--port", "127.0.0.1:3700", "--driver-package", "practicalmeteor:mocha");
-  run.waitSecs(60);
-  run.match('App running at: http://127.0.0.1:3700/');
   run.stop();
 });
 
@@ -475,4 +452,29 @@ selftest.define("update package during run", function () {
 
     runRun.stop();
   });
+});
+
+selftest.define("run logging in order", function () {
+  var s = new Sandbox({ fakeMongo: true });
+  var run;
+
+  // Starting a run
+  s.createApp("myapp", "standard-app");
+  s.cd("myapp");
+  s.write('packageless.js', `
+    Meteor.startup(function() {
+      for (var i = 0; i < 100000; i++) {
+        console.log('line: ' + i + '.');
+      }
+    });
+  `);
+  run = s.run();
+  run.match("myapp");
+  run.match("proxy");
+  run.tellMongo(MONGO_LISTENING);
+  run.match("MongoDB");
+  run.waitSecs(5);
+  for (var i = 0; i < 100000; i++) {
+    run.match(`line: ${i}.`);
+  }
 });

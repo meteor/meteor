@@ -260,7 +260,7 @@ Log.format = function (obj, options) {
 
   var prettify = function (line, color) {
     return (options.color && Meteor.isServer && color) ?
-      Npm.require('cli-color')[color](line) : line;
+      require('cli-color')[color](line) : line;
   };
 
   return prettify(metaPrefix, options.metaColor || META_COLOR) +

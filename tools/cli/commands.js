@@ -2020,7 +2020,11 @@ main.registerCommand({
     history: { type: Number },
     list: { type: Boolean },
     file: { type: String },
-    exclude: { type: String }
+    exclude: { type: String },
+    // Skip tests w/ this tag
+    'without-tag': { type: String },
+    // Only run tests with this tag
+    'with-tag': { type: String },
   },
   hidden: true,
   catalogRefresh: new catalog.Refresh.Never()
@@ -2087,7 +2091,9 @@ main.registerCommand({
       includeSlowTests: options.slow,
       galaxyOnly: options.galaxy,
       testRegexp: testRegexp,
-      fileRegexp: fileRegexp
+      fileRegexp: fileRegexp,
+      'without-tag': options['without-tag'],
+      'with-tag': options['with-tag']
     });
 
     return 0;
@@ -2114,7 +2120,9 @@ main.registerCommand({
     excludeRegexp: excludeRegexp,
     // other options
     historyLines: options.history,
-    clients: clients
+    clients: clients,
+    'without-tag': options['without-tag'],
+    'with-tag': options['with-tag']
   });
 
 });

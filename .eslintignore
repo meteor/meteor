@@ -35,7 +35,7 @@ tools/mongo-exit-codes.js
 tools/processes.js
 tools/progress.js
 tools/project-context.js
-tools/run-log.js
+tools/runners/run-log.js
 tools/fs/safe-pathwatcher.js
 tools/selftest.js
 tools/service-connection.js
