@@ -17,7 +17,7 @@ Cordova.depends({
 
 Package.onUse(function (api) {
   api.export('Log');
-  api.use(['underscore', 'ejson']);
+  api.use(['underscore', 'ejson', 'modules']);
   api.addFiles('logging.js');
   api.addFiles('logging_cordova.js', 'web.cordova');
 });

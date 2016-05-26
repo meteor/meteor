@@ -22,7 +22,7 @@ selftest.define("source maps from checkout", ['checkout'], function () {
   }
 });
 
-selftest.define("source maps from an app", ['checkout'], function () {
+selftest.define("source maps from an app", ['checkout', 'custom-warehouse'], function () {
   var s = new Sandbox({
     warehouse: {
       v1: { recommended: true }
@@ -54,7 +54,7 @@ selftest.define("source maps from an app", ['checkout'], function () {
   run.stop();
 });
 
-selftest.define("source maps from built meteor tool", ['checkout'], function () {
+selftest.define("source maps from built meteor tool", ['checkout', 'custom-warehouse'], function () {
   var s = new Sandbox({
     warehouse: {
       v1: { recommended: true }
@@ -85,7 +85,7 @@ selftest.define("source maps from built meteor tool", ['checkout'], function () 
   run.expectExit(8);
 });
 
-selftest.define("source maps from a build plugin implementation", ['checkout'], function () {
+selftest.define("source maps from a build plugin implementation", ['checkout', 'custom-warehouse'], function () {
   var s = new Sandbox({
     warehouse: {
       v1: { recommended: true }
