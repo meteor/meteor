@@ -9,6 +9,7 @@ description:
 author:
 language:
 timezone:
+github_repo: meteor/guide
 apis:
   segment: zQx6cQifkTU79E3L0XAnmrOXP2A5bC6r
   docsearch:
