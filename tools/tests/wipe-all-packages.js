@@ -5,7 +5,7 @@ var utils = require('../utils/utils.js');
 var archinfo = require('../utils/archinfo.js');
 var _ = require('underscore');
 
-selftest.define("wipe all packages", function () {
+selftest.define("wipe all packages", ['slow', 'custom-warehouse'], function () {
   var s = new Sandbox({
     warehouse: {
       v1: { tool: "meteor-tool@33.0.1", recommended: true },

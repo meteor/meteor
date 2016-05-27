@@ -31,7 +31,7 @@ var recommend = function (sandbox, version) {
   });
 };
 
-selftest.define("autoupdate", ['checkout'], function () {
+selftest.define("autoupdate", ['checkout', 'custom-warehouse'], function () {
   var s = new Sandbox({
     warehouse: {
       v1: { recommended: true},
