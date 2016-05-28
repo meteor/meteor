@@ -223,7 +223,7 @@ const withDiv = function withDiv(callback) {
   }
 };
 
-export const function withRenderedTemplate(template, data, callback) {
+export const withRenderedTemplate = function withRenderedTemplate(template, data, callback) {
   withDiv((el) => {
     const ourTemplate = _.isString(template) ? Template[template] : template;
     Blaze.renderWithData(ourTemplate, data, el);
@@ -289,7 +289,7 @@ If you're testing code that makes use of globals, you'll need to import those gl
 
 ```js
 // logging.js
-export const function logTodos() {
+export function logTodos() {
   console.log(Todos.findOne());
 }
 ```
@@ -299,7 +299,7 @@ then you'll need to import `Todos` both in that file and in the test:
 ```js
 // logging.js
 import { Todos } from './todos.js'
-export const function logTodos() {
+export function logTodos() {
   console.log(Todos.findOne());
 }
 ```
