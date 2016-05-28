@@ -397,7 +397,7 @@ selftest.define("add package with no builds", ["net"], function () {
   run.expectExit(1);
 });
 
-selftest.define("package skeleton creates correct versionsFrom", function () {
+selftest.define("package skeleton creates correct versionsFrom", ['custom-warehouse'], function () {
   var s = new Sandbox({ warehouse: { v1: { recommended: true } } });
   var token = utils.randomToken();
   var fullPackageName = "test:" + token;

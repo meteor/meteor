@@ -1507,7 +1507,8 @@ class JsImage {
       }
     };
 
-    const nodeModulesDirsByPackageName = Object.create(null);
+    const nodeModulesDirsByPackageName = new Map;
+
     _.each(self.jsToLoad, item => {
       _.each(item.nodeModulesDirectories, nmd => {
         if (nmd.local) {
@@ -1516,15 +1517,15 @@ class JsImage {
           return;
         }
 
-        const name = nmd.packageName;
-        if (! name) {
-          return;
+        let name = nmd.packageName;
+        if (name) {
+          name = colonConverter.convert(name);
         }
 
-        if (_.has(nodeModulesDirsByPackageName, name)) {
-          nodeModulesDirsByPackageName[name].push(nmd.sourcePath);
+        if (nodeModulesDirsByPackageName.has(name)) {
+          nodeModulesDirsByPackageName.get(name).push(nmd.sourcePath);
         } else {
-          nodeModulesDirsByPackageName[name] = [nmd.sourcePath];
+          nodeModulesDirsByPackageName.set(name, [nmd.sourcePath]);
         }
       });
     });
@@ -1654,29 +1655,51 @@ class JsImage {
       }
 
       const parts = id.split("/");
+      let start = 0;
+      let dirs;
 
-      if (parts[0] === "") parts.shift();
-      if (parts[0] === "node_modules" &&
-          parts[1] === "meteor") {
-        const packageName = parts[2];
-        const dirs = nodeModulesDirsByPackageName[packageName];
+      if (parts[start] === "") ++start;
+      if (parts[start] === "node_modules" &&
+          parts[start + 1] === "meteor" &&
+          parts[start + 3] === "node_modules") {
+        const packageName = colonConverter.convert(parts[start + 2]);
+        dirs = nodeModulesDirsByPackageName.get(packageName);
+        start += 4;
 
-        if (dirs && parts[3] === "node_modules") {
-          let fullPath;
+      } else {
+        dirs = [];
 
-          _.some(dirs, dir => {
-            const osPath = files.convertToOSPath(
-              files.pathJoin(dir, parts.slice(4).join("/"))
-            );
+        const appDirs = nodeModulesDirsByPackageName.get(null);
+        if (appDirs) {
+          dirs.push(...appDirs);
+        }
 
-            if (files.exists(osPath)) {
-              return fullPath = osPath;
-            }
-          });
+        // We usually move all node_modules from the app into the source
+        // batch for the "modules" package, so we need to consider those
+        // directories in addition to appDirs.
+        const modulesDirs = nodeModulesDirsByPackageName.get("modules");
+        if (modulesDirs) {
+          dirs.push(...modulesDirs);
+        }
 
-          if (fullPath) {
-            return resolveCache[id] = fullPath;
+        start += 1;
+      }
+
+      if (dirs && dirs.length > 0) {
+        const relativePath = parts.slice(start).join("/");
+        let fullPath;
+
+        _.some(dirs, dir => {
+          const osPath = files.convertToOSPath(
+            files.pathJoin(dir, relativePath));
+
+          if (files.exists(osPath)) {
+            return fullPath = osPath;
           }
+        });
+
+        if (fullPath) {
+          return resolveCache[id] = fullPath;
         }
       }
 
