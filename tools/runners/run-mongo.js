@@ -611,35 +611,41 @@ var launchMongo = function (options) {
         });
       }
 
-      var initiateResult = yieldingMethod(
-        db.admin(), 'command', {replSetInitiate: configuration});
+      var initiateResult;
+      try {
+        initiateResult = yieldingMethod(
+          db.admin(), 'command', {replSetInitiate: configuration});
+      } catch (e) {
+        if (e.message !== 'already initialized') {
+          throw Error("rs.initiate error: " + e.message);
+        }
+      }
+
       if (stopped) {
         return;
       }
-      // why this isn't in the error is unclear.
-      if (initiateResult && initiateResult.documents
-          && initiateResult.documents[0]
-          && initiateResult.documents[0].errmsg) {
-        var err = initiateResult.documents[0].errmsg;
-        if (err !== "already initialized") {
-          throw Error("rs.initiate error: " +
-                      initiateResult.documents[0].errmsg);
-        }
-      }
+
       // XXX timeout eventually?
       while (!stopped) {
-        var status = yieldingMethod(db.admin(), 'command',
-                                    {replSetGetStatus: 1});
-        if (!(status && status.documents && status.documents[0])) {
+        var status;
+        try{
+          var status = yieldingMethod(db.admin(), 'command',
+                                      {replSetGetStatus: 1});
+        } catch (e) {
+          //Some of the expected results, come as errors.
+          status = e;
+        }
+
+        if (!status) {
           throw status;
         }
-        status = status.documents[0];
+
         if (!status.ok) {
           if (status.startupStatus === 6) {  // "SOON"
             utils.sleepMs(20);
             continue;
           }
-          throw status.errmsg;
+          throw status.message;
         }
         // See http://docs.mongodb.org/manual/reference/replica-states/
         // for information about the various states.
@@ -823,7 +829,6 @@ _.extend(MRp, {
         self.suppressExitMessage = false;
       },
     });
-
     // It has successfully started up, so if it exits after this point, that
     // actually is an interesting fact and we shouldn't suppress it.
     self.suppressExitMessage = false;
