@@ -135,8 +135,8 @@ Migrations.migrateTo = function(command) {
   if (typeof command === 'number') {
     var version = command;
   } else {
-    var version = command.split(',')[0].trim();
-    var subcommand = command.split(',')[1].trim();
+    var version = command.split(',')[0];//.trim();
+    var subcommand = command.split(',')[1];//.trim();
   }
 
   if (version === 'latest') {
