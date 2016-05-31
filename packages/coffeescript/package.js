@@ -15,12 +15,12 @@ Package.registerBuildPlugin({
 
 Package.onUse(function (api) {
   api.use('isobuild:compiler-plugin@1.0.0');
-  api.use('ecmascript');
+  api.use('babel-compiler');
 });
 
 Package.onTest(function (api) {
   api.use(['coffeescript', 'tinytest']);
-  api.use(['coffeescript-test-helper', 'ecmascript'], ['client', 'server']);
+  api.use(['coffeescript-test-helper', 'ecmascript'], ['client', 'server']); // Need ecmascript to compile tests/es2015_module.js
   api.addFiles('tests/bare_test_setup.coffee', ['client'], {bare: true});
   api.addFiles('tests/bare_tests.js', ['client']);
   api.addFiles([
