@@ -80,6 +80,12 @@
   `node_modules` directories installed in the parent application or in the
   package directory itself. #6827
 
+* You no longer need to specify `DEPLOY_HOSTNAME=galaxy.meteor.com` to run
+  `meteor deploy` (and similar commands) against Galaxy. The AWS us-east-1
+  Galaxy is now the default for `DEPLOY_HOSTNAME`. If your app's DNS points to
+  another Galaxy region, `meteor deploy` will detect that automatically as
+  well. #7055
+
 * Miscellaneous fixed bugs: #6877 #6843 #6881
 
 ## v1.3.2.3
