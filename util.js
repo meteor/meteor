@@ -22,47 +22,10 @@ exports.mkdirp = function mkdirp(dir) {
   return dir;
 };
 
-// Borrowed from another MIT-licensed project that I wrote:
-// https://github.com/reactjs/commoner/blob/235d54a12c/lib/util.js#L136-L168
 function deepHash(val) {
-  var hash = createHash("sha1");
-  var type = typeof val;
-
-  if (val === null) {
-    type = "null";
-  }
-
-  switch (type) {
-  case "object":
-    var keys = Object.keys(val);
-
-    // Array keys will already be sorted.
-    if (! Array.isArray(val)) {
-      keys.sort();
-    }
-
-    keys.forEach(function(key) {
-      if (typeof val[key] === "function") {
-        // Silently ignore nested methods, but nevertheless complain below
-        // if the root value is a function.
-        return;
-      }
-
-      hash.update(key + "\0").update(deepHash(val[key]));
-    });
-
-    break;
-
-  case "function":
-    assert.ok(false, "cannot hash function objects");
-    break;
-
-  default:
-    hash.update("" + val);
-    break;
-  }
-
-  return hash.digest("hex");
+  return createHash("sha1")
+    .update(JSON.stringify(val))
+    .digest("hex");
 }
 
 exports.deepHash = function (val) {
