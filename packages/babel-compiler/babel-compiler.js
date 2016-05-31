@@ -181,8 +181,9 @@ BCp._inferFromBabelRc = function (inputFile, babelOptions, cacheDeps) {
     return this._inferHelper(
       inputFile,
       babelOptions,
-      cacheDeps,
-      this._babelrcCache[babelrcPath]
+      babelrcPath,
+      this._babelrcCache[babelrcPath],
+      cacheDeps
     );
   }
 };
@@ -199,13 +200,20 @@ BCp._inferFromPackageJson = function (inputFile, babelOptions, cacheDeps) {
     return this._inferHelper(
       inputFile,
       babelOptions,
-      cacheDeps,
-      this._babelrcCache[pkgJsonPath]
+      pkgJsonPath,
+      this._babelrcCache[pkgJsonPath],
+      cacheDeps
     );
   }
 };
 
-BCp._inferHelper = function (inputFile, babelOptions, cacheDeps, babelrc) {
+BCp._inferHelper = function (
+  inputFile,
+  babelOptions,
+  controlFilePath,
+  babelrc,
+  cacheDeps
+) {
   if (! babelrc) {
     return false;
   }
@@ -240,14 +248,23 @@ BCp._inferHelper = function (inputFile, babelOptions, cacheDeps, babelrc) {
           presetOrPluginMeta = inputFile.require(
             packageNameFromTopLevelModuleId(id) + '/package.json');
         }
+
       } else {
         // If the identifier is not top-level, but relative or absolute,
         // then it will be required as-is, so that you can implement your
         // own Babel plugins locally, rather than always using plugins
         // installed from npm.
-        presetOrPlugin = inputFile.require(id);
-        presetOrPluginMeta =
-          metaForRelativeRequire(id, presetOrPlugin, inputFile);
+        presetOrPlugin = inputFile.require(id, controlFilePath);
+
+        // Note that inputFile.readAndWatchFileWithHash converts module
+        // identifers to OS-specific paths if necessary.
+        var absId = inputFile.resolve(id, controlFilePath);
+        var info = inputFile.readAndWatchFileWithHash(absId);
+
+        presetOrPluginMeta = {
+          name: absId,
+          version: info.hash
+        };
       }
 
       return {
@@ -305,16 +322,3 @@ BCp._inferHelper = function (inputFile, babelOptions, cacheDeps, babelrc) {
 function packageNameFromTopLevelModuleId(id) {
   return id.split("/", 1)[0];
 }
-
-function metaForRelativeRequire(relativeId, module, inputFile) {
-  var id = inputFile.resolve(relativeId);
-
-  // Note that inputFile.readAndWatchFileWithHash converts module
-  // identifers to OS-specific paths if necessary.
-  var info = inputFile.readAndWatchFileWithHash(id);
-
-  return {
-    name: id,
-    version: info.hash
-  }
-};

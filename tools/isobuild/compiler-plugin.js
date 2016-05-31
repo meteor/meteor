@@ -15,6 +15,7 @@ import {sourceMapLength} from '../utils/utils.js';
 import {Console} from '../console/console.js';
 import ImportScanner from './import-scanner.js';
 import {cssToCommonJS} from "./css-modules.js";
+import Resolver from "./resolver.js";
 
 import { isTestFilePath } from './test-files.js';
 
@@ -313,58 +314,46 @@ class InputFile extends buildPluginModule.InputFile {
     return this._controlFileCache[basename] = null;
   }
 
-  resolve(id) {
-    if (_.has(this._resolveCache, id)) {
-      return this._resolveCache[id];
-    }
-
-    const sourceBatch = this._resourceSlot.packageSourceBatch;
-    const parentPath = files.convertToOSPath(files.pathJoin(
-      sourceBatch.sourceRoot,
-      this.getPathInPackage()
-    ));
-    // Absolute CommonJS module identifier of the parent module.
-    const parentId = files.convertToPosixPath(parentPath, true);
-    const Module = module.constructor;
-    const parent = new Module(parentId);
-
-    // We only need to populate parent.paths if id is top-level, meaning
-    // that it could potentially be found in a node_modules directory.
-    const isTopLevelId = "./".indexOf(id.charAt(0)) < 0;
-    if (isTopLevelId) {
-      const nmds = sourceBatch.unibuild.nodeModulesDirectories;
-      const osPaths = Object.create(null);
-      const nonLocalPaths = [];
-
-      _.each(nmds, (nmd, path) => {
-        path = files.convertToOSPath(path.replace(/\/$/g, ""));
-        osPaths[path] = true;
-        if (! nmd.local) {
-          nonLocalPaths.push(path);
-        }
-      });
-
-      parent.paths = [];
-
-      // Add any local node_modules directory paths that are both
-      // ancestors of this file and included in this PackageSourceBatch.
-      Module._nodeModulePaths(parentPath).forEach(path => {
-        if (_.has(osPaths, path)) {
-          parent.paths.push(path);
-        }
-      });
-
-      // Now add any non-local node_modules directories that are used by
-      // this PackageSourceBatch.
-      parent.paths.push(...nonLocalPaths);
-    }
-
-    return this._resolveCache[id] =
-      Module._resolveFilename(id, parent);
+  _resolveCacheLookup(id, parentPath) {
+    const byId = this._resolveCache[id];
+    return byId && byId[parentPath];
   }
 
-  require(id) {
-    return require(this.resolve(id));
+  _resolveCacheStore(id, parentPath, resolved) {
+    let byId = this._resolveCache[id];
+    if (! byId) {
+      byId = this._resolveCache[id] = Object.create(null);
+    }
+    return byId[parentPath] = resolved;
+  }
+
+  resolve(id, parentPath) {
+    const batch = this._resourceSlot.packageSourceBatch;
+
+    parentPath = parentPath || files.pathJoin(
+      batch.sourceRoot,
+      this.getPathInPackage()
+    );
+
+    let resolved = this._resolveCacheLookup(id, parentPath);
+    if (resolved) {
+      return resolved;
+    }
+
+    const parentStat = files.statOrNull(parentPath);
+    if (! parentStat ||
+        ! parentStat.isFile()) {
+      throw new Error("Not a file: " + parentPath);
+    }
+
+    const resolver = batch.getResolver();
+
+    return this._resolveCacheStore(
+      id, parentPath, resolver.resolve(id, parentPath).path);
+  }
+
+  require(id, parentPath) {
+    return require(this.resolve(id, parentPath));
   }
 
   getArch() {
@@ -776,6 +765,7 @@ export class PackageSourceBatch {
     self.sourceRoot = sourceRoot;
     self.linkerCacheDir = linkerCacheDir;
     self.importExtensions = [".js", ".json"];
+    self._resolver = null;
 
     var sourceProcessorSet = self._getSourceProcessorSet();
 
@@ -866,6 +856,35 @@ export class PackageSourceBatch {
     if (this.importExtensions.indexOf(extension) < 0) {
       this.importExtensions.push(extension);
     }
+  }
+
+  getResolver() {
+    if (this._resolver) {
+      return this._resolver;
+    }
+
+    const nmds = this.unibuild.nodeModulesDirectories;
+    const nodeModulesPaths = [];
+
+    _.each(nmds, (nmd, path) => {
+      if (! nmd.local) {
+        nodeModulesPaths.push(
+          files.convertToOSPath(path.replace(/\/$/g, "")));
+      }
+    });
+
+    return this._resolver = new Resolver({
+      sourceRoot: this.sourceRoot,
+      targetArch: this.processor.arch,
+      extensions: this.importExtensions,
+      nodeModulesPaths,
+      watchSet: this.unibuild.watchSet,
+      onMissing(id) {
+        const error = new Error("Cannot find module '" + id + "'");
+        error.code = "MODULE_NOT_FOUND";
+        throw error;
+      }
+    });
   }
 
   _getSourceProcessorSet() {
