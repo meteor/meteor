@@ -12,6 +12,7 @@ var auth = require('../meteor-services/auth.js');
 var config = require('../meteor-services/config.js');
 var release = require('../packaging/release.js');
 var Console = require('../console/console.js').Console;
+var timeoutScaleFactor = require('./utils.js').timeoutScaleFactor;
 
 
 // Helper that tracks bytes written to a writable
@@ -242,6 +243,12 @@ _.extend(exports, {
     }
     if (proxy && !options.proxy) {
       options.proxy = proxy;
+    }
+
+    if (! options.timeout) {
+      // 15 seconds for timeout between initial response headers and data,
+      // and between chunks of data while reading the rest of the response.
+      options.timeout = 15000 * timeoutScaleFactor;
     }
 
     // request is the most heavy-weight of the tool's npm dependencies; don't
