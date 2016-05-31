@@ -67,6 +67,9 @@ BCp.processOneFileForTarget = function (inputFile, source) {
     sourceMap: null,
     bare: !! fileOptions.bare
   };
+  var cacheDeps = {
+    sourceHash: toBeAdded.hash
+  };
 
   // If you need to exclude a specific file within a package from Babel
   // compilation, pass the { transpile: false } options to api.addFiles
@@ -105,7 +108,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       babelOptions.plugins.push(babelModulesPlugin);
     }
 
-    this.inferExtraBabelOptions(inputFile, babelOptions);
+    this.inferExtraBabelOptions(inputFile, babelOptions, cacheDeps);
 
     babelOptions.sourceMap = true;
     babelOptions.filename =
@@ -117,7 +120,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
 
     try {
       var result = profile('Babel.compile', function () {
-        return Babel.compile(source, babelOptions);
+        return Babel.compile(source, babelOptions, cacheDeps);
       });
     } catch (e) {
       if (e.loc) {
@@ -153,7 +156,7 @@ function profile(name, func) {
   }
 };
 
-BCp.inferExtraBabelOptions = function (inputFile, babelOptions) {
+BCp.inferExtraBabelOptions = function (inputFile, babelOptions, cacheDeps) {
   if (! inputFile.require ||
       ! inputFile.findControlFile ||
       ! inputFile.readAndWatchFile) {
@@ -162,12 +165,12 @@ BCp.inferExtraBabelOptions = function (inputFile, babelOptions) {
 
   return (
     // If a .babelrc exists, it takes precedence over package.json.
-    this._inferFromBabelRc(inputFile, babelOptions) ||
-    this._inferFromPackageJson(inputFile, babelOptions)
+    this._inferFromBabelRc(inputFile, babelOptions, cacheDeps) ||
+    this._inferFromPackageJson(inputFile, babelOptions, cacheDeps)
   );
 };
 
-BCp._inferFromBabelRc = function (inputFile, babelOptions) {
+BCp._inferFromBabelRc = function (inputFile, babelOptions, cacheDeps) {
   var babelrcPath = inputFile.findControlFile(".babelrc");
   if (babelrcPath) {
     if (! hasOwn.call(this._babelrcCache, babelrcPath)) {
@@ -178,12 +181,13 @@ BCp._inferFromBabelRc = function (inputFile, babelOptions) {
     return this._inferHelper(
       inputFile,
       babelOptions,
+      cacheDeps,
       this._babelrcCache[babelrcPath]
     );
   }
 };
 
-BCp._inferFromPackageJson = function (inputFile, babelOptions) {
+BCp._inferFromPackageJson = function (inputFile, babelOptions, cacheDeps) {
   var pkgJsonPath = inputFile.findControlFile("package.json");
   if (pkgJsonPath) {
     if (! hasOwn.call(this._babelrcCache, pkgJsonPath)) {
@@ -195,17 +199,19 @@ BCp._inferFromPackageJson = function (inputFile, babelOptions) {
     return this._inferHelper(
       inputFile,
       babelOptions,
+      cacheDeps,
       this._babelrcCache[pkgJsonPath]
     );
   }
 };
 
-BCp._inferHelper = function (inputFile, babelOptions, babelrc) {
+BCp._inferHelper = function (inputFile, babelOptions, cacheDeps, babelrc) {
   if (! babelrc) {
     return false;
   }
 
   var inferredPresets = [];
+  var result;
 
   function infer(listName, prefix) {
     var list = babelrc[listName];
@@ -216,18 +222,23 @@ BCp._inferHelper = function (inputFile, babelOptions, babelrc) {
     function req(id) {
       var isTopLevel = "./".indexOf(id.charAt(0)) < 0;
       var presetOrPlugin;
+      var presetOrPluginMeta;
 
       if (isTopLevel) {
         try {
           // If the identifier is top-level, try to prefix it with
           // "babel-plugin-" or "babel-preset-".
           presetOrPlugin = inputFile.require(prefix + id);
+          presetOrPluginMeta = inputFile.require(
+            packageNameFromTopLevelModuleId(prefix + id) + '/package.json');
         } catch (e) {
           if (e.code !== "MODULE_NOT_FOUND") {
             throw e;
           }
           // Fall back to requiring the plugin as-is if the prefix failed.
           presetOrPlugin = inputFile.require(id);
+          presetOrPluginMeta = inputFile.require(
+            packageNameFromTopLevelModuleId(id) + '/package.json');
         }
       } else {
         // If the identifier is not top-level, but relative or absolute,
@@ -235,21 +246,34 @@ BCp._inferHelper = function (inputFile, babelOptions, babelrc) {
         // own Babel plugins locally, rather than always using plugins
         // installed from npm.
         presetOrPlugin = inputFile.require(id);
+        presetOrPluginMeta = metaForRelativeRequire(id, presetOrPlugin,
+          inputFile);
       }
 
-      return presetOrPlugin.__esModule
-        ? presetOrPlugin.default
-        : presetOrPlugin;
+      return {
+        name: presetOrPluginMeta.name,
+        version: presetOrPluginMeta.version,
+        module: presetOrPlugin.__esModule
+          ? presetOrPlugin.default
+          : presetOrPlugin
+      };
     }
 
     list.forEach(function (item, i) {
       if (typeof item === "string") {
-        item = req(item);
+        result = req(item);
+        item = result.module;
+        cacheDeps[result.name] = result.version;
       } else if (Array.isArray(item) &&
                  typeof item[0] === "string") {
         item = item.slice(); // defensive copy
-        item[0] = req(item[0]);
+        result = req(item[0]);
+        item[0] = result.module;
+        cacheDeps[result.name] = result.version;
       }
+      // else, an object { presets: [], plugins: [] } from meteorBabel, whose
+      // version is used for the cache hash internally.
+
       list[i] = item;
     });
 
@@ -275,4 +299,26 @@ BCp._inferHelper = function (inputFile, babelOptions, babelrc) {
   }
 
   return false;
+};
+
+// 'react-hot-loader/babel' => 'react-hot-loader'
+function packageNameFromTopLevelModuleId(id) {
+  return id.split("/", 1)[0];
+}
+
+var crypto = Npm.require('crypto');
+var moduleShaCache = {};
+
+function metaForRelativeRequire(relativeId, module, inputFile) {
+  var id = inputFile.resolve(relativeId);
+  var hash = moduleShaCache[id];
+  if (!hash) {
+    hash = moduleShaCache[id] =
+      crypto.createHash('sha1').update(module.toString()).digest('hex');
+  }
+
+  return {
+    name: id,
+    version: hash
+  }
 };
