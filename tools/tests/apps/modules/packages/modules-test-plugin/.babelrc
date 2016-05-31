@@ -1,6 +1,6 @@
 {
   "plugins": [
-    "transform-class-properties",
+    "babel-plugin-transform-class-properties",
     ["transform-strict-mode", { "strict": true }]
   ]
 }
