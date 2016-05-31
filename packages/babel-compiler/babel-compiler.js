@@ -246,8 +246,8 @@ BCp._inferHelper = function (inputFile, babelOptions, cacheDeps, babelrc) {
         // own Babel plugins locally, rather than always using plugins
         // installed from npm.
         presetOrPlugin = inputFile.require(id);
-        presetOrPluginMeta = metaForRelativeRequire(id, presetOrPlugin,
-          inputFile);
+        presetOrPluginMeta =
+          metaForRelativeRequire(id, presetOrPlugin, inputFile);
       }
 
       return {
@@ -306,19 +306,15 @@ function packageNameFromTopLevelModuleId(id) {
   return id.split("/", 1)[0];
 }
 
-var crypto = Npm.require('crypto');
-var moduleShaCache = {};
-
 function metaForRelativeRequire(relativeId, module, inputFile) {
   var id = inputFile.resolve(relativeId);
-  var hash = moduleShaCache[id];
-  if (!hash) {
-    hash = moduleShaCache[id] =
-      crypto.createHash('sha1').update(module.toString()).digest('hex');
-  }
+
+  // Note that inputFile.readAndWatchFileWithHash converts module
+  // identifers to OS-specific paths if necessary.
+  var info = inputFile.readAndWatchFileWithHash(id);
 
   return {
     name: id,
-    version: hash
+    version: info.hash
   }
 };
