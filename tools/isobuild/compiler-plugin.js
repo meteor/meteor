@@ -8,7 +8,7 @@ var linker = require('./linker.js');
 var util = require('util');
 var _ = require('underscore');
 var Profile = require('../tool-env/profile.js').Profile;
-import {sha1, readAndWatchFile} from  '../fs/watch.js';
+import {sha1, readAndWatchFileWithHash} from  '../fs/watch.js';
 import LRU from 'lru-cache';
 import Fiber from 'fibers';
 import {sourceMapLength} from '../utils/utils.js';
@@ -256,17 +256,25 @@ class InputFile extends buildPluginModule.InputFile {
     return self._resourceSlot.inputResource.fileOptions || {};
   }
 
-  readAndWatchFile(path) {
+  readAndWatchFileWithHash(path) {
+    const osPath = files.convertToOSPath(path);
     const sourceRoot = this.getSourceRoot();
-    const relPath = files.pathRelative(sourceRoot, path);
+    const relPath = files.pathRelative(sourceRoot, osPath);
     if (relPath.startsWith("..")) {
       throw new Error(
         `Attempting to read file outside ${
-          this.getPackageName() || "the app"}: ${path}`
+          this.getPackageName() || "the app"}: ${osPath}`
       );
     }
     const sourceBatch = this._resourceSlot.packageSourceBatch;
-    return readAndWatchFile(sourceBatch.unibuild.watchSet, path);
+    return readAndWatchFileWithHash(
+      sourceBatch.unibuild.watchSet,
+      osPath
+    );
+  }
+
+  readAndWatchFile(path) {
+    return this.readAndWatchFileWithHash(path).contents;
   }
 
   // Search ancestor directories for control files (e.g. package.json,
