@@ -1,6 +1,6 @@
-import { ECMAScript } from "meteor/ecmascript";
 import sourcemap from 'source-map';
 import coffee from 'coffee-script';
+import { BabelCompiler } from 'meteor/babel-compiler';
 
 // The coffee-script compiler overrides Error.prepareStackTrace, mostly for the
 // use of coffee.run which we don't use.  This conflicts with the tool's use of
@@ -22,6 +22,7 @@ export class CoffeeCompiler extends CachingCompiler {
       compilerName: 'coffeescript',
       defaultCacheSize: 1024*1024*10,
     });
+    this.babelCompiler = new BabelCompiler();
   }
 
   _getCompileOptions(inputFile) {
@@ -69,10 +70,11 @@ export class CoffeeCompiler extends CachingCompiler {
     }
 
     if (source.indexOf('`') !== -1) {
-      // If source contains backticks, pass the coffee output through ecmascript
-      try {
-        output.js = ECMAScript.compileForShell(output.js);
-      } catch (e) {}
+      // If source contains backticks, pass the coffee output through babel-compiler
+      const doubleRoastedCoffee = this.babelCompiler.processOneFileForTarget(inputFile, output.js);
+      if (doubleRoastedCoffee != null && doubleRoastedCoffee.data != null) {
+        output.js = doubleRoastedCoffee.data;
+      }
     }
 
     const stripped = stripExportedVars(
