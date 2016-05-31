@@ -303,7 +303,7 @@ BCp._inferHelper = function (inputFile, babelOptions, cacheDeps, babelrc) {
 
 // 'react-hot-loader/babel' => 'react-hot-loader'
 function packageNameFromTopLevelModuleId(id) {
-  return id.replace(/\/.*$/, '');
+  return id.split("/", 1)[0];
 }
 
 var crypto = Npm.require('crypto');
