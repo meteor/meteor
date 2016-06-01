@@ -12,6 +12,8 @@ import {
   pathNormalize,
   pathDirname,
   statOrNull as realStatOrNull,
+  convertToOSPath,
+  convertToPosixPath,
 } from "../fs/files.js";
 
 const nativeModulesMap = Object.create(null);
@@ -106,6 +108,13 @@ export default class Resolver {
       // directory. However, in principle it is remotely possible that a
       // file called `index.js` could be a directory instead of a file.
       resolved = this._joinAndStat(dirPath, "index.js");
+    }
+
+    if (resolved) {
+      resolved.id = convertToPosixPath(
+        convertToOSPath(resolved.path),
+        true
+      );
     }
 
     return resolved;

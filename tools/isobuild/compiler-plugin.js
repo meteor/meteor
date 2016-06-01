@@ -349,7 +349,7 @@ class InputFile extends buildPluginModule.InputFile {
     const resolver = batch.getResolver();
 
     return this._resolveCacheStore(
-      id, parentPath, resolver.resolve(id, parentPath).path);
+      id, parentPath, resolver.resolve(id, parentPath).id);
   }
 
   require(id, parentPath) {
