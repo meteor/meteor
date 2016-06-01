@@ -1,6 +1,7 @@
 {
   "plugins": [
     "babel-plugin-transform-class-properties",
-    ["transform-strict-mode", { "strict": true }]
+    ["transform-strict-mode", { "strict": true }],
+    "./oyez-transform"
   ]
 }
