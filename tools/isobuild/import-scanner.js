@@ -704,7 +704,7 @@ export default class ImportScanner {
             parentFile.deps) {
           parentFile.deps[stubId] = parentFile.deps[id];
         }
-        return this.resolver.resolveNodeModule(stubId, absParentPath);
+        return this.resolver.resolve(stubId, absParentPath);
       }
     }
 

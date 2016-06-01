@@ -76,9 +76,9 @@ export default class Resolver {
   // parameter is for internal use only and should be ommitted.
   resolve(id, absParentPath, _seenDirPaths) {
     let resolved =
-      this.resolveAbsolute(id, absParentPath) ||
-      this.resolveRelative(id, absParentPath) ||
-      this.resolveNodeModule(id, absParentPath);
+      this._resolveAbsolute(id, absParentPath) ||
+      this._resolveRelative(id, absParentPath) ||
+      this._resolveNodeModule(id, absParentPath);
 
     while (resolved && resolved.stat.isDirectory()) {
       let dirPath = resolved.path;
@@ -145,18 +145,18 @@ export default class Resolver {
     return result;
   }
 
-  resolveAbsolute(id, absParentPath) {
+  _resolveAbsolute(id, absParentPath) {
     return id.charAt(0) === "/" &&
       this._joinAndStat(this.sourceRoot, id.slice(1));
   }
 
-  resolveRelative(id, absParentPath) {
+  _resolveRelative(id, absParentPath) {
     if (id.charAt(0) === ".") {
       return this._joinAndStat(absParentPath, "..", id);
     }
   }
 
-  resolveNodeModule(id, absParentPath) {
+  _resolveNodeModule(id, absParentPath) {
     let resolved = null;
 
     if (Resolver.isNative(id) &&
