@@ -29,8 +29,8 @@ Meteor officially supports three user interface (UI) rendering libraries, [Blaze
 <h3 id="community">Community</h3>
 
 - Blaze has many full-stack Meteor packages on Atmosphere, such as [`useraccounts:core`](https://atmospherejs.com/useraccounts/core) and [`aldeed:autoform`](https://atmospherejs.com/aldeed/autoform).
-- React has 41k stars on Github and 13k npm libraries.
-- Angular has 11k stars on Github and 4k npm libraries.
+- React has 42k stars on Github and 13k npm libraries.
+- Angular has 12k stars on Github and 4k npm libraries.
 
 <h3 id="performance">Performance</h3>
 
