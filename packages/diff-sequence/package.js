@@ -1,6 +1,6 @@
 Package.describe({
   summary: "An implementation of a diff algorithm on arrays and objects.",
-  version: '1.0.6-beta.1',
+  version: '1.0.6-beta.2',
   documentation: null
 });
 
