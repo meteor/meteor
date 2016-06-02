@@ -1439,7 +1439,18 @@ wrapFsFunc("readFile", [0], {
 });
 wrapFsFunc("stat", [0]);
 wrapFsFunc("lstat", [0]);
-wrapFsFunc("rename", [0, 1]);
+
+files.rename =
+files.renameSync = Profile("files.rename", function (source, target, callback) {
+  if (typeof callback === "function") {
+    throw new Error("Passing a callback to files.rename is no longer supported");
+  }
+
+  return fs.renameSync(
+    files.convertToOSPath(source),
+    files.convertToOSPath(target)
+  );
+});
 
 // The fs.exists method is deprecated in Node v4:
 // https://nodejs.org/api/fs.html#fs_fs_exists_path_callback
