@@ -4,6 +4,7 @@ order: 1001
 description: A log of significant changes to the Meteor Guide.
 ---
 
+- 2016/05/28: Created new section "A simple React unit test" [PR #466](https://github.com/meteor/guide/pull/466).
 - 2016/05/22: Created new section "Testing publications" for separated `publication-collector` package (as [discussed here](https://github.com/meteor/todos/issues/119)).
 - 2016/05/05: Changed Build Section organization to separate Atmosphere and npm.  [Discussed here](https://github.com/meteor/guide/pull/390#issuecomment-212577341). [PR #410](https://github.com/meteor/guide/pull/410)
 - 2016/04/16: Switch order of Code Style and Application structure sections. [PR #383](https://github.com/meteor/guide/pull/383)

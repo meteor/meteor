@@ -199,11 +199,11 @@ Unit testing is the process of isolating a section of code and then testing that
 
 By isolating a module and simply testing its internal functionality, we can write tests that are *fast* and *accurate*---they can quickly tell you where a problem in your application lies. Note however that incomplete unit tests can often hide bugs because of the way they stub out dependencies. For that reason it's useful to combine unit tests with slower (and perhaps less commonly run) integration and acceptance tests.
 
-<h3 id="simple-unit-test">A simple unit test</h3>
+<h3 id="simple-blaze-unit-test">A simple Blaze unit test</h3>
 
 In the [Todos](https://github.com/meteor/todos) example app, thanks to the fact that we've split our User Interface into [smart and reusable components](ui-ux.html#components), it's natural to want to unit test some of our reusable components (we'll see below how to [integration test](#simple-integration-test) our smart components).
 
-To do so, we'll use a very simple test helper that renders a Blaze component off-screen with a given data context (note that the [React test utils](https://facebook.github.io/react/docs/test-utils.html) can do a similar thing for React). As we place it in `imports`, it won't load in our app by in normal mode (as it's not required anywhere).
+To do so, we'll use a very simple test helper that renders a Blaze component off-screen with a given data context. As we place it in `imports`, it won't load in our app by in normal mode (as it's not required anywhere).
 
 [`imports/ui/test-helpers.js`](https://github.com/meteor/todos/blob/master/imports/ui/test-helpers.js):
 
@@ -320,6 +320,61 @@ import { logTodos } from './logging.js'
 
 We can use the [Factory package's](#test-data) `.build()` API to create a test document without inserting it into any collection. As we've been careful not to call out to any collections directly in the reusable component, we can pass the built `todo` document directly into the template.
 
+<h3 id="simple-react-unit-test">A simple React unit test</h3>
+
+We can also apply the same structure to testing React components and recommend the [Enzyme](https://github.com/airbnb/enzyme) package, which simulates a React component's environment and allows you to query it using CSS selectors. A larger suite of tests is available in the [react branch of the Todos app](https://github.com/meteor/todos/tree/react), but let's look at a simple example for now:
+
+```js
+import { Factory } from 'meteor/factory';
+import React from 'react';
+import { shallow } from 'enzyme';
+import { chai } from 'meteor/practicalmeteor:chai';
+import TodoItem from './TodoItem.jsx';
+
+describe('TodoItem', () => {
+  it('should render', () => {
+    const todo = Factory.build('todo', { text: 'testing', checked: false });
+    const item = shallow(<TodoItem todo={todo} />);
+    chai.assert(item.hasClass('list-item'));
+    chai.assert(!item.hasClass('checked'));
+    chai.assert.equal(item.find('.editing').length, 0);
+    chai.assert.equal(item.find('input[type="text"]').prop('defaultValue'), 'testing');
+  });
+});
+```
+
+The test is slightly simpler than the Blaze version above because the React sample app is not internationalized. Otherwise, it's conceptually identical. We use Enzyme's `shallow` function to render the `TodoItem` component, and the resulting object to query the document, and also to simulate user interactions. And here's an example of simulating a user checking the todo item:
+
+```js
+import { Factory } from 'meteor/factory';
+import React from 'react';
+import { shallow } from 'enzyme';
+import { sinon } from 'meteor/practicalmeteor:sinon';
+import TodoItem from './TodoItem.jsx';
+import { setCheckedStatus } from '../../api/todos/methods.js';
+
+describe('TodoItem', () => {
+  it('should update status when checked', () => {
+    sinon.stub(setCheckedStatus, 'call');
+    const todo = Factory.create('todo', { checked: false });
+    const item = shallow(<TodoItem todo={todo} />);
+
+    item.find('input[type="checkbox"]').simulate('change', {
+      target: { checked: true },
+    });
+
+    sinon.assert.calledWith(setCheckedStatus.call, {
+      todoId: todo._id,
+      newCheckedStatus: true,
+    });
+
+    setCheckedStatus.call.restore();
+  });
+});
+```
+
+In this case, the `TodoItem` component calls a [Meteor Method](/methods.html) `setCheckedStatus` when the user clicks, but this is a unit test so there's no server running. So we stub it out using [Sinon](http://sinonjs.org). After we simulate the click, we verify that the stub was called with the correct arguments. Finally, we clean up the stub and restore the original method behavior.
+
 <h3 id="running-unit-tests">Running unit tests</h3>
 
 To run the tests that our app defines, we run our app in [test mode](#test-modes):
@@ -348,7 +403,7 @@ Then you can open two browser windows to see the app in action while also ensuri
 
 <h3 id="isolation-techniques">Isolation techniques</h3>
 
-In the [unit test above](#simple-unit-test) we saw a very limited example of how to isolate a module from the larger app. This is critical for proper unit testing. Some other utilities and techniques include:
+In the [unit tests above](#simple-blaze-unit-test) we saw a very limited example of how to isolate a module from the larger app. This is critical for proper unit testing. Some other utilities and techniques include:
 
   - The [`velocity:meteor-stubs`](https://atmospherejs.com/velocity/meteor-stubs) package, which creates simple stubs for most Meteor core objects.
 
