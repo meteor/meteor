@@ -32,7 +32,9 @@ Migrations.add({
 To run this migration from within your app call:
 
 ``` javascript
-Migrations.migrateTo('latest');
+Meteor.startup(() => {
+  Migrations.migrateTo('latest');
+});
 ```
 
 ### Advanced
