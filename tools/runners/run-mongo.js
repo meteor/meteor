@@ -611,9 +611,8 @@ var launchMongo = function (options) {
         });
       }
 
-      var initiateResult;
       try {
-        initiateResult = yieldingMethod(
+        var initiateResult = yieldingMethod(
           db.admin(), 'command', {replSetInitiate: configuration});
       } catch (e) {
         if (e.message !== 'already initialized') {
@@ -629,26 +628,20 @@ var launchMongo = function (options) {
       while (!stopped) {
         var status;
         try{
-          var status = yieldingMethod(db.admin(), 'command',
+          status = yieldingMethod(db.admin(), 'command',
                                       {replSetGetStatus: 1});
         } catch (e) {
-          //Some of the expected results, come as errors.
-          status = e;
-        }
-
-        if (!status) {
-          throw status;
-        }
-
-        if (!status.ok) {
-          if (status.startupStatus === 6) {  // "SOON"
+          // See https://docs.mongodb.com/manual/reference/replica-states/
+          // for information on various states
+          if (e.myState === 6) {
+            // UNKNOWN(6) some of the other replicas are in an UNKNOWN
+            // state from this replica perspective.
             utils.sleepMs(20);
             continue;
+          } else {
+            throw e;
           }
-          throw status.message;
         }
-        // See http://docs.mongodb.org/manual/reference/replica-states/
-        // for information about the various states.
 
         // Are any of the members starting up or recovering?
         if (_.any(status.members, function (member) {
@@ -662,7 +655,6 @@ var launchMongo = function (options) {
 
         // Is the intended primary currently a secondary? (It passes through
         // that phase briefly.)
-
         if (status.members[0].stateStr === 'SECONDARY') {
           utils.sleepMs(20);
           continue;
