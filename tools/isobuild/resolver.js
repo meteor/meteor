@@ -58,8 +58,9 @@ export default class Resolver {
     this.onMissing = onMissing;
     this.statOrNull = statOrNull;
 
-    this.statCache = new Map;
-    this.pkgJsonCache = new Map;
+    this._resolveCache = new Map;
+    this._statCache = new Map;
+    this._pkgJsonCache = new Map;
   }
 
   static isTopLevel(id) {
@@ -78,6 +79,14 @@ export default class Resolver {
   // null, relative to an absolute parent path. The _seenDirPaths
   // parameter is for internal use only and should be ommitted.
   resolve(id, absParentPath, _seenDirPaths) {
+    const byParentDir = this._resolveCache[id] || Object.create(null);
+    const absParentDir = pathDirname(absParentPath);
+    if (has(byParentDir, absParentDir)) {
+      return byParentDir[absParentDir];
+    }
+
+    this._resolveCache[id] = byParentDir;
+
     let resolved =
       this._resolveAbsolute(id, absParentPath) ||
       this._resolveRelative(id, absParentPath) ||
@@ -118,13 +127,13 @@ export default class Resolver {
       );
     }
 
-    return resolved;
+    return byParentDir[absParentDir] = resolved;
   }
 
   _joinAndStat(...joinArgs) {
     const joined = pathJoin(...joinArgs);
-    if (this.statCache.has(joined)) {
-      return this.statCache.get(joined);
+    if (this._statCache.has(joined)) {
+      return this._statCache.get(joined);
     }
 
     const path = pathNormalize(joined);
@@ -151,7 +160,7 @@ export default class Resolver {
       result = exactResult;
     }
 
-    this.statCache.set(joined, result);
+    this._statCache.set(joined, result);
     return result;
   }
 
@@ -243,8 +252,8 @@ export default class Resolver {
   }
 
   _readPkgJson(path) {
-    if (this.pkgJsonCache.has(path)) {
-      return this.pkgJsonCache.get(path);
+    if (this._pkgJsonCache.has(path)) {
+      return this._pkgJsonCache.get(path);
     }
 
     let result = null;
@@ -258,7 +267,7 @@ export default class Resolver {
       }
     }
 
-    this.pkgJsonCache.set(path, result);
+    this._pkgJsonCache.set(path, result);
     return result;
   }
 
