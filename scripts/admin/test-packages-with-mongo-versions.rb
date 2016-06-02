@@ -16,11 +16,13 @@ mongo_port = "12345"
 
 dirname = File.dirname(__FILE__)
 path_to_test_in_console = File.realpath File.join dirname, "..", "..", "packages", "test-in-console", "run.sh"
-path_to_output = File.realpath File.join dirname, "..", "..", "mongo-test-output"
+path_to_output = File.join dirname, "..", "..", "mongo-test-output"
 
-unless Dir[path_to_output]
+unless Dir[path_to_output] != []
   Dir.mkdir path_to_output
 end
+
+path_to_output = File.realpath path_to_output
 
 puts "Putting output in: #{path_to_output}/"
 
