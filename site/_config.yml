@@ -193,3 +193,4 @@ redirects:
   '/writing-packages.html#types-of-build-plugins': build-tool.html#types-of-build-plugins
   '/writing-packages.html#writing-build-plugins': build-tool.html#writing-build-plugins
   '/writing-packages.html#caching-build-plugins': build-tool.html#caching-build-plugins
+  '/testing.html#simple-unit-test': testing.html#simple-blaze-unit-test
