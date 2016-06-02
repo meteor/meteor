@@ -776,8 +776,15 @@ export class PackageSourceBatch {
 
       map.forEach((info, name) => {
         if (! name) return;
+
+        let mainModule = _.find(info.files, file => file.mainModule);
+        mainModule = mainModule ?
+          `meteor/${name}/${mainModule.targetPath}` : false;
+
         meteorPackageInstalls.push(
-          "install(" + JSON.stringify(name) + ");\n"
+          "install(" + JSON.stringify(name) +
+            (mainModule ? ", " + JSON.stringify(mainModule) : '') +
+          ");\n"
         );
       });
 
