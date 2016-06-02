@@ -40,7 +40,7 @@
     "convert-source-map": "~1.2.0",
     "lodash": "~4.13.1",
     "meteor-babel-helpers": "0.0.3",
-    "reify": "~0.1.12"
+    "reify": "~0.1.13"
   },
   "devDependencies": {
     "fibers": "~1.0.10",
