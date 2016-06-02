@@ -12,6 +12,7 @@
 * Added support for `$eq` to Minimongo: https://github.com/meteor/meteor/pull/4235
 * Insert a `Date` header into emails by default: https://github.com/meteor/meteor/pull/6916/files
 * `meteor test` now supports setting the bind address using `--port IP:PORT` the same as `meteor run` [PR #6964](https://github.com/meteor/meteor/pull/6964) [Issue #6961](https://github.com/meteor/meteor/issues/6961)
+* `Meteor.apply` now takes a `noRetry` option to opt-out of automatically retrying non-idempotent methods on connection blips: [PR #6180](https://github.com/meteor/meteor/pull/6180)
 
 ## v1.3.2.3
 
