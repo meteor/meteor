@@ -1357,7 +1357,8 @@ function wrapFsFunc(fsFuncName, pathArgIndices, options) {
       // may perform 1,000s or 10,000s of stats each under certain
       // conditions, so we get a nice performance boost from making
       // these calls sync.
-      const isQuickie = (fsFuncName === 'stat');
+      const isQuickie = (fsFuncName === 'stat' ||
+                         fsFuncName === 'rename');
 
       if (canYield && shouldBeSync && !isQuickie) {
         const promise = new Promise((resolve, reject) => {
@@ -1439,18 +1440,7 @@ wrapFsFunc("readFile", [0], {
 });
 wrapFsFunc("stat", [0]);
 wrapFsFunc("lstat", [0]);
-
-files.rename =
-files.renameSync = Profile("files.rename", function (source, target, callback) {
-  if (typeof callback === "function") {
-    throw new Error("Passing a callback to files.rename is no longer supported");
-  }
-
-  return fs.renameSync(
-    files.convertToOSPath(source),
-    files.convertToOSPath(target)
-  );
-});
+wrapFsFunc("rename", [0, 1]);
 
 // The fs.exists method is deprecated in Node v4:
 // https://nodejs.org/api/fs.html#fs_fs_exists_path_callback
