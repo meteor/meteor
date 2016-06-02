@@ -159,6 +159,7 @@ var authedRpc = function (options) {
     qs: options.qs,
     printDeployURL: options.printDeployURL
   });
+  delete rpcOptions.printDeployURL;
 
   if (infoResult.statusCode === 401 && rpcOptions.promptIfAuthFails) {
     // Our authentication didn't validate, so prompt the user to log in
@@ -838,7 +839,7 @@ function getDeployURL(site) {
     return Promise.resolve(addScheme(process.env.DEPLOY_HOSTNAME));
   }
 
-  const defaultURL = "https://galaxy.meteor.com";
+  const defaultURL = "https://us-east-1.galaxy-deploy.meteor.com";
 
   // No site? Just use the default.
   if (!site) {
