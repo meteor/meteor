@@ -8,7 +8,7 @@ var linker = require('./linker.js');
 var util = require('util');
 var _ = require('underscore');
 var Profile = require('../tool-env/profile.js').Profile;
-import {sha1} from  '../fs/watch.js';
+import {sha1, readAndWatchFile} from  '../fs/watch.js';
 import LRU from 'lru-cache';
 import Fiber from 'fibers';
 import {sourceMapLength} from '../utils/utils.js';
@@ -203,6 +203,14 @@ class InputFile extends buildPluginModule.InputFile {
     // code and we don't want users to be accessing anything that we don't
     // document.
     this._resourceSlot = resourceSlot;
+
+    // Map from control file names (e.g. package.json, .babelrc) to
+    // absolute paths, or null to indicate absence.
+    this._controlFileCache = Object.create(null);
+
+    // Map from imported module identifier strings (possibly relative) to
+    // fully require.resolve'd module identifiers.
+    this._resolveCache = Object.create(null);
   }
 
   getContentsAsBuffer() {
@@ -215,6 +223,27 @@ class InputFile extends buildPluginModule.InputFile {
     return self._resourceSlot.packageSourceBatch.unibuild.pkg.name;
   }
 
+  isPackageFile() {
+    return !! this.getPackageName();
+  }
+
+  isApplicationFile() {
+    return ! this.getPackageName();
+  }
+
+  getSourceRoot() {
+    const sourceRoot = this._resourceSlot.packageSourceBatch.sourceRoot;
+
+    if (! _.isString(sourceRoot)) {
+      const name = this.getPackageName();
+      throw new Error(
+        "Unknown source root for " + (
+          name ? "package " + name : "app"));
+    }
+
+    return sourceRoot;
+  }
+
   getPathInPackage() {
     var self = this;
     return self._resourceSlot.inputResource.path;
@@ -225,6 +254,109 @@ class InputFile extends buildPluginModule.InputFile {
     // XXX fileOptions only exists on some resources (of type "source"). The JS
     // resources might not have this property.
     return self._resourceSlot.inputResource.fileOptions || {};
+  }
+
+  readAndWatchFile(path) {
+    const sourceRoot = this.getSourceRoot();
+    const relPath = files.pathRelative(sourceRoot, path);
+    if (relPath.startsWith("..")) {
+      throw new Error(
+        `Attempting to read file outside ${
+          this.getPackageName() || "the app"}: ${path}`
+      );
+    }
+    const sourceBatch = this._resourceSlot.packageSourceBatch;
+    return readAndWatchFile(sourceBatch.unibuild.watchSet, path);
+  }
+
+  // Search ancestor directories for control files (e.g. package.json,
+  // .babelrc), and return the absolute path of the first one found, or
+  // null if the search failed.
+  findControlFile(basename) {
+    let absPath = this._controlFileCache[basename];
+    if (typeof absPath === "string") {
+      return absPath;
+    }
+
+    const sourceRoot = this._resourceSlot.packageSourceBatch.sourceRoot;
+    if (! _.isString(sourceRoot)) {
+      return this._controlFileCache[basename] = null;
+    }
+
+    let dir = files.pathDirname(this.getPathInPackage());
+    while (true) {
+      absPath = files.pathJoin(sourceRoot, dir, basename);
+
+      const stat = files.statOrNull(absPath);
+      if (stat && stat.isFile()) {
+        return this._controlFileCache[basename] = absPath;
+      }
+
+      if (files.pathBasename(dir) === "node_modules") {
+        // The search for control files should not escape node_modules.
+        return this._controlFileCache[basename] = null;
+      }
+
+      let parentDir = files.pathDirname(dir);
+      if (parentDir === dir) break;
+      dir = parentDir;
+    }
+
+    return this._controlFileCache[basename] = null;
+  }
+
+  resolve(id) {
+    if (_.has(this._resolveCache, id)) {
+      return this._resolveCache[id];
+    }
+
+    const sourceBatch = this._resourceSlot.packageSourceBatch;
+    const parentPath = files.convertToOSPath(files.pathJoin(
+      sourceBatch.sourceRoot,
+      this.getPathInPackage()
+    ));
+    // Absolute CommonJS module identifier of the parent module.
+    const parentId = files.convertToPosixPath(parentPath, true);
+    const Module = module.constructor;
+    const parent = new Module(parentId);
+
+    // We only need to populate parent.paths if id is top-level, meaning
+    // that it could potentially be found in a node_modules directory.
+    const isTopLevelId = "./".indexOf(id.charAt(0)) < 0;
+    if (isTopLevelId) {
+      const nmds = sourceBatch.unibuild.nodeModulesDirectories;
+      const osPaths = Object.create(null);
+      const nonLocalPaths = [];
+
+      _.each(nmds, (nmd, path) => {
+        path = files.convertToOSPath(path.replace(/\/$/g, ""));
+        osPaths[path] = true;
+        if (! nmd.local) {
+          nonLocalPaths.push(path);
+        }
+      });
+
+      parent.paths = [];
+
+      // Add any local node_modules directory paths that are both
+      // ancestors of this file and included in this PackageSourceBatch.
+      Module._nodeModulePaths(parentPath).forEach(path => {
+        if (_.has(osPaths, path)) {
+          parent.paths.push(path);
+        }
+      });
+
+      // Now add any non-local node_modules directories that are used by
+      // this PackageSourceBatch.
+      parent.paths.push(...nonLocalPaths);
+    }
+
+    return this._resolveCache[id] =
+      Module._resolveFilename(id, parent);
+  }
+
+  require(id) {
+    return require(this.resolve(id));
   }
 
   getArch() {
@@ -495,10 +627,17 @@ class ResourceSlot {
       // the beginning of the <head>. If the corresponding module ever
       // gets imported, its module.exports object should be an empty stub,
       // rather than a <style> node added dynamically to the <head>.
-      self.addJavaScript({
-        ...options,
-        data: "// These styles have already been applied to the document.\n",
-        lazy: true
+      self.jsOutputResources.push({
+        ...resource,
+        type: "js",
+        data: new Buffer(
+          "// These styles have already been applied to the document.\n",
+          "utf8"),
+        // If a compiler plugin calls addJavaScript with the same
+        // sourcePath, that code should take precedence over this empty
+        // stub, so this property marks the resource as disposable.
+        emtpyStub: true,
+        lazy: true,
       });
 
       resource.type = "css";
@@ -702,7 +841,11 @@ export class PackageSourceBatch {
 
     self.useMeteorInstall =
       _.isString(self.sourceRoot) &&
-      self.processor.isopackCache.uses(self.unibuild.pkg, "modules");
+      self.processor.isopackCache.uses(
+        self.unibuild.pkg,
+        "modules",
+        self.unibuild.arch
+      );
   }
 
   addImportExtension(extension) {

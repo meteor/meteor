@@ -333,7 +333,13 @@ export class NodeModulesDirectory {
   // objects returned by the toJSON method above. Note that this works
   // even if the node_modules parameter is a string, though that will only
   // be the case for bundles built before Meteor 1.3.
-  static readDirsFromJSON(node_modules, callerInfo) {
+  static readDirsFromJSON(node_modules, {
+    rebuildBinaries = false,
+    // Options consumed by readDirsFromJSON are listed above. Any other
+    // options will be passed on to NodeModulesDirectory constructor via
+    // this callerInfo object:
+    ...callerInfo,
+  }) {
     assert.strictEqual(typeof callerInfo.sourceRoot, "string");
 
     const nodeModulesDirectories = Object.create(null);
@@ -395,6 +401,12 @@ export class NodeModulesDirectory {
       add({ local: false }, node_modules);
     } else if (node_modules) {
       _.each(node_modules, add);
+    }
+
+    if (rebuildBinaries) {
+      _.each(nodeModulesDirectories, (info, path) => {
+        meteorNpm.rebuildIfNonPortable(path);
+      });
     }
 
     return nodeModulesDirectories;
@@ -1495,7 +1507,8 @@ class JsImage {
       }
     };
 
-    const nodeModulesDirsByPackageName = Object.create(null);
+    const nodeModulesDirsByPackageName = new Map;
+
     _.each(self.jsToLoad, item => {
       _.each(item.nodeModulesDirectories, nmd => {
         if (nmd.local) {
@@ -1504,15 +1517,15 @@ class JsImage {
           return;
         }
 
-        const name = nmd.packageName;
-        if (! name) {
-          return;
+        let name = nmd.packageName;
+        if (name) {
+          name = colonConverter.convert(name);
         }
 
-        if (_.has(nodeModulesDirsByPackageName, name)) {
-          nodeModulesDirsByPackageName[name].push(nmd.sourcePath);
+        if (nodeModulesDirsByPackageName.has(name)) {
+          nodeModulesDirsByPackageName.get(name).push(nmd.sourcePath);
         } else {
-          nodeModulesDirsByPackageName[name] = [nmd.sourcePath];
+          nodeModulesDirsByPackageName.set(name, [nmd.sourcePath]);
         }
       });
     });
@@ -1642,29 +1655,51 @@ class JsImage {
       }
 
       const parts = id.split("/");
+      let start = 0;
+      let dirs;
 
-      if (parts[0] === "") parts.shift();
-      if (parts[0] === "node_modules" &&
-          parts[1] === "meteor") {
-        const packageName = parts[2];
-        const dirs = nodeModulesDirsByPackageName[packageName];
+      if (parts[start] === "") ++start;
+      if (parts[start] === "node_modules" &&
+          parts[start + 1] === "meteor" &&
+          parts[start + 3] === "node_modules") {
+        const packageName = colonConverter.convert(parts[start + 2]);
+        dirs = nodeModulesDirsByPackageName.get(packageName);
+        start += 4;
 
-        if (dirs && parts[3] === "node_modules") {
-          let fullPath;
+      } else {
+        dirs = [];
 
-          _.some(dirs, dir => {
-            const osPath = files.convertToOSPath(
-              files.pathJoin(dir, parts.slice(4).join("/"))
-            );
+        const appDirs = nodeModulesDirsByPackageName.get(null);
+        if (appDirs) {
+          dirs.push(...appDirs);
+        }
 
-            if (files.exists(osPath)) {
-              return fullPath = osPath;
-            }
-          });
+        // We usually move all node_modules from the app into the source
+        // batch for the "modules" package, so we need to consider those
+        // directories in addition to appDirs.
+        const modulesDirs = nodeModulesDirsByPackageName.get("modules");
+        if (modulesDirs) {
+          dirs.push(...modulesDirs);
+        }
 
-          if (fullPath) {
-            return resolveCache[id] = fullPath;
+        start += 1;
+      }
+
+      if (dirs && dirs.length > 0) {
+        const relativePath = parts.slice(start).join("/");
+        let fullPath;
+
+        _.some(dirs, dir => {
+          const osPath = files.convertToOSPath(
+            files.pathJoin(dir, relativePath));
+
+          if (files.exists(osPath)) {
+            return fullPath = osPath;
           }
+        });
+
+        if (fullPath) {
+          return resolveCache[id] = fullPath;
         }
       }
 
@@ -1847,12 +1882,36 @@ class JsImage {
       }
 
       if (nmd.sourcePath !== nmd.preferredBundlePath) {
-        builder.copyDirectory({
+        var copyOptions = {
           from: nmd.sourcePath,
           to: nmd.preferredBundlePath,
           npmDiscards: nmd.npmDiscards,
           symlink: (options.includeNodeModules === 'symlink')
-        });
+        };
+
+        if (nmd.local) {
+          var prodPackageNames =
+            meteorNpm.getProdPackageNames(nmd.sourcePath);
+
+          // When copying a local node_modules directory, ignore any npm
+          // package directories not in the list of production package
+          // names, as determined by meteorNpm.getProdPackageNames. Note
+          // that we always copy a package directory if any package of the
+          // same name is listed as a production dependency anywhere in
+          // nmd.sourcePath. In other words, if you list a package in your
+          // "devDependencies", but it also gets listed in some other
+          // package's "dependencies", then every copy of that package
+          // will be copied to the destination directory. A little bit of
+          // overcopying vastly simplifies the job of directoryFilter.
+          copyOptions.directoryFilter = function (dir) {
+            var base = files.pathBasename(dir);
+            var parentBase = files.pathBasename(files.pathDirname(dir));
+            return parentBase !== "node_modules" ||
+              _.has(prodPackageNames, base);
+          };
+        }
+
+        builder.copyDirectory(copyOptions);
       }
     });
 

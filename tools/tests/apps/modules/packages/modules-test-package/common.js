@@ -1,5 +1,5 @@
 import assert from "assert";
-import "regenerator/runtime";
+import "regenerator-runtime/runtime";
 export const ModulesTestPackage = "loaded";
 
 export function checkPackageVars() {

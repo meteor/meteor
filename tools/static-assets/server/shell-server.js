@@ -11,9 +11,8 @@ var EXITING_MESSAGE =
   // Exported so that ./client.js can know what to expect.
   exports.EXITING_MESSAGE = "Shell exiting...";
 
-var Promise = require("meteor-promise");
-// Only require("fibers") if somehow Promise.Fiber is not yet defined.
-Promise.Fiber = Promise.Fiber || require("fibers");
+var Promise = require("promise/lib/es6-extensions");
+require("meteor-promise").makeCompatible(Promise, require("fibers"));
 
 // Invoked by the server process to listen for incoming connections from
 // shell clients. Each connection gets its own REPL instance.
@@ -32,7 +31,7 @@ exports.listen = function listen(shellDir) {
       hooks.push(callback);
     } else {
       // As a fallback, just call the callback asynchronously.
-      process.nextTick(callback);
+      setImmediate(callback);
     }
   }
 };
@@ -256,20 +255,35 @@ Sp.startREPL = function startREPL(options) {
     configurable: true
   });
 
-  // Use the same `require` function and `module` object visible to the
-  // shell.js module.
-  repl.context.require = Package.modules
-    ? Package.modules.meteorInstall()
-    : require;
+  if (Package.modules) {
+    // Use the same `require` function and `module` object visible to the
+    // application.
+    var toBeInstalled = {};
+    var shellModuleName = "meteor-shell-" +
+      Math.random().toString(36).slice(2) + ".js";
 
-  repl.context.module = module;
+    toBeInstalled[shellModuleName] = function (require, exports, module) {
+      repl.context.module = module;
+      repl.context.require = require;
+    };
+
+    // This populates repl.context.{module,require} by evaluating the
+    // module defined above.
+    Package.modules.meteorInstall(toBeInstalled)("./" + shellModuleName);
+  }
+
   repl.context.repl = repl;
 
   // Some improvements to the existing help messages.
-  repl.commands[".break"].help =
-    "Terminate current command input and display new prompt";
-  repl.commands[".exit"].help = "Disconnect from server and leave shell";
-  repl.commands[".help"].help = "Show this help information";
+  function addHelp(cmd, helpText) {
+    var info = repl.commands[cmd] || repl.commands["." + cmd];
+    if (info) {
+      info.help = helpText;
+    }
+  }
+  addHelp("break", "Terminate current command input and display new prompt");
+  addHelp("exit", "Disconnect from server and leave shell");
+  addHelp("help", "Show this help information");
 
   // When the REPL exits, signal the attached client to exit by sending it
   // the special EXITING_MESSAGE.

@@ -1,9 +1,9 @@
 {
   "dependencies": {
     "coffee-script": {
-      "version": "1.9.2",
-      "resolved": "https://registry.npmjs.org/coffee-script/-/coffee-script-1.9.2.tgz",
-      "from": "https://registry.npmjs.org/coffee-script/-/coffee-script-1.9.2.tgz"
+      "version": "1.10.0",
+      "resolved": "https://registry.npmjs.org/coffee-script/-/coffee-script-1.10.0.tgz",
+      "from": "https://registry.npmjs.org/coffee-script/-/coffee-script-1.10.0.tgz"
     },
     "source-map": {
       "version": "0.5.3",

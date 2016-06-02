@@ -5,6 +5,10 @@ export SELF_TEST_EXCLUDE="^can't publish package with colons|^old cli tests|^log
 # Don't print as many progress indicators
 export EMACS=t
 
+# Since PhantomJS has been removed from dev_bundle/lib/node_modules
+# (#6905), but self-test still needs it, install it now.
+./meteor npm install -g phantomjs-prebuilt
+
 # run different jobs based on CicleCI parallel container index
 case $CIRCLE_NODE_INDEX in
 0)

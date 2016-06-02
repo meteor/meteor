@@ -12,21 +12,18 @@ var win32Extensions = {
 var devBundleBinCommand = process.argv[2];
 
 if (win32Extensions.hasOwnProperty(devBundleBinCommand)) {
+  var helpers = require("./dev-bundle-bin-helpers.js");
+
   if (process.platform === "win32") {
     devBundleBinCommand += win32Extensions[devBundleBinCommand];
   }
 
-  var path = require("path");
-  var binDir = path.resolve(__dirname, "..", "..", "dev_bundle", "bin");
-  var cmd = path.join(binDir, devBundleBinCommand);
+  var cmd = helpers.getCommandPath(devBundleBinCommand);
   var args = process.argv.slice(3);
 
   exports.process = require("child_process").spawn(cmd, args, {
     stdio: "inherit",
-    env: Object.create(process.env, {
-      // When npm looks for node, it must find dev_bundle/bin/node.
-      PATH: { value: binDir + ":" + process.env.PATH }
-    })
+    env: helpers.getEnv()
   });
 
   require("./flush-buffers-on-exit-in-windows.js");
