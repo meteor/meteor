@@ -209,7 +209,7 @@ The section above talked about JavaScript code in general - you can easily apply
 
 <h3 id="collections">Collections</h3>
 
-Collections should be named as a plural noun, in PascalCase. The name of the collection in the database (the first argument to the collection constructor) should be the same as the name of the JavaScript symbol.
+Collections should be named as a plural noun, in [PascalCase](https://en.wikipedia.org/wiki/PascalCase). The name of the collection in the database (the first argument to the collection constructor) should be the same as the name of the JavaScript symbol.
 
 ```js
 // Defining a collection
