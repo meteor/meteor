@@ -1,6 +1,7 @@
 import {
   isString,
   isFunction,
+  each,
   has,
 } from "underscore";
 
@@ -313,3 +314,12 @@ export default class Resolver {
     return null;
   }
 };
+
+import { Profile } from "../tool-env/profile.js";
+each(Resolver.prototype, (value, key) => {
+  if (key === "constructor") return;
+  Resolver.prototype[key] = Profile(
+    `Resolver#${key}`,
+    Resolver.prototype[key]
+  );
+});
