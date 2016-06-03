@@ -164,7 +164,7 @@ Accounts.emailTemplates.enrollAccount.text = function (user, url) {
      + url;
 };
 Accounts.emailTemplates.resetPassword.from = function () {
-   // Overrides value set in Accounts.emailTemplates.from for this template
+   // Overrides value set in Accounts.emailTemplates.from when resetting passwords
    return "AwesomeSite Password Reset <no-reply@example.com>";
 };
 ```
