@@ -28,7 +28,7 @@ steps.initialized = function () {
     console.log("No master in initialized?");
     process.exit(1);
   }
-  originalMasterName = master.name;
+  originalMasterName = master.primary;
   console.log("Master starts as", originalMasterName);
 };
 
@@ -54,11 +54,11 @@ steps.steppedDown = function () {
     console.log("No master in steppedDown?");
     process.exit(1);
   }
-  if (master.name === originalMasterName) {
+  if (master.primary === originalMasterName) {
     console.log("Master didn't change?");
     process.exit(1);
   }
-  console.log("Master ended as", master.name);
+  console.log("Master ended as", master.primary);
   console.log("SUCCESS");
   process.exit(0);
 };
