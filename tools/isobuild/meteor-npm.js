@@ -664,7 +664,7 @@ var installFromShrinkwrap = function (dir) {
 // dependencies. `npm install` times out after more than a minute.
 var ensureConnected = function () {
   try {
-    httpHelpers.getUrl("http://registry.npmjs.org");
+    httpHelpers.getUrl(process.env.NPM_CONFIG_REGISTRY || "http://registry.npmjs.org");
   } catch (e) {
     buildmessage.error("Can't install npm dependencies. " +
                        "Are you connected to the internet?");
