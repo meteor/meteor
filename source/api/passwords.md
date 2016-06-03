@@ -163,4 +163,8 @@ Accounts.emailTemplates.enrollAccount.text = function (user, url) {
      + " To activate your account, simply click the link below:\n\n"
      + url;
 };
+Accounts.emailTemplates.resetPassword.from = function () {
+   // Overrides value set in Accounts.emailTemplates.from for this template
+   return "AwesomeSite Password Reset <no-reply@example.com>";
+};
 ```
