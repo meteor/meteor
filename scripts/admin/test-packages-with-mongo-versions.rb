@@ -27,6 +27,8 @@ path_to_output = File.realpath path_to_output
 
 puts "Putting output in: #{path_to_output}/"
 
+test_env = "TEST_PACKAGES_EXCLUDE=\"less\""
+
 ["3.2.6", "3.0.5", "2.6.10", "2.4.14"].each do |mongo_version|
   puts "Installing and testing with Mongo #{mongo_version}..."
 
@@ -46,7 +48,7 @@ puts "Putting output in: #{path_to_output}/"
 
       puts "Running test-in-console from: #{path_to_test_in_console}"
       puts "Passing #{mongo_env}"
-      `#{mongo_env} bash #{path_to_test_in_console} > #{path_to_output}/#{mongo_version}.txt`
+      `#{test_env} #{mongo_env} bash #{path_to_test_in_console} > #{path_to_output}/#{mongo_version}.txt`
 
       # Kill Mongo
       Process.kill "TERM", pid
