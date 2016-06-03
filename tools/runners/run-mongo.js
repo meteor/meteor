@@ -622,22 +622,10 @@ var launchMongo = function (options) {
 
       // XXX timeout eventually?
       while (!stopped) {
-        var status;
-        try{
-          status = yieldingMethod(db.admin(), 'command',
+        var status = yieldingMethod(db.admin(), 'command',
                                       {replSetGetStatus: 1});
-        } catch (e) {
-          // See https://docs.mongodb.com/manual/reference/replica-states/
-          // for information on various states
-          if (e.myState === 6) {
-            // UNKNOWN(6) some of the other replicas are in an UNKNOWN
-            // state from this replica perspective.
-            utils.sleepMs(20);
-            continue;
-          } else {
-            throw e;
-          }
-        }
+        // See https://docs.mongodb.com/manual/reference/replica-states/
+        // for information on various states
 
         // Are any of the members starting up or recovering?
         if (_.any(status.members, function (member) {
