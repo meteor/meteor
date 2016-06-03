@@ -1,4 +1,7 @@
-import sourcemap from 'source-map';
+import {
+  SourceMapConsumer,
+  SourceMapGenerator,
+} from 'source-map';
 import coffee from 'coffee-script';
 import { BabelCompiler } from 'meteor/babel-compiler';
 
@@ -69,20 +72,30 @@ export class CoffeeCompiler extends CachingCompiler {
       return null;
     }
 
+    let sourceMap = JSON.parse(output.v3SourceMap);
+
     if (source.indexOf('`') !== -1) {
       // If source contains backticks, pass the coffee output through babel-compiler
-      const doubleRoastedCoffee = this.babelCompiler.processOneFileForTarget(inputFile, output.js);
-      if (doubleRoastedCoffee != null && doubleRoastedCoffee.data != null) {
+      const doubleRoastedCoffee =
+        this.babelCompiler.processOneFileForTarget(inputFile, output.js);
+
+      if (doubleRoastedCoffee != null &&
+          doubleRoastedCoffee.data != null) {
         output.js = doubleRoastedCoffee.data;
+
+        // Combine the original CoffeeScript source map with the one
+        // produced by this.babelCompiler.processOneFileForTarget.
+        const smg = new SourceMapGenerator(
+          new SourceMapConsumer(doubleRoastedCoffee.sourceMap));
+        smg.applySourceMap(new SourceMapConsumer(sourceMap));
+        sourceMap = smg.toJSON();
       }
     }
 
-    const stripped = stripExportedVars(
+    return addSharedHeader(stripExportedVars(
       output.js,
-      inputFile.getDeclaredExports().map(e => e.name));
-    const sourceWithMap = addSharedHeader(
-      stripped, JSON.parse(output.v3SourceMap));
-    return sourceWithMap;
+      inputFile.getDeclaredExports().map(e => e.name)
+    ), sourceMap);
   }
 
   addCompileResult(inputFile, sourceWithMap) {
