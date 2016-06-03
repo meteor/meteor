@@ -23,12 +23,12 @@ var originalMasterName = null;
 steps.initialized = function () {
   // Great, we got the first thing. Let's get another thing.
   C.insert({step: 'next'});
-  var master = C.rawDatabase().serverConfig._state.master;
+  var master = C.rawDatabase().serverConfig.isMasterDoc;
   if (!master) {
     console.log("No master in initialized?");
     process.exit(1);
   }
-  originalMasterName = master.name;
+  originalMasterName = master.primary;
   console.log("Master starts as", originalMasterName);
 };
 
@@ -49,16 +49,16 @@ steps.next = function () {
 
 steps.steppedDown = function () {
   console.log("Write succeeded after stepdown.");
-  var master = C.rawDatabase().serverConfig._state.master;
+  var master = C.rawDatabase().serverConfig.isMasterDoc;
   if (!master) {
     console.log("No master in steppedDown?");
     process.exit(1);
   }
-  if (master.name === originalMasterName) {
+  if (master.primary === originalMasterName) {
     console.log("Master didn't change?");
     process.exit(1);
   }
-  console.log("Master ended as", master.name);
+  console.log("Master ended as", master.primary);
   console.log("SUCCESS");
   process.exit(0);
 };

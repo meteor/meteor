@@ -63,6 +63,14 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
 
       // Fill collection with lots of irrelevant objects (red cats) and some
       // relevant ones (blue dogs).
+
+      // After updating to mongo 3.2 with the 2.1.18 driver it was no longer
+      // possible to make this test fail with TOO_FAR_BEHIND = 2000.
+      // The documents waiting to be processed would hardly go beyond 1000
+      // using mongo 3.2 with WiredTiger
+      MongoInternals.defaultRemoteCollectionDriver().mongo
+      ._oplogHandle._defineTooFarBehind(800);
+
       self.IRRELEVANT_SIZE = 15000;
       self.RELEVANT_SIZE = 10;
       var docs = [];
@@ -139,6 +147,10 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
     function (test, expect) {
       var self = this;
       test.isTrue(self.skipped);
+
+      //This gets the TOO_FAR_BEHIND back to its initial value
+      MongoInternals.defaultRemoteCollectionDriver().mongo
+      ._oplogHandle._resetTooFarBehind();
 
       self.skipHandle.stop();
       self.subHandle.stop();
