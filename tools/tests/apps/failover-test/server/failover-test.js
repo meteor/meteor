@@ -23,7 +23,7 @@ var originalMasterName = null;
 steps.initialized = function () {
   // Great, we got the first thing. Let's get another thing.
   C.insert({step: 'next'});
-  var master = C.rawDatabase().serverConfig._state.master;
+  var master = C.rawDatabase().serverConfig.isMasterDoc;
   if (!master) {
     console.log("No master in initialized?");
     process.exit(1);
@@ -49,7 +49,7 @@ steps.next = function () {
 
 steps.steppedDown = function () {
   console.log("Write succeeded after stepdown.");
-  var master = C.rawDatabase().serverConfig._state.master;
+  var master = C.rawDatabase().serverConfig.isMasterDoc;
   if (!master) {
     console.log("No master in steppedDown?");
     process.exit(1);
