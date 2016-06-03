@@ -622,8 +622,9 @@ var launchMongo = function (options) {
 
       // XXX timeout eventually?
       while (!stopped) {
-        var status = yieldingMethod(db.admin(), 'command',
-                                      {replSetGetStatus: 1});
+        var status = yieldingMethod(
+          db.admin(), 'command', {replSetGetStatus: 1});
+
         // See https://docs.mongodb.com/manual/reference/replica-states/
         // for information on various states
 
