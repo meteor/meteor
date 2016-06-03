@@ -607,11 +607,11 @@ var launchMongo = function (options) {
         });
       }
 
-      try{
+      try {
         var initiateResult = yieldingMethod(
           db.admin(), 'command', {replSetInitiate: configuration});
       } catch (e){
-        if(e.message !== 'already initialized') {
+        if (e.message !== 'already initialized') {
           throw Error("rs.initiate error: " + e.message);
         }
       }
@@ -627,22 +627,16 @@ var launchMongo = function (options) {
           status = yieldingMethod(db.admin(), 'command',
                                       {replSetGetStatus: 1});
         } catch (e) {
-          // Some of the expected results, come as errors.
-          status = e;
-        }
-
-        // See https://docs.mongodb.com/manual/reference/replica-states/
-        // for information on various states
-        if (!status.ok) {
-          // UNKNOWN(6) some of the other replicas are in an UNKNOWN state from
-          // this replica perspective.
-          if (status.myState === 6) {
+          // See https://docs.mongodb.com/manual/reference/replica-states/
+          // for information on various states
+          if (e.myState === 6) {
+            // UNKNOWN(6) some of the other replicas are in an UNKNOWN
+            // state from this replica perspective.
             utils.sleepMs(20);
             continue;
+          } else {
+            throw e;
           }
-
-          // It is an error, but not one we chose to ignore;
-          throw status;
         }
 
         // Are any of the members starting up or recovering?
