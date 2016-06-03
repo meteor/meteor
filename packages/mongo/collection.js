@@ -276,7 +276,7 @@ _.extend(Mongo.Collection.prototype, {
     } else {
       check(args[1], Match.Optional(Match.ObjectIncluding({
         fields: Match.Optional(Match.OneOf(Object, undefined)),
-        sort: Match.Optional(Match.OneOf(Object, Array, undefined)),
+        sort: Match.Optional(Match.OneOf(Object, Array, Function, undefined)),
         limit: Match.Optional(Match.OneOf(Number, undefined)),
         skip: Match.Optional(Match.OneOf(Number, undefined))
      })));
