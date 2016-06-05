@@ -6,7 +6,9 @@
 
 * `npm` has been upgraded from 2.14.22 to 2.15.1.
 
-* The `fibers` package has been upgraded to 1.0.10.
+* The `fibers` package has been upgraded to 1.0.13.
+
+* The `meteor-babel` package has been upgraded to 0.10.9.
 
 * The `meteor-promise` package has been upgraded to 0.7.1, a breaking
   change for code that uses `Promise.denodeify`, `Promise.nodeify`,
