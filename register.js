@@ -22,6 +22,10 @@ exports.setSourceMapRootPath = function (smrp) {
 
 exports.allowDirectory = function (dir) {
   config.allowedDirectories[dir] = true;
+  // Sometimes the filename passed to the require.extensions handler is a
+  // real path, and thus may not appear to be contained by an allowed
+  // directory, even though it should be.
+  config.allowedDirectories[fs.realpathSync(dir)] = true;
   return exports;
 };
 
