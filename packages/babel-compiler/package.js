@@ -10,7 +10,7 @@ Package.describe({
 });
 
 Npm.depends({
-  'meteor-babel': '0.10.7',
+  'meteor-babel': '0.10.9',
   'babel-plugin-transform-es2015-modules-commonjs': "6.8.0"
 });
 
