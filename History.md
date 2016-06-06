@@ -1,5 +1,21 @@
 ## v.NEXT
 
+* Meteor has been upgraded to support Mongo 3.2 by default (the bundled version
+  used by `meteor run` has been upgraded). Internally it now uses the 2.1.18
+  version of the `mongodb` npm driver, and has been tested against at Mongo 3.2
+  server. [Issue #6957](https://github.com/meteor/meteor/issues/6957)
+
+  Mongo 3.2 defaults to the new WiredTiger storage engine. You can update your
+  database following the instructions here:
+  https://docs.mongodb.com/v3.0/release-notes/3.0-upgrade/.
+  In development, you can also just use `meteor reset` to remove your old
+  database, and Meteor will create a new WiredTiger database for you. The Mongo
+  driver will continue to work with the old MMAPv1 storage engine however.
+
+  The new version of the Mongo driver has been tested with MongoDB versions from
+  2.6 up. Mongo 2.4 has now reached end-of-life
+  (https://www.mongodb.com/support-policy), and is no longer supported.
+
 ## v1.3.3
 
 * Node has been upgraded from 0.10.43 to 0.10.45.
@@ -20,7 +36,7 @@
   making it much simpler to use Meteor with different versions of Node.
   5dc51d39ecc9e8e342884f3b4f8a489f734b4352
 
-* `*.min.js` files are no longer minified during the build process. 
+* `*.min.js` files are no longer minified during the build process.
   [PR #6986](https://github.com/meteor/meteor/pull/6986) [Issue #5363](https://github.com/meteor/meteor/issues/5363)
 
 * You can now pick where the `.meteor/local` directory is created by setting the `METEOR_LOCAL_DIR` environment variable. This lets you run multiple instances of the same Meteor app.
@@ -392,7 +408,7 @@
 
 ### Check
 
-* Introduced new matcher `Match.Maybe(type)` which will also match (permit) `null` in addition to `undefined`.  This is a suggested replacement (where appropriate) for `Match.Optional` which did not permit `null`.  This prevents the need to use `Match.OneOf(null, undefined, type)`. #6220 
+* Introduced new matcher `Match.Maybe(type)` which will also match (permit) `null` in addition to `undefined`.  This is a suggested replacement (where appropriate) for `Match.Optional` which did not permit `null`.  This prevents the need to use `Match.OneOf(null, undefined, type)`. #6220
 
 ### Testing
 
