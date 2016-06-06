@@ -269,30 +269,16 @@ files.statOrNull = function (path) {
   }
 };
 
-let rmTmpDir;
+// Like rm -r.
 files.rm_recursive = Profile("files.rm_recursive", function (p) {
-  const osPath = files.convertToOSPath(p);
-
-  if (osPath === rmTmpDir) {
-    // Special case: if we're attempting to delete the rmTmpDir, then the
-    // renaming trick won't work, and we should reset rmTmpDir to null.
-    rimraf.sync(osPath);
-    rmTmpDir = null;
-    return;
-  }
-
-  rmTmpDir = rmTmpDir || files.convertToOSPath(
-    files.mkdtemp("meteor-wastebin-"));
-
-  const basename = files.pathBasename(p) + "." + utils.randomToken();
-  const target = path.join(rmTmpDir, basename);
-
-  try {
-    fs.renameSync(osPath, target);
-  } catch (e) {
-    if (e.code !== "ENOENT") {
-      rimraf.sync(osPath);
-    }
+  if (Fiber.current && Fiber.yield && ! Fiber.yield.disallowed) {
+    new Promise((resolve, reject) => {
+      rimraf(files.convertToOSPath(p), err => {
+        err ? reject(err) : resolve();
+      });
+    }).await();
+  } else {
+    rimraf.sync(files.convertToOSPath(p));
   }
 });
 
