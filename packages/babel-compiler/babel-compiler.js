@@ -6,6 +6,7 @@
 BabelCompiler = function BabelCompiler(extraFeatures) {
   this.extraFeatures = extraFeatures;
   this._babelrcCache = null;
+  this._babelrcWarnings = Object.create(null);
 };
 
 var BCp = BabelCompiler.prototype;
@@ -218,6 +219,7 @@ BCp._inferHelper = function (
     return false;
   }
 
+  var compiler = this;
   var inferredPresets = [];
   var result;
 
@@ -228,6 +230,29 @@ BCp._inferHelper = function (
     }
 
     function req(id) {
+      try {
+        return reqMightThrow(id);
+      } catch (e) {
+        if (e.code !== "MODULE_NOT_FOUND") {
+          throw e;
+        }
+
+        if (! hasOwn.call(compiler._babelrcWarnings, id)) {
+          compiler._babelrcWarnings[id] = controlFilePath;
+
+          console.error(
+            "Warning: unable to resolve " +
+              JSON.stringify(id) +
+              " in " + listName +
+              " of " + controlFilePath
+          );
+        }
+
+        return null;
+      }
+    }
+
+    function reqMightThrow(id) {
       var isTopLevel = "./".indexOf(id.charAt(0)) < 0;
       var presetOrPlugin;
       var presetOrPluginMeta;
@@ -276,30 +301,34 @@ BCp._inferHelper = function (
       };
     }
 
+    var filtered = [];
+
     list.forEach(function (item, i) {
       if (typeof item === "string") {
         result = req(item);
+        if (! result) return;
         item = result.module;
         cacheDeps[result.name] = result.version;
       } else if (Array.isArray(item) &&
                  typeof item[0] === "string") {
         item = item.slice(); // defensive copy
         result = req(item[0]);
+        if (! result) return;
         item[0] = result.module;
         cacheDeps[result.name] = result.version;
       }
       // else, an object { presets: [], plugins: [] } from meteorBabel, whose
       // version is used for the cache hash internally.
 
-      list[i] = item;
+      filtered.push(item);
     });
 
     if (listName === "plugins") {
       // Turn any additional plugins into their own preset, so that they
       // can come before babel-preset-meteor.
-      inferredPresets.push({ plugins: list });
+      inferredPresets.push({ plugins: filtered });
     } else if (listName === "presets") {
-      inferredPresets.push.apply(inferredPresets, list);
+      inferredPresets.push.apply(inferredPresets, filtered);
     }
   }
 
