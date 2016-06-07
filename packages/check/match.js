@@ -138,12 +138,40 @@ var ObjectWithValues = function (pattern) {
   this.pattern = pattern;
 };
 
+var stringForErrorMessage = function (value, options) {
+  options = options || {};
+
+  if ( value === null ) return "null";
+
+  if ( options.onlyShowType ) {
+    return typeof value;
+  }
+
+  // Your average non-object things.  Saves from doing the try/catch below for.
+  if ( typeof value !== "object" ) {
+    return EJSON.stringify(value)
+  }
+
+  try {
+    // Find objects with circular references since EJSON doesn't support them yet (Issue #4778 + Unaccepted PR)
+    // If the native stringify is going to choke, EJSON.stringify is going to choke too.
+    JSON.stringify(value);
+  } catch (stringifyError) {
+    if ( stringifyError.name === "TypeError" ) {
+      return typeof value;
+    }
+  }
+
+  return EJSON.stringify(value);
+};
+
 var typeofChecks = [
   [String, "string"],
   [Number, "number"],
   [Boolean, "boolean"],
-  // While we don't allow undefined in EJSON, this is good for optional
+  // While we don't allow undefined/function in EJSON, this is good for optional
   // arguments with OneOf.
+  [Function, "function"],
   [undefined, "undefined"]
 ];
 
@@ -160,16 +188,18 @@ var testSubtree = function (value, pattern) {
       if (typeof value === typeofChecks[i][1])
         return false;
       return {
-        message: "Expected " + typeofChecks[i][1] + ", got " + (value === null ? "null" : typeof value),
+        message: "Expected " + typeofChecks[i][1] + ", got " + stringForErrorMessage(value, { onlyShowType: true }),
         path: ""
       };
     }
   }
+
   if (pattern === null) {
-    if (value === null)
+    if (value === null) {
       return false;
+    }
     return {
-      message: "Expected null, got " + EJSON.stringify(value),
+      message: "Expected null, got " + stringForErrorMessage(value),
       path: ""
     };
   }
@@ -179,7 +209,7 @@ var testSubtree = function (value, pattern) {
     if (value === pattern)
       return false;
     return {
-      message: "Expected " + pattern + ", got " + EJSON.stringify(value),
+      message: "Expected " + pattern + ", got " + stringForErrorMessage(value),
       path: ""
     };
   }
@@ -195,7 +225,7 @@ var testSubtree = function (value, pattern) {
     if (typeof value === "number" && (value | 0) === value)
       return false;
     return {
-      message: "Expected Integer, got " + (value instanceof Object ? EJSON.stringify(value) : value),
+      message: "Expected Integer, got " + stringForErrorMessage(value),
       path: ""
     };
   }
@@ -208,13 +238,13 @@ var testSubtree = function (value, pattern) {
   if (pattern instanceof Array) {
     if (pattern.length !== 1) {
       return {
-        message: "Bad pattern: arrays must have one type element" + EJSON.stringify(pattern),
+        message: "Bad pattern: arrays must have one type element" + stringForErrorMessage(pattern),
         path: ""
       };
     }
     if (!_.isArray(value) && !_.isArguments(value)) {
       return {
-        message: "Expected array, got " + EJSON.stringify(value),
+        message: "Expected array, got " + stringForErrorMessage(value),
         path: ""
       };
     }
