@@ -21,8 +21,8 @@ Package.onUse(function (api) {
   // BabelCompiler.prototype.processOneFileForTarget for any raw
   // JavaScript enclosed by backticks, it must provide the same runtime
   // environment that the 'ecmascript' package provides. The following
-  // api.imply calls should match those in ../ecmascript/package.js.
-  api.imply('modules');
+  // api.imply calls should match those in ../ecmascript/package.js,
+  // except that coffeescript does not api.imply('modules').
   api.imply('ecmascript-runtime');
   api.imply('babel-runtime');
   api.imply('promise');
