@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Google OAuth flow",
-  version: "1.1.12-rc.3"
+  version: "1.1.12-rc.4"
 });
 
 Package.onUse(function(api) {
