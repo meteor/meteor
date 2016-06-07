@@ -409,7 +409,7 @@ export default class ImportScanner {
 
         } finally {
           if (! relPath || relPath.startsWith("..")) {
-            if (this._joinAndStat(this.sourceRoot, sourcePath)) {
+            if (this.resolver._joinAndStat(this.sourceRoot, sourcePath)) {
               // If sourcePath exists as a path relative to this.sourceRoot,
               // strip away the leading / that made it look absolute.
               return pathNormalize(pathJoin(".", sourcePath));
