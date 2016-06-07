@@ -497,7 +497,7 @@ In addition to _property selectors_, you can use a _field selector_ to reduce th
 
 ```js
 Tracker.autorun(function(){
-  var postAuthors = Posts.find({}, {fields: {tag: 0, author: 1, title: 0).fetch();
+  var postAuthors = Posts.find({}, {fields: {tag: 0, author: 1, title: 0}}).fetch();
   postAuthors.forEach(function (post) {
     console.log(post.author);
   });
