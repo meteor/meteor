@@ -15,6 +15,8 @@ Package.onUse(function (api) {
   api.use('isobuild:compiler-plugin@1.0.0');
   api.use('babel-compiler');
 
+  // The following api.imply calls should match those in
+  // ../coffeescript/package.js.
   api.imply('modules');
   api.imply('ecmascript-runtime');
   api.imply('babel-runtime');

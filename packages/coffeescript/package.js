@@ -16,6 +16,16 @@ Package.registerBuildPlugin({
 Package.onUse(function (api) {
   api.use('isobuild:compiler-plugin@1.0.0');
   api.use('babel-compiler');
+
+  // Because the CoffeeScript plugin now calls
+  // BabelCompiler.prototype.processOneFileForTarget for any raw
+  // JavaScript enclosed by backticks, it must provide the same runtime
+  // environment that the 'ecmascript' package provides. The following
+  // api.imply calls should match those in ../ecmascript/package.js.
+  api.imply('modules');
+  api.imply('ecmascript-runtime');
+  api.imply('babel-runtime');
+  api.imply('promise');
 });
 
 Package.onTest(function (api) {
