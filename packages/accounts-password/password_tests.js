@@ -996,6 +996,54 @@ if (Meteor.isClient) (function () {
     }
   ]);
 
+  testAsyncMulti("passwords - server onLogout hook", [
+    function (test, expect) {
+      Meteor.call("testCaptureLogouts", expect(function (error) {
+        test.isFalse(error);
+      }));
+    },
+    function (test, expect) {
+      this.username = Random.id();
+      this.password = "password";
+
+      Accounts.createUser(
+        {username: this.username, password: this.password},
+        loggedInAs(this.username, test, expect));
+    },
+    logoutStep,
+    function (test, expect) {
+      var self = this;
+      Meteor.call("testFetchCapturedLogouts", expect(function (error, logouts) {
+        test.isFalse(error);
+        test.equal(logouts.length, 1);
+        var logout = logouts[0];
+        test.isTrue(logout.successful);
+      }));
+    }
+  ]);
+
+  testAsyncMulti("passwords - client onLogout hook", [
+    function (test, expect) {
+      var self = this;
+      this.username = Random.id();
+      this.password = "password";
+      this.attempt = false;
+
+      this.onLogout = Accounts.onLogout(function () {
+        self.logoutSuccess = true;
+      });
+
+      Accounts.createUser(
+        {username: this.username, password: this.password},
+        loggedInAs(this.username, test, expect));
+    },
+    logoutStep,
+    function (test, expect) {
+      test.isTrue(this.logoutSuccess);
+      expect(function() {})();
+    }
+  ]);
+
   testAsyncMulti("passwords - server onLoginFailure hook", [
     function (test, expect) {
       this.username = Random.id();
