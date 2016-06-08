@@ -726,7 +726,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
                         bindEnvironmentForWrite(function (err, result) {
                           if (err) {
                             callback(err);
-                          } else if (result && result.result.nModified != 0) {
+                          } else if (result && result.result.n != 0) {
                             callback(null, {
                               numberAffected: result.result.n
                             });
