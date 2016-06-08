@@ -219,6 +219,8 @@ if (!attempt.allowed)
   return false;
 ```
 
+{% apibox "AccountsServer#onLogout" %}
+
 <h2 id="accounts_rate_limit">Rate Limiting</h2>
 
 By default, there are rules added to the [`DDPRateLimiter`](#ddpratelimiter)
