@@ -138,7 +138,7 @@ export class CordovaBuilder {
 
     const mobileServerUrl = this.options.mobileServerUrl;
     const serverDomain = mobileServerUrl ?
-      utils.parseUrl(mobileServerUrl).host : null;
+      utils.parseUrl(mobileServerUrl).hostname : null;
 
     // If the remote server domain is known, allow access to it for XHR and DDP
     // connections.
