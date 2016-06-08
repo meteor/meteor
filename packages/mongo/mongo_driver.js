@@ -615,13 +615,7 @@ var transformResult = function (driverResult) {
         meteorResult.insertedId = mongoResult.upserted[0]._id;
       }
     } else {
-      //The remove call, resturns only {ok: 1, n: [number of removed documents]}
-      //update apis return the nModified with the number of changed documents
-      if (mongoResult.nModified != null) {
-        meteorResult.numberAffected = mongoResult.nModified;
-      } else if (mongoResult.n) {
-        meteorResult.numberAffected = mongoResult.n;
-      }
+      meteorResult.numberAffected = mongoResult.n;
     }
   }
 
@@ -733,7 +727,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
                             callback(err);
                           else if (result && result.result.nModified != 0){
                             callback(null, {
-                              numberAffected: result.result.nModified
+                              numberAffected: result.result.n
                             });
                           }
                           else
