@@ -186,7 +186,7 @@ sites:
 
 - Facebook: <http://developers.facebook.com/docs/authentication/permissions/>
 - GitHub: <http://developer.github.com/v3/oauth/#scopes>
-- Google: <https://developers.google.com/accounts/docs/OAuth2Login#scopeparameter>
+- Google: <https://developers.google.com/identity/protocols/googlescopes>
 - Meetup: <http://www.meetup.com/meetup_api/auth/#oauth2-scopes>
 - Twitter, Weibo, Meteor developer accounts: `requestPermissions` currently not supported
 

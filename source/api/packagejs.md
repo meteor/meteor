@@ -41,6 +41,10 @@ Package.onUse(function (api) {
   api.export('Email', 'server');
   // Specify the source code for the package.
   api.addFiles('email.js', 'server');
+
+  // When using ecmascript or modules packages, you can use this instead of
+  // api.export and api.addFiles:
+  api.mainModule('email.js', 'server');
 });
 
 /* This defines the tests for the package */
@@ -58,6 +62,8 @@ Npm.depends({
   simplesmtp: "0.3.10",
   "stream-buffers": "0.2.5"});
 ```
+
+`api.mainModule` is documented in the [modules](http://docs.meteor.com/packages/modules.html#Modular-package-structure) section.
 
 Build plugins are created with
 [`Package.registerBuildPlugin`](#Package-registerBuildPlugin). See the

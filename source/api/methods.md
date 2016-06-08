@@ -201,7 +201,7 @@ add the `ddp-rate-limiter` package to your project in your terminal:
 meteor add ddp-rate-limiter
 ```
 
-{% apibox "DDPRateLimiter.addRule" nested:true %}
+{% apibox "DDPRateLimiter.addRule" nested:true instanceDelimiter:. %}
 
 Custom rules can be added by calling `DDPRateLimiter.addRule`. The rate
 limiter is called on every method and subscription invocation.

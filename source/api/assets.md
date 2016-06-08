@@ -4,6 +4,8 @@ order: 18
 description: Documentation of how to use assets in Meteor.
 ---
 
+> Currently, it is not possible to import `Assets` as an ES6 module.  Any of the `Assets` methods below can simply be called directly in any Meteor server code.
+
 `Assets` allows server code in a Meteor application to access static server
 assets, which are located in the `private` subdirectory of an application's
 tree. Assets are not processed as source files and are copied directly
@@ -11,8 +13,7 @@ into your application's bundle.
 
 {% apibox "Assets.getText" %}
 {% apibox "Assets.getBinary" %}
-<!-- commented out because this does not exist in master -->
-<!-- { % apibox "Assets.absoluteFilePath" %} -->
+{% apibox "Assets.absoluteFilePath" %}
 
 Static server assets are included by placing them in the application's `private`
 subdirectory. For example, if an application's `private` subdirectory includes a
