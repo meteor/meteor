@@ -13,7 +13,8 @@ into your application's bundle.
 
 {% apibox "Assets.getText" %}
 {% apibox "Assets.getBinary" %}
-{% apibox "Assets.absoluteFilePath" %}
+<!-- commented out because this does not exist in master -->
+<!-- { % apibox "Assets.absoluteFilePath" %} -->
 
 Static server assets are included by placing them in the application's `private`
 subdirectory. For example, if an application's `private` subdirectory includes a
