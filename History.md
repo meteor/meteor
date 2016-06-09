@@ -58,6 +58,10 @@
   you can add your preferred transform plugins to the "presets" or
   "plugins" section of your `.babelrc` or `package.json` file. #6351
 
+* When `BabelCompiler` cannot resolve a Babel plugin or preset package in
+  `.babelrc` or `package.json`, it now merely warns instead of
+  crashing. #7179
+
 * Compiler plugins can now import npm packages that are visible to their
   input files using `inputFile.require(id)`. b16e8d50194b37d3511889b316345f31d689b020
 
@@ -88,6 +92,20 @@
   Galaxy is now the default for `DEPLOY_HOSTNAME`. If your app's DNS points to
   another Galaxy region, `meteor deploy` will detect that automatically as
   well. #7055
+
+* The `coffeescript` plugin now passes raw JavaScript code enclosed by
+  back-ticks to `BabelCompiler`, enabling all ECMAScript features
+  (including `import` and `export`) within CoffeeScript. #6000 #6691
+
+* The `coffeescript` package now implies the same runtime environment as
+  `ecmascript` (`ecmascript-runtime`, `babel-runtime`, and `promise`, but
+  not `modules`). #7184
+
+* When Meteor packages install `npm` dependencies, the
+  `process.env.NPM_CONFIG_REGISTRY` environment variable is now
+  respected. #7162
+
+* `files.rename` now always executes synchronously. 9856d1d418a4d19c0adf22ec9a92f7ce81a23b05
 
 * Miscellaneous fixed bugs: #6877 #6843 #6881
 
