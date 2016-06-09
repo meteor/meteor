@@ -139,6 +139,18 @@ meteorNpm.getProdPackageNames = function (nodeModulesDir) {
 };
 
 const lastRebuildJSONFilename = ".meteor-last-rebuild-version.json";
+const currentVersionsJSON =
+  JSON.stringify(process.versions, null, 2) + "\n";
+
+function recordLastRebuildVersions(pkgDir) {
+  // Record the current process.versions so that we can avoid
+  // copying/rebuilding/renaming next time.
+  files.writeFile(
+    files.pathJoin(pkgDir, lastRebuildJSONFilename),
+    currentVersionsJSON,
+    "utf8"
+  );
+}
 
 // Rebuilds any binary dependencies in the given node_modules directory,
 // and returns true iff anything was rebuilt.
@@ -176,9 +188,6 @@ Profile("meteorNpm.rebuildIfNonPortable", function (nodeModulesDir) {
     return false;
   }
 
-  const currentVersionsJSON =
-    JSON.stringify(process.versions, null, 2) + "\n";
-
   const tempDir = files.pathJoin(
     nodeModulesDir,
     ".temp-" + utils.randomToken()
@@ -207,11 +216,7 @@ Profile("meteorNpm.rebuildIfNonPortable", function (nodeModulesDir) {
 
     // Record the current process.versions so that we can avoid
     // copying/rebuilding/renaming next time.
-    files.writeFile(
-      files.pathJoin(tempPkgDir, lastRebuildJSONFilename),
-      currentVersionsJSON,
-      "utf8"
-    );
+    recordLastRebuildVersions(tempPkgDir);
   });
 
   // The `npm rebuild` command must be run in the parent directory of the
@@ -734,6 +739,11 @@ var installNpmModule = function (name, version, dir) {
 
     // Recover by returning false from updateDependencies
     throw new NpmFailure;
+  }
+
+  const pkgDir = files.pathJoin(dir, "node_modules", name);
+  if (! isPortable(pkgDir, true)) {
+    recordLastRebuildVersions(pkgDir);
   }
 
   if (process.platform !== "win32") {
