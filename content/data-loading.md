@@ -582,9 +582,7 @@ Meteor.publish('polled-publication', function() {
         this.changed(COLLECTION_NAME, doc._id, doc);
       } else {
         publishedKeys[doc._id] = true;
-        if (publishedKeys[doc._id]) {
-          this.added(COLLECTION_NAME, doc._id, doc);
-        }
+        this.added(COLLECTION_NAME, doc._id, doc);
       }
     });
   };
