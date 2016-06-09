@@ -368,7 +368,7 @@ FlowRouter.route('/', {
 The `App_rootRedirector` component is rendered inside the `App_body` layout, which takes care of subscribing to the set of lists the user knows about *before* rendering its sub-component, and we are guaranteed there is at least one such list. This means that if the `App_rootRedirector` ends up being created, there'll be a list loaded, so we can simply do:
 
 ```js
-Template.App_rootRedirector.onCreated(() => {
+Template.App_rootRedirector.onCreated(function rootRedirectorOnCreated() {
   // We need to set a timeout here so that we don't redirect from inside a redirection
   //   which is a limitation of the current version of FR.
   Meteor.setTimeout(() => {
@@ -380,7 +380,7 @@ Template.App_rootRedirector.onCreated(() => {
 If you need to wait on specific data that you aren't already subscribed to at creation time, you can use an `autorun` and `subscriptionsReady()` to wait on that subscription:
 
 ```js
-Template.App_rootRedirector.onCreated(() => {
+Template.App_rootRedirector.onCreated(function rootRedirectorOnCreated() {
   // If we needed to open this subscription here
   this.subscribe('lists.public');
 
