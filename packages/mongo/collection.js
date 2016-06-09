@@ -537,7 +537,7 @@ Mongo.Collection.prototype.insert = function insert(doc, callback) {
 }
 
 /**
- * @summary Modify one or more documents in the collection. Returns the number of affected documents.
+ * @summary Modify one or more documents in the collection. Returns the number of matched documents.
  * @locus Anywhere
  * @method update
  * @memberOf Mongo.Collection
