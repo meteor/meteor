@@ -786,6 +786,14 @@ var installFromShrinkwrap = function (dir) {
     // Recover by returning false from updateDependencies
     throw new NpmFailure;
   }
+
+  const nodeModulesDir = files.pathJoin(dir, "node_modules");
+  files.readdir(nodeModulesDir).forEach(function (name) {
+    const pkgDir = files.pathJoin(nodeModulesDir, name);
+    if (! isPortable(pkgDir, true)) {
+      recordLastRebuildVersions(pkgDir);
+    }
+  });
 };
 
 // ensure we can reach http://npmjs.org before we try to install
