@@ -1,6 +1,6 @@
 Package.describe({
   name: 'ecmascript',
-  version: '0.4.3',
+  version: '0.4.4',
   summary: 'Compiler plugin that supports ES2015+ in all .js files',
   documentation: 'README.md'
 });
@@ -15,6 +15,8 @@ Package.onUse(function (api) {
   api.use('isobuild:compiler-plugin@1.0.0');
   api.use('babel-compiler');
 
+  // The following api.imply calls should match those in
+  // ../coffeescript/package.js.
   api.imply('modules');
   api.imply('ecmascript-runtime');
   api.imply('babel-runtime');

@@ -2,7 +2,7 @@
 import { Tinytest } from "meteor/tinytest";
 
 // Import and rename a variable exported by ~fs-name~.js.
-import { name as packageName } from "meteor/~fs-name~";
+import { name as packageName } from "meteor/~name~";
 
 // Write your tests here!
 // Here is an example.

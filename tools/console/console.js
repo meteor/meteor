@@ -309,11 +309,16 @@ var ProgressDisplayFull = function (console) {
   self._progressBarRenderer = new ProgressBarRenderer(PROGRESS_BAR_FORMAT, options);
   self._progressBarRenderer.start = new Date();
 
+  self._headless = false;
+
   self._spinnerRenderer = new SpinnerRenderer();
 
   self._fraction = undefined;
 
   self._printedLength = 0;
+
+  self._lastWrittenLine = null;
+  self._lastWrittenTime = 0;
 };
 
 _.extend(ProgressDisplayFull.prototype, {
@@ -352,10 +357,12 @@ _.extend(ProgressDisplayFull.prototype, {
     self._render();
   },
 
+  setHeadless(headless) {
+    this._headless = !! headless;
+  },
+
   _render: function () {
     var self = this;
-
-    var text = self._status;
 
     // XXX: Throttle these updates?
     // XXX: Or maybe just jump to the correct position?
@@ -379,14 +386,18 @@ _.extend(ProgressDisplayFull.prototype, {
     if (self._fraction !== undefined && progressColumns > 16) {
       // 16 is a heuristic number that allows enough space for a meaningful progress bar
       progressGraphic = "  " + self._progressBarRenderer.asString(progressColumns - 2);
-    } else if (progressColumns > 3) {
+
+    } else if (! self._headless && progressColumns > 3) {
       // 3 = 2 spaces + 1 spinner character
       progressGraphic = "  " + self._spinnerRenderer.asString();
-    } else {
-      // Don't show any progress graphic - no room!
+
+    } else if (new Date - self._lastWrittenTime > 5 * 60 * 1000) {
+      // Print something every five minutes, to avoid test timeouts.
+      progressGraphic = "  [ProgressDisplayFull keepalive]";
+      self._lastWrittenLine = null; // Force printing.
     }
 
-    if (text || progressGraphic) {
+    if (self._status || progressGraphic) {
       // XXX: Just update the graphic, to avoid text flicker?
 
       var line = spacesString(indentColumns);
@@ -404,8 +415,17 @@ _.extend(ProgressDisplayFull.prototype, {
       line += progressGraphic + CARRIAGE_RETURN;
       length += progressGraphic.length;
 
+      if (self._headless &&
+          line === self._lastWrittenLine) {
+        // Don't write the exact same line twice in a row.
+        return;
+      }
+
       self.depaint();
+
       self._stream.write(line);
+      self._lastWrittenLine = line;
+      self._lastWrittenTime = +new Date;
       self._printedLength = length;
     }
   }
@@ -1243,6 +1263,15 @@ _.extend(Console.prototype, {
     }
 
     self._setProgressDisplay(newProgressDisplay);
+  },
+
+  setHeadless(headless) {
+    if (typeof headless === "undefined") headless = true;
+    headless = !! headless;
+    if (this._progressDisplay &&
+        this._progressDisplay.setHeadless) {
+      this._progressDisplay.setHeadless(headless);
+    }
   },
 
   _setProgressDisplay: function (newProgressDisplay) {

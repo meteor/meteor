@@ -5,6 +5,7 @@ set -u
 
 UNAME=$(uname)
 ARCH=$(uname -m)
+NODE_VERSION=0.10.45
 
 if [ "$UNAME" == "Linux" ] ; then
     if [ "$ARCH" != "i686" -a "$ARCH" != "x86_64" ] ; then
@@ -47,6 +48,26 @@ else
 fi
 
 PLATFORM="${UNAME}_${ARCH}"
+
+if [ "$UNAME" == "Linux" ]
+then
+    if [ "$ARCH" == "i686" ]
+    then
+        NODE_TGZ="node-v${NODE_VERSION}-linux-x86.tar.gz"
+    elif [ "$ARCH" == "x86_64" ]
+    then
+        NODE_TGZ="node-v${NODE_VERSION}-linux-x64.tar.gz"
+    else
+        echo "Unknown architecture: $UNAME $ARCH"
+        exit 1
+    fi
+elif [ "$UNAME" == "Darwin" ]
+then
+    NODE_TGZ="node-v${NODE_VERSION}-darwin-x64.tar.gz"
+else
+    echo "Unknown architecture: $UNAME $ARCH"
+    exit 1
+fi
 
 SCRIPTS_DIR=$(dirname $0)
 cd "$SCRIPTS_DIR/.."

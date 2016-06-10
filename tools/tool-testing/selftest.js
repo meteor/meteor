@@ -3,7 +3,6 @@ var util = require('util');
 var Future = require('fibers/future');
 var fiberHelpers = require('../utils/fiber-helpers.js');
 var child_process = require('child_process');
-var phantomjs = require('phantomjs');
 var webdriver = require('browserstack-webdriver');
 
 var files = require('../fs/files.js');
@@ -13,6 +12,8 @@ var Console = require('../console/console.js').Console;
 var archinfo = require('../utils/archinfo.js');
 var config = require('../meteor-services/config.js');
 var buildmessage = require('../utils/buildmessage.js');
+var execFileSync = require('../utils/processes.js').execFileSync;
+var Builder = require('../isobuild/builder.js').default;
 
 var catalog = require('../packaging/catalog/catalog.js');
 var catalogRemote = require('../packaging/catalog/catalog-remote.js');
@@ -25,6 +26,20 @@ var release = require('../packaging/release.js');
 
 var projectContextModule = require('../project-context.js');
 var upgraders = require('../upgraders.js');
+
+try {
+  var phantomjs = require('phantomjs-prebuilt');
+} catch (e) {
+  throw new Error([
+    "Please install PhantomJS by running the following command:",
+    "",
+    "  meteor npm install -g phantomjs-prebuilt",
+    ""
+  ].join("\n"));
+}
+
+// To allow long stack traces that cross async boundaries
+require('longjohn');
 
 // Exception representing a test failure
 var TestFailure = function (reason, details) {
@@ -84,13 +99,6 @@ var expectThrows = markStack(function (f) {
     throw new TestFailure("expected-exception");
   }
 });
-
-// Execute a command synchronously, discarding stderr.
-var execFileSync = function (binary, args, opts) {
-  return Promise.denodeify(child_process.execFile)(
-    binary, args, opts
-  ).await();
-};
 
 var doOrThrow = function (f) {
   var ret;
@@ -638,7 +646,7 @@ _.extend(Sandbox.prototype, {
       // multiple calls to createApp with the same template get the same cache?
       // This is a little tricky because isopack-buildinfo.json uses absolute
       // paths.
-      run.waitSecs(20);
+      run.waitSecs(120);
       run.expectExit(0);
     });
   },
@@ -803,6 +811,13 @@ _.extend(Sandbox.prototype, {
     if (!self.warehouse && release.current.isProperRelease()) {
       env.METEOR_TEST_LATEST_RELEASE = release.current.name;
     }
+
+    // Allow user to set TOOL_NODE_FLAGS for self-test app.
+    if (process.env.TOOL_NODE_FLAGS && ! process.env.SELF_TEST_TOOL_NODE_FLAGS)
+      console.log('Consider setting SELF_TEST_TOOL_NODE_FLAGS to configure ' +
+                  'self-test test applicaion spawns');
+    env.TOOL_NODE_FLAGS = process.env.SELF_TEST_TOOL_NODE_FLAGS || '';
+
     return env;
   },
 
@@ -822,9 +837,14 @@ _.extend(Sandbox.prototype, {
 
     var serverUrl = self.env.METEOR_PACKAGE_SERVER_URL;
     var packagesDirectoryName = config.getPackagesDirectoryName(serverUrl);
-    files.cp_r(files.pathJoin(builtPackageTropohouseDir, 'packages'),
-               files.pathJoin(self.warehouse, packagesDirectoryName),
-               { preserveSymlinks: true });
+
+    var builder = new Builder({outputPath: self.warehouse});
+    builder.copyDirectory({
+      from: files.pathJoin(builtPackageTropohouseDir, 'packages'),
+      to: packagesDirectoryName,
+      symlink: true
+    });
+    builder.complete();
 
     var stubCatalog = {
       syncToken: {},
@@ -1425,7 +1445,7 @@ _.extend(Run.prototype, {
     self._ensureStarted();
 
     // If it's the first time we've called tellMongo on this sandbox,
-    // open a connection to fake-mongod. Wait up to 10 seconds for it
+    // open a connection to fake-mongod. Wait up to 60 seconds for it
     // to accept the connection, retrying every 100ms.
     //
     // XXX we never clean up this connection. Hopefully once
@@ -1437,7 +1457,7 @@ _.extend(Run.prototype, {
       var net = require('net');
 
       var lastStartTime = 0;
-      for (var attempts = 0; ! self.fakeMongoConnection && attempts < 100;
+      for (var attempts = 0; ! self.fakeMongoConnection && attempts < 600;
            attempts ++) {
         // Throttle attempts to one every 100ms
         utils.sleepMs((lastStartTime + 100) - (+ new Date));
@@ -1582,7 +1602,10 @@ var tagDescriptions = {
   // --changed, --file, or a pattern argument
   unchanged: 'unchanged since last pass',
   'non-matching': "don't match specified pattern",
-  'in other files': ""
+  'in other files': "",
+  // These tests require a setup step which can be amortized across multiple
+  // similar tests, so it makes sense to segregate them
+  'custom-warehouse': "requires a custom warehouse"
 };
 
 // Returns a TestList object representing a filtered list of tests,
@@ -1660,6 +1683,10 @@ var getFilteredTests = function (options) {
     }
   }
 
+  if (options['without-tag']) {
+    tagsToSkip.push(options['without-tag']);
+  }
+
   if (process.platform === "win32") {
     tagsToSkip.push("cordova");
     tagsToSkip.push("yet-unsolved-windows-failure");
@@ -1667,7 +1694,8 @@ var getFilteredTests = function (options) {
     tagsToSkip.push("windows");
   }
 
-  return new TestList(allTests, tagsToSkip, testState);
+  var tagsToMatch = options['with-tag'] ? [options['with-tag']] : [];
+  return new TestList(allTests, tagsToSkip, tagsToMatch, testState);
 };
 
 // A TestList is the result of getFilteredTests.  It holds the original
@@ -1678,7 +1706,7 @@ var getFilteredTests = function (options) {
 // ran and passed (for the `--changed` option).  If a testState is
 // provided, the notifyFailed and saveTestState can be used to modify
 // the testState appropriately and write it out.
-var TestList = function (allTests, tagsToSkip, testState) {
+var TestList = function (allTests, tagsToSkip, tagsToMatch, testState) {
   tagsToSkip = (tagsToSkip || []);
   testState = (testState || null); // optional
 
@@ -1704,6 +1732,15 @@ var TestList = function (allTests, tagsToSkip, testState) {
       };
     }
     var fileInfo = self.fileInfo[test.file];
+
+    if (tagsToMatch.length) {
+      var matches = _.any(tagsToMatch, function(tag) {
+        return _.contains(test.tags, tag);
+      })
+      if (!matches) {
+        return false;
+      }
+    }
 
     // We look for tagsToSkip *in order*, and when we decide to
     // skip a test, we don't keep looking at more tags, and we don't
@@ -1841,7 +1878,10 @@ var runTests = function (options) {
     try {
       runningTest = test;
       var startTime = +(new Date);
-      test.f(options);
+      // ensure we mark the bottom of the stack each time we start a new test
+      parseStack.markBottom(() => {
+        test.f(options);
+      })();
     } catch (e) {
       failure = e;
     } finally {

@@ -1,3 +1,118 @@
+## v.NEXT
+
+## v1.3.3
+
+* Node has been upgraded from 0.10.43 to 0.10.45.
+
+* `npm` has been upgraded from 2.14.22 to 2.15.1.
+
+* The `fibers` package has been upgraded to 1.0.13.
+
+* The `meteor-babel` package has been upgraded to 0.10.9.
+
+* The `meteor-promise` package has been upgraded to 0.7.1, a breaking
+  change for code that uses `Promise.denodeify`, `Promise.nodeify`,
+  `Function.prototype.async`, or `Function.prototype.asyncApply`, since
+  those APIs have been removed.
+
+* Meteor packages with binary npm dependencies are now automatically
+  rebuilt using `npm rebuild` whenever the version of Node or V8 changes,
+  making it much simpler to use Meteor with different versions of Node.
+  5dc51d39ecc9e8e342884f3b4f8a489f734b4352
+
+* `*.min.js` files are no longer minified during the build process. 
+  [PR #6986](https://github.com/meteor/meteor/pull/6986) [Issue #5363](https://github.com/meteor/meteor/issues/5363)
+
+* You can now pick where the `.meteor/local` directory is created by setting the `METEOR_LOCAL_DIR` environment variable. This lets you run multiple instances of the same Meteor app.
+  [PR #6760](https://github.com/meteor/meteor/pull/6760) [Issue #6532](https://github.com/meteor/meteor/issues/6532)
+
+* Allow using authType in Facebook login [PR #5694](https://github.com/meteor/meteor/pull/5694)
+
+* Adds flush() method to Tracker to force recomputation [PR #4710](https://github.com/meteor/meteor/pull/4710)
+
+* Adds `defineMutationMethods` option (default: true) to `new Mongo.Collection` to override default behavior that sets up mutation methods (/collection/[insert|update...]) [PR #5778](https://github.com/meteor/meteor/pull/5778)
+
+* Allow overridding the default warehouse url by specifying `METEOR_WAREHOUSE_URLBASE` [PR #7054](https://github.com/meteor/meteor/pull/7054)
+
+* Allow `_id` in `$setOnInsert` in Minimongo: https://github.com/meteor/meteor/pull/7066
+
+* Added support for `$eq` to Minimongo: https://github.com/meteor/meteor/pull/4235
+
+* Insert a `Date` header into emails by default: https://github.com/meteor/meteor/pull/6916/files
+* `meteor test` now supports setting the bind address using `--port IP:PORT` the same as `meteor run` [PR #6964](https://github.com/meteor/meteor/pull/6964) [Issue #6961](https://github.com/meteor/meteor/issues/6961)
+* `Meteor.apply` now takes a `noRetry` option to opt-out of automatically retrying non-idempotent methods on connection blips: [PR #6180](https://github.com/meteor/meteor/pull/6180)
+
+* DDP callbacks are now batched on the client side. This means that after a DDP message arrives, the local DDP client will batch changes for a minimum of 5ms (configurable via `bufferedWritesInterval`) and a maximum of 500ms (configurable via `bufferedWritesMaxAge`) before calling any callbacks (such as cursor observe callbacks).
+
+* PhantomJS is no longer included in the Meteor dev bundle (#6905). If you
+  previously relied on PhantomJS for local testing, the `spiderable`
+  package, Velocity tests, or testing Meteor from a checkout, you should
+  now install PhantomJS yourself, by running the following commmand:
+  `meteor npm install -g phantomjs-prebuilt`
+
+* The `babel-compiler` package now looks for `.babelrc` files and
+  `package.json` files with a "babel" section. If found, these files may
+  contribute additional Babel transforms that run before the usual
+  `babel-preset-meteor` set of transforms. In other words, if you don't
+  like the way `babel-preset-meteor` handles a particular kind of syntax,
+  you can add your preferred transform plugins to the "presets" or
+  "plugins" section of your `.babelrc` or `package.json` file. #6351
+
+* When `BabelCompiler` cannot resolve a Babel plugin or preset package in
+  `.babelrc` or `package.json`, it now merely warns instead of
+  crashing. #7179
+
+* Compiler plugins can now import npm packages that are visible to their
+  input files using `inputFile.require(id)`. b16e8d50194b37d3511889b316345f31d689b020
+
+* `import` statements in application modules now declare normal variables
+  for the symbols that are imported, making it significantly easier to
+  inspect imported variables when debugging in the browser console or in
+  `meteor shell`.
+
+* `import` statements in application modules are no longer restricted to
+  the top level, and may now appear inside conditional statements
+  (e.g. `if (Meteor.isServer) { import ... }`) or in nested scopes.
+
+* `import` statements now work as expected in `meteor shell`. #6271
+
+* Commands installed in `dev_bundle/lib/node_modules/.bin` (such as
+  `node-gyp` and `node-pre-gyp`) are now available to scripts run by
+  `meteor npm`. e95dfe410e1b43e8131bc2df9d2c29decdd1eaf6
+
+* When building an application using `meteor build`, "devDependencies"
+  listed in `package.json` are no longer copied into the bundle. #6750
+
+* Packages tested with `meteor test-packages` now have access to local
+  `node_modules` directories installed in the parent application or in the
+  package directory itself. #6827
+
+* You no longer need to specify `DEPLOY_HOSTNAME=galaxy.meteor.com` to run
+  `meteor deploy` (and similar commands) against Galaxy. The AWS us-east-1
+  Galaxy is now the default for `DEPLOY_HOSTNAME`. If your app's DNS points to
+  another Galaxy region, `meteor deploy` will detect that automatically as
+  well. #7055
+
+* The `coffeescript` plugin now passes raw JavaScript code enclosed by
+  back-ticks to `BabelCompiler`, enabling all ECMAScript features
+  (including `import` and `export`) within CoffeeScript. #6000 #6691
+
+* The `coffeescript` package now implies the same runtime environment as
+  `ecmascript` (`ecmascript-runtime`, `babel-runtime`, and `promise`, but
+  not `modules`). #7184
+
+* When Meteor packages install `npm` dependencies, the
+  `process.env.NPM_CONFIG_REGISTRY` environment variable is now
+  respected. #7162
+
+* `files.rename` now always executes synchronously. 9856d1d418a4d19c0adf22ec9a92f7ce81a23b05
+
+* "Bare" files contained by `client/compatibility/` directories or added
+  with `api.addFiles(path, ..., { bare: true })` are no longer compiled by
+  Babel. https://github.com/meteor/meteor/pull/7033#issuecomment-225126778
+
+* Miscellaneous fixed bugs: #6877 #6843 #6881
+
 ## v1.3.2.3
 
 * Reverted accidental changes included in 1.3.2.1 and 1.3.2.2 that
@@ -44,15 +159,13 @@
 * The `npm-bcrypt` package has been upgraded to use the latest version
   (0.8.5) of the `bcrypt` npm package.
 
-* `Match.Optional` only passes if the value is `null` or the specified
-  type, whereas previously it accepted `undefined`. Use `Match.Maybe` to
-  allow `undefined`. #6735
-
 * Compiler plugins can call `addJavaScript({ path })` multiple times with
   different paths for the same source file, and `module.id` will reflect
   this `path` instead of the source path, if they are different. #6806
 
 * Fixed bugs: https://github.com/meteor/meteor/milestones/Release%201.3.2
+
+* Fixed unintended change to `Match.Optional` which caused it to behave the same as the new `Match.Maybe` and incorrectly matching `null` where it previously would not have allowed it. #6735
 
 ## v1.3.1
 
@@ -275,6 +388,10 @@
 
 * Improve automatic blocking of URLs in attribute values to also
   include `vbscript:` URLs.
+
+### Check
+
+* Introduced new matcher `Match.Maybe(type)` which will also match (permit) `null` in addition to `undefined`.  This is a suggested replacement (where appropriate) for `Match.Optional` which did not permit `null`.  This prevents the need to use `Match.OneOf(null, undefined, type)`. #6220 
 
 ### Testing
 

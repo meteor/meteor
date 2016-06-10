@@ -19,6 +19,11 @@
         }
       }
     },
+    "lolex": {
+      "version": "1.4.0",
+      "resolved": "https://registry.npmjs.org/lolex/-/lolex-1.4.0.tgz",
+      "from": "lolex@1.4.0"
+    },
     "permessage-deflate": {
       "version": "0.1.3",
       "resolved": "https://registry.npmjs.org/permessage-deflate/-/permessage-deflate-0.1.3.tgz",

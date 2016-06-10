@@ -138,15 +138,6 @@ selftest.define("change packages during hot code push", [], function () {
   run.match("edit");
   run.match("foobar!");
 
-  // In a local package, add a dependency on a different package.  In this case,
-  // package2.js contains an onUse call that tells it to use accounts-base (a
-  // core package that is not already included in the app)
-  s.cp('packages/contains-plugin/package2.js',
-         'packages/contains-plugin/package.js');
-  run.waitSecs(2);
-  run.match("edit");
-  run.match("foobar!");
-
   // Check that we are watching the versions file, as well as the packages file.
   s.unlink('.meteor/versions');
   run.waitSecs(10);
@@ -406,7 +397,7 @@ selftest.define("add package with no builds", ["net"], function () {
   run.expectExit(1);
 });
 
-selftest.define("package skeleton creates correct versionsFrom", function () {
+selftest.define("package skeleton creates correct versionsFrom", ['custom-warehouse'], function () {
   var s = new Sandbox({ warehouse: { v1: { recommended: true } } });
   var token = utils.randomToken();
   var fullPackageName = "test:" + token;

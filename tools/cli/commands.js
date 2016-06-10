@@ -344,7 +344,7 @@ function doRunCommand(options) {
 
   let webArchs = ['web.browser'];
   let cordovaRunner;
-  if (!_.isEmpty(runTargets)) {
+  if (!_.isEmpty(runTargets) || options['mobile-server']) {
     main.captureAndExit('', 'preparing Cordova project', () => {
       const cordovaProject = new CordovaProject(projectContext, {
         settingsFile: options.settings,
@@ -1145,7 +1145,6 @@ to this command.`);
   } else {
     // remote mode
     var site = qualifySitename(options.args[0]);
-    config.printUniverseBanner();
 
     mongoUrl = deploy.temporaryMongoUrl(site);
     usedMeteorAccount = true;
@@ -1190,6 +1189,12 @@ main.registerCommand({
     Console.error(
       Console.command("meteor deploy appname"), Console.options({ indent: 2 }));
     return 1;
+  }
+  
+  if (process.env.MONGO_URL) {
+    Console.info("As a precaution, meteor reset only clears the local database that is " +
+                 "provided by meteor run for development. The database specified with " +
+                 "MONGO_URL will NOT be reset.");
   }
 
   // XXX detect the case where Meteor is running the app, but
@@ -1240,7 +1245,6 @@ main.registerCommand({
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options, {rawOptions}) {
   var site = options.args[0];
-  config.printUniverseBanner();
 
   if (options.delete) {
     return deploy.deleteApp(site);
@@ -1358,7 +1362,6 @@ main.registerCommand({
     return 1;
   }
 
-  config.printUniverseBanner();
   auth.pollForRegistrationCompletion();
   var site = qualifySitename(options.args[0]);
 
@@ -1390,7 +1393,6 @@ main.registerCommand({
   maxArgs: 1,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
-  config.printUniverseBanner();
   auth.pollForRegistrationCompletion();
   var site = qualifySitename(options.args[0]);
 
@@ -1671,7 +1673,12 @@ function doTestCommand(options) {
 
   return runTestAppForPackages(projectContext, _.extend(
     options,
-    { mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) }));
+    {
+      mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
+      proxyPort: parsedServerUrl.port,
+      proxyHost: parsedServerUrl.host,
+    }
+  ));
 }
 
 // Returns the "local-test:*" package names for the given package names (or for
@@ -1755,7 +1762,8 @@ var runTestAppForPackages = function (projectContext, options) {
     var runAll = require('../runners/run-all.js');
     return runAll.run({
       projectContext: projectContext,
-      proxyPort: options.port,
+      proxyPort: options.proxyPort,
+      proxyHost: options.proxyHost,
       debugPort: options['debug-port'],
       disableOplog: options['disable-oplog'],
       settingsFile: options.settings,
@@ -1950,8 +1958,6 @@ main.registerCommand({
     throw new main.ShowUsage;
   }
 
-  config.printUniverseBanner();
-
   var username = options.add || options.remove;
 
   var conn = loggedInAccountsConnectionOrPrompt(
@@ -2007,10 +2013,18 @@ main.registerCommand({
     slow: { type: Boolean },
     galaxy: { type: Boolean },
     browserstack: { type: Boolean },
+    // Indicates whether these self-tests are running headless, e.g. in a
+    // continuous integration testing environment, where visual niceties
+    // like progress bars and spinners are unimportant.
+    headless: { type: Boolean },
     history: { type: Number },
     list: { type: Boolean },
     file: { type: String },
-    exclude: { type: String }
+    exclude: { type: String },
+    // Skip tests w/ this tag
+    'without-tag': { type: String },
+    // Only run tests with this tag
+    'with-tag': { type: String },
   },
   hidden: true,
   catalogRefresh: new catalog.Refresh.Never()
@@ -2077,7 +2091,9 @@ main.registerCommand({
       includeSlowTests: options.slow,
       galaxyOnly: options.galaxy,
       testRegexp: testRegexp,
-      fileRegexp: fileRegexp
+      fileRegexp: fileRegexp,
+      'without-tag': options['without-tag'],
+      'with-tag': options['with-tag']
     });
 
     return 0;
@@ -2086,6 +2102,12 @@ main.registerCommand({
   var clients = {
     browserstack: options.browserstack
   };
+
+  if (options.headless) {
+    // There's no point in spinning the spinner when we're running
+    // continuous integration tests.
+    Console.setHeadless(true);
+  }
 
   return selftest.runTests({
     // filtering options
@@ -2098,7 +2120,9 @@ main.registerCommand({
     excludeRegexp: excludeRegexp,
     // other options
     historyLines: options.history,
-    clients: clients
+    clients: clients,
+    'without-tag': options['without-tag'],
+    'with-tag': options['with-tag']
   });
 
 });

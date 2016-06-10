@@ -20,10 +20,12 @@ import {
   pathBasename,
   pathExtname,
   pathIsAbsolute,
-  statOrNull,
+  statOrNull as realStatOrNull,
   convertToOSPath,
   convertToPosixPath,
 } from "../fs/files.js";
+
+import Resolver from "./resolver.js";
 
 const fakeFileStat = {
   isFile() {
@@ -34,27 +36,6 @@ const fakeFileStat = {
     return false;
   }
 };
-
-const nativeModulesMap = Object.create(null);
-const nativeNames = Object.keys(process.binding("natives"));
-
-// Node 0.10 does not include process as a built-in module, but later
-// versions of Node do, and we provide a stub for it on the client.
-nativeNames.push("process");
-
-nativeNames.forEach(id => {
-  if (id === "freelist" ||
-      id.startsWith("internal/")) {
-    return;
-  }
-
-  // When a native Node module is imported, we register a dependency on a
-  // meteor-node-stubs/deps/* module of the same name, so that the
-  // necessary stub modules will be included in the bundle. This alternate
-  // identifier will not be imported at runtime, but the modules it
-  // depends on are necessary for the original import to succeed.
-  nativeModulesMap[id] =  "meteor-node-stubs/deps/" + id;
-});
 
 // Default handlers for well-known file extensions.
 // Note that these function expect strings, not Buffer objects.
@@ -117,16 +98,16 @@ export default class ImportScanner {
   constructor({
     name,
     bundleArch,
-    extensions = [".js", ".json"],
+    extensions,
     sourceRoot,
     nodeModulesPaths = [],
     watchSet,
   }) {
+    const scanner = this;
     assert.ok(isString(sourceRoot));
 
     this.name = name;
     this.bundleArch = bundleArch;
-    this.extensions = extensions;
     this.sourceRoot = sourceRoot;
     this.nodeModulesPaths = nodeModulesPaths;
     this.watchSet = watchSet;
@@ -134,8 +115,29 @@ export default class ImportScanner {
     this.allMissingNodeModules = Object.create(null);
     this.outputFiles = [];
 
-    this._statCache = new Map;
-    this._pkgJsonCache = new Map;
+    this.resolver = new Resolver({
+      sourceRoot,
+      targetArch: bundleArch,
+      extensions,
+      nodeModulesPaths,
+      watchSet,
+
+      onPackageJson(path, pkg) {
+        return scanner._addPkgJsonToOutput(path, pkg);
+      },
+
+      onMissing(id, parentPath) {
+        return scanner._onMissing(id, parentPath);
+      },
+
+      statOrNull(absPath) {
+        const file = scanner._getFile(absPath);
+        if (file) {
+          return fakeFileStat;
+        }
+        return realStatOrNull(absPath);
+      }
+    });
   }
 
   _getFile(absPath) {
@@ -147,9 +149,26 @@ export default class ImportScanner {
 
   _addFile(absPath, file) {
     absPath = absPath.toLowerCase();
-    if (! has(this.absPathToOutputIndex, absPath)) {
+    const old = this.absPathToOutputIndex[absPath];
+
+    if (old) {
+      // If the old file is just an empty stub, let the new file take
+      // precedence over it.
+      if (old.emptyStub === true) {
+        return this.absPathToOutputIndex[absPath] = file;
+      }
+
+      // If the new file is just an empty stub, pretend the _addFile
+      // succeeded by returning the old file, so that we won't try to call
+      // _combineFiles needlessly.
+      if (file.emptyStub === true) {
+        return old;
+      }
+
+    } else {
       this.absPathToOutputIndex[absPath] =
         this.outputFiles.push(file) - 1;
+
       return file;
     }
   }
@@ -390,7 +409,7 @@ export default class ImportScanner {
 
         } finally {
           if (! relPath || relPath.startsWith("..")) {
-            if (this._joinAndStat(this.sourceRoot, sourcePath)) {
+            if (this.resolver._joinAndStat(this.sourceRoot, sourcePath)) {
               // If sourcePath exists as a path relative to this.sourceRoot,
               // strip away the leading / that made it look absolute.
               return pathNormalize(pathJoin(".", sourcePath));
@@ -455,7 +474,7 @@ export default class ImportScanner {
     }
 
     each(file.deps, (info, id) => {
-      const resolved = this._tryToResolveImportedPath(file, id);
+      const resolved = this.resolver.resolve(id, absPath);
       if (! resolved) {
         return;
       }
@@ -669,274 +688,57 @@ export default class ImportScanner {
     return partsInReverse.reverse();
   }
 
-  // TODO This method can probably be consolidated with _getInstallPath.
-  _tryToResolveImportedPath(file, id, seenDirPaths) {
-    let resolved =
-      this._resolveAbsolute(file, id) ||
-      this._resolveRelative(file, id) ||
-      this._resolveNodeModule(file, id);
+  // Called by this.resolver when a module identifier cannot be resolved.
+  _onMissing(id, absParentPath) {
+    const isApp = ! this.name;
+    const parentFile = this._getFile(absParentPath);
 
-    while (resolved && resolved.stat.isDirectory()) {
-      let dirPath = resolved.path;
-      seenDirPaths = seenDirPaths || new Set;
-
-      // If the "main" field of a package.json file resolves to a
-      // directory we've already considered, then we should not attempt to
-      // read the same package.json file again.
-      if (! seenDirPaths.has(dirPath)) {
-        seenDirPaths.add(dirPath);
-        resolved = this._resolvePkgJsonMain(dirPath, seenDirPaths);
-        if (resolved) {
-          // The _resolvePkgJsonMain call above may have returned a
-          // directory, so continue the loop to make sure we fully resolve
-          // it to a non-directory.
-          continue;
+    if (isApp &&
+        Resolver.isNative(id) &&
+        archMatches(this.bundleArch, "web")) {
+      // To ensure the native module can be evaluated at runtime, register
+      // a dependency on meteor-node-stubs/deps/<id>.js.
+      const stubId = Resolver.getNativeStubId(id);
+      if (isString(stubId) && stubId !== id) {
+        if (parentFile &&
+            parentFile.deps) {
+          parentFile.deps[stubId] = parentFile.deps[id];
         }
-      }
-
-      // If we didn't find a `package.json` file, or it didn't have a
-      // resolvable `.main` property, the only possibility left to
-      // consider is that this directory contains an `index.js` module.
-      // This assignment almost always terminates the while loop, because
-      // there's very little chance an `index.js` file will be a
-      // directory. However, in principle it is remotely possible that a
-      // file called `index.js` could be a directory instead of a file.
-      resolved = this._joinAndStat(dirPath, "index.js");
-    }
-
-    return resolved;
-  }
-
-  _statOrNull(absPath) {
-    const file = this._getFile(absPath);
-    if (file) {
-      return fakeFileStat;
-    }
-
-    return statOrNull(absPath);
-  }
-
-  _joinAndStat(...joinArgs) {
-    const joined = pathJoin(...joinArgs);
-    if (this._statCache.has(joined)) {
-      return this._statCache.get(joined);
-    }
-
-    const path = pathNormalize(joined);
-    const exactStat = this._statOrNull(path);
-    const exactResult = exactStat && { path, stat: exactStat };
-    let result = null;
-    if (exactResult && exactStat.isFile()) {
-      result = exactResult;
-    }
-
-    if (! result) {
-      this.extensions.some(ext => {
-        const pathWithExt = path + ext;
-        const stat = this._statOrNull(pathWithExt);
-        if (stat) {
-          return result = { path: pathWithExt, stat };
-        }
-      });
-    }
-
-    if (! result && exactResult && exactStat.isDirectory()) {
-      // After trying all available file extensions, fall back to the
-      // original result if it was a directory.
-      result = exactResult;
-    }
-
-    this._statCache.set(joined, result);
-    return result;
-  }
-
-  _resolveAbsolute(file, id) {
-    return id.charAt(0) === "/" &&
-      this._joinAndStat(this.sourceRoot, id.slice(1));
-  }
-
-  _resolveRelative({ sourcePath }, id) {
-    if (id.charAt(0) === ".") {
-      return this._joinAndStat(
-        this.sourceRoot, sourcePath, "..", id
-      );
-    }
-  }
-
-  _resolveNodeModule(file, id) {
-    let resolved = null;
-
-    const isNative = has(nativeModulesMap, id);
-    if (isNative && archMatches(this.bundleArch, "os")) {
-      // Forbid installing any server module with the same name as a
-      // native Node module.
-      return null;
-    }
-
-    const absPath = pathJoin(this.sourceRoot, file.sourcePath);
-
-    let sourceRoot;
-    if (! file.sourcePath.startsWith("..")) {
-      // If the file is contained by this.sourceRoot, then it's safe to
-      // use this.sourceRoot as the limiting ancestor directory in the
-      // while loop below, but we're still going to check whether the file
-      // resides in an external node_modules directory, since "external"
-      // .npm/package/node_modules directories are technically contained
-      // within the root directory of their packages.
-      sourceRoot = this.sourceRoot;
-    }
-
-    this.nodeModulesPaths.some(path => {
-      if (! pathRelative(path, absPath).startsWith("..")) {
-        // If the file is inside an external node_modules directory,
-        // consider the rootDir to be the parent directory of that
-        // node_modules directory, rather than this.sourceRoot.
-        return sourceRoot = pathDirname(path);
-      }
-    });
-
-    if (sourceRoot) {
-      let dir = absPath; // It's ok for absPath to be a directory!
-      let info = this._joinAndStat(dir);
-      if (! info || ! info.stat.isDirectory()) {
-        dir = pathDirname(dir);
-      }
-
-      while (! (resolved = this._joinAndStat(dir, "node_modules", id))) {
-        if (dir === sourceRoot) {
-          break;
-        }
-
-        const parentDir = pathDirname(dir);
-        if (dir === parentDir) {
-          // We've reached the root of the file system??
-          break;
-        }
-
-        dir = parentDir;
+        return this.resolver.resolve(stubId, absParentPath);
       }
     }
 
-    if (! resolved) {
-      // After checking any local node_modules directories, fall back to
-      // the package NPM directory, if one was specified.
-      this.nodeModulesPaths.some(path => {
-        return resolved = this._joinAndStat(path, id);
-      });
-    }
+    const possiblySpurious =
+      parentFile &&
+      parentFile.deps &&
+      has(parentFile.deps, id) &&
+      parentFile.deps[id].possiblySpurious;
 
-    if (! resolved) {
-      const isApp = ! this.name;
-      if (isApp && isNative && archMatches(this.bundleArch, "web")) {
-        // To ensure the native module can be evaluated at runtime,
-        // register a dependency on meteor-node-stubs/deps/<id>.js.
-        const stubsId = nativeModulesMap[id];
-        if (isString(stubsId) && stubsId !== id) {
-          file.deps[stubsId] = file.deps[id];
-          return this._resolveNodeModule(file, stubsId);
-        }
-      }
-
-      // If the imported identifier is neither absolute nor relative, but
-      // top-level, then it might be satisfied by a package installed in
-      // the top-level node_modules directory, and we should record the
-      // missing dependency so that we can include it in the app bundle.
-      const missing = file.missingNodeModules || Object.create(null);
-      file.missingNodeModules = missing;
-
-      const possiblySpurious =
-        file.deps && has(file.deps, id) &&
-        file.deps[id].possiblySpurious;
-
-      const info = missing[id] = {
-        packageName: this.name,
-        parentPath: absPath,
-        bundleArch: this.bundleArch,
-        possiblySpurious,
-      };
-
-      if (! has(this.allMissingNodeModules, id) ||
-          ! info.possiblySpurious) {
-        // Allow any non-spurious identifier to replace an existing
-        // possibly spurious identifier.
-        this.allMissingNodeModules[id] = info;
-      }
-    }
-
-    // If the dependency is still not resolved, it might be handled by the
-    // fallback function defined in meteor/packages/modules/modules.js, or
-    // it might be imported in code that will never run on this platform,
-    // so there is always the possibility that its absence is not actually
-    // a problem. As much as we might like to issue warnings about missing
-    // dependencies here, we just don't have enough information to make
-    // that determination until the code actually runs.
-
-    return resolved;
-  }
-
-  _readPkgJson(path) {
-    if (this._pkgJsonCache.has(path)) {
-      return this._pkgJsonCache.get(path);
-    }
-
-    let result = null;
-    try {
-      result = JSON.parse(this._readFile(path).dataString);
-    } catch (e) {
-      // leave result null
-    }
-
-    this._pkgJsonCache.set(path, result);
-    return result;
-  }
-
-  _resolvePkgJsonMain(dirPath, seenDirPaths) {
-    const pkgJsonPath = pathJoin(dirPath, "package.json");
-    const pkg = this._readPkgJson(pkgJsonPath);
-    if (! pkg) {
-      return null;
-    }
-
-    let main = pkg.main;
-
-    if (archMatches(this.bundleArch, "web") &&
-        isString(pkg.browser)) {
-      main = pkg.browser;
-    }
-
-    // Output a JS module that exports just the "name", "version", and
-    // "main" properties defined in the package.json file.
-    const pkgSubset = {
-      name: pkg.name,
+    const info = {
+      packageName: this.name,
+      parentPath: absParentPath,
+      bundleArch: this.bundleArch,
+      possiblySpurious,
     };
 
-    if (has(pkg, "version")) {
-      pkgSubset.version = pkg.version;
+    // If the imported identifier is neither absolute nor relative, but
+    // top-level, then it might be satisfied by a package installed in
+    // the top-level node_modules directory, and we should record the
+    // missing dependency so that we can include it in the app bundle.
+    if (parentFile) {
+      const missing =
+        parentFile.missingNodeModules ||
+        Object.create(null);
+      missing[id] = info;
+      parentFile.missingNodeModules = missing;
     }
 
-    if (isString(main)) {
-      pkgSubset.main = main;
+    if (! has(this.allMissingNodeModules, id) ||
+        ! info.possiblySpurious) {
+      // Allow any non-spurious identifier to replace an existing
+      // possibly spurious identifier.
+      this.allMissingNodeModules[id] = info;
     }
-
-    this._addPkgJsonToOutput(pkgJsonPath, pkgSubset);
-
-    if (isString(main)) {
-      // The "main" field of package.json does not have to begin with ./
-      // to be considered relative, so first we try simply appending it to
-      // the directory path before falling back to a full resolve, which
-      // might return a package from a node_modules directory.
-      return this._joinAndStat(dirPath, main) ||
-        // The _tryToResolveImportedPath method takes a file object as its
-        // first parameter, but only the .sourcePath and .deps properties
-        // are ever used, so we can get away with passing a fake file
-        // object with only those properties.
-        this._tryToResolveImportedPath({
-          sourcePath: pathRelative(this.sourceRoot, pkgJsonPath),
-          deps: {},
-        }, main, seenDirPaths);
-    }
-
-    return null;
   }
 
   _addPkgJsonToOutput(pkgJsonPath, pkg) {
@@ -965,8 +767,7 @@ export default class ImportScanner {
 }
 
 each(["_readFile", "_findImportedModuleIdentifiers",
-      "_getInstallPath", "_tryToResolveImportedPath",
-      "_resolvePkgJsonMain"], funcName => {
+      "_getInstallPath"], funcName => {
   ImportScanner.prototype[funcName] = Profile(
     `ImportScanner#${funcName}`, ImportScanner.prototype[funcName]);
 });

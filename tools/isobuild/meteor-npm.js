@@ -13,6 +13,7 @@ var httpHelpers = require('../utils/http-helpers.js');
 var buildmessage = require('../utils/buildmessage.js');
 var utils = require('../utils/utils.js');
 var runLog = require('../runners/run-log.js');
+var Profile = require('../tool-env/profile.js').Profile;
 
 var meteorNpm = exports;
 
@@ -114,6 +115,181 @@ meteorNpm.updateDependencies = function (packageName,
   return true;
 };
 
+// Returns a flattened list of npm package names used in production.
+meteorNpm.getProdPackageNames = function (nodeModulesDir) {
+  var names = Object.create(null);
+  var lsResult = runNpmCommand([
+    "ls", "--json", "--production"
+  ], nodeModulesDir);
+
+  function walk(deps) {
+    if (! deps) {
+      return;
+    }
+
+    Object.keys(deps).forEach(function (name) {
+      names[name] = true;
+      walk(deps[name].dependencies);
+    });
+  }
+
+  walk(JSON.parse(lsResult.stdout).dependencies);
+
+  return names;
+};
+
+const lastRebuildJSONFilename = ".meteor-last-rebuild-version.json";
+const currentVersionsJSON =
+  JSON.stringify(process.versions, null, 2) + "\n";
+
+function recordLastRebuildVersions(pkgDir) {
+  // Record the current process.versions so that we can avoid
+  // copying/rebuilding/renaming next time.
+  files.writeFile(
+    files.pathJoin(pkgDir, lastRebuildJSONFilename),
+    currentVersionsJSON,
+    "utf8"
+  );
+}
+
+// Rebuilds any binary dependencies in the given node_modules directory,
+// and returns true iff anything was rebuilt.
+meteorNpm.rebuildIfNonPortable =
+Profile("meteorNpm.rebuildIfNonPortable", function (nodeModulesDir) {
+  const dirsToRebuild = [];
+
+  files.readdir(nodeModulesDir).forEach(function (pkg) {
+    const pkgPath = files.pathJoin(nodeModulesDir, pkg);
+
+    if (isPortable(pkgPath, true)) {
+      return;
+    }
+
+    const versionFile =
+      files.pathJoin(pkgPath, lastRebuildJSONFilename);
+
+    try {
+      var versions = JSON.parse(files.readFile(versionFile));
+    } catch (e) {
+      if (! (e instanceof SyntaxError ||
+             e.code === "ENOENT")) {
+        throw e;
+      }
+    }
+
+    if (_.isEqual(versions, process.versions)) {
+      return;
+    }
+
+    dirsToRebuild.push(pkgPath);
+  });
+
+  if (dirsToRebuild.length === 0) {
+    return false;
+  }
+
+  const tempDir = files.pathJoin(
+    nodeModulesDir,
+    ".temp-" + utils.randomToken()
+  );
+
+  // There's a chance the basename of the original nodeModulesDir isn't
+  // actually "node_modules", which will confuse the `npm rebuild`
+  // command, but fortunately we can ensure this temporary directory has
+  // exactly that basename.
+  const tempNodeModules = files.pathJoin(tempDir, "node_modules");
+  files.mkdir_p(tempNodeModules);
+
+  // Map from original package directory paths to temporary package
+  // directory paths.
+  const tempPkgDirs = {};
+
+  dirsToRebuild.forEach(function (pkgPath) {
+    const tempPkgDir = tempPkgDirs[pkgPath] = files.pathJoin(
+      tempNodeModules,
+      files.pathBasename(pkgPath)
+    );
+
+    // Copy instead of rename so that the original package directories
+    // will be left untouched if the rebuild fails.
+    files.cp_r(pkgPath, tempPkgDir);
+
+    // Record the current process.versions so that we can avoid
+    // copying/rebuilding/renaming next time.
+    recordLastRebuildVersions(tempPkgDir);
+  });
+
+  // The `npm rebuild` command must be run in the parent directory of the
+  // relevant node_modules directory, which in this case is tempDir.
+  const rebuildResult = runNpmCommand(["rebuild"], tempDir);
+  if (! rebuildResult.success) {
+    buildmessage.error(rebuildResult.error);
+    files.rm_recursive(tempDir);
+    return false;
+  }
+
+  // If the `npm rebuild` command succeeded, overwrite the original
+  // package directories with the rebuilt package directories.
+  dirsToRebuild.forEach(function (pkgPath) {
+    files.renameDirAlmostAtomically(tempPkgDirs[pkgPath], pkgPath);
+  });
+
+  files.rm_recursive(tempDir);
+
+  return true;
+});
+
+function isPortable(dir, shouldCache) {
+  if (! files.lstat(dir).isDirectory()) {
+    return true;
+  }
+
+  return files.readdir(dir).every(itemName => {
+    const item = files.pathJoin(dir, itemName);
+
+    if (! files.lstat(item).isDirectory()) {
+      // Non-directory files are portable unless they end with .node.
+      return ! itemName.endsWith(".node");
+    }
+
+    if (! shouldCache) {
+      // Once we stop caching, we keep calling isPortable recursively
+      // without caching.
+      return isPortable(item);
+    }
+
+    // Cache previous results by writing a boolean value to a hidden
+    // file called .meteor-portable. Although it's tempting to write
+    // this file once for the whole node_modules directory, it's
+    // important that we put separate files in the individual top-level
+    // package directories so that they will get cleared away the next
+    // time those packages are (re)installed.
+
+    const portableFile = files.pathJoin(item, ".meteor-portable");
+    try {
+      return JSON.parse(files.readFile(portableFile));
+    } catch (e) {
+      if (! (e instanceof SyntaxError ||
+             e.code === "ENOENT")) {
+        throw e;
+      }
+    }
+
+    const result = isPortable(item);
+
+    // Write the .meteor-portable file asynchronously, and don't worry
+    // if it fails, e.g. because the file system is read-only (#6591).
+    // Failing to write the file only means more work next time.
+    fs.writeFile(
+      portableFile,
+      JSON.stringify(result) + "\n",
+      (error) => {}
+    );
+
+    return result;
+  });
+}
+
 // Return true if all of a package's npm dependencies are portable
 // (that is, if the node_modules can be copied anywhere and we'd
 // expect it to work, rather than containing native extensions that
@@ -131,53 +307,6 @@ meteorNpm.dependenciesArePortable = function (nodeModulesDir) {
     files.pathBasename(nodeModulesDir).startsWith("node_modules"),
     "Bad node_modules directory: " + nodeModulesDir,
   );
-
-  function isPortable(dir, shouldCache) {
-    return files.readdir(dir).every(itemName => {
-      const item = files.pathJoin(dir, itemName);
-
-      if (! files.lstat(item).isDirectory()) {
-        // Non-directory files are portable unless they end with .node.
-        return ! itemName.endsWith(".node");
-      }
-
-      if (! shouldCache) {
-        // Once we stop caching, we keep calling isPortable recursively
-        // without caching.
-        return isPortable(item);
-      }
-
-      // Cache previous results by writing a boolean value to a hidden
-      // file called .meteor-portable. Although it's tempting to write
-      // this file once for the whole node_modules directory, it's
-      // important that we put separate files in the individual top-level
-      // package directories so that they will get cleared away the next
-      // time those packages are (re)installed.
-
-      const portableFile = files.pathJoin(item, ".meteor-portable");
-      try {
-        return JSON.parse(files.readFile(portableFile));
-      } catch (e) {
-        if (! (e instanceof SyntaxError ||
-               e.code === "ENOENT")) {
-          throw e;
-        }
-      }
-
-      const result = isPortable(item);
-
-      // Write the .meteor-portable file asynchronously, and don't worry
-      // if it fails, e.g. because the file system is read-only (#6591).
-      // Failing to write the file only means more work next time.
-      fs.writeFile(
-        portableFile,
-        JSON.stringify(result) + "\n",
-        (error) => {}
-      );
-
-      return result;
-    });
-  }
 
   // Only check/write .meteor-portable files in each of the top-level
   // package directories.
@@ -403,11 +532,13 @@ const npmUserConfigFile = files.pathJoin(
   "meteor-npm-userconfig"
 );
 
-var runNpmCommand = function (args, cwd) {
+var runNpmCommand = meteorNpm.runNpmCommand =
+Profile("meteorNpm.runNpmCommand", function (args, cwd) {
   const nodeBinDir = files.getCurrentNodeBinDir();
+  const isWindows = process.platform === "win32";
   var npmPath;
 
-  if (os.platform() === "win32") {
+  if (isWindows) {
     npmPath = files.convertToOSPath(
       files.pathJoin(nodeBinDir, "npm.cmd"));
   } else {
@@ -424,15 +555,7 @@ var runNpmCommand = function (args, cwd) {
     cwd = files.convertToOSPath(cwd);
   }
 
-  // It looks like some npm commands (such as build commands, specifically on
-  // Windows) rely on having a global node binary present.
-  // Sometimes users have a global node installed, so it is not
-  // a problem, but a) it can be outdated and b) it can not be installed.
-  // To solve this problem, we set the PATH env variable to have the path
-  // containing the node binary we are running in right now as the highest
-  // priority.
-  // This hack is confusing as npm is supposed to do it already.
-  const env = files.currentEnvWithPathsAdded(nodeBinDir);
+  const env = require("../cli/dev-bundle-bin-helpers.js").getEnv();
 
   // Make sure we don't honor any user-provided configuration files.
   env.npm_config_userconfig = npmUserConfigFile;
@@ -455,7 +578,7 @@ var runNpmCommand = function (args, cwd) {
       }
     );
   }).await();
-}
+});
 
 var constructPackageJson = function (packageName, newPackageNpmDir,
                                      npmDependencies) {
@@ -618,6 +741,11 @@ var installNpmModule = function (name, version, dir) {
     throw new NpmFailure;
   }
 
+  const pkgDir = files.pathJoin(dir, "node_modules", name);
+  if (! isPortable(pkgDir, true)) {
+    recordLastRebuildVersions(pkgDir);
+  }
+
   if (process.platform !== "win32") {
     // If we are on a unixy file system, we should not build a package that
     // can't be used on Windows.
@@ -658,13 +786,21 @@ var installFromShrinkwrap = function (dir) {
     // Recover by returning false from updateDependencies
     throw new NpmFailure;
   }
+
+  const nodeModulesDir = files.pathJoin(dir, "node_modules");
+  files.readdir(nodeModulesDir).forEach(function (name) {
+    const pkgDir = files.pathJoin(nodeModulesDir, name);
+    if (! isPortable(pkgDir, true)) {
+      recordLastRebuildVersions(pkgDir);
+    }
+  });
 };
 
 // ensure we can reach http://npmjs.org before we try to install
 // dependencies. `npm install` times out after more than a minute.
 var ensureConnected = function () {
   try {
-    httpHelpers.getUrl("http://registry.npmjs.org");
+    httpHelpers.getUrl(process.env.NPM_CONFIG_REGISTRY || "http://registry.npmjs.org");
   } catch (e) {
     buildmessage.error("Can't install npm dependencies. " +
                        "Are you connected to the internet?");
@@ -721,5 +857,3 @@ var logUpdateDependencies = function (packageName, npmDependencies) {
   runLog.log(packageName + ': updating npm dependencies -- ' +
              _.keys(npmDependencies).join(', ') + '...');
 };
-
-exports.runNpmCommand = runNpmCommand;

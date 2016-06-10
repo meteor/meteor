@@ -1,6 +1,7 @@
 var _ = require('underscore');
 var isopackets = require('../tool-env/isopackets.js');
 var Console = require('../console/console.js').Console;
+var fiberHelpers = require('../utils/fiber-helpers.js');
 
 // runLog is primarily used by the parts of the tool which run apps locally. It
 // writes to standard output (and standard error, if rawLogs is set), and allows
@@ -16,15 +17,17 @@ var Console = require('../console/console.js').Console;
 // process.std{out,err} or to console.log; we should be careful to not do that
 // anywhere that may overlap with use of runLog.
 
-
-var getLoggingPackage = function () {
-  var Log = isopackets.load('logging').logging.Log;
+let _Log;
+function getLoggingPackage() {
+  if (! _Log) {
+    _Log = isopackets.load('logging').logging.Log;
+  }
 
   // Since no other process will be listening to stdout and parsing it,
   // print directly in the same format as log messages from other apps
-  Log.outputFormat = 'colored-text';
+  _Log.outputFormat = 'colored-text';
 
-  return Log;
+  return _Log;
 };
 
 var RunLog = function () {
@@ -96,7 +99,9 @@ _.extend(RunLog.prototype, {
       Console[isStderr ? "rawError" : "rawInfo"](line + "\n");
     } else {
       // XXX deal with test server logging differently?!
-      Console.rawInfo(Log.format(obj, { color: true }) + "\n");
+      return fiberHelpers.noYieldsAllowed(function() {
+        Console.rawInfo(Log.format(obj, { color: true }) + "\n");
+      });
     }
   },
 

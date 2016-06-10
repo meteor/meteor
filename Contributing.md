@@ -1,17 +1,16 @@
 # Contributing to Meteor
 
 Thank you for contributing to the Meteor project! Please read the guidelines below or it might be
-hard for us to help you with your issue.
+hard for the community to help you with your issue or pull request.
 
 We are excited to have your help building Meteor &mdash; both the platform and the
-community behind it &mdash; and share in the rewards of getting in early on
-something great.  Here's how you can help with bug reports and new code.
+community behind it. Here's how you can help with bug reports and new code.
 
-## Reporting a bug in Meteor
+<h2 id="reporting-bug">Reporting a bug in Meteor</h2>
 
 We welcome clear bug reports.  If you've found a bug in Meteor that
 isn't a security risk, please file a report in
-[our issue tracker](https://github.com/meteor/meteor/issues).
+[our issue tracker](https://github.com/meteor/meteor/issues). Before you file your issue, look to see if it has already been reported. If so, comment, up-vote or +1 the existing issue to show that it's affecting multiple people.
 
 > There is a separate procedure for security-related issues.  If the
 > issue you've found contains sensitive information or raises a security
@@ -22,11 +21,9 @@ A Meteor app has many moving parts, and it's often difficult to
 reproduce a bug based on just a few lines of code.  So your report
 should include a reproduction recipe.  By making it as easy as possible
 for others to reproduce your bug, you make it easier for your bug to be
-fixed. **We may not be able to tackle an issue opened without a
-reproduction recipe. If we can't, we'll close them with a pointer to this
-wiki section and a request for more information.**
+fixed. **It's likely that without a reproduction, contributors won't look into fixing your issue and it will end up being closed.**
 
-**A single code snippet is _not_ a reproduction recipe.**
+**A single code snippet is _not_ a reproduction recipe and neither is an entire application.**
 
 A reproduction recipe works like this:
 
@@ -59,10 +56,9 @@ better.  We love getting bugfix pull requests.  Just make sure they're
 written to the MDG style guide and *come with tests*.  Read further down
 for more details on proposing changes to core code.
 
-## Feature requests
+<h2 id="feature-requests">Feature requests</h2>
 
-As of January 2015, we do use GitHub to track feature requests from our
-community. Feature request issues get the `feature` label, as well as a label
+As of May 2016, we use GitHub to track feature requests. Feature request issues get the `feature` label, as well as a label
 corresponding to the Meteor subproject that they are a part of.
 
 Meteor is a big project with [many](https://www.meteor.com/projects)
@@ -75,70 +71,23 @@ month.  We use our [roadmap](Roadmap.md) to communicate the high level features 
 Every additional feature adds a maintenance cost in addition to its value. This
 cost starts with the work of writing the feature or reviewing a community pull
 request. In addition to the core code change, attention needs to be paid to
-documentation, tests, maintability, how the feature interacts with existing and
+documentation, tests, maintainability, how the feature interacts with existing and
 speculative Meteor features, cross-browser/platform support, user experience/API
-considerations, etc.  Once the feature is shipped, it then becomes the core
-team's responsibility to fix future bugs related to the feature.
+considerations, etc.  Once the feature is shipped, it then becomes the community's responsibility to fix future bugs related to the feature. In case the original author disappears, it's important that the feature has good tests and is widely used in order to be maintainable by other contributors.
 
-We're happy to see pull requests for Meteor feature requests on GitHub. Even if
-they don't get merged quickly, they can be helpful to other users who can use
-them as temporary workarounds, and community members can help each other iterate
-on making better pull requests.
+For these reasons, we strongly encourage features to be implemented as [Atmosphere or npm packages](http://guide.meteor.com/writing-packages.html) rather than changes to core. Try to re-work your feature request as a minimal set of hooks to core that enable the feature to be implemented as a package.
 
-But as described above, actually evaluating and merging them is real work that
-always has to be weighed against [other work](https://roadmap.meteor.com/) that
-Meteor users need.  So don't be surprised if feature requests and their
-corresponding pull requests don't get acted on for a while or ever, especially
-if they contain API changes or don't contain tests.
+Feature requests should be well specified and unambiguous to have the greatest chance of being worked on by a contributor.
 
-That said, feature requests on GitHub are still a good place for the community
-to express their desires around features. We now organize issues using subproject
-labels, so it's easier for a core developer to find all the feature requests for
-a subproject and think of ways to holistically address multiple feature
-requests.
+Finally, you can show your support for features you would like by commenting with a +1 or up-voting the issue.
 
-In general, if a feature can be implemented as an external Atmosphere package by
-our community, that's better than building it in to core, since future changes
-can be made directly by the community users who directly depend on the feature.
+## Triaging issues
 
+A great way to contribute to Meteor is by helping keep the issues in the repository clean and well organized. This process is called 'issue triage' and the steps are described [here](IssueTriage.md).
 
-## Adding new packages to Meteor
+## Documentation
 
-If you have an idea for something new in Meteor, usually the best option
-is to publish it as an [Atmosphere](https://atmospherejs.com/)
-package.  We want to keep the core as small as possible, with just
-the parts that most apps will need.  If there's a way to do something as
-an Atmosphere package, we'll steer you in that direction.
-
-Publishing your code as a separate package decouples your change from
-Meteor's core release cycle so you can maintain the code independently.
-It gives you and others in the community freedom to explore different
-variations of your idea.  And it lets developers "vote with their feet"
-to find the best way to solve a problem or add a capability.  For
-example, the popular
-[`iron:router`](https://atmospherejs.com/iron/router) package is
-an evolution of two earlier routing solutions that were both already
-available in Atmosphere.
-
-For historical reasons, some packages that really ought to be in
-Atmosphere are currently in core, like `less` and `coffeescript`.
-We welcome PRs against these packages but they may not get the highest
-priority. If a community-supported package providing access to the same
-tool becomes popular, we'll likely start recommending that users use
-that instead and deprecate these core packages, as we already have
-with a few.
-
-It's probably a good idea to write
-your packages to the MDG style guide.  You can read more about that in
-the next section.  In particular, two things you can get a head start on
-are:
-
- * Your package should have tests. See the `iron:router`
-   [test suite](https://github.com/EventedMind/iron-router/tree/master/test)
-   as an example.
-
- * Meteor minifies all JS/CSS.  Packages should include only the
-   original JS/CSS files, not the minified versions.
+If you'd like to contribution to Meteor's documentation, head over to https://github.com/meteor/docs and create issues or pull requests there.
 
 ## Making changes to Meteor core
 
@@ -179,36 +128,19 @@ We have found that writing software to meet both these standards at the
 same time is hard but
 incredibly rewarding.  We hope you come to feel the same way.
 
-#### Proposing your change
+### Proposing your change
 
-You'll have the best chance of getting a change into core if you can
-build consensus in the community for it and eventually get a core
-developer on board.  It is very unlikely that we'll take a patch that adds a feature
-without seeing some initial discussion about it.  Probably the best way
-to get consensus is to discuss it on [Meteor Forums](https://forums.meteor.com), search the
-archives for anything relevant, and then post your proposal there.  It's
-okay to post an idea to [Meteor Forums](https://forums.meteor.com) without having a design or some
-initial code &mdash; others may be interested in helping.
+You'll have the best chance of getting a change into core if you can build consensus in the community for it. Start by creating a well specified feature request as a Github issue.
 
-Another option is to come to [Devshop](https://devshop.meteor.com/) in
-San Francisco, where you can sit with a core developer and work out some
-of the design in person.
+Help drive discussion and advocate for your feature on the Github ticket (and perhaps the forums). The higher the demand for the feature and the greater the clarity of it's specification will determine the likelihood of a core contributor prioritizing your feature by flagging it with the `pull-requests-encouraged` label.
 
-Most non-trivial changes need more discussion than comfortably fits
-inside GitHub's issue tracker, so that is not a good place to propose a
-new idea.  We will probably close most "surprise" PRs that we find there
-with a note to start a discussion on [Meteor Forums](https://forums.meteor.com).
+Split features up into smaller, logically separable chunks. It is unlikely that large and complicated PRs  will be merged.
 
-Small changes, especially if they don't affect APIs or documentation,
-may not really need a thread on [Meteor Forums](https://forums.meteor.com) first.  But a new feature
-that's small enough not to need discussion probably isn't super
-valuable.  It may not get the highest priority from the core team, or we
-may just close it.
+Once your feature has been labelled with `pull-requests-encouraged`, leave a comment letting people know you're working on it and you can begin work on the code.
 
-#### Submitting pull requests
+### Submitting pull requests
 
-Once you've hammered out a good design and gotten at least one core
-developer on board, go ahead and submit a pull request.  Please follow
+Once you've hammered out a good design go ahead and submit a pull request. If your PR isn't against a bug with the `confirmed` label or a feature request with the `pull-requests-encouraged` label, don't expect your PR to be merged unless it's a trivial and obvious fix (e.g documentation). When submitting a PR, please follow
 these guidelines:
 
  * Sign the [contributor's agreement](http://contribute.meteor.com/).
@@ -231,19 +163,19 @@ these guidelines:
  * Be sure your author field in git is properly filled out with your full name
  and email address so we can credit you.
 
-#### Need help with your pull request?
+### Need help with your pull request?
 
 Meteor now has groups defined to cover different areas of the codebase. If you need help getting acceptance on certain pull requests with an area of focus listed below, you can address the appropriate people in the pull request:
 
 * Meteor Data Team - This includes DDP, tracker, mongo, accounts, etc. You can mention @data in the PR.
 * Blaze - This includes Spacebars, Blaze, etc. You can mention @view-layer in the PR.
-* Build tools - This includes modules, build tool changes, etc. You can memtion @platform in the PR.
+* Build tools - This includes modules, build tool changes, etc. You can mention @platform in the PR.
 * Mobile integration - This includes Cordova, React Native, etc. You can mention @mobile in the PR.
 * Documentation - This includes the Guide, the Docs, and any supporting material. You can mention @guide in the PR.
 
 Including the people above is no guarantee that you will get a response, or ultimately that your pull request will be accepted. This section exists to give some minor guidance on internal Meteor Development Group team structures.
 
-## Running tests on Meteor core
+### Running tests on Meteor core
 
 When you are working with code in the core Meteor packages, you will want to make sure you run the
 full test-suite (including the tests you added) to ensure you haven't broken anything in Meteor. The
@@ -252,7 +184,7 @@ full test-suite (including the tests you added) to ensure you haven't broken any
 The test packages command will start up a Meteor app with TinyTest setup, just connect to
 http://localhost:3000 or your specified port, like you would do with a normal meteor app.
 
-### Run against your local meteor copy
+#### Run against your local meteor copy
 
 When running `test-packages`, be sure that you use the current directory copy of Meteor instead of
 the installed version. Here is the INCORRECT way: `meteor test-packages`.
@@ -264,14 +196,10 @@ This is important because you want to make sure you are running the test-package
 the Meteor code on the branch you have pulled from GitHub, rather than the stable Meteor release you
 have installed on your computer.
 
-### Running a subset of tests
+#### Running a subset of tests
 
 You can also just run a subset of tests from one package to speed up testing time. Let's say for
 example that you just want to run the Spacebars test suite. Just simple do `./meteor test-packages
 ./packages/spacebars-tests` and it will just run the test files from that one package. You can
 examine the `package.js` file for the `onTest` block, it outlines all the test files that should be
 run.
-
-## How we respond to issues
-
-You might be interesting in reading this [guide for core developers about responding to issues](https://meteor.hackpad.com/Responding-to-GitHub-Issues-SKE2u3tkSiH).

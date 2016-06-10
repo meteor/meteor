@@ -6,9 +6,17 @@ var files = require('./mini-files.js');
 var serverJson = require("./server-json.js");
 var topLevelIdPattern = /^[^./]/;
 
+function statOrNull(path) {
+  try {
+    return fs.statSync(path);
+  } catch (e) {
+    return null;
+  }
+}
+
 function findAppDirHelper(absOSPath) {
   if (fs.statSync(absOSPath).isDirectory() &&
-      fs.existsSync(path.join(absOSPath, ".meteor"))) {
+      statOrNull(path.join(absOSPath, ".meteor"))) {
     return absOSPath;
   }
 
@@ -131,7 +139,17 @@ function resolve(id) {
   }
 
   if (res === null) {
-    res = new Error("Cannot find module '" + id + "'");
+    var idParts = id.split("/");
+    var meteorAddTip = "";
+    // If it looks like `meteor/xxx`, the user may forgot to add the 
+    // package before importing it.
+    if (idParts.length === 2 &&
+        idParts[0] === "meteor") {
+          meteorAddTip = ". Try `meteor add " + idParts[1] + "` " +
+          "as it looks like you tried to import it without adding " +
+          "to the project.";
+    }
+    res = new Error("Cannot find module '" + id + "'" + meteorAddTip);
     res.code = "MODULE_NOT_FOUND";
     throw res;
   }

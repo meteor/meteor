@@ -147,36 +147,56 @@ function isNode(value) {
     && typeof value.end === "number";
 }
 
+function isIdWithName(node, name) {
+  return node &&
+    node.type === "Identifier" &&
+    node.name === name;
+}
+
 function isFunctionWithParameter(node, name) {
   if (node.type === "FunctionExpression" ||
       node.type === "FunctionDeclaration" ||
       node.type === "ArrowFunctionExpression") {
-    return node.params.some(
-      param =>
-        param.type === "Identifier" &&
-        param.name === name
-    );
+    return node.params.some(param => isIdWithName(param, name));
   }
 }
 
 function getRequiredModuleId(node) {
   if (node.type === "CallExpression" &&
-      node.callee.type === "Identifier" &&
-      node.callee.name === "require") {
+      isIdWithName(node.callee, "require")) {
     const args = node.arguments;
     const argc = args.length;
     if (argc > 0) {
       const arg = args[0];
-      if (arg.type === "StringLiteral" ||
-          (arg.type === "Literal" &&
-           typeof arg.value === "string")) {
+      if (isStringLiteral(arg)) {
         return arg.value;
       }
     }
   }
 }
 
+function isStringLiteral(node) {
+  return node && (
+    node.type === "StringLiteral" ||
+    (node.type === "Literal" &&
+     typeof node.value === "string"));
+}
+
 function getImportedModuleId(node) {
+  if (node.type === "CallExpression" &&
+      node.callee.type === "MemberExpression" &&
+      isIdWithName(node.callee.object, "module") &&
+      isIdWithName(node.callee.property, "import")) {
+    const args = node.arguments;
+    const argc = args.length;
+    if (argc > 0) {
+      const arg = args[0];
+      if (isStringLiteral(arg)) {
+        return arg.value;
+      }
+    }
+  }
+
   if (node.type === "ImportDeclaration" ||
       node.type === "ExportAllDeclaration" ||
       node.type === "ExportNamedDeclaration") {

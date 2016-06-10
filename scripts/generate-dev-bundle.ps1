@@ -2,8 +2,9 @@
 # use 32bit by default
 $PLATFORM = "windows_x86"
 $MONGO_VERSION = "2.6.7"
-$NODE_VERSION = "0.10.43"
-$NPM_VERSION = "2.14.22"
+$NODE_VERSION = "0.10.45"
+$NPM_VERSION = "2.15.1"
+$PYTHON_VERSION = "2.7.10" # For node-gyp
 
 # take it form the environment if exists
 if (Test-Path env:PLATFORM) {
@@ -38,6 +39,15 @@ $shell = New-Object -com shell.application
 # same node on 32bit vs 64bit?
 $node_link = "http://nodejs.org/dist/v${NODE_VERSION}/node.exe"
 $webclient.DownloadFile($node_link, "$DIR\bin\node.exe")
+
+# On Windows we provide a reliable version of python.exe for use by
+# node-gyp (the tool that rebuilds binary node modules). #WinPy
+$py_msi_link = "http://www.python.org/ftp/python/${PYTHON_VERSION}/python-${PYTHON_VERSION}.msi"
+$py_msi = "${DIR}\python.msi"
+$webclient.DownloadFile($py_msi_link, $py_msi)
+$py_dir = "${DIR}\python"
+msiexec /i "$py_msi" TARGETDIR="$py_dir" /quiet /qn /norestart
+$env:PATH = "${py_dir};${env:PATH}"
 
 # download initial version of npm
 $npm_zip = "$DIR\bin\npm.zip"
@@ -136,6 +146,9 @@ rm -Recurse -Force "$DIR\mongodb\$mongo_name"
 
 # Remove npm 3 before we package the dev bundle
 rm -Recurse -Force "${DIR}\bin\npm3"
+
+rm -Recurse -Force "$py_msi"
+python --version
 
 cd $DIR
 

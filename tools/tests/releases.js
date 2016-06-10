@@ -11,7 +11,7 @@ var DEFAULT_RELEASE_TRACK = catalog.DEFAULT_TRACK;
 // the packages from the internet. If we could fool it into using local packages
 // instead, or think that it alreayd has the packages, it would be ok). (This is
 // because it calls 'create' from a warehouse, to be specific).
-selftest.define("springboard", ['checkout', 'net'], function () {
+selftest.define("springboard", ['checkout', 'net', 'custom-warehouse'], function () {
   var s = new Sandbox({
     warehouse: {
       v1: { },
@@ -125,7 +125,7 @@ selftest.define("springboard", ['checkout', 'net'], function () {
 // the internets. (Or, to be more specific: our warehouse code tries to fetch
 // the packages from the internet. If we could fool it into using local packages
 // instead, or think that it already has the packages, it would be ok).
-selftest.define("writing versions file", ['checkout', 'net'], function () {
+selftest.define("writing versions file", ['checkout', 'net', 'custom-warehouse'], function () {
   var s = new Sandbox({
     warehouse: {
       v1: { recommended: true},
@@ -197,7 +197,7 @@ selftest.define("checkout", ['checkout'], function () {
 });
 
 
-selftest.define("download and springboard to pre-0.9.0 release", ['net', 'slow'], function () {
+selftest.define("download and springboard to pre-0.9.0 release", ['net', 'slow', 'custom-warehouse'], function () {
   var s, run;
 
   if (files.inCheckout()) {
@@ -223,7 +223,7 @@ selftest.define("download and springboard to pre-0.9.0 release", ['net', 'slow']
 });
 
 
-selftest.define("unknown release", [], function () {
+selftest.define("unknown release", ['custom-warehouse'], function () {
   var s = new Sandbox({
     warehouse: {
       v2: { recommended: true }
