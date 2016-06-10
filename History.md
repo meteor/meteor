@@ -107,6 +107,10 @@
 
 * `files.rename` now always executes synchronously. 9856d1d418a4d19c0adf22ec9a92f7ce81a23b05
 
+* "Bare" files contained by `client/compatibility/` directories or added
+  with `api.addFiles(path, ..., { bare: true })` are no longer compiled by
+  Babel. https://github.com/meteor/meteor/pull/7033#issuecomment-225126778
+
 * Miscellaneous fixed bugs: #6877 #6843 #6881
 
 ## v1.3.2.3
