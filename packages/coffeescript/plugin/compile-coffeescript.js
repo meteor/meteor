@@ -1,5 +1,9 @@
-import sourcemap from "source-map";
-import coffee from "coffee-script";
+import {
+  SourceMapConsumer,
+  SourceMapGenerator,
+} from 'source-map';
+import coffee from 'coffee-script';
+import { BabelCompiler } from 'meteor/babel-compiler';
 
 // The coffee-script compiler overrides Error.prepareStackTrace, mostly for the
 // use of coffee.run which we don't use.  This conflicts with the tool's use of
@@ -21,6 +25,7 @@ export class CoffeeCompiler extends CachingCompiler {
       compilerName: 'coffeescript',
       defaultCacheSize: 1024*1024*10,
     });
+    this.babelCompiler = new BabelCompiler();
   }
 
   _getCompileOptions(inputFile) {
@@ -33,14 +38,14 @@ export class CoffeeCompiler extends CachingCompiler {
       // Include the original source in the source map (sourcesContent field).
       inline: true,
       // This becomes the "file" field of the source map.
-      generatedFile: "/" + this._outputFilePath(inputFile),
+      generatedFile: '/' + this._outputFilePath(inputFile),
       // This becomes the "sources" field of the source map.
       sourceFiles: [inputFile.getDisplayPath()],
     };
   }
 
   _outputFilePath(inputFile) {
-    return inputFile.getPathInPackage() + ".js";
+    return inputFile.getPathInPackage() + '.js';
   }
 
   getCacheKey(inputFile) {
@@ -67,12 +72,37 @@ export class CoffeeCompiler extends CachingCompiler {
       return null;
     }
 
-    const stripped = stripExportedVars(
+    let sourceMap = JSON.parse(output.v3SourceMap);
+
+    if (source.indexOf('`') !== -1) {
+      // If source contains backticks, pass the coffee output through babel-compiler
+      const doubleRoastedCoffee =
+        this.babelCompiler.processOneFileForTarget(inputFile, output.js);
+
+      if (doubleRoastedCoffee != null &&
+          doubleRoastedCoffee.data != null) {
+        output.js = doubleRoastedCoffee.data;
+
+        if (doubleRoastedCoffee.sourceMap) {
+          // Combine the original CoffeeScript source map with the one
+          // produced by this.babelCompiler.processOneFileForTarget.
+          const smg = new SourceMapGenerator(
+            new SourceMapConsumer(doubleRoastedCoffee.sourceMap));
+          smg.applySourceMap(new SourceMapConsumer(sourceMap));
+          sourceMap = smg.toJSON();
+        } else {
+          // If the .coffee file is contained by a node_modules directory,
+          // then BabelCompiler will not transpile it, and there will be
+          // no sourceMap, but that's fine because the original
+          // CoffeeScript sourceMap will still be valid.
+        }
+      }
+    }
+
+    return addSharedHeader(stripExportedVars(
       output.js,
-      inputFile.getDeclaredExports().map(e => e.name));
-    const sourceWithMap = addSharedHeader(
-      stripped, JSON.parse(output.v3SourceMap));
-    return sourceWithMap;
+      inputFile.getDeclaredExports().map(e => e.name)
+    ), sourceMap);
   }
 
   addCompileResult(inputFile, sourceWithMap) {
@@ -143,7 +173,7 @@ function stripExportedVars(source, exports) {
 
     let vars = match[1].split(', ').filter(v => exports.indexOf(v) === -1);
     if (vars.length) {
-      replaceLine("var " + vars.join(', ') + match[2]);
+      replaceLine('var ' + vars.join(', ') + match[2]);
     } else {
       // We got rid of all the vars on this line. Drop the whole line if this
       // didn't continue to the next line, otherwise keep just the 'var '.
@@ -182,12 +212,12 @@ function addSharedHeader(source, sourceMap) {
       // our header at the end of the line that it's on. This doesn't change
       // line numbers or the part of the line that previous may have been
       // annotated, so we don't need to update the source map.
-      return useStrict + "  " + header;
+      return useStrict + '  ' + header;
     } else {
       // There's no use strict, so we can just add the header at the very
       // beginning. This adds a line to the file, so we update the source map to
       // add a single un-annotated line to the beginning.
-      sourceMap.mappings = ";" + sourceMap.mappings;
+      sourceMap.mappings = ';' + sourceMap.mappings;
       return header;
     }
   });

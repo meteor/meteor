@@ -150,6 +150,14 @@ Fiber(function () {
       });
     }
 
+    function statOrNull(path) {
+      try {
+        return fs.statSync(path);
+      } catch (e) {
+        return null;
+      }
+    }
+
     var Npm = {
       /**
        * @summary Require a package that was specified using
@@ -171,7 +179,7 @@ Fiber(function () {
             name.split("/", 1)[0]
           ));
 
-          if (fs.existsSync(packageBase)) {
+          if (statOrNull(packageBase)) {
             return fullPath = files.convertToOSPath(
               files.pathResolve(nodeModuleBase, name)
             );

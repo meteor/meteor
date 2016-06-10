@@ -93,8 +93,9 @@ class StylusCompiler extends MultiFileCachingCompiler {
           // if it is not a custom syntax path, it could be a lookup in a folder
           for (let i = paths.length - 1; i >= 0; i--) {
             const joined = path.join(paths[i], importPath);
-            if (fs.exists(joined))
+            if (statOrNull(joined)) {
               return [joined];
+            }
           }
         }
 
@@ -175,5 +176,13 @@ class StylusCompiler extends MultiFileCachingCompiler {
       data: css,
       sourceMap: sourceMap
     });
+  }
+}
+
+function statOrNull(path) {
+  try {
+    return fs.statSync(path);
+  } catch (e) {
+    return null;
   }
 }

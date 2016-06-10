@@ -8,13 +8,14 @@ var linker = require('./linker.js');
 var util = require('util');
 var _ = require('underscore');
 var Profile = require('../tool-env/profile.js').Profile;
-import {sha1} from  '../fs/watch.js';
+import {sha1, readAndWatchFileWithHash} from  '../fs/watch.js';
 import LRU from 'lru-cache';
 import Fiber from 'fibers';
 import {sourceMapLength} from '../utils/utils.js';
 import {Console} from '../console/console.js';
 import ImportScanner from './import-scanner.js';
 import {cssToCommonJS} from "./css-modules.js";
+import Resolver from "./resolver.js";
 
 import { isTestFilePath } from './test-files.js';
 
@@ -58,7 +59,7 @@ import { isTestFilePath } from './test-files.js';
 // Cache the (slightly post-processed) results of linker.fullLink.
 const CACHE_SIZE = process.env.METEOR_LINKER_CACHE_SIZE || 1024*1024*100;
 const CACHE_DEBUG = !! process.env.METEOR_TEST_PRINT_LINKER_CACHE_DEBUG;
-const LINKER_CACHE_SALT = 6; // Increment this number to force relinking.
+const LINKER_CACHE_SALT = 7; // Increment this number to force relinking.
 const LINKER_CACHE = new LRU({
   max: CACHE_SIZE,
   // Cache is measured in bytes. We don't care about servePath.
@@ -203,6 +204,14 @@ class InputFile extends buildPluginModule.InputFile {
     // code and we don't want users to be accessing anything that we don't
     // document.
     this._resourceSlot = resourceSlot;
+
+    // Map from control file names (e.g. package.json, .babelrc) to
+    // absolute paths, or null to indicate absence.
+    this._controlFileCache = Object.create(null);
+
+    // Map from imported module identifier strings (possibly relative) to
+    // fully require.resolve'd module identifiers.
+    this._resolveCache = Object.create(null);
   }
 
   getContentsAsBuffer() {
@@ -215,6 +224,27 @@ class InputFile extends buildPluginModule.InputFile {
     return self._resourceSlot.packageSourceBatch.unibuild.pkg.name;
   }
 
+  isPackageFile() {
+    return !! this.getPackageName();
+  }
+
+  isApplicationFile() {
+    return ! this.getPackageName();
+  }
+
+  getSourceRoot() {
+    const sourceRoot = this._resourceSlot.packageSourceBatch.sourceRoot;
+
+    if (! _.isString(sourceRoot)) {
+      const name = this.getPackageName();
+      throw new Error(
+        "Unknown source root for " + (
+          name ? "package " + name : "app"));
+    }
+
+    return sourceRoot;
+  }
+
   getPathInPackage() {
     var self = this;
     return self._resourceSlot.inputResource.path;
@@ -225,6 +255,105 @@ class InputFile extends buildPluginModule.InputFile {
     // XXX fileOptions only exists on some resources (of type "source"). The JS
     // resources might not have this property.
     return self._resourceSlot.inputResource.fileOptions || {};
+  }
+
+  readAndWatchFileWithHash(path) {
+    const osPath = files.convertToOSPath(path);
+    const sourceRoot = this.getSourceRoot();
+    const relPath = files.pathRelative(sourceRoot, osPath);
+    if (relPath.startsWith("..")) {
+      throw new Error(
+        `Attempting to read file outside ${
+          this.getPackageName() || "the app"}: ${osPath}`
+      );
+    }
+    const sourceBatch = this._resourceSlot.packageSourceBatch;
+    return readAndWatchFileWithHash(
+      sourceBatch.unibuild.watchSet,
+      osPath
+    );
+  }
+
+  readAndWatchFile(path) {
+    return this.readAndWatchFileWithHash(path).contents;
+  }
+
+  // Search ancestor directories for control files (e.g. package.json,
+  // .babelrc), and return the absolute path of the first one found, or
+  // null if the search failed.
+  findControlFile(basename) {
+    let absPath = this._controlFileCache[basename];
+    if (typeof absPath === "string") {
+      return absPath;
+    }
+
+    const sourceRoot = this._resourceSlot.packageSourceBatch.sourceRoot;
+    if (! _.isString(sourceRoot)) {
+      return this._controlFileCache[basename] = null;
+    }
+
+    let dir = files.pathDirname(this.getPathInPackage());
+    while (true) {
+      absPath = files.pathJoin(sourceRoot, dir, basename);
+
+      const stat = files.statOrNull(absPath);
+      if (stat && stat.isFile()) {
+        return this._controlFileCache[basename] = absPath;
+      }
+
+      if (files.pathBasename(dir) === "node_modules") {
+        // The search for control files should not escape node_modules.
+        return this._controlFileCache[basename] = null;
+      }
+
+      let parentDir = files.pathDirname(dir);
+      if (parentDir === dir) break;
+      dir = parentDir;
+    }
+
+    return this._controlFileCache[basename] = null;
+  }
+
+  _resolveCacheLookup(id, parentPath) {
+    const byId = this._resolveCache[id];
+    return byId && byId[parentPath];
+  }
+
+  _resolveCacheStore(id, parentPath, resolved) {
+    let byId = this._resolveCache[id];
+    if (! byId) {
+      byId = this._resolveCache[id] = Object.create(null);
+    }
+    return byId[parentPath] = resolved;
+  }
+
+  resolve(id, parentPath) {
+    const batch = this._resourceSlot.packageSourceBatch;
+
+    parentPath = parentPath || files.pathJoin(
+      batch.sourceRoot,
+      this.getPathInPackage()
+    );
+
+    let resolved = this._resolveCacheLookup(id, parentPath);
+    if (resolved) {
+      return resolved;
+    }
+
+    const parentStat = files.statOrNull(parentPath);
+    if (! parentStat ||
+        ! parentStat.isFile()) {
+      throw new Error("Not a file: " + parentPath);
+    }
+
+    const resolver = batch.getResolver();
+
+    return this._resolveCacheStore(
+      id, parentPath, resolver.resolve(id, parentPath).id);
+  }
+
+  require(id, parentPath) {
+    return require(this.resolve(id, parentPath));
   }
 
   getArch() {
@@ -495,10 +624,17 @@ class ResourceSlot {
       // the beginning of the <head>. If the corresponding module ever
       // gets imported, its module.exports object should be an empty stub,
       // rather than a <style> node added dynamically to the <head>.
-      self.addJavaScript({
-        ...options,
-        data: "// These styles have already been applied to the document.\n",
-        lazy: true
+      self.jsOutputResources.push({
+        ...resource,
+        type: "js",
+        data: new Buffer(
+          "// These styles have already been applied to the document.\n",
+          "utf8"),
+        // If a compiler plugin calls addJavaScript with the same
+        // sourcePath, that code should take precedence over this empty
+        // stub, so this property marks the resource as disposable.
+        emtpyStub: true,
+        lazy: true,
       });
 
       resource.type = "css";
@@ -629,6 +765,7 @@ export class PackageSourceBatch {
     self.sourceRoot = sourceRoot;
     self.linkerCacheDir = linkerCacheDir;
     self.importExtensions = [".js", ".json"];
+    self._resolver = null;
 
     var sourceProcessorSet = self._getSourceProcessorSet();
 
@@ -702,7 +839,11 @@ export class PackageSourceBatch {
 
     self.useMeteorInstall =
       _.isString(self.sourceRoot) &&
-      self.processor.isopackCache.uses(self.unibuild.pkg, "modules");
+      self.processor.isopackCache.uses(
+        self.unibuild.pkg,
+        "modules",
+        self.unibuild.arch
+      );
   }
 
   addImportExtension(extension) {
@@ -715,6 +856,35 @@ export class PackageSourceBatch {
     if (this.importExtensions.indexOf(extension) < 0) {
       this.importExtensions.push(extension);
     }
+  }
+
+  getResolver() {
+    if (this._resolver) {
+      return this._resolver;
+    }
+
+    const nmds = this.unibuild.nodeModulesDirectories;
+    const nodeModulesPaths = [];
+
+    _.each(nmds, (nmd, path) => {
+      if (! nmd.local) {
+        nodeModulesPaths.push(
+          files.convertToOSPath(path.replace(/\/$/g, "")));
+      }
+    });
+
+    return this._resolver = new Resolver({
+      sourceRoot: this.sourceRoot,
+      targetArch: this.processor.arch,
+      extensions: this.importExtensions,
+      nodeModulesPaths,
+      watchSet: this.unibuild.watchSet,
+      onMissing(id) {
+        const error = new Error("Cannot find module '" + id + "'");
+        error.code = "MODULE_NOT_FOUND";
+        throw error;
+      }
+    });
   }
 
   _getSourceProcessorSet() {

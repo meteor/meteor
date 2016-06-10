@@ -1,5 +1,6 @@
-exports.Promise = require("meteor-promise");
-
-// Define MeteorPromise.Fiber so that every Promise callback can run in a
-// Fiber drawn from a pool of reusable Fibers.
-exports.Promise.Fiber = require("fibers");
+require("meteor-promise").makeCompatible(
+  exports.Promise = require("./common.js").Promise,
+  // Allow every Promise callback to run in a Fiber drawn from a pool of
+  // reusable Fibers.
+  require("fibers")
+);

@@ -189,8 +189,11 @@ var _updateServerPackageData = function (dataStore, options) {
       var zlib = require('zlib');
       var colsGzippedBuffer = new Buffer(
         remoteData.collectionsCompressed, 'base64');
-      var gunzip = Promise.denodeify(zlib.gunzip);
-      var colsJSON = gunzip(colsGzippedBuffer).await();
+      var colsJSON = new Promise((resolve, reject) => {
+        zlib.gunzip(colsGzippedBuffer, (err, res) => {
+          err ? reject(err) : resolve(res);
+        });
+      }).await();
       remoteData.collections = JSON.parse(colsJSON);
       delete remoteData.collectionsCompressed;
     }
@@ -359,7 +362,7 @@ export function bundleBuild(isopack, isopackCache) {
     // When publishing packages that don't use new registerCompiler plugins,
     // make sure that old Meteors can use it too
     includePreCompilerPluginIsopackVersions: true,
-    usesModules: isopackCache.uses(isopack, "modules"),
+    isopackCache,
   });
 
   var buildTarball = files.pathJoin(tempDir, packageTarName + '.tgz');

@@ -29,7 +29,7 @@ var compiler = exports;
 // dependencies. (At least for now, packages only used in target creation (eg
 // minifiers) don't require you to update BUILT_BY, though you will need to quit
 // and rerun "meteor run".)
-compiler.BUILT_BY = 'meteor/20';
+compiler.BUILT_BY = 'meteor/21';
 
 // This is a list of all possible architectures that a build can target. (Client
 // is expanded into 'web.browser' and 'web.cordova')
@@ -299,7 +299,11 @@ var lintUnibuild = function ({isopack, isopackCache, sourceArch}) {
     return null;
   }
 
-  const unibuild = _.findWhere(isopack.unibuilds, {arch: sourceArch.arch});
+  const unibuild = _.find(
+    isopack.unibuilds,
+    unibuild => archinfo.matches(unibuild.arch, sourceArch.arch)
+  );
+
   if (! unibuild) {
     throw Error(`No ${ sourceArch.arch } unibuild for ${ isopack.name }!`);
   }
@@ -402,7 +406,7 @@ var compileUnibuild = Profile(function (options) {
     nodeModulesDirectories[nmd.sourcePath] = nmd;
   }
 
-  Object.keys(inputSourceArch.localNodeModulesDirs).forEach(dir => {
+  _.each(inputSourceArch.localNodeModulesDirs, (info, dir) => {
     addNodeModulesDirectory({
       packageName: inputSourceArch.pkg.name,
       sourceRoot: inputSourceArch.sourceRoot,
@@ -411,6 +415,10 @@ var compileUnibuild = Profile(function (options) {
       // packages, as well as .npm/package/node_modules directories.
       npmDiscards: isopk.npmDiscards,
       local: true,
+      // The values of inputSourceArch.localNodeModulesDirs are usually
+      // just `true`, but if `info` is an object, then we let its
+      // properties override the properties defined above.
+      ...(_.isObject(info) ? info : Object.prototype),
     });
   });
 

@@ -1,0 +1,15 @@
+{
+  "dependencies": {
+    "reify": {
+      "version": "0.2.0",
+      "from": "reify@0.2.0",
+      "dependencies": {
+        "acorn": {
+          "version": "3.1.0",
+          "resolved": "https://registry.npmjs.org/acorn/-/acorn-3.1.0.tgz",
+          "from": "acorn@>=3.1.0 <3.2.0"
+        }
+      }
+    }
+  }
+}

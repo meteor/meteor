@@ -360,7 +360,7 @@ meteorInstall({
       "regenerator.js": function (r, e, module) {
         // Note that we use the require function provided to the
         // babel-runtime.js file, not the one named 'r' above.
-        var runtime = require("regenerator/runtime-module");
+        var runtime = require("regenerator-runtime");
 
         // If Promise.asyncApply is defined, use it to wrap calls to
         // runtime.async so that the entire async function will run in its

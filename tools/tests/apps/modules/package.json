@@ -9,7 +9,7 @@
     "meteor-node-stubs": "^0.2.0",
     "moment": "2.11.1",
     "mssql": "^3.1.1",
-    "regenerator": "^0.8.42",
+    "regenerator-runtime": "^0.9.5",
     "stripe": "^4.4.0",
     "winston": "^2.2.0"
   },
