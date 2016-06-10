@@ -76,6 +76,9 @@ BCp.processOneFileForTarget = function (inputFile, source) {
   // compilation, pass the { transpile: false } options to api.addFiles
   // when you add that file.
   if (fileOptions.transpile !== false &&
+      // Bare files should not be transpiled by Babel, because they do not
+      // have access to CommonJS APIs like `require`, `module`, `exports`.
+      ! toBeAdded.bare &&
       // If you need to exclude a specific file within an app from Babel
       // compilation, give it the following file extension: .es5.js
       ! excludedFileExtensionPattern.test(inputFilePath)) {
