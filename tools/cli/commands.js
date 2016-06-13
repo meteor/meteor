@@ -581,7 +581,7 @@ main.registerCommand({
 
     Console.info();
     Console.info("To create an example, simply", Console.command("git clone"),
-      "the relevant repository and branch (run", 
+      "the relevant repository and branch (run",
       Console.command("'meteor create --example <name>'"),
       " to see the full command).");
     return 0;
@@ -970,7 +970,7 @@ ${Console.command("meteor build ../output")}`,
           { title: `building Cordova app for \
 ${cordova.displayNameForPlatform(platform)}` }, () => {
             let buildOptions = { release: !options.debug };
-            
+
             const buildPath = files.pathJoin(
               projectContext.getProjectLocalDirectory('cordova-build'),
               'platforms', platform);
@@ -1195,7 +1195,7 @@ main.registerCommand({
       Console.command("meteor deploy appname"), Console.options({ indent: 2 }));
     return 1;
   }
-  
+
   if (process.env.MONGO_URL) {
     Console.info("As a precaution, meteor reset only clears the local database that is " +
                  "provided by meteor run for development. The database specified with " +
@@ -1309,6 +1309,54 @@ main.registerCommand({
     settingsFile: options.settings,
     buildOptions: buildOptions,
     rawOptions
+  });
+
+  if (deployResult === 0) {
+    auth.maybePrintRegistrationLink({
+      leadingNewline: true,
+      // If the user was already logged in at the beginning of the
+      // deploy, then they've already been prompted to set a password
+      // at least once before, so we use a slightly different message.
+      firstTime: ! loggedIn
+    });
+  }
+
+  return deployResult;
+});
+
+///////////////////////////////////////////////////////////////////////////////
+// deploy-node
+///////////////////////////////////////////////////////////////////////////////
+
+main.registerCommand({
+  name: 'deploy-node',
+  minArgs: 1,
+  maxArgs: 1,
+  options: {
+    settings: { type: String },
+  },
+  allowUnrecognizedOptions: true,
+  requiresApp: false,
+  catalogRefresh: new catalog.Refresh.Never()
+}, function (options, {rawOptions}) {
+  var site = options.args[0];
+
+  var loggedIn = auth.isLoggedIn();
+  if (! loggedIn) {
+    Console.error(
+      "You must be logged in to deploy, just enter your email address.");
+    Console.error();
+    if (! auth.registerOrLogIn()) {
+      return 1;
+    }
+  }
+
+  var deployResult = deploy.deploy({
+    site: site,
+    settingsFile: options.settings,
+    rawOptions,
+    // XXX: argument?
+    buildDir: process.cwd()
   });
 
   if (deployResult === 0) {
@@ -1615,7 +1663,7 @@ function doTestCommand(options) {
 
     global.testCommandMetadata.isAppTest = options['full-app'];
     global.testCommandMetadata.isTest = !global.testCommandMetadata.isAppTest;
-    
+
     projectContextOptions.projectDir = options.appDir;
     projectContextOptions.projectLocalDir = files.pathJoin(testRunnerAppDir, '.meteor', 'local');
 
@@ -1637,7 +1685,7 @@ function doTestCommand(options) {
     copyDirIntoTestRunnerApp('.meteor', 'local', 'bundler-cache');
     copyDirIntoTestRunnerApp('.meteor', 'local', 'isopacks');
     copyDirIntoTestRunnerApp('.meteor', 'local', 'plugin-cache');
-    
+
     projectContext = new projectContextModule.ProjectContext(projectContextOptions);
 
     main.captureAndExit("=> Errors while setting up tests:", function () {
@@ -1746,7 +1794,7 @@ var runTestAppForPackages = function (projectContext, options) {
     minifyMode: options.production ? 'production' : 'development'
   };
   buildOptions.buildMode = "test";
-  
+
   if (options.deploy) {
     // Run the constraint solver and build local packages.
     main.captureAndExit("=> Errors while initializing project:", function () {

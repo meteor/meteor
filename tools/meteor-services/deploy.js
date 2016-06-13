@@ -340,24 +340,44 @@ var canonicalizeSite = function (site) {
   return parsed.hostname;
 };
 
-// Run the bundler and deploy the result. Print progress
-// messages. Return a command exit code.
-//
-// Options:
-// - projectContext: the ProjectContext for the app
-// - site: site to deploy as
-// - settingsFile: file from which to read deploy settings (undefined
-//   to leave unchanged from previous deploy of the app, if any)
-// - recordPackageUsage: (defaults to true) if set to false, don't
-//   send information about packages used by this app to the package
-//   stats server.
-// - buildOptions: the 'buildOptions' argument to the bundler
-// - rawOptions: any unknown options that were passed to the command line tool
-var bundleAndDeploy = function (options) {
-  if (options.recordPackageUsage === undefined) {
-    options.recordPackageUsage = true;
+var bundle = function(options, settings, site) {
+  var bundlePath = files.pathJoin(options.buildDir, 'bundle');
+
+  Console.info('Deploying your app...');
+
+  if (! messages.hasMessages()) {
+    var bundler = require('../isobuild/bundler.js');
+
+    var bundleResult = bundler.bundle({
+      projectContext: options.projectContext,
+      outputPath: bundlePath,
+      buildOptions: options.buildOptions,
+    });
+
+    if (bundleResult.errors) {
+      messages = bundleResult.errors;
+    }
   }
 
+  if (messages.hasMessages()) {
+    Console.info("\nErrors prevented deploying:");
+    Console.info(messages.formatMessages());
+    return 1;
+  }
+
+  if (options.recordPackageUsage) {
+    stats.recordPackages({
+      what: "sdk.deploy",
+      projectContext: options.projectContext,
+      site: site
+    });
+  }
+
+  return 0;
+}
+
+// Pre deploy step is typically bundling
+var deploy = function(options, preDeployStep) {
   var site = canonicalizeSite(options.site);
   if (! site) {
     return 1;
@@ -404,11 +424,6 @@ var bundleAndDeploy = function (options) {
     return 1;
   }
 
-  var buildDir = files.mkdtemp('build_tar');
-  var bundlePath = files.pathJoin(buildDir, 'bundle');
-
-  Console.info('Deploying your app...');
-
   var settings = null;
   var messages = buildmessage.capture({
     title: "preparing to deploy",
@@ -419,32 +434,11 @@ var bundleAndDeploy = function (options) {
     }
   });
 
-  if (! messages.hasMessages()) {
-    var bundler = require('../isobuild/bundler.js');
-
-    var bundleResult = bundler.bundle({
-      projectContext: options.projectContext,
-      outputPath: bundlePath,
-      buildOptions: options.buildOptions,
-    });
-
-    if (bundleResult.errors) {
-      messages = bundleResult.errors;
+  if (preDeployStep) {
+    var result = preDeployStep(options, settings, site);
+    if (result !== 0) {
+      return result;
     }
-  }
-
-  if (messages.hasMessages()) {
-    Console.info("\nErrors prevented deploying:");
-    Console.info(messages.formatMessages());
-    return 1;
-  }
-
-  if (options.recordPackageUsage) {
-    stats.recordPackages({
-      what: "sdk.deploy",
-      projectContext: options.projectContext,
-      site: site
-    });
   }
 
   var result = buildmessage.enterJob({ title: "uploading" }, function () {
@@ -453,7 +447,7 @@ var bundleAndDeploy = function (options) {
       operation: 'deploy',
       site: site,
       qs: _.extend({}, options.rawOptions, settings !== null ? {settings: settings} : {}),
-      bodyStream: files.createTarGzStream(files.pathJoin(buildDir, 'bundle')),
+      bodyStream: files.createTarGzStream(files.pathJoin(options.buildDir, 'bundle')),
       expectPayload: ['url'],
       preflightPassword: preflight.preflightPassword
     });
@@ -492,6 +486,31 @@ var bundleAndDeploy = function (options) {
   }
 
   return 0;
+}
+
+// Run the bundler and deploy the result. Print progress
+// messages. Return a command exit code.
+//
+// Options:
+// - projectContext: the ProjectContext for the app
+// - site: site to deploy as
+// - settingsFile: file from which to read deploy settings (undefined
+//   to leave unchanged from previous deploy of the app, if any)
+// - recordPackageUsage: (defaults to true) if set to false, don't
+//   send information about packages used by this app to the package
+//   stats server.
+// - buildOptions: the 'buildOptions' argument to the bundler
+// - rawOptions: any unknown options that were passed to the command line tool
+var bundleAndDeploy = function (options) {
+  if (options.recordPackageUsage === undefined) {
+    options.recordPackageUsage = true;
+  }
+
+  options.buildDir = files.mkdtemp('build_tar');
+
+  return deploy(options, function(opts, site) {
+    return bundle(opts, site);
+  });
 };
 
 var deleteApp = function (site) {
@@ -892,6 +911,7 @@ async function discoverGalaxy(site, scheme) {
   return body.deployURL;
 }
 
+exports.deploy = deploy;
 exports.bundleAndDeploy = bundleAndDeploy;
 exports.deleteApp = deleteApp;
 exports.temporaryMongoUrl = temporaryMongoUrl;
