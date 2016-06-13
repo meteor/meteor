@@ -91,7 +91,7 @@ Here's some of the functionality an ideal Method would have:
 <h4 id="advanced-boilerplate-defining">Defining</h4>
 
 ```js
-export default updateText = {
+export const updateText = {
   name: 'todos.updateText',
 
   // Factor out validation so that it can be run independently (1)
