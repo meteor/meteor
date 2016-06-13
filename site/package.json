@@ -23,6 +23,6 @@
     "deploy": "hexo-s3-deploy"
   },
   "devDependencies": {
-    "hexo-s3-deploy": "^1.0.1"
+    "hexo-s3-deploy": "^1.1.0"
   }
 }
