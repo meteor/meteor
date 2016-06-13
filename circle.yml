@@ -21,7 +21,7 @@ test:
 
 deployment:
   s3:
-    branch: /^(master|version-.*)/
+    branch: /^(master|version-.*|translation-.*)/
     commands:
       - npm run deploy:
           pwd: site
