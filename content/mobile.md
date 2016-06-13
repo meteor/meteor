@@ -323,7 +323,7 @@ Cordova downloads plugins from npm, and caches them (in `~/.cordova/lib/npm_cach
 
 <h4>Setting plugin parameters</h4>
 
-Some Cordova plugins require certain parameters to be set as part of the build process. For example, `com-phonegap-plugins-facebookconnect` requires you to specify an `APP_ID` and `APP_NAME`. You can set these using `App.configurePlugin` in your [mobile-config.js](http://docs.meteor.com/#mobileconfigjs).
+Some Cordova plugins require certain parameters to be set as part of the build process. For example, `com-phonegap-plugins-facebookconnect` requires you to specify an `APP_ID` and `APP_NAME`. You can set these using `App.configurePlugin` in your [mobile-config.js](http://docs.meteor.com/api/mobile-config.html).
 
 <h4>Installing a plugin from Git</h4>
 
@@ -425,7 +425,7 @@ The file serving mechanism used in Meteor allows for local file access through U
 
 Cordova controls access to external domains through a whitelisting mechanism, which is implemented as [`cordova-plugin-whitelist`](https://github.com/apache/cordova-plugin-whitelist) in the version of Cordova we bundle.
 
-In Meteor, you use [`App.accessRule`](http://docs.meteor.com/#/full/App-accessRule) in `mobile-config.js` to set additional rules. (These correspond to `<access>`, `<allow-navigation>` and `<allow-intent>` tags in the generated `config.xml`.)
+In Meteor, you use [`App.accessRule`](http://docs.meteor.com/#/full/App-accessRule) in [`mobile-config.js`](http://docs.meteor.com/api/mobile-config.html) to set additional rules. (These correspond to `<access>`, `<allow-navigation>` and `<allow-intent>` tags in the generated `config.xml`.)
 
 > On iOS, these settings also control [Application Transport Security (ATS)](https://developer.apple.com/library/prerelease/ios/documentation/General/Reference/InfoPlistKeyReference/Articles/CocoaKeys.html#//apple_ref/doc/uid/TP40009251-SW33), which is an OS level mechanism to enforce security best practices new to iOS 9. If the server you're connecting to does not (yet) fulfill these requirements, you can use additional options to override them for specific domains:
 > ```js
@@ -454,7 +454,7 @@ To get around these restrictions, you'll have to use what is known as [Cross-Ori
 
 <h2 id="configuring-your-app">Configuring your app</h2>
 
-Meteor reads a [`mobile-config.js`](http://docs.meteor.com/#/full/mobileconfigjs) file in the root of your app directory during build, and uses the settings specified there to generate Cordova's [`config.xml`](https://cordova.apache.org/docs/en/dev/config_ref/index.html).
+Meteor reads a [`mobile-config.js`](http://docs.meteor.com/api/mobile-config.html) file in the root of your app directory during build, and uses the settings specified there to generate Cordova's [`config.xml`](https://cordova.apache.org/docs/en/dev/config_ref/index.html).
 
 <h3 id="configuring-metadata">Metadata</h3>
 
