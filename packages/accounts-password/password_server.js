@@ -891,8 +891,7 @@ Accounts.addEmail = function (userId, newEmail, verified) {
         _id: user._id,
         'emails.address': email.address
       }, {$set: {
-        'emails.$.address': newEmail,
-        'emails.$.verified': verified
+        'emails.$.address': newEmail
       }});
       return true;
     }
