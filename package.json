@@ -15,7 +15,7 @@
     "babel-plugin-syntax-trailing-function-commas": "^6.8.0",
     "babel-plugin-transform-es2015-arrow-functions": "^6.8.0",
     "babel-plugin-transform-es2015-block-scoped-functions": "^6.8.0",
-    "babel-plugin-transform-es2015-block-scoping": "^6.9.0",
+    "babel-plugin-transform-es2015-block-scoping": "^6.10.1",
     "babel-plugin-transform-es2015-classes": "^6.9.0",
     "babel-plugin-transform-es2015-computed-properties": "^6.8.0",
     "babel-plugin-transform-es2015-destructuring": "^6.9.0",
@@ -38,7 +38,7 @@
     "babel-plugin-transform-runtime": "^6.9.0",
     "babel-template": "^6.9.0",
     "babel-traverse": "^6.9.0",
-    "babel-types": "^6.9.1",
+    "babel-types": "^6.10.0",
     "lodash": "^4.13.1"
   },
   "peerDependencies": {
