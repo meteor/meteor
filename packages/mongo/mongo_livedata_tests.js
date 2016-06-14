@@ -3236,7 +3236,7 @@ Meteor.isServer && Tinytest.add(
 
 Meteor.isServer && Tinytest.add("mongo-livedata - npm modules", function (test) {
   // Make sure the version number looks like a version number.
-  test.matches(MongoInternals.NpmModules.mongodb.version, /^1\.(\d+)\.(\d+)/);
+  test.matches(MongoInternals.NpmModules.mongodb.version, /^2\.(\d+)\.(\d+)/);
   test.equal(typeof(MongoInternals.NpmModules.mongodb.module), 'function');
   test.equal(typeof(MongoInternals.NpmModules.mongodb.module.connect),
              'function');
@@ -3343,5 +3343,89 @@ if (Meteor.isClient) {
         delete futuresByNonce[nonce];
       }
     }
+  });
+}
+
+if (Meteor.isServer) {
+  Tinytest.add('mongo update/upsert - returns nMatched as numberAffected', function (test, onComplete) {
+    var collName = Random.id();
+    var coll = new Mongo.Collection('update_nmatched'+collName);
+
+    coll.insert({animal: 'cat', legs: 4});
+    coll.insert({animal: 'dog', legs: 4});
+    coll.insert({animal: 'echidna', legs: 4});
+    coll.insert({animal: 'platypus', legs: 4});
+    coll.insert({animal: 'starfish', legs: 5});
+
+    var affected = coll.update({legs: 4}, {$set: {category: 'quadruped'}})
+    test.equal(affected, 1);
+
+    //Changes only 3 but matched 4 documents
+    var affected = coll.update({legs: 4}, {$set: {category: 'quadruped'}}, {multi: true})
+    test.equal(affected, 4);
+
+    //Again, changes nothing but returns nModified
+    var affected = coll.update({legs: 4}, {$set: {category: 'quadruped'}}, {multi: true})
+    test.equal(affected, 4);
+
+    //upsert:true changes nothing, 4 modified
+    var affected = coll.update({legs: 4}, {$set: {category: 'quadruped'}}, {multi: true, upsert:true})
+    test.equal(affected, 4);
+
+    //upsert method works as upsert:true
+    var result = coll.upsert({legs: 4}, {$set: {category: 'quadruped'}}, {multi: true})
+    test.equal(result.numberAffected, 4);
+  });
+
+  Tinytest.addAsync('mongo livedata - update/upsert callback returns nMatched as numberAffected', function (test, onComplete) {
+    var collName = Random.id();
+    var coll = new Mongo.Collection('update_nmatched'+collName);
+
+    coll.insert({animal: 'cat', legs: 4});
+    coll.insert({animal: 'dog', legs: 4});
+    coll.insert({animal: 'echidna', legs: 4});
+    coll.insert({animal: 'platypus', legs: 4});
+    coll.insert({animal: 'starfish', legs: 5});
+
+    var test1 = function () {
+      coll.update({legs: 4}, {$set: {category: 'quadruped'}}, function (err, result) {
+        test.equal(result, 1);
+        test2();
+      })
+    }
+
+    var test2 = function () {
+      //Changes only 3 but matched 4 documents
+      coll.update({legs: 4}, {$set: {category: 'quadruped'}}, {multi: true}, function (err, result) {
+        test.equal(result, 4);
+        test3();
+      });
+    }
+
+    var test3 = function () {
+      //Again, changes nothing but returns nModified
+      coll.update({legs: 4}, {$set: {category: 'quadruped'}}, {multi: true}, function (err, result) {
+        test.equal(result, 4);
+        test4();
+      });
+    }
+
+    var test4 = function () {
+      //upsert:true changes nothing, 4 modified
+      coll.update({legs: 4}, {$set: {category: 'quadruped'}}, {multi: true, upsert:true}, function (err, result) {
+        test.equal(result, 4);
+        test5();
+      });
+    }
+
+    var test5 = function () {
+      //upsert method works as upsert:true
+      coll.upsert({legs: 4}, {$set: {category: 'quadruped'}}, {multi: true}, function (err, result) {
+        test.equal(result.numberAffected, 4);
+        onComplete();
+      });
+    }
+
+    test1();
   });
 }

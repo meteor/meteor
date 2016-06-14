@@ -207,12 +207,14 @@ _.extend(OplogHandle.prototype, {
 
     // Now, make sure that there actually is a repl set here. If not, oplog
     // tailing won't ever find anything!
+    // More on the isMasterDoc
+    // https://docs.mongodb.com/manual/reference/command/isMaster/
     var f = new Future;
     self._oplogLastEntryConnection.db.admin().command(
       { ismaster: 1 }, f.resolver());
     var isMasterDoc = f.wait();
-    if (!(isMasterDoc && isMasterDoc.documents && isMasterDoc.documents[0] &&
-          isMasterDoc.documents[0].setName)) {
+
+    if (!(isMasterDoc && isMasterDoc.setName)) {
       throw Error("$MONGO_OPLOG_URL must be set to the 'local' database of " +
                   "a Mongo replica set");
     }
@@ -321,5 +323,13 @@ _.extend(OplogHandle.prototype, {
       var sequencer = self._catchingUpFutures.shift();
       sequencer.future.return();
     }
+  },
+
+  //Methods used on tests to dinamically change TOO_FAR_BEHIND
+  _defineTooFarBehind: function(value) {
+    TOO_FAR_BEHIND = value;
+  },
+  _resetTooFarBehind: function() {
+    TOO_FAR_BEHIND = process.env.METEOR_OPLOG_TOO_FAR_BEHIND || 2000;
   }
 });

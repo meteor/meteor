@@ -176,6 +176,12 @@ Ap._failedLogin = function (connection, attempt) {
   });
 };
 
+Ap._successfulLogout = function () {
+  this._onLogoutHook.each(function (callback) {
+    callback();
+    return true;
+  });
+};
 
 ///
 /// LOGIN METHODS
@@ -532,6 +538,7 @@ Ap._initServerMethods = function () {
     if (token && this.userId)
       accounts.destroyToken(this.userId, token);
     this.setUserId(null);
+    accounts._successfulLogout();
   };
 
   // Delete all the current user's tokens and close all open connections logged
@@ -1253,9 +1260,9 @@ Ap.insertUserDoc = function (options, user) {
     // https://jira.mongodb.org/browse/SERVER-3069 will get fixed one day
     if (e.name !== 'MongoError') throw e;
     if (e.code !== 11000) throw e;
-    if (e.err.indexOf('emails.address') !== -1)
+    if (e.errmsg.indexOf('emails.address') !== -1)
       throw new Meteor.Error(403, "Email already exists.");
-    if (e.err.indexOf('username') !== -1)
+    if (e.errmsg.indexOf('username') !== -1)
       throw new Meteor.Error(403, "Username already exists.");
     // XXX better error reporting for services.facebook.id duplicate, etc
     throw e;

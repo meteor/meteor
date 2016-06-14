@@ -180,8 +180,10 @@ MongoConnection = function (url, options) {
         }
 
         // First, figure out what the current primary is, if any.
-        if (db.serverConfig._state.master)
-          self._primary = db.serverConfig._state.master.name;
+        if (db.serverConfig.isMasterDoc) {
+          self._primary = db.serverConfig.isMasterDoc.primary;
+        }
+
         db.serverConfig.on(
           'joined', Meteor.bindEnvironment(function (kind, doc) {
             if (kind === 'primary') {
@@ -408,8 +410,11 @@ MongoConnection.prototype._remove = function (collection_name, selector,
 
   try {
     var collection = self.rawCollection(collection_name);
+    var wrappedCallback = function(err, driverResult) {
+      callback(err, transformResult(driverResult).numberAffected);
+    };
     collection.remove(replaceTypes(selector, replaceMeteorAtomWithMongo),
-                      {safe: true}, callback);
+                       {safe: true}, wrappedCallback);
   } catch (e) {
     write.committed();
     throw e;
@@ -553,19 +558,24 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
     } else {
       collection.update(
         mongoSelector, mongoMod, mongoOpts,
-        bindEnvironmentForWrite(function (err, result, extra) {
+        bindEnvironmentForWrite(function (err, result) {
           if (! err) {
-            if (result && options._returnObject) {
-              result = { numberAffected: result };
+            var meteorResult = transformResult(result);
+            if (meteorResult && options._returnObject) {
               // If this was an upsert() call, and we ended up
               // inserting a new doc and we know its id, then
               // return that id as well.
-              if (options.upsert && knownId &&
-                  ! extra.updatedExisting)
-                result.insertedId = knownId;
+
+              if (options.upsert && meteorResult.insertedId && knownId) {
+                meteorResult.insertedId = knownId;
+              }
+              callback(err, meteorResult);
+            } else {
+              callback(err, meteorResult.numberAffected);
             }
+          } else {
+            callback(err);
           }
-          callback(err, result);
         }));
     }
   } catch (e) {
@@ -591,6 +601,29 @@ var isModificationMod = function (mod) {
   return isModify;
 };
 
+var transformResult = function (driverResult) {
+  var meteorResult = { numberAffected: 0 };
+  if (driverResult) {
+    mongoResult = driverResult.result;
+
+    // On updates with upsert:true, the inserted values come as a list of
+    // upserted values -- even with options.multi, when the upsert does insert,
+    // it only inserts one element.
+    if (mongoResult.upserted) {
+      meteorResult.numberAffected += mongoResult.upserted.length;
+
+      if (mongoResult.upserted.length == 1) {
+        meteorResult.insertedId = mongoResult.upserted[0]._id;
+      }
+    } else {
+      meteorResult.numberAffected = mongoResult.n;
+    }
+  }
+
+  return meteorResult;
+};
+
+
 var NUM_OPTIMISTIC_TRIES = 3;
 
 // exposed for testing
@@ -599,13 +632,13 @@ MongoConnection._isCannotChangeIdError = function (err) {
   // checks should work, but just to be safe...
   if (err.code === 13596)
     return true;
-  if (err.err.indexOf("cannot change _id of a document") === 0)
+  if (err.errmsg.indexOf("cannot change _id of a document") === 0)
     return true;
 
   // Now look for what it looks like in Mongo 2.6.  We don't use the error code
   // here, because the error code we observed it producing (16837) appears to be
   // a far more generic error code based on examining the source.
-  if (err.err.indexOf("The _id field cannot be changed") === 0)
+  if (err.errmsg.indexOf("The _id field cannot be changed") === 0)
     return true;
 
   return false;
@@ -691,14 +724,15 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
     } else {
       collection.update(selector, mod, mongoOptsForUpdate,
                         bindEnvironmentForWrite(function (err, result) {
-                          if (err)
+                          if (err) {
                             callback(err);
-                          else if (result)
+                          } else if (result && result.result.n != 0) {
                             callback(null, {
-                              numberAffected: result
+                              numberAffected: result.result.n
                             });
-                          else
+                          } else {
                             doConditionalInsert();
+                          }
                         }));
     }
   };
@@ -720,8 +754,8 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
                           }
                         } else {
                           callback(null, {
-                            numberAffected: result,
-                            insertedId: insertedId
+                            numberAffected: result.result.upserted.length,
+                            insertedId: insertedId,
                           });
                         }
                       }));

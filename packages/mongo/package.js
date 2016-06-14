@@ -84,6 +84,7 @@ Package.onTest(function (api) {
   // XXX test order dependency: the allow_tests "partial allow" test
   // fails if it is run before mongo_livedata_tests.
   api.addFiles('mongo_livedata_tests.js', ['client', 'server']);
+  api.addFiles('upsert_compatibility_test.js', 'server');
   api.addFiles('allow_tests.js', ['client', 'server']);
   api.addFiles('collection_tests.js', ['client', 'server']);
   api.addFiles('observe_changes_tests.js', ['client', 'server']);

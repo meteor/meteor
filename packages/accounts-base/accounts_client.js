@@ -319,6 +319,13 @@ Ap.callLoginMethod = function (options) {
 };
 
 Ap.makeClientLoggedOut = function () {
+  // Ensure client was successfully logged in before running logout hooks.
+  if (this.connection._userId) {
+    this._onLogoutHook.each(function (callback) {
+      callback();
+      return true;
+    });
+  }
   this._unstoreLoginToken();
   this.connection.setUserId(null);
   this.connection.onReconnect = null;

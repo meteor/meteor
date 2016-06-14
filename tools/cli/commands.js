@@ -108,9 +108,9 @@ function parseMobileServerOption(mobileServerOption,
   optionName = 'mobile-server') {
   let parsedMobileServerUrl = utils.parseUrl(
     mobileServerOption,
-    { protocol: 'http://' });
+    { protocol: 'http' });
 
-  if (!parsedMobileServerUrl.host) {
+  if (!parsedMobileServerUrl.hostname) {
     Console.error(`--${optionName} must include a hostname.`);
     throw new main.ExitWithCode(1);
   }
@@ -123,8 +123,8 @@ function detectMobileServerUrl(parsedServerUrl, isRunOnDeviceRequested) {
   try {
     const myIp = utils.ipAddress();
     return {
-      protocol: 'http://',
-      host: myIp,
+      protocol: 'http',
+      hostname: myIp,
       port: parsedServerUrl.port
     };
   } catch (error) {
@@ -138,8 +138,8 @@ to with --mobile-server.`);
       throw new main.ExitWithCode(1);
     } else {
       return {
-        protocol: 'http://',
-        host: 'localhost',
+        protocol: 'http',
+        hostname: 'localhost',
         port: parsedServerUrl.port
       };
     }
@@ -336,8 +336,13 @@ function doRunCommand(options) {
   // NOTE: this calls process.exit() when testing is done.
   if (options['test']){
     options.once = true;
-    const serverUrlForVelocity =
-    `http://${(parsedServerUrl.host || "localhost")}:${parsedServerUrl.port}`;
+    const serverUrlForVelocity = utils.formatUrl({
+      protocol: 'http',
+      hostname: parsedServerUrl.hostname || "localhost",
+      port: parsedServerUrl.port,
+      pathname: ''
+    });
+
     const velocity = require('../runners/run-velocity.js');
     velocity.runVelocity(serverUrlForVelocity);
   }
@@ -361,7 +366,7 @@ function doRunCommand(options) {
   return runAll.run({
     projectContext: projectContext,
     proxyPort: parsedServerUrl.port,
-    proxyHost: parsedServerUrl.host,
+    proxyHost: parsedServerUrl.hostname,
     appPort: appPort,
     appHost: appHost,
     debugPort: options['debug-port'],
@@ -1666,7 +1671,7 @@ function doTestCommand(options) {
 
   if (options.velocity) {
     const serverUrlForVelocity =
-    `http://${(parsedServerUrl.host || "localhost")}:${parsedServerUrl.port}`;
+    `http://${(parsedServerUrl.hostname || "localhost")}:${parsedServerUrl.port}`;
     const velocity = require('../runners/run-velocity.js');
     velocity.runVelocity(serverUrlForVelocity);
   }
@@ -1676,7 +1681,7 @@ function doTestCommand(options) {
     {
       mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
       proxyPort: parsedServerUrl.port,
-      proxyHost: parsedServerUrl.host,
+      proxyHost: parsedServerUrl.hostname,
     }
   ));
 }
