@@ -22,7 +22,7 @@ describe("meteor-babel", () => {
     // explicitly to her code.
     var strict = meteorBabel.compile([
       '"use strict";',
-      "export var foo = 42;"
+      "console.log(arguments.callee);"
     ].join("\n")).code;
     assert.strictEqual(strict.indexOf("use strict"), 1);
   });

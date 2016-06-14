@@ -30,17 +30,17 @@
   },
   "dependencies": {
     "babel-core": "~6.9.1",
-    "babel-preset-meteor": "~6.9.0",
+    "babel-preset-meteor": "~6.9.1",
     "babel-preset-react": "~6.5.0",
     "babel-runtime": "~6.9.2",
     "babel-template": "~6.9.0",
     "babel-traverse": "~6.9.0",
-    "babel-types": "~6.9.1",
-    "babylon": "~6.8.0",
+    "babel-types": "~6.10.0",
+    "babylon": "~6.8.1",
     "convert-source-map": "~1.2.0",
     "lodash": "~4.13.1",
     "meteor-babel-helpers": "0.0.3",
-    "reify": "~0.2.0"
+    "reify": "~0.3.2"
   },
   "devDependencies": {
     "fibers": "~1.0.10",
