@@ -274,9 +274,15 @@ _.extend(Mongo.Collection.prototype, {
     if (args.length < 2) {
       return { transform: self._transform };
     } else {
+      let sortClauseSpec;
+      if (this._collection instanceof LocalCollection) {
+        sortClauseSpec = Match.OneOf(Object, Array, Function, undefined);
+      } else {
+        sortClauseSpec = Match.OneOf(Object, Array, undefined);
+      }
       check(args[1], Match.Optional(Match.ObjectIncluding({
         fields: Match.Optional(Match.OneOf(Object, undefined)),
-        sort: Match.Optional(Match.OneOf(Object, Array, undefined)),
+        sort: Match.Optional(sortClauseSpec),
         limit: Match.Optional(Match.OneOf(Number, undefined)),
         skip: Match.Optional(Match.OneOf(Number, undefined))
      })));
