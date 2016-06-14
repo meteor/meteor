@@ -1,6 +1,6 @@
 {
   "name": "babel-preset-meteor",
-  "version": "6.9.0",
+  "version": "6.9.1",
   "dependencies": {
     "babel-plugin-check-es2015-constants": {
       "version": "6.8.0",
