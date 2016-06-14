@@ -8,22 +8,22 @@
     "sockjs": {
       "version": "0.3.17",
       "resolved": "https://registry.npmjs.org/sockjs/-/sockjs-0.3.17.tgz",
-      "from": "sockjs@0.3.17",
+      "from": "https://registry.npmjs.org/sockjs/-/sockjs-0.3.17.tgz",
       "dependencies": {
         "faye-websocket": {
           "version": "0.10.0",
           "resolved": "https://registry.npmjs.org/faye-websocket/-/faye-websocket-0.10.0.tgz",
-          "from": "faye-websocket@>=0.10.0 <0.11.0",
+          "from": "https://registry.npmjs.org/faye-websocket/-/faye-websocket-0.10.0.tgz",
           "dependencies": {
             "websocket-driver": {
               "version": "0.6.5",
               "resolved": "https://registry.npmjs.org/websocket-driver/-/websocket-driver-0.6.5.tgz",
-              "from": "websocket-driver@>=0.5.1",
+              "from": "https://registry.npmjs.org/websocket-driver/-/websocket-driver-0.6.5.tgz",
               "dependencies": {
                 "websocket-extensions": {
                   "version": "0.1.1",
                   "resolved": "https://registry.npmjs.org/websocket-extensions/-/websocket-extensions-0.1.1.tgz",
-                  "from": "websocket-extensions@>=0.1.1"
+                  "from": "https://registry.npmjs.org/websocket-extensions/-/websocket-extensions-0.1.1.tgz"
                 }
               }
             }
@@ -32,7 +32,7 @@
         "uuid": {
           "version": "2.0.2",
           "resolved": "https://registry.npmjs.org/uuid/-/uuid-2.0.2.tgz",
-          "from": "uuid@>=2.0.2 <3.0.0"
+          "from": "https://registry.npmjs.org/uuid/-/uuid-2.0.2.tgz"
         }
       }
     }

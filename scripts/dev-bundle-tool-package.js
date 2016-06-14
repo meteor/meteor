@@ -14,12 +14,12 @@ var packageJson = {
     npm: "2.15.5",
     "node-gyp": "3.3.1",
     "node-pre-gyp": "0.6.26",
-    "meteor-babel": "0.10.9",
+    "meteor-babel": "0.11.0",
     "meteor-promise": "0.7.2",
     fibers: "1.0.13",
     promise: "7.1.1",
     // So that Babel 6 can emit require("babel-runtime/helpers/...") calls.
-    "babel-runtime": "5.8.38",
+    "babel-runtime": "6.9.2",
     // For various ES2015 polyfills, such as Map and Set.
     "meteor-ecmascript-runtime": "0.2.6",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
@@ -50,7 +50,7 @@ var packageJson = {
     // 2.4.0 (more or less, the package.json change isn't committed) plus our PR
     // https://github.com/williamwicks/node-eachline/pull/4
     eachline: "https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da",
-    pathwatcher: "6.5.0",
+    pathwatcher: "6.7.0",
     runas: "3.1.1",
     'lru-cache': '2.6.4',
     'cordova-lib': "6.0.0",
