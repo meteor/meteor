@@ -1,5 +1,7 @@
 ## v.NEXT
 
+* Allow smtps:// in MAIL_URL [#7043](https://github.com/meteor/meteor/pull/7043)
+
 ## v1.3.3
 
 * Node has been upgraded from 0.10.43 to 0.10.45.
