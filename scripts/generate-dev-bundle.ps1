@@ -67,6 +67,10 @@ rm -Recurse -Force $npm_zip
 # add bin to the front of the path so we can use our own node for building
 $env:PATH = "${DIR}\bin;${env:PATH}"
 
+# Make sure node-gyp knows how to find its build tools.
+$env:PYTHON = "${DIR}\python\python.exe"
+$env:GYP_MSVS_VERSION = "2015"
+
 # Install the version of npm that we're actually going to expose from the
 # dev bundle. Note that we use npm@1.4.12 to install npm@${NPM_VERSION},
 # but we use npm@3.1.2 to install dev_bundle\lib\node_modules, so that the
