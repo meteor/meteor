@@ -259,7 +259,6 @@ var runCommandOptions = {
     production: { type: Boolean },
     'raw-logs': { type: Boolean },
     settings: { type: String },
-    test: {type: Boolean, default: false},
     verbose: { type: Boolean, short: "v" },
     // With --once, meteor does not re-run the project if it crashes
     // and does not monitor for file changes. Intentionally
@@ -328,23 +327,6 @@ function doRunCommand(options) {
 
   if (options['raw-logs']) {
     runLog.setRawLogs(true);
-  }
-
-  // Velocity testing. Sets up a DDP connection to the app process and
-  // runs phantomjs.
-  //
-  // NOTE: this calls process.exit() when testing is done.
-  if (options['test']){
-    options.once = true;
-    const serverUrlForVelocity = utils.formatUrl({
-      protocol: 'http',
-      hostname: parsedServerUrl.hostname || "localhost",
-      port: parsedServerUrl.port,
-      pathname: ''
-    });
-
-    const velocity = require('../runners/run-velocity.js');
-    velocity.runVelocity(serverUrlForVelocity);
   }
 
   let webArchs = ['web.browser'];
@@ -1431,7 +1413,6 @@ testCommandOptions = {
     deploy: { type: String },
     production: { type: Boolean },
     settings: { type: String },
-    velocity: { type: Boolean },
     verbose: { type: Boolean, short: "v" },
 
     // Undocumented. See #Once
@@ -1668,13 +1649,6 @@ function doTestCommand(options) {
   }
 
   options.cordovaRunner = cordovaRunner;
-
-  if (options.velocity) {
-    const serverUrlForVelocity =
-    `http://${(parsedServerUrl.hostname || "localhost")}:${parsedServerUrl.port}`;
-    const velocity = require('../runners/run-velocity.js');
-    velocity.runVelocity(serverUrlForVelocity);
-  }
 
   return runTestAppForPackages(projectContext, _.extend(
     options,

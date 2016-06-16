@@ -41,7 +41,7 @@ unpacking of a tarball. (Get 7-zip [here](http://www.7-zip.org/))
 ## Testing
 
 Since the tool is a node app, it is not testable with general Meteor testing
-tools such as Tinytest or Velocity. Instead the home-grown system "self test" is
+tools such as Tinytest. Instead the home-grown system "self test" is
 used.
 
 "Self test" is a testing library that is focused on testing the CLI interactions
