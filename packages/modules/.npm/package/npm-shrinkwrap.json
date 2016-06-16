@@ -1,8 +1,8 @@
 {
   "dependencies": {
     "reify": {
-      "version": "0.3.2",
-      "from": "reify@0.3.2",
+      "version": "0.3.3",
+      "from": "reify@0.3.3",
       "dependencies": {
         "acorn": {
           "version": "3.2.0",
