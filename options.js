@@ -25,6 +25,12 @@ exports.getDefaults = function getDefaults(features) {
         require("./plugins/sanitize-for-in-objects.js")
       );
     }
+
+    if (features.legacyModules) {
+      options.plugins.push(
+        require("babel-plugin-transform-es2015-modules-commonjs")
+      );
+    }
   }
 
   return options;
