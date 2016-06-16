@@ -1,14 +1,14 @@
 {
   "dependencies": {
     "node-aes-gcm": {
-      "version": "0.1.7",
-      "resolved": "https://registry.npmjs.org/node-aes-gcm/-/node-aes-gcm-0.1.7.tgz",
-      "from": "node-aes-gcm@0.1.7",
+      "version": "0.1.5",
+      "resolved": "https://registry.npmjs.org/node-aes-gcm/-/node-aes-gcm-0.1.5.tgz",
+      "from": "node-aes-gcm@0.1.5",
       "dependencies": {
         "nan": {
-          "version": "2.3.5",
-          "resolved": "https://registry.npmjs.org/nan/-/nan-2.3.5.tgz",
-          "from": "nan@>=2.3.0 <2.4.0"
+          "version": "1.9.0",
+          "resolved": "https://registry.npmjs.org/nan/-/nan-1.9.0.tgz",
+          "from": "nan@>=1.7.0 <2.0.0"
         }
       }
     }
