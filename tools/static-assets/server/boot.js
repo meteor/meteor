@@ -240,13 +240,34 @@ Fiber(function () {
         return fut.wait();
     };
 
+    /**
+     * @summary The namespace for Assets functions, lives in the bundler.
+     * @namespace
+     * @name Assets
+     */
     var Assets = {
+      /**
+       * @summary Retrieve the contents of the static server asset as a UTF8-encoded string.
+       * @locus Server
+       * @memberOf Assets
+       * @param {String} assetPath The path of the asset, relative to the application's `private` subdirectory.
+       * @param {Function} [asyncCallback] Optional callback, which is called asynchronously with the error or result after the function is complete. If not provided, the function runs synchronously.
+       */
       getText: function (assetPath, callback) {
         return getAsset(assetPath, "utf8", callback);
       },
+
+      /**
+       * @summary Retrieve the contents of the static server asset as an [EJSON Binary](#ejson_new_binary).
+       * @locus Server
+       * @memberOf Assets
+       * @param {String} assetPath The path of the asset, relative to the application's `private` subdirectory.
+       * @param {Function} [asyncCallback] Optional callback, which is called asynchronously with the error or result after the function is complete. If not provided, the function runs synchronously.
+       */
       getBinary: function (assetPath, callback) {
         return getAsset(assetPath, undefined, callback);
       },
+      
       absoluteFilePath: function (assetPath) {
         if (!fileInfo.assets || !_.has(fileInfo.assets, assetPath)) {
           throw new Error("Unknown asset: " + assetPath);
