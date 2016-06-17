@@ -246,9 +246,9 @@ _.extend(exports, {
     }
 
     if (! options.timeout) {
-      // 15 seconds for timeout between initial response headers and data,
+      // 30 seconds for timeout between initial response headers and data,
       // and between chunks of data while reading the rest of the response.
-      options.timeout = 15000 * timeoutScaleFactor;
+      options.timeout = 30000 * timeoutScaleFactor;
     }
 
     // request is the most heavy-weight of the tool's npm dependencies; don't
