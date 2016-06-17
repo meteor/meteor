@@ -79,13 +79,15 @@ export default class Resolver {
   // null, relative to an absolute parent path. The _seenDirPaths
   // parameter is for internal use only and should be ommitted.
   resolve(id, absParentPath, _seenDirPaths) {
-    const byParentDir = this._resolveCache[id] || Object.create(null);
+    if (! this._resolveCache.has(id)) {
+      this._resolveCache.set(id, Object.create(null));
+    }
+
+    const byParentDir = this._resolveCache.get(id);
     const absParentDir = pathDirname(absParentPath);
     if (has(byParentDir, absParentDir)) {
       return byParentDir[absParentDir];
     }
-
-    this._resolveCache[id] = byParentDir;
 
     let resolved =
       this._resolveAbsolute(id, absParentPath) ||

@@ -25,7 +25,16 @@ export class CoffeeCompiler extends CachingCompiler {
       compilerName: 'coffeescript',
       defaultCacheSize: 1024*1024*10,
     });
-    this.babelCompiler = new BabelCompiler();
+
+    this.babelCompiler = new BabelCompiler({
+      // Prevent Babel from importing helpers from babel-runtime, since
+      // the CoffeeScript plugin does not imply the modules package, which
+      // means require may not be defined. Note that this in no way
+      // prevents CoffeeScript projects from using the modules package and
+      // putting require or import statements within backticks; it just
+      // won't happen automatically because of Babel.
+      runtime: false
+    });
   }
 
   _getCompileOptions(inputFile) {
