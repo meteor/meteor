@@ -31,6 +31,16 @@ exports.getDefaults = function getDefaults(features) {
     plugins: []
   };
 
+  if (! (features &&
+         features.runtime === false)) {
+    options.plugins.push([
+      require("babel-plugin-transform-runtime"),
+      { // Avoid importing polyfills for things like Object.keys, which
+        // Meteor already shims in other ways.
+        polyfill: false }
+    ]);
+  }
+
   if (features) {
     if (features.react) {
       options.presets.push(
