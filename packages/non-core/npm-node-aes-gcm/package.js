@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Wrapper around the node-aes-gcm npm package",
-  version: '0.1.5',
+  version: '0.1.5_1',
   documentation: null
 });
 
