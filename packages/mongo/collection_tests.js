@@ -52,3 +52,47 @@ Tinytest.add('collection - call new Mongo.Collection with defineMutationMethods=
     test.equal(nomethods._connection[handlerPropName]['/' + noMethodCollectionName + '/insert'], undefined);
   }
 );
+
+Tinytest.add('collection - call find with sort function',
+  function (test) {
+    var initialize = function (collection) {
+      collection.insert({a: 2});
+      collection.insert({a: 3});
+      collection.insert({a: 1});
+    };
+
+    var sorter = function (a, b) {
+      return a.a - b.a;
+    }
+
+    var getSorted = function (collection) {
+      return collection.find({}, {sort: sorter}).map(function (doc) { return doc.a; });
+    };
+
+    var collectionName = 'sort' + test.id;
+    var localCollection = new Mongo.Collection(null);
+    var namedCollection = new Mongo.Collection(collectionName, {connection: null});
+
+    initialize(localCollection);
+    test.equal(getSorted(localCollection), [1, 2, 3]);
+
+    initialize(namedCollection);
+    test.equal(getSorted(namedCollection), [1, 2, 3]);
+  }
+);
+
+Tinytest.add('collection - call native find with sort function',
+  function (test) {
+    var collectionName = 'sortNative' + test.id;
+    var nativeCollection = new Mongo.Collection(collectionName);
+
+    if (Meteor.isServer) {
+      test.throws(
+        function () {
+          nativeCollection.find({}, {sort: function(){}}).map(function (doc) { return doc.a; })
+        },
+        /Illegal sort clause/
+      );
+    }
+  }
+);

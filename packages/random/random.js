@@ -129,6 +129,11 @@ RandomGenerator.Type = {
   ALEA: "ALEA",
 };
 
+/**
+ * @name Random.fraction
+ * @summary Return a number between 0 and 1, like `Math.random`.
+ * @locus Anywhere
+ */
 RandomGenerator.prototype.fraction = function () {
   var self = this;
   if (self.type === RandomGenerator.Type.ALEA) {
@@ -145,6 +150,12 @@ RandomGenerator.prototype.fraction = function () {
   }
 };
 
+/**
+ * @name Random.hexString
+ * @summary Return a random string of `n` hexadecimal digits.
+ * @locus Anywhere
+ * @param {Number} n Length of the string
+ */
 RandomGenerator.prototype.hexString = function (digits) {
   var self = this;
   if (self.type === RandomGenerator.Type.NODE_CRYPTO) {
@@ -177,6 +188,14 @@ RandomGenerator.prototype._randomString = function (charsCount,
   return digits.join("");
 };
 
+/**
+ * @name Random.id
+ * @summary Return a unique identifier, such as `"Jjwjg6gouWLXhMGKW"`, that is
+ * likely to be unique in the whole world.
+ * @locus Anywhere
+ * @param {Number} [n] Optional length of the identifier in characters
+ *   (defaults to 17)
+ */
 RandomGenerator.prototype.id = function (charsCount) {
   var self = this;
   // 17 characters is around 96 bits of entropy, which is the amount of
@@ -187,6 +206,15 @@ RandomGenerator.prototype.id = function (charsCount) {
   return self._randomString(charsCount, UNMISTAKABLE_CHARS);
 };
 
+/**
+ * @name Random.secret
+ * @summary Return a random string of printable characters with 6 bits of
+ * entropy per character. Use `Random.secret` for security-critical secrets
+ * that are intended for machine, rather than human, consumption.
+ * @locus Anywhere
+ * @param {Number} [n] Optional length of the secret string (defaults to 43
+ *   characters, or 256 bits of entropy)
+ */
 RandomGenerator.prototype.secret = function (charsCount) {
   var self = this;
   // Default to 256 bits of entropy, or 43 characters at 6 bits per
@@ -196,6 +224,12 @@ RandomGenerator.prototype.secret = function (charsCount) {
   return self._randomString(charsCount, BASE64_CHARS);
 };
 
+/**
+ * @name Random.choice
+ * @summary Return a random element of the given array or string.
+ * @locus Anywhere
+ * @param {Array|String} arrayOrString Array or string to choose from
+ */
 RandomGenerator.prototype.choice = function (arrayOrString) {
   var index = Math.floor(this.fraction() * arrayOrString.length);
   if (typeof arrayOrString === "string")

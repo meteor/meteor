@@ -2,6 +2,7 @@ const _ = require('underscore');
 
 const files = require('../fs/files.js');
 const buildmessage = require('../utils/buildmessage.js');
+const utils = require('../utils/utils.js');
 const runLog = require('./run-log.js');
 const release = require('../packaging/release.js');
 
@@ -52,10 +53,12 @@ class Runner {
 
     if (rootUrl) {
       self.rootUrl = rootUrl;
-    } else if (proxyHost) {
-      self.rootUrl = 'http://' + proxyHost + ':' + listenPort + '/';
     } else {
-      self.rootUrl = 'http://localhost:' + listenPort + '/';
+      self.rootUrl = utils.formatUrl({
+        protocol: 'http',
+        hostname: proxyHost || "localhost",
+        port: listenPort,
+      });
     }
 
     self.proxy = new Proxy({

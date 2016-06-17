@@ -1,5 +1,38 @@
 ## v.NEXT
 
+* The `--headless` option is now supported by `meteor test` and
+  `meteor test-packages`, in addition to `meteor self-test`.
+  [#7245](https://github.com/meteor/meteor/pull/7245)
+
+## v1.3.3.1
+
+* Fixed bugs:
+  [#7226](https://github.com/meteor/meteor/pull/7226)
+  [#7181](https://github.com/meteor/meteor/pull/7181)
+  [#7221](https://github.com/meteor/meteor/pull/7221)
+  [#7215](https://github.com/meteor/meteor/pull/7215)
+  [#7217](https://github.com/meteor/meteor/pull/7217)
+
+* The `node-aes-gcm` npm package used by `oauth-encryption` has been
+  upgraded to 0.1.5. [#7217](https://github.com/meteor/meteor/issues/7217)
+
+* The `reify` module compiler has been upgraded to 0.3.3.
+
+* The `meteor-babel` package has been upgraded to 0.11.4.
+
+* The `pathwatcher` npm package has been upgraded to 6.7.0.
+
+* In CoffeeScript files with raw JavaScript enclosed by backticks, the
+  compiled JS will no longer contain `require` calls inserted by Babel.
+  [#7226](https://github.com/meteor/meteor/issues/7226)
+
+* Code related to the Velocity testing system has been removed.
+  [#7235](https://github.com/meteor/meteor/pull/7235)
+
+* Allow smtps:// in MAIL_URL [#7043](https://github.com/meteor/meteor/pull/7043)
+
+* Adds `Accounts.onLogout()` a hook directly analogous to `Accounts.onLogin()`. [PR #6889](https://github.com/meteor/meteor/pull/6889)
+
 ## v1.3.3
 
 * Node has been upgraded from 0.10.43 to 0.10.45.
@@ -20,7 +53,7 @@
   making it much simpler to use Meteor with different versions of Node.
   5dc51d39ecc9e8e342884f3b4f8a489f734b4352
 
-* `*.min.js` files are no longer minified during the build process. 
+* `*.min.js` files are no longer minified during the build process.
   [PR #6986](https://github.com/meteor/meteor/pull/6986) [Issue #5363](https://github.com/meteor/meteor/issues/5363)
 
 * You can now pick where the `.meteor/local` directory is created by setting the `METEOR_LOCAL_DIR` environment variable. This lets you run multiple instances of the same Meteor app.
@@ -39,7 +72,9 @@
 * Added support for `$eq` to Minimongo: https://github.com/meteor/meteor/pull/4235
 
 * Insert a `Date` header into emails by default: https://github.com/meteor/meteor/pull/6916/files
+
 * `meteor test` now supports setting the bind address using `--port IP:PORT` the same as `meteor run` [PR #6964](https://github.com/meteor/meteor/pull/6964) [Issue #6961](https://github.com/meteor/meteor/issues/6961)
+
 * `Meteor.apply` now takes a `noRetry` option to opt-out of automatically retrying non-idempotent methods on connection blips: [PR #6180](https://github.com/meteor/meteor/pull/6180)
 
 * DDP callbacks are now batched on the client side. This means that after a DDP message arrives, the local DDP client will batch changes for a minimum of 5ms (configurable via `bufferedWritesInterval`) and a maximum of 500ms (configurable via `bufferedWritesMaxAge`) before calling any callbacks (such as cursor observe callbacks).
@@ -391,7 +426,7 @@
 
 ### Check
 
-* Introduced new matcher `Match.Maybe(type)` which will also match (permit) `null` in addition to `undefined`.  This is a suggested replacement (where appropriate) for `Match.Optional` which did not permit `null`.  This prevents the need to use `Match.OneOf(null, undefined, type)`. #6220 
+* Introduced new matcher `Match.Maybe(type)` which will also match (permit) `null` in addition to `undefined`.  This is a suggested replacement (where appropriate) for `Match.Optional` which did not permit `null`.  This prevents the need to use `Match.OneOf(null, undefined, type)`. #6220
 
 ### Testing
 

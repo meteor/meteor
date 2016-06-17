@@ -35,6 +35,11 @@ export class AccountsCommon {
       bindEnvironment: false,
       debugPrintExceptions: "onLoginFailure callback"
     });
+
+    this._onLogoutHook = new Hook({
+      bindEnvironment: false,
+      debugPrintExceptions: "onLogout callback"
+    });
   }
 
   /**
@@ -154,6 +159,15 @@ export class AccountsCommon {
    */
   onLoginFailure(func) {
     return this._onLoginFailureHook.register(func);
+  }
+
+  /**
+   * @summary Register a callback to be called after a logout attempt succeeds.
+   * @locus Anywhere
+   * @param {Function} func The callback to be called when logout is successful.
+   */
+  onLogout(func) {
+    return this._onLogoutHook.register(func);
   }
 
   _initConnection(options) {

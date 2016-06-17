@@ -294,8 +294,8 @@ var Session = function (server, version, socket, options) {
     httpHeaders: self.socket.headers
   };
 
-  socket.send(DDPCommon.stringifyDDP({msg: 'connected',
-                            session: self.id}));
+  self.send({ msg: 'connected', session: self.id });
+
   // On initial connect, spin up all the universal publishers.
   Fiber(function () {
     self.startUniversalSubs();

@@ -62,7 +62,6 @@ Options:
                    downgraded to versions that are potentially incompatible with
                    the current versions, if required to satisfy all package
                    version constraints.
-  --test           [Experimental] Run Velocity tests using phantomjs and exit.
 
 >>> debug
 Run the project, but suspend the server process for debugging.
@@ -512,7 +511,7 @@ then all available packages will be tested.
 
 Open the test dashboard in your browser to run the tests and see the
 results. By default the URL is localhost:3000 but that can be changed
-with --port. 
+with --port.
 
 Options:
   --port, -p        Port to listen on (instead of the default 3000). Also
@@ -536,7 +535,6 @@ Options:
   --test-app-path   Set the directory in which to create a temporary app used
                     for tests. Defaults to the system's temporary directory,
                     usually /tmp.
-  --velocity        [Experimental] Execute tests using phantomjs and exit.
   --verbose         Print all output from builds logs.
   --no-lint         Don't run linters used by the tested packages on every
                     test app rebuild.
@@ -553,8 +551,8 @@ task of running tests and displaying the results in the browser when you
 visit it.
 
 In normal test mode, no files in your application are eagerly loaded, aside
-from test files (files named *.test[s].* or *.spec[s].* placed anywhere 
-in your application). You can import your app's modules from within your 
+from test files (files named *.test[s].* or *.spec[s].* placed anywhere
+in your application). You can import your app's modules from within your
 tests and use them as normal.
 
 In "full app" test mode, your app is loaded as usual, and then made hidden,
@@ -564,7 +562,7 @@ loaded similarly to unit test mode, but must be called *.app-test[s].* or
 
 Open the test dashboard in your browser to run the tests and see the
 results. By default the URL is localhost:3000 but that can be changed
-with --port. 
+with --port.
 
 Read more about testing your application in the Testing Article of the
 Meteor Guide - https://guide.meteor.com/testing.html

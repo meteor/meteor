@@ -44,7 +44,52 @@ var result = Babel.compile(
 Use `Babel.compile(source)` to transpile code using a set of default
 options that work well for Meteor code.
 
-Resources:
+### `.babelrc` configuration files
+
+Like other Babel-compiled projects, a Meteor project that uses the
+`ecmascript` package can specify custom Babel plugins and presets (which
+are just groups of plugins) in JSON files named `.babelrc`.
+
+For example, to enable the Babel
+[transform](https://www.npmjs.com/package/babel-plugin-transform-class-properties)
+that supports [class
+properties](https://github.com/jeffmo/es-class-fields-and-static-properties),
+you should
+
+  1. run `meteor npm install --save-dev babel-plugin-transform-class-properties`
+  2. put the following in a `.babelrc` file in the root of your project:
+```js
+{
+  "plugins": ["transform-class-properties"]
+}
+```
+
+If you want to include all Stage 1 transforms (including the class
+properties plugin), you could use a preset instead:
+
+```sh
+meteor npm install --save-dev babel-preset-stage-1
+```
+
+and then (in your `.babelrc` file):
+
+```js
+{
+  "presets": ["stage-1"]
+}
+```
+
+Note that you should never need to include the `es2015` or `react`
+transforms, as that functionality is already provided by the default
+`babel-preset-meteor` preset.
+
+Any plugins and transforms that you list in your `.babelrc` file will be
+included after `babel-preset-meteor`.
+
+To be considered by the `babel-compiler` package, `.babelrc` files must be
+contained within your root application directory.
+
+### Resources:
 
 * [API docs](https://babeljs.io/docs/usage/api/)
 * [List of transformers](https://babeljs.io/docs/usage/transformers/)

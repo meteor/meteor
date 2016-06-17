@@ -108,9 +108,9 @@ function parseMobileServerOption(mobileServerOption,
   optionName = 'mobile-server') {
   let parsedMobileServerUrl = utils.parseUrl(
     mobileServerOption,
-    { protocol: 'http://' });
+    { protocol: 'http' });
 
-  if (!parsedMobileServerUrl.host) {
+  if (!parsedMobileServerUrl.hostname) {
     Console.error(`--${optionName} must include a hostname.`);
     throw new main.ExitWithCode(1);
   }
@@ -123,8 +123,8 @@ function detectMobileServerUrl(parsedServerUrl, isRunOnDeviceRequested) {
   try {
     const myIp = utils.ipAddress();
     return {
-      protocol: 'http://',
-      host: myIp,
+      protocol: 'http',
+      hostname: myIp,
       port: parsedServerUrl.port
     };
   } catch (error) {
@@ -138,8 +138,8 @@ to with --mobile-server.`);
       throw new main.ExitWithCode(1);
     } else {
       return {
-        protocol: 'http://',
-        host: 'localhost',
+        protocol: 'http',
+        hostname: 'localhost',
         port: parsedServerUrl.port
       };
     }
@@ -259,7 +259,6 @@ var runCommandOptions = {
     production: { type: Boolean },
     'raw-logs': { type: Boolean },
     settings: { type: String },
-    test: {type: Boolean, default: false},
     verbose: { type: Boolean, short: "v" },
     // With --once, meteor does not re-run the project if it crashes
     // and does not monitor for file changes. Intentionally
@@ -330,18 +329,6 @@ function doRunCommand(options) {
     runLog.setRawLogs(true);
   }
 
-  // Velocity testing. Sets up a DDP connection to the app process and
-  // runs phantomjs.
-  //
-  // NOTE: this calls process.exit() when testing is done.
-  if (options['test']){
-    options.once = true;
-    const serverUrlForVelocity =
-    `http://${(parsedServerUrl.host || "localhost")}:${parsedServerUrl.port}`;
-    const velocity = require('../runners/run-velocity.js');
-    velocity.runVelocity(serverUrlForVelocity);
-  }
-
   let webArchs = ['web.browser'];
   let cordovaRunner;
   if (!_.isEmpty(runTargets) || options['mobile-server']) {
@@ -361,7 +348,7 @@ function doRunCommand(options) {
   return runAll.run({
     projectContext: projectContext,
     proxyPort: parsedServerUrl.port,
-    proxyHost: parsedServerUrl.host,
+    proxyHost: parsedServerUrl.hostname,
     appPort: appPort,
     appHost: appHost,
     debugPort: options['debug-port'],
@@ -1426,7 +1413,6 @@ testCommandOptions = {
     deploy: { type: String },
     production: { type: Boolean },
     settings: { type: String },
-    velocity: { type: Boolean },
     verbose: { type: Boolean, short: "v" },
 
     // Undocumented. See #Once
@@ -1664,19 +1650,12 @@ function doTestCommand(options) {
 
   options.cordovaRunner = cordovaRunner;
 
-  if (options.velocity) {
-    const serverUrlForVelocity =
-    `http://${(parsedServerUrl.host || "localhost")}:${parsedServerUrl.port}`;
-    const velocity = require('../runners/run-velocity.js');
-    velocity.runVelocity(serverUrlForVelocity);
-  }
-
   return runTestAppForPackages(projectContext, _.extend(
     options,
     {
       mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
       proxyPort: parsedServerUrl.port,
-      proxyHost: parsedServerUrl.host,
+      proxyHost: parsedServerUrl.hostname,
     }
   ));
 }

@@ -14,7 +14,7 @@ require("meteor-promise").makeCompatible(Promise, require("fibers"));
 var regenerator = require([
   "babel-runtime",
   "regenerator"
-].join("/")).default;
+].join("/"));
 
 // Use Promise.asyncApply to wrap calls to runtime.async so that the
 // entire async function will run in its own Fiber, not just the code that

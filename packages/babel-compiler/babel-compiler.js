@@ -13,25 +13,6 @@ var BCp = BabelCompiler.prototype;
 var excludedFileExtensionPattern = /\.es5\.js$/i;
 var hasOwn = Object.prototype.hasOwnProperty;
 
-var strictModulesPluginFactory =
-  Npm.require("babel-plugin-transform-es2015-modules-commonjs");
-
-var babelModulesPlugin = [function () {
-  var plugin = strictModulesPluginFactory.apply(this, arguments);
-  // Since babel-preset-meteor uses an exact version of the
-  // babel-plugin-transform-es2015-modules-commonjs transform (6.8.0), we
-  // can be sure this plugin.inherits property is indeed the
-  // babel-plugin-transform-strict-mode transform that we wish to disable.
-  // Otherwise it would be difficult to know exactly what we're deleting
-  // here, since plugins don't provide much identifying information.
-  delete plugin.inherits;
-  return plugin;
-}, {
-  allowTopLevelThis: true,
-  strict: false,
-  loose: true
-}];
-
 BCp.processFilesForTarget = function (inputFiles) {
   // Reset this cache for each batch processed.
   this._babelrcCache = null;
@@ -86,15 +67,14 @@ BCp.processOneFileForTarget = function (inputFile, source) {
     var targetCouldBeInternetExplorer8 =
       inputFile.getArch() === "web.browser";
 
-    this.extraFeatures = this.extraFeatures || {};
-    if (! this.extraFeatures.hasOwnProperty("jscript")) {
+    var extraFeatures = Object.assign({}, this.extraFeatures);
+
+    if (! extraFeatures.hasOwnProperty("jscript")) {
       // Perform some additional transformations to improve compatibility
       // in older browsers (e.g. wrapping named function expressions, per
       // http://kiro.me/blog/nfe_dilemma.html).
-      this.extraFeatures.jscript = targetCouldBeInternetExplorer8;
+      extraFeatures.jscript = targetCouldBeInternetExplorer8;
     }
-
-    var babelOptions = Babel.getDefaultOptions(this.extraFeatures);
 
     if (inputFile.isPackageFile()) {
       // When compiling package files, handle import/export syntax using
@@ -109,8 +89,10 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       // TODO Remove this once we are confident enough developers have
       // updated to a version of Meteor that supports module.import and
       // module.export.
-      babelOptions.plugins.push(babelModulesPlugin);
+      extraFeatures.legacyModules = true;
     }
+
+    var babelOptions = Babel.getDefaultOptions(extraFeatures);
 
     this.inferExtraBabelOptions(inputFile, babelOptions, cacheDeps);
 
