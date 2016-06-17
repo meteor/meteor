@@ -1,5 +1,34 @@
 ## v.NEXT
 
+* The `--headless` option is now supported by `meteor test` and
+  `meteor test-packages`, in addition to `meteor self-test`.
+  [#7245](https://github.com/meteor/meteor/pull/7245)
+
+## v1.3.3.1
+
+* Fixed bugs:
+  [#7226](https://github.com/meteor/meteor/pull/7226)
+  [#7181](https://github.com/meteor/meteor/pull/7181)
+  [#7221](https://github.com/meteor/meteor/pull/7221)
+  [#7215](https://github.com/meteor/meteor/pull/7215)
+  [#7217](https://github.com/meteor/meteor/pull/7217)
+
+* The `node-aes-gcm` npm package used by `oauth-encryption` has been
+  upgraded to 0.1.5. [#7217](https://github.com/meteor/meteor/issues/7217)
+
+* The `reify` module compiler has been upgraded to 0.3.3.
+
+* The `meteor-babel` package has been upgraded to 0.11.4.
+
+* The `pathwatcher` npm package has been upgraded to 6.7.0.
+
+* In CoffeeScript files with raw JavaScript enclosed by backticks, the
+  compiled JS will no longer contain `require` calls inserted by Babel.
+  [#7226](https://github.com/meteor/meteor/issues/7226)
+
+* Code related to the Velocity testing system has been removed.
+  [#7235](https://github.com/meteor/meteor/pull/7235)
+
 * Allow smtps:// in MAIL_URL [#7043](https://github.com/meteor/meteor/pull/7043)
 
 * Adds `Accounts.onLogout()` a hook directly analogous to `Accounts.onLogin()`. [PR #6889](https://github.com/meteor/meteor/pull/6889)
