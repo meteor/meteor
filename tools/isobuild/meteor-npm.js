@@ -298,7 +298,7 @@ function isPortable(dir, shouldCache) {
 // nodeModulesDir up to date.
 meteorNpm.dependenciesArePortable = function (nodeModulesDir) {
   // We use a simple heuristic: we check to see if a package (or any
-  // of its transitive depedencies) contains any *.node files. .node
+  // of its transitive dependencies) contains any *.node files. .node
   // is the extension that signals to Node that it should load a file
   // as a shared object rather than as JavaScript, so this should work
   // in the vast majority of cases.
@@ -379,78 +379,78 @@ var updateExistingNpmDirectory = function (packageName, newPackageNpmDir,
   }
 
   var installedDependenciesTree = getInstalledDependenciesTree(packageNpmDir);
-  var installedDependencies = treeToDependencies(installedDependenciesTree);
   var shrinkwrappedDependenciesTree =
     getShrinkwrappedDependenciesTree(packageNpmDir);
-  var shrinkwrappedDependencies = treeToDependencies(
-    shrinkwrappedDependenciesTree);
 
-  // If we already have the right things installed, life is good.
-  // XXX this check is wrong: what if we just pulled a commit that
-  //     changes a sub-module in npm-shrinkwrap.json? See #1648 But
-  //     while it might be "correct" to just drop this check we should
-  //     be careful not to make the common case of no changes too
-  //     slow.
-  if (_.isEqual(installedDependencies, npmDependencies)) {
-    // What we have installed matches the top-level dependencies specified
-    // in `Npm.depends`. But what if we just pulled a change in
-    // npm-shrinkwrap.json to an indirectly used module version? We'll
-    // have to compare more carefully. First, normalize the tree (strip
-    // irrelevant fields and normalize to 'version'). If what we have
-    // installed is the same as what we have shrinkwrapped, we're done.
-    if (_.isEqual(minimizeDependencyTree(installedDependenciesTree),
-                  minimizeDependencyTree(shrinkwrappedDependenciesTree))) {
-      return;
-    }
+  const npmTree = { dependencies: {} };
+  _.each(npmDependencies, (version, name) => {
+    npmTree.dependencies[name] = { version };
+  });
+
+  const minInstalledTree =
+    minimizeDependencyTree(installedDependenciesTree);
+  const minShrinkwrapTree =
+    minimizeDependencyTree(shrinkwrappedDependenciesTree);
+
+  if (isSubtreeOf(npmTree, minInstalledTree) &&
+      isSubtreeOf(minShrinkwrapTree, minInstalledTree)) {
+    return;
   }
 
   if (! quiet) {
     logUpdateDependencies(packageName, npmDependencies);
   }
 
-  var preservedShrinkwrap = {dependencies: {}};
-  _.each(shrinkwrappedDependencies, function (version, name) {
-    if (npmDependencies[name] === version) {
-      // We're not changing this dependency, so copy over its shrinkwrap.
-      preservedShrinkwrap.dependencies[name] =
-        shrinkwrappedDependenciesTree.dependencies[name];
-    }
-  });
+  let preservedShrinkwrap;
+
+  if (_.isEmpty(npmDependencies)) {
+    // If there are no npmDependencies, make sure nothing is installed.
+    preservedShrinkwrap = { dependencies: {} };
+  } else if (isSubtreeOf(npmTree, minShrinkwrapTree)) {
+    // If the top-level npm dependencies are already encompassed by the
+    // npm-shrinkwrap.json file, then reuse that file.
+    preservedShrinkwrap = shrinkwrappedDependenciesTree;
+  } else {
+    // Otherwise install only the required npm packages and their
+    // dependencies.
+    preservedShrinkwrap = npmTree;
+  }
 
   makeNewPackageNpmDir(newPackageNpmDir);
 
   if (!_.isEmpty(preservedShrinkwrap.dependencies)) {
-    // There are some unchanged packages here. Install from shrinkwrap.
-    files.writeFile(files.pathJoin(newPackageNpmDir, 'npm-shrinkwrap.json'),
-                     JSON.stringify(preservedShrinkwrap, null, /*legible*/2));
+    const newShrinkwrapFile = files.pathJoin(
+      newPackageNpmDir,
+      'npm-shrinkwrap.json'
+    );
 
-    // construct a matching package.json to make `npm install` happy
-    constructPackageJson(packageName, newPackageNpmDir,
-                         treeToDependencies(preservedShrinkwrap));
+    // There are some unchanged packages here. Install from shrinkwrap.
+    files.writeFile(
+      newShrinkwrapFile,
+      JSON.stringify(preservedShrinkwrap, null, 2)
+    );
 
     // `npm install`
     installFromShrinkwrap(newPackageNpmDir);
 
-    // delete package.json and npm-shrinkwrap.json
-    files.unlink(files.pathJoin(newPackageNpmDir, 'package.json'));
-    files.unlink(files.pathJoin(newPackageNpmDir, 'npm-shrinkwrap.json'));
+    files.unlink(newShrinkwrapFile);
   }
-
-  // we may have just installed the shrinkwrapped packages. but let's not
-  // trust that it actually worked: let's do the rest based on what we
-  // actually have installed now.
-  var newInstalledDependencies = getInstalledDependencies(newPackageNpmDir);
-
-  // `npm install name@version` for modules that need updating
-  _.each(npmDependencies, function (version, name) {
-    if (newInstalledDependencies[name] !== version) {
-      installNpmModule(name, version, newPackageNpmDir);
-    }
-  });
 
   completeNpmDirectory(packageName, newPackageNpmDir, packageNpmDir,
                        npmDependencies);
 };
+
+function isSubtreeOf(subsetTree, supersetTree) {
+  if (subsetTree === supersetTree) {
+    return true;
+  }
+
+  return _.isObject(subsetTree) &&
+    _.isObject(supersetTree) &&
+    _.every(subsetTree, (value, key) => {
+      return isSubtreeOf(value, supersetTree[key]);
+    });
+}
 
 var createFreshNpmDirectory = function (packageName, newPackageNpmDir,
                                         packageNpmDir, npmDependencies, quiet) {
@@ -471,18 +471,9 @@ var createFreshNpmDirectory = function (packageName, newPackageNpmDir,
 // Shared code for updateExistingNpmDirectory and createFreshNpmDirectory.
 var completeNpmDirectory = function (packageName, newPackageNpmDir,
                                      packageNpmDir, npmDependencies) {
-  // temporarily construct a matching package.json to make `npm
-  // shrinkwrap` happy
-  constructPackageJson(packageName, newPackageNpmDir, npmDependencies);
-
   // Create a shrinkwrap file.
   shrinkwrap(newPackageNpmDir);
 
-  // now get package.json out of the way, but put it somewhere where the
-  // providePackageJSONForUnavailableBinaryDeps code can find it
-  files.rename(
-    files.pathJoin(newPackageNpmDir, 'package.json'),
-    files.pathJoin(newPackageNpmDir, 'node_modules', '.package.json'));
   // And stow a copy of npm-shrinkwrap too.
   files.copyFile(
     files.pathJoin(newPackageNpmDir, 'npm-shrinkwrap.json'),
@@ -579,18 +570,6 @@ Profile("meteorNpm.runNpmCommand", function (args, cwd) {
     );
   }).await();
 });
-
-var constructPackageJson = function (packageName, newPackageNpmDir,
-                                     npmDependencies) {
-  var packageJsonContents = JSON.stringify({
-    // name and version are unimportant but required for `npm install`.
-    name: 'packages-for-meteor-' + packageName.replace(/:/g, '-'),
-    version: '0.0.0',
-    dependencies: npmDependencies
-  });
-  var packageJsonPath = files.pathJoin(newPackageNpmDir, 'package.json');
-  files.writeFile(packageJsonPath, packageJsonContents);
-};
 
 // Gets a JSON object from `npm ls --json` (getInstalledDependenciesTree) or
 // `npm-shrinkwrap.json` (getShrinkwrappedDependenciesTree).
