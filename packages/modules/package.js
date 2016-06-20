@@ -1,12 +1,12 @@
 Package.describe({
   name: "modules",
-  version: "0.6.3",
+  version: "0.6.4",
   summary: "CommonJS module system",
   documentation: "README.md"
 });
 
 Npm.depends({
-  reify: "0.3.3"
+  reify: "0.3.4"
 });
 
 Package.onUse(function(api) {
