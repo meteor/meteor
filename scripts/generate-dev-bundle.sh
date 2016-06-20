@@ -40,8 +40,13 @@ fi
 # export path so we use the downloaded node and npm
 export PATH="$DIR/bin:$PATH"
 
+cd "$DIR/lib"
+# Overwrite the bundled version with the latest version of npm.
+npm install "npm@$NPM_VERSION"
+
 which node
 which npm
+npm version
 
 # When adding new node modules (or any software) to the dev bundle,
 # remember to update LICENSE.txt! Also note that we include all the
@@ -131,7 +136,7 @@ mv BrowserStackLocal "$DIR/bin/"
 # Sanity check to see if we're not breaking anything by replacing npm
 INSTALLED_NPM_VERSION=$(cat "$DIR/lib/node_modules/npm/package.json" |
 xargs -0 node -e "console.log(JSON.parse(process.argv[1]).version)")
-if [ "$INSTALLED_NPM_VERSION" != "2.15.1" ]; then
+if [ "$INSTALLED_NPM_VERSION" != "3.9.6" ]; then
   echo "Unexpected NPM version in lib/node_modules: $INSTALLED_NPM_VERSION"
   echo "We will be replacing it with our own version because the bundled node"
   echo "is built using PORTABLE=1, which makes npm look for node relative to"
