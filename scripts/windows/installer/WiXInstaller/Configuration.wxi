@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Include>
     <?define METEOR_ProductName  = "Meteor" ?>
+    <?define METEOR_ProductId    = "{1B1B4C6E-371D-4027-80AB-27922ABD7EE4}" ?>
     <?define METEOR_UpgradeCode  = "{D6831580-7DD8-4088-9792-64E4D37FEDDC}" ?>
     <?define BUNDLE_UpgradeCode  = "{D6F8653E-2F27-4FDD-9C92-66D7B4B21D79}" ?>
 
