@@ -152,7 +152,7 @@ There are three main locations in the HTML where template tags are allowed:
 The behavior of a template tag is affected by where it is located in the HTML,
 and not all tags are allowed at all locations.
 
-# Double-braced Tags
+### Double-braced Tags
 
 A double-braced tag at element level or in an attribute value typically evalutes
 to a string.  If it evalutes to something else, the value will be cast to a
