@@ -262,7 +262,9 @@ files.statOrNull = function (path) {
   try {
     return files.stat(path);
   } catch (e) {
-    if (e.code == "ENOENT") {
+    if (e.code === "ENOENT" ||
+        (process.platform === "win32" &&
+         e.code === "UNKNOWN")) {
       return null;
     }
     throw e;
