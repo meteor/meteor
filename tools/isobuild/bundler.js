@@ -2461,7 +2461,12 @@ Find out more about Meteor at meteor.com.
  * will point somewhere else -- into the app (if any) whose packages
  * you are testing!
  */
-exports.bundle = function ({
+
+exports.bundle = function (options) {
+  return files.withCache(() => bundle(options));
+};
+
+function bundle({
   projectContext,
   outputPath,
   includeNodeModules,

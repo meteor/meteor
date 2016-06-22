@@ -4,6 +4,7 @@
 /// (such as testing whether an directory is a meteor app)
 ///
 
+var assert = require("assert");
 var fs = require("fs");
 var path = require('path');
 var os = require('os');
@@ -1429,6 +1430,67 @@ wrapFsFunc("readFile", [0], {
 wrapFsFunc("stat", [0]);
 wrapFsFunc("lstat", [0]);
 wrapFsFunc("rename", [0, 1]);
+
+const cacheStack = [];
+files.withCache = Profile("files.withCache", function (fn) {
+  try {
+    var cache = Object.create(null);
+    cacheStack.push(cache);
+    return fn();
+  } finally {
+    assert.strictEqual(cacheStack.pop(), cache);
+  }
+});
+
+function enableCache(name) {
+  const method = files[name];
+
+  function makeCacheKey(args) {
+    var parts = [name];
+
+    for (var i = 0; i < args.length; ++i) {
+      var arg = args[i];
+
+      if (typeof arg !== "string") {
+        // If any of the arguments is not a string, then we won't cache
+        // the result of the corresponding file.* method invocation.
+        return null;
+      }
+
+      parts.push(arg);
+    }
+
+    return parts.join("\0");
+  }
+
+  files[name] = function (...args) {
+    let cacheKey;
+
+    if (cacheStack.length > 0 &&
+        (cacheKey = makeCacheKey(args))) {
+      for (var i = cacheStack.length - 1; i >= 0; --i) {
+        const cache = cacheStack[i];
+        if (cacheKey in cache) {
+          return cache[cacheKey];
+        }
+      }
+    }
+
+    const result = method.apply(files, args);
+
+    const lastCache = cacheStack[cacheStack.length - 1];
+    if (lastCache && (cacheKey = cacheKey || makeCacheKey(args))) {
+      lastCache[cacheKey] = result;
+    }
+
+    return result;
+  };
+}
+
+enableCache("readdir");
+enableCache("realpath");
+enableCache("stat");
+enableCache("lstat");
 
 // The fs.exists method is deprecated in Node v4:
 // https://nodejs.org/api/fs.html#fs_fs_exists_path_callback
