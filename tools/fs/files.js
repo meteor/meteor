@@ -1431,14 +1431,17 @@ wrapFsFunc("stat", [0]);
 wrapFsFunc("lstat", [0]);
 wrapFsFunc("rename", [0, 1]);
 
-const cacheStack = [];
+// After the outermost files.withCache call returns, the withCacheCache is
+// reset to null so that it does not survive server restarts.
+let withCacheCache = null;
+
 files.withCache = Profile("files.withCache", function (fn) {
+  const oldCache = withCacheCache;
+  withCacheCache = oldCache || Object.create(null);
   try {
-    var cache = Object.create(null);
-    cacheStack.push(cache);
     return fn();
   } finally {
-    assert.strictEqual(cacheStack.pop(), cache);
+    withCacheCache = oldCache;
   }
 });
 
@@ -1464,23 +1467,20 @@ function enableCache(name) {
   }
 
   files[name] = function (...args) {
-    let cacheKey;
-
-    if (cacheStack.length > 0 &&
-        (cacheKey = makeCacheKey(args))) {
-      for (var i = cacheStack.length - 1; i >= 0; --i) {
-        const cache = cacheStack[i];
-        if (cacheKey in cache) {
-          return cache[cacheKey];
-        }
+    if (withCacheCache) {
+      var cacheKey = makeCacheKey(args);
+      if (cacheKey && cacheKey in withCacheCache) {
+        return withCacheCache[cacheKey];
       }
     }
 
     const result = method.apply(files, args);
 
-    const lastCache = cacheStack[cacheStack.length - 1];
-    if (lastCache && (cacheKey = cacheKey || makeCacheKey(args))) {
-      lastCache[cacheKey] = result;
+    if (withCacheCache && cacheKey !== null) {
+      // If cacheKey === null, then we called makeCacheKey above and it
+      // failed because one of the arguments was not a string, so we
+      // should not try to call makeCacheKey again.
+      withCacheCache[cacheKey || makeCacheKey(args)] = result;
     }
 
     return result;
