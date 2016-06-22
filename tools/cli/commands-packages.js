@@ -1718,9 +1718,13 @@ main.registerCommand({
     });
 
     var releaseConstrainedPkgSet = {}; // pinned core packages (to skip)
-    _.each(releaseRecordForConstraints.packages, function (v, packageName) {
-      releaseConstrainedPkgSet[packageName] = true;
-    });
+    // check releaseRecordForConstraints is not null, e.g. possible
+    // when running meteor from checkout
+    if (releaseRecordForConstraints) {
+      _.each(releaseRecordForConstraints.packages, function (v, packageName) {
+        releaseConstrainedPkgSet[packageName] = true;
+      });
+    }
 
     var nonlatestDirectDeps = [];
     var nonlatestIndirectDeps = [];
