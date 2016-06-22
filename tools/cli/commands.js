@@ -1413,6 +1413,10 @@ testCommandOptions = {
     deploy: { type: String },
     production: { type: Boolean },
     settings: { type: String },
+    // Indicates whether these self-tests are running headless, e.g. in a
+    // continuous integration testing environment, where visual niceties
+    // like progress bars and spinners are unimportant.
+    headless: { type: Boolean },
     verbose: { type: Boolean, short: "v" },
 
     // Undocumented. See #Once
@@ -1489,6 +1493,9 @@ function doTestCommand(options) {
   global.testCommandMetadata = {};
 
   Console.setVerbose(!!options.verbose);
+  if (options.headless) {
+    Console.setHeadless(true);
+  }
 
   const runTargets = parseRunTargets(_.intersection(
     Object.keys(options), ['ios', 'ios-device', 'android', 'android-device']));

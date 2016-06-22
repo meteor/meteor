@@ -4,6 +4,7 @@
 /// (such as testing whether an directory is a meteor app)
 ///
 
+var assert = require("assert");
 var fs = require("fs");
 var path = require('path');
 var os = require('os');
@@ -1427,6 +1428,67 @@ wrapFsFunc("readFile", [0], {
 wrapFsFunc("stat", [0]);
 wrapFsFunc("lstat", [0]);
 wrapFsFunc("rename", [0, 1]);
+
+// After the outermost files.withCache call returns, the withCacheCache is
+// reset to null so that it does not survive server restarts.
+let withCacheCache = null;
+
+files.withCache = Profile("files.withCache", function (fn) {
+  const oldCache = withCacheCache;
+  withCacheCache = oldCache || Object.create(null);
+  try {
+    return fn();
+  } finally {
+    withCacheCache = oldCache;
+  }
+});
+
+function enableCache(name) {
+  const method = files[name];
+
+  function makeCacheKey(args) {
+    var parts = [name];
+
+    for (var i = 0; i < args.length; ++i) {
+      var arg = args[i];
+
+      if (typeof arg !== "string") {
+        // If any of the arguments is not a string, then we won't cache
+        // the result of the corresponding file.* method invocation.
+        return null;
+      }
+
+      parts.push(arg);
+    }
+
+    return parts.join("\0");
+  }
+
+  files[name] = function (...args) {
+    if (withCacheCache) {
+      var cacheKey = makeCacheKey(args);
+      if (cacheKey && cacheKey in withCacheCache) {
+        return withCacheCache[cacheKey];
+      }
+    }
+
+    const result = method.apply(files, args);
+
+    if (withCacheCache && cacheKey !== null) {
+      // If cacheKey === null, then we called makeCacheKey above and it
+      // failed because one of the arguments was not a string, so we
+      // should not try to call makeCacheKey again.
+      withCacheCache[cacheKey || makeCacheKey(args)] = result;
+    }
+
+    return result;
+  };
+}
+
+enableCache("readdir");
+enableCache("realpath");
+enableCache("stat");
+enableCache("lstat");
 
 // The fs.exists method is deprecated in Node v4:
 // https://nodejs.org/api/fs.html#fs_fs_exists_path_callback

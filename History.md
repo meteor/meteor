@@ -1,8 +1,43 @@
 ## v.NEXT
 
+## v1.3.4
+
+* The version of `npm` used by `meteor npm` and when installing
+  `Npm.depends` dependencies of Meteor packages has been upgraded from
+  2.15.1 to **3.9.6**, which should lead to much flatter node_modules
+  dependency trees.
+
+* The `meteor-babel` npm package has been upgraded to 0.11.6, and is now
+  installed using `npm@3.9.6`, fixing bugs arising from Windows path
+  limits, such as [#7247](https://github.com/meteor/meteor/issues/7247).
+
+* The `reify` npm package has been upgraded to 0.3.4, fixing
+  [#7250](https://github.com/meteor/meteor/issues/7250).
+
+* Thanks to caching improvements for the
+  `files.{stat,lstat,readdir,realpath}` methods and
+  `PackageSource#_findSources`, development server restart times are no
+  longer proportional to the number of files in `node_modules`
+  directories. [#7253](https://github.com/meteor/meteor/issues/7253)
+  [#7008](https://github.com/meteor/meteor/issues/7008)
+
+* When installed via `InstallMeteor.exe` on Windows, Meteor can now be
+  easily uninstalled through the "Programs and Features" control panel.
+
+* HTTP requests made by the `meteor` command-line tool now have a timeout
+  of 30 seconds, which can be adjusted by the `$TIMEOUT_SCALE_FACTOR`
+  environment variable. [#7143](https://github.com/meteor/meteor/pull/7143)
+
+* The `request` npm dependency of the `http` package has been upgraded
+  from 2.53.0 to 2.72.0.
+
 * The `--headless` option is now supported by `meteor test` and
   `meteor test-packages`, in addition to `meteor self-test`.
   [#7245](https://github.com/meteor/meteor/pull/7245)
+
+* Miscellaneous fixed bugs:
+  [#7255](https://github.com/meteor/meteor/pull/7255)
+  [#7239](https://github.com/meteor/meteor/pull/7239)
 
 ## v1.3.3.1
 

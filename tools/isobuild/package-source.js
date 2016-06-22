@@ -1421,6 +1421,10 @@ _.extend(PackageSource.prototype, {
     return fileOptions;
   },
 
+  // This cache survives for the duration of the process, and stores the
+  // complete list of source files for directories within node_modules.
+  _findSourcesCache: Object.create(null),
+
   _findSources({
     sourceProcessorSet,
     watchSet,
@@ -1483,9 +1487,33 @@ _.extend(PackageSource.prototype, {
       exclude: sourceReadOptions.exclude.concat(/\.js(on)?$/i),
     };
 
+    const baseCacheKey = JSON.stringify({
+      isApp,
+      arch,
+      sourceRoot: self.sourceRoot,
+      excludes: anyLevelExcludes,
+    }, (key, value) => {
+      if (_.isRegExp(value)) {
+        return [value.source, value.flags];
+      }
+      return value;
+    });
+
+    function makeCacheKey(dir) {
+      return baseCacheKey + "\0" + dir;
+    }
+
     function find(dir, depth, inNodeModules) {
       // Remove trailing slash.
       dir = dir.replace(/\/$/, "");
+
+      // If we're in a node_modules directory, cache the results of the
+      // find function for the duration of the process.
+      const cacheKey = inNodeModules && makeCacheKey(dir);
+      if (cacheKey &&
+          cacheKey in self._findSourcesCache) {
+        return self._findSourcesCache[cacheKey];
+      }
 
       if (loopChecker.check(dir)) {
         // Pretend we found no files.
@@ -1541,10 +1569,14 @@ _.extend(PackageSource.prototype, {
         sources.push(...find(nodeModulesDir, depth + 1, true));
       }
 
+      if (cacheKey) {
+        self._findSourcesCache[cacheKey] = sources;
+      }
+
       return sources;
     }
 
-    return find("", 0, false);
+    return files.withCache(() => find("", 0, false));
   },
 
   _findAssets({

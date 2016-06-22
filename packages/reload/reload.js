@@ -223,7 +223,7 @@ Reload._reload = function (options) {
       // with the server if we still have a valid cached copy. This doesn't work
       // when the location contains a hash however, because that wouldn't reload
       // the page and just scroll to the hash location instead.
-      if (window.location.hash) {
+      if (window.location.hash || window.location.href.endsWith("#")) {
         window.location.reload();
       } else {
         window.location.replace(window.location.href);
