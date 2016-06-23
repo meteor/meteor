@@ -183,6 +183,12 @@
 
 * Miscellaneous fixed bugs: #6877 #6843 #6881
 
+## v1.3.2.4
+
+> Meteor 1.3.2.4 was published because publishing 1.3.2.3 failed in an
+unrecoverable way. Meteor 1.3.2.4 contains no additional changes beyond
+the changes in 1.3.2.3.
+
 ## v1.3.2.3
 
 * Reverted accidental changes included in 1.3.2.1 and 1.3.2.2 that
