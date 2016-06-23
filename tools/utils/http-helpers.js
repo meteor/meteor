@@ -245,10 +245,15 @@ _.extend(exports, {
       options.proxy = proxy;
     }
 
-    if (! options.timeout) {
-      // 30 seconds for timeout between initial response headers and data,
+    if (! _.has(options, "timeout")) {
+      // 60 seconds for timeout between initial response headers and data,
       // and between chunks of data while reading the rest of the response.
-      options.timeout = 30000 * timeoutScaleFactor;
+      options.timeout = 60 * 1000 * timeoutScaleFactor;
+    } else if (! (typeof options.timeout === "number" &&
+                  options.timeout > 0)) {
+      // The timeout can be disabled by passing anything other than a
+      // positive number, e.g. { timeout: null }.
+      delete options.timeout;
     }
 
     // request is the most heavy-weight of the tool's npm dependencies; don't
