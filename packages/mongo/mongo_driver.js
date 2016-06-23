@@ -130,7 +130,8 @@ MongoConnection = function (url, options) {
   self._observeMultiplexers = {};
   self._onFailoverHook = new Hook;
 
-  var mongoOptions = {db: {safe: true}, server: {}, replSet: {}};
+  var mongoOptions = _.extend({db: {safe: true}, server: {}, replSet: {}},
+                               Mongo._connectionOptions);
 
   // Set autoReconnect to true, unless passed on the URL. Why someone
   // would want to set autoReconnect to false, I'm not really sure, but
@@ -151,8 +152,8 @@ MongoConnection = function (url, options) {
     mongoOptions.db.native_parser = false;
   }
 
-  // XXX maybe we should have a better way of allowing users to configure the
-  // underlying Mongo driver
+  // Internally the oplog connections specify their own poolSize
+  // which we don't want to overwrite with any user defined value
   if (_.has(options, 'poolSize')) {
     // If we just set this for "server", replSet will override it. If we just
     // set it for replSet, it will be ignored if we're not using a replSet.
