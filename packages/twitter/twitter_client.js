@@ -39,7 +39,7 @@ Twitter.requestCredential = function (options, credentialRequestCompleteCallback
   }
 
   // Handle force login (request the user to enter their credentials)
-  if (options.force_login) {
+  if (options && options.force_login) {
     loginPath += "&force_login=true";
   }
 
