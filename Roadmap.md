@@ -21,12 +21,12 @@ We want to be able to update the version of Node that ships with Meteor to 4 and
 
 The community has rallied around npm as the de-facto standard package manager for JavaScript. We believe committing fully to npm will strengthen the entire JavaScript ecosystem by removing fragmentation, will benefit existing Meteor developers by making it seamless to use any JavaScript package and increase Meteor adoption by aligning it with JavaScript best practices.
 
-1.3 introduced `npm install` support along with ES2015 modules. With 1.4, we would like to transition the Meteor package ecosystem over entirely from Atmosphere to npm. We are still in the early conceptual design phase and expect to update the roadmap once we have a design in place that will underpin further development.
+1.3 introduced `npm install` support along with ES2015 modules. In the future, we would like to transition the Meteor package ecosystem over entirely from Atmosphere to npm. We are still in the early conceptual design phase and expect to update the roadmap once we have a design in place that will underpin further development.
 
 
 ## Testing updates
 
-Meteor 1.3 shipped with two new testing modes and many developers are writing test suites and building test drivers as part of migrating to 1.3. We’re looking at improving the feature in upcoming releases, especially our support for continuous integration mode (see [#6755](https://github.com/meteor/meteor/issues/6755) and [#6809](https://github.com/meteor/meteor/issues/6809)).
+Meteor 1.3 shipped with two new testing modes and many developers are writing test suites and building test drivers as part of migrating to 1.3. We’re looking at improving the feature in upcoming releases, especially our support for continuous integration mode (see [#6755](https://github.com/meteor/meteor/issues/6755)).
 
 ## Project Governance/Community Contribution
 
