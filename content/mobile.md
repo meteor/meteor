@@ -273,7 +273,7 @@ Hot code pushing updated JavaScript code to a device could accidentally push cod
 
 To avoid this, we try to detect faulty versions and revert to the last known good version when this happens. The way detection works is that we expect all `Meteor.startup()` callbacks to complete within a set period of time. If this doesn't happen we consider the version faulty and will rollback the update. Unless the version on the server has been updated in the meantime, the server will try to hot code push the faulty version again. Therefore, we blacklist faulty versions on the device so we know not to retry.
 
-By default, the startup timeout is set to 20 seconds. If your app needs more time to startup (or considerably less), you can use [`App.setPreference`](http://docs.meteor.com/#/full/App-setPreference) to set `WebAppStartupTimeout` to another value.
+By default, the startup timeout is set to 20 seconds. If your app needs more time to startup (or considerably less), you can use [`App.setPreference`](http://docs.meteor.com/api/mobile-config.html#App-setPreference) to set `WebAppStartupTimeout` to another value.
 
 <h2 id="cordova-plugins">Using native device features with Cordova plugins</h2>
 
@@ -425,7 +425,7 @@ The file serving mechanism used in Meteor allows for local file access through U
 
 Cordova controls access to external domains through a whitelisting mechanism, which is implemented as [`cordova-plugin-whitelist`](https://github.com/apache/cordova-plugin-whitelist) in the version of Cordova we bundle.
 
-In Meteor, you use [`App.accessRule`](http://docs.meteor.com/#/full/App-accessRule) in [`mobile-config.js`](http://docs.meteor.com/api/mobile-config.html) to set additional rules. (These correspond to `<access>`, `<allow-navigation>` and `<allow-intent>` tags in the generated `config.xml`.)
+In Meteor, you use [`App.accessRule`](http://docs.meteor.com/api/mobile-config.html#App-accessRule) in [`mobile-config.js`](http://docs.meteor.com/api/mobile-config.html) to set additional rules. (These correspond to `<access>`, `<allow-navigation>` and `<allow-intent>` tags in the generated `config.xml`.)
 
 > On iOS, these settings also control [Application Transport Security (ATS)](https://developer.apple.com/library/prerelease/ios/documentation/General/Reference/InfoPlistKeyReference/Articles/CocoaKeys.html#//apple_ref/doc/uid/TP40009251-SW33), which is an OS level mechanism to enforce security best practices new to iOS 9. If the server you're connecting to does not (yet) fulfill these requirements, you can use additional options to override them for specific domains:
 > ```js
@@ -480,7 +480,7 @@ Refer to the [preferences section](https://cordova.apache.org/docs/en/dev/config
 
 Although Meteor includes a standard set of app icons and launch screens, you'll most likely want to configure your own images.
 
-You configure these images with [`App.icons`](http://docs.meteor.com/#/full/App-icons) and [`App.launchScreens`](http://docs.meteor.com/#/full/App-launchScreens), which both use names to refer to the various supported image sizes (see API documentation).
+You configure these images with [`App.icons`](http://docs.meteor.com/api/mobile-config.html#App-icons) and [`App.launchScreens`](http://docs.meteor.com/api/mobile-config.html#App-launchScreens), which both use names to refer to the various supported image sizes (see API documentation).
 
 For iOS, you can also refer to the [Icon and image sizes](https://developer.apple.com/library/ios/documentation/UserExperience/Conceptual/MobileHIG/IconMatrix.html) in the iOS Human Interface Guidelines for more information about the way these different sizes are used.
 
