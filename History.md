@@ -1,5 +1,15 @@
 ## v.NEXT
 
+## v1.3.4.1
+
+* Increased the default HTTP timeout for requests made by the `meteor`
+  command-line tool to 60 seconds (previously 30), and [disabled the
+  timeout completely for Galaxy
+  deploys](https://forums.meteor.com/t/1-3-4-breaks-galaxy-deployment-etimedout/25383/).
+
+* Minor bug fixes: [#7281](https://github.com/meteor/meteor/pull/7281)
+  [#7276](https://github.com/meteor/meteor/pull/7276)
+
 ## v1.3.4
 
 * The version of `npm` used by `meteor npm` and when installing
