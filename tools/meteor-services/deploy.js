@@ -455,7 +455,9 @@ var bundleAndDeploy = function (options) {
       qs: _.extend({}, options.rawOptions, settings !== null ? {settings: settings} : {}),
       bodyStream: files.createTarGzStream(files.pathJoin(buildDir, 'bundle')),
       expectPayload: ['url'],
-      preflightPassword: preflight.preflightPassword
+      preflightPassword: preflight.preflightPassword,
+      // Disable the HTTP timeout for this POST request.
+      timeout: null,
     });
   });
 

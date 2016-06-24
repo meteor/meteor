@@ -1,5 +1,15 @@
 ## v.NEXT
 
+## v1.3.4.1
+
+* Increased the default HTTP timeout for requests made by the `meteor`
+  command-line tool to 60 seconds (previously 30), and [disabled the
+  timeout completely for Galaxy
+  deploys](https://forums.meteor.com/t/1-3-4-breaks-galaxy-deployment-etimedout/25383/).
+
+* Minor bug fixes: [#7281](https://github.com/meteor/meteor/pull/7281)
+  [#7276](https://github.com/meteor/meteor/pull/7276)
+
 ## v1.3.4
 
 * The version of `npm` used by `meteor npm` and when installing
@@ -182,6 +192,12 @@
   Babel. https://github.com/meteor/meteor/pull/7033#issuecomment-225126778
 
 * Miscellaneous fixed bugs: #6877 #6843 #6881
+
+## v1.3.2.4
+
+> Meteor 1.3.2.4 was published because publishing 1.3.2.3 failed in an
+unrecoverable way. Meteor 1.3.2.4 contains no additional changes beyond
+the changes in 1.3.2.3.
 
 ## v1.3.2.3
 
