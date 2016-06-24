@@ -330,8 +330,12 @@ function doRunCommand(options) {
   }
 
   let webArchs = ['web.browser'];
-  let cordovaRunner;
   if (!_.isEmpty(runTargets) || options['mobile-server']) {
+    webArchs.push("web.cordova");
+  }
+
+  let cordovaRunner;
+  if (!_.isEmpty(runTargets)) {
     main.captureAndExit('', 'preparing Cordova project', () => {
       const cordovaProject = new CordovaProject(projectContext, {
         settingsFile: options.settings,
@@ -341,7 +345,6 @@ function doRunCommand(options) {
       cordovaRunner = new CordovaRunner(cordovaProject, runTargets);
       cordovaRunner.checkPlatformsForRunTargets();
     });
-    webArchs.push("web.cordova");
   }
 
   var runAll = require('../runners/run-all.js');
