@@ -255,13 +255,7 @@ export class CordovaBuilder {
 
     // Set custom tags into widget element
     _.each(this.custom, elementSet => {
-      let tag = config
-        .element(elementSet.name, elementSet.contents.attrs);
-
-      _.each(elementSet.contents.children, child => {
-        tag.element(child.name, child.attrs);
-        if(child.txt) tag.txt(child.txt);
-      });
+      const tag = config.raw(elementSet);
     });
 
     config.element('content', { src: this.metadata.contentUrl });
@@ -647,17 +641,13 @@ configuration. The key may be deprecated.`);
     /**
      * @summary Append custom tags into config's widget element.
      *
-     * `App.appendToConfig('custom-tag', {attrs: '', children: {}});`
+     * `App.appendToConfig('<any-xml-content/>');`
      *
-     * @param  {String} elementName The tag name
-     * @param  {Object} contents    The contents
+     * @param  {String} element The XML you want to include 
      * @memberOf App
      */
-    appendToConfig: function (name, contents) {
-      builder.custom.push({
-        name,
-        contents
-      });
-    }
+    appendToConfig: function (xml) {
+      builder.custom.push(xml);
+    },
   };
 }
