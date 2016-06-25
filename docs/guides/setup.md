@@ -17,7 +17,7 @@ $ npm install eslint eslint-plugin-meteor --save-dev
 ```
 
 Next, an ESLint configuration needs to be created to enable some rules.
-Create a file called `.esintrc.json` at the root of your project.
+Create a file called `.eslintrc.json` at the root of your project.
 
 A minimal configuration should look like this:
 
