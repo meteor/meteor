@@ -16,6 +16,10 @@
   2.6 up. Mongo 2.4 has now reached end-of-life
   (https://www.mongodb.com/support-policy), and is no longer supported.
 
+* Custom Mongo options can now be specified using the
+  `Mongo.setConnectionOptions(options)` API.
+  [#7277](https://github.com/meteor/meteor/pull/7277)
+
 ## v1.3.4.1
 
 * Increased the default HTTP timeout for requests made by the `meteor`
