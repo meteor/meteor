@@ -1,5 +1,7 @@
 ## v1.4
 
+* Node has been upgraded to 4.4.6.
+
 * Meteor has been upgraded to support Mongo 3.2 by default (the bundled version
   used by `meteor run` has been upgraded). Internally it now uses the 2.1.18
   version of the `mongodb` npm driver, and has been tested against at Mongo 3.2

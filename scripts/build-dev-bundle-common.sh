@@ -5,7 +5,7 @@ set -u
 
 UNAME=$(uname)
 ARCH=$(uname -m)
-NODE_VERSION=4.4.5
+NODE_VERSION=4.4.6
 NPM_VERSION=3.9.6
 
 if [ "$UNAME" == "Linux" ] ; then
