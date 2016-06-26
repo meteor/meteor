@@ -716,4 +716,4 @@ redirects:
   '#spiderable': 'packages/spiderable.html'
   '#underscore': 'packages/underscore.html'
   '#webapp': 'packages/webapp.html'
-  '#pkg_spacebars': '/packages/spacebars.html'
+  '#pkg_spacebars': 'packages/spacebars.html'
