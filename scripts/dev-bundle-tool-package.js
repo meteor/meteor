@@ -20,6 +20,9 @@ var packageJson = {
     promise: "7.1.1",
     // So that Babel 6 can emit require("babel-runtime/helpers/...") calls.
     "babel-runtime": "6.9.2",
+    // Peg babylon at 6.8.1 since 6.8.2 appears to have a bug that causes
+    // an endless loop when parsing packages/logic-solver/minisat.js.
+    "babylon": "6.8.1",
     // For various ES2015 polyfills, such as Map and Set.
     "meteor-ecmascript-runtime": "0.2.6",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
