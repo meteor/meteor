@@ -1,6 +1,6 @@
 Package.describe({
   summary: "An XML builder for node.js similar to java-xmlbuilder.",
-  version: '2.4.13-beta.2'
+  version: '2.4.13-beta.3'
 });
 
 Npm.depends({
