@@ -174,9 +174,11 @@ _.extend(Proxy.prototype, {
       try {
         return fn();
       } catch (e) {
-        resOrSocket.writeHead(400, {
-          'Content-Type': 'text/plain'
-        });
+        if (typeof resOrSocket.writeHead === "function") {
+          resOrSocket.writeHead(400, {
+            'Content-Type': 'text/plain'
+          });
+        }
         resOrSocket.end("Bad request\n");
       }
     }
