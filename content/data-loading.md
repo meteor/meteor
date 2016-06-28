@@ -337,7 +337,7 @@ This way you get the full reactive power of the store.
 
 <h3 id="updating-stores">Updating stores</h3>
 
-If you need to update a store as a result of user action, you'd update the store from an event handler, just like you call Methods.
+If you need to update a store as a result of user action, you'd update the store from an event handler, just like you call [Methods](methods.html).
 
 If you need to perform complex logic in the update (e.g. not just call `.set()` etc), it's a good idea to define a mutator on the store. As the store is a singleton, you can just attach a function to the object directly:
 
