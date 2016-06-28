@@ -89,7 +89,7 @@ Below, you can find directions for setting up automatic linting at many differen
 To setup ESLint in your application, you can install the following [npm](https://docs.npmjs.com/getting-started/what-is-npm) packages:
 
 ```
-meteor npm install --save-dev eslint-config-airbnb eslint-plugin-import eslint-plugin-meteor eslint-plugin-react eslint-plugin-jsx-a11y eslint
+meteor npm install --save-dev eslint-config-airbnb eslint-plugin-import eslint-plugin-meteor eslint-plugin-react eslint-plugin-jsx-a11y eslint-import-resolver-meteor eslint
 ```
 
 > Meteor comes with npm bundled so that you can type meteor npm without worrying about installing it yourself. If you like, you can also use a globally installed npm command.
@@ -111,6 +111,9 @@ You can also add a `eslintConfig` section to your `package.json` to specify that
       "airbnb",
       "plugin:meteor/recommended"
     ],
+    "settings": {
+      "import/resolver": "meteor"
+    },
     "rules": {}
   }
 }
@@ -121,38 +124,6 @@ To run the linter, you can now simply type:
 ```bash
 meteor npm run lint
 ```
-
-If you get errors from the default `meteor create myapp` such as:
-
-```bash
-/opt/www/sites/me/myapp/client/main.js
-   1:26  error  Unable to resolve path to module 'meteor/templating'    import/no-unresolved
-   2:29  error  Unable to resolve path to module 'meteor/reactive-var'  import/no-unresolved
-  18:25  error  Invalid parameter name, use "templateInstance" instead  meteor/eventmap-params
-
-/opt/www/sites/me/myapp/server/main.js
-  1:24  error  Unable to resolve path to module 'meteor/meteor'  import/no-unresolved
-```
-
-then you can quiet them by adding to `rules` in `eslintConfig`, for instance:
-
-```
-{
-  ...
-  "eslintConfig": {
-   ...
-    "rules": {
-      "meteor/eventmap-params": [
-        2, { "templateInstanceParamName": "instance" }
-      ],
-      "import/no-unresolved": [
-        2, { "ignore": ["^meteor/"] }
-      ]
-    }
-  }
-}
-```
-
 
 For more details, read the [Getting Started](http://eslint.org/docs/user-guide/getting-started) directions from the ESLint website.
 
