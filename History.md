@@ -2,6 +2,15 @@
 
 * Node has been upgraded to 4.4.6.
 
+* The `meteor-babel` npm package has been upgraded to 0.11.7.
+
+* The `reify` npm package has been upgraded to 0.3.6.
+
+* The `bcrypt` npm package has been upgraded to 0.8.7.
+
+* Nested `import` declarations are now enabled for package code as well as
+  application code. 699cf1f38e9b2a074169515d23983f74148c7223
+
 * Meteor has been upgraded to support Mongo 3.2 by default (the bundled version
   used by `meteor run` has been upgraded). Internally it now uses the 2.1.18
   version of the `mongodb` npm driver, and has been tested against at Mongo 3.2
@@ -21,6 +30,11 @@
 * Custom Mongo options can now be specified using the
   `Mongo.setConnectionOptions(options)` API.
   [#7277](https://github.com/meteor/meteor/pull/7277)
+
+* When running `meteor test`, shared directories are symlinked (or
+  junction-linked on Windows) into the temporary test directory, not
+  copied, leading to much faster test start times after the initial build.
+  The directories: `.meteor/local/{bundler-cache,isopacks,plugin-cache}`
 
 ## v1.3.4.1
 
