@@ -1890,8 +1890,7 @@ class JsImage {
         };
 
         if (nmd.local) {
-          var prodPackageNames =
-            meteorNpm.getProdPackageNames(nmd.sourcePath);
+          let prodPackageNames;
 
           // When copying a local node_modules directory, ignore any npm
           // package directories not in the list of production package
@@ -1906,8 +1905,15 @@ class JsImage {
           copyOptions.directoryFilter = function (dir) {
             var base = files.pathBasename(dir);
             var parentBase = files.pathBasename(files.pathDirname(dir));
-            return parentBase !== "node_modules" ||
-              _.has(prodPackageNames, base);
+            if (parentBase !== "node_modules") {
+              return true;
+            }
+
+            // Compute prodPackageNames lazily.
+            prodPackageNames = prodPackageNames ||
+              meteorNpm.getProdPackageNames(nmd.sourcePath);
+
+            return _.has(prodPackageNames, base);
           };
         }
 
