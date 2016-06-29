@@ -157,6 +157,7 @@ var compiler = require('./compiler.js');
 var PackageSource = require('./package-source.js');
 import Builder from './builder.js';
 var compilerPluginModule = require('./compiler-plugin.js');
+import { JsFile, CssFile } from './minifier-plugin.js';
 var meteorNpm = require('./meteor-npm.js');
 
 var files = require('../fs/files.js');
@@ -1057,11 +1058,8 @@ class Target {
 
   // Minify the JS in this target
   minifyJs(minifierDef, minifyMode) {
-    // Avoid circular deps from top-level import.
-    const minifierPluginModule = require('./minifier-plugin.js');
-
     const sources = _.map(this.js, function (file) {
-      return new minifierPluginModule.JsFile(file, {
+      return new JsFile(file, {
         arch: this.arch
       });
     });
@@ -1235,11 +1233,8 @@ class ClientTarget extends Target {
 
   // Minify the CSS in this target
   minifyCss(minifierDef, minifyMode) {
-    // Avoid circular deps from top-level import.
-    const minifierPluginModule = require('./minifier-plugin.js');
-
     const sources = this.css.map((file) => {
-      return new minifierPluginModule.CssFile(file, {
+      return new CssFile(file, {
         arch: this.arch
       });
     });
