@@ -36,7 +36,11 @@ WebApp.clientPrograms = {};
 // XXX maps archs to program path on filesystem
 var archPath = {};
 
-var bundledJsCssUrlRewriteHook;
+var bundledJsCssUrlRewriteHook = function (url) {
+  var bundledPrefix =
+     __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '';
+  return bundledPrefix + url;
+};
 
 var sha1 = function (contents) {
   var hash = crypto.createHash('sha1');
@@ -285,13 +289,6 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
     _.clone(__meteor_runtime_config__),
     additionalOptions.runtimeConfigOverrides || {}
   );
-
-  var jsCssUrlRewriteHook = bundledJsCssUrlRewriteHook || function (url) {
-    var bundledPrefix =
-       __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '';
-    return bundledPrefix + url;
-  };
-
   return new Boilerplate(arch, manifest,
     _.extend({
       pathMapper: function (itemPath) {
@@ -315,7 +312,7 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
         meteorRuntimeConfig: JSON.stringify(
           encodeURIComponent(JSON.stringify(runtimeConfig))),
         rootUrlPathPrefix: __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
-        bundledJsCssUrlRewriteHook: jsCssUrlRewriteHook,
+        bundledJsCssUrlRewriteHook: bundledJsCssUrlRewriteHook,
         inlineScriptsAllowed: WebAppInternals.inlineScriptsAllowed(),
         inline: additionalOptions.inline
       }
@@ -576,9 +573,13 @@ var runWebAppServer = function () {
 
       // Configure CSS injection for the default arch
       // XXX implement the CSS injection for all archs?
-      WebAppInternals.refreshableAssets = {
-        allCss: boilerplateByArch[WebApp.defaultArch].baseData.css
-      };
+      var cssFiles = boilerplateByArch[WebApp.defaultArch].baseData.css;
+      // Rewrite all CSS files (which are written directly to <style> tags)
+      // by autoupdate_client to use the CDN prefix/etc
+      var allCss = _.map(cssFiles, function(cssFile) {
+        return { url: bundledJsCssUrlRewriteHook(cssFile.url) };
+      });
+      WebAppInternals.refreshableAssets = { allCss };
     });
   };
 
