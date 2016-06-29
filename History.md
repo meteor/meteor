@@ -2,6 +2,8 @@
 
 * Node has been upgraded to 4.4.7.
 
+* The `npm` tool has been upgraded to 3.10.2.
+
 * The `meteor-babel` npm package has been upgraded to 0.11.7.
 
 * The `reify` npm package has been upgraded to 0.3.6.

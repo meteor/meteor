@@ -6,7 +6,7 @@ set -u
 UNAME=$(uname)
 ARCH=$(uname -m)
 NODE_VERSION=4.4.7
-NPM_VERSION=3.9.6
+NPM_VERSION=3.10.2
 
 if [ "$UNAME" == "Linux" ] ; then
     if [ "$ARCH" != "i686" -a "$ARCH" != "x86_64" ] ; then
