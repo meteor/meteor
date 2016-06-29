@@ -161,6 +161,12 @@ Sp.onConnection = function onConnection(socket) {
   readJSONFromStream(socket, function (error, options, replInputSocket) {
     clearTimeout(timeout);
 
+    if (error) {
+      socket = null;
+      console.error(error.stack);
+      return;
+    }
+
     if (options.key !== self.key) {
       if (socket) {
         socket.end(EXITING_MESSAGE + "\n");
