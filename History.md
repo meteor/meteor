@@ -1,6 +1,6 @@
 ## v1.4
 
-* Node has been upgraded to 4.4.6.
+* Node has been upgraded to 4.4.7.
 
 * The `meteor-babel` npm package has been upgraded to 0.11.7.
 
