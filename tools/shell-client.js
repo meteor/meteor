@@ -134,7 +134,7 @@ Cp.setUpSocket = function setUpSocket(sock, key) {
     sock.write(JSON.stringify({
       terminal: ! process.env.EMACS,
       key: key
-    }));
+    }) + "\n");
 
     process.stderr.write(shellBanner());
     process.stdin.pipe(sock);
