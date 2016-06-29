@@ -36,6 +36,8 @@
   copied, leading to much faster test start times after the initial build.
   The directories: `.meteor/local/{bundler-cache,isopacks,plugin-cache}`
 
+* Adds App.appendToConfig allowing custom tags in config.xml [#7307](https://github.com/meteor/meteor/pull/7307)
+
 ## v1.3.4.1
 
 * Increased the default HTTP timeout for requests made by the `meteor`
