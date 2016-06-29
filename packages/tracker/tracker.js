@@ -301,7 +301,7 @@ Tracker.Computation.prototype.stop = function () {
     self.stopped = true;
     self.invalidate();
     // Unregister from global Tracker.
-    delete Tracker._computations[self._id];
+    Tracker._computations[self._id] = null;
     for(var i = 0, f; f = self._onStopCallbacks[i]; i++) {
       Tracker.nonreactive(function () {
         withNoYieldsAllowed(f)(self);
