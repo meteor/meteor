@@ -208,7 +208,7 @@ ListPage.propTypes = {
 };
 ```
 
-Then we create a `ListContainer` container component which wraps it and provides a data source:
+Then we create a `ListPageContainer` container component which wraps it and provides a data source:
 
 ```js
 import { Meteor } from 'meteor/meteor';
@@ -231,12 +231,14 @@ export default ListContainer = createContainer(({ params }) => {
 }, ListPage);
 ```
 
+It's a good habit to name your container exactly like the component that it wraps, with the word “Container” tacked onto the end. This way, when you're attempting to track down issues in your code, it makes it much easier to locate the appropriate files/classes.
+
 The container component created by `createContainer()` will reactively rerender the wrapped component in response to any changes to [reactive data sources](https://atmospherejs.com/meteor/tracker) accessed from inside the function provided to it.
 
-Although this `ListContainer` container is intended to be instantiated by the React Router (which passes in the props automatically), if we did ever want to create one manually, we would need to pass in the props to the container component (which then get passed into our data function above):
+Although this `ListPageContainer` container is intended to be instantiated by the React Router (which passes in the props automatically), if we did ever want to create one manually, we would need to pass in the props to the container component (which then get passed into our data function above):
 
 ```jsx
-<ListContainer params={{id: '7'}}/>
+<ListPageContainer params={{id: '7'}}/>
 ```
 
 <h3 id="preventing-rerenders">Preventing re-renders</h3>
