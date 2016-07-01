@@ -55,7 +55,7 @@ Meteor.loginWithPassword = function (selector, password, callback) {
         }, callback);
       }
       else if (error) {
-        reportError(error, callback)
+        reportError(error, callback);
       } else {
         callback && callback();
       }
