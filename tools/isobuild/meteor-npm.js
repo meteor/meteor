@@ -14,6 +14,7 @@ var buildmessage = require('../utils/buildmessage.js');
 var utils = require('../utils/utils.js');
 var runLog = require('../runners/run-log.js');
 var Profile = require('../tool-env/profile.js').Profile;
+import { execFileAsync } from "../utils/processes.js";
 
 var meteorNpm = exports;
 
@@ -546,28 +547,34 @@ Profile("meteorNpm.runNpmCommand", function (args, cwd) {
     cwd = files.convertToOSPath(cwd);
   }
 
-  const env = require("../cli/dev-bundle-bin-helpers.js").getEnv();
+  var getEnv = require("../cli/dev-bundle-bin-helpers.js").getEnv;
 
-  // Make sure we don't honor any user-provided configuration files.
-  env.npm_config_userconfig = npmUserConfigFile;
+  return getEnv().then(env => {
+    // Make sure we don't honor any user-provided configuration files.
+    env.npm_config_userconfig = npmUserConfigFile;
 
-  var opts = { cwd: cwd, env: env, maxBuffer: 10 * 1024 * 1024 };
+    var opts = {
+      cwd: cwd,
+      env: env,
+      maxBuffer: 10 * 1024 * 1024
+    };
 
-  return new Promise(function (resolve) {
-    require('child_process').execFile(
-      npmPath, args, opts, function (err, stdout, stderr) {
-        if (meteorNpm._printNpmCalls) {
-          process.stdout.write(err ? 'failed\n' : 'done\n');
+    return new Promise(function (resolve) {
+      require('child_process').execFile(
+        npmPath, args, opts, function (err, stdout, stderr) {
+          if (meteorNpm._printNpmCalls) {
+            process.stdout.write(err ? 'failed\n' : 'done\n');
+          }
+
+          resolve({
+            success: ! err,
+            error: (err ? `${err.message}${stderr}` : stderr),
+            stdout: stdout,
+            stderr: stderr
+          });
         }
-
-        resolve({
-          success: ! err,
-          error: (err ? `${err.message}${stderr}` : stderr),
-          stdout: stdout,
-          stderr: stderr
-        });
-      }
-    );
+      );
+    });
   }).await();
 });
 
