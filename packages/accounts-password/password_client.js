@@ -98,7 +98,7 @@ var srpUpgradePath = function (options, callback) {
   }
 };
 
-var reportError(error, callback) {
+var reportError = function reportError(error, callback) {
    if (callback) {
      callback(error);
    } else {
