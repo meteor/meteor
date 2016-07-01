@@ -2,6 +2,7 @@
   "dependencies": {
     "meteor-promise": {
       "version": "0.7.2",
+      "resolved": "https://registry.npmjs.org/meteor-promise/-/meteor-promise-0.7.2.tgz",
       "from": "meteor-promise@0.7.2"
     },
     "promise": {
