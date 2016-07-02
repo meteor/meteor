@@ -365,7 +365,7 @@ Meteor.publish('todos.inList', function(listId) {
     listId: {type: String}
   }).validate({ listId });
 
-  const list = List.findOne(listId);
+  const list = Lists.findOne(listId);
 
   if (list && (!list.userId || list.userId === this.userId)) {
     return [
