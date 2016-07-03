@@ -1,6 +1,5 @@
 var assert = require("assert");
 var _ = require('underscore');
-var path = require('path');
 
 var archinfo = require('./utils/archinfo.js');
 var buildmessage = require('./utils/buildmessage.js');
@@ -93,9 +92,10 @@ _.extend(ProjectContext.prototype, {
     // METEOR_LOCAL_DIR. You can use relative path if you want it
     // relative to your project directory.
     self.projectLocalDir = process.env.METEOR_LOCAL_DIR ?
-      path.resolve(options.projectLocalDir, process.env.METEOR_LOCAL_DIR)
+      files.pathResolve(options.projectDir,
+        files.convertToStandardPath(process.env.METEOR_LOCAL_DIR))
       : (options.projectLocalDir ||
-      files.pathJoin(self.projectDir, '.meteor', 'local'));
+        files.pathJoin(self.projectDir, '.meteor', 'local'));
 
     // Used by 'meteor rebuild'; true to rebuild all packages, or a list of
     // package names.  Deletes the isopacks and their plugin caches.
