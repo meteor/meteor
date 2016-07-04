@@ -1324,7 +1324,7 @@ _.extend(exports.CordovaPluginsFile.prototype, {
       // We just do a standard split here, not utils.parsePackageConstraint,
       // since cordova plugins don't necessary obey the same naming conventions
       // as Meteor packages.
-      var parts = line.split('@');
+      var parts = [line.substring(0,line.lastIndexOf('@')), line.substring(line.lastIndexOf('@')+1)];
       if (parts.length !== 2) {
         buildmessage.error("Cordova plugin must specify version: " + line, {
           // XXX should this be relative?
