@@ -28,7 +28,7 @@ var packageJson = {
     underscore: "1.5.2",
     "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e",
     semver: "4.1.0",
-    request: "2.47.0",
+    requestretry: "1.9.0",
     fstream: "https://github.com/meteor/fstream/tarball/d11b9ec4a13918447c8af7559c243c190744dd1c",
     tar: "1.0.2",
     kexec: "2.0.2",
