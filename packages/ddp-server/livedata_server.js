@@ -1472,6 +1472,8 @@ _.extend(Server.prototype, {
    * @locus Server
    * @param {String} name Name of the record set.  If `null`, the set has no name, and the record set is automatically sent to all connected clients.
    * @param {Function} func Function called on the server each time a client subscribes.  Inside the function, `this` is the publish handler object, described below.  If the client passed arguments to `subscribe`, the function is called with the same arguments.
+
+   TODO: https://github.com/meteor/meteor/issues/6649
    */
   publish: function (name, handler, options) {
     var self = this;
