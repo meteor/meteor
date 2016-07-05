@@ -161,7 +161,7 @@ var rewriteRules = function (rules, mergedCssPath) {
         // merged CSS, leaving to the browser the responsibility to calculate
         // the final resource links (by adding the application deployment
         // prefix, here `myapp/`, if applicable).
-        relativeToMergedCss = path.relative(mergedCssPath, absolutePath);
+        relativeToMergedCss = pathRelative(mergedCssPath, absolutePath);
         newCssUrl = "url(" + quote + relativeToMergedCss + quote + ")";
         value = value.replace(oldCssUrl, newCssUrl);
       }
@@ -201,3 +201,6 @@ var pathDirname = function (p) {
   return toStandardPath(path.dirname(toOSPath(p)));
 };
 
+var pathRelative = function(p1, p2) {
+  return toStandardPath(path.relative(toOSPath(p1), toOSPath(p2)));
+};
