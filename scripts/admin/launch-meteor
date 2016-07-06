@@ -97,7 +97,7 @@ if [ ! -x "$METEOR_WAREHOUSE_DIR/meteor" ]; then
 
     # Only show progress bar animations if we have a tty
     # (Prevents tons of console junk when installing within a pipe)
-    if [[ -t 1 ]]; then
+    if [ -t 1 ]; then
       curl --progress-bar --fail "$TARBALL_URL" -C - -o "$TARBALL_FILE"
     else
       curl -s --fail "$TARBALL_URL" -C - -o "$TARBALL_FILE"
