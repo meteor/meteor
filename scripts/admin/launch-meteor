@@ -82,7 +82,10 @@ if [ ! -x "$METEOR_WAREHOUSE_DIR/meteor" ]; then
   fi
   echo "Installing a Meteor distribution in your home directory." 1>&2
 
-  TARBALL_FILE="$(dirname "$METEOR_WAREHOUSE_DIR")/.meteor-tarball-tmp"
+  # Generate the $TARBALL_FILE path based on $TARBALL_URL, but with unsafe
+  # characters replaced by underscores.
+  PART_FILE=".meteor-${TARBALL_URL//[^A-Za-z0-9_.-]/_}.part"
+  TARBALL_FILE="$(dirname "$METEOR_WAREHOUSE_DIR")/${PART_FILE}"
   rm -rf "$TARBALL_FILE"
 
   echo "Downloading Meteor distribution"
