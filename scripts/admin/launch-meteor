@@ -100,11 +100,11 @@ if [ ! -x "$METEOR_WAREHOUSE_DIR/meteor" ]; then
 
   echo "Downloading Meteor distribution"
   # keep trying to curl the file until it works (resuming where possible)
-  MAX_ATTEMPTS=99
+  MAX_ATTEMPTS=10
+  RETRY_DELAY_SECS=5
   set +e
-  CODE=1
   ATTEMPTS=0
-  while [ $CODE -ne 0 ] && [ $ATTEMPTS -lt $MAX_ATTEMPTS ]
+  while [ $ATTEMPTS -lt $MAX_ATTEMPTS ]
   do
     ATTEMPTS=$((ATTEMPTS + 1))
 
@@ -118,7 +118,13 @@ if [ ! -x "$METEOR_WAREHOUSE_DIR/meteor" ]; then
         "$TARBALL_URL" --output "$TARBALL_FILE"
     fi
 
-    CODE=$?
+    if [ $? -eq 0 ]
+    then
+        break
+    fi
+
+    echo "Retrying download in $RETRY_DELAY_SECS seconds..."
+    sleep $RETRY_DELAY_SECS
   done
   set -e
 
