@@ -8,7 +8,6 @@
 var fs = require("fs");
 var path = require("path");
 var rootDir = path.resolve(__dirname, "..", "..");
-var Promise = global.Promise || require("promise/lib/es6-extensions");
 var defaultDevBundlePromise =
   Promise.resolve(path.join(rootDir, "dev_bundle"));
 

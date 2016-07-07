@@ -1,8 +1,6 @@
 // Note that this file is required before we install our Babel hooks in
 // ../tool-env/install-babel.js, so we can't use ES2015+ syntax here.
 
-var Promise = global.Promise || require("promise/lib/es6-extensions");
-
 var win32Extensions = {
   node: ".exe",
   npm: ".cmd"
