@@ -104,6 +104,9 @@ export class CordovaBuilder {
       }
     };
 
+    // Custom elements that will be appended into config.xml's widgets
+    this.custom = [];
+
     const packageMap = this.projectContext.packageMap;
 
     if (packageMap && packageMap.getInfo('launch-screen')) {
@@ -248,6 +251,11 @@ export class CordovaBuilder {
         name: key,
         value: value.toString()
       });
+    });
+
+    // Set custom tags into widget element
+    _.each(this.custom, elementSet => {
+      const tag = config.raw(elementSet);
     });
 
     config.element('content', { src: this.metadata.contentUrl });
@@ -628,6 +636,18 @@ configuration. The key may be deprecated.`);
       }
 
       builder.accessRules[pattern] = options;
-    }
+    },
+
+    /**
+     * @summary Append custom tags into config's widget element.
+     *
+     * `App.appendToConfig('<any-xml-content/>');`
+     *
+     * @param  {String} element The XML you want to include 
+     * @memberOf App
+     */
+    appendToConfig: function (xml) {
+      builder.custom.push(xml);
+    },
   };
 }

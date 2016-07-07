@@ -1,5 +1,32 @@
 ## v.NEXT
 
+## v1.3.4.2
+
+* The `meteor node` and `meteor npm` commands now respect
+  `.meteor/release` when resolving which versions of `node` and `npm` to
+  invoke. Note that you must `meteor update` to 1.3.4.2 before this logic
+  will take effect, but it will work in all app directories after
+  updating, even those pinned to older versions.
+  [#7338](https://github.com/meteor/meteor/issue/7338)
+
+* The Meteor installer now has the ability to resume downloads, so
+  installing Meteor on a spotty internet connection should be more
+  reliable. [#7348](https://github.com/meteor/meteor/pull/7348)
+
+* When running `meteor test`, shared directories are symlinked (or
+  junction-linked on Windows) into the temporary test directory, not
+  copied, leading to much faster test start times after the initial build.
+  The directories: `.meteor/local/{bundler-cache,isopacks,plugin-cache}`
+
+* `App.appendToConfig` allows adding custom tags to config.xml.
+  [#7307](https://github.com/meteor/meteor/pull/7307)
+
+* Fixed bugs:
+  [#7149](https://github.com/meteor/meteor/issues/7149)
+  [#7296](https://github.com/meteor/meteor/issues/7296)
+  [#7309](https://github.com/meteor/meteor/issues/7309)
+  [#7312](https://github.com/meteor/meteor/issues/7312)
+
 ## v1.3.4.1
 
 * Increased the default HTTP timeout for requests made by the `meteor`

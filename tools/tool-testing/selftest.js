@@ -33,7 +33,9 @@ try {
   throw new Error([
     "Please install PhantomJS by running the following command:",
     "",
-    "  meteor npm install -g phantomjs-prebuilt",
+    "  /path/to/meteor npm install -g phantomjs-prebuilt",
+    "",
+    "Where `/path/to/meteor` is the executable you used to run this self-test.",
     ""
   ].join("\n"));
 }

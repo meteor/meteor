@@ -157,6 +157,7 @@ var compiler = require('./compiler.js');
 var PackageSource = require('./package-source.js');
 import Builder from './builder.js';
 var compilerPluginModule = require('./compiler-plugin.js');
+import { JsFile, CssFile } from './minifier-plugin.js';
 var meteorNpm = require('./meteor-npm.js');
 
 var files = require('../fs/files.js');
@@ -1057,11 +1058,8 @@ class Target {
 
   // Minify the JS in this target
   minifyJs(minifierDef, minifyMode) {
-    // Avoid circular deps from top-level import.
-    const minifierPluginModule = require('./minifier-plugin.js');
-
     const sources = _.map(this.js, function (file) {
-      return new minifierPluginModule.JsFile(file, {
+      return new JsFile(file, {
         arch: this.arch
       });
     });
@@ -1235,11 +1233,8 @@ class ClientTarget extends Target {
 
   // Minify the CSS in this target
   minifyCss(minifierDef, minifyMode) {
-    // Avoid circular deps from top-level import.
-    const minifierPluginModule = require('./minifier-plugin.js');
-
     const sources = this.css.map((file) => {
-      return new minifierPluginModule.CssFile(file, {
+      return new CssFile(file, {
         arch: this.arch
       });
     });
@@ -1890,8 +1885,7 @@ class JsImage {
         };
 
         if (nmd.local) {
-          var prodPackageNames =
-            meteorNpm.getProdPackageNames(nmd.sourcePath);
+          let prodPackageNames;
 
           // When copying a local node_modules directory, ignore any npm
           // package directories not in the list of production package
@@ -1906,8 +1900,15 @@ class JsImage {
           copyOptions.directoryFilter = function (dir) {
             var base = files.pathBasename(dir);
             var parentBase = files.pathBasename(files.pathDirname(dir));
-            return parentBase !== "node_modules" ||
-              _.has(prodPackageNames, base);
+            if (parentBase !== "node_modules") {
+              return true;
+            }
+
+            // Compute prodPackageNames lazily.
+            prodPackageNames = prodPackageNames ||
+              meteorNpm.getProdPackageNames(nmd.sourcePath);
+
+            return _.has(prodPackageNames, base);
           };
         }
 

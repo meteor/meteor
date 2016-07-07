@@ -89,10 +89,13 @@ _.extend(ProjectContext.prototype, {
     // writes to; used by `meteor test` so that you can test your
     // app in parallel to writing it, with an isolated database.
     // You can override the default .meteor/local by specifying
-    // METEOR_LOCAL_DIR.
+    // METEOR_LOCAL_DIR. You can use relative path if you want it
+    // relative to your project directory.
     self.projectLocalDir = process.env.METEOR_LOCAL_DIR ?
-      process.env.METEOR_LOCAL_DIR : (options.projectLocalDir ||
-      files.pathJoin(self.projectDir, '.meteor', 'local'));
+      files.pathResolve(options.projectDir,
+        files.convertToStandardPath(process.env.METEOR_LOCAL_DIR))
+      : (options.projectLocalDir ||
+        files.pathJoin(self.projectDir, '.meteor', 'local'));
 
     // Used by 'meteor rebuild'; true to rebuild all packages, or a list of
     // package names.  Deletes the isopacks and their plugin caches.
@@ -361,6 +364,38 @@ _.extend(ProjectContext.prototype, {
 
     self._completedStage = STAGE.READ_PROJECT_METADATA;
   }),
+
+  // Write the new release to .meteor/release and create a
+  // .meteor/dev_bundle symlink to the corresponding dev_bundle.
+  writeReleaseFileAndDevBundleLink(releaseName) {
+    assert.strictEqual(files.inCheckout(), false);
+
+    this.releaseFile.write(releaseName);
+
+    // Make a symlink from .meteor/dev_bundle to the actual dev_bundle.
+    const devBundleLink = files.pathJoin(
+      files.pathDirname(this.releaseFile.filename),
+      "dev_bundle"
+    );
+
+    if (files.exists(devBundleLink)) {
+      files.rm_recursive(devBundleLink);
+    }
+
+    if (this.releaseFile.isCheckout()) {
+      // Only create the .meteor/dev_bundle symlink if it points to the
+      // dev_bundle of an actual release, but remove it first regardless.
+      return;
+    }
+
+    files.symlink(
+      files.getDevBundle(),
+      devBundleLink,
+      // Since the target is a directory, Windows can create a junction
+      // without needing administrator privileges.
+      "junction"
+    );
+  },
 
   _ensureProjectDir: function () {
     var self = this;

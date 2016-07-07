@@ -10,25 +10,38 @@ var win32Extensions = {
 // command, as in `meteor npm` or `meteor node`, because we don't want to
 // require("./main.js") for these commands.
 var devBundleBinCommand = process.argv[2];
+var args = process.argv.slice(3);
 
-if (win32Extensions.hasOwnProperty(devBundleBinCommand)) {
+function getChildProcess() {
+  if (! win32Extensions.hasOwnProperty(devBundleBinCommand)) {
+    return Promise.resolve(null);
+  }
+
   var helpers = require("./dev-bundle-bin-helpers.js");
 
   if (process.platform === "win32") {
     devBundleBinCommand += win32Extensions[devBundleBinCommand];
   }
 
-  var cmd = helpers.getCommandPath(devBundleBinCommand);
-  var args = process.argv.slice(3);
+  return Promise.all([
+    helpers.getCommandPath(devBundleBinCommand),
+    helpers.getEnv()
+  ]).then(function (cmdAndEnv) {
+    var cmd = cmdAndEnv[0];
+    var env = cmdAndEnv[1];
+    var child = require("child_process").spawn(cmd, args, {
+      stdio: "inherit",
+      env: env
+    });
 
-  exports.process = require("child_process").spawn(cmd, args, {
-    stdio: "inherit",
-    env: helpers.getEnv()
-  });
+    require("./flush-buffers-on-exit-in-windows.js");
 
-  require("./flush-buffers-on-exit-in-windows.js");
+    child.on("exit", function (exitCode) {
+      process.exit(exitCode);
+    });
 
-  exports.process.on("exit", function (exitCode) {
-    process.exit(exitCode);
+    return child;
   });
 }
+
+module.exports = getChildProcess();
