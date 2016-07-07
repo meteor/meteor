@@ -98,6 +98,14 @@ if [ ! -x "$METEOR_WAREHOUSE_DIR/meteor" ]; then
   fi
   echo "Installing a Meteor distribution in your home directory." 1>&2
 
+
+  # Only show progress bar animations if we have a tty
+  # (Prevents tons of console junk when installing within a pipe)
+  VERBOSITY="--silent";
+  if [ -t 1 ]; then
+    VERBOSITY="--progress-bar"
+  fi
+
   echo "Downloading Meteor distribution"
   # keep trying to curl the file until it works (resuming where possible)
   MAX_ATTEMPTS=10
@@ -108,15 +116,8 @@ if [ ! -x "$METEOR_WAREHOUSE_DIR/meteor" ]; then
   do
     ATTEMPTS=$((ATTEMPTS + 1))
 
-    # Only show progress bar animations if we have a tty
-    # (Prevents tons of console junk when installing within a pipe)
-    if [ -t 1 ]; then
-      curl --progress-bar --fail --continue-at - \
-        "$TARBALL_URL" --output "$TARBALL_FILE"
-    else
-      curl --silent --fail --continue-at - \
-        "$TARBALL_URL" --output "$TARBALL_FILE"
-    fi
+    curl $VERBOSITY --fail --continue-at - \
+      "$TARBALL_URL" --output "$TARBALL_FILE"
 
     if [ $? -eq 0 ]
     then
