@@ -1464,66 +1464,75 @@ _.extend(Server.prototype, {
    *    (it lets us determine whether to print a warning suggesting
    *    that you turn off autopublish.)
    */
+   publish_handler: function (name, handler, options){
+     var self = this;
+     options = options || {};
 
+     if (name && name in self.publish_handlers) {
+       Meteor._debug("Ignoring duplicate publish named '" + name + "'");
+       return;
+     }
+
+     if (Package.autopublish && !options.is_auto) {
+       // They have autopublish on, yet they're trying to manually
+       // picking stuff to publish. They probably should turn off
+       // autopublish. (This check isn't perfect -- if you create a
+       // publish before you turn on autopublish, it won't catch
+       // it. But this will definitely handle the simple case where
+       // you've added the autopublish package to your app, and are
+       // calling publish from your app code.)
+       if (!self.warned_about_autopublish) {
+         self.warned_about_autopublish = true;
+         Meteor._debug(
+   "** You've set up some data subscriptions with Meteor.publish(), but\n" +
+   "** you still have autopublish turned on. Because autopublish is still\n" +
+   "** on, your Meteor.publish() calls won't have much effect. All data\n" +
+   "** will still be sent to all clients.\n" +
+   "**\n" +
+   "** Turn off autopublish by removing the autopublish package:\n" +
+   "**\n" +
+   "**   $ meteor remove autopublish\n" +
+   "**\n" +
+   "** .. and make sure you have Meteor.publish() and Meteor.subscribe() calls\n" +
+   "** for each collection that you want clients to see.\n");
+       }
+     }
+
+     if (name)
+       self.publish_handlers[name] = handler;
+     else {
+       self.universal_publish_handlers.push(handler);
+       // Spin up the new publisher on any existing session too. Run each
+       // session's subscription in a new Fiber, so that there's no change for
+       // self.sessions to change while we're running this loop.
+       _.each(self.sessions, function (session) {
+         if (!session._dontStartNewUniversalSubs) {
+           Fiber(function() {
+             session._startSubscription(handler);
+           }).run();
+         }
+       });
+     }
+   },
   /**
    * @summary Publish a record set.
    * @memberOf Meteor
    * @importFromPackage meteor
    * @locus Server
-   * @param {String} name Name of the record set.  If `null`, the set has no name, and the record set is automatically sent to all connected clients.
+   * @param {String|Object} name If String, name of the record set.  If Object, publications Dictionary of publish functions by name.  If `null`, the set has no name, and the record set is automatically sent to all connected clients.
    * @param {Function} func Function called on the server each time a client subscribes.  Inside the function, `this` is the publish handler object, described below.  If the client passed arguments to `subscribe`, the function is called with the same arguments.
 
-   TODO: https://github.com/meteor/meteor/issues/6649
    */
   publish: function (name, handler, options) {
     var self = this;
 
-    options = options || {};
-
-    if (name && name in self.publish_handlers) {
-      Meteor._debug("Ignoring duplicate publish named '" + name + "'");
-      return;
+    if (! _.isObject(name)) {
+      self.publish_handler(name, handler, options);
     }
-
-    if (Package.autopublish && !options.is_auto) {
-      // They have autopublish on, yet they're trying to manually
-      // picking stuff to publish. They probably should turn off
-      // autopublish. (This check isn't perfect -- if you create a
-      // publish before you turn on autopublish, it won't catch
-      // it. But this will definitely handle the simple case where
-      // you've added the autopublish package to your app, and are
-      // calling publish from your app code.)
-      if (!self.warned_about_autopublish) {
-        self.warned_about_autopublish = true;
-        Meteor._debug(
-"** You've set up some data subscriptions with Meteor.publish(), but\n" +
-"** you still have autopublish turned on. Because autopublish is still\n" +
-"** on, your Meteor.publish() calls won't have much effect. All data\n" +
-"** will still be sent to all clients.\n" +
-"**\n" +
-"** Turn off autopublish by removing the autopublish package:\n" +
-"**\n" +
-"**   $ meteor remove autopublish\n" +
-"**\n" +
-"** .. and make sure you have Meteor.publish() and Meteor.subscribe() calls\n" +
-"** for each collection that you want clients to see.\n");
+    else{
+      for (var k in name){
+        self.publish_handler(k, name[k], {});
       }
-    }
-
-    if (name)
-      self.publish_handlers[name] = handler;
-    else {
-      self.universal_publish_handlers.push(handler);
-      // Spin up the new publisher on any existing session too. Run each
-      // session's subscription in a new Fiber, so that there's no change for
-      // self.sessions to change while we're running this loop.
-      _.each(self.sessions, function (session) {
-        if (!session._dontStartNewUniversalSubs) {
-          Fiber(function() {
-            session._startSubscription(handler);
-          }).run();
-        }
-      });
     }
   },
 
