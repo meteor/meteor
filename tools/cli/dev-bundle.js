@@ -16,36 +16,50 @@ function getDevBundleDir() {
   // checkout, because it's always better to respect the .meteor/release
   // file of the current app, if possible.
 
-  var release = getReleaseForCurrentApp();
-  if (release) {
-    return getDevBundleForRelease(release);
-  }
-
-  return defaultDevBundlePromise;
-}
-
-function getReleaseForCurrentApp() {
   var releaseFile = find(
     process.cwd(),
     makeStatTest("isFile"),
     ".meteor", "release"
   );
 
-  if (releaseFile) {
-    var release = fs.readFileSync(
-      releaseFile, "utf8"
-    ).replace(/^\s+|\s+$/g, "");
-
-    if (/^METEOR@\d+/.test(release)) {
-      return release;
-    }
+  if (! releaseFile) {
+    return defaultDevBundlePromise;
   }
+
+  var devBundleLink = path.join(
+    path.dirname(releaseFile),
+    "dev_bundle"
+  );
+
+  var devBundleStat = statOrNull(devBundleLink, "isDirectory");
+  if (devBundleStat) {
+    return new Promise(function (resolve) {
+      resolve(fs.realpathSync(devBundleLink));
+    });
+  }
+
+  var release = fs.readFileSync(
+    releaseFile, "utf8"
+  ).replace(/^\s+|\s+$/g, "");
+
+  if (! /^METEOR@\d+/.test(release)) {
+    return defaultDevBundlePromise;
+  }
+
+  return getDevBundleForRelease(release).then(function (devBundleDir) {
+    if (devBundleDir) {
+      fs.symlink(devBundleDir, devBundleLink, "junction");
+      return devBundleDir;
+    }
+
+    return defaultDevBundlePromise;
+  });
 }
 
 function getDevBundleForRelease(release) {
   var parts = release.split("@");
   if (parts.length < 2) {
-    return defaultDevBundlePromise;
+    return null;
   }
 
   var track = parts[0];
@@ -58,7 +72,7 @@ function getDevBundleForRelease(release) {
   );
 
   if (! packageMetadataDir) {
-    return defaultDevBundlePromise;
+    return null;
   }
 
   var meteorToolDir = path.resolve(
@@ -68,7 +82,7 @@ function getDevBundleForRelease(release) {
 
   var meteorToolStat = statOrNull(meteorToolDir, "isDirectory");
   if (! meteorToolStat) {
-    return defaultDevBundlePromise;
+    return null;
   }
 
   var dbPath = path.join(
@@ -79,7 +93,7 @@ function getDevBundleForRelease(release) {
 
   var dbStat = statOrNull(dbPath, "isFile");
   if (! dbStat) {
-    return defaultDevBundlePromise;
+    return null;
   }
 
   var sqlite3 = require("sqlite3");
@@ -105,7 +119,7 @@ function getDevBundleForRelease(release) {
           if (devBundleStat) {
             resolve(devBundleDir);
           } else {
-            resolve(defaultDevBundlePromise);
+            resolve(null);
           }
         }
       }
