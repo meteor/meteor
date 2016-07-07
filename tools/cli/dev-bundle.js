@@ -12,14 +12,9 @@ var defaultDevBundlePromise =
   Promise.resolve(path.join(rootDir, "dev_bundle"));
 
 function getDevBundleDir() {
-  var dotGitStat = statOrNull(
-    path.join(rootDir, ".git"),
-    "isDirectory"
-  );
-
-  if (dotGitStat) {
-    return defaultDevBundlePromise;
-  }
+  // Note that this code does not care if we are running meteor from a
+  // checkout, because it's always better to respect the .meteor/release
+  // file of the current app, if possible.
 
   var release = getReleaseForCurrentApp();
   if (release) {
@@ -108,7 +103,6 @@ function getDevBundleForRelease(release) {
 
           var devBundleStat = statOrNull(devBundleDir, "isDirectory");
           if (devBundleStat) {
-            console.log(devBundleDir);
             resolve(devBundleDir);
           } else {
             resolve(defaultDevBundlePromise);
