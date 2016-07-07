@@ -1533,8 +1533,9 @@ var maybeUpdateRelease = function (options) {
   main.captureAndExit("=> Errors while initializing project:", function () {
     projectContext.prepareProjectForBuild();
   });
-  // Write the new release to .meteor/release.
-  projectContext.releaseFile.write(solutionReleaseName);
+
+  projectContext.writeReleaseFileAndDevBundleLink(solutionReleaseName);
+
   projectContext.packageMapDelta.displayOnConsole({
     title: ("Changes to your project's package version selections from " +
             "updating the release:")
