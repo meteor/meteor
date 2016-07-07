@@ -256,10 +256,18 @@ _.extend(exports, {
       delete options.timeout;
     }
 
+    // Configure requestretry
+    if (! _.has(options, "maxAttempts")) {
+      options.maxAttempts = 3;   // try 3 times
+    }
+    if (! _.has(options, "retryDelay")) {
+      options.retryDelay = 30 * 1000;  // wait for 30s before trying again
+    }
+
     // request is the most heavy-weight of the tool's npm dependencies; don't
     // require it until we definitely need it.
     Console.debug("Doing HTTP request: ", options.method || 'GET', options.url);
-    var request = require('request');
+    var request = require('requestretry');
     var req = request(options, callback);
 
 
