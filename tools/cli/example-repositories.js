@@ -14,4 +14,7 @@ export const EXAMPLE_REPOSITORIES = {
     'repo': 'https://github.com/meteor/todos',
     'branch': 'react',
   },
+  angular2: {
+    repo: 'https://github.com/bsliran/angular2-meteor-base'
+  }
 };
