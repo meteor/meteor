@@ -372,12 +372,6 @@ _.extend(ProjectContext.prototype, {
 
     this.releaseFile.write(releaseName);
 
-    if (this.releaseFile.isCheckout()) {
-      // Only create the .meteor/dev_bundle symlink if it points to the
-      // dev_bundle of an actual release.
-      return;
-    }
-
     // Make a symlink from .meteor/dev_bundle to the actual dev_bundle.
     const devBundleLink = files.pathJoin(
       files.pathDirname(this.releaseFile.filename),
@@ -386,6 +380,12 @@ _.extend(ProjectContext.prototype, {
 
     if (files.exists(devBundleLink)) {
       files.rm_recursive(devBundleLink);
+    }
+
+    if (this.releaseFile.isCheckout()) {
+      // Only create the .meteor/dev_bundle symlink if it points to the
+      // dev_bundle of an actual release, but remove it first regardless.
+      return;
     }
 
     files.symlink(
