@@ -25,7 +25,6 @@ echo "Downloading Node from ${NODE_URL}"
 curl "${NODE_URL}" | tar zx --strip-components 1
 
 # Download Mongo from mongodb.com
-MONGO_VERSION=3.2.6
 MONGO_NAME="mongodb-${OS}-${ARCH}-${MONGO_VERSION}"
 MONGO_TGZ="${MONGO_NAME}.tgz"
 MONGO_URL="http://fastdl.mongodb.org/${OS}/${MONGO_TGZ}"

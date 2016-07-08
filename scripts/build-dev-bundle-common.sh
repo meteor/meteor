@@ -5,6 +5,7 @@ set -u
 
 UNAME=$(uname)
 ARCH=$(uname -m)
+MONGO_VERSION=3.2.6
 NODE_VERSION=4.4.7
 NPM_VERSION=3.10.3
 
