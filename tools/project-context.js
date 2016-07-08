@@ -365,6 +365,38 @@ _.extend(ProjectContext.prototype, {
     self._completedStage = STAGE.READ_PROJECT_METADATA;
   }),
 
+  // Write the new release to .meteor/release and create a
+  // .meteor/dev_bundle symlink to the corresponding dev_bundle.
+  writeReleaseFileAndDevBundleLink(releaseName) {
+    assert.strictEqual(files.inCheckout(), false);
+
+    this.releaseFile.write(releaseName);
+
+    // Make a symlink from .meteor/dev_bundle to the actual dev_bundle.
+    const devBundleLink = files.pathJoin(
+      files.pathDirname(this.releaseFile.filename),
+      "dev_bundle"
+    );
+
+    if (files.exists(devBundleLink)) {
+      files.rm_recursive(devBundleLink);
+    }
+
+    if (this.releaseFile.isCheckout()) {
+      // Only create the .meteor/dev_bundle symlink if it points to the
+      // dev_bundle of an actual release, but remove it first regardless.
+      return;
+    }
+
+    files.symlink(
+      files.getDevBundle(),
+      devBundleLink,
+      // Since the target is a directory, Windows can create a junction
+      // without needing administrator privileges.
+      "junction"
+    );
+  },
+
   _ensureProjectDir: function () {
     var self = this;
     files.mkdir_p(files.pathJoin(self.projectDir, '.meteor'));

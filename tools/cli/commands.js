@@ -1611,23 +1611,30 @@ function doTestCommand(options) {
     projectContextOptions.projectLocalDir = files.pathJoin(testRunnerAppDir, '.meteor', 'local');
 
     // Copy the existing build and isopacks to speed up the initial start
-    const copyDirIntoTestRunnerApp = (...parts) => {
+    function copyDirIntoTestRunnerApp(allowSymlink, ...parts) {
       // Depending on whether the user has run `meteor run` or other commands, they
       // may or may not exist yet
       const appDirPath = files.pathJoin(options.appDir, ...parts);
-      if (files.exists(appDirPath)) {
-        files.cp_r(
-          appDirPath,
-          files.pathJoin(testRunnerAppDir, ...parts),
-          {preserveSymlinks: true}
-        );
+      const testDirPath = files.pathJoin(testRunnerAppDir, ...parts);
+
+      files.mkdir_p(appDirPath);
+      files.mkdir_p(files.pathDirname(testDirPath));
+
+      if (allowSymlink) {
+        // Windows can create junction links without administrator
+        // privileges since both paths refer to directories.
+        files.symlink(appDirPath, testDirPath, "junction");
+      } else {
+        files.cp_r(appDirPath, testDirPath, {
+          preserveSymlinks: true
+        });
       }
     }
 
-    copyDirIntoTestRunnerApp('.meteor', 'local', 'build');
-    copyDirIntoTestRunnerApp('.meteor', 'local', 'bundler-cache');
-    copyDirIntoTestRunnerApp('.meteor', 'local', 'isopacks');
-    copyDirIntoTestRunnerApp('.meteor', 'local', 'plugin-cache');
+    copyDirIntoTestRunnerApp(false, '.meteor', 'local', 'build');
+    copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'bundler-cache');
+    copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'isopacks');
+    copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'plugin-cache');
     
     projectContext = new projectContextModule.ProjectContext(projectContextOptions);
 

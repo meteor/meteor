@@ -1,12 +1,8 @@
 // Install ES2015-complaint polyfills for Object, Array, String, Function,
-// Symbol, Map, and Set, patching the native implementations if available.
+// Symbol, Map, Set, and Promise, patching the native implementations when
+// they are available.
 require("meteor-ecmascript-runtime");
-
-// Install a global ES2015-compliant Promise constructor that knows how to
-// run all its callbacks in Fibers.
-var Promise = global.Promise = global.Promise ||
-  require("promise/lib/es6-extensions");
-require("meteor-promise").makeCompatible(Promise, require("fibers"));
+require("./install-promise.js");
 
 // Verify that the babel-runtime package is available to be required.
 // The .join("/") prevents babel-plugin-transform-runtime from
