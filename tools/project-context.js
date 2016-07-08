@@ -410,8 +410,19 @@ _.extend(ProjectContext.prototype, {
 
     // Let's also make sure we have a minimal gitignore.
     var gitignorePath = files.pathJoin(self.projectDir, '.meteor', '.gitignore');
-    if (! files.exists(gitignorePath)) {
-      files.writeFileAtomically(gitignorePath, 'local\n');
+    try {
+      var lines = files.readFile(gitignorePath, "utf8").split("\n");
+    } catch (e) {
+      if (e.code !== "ENOENT") throw e;
+      lines = [""];
+    }
+
+    var needLocal = lines.indexOf("local") < 0;
+    var needDevBundle = lines.indexOf("dev_bundle") < 0;
+    if (needDevBundle || needLocal) {
+      if (needDevBundle) lines.unshift("dev_bundle");
+      if (needLocal) lines.unshift("local");
+      files.writeFileAtomically(gitignorePath, lines.join("\n"));
     }
   },
 
