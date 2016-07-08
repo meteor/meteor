@@ -369,32 +369,7 @@ _.extend(ProjectContext.prototype, {
   // .meteor/dev_bundle symlink to the corresponding dev_bundle.
   writeReleaseFileAndDevBundleLink(releaseName) {
     assert.strictEqual(files.inCheckout(), false);
-
     this.releaseFile.write(releaseName);
-
-    // Make a symlink from .meteor/dev_bundle to the actual dev_bundle.
-    const devBundleLink = files.pathJoin(
-      files.pathDirname(this.releaseFile.filename),
-      "dev_bundle"
-    );
-
-    if (files.exists(devBundleLink)) {
-      files.rm_recursive(devBundleLink);
-    }
-
-    if (this.releaseFile.isCheckout()) {
-      // Only create the .meteor/dev_bundle symlink if it points to the
-      // dev_bundle of an actual release, but remove it first regardless.
-      return;
-    }
-
-    files.symlink(
-      files.getDevBundle(),
-      devBundleLink,
-      // Since the target is a directory, Windows can create a junction
-      // without needing administrator privileges.
-      "junction"
-    );
   },
 
   _ensureProjectDir: function () {
@@ -1368,6 +1343,56 @@ _.extend(exports.ReleaseFile.prototype, {
     self.displayReleaseName = catalogUtils.displayRelease(parts[0], parts[1]);
     self.releaseTrack = parts[0];
     self.releaseVersion = parts[1];
+
+    self.ensureDevBundleLink();
+  },
+
+  ensureDevBundleLink() {
+    // Make a symlink from .meteor/dev_bundle to the actual dev_bundle.
+    const devBundleLink = files.pathJoin(
+      files.pathDirname(this.filename),
+      "dev_bundle"
+    );
+
+    if (this.isCheckout()) {
+      // Only create the .meteor/dev_bundle symlink if .meteor/release
+      // refers to an actual release, and remove it otherwise.
+      files.rm_recursive(devBundleLink);
+      return;
+    }
+
+    if (files.inCheckout()) {
+      // Never update .meteor/dev_bundle to point to a checkout.
+      return;
+    }
+
+    const newTarget = files.realpath(files.getDevBundle());
+
+    try {
+      if (newTarget === files.realpath(devBundleLink)) {
+        // Don't touch .meteor/dev_bundle if it already points to the
+        // right target path.
+        return;
+      }
+
+      // Remove .meteor/dev_bundle so that we can recreate it below.
+      files.rm_recursive(devBundleLink);
+
+    } catch (e) {
+      if (e.code !== "ENOENT") {
+        // It's ok if files.realpath(devBundleLink) failed because the
+        // devBundleLink file does not exist.
+        throw e;
+      }
+    }
+
+    files.symlink(
+      newTarget,
+      devBundleLink,
+      // Since the target is a directory, Windows can create a junction
+      // without needing administrator privileges.
+      "junction"
+    );
   },
 
   write: function (releaseName) {
