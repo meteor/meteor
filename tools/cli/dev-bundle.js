@@ -32,7 +32,7 @@ function getDevBundleDir() {
     "dev_bundle"
   );
 
-  var devBundleStat = statOrNull(devBundleLink, "isDirectory");
+  var devBundleStat = statOrNull(devBundleLink);
   if (devBundleStat) {
     return new Promise(function (resolve) {
       resolve(links.readLink(devBundleLink));
