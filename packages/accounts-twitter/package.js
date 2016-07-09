@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Login service for Twitter accounts",
-  version: "1.1.11-beta.7"
+  version: "1.1.11-beta.8"
 });
 
 Package.onUse(function(api) {
