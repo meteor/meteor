@@ -1503,7 +1503,7 @@ var maybeUpdateRelease = function (options) {
     projectContext.prepareProjectForBuild();
   });
 
-  projectContext.writeReleaseFileAndDevBundleLink(solutionReleaseName);
+  projectContext.writeReleaseFileAndDevBundleLink(releaseName);
 
   projectContext.packageMapDelta.displayOnConsole({
     title: ("Changes to your project's package version selections from " +
