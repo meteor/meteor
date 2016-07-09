@@ -1,6 +1,6 @@
 Package.describe({
   name: 'caching-compiler',
-  version: '1.0.6-beta.7',
+  version: '1.1.6-beta.7',
   summary: 'An easy way to make compiler plugins cache',
   documentation: 'README.md'
 });
