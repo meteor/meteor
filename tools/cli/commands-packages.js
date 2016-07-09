@@ -24,6 +24,7 @@ var packageClient = require('../packaging/package-client.js');
 var tropohouse = require('../packaging/tropohouse.js');
 
 import * as cordova from '../cordova';
+import { updateMeteorToolSymlink } from "../packaging/updater.js";
 
 // For each release (or package), we store a meta-record with its name,
 // maintainers, etc. This function takes in a name, figures out if
@@ -1335,6 +1336,8 @@ var maybeUpdateRelease = function (options) {
   if (! release.current || ! release.current.isProperRelease()) {
     throw new Error("don't have a proper release?");
   }
+
+  updateMeteorToolSymlink(true);
 
   // If we're not in an app, then we're basically done. The only thing left to
   // do is print out some messages explaining what happened (and advising the

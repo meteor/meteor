@@ -1,5 +1,27 @@
 ## v.NEXT
 
+## v1.3.4.3
+
+* Node has been upgraded to 0.10.46.
+
+* `npm` has been upgraded to 3.10.5.
+
+* The `node-gyp` npm package has been upgraded to 3.4.0.
+
+* The `node-pre-gyp` npm package has been upgraded to 0.6.29.
+
+* The `~/.meteor/meteor` symlink (or `AppData\Local\.meteor\meteor.bat` on
+  Windows) will now be updated properly after `meteor update` succeeds. This was
+  promised in [v1.3.4.2](https://github.com/meteor/meteor/blob/devel/History.md#v1342)
+  but [not fully delivered](https://github.com/meteor/meteor/pull/7369#issue-164569763).
+
+* The `.meteor/dev_bundle` symbolic link introduced in
+  [v1.3.4.2](https://github.com/meteor/meteor/blob/devel/History.md#v1342)
+  is now updated whenever `.meteor/release` is read.
+
+* The `.meteor/dev_bundle` symbolic link is now ignored by
+  `.meteor/.gitignore`.
+
 ## v1.3.4.2
 
 * The `meteor node` and `meteor npm` commands now respect
