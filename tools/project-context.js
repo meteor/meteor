@@ -1348,6 +1348,8 @@ _.extend(exports.ReleaseFile.prototype, {
   },
 
   ensureDevBundleLink() {
+    import { makeLink, readLink } from "./cli/dev-bundle-links.js";
+
     // Make a symlink from .meteor/dev_bundle to the actual dev_bundle.
     const devBundleLink = files.pathJoin(
       files.pathDirname(this.filename),
@@ -1369,14 +1371,11 @@ _.extend(exports.ReleaseFile.prototype, {
     const newTarget = files.realpath(files.getDevBundle());
 
     try {
-      if (newTarget === files.realpath(devBundleLink)) {
+      if (newTarget === readLink(devBundleLink)) {
         // Don't touch .meteor/dev_bundle if it already points to the
         // right target path.
         return;
       }
-
-      // Remove .meteor/dev_bundle so that we can recreate it below.
-      files.rm_recursive(devBundleLink);
 
     } catch (e) {
       if (e.code !== "ENOENT") {
@@ -1386,10 +1385,7 @@ _.extend(exports.ReleaseFile.prototype, {
       }
     }
 
-    require("./cli/dev-bundle-links.js").makeLink(
-      files.convertToOSPath(newTarget),
-      files.convertToOSPath(devBundleLink)
-    );
+    makeLink(newTarget, devBundleLink);
   },
 
   write: function (releaseName) {

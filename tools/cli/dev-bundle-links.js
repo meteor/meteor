@@ -1,6 +1,10 @@
 var fs = require("fs");
+var files = require("../fs/mini-files.js");
 
 exports.makeLink = function (target, linkPath) {
+  target = files.convertToOSPath(target);
+  linkPath = files.convertToOSPath(linkPath);
+
   var tempPath = linkPath + "-" + Math.random().toString(36).slice(2);
 
   try {
@@ -13,15 +17,14 @@ exports.makeLink = function (target, linkPath) {
 };
 
 exports.readLink = function (linkPath) {
+  linkPath = files.convertToOSPath(linkPath);
+
   var stat = fs.lstatSync(linkPath);
-
   if (stat.isSymbolicLink()) {
-    return fs.realpathSync(linkPath);
+    linkPath = fs.realpathSync(linkPath);
+  } else if (stat.isFile()) {
+    linkPath = fs.readFileSync(linkPath, "utf8");
   }
 
-  if (stat.isFile()) {
-    return fs.readFileSync(linkPath, "utf8");
-  }
-
-  return linkPath;
+  return files.convertToStandardPath(linkPath);
 };
