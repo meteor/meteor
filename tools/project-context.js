@@ -1386,12 +1386,9 @@ _.extend(exports.ReleaseFile.prototype, {
       }
     }
 
-    files.symlink(
-      newTarget,
-      devBundleLink,
-      // Since the target is a directory, Windows can create a junction
-      // without needing administrator privileges.
-      "junction"
+    require("./cli/dev-bundle-links.js").makeLink(
+      files.convertToOSPath(newTarget),
+      files.convertToOSPath(devBundleLink)
     );
   },
 
