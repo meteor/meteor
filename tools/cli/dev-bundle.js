@@ -7,6 +7,7 @@
 
 var fs = require("fs");
 var path = require("path");
+var links = require("./dev-bundle-links.js");
 var rootDir = path.resolve(__dirname, "..", "..");
 var defaultDevBundlePromise =
   Promise.resolve(path.join(rootDir, "dev_bundle"));
@@ -31,10 +32,10 @@ function getDevBundleDir() {
     "dev_bundle"
   );
 
-  var devBundleStat = statOrNull(devBundleLink, "isDirectory");
+  var devBundleStat = statOrNull(devBundleLink);
   if (devBundleStat) {
     return new Promise(function (resolve) {
-      resolve(fs.realpathSync(devBundleLink));
+      resolve(links.readLink(devBundleLink));
     });
   }
 
@@ -48,7 +49,7 @@ function getDevBundleDir() {
 
   return getDevBundleForRelease(release).then(function (devBundleDir) {
     if (devBundleDir) {
-      fs.symlink(devBundleDir, devBundleLink, "junction");
+      links.makeLink(devBundleDir, devBundleLink);
       return devBundleDir;
     }
 
