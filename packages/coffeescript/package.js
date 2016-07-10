@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Javascript dialect with fewer braces and semicolons",
-  version: "1.2.3-beta.8"
+  version: "1.2.3-beta.9"
 });
 
 Package.registerBuildPlugin({
