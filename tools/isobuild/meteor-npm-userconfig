@@ -1,2 +1,7 @@
-# This file intentionally left empty to ensure consistent npm
-# configuration.
+# These configuration options govern `npm` commands run on behalf of
+# Meteor packages that have `Npm.depends` calls in their package.js files,
+# not `meteor npm ...` commands. Because the developer is not running
+# these commands herself, we don't care as much about helpful warnings,
+# and we certainly don't want them to obscure actual errors.
+
+loglevel = error
