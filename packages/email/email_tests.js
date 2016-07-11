@@ -68,7 +68,6 @@ Tinytest.add("email - undefined headers sends properly", function (test) {
 
 Tinytest.add("email - multiple e-mails same stream", function (test) {
   smokeEmailTest(function (stream) {
-    // Test if date header is automaticall generated, if not specified
     Email.send({
       from: "foo@example.com",
       to: "bar@example.com",
