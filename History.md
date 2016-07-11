@@ -1,5 +1,15 @@
 ## v.NEXT
 
+## v1.3.4.4
+
+* Fixed [#7374](https://github.com/meteor/meteor/issues/7374).
+
+* The default loglevel for internal `npm` commands (e.g., those related to
+  `Npm.depends`) has been set to "error" instead of "warn". Note that this
+  change does not affect `meteor npm ...` commands, which can be easily
+  configured using `.npmrc` files or command-line flags.
+  https://github.com/meteor/meteor/commit/0689cae25a3e0da3615a402cdd0bec94ce8455c8
+
 ## v1.3.4.3
 
 * Node has been upgraded to 0.10.46.
