@@ -299,7 +299,8 @@ _.extend(ProjectContext.prototype, {
 
       // Read .meteor/release.
       self.releaseFile = new exports.ReleaseFile({
-        projectDir: self.projectDir
+        projectDir: self.projectDir,
+        catalog: self._officialCatalog,
       });
       if (buildmessage.jobHasMessages())
         return;
@@ -1264,6 +1265,8 @@ exports.ReleaseFile = function (options) {
   var self = this;
 
   self.filename = files.pathJoin(options.projectDir, '.meteor', 'release');
+  self.catalog = options.catalog || catalog.official;
+
   self.watchSet = null;
   // The release name actually written in the file.  Null if no fill.  Empty if
   // the file is empty.
@@ -1329,6 +1332,29 @@ _.extend(exports.ReleaseFile.prototype, {
     self.ensureDevBundleLink();
   },
 
+  // Returns an absolute path to the dev_bundle appropriate for the
+  // release specified in the .meteor/release file.
+  getDevBundle() {
+    let devBundle = files.getDevBundle();
+    const devBundleParts = devBundle.split(files.pathSep);
+    const meteorToolIndex = devBundleParts.lastIndexOf("meteor-tool");
+
+    if (meteorToolIndex >= 0) {
+      const releaseVersion = this.catalog.getReleaseVersion(
+        this.releaseTrack,
+        this.releaseVersion
+      );
+
+      if (releaseVersion) {
+        const meteorToolVersion = releaseVersion.tool.split("@").pop();
+        devBundleParts[meteorToolIndex + 1] = meteorToolVersion;
+        devBundle = devBundleParts.join(files.pathSep);
+      }
+    }
+
+    return files.realpath(devBundle);
+  },
+
   ensureDevBundleLink() {
     import { makeLink, readLink } from "./cli/dev-bundle-links.js";
 
@@ -1350,7 +1376,7 @@ _.extend(exports.ReleaseFile.prototype, {
       return;
     }
 
-    const newTarget = files.realpath(files.getDevBundle());
+    const newTarget = this.getDevBundle();
 
     try {
       if (newTarget === readLink(devBundleLink)) {
