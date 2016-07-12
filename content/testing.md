@@ -387,7 +387,7 @@ To run the tests, visit http://localhost:3000 in your browser. This kicks off `p
 
 <img src="images/mocha-test-results.png">
 
-Usually, while developing an application, it make sense to run `meteor test` on a second port (say `3100`), while also running your main application in a separate process:
+Usually, while developing an application, it makes sense to run `meteor test` on a second port (say `3100`), while also running your main application in a separate process:
 
 ```bash
 # in one terminal window
