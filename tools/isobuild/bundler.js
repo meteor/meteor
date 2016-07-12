@@ -1953,6 +1953,9 @@ class JsImage {
 
     ret.arch = json.arch;
 
+    // Rebuild binary npm packages if unibuild arch matches host arch.
+    const rebuildBinaries = archinfo.matches(archinfo.host(), ret.arch);
+
     _.each(json.load, function (item) {
       rejectBadPath(item.path);
 
@@ -1962,7 +1965,8 @@ class JsImage {
           ret.nodeModulesDirectories,
           nodeModulesDirectories =
             NodeModulesDirectory.readDirsFromJSON(item.node_modules, {
-              sourceRoot: dir
+              sourceRoot: dir,
+              rebuildBinaries,
             })
         );
       }
