@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Update the client when new client code is available",
-  version: '1.3.11-beta.11'
+  version: '1.3.11-beta.12'
 });
 
 Package.onUse(function (api) {
