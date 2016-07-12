@@ -26,13 +26,6 @@ Tracker.active = false;
  */
 Tracker.currentComputation = null;
 
-// References to all computations created within the Tracker by id.
-// Keeping these references on an underscore property gives more control to
-// tooling and packages extending Tracker without increasing the API surface.
-// These can used to monkey-patch computations, their functions, use
-// computation ids for tracking, etc.
-Tracker._computations = {};
-
 var setCurrentComputation = function (c) {
   Tracker.currentComputation = c;
   Tracker.active = !! c;
@@ -203,9 +196,6 @@ Tracker.Computation = function (f, parent, onError) {
   self._onError = onError;
   self._recomputing = false;
 
-  // Register the computation within the global Tracker.
-  Tracker._computations[self._id] = self;
-
   var errored = true;
   try {
     self._compute();
@@ -300,8 +290,6 @@ Tracker.Computation.prototype.stop = function () {
   if (! self.stopped) {
     self.stopped = true;
     self.invalidate();
-    // Unregister from global Tracker.
-    delete Tracker._computations[self._id];
     for(var i = 0, f; f = self._onStopCallbacks[i]; i++) {
       Tracker.nonreactive(function () {
         withNoYieldsAllowed(f)(self);
