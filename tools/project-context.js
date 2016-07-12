@@ -210,7 +210,7 @@ _.extend(ProjectContext.prototype, {
     // calls to the constraint solver, the constraint solver can be
     // more efficient by caching or memoizing its work.  We choose not
     // to reset this when reset() is called more than once.
-    self._resolverResultCache = (self._resolverResultCache || {});
+    self._readResolverResultCache();
   },
 
   readProjectMetadata: function () {
@@ -559,10 +559,39 @@ _.extend(ProjectContext.prototype, {
           anticipatedPrereleases: anticipatedPrereleases
         });
 
+        self._saveResolverResultCache();
+
         self._completedStage = STAGE.RESOLVE_CONSTRAINTS;
       });
     });
   }),
+
+  _readResolverResultCache() {
+    if (! this._resolverResultCache) {
+      try {
+        this._resolverResultCache =
+          JSON.parse(files.readFile(files.pathJoin(
+            this.projectLocalDir,
+            "resolver-result-cache.json"
+          )));
+      } catch (e) {
+        if (e.code !== "ENOENT") throw e;
+        this._resolverResultCache = {};
+      }
+    }
+
+    return this._resolverResultCache;
+  },
+
+  _saveResolverResultCache() {
+    files.writeFileAtomically(
+      files.pathJoin(
+        this.projectLocalDir,
+        "resolver-result-cache.json"
+      ),
+      JSON.stringify(this._resolverResultCache) + "\n"
+    );
+  },
 
   // When running test-packages for an app with local packages, this
   // method will return the original app dir, as opposed to the temporary
