@@ -60,8 +60,10 @@ CS.PackagesResolver.prototype.resolve = function (dependencies, constraints,
   });
 
   var resultCache = self._options.resultCache;
-  if (resultCache && resultCache.lastInput &&
-      input.isEqual(resultCache.lastInput)) {
+  if (resultCache &&
+      resultCache.lastInput &&
+      _.isEqual(resultCache.lastInput,
+                input.toJSONable(true))) {
     return resultCache.lastOutput;
   }
 
@@ -127,7 +129,7 @@ CS.PackagesResolver.prototype.resolve = function (dependencies, constraints,
   }
 
   if (resultCache) {
-    resultCache.lastInput = input;
+    resultCache.lastInput = input.toJSONable(true);
     resultCache.lastOutput = output;
   }
 
