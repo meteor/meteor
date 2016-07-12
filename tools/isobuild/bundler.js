@@ -1953,7 +1953,7 @@ class JsImage {
 
     ret.arch = json.arch;
 
-    // Rebuild binary npm packages if unibuild arch matches host arch.
+    // Rebuild binary npm packages if host arch matches image arch.
     const rebuildBinaries = archinfo.matches(archinfo.host(), ret.arch);
 
     _.each(json.load, function (item) {
