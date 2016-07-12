@@ -40,10 +40,9 @@ function rebuild(i) {
     return;
   }
 
-  // The --update-binary flag tells node-pre-gyp to replace previously
-  // installed local binaries with remote binaries:
-  // https://github.com/mapbox/node-pre-gyp#options
-  spawn("npm", ["rebuild", "--update-binary"], {
+  // The --build-from-source flag tells node-pre-gyp not to use any
+  // pre-built binaries: https://github.com/mapbox/node-pre-gyp#options
+  spawn("npm", ["rebuild", "--build-from-source"], {
     cwd: path.join(__dirname, dir),
     stdio: "inherit",
     env: env
