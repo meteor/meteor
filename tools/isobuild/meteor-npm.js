@@ -119,9 +119,22 @@ meteorNpm.updateDependencies = function (packageName,
 // Returns a flattened list of npm package names used in production.
 meteorNpm.getProdPackageNames = function (nodeModulesDir) {
   var names = Object.create(null);
-  var lsResult = runNpmCommand([
-    "ls", "--json", "--production"
-  ], nodeModulesDir);
+  var lsCmdArgs = ["ls", "--json"];
+
+  const packageJsonPath = files.pathJoin(
+    files.pathDirname(nodeModulesDir),
+    "package.json"
+  );
+
+  const packageJsonStat = files.statOrNull(packageJsonPath);
+  if (packageJsonStat &&
+      packageJsonStat.isFile()) {
+    // If there is no package.json file, adding --production will cause
+    // the names object to be empty, which is not what we want.
+    lsCmdArgs.push("--production");
+  }
+
+  var lsResult = runNpmCommand(lsCmdArgs, nodeModulesDir);
 
   function walk(deps) {
     if (! deps) {
