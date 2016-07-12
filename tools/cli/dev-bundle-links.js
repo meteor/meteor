@@ -13,7 +13,13 @@ exports.makeLink = function (target, linkPath) {
     fs.writeFileSync(tempPath, target, "utf8");
   }
 
-  fs.renameSync(tempPath, linkPath);
+  try {
+    fs.renameSync(tempPath, linkPath);
+  } catch (e) {
+    // If renaming fails, try unlinking first.
+    fs.unlinkSync(linkPath);
+    fs.renameSync(tempPath, linkPath);
+  }
 };
 
 exports.readLink = function (linkPath) {
