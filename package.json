@@ -55,7 +55,7 @@
     "babel-preset-es2015": "6.9.0",
     "babel-preset-stage-3": "6.11.0",
     "colors": "1.1.2",
-    "coveralls": "2.11.10",
+    "coveralls": "2.11.11",
     "cz-conventional-changelog": "1.1.6",
     "eslint": "3.0.0",
     "eslint-config-airbnb": "9.0.1",
