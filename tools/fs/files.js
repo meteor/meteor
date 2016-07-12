@@ -836,9 +836,14 @@ files.renameDirAlmostAtomically = Profile("files.renameDirAlmostAtomically",
                                           files.renameDirAlmostAtomically);
 
 files.writeFileAtomically = function (filename, contents) {
-  var tmpFile = files.pathJoin(
-    files.pathDirname(filename),
-    '.' + files.pathBasename(filename) + '.' + utils.randomToken());
+  const parentDir = files.pathDirname(filename);
+  files.mkdir_p(parentDir);
+
+  const tmpFile = files.pathJoin(
+    parentDir,
+    '.' + files.pathBasename(filename) + '.' + utils.randomToken()
+  );
+
   files.writeFile(tmpFile, contents);
   files.rename(tmpFile, filename);
 };
