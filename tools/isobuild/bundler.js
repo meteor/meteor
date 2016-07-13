@@ -2149,6 +2149,7 @@ class ServerTarget extends JsImageTarget {
       "mini-files.js",
       "npm-require.js",
       "npm-rebuild.js",
+      "npm-rebuild-args.js",
     ], function (filename) {
       builder.write(filename, {
         file: files.pathJoin(
