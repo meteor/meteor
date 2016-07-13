@@ -13,6 +13,13 @@ var args = [
   "--update-binary"
 ];
 
+// Allow additional flags to be passed via the $METEOR_NPM_REBUILD_FLAGS
+// environment variable.
+var flags = process.env.METEOR_NPM_REBUILD_FLAGS;
+if (flags) {
+  args.push.apply(args, flags.split(/\s+/g));
+}
+
 exports.get = function () {
   // Make a defensive copy.
   return args.slice(0);
