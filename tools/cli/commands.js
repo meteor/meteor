@@ -1421,6 +1421,7 @@ testCommandOptions = {
     // like progress bars and spinners are unimportant.
     headless: { type: Boolean },
     verbose: { type: Boolean, short: "v" },
+    'raw-logs': { type: Boolean },
 
     // Undocumented. See #Once
     once: { type: Boolean },
@@ -1518,6 +1519,10 @@ function doTestCommand(options) {
   var serverArchitectures = [archinfo.host()];
   if (options.deploy && DEPLOY_ARCH !== archinfo.host()) {
     serverArchitectures.push(DEPLOY_ARCH);
+  }
+
+  if (options['raw-logs']) {
+    runLog.setRawLogs(true);
   }
 
   var projectContextOptions = {
