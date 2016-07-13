@@ -7,6 +7,7 @@ if (process.env.METEOR_SKIP_NPM_REBUILD) {
 
 var path = require("path");
 var spawn = require("child_process").spawn;
+var rebuildArgs = require("./npm-rebuild-args.js").get();
 
 try {
   // This JSON file gets written in meteor/tools/isobuild/bundler.js.
@@ -40,10 +41,7 @@ function rebuild(i) {
     return;
   }
 
-  // The --update-binary flag tells node-pre-gyp to replace previously
-  // installed local binaries with remote binaries:
-  // https://github.com/mapbox/node-pre-gyp#options
-  spawn("npm", ["rebuild", "--update-binary"], {
+  spawn("npm", rebuildArgs, {
     cwd: path.join(__dirname, dir),
     stdio: "inherit",
     env: env

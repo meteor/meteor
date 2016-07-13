@@ -15,6 +15,9 @@ var utils = require('../utils/utils.js');
 var runLog = require('../runners/run-log.js');
 var Profile = require('../tool-env/profile.js').Profile;
 import { execFileAsync } from "../utils/processes.js";
+import {
+  get as getRebuildArgs
+} from "../static-assets/server/npm-rebuild-args.js";
 
 var meteorNpm = exports;
 
@@ -235,7 +238,7 @@ Profile("meteorNpm.rebuildIfNonPortable", function (nodeModulesDir) {
 
   // The `npm rebuild` command must be run in the parent directory of the
   // relevant node_modules directory, which in this case is tempDir.
-  const rebuildResult = runNpmCommand(["rebuild"], tempDir);
+  const rebuildResult = runNpmCommand(getRebuildArgs(), tempDir);
   if (! rebuildResult.success) {
     buildmessage.error(rebuildResult.error);
     files.rm_recursive(tempDir);
