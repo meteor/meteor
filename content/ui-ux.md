@@ -44,10 +44,10 @@ Meteor officially supports three user interface (UI) rendering libraries, [Blaze
   - All three libraries work fine in a Cordova web view, and you can use mobile CSS libraries like Ionic's CSS with any view library.
   - The most advanced mobile web framework is [Ionic 2](http://ionicframework.com/docs/v2/), which uses Angular 2.
   - Ionic 1 uses Angular 1, but there are also [Blaze](http://meteoric-doc.com/) and [React](http://reactionic.github.io/) ports.
-  - Another good option is [Onsen UI](https://onsen.io/v2/), which includes a [React version](https://onsen.io/v2/docs/guide/react/].
+  - Another good option is [Onsen UI](https://onsen.io/v2/), which includes a [React version](https://onsen.io/v2/docs/guide/react/).
 - **Native**
   - You can connect any native iOS or Android app to a Meteor server via [DDP](https://www.meteor.com/ddp). For iOS, use the [`meteor-ios`](https://github.com/martijnwalraven/meteor-ios) framework.
-  - You can write native clients in JavaScript using [React Native](https://facebook.github.io/react-native/). For the most recent information on how to use React Native with Meteor, see [this reference](https://github.com/spencercarli/react-native-meteor-index).
+  - You can write apps with native UI elements in JavaScript using [React Native](https://facebook.github.io/react-native/). For the most recent information on how to use React Native with Meteor, see [this reference](https://github.com/spencercarli/react-native-meteor-index).
 
 <h2 id="components">UI components</h2>
 
