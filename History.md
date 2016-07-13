@@ -1,5 +1,25 @@
 ## v.NEXT
 
+## v1.3.4.5
+
+* If an app has no `package.json` file, all packages in `node_modules`
+  will be built into the production bundle. In other words, make sure you
+  have a `package.json` file if you want to benefit from `devDependencies`
+  pruning. 7b2193188fc9e297eefc841ce6035825164f0684
+
+* Binary npm dependencies of compiler plugins are now automatically
+  rebuilt when Node/V8 versions change.
+  [#7297](https://github.com/meteor/meteor/issues/7297)
+
+* The `.meteor/dev_bundle` link now corresponds exactly to
+  `.meteor/release` even when an app is using an older version of
+  Meteor. d732c2e649794f350238d515153f7fb71969c526
+
+* When recompiling binary npm packages, the `npm rebuild` command now
+  receives the flags `--update-binary` and `--no-bin-links`, in addition
+  to respecting the `$METEOR_NPM_REBUILD_FLAGS` environment variable.
+  [#7401](https://github.com/meteor/meteor/issues/7401)
+
 ## v1.3.4.4
 
 * Fixed [#7374](https://github.com/meteor/meteor/issues/7374).
