@@ -1529,7 +1529,7 @@ _.extend(Server.prototype, {
     else{
       _.each(name, function(value, key) {
         self.publish(key, value, {});
-      })
+      });
     }
   },
 
