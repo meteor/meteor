@@ -17,7 +17,12 @@ var args = [
 // environment variable.
 var flags = process.env.METEOR_NPM_REBUILD_FLAGS;
 if (flags) {
-  args.push.apply(args, flags.split(/\s+/g));
+  args = ["rebuild"];
+  flags.split(/\s+/g).forEach(function (flag) {
+    if (flag) {
+      args.push(flag);
+    }
+  });
 }
 
 exports.get = function () {
