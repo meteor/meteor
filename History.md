@@ -46,6 +46,11 @@
   `.meteor/release` even when an app is using an older version of
   Meteor. d732c2e649794f350238d515153f7fb71969c526
 
+* When recompiling binary npm packages, the `npm rebuild` command now
+  receives the flags `--update-binary` and `--no-bin-links`, in addition
+  to respecting the `$METEOR_NPM_REBUILD_FLAGS` environment variable.
+  [#7401](https://github.com/meteor/meteor/issues/7401)
+
 ## v1.3.4.4
 
 * Fixed [#7374](https://github.com/meteor/meteor/issues/7374).
