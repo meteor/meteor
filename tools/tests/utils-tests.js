@@ -152,3 +152,30 @@ selftest.define("parse url", function () {
     protocol: "https"
   });
 });
+
+// XXX: WIP -- I'm not sure how to properly test a failed connection.
+// At the moment, I'm thinking I'll just mark this test as "don't run"
+// and use it by hand for testing (which basically means run it, kill my
+// internet, start my internet again, watch what happens)
+selftest.define("resume downloads", function () {
+  const url = 'http://warehouse.meteor.com/builds/Pr7L8f6PqXyqNJJn4/1443478653127/aRiirNrp4v/meteor-tool-1.1.9-os.osx.x86_64+web.browser+web.cordova.tgz';
+
+  const result = require('../utils/http-helpers').getUrlWithResuming({
+    timeout: 1000,
+    url: url,
+    encoding: null,
+    wait: false,
+    progress: {
+      reportProgress({ current, end }) {
+        const percent = current / end * 100;
+        if (Math.random() < 0.1) {
+          console.log(`${percent} %`);
+        }
+      },
+      reportProgressDone() {
+        console.log('done');
+      }
+    }
+  });
+  console.log(result, result.toString().length)
+});
