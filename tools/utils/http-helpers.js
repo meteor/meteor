@@ -14,6 +14,7 @@ var release = require('../packaging/release.js');
 var Console = require('../console/console.js').Console;
 var timeoutScaleFactor = require('./utils.js').timeoutScaleFactor;
 
+import { WritableStreamBuffer } from 'stream-buffers';
 
 // Helper that tracks bytes written to a writable
 var WritableWithProgress = function (writable, listener) {
@@ -126,6 +127,12 @@ _.extend(exports, {
       options = { url: urlOrOptions };
     } else {
       options = _.clone(urlOrOptions);
+    }
+
+    var outputStream;
+    if (_.has(options, 'outputStream')) {
+      outputStream = options.outputStream;
+      delete options.outputStream;
     }
 
     var bodyStream;
@@ -278,6 +285,10 @@ _.extend(exports, {
       bodyStream.pipe(dest);
     }
 
+    if (outputStream) {
+      req.pipe(outputStream);
+    }
+
     if (progress) {
       httpHelpers._addProgressEvents(req);
       req.on('progress', function (state) {
@@ -358,6 +369,47 @@ _.extend(exports, {
     } else {
       return body;
     }
-  }
+  },
 
+  getUrlWithResuming(urlOrOptions) {
+    const options = _.isObject(urlOrOptions) ? urlOrOptions : {
+      url: urlOrOptions,
+    };
+
+    const outputStream = new WritableStreamBuffer();
+
+    const MAX_ATTEMPTS = 5;
+    function attempt(triesRemaining) {
+      const headers = _.extend({}, urlOrOptions.headers, {
+        range: `bytes=${outputStream.size()}-`,
+      });
+      try {
+        return httpHelpers.request({
+          outputStream,
+          headers,
+          ...urlOrOptions,
+        });
+      } catch (e) {
+        console.log(e);
+        if (triesRemaining > 0) {
+          console.log(`Request failed, retrying`);
+          return attempt(triesRemaining - 1);
+        } else {
+          console.log(`Request failed ${MAX_ATTEMPTS} times, failing`)
+          throw new files.OfflineError(e);
+        }
+      }
+    }
+    const response = attempt(MAX_ATTEMPTS).response;
+    const body = outputStream.getContents();
+
+    if (response.statusCode >= 400 && response.statusCode < 600) {
+      const href = response.request.href;
+      throw Error(
+         body ||
+          `Could not get ${href}; server returned [${response.statusCode}]`);
+    } else {
+      return body;
+    }
+  }
 });

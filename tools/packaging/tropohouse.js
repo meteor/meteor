@@ -304,7 +304,7 @@ _.extend(exports.Tropohouse.prototype, {
     // it relies on extractTarGz being fast and not reporting any progress.
     // Really, we should create two subtasks
     // (and, we should stream the download to the tar extractor)
-    var packageTarball = httpHelpers.getUrl({
+    var packageTarball = httpHelpers.getUrlWithResuming({
       url: url,
       encoding: null,
       progress: buildmessage.getCurrentProgressTracker(),
