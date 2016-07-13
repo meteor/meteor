@@ -136,7 +136,7 @@ _.extend(exports, {
 
     // Body stream length for progress
     var bodyStreamLength = 0;
-    if (_.has(options, 'bodyStream')) {
+    if (_.has(options, 'bodyStreamLength')) {
       bodyStreamLength = options.bodyStreamLength;
       delete options.bodyStreamLength;
     } else {
