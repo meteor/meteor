@@ -15,6 +15,7 @@ var Console = require('../console/console.js').Console;
 var timeoutScaleFactor = require('./utils.js').timeoutScaleFactor;
 
 import { WritableStreamBuffer } from 'stream-buffers';
+import fiberHelpers from '../utils/fiber-helpers.js';
 
 // Helper that tracks bytes written to a writable
 var WritableWithProgress = function (writable, listener) {
@@ -83,6 +84,10 @@ var getUserAgent = function () {
 
 var httpHelpers = exports;
 _.extend(exports, {
+  // For testing purposes, do not use (obviously it doesn't really make
+  // sense to have only one current request)
+  _currentRequest: null,
+
   getUserAgent: getUserAgent,
 
   // A wrapper around request with the following improvements:
@@ -269,6 +274,8 @@ _.extend(exports, {
     var request = require('request');
     var req = request(options, callback);
 
+    // A handle for testing
+    httpHelpers._currentRequest = req;
 
     var totalProgress = { current: 0, end: bodyStreamLength + responseLength, done: false };
 
@@ -372,44 +379,54 @@ _.extend(exports, {
   },
 
   getUrlWithResuming(urlOrOptions) {
-    const options = _.isObject(urlOrOptions) ? urlOrOptions : {
+    const options = _.isObject(urlOrOptions) ? _.clone(urlOrOptions) : {
       url: urlOrOptions,
     };
 
     const outputStream = new WritableStreamBuffer();
 
-    const MAX_ATTEMPTS = 5;
+    const MAX_ATTEMPTS = 10;
+    const RETRY_DELAY_SECS = 5;
+
+    let lastSize = 0;
     function attempt(triesRemaining) {
-      const headers = _.extend({}, urlOrOptions.headers, {
-        range: `bytes=${outputStream.size()}-`,
-      });
+      if (lastSize > 0) {
+        options.headers = {
+          ...options.headers,
+          Range: `bytes=${outputStream.size()}-`
+        };
+      }
+
       try {
         return httpHelpers.request({
           outputStream,
-          headers,
-          ...urlOrOptions,
+          ...options,
         });
       } catch (e) {
-        console.log(e);
-        if (triesRemaining > 0) {
+        const size = outputStream.size();
+        const useTry = size === lastSize;
+        lastSize = outputStream.size();
+
+        if (!useTry || triesRemaining > 0) {
           console.log(`Request failed, retrying`);
-          return attempt(triesRemaining - 1);
+          return new Promise(resolve => {
+            setTimeout(fiberHelpers.bindEnvironment(() => {
+              resolve(attempt(useTry ? triesRemaining - 1 : triesRemaining));
+            }, RETRY_DELAY_SECS * 1000));
+          }).await();
         } else {
           console.log(`Request failed ${MAX_ATTEMPTS} times, failing`)
           throw new files.OfflineError(e);
         }
       }
     }
-    const response = attempt(MAX_ATTEMPTS).response;
-    const body = outputStream.getContents();
 
+    const response = attempt(MAX_ATTEMPTS).response;
     if (response.statusCode >= 400 && response.statusCode < 600) {
       const href = response.request.href;
-      throw Error(
-         body ||
-          `Could not get ${href}; server returned [${response.statusCode}]`);
+      throw Error(`Could not get ${href}; server returned [${response.statusCode}]`);
     } else {
-      return body;
+      return outputStream.getContents();
     }
   }
 });

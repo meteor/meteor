@@ -153,14 +153,23 @@ selftest.define("parse url", function () {
   });
 });
 
-// XXX: WIP -- I'm not sure how to properly test a failed connection.
-// At the moment, I'm thinking I'll just mark this test as "don't run"
-// and use it by hand for testing (which basically means run it, kill my
-// internet, start my internet again, watch what happens)
-selftest.define("resume downloads", function () {
+selftest.define("resume downloads", ['net', 'slow'], function () {
+  // A reasonably big file that (I think) should take more than 1s to download
+  // and that we know the size of
   const url = 'http://warehouse.meteor.com/builds/Pr7L8f6PqXyqNJJn4/1443478653127/aRiirNrp4v/meteor-tool-1.1.9-os.osx.x86_64+web.browser+web.cordova.tgz';
 
-  const result = require('../utils/http-helpers').getUrlWithResuming({
+  let firstPass = true;
+  const httpHelpers = require('../utils/http-helpers');
+
+  setTimeout(() => {
+    httpHelpers._currentRequest.emit('error', 'pretend-http-error');
+    httpHelpers._currentRequest.emit('end');
+  }, 1000);
+
+  const result = httpHelpers.getUrlWithResuming({
+    // This doesn't affect the test, but if you remove the timeout above,
+    // you can kill the connection manually by shutting down your network.
+    // This makes it a bit faster
     timeout: 1000,
     url: url,
     encoding: null,
@@ -168,14 +177,14 @@ selftest.define("resume downloads", function () {
     progress: {
       reportProgress({ current, end }) {
         const percent = current / end * 100;
-        if (Math.random() < 0.1) {
-          console.log(`${percent} %`);
+        if (Math.random() < 0.01) {
+          // Uncomment this when manually testing I guess
+          // console.log(`${percent} %`);
         }
       },
-      reportProgressDone() {
-        console.log('done');
-      }
+      reportProgressDone() {}
     }
   });
-  console.log(result, result.toString().length)
+
+  selftest.expectEqual(result.toString().length, 65041076);
 });
