@@ -27,11 +27,12 @@ function getDevBundleDir() {
     return defaultDevBundlePromise;
   }
 
-  var devBundleLink = path.join(
-    path.dirname(releaseFile),
-    "dev_bundle"
-  );
+  var localDir = path.join(path.dirname(releaseFile), "local");
+  if (! statOrNull(localDir, "isDirectory")) {
+    return defaultDevBundlePromise;
+  }
 
+  var devBundleLink = path.join(localDir, "dev_bundle");
   var devBundleStat = statOrNull(devBundleLink);
   if (devBundleStat) {
     return new Promise(function (resolve) {
