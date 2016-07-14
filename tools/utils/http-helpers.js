@@ -378,6 +378,12 @@ _.extend(exports, {
     }
   },
 
+  // More or less as above, except with support for multiple attempts per
+  // request and resuming on retries. This means if the connection is bad,
+  // we can sometimes complete a request, even if each individual attempt fails.
+  // We only use this for package downloads. In theory we could use it for
+  // all requests but that seems like overkill and it isn't well tested in
+  // other scenarioes.
   getUrlWithResuming(urlOrOptions) {
     const options = _.isObject(urlOrOptions) ? _.clone(urlOrOptions) : {
       url: urlOrOptions,
