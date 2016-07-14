@@ -84,10 +84,6 @@ var getUserAgent = function () {
 
 var httpHelpers = exports;
 _.extend(exports, {
-  // For testing purposes, do not use (obviously it doesn't really make
-  // sense to have only one current request)
-  _currentRequest: null,
-
   getUserAgent: getUserAgent,
 
   // A wrapper around request with the following improvements:
@@ -121,6 +117,9 @@ _.extend(exports, {
   // - forceSSL is always set to true. Always. And followRedirect is
   //   set to false since it doesn't understand origins (see comment
   //   in implementation).
+  //
+  // - An optional options.onRequest callback may be provided if the
+  //   caller desires access to the request object.
   //
   // NB: With useSessionHeader and useAuthHeader, this function will
   // read *and possibly write to* the session file, so if you are
@@ -268,14 +267,21 @@ _.extend(exports, {
       delete options.timeout;
     }
 
+    let onRequest;
+    if (_.has(options, "onRequest")) {
+      onRequest = options.onRequest;
+      delete options.onRequest;
+    }
+
     // request is the most heavy-weight of the tool's npm dependencies; don't
     // require it until we definitely need it.
     Console.debug("Doing HTTP request: ", options.method || 'GET', options.url);
     var request = require('request');
     var req = request(options, callback);
 
-    // A handle for testing
-    httpHelpers._currentRequest = req;
+    if (_.isFunction(onRequest)) {
+      onRequest(req);
+    }
 
     var totalProgress = { current: 0, end: bodyStreamLength + responseLength, done: false };
 

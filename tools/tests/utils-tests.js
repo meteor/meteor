@@ -160,11 +160,6 @@ selftest.define("resume downloads", ['net', 'slow'], function () {
   // and that we know the size of
   const url = 'http://warehouse.meteor.com/builds/Pr7L8f6PqXyqNJJn4/1443478653127/aRiirNrp4v/meteor-tool-1.1.9-os.osx.x86_64+web.browser+web.cordova.tgz';
 
-  setTimeout(() => {
-    httpHelpers._currentRequest.emit('error', 'pretend-http-error');
-    httpHelpers._currentRequest.emit('end');
-  }, 1000);
-
   const result = httpHelpers.getUrlWithResuming({
     // This doesn't affect the test, but if you remove the timeout above,
     // you can kill the connection manually by shutting down your network.
@@ -182,6 +177,12 @@ selftest.define("resume downloads", ['net', 'slow'], function () {
         }
       },
       reportProgressDone() {}
+    },
+    onRequest(request) {
+      setTimeout(() => {
+        request.emit('error', 'pretend-http-error');
+        request.emit('end');
+      }, 1000);
     }
   });
 
