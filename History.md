@@ -42,7 +42,11 @@
   rebuilt when Node/V8 versions change.
   [#7297](https://github.com/meteor/meteor/issues/7297)
 
-* The `.meteor/dev_bundle` link now corresponds exactly to
+* Because `.meteor/local` is where purely local information should be
+  stored, the `.meteor/dev_bundle` link has been renamed to
+  `.meteor/local/dev_bundle`.
+
+* The `.meteor/local/dev_bundle` link now corresponds exactly to
   `.meteor/release` even when an app is using an older version of
   Meteor. d732c2e649794f350238d515153f7fb71969c526
 

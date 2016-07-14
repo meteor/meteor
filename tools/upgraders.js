@@ -227,6 +227,12 @@ the guide about breaking changes here:`,
     packagesFile.writeIfModified();
   },
 
+  "1.4.0-remove-old-dev-bundle-link": function (projectContext) {
+    const oldDevBundleLink =
+      files.pathJoin(projectContext.projectDir, ".meteor", "dev_bundle");
+    files.rm_recursive(oldDevBundleLink);
+  },
+
   ////////////
   // PLEASE. When adding new upgraders that print mesasges, follow the
   // examples for 0.9.0 and 0.9.1 above. Specifically, formatting

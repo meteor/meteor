@@ -1384,33 +1384,34 @@ _.extend(exports.ReleaseFile.prototype, {
     return files.realpath(devBundle);
   },
 
+  // Make a symlink from .meteor/local/dev_bundle to the actual dev_bundle.
   ensureDevBundleLink() {
     import { makeLink, readLink } from "./cli/dev-bundle-links.js";
 
-    // Make a symlink from .meteor/dev_bundle to the actual dev_bundle.
-    const devBundleLink = files.pathJoin(
-      files.pathDirname(this.filename),
-      "dev_bundle"
-    );
+    const dotMeteorDir = files.pathDirname(this.filename);
+    const localDir = files.pathJoin(dotMeteorDir, "local");
+    const devBundleLink = files.pathJoin(localDir, "dev_bundle");
 
     if (this.isCheckout()) {
-      // Only create the .meteor/dev_bundle symlink if .meteor/release
-      // refers to an actual release, and remove it otherwise.
+      // Only create .meteor/local/dev_bundle if .meteor/release refers to
+      // an actual release, and remove it otherwise.
       files.rm_recursive(devBundleLink);
       return;
     }
 
     if (files.inCheckout()) {
-      // Never update .meteor/dev_bundle to point to a checkout.
+      // Never update .meteor/local/dev_bundle to point to a checkout.
       return;
     }
+
+    files.mkdir_p(localDir);
 
     const newTarget = this.getDevBundle();
 
     try {
       if (newTarget === readLink(devBundleLink)) {
-        // Don't touch .meteor/dev_bundle if it already points to the
-        // right target path.
+        // Don't touch .meteor/local/dev_bundle if it already points to
+        // the right target path.
         return;
       }
 
