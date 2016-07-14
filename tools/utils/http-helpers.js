@@ -15,7 +15,6 @@ var Console = require('../console/console.js').Console;
 var timeoutScaleFactor = require('./utils.js').timeoutScaleFactor;
 
 import { WritableStreamBuffer } from 'stream-buffers';
-import fiberHelpers from '../utils/fiber-helpers.js';
 
 // Helper that tracks bytes written to a writable
 var WritableWithProgress = function (writable, listener) {
@@ -417,10 +416,11 @@ _.extend(exports, {
       }
 
       try {
-        return httpHelpers.request({
+        return Promise.resolve(httpHelpers.request({
           outputStream,
           ...options,
-        });
+        }).response);
+
       } catch (e) {
         const size = outputStream.size();
         const useTry = size === lastSize;
@@ -434,24 +434,22 @@ _.extend(exports, {
             Console.debug(`Request failed after ${change} bytes, retrying`);
           }
 
-          return new Promise(resolve => {
-            setTimeout(fiberHelpers.bindEnvironment(() => {
-              resolve(attempt(useTry ? triesRemaining - 1 : triesRemaining));
-            }, RETRY_DELAY_SECS * 1000));
-          }).await();
-        } else {
-          Console.debug(`Request failed ${MAX_ATTEMPTS} times: failing`);
-          throw new files.OfflineError(e);
+          return new Promise(
+            resolve => setTimeout(resolve, RETRY_DELAY_SECS * 1000)
+          ).then(() => attempt(triesRemaining - (useTry ? 1 : 0)));
         }
+
+        Console.debug(`Request failed ${MAX_ATTEMPTS} times: failing`);
+        return Promise.reject(new files.OfflineError(e));
       }
     }
 
-    const response = attempt(MAX_ATTEMPTS).response;
+    const response = attempt(MAX_ATTEMPTS).await();
     if (response.statusCode >= 400 && response.statusCode < 600) {
       const href = response.request.href;
       throw Error(`Could not get ${href}; server returned [${response.statusCode}]`);
-    } else {
-      return outputStream.getContents();
     }
+
+    return outputStream.getContents();
   }
 });
