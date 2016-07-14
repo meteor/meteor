@@ -1388,9 +1388,21 @@ Ap.updateOrCreateUserFromExternalService = function (
     // insertUserDoc.
     user = {services: {}};
     user.services[serviceName] = serviceData;
+
+    var userId = this.insertUserDoc(options, user);
+
+    console.log("User created, calling postSignUpHook");
+    // Call postSignUpHook, if any...
+    if(!!userId) {
+      var postSignUpHook = AccountsTemplates.options.postSignUpHook;
+      if (postSignUpHook) {
+        postSignUpHook(userId, options);
+      }
+    }
+
     return {
       type: serviceName,
-      userId: this.insertUserDoc(options, user)
+      userId: userId
     };
   }
 };
