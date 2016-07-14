@@ -409,10 +409,12 @@ selftest.define("'meteor run --port' accepts/rejects proper values", function ()
   run.expectExit(1);
 
   run = s.run("run", "--port", "3500");
+  run.waitSecs(30);
   run.match('App running at: http://localhost:3500/');
   run.stop();
 
   run = s.run("run", "--port", "127.0.0.1:3500");
+  run.waitSecs(30);
   run.match('App running at: http://127.0.0.1:3500/');
   run.stop();
 });
