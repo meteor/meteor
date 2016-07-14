@@ -330,7 +330,7 @@ _.extend(exports, {
   // Adds progress callbacks to a request
   // Based on request-progress
   _addProgressEvents: function (request) {
-    var state;
+    var state = {};
 
     var emitProgress = function () {
       request.emit('progress', state);
@@ -338,7 +338,6 @@ _.extend(exports, {
 
     request
       .on('response', function (response) {
-        state = {};
         state.end = undefined;
         state.done = false;
         state.current = 0;
@@ -409,7 +408,8 @@ _.extend(exports, {
         };
       }
 
-      if (masterProgress) {
+      if (masterProgress &&
+          masterProgress.addChildTask) {
         options.progress = masterProgress.addChildTask({
           title: masterProgress._title
         });
@@ -419,7 +419,7 @@ _.extend(exports, {
         return Promise.resolve(httpHelpers.request({
           outputStream,
           ...options,
-        }).response);
+        }));
 
       } catch (e) {
         const size = outputStream.size();
@@ -444,7 +444,7 @@ _.extend(exports, {
       }
     }
 
-    const response = attempt(MAX_ATTEMPTS).await();
+    const response = attempt(MAX_ATTEMPTS).await().response
     if (response.statusCode >= 400 && response.statusCode < 600) {
       const href = response.request.href;
       throw Error(`Could not get ${href}; server returned [${response.statusCode}]`);

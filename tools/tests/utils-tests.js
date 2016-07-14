@@ -1,6 +1,7 @@
 var selftest = require('../tool-testing/selftest.js');
 var utils = require('../utils/utils.js');
 
+import { sha1 } from '../fs/watch.js';
 import httpHelpers from '../utils/http-helpers';
 
 selftest.define('subset generator', function () {
@@ -155,36 +156,63 @@ selftest.define("parse url", function () {
   });
 });
 
-selftest.define("resume downloads", ['net', 'slow'], function () {
+selftest.define("resume downloads", ['net'], function () {
   // A reasonably big file that (I think) should take more than 1s to download
   // and that we know the size of
   const url = 'http://warehouse.meteor.com/builds/Pr7L8f6PqXyqNJJn4/1443478653127/aRiirNrp4v/meteor-tool-1.1.9-os.osx.x86_64+web.browser+web.cordova.tgz';
 
-  const result = httpHelpers.getUrlWithResuming({
-    // This doesn't affect the test, but if you remove the timeout above,
-    // you can kill the connection manually by shutting down your network.
-    // This makes it a bit faster
-    timeout: 1000,
-    url: url,
-    encoding: null,
-    wait: false,
-    progress: {
-      reportProgress({ current, end }) {
-        const percent = current / end * 100;
-        if (Math.random() < 0.01) {
-          // Uncomment this when manually testing I guess
-          // console.log(`${percent} %`);
-        }
-      },
-      reportProgressDone() {}
-    },
-    onRequest(request) {
-      setTimeout(() => {
-        request.emit('error', 'pretend-http-error');
-        request.emit('end');
-      }, 1000);
-    }
-  });
+  const timeout = 1000;
+  let interruptCount = 0;
 
-  selftest.expectEqual(result.toString().length, 65041076);
+  const resumedPromise = Promise.resolve().then(
+    () => httpHelpers.getUrlWithResuming({
+      // This doesn't affect the test, but if you remove the timeout above,
+      // you can kill the connection manually by shutting down your network.
+      // This makes it a bit faster
+      timeout,
+      url: url,
+      encoding: null,
+      progress: {
+        reportProgress({ current, end }) {
+          const percent = current / end * 100;
+          if (Math.random() < 0.01) {
+            console.log(`${percent} %`);
+          }
+        },
+        reportProgressDone() {}
+      },
+      onRequest(request) {
+        setTimeout(() => {
+          ++interruptCount;
+          request.emit('error', 'pretend-http-error');
+          request.emit('end');
+        }, timeout);
+      }
+    })
+  );
+
+  const normalPromise = Promise.resolve().then(
+    () => httpHelpers.getUrl({
+      url,
+      timeout: null,
+      encoding: null,
+    })
+  );
+
+  Promise.all([
+    resumedPromise,
+    normalPromise,
+  ]).then(bodies => {
+    selftest.expectTrue(interruptCount > 1);
+
+    selftest.expectEqual(
+      bodies[0].length,
+      bodies[1].length
+    );
+
+    selftest.expectEqual(
+      sha1(bodies[0]),
+      sha1(bodies[1])
+    );
+  }).await();
 });
