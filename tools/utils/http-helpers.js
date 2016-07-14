@@ -387,6 +387,7 @@ _.extend(exports, {
 
     const MAX_ATTEMPTS = 10;
     const RETRY_DELAY_SECS = 5;
+    const masterProgress = options.progress;
 
     let lastSize = 0;
     function attempt(triesRemaining) {
@@ -397,6 +398,12 @@ _.extend(exports, {
         };
       }
 
+      if (masterProgress) {
+        options.progress = masterProgress.addChildTask({
+          title: masterProgress._title
+        });
+      }
+
       try {
         return httpHelpers.request({
           outputStream,
@@ -405,17 +412,23 @@ _.extend(exports, {
       } catch (e) {
         const size = outputStream.size();
         const useTry = size === lastSize;
+        const change = size - lastSize;
         lastSize = outputStream.size();
 
         if (!useTry || triesRemaining > 0) {
-          console.log(`Request failed, retrying`);
+          if (useTry) {
+            Console.debug(`Request failed, ${triesRemaining - 1} attempts left`);
+          } else {
+            Console.debug(`Request failed after ${change} bytes, retrying`);
+          }
+
           return new Promise(resolve => {
             setTimeout(fiberHelpers.bindEnvironment(() => {
               resolve(attempt(useTry ? triesRemaining - 1 : triesRemaining));
             }, RETRY_DELAY_SECS * 1000));
           }).await();
         } else {
-          console.log(`Request failed ${MAX_ATTEMPTS} times, failing`)
+          Console.debug(`Request failed ${MAX_ATTEMPTS} times: failing`);
           throw new files.OfflineError(e);
         }
       }
