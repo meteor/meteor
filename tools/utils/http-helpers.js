@@ -395,8 +395,14 @@ _.extend(exports, {
 
     const outputStream = new WritableStreamBuffer();
 
-    const MAX_ATTEMPTS = 10;
-    const RETRY_DELAY_SECS = 5;
+    const maxAttempts =
+      _.has(options, "maxAttempts")
+      ? options.maxAttempts : 10;
+
+    const retryDelaySecs =
+      _.has(options, "retryDelaySecs")
+      ? options.retryDelaySecs : 5;
+
     const masterProgress = options.progress;
 
     let lastSize = 0;
@@ -435,16 +441,17 @@ _.extend(exports, {
           }
 
           return new Promise(
-            resolve => setTimeout(resolve, RETRY_DELAY_SECS * 1000)
+            resolve => setTimeout(resolve, retryDelaySecs * 1000)
           ).then(() => attempt(triesRemaining - (useTry ? 1 : 0)));
         }
 
-        Console.debug(`Request failed ${MAX_ATTEMPTS} times: failing`);
+        Console.debug(`Request failed ${maxAttempts} times: failing`);
         return Promise.reject(new files.OfflineError(e));
       }
     }
 
-    const response = attempt(MAX_ATTEMPTS).await().response
+    const result = attempt(maxAttempts).await();
+    const response = result.response
     if (response.statusCode >= 400 && response.statusCode < 600) {
       const href = response.request.href;
       throw Error(`Could not get ${href}; server returned [${response.statusCode}]`);

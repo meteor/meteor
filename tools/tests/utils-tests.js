@@ -159,34 +159,26 @@ selftest.define("parse url", function () {
 selftest.define("resume downloads", ['net'], function () {
   // A reasonably big file that (I think) should take more than 1s to download
   // and that we know the size of
-  const url = 'http://warehouse.meteor.com/builds/Pr7L8f6PqXyqNJJn4/1443478653127/aRiirNrp4v/meteor-tool-1.1.9-os.osx.x86_64+web.browser+web.cordova.tgz';
+  const url = 'https://warehouse.meteor.com/builds/EXSxwGqYjjJKh3WMJ/1467929945102/DRyKg3bYHL/babel-compiler-6.8.4-os+web.browser+web.cordova.tgz';
 
-  const timeout = 1000;
   let interruptCount = 0;
+  let bytesSinceLastInterrupt = 0;
 
   const resumedPromise = Promise.resolve().then(
     () => httpHelpers.getUrlWithResuming({
-      // This doesn't affect the test, but if you remove the timeout above,
-      // you can kill the connection manually by shutting down your network.
-      // This makes it a bit faster
-      timeout,
       url: url,
       encoding: null,
-      progress: {
-        reportProgress({ current, end }) {
-          const percent = current / end * 100;
-          if (Math.random() < 0.01) {
-            console.log(`${percent} %`);
-          }
-        },
-        reportProgressDone() {}
-      },
+      retryDelaySecs: 1,
       onRequest(request) {
-        setTimeout(() => {
-          ++interruptCount;
-          request.emit('error', 'pretend-http-error');
-          request.emit('end');
-        }, timeout);
+        request.on("data", chunk => {
+          bytesSinceLastInterrupt += chunk.length
+          if (bytesSinceLastInterrupt > 500000) {
+            bytesSinceLastInterrupt = 0;
+            ++interruptCount;
+            request.emit('error', 'pretend-http-error');
+            request.emit('end');
+          }
+        });
       }
     })
   );
@@ -194,7 +186,6 @@ selftest.define("resume downloads", ['net'], function () {
   const normalPromise = Promise.resolve().then(
     () => httpHelpers.getUrl({
       url,
-      timeout: null,
       encoding: null,
     })
   );
