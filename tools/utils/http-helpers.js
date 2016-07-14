@@ -14,6 +14,8 @@ var release = require('../packaging/release.js');
 var Console = require('../console/console.js').Console;
 var timeoutScaleFactor = require('./utils.js').timeoutScaleFactor;
 
+import { WritableStreamBuffer } from 'stream-buffers';
+import fiberHelpers from '../utils/fiber-helpers.js';
 
 // Helper that tracks bytes written to a writable
 var WritableWithProgress = function (writable, listener) {
@@ -82,6 +84,10 @@ var getUserAgent = function () {
 
 var httpHelpers = exports;
 _.extend(exports, {
+  // For testing purposes, do not use (obviously it doesn't really make
+  // sense to have only one current request)
+  _currentRequest: null,
+
   getUserAgent: getUserAgent,
 
   // A wrapper around request with the following improvements:
@@ -126,6 +132,12 @@ _.extend(exports, {
       options = { url: urlOrOptions };
     } else {
       options = _.clone(urlOrOptions);
+    }
+
+    var outputStream;
+    if (_.has(options, 'outputStream')) {
+      outputStream = options.outputStream;
+      delete options.outputStream;
     }
 
     var bodyStream;
@@ -262,6 +274,8 @@ _.extend(exports, {
     var request = require('request');
     var req = request(options, callback);
 
+    // A handle for testing
+    httpHelpers._currentRequest = req;
 
     var totalProgress = { current: 0, end: bodyStreamLength + responseLength, done: false };
 
@@ -276,6 +290,10 @@ _.extend(exports, {
         });
       }
       bodyStream.pipe(dest);
+    }
+
+    if (outputStream) {
+      req.pipe(outputStream);
     }
 
     if (progress) {
@@ -358,6 +376,76 @@ _.extend(exports, {
     } else {
       return body;
     }
-  }
+  },
 
+  // More or less as above, except with support for multiple attempts per
+  // request and resuming on retries. This means if the connection is bad,
+  // we can sometimes complete a request, even if each individual attempt fails.
+  // We only use this for package downloads. In theory we could use it for
+  // all requests but that seems like overkill and it isn't well tested in
+  // other scenarioes.
+  getUrlWithResuming(urlOrOptions) {
+    const options = _.isObject(urlOrOptions) ? _.clone(urlOrOptions) : {
+      url: urlOrOptions,
+    };
+
+    const outputStream = new WritableStreamBuffer();
+
+    const MAX_ATTEMPTS = 10;
+    const RETRY_DELAY_SECS = 5;
+    const masterProgress = options.progress;
+
+    let lastSize = 0;
+    function attempt(triesRemaining) {
+      if (lastSize > 0) {
+        options.headers = {
+          ...options.headers,
+          Range: `bytes=${outputStream.size()}-`
+        };
+      }
+
+      if (masterProgress) {
+        options.progress = masterProgress.addChildTask({
+          title: masterProgress._title
+        });
+      }
+
+      try {
+        return httpHelpers.request({
+          outputStream,
+          ...options,
+        });
+      } catch (e) {
+        const size = outputStream.size();
+        const useTry = size === lastSize;
+        const change = size - lastSize;
+        lastSize = outputStream.size();
+
+        if (!useTry || triesRemaining > 0) {
+          if (useTry) {
+            Console.debug(`Request failed, ${triesRemaining - 1} attempts left`);
+          } else {
+            Console.debug(`Request failed after ${change} bytes, retrying`);
+          }
+
+          return new Promise(resolve => {
+            setTimeout(fiberHelpers.bindEnvironment(() => {
+              resolve(attempt(useTry ? triesRemaining - 1 : triesRemaining));
+            }, RETRY_DELAY_SECS * 1000));
+          }).await();
+        } else {
+          Console.debug(`Request failed ${MAX_ATTEMPTS} times: failing`);
+          throw new files.OfflineError(e);
+        }
+      }
+    }
+
+    const response = attempt(MAX_ATTEMPTS).response;
+    if (response.statusCode >= 400 && response.statusCode < 600) {
+      const href = response.request.href;
+      throw Error(`Could not get ${href}; server returned [${response.statusCode}]`);
+    } else {
+      return outputStream.getContents();
+    }
+  }
 });

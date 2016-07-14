@@ -1,6 +1,8 @@
 var selftest = require('../tool-testing/selftest.js');
 var utils = require('../utils/utils.js');
 
+import httpHelpers from '../utils/http-helpers';
+
 selftest.define('subset generator', function () {
   var out = [];
   utils.generateSubsetsOfIncreasingSize(['a', 'b', 'c'], function (x) {
@@ -151,4 +153,37 @@ selftest.define("parse url", function () {
     port: "3000",
     protocol: "https"
   });
+});
+
+selftest.define("resume downloads", ['net', 'slow'], function () {
+  // A reasonably big file that (I think) should take more than 1s to download
+  // and that we know the size of
+  const url = 'http://warehouse.meteor.com/builds/Pr7L8f6PqXyqNJJn4/1443478653127/aRiirNrp4v/meteor-tool-1.1.9-os.osx.x86_64+web.browser+web.cordova.tgz';
+
+  setTimeout(() => {
+    httpHelpers._currentRequest.emit('error', 'pretend-http-error');
+    httpHelpers._currentRequest.emit('end');
+  }, 1000);
+
+  const result = httpHelpers.getUrlWithResuming({
+    // This doesn't affect the test, but if you remove the timeout above,
+    // you can kill the connection manually by shutting down your network.
+    // This makes it a bit faster
+    timeout: 1000,
+    url: url,
+    encoding: null,
+    wait: false,
+    progress: {
+      reportProgress({ current, end }) {
+        const percent = current / end * 100;
+        if (Math.random() < 0.01) {
+          // Uncomment this when manually testing I guess
+          // console.log(`${percent} %`);
+        }
+      },
+      reportProgressDone() {}
+    }
+  });
+
+  selftest.expectEqual(result.toString().length, 65041076);
 });
