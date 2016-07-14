@@ -1,6 +1,8 @@
 var selftest = require('../tool-testing/selftest.js');
 var utils = require('../utils/utils.js');
 
+import httpHelpers from '../utils/http-helpers';
+
 selftest.define('subset generator', function () {
   var out = [];
   utils.generateSubsetsOfIncreasingSize(['a', 'b', 'c'], function (x) {
@@ -157,9 +159,6 @@ selftest.define("resume downloads", ['net', 'slow'], function () {
   // A reasonably big file that (I think) should take more than 1s to download
   // and that we know the size of
   const url = 'http://warehouse.meteor.com/builds/Pr7L8f6PqXyqNJJn4/1443478653127/aRiirNrp4v/meteor-tool-1.1.9-os.osx.x86_64+web.browser+web.cordova.tgz';
-
-  let firstPass = true;
-  const httpHelpers = require('../utils/http-helpers');
 
   setTimeout(() => {
     httpHelpers._currentRequest.emit('error', 'pretend-http-error');
