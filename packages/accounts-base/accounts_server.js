@@ -1394,9 +1394,11 @@ Ap.updateOrCreateUserFromExternalService = function (
     console.log("User created, calling postSignUpHook");
     // Call postSignUpHook, if any...
     if(!!userId) {
-      var postSignUpHook = AccountsTemplates.options.postSignUpHook;
-      if (postSignUpHook) {
-        postSignUpHook(userId, options);
+      if(!!AccountsTemplates) {
+        var postSignUpHook = AccountsTemplates.options.postSignUpHook;
+        if (postSignUpHook) {
+          postSignUpHook(userId, options);
+        }
       }
     }
 
