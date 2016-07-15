@@ -780,8 +780,21 @@ var installFromShrinkwrap = function (dir) {
 
   ensureConnected();
 
+  const tempPkgJsonPath = files.pathJoin(dir, "package.json");
+  const pkgJsonExisted = files.exists(tempPkgJsonPath);
+  if (! pkgJsonExisted) {
+    // Writing an empty package.json file prevents ENOENT warnings about
+    // package.json not existing, which are noisy at best and sometimes
+    // seem to interfere with the install.
+    files.writeFile(tempPkgJsonPath, "{}\n", "utf8");
+  }
+
   // `npm install`, which reads npm-shrinkwrap.json.
   var result = runNpmCommand(["install"], dir);
+
+  if (! pkgJsonExisted) {
+    files.rm_recursive(tempPkgJsonPath);
+  }
 
   if (! result.success) {
     buildmessage.error(`couldn't install npm packages from npm-shrinkwrap: ${result.error}`);
