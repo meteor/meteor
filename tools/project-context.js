@@ -1427,7 +1427,9 @@ _.extend(exports.ReleaseFile.prototype, {
     const newTarget = this.getDevBundle();
 
     try {
-      if (newTarget === readLink(devBundleLink)) {
+      const oldOSPath = readLink(devBundleLink);
+      const oldTarget = files.convertToStandardPath(oldOSPath);
+      if (newTarget === oldTarget) {
         // Don't touch .meteor/local/dev_bundle if it already points to
         // the right target path.
         return;
