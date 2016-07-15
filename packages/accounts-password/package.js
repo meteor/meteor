@@ -1,10 +1,10 @@
 Package.describe({
   summary: "Password support for accounts",
-  version: "1.1.12"
+  version: "1.1.13-rc.1"
 });
 
 Package.onUse(function(api) {
-  api.use('npm-bcrypt@=0.8.6_2');
+  api.use('npm-bcrypt@=0.8.6_3');
 
   api.use([
     'accounts-base',
