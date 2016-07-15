@@ -36,6 +36,10 @@ function getChildProcess() {
 
     require("./flush-buffers-on-exit-in-windows.js");
 
+    child.on("error", function (error) {
+      console.log(error.stack || error);
+    });
+
     child.on("exit", function (exitCode) {
       process.exit(exitCode);
     });
