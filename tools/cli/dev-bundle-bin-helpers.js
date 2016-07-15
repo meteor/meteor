@@ -78,7 +78,6 @@ function addWindowsVariables(devBundleDir, env) {
       "except:",
       "  print 2015"
     ].join("\n")], {
-      env: env,
       cwd: nodeGypPylibDir,
       stdio: "pipe"
     });
