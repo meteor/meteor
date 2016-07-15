@@ -39,10 +39,6 @@ exports.getEnv = function() {
       env.PYTHON = env.PYTHON || path.join(
         devBundleDir, "python", "python.exe");
 
-      // We don't try to install a compiler toolchain on the developer's
-      // behalf, but setting GYP_MSVS_VERSION helps select the right one.
-      env.GYP_MSVS_VERSION = env.GYP_MSVS_VERSION || "2015";
-
       // While the original process.env object allows for case insensitive
       // access on Windows, Object.create interferes with that behavior,
       // so here we ensure env.PATH === env.Path on Windows.
