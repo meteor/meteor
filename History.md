@@ -1,5 +1,9 @@
 ## v.NEXT
 
+* Fix for regression caused by #5837 which incorrectly rewrote
+  network-path references (i.e. //domain.com/image.gif) in CSS URLs
+  [#7416](https://github.com/meteor/meteor/issues/7416)
+
 ## v1.3.4.4
 
 * Fixed [#7374](https://github.com/meteor/meteor/issues/7374).
