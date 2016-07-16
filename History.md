@@ -53,6 +53,9 @@
 * `App.appendToConfig` allows adding custom tags to config.xml.
   [#7307](https://github.com/meteor/meteor/pull/7307)
 
+* When using `ROOT_URL` with a path, relative CSS URLs are rewriten
+  accordingly. [#5837](https://github.com/meteor/meteor/issues/5837)
+
 * Fixed bugs:
   [#7149](https://github.com/meteor/meteor/issues/7149)
   [#7296](https://github.com/meteor/meteor/issues/7296)
