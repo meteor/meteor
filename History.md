@@ -32,6 +32,10 @@
   stored in `.meteor/local/resolver-result-cache.json` so that it need not
   be recomputed every time Meteor starts up.
 
+* If the `$GYP_MSVS_VERSION` environment variable is not explicitly
+  provided to `meteor {node,npm}`, the `node-gyp` tool will infer the
+  appropriate version (though it still defaults to "2015").
+
 ## v1.3.4.4
 
 * Fixed [#7374](https://github.com/meteor/meteor/issues/7374).
