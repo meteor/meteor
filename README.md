@@ -73,7 +73,7 @@ You can configure SyncedCron with the `config` method. Defaults are:
     log: true,
 
     // Use a custom logger function (defaults to Meteor's logging package)
-    logger: null
+    logger: null,
 
     // Name of collection to use for synchronisation and logging
     collectionName: 'cronHistory',
