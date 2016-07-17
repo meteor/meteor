@@ -198,4 +198,6 @@ function getHostArch() {
   }
 }
 
-module.exports = getDevBundleDir();
+module.exports = getDevBundleDir().catch(function (error) {
+  return defaultDevBundlePromise;
+});
