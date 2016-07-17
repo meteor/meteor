@@ -325,6 +325,15 @@ function doRunCommand(options) {
     appPort = appPortMatch[2] ? parseInt(appPortMatch[2]) : null;
   }
 
+  if (options.production) {
+    Console.warn(
+      "You're using --production to run the app. Please attention that ",
+      "this option is not intended for production deployments and may ",
+      "have performance or security issues. See",
+      "https://guide.meteor.com/deployment.html to deploy a Meteor app."
+    );
+  }
+
   if (options['raw-logs']) {
     runLog.setRawLogs(true);
   }
