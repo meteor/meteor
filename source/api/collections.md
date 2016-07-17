@@ -202,9 +202,13 @@ invalidations in reactive computations using this cursor. Careful use
 of `fields` allows for more fine-grained reactivity for computations
 that don't depend on an entire document.
 
+On the client, there will be a period of time between when the page loads and
+when the published data arrives from the server during which your client-side
+collections will be empty.
+
 {% apibox "Mongo.Collection#findOne" %}
 
-Equivalent to `find(selector, options).fetch()[0]` with
+Equivalent to [`find`](#find)`(selector, options).`[`fetch`](#fetch)`()[0]` with
 `options.limit = 1`.
 
 {% apibox "Mongo.Collection#insert" %}
