@@ -84,12 +84,20 @@ function addWindowsVariables(devBundleDir, env) {
 
     var chunks = [];
     child.stdout.on("data", function (chunk) {
-      chunks.push(chunk.toString("utf8"));
+      chunks.push(chunk);
     });
 
     function finish(codeOrError) {
-      env.GYP_MSVS_VERSION = cachedMSVSVersion =
-        codeOrError ? "2015" : chunks.join("").replace(/^\s+|\s+$/g, "");
+      if (codeOrError) {
+        // In the event of any kind of error, default to 2015.
+        cachedMSVSVersion = "2015";
+      } else {
+        cachedMSVSVersion = Buffer.concat(chunks)
+          .toString("utf8").replace(/^\s+|\s+$/g, "");
+      }
+
+      env.GYP_MSVS_VERSION = cachedMSVSVersion;
+
       resolve(env);
     }
 
