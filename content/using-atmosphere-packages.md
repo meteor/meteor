@@ -108,14 +108,3 @@ In addition to local scope and package scope, there are also package exports. A 
 > It is recommended that you use the `ecmascript` package and first call `import { Email } from 'meteor/email';` before calling `Email.send` in your app. It is also recommended that package developers now use ES2015 `export` from their main JavaScript file instead of `api.export`.
 
 Your app sees only the exports of the packages that you use directly. If you use package A, and package A uses package B, then you only see package A's exports. Package B's exports don't "leak" into your namespace just because you used package A. Each app or package only sees their own globals plus the APIs of the packages that they specifically use and depend upon.
-
-<h2 id="peer-npm-dependencies">Peer npm Dependencies</h2>
-
-Atmosphere packages can ship with contained [npm dependencies](writing-atmosphere-packages.html#npm-dependencies), in which case you don't need to do anything to make them work. However, some Atmosphere packages will expect that you have installed certain "peer" npm dependencies in your application.
-
-Typically the package will warn you if you have not done so. For example, if you install the [`react-meteor-data`](https://atmospherejs.com/meteor/react-meteor-data) atmosphere package into your app, you'll also need to [install](#installing-npm) the [`react`](https://www.npmjs.com/package/react) and [`react-addons-pure-render-mixin`](https://www.npmjs.com/package/react-addons-pure-render-mixin) npm packages:
-
-```bash
-meteor npm install --save react react-addons-pure-render-mixin
-meteor add react-meteor-data
-```
