@@ -388,6 +388,9 @@ Tinytest.add(
     var onLoginStopper = Accounts.onLogin(function(attempt) {
       test.equal(Meteor.userId(), onLoginExpectedUserId, "onLogin");
     });
+    var onLogoutStopper = Accounts.onLogout(function(logoutContext) {
+      test.equal(logoutContext.userId, onLogoutExpectedUserId, "onLogout");
+    });
     var onLoginFailureStopper = Accounts.onLoginFailure(function(attempt) {
       test.equal(Meteor.userId(), onLoginFailureExpectedUserId, "onLoginFailure");
     });
@@ -408,9 +411,14 @@ Tinytest.add(
     var onLoginFailureExpectedUserId = userId;
     test.throws(function() { conn.call('login', { resume: "bogus" }) }, '403');
 
+    // Trigger onLogout callbacks
+    var onLogoutExpectedUserId = userId;
+    conn.call('logout');
+
     conn.disconnect();
     validateStopper.stop();
     onLoginStopper.stop();
+    onLogoutStopper.stop();
     onLoginFailureStopper.stop();
   }
 );
