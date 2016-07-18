@@ -1,28 +1,26 @@
 var fs = require("fs");
 var path = require("path");
-var devBundlePromise = require("./dev-bundle.js");
-var Promise = devBundlePromise.constructor;
-var binDirPromise = devBundlePromise.then(function (devBundleDir) {
-  return path.join(devBundleDir, "bin");
-});
+var files = require("../fs/mini-files.js");
 
-exports.getCommandPath = function (command) {
-  return binDirPromise.then(function (binDir) {
-    return path.join(binDir, command);
-  });
-};
+function getDevBundle() {
+  return require("./dev-bundle.js");
+}
+exports.getDevBundle = getDevBundle;
 
-exports.getEnv = function() {
-  return Promise.all([
-    // When npm looks for node, it must find dev_bundle/bin/node.
-    binDirPromise,
-    devBundlePromise
-  ]).then(function (paths) {
-    var devBundleDir = paths[1];
+exports.getEnv = function (options) {
+  var devBundle = options && options.devBundle;
+  var devBundlePromise = typeof devBundle === "string"
+    ? Promise.resolve(files.convertToOSPath(devBundle))
+    : getDevBundle();
 
-    // Also make available any scripts installed by packages in
-    // dev_bundle/lib/node_modules, such as node-gyp.
-    paths[1] = path.join(devBundleDir, "lib", "node_modules", ".bin");
+  return devBundlePromise.then(function (devBundleDir) {
+    var paths = [
+      // When npm looks for node, it must find dev_bundle/bin/node.
+      path.join(devBundleDir, "bin"),
+      // Also make available any scripts installed by packages in
+      // dev_bundle/lib/node_modules, such as node-gyp.
+      path.join(devBundleDir, "lib", "node_modules", ".bin")
+    ];
 
     var env = Object.create(process.env);
 

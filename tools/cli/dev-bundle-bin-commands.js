@@ -1,6 +1,7 @@
 // Note that this file is required before we install our Babel hooks in
 // ../tool-env/install-babel.js, so we can't use ES2015+ syntax here.
 
+var path = require("path");
 var win32Extensions = {
   node: ".exe",
   npm: ".cmd"
@@ -24,11 +25,12 @@ function getChildProcess() {
   }
 
   return Promise.all([
-    helpers.getCommandPath(devBundleBinCommand),
+    helpers.getDevBundle(),
     helpers.getEnv()
-  ]).then(function (cmdAndEnv) {
-    var cmd = cmdAndEnv[0];
-    var env = cmdAndEnv[1];
+  ]).then(function (devBundleAndEnv) {
+    var devBundleDir = devBundleAndEnv[0];
+    var cmd = path.join(devBundleDir, "bin", devBundleBinCommand);
+    var env = devBundleAndEnv[1];
     var child = require("child_process").spawn(cmd, args, {
       stdio: "inherit",
       env: env
