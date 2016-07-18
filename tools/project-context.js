@@ -1381,7 +1381,12 @@ _.extend(exports.ReleaseFile.prototype, {
       }
     }
 
-    return files.realpath(devBundle);
+    try {
+      return files.realpath(devBundle);
+    } catch (e) {
+      if (e.code !== "ENOENT") throw e;
+      return null;
+    }
   },
 
   // Make a symlink from .meteor/local/dev_bundle to the actual dev_bundle.
@@ -1404,26 +1409,30 @@ _.extend(exports.ReleaseFile.prototype, {
       return;
     }
 
-    files.mkdir_p(localDir);
-
     const newTarget = this.getDevBundle();
+    if (! newTarget) {
+      return;
+    }
 
     try {
-      if (newTarget === readLink(devBundleLink)) {
+      const oldOSPath = readLink(devBundleLink);
+      const oldTarget = files.convertToStandardPath(oldOSPath);
+      if (newTarget === oldTarget) {
         // Don't touch .meteor/local/dev_bundle if it already points to
         // the right target path.
         return;
       }
 
+      files.mkdir_p(localDir);
+      makeLink(newTarget, devBundleLink);
+
     } catch (e) {
       if (e.code !== "ENOENT") {
-        // It's ok if files.realpath(devBundleLink) failed because the
-        // devBundleLink file does not exist.
+        // It's ok if the above commands failed because the target path
+        // did not exist, but other errors should not be silenced.
         throw e;
       }
     }
-
-    makeLink(newTarget, devBundleLink);
   },
 
   write: function (releaseName) {

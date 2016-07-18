@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.onUse(function(api) {
-  api.use('npm-bcrypt@0.8.7');
+  api.use('npm-bcrypt@=0.8.7');
 
   api.use([
     'accounts-base',

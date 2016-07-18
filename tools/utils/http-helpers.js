@@ -330,7 +330,7 @@ _.extend(exports, {
   // Adds progress callbacks to a request
   // Based on request-progress
   _addProgressEvents: function (request) {
-    var state;
+    var state = {};
 
     var emitProgress = function () {
       request.emit('progress', state);
@@ -338,7 +338,6 @@ _.extend(exports, {
 
     request
       .on('response', function (response) {
-        state = {};
         state.end = undefined;
         state.done = false;
         state.current = 0;
@@ -396,8 +395,14 @@ _.extend(exports, {
 
     const outputStream = new WritableStreamBuffer();
 
-    const MAX_ATTEMPTS = 10;
-    const RETRY_DELAY_SECS = 5;
+    const maxAttempts =
+      _.has(options, "maxAttempts")
+      ? options.maxAttempts : 10;
+
+    const retryDelaySecs =
+      _.has(options, "retryDelaySecs")
+      ? options.retryDelaySecs : 5;
+
     const masterProgress = options.progress;
 
     let lastSize = 0;
@@ -409,7 +414,8 @@ _.extend(exports, {
         };
       }
 
-      if (masterProgress) {
+      if (masterProgress &&
+          masterProgress.addChildTask) {
         options.progress = masterProgress.addChildTask({
           title: masterProgress._title
         });
@@ -419,7 +425,7 @@ _.extend(exports, {
         return Promise.resolve(httpHelpers.request({
           outputStream,
           ...options,
-        }).response);
+        }));
 
       } catch (e) {
         const size = outputStream.size();
@@ -435,16 +441,17 @@ _.extend(exports, {
           }
 
           return new Promise(
-            resolve => setTimeout(resolve, RETRY_DELAY_SECS * 1000)
+            resolve => setTimeout(resolve, retryDelaySecs * 1000)
           ).then(() => attempt(triesRemaining - (useTry ? 1 : 0)));
         }
 
-        Console.debug(`Request failed ${MAX_ATTEMPTS} times: failing`);
+        Console.debug(`Request failed ${maxAttempts} times: failing`);
         return Promise.reject(new files.OfflineError(e));
       }
     }
 
-    const response = attempt(MAX_ATTEMPTS).await();
+    const result = attempt(maxAttempts).await();
+    const response = result.response
     if (response.statusCode >= 400 && response.statusCode < 600) {
       const href = response.request.href;
       throw Error(`Could not get ${href}; server returned [${response.statusCode}]`);

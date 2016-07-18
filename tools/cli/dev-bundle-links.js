@@ -22,6 +22,7 @@ exports.makeLink = function (target, linkPath) {
   }
 };
 
+// Note: this function returns an OS-specific path!
 exports.readLink = function (linkPath) {
   linkPath = files.convertToOSPath(linkPath);
 
@@ -32,5 +33,5 @@ exports.readLink = function (linkPath) {
     linkPath = fs.readFileSync(linkPath, "utf8");
   }
 
-  return files.convertToStandardPath(linkPath);
+  return linkPath;
 };

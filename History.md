@@ -33,6 +33,18 @@
   `Mongo.setConnectionOptions(options)` API.
   [#7277](https://github.com/meteor/meteor/pull/7277)
 
+## v1.3.5.1
+
+* This release fixed a small bug in 1.3.5 that prevented updating apps
+  whose `.meteor/release` files refer to releases no longer installed in
+  `~/.meteor/packages/meteor-tool`. 576468eae8d8dd7c1fe2fa381ac51dee5cb792cd
+
+## v1.3.5
+
+* Failed Meteor package downloads are now automatically resumed from the
+  point of failure, up to ten times, with a five-second delay between
+  attempts. [#7399](https://github.com/meteor/meteor/pull/7399)
+
 * If an app has no `package.json` file, all packages in `node_modules`
   will be built into the production bundle. In other words, make sure you
   have a `package.json` file if you want to benefit from `devDependencies`
@@ -54,6 +66,14 @@
   receives the flags `--update-binary` and `--no-bin-links`, in addition
   to respecting the `$METEOR_NPM_REBUILD_FLAGS` environment variable.
   [#7401](https://github.com/meteor/meteor/issues/7401)
+
+* The last solution found by the package version constraint solver is now
+  stored in `.meteor/local/resolver-result-cache.json` so that it need not
+  be recomputed every time Meteor starts up.
+
+* If the `$GYP_MSVS_VERSION` environment variable is not explicitly
+  provided to `meteor {node,npm}`, the `node-gyp` tool will infer the
+  appropriate version (though it still defaults to "2015").
 
 ## v1.3.4.4
 
