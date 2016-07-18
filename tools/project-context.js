@@ -226,7 +226,7 @@ _.extend(ProjectContext.prototype, {
     // calls to the constraint solver, the constraint solver can be
     // more efficient by caching or memoizing its work.  We choose not
     // to reset this when reset() is called more than once.
-    self._resolverResultCache = (self._resolverResultCache || {});
+    self._readResolverResultCache();
   },
 
   readProjectMetadata: function () {
@@ -315,7 +315,8 @@ _.extend(ProjectContext.prototype, {
 
       // Read .meteor/release.
       self.releaseFile = new exports.ReleaseFile({
-        projectDir: self.projectDir
+        projectDir: self.projectDir,
+        catalog: self._officialCatalog,
       });
       if (buildmessage.jobHasMessages())
         return;
@@ -574,10 +575,39 @@ _.extend(ProjectContext.prototype, {
           anticipatedPrereleases: anticipatedPrereleases
         });
 
+        self._saveResolverResultCache();
+
         self._completedStage = STAGE.RESOLVE_CONSTRAINTS;
       });
     });
   }),
+
+  _readResolverResultCache() {
+    if (! this._resolverResultCache) {
+      try {
+        this._resolverResultCache =
+          JSON.parse(files.readFile(files.pathJoin(
+            this.projectLocalDir,
+            "resolver-result-cache.json"
+          )));
+      } catch (e) {
+        if (e.code !== "ENOENT") throw e;
+        this._resolverResultCache = {};
+      }
+    }
+
+    return this._resolverResultCache;
+  },
+
+  _saveResolverResultCache() {
+    files.writeFileAtomically(
+      files.pathJoin(
+        this.projectLocalDir,
+        "resolver-result-cache.json"
+      ),
+      JSON.stringify(this._resolverResultCache) + "\n"
+    );
+  },
 
   // When running test-packages for an app with local packages, this
   // method will return the original app dir, as opposed to the temporary
@@ -1282,6 +1312,8 @@ exports.ReleaseFile = function (options) {
   var self = this;
 
   self.filename = files.pathJoin(options.projectDir, '.meteor', 'release');
+  self.catalog = options.catalog || catalog.official;
+
   self.watchSet = null;
   // The release name actually written in the file.  Null if no fill.  Empty if
   // the file is empty.
@@ -1347,45 +1379,78 @@ _.extend(exports.ReleaseFile.prototype, {
     self.ensureDevBundleLink();
   },
 
+  // Returns an absolute path to the dev_bundle appropriate for the
+  // release specified in the .meteor/release file.
+  getDevBundle() {
+    let devBundle = files.getDevBundle();
+    const devBundleParts = devBundle.split(files.pathSep);
+    const meteorToolIndex = devBundleParts.lastIndexOf("meteor-tool");
+
+    if (meteorToolIndex >= 0) {
+      const releaseVersion = this.catalog.getReleaseVersion(
+        this.releaseTrack,
+        this.releaseVersion
+      );
+
+      if (releaseVersion) {
+        const meteorToolVersion = releaseVersion.tool.split("@").pop();
+        devBundleParts[meteorToolIndex + 1] = meteorToolVersion;
+        devBundle = devBundleParts.join(files.pathSep);
+      }
+    }
+
+    try {
+      return files.realpath(devBundle);
+    } catch (e) {
+      if (e.code !== "ENOENT") throw e;
+      return null;
+    }
+  },
+
+  // Make a symlink from .meteor/local/dev_bundle to the actual dev_bundle.
   ensureDevBundleLink() {
     import { makeLink, readLink } from "./cli/dev-bundle-links.js";
 
-    // Make a symlink from .meteor/dev_bundle to the actual dev_bundle.
-    const devBundleLink = files.pathJoin(
-      files.pathDirname(this.filename),
-      "dev_bundle"
-    );
+    const dotMeteorDir = files.pathDirname(this.filename);
+    const localDir = files.pathJoin(dotMeteorDir, "local");
+    const devBundleLink = files.pathJoin(localDir, "dev_bundle");
 
     if (this.isCheckout()) {
-      // Only create the .meteor/dev_bundle symlink if .meteor/release
-      // refers to an actual release, and remove it otherwise.
+      // Only create .meteor/local/dev_bundle if .meteor/release refers to
+      // an actual release, and remove it otherwise.
       files.rm_recursive(devBundleLink);
       return;
     }
 
     if (files.inCheckout()) {
-      // Never update .meteor/dev_bundle to point to a checkout.
+      // Never update .meteor/local/dev_bundle to point to a checkout.
       return;
     }
 
-    const newTarget = files.realpath(files.getDevBundle());
+    const newTarget = this.getDevBundle();
+    if (! newTarget) {
+      return;
+    }
 
     try {
-      if (newTarget === readLink(devBundleLink)) {
-        // Don't touch .meteor/dev_bundle if it already points to the
-        // right target path.
+      const oldOSPath = readLink(devBundleLink);
+      const oldTarget = files.convertToStandardPath(oldOSPath);
+      if (newTarget === oldTarget) {
+        // Don't touch .meteor/local/dev_bundle if it already points to
+        // the right target path.
         return;
       }
 
+      files.mkdir_p(localDir);
+      makeLink(newTarget, devBundleLink);
+
     } catch (e) {
       if (e.code !== "ENOENT") {
-        // It's ok if files.realpath(devBundleLink) failed because the
-        // devBundleLink file does not exist.
+        // It's ok if the above commands failed because the target path
+        // did not exist, but other errors should not be silenced.
         throw e;
       }
     }
-
-    makeLink(newTarget, devBundleLink);
   },
 
   write: function (releaseName) {

@@ -14,6 +14,7 @@ var release = require('../packaging/release.js');
 var Console = require('../console/console.js').Console;
 var timeoutScaleFactor = require('./utils.js').timeoutScaleFactor;
 
+import { WritableStreamBuffer } from 'stream-buffers';
 
 // Helper that tracks bytes written to a writable
 var WritableWithProgress = function (writable, listener) {
@@ -116,6 +117,9 @@ _.extend(exports, {
   //   set to false since it doesn't understand origins (see comment
   //   in implementation).
   //
+  // - An optional options.onRequest callback may be provided if the
+  //   caller desires access to the request object.
+  //
   // NB: With useSessionHeader and useAuthHeader, this function will
   // read *and possibly write to* the session file, so if you are
   // writing auth code (in auth.js) and you call it, be sure to reread
@@ -128,6 +132,12 @@ _.extend(exports, {
       options = _.clone(urlOrOptions);
     }
 
+    var outputStream;
+    if (_.has(options, 'outputStream')) {
+      outputStream = options.outputStream;
+      delete options.outputStream;
+    }
+
     var bodyStream;
     if (_.has(options, 'bodyStream')) {
       bodyStream = options.bodyStream;
@@ -136,7 +146,7 @@ _.extend(exports, {
 
     // Body stream length for progress
     var bodyStreamLength = 0;
-    if (_.has(options, 'bodyStream')) {
+    if (_.has(options, 'bodyStreamLength')) {
       bodyStreamLength = options.bodyStreamLength;
       delete options.bodyStreamLength;
     } else {
@@ -256,12 +266,21 @@ _.extend(exports, {
       delete options.timeout;
     }
 
+    let onRequest;
+    if (_.has(options, "onRequest")) {
+      onRequest = options.onRequest;
+      delete options.onRequest;
+    }
+
     // request is the most heavy-weight of the tool's npm dependencies; don't
     // require it until we definitely need it.
     Console.debug("Doing HTTP request: ", options.method || 'GET', options.url);
     var request = require('request');
     var req = request(options, callback);
 
+    if (_.isFunction(onRequest)) {
+      onRequest(req);
+    }
 
     var totalProgress = { current: 0, end: bodyStreamLength + responseLength, done: false };
 
@@ -276,6 +295,10 @@ _.extend(exports, {
         });
       }
       bodyStream.pipe(dest);
+    }
+
+    if (outputStream) {
+      req.pipe(outputStream);
     }
 
     if (progress) {
@@ -307,7 +330,7 @@ _.extend(exports, {
   // Adds progress callbacks to a request
   // Based on request-progress
   _addProgressEvents: function (request) {
-    var state;
+    var state = {};
 
     var emitProgress = function () {
       request.emit('progress', state);
@@ -315,7 +338,6 @@ _.extend(exports, {
 
     request
       .on('response', function (response) {
-        state = {};
         state.end = undefined;
         state.done = false;
         state.current = 0;
@@ -358,6 +380,83 @@ _.extend(exports, {
     } else {
       return body;
     }
-  }
+  },
 
+  // More or less as above, except with support for multiple attempts per
+  // request and resuming on retries. This means if the connection is bad,
+  // we can sometimes complete a request, even if each individual attempt fails.
+  // We only use this for package downloads. In theory we could use it for
+  // all requests but that seems like overkill and it isn't well tested in
+  // other scenarioes.
+  getUrlWithResuming(urlOrOptions) {
+    const options = _.isObject(urlOrOptions) ? _.clone(urlOrOptions) : {
+      url: urlOrOptions,
+    };
+
+    const outputStream = new WritableStreamBuffer();
+
+    const maxAttempts =
+      _.has(options, "maxAttempts")
+      ? options.maxAttempts : 10;
+
+    const retryDelaySecs =
+      _.has(options, "retryDelaySecs")
+      ? options.retryDelaySecs : 5;
+
+    const masterProgress = options.progress;
+
+    let lastSize = 0;
+    function attempt(triesRemaining) {
+      if (lastSize > 0) {
+        options.headers = {
+          ...options.headers,
+          Range: `bytes=${outputStream.size()}-`
+        };
+      }
+
+      if (masterProgress &&
+          masterProgress.addChildTask) {
+        options.progress = masterProgress.addChildTask({
+          title: masterProgress._title
+        });
+      }
+
+      try {
+        return Promise.resolve(httpHelpers.request({
+          outputStream,
+          ...options,
+        }));
+
+      } catch (e) {
+        const size = outputStream.size();
+        const useTry = size === lastSize;
+        const change = size - lastSize;
+        lastSize = outputStream.size();
+
+        if (!useTry || triesRemaining > 0) {
+          if (useTry) {
+            Console.debug(`Request failed, ${triesRemaining - 1} attempts left`);
+          } else {
+            Console.debug(`Request failed after ${change} bytes, retrying`);
+          }
+
+          return new Promise(
+            resolve => setTimeout(resolve, retryDelaySecs * 1000)
+          ).then(() => attempt(triesRemaining - (useTry ? 1 : 0)));
+        }
+
+        Console.debug(`Request failed ${maxAttempts} times: failing`);
+        return Promise.reject(new files.OfflineError(e));
+      }
+    }
+
+    const result = attempt(maxAttempts).await();
+    const response = result.response
+    if (response.statusCode >= 400 && response.statusCode < 600) {
+      const href = response.request.href;
+      throw Error(`Could not get ${href}; server returned [${response.statusCode}]`);
+    }
+
+    return outputStream.getContents();
+  }
 });

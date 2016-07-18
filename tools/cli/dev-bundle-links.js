@@ -13,9 +13,16 @@ exports.makeLink = function (target, linkPath) {
     fs.writeFileSync(tempPath, target, "utf8");
   }
 
-  fs.renameSync(tempPath, linkPath);
+  try {
+    fs.renameSync(tempPath, linkPath);
+  } catch (e) {
+    // If renaming fails, try unlinking first.
+    fs.unlinkSync(linkPath);
+    fs.renameSync(tempPath, linkPath);
+  }
 };
 
+// Note: this function returns an OS-specific path!
 exports.readLink = function (linkPath) {
   linkPath = files.convertToOSPath(linkPath);
 
@@ -26,5 +33,5 @@ exports.readLink = function (linkPath) {
     linkPath = fs.readFileSync(linkPath, "utf8");
   }
 
-  return files.convertToStandardPath(linkPath);
+  return linkPath;
 };

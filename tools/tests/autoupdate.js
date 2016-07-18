@@ -56,9 +56,13 @@ selftest.define("autoupdate", ['checkout', 'custom-warehouse'], function () {
 
     // Run it and see the banner for the current version.
     run = s.run("--port", "21000");
-    run.waitSecs(30);
-    run.match("New hotness v2 being downloaded");
-    run.match("running at");
+    run.waitSecs(60);
+    var runningHotnessPattern = /running at|New hotness v2 being downloaded/;
+    // We're not sure in which order these messages will arrive, but we
+    // expect to see them both (and we're not worried about either message
+    // being printed more than once).
+    run.match(runningHotnessPattern);
+    run.match(runningHotnessPattern);
     require('../utils/utils.js').sleepMs(500);
     run.stop();
 

@@ -1,3 +1,4 @@
+var assert = require('assert');
 var _ = require('underscore');
 
 var bundler = require('../isobuild/bundler.js');
@@ -12,6 +13,7 @@ var watch = require('../fs/watch.js');
 var Console = require('../console/console.js').Console;
 var fiberHelpers = require('../utils/fiber-helpers.js');
 var packageMapModule = require('../packaging/package-map.js');
+var archinfo = require('../utils/archinfo.js');
 var Profile = require('./profile.js').Profile;
 
 // TL;DR: Isopacket is a set of isopacks. Isopackets are used only inside
@@ -77,6 +79,12 @@ var loadedIsopackets = {};
 // disk. Does not do a build step: ensureIsopacketsLoadable must be called
 // first!
 export function load(isopacketName) {
+  // Small but necessary hack: because archinfo.host() calls execFileSync,
+  // it yields the first time we call it, which is a problem for the
+  // fiberHelpers.noYieldsAllowed block below. Calling it here ensures the
+  // result is cached, so no yielding occurs later.
+  assert.strictEqual(archinfo.host().split(".", 1)[0], "os");
+
   return fiberHelpers.noYieldsAllowed(function () {
     if (_.has(loadedIsopackets, isopacketName)) {
       if (loadedIsopackets[isopacketName]) {

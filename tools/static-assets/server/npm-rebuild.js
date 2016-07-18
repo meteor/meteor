@@ -7,6 +7,7 @@ if (process.env.METEOR_SKIP_NPM_REBUILD) {
 
 var path = require("path");
 var spawn = require("child_process").spawn;
+var rebuildArgs = require("./npm-rebuild-args.js").get();
 
 try {
   // This JSON file gets written in meteor/tools/isobuild/bundler.js.
@@ -40,7 +41,7 @@ function rebuild(i) {
     return;
   }
 
-  spawn("npm", ["rebuild"], {
+  spawn("npm", rebuildArgs, {
     cwd: path.join(__dirname, dir),
     stdio: "inherit",
     env: env

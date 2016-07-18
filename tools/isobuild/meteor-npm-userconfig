@@ -5,3 +5,4 @@
 # and we certainly don't want them to obscure actual errors.
 
 loglevel = error
+progress = false

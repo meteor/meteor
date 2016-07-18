@@ -171,20 +171,23 @@ CS.Input.prototype.isEqual = function (otherInput) {
   // to reload the entire relevant part of the catalog from SQLite on
   // every rebuild!
   return _.isEqual(
-    _.omit(a.toJSONable(), "catalogCache"),
-    _.omit(b.toJSONable(), "catalogCache")
+    a.toJSONable(true),
+    b.toJSONable(true)
   );
 };
 
-CS.Input.prototype.toJSONable = function () {
+CS.Input.prototype.toJSONable = function (omitCatalogCache) {
   var self = this;
   var obj = {
     dependencies: self.dependencies,
     constraints: _.map(self.constraints, function (c) {
       return c.toString();
-    }),
-    catalogCache: self.catalogCache.toJSONable()
+    })
   };
+
+  if (! omitCatalogCache) {
+    obj.catalogCache = self.catalogCache.toJSONable();
+  }
 
   // For readability of the resulting JSON, only include optional
   // properties that aren't the default.

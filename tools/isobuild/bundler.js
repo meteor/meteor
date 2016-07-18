@@ -1953,6 +1953,9 @@ class JsImage {
 
     ret.arch = json.arch;
 
+    // Rebuild binary npm packages if host arch matches image arch.
+    const rebuildBinaries = archinfo.matches(archinfo.host(), ret.arch);
+
     _.each(json.load, function (item) {
       rejectBadPath(item.path);
 
@@ -1962,7 +1965,8 @@ class JsImage {
           ret.nodeModulesDirectories,
           nodeModulesDirectories =
             NodeModulesDirectory.readDirsFromJSON(item.node_modules, {
-              sourceRoot: dir
+              sourceRoot: dir,
+              rebuildBinaries,
             })
         );
       }
@@ -2145,6 +2149,7 @@ class ServerTarget extends JsImageTarget {
       "mini-files.js",
       "npm-require.js",
       "npm-rebuild.js",
+      "npm-rebuild-args.js",
     ], function (filename) {
       builder.write(filename, {
         file: files.pathJoin(
