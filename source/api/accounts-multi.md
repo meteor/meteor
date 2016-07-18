@@ -52,6 +52,7 @@ On the server, the callbacks get a single argument, the same attempt info
 object as [`validateLoginAttempt`](#accounts_validateloginattempt). On the
 client, no arguments are passed.
 
+{% apibox "AccountsCommon#onLogout" %}
 
 
 {% apibox "AccountsClient" %}
@@ -218,8 +219,6 @@ to fail, and should start with
 if (!attempt.allowed)
   return false;
 ```
-
-{% apibox "AccountsServer#onLogout" %}
 
 <h2 id="accounts_rate_limit">Rate Limiting</h2>
 
