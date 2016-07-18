@@ -1,5 +1,11 @@
 ## v.NEXT
 
+## v1.3.5.1
+
+* This release fixed a small bug in 1.3.5 that prevented updating apps
+  whose `.meteor/release` files refer to releases no longer installed in
+  `~/.meteor/packages/meteor-tool`. 576468eae8d8dd7c1fe2fa381ac51dee5cb792cd
+
 ## v1.3.5
 
 * Failed Meteor package downloads are now automatically resumed from the
