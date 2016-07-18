@@ -561,6 +561,8 @@ Meteor.users.update(userId, {
 });
 ```
 
+You can use any field name other than those [used by the Accounts sytem](http://docs.meteor.com/api/accounts.html#Meteor-users).
+
 <h3 id="adding-fields-on-registration">Adding fields on user registration</h3>
 
 The code above is just code that you could run on the server inside a Meteor Method to set someone's mailing address. Sometimes, you want to set a field when the user first creates their account, for example to initialize a default value or compute something from their social data. You can do this using [`Accounts.onCreateUser`](http://docs.meteor.com/#/full/accounts_oncreateuser):
