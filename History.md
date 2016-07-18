@@ -1,5 +1,57 @@
 ## v.NEXT
 
+## v1.3.5.1
+
+* This release fixed a small bug in 1.3.5 that prevented updating apps
+  whose `.meteor/release` files refer to releases no longer installed in
+  `~/.meteor/packages/meteor-tool`. 576468eae8d8dd7c1fe2fa381ac51dee5cb792cd
+
+## v1.3.5
+
+* Failed Meteor package downloads are now automatically resumed from the
+  point of failure, up to ten times, with a five-second delay between
+  attempts. [#7399](https://github.com/meteor/meteor/pull/7399)
+
+* If an app has no `package.json` file, all packages in `node_modules`
+  will be built into the production bundle. In other words, make sure you
+  have a `package.json` file if you want to benefit from `devDependencies`
+  pruning. 7b2193188fc9e297eefc841ce6035825164f0684
+
+* Binary npm dependencies of compiler plugins are now automatically
+  rebuilt when Node/V8 versions change.
+  [#7297](https://github.com/meteor/meteor/issues/7297)
+
+* Because `.meteor/local` is where purely local information should be
+  stored, the `.meteor/dev_bundle` link has been renamed to
+  `.meteor/local/dev_bundle`.
+
+* The `.meteor/local/dev_bundle` link now corresponds exactly to
+  `.meteor/release` even when an app is using an older version of
+  Meteor. d732c2e649794f350238d515153f7fb71969c526
+
+* When recompiling binary npm packages, the `npm rebuild` command now
+  receives the flags `--update-binary` and `--no-bin-links`, in addition
+  to respecting the `$METEOR_NPM_REBUILD_FLAGS` environment variable.
+  [#7401](https://github.com/meteor/meteor/issues/7401)
+
+* The last solution found by the package version constraint solver is now
+  stored in `.meteor/local/resolver-result-cache.json` so that it need not
+  be recomputed every time Meteor starts up.
+
+* If the `$GYP_MSVS_VERSION` environment variable is not explicitly
+  provided to `meteor {node,npm}`, the `node-gyp` tool will infer the
+  appropriate version (though it still defaults to "2015").
+
+## v1.3.4.4
+
+* Fixed [#7374](https://github.com/meteor/meteor/issues/7374).
+
+* The default loglevel for internal `npm` commands (e.g., those related to
+  `Npm.depends`) has been set to "error" instead of "warn". Note that this
+  change does not affect `meteor npm ...` commands, which can be easily
+  configured using `.npmrc` files or command-line flags.
+  https://github.com/meteor/meteor/commit/0689cae25a3e0da3615a402cdd0bec94ce8455c8
+
 ## v1.3.4.3
 
 * Node has been upgraded to 0.10.46.

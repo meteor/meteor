@@ -1,6 +1,10 @@
 var fs = require("fs");
+var files = require("../fs/mini-files.js");
 
 exports.makeLink = function (target, linkPath) {
+  target = files.convertToOSPath(target);
+  linkPath = files.convertToOSPath(linkPath);
+
   var tempPath = linkPath + "-" + Math.random().toString(36).slice(2);
 
   try {
@@ -9,18 +13,24 @@ exports.makeLink = function (target, linkPath) {
     fs.writeFileSync(tempPath, target, "utf8");
   }
 
-  fs.renameSync(tempPath, linkPath);
+  try {
+    fs.renameSync(tempPath, linkPath);
+  } catch (e) {
+    // If renaming fails, try unlinking first.
+    fs.unlinkSync(linkPath);
+    fs.renameSync(tempPath, linkPath);
+  }
 };
 
+// Note: this function returns an OS-specific path!
 exports.readLink = function (linkPath) {
+  linkPath = files.convertToOSPath(linkPath);
+
   var stat = fs.lstatSync(linkPath);
-
   if (stat.isSymbolicLink()) {
-    return fs.realpathSync(linkPath);
-  }
-
-  if (stat.isFile()) {
-    return fs.readFileSync(linkPath, "utf8");
+    linkPath = fs.realpathSync(linkPath);
+  } else if (stat.isFile()) {
+    linkPath = fs.readFileSync(linkPath, "utf8");
   }
 
   return linkPath;

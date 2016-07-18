@@ -10,7 +10,7 @@ BabelCompiler = function BabelCompiler(extraFeatures) {
 };
 
 var BCp = BabelCompiler.prototype;
-var excludedFileExtensionPattern = /\.es5\.js$/i;
+var excludedFileExtensionPattern = /\.(es5|min)\.js$/i;
 var hasOwn = Object.prototype.hasOwnProperty;
 
 BCp.processFilesForTarget = function (inputFiles) {

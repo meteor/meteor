@@ -15,6 +15,9 @@ var utils = require('../utils/utils.js');
 var runLog = require('../runners/run-log.js');
 var Profile = require('../tool-env/profile.js').Profile;
 import { execFileAsync } from "../utils/processes.js";
+import {
+  get as getRebuildArgs
+} from "../static-assets/server/npm-rebuild-args.js";
 
 var meteorNpm = exports;
 
@@ -119,9 +122,22 @@ meteorNpm.updateDependencies = function (packageName,
 // Returns a flattened list of npm package names used in production.
 meteorNpm.getProdPackageNames = function (nodeModulesDir) {
   var names = Object.create(null);
-  var lsResult = runNpmCommand([
-    "ls", "--json", "--production"
-  ], nodeModulesDir);
+  var lsCmdArgs = ["ls", "--json"];
+
+  const packageJsonPath = files.pathJoin(
+    files.pathDirname(nodeModulesDir),
+    "package.json"
+  );
+
+  const packageJsonStat = files.statOrNull(packageJsonPath);
+  if (packageJsonStat &&
+      packageJsonStat.isFile()) {
+    // If there is no package.json file, adding --production will cause
+    // the names object to be empty, which is not what we want.
+    lsCmdArgs.push("--production");
+  }
+
+  var lsResult = runNpmCommand(lsCmdArgs, nodeModulesDir);
 
   function walk(deps) {
     if (! deps) {
@@ -222,7 +238,7 @@ Profile("meteorNpm.rebuildIfNonPortable", function (nodeModulesDir) {
 
   // The `npm rebuild` command must be run in the parent directory of the
   // relevant node_modules directory, which in this case is tempDir.
-  const rebuildResult = runNpmCommand(["rebuild"], tempDir);
+  const rebuildResult = runNpmCommand(getRebuildArgs(), tempDir);
   if (! rebuildResult.success) {
     buildmessage.error(rebuildResult.error);
     files.rm_recursive(tempDir);
@@ -526,16 +542,14 @@ const npmUserConfigFile = files.pathJoin(
 
 var runNpmCommand = meteorNpm.runNpmCommand =
 Profile("meteorNpm.runNpmCommand", function (args, cwd) {
-  const nodeBinDir = files.getCurrentNodeBinDir();
-  const isWindows = process.platform === "win32";
-  var npmPath;
+  import { getEnv } from "../cli/dev-bundle-bin-helpers.js";
 
-  if (isWindows) {
-    npmPath = files.convertToOSPath(
-      files.pathJoin(nodeBinDir, "npm.cmd"));
-  } else {
-    npmPath = files.pathJoin(nodeBinDir, "npm");
-  }
+  const devBundleDir = files.getDevBundle();
+  const isWindows = process.platform === "win32";
+  const npmPath = files.convertToOSPath(files.pathJoin(
+    devBundleDir, "bin",
+    isWindows ? "npm.cmd" : "npm"
+  ));
 
   if (meteorNpm._printNpmCalls) {
     // only used by test-bundler.js
@@ -543,21 +557,20 @@ Profile("meteorNpm.runNpmCommand", function (args, cwd) {
                          args.join(' ') + ' ...\n');
   }
 
-  if (cwd) {
-    cwd = files.convertToOSPath(cwd);
-  }
-
-  var getEnv = require("../cli/dev-bundle-bin-helpers.js").getEnv;
-
-  return getEnv().then(env => {
-    // Make sure we don't honor any user-provided configuration files.
-    env.npm_config_userconfig = npmUserConfigFile;
-
-    var opts = {
-      cwd: cwd,
+  return getEnv({
+    devBundle: devBundleDir
+  }).then(env => {
+    const opts = {
       env: env,
       maxBuffer: 10 * 1024 * 1024
     };
+
+    if (cwd) {
+      opts.cwd = files.convertToOSPath(cwd);
+    }
+
+    // Make sure we don't honor any user-provided configuration files.
+    env.npm_config_userconfig = npmUserConfigFile;
 
     return new Promise(function (resolve) {
       require('child_process').execFile(
@@ -575,6 +588,7 @@ Profile("meteorNpm.runNpmCommand", function (args, cwd) {
         }
       );
     });
+
   }).await();
 });
 
@@ -764,8 +778,21 @@ var installFromShrinkwrap = function (dir) {
 
   ensureConnected();
 
+  const tempPkgJsonPath = files.pathJoin(dir, "package.json");
+  const pkgJsonExisted = files.exists(tempPkgJsonPath);
+  if (! pkgJsonExisted) {
+    // Writing an empty package.json file prevents ENOENT warnings about
+    // package.json not existing, which are noisy at best and sometimes
+    // seem to interfere with the install.
+    files.writeFile(tempPkgJsonPath, "{}\n", "utf8");
+  }
+
   // `npm install`, which reads npm-shrinkwrap.json.
   var result = runNpmCommand(["install"], dir);
+
+  if (! pkgJsonExisted) {
+    files.rm_recursive(tempPkgJsonPath);
+  }
 
   if (! result.success) {
     buildmessage.error(`couldn't install npm packages from npm-shrinkwrap: ${result.error}`);

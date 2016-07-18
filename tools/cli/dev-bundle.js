@@ -27,11 +27,12 @@ function getDevBundleDir() {
     return defaultDevBundlePromise;
   }
 
-  var devBundleLink = path.join(
-    path.dirname(releaseFile),
-    "dev_bundle"
-  );
+  var localDir = path.join(path.dirname(releaseFile), "local");
+  if (! statOrNull(localDir, "isDirectory")) {
+    return defaultDevBundlePromise;
+  }
 
+  var devBundleLink = path.join(localDir, "dev_bundle");
   var devBundleStat = statOrNull(devBundleLink);
   if (devBundleStat) {
     return new Promise(function (resolve) {
@@ -105,26 +106,31 @@ function getDevBundleForRelease(release) {
       "SELECT content FROM releaseVersions WHERE track=? AND version=?",
       [track, version],
       function (error, data) {
-        if (error) {
-          reject(error);
-        } else {
-          var tool = JSON.parse(data.content).tool;
-          var devBundleDir = path.join(
-            meteorToolDir,
-            tool.split("@").slice(1).join("@"),
-            "mt-" + getHostArch(),
-            "dev_bundle"
-          );
-
-          var devBundleStat = statOrNull(devBundleDir, "isDirectory");
-          if (devBundleStat) {
-            resolve(devBundleDir);
-          } else {
-            resolve(null);
-          }
-        }
+        error ? reject(error) : resolve(data);
       }
     );
+
+  }).then(function (data) {
+    if (data) {
+      var tool = JSON.parse(data.content).tool;
+      var devBundleDir = path.join(
+        meteorToolDir,
+        tool.split("@").slice(1).join("@"),
+        "mt-" + getHostArch(),
+        "dev_bundle"
+      );
+
+      var devBundleStat = statOrNull(devBundleDir, "isDirectory");
+      if (devBundleStat) {
+        return devBundleDir;
+      }
+    }
+
+    return null;
+
+  }).catch(function (error) {
+    console.error(error.stack || error);
+    return null;
   });
 }
 
@@ -192,4 +198,6 @@ function getHostArch() {
   }
 }
 
-module.exports = getDevBundleDir();
+module.exports = getDevBundleDir().catch(function (error) {
+  return defaultDevBundlePromise;
+});

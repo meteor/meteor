@@ -579,6 +579,7 @@ Options:
                     port that the Meteor server binds to. Can include a
                     URL scheme (for example,
                     --mobile-server=https://example.com:443).
+  --raw-logs        Run without parsing logs from stdout and stderr.
   --settings        Set optional data for Meteor.settings on the server
 
   --ios,            Run tests in an emulator or on a mobile device. All of

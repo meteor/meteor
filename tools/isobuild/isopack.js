@@ -1085,13 +1085,17 @@ _.extend(Isopack.prototype, {
         }
       });
 
+      // Rebuild binary npm packages if unibuild arch matches host arch.
+      const rebuildBinaries = archinfo.matches(
+        archinfo.host(),
+        unibuildMeta.arch
+      );
+
       const nodeModulesDirectories = bundler.NodeModulesDirectory
         .readDirsFromJSON(unibuildJson.node_modules, {
           packageName: self.name,
           sourceRoot: unibuildBasePath,
-          // Rebuild binaries if unibuild arch matches host arch.
-          rebuildBinaries: archinfo.matches(
-            archinfo.host(), unibuildMeta.arch)
+          rebuildBinaries,
         });
 
       self.unibuilds.push(new Unibuild(self, {

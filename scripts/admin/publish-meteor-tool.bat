@@ -22,7 +22,7 @@ REM GITSHA is replaced by the script transferring this file
 C:\git\bin\git.exe checkout $GITSHA
 
 REM install 7-zip, required for running meteor from checkout
-C:\git\bin\curl -L http://downloads.sourceforge.net/sevenzip/7z920.msi ^> C:\7z.msi
+C:\git\bin\curl -L http://www.7-zip.org/a/7z1602.msi ^> C:\7z.msi
 msiexec /i C:\7z.msi /quiet /qn /norestart
 set PATH=^%PATH^%;"C:\Program Files\7-Zip"
 REM wait 3 seconds to avoid races with the 7-zip installation
