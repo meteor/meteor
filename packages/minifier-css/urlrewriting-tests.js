@@ -78,6 +78,7 @@ Tinytest.add("minifier-css - url rewriting with media queries (ast rule recursio
   t("'/image.png'", "'image.png'", 'single quoted url');
   t('"./../image.png"', '"packages/image.png"', 'quoted parent directory');
   t('http://i.imgur.com/fBcdJIh.gif', 'http://i.imgur.com/fBcdJIh.gif', 'complete URL');
+  t('//i.imgur.com/fBcdJIh.gif', '//i.imgur.com/fBcdJIh.gif', 'network-path reference');
   t('"http://i.imgur.com/fBcdJIh.gif"', '"http://i.imgur.com/fBcdJIh.gif"', 'complete quoted URL');
   t('data:image/png;base64,iVBORw0K=', 'data:image/png;base64,iVBORw0K=', 'data URI');
   t('http://', 'http://', 'malformed URL');
@@ -90,6 +91,7 @@ Tinytest.add("minifier-css - url rewriting with media queries (ast rule recursio
   t('"/image.png"', '"image.png"', 'double quoted url');
   t("'/image.png'", "'image.png'", 'single quoted url');
   t('http://i.imgur.com/fBcdJIh.gif', 'http://i.imgur.com/fBcdJIh.gif', 'complete URL');
+  t('//i.imgur.com/fBcdJIh.gif', '//i.imgur.com/fBcdJIh.gif', 'network-path reference');
   t('"http://i.imgur.com/fBcdJIh.gif"', '"http://i.imgur.com/fBcdJIh.gif"', 'complete quoted URL');
   t('data:image/png;base64,iVBORw0K=', 'data:image/png;base64,iVBORw0K=', 'data URI');
   t('http://', 'http://', 'malformed URL');
