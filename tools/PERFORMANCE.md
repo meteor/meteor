@@ -213,9 +213,11 @@ the top level (probably because they are fired off asynchronously).
 
 Some initial work has been done to make constraint solving fast in the typical
 case where a previous solution exists in `APP/.meteor/versions`, but there is
-possible room for improvement.  For example, the previous solution could be
-checked without invoking the logic solver at all, though the manual logic would
-have to match closely.
+possible room for improvement.
+
+<strike>For example, the previous solution could be checked without
+invoking the logic solver at all, though the manual logic would have to
+match closely.</strike> [Implemented](https://github.com/meteor/meteor/compare/ea236fc9da99a1679b6205dce3a7008617e660e5...69b100d21a33fd7ca58fc2fe2d8997ade4a36af6)!
 
 Time spent reading from the packages database (a SQLite file) could be understood
 better and improved by batching queries, reading less data, or using SQLite
