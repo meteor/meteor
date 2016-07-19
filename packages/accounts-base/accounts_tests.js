@@ -390,6 +390,7 @@ Tinytest.add(
     });
     var onLogoutStopper = Accounts.onLogout(function(logoutContext) {
       test.equal(logoutContext.userId, onLogoutExpectedUserId, "onLogout");
+      test.instanceOf(logoutContext.connection, Object);
     });
     var onLoginFailureStopper = Accounts.onLoginFailure(function(attempt) {
       test.equal(Meteor.userId(), onLoginFailureExpectedUserId, "onLoginFailure");
