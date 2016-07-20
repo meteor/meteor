@@ -325,6 +325,14 @@ function doRunCommand(options) {
     appPort = appPortMatch[2] ? parseInt(appPortMatch[2]) : null;
   }
 
+  if (options.production) {
+    Console.warn(
+      "Warning: The --production flag should only be used to simulate production " +
+      "bundling for testing purposes. Use meteor build to create a bundle for " + 
+      "production deployment. See: https://guide.meteor.com/deployment.html"
+    );
+  }
+
   if (options['raw-logs']) {
     runLog.setRawLogs(true);
   }
