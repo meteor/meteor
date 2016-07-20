@@ -40,6 +40,7 @@
 * Fix for regression caused by #5837 which incorrectly rewrote
   network-path references (e.g. `//domain.com/image.gif`) in CSS URLs.
   [#7416](https://github.com/meteor/meteor/issues/7416)
+* Added Angular2 boilerplate example [#7364](https://github.com/meteor/meteor/pull/7363)
 
 ## v1.3.5.1
 
