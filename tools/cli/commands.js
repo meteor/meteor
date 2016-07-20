@@ -327,10 +327,9 @@ function doRunCommand(options) {
 
   if (options.production) {
     Console.warn(
-      "You're using --production to run the app. Please attention that ",
-      "this option is not intended for production deployments and may ",
-      "have performance or security issues. See",
-      "https://guide.meteor.com/deployment.html to deploy a Meteor app."
+      "Warning: The --production flag should only be used to simulate production " +
+      "bundling for testing purposes. Use meteor build to create a bundle for " + 
+      "production deployment. See: https://guide.meteor.com/deployment.html"
     );
   }
 
