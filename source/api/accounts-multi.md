@@ -54,6 +54,19 @@ client, no arguments are passed.
 
 {% apibox "AccountsCommon#onLogout" %}
 
+On the server, the `func` callback receives a single argument with the object below. On the
+client, no arguments are passed.
+
+<dl class="objdesc">
+{% dtdd name:"user" type:"Object" %}
+  The Meteor user object of the user which just logged out.
+{% enddtdd %}
+
+{% dtdd name:"connection" type:"Object" %}
+  The `connection` object the request came in on. See
+  [`Meteor.onConnection`](#meteor_onconnection) for details.
+{% enddtdd %}
+</dl>
 
 {% apibox "AccountsClient" %}
 
