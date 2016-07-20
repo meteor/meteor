@@ -33,6 +33,10 @@
   `Mongo.setConnectionOptions(options)` API.
   [#7277](https://github.com/meteor/meteor/pull/7277)
 
+* On the server, cursor.count() now takes a single argument `applySkipLimit`
+  (see the corresponding [Mongo documentation]
+    (http://mongodb.github.io/node-mongodb-native/2.1/api/Cursor.html#count))
+
 ## v1.3.5.1
 
 * This release fixed a small bug in 1.3.5 that prevented updating apps
