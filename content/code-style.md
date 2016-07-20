@@ -64,7 +64,7 @@ ECMAScript, the language standard on which every browser's JavaScript implementa
 
 The `ecmascript` package is included in all new apps and packages by default, and compiles all files with the `.js` file extension automatically. See the [list of all ES2015 features supported by the ecmascript package](https://docs.meteor.com/packages/ecmascript.html#Supported-ES2015-Features).
 
-To get the full experience, you should also use the `es5-shim` package which is included in all new apps by default. This means you can rely on runtime features like `Array#forEach` without worrying about which browsers support them.
+To get the full experience, you should also use the `es5-shim` package which is included in all new apps by default. This means you can rely on runtime features like `Array.forEach` without worrying about which browsers support them.
 
 All of the code samples in this guide and future Meteor tutorials will use all of the new ES2015 features. You can also read more about ES2015 and how to get started with it on the Meteor Blog:
 
