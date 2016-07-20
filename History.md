@@ -37,6 +37,10 @@
   (see the corresponding [Mongo documentation]
     (http://mongodb.github.io/node-mongodb-native/2.1/api/Cursor.html#count))
 
+* Fix for regression caused by #5837 which incorrectly rewrote
+  network-path references (e.g. `//domain.com/image.gif`) in CSS URLs.
+  [#7416](https://github.com/meteor/meteor/issues/7416)
+
 ## v1.3.5.1
 
 * This release fixed a small bug in 1.3.5 that prevented updating apps
@@ -131,6 +135,9 @@
 
 * `App.appendToConfig` allows adding custom tags to config.xml.
   [#7307](https://github.com/meteor/meteor/pull/7307)
+
+* When using `ROOT_URL` with a path, relative CSS URLs are rewriten
+  accordingly. [#5837](https://github.com/meteor/meteor/issues/5837)
 
 * Fixed bugs:
   [#7149](https://github.com/meteor/meteor/issues/7149)

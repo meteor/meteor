@@ -317,7 +317,7 @@ _.extend(Mongo.Collection.prototype, {
   },
 
   /**
-   * @summary Finds the first document that matches the selector, as ordered by sort and skip options.
+   * @summary Finds the first document that matches the selector, as ordered by sort and skip options. Returns `undefined` if no matching document is found.
    * @locus Anywhere
    * @method findOne
    * @memberOf Mongo.Collection
