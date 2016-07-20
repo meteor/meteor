@@ -389,7 +389,7 @@ Tinytest.add(
       test.equal(Meteor.userId(), onLoginExpectedUserId, "onLogin");
     });
     var onLogoutStopper = Accounts.onLogout(function(logoutContext) {
-      test.equal(logoutContext.userId, onLogoutExpectedUserId, "onLogout");
+      test.equal(logoutContext.user._id, onLogoutExpectedUserId, "onLogout");
       test.instanceOf(logoutContext.connection, Object);
     });
     var onLoginFailureStopper = Accounts.onLoginFailure(function(attempt) {

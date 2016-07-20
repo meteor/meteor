@@ -177,9 +177,9 @@ Ap._failedLogin = function (connection, attempt) {
 };
 
 Ap._successfulLogout = function (connection, userId) {
-  var logoutContext = { userId: userId, connection: connection };
+  const user = userId && this.users.findOne(userId);
   this._onLogoutHook.each(function (callback) {
-    callback(logoutContext);
+    callback({ user, connection });
     return true;
   });
 };
