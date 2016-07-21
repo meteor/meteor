@@ -66,14 +66,14 @@ _.extend(Module.prototype, {
     var self = this;
     var maxInFile = 0;
     var file, i = 0;
-    var lines, line, j;
+    var lines, line, j, m;
     for ( ; i < self.files.length ; i++) {
       file = self.files[i];
-      var m = 0;
+      m = 0;
 
       lines = self.sourceLines || file.source.split('\n');
       for (j = 0; j < lines.length ; j++) {
-        var line = lines[j];
+        line = lines[j];
         if (line.length <= ignoreOver && line.length > m) {
           m = line.length;
         }
