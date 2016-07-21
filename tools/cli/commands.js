@@ -260,6 +260,9 @@ var runCommandOptions = {
     'raw-logs': { type: Boolean },
     settings: { type: String },
     verbose: { type: Boolean, short: "v" },
+
+    // cache the resolved solution for the depependency resolver
+    'cache-solution': { type: Boolean },
     // With --once, meteor does not re-run the project if it crashes
     // and does not monitor for file changes. Intentionally
     // undocumented: intended for automated testing (eg, cli-test.sh),
@@ -290,6 +293,7 @@ function doRunCommand(options) {
 
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
+    cacheSolution: options['cache-solution'],
     allowIncompatibleUpdate: options['allow-incompatible-update'],
     lintAppAndLocalPackages: !options['no-lint']
   });

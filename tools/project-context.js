@@ -537,15 +537,33 @@ _.extend(ProjectContext.prototype, {
         resolverRunCount++;
 
         var solution;
+        var solutionCacheFile = files.pathJoin(self._projectDirForLocalPackages, '.meteor', 'solution-cache.json');
+
         try {
+          if (self.originalOptions.cacheSolution) {
+            if (self._solution) {
+              solution = self._solution;
+            } else {
+              if (files.exists(solutionCacheFile)) {
+                var jsoncache = files.readFile(solutionCacheFile, 'utf8');
+                solution = JSON.parse(jsoncache);
+              }
+            }
+          }
+          if (typeof solution !== "object") {
           Profile.time(
             "Select Package Versions" +
               (resolverRunCount > 1 ? (" (Try " + resolverRunCount + ")") : ""),
             function () {
-              solution = resolver.resolve(
+              self._solution = solution = resolver.resolve(
                 depsAndConstraints.deps, depsAndConstraints.constraints,
                 resolveOptions);
+
+              if (self.originalOptions.cacheSolution) {
+                files.writeFile(solutionCacheFile, JSON.stringify(solution), 'utf8');
+              }
             });
+          }
         } catch (e) {
           if (!e.constraintSolverError && !e.versionParserError)
             throw e;
