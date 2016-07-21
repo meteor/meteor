@@ -366,7 +366,7 @@ var buildSymbolTree = function (symbolMap) {
     var walk = ret;
     var i = 0, part;
     for (; i < parts.length ; i++) {
-      var part = parts[i];
+      part = parts[i];
       if (! (part in walk))
         walk[part] = {};
       walk = walk[part];
