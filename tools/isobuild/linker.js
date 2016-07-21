@@ -63,17 +63,22 @@ _.extend(Module.prototype, {
 
   maxLineLength: function (ignoreOver) {
     var self = this;
-
     var maxInFile = [];
-    _.each(self.files, function (file) {
+    var file, i = 0;
+    var lines, line, j;
+    for ( ; i < self.files.length ; i++) {
+      file = self.files[i];
       var m = 0;
-      _.each(file.source.split('\n'), function (line) {
+
+      lines = file.source.split('\n');
+      for (j = 0; j < lines.length ; j++) {
+        var line = lines[j];
         if (line.length <= ignoreOver && line.length > m) {
           m = line.length;
         }
-      });
+      }
       maxInFile.push(m);
-    });
+    }
 
     return _.max(maxInFile);
   },
@@ -1008,7 +1013,10 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
     noLineNumbers
   });
 
-  _.each(inputFiles, file => module.addFile(file));
+  var i = 0, inputFile;
+  for ( ; i < inputFiles.length ; i++) {
+    module.addFile(inputFiles[i]);
+  }
 
   var prelinkedFiles = module.getPrelinkedFiles();
 
