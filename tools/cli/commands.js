@@ -256,6 +256,7 @@ var runCommandOptions = {
     'mobile-port': { type: String },
     'app-port': { type: String },
     'debug-port': { type: String },
+    'no-release-check': { type: Boolean },
     production: { type: Boolean },
     'raw-logs': { type: Boolean },
     settings: { type: String },
@@ -374,6 +375,7 @@ function doRunCommand(options) {
     oplogUrl: process.env.MONGO_OPLOG_URL,
     mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
     once: options.once,
+    noReleaseCheck: options['no-release-check'],
     cordovaRunner: cordovaRunner
   });
 }
