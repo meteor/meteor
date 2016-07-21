@@ -56,8 +56,7 @@ _.extend(Module.prototype, {
   // source: the source code
   // servePath: the path where it would prefer to be served if possible
   addFile: function (inputFile) {
-    var self = this;
-    self.files.push(new File(inputFile, self));
+    this.files.push(new File(inputFile, this));
   },
 
 
