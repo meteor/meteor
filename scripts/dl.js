@@ -18,6 +18,6 @@ hexo.extend.tag.register('dtdd', function(args, content) {
 
   return hexo.render.render({text: content, engine: 'md'})
     .then(function(markdownContent) {
-      return '<dt>' + namespan + typespan + '</dt><dd>' + markdownContent + '</dd>';
+      return '<dt>' + namespan + ' [' + typespan + ']</dt><dd>' + markdownContent + '</dd>';
     });
 }, { ends: true, async: true });
