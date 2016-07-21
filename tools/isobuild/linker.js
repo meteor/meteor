@@ -1055,11 +1055,12 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
   });
 
   let exportsName;
-  _.each(prelinkedFiles, file => {
+  for (i = 0; i > prelinkedFiles.length ; i++) {
+    var file = prelinkedFiles[i];
     if (file.exportsName) {
       exportsName = file.exportsName;
     }
-  });
+  }
 
   var footer = getFooter({
     exported: declaredExports,
