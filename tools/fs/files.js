@@ -727,7 +727,15 @@ files.extractTarGz = function (buffer, destPath, options) {
   files.rmdir(tempDir);
 };
 
+function ensureDirectoryEmpty(dir) {
+  files.readdir(dir).forEach(file => {
+    files.rm_recursive(files.pathJoin(dir, file));
+  });
+}
+
 function tryExtractWithNativeTar(buffer, tempDir) {
+  ensureDirectoryEmpty(tempDir);
+
   const tarProc = spawn("tar", ["xzf", "-"], {
     cwd: tempDir,
     stdio: "pipe"
@@ -743,6 +751,8 @@ function tryExtractWithNativeTar(buffer, tempDir) {
 }
 
 function tryExtractWithNative7z(buffer, tempDir) {
+  ensureDirectoryEmpty(tempDir);
+
   const exeOSPath = files.convertToOSPath(
     files.pathJoin(files.getCurrentNodeBinDir(), "7z.exe"));
   const tarGzBasename = "out.tar.gz";
@@ -796,6 +806,8 @@ function tryExtractWithNative7z(buffer, tempDir) {
 }
 
 function tryExtractWithNpmTar(buffer, tempDir) {
+  ensureDirectoryEmpty(tempDir);
+
   var tar = require("tar");
   var zlib = require("zlib");
 
