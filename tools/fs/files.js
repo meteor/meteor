@@ -12,6 +12,7 @@ var util = require('util');
 var _ = require('underscore');
 var Fiber = require('fibers');
 var crypto = require('crypto');
+var spawn = require("child_process").spawn;
 
 var rimraf = require('rimraf');
 var sourcemap = require('source-map');
@@ -695,33 +696,26 @@ files.extractTarGz = function (buffer, destPath, options) {
   var tempDir = files.pathJoin(parentDir, '.tmp' + utils.randomToken());
   files.mkdir_p(tempDir);
 
-  var tar = require("tar");
-  var zlib = require("zlib");
+  const startTime = +new Date;
+  let promise = tryExtractWithNativeTar(buffer, tempDir);
 
-  new Promise(function (resolve, reject) {
-    var gunzip = zlib.createGunzip().on('error', reject);
+  if (process.platform === "win32") {
+    promise = promise.catch(
+      error => tryExtractWithNative7z(buffer, tempDir)
+    );
+  }
 
-    var extractor = new tar.Extract({
-      path: files.convertToOSPath(tempDir)
-    }).on('entry', function (e) {
-      if (process.platform === "win32" || options.forceConvert) {
-        // On Windows, try to convert old packages that have colons in paths
-        // by blindly replacing all of the paths. Otherwise, we can't even
-        // extract the tarball
-        e.path = colonConverter.convert(e.path);
-      }
-    }).on('error', reject)
-      .on('end', resolve);
+  promise = promise.catch(
+    error => tryExtractWithNpmTar(buffer, tempDir)
+  );
 
-    // write the buffer to the (gunzip|untar) pipeline; these calls
-    // cause the tar to be extracted to disk.
-    gunzip.pipe(extractor);
-    gunzip.write(buffer);
-    gunzip.end();
-  }).await();
+  promise.await();
+
+  console.log("finished extracting in", new Date - startTime, "ms");
 
   // succeed!
   var topLevelOfArchive = files.readdir(tempDir);
+  console.log(topLevelOfArchive);
   if (topLevelOfArchive.length !== 1) {
     throw new Error(
       "Extracted archive '" + tempDir + "' should only contain one entry");
@@ -732,6 +726,93 @@ files.extractTarGz = function (buffer, destPath, options) {
   files.rename(extractDir, destPath);
   files.rmdir(tempDir);
 };
+
+function tryExtractWithNativeTar(buffer, tempDir) {
+  const tarProc = spawn("tar", ["xzf", "-"], {
+    cwd: tempDir,
+    stdio: "pipe"
+  });
+
+  tarProc.stdin.write(buffer);
+  tarProc.stdin.end();
+
+  return new Promise((resolve, reject) => {
+    tarProc.on("error", reject);
+    tarProc.on("exit", resolve);
+  });
+}
+
+function tryExtractWithNative7z(buffer, tempDir) {
+  const exeOSPath = files.convertToOSPath(
+    files.pathJoin(files.getCurrentNodeBinDir(), "7z.exe"));
+  const tarGzBasename = "out.tar.gz";
+  const tarGzOSPath = files.convertToOSPath(
+    files.pathJoin(tempDir, tarGzBasename));
+
+  files.writeFile(tarGzOSPath, buffer);
+
+  const proc1 = spawn(exeOSPath, ["x", tarGzBasename], {
+    cwd: tempDir,
+    stdio: "inherit" // TODO Hide this later.
+  });
+
+  return new Promise((resolve, reject) => {
+    proc1.on("error", reject);
+    proc1.on("exit", resolve);
+  }).then(code => {
+    assert.strictEqual(code, 0);
+
+    let tarBasename;
+    const foundTar = files.readdir(tempDir).some(file => {
+      if (file !== tarGzBasename) {
+        tarBasename = file;
+        return true;
+      }
+    });
+
+    assert.ok(foundTar, "failed to find .tar file");
+
+    const proc2 = spawn(exeOSPath, ["x", tarBasename], {
+      cwd: tempDir,
+      stdio: "inherit" // TODO Hide this later.
+    });
+
+    function cleanUp() {
+      files.unlink(files.pathJoin(tempDir, tarGzBasename));
+      files.unlink(files.pathJoin(tempDir, tarBasename));
+    }
+
+    return new Promise((resolve, reject) => {
+      proc2.on("error", reject);
+      proc2.on("exit", resolve);
+    }).then(code => {
+      cleanUp();
+      return code;
+    }, error => {
+      cleanUp();
+      throw error;
+    });
+  });
+}
+
+function tryExtractWithNpmTar(buffer, tempDir) {
+  var tar = require("tar");
+  var zlib = require("zlib");
+
+  return new Promise((resolve, reject) => {
+    var gunzip = zlib.createGunzip().on('error', reject);
+    var extractor = new tar.Extract({
+      path: files.convertToOSPath(tempDir)
+    }).on('error', reject)
+      .on('end', resolve);
+
+    // write the buffer to the (gunzip|untar) pipeline; these calls
+    // cause the tar to be extracted to disk.
+    gunzip.pipe(extractor);
+    gunzip.write(buffer);
+    gunzip.end();
+  });
+}
 
 // Tar-gzips a directory, returning a stream that can then be piped as
 // needed.  The tar archive will contain a top-level directory named
