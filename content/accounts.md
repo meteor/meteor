@@ -77,7 +77,7 @@ Once you've gotten your initial prototype up and running with `accounts-ui`, you
 The first thing to understand about `useraccounts` is that the core accounts management logic is independent of the HTML templates and routing packages. This means you can use [`useraccounts:core`](https://atmospherejs.com/useraccounts/core) to build your own set of login templates. Generally, you'll want to pick one login template package and one login routing package. The options for templates include:
 
 - [`useraccounts:unstyled`](https://atmospherejs.com/useraccounts/unstyled) which lets you bring your own CSS; this one is used in the Todos example app to make the login UI blend seamlessly with the rest of the app.
-- Pre-built templates for [Bootstrap, Semantic UI, Materialize, and more](http://useraccounts.meteor.com/). These templates don't come with the actual CSS framework, so you can pick your favorite Bootstrap package, for example.
+- Pre-built templates for Bootstrap, Semantic UI, Materialize, and more. These templates don't come with the actual CSS framework, so you can pick your favorite Bootstrap package, for example.
 
 While it's optional and the basic functionality will work without it, it's also a good idea to pick a router integration:
 
