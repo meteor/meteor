@@ -373,8 +373,9 @@ var buildSymbolTree = function (symbolMap) {
         walk[part] = {};
       walk = walk[part];
     }
-    if (value)
+    if (value) {
       walk[lastPart] = value;
+    }
   }
   return ret;
 };
@@ -644,7 +645,8 @@ _.extend(File.prototype, {
         });
       }
 
-      for (var line = 1; line <= lines.length; ++line) {
+      var lineCount = lines.length;
+      for (var line = 1; line <= lineCount; ++line) {
         addIdentityMapping({ line, column: 0 });
       }
 
@@ -1015,8 +1017,8 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
     noLineNumbers
   });
 
-  var i = 0, inputFile;
-  for ( ; i < inputFiles.length ; i++) {
+  var i = 0, inputFile, _len;
+  for (_len = inputFiles.length ; i < _len ; i++) {
     module.addFile(inputFiles[i]);
   }
 
