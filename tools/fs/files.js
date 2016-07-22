@@ -745,6 +745,11 @@ function ensureDirectoryEmpty(dir) {
 function tryExtractWithNativeTar(buffer, tempDir, options) {
   ensureDirectoryEmpty(tempDir);
 
+  if (options.forceConvert) {
+    return Promise.reject(new Error(
+      "Native tar cannot convert colons in package names"));
+  }
+
   return new Promise((resolve, reject) => {
     const flags = options.verbose ? "-xzvf" : "-xzf";
     const tarProc = spawn("tar", [flags, "-"], {
@@ -766,6 +771,11 @@ function tryExtractWithNativeTar(buffer, tempDir, options) {
 
 function tryExtractWithNative7z(buffer, tempDir, options) {
   ensureDirectoryEmpty(tempDir);
+
+  if (options.forceConvert) {
+    return Promise.reject(new Error(
+      "Native 7z.exe cannot convert colons in package names"));
+  }
 
   const exeOSPath = files.convertToOSPath(
     files.pathJoin(files.getCurrentNodeBinDir(), "7z.exe"));
@@ -829,6 +839,13 @@ function tryExtractWithNpmTar(buffer, tempDir, options) {
     var gunzip = zlib.createGunzip().on('error', reject);
     var extractor = new tar.Extract({
       path: files.convertToOSPath(tempDir)
+    }).on('entry', function (e) {
+      if (process.platform === "win32" || options.forceConvert) {
+        // On Windows, try to convert old packages that have colons in
+        // paths by blindly replacing all of the paths. Otherwise, we
+        // can't even extract the tarball
+        e.path = colonConverter.convert(e.path);
+      }
     }).on('error', reject)
       .on('end', resolve);
 
