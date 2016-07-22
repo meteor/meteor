@@ -1072,6 +1072,26 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
 
   return _.map(prelinkedFiles, function (file) {
     if (file.sourceMap) {
+
+      // ===Question===
+      // The header variable is reused, and concat to itself repeatedly,
+      // but we are returning "header" + source + "footer" for every file.
+      // 
+      //    source: header + file.source + footer,
+      //
+      // so the: 
+      //   file1.source = header1 + source + footer
+      //
+      //   file2.source = header1 + SOURCE_MAP_INSTRUCTIONS_COMMENT + header1 
+      //                    + source + footer
+      //
+      //   file3.source = header1 
+      //                    + SOURCE_MAP_INSTRUCTIONS_COMMENT + header1 
+      //                    + SOURCE_MAP_INSTRUCTIONS_COMMENT + header1
+      //                    + source + footer
+      //
+      // is this expected?
+      //
       if (includeSourceMapInstructions) {
         header = SOURCE_MAP_INSTRUCTIONS_COMMENT + "\n\n" + header;
       }
