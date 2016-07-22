@@ -104,9 +104,7 @@ _.extend(Module.prototype, {
       assignedVariables = assignedVariables.concat(
         file.computeAssignedVariables());
     });
-    assignedVariables = _.uniq(assignedVariables);
-
-    return assignedVariables;
+    return _.uniq(assignedVariables);
   }),
 
   // Output is a list of objects with keys 'source', 'servePath', 'sourceMap',
@@ -1070,47 +1068,27 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
     name
   });
 
+  if (includeSourceMapInstructions) {
+    header = SOURCE_MAP_INSTRUCTIONS_COMMENT + "\n\n" + header;
+  }
+
+  // Bias the source map by the length of the header without
+  // (fully) parsing and re-serializing it. (We used to do this
+  // with the source-map library, but it was incredibly slow,
+  // accounting for over half of bundling time.) It would be nice
+  // if we could use "index maps" for this (the 'sections' key),
+  // as that would let us avoid even JSON-parsing the source map,
+  // but that doesn't seem to be supported by Firefox yet.
+  if (header.charAt(header.length - 1) !== "\n") {
+    // make sure it's a whole number of lines
+    header += "\n";
+  }
+  var headerLines = header.split('\n').length - 1;
+  var headerLinesJoined = (new Array(headerLines + 1).join(';'));
   return _.map(prelinkedFiles, function (file) {
     if (file.sourceMap) {
-
-      // ===Question===
-      // The header variable is reused, and concat to itself repeatedly,
-      // but we are returning "header" + source + "footer" for every file.
-      // 
-      //    source: header + file.source + footer,
-      //
-      // so the: 
-      //   file1.source = header1 + source + footer
-      //
-      //   file2.source = header1 + SOURCE_MAP_INSTRUCTIONS_COMMENT + header1 
-      //                    + source + footer
-      //
-      //   file3.source = header1 
-      //                    + SOURCE_MAP_INSTRUCTIONS_COMMENT + header1 
-      //                    + SOURCE_MAP_INSTRUCTIONS_COMMENT + header1
-      //                    + source + footer
-      //
-      // is this expected?
-      //
-      if (includeSourceMapInstructions) {
-        header = SOURCE_MAP_INSTRUCTIONS_COMMENT + "\n\n" + header;
-      }
-
-      // Bias the source map by the length of the header without
-      // (fully) parsing and re-serializing it. (We used to do this
-      // with the source-map library, but it was incredibly slow,
-      // accounting for over half of bundling time.) It would be nice
-      // if we could use "index maps" for this (the 'sections' key),
-      // as that would let us avoid even JSON-parsing the source map,
-      // but that doesn't seem to be supported by Firefox yet.
-      if (header.charAt(header.length - 1) !== "\n") {
-        // make sure it's a whole number of lines
-        header += "\n";
-      }
-      var headerLines = header.split('\n').length - 1;
       var sourceMap = file.sourceMap;
-      sourceMap.mappings = (new Array(headerLines + 1).join(';')) +
-        sourceMap.mappings;
+      sourceMap.mappings = headerLinesJoined + sourceMap.mappings;
       return {
         source: header + file.source + footer,
         sourcePath: file.sourcePath,
