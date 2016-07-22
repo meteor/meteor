@@ -714,8 +714,11 @@ files.extractTarGz = function (buffer, destPath, options) {
   console.log("finished extracting in", new Date - startTime, "ms");
 
   // succeed!
-  var topLevelOfArchive = files.readdir(tempDir);
-  console.log(topLevelOfArchive);
+  var topLevelOfArchive = files.readdir(tempDir)
+    // On Windows, the 7z.exe tool sometimes creates an auxiliary
+    // PaxHeader directory.
+    .filter(file => ! file.startsWith("PaxHeader"));
+
   if (topLevelOfArchive.length !== 1) {
     throw new Error(
       "Extracted archive '" + tempDir + "' should only contain one entry");
@@ -724,7 +727,7 @@ files.extractTarGz = function (buffer, destPath, options) {
   var extractDir = files.pathJoin(tempDir, topLevelOfArchive[0]);
   makeTreeReadOnly(extractDir);
   files.rename(extractDir, destPath);
-  files.rmdir(tempDir);
+  files.rm_recursive(tempDir);
 };
 
 function ensureDirectoryEmpty(dir) {
@@ -736,17 +739,17 @@ function ensureDirectoryEmpty(dir) {
 function tryExtractWithNativeTar(buffer, tempDir) {
   ensureDirectoryEmpty(tempDir);
 
-  const tarProc = spawn("tar", ["xzf", "-"], {
-    cwd: tempDir,
-    stdio: "pipe"
-  });
-
-  tarProc.stdin.write(buffer);
-  tarProc.stdin.end();
-
   return new Promise((resolve, reject) => {
+    const tarProc = spawn("tar", ["xzf", "-"], {
+      cwd: files.convertToOSPath(tempDir),
+      stdio: "pipe"
+    });
+
     tarProc.on("error", reject);
     tarProc.on("exit", resolve);
+
+    tarProc.stdin.write(buffer);
+    tarProc.stdin.end();
   });
 }
 
@@ -756,19 +759,21 @@ function tryExtractWithNative7z(buffer, tempDir) {
   const exeOSPath = files.convertToOSPath(
     files.pathJoin(files.getCurrentNodeBinDir(), "7z.exe"));
   const tarGzBasename = "out.tar.gz";
-  const tarGzOSPath = files.convertToOSPath(
-    files.pathJoin(tempDir, tarGzBasename));
+  const Console = require("../console/console.js").Console;
+  const spawnOptions = {
+    cwd: files.convertToOSPath(tempDir),
+    stdio: Console.verbose ? "inherit" : "pipe",
+  };
 
-  files.writeFile(tarGzOSPath, buffer);
-
-  const proc1 = spawn(exeOSPath, ["x", tarGzBasename], {
-    cwd: tempDir,
-    stdio: "inherit" // TODO Hide this later.
-  });
+  files.writeFile(files.pathJoin(tempDir, tarGzBasename), buffer);
 
   return new Promise((resolve, reject) => {
-    proc1.on("error", reject);
-    proc1.on("exit", resolve);
+    spawn(exeOSPath, [
+      "x", "-y", tarGzBasename
+    ], spawnOptions)
+      .on("error", reject)
+      .on("exit", resolve);
+
   }).then(code => {
     assert.strictEqual(code, 0);
 
@@ -782,19 +787,18 @@ function tryExtractWithNative7z(buffer, tempDir) {
 
     assert.ok(foundTar, "failed to find .tar file");
 
-    const proc2 = spawn(exeOSPath, ["x", tarBasename], {
-      cwd: tempDir,
-      stdio: "inherit" // TODO Hide this later.
-    });
-
     function cleanUp() {
       files.unlink(files.pathJoin(tempDir, tarGzBasename));
       files.unlink(files.pathJoin(tempDir, tarBasename));
     }
 
     return new Promise((resolve, reject) => {
-      proc2.on("error", reject);
-      proc2.on("exit", resolve);
+      spawn(exeOSPath, [
+        "x", "-y", tarBasename
+      ], spawnOptions)
+        .on("error", reject)
+        .on("exit", resolve);
+
     }).then(code => {
       cleanUp();
       return code;
