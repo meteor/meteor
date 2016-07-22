@@ -67,7 +67,7 @@
     "nyc": "7.0.0",
     "readline-sync": "1.4.4",
     "rewire": "2.5.2",
-    "rimraf": "2.5.3",
+    "rimraf": "2.5.4",
     "semantic-release": "4.3.5",
     "validate-commit-msg": "2.6.1"
   },
