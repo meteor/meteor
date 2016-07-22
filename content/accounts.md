@@ -70,14 +70,14 @@ Here are a couple of screenshots of `accounts-ui` so you know what to expect:
 
 <h2 id="useraccounts">Customizable UI: useraccounts</h2>
 
-Once you've gotten your initial prototype up and running with `accounts-ui`, you'll want to move to something more powerful and configurable so that you can better integrate your login flow with the rest of your app. The [`useraccounts` family of packages](http://useraccounts.meteor.com/) is the most powerful set of accounts management UI controls available for Meteor today. If you need even more customization, you can also roll your own system, but it's worth trying `useraccounts` first.
+Once you've gotten your initial prototype up and running with `accounts-ui`, you'll want to move to something more powerful and configurable so that you can better integrate your login flow with the rest of your app. The [`useraccounts` family of packages](https://github.com/meteor-useraccounts/core/blob/master/Guide.md) is the most powerful set of accounts management UI controls available for Meteor today. If you need even more customization, you can also roll your own system, but it's worth trying `useraccounts` first.
 
 <h3 id="useraccounts-flexibility">Use any router or UI framework</h3>
 
 The first thing to understand about `useraccounts` is that the core accounts management logic is independent of the HTML templates and routing packages. This means you can use [`useraccounts:core`](https://atmospherejs.com/useraccounts/core) to build your own set of login templates. Generally, you'll want to pick one login template package and one login routing package. The options for templates include:
 
 - [`useraccounts:unstyled`](https://atmospherejs.com/useraccounts/unstyled) which lets you bring your own CSS; this one is used in the Todos example app to make the login UI blend seamlessly with the rest of the app.
-- Pre-built templates for Bootstrap, Semantic UI, Materialize, and more. These templates don't come with the actual CSS framework, so you can pick your favorite Bootstrap package, for example.
+- Pre-built templates for [Bootstrap, Semantic UI, Materialize, and more](https://github.com/meteor-useraccounts/core/blob/master/Guide.md#available-versions). These templates don't come with the actual CSS framework, so you can pick your favorite Bootstrap package, for example.
 
 While it's optional and the basic functionality will work without it, it's also a good idea to pick a router integration:
 
