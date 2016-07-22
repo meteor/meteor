@@ -696,22 +696,24 @@ files.extractTarGz = function (buffer, destPath, options) {
   var tempDir = files.pathJoin(parentDir, '.tmp' + utils.randomToken());
   files.mkdir_p(tempDir);
 
+  if (! _.has(options, "verbose")) {
+    options.verbose = require("../console/console.js").Console.verbose;
+  }
+
   const startTime = +new Date;
-  let promise = tryExtractWithNativeTar(buffer, tempDir);
+  let promise = tryExtractWithNativeTar(buffer, tempDir, options);
 
   if (process.platform === "win32") {
     promise = promise.catch(
-      error => tryExtractWithNative7z(buffer, tempDir)
+      error => tryExtractWithNative7z(buffer, tempDir, options)
     );
   }
 
   promise = promise.catch(
-    error => tryExtractWithNpmTar(buffer, tempDir)
+    error => tryExtractWithNpmTar(buffer, tempDir, options)
   );
 
   promise.await();
-
-  console.log("finished extracting in", new Date - startTime, "ms");
 
   // succeed!
   var topLevelOfArchive = files.readdir(tempDir)
@@ -728,6 +730,10 @@ files.extractTarGz = function (buffer, destPath, options) {
   makeTreeReadOnly(extractDir);
   files.rename(extractDir, destPath);
   files.rm_recursive(tempDir);
+
+  if (options.verbose) {
+    console.log("Finished extracting in", new Date - startTime, "ms");
+  }
 };
 
 function ensureDirectoryEmpty(dir) {
@@ -736,13 +742,18 @@ function ensureDirectoryEmpty(dir) {
   });
 }
 
-function tryExtractWithNativeTar(buffer, tempDir) {
+function tryExtractWithNativeTar(buffer, tempDir, options) {
   ensureDirectoryEmpty(tempDir);
 
   return new Promise((resolve, reject) => {
-    const tarProc = spawn("tar", ["xzf", "-"], {
+    const flags = options.verbose ? "-xzvf" : "-xzf";
+    const tarProc = spawn("tar", [flags, "-"], {
       cwd: files.convertToOSPath(tempDir),
-      stdio: "pipe"
+      stdio: options.verbose ? [
+        "pipe", // Always need to write to tarProc.stdin.
+        process.stdout,
+        process.stderr
+      ] : "pipe",
     });
 
     tarProc.on("error", reject);
@@ -753,16 +764,15 @@ function tryExtractWithNativeTar(buffer, tempDir) {
   });
 }
 
-function tryExtractWithNative7z(buffer, tempDir) {
+function tryExtractWithNative7z(buffer, tempDir, options) {
   ensureDirectoryEmpty(tempDir);
 
   const exeOSPath = files.convertToOSPath(
     files.pathJoin(files.getCurrentNodeBinDir(), "7z.exe"));
   const tarGzBasename = "out.tar.gz";
-  const Console = require("../console/console.js").Console;
   const spawnOptions = {
     cwd: files.convertToOSPath(tempDir),
-    stdio: Console.verbose ? "inherit" : "pipe",
+    stdio: options.verbose ? "inherit" : "pipe",
   };
 
   files.writeFile(files.pathJoin(tempDir, tarGzBasename), buffer);
@@ -809,7 +819,7 @@ function tryExtractWithNative7z(buffer, tempDir) {
   });
 }
 
-function tryExtractWithNpmTar(buffer, tempDir) {
+function tryExtractWithNpmTar(buffer, tempDir, options) {
   ensureDirectoryEmpty(tempDir);
 
   var tar = require("tar");
