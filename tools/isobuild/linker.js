@@ -703,9 +703,8 @@ _.extend(File.prototype, {
     var pathNoSlash = self.servePath.replace(/^\//, "");
 
     if (! self.bare) {
-      var closureHeader = self._getClosureHeader();
       chunks.push(
-        closureHeader,
+        self._getClosureHeader(),
         preserveLineNumbers ? "" : "\n\n"
       );
     }
