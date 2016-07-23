@@ -1461,13 +1461,13 @@ _.extend(PackageSource.prototype, {
       controlFiles.push('package.js');
     }
 
-    const anyLevelExcludes = [
+    let anyLevelExcludes = [
       /^tests\/$/,
       archinfo.matches(arch, "os")
         ? /^client\/$/
         : /^server\/$/,
-      ...sourceReadOptions.exclude,
     ];
+    anyLevelExcludes.push.apply(anyLevelExcludes, sourceReadOptions.exclude);
 
     const topLevelExcludes = isApp ? [
       ...anyLevelExcludes,
@@ -1552,7 +1552,7 @@ _.extend(PackageSource.prototype, {
           nodeModulesDir = subdir;
 
         } else {
-          sources.push(...find(subdir, depth + 1, inNodeModules));
+          sources.push.apply(sources, find(subdir, depth + 1, inNodeModules));
         }
       });
 
@@ -1566,7 +1566,7 @@ _.extend(PackageSource.prototype, {
         // Meteor package), continue searching this node_modules
         // directory, so that any non-.js(on) files it contains can be
         // imported by the app (#6037).
-        sources.push(...find(nodeModulesDir, depth + 1, true));
+        sources.push.apply(sources, find(nodeModulesDir, depth + 1, true));
       }
 
       if (cacheKey) {
