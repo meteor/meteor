@@ -558,8 +558,7 @@ class File {
 
     // XXX replacing colons with underscores as colon is hard to escape later
     // on different targets and generally is not a good separator for web.
-    url = url.replace(/:/g, '_');
-    this.url = url;
+    this.url = url.replace(/:/g, '_');
   }
 
   setTargetPathFromRelPath(relPath) {
