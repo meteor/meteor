@@ -375,7 +375,7 @@ function doRunCommand(options) {
     oplogUrl: process.env.MONGO_OPLOG_URL,
     mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
     once: options.once,
-    noReleaseCheck: options['no-release-check'],
+    noReleaseCheck: options['no-release-check'] || process.env.METEOR_NO_RELEASE_CHECK,
     cordovaRunner: cordovaRunner
   });
 }
