@@ -174,7 +174,7 @@ import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
 // files to ignore when bundling. node has no globs, so use regexps
 exports.ignoreFiles = [
     /~$/, /^\.#/,
-    /^\(\.meteor\/|\.git\/|Thumbs\.db|\.DS_Store\/?|Icon.|ehthumbs\.db|\..*\.sw.|#.*#)$/, 
+    /^(\.meteor\/|\.git\/|Thumbs\.db|\.DS_Store\/?|Icon.|ehthumbs\.db|\..*\.sw.|#.*#)$/, 
       /* .meteor => avoids scanning N^2 files when bundling all packages
         .git => often has too many files to watch 
         ....sw(.) => vim swap files
