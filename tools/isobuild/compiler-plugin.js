@@ -987,6 +987,20 @@ export class PackageSourceBatch {
     const allRelocatedNodeModules = Object.create(null);
     const scannerMap = new Map;
 
+
+    function buildExternalNodeModulesPaths(batch) {
+      const nodeModulesPaths = [];
+      _.each(batch.unibuild.nodeModulesDirectories, (nmd, sourcePath) => {
+        if (! nmd.local) {
+          // Local node_modules directories will be found by the
+          // ImportScanner, but we need to tell it about any external
+          // node_modules directories (e.g. .npm/package/node_modules).
+          nodeModulesPaths.push(sourcePath);
+        }
+      });
+      return nodeModulesPaths;
+    }
+
     sourceBatches.forEach(batch => {
       const name = batch.unibuild.pkg.name || null;
       const isApp = ! name;
@@ -997,16 +1011,7 @@ export class PackageSourceBatch {
         return;
       }
 
-      const nodeModulesPaths = [];
-      _.each(batch.unibuild.nodeModulesDirectories, (nmd, sourcePath) => {
-        if (! nmd.local) {
-          // Local node_modules directories will be found by the
-          // ImportScanner, but we need to tell it about any external
-          // node_modules directories (e.g. .npm/package/node_modules).
-          nodeModulesPaths.push(sourcePath);
-        }
-      });
-
+      const nodeModulesPaths = buildExternalNodeModulesPaths(batch);
       const scanner = new ImportScanner({
         name,
         bundleArch: batch.processor.arch,
