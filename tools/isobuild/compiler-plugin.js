@@ -917,9 +917,9 @@ export class PackageSourceBatch {
     sourceBatches.forEach(batch => {
       const name = batch.unibuild.pkg.name || null;
       let inputFiles = [];
-      let slot, i, len;
+      var slot, i, len;
       for (i = 0; len = batch.resourceSlots.length ; i++) {
-        let slot = batch.resourceSlots[i];
+        slot = batch.resourceSlots[i];
         // this will be translated into babel runtime toConsumableArray, which 
         // is more expensive
         //    inputFiles.push(...slot.jsOutputResources);
