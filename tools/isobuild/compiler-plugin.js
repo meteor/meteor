@@ -941,6 +941,12 @@ export class PackageSourceBatch {
       return map;
     }
 
+
+    function findMainModule(info, name) {
+      let mainModule = _.find(info.files, file => file.mainModule);
+      return mainModule ?  `meteor/${name}/${mainModule.targetPath}` : false;
+    }
+
     // Append install(<name>) calls to the install-packages.js file in the
     // modules package for every Meteor package name used.
     map.get("modules").files.some(file => {
@@ -952,11 +958,7 @@ export class PackageSourceBatch {
 
       map.forEach((info, name) => {
         if (! name) return;
-
-        let mainModule = _.find(info.files, file => file.mainModule);
-        mainModule = mainModule ?
-          `meteor/${name}/${mainModule.targetPath}` : false;
-
+        let mainModule = findMainModule(info,name);
         meteorPackageInstalls.push(
           "install(" + JSON.stringify(name) +
             (mainModule ? ", " + JSON.stringify(mainModule) : '') +
