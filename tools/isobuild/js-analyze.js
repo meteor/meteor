@@ -35,7 +35,17 @@ function tryToParse(source, hash) {
   return ast;
 }
 
-var dependencyKeywordPattern = /\b(require|import|export)\b/g;
+const dependencyKeywordPattern = /\b(require|import|export)\b/g;
+
+function parsePossibleIndexes(source) {
+  let match;
+  var possibleIndexes = [];
+  dependencyKeywordPattern.lastIndex = 0;
+  while ((match = dependencyKeywordPattern.exec(source))) {
+    possibleIndexes.push(match.index);
+  }
+  return possibleIndexes;
+}
 
 /**
  * The `findImportedModuleIdentifiers` function takes a string of module
@@ -53,14 +63,7 @@ var dependencyKeywordPattern = /\b(require|import|export)\b/g;
  */
 export function findImportedModuleIdentifiers(source, hash) {
   const identifiers = {};
-  const possibleIndexes = [];
-  let match;
-
-  dependencyKeywordPattern.lastIndex = 0;
-  while ((match = dependencyKeywordPattern.exec(source))) {
-    possibleIndexes.push(match.index);
-  }
-
+  const possibleIndexes = parsePossibleIndexes(source);
   if (!possibleIndexes.length) {
     return {};
   }
