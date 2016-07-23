@@ -411,6 +411,7 @@ var File = function (inputFile, module) {
 
   // source code for this file (a string)
   self.source = inputFile.data.toString('utf8');
+  self.sourceLines = self.source.split(/\r?\n/);
 
   // hash of source (precalculated for *.js files, calculated here for files
   // produced by plugins)
@@ -633,7 +634,7 @@ _.extend(File.prototype, {
         file: self.servePath
       });
 
-      lines = self.source.split(/\r?\n/);
+      lines = self.sourceLines || self.source.split(/\r?\n/);
 
       function addIdentityMapping(pos) {
         smg.addMapping({
