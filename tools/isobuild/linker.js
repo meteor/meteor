@@ -360,23 +360,22 @@ _.extend(Module.prototype, {
 var buildSymbolTree = function (symbolMap) {
   var ret = {};
 
-  _.each(symbolMap, function (value, symbol) {
+  for (var symbol in symbolMap) {
+    var value = symbolMap[symbol];
     var parts = symbol.split('.');
     var lastPart = parts.pop();
 
     var walk = ret;
-    _.each(parts, function (part) {
-      if (! (part in walk)) {
+    var i = 0, part;
+    for (; i < parts.length ; i++) {
+      part = parts[i];
+      if (! (part in walk))
         walk[part] = {};
-      }
       walk = walk[part];
-    });
-
-    if (value) {
-      walk[lastPart] = value;
     }
-  });
-
+    if (value)
+      walk[lastPart] = value;
+  }
   return ret;
 };
 
