@@ -1015,7 +1015,10 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
     noLineNumbers
   });
 
-  _.each(inputFiles, file => module.addFile(file));
+  var i = 0, inputFile;
+  for ( ; i < inputFiles.length ; i++) {
+    module.addFile(inputFiles[i]);
+  }
 
   var prelinkedFiles = module.getPrelinkedFiles();
 
