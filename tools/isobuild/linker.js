@@ -942,7 +942,12 @@ var getFooter = function ({
       chunks.push(pkgInit, ";\n");
     } else {
       const scratch = {};
-      _.each(exported, symbol => scratch[symbol] = symbol);
+      // _.each(exported, symbol => scratch[symbol] = symbol);
+      for (var i = 0 ; i < exported.length ; i++) {
+        var symbol = exported[i];
+        scratch[symbol] = symbol;
+      }
+
       const symbolTree = writeSymbolTree(buildSymbolTree(scratch));
       chunks.push("(function (pkg, symbols) {\n",
                   "  for (var s in symbols)\n",
