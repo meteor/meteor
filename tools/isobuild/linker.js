@@ -859,12 +859,9 @@ export var prelink = Profile("linker.prelink", function (options) {
   // Do static analysis to compute module-scoped variables. Error recovery from
   // the static analysis mutates the sources, so this has to be done before
   // concatenation.
-  var assignedVariables = module.computeAssignedVariables();
-  var files = module.getPrelinkedFiles();
-
   return {
-    files: files,
-    assignedVariables: assignedVariables
+    files: module.getPrelinkedFiles(),
+    assignedVariables: module.computeAssignedVariables()
   };
 });
 
