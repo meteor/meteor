@@ -563,7 +563,7 @@ class File {
 
   setTargetPathFromRelPath(relPath) {
     // XXX hack
-    if (relPath.match(/^packages\//) || relPath.match(/^assets\//)) {
+    if (relPath.match(/^(packages|assets)\//)) {
       this.targetPath = relPath;
     } else {
       this.targetPath = files.pathJoin('app', relPath);
