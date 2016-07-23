@@ -908,14 +908,13 @@ var getImportCode = function (imports, header, omitvar) {
 
   // Imports
   var scratch = {};
-  _.each(imports, function (name, symbol) {
-    scratch[symbol] = packageDot(name) + "." + symbol;
-  });
+  for (var symbol in imports) {
+    scratch[symbol] = packageDot(imports[symbol]) + "." + symbol;
+  }
   var tree = buildSymbolTree(scratch);
 
   // Generate output
-  var buf = header;
-  var node;
+  var buf = header, node;
   for (var key in tree) {
     node = tree[key];
     buf += (omitvar ? "" : "var ") +
