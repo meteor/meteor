@@ -915,12 +915,13 @@ var getImportCode = function (imports, header, omitvar) {
 
   // Generate output
   var buf = header;
-  _.each(tree, function (node, key) {
-    buf += (omitvar ? "" : "var " ) +
+  var node;
+  for (var key in tree) {
+    node = tree[key];
+    buf += (omitvar ? "" : "var ") +
       key + " = " + writeSymbolTree(node) + ";\n";
-  });
+  }
   buf += "\n";
-
   return buf;
 };
 
