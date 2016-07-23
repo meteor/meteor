@@ -1442,7 +1442,7 @@ _.extend(PackageSource.prototype, {
     // 'names').
     sourceReadOptions.exclude.push(/^\./);
     // Ignore the usual ignorable files.
-    sourceReadOptions.exclude.push(...ignoreFiles);
+    sourceReadOptions.exclude.push.apply(sourceReadOptions.exclude, ignoreFiles);
 
     // Unless we're running tests, ignore all test filenames and if we are, ignore the
     // type of file we *aren't* running
