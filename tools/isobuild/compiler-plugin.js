@@ -910,10 +910,9 @@ export class PackageSourceBatch {
     return sourceProcessorSet;
   }
 
-  // Returns a map from package names to arrays of JS output files.
-  static computeJsOutputFilesMap(sourceBatches) {
-    const map = new Map;
 
+  static buildJsOutputFilesMap(sourceBatches) {
+    const map = new Map;
     sourceBatches.forEach(batch => {
       const name = batch.unibuild.pkg.name || null;
       let inputFiles = [];
@@ -922,17 +921,19 @@ export class PackageSourceBatch {
         slot = batch.resourceSlots[i];
         // this will be translated into babel runtime toConsumableArray, which 
         // is more expensive
-        //    inputFiles.push(...slot.jsOutputResources);
-        // inputFiles = inputFiles.concat(slot.jsOutputResources);
         inputFiles.push.apply(inputFiles, slot.jsOutputResources);
       }
-
       map.set(name, {
         files: inputFiles,
         importExtensions: batch.importExtensions,
       });
     });
+    return map;
+  }
 
+  // Returns a map from package names to arrays of JS output files.
+  static computeJsOutputFilesMap(sourceBatches) {
+    const map = PackageSourceBatch.buildJsOutputFilesMap(sourceBatches);
     if (! map.has("modules")) {
       // In the unlikely event that no package is using the modules
       // package, then the map is already complete, and we don't need to
