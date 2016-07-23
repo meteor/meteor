@@ -918,12 +918,13 @@ export class PackageSourceBatch {
       const name = batch.unibuild.pkg.name || null;
       let inputFiles = [];
       var slot, i, len;
-      for (i = 0; len = batch.resourceSlots.length ; i++) {
+      for (i = 0, len = batch.resourceSlots.length; i < len ; i++) {
         slot = batch.resourceSlots[i];
         // this will be translated into babel runtime toConsumableArray, which 
         // is more expensive
         //    inputFiles.push(...slot.jsOutputResources);
-        inputFiles = inputFiles.concat(slot.jsOutputResources);
+        // inputFiles = inputFiles.concat(slot.jsOutputResources);
+        inputFiles.push.apply(inputFiles, slot.jsOutputResources);
       }
 
       map.set(name, {
