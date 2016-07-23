@@ -850,9 +850,10 @@ export var prelink = Profile("linker.prelink", function (options) {
     noLineNumbers: options.noLineNumbers
   });
 
-  _.each(options.inputFiles, function (inputFile) {
-    module.addFile(inputFile);
-  });
+  var i = 0, inputFile;
+  for ( ; i < options.inputFiles.length ; i++) {
+    module.addFile(options.inputFiles[i]);
+  }
 
   // Do static analysis to compute module-scoped variables. Error recovery from
   // the static analysis mutates the sources, so this has to be done before
