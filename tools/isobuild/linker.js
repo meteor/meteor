@@ -100,10 +100,11 @@ _.extend(Module.prototype, {
 
     // Find all global references in any files
     var assignedVariables = [];
-    _.each(self.files, function (file) {
-      assignedVariables = assignedVariables.concat(
-        file.computeAssignedVariables());
-    });
+    var i = 0, len = self.files.length, file;
+    for (; i < len ; i++) {
+      file = self.files[i];
+      assignedVariables.push.apply(assignedVariables, file.computeAssignedVariables());
+    }
     return _.uniq(assignedVariables);
   }),
 
