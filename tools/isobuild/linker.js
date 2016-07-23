@@ -61,21 +61,28 @@ _.extend(Module.prototype, {
   },
 
 
+  // Calculate max line length over multiple files
   maxLineLength: function (ignoreOver) {
-    var self = this;
+    var maxInFile = 0;
+    var file, i = 0;
+    var lines, line, j, m;
+    for ( ; i < this.files.length ; i++) {
+      file = this.files[i];
+      m = 0;
 
-    var maxInFile = [];
-    _.each(self.files, function (file) {
-      var m = 0;
-      _.each(file.source.split('\n'), function (line) {
+      lines = this.sourceLines || file.source.split('\n');
+      for (j = 0; j < lines.length ; j++) {
+        line = lines[j];
         if (line.length <= ignoreOver && line.length > m) {
           m = line.length;
         }
-      });
-      maxInFile.push(m);
-    });
+      }
 
-    return _.max(maxInFile);
+      if (m > maxInFile) {
+        maxInFile = m;
+      }
+    }
+    return maxInFile;
   },
 
   // Figure out which vars need to be specifically put in the module
