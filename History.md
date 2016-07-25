@@ -14,7 +14,7 @@
   application code. 699cf1f38e9b2a074169515d23983f74148c7223
 
 * Meteor has been upgraded to support Mongo 3.2 by default (the bundled version
-  used by `meteor run` has been upgraded). Internally it now uses the 2.1.18
+  used by `meteor run` has been upgraded). Internally it now uses the 2.2.4
   version of the `mongodb` npm driver, and has been tested against at Mongo 3.2
   server. [Issue #6957](https://github.com/meteor/meteor/issues/6957)
 
