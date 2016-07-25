@@ -27,12 +27,12 @@
     },
     "mongodb": {
       "version": "2.2.4",
-      "resolved": "https://registry.npmjs.com/mongodb/-/mongodb-2.2.4.tgz",
+      "resolved": "https://registry.npmjs.org/mongodb/-/mongodb-2.2.4.tgz",
       "from": "mongodb@2.2.4"
     },
     "mongodb-core": {
       "version": "2.0.6",
-      "resolved": "https://registry.npmjs.com/mongodb-core/-/mongodb-core-2.0.6.tgz",
+      "resolved": "https://registry.npmjs.org/mongodb-core/-/mongodb-core-2.0.6.tgz",
       "from": "mongodb-core@2.0.6"
     },
     "readable-stream": {
