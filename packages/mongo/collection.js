@@ -317,7 +317,7 @@ _.extend(Mongo.Collection.prototype, {
   },
 
   /**
-   * @summary Finds the first document that matches the selector, as ordered by sort and skip options.
+   * @summary Finds the first document that matches the selector, as ordered by sort and skip options. Returns `undefined` if no matching document is found.
    * @locus Anywhere
    * @method findOne
    * @memberOf Mongo.Collection
@@ -537,7 +537,7 @@ Mongo.Collection.prototype.insert = function insert(doc, callback) {
 }
 
 /**
- * @summary Modify one or more documents in the collection. Returns the number of affected documents.
+ * @summary Modify one or more documents in the collection. Returns the number of matched documents.
  * @locus Anywhere
  * @method update
  * @memberOf Mongo.Collection

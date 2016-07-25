@@ -9,7 +9,7 @@
 
 Package.describe({
   summary: "Adaptor for using MongoDB and Minimongo over DDP",
-  version: '1.1.9_1'
+  version: '1.1.10'
 });
 
 Npm.depends({
@@ -74,6 +74,7 @@ Package.onUse(function (api) {
   api.addFiles('local_collection_driver.js', ['client', 'server']);
   api.addFiles('remote_collection_driver.js', 'server');
   api.addFiles('collection.js', ['client', 'server']);
+  api.addFiles('connection_options.js', 'server');
 });
 
 Package.onTest(function (api) {
@@ -84,6 +85,7 @@ Package.onTest(function (api) {
   // XXX test order dependency: the allow_tests "partial allow" test
   // fails if it is run before mongo_livedata_tests.
   api.addFiles('mongo_livedata_tests.js', ['client', 'server']);
+  api.addFiles('upsert_compatibility_test.js', 'server');
   api.addFiles('allow_tests.js', ['client', 'server']);
   api.addFiles('collection_tests.js', ['client', 'server']);
   api.addFiles('observe_changes_tests.js', ['client', 'server']);
