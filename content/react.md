@@ -68,7 +68,7 @@ meteor add static-html
 
 <h3 id="using-third-party-npm-packages">Using 3rd party packages</h3>
 
-If you'd like to use a third party React component that has been published on npm (such as the ones you find on the [React Components site](http://react-components.com)), you can `npm install --save` them and `import` from within your app.
+If you'd like to use a third party React component that has been published on npm, you can `npm install --save` them and `import` from within your app.
 
 For example, to use the excellent [Griddle](http://griddlegriddle.github.io/Griddle/) React package for making tables, you could run
 
