@@ -60,8 +60,7 @@ var STAGE = {
 _.extend(ProjectContext.prototype, {
   reset: function (moreOptions, resetOptions) {
     var self = this;
-    // Allow overriding some options until the next call to reset; used by
-    // 'meteor update' code to try various values of releaseForConstraints.
+    // Allow overriding some options until the next call to reset;
     var options = _.extend({}, self.originalOptions, moreOptions);
     // This is options that are actually directed at reset itself.
     resetOptions = resetOptions || {};
@@ -141,21 +140,6 @@ _.extend(ProjectContext.prototype, {
     // a web.cordova slice (because we aren't yet smart enough to just default
     // to using the web.browser slice instead or make a common 'web' slice).
     self._forceIncludeCordovaUnibuild = options.forceIncludeCordovaUnibuild;
-
-    // If explicitly specified as null, use no release for constraints.
-    // If specified non-null, should be a release version catalog record.
-    // If not specified, defaults to release.current.
-    //
-    // Note that NONE of these cases are "use the release from
-    // self.releaseFile"; after all, if you are explicitly running `meteor
-    // --release foo` it will override what is found in .meteor/releases.
-    if (_.has(options, 'releaseForConstraints')) {
-      self._releaseForConstraints = options.releaseForConstraints || null;
-    } else if (release.current.isCheckout()) {
-      self._releaseForConstraints = null;
-    } else {
-      self._releaseForConstraints = release.current.getCatalogReleaseData();
-    }
 
     if (resetOptions.preservePackageMap && self.packageMap) {
       self._cachedVersionsBeforeReset = self.packageMap.toVersionMap();
@@ -386,19 +370,8 @@ _.extend(ProjectContext.prototype, {
 
     // Let's also make sure we have a minimal gitignore.
     var gitignorePath = files.pathJoin(self.projectDir, '.meteor', '.gitignore');
-    try {
-      var lines = files.readFile(gitignorePath, "utf8").split("\n");
-    } catch (e) {
-      if (e.code !== "ENOENT") throw e;
-      lines = [""];
-    }
-
-    var needLocal = lines.indexOf("local") < 0;
-    var needDevBundle = lines.indexOf("dev_bundle") < 0;
-    if (needDevBundle || needLocal) {
-      if (needDevBundle) lines.unshift("dev_bundle");
-      if (needLocal) lines.unshift("local");
-      files.writeFileAtomically(gitignorePath, lines.join("\n"));
+    if (! files.exists(gitignorePath)) {
+      files.writeFileAtomically(gitignorePath, 'local\n');
     }
   },
 
@@ -690,7 +663,6 @@ _.extend(ProjectContext.prototype, {
 
     self._addAppConstraints(depsAndConstraints);
     self._addLocalPackageConstraints(depsAndConstraints);
-    self._addReleaseConstraints(depsAndConstraints);
     return depsAndConstraints;
   },
 
@@ -711,19 +683,6 @@ _.extend(ProjectContext.prototype, {
       var versionRecord = self.localCatalog.getLatestVersion(packageName);
       var constraint = utils.parsePackageConstraint(
         packageName + "@=" + versionRecord.version);
-      // Add a constraint ("this is the only version available") but no
-      // dependency (we don't automatically use all local packages!)
-      depsAndConstraints.constraints.push(constraint);
-    });
-  },
-
-  _addReleaseConstraints: function (depsAndConstraints) {
-    var self = this;
-    if (! self._releaseForConstraints)
-      return;
-    _.each(self._releaseForConstraints.packages, function (version, packageName) {
-      var constraint = utils.parsePackageConstraint(
-        packageName + "@=" + version);
       // Add a constraint ("this is the only version available") but no
       // dependency (we don't automatically use all local packages!)
       depsAndConstraints.constraints.push(constraint);
@@ -1021,6 +980,18 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
       utils.validatePackageName(packageName);
       return utils.parsePackageConstraint(packageName);
     }));
+  },
+
+  // For every package we already have, update the constraint to be semver>=
+  // the constraint from the release
+  updateReleaseConstraints: function (releaseRecord) {
+    this.addConstraints(
+      _.compact(_.map(releaseRecord.packages, (version, packageName) => {
+        if (this.getConstraint(packageName)) {
+          return utils.parsePackageConstraint(packageName + '@' + version);
+        }
+      }))
+    );
   },
 
   // The packages in packagesToRemove are expected to actually be in the file;

@@ -76,22 +76,6 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       extraFeatures.jscript = targetCouldBeInternetExplorer8;
     }
 
-    if (inputFile.isPackageFile()) {
-      // When compiling package files, handle import/export syntax using
-      // the official Babel plugin, so that package authors won't publish
-      // code that relies on module.import and module.export, because such
-      // code would fail on Meteor versions before 1.3.3.  When compiling
-      // application files, however, it's fine to rely on module.import
-      // and module.export, and the developer experience will be much
-      // better for it: faster compilation, real variables, import
-      // statements inside conditional statements, etc.
-      //
-      // TODO Remove this once we are confident enough developers have
-      // updated to a version of Meteor that supports module.import and
-      // module.export.
-      extraFeatures.legacyModules = true;
-    }
-
     var babelOptions = Babel.getDefaultOptions(extraFeatures);
 
     this.inferExtraBabelOptions(inputFile, babelOptions, cacheDeps);

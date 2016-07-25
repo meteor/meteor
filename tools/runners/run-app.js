@@ -843,8 +843,14 @@ _.extend(AppRunner.prototype, {
         // Notify the server that new client assets have been added to the
         // build.
         self._refreshing = true;
-        appProcess.proc.send({ refresh: 'client' });
-        self._refreshing = false;
+        // ChildProcess.prototype.send used to be synchronous, but is now
+        // asynchronous: https://github.com/nodejs/node/pull/2620
+        appProcess.proc.send({
+          refresh: 'client'
+        }, err => {
+          self._refreshing = false;
+          if (err) throw err;
+        });
 
         // Establish a watcher on the new files.
         setupClientWatcher();
