@@ -28,21 +28,14 @@ Package.registerBuildPlugin({
 
 // This onUse describes the *runtime* implications of using this package.
 Package.onUse(function (api) {
-  // XXX would like to do the following only when the first html file
-  // is encountered
-
-  api.addFiles('templating.js', 'client');
-  api.export('Template', 'client');
+  // Base package supports both client and server side, but this package
+  // supports only the client side.
+  api.use('templating-base', 'client');
+  api.imply('templating-base', 'client');
 
   api.use('underscore'); // only the subset in packages/blaze/microscore.js
 
   api.use('isobuild:compiler-plugin@1.0.0');
-
-  // html_scanner.js emits client code that calls Meteor.startup and
-  // Blaze, so anybody using templating (eg apps) need to implicitly use
-  // 'meteor' and 'blaze'.
-  api.use(['blaze', 'spacebars']);
-  api.imply(['meteor', 'blaze', 'spacebars'], 'client');
 
   api.addFiles(['dynamic.html', 'dynamic.js'], 'client');
 });
