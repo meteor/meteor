@@ -527,54 +527,7 @@ Meteor.methods({forgotPassword: function (options) {
  * @importFromPackage accounts-base
  */
 Accounts.sendResetPasswordEmail = function (userId, email) {
-  // Make sure the user exists, and email is one of their addresses.
-  var user = Meteor.users.findOne(userId);
-  if (!user)
-    throw new Error("Can't find user");
-  // pick the first email if we weren't passed an email.
-  if (!email && user.emails && user.emails[0])
-    email = user.emails[0].address;
-  // make sure we have a valid email
-  if (!email || !_.contains(_.pluck(user.emails || [], 'address'), email))
-    throw new Error("No such email for user.");
-
-  var token = Random.secret();
-  var when = new Date();
-  var tokenRecord = {
-    token: token,
-    email: email,
-    when: when
-  };
-  Meteor.users.update(userId, {$set: {
-    "services.password.reset": tokenRecord
-  }});
-  // before passing to template, update user object with new token
-  Meteor._ensure(user, 'services', 'password').reset = tokenRecord;
-
-  var resetPasswordUrl = Accounts.urls.resetPassword(token);
-
-  var options = {
-    to: email,
-    from: Accounts.emailTemplates.resetPassword.from
-      ? Accounts.emailTemplates.resetPassword.from(user)
-      : Accounts.emailTemplates.from,
-    subject: Accounts.emailTemplates.resetPassword.subject(user)
-  };
-
-  if (typeof Accounts.emailTemplates.resetPassword.text === 'function') {
-    options.text =
-      Accounts.emailTemplates.resetPassword.text(user, resetPasswordUrl);
-  }
-
-  if (typeof Accounts.emailTemplates.resetPassword.html === 'function')
-    options.html =
-      Accounts.emailTemplates.resetPassword.html(user, resetPasswordUrl);
-
-  if (typeof Accounts.emailTemplates.headers === 'object') {
-    options.headers = Accounts.emailTemplates.headers;
-  }
-
-  Email.send(options);
+  Accounts.sendEmail(userId, email, 'resetPassword');
 };
 
 // send the user an email informing them that their account was created, with
@@ -593,9 +546,14 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
  * @importFromPackage accounts-base
  */
 Accounts.sendEnrollmentEmail = function (userId, email) {
-  // XXX refactor! This is basically identical to sendResetPasswordEmail.
+  Accounts.sendEmail(userId, email, 'enrollAccount');
+};
 
-  // Make sure the user exists, and email is in their addresses.
+/**
+ * @param {String} type Can be either resetPassword or enrollAccount depending on which function called it.
+ */
+Accounts.sendEmail = function (userId, email, type) {
+  // Make sure the user exists, and email is one of their addresses.
   var user = Meteor.users.findOne(userId);
   if (!user)
     throw new Error("Can't find user");
@@ -613,38 +571,45 @@ Accounts.sendEnrollmentEmail = function (userId, email) {
     email: email,
     when: when
   };
-  Meteor.users.update(userId, {$set: {
-    "services.password.reset": tokenRecord
-  }});
-
+  Meteor.users.update(userId, {
+    $set: {
+      "services.password.reset": tokenRecord
+    }
+  });
   // before passing to template, update user object with new token
   Meteor._ensure(user, 'services', 'password').reset = tokenRecord;
 
-  var enrollAccountUrl = Accounts.urls.enrollAccount(token);
+  var url;
+
+  if (type === 'resetPassword') {
+    url = Accounts.urls.resetPassword(token);
+  }
+
+  if (type === 'enrollAccount') {
+    url = Accounts.urls.enrollAccount(token);
+  }
 
   var options = {
     to: email,
-    from: Accounts.emailTemplates.enrollAccount.from
-      ? Accounts.emailTemplates.enrollAccount.from(user)
-      : Accounts.emailTemplates.from,
-    subject: Accounts.emailTemplates.enrollAccount.subject(user)
+    from: Accounts.emailTemplates[type].from ? Accounts.emailTemplates[type].from(user) : Accounts.emailTemplates.from,
+    subject: Accounts.emailTemplates[type].subject(user)
   };
 
-  if (typeof Accounts.emailTemplates.enrollAccount.text === 'function') {
+  if (typeof Accounts.emailTemplates[type].text === 'function') {
     options.text =
-      Accounts.emailTemplates.enrollAccount.text(user, enrollAccountUrl);
+      Accounts.emailTemplates[type].text(user, url);
   }
 
-  if (typeof Accounts.emailTemplates.enrollAccount.html === 'function')
+  if (typeof Accounts.emailTemplates[type].html === 'function')
     options.html =
-      Accounts.emailTemplates.enrollAccount.html(user, enrollAccountUrl);
+    Accounts.emailTemplates[type].html(user, url);
 
   if (typeof Accounts.emailTemplates.headers === 'object') {
     options.headers = Accounts.emailTemplates.headers;
   }
 
   Email.send(options);
-};
+}
 
 
 // Take token from sendResetPasswordEmail or sendEnrollmentEmail, change
