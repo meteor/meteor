@@ -310,6 +310,13 @@ if (Meteor.isClient) (function () {
       "username", [
     createUserStep,
     logoutStep,
+    // Create user error without callback should not throw error
+    function (test, expect) {
+      this.newUsername = 'adalovelace' + this.randomSuffix;
+      Accounts.createUser(
+        { username: this.newUsername, password: '' }
+        );
+    },
     // Attempting to create another user with a username that only differs in
     // case should fail
     function (test, expect) {
@@ -467,6 +474,14 @@ if (Meteor.isClient) (function () {
         test.isTrue(error);
         test.equal(Meteor.user().username, self.username);
       }));
+    },
+    // change password with bad old password, but no callback so no error
+    function (test, expect) {
+      Accounts.changePassword('wrong', 'doesntmatter');
+    },
+    // change password with blank new password, but no callback so no error
+    function (test, expect) {
+      Accounts.changePassword(this.password, '');
     },
     // change password with good old password.
     function (test, expect) {
@@ -1212,6 +1227,73 @@ if (Meteor.isClient) (function () {
       }));
     },
     logoutStep
+  ]);
+
+  testAsyncMulti("passwords - forgotPassword client return error when empty email", [
+    function (test, expect) {
+      // setup
+      this.email = '';
+    },
+    // forgotPassword called on client with blank email
+    function (test, expect) {
+      Accounts.forgotPassword(
+        { email: this.email }, expect(function (error) {
+          test.isTrue(error);
+      }));
+    },
+    // forgotPassword called on client with blank email, no callback so no error
+    function (test, expect) {
+      Accounts.forgotPassword({ email: this.email });
+    },
+  ]);
+
+  testAsyncMulti("passwords - verifyEmail client return error when empty token", [
+    function (test, expect) {
+      // setup
+      this.token = '';
+    },
+    // verifyEmail called on client with blank token
+    function (test, expect) {
+      Accounts.verifyEmail(
+        this.token, expect(function (error) {
+          test.isTrue(error);
+      }));
+    },
+    // verifyEmail called on client with blank token, no callback so no error
+    function (test, expect) {
+      Accounts.verifyEmail(this.token);
+    },
+  ]);
+
+  testAsyncMulti("passwords - resetPassword errors", [
+    function (test, expect) {
+      // setup
+      this.token = '';
+      this.newPassword = 'nonblankpassword';
+    },
+    // resetPassword called on client with blank token
+    function (test, expect) {
+      Accounts.resetPassword(
+        this.token, this.newPassword, expect(function (error) {
+          test.isTrue(error);
+      }));
+    },
+    function (test, expect) {
+      // setup
+      this.token = 'nonblank-token';
+      this.newPassword = '';
+    },
+    // resetPassword called on client with blank password
+    function (test, expect) {
+      Accounts.resetPassword(
+        this.token, this.newPassword, expect(function (error) {
+          test.isTrue(error);
+      }));
+    },
+    // resetPassword called on client with blank password, no callback so no error
+    function (test, expect) {
+      Accounts.resetPassword(this.token, this.newPassword);
+    },
   ]);
 }) ();
 
