@@ -78,7 +78,7 @@ Tinytest.add("spacebars-compiler - compiler errors", function (test) {
   isError("{{#each}}{{/each}}", "#each requires an argument");
   isError("{{#unless}}{{/unless}}", "#unless requires an argument");
 
-  isError("{{0 0}}", "Expected IDENTIFIER");
+  isError("{{0x6}}", "Expected IDENTIFIER");
 
   isError("{{> foo 0 0}}",
           "First argument must be a function");
