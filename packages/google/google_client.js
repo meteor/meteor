@@ -23,9 +23,9 @@ Google.requestCredential = function (options, credentialRequestCompleteCallback)
 
   var credentialToken = Random.secret();
 
-  // always need this to get user id from google.
-  var requiredScope = ['profile'];
-  var scope = ['email'];
+  // we need the email scope to get user id from google.
+  var requiredScope = ['email'];
+  var scope = [];
   if (options.requestPermissions)
     scope = options.requestPermissions;
   scope = _.union(scope, requiredScope);
