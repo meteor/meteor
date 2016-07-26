@@ -102,9 +102,13 @@ var ClassHandler = DiffingAttributeHandler.extend({
   parseValue: function (attrString) {
     var tokens = {};
 
-    _.each(attrString.split(' '), function(token) {
-      if (token)
-        tokens[token] = token;
+    var similarTokens = 0;
+    _.each(attrString.split(' '), function(token, i) {
+      if (token) {
+        // Duplicate class names (e.g: Semantic UI)
+        if (tokens[token] && i > 0) tokens[Object.keys(tokens)[(i-similarTokens++)-1]] += ' ' + token;
+        else tokens[token] = token;
+      }
     });
     return tokens;
   }
