@@ -170,15 +170,27 @@ npm install --production
 meteor build /path/to/build --architecture os.linux.x86_64
 ```
 
-To run this application, you need to provide Node.js 0.10.x and a MongoDB server. The current release of Meteor has been tested with Node 0.10.43. You can then run the application by invoking `node`, a ROOT_URL, and the MongoDB endpoint.
+This will provide you with a bundled application `.tar.gz` which you can extract and run without the `meteor` tool.  The environment you choose will need the correct version of Node.js and connectivity to a MongoDB server.
+
+Depending on the version of Meteor you are using, you should install the proper version of `node` using the appropriate installation process for your platform.
+* Node 4.4.7 for *Meteor 1.4.x*
+* Node 0.10.43 for *Meteor 1.3.x and earlier*
+
+> If you use a mis-matched version of Node when deploying your application, you will encounter errors!
+
+You can then run the application by invoking `node` with a `ROOT_URL`, and `MONGO_URL`.  These instructions are also available in the `README` file found in the root of the bundle you built above.
 
 ```bash
-cd my_directory
+cd my_build_bundle_directory
 (cd programs/server && npm install)
 MONGO_URL=mongodb://localhost:27017/myapp ROOT_URL=http://my-app.com node main.js
 ```
 
-However, unless you have a specific need to roll your own hosting environment, the other options here are definitely easier, and probably make for a better setup than doing everything from scratch. Operating a Meteor app in a way that it works correctly for everyone can be complex, and [Galaxy](#galaxy) handles a lot of the specifics like routing clients to the right containers and handling coordinated version updates for you.
+* `ROOT_URL` is the base URL for your Meteor project
+* `MONGO_URL` is a [Mongo connection string URI](https://docs.mongodb.com/manual/reference/connection-string/) supplied by the MongoDB provider.
+
+
+Unless you have a specific need to roll your own hosting environment, the other options here are definitely easier, and probably make for a better setup than doing everything from scratch. Operating a Meteor app in a way that it works correctly for everyone can be complex, and [Galaxy](#galaxy) handles a lot of the specifics like routing clients to the right containers and handling coordinated version updates for you.
 
 <h2 id="process">Deployment process</h2>
 
