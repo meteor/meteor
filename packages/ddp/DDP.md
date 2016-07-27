@@ -40,10 +40,6 @@ otherwise a new protocol version would be required.
       in order of preference)
  * `connected` (server->client)
    - `session`: string (an identifier for the DDP session)
- * `closed` (server->client)
-   - `code`: string (close code)
-   - `reason`: string (reason for closing)
-   - `remote`: boolean (is closed by remote)
  * `failed` (server->client)
    - `version`: string (a suggested protocol version to connect with)
 
