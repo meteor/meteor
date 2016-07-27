@@ -52,8 +52,10 @@ cluster:PRIMARY> db.addUser({user: "oplogger", pwd: "PasswordForOplogger", roles
 Then, when running your bundled Meteor app, set the `MONGO_OPLOG_URL` environment variable:
 
 ```
-MONGO_OPLOG_URL=mongodb://oplogger:PasswordForOplogger@mongo-server-1.example.com,mongo-server-2.example.com,mongo-server-3.example.com/local?authSource=admin
+MONGO_OPLOG_URL=mongodb://oplogger:PasswordForOplogger@mongo-server-1.example.com,mongo-server-2.example.com,mongo-server-3.example.com/local?authSource=admin&replicaSet=replicaSetName
 ```
+
+(You can find the name of your replica set by running `rs.config()._id` in the mongo console).
 
 (You may be used to running `db.createUser` (or `db.addUser`) inside the actual database that you want the new user to be able to access (in this case, `local`), instead of running it in `admin` and using the `authSource` flag to specify that you want to authenticate against `admin`.  However, this doesn't work with the special case of the `local` database. Mongo 2.6 specifically prevents you from creating users in the `local` database, and while Mongo 2.4 would let you do it, you would find that you need to run `db.addUser` separately against each database replica (and risking ending up with different passwords on each), because the `local` database is not itself replicated across servers.)
 

@@ -865,3 +865,20 @@ Users.findOne({}, { fields: { 'alterEgos.name': 1, _id: 0 } });
 
 See <a href="http://docs.mongodb.org/manual/tutorial/project-fields-from-query-results/#projection">
 the MongoDB docs</a> for details of the nested field rules and array behavior.
+
+<h2 id="mongo_url">Connecting to your database</h2>
+
+When developing your application, Meteor starts a local MongoDB instance and
+automatically connects to it. In production, you must specify a `MONGO_URL`
+environment variable pointing at your database in [the standard mongo connection
+string format](https://docs.mongodb.com/manual/reference/connection-string).
+
+> You can also set `MONGO_URL` in development if you want to connect to a
+different MongoDB instance.
+
+If you want to use oplog tailing for livequeries, you should also set
+`MONGO_OPLOG_URL` (generally you'll need a special user with oplog access, but
+the detail can differ depending on how you host your MongoDB. Read more [here](https://github.com/meteor/docs/blob/master/long-form/oplog-observe-driver.md)).
+
+> As of Meteor 1.4, you must ensure you set the `replicaSet` parameter on your
+`METEOR_OPLOG_URL`
