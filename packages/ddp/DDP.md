@@ -269,8 +269,6 @@ The error message contains the following fields:
  * `reason`: string describing the error
  * `offendingMessage`: if the original message parsed properly, it is included
    here
- * `source`: string describing the error source
- * `errormsg`: string describing the error
 
 ## Appendix: EJSON
 
