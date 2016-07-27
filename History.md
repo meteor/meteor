@@ -1,5 +1,13 @@
 ## v.NEXT
 
+* The `google` package now uses the `email` scope as a mandatory field instead
+  of the `profile` scope. The `profile` scope is still added by default if the
+  `requestPermissions` option is not specified to maintain backward
+  compatibility, but it is now possible to pass an empty array to
+  `requestPermissions` in order to only request the `email` scope, which
+  reduces the amount of permissions requested from the user in the Google
+  popup. [PR #6975](https://github.com/meteor/meteor/pull/6975)
+
 ## v1.4
 
 * Node has been upgraded to 4.4.7.
