@@ -40,6 +40,10 @@ otherwise a new protocol version would be required.
       in order of preference)
  * `connected` (server->client)
    - `session`: string (an identifier for the DDP session)
+ * `closed` (server->client)
+   - `code`: string (close code)
+   - `reason`: string (reason for closing)
+   - `remote`: boolean (is closed by remote)
  * `failed` (server->client)
    - `version`: string (a suggested protocol version to connect with)
 
@@ -242,7 +246,9 @@ error is an Object with the following fields:
 
  * `error`: string (previously a number. See appendix 3)
  * `reason`: optional string
+ * `message`: optional string
  * `details`: optional string
+ * `errorType`: optional string
 
 Such an Error is used to represent errors raised by the method or subscription,
 as well as an attempt to subscribe to an unknown subscription or call an unknown
@@ -263,6 +269,8 @@ The error message contains the following fields:
  * `reason`: string describing the error
  * `offendingMessage`: if the original message parsed properly, it is included
    here
+ * `source`: string describing the error source
+ * `errormsg`: string describing the error
 
 ## Appendix: EJSON
 
