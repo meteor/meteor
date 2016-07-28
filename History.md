@@ -1,5 +1,7 @@
 ## v.NEXT
 
+* Fix an issue where springboarding to older releases caused CPU load [Issue #7491](https://github.com/meteor/meteor/issues/7491)
+
 ## v1.4
 
 * Node has been upgraded to 4.4.7.
