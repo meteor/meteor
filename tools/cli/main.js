@@ -490,8 +490,14 @@ var springboard = function (rel, options) {
   process.exit(new Promise(function (resolve) {
     var child = require("child_process").spawn(executable, newArgv, {
       env: process.env,
-      stdio: 'inherit'
+      stdio: 'pipe'
     }).on('exit', resolve);
+
+    // We pipe here because for some (unknown) reason, passing stdio: 'inherit'
+    // above causes the process to max out
+    child.stdout.pipe(process.stdout);
+    child.stdin.pipe(process.stdin);
+    child.stderr.pipe(process.stderr);
   }).await());
 };
 
