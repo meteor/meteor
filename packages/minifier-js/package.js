@@ -4,11 +4,11 @@ Package.describe({
 });
 
 Npm.depends({
-  "uglify-js": "2.4.20",
+  "uglify-js": "https://github.com/mishoo/UglifyJS2/tarball/3f8fc3a316a60b67acf09b2b2cf887f0209c7d71"
 });
 
 Npm.strip({
-  "uglify-js": ["test/"],
+  "uglify-js": ["test/"]
 });
 
 Package.onUse(function (api) {

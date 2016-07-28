@@ -1,5 +1,7 @@
 ## v.NEXT
 
+* The `minifier-js` package now uses the "harmony" branch of `uglify-js`.
+
 ## v1.4
 
 * Node has been upgraded to 4.4.7.
