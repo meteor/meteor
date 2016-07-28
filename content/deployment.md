@@ -154,9 +154,18 @@ If you are using Galaxy (or need a production quality, managed MongoDB for one o
 
 <h3 id="mup">Meteor Up</h3>
 
-[Meteor Up X](https://github.com/arunoda/meteor-up/tree/mupx), often referred to as "mupx", is an open source tool that can be used to deploy Meteor application to any online server over SSH. Mup handles some of the essential deployment requirements, but you will still need to do a lot of work to get your load balancing and version updates working smoothly - it's essentially a way to automate the manual steps of using `meteor build` and putting that bundle on your server.
+Meteor Up, often referred to as "mupx" or "mup", is a third-party open-source tool that can be used to deploy Meteor application to any online server over SSH. It handles some of the essential deployment requirements, but you will still need to do a lot of work to get your load balancing and version updates working smoothly.  It's essentially a way to automate the manual steps of using `meteor build` and putting that bundle on your server.
 
-You can obtain a server running Ubuntu or Debian from many generic hosting providers. Mup can SSH into your server with the keys you provide in the config. You can also [watch this video](https://www.youtube.com/watch?v=WLGdXtZMmiI) for a more complete walkthrough on how to do it.
+You can obtain a server running Ubuntu or Debian from many generic hosting providers and Meteor Up can SSH into your server with the keys you provide in the config. You can also [watch this video](https://www.youtube.com/watch?v=WLGdXtZMmiI) for a more complete walkthrough on how to do it.
+
+Meteor Up has multiple projects so select what is best for your project:
+* Original [Meteor Up](https://github.com/arunoda/meteor-up) (not generally recommended any longer)
+* The [`mupx`](https://github.com/arunoda/meteor-up/tree/mupx) branch (best for pre-Meteor 1.4)
+* The [`kadirahq/mup`](https://github.com/kadirahq/meteor-up) fork _(best for Meteor 1.4 or higher)_
+
+> Currently, using Meteor Up with Meteor 1.4 requires `kadirahq/mup` (still in development) and a special docker image with the correct Node version.
+
+For further assistance, consult the documentation for the option you select.
 
 <h3 id="custom-deployment">Custom deployment</h3>
 
