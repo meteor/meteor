@@ -603,15 +603,21 @@ main.registerCommand({
 
   // Download the source to the package.
   var sourceTarball = buildmessage.enterJob("downloading package source", function () {
-    return httpHelpers.getUrl({
+    return httpHelpers.getUrlWithResuming({
       url: pkgVersion.source.url,
       encoding: null
     });
   });
 
+  if (buildmessage.hasMessages()) {
+    return 1;
+  }
+
   var sourcePath = files.mkdtemp('package-source');
-  // XXX check tarballHash!
-  files.extractTarGz(sourceTarball, sourcePath);
+  buildmessage.enterJob("extracting package source", () => {
+    // XXX check tarballHash!
+    files.extractTarGz(sourceTarball, sourcePath);
+  });
 
   // XXX Factor out with packageClient.bundleSource so that we don't
   // have knowledge of the tarball structure in two places.
