@@ -55,8 +55,9 @@ function spawnMongod(mongodPath, port, dbPath, replSetName) {
     '--replSet', replSetName
   ];
 
-  // Use mmapv1 on windows, as our binary doesn't support WT
-  if (process.platform === "win32") {
+  // Use mmapv1 on 32bit platforms, as our binary doesn't support WT
+  if (process.platform === "win32"
+      || (process.platform === "linux" && process.arch === "ia32")) {
     args.push('--storageEngine', 'mmapv1', '--smallfiles');
   } else {
     // The WT journal seems to be at least 300MB, which is just too much

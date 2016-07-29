@@ -1,5 +1,11 @@
 ## v.NEXT
 
+## v1.4.0.1
+
+* Fix issue with the 1.4 tool springboarding to older releases (see [Issue #7491](https://github.com/meteor/meteor/issues/7491))
+
+* Fix issue with running in development on Linux 32bit [Issue #7511](https://github.com/meteor/meteor/issues/7511)
+
 ## v1.4
 
 * Node has been upgraded to 4.4.7.
