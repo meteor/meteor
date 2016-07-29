@@ -1,5 +1,11 @@
 ## v.NEXT
 
+## v1.4.0.1
+
+* Fix issue with the 1.4 tool springboarding to older releases (see [Issue #7491](https://github.com/meteor/meteor/issues/7491))
+
+* Fix issue with running in development on Linux 32bit [Issue #7511](https://github.com/meteor/meteor/issues/7511)
+
 ## v1.4
 
 * Node has been upgraded to 4.4.7.
@@ -28,6 +34,10 @@
   The new version of the Mongo driver has been tested with MongoDB versions from
   2.6 up. Mongo 2.4 has now reached end-of-life
   (https://www.mongodb.com/support-policy), and is no longer supported.
+
+  If you are setting `MONGO_OPLOG_URL`, especially in production, ensure you are
+  passing in the `replicaSet` argument (see [#7450]
+    (https://github.com/meteor/meteor/issues/7450))
 
 * Custom Mongo options can now be specified using the
   `Mongo.setConnectionOptions(options)` API.

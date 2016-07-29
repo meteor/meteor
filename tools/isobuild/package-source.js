@@ -1361,21 +1361,16 @@ _.extend(PackageSource.prototype, {
 
   _inferFileOptions(relPath, {arch, isApp}) {
     const fileOptions = {};
-    const isAnyTest = global.testCommandMetadata &&
-      (global.testCommandMetadata.isTest ||
-       global.testCommandMetadata.isAppTest);
+    const isTest = global.testCommandMetadata
+      && global.testCommandMetadata.isTest;
+    const isAppTest = global.testCommandMetadata
+      && global.testCommandMetadata.isAppTest;
+    const isTestFile = (isTest || isAppTest) && isTestFilePath(relPath);
 
-    if (isAnyTest) {
-      if (isTestFilePath(relPath)) {
-        // When running tests, test files should not be loaded lazily.
-        return fileOptions;
-      }
-
-      // If running in test mode (`meteor test`), all files other than
-      // test files should be loaded lazily.
-      if (global.testCommandMetadata.isTest) {
-        fileOptions.lazy = true;
-      }
+    // If running in test mode (`meteor test`), all files other than
+    // test files should be loaded lazily.
+    if (isTest && !isTestFile) {
+      fileOptions.lazy = true;
     }
 
     const dirs = files.pathDirname(relPath).split(files.pathSep);
@@ -1392,7 +1387,8 @@ _.extend(PackageSource.prototype, {
         return fileOptions;
       }
 
-      if (isApp && dir === "imports") {
+      // Files in `imports/` should be lazily loaded *apart* from tests
+      if (isApp && dir === "imports" && !isTestFile) {
         fileOptions.lazy = true;
       }
 
