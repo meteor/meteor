@@ -484,18 +484,21 @@ var springboard = function (rel, options) {
   }
 
   if (process.platform === 'win32') {
-    process.exit(new Promise(function (resolve) {
-      var batPath = files.convertToOSPath(executable + ".bat");
-      var child = require("child_process").spawn(batPath, newArgv, {
-        env: process.env,
-        stdio: 'inherit'
-      }).on('exit', resolve);
-    }).await());
+    executable = files.convertToOSPath(executable + ".bat");
   }
 
-  // Now exec; we're not coming back.
-  require('kexec')(executable, newArgv);
-  throw Error('exec failed?');
+  process.exit(new Promise(function (resolve) {
+    var child = require("child_process").spawn(executable, newArgv, {
+      env: process.env,
+      stdio: 'pipe'
+    }).on('exit', resolve);
+
+    // We pipe here because for some (unknown) reason, passing stdio: 'inherit'
+    // above causes the process to max out
+    child.stdout.pipe(process.stdout);
+    child.stdin.pipe(process.stdin);
+    child.stderr.pipe(process.stderr);
+  }).await());
 };
 
 // Springboard to a pre-0.9.0 release.
