@@ -61,21 +61,28 @@ _.extend(Module.prototype, {
   },
 
 
+  // Calculate max line length over multiple files
   maxLineLength: function (ignoreOver) {
-    var self = this;
+    var maxInFile = 0;
+    var file, i = 0;
+    var lines, line, j, m;
+    for ( ; i < this.files.length ; i++) {
+      file = this.files[i];
+      m = 0;
 
-    var maxInFile = [];
-    _.each(self.files, function (file) {
-      var m = 0;
-      _.each(file.source.split('\n'), function (line) {
+      lines = this.sourceLines || file.source.split('\n');
+      for (j = 0; j < lines.length ; j++) {
+        line = lines[j];
         if (line.length <= ignoreOver && line.length > m) {
           m = line.length;
         }
-      });
-      maxInFile.push(m);
-    });
+      }
 
-    return _.max(maxInFile);
+      if (m > maxInFile) {
+        maxInFile = m;
+      }
+    }
+    return maxInFile;
   },
 
   // Figure out which vars need to be specifically put in the module
@@ -93,13 +100,12 @@ _.extend(Module.prototype, {
 
     // Find all global references in any files
     var assignedVariables = [];
-    _.each(self.files, function (file) {
-      assignedVariables = assignedVariables.concat(
-        file.computeAssignedVariables());
-    });
-    assignedVariables = _.uniq(assignedVariables);
-
-    return assignedVariables;
+    var i = 0, len = self.files.length, file;
+    for (; i < len ; i++) {
+      file = self.files[i];
+      assignedVariables.push.apply(assignedVariables, file.computeAssignedVariables());
+    }
+    return _.uniq(assignedVariables);
   }),
 
   // Output is a list of objects with keys 'source', 'servePath', 'sourceMap',
@@ -353,23 +359,23 @@ _.extend(Module.prototype, {
 var buildSymbolTree = function (symbolMap) {
   var ret = {};
 
-  _.each(symbolMap, function (value, symbol) {
+  for (var symbol in symbolMap) {
+    var value = symbolMap[symbol];
     var parts = symbol.split('.');
     var lastPart = parts.pop();
 
     var walk = ret;
-    _.each(parts, function (part) {
-      if (! (part in walk)) {
+    var i = 0, part;
+    for (; i < parts.length ; i++) {
+      part = parts[i];
+      if (! (part in walk))
         walk[part] = {};
-      }
       walk = walk[part];
-    });
-
+    }
     if (value) {
       walk[lastPart] = value;
     }
-  });
-
+  }
   return ret;
 };
 
@@ -405,6 +411,7 @@ var File = function (inputFile, module) {
 
   // source code for this file (a string)
   self.source = inputFile.data.toString('utf8');
+  self.sourceLines = self.source.split(/\r?\n/);
 
   // hash of source (precalculated for *.js files, calculated here for files
   // produced by plugins)
@@ -627,7 +634,7 @@ _.extend(File.prototype, {
         file: self.servePath
       });
 
-      lines = self.source.split(/\r?\n/);
+      lines = self.sourceLines || self.source.split(/\r?\n/);
 
       function addIdentityMapping(pos) {
         smg.addMapping({
@@ -637,7 +644,8 @@ _.extend(File.prototype, {
         });
       }
 
-      for (var line = 1; line <= lines.length; ++line) {
+      var lineCount = lines.length;
+      for (var line = 1; line <= lineCount; ++line) {
         addIdentityMapping({ line, column: 0 });
       }
 
@@ -696,9 +704,8 @@ _.extend(File.prototype, {
     var pathNoSlash = self.servePath.replace(/^\//, "");
 
     if (! self.bare) {
-      var closureHeader = self._getClosureHeader();
       chunks.push(
-        closureHeader,
+        self._getClosureHeader(),
         preserveLineNumbers ? "" : "\n\n"
       );
     }
@@ -844,19 +851,17 @@ export var prelink = Profile("linker.prelink", function (options) {
     noLineNumbers: options.noLineNumbers
   });
 
-  _.each(options.inputFiles, function (inputFile) {
-    module.addFile(inputFile);
-  });
+  var i = 0, inputFile;
+  for ( ; i < options.inputFiles.length ; i++) {
+    module.addFile(options.inputFiles[i]);
+  }
 
   // Do static analysis to compute module-scoped variables. Error recovery from
   // the static analysis mutates the sources, so this has to be done before
   // concatenation.
-  var assignedVariables = module.computeAssignedVariables();
-  var files = module.getPrelinkedFiles();
-
   return {
-    files: files,
-    assignedVariables: assignedVariables
+    files: module.getPrelinkedFiles(),
+    assignedVariables: module.computeAssignedVariables()
   };
 });
 
@@ -901,19 +906,19 @@ var getImportCode = function (imports, header, omitvar) {
 
   // Imports
   var scratch = {};
-  _.each(imports, function (name, symbol) {
-    scratch[symbol] = packageDot(name) + "." + symbol;
-  });
+  for (var symbol in imports) {
+    scratch[symbol] = packageDot(imports[symbol]) + "." + symbol;
+  }
   var tree = buildSymbolTree(scratch);
 
   // Generate output
-  var buf = header;
-  _.each(tree, function (node, key) {
-    buf += (omitvar ? "" : "var " ) +
+  var buf = header, node;
+  for (var key in tree) {
+    node = tree[key];
+    buf += (omitvar ? "" : "var ") +
       key + " = " + writeSymbolTree(node) + ";\n";
-  });
+  }
   buf += "\n";
-
   return buf;
 };
 
@@ -935,7 +940,12 @@ var getFooter = function ({
       chunks.push(pkgInit, ";\n");
     } else {
       const scratch = {};
-      _.each(exported, symbol => scratch[symbol] = symbol);
+      // _.each(exported, symbol => scratch[symbol] = symbol);
+      for (var i = 0 ; i < exported.length ; i++) {
+        var symbol = exported[i];
+        scratch[symbol] = symbol;
+      }
+
       const symbolTree = writeSymbolTree(buildSymbolTree(scratch));
       chunks.push("(function (pkg, symbols) {\n",
                   "  for (var s in symbols)\n",
@@ -1007,7 +1017,10 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
     noLineNumbers
   });
 
-  _.each(inputFiles, file => module.addFile(file));
+  var i = 0, inputFile, _len;
+  for (_len = inputFiles.length ; i < _len ; i++) {
+    module.addFile(inputFiles[i]);
+  }
 
   var prelinkedFiles = module.getPrelinkedFiles();
 
@@ -1057,27 +1070,27 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
     name
   });
 
+  if (includeSourceMapInstructions) {
+    header = SOURCE_MAP_INSTRUCTIONS_COMMENT + "\n\n" + header;
+  }
+
+  // Bias the source map by the length of the header without
+  // (fully) parsing and re-serializing it. (We used to do this
+  // with the source-map library, but it was incredibly slow,
+  // accounting for over half of bundling time.) It would be nice
+  // if we could use "index maps" for this (the 'sections' key),
+  // as that would let us avoid even JSON-parsing the source map,
+  // but that doesn't seem to be supported by Firefox yet.
+  if (header.charAt(header.length - 1) !== "\n") {
+    // make sure it's a whole number of lines
+    header += "\n";
+  }
+  var headerLines = header.split('\n').length - 1;
+  var headerLinesJoined = (new Array(headerLines + 1).join(';'));
   return _.map(prelinkedFiles, function (file) {
     if (file.sourceMap) {
-      if (includeSourceMapInstructions) {
-        header = SOURCE_MAP_INSTRUCTIONS_COMMENT + "\n\n" + header;
-      }
-
-      // Bias the source map by the length of the header without
-      // (fully) parsing and re-serializing it. (We used to do this
-      // with the source-map library, but it was incredibly slow,
-      // accounting for over half of bundling time.) It would be nice
-      // if we could use "index maps" for this (the 'sections' key),
-      // as that would let us avoid even JSON-parsing the source map,
-      // but that doesn't seem to be supported by Firefox yet.
-      if (header.charAt(header.length - 1) !== "\n") {
-        // make sure it's a whole number of lines
-        header += "\n";
-      }
-      var headerLines = header.split('\n').length - 1;
       var sourceMap = file.sourceMap;
-      sourceMap.mappings = (new Array(headerLines + 1).join(';')) +
-        sourceMap.mappings;
+      sourceMap.mappings = headerLinesJoined + sourceMap.mappings;
       return {
         source: header + file.source + footer,
         sourcePath: file.sourcePath,

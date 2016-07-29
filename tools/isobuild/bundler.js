@@ -173,11 +173,13 @@ import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
 
 // files to ignore when bundling. node has no globs, so use regexps
 exports.ignoreFiles = [
-    /~$/, /^\.#/, /^#.*#$/,  // emacs swap files
-    /^\..*\.sw.$/,  // vim swap files
-    /^\.DS_Store\/?$/, /^ehthumbs\.db$/, /^Icon.$/, /^Thumbs\.db$/,
-    /^\.meteor\/$/, /* avoids scanning N^2 files when bundling all packages */
-    /^\.git\/$/ /* often has too many files to watch */
+    /~$/, /^\.#/,
+    /^(\.meteor\/|\.git\/|Thumbs\.db|\.DS_Store\/?|Icon.|ehthumbs\.db|\..*\.sw.|#.*#)$/, 
+      /* .meteor => avoids scanning N^2 files when bundling all packages
+        .git => often has too many files to watch 
+        ....sw(.) => vim swap files
+        #.*# => emacs swap files
+      */
 ];
 
 function rejectBadPath(p) {
@@ -556,13 +558,12 @@ class File {
 
     // XXX replacing colons with underscores as colon is hard to escape later
     // on different targets and generally is not a good separator for web.
-    url = url.replace(/:/g, '_');
-    this.url = url;
+    this.url = url.replace(/:/g, '_');
   }
 
   setTargetPathFromRelPath(relPath) {
     // XXX hack
-    if (relPath.match(/^packages\//) || relPath.match(/^assets\//)) {
+    if (relPath.match(/^(packages|assets)\//)) {
       this.targetPath = relPath;
     } else {
       this.targetPath = files.pathJoin('app', relPath);
