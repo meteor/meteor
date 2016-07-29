@@ -227,7 +227,7 @@ the guide about breaking changes here:`,
     packagesFile.writeIfModified();
   },
 
-  "1.3.5-remove-old-dev-bundle-link": function (projectContext) {
+  "1.4.0-remove-old-dev-bundle-link": function (projectContext) {
     const oldDevBundleLink =
       files.pathJoin(projectContext.projectDir, ".meteor", "dev_bundle");
     files.rm_recursive(oldDevBundleLink);

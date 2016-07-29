@@ -1,8 +1,56 @@
 ## v.NEXT
 
+## v1.4.0.1
+
+* Fix issue with the 1.4 tool springboarding to older releases (see [Issue #7491](https://github.com/meteor/meteor/issues/7491))
+
+* Fix issue with running in development on Linux 32bit [Issue #7511](https://github.com/meteor/meteor/issues/7511)
+
+## v1.4
+
+* Node has been upgraded to 4.4.7.
+
+* The `meteor-babel` npm package has been upgraded to 0.11.7.
+
+* The `reify` npm package has been upgraded to 0.3.6.
+
+* The `bcrypt` npm package has been upgraded to 0.8.7.
+
+* Nested `import` declarations are now enabled for package code as well as
+  application code. 699cf1f38e9b2a074169515d23983f74148c7223
+
+* Meteor has been upgraded to support Mongo 3.2 by default (the bundled version
+  used by `meteor run` has been upgraded). Internally it now uses the 2.2.4
+  version of the `mongodb` npm driver, and has been tested against at Mongo 3.2
+  server. [Issue #6957](https://github.com/meteor/meteor/issues/6957)
+
+  Mongo 3.2 defaults to the new WiredTiger storage engine. You can update your
+  database following the instructions here:
+  https://docs.mongodb.com/v3.0/release-notes/3.0-upgrade/.
+  In development, you can also just use `meteor reset` to remove your old
+  database, and Meteor will create a new WiredTiger database for you. The Mongo
+  driver will continue to work with the old MMAPv1 storage engine however.
+
+  The new version of the Mongo driver has been tested with MongoDB versions from
+  2.6 up. Mongo 2.4 has now reached end-of-life
+  (https://www.mongodb.com/support-policy), and is no longer supported.
+
+  If you are setting `MONGO_OPLOG_URL`, especially in production, ensure you are
+  passing in the `replicaSet` argument (see [#7450]
+    (https://github.com/meteor/meteor/issues/7450))
+
+* Custom Mongo options can now be specified using the
+  `Mongo.setConnectionOptions(options)` API.
+  [#7277](https://github.com/meteor/meteor/pull/7277)
+
+* On the server, cursor.count() now takes a single argument `applySkipLimit`
+  (see the corresponding [Mongo documentation]
+    (http://mongodb.github.io/node-mongodb-native/2.1/api/Cursor.html#count))
+
 * Fix for regression caused by #5837 which incorrectly rewrote
-  network-path references (i.e. //domain.com/image.gif) in CSS URLs
+  network-path references (e.g. `//domain.com/image.gif`) in CSS URLs.
   [#7416](https://github.com/meteor/meteor/issues/7416)
+* Added Angular2 boilerplate example [#7364](https://github.com/meteor/meteor/pull/7363)
 
 ## v1.3.5.1
 

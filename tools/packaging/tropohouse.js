@@ -293,27 +293,6 @@ _.extend(exports.Tropohouse.prototype, {
     });
   },
 
-  // Contacts the package server, downloads and extracts a tarball for a given
-  // buildRecord into a temporary directory, whose path is returned.
-  //
-  // XXX: Error handling.
-  _downloadBuildToTempDir: function (versionInfo, buildRecord) {
-    var url = buildRecord.build.url;
-
-    // XXX: We use one progress for download & untar; this isn't ideal:
-    // it relies on extractTarGz being fast and not reporting any progress.
-    // Really, we should create two subtasks
-    // (and, we should stream the download to the tar extractor)
-    var packageTarball = httpHelpers.getUrlWithResuming({
-      url: url,
-      encoding: null,
-      progress: buildmessage.getCurrentProgressTracker(),
-      wait: false
-    });
-
-    return exports._extractAndConvert(packageTarball);
-  },
-
   // Given a package name and version, returns the architectures for
   // which we have downloaded this package
   //
@@ -487,36 +466,65 @@ _.extend(exports.Tropohouse.prototype, {
         // XXX how does concurrency work here?  we could just get errors if we
         // try to rename over the other thing?  but that's the same as in
         // warehouse?
-        _.each(buildsToDownload, function (build) {
-          buildmessage.enterJob({
+        _.each(buildsToDownload, ({ build: { url }}) => {
+          const packageTarball = buildmessage.enterJob({
             title: "downloading " + packageName + "@" + version + "..."
-          }, function() {
+          }, () => {
             try {
-              var buildTempDir = self._downloadBuildToTempDir(
-                { packageName: packageName, version: version }, build);
+              // Override the download domain name and protocol if METEOR_WAREHOUSE_URLBASE
+              // provided.
+              if (process.env.METEOR_WAREHOUSE_URLBASE) {
+                url = url.replace(
+                  /^[a-zA-Z]+:\/\/[^\/]+/,
+                  process.env.METEOR_WAREHOUSE_URLBASE
+                );
+              }
+
+              return httpHelpers.getUrlWithResuming({
+                url: url,
+                encoding: null,
+                progress: buildmessage.getCurrentProgressTracker(),
+                wait: false
+              });
+
             } catch (e) {
-              if (!(e instanceof files.OfflineError)) {
+              if (! (e instanceof files.OfflineError)) {
                 throw e;
               }
               buildmessage.error(e.error.message);
             }
+          });
+
+          if (buildmessage.jobHasMessages()) {
+            return;
+          }
+
+          buildmessage.enterJob({
+            title: "extracting " + packageName + "@" + version + "..."
+          }, () => {
+            const buildTempDir = exports._extractAndConvert(packageTarball);
             buildInputDirs.push(buildTempDir);
             buildTempDirs.push(buildTempDir);
           });
         });
+
         if (buildmessage.jobHasMessages()) {
           return;
         }
 
-        // We need to turn our builds into a single isopack.
-        var isopack = new Isopack();
-        _.each(buildInputDirs, function (buildTempDir, i) {
-          isopack._loadUnibuildsFromPath(packageName, buildTempDir, {
-            firstIsopack: i === 0,
+        buildmessage.enterJob({
+          title: "loading " + packageName + "@" + version + "..."
+        }, () => {
+          // We need to turn our builds into a single isopack.
+          var isopack = new Isopack();
+          _.each(buildInputDirs, (buildTempDir, i) => {
+            isopack._loadUnibuildsFromPath(packageName, buildTempDir, {
+              firstIsopack: i === 0,
+            });
           });
-        });
 
-        self._saveIsopack(isopack, packageName, version);
+          self._saveIsopack(isopack, packageName, version);
+        });
 
         // Delete temp directories now (asynchronously).
         _.each(buildTempDirs, function (buildTempDir) {

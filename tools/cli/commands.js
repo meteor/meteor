@@ -325,6 +325,14 @@ function doRunCommand(options) {
     appPort = appPortMatch[2] ? parseInt(appPortMatch[2]) : null;
   }
 
+  if (options.production) {
+    Console.warn(
+      "Warning: The --production flag should only be used to simulate production " +
+      "bundling for testing purposes. Use meteor build to create a bundle for " + 
+      "production deployment. See: https://guide.meteor.com/deployment.html"
+    );
+  }
+
   if (options['raw-logs']) {
     runLog.setRawLogs(true);
   }
@@ -701,6 +709,15 @@ main.registerCommand({
       release.current.isCheckout() ? "none" : release.current.name);
     if (buildmessage.jobHasMessages()) {
       return;
+    }
+
+    // Also, write package version constraints from the current release
+    // If we are on a checkout, we don't need to do this as running from
+    // checkout still pins all package versions and if the user updates
+    // to a real release, the packages file will subsequently get updated
+    if (!release.current.isCheckout()) {
+      projectContext.projectConstraintsFile
+        .updateReleaseConstraints(release.current._manifest);
     }
 
     // Any upgrader that is in this version of Meteor doesn't need to be run on

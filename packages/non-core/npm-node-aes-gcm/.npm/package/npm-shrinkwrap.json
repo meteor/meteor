@@ -1,14 +1,21 @@
 {
   "dependencies": {
-    "node-aes-gcm": {
-      "version": "0.1.5",
-      "resolved": "https://registry.npmjs.org/node-aes-gcm/-/node-aes-gcm-0.1.5.tgz",
-      "from": "node-aes-gcm@0.1.5",
+    "meteor-node-aes-gcm": {
+      "version": "0.1.7",
+      "resolved": "https://registry.npmjs.org/meteor-node-aes-gcm/-/meteor-node-aes-gcm-0.1.7.tgz",
+      "from": "meteor-node-aes-gcm@0.1.7",
       "dependencies": {
-        "nan": {
-          "version": "1.9.0",
-          "resolved": "https://registry.npmjs.org/nan/-/nan-1.9.0.tgz",
-          "from": "nan@>=1.7.0 <2.0.0"
+        "node-aes-gcm": {
+          "version": "0.1.7",
+          "resolved": "https://registry.npmjs.org/node-aes-gcm/-/node-aes-gcm-0.1.7.tgz",
+          "from": "node-aes-gcm@0.1.7",
+          "dependencies": {
+            "nan": {
+              "version": "2.3.3",
+              "resolved": "https://registry.npmjs.org/nan/-/nan-2.3.3.tgz",
+              "from": "nan@>=2.3.0 <2.4.0"
+            }
+          }
         }
       }
     }

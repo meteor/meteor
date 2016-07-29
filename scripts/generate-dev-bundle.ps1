@@ -1,8 +1,8 @@
 # determine the platform
 # use 32bit by default
 $PLATFORM = "windows_x86"
-$MONGO_VERSION = "2.6.7"
-$NODE_VERSION = "0.10.46"
+$MONGO_VERSION = "3.2.6"
+$NODE_VERSION = "4.4.7"
 $NPM_VERSION = "3.10.5"
 $PYTHON_VERSION = "2.7.10" # For node-gyp
 
@@ -35,9 +35,19 @@ cd bin
 $webclient = New-Object System.Net.WebClient
 $shell = New-Object -com shell.application
 
+mkdir "$DIR\7z"
+cd "$DIR\7z"
+$webclient.DownloadFile("http://www.7-zip.org/a/7z1602.msi", "$DIR\7z\7z.msi")
+$webclient.DownloadFile("http://www.7-zip.org/a/7z1602-extra.7z", "$DIR\7z\extra.7z")
+msiexec /i 7z.msi /quiet /qn /norestart
+ping -n 4 127.0.0.1 | out-null
+& "C:\Program Files*\7-Zip\7z.exe" x extra.7z
+mv 7za.exe "$DIR\bin\7z.exe"
+cd "$DIR\bin"
+
 # download node
 # same node on 32bit vs 64bit?
-$node_link = "http://nodejs.org/dist/v${NODE_VERSION}/node.exe"
+$node_link = "http://nodejs.org/dist/v${NODE_VERSION}/win-x86/node.exe"
 $webclient.DownloadFile($node_link, "$DIR\bin\node.exe")
 
 # On Windows we provide a reliable version of python.exe for use by
@@ -63,9 +73,14 @@ foreach($item in $zip.items()) {
 }
 
 rm -Recurse -Force $npm_zip
+rm -Recurse -Force "$DIR\7z"
 
 # add bin to the front of the path so we can use our own node for building
 $env:PATH = "${DIR}\bin;${env:PATH}"
+
+# Make sure node-gyp knows how to find its build tools.
+$env:PYTHON = "${DIR}\python\python.exe"
+$env:GYP_MSVS_VERSION = "2015"
 
 # Install the version of npm that we're actually going to expose from the
 # dev bundle. Note that we use npm@1.4.12 to install npm@${NPM_VERSION}.
@@ -145,8 +160,8 @@ cd "$DIR\.."
 # rename the folder with the devbundle
 cmd /c rename "$DIR" "dev_bundle_${PLATFORM}_${BUNDLE_VERSION}"
 
-cmd /c 7z.exe a -ttar dev_bundle.tar "dev_bundle_${PLATFORM}_${BUNDLE_VERSION}"
-cmd /c 7z.exe a -tgzip "${CHECKOUT_DIR}\dev_bundle_${PLATFORM}_${BUNDLE_VERSION}.tar.gz" dev_bundle.tar
+& "C:\Program Files*\7-zip\7z.exe" a -ttar dev_bundle.tar "dev_bundle_${PLATFORM}_${BUNDLE_VERSION}"
+& "C:\Program Files*\7-zip\7z.exe" a -tgzip "${CHECKOUT_DIR}\dev_bundle_${PLATFORM}_${BUNDLE_VERSION}.tar.gz" dev_bundle.tar
 del dev_bundle.tar
 cmd /c rmdir "dev_bundle_${PLATFORM}_${BUNDLE_VERSION}" /s /q
 
