@@ -29,6 +29,10 @@
   2.6 up. Mongo 2.4 has now reached end-of-life
   (https://www.mongodb.com/support-policy), and is no longer supported.
 
+  If you are setting `MONGO_OPLOG_URL`, especially in production, ensure you are
+  passing in the `replicaSet` argument (see [#7450]
+    (https://github.com/meteor/meteor/issues/7450))
+
 * Custom Mongo options can now be specified using the
   `Mongo.setConnectionOptions(options)` API.
   [#7277](https://github.com/meteor/meteor/pull/7277)

@@ -299,6 +299,12 @@ _.extend(exports.Tropohouse.prototype, {
   // XXX: Error handling.
   _downloadBuildToTempDir: function (versionInfo, buildRecord) {
     var url = buildRecord.build.url;
+    
+    // Override the download domain name and protocol if METEOR_WAREHOUSE_URLBASE
+    // provided.
+    if (process.env.METEOR_WAREHOUSE_URLBASE) {
+      url = url.replace(/^[a-zA-Z]+:\/\/[^\/]+/, process.env.METEOR_WAREHOUSE_URLBASE);
+    }
 
     // XXX: We use one progress for download & untar; this isn't ideal:
     // it relies on extractTarGz being fast and not reporting any progress.
