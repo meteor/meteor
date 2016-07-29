@@ -57,11 +57,11 @@ There are some other considerations that you should make before you deploy your 
 
 <h3 id="domain-name">Domain name</h3>
 
-What URL will users use to access your site? You'll probably need to register a domain name with a domain registrar, and setup DNS entries to point to the site (this will depend on how you deploy, see below). If you deploy to Galaxy, you can use a `x.meteorapp.com` domain while you are testing the app.
+What URL will users use to access your site? You'll probably need to register a domain name with a domain registrar, and setup DNS entries to point to the site (this will depend on how you deploy, see below). If you deploy to Galaxy, you can use a `x.meteorapp.com` or `x.eu.meteorapp.com` domain while you are testing the app. [Learn more about Galaxy domains »](http://galaxy-guide.meteor.com/custom-domains.html#meteorapp-subdomain)
 
 <h3 id="ssl">SSL Certificate</h3>
 
-It's always a good idea to use SSL for Meteor applications (see the [Security Article](security.html#ssl) to find out why). Once you have a registered domain name, you'll need to generate an SSL certificate with a certificate authority for your domain.
+It's always a good idea to use SSL for Meteor applications (see the [Security Article](security.html#ssl) to find out why). Once you have a registered domain name, you'll need to generate an SSL certificate with a certificate authority for your domain. If you deploy to Galaxy, you can [generate a free SSL certificate with a single click](http://galaxy-guide.meteor.com/encryption.html#lets-encrypt)(courtesy of Let's Encrypt!).
 
 <h3 id="cdn">CDN</h3>
 
