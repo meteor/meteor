@@ -630,11 +630,11 @@ if (Meteor.isClient) (function () {
           test.isTrue(error);
       }));
     },
-    // resetPassword called on client with blank password, no callback so no error
+    // resetPassword called on client with blank password and no callback.
     function (test, expect) {
       test.throws(function(){
         Accounts.resetPassword(this.token, this.newPassword);
-      }, /Password may not be empty/);
+      }, /Match error: Expected string, got undefined/);
     },
   ]);
 
