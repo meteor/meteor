@@ -410,12 +410,12 @@ if (Meteor.isClient) (function () {
       "email", [
     createUserStep,
     logoutStep,
-    // Create user error without callback should not throw error
+    // Create user error without callback should throw error
     function (test, expect) {
       this.newUsername = 'adalovelace' + this.randomSuffix;
-      Accounts.createUser(
-        { username: this.newUsername, password: '' }
-        );
+      test.throws(function(){
+        Accounts.createUser({ username: this.newUsername, password: '' });
+      }, /Password may not be empty/);
     },
     // Attempting to create another user with an email that only differs in
     // case should fail
@@ -475,13 +475,17 @@ if (Meteor.isClient) (function () {
         test.equal(Meteor.user().username, self.username);
       }));
     },
-    // change password with bad old password, but no callback so no error
+    // change password with bad old password
     function (test, expect) {
-      Accounts.changePassword('wrong', 'doesntmatter');
+      test.throws(function(){
+        Accounts.changePassword('wrong', 'doesntmatter');
+      }, /Incorrect password/);
     },
-    // change password with blank new password, but no callback so no error
+    // change password with blank new password
     function (test, expect) {
-      Accounts.changePassword(this.password, '');
+      test.throws(function(){
+        Accounts.changePassword(this.password, '');
+      }, /Password may not be empty/);
     },
     // change password with good old password.
     function (test, expect) {
@@ -573,9 +577,11 @@ if (Meteor.isClient) (function () {
           test.isTrue(error);
       }));
     },
-    // forgotPassword called on client with blank email, no callback so no error
+    // forgotPassword called on client with blank email and no callback.
     function (test, expect) {
-      Accounts.forgotPassword({ email: this.email });
+      test.throws(function(){
+        Accounts.forgotPassword({ email: this.email });
+      }, /Must pass options\.email/);
     },
   ]);
  
@@ -591,9 +597,11 @@ if (Meteor.isClient) (function () {
           test.isTrue(error);
       }));
     },
-    // verifyEmail called on client with blank token, no callback so no error
+    // verifyEmail called on client with blank token and no callback.
     function (test, expect) {
-      Accounts.verifyEmail(this.token);
+      test.throws(function(){
+        Accounts.verifyEmail(this.token);
+      }, /Need to pass token/);
     },
   ]);
  
@@ -624,7 +632,9 @@ if (Meteor.isClient) (function () {
     },
     // resetPassword called on client with blank password, no callback so no error
     function (test, expect) {
-      Accounts.resetPassword(this.token, this.newPassword);
+      test.throws(function(){
+        Accounts.resetPassword(this.token, this.newPassword);
+      }, /Password may not be empty/);
     },
   ]);
 
