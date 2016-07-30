@@ -479,7 +479,7 @@ if (Meteor.isClient) (function () {
     function (test, expect) {
       test.throws(function(){
         Accounts.changePassword('wrong', 'doesntmatter');
-      }, /Incorrect password/);
+      });
     },
     // change password with blank new password
     function (test, expect) {
