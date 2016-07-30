@@ -21,7 +21,7 @@ Next, read the [guide](http://guide.meteor.com) or the reference documentation a
 Install Meteor:
 
 ```bash
-curl https://install.meteor.com | /bin/sh
+curl https://install.meteor.com/ | sh
 ```
 
 Create a project:
