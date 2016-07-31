@@ -39,17 +39,17 @@
   "bugs": "https://github.com/dferber90/eslint-plugin-meteor/issues",
   "dependencies": {
     "babel-polyfill": "6.9.1",
-    "babel-register": "6.11.5",
-    "babel-runtime": "6.9.2",
+    "babel-register": "6.11.6",
+    "babel-runtime": "6.11.6",
     "escope": "3.6.0",
     "invariant": "2.2.1",
     "lodash.find": "4.5.1",
-    "lodash.memoize": "4.1.0",
+    "lodash.memoize": "4.1.1",
     "path-exists": "3.0.0"
   },
   "devDependencies": {
     "babel-cli": "6.11.4",
-    "babel-core": "6.10.4",
+    "babel-core": "6.11.4",
     "babel-plugin-transform-object-rest-spread": "6.8.0",
     "babel-plugin-transform-runtime": "6.12.0",
     "babel-preset-es2015": "6.9.0",
@@ -57,9 +57,9 @@
     "colors": "1.1.2",
     "coveralls": "2.11.12",
     "cz-conventional-changelog": "1.1.6",
-    "eslint": "3.0.0",
+    "eslint": "3.2.0",
     "eslint-config-airbnb": "9.0.1",
-    "eslint-plugin-import": "1.11.1",
+    "eslint-plugin-import": "1.12.0",
     "eslint-plugin-jsx-a11y": "^2.0.0",
     "eslint-plugin-react": "5.2.2",
     "ghooks": "1.3.2",
@@ -72,7 +72,7 @@
     "validate-commit-msg": "2.6.1"
   },
   "peerDependencies": {
-    "eslint": ">=0.8.0"
+    "eslint": "^2.0.0 || ^3.0.0"
   },
   "engines": {},
   "keywords": [
