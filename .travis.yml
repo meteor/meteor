@@ -9,10 +9,8 @@ branches:
 notifications:
   email: false
 node_js:
-  - 0.10
-  - 0.12
-  - iojs
   - 4
+  - 6
 before_install:
   - npm i -g npm@^3.0.0
   - npm -v
