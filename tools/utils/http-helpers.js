@@ -14,7 +14,30 @@ var release = require('../packaging/release.js');
 var Console = require('../console/console.js').Console;
 var timeoutScaleFactor = require('./utils.js').timeoutScaleFactor;
 
-import { WritableStreamBuffer } from 'stream-buffers';
+import { Writable } from "stream";
+
+class ConcatStream extends Writable {
+  constructor() {
+    super();
+    this.chunks = [];
+    this.size = 0;
+  }
+
+  _write(chunk, encoding, next) {
+    this.chunks.push(chunk);
+    this.size += chunk.length;
+    next();
+  }
+
+  getBuffer() {
+    if (this.chunks.length !== 1) {
+      this.chunks[0] = Buffer.concat(this.chunks);
+      this.chunks.length = 1;
+    }
+
+    return this.chunks[0];
+  }
+}
 
 // Helper that tracks bytes written to a writable
 var WritableWithProgress = function (writable, listener) {
@@ -393,8 +416,6 @@ _.extend(exports, {
       url: urlOrOptions,
     };
 
-    const outputStream = new WritableStreamBuffer();
-
     const maxAttempts =
       _.has(options, "maxAttempts")
       ? options.maxAttempts : 10;
@@ -404,13 +425,13 @@ _.extend(exports, {
       ? options.retryDelaySecs : 5;
 
     const masterProgress = options.progress;
+    const outputStream = new ConcatStream();
 
-    let lastSize = 0;
-    function attempt(triesRemaining) {
-      if (lastSize > 0) {
+    function attempt(triesRemaining = maxAttempts, startAt = 0) {
+      if (startAt > 0) {
         options.headers = {
           ...options.headers,
-          Range: `bytes=${outputStream.size()}-`
+          Range: `bytes=${startAt}-`
         };
       }
 
@@ -428,10 +449,9 @@ _.extend(exports, {
         }));
 
       } catch (e) {
-        const size = outputStream.size();
-        const useTry = size === lastSize;
-        const change = size - lastSize;
-        lastSize = outputStream.size();
+        const size = outputStream.size;
+        const useTry = size === startAt;
+        const change = size - startAt;
 
         if (!useTry || triesRemaining > 0) {
           if (useTry) {
@@ -442,7 +462,7 @@ _.extend(exports, {
 
           return new Promise(
             resolve => setTimeout(resolve, retryDelaySecs * 1000)
-          ).then(() => attempt(triesRemaining - (useTry ? 1 : 0)));
+          ).then(() => attempt(triesRemaining - (useTry ? 1 : 0), size));
         }
 
         Console.debug(`Request failed ${maxAttempts} times: failing`);
@@ -450,13 +470,14 @@ _.extend(exports, {
       }
     }
 
-    const result = attempt(maxAttempts).await();
+
+    const result = attempt().await();
     const response = result.response
     if (response.statusCode >= 400 && response.statusCode < 600) {
       const href = response.request.href;
       throw Error(`Could not get ${href}; server returned [${response.statusCode}]`);
     }
 
-    return outputStream.getContents();
+    return outputStream.getBuffer();
   }
 });
