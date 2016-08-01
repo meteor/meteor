@@ -177,6 +177,7 @@ selftest.define("resume downloads", ['net'], function () {
             ++interruptCount;
             request.emit('error', 'pretend-http-error');
             request.emit('end');
+            request.abort();
           }
         });
       }
