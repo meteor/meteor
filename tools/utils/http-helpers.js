@@ -14,7 +14,30 @@ var release = require('../packaging/release.js');
 var Console = require('../console/console.js').Console;
 var timeoutScaleFactor = require('./utils.js').timeoutScaleFactor;
 
-import concatStream from 'concat-stream';
+import { Writable } from "stream";
+
+class ConcatStream extends Writable {
+  constructor() {
+    super();
+    this.chunks = [];
+    this.size = 0;
+  }
+
+  _write(chunk, encoding, next) {
+    this.chunks.push(chunk);
+    this.size += chunk.length;
+    next();
+  }
+
+  getBuffer() {
+    if (this.chunks.length !== 1) {
+      this.chunks[0] = Buffer.concat(this.chunks);
+      this.chunks.length = 1;
+    }
+
+    return this.chunks[0];
+  }
+}
 
 // Helper that tracks bytes written to a writable
 var WritableWithProgress = function (writable, listener) {
@@ -402,7 +425,7 @@ _.extend(exports, {
       ? options.retryDelaySecs : 5;
 
     const masterProgress = options.progress;
-    const outputStream = concatStream();
+    const outputStream = new ConcatStream();
 
     function attempt(triesRemaining = maxAttempts, startAt = 0) {
       if (startAt > 0) {
@@ -426,7 +449,7 @@ _.extend(exports, {
         }));
 
       } catch (e) {
-        const size = _.reduce(outputStream.body, (s, buf) => s + buf.length, 0);
+        const size = outputStream.size;
         const useTry = size === startAt;
         const change = size - startAt;
 
@@ -455,6 +478,6 @@ _.extend(exports, {
       throw Error(`Could not get ${href}; server returned [${response.statusCode}]`);
     }
 
-    return outputStream.getBody();
+    return outputStream.getBuffer();
   }
 });
