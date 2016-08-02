@@ -9,8 +9,8 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-import rule from '../../../lib/rules/eventmap-params'
 import { RuleTester } from 'eslint'
+import rule from '../../../lib/rules/eventmap-params'
 
 // -----------------------------------------------------------------------------
 // Tests

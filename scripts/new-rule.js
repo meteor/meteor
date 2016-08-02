@@ -1,8 +1,8 @@
-/* eslint-disable no-console, max-len */
+/* eslint-disable no-console, max-len, import/no-extraneous-dependencies */
 
-const fs = require('fs')
 const readlineSync = require('readline-sync')
 const colors = require('colors/safe')
+const fs = require('fs')
 
 console.log('Scaffolding new rule. Please give the following details.')
 const authorName = readlineSync.question(colors.green('What is your name? '))
@@ -87,8 +87,9 @@ const test = `/**
  * See LICENSE file in root directory for full license.
  */
 
-import rule from '../../../lib/rules/${ruleId}'
 import { RuleTester } from 'eslint'
+import rule from '../../../lib/rules/${ruleId}'
+
 const ruleTester = new RuleTester()
 
 ruleTester.run('${ruleId}', rule, {

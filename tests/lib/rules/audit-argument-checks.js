@@ -7,8 +7,8 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-import rule from '../../../lib/rules/audit-argument-checks'
 import { RuleTester } from 'eslint'
+import rule from '../../../lib/rules/audit-argument-checks'
 
 // -----------------------------------------------------------------------------
 // Tests

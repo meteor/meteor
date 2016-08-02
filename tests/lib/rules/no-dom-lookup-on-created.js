@@ -5,8 +5,9 @@
  * See LICENSE file in root directory for full license.
  */
 
-import rule from '../../../lib/rules/no-dom-lookup-on-created'
 import { RuleTester } from 'eslint'
+import rule from '../../../lib/rules/no-dom-lookup-on-created'
+
 const ruleTester = new RuleTester()
 
 ruleTester.run('no-dom-lookup-on-created', rule, {

@@ -5,8 +5,9 @@
  * See LICENSE file in root directory for full license.
  */
 
-import rule from '../../../lib/rules/no-template-parent-data'
 import { RuleTester } from 'eslint'
+import rule from '../../../lib/rules/no-template-parent-data'
+
 const ruleTester = new RuleTester()
 
 ruleTester.run('no-template-parent-data', rule, {

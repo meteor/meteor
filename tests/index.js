@@ -1,7 +1,7 @@
-import { rules, configs } from '../lib/index'
 import assert from 'assert'
 import fs from 'fs'
 import path from 'path'
+import { rules, configs } from '../lib/index'
 
 const ruleNames = fs.readdirSync(path.resolve(__dirname, '../lib/rules/'))
   .filter(f => path.extname(f) === '.js')
@@ -10,7 +10,7 @@ const ruleNames = fs.readdirSync(path.resolve(__dirname, '../lib/rules/'))
 describe('all rule files should be exported by the plugin', () => {
   ruleNames.forEach(ruleName => {
     it(`should export ${ruleName}`, () => {
-      assert(rules.hasOwnProperty(ruleName))
+      assert({}.hasOwnProperty.call(rules, ruleName))
     })
   })
 })
@@ -18,7 +18,9 @@ describe('all rule files should be exported by the plugin', () => {
 describe('configurations', () => {
   ruleNames.forEach(ruleName => {
     it(`should have a recommended configuration for ${ruleName}`, () => {
-      assert(configs.recommended.rules.hasOwnProperty(`meteor/${ruleName}`))
+      assert(
+        {}.hasOwnProperty.call(configs.recommended.rules, `meteor/${ruleName}`)
+      )
     })
   })
 })
