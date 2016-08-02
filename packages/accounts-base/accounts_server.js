@@ -176,9 +176,10 @@ Ap._failedLogin = function (connection, attempt) {
   });
 };
 
-Ap._successfulLogout = function () {
+Ap._successfulLogout = function (connection, userId) {
+  const user = userId && this.users.findOne(userId);
   this._onLogoutHook.each(function (callback) {
-    callback();
+    callback({ user, connection });
     return true;
   });
 };
@@ -537,8 +538,8 @@ Ap._initServerMethods = function () {
     accounts._setLoginToken(this.userId, this.connection, null);
     if (token && this.userId)
       accounts.destroyToken(this.userId, token);
+    accounts._successfulLogout(this.connection, this.userId);
     this.setUserId(null);
-    accounts._successfulLogout();
   };
 
   // Delete all the current user's tokens and close all open connections logged
