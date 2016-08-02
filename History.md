@@ -8,6 +8,12 @@
   reduces the amount of permissions requested from the user in the Google
   popup. [PR #6975](https://github.com/meteor/meteor/pull/6975)
 
+* Added `Facebook.handleAuthFromAccessToken` in the case where you get the FB
+  accessToken in some out-of-band way. [PR #7550](https://github.com/meteor/meteor/pull/7550)
+
+* `Accounts.onLogout` gets `{ user, connection }` context in a similar fashion
+  to `Accounts.onLogin`. [Issue #7397](https://github.com/meteor/meteor/issue/7397) [PR #7433](https://github.com/meteor/meteor/pull/7433)
+
 ## v1.4.0.1
 
 * Fix issue with the 1.4 tool springboarding to older releases (see [Issue #7491](https://github.com/meteor/meteor/issues/7491))
