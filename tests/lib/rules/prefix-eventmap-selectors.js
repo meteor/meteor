@@ -5,8 +5,9 @@
  * See LICENSE file in root directory for full license.
  */
 
-import rule from '../../../lib/rules/prefix-eventmap-selectors'
 import { RuleTester } from 'eslint'
+import rule from '../../../lib/rules/prefix-eventmap-selectors'
+
 const ruleTester = new RuleTester()
 
 ruleTester.run('prefix-eventmap-selectors', rule, {

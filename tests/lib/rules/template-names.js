@@ -9,8 +9,9 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-import rule from '../../../lib/rules/template-names'
 import { RuleTester } from 'eslint'
+import rule from '../../../lib/rules/template-names'
+
 const ruleTester = new RuleTester()
 
 ruleTester.run('template-names', rule, {

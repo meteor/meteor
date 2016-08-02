@@ -3,23 +3,23 @@ import * as astUtils from '../../../../lib/util/ast/index'
 
 describe('ast utils', () => {
   it('exports isMeteorCall', () => {
-    assert(astUtils.hasOwnProperty('isMeteorCall'))
+    assert({}.hasOwnProperty.call(astUtils, 'isMeteorCall'))
     assert.equal(typeof astUtils.isMeteorCall, 'function')
   })
   it('exports isMeteorProp', () => {
-    assert(astUtils.hasOwnProperty('isMeteorProp'))
+    assert({}.hasOwnProperty.call(astUtils, 'isMeteorProp'))
     assert.equal(typeof astUtils.isMeteorProp, 'function')
   })
   it('exports isTemplateProp', () => {
-    assert(astUtils.hasOwnProperty('isTemplateProp'))
+    assert({}.hasOwnProperty.call(astUtils, 'isTemplateProp'))
     assert.equal(typeof astUtils.isTemplateProp, 'function')
   })
   it('exports isFunction', () => {
-    assert(astUtils.hasOwnProperty('isFunction'))
+    assert({}.hasOwnProperty.call(astUtils, 'isFunction'))
     assert.equal(typeof astUtils.isFunction, 'function')
   })
   it('exports getPropertyName', () => {
-    assert(astUtils.hasOwnProperty('getPropertyName'))
+    assert({}.hasOwnProperty.call(astUtils, 'getPropertyName'))
     assert.equal(typeof astUtils.getPropertyName, 'function')
   })
 })

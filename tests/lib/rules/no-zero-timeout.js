@@ -7,8 +7,8 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-import rule from '../../../lib/rules/no-zero-timeout'
 import { RuleTester } from 'eslint'
+import rule from '../../../lib/rules/no-zero-timeout'
 
 // -----------------------------------------------------------------------------
 // Tests

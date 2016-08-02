@@ -9,8 +9,8 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-import rule from '../../../lib/rules/no-session'
 import { RuleTester } from 'eslint'
+import rule from '../../../lib/rules/no-session'
 
 // -----------------------------------------------------------------------------
 // Tests

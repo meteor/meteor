@@ -9,8 +9,8 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-import rule from '../../../lib/rules/no-template-lifecycle-assignments'
 import { RuleTester } from 'eslint'
+import rule from '../../../lib/rules/no-template-lifecycle-assignments'
 
 // -----------------------------------------------------------------------------
 // Tests
