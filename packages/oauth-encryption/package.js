@@ -6,7 +6,6 @@ Package.describe({
 Package.onUse(function (api) {
   api.use([
     "modules",
-    "underscore",
     "ejson"
   ]);
   api.mainModule("encrypt.js", "server");

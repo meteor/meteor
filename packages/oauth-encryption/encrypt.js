@@ -1,6 +1,11 @@
 var crypto = require("crypto");
 var gcmKey = null;
 var OAuthEncryption = exports.OAuthEncryption = {};
+var objToStr = Object.prototype.toString;
+
+function isString(value) {
+  return objToStr.call(value) === "[object String]";
+}
 
 // Node leniently ignores non-base64 characters when parsing a base64
 // string, but we want to provide a more informative error message if
@@ -11,7 +16,7 @@ var OAuthEncryption = exports.OAuthEncryption = {};
 // Exported for the convenience of tests.
 //
 OAuthEncryption._isBase64 = function (str) {
-  return _.isString(str) && /^[A-Za-z0-9\+\/]*\={0,2}$/.test(str);
+  return isString(str) && /^[A-Za-z0-9\+\/]*\={0,2}$/.test(str);
 };
 
 
@@ -139,7 +144,7 @@ OAuthEncryption.isSealed = function (maybeCipherText) {
     OAuthEncryption._isBase64(maybeCipherText.iv) &&
     OAuthEncryption._isBase64(maybeCipherText.ciphertext) &&
     OAuthEncryption._isBase64(maybeCipherText.authTag) &&
-    _.isString(maybeCipherText.algorithm);
+    isString(maybeCipherText.algorithm);
 };
 
 
