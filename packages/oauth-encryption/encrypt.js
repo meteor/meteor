@@ -48,9 +48,10 @@ OAuthEncryption.loadKey = function (key) {
 // credentials such as access tokens from being used by a different
 // user.
 //
-// We would actually like the user id to be AAD (additional
-// authenticated data), but the node crypto API does not currently have
-// support for specifying AAD.
+// We might someday like the user id to be AAD (additional authenticated
+// data), but the Node 0.10.x crypto API did not support specifying AAD,
+// and it's not clear that we want to incur the compatibility issues of
+// relying on that feature, even though it's now supported by Node 4.
 //
 OAuthEncryption.seal = function (data, userId) {
   if (! gcmKey) {
