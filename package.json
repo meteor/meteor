@@ -58,7 +58,7 @@
     "coveralls": "2.11.12",
     "cz-conventional-changelog": "1.1.6",
     "eslint": "3.2.2",
-    "eslint-config-airbnb": "9.0.1",
+    "eslint-config-airbnb": "10.0.0",
     "eslint-plugin-import": "1.12.0",
     "eslint-plugin-jsx-a11y": "^2.0.0",
     "eslint-plugin-react": "6.0.0",
