@@ -4,10 +4,8 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
-  api.use([
-    "modules",
-    "ejson"
-  ]);
+  api.use("modules@0.7.5", "server");
+  api.use("ejson@1.0.12", "server");
   api.mainModule("encrypt.js", "server");
   api.export("OAuthEncryption", "server");
 });
