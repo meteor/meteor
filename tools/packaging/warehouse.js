@@ -394,8 +394,13 @@ _.extend(warehouse, {
               "/" + version +
               "/" + name + '-' + version + "-" + platform + ".tar.gz";
 
-        var tarball = httpHelpers.getUrl({url: packageUrl, encoding: null});
+        var tarball = httpHelpers.getUrlWithResuming({
+          url: packageUrl,
+          encoding: null
+        });
+
         files.extractTarGz(tarball, packageDir);
+
         if (!dontWriteFreshFile) {
           files.writeFile(warehouse.getPackageFreshFile(name, version), '');
         }

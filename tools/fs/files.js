@@ -12,6 +12,7 @@ var util = require('util');
 var _ = require('underscore');
 var Fiber = require('fibers');
 var crypto = require('crypto');
+var spawn = require("child_process").spawn;
 
 var rimraf = require('rimraf');
 var sourcemap = require('source-map');
@@ -695,19 +696,154 @@ files.extractTarGz = function (buffer, destPath, options) {
   var tempDir = files.pathJoin(parentDir, '.tmp' + utils.randomToken());
   files.mkdir_p(tempDir);
 
+  if (! _.has(options, "verbose")) {
+    options.verbose = require("../console/console.js").Console.verbose;
+  }
+
+  const startTime = +new Date;
+  let promise = tryExtractWithNativeTar(buffer, tempDir, options);
+
+  if (process.platform === "win32") {
+    promise = promise.catch(
+      error => tryExtractWithNative7z(buffer, tempDir, options)
+    );
+  }
+
+  promise = promise.catch(
+    error => tryExtractWithNpmTar(buffer, tempDir, options)
+  );
+
+  promise.await();
+
+  // succeed!
+  var topLevelOfArchive = files.readdir(tempDir)
+    // On Windows, the 7z.exe tool sometimes creates an auxiliary
+    // PaxHeader directory.
+    .filter(file => ! file.startsWith("PaxHeader"));
+
+  if (topLevelOfArchive.length !== 1) {
+    throw new Error(
+      "Extracted archive '" + tempDir + "' should only contain one entry");
+  }
+
+  var extractDir = files.pathJoin(tempDir, topLevelOfArchive[0]);
+  makeTreeReadOnly(extractDir);
+  files.rename(extractDir, destPath);
+  files.rm_recursive(tempDir);
+
+  if (options.verbose) {
+    console.log("Finished extracting in", new Date - startTime, "ms");
+  }
+};
+
+function ensureDirectoryEmpty(dir) {
+  files.readdir(dir).forEach(file => {
+    files.rm_recursive(files.pathJoin(dir, file));
+  });
+}
+
+function tryExtractWithNativeTar(buffer, tempDir, options) {
+  ensureDirectoryEmpty(tempDir);
+
+  if (options.forceConvert) {
+    return Promise.reject(new Error(
+      "Native tar cannot convert colons in package names"));
+  }
+
+  return new Promise((resolve, reject) => {
+    const flags = options.verbose ? "-xzvf" : "-xzf";
+    const tarProc = spawn("tar", [flags, "-"], {
+      cwd: files.convertToOSPath(tempDir),
+      stdio: options.verbose ? [
+        "pipe", // Always need to write to tarProc.stdin.
+        process.stdout,
+        process.stderr
+      ] : "pipe",
+    });
+
+    tarProc.on("error", reject);
+    tarProc.on("exit", resolve);
+
+    tarProc.stdin.write(buffer);
+    tarProc.stdin.end();
+  });
+}
+
+function tryExtractWithNative7z(buffer, tempDir, options) {
+  ensureDirectoryEmpty(tempDir);
+
+  if (options.forceConvert) {
+    return Promise.reject(new Error(
+      "Native 7z.exe cannot convert colons in package names"));
+  }
+
+  const exeOSPath = files.convertToOSPath(
+    files.pathJoin(files.getCurrentNodeBinDir(), "7z.exe"));
+  const tarGzBasename = "out.tar.gz";
+  const spawnOptions = {
+    cwd: files.convertToOSPath(tempDir),
+    stdio: options.verbose ? "inherit" : "pipe",
+  };
+
+  files.writeFile(files.pathJoin(tempDir, tarGzBasename), buffer);
+
+  return new Promise((resolve, reject) => {
+    spawn(exeOSPath, [
+      "x", "-y", tarGzBasename
+    ], spawnOptions)
+      .on("error", reject)
+      .on("exit", resolve);
+
+  }).then(code => {
+    assert.strictEqual(code, 0);
+
+    let tarBasename;
+    const foundTar = files.readdir(tempDir).some(file => {
+      if (file !== tarGzBasename) {
+        tarBasename = file;
+        return true;
+      }
+    });
+
+    assert.ok(foundTar, "failed to find .tar file");
+
+    function cleanUp() {
+      files.unlink(files.pathJoin(tempDir, tarGzBasename));
+      files.unlink(files.pathJoin(tempDir, tarBasename));
+    }
+
+    return new Promise((resolve, reject) => {
+      spawn(exeOSPath, [
+        "x", "-y", tarBasename
+      ], spawnOptions)
+        .on("error", reject)
+        .on("exit", resolve);
+
+    }).then(code => {
+      cleanUp();
+      return code;
+    }, error => {
+      cleanUp();
+      throw error;
+    });
+  });
+}
+
+function tryExtractWithNpmTar(buffer, tempDir, options) {
+  ensureDirectoryEmpty(tempDir);
+
   var tar = require("tar");
   var zlib = require("zlib");
 
-  new Promise(function (resolve, reject) {
+  return new Promise((resolve, reject) => {
     var gunzip = zlib.createGunzip().on('error', reject);
-
     var extractor = new tar.Extract({
       path: files.convertToOSPath(tempDir)
     }).on('entry', function (e) {
       if (process.platform === "win32" || options.forceConvert) {
-        // On Windows, try to convert old packages that have colons in paths
-        // by blindly replacing all of the paths. Otherwise, we can't even
-        // extract the tarball
+        // On Windows, try to convert old packages that have colons in
+        // paths by blindly replacing all of the paths. Otherwise, we
+        // can't even extract the tarball
         e.path = colonConverter.convert(e.path);
       }
     }).on('error', reject)
@@ -718,20 +854,8 @@ files.extractTarGz = function (buffer, destPath, options) {
     gunzip.pipe(extractor);
     gunzip.write(buffer);
     gunzip.end();
-  }).await();
-
-  // succeed!
-  var topLevelOfArchive = files.readdir(tempDir);
-  if (topLevelOfArchive.length !== 1) {
-    throw new Error(
-      "Extracted archive '" + tempDir + "' should only contain one entry");
-  }
-
-  var extractDir = files.pathJoin(tempDir, topLevelOfArchive[0]);
-  makeTreeReadOnly(extractDir);
-  files.rename(extractDir, destPath);
-  files.rmdir(tempDir);
-};
+  });
+}
 
 // Tar-gzips a directory, returning a stream that can then be piped as
 // needed.  The tar archive will contain a top-level directory named
