@@ -30,7 +30,7 @@ var upgraders = require('../upgraders.js');
 require("../tool-env/install-runtime.js");
 
 try {
-  var phantomjs = require('phantomjs-prebuilt');
+  var phantomPath = require.resolve('phantomjs-prebuilt');
 } catch (e) {
   throw new Error([
     "Please install PhantomJS by running the following command:",
@@ -41,6 +41,8 @@ try {
     ""
   ].join("\n"));
 }
+
+var phantomjs = require(phantomPath);
 
 // To allow long stack traces that cross async boundaries
 require('longjohn');
