@@ -27,6 +27,8 @@ var release = require('../packaging/release.js');
 var projectContextModule = require('../project-context.js');
 var upgraders = require('../upgraders.js');
 
+require("../tool-env/install-runtime.js");
+
 try {
   var phantomjs = require('phantomjs-prebuilt');
 } catch (e) {
