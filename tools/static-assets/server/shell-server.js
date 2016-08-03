@@ -176,7 +176,8 @@ Sp.onConnection = function onConnection(socket) {
     delete options.key;
 
     if (options.evaluateAndExit) {
-      evalCommand(
+      evalCommand.call(
+        Object.create(null), // Dummy repl object without ._RecoverableError.
         "(" + options.evaluateAndExit.command + ")",
         null, // evalCommand ignores the context parameter, anyway
         options.evaluateAndExit.filename || "<meteor shell>",
@@ -202,8 +203,7 @@ Sp.onConnection = function onConnection(socket) {
     // Immutable options.
     _.extend(options, {
       input: replInputSocket,
-      output: socket,
-      eval: evalCommand
+      output: socket
     });
 
     // Overridable options.
@@ -316,6 +316,26 @@ Sp.startREPL = function startREPL(options) {
       process.exit(0);
     }
   });
+
+  // Trigger one recoverable error using the default eval function, just
+  // to capture the Recoverable error constructor, so that our custom
+  // evalCommand function can wrap recoverable errors properly.
+  repl.eval(
+    "{", null, "<meteor shell>",
+    function (error) {
+      // Capture the Recoverable error constructor.
+      repl._RecoverableError = error && error.constructor;
+
+      // Now set repl.eval to the actual evalCommand function that we want
+      // to use, bound to repl._domain if necessary.
+      repl.eval = repl._domain
+        ? repl._domain.bind(evalCommand)
+        : evalCommand;
+
+      // Terminate the partial evaluation of the { command.
+      repl.commands["break"].action.call(repl);
+    }
+  );
 };
 
 function getInfoFile(shellDir) {
@@ -346,6 +366,21 @@ function getTerminalWidth() {
 var evalCommandPromise = Promise.resolve();
 
 function evalCommand(command, context, filename, callback) {
+  var repl = this;
+
+  function finish(error, result) {
+    if (error) {
+      if (repl._RecoverableError &&
+          isRecoverableError(error, repl)) {
+        callback(new repl._RecoverableError(error));
+      } else {
+        callback(error);
+      }
+    } else {
+      callback(null, result);
+    }
+  }
+
   if (Package.ecmascript) {
     var noParens = stripParens(command);
     if (noParens !== command) {
@@ -367,7 +402,7 @@ function evalCommand(command, context, filename, callback) {
     try {
       command = Package.ecmascript.ECMAScript.compileForShell(command);
     } catch (error) {
-      callback(error);
+      finish(error);
       return;
     }
   }
@@ -378,13 +413,13 @@ function evalCommand(command, context, filename, callback) {
       displayErrors: false
     });
   } catch (parseError) {
-    callback(parseError);
+    finish(parseError);
     return;
   }
 
   evalCommandPromise.then(function () {
-    callback(null, script.runInThisContext());
-  }).catch(callback);
+    finish(null, script.runInThisContext());
+  }).catch(finish);
 }
 
 function stripParens(command) {
@@ -393,6 +428,39 @@ function stripParens(command) {
     return command.slice(1, command.length - 1);
   }
   return command;
+}
+
+// The bailOnIllegalToken and isRecoverableError functions are taken from
+// https://github.com/nodejs/node/blob/c9e670ea2a/lib/repl.js#L1227-L1253
+function bailOnIllegalToken(parser) {
+  return parser._literal === null &&
+    ! parser.blockComment &&
+    ! parser.regExpLiteral;
+}
+
+// If the error is that we've unexpectedly ended the input,
+// then let the user try to recover by adding more input.
+function isRecoverableError(e, repl) {
+  if (e && e.name === 'SyntaxError') {
+    var message = e.message;
+    if (message === 'Unterminated template literal' ||
+        message === 'Missing } in template expression') {
+      repl._inTemplateLiteral = true;
+      return true;
+    }
+
+    if (message.startsWith('Unexpected end of input') ||
+        message.startsWith('missing ) after argument list') ||
+        message.startsWith('Unexpected token')) {
+      return true;
+    }
+
+    if (message === 'Invalid or unexpected token') {
+      return ! bailOnIllegalToken(repl.lineParser);
+    }
+  }
+
+  return false;
 }
 
 // This function allows a persistent history of shell commands to be saved
