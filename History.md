@@ -1,5 +1,9 @@
 ## v.NEXT
 
+## v1.4.0.2
+
+* Improve downloading of Meteor packages [#7539](https://github.com/meteor/meteor/pull/7539)
+
 ## v1.4.0.1
 
 * Fix issue with the 1.4 tool springboarding to older releases (see [Issue #7491](https://github.com/meteor/meteor/issues/7491))
