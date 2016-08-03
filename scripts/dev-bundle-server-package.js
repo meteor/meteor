@@ -9,6 +9,8 @@ var packageJson = {
   // Version is not important but is needed to prevent warnings.
   version: "0.0.0",
   dependencies: {
+    "node-gyp": "3.4.0",
+    "node-pre-gyp": "0.6.29",
     "meteor-promise": "0.7.2",
     fibers: "1.0.13",
     promise: "7.1.1",
