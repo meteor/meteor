@@ -2,6 +2,15 @@
 
 ## v1.4.1
 
+* After Meteor packages are downloaded from Atmosphere, they will now be
+  extracted using native `tar` or `7z.exe` on Windows, instead of the
+  https://www.npmjs.com/package/tar library, for a significant performance
+  improvement. [#7457](https://github.com/meteor/meteor/pull/7457)
+
+* The progress indicator now distinguishes between downloading,
+  extracting, and loading newly-installed Meteor packages, instead of
+  lumping all of that work into a "downloading" status message.
+
 * Password Reset tokens now expire (after 3 days by default -- can be modified via `Accounts.config({ passwordResetTokenExpirationInDays: ...}`). [PR #7534](https://github.com/meteor/meteor/pull/7534)
 
 * The `google` package now uses the `email` scope as a mandatory field instead
