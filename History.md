@@ -1,5 +1,7 @@
 ## v.NEXT
 
+* Password Reset tokens now expire (after 3 days by default -- can be modified via `Accounts.config({ passwordResetTokenExpirationInDays: ...}`). [PR #7534](https://github.com/meteor/meteor/pull/7534)
+
 * The `google` package now uses the `email` scope as a mandatory field instead
   of the `profile` scope. The `profile` scope is still added by default if the
   `requestPermissions` option is not specified to maintain backward
