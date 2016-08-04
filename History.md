@@ -1,5 +1,7 @@
 ## v.NEXT
 
+## v1.4.1
+
 * Password Reset tokens now expire (after 3 days by default -- can be modified via `Accounts.config({ passwordResetTokenExpirationInDays: ...}`). [PR #7534](https://github.com/meteor/meteor/pull/7534)
 
 * The `google` package now uses the `email` scope as a mandatory field instead
@@ -15,6 +17,27 @@
 
 * `Accounts.onLogout` gets `{ user, connection }` context in a similar fashion
   to `Accounts.onLogin`. [Issue #7397](https://github.com/meteor/meteor/issues/7397) [PR #7433](https://github.com/meteor/meteor/pull/7433)
+
+* The `node-gyp` and `node-pre-gyp` tools will now be installed in
+  `bundle/programs/server/node_modules`, to assist with rebuilding binary
+  npm packages when deploying an app to Galaxy or elsewhere.
+  [#7571](https://github.com/meteor/meteor/pull/7571)
+
+* The `standard-minifier-{js,css}` packages no longer minify .js or .css
+  files on the server. [#7572](https://github.com/meteor/meteor/pull/7572)
+
+* Multi-line input to `meteor shell`, which was broken by changes to the
+  `repl` module in Node 4, works again.
+  [#7562](https://github.com/meteor/meteor/pull/7562)
+
+* The implementation of the command-line `meteor` tool now forbids
+  misbehaving polyfill libraries from overwriting `global.Promise`.
+  [#7569](https://github.com/meteor/meteor/pull/7569)
+
+* The `oauth-encryption` package no longer depends on the
+  `npm-node-aes-gcm` package (or any special npm packages), because the
+  Node 4 `crypto` library natively supports the `aes-128-gcm` algorithm.
+  [#7548](https://github.com/meteor/meteor/pull/7548)
 
 ## v1.4.0.1
 
