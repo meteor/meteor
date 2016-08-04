@@ -83,6 +83,9 @@ export class AccountsCommon {
   // - loginExpirationInDays {Number}
   //     Number of days since login until a user is logged out (login token
   //     expires).
+  // - passwordResetTokenExpirationInDays {Number}
+  //     Number of days since password reset token creation until the
+  //     token cannt be used any longer (password reset token expires).
 
   /**
    * @summary Set global accounts options.
@@ -93,6 +96,7 @@ export class AccountsCommon {
    * @param {String | Function} options.restrictCreationByEmailDomain If set to a string, only allows new users if the domain part of their email address matches the string. If set to a function, only allows new users if the function returns true.  The function is passed the full email address of the proposed new user.  Works with password-based sign-in and external services that expose email addresses (Google, Facebook, GitHub). All existing users still can log in after enabling this option. Example: `Accounts.config({ restrictCreationByEmailDomain: 'school.edu' })`.
    * @param {Number} options.loginExpirationInDays The number of days from when a user logs in until their token expires and they are logged out. Defaults to 90. Set to `null` to disable login expiration.
    * @param {String} options.oauthSecretKey When using the `oauth-encryption` package, the 16 byte key using to encrypt sensitive account credentials in the database, encoded in base64.  This option may only be specifed on the server.  See packages/oauth-encryption/README.md for details.
+   * @param {Number} options.passwordResetTokenExpirationInDays The number of days from when a link to reset password is sent until token expires and user can't reset password with the link anymore. Defaults to 3.
    */
   config(options) {
     var self = this;
@@ -125,7 +129,7 @@ export class AccountsCommon {
 
     // validate option keys
     var VALID_KEYS = ["sendVerificationEmail", "forbidClientAccountCreation",
-                      "restrictCreationByEmailDomain", "loginExpirationInDays"];
+                      "restrictCreationByEmailDomain", "loginExpirationInDays", "passwordResetTokenExpirationInDays"];
     _.each(_.keys(options), function (key) {
       if (!_.contains(VALID_KEYS, key)) {
         throw new Error("Accounts.config: Invalid key: " + key);
@@ -208,6 +212,11 @@ export class AccountsCommon {
             DEFAULT_LOGIN_EXPIRATION_DAYS) * 24 * 60 * 60 * 1000;
   }
 
+  _getPasswordResetTokenLifetimeMs() {
+   return (this._options.passwordResetTokenExpirationInDays ||
+            DEFAULT_PASSWORD_RESET_TOKEN_EXPIRATION_DAYS) * 24 * 60 * 60 * 1000;
+  }
+
   _tokenExpiration(when) {
     // We pass when through the Date constructor for backwards compatibility;
     // `when` used to be a number.
@@ -248,6 +257,8 @@ Meteor.user = function () {
 
 // how long (in days) until a login token expires
 var DEFAULT_LOGIN_EXPIRATION_DAYS = 90;
+// how long (in days) until reset password token expires
+var DEFAULT_PASSWORD_RESET_TOKEN_EXPIRATION_DAYS = 3;
 // Clients don't try to auto-login with a token that is going to expire within
 // .1 * DEFAULT_LOGIN_EXPIRATION_DAYS, capped at MIN_TOKEN_LIFETIME_CAP_SECS.
 // Tries to avoid abrupt disconnects from expiring tokens.

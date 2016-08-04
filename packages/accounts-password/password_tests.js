@@ -1392,6 +1392,75 @@ if (Meteor.isServer) (function () {
       }, /Incorrect password/);
     });
 
+  Tinytest.add(
+    'passwords - reset password should work when token is not expired',
+    function (test, onComplete) {
+      var username = Random.id();
+      var email = username + '-intercept@example.com';
+
+      var userId = Accounts.createUser({
+        username: username,
+        email: email,
+        password: "old-password"
+      });
+
+      var user = Meteor.users.findOne(userId);
+
+      Accounts.sendResetPasswordEmail(userId, email);
+
+      var resetPasswordEmailOptions =
+        Meteor.call("getInterceptedEmails", email)[0];
+
+      var re = new RegExp(Meteor.absoluteUrl() + "#/reset-password/(\\S*)");
+      var match = resetPasswordEmailOptions.text.match(re);
+      test.isTrue(match);
+      var resetPasswordToken = match[1];
+
+      makeTestConnection(
+        test,
+        function () {
+          
+          test.isTrue(Meteor.call("resetPassword", resetPasswordToken, "new-password"));
+          test.isTrue(Meteor.call("login", {user: {username: username}, password: "new-password"}));
+
+          onComplete();
+      });
+    });
+
+  Tinytest.add(
+    'passwords - reset password should not work when token is expired',
+    function (test) {
+      var username = Random.id();
+      var email = username + '-intercept@example.com';
+
+      var userId = Accounts.createUser({
+        username: username,
+        email: email,
+        password: "old-password"
+      });
+
+      var user = Meteor.users.findOne(userId);
+
+      Accounts.sendResetPasswordEmail(userId, email);
+
+      var resetPasswordEmailOptions =
+        Meteor.call("getInterceptedEmails", email)[0];
+
+      var re = new RegExp(Meteor.absoluteUrl() + "#/reset-password/(\\S*)");
+      var match = resetPasswordEmailOptions.text.match(re);
+      test.isTrue(match);
+      var resetPasswordToken = match[1];
+
+      Meteor.users.update(userId, {$set: {"services.password.reset.when":  new Date(Date.now() + -5 * 24 * 3600 * 1000) }});
+
+      test.throws(function () {
+        Meteor.call("resetPassword", resetPasswordToken, "new-password");
+      }, /Token expired/);
+      test.throws(function () {
+        Meteor.call("login", {user: {username: username}, password: "new-password"});
+      }, /Incorrect password/);
+    });
+
   // We should be able to change the username
   Tinytest.add("passwords - change username", function (test) {
     var username = Random.id();
