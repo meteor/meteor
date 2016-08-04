@@ -2,7 +2,7 @@
 # use 32bit by default
 $PLATFORM = "windows_x86"
 $MONGO_VERSION = "3.2.6"
-$NODE_VERSION = "4.4.7"
+$NODE_VERSION = "4.5.0-rc.2"
 $NPM_VERSION = "3.10.5"
 $PYTHON_VERSION = "2.7.10" # For node-gyp
 
@@ -47,7 +47,7 @@ cd "$DIR\bin"
 
 # download node
 # same node on 32bit vs 64bit?
-$node_link = "http://nodejs.org/dist/v${NODE_VERSION}/win-x86/node.exe"
+$node_link = "http://nodejs.org/download/rc/v${NODE_VERSION}/win-x86/node.exe"
 $webclient.DownloadFile($node_link, "$DIR\bin\node.exe")
 
 # On Windows we provide a reliable version of python.exe for use by

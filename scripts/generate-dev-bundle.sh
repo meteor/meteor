@@ -20,7 +20,7 @@ S3_HOST="s3.amazonaws.com/com.meteor.jenkins"
 
 # Update these values after building the dev-bundle-node Jenkins project.
 # Also make sure to update NODE_VERSION in generate-dev-bundle.ps1.
-NODE_URL="https://nodejs.org/dist/v${NODE_VERSION}/${NODE_TGZ}"
+NODE_URL="https://nodejs.org/download/rc/v${NODE_VERSION}/${NODE_TGZ}"
 echo "Downloading Node from ${NODE_URL}"
 curl "${NODE_URL}" | tar zx --strip-components 1
 
