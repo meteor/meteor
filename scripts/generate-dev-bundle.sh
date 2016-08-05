@@ -60,13 +60,22 @@ npm version
 # will get confused by the pre-existing modules.
 mkdir "${DIR}/build/npm-server-install"
 cd "${DIR}/build/npm-server-install"
-node "${CHECKOUT_DIR}/scripts/dev-bundle-server-package.js" >package.json
+node "${CHECKOUT_DIR}/scripts/dev-bundle-server-package.js" > package.json
 npm install
 npm shrinkwrap
 
 mkdir -p "${DIR}/server-lib/node_modules"
 # This ignores the stuff in node_modules/.bin, but that's OK.
 cp -R node_modules/* "${DIR}/server-lib/node_modules/"
+
+# Make node-gyp install Node headers and libraries in $DIR/.node-gyp/.
+# https://github.com/nodejs/node-gyp/blob/4ee31329e0/lib/node-gyp.js#L52
+export HOME="$DIR"
+export USERPROFILE="$DIR"
+node "${DIR}/server-lib/node_modules/node-gyp/bin/node-gyp.js" install
+INCLUDE_PATH="${DIR}/.node-gyp/${NODE_VERSION}/include/node"
+echo "Contents of ${INCLUDE_PATH}:"
+ls -al "$INCLUDE_PATH"
 
 mkdir -p "${DIR}/etc"
 mv package.json npm-shrinkwrap.json "${DIR}/etc/"
