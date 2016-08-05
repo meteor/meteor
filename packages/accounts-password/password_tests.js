@@ -1392,7 +1392,7 @@ if (Meteor.isServer) (function () {
       }, /Incorrect password/);
     });
 
-  Tinytest.add(
+  Tinytest.addAsync(
     'passwords - reset password should work when token is not expired',
     function (test, onComplete) {
       var username = Random.id();
@@ -1418,10 +1418,17 @@ if (Meteor.isServer) (function () {
 
       makeTestConnection(
         test,
-        function () {
-          
-          test.isTrue(Meteor.call("resetPassword", resetPasswordToken, "new-password"));
-          test.isTrue(Meteor.call("login", {user: {username: username}, password: "new-password"}));
+        function (clientConn) {
+          test.isTrue(clientConn.call(
+            "resetPassword",
+            resetPasswordToken,
+            "new-password"
+          ));
+
+          test.isTrue(clientConn.call("login", {
+            user: { username },
+            password: "new-password"
+          }));
 
           onComplete();
       });
