@@ -421,7 +421,7 @@ Because the Cordova integration in Meteor does not serve your app from `file://`
 
 The file serving mechanism used in Meteor allows for local file access through URLs of the form `http://localhost:<port>/local-filesystem/<path>`) however. You can construct these file system URLs manually, or use `WebAppLocalServer.localFileSystemUrl()` to convert `file://` URLs. You can use this to convert URLs received from plugins like `cordova-plugin-file` and `cordova-plugin-camera` for example.
 
-<h3 id="accessing-local-files">Domain whitelisting</h3>
+<h3 id="domain-whitelisting">Domain whitelisting</h3>
 
 Cordova controls access to external domains through a whitelisting mechanism, which is implemented as [`cordova-plugin-whitelist`](https://github.com/apache/cordova-plugin-whitelist) in the version of Cordova we bundle.
 
