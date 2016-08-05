@@ -14,7 +14,7 @@
   accessToken in some out-of-band way. [PR #7550](https://github.com/meteor/meteor/pull/7550)
 
 * `Accounts.onLogout` gets `{ user, connection }` context in a similar fashion
-  to `Accounts.onLogin`. [Issue #7397](https://github.com/meteor/meteor/issue/7397) [PR #7433](https://github.com/meteor/meteor/pull/7433)
+  to `Accounts.onLogin`. [Issue #7397](https://github.com/meteor/meteor/issues/7397) [PR #7433](https://github.com/meteor/meteor/pull/7433)
 
 ## v1.4.0.1
 
@@ -149,7 +149,7 @@
   invoke. Note that you must `meteor update` to 1.3.4.2 before this logic
   will take effect, but it will work in all app directories after
   updating, even those pinned to older versions.
-  [#7338](https://github.com/meteor/meteor/issue/7338)
+  [#7338](https://github.com/meteor/meteor/issues/7338)
 
 * The Meteor installer now has the ability to resume downloads, so
   installing Meteor on a spotty internet connection should be more
