@@ -24,6 +24,10 @@ exports.getEnv = function (options) {
 
     var env = Object.create(process.env);
 
+    // This allows node-gyp to find Node headers and libraries in
+    // dev_bundle/.node-gyp.
+    env.USERPROFILE = devBundleDir;
+
     var PATH = env.PATH || env.Path;
     if (PATH) {
       paths.push(PATH);
