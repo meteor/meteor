@@ -609,7 +609,7 @@ main.registerCommand({
     });
   });
 
-  if (buildmessage.hasMessages()) {
+  if (buildmessage.jobHasMessages()) {
     return 1;
   }
 
