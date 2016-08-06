@@ -156,12 +156,17 @@ meteorNpm.getProdPackageNames = function (nodeModulesDir) {
 };
 
 const lastRebuildJSONFilename = ".meteor-last-rebuild-version.json";
+const currentVersions = {
+  platform: process.platform,
+  arch: process.arch,
+  versions: process.versions
+};
 const currentVersionsJSON =
-  JSON.stringify(process.versions, null, 2) + "\n";
+  JSON.stringify(currentVersions, null, 2) + "\n";
 
 function recordLastRebuildVersions(pkgDir) {
-  // Record the current process.versions so that we can avoid
-  // copying/rebuilding/renaming next time.
+  // Record the current process.{platform,arch,versions} so that we can
+  // avoid copying/rebuilding/renaming next time.
   files.writeFile(
     files.pathJoin(pkgDir, lastRebuildJSONFilename),
     currentVersionsJSON,
@@ -194,7 +199,7 @@ Profile("meteorNpm.rebuildIfNonPortable", function (nodeModulesDir) {
       }
     }
 
-    if (_.isEqual(versions, process.versions)) {
+    if (_.isEqual(versions, currentVersions)) {
       return;
     }
 
