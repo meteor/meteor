@@ -260,6 +260,10 @@ export class NodeModulesDirectory {
     return meteorNpm.dependenciesArePortable(this.sourcePath);
   }
 
+  rebuildIfNonPortable() {
+    return meteorNpm.rebuildIfNonPortable(this.sourcePath);
+  }
+
   getPreferredBundlePath(kind) {
     assert.ok(kind === "bundle" ||
               kind === "isopack",
