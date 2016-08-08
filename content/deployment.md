@@ -213,7 +213,7 @@ It's a good idea to have a release process that you follow in releasing your app
 4. Once you are satisfied with the staging release, release the *exact same* version to production.
 5. Run final QA on production.
 
-Steps 2. and 5. can be quite time-consuming, especially if you are aiming to maintain a high level of quality in your application. That's why it's a great idea to develop a suite of acceptance tests (see our [Testing Article](XXX) for more on this). To take things even further, you could run a load/stress test against your staging server on every release.
+Steps 2. and 5. can be quite time-consuming, especially if you are aiming to maintain a high level of quality in your application. That's why it's a great idea to develop a suite of acceptance tests (see our [Testing Article](https://guide.meteor.com/testing.html) for more on this). To take things even further, you could run a load/stress test against your staging server on every release.
 
 <h3 id="continuous-deployment">Continuous deployment</h3>
 
