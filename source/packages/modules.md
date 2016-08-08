@@ -186,7 +186,7 @@ module.exports = incompleteCountDenormalizer
 
 You can also simply write `exports` instead of `module.exports` if you prefer.
 
-Note that ES2015 code in [backticks](http://coffeescript.org/#embedded), for example an `import` statement in backticks, do *[not](https://github.com/meteor/meteor/issues/6000)* work; your `.coffee` files will be transpiled into JavaScript, but not then handed off to the `ecmascript` package for further transpiling. Any JavaScript you type in backticks will be passed through unmodified all the way to the browser or Node.js runtime.
+As of Meteor 1.3.3, you can also enclose ES2015 code in [backticks](http://coffeescript.org/#embedded).
 
 
 ## Modular application structure
