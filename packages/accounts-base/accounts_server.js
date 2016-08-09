@@ -1123,7 +1123,7 @@ Ap._expireTokens = function (oldestValidDate, userId) {
 // for them to actually expire. userId is used by tests to only expire
 // tokens for the test user.
 Ap._expirePasswordResetTokens = function (oldestValidDate, userId) {
-  var tokenLiftetimeMs = this. _getPasswordResetTokenLifetimeMs();
+  var tokenLifetimeMs = this._getPasswordResetTokenLifetimeMs();
 
   // when calling from a test with extra arguments, you must specify both!
   if ((oldestValidDate && !userId) || (!oldestValidDate && userId)) {
