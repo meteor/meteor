@@ -15,7 +15,7 @@ Package.onUse(function (api) {
   api.use('reload');
   api.use('jquery');
 
-  api.use(['webapp', 'blaze', 'templating', 'spacebars',
+  api.use(['webapp', 'blaze@2.1.8', 'templating@1.2.13', 'spacebars@1.0.12',
            'ddp', 'tracker'], 'client');
 
   api.addFiles('diff_match_patch_uncompressed.js', 'client');
