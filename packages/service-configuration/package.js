@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Manage the configuration for third-party services",
-  version: "1.0.10"
+  version: "1.0.10",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/service-configuration'
 });
 
 Package.onUse(function(api) {

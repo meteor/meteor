@@ -2,7 +2,8 @@
 
 Package.describe({
   summary: "Markdown-to-HTML processor",
-  version: "1.0.10"
+  version: "1.0.10",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/markdown'
 });
 
 Package.onUse(function (api) {

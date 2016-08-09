@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Extended and Extensible JSON library",
-  version: '1.0.12'
+  version: '1.0.12',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/ejson'
 });
 
 Package.onUse(function (api) {

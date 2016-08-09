@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Moved to the 'ddp' package",
-  version: '1.0.18'
+  version: '1.0.18',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/livedata'
 });
 
 Package.onUse(function (api) {

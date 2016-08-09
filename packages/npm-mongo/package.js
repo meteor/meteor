@@ -4,7 +4,8 @@
 Package.describe({
   summary: "Wrapper around the mongo npm package",
   version: '1.5.45',
-  documentation: null
+  documentation: null,
+  git: 'https://github.com/meteor/meteor/tree/master/packages/npm-mongo'
 });
 
 Npm.depends({

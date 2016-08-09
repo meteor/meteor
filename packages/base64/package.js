@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Base64 encoding and decoding",
-  version: '1.0.9'
+  version: '1.0.9',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/base64'
 });
 
 Package.onUse(function (api) {

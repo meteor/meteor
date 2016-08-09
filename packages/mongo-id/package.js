@@ -1,7 +1,8 @@
 Package.describe({
   summary: "JS simulation of MongoDB ObjectIDs",
   version: '1.0.5',
-  documentation: null
+  documentation: null,
+  git: 'https://github.com/meteor/meteor/tree/master/packages/mongo-id'
 });
 
 Package.onUse(function (api) {

@@ -3,7 +3,8 @@
 // encourage this pattern. Maybe another solution would be better.
 Package.describe({
   summary: "reset.css v2.0 from http://meyerweb.com/eric/tools/css/reset/",
-  version: "1.0.7"
+  version: "1.0.7",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/meyerweb-reset'
 });
 
 Package.onUse(function (api) {

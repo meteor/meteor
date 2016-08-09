@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Compile-time tools for Blaze",
-  version: '1.0.9'
+  version: '1.0.9',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/blaze-tools'
 });
 
 Package.onUse(function (api) {

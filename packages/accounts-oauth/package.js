@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Common code for OAuth-based login services",
-  version: "1.1.13"
+  version: "1.1.13",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/accounts-oauth'
 });
 
 Package.onUse(function (api) {

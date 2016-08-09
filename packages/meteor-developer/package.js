@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Meteor developer accounts OAuth flow",
-  version: "1.1.9"
+  version: "1.1.9",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/meteor-developer'
 });
 
 Package.onUse(function (api) {

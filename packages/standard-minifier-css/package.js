@@ -2,7 +2,8 @@ Package.describe({
   name: 'standard-minifier-css',
   version: '1.2.0',
   summary: 'Standard css minifier used with Meteor apps by default.',
-  documentation: 'README.md'
+  documentation: 'README.md',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/standard-minifier-css'
 });
 
 Package.registerBuildPlugin({

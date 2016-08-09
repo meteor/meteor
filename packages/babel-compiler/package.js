@@ -6,7 +6,8 @@ Package.describe({
   // isn't possible because you can't publish a non-recommended
   // release with package versions that don't have a pre-release
   // identifier at the end (eg, -dev)
-  version: '6.9.0'
+  version: '6.9.0',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/babel-compiler'
 });
 
 Npm.depends({

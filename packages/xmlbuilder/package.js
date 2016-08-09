@@ -1,6 +1,7 @@
 Package.describe({
   summary: "An XML builder for node.js similar to java-xmlbuilder.",
-  version: '2.5.13'
+  version: '2.5.13',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/xmlbuilder'
 });
 
 Npm.depends({

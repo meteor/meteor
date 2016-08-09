@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Serves a Meteor app over HTTP",
-  version: '1.3.10'
+  version: '1.3.10',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/webapp'
 });
 
 Npm.depends({connect: "2.30.2",

@@ -2,7 +2,8 @@ Package.describe({
   name: 'jshint',
   version: '1.1.5',
   summary: 'Lint all your JavaScript files with JSHint.',
-  documentation: 'README.md'
+  documentation: 'README.md',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/jshint'
 });
 
 Package.registerBuildPlugin({

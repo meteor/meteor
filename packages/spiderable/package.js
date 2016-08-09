@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Makes the application crawlable to web spiders",
-  version: "1.0.13"
+  version: "1.0.13",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/spiderable'
 });
 
 Package.onUse(function (api) {

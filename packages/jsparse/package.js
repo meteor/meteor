@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Full-featured JavaScript parser",
-  version: "1.0.9"
+  version: "1.0.9",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/jsparse'
 });
 
 Package.onUse(function (api) {

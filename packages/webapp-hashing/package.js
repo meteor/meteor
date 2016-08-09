@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Used internally by WebApp. Knows how to hash programs from manifests.",
-  version: "1.0.9"
+  version: "1.0.9",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/webapp-hashing'
 });
 
 Package.onUse(function(api) {

@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Enable the application cache in the browser",
-  version: "1.0.11"
+  version: "1.0.11",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/appcahe'
 });
 
 Package.onUse(function (api) {

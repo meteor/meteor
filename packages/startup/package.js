@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Deprecated package (now empty)",
-  version: "1.0.7"
+  version: "1.0.7",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/startup'
 });
 
 Package.onUse(function (api) {

@@ -1,6 +1,7 @@
 Package.describe({
   summary: "route policy declarations",
-  version: '1.0.11'
+  version: '1.0.11',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/routepolicy'
 });
 
 Package.onUse(function (api) {

@@ -2,10 +2,10 @@ Package.describe({
   version: '1.1.11',
   // Brief, one-line summary of the package.
   summary: 'Define static page content in .html files',
-  git: 'https://github.com/meteor/meteor',
   // By default, Meteor will default to using README.md for documentation.
   // To avoid submitting documentation, set this field to null.
-  documentation: 'README.md'
+  documentation: 'README.md',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/static-html'
 });
 
 Package.registerBuildPlugin({

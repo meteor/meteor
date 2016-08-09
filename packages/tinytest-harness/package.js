@@ -2,7 +2,8 @@ Package.describe({
   name: 'tinytest-harness',
   version: '0.0.4',
   summary: 'In development, lets your app define Tinytests, run them and see results',
-  documentation: null
+  documentation: null,
+  git: 'https://github.com/meteor/meteor/tree/master/packages/tinytest-harness'
 });
 
 Package.onUse(function(api) {

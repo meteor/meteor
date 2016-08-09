@@ -1,6 +1,7 @@
 Package.describe({
   summary: "JavaScript minifier",
-  version: "1.2.14"
+  version: "1.2.14",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/minifier-js'
 });
 
 Npm.depends({

@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Password support for accounts",
-  version: "1.2.13"
+  version: "1.2.13",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/accounts-password'
 });
 
 Package.onUse(function(api) {

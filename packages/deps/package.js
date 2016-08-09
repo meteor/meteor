@@ -2,7 +2,8 @@
 
 Package.describe({
   summary: "Deprecated: Use the 'tracker' package instead.",
-  version: '1.0.12'
+  version: '1.0.12',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/deps'
 });
 
 Package.onUse(function (api) {

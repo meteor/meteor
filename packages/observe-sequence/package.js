@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Observe changes to various sequence types such as arrays, cursors and objects",
-  version: "1.0.12"
+  version: "1.0.12",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/observe-sequence'
 });
 
 Package.onUse(function (api) {

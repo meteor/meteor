@@ -5,7 +5,7 @@ Package.describe({
   summary: 'The DDPRateLimiter allows users to add rate limits to DDP' +
   ' methods and subscriptions.',
   // URL to the Git repository containing the source code for this package.
-  git: '',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/ddp-rate-limiter',
   // By default, Meteor will default to using README.md for documentation.
   // To avoid submitting documentation, set this field to null.
   documentation: 'README.md'

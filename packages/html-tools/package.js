@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Standards-compliant HTML tools",
-  version: '1.0.10'
+  version: '1.0.10',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/html-tools'
 });
 
 Package.onUse(function (api) {

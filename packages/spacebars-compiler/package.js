@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Compiler for Spacebars template language",
-  version: '1.0.12'
+  version: '1.0.12',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/spacebars-compiler'
 });
 
 Package.onUse(function (api) {

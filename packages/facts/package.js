@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Publish internal app statistics",
-  version: '1.0.8'
+  version: '1.0.8',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/facts'
 });
 
 Package.onUse(function (api) {

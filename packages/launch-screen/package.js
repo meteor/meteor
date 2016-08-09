@@ -6,7 +6,8 @@ Package.describe({
   // between such packages and the build tool.
   name: 'launch-screen',
   summary: 'Default and customizable launch screen on mobile.',
-  version: '1.0.12'
+  version: '1.0.12',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/launch-screen'
 });
 
 Cordova.depends({

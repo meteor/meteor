@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Make HTTP calls to remote servers",
-  version: '1.2.8'
+  version: '1.2.8',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/http'
 });
 
 Npm.depends({

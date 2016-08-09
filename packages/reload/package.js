@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Reload the page while preserving application state.",
-  version: '1.1.10'
+  version: '1.1.10',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/reload'
 });
 
 Package.onUse(function (api) {

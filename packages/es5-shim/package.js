@@ -2,7 +2,8 @@ Package.describe({
   name: "es5-shim",
   version: "4.6.13",
   summary: "Shims and polyfills to improve ECMAScript 5 support",
-  documentation: "README.md"
+  documentation: "README.md",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/es5-shim'
 });
 
 Npm.depends({

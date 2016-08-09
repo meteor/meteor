@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Login service for Twitter accounts",
-  version: "1.1.11"
+  version: "1.1.11",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/accounts-twitter'
 });
 
 Package.onUse(function(api) {

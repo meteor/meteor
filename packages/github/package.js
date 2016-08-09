@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Github OAuth flow",
-  version: "1.1.8"
+  version: "1.1.8",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/github'
 });
 
 Package.onUse(function(api) {

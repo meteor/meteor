@@ -2,7 +2,8 @@ Package.describe({
   name: "babel-runtime",
   summary: "Runtime support for output of Babel transpiler",
   version: '0.1.10',
-  documentation: 'README.md'
+  documentation: 'README.md',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/babel-runtime'
 });
 
 Npm.depends({

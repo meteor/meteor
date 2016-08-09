@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Dependency tracker to allow reactive callbacks",
-  version: '1.1.0'
+  version: '1.1.0',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/tracker'
 });
 
 Package.onUse(function (api) {

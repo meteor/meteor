@@ -1,7 +1,8 @@
 Package.describe({
   summary: "Run tests interactively in the browser",
   version: '1.0.12',
-  documentation: null
+  documentation: null,
+  git: 'https://github.com/meteor/meteor/tree/master/packages/test-in-browser'
 });
 
 Package.onUse(function (api) {

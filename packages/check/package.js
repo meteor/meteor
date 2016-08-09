@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Check whether a value matches a pattern",
-  version: '1.2.3'
+  version: '1.2.3',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/check'
 });
 
 Package.onUse(function (api) {

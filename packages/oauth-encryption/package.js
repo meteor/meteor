@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Encrypt account secrets stored in the database",
-  version: '1.2.0'
+  version: '1.2.0',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/oauth-encryption'
 });
 
 Package.onUse(function (api) {

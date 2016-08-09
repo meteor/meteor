@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Simple templates to add login widgets to an app",
-  version: "1.1.9"
+  version: "1.1.9",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/accounts-ui'
 });
 
 Package.onUse(function (api) {

@@ -5,7 +5,8 @@ Package.describe({
   // patch number instead of the wrap number, we're higher than that.
   // In fairness, there's no way to make an RC of a new version without
   // bumping the patch number.
-  version: '1.11.9'
+  version: '1.11.9',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/jquery'
 });
 
 Package.onUse(function (api) {

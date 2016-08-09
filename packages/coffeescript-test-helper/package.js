@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Used by the coffeescript package's tests",
-  version: "1.0.7"
+  version: "1.0.7",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/coffeescript-test-helper'
 });
 
 Package.onUse(function (api) {

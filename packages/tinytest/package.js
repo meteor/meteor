@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Tiny testing framework",
-  version: '1.0.11'
+  version: '1.0.11',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/tinytest'
 });
 
 Package.onUse(function (api) {

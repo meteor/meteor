@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Logging facility.",
-  version: '1.1.14'
+  version: '1.1.14',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/logging'
 });
 
 Npm.depends({

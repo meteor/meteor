@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Allows templates to be defined in .html files",
-  version: '1.2.13'
+  version: '1.2.13',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/templating'
 });
 
 // Today, this package is closely intertwined with Handlebars, meaning
