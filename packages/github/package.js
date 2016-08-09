@@ -8,7 +8,7 @@ Package.onUse(function(api) {
   api.use('oauth', ['client', 'server']);
   api.use('http', ['server']);
   api.use('underscore', 'client');
-  api.use('templating', 'client');
+  api.use('templating@1.2.13', 'client');
   api.use('random', 'client');
   api.use('service-configuration', ['client', 'server']);
 
