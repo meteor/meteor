@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Run tests interactively in the browser",
-  version: '1.0.12',
+  version: '1.0.13-release-testing.0',
   documentation: null
 });
 

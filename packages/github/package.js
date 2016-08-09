@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Github OAuth flow",
-  version: "1.1.8"
+  version: "1.1.9-release-testing.0"
 });
 
 Package.onUse(function(api) {
@@ -8,7 +8,7 @@ Package.onUse(function(api) {
   api.use('oauth', ['client', 'server']);
   api.use('http', ['server']);
   api.use('underscore', 'client');
-  api.use('templating', 'client');
+  api.use('templating@1.2.13', 'client');
   api.use('random', 'client');
   api.use('service-configuration', ['client', 'server']);
 
