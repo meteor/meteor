@@ -2,7 +2,8 @@ Package.describe({
   name: 'standard-minifier-js',
   version: '1.2.0',
   summary: 'Standard javascript minifiers used with Meteor apps by default.',
-  documentation: 'README.md'
+  documentation: 'README.md',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/standard-minifier-js'
 });
 
 Package.registerBuildPlugin({

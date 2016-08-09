@@ -5,7 +5,8 @@
 
 Package.describe({
   summary: "Library for Secure Remote Password (SRP) exchanges",
-  version: "1.0.9"
+  version: "1.0.9",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/srp'
 });
 
 Package.onUse(function (api) {

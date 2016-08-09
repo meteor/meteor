@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Javascript dialect with fewer braces and semicolons",
-  version: "1.2.3"
+  version: "1.2.3",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/coffeescript'
 });
 
 Package.registerBuildPlugin({

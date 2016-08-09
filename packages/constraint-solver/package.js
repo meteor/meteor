@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Given the set of the constraints, picks a satisfying configuration",
-  version: "1.1.0"
+  version: "1.1.0",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/constraint-solver'
 });
 
 Package.onUse(function (api) {

@@ -2,7 +2,8 @@
 
 Package.describe({
   summary: "Core Meteor environment",
-  version: '1.2.16'
+  version: '1.2.16',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/meteor'
 });
 
 Package.registerBuildPlugin({
@@ -41,7 +42,7 @@ Package.onUse(function (api) {
   api.addFiles('debug.js', ['client', 'server']);
   api.addFiles('string_utils.js', ['client', 'server']);
   api.addFiles('test_environment.js', ['client', 'server']);
-  
+
   // dynamic variables, bindEnvironment
   // XXX move into a separate package?
   api.addFiles('dynamics_browser.js', 'client');

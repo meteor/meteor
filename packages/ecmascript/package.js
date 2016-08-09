@@ -2,7 +2,8 @@ Package.describe({
   name: 'ecmascript',
   version: '0.5.7',
   summary: 'Compiler plugin that supports ES2015+ in all .js files',
-  documentation: 'README.md'
+  documentation: 'README.md',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/ecmascript'
 });
 
 Package.registerBuildPlugin({

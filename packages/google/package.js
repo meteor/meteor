@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Google OAuth flow",
-  version: "1.1.13"
+  version: "1.1.13",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/google'
 });
 
 Package.onUse(function(api) {

@@ -1,7 +1,8 @@
 Package.describe({
   summary: "Require this application to use HTTPS",
   version: "1.0.12",
-  prodOnly: true
+  prodOnly: true,
+  git: 'https://github.com/meteor/meteor/tree/master/packages/force-ssl'
 });
 
 Package.onUse(function (api) {

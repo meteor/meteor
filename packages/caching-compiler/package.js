@@ -2,7 +2,8 @@ Package.describe({
   name: 'caching-compiler',
   version: '1.1.6',
   summary: 'An easy way to make compiler plugins cache',
-  documentation: 'README.md'
+  documentation: 'README.md',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/caching-compiler'
 });
 
 Npm.depends({'lru-cache': '2.6.4',

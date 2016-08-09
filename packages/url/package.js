@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Utility code for constructing URLs",
-  version: "1.0.10"
+  version: "1.0.10",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/url'
 });
 
 Package.onUse(function(api) {

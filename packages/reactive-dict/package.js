@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Reactive dictionary",
-  version: '1.1.8'
+  version: '1.1.8',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/reactive-dict'
 });
 
 Package.onUse(function (api) {

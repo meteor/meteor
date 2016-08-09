@@ -1,7 +1,8 @@
 Package.describe({
   summary: "An implementation of a diff algorithm on arrays and objects.",
   version: '1.0.6',
-  documentation: null
+  documentation: null,
+  git: 'https://github.com/meteor/meteor/tree/master/packages/diff-sequence'
 });
 
 Package.onUse(function (api) {

@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Unstyled version of login widgets",
-  version: "1.1.12"
+  version: "1.1.12",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/accounts-ui-unstyled'
 });
 
 Package.onUse(function (api) {

@@ -1,7 +1,8 @@
 Package.describe({
   summary: "Code shared beween ddp-client and ddp-server",
   version: '1.2.6',
-  documentation: null
+  documentation: null,
+  git: 'https://github.com/meteor/meteor/tree/master/packages/ddp-common'
 });
 
 Package.onUse(function (api) {

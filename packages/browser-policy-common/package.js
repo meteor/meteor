@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Common code for browser-policy packages",
-  version: "1.0.10"
+  version: "1.0.10",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/browser-policy-common'
 });
 
 Package.onUse(function (api) {

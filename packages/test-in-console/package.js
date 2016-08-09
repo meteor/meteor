@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Run tests noninteractively, with results going to the console.",
-  version: '1.0.12'
+  version: '1.0.12',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/test-in-console'
 });
 
 Package.onUse(function (api) {

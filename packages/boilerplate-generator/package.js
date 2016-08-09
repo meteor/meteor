@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Generates the boilerplate html from program's manifest",
-  version: '1.0.9'
+  version: '1.0.9',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/boilerplate-generator'
 });
 
 Package.onUse(function (api) {

@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Simulates local storage on IE 6,7 using userData",
-  version: "1.0.11"
+  version: "1.0.11",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/localstorage'
 });
 
 Package.onUse(function (api) {

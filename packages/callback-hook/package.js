@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Register callbacks on a hook",
-  version: '1.0.9'
+  version: '1.0.9',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/callback-hook'
 });
 
 Package.onUse(function (api) {

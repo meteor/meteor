@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Send email messages",
-  version: "1.1.16"
+  version: "1.1.16",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/email'
 });
 
 Npm.depends({

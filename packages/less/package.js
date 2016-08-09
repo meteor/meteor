@@ -2,7 +2,8 @@ Package.describe({
   name: 'less',
   version: '2.7.4',
   summary: 'Leaner CSS language',
-  documentation: 'README.md'
+  documentation: 'README.md',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/less'
 });
 
 Package.registerBuildPlugin({

@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Meteor's latency-compensated distributed data framework",
-  version: '1.2.5'
+  version: '1.2.5',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/ddp'
 });
 
 Package.onUse(function (api) {

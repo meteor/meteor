@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Reload safety belt for multi-server deployments",
-  version: '1.0.10'
+  version: '1.0.10',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/reload-safetybelt'
 });
 
 Package.onUse(function (api) {

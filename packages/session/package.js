@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Session variable",
-  version: '1.1.6'
+  version: '1.1.6',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/session'
 });
 
 Package.onUse(function (api) {

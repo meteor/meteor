@@ -1,6 +1,7 @@
 Package.describe({
   summary: "A user account system",
-  version: "1.2.9"
+  version: "1.2.9",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/accounts-base'
 });
 
 Package.onUse(function (api) {

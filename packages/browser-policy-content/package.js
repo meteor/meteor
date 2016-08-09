@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Configure content security policies",
-  version: "1.0.11"
+  version: "1.0.11",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/browser-policy-content'
 });
 
 Package.onUse(function (api) {

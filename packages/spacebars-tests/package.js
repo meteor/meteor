@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Additional tests for Spacebars",
-  version: '1.0.8'
+  version: '1.0.8',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/spacebars-tests'
 });
 
 // These tests are in a separate package to avoid a circular dependency

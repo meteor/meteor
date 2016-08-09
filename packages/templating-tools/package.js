@@ -4,7 +4,7 @@ Package.describe({
   // Brief, one-line summary of the package.
   summary: 'Tools to scan HTML and compile tags when building a templating package',
   // URL to the Git repository containing the source code for this package.
-  git: 'https://github.com/meteor/meteor',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/templating-tools',
   // By default, Meteor will default to using README.md for documentation.
   // To avoid submitting documentation, set this field to null.
   documentation: 'README.md'

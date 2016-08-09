@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Meetup OAuth flow",
-  version: "1.6.4"
+  version: "1.6.4",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/meetup'
 });
 
 Package.onUse(function(api) {

@@ -1,6 +1,7 @@
 Package.describe({
   summary: "CSS minifier",
-  version: "1.2.13"
+  version: "1.2.13",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/minifier-css'
 });
 
 Npm.depends({

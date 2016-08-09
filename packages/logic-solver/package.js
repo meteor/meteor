@@ -1,6 +1,7 @@
 Package.describe({
   summary: "General satisfiability solver for logic problems",
-  version: '2.0.6'
+  version: '2.0.6',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/logic-solver'
 });
 
 Package.on_use(function (api) {

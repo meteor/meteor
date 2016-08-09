@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Update the client when new client code is available",
-  version: '1.3.11'
+  version: '1.3.11',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/autoupdate'
 });
 
 Package.onUse(function (api) {

@@ -8,7 +8,8 @@ var path = Npm.require('path');
 
 Package.describe({
   summary: "Syntax highlighting of code, from Google",
-  version: "1.0.10"
+  version: "1.0.10",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/code-pretify'
 });
 
 // XXX this code dumps symbols into the global namespace (directly

@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Collection of small helpers: _.map, _.each, ...",
-  version: '1.0.9'
+  version: '1.0.9',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/underscore'
 });
 
 Package.onUse(function (api) {

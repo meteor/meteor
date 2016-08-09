@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Login service for Meetup accounts",
-  version: "1.0.10"
+  version: "1.0.10",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/accounts-meetup'
 });
 
 Package.onUse(function(api) {

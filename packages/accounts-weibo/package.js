@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Login service for Sina Weibo accounts",
-  version: "1.0.10"
+  version: "1.0.10",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/accounts-weibo'
 });
 
 Package.onUse(function(api) {

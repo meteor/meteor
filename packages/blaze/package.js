@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Meteor Reactive Templating library",
-  version: '2.1.8'
+  version: '2.1.8',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/blaze'
 });
 
 Package.onUse(function (api) {

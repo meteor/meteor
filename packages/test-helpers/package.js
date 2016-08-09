@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Utility functions for tests",
-  version: '1.0.10'
+  version: '1.0.10',
+  git: 'https://github.com/meteor/meteor/tree/master/packages/test-helpers'
 });
 
 Package.onUse(function (api) {

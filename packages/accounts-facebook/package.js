@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Login service for Facebook accounts",
-  version: "1.0.10"
+  version: "1.0.10",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/accounts-facebook'
 });
 
 Package.onUse(function(api) {

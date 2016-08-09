@@ -2,7 +2,8 @@ Package.describe({
   name: "modules",
   version: "0.7.5",
   summary: "CommonJS module system",
-  documentation: "README.md"
+  documentation: "README.md",
+  git: 'https://github.com/meteor/meteor/tree/master/packages/modules'
 });
 
 Npm.depends({

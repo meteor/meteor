@@ -1,7 +1,8 @@
 Package.describe({
   summary: "Meteor's latency-compensated distributed data server",
   version: '1.3.9',
-  documentation: null
+  documentation: null,
+  git: 'https://github.com/meteor/meteor/tree/master/packages/ddp-server'
 });
 
 Npm.depends({
