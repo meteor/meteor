@@ -54,8 +54,8 @@ export const ISOPACKETS = {
   'mongo': ['npm-mongo'],
   'ejson': ['ejson'],
   'constraint-solver': ['constraint-solver'],
-  'cordova-support': ['boilerplate-generator', 'logging', 'webapp-hashing',
-                      'xmlbuilder'],
+  // 'cordova-support': ['boilerplate-generator', 'logging', 'webapp-hashing',
+  //                     'xmlbuilder'],
   'logging': ['logging']
 };
 
