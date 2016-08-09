@@ -156,11 +156,22 @@ meteorNpm.getProdPackageNames = function (nodeModulesDir) {
 };
 
 const lastRebuildJSONFilename = ".meteor-last-rebuild-version.json";
+
 const currentVersions = {
   platform: process.platform,
   arch: process.arch,
-  versions: process.versions
+  versions: {...process.versions},
 };
+
+// Make currentVersions.versions.node less sensitive to patch updates.
+// Come to think of it, we could probably get away with simply deleting
+// currentVersions.versions.node, since the v8/uv/etc. versions are what
+// really matters here, but that would be a bolder/riskier change.
+const nodeVersionParts = currentVersions.versions.node.split(".");
+assert.strictEqual(nodeVersionParts.length, 3);
+nodeVersionParts[2] = "*";
+currentVersions.versions.node = nodeVersionParts.join(".");
+
 const currentVersionsJSON =
   JSON.stringify(currentVersions, null, 2) + "\n";
 
