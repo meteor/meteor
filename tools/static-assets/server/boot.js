@@ -96,11 +96,6 @@ sourcemap_support.install({
   wrapCallSite: wrapCallSite
 });
 
-// Only enabled by default in development.
-if (process.env.METEOR_SHELL_DIR) {
-  require('./shell-server.js').listen(process.env.METEOR_SHELL_DIR);
-}
-
 // As a replacement to the old keepalives mechanism, check for a running
 // parent every few seconds. Exit if the parent is not running.
 //
