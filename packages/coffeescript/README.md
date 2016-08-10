@@ -1,4 +1,6 @@
 # coffeescript
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/coffeescript) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/coffeescript)
+***
 
 [CoffeeScript](http://coffeescript.org/) is a little language that
 compiles into JavaScript. It provides a simple syntax without lots of

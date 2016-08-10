@@ -1,4 +1,6 @@
 # mongo
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/mongo) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/mongo)
+***
 
 The `mongo` package is a [full stack database
 driver](https://www.meteor.com/full-stack-db-drivers) that provides

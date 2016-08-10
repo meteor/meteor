@@ -1,4 +1,6 @@
 # caching-html-compiler
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/caching-html-compiler) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/caching-html-compiler)
+***
 
 Provides a pluggable class used to compile HTML-style templates in Meteor build plugins. This abstracts out a lot of the functionality you would need to implement the following plugins:
 

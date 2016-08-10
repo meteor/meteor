@@ -1,4 +1,6 @@
 # autoupdate
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/autoupdate) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/autoupdate)
+***
 
 This package is the heart of Meteor's Hot Code Push functionality. It has a
 client component and a server component component. The client component uses a

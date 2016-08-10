@@ -1,4 +1,6 @@
 # caching-compiler
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/caching-compiler) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/caching-compiler)
+***
 
 Caching superclasses for Plugin.registerCompiler.
 CachingCompiler and MultiFileCachingCompiler are classes designed to be used

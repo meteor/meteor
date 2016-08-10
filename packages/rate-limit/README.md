@@ -1,4 +1,6 @@
 # Rate Limit
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/rate-limit) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/rate-limit)
+***
 ===
 A Rate Limiter is a general rate limiting object that stores rules and
 determines whether inputs are allowed based on the rules. There is also a
