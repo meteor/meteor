@@ -1,5 +1,6 @@
-# caching-compiler: caching superclasses for Plugin.registerCompiler
+# caching-compiler
 
+Caching superclasses for Plugin.registerCompiler.
 CachingCompiler and MultiFileCachingCompiler are classes designed to be used
 with Plugin.registerCompiler. They implement in-memory and on-disk caches for
 the files that they process.

@@ -1,4 +1,4 @@
-# [ecmascript](https://github.com/meteor/meteor/tree/devel/packages/ecmascript)
+# ecmascript
 
 This package lets you use new JavaScript language features that are part
 of the [ECMAScript 2015
