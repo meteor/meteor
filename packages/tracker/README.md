@@ -1,4 +1,6 @@
 # Meteor Tracker
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/tracker) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/tracker)
+***
 
 Meteor Tracker is an incredibly tiny (~1k) but incredibly powerful
 library for **transparent reactive programming** in JavaScript. (It

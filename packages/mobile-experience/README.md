@@ -1,4 +1,6 @@
 # mobile-experience
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/mobile-experience) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/mobile-experience)
+***
 
 A set of Cordova/PhoneGap-specific packages that set some good defaults when building for mobile. These packages only activate when you are building a native Android or iOS app.
 

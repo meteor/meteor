@@ -1,4 +1,6 @@
 # meteor-base
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/meteor-base) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/meteor-base)
+***
 
 A default set of packages that almost every app will have. You should only remove this package if you really, really know what you are doing.
 

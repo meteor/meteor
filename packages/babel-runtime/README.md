@@ -1,4 +1,6 @@
 # babel-runtime
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/babel-runtime) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/babel-runtime)
+***
 
 Meteor maintains a version of the runtime helpers needed by Babel-transpiled code.
 In most cases, the code is copied from Babel's helper implementations, though we

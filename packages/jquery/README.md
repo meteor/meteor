@@ -1,4 +1,6 @@
 # jquery
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/jquery) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/jquery)
+***
 
 [jQuery](http://jquery.com/) is a fast and concise JavaScript
 Library that simplifies HTML document traversing, event handling,
