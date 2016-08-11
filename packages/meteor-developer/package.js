@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Meteor developer accounts OAuth flow",
-  version: "1.1.9"
+  version: "1.1.10-release-testing.0"
 });
 
 Package.onUse(function (api) {
@@ -8,7 +8,7 @@ Package.onUse(function (api) {
   api.use('oauth', ['client', 'server']);
   api.use('http', ['server']);
   api.use(['underscore', 'service-configuration'], ['client', 'server']);
-  api.use(['random', 'templating'], 'client');
+  api.use(['random', 'templating@1.2.13'], 'client');
 
   api.export('MeteorDeveloperAccounts');
 

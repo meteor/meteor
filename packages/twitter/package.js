@@ -1,11 +1,11 @@
 Package.describe({
   summary: "Twitter OAuth flow",
-  version: '1.1.12'
+  version: '1.1.13-release-testing.0'
 });
 
 Package.onUse(function(api) {
   api.use('http', ['client', 'server']);
-  api.use('templating', 'client');
+  api.use('templating@1.2.13', 'client');
   api.use('oauth1', ['client', 'server']);
   api.use('oauth', ['client', 'server']);
   api.use('random', 'client');
