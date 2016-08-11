@@ -1,13 +1,13 @@
 Package.describe({
   summary: "Password support for accounts",
-  version: "1.2.13"
+  version: "1.3.0"
 });
 
 Package.onUse(function(api) {
-  api.use('npm-bcrypt@=0.8.7_1');
+  api.use('npm-bcrypt@0.9.0', 'server');
 
   api.use([
-    'accounts-base@1.2.9',
+    'accounts-base@1.2.10',
     'srp@1.0.9',
     'sha@1.0.8',
     'ejson@1.0.12',
@@ -15,7 +15,7 @@ Package.onUse(function(api) {
   ], ['client', 'server']);
 
   // Export Accounts (etc) to packages using this one.
-  api.imply('accounts-base@1.2.9', ['client', 'server']);
+  api.imply('accounts-base@1.2.10', ['client', 'server']);
 
   api.use('email@1.1.16', ['server']);
   api.use('random@1.0.10', ['server']);

@@ -623,8 +623,25 @@ api.addAssets('${relPath}', 'client').`);
     return _.pick(symbol, ['name', 'testOnly']);
   });
 
-  const isPortable = process.env.METEOR_FORCE_PORTABLE ||
-    _.every(nodeModulesDirectories, nmd => nmd.isPortable());
+  // By default, consider this isopack "portable" unless
+  // process.env.METEOR_ALLOW_NON_PORTABLE is truthy or the name of the
+  // package is "meteor-tool", in which case we determine portability by
+  // scanning node_modules directories for binary .node files.
+  // Non-portable packages must publish platform-specific builds using
+  // publish-for-arch, whereas portable packages can avoid running
+  // publish-for-arch and rely instead on the package consumer to rebuild
+  // binary npm dependencies when necessary.
+  let isPortable = true;
+  if (! process.env.METEOR_FORCE_PORTABLE) {
+    // Make sure we've rebuilt these npm packages according to the current
+    // process.{platform,arch,versions}.
+    _.each(nodeModulesDirectories, nmd => nmd.rebuildIfNonPortable());
+
+    if (process.env.METEOR_ALLOW_NON_PORTABLE ||
+        isopk.name === "meteor-tool") {
+      isPortable = _.every(nodeModulesDirectories, nmd => nmd.isPortable());
+    }
+  }
 
   // *** Consider npm dependencies and portability
   var arch = inputSourceArch.arch;

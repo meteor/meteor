@@ -104,7 +104,7 @@
 
 * This release fixed a small bug in 1.3.5 that prevented updating apps
   whose `.meteor/release` files refer to releases no longer installed in
-  `~/.meteor/packages/meteor-tool`. 576468eae8d8dd7c1fe2fa381ac51dee5cb792cd
+  `~/.meteor/packages/meteor-tool`. [576468eae8d8dd7c1fe2fa381ac51dee5cb792cd](https://github.com/meteor/meteor/commit/576468eae8d8dd7c1fe2fa381ac51dee5cb792cd)
 
 ## v1.3.5
 
@@ -115,7 +115,7 @@
 * If an app has no `package.json` file, all packages in `node_modules`
   will be built into the production bundle. In other words, make sure you
   have a `package.json` file if you want to benefit from `devDependencies`
-  pruning. 7b2193188fc9e297eefc841ce6035825164f0684
+  pruning. [7b2193188fc9e297eefc841ce6035825164f0684](https://github.com/meteor/meteor/commit/7b2193188fc9e297eefc841ce6035825164f0684)
 
 * Binary npm dependencies of compiler plugins are now automatically
   rebuilt when Node/V8 versions change.
@@ -150,7 +150,7 @@
   `Npm.depends`) has been set to "error" instead of "warn". Note that this
   change does not affect `meteor npm ...` commands, which can be easily
   configured using `.npmrc` files or command-line flags.
-  https://github.com/meteor/meteor/commit/0689cae25a3e0da3615a402cdd0bec94ce8455c8
+  [0689cae25a3e0da3615a402cdd0bec94ce8455c8](https://github.com/meteor/meteor/commit/0689cae25a3e0da3615a402cdd0bec94ce8455c8)
 
 ## v1.3.4.3
 

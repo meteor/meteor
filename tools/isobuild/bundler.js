@@ -260,6 +260,10 @@ export class NodeModulesDirectory {
     return meteorNpm.dependenciesArePortable(this.sourcePath);
   }
 
+  rebuildIfNonPortable() {
+    return meteorNpm.rebuildIfNonPortable(this.sourcePath);
+  }
+
   getPreferredBundlePath(kind) {
     assert.ok(kind === "bundle" ||
               kind === "isopack",
@@ -2180,7 +2184,6 @@ class ServerTarget extends JsImageTarget {
     _.each([
       "boot.js",
       "boot-utils.js",
-      "shell-server.js",
       "server-json.js",
       "mini-files.js",
       "npm-require.js",
