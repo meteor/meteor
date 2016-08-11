@@ -30,7 +30,7 @@ var packageJson = {
     semver: "4.1.0",
     request: "2.47.0",
     fstream: "https://github.com/meteor/fstream/tarball/cf4ea6c175355cec7bee38311e170d08c4078a5d",
-    tar: "1.0.2",
+    tar: "2.2.1",
     kexec: "2.0.2",
     "source-map": "0.5.3",
     "browserstack-webdriver": "2.41.1",
