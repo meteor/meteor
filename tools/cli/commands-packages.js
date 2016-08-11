@@ -603,15 +603,21 @@ main.registerCommand({
 
   // Download the source to the package.
   var sourceTarball = buildmessage.enterJob("downloading package source", function () {
-    return httpHelpers.getUrl({
+    return httpHelpers.getUrlWithResuming({
       url: pkgVersion.source.url,
       encoding: null
     });
   });
 
+  if (buildmessage.hasMessages()) {
+    return 1;
+  }
+
   var sourcePath = files.mkdtemp('package-source');
-  // XXX check tarballHash!
-  files.extractTarGz(sourceTarball, sourcePath);
+  buildmessage.enterJob("extracting package source", () => {
+    // XXX check tarballHash!
+    files.extractTarGz(sourceTarball, sourcePath);
+  });
 
   // XXX Factor out with packageClient.bundleSource so that we don't
   // have knowledge of the tarball structure in two places.
@@ -1615,6 +1621,34 @@ main.registerCommand({
     upgradePackageNames = options.args;
   }
 
+  const upgradePackagesWithoutCordova =
+    upgradePackageNames.filter(name => name.split(':')[0] !== 'cordova');
+  if (!_.isEqual(upgradePackagesWithoutCordova, upgradePackageNames)) {
+    // There are some cordova packages in the list to update.
+    // We should tell users how to update cordova packages.
+    Console.warn();
+    Console.warn("To add/upgrade a Cordova plugin in your Meteor project, run:");
+    Console.warn();
+    Console.warn(
+      Console.command("meteor add cordova:PLUGIN-NAME@x.y.z"),
+      Console.options({ indent: 2 }));
+    Console.warn();
+    Console.warn("The 'PLUGIN-NAME' should be an official plugin name",
+      "(e.g. cordova-plugin-media) and the 'x.y.z' should be an available version of",
+      "the plugin. The latest version can be found with the following command:");
+    Console.warn();
+    Console.warn(
+      Console.command("meteor npm view PLUGIN-NAME version"),
+      Console.options({ indent: 2 }));
+    if (upgradePackagesWithoutCordova.length !== 0) {
+      Console.warn();
+      Console.warn('The non-Cordova packages will now be updated...');
+    }
+    Console.warn();
+    // Exclude cordova packages
+    upgradePackageNames = upgradePackagesWithoutCordova;
+  }
+
   // Try to resolve constraints, allowing the given packages to be upgraded.
   projectContext.reset({
     upgradePackageNames: upgradePackageNames,
@@ -1629,11 +1663,13 @@ main.registerCommand({
 
       // If the user explicitly mentioned some packages to upgrade, they must
       // actually end up in our solution!
-      _.each(options.args, function (packageName) {
-        if (! projectContext.packageMap.getInfo(packageName)) {
-          buildmessage.error(packageName + ': package is not in the project');
-        }
-      });
+      if (options.args.length !== 0) {
+        _.each(upgradePackageNames, function (packageName) {
+          if (! projectContext.packageMap.getInfo(packageName)) {
+            buildmessage.error(packageName + ': package is not in the project');
+          }
+        });
+      }
       if (buildmessage.jobHasMessages()) {
         return;
       }

@@ -54,8 +54,7 @@ var packageJson = {
     runas: "3.1.1",
     'lru-cache': '2.6.4',
     'cordova-lib': "6.0.0",
-    longjohn: '0.2.11',
-    'stream-buffers': '3.0.0'
+    longjohn: '0.2.11'
   }
 };
 
