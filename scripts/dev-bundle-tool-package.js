@@ -21,7 +21,7 @@ var packageJson = {
     // So that Babel 6 can emit require("babel-runtime/helpers/...") calls.
     "babel-runtime": "6.9.2",
     // For various ES2015 polyfills, such as Map and Set.
-    "meteor-ecmascript-runtime": "0.2.6",
+    "meteor-ecmascript-runtime": "0.2.9",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
     // in the package too) because we should consider using lodash instead
     // (and there are backwards-incompatible changes either way).
