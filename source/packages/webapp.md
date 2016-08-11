@@ -36,7 +36,7 @@ will match `/hello/world` and `/hello.world`, but not `/hello_world`.
 **handler** - this is a function that takes three arguments:
 
 - **req** - a Node.js
-[IncomingMessage](http://nodejs.org/api/http.html#http_http_incomingmessage)
+[IncomingMessage](https://nodejs.org/api/http.html#http_class_http_incomingmessage)
 object with some extra properties. This argument can be used to get information
 about the incoming request.
 - **res** - a Node.js
