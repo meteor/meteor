@@ -1,0 +1,3 @@
+[submodule "packages-for-isopackets/blaze"]
+	path = packages-for-isopackets/blaze
+	url = https://github.com/meteor/blaze.git
