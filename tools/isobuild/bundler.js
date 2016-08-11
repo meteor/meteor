@@ -2184,7 +2184,6 @@ class ServerTarget extends JsImageTarget {
     _.each([
       "boot.js",
       "boot-utils.js",
-      "shell-server.js",
       "server-json.js",
       "mini-files.js",
       "npm-require.js",
