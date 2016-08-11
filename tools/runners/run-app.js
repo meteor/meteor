@@ -240,9 +240,9 @@ _.extend(AppProcess.prototype, {
     if (self.debugPort) {
       attach = require('../inspector.js').start(self.debugPort, entryPoint);
 
-      // If you do opts.push("--debug-brk", port) it doesn't work on Windows
-      // for some reason
-      opts.push("--debug-brk=" + attach.suggestedDebugBrkPort);
+      // If you do opts.push("--debug", port) it doesn't work on Windows
+      // for some reason.
+      opts.push("--debug=" + attach.suggestedDebugBrkPort);
     }
 
     opts.push(entryPoint);
