@@ -233,6 +233,12 @@ the guide about breaking changes here:`,
     files.rm_recursive(oldDevBundleLink);
   },
 
+  "1.4.1-add-shell-server-package": function (projectContext) {
+    const packagesFile = projectContext.projectConstraintsFile;
+    packagesFile.addPackages(["shell-server"]);
+    packagesFile.writeIfModified();
+  },
+
   ////////////
   // PLEASE. When adding new upgraders that print mesasges, follow the
   // examples for 0.9.0 and 0.9.1 above. Specifically, formatting
