@@ -156,17 +156,72 @@ meteorNpm.getProdPackageNames = function (nodeModulesDir) {
 };
 
 const lastRebuildJSONFilename = ".meteor-last-rebuild-version.json";
+
+const currentVersions = {
+  platform: process.platform,
+  arch: process.arch,
+  versions: {...process.versions},
+};
+
 const currentVersionsJSON =
-  JSON.stringify(process.versions, null, 2) + "\n";
+  JSON.stringify(currentVersions, null, 2) + "\n";
 
 function recordLastRebuildVersions(pkgDir) {
-  // Record the current process.versions so that we can avoid
-  // copying/rebuilding/renaming next time.
+  // Record the current process.{platform,arch,versions} so that we can
+  // avoid copying/rebuilding/renaming next time.
   files.writeFile(
     files.pathJoin(pkgDir, lastRebuildJSONFilename),
     currentVersionsJSON,
     "utf8"
   );
+}
+
+// Returns true iff isSubtreeOf(currentVersions, versions), allowing
+// valid semantic versions to differ in their patch versions.
+function versionsAreCompatible(versions) {
+  import { parse } from "semver";
+
+  return isSubtreeOf(currentVersions, versions, (a, b) => {
+    // Technically already handled by isSubtreeOf, but doesn't hurt.
+    if (a === b) {
+      return true;
+    }
+
+    if (! a || ! b) {
+      return false;
+    }
+
+    const aType = typeof a;
+    const bType = typeof b;
+
+    if (aType !== bType) {
+      return false;
+    }
+
+    if (aType === "string") {
+      const aVer = parse(a);
+      const bVer = parse(b);
+      return aVer && bVer &&
+        aVer.major === bVer.major &&
+        aVer.minor === bVer.minor;
+    }
+  });
+}
+
+function rebuildVersionsAreCompatible(pkgPath) {
+  const versionFile =
+    files.pathJoin(pkgPath, lastRebuildJSONFilename);
+
+  try {
+    var versions = JSON.parse(files.readFile(versionFile));
+  } catch (e) {
+    if (! (e instanceof SyntaxError ||
+           e.code === "ENOENT")) {
+      throw e;
+    }
+  }
+
+  return versionsAreCompatible(versions);
 }
 
 // Rebuilds any binary dependencies in the given node_modules directory,
@@ -182,19 +237,7 @@ Profile("meteorNpm.rebuildIfNonPortable", function (nodeModulesDir) {
       return;
     }
 
-    const versionFile =
-      files.pathJoin(pkgPath, lastRebuildJSONFilename);
-
-    try {
-      var versions = JSON.parse(files.readFile(versionFile));
-    } catch (e) {
-      if (! (e instanceof SyntaxError ||
-             e.code === "ENOENT")) {
-        throw e;
-      }
-    }
-
-    if (_.isEqual(versions, process.versions)) {
+    if (rebuildVersionsAreCompatible(pkgPath)) {
       return;
     }
 
@@ -457,16 +500,26 @@ var updateExistingNpmDirectory = function (packageName, newPackageNpmDir,
                        npmDependencies);
 };
 
-function isSubtreeOf(subsetTree, supersetTree) {
+function isSubtreeOf(subsetTree, supersetTree, predicate) {
   if (subsetTree === supersetTree) {
     return true;
   }
 
-  return _.isObject(subsetTree) &&
-    _.isObject(supersetTree) &&
-    _.every(subsetTree, (value, key) => {
-      return isSubtreeOf(value, supersetTree[key]);
-    });
+  if (_.isObject(subsetTree)) {
+    return _.isObject(supersetTree) &&
+      _.every(subsetTree, (value, key) => {
+        return isSubtreeOf(value, supersetTree[key], predicate);
+      });
+  }
+
+  if (_.isFunction(predicate)) {
+    const result = predicate(subsetTree, supersetTree);
+    if (typeof result === "boolean") {
+      return result;
+    }
+  }
+
+  return false;
 }
 
 var createFreshNpmDirectory = function (packageName, newPackageNpmDir,
