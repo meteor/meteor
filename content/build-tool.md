@@ -198,7 +198,7 @@ Minification usually happens when you `meteor deploy` or `meteor build` your app
 
 The most powerful feature of Meteor's build system is the ability to define custom build plugins. If you find yourself writing scripts that mangle one type of file into another, merge multiple files, or something else, it's likely that these scripts would be better implemented as a build plugin. The `ecmascript`, `templating`, and `coffeescript` packages are all implemented as build plugins, so you can replace them with your own versions if you want to!
 
-[Read the documentation about build plugins.](https://github.com/meteor/meteor/wiki/Build-Plugins-API)
+[Read the documentation about build plugins.](https://docs.meteor.com/api/packagejs.html#build-plugin-api)
 
 <h3 id="types-of-build-plugins">Types of build plugins</h3>
 
@@ -214,5 +214,5 @@ Writing a build plugin is a very advanced task that only the most advanced Meteo
 
 <h3 id="caching-build-plugins">Caching</h3>
 
-The best way to make your build plugin fast is to use caching anywhere you can - the best way to save time is to do less work! Check out the [documentation about CachingCompiler](https://github.com/meteor/meteor/wiki/Build-Plugins-API#caching) to learn more. It's used in all of the above examples, so you can see how to use it by looking at them.
+The best way to make your build plugin fast is to use caching anywhere you can - the best way to save time is to do less work! Check out the [documentation about CachingCompiler](https://docs.meteor.com/api/packagejs.html#build-plugin-caching) to learn more. It's used in all of the above examples, so you can see how to use it by looking at them.
 
