@@ -45,7 +45,7 @@ If you want to run on the bleeding edge, or help develop Meteor, you
 can run Meteor directly from a git checkout.
 
 ```bash
-git clone git://github.com/meteor/meteor.git
+git clone --recursive git://github.com/meteor/meteor.git
 cd meteor
 ```
 
