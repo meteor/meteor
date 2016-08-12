@@ -364,3 +364,25 @@ The shell supports tab completion for global variables like `Meteor`,
 
 The shell maintains a persistent history across sessions. Previously-run
 commands can be accessed by pressing the up arrow.
+
+<h2 id="meteornpm">meteor npm</h2>
+
+Calling `meteor npm` calls the `npm` command bundled with meteor. 
+
+Pass additional arguments as you would to `npm`.
+
+For example, executing `meteor npm install bootstrap` would install bootstrap
+from npm, to your `node_modules` dir.
+
+This is useful for ensuring that you install dependencies with npm v3, 
+as expected by meteor since [v1.3.4](https://github.com/meteor/meteor/blob/devel/History.md#v134)
+
+<h2 id="meteornode">meteor node</h2>
+
+Calling `meteor node` calls the `node` command bundled with meteor. 
+
+Pass additional arguments as you would to `node`.
+
+For example, executing `meteor node -e "console.log(process.versions)"` would 
+run `console.log(process.versions)` in the version of `node` bundled with Meteor.
+
