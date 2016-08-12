@@ -13,6 +13,7 @@
   ],
   "main": "promise_server.js",
   "browser": "promise_client.js",
+  "typings": "promise.d.ts",
   "scripts": {
     "test": "test/run.sh"
   },
