@@ -423,3 +423,29 @@ Tinytest.add(
     onLoginFailureStopper.stop();
   }
 );
+
+Tinytest.addAsync(
+  'accounts - password reset token should be correctly removed when expired',
+  function (test, onComplete) {
+    var userId = Accounts.insertUserDoc({}, { username: Random.id() });
+    var date = new Date(new Date() - 5000);
+    var tokenRecord = {
+      token: Random.id(),
+      email: Random.id(),
+      when: date
+    };
+    Meteor.users.update(userId, {$set: {
+      "services.password.reset": tokenRecord
+    }});
+    var observe = Meteor.users.find(userId).observe({
+      changed: function (newUser) {
+        if (!newUser.services.password.reset || _.isEmpty(newUser.services.password.reset)) {
+          observe.stop();
+          onComplete();
+        }
+      }
+    });
+
+    Accounts._expirePasswordResetTokens(new Date(), userId);
+  }
+);
