@@ -121,6 +121,11 @@ delete () {
 }
 
 delete npm/test
+delete npm/node_modules/node-gyp
+pushd npm/node_modules
+ln -s ../../node-gyp ./
+popd
+
 delete sqlite3/deps
 delete sqlite3/node_modules/nan
 delete sqlite3/node_modules/node-pre-gyp
