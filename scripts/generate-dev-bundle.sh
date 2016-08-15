@@ -120,6 +120,7 @@ delete () {
     rm -rf "$1"
 }
 
+delete npm/test
 delete sqlite3/deps
 delete sqlite3/node_modules/nan
 delete sqlite3/node_modules/node-pre-gyp
