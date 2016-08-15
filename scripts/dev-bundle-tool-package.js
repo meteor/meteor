@@ -33,7 +33,6 @@ var packageJson = {
     tar: "2.2.1",
     kexec: "2.0.2",
     "source-map": "0.5.3",
-    "browserstack-webdriver": "2.41.1",
     "node-inspector": "0.12.8",
     chalk: "0.5.1",
     sqlite3: "3.1.3",

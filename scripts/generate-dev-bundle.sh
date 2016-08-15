@@ -120,9 +120,6 @@ delete () {
     rm -rf "$1"
 }
 
-delete browserstack-webdriver/docs
-delete browserstack-webdriver/lib/test
-
 delete sqlite3/deps
 delete wordwrap/test
 delete moment/min
@@ -132,15 +129,6 @@ find . -path '*/esprima-fb/test' | xargs rm -rf
 
 cd "$DIR/lib/node_modules/fibers/bin"
 shrink_fibers
-
-# Download BrowserStackLocal binary.
-BROWSER_STACK_LOCAL_URL="https://browserstack-binaries.s3.amazonaws.com/BrowserStackLocal-07-03-14-$OS-$ARCH.gz"
-
-cd "$DIR/build"
-curl -O $BROWSER_STACK_LOCAL_URL
-gunzip BrowserStackLocal*
-mv BrowserStackLocal* BrowserStackLocal
-mv BrowserStackLocal "$DIR/bin/"
 
 # Sanity check to see if we're not breaking anything by replacing npm
 INSTALLED_NPM_VERSION=$(cat "$DIR/lib/node_modules/npm/package.json" |
