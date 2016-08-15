@@ -13,6 +13,12 @@
   using an older release: e.g. `meteor --release 1.4 publish`.
   [#7608](https://github.com/meteor/meteor/pull/7608)
 
+* The `.meteor-last-rebuild-version.json` files that determine if a binary
+  npm package needs to be rebuilt now include more information from the
+  `process` object, namely `process.{platform,arch,versions}` instead of
+  just `process.versions`. Note also that the comparison of versions now
+  ignores differences in patch versions, to avoid needless rebuilds.
+
 * The `npm-bcrypt` package now uses a pure-JavaScript implementation by
   default, but will prefer the native `bcrypt` implementation if it is
   installed in the application's `node_modules` directory. In other words,
