@@ -1140,7 +1140,7 @@ Ap._expirePasswordResetTokens = function (oldestValidDate, userId) {
       { "services.password.reset.when": { $lt: +oldestValidDate } }
     ]
   }), {
-    $pull: {
+    $unset: {
       "services.password.reset": {
         $or: [
           { when: { $lt: oldestValidDate } },

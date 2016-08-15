@@ -1468,6 +1468,20 @@ if (Meteor.isServer) (function () {
       }, /Incorrect password/);
     });
 
+  Tinytest.add(
+    'passwords - reset tokens get cleaned up',
+    function (test) {
+      var email = test.id + '-intercept@example.com';
+      var userId = Accounts.createUser({email: email, password: 'password'});
+      Accounts.sendResetPasswordEmail(userId, email);
+      test.isTrue(!!Meteor.users.findOne(userId).services.password.reset);
+
+      Accounts._expirePasswordResetTokens(new Date(), userId);
+
+      test.isUndefined(Meteor.users.findOne(userId).services.password.reset);
+    }
+  )
+
   // We should be able to change the username
   Tinytest.add("passwords - change username", function (test) {
     var username = Random.id();
