@@ -1546,7 +1546,8 @@ main.registerCommand({
   options: {
     patch: { type: Boolean },
     "packages-only": { type: Boolean },
-    "allow-incompatible-update": { type: Boolean }
+    "allow-incompatible-update": { type: Boolean },
+    "all-packages": { type: Boolean }
   },
   // We have to be able to work without a release, since 'meteor
   // update' is how you fix apps that don't have a release.
@@ -1611,13 +1612,28 @@ main.registerCommand({
   // args), take patches to indirect dependencies.
   var upgradeIndirectDepPatchVersions = false;
   if (options.args.length === 0) {
-    projectContext.projectConstraintsFile.eachConstraint(function (constraint) {
-      if (! compiler.isIsobuildFeaturePackage(constraint.package)) {
-        upgradePackageNames.push(constraint.package);
-      }
-    });
+    var allDependencies = _.keys(projectContext.packageMapFile._versions);
+
+    // "all-packages" means update every package we depend on. The default
+    // is to tend to leave indirect dependencies (i.e. things not listed in
+    // `.meteor/packages`) alone.
+    if (options["all-packages"] && allDependencies.length > 0) {
+      upgradePackageNames = allDependencies;
+    } else {
+      projectContext.projectConstraintsFile.eachConstraint(function (constraint) {
+        if (! compiler.isIsobuildFeaturePackage(constraint.package)) {
+          upgradePackageNames.push(constraint.package);
+        }
+      });
+    }
     upgradeIndirectDepPatchVersions = true;
   } else {
+    if (options["all-packages"]) {
+      Console.error("You cannot both specify a list of packages to"
+       + " update and pass --all-packages.");
+       exit(1)
+    }
+
     upgradePackageNames = options.args;
   }
 
