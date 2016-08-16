@@ -3,7 +3,7 @@
 $PLATFORM = "windows_x86"
 $MONGO_VERSION = "3.2.6"
 $NODE_VERSION = "4.5.0"
-$NPM_VERSION = "3.10.5"
+$NPM_VERSION = "3.10.6"
 $PYTHON_VERSION = "2.7.10" # For node-gyp
 
 # take it form the environment if exists
