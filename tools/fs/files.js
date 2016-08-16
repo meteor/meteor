@@ -434,9 +434,7 @@ files.mkdir_p = function (dir, mode) {
   return pathIsDirectory(p);
 };
 
-// Roughly like cp -R. 'from' should be a directory. 'to' can either
-// be a directory, or it can not exist (in which case it will be
-// created with mkdir_p).
+// Roughly like cp -R.
 //
 // The output files will be readable and writable by everyone that the umask
 // allows, and executable by everyone (modulo umask) if the original file was
@@ -450,49 +448,55 @@ files.mkdir_p = function (dir, mode) {
 // If options.ignore is present, it should be a list of regexps. Any
 // file whose basename matches one of the regexps, before
 // transformation, will be skipped.
-files.cp_r = function (from, to, options) {
-  options = options || {};
+files.cp_r = function(from, to, options = {}) {
+  from = files.pathResolve(from);
 
-  var absFrom = files.pathResolve(from);
-  files.mkdir_p(to, 0o755);
+  const stat = options.preserveSymlinks
+    ? files.lstat(from)
+    : files.stat(from);
 
-  _.each(files.readdir(from), function (f) {
-    if (_.any(options.ignore || [], function (pattern) {
-      return f.match(pattern);
-    })) {
-      return;
-    }
+  if (stat.isDirectory()) {
+    files.mkdir_p(to, 0o755);
 
-    var fullFrom = files.pathJoin(from, f);
-    if (options.transformFilename) {
-      f = options.transformFilename(f);
-    }
-    var fullTo = files.pathJoin(to, f);
-    var stats = options.preserveSymlinks
-          ? files.lstat(fullFrom) : files.stat(fullFrom);
-    if (stats.isDirectory()) {
-      files.cp_r(fullFrom, fullTo, options);
-    } else if (stats.isSymbolicLink()) {
-      var linkText = files.readlink(fullFrom);
-      files.symlink(linkText, fullTo);
-    } else {
-      var absFullFrom = files.pathResolve(fullFrom);
-
-      // Create the file as readable and writable by everyone, and executable by
-      // everyone if the original file is executably by owner. (This mode will
-      // be modified by umask.) We don't copy the mode *directly* because this
-      // function is used by 'meteor create' which is copying from the read-only
-      // tools tree into a writable app.
-      var mode = (stats.mode & 0o100) ? 0o777 : 0o666;
-      if (!options.transformContents) {
-        copyFileHelper(fullFrom, fullTo, mode);
-      } else {
-        var contents = files.readFile(fullFrom);
-        contents = options.transformContents(contents, f);
-        files.writeFile(fullTo, contents, { mode: mode });
+    files.readdir(from).forEach(f => {
+      if (options.ignore &&
+          _.any(options.ignore,
+                pattern => f.match(pattern))) {
+        return;
       }
+
+      if (options.transformFilename) {
+        f = options.transformFilename(f);
+      }
+
+      files.cp_r(
+        files.pathJoin(from, f),
+        files.pathJoin(to, f),
+        options
+      );
+    })
+
+  } else if (stat.isSymbolicLink()) {
+    files.symlink(files.readlink(from), to);
+
+  } else {
+    // Create the file as readable and writable by everyone, and
+    // executable by everyone if the original file is executable by
+    // owner. (This mode will be modified by umask.) We don't copy the
+    // mode *directly* because this function is used by 'meteor create'
+    // which is copying from the read-only tools tree into a writable app.
+    const mode = (stat.mode & 0o100) ? 0o777 : 0o666;
+
+    if (options.transformContents) {
+      files.writeFile(to, options.transformContents(
+        files.readFile(from),
+        files.basename(from)
+      ), { mode });
+
+    } else {
+      copyFileHelper(from, to, mode);
     }
-  });
+  }
 };
 
 /**
