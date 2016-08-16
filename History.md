@@ -2,6 +2,8 @@
 
 ## v1.4.1
 
+* Node has been upgraded to 4.5.0.
+
 * The `meteor publish-for-arch` command is no longer necessary when
   publishing Meteor packages with binary npm dependencies. Instead, binary
   dependencies will be rebuilt automatically on the installation side.
