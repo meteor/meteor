@@ -270,9 +270,11 @@ Profile("meteorNpm.rebuildIfNonPortable", function (nodeModulesDir) {
       files.pathBasename(pkgPath)
     );
 
-    // Copy instead of rename so that the original package directories
-    // will be left untouched if the rebuild fails.
-    files.cp_r(pkgPath, tempPkgDir);
+    // Copy the package directory instead of renaming it, so that the
+    // original package will be left untouched if the rebuild fails. We
+    // could just run files.cp_r(pkgPath, tempPkgDir) here, except that we
+    // want to handle nested node_modules directories specially.
+    copyNpmPackageWithSymlinkedNodeModules(pkgPath, tempPkgDir);
 
     // Record the current process.versions so that we can avoid
     // copying/rebuilding/renaming next time.
@@ -291,6 +293,30 @@ Profile("meteorNpm.rebuildIfNonPortable", function (nodeModulesDir) {
   // If the `npm rebuild` command succeeded, overwrite the original
   // package directories with the rebuilt package directories.
   dirsToRebuild.forEach(function (pkgPath) {
+    const actualNodeModulesDir =
+      files.pathJoin(pkgPath, "node_modules");
+
+    const actualNodeModulesStat =
+      files.statOrNull(actualNodeModulesDir);
+
+    if (actualNodeModulesStat &&
+        actualNodeModulesStat.isDirectory()) {
+      // If the original package had a node_modules directory, move it
+      // into the temporary package directory, overwriting the one created
+      // by copyNpmPackageWithSymlinkedNodeModules (which contains only
+      // symlinks), so that when we rename the temporary directory back to
+      // the original directory below, we'll end up with a node_modules
+      // directory that contains real packages rather than symlinks.
+
+      const symlinkNodeModulesDir =
+        files.pathJoin(tempPkgDirs[pkgPath], "node_modules");
+
+      files.renameDirAlmostAtomically(
+        actualNodeModulesDir,
+        symlinkNodeModulesDir
+      );
+    }
+
     files.renameDirAlmostAtomically(tempPkgDirs[pkgPath], pkgPath);
   });
 
@@ -298,6 +324,63 @@ Profile("meteorNpm.rebuildIfNonPortable", function (nodeModulesDir) {
 
   return true;
 });
+
+// Copy an npm package directory to another location, but attempt to
+// symlink all of its node_modules rather than recursively copying them,
+// which potentially saves a lot of time.
+function copyNpmPackageWithSymlinkedNodeModules(fromPkgDir, toPkgDir) {
+  files.mkdir_p(toPkgDir);
+
+  let needToHandleNodeModules = false;
+
+  files.readdir(fromPkgDir).forEach(item => {
+    if (item === "node_modules") {
+      // We'll link or copy node_modules in a follow-up step.
+      needToHandleNodeModules = true;
+      return;
+    }
+
+    files.cp_r(
+      files.pathJoin(fromPkgDir, item),
+      files.pathJoin(toPkgDir, item)
+    );
+  });
+
+  if (! needToHandleNodeModules) {
+    return;
+  }
+
+  const nodeModulesFromPath = files.pathJoin(fromPkgDir, "node_modules");
+  const nodeModulesToPath = files.pathJoin(toPkgDir, "node_modules");
+
+  files.mkdir(nodeModulesToPath);
+
+  files.readdir(nodeModulesFromPath).forEach(depPath => {
+    if (depPath === ".bin") {
+      // Avoid copying node_modules/.bin because commands like
+      // .bin/node-gyp and .bin/node-pre-gyp tend to cause problems.
+      return;
+    }
+
+    const absDepFromPath = files.pathJoin(nodeModulesFromPath, depPath);
+
+    if (! files.stat(absDepFromPath).isDirectory()) {
+      // Only copy package directories, even though there might be other
+      // kinds of files in node_modules.
+      return;
+    }
+
+    const absDepToPath = files.pathJoin(nodeModulesToPath, depPath);
+
+    // Try to symlink node_modules dependencies if possible (faster),
+    // and fall back to a recursive copy otherwise.
+    try {
+      files.symlink(absDepFromPath, absDepToPath, "junction");
+    } catch (e) {
+      files.cp_r(absDepFromPath, absDepToPath);
+    }
+  });
+}
 
 function isPortable(dir) {
   const lstat = files.lstat(dir);
