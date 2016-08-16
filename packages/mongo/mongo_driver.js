@@ -123,6 +123,64 @@ var replaceTypes = function (document, atomTransformer) {
   return ret;
 };
 
+var connectToDb = function (future, self, url, mongoOptions) {
+  var connectFuture = new Future;
+  MongoDB.connect(
+    url,
+    mongoOptions,
+    Meteor.bindEnvironment(
+      function (err, db) {
+        if (err) {
+          throw err;
+        }
+
+        // First, figure out what the current primary is, if any.
+        if (db.serverConfig.isMasterDoc) {
+          self._primary = db.serverConfig.isMasterDoc.primary;
+        }
+
+        db.serverConfig.on(
+          'joined', Meteor.bindEnvironment(function (kind, doc) {
+            if (kind === 'primary') {
+              if (doc.primary !== self._primary) {
+                self._primary = doc.primary;
+                self._onFailoverHook.each(function (callback) {
+                  callback();
+                  return true;
+                });
+              }
+            } else if (doc.me === self._primary) {
+              // The thing we thought was primary is now something other than
+              // primary.  Forget that we thought it was primary.  (This means
+              // that if a server stops being primary and then starts being
+              // primary again without another server becoming primary in the
+              // middle, we'll correctly count it as a failover.)
+              self._primary = null;
+            }
+          }));
+
+        // Allow the constructor to return.
+        connectFuture['return'](db);
+      },
+      connectFuture.resolver()  // onException
+    )
+  );
+
+  // Wait for the connection to be successful; throws on failure.
+  try {
+    var db = connectFuture.wait();
+    console.log('connected');
+    delete self._dbConnectTimeout;
+    future['return'](db);
+  }
+  catch (error) {
+    // wait and retry in 5 seconds
+    console.log('connection failed. retrying in 5 seconds...');
+    self._dbConnectTimeout = setTimeout(Meteor.bindEnvironment(connectToDb.bind(this, future, self, url, mongoOptions)), 5000);
+  }
+  return connectFuture;
+};
+
 
 MongoConnection = function (url, options) {
   var self = this;
@@ -169,51 +227,10 @@ MongoConnection = function (url, options) {
   self._oplogHandle = null;
   self._docFetcher = null;
 
-
-  var connectFuture = new Future;
-  MongoDB.connect(
-    url,
-    mongoOptions,
-    Meteor.bindEnvironment(
-      function (err, db) {
-        if (err) {
-          throw err;
-        }
-
-        // First, figure out what the current primary is, if any.
-        if (db.serverConfig.isMasterDoc) {
-          self._primary = db.serverConfig.isMasterDoc.primary;
-        }
-
-        db.serverConfig.on(
-          'joined', Meteor.bindEnvironment(function (kind, doc) {
-            if (kind === 'primary') {
-              if (doc.primary !== self._primary) {
-                self._primary = doc.primary;
-                self._onFailoverHook.each(function (callback) {
-                  callback();
-                  return true;
-                });
-              }
-            } else if (doc.me === self._primary) {
-              // The thing we thought was primary is now something other than
-              // primary.  Forget that we thought it was primary.  (This means
-              // that if a server stops being primary and then starts being
-              // primary again without another server becoming primary in the
-              // middle, we'll correctly count it as a failover.)
-              self._primary = null;
-            }
-          }));
-
-        // Allow the constructor to return.
-        connectFuture['return'](db);
-      },
-      connectFuture.resolver()  // onException
-    )
-  );
-
-  // Wait for the connection to be successful; throws on failure.
-  self.db = connectFuture.wait();
+  console.log('initial mongo connection...')
+  var connectedFuture = new Future;
+  connectToDb(connectedFuture, self, url, mongoOptions);
+  self.db = connectedFuture.wait();
 
   if (options.oplogUrl && ! Package['disable-oplog']) {
     self._oplogHandle = new OplogHandle(options.oplogUrl, self.db.databaseName);
@@ -226,6 +243,10 @@ MongoConnection.prototype.close = function() {
 
   if (! self.db)
     throw Error("close called before Connection created?");
+
+  if (self._dbConnectTimeout) {
+    clearTimeout(self._dbConnectTimeout);
+  }
 
   // XXX probably untested
   var oplogHandle = self._oplogHandle;
