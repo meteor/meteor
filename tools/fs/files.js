@@ -490,7 +490,7 @@ files.cp_r = function(from, to, options = {}) {
     if (options.transformContents) {
       files.writeFile(to, options.transformContents(
         files.readFile(from),
-        files.basename(from)
+        files.pathBasename(from)
       ), { mode });
 
     } else {
