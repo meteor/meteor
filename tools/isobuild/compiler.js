@@ -635,7 +635,16 @@ api.addAssets('${relPath}', 'client').`);
   if (! process.env.METEOR_FORCE_PORTABLE) {
     // Make sure we've rebuilt these npm packages according to the current
     // process.{platform,arch,versions}.
-    _.each(nodeModulesDirectories, nmd => nmd.rebuildIfNonPortable());
+    _.each(nodeModulesDirectories, nmd => {
+      if (nmd.local) {
+        // Meteor never attempts to modify the contents of local
+        // node_modules directories (such as the one in the root directory
+        // of an application), so we call nmd.rebuildIfNonPortable() only
+        // when nmd.local is false.
+      } else {
+        nmd.rebuildIfNonPortable();
+      }
+    });
 
     if (process.env.METEOR_ALLOW_NON_PORTABLE ||
         isopk.name === "meteor-tool") {
