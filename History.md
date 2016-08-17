@@ -105,6 +105,16 @@
   deployed apps has been fixed.
   [#7609](https://github.com/meteor/meteor/pull/7609).
 
+* The `meteor update` command now supports an `--all-packages` flag to
+  update all packages (including indirect dependencies) to their latest
+  compatible versions, similar to passing the names of all your packages
+  to the `meteor update` command.
+  [#7653](https://github.com/meteor/meteor/pull/7653)
+
+* Background release updates can now be disabled by invoking either
+  `meteor --no-release-check` or `METEOR_NO_RELEASE_CHECK=1 meteor`.
+  [#7445](https://github.com/meteor/meteor/pull/7445)
+
 ## v1.4.0.1
 
 * Fix issue with the 1.4 tool springboarding to older releases (see [Issue #7491](https://github.com/meteor/meteor/issues/7491))
