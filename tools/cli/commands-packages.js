@@ -1750,9 +1750,10 @@ main.registerCommand({
       Console.info("\nNewer versions of the following indirect dependencies" +
                    " are available:");
       _.each(nonlatestIndirectDeps, printItem);
-      Console.info(
-        "To update one or more of these packages, pass their names to " +
-          "`meteor update`.");
+      Console.info([
+        "To update one or more of these packages, pass their names to ",
+        "`meteor update`, or just run `meteor update --all-packages`."
+      ].join("\n"));
     }
   }
 });
