@@ -4,6 +4,7 @@ order: 1001
 description: A log of significant changes to the Meteor Guide.
 ---
 
+- 2017/01/07: Created new section "TypeScript".
 - 2016/07/02: Created new section in ui-ux on use of i18n with React.
 - 2016/05/28: Created new section "A simple React unit test" [PR #466](https://github.com/meteor/guide/pull/466).
 - 2016/05/22: Created new section "Testing publications" for separated `publication-collector` package (as [discussed here](https://github.com/meteor/todos/issues/119)).

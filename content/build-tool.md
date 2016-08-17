@@ -46,6 +46,24 @@ meteor add coffeescript
 
 All code written in CoffeeScript compiles to JavaScript under the hood, and is completely compatible with any code in other packages that is written in JS or ES2015.
 
+<h3 id="typescript">TypeScript</h3>
+
+[TypeScript](https://www.typescriptlang.org/) is ES2015 with optional types.
+
+Make sure you are familiar with the [new features introduced by ES2015](https://www.sitepoint.com/es2015-useful-parts-rundown-best-new-features/), as many people mistakenly confuse those with features introduced by TypeScript.
+
+Adding types to your code makes it easier for your development environment, yourself, and your colleagues, to understand.
+
+TypeScript can be installed with:
+
+```sh
+meteor add barbatus:typescript
+```
+
+It is necessary to configure TypeScript with a `tsconfig.json` file. More info about that can be found [here](http://www.typescriptlang.org/docs/handbook/tsconfig-json.html).
+
+A guide on installation, configuration and usage of TypeScript with meteor is currently being written.
+
 <h2 id="blaze-templates">Templates and HTML</h2>
 
 Since Meteor uses client-side rendering for your app's UI, all of your HTML code, UI components, and templates need to be compiled to JavaScript. There are a few options at your disposal to write your UI code.
