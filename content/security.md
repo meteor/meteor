@@ -387,7 +387,7 @@ Here's what a settings file with some API keys might look like:
 ```js
 {
   "facebook": {
-    "clientId": "12345",
+    "appId": "12345",
     "secret": "1234567"
   }
 }
@@ -418,7 +418,7 @@ ServiceConfiguration.configurations.upsert({
   service: "facebook"
 }, {
   $set: {
-    clientId: Meteor.settings.facebook.clientId,
+    appId: Meteor.settings.facebook.appId,
     loginStyle: "popup",
     secret: Meteor.settings.facebook.secret
   }
