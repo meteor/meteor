@@ -31,6 +31,7 @@ class Runner {
     rootUrl,
     selenium,
     seleniumBrowser,
+    noReleaseCheck,
     ...optionsForAppRunner
   }) {
     const self = this;
@@ -46,6 +47,7 @@ class Runner {
     self.regenerateAppPort();
 
     self.stopped = false;
+    self.noReleaseCheck = noReleaseCheck;
     self.quiet = quiet;
     self.banner = banner || files.convertToOSPath(
       files.prettyPath(self.projectContext.projectDir)
@@ -125,7 +127,7 @@ class Runner {
     var unblockAppRunner = self.appRunner.makeBeforeStartPromise();
     self._startMongoAsync().then(unblockAppRunner);
 
-    if (! self.stopped) {
+    if (!self.noReleaseCheck && ! self.stopped) {
       self.updater.start();
     }
 
