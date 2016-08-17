@@ -261,15 +261,21 @@ files.prettyPath = function (p) {
 
 // Like statSync, but null if file not found
 files.statOrNull = function (path) {
+  return statOrNull(path);
+};
+
+function statOrNull(path, preserveSymlinks) {
   try {
-    return files.stat(path);
+    return preserveSymlinks
+      ? files.lstat(path)
+      : files.stat(path);
   } catch (e) {
-    if (e.code == "ENOENT") {
+    if (e.code === "ENOENT") {
       return null;
     }
     throw e;
   }
-};
+}
 
 // Like rm -r.
 files.rm_recursive = Profile("files.rm_recursive", function (p) {
@@ -451,9 +457,10 @@ files.mkdir_p = function (dir, mode) {
 files.cp_r = function(from, to, options = {}) {
   from = files.pathResolve(from);
 
-  const stat = options.preserveSymlinks
-    ? files.lstat(from)
-    : files.stat(from);
+  const stat = statOrNull(from, options.preserveSymlinks);
+  if (! stat) {
+    return;
+  }
 
   if (stat.isDirectory()) {
     files.mkdir_p(to, 0o755);
@@ -476,7 +483,12 @@ files.cp_r = function(from, to, options = {}) {
       );
     })
 
-  } else if (stat.isSymbolicLink()) {
+    return;
+  }
+
+  files.mkdir_p(files.pathDirname(to));
+
+  if (stat.isSymbolicLink()) {
     files.symlink(files.readlink(from), to);
 
   } else {
