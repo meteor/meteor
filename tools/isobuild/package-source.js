@@ -390,7 +390,11 @@ _.extend(PackageSource.prototype, {
 
     utils.ensureOnlyValidVersions(options.npmDependencies, {forCordova: false});
     self.npmDependencies = options.npmDependencies;
-    self.npmCacheDirectory = convertColonsInPath(options.npmDir);
+
+    // If options.npmDir is a string, make sure it contains no colons.
+    self.npmCacheDirectory = _.isString(options.npmDir)
+      ? convertColonsInPath(options.npmDir)
+      : options.npmDir;
 
     utils.ensureOnlyValidVersions(options.cordovaDependencies, {forCordova: true});
     self.cordovaDependencies = options.cordovaDependencies;
