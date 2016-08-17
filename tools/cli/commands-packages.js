@@ -1612,21 +1612,26 @@ main.registerCommand({
   // args), take patches to indirect dependencies.
   var upgradeIndirectDepPatchVersions = false;
   if (options.args.length === 0) {
-    var allDependencies = _.keys(projectContext.packageMapFile._versions);
-
     // "all-packages" means update every package we depend on. The default
     // is to tend to leave indirect dependencies (i.e. things not listed in
     // `.meteor/packages`) alone.
-    if (options["all-packages"] && allDependencies.length > 0) {
-      upgradePackageNames = allDependencies;
-    } else {
+    if (options["all-packages"]) {
+      upgradePackageNames = _.filter(
+        _.keys(projectContext.packageMapFile.getCachedVersions()),
+        packageName => ! compiler.isIsobuildFeaturePackage(packageName)
+      );
+    }
+
+    if (upgradePackageNames.length === 0) {
       projectContext.projectConstraintsFile.eachConstraint(function (constraint) {
         if (! compiler.isIsobuildFeaturePackage(constraint.package)) {
           upgradePackageNames.push(constraint.package);
         }
       });
     }
+
     upgradeIndirectDepPatchVersions = true;
+
   } else {
     if (options["all-packages"]) {
       Console.error("You cannot both specify a list of packages to"
