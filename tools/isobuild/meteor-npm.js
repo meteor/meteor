@@ -18,6 +18,9 @@ import { execFileAsync } from "../utils/processes.js";
 import {
   get as getRebuildArgs
 } from "../static-assets/server/npm-rebuild-args.js";
+import {
+  convert as convertColonsInPath
+} from "../utils/colon-converter.js";
 
 var meteorNpm = exports;
 
@@ -52,7 +55,8 @@ meteorNpm.updateDependencies = function (packageName,
   // we can then atomically rename it. we also make sure to
   // randomize the name, in case we're bundling this package
   // multiple times in parallel.
-  var newPackageNpmDir = packageNpmDir + '-new-' + utils.randomToken();
+  var newPackageNpmDir =
+    convertColonsInPath(packageNpmDir) + '-new-' + utils.randomToken();
 
   if (! npmDependencies || _.isEmpty(npmDependencies)) {
     // No NPM dependencies? Delete the .npm directory if it exists (because,

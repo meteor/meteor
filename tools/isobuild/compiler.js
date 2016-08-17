@@ -73,8 +73,10 @@ compiler.compile = Profile(function (packageSource, options) {
         // Plugins have their own npm dependencies separate from the
         // rest of the package, so they need their own separate npm
         // shrinkwrap and cache state.
-        npmDir: files.pathResolve(
-          files.pathJoin(packageSource.sourceRoot, '.npm', 'plugin', info.name))
+        npmDir: files.pathResolve(files.pathJoin(
+          packageSource.sourceRoot,
+          '.npm', 'plugin', colonConverter.convert(info.name)
+        ))
       });
       // Add this plugin's dependencies to our "plugin dependency"
       // WatchSet. buildResult.watchSet will end up being the merged
