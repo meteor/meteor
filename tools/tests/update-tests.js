@@ -72,7 +72,7 @@ selftest.define("'meteor update' updates indirect dependencies with patches", ()
   update.expectExit(0);
 });
 
-selftest.define("'meteor update --update-all' updates indirect dependencies to latest, within constraints", () => {
+selftest.define("'meteor update --all-packages' updates indirect dependencies to latest, within constraints", () => {
   const s = new Sandbox();
 
   s.createApp("myapp", "app-with-indirect-dependencies", {

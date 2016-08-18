@@ -1,5 +1,52 @@
 ## v.NEXT
 
+## v1.4.1
+
+* Node has been upgraded to 4.5.0.
+
+* `npm` has been upgraded to 3.10.6.
+
+* The `meteor publish-for-arch` command is no longer necessary when
+  publishing Meteor packages with binary npm dependencies. Instead, binary
+  dependencies will be rebuilt automatically on the installation side.
+  Meteor package authors are not responsible for failures due to compiler
+  toolchain misconfiguration, and any compilation problems with the
+  underlying npm packages should be taken up with the authors of those
+  packages. That said, if a Meteor package author really needs or wants to
+  continue using `meteor publish-for-arch`, she should publish her package
+  using an older release: e.g. `meteor --release 1.4 publish`.
+  [#7608](https://github.com/meteor/meteor/pull/7608)
+
+* The `.meteor-last-rebuild-version.json` files that determine if a binary
+  npm package needs to be rebuilt now include more information from the
+  `process` object, namely `process.{platform,arch,versions}` instead of
+  just `process.versions`. Note also that the comparison of versions now
+  ignores differences in patch versions, to avoid needless rebuilds.
+
+* The `npm-bcrypt` package now uses a pure-JavaScript implementation by
+  default, but will prefer the native `bcrypt` implementation if it is
+  installed in the application's `node_modules` directory. In other words,
+  run `meteor install --save bcrypt` in your application if you need or
+  want to use the native implementation of `bcrypt`.
+  [#7595](https://github.com/meteor/meteor/pull/7595)
+
+* After Meteor packages are downloaded from Atmosphere, they will now be
+  extracted using native `tar` or `7z.exe` on Windows, instead of the
+  https://www.npmjs.com/package/tar library, for a significant performance
+  improvement. [#7457](https://github.com/meteor/meteor/pull/7457)
+
+* The npm `tar` package has been upgraded to 2.2.1, though it is now only
+  used as a fallback after native `tar` and/or `7z.exe`.
+
+* The progress indicator now distinguishes between downloading,
+  extracting, and loading newly-installed Meteor packages, instead of
+  lumping all of that work into a "downloading" status message.
+
+* Background Meteor updates will no longer modify the `~/.meteor/meteor`
+  symbolic link (or `AppData\Local\.meteor\meteor.bat` on Windows).
+  Instead, developers must explicitly type `meteor update` to begin using
+  a new version of the `meteor` script.
+
 * Password Reset tokens now expire (after 3 days by default -- can be modified via `Accounts.config({ passwordResetTokenExpirationInDays: ...}`). [PR #7534](https://github.com/meteor/meteor/pull/7534)
 
 * The `google` package now uses the `email` scope as a mandatory field instead
@@ -15,6 +62,58 @@
 
 * `Accounts.onLogout` gets `{ user, connection }` context in a similar fashion
   to `Accounts.onLogin`. [Issue #7397](https://github.com/meteor/meteor/issues/7397) [PR #7433](https://github.com/meteor/meteor/pull/7433)
+
+* The `node-gyp` and `node-pre-gyp` tools will now be installed in
+  `bundle/programs/server/node_modules`, to assist with rebuilding binary
+  npm packages when deploying an app to Galaxy or elsewhere.
+  [#7571](https://github.com/meteor/meteor/pull/7571)
+
+* The `standard-minifier-{js,css}` packages no longer minify .js or .css
+  files on the server. [#7572](https://github.com/meteor/meteor/pull/7572)
+
+* Multi-line input to `meteor shell`, which was broken by changes to the
+  `repl` module in Node 4, works again.
+  [#7562](https://github.com/meteor/meteor/pull/7562)
+
+* The implementation of the command-line `meteor` tool now forbids
+  misbehaving polyfill libraries from overwriting `global.Promise`.
+  [#7569](https://github.com/meteor/meteor/pull/7569)
+
+* The `oauth-encryption` package no longer depends on the
+  `npm-node-aes-gcm` package (or any special npm packages), because the
+  Node 4 `crypto` library natively supports the `aes-128-gcm` algorithm.
+  [#7548](https://github.com/meteor/meteor/pull/7548)
+
+* The server-side component of the `meteor shell` command has been moved
+  into a Meteor package, so that it can be developed independently from
+  the Meteor release process, thanks to version unpinning.
+  [#7624](https://github.com/meteor/meteor/pull/7624)
+
+* The `meteor shell` command now works when running `meteor test`.
+
+* The `meteor debug` command no longer pauses at the first statement
+  in the Node process, yet still reliably stops at custom breakpoints
+  it encounters later.
+
+* The `meteor-babel` package has been upgraded to 0.12.0.
+
+* The `meteor-ecmascript-runtime` package has been upgraded to 0.2.9, to
+  support several additional [stage 4
+  proposals](https://github.com/meteor/ecmascript-runtime/pull/4).
+
+* A bug that prevented @-scoped npm packages from getting bundled for
+  deployed apps has been fixed.
+  [#7609](https://github.com/meteor/meteor/pull/7609).
+
+* The `meteor update` command now supports an `--all-packages` flag to
+  update all packages (including indirect dependencies) to their latest
+  compatible versions, similar to passing the names of all your packages
+  to the `meteor update` command.
+  [#7653](https://github.com/meteor/meteor/pull/7653)
+
+* Background release updates can now be disabled by invoking either
+  `meteor --no-release-check` or `METEOR_NO_RELEASE_CHECK=1 meteor`.
+  [#7445](https://github.com/meteor/meteor/pull/7445)
 
 ## v1.4.0.1
 

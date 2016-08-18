@@ -295,13 +295,20 @@ function banner(debugPort) {
   return [
     "",
     chalk.green([
-      "Your application is now paused and ready for debugging!",
+      "Your application is now ready for debugging!",
       "",
       "To debug the server process using a graphical debugging interface, ",
-      "visit this URL in your web browser:"
+      "visit this URL in your web browser:",
+      ""
     ].join(EOL)),
-    chalk.cyan(proc.url),
-    EOL
+    chalk.cyan("  " + proc.url),
+    chalk.green([
+      "",
+      "If your application is paused on a breakpoint but the code is not ",
+      "visible in the debugger, press the pause (||) button.",
+      ""
+    ].join(EOL)),
+    ""
   ].join(EOL);
 }
 

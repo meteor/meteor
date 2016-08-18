@@ -1659,6 +1659,7 @@ function doTestCommand(options) {
     copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'bundler-cache');
     copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'isopacks');
     copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'plugin-cache');
+    copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'shell');
     
     projectContext = new projectContextModule.ProjectContext(projectContextOptions);
 
