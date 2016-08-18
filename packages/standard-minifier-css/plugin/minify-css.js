@@ -1,7 +1,8 @@
 var sourcemap = Npm.require('source-map');
 
 Plugin.registerMinifier({
-  extensions: ["css"]
+  extensions: ["css"],
+  archMatching: "web"
 }, function () {
   var minifier = new CssToolsMinifier();
   return minifier;

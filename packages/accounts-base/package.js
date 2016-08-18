@@ -1,39 +1,39 @@
 Package.describe({
   summary: "A user account system",
-  version: "1.2.9"
+  version: "1.2.11"
 });
 
 Package.onUse(function (api) {
-  api.use('underscore', ['client', 'server']);
-  api.use('ecmascript', ['client', 'server']);
-  api.use('ddp-rate-limiter');
-  api.use('localstorage', 'client');
-  api.use('tracker', 'client');
-  api.use('check', 'server');
-  api.use('random', ['client', 'server']);
-  api.use('ejson', 'server');
-  api.use('callback-hook', ['client', 'server']);
+  api.use('underscore@1.0.9', ['client', 'server']);
+  api.use('ecmascript@0.5.7', ['client', 'server']);
+  api.use('ddp-rate-limiter@1.0.5');
+  api.use('localstorage@1.0.11', 'client');
+  api.use('tracker@1.1.0', 'client');
+  api.use('check@1.2.3', 'server');
+  api.use('random@1.0.10', ['client', 'server']);
+  api.use('ejson@1.0.12', 'server');
+  api.use('callback-hook@1.0.9', ['client', 'server']);
 
   // use unordered to work around a circular dependency
   // (service-configuration needs Accounts.connection)
-  api.use('service-configuration', ['client', 'server'], { unordered: true });
+  api.use('service-configuration@1.0.10', ['client', 'server'], { unordered: true });
 
   // needed for getting the currently logged-in user
-  api.use('ddp', ['client', 'server']);
+  api.use('ddp@1.2.5', ['client', 'server']);
 
   // need this because of the Meteor.users collection but in the future
   // we'd probably want to abstract this away
-  api.use('mongo', ['client', 'server']);
+  api.use('mongo@1.1.10', ['client', 'server']);
 
   // If the 'blaze' package is loaded, we'll define some helpers like
   // {{currentUser}}.  If not, no biggie.
-  api.use('blaze', 'client', {weak: true});
+  api.use('blaze@2.1.8', 'client', {weak: true});
 
   // Allow us to detect 'autopublish', and publish some Meteor.users fields if
   // it's loaded.
-  api.use('autopublish', 'server', {weak: true});
+  api.use('autopublish@1.0.7', 'server', {weak: true});
 
-  api.use('oauth-encryption', 'server', {weak: true});
+  api.use('oauth-encryption@1.2.0', 'server', {weak: true});
 
   // Though this "Accounts" symbol is the only official Package export for
   // the accounts-base package, modules that import accounts-base will

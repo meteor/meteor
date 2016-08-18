@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "bcryptjs": {
+      "version": "2.3.0",
+      "resolved": "https://registry.npmjs.org/bcryptjs/-/bcryptjs-2.3.0.tgz",
+      "from": "bcryptjs@2.3.0"
+    }
+  }
+}

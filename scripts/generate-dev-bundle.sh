@@ -60,7 +60,7 @@ npm version
 # will get confused by the pre-existing modules.
 mkdir "${DIR}/build/npm-server-install"
 cd "${DIR}/build/npm-server-install"
-node "${CHECKOUT_DIR}/scripts/dev-bundle-server-package.js" >package.json
+node "${CHECKOUT_DIR}/scripts/dev-bundle-server-package.js" > package.json
 npm install
 npm shrinkwrap
 
@@ -95,6 +95,15 @@ cp -R node_modules/* "${DIR}/lib/node_modules/"
 # commands like node-gyp and node-pre-gyp.
 cp -R node_modules/.bin "${DIR}/lib/node_modules/"
 
+# Make node-gyp install Node headers and libraries in $DIR/.node-gyp/.
+# https://github.com/nodejs/node-gyp/blob/4ee31329e0/lib/node-gyp.js#L52
+export HOME="$DIR"
+export USERPROFILE="$DIR"
+node "${DIR}/lib/node_modules/node-gyp/bin/node-gyp.js" install
+INCLUDE_PATH="${DIR}/.node-gyp/${NODE_VERSION}/include/node"
+echo "Contents of ${INCLUDE_PATH}:"
+ls -al "$INCLUDE_PATH"
+
 cd "${DIR}/lib"
 
 # Clean up some bulky stuff.
@@ -111,27 +120,24 @@ delete () {
     rm -rf "$1"
 }
 
-delete browserstack-webdriver/docs
-delete browserstack-webdriver/lib/test
+delete npm/test
+delete npm/node_modules/node-gyp
+pushd npm/node_modules
+ln -s ../../node-gyp ./
+popd
 
 delete sqlite3/deps
+delete sqlite3/node_modules/nan
+delete sqlite3/node_modules/node-pre-gyp
 delete wordwrap/test
 delete moment/min
+delete cordova-app-hello-world
 
 # Remove esprima tests to reduce the size of the dev bundle
 find . -path '*/esprima-fb/test' | xargs rm -rf
 
 cd "$DIR/lib/node_modules/fibers/bin"
 shrink_fibers
-
-# Download BrowserStackLocal binary.
-BROWSER_STACK_LOCAL_URL="https://browserstack-binaries.s3.amazonaws.com/BrowserStackLocal-07-03-14-$OS-$ARCH.gz"
-
-cd "$DIR/build"
-curl -O $BROWSER_STACK_LOCAL_URL
-gunzip BrowserStackLocal*
-mv BrowserStackLocal* BrowserStackLocal
-mv BrowserStackLocal "$DIR/bin/"
 
 # Sanity check to see if we're not breaking anything by replacing npm
 INSTALLED_NPM_VERSION=$(cat "$DIR/lib/node_modules/npm/package.json" |

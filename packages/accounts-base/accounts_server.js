@@ -176,9 +176,10 @@ Ap._failedLogin = function (connection, attempt) {
   });
 };
 
-Ap._successfulLogout = function () {
+Ap._successfulLogout = function (connection, userId) {
+  const user = userId && this.users.findOne(userId);
   this._onLogoutHook.each(function (callback) {
-    callback();
+    callback({ user, connection });
     return true;
   });
 };
@@ -537,8 +538,8 @@ Ap._initServerMethods = function () {
     accounts._setLoginToken(this.userId, this.connection, null);
     if (token && this.userId)
       accounts.destroyToken(this.userId, token);
+    accounts._successfulLogout(this.connection, this.userId);
     this.setUserId(null);
-    accounts._successfulLogout();
   };
 
   // Delete all the current user's tokens and close all open connections logged
@@ -1115,6 +1116,41 @@ Ap._expireTokens = function (oldestValidDate, userId) {
   // expired tokens.
 };
 
+// Deletes expired password reset tokens from the database.
+//
+// Exported for tests. Also, the arguments are only used by
+// tests. oldestValidDate is simulate expiring tokens without waiting
+// for them to actually expire. userId is used by tests to only expire
+// tokens for the test user.
+Ap._expirePasswordResetTokens = function (oldestValidDate, userId) {
+  var tokenLifetimeMs = this._getPasswordResetTokenLifetimeMs();
+
+  // when calling from a test with extra arguments, you must specify both!
+  if ((oldestValidDate && !userId) || (!oldestValidDate && userId)) {
+    throw new Error("Bad test. Must specify both oldestValidDate and userId.");
+  }
+
+  oldestValidDate = oldestValidDate ||
+    (new Date(new Date() - tokenLifetimeMs));
+  var userFilter = userId ? {_id: userId} : {};
+
+  this.users.update(_.extend(userFilter, {
+    $or: [
+      { "services.password.reset.when": { $lt: oldestValidDate } },
+      { "services.password.reset.when": { $lt: +oldestValidDate } }
+    ]
+  }), {
+    $unset: {
+      "services.password.reset": {
+        $or: [
+          { when: { $lt: oldestValidDate } },
+          { when: { $lt: +oldestValidDate } }
+        ]
+      }
+    }
+  }, { multi: true });
+}
+
 // @override from accounts_common.js
 Ap.config = function (options) {
   // Call the overridden implementation of the method.
@@ -1135,6 +1171,7 @@ Ap.config = function (options) {
 function setExpireTokensInterval(accounts) {
   accounts.expireTokenInterval = Meteor.setInterval(function () {
     accounts._expireTokens();
+    accounts._expirePasswordResetTokens();
   }, EXPIRE_TOKENS_INTERVAL_MS);
 }
 

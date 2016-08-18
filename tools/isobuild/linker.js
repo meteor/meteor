@@ -1057,27 +1057,28 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
     name
   });
 
+  if (includeSourceMapInstructions) {
+    header = SOURCE_MAP_INSTRUCTIONS_COMMENT + "\n\n" + header;
+  }
+
+  // Bias the source map by the length of the header without
+  // (fully) parsing and re-serializing it. (We used to do this
+  // with the source-map library, but it was incredibly slow,
+  // accounting for over half of bundling time.) It would be nice
+  // if we could use "index maps" for this (the 'sections' key),
+  // as that would let us avoid even JSON-parsing the source map,
+  // but that doesn't seem to be supported by Firefox yet.
+  if (header.charAt(header.length - 1) !== "\n") {
+    // make sure it's a whole number of lines
+    header += "\n";
+  }
+  var headerLines = header.split('\n').length - 1;
+  var headerContent = (new Array(headerLines + 1).join(';'));
+
   return _.map(prelinkedFiles, function (file) {
     if (file.sourceMap) {
-      if (includeSourceMapInstructions) {
-        header = SOURCE_MAP_INSTRUCTIONS_COMMENT + "\n\n" + header;
-      }
-
-      // Bias the source map by the length of the header without
-      // (fully) parsing and re-serializing it. (We used to do this
-      // with the source-map library, but it was incredibly slow,
-      // accounting for over half of bundling time.) It would be nice
-      // if we could use "index maps" for this (the 'sections' key),
-      // as that would let us avoid even JSON-parsing the source map,
-      // but that doesn't seem to be supported by Firefox yet.
-      if (header.charAt(header.length - 1) !== "\n") {
-        // make sure it's a whole number of lines
-        header += "\n";
-      }
-      var headerLines = header.split('\n').length - 1;
       var sourceMap = file.sourceMap;
-      sourceMap.mappings = (new Array(headerLines + 1).join(';')) +
-        sourceMap.mappings;
+      sourceMap.mappings = headerContent + sourceMap.mappings;
       return {
         source: header + file.source + footer,
         sourcePath: file.sourcePath,

@@ -138,15 +138,6 @@ _.extend(AppProcess.prototype, {
     // exception and the whole app dies.
     // http://stackoverflow.com/questions/2893458/uncatchable-errors-in-node-js
     self.proc.stdin.on('error', function () {});
-
-    // When the parent process exits (i.e. the server is shutting down and
-    // not merely restarting), make sure to disconnect any still-connected
-    // shell clients.
-    require('../tool-env/cleanup.js').onExit(function() {
-      require('../static-assets/server/shell-server.js').disable(
-        self.projectContext.getMeteorShellDirectory()
-      );
-    });
   },
 
   _maybeCallOnExit: function (code, signal) {
@@ -249,9 +240,9 @@ _.extend(AppProcess.prototype, {
     if (self.debugPort) {
       attach = require('../inspector.js').start(self.debugPort, entryPoint);
 
-      // If you do opts.push("--debug-brk", port) it doesn't work on Windows
-      // for some reason
-      opts.push("--debug-brk=" + attach.suggestedDebugBrkPort);
+      // If you do opts.push("--debug", port) it doesn't work on Windows
+      // for some reason.
+      opts.push("--debug=" + attach.suggestedDebugBrkPort);
     }
 
     opts.push(entryPoint);

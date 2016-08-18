@@ -61,8 +61,6 @@ var checkForUpdate = function (showBanner, printErrors) {
     return;
   }
 
-  updateMeteorToolSymlink(printErrors);
-
   maybeShowBanners();
 };
 

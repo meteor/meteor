@@ -1,5 +1,6 @@
 Plugin.registerMinifier({
-  extensions: ["js"]
+  extensions: ["js"],
+  archMatching: "web"
 }, function () {
   var minifier = new UglifyJSMinifier();
   return minifier;

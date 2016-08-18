@@ -58,6 +58,7 @@ Options:
   --release        Specify the release of Meteor to use.
   --verbose        Print all output from builds logs.
   --no-lint        Don't run linters used by the app on every rebuild.
+  --no-release-check            Don't run the release updater to check for new releases.
   --allow-incompatible-update   Allow packages in your project to be upgraded or
                    downgraded to versions that are potentially incompatible with
                    the current versions, if required to satisfy all package
