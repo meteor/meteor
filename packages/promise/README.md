@@ -1,8 +1,7 @@
-# promise
+# promise [![Build Status](https://travis-ci.org/meteor/promise.svg)](https://travis-ci.org/meteor/promise)
 [Source code of released version](https://github.com/meteor/meteor/tree/master/packages/promise) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/promise)
 ***
 
-[![Build Status](https://travis-ci.org/meteor/promise.svg)](https://travis-ci.org/meteor/promise)
 ECMAScript 2015 Promise polyfill with Fiber support
 
 The static methods `Promise.async` and `Promise.await` implement the
