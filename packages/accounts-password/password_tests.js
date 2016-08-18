@@ -410,6 +410,13 @@ if (Meteor.isClient) (function () {
       "email", [
     createUserStep,
     logoutStep,
+    // Create user error without callback should throw error
+    function (test, expect) {
+      this.newUsername = 'adalovelace' + this.randomSuffix;
+      test.throws(function(){
+        Accounts.createUser({ username: this.newUsername, password: '' });
+      }, /Password may not be empty/);
+    },
     // Attempting to create another user with an email that only differs in
     // case should fail
     function (test, expect) {
@@ -467,6 +474,18 @@ if (Meteor.isClient) (function () {
         test.isTrue(error);
         test.equal(Meteor.user().username, self.username);
       }));
+    },
+    // change password with bad old password
+    function (test, expect) {
+      test.throws(function(){
+        Accounts.changePassword('wrong', 'doesntmatter');
+      });
+    },
+    // change password with blank new password
+    function (test, expect) {
+      test.throws(function(){
+        Accounts.changePassword(this.password, '');
+      }, /Password may not be empty/);
     },
     // change password with good old password.
     function (test, expect) {
@@ -543,6 +562,80 @@ if (Meteor.isClient) (function () {
         return self.secondConn.userId() === null;
       }, 10 * 1000, 100);
     }
+  ]);
+  
+  
+  testAsyncMulti("passwords - forgotPassword client return error when empty email", [
+    function (test, expect) {
+      // setup
+      this.email = '';
+    },
+    // forgotPassword called on client with blank email
+    function (test, expect) {
+      Accounts.forgotPassword(
+        { email: this.email }, expect(function (error) {
+          test.isTrue(error);
+      }));
+    },
+    // forgotPassword called on client with blank email and no callback.
+    function (test, expect) {
+      test.throws(function(){
+        Accounts.forgotPassword({ email: this.email });
+      }, /Must pass options\.email/);
+    },
+  ]);
+ 
+  testAsyncMulti("passwords - verifyEmail client return error when empty token", [
+    function (test, expect) {
+      // setup
+      this.token = '';
+    },
+    // verifyEmail called on client with blank token
+    function (test, expect) {
+      Accounts.verifyEmail(
+        this.token, expect(function (error) {
+          test.isTrue(error);
+      }));
+    },
+    // verifyEmail called on client with blank token and no callback.
+    function (test, expect) {
+      test.throws(function(){
+        Accounts.verifyEmail(this.token);
+      }, /Need to pass token/);
+    },
+  ]);
+ 
+  testAsyncMulti("passwords - resetPassword errors", [
+    function (test, expect) {
+      // setup
+      this.token = '';
+      this.newPassword = 'nonblankpassword';
+    },
+    // resetPassword called on client with blank token
+    function (test, expect) {
+      Accounts.resetPassword(
+        this.token, this.newPassword, expect(function (error) {
+          test.isTrue(error);
+      }));
+    },
+    function (test, expect) {
+      // setup
+      this.token = 'nonblank-token';
+      this.newPassword = '';
+    },
+    // resetPassword called on client with blank password
+    function (test, expect) {
+      Accounts.resetPassword(
+        this.token, this.newPassword, expect(function (error) {
+          test.isTrue(error);
+      }));
+    },
+    // resetPassword called on client with blank password and no callback.
+    function (test, expect) {
+      test.throws(function(){
+        Accounts.resetPassword(this.token, this.newPassword);
+      }, /Match error: Expected string, got undefined/);
+    },
   ]);
 
 
