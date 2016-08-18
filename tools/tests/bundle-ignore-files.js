@@ -7,10 +7,11 @@ var bundler = require('../isobuild/bundle.js');
 selftest.define("bundle-ignore-files", () => {
   var patterns = bundler.ignoreFiles;
   var inputs = [
-    '.git/refs',
-    '.git/HEAD',
-    '.meteor/local',
-    '.meteor/packages',
+    '.git/',
+    '.meteor/',
+    '.DS_Store',
+    '.aaabbb.swp',
+    'Thumbs.db',
   ];
   _.each(inputs, (input) => {
     let matched = _.any(patterns, (ptn) => {
