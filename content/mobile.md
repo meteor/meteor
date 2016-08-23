@@ -275,6 +275,11 @@ To avoid this, we try to detect faulty versions and revert to the last known goo
 
 By default, the startup timeout is set to 20 seconds. If your app needs more time to startup (or considerably less), you can use [`App.setPreference`](http://docs.meteor.com/api/mobile-config.html#App-setPreference) to set `WebAppStartupTimeout` to another value.
 
+> Note that the value is set in milliseconds
+> ```js
+App.setPreference('WebAppStartupTimeout', 30000);
+```
+
 <h2 id="cordova-plugins">Native features with Cordova plugins</h2>
 
 Cordova comes with a plugin architecture that opens up access to features not usually available to web apps. Plugins are installable add-ons that contain both JavaScript and native code, which allows them to translate calls from your web app to platform-specific APIs.
