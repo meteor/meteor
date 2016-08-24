@@ -3,7 +3,7 @@
     "bson": {
       "version": "0.5.4",
       "resolved": "https://registry.npmjs.org/bson/-/bson-0.5.4.tgz",
-      "from": "bson@>=0.5.3 <0.6.0"
+      "from": "bson@>=0.5.4 <0.6.0"
     },
     "buffer-shims": {
       "version": "1.0.0",
@@ -31,14 +31,14 @@
       "from": "isarray@>=1.0.0 <1.1.0"
     },
     "mongodb": {
-      "version": "2.2.7",
-      "resolved": "https://registry.npmjs.org/mongodb/-/mongodb-2.2.7.tgz",
-      "from": "mongodb@2.2.7"
+      "version": "2.2.8",
+      "resolved": "https://registry.npmjs.org/mongodb/-/mongodb-2.2.8.tgz",
+      "from": "mongodb@2.2.8"
     },
     "mongodb-core": {
-      "version": "2.0.9",
-      "resolved": "https://registry.npmjs.org/mongodb-core/-/mongodb-core-2.0.9.tgz",
-      "from": "mongodb-core@2.0.9"
+      "version": "2.0.10",
+      "resolved": "https://registry.npmjs.org/mongodb-core/-/mongodb-core-2.0.10.tgz",
+      "from": "mongodb-core@2.0.10"
     },
     "process-nextick-args": {
       "version": "1.0.7",
