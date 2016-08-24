@@ -21,7 +21,7 @@ Npm.strip({
 });
 
 Package.onUse(function (api) {
-  api.use('npm-mongo@1.5.47', 'server');
+  api.use('npm-mongo@1.5.48', 'server');
   api.use('allow-deny');
 
   api.use([
