@@ -1,4 +1,6 @@
 # stylus
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/stylus) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/stylus)
+***
 
 [Stylus](http://learnboost.github.com/stylus/) is a CSS pre-processor with a
 simple syntax and expressive dynamic behavior. It allows for more compact

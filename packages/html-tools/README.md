@@ -1,4 +1,6 @@
 # html-tools
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/html-tools) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/html-tools)
+***
 
 A lightweight HTML tokenizer and parser which outputs to the HTMLjs
 object representation.  Special hooks allow the syntax to be extended

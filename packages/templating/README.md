@@ -1,4 +1,6 @@
 # templating
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/templating) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/templating)
+***
 
 Compiles Blaze templates defined in `.html` files. Also automatically includes Blaze on the client.
 

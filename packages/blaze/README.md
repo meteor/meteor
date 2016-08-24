@@ -1,4 +1,6 @@
 # Blaze
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/blaze) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/blaze)
+***
 
 Blaze is a powerful library for creating user interfaces by writing
 reactive HTML templates.  Compared to using a combination of

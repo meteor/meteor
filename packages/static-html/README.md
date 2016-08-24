@@ -1,4 +1,6 @@
 # static-html
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/static-html) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/static-html)
+***
 
 Essentially, an alternative to the `templating` package that doesn't compile Blaze templates. Mostly useful if you want to use Angular or React as your view layer and just want to get some static HTML content on your page as a render target for your view framework.
 

@@ -1,4 +1,6 @@
 # HTMLjs
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/htmljs) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/htmljs)
+***
 
 HTMLjs is a small library for expressing HTML trees with a concise
 syntax.  It is used to render content in Blaze and to represent

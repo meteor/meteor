@@ -1,4 +1,6 @@
 # webapp
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/webapp) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/webapp)
+***
 
 The `webapp` package contains the core functionality that makes a
 Meteor project into a web application. It is a "value added HTTP

@@ -1,4 +1,6 @@
 # templating-tools
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/templating-tools) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/templating-tools)
+***
 
 Has some conveniently abstracted functions that are used together with the `caching-html-compiler` package to implement different template compilers:
 

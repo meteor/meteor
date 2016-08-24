@@ -1,4 +1,6 @@
 # blaze-html-templates
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/blaze-html-templates) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/blaze-html-templates)
+***
 
 A meta-package that includes everything you need to compile and run Meteor templates with Spacebars and Blaze.
 

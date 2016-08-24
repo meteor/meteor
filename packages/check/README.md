@@ -1,4 +1,6 @@
 # check
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/check) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/check)
+***
 
 `check` is a lightweight package for argument checking and general pattern matching. Use it like this:
 
