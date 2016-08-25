@@ -4,8 +4,8 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
-  api.use(['underscore',  'spacebars-compiler',
-           'spacebars', 'htmljs', 'ui'], 'server');
+  api.use(['underscore',  'spacebars-compiler@1.0.12',
+           'spacebars@1.0.12', 'htmljs@1.0.10', 'ui'], 'server');
   api.addFiles(['boilerplate-generator.js'], 'server');
   api.export(['Boilerplate'], 'server');
   // These are spacebars templates, but we process them manually with the
