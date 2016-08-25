@@ -229,7 +229,8 @@ var newIsopacketBuildingCatalog = function () {
       isopacketCatalog.initialize({
         localPackageSearchDirs: [
           files.pathJoin(files.getCurrentToolsDir(), 'packages'),
-          files.pathJoin(files.getCurrentToolsDir(), 'packages-for-isopackets', 'blaze', 'packages')
+          files.pathJoin(files.getCurrentToolsDir(),
+            'packages-for-isopackets', 'blaze', 'packages')
         ],
         buildingIsopackets: true
       });
