@@ -31,6 +31,8 @@ Tinytest.add('ejson - Arrays - keyOrderSensitive', function (test) {
   test.isTrue(EJSON.equals({a: [{c: 1, d: 2}]}, {a: [{c: 1, d: 2}]}, {keyOrderSensitive: true}));
   test.isFalse(EJSON.equals({a: [{c: 1, d: 2}]}, {a: [{d: 2, c: 1}]}, {keyOrderSensitive: true}));
   test.isTrue(EJSON.equals({a: ['a', 'b', 'c']}, {a: ['a', 'b', 'c']}, {keyOrderSensitive: true}));
+  test.isTrue(EJSON.equals(['a', 'b', 'c'], ['a', 'b', 'c'], {keyOrderSensitive: true}));
+  test.isFalse(EJSON.equals(['a', 'c', 'b'], ['a', 'b', 'c'], {keyOrderSensitive: true}));
 });
 
 Tinytest.add("ejson - nesting and literal", function (test) {
@@ -62,6 +64,7 @@ Tinytest.add('ejson - Arrays - equality tests', function (test) {
   test.isTrue(EJSON.equals({a: ['d', 'b', 'c']}, {a: ['c', 'd', 'b']}));
   test.isFalse(EJSON.equals(['a', 'b', 'd'], ['d', 'b', 'c']));
   test.isFalse(EJSON.equals(['a', 'a', 'b'], ['b', 'b', 'a']));
+  test.isTrue(EJSON.equals(['a', 'b', 'a', 'b'], ['b', 'b', 'a', 'a']));
 });
 
 Tinytest.add("ejson - equality and falsiness", function (test) {
