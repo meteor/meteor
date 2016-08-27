@@ -26,6 +26,13 @@ Tinytest.add("ejson - keyOrderSensitive", function (test) {
   test.isFalse(EJSON.equals({a: {b:2}}, {a: {}}, {keyOrderSensitive: true}));
 });
 
+Tinytest.add('ejson - Arrays - keyOrderSensitive', function (test) {
+  test.isFalse(EJSON.equals({a: ['a', 'b', 'c']}, {a: ['a', 'c', 'b']}, {keyOrderSensitive: true}));
+  test.isTrue(EJSON.equals({a: [{c: 1, d: 2}]}, {a: [{c: 1, d: 2}]}, {keyOrderSensitive: true}));
+  test.isFalse(EJSON.equals({a: [{c: 1, d: 2}]}, {a: [{d: 2, c: 1}]}, {keyOrderSensitive: true}));
+  test.isTrue(EJSON.equals({a: ['a', 'b', 'c']}, {a: ['a', 'b', 'c']}, {keyOrderSensitive: true}));
+});
+
 Tinytest.add("ejson - nesting and literal", function (test) {
   var d = new Date;
   var obj = {$date: d};
@@ -41,6 +48,20 @@ Tinytest.add("ejson - some equality tests", function (test) {
   test.isFalse(EJSON.equals({a: 1, b: 2, c: 3}, {a: 1, c: 3, b: 4}));
   test.isFalse(EJSON.equals({a: {}}, {a: {b:2}}));
   test.isFalse(EJSON.equals({a: {b:2}}, {a: {}}));
+  test.isFalse(EJSON.equals({a: {b:2}}, {a: {}}));
+});
+
+Tinytest.add('ejson - Arrays - equality tests', function (test) {
+  test.isTrue(EJSON.equals({a: ['a', 'b', 'c']}, {a: ['a', 'c', 'b']}));
+  test.isTrue(EJSON.equals(['a', 'b', 'c'], ['a', 'b', 'c']));
+
+  test.isTrue(EJSON.equals({a: [{c: 1, d: 2}]}, {a: [{c: 1, d: 2}]}));
+  test.isTrue(EJSON.equals({a: [{c: 1, d: 2}]}, {a: [{d: 2, c: 1}]}));
+
+  test.isFalse(EJSON.equals({a: ['d', 'b', 'c']}, {a: ['a', 'd', 'b']}));
+  test.isTrue(EJSON.equals({a: ['d', 'b', 'c']}, {a: ['c', 'd', 'b']}));
+  test.isFalse(EJSON.equals(['a', 'b', 'd'], ['d', 'b', 'c']));
+  test.isFalse(EJSON.equals(['a', 'a', 'b'], ['b', 'b', 'a']));
 });
 
 Tinytest.add("ejson - equality and falsiness", function (test) {
@@ -50,6 +71,13 @@ Tinytest.add("ejson - equality and falsiness", function (test) {
   test.isFalse(EJSON.equals(null, {foo: "foo"}));
   test.isFalse(EJSON.equals(undefined, {foo: "foo"}));
   test.isFalse(EJSON.equals({foo: "foo"}, undefined));
+});
+
+Tinytest.add('ejson - Arrays - equality and falsiness', function (test) {
+  test.isTrue(EJSON.equals({a: []}, {a: []}));
+  test.isTrue(EJSON.equals([], []));
+  test.isFalse(EJSON.equals([false], [null]));
+  test.isTrue(EJSON.equals([false], [false]));
 });
 
 Tinytest.add("ejson - NaN and Inf", function (test) {

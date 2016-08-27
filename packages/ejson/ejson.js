@@ -405,9 +405,28 @@ EJSON.equals = function (a, b, options) {
       return false;
     if (a.length !== b.length)
       return false;
-    for (i = 0; i < a.length; i++) {
-      if (!EJSON.equals(a[i], b[i], options))
-        return false;
+    if (keyOrderSensitive) {
+      for (i = 0; i < a.length; i++) {
+        if (!EJSON.equals(a[i], b[i], options)) {
+          return false;
+        }
+      }
+    } else {
+      var _a = a.slice();
+      var _b = b.slice();
+      for (i = _a.length - 1; i >= 0; i--) {
+        var result = false;
+        for (var j = _b.length - 1; j >= 0; j--) {
+          if (EJSON.equals(_a[i], _b[j], options)) {
+            result = true;
+            _a.splice(i, 1);
+            _b.splice(j, 1);
+          }
+        }
+
+        if (!result)
+          return false;
+      }
     }
     return true;
   }
