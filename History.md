@@ -1,5 +1,7 @@
 ## v.NEXT
 
+* Accounts.forgotPassword and .verifyEmail no longer throw errors if callback is provided. [Issue #5664](https://github.com/meteor/meteor/issues/5664) [Origin PR #5681](https://github.com/meteor/meteor/pull/5681) [Merged PR](https://github.com/meteor/meteor/pull/7117)
+
 ## v1.4.1.1
 
 * Update the version of our Node MongoDB driver to 2.2.7 to fix a bug in
@@ -396,7 +398,6 @@
 * Insert a `Date` header into emails by default: https://github.com/meteor/meteor/pull/6916/files
 
 * `meteor test` now supports setting the bind address using `--port IP:PORT` the same as `meteor run` [PR #6964](https://github.com/meteor/meteor/pull/6964) [Issue #6961](https://github.com/meteor/meteor/issues/6961)
-* Accounts.forgotPassword and .verifyEmail no longer throw errors if callback is provided. [Issue #5664](https://github.com/meteor/meteor/issues/5664) [Origin PR #5681](https://github.com/meteor/meteor/pull/5681) [Merged PR](https://github.com/meteor/meteor/pull/7117)
 
 * `Meteor.apply` now takes a `noRetry` option to opt-out of automatically retrying non-idempotent methods on connection blips: [PR #6180](https://github.com/meteor/meteor/pull/6180)
 
