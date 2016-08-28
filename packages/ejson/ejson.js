@@ -421,6 +421,7 @@ EJSON.equals = function (a, b, options) {
             result = true;
             _a.splice(i, 1);
             _b.splice(j, 1);
+            break;
           }
         }
 
