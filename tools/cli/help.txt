@@ -89,14 +89,15 @@ Options:
 
 >>> create
 Create a new project.
-Usage: meteor create [--release <release>] <path>
+Usage: meteor create [--release <release>] [--bare|--full] <path>
        meteor create [--release <release>] --example <example_name> [<path>]
        meteor create --list
        meteor create --package [<package_name>]
 
 Make a subdirectory named <path> if it doesn't exist and create a new Meteor app
 there. You can pass an absolute path, relative path, or '.' for the current
-directory.
+directory. Use the --bare option to create an empty app. To scaffold the app
+use the --full option.
 
 With the --package option, creates a Meteor package instead of an app. If you're
 in an app, the package will go in the app's top-level 'packages' directory;
@@ -115,6 +116,8 @@ Options:
   --package  Create a new meteor package instead of an app.
   --example  Example template to use.
   --list     Show list of available examples.
+  --bare     Create an empty app.
+  --full     Create a scaffolded app.
 
 
 >>> update

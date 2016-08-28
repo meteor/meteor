@@ -329,7 +329,7 @@ function doRunCommand(options) {
   if (options.production) {
     Console.warn(
       "Warning: The --production flag should only be used to simulate production " +
-      "bundling for testing purposes. Use meteor build to create a bundle for " + 
+      "bundling for testing purposes. Use meteor build to create a bundle for " +
       "production deployment. See: https://guide.meteor.com/deployment.html"
     );
   }
@@ -433,7 +433,9 @@ main.registerCommand({
   options: {
     list: { type: Boolean },
     example: { type: String },
-    package: { type: Boolean }
+    package: { type: Boolean },
+    full: { type: Boolean },
+    bare: { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -576,7 +578,7 @@ main.registerCommand({
 
     Console.info();
     Console.info("To create an example, simply", Console.command("git clone"),
-      "the relevant repository and branch (run", 
+      "the relevant repository and branch (run",
       Console.command("'meteor create --example <name>'"),
       " to see the full command).");
     return 0;
@@ -676,7 +678,16 @@ main.registerCommand({
     toIgnore.push(/(\.html|\.js|\.css)/)
   }
 
-  files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets', 'skel'), appPath, {
+  let skelName = 'skel';
+
+  if(options.bare){
+    skelName += '-bare';
+  }
+  else if(options.full){
+    skelName += '-full';
+  }
+
+  files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets', skelName), appPath, {
     transformFilename: function (f) {
       return transform(f);
     },
@@ -766,6 +777,15 @@ main.registerCommand({
   Console.info(
     Console.url("https://www.meteor.com/learn"),
       Console.options({ indent: 2 }));
+
+  if (!options.full && !options.bare){
+    // Notice people about --bare and --full
+    const bareOptionNotice = 'meteor create --bare to create an empty app.';
+    const fullOptionNotice = 'meteor create --full to create a scaffolded app.';
+
+    Console.info("");
+    Console.info(bareOptionNotice + '\n' + fullOptionNotice);
+  }
 
   Console.info("");
 });
@@ -983,7 +1003,7 @@ ${Console.command("meteor build ../output")}`,
           { title: `building Cordova app for \
 ${cordova.displayNameForPlatform(platform)}` }, () => {
             let buildOptions = { release: !options.debug };
-            
+
             const buildPath = files.pathJoin(
               projectContext.getProjectLocalDirectory('cordova-build'),
               'platforms', platform);
@@ -1208,7 +1228,7 @@ main.registerCommand({
       Console.command("meteor deploy appname"), Console.options({ indent: 2 }));
     return 1;
   }
-  
+
   if (process.env.MONGO_URL) {
     Console.info("As a precaution, meteor reset only clears the local database that is " +
                  "provided by meteor run for development. The database specified with " +
@@ -1639,7 +1659,7 @@ function doTestCommand(options) {
 
     global.testCommandMetadata.isAppTest = options['full-app'];
     global.testCommandMetadata.isTest = !global.testCommandMetadata.isAppTest;
-    
+
     projectContextOptions.projectDir = options.appDir;
     projectContextOptions.projectLocalDir = files.pathJoin(testRunnerAppDir, '.meteor', 'local');
 
@@ -1669,7 +1689,7 @@ function doTestCommand(options) {
     copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'isopacks');
     copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'plugin-cache');
     copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'shell');
-    
+
     projectContext = new projectContextModule.ProjectContext(projectContextOptions);
 
     main.captureAndExit("=> Errors while setting up tests:", function () {
@@ -1771,7 +1791,7 @@ var runTestAppForPackages = function (projectContext, options) {
     minifyMode: options.production ? 'production' : 'development'
   };
   buildOptions.buildMode = "test";
-  
+
   if (options.deploy) {
     // Run the constraint solver and build local packages.
     main.captureAndExit("=> Errors while initializing project:", function () {
