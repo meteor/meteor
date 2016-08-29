@@ -2,7 +2,7 @@
 
 ## v1.4.1.1
 
-* Update the version of our Node MongoDB driver to 2.2.7 to fix a bug in
+* Update the version of our Node MongoDB driver to 2.2.8 to fix a bug in
   reconnection logic, leading to some `update` and `remove` commands being
   treated as `insert`s. [#7594](https://github.com/meteor/meteor/issues/7594)
 
