@@ -12,13 +12,10 @@ Package.onUse(function(api) {
   api.use('underscore', 'server');
   api.use('random', 'client');
   api.use('service-configuration', ['client', 'server']);
-  api.use('accounts-facebook');
+  api.use('accounts-facebook@1.1.0');
+  api.use('blaze-accounts-config-ui-facebook', 'client');
 
   api.imply('accounts-facebook');
-
-  api.addFiles(
-    ['facebook_configure.html', 'facebook_configure.js'],
-    'client');
 
   api.addFiles('deprecation_notice.js');
 });
