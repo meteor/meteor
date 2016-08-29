@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Facebook OAuth flow",
-  version: "1.2.10"
+  summary: "DEPRECATED - Facebook OAuth flow",
+  version: "1.3.0"
 });
 
 Package.onUse(function(api) {
@@ -11,13 +12,13 @@ Package.onUse(function(api) {
   api.use('underscore', 'server');
   api.use('random', 'client');
   api.use('service-configuration', ['client', 'server']);
+  api.use('accounts-facebook');
 
-  api.export('Facebook');
+  api.imply('accounts-facebook');
 
   api.addFiles(
     ['facebook_configure.html', 'facebook_configure.js'],
     'client');
 
-  api.addFiles('facebook_server.js', 'server');
-  api.addFiles('facebook_client.js', 'client');
+  api.addFiles('deprecation_notice.js');
 });
