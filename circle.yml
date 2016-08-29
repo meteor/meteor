@@ -1,3 +1,7 @@
+checkout:
+  post:
+    - git submodule update --init
+
 dependencies:
   pre:
     # https://github.com/meteor/docs/blob/version-NEXT/long-form/file-change-watcher-efficiency.md
