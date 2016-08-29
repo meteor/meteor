@@ -1,5 +1,6 @@
 const stylus = Npm.require('stylus');
 const nib = Npm.require('nib');
+const autoprefixer = Npm.require('autoprefixer-stylus');
 const Future = Npm.require('fibers/future');
 const fs = Plugin.fs;
 const path = Plugin.path;
@@ -19,7 +20,10 @@ class StylusCompiler extends MultiFileCachingCompiler {
   }
 
   getCacheKey(inputFile) {
-    return inputFile.getSourceHash();
+    return [
+      inputFile.getSourceHash(),
+      inputFile.getFileOptions(),
+    ];
   }
 
   compileResultSize(compileResult) {
@@ -147,10 +151,13 @@ class StylusCompiler extends MultiFileCachingCompiler {
       return sourcemap;
     }
 
+    const fileOptions = inputFile.getFileOptions();
+
     const f = new Future;
 
     const style = stylus(inputFile.getContentsAsString())
             .use(nib())
+            .use(autoprefixer(fileOptions.autoprefixer || {}))
             .set('filename', inputFile.getPathInPackage())
             .set('sourcemap', { inline: false, comment: false })
             .set('cache', false)
