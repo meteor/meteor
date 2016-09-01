@@ -696,6 +696,14 @@ Ap._initAccountDataHooks = function () {
   });
 };
 
+Ap._publicationFields = function () {
+  return {
+    profile: 1,
+    username: 1,
+    emails: 1
+  };
+};
+
 Ap._initServerPublications = function () {
   var accounts = this;
 
@@ -712,11 +720,7 @@ Ap._initServerPublications = function () {
       return accounts.users.find({
         _id: this.userId
       }, {
-        fields: {
-          profile: 1,
-          username: 1,
-          emails: 1
-        }
+        fields: accounts._publicationFields()
       });
     } else {
       return null;
