@@ -268,7 +268,7 @@ methods are available:
    such as package.js.
  - `getDisplayPath` Returns a relative path that can be used to form error
  messages or other display properties. Can be used as an input to a source map.
- - `addStlyesheet` - Web targets only. Add a stylesheet to the document. Not
+ - `addStylesheet` - Web targets only. Add a stylesheet to the document. Not
    available for linter build plugins.
  - `addJavaScript` - Add JavaScript code. The code added will only see the
    namespaces imported by this package as runtime dependencies using
