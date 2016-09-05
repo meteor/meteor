@@ -112,13 +112,25 @@ function wrapCallback(callback, Promise, dynamics) {
     return callback;
   }
 
-  return function (arg) {
+  // Don't wrap callbacks that are flagged as not wanting to be called in a
+  // fiber.
+  if (callback._meteorPromiseAlreadyWrapped) {
+    return callback;
+  }
+
+  var result = function (arg) {
     return fiberPool.run({
       callback: callback,
       args: [arg], // Avoid dealing with arguments objects.
       dynamics: dynamics
     }, Promise);
   };
+
+  // Flag this callback as not wanting to be called in a fiber because it is
+  // already creating a fiber.
+  result._meteorPromiseAlreadyWrapped = true;
+
+  return result;
 }
 
 function cloneFiberOwnProperties(fiber) {

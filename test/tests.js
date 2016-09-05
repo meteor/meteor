@@ -1,5 +1,6 @@
 var assert = require("assert");
 var Fiber = require("fibers");
+var Future = require("fibers/future");
 var Promise = process.env.USE_GLOBAL_PROMISE
   ? global.Promise
   : require("promise/lib/es6-extensions");
@@ -152,6 +153,66 @@ describe("Promise.then callbacks", function () {
       assert.strictEqual(error.message, "friendly exception");
       checkCallbackFiber();
     });
+  }));
+
+  it("should not double-wrap callbacks", Promise.async(function () {
+    // Consume all fibers currently in the pool, so that we can detect how many
+    // new fibers are created after that point.
+    var done = new Future();
+    var origCount = Fiber.fibersCreated;
+
+    while (Fiber.fibersCreated == origCount) {
+      // Force creation of a new fiber that blocks until we're done.
+      var ready = new Future();
+      Promise.asyncApply(function () {
+        ready.return();
+        done.wait();
+      });
+      ready.wait();  // Make sure fiber is running before we continue.
+    }
+
+    // OK, we're now in a situation where a Promise.then() should create
+    // *one* new fiber.
+    var baseCount = Fiber.fibersCreated;
+
+    // Create some named no-op promises and callbacks. I'm assigning names
+    // to these so that the comments below are easier to read.
+    var promise1 = Promise.resolve();
+    var promise2 = Promise.resolve();
+    var returnPromise2 = function () { return promise2; };
+    var cb = function () {};
+
+    // Make sure this didn't create any fibers.
+    assert.strictEqual(baseCount, Fiber.fibersCreated);
+
+    // This should create one fiber, and return it to the pool.
+    // Note that you can remove these two lines and the test still works and
+    // tests the right thing. This is just checking my assumptions.
+    promise1.then(returnPromise2).await();
+    assert.strictEqual(baseCount + 1, Fiber.fibersCreated);
+
+    // This should NOT create a another fiber. It should reuse the fiber
+    // created by the above block. However, if callback double-wrapping
+    // is not prevented, then cb will end up being wrapped *twice*, and
+    // thus *two* fibers will be created at the same time.
+    //
+    // What happens is:
+    // * .then(cb) wraps cb (let's call the wrapped version wcb) and passes
+    //   it on to the Promise implementation.
+    // * On next tick, promise1 "completes", so returnPromise2() is called.
+    // * Since it returns a promise (promise2), the Promise implementation
+    //   calls promise2.then(wcb) -- forwarding the callback on to the next
+    //   promise in the chain.
+    // * Our monkey-patched .then() is used here. If we don't detect that
+    //   the callback is already wrapped, we'll end up wrapping it again!
+    var promise3 = promise1.then(returnPromise2);
+    promise3.then(cb).await();
+
+    // If we double-wrapped the callback, then fibersCreated will end up
+    // being baseCount + 2 instead of baseCount + 1.
+    assert.strictEqual(baseCount + 1, Fiber.fibersCreated);
+
+    done.return();
   }));
 });
 
