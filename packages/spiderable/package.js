@@ -1,13 +1,13 @@
 Package.describe({
   summary: "Makes the application crawlable to web spiders",
-  version: "1.0.13"
+  version: "1.0.14-release-testing.0"
 });
 
 Package.onUse(function (api) {
   api.use('webapp', 'server');
   api.use(['ddp', 'tracker'], 'client');
   api.use(['callback-hook'], 'client');
-  api.use(['templating'], 'client');
+  api.use(['templating@1.2.13'], 'client');
   api.use(['underscore'], ['client', 'server']);
 
   api.export('Spiderable');

@@ -1,4 +1,6 @@
 # reactive-var
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/reactive-var) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/reactive-var)
+***
 
 This package provide `ReactiveVar`, a general-purpose reactive
 datatype for use with

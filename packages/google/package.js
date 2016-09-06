@@ -8,7 +8,7 @@ Package.onUse(function(api) {
   api.use('oauth', ['client', 'server']);
   api.use('http', ['server']);
   api.use(['underscore', 'service-configuration'], ['client', 'server']);
-  api.use(['random', 'templating'], 'client');
+  api.use(['random', 'templating@1.2.13'], 'client');
 
   api.export('Google');
 

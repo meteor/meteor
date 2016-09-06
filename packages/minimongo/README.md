@@ -1,4 +1,6 @@
 # Minimongo
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/minimongo) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/minimongo)
+***
 
 `minimongo` is reimplementation of (almost) the entire MongoDB API, against an
 in-memory JavaScript database. It is like a MongoDB emulator that runs inside
