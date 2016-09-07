@@ -49,6 +49,15 @@ App.configurePlugin('com.phonegap.plugins.facebookconnect', {
   APP_ID: '1234567890',
   API_KEY: 'supersecretapikey'
 });
+
+// Add custom tags for a particular PhoneGap/Cordova plugin
+// to the end of generated config.xml.
+// Universal Links is shown as an example here.
+App.appendToConfig(`
+  <universal-links>
+    <host name="localhost:3000" />
+  </universal-links>
+`);
 ```
 
 {% apibox "App.info" %}
@@ -57,3 +66,4 @@ App.configurePlugin('com.phonegap.plugins.facebookconnect', {
 {% apibox "App.configurePlugin" %}
 {% apibox "App.icons" %}
 {% apibox "App.launchScreens" %}
+{% apibox "App.appendToConfig" %}
