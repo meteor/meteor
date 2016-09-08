@@ -1,4 +1,6 @@
 # browser-policy
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/browser-policy) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/browser-policy)
+***
 
 The `browser-policy` family of packages, part of
 [Webapp](https://www.meteor.com/webapp), lets you set security-related

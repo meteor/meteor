@@ -588,13 +588,13 @@ var runWebAppServer = function () {
   // webserver
   var app = connect();
 
-  // Auto-compress any json, javascript, or text.
-  app.use(connect.compress());
-
   // Packages and apps can add handlers that run before any other Meteor
   // handlers via WebApp.rawConnectHandlers.
   var rawConnectHandlers = connect();
   app.use(rawConnectHandlers);
+
+  // Auto-compress any json, javascript, or text.
+  app.use(connect.compress());
 
   // We're not a proxy; reject (without crashing) attempts to treat us like
   // one. (See #1212.)

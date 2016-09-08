@@ -1,4 +1,6 @@
 # session
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/session) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/session)
+***
 
 This package provide `Session`. `Session` is a special
 [ReactiveDict](https://atmospherejs.com/meteor/reactive-dict) whose

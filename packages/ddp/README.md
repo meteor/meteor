@@ -1,4 +1,6 @@
 # ddp
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/ddp) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/ddp)
+***
 
 DDP (Distributed Data Protocol) is the stateful websocket protocol
 that Meteor uses to communicate between the client and the server. For

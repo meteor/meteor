@@ -215,8 +215,11 @@ var newSelfTestCatalog = function () {
       // build, and we're fine with dying if they don't (there's no worries
       // about needing to springboard).
       selfTestCatalog.initialize({
-        localPackageSearchDirs: [files.pathJoin(
-          files.getCurrentToolsDir(), 'packages')]
+        localPackageSearchDirs: [
+          files.pathJoin(files.getCurrentToolsDir(), 'packages'),
+          files.pathJoin(files.getCurrentToolsDir(),
+            'packages-for-isopackets', 'blaze', 'packages')
+        ],
       });
     });
   if (messages.hasMessages()) {
