@@ -61,7 +61,7 @@ extension WebAppLocalServer {
 
       let fileManager = FileManager.default
 
-      if fileManager.fileExists(atPath: downloadDirectoryURL.path!) {
+      if fileManager.fileExists(atPath: downloadDirectoryURL.path) {
         try! fileManager.removeItem(at: downloadDirectoryURL)
       }
 

@@ -66,7 +66,7 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
     for itemURL in items {
       if itemURL.isDirectory != true { continue }
 
-      guard let version = itemURL.lastPathComponent else { continue }
+      let version = itemURL.lastPathComponent
 
       if version == "PartialDownload" { continue }
       if version == "Downloading" { continue }
@@ -209,13 +209,12 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
 
     for asset in assetBundle.ownAssets {
       // Create containing directories for the asset if necessary
-      if let containingDirectoryURL = asset.fileURL.deletingLastPathComponent {
-        do {
-          try fileManager.createDirectory(at: containingDirectoryURL, withIntermediateDirectories: true, attributes: nil)
-        } catch {
-          self.didFailWithError(WebAppError.fileSystemFailure(reason: "Could not create containing directories for asset", underlyingError: error))
-          return
-        }
+      let containingDirectoryURL = asset.fileURL.deletingLastPathComponent()
+      do {
+        try fileManager.createDirectory(at: containingDirectoryURL, withIntermediateDirectories: true, attributes: nil)
+      } catch {
+        self.didFailWithError(WebAppError.fileSystemFailure(reason: "Could not create containing directories for asset", underlyingError: error))
+        return
       }
 
       // If we find a cached asset, we make a hard link to it
@@ -264,7 +263,7 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
 
     if let cachedAsset = partiallyDownloadedAssetBundle?.cachedAssetForURLPath(asset.URLPath, hash: asset.hash) {
       // Make sure the asset has been downloaded
-      if fileManager.fileExists(atPath: cachedAsset.fileURL.path!) {
+      if fileManager.fileExists(atPath: cachedAsset.fileURL.path) {
         return cachedAsset
       }
     }

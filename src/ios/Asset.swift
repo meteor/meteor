@@ -2,8 +2,7 @@ struct Asset {
   let bundle: AssetBundle
   let filePath: String
   var fileURL: URL {
-    return bundle.directoryURL.appendingPathComponent(filePath,
-      isDirectory: false)!
+    return bundle.directoryURL.appendingPathComponent(filePath, isDirectory: false)
   }
   let URLPath: String
   let fileType: String?

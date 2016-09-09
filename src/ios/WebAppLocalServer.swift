@@ -455,7 +455,7 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
   }
 
   fileprivate func responseForAsset(_ request: GCDWebServerRequest, asset: Asset) -> GCDWebServerResponse {
-    let filePath = asset.fileURL.path!
+    let filePath = asset.fileURL.path
     return responseForFile(request, filePath: filePath, cacheable: asset.cacheable, hash: asset.hash, sourceMapURLPath: asset.sourceMapURLPath)
   }
 
