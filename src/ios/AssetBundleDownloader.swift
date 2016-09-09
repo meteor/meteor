@@ -4,27 +4,27 @@ protocol AssetBundleDownloaderDelegate: class {
 }
 
 final class AssetBundleDownloader: NSObject, URLSessionDelegate, URLSessionTaskDelegate, URLSessionDataDelegate, URLSessionDownloadDelegate, METNetworkReachabilityManagerDelegate {
-  fileprivate(set) var configuration: WebAppConfiguration
-  fileprivate(set) var assetBundle: AssetBundle
-  fileprivate(set) var baseURL: URL
+  private(set) var configuration: WebAppConfiguration
+  private(set) var assetBundle: AssetBundle
+  private(set) var baseURL: URL
 
   weak var delegate: AssetBundleDownloaderDelegate?
 
   /// A private serial queue used to synchronize access
-  fileprivate let queue: DispatchQueue
+  private let queue: DispatchQueue
 
-  fileprivate let fileManager = FileManager()
+  private let fileManager = FileManager()
 
-  fileprivate var session: Foundation.URLSession!
+  private var session: Foundation.URLSession!
 
-  fileprivate var missingAssets: Set<Asset>
-  fileprivate var assetsDownloadingByTaskIdentifier = [Int: Asset]()
-  fileprivate var resumeDataByAsset = [Asset: Data]()
+  private var missingAssets: Set<Asset>
+  private var assetsDownloadingByTaskIdentifier = [Int: Asset]()
+  private var resumeDataByAsset = [Asset: Data]()
 
-  fileprivate var retryStrategy: METRetryStrategy
-  fileprivate var numberOfRetryAttempts: UInt = 0
-  fileprivate var resumeTimer: METTimer!
-  fileprivate var networkReachabilityManager: METNetworkReachabilityManager!
+  private var retryStrategy: METRetryStrategy
+  private var numberOfRetryAttempts: UInt = 0
+  private var resumeTimer: METTimer!
+  private var networkReachabilityManager: METNetworkReachabilityManager!
 
   enum Status {
     case suspended
@@ -34,9 +34,9 @@ final class AssetBundleDownloader: NSObject, URLSessionDelegate, URLSessionTaskD
     case invalid
   }
 
-  fileprivate var status: Status = .suspended
+  private var status: Status = .suspended
 
-  fileprivate var backgroundTask: UIBackgroundTaskIdentifier = UIBackgroundTaskInvalid
+  private var backgroundTask: UIBackgroundTaskIdentifier = UIBackgroundTaskInvalid
 
   init(configuration: WebAppConfiguration, assetBundle: AssetBundle, baseURL: URL, missingAssets: Set<Asset>) {
     self.configuration = configuration
@@ -130,7 +130,7 @@ final class AssetBundleDownloader: NSObject, URLSessionDelegate, URLSessionTaskD
     }
   }
 
-  fileprivate func resumeLater() {
+  private func resumeLater() {
     if status == .running {
       let retryInterval = retryStrategy.retryIntervalForNumber(ofAttempts: numberOfRetryAttempts)
       NSLog("Will retry resuming downloads after %f seconds", retryInterval);
@@ -140,7 +140,7 @@ final class AssetBundleDownloader: NSObject, URLSessionDelegate, URLSessionTaskD
     }
   }
 
-  fileprivate func downloadURLForAsset(_ asset: Asset) -> URL? {
+  private func downloadURLForAsset(_ asset: Asset) -> URL? {
     var URLPath = asset.URLPath
 
     // Remove leading / from URL path because the path should be relative to the base URL
@@ -168,7 +168,7 @@ final class AssetBundleDownloader: NSObject, URLSessionDelegate, URLSessionTaskD
     return urlComponents.url(relativeTo: baseURL)
   }
 
-  fileprivate func endBackgroundTask() {
+  private func endBackgroundTask() {
     let application = UIApplication.shared
     application.endBackgroundTask(self.backgroundTask)
     self.backgroundTask = UIBackgroundTaskInvalid;
@@ -182,7 +182,7 @@ final class AssetBundleDownloader: NSObject, URLSessionDelegate, URLSessionTaskD
     }
   }
 
-  fileprivate func _cancel() {
+  private func _cancel() {
     if self.status != .canceling || self.status == .invalid {
       self.status = .canceling
       self.session.invalidateAndCancel()
@@ -190,17 +190,17 @@ final class AssetBundleDownloader: NSObject, URLSessionDelegate, URLSessionTaskD
     }
   }
 
-  fileprivate func cancelAndFailWithReason(_ reason: String, underlyingError: Error? = nil) {
+  private func cancelAndFailWithReason(_ reason: String, underlyingError: Error? = nil) {
     let error = WebAppError.downloadFailure(reason: reason, underlyingError: underlyingError)
     cancelAndFailWithError(error)
   }
 
-  fileprivate func cancelAndFailWithError(_ error: Error) {
+  private func cancelAndFailWithError(_ error: Error) {
     _cancel()
     delegate?.assetBundleDownloader(self, didFailWithError: error)
   }
 
-  fileprivate func didFinish() {
+  private func didFinish() {
     session.finishTasksAndInvalidate()
     delegate?.assetBundleDownloaderDidFinish(self)
     endBackgroundTask()
@@ -322,39 +322,40 @@ final class AssetBundleDownloader: NSObject, URLSessionDelegate, URLSessionTaskD
     }
   }
 
-  fileprivate func verifyResponse(_ response: HTTPURLResponse, forAsset asset: Asset) throws {
+  private func verifyResponse(_ response: HTTPURLResponse, forAsset asset: Asset) throws {
     // A response with a non-success status code should not be considered a succesful download
     if !response.isSuccessful {
       throw WebAppError.downloadFailure(reason: "Non-success status code \(response.statusCode) for asset: \(asset)", underlyingError: nil)
       // If we have a hash for the asset, and the ETag header also specifies
       // a hash, we compare these to verify if we received the expected asset version
-    } else if let expectedHash = asset.hash,
+    } else if
+      let expectedHash = asset.hash,
       let ETag = response.allHeaderFields["ETag"] as? String,
-      let actualHash = SHA1HashFromETag(ETag)
-      , actualHash != expectedHash {
+      let actualHash = SHA1HashFromETag(ETag),
+      actualHash != expectedHash {
         throw WebAppError.downloadFailure(reason: "Hash mismatch for asset: \(asset)", underlyingError: nil)
     }
   }
-  
-  fileprivate func verifyRuntimeConfig(_ runtimeConfig: AssetBundle.RuntimeConfig) throws {
+
+  private func verifyRuntimeConfig(_ runtimeConfig: AssetBundle.RuntimeConfig) throws {
     let expectedVersion = assetBundle.version
     if let actualVersion = runtimeConfig.autoupdateVersionCordova
       , expectedVersion != actualVersion {
         throw WebAppError.downloadFailure(reason: "Version mismatch for index page, expected: \(expectedVersion), actual: \(actualVersion)", underlyingError: nil)
     }
-    
+
     guard let rootURL = runtimeConfig.rootURL else {
       throw WebAppError.unsuitableAssetBundle(reason: "Could not find ROOT_URL in downloaded asset bundle", underlyingError: nil)
     }
-    
+
     if configuration.rootURL?.host != "localhost" && rootURL.host == "localhost" {
       throw WebAppError.unsuitableAssetBundle(reason: "ROOT_URL in downloaded asset bundle would change current ROOT_URL to localhost. Make sure ROOT_URL has been configured correctly on the server.", underlyingError: nil)
     }
-    
+
     guard let appId = runtimeConfig.appId else {
       throw WebAppError.unsuitableAssetBundle(reason: "Could not find appId in downloaded asset bundle", underlyingError: nil)
     }
-    
+
     if appId != configuration.appId {
       throw WebAppError.unsuitableAssetBundle(reason: "appId in downloaded asset bundle does not match current appId. Make sure the server at \(rootURL) is serving the right app.", underlyingError: nil)
     }

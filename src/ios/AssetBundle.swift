@@ -20,14 +20,14 @@ func loadRuntimeConfigFromIndexFileAtURL(_ fileURL: URL) throws -> AssetBundle.R
 }
 
 final class AssetBundle {
-  fileprivate(set) var directoryURL: URL
+  private(set) var directoryURL: URL
 
   let version: String
   let cordovaCompatibilityVersion: String
 
-  fileprivate var parentAssetBundle: AssetBundle?
-  fileprivate var ownAssetsByURLPath: [String: Asset] = [:]
-  fileprivate(set) var indexFile: Asset?
+  private var parentAssetBundle: AssetBundle?
+  private var ownAssetsByURLPath: [String: Asset] = [:]
+  private(set) var indexFile: Asset?
 
   var ownAssets: [Asset] {
     return Array(ownAssetsByURLPath.values)
@@ -99,7 +99,11 @@ final class AssetBundle {
   }
   
   struct RuntimeConfig {
-    fileprivate let JSON: JSONObject
+    private let JSON: JSONObject
+    
+    init(JSON: JSONObject) {
+      self.JSON = JSON
+    }
     
     var appId: String? {
       return JSON["appId"] as? String

@@ -16,16 +16,16 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
   weak var delegate: AssetBundleManagerDelegate?
 
   /// A private serial queue used to synchronize access
-  fileprivate let queue: DispatchQueue
+  private let queue: DispatchQueue
 
-  fileprivate let fileManager = FileManager()
-  fileprivate var downloadedAssetBundlesByVersion: [String: AssetBundle]
+  private let fileManager = FileManager()
+  private var downloadedAssetBundlesByVersion: [String: AssetBundle]
   
-  fileprivate var session: URLSession!
+  private var session: URLSession!
   
-  fileprivate var downloadDirectoryURL: URL
-  fileprivate var assetBundleDownloader: AssetBundleDownloader?
-  fileprivate var partiallyDownloadedAssetBundle: AssetBundle?
+  private var downloadDirectoryURL: URL
+  private var assetBundleDownloader: AssetBundleDownloader?
+  private var partiallyDownloadedAssetBundle: AssetBundle?
 
   var isDownloading: Bool {
     return assetBundleDownloader != nil
@@ -57,7 +57,7 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
     assetBundleDownloader?.cancel()
   }
 
-  fileprivate func loadDownloadedAssetBundles() {
+  private func loadDownloadedAssetBundles() {
     let items: [URL]
     items = try! fileManager.contentsOfDirectory(at: versionsDirectoryURL,
       includingPropertiesForKeys: [URLResourceKey.isDirectoryKey],
@@ -183,7 +183,7 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
   /// If there is an existing Downloading directory, move it
   /// to PartialDownload and load the partiallyDownloadedAssetBundle so we
   /// don't unnecessarily redownload assets
-  fileprivate func moveExistingDownloadDirectoryIfNeeded() {
+  private func moveExistingDownloadDirectoryIfNeeded() {
     if fileManager.fileExists(atPath: downloadDirectoryURL.path) {
       let partialDownloadDirectoryURL = self.versionsDirectoryURL.appendingPathComponent("PartialDownload")
       do {
@@ -204,7 +204,7 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
     }
   }
 
-  fileprivate func downloadAssetBundle(_ assetBundle: AssetBundle, withBaseURL baseURL: URL) {
+  private func downloadAssetBundle(_ assetBundle: AssetBundle, withBaseURL baseURL: URL) {
     var missingAssets = Set<Asset>()
 
     for asset in assetBundle.ownAssets {
@@ -246,15 +246,15 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
     assetBundleDownloader!.resume()
   }
 
-  fileprivate func didFinishDownloadingAssetBundle(_ assetBundle: AssetBundle) {
+  private func didFinishDownloadingAssetBundle(_ assetBundle: AssetBundle) {
     delegate?.assetBundleManager(self, didFinishDownloadingBundle: assetBundle)
   }
 
-  fileprivate func didFailWithError(_ error: Error) {
+  private func didFailWithError(_ error: Error) {
     delegate?.assetBundleManager(self, didFailDownloadingBundleWithError: error)
   }
 
-  fileprivate func cachedAssetForAsset(_ asset: Asset) -> Asset? {
+  private func cachedAssetForAsset(_ asset: Asset) -> Asset? {
     for assetBundle in downloadedAssetBundlesByVersion.values {
       if let cachedAsset = assetBundle.cachedAssetForURLPath(asset.URLPath, hash: asset.hash) {
         return cachedAsset
@@ -272,7 +272,7 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
   }
 
   /// Move the downloaded asset bundle to a new directory named after the version
-  fileprivate func moveDownloadedAssetBundleIntoPlace(_ assetBundle: AssetBundle) throws {
+  private func moveDownloadedAssetBundleIntoPlace(_ assetBundle: AssetBundle) throws {
     let versionDirectoryURL = self.versionsDirectoryURL.appendingPathComponent(assetBundle.version)
 
     do {

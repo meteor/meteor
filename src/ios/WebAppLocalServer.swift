@@ -10,10 +10,10 @@ let localFileSystemPath = "/local-filesystem"
 @objc(METWebAppLocalServer)
 open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
   /// The local web server responsible for serving assets to the web app
-  fileprivate(set) var localServer: GCDWebServer!
+  private(set) var localServer: GCDWebServer!
 
   /// The listening port of the local web server
-  fileprivate var localServerPort: UInt = 0
+  private var localServerPort: UInt = 0
 
   let authTokenKeyValuePair: String = {
     let authToken = ProcessInfo.processInfo.globallyUniqueString
@@ -21,17 +21,17 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
   }()
 
   /// The www directory in the app bundle
-  fileprivate(set) var wwwDirectoryURL: URL!
+  private(set) var wwwDirectoryURL: URL!
 
   /// Persistent configuration settings for the webapp
-  fileprivate(set) var configuration: WebAppConfiguration!
+  private(set) var configuration: WebAppConfiguration!
 
   /// The asset bundle manager is responsible for managing asset bundles
   /// and checking for updates
-  fileprivate(set) var assetBundleManager: AssetBundleManager!
+  private(set) var assetBundleManager: AssetBundleManager!
 
   /// The asset bundle currently used to serve assets from
-  fileprivate var currentAssetBundle: AssetBundle! {
+  private var currentAssetBundle: AssetBundle! {
     didSet {
       if currentAssetBundle != nil {
         configuration.appId = currentAssetBundle.appId
@@ -46,7 +46,7 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
   /// Downloaded asset bundles are considered pending until the next page reload
   /// because we don't want the app to end up in an inconsistent state by
   /// loading assets from different bundles.
-  fileprivate var pendingAssetBundle: AssetBundle?
+  private var pendingAssetBundle: AssetBundle?
 
   /// Callback ID used to send a newVersionReady notification to JavaScript
   var newVersionReadyCallbackId: String?
@@ -55,13 +55,13 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
   var errorCallbackId: String?
 
   /// Timer used to wait for startup to complete after a reload
-  fileprivate var startupTimer: METTimer?
+  private var startupTimer: METTimer?
 
   /// The number of seconds to wait for startup to complete, after which
   /// we revert to the last known good version
-  fileprivate var startupTimeoutInterval: TimeInterval = 20.0
+  private var startupTimeoutInterval: TimeInterval = 20.0
 
-  fileprivate var isTesting: Bool = false
+  private var isTesting: Bool = false
 
   // MARK: - Lifecycle
 
@@ -252,7 +252,7 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
     commandDelegate?.send(result, callbackId: newVersionReadyCallbackId)
   }
 
-  fileprivate func notifyNewVersionReady(_ version: String?) {
+  private func notifyNewVersionReady(_ version: String?) {
     guard let newVersionReadyCallbackId = newVersionReadyCallbackId else { return }
 
     let result = CDVPluginResult(status: CDVCommandStatus_OK, messageAs: version)
@@ -270,7 +270,7 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
     commandDelegate?.send(result, callbackId: errorCallbackId)
   }
 
-  fileprivate func notifyError(_ error: Error) {
+  private func notifyError(_ error: Error) {
     NSLog("Download failure: \(error)")
 
     guard let errorCallbackId = errorCallbackId else { return }
@@ -376,8 +376,7 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
 
   // MARK: Request Handlers
 
-  fileprivate func addHandlerForAssetBundle() {
-    localServer.addHandler(match: { [weak self] (requestMethod, requestURL, requestHeaders, URLPath, URLQuery) -> GCDWebServerRequest! in
+  private func addHandlerForAssetBundle() {
     localServer.addHandler(match: { [weak self] (requestMethod, requestURL, requestHeaders, urlPath, urlQuery) -> GCDWebServerRequest! in
       if requestMethod != "GET" { return nil }
       guard let urlPath = urlPath else { return nil }
@@ -392,7 +391,6 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
     }
   }
 
-  fileprivate func addHandlerForWwwDirectory() {
   private func addHandlerForWwwDirectory() {
     localServer.addHandler(match: { [weak self] (requestMethod, requestURL, requestHeaders, urlPath, urlQuery) -> GCDWebServerRequest! in
       if requestMethod != "GET" { return nil }
@@ -404,7 +402,6 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
       guard let fileURL = self?.wwwDirectoryURL?.appendingPathComponent(urlPath) else { return nil }
       if fileURL.isRegularFile != true { return nil }
 
-      let request = GCDWebServerRequest(method: requestMethod, url: requestURL, headers: requestHeaders, path: URLPath, query: URLQuery)
       let request = GCDWebServerRequest(method: requestMethod, url: requestURL, headers: requestHeaders, path: urlPath, query: urlQuery)
       request?.setAttribute(fileURL.path, forKey: GCDWebServerRequestAttribute_FilePath)
       return request
@@ -414,8 +411,7 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
     }
   }
 
-  fileprivate func addHandlerForLocalFileSystem() {
-    localServer.addHandler(match: { (requestMethod, requestURL, requestHeaders, URLPath, URLQuery) -> GCDWebServerRequest! in
+  private func addHandlerForLocalFileSystem() {
     localServer.addHandler(match: { (requestMethod, requestURL, requestHeaders, urlPath, urlQuery) -> GCDWebServerRequest! in
       if requestMethod != "GET" { return nil }
       guard let urlPath = urlPath else { return nil }
@@ -435,8 +431,7 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
     }
   }
 
-  fileprivate func addIndexFileHandler() {
-    localServer.addHandler(match: { [weak self] (requestMethod, requestURL, requestHeaders, URLPath, URLQuery) -> GCDWebServerRequest! in
+  private func addIndexFileHandler() {
     localServer.addHandler(match: { [weak self] (requestMethod, requestURL, requestHeaders, urlPath, urlQuery) -> GCDWebServerRequest! in
       if requestMethod != "GET" { return nil }
       guard let urlPath = urlPath else { return nil }
@@ -457,18 +452,18 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
     }
   }
 
-  fileprivate func addNotFoundHandler() {
+  private func addNotFoundHandler() {
     localServer.addDefaultHandler(forMethod: "GET", request: GCDWebServerRequest.self) { (request) -> GCDWebServerResponse! in
-           return GCDWebServerResponse(statusCode: GCDWebServerClientErrorHTTPStatusCode.httpStatusCode_NotFound.rawValue)
+      return GCDWebServerResponse(statusCode: GCDWebServerClientErrorHTTPStatusCode.httpStatusCode_NotFound.rawValue)
     }
   }
 
-  fileprivate func responseForAsset(_ request: GCDWebServerRequest, asset: Asset) -> GCDWebServerResponse {
+  private func responseForAsset(_ request: GCDWebServerRequest, asset: Asset) -> GCDWebServerResponse {
     let filePath = asset.fileURL.path
     return responseForFile(request, filePath: filePath, cacheable: asset.cacheable, hash: asset.hash, sourceMapURLPath: asset.sourceMapURLPath)
   }
 
-  fileprivate func responseForFile(_ request: GCDWebServerRequest, filePath: String, cacheable: Bool, hash: String? = nil, sourceMapURLPath: String? = nil) -> GCDWebServerResponse {
+  private func responseForFile(_ request: GCDWebServerRequest, filePath: String, cacheable: Bool, hash: String? = nil, sourceMapURLPath: String? = nil) -> GCDWebServerResponse {
     // To protect our server from access by other apps running on the same device,
     // we check whether the rponsequest contains an auth token.
     // The auth token can be passed either as a query item or as a cookie.
