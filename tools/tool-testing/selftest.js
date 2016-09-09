@@ -218,7 +218,7 @@ var newSelfTestCatalog = function () {
         localPackageSearchDirs: [
           files.pathJoin(files.getCurrentToolsDir(), 'packages'),
           files.pathJoin(files.getCurrentToolsDir(),
-            'packages-for-isopackets', 'blaze', 'packages')
+            'packages', 'non-core', 'blaze', 'packages')
         ],
       });
     });
