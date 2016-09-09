@@ -12,22 +12,6 @@ extension Collection {
   }
 }
 
-func dispatch_sync(_ queue: DispatchQueue, block: () throws -> ()) throws {
-  var caughtError: Error?
-  
-  queue.sync {
-    do {
-      try block()
-    } catch {
-      caughtError = error
-    }
-  }
-  
-  if let caughtError = caughtError {
-    throw caughtError
-  }
-}
-
 typealias JSONObject = [String:AnyObject]
 
 // Regex that matches the query string part of a URL
