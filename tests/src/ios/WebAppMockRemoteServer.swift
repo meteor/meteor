@@ -1,8 +1,11 @@
 extension Data {
   func SHA1() -> String {
     var digest = [UInt8](repeating: 0, count: Int(CC_SHA1_DIGEST_LENGTH))
-    CC_SHA1(bytes, CC_LONG(count), &digest)
-
+    
+    withUnsafeBytes { (bytes) -> Void in
+      CC_SHA1(bytes, CC_LONG(count), &digest)
+    }
+    
     var hexString = ""
     for index in 0..<digest.count {
       hexString += String(format: "%02x", digest[index])
