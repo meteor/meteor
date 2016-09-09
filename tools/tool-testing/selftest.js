@@ -209,6 +209,9 @@ var newSelfTestCatalog = function () {
   var messages = buildmessage.capture(
     { title: "scanning local core packages" },
     function () {
+      const packagesDir =
+        files.pathJoin(files.getCurrentToolsDir(), 'packages');
+
       // When building a fake warehouse from a checkout, we use local packages,
       // but *ONLY THOSE FROM THE CHECKOUT*: not app packages or $PACKAGE_DIRS
       // packages.  One side effect of this: we really really expect them to all
@@ -216,7 +219,8 @@ var newSelfTestCatalog = function () {
       // about needing to springboard).
       selfTestCatalog.initialize({
         localPackageSearchDirs: [
-          files.pathJoin(files.getCurrentToolsDir(), 'packages'),
+          packagesDir,
+          files.pathJoin(packagesDir, "non-core", "*", "packages"),
         ],
       });
     });
