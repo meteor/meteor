@@ -1,5 +1,7 @@
 ## v1.4.2
 
+* The `npm` npm package has been updated to 3.10.7.
+
 * Blaze-related packages have been extracted to
   [`meteor/blaze`](https://github.com/meteor/blaze), and the main
   [`meteor/meteor`](https://github.com/meteor/meteor) repository now
