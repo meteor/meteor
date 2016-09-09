@@ -2,7 +2,7 @@
   "dependencies": {
     "asap": {
       "version": "2.0.4",
-      "resolved": "file:node_shrinkwrap/asap-2.0.4.tgz",
+      "resolved": "https://registry.npmjs.org/asap/-/asap-2.0.4.tgz",
       "from": "asap@>=2.0.3 <2.1.0"
     },
     "meteor-promise": {
