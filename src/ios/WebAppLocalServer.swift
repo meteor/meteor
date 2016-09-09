@@ -71,8 +71,8 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
 
     // Detect whether we are testing the app using
     // cordova-plugin-test-framework
-    if let viewController = self.viewController as? CDVViewController
-      , viewController.startPage == "cdvtests/index.html" {
+    if let viewController = self.viewController as? CDVViewController,
+      viewController.startPage == "cdvtests/index.html" {
         isTesting = true
     }
 
@@ -469,9 +469,9 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
     // The auth token can be passed either as a query item or as a cookie.
     // If the auth token was passed as a query item, we set the cookie.
     var shouldSetCookie = false
-    if let query = request.url.query , query.contains(authTokenKeyValuePair) {
+    if let query = request.url.query, query.contains(authTokenKeyValuePair) {
       shouldSetCookie = true
-    } else if let cookie = request.headers["Cookie"] , (cookie as AnyObject).contains(authTokenKeyValuePair) {
+    } else if let cookie = request.headers["Cookie"], (cookie as AnyObject).contains(authTokenKeyValuePair) {
     } else {
       return GCDWebServerResponse(statusCode: GCDWebServerClientErrorHTTPStatusCode.httpStatusCode_Forbidden.rawValue)
     }

@@ -89,9 +89,9 @@ final class AssetBundle {
   }
 
   func cachedAssetForURLPath(_ URLPath: String, hash: String? = nil) -> Asset? {
-    if let asset = ownAssetsByURLPath[URLPath]
+    if let asset = ownAssetsByURLPath[URLPath],
         // If the asset is not cacheable, we require a matching hash
-        , (asset.cacheable || asset.hash != nil) && asset.hash == hash {
+        (asset.cacheable || asset.hash != nil) && asset.hash == hash {
       return asset
     } else {
       return nil

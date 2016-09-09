@@ -339,8 +339,8 @@ final class AssetBundleDownloader: NSObject, URLSessionDelegate, URLSessionTaskD
 
   private func verifyRuntimeConfig(_ runtimeConfig: AssetBundle.RuntimeConfig) throws {
     let expectedVersion = assetBundle.version
-    if let actualVersion = runtimeConfig.autoupdateVersionCordova
-      , expectedVersion != actualVersion {
+    if let actualVersion = runtimeConfig.autoupdateVersionCordova,
+      expectedVersion != actualVersion {
         throw WebAppError.downloadFailure(reason: "Version mismatch for index page, expected: \(expectedVersion), actual: \(actualVersion)", underlyingError: nil)
     }
 

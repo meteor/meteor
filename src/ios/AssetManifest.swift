@@ -25,7 +25,7 @@ struct AssetManifest {
       throw WebAppError.invalidAssetManifest(reason: "Error parsing asset manifest", underlyingError: error)
     }
 
-    if let format = JSON["format"] as? String , format != "web-program-pre1" {
+    if let format = JSON["format"] as? String, format != "web-program-pre1" {
       throw WebAppError.invalidAssetManifest(reason: "The asset manifest format is incompatible: \(format)", underlyingError: nil)
     }
 
