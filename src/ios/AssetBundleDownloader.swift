@@ -148,7 +148,7 @@ final class AssetBundleDownloader: NSObject, URLSessionDelegate, URLSessionTaskD
       URLPath = String(describing: asset.URLPath.utf16.dropFirst())
     }
 
-    guard let URLComponents = URLComponents(string: URLPath) else {
+    guard var urlComponents = URLComponents(string: URLPath) else {
       return nil
     }
 
@@ -157,15 +157,15 @@ final class AssetBundleDownloader: NSObject, URLSessionDelegate, URLSessionTaskD
     // are actually downloading the index page.
     if asset.filePath != "index.html" {
       let queryItem = URLQueryItem(name: "meteor_dont_serve_index", value: "true")
-      if var queryItems = URLComponents.queryItems {
+      if var queryItems = urlComponents.queryItems {
         queryItems.append(queryItem)
-        URLComponents.queryItems = queryItems
+        urlComponents.queryItems = queryItems
       } else {
-        URLComponents.queryItems = [queryItem]
+        urlComponents.queryItems = [queryItem]
       }
     }
 
-    return URLComponents.url(relativeTo: baseURL)
+    return urlComponents.url(relativeTo: baseURL)
   }
 
   fileprivate func endBackgroundTask() {
