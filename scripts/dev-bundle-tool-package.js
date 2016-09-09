@@ -13,7 +13,7 @@ var packageJson = {
     // and we want to make sure there are no dependencies on a higher version
     npm: "3.10.7",
     "node-gyp": "3.4.0",
-    "node-pre-gyp": "0.6.29",
+    "node-pre-gyp": "0.6.30",
     "meteor-babel": "0.12.0",
     "meteor-promise": "0.7.2",
     fibers: "1.0.13",
