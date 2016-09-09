@@ -378,10 +378,12 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
 
   fileprivate func addHandlerForAssetBundle() {
     localServer.addHandler(match: { [weak self] (requestMethod, requestURL, requestHeaders, URLPath, URLQuery) -> GCDWebServerRequest! in
+    localServer.addHandler(match: { [weak self] (requestMethod, requestURL, requestHeaders, urlPath, urlQuery) -> GCDWebServerRequest! in
       if requestMethod != "GET" { return nil }
-      guard let asset = self?.currentAssetBundle?.assetForURLPath(URLPath) else { return nil }
+      guard let urlPath = urlPath else { return nil }
+      guard let asset = self?.currentAssetBundle?.assetForURLPath(urlPath) else { return nil }
 
-      let request = GCDWebServerRequest(method: requestMethod, url: requestURL, headers: requestHeaders, path: URLPath, query: URLQuery)
+      let request = GCDWebServerRequest(method: requestMethod, url: requestURL, headers: requestHeaders, path: urlPath, query: urlQuery)!
       request.setAttribute(Box(asset), forKey: GCDWebServerRequestAttribute_Asset)
       return request
     }) { (request) -> GCDWebServerResponse! in
@@ -391,16 +393,19 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
   }
 
   fileprivate func addHandlerForWwwDirectory() {
-    localServer.addHandler(match: { [weak self] (requestMethod, requestURL, requestHeaders, URLPath, URLQuery) -> GCDWebServerRequest! in
+  private func addHandlerForWwwDirectory() {
+    localServer.addHandler(match: { [weak self] (requestMethod, requestURL, requestHeaders, urlPath, urlQuery) -> GCDWebServerRequest! in
       if requestMethod != "GET" { return nil }
+      guard let urlPath = urlPath else { return nil }
 
       // Do not serve files from /application, because these should only be served through the initial asset bundle
-      if (URLPath?.hasPrefix("/application"))! { return nil }
+      if (urlPath.hasPrefix("/application")) { return nil }
 
-      guard let fileURL = self?.wwwDirectoryURL?.appendingPathComponent(URLPath!) else { return nil }
+      guard let fileURL = self?.wwwDirectoryURL?.appendingPathComponent(urlPath) else { return nil }
       if fileURL.isRegularFile != true { return nil }
 
       let request = GCDWebServerRequest(method: requestMethod, url: requestURL, headers: requestHeaders, path: URLPath, query: URLQuery)
+      let request = GCDWebServerRequest(method: requestMethod, url: requestURL, headers: requestHeaders, path: urlPath, query: urlQuery)
       request?.setAttribute(fileURL.path, forKey: GCDWebServerRequestAttribute_FilePath)
       return request
     }) { (request) -> GCDWebServerResponse! in
@@ -411,15 +416,17 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
 
   fileprivate func addHandlerForLocalFileSystem() {
     localServer.addHandler(match: { (requestMethod, requestURL, requestHeaders, URLPath, URLQuery) -> GCDWebServerRequest! in
+    localServer.addHandler(match: { (requestMethod, requestURL, requestHeaders, urlPath, urlQuery) -> GCDWebServerRequest! in
       if requestMethod != "GET" { return nil }
+      guard let urlPath = urlPath else { return nil }
 
-      if !(URLPath?.hasPrefix(localFileSystemPath))! { return nil }
+      if !(urlPath.hasPrefix(localFileSystemPath)) { return nil }
 
-      let filePath = URLPath?.substring(from: localFileSystemPath.endIndex)
-      let fileURL = URL(fileURLWithPath: filePath!)
+      let filePath = urlPath.substring(from: localFileSystemPath.endIndex)
+      let fileURL = URL(fileURLWithPath: filePath)
       if fileURL.isRegularFile != true { return nil }
 
-      let request = GCDWebServerRequest(method: requestMethod, url: requestURL, headers: requestHeaders, path: URLPath, query: URLQuery)
+      let request = GCDWebServerRequest(method: requestMethod, url: requestURL, headers: requestHeaders, path: urlPath, query: urlQuery)
       request?.setAttribute(filePath, forKey: GCDWebServerRequestAttribute_FilePath)
       return request
       }) { (request) -> GCDWebServerResponse! in
@@ -430,16 +437,18 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
 
   fileprivate func addIndexFileHandler() {
     localServer.addHandler(match: { [weak self] (requestMethod, requestURL, requestHeaders, URLPath, URLQuery) -> GCDWebServerRequest! in
+    localServer.addHandler(match: { [weak self] (requestMethod, requestURL, requestHeaders, urlPath, urlQuery) -> GCDWebServerRequest! in
       if requestMethod != "GET" { return nil }
+      guard let urlPath = urlPath else { return nil }
 
       // Don't serve index.html for local file system paths
-      if (URLPath?.hasPrefix(localFileSystemPath))! { return nil }
+      if (urlPath.hasPrefix(localFileSystemPath)) { return nil }
 
-      if URLPath == "/favicon.ico" { return nil }
+      if urlPath == "/favicon.ico" { return nil }
 
       guard let indexFile = self?.currentAssetBundle?.indexFile else { return nil }
 
-      let request = GCDWebServerRequest(method: requestMethod, url: requestURL, headers: requestHeaders, path: URLPath, query: URLQuery)
+      let request = GCDWebServerRequest(method: requestMethod, url: requestURL, headers: requestHeaders, path: urlPath, query: urlQuery)
       request?.setAttribute(Box(indexFile), forKey: GCDWebServerRequestAttribute_Asset)
       return request
       }) { (request) -> GCDWebServerResponse! in
@@ -478,36 +487,39 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
     }
 
     // Support partial requests using byte ranges
-    let response = GCDWebServerFileResponse(file: filePath, byteRange: request.byteRange)
-    response?.setValue("bytes", forAdditionalHeader: "Accept-Ranges")
+    guard let response = GCDWebServerFileResponse(file: filePath, byteRange: request.byteRange) else {
+      return GCDWebServerResponse(statusCode: GCDWebServerClientErrorHTTPStatusCode.httpStatusCode_NotFound.rawValue)
+    }
+    
+    response.setValue("bytes", forAdditionalHeader: "Accept-Ranges")
 
     if shouldSetCookie {
-      response?.setValue(authTokenKeyValuePair, forAdditionalHeader: "Set-Cookie")
+      response.setValue(authTokenKeyValuePair, forAdditionalHeader: "Set-Cookie")
     }
 
     // Only cache files when the file is cacheable and the request URL includes a cache buster
     let shouldCache = cacheable &&
       (!(request.url.query?.isEmpty ?? true)
-        || sha1HashRegEx.matches(request.url.path!))
+        || sha1HashRegEx.matches(request.url.path))
     response.cacheControlMaxAge = UInt(shouldCache ? oneYearInSeconds : 0)
 
     // If we don't set an ETag ourselves, GCDWebServerFileResponse will generate
     // one based on the inode of the file
     if let hash = hash {
-      response?.eTag = hash
+      response.eTag = hash
     }
 
     // GCDWebServerFileResponse sets this to the file modification date, which
     // isn't very useful for our purposes and would hamper
     // the ability to serve conditional requests
-    response?.lastModifiedDate = nil
+    response.lastModifiedDate = nil
 
     // If the asset has a source map, set the X-SourceMap header
     if let sourceMapURLPath = sourceMapURLPath,
         let sourceMapURL = URL(string: sourceMapURLPath, relativeTo: localServer.serverURL) {
-      response?.setValue(sourceMapURL.absoluteString, forAdditionalHeader: "X-SourceMap")
+      response.setValue(sourceMapURL.absoluteString, forAdditionalHeader: "X-SourceMap")
     }
 
-    return response!
+    return response
   }
 }
