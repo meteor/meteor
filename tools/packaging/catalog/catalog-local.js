@@ -4,6 +4,7 @@ var files = require('../../fs/files.js');
 var watch = require('../../fs/watch.js');
 var PackageSource = require('../../isobuild/package-source.js');
 import { KNOWN_ISOBUILD_FEATURE_PACKAGES } from '../../isobuild/compiler.js';
+import { sync as glob } from "glob";
 
 // LocalCatalog represents packages located in the application's
 // package directory, other package directories specified via an
@@ -48,8 +49,8 @@ var LocalCatalog = function (options) {
 _.extend(LocalCatalog.prototype, {
   toString: function () {
     var self = this;
-    return "LocalCatalog [localPackageSearchDirs="
-      + self.localPackageSearchDirs + "]";
+    return "LocalCatalog [localPackageSearchDirs=" +
+      JSON.stringify(self.localPackageSearchDirs) + "]";
   },
 
   // Initialize the Catalog. This must be called before any other
@@ -73,14 +74,29 @@ _.extend(LocalCatalog.prototype, {
 
     options = options || {};
 
-    self.localPackageSearchDirs = _.map(
-      options.localPackageSearchDirs, function (p) {
-        return files.pathResolve(p);
+    function addPatternsToList(patterns, list) {
+      if (! patterns) {
+        return;
+      }
+
+      patterns.forEach(pattern => {
+        // Note: glob expects POSIX-style paths, even on Windows.
+        // https://github.com/isaacs/node-glob/blob/master/README.md#windows
+        glob(pattern).forEach(
+          p => list.push(files.pathResolve(p))
+        );
       });
-    self.explicitlyAddedLocalPackageDirs = _.map(
-      options.explicitlyAddedLocalPackageDirs, function (p) {
-        return files.pathResolve(p);
-      });
+    }
+
+    addPatternsToList(
+      options.localPackageSearchDirs,
+      self.localPackageSearchDirs = [],
+    );
+
+    addPatternsToList(
+      options.explicitlyAddedLocalPackageDirs,
+      self.explicitlyAddedLocalPackageDirs = [],
+    );
 
     self._computeEffectiveLocalPackages();
     self._loadLocalPackages(options.buildingIsopackets);
