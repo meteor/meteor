@@ -330,7 +330,9 @@ final class AssetBundleDownloader: NSObject, URLSessionDelegate, URLSessionTaskD
       // a hash, we compare these to verify if we received the expected asset version
     } else if
       let expectedHash = asset.hash,
-      let ETag = response.allHeaderFields["ETag"] as? String,
+      // TODO: allHeaderFields should be case insensitive, but now requires 'Etag'
+      // This appears to be s Swift bug (see https://bugs.swift.org/browse/SR-2429)
+      let ETag = response.allHeaderFields["Etag"] as? String,
       let actualHash = SHA1HashFromETag(ETag),
       actualHash != expectedHash {
         throw WebAppError.downloadFailure(reason: "Hash mismatch for asset: \(asset)", underlyingError: nil)
