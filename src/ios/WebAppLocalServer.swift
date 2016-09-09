@@ -107,7 +107,7 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
     }
 
     if !isTesting {
-      startupTimer = METTimer(queue: DispatchQueue.global(priority: DispatchQueue.GlobalQueuePriority.default)) { [weak self] in
+      startupTimer = METTimer(queue: DispatchQueue.global(qos: .utility)) { [weak self] in
         NSLog("App startup timed out, reverting to last known good version")
         self?.revertToLastKnownGoodVersion()
       }
