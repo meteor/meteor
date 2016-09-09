@@ -221,6 +221,9 @@ var newIsopacketBuildingCatalog = function () {
   var messages = buildmessage.capture(
     { title: "scanning local core packages" },
     function () {
+      const packagesDir =
+        files.pathJoin(files.getCurrentToolsDir(), 'packages');
+
       // When running from a checkout, isopacket building does use local
       // packages, but *ONLY THOSE FROM THE CHECKOUT*: not app packages or
       // $PACKAGE_DIRS packages.  One side effect of this: we really really
@@ -228,7 +231,8 @@ var newIsopacketBuildingCatalog = function () {
       // (there's no worries about needing to springboard).
       isopacketCatalog.initialize({
         localPackageSearchDirs: [
-          files.pathJoin(files.getCurrentToolsDir(), 'packages'),
+          packagesDir,
+          files.pathJoin(packagesDir, "non-core", "*", "packages"),
         ],
         buildingIsopackets: true
       });

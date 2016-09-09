@@ -607,7 +607,13 @@ _.extend(ProjectContext.prototype, {
     if (! self._ignoreCheckoutPackages && files.inCheckout()) {
       // Running from a checkout, so use the Meteor core packages from the
       // checkout.
-      searchDirs.push(files.pathJoin(files.getCurrentToolsDir(), 'packages'));
+      const packagesDir =
+        files.pathJoin(files.getCurrentToolsDir(), 'packages');
+
+      searchDirs.push(
+        packagesDir,
+        files.pathJoin(packagesDir, "non-core", "*", "packages"),
+      );
     }
     return searchDirs;
   },
