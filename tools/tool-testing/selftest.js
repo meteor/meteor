@@ -217,8 +217,6 @@ var newSelfTestCatalog = function () {
       selfTestCatalog.initialize({
         localPackageSearchDirs: [
           files.pathJoin(files.getCurrentToolsDir(), 'packages'),
-          files.pathJoin(files.getCurrentToolsDir(),
-            'packages', 'non-core', 'blaze', 'packages')
         ],
       });
     });
