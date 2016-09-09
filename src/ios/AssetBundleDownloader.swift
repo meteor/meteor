@@ -223,7 +223,7 @@ final class AssetBundleDownloader: NSObject, URLSessionDelegate, URLSessionTaskD
     }
   }
 
-  // MARK: NSURLSessionDelegate
+  // MARK: URLSessionDelegate
 
   func urlSession(_ session: URLSession, didBecomeInvalidWithError error: Error?) {
     status = .invalid
@@ -232,7 +232,7 @@ final class AssetBundleDownloader: NSObject, URLSessionDelegate, URLSessionTaskD
   func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
   }
 
-  // MARK: NSURLSessionTaskDelegate
+  // MARK: URLSessionTaskDelegate
 
   func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
     if let error = error {
@@ -250,7 +250,7 @@ final class AssetBundleDownloader: NSObject, URLSessionDelegate, URLSessionTaskD
     }
   }
 
-  // MARK: NSURLSessionDataDelegate
+  // MARK: URLSessionDataDelegate
 
   func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse, completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
     if status == .canceling { return }
@@ -274,7 +274,7 @@ final class AssetBundleDownloader: NSObject, URLSessionDelegate, URLSessionTaskD
     }
   }
 
-  // MARK: NSURLSessionDownloadDelegate
+  // MARK: URLSessionDownloadDelegate
 
   func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didResumeAtOffset fileOffset: Int64, expectedTotalBytes: Int64) {
     if status == .canceling { return }
