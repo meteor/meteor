@@ -5,41 +5,41 @@ private let configJSONRegEx = try! NSRegularExpression(
 
 /// Load the runtime config by extracting and parsing
 /// `__meteor_runtime_config__` from index.html
-func loadRuntimeConfigFromIndexFileAtURL(fileURL: NSURL) throws -> AssetBundle.RuntimeConfig {
+func loadRuntimeConfigFromIndexFileAtURL(_ fileURL: URL) throws -> AssetBundle.RuntimeConfig {
   do {
-    let indexFileString = try NSString(contentsOfURL: fileURL, encoding: NSUTF8StringEncoding)
+    let indexFileString = try NSString(contentsOf: fileURL, encoding: String.Encoding.utf8.rawValue)
     guard
       let match  = configJSONRegEx.firstMatchInString(indexFileString as String),
-      let configString = (indexFileString.substringWithRange(match.rangeAtIndex(1)) as NSString).stringByRemovingPercentEncoding,
-      let configData = configString.dataUsingEncoding(NSUTF8StringEncoding)
-      else { throw WebAppError.UnsuitableAssetBundle(reason: "Couldn't load runtime config from index file", underlyingError: nil) }
-    return AssetBundle.RuntimeConfig(JSON: try NSJSONSerialization.JSONObjectWithData(configData, options: []) as! JSONObject)
+      let configString = (indexFileString.substring(with: match.rangeAt(1)) as NSString).removingPercentEncoding,
+      let configData = configString.data(using: String.Encoding.utf8)
+      else { throw WebAppError.unsuitableAssetBundle(reason: "Couldn't load runtime config from index file", underlyingError: nil) }
+    return AssetBundle.RuntimeConfig(JSON: try JSONSerialization.jsonObject(with: configData, options: []) as! JSONObject)
   } catch {
-    throw WebAppError.UnsuitableAssetBundle(reason: "Couldn't load runtime config from index file", underlyingError: error)
+    throw WebAppError.unsuitableAssetBundle(reason: "Couldn't load runtime config from index file", underlyingError: error)
   }
 }
 
 final class AssetBundle {
-  private(set) var directoryURL: NSURL
+  fileprivate(set) var directoryURL: URL
 
   let version: String
   let cordovaCompatibilityVersion: String
 
-  private var parentAssetBundle: AssetBundle?
-  private var ownAssetsByURLPath: [String: Asset] = [:]
-  private(set) var indexFile: Asset?
+  fileprivate var parentAssetBundle: AssetBundle?
+  fileprivate var ownAssetsByURLPath: [String: Asset] = [:]
+  fileprivate(set) var indexFile: Asset?
 
   var ownAssets: [Asset] {
     return Array(ownAssetsByURLPath.values)
   }
 
-  convenience init(directoryURL: NSURL, parentAssetBundle: AssetBundle? = nil) throws {
-    let manifestURL = directoryURL.URLByAppendingPathComponent("program.json")
+  convenience init(directoryURL: URL, parentAssetBundle: AssetBundle? = nil) throws {
+    let manifestURL = directoryURL.appendingPathComponent("program.json")
     let manifest = try AssetManifest(fileURL: manifestURL)
     try self.init(directoryURL: directoryURL, manifest: manifest, parentAssetBundle: parentAssetBundle)
   }
 
-  init(directoryURL: NSURL, manifest: AssetManifest, parentAssetBundle: AssetBundle? = nil) throws {
+  init(directoryURL: URL, manifest: AssetManifest, parentAssetBundle: AssetBundle? = nil) throws {
     self.directoryURL = directoryURL
     self.parentAssetBundle = parentAssetBundle
     
@@ -80,18 +80,18 @@ final class AssetBundle {
     self.indexFile = indexFile
   }
 
-  func addAsset(asset: Asset) {
+  func addAsset(_ asset: Asset) {
     ownAssetsByURLPath[asset.URLPath] = asset
   }
 
-  func assetForURLPath(URLPath: String) -> Asset? {
+  func assetForURLPath(_ URLPath: String) -> Asset? {
     return ownAssetsByURLPath[URLPath] ?? parentAssetBundle?.assetForURLPath(URLPath)
   }
 
-  func cachedAssetForURLPath(URLPath: String, hash: String? = nil) -> Asset? {
+  func cachedAssetForURLPath(_ URLPath: String, hash: String? = nil) -> Asset? {
     if let asset = ownAssetsByURLPath[URLPath]
         // If the asset is not cacheable, we require a matching hash
-        where (asset.cacheable || asset.hash != nil) && asset.hash == hash {
+        , (asset.cacheable || asset.hash != nil) && asset.hash == hash {
       return asset
     } else {
       return nil
@@ -99,15 +99,15 @@ final class AssetBundle {
   }
   
   struct RuntimeConfig {
-    private let JSON: JSONObject
+    fileprivate let JSON: JSONObject
     
     var appId: String? {
       return JSON["appId"] as? String
     }
     
-    var rootURL: NSURL? {
+    var rootURL: URL? {
       if let rootURLString = JSON["ROOT_URL"] as? String {
-        return NSURL(string: rootURLString)
+        return URL(string: rootURLString)
       } else {
         return nil
       }
@@ -123,7 +123,7 @@ final class AssetBundle {
     guard let indexFile = self.indexFile else { return nil }
     
     do {
-      return try loadRuntimeConfigFromIndexFileAtURL(indexFile.fileURL)
+      return try loadRuntimeConfigFromIndexFileAtURL(indexFile.fileURL as URL)
     } catch {
       NSLog("\(error)")
       return nil
@@ -134,11 +134,11 @@ final class AssetBundle {
     return runtimeConfig?.appId
   }
   
-  var rootURL: NSURL? {
+  var rootURL: URL? {
     return runtimeConfig?.rootURL
   }
 
-  func didMoveToDirectoryAtURL(directoryURL: NSURL) {
+  func didMoveToDirectoryAtURL(_ directoryURL: URL) {
     self.directoryURL = directoryURL
   }
 }

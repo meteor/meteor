@@ -6,16 +6,16 @@ class Box<T>: NSObject {
   }
 }
 
-extension CollectionType {
-  func find(@noescape predicate: (Self.Generator.Element) throws -> Bool) rethrows -> Self.Generator.Element? {
-    return try indexOf(predicate).map({self[$0]})
+extension Collection {
+  func find(_ predicate: (Self.Iterator.Element) throws -> Bool) rethrows -> Self.Iterator.Element? {
+    return try index(where: predicate).map({self[$0]})
   }
 }
 
-func dispatch_sync(queue: dispatch_queue_t, block: () throws -> ()) throws {
-  var caughtError: ErrorType?
+func dispatch_sync(_ queue: DispatchQueue, block: () throws -> ()) throws {
+  var caughtError: Error?
   
-  dispatch_sync(queue) {
+  queue.sync {
     do {
       try block()
     } catch {
@@ -33,11 +33,11 @@ typealias JSONObject = [String:AnyObject]
 // Regex that matches the query string part of a URL
 let queryStringRegEx = try! NSRegularExpression(pattern: "(/[^?]+).*", options: [])
 
-func URLPathByRemovingQueryString(URLString: String) -> String {
+func URLPathByRemovingQueryString(_ URLString: String) -> String {
   guard let match = queryStringRegEx.firstMatchInString(URLString) else {
     return URLString
   }
-  return (URLString as NSString).substringWithRange(match.rangeAtIndex(1))
+  return (URLString as NSString).substring(with: match.rangeAt(1))
 }
 
 // Regex that matches a SHA1 hash
@@ -46,38 +46,38 @@ let sha1HashRegEx = try! NSRegularExpression(pattern: "[0-9a-f]{40}", options: [
 // Regex that matches an ETag with a SHA1 hash
 let ETagWithSha1HashRegEx = try! NSRegularExpression(pattern: "\"([0-9a-f]{40})\"", options: [])
 
-func SHA1HashFromETag(ETag: String) -> String? {
+func SHA1HashFromETag(_ ETag: String) -> String? {
   guard let match = ETagWithSha1HashRegEx.firstMatchInString(ETag) else {
     return nil
   }
   
-  return (ETag as NSString).substringWithRange(match.rangeAtIndex(1))
+  return (ETag as NSString).substring(with: match.rangeAt(1))
 }
 
 extension NSRegularExpression {
-  func firstMatchInString(string: String) -> NSTextCheckingResult? {
-    return firstMatchInString(string, options: [],
+  func firstMatchInString(_ string: String) -> NSTextCheckingResult? {
+    return firstMatch(in: string, options: [],
         range: NSRange(location: 0, length: string.utf16.count))
   }
 
-  func matches(string: String) -> Bool {
+  func matches(_ string: String) -> Bool {
     return firstMatchInString(string) != nil
   }
 }
 
-extension NSURL {
+extension URL {
   var isDirectory: Bool? {
-    return resourceValueAsBoolForKey(NSURLIsDirectoryKey)
+    return resourceValueAsBoolForKey(URLResourceKey.isDirectoryKey.rawValue)
   }
 
   var isRegularFile: Bool? {
-    return resourceValueAsBoolForKey(NSURLIsRegularFileKey)
+    return resourceValueAsBoolForKey(URLResourceKey.isRegularFileKey.rawValue)
   }
 
-  private func resourceValueAsBoolForKey(key: String) -> Bool? {
+  fileprivate func resourceValueAsBoolForKey(_ key: String) -> Bool? {
     do {
       var valueObject: AnyObject?
-      try getResourceValue(&valueObject, forKey: key)
+      try getResourceValue(&valueObject, forKey: URLResourceKey(rawValue: key))
       guard let value = valueObject?.boolValue else { return nil }
       return value
     } catch {
@@ -86,7 +86,7 @@ extension NSURL {
   }
 }
 
-extension NSHTTPURLResponse {
+extension HTTPURLResponse {
   var isSuccessful: Bool {
     return (200..<300).contains(statusCode)
   }
