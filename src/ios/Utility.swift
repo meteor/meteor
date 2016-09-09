@@ -1,11 +1,3 @@
-class Box<T>: NSObject {
-  var value: T
-
-  init(_ value: T) {
-    self.value = value
-  }
-}
-
 extension Collection {
   func find(_ predicate: (Self.Iterator.Element) throws -> Bool) rethrows -> Self.Iterator.Element? {
     return try index(where: predicate).map({self[$0]})

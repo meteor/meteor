@@ -383,10 +383,10 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
       guard let asset = self?.currentAssetBundle?.assetForURLPath(urlPath) else { return nil }
 
       let request = GCDWebServerRequest(method: requestMethod, url: requestURL, headers: requestHeaders, path: urlPath, query: urlQuery)!
-      request.setAttribute(Box(asset), forKey: GCDWebServerRequestAttribute_Asset)
+      request.setAttribute(asset, forKey: GCDWebServerRequestAttribute_Asset)
       return request
     }) { (request) -> GCDWebServerResponse! in
-        let asset = (request?.attribute(forKey: GCDWebServerRequestAttribute_Asset) as! Box<Asset>).value
+        let asset = request?.attribute(forKey: GCDWebServerRequestAttribute_Asset) as! Asset
         return self.responseForAsset(request!, asset: asset)
     }
   }
@@ -444,10 +444,10 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
       guard let indexFile = self?.currentAssetBundle?.indexFile else { return nil }
 
       let request = GCDWebServerRequest(method: requestMethod, url: requestURL, headers: requestHeaders, path: urlPath, query: urlQuery)
-      request?.setAttribute(Box(indexFile), forKey: GCDWebServerRequestAttribute_Asset)
+      request?.setAttribute(indexFile, forKey: GCDWebServerRequestAttribute_Asset)
       return request
       }) { (request) -> GCDWebServerResponse! in
-        let asset = (request?.attribute(forKey: GCDWebServerRequestAttribute_Asset) as! Box<Asset>).value
+        let asset = request?.attribute(forKey: GCDWebServerRequestAttribute_Asset) as! Asset
         return self.responseForAsset(request!, asset: asset)
     }
   }
