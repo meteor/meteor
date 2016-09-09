@@ -241,7 +241,7 @@ final class AssetBundleDownloader: NSObject, URLSessionDelegate, URLSessionTaskD
           NSLog("Download of asset: \(asset) did fail with error: \(error)")
 
           // If there is resume data, we store it and use it to recreate the task later
-          if let resumeData = error.userInfo[NSURLSessionDownloadTaskResumeData] as? Data {
+          if let resumeData = (error as NSError).userInfo[NSURLSessionDownloadTaskResumeData] as? Data {
             resumeDataByAsset[asset] = resumeData
           }
           resumeLater()
