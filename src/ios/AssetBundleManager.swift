@@ -293,14 +293,14 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
 
   /// Remove all downloaded asset bundles, except for one
   func removeAllDownloadedAssetBundlesExceptFor(_ assetBundleToKeep: AssetBundle) throws {
-    try dispatch_sync(queue) {
+    try queue.sync {
       for assetBundle in self.downloadedAssetBundlesByVersion.values {
         if assetBundle !== assetBundleToKeep {
           try self.fileManager.removeItem(at: assetBundle.directoryURL)
           self.downloadedAssetBundlesByVersion.removeValue(forKey: assetBundle.version)
         }
       }
-    } as! () -> Void as! () -> Void as! () -> Void as! () -> Void as! () -> Void as! () -> Void as! () -> Void
+    }
   }
 
   // MARK: AssetBundleDownloaderDelegate
