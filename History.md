@@ -4,6 +4,8 @@
 
 * The `node-pre-gyp` npm package has been updated to 0.6.30.
 
+* The `fibers` npm package has been updated to 1.0.14.
+
 * Blaze-related packages have been extracted to
   [`meteor/blaze`](https://github.com/meteor/blaze), and the main
   [`meteor/meteor`](https://github.com/meteor/meteor) repository now
