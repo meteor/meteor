@@ -13,7 +13,7 @@ func loadRuntimeConfigFromIndexFileAtURL(_ fileURL: URL) throws -> AssetBundle.R
       let configString = (indexFileString.substring(with: match.rangeAt(1)) as NSString).removingPercentEncoding,
       let configData = configString.data(using: String.Encoding.utf8)
       else { throw WebAppError.unsuitableAssetBundle(reason: "Couldn't load runtime config from index file", underlyingError: nil) }
-    return AssetBundle.RuntimeConfig(JSON: try JSONSerialization.jsonObject(with: configData, options: []) as! JSONObject)
+    return AssetBundle.RuntimeConfig(json: try JSONSerialization.jsonObject(with: configData, options: []) as! JSONObject)
   } catch {
     throw WebAppError.unsuitableAssetBundle(reason: "Couldn't load runtime config from index file", underlyingError: error)
   }
@@ -53,7 +53,7 @@ final class AssetBundle {
         let asset = Asset(
           bundle: self,
           filePath: entry.filePath,
-          URLPath: URLPath,
+          urlPath: URLPath,
           fileType: entry.fileType,
           cacheable: entry.cacheable,
           hash: entry.hash,
@@ -67,7 +67,7 @@ final class AssetBundle {
           let sourceMap = Asset(
             bundle: self,
             filePath: sourceMapPath,
-            URLPath: sourceMapURLPath,
+            urlPath: sourceMapURLPath,
             fileType: "json",
             cacheable: true)
           addAsset(sourceMap)
@@ -75,13 +75,13 @@ final class AssetBundle {
       }
     }
 
-    let indexFile = Asset(bundle: self, filePath: "index.html", URLPath: "/", fileType: "html", cacheable: false, hash: nil)
+    let indexFile = Asset(bundle: self, filePath: "index.html", urlPath: "/", fileType: "html", cacheable: false, hash: nil)
     addAsset(indexFile)
     self.indexFile = indexFile
   }
 
   func addAsset(_ asset: Asset) {
-    ownAssetsByURLPath[asset.URLPath] = asset
+    ownAssetsByURLPath[asset.urlPath] = asset
   }
 
   func assetForURLPath(_ URLPath: String) -> Asset? {
@@ -99,18 +99,18 @@ final class AssetBundle {
   }
   
   struct RuntimeConfig {
-    private let JSON: JSONObject
+    private let json: JSONObject
     
-    init(JSON: JSONObject) {
-      self.JSON = JSON
+    init(json: JSONObject) {
+      self.json = json
     }
     
     var appId: String? {
-      return JSON["appId"] as? String
+      return json["appId"] as? String
     }
     
     var rootURL: URL? {
-      if let rootURLString = JSON["ROOT_URL"] as? String {
+      if let rootURLString = json["ROOT_URL"] as? String {
         return URL(string: rootURLString)
       } else {
         return nil
@@ -118,7 +118,7 @@ final class AssetBundle {
     }
     
     var autoupdateVersionCordova: String? {
-      return JSON["autoupdateVersionCordova"] as? String
+      return json["autoupdateVersionCordova"] as? String
     }
   }
   

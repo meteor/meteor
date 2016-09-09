@@ -141,14 +141,14 @@ final class AssetBundleDownloader: NSObject, URLSessionDelegate, URLSessionTaskD
   }
 
   private func downloadURLForAsset(_ asset: Asset) -> URL? {
-    var URLPath = asset.URLPath
+    var urlPath = asset.urlPath
 
     // Remove leading / from URL path because the path should be relative to the base URL
-    if URLPath.hasPrefix("/") {
-      URLPath = String(describing: asset.URLPath.utf16.dropFirst())
+    if urlPath.hasPrefix("/") {
+      urlPath = String(asset.urlPath.characters.dropFirst())
     }
 
-    guard var urlComponents = URLComponents(string: URLPath) else {
+    guard var urlComponents = URLComponents(string: urlPath) else {
       return nil
     }
 

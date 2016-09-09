@@ -256,12 +256,12 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
 
   private func cachedAssetForAsset(_ asset: Asset) -> Asset? {
     for assetBundle in downloadedAssetBundlesByVersion.values {
-      if let cachedAsset = assetBundle.cachedAssetForURLPath(asset.URLPath, hash: asset.hash) {
+      if let cachedAsset = assetBundle.cachedAssetForURLPath(asset.urlPath, hash: asset.hash) {
         return cachedAsset
       }
     }
 
-    if let cachedAsset = partiallyDownloadedAssetBundle?.cachedAssetForURLPath(asset.URLPath, hash: asset.hash) {
+    if let cachedAsset = partiallyDownloadedAssetBundle?.cachedAssetForURLPath(asset.urlPath, hash: asset.hash) {
       // Make sure the asset has been downloaded
       if fileManager.fileExists(atPath: cachedAsset.fileURL.path) {
         return cachedAsset
