@@ -91,7 +91,7 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
     // collisions between Meteor apps installed on the same device
     } else if let viewController = self.viewController as? CDVViewController,
         let port = URLComponents(string: viewController.startPage)?.port {
-      localServerPort = port.uintValue
+      localServerPort = UInt(port)
     }
 
     do {
