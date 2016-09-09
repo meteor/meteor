@@ -51,22 +51,13 @@ extension NSRegularExpression {
 
 extension URL {
   var isDirectory: Bool? {
-    return resourceValueAsBoolForKey(URLResourceKey.isDirectoryKey.rawValue)
+    let values = try? self.resourceValues(forKeys: [.isDirectoryKey])
+    return values?.isDirectory
   }
 
   var isRegularFile: Bool? {
-    return resourceValueAsBoolForKey(URLResourceKey.isRegularFileKey.rawValue)
-  }
-
-  fileprivate func resourceValueAsBoolForKey(_ key: String) -> Bool? {
-    do {
-      var valueObject: AnyObject?
-      try getResourceValue(&valueObject, forKey: URLResourceKey(rawValue: key))
-      guard let value = valueObject?.boolValue else { return nil }
-      return value
-    } catch {
-      return nil
-    }
+    let values = try? self.resourceValues(forKeys: [.isRegularFileKey])
+    return values?.isRegularFile
   }
 }
 
