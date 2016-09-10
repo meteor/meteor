@@ -13,9 +13,10 @@ Package.onUse(function(api) {
   api.use('random', 'client');
   api.use('service-configuration', ['client', 'server']);
   api.use('accounts-facebook@1.1.0');
-  api.use('blaze-accounts-config-ui-facebook', 'client');
+  api.use('facebook-oauth');
+  api.use('facebook-config-ui', 'client');
 
-  api.imply('accounts-facebook');
+  api.imply('facebook-oauth');
 
   api.addFiles('deprecation_notice.js');
 });
