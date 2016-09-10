@@ -8,10 +8,12 @@ Package.onUse(function(api) {
   // Export Accounts (etc) to packages using this one.
   api.imply('accounts-base', ['client', 'server']);
   api.use('accounts-oauth', ['client', 'server']);
-  api.addFiles('facebook_client.js', 'client');
-  api.addFiles('facebook_server.js', 'server');
+  api.use('facebook-oauth');
+  api.imply('facebook-oauth');
 
-  api.export('Facebook');
+  // If users use accounts-ui but not facebook-config-ui, give them a tip.
+  api.use(['accounts-ui', 'facebook-config-ui'], 'client', { weak: true });
+  api.addFiles("notice.js");
 
   api.addFiles("facebook.js");
 });
