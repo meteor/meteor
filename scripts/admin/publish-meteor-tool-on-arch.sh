@@ -54,6 +54,7 @@ if [ -d meteor ]; then
 fi
 git clone --recursive https://github.com/meteor/meteor.git
 cd meteor
+git submodule update --init --recursive
 git fetch --tags
 END
 
