@@ -13,8 +13,6 @@ cd C:\tmp
 REM get the meteor/meteor repo
 C:\git\bin\git.exe clone --recursive https://github.com/meteor/meteor.git
 cd meteor
-REM make extra sure to initialize and update submodules
-C:\git\bin\git.exe submodule update --init --recursive
 REM force git to use original end-line characters (unixy '\n')
 C:\git\bin\git.exe config --replace-all core.autocrlf input
 C:\git\bin\git.exe rm --cached -r . ^> nul
@@ -22,6 +20,8 @@ C:\git\bin\git.exe reset --hard
 C:\git\bin\git.exe fetch --tags
 REM GITSHA is replaced by the script transferring this file
 C:\git\bin\git.exe checkout $GITSHA
+REM make extra sure to initialize and update submodules
+C:\git\bin\git.exe submodule update --init --recursive
 
 REM install 7-zip, required for running meteor from checkout
 C:\git\bin\curl -L http://www.7-zip.org/a/7z1602.msi ^> C:\7z.msi
