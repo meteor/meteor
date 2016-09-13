@@ -122,14 +122,38 @@ _.extend(LocalCatalog.prototype, {
 
   // Return an array with the names of all of the non-test packages that we know
   // about, in no particular order.
-  getAllNonTestPackageNames: function (options) {
+  getAllNonTestPackageNames: function ({
+    // Iff options.includeNonCore is truthy, packages in
+    // meteor/packages/non-core/*/packages will be returned.
+    includeNonCore = false,
+  } = {}) {
     var self = this;
     self._requireInitialized();
 
     var ret = [];
-    _.each(self.packages, function (record, name) {
-      record.versionRecord.isTest || ret.push(name);
+
+    const nonCoreDir = files.pathJoin(
+      files.getCurrentToolsDir(),
+      "packages",
+      "non-core"
+    ) + files.pathSep;
+
+    _.each(self.packages, function ({
+      packageSource: { sourceRoot },
+      versionRecord: { isTest },
+    }, name) {
+      if (isTest) {
+        return;
+      }
+
+      if (! includeNonCore &&
+          sourceRoot.startsWith(nonCoreDir)) {
+        return;
+      }
+
+      ret.push(name);
     });
+
     return ret;
   },
 
