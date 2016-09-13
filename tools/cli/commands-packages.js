@@ -863,7 +863,9 @@ main.registerCommand({
     // Ensure that all packages and their tests are built. (We need to build
     // tests so that we can include their sources in source tarballs.)
     var allPackagesWithTests = projectContext.localCatalog.getAllPackageNames();
-    var allPackages = projectContext.localCatalog.getAllNonTestPackageNames();
+    var allPackages = projectContext.localCatalog.getAllNonTestPackageNames({
+      includeNonCore: false,
+    });
     projectContext.projectConstraintsFile.addConstraints(
       _.map(allPackagesWithTests, function (p) {
         return utils.parsePackageConstraint(p);

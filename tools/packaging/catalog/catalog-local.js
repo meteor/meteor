@@ -125,7 +125,7 @@ _.extend(LocalCatalog.prototype, {
   getAllNonTestPackageNames: function ({
     // Iff options.includeNonCore is truthy, packages in
     // meteor/packages/non-core/*/packages will be returned.
-    includeNonCore = false,
+    includeNonCore = true,
   } = {}) {
     var self = this;
     self._requireInitialized();
