@@ -191,7 +191,7 @@ Ap.callLoginMethod = function (options) {
       });
     } else {
       self._onLoginFailureHook.each(function (callback) {
-        callback();
+        callback({ error });
         return true;
       });
     }
