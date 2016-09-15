@@ -123,41 +123,84 @@ meteorNpm.updateDependencies = function (packageName,
   return true;
 };
 
-// Returns a flattened list of npm package names used in production.
-meteorNpm.getProdPackageNames = function (nodeModulesDir) {
-  var names = Object.create(null);
-  var lsCmdArgs = ["ls", "--json"];
+// Returns a flattened dictionary of npm package names used in production,
+// or false if there is no package.json file in the parent directory.
+export function getProdPackageNames(nodeModulesDir) {
+  const names = Object.create(null);
+  const dirs = Object.create(null);
+  const nodeModulesDirStack = [];
 
-  const packageJsonPath = files.pathJoin(
-    files.pathDirname(nodeModulesDir),
-    "package.json"
-  );
+  // Returns true iff dir is a package directory.
+  function walk(dir) {
+    const packageJsonPath = files.pathJoin(dir, "package.json");
+    const packageJsonStat = files.statOrNull(packageJsonPath);
 
-  const packageJsonStat = files.statOrNull(packageJsonPath);
-  if (packageJsonStat &&
-      packageJsonStat.isFile()) {
-    // If there is no package.json file, adding --production will cause
-    // the names object to be empty, which is not what we want.
-    lsCmdArgs.push("--production");
+    if (packageJsonStat &&
+        packageJsonStat.isFile()) {
+      const pkg = JSON.parse(files.readFile(packageJsonPath));
+      const nodeModulesDir = files.pathJoin(dir, "node_modules");
+      nodeModulesDirStack.push(nodeModulesDir);
+
+      // Scan all dependencies except pkg.devDependencies.
+      scanDeps(pkg.dependencies);
+      scanDeps(pkg.peerDependencies);
+      scanDeps(pkg.optionalDependencies);
+      scanDeps(pkg.bundledDependencies);
+      // This typo is also honored.
+      scanDeps(pkg.bundleDependencies);
+
+      assert.strictEqual(
+        nodeModulesDirStack.pop(),
+        nodeModulesDir
+      );
+
+      return true;
+    }
+
+    return false;
   }
 
-  var lsResult = runNpmCommand(lsCmdArgs, nodeModulesDir);
-
-  function walk(deps) {
+  function scanDeps(deps) {
     if (! deps) {
       return;
     }
 
-    Object.keys(deps).forEach(function (name) {
-      names[name] = true;
-      walk(deps[name].dependencies);
+    Object.keys(deps).forEach(name => {
+      const resDir = resolve(name);
+      if (! resDir || _.has(dirs, resDir)) {
+        return;
+      }
+
+      // Record that we've seen this directory so that we don't try to
+      // walk it again.
+      dirs[resDir] = name;
+
+      if (walk(resDir)) {
+        // If resDir is indeed a package directory, record the package
+        // name in the set of production names.
+        names[name] = true;
+      }
     });
   }
 
-  walk(JSON.parse(lsResult.stdout).dependencies);
+  function resolve(name) {
+    for (let i = nodeModulesDirStack.length - 1; i >= 0; --i) {
+      const nodeModulesDir = nodeModulesDirStack[i];
+      const candidate = files.pathJoin(nodeModulesDir, name);
+      const stat = files.statOrNull(candidate);
+      if (stat && stat.isDirectory()) {
+        return candidate;
+      }
+    }
+  }
 
-  return names;
-};
+  // If the top-level nodeModulesDir is not contained by a package
+  // directory with a package.json file, then we return false to indicate
+  // that we don't know or care which packages are production-specific.
+  // Concretely, this means your app needs to have a package.json file if
+  // you want any npm packages to be excluded in production.
+  return walk(files.pathDirname(nodeModulesDir)) && names;
+}
 
 const lastRebuildJSONFilename = ".meteor-last-rebuild-version.json";
 
