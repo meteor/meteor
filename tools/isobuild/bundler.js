@@ -416,6 +416,72 @@ export class NodeModulesDirectory {
 
     return nodeModulesDirectories;
   }
+
+  // Returns a predicate function that determines if a given directory is
+  // contained by a production package directory in this.sourcePath.
+  getProdPackagePredicate() {
+    if (this._prodPackagePredicate) {
+      return this._prodPackagePredicate;
+    }
+
+    const sourcePath = this.sourcePath;
+    const prodPackageNames = meteorNpm.getProdPackageNames(sourcePath);
+    if (! prodPackageNames) {
+      // Indicates that no directories should be excluded from the set of
+      // production packages. Equivalent to returning dir => true.
+      return null;
+    }
+
+    const prodPackageTree = Object.create(null);
+    const complete = Symbol();
+    let maxPartCount = 0;
+
+    Object.keys(prodPackageNames).forEach(name => {
+      const parts = name.split("/");
+      let tree = prodPackageTree;
+
+      parts.forEach(part => {
+        tree = tree[part] || (tree[part] = Object.create(null));
+      });
+
+      tree[complete] = true;
+      maxPartCount = Math.max(parts.length, maxPartCount);
+    });
+
+    return this._prodPackagePredicate = function isWithinProdPackage(dir) {
+      const parts = files.pathRelative(sourcePath, dir)
+        .split(files.pathSep);
+
+      let start = parts.lastIndexOf("node_modules") + 1;
+
+      if (parts.length - start > maxPartCount) {
+        // We're deep enough inside node_modules that it's safe to
+        // say we should have returned false earlier.
+        return true;
+      }
+
+      let tree = prodPackageTree;
+
+      for (let pos = start; pos < parts.length; ++pos) {
+        const part = parts[pos];
+        const branch = tree[part];
+
+        if (! branch) {
+          // This dir is not prefixed by a production package name.
+          return false;
+        }
+
+        if (branch[complete]) {
+          // This dir is prefixed by a complete production package name.
+          break;
+        }
+
+        tree = branch;
+      }
+
+      return true;
+    };
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1888,25 +1954,11 @@ class JsImage {
           symlink: (options.includeNodeModules === 'symlink')
         };
 
-        if (nmd.local) {
-          const prodPackageTree = Object.create(null);
-          const complete = Symbol();
-          let maxPartCount = 0;
+        const prodPackagePredicate =
+          nmd.local && // Only filter local node_modules directories.
+          nmd.getProdPackagePredicate();
 
-          Object.keys(
-            meteorNpm.getProdPackageNames(nmd.sourcePath)
-          ).forEach(name => {
-            const parts = name.split("/");
-            let tree = prodPackageTree;
-
-            parts.forEach(part => {
-              tree = tree[part] || (tree[part] = Object.create(null));
-            });
-
-            tree[complete] = true;
-            maxPartCount = Math.max(parts.length, maxPartCount);
-          });
-
+        if (prodPackagePredicate) {
           // When copying a local node_modules directory, ignore any npm
           // package directories not in the list of production package
           // names, as determined by meteorNpm.getProdPackageNames. Note
@@ -1917,39 +1969,7 @@ class JsImage {
           // package's "dependencies", then every copy of that package
           // will be copied to the destination directory. A little bit of
           // overcopying vastly simplifies the job of directoryFilter.
-          copyOptions.directoryFilter = function isWithinProdPackage(dir) {
-            const parts = files.pathRelative(nmd.sourcePath, dir)
-              .split(files.pathSep);
-
-            let start = parts.lastIndexOf("node_modules") + 1;
-
-            if (parts.length - start > maxPartCount) {
-              // We're deep enough inside node_modules that it's safe to
-              // say we should have returned false earlier.
-              return true;
-            }
-
-            let tree = prodPackageTree;
-
-            for (let pos = start; pos < parts.length; ++pos) {
-              const part = parts[pos];
-              const branch = tree[part];
-
-              if (! branch) {
-                // This dir is not prefixed by a production package name.
-                return false;
-              }
-
-              if (branch[complete]) {
-                // This dir is prefixed by a complete production package name.
-                break;
-              }
-
-              tree = branch;
-            }
-
-            return true;
-          };
+          copyOptions.directoryFilter = prodPackagePredicate;
         }
 
         builder.copyDirectory(copyOptions);
