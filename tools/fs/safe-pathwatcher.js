@@ -1,4 +1,5 @@
 var files = require('./files.js');
+import { readFile, sha1 } from "./watch.js";
 
 // Set METEOR_WATCH_FORCE_POLLING environment variable to a truthy value to
 // force the use of files.watchFile instead of pathwatcher.watch.
@@ -14,6 +15,11 @@ var DEFAULT_POLLING_INTERVAL =
 
 var NO_PATHWATCHER_POLLING_INTERVAL =
       ~~process.env.METEOR_WATCH_POLLING_INTERVAL_MS || 500;
+
+// When a file changes, we wait for this long before actually recomputing
+// its hash, though of course we compute it immediately if anyone asks for
+// it in the meantime.
+const REHASH_DELAY_MS = 500;
 
 var suggestedRaisingWatchLimit = false;
 
@@ -33,11 +39,32 @@ function acquireWatcher(absPath, callback) {
 function startNewWatcher(absPath) {
   let lastPathwatcherEventTime = 0;
   const callbacks = new Set;
+  let latestHash = hashOrNull(absPath);
+  let requestRehashTimer = null;
+
+  function fire(self, args) {
+    requestRehash();
+    callbacks.forEach(cb => cb.apply(self, args));
+  }
+
+  function requestRehash() {
+    if (requestRehashTimer === null) {
+      requestRehashTimer = setTimeout(ensureLatestHash, REHASH_DELAY_MS);
+    }
+  }
+
+  function ensureLatestHash() {
+    if (requestRehashTimer !== null) {
+      clearTimeout(requestRehashTimer);
+      requestRehashTimer = null;
+      latestHash = hashOrNull(absPath);
+    }
+    return latestHash;
+  }
 
   function pathwatcherWrapper(...args) {
-    const self = this;
     lastPathwatcherEventTime = +new Date;
-    callbacks.forEach(cb => cb.apply(self, args));
+    fire(this, args);
 
     // It's tempting to call files.unwatchFile(absPath, watchFileWrapper)
     // here, but previous pathwatcher success is no guarantee of future
@@ -58,7 +85,7 @@ function startNewWatcher(absPath) {
     // If a pathwatcher event fired in the last polling interval, ignore
     // this event.
     if (new Date - lastPathwatcherEventTime > pollingInterval) {
-      callbacks.forEach(cb => cb.apply(self, args));
+      fire(this, args);
     }
   }
 
@@ -74,6 +101,9 @@ function startNewWatcher(absPath) {
 
   return {
     callbacks,
+
+    cheapHashOrNull: ensureLatestHash,
+
     release(callback) {
       if (! watchers[absPath]) {
         return;
@@ -133,6 +163,11 @@ function pathwatcherWatch(absPath, callback) {
   return null;
 }
 
+function hashOrNull(absPath) {
+  const contents = readFile(absPath);
+  return contents && sha1(contents) || null;
+}
+
 export function watch(absPath, callback) {
   const entry = acquireWatcher(absPath, callback);
   return {
@@ -140,4 +175,11 @@ export function watch(absPath, callback) {
       entry.release(callback);
     }
   };
+}
+
+export function cheapHashOrNull(absPath) {
+  const entry = watchers[absPath];
+  return entry
+    ? entry.cheapHashOrNull()
+    : hashOrNull(absPath);
 }

@@ -4,6 +4,7 @@ import pathwatcher from './safe-pathwatcher.js';
 import {createHash} from "crypto";
 import {coalesce} from '../utils/func-utils.js';
 import {Profile} from '../tool-env/profile.js';
+import { cheapHashOrNull } from "./safe-pathwatcher.js";
 
 // Watch for changes to a set of files, and the first time that any of
 // the files change, call a user-provided callback. (If you want a
@@ -238,7 +239,7 @@ export class WatchSet {
   }
 }
 
-var readFile = function (absPath) {
+export function readFile(absPath) {
   try {
     return files.readFile(absPath);
   } catch (e) {
@@ -369,9 +370,9 @@ export class Watcher {
       throw new Error("Checking unknown file " + absPath);
     }
 
-    var contents = readFile(absPath);
+    var newHash = cheapHashOrNull(absPath);
 
-    if (contents === null) {
+    if (newHash === null) {
       // File does not exist (or is a directory).
       // Is this what we expected?
       if (oldHash === null) {
@@ -387,8 +388,6 @@ export class Watcher {
       self._fire();
       return true;
     }
-
-    var newHash = sha1(contents);
 
     // Unchanged?
     if (newHash === oldHash) {
