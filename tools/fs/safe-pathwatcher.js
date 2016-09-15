@@ -17,24 +17,87 @@ var NO_PATHWATCHER_POLLING_INTERVAL =
 
 var suggestedRaisingWatchLimit = false;
 
-exports.watch = function watch(absPath, callback) {
-  var lastPathwatcherEventTime = 0;
+const watchers = Object.create(null);
 
-  function pathwatcherWrapper() {
+function acquireWatcher(absPath, callback) {
+  const entry = watchers[absPath] || (
+    watchers[absPath] = startNewWatcher(absPath));
+
+  // The size of the entry.callbacks Set also serves as a reference count
+  // for this watcher.
+  entry.callbacks.add(callback);
+
+  return entry;
+}
+
+function startNewWatcher(absPath) {
+  let lastPathwatcherEventTime = 0;
+  const callbacks = new Set;
+
+  function pathwatcherWrapper(...args) {
+    const self = this;
+    lastPathwatcherEventTime = +new Date;
+    callbacks.forEach(cb => cb.apply(self, args));
+
     // It's tempting to call files.unwatchFile(absPath, watchFileWrapper)
     // here, but previous pathwatcher success is no guarantee of future
     // pathwatcher reliability. For example, pathwatcher works just fine
     // when file changes originate from within a Vagrant VM, but changes
     // to shared files made outside the VM are invisible to pathwatcher,
     // so our only hope of catching them is to continue polling.
-    lastPathwatcherEventTime = +new Date;
-    callback.apply(this, arguments);
   }
 
-  var watcher = null;
+  const watcher = pathwatcherWatch(absPath, pathwatcherWrapper);
+
+  const pollingInterval = watcher
+    ? DEFAULT_POLLING_INTERVAL
+    : NO_PATHWATCHER_POLLING_INTERVAL;
+
+  function watchFileWrapper(...args) {
+    const self = this;
+    // If a pathwatcher event fired in the last polling interval, ignore
+    // this event.
+    if (new Date - lastPathwatcherEventTime > pollingInterval) {
+      callbacks.forEach(cb => cb.apply(self, args));
+    }
+  }
+
+  // We use files.watchFile in addition to pathwatcher.watch as a
+  // fail-safe to detect file changes even on network file systems.
+  // However (unless the user disabled pathwatcher or this pathwatcher
+  // call failed), we use a relatively long default polling interval of
+  // 5000ms to save CPU cycles.
+  files.watchFile(absPath, {
+    persistent: false,
+    interval: pollingInterval
+  }, watchFileWrapper);
+
+  return {
+    callbacks,
+    release(callback) {
+      if (! watchers[absPath]) {
+        return;
+      }
+
+      callbacks.delete(callback);
+      if (callbacks.size > 0) {
+        return;
+      }
+
+      // Once there are no more callbacks in the Set, close both watchers
+      // and nullify the shared data.
+      watcher.close();
+      files.unwatchFile(absPath, watchFileWrapper);
+      watchers[absPath] = null;
+    }
+  };
+}
+
+
+function pathwatcherWatch(absPath, callback) {
   if (PATHWATCHER_ENABLED) {
     try {
-      watcher = files.pathwatcherWatch(absPath, pathwatcherWrapper);
+      return files.pathwatcherWatch(absPath, callback);
     } catch (e) {
       // If it isn't an actual pathwatcher failure, rethrow.
       if (e.message !== 'Unable to watch path') {
@@ -65,41 +128,16 @@ exports.watch = function watch(absPath, callback) {
       // ... ignore the error.  We'll still have watchFile, which is good
       // enough.
     }
-  };
-
-  var pollingInterval = watcher
-        ? DEFAULT_POLLING_INTERVAL : NO_PATHWATCHER_POLLING_INTERVAL;
-
-  function watchFileWrapper() {
-    // If a pathwatcher event fired in the last polling interval, ignore
-    // this event.
-    if (new Date - lastPathwatcherEventTime > pollingInterval) {
-      callback.apply(this, arguments);
-    }
   }
 
-  // We use files.watchFile in addition to pathwatcher.watch as a fail-safe to
-  // detect file changes even on network file systems.  However (unless the user
-  // disabled pathwatcher or this pathwatcher call failed), we use a relatively
-  // long default polling interval of 5000ms to save CPU cycles.
-  files.watchFile(absPath, {
-    persistent: false,
-    interval: pollingInterval
-  }, watchFileWrapper);
+  return null;
+}
 
-  var polling = true;
-
+export function watch(absPath, callback) {
+  const entry = acquireWatcher(absPath, callback);
   return {
-    close: function close() {
-      if (watcher) {
-        watcher.close();
-        watcher = null;
-      }
-
-      if (polling) {
-        polling = false;
-        files.unwatchFile(absPath, watchFileWrapper);
-      }
+    close() {
+      entry.release(callback);
     }
   };
-};
+}
