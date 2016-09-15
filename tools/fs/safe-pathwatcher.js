@@ -21,6 +21,10 @@ var NO_PATHWATCHER_POLLING_INTERVAL =
 // it in the meantime.
 const REHASH_DELAY_MS = 500;
 
+// This may seems like a long time to wait before actually closing the
+// file watchers, but it's to our advantage if they survive restarts.
+const WATCHER_CLEANUP_DELAY_MS = 30000;
+
 var suggestedRaisingWatchLimit = false;
 
 const watchers = Object.create(null);
@@ -41,6 +45,7 @@ function startNewWatcher(absPath) {
   const callbacks = new Set;
   let latestHash = hashOrNull(absPath);
   let requestRehashTimer = null;
+  let watcherCleanupTimer = null;
 
   function fire(self, args) {
     requestRehash();
@@ -116,9 +121,18 @@ function startNewWatcher(absPath) {
 
       // Once there are no more callbacks in the Set, close both watchers
       // and nullify the shared data.
-      watcher.close();
-      files.unwatchFile(absPath, watchFileWrapper);
-      watchers[absPath] = null;
+      clearTimeout(watcherCleanupTimer);
+      watcherCleanupTimer = setTimeout(() => {
+        if (callbacks.size > 0) {
+          // If another callback was added while the timer was pending, we
+          // can avoid tearing anything down.
+          return;
+        }
+
+        watcher.close();
+        files.unwatchFile(absPath, watchFileWrapper);
+        watchers[absPath] = null;
+      }, WATCHER_CLEANUP_DELAY_MS);
     }
   };
 }
