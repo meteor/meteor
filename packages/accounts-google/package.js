@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Login service for Google accounts",
-  version: "1.0.11-beta.3"
+  version: "1.0.11-beta.4"
 });
 
 Package.onUse(function(api) {
