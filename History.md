@@ -20,6 +20,10 @@
 
 * Accounts.forgotPassword and .verifyEmail no longer throw errors if callback is provided. [Issue #5664](https://github.com/meteor/meteor/issues/5664) [Origin PR #5681](https://github.com/meteor/meteor/pull/5681) [Merged PR](https://github.com/meteor/meteor/pull/7117)
 
+* The default content security policy (CSP) for Cordova now includes `ws:`
+  and `wss:` WebSocket protocols.
+  [#7774](https://github.com/meteor/meteor/pull/7774)
+
 ## v1.4.1.1
 
 * Update the version of our Node MongoDB driver to 2.2.8 to fix a bug in
