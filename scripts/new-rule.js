@@ -58,7 +58,7 @@ const rule = `/**
  * See LICENSE file in root directory for full license.
  */
 
-export default context => {
+export default (context) => {
   // ---------------------------------------------------------------------------
   // Helpers
   // ---------------------------------------------------------------------------
