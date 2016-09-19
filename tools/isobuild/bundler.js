@@ -175,7 +175,7 @@ import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
 exports.ignoreFiles = [
     /~$/, /^\.#/, /^#.*#$/,  // emacs swap files
     /^\..*\.sw.$/,  // vim swap files
-    /^\.DS_Store\/?$/, /^ehthumbs\.db$/, /^Icon.$/, /^Thumbs\.db$/,
+    /^\.DS_Store\/?$/, /^ehthumbs\.db$/, /^Icon\.$/, /^Thumbs\.db$/,
     /^\.meteor\/$/, /* avoids scanning N^2 files when bundling all packages */
     /^\.git\/$/ /* often has too many files to watch */
 ];
