@@ -1,6 +1,5 @@
 ---
 title: Atmosphere vs. npm
-order: 27
 discourseTopicId: 20193
 ---
 

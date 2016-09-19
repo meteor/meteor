@@ -57,11 +57,10 @@ sidebar_categories:
 favicon: '../images/favicon.png'
 
 logo:
-  nav_mobile: '../images/logo-coralspace.svg'
-  sidebar: '../images/icon-white.svg'
+  nav_mobile: '../images/logo-coralspace-left.svg'
   url: 'http://www.meteor.com/developers'
   title: 'Meteor Developers'
-  target: _new
+  subtitle: 'Developers'
 
 nav_links:
   'Tutorials':

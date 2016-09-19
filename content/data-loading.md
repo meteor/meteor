@@ -1,6 +1,5 @@
 ---
 title: Publications and Data Loading
-order: 11
 description: How and where to load data in your Meteor app using publications and subscriptions.
 discourseTopicId: 19661
 ---

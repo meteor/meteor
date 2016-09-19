@@ -1,6 +1,5 @@
 ---
 title: Build System
-order: 33
 description: How to use Meteor's build system to compile your app.
 discourseTopicId: 19669
 ---
@@ -106,7 +105,7 @@ Read the documentation for each package listed below to see how to indicate whic
 
 <h3 id="css-importing">Importing styles</h3>
 
-In all three Meteor supported CSS pre-processors you can import other style files from both relative and absolute paths in your app and from both npm and Meteor Atmosphere packages. 
+In all three Meteor supported CSS pre-processors you can import other style files from both relative and absolute paths in your app and from both npm and Meteor Atmosphere packages.
 
 ```less
 @import '../stylesheets/colors.less';   // a relative path
@@ -215,4 +214,3 @@ Writing a build plugin is a very advanced task that only the most advanced Meteo
 <h3 id="caching-build-plugins">Caching</h3>
 
 The best way to make your build plugin fast is to use caching anywhere you can - the best way to save time is to do less work! Check out the [documentation about CachingCompiler](https://docs.meteor.com/api/packagejs.html#build-plugin-caching) to learn more. It's used in all of the above examples, so you can see how to use it by looking at them.
-

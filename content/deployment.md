@@ -1,6 +1,5 @@
 ---
 title: Deployment and Monitoring
-order: 41
 description: How to deploy, run, and monitor your Meteor app in production.
 discourseTopicId: 19668
 ---
@@ -23,7 +22,7 @@ Deploying a web application is fundamentally different to releasing most other k
 However, it's still important to test your changes throughly with a good process of Quality Assurance (QA). Although it's easy to push out fixes to bugs, those bugs can still cause major problems to users and even potentially data corruption!
 
 > <h3 id="never-use-production-flag">Never use `--production` flag to deploy!</h3>
-> 
+>
 > `--production` flag is purely meant to simulate production minification, but does almost nothing else. This still watches source code files, exchanges data with package server and does a lot more than just running the app, leading to unnecessary computing resource wasting and security issues. Please don't use `--production` flag to deploy!
 
 <h3 id="environments">Deployment environments</h3>

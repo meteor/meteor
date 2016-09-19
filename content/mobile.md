@@ -1,6 +1,5 @@
 ---
 title: Mobile
-order: 32
 description: How to build mobile apps using Meteor's Cordova integration.
 discourseTopicId: 20195
 ---

@@ -1,6 +1,5 @@
 ---
 title: "Security"
-order: 40
 description: How to secure your Meteor app.
 discourseTopicId: 19667
 ---

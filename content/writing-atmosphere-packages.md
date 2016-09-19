@@ -1,6 +1,5 @@
 ---
 title: Writing Atmosphere Packages
-order: 29
 discourseTopicId: 20194
 ---
 
@@ -284,6 +283,3 @@ A Meteor app can load Atmosphere packages in one of three ways, and it looks for
 You can use (1) or (2) to override the version from Atmosphere. You can even do this to load patched versions of Meteor core packages - just copy the code of the package from [Meteor's GitHub repository](https://github.com/meteor/meteor/tree/devel/packages), and edit away.
 
 One difference between pre-published packages and local app packages is that the published packages have any binary dependencies pre-built. This should only affect a small subset of packages. If you clone the source code into your app, you need to make sure you have any compilers required by that package.
-
-
-

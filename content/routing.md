@@ -1,6 +1,5 @@
 ---
 title: "URLs and Routing"
-order: 20
 description: How to drive your Meteor app's UI using URLs with FlowRouter.
 discourseTopicId: 19663
 ---

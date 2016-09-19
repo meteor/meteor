@@ -1,6 +1,5 @@
 ---
 title: Code Style
-order: 1
 description: Suggested style guidelines for your code.
 discourseTopicId: 20189
 ---

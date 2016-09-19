@@ -1,6 +1,5 @@
 ---
 title: User Interfaces
-order: 21
 description: General tips for structuring your UI code, independent of your view rendering technology.
 discourseTopicId: 19665
 ---
@@ -23,7 +22,7 @@ Meteor officially supports three user interface (UI) rendering libraries, [Blaze
 
 - Blaze uses an easy-to-learn [Handlebars](http://handlebarsjs.com)-like template syntax, with logic like `{% raw %}{{#if}}{% endraw %}` and `{% raw %}{{#each}}{% endraw %}` interspersed in your HTML files. Template functions and CSS-selector events maps are written in JavaScript files.
 - React uses [JSX](https://facebook.github.io/react/docs/jsx-in-depth.html), with which you write your HTML in JavaScript. While it doesn't have the logic-view separation most libraries have, it also has the most flexibility. Template functions and event handlers are defined in the same file as the HTML part of the component, which usually makes it easier to understand how they are tied together.
-- Angular uses HTML with [special attribute syntax](https://angular.io/docs/ts/latest/guide/cheatsheet.html) for logic and events. Template helpers are written in the accompanying JavaScript file along with events, which are called by name from inside HTML attributes. 
+- Angular uses HTML with [special attribute syntax](https://angular.io/docs/ts/latest/guide/cheatsheet.html) for logic and events. Template helpers are written in the accompanying JavaScript file along with events, which are called by name from inside HTML attributes.
 - React and Angular enforce a better component structure, which makes developing larger apps easier. (Although you can add component structure to Blaze by [following conventions](blaze.html#reusable-components) or using the [Blaze Components](http://components.meteorapp.com/) or [ViewModel](https://viewmodel.org/) packages.)
 
 <h3 id="community">Community</h3>
@@ -36,7 +35,7 @@ Meteor officially supports three user interface (UI) rendering libraries, [Blaze
 
  - Render performance varies a lot depending on the situation. All three libraries are very quick at rendering simple apps, but can take a noticeable amount of time with more complex apps.
  - Angular and React have had more performance optimization work put into them than Blaze and in general will perform better. However, there are some cases when Blaze does better (for instance an `{% raw %}{{#each}}{% endraw %}` over a changing cursor).
- - [One test](http://info.meteor.com/blog/comparing-performance-of-blaze-react-angular-meteor-and-angular-2-with-meteor) benchmarks Angular 2 as the best, followed by React and Angular 1, followed by Blaze. 
+ - [One test](http://info.meteor.com/blog/comparing-performance-of-blaze-react-angular-meteor-and-angular-2-with-meteor) benchmarks Angular 2 as the best, followed by React and Angular 1, followed by Blaze.
 
 <h3 id="mobile">Mobile</h3>
 
@@ -296,7 +295,7 @@ import i18n from 'meteor/universe:i18n';
 
 const T = i18n.createComponent();
 
-// displays 'hello world!' where our en-us.i18n.json 
+// displays 'hello world!' where our en-us.i18n.json
 // has the key/value { "hello": "hello world!" }
 
 const Welcome = (props) => <div>
@@ -534,7 +533,7 @@ Template.Lists_show_page.onCreated(function() {
   this.autorun((computation) => {
     const todos = this.getTodos();
 
-    // If this autorun re-runs, the list id or set of todos must have 
+    // If this autorun re-runs, the list id or set of todos must have
     // changed, so we should flag it to the user so they know there
     // are changes to be seen.
     if (!computation.firstRun) {

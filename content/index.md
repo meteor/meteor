@@ -1,6 +1,5 @@
 ---
 title: Introduction
-order: 0
 description: This is the guide for using Meteor, a full-stack JavaScript platform for developing modern web and mobile applications.
 ---
 

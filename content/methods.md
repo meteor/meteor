@@ -1,6 +1,5 @@
 ---
 title: "Methods"
-order: 12
 description: How to use Methods, Meteor's remote procedure call system, to write to the database.
 discourseTopicId: 19662
 ---
