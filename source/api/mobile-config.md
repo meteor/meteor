@@ -1,6 +1,5 @@
 ---
 title: Mobile Configuration
-order: 20
 description: Documentation of Meteor's Cordova configuration API.
 ---
 

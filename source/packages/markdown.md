@@ -1,6 +1,5 @@
 ---
 title: markdown
-order: 28
 description: Documentation of Meteor's `markdown` package.
 ---
 

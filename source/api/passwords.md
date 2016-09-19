@@ -1,6 +1,5 @@
 ---
 title: Passwords
-order: 10
 description: Documentation of Meteor's password-based accounts API.
 ---
 

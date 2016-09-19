@@ -1,6 +1,5 @@
 ---
 title: ReactiveVar
-order: 15
 description: Documentation of ReactiveVar, a simple reactive variable package.
 ---
 

@@ -1,6 +1,5 @@
 ---
 title: Server Connections
-order: 5
 description: Documentation on how to use Meteor's client-server connection.
 ---
 

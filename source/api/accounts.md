@@ -1,6 +1,5 @@
 ---
 title: Accounts
-order: 8
 description: Documentation of how to use Meteor's accounts functionality.
 ---
 

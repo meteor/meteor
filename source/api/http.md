@@ -1,6 +1,5 @@
 ---
 title: HTTP
-order: 16
 description: Documentation of Meteor's HTTP API.
 ---
 

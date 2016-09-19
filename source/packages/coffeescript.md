@@ -1,6 +1,5 @@
 ---
 title: coffeescript
-order: 24
 description: Documentation of Meteor's `coffeescript` package.
 ---
 

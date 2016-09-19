@@ -1,6 +1,5 @@
 ---
 title: audit-argument-checks
-order: 23
 description: Documentation of Meteor's `audit-argument-checks` package.
 ---
 

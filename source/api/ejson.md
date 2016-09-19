@@ -1,6 +1,5 @@
 ---
 title: EJSON
-order: 16
 description: Documentation of EJSON, Meteor's JSON extension.
 ---
 

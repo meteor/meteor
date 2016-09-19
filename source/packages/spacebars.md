@@ -1,6 +1,5 @@
 ---
 title: spacebars
-order: 32
 description: Documentation of Meteor's `spacebars` package.
 ---
 

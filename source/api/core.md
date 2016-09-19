@@ -1,6 +1,5 @@
 ---
 title: Core
-order: 1
 description: Documentation of core Meteor functions.
 ---
 

@@ -1,6 +1,5 @@
 ---
 title: Publish and subscribe
-order: 2
 description: Documentation of Meteor's publication and subscription API.
 ---
 

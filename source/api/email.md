@@ -1,6 +1,5 @@
 ---
 title: Email
-order: 17
 description: Documentation of Meteor's email API.
 ---
 

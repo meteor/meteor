@@ -1,6 +1,5 @@
 ---
 title: modules
-order: 29
 description: Documentation of Meteor's `modules` package.
 ---
 

@@ -1,6 +1,5 @@
 ---
 title: Package.js
-order: 19
 description: Documentation of Meteor's package API.
 ---
 

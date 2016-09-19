@@ -1,6 +1,5 @@
 ---
 title: accounts-ui
-order: 21
 description: Documentation of Meteor's `accounts-ui` package.
 ---
 

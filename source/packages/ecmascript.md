@@ -1,6 +1,5 @@
 ---
 title: ecmascript
-order: 25
 description: Documentation of Meteor's `ecmascript` package.
 ---
 

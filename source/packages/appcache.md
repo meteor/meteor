@@ -1,6 +1,5 @@
 ---
 title: appcache
-order: 22
 description: Documentation of Meteor's `appcache` package.
 ---
 
