@@ -5,7 +5,6 @@ Package.describe({
 
 Package.onUse(function(api) {
   api.use('templating@1.2.13', 'client');
-  api.use('accounts-facebook@1.1.0');
 
   api.addFiles('facebook_login_button.css', 'client');
   api.addFiles(
