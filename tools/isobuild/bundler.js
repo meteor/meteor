@@ -1834,8 +1834,6 @@ class JsImage {
         node_modules: {}
       };
 
-      const nodeModulesPaths = [];
-
       _.each(item.nodeModulesDirectories, nmd => {
         // We need to make sure to use the directory name we got from
         // builder.generateFilename here.
@@ -1848,30 +1846,19 @@ class JsImage {
             "string"
           );
 
-          // Eventually we would prefer to write these node_modules
-          // properties with object values instead of string values, like
-          // we're doing here, but older versions of meteor-tool won't be
-          // able to load images like that, so we have to wait until
-          // everyone is using a version of the tool that knows how to
-          // read object-valued node_modules properties.
           loadItem.node_modules[generatedNMD.preferredBundlePath] =
             generatedNMD.toJSON();
-
-          if (nmd.local) {
-            nodeModulesPaths.push(generatedNMD.preferredBundlePath);
-          } else {
-            // Give .npm/package/node_modules directories preference in
-            // the selection of a single bundle path below.
-            nodeModulesPaths.unshift(generatedNMD.preferredBundlePath);
-          }
         }
       });
 
-      if (nodeModulesPaths.length > 0) {
-        // For backwards compatibility, we unfortunately can only write
-        // node_modules as a single string.
-        loadItem.node_modules = nodeModulesPaths[0];
-      } else {
+      const preferredPaths = Object.keys(loadItem.node_modules);
+      if (preferredPaths.length === 1) {
+        // For backwards compatibility, if there's only one node_modules
+        // directory, store it as a single string.
+        loadItem.node_modules = preferredPaths[0];
+      } else if (preferredPaths.length === 0) {
+        // If there are no node_modules directories, don't confuse older
+        // versions of Meteor by storing an empty object.
         delete loadItem.node_modules;
       }
 
