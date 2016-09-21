@@ -231,8 +231,9 @@ running. Quit all running meteor applications before running this.
 Package this project up for deployment. The output is a directory with several
 build artifacts:
 
-<ul><li>a tarball that includes everything necessary to run the application server
-  (see the <code>README</code> in the tarball for details)</li>
+<ul><li>a tarball (.tar.gz) that includes everything necessary to run the application
+  server (see the <code>README</code> in the tarball for details).  Using the
+  `--directory` option will produce a `bundle` directory instead of the tarball.</li>
 <li>an unsigned <code>apk</code> bundle and a project source if Android is targetted as a
   mobile platform</li>
 <li>a directory with an Xcode project source if iOS is targetted as a mobile
