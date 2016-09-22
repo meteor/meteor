@@ -85,7 +85,7 @@ Although MongoDB is a schema-less database, which allows maximum flexibility in 
 
 In Meteor, the pre-eminent schema package is [aldeed:simple-schema](https://atmospherejs.com/aldeed/simple-schema). It's an expressive, MongoDB based schema that's used to insert and update documents. Another alternative is [jagi:astronomy](https://atmospherejs.com/jagi/astronomy) which is a full Object Model (OM) layer offering schema definition, server/client side validators, object methods and event handlers.
 
-To write a schema using `simple-schema`, you can simply create a new instance of the `SimpleSchema` class:
+Let's assume that we have a `Lists` collection.  To define a schema for this collection using `simple-schema`, you can simply create a new instance of the `SimpleSchema` class and attach it to the `Lists` object:
 
 ```js
 Lists.schema = new SimpleSchema({
