@@ -1,4 +1,5 @@
 var files = require('./files.js');
+import { readFile, sha1 } from "./watch.js";
 
 // Set METEOR_WATCH_FORCE_POLLING environment variable to a truthy value to
 // force the use of files.watchFile instead of pathwatcher.watch.
@@ -15,26 +16,132 @@ var DEFAULT_POLLING_INTERVAL =
 var NO_PATHWATCHER_POLLING_INTERVAL =
       ~~process.env.METEOR_WATCH_POLLING_INTERVAL_MS || 500;
 
+// When a file changes, we wait for this long before actually recomputing
+// its hash, though of course we compute it immediately if anyone asks for
+// it in the meantime.
+const REHASH_DELAY_MS = 500;
+
+// This may seems like a long time to wait before actually closing the
+// file watchers, but it's to our advantage if they survive restarts.
+const WATCHER_CLEANUP_DELAY_MS = 30000;
+
 var suggestedRaisingWatchLimit = false;
 
-exports.watch = function watch(absPath, callback) {
-  var lastPathwatcherEventTime = 0;
+const watchers = Object.create(null);
 
-  function pathwatcherWrapper() {
+function acquireWatcher(absPath, callback) {
+  const entry = watchers[absPath] || (
+    watchers[absPath] = startNewWatcher(absPath));
+
+  // The size of the entry.callbacks Set also serves as a reference count
+  // for this watcher.
+  entry.callbacks.add(callback);
+
+  return entry;
+}
+
+function startNewWatcher(absPath) {
+  let lastPathwatcherEventTime = 0;
+  const callbacks = new Set;
+  let latestHash = hashOrNull(absPath);
+  let requestRehashTimer = null;
+  let watcherCleanupTimer = null;
+
+  function fire(self, args) {
+    requestRehash();
+    callbacks.forEach(cb => cb.apply(self, args));
+  }
+
+  function requestRehash() {
+    if (requestRehashTimer === null) {
+      requestRehashTimer = setTimeout(ensureLatestHash, REHASH_DELAY_MS);
+    }
+  }
+
+  function ensureLatestHash() {
+    if (requestRehashTimer !== null) {
+      clearTimeout(requestRehashTimer);
+      requestRehashTimer = null;
+      latestHash = hashOrNull(absPath);
+    }
+    return latestHash;
+  }
+
+  function pathwatcherWrapper(...args) {
+    lastPathwatcherEventTime = +new Date;
+    fire(this, args);
+
     // It's tempting to call files.unwatchFile(absPath, watchFileWrapper)
     // here, but previous pathwatcher success is no guarantee of future
     // pathwatcher reliability. For example, pathwatcher works just fine
     // when file changes originate from within a Vagrant VM, but changes
     // to shared files made outside the VM are invisible to pathwatcher,
     // so our only hope of catching them is to continue polling.
-    lastPathwatcherEventTime = +new Date;
-    callback.apply(this, arguments);
   }
 
-  var watcher = null;
+  const watcher = pathwatcherWatch(absPath, pathwatcherWrapper);
+
+  const pollingInterval = watcher
+    ? DEFAULT_POLLING_INTERVAL
+    : NO_PATHWATCHER_POLLING_INTERVAL;
+
+  function watchFileWrapper(...args) {
+    const self = this;
+    // If a pathwatcher event fired in the last polling interval, ignore
+    // this event.
+    if (new Date - lastPathwatcherEventTime > pollingInterval) {
+      fire(this, args);
+    }
+  }
+
+  // We use files.watchFile in addition to pathwatcher.watch as a
+  // fail-safe to detect file changes even on network file systems.
+  // However (unless the user disabled pathwatcher or this pathwatcher
+  // call failed), we use a relatively long default polling interval of
+  // 5000ms to save CPU cycles.
+  files.watchFile(absPath, {
+    persistent: false,
+    interval: pollingInterval
+  }, watchFileWrapper);
+
+  return {
+    callbacks,
+
+    cheapHashOrNull: ensureLatestHash,
+
+    release(callback) {
+      if (! watchers[absPath]) {
+        return;
+      }
+
+      callbacks.delete(callback);
+      if (callbacks.size > 0) {
+        return;
+      }
+
+      // Once there are no more callbacks in the Set, close both watchers
+      // and nullify the shared data.
+      clearTimeout(watcherCleanupTimer);
+      watcherCleanupTimer = setTimeout(() => {
+        if (callbacks.size > 0) {
+          // If another callback was added while the timer was pending, we
+          // can avoid tearing anything down.
+          return;
+        }
+
+        watcher.close();
+        files.unwatchFile(absPath, watchFileWrapper);
+        watchers[absPath] = null;
+      }, WATCHER_CLEANUP_DELAY_MS);
+    }
+  };
+}
+
+
+function pathwatcherWatch(absPath, callback) {
   if (PATHWATCHER_ENABLED) {
     try {
-      watcher = files.pathwatcherWatch(absPath, pathwatcherWrapper);
+      return files.pathwatcherWatch(absPath, callback);
     } catch (e) {
       // If it isn't an actual pathwatcher failure, rethrow.
       if (e.message !== 'Unable to watch path') {
@@ -65,41 +172,28 @@ exports.watch = function watch(absPath, callback) {
       // ... ignore the error.  We'll still have watchFile, which is good
       // enough.
     }
-  };
-
-  var pollingInterval = watcher
-        ? DEFAULT_POLLING_INTERVAL : NO_PATHWATCHER_POLLING_INTERVAL;
-
-  function watchFileWrapper() {
-    // If a pathwatcher event fired in the last polling interval, ignore
-    // this event.
-    if (new Date - lastPathwatcherEventTime > pollingInterval) {
-      callback.apply(this, arguments);
-    }
   }
 
-  // We use files.watchFile in addition to pathwatcher.watch as a fail-safe to
-  // detect file changes even on network file systems.  However (unless the user
-  // disabled pathwatcher or this pathwatcher call failed), we use a relatively
-  // long default polling interval of 5000ms to save CPU cycles.
-  files.watchFile(absPath, {
-    persistent: false,
-    interval: pollingInterval
-  }, watchFileWrapper);
+  return null;
+}
 
-  var polling = true;
+function hashOrNull(absPath) {
+  const contents = readFile(absPath);
+  return contents && sha1(contents) || null;
+}
 
+export function watch(absPath, callback) {
+  const entry = acquireWatcher(absPath, callback);
   return {
-    close: function close() {
-      if (watcher) {
-        watcher.close();
-        watcher = null;
-      }
-
-      if (polling) {
-        polling = false;
-        files.unwatchFile(absPath, watchFileWrapper);
-      }
+    close() {
+      entry.release(callback);
     }
   };
-};
+}
+
+export function cheapHashOrNull(absPath) {
+  const entry = watchers[absPath];
+  return entry
+    ? entry.cheapHashOrNull()
+    : hashOrNull(absPath);
+}

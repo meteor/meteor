@@ -49,6 +49,18 @@ git clone --recursive git://github.com/meteor/meteor.git
 cd meteor
 ```
 
+The `--recursive` flag ensures that submodules will be initialized and
+updated as part of the cloning process. If you cloned the `meteor`
+repository without the `--recursive` flag, you can equivalently run
+
+```bash
+git submodule update --init --recursive
+```
+
+in the root of the `meteor` repository. The typical symptom of not
+updating submodules will be `Error: Depending on unknown package ...`
+when you run most Meteor commands.
+
 If you're the sort of person who likes to build everything from scratch,
 you can build all the Meteor dependencies (node.js, npm, mongodb, etc)
 with the provided script. This requires git, a C and C++ compiler,

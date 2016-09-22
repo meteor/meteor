@@ -24,6 +24,11 @@ exports.getEnv = function (options) {
 
     var env = Object.create(process.env);
 
+    // Make sure we don't try to use the global ~/.npm cache accidentally.
+    if (! env.NPM_CONFIG_CACHE) {
+      env.NPM_CONFIG_CACHE = path.join(devBundleDir, ".npm");
+    }
+
     // This allows node-gyp to find Node headers and libraries in
     // dev_bundle/.node-gyp.
     env.USERPROFILE = devBundleDir;

@@ -717,13 +717,10 @@ files.extractTarGz = function (buffer, destPath, options) {
   }
 
   const startTime = +new Date;
-  let promise = tryExtractWithNativeTar(buffer, tempDir, options);
 
-  if (process.platform === "win32") {
-    promise = promise.catch(
-      error => tryExtractWithNative7z(buffer, tempDir, options)
-    );
-  }
+  let promise = process.platform === "win32"
+    ? tryExtractWithNative7z(buffer, tempDir, options)
+    : tryExtractWithNativeTar(buffer, tempDir, options)
 
   promise = promise.catch(
     error => tryExtractWithNpmTar(buffer, tempDir, options)

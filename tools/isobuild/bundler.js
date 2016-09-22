@@ -248,6 +248,13 @@ export class NodeModulesDirectory {
     // accessible from other modules in the app or package.
     this.local = !! local;
 
+    // A test package often shares its .sourcePath with the non-test
+    // package, so it's important to be able to tell them apart,
+    // especially when we'd like to treat .sourcePath as a unique key.
+    this.isTestPackage =
+      typeof packageName === "string" &&
+      /^local-test[:_]/.test(packageName);
+
     // Optionally, files to discard.
     this.npmDiscards = npmDiscards;
   }
@@ -274,8 +281,9 @@ export class NodeModulesDirectory {
 
     const isApp = ! this.packageName;
     if (! isApp) {
-      const name = colonConverter.convert(this.packageName);
       const relParts = relPath.split(files.pathSep);
+      const name = colonConverter.convert(
+        this.packageName.replace(/^local-test[:_]/, ""));
 
       if (relParts[0] === ".npm") {
         // Normalize .npm/package/node_modules/... paths so that they get
@@ -415,6 +423,72 @@ export class NodeModulesDirectory {
     }
 
     return nodeModulesDirectories;
+  }
+
+  // Returns a predicate function that determines if a given directory is
+  // contained by a production package directory in this.sourcePath.
+  getProdPackagePredicate() {
+    if (this._prodPackagePredicate) {
+      return this._prodPackagePredicate;
+    }
+
+    const sourcePath = this.sourcePath;
+    const prodPackageNames = meteorNpm.getProdPackageNames(sourcePath);
+    if (! prodPackageNames) {
+      // Indicates that no directories should be excluded from the set of
+      // production packages. Equivalent to returning dir => true.
+      return null;
+    }
+
+    const prodPackageTree = Object.create(null);
+    const complete = Symbol();
+    let maxPartCount = 0;
+
+    Object.keys(prodPackageNames).forEach(name => {
+      const parts = name.split("/");
+      let tree = prodPackageTree;
+
+      parts.forEach(part => {
+        tree = tree[part] || (tree[part] = Object.create(null));
+      });
+
+      tree[complete] = true;
+      maxPartCount = Math.max(parts.length, maxPartCount);
+    });
+
+    return this._prodPackagePredicate = function isWithinProdPackage(dir) {
+      const parts = files.pathRelative(sourcePath, dir)
+        .split(files.pathSep);
+
+      let start = parts.lastIndexOf("node_modules") + 1;
+
+      if (parts.length - start > maxPartCount) {
+        // We're deep enough inside node_modules that it's safe to
+        // say we should have returned false earlier.
+        return true;
+      }
+
+      let tree = prodPackageTree;
+
+      for (let pos = start; pos < parts.length; ++pos) {
+        const part = parts[pos];
+        const branch = tree[part];
+
+        if (! branch) {
+          // This dir is not prefixed by a production package name.
+          return false;
+        }
+
+        if (branch[complete]) {
+          // This dir is prefixed by a complete production package name.
+          break;
+        }
+
+        tree = branch;
+      }
+
+      return true;
+    };
   }
 }
 
@@ -1020,8 +1094,8 @@ class Target {
             }
 
             _.each(unibuild.nodeModulesDirectories, nmd => {
-              this.nodeModulesDirectories[nmd.sourcePath] = nmd;
-              f.nodeModulesDirectories[nmd.sourcePath] = nmd;
+              addNodeModulesDirToObject(nmd, this.nodeModulesDirectories);
+              addNodeModulesDirToObject(nmd, f.nodeModulesDirectories);
             });
           }
 
@@ -1216,6 +1290,26 @@ class Target {
 ].forEach((method) => {
   Target.prototype[method] = Profile(`Target#${method}`, Target.prototype[method]);
 });
+
+// Sets `obj[nmd.sourcePath] = nmd` unless the key already exists and the
+// old nmd object is for a non-test package. Since nmd.sourcePath can be
+// shared by test and non-test packages, this logic prefers the non-test
+// nmd object when possible. Returns true iff the given nmd was added.
+function addNodeModulesDirToObject(nmd, obj) {
+  if (_.has(obj, nmd.sourcePath)) {
+    const old = obj[nmd.sourcePath];
+    // If the old NodeModulesDirectory object is not a test package, or
+    // the new one is a test package, keep the old one.
+    if (! old.isTestPackage ||
+        nmd.isTestPackage) {
+      return false;
+    }
+  }
+
+  obj[nmd.sourcePath] = nmd;
+
+  return true;
+}
 
 //////////////////// ClientTarget ////////////////////
 
@@ -1750,7 +1844,7 @@ class JsImage {
 
       nmd = nmd.copy();
       nmd.preferredBundlePath = modulesPhysicalLocation;
-      nodeModulesDirectories[nmd.sourcePath] = nmd;
+      addNodeModulesDirToObject(nmd, nodeModulesDirectories);
     });
 
     // If multiple load files share the same asset, only write one copy of
@@ -1768,8 +1862,6 @@ class JsImage {
         node_modules: {}
       };
 
-      const nodeModulesPaths = [];
-
       _.each(item.nodeModulesDirectories, nmd => {
         // We need to make sure to use the directory name we got from
         // builder.generateFilename here.
@@ -1782,30 +1874,19 @@ class JsImage {
             "string"
           );
 
-          // Eventually we would prefer to write these node_modules
-          // properties with object values instead of string values, like
-          // we're doing here, but older versions of meteor-tool won't be
-          // able to load images like that, so we have to wait until
-          // everyone is using a version of the tool that knows how to
-          // read object-valued node_modules properties.
           loadItem.node_modules[generatedNMD.preferredBundlePath] =
             generatedNMD.toJSON();
-
-          if (nmd.local) {
-            nodeModulesPaths.push(generatedNMD.preferredBundlePath);
-          } else {
-            // Give .npm/package/node_modules directories preference in
-            // the selection of a single bundle path below.
-            nodeModulesPaths.unshift(generatedNMD.preferredBundlePath);
-          }
         }
       });
 
-      if (nodeModulesPaths.length > 0) {
-        // For backwards compatibility, we unfortunately can only write
-        // node_modules as a single string.
-        loadItem.node_modules = nodeModulesPaths[0];
-      } else {
+      const preferredPaths = Object.keys(loadItem.node_modules);
+      if (preferredPaths.length === 1) {
+        // For backwards compatibility, if there's only one node_modules
+        // directory, store it as a single string.
+        loadItem.node_modules = preferredPaths[0];
+      } else if (preferredPaths.length === 0) {
+        // If there are no node_modules directories, don't confuse older
+        // versions of Meteor by storing an empty object.
         delete loadItem.node_modules;
       }
 
@@ -1888,25 +1969,11 @@ class JsImage {
           symlink: (options.includeNodeModules === 'symlink')
         };
 
-        if (nmd.local) {
-          const prodPackageTree = Object.create(null);
-          const complete = Symbol();
-          let maxPartCount = 0;
+        const prodPackagePredicate =
+          nmd.local && // Only filter local node_modules directories.
+          nmd.getProdPackagePredicate();
 
-          Object.keys(
-            meteorNpm.getProdPackageNames(nmd.sourcePath)
-          ).forEach(name => {
-            const parts = name.split("/");
-            let tree = prodPackageTree;
-
-            parts.forEach(part => {
-              tree = tree[part] || (tree[part] = Object.create(null));
-            });
-
-            tree[complete] = true;
-            maxPartCount = Math.max(parts.length, maxPartCount);
-          });
-
+        if (prodPackagePredicate) {
           // When copying a local node_modules directory, ignore any npm
           // package directories not in the list of production package
           // names, as determined by meteorNpm.getProdPackageNames. Note
@@ -1917,39 +1984,7 @@ class JsImage {
           // package's "dependencies", then every copy of that package
           // will be copied to the destination directory. A little bit of
           // overcopying vastly simplifies the job of directoryFilter.
-          copyOptions.directoryFilter = function isWithinProdPackage(dir) {
-            const parts = files.pathRelative(nmd.sourcePath, dir)
-              .split(files.pathSep);
-
-            let start = parts.lastIndexOf("node_modules") + 1;
-
-            if (parts.length - start > maxPartCount) {
-              // We're deep enough inside node_modules that it's safe to
-              // say we should have returned false earlier.
-              return true;
-            }
-
-            let tree = prodPackageTree;
-
-            for (let pos = start; pos < parts.length; ++pos) {
-              const part = parts[pos];
-              const branch = tree[part];
-
-              if (! branch) {
-                // This dir is not prefixed by a production package name.
-                return false;
-              }
-
-              if (branch[complete]) {
-                // This dir is prefixed by a complete production package name.
-                break;
-              }
-
-              tree = branch;
-            }
-
-            return true;
-          };
+          copyOptions.directoryFilter = prodPackagePredicate;
         }
 
         builder.copyDirectory(copyOptions);

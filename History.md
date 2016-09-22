@@ -1,4 +1,22 @@
-## v.NEXT
+## v1.4.2
+
+* The `npm` npm package has been updated to 3.10.7.
+
+* The `node-pre-gyp` npm package has been updated to 0.6.30.
+
+* The `fibers` npm package has been updated to 1.0.14.
+
+* Blaze-related packages have been extracted to
+  [`meteor/blaze`](https://github.com/meteor/blaze), and the main
+  [`meteor/meteor`](https://github.com/meteor/meteor) repository now
+  refers to them via git submodules (see
+  [#7633](https://github.com/meteor/meteor/pull/7633)).
+  When running `meteor` from a checkout, you must now update these
+  submodules by running
+  ```sh
+  git submodule update --init --recursive
+  ```
+  in the root directory of your `meteor` checkout.
 
 * Accounts.forgotPassword and .verifyEmail no longer throw errors if callback is provided. [Issue #5664](https://github.com/meteor/meteor/issues/5664) [Origin PR #5681](https://github.com/meteor/meteor/pull/5681) [Merged PR](https://github.com/meteor/meteor/pull/7117)
 

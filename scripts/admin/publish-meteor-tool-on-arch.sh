@@ -58,7 +58,7 @@ git fetch --tags
 END
 
     # checkout the SHA1 we want to publish
-    echo "cd meteor; git checkout $GITSHA" | METEOR_SESSION_FILE="$SESSION_FILE" "$METEOR" admin get-machine "$PLATFORM"
+    echo "cd meteor; git checkout $GITSHA; git submodule update --init --recursive" | METEOR_SESSION_FILE="$SESSION_FILE" "$METEOR" admin get-machine "$PLATFORM"
     # publish the release
     echo "cd meteor/packages/meteor-tool && env METEOR_SESSION_FILE=~/session ../../meteor publish --existing-version" | METEOR_SESSION_FILE=$SESSION_FILE $METEOR admin get-machine $PLATFORM
 

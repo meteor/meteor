@@ -11,12 +11,12 @@ var packageJson = {
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
-    npm: "3.10.6",
+    npm: "3.10.7",
     "node-gyp": "3.4.0",
-    "node-pre-gyp": "0.6.29",
+    "node-pre-gyp": "0.6.30",
     "meteor-babel": "0.12.0",
     "meteor-promise": "0.7.2",
-    fibers: "1.0.13",
+    fibers: "1.0.14",
     promise: "7.1.1",
     // So that Babel 6 can emit require("babel-runtime/helpers/...") calls.
     "babel-runtime": "6.9.2",
@@ -41,6 +41,7 @@ var packageJson = {
     "wordwrap": "0.0.2",
     "moment": "2.8.4",
     "rimraf": "2.4.3",
+    "glob": "7.0.6",
     // XXX: When we update this, see if it fixes this Github issue:
     // https://github.com/jgm/CommonMark/issues/276 . If it does, remove the
     // workaround from the tool.
