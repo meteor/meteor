@@ -1796,6 +1796,7 @@ var runTestAppForPackages = function (projectContext, options) {
       oplogUrl: process.env.MONGO_OPLOG_URL,
       mobileServerUrl: options.mobileServerUrl,
       once: options.once,
+      noReleaseCheck: options['no-release-check'] || process.env.METEOR_NO_RELEASE_CHECK,
       recordPackageUsage: false,
       selenium: options.selenium,
       seleniumBrowser: options['selenium-browser'],
