@@ -98,7 +98,7 @@
     "stylus": {
       "version": "0.54.5",
       "resolved": "https://github.com/meteor/stylus/tarball/bb47a357d132ca843718c63998eb37b90013a449",
-      "from": "stylus@https://github.com/meteor/stylus/tarball/bb47a357d132ca843718c63998eb37b90013a449"
+      "from": "https://github.com/meteor/stylus/tarball/bb47a357d132ca843718c63998eb37b90013a449"
     },
     "wrappy": {
       "version": "1.0.2",
