@@ -713,11 +713,13 @@ Profile("meteorNpm.runNpmCommand", function (args, cwd) {
     env.npm_config_userconfig = npmUserConfigFile;
 
     return new Promise(function (resolve) {
+      console.log(`running npm command ${npmPath} ${args} ${opts}`);
       require('child_process').execFile(
         npmPath, args, opts, function (err, stdout, stderr) {
           if (meteorNpm._printNpmCalls) {
             process.stdout.write(err ? 'failed\n' : 'done\n');
           }
+          console.log(`done running npm command, resolving`);
 
           resolve({
             success: ! err,
@@ -928,7 +930,9 @@ var installFromShrinkwrap = function (dir) {
   }
 
   // `npm install`, which reads npm-shrinkwrap.json.
+  console.log('running npm command from `installFromShrinkwrap`');
   var result = runNpmCommand(["install"], dir);
+  console.log('done running npm command from `installFromShrinkwrap`');
 
   if (! pkgJsonExisted) {
     files.rm_recursive(tempPkgJsonPath);
