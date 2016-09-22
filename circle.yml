@@ -11,7 +11,9 @@ dependencies:
     - ".meteor"
     - ".babel-cache"
   override:
-    - ./meteor --get-ready
+    - ./meteor --get-ready:
+      # shouldn't take longer than 10 minutes
+      timeout: 600
 
 test:
   override:
