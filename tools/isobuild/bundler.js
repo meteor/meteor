@@ -248,6 +248,13 @@ export class NodeModulesDirectory {
     // accessible from other modules in the app or package.
     this.local = !! local;
 
+    // A test package often shares its .sourcePath with the non-test
+    // package, so it's important to be able to tell them apart,
+    // especially when we'd like to treat .sourcePath as a unique key.
+    this.isTestPackage =
+      typeof packageName === "string" &&
+      /^local-test[:_]/.test(packageName);
+
     // Optionally, files to discard.
     this.npmDiscards = npmDiscards;
   }
@@ -274,8 +281,9 @@ export class NodeModulesDirectory {
 
     const isApp = ! this.packageName;
     if (! isApp) {
-      const name = colonConverter.convert(this.packageName);
       const relParts = relPath.split(files.pathSep);
+      const name = colonConverter.convert(
+        this.packageName.replace(/^local-test[:_]/, ""));
 
       if (relParts[0] === ".npm") {
         // Normalize .npm/package/node_modules/... paths so that they get
@@ -1086,8 +1094,8 @@ class Target {
             }
 
             _.each(unibuild.nodeModulesDirectories, nmd => {
-              this.nodeModulesDirectories[nmd.sourcePath] = nmd;
-              f.nodeModulesDirectories[nmd.sourcePath] = nmd;
+              addNodeModulesDirToObject(nmd, this.nodeModulesDirectories);
+              addNodeModulesDirToObject(nmd, f.nodeModulesDirectories);
             });
           }
 
@@ -1282,6 +1290,26 @@ class Target {
 ].forEach((method) => {
   Target.prototype[method] = Profile(`Target#${method}`, Target.prototype[method]);
 });
+
+// Sets `obj[nmd.sourcePath] = nmd` unless the key already exists and the
+// old nmd object is for a non-test package. Since nmd.sourcePath can be
+// shared by test and non-test packages, this logic prefers the non-test
+// nmd object when possible. Returns true iff the given nmd was added.
+function addNodeModulesDirToObject(nmd, obj) {
+  if (_.has(obj, nmd.sourcePath)) {
+    const old = obj[nmd.sourcePath];
+    // If the old NodeModulesDirectory object is not a test package, or
+    // the new one is a test package, keep the old one.
+    if (! old.isTestPackage ||
+        nmd.isTestPackage) {
+      return false;
+    }
+  }
+
+  obj[nmd.sourcePath] = nmd;
+
+  return true;
+}
 
 //////////////////// ClientTarget ////////////////////
 
@@ -1816,7 +1844,7 @@ class JsImage {
 
       nmd = nmd.copy();
       nmd.preferredBundlePath = modulesPhysicalLocation;
-      nodeModulesDirectories[nmd.sourcePath] = nmd;
+      addNodeModulesDirToObject(nmd, nodeModulesDirectories);
     });
 
     // If multiple load files share the same asset, only write one copy of
