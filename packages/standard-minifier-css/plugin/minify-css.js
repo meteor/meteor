@@ -1,4 +1,6 @@
-var sourcemap = Npm.require('source-map');
+var sourcemap = Npm.require("source-map");
+var createHash = Npm.require("crypto").createHash;
+var LRU = Npm.require("lru-cache");
 
 Plugin.registerMinifier({
   extensions: ["css"],
@@ -37,10 +39,28 @@ CssToolsMinifier.prototype.processFilesForBundle = function (files, options) {
   }
 };
 
+var mergeCache = new LRU({
+  max: 100
+});
+
+var hashFiles = Profile("hashFiles", function (files) {
+  var hash = createHash("sha1");
+  var hashes = files.forEach(f => {
+    hash.update(f.getSourceHash()).update("\0");
+  });
+  return hash.digest("hex");
+});
+
 // Lints CSS files and merges them into one file, fixing up source maps and
 // pulling any @import directives up to the top since the CSS spec does not
 // allow them to appear in the middle of a file.
 var mergeCss = Profile("mergeCss", function (css) {
+  var hashOfFiles = hashFiles(css);
+  var merged = mergeCache.get(hashOfFiles);
+  if (merged) {
+    return merged;
+  }
+
   // Filenames passed to AST manipulator mapped to their original files
   var originals = {};
 
@@ -87,7 +107,8 @@ var mergeCss = Profile("mergeCss", function (css) {
   });
 
   if (! stringifiedCss.code) {
-    return { code: '' };
+    mergeCache.set(hashOfFiles, merged = { code: '' });
+    return merged;
   }
 
   // Add the contents of the input files to the source map of the new file
@@ -121,8 +142,10 @@ var mergeCss = Profile("mergeCss", function (css) {
     });
   });
 
-  return {
+  mergeCache.set(hashOfFiles, merged = {
     code: stringifiedCss.code,
     sourceMap: newMap.toString()
-  };
+  });
+
+  return merged;
 });
