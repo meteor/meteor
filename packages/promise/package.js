@@ -7,7 +7,7 @@ Package.describe({
 });
 
 Npm.depends({
-  "meteor-promise": "https://github.com/tmeasday/meteor-promise.git#7b4aac385d70f0d352a7575e625b0c383c54f09a",
+  "meteor-promise": "https://github.com/tmeasday/meteor-promise.git#a223c7e248f32b1a82a63a9834a53b03b459e77c",
   "promise": "7.1.1"
 });
 
