@@ -777,7 +777,7 @@ Profile("meteorNpm.runNpmCommand", function (args, cwd) {
           });
         }
       );
-    });
+    }).await();
 
   }).await();
 });
