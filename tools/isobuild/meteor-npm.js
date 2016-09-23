@@ -482,6 +482,7 @@ var makeNewPackageNpmDir = function (newPackageNpmDir) {
 var updateExistingNpmDirectory = function (packageName, newPackageNpmDir,
                                            packageNpmDir, npmDependencies,
                                            quiet) {
+  console.log('updateExistingNpmDirectory', packageName);
   // sanity check on contents of .npm directory
   if (!files.stat(packageNpmDir).isDirectory()) {
     throw new Error("Corrupted .npm directory -- should be a directory: " +
@@ -611,6 +612,7 @@ function isSubtreeOf(subsetTree, supersetTree, predicate) {
 
 var createFreshNpmDirectory = function (packageName, newPackageNpmDir,
                                         packageNpmDir, npmDependencies, quiet) {
+  console.log('createFreshNpmDirectory', packageName);
   if (! quiet) {
     logUpdateDependencies(packageName, npmDependencies);
   }
@@ -721,6 +723,7 @@ Profile("meteorNpm.runNpmCommand", function (args, cwd) {
           }
           console.log(`done running npm command, resolving`);
           setTimeout(() => console.log(`100ms after last "done running...resolving"`), 100);
+          Promise._logYields = true;
 
           resolve({
             success: ! err,
@@ -934,6 +937,7 @@ var installFromShrinkwrap = function (dir) {
   console.log('running npm command from `installFromShrinkwrap`');
   var result = runNpmCommand(["install"], dir);
   console.log('done running npm command from `installFromShrinkwrap`');
+  Promise._logYields = false;
 
   if (! pkgJsonExisted) {
     files.rm_recursive(tempPkgJsonPath);

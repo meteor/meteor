@@ -1,21 +1,19 @@
 {
   "dependencies": {
+    "asap": {
+      "version": "2.0.4",
+      "resolved": "https://registry.npmjs.org/asap/-/asap-2.0.4.tgz",
+      "from": "asap@>=2.0.3 <2.1.0"
+    },
     "meteor-promise": {
-      "version": "0.7.2",
-      "resolved": "https://registry.npmjs.org/meteor-promise/-/meteor-promise-0.7.2.tgz",
-      "from": "meteor-promise@0.7.2"
+      "version": "0.7.4",
+      "resolved": "git+https://github.com/tmeasday/meteor-promise.git#7b4aac385d70f0d352a7575e625b0c383c54f09a",
+      "from": "meteor-promise@https://github.com/tmeasday/meteor-promise.git#7b4aac385d70f0d352a7575e625b0c383c54f09a"
     },
     "promise": {
       "version": "7.1.1",
       "resolved": "https://registry.npmjs.org/promise/-/promise-7.1.1.tgz",
-      "from": "promise@7.1.1",
-      "dependencies": {
-        "asap": {
-          "version": "2.0.3",
-          "resolved": "https://registry.npmjs.org/asap/-/asap-2.0.3.tgz",
-          "from": "asap@>=2.0.3 <2.1.0"
-        }
-      }
+      "from": "promise@7.1.1"
     }
   }
 }
