@@ -720,6 +720,7 @@ Profile("meteorNpm.runNpmCommand", function (args, cwd) {
             process.stdout.write(err ? 'failed\n' : 'done\n');
           }
           console.log(`done running npm command, resolving`);
+          setTimeout(() => console.log(`100ms after last "done running...resolving"`), 100);
 
           resolve({
             success: ! err,
