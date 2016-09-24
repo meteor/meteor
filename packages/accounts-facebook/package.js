@@ -12,7 +12,7 @@ Package.onUse(function(api) {
   api.imply('facebook-oauth');
 
   // If users use accounts-ui but not facebook-config-ui, give them a tip.
-  api.use(['accounts-ui', 'facebook-config-ui'], 'client', { weak: true });
+  api.use(['accounts-ui', 'facebook-config-ui'], ['client', 'server'], { weak: true });
   api.addFiles("notice.js");
 
   api.addFiles("facebook.js");
