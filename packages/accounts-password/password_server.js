@@ -543,7 +543,8 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
   var tokenRecord = {
     token: token,
     email: email,
-    when: when
+    when: when,
+    reason: 'reset'
   };
   Meteor.users.update(userId, {$set: {
     "services.password.reset": tokenRecord
@@ -611,7 +612,8 @@ Accounts.sendEnrollmentEmail = function (userId, email) {
   var tokenRecord = {
     token: token,
     email: email,
-    when: when
+    when: when,
+    reason: 'enroll'
   };
   Meteor.users.update(userId, {$set: {
     "services.password.reset": tokenRecord
@@ -665,7 +667,11 @@ Meteor.methods({resetPassword: function (token, newPassword) {
       if (!user)
         throw new Meteor.Error(403, "Token expired");
       var when = user.services.password.reset.when;
+      var reason = user.services.password.reset.reason;
       var tokenLifetimeMs = Accounts._getPasswordResetTokenLifetimeMs();
+      if (reason === "enroll") {
+        tokenLifetimeMs = Accounts._getPasswordEnrollTokenLifetimeMs();
+      }
       var currentTimeMs = Date.now();
       if ((currentTimeMs - when) > tokenLifetimeMs)
         throw new Meteor.Error(403, "Token expired");
