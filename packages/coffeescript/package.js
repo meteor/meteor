@@ -37,6 +37,7 @@ Package.onTest(function (api) {
     'tests/coffeescript_test_setup.js',
     'tests/coffeescript_tests.coffee',
     'tests/coffeescript_strict_tests.coffee',
+    'tests/coffeescript_module.coffee',
     'tests/es2015_module.js',
     'tests/litcoffeescript_tests.litcoffee',
     'tests/litcoffeescript_tests.coffee.md',

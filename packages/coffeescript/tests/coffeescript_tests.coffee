@@ -23,3 +23,8 @@ Tinytest.add "coffeescript - import external package via native import statement
 import { testingForImportedModule123456789 } from "./es2015_module.js";
 Tinytest.add "coffeescript - import local module via native import statement", (test) ->
   test.isTrue testingForImportedModule123456789?
+
+
+import { testingForNativeImportedModule123456789 } from "./coffeescript_module.coffee";
+Tinytest.add "coffeescript - import local module exported by a CoffeeScript native export statement, via native import statement", (test) ->
+  test.isTrue testingForNativeImportedModule123456789?
