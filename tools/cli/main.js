@@ -594,7 +594,7 @@ Fiber(function () {
   // tight timetable for 1.0 and there is no advantage to doing it now
   // rather than later. #ImprovingCrossVersionOptionParsing
 
-  var isBoolean = { "--help": true };
+  var isBoolean = { "--help": true, "--unsafe-perm": true };
   var walkCommands = function (node) {
     _.each(node, function (value, key) {
       if (value instanceof Command) {
@@ -744,6 +744,35 @@ Fiber(function () {
 
     // It is a plain old argument!
     rawArgs.push(term);
+  }
+  
+  // Check if meteor is run as root only on UNIX platforms
+  var unixPlatforms = { 
+    'darwin': true,
+    'linux': true,
+    'freebsd': true
+  };
+  var platform = process.platform;
+
+  if (_.has(unixPlatforms, platform)){
+    var isRoot = process.env.USERNAME == 'root';
+    var isRootSafe = _.has(rawOptions, '--unsafe-perm');
+
+    if(isRoot && !isRootSafe){
+      Console.error("");
+      Console.error("It seems that you are running meteor as root, if you really know what you are doing, add the unsafe-perm flag.");
+      Console.error("");
+      Console.error("meteor --unsafe-perm <command>");
+      Console.error("");
+      process.exit(1);
+    }
+    if (isRoot && isRootSafe) {
+      Console.info("");
+      Console.info("You are running meteor as root, don't forget to chown your .meteor directory back to yourself.");
+      Console.info("");
+      Console.info("chown -Rh <username> ~/.meteor");
+      Console.info("");
+    }
   }
 
   // Figure out if we're running in a directory that is part of a Meteor
