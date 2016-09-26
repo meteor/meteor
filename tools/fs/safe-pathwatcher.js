@@ -1,4 +1,5 @@
 var files = require('./files.js');
+import { Profile } from "../tool-env/profile.js";
 
 // Set METEOR_WATCH_FORCE_POLLING environment variable to a truthy value to
 // force the use of files.watchFile instead of pathwatcher.watch.
@@ -160,11 +161,14 @@ function pathwatcherWatch(absPath, callback) {
   return null;
 }
 
-export function watch(absPath, callback) {
-  const entry = acquireWatcher(absPath, callback);
-  return {
-    close() {
-      entry.release(callback);
-    }
-  };
-}
+export const watch = Profile(
+  "pathwatcher.watch",
+  (absPath, callback) => {
+    const entry = acquireWatcher(absPath, callback);
+    return {
+      close() {
+        entry.release(callback);
+      }
+    };
+  }
+);
