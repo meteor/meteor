@@ -16,11 +16,6 @@ var DEFAULT_POLLING_INTERVAL =
 var NO_PATHWATCHER_POLLING_INTERVAL =
       ~~process.env.METEOR_WATCH_POLLING_INTERVAL_MS || 500;
 
-// When a file changes, we wait for this long before actually recomputing
-// its hash, though of course we compute it immediately if anyone asks for
-// it in the meantime.
-const REHASH_DELAY_MS = 500;
-
 // This may seems like a long time to wait before actually closing the
 // file watchers, but it's to our advantage if they survive restarts.
 const WATCHER_CLEANUP_DELAY_MS = 30000;
@@ -44,24 +39,15 @@ function startNewWatcher(absPath) {
   let lastPathwatcherEventTime = 0;
   const callbacks = new Set;
   let latestHash = hashOrNull(absPath);
-  let requestRehashTimer = null;
   let watcherCleanupTimer = null;
 
   function fire(self, args) {
-    requestRehash();
+    latestHash = void 0;
     callbacks.forEach(cb => cb.apply(self, args));
   }
 
-  function requestRehash() {
-    if (requestRehashTimer === null) {
-      requestRehashTimer = setTimeout(ensureLatestHash, REHASH_DELAY_MS);
-    }
-  }
-
   function ensureLatestHash() {
-    if (requestRehashTimer !== null) {
-      clearTimeout(requestRehashTimer);
-      requestRehashTimer = null;
+    if (typeof latestHash === "undefined") {
       latestHash = hashOrNull(absPath);
     }
     return latestHash;
