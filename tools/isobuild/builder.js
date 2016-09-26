@@ -2,6 +2,11 @@ import {WatchSet, readAndWatchFile, sha1} from '../fs/watch.js';
 import files from '../fs/files.js';
 import NpmDiscards from './npm-discards.js';
 import {Profile} from '../tool-env/profile.js';
+import {
+  optimisticReadFile,
+  optimisticReaddir,
+  optimisticLStat,
+} from "../fs/optimistic.js";
 
 // Builder is in charge of writing "bundles" to disk, which are
 // directory trees such as site archives, programs, and packages.  In
@@ -455,7 +460,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
       this._ensureDirectory(relTo);
 
-      files.readdir(absFrom).forEach(item => {
+      optimisticReaddir(absFrom).forEach(item => {
         const thisAbsFrom = files.pathResolve(absFrom, item);
         const thisRelTo = files.pathJoin(relTo, item);
 
@@ -463,7 +468,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           return;
         }
 
-        const fileStatus = files.lstat(thisAbsFrom);
+        const fileStatus = optimisticLStat(thisAbsFrom);
 
         let itemForMatch = item;
         const isDirectory = fileStatus.isDirectory();
@@ -500,9 +505,11 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         } else {
           // XXX can't really optimize this copying without reading
           // the file into memory to calculate the hash.
-          files.copyFile(thisAbsFrom,
-                         files.pathResolve(this.buildPath, thisRelTo),
-                         fileStatus.mode);
+          files.writeFile(
+            files.pathResolve(this.buildPath, thisRelTo),
+            optimisticReadFile(thisAbsFrom),
+            { mode: fileStatus.mode },
+          );
 
           this.usedAsFile[thisRelTo] = true;
         }
