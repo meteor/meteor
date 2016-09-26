@@ -26,7 +26,7 @@ To get started with React in Meteor, you can follow along the [React tutorial](h
 To install React in Meteor 1.3 you should simply add it as an npm dependency:
 
 ```sh
-npm install --save react react-dom
+meteor npm install --save react react-dom
 ```
 
 This will install `react` into your project and allow you to access it within your files with `import React from 'react'`. Most React code is written in [JSX](https://facebook.github.io/react/docs/jsx-in-depth.html), which you can use by [default in Meteor](http://guide.meteor.com/build-tool.html#react-jsx) if you include the `ecmascript` package (which is installed in all Meteor apps by default).
@@ -67,12 +67,12 @@ meteor add static-html
 
 <h3 id="using-third-party-npm-packages">Using 3rd party packages</h3>
 
-If you'd like to use a third party React component that has been [published on npm](https://www.npmjs.com/search?q=react), you can `npm install --save` them and `import` from within your app.
+If you'd like to use a third party React component that has been [published on npm](https://www.npmjs.com/search?q=react), you can `meteor npm install --save` them and `import` from within your app.
 
 For example, to use the excellent [Griddle](http://griddlegriddle.github.io/Griddle/) React package for making tables, you could run
 
 ```sh
-npm install --save griddle-react
+meteor npm install --save griddle-react
 ```
 
 Then, like with any other [npm package](using-packages.html#npm), you can import the component in your application:
@@ -254,7 +254,7 @@ There are two main options for routing with Meteor and React. Either way, we rec
 
 <h3 id="using-flow-router">Flow Router</h3>
 
-Using Flow Router with React is very similar to using it with Blaze. The only difference is that in your route actions, you should use the [`react-mounter`](https://www.npmjs.com/package/react-mounter) package to mount components with a layout. Once you `npm install --save react-mounter`, you can do the following:
+Using Flow Router with React is very similar to using it with Blaze. The only difference is that in your route actions, you should use the [`react-mounter`](https://www.npmjs.com/package/react-mounter) package to mount components with a layout. Once you `meteor npm install --save react-mounter`, you can do the following:
 
 ```js
 import React from 'react';
@@ -298,7 +298,7 @@ export default AppContainer = createContainer(props => {
 
 <h3 id="using-react-router">React Router</h3>
 
-Using React Router is also straightforward. Once you `npm install --save react-router`, you can simply export a list of nested routes as you would in any other React Router driven React application:
+Using React Router is also straightforward. Once you `meteor npm install --save react-router`, you can simply export a list of nested routes as you would in any other React Router driven React application:
 
 ```js
 import React from 'react';
