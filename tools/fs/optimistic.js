@@ -4,6 +4,7 @@ import { Profile } from "../tool-env/profile.js";
 import { watch } from "./safe-pathwatcher.js";
 import { sha1 } from "./watch.js";
 import {
+  pathSep,
   pathIsAbsolute,
   statOrNull,
   readFile,
@@ -37,17 +38,9 @@ function makeOptimistic(name, fn) {
     let entry = cache.get(path);
 
     if (! entry) {
-      entry = Object.create(null);
+      entry = maybeStartWatcher(path, key);
 
-      try {
-        entry.watcher = watch(path, (...args) => {
-          const result = entry.results[key];
-          // Trigger a cache miss the next time anyone asks.
-          delete result.value;
-          result.error = false;
-        });
-      } catch (e) {
-        // If we can't watch the file, we must not cache the result.
+      if (! entry) {
         return fn(...args);
       }
 
@@ -68,16 +61,47 @@ function makeOptimistic(name, fn) {
       return result.value;
     }
 
-    try {
-      result.value = fn(...args)
-      result.error = false;
-    } catch (e) {
-      result.error = true;
-      throw result.value = e;
-    }
-
-    return result.value;
+    return tryApply(result, fn, args);
   });
+}
+
+function maybeStartWatcher(path, key) {
+  const entry = Object.create(null);
+
+  if (path.split(pathSep).indexOf("node_modules") >= 0) {
+    // Avoid starting a watcher for files in node_modules directories.
+    // This effectively results in caching the result until the server is
+    // fully restarted, which isn't ideal, but it's better than wasting
+    // thousands of watchers on rarely-changing node_modules files.
+    return entry;
+  }
+
+  try {
+    entry.watcher = watch(path, (...args) => {
+      const result = entry.results[key];
+      // Trigger a cache miss the next time anyone asks.
+      delete result.value;
+      result.error = false;
+    });
+
+  } catch (e) {
+    // If we can't watch the file, we must not cache the result.
+    return null;
+  }
+
+  return entry;
+}
+
+function tryApply(result, fn, args) {
+  try {
+    result.value = fn(...args)
+    result.error = false;
+  } catch (e) {
+    result.error = true;
+    throw result.value = e;
+  }
+
+  return result.value;
 }
 
 function makeCacheKey(args) {
