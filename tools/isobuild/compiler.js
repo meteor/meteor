@@ -14,6 +14,11 @@ var compileStepModule = require('./compiler-deprecated-compile-step.js');
 var Profile = require('../tool-env/profile.js').Profile;
 import { SourceProcessorSet } from './build-plugin.js';
 
+import {
+  optimisticReadFile,
+  optimisticHashOrNull,
+} from "../fs/optimistic.js";
+
 var compiler = exports;
 
 // Whenever you change anything about the code that generates isopacks, bump
@@ -550,12 +555,9 @@ api.addAssets('${relPath}', 'client').`);
       return;
     }
 
-    // readAndWatchFileWithHash returns an object carrying a buffer with the
-    // file-contents. The buffer contains the original data of the file (no EOL
-    // transforms from the tools/files.js part).
-    const file = watch.readAndWatchFileWithHash(watchSet, absPath);
-    const hash = file.hash;
-    const contents = file.contents;
+    const contents = optimisticReadFile(absPath);
+    const hash = optimisticHashOrNull(absPath);
+    watchSet.addFile(absPath, hash);
 
     Console.nudge(true);
 
