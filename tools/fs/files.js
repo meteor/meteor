@@ -21,7 +21,6 @@ var sourceMapRetrieverStack = require('../tool-env/source-map-retriever-stack.js
 var utils = require('../utils/utils.js');
 var cleanup = require('../tool-env/cleanup.js');
 var buildmessage = require('../utils/buildmessage.js');
-var watch = require('./watch.js');
 var fiberHelpers = require('../utils/fiber-helpers.js');
 var colonConverter = require('../utils/colon-converter.js');
 
@@ -215,7 +214,7 @@ files.getCurrentToolsDir = function () {
 files.getSettings = function (filename, watchSet) {
   buildmessage.assertInCapture();
   var absPath = files.pathResolve(filename);
-  var buffer = watch.readAndWatchFile(watchSet, absPath);
+  var buffer = require("./watch.js").readAndWatchFile(watchSet, absPath);
   if (buffer === null) {
     buildmessage.error("file not found (settings file)",
                        { file: filename });
