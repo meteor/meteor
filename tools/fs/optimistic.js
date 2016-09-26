@@ -7,6 +7,7 @@ import {
   pathSep,
   pathIsAbsolute,
   statOrNull,
+  lstat,
   readFile,
   readdir,
 } from "./files.js";
@@ -123,6 +124,7 @@ function makeCacheKey(args) {
 }
 
 export const optimisticStatOrNull = makeOptimistic("statOrNull", statOrNull);
+export const optimisticLStat = makeOptimistic("lstat", lstat);
 export const optimisticReadFile = makeOptimistic("readFile", readFile);
 export const optimisticReaddir = makeOptimistic("readdir", readdir);
 export const optimisticHashOrNull = makeOptimistic("hashOrNull", path => {
