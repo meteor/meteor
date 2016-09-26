@@ -1,5 +1,4 @@
 var files = require('./files.js');
-import { readFile, sha1 } from "./watch.js";
 
 // Set METEOR_WATCH_FORCE_POLLING environment variable to a truthy value to
 // force the use of files.watchFile instead of pathwatcher.watch.
@@ -38,19 +37,10 @@ function acquireWatcher(absPath, callback) {
 function startNewWatcher(absPath) {
   let lastPathwatcherEventTime = +new Date;
   const callbacks = new Set;
-  let latestHash = hashOrNull(absPath);
   let watcherCleanupTimer = null;
 
   function fire(self, args) {
-    latestHash = void 0;
     callbacks.forEach(cb => cb.apply(self, args));
-  }
-
-  function ensureLatestHash() {
-    if (typeof latestHash === "undefined") {
-      latestHash = hashOrNull(absPath);
-    }
-    return latestHash;
   }
 
   function pathwatcherWrapper(...args) {
@@ -101,8 +91,6 @@ function startNewWatcher(absPath) {
 
   return {
     callbacks,
-
-    cheapHashOrNull: ensureLatestHash,
 
     release(callback) {
       if (! watchers[absPath]) {
@@ -172,11 +160,6 @@ function pathwatcherWatch(absPath, callback) {
   return null;
 }
 
-function hashOrNull(absPath) {
-  const contents = readFile(absPath);
-  return contents && sha1(contents) || null;
-}
-
 export function watch(absPath, callback) {
   const entry = acquireWatcher(absPath, callback);
   return {
@@ -184,11 +167,4 @@ export function watch(absPath, callback) {
       entry.release(callback);
     }
   };
-}
-
-export function cheapHashOrNull(absPath) {
-  const entry = watchers[absPath];
-  return entry
-    ? entry.cheapHashOrNull()
-    : hashOrNull(absPath);
 }

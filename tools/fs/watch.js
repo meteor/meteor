@@ -4,7 +4,11 @@ import pathwatcher from './safe-pathwatcher.js';
 import {createHash} from "crypto";
 import {coalesce} from '../utils/func-utils.js';
 import {Profile} from '../tool-env/profile.js';
-import { cheapHashOrNull } from "./safe-pathwatcher.js";
+
+import {
+  optimisticReaddir,
+  optimisticHashOrNull,
+} from "./optimistic.js";
 
 // Watch for changes to a set of files, and the first time that any of
 // the files change, call a user-provided callback. (If you want a
@@ -263,7 +267,7 @@ export function sha1(contents) {
 export function readDirectory({absPath, include, exclude, names}) {
   // Read the directory.
   try {
-    var contents = files.readdir(absPath);
+    var contents = optimisticReaddir(absPath);
   } catch (e) {
     // If the path is not a directory, return null; let other errors through.
     if (e && (e.code === 'ENOENT' || e.code === 'ENOTDIR')) {
@@ -370,7 +374,7 @@ export class Watcher {
       throw new Error("Checking unknown file " + absPath);
     }
 
-    var newHash = cheapHashOrNull(absPath);
+    var newHash = optimisticHashOrNull(absPath);
 
     if (newHash === null) {
       // File does not exist (or is a directory).

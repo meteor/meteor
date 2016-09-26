@@ -5,17 +5,21 @@ import {
   has,
 } from "underscore";
 
-import { readAndWatchFileWithHash } from "../fs/watch.js";
+import { sha1 } from "../fs/watch.js";
 import { matches as archMatches } from "../utils/archinfo.js";
 import {
   pathJoin,
   pathRelative,
   pathNormalize,
   pathDirname,
-  statOrNull as realStatOrNull,
   convertToOSPath,
   convertToPosixPath,
 } from "../fs/files.js";
+
+import {
+  optimisticStatOrNull,
+  optimisticReadFile,
+} from "../fs/optimistic.js";
 
 const nativeModulesMap = Object.create(null);
 const nativeNames = Object.keys(process.binding("natives"));
@@ -47,7 +51,7 @@ export default class Resolver {
     watchSet = null,
     onPackageJson,
     onMissing,
-    statOrNull = realStatOrNull,
+    statOrNull = optimisticStatOrNull,
   }) {
     this.sourceRoot = sourceRoot;
     this.extensions = extensions;
@@ -260,8 +264,9 @@ export default class Resolver {
 
     let result = null;
     try {
-      result = JSON.parse(
-        readAndWatchFileWithHash(this.watchSet, path).contents);
+      const contents = optimisticReadFile(path);
+      result = JSON.parse(contents);
+      this.watchSet.addFile(path, sha1(contents));
     } catch (e) {
       if (! (e instanceof SyntaxError ||
              e.code === "ENOENT")) {

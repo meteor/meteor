@@ -4,7 +4,7 @@ import {Script} from "vm";
 import {
   isString, isEmpty, has, keys, each, map, omit,
 } from "underscore";
-import {sha1, readAndWatchFileWithHash} from "../fs/watch.js";
+import {sha1} from "../fs/watch.js";
 import {matches as archMatches} from "../utils/archinfo.js";
 import {findImportedModuleIdentifiers} from "./js-analyze.js";
 import {cssToCommonJS} from "./css-modules.js";
@@ -20,10 +20,15 @@ import {
   pathBasename,
   pathExtname,
   pathIsAbsolute,
-  statOrNull as realStatOrNull,
   convertToOSPath,
   convertToPosixPath,
 } from "../fs/files.js";
+
+import {
+  optimisticReadFile,
+  optimisticStatOrNull,
+  optimisticHashOrNull,
+} from "../fs/optimistic.js";
 
 import Resolver from "./resolver.js";
 
@@ -135,7 +140,8 @@ export default class ImportScanner {
         if (file) {
           return fakeFileStat;
         }
-        return realStatOrNull(absPath);
+
+        return optimisticStatOrNull(absPath);
       }
     });
   }
@@ -549,8 +555,10 @@ export default class ImportScanner {
   }
 
   _readFile(absPath) {
-    let { contents, hash } =
-      readAndWatchFileWithHash(this.watchSet, absPath);
+    const contents = optimisticReadFile(absPath);
+    const hash = optimisticHashOrNull(absPath);
+
+    this.watchSet.addFile(absPath, hash);
 
     return {
       data: contents,
