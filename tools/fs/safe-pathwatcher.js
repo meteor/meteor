@@ -36,7 +36,7 @@ function acquireWatcher(absPath, callback) {
 }
 
 function startNewWatcher(absPath) {
-  let lastPathwatcherEventTime = 0;
+  let lastPathwatcherEventTime = +new Date;
   const callbacks = new Set;
   let latestHash = hashOrNull(absPath);
   let watcherCleanupTimer = null;
@@ -72,7 +72,16 @@ function startNewWatcher(absPath) {
     : NO_PATHWATCHER_POLLING_INTERVAL;
 
   function watchFileWrapper(...args) {
-    const self = this;
+    const [newStat, oldStat] = args;
+
+    if (newStat.ino === 0 &&
+        oldStat.ino === 0 &&
+        +newStat.mtime === +oldStat.mtime) {
+      // Node calls the watchFile listener once with bogus identical stat
+      // objects, which should not trigger a file change event.
+      return;
+    }
+
     // If a pathwatcher event fired in the last polling interval, ignore
     // this event.
     if (new Date - lastPathwatcherEventTime > pollingInterval) {
