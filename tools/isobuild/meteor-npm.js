@@ -140,11 +140,11 @@ export function getProdPackageNames(nodeModulesDir) {
   // Returns true iff dir is a package directory.
   function walk(dir) {
     const packageJsonPath = files.pathJoin(dir, "package.json");
-    const packageJsonStat = files.statOrNull(packageJsonPath);
+    const packageJsonStat = optimisticStatOrNull(packageJsonPath);
 
     if (packageJsonStat &&
         packageJsonStat.isFile()) {
-      const pkg = JSON.parse(files.readFile(packageJsonPath));
+      const pkg = JSON.parse(optimisticReadFile(packageJsonPath));
       const nodeModulesDir = files.pathJoin(dir, "node_modules");
       nodeModulesDirStack.push(nodeModulesDir);
 
@@ -194,7 +194,7 @@ export function getProdPackageNames(nodeModulesDir) {
     for (let i = nodeModulesDirStack.length - 1; i >= 0; --i) {
       const nodeModulesDir = nodeModulesDirStack[i];
       const candidate = files.pathJoin(nodeModulesDir, name);
-      const stat = files.statOrNull(candidate);
+      const stat = optimisticStatOrNull(candidate);
       if (stat && stat.isDirectory()) {
         return candidate;
       }
