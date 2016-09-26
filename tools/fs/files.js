@@ -1478,7 +1478,8 @@ function wrapFsFunc(fsFuncName, pathArgIndices, options) {
       // conditions, so we get a nice performance boost from making
       // these calls sync.
       const isQuickie = (fsFuncName === 'stat' ||
-                         fsFuncName === 'rename');
+                         fsFuncName === 'rename' ||
+                         fsFuncName === 'symlink');
 
       if (canYield && shouldBeSync && !isQuickie) {
         const promise = new Promise((resolve, reject) => {
