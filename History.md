@@ -11,6 +11,8 @@
 
 * The `fibers` npm package has been updated to 1.0.14.
 
+* The `lru-cache` npm package has been updated to 4.0.1.
+
 * Blaze-related packages have been extracted to
   [`meteor/blaze`](https://github.com/meteor/blaze), and the main
   [`meteor/meteor`](https://github.com/meteor/meteor) repository now
