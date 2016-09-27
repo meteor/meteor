@@ -44,6 +44,8 @@ meteor
 If you want to run on the bleeding edge, or help develop Meteor, you
 can run Meteor directly from a git checkout.
 
+### Clone
+
 ```bash
 git clone --recursive git://github.com/meteor/meteor.git
 cd meteor
@@ -60,6 +62,35 @@ git submodule update --init --recursive
 in the root of the `meteor` repository. The typical symptom of not
 updating submodules will be `Error: Depending on unknown package ...`
 when you run most Meteor commands.
+
+### Create testing app
+
+To create a local app to test with your Meteor checkout this is a good 
+structure:
+
+```
+./meteor
+./demo-app
+```
+
+Create the demo app by running:
+
+```bash
+./meteor create demo-app
+```
+
+To run the demo-app with the local copy of Meteor:
+
+```bash
+cd demo-app
+../meteor/meteor
+```
+
+The first time you will see a message which confirms running locally:
+
+> It's the first time you've run Meteor from a git checkout.
+
+### Build from scratch
 
 If you're the sort of person who likes to build everything from scratch,
 you can build all the Meteor dependencies (node.js, npm, mongodb, etc)
@@ -79,6 +110,8 @@ download a pre-build version).
 ```bash
 ./meteor --help
 ```
+
+### Local docs
 
 From your checkout, you can read the docs locally. The `/docs` directory is a
 meteor application, so simply change into the `/docs` directory and launch
