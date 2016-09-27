@@ -56,7 +56,7 @@ function startNewWatcher(absPath) {
     // so our only hope of catching them is to continue polling.
   }
 
-  const watcher = pathwatcherWatch(absPath, pathwatcherWrapper);
+  let watcher = pathwatcherWatch(absPath, pathwatcherWrapper);
 
   const pollingInterval = watcher
     ? DEFAULT_POLLING_INTERVAL
@@ -113,9 +113,14 @@ function startNewWatcher(absPath) {
           return;
         }
 
-        watcher.close();
-        files.unwatchFile(absPath, watchFileWrapper);
         watchers[absPath] = null;
+
+        if (watcher) {
+          watcher.close();
+          watcher = null;
+        }
+
+        files.unwatchFile(absPath, watchFileWrapper);
       }, WATCHER_CLEANUP_DELAY_MS);
     }
   };
