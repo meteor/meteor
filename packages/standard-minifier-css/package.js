@@ -8,7 +8,7 @@ Package.describe({
 Package.registerBuildPlugin({
   name: "minifyStdCSS",
   use: [
-    'minifier-css'
+    'minifier-css@1.2.14'
   ],
   npmDependencies: {
     "source-map": "0.5.6",
