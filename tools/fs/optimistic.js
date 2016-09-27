@@ -12,6 +12,8 @@ import {
   readdir,
 } from "./files.js";
 
+const CACHE_MISS_SENTINEL = Object.create(null);
+
 function makeOptimistic(name, fn) {
   assert.strictEqual(typeof fn, "function");
 
@@ -46,23 +48,17 @@ function makeOptimistic(name, fn) {
       }
 
       entry.results = Object.create(null);
-
-      // Equivalent to a cache miss, because there is no "value" key.
-      entry.results[key] = { error: false };
+      entry.results[key] = CACHE_MISS_SENTINEL;
 
       cache.set(path, entry);
     }
 
-    const result = entry.results[key];
-
-    if ("value" in result) {
-      if (result.error) {
-        throw result.value;
-      }
-      return result.value;
+    let result = entry.results[key];
+    if (result === CACHE_MISS_SENTINEL) {
+      result = entry.results[key] = fn(...args);
     }
 
-    return tryApply(result, fn, args);
+    return result;
   });
 }
 
@@ -79,10 +75,8 @@ function maybeStartWatcher(path, key) {
 
   try {
     entry.watcher = watch(path, (...args) => {
-      const result = entry.results[key];
       // Trigger a cache miss the next time anyone asks.
-      delete result.value;
-      result.error = false;
+      entry.results[key] = CACHE_MISS_SENTINEL;
     });
 
   } catch (e) {
@@ -91,18 +85,6 @@ function maybeStartWatcher(path, key) {
   }
 
   return entry;
-}
-
-function tryApply(result, fn, args) {
-  try {
-    result.value = fn(...args)
-    result.error = false;
-  } catch (e) {
-    result.error = true;
-    throw result.value = e;
-  }
-
-  return result.value;
 }
 
 function makeCacheKey(args) {
