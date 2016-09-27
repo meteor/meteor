@@ -26,11 +26,25 @@ options.fallback = function (id, parentId, error) {
 };
 
 options.fallback.resolve = function (id, parentId, error) {
-  if (Meteor.isServer &&
-      topLevelIdPattern.test(id)) {
-    // Allow any top-level identifier to resolve to itself on the server,
-    // so that options.fallback can have a chance to handle it.
-    return id;
+  if (Meteor.isServer) {
+    if (topLevelIdPattern.test(id)) {
+      // Allow any top-level identifier to resolve to itself on the server,
+      // so that options.fallback can have a chance to handle it.
+      return id;
+    }else{
+      // Try to give a specific error in known cases
+      if (parentId.startsWith("/imports/ui")) {
+        throw new Error("Cannot find module " + 
+          "'" + id + "' from " + parentId + " on the server." + 
+          " Are you sure this file is intended to load on the server?");
+      }
+
+      if (parentId.startsWith("/client")) {
+        throw new Error("Cannot find module " + 
+          "'" + id + "' from " + parentId + " on the server." + 
+          " Are you sure this file is intended to load on the server?");
+      }
+    }
   }
 
   throw error;
