@@ -1,6 +1,6 @@
 ## v1.4.2
 
-* The `npm` npm package has been updated to 3.10.7.
+* The `npm` npm package has been updated to 3.10.8.
 
 * The `node-pre-gyp` npm package has been updated to 0.6.30.
 
