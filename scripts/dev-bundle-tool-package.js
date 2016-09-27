@@ -50,8 +50,7 @@ var packageJson = {
     // 2.4.0 (more or less, the package.json change isn't committed) plus our PR
     // https://github.com/williamwicks/node-eachline/pull/4
     eachline: "https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da",
-    pathwatcher: "6.7.0",
-    runas: "3.1.1",
+    pathwatcher: "6.7.1",
     'lru-cache': '2.6.4',
     'cordova-lib': "6.0.0",
     longjohn: '0.2.11'
