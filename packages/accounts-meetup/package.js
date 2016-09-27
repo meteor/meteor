@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Login service for Meetup accounts",
-  version: "1.0.11-beta.5"
+  version: "1.0.11-beta.6"
 });
 
 Package.onUse(function(api) {
