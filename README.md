@@ -76,7 +76,7 @@ structure:
 Create the demo app by running:
 
 ```bash
-./meteor create demo-app
+./meteor/meteor create demo-app
 ```
 
 To run the demo-app with the local copy of Meteor:
