@@ -152,11 +152,13 @@ function pathwatcherWatch(absPath, callback) {
           archinfo.matches(archinfo.host(), 'os.linux')) {
         suggestedRaisingWatchLimit = true;
         var Console = require('../console/console.js').Console;
-        Console.arrowWarn(
-          "It looks like a simple tweak to your system's configuration will " +
-            "make many tools (including this Meteor command) more efficient. " +
-            "To learn more, see " +
-            Console.url("https://github.com/meteor/meteor/wiki/File-Change-Watcher-Efficiency"));
+        if (! Console.isHeadless()) {
+          Console.arrowWarn(
+            "It looks like a simple tweak to your system's configuration will " +
+              "make many tools (including this Meteor command) more efficient. " +
+              "To learn more, see " +
+              Console.url("https://github.com/meteor/meteor/wiki/File-Change-Watcher-Efficiency"));
+        }
       }
       // ... ignore the error.  We'll still have watchFile, which is good
       // enough.

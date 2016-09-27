@@ -541,6 +541,8 @@ var Console = function (options) {
 
   options = options || {};
 
+  self._headless = false;
+
   // The progress display we are showing on-screen
   self._progressDisplay = new ProgressDisplayNone(self);
 
@@ -1265,12 +1267,16 @@ _.extend(Console.prototype, {
     self._setProgressDisplay(newProgressDisplay);
   },
 
-  setHeadless(headless) {
-    if (typeof headless === "undefined") headless = true;
-    headless = !! headless;
+  isHeadless() {
+    return this._headless;
+  },
+
+  setHeadless(headless = true) {
+    this._headless = !! headless;
+
     if (this._progressDisplay &&
         this._progressDisplay.setHeadless) {
-      this._progressDisplay.setHeadless(headless);
+      this._progressDisplay.setHeadless(this._headless);
     }
   },
 
