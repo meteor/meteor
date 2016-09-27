@@ -4,6 +4,9 @@ cd "`dirname "$0"`"
 cd ../..
 export METEOR_HOME=`pwd`
 
+# Clear dev_bundle/.npm to ensure consistent test runs.
+./meteor npm cache clear
+
 export PATH=$METEOR_HOME:$PATH
 # synchronously get the dev bundle and NPM modules if they're not there.
 ./meteor --get-ready || exit 1
