@@ -113,7 +113,7 @@ Run at least one Meteor command to install required dependencies, like:
 ./meteor --help
 ```
 
-You local Meteor checkout is now ready for use.
+Your local Meteor checkout is now ready for use.
 
 Note that if you run Meteor from a git checkout, you cannot pin apps to specific
 Meteor releases or run using different Meteor releases using `--release`.
