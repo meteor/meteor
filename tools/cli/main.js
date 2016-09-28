@@ -747,17 +747,9 @@ Fiber(function () {
   }
 
   // Prevent running meteor as root
-
-  var unixPlatforms = {
-    'darwin': true,
-    'linux': true,
-    'freebsd': true
-  };
-  var platform = process.platform;
-
-  if (_.has(unixPlatforms, platform)){
+  if (process.getuid) {
     // On UNIX platforms.
-    if (process.getgid() === 0 && process.getuid() === 0){
+    if (process.getuid() === 0){
       if (_.has(rawOptions, '--unsafe-perm')) {
         // Meteor is running as root and has the --unsafe-perm flag, just notice.
         Console.info("");
