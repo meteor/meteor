@@ -8,13 +8,14 @@ selftest.define("bundle-ignore-files", () => {
     '.meteor/',
     '.DS_Store',
     '.aaabbb.swp',
+    'Icon.',
     'Thumbs.db'
   ];
 
   matchingInputs.forEach(input => selftest.expectEqual(patterns.some(p => p.test(input)),true));
 
   const nonMatchingInputs = [
-    '/imports/components/Icon/index.js',
+    'Icon',
   ];
 
   nonMatchingInputs.forEach(input => selftest.expectEqual(patterns.some(p => p.test(input)),false));
