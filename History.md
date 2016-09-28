@@ -7,6 +7,11 @@
 
 * The `fibers` npm package has been upgraded to version 1.0.15.
 
+* Running Meteor with a different `--port` will now automatically
+  reconfigure the Mongo replica set when using the WiredTiger storage
+  engine, instead of failing to start Mongo.
+  [#7840](https://github.com/meteor/meteor/pull/7840).
+
 ## v1.4.1.2
 
 * Node has been upgraded to version 4.6.0, a recommended security release:
