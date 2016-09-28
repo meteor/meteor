@@ -12,4 +12,10 @@ selftest.define("bundle-ignore-files", () => {
   ];
 
   matchingInputs.forEach(input => selftest.expectEqual(patterns.some(p => p.test(input)),true));
+
+  const nonMatchingInputs = [
+    '/imports/components/Icon/index.js',
+  ];
+
+  nonMatchingInputs.forEach(input => selftest.expectEqual(patterns.some(p => p.test(input)),false));
 });
