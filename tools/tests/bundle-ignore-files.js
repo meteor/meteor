@@ -1,22 +1,15 @@
-var _ = require('underscore');
-var selftest = require('../tool-testing/selftest.js');
-var Sandbox = selftest.Sandbox;
-var files = require('../fs/files.js');
-var bundler = require('../isobuild/bundler.js');
+const selftest = require('../tool-testing/selftest.js');
+const bundler = require('../isobuild/bundler.js');
 
 selftest.define("bundle-ignore-files", () => {
-  var patterns = bundler.ignoreFiles;
-  var inputs = [
+  const patterns = bundler.ignoreFiles;
+  const matchingInputs = [
     '.git/',
     '.meteor/',
     '.DS_Store',
     '.aaabbb.swp',
-    'Thumbs.db',
+    'Thumbs.db'
   ];
-  _.each(inputs, (input) => {
-    let matched = _.any(patterns, (ptn) => {
-      return ptn.test(input);
-    });
-    selftest.expectEqual(matched, true);
-  });
+
+  matchingInputs.forEach(input => selftest.expectEqual(patterns.some(p => p.test(input)),true));
 });
