@@ -52,7 +52,9 @@ function getDevBundleDir() {
     return defaultDevBundlePromise;
   }
 
-  return getDevBundleForRelease(release).then(function (devBundleDir) {
+  return Promise.resolve(
+    getDevBundleForRelease(release)
+  ).then(function (devBundleDir) {
     if (devBundleDir) {
       links.makeLink(devBundleDir, devBundleLink);
       return devBundleDir;
