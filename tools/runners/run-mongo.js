@@ -532,7 +532,8 @@ var launchMongo = function (options) {
     var stdoutOnData = fiberHelpers.bindEnvironment(function (data) {
       // note: don't use "else ifs" in this, because 'data' can have multiple
       // lines
-      if (/\[initandlisten\] Did not find local replica set configuration document at startup/.test(data)) {
+      if (/\[initandlisten\] Did not find local replica set configuration document at startup/.test(data) ||
+          /\[ReplicationExecutor\] Locally stored replica set configuration does not have a valid entry for the current node/.test(data)) {
         replSetReadyToBeInitiated = true;
         maybeReadyToTalk();
       }
@@ -596,10 +597,25 @@ var launchMongo = function (options) {
       if (stopped) {
         return;
       }
+
       var configuration = {
         _id: replSetName,
+        version: 1,
         members: [{_id: 0, host: '127.0.0.1:' + options.port, priority: 100}]
       };
+
+      try {
+        const config = yieldingMethod(db.admin(), "command", {
+          replSetGetConfig: 1,
+        }).config;
+
+        // If a replication set configuration already exists, it's
+        // important that the new version number is greater than the old.
+        if (config && _.has(config, "version")) {
+          configuration.version = config.version + 1;
+        }
+      } catch (e) {}
+
       if (options.multiple) {
         // Add two more members: one of which should start as secondary but
         // could in theory become primary, and one of which can never be
@@ -613,10 +629,16 @@ var launchMongo = function (options) {
       }
 
       try {
-        var initiateResult = yieldingMethod(
-          db.admin(), 'command', {replSetInitiate: configuration});
+        yieldingMethod(db.admin(), 'command', {
+          replSetInitiate: configuration,
+        });
       } catch (e) {
-        if (e.message !== 'already initialized') {
+        if (e.message === 'already initialized') {
+          yieldingMethod(db.admin(), 'command', {
+            replSetReconfig: configuration,
+            force: true,
+          });
+        } else {
           throw Error("rs.initiate error: " + e.message);
         }
       }
