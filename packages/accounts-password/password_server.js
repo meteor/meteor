@@ -627,6 +627,9 @@ Accounts.sendEnrollmentEmail = function (userId, email) {
     from: Accounts.emailTemplates.enrollAccount.from
       ? Accounts.emailTemplates.enrollAccount.from(user)
       : Accounts.emailTemplates.from,
+    bcc: Accounts.emailTemplates.enrollAccount.bcc
+      ? Accounts.emailTemplates.enrollAccount.bcc(user)
+      : Accounts.emailTemplates.bcc,
     subject: Accounts.emailTemplates.enrollAccount.subject(user)
   };
 
