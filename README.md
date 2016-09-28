@@ -107,23 +107,13 @@ Now you can run meteor directly from the checkout (if you did not
 build the dependency bundle above, this will take a few moments to
 download a pre-build version).
 
+Run at least one Meteor command to install required dependencies, like:
+
 ```bash
 ./meteor --help
 ```
 
-### Local docs
-
-From your checkout, you can read the docs locally. The `/docs` directory is a
-meteor application, so simply change into the `/docs` directory and launch
-the app:
-
-```bash
-cd docs/
-../meteor
-```
-
-You'll then be able to read the docs locally in your browser at
-`http://localhost:3000/`.
+You local Meteor checkout is now ready for use.
 
 Note that if you run Meteor from a git checkout, you cannot pin apps to specific
 Meteor releases or run using different Meteor releases using `--release`.
