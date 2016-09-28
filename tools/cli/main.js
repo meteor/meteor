@@ -747,6 +747,7 @@ Fiber(function () {
   }
   
   // Check if meteor is run as root only on UNIX platforms.
+  
   var unixPlatforms = { 
     'darwin': true,
     'linux': true,
@@ -756,15 +757,10 @@ Fiber(function () {
 
   if (_.has(unixPlatforms, platform)){
     // On UNIX platforms.
-    var isRoot = process.getgid() === 0 && process.getuid() === 0;
     var isSudo = !_.isUndefined(process.env.SUDO_UID);
-    var isRootSafe = _.has(rawOptions, '--unsafe-perm');
     
-    // Issue when running `sudo meteor --unsafe-perm`, --unsafe-perm: unknown option.
-    // TODO: remove the --unsafe-perm flag.
-    
-    if (isRoot){
-      if (isRootSafe) {
+    if (process.getgid() === 0 && process.getuid() === 0){
+      if (_.has(rawOptions, '--unsafe-perm')) {
         // Meteor is running as root and has the --unsafe-perm flag, just notice.
         Console.info("");
         Console.info("You have run Meteor as root.", 
@@ -800,6 +796,9 @@ Fiber(function () {
         }
       }
     }
+    
+    // Issue when running `sudo meteor --unsafe-perm`, --unsafe-perm: unknown option.
+    // TODO: remove the --unsafe-perm flag.
   }
 
   // Figure out if we're running in a directory that is part of a Meteor
