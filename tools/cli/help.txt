@@ -54,7 +54,7 @@ Options:
                    example, --mobile-server=https://example.com:443).
   --production     Simulate production mode. Minify and bundle CSS and JS files.
   --raw-logs       Run without parsing logs from stdout and stderr.
-  --settings       Set optional data for Meteor.settings on the server.
+  --settings, -s   Set optional data for Meteor.settings on the server.
   --release        Specify the release of Meteor to use.
   --verbose        Print all output from builds logs.
   --no-lint        Don't run linters used by the app on every rebuild.
@@ -410,13 +410,13 @@ The --delete flag permanently removes a deployed application, including
 all of its stored data.
 
 Options:
-  --delete, -D  permanently delete this deployment
-  --debug       deploy in debug mode (don't minify, etc)
-  --settings    set optional data for Meteor.settings
+  --delete, -D    permanently delete this deployment
+  --debug         deploy in debug mode (don't minify, etc)
+  --settings, -s  set optional data for Meteor.settings
   --allow-incompatible-update   Allow packages in your project to be upgraded or
-                downgraded to versions that are potentially incompatible with
-                the current versions, if required to satisfy all package version
-                constraints.
+                  downgraded to versions that are potentially incompatible with
+                  the current versions, if required to satisfy all package version
+                  constraints.
 
 
 >>> logs
@@ -527,7 +527,7 @@ Options:
                     URL scheme (for example,
                     --mobile-server=https://example.com:443).
   --production      Simulate production mode. Minify and bundle CSS, JS files.
-  --settings        Set optional data for Meteor.settings on the server
+  --settings, -s    Set optional data for Meteor.settings on the server
 
   --ios,            Run tests in an emulator or on a mobile device. All of
   --android,        the tests for client and server will run in addition to
@@ -581,7 +581,7 @@ Options:
                     URL scheme (for example,
                     --mobile-server=https://example.com:443).
   --raw-logs        Run without parsing logs from stdout and stderr.
-  --settings        Set optional data for Meteor.settings on the server
+  --settings, -s    Set optional data for Meteor.settings on the server
 
   --ios,            Run tests in an emulator or on a mobile device. All of
   --android,        the tests for client and server will run in addition to
