@@ -83,7 +83,7 @@ export class CoffeeCompiler extends CachingCompiler {
 
     let sourceMap = JSON.parse(output.v3SourceMap);
 
-    if (source.match(/`|\b(?:import|export|yield)\b/)) {
+    if (/`|\b(?:import|export|yield)\b/.test(source)) {
       // If source contains backticks or features that output as ES2015+,
       // pass the coffee output through babel-compiler
       const doubleRoastedCoffee =
