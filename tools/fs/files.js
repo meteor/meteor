@@ -278,7 +278,23 @@ function statOrNull(path, preserveSymlinks) {
 
 // Like rm -r.
 files.rm_recursive = Profile("files.rm_recursive", function (p) {
-  rimraf.sync(files.convertToOSPath(p));
+  const path = files.convertToOSPath(p);
+  try {
+    rimraf.sync(path);
+  } catch (e) {
+    if (e.code === "ENOTEMPTY" &&
+        Fiber.current &&
+        Fiber.yield &&
+        ! Fiber.yield.disallowed) {
+      new Promise((resolve, reject) => {
+        rimraf(path, err => {
+          err ? reject(err) : resolve();
+        });
+      }).await();
+      return;
+    }
+    throw e;
+  }
 });
 
 // Makes all files in a tree read-only.
