@@ -8,7 +8,7 @@ selftest.define("bundle-ignore-files", () => {
     '.meteor/',
     '.DS_Store',
     '.aaabbb.swp',
-    'Icon.',
+    'Icon\r',
     'Thumbs.db'
   ];
 
