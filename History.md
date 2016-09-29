@@ -17,6 +17,11 @@
   been updated to version 2.2.10.
   [#7780](https://github.com/meteor/meteor/pull/7780)
 
+* When the Meteor development server shuts down, it now attempts to kill
+  the `mongod` process it spawned, in addition to killing any running
+  `mongod` processes when the server first starts up.
+  https://github.com/meteor/meteor/pull/7668/commits/295d3d5678228f06ee0ab6c0d60139849a0ea192
+
 * Blaze-related packages have been extracted to
   [`meteor/blaze`](https://github.com/meteor/blaze), and the main
   [`meteor/meteor`](https://github.com/meteor/meteor) repository now
