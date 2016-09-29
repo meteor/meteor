@@ -13,6 +13,10 @@
 
 * The `lru-cache` npm package has been updated to 4.0.1.
 
+* The `mongodb` npm package used by the `npm-mongo` Meteor package has
+  been updated to version 2.2.10.
+  [#7780](https://github.com/meteor/meteor/pull/7780)
+
 * Blaze-related packages have been extracted to
   [`meteor/blaze`](https://github.com/meteor/blaze), and the main
   [`meteor/meteor`](https://github.com/meteor/meteor) repository now
@@ -48,6 +52,17 @@
 * The `standard-minifier-css` package now does basic caching for the
   expensive `mergeCss` function.
   https://github.com/meteor/meteor/pull/7668/commits/bfa67337dda1e90610830611fd99dcb1bd44846a
+
+* The `coffeescript` package now natively supports `import` and `export`
+  declarations. [#7818](https://github.com/meteor/meteor/pull/7818)
+
+* Running Meteor with a different `--port` will now automatically
+  reconfigure the Mongo replica set when using the WiredTiger storage
+  engine, instead of failing to start Mongo.
+  [#7840](https://github.com/meteor/meteor/pull/7840).
+
+* Running Meteor with root privileges now displays a warning.
+  [#7821](https://github.com/meteor/meteor/pull/7821)
 
 ## v1.4.1.1
 
