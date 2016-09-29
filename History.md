@@ -12,6 +12,11 @@
   engine, instead of failing to start Mongo.
   [#7840](https://github.com/meteor/meteor/pull/7840).
 
+* When the Meteor development server shuts down, it now attempts to kill
+  the `mongod` process it spawned, in addition to killing any running
+  `mongod` processes when the server first starts up.
+  https://github.com/meteor/meteor/pull/7668/commits/295d3d5678228f06ee0ab6c0d60139849a0ea192
+
 ## v1.4.1.2
 
 * Node has been upgraded to version 4.6.0, a recommended security release:
