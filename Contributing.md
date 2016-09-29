@@ -61,9 +61,8 @@ for more details on proposing changes to core code.
 As of May 2016, we use GitHub to track feature requests. Feature request issues get the `feature` label, as well as a label
 corresponding to the Meteor subproject that they are a part of.
 
-Meteor is a big project with [many](https://www.meteor.com/projects)
-[subprojects](https://github.com/meteor/meteor/labels). Right now, the project
-doesn't have as many
+Meteor is a big project with [many subprojects](https://github.com/meteor/meteor/tree/devel/packages). 
+Right now, the project doesn't have as many
 [core developers (we're hiring!)](https://www.meteor.com/jobs/core-developer)
 as subprojects, so we're not able to work on every single subproject every
 month.  We use our [roadmap](Roadmap.md) to communicate the high level features we're prioritizing over the near and medium term.

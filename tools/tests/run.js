@@ -106,6 +106,7 @@ try {
   run.match('s.json: parse error reading settings file');
   run.match('Waiting for file change');
   s.write('s.json', '{}');
+  run.waitSecs(15);
   run.match('App running at');
   run.stop();
 

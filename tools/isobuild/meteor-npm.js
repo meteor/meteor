@@ -893,7 +893,6 @@ var getShrinkwrappedDependencies = function (dir) {
 };
 
 var installNpmModule = function (name, version, dir) {
-  ensureConnected();
 
   var installArg = utils.isNpmUrl(version)
     ? version : (name + "@" + version);
@@ -966,8 +965,6 @@ var installFromShrinkwrap = function (dir) {
       "Can't call `npm install` without a npm-shrinkwrap.json file present");
   }
 
-  ensureConnected();
-
   const tempPkgJsonPath = files.pathJoin(dir, "package.json");
   const pkgJsonExisted = files.exists(tempPkgJsonPath);
   if (! pkgJsonExisted) {
@@ -997,19 +994,6 @@ var installFromShrinkwrap = function (dir) {
       recordLastRebuildVersions(pkgDir);
     }
   });
-};
-
-// ensure we can reach http://npmjs.org before we try to install
-// dependencies. `npm install` times out after more than a minute.
-var ensureConnected = function () {
-  try {
-    httpHelpers.getUrl(process.env.NPM_CONFIG_REGISTRY || "http://registry.npmjs.org");
-  } catch (e) {
-    buildmessage.error("Can't install npm dependencies. " +
-                       "Are you connected to the internet?");
-    // Recover by returning false from updateDependencies
-    throw new NpmFailure;
-  }
 };
 
 // `npm shrinkwrap`
