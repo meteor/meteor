@@ -482,15 +482,15 @@ var launchMongo = function (options) {
 
     proc = spawnMongod(mongod_path, port, dbPath, replSetName);
 
-    subHandles.push({
-      stop: function () {
-        if (proc) {
-          proc.removeListener('exit', procExitHandler);
-          proc.kill('SIGINT');
-          proc = null;
-        }
+    function stop() {
+      if (proc) {
+        proc.removeListener('exit', procExitHandler);
+        proc.kill('SIGINT');
+        proc = null;
       }
-    });
+    }
+    require("../tool-env/cleanup.js").onExit(stop);
+    subHandles.push({ stop });
 
     var procExitHandler = fiberHelpers.bindEnvironment(function (code, signal) {
       // Defang subHandle.stop().
