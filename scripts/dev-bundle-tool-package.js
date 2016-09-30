@@ -34,6 +34,7 @@ var packageJson = {
     kexec: "2.0.2",
     "source-map": "0.5.3",
     "node-inspector": "0.12.8",
+    "v8-profiler": "5.6.5",
     chalk: "0.5.1",
     sqlite3: "3.1.3",
     netroute: "1.0.2",
