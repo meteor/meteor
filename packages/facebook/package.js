@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "DEPRECATED - Facebook OAuth flow",
+  summary: "DEPRECATED - Use facebook-oauth instead - Facebook OAuth flow",
   version: "1.3.0"
 });
 
