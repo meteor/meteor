@@ -218,8 +218,21 @@ function getImportedModuleId(node) {
 //
 // It only cares about assignments to variables; an assignment to a field on an
 // object (`Foo.Bar = true`) neither causes `Foo` nor `Foo.Bar` to be returned.
+const globalsCache = new LRU({
+  max: Math.pow(2, 12),
+  length(globals) {
+    let sum = 0;
+    Object.keys(globals).forEach(name => sum += name.length);
+    return sum;
+  }
+});
+
 export function findAssignedGlobals(source, hash) {
   const ast = tryToParse(source, hash);
+
+  if (hash && globalsCache.has(hash)) {
+    return globalsCache.get(hash);
+  }
 
   // We have to pass ignoreEval; otherwise, the existence of a direct eval call
   // causes escope to not bother to resolve references in the eval's scope.
@@ -265,6 +278,10 @@ export function findAssignedGlobals(source, hash) {
       assignedGlobals[entry.identifier.name] = true;
     }
   });
+
+  if (hash) {
+    globalsCache.set(hash, assignedGlobals);
+  }
 
   return assignedGlobals;
 }
