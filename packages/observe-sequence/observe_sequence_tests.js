@@ -177,6 +177,15 @@ Tinytest.add('observe-sequence - array to other array, strings', function (test)
   ]);
 });
 
+Tinytest.add('observe-sequence - bug #7850 array with null values', function (test) {
+  runOneObserveSequenceTestCase(test, function () {
+    return [1, null];
+  }, function () {}, [
+    {addedAt: [1, 1, 0, null]},
+    {addedAt: [null, null, 1, null]}
+  ]);
+});
+
 Tinytest.add('observe-sequence - array to other array, objects without ids', function (test) {
   var dep = new Tracker.Dependency;
   var seq = [{foo: 1}, {bar: 2}];
