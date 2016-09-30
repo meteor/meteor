@@ -143,7 +143,7 @@ Cordova will detect an Android SDK installed in various standard locations autom
 You can do this by adding these lines to your `~/.bash_profile` file (or the equivalent file for your shell environment, like `~/.zshrc`):
 ```
 # Android
-export ANDROID_HOME="/Users/<username>/Library/Android/sdk"
+export ANDROID_HOME="$HOME/Library/Android/sdk"
 export PATH=$PATH:$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools
 ```
 
