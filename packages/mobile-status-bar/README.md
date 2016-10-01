@@ -1,4 +1,6 @@
 # mobile-status-bar
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/mobile-status-bar) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/mobile-status-bar)
+***
 
 This package allows you to customize the status bar on Meteor
 Phonegap/Cordova apps.

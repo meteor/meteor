@@ -493,14 +493,6 @@ var springboard = function (rel, options) {
     }).await());
   }
 
-  // On OSX, there is a bug in node 4 when launching out to a node 0.10 process
-  // This should be fixed in the next release of node (we should then revert
-  // this change) https://github.com/meteor/meteor/issues/7491
-  if (process.platform === 'darwin') {
-    newArgv.unshift('-q', '/dev/null', executable);
-    executable = 'script';
-  }
-
   // Now exec; we're not coming back.
   require('kexec')(executable, newArgv);
   throw Error('exec failed?');

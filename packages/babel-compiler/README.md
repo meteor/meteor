@@ -1,3 +1,7 @@
+# babel-compiler
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/babel-compiler) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/babel-compiler)
+***
+
 [Babel](http://babeljs.io/) is a parser and transpiler for ECMAScript 2015
 syntax and beyond, which enables some upcoming JavaScript syntax features
 to be used in today's browsers and runtimes.

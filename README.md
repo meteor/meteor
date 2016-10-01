@@ -18,7 +18,9 @@ Next, read the [guide](http://guide.meteor.com) or the reference documentation a
 
 ## Quick Start
 
-Install Meteor:
+On Windows, simply go to https://www.meteor.com/install and use the Windows installer.
+
+On Linux/macOS, use this line:
 
 ```bash
 curl https://install.meteor.com/ | sh
@@ -43,9 +45,21 @@ If you want to run on the bleeding edge, or help develop Meteor, you
 can run Meteor directly from a git checkout.
 
 ```bash
-git clone git://github.com/meteor/meteor.git
+git clone --recursive git://github.com/meteor/meteor.git
 cd meteor
 ```
+
+The `--recursive` flag ensures that submodules will be initialized and
+updated as part of the cloning process. If you cloned the `meteor`
+repository without the `--recursive` flag, you can equivalently run
+
+```bash
+git submodule update --init --recursive
+```
+
+in the root of the `meteor` repository. The typical symptom of not
+updating submodules will be `Error: Depending on unknown package ...`
+when you run most Meteor commands.
 
 If you're the sort of person who likes to build everything from scratch,
 you can build all the Meteor dependencies (node.js, npm, mongodb, etc)
@@ -90,6 +104,8 @@ home directory. To uninstall Meteor, run:
 rm -rf ~/.meteor/
 sudo rm /usr/local/bin/meteor
 ```
+
+On Windows, just run the uninstaller from your Control Panel.
 
 ## Developer Resources
 

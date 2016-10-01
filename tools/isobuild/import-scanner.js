@@ -536,6 +536,14 @@ export default class ImportScanner {
       // Append this file to the output array and record its index.
       this._addFile(absImportedPath, depFile);
 
+      if (archMatches(this.bundleArch, "os") &&
+          depFile.installPath.startsWith("node_modules/")) {
+        // On the server, modules in node_modules directories will be
+        // handled natively by Node, so we don't need to build a
+        // meteorInstall-style bundle beyond the entry-point module.
+        return;
+      }
+
       this._scanFile(depFile);
     });
   }

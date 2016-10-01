@@ -1,4 +1,6 @@
 # Logic Solver
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/logic-solver) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/logic-solver)
+***
 
 ## Introduction
 

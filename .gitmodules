@@ -1,0 +1,3 @@
+[submodule "packages/non-core/blaze"]
+    path = packages/non-core/blaze
+    url = https://github.com/meteor/blaze.git

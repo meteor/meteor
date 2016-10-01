@@ -11,17 +11,17 @@ var packageJson = {
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
-    npm: "3.10.5",
+    npm: "3.10.7",
     "node-gyp": "3.4.0",
-    "node-pre-gyp": "0.6.29",
-    "meteor-babel": "0.11.7",
+    "node-pre-gyp": "0.6.30",
+    "meteor-babel": "0.12.0",
     "meteor-promise": "0.7.2",
-    fibers: "1.0.13",
+    fibers: "1.0.14",
     promise: "7.1.1",
     // So that Babel 6 can emit require("babel-runtime/helpers/...") calls.
     "babel-runtime": "6.9.2",
     // For various ES2015 polyfills, such as Map and Set.
-    "meteor-ecmascript-runtime": "0.2.6",
+    "meteor-ecmascript-runtime": "0.2.9",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
     // in the package too) because we should consider using lodash instead
     // (and there are backwards-incompatible changes either way).
@@ -30,10 +30,9 @@ var packageJson = {
     semver: "4.1.0",
     request: "2.47.0",
     fstream: "https://github.com/meteor/fstream/tarball/cf4ea6c175355cec7bee38311e170d08c4078a5d",
-    tar: "1.0.2",
+    tar: "2.2.1",
     kexec: "2.0.2",
     "source-map": "0.5.3",
-    "browserstack-webdriver": "2.41.1",
     "node-inspector": "0.12.8",
     chalk: "0.5.1",
     sqlite3: "3.1.3",
@@ -42,6 +41,7 @@ var packageJson = {
     "wordwrap": "0.0.2",
     "moment": "2.8.4",
     "rimraf": "2.4.3",
+    "glob": "7.0.6",
     // XXX: When we update this, see if it fixes this Github issue:
     // https://github.com/jgm/CommonMark/issues/276 . If it does, remove the
     // workaround from the tool.

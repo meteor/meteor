@@ -2,9 +2,9 @@
 # use 32bit by default
 $PLATFORM = "windows_x86"
 $MONGO_VERSION = "3.2.6"
-$NODE_VERSION = "4.4.7"
-$NPM_VERSION = "3.10.5"
-$PYTHON_VERSION = "2.7.10" # For node-gyp
+$NODE_VERSION = "4.5.0"
+$NPM_VERSION = "3.10.7"
+$PYTHON_VERSION = "2.7.12" # For node-gyp
 
 # take it form the environment if exists
 if (Test-Path env:PLATFORM) {
@@ -78,10 +78,6 @@ rm -Recurse -Force "$DIR\7z"
 # add bin to the front of the path so we can use our own node for building
 $env:PATH = "${DIR}\bin;${env:PATH}"
 
-# Make sure node-gyp knows how to find its build tools.
-$env:PYTHON = "${DIR}\python\python.exe"
-$env:GYP_MSVS_VERSION = "2015"
-
 # Install the version of npm that we're actually going to expose from the
 # dev bundle. Note that we use npm@1.4.12 to install npm@${NPM_VERSION}.
 cd "${DIR}\lib"
@@ -94,6 +90,19 @@ npm version
 # un-flattened
 cd node_modules\npm
 npm install node-gyp
+
+# Make sure node-gyp knows how to find its build tools.
+$env:PYTHON = "${DIR}\python\python.exe"
+$env:GYP_MSVS_VERSION = "2015"
+$env:HOME = "$DIR";
+$env:USERPROFILE = "$DIR";
+
+# Make node-gyp install Node headers and libraries in $DIR\.node-gyp\.
+# https://github.com/nodejs/node-gyp/blob/4ee31329e0/lib/node-gyp.js#L52
+& "${DIR}\bin\node.exe" node_modules\node-gyp\bin\node-gyp.js install
+$include_path = "${DIR}\.node-gyp\${NODE_VERSION}\include\node"
+echo "Contents of ${include_path}:"
+dir "$include_path"
 
 # install dev-bundle-package.json
 # use short folder names

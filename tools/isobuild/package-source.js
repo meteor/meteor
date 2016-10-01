@@ -22,6 +22,10 @@ import {
   APP_TEST_FILENAME_REGEXPS,
   isTestFilePath } from './test-files.js';
 
+import {
+  convert as convertColonsInPath
+} from '../utils/colon-converter.js';
+
 // XXX: This is a medium-term hack, to avoid having the user set a package name
 // & test-name in package.describe. We will change this in the new control file
 // world in some way.
@@ -386,7 +390,11 @@ _.extend(PackageSource.prototype, {
 
     utils.ensureOnlyValidVersions(options.npmDependencies, {forCordova: false});
     self.npmDependencies = options.npmDependencies;
-    self.npmCacheDirectory = options.npmDir;
+
+    // If options.npmDir is a string, make sure it contains no colons.
+    self.npmCacheDirectory = _.isString(options.npmDir)
+      ? convertColonsInPath(options.npmDir)
+      : options.npmDir;
 
     utils.ensureOnlyValidVersions(options.cordovaDependencies, {forCordova: true});
     self.cordovaDependencies = options.cordovaDependencies;

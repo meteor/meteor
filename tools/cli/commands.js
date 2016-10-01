@@ -256,6 +256,7 @@ var runCommandOptions = {
     'mobile-port': { type: String },
     'app-port': { type: String },
     'debug-port': { type: String },
+    'no-release-check': { type: Boolean },
     production: { type: Boolean },
     'raw-logs': { type: Boolean },
     settings: { type: String },
@@ -374,6 +375,7 @@ function doRunCommand(options) {
     oplogUrl: process.env.MONGO_OPLOG_URL,
     mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
     once: options.once,
+    noReleaseCheck: options['no-release-check'] || process.env.METEOR_NO_RELEASE_CHECK,
     cordovaRunner: cordovaRunner
   });
 }
@@ -1657,6 +1659,7 @@ function doTestCommand(options) {
     copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'bundler-cache');
     copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'isopacks');
     copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'plugin-cache');
+    copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'shell');
     
     projectContext = new projectContextModule.ProjectContext(projectContextOptions);
 
@@ -1793,6 +1796,7 @@ var runTestAppForPackages = function (projectContext, options) {
       oplogUrl: process.env.MONGO_OPLOG_URL,
       mobileServerUrl: options.mobileServerUrl,
       once: options.once,
+      noReleaseCheck: options['no-release-check'] || process.env.METEOR_NO_RELEASE_CHECK,
       recordPackageUsage: false,
       selenium: options.selenium,
       seleniumBrowser: options['selenium-browser'],

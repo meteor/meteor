@@ -3,7 +3,6 @@ var util = require('util');
 var Future = require('fibers/future');
 var fiberHelpers = require('../utils/fiber-helpers.js');
 var child_process = require('child_process');
-var webdriver = require('browserstack-webdriver');
 
 var files = require('../fs/files.js');
 var utils = require('../utils/utils.js');
@@ -13,6 +12,7 @@ var archinfo = require('../utils/archinfo.js');
 var config = require('../meteor-services/config.js');
 var buildmessage = require('../utils/buildmessage.js');
 var execFileSync = require('../utils/processes.js').execFileSync;
+var { getUrlWithResuming } = require("../utils/http-helpers.js");
 var Builder = require('../isobuild/builder.js').default;
 
 var catalog = require('../packaging/catalog/catalog.js');
@@ -27,18 +27,27 @@ var release = require('../packaging/release.js');
 var projectContextModule = require('../project-context.js');
 var upgraders = require('../upgraders.js');
 
-try {
-  var phantomjs = require('phantomjs-prebuilt');
-} catch (e) {
-  throw new Error([
-    "Please install PhantomJS by running the following command:",
-    "",
-    "  /path/to/meteor npm install -g phantomjs-prebuilt",
-    "",
-    "Where `/path/to/meteor` is the executable you used to run this self-test.",
-    ""
-  ].join("\n"));
+require("../tool-env/install-runtime.js");
+
+function checkTestOnlyDependency(name) {
+  try {
+    var absPath = require.resolve(name);
+  } catch (e) {
+    throw new Error([
+      "Please install " + name + " by running the following command:",
+      "",
+      "  /path/to/meteor npm install -g " + name,
+      "",
+      "Where `/path/to/meteor` is the executable you used to run this self-test.",
+      ""
+    ].join("\n"));
+  }
+
+  return require(absPath);
 }
+
+var phantomjs = checkTestOnlyDependency("phantomjs-prebuilt");
+var webdriver = checkTestOnlyDependency('browserstack-webdriver');
 
 // To allow long stack traces that cross async boundaries
 require('longjohn');
@@ -140,7 +149,8 @@ var ROOT_PACKAGES_TO_BUILD_IN_SANDBOX = [
   "insecure",
   "standard-minifier-css",
   "standard-minifier-js",
-  "es5-shim"
+  "es5-shim",
+  "shell-server"
 ];
 
 var setUpBuiltPackageTropohouse = function () {
@@ -199,14 +209,19 @@ var newSelfTestCatalog = function () {
   var messages = buildmessage.capture(
     { title: "scanning local core packages" },
     function () {
+      const packagesDir =
+        files.pathJoin(files.getCurrentToolsDir(), 'packages');
+
       // When building a fake warehouse from a checkout, we use local packages,
       // but *ONLY THOSE FROM THE CHECKOUT*: not app packages or $PACKAGE_DIRS
       // packages.  One side effect of this: we really really expect them to all
       // build, and we're fine with dying if they don't (there's no worries
       // about needing to springboard).
       selfTestCatalog.initialize({
-        localPackageSearchDirs: [files.pathJoin(
-          files.getCurrentToolsDir(), 'packages')]
+        localPackageSearchDirs: [
+          packagesDir,
+          files.pathJoin(packagesDir, "non-core", "*", "packages"),
+        ],
       });
     });
   if (messages.hasMessages()) {
@@ -1072,10 +1087,8 @@ _.extend(BrowserStackClient.prototype, {
   },
 
   _launchBrowserStackTunnel: function (callback) {
-    var self = this;
-    var browserStackPath =
-      files.pathJoin(files.getDevBundle(), 'bin', 'BrowserStackLocal');
-    files.chmod(browserStackPath, 0o755);
+    const self = this;
+    const browserStackPath = ensureBrowserStack();
 
     var args = [
       browserStackPath,
@@ -1099,6 +1112,42 @@ _.extend(BrowserStackClient.prototype, {
     });
   }
 });
+
+function ensureBrowserStack() {
+  const browserStackPath = files.pathJoin(
+    files.getDevBundle(),
+    'bin',
+    'BrowserStackLocal'
+  );
+
+  const browserStackStat = files.statOrNull(browserStackPath);
+  if (! browserStackStat) {
+    const host = "browserstack-binaries.s3.amazonaws.com";
+    const OS = process.platform === "darwin" ? "osx" : "linux";
+    const ARCH = process.arch === "x64" ? "x86_64" : "i686";
+    const tarGz = `BrowserStackLocal-07-03-14-${OS}-${ARCH}.gz`;
+    const url = `https:\/\/${host}/${tarGz}`;
+
+    buildmessage.enterJob("downloading BrowserStack binaries", () => {
+      return new Promise((resolve, reject) => {
+        const browserStackStream =
+          files.createWriteStream(browserStackPath);
+
+        browserStackStream.on("error", reject);
+        browserStackStream.on("end", resolve);
+
+        const gunzip = require("zlib").createGunzip();
+        gunzip.pipe(browserStackStream);
+        gunzip.write(getUrlWithResuming(url));
+        gunzip.end();
+      }).await();
+    });
+  }
+
+  files.chmod(browserStackPath, 0o755);
+
+  return browserStackPath;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Run

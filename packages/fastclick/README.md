@@ -1,4 +1,6 @@
 # fastclick
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/fastclick) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/fastclick)
+***
 
 FastClick is a simple, easy-to-use library for eliminating the 300ms delay
 between a physical tap and the firing of a `click` event on mobile browsers. The

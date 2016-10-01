@@ -1,27 +1,27 @@
 Package.describe({
   summary: "Password support for accounts",
-  version: "1.2.12"
+  version: "1.3.1-beta.5"
 });
 
 Package.onUse(function(api) {
-  api.use('npm-bcrypt@=0.8.7');
+  api.use('npm-bcrypt@0.9.0', 'server');
 
   api.use([
-    'accounts-base',
-    'srp',
-    'sha',
-    'ejson',
-    'ddp'
+    'accounts-base@1.2.10',
+    'srp@1.0.9',
+    'sha@1.0.8',
+    'ejson@1.0.12',
+    'ddp@1.2.5'
   ], ['client', 'server']);
 
   // Export Accounts (etc) to packages using this one.
-  api.imply('accounts-base', ['client', 'server']);
+  api.imply('accounts-base@1.2.10', ['client', 'server']);
 
-  api.use('email', ['server']);
-  api.use('random', ['server']);
-  api.use('check');
-  api.use('underscore');
-  api.use('ecmascript');
+  api.use('email@1.1.16', ['server']);
+  api.use('random@1.0.10', ['server']);
+  api.use('check@1.2.3');
+  api.use('underscore@1.0.9');
+  api.use('ecmascript@0.5.7');
 
   api.addFiles('email_templates.js', 'server');
   api.addFiles('password_server.js', 'server');

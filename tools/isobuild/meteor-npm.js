@@ -18,6 +18,9 @@ import { execFileAsync } from "../utils/processes.js";
 import {
   get as getRebuildArgs
 } from "../static-assets/server/npm-rebuild-args.js";
+import {
+  convert as convertColonsInPath
+} from "../utils/colon-converter.js";
 
 var meteorNpm = exports;
 
@@ -52,7 +55,8 @@ meteorNpm.updateDependencies = function (packageName,
   // we can then atomically rename it. we also make sure to
   // randomize the name, in case we're bundling this package
   // multiple times in parallel.
-  var newPackageNpmDir = packageNpmDir + '-new-' + utils.randomToken();
+  var newPackageNpmDir =
+    convertColonsInPath(packageNpmDir) + '-new-' + utils.randomToken();
 
   if (! npmDependencies || _.isEmpty(npmDependencies)) {
     // No NPM dependencies? Delete the .npm directory if it exists (because,
@@ -119,54 +123,152 @@ meteorNpm.updateDependencies = function (packageName,
   return true;
 };
 
-// Returns a flattened list of npm package names used in production.
-meteorNpm.getProdPackageNames = function (nodeModulesDir) {
-  var names = Object.create(null);
-  var lsCmdArgs = ["ls", "--json"];
+// Returns a flattened dictionary of npm package names used in production,
+// or false if there is no package.json file in the parent directory.
+export function getProdPackageNames(nodeModulesDir) {
+  const names = Object.create(null);
+  const dirs = Object.create(null);
+  const nodeModulesDirStack = [];
 
-  const packageJsonPath = files.pathJoin(
-    files.pathDirname(nodeModulesDir),
-    "package.json"
-  );
+  // Returns true iff dir is a package directory.
+  function walk(dir) {
+    const packageJsonPath = files.pathJoin(dir, "package.json");
+    const packageJsonStat = files.statOrNull(packageJsonPath);
 
-  const packageJsonStat = files.statOrNull(packageJsonPath);
-  if (packageJsonStat &&
-      packageJsonStat.isFile()) {
-    // If there is no package.json file, adding --production will cause
-    // the names object to be empty, which is not what we want.
-    lsCmdArgs.push("--production");
+    if (packageJsonStat &&
+        packageJsonStat.isFile()) {
+      const pkg = JSON.parse(files.readFile(packageJsonPath));
+      const nodeModulesDir = files.pathJoin(dir, "node_modules");
+      nodeModulesDirStack.push(nodeModulesDir);
+
+      // Scan all dependencies except pkg.devDependencies.
+      scanDeps(pkg.dependencies);
+      scanDeps(pkg.peerDependencies);
+      scanDeps(pkg.optionalDependencies);
+      scanDeps(pkg.bundledDependencies);
+      // This typo is also honored.
+      scanDeps(pkg.bundleDependencies);
+
+      assert.strictEqual(
+        nodeModulesDirStack.pop(),
+        nodeModulesDir
+      );
+
+      return true;
+    }
+
+    return false;
   }
 
-  var lsResult = runNpmCommand(lsCmdArgs, nodeModulesDir);
-
-  function walk(deps) {
+  function scanDeps(deps) {
     if (! deps) {
       return;
     }
 
-    Object.keys(deps).forEach(function (name) {
-      names[name] = true;
-      walk(deps[name].dependencies);
+    Object.keys(deps).forEach(name => {
+      const resDir = resolve(name);
+      if (! resDir || _.has(dirs, resDir)) {
+        return;
+      }
+
+      // Record that we've seen this directory so that we don't try to
+      // walk it again.
+      dirs[resDir] = name;
+
+      if (walk(resDir)) {
+        // If resDir is indeed a package directory, record the package
+        // name in the set of production names.
+        names[name] = true;
+      }
     });
   }
 
-  walk(JSON.parse(lsResult.stdout).dependencies);
+  function resolve(name) {
+    for (let i = nodeModulesDirStack.length - 1; i >= 0; --i) {
+      const nodeModulesDir = nodeModulesDirStack[i];
+      const candidate = files.pathJoin(nodeModulesDir, name);
+      const stat = files.statOrNull(candidate);
+      if (stat && stat.isDirectory()) {
+        return candidate;
+      }
+    }
+  }
 
-  return names;
-};
+  // If the top-level nodeModulesDir is not contained by a package
+  // directory with a package.json file, then we return false to indicate
+  // that we don't know or care which packages are production-specific.
+  // Concretely, this means your app needs to have a package.json file if
+  // you want any npm packages to be excluded in production.
+  return walk(files.pathDirname(nodeModulesDir)) && names;
+}
 
 const lastRebuildJSONFilename = ".meteor-last-rebuild-version.json";
+
+const currentVersions = {
+  platform: process.platform,
+  arch: process.arch,
+  versions: {...process.versions},
+};
+
 const currentVersionsJSON =
-  JSON.stringify(process.versions, null, 2) + "\n";
+  JSON.stringify(currentVersions, null, 2) + "\n";
 
 function recordLastRebuildVersions(pkgDir) {
-  // Record the current process.versions so that we can avoid
-  // copying/rebuilding/renaming next time.
+  // Record the current process.{platform,arch,versions} so that we can
+  // avoid copying/rebuilding/renaming next time.
   files.writeFile(
     files.pathJoin(pkgDir, lastRebuildJSONFilename),
     currentVersionsJSON,
     "utf8"
   );
+}
+
+// Returns true iff isSubtreeOf(currentVersions, versions), allowing
+// valid semantic versions to differ in their patch versions.
+function versionsAreCompatible(versions) {
+  import { parse } from "semver";
+
+  return isSubtreeOf(currentVersions, versions, (a, b) => {
+    // Technically already handled by isSubtreeOf, but doesn't hurt.
+    if (a === b) {
+      return true;
+    }
+
+    if (! a || ! b) {
+      return false;
+    }
+
+    const aType = typeof a;
+    const bType = typeof b;
+
+    if (aType !== bType) {
+      return false;
+    }
+
+    if (aType === "string") {
+      const aVer = parse(a);
+      const bVer = parse(b);
+      return aVer && bVer &&
+        aVer.major === bVer.major &&
+        aVer.minor === bVer.minor;
+    }
+  });
+}
+
+function rebuildVersionsAreCompatible(pkgPath) {
+  const versionFile =
+    files.pathJoin(pkgPath, lastRebuildJSONFilename);
+
+  try {
+    var versions = JSON.parse(files.readFile(versionFile));
+  } catch (e) {
+    if (! (e instanceof SyntaxError ||
+           e.code === "ENOENT")) {
+      throw e;
+    }
+  }
+
+  return versionsAreCompatible(versions);
 }
 
 // Rebuilds any binary dependencies in the given node_modules directory,
@@ -182,19 +284,7 @@ Profile("meteorNpm.rebuildIfNonPortable", function (nodeModulesDir) {
       return;
     }
 
-    const versionFile =
-      files.pathJoin(pkgPath, lastRebuildJSONFilename);
-
-    try {
-      var versions = JSON.parse(files.readFile(versionFile));
-    } catch (e) {
-      if (! (e instanceof SyntaxError ||
-             e.code === "ENOENT")) {
-        throw e;
-      }
-    }
-
-    if (_.isEqual(versions, process.versions)) {
+    if (rebuildVersionsAreCompatible(pkgPath)) {
       return;
     }
 
@@ -227,9 +317,11 @@ Profile("meteorNpm.rebuildIfNonPortable", function (nodeModulesDir) {
       files.pathBasename(pkgPath)
     );
 
-    // Copy instead of rename so that the original package directories
-    // will be left untouched if the rebuild fails.
-    files.cp_r(pkgPath, tempPkgDir);
+    // Copy the package directory instead of renaming it, so that the
+    // original package will be left untouched if the rebuild fails. We
+    // could just run files.cp_r(pkgPath, tempPkgDir) here, except that we
+    // want to handle nested node_modules directories specially.
+    copyNpmPackageWithSymlinkedNodeModules(pkgPath, tempPkgDir);
 
     // Record the current process.versions so that we can avoid
     // copying/rebuilding/renaming next time.
@@ -248,6 +340,30 @@ Profile("meteorNpm.rebuildIfNonPortable", function (nodeModulesDir) {
   // If the `npm rebuild` command succeeded, overwrite the original
   // package directories with the rebuilt package directories.
   dirsToRebuild.forEach(function (pkgPath) {
+    const actualNodeModulesDir =
+      files.pathJoin(pkgPath, "node_modules");
+
+    const actualNodeModulesStat =
+      files.statOrNull(actualNodeModulesDir);
+
+    if (actualNodeModulesStat &&
+        actualNodeModulesStat.isDirectory()) {
+      // If the original package had a node_modules directory, move it
+      // into the temporary package directory, overwriting the one created
+      // by copyNpmPackageWithSymlinkedNodeModules (which contains only
+      // symlinks), so that when we rename the temporary directory back to
+      // the original directory below, we'll end up with a node_modules
+      // directory that contains real packages rather than symlinks.
+
+      const symlinkNodeModulesDir =
+        files.pathJoin(tempPkgDirs[pkgPath], "node_modules");
+
+      files.renameDirAlmostAtomically(
+        actualNodeModulesDir,
+        symlinkNodeModulesDir
+      );
+    }
+
     files.renameDirAlmostAtomically(tempPkgDirs[pkgPath], pkgPath);
   });
 
@@ -255,6 +371,63 @@ Profile("meteorNpm.rebuildIfNonPortable", function (nodeModulesDir) {
 
   return true;
 });
+
+// Copy an npm package directory to another location, but attempt to
+// symlink all of its node_modules rather than recursively copying them,
+// which potentially saves a lot of time.
+function copyNpmPackageWithSymlinkedNodeModules(fromPkgDir, toPkgDir) {
+  files.mkdir_p(toPkgDir);
+
+  let needToHandleNodeModules = false;
+
+  files.readdir(fromPkgDir).forEach(item => {
+    if (item === "node_modules") {
+      // We'll link or copy node_modules in a follow-up step.
+      needToHandleNodeModules = true;
+      return;
+    }
+
+    files.cp_r(
+      files.pathJoin(fromPkgDir, item),
+      files.pathJoin(toPkgDir, item)
+    );
+  });
+
+  if (! needToHandleNodeModules) {
+    return;
+  }
+
+  const nodeModulesFromPath = files.pathJoin(fromPkgDir, "node_modules");
+  const nodeModulesToPath = files.pathJoin(toPkgDir, "node_modules");
+
+  files.mkdir(nodeModulesToPath);
+
+  files.readdir(nodeModulesFromPath).forEach(depPath => {
+    if (depPath === ".bin") {
+      // Avoid copying node_modules/.bin because commands like
+      // .bin/node-gyp and .bin/node-pre-gyp tend to cause problems.
+      return;
+    }
+
+    const absDepFromPath = files.pathJoin(nodeModulesFromPath, depPath);
+
+    if (! files.stat(absDepFromPath).isDirectory()) {
+      // Only copy package directories, even though there might be other
+      // kinds of files in node_modules.
+      return;
+    }
+
+    const absDepToPath = files.pathJoin(nodeModulesToPath, depPath);
+
+    // Try to symlink node_modules dependencies if possible (faster),
+    // and fall back to a recursive copy otherwise.
+    try {
+      files.symlink(absDepFromPath, absDepToPath, "junction");
+    } catch (e) {
+      files.cp_r(absDepFromPath, absDepToPath);
+    }
+  });
+}
 
 function isPortable(dir) {
   const lstat = files.lstat(dir);
@@ -457,16 +630,26 @@ var updateExistingNpmDirectory = function (packageName, newPackageNpmDir,
                        npmDependencies);
 };
 
-function isSubtreeOf(subsetTree, supersetTree) {
+function isSubtreeOf(subsetTree, supersetTree, predicate) {
   if (subsetTree === supersetTree) {
     return true;
   }
 
-  return _.isObject(subsetTree) &&
-    _.isObject(supersetTree) &&
-    _.every(subsetTree, (value, key) => {
-      return isSubtreeOf(value, supersetTree[key]);
-    });
+  if (_.isObject(subsetTree)) {
+    return _.isObject(supersetTree) &&
+      _.every(subsetTree, (value, key) => {
+        return isSubtreeOf(value, supersetTree[key], predicate);
+      });
+  }
+
+  if (_.isFunction(predicate)) {
+    const result = predicate(subsetTree, supersetTree);
+    if (typeof result === "boolean") {
+      return result;
+    }
+  }
+
+  return false;
 }
 
 var createFreshNpmDirectory = function (packageName, newPackageNpmDir,
@@ -587,7 +770,7 @@ Profile("meteorNpm.runNpmCommand", function (args, cwd) {
           });
         }
       );
-    });
+    }).await();
 
   }).await();
 });
