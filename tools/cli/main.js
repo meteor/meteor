@@ -594,7 +594,7 @@ Fiber(function () {
   // tight timetable for 1.0 and there is no advantage to doing it now
   // rather than later. #ImprovingCrossVersionOptionParsing
 
-  var isBoolean = { "--help": true };
+  var isBoolean = { "--help": true, "--unsafe-perm": true };
   var walkCommands = function (node) {
     _.each(node, function (value, key) {
       if (value instanceof Command) {
@@ -744,6 +744,36 @@ Fiber(function () {
 
     // It is a plain old argument!
     rawArgs.push(term);
+  }
+
+  // Prevent running meteor as root
+  if (process.getuid) {
+    // On UNIX platforms.
+    if (process.getuid() === 0){
+      if (_.has(rawOptions, '--unsafe-perm')) {
+        // Meteor is running as root and has the --unsafe-perm flag, just notice.
+        Console.info("");
+        Console.info("You have run Meteor as root.",
+        "Your permissions in your app directory will be incorrect if you ever attempt to perform any Meteor tasks as your non-root user.",
+        "You probably didn't want this, but you can fix it by running the following from the root of your project:");
+        Console.info("");
+        Console.info("sudo chown -Rh <username> .meteor/local");
+        Console.info("");
+        // Fix issue when running `sudo meteor --unsafe-perm`, --unsafe-perm: unknown option.
+        delete rawOptions['--unsafe-perm'];
+      }
+      else {
+        // Meteor is running as root without the --unsafe-perm flag, notice and stop.
+        Console.error("");
+        Console.error("You are attempting to run Meteor as the \"root\" user.",
+        "If you are developing, this is almost certainly *not* what you want to do and will likely result in incorrect file permissions.",
+        "However, if you are running this in a build process (CI, etc.) or you are absolutely sure you know what you are doing,",
+        "add the `--unsafe-perm` flag to this command to proceed.");
+        Console.error("");
+
+        process.exit(1);
+      }
+    }
   }
 
   // Figure out if we're running in a directory that is part of a Meteor

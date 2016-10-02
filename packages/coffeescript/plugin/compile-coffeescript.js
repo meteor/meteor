@@ -88,8 +88,9 @@ export class CoffeeCompiler extends CachingCompiler {
       inputFile.getDeclaredExports().map(e => e.name)
     );
 
-    if (source.indexOf('`') !== -1) {
-      // If source contains backticks, pass the coffee output through babel-compiler
+    if (/`|\b(?:import|export|yield)\b/.test(source)) {
+      // If source contains backticks or features that output as ES2015+,
+      // pass the coffee output through babel-compiler
       const doubleRoastedCoffee =
         this.babelCompiler.processOneFileForTarget(inputFile, output.js);
 
