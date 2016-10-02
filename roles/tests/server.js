@@ -2589,6 +2589,28 @@
       }, /form a cycle/);
     });
 
+  Tinytest.add(
+    'roles - userIsInRole returns false for unknown roles',
+    function (test) {
+      reset();
+
+      Roles.createRole('admin');
+      Roles.createRole('user');
+      Roles.createRole('editor');
+      Roles.addUsersToRoles(users.eve, ['admin', 'user']);
+      Roles.addUsersToRoles(users.eve, ['editor']);
+
+      test.isFalse(Roles.userIsInRole(users.eve, 'unknown'));
+      test.isFalse(Roles.userIsInRole(users.eve, []));
+      test.isFalse(Roles.userIsInRole(users.eve, null));
+      test.isFalse(Roles.userIsInRole(users.eve, undefined));
+
+      test.isFalse(Roles.userIsInRole(users.eve, 'unknown', {anyScope: true}));
+      test.isFalse(Roles.userIsInRole(users.eve, [], {anyScope: true}));
+      test.isFalse(Roles.userIsInRole(users.eve, null, {anyScope: true}));
+      test.isFalse(Roles.userIsInRole(users.eve, undefined, {anyScope: true}));
+    });
+
   function printException (ex) {
     var tmp = {};
     for (var key in ex) {
