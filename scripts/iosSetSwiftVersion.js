@@ -15,16 +15,30 @@ module.exports = function(context) {
   var projectPath = path.join(platformRoot, projectName + '.xcodeproj/project.pbxproj');
   var xcodeProject = xcode.project(projectPath);
 
-  xcodeProject.parse(function(error) {
-    if (error) {
-      console.log('Error: ' + JSON.stringify(error));
-    } else {
-      var pbxProjectSection = xcodeProject.pbxProjectSection();
-      var firstProjectUUID = Object.keys(pbxProjectSection)[0];
-      var firstProject = pbxProjectSection[firstProjectUUID];
-      // Xcode 7.2
-      firstProject.attributes['LastSwiftUpdateCheck'] = '0720';
-      fs.writeFileSync(projectPath, xcodeProject.writeSync());
+  xcodeProject.parseSync();
+
+  var configurations, buildSettings;
+  configurations = nonComments(xcodeProject.pbxXCBuildConfigurationSection());
+	Object.keys(configurations).forEach(function (config) {
+		buildSettings = configurations[config].buildSettings;
+		buildSettings.SWIFT_VERSION = '3.0';
+	});
+
+  fs.writeFileSync(projectPath, xcodeProject.writeSync());
+}
+
+// Extracted from https://github.com/alunny/node-xcode/blob/master/lib/pbxProject.js
+
+COMMENT_KEY = /_comment$/;
+
+function nonComments(obj) {
+  var keys = Object.keys(obj), newObj = {}, i = 0;
+
+  for (i; i < keys.length; i++) {
+    if (!COMMENT_KEY.test(keys[i])) {
+      newObj[keys[i]] = obj[keys[i]];
     }
-  });
+  }
+
+  return newObj;
 }
