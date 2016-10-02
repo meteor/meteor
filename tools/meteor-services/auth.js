@@ -65,6 +65,9 @@ var loggedInAccountsConnection = function (token) {
     connection.close();
 
     if (err.error === 403) {
+      // Better than saying nothing at all
+      Console.error("warning: login token was rejected by the server");
+
       // This is not an ideal value for the error code, but it means
       // "server rejected our access token". For example, it expired
       // or we revoked it from the web.
