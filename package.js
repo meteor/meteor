@@ -8,7 +8,7 @@ Package.describe({
 Package.onUse(function (api) {
   var both = ['client', 'server'];
 
-  api.versionsFrom("METEOR@1.2.0.2");
+  api.versionsFrom("METEOR@1.4.1");
 
   api.use(['underscore',
            'accounts-base',
@@ -28,6 +28,8 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
+  api.versionsFrom("METEOR@1.4.1");
+
   var both = ['client', 'server'];
 
   // `accounts-password` is included so `Meteor.users` exists
