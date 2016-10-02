@@ -182,6 +182,46 @@ var NO_CREATE_MODIFIERS = {
 };
 
 var MODIFIERS = {
+  $currentDate: function (target, field, arg) {
+    if (typeof arg === "object" && arg.hasOwnProperty("$type")) {
+       if (arg.$type !== "date") {
+         throw MinimongoError("Minimongo does currently only support the date type in $currentDate modifiers");
+       }
+    } else if (arg !== true) {
+      throw MinimongoError("Invalid $currentDate modifier");
+    }
+    target[field] = new Date();
+  },
+  $min: function (target, field, arg) {
+    if (typeof arg !== "number") {
+      throw MinimongoError("Modifier $min allowed for numbers only");
+    }
+    if (field in target) {
+      if (typeof target[field] !== "number") {
+        throw MinimongoError("Cannot apply $min modifier to non-number");
+      }
+      if (target[field] > arg) {
+        target[field] = arg;
+      }
+    } else {
+      target[field] = arg;
+    }
+  },
+  $max: function (target, field, arg) {
+    if (typeof arg !== "number") {
+      throw MinimongoError("Modifier $max allowed for numbers only");
+    }
+    if (field in target) {
+      if (typeof target[field] !== "number") {
+        throw MinimongoError("Cannot apply $max modifier to non-number");
+      }
+      if (target[field] < arg) {
+         target[field] = arg;
+      }
+    } else {
+      target[field] = arg;
+    }
+  },
   $inc: function (target, field, arg) {
     if (typeof arg !== "number")
       throw MinimongoError("Modifier $inc allowed for numbers only");
