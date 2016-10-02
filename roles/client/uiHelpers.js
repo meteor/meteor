@@ -32,17 +32,17 @@ Roles._uiHelpers = {
    *     {{#if isInRole 'editor,user'}}
    *     {{/if}}
    *
-   *     {{#if isInRole 'editor,user' 'partition1'}}
+   *     {{#if isInRole 'editor,user' 'scope1'}}
    *     {{/if}}
    *
    * @method isInRole
    * @param {String} role Name of role or comma-seperated list of roles.
-   * @param {String} [partition] Optional, name of partition to check.
+   * @param {String} [scope] Optional, name of scope to check.
    * @return {Boolean} `true` if current user is in at least one of the target roles.
    * @static
    * @for UIHelpers 
    */
-  isInRole: function (role, partition) {
+  isInRole: function (role, scope) {
     var user = Meteor.user(),
         comma = (role || '').indexOf(','),
         roles
@@ -62,8 +62,8 @@ Roles._uiHelpers = {
       roles = [role]
     }
 
-    if (Match.test(partition, String)) {
-      return Roles.userIsInRole(user, roles, partition)
+    if (Match.test(scope, String)) {
+      return Roles.userIsInRole(user, roles, scope)
     }
 
     return Roles.userIsInRole(user, roles)

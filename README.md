@@ -10,7 +10,7 @@ Authorization package for Meteor - compatible with built-in accounts package.
 * [Contributors](#roles-contributors)
 * [Authorization](#roles-authorization)
 * [Permissions vs roles](#roles-naming)
-* [What are "partitions"?](#roles-partitions)
+* [What are "scopes"?](#roles-scopes)
 * [Changes to default Meteor](#roles-changes)
 * [Installation](#roles-installing)
 * [Migration to 2.0](#roles-migration)
@@ -89,19 +89,19 @@ Roles.addRolesToParent('POST_EDIT', 'user');
 
 <br />
 
-<a id="roles-partitions" name="roles-partitions"></a>
-### What are "partitions"?
+<a id="roles-scopes" name="roles-scopes"></a>
+### What are "scopes"?
 
 Sometimes it is useful to let a user have independent sets of roles.  The `roles` package calls these independent
-sets "partitions" for lack of a better term. You can use them to represent various communities inside of your
+sets "scopes" for lack of a better term. You can use them to represent various communities inside of your
 application. Or maybe your application supports [multiple tenants](https://en.wikipedia.org/wiki/Multitenancy).
-You can put each of those tenants into their own partition. Alternatively, you can use partitions to represent
+You can put each of those tenants into their own scope. Alternatively, you can use scopes to represent
 various resources you have. But if you really need per-document permissions, if might be that storing permissions
 with documents is a better approach (than one takes by this package, where roles are stored with users).
 
-Users can have both partition roles assigned, and global roles. Global roles are in effect for all partitions.
-But partitions are independent from each other. Users can have one set of roles in partition A and another set
-of roles in partition B. Let's go through an example of this using soccer/football teams as partitions.
+Users can have both scope roles assigned, and global roles. Global roles are in effect for all scopes.
+But scopes are independent from each other. Users can have one set of roles in scope A and another set
+of roles in scope B. Let's go through an example of this using soccer/football teams as scopes.
 
 ```javascript
 Roles.addUsersToRoles(joesUserId, ['manage-team','schedule-game'], 'manchester-united.com');
@@ -111,11 +111,11 @@ Roles.userIsInRole(joesUserId, 'manage-team', 'manchester-united.com'); // true
 Roles.userIsInRole(joesUserId, 'manage-team', 'real-madrid.com'); // false
 ```
 
-In this example we can see that Joe manages Manchester United and plays for Real Madrid. By using partitions, we can
-assign roles independently and make sure that they don't get mixed up between partitions.
+In this example we can see that Joe manages Manchester United and plays for Real Madrid. By using scopes, we can
+assign roles independently and make sure that they don't get mixed up between scopes.
 
 Now, let's take a look at how to use the global roles. Say we want to give Joe permission to do something across
-all of our partitions. That is what the global roles are for:
+all of our scopes. That is what the global roles are for:
 
 ```javascript
 Roles.addUsersToRoles(joesUserId, 'super-admin', null); // Or you could just omit the last argument.
@@ -173,10 +173,10 @@ meteor shell
 Here is the list of important changes between meteor-roles 1.0 and 2.0 to consider when migrating to 2.0:
 
 * New schema for `roles` field and `Meteor.roles` collection.
-* Groups were renamed to partitions.
-* Partitions are always available, if you do not specify a partition, role is seen as a global role.
-* `GLOBAL_GROUP` is deprecated and should not be used anymore (just do not specify a partition, or use `null`).
-* `getGroupsForUser` is deprecated, `getPartitionsForUser` should be used instead.
+* Groups were renamed to scopes.
+* Scopes are always available, if you do not specify a scope, role is seen as a global role.
+* `GLOBAL_GROUP` is deprecated and should not be used anymore (just do not specify a scope, or use `null`).
+* `getGroupsForUser` is deprecated, `getScopesForUser` should be used instead.
 * Functions which modify roles are available both on the client and server side, but should be called on the
   client side only from inside Meteor methods.
 * `deleteRole` can now delete role even when in use, it is automatically unset from all users.
@@ -242,12 +242,12 @@ Check user roles before publishing sensitive data:
 // server/publish.js
 
 // Give authorized users access to sensitive data by group
-Meteor.publish('secrets', function (partition) {
-  check(partition, String);
+Meteor.publish('secrets', function (scope) {
+  check(scope, String);
 
-  if (Roles.userIsInRole(this.userId, ['view-secrets','admin'], partition)) {
+  if (Roles.userIsInRole(this.userId, ['view-secrets','admin'], scope)) {
     
-    return Meteor.secrets.find({partition: partition});
+    return Meteor.secrets.find({scope: scope});
     
   } else {
 
@@ -282,26 +282,26 @@ Prevent access to certain functionality, such as deleting a user:
 
 Meteor.methods({
   /**
-   * Revokes roles for a user in a specific partition.
+   * Revokes roles for a user in a specific scope.
    * 
    * @method revokeUser
    * @param {String} targetUserId ID of user to revoke roles for.
-   * @param {String} partition Company to update roles for.
+   * @param {String} scope Company to update roles for.
    */
-  revokeUser: function (targetUserId, partition) {
+  revokeUser: function (targetUserId, scope) {
     check(targetUserId, String);
-    check(partition, String);
+    check(scope, String);
   
     var loggedInUser = Meteor.user();
 
     if (!loggedInUser ||
         !Roles.userIsInRole(loggedInUser, 
-                            ['manage-users', 'support-staff'], partition)) {
+                            ['manage-users', 'support-staff'], scope)) {
       throw new Meteor.Error('access-denied', "Access denied")
     }
 
-    // remove roles for target partition
-    Roles.setUserRoles(targetUserId, [], partition)
+    // remove roles for target scope
+    Roles.setUserRoles(targetUserId, [], scope)
   }
 })
 ```
@@ -318,22 +318,22 @@ Meteor.methods({
    *
    * @param {Object} targetUserId Id of user to update.
    * @param {Array} roles User's new roles.
-   * @param {String} partition Company to update roles for.
+   * @param {String} scope Company to update roles for.
    */
-  updateRoles: function (targetUserId, roles, partition) {
+  updateRoles: function (targetUserId, roles, scope) {
     check(targetUserId, String);
     check(roles, [String]);
-    check(partition, String);
+    check(scope, String);
 
     var loggedInUser = Meteor.user();
 
     if (!loggedInUser ||
         !Roles.userIsInRole(loggedInUser, 
-                            ['manage-users', 'support-staff'], partition)) {
+                            ['manage-users', 'support-staff'], scope)) {
       throw new Meteor.Error('access-denied', "Access denied");
     }
 
-    Roles.setUserRoles(targetUserId, roles, partition);
+    Roles.setUserRoles(targetUserId, roles, scope);
   }
 })
 ```
@@ -356,7 +356,7 @@ The following example is just sugar to help improve the user experience for norm
 the 'admin_nav' template in the example below will still be able to do so by manually reading the bundled `client.js`
 file. It won't be pretty but it is possible. But this is not a problem as long as the actual data is restricted server-side.
 
-To check for global roles or when not using partitions:
+To check for global roles or when not using scopes:
 
 ```handlebars
 <!-- client/myApp.html -->
@@ -372,7 +372,7 @@ To check for global roles or when not using partitions:
 </template>
 ```
 
-To check for roles when using partitions:
+To check for roles when using scopes:
 
 ```handlebars
 <!-- client/myApp.html -->

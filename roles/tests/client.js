@@ -10,11 +10,11 @@
       _id: 'eve',
       roles: [{
         _id: 'admin',
-        partition: null,
+        scope: null,
         assigned: true
       }, {
         _id: 'editor',
-        partition: null,
+        scope: null,
         assigned: true
       }]
     },
@@ -22,11 +22,11 @@
       _id: 'bob',
       roles: [{
         _id: 'user',
-        partition: 'group1',
+        scope: 'group1',
         assigned: true
       }, {
         _id: 'editor',
-        partition: 'group2',
+        scope: 'group2',
         assigned: true
       }]
     },
@@ -34,11 +34,11 @@
       _id: 'joe',
       roles: [{
         _id: 'admin',
-        partition: null,
+        scope: null,
         assigned: true
       }, {
         _id: 'editor',
-        partition: 'group1',
+        scope: 'group1',
         assigned: true
       }]
     }

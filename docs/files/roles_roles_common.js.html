@@ -91,7 +91,7 @@
  * It uses &#x60;roles&#x60; field to &#x60;Meteor.users&#x60; documents which is an array of subdocuments with the following
  * schema:
  *  - &#x60;_id&#x60;: role name
- *  - &#x60;partition&#x60;: partition name
+ *  - &#x60;scope&#x60;: scope name
  *  - &#x60;assigned&#x60;: boolean, if the role was manually assigned (set), or was automatically inferred (eg., subroles)
  *
  * Roles themselves are accessible throgh &#x60;Meteor.roles&#x60; collection and documents consist of:
@@ -125,7 +125,7 @@ var getGroupsForUserDeprecationWarning = false;
 _.extend(Roles, {
 
   /**
-   * Used as a global group (now partition) name. Not used anymore.
+   * Used as a global group (now scope) name. Not used anymore.
    *
    * @property GLOBAL_GROUP
    * @static
@@ -146,7 +146,7 @@ _.extend(Roles, {
   createRole: function (roleName, options) {
     var match;
 
-    options = options || {};
+    options = Roles._normalizeOptions(options);
 
     Roles._checkRoleName(roleName);
 
@@ -154,21 +154,14 @@ _.extend(Roles, {
       unlessExists: false
     });
 
-    try {
-      return Meteor.roles.insert({_id: roleName, children: []});
-    } catch (e) {
-      // (from Meteor accounts-base package, insertUserDoc func)
-      // XXX string parsing sucks, maybe
-      // https://jira.mongodb.org/browse/SERVER-3069 will get fixed one day
-      if (e.name !== &#x27;MongoError&#x27;) throw e;
-      match = e.err.match(/E11000 duplicate key error index: ([^ ]+)/);
-      if (!match) throw e;
-      if (match[1].indexOf(&#x27;$_id&#x27;) !== -1) {
-        if (options.unlessExists) return null;
-        throw new Error(&quot;Role &#x27;&quot; + roleName + &quot;&#x27; already exists.&quot;);
-      }
-      throw e;
+    var result = Meteor.roles.upsert({_id: roleName}, {$setOnInsert: {children: []}});
+
+    if (!result.insertedId) {
+      if (options.unlessExists) return null;
+      throw new Error(&quot;Role &#x27;&quot; + roleName + &quot;&#x27; already exists.&quot;);
     }
+
+    return result.insertedId;
   },
 
   /**
@@ -196,7 +189,7 @@ _.extend(Roles, {
     }, {multi: true});
 
     Roles.getUsersInRole(roleName, {
-      anyPartition: true,
+      anyScope: true,
       queryOptions: {
         fields: {
           _id: 1,
@@ -204,12 +197,12 @@ _.extend(Roles, {
         }
       }
     }).forEach(function (user, index, cursor) {
-      // role can be assigned multiple times to the user, for multiple partitions
-      // we have to remove the role for each of those partitions
+      // role can be assigned multiple times to the user, for multiple scopes
+      // we have to remove the role for each of those scopes
       roles = _.filter(user.roles, Roles._roleMatcher(roleName));
       _.each(roles, function (role) {
         Roles._removeUserFromRole(user, roleName, {
-          partition: role.partition,
+          scope: role.scope,
           // we want to remove the role in any case
           _assigned: null
         });
@@ -363,7 +356,7 @@ _.extend(Roles, {
     if (!count) return;
 
     Roles.getUsersInRole(parentName, {
-      anyPartition: true,
+      anyScope: true,
       queryOptions: {
         fields: {
           _id: 1,
@@ -371,12 +364,12 @@ _.extend(Roles, {
         }
       }
     }).forEach(function (user, index, cursor) {
-      // parent role can be assigned multiple times to the user, for multiple partitions
-      // we have to assign a new subrole for each of those partitions
+      // parent role can be assigned multiple times to the user, for multiple scopes
+      // we have to assign a new subrole for each of those scopes
       parentRoles = _.filter(user.roles, Roles._roleMatcher(parentName));
       _.each(parentRoles, function (parentRole) {
         Roles._addUserToRole(user, roleName, {
-          partition: parentRole.partition,
+          scope: parentRole.scope,
           // we are assigning a subrole, so we set it as unassigned,
           // but only if they do not already exist
           _assigned: null
@@ -443,7 +436,7 @@ _.extend(Roles, {
     if (!count) return;
 
     Roles.getUsersInRole(parentName, {
-      anyPartition: true,
+      anyScope: true,
       queryOptions: {
         fields: {
           _id: 1,
@@ -451,12 +444,12 @@ _.extend(Roles, {
         }
       }
     }).forEach(function (user, index, cursor) {
-      // parent role can be assigned multiple times to the user, for multiple partitions
-      // we have to remove the subrole for each of those partitions
+      // parent role can be assigned multiple times to the user, for multiple scopes
+      // we have to remove the subrole for each of those scopes
       parentRoles = _.filter(user.roles, Roles._roleMatcher(parentName));
       _.each(parentRoles, function (parentRole) {
         Roles._removeUserFromRole(user, roleName, {
-          partition: parentRole.partition,
+          scope: parentRole.scope,
           // but we want to remove it only if it was not also explicitly assigned
           _assigned: false
         });
@@ -482,29 +475,23 @@ _.extend(Roles, {
    * @param {Array|String} users User ID(s) or object(s) with an &#x60;_id&#x60; field.
    * @param {Array|String} roles Name(s) of roles to add users to. Roles have to exist.
    * @param {Object|String} [options] Options:
-   *   - &#x60;partition&#x60;: name of the partition, or &#x60;null&#x60; for the global role
+   *   - &#x60;scope&#x60;: name of the scope, or &#x60;null&#x60; for the global role
    *   - &#x60;ifExists&#x60;: if &#x60;true&#x60;, do not throw an exception if the role does not exist
    *
-   * Alternatively, it can be a partition name string.
+   * Alternatively, it can be a scope name string.
    * @static
    */
   addUsersToRoles: function (users, roles, options) {
     if (!users) throw new Error (&quot;Missing &#x27;users&#x27; param.&quot;);
     if (!roles) throw new Error (&quot;Missing &#x27;roles&#x27; param.&quot;);
 
-    options = options || {};
+    options = Roles._normalizeOptions(options);
 
     // ensure arrays
     if (!_.isArray(users)) users = [users];
     if (!_.isArray(roles)) roles = [roles];
 
-    if (_.isString(options)) {
-      options = {partition: options};
-    }
-
-    options.partition = options.partition || null;
-
-    Roles._checkPartitionName(options.partition);
+    Roles._checkScopeName(options.scope);
 
     options = _.defaults(options, {
       ifExists: false,
@@ -537,10 +524,10 @@ _.extend(Roles, {
    * @param {Array|String} users User ID(s) or object(s) with an &#x60;_id&#x60; field.
    * @param {Array|String} roles Name(s) of roles to add users to. Roles have to exist.
    * @param {Object|String} [options] Options:
-   *   - &#x60;partition&#x60;: name of the partition, or &#x60;null&#x60; for the global role
+   *   - &#x60;scope&#x60;: name of the scope, or &#x60;null&#x60; for the global role
    *   - &#x60;ifExists&#x60;: if &#x60;true&#x60;, do not throw an exception if the role does not exist
    *
-   * Alternatively, it can be a partition name string.
+   * Alternatively, it can be a scope name string.
    * @static
    */
   setUserRoles: function (users, roles, options) {
@@ -549,19 +536,13 @@ _.extend(Roles, {
     if (!users) throw new Error (&quot;Missing &#x27;users&#x27; param.&quot;);
     if (!roles) throw new Error (&quot;Missing &#x27;roles&#x27; param.&quot;);
 
-    options = options || {};
+    options = Roles._normalizeOptions(options);
 
     // ensure arrays
     if (!_.isArray(users)) users = [users];
     if (!_.isArray(roles)) roles = [roles];
 
-    if (_.isString(options)) {
-      options = {partition: options};
-    }
-
-    options.partition = options.partition || null;
-
-    Roles._checkPartitionName(options.partition);
+    Roles._checkScopeName(options.scope);
 
     options = _.defaults(options, {
       ifExists: false,
@@ -580,7 +561,7 @@ _.extend(Roles, {
         id = user;
       }
       // we first clear all roles for the user
-      Meteor.users.update(id, {$pull: {roles: {partition: options.partition}}});
+      Meteor.users.update(id, {$pull: {roles: {scope: options.scope}}});
 
       // and then add all
       _.each(roles, function (role) {
@@ -596,7 +577,7 @@ _.extend(Roles, {
    * @param {String|Object} user User ID or object with an &#x60;_id&#x60; field.
    * @param {String} roleName Name of the role to add the user to. The role have to exist.
    * @param {Object} options Options:
-   *   - &#x60;partition&#x60;: name of the partition, or &#x60;null&#x60; for the global role
+   *   - &#x60;scope&#x60;: name of the scope, or &#x60;null&#x60; for the global role
    *   - &#x60;ifExists&#x60;: if &#x60;true&#x60;, do not throw an exception if the role does not exist
    *   - &#x60;_assigned&#x60;: internal option, should not be used publicly because it will break assumptions
    *     in te code; publicly, you can only add users to an assigned role
@@ -613,7 +594,7 @@ _.extend(Roles, {
         setRoles;
 
     Roles._checkRoleName(roleName);
-    Roles._checkPartitionName(options.partition);
+    Roles._checkScopeName(options.scope);
 
     if (_.isObject(user)) {
       id = user._id;
@@ -642,7 +623,7 @@ _.extend(Roles, {
         $not: {
           $elemMatch: {
             _id: roleName,
-            partition: options.partition
+            scope: options.scope
           }
         }
       }
@@ -651,7 +632,7 @@ _.extend(Roles, {
       $addToSet: {
         roles: {
           _id: roleName,
-          partition: options.partition,
+          scope: options.scope,
           // we want to make sure it is a boolean value
           assigned: !!options._assigned
         }
@@ -667,7 +648,7 @@ _.extend(Roles, {
           roles: {
             $elemMatch: {
               _id: roleName,
-              partition: options.partition
+              scope: options.scope
             }
           }
 
@@ -684,7 +665,7 @@ _.extend(Roles, {
           roles: {
             $elemMatch: {
               _id: roleName,
-              partition: options.partition
+              scope: options.scope
             }
           }
 
@@ -698,7 +679,7 @@ _.extend(Roles, {
 
     setRoles = [{
       _id: roleName,
-      partition: options.partition
+      scope: options.scope
     }];
 
     _.each(role.children, function (child) {
@@ -721,28 +702,22 @@ _.extend(Roles, {
    * @param {Array|String} users User ID(s) or object(s) with an &#x60;_id&#x60; field.
    * @param {Array|String} roles Name(s) of roles to add users to. Roles have to exist.
    * @param {Object|String} [options] Options:
-   *   - &#x60;partition&#x60;: name of the partition, or &#x60;null&#x60; for the global role
+   *   - &#x60;scope&#x60;: name of the scope, or &#x60;null&#x60; for the global role
    *
-   * Alternatively, it can be a partition name string.
+   * Alternatively, it can be a scope name string.
    * @static
    */
   removeUsersFromRoles: function (users, roles, options) {
     if (!users) throw new Error (&quot;Missing &#x27;users&#x27; param.&quot;);
     if (!roles) throw new Error (&quot;Missing &#x27;roles&#x27; param.&quot;);
 
-    options = options || {};
+    options = Roles._normalizeOptions(options);
 
     // ensure arrays
     if (!_.isArray(users)) users = [users];
     if (!_.isArray(roles)) roles = [roles];
 
-    if (_.isString(options)) {
-      options = {partition: options};
-    }
-
-    options.partition = options.partition || null;
-
-    Roles._checkPartitionName(options.partition);
+    Roles._checkScopeName(options.scope);
 
     options = _.defaults(options, {
       // internal option, should not be used publicly because it will break assumptions
@@ -775,7 +750,7 @@ _.extend(Roles, {
    * @param {String|Object} user User ID or object with an &#x60;_id&#x60; field.
    * @param {String} roleName Name of the role to add the user to. The role have to exist.
    * @param {Object} options Options:
-   *   - &#x60;partition&#x60;: name of the partition, or &#x60;null&#x60; for the global role
+   *   - &#x60;scope&#x60;: name of the scope, or &#x60;null&#x60; for the global role
    *   - &#x60;_assigned&#x60;: internal option, should not be used publicly because it will break assumptions
    *     in te code; publicly, you can only remove users from an assigned role
    *     if &#x60;true&#x60;, only manually assigned roles are removed, if &#x60;false&#x60;, only automatically
@@ -789,7 +764,7 @@ _.extend(Roles, {
         update;
 
     Roles._checkRoleName(roleName);
-    Roles._checkPartitionName(options.partition);
+    Roles._checkScopeName(options.scope);
 
     if (_.isObject(user)) {
       id = user._id;
@@ -804,7 +779,7 @@ _.extend(Roles, {
       $pull: {
         roles: {
           _id: roleName,
-          partition: options.partition
+          scope: options.scope
         }
       }
     };
@@ -857,7 +832,7 @@ _.extend(Roles, {
     setRoles = [];
     _.each(roles, function (role) {
       setRoles = setRoles.concat(Roles._addUserToRole(user, role._id, {
-        partition: role.partition,
+        scope: role.scope,
         _assigned: role.assigned, // this is true
         ifExists: true
       }));
@@ -868,7 +843,7 @@ _.extend(Roles, {
       Meteor.users.update(user._id, {
         $pull: {
           roles: {
-            $nor: _.map(setRoles, function (role) {return _.pick(role, &#x27;_id&#x27;, &#x27;partition&#x27;)})
+            $nor: _.map(setRoles, function (role) {return _.pick(role, &#x27;_id&#x27;, &#x27;scope&#x27;)})
           }
         }
       });
@@ -888,10 +863,10 @@ _.extend(Roles, {
    *     Roles.userIsInRole(userId, &#x27;admin&#x27;)
    *     Roles.userIsInRole(userId, [&#x27;admin&#x27;,&#x27;editor&#x27;])
    *
-   *     // partition roles (global roles are still checked)
+   *     // scope roles (global roles are still checked)
    *     Roles.userIsInRole(user, &#x27;admin&#x27;, &#x27;group1&#x27;)
    *     Roles.userIsInRole(userId, [&#x27;admin&#x27;,&#x27;editor&#x27;], &#x27;group1&#x27;)
-   *     Roles.userIsInRole(userId, [&#x27;admin&#x27;,&#x27;editor&#x27;], {partition: &#x27;group1&#x27;})
+   *     Roles.userIsInRole(userId, [&#x27;admin&#x27;,&#x27;editor&#x27;], {scope: &#x27;group1&#x27;})
    *
    * @method userIsInRole
    * @param {String|Object} user User ID or an actual user object.
@@ -899,11 +874,11 @@ _.extend(Roles, {
    *                             will return &#x60;true&#x60; if user is in _any_ role.
    *                             Roles do not have to exist.
    * @param {Object|String} [options] Options:
-   *   - &#x60;partition&#x60;: name of the partition; if supplied, limits check to just that partition;
-   *     the user&#x27;s global roles will always be checked whether partition is specified or not
-   *   - &#x60;anyPartition&#x60;: if set, role can be in any partition (&#x60;partition&#x60; option is ignored)
+   *   - &#x60;scope&#x60;: name of the scope; if supplied, limits check to just that scope;
+   *     the user&#x27;s global roles will always be checked whether scope is specified or not
+   *   - &#x60;anyScope&#x60;: if set, role can be in any scope (&#x60;scope&#x60; option is ignored)
    *
-   * Alternatively, it can be a partition name string.
+   * Alternatively, it can be a scope name string.
    * @return {Boolean} &#x60;true&#x60; if user is in _any_ of the target roles
    * @static
    */
@@ -911,23 +886,17 @@ _.extend(Roles, {
     var id,
         query;
 
-    options = options || {};
+    options = Roles._normalizeOptions(options);
 
     // ensure array to simplify code
     if (!_.isArray(roles)) roles = [roles];
 
     if (!roles.length) return false;
 
-    if (_.isString(options)) {
-      options = {partition: options};
-    }
-
-    options.partition = options.partition || null;
-
-    Roles._checkPartitionName(options.partition);
+    Roles._checkScopeName(options.scope);
 
     options = _.defaults(options, {
-      anyPartition: false
+      anyScope: false
     });
 
     if (!user) return false;
@@ -935,11 +904,11 @@ _.extend(Roles, {
     if (_.isObject(user)) {
       if (_.has(user, &#x27;roles&#x27;)) {
         return _.some(roles, function (role) {
-          if (options.anyPartition) {
+          if (options.anyScope) {
             return _.some(user.roles || [], Roles._roleMatcher(role));
           }
           else {
-            return _.some(user.roles || [], Roles._roleAndPartitionMatcher(role, options.partition));
+            return _.some(user.roles || [], Roles._roleAndScopeMatcher(role, options.scope));
           }
         })
       } else {
@@ -952,7 +921,7 @@ _.extend(Roles, {
 
     if (!id) return false;
 
-    if (options.anyPartition) {
+    if (options.anyScope) {
       query = {
         _id: id,
         &#x27;roles._id&#x27;: {$in: roles}
@@ -965,14 +934,14 @@ _.extend(Roles, {
           roles: {
             $elemMatch: {
               _id: {$in: roles},
-              partition: options.partition
+              scope: options.scope
             }
           }
         }, {
           roles: {
             $elemMatch: {
               _id: {$in: roles},
-              partition: null
+              scope: null
             }
           }
         }]
@@ -988,43 +957,37 @@ _.extend(Roles, {
    * @method getRolesForUser
    * @param {String|Object} user User ID or an actual user object.
    * @param {Object|String} [options] Options:
-   *   - &#x60;partition&#x60;: name of partition to provide roles for; if not specified, global roles are returned
-   *   - &#x60;anyPartition&#x60;: if set, role can be in any partition (&#x60;partition&#x60; option is ignored)
+   *   - &#x60;scope&#x60;: name of scope to provide roles for; if not specified, global roles are returned
+   *   - &#x60;anyScope&#x60;: if set, role can be in any scope (&#x60;scope&#x60; option is ignored)
    *   - &#x60;fullObjects&#x60;: return full roles objects (&#x60;true&#x60;) or just names (&#x60;false&#x60;) (default &#x60;false&#x60;)
    *   - &#x60;onlyAssigned&#x60;: return only assigned roles and not automatically inferred (like subroles)
    *
-   * Alternatively, it can be a partition name string.
+   * Alternatively, it can be a scope name string.
    * @return {Array} Array of user&#x27;s roles, unsorted.
    * @static
    */
   getRolesForUser: function (user, options) {
     var roles;
 
-    options = options || {};
+    options = Roles._normalizeOptions(options);
 
-    if (_.isString(options)) {
-      options = {partition: options};
-    }
-
-    options.partition = options.partition || null;
-
-    Roles._checkPartitionName(options.partition);
+    Roles._checkScopeName(options.scope);
 
     options = _.defaults(options, {
       fullObjects: false,
       onlyAssigned: false,
-      anyPartition: false
+      anyScope: false
     });
 
     user = Roles._resolveUser(user);
 
     if (!user) return [];
 
-    if (options.anyPartition) {
+    if (options.anyScope) {
       roles = user.roles || [];
     }
     else {
-      roles = _.filter(user.roles || [], Roles._partitionMatcher(options.partition));
+      roles = _.filter(user.roles || [], Roles._scopeMatcher(options.scope));
     }
 
     if (options.onlyAssigned) {
@@ -1064,13 +1027,13 @@ _.extend(Roles, {
    *                             specified but need not have _all_ roles.
    *                             Roles do not have to exist.
    * @param {Object|String} [options] Options:
-   *   - &#x60;partition&#x60;: name of the partition to restrict roles to; user&#x27;s global
+   *   - &#x60;scope&#x60;: name of the scope to restrict roles to; user&#x27;s global
    *     roles will also be checked
-   *   - &#x60;anyPartition&#x60;: if set, role can be in any partition (&#x60;partition&#x60; option is ignored)
+   *   - &#x60;anyScope&#x60;: if set, role can be in any scope (&#x60;scope&#x60; option is ignored)
    *   - &#x60;queryOptions&#x60;: options which are passed directly
    *     through to &#x60;Meteor.users.find(query, options)&#x60;
    *
-   * Alternatively, it can be a partition name string.
+   * Alternatively, it can be a scope name string.
    * @param {Object} [queryOptions] Options which are passed directly
    *                                through to &#x60;Meteor.users.find(query, options)&#x60;
    * @return {Cursor} Cursor of users in roles.
@@ -1091,13 +1054,13 @@ _.extend(Roles, {
    *                             specified but need not have _all_ roles.
    *                             Roles do not have to exist.
    * @param {Object|String} [options] Options:
-   *   - &#x60;partition&#x60;: name of the partition to restrict roles to; user&#x27;s global
+   *   - &#x60;scope&#x60;: name of the scope to restrict roles to; user&#x27;s global
    *     roles will also be checked
-   *   - &#x60;anyPartition&#x60;: if set, role can be in any partition (&#x60;partition&#x60; option is ignored)
+   *   - &#x60;anyScope&#x60;: if set, role can be in any scope (&#x60;scope&#x60; option is ignored)
    *   - &#x60;queryOptions&#x60;: options which are passed directly
    *     through to &#x60;Meteor.users.find(query, options)&#x60;
    *
-   * Alternatively, it can be a partition name string.
+   * Alternatively, it can be a scope name string.
    * @param {Object} [queryOptions] Options which are passed directly
    *                                through to &#x60;Meteor.users.find(query, options)&#x60;
    * @return {Object} Object with &#x60;query&#x60; and &#x60;queryOptions&#x60;.
@@ -1107,25 +1070,19 @@ _.extend(Roles, {
   _usersInRoleQuery: function (roles, options, queryOptions) {
     var query;
 
-    options = options || {};
+    options = Roles._normalizeOptions(options);
 
     // ensure array to simplify code
     if (!_.isArray(roles)) roles = [roles];
 
-    if (_.isString(options)) {
-      options = {partition: options};
-    }
-
-    options.partition = options.partition || null;
-
-    Roles._checkPartitionName(options.partition);
+    Roles._checkScopeName(options.scope);
 
     options = _.defaults(options, {
       queryOptions: queryOptions || {},
-      anyPartition: false
+      anyScope: false
     });
 
-    if (options.anyPartition) {
+    if (options.anyScope) {
       query = {
         &#x27;roles._id&#x27;: {$in: roles}
       };
@@ -1136,14 +1093,14 @@ _.extend(Roles, {
           roles: {
             $elemMatch: {
               _id: {$in: roles},
-              partition: options.partition
+              scope: options.scope
             }
           }
         }, {
           roles: {
             $elemMatch: {
               _id: {$in: roles},
-              partition: null
+              scope: null
             }
           }
         }]
@@ -1157,7 +1114,7 @@ _.extend(Roles, {
   },
 
   /**
-   * Deprecated. Use &#x60;getPartitionsForUser&#x60; instead.
+   * Deprecated. Use &#x60;getScopesForUser&#x60; instead.
    *
    * @method getGroupsForUser
    * @static
@@ -1166,24 +1123,24 @@ _.extend(Roles, {
   getGroupsForUser: function (/*args*/) {
     if (!getGroupsForUserDeprecationWarning) {
       getGroupsForUserDeprecationWarning = true;
-      console &amp;&amp; console.warn(&quot;getGroupsForUser has been deprecated. Use getPartitionsForUser instead.&quot;);
+      console &amp;&amp; console.warn(&quot;getGroupsForUser has been deprecated. Use getScopesForUser instead.&quot;);
     }
 
-    return Roles.getPartitionsForUser.apply(this, arguments);
+    return Roles.getScopesForUser.apply(this, arguments);
   },
 
   /**
-   * Retrieve users partitions, if any.
+   * Retrieve users scopes, if any.
    *
-   * @method getPartitionsForUser
+   * @method getScopesForUser
    * @param {String|Object} user User ID or an actual user object.
-   * @param {Array|String} [roles] Name of roles to restrict partitions to.
+   * @param {Array|String} [roles] Name of roles to restrict scopes to.
    *
-   * @return {Array} Array of user&#x27;s partitions, unsorted.
+   * @return {Array} Array of user&#x27;s scopes, unsorted.
    * @static
    */
-  getPartitionsForUser: function (user, roles) {
-    var partitions;
+  getScopesForUser: function (user, roles) {
+    var scopes;
 
     // ensure array to simplify code
     if (roles &amp;&amp; !_.isArray(roles)) roles = [roles];
@@ -1192,36 +1149,33 @@ _.extend(Roles, {
 
     if (!user) return [];
 
-    partitions = [];
+    scopes = [];
     _.each(user.roles || [], function (userRole) {
       // == used on purpose.
-      if (userRole.partition == null) return;
+      if (userRole.scope == null) return;
       if (roles &amp;&amp; !_.contains(roles, userRole._id)) return;
 
-      partitions.push(userRole.partition);
+      scopes.push(userRole.scope);
     });
 
-    return _.uniq(partitions);
+    return _.uniq(scopes);
   },
 
   /**
-   * Rename a partition.
+   * Rename a scope.
    *
-   * Roles assigned with a given partition are changed to be under the new partition.
+   * Roles assigned with a given scope are changed to be under the new scope.
    *
-   * @method renamePartition
-   * @param {String} oldName Old name of a partition.
-   * @param {String} newName New name of a partition.
+   * @method renameScope
+   * @param {String} oldName Old name of a scope.
+   * @param {String} newName New name of a scope.
    * @static
    */
-  renamePartition: function (oldName, newName) {
+  renameScope: function (oldName, newName) {
     var count;
 
-    oldName = oldName || null;
-    newName = newName || null;
-
-    Roles._checkPartitionName(oldName);
-    Roles._checkPartitionName(newName);
+    Roles._checkScopeName(oldName);
+    Roles._checkScopeName(newName);
 
     if (oldName === newName) return;
 
@@ -1229,35 +1183,33 @@ _.extend(Roles, {
       count = Meteor.users.update({
         roles: {
           $elemMatch: {
-            partition: oldName
+            scope: oldName
           }
         }
       }, {
         $set: {
-          &#x27;roles.$.partition&#x27;: newName
+          &#x27;roles.$.scope&#x27;: newName
         }
       }, {multi: true});
     } while (count &gt; 0);
   },
 
   /**
-   * Remove a partition.
+   * Remove a scope.
    *
-   * Roles assigned with a given partition are removed.
+   * Roles assigned with a given scope are removed.
    *
-   * @method removePartition
-   * @param {String} name The name of a partition.
+   * @method removeScope
+   * @param {String} name The name of a scope.
    * @static
    */
-  removePartition: function (name) {
-    name = name || null;
-
-    Roles._checkPartitionName(name);
+  removeScope: function (name) {
+    Roles._checkScopeName(name);
 
     Meteor.users.update({}, {
       $pull: {
         roles: {
-          partition: name
+          scope: name
         }
       }
     }, {multi: true});
@@ -1304,35 +1256,35 @@ _.extend(Roles, {
   },
 
   /**
-   * @method _roleAndPartitionMatcher
+   * @method _roleAndScopeMatcher
    * @param {String} roleName A role name to match against.
-   * @param {String} partition A partition to match against.
+   * @param {String} scope A scope to match against.
    * @return {Function} A matcher function which accepts a role object and returns &#x60;true&#x60;
-   *                     if its name matches &#x60;roleName&#x60;, and partition matches &#x60;partition&#x60;.
+   *                     if its name matches &#x60;roleName&#x60;, and scope matches &#x60;scope&#x60;.
    * @private
    * @static
    */
-  _roleAndPartitionMatcher: function (roleName, partition) {
+  _roleAndScopeMatcher: function (roleName, scope) {
     return function (userRole) {
-      // == used on purpose in &quot;userRole.partition == null&quot;
-      return (userRole._id === roleName &amp;&amp; userRole.partition === partition) ||
-        (userRole._id === roleName &amp;&amp; (!_.has(userRole, &#x27;partition&#x27;) || userRole.partition == null));
+      // == used on purpose in &quot;userRole.scope == null&quot;
+      return (userRole._id === roleName &amp;&amp; userRole.scope === scope) ||
+        (userRole._id === roleName &amp;&amp; (!_.has(userRole, &#x27;scope&#x27;) || userRole.scope == null));
     };
   },
 
   /**
-   * @method _partitionMatcher
-   * @param {String} partition A partition to match against.
+   * @method _scopeMatcher
+   * @param {String} scope A scope to match against.
    * @return {Function} A matcher function which accepts a role object and returns &#x60;true&#x60;
-   *                     if its partition matches &#x60;partition&#x60;.
+   *                    if its scope matches &#x60;scope&#x60;.
    * @private
    * @static
    */
-  _partitionMatcher: function (partition) {
+  _scopeMatcher: function (scope) {
     return function (userRole) {
-      // == used on purpose in &quot;userRole.partition == null&quot;
-      return (userRole.partition === partition) ||
-        (!_.has(userRole, &#x27;partition&#x27;) || userRole.partition == null);
+      // == used on purpose in &quot;userRole.scope == null&quot;
+      return (userRole.scope === scope) ||
+        (!_.has(userRole, &#x27;scope&#x27;) || userRole.scope == null);
     };
   },
 
@@ -1364,18 +1316,58 @@ _.extend(Roles, {
   },
 
   /**
-   * Throw an exception if &#x60;partitionName&#x60; is an invalid partition name.
+   * Normalize options.
    *
-   * @method _checkRoleName
-   * @param {String} partitionName A partition name to match against.
+   * @method _normalizeOptions
+   * @param {Object} options Options to normalize.
+   * @return {Object} Normalized options.
    * @private
    * @static
    */
-  _checkPartitionName: function (partitionName) {
-    if (partitionName === null) return;
+  _normalizeOptions: function (options) {
+    options = _.isUndefined(options) ? {} : options;
 
-    if (!partitionName || !_.isString(partitionName) || Roles._trim(partitionName) !== partitionName) {
-      throw new Error(&quot;Invalid partition name &#x27;&quot; + partitionName + &quot;&#x27;.&quot;);
+    if (options === null || _.isString(options)) {
+      options = {scope: options};
+    }
+
+    options.scope = Roles._normalizeScopeName(options.scope);
+
+    return options;
+  },
+
+  /**
+   * Normalize scope name.
+   *
+   * @method _normalizeScopeName
+   * @param {String} scopeName A scope name to normalize.
+   * @return {String} Normalized scope name.
+   * @private
+   * @static
+   */
+  _normalizeScopeName: function (scopeName) {
+    // map undefined and null to null
+    if (scopeName == null) {
+      return null;
+    }
+    else {
+      return scopeName;
+    }
+  },
+
+  /**
+   * Throw an exception if &#x60;scopeName&#x60; is an invalid scope name.
+   *
+   * @method _checkRoleName
+   * @param {String} scopeName A scope name to match against.
+   * @private
+   * @static
+   */
+  _checkScopeName: function (scopeName) {
+    if (scopeName === null) return;
+
+    if (!scopeName || !_.isString(scopeName) || Roles._trim(scopeName) !== scopeName) {
+      throw new Error(&quot;Invalid scope name &#x27;&quot; + scopeName + &quot;&#x27;.&quot;);
     }
   },
 

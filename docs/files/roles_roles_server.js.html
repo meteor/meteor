@@ -87,12 +87,12 @@
 
 // Create default indexes on users collection.
 // Index only on &quot;roles._id&quot; is not needed because the combined index works for it as well.
-Meteor.users._ensureIndex({&#x27;roles._id&#x27;: 1, &#x27;roles.partition&#x27;: 1});
-Meteor.users._ensureIndex({&#x27;roles.partition&#x27;: 1});
+Meteor.users._ensureIndex({&#x27;roles._id&#x27;: 1, &#x27;roles.scope&#x27;: 1});
+Meteor.users._ensureIndex({&#x27;roles.scope&#x27;: 1});
 
 /*
  * Publish logged-in user&#x27;s roles so client-side checks can work.
- * 
+ *
  * Use a named publish function so clients can check &#x60;ready()&#x60; state.
  */
 Meteor.publish(&#x27;_roles&#x27;, function () {
@@ -211,7 +211,7 @@ _.extend(Roles, {
 
         roles.push({
           _id: role,
-          partition: null,
+          scope: null,
           assigned: true
         })
       });
@@ -231,7 +231,7 @@ _.extend(Roles, {
 
           roles.push({
             _id: role,
-            partition: group,
+            scope: group,
             assigned: true
           })
         });
@@ -265,16 +265,16 @@ _.extend(Roles, {
       // We assume that we are converting back a failed migration, so values can only be
       // what were valid values in 1.0. So no group names starting with $ and no subroles.
 
-      if (userRole.partition) {
-        if (!usingGroups) throw new Error(&quot;Role &#x27;&quot; + userRole._id + &quot;&#x27; with partition &#x27;&quot; + userRole.partition + &quot;&#x27; without enabled groups.&quot;);
+      if (userRole.scope) {
+        if (!usingGroups) throw new Error(&quot;Role &#x27;&quot; + userRole._id + &quot;&#x27; with scope &#x27;&quot; + userRole.scope + &quot;&#x27; without enabled groups.&quot;);
 
         // escape
-        var partition = userRole.partition.replace(/\./g, &#x27;_&#x27;);
+        var scope = userRole.scope.replace(/\./g, &#x27;_&#x27;);
 
-        if (partition[0] === &#x27;$&#x27;) throw new Error(&quot;Group name &#x27;&quot; + partition + &quot;&#x27; start with $.&quot;);
+        if (scope[0] === &#x27;$&#x27;) throw new Error(&quot;Group name &#x27;&quot; + scope + &quot;&#x27; start with $.&quot;);
 
-        roles[partition] = roles[partition] || [];
-        roles[partition].push(userRole._id);
+        roles[scope] = roles[scope] || [];
+        roles[scope].push(userRole._id);
       }
       else {
         if (usingGroups) {
@@ -321,6 +321,23 @@ _.extend(Roles, {
   },
 
   /**
+   * @method _dropCollectionIndex
+   * @param {Object} collection Collection on which to drop the index.
+   * @param {String} indexName Name of the index to drop.
+   * @for Roles
+   * @private
+   * @static
+   */
+  _dropCollectionIndex: function (collection, indexName) {
+    try {
+      collection._dropIndex(indexName);
+    } catch (e) {
+      if (e.name !== &#x27;MongoError&#x27;) throw e;
+      if (!/index not found/.test(e.err || e.errmsg)) throw e;
+    }
+  },
+
+  /**
    * Migrates &#x60;Meteor.users&#x60; and &#x60;Meteor.roles&#x60; to the new format.
    *
    * @method _forwardMigrate
@@ -334,6 +351,8 @@ _.extend(Roles, {
   _forwardMigrate: function (updateUser, updateRole, convertUnderscoresToDots) {
     updateUser = updateUser || Roles._defaultUpdateUser;
     updateRole = updateRole || Roles._defaultUpdateRole;
+
+    Roles._dropCollectionIndex(Meteor.roles, &#x27;name_1&#x27;);
 
     Meteor.roles.find().forEach(function (role, index, cursor) {
       if (!Roles._isNewRole(role)) {
@@ -366,6 +385,9 @@ _.extend(Roles, {
   _backwardMigrate: function (updateUser, updateRole, usingGroups) {
     updateUser = updateUser || Roles._defaultUpdateUser;
     updateRole = updateRole || Roles._defaultUpdateRole;
+
+    Roles._dropCollectionIndex(Meteor.users, &#x27;roles._id_1_roles.scope_1&#x27;);
+    Roles._dropCollectionIndex(Meteor.users, &#x27;roles.scope_1&#x27;);
 
     Meteor.roles.find().forEach(function (role, index, cursor) {
       if (!Roles._isOldRole(role)) {

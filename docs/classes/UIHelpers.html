@@ -133,7 +133,7 @@
                         <code>role</code>
                 </li>
                 <li class="arg">
-                        <code class="optional">[partition]</code>
+                        <code class="optional">[scope]</code>
                 </li>
             </ul><span class="paren">)</span>
         </div>
@@ -181,13 +181,13 @@ of the target roles.  For use in client-side templates.</p>
 
                 </li>
                 <li class="param">
-                        <code class="param-name optional">[partition]</code>
+                        <code class="param-name optional">[scope]</code>
                         <span class="type">String</span>
                         <span class="flag optional" title="This parameter is optional.">optional</span>
 
 
                     <div class="param-description">
-                        <p>Optional, name of partition to check.</p>
+                        <p>Optional, name of scope to check.</p>
 
                     </div>
 
@@ -216,7 +216,7 @@ of the target roles.  For use in client-side templates.</p>
 {{#if isInRole 'editor,user'}}
 {{/if}}
 
-{{#if isInRole 'editor,user' 'partition1'}}
+{{#if isInRole 'editor,user' 'scope1'}}
 {{/if}}</code></pre>
 
             </div>

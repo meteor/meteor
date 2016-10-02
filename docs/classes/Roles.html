@@ -174,6 +174,11 @@
                                     <span class="flag static">static</span>
                             </li>
                             <li class="index-item method private">
+                                <a href="#method__dropCollectionIndex">_dropCollectionIndex</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method private">
                                 <a href="#method__forwardMigrate">_forwardMigrate</a>
 
                                     <span class="flag static">static</span>
@@ -199,12 +204,17 @@
                                     <span class="flag static">static</span>
                             </li>
                             <li class="index-item method private">
-                                <a href="#method__onlyAssignedMatcher">_onlyAssignedMatcher</a>
+                                <a href="#method__normalizeOptions">_normalizeOptions</a>
 
                                     <span class="flag static">static</span>
                             </li>
                             <li class="index-item method private">
-                                <a href="#method__partitionMatcher">_partitionMatcher</a>
+                                <a href="#method__normalizeScopeName">_normalizeScopeName</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method__onlyAssignedMatcher">_onlyAssignedMatcher</a>
 
                                     <span class="flag static">static</span>
                             </li>
@@ -224,12 +234,17 @@
                                     <span class="flag static">static</span>
                             </li>
                             <li class="index-item method private">
-                                <a href="#method__roleAndPartitionMatcher">_roleAndPartitionMatcher</a>
+                                <a href="#method__roleAndScopeMatcher">_roleAndScopeMatcher</a>
 
                                     <span class="flag static">static</span>
                             </li>
                             <li class="index-item method private">
                                 <a href="#method__roleMatcher">_roleMatcher</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method__scopeMatcher">_scopeMatcher</a>
 
                                     <span class="flag static">static</span>
                             </li>
@@ -270,12 +285,12 @@
                                     <span class="flag deprecated">deprecated</span>
                             </li>
                             <li class="index-item method">
-                                <a href="#method_getPartitionsForUser">getPartitionsForUser</a>
+                                <a href="#method_getRolesForUser">getRolesForUser</a>
 
                                     <span class="flag static">static</span>
                             </li>
                             <li class="index-item method">
-                                <a href="#method_getRolesForUser">getRolesForUser</a>
+                                <a href="#method_getScopesForUser">getScopesForUser</a>
 
                                     <span class="flag static">static</span>
                             </li>
@@ -285,12 +300,12 @@
                                     <span class="flag static">static</span>
                             </li>
                             <li class="index-item method">
-                                <a href="#method_removePartition">removePartition</a>
+                                <a href="#method_removeRolesFromParent">removeRolesFromParent</a>
 
                                     <span class="flag static">static</span>
                             </li>
                             <li class="index-item method">
-                                <a href="#method_removeRolesFromParent">removeRolesFromParent</a>
+                                <a href="#method_removeScope">removeScope</a>
 
                                     <span class="flag static">static</span>
                             </li>
@@ -300,12 +315,12 @@
                                     <span class="flag static">static</span>
                             </li>
                             <li class="index-item method">
-                                <a href="#method_renamePartition">renamePartition</a>
+                                <a href="#method_renameRole">renameRole</a>
 
                                     <span class="flag static">static</span>
                             </li>
                             <li class="index-item method">
-                                <a href="#method_renameRole">renameRole</a>
+                                <a href="#method_renameScope">renameScope</a>
 
                                     <span class="flag static">static</span>
                             </li>
@@ -372,7 +387,7 @@
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l219"><code>roles&#x2F;roles_common.js:219</code></a>
+        <a href="../files/roles_roles_common.js.html#l212"><code>roles&#x2F;roles_common.js:212</code></a>
         </p>
 
 
@@ -447,7 +462,7 @@
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l507"><code>roles&#x2F;roles_common.js:507</code></a>
+        <a href="../files/roles_roles_common.js.html#l488"><code>roles&#x2F;roles_common.js:488</code></a>
         </p>
 
 
@@ -493,7 +508,7 @@
                     <div class="param-description">
                         <p>Options:</p>
 <ul>
-<li><code>partition</code>: name of the partition, or <code>null</code> for the global role</li>
+<li><code>scope</code>: name of the scope, or <code>null</code> for the global role</li>
 <li><code>ifExists</code>: if <code>true</code>, do not throw an exception if the role does not exist</li>
 <li><code>_assigned</code>: internal option, should not be used publicly because it will break assumptions
 in te code; publicly, you can only add users to an assigned role
@@ -542,7 +557,7 @@ only that it does not force the value to <code>false</code> if the role is alrea
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l748"><code>roles&#x2F;roles_common.js:748</code></a>
+        <a href="../files/roles_roles_common.js.html#l723"><code>roles&#x2F;roles_common.js:723</code></a>
         </p>
 
 
@@ -608,7 +623,7 @@ are marked as not explicitly assigned, and have not been part of what we current
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_server.js.html#l266"><code>roles&#x2F;roles_server.js:266</code></a>
+        <a href="../files/roles_roles_server.js.html#l285"><code>roles&#x2F;roles_server.js:285</code></a>
         </p>
 
 
@@ -672,62 +687,6 @@ no subroles.</p>
         <div class="args">
             <span class="paren">(</span><ul class="args-list inline commas">
                 <li class="arg">
-                        <code>partitionName</code>
-                </li>
-            </ul><span class="paren">)</span>
-        </div>
-
-
-
-        <span class="flag private">private</span>
-
-
-        <span class="flag static">static</span>
-
-
-
-    <div class="meta">
-                <p>
-                Defined in
-        <a href="../files/roles_roles_common.js.html#l1281"><code>roles&#x2F;roles_common.js:1281</code></a>
-        </p>
-
-
-
-    </div>
-
-    <div class="description">
-        <p>Throw an exception if <code>partitionName</code> is an invalid partition name.</p>
-
-    </div>
-
-        <div class="params">
-            <h4>Parameters:</h4>
-
-            <ul class="params-list">
-                <li class="param">
-                        <code class="param-name">partitionName</code>
-                        <span class="type">String</span>
-
-
-                    <div class="param-description">
-                        <p>A partition name to match against.</p>
-
-                    </div>
-
-                </li>
-            </ul>
-        </div>
-
-
-
-</div>
-<div id="method__checkRoleName" class="method item private">
-    <h3 class="name"><code>_checkRoleName</code></h3>
-
-        <div class="args">
-            <span class="paren">(</span><ul class="args-list inline commas">
-                <li class="arg">
                         <code>roleName</code>
                 </li>
             </ul><span class="paren">)</span>
@@ -745,7 +704,7 @@ no subroles.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1267"><code>roles&#x2F;roles_common.js:1267</code></a>
+        <a href="../files/roles_roles_common.js.html#l1219"><code>roles&#x2F;roles_common.js:1219</code></a>
         </p>
 
 
@@ -768,6 +727,62 @@ no subroles.</p>
 
                     <div class="param-description">
                         <p>A role name to match against.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
+<div id="method__checkRoleName" class="method item private">
+    <h3 class="name"><code>_checkRoleName</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>scopeName</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common.js.html#l1273"><code>roles&#x2F;roles_common.js:1273</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Throw an exception if <code>scopeName</code> is an invalid scope name.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">scopeName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>A scope name to match against.</p>
 
                     </div>
 
@@ -1212,6 +1227,75 @@ no subroles.</p>
 
 
 </div>
+<div id="method__dropCollectionIndex" class="method item private">
+    <h3 class="name"><code>_dropCollectionIndex</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>collection</code>
+                </li>
+                <li class="arg">
+                        <code>indexName</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_server.js.html#l238"><code>roles&#x2F;roles_server.js:238</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">collection</code>
+                        <span class="type">Object</span>
+
+
+                    <div class="param-description">
+                        <p>Collection on which to drop the index.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">indexName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>Name of the index to drop.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
 <div id="method__forwardMigrate" class="method item private">
     <h3 class="name"><code>_forwardMigrate</code></h3>
 
@@ -1241,7 +1325,7 @@ no subroles.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_server.js.html#l238"><code>roles&#x2F;roles_server.js:238</code></a>
+        <a href="../files/roles_roles_server.js.html#l255"><code>roles&#x2F;roles_server.js:255</code></a>
         </p>
 
 
@@ -1568,13 +1652,87 @@ If it is ambiguous or it is not, returns <code>false</code>.</p>
 
 
 </div>
-<div id="method__onlyAssignedMatcher" class="method item private">
-    <h3 class="name"><code>_onlyAssignedMatcher</code></h3>
+<div id="method__normalizeOptions" class="method item private">
+    <h3 class="name"><code>_normalizeOptions</code></h3>
 
-        <span class="paren">()</span>
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>options</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
 
         <span class="returns-inline">
-            <span class="type">Function</span>
+            <span class="type">Object</span>
+        </span>
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common.js.html#l1233"><code>roles&#x2F;roles_common.js:1233</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Normalize options.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">options</code>
+                        <span class="type">Object</span>
+
+
+                    <div class="param-description">
+                        <p>Options to normalize.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Object</span>:
+                    <p>Normalized options.</p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method__normalizeScopeName" class="method item private">
+    <h3 class="name"><code>_normalizeScopeName</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>scopeName</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">String</span>
         </span>
 
 
@@ -1596,33 +1754,44 @@ If it is ambiguous or it is not, returns <code>false</code>.</p>
     </div>
 
     <div class="description">
-        
+        <p>Normalize scope name.</p>
+
     </div>
 
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">scopeName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>A scope name to normalize.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
 
         <div class="returns">
             <h4>Returns:</h4>
 
             <div class="returns-description">
-                        <span class="type">Function</span>:
-                    <p>A matcher function which accepts a role object and returns <code>true</code>
-if the role is an assigned role.</p>
+                        <span class="type">String</span>:
+                    <p>Normalized scope name.</p>
 
             </div>
         </div>
 
 
 </div>
-<div id="method__partitionMatcher" class="method item private">
-    <h3 class="name"><code>_partitionMatcher</code></h3>
+<div id="method__onlyAssignedMatcher" class="method item private">
+    <h3 class="name"><code>_onlyAssignedMatcher</code></h3>
 
-        <div class="args">
-            <span class="paren">(</span><ul class="args-list inline commas">
-                <li class="arg">
-                        <code>partition</code>
-                </li>
-            </ul><span class="paren">)</span>
-        </div>
+        <span class="paren">()</span>
 
         <span class="returns-inline">
             <span class="type">Function</span>
@@ -1639,7 +1808,7 @@ if the role is an assigned role.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1238"><code>roles&#x2F;roles_common.js:1238</code></a>
+        <a href="../files/roles_roles_common.js.html#l1206"><code>roles&#x2F;roles_common.js:1206</code></a>
         </p>
 
 
@@ -1650,23 +1819,6 @@ if the role is an assigned role.</p>
         
     </div>
 
-        <div class="params">
-            <h4>Parameters:</h4>
-
-            <ul class="params-list">
-                <li class="param">
-                        <code class="param-name">partition</code>
-                        <span class="type">String</span>
-
-
-                    <div class="param-description">
-                        <p>A partition to match against.</p>
-
-                    </div>
-
-                </li>
-            </ul>
-        </div>
 
         <div class="returns">
             <h4>Returns:</h4>
@@ -1674,7 +1826,7 @@ if the role is an assigned role.</p>
             <div class="returns-description">
                         <span class="type">Function</span>:
                     <p>A matcher function which accepts a role object and returns <code>true</code>
-if its partition matches <code>partition</code>.</p>
+if the role is an assigned role.</p>
 
             </div>
         </div>
@@ -1707,7 +1859,7 @@ if its partition matches <code>partition</code>.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l323"><code>roles&#x2F;roles_common.js:323</code></a>
+        <a href="../files/roles_roles_common.js.html#l316"><code>roles&#x2F;roles_common.js:316</code></a>
         </p>
 
 
@@ -1779,7 +1931,7 @@ if its partition matches <code>partition</code>.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l680"><code>roles&#x2F;roles_common.js:680</code></a>
+        <a href="../files/roles_roles_common.js.html#l655"><code>roles&#x2F;roles_common.js:655</code></a>
         </p>
 
 
@@ -1830,7 +1982,7 @@ particular user.</p>
                     <div class="param-description">
                         <p>Options:</p>
 <ul>
-<li><code>partition</code>: name of the partition, or <code>null</code> for the global role</li>
+<li><code>scope</code>: name of the scope, or <code>null</code> for the global role</li>
 <li><code>_assigned</code>: internal option, should not be used publicly because it will break assumptions
 in te code; publicly, you can only remove users from an assigned role
 if <code>true</code>, only manually assigned roles are removed, if <code>false</code>, only automatically
@@ -1875,7 +2027,7 @@ assigned roles are removed, if <code>null</code>, any role is removed</li>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1181"><code>roles&#x2F;roles_common.js:1181</code></a>
+        <a href="../files/roles_roles_common.js.html#l1133"><code>roles&#x2F;roles_common.js:1133</code></a>
         </p>
 
 
@@ -1929,8 +2081,8 @@ if it is not already.</p>
 
 
 </div>
-<div id="method__roleAndPartitionMatcher" class="method item private">
-    <h3 class="name"><code>_roleAndPartitionMatcher</code></h3>
+<div id="method__roleAndScopeMatcher" class="method item private">
+    <h3 class="name"><code>_roleAndScopeMatcher</code></h3>
 
         <div class="args">
             <span class="paren">(</span><ul class="args-list inline commas">
@@ -1938,7 +2090,7 @@ if it is not already.</p>
                         <code>roleName</code>
                 </li>
                 <li class="arg">
-                        <code>partition</code>
+                        <code>scope</code>
                 </li>
             </ul><span class="paren">)</span>
         </div>
@@ -1958,7 +2110,7 @@ if it is not already.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1221"><code>roles&#x2F;roles_common.js:1221</code></a>
+        <a href="../files/roles_roles_common.js.html#l1173"><code>roles&#x2F;roles_common.js:1173</code></a>
         </p>
 
 
@@ -1985,12 +2137,12 @@ if it is not already.</p>
 
                 </li>
                 <li class="param">
-                        <code class="param-name">partition</code>
+                        <code class="param-name">scope</code>
                         <span class="type">String</span>
 
 
                     <div class="param-description">
-                        <p>A partition to match against.</p>
+                        <p>A scope to match against.</p>
 
                     </div>
 
@@ -2004,7 +2156,7 @@ if it is not already.</p>
             <div class="returns-description">
                         <span class="type">Function</span>:
                     <p>A matcher function which accepts a role object and returns <code>true</code>
-if its name matches <code>roleName</code>, and partition matches <code>partition</code>.</p>
+if its name matches <code>roleName</code>, and scope matches <code>scope</code>.</p>
 
             </div>
         </div>
@@ -2037,7 +2189,7 @@ if its name matches <code>roleName</code>, and partition matches <code>partition
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1207"><code>roles&#x2F;roles_common.js:1207</code></a>
+        <a href="../files/roles_roles_common.js.html#l1159"><code>roles&#x2F;roles_common.js:1159</code></a>
         </p>
 
 
@@ -2079,6 +2231,74 @@ if its name matches <code>roleName</code>.</p>
 
 
 </div>
+<div id="method__scopeMatcher" class="method item private">
+    <h3 class="name"><code>_scopeMatcher</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>scope</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Function</span>
+        </span>
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common.js.html#l1190"><code>roles&#x2F;roles_common.js:1190</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">scope</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>A scope to match against.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Function</span>:
+                    <p>A matcher function which accepts a role object and returns <code>true</code>
+if its scope matches <code>scope</code>.</p>
+
+            </div>
+        </div>
+
+
+</div>
 <div id="method__usersInRoleQuery" class="method item private">
     <h3 class="name"><code>_usersInRoleQuery</code></h3>
 
@@ -2111,7 +2331,7 @@ if its name matches <code>roleName</code>.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1002"><code>roles&#x2F;roles_common.js:1002</code></a>
+        <a href="../files/roles_roles_common.js.html#l965"><code>roles&#x2F;roles_common.js:965</code></a>
         </p>
 
 
@@ -2149,13 +2369,13 @@ Roles do not have to exist.</p>
                     <div class="param-description">
                         <p>Options:</p>
 <ul>
-<li><code>partition</code>: name of the partition to restrict roles to; user's global
+<li><code>scope</code>: name of the scope to restrict roles to; user's global
 roles will also be checked</li>
-<li><code>anyPartition</code>: if set, role can be in any partition (<code>partition</code> option is ignored)</li>
+<li><code>anyScope</code>: if set, role can be in any scope (<code>scope</code> option is ignored)</li>
 <li><code>queryOptions</code>: options which are passed directly
 through to <code>Meteor.users.find(query, options)</code></li>
 </ul>
-<p>Alternatively, it can be a partition name string.</p>
+<p>Alternatively, it can be a scope name string.</p>
 
                     </div>
 
@@ -2213,7 +2433,7 @@ through to <code>Meteor.users.find(query, options)</code></p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l199"><code>roles&#x2F;roles_common.js:199</code></a>
+        <a href="../files/roles_roles_common.js.html#l192"><code>roles&#x2F;roles_common.js:192</code></a>
         </p>
 
 
@@ -2287,7 +2507,7 @@ parent role set, new subroles are added automatically.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l385"><code>roles&#x2F;roles_common.js:385</code></a>
+        <a href="../files/roles_roles_common.js.html#l378"><code>roles&#x2F;roles_common.js:378</code></a>
         </p>
 
 
@@ -2335,10 +2555,10 @@ parent role set, new subroles are added automatically.</p>
                     <div class="param-description">
                         <p>Options:</p>
 <ul>
-<li><code>partition</code>: name of the partition, or <code>null</code> for the global role</li>
+<li><code>scope</code>: name of the scope, or <code>null</code> for the global role</li>
 <li><code>ifExists</code>: if <code>true</code>, do not throw an exception if the role does not exist</li>
 </ul>
-<p>Alternatively, it can be a partition name string.</p>
+<p>Alternatively, it can be a scope name string.</p>
 
                     </div>
 
@@ -2467,7 +2687,7 @@ Roles.addUsersToRoles([user1, user2], ['glorious-admin', 'perform-action'], 'exa
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l89"><code>roles&#x2F;roles_common.js:89</code></a>
+        <a href="../files/roles_roles_common.js.html#l82"><code>roles&#x2F;roles_common.js:82</code></a>
         </p>
 
 
@@ -2526,7 +2746,7 @@ Roles.addUsersToRoles([user1, user2], ['glorious-admin', 'perform-action'], 'exa
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l956"><code>roles&#x2F;roles_common.js:956</code></a>
+        <a href="../files/roles_roles_common.js.html#l919"><code>roles&#x2F;roles_common.js:919</code></a>
         </p>
 
 
@@ -2587,7 +2807,7 @@ through to <code>Meteor.roles.find(query, options)</code>.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1074"><code>roles&#x2F;roles_common.js:1074</code></a>
+        <a href="../files/roles_roles_common.js.html#l1031"><code>roles&#x2F;roles_common.js:1031</code></a>
         </p>
 
 
@@ -2595,93 +2815,11 @@ through to <code>Meteor.roles.find(query, options)</code>.</p>
     </div>
 
     <div class="description">
-        <p>Deprecated. Use <code>getPartitionsForUser</code> instead.</p>
+        <p>Deprecated. Use <code>getScopesForUser</code> instead.</p>
 
     </div>
 
 
-
-
-</div>
-<div id="method_getPartitionsForUser" class="method item">
-    <h3 class="name"><code>getPartitionsForUser</code></h3>
-
-        <div class="args">
-            <span class="paren">(</span><ul class="args-list inline commas">
-                <li class="arg">
-                        <code>user</code>
-                </li>
-                <li class="arg">
-                        <code class="optional">[roles]</code>
-                </li>
-            </ul><span class="paren">)</span>
-        </div>
-
-        <span class="returns-inline">
-            <span class="type">Array</span>
-        </span>
-
-
-
-
-        <span class="flag static">static</span>
-
-
-
-    <div class="meta">
-                <p>
-                Defined in
-        <a href="../files/roles_roles_common.js.html#l1090"><code>roles&#x2F;roles_common.js:1090</code></a>
-        </p>
-
-
-
-    </div>
-
-    <div class="description">
-        <p>Retrieve users partitions, if any.</p>
-
-    </div>
-
-        <div class="params">
-            <h4>Parameters:</h4>
-
-            <ul class="params-list">
-                <li class="param">
-                        <code class="param-name">user</code>
-                        <span class="type">String | Object</span>
-
-
-                    <div class="param-description">
-                        <p>User ID or an actual user object.</p>
-
-                    </div>
-
-                </li>
-                <li class="param">
-                        <code class="param-name optional">[roles]</code>
-                        <span class="type">Array | String</span>
-                        <span class="flag optional" title="This parameter is optional.">optional</span>
-
-
-                    <div class="param-description">
-                        <p>Name of roles to restrict partitions to.</p>
-
-                    </div>
-
-                </li>
-            </ul>
-        </div>
-
-        <div class="returns">
-            <h4>Returns:</h4>
-
-            <div class="returns-description">
-                        <span class="type">Array</span>:
-                    <p>Array of user's partitions, unsorted.</p>
-
-            </div>
-        </div>
 
 
 </div>
@@ -2713,7 +2851,7 @@ through to <code>Meteor.roles.find(query, options)</code>.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l900"><code>roles&#x2F;roles_common.js:900</code></a>
+        <a href="../files/roles_roles_common.js.html#l869"><code>roles&#x2F;roles_common.js:869</code></a>
         </p>
 
 
@@ -2749,12 +2887,12 @@ through to <code>Meteor.roles.find(query, options)</code>.</p>
                     <div class="param-description">
                         <p>Options:</p>
 <ul>
-<li><code>partition</code>: name of partition to provide roles for; if not specified, global roles are returned</li>
-<li><code>anyPartition</code>: if set, role can be in any partition (<code>partition</code> option is ignored)</li>
+<li><code>scope</code>: name of scope to provide roles for; if not specified, global roles are returned</li>
+<li><code>anyScope</code>: if set, role can be in any scope (<code>scope</code> option is ignored)</li>
 <li><code>fullObjects</code>: return full roles objects (<code>true</code>) or just names (<code>false</code>) (default <code>false</code>)</li>
 <li><code>onlyAssigned</code>: return only assigned roles and not automatically inferred (like subroles)</li>
 </ul>
-<p>Alternatively, it can be a partition name string.</p>
+<p>Alternatively, it can be a scope name string.</p>
 
                     </div>
 
@@ -2768,6 +2906,88 @@ through to <code>Meteor.roles.find(query, options)</code>.</p>
             <div class="returns-description">
                         <span class="type">Array</span>:
                     <p>Array of user's roles, unsorted.</p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method_getScopesForUser" class="method item">
+    <h3 class="name"><code>getScopesForUser</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>user</code>
+                </li>
+                <li class="arg">
+                        <code class="optional">[roles]</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Array</span>
+        </span>
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common.js.html#l1047"><code>roles&#x2F;roles_common.js:1047</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Retrieve users scopes, if any.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">user</code>
+                        <span class="type">String | Object</span>
+
+
+                    <div class="param-description">
+                        <p>User ID or an actual user object.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name optional">[roles]</code>
+                        <span class="type">Array | String</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+
+
+                    <div class="param-description">
+                        <p>Name of roles to restrict scopes to.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Array</span>:
+                    <p>Array of user's scopes, unsorted.</p>
 
             </div>
         </div>
@@ -2805,7 +3025,7 @@ through to <code>Meteor.roles.find(query, options)</code>.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l971"><code>roles&#x2F;roles_common.js:971</code></a>
+        <a href="../files/roles_roles_common.js.html#l934"><code>roles&#x2F;roles_common.js:934</code></a>
         </p>
 
 
@@ -2845,13 +3065,13 @@ Roles do not have to exist.</p>
                     <div class="param-description">
                         <p>Options:</p>
 <ul>
-<li><code>partition</code>: name of the partition to restrict roles to; user's global
+<li><code>scope</code>: name of the scope to restrict roles to; user's global
 roles will also be checked</li>
-<li><code>anyPartition</code>: if set, role can be in any partition (<code>partition</code> option is ignored)</li>
+<li><code>anyScope</code>: if set, role can be in any scope (<code>scope</code> option is ignored)</li>
 <li><code>queryOptions</code>: options which are passed directly
 through to <code>Meteor.users.find(query, options)</code></li>
 </ul>
-<p>Alternatively, it can be a partition name string.</p>
+<p>Alternatively, it can be a scope name string.</p>
 
                     </div>
 
@@ -2884,62 +3104,6 @@ through to <code>Meteor.users.find(query, options)</code></p>
 
 
 </div>
-<div id="method_removePartition" class="method item">
-    <h3 class="name"><code>removePartition</code></h3>
-
-        <div class="args">
-            <span class="paren">(</span><ul class="args-list inline commas">
-                <li class="arg">
-                        <code>name</code>
-                </li>
-            </ul><span class="paren">)</span>
-        </div>
-
-
-
-
-
-        <span class="flag static">static</span>
-
-
-
-    <div class="meta">
-                <p>
-                Defined in
-        <a href="../files/roles_roles_common.js.html#l1158"><code>roles&#x2F;roles_common.js:1158</code></a>
-        </p>
-
-
-
-    </div>
-
-    <div class="description">
-        <p>Remove a partition.</p>
-<p>Roles assigned with a given partition are removed.</p>
-
-    </div>
-
-        <div class="params">
-            <h4>Parameters:</h4>
-
-            <ul class="params-list">
-                <li class="param">
-                        <code class="param-name">name</code>
-                        <span class="type">String</span>
-
-
-                    <div class="param-description">
-                        <p>The name of a partition.</p>
-
-                    </div>
-
-                </li>
-            </ul>
-        </div>
-
-
-
-</div>
 <div id="method_removeRolesFromParent" class="method item">
     <h3 class="name"><code>removeRolesFromParent</code></h3>
 
@@ -2965,7 +3129,7 @@ through to <code>Meteor.users.find(query, options)</code></p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l303"><code>roles&#x2F;roles_common.js:303</code></a>
+        <a href="../files/roles_roles_common.js.html#l296"><code>roles&#x2F;roles_common.js:296</code></a>
         </p>
 
 
@@ -3011,6 +3175,62 @@ parent role set, removed subrole is removed automatically.</p>
 
 
 </div>
+<div id="method_removeScope" class="method item">
+    <h3 class="name"><code>removeScope</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>name</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common.js.html#l1112"><code>roles&#x2F;roles_common.js:1112</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Remove a scope.</p>
+<p>Roles assigned with a given scope are removed.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">name</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>The name of a scope.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
 <div id="method_removeUsersFromRoles" class="method item">
     <h3 class="name"><code>removeUsersFromRoles</code></h3>
 
@@ -3039,7 +3259,7 @@ parent role set, removed subrole is removed automatically.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l627"><code>roles&#x2F;roles_common.js:627</code></a>
+        <a href="../files/roles_roles_common.js.html#l608"><code>roles&#x2F;roles_common.js:608</code></a>
         </p>
 
 
@@ -3086,9 +3306,9 @@ parent role set, removed subrole is removed automatically.</p>
                     <div class="param-description">
                         <p>Options:</p>
 <ul>
-<li><code>partition</code>: name of the partition, or <code>null</code> for the global role</li>
+<li><code>scope</code>: name of the scope, or <code>null</code> for the global role</li>
 </ul>
-<p>Alternatively, it can be a partition name string.</p>
+<p>Alternatively, it can be a scope name string.</p>
 
                     </div>
 
@@ -3108,76 +3328,6 @@ Roles.removeUsersFromRoles(userId, ['user'], 'group1')</code></pre>
 
             </div>
         </div>
-</div>
-<div id="method_renamePartition" class="method item">
-    <h3 class="name"><code>renamePartition</code></h3>
-
-        <div class="args">
-            <span class="paren">(</span><ul class="args-list inline commas">
-                <li class="arg">
-                        <code>oldName</code>
-                </li>
-                <li class="arg">
-                        <code>newName</code>
-                </li>
-            </ul><span class="paren">)</span>
-        </div>
-
-
-
-
-
-        <span class="flag static">static</span>
-
-
-
-    <div class="meta">
-                <p>
-                Defined in
-        <a href="../files/roles_roles_common.js.html#l1122"><code>roles&#x2F;roles_common.js:1122</code></a>
-        </p>
-
-
-
-    </div>
-
-    <div class="description">
-        <p>Rename a partition.</p>
-<p>Roles assigned with a given partition are changed to be under the new partition.</p>
-
-    </div>
-
-        <div class="params">
-            <h4>Parameters:</h4>
-
-            <ul class="params-list">
-                <li class="param">
-                        <code class="param-name">oldName</code>
-                        <span class="type">String</span>
-
-
-                    <div class="param-description">
-                        <p>Old name of a partition.</p>
-
-                    </div>
-
-                </li>
-                <li class="param">
-                        <code class="param-name">newName</code>
-                        <span class="type">String</span>
-
-
-                    <div class="param-description">
-                        <p>New name of a partition.</p>
-
-                    </div>
-
-                </li>
-            </ul>
-        </div>
-
-
-
 </div>
 <div id="method_renameRole" class="method item">
     <h3 class="name"><code>renameRole</code></h3>
@@ -3204,7 +3354,7 @@ Roles.removeUsersFromRoles(userId, ['user'], 'group1')</code></pre>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l141"><code>roles&#x2F;roles_common.js:141</code></a>
+        <a href="../files/roles_roles_common.js.html#l134"><code>roles&#x2F;roles_common.js:134</code></a>
         </p>
 
 
@@ -3248,6 +3398,76 @@ Roles.removeUsersFromRoles(userId, ['user'], 'group1')</code></pre>
 
 
 </div>
+<div id="method_renameScope" class="method item">
+    <h3 class="name"><code>renameScope</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>oldName</code>
+                </li>
+                <li class="arg">
+                        <code>newName</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common.js.html#l1079"><code>roles&#x2F;roles_common.js:1079</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Rename a scope.</p>
+<p>Roles assigned with a given scope are changed to be under the new scope.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">oldName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>Old name of a scope.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">newName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>New name of a scope.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
 <div id="method_setUserRoles" class="method item">
     <h3 class="name"><code>setUserRoles</code></h3>
 
@@ -3276,7 +3496,7 @@ Roles.removeUsersFromRoles(userId, ['user'], 'group1')</code></pre>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l440"><code>roles&#x2F;roles_common.js:440</code></a>
+        <a href="../files/roles_roles_common.js.html#l427"><code>roles&#x2F;roles_common.js:427</code></a>
         </p>
 
 
@@ -3324,10 +3544,10 @@ Roles.removeUsersFromRoles(userId, ['user'], 'group1')</code></pre>
                     <div class="param-description">
                         <p>Options:</p>
 <ul>
-<li><code>partition</code>: name of the partition, or <code>null</code> for the global role</li>
+<li><code>scope</code>: name of the scope, or <code>null</code> for the global role</li>
 <li><code>ifExists</code>: if <code>true</code>, do not throw an exception if the role does not exist</li>
 </ul>
-<p>Alternatively, it can be a partition name string.</p>
+<p>Alternatively, it can be a scope name string.</p>
 
                     </div>
 
@@ -3380,7 +3600,7 @@ Roles.setUserRoles([user1, user2], ['glorious-admin', 'perform-action'], 'exampl
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l796"><code>roles&#x2F;roles_common.js:796</code></a>
+        <a href="../files/roles_roles_common.js.html#l771"><code>roles&#x2F;roles_common.js:771</code></a>
         </p>
 
 
@@ -3429,11 +3649,11 @@ Roles do not have to exist.</p>
                     <div class="param-description">
                         <p>Options:</p>
 <ul>
-<li><code>partition</code>: name of the partition; if supplied, limits check to just that partition;
-the user's global roles will always be checked whether partition is specified or not</li>
-<li><code>anyPartition</code>: if set, role can be in any partition (<code>partition</code> option is ignored)</li>
+<li><code>scope</code>: name of the scope; if supplied, limits check to just that scope;
+the user's global roles will always be checked whether scope is specified or not</li>
+<li><code>anyScope</code>: if set, role can be in any scope (<code>scope</code> option is ignored)</li>
 </ul>
-<p>Alternatively, it can be a partition name string.</p>
+<p>Alternatively, it can be a scope name string.</p>
 
                     </div>
 
@@ -3462,10 +3682,10 @@ Roles.userIsInRole(user, ['admin','editor'])
 Roles.userIsInRole(userId, 'admin')
 Roles.userIsInRole(userId, ['admin','editor'])
 
-// partition roles (global roles are still checked)
+// scope roles (global roles are still checked)
 Roles.userIsInRole(user, 'admin', 'group1')
 Roles.userIsInRole(userId, ['admin','editor'], 'group1')
-Roles.userIsInRole(userId, ['admin','editor'], {partition: 'group1'})</code></pre>
+Roles.userIsInRole(userId, ['admin','editor'], {scope: 'group1'})</code></pre>
 
             </div>
         </div>
@@ -3495,7 +3715,7 @@ Roles.userIsInRole(userId, ['admin','editor'], {partition: 'group1'})</code></pr
     </div>
 
     <div class="description">
-        <p>Used as a global group (now partition) name. Not used anymore.</p>
+        <p>Used as a global group (now scope) name. Not used anymore.</p>
 
     </div>
 

@@ -23,18 +23,18 @@
   }
 
 
-  function testUser (test, username, expectedRoles, partition) {
+  function testUser (test, username, expectedRoles, scope) {
     var userId = users[username],
         userObj = Meteor.users.findOne({_id: userId});
         
     // check using user ids (makes db calls)
-    _innerTest(test, userId, username, expectedRoles, partition);
+    _innerTest(test, userId, username, expectedRoles, scope);
 
     // check using passed-in user object
-    _innerTest(test, userObj, username, expectedRoles, partition);
+    _innerTest(test, userObj, username, expectedRoles, scope);
   }
 
-  function _innerTest (test, userParam, username, expectedRoles, partition) {
+  function _innerTest (test, userParam, username, expectedRoles, scope) {
     // test that user has only the roles expected and no others
     _.each(roles, function (role) {
       var expected = _.contains(expectedRoles, role),
@@ -42,9 +42,9 @@
           nmsg = username + ' had the following un-expected role: ' + role;
 
       if (expected) {
-        test.isTrue(Roles.userIsInRole(userParam, role, partition), msg);
+        test.isTrue(Roles.userIsInRole(userParam, role, scope), msg);
       } else {
-        test.isFalse(Roles.userIsInRole(userParam, role, partition), nmsg);
+        test.isFalse(Roles.userIsInRole(userParam, role, scope), nmsg);
       }
     })
   }
@@ -133,31 +133,31 @@
     });
 
   Tinytest.add(
-    'roles - can\'t use invalid partition names',
+    'roles - can\'t use invalid scope names',
     function (test) {
       reset();
 
       Roles.createRole('admin');
       Roles.createRole('user');
       Roles.createRole('editor');
-      Roles.addUsersToRoles(users.eve, ['admin', 'user'], 'partition1');
-      Roles.addUsersToRoles(users.eve, ['editor'], 'partition2');
+      Roles.addUsersToRoles(users.eve, ['admin', 'user'], 'scope1');
+      Roles.addUsersToRoles(users.eve, ['editor'], 'scope2');
 
       test.throws(function () {
         Roles.addUsersToRoles(users.eve, ['admin', 'user'], '');
-      }, /Invalid partition name/);
+      }, /Invalid scope name/);
       test.throws(function () {
         Roles.addUsersToRoles(users.eve, ['admin', 'user'], ' ');
-      }, /Invalid partition name/);
+      }, /Invalid scope name/);
       test.throws(function () {
         Roles.addUsersToRoles(users.eve, ['admin', 'user'], ' foobar');
-      }, /Invalid partition name/);
+      }, /Invalid scope name/);
       test.throws(function () {
         Roles.addUsersToRoles(users.eve, ['admin', 'user'], ' foobar ');
-      }, /Invalid partition name/);
+      }, /Invalid scope name/);
       test.throws(function () {
         Roles.addUsersToRoles(users.eve, ['admin', 'user'], 42);
-      }, /Invalid partition name/);
+      }, /Invalid scope name/);
     });
 
   Tinytest.add(
@@ -173,99 +173,99 @@
     });
 
   Tinytest.add(
-    'roles - can check if user is in role by partition', 
+    'roles - can check if user is in role by scope',
     function (test) {
       reset();
 
       Roles.createRole('admin');
       Roles.createRole('user');
       Roles.createRole('editor');
-      Roles.addUsersToRoles(users.eve, ['admin', 'user'], 'partition1');
-      Roles.addUsersToRoles(users.eve, ['editor'], 'partition2');
+      Roles.addUsersToRoles(users.eve, ['admin', 'user'], 'scope1');
+      Roles.addUsersToRoles(users.eve, ['editor'], 'scope2');
 
-      testUser(test, 'eve', ['admin', 'user'], 'partition1');
-      testUser(test, 'eve', ['editor'], 'partition2');
+      testUser(test, 'eve', ['admin', 'user'], 'scope1');
+      testUser(test, 'eve', ['editor'], 'scope2');
 
-      test.isFalse(Roles.userIsInRole(users.eve, ['admin', 'user'], 'partition2'));
-      test.isFalse(Roles.userIsInRole(users.eve, ['editor'], 'partition1'));
+      test.isFalse(Roles.userIsInRole(users.eve, ['admin', 'user'], 'scope2'));
+      test.isFalse(Roles.userIsInRole(users.eve, ['editor'], 'scope1'));
 
-      test.isTrue(Roles.userIsInRole(users.eve, ['admin', 'user'], {anyPartition: true}));
-      test.isTrue(Roles.userIsInRole(users.eve, ['editor'], {anyPartition: true}));
+      test.isTrue(Roles.userIsInRole(users.eve, ['admin', 'user'], {anyScope: true}));
+      test.isTrue(Roles.userIsInRole(users.eve, ['editor'], {anyScope: true}));
     });
 
   Tinytest.add(
-    'roles - can check if user is in role by partition through options',
+    'roles - can check if user is in role by scope through options',
     function (test) {
       reset();
 
       Roles.createRole('admin');
       Roles.createRole('user');
       Roles.createRole('editor');
-      Roles.addUsersToRoles(users.eve, ['admin', 'user'], {partition: 'partition1'});
-      Roles.addUsersToRoles(users.eve, ['editor'], {partition: 'partition2'});
+      Roles.addUsersToRoles(users.eve, ['admin', 'user'], {scope: 'scope1'});
+      Roles.addUsersToRoles(users.eve, ['editor'], {scope: 'scope2'});
 
-      testUser(test, 'eve', ['admin', 'user'], {partition: 'partition1'});
-      testUser(test, 'eve', ['editor'], {partition: 'partition2'});
+      testUser(test, 'eve', ['admin', 'user'], {scope: 'scope1'});
+      testUser(test, 'eve', ['editor'], {scope: 'scope2'});
     });
 
   Tinytest.add(
-    'roles - can check if user is in role by partition with global role',
+    'roles - can check if user is in role by scope with global role',
     function (test) {
       reset();
 
       Roles.createRole('admin');
       Roles.createRole('user');
       Roles.createRole('editor');
-      Roles.addUsersToRoles(users.eve, ['admin', 'user'], 'partition1');
-      Roles.addUsersToRoles(users.eve, ['editor'], 'partition2');
+      Roles.addUsersToRoles(users.eve, ['admin', 'user'], 'scope1');
+      Roles.addUsersToRoles(users.eve, ['editor'], 'scope2');
       Roles.addUsersToRoles(users.eve, ['admin']);
 
-      test.isTrue(Roles.userIsInRole(users.eve, ['user'], 'partition1'));
-      test.isTrue(Roles.userIsInRole(users.eve, ['editor'], 'partition2'));
+      test.isTrue(Roles.userIsInRole(users.eve, ['user'], 'scope1'));
+      test.isTrue(Roles.userIsInRole(users.eve, ['editor'], 'scope2'));
 
       test.isFalse(Roles.userIsInRole(users.eve, ['user']));
       test.isFalse(Roles.userIsInRole(users.eve, ['editor']));
       test.isFalse(Roles.userIsInRole(users.eve, ['user'], null));
       test.isFalse(Roles.userIsInRole(users.eve, ['editor'], null));
 
-      test.isFalse(Roles.userIsInRole(users.eve, ['user'], 'partition2'));
-      test.isFalse(Roles.userIsInRole(users.eve, ['editor'], 'partition1'));
+      test.isFalse(Roles.userIsInRole(users.eve, ['user'], 'scope2'));
+      test.isFalse(Roles.userIsInRole(users.eve, ['editor'], 'scope1'));
 
-      test.isTrue(Roles.userIsInRole(users.eve, ['admin'], 'partition2'));
-      test.isTrue(Roles.userIsInRole(users.eve, ['admin'], 'partition1'));
+      test.isTrue(Roles.userIsInRole(users.eve, ['admin'], 'scope2'));
+      test.isTrue(Roles.userIsInRole(users.eve, ['admin'], 'scope1'));
       test.isTrue(Roles.userIsInRole(users.eve, ['admin']));
       test.isTrue(Roles.userIsInRole(users.eve, ['admin'], null));
     });
 
   Tinytest.add(
-    'roles - renaming partitions',
+    'roles - renaming scopes',
     function (test) {
       reset();
 
       Roles.createRole('admin');
       Roles.createRole('user');
       Roles.createRole('editor');
-      Roles.addUsersToRoles(users.eve, ['admin', 'user'], 'partition1');
-      Roles.addUsersToRoles(users.eve, ['editor'], 'partition2');
+      Roles.addUsersToRoles(users.eve, ['admin', 'user'], 'scope1');
+      Roles.addUsersToRoles(users.eve, ['editor'], 'scope2');
 
-      testUser(test, 'eve', ['admin', 'user'], 'partition1');
-      testUser(test, 'eve', ['editor'], 'partition2');
+      testUser(test, 'eve', ['admin', 'user'], 'scope1');
+      testUser(test, 'eve', ['editor'], 'scope2');
 
-      Roles.renamePartition('partition1', 'partition3');
+      Roles.renameScope('scope1', 'scope3');
 
-      testUser(test, 'eve', ['admin', 'user'], 'partition3');
-      testUser(test, 'eve', ['editor'], 'partition2');
+      testUser(test, 'eve', ['admin', 'user'], 'scope3');
+      testUser(test, 'eve', ['editor'], 'scope2');
 
-      test.isFalse(Roles.userIsInRole(users.eve, ['admin', 'user'], 'partition1'));
-      test.isFalse(Roles.userIsInRole(users.eve, ['admin', 'user'], 'partition2'));
+      test.isFalse(Roles.userIsInRole(users.eve, ['admin', 'user'], 'scope1'));
+      test.isFalse(Roles.userIsInRole(users.eve, ['admin', 'user'], 'scope2'));
 
       test.throws(function () {
-        Roles.renamePartition('partition3');
-      }, /Invalid partition name/);
+        Roles.renameScope('scope3');
+      }, /Invalid scope name/);
 
-      Roles.renamePartition('partition3', null);
+      Roles.renameScope('scope3', null);
 
-      testUser(test, 'eve', ['admin', 'user', 'editor'], 'partition2');
+      testUser(test, 'eve', ['admin', 'user', 'editor'], 'scope2');
 
       test.isFalse(Roles.userIsInRole(users.eve, ['editor']));
       test.isTrue(Roles.userIsInRole(users.eve, ['admin']));
@@ -274,9 +274,9 @@
       test.isTrue(Roles.userIsInRole(users.eve, ['admin'], null));
       test.isTrue(Roles.userIsInRole(users.eve, ['user'], null));
 
-      Roles.renamePartition(null, 'partition2');
+      Roles.renameScope(null, 'scope2');
 
-      testUser(test, 'eve', ['admin', 'user', 'editor'], 'partition2');
+      testUser(test, 'eve', ['admin', 'user', 'editor'], 'scope2');
 
       test.isFalse(Roles.userIsInRole(users.eve, ['editor']));
       test.isFalse(Roles.userIsInRole(users.eve, ['admin']));
@@ -287,25 +287,25 @@
     });
 
   Tinytest.add(
-    'roles - removing partitions',
+    'roles - removing scopes',
     function (test) {
       reset();
 
       Roles.createRole('admin');
       Roles.createRole('user');
       Roles.createRole('editor');
-      Roles.addUsersToRoles(users.eve, ['admin', 'user'], 'partition1');
-      Roles.addUsersToRoles(users.eve, ['editor'], 'partition2');
+      Roles.addUsersToRoles(users.eve, ['admin', 'user'], 'scope1');
+      Roles.addUsersToRoles(users.eve, ['editor'], 'scope2');
 
-      testUser(test, 'eve', ['admin', 'user'], 'partition1');
-      testUser(test, 'eve', ['editor'], 'partition2');
+      testUser(test, 'eve', ['admin', 'user'], 'scope1');
+      testUser(test, 'eve', ['editor'], 'scope2');
 
-      Roles.removePartition('partition1');
+      Roles.removeScope('scope1');
 
-      testUser(test, 'eve', ['editor'], 'partition2');
+      testUser(test, 'eve', ['editor'], 'scope2');
 
-      test.isFalse(Roles.userIsInRole(users.eve, ['admin', 'user'], 'partition1'));
-      test.isFalse(Roles.userIsInRole(users.eve, ['admin', 'user'], 'partition2'));
+      test.isFalse(Roles.userIsInRole(users.eve, ['admin', 'user'], 'scope1'));
+      test.isFalse(Roles.userIsInRole(users.eve, ['admin', 'user'], 'scope2'));
     });
 
   Tinytest.add(
@@ -408,7 +408,7 @@
     });
 
   Tinytest.add(
-    'roles - can add individual users to roles by partition', 
+    'roles - can add individual users to roles by scope',
     function (test) {
       reset();
 
@@ -416,26 +416,26 @@
       Roles.createRole('user');
       Roles.createRole('editor');
 
-      Roles.addUsersToRoles(users.eve, ['admin', 'user'], 'partition1');
+      Roles.addUsersToRoles(users.eve, ['admin', 'user'], 'scope1');
 
-      testUser(test, 'eve', ['admin', 'user'], 'partition1');
-      testUser(test, 'bob', [], 'partition1');
-      testUser(test, 'joe', [], 'partition1');
+      testUser(test, 'eve', ['admin', 'user'], 'scope1');
+      testUser(test, 'bob', [], 'scope1');
+      testUser(test, 'joe', [], 'scope1');
 
-      testUser(test, 'eve', [], 'partition2');
-      testUser(test, 'bob', [], 'partition2');
-      testUser(test, 'joe', [], 'partition2');
+      testUser(test, 'eve', [], 'scope2');
+      testUser(test, 'bob', [], 'scope2');
+      testUser(test, 'joe', [], 'scope2');
 
-      Roles.addUsersToRoles(users.joe, ['editor', 'user'], 'partition1');
-      Roles.addUsersToRoles(users.bob, ['editor', 'user'], 'partition2');
+      Roles.addUsersToRoles(users.joe, ['editor', 'user'], 'scope1');
+      Roles.addUsersToRoles(users.bob, ['editor', 'user'], 'scope2');
 
-      testUser(test, 'eve', ['admin', 'user'], 'partition1');
-      testUser(test, 'bob', [], 'partition1');
-      testUser(test, 'joe', ['editor', 'user'], 'partition1');
+      testUser(test, 'eve', ['admin', 'user'], 'scope1');
+      testUser(test, 'bob', [], 'scope1');
+      testUser(test, 'joe', ['editor', 'user'], 'scope1');
 
-      testUser(test, 'eve', [], 'partition2');
-      testUser(test, 'bob', ['editor', 'user'], 'partition2');
-      testUser(test, 'joe', [], 'partition2');
+      testUser(test, 'eve', [], 'scope2');
+      testUser(test, 'bob', ['editor', 'user'], 'scope2');
+      testUser(test, 'joe', [], 'scope2');
     });
 
   Tinytest.add(
@@ -488,7 +488,7 @@
     });
 
   Tinytest.add(
-    'roles - can add user to roles multiple times by partition', 
+    'roles - can add user to roles multiple times by scope',
     function (test) {
       reset();
 
@@ -496,19 +496,19 @@
       Roles.createRole('user');
       Roles.createRole('editor');
 
-      Roles.addUsersToRoles(users.eve, ['admin', 'user'], 'partition1');
-      Roles.addUsersToRoles(users.eve, ['admin', 'user'], 'partition1');
+      Roles.addUsersToRoles(users.eve, ['admin', 'user'], 'scope1');
+      Roles.addUsersToRoles(users.eve, ['admin', 'user'], 'scope1');
 
-      testUser(test, 'eve', ['admin', 'user'], 'partition1');
-      testUser(test, 'bob', [], 'partition1');
-      testUser(test, 'joe', [], 'partition1');
+      testUser(test, 'eve', ['admin', 'user'], 'scope1');
+      testUser(test, 'bob', [], 'scope1');
+      testUser(test, 'joe', [], 'scope1');
 
-      Roles.addUsersToRoles(users.bob, ['admin'], 'partition1');
-      Roles.addUsersToRoles(users.bob, ['editor'], 'partition1');
+      Roles.addUsersToRoles(users.bob, ['admin'], 'scope1');
+      Roles.addUsersToRoles(users.bob, ['editor'], 'scope1');
 
-      testUser(test, 'eve', ['admin', 'user'], 'partition1');
-      testUser(test, 'bob', ['admin', 'editor'], 'partition1');
-      testUser(test, 'joe', [], 'partition1');
+      testUser(test, 'eve', ['admin', 'user'], 'scope1');
+      testUser(test, 'bob', ['admin', 'editor'], 'scope1');
+      testUser(test, 'joe', [], 'scope1');
     });
 
   Tinytest.add(
@@ -534,7 +534,7 @@
     });
 
   Tinytest.add(
-    'roles - can add multiple users to roles by partition', 
+    'roles - can add multiple users to roles by scope',
     function (test) {
       reset();
 
@@ -542,26 +542,26 @@
       Roles.createRole('user');
       Roles.createRole('editor');
 
-      Roles.addUsersToRoles([users.eve, users.bob], ['admin', 'user'], 'partition1');
+      Roles.addUsersToRoles([users.eve, users.bob], ['admin', 'user'], 'scope1');
 
-      testUser(test, 'eve', ['admin', 'user'], 'partition1');
-      testUser(test, 'bob', ['admin', 'user'], 'partition1');
-      testUser(test, 'joe', [], 'partition1');
+      testUser(test, 'eve', ['admin', 'user'], 'scope1');
+      testUser(test, 'bob', ['admin', 'user'], 'scope1');
+      testUser(test, 'joe', [], 'scope1');
 
-      testUser(test, 'eve', [], 'partition2');
-      testUser(test, 'bob', [], 'partition2');
-      testUser(test, 'joe', [], 'partition2');
+      testUser(test, 'eve', [], 'scope2');
+      testUser(test, 'bob', [], 'scope2');
+      testUser(test, 'joe', [], 'scope2');
 
-      Roles.addUsersToRoles([users.bob, users.joe], ['editor', 'user'], 'partition1');
-      Roles.addUsersToRoles([users.bob, users.joe], ['editor', 'user'], 'partition2');
+      Roles.addUsersToRoles([users.bob, users.joe], ['editor', 'user'], 'scope1');
+      Roles.addUsersToRoles([users.bob, users.joe], ['editor', 'user'], 'scope2');
 
-      testUser(test, 'eve', ['admin', 'user'], 'partition1');
-      testUser(test, 'bob', ['admin', 'editor', 'user'], 'partition1');
-      testUser(test, 'joe', ['editor', 'user'], 'partition1');
+      testUser(test, 'eve', ['admin', 'user'], 'scope1');
+      testUser(test, 'bob', ['admin', 'editor', 'user'], 'scope1');
+      testUser(test, 'joe', ['editor', 'user'], 'scope1');
 
-      testUser(test, 'eve', [], 'partition2');
-      testUser(test, 'bob', ['editor', 'user'], 'partition2');
-      testUser(test, 'joe', ['editor', 'user'], 'partition2');
+      testUser(test, 'eve', [], 'scope2');
+      testUser(test, 'bob', ['editor', 'user'], 'scope2');
+      testUser(test, 'joe', ['editor', 'user'], 'scope2');
     });
 
   Tinytest.add(
@@ -623,7 +623,7 @@
     });
 
   Tinytest.add(
-    'roles - can remove individual users from roles by partition', 
+    'roles - can remove individual users from roles by scope',
     function (test) {
       reset();
 
@@ -632,26 +632,26 @@
       Roles.createRole('editor');
 
       // remove user role - one user
-      Roles.addUsersToRoles([users.eve, users.bob], ['editor', 'user'], 'partition1');
-      Roles.addUsersToRoles([users.joe, users.bob], ['admin'], 'partition2');
-      testUser(test, 'eve', ['editor', 'user'], 'partition1');
-      testUser(test, 'bob', ['editor', 'user'], 'partition1');
-      testUser(test, 'joe', [], 'partition1');
-      testUser(test, 'eve', [], 'partition2');
-      testUser(test, 'bob', ['admin'], 'partition2');
-      testUser(test, 'joe', ['admin'], 'partition2');
+      Roles.addUsersToRoles([users.eve, users.bob], ['editor', 'user'], 'scope1');
+      Roles.addUsersToRoles([users.joe, users.bob], ['admin'], 'scope2');
+      testUser(test, 'eve', ['editor', 'user'], 'scope1');
+      testUser(test, 'bob', ['editor', 'user'], 'scope1');
+      testUser(test, 'joe', [], 'scope1');
+      testUser(test, 'eve', [], 'scope2');
+      testUser(test, 'bob', ['admin'], 'scope2');
+      testUser(test, 'joe', ['admin'], 'scope2');
 
-      Roles.removeUsersFromRoles(users.eve, ['user'], 'partition1');
-      testUser(test, 'eve', ['editor'], 'partition1');
-      testUser(test, 'bob', ['editor', 'user'], 'partition1');
-      testUser(test, 'joe', [], 'partition1');
-      testUser(test, 'eve', [], 'partition2');
-      testUser(test, 'bob', ['admin'], 'partition2');
-      testUser(test, 'joe', ['admin'], 'partition2');
+      Roles.removeUsersFromRoles(users.eve, ['user'], 'scope1');
+      testUser(test, 'eve', ['editor'], 'scope1');
+      testUser(test, 'bob', ['editor', 'user'], 'scope1');
+      testUser(test, 'joe', [], 'scope1');
+      testUser(test, 'eve', [], 'scope2');
+      testUser(test, 'bob', ['admin'], 'scope2');
+      testUser(test, 'joe', ['admin'], 'scope2');
     });
 
   Tinytest.add(
-    'roles - can remove individual users from roles by partition through options',
+    'roles - can remove individual users from roles by scope through options',
     function (test) {
       reset();
 
@@ -660,22 +660,22 @@
       Roles.createRole('editor');
 
       // remove user role - one user
-      Roles.addUsersToRoles([users.eve, users.bob], ['editor', 'user'], {partition: 'partition1'});
-      Roles.addUsersToRoles([users.joe, users.bob], ['admin'], {partition: 'partition2'});
-      testUser(test, 'eve', ['editor', 'user'], 'partition1');
-      testUser(test, 'bob', ['editor', 'user'], 'partition1');
-      testUser(test, 'joe', [], 'partition1');
-      testUser(test, 'eve', [], 'partition2');
-      testUser(test, 'bob', ['admin'], 'partition2');
-      testUser(test, 'joe', ['admin'], 'partition2');
+      Roles.addUsersToRoles([users.eve, users.bob], ['editor', 'user'], {scope: 'scope1'});
+      Roles.addUsersToRoles([users.joe, users.bob], ['admin'], {scope: 'scope2'});
+      testUser(test, 'eve', ['editor', 'user'], 'scope1');
+      testUser(test, 'bob', ['editor', 'user'], 'scope1');
+      testUser(test, 'joe', [], 'scope1');
+      testUser(test, 'eve', [], 'scope2');
+      testUser(test, 'bob', ['admin'], 'scope2');
+      testUser(test, 'joe', ['admin'], 'scope2');
 
-      Roles.removeUsersFromRoles(users.eve, ['user'], {partition: 'partition1'});
-      testUser(test, 'eve', ['editor'], 'partition1');
-      testUser(test, 'bob', ['editor', 'user'], 'partition1');
-      testUser(test, 'joe', [], 'partition1');
-      testUser(test, 'eve', [], 'partition2');
-      testUser(test, 'bob', ['admin'], 'partition2');
-      testUser(test, 'joe', ['admin'], 'partition2');
+      Roles.removeUsersFromRoles(users.eve, ['user'], {scope: 'scope1'});
+      testUser(test, 'eve', ['editor'], 'scope1');
+      testUser(test, 'bob', ['editor', 'user'], 'scope1');
+      testUser(test, 'joe', [], 'scope1');
+      testUser(test, 'eve', [], 'scope2');
+      testUser(test, 'bob', ['admin'], 'scope2');
+      testUser(test, 'joe', ['admin'], 'scope2');
     });
 
   Tinytest.add(
@@ -702,7 +702,7 @@
     });
 
   Tinytest.add(
-    'roles - can remove multiple users from roles by partition', 
+    'roles - can remove multiple users from roles by scope',
     function (test) {
       reset();
 
@@ -711,27 +711,27 @@
       Roles.createRole('editor');
 
       // remove user role - one user
-      Roles.addUsersToRoles([users.eve, users.bob], ['editor', 'user'], 'partition1');
-      Roles.addUsersToRoles([users.joe, users.bob], ['admin'], 'partition2');
-      testUser(test, 'eve', ['editor', 'user'], 'partition1');
-      testUser(test, 'bob', ['editor', 'user'], 'partition1');
-      testUser(test, 'joe', [], 'partition1');
-      testUser(test, 'eve', [], 'partition2');
-      testUser(test, 'bob', ['admin'], 'partition2');
-      testUser(test, 'joe', ['admin'], 'partition2');
+      Roles.addUsersToRoles([users.eve, users.bob], ['editor', 'user'], 'scope1');
+      Roles.addUsersToRoles([users.joe, users.bob], ['admin'], 'scope2');
+      testUser(test, 'eve', ['editor', 'user'], 'scope1');
+      testUser(test, 'bob', ['editor', 'user'], 'scope1');
+      testUser(test, 'joe', [], 'scope1');
+      testUser(test, 'eve', [], 'scope2');
+      testUser(test, 'bob', ['admin'], 'scope2');
+      testUser(test, 'joe', ['admin'], 'scope2');
 
-      Roles.removeUsersFromRoles([users.eve, users.bob], ['user'], 'partition1');
-      testUser(test, 'eve', ['editor'], 'partition1');
-      testUser(test, 'bob', ['editor'], 'partition1');
-      testUser(test, 'joe', [], 'partition1');
-      testUser(test, 'eve', [], 'partition2');
-      testUser(test, 'bob', ['admin'], 'partition2');
-      testUser(test, 'joe', ['admin'], 'partition2');
+      Roles.removeUsersFromRoles([users.eve, users.bob], ['user'], 'scope1');
+      testUser(test, 'eve', ['editor'], 'scope1');
+      testUser(test, 'bob', ['editor'], 'scope1');
+      testUser(test, 'joe', [], 'scope1');
+      testUser(test, 'eve', [], 'scope2');
+      testUser(test, 'bob', ['admin'], 'scope2');
+      testUser(test, 'joe', ['admin'], 'scope2');
 
-      Roles.removeUsersFromRoles([users.joe, users.bob], ['admin'], 'partition2');
-      testUser(test, 'eve', [], 'partition2');
-      testUser(test, 'bob', [], 'partition2');
-      testUser(test, 'joe', [], 'partition2');
+      Roles.removeUsersFromRoles([users.joe, users.bob], ['admin'], 'scope2');
+      testUser(test, 'eve', [], 'scope2');
+      testUser(test, 'bob', [], 'scope2');
+      testUser(test, 'joe', [], 'scope2');
     });
 
   Tinytest.add(
@@ -775,7 +775,7 @@
     });
 
   Tinytest.add(
-    'roles - can set user roles by partition', 
+    'roles - can set user roles by scope',
     function (test) {
       reset();
 
@@ -787,60 +787,60 @@
           bob = Meteor.users.findOne({_id: users.bob}),
           joe = Meteor.users.findOne({_id: users.joe});
     
-      Roles.setUserRoles([users.eve, users.bob], ['editor', 'user'], 'partition1');
-      Roles.setUserRoles([users.bob, users.joe], ['admin'], 'partition2');
-      testUser(test, 'eve', ['editor', 'user'], 'partition1');
-      testUser(test, 'bob', ['editor', 'user'], 'partition1');
-      testUser(test, 'joe', [], 'partition1');
-      testUser(test, 'eve', [], 'partition2');
-      testUser(test, 'bob', ['admin'], 'partition2');
-      testUser(test, 'joe', ['admin'], 'partition2');
+      Roles.setUserRoles([users.eve, users.bob], ['editor', 'user'], 'scope1');
+      Roles.setUserRoles([users.bob, users.joe], ['admin'], 'scope2');
+      testUser(test, 'eve', ['editor', 'user'], 'scope1');
+      testUser(test, 'bob', ['editor', 'user'], 'scope1');
+      testUser(test, 'joe', [], 'scope1');
+      testUser(test, 'eve', [], 'scope2');
+      testUser(test, 'bob', ['admin'], 'scope2');
+      testUser(test, 'joe', ['admin'], 'scope2');
 
       // use addUsersToRoles add some roles
-      Roles.addUsersToRoles([users.eve, users.bob], ['admin'], 'partition1');
-      Roles.addUsersToRoles([users.bob, users.joe], ['editor'], 'partition2');
-      testUser(test, 'eve', ['admin', 'editor', 'user'], 'partition1');
-      testUser(test, 'bob', ['admin', 'editor', 'user'], 'partition1');
-      testUser(test, 'joe', [], 'partition1');
-      testUser(test, 'eve', [], 'partition2');
-      testUser(test, 'bob', ['admin', 'editor'], 'partition2');
-      testUser(test, 'joe', ['admin', 'editor'], 'partition2');
+      Roles.addUsersToRoles([users.eve, users.bob], ['admin'], 'scope1');
+      Roles.addUsersToRoles([users.bob, users.joe], ['editor'], 'scope2');
+      testUser(test, 'eve', ['admin', 'editor', 'user'], 'scope1');
+      testUser(test, 'bob', ['admin', 'editor', 'user'], 'scope1');
+      testUser(test, 'joe', [], 'scope1');
+      testUser(test, 'eve', [], 'scope2');
+      testUser(test, 'bob', ['admin', 'editor'], 'scope2');
+      testUser(test, 'joe', ['admin', 'editor'], 'scope2');
 
-      Roles.setUserRoles([eve, bob], ['user'], 'partition1');
-      Roles.setUserRoles([eve, joe], ['editor'], 'partition2');
-      testUser(test, 'eve', ['user'], 'partition1');
-      testUser(test, 'bob', ['user'], 'partition1');
-      testUser(test, 'joe', [], 'partition1');
-      testUser(test, 'eve', ['editor'], 'partition2');
-      testUser(test, 'bob', ['admin', 'editor'], 'partition2');
-      testUser(test, 'joe', ['editor'], 'partition2');
+      Roles.setUserRoles([eve, bob], ['user'], 'scope1');
+      Roles.setUserRoles([eve, joe], ['editor'], 'scope2');
+      testUser(test, 'eve', ['user'], 'scope1');
+      testUser(test, 'bob', ['user'], 'scope1');
+      testUser(test, 'joe', [], 'scope1');
+      testUser(test, 'eve', ['editor'], 'scope2');
+      testUser(test, 'bob', ['admin', 'editor'], 'scope2');
+      testUser(test, 'joe', ['editor'], 'scope2');
 
-      Roles.setUserRoles(bob, 'editor', 'partition1');
-      testUser(test, 'eve', ['user'], 'partition1');
-      testUser(test, 'bob', ['editor'], 'partition1');
-      testUser(test, 'joe', [], 'partition1');
-      testUser(test, 'eve', ['editor'], 'partition2');
-      testUser(test, 'bob', ['admin', 'editor'], 'partition2');
-      testUser(test, 'joe', ['editor'], 'partition2');
+      Roles.setUserRoles(bob, 'editor', 'scope1');
+      testUser(test, 'eve', ['user'], 'scope1');
+      testUser(test, 'bob', ['editor'], 'scope1');
+      testUser(test, 'joe', [], 'scope1');
+      testUser(test, 'eve', ['editor'], 'scope2');
+      testUser(test, 'bob', ['admin', 'editor'], 'scope2');
+      testUser(test, 'joe', ['editor'], 'scope2');
 
-      test.isTrue(_.contains(_.pluck(Roles.getRolesForUser(users.bob, {anyPartition: true, fullObjects: true}), 'partition'), 'partition1'));
-      test.isFalse(_.contains(_.pluck(Roles.getRolesForUser(users.joe, {anyPartition: true, fullObjects: true}), 'partition'), 'partition1'));
+      test.isTrue(_.contains(_.pluck(Roles.getRolesForUser(users.bob, {anyScope: true, fullObjects: true}), 'scope'), 'scope1'));
+      test.isFalse(_.contains(_.pluck(Roles.getRolesForUser(users.joe, {anyScope: true, fullObjects: true}), 'scope'), 'scope1'));
 
-      Roles.setUserRoles([bob, users.joe], [], 'partition1');
-      testUser(test, 'eve', ['user'], 'partition1');
-      testUser(test, 'bob', [], 'partition1');
-      testUser(test, 'joe', [], 'partition1');
-      testUser(test, 'eve', ['editor'], 'partition2');
-      testUser(test, 'bob', ['admin', 'editor'], 'partition2');
-      testUser(test, 'joe', ['editor'], 'partition2');
+      Roles.setUserRoles([bob, users.joe], [], 'scope1');
+      testUser(test, 'eve', ['user'], 'scope1');
+      testUser(test, 'bob', [], 'scope1');
+      testUser(test, 'joe', [], 'scope1');
+      testUser(test, 'eve', ['editor'], 'scope2');
+      testUser(test, 'bob', ['admin', 'editor'], 'scope2');
+      testUser(test, 'joe', ['editor'], 'scope2');
 
-      // When roles in a given partition are removed, we do not want any dangling database content for that partition.
-      test.isFalse(_.contains(_.pluck(Roles.getRolesForUser(users.bob, {anyPartition: true, fullObjects: true}), 'partition'), 'partition1'));
-      test.isFalse(_.contains(_.pluck(Roles.getRolesForUser(users.joe, {anyPartition: true, fullObjects: true}), 'partition'), 'partition1'));
+      // When roles in a given scope are removed, we do not want any dangling database content for that scope.
+      test.isFalse(_.contains(_.pluck(Roles.getRolesForUser(users.bob, {anyScope: true, fullObjects: true}), 'scope'), 'scope1'));
+      test.isFalse(_.contains(_.pluck(Roles.getRolesForUser(users.joe, {anyScope: true, fullObjects: true}), 'scope'), 'scope1'));
     });
 
   Tinytest.add(
-    'roles - can set user roles by partition including GLOBAL_PARTITION', 
+    'roles - can set user roles by scope including GLOBAL_SCOPE',
     function (test) {
       reset();
 
@@ -851,12 +851,12 @@
           bob = Meteor.users.findOne({_id: users.bob}),
           joe = Meteor.users.findOne({_id: users.joe});
     
-      Roles.addUsersToRoles(eve, 'admin', Roles.GLOBAL_PARTITION);
-      testUser(test, 'eve', ['admin'], 'partition1');
+      Roles.addUsersToRoles(eve, 'admin', Roles.GLOBAL_SCOPE);
+      testUser(test, 'eve', ['admin'], 'scope1');
       testUser(test, 'eve', ['admin']);
 
-      Roles.setUserRoles(eve, 'editor', Roles.GLOBAL_PARTITION);
-      testUser(test, 'eve', ['editor'], 'partition2');
+      Roles.setUserRoles(eve, 'editor', Roles.GLOBAL_SCOPE);
+      testUser(test, 'eve', ['editor'], 'scope2');
       testUser(test, 'eve', ['editor']);
     });
 
@@ -884,7 +884,7 @@
     function (test) {
       reset();
       test.equal(Roles.getRolesForUser('1'), []);
-      test.equal(Roles.getRolesForUser('1', 'partition1'), []);
+      test.equal(Roles.getRolesForUser('1', 'scope1'), []);
     });
 
   Tinytest.add(
@@ -917,17 +917,17 @@
 
       test.equal(Roles.getRolesForUser(userId, {fullObjects: true}), [{
         _id: 'admin',
-        partition: null,
+        scope: null,
         assigned: true
       }, {
         _id: 'user',
-        partition: null,
+        scope: null,
         assigned: true
       }]);
     });
 
   Tinytest.add(
-    'roles - can get all roles for user by partition', 
+    'roles - can get all roles for user by scope',
     function (test) {
       reset();
 
@@ -938,134 +938,134 @@
           userObj;
 
       // by userId
-      test.equal(Roles.getRolesForUser(userId, 'partition1'), []);
+      test.equal(Roles.getRolesForUser(userId, 'scope1'), []);
 
       // by user object
       userObj = Meteor.users.findOne({_id: userId});
-      test.equal(Roles.getRolesForUser(userObj, 'partition1'), []);
+      test.equal(Roles.getRolesForUser(userObj, 'scope1'), []);
 
       // add roles
-      Roles.addUsersToRoles(userId, ['admin', 'user'], 'partition1');
-      Roles.addUsersToRoles(userId, ['admin'], 'partition2');
+      Roles.addUsersToRoles(userId, ['admin', 'user'], 'scope1');
+      Roles.addUsersToRoles(userId, ['admin'], 'scope2');
 
       // by userId
-      test.equal(Roles.getRolesForUser(userId, 'partition1'), ['admin', 'user']);
-      test.equal(Roles.getRolesForUser(userId, 'partition2'), ['admin']);
+      test.equal(Roles.getRolesForUser(userId, 'scope1'), ['admin', 'user']);
+      test.equal(Roles.getRolesForUser(userId, 'scope2'), ['admin']);
       test.equal(Roles.getRolesForUser(userId), []);
 
       // by user object
       userObj = Meteor.users.findOne({_id: userId});
-      test.equal(Roles.getRolesForUser(userObj, 'partition1'), ['admin', 'user']);
-      test.equal(Roles.getRolesForUser(userObj, 'partition2'), ['admin']);
+      test.equal(Roles.getRolesForUser(userObj, 'scope1'), ['admin', 'user']);
+      test.equal(Roles.getRolesForUser(userObj, 'scope2'), ['admin']);
       test.equal(Roles.getRolesForUser(userObj), []);
 
-      test.equal(Roles.getRolesForUser(userId, {fullObjects: true, partition: 'partition1'}), [{
+      test.equal(Roles.getRolesForUser(userId, {fullObjects: true, scope: 'scope1'}), [{
         _id: 'admin',
-        partition: 'partition1',
+        scope: 'scope1',
         assigned: true
       }, {
         _id: 'user',
-        partition: 'partition1',
+        scope: 'scope1',
         assigned: true
       }]);
-      test.equal(Roles.getRolesForUser(userId, {fullObjects: true, partition: 'partition2'}), [{
+      test.equal(Roles.getRolesForUser(userId, {fullObjects: true, scope: 'scope2'}), [{
         _id: 'admin',
-        partition: 'partition2',
+        scope: 'scope2',
         assigned: true
       }]);
 
-      test.equal(Roles.getRolesForUser(userId, {fullObjects: true, anyPartition: true}), [{
+      test.equal(Roles.getRolesForUser(userId, {fullObjects: true, anyScope: true}), [{
         _id: 'admin',
-        partition: 'partition1',
+        scope: 'scope1',
         assigned: true
       }, {
         _id: 'user',
-        partition: 'partition1',
+        scope: 'scope1',
         assigned: true
       }, {
         _id: 'admin',
-        partition: 'partition2',
+        scope: 'scope2',
         assigned: true
       }]);
 
       Roles.createRole('PERMISSION');
       Roles.addRolesToParent('PERMISSION', 'user');
 
-      test.equal(Roles.getRolesForUser(userId, {fullObjects: true, partition: 'partition1'}), [{
+      test.equal(Roles.getRolesForUser(userId, {fullObjects: true, scope: 'scope1'}), [{
         _id: 'admin',
-        partition: 'partition1',
+        scope: 'scope1',
         assigned: true
       }, {
         _id: 'user',
-        partition: 'partition1',
+        scope: 'scope1',
         assigned: true
       }, {
         _id: 'PERMISSION',
-        partition: 'partition1',
+        scope: 'scope1',
         assigned: false
       }]);
-      test.equal(Roles.getRolesForUser(userId, {fullObjects: true, partition: 'partition2'}), [{
+      test.equal(Roles.getRolesForUser(userId, {fullObjects: true, scope: 'scope2'}), [{
         _id: 'admin',
-        partition: 'partition2',
+        scope: 'scope2',
         assigned: true
       }]);
-      test.equal(Roles.getRolesForUser(userId, {partition: 'partition1'}), ['admin', 'user', 'PERMISSION']);
-      test.equal(Roles.getRolesForUser(userId, {partition: 'partition2'}), ['admin']);
+      test.equal(Roles.getRolesForUser(userId, {scope: 'scope1'}), ['admin', 'user', 'PERMISSION']);
+      test.equal(Roles.getRolesForUser(userId, {scope: 'scope2'}), ['admin']);
 
-      test.equal(Roles.getRolesForUser(userId, {fullObjects: true, anyPartition: true}), [{
+      test.equal(Roles.getRolesForUser(userId, {fullObjects: true, anyScope: true}), [{
         _id: 'admin',
-        partition: 'partition1',
+        scope: 'scope1',
         assigned: true
       }, {
         _id: 'user',
-        partition: 'partition1',
+        scope: 'scope1',
         assigned: true
       }, {
         _id: 'admin',
-        partition: 'partition2',
+        scope: 'scope2',
         assigned: true
       }, {
         _id: 'PERMISSION',
-        partition: 'partition1',
+        scope: 'scope1',
         assigned: false
       }]);
-      test.equal(Roles.getRolesForUser(userId, {anyPartition: true}), ['admin', 'user', 'PERMISSION']);
+      test.equal(Roles.getRolesForUser(userId, {anyScope: true}), ['admin', 'user', 'PERMISSION']);
 
-      test.equal(Roles.getRolesForUser(userId, {fullObjects: true, partition: 'partition1', onlyAssigned: true}), [{
+      test.equal(Roles.getRolesForUser(userId, {fullObjects: true, scope: 'scope1', onlyAssigned: true}), [{
         _id: 'admin',
-        partition: 'partition1',
+        scope: 'scope1',
         assigned: true
       }, {
         _id: 'user',
-        partition: 'partition1',
+        scope: 'scope1',
         assigned: true
       }]);
-      test.equal(Roles.getRolesForUser(userId, {fullObjects: true, partition: 'partition2', onlyAssigned: true}), [{
+      test.equal(Roles.getRolesForUser(userId, {fullObjects: true, scope: 'scope2', onlyAssigned: true}), [{
         _id: 'admin',
-        partition: 'partition2',
+        scope: 'scope2',
         assigned: true
       }]);
-      test.equal(Roles.getRolesForUser(userId, {partition: 'partition1', onlyAssigned: true}), ['admin', 'user']);
-      test.equal(Roles.getRolesForUser(userId, {partition: 'partition2', onlyAssigned: true}), ['admin']);
+      test.equal(Roles.getRolesForUser(userId, {scope: 'scope1', onlyAssigned: true}), ['admin', 'user']);
+      test.equal(Roles.getRolesForUser(userId, {scope: 'scope2', onlyAssigned: true}), ['admin']);
 
-      test.equal(Roles.getRolesForUser(userId, {fullObjects: true, anyPartition: true, onlyAssigned: true}), [{
+      test.equal(Roles.getRolesForUser(userId, {fullObjects: true, anyScope: true, onlyAssigned: true}), [{
         _id: 'admin',
-        partition: 'partition1',
+        scope: 'scope1',
         assigned: true
       }, {
         _id: 'user',
-        partition: 'partition1',
+        scope: 'scope1',
         assigned: true
       }, {
         _id: 'admin',
-        partition: 'partition2',
+        scope: 'scope2',
         assigned: true
       }]);
-      test.equal(Roles.getRolesForUser(userId, {anyPartition: true, onlyAssigned: true}), ['admin', 'user']);
+      test.equal(Roles.getRolesForUser(userId, {anyScope: true, onlyAssigned: true}), ['admin', 'user']);
     });
 
   Tinytest.add(
-    'roles - can get all roles for user by partition with periods in name', 
+    'roles - can get all roles for user by scope with periods in name',
     function (test) {
       reset();
 
@@ -1077,7 +1077,7 @@
     });
 
   Tinytest.add(
-    'roles - can get all roles for user by partition including Roles.GLOBAL_PARTITION', 
+    'roles - can get all roles for user by scope including Roles.GLOBAL_SCOPE',
     function (test) {
       reset();
 
@@ -1088,22 +1088,22 @@
       var userId = users.eve,
           userObj;
 
-      Roles.addUsersToRoles([users.eve], ['editor'], Roles.GLOBAL_PARTITION);
-      Roles.addUsersToRoles([users.eve], ['admin', 'user'], 'partition1');
+      Roles.addUsersToRoles([users.eve], ['editor'], Roles.GLOBAL_SCOPE);
+      Roles.addUsersToRoles([users.eve], ['admin', 'user'], 'scope1');
 
       // by userId
-      test.equal(Roles.getRolesForUser(userId, 'partition1'), ['editor', 'admin', 'user']);
+      test.equal(Roles.getRolesForUser(userId, 'scope1'), ['editor', 'admin', 'user']);
       test.equal(Roles.getRolesForUser(userId), ['editor']);
 
       // by user object
       userObj = Meteor.users.findOne({_id: userId});
-      test.equal(Roles.getRolesForUser(userObj, 'partition1'), ['editor', 'admin', 'user']);
+      test.equal(Roles.getRolesForUser(userObj, 'scope1'), ['editor', 'admin', 'user']);
       test.equal(Roles.getRolesForUser(userObj), ['editor']);
     });
 
 
   Tinytest.add(
-    'roles - getRolesForUser should not return null entries if user has no roles for partition', 
+    'roles - getRolesForUser should not return null entries if user has no roles for scope',
     function (test) {
       reset();
 
@@ -1113,29 +1113,29 @@
           userObj;
 
       // by userId
-      test.equal(Roles.getRolesForUser(userId, 'partition1'), []);
+      test.equal(Roles.getRolesForUser(userId, 'scope1'), []);
       test.equal(Roles.getRolesForUser(userId), []);
 
       // by user object
       userObj = Meteor.users.findOne({_id: userId});
-      test.equal(Roles.getRolesForUser(userObj, 'partition1'), []);
+      test.equal(Roles.getRolesForUser(userObj, 'scope1'), []);
       test.equal(Roles.getRolesForUser(userObj), []);
 
 
-      Roles.addUsersToRoles([users.eve], ['editor'], Roles.GLOBAL_PARTITION);
+      Roles.addUsersToRoles([users.eve], ['editor'], Roles.GLOBAL_SCOPE);
 
       // by userId
-      test.equal(Roles.getRolesForUser(userId, 'partition1'), ['editor']);
+      test.equal(Roles.getRolesForUser(userId, 'scope1'), ['editor']);
       test.equal(Roles.getRolesForUser(userId), ['editor']);
 
       // by user object
       userObj = Meteor.users.findOne({_id: userId});
-      test.equal(Roles.getRolesForUser(userObj, 'partition1'), ['editor']);
+      test.equal(Roles.getRolesForUser(userObj, 'scope1'), ['editor']);
       test.equal(Roles.getRolesForUser(userObj), ['editor']);
     });
     
   Tinytest.add(
-    'roles - can get all partitions for user', 
+    'roles - can get all scopes for user',
     function (test) {
       reset();
 
@@ -1146,19 +1146,19 @@
       var userId = users.eve,
           userObj;
 
-      Roles.addUsersToRoles([users.eve], ['editor'], 'partition1');
-      Roles.addUsersToRoles([users.eve], ['admin', 'user'], 'partition2');
+      Roles.addUsersToRoles([users.eve], ['editor'], 'scope1');
+      Roles.addUsersToRoles([users.eve], ['admin', 'user'], 'scope2');
 
       // by userId
-      test.equal(Roles.getPartitionsForUser(userId), ['partition1', 'partition2']);
+      test.equal(Roles.getScopesForUser(userId), ['scope1', 'scope2']);
 
       // by user object
       userObj = Meteor.users.findOne({_id: userId});
-      test.equal(Roles.getPartitionsForUser(userObj), ['partition1', 'partition2']);
+      test.equal(Roles.getScopesForUser(userObj), ['scope1', 'scope2']);
     });
   
   Tinytest.add(
-    'roles - can get all partitions for user by role', 
+    'roles - can get all scopes for user by role',
     function (test) {
       reset();
 
@@ -1169,23 +1169,23 @@
       var userId = users.eve,
           userObj;
 
-      Roles.addUsersToRoles([users.eve], ['editor'], 'partition1');
-      Roles.addUsersToRoles([users.eve], ['editor', 'user'], 'partition2');
+      Roles.addUsersToRoles([users.eve], ['editor'], 'scope1');
+      Roles.addUsersToRoles([users.eve], ['editor', 'user'], 'scope2');
 
       // by userId
-      test.equal(Roles.getPartitionsForUser(userId, 'user'), ['partition2']);
-      test.equal(Roles.getPartitionsForUser(userId, 'editor'), ['partition1', 'partition2']);
-      test.equal(Roles.getPartitionsForUser(userId, 'admin'), []);
+      test.equal(Roles.getScopesForUser(userId, 'user'), ['scope2']);
+      test.equal(Roles.getScopesForUser(userId, 'editor'), ['scope1', 'scope2']);
+      test.equal(Roles.getScopesForUser(userId, 'admin'), []);
 
       // by user object
       userObj = Meteor.users.findOne({_id: userId});
-      test.equal(Roles.getPartitionsForUser(userObj, 'user'), ['partition2']);
-      test.equal(Roles.getPartitionsForUser(userObj, 'editor'), ['partition1', 'partition2']);
-      test.equal(Roles.getPartitionsForUser(userObj, 'admin'), []);
+      test.equal(Roles.getScopesForUser(userObj, 'user'), ['scope2']);
+      test.equal(Roles.getScopesForUser(userObj, 'editor'), ['scope1', 'scope2']);
+      test.equal(Roles.getScopesForUser(userObj, 'admin'), []);
   });
   
   Tinytest.add(
-    'roles - getPartitionsForUser returns [] when not using partitions', 
+    'roles - getScopesForUser returns [] when not using scopes',
     function (test) {
       reset();
 
@@ -1198,17 +1198,17 @@
       Roles.addUsersToRoles([users.eve], ['editor', 'user']);
 
       // by userId
-      test.equal(Roles.getPartitionsForUser(userId), []);
-      test.equal(Roles.getPartitionsForUser(userId, 'editor'), []);
-      test.equal(Roles.getPartitionsForUser(userId, ['editor']), []);
-      test.equal(Roles.getPartitionsForUser(userId, ['editor', 'user']), []);
+      test.equal(Roles.getScopesForUser(userId), []);
+      test.equal(Roles.getScopesForUser(userId, 'editor'), []);
+      test.equal(Roles.getScopesForUser(userId, ['editor']), []);
+      test.equal(Roles.getScopesForUser(userId, ['editor', 'user']), []);
 
       // by user object
       userObj = Meteor.users.findOne({_id: userId});
-      test.equal(Roles.getPartitionsForUser(userObj), []);
-      test.equal(Roles.getPartitionsForUser(userObj, 'editor'), []);
-      test.equal(Roles.getPartitionsForUser(userObj, ['editor']), []);
-      test.equal(Roles.getPartitionsForUser(userObj, ['editor', 'user']), []);
+      test.equal(Roles.getScopesForUser(userObj), []);
+      test.equal(Roles.getScopesForUser(userObj, 'editor'), []);
+      test.equal(Roles.getScopesForUser(userObj, ['editor']), []);
+      test.equal(Roles.getScopesForUser(userObj, ['editor', 'user']), []);
     });
 
   Tinytest.add(
@@ -1229,29 +1229,29 @@
       Roles.addUsersToRoles([users.eve], ['moderator'], 'group3');
 
       // by userId, one role
-      test.equal(Roles.getPartitionsForUser(userId, ['user']), ['group2']);
-      test.equal(Roles.getPartitionsForUser(userId, ['editor']), ['group1', 'group2']);
-      test.equal(Roles.getPartitionsForUser(userId, ['admin']), []);
+      test.equal(Roles.getScopesForUser(userId, ['user']), ['group2']);
+      test.equal(Roles.getScopesForUser(userId, ['editor']), ['group1', 'group2']);
+      test.equal(Roles.getScopesForUser(userId, ['admin']), []);
 
       // by userId, multiple roles
-      test.equal(Roles.getPartitionsForUser(userId, ['editor', 'user']), ['group1', 'group2']);
-      test.equal(Roles.getPartitionsForUser(userId, ['editor', 'moderator']), ['group1', 'group2', 'group3']);
-      test.equal(Roles.getPartitionsForUser(userId, ['user', 'moderator']), ['group2', 'group3']);
+      test.equal(Roles.getScopesForUser(userId, ['editor', 'user']), ['group1', 'group2']);
+      test.equal(Roles.getScopesForUser(userId, ['editor', 'moderator']), ['group1', 'group2', 'group3']);
+      test.equal(Roles.getScopesForUser(userId, ['user', 'moderator']), ['group2', 'group3']);
 
       // by user object, one role
       userObj = Meteor.users.findOne({_id: userId});
-      test.equal(Roles.getPartitionsForUser(userObj, ['user']), ['group2']);
-      test.equal(Roles.getPartitionsForUser(userObj, ['editor']), ['group1', 'group2']);
-      test.equal(Roles.getPartitionsForUser(userObj, ['admin']), []);
+      test.equal(Roles.getScopesForUser(userObj, ['user']), ['group2']);
+      test.equal(Roles.getScopesForUser(userObj, ['editor']), ['group1', 'group2']);
+      test.equal(Roles.getScopesForUser(userObj, ['admin']), []);
 
       // by user object, multiple roles
-      test.equal(Roles.getPartitionsForUser(userObj, ['editor', 'user']), ['group1', 'group2']);
-      test.equal(Roles.getPartitionsForUser(userObj, ['editor', 'moderator']), ['group1', 'group2', 'group3']);
-      test.equal(Roles.getPartitionsForUser(userObj, ['user', 'moderator']), ['group2', 'group3']);
+      test.equal(Roles.getScopesForUser(userObj, ['editor', 'user']), ['group1', 'group2']);
+      test.equal(Roles.getScopesForUser(userObj, ['editor', 'moderator']), ['group1', 'group2', 'group3']);
+      test.equal(Roles.getScopesForUser(userObj, ['user', 'moderator']), ['group2', 'group3']);
     });
   
   Tinytest.add(
-    'roles - getting all partitions for user does not include GLOBAL_PARTITION', 
+    'roles - getting all scopes for user does not include GLOBAL_SCOPE',
     function (test) {
       reset();
 
@@ -1262,28 +1262,28 @@
       var userId = users.eve,
           userObj;
 
-      Roles.addUsersToRoles([users.eve], ['editor'], 'partition1');
-      Roles.addUsersToRoles([users.eve], ['editor', 'user'], 'partition2');
-      Roles.addUsersToRoles([users.eve], ['editor', 'user', 'admin'], Roles.GLOBAL_PARTITION);
+      Roles.addUsersToRoles([users.eve], ['editor'], 'scope1');
+      Roles.addUsersToRoles([users.eve], ['editor', 'user'], 'scope2');
+      Roles.addUsersToRoles([users.eve], ['editor', 'user', 'admin'], Roles.GLOBAL_SCOPE);
 
       // by userId
-      test.equal(Roles.getPartitionsForUser(userId, 'user'), ['partition2']);
-      test.equal(Roles.getPartitionsForUser(userId, 'editor'), ['partition1', 'partition2']);
-      test.equal(Roles.getPartitionsForUser(userId, 'admin'), []);
-      test.equal(Roles.getPartitionsForUser(userId, ['user']), ['partition2']);
-      test.equal(Roles.getPartitionsForUser(userId, ['editor']), ['partition1', 'partition2']);
-      test.equal(Roles.getPartitionsForUser(userId, ['admin']), []);
-      test.equal(Roles.getPartitionsForUser(userId, ['user', 'editor', 'admin']), ['partition1', 'partition2']);
+      test.equal(Roles.getScopesForUser(userId, 'user'), ['scope2']);
+      test.equal(Roles.getScopesForUser(userId, 'editor'), ['scope1', 'scope2']);
+      test.equal(Roles.getScopesForUser(userId, 'admin'), []);
+      test.equal(Roles.getScopesForUser(userId, ['user']), ['scope2']);
+      test.equal(Roles.getScopesForUser(userId, ['editor']), ['scope1', 'scope2']);
+      test.equal(Roles.getScopesForUser(userId, ['admin']), []);
+      test.equal(Roles.getScopesForUser(userId, ['user', 'editor', 'admin']), ['scope1', 'scope2']);
 
       // by user object
       userObj = Meteor.users.findOne({_id: userId});
-      test.equal(Roles.getPartitionsForUser(userObj, 'user'), ['partition2']);
-      test.equal(Roles.getPartitionsForUser(userObj, 'editor'), ['partition1', 'partition2']);
-      test.equal(Roles.getPartitionsForUser(userObj, 'admin'), []);
-      test.equal(Roles.getPartitionsForUser(userObj, ['user']), ['partition2']);
-      test.equal(Roles.getPartitionsForUser(userObj, ['editor']), ['partition1', 'partition2']);
-      test.equal(Roles.getPartitionsForUser(userObj, ['admin']), []);
-      test.equal(Roles.getPartitionsForUser(userObj, ['user', 'editor', 'admin']), ['partition1', 'partition2']);
+      test.equal(Roles.getScopesForUser(userObj, 'user'), ['scope2']);
+      test.equal(Roles.getScopesForUser(userObj, 'editor'), ['scope1', 'scope2']);
+      test.equal(Roles.getScopesForUser(userObj, 'admin'), []);
+      test.equal(Roles.getScopesForUser(userObj, ['user']), ['scope2']);
+      test.equal(Roles.getScopesForUser(userObj, ['editor']), ['scope1', 'scope2']);
+      test.equal(Roles.getScopesForUser(userObj, ['admin']), []);
+      test.equal(Roles.getScopesForUser(userObj, ['user', 'editor', 'admin']), ['scope1', 'scope2']);
     });
 
 
@@ -1306,27 +1306,27 @@
     });
 
   Tinytest.add(
-    'roles - can get all users in role by partition', 
+    'roles - can get all users in role by scope',
     function (test) {
       reset();
 
       Roles.createRole('admin');
       Roles.createRole('user');
 
-      Roles.addUsersToRoles([users.eve, users.joe], ['admin', 'user'], 'partition1');
-      Roles.addUsersToRoles([users.bob, users.joe], ['admin'], 'partition2');
+      Roles.addUsersToRoles([users.eve, users.joe], ['admin', 'user'], 'scope1');
+      Roles.addUsersToRoles([users.bob, users.joe], ['admin'], 'scope2');
 
       var expected = [users.eve, users.joe],
-          actual = _.pluck(Roles.getUsersInRole('admin', 'partition1').fetch(), '_id');
+          actual = _.pluck(Roles.getUsersInRole('admin', 'scope1').fetch(), '_id');
 
       itemsEqual(test, actual, expected);
 
       expected = [users.eve, users.joe];
-      actual = _.pluck(Roles.getUsersInRole('admin', {partition: 'partition1'}).fetch(), '_id');
+      actual = _.pluck(Roles.getUsersInRole('admin', {scope: 'scope1'}).fetch(), '_id');
       itemsEqual(test, actual, expected);
 
       expected = [users.eve, users.bob, users.joe];
-      actual = _.pluck(Roles.getUsersInRole('admin', {anyPartition: true}).fetch(), '_id');
+      actual = _.pluck(Roles.getUsersInRole('admin', {anyScope: true}).fetch(), '_id');
       itemsEqual(test, actual, expected);
 
       actual = _.pluck(Roles.getUsersInRole('admin').fetch(), '_id');
@@ -1334,23 +1334,23 @@
     });
   
   Tinytest.add(
-    'roles - can get all users in role by partition including Roles.GLOBAL_PARTITION', 
+    'roles - can get all users in role by scope including Roles.GLOBAL_SCOPE',
     function (test) {
       reset();
 
       Roles.createRole('admin');
       Roles.createRole('user');
 
-      Roles.addUsersToRoles([users.eve], ['admin', 'user'], Roles.GLOBAL_PARTITION);
-      Roles.addUsersToRoles([users.bob, users.joe], ['admin'], 'partition2');
+      Roles.addUsersToRoles([users.eve], ['admin', 'user'], Roles.GLOBAL_SCOPE);
+      Roles.addUsersToRoles([users.bob, users.joe], ['admin'], 'scope2');
 
       var expected = [users.eve],
-          actual = _.pluck(Roles.getUsersInRole('admin', 'partition1').fetch(), '_id');
+          actual = _.pluck(Roles.getUsersInRole('admin', 'scope1').fetch(), '_id');
 
       itemsEqual(test, actual, expected);
 
       expected = [users.eve, users.bob, users.joe];
-      actual = _.pluck(Roles.getUsersInRole('admin', 'partition2').fetch(), '_id');
+      actual = _.pluck(Roles.getUsersInRole('admin', 'scope2').fetch(), '_id');
 
       itemsEqual(test, actual, expected);
 
@@ -1360,23 +1360,23 @@
       itemsEqual(test, actual, expected);
 
       expected = [users.eve, users.bob, users.joe];
-      actual = _.pluck(Roles.getUsersInRole('admin', {anyPartition: true}).fetch(), '_id');
+      actual = _.pluck(Roles.getUsersInRole('admin', {anyScope: true}).fetch(), '_id');
 
       itemsEqual(test, actual, expected);
     });
 
   Tinytest.add(
-    'roles - can get all users in role by partition and passes through mongo query arguments', 
+    'roles - can get all users in role by scope and passes through mongo query arguments',
     function (test) {
       reset();
 
       Roles.createRole('admin');
       Roles.createRole('user');
 
-      Roles.addUsersToRoles([users.eve, users.joe], ['admin', 'user'], 'partition1');
-      Roles.addUsersToRoles([users.bob, users.joe], ['admin'], 'partition2');
+      Roles.addUsersToRoles([users.eve, users.joe], ['admin', 'user'], 'scope1');
+      Roles.addUsersToRoles([users.bob, users.joe], ['admin'], 'scope2');
 
-      var results = Roles.getUsersInRole('admin', 'partition1', { fields: { username: 0 }, limit: 1 }).fetch();
+      var results = Roles.getUsersInRole('admin', 'scope1', { fields: { username: 0 }, limit: 1 }).fetch();
 
       test.equal(1, results.length);
       test.isTrue(results[0].hasOwnProperty('_id'));
@@ -1385,76 +1385,76 @@
 
 
   Tinytest.add(
-    'roles - can use Roles.GLOBAL_PARTITION to assign blanket roles',
+    'roles - can use Roles.GLOBAL_SCOPE to assign blanket roles',
     function (test) {
       reset();
 
       Roles.createRole('admin');
 
-      Roles.addUsersToRoles([users.joe, users.bob], ['admin'], Roles.GLOBAL_PARTITION);
+      Roles.addUsersToRoles([users.joe, users.bob], ['admin'], Roles.GLOBAL_SCOPE);
 
-      testUser(test, 'eve', [], 'partition1');
-      testUser(test, 'joe', ['admin'], 'partition2');
-      testUser(test, 'joe', ['admin'], 'partition1');
-      testUser(test, 'bob', ['admin'], 'partition2');
-      testUser(test, 'bob', ['admin'], 'partition1');
+      testUser(test, 'eve', [], 'scope1');
+      testUser(test, 'joe', ['admin'], 'scope2');
+      testUser(test, 'joe', ['admin'], 'scope1');
+      testUser(test, 'bob', ['admin'], 'scope2');
+      testUser(test, 'bob', ['admin'], 'scope1');
 
-      Roles.removeUsersFromRoles(users.joe, ['admin'], Roles.GLOBAL_PARTITION);
+      Roles.removeUsersFromRoles(users.joe, ['admin'], Roles.GLOBAL_SCOPE);
 
-      testUser(test, 'eve', [], 'partition1');
-      testUser(test, 'joe', [], 'partition2');
-      testUser(test, 'joe', [], 'partition1');
-      testUser(test, 'bob', ['admin'], 'partition2');
-      testUser(test, 'bob', ['admin'], 'partition1');
+      testUser(test, 'eve', [], 'scope1');
+      testUser(test, 'joe', [], 'scope2');
+      testUser(test, 'joe', [], 'scope1');
+      testUser(test, 'bob', ['admin'], 'scope2');
+      testUser(test, 'bob', ['admin'], 'scope1');
     });
 
   Tinytest.add(
-    'roles - Roles.GLOBAL_PARTITION is independent of other partitions',
+    'roles - Roles.GLOBAL_SCOPE is independent of other scopes',
     function (test) {
       reset();
 
       Roles.createRole('admin');
 
-      Roles.addUsersToRoles([users.joe, users.bob], ['admin'], 'partition5');
-      Roles.addUsersToRoles([users.joe, users.bob], ['admin'], Roles.GLOBAL_PARTITION);
+      Roles.addUsersToRoles([users.joe, users.bob], ['admin'], 'scope5');
+      Roles.addUsersToRoles([users.joe, users.bob], ['admin'], Roles.GLOBAL_SCOPE);
 
-      testUser(test, 'eve', [], 'partition1');
-      testUser(test, 'joe', ['admin'], 'partition5');
-      testUser(test, 'joe', ['admin'], 'partition2');
-      testUser(test, 'joe', ['admin'], 'partition1');
-      testUser(test, 'bob', ['admin'], 'partition5');
-      testUser(test, 'bob', ['admin'], 'partition2');
-      testUser(test, 'bob', ['admin'], 'partition1');
+      testUser(test, 'eve', [], 'scope1');
+      testUser(test, 'joe', ['admin'], 'scope5');
+      testUser(test, 'joe', ['admin'], 'scope2');
+      testUser(test, 'joe', ['admin'], 'scope1');
+      testUser(test, 'bob', ['admin'], 'scope5');
+      testUser(test, 'bob', ['admin'], 'scope2');
+      testUser(test, 'bob', ['admin'], 'scope1');
 
-      Roles.removeUsersFromRoles(users.joe, ['admin'], Roles.GLOBAL_PARTITION);
+      Roles.removeUsersFromRoles(users.joe, ['admin'], Roles.GLOBAL_SCOPE);
 
-      testUser(test, 'eve', [], 'partition1');
-      testUser(test, 'joe', ['admin'], 'partition5');
-      testUser(test, 'joe', [], 'partition2');
-      testUser(test, 'joe', [], 'partition1');
-      testUser(test, 'bob', ['admin'], 'partition5');
-      testUser(test, 'bob', ['admin'], 'partition2');
-      testUser(test, 'bob', ['admin'], 'partition1');
+      testUser(test, 'eve', [], 'scope1');
+      testUser(test, 'joe', ['admin'], 'scope5');
+      testUser(test, 'joe', [], 'scope2');
+      testUser(test, 'joe', [], 'scope1');
+      testUser(test, 'bob', ['admin'], 'scope5');
+      testUser(test, 'bob', ['admin'], 'scope2');
+      testUser(test, 'bob', ['admin'], 'scope1');
     });
   
   Tinytest.add(
-    'roles - Roles.GLOBAL_PARTITION also checked when partition not specified',
+    'roles - Roles.GLOBAL_SCOPE also checked when scope not specified',
     function (test) {
       reset();
 
       Roles.createRole('admin');
 
-      Roles.addUsersToRoles(users.joe, 'admin', Roles.GLOBAL_PARTITION);
+      Roles.addUsersToRoles(users.joe, 'admin', Roles.GLOBAL_SCOPE);
 
       testUser(test, 'joe', ['admin']);
 
-      Roles.removeUsersFromRoles(users.joe, 'admin', Roles.GLOBAL_PARTITION);
+      Roles.removeUsersFromRoles(users.joe, 'admin', Roles.GLOBAL_SCOPE);
 
       testUser(test, 'joe', []);
     });
 
   Tinytest.add(
-    "roles - can use '.' in partition name",
+    "roles - can use '.' in scope name",
     function (test) {
       reset();
 
@@ -1465,7 +1465,7 @@
     });
 
   Tinytest.add(
-    "roles - can use multiple periods in partition name",
+    "roles - can use multiple periods in scope name",
     function (test) {
       reset();
 
@@ -1484,44 +1484,44 @@
       Roles.createRole('user');
       Roles.createRole('editor');
 
-      Roles.setUserRoles([users.eve, users.bob], ['editor', 'user'], 'partition1');
-      Roles.setUserRoles([users.bob, users.joe], ['user', 'admin'], 'partition2');
+      Roles.setUserRoles([users.eve, users.bob], ['editor', 'user'], 'scope1');
+      Roles.setUserRoles([users.bob, users.joe], ['user', 'admin'], 'scope2');
 
-      test.isTrue(Roles.userIsInRole(users.eve, 'editor', 'partition1'));
-      test.isFalse(Roles.userIsInRole(users.eve, 'editor', 'partition2'));
+      test.isTrue(Roles.userIsInRole(users.eve, 'editor', 'scope1'));
+      test.isFalse(Roles.userIsInRole(users.eve, 'editor', 'scope2'));
 
-      test.isFalse(Roles.userIsInRole(users.joe, 'admin', 'partition1'));
-      test.isTrue(Roles.userIsInRole(users.joe, 'admin', 'partition2'));
+      test.isFalse(Roles.userIsInRole(users.joe, 'admin', 'scope1'));
+      test.isTrue(Roles.userIsInRole(users.joe, 'admin', 'scope2'));
 
-      test.isTrue(Roles.userIsInRole(users.eve, 'user', 'partition1'));
-      test.isTrue(Roles.userIsInRole(users.bob, 'user', 'partition1'));
-      test.isFalse(Roles.userIsInRole(users.joe, 'user', 'partition1'));
+      test.isTrue(Roles.userIsInRole(users.eve, 'user', 'scope1'));
+      test.isTrue(Roles.userIsInRole(users.bob, 'user', 'scope1'));
+      test.isFalse(Roles.userIsInRole(users.joe, 'user', 'scope1'));
 
-      test.isFalse(Roles.userIsInRole(users.eve, 'user', 'partition2'));
-      test.isTrue(Roles.userIsInRole(users.bob, 'user', 'partition2'));
-      test.isTrue(Roles.userIsInRole(users.joe, 'user', 'partition2'));
+      test.isFalse(Roles.userIsInRole(users.eve, 'user', 'scope2'));
+      test.isTrue(Roles.userIsInRole(users.bob, 'user', 'scope2'));
+      test.isTrue(Roles.userIsInRole(users.joe, 'user', 'scope2'));
 
-      test.isFalse(Roles.userIsInRole(users.eve, 'user2', 'partition1'));
-      test.isFalse(Roles.userIsInRole(users.eve, 'user2', 'partition2'));
+      test.isFalse(Roles.userIsInRole(users.eve, 'user2', 'scope1'));
+      test.isFalse(Roles.userIsInRole(users.eve, 'user2', 'scope2'));
 
       Roles.renameRole('user', 'user2');
 
-      test.isTrue(Roles.userIsInRole(users.eve, 'editor', 'partition1'));
-      test.isFalse(Roles.userIsInRole(users.eve, 'editor', 'partition2'));
+      test.isTrue(Roles.userIsInRole(users.eve, 'editor', 'scope1'));
+      test.isFalse(Roles.userIsInRole(users.eve, 'editor', 'scope2'));
 
-      test.isFalse(Roles.userIsInRole(users.joe, 'admin', 'partition1'));
-      test.isTrue(Roles.userIsInRole(users.joe, 'admin', 'partition2'));
+      test.isFalse(Roles.userIsInRole(users.joe, 'admin', 'scope1'));
+      test.isTrue(Roles.userIsInRole(users.joe, 'admin', 'scope2'));
 
-      test.isTrue(Roles.userIsInRole(users.eve, 'user2', 'partition1'));
-      test.isTrue(Roles.userIsInRole(users.bob, 'user2', 'partition1'));
-      test.isFalse(Roles.userIsInRole(users.joe, 'user2', 'partition1'));
+      test.isTrue(Roles.userIsInRole(users.eve, 'user2', 'scope1'));
+      test.isTrue(Roles.userIsInRole(users.bob, 'user2', 'scope1'));
+      test.isFalse(Roles.userIsInRole(users.joe, 'user2', 'scope1'));
 
-      test.isFalse(Roles.userIsInRole(users.eve, 'user2', 'partition2'));
-      test.isTrue(Roles.userIsInRole(users.bob, 'user2', 'partition2'));
-      test.isTrue(Roles.userIsInRole(users.joe, 'user2', 'partition2'));
+      test.isFalse(Roles.userIsInRole(users.eve, 'user2', 'scope2'));
+      test.isTrue(Roles.userIsInRole(users.bob, 'user2', 'scope2'));
+      test.isTrue(Roles.userIsInRole(users.joe, 'user2', 'scope2'));
 
-      test.isFalse(Roles.userIsInRole(users.eve, 'user', 'partition1'));
-      test.isFalse(Roles.userIsInRole(users.eve, 'user', 'partition2'));
+      test.isFalse(Roles.userIsInRole(users.eve, 'user', 'scope1'));
+      test.isFalse(Roles.userIsInRole(users.eve, 'user', 'scope2'));
     });
 
   Tinytest.add(
@@ -1542,11 +1542,11 @@
       test.equal(Meteor.users.findOne(users.eve, {fields: {roles: 1, _id: 0}}), {
         roles: [{
           _id: 'admin',
-          partition: null,
+          scope: null,
           assigned: true
         }, {
           _id: 'editor',
-          partition: null,
+          scope: null,
           assigned: true
         }]
       });
@@ -1556,7 +1556,7 @@
       test.equal(Meteor.users.findOne(users.joe, {fields: {roles: 1, _id: 0}}), {
         roles: [{
           _id: 'user',
-          partition: null,
+          scope: null,
           assigned: true
         }]
       });
@@ -1615,15 +1615,15 @@
       test.equal(Meteor.users.findOne(users.eve, {fields: {roles: 1, _id: 0}}), {
         roles: [{
           _id: 'admin',
-          partition: null,
+          scope: null,
           assigned: true
         }, {
           _id: 'editor',
-          partition: null,
+          scope: null,
           assigned: true
         }, {
           _id: 'user',
-          partition: 'foo_bla',
+          scope: 'foo_bla',
           assigned: true
         }]
       });
@@ -1633,11 +1633,11 @@
       test.equal(Meteor.users.findOne(users.joe, {fields: {roles: 1, _id: 0}}), {
         roles: [{
           _id: 'user',
-          partition: null,
+          scope: null,
           assigned: true
         }, {
           _id: 'user',
-          partition: 'foo_bla',
+          scope: 'foo_bla',
           assigned: true
         }]
       });
@@ -1688,15 +1688,15 @@
       test.equal(Meteor.users.findOne(users.eve, {fields: {roles: 1, _id: 0}}), {
         roles: [{
           _id: 'admin',
-          partition: null,
+          scope: null,
           assigned: true
         }, {
           _id: 'editor',
-          partition: null,
+          scope: null,
           assigned: true
         }, {
           _id: 'user',
-          partition: 'foo.bla',
+          scope: 'foo.bla',
           assigned: true
         }]
       });
@@ -1706,11 +1706,11 @@
       test.equal(Meteor.users.findOne(users.joe, {fields: {roles: 1, _id: 0}}), {
         roles: [{
           _id: 'user',
-          partition: null,
+          scope: null,
           assigned: true
         }, {
           _id: 'user',
-          partition: 'foo.bla',
+          scope: 'foo.bla',
           assigned: true
         }]
       });
@@ -1745,99 +1745,99 @@
       Roles.addRolesToParent('VIEW_PERMISSION', 'ALL_PERMISSIONS');
       Roles.addRolesToParent('DELETE_PERMISSION', 'admin');
 
-      Roles.addUsersToRoles(users.eve, ['user'], 'partition1');
-      Roles.addUsersToRoles(users.eve, ['user'], 'partition2');
+      Roles.addUsersToRoles(users.eve, ['user'], 'scope1');
+      Roles.addUsersToRoles(users.eve, ['user'], 'scope2');
 
       var correctRoles = [{
         _id: 'user',
-        partition: 'partition1',
+        scope: 'scope1',
         assigned: true
       }, {
         _id: 'ALL_PERMISSIONS',
-        partition: 'partition1',
+        scope: 'scope1',
         assigned: false
       }, {
         _id: 'EDIT_PERMISSION',
-        partition: 'partition1',
+        scope: 'scope1',
         assigned: false
       }, {
         _id: 'VIEW_PERMISSION',
-        partition: 'partition1',
+        scope: 'scope1',
         assigned: false
       }, {
         _id: 'user',
-        partition: 'partition2',
+        scope: 'scope2',
         assigned: true
       }, {
         _id: 'ALL_PERMISSIONS',
-        partition: 'partition2',
+        scope: 'scope2',
         assigned: false
       }, {
         _id: 'EDIT_PERMISSION',
-        partition: 'partition2',
+        scope: 'scope2',
         assigned: false
       }, {
         _id: 'VIEW_PERMISSION',
-        partition: 'partition2',
+        scope: 'scope2',
         assigned: false
       }];
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), correctRoles);
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), correctRoles);
 
       // let's remove all automatically assigned roles
       // _assureConsistency should recreate those roles
       Meteor.users.update(users.eve, {$pull: {roles: {assigned: false}}});
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), [{
         _id: 'user',
-        partition: 'partition1',
+        scope: 'scope1',
         assigned: true
       }, {
         _id: 'user',
-        partition: 'partition2',
+        scope: 'scope2',
         assigned: true
       }]);
 
       Roles._assureConsistency(users.eve);
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), correctRoles);
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), correctRoles);
 
       // add an extra role, faking that it is automatically assigned
       // _assureConsistency should remove this extra role
-      Meteor.users.update(users.eve, {$push: {roles: {_id: 'DELETE_PERMISSION', partition: null, assigned: false}}});
+      Meteor.users.update(users.eve, {$push: {roles: {_id: 'DELETE_PERMISSION', scope: null, assigned: false}}});
 
       Roles._assureConsistency(users.eve);
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), correctRoles);
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), correctRoles);
 
       // remove a role, _assureConsistency should remove it from the user
       Meteor.roles.remove({_id: 'VIEW_PERMISSION'});
 
       Roles._assureConsistency(users.eve);
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), [{
         _id: 'user',
-        partition: 'partition1',
+        scope: 'scope1',
         assigned: true
       }, {
         _id: 'ALL_PERMISSIONS',
-        partition: 'partition1',
+        scope: 'scope1',
         assigned: false
       }, {
         _id: 'EDIT_PERMISSION',
-        partition: 'partition1',
+        scope: 'scope1',
         assigned: false
       }, {
         _id: 'user',
-        partition: 'partition2',
+        scope: 'scope2',
         assigned: true
       }, {
         _id: 'ALL_PERMISSIONS',
-        partition: 'partition2',
+        scope: 'scope2',
         assigned: false
       }, {
         _id: 'EDIT_PERMISSION',
-        partition: 'partition2',
+        scope: 'scope2',
         assigned: false
       }]);
     });
@@ -1850,51 +1850,51 @@
       Roles.createRole('admin');
 
       // add role with assigned set to true
-      Roles._addUserToRole(users.eve, 'admin', {partition: null, ifExists: false, _assigned: true});
+      Roles._addUserToRole(users.eve, 'admin', {scope: null, ifExists: false, _assigned: true});
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), [{
         _id: 'admin',
-        partition: null,
+        scope: null,
         assigned: true
       }]);
 
       // change assigned to false
-      Roles._addUserToRole(users.eve, 'admin', {partition: null, ifExists: false, _assigned: false});
+      Roles._addUserToRole(users.eve, 'admin', {scope: null, ifExists: false, _assigned: false});
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), [{
         _id: 'admin',
-        partition: null,
+        scope: null,
         assigned: false
       }]);
 
       Roles.setUserRoles(users.eve, []);
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), []);
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), []);
 
       // add role with assigned set to false
-      Roles._addUserToRole(users.eve, 'admin', {partition: null, ifExists: false, _assigned: null});
+      Roles._addUserToRole(users.eve, 'admin', {scope: null, ifExists: false, _assigned: null});
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), [{
         _id: 'admin',
-        partition: null,
+        scope: null,
         assigned: false
       }]);
 
       // change assigned to true
-      Roles._addUserToRole(users.eve, 'admin', {partition: null, ifExists: false, _assigned: true});
+      Roles._addUserToRole(users.eve, 'admin', {scope: null, ifExists: false, _assigned: true});
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), [{
         _id: 'admin',
-        partition: null,
+        scope: null,
         assigned: true
       }]);
 
       // do not change assigned
-      Roles._addUserToRole(users.eve, 'admin', {partition: null, ifExists: false, _assigned: null});
+      Roles._addUserToRole(users.eve, 'admin', {scope: null, ifExists: false, _assigned: null});
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), [{
         _id: 'admin',
-        partition: null,
+        scope: null,
         assigned: true
       }]);
     });
@@ -1908,60 +1908,60 @@
 
       Roles.addUsersToRoles(users.eve, 'admin');
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), [{
         _id: 'admin',
-        partition: null,
+        scope: null,
         assigned: true
       }]);
 
       // remove only roles with assigned set to false, thus do not remove anything
-      Roles._removeUserFromRole(users.eve, 'admin', {partition: null, _assigned: false});
+      Roles._removeUserFromRole(users.eve, 'admin', {scope: null, _assigned: false});
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), [{
         _id: 'admin',
-        partition: null,
+        scope: null,
         assigned: true
       }]);
 
       // remove only roles with assigned set to true
-      Roles._removeUserFromRole(users.eve, 'admin', {partition: null, _assigned: true});
+      Roles._removeUserFromRole(users.eve, 'admin', {scope: null, _assigned: true});
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), []);
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), []);
 
       Roles.addUsersToRoles(users.eve, 'admin');
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), [{
         _id: 'admin',
-        partition: null,
+        scope: null,
         assigned: true
       }]);
 
       // remove roles no matter the assignment
-      Roles._removeUserFromRole(users.eve, 'admin', {partition: null, _assigned: null});
+      Roles._removeUserFromRole(users.eve, 'admin', {scope: null, _assigned: null});
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), []);
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), []);
 
       Roles.addUsersToRoles(users.eve, 'admin', {_assigned: false});
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), [{
         _id: 'admin',
-        partition: null,
+        scope: null,
         assigned: false
       }]);
 
       // remove only roles with assigned set to true, thus do not remove anything
-      Roles._removeUserFromRole(users.eve, 'admin', {partition: null, _assigned: true});
+      Roles._removeUserFromRole(users.eve, 'admin', {scope: null, _assigned: true});
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), [{
         _id: 'admin',
-        partition: null,
+        scope: null,
         assigned: false
       }]);
 
       // remove only roles with assigned set to false
-      Roles._removeUserFromRole(users.eve, 'admin', {partition: null, _assigned: false});
+      Roles._removeUserFromRole(users.eve, 'admin', {scope: null, _assigned: false});
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), []);
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), []);
     });
 
   Tinytest.add(
@@ -1984,21 +1984,21 @@
 
       test.isTrue(Roles.userIsInRole(users.eve, 'VIEW_PERMISSION'));
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), [{
         _id: 'user',
-        partition: null,
+        scope: null,
         assigned: true
       }, {
         _id: 'ALL_PERMISSIONS',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'EDIT_PERMISSION',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'VIEW_PERMISSION',
-        partition: null,
+        scope: null,
         assigned: false
       }]);
 
@@ -2006,21 +2006,21 @@
 
       test.isTrue(Roles.userIsInRole(users.eve, 'VIEW_PERMISSION'));
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), [{
         _id: 'user',
-        partition: null,
+        scope: null,
         assigned: true
       }, {
         _id: 'ALL_PERMISSIONS',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'EDIT_PERMISSION',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'VIEW_PERMISSION',
-        partition: null,
+        scope: null,
         assigned: true
       }]);
 
@@ -2028,9 +2028,9 @@
 
       test.isTrue(Roles.userIsInRole(users.eve, 'VIEW_PERMISSION'));
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), [{
         _id: 'VIEW_PERMISSION',
-        partition: null,
+        scope: null,
         assigned: true
       }]);
 
@@ -2038,7 +2038,7 @@
 
       test.isFalse(Roles.userIsInRole(users.eve, 'VIEW_PERMISSION'));
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), []);
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), []);
     });
 
   Tinytest.add(
@@ -2058,38 +2058,38 @@
       Roles.addRolesToParent('DELETE_PERMISSION', 'admin');
 
       Roles.addUsersToRoles(users.eve, ['user']);
-      Roles.addUsersToRoles(users.eve, ['ALL_PERMISSIONS'], 'partition');
+      Roles.addUsersToRoles(users.eve, ['ALL_PERMISSIONS'], 'scope');
 
       test.isFalse(Roles.userIsInRole(users.eve, 'MODERATE_PERMISSION'));
-      test.isFalse(Roles.userIsInRole(users.eve, 'MODERATE_PERMISSION', 'partition'));
+      test.isFalse(Roles.userIsInRole(users.eve, 'MODERATE_PERMISSION', 'scope'));
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), [{
         _id: 'user',
-        partition: null,
+        scope: null,
         assigned: true
       }, {
         _id: 'ALL_PERMISSIONS',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'EDIT_PERMISSION',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'VIEW_PERMISSION',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'ALL_PERMISSIONS',
-        partition: 'partition',
+        scope: 'scope',
         assigned: true
       }, {
         _id: 'EDIT_PERMISSION',
-        partition: 'partition',
+        scope: 'scope',
         assigned: false
       }, {
         _id: 'VIEW_PERMISSION',
-        partition: 'partition',
+        scope: 'scope',
         assigned: false
       }]);
 
@@ -2098,214 +2098,214 @@
       Roles.addRolesToParent('MODERATE_PERMISSION', 'ALL_PERMISSIONS');
 
       test.isTrue(Roles.userIsInRole(users.eve, 'MODERATE_PERMISSION'));
-      test.isTrue(Roles.userIsInRole(users.eve, 'MODERATE_PERMISSION', 'partition'));
+      test.isTrue(Roles.userIsInRole(users.eve, 'MODERATE_PERMISSION', 'scope'));
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), [{
         _id: 'user',
-        partition: null,
+        scope: null,
         assigned: true
       }, {
         _id: 'ALL_PERMISSIONS',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'EDIT_PERMISSION',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'VIEW_PERMISSION',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'ALL_PERMISSIONS',
-        partition: 'partition',
+        scope: 'scope',
         assigned: true
       }, {
         _id: 'EDIT_PERMISSION',
-        partition: 'partition',
+        scope: 'scope',
         assigned: false
       }, {
         _id: 'VIEW_PERMISSION',
-        partition: 'partition',
+        scope: 'scope',
         assigned: false
       }, {
         _id: 'MODERATE_PERMISSION',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'MODERATE_PERMISSION',
-        partition: 'partition',
+        scope: 'scope',
         assigned: false
       }]);
 
       Roles.addUsersToRoles(users.eve, ['admin']);
 
       test.isTrue(Roles.userIsInRole(users.eve, 'DELETE_PERMISSION'));
-      test.isTrue(Roles.userIsInRole(users.eve, 'DELETE_PERMISSION', 'partition'));
+      test.isTrue(Roles.userIsInRole(users.eve, 'DELETE_PERMISSION', 'scope'));
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), [{
         _id: 'user',
-        partition: null,
+        scope: null,
         assigned: true
       }, {
         _id: 'ALL_PERMISSIONS',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'EDIT_PERMISSION',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'VIEW_PERMISSION',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'ALL_PERMISSIONS',
-        partition: 'partition',
+        scope: 'scope',
         assigned: true
       }, {
         _id: 'EDIT_PERMISSION',
-        partition: 'partition',
+        scope: 'scope',
         assigned: false
       }, {
         _id: 'VIEW_PERMISSION',
-        partition: 'partition',
+        scope: 'scope',
         assigned: false
       }, {
         _id: 'MODERATE_PERMISSION',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'MODERATE_PERMISSION',
-        partition: 'partition',
+        scope: 'scope',
         assigned: false
       }, {
         _id: 'admin',
-        partition: null,
+        scope: null,
         assigned: true
       }, {
         _id: 'DELETE_PERMISSION',
-        partition: null,
+        scope: null,
         assigned: false
       }]);
 
       Roles.addRolesToParent('DELETE_PERMISSION', 'ALL_PERMISSIONS');
 
       test.isTrue(Roles.userIsInRole(users.eve, 'DELETE_PERMISSION'));
-      test.isTrue(Roles.userIsInRole(users.eve, 'DELETE_PERMISSION', 'partition'));
+      test.isTrue(Roles.userIsInRole(users.eve, 'DELETE_PERMISSION', 'scope'));
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), [{
         _id: 'user',
-        partition: null,
+        scope: null,
         assigned: true
       }, {
         _id: 'ALL_PERMISSIONS',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'EDIT_PERMISSION',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'VIEW_PERMISSION',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'ALL_PERMISSIONS',
-        partition: 'partition',
+        scope: 'scope',
         assigned: true
       }, {
         _id: 'EDIT_PERMISSION',
-        partition: 'partition',
+        scope: 'scope',
         assigned: false
       }, {
         _id: 'VIEW_PERMISSION',
-        partition: 'partition',
+        scope: 'scope',
         assigned: false
       }, {
         _id: 'MODERATE_PERMISSION',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'MODERATE_PERMISSION',
-        partition: 'partition',
+        scope: 'scope',
         assigned: false
       }, {
         _id: 'admin',
-        partition: null,
+        scope: null,
         assigned: true
       }, {
         _id: 'DELETE_PERMISSION',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'DELETE_PERMISSION',
-        partition: 'partition',
+        scope: 'scope',
         assigned: false
       }]);
 
       Roles.removeUsersFromRoles(users.eve, ['admin']);
 
       test.isTrue(Roles.userIsInRole(users.eve, 'DELETE_PERMISSION'));
-      test.isTrue(Roles.userIsInRole(users.eve, 'DELETE_PERMISSION', 'partition'));
+      test.isTrue(Roles.userIsInRole(users.eve, 'DELETE_PERMISSION', 'scope'));
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), [{
         _id: 'user',
-        partition: null,
+        scope: null,
         assigned: true
       }, {
         _id: 'ALL_PERMISSIONS',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'EDIT_PERMISSION',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'VIEW_PERMISSION',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'ALL_PERMISSIONS',
-        partition: 'partition',
+        scope: 'scope',
         assigned: true
       }, {
         _id: 'EDIT_PERMISSION',
-        partition: 'partition',
+        scope: 'scope',
         assigned: false
       }, {
         _id: 'VIEW_PERMISSION',
-        partition: 'partition',
+        scope: 'scope',
         assigned: false
       }, {
         _id: 'MODERATE_PERMISSION',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'MODERATE_PERMISSION',
-        partition: 'partition',
+        scope: 'scope',
         assigned: false
       }, {
         _id: 'DELETE_PERMISSION',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'DELETE_PERMISSION',
-        partition: 'partition',
+        scope: 'scope',
         assigned: false
       }]);
 
       Roles.deleteRole('ALL_PERMISSIONS');
 
       test.isFalse(Roles.userIsInRole(users.eve, 'DELETE_PERMISSION'));
-      test.isFalse(Roles.userIsInRole(users.eve, 'DELETE_PERMISSION', 'partition'));
+      test.isFalse(Roles.userIsInRole(users.eve, 'DELETE_PERMISSION', 'scope'));
 
       test.isFalse(Roles.userIsInRole(users.eve, 'MODERATE_PERMISSION'));
-      test.isFalse(Roles.userIsInRole(users.eve, 'MODERATE_PERMISSION', 'partition'));
+      test.isFalse(Roles.userIsInRole(users.eve, 'MODERATE_PERMISSION', 'scope'));
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), [{
         _id: 'user',
-        partition: null,
+        scope: null,
         assigned: true
       }]);
     });
@@ -2340,33 +2340,33 @@
       test.isTrue(Roles.userIsInRole(users.eve, 'EXTRA_PERMISSION_ROLE_1'));
       test.isTrue(Roles.userIsInRole(users.eve, 'EXTRA_PERMISSION_ROLE_2'));
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), [{
         _id: 'role1',
-        partition: null,
+        scope: null,
         assigned: true
       }, {
         _id: 'role2',
-        partition: null,
+        scope: null,
         assigned: true
       }, {
         _id: 'COMMON_PERMISSION_1',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'COMMON_PERMISSION_2',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'COMMON_PERMISSION_3',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'EXTRA_PERMISSION_ROLE_1',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'EXTRA_PERMISSION_ROLE_2',
-        partition: null,
+        scope: null,
         assigned: false
       }]);
 
@@ -2376,25 +2376,25 @@
       test.isTrue(Roles.userIsInRole(users.eve, 'EXTRA_PERMISSION_ROLE_1'));
       test.isFalse(Roles.userIsInRole(users.eve, 'EXTRA_PERMISSION_ROLE_2'));
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), [{
         _id: 'role1',
-        partition: null,
+        scope: null,
         assigned: true
       }, {
         _id: 'COMMON_PERMISSION_1',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'COMMON_PERMISSION_2',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'COMMON_PERMISSION_3',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'EXTRA_PERMISSION_ROLE_1',
-        partition: null,
+        scope: null,
         assigned: false
       }]);
 
@@ -2404,33 +2404,33 @@
       test.isTrue(Roles.userIsInRole(users.eve, 'EXTRA_PERMISSION_ROLE_1'));
       test.isTrue(Roles.userIsInRole(users.eve, 'EXTRA_PERMISSION_ROLE_2'));
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), [{
         _id: 'role1',
-        partition: null,
+        scope: null,
         assigned: true
       }, {
         _id: 'role2',
-        partition: null,
+        scope: null,
         assigned: true
       }, {
         _id: 'COMMON_PERMISSION_1',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'COMMON_PERMISSION_2',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'COMMON_PERMISSION_3',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'EXTRA_PERMISSION_ROLE_1',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'EXTRA_PERMISSION_ROLE_2',
-        partition: null,
+        scope: null,
         assigned: false
       }]);
 
@@ -2440,25 +2440,25 @@
       test.isTrue(Roles.userIsInRole(users.eve, 'EXTRA_PERMISSION_ROLE_1'));
       test.isFalse(Roles.userIsInRole(users.eve, 'EXTRA_PERMISSION_ROLE_2'));
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), [{
         _id: 'role1',
-        partition: null,
+        scope: null,
         assigned: true
       }, {
         _id: 'COMMON_PERMISSION_1',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'COMMON_PERMISSION_2',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'COMMON_PERMISSION_3',
-        partition: null,
+        scope: null,
         assigned: false
       }, {
         _id: 'EXTRA_PERMISSION_ROLE_1',
-        partition: null,
+        scope: null,
         assigned: false
       }]);
     });
@@ -2476,9 +2476,9 @@
       test.isTrue(Roles.userIsInRole(users.eve, 'EDIT_PERMISSION'));
       test.isFalse(Roles.userIsInRole(users.eve, 'admin'));
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), [{
         _id: 'EDIT_PERMISSION',
-        partition: null,
+        scope: null,
         assigned: true
       }]);
 
@@ -2487,9 +2487,9 @@
       test.isTrue(Roles.userIsInRole(users.eve, 'EDIT_PERMISSION'));
       test.isFalse(Roles.userIsInRole(users.eve, 'admin'));
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), [{
         _id: 'EDIT_PERMISSION',
-        partition: null,
+        scope: null,
         assigned: true
       }]);
     });
@@ -2509,9 +2509,9 @@
       test.isTrue(Roles.userIsInRole(users.eve, 'EDIT_PERMISSION'));
       test.isFalse(Roles.userIsInRole(users.eve, 'admin'));
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), [{
         _id: 'EDIT_PERMISSION',
-        partition: null,
+        scope: null,
         assigned: true
       }]);
 
@@ -2520,9 +2520,9 @@
       test.isTrue(Roles.userIsInRole(users.eve, 'EDIT_PERMISSION'));
       test.isFalse(Roles.userIsInRole(users.eve, 'admin'));
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), [{
         _id: 'EDIT_PERMISSION',
-        partition: null,
+        scope: null,
         assigned: true
       }]);
     });
@@ -2543,9 +2543,9 @@
       test.isTrue(Roles.userIsInRole(users.eve, 'EDIT_PERMISSION'));
       test.isFalse(Roles.userIsInRole(users.eve, 'admin'));
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), [{
         _id: 'EDIT_PERMISSION',
-        partition: null,
+        scope: null,
         assigned: true
       }]);
 
@@ -2554,9 +2554,9 @@
       test.isTrue(Roles.userIsInRole(users.eve, 'EDIT_PERMISSION'));
       test.isFalse(Roles.userIsInRole(users.eve, 'admin'));
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), [{
         _id: 'EDIT_PERMISSION',
-        partition: null,
+        scope: null,
         assigned: true
       }]);
 
@@ -2565,9 +2565,9 @@
       test.isTrue(Roles.userIsInRole(users.eve, 'EDIT_PERMISSION'));
       test.isFalse(Roles.userIsInRole(users.eve, 'admin'));
 
-      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyScope: true, fullObjects: true}), [{
         _id: 'EDIT_PERMISSION',
-        partition: null,
+        scope: null,
         assigned: true
       }]);
     });

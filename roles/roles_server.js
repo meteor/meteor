@@ -2,8 +2,8 @@
 
 // Create default indexes on users collection.
 // Index only on "roles._id" is not needed because the combined index works for it as well.
-Meteor.users._ensureIndex({'roles._id': 1, 'roles.partition': 1});
-Meteor.users._ensureIndex({'roles.partition': 1});
+Meteor.users._ensureIndex({'roles._id': 1, 'roles.scope': 1});
+Meteor.users._ensureIndex({'roles.scope': 1});
 
 /*
  * Publish logged-in user's roles so client-side checks can work.
@@ -126,7 +126,7 @@ _.extend(Roles, {
 
         roles.push({
           _id: role,
-          partition: null,
+          scope: null,
           assigned: true
         })
       });
@@ -146,7 +146,7 @@ _.extend(Roles, {
 
           roles.push({
             _id: role,
-            partition: group,
+            scope: group,
             assigned: true
           })
         });
@@ -180,16 +180,16 @@ _.extend(Roles, {
       // We assume that we are converting back a failed migration, so values can only be
       // what were valid values in 1.0. So no group names starting with $ and no subroles.
 
-      if (userRole.partition) {
-        if (!usingGroups) throw new Error("Role '" + userRole._id + "' with partition '" + userRole.partition + "' without enabled groups.");
+      if (userRole.scope) {
+        if (!usingGroups) throw new Error("Role '" + userRole._id + "' with scope '" + userRole.scope + "' without enabled groups.");
 
         // escape
-        var partition = userRole.partition.replace(/\./g, '_');
+        var scope = userRole.scope.replace(/\./g, '_');
 
-        if (partition[0] === '$') throw new Error("Group name '" + partition + "' start with $.");
+        if (scope[0] === '$') throw new Error("Group name '" + scope + "' start with $.");
 
-        roles[partition] = roles[partition] || [];
-        roles[partition].push(userRole._id);
+        roles[scope] = roles[scope] || [];
+        roles[scope].push(userRole._id);
       }
       else {
         if (usingGroups) {
@@ -301,8 +301,8 @@ _.extend(Roles, {
     updateUser = updateUser || Roles._defaultUpdateUser;
     updateRole = updateRole || Roles._defaultUpdateRole;
 
-    Roles._dropCollectionIndex(Meteor.users, 'roles._id_1_roles.partition_1');
-    Roles._dropCollectionIndex(Meteor.users, 'roles.partition_1');
+    Roles._dropCollectionIndex(Meteor.users, 'roles._id_1_roles.scope_1');
+    Roles._dropCollectionIndex(Meteor.users, 'roles.scope_1');
 
     Meteor.roles.find().forEach(function (role, index, cursor) {
       if (!Roles._isOldRole(role)) {
