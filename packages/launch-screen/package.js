@@ -10,7 +10,7 @@ Package.describe({
 });
 
 Cordova.depends({
-  'cordova-plugin-splashscreen': '3.2.1'
+  'cordova-plugin-splashscreen': '4.0.0'
 });
 
 Package.onUse(function(api) {
