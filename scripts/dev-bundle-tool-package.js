@@ -52,6 +52,7 @@ var packageJson = {
     // https://github.com/williamwicks/node-eachline/pull/4
     eachline: "https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da",
     pathwatcher: "6.7.1",
+    optimism: "0.2.2",
     'lru-cache': '4.0.1',
     'cordova-lib': "6.0.0",
     longjohn: '0.2.11'
