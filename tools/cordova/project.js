@@ -218,6 +218,13 @@ outdated platforms`);
   prepareForPlatform(platform) {
     assert(platform);
 
+    // Temporary workaround for Cordova iOS bug until
+    // https://issues.apache.org/jira/browse/CB-11731 has been released
+    delete require.cache[files.pathJoin(this.projectRoot,
+      'platforms/ios/cordova/lib/configMunger.js')];
+    delete require.cache[files.pathJoin(this.projectRoot,
+      'platforms/ios/cordova/lib/prepare.js')];
+
     const commandOptions = _.extend(this.defaultOptions,
       { platforms: [platform] });
 
