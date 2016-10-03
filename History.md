@@ -1,5 +1,7 @@
 ## v1.4.2
 
+* Node has been updated to version 4.6.0.
+
 * This release implements a number of rebuild performance optimizations.
   As you edit files in development, the server should restart and rebuild
   much more quickly, especially if you have many `node_modules` files.
