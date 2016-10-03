@@ -53,7 +53,7 @@ var packageJson = {
     pathwatcher: "6.7.0",
     runas: "3.1.1",
     'lru-cache': '2.6.4',
-    'cordova-lib': "6.0.0",
+    'cordova-lib': "6.3.1",
     longjohn: '0.2.11'
   }
 };
