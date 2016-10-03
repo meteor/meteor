@@ -1,5 +1,5 @@
 import assert from "assert";
-import LRU from "lru-cache";
+import { wrap } from "optimism";
 import { Profile } from "../tool-env/profile.js";
 import { watch } from "./safe-pathwatcher.js";
 import { sha1 } from "./watch.js";
@@ -12,97 +12,53 @@ import {
   readdir,
 } from "./files.js";
 
-const CACHE_MISS_SENTINEL = Object.create(null);
-
 function makeOptimistic(name, fn) {
-  assert.strictEqual(typeof fn, "function");
-
-  const cache = new LRU({
-    max: Math.pow(2, 14),
-    dispose(path, entry) {
-      if (entry.watcher) {
-        entry.watcher.close();
-        entry.watcher = null;
-      }
-    }
-  });
-
-  return Profile("optimistic " + name, (...args) => {
-    const path = args[0];
-    if (! pathIsAbsolute(path)) {
-      return fn(...args);
-    }
-
-    const key = makeCacheKey(args);
-    if (! key) {
-      return fn(...args);
-    }
-
-    let entry = cache.get(path);
-
-    if (! entry) {
-      entry = maybeStartWatcher(path, key);
-
-      if (! entry) {
-        return fn(...args);
+  return Profile("optimistic " + name, wrap(fn, {
+    makeCacheKey(...args) {
+      const path = args[0];
+      if (! pathIsAbsolute(path)) {
+        return;
       }
 
-      entry.results = Object.create(null);
-      entry.results[key] = CACHE_MISS_SENTINEL;
+      var parts = [];
 
-      cache.set(path, entry);
+      for (var i = 0; i < args.length; ++i) {
+        var arg = args[i];
+
+        if (typeof arg !== "string") {
+          // If any of the arguments is not a string, then we won't cache the
+          // result of the corresponding file.* method invocation.
+          return;
+        }
+
+        parts.push(arg);
+      }
+
+      return parts.join("\0");
+    },
+
+    subscribe(...args) {
+      const path = args[0];
+      assert.ok(pathIsAbsolute(path));
+
+      // Only start a watcher for files not in node_modules directories.
+      // This results in caching the result until the server is fully
+      // restarted, which isn't ideal, but it's better than wasting
+      // thousands of watchers on rarely-changing node_modules files.
+      if (path.split(pathSep).indexOf("node_modules") >= 0) {
+        return;
+      }
+
+      let watcher = watch(path, () => this.dirty(...args));
+
+      return () => {
+        if (watcher) {
+          watcher.close();
+          watcher = null;
+        }
+      };
     }
-
-    let result = entry.results[key];
-    if (result === CACHE_MISS_SENTINEL) {
-      result = entry.results[key] = fn(...args);
-    }
-
-    return result;
-  });
-}
-
-function maybeStartWatcher(path, key) {
-  const entry = Object.create(null);
-
-  if (path.split(pathSep).indexOf("node_modules") >= 0) {
-    // Avoid starting a watcher for files in node_modules directories.
-    // This effectively results in caching the result until the server is
-    // fully restarted, which isn't ideal, but it's better than wasting
-    // thousands of watchers on rarely-changing node_modules files.
-    return entry;
-  }
-
-  try {
-    entry.watcher = watch(path, (...args) => {
-      // Trigger a cache miss the next time anyone asks.
-      entry.results[key] = CACHE_MISS_SENTINEL;
-    });
-
-  } catch (e) {
-    // If we can't watch the file, we must not cache the result.
-    return null;
-  }
-
-  return entry;
-}
-
-function makeCacheKey(args) {
-  var parts = [];
-
-  for (var i = 0; i < args.length; ++i) {
-    var arg = args[i];
-
-    if (typeof arg !== "string") {
-      // If any of the arguments is not a string, then we won't cache the
-      // result of the corresponding file.* method invocation.
-      return null;
-    }
-
-    parts.push(arg);
-  }
-
-  return parts.join("\0");
+  }));
 }
 
 export const optimisticStatOrNull = makeOptimistic("statOrNull", statOrNull);
