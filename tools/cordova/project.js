@@ -16,8 +16,8 @@ import './protect-string-proto.js'; // must always come before 'cordova-lib'
 import { cordova as cordova_lib, events as cordova_events, CordovaError }
   from 'cordova-lib';
 import cordova_util from 'cordova-lib/src/cordova/util.js';
-import superspawn from 'cordova-lib/node_modules/cordova-common/src/superspawn.js';
-import PluginInfoProvider from 'cordova-lib/node_modules/cordova-common/src/PluginInfo/PluginInfoProvider.js';
+import superspawn from 'cordova-common/src/superspawn.js';
+import PluginInfoProvider from 'cordova-common/src/PluginInfo/PluginInfoProvider.js';
 
 import { CORDOVA_PLATFORMS, CORDOVA_PLATFORM_VERSIONS, displayNameForPlatform, displayNamesForPlatforms,
   newPluginId, convertPluginVersions, convertToGitUrl } from './index.js';
@@ -152,8 +152,14 @@ outdated platforms`);
       // Create the Cordova project root directory
       files.mkdir_p(files.pathDirname(this.projectRoot));
 
-      const config = { lib:
-        { www: { url: files.convertToOSPath(templatePath) } } };
+      const config = {
+        lib: {
+          www: {
+            url: files.convertToOSPath(templatePath),
+            template: true
+          }
+        }
+      };
 
       // Don't set cwd to project root in runCommands because it doesn't
       // exist yet

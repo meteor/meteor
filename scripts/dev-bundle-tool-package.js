@@ -54,7 +54,7 @@ var packageJson = {
     pathwatcher: "6.7.1",
     optimism: "0.2.2",
     'lru-cache': '4.0.1',
-    'cordova-lib': "6.0.0",
+    'cordova-lib': "6.3.1",
     longjohn: '0.2.11'
   }
 };
