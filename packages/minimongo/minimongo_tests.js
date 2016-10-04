@@ -2087,9 +2087,9 @@ Tinytest.add("minimongo - modify", function (test) {
     var actual = coll.findOne();
     delete actual._id;  // added by insert
 
-    if(typeof expected === "function"){
+    if (typeof expected === "function") {
       expected(actual, EJSON.stringify({input: doc, mod: mod}));
-    }else{
+    } else {
       test.equal(actual, expected, EJSON.stringify({input: doc, mod: mod}));
     }
   };
