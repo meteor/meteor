@@ -16,6 +16,8 @@ import {
   convertToPosixPath,
 } from "../fs/files.js";
 
+import LRU from "lru-cache";
+
 import { wrap } from "optimism";
 import {
   optimisticStatOrNull,
@@ -43,7 +45,20 @@ nativeNames.forEach(id => {
   nativeModulesMap[id] =  "meteor-node-stubs/deps/" + id;
 });
 
+const resolverCache = new LRU({
+  max: Math.pow(2, 12)
+});
+
 export default class Resolver {
+  static getOrCreate(options) {
+    const key = JSON.stringify(options);
+    let resolver = resolverCache.get(key);
+    if (! resolver) {
+      resolverCache.set(key, resolver = new Resolver(options));
+    }
+    return resolver;
+  }
+
   constructor({
     sourceRoot,
     targetArch,

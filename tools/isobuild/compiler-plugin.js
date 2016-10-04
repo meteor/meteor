@@ -879,7 +879,7 @@ export class PackageSourceBatch {
       }
     });
 
-    return this._resolver = new Resolver({
+    return this._resolver = Resolver.getOrCreate({
       sourceRoot: this.sourceRoot,
       targetArch: this.processor.arch,
       extensions: this.importExtensions,

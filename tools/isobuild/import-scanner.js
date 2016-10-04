@@ -120,7 +120,7 @@ export default class ImportScanner {
     this.allMissingNodeModules = Object.create(null);
     this.outputFiles = [];
 
-    this.resolver = new Resolver({
+    this.resolver = Resolver.getOrCreate({
       sourceRoot,
       targetArch: bundleArch,
       extensions,
