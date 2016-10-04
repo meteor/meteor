@@ -126,10 +126,6 @@ export default class ImportScanner {
       extensions,
       nodeModulesPaths,
 
-      onPackageJson(path, pkg) {
-        return scanner._addPkgJsonToOutput(path, pkg);
-      },
-
       onMissing(id, parentPath) {
         return scanner._onMissing(id, parentPath);
       },
@@ -482,6 +478,12 @@ export default class ImportScanner {
       const resolved = this.resolver.resolve(id, absPath);
       if (! resolved) {
         return;
+      }
+
+      if (resolved.packageJsonMap) {
+        each(resolved.packageJsonMap, (pkg, path) => {
+          this._addPkgJsonToOutput(path, pkg);
+        });
       }
 
       const absImportedPath = resolved.path;

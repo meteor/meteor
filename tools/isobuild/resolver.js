@@ -48,7 +48,6 @@ export default class Resolver {
     targetArch,
     extensions = [".js", ".json"],
     nodeModulesPaths = [],
-    onPackageJson,
     onMissing,
     statOrNull = optimisticStatOrNull,
   }) {
@@ -56,7 +55,6 @@ export default class Resolver {
     this.extensions = extensions;
     this.targetArch = targetArch;
     this.nodeModulesPaths = nodeModulesPaths;
-    this.onPackageJson = onPackageJson;
     this.onMissing = onMissing;
     this.statOrNull = statOrNull;
 
@@ -287,27 +285,23 @@ export default class Resolver {
 
     if (isString(main)) {
       pkgSubset.main = main;
-    }
 
-    if (isFunction(this.onPackageJson)) {
-      this.onPackageJson(pkgJsonPath, pkgSubset);
-    }
-
-    if (isString(main)) {
       // The "main" field of package.json does not have to begin with ./
       // to be considered relative, so first we try simply appending it to
       // the directory path before falling back to a full resolve, which
       // might return a package from a node_modules directory.
-      return this._joinAndStat(dirPath, main) ||
-        // The _tryToResolveImportedPath method takes a file object as its
-        // first parameter, but only the .sourcePath and .deps properties
-        // are ever used, so we can get away with passing a fake file
-        // object with only those properties.
-        this.resolve(
-          main,
-          pkgJsonPath,
-          _seenDirPaths
-        );
+      const resolved = this._joinAndStat(dirPath, main) ||
+        this.resolve(main, pkgJsonPath, _seenDirPaths);
+
+      if (resolved) {
+        if (! resolved.packageJsonMap) {
+          resolved.packageJsonMap = Object.create(null);
+        }
+
+        resolved.packageJsonMap[pkgJsonPath] = pkgSubset;
+
+        return resolved;
+      }
     }
 
     return null;
