@@ -63,8 +63,6 @@ export default class Resolver {
     this.statOrNull = statOrNull;
 
     this._resolveCache = new Map;
-    this._statCache = new Map;
-    this._pkgJsonCache = new Map;
   }
 
   static isTopLevel(id) {
@@ -138,10 +136,6 @@ export default class Resolver {
 
   _joinAndStat(...joinArgs) {
     const joined = pathJoin(...joinArgs);
-    if (this._statCache.has(joined)) {
-      return this._statCache.get(joined);
-    }
-
     const path = pathNormalize(joined);
     const exactStat = this.statOrNull(path);
     const exactResult = exactStat && { path, stat: exactStat };
@@ -166,7 +160,6 @@ export default class Resolver {
       result = exactResult;
     }
 
-    this._statCache.set(joined, result);
     return result;
   }
 
@@ -258,15 +251,8 @@ export default class Resolver {
   }
 
   _readPkgJson(path) {
-    if (this._pkgJsonCache.has(path)) {
-      return this._pkgJsonCache.get(path);
-    }
-
-    let result = null;
     try {
-      const contents = optimisticReadFile(path);
-      result = JSON.parse(contents);
-      this.watchSet.addFile(path, sha1(contents));
+      return JSON.parse(optimisticReadFile(path));
     } catch (e) {
       if (! (e instanceof SyntaxError ||
              e.code === "ENOENT")) {
@@ -274,8 +260,7 @@ export default class Resolver {
       }
     }
 
-    this._pkgJsonCache.set(path, result);
-    return result;
+    return null;
   }
 
   _resolvePkgJsonMain(dirPath, _seenDirPaths) {
