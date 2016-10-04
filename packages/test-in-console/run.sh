@@ -7,6 +7,9 @@ export METEOR_HOME=`pwd`
 # Clear dev_bundle/.npm to ensure consistent test runs.
 ./meteor npm cache clear
 
+# Just in case these packages haven't been installed elsewhere.
+./meteor npm install -g phantomjs-prebuilt browserstack-webdriver
+
 export PATH=$METEOR_HOME:$PATH
 # synchronously get the dev bundle and NPM modules if they're not there.
 ./meteor --get-ready || exit 1
@@ -17,7 +20,7 @@ exec 3< <(meteor test-packages --driver-package test-in-console -p 4096 --exclud
 EXEC_PID=$!
 
 sed '/test-in-console listening$/q' <&3
-phantomjs $METEOR_HOME/packages/test-in-console/runner.js
+./dev_bundle/bin/phantomjs "$METEOR_HOME/packages/test-in-console/runner.js"
 STATUS=$?
 
 pkill -TERM -P $EXEC_PID
