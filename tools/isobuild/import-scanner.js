@@ -125,7 +125,6 @@ export default class ImportScanner {
       targetArch: bundleArch,
       extensions,
       nodeModulesPaths,
-      watchSet,
 
       onPackageJson(path, pkg) {
         return scanner._addPkgJsonToOutput(path, pkg);

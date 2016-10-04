@@ -48,7 +48,6 @@ export default class Resolver {
     targetArch,
     extensions = [".js", ".json"],
     nodeModulesPaths = [],
-    watchSet = null,
     onPackageJson,
     onMissing,
     statOrNull = optimisticStatOrNull,
@@ -57,7 +56,6 @@ export default class Resolver {
     this.extensions = extensions;
     this.targetArch = targetArch;
     this.nodeModulesPaths = nodeModulesPaths;
-    this.watchSet = watchSet;
     this.onPackageJson = onPackageJson;
     this.onMissing = onMissing;
     this.statOrNull = statOrNull;

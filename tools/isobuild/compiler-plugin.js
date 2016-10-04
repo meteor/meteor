@@ -878,7 +878,6 @@ export class PackageSourceBatch {
       targetArch: this.processor.arch,
       extensions: this.importExtensions,
       nodeModulesPaths,
-      watchSet: this.unibuild.watchSet,
       onMissing(id) {
         const error = new Error("Cannot find module '" + id + "'");
         error.code = "MODULE_NOT_FOUND";
