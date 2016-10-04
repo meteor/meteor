@@ -126,10 +126,6 @@ export default class ImportScanner {
       extensions,
       nodeModulesPaths,
 
-      onMissing(id, parentPath) {
-        return scanner._onMissing(id, parentPath);
-      },
-
       statOrNull(absPath) {
         const file = scanner._getFile(absPath);
         if (file) {
@@ -457,6 +453,22 @@ export default class ImportScanner {
     return result;
   }
 
+  _resolve(id, absPath) {
+    const resolved = this.resolver.resolve(id, absPath);
+
+    if (resolved === "missing") {
+      return this._onMissing(id, absPath);
+    }
+
+    if (resolved && resolved.packageJsonMap) {
+      each(resolved.packageJsonMap, (pkg, path) => {
+        this._addPkgJsonToOutput(path, pkg);
+      });
+    }
+
+    return resolved;
+  }
+
   _scanFile(file) {
     const absPath = pathJoin(this.sourceRoot, file.sourcePath);
 
@@ -475,15 +487,9 @@ export default class ImportScanner {
     }
 
     each(file.deps, (info, id) => {
-      const resolved = this.resolver.resolve(id, absPath);
+      const resolved = this._resolve(id, absPath);
       if (! resolved) {
         return;
-      }
-
-      if (resolved.packageJsonMap) {
-        each(resolved.packageJsonMap, (pkg, path) => {
-          this._addPkgJsonToOutput(path, pkg);
-        });
       }
 
       const absImportedPath = resolved.path;
@@ -721,7 +727,7 @@ export default class ImportScanner {
             parentFile.deps) {
           parentFile.deps[stubId] = parentFile.deps[id];
         }
-        return this.resolver.resolve(stubId, absParentPath);
+        return this._resolve(stubId, absParentPath);
       }
     }
 

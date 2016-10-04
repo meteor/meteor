@@ -48,14 +48,12 @@ export default class Resolver {
     targetArch,
     extensions = [".js", ".json"],
     nodeModulesPaths = [],
-    onMissing,
     statOrNull = optimisticStatOrNull,
   }) {
     this.sourceRoot = sourceRoot;
     this.extensions = extensions;
     this.targetArch = targetArch;
     this.nodeModulesPaths = nodeModulesPaths;
-    this.onMissing = onMissing;
     this.statOrNull = statOrNull;
 
     this._resolveCache = new Map;
@@ -91,6 +89,13 @@ export default class Resolver {
       this._resolveAbsolute(id, absParentPath) ||
       this._resolveRelative(id, absParentPath) ||
       this._resolveNodeModule(id, absParentPath);
+
+    if (typeof resolved === "string") {
+      // The _resolveNodeModule method can return "missing" to indicate
+      // that the ImportScanner should look elsewhere for this module,
+      // such as in the app node_modules directory.
+      return byParentDir[absParentDir] = resolved;
+    }
 
     while (resolved && resolved.stat.isDirectory()) {
       let dirPath = resolved.path;
@@ -231,10 +236,6 @@ export default class Resolver {
       });
     }
 
-    if (! resolved && isFunction(this.onMissing)) {
-      return this.onMissing(id, absParentPath);
-    }
-
     // If the dependency is still not resolved, it might be handled by the
     // fallback function defined in meteor/packages/modules/modules.js, or
     // it might be imported in code that will never run on this platform,
@@ -243,7 +244,7 @@ export default class Resolver {
     // dependencies here, we just don't have enough information to make
     // that determination until the code actually runs.
 
-    return resolved;
+    return resolved || "missing";
   }
 
   _readPkgJson(path) {

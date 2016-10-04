@@ -335,9 +335,9 @@ class InputFile extends buildPluginModule.InputFile {
       this.getPathInPackage()
     );
 
-    let resolved = this._resolveCacheLookup(id, parentPath);
-    if (resolved) {
-      return resolved;
+    const resId = this._resolveCacheLookup(id, parentPath);
+    if (resId) {
+      return resId;
     }
 
     const parentStat = files.statOrNull(parentPath);
@@ -347,9 +347,15 @@ class InputFile extends buildPluginModule.InputFile {
     }
 
     const resolver = batch.getResolver();
+    const resolved = resolver.resolve(id, parentPath);
 
-    return this._resolveCacheStore(
-      id, parentPath, resolver.resolve(id, parentPath).id);
+    if (resolved === "missing") {
+      const error = new Error("Cannot find module '" + id + "'");
+      error.code = "MODULE_NOT_FOUND";
+      throw error;
+    }
+
+    return this._resolveCacheStore(id, parentPath, resolved.id);
   }
 
   require(id, parentPath) {
@@ -878,11 +884,6 @@ export class PackageSourceBatch {
       targetArch: this.processor.arch,
       extensions: this.importExtensions,
       nodeModulesPaths,
-      onMissing(id) {
-        const error = new Error("Cannot find module '" + id + "'");
-        error.code = "MODULE_NOT_FOUND";
-        throw error;
-      }
     });
   }
 
