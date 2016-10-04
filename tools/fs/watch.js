@@ -6,6 +6,7 @@ import {coalesce} from '../utils/func-utils.js';
 import {Profile} from '../tool-env/profile.js';
 
 import {
+  optimisticStatOrNull,
   optimisticReaddir,
   optimisticHashOrNull,
 } from "./optimistic.js";
@@ -279,22 +280,19 @@ export function readDirectory({absPath, include, exclude, names}) {
   // Add slashes to the end of directories.
   var contentsWithSlashes = [];
   _.each(contents, function (entry) {
-    try {
-      // We do stat instead of lstat here, so that we treat symlinks to
-      // directories just like directories themselves.
-      // XXX Does the treatment of symlinks make sense?
-      var stats = files.stat(files.pathJoin(absPath, entry));
-    } catch (e) {
-      if (e && (e.code === 'ENOENT')) {
-        // Disappeared after the readdir (or a dangling symlink)? Eh,
-        // pretend it was never there in the first place.
-        return;
-      }
-      throw e;
+    // We do stat instead of lstat here, so that we treat symlinks to
+    // directories just like directories themselves.
+    const stat = optimisticStatOrNull(files.pathJoin(absPath, entry));
+    if (! stat) {
+      // Disappeared after the readdir (or a dangling symlink)?
+      // Eh, pretend it was never there in the first place.
+      return;
     }
-    if (stats.isDirectory()) {
+
+    if (stat.isDirectory()) {
       entry += '/';
     }
+
     contentsWithSlashes.push(entry);
   });
 
@@ -592,16 +590,7 @@ export class Watcher {
     var self = this;
     var entry = self.watches[absPath];
     var lastStat = entry.lastStat;
-
-    try {
-      var stat = files.stat(absPath);
-    } catch (err) {
-      stat = null;
-      if (err.code !== "ENOENT") {
-        throw err;
-      }
-    }
-
+    var stat = optimisticStatOrNull(absPath);
     var mustNotExist = self._mustNotExist(absPath);
     var mustBeAFile = self._mustBeAFile(absPath);
 
