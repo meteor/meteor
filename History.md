@@ -1,5 +1,12 @@
 ## v.NEXT
 
+## v1.4.1.2
+
+* Node has been upgraded to version 4.6.0, a recommended security release:
+  https://nodejs.org/en/blog/release/v4.6.0/
+
+* `npm` has been upgraded to version 3.10.8.
+
 ## v1.4.1.1
 
 * Update the version of our Node MongoDB driver to 2.2.7 to fix a bug in
