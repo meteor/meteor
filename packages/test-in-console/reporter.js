@@ -1,3 +1,10 @@
+// provide some notification we're started. This is to allow use
+// in automated scripts with `meteor run --once` which does not
+// print when the proxy is listening.
+Meteor.startup(function () {
+  console.log("test-in-console listening");
+});
+
 // A hacky way to extract the phantom runner script from the package.
 if (process.env.WRITE_RUNNER_JS) {
   Npm.require('fs').writeFileSync(
@@ -25,11 +32,4 @@ Meteor.methods({
     }
     return null;
   }
-});
-
-// provide some notification we're started. This is to allow use
-// in automated scripts with `meteor run --once` which does not
-// print when the proxy is listening.
-Meteor.startup(function () {
-  Meteor._debug("test-in-console listening");
 });
