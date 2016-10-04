@@ -786,10 +786,10 @@ export default class ImportScanner {
 
       this._addFile(pkgJsonPath, pkgFile);
 
-      this.watchSet.addFile(
-        pkgJsonPath,
-        optimisticHashOrNull(pkgJsonPath),
-      );
+      const hash = optimisticHashOrNull(pkgJsonPath);
+      if (hash) {
+        this.watchSet.addFile(pkgJsonPath, hash);
+      }
     }
   }
 }
