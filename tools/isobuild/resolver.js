@@ -16,6 +16,7 @@ import {
   convertToPosixPath,
 } from "../fs/files.js";
 
+import { wrap } from "optimism";
 import {
   optimisticStatOrNull,
   optimisticReadFile,
@@ -56,7 +57,14 @@ export default class Resolver {
     this.nodeModulesPaths = nodeModulesPaths;
     this.statOrNull = statOrNull;
 
-    this._resolveCache = new Map;
+    this.resolve = wrap((id, absParentPath) => {
+      return this._resolve(id, absParentPath);
+    }, {
+      makeCacheKey(id, absParentPath) {
+        // Only the directory of the absParentPath matters for caching.
+        return JSON.stringify([id, pathDirname(absParentPath)]);
+      }
+    });
   }
 
   static isTopLevel(id) {
@@ -74,17 +82,7 @@ export default class Resolver {
   // Resolve the given module identifier to an object { path, stat } or
   // null, relative to an absolute parent path. The _seenDirPaths
   // parameter is for internal use only and should be ommitted.
-  resolve(id, absParentPath, _seenDirPaths) {
-    if (! this._resolveCache.has(id)) {
-      this._resolveCache.set(id, Object.create(null));
-    }
-
-    const byParentDir = this._resolveCache.get(id);
-    const absParentDir = pathDirname(absParentPath);
-    if (has(byParentDir, absParentDir)) {
-      return byParentDir[absParentDir];
-    }
-
+  _resolve(id, absParentPath, _seenDirPaths) {
     let resolved =
       this._resolveAbsolute(id, absParentPath) ||
       this._resolveRelative(id, absParentPath) ||
@@ -94,7 +92,7 @@ export default class Resolver {
       // The _resolveNodeModule method can return "missing" to indicate
       // that the ImportScanner should look elsewhere for this module,
       // such as in the app node_modules directory.
-      return byParentDir[absParentDir] = resolved;
+      return resolved;
     }
 
     while (resolved && resolved.stat.isDirectory()) {
@@ -132,7 +130,7 @@ export default class Resolver {
       );
     }
 
-    return byParentDir[absParentDir] = resolved;
+    return resolved;
   }
 
   _joinAndStat(...joinArgs) {
@@ -292,7 +290,7 @@ export default class Resolver {
       // the directory path before falling back to a full resolve, which
       // might return a package from a node_modules directory.
       const resolved = this._joinAndStat(dirPath, main) ||
-        this.resolve(main, pkgJsonPath, _seenDirPaths);
+        this._resolve(main, pkgJsonPath, _seenDirPaths);
 
       if (resolved) {
         if (! resolved.packageJsonMap) {
