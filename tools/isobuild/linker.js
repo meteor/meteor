@@ -610,47 +610,15 @@ _.extend(File.prototype, {
 
       consumer = new sourcemap.SourceMapConsumer(result.map);
 
-    } else if (noLineNumbers && preserveLineNumbers) {
-      // No need to generate a source map if we don't want line numbers.
-      result = {
-        code: self.source,
-        map: null
-      };
-
     } else {
-      // If we're planning to annotate the source with line number
-      // comments (e.g. because we're combining this file with others in a
-      // package), and we don't already have a source map, then we need to
-      // generate one, but it doesn't have to be very detailed, since we
-      // we can use a dumb implementation of originalPositionFor.
-      const smg = new sourcemap.SourceMapGenerator({
-        file: self.servePath
-      });
-
-      lines = self.source.split(/\r?\n/);
-
-      function addIdentityMapping(pos) {
-        smg.addMapping({
-          original: pos,
-          generated: pos,
-          source: self.servePath,
-        });
-      }
-
-      for (var line = 1; line <= lines.length; ++line) {
-        addIdentityMapping({ line, column: 0 });
-      }
-
-      smg.setSourceContent(self.servePath, self.source);
-
       result = {
         code: self.source,
-        map: smg.toJSON(),
+        map: null,
       };
 
       // Generating line number comments for really big files is not
       // really worth it when there's no meaningful self.sourceMap.
-      if (self.source.length < 500000) {
+      if (! noLineNumbers && result.code.length < 500000) {
         consumer = {
           originalPositionFor(pos) {
             return pos;
