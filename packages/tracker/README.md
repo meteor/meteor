@@ -3,8 +3,9 @@
 ***
 
 Meteor Tracker is an incredibly tiny (~1k) but incredibly powerful
-library for **transparent reactive programming** in JavaScript. (It
-was previously called Deps.)
+library for **transparent reactive programming** in JavaScript.
+
+## Overview
 
 Tracker gives you much of the power of a full-blown
 [Functional Reactive Programming](http://en.wikipedia.org/wiki/Functional_reactive_programming) (FRP) system without requiring you to rewrite your program as a FRP data flow graph. Combined with Tracker-aware libraries, this lets you build complex event-driven programs without writing a lot of boilerplate event-handling code.
