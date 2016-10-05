@@ -73,7 +73,9 @@
   "peerDependencies": {
     "eslint": "^3.7.0"
   },
-  "engines": {},
+  "engines": {
+    "node": ">=4"
+  },
   "keywords": [
     "eslint",
     "eslint-plugin",
