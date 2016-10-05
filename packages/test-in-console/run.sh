@@ -19,7 +19,7 @@ export URL='http://localhost:4096/'
 exec 3< <(meteor test-packages --driver-package test-in-console -p 4096 --exclude ${TEST_PACKAGES_EXCLUDE:-''})
 EXEC_PID=$!
 
-sed '/^=> App running at:/q' <&3
+sed '/test-in-console listening$/q' <&3
 ./dev_bundle/bin/phantomjs "$METEOR_HOME/packages/test-in-console/runner.js"
 STATUS=$?
 
