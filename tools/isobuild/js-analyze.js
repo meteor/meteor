@@ -228,11 +228,11 @@ const globalsCache = new LRU({
 });
 
 export function findAssignedGlobals(source, hash) {
-  const ast = tryToParse(source, hash);
-
   if (hash && globalsCache.has(hash)) {
     return globalsCache.get(hash);
   }
+
+  const ast = tryToParse(source, hash);
 
   // We have to pass ignoreEval; otherwise, the existence of a direct eval call
   // causes escope to not bother to resolve references in the eval's scope.

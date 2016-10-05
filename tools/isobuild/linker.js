@@ -453,15 +453,6 @@ var File = function (inputFile, module) {
   self.module = module;
 };
 
-// findAssignedGlobals is somewhat slow, and we often compute assigned variables
-// on the same file multiple times in one process (notably, a single file is
-// often processed for two or three different unibuilds, and is processed again
-// when rebuilding a package when another file has changed). We cache the
-// calculated variables under the source file's hash (calculating the source
-// file's hash is faster than running findAssignedGlobals, and in the case of
-// *.js files we have the hash already anyway).
-var ASSIGNED_GLOBALS_CACHE = {};
-
 _.extend(File.prototype, {
   // Return the globals in this file as an array of symbol names.  For
   // example: if the code references 'Foo.bar.baz' and 'Quux', and
@@ -470,13 +461,8 @@ _.extend(File.prototype, {
   computeAssignedVariables: Profile("linker File#computeAssignedVariables", function () {
     var self = this;
 
-    if (_.has(ASSIGNED_GLOBALS_CACHE, self.sourceHash)) {
-      return ASSIGNED_GLOBALS_CACHE[self.sourceHash];
-    }
-
     try {
-      return ASSIGNED_GLOBALS_CACHE[self.sourceHash] =
-        _.keys(findAssignedGlobals(self.source, self.sourceHash));
+      return _.keys(findAssignedGlobals(self.source, self.sourceHash));
     } catch (e) {
       if (!e.$ParseError) {
         throw e;
