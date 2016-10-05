@@ -1,5 +1,18 @@
 ## v.NEXT
 
+* The `facebook` package has been split into:
+  - `facebook-oauth` (the part that allows oauth w/ FB directly) and
+  - `facebook-config-ui` (the Blaze configuration templates for accounts-ui)
+
+  This means you can now use `[accounts-]facebook` without needing Blaze.
+
+  If you are using `accounts-ui` and `accounts-facebook`, you will probably
+  need to install the `facebook-config-ui` package if you want to configure it
+  using the Accounts UI.
+
+  [Issue #7715](https://github.com/meteor/meteor/issues/7715)
+  [PR #7728](https://github.com/meteor/meteor/pull/7728)
+
 ## v1.4.2.1
 
 * Installing the `babel-runtime` npm package in your application
