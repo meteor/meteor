@@ -1,4 +1,4 @@
-## v1.4.2
+## v1.4.1.2
 
 * The `npm` npm package has been updated to 3.10.7.
 
