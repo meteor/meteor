@@ -5,6 +5,9 @@
   much more quickly, especially if you have many `node_modules` files.
   See https://github.com/meteor/meteor/pull/7668 for more details.
 
+* The `cordova-lib` npm package has been updated to 6.3.1, along with
+  cordova-android (5.2.2) and cordova-ios (4.2.1), and various plugins.
+
 * The `node-pre-gyp` npm package has been updated to 0.6.30.
 
 * The `fibers` npm package has been updated to 1.0.14.
