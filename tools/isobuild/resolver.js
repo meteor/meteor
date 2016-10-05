@@ -110,6 +110,8 @@ export default class Resolver {
       return resolved;
     }
 
+    let packageJsonMap = null;
+
     while (resolved && resolved.stat.isDirectory()) {
       let dirPath = resolved.path;
       _seenDirPaths = _seenDirPaths || new Set;
@@ -122,8 +124,17 @@ export default class Resolver {
         resolved = this._resolvePkgJsonMain(dirPath, _seenDirPaths);
         if (resolved) {
           // The _resolvePkgJsonMain call above may have returned a
-          // directory, so continue the loop to make sure we fully resolve
-          // it to a non-directory.
+          // directory, so first merge resolved.packageJsonMap into
+          // packageJsonMap so that we don't forget the package.json we
+          // just resolved, then continue the loop to make sure we fully
+          // resolve the "main" module identifier to a non-directory.
+          // Technically this could involve even more package.json files,
+          // but in practice the "main" property will almost always name a
+          // directory containing an index.js file.
+          Object.assign(
+            packageJsonMap || (packageJsonMap = Object.create(null)),
+            resolved.packageJsonMap,
+          );
           continue;
         }
       }
@@ -139,6 +150,10 @@ export default class Resolver {
     }
 
     if (resolved) {
+      if (packageJsonMap) {
+        resolved.packageJsonMap = packageJsonMap;
+      }
+
       resolved.id = convertToPosixPath(
         convertToOSPath(resolved.path),
         true
