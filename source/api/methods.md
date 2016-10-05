@@ -1,6 +1,5 @@
 ---
 title: Methods
-order: 3
 description: Documentation of Meteor's Method (Remote Procedure Call) API.
 ---
 

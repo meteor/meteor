@@ -1,6 +1,5 @@
 ---
 title: Check
-order: 4
 desription: Documentation on how to use check, Meteor's type checking library.
 ---
 

@@ -1,6 +1,5 @@
 ---
 title: webapp
-order: 34
 description: Documentation of Meteor's `webapp` package.
 ---
 

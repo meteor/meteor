@@ -1,6 +1,5 @@
 ---
 title: Command Line
-order: 35
 description: Documentation of the various command line options of the Meteor tool.
 ---
 
@@ -232,8 +231,9 @@ running. Quit all running meteor applications before running this.
 Package this project up for deployment. The output is a directory with several
 build artifacts:
 
-<ul><li>a tarball that includes everything necessary to run the application server
-  (see the <code>README</code> in the tarball for details)</li>
+<ul><li>a tarball (.tar.gz) that includes everything necessary to run the application
+  server (see the <code>README</code> in the tarball for details).  Using the
+  `--directory` option will produce a `bundle` directory instead of the tarball.</li>
 <li>an unsigned <code>apk</code> bundle and a project source if Android is targetted as a
   mobile platform</li>
 <li>a directory with an Xcode project source if iOS is targetted as a mobile
@@ -367,22 +367,21 @@ commands can be accessed by pressing the up arrow.
 
 <h2 id="meteornpm">meteor npm</h2>
 
-Calling `meteor npm` calls the `npm` command bundled with meteor. 
+Calling `meteor npm` calls the `npm` command bundled with meteor.
 
 Pass additional arguments as you would to `npm`.
 
 For example, executing `meteor npm install bootstrap` would install bootstrap
 from npm, to your `node_modules` dir.
 
-This is useful for ensuring that you install dependencies with npm v3, 
+This is useful for ensuring that you install dependencies with npm v3,
 as expected by meteor since [v1.3.4](https://github.com/meteor/meteor/blob/devel/History.md#v134)
 
 <h2 id="meteornode">meteor node</h2>
 
-Calling `meteor node` calls the `node` command bundled with meteor. 
+Calling `meteor node` calls the `node` command bundled with meteor.
 
 Pass additional arguments as you would to `node`.
 
-For example, executing `meteor node -e "console.log(process.versions)"` would 
+For example, executing `meteor node -e "console.log(process.versions)"` would
 run `console.log(process.versions)` in the version of `node` bundled with Meteor.
-

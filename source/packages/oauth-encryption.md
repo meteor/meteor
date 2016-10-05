@@ -1,6 +1,5 @@
 ---
 title: oauth-encryption
-order: 30
 description: Documentation of Meteor's `oauth-encryption` package.
 ---
 

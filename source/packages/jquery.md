@@ -1,6 +1,5 @@
 ---
 title: jquery
-order: 26
 description: Documentation of Meteor's `jquery` package.
 ---
 

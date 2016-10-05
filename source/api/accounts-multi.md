@@ -1,6 +1,5 @@
 ---
 title: Accounts (multi-server)
-order: 8
 description: Documentation of how to use the Accounts client to connect to other servers.
 ---
 

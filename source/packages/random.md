@@ -1,6 +1,5 @@
 ---
 title: random
-order: 31
 description: Documentation of Meteor's `random` package.
 ---
 

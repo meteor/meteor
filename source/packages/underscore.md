@@ -1,6 +1,5 @@
 ---
 title: underscore
-order: 33
 description: Documentation of Meteor's `underscore` package.
 ---
 

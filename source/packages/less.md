@@ -1,6 +1,5 @@
 ---
 title: less
-order: 27
 description: Documentation of Meteor's `less` package.
 ---
 

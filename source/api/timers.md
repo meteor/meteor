@@ -1,6 +1,5 @@
 ---
 title: Timers
-order: 13
 description: Documentation of Meteor's timeout APIs.
 ---
 

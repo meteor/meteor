@@ -1,6 +1,5 @@
 ---
 title: Assets
-order: 18
 description: Documentation of how to use assets in Meteor.
 ---
 

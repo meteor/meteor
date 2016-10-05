@@ -1,6 +1,5 @@
 ---
 title: Session
-order: 7
 description: Documentation of Meteor's client-side session API.
 ---
 
