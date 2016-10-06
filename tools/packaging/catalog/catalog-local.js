@@ -5,6 +5,10 @@ var watch = require('../../fs/watch.js');
 var PackageSource = require('../../isobuild/package-source.js');
 import { KNOWN_ISOBUILD_FEATURE_PACKAGES } from '../../isobuild/compiler.js';
 import { sync as glob } from "glob";
+import { Profile } from "../../tool-env/profile.js";
+import {
+  optimisticHashOrNull,
+} from "../../fs/optimistic.js";
 
 // LocalCatalog represents packages located in the application's
 // package directory, other package directories specified via an
@@ -68,37 +72,38 @@ _.extend(LocalCatalog.prototype, {
   //    are package source trees.  Takes precedence over packages found
   //    via localPackageSearchDirs.
   //  - buildingIsopackets: true if we are building isopackets
-  initialize: function (options) {
+  initialize(options) {
     var self = this;
     buildmessage.assertInCapture();
 
     options = options || {};
 
-    function addPatternsToList(patterns, list) {
-      if (! patterns) {
-        return;
-      }
-
-      patterns.forEach(pattern => {
-        if (process.platform === "win32") {
-          pattern = files.convertToOSPath(pattern);
-
-          if (pattern.charAt(1) === ":") {
-            // Get rid of drive prefix, e.g. C:
-            pattern = pattern.slice(2);
-          }
-
-          // Convert to /forward/slash/path without /C
-          pattern = files.convertToPosixPath(pattern, true);
+    const addPatternsToList =
+      Profile("addPatternsToList", (patterns, list) => {
+        if (! patterns) {
+          return;
         }
 
-        // Note: glob expects POSIX-style paths, even on Windows.
-        // https://github.com/isaacs/node-glob/blob/master/README.md#windows
-        glob(pattern).forEach(
-          p => list.push(files.pathResolve(p))
-        );
+        patterns.forEach(pattern => {
+          if (process.platform === "win32") {
+            pattern = files.convertToOSPath(pattern);
+
+            if (pattern.charAt(1) === ":") {
+              // Get rid of drive prefix, e.g. C:
+              pattern = pattern.slice(2);
+            }
+
+            // Convert to /forward/slash/path without /C
+            pattern = files.convertToPosixPath(pattern, true);
+          }
+
+          // Note: glob expects POSIX-style paths, even on Windows.
+          // https://github.com/isaacs/node-glob/blob/master/README.md#windows
+          glob(pattern).forEach(
+            p => list.push(files.pathResolve(p))
+          );
+        });
       });
-    }
 
     addPatternsToList(
       options.localPackageSearchDirs,
@@ -249,25 +254,31 @@ _.extend(LocalCatalog.prototype, {
 
   // Compute self.effectiveLocalPackageDirs from self.localPackageSearchDirs and
   // self.explicitlyAddedLocalPackageDirs.
-  _computeEffectiveLocalPackages: function () {
+  _computeEffectiveLocalPackages() {
     var self = this;
     buildmessage.assertInCapture();
 
     self.effectiveLocalPackageDirs = [];
 
     buildmessage.enterJob("looking for packages", function () {
-      _.each(self.explicitlyAddedLocalPackageDirs, function (explicitDir) {
-        var packageJs = watch.readAndWatchFile(
-          self.packageLocationWatchSet,
-          files.pathJoin(explicitDir, 'package.js'));
-        // We asked specifically for this directory, but it has no package!
-        if (packageJs === null) {
+      _.each(self.explicitlyAddedLocalPackageDirs, (explicitDir) => {
+        const packageJsPath = files.pathJoin(explicitDir, "package.js");
+        const packageJsHash = optimisticHashOrNull(packageJsPath);
+
+        if (packageJsHash) {
+          self.packageLocationWatchSet.addFile(
+            packageJsPath,
+            packageJsHash,
+          );
+
+          self.effectiveLocalPackageDirs.push(explicitDir);
+
+        } else {
+          // We asked specifically for this directory, but it has no package!
           buildmessage.error("package has no package.js file", {
             file: explicitDir
           });
-          return;  // recover by ignoring
         }
-        self.effectiveLocalPackageDirs.push(explicitDir);
       });
 
       _.each(self.localPackageSearchDirs, function (searchDir) {
@@ -289,12 +300,17 @@ _.extend(LocalCatalog.prototype, {
           // Consider a directory to be a package source tree if it contains
           // 'package.js'. (We used to support isopacks in
           // localPackageSearchDirs, but no longer.)
-          var packageJs = watch.readAndWatchFile(
-            self.packageLocationWatchSet,
-            files.pathJoin(absPackageDir, 'package.js'));
-          if (packageJs !== null) {
+
+          const packageJsPath = files.pathJoin(absPackageDir, "package.js");
+          const packageJsHash = optimisticHashOrNull(packageJsPath);
+
+          if (packageJsHash) {
             // Let earlier package directories override later package
             // directories.
+            self.packageLocationWatchSet.addFile(
+              packageJsPath,
+              packageJsHash,
+            );
 
             // We don't know the name of the package, so we can't deal with
             // duplicates yet. We are going to have to rely on the fact that we
@@ -306,7 +322,7 @@ _.extend(LocalCatalog.prototype, {
     });
   },
 
-  _loadLocalPackages: function (buildingIsopackets) {
+  _loadLocalPackages(buildingIsopackets) {
     var self = this;
     buildmessage.assertInCapture();
 
@@ -406,5 +422,12 @@ _.extend(LocalCatalog.prototype, {
     return self.packages[name].packageSource;
   }
 });
+
+["initialize",
+ "_computeEffectiveLocalPackages",
+ "_loadLocalPackages",
+].forEach(function (method) {
+  this[method] = Profile("LocalCatalog#" + method, this[method]);
+}, LocalCatalog.prototype);
 
 exports.LocalCatalog = LocalCatalog;
