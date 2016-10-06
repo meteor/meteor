@@ -880,6 +880,7 @@ export class PackageSourceBatch {
     });
 
     return this._resolver = Resolver.getOrCreate({
+      caller: "PackageSourceBatch#getResolver",
       sourceRoot: this.sourceRoot,
       targetArch: this.processor.arch,
       extensions: this.importExtensions,

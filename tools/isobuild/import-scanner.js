@@ -121,6 +121,8 @@ export default class ImportScanner {
     this.outputFiles = [];
 
     this.resolver = Resolver.getOrCreate({
+      caller: "ImportScanner#constructor",
+
       sourceRoot,
       targetArch: bundleArch,
       extensions,
