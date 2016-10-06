@@ -28,6 +28,12 @@ import {
   convert as convertColonsInPath
 } from '../utils/colon-converter.js';
 
+import {
+  optimisticReadFile,
+  optimisticHashOrNull,
+  optimisticStatOrNull,
+} from "../fs/optimistic.js";
+
 // XXX: This is a medium-term hack, to avoid having the user set a package name
 // & test-name in package.describe. We will change this in the new control file
 // world in some way.
@@ -446,7 +452,7 @@ _.extend(PackageSource.prototype, {
   // - name: override the name of this package with a different name.
   // - buildingIsopackets: true if this is being scanned in the process
   //   of building isopackets
-  initFromPackageDir: Profile("initFromPackageDir", function (dir, options) {
+  initFromPackageDir: Profile("PackageSource#initFromPackageDir", function (dir, options) {
     var self = this;
     buildmessage.assertInCapture();
     var isPortable = true;
@@ -488,15 +494,16 @@ _.extend(PackageSource.prototype, {
 
     const packageFileHashes = Object.create(null);
     const packageJsPath = files.pathJoin(self.sourceRoot, 'package.js');
-    const packageJsCode = files.readFile(packageJsPath);
-    packageFileHashes[packageJsPath] = watch.sha1(packageJsCode);
+    const packageJsCode = optimisticReadFile(packageJsPath);
+    packageFileHashes[packageJsPath] =
+      optimisticHashOrNull(packageJsPath);
 
     const pkgJsonPath = files.pathJoin(self.sourceRoot, 'package.json');
-    const pkgJsonStat = files.statOrNull(pkgJsonPath);
+    const pkgJsonStat = optimisticStatOrNull(pkgJsonPath);
     if (pkgJsonStat &&
         pkgJsonStat.isFile()) {
       packageFileHashes[pkgJsonPath] =
-        watch.sha1(files.readFile(pkgJsonPath));
+        optimisticHashOrNull(pkgJsonPath);
     }
 
     function watchPackageFiles(watchSet) {
