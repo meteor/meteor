@@ -3,7 +3,6 @@ var path = require("path");
 var stream = require("stream");
 var fs = require("fs");
 var net = require("net");
-var tty = require("tty");
 var vm = require("vm");
 var _ = require("underscore");
 var INFO_FILE_MODE = parseInt("600", 8); // Only the owner can read or write.
@@ -119,6 +118,12 @@ class Server {
       }
       delete options.key;
 
+      // Set the columns to what is being requested by the client.
+      if (options.columns && socket) {
+        socket.columns = options.columns;
+      }
+      delete options.columns;
+
       if (options.evaluateAndExit) {
         evalCommand.call(
           Object.create(null), // Dummy repl object without ._RecoverableError.
@@ -165,13 +170,6 @@ class Server {
 
   startREPL(options) {
     var self = this;
-
-    if (! options.output.columns) {
-      // The REPL's tab completion logic assumes process.stdout is a TTY,
-      // and while that isn't technically true here, we can get tab
-      // completion to behave correctly if we fake the .columns property.
-      options.output.columns = getTerminalWidth();
-    }
 
     // Make sure this function doesn't try to write anything to the output
     // stream after it has been closed.
@@ -382,19 +380,6 @@ function getInfoFile(shellDir) {
 
 function getHistoryFile(shellDir) {
   return path.join(shellDir, "history");
-}
-
-function getTerminalWidth() {
-  try {
-    // Inspired by https://github.com/TooTallNate/ttys/blob/master/index.js
-    var fd = fs.openSync("/dev/tty", "r");
-    assert.ok(tty.isatty(fd));
-    var ws = new tty.WriteStream(fd);
-    ws.end();
-    return ws.columns;
-  } catch (fancyApproachWasTooFancy) {
-    return 80;
-  }
 }
 
 // Shell commands need to be executed in a Fiber in case they call into
