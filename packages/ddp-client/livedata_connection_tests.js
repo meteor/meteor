@@ -210,6 +210,36 @@ Tinytest.add("livedata stub - subscribe", function (test) {
   test.equal(message, {msg: 'sub', name: 'my_data', params: []});
 });
 
+Tinytest.add("livedata stub - instant ready subscribe", function (test) {
+  var stream = new StubStream();
+  var conn = newConnection(stream);
+
+  startAndConnect(test, stream);
+
+  // subscribe
+  var callback_fired = false;
+  var sub = conn.subscribe('my_data', function () {
+    callback_fired = true;
+  });
+  test.isFalse(callback_fired);
+
+  test.length(stream.sent, 1);
+  var message = JSON.parse(stream.sent.shift());
+  var id = message.id;
+  delete message.id;
+  test.equal(message, {msg: 'sub', name: 'my_data', params: []});
+
+  // get the sub satisfied. callback fires.
+  stream.receive({msg: 'ready', 'subs': [id]});
+  test.isTrue(callback_fired);
+
+  // subscribe again
+  var callback_fired = false;
+  var sub = conn.subscribe('my_data', function () {
+    callback_fired = true;
+  });
+  test.isTrue(callback_fired);
+});
 
 Tinytest.add("livedata stub - reactive subscribe", function (test) {
   var stream = new StubStream();
