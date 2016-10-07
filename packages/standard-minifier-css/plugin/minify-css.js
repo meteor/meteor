@@ -149,23 +149,28 @@ var mergeCss = Profile("mergeCss", function (css) {
 
     // Find mappings from the concatenated file back to the original files
     concatConsumer.eachMapping(function (mapping) {
-      var consumer = consumers[mapping.source];
-      var source;
+      var source = mapping.source;
+      var consumer = consumers[source];
 
-      // If there is a source map for the original file, e.g., if it has been
-      // compiled from Less to CSS, find the source location in the original's
-      // original file. Otherwise, use the mapping of the concatenated file's
-      // source map.
       var original = {
         line: mapping.originalLine,
         column: mapping.originalColumn
       };
 
+      // If there is a source map for the original file, e.g., if it has been
+      // compiled from Less to CSS, find the source location in the original's
+      // original file. Otherwise, use the mapping of the concatenated file's
+      // source map.
       if (consumer) {
-        original = consumer.originalPositionFor(original);
-        source = original.source;
-      } else {
-        source = mapping.source;
+        var newOriginal = consumer.originalPositionFor(original);
+
+        // Finding the original position should always be possible (otherwise,
+        // one of the source maps would have incorrect mappings). However, in
+        // case there is something wrong, use the intermediate mapping.
+        if (newOriginal.source !== null) {
+          original = newOriginal;
+          source = original.source;
+        }
       }
 
       // Add a new mapping to the final source map
@@ -174,10 +179,7 @@ var mergeCss = Profile("mergeCss", function (css) {
           line: mapping.generatedLine,
           column: mapping.generatedColumn
         },
-        original: {
-          line: original.line,
-          column: original.column
-        },
+        original: original,
         source: source
       });
 
