@@ -128,7 +128,9 @@ var mergeCss = Profile("mergeCss", function (css) {
     concatConsumer = new sourcemap.SourceMapConsumer(stringifiedCss.map);
 
     // Create a dictionary of source map consumers for fast access
-    var consumers = Object.keys(originals).reduce(function (consumers, name) {
+    var consumers = Object.create(null);
+
+    Object.keys(originals).forEach(function (name) {
       var file = originals[name];
       var sourceMap = file.getSourceMap();
 
@@ -143,9 +145,7 @@ var mergeCss = Profile("mergeCss", function (css) {
           // figure out exactly why and fix it, but this will do for now.
         }
       }
-
-      return consumers;
-    }, Object.create(null));
+    });
 
     // Find mappings from the concatenated file back to the original files
     concatConsumer.eachMapping(function (mapping) {
