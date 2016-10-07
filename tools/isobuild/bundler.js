@@ -173,11 +173,13 @@ import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
 
 // files to ignore when bundling. node has no globs, so use regexps
 exports.ignoreFiles = [
-    /~$/, /^\.#/, /^#.*#$/,  // emacs swap files
-    /^\..*\.sw.$/,  // vim swap files
-    /^\.DS_Store\/?$/, /^ehthumbs\.db$/, /^Icon.$/, /^Thumbs\.db$/,
-    /^\.meteor\/$/, /* avoids scanning N^2 files when bundling all packages */
-    /^\.git\/$/ /* often has too many files to watch */
+    /~$/, /^\.#/,
+    /^(\.meteor\/|\.git\/|Thumbs\.db|\.DS_Store\/?|Icon\r|ehthumbs\.db|\..*\.sw.|#.*#)$/,
+      /* .meteor => avoids scanning N^2 files when bundling all packages
+        .git => often has too many files to watch 
+        ....sw(.) => vim swap files
+        #.*# => emacs swap files
+      */
 ];
 
 function rejectBadPath(p) {

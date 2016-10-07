@@ -328,7 +328,7 @@ to build apps for ${displayNameForPlatform(platform)}.`);
       for (requirement of requirements) {
         const name = requirement.name;
         if (requirement.installed) {
-          Console.success(name);
+          Console.success(name, "installed");
         } else {
           const reason = requirement.metadata && requirement.metadata.reason;
           if (reason) {

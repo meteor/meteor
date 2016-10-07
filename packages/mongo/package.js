@@ -9,7 +9,7 @@
 
 Package.describe({
   summary: "Adaptor for using MongoDB and Minimongo over DDP",
-  version: '1.1.13-beta.9'
+  version: '1.1.12_3'
 });
 
 Npm.depends({
@@ -21,7 +21,7 @@ Npm.strip({
 });
 
 Package.onUse(function (api) {
-  api.use('npm-mongo@1.5.48-1-rc.0', 'server');
+  api.use('npm-mongo@1.5.48_1', 'server');
   api.use('allow-deny');
 
   api.use([

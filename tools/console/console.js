@@ -922,12 +922,12 @@ _.extend(Console.prototype, {
 
   // A wrapper around Console.info. Prints the message out in green (if pretty),
   // with the CHECKMARK as the bullet point in front of it.
-  success: function (message) {
+  success: function (message, uglySuccessKeyword = "success") {
     var self = this;
     var checkmark;
 
     if (! self._pretty) {
-      return self.info(message);
+      return self.info(`${message}: ${uglySuccessKeyword}`);
     }
 
     if (process.platform === "win32") {
@@ -960,7 +960,7 @@ _.extend(Console.prototype, {
     var self = this;
 
     if (! self._pretty) {
-      return printFn(message);
+      return self[printFn](message);
     }
 
     var xmark = chalk.red('\u2717');
