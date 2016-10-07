@@ -4,7 +4,7 @@ var files = require('../fs/files.js');
 
 selftest.define("add cordova platforms", ["cordova"], function () {
   var s = new Sandbox();
-  var run;
+  let run;
 
   // Starting a run
   s.createApp("myapp", "package-tests");
@@ -15,7 +15,7 @@ selftest.define("add cordova platforms", ["cordova"], function () {
   run.match("meteor add-platform android");
   run.expectExit(1);
 
-  var run = s.run("add-platform", "android");
+  run = s.run("add-platform", "android");
   // Cordova may need to download cordova-android if it's not already
   // cached (in ~/.cordova).
   run.waitSecs(30);
