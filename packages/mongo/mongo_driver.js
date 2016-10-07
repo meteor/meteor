@@ -130,15 +130,15 @@ MongoConnection = function (url, options) {
   self._observeMultiplexers = {};
   self._onFailoverHook = new Hook;
 
-  var mongoOptions = _.extend({db: {safe: true}, server: {}, replSet: {}},
-                               Mongo._connectionOptions);
-
-  // Set autoReconnect to true, unless passed on the URL. Why someone
-  // would want to set autoReconnect to false, I'm not really sure, but
-  // keeping this for backwards compatibility for now.
-  if (!(/[\?&]auto_?[rR]econnect=/.test(url))) {
-    mongoOptions.server.auto_reconnect = true;
-  }
+  var mongoOptions = _.extend({
+      db: { safe: true },
+      // Set reconnectTries to 0 which means keep trying to reconnect forever,
+      // rather than the default of losing the connection permanently after 30
+      // retries (separated by 1000ms).
+      server: { reconnectTries: 0 },
+      replSet: {}
+    },
+    Mongo._connectionOptions);
 
   // Disable the native parser by default, unless specifically enabled
   // in the mongo URL.
