@@ -958,7 +958,7 @@ _.extend(Console.prototype, {
     var self = this;
 
     if (! self._pretty) {
-      return printFn(message);
+      return self[printFn](message);
     }
 
     var xmark = chalk.red('\u2717');
