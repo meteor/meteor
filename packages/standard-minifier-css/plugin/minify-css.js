@@ -117,15 +117,11 @@ var mergeCss = Profile("mergeCss", function (css) {
       return originals[filename].getContentsAsString();
     });
 
-  var newMap;
-
   // Compose the concatenated file's source map with source maps from the
   // previous build step if necessary.
-  Profile.time("composing source maps", function () {
-    var concatConsumer;
-
-    newMap = new sourcemap.SourceMapGenerator();
-    concatConsumer = new sourcemap.SourceMapConsumer(stringifiedCss.map);
+  var newMap = Profile.time("composing source maps", function () {
+    var newMap = new sourcemap.SourceMapGenerator();
+    var concatConsumer = new sourcemap.SourceMapConsumer(stringifiedCss.map);
 
     // Create a dictionary of source map consumers for fast access
     var consumers = Object.create(null);
@@ -146,6 +142,10 @@ var mergeCss = Profile("mergeCss", function (css) {
         }
       }
     });
+
+    // Maps each original source file name to the SourceMapConsumer that
+    // can provide its content.
+    var sourceToConsumerMap = Object.create(null);
 
     // Find mappings from the concatenated file back to the original files
     concatConsumer.eachMapping(function (mapping) {
@@ -170,7 +170,20 @@ var mergeCss = Profile("mergeCss", function (css) {
         if (newOriginal.source !== null) {
           original = newOriginal;
           source = original.source;
+
+          if (source) {
+            // Since the new consumer provided a different
+            // original.source, we should ask it for the original source
+            // content instead of asking the concatConsumer.
+            sourceToConsumerMap[source] = consumer;
+          }
         }
+      }
+
+      if (source && ! sourceToConsumerMap[source]) {
+        // If we didn't set sourceToConsumerMap[source] = consumer above,
+        // use the concatConsumer to determine the original content.
+        sourceToConsumerMap[source] = concatConsumer;
       }
 
       // Add a new mapping to the final source map
@@ -182,13 +195,19 @@ var mergeCss = Profile("mergeCss", function (css) {
         original: original,
         source: source
       });
-
-      // Set the correct content for the mapping's source
-      newMap.setSourceContent(
-        source,
-        (consumer || concatConsumer).sourceContentFor(source)
-      );
     });
+
+    // The consumer.sourceContentFor and newMap.setSourceContent methods
+    // are relatively fast, but not entirely trivial, so it's better to
+    // call them only once per source, rather than calling them every time
+    // we call newMap.addMapping in the loop above.
+    Object.keys(sourceToConsumerMap).forEach(function (source) {
+      var consumer = sourceToConsumerMap[source];
+      var content = consumer.sourceContentFor(source);
+      newMap.setSourceContent(source, content);
+    });
+
+    return newMap;
   });
 
   mergeCache.set(hashOfFiles, merged = {
