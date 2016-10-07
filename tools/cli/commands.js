@@ -787,6 +787,10 @@ var buildCommands = {
     server: { type: String },
     // XXX COMPAT WITH 0.9.2.2
     "mobile-port": { type: String },
+    // Indicates whether these build is running headless, e.g. in a
+    // continuous integration building environment, where visual niceties
+    // like progress bars and spinners are unimportant.
+    headless: { type: Boolean },
     verbose: { type: Boolean, short: "v" },
     'allow-incompatible-update': { type: Boolean }
   },
@@ -818,6 +822,11 @@ main.registerCommand(_.extend({ name: 'bundle', hidden: true
 
 var buildCommand = function (options) {
   Console.setVerbose(!!options.verbose);
+  if (options.headless) {
+    // There's no point in spinning the spinner when we're running
+    // automated builds.
+    Console.setHeadless(true);
+  }
   // XXX output, to stderr, the name of the file written to (for human
   // comfort, especially since we might change the name)
 
