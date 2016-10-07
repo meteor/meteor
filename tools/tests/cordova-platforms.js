@@ -32,4 +32,27 @@ selftest.define("add cordova platforms", ["cordova"], function () {
   run.matchErr("Please add the Android platform to your project first");
   run.match("meteor add-platform android");
   run.expectExit(1);
+
+  if (process.platform !== 'win32') {
+    const originalAndroidHome = process.env.ANDROID_HOME;
+    const originalPath = process.env.PATH;
+
+    // Hide the fact that Android is installed (as it is on CircleCI) by providing
+    // access to only bare system functionality. Android is installed globally in /usr/local/
+    // on CircleCI and on Mac.
+    s.set("ANDROID_HOME", undefined);
+    s.set("PATH", "/usr/bin:/bin:/usr/sbin:/sbin");
+
+    run = s.run("add-platform", "android");
+    run.match("added platform");
+    run.match("Your system does not yet seem to fulfill all requirements to build apps for Android");
+    run.expectExit(0);
+
+    run = s.run("remove-platform", "android");
+    run.match("removed");
+    run.expectExit(0);
+
+    s.set("ANDROID_HOME", originalAndroidHome);
+    s.set("PATH", originalPath);
+  }
 });
