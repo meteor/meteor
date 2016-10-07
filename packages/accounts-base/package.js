@@ -1,6 +1,6 @@
 Package.describe({
   summary: "A user account system",
-  version: "1.2.12_1"
+  version: "1.2.12-beta.5"
 });
 
 Package.onUse(function (api) {
@@ -23,7 +23,7 @@ Package.onUse(function (api) {
 
   // need this because of the Meteor.users collection but in the future
   // we'd probably want to abstract this away
-  api.use('mongo@1.1.12_2', ['client', 'server']);
+  api.use('mongo@1.1.10', ['client', 'server']);
 
   // If the 'blaze' package is loaded, we'll define some helpers like
   // {{currentUser}}.  If not, no biggie.

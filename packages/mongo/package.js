@@ -9,7 +9,7 @@
 
 Package.describe({
   summary: "Adaptor for using MongoDB and Minimongo over DDP",
-  version: '1.1.12_2'
+  version: '1.1.12_3'
 });
 
 Npm.depends({
@@ -22,44 +22,44 @@ Npm.strip({
 
 Package.onUse(function (api) {
   api.use('npm-mongo@1.5.48_1', 'server');
-  api.use('allow-deny@1.0.5');
+  api.use('allow-deny');
 
   api.use([
-    'random@1.0.10',
-    'ejson@1.0.12',
-    'underscore@1.0.9',
-    'minimongo@1.0.17',
-    'ddp@1.2.5',
-    'tracker@1.1.0',
-    'diff-sequence@1.0.6',
-    'mongo-id@1.0.5',
-    'check@1.2.3',
-    'ecmascript@0.5.8'
+    'random',
+    'ejson',
+    'underscore',
+    'minimongo',
+    'ddp',
+    'tracker',
+    'diff-sequence',
+    'mongo-id',
+    'check',
+    'ecmascript'
   ]);
 
   // Binary Heap data structure is used to optimize oplog observe driver
   // performance.
-  api.use('binary-heap@1.0.9', 'server');
+  api.use('binary-heap', 'server');
 
   // Allow us to detect 'insecure'.
-  api.use('insecure@1.0.7', {weak: true});
+  api.use('insecure', {weak: true});
 
   // Allow us to detect 'autopublish', and publish collections if it's loaded.
-  api.use('autopublish@1.0.7', 'server', {weak: true});
+  api.use('autopublish', 'server', {weak: true});
 
   // Allow us to detect 'disable-oplog', which turns off oplog tailing for your
   // app even if it's configured in the environment. (This package will be
   // probably be removed before 1.0.)
-  api.use('disable-oplog@1.0.7', 'server', {weak: true});
+  api.use('disable-oplog', 'server', {weak: true});
 
   // defaultRemoteCollectionDriver gets its deployConfig from something that is
   // (for questionable reasons) initialized by the webapp package.
-  api.use('webapp@1.3.11', 'server', {weak: true});
+  api.use('webapp', 'server', {weak: true});
 
   // If the facts package is loaded, publish some statistics.
-  api.use('facts@1.0.9', 'server', {weak: true});
+  api.use('facts', 'server', {weak: true});
 
-  api.use('callback-hook@1.0.9', 'server');
+  api.use('callback-hook', 'server');
 
   // Stuff that should be exposed via a real API, but we haven't yet.
   api.export('MongoInternals', 'server');
