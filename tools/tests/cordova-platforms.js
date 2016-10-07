@@ -22,6 +22,10 @@ selftest.define("add cordova platforms", ["cordova"], function () {
   run.match("added platform");
   run.expectExit(0);
 
+  run = s.run("add-platform", "android");
+  run.matchErr("android: platform is already added");
+  run.expectExit(1);
+
   run = s.run("remove-platform", "foo");
   run.matchErr("foo: platform is not");
   run.expectExit(1);
