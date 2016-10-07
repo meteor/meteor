@@ -119,26 +119,75 @@ var mergeCss = Profile("mergeCss", function (css) {
 
   var newMap;
 
+  // Compose the concatenated file's source map with source maps from the
+  // previous build step if necessary.
   Profile.time("composing source maps", function () {
-    // If any input files had source maps, apply them.
-    // Ex.: less -> css source map should be composed with css -> css source map
-    newMap = sourcemap.SourceMapGenerator.fromSourceMap(
-      new sourcemap.SourceMapConsumer(stringifiedCss.map));
+    var concatConsumer;
+
+    newMap = new sourcemap.SourceMapGenerator();
+    concatConsumer = new sourcemap.SourceMapConsumer(stringifiedCss.map);
+
+    // Create a dictionary of source map consumers for fast access
+    var consumers = Object.create(null);
 
     Object.keys(originals).forEach(function (name) {
       var file = originals[name];
-      if (! file.getSourceMap())
-        return;
-      try {
-        newMap.applySourceMap(
-          new sourcemap.SourceMapConsumer(file.getSourceMap()), name);
-      } catch (err) {
-        // If we can't apply the source map, silently drop it.
-        //
-        // XXX This is here because there are some less files that
-        // produce source maps that throw when consumed. We should
-        // figure out exactly why and fix it, but this will do for now.
+      var sourceMap = file.getSourceMap();
+
+      if (sourceMap) {
+        try {
+          consumers[name] = new sourcemap.SourceMapConsumer(sourceMap);
+        } catch (err) {
+          // If we can't apply the source map, silently drop it.
+          //
+          // XXX This is here because there are some less files that
+          // produce source maps that throw when consumed. We should
+          // figure out exactly why and fix it, but this will do for now.
+        }
       }
+    });
+
+    // Find mappings from the concatenated file back to the original files
+    concatConsumer.eachMapping(function (mapping) {
+      var source = mapping.source;
+      var consumer = consumers[source];
+
+      var original = {
+        line: mapping.originalLine,
+        column: mapping.originalColumn
+      };
+
+      // If there is a source map for the original file, e.g., if it has been
+      // compiled from Less to CSS, find the source location in the original's
+      // original file. Otherwise, use the mapping of the concatenated file's
+      // source map.
+      if (consumer) {
+        var newOriginal = consumer.originalPositionFor(original);
+
+        // Finding the original position should always be possible (otherwise,
+        // one of the source maps would have incorrect mappings). However, in
+        // case there is something wrong, use the intermediate mapping.
+        if (newOriginal.source !== null) {
+          original = newOriginal;
+          source = original.source;
+        }
+      }
+
+      // Add a new mapping to the final source map
+      newMap.addMapping({
+        generated: {
+          line: mapping.generatedLine,
+          column: mapping.generatedColumn
+        },
+        original: original,
+        source: source
+      });
+
+      // Set the correct content for the mapping's source
+      newMap.setSourceContent(
+        source,
+        (consumer || concatConsumer).sourceContentFor(source)
+      );
     });
   });
 
