@@ -1,6 +1,4 @@
-## v1.4.2
-
-* The `npm` npm package has been updated to 3.10.7.
+## v.NEXT
 
 * The `node-pre-gyp` npm package has been updated to 0.6.30.
 
@@ -23,6 +21,13 @@
 * The default content security policy (CSP) for Cordova now includes `ws:`
   and `wss:` WebSocket protocols.
   [#7774](https://github.com/meteor/meteor/pull/7774)
+
+## v1.4.1.2
+
+* Node has been upgraded to version 4.6.0, a recommended security release:
+  https://nodejs.org/en/blog/release/v4.6.0/
+
+* `npm` has been upgraded to version 3.10.8.
 
 ## v1.4.1.1
 

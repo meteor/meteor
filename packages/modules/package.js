@@ -1,6 +1,6 @@
 Package.describe({
   name: "modules",
-  version: "0.7.7-beta.5",
+  version: "0.7.6_1",
   summary: "CommonJS module system",
   documentation: "README.md"
 });
