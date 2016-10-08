@@ -131,14 +131,17 @@ MongoConnection = function (url, options) {
   self._onFailoverHook = new Hook;
 
   var mongoOptions = _.extend({
-      db: { safe: true },
-      // Set reconnectTries to 0 which means keep trying to reconnect forever,
-      // rather than the default of losing the connection permanently after 30
-      // retries (separated by 1000ms).
-      server: { reconnectTries: 0 },
-      replSet: {}
+    db: { safe: true },
+    // http://mongodb.github.io/node-mongodb-native/2.2/api/Server.html
+    server: {
+      // Reconnect on error.
+      autoReconnect: true,
+      // Try to reconnect forever, instead of stopping after 30 tries (the
+      // default), with each attempt separated by 1000ms.
+      reconnectTries: Infinity
     },
-    Mongo._connectionOptions);
+    replSet: {}
+  }, Mongo._connectionOptions);
 
   // Disable the native parser by default, unless specifically enabled
   // in the mongo URL.
