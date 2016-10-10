@@ -13,7 +13,7 @@ import {
 } from "./files.js";
 
 function makeOptimistic(name, fn) {
-  return Profile("optimistic " + name, wrap(fn, {
+  const wrapper = wrap(fn, {
     makeCacheKey(...args) {
       const path = args[0];
       if (! pathIsAbsolute(path)) {
@@ -49,7 +49,7 @@ function makeOptimistic(name, fn) {
         return;
       }
 
-      let watcher = watch(path, () => this.dirty(...args));
+      var watcher = watch(path, () => wrapper.dirty(...args));
 
       return () => {
         if (watcher) {
@@ -58,7 +58,9 @@ function makeOptimistic(name, fn) {
         }
       };
     }
-  }));
+  });
+
+  return Profile("optimistic " + name, wrapper);
 }
 
 export const optimisticStatOrNull = makeOptimistic("statOrNull", statOrNull);
