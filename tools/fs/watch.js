@@ -7,6 +7,7 @@ import {Profile} from '../tool-env/profile.js';
 
 import {
   optimisticStatOrNull,
+  optimisticReadFile,
   optimisticReaddir,
   optimisticHashOrNull,
 } from "./optimistic.js";
@@ -246,7 +247,7 @@ export class WatchSet {
 
 export function readFile(absPath) {
   try {
-    return files.readFile(absPath);
+    return optimisticReadFile(absPath);
   } catch (e) {
     // Rethrow most errors.
     if (! e || (e.code !== 'ENOENT' && e.code !== 'EISDIR')) {
@@ -460,7 +461,8 @@ export class Watcher {
       return;
     }
 
-    if (files.exists(absPath)) {
+    const exists = !! optimisticStatOrNull(absPath);
+    if (exists) {
       if (self._mustNotExist(absPath)) {
         self._fire();
         return;
@@ -522,7 +524,7 @@ export class Watcher {
 
       } else if (stat.isDirectory()) {
         try {
-          var dirFiles = files.readdir(absPath);
+          var dirFiles = optimisticReaddir(absPath);
         } catch (err) {
           if (err.code === "ENOENT" ||
               err.code === "ENOTDIR") {
@@ -725,14 +727,16 @@ export function readAndWatchDirectory(watchSet, options) {
 export function readAndWatchFileWithHash(watchSet, absPath) {
   var contents = readFile(absPath);
   var hash = null;
+
   // Allow null watchSet, if we want to use readFile-style error handling in a
   // context where we might not always have a WatchSet (eg, reading
   // settings.json where we watch for "meteor run" but not for "meteor deploy").
   if (watchSet) {
-    hash = contents === null ? null : sha1(contents);
+    hash = optimisticHashOrNull(absPath);
     watchSet.addFile(absPath, hash);
   }
-  return {contents: contents, hash: hash};
+
+  return { contents, hash };
 }
 
 export function readAndWatchFile(watchSet, absPath) {
