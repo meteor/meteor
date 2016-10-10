@@ -1,7 +1,7 @@
 import assert from "assert";
 import { wrap } from "optimism";
 import { Profile } from "../tool-env/profile.js";
-import { watch } from "./safe-pathwatcher.js";
+import { watch } from "./safe-watcher.js";
 import { sha1 } from "./watch.js";
 import {
   pathSep,
