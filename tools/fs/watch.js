@@ -1,6 +1,6 @@
 import files from './files.js';
 import _ from "underscore";
-import pathwatcher from './safe-pathwatcher.js';
+import * as safeWatcher from './safe-watcher.js';
 import {createHash} from "crypto";
 import {coalesce} from '../utils/func-utils.js';
 import {Profile} from '../tool-env/profile.js';
@@ -341,8 +341,8 @@ export class Watcher {
 
     self.watches = {
       // <absolute path of watched file or directory>: {
-      //   // Null until pathwatcher.watch succeeds in watching the file.
-      //   watcher: <object returned by pathwatcher.watch> | null,
+      //   // Null until safeWatcher.watch succeeds in watching the file.
+      //   watcher: <object returned by safeWatcher.watch> | null,
       //   // Undefined until we stat the file for the first time, then null
       //   // if the file is observed to be missing.
       //   lastStat: <object returned by files.stat> | null | undefined
@@ -467,7 +467,7 @@ export class Watcher {
       }
 
       var onWatchEvent = self._makeWatchEventCallback(absPath);
-      entry.watcher = pathwatcher.watch(absPath, onWatchEvent);
+      entry.watcher = safeWatcher.watch(absPath, onWatchEvent);
 
       // If we successfully created the watcher, invoke the callback
       // immediately, so that we examine this file at least once.
