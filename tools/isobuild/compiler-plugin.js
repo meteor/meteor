@@ -16,6 +16,9 @@ import {Console} from '../console/console.js';
 import ImportScanner from './import-scanner.js';
 import {cssToCommonJS} from "./css-modules.js";
 import Resolver from "./resolver.js";
+import {
+  optimisticStatOrNull,
+} from "../fs/optimistic.js";
 
 import { isTestFilePath } from './test-files.js';
 
@@ -205,6 +208,10 @@ class InputFile extends buildPluginModule.InputFile {
     // document.
     this._resourceSlot = resourceSlot;
 
+    // Map from absolute paths to stat objects (or null if the file does
+    // not exist).
+    this._statCache = Object.create(null);
+
     // Map from control file names (e.g. package.json, .babelrc) to
     // absolute paths, or null to indicate absence.
     this._controlFileCache = Object.create(null);
@@ -278,6 +285,12 @@ class InputFile extends buildPluginModule.InputFile {
     return this.readAndWatchFileWithHash(path).contents;
   }
 
+  _stat(absPath) {
+    return _.has(this._statCache, absPath)
+      ? this._statCache[absPath]
+      : this._statCache[absPath] = optimisticStatOrNull(absPath);
+  }
+
   // Search ancestor directories for control files (e.g. package.json,
   // .babelrc), and return the absolute path of the first one found, or
   // null if the search failed.
@@ -296,7 +309,7 @@ class InputFile extends buildPluginModule.InputFile {
     while (true) {
       absPath = files.pathJoin(sourceRoot, dir, basename);
 
-      const stat = files.statOrNull(absPath);
+      const stat = this._stat(absPath);
       if (stat && stat.isFile()) {
         return this._controlFileCache[basename] = absPath;
       }
