@@ -25,6 +25,7 @@ versions:
 sidebar_categories:
   null:
     - index
+    - changelog
   API:
     - api/core
     - api/pubsub
