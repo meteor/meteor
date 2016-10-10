@@ -26,8 +26,6 @@ var NO_WATCHER_POLLING_INTERVAL =
 // file watchers, but it's to our advantage if they survive restarts.
 const WATCHER_CLEANUP_DELAY_MS = 30000;
 
-var suggestedRaisingWatchLimit = false;
-
 const watchers = Object.create(null);
 
 function acquireWatcher(absPath, callback) {
@@ -146,39 +144,46 @@ function chokidarWatch(absPath, callback) {
             // that it contains, fire callbacks for the directory.
             pathDirname(path) !== absPath;
         }
-      }).on("all", callback);
+      }).on("all", callback)
+        .on("error", maybeSuggestRaisingWatchLimit);
 
     } catch (e) {
-      var constants = require('constants');
-      var archinfo = require('../utils/archinfo.js');
-      if (! suggestedRaisingWatchLimit &&
-          // Note: the not-super-documented require('constants') maps from
-          // strings to SYSTEM errno values. System errno values aren't the same
-          // as the numbers used internally by libuv! Once we're upgraded
-          // to Node 0.12, we'll have the system errno as a string (on 'code'),
-          // but the support for that wasn't in Node 0.10's uv.
-          // See our PR https://github.com/atom/node-pathwatcher/pull/53
-          // (and make sure to read the final commit message, not the original
-          // proposed PR, which had a slightly different interface).
-          e.errno === constants.ENOSPC &&
-          // The only suggestion we currently have is for Linux.
-          archinfo.matches(archinfo.host(), 'os.linux')) {
-        suggestedRaisingWatchLimit = true;
-        var Console = require('../console/console.js').Console;
-        if (! Console.isHeadless()) {
-          Console.arrowWarn(
-            "It looks like a simple tweak to your system's configuration will " +
-              "make many tools (including this Meteor command) more efficient. " +
-              "To learn more, see " +
-              Console.url("https://github.com/meteor/meteor/wiki/File-Change-Watcher-Efficiency"));
-        }
-      }
+      maybeSuggestRaisingWatchLimit(e);
       // ... ignore the error.  We'll still have watchFile, which is good
       // enough.
     }
   }
 
   return null;
+}
+
+let suggestedRaisingWatchLimit = false;
+
+function maybeSuggestRaisingWatchLimit(error) {
+  var constants = require('constants');
+  var archinfo = require('../utils/archinfo.js');
+  if (! suggestedRaisingWatchLimit &&
+      // Note: the not-super-documented require('constants') maps from
+      // strings to SYSTEM errno values. System errno values aren't the same
+      // as the numbers used internally by libuv! Once we're upgraded
+      // to Node 0.12, we'll have the system errno as a string (on 'code'),
+      // but the support for that wasn't in Node 0.10's uv.
+      // See our PR https://github.com/atom/node-pathwatcher/pull/53
+      // (and make sure to read the final commit message, not the original
+      // proposed PR, which had a slightly different interface).
+      error.errno === constants.ENOSPC &&
+      // The only suggestion we currently have is for Linux.
+      archinfo.matches(archinfo.host(), 'os.linux')) {
+    suggestedRaisingWatchLimit = true;
+    var Console = require('../console/console.js').Console;
+    if (! Console.isHeadless()) {
+      Console.arrowWarn(
+        "It looks like a simple tweak to your system's configuration will " +
+          "make many tools (including this Meteor command) more efficient. " +
+          "To learn more, see " +
+          Console.url("https://github.com/meteor/meteor/wiki/File-Change-Watcher-Efficiency"));
+    }
+  }
 }
 
 export const watch = Profile(
