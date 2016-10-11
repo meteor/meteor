@@ -1,4 +1,4 @@
-import chokidar from "chokidar";
+import * as watchLibrary from "pathwatcher";
 import { Profile } from "../tool-env/profile.js";
 import {
   pathDirname,
@@ -9,7 +9,7 @@ import {
 } from "./files.js";
 
 // Set METEOR_WATCH_FORCE_POLLING environment variable to a truthy value to
-// force the use of files.watchFile instead of chokidar.watch.
+// force the use of files.watchFile instead of watchLibrary.watch.
 // Enabled on Mac and Linux and disabled on Windows by default.
 var WATCHER_ENABLED = ! process.env.METEOR_WATCH_FORCE_POLLING;
 if (process.platform === "win32") {
@@ -32,6 +32,11 @@ function acquireWatcher(absPath, callback) {
   const entry = watchers[absPath] || (
     watchers[absPath] = startNewWatcher(absPath));
 
+  // Watches successfully established in the past may have become invalid
+  // because the watched file was deleted or renamed, so we need to make
+  // sure we're still watching every time we call safeWatcher.watch.
+  entry.rewatch();
+
   // The size of the entry.callbacks Set also serves as a reference count
   // for this watcher.
   entry.callbacks.add(callback);
@@ -43,8 +48,27 @@ function startNewWatcher(absPath) {
   let lastWatcherEventTime = +new Date;
   const callbacks = new Set;
   let watcherCleanupTimer = null;
+  let watcher;
+  let pollingInterval;
 
   function fire(event) {
+    if (event !== "change") {
+      if (watcher) {
+        // When we receive a "delete" or "rename" event, the watcher is
+        // probably not going to generate any more notifications for this
+        // file, so we close and nullify the watcher to ensure that
+        // entry.rewatch() will attempt to reestablish the watcher the
+        // next time we call safeWatcher.watch.
+        watcher.close();
+        watcher = null;
+      }
+
+      // Make sure we don't throttle the watchFile callback after a
+      // "delete" or "rename" event, since it is now our only reliable
+      // source of file change notifications.
+      lastWatcherEventTime = 0;
+    }
+
     callbacks.forEach(cb => cb.call(this, event));
   }
 
@@ -54,17 +78,37 @@ function startNewWatcher(absPath) {
 
     // It's tempting to call unwatchFile(absPath, watchFileWrapper) here,
     // but previous watcher success is no guarantee of future watcher
-    // reliability. For example, chokidar.watch works just fine when file
+    // reliability. For example, watchLibrary.watch works just fine when file
     // changes originate from within a Vagrant VM, but changes to shared
     // files made outside the VM are invisible to watcher, so our only
     // hope of catching them is to continue polling.
   }
 
-  let watcher = chokidarWatch(absPath, watchWrapper);
+  function rewatch() {
+    if (watcher) {
+      // Already watching; nothing to do.
+      return;
+    }
 
-  const pollingInterval = watcher
-    ? DEFAULT_POLLING_INTERVAL
-    : NO_WATCHER_POLLING_INTERVAL;
+    watcher = watchLibraryWatch(absPath, watchWrapper);
+
+    pollingInterval = watcher
+      ? DEFAULT_POLLING_INTERVAL
+      : NO_WATCHER_POLLING_INTERVAL;
+
+    // This is a no-op if we're not watching the file.
+    unwatchFile(absPath, watchFileWrapper);
+
+    // We use files.watchFile in addition to watcher.watch as a fail-safe
+    // to detect file changes even on network file systems.  However
+    // (unless the user disabled watcher or this watcher call failed), we
+    // use a relatively long default polling interval of 5000ms to save
+    // CPU cycles.
+    watchFile(absPath, {
+      persistent: false,
+      interval: pollingInterval,
+    }, watchFileWrapper);
+  }
 
   function watchFileWrapper(...args) {
     const [newStat, oldStat] = args;
@@ -84,18 +128,11 @@ function startNewWatcher(absPath) {
     }
   }
 
-  // We use files.watchFile in addition to watcher.watch as a
-  // fail-safe to detect file changes even on network file systems.
-  // However (unless the user disabled watcher or this watcher
-  // call failed), we use a relatively long default polling interval of
-  // 5000ms to save CPU cycles.
-  watchFile(absPath, {
-    persistent: false,
-    interval: pollingInterval
-  }, watchFileWrapper);
+  rewatch();
 
   return {
     callbacks,
+    rewatch,
 
     release(callback) {
       if (! watchers[absPath]) {
@@ -130,23 +167,10 @@ function startNewWatcher(absPath) {
   };
 }
 
-function chokidarWatch(absPath, callback) {
+function watchLibraryWatch(absPath, callback) {
   if (WATCHER_ENABLED) {
     try {
-      return chokidar.watch(convertToOSPath(absPath), {
-        // Ignore initial "add" events.
-        ignoreInitial: true,
-        // Avoid recursively watching subdirectories.
-        ignored(path) {
-          path = convertToStandardPath(path);
-          return path !== absPath &&
-            // If absPath is a directory and an event fires for a file
-            // that it contains, fire callbacks for the directory.
-            pathDirname(path) !== absPath;
-        }
-      }).on("all", callback)
-        .on("error", maybeSuggestRaisingWatchLimit);
-
+      return watchLibrary.watch(convertToOSPath(absPath), callback);
     } catch (e) {
       maybeSuggestRaisingWatchLimit(e);
       // ... ignore the error.  We'll still have watchFile, which is good
