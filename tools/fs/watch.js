@@ -7,7 +7,6 @@ import {Profile} from '../tool-env/profile.js';
 
 import {
   optimisticStatOrNull,
-  optimisticReadFile,
   optimisticReaddir,
   optimisticHashOrNull,
 } from "./optimistic.js";
@@ -247,7 +246,7 @@ export class WatchSet {
 
 export function readFile(absPath) {
   try {
-    return optimisticReadFile(absPath);
+    return files.readFile(absPath);
   } catch (e) {
     // Rethrow most errors.
     if (! e || (e.code !== 'ENOENT' && e.code !== 'EISDIR')) {
@@ -732,7 +731,7 @@ export function readAndWatchFileWithHash(watchSet, absPath) {
   // context where we might not always have a WatchSet (eg, reading
   // settings.json where we watch for "meteor run" but not for "meteor deploy").
   if (watchSet) {
-    hash = optimisticHashOrNull(absPath);
+    hash = contents === null ? null : sha1(contents);
     watchSet.addFile(absPath, hash);
   }
 
