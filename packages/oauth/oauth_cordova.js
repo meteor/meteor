@@ -29,13 +29,10 @@ OAuth.showPopup = function (url, callback, dimensions) {
       var splitUrl = event.url.split("#");
       var hashFragment = splitUrl[1];
 
-      if (! hashFragment) {
-        throw new Error("No hash fragment in OAuth popup?");
+      if (hashFragment) {
+        var credentials = JSON.parse(decodeURIComponent(hashFragment));
+        OAuth._handleCredentialSecret(credentials.credentialToken,credentials.credentialSecret);
       }
-
-      var credentials = JSON.parse(decodeURIComponent(hashFragment));
-      OAuth._handleCredentialSecret(credentials.credentialToken,
-                                    credentials.credentialSecret);
 
       oauthFinished = true;
 
@@ -47,10 +44,11 @@ OAuth.showPopup = function (url, callback, dimensions) {
       // https://issues.apache.org/jira/browse/CB-2285.
       //
       // XXX Can we make this timeout smaller?
+
       setTimeout(function () {
         popup.close();
         callback();
-      }, 100);
+      }, 500);
     }
   };
 
