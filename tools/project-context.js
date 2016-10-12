@@ -1,5 +1,6 @@
 var assert = require("assert");
 var _ = require('underscore');
+var path = require('path');
 
 var archinfo = require('./utils/archinfo.js');
 var buildmessage = require('./utils/buildmessage.js');
@@ -596,10 +597,21 @@ _.extend(ProjectContext.prototype, {
     var self = this;
     var searchDirs = [files.pathJoin(self._projectDirForLocalPackages, 'packages')];
 
-    if (! self._ignorePackageDirsEnvVar && process.env.PACKAGE_DIRS) {
-      // User can provide additional package directories to search in
-      // PACKAGE_DIRS (colon-separated).
-      _.each(process.env.PACKAGE_DIRS.split(':'), function (p) {
+    // User can provide additional package directories to search in
+    // METEOR_PACKAGE_DIRS (colon-separated),
+    // This was added after 1.4.0.1
+    var envPackageDirs = process.env.METEOR_PACKAGE_DIRS || process.env.PACKAGE_DIRS;
+
+    // If the PACKAGE_DIRS, warn users to migrate to the new env vars.
+    if (process.env.PACKAGE_DIRS) {
+      console.warn("For compatibility reasons, the 'PACKAGE_DIRS' environment"
+                   + " variable is deprecated and will be removed in a future"
+                   + " release of Meteor.  Developers should now use"
+                   + " 'METEOR_PACKAGE_DIRS'.");
+    }
+    if (! self._ignorePackageDirsEnvVar && envPackageDirs) {
+      // path.delimiter was added in v0.9.3
+      _.each(envPackageDirs.split(path.delimiter), function (p) {
         searchDirs.push(files.pathResolve(p));
       });
     }
