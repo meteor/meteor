@@ -167,7 +167,9 @@ AccountsTemplates.configureRoute('resetPwd', {
 });
 ```
 
-Now, we can easily render links to our login page like so:
+Note that we have specified a password reset route. Normally, we would have to configure Meteor's accounts system to send this route in password reset emails, but the `useraccounts:flow-routing` package does it for us. [Read more about configuring email flows below.](#email-flows)
+
+Now that the routes are setup on the server, they can be accessed from the browser (e.g. `example.com/reset-password`).  To create links to these routes in a template, it's best to use a helper method provided by the router.  For Flow Router, the [`arillo:flow-router-helpers`](https://github.com/arillo/meteor-flow-router-helpers/) package provides a `pathFor` helper for just this purpose.  Once installed, the following is possible in a template:
 
 ```html
 <div class="btns-group">
@@ -175,8 +177,6 @@ Now, we can easily render links to our login page like so:
   <a href="{{pathFor 'join'}}" class="btn-secondary">Join</a>
 </div>
 ```
-
-Note that we have specified a password reset route. Normally, we would have to configure Meteor's accounts system to send this route in password reset emails, but the `useraccounts:flow-routing` package does it for us. [Read more about configuring email flows below.](#email-flows)
 
 You can find a complete list of different available routes in the [documentation the `useraccounts:flow-routing`](https://github.com/meteor-useraccounts/flow-routing#routes).
 
