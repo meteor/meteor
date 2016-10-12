@@ -114,10 +114,8 @@ DEV_BUNDLE="$SCRIPT_DIR/dev_bundle"
 METEOR="$SCRIPT_DIR/tools/index.js"
 
 
-# Bump our file descriptor ulimit as high as it will go. This is a
-# temporary workaround for dependancy watching holding open too many
-# files: https://app.asana.com/0/364581412985/472479912325
-if [ "$(ulimit -n)" != "unlimited" ] ; then
+# Try higher ulimit maxfiles settings until permitted by the kernel
+if [ "$(ulimit -n)" != "unlimited" ] && ! [ "$(ulimit -n)" -gt 16384 ] ; then
     ulimit -n 16384 > /dev/null 2>&1 || \
     ulimit -n 8192 > /dev/null 2>&1 || \
     ulimit -n 4096 > /dev/null 2>&1 || \
