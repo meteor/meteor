@@ -276,6 +276,10 @@ export default class Resolver {
   }
 
   _readPkgJson(path) {
+    if (! optimisticStatOrNull(path)) {
+      return null;
+    }
+
     try {
       return JSON.parse(optimisticReadFile(path));
     } catch (e) {
