@@ -96,7 +96,7 @@ Tinytest.add('Tests migrating down to version 0', function(test) {
   Migrations._reset();
 
   test.equal(Migrations.getVersion(), 0);
-  
+
   Migrations.add({
     up: function () {run.push('u1');},
     down: function () {run.push('d1');},
@@ -163,6 +163,30 @@ Tinytest.add('Checks that rerun works correctly', function(test) {
   Migrations.migrateTo('1,rerun');
   test.equal(run, ['u1', 'u1']);
   test.equal(Migrations.getVersion(), 1);
+});
+
+Tinytest.add('Checks that rerun works even if there are missing versions', function(test) {
+  var run = []; //keeps track of migrations in here
+  Migrations._reset();
+
+  // add the migration with a missing step
+  Migrations.add({version: 3, up: function () {
+    run.push('u1');
+  }});
+
+  Migrations.migrateTo('latest');
+  test.equal(run, ['u1']);
+  test.equal(Migrations.getVersion(), 3);
+
+  // shouldn't migrate
+  Migrations.migrateTo(3);
+  test.equal(run, ['u1']);
+  test.equal(Migrations.getVersion(), 3);
+
+  // should migrate again
+  Migrations.migrateTo('3,rerun');
+  test.equal(run, ['u1', 'u1']);
+  test.equal(Migrations.getVersion(), 3);
 });
 
 Tinytest.add('Migration callbacks include the migration as an argument', function(test) {
