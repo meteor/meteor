@@ -268,7 +268,7 @@ export function sha1(contents) {
 export function readDirectory({absPath, include, exclude, names}) {
   // Read the directory.
   try {
-    var contents = optimisticReaddir(absPath);
+    var contents = files.readdir(absPath);
   } catch (e) {
     // If the path is not a directory, return null; let other errors through.
     if (e && (e.code === 'ENOENT' || e.code === 'ENOTDIR')) {
@@ -282,7 +282,7 @@ export function readDirectory({absPath, include, exclude, names}) {
   _.each(contents, function (entry) {
     // We do stat instead of lstat here, so that we treat symlinks to
     // directories just like directories themselves.
-    const stat = optimisticStatOrNull(files.pathJoin(absPath, entry));
+    const stat = files.statOrNull(files.pathJoin(absPath, entry));
     if (! stat) {
       // Disappeared after the readdir (or a dangling symlink)?
       // Eh, pretend it was never there in the first place.
@@ -460,8 +460,7 @@ export class Watcher {
       return;
     }
 
-    const exists = !! optimisticStatOrNull(absPath);
-    if (exists) {
+    if (files.statOrNull(absPath)) {
       if (self._mustNotExist(absPath)) {
         self._fire();
         return;
@@ -523,7 +522,7 @@ export class Watcher {
 
       } else if (stat.isDirectory()) {
         try {
-          var dirFiles = optimisticReaddir(absPath);
+          var dirFiles = files.readdir(absPath);
         } catch (err) {
           if (err.code === "ENOENT" ||
               err.code === "ENOTDIR") {
@@ -591,7 +590,7 @@ export class Watcher {
     var self = this;
     var entry = self.watches[absPath];
     var lastStat = entry.lastStat;
-    var stat = optimisticStatOrNull(absPath);
+    var stat = files.statOrNull(absPath);
     var mustNotExist = self._mustNotExist(absPath);
     var mustBeAFile = self._mustBeAFile(absPath);
 
