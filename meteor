@@ -115,7 +115,8 @@ METEOR="$SCRIPT_DIR/tools/index.js"
 
 
 # Try higher ulimit maxfiles settings until permitted by the kernel
-if [ "$(ulimit -n)" != "unlimited" ] && ! [ "$(ulimit -n)" -gt 16384 ] ; then
+if [ "$(ulimit -n)" != "unlimited" ] && ! [ "$(ulimit -n)" -gt 32768 ] ; then
+    ulimit -n 32768 > /dev/null 2>&1 || \
     ulimit -n 16384 > /dev/null 2>&1 || \
     ulimit -n 8192 > /dev/null 2>&1 || \
     ulimit -n 4096 > /dev/null 2>&1 || \
