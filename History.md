@@ -48,6 +48,9 @@
   sensitive to non-reproducible factors in the external environment.
   https://github.com/meteor/meteor/pull/7668/commits/3313180a6ff33ee63602f7592a9506012029e919
 
+* The `meteor <command> ...` syntax will now work for any command
+  installed in `dev_bundle/bin`, except for Meteor's own commands.
+
 * The `meteor test` command now supports the `--no-release-check` flag.
   https://github.com/meteor/meteor/pull/7668/commits/7097f78926f331fb9e70a06300ce1711adae2850
 
