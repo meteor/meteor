@@ -14,7 +14,7 @@ var packageJson = {
     npm: "3.10.8",
     "node-gyp": "3.4.0",
     "node-pre-gyp": "0.6.30",
-    "meteor-babel": "0.12.0",
+    "meteor-babel": "0.13.0",
     "meteor-promise": "0.7.2",
     fibers: "1.0.14",
     promise: "7.1.1",
