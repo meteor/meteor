@@ -292,6 +292,28 @@ require('./commands-cordova.js');
 require('./commands-aliases.js');
 
 ///////////////////////////////////////////////////////////////////////////////
+// Record all the top-level commands as JSON
+///////////////////////////////////////////////////////////////////////////////
+
+export const meteorCommandsJsonPath = files.pathJoin(
+  files.getDevBundle(), "bin", ".meteor-commands.json"
+);
+
+export function dumpMeteorCommands() {
+  const all = Object.create(null);
+  Object.keys(commands).forEach(name => all[name] = true);
+  const json = JSON.stringify(all, null, 2);
+  files.writeFile(meteorCommandsJsonPath, json + "\n");
+  return all;
+}
+
+if (files.inCheckout()) {
+  // If we're running Meteor from a checkout, dump the commands every
+  // time, so that the file remains up to date.
+  dumpMeteorCommands();
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // Long-form help
 ///////////////////////////////////////////////////////////////////////////////
 

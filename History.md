@@ -17,6 +17,9 @@
   `mongod` processes when the server first starts up.
   https://github.com/meteor/meteor/pull/7668/commits/295d3d5678228f06ee0ab6c0d60139849a0ea192
 
+* The `meteor <command> ...` syntax will now work for any command
+  installed in `dev_bundle/bin`, except for Meteor's own commands.
+
 ## v1.4.1.2
 
 * Node has been upgraded to version 4.6.0, a recommended security release:
