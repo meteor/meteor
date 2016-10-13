@@ -130,7 +130,7 @@ function startNewWatcher(absPath) {
 
   rewatch();
 
-  return {
+  const entry = {
     callbacks,
     rewatch,
 
@@ -153,18 +153,38 @@ function startNewWatcher(absPath) {
           // can avoid tearing anything down.
           return;
         }
-
-        watchers[absPath] = null;
-
-        if (watcher) {
-          watcher.close();
-          watcher = null;
-        }
-
-        unwatchFile(absPath, watchFileWrapper);
+        entry.close();
       }, WATCHER_CLEANUP_DELAY_MS);
+    },
+
+    close() {
+      if (watchers[absPath] !== entry) return;
+      watchers[absPath] = null;
+
+      if (watcherCleanupTimer) {
+        clearTimeout(watcherCleanupTimer);
+        watcherCleanupTimer = null;
+      }
+
+      if (watcher) {
+        watcher.close();
+        watcher = null;
+      }
+
+      unwatchFile(absPath, watchFileWrapper);
     }
   };
+
+  return entry;
+}
+
+export function closeAllWatchers() {
+  Object.keys(watchers).forEach(absPath => {
+    const entry = watchers[absPath];
+    if (entry) {
+      entry.close();
+    }
+  });
 }
 
 function watchLibraryWatch(absPath, callback) {

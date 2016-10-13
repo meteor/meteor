@@ -13,6 +13,7 @@ var Profile = require('../tool-env/profile.js').Profile;
 var release = require('../packaging/release.js');
 import * as cordova from '../cordova';
 import { CordovaBuilder } from '../cordova/builder.js';
+import { closeAllWatchers } from "../fs/safe-watcher.js";
 
 // Parse out s as if it were a bash command line.
 var bashParse = function (s) {
@@ -979,6 +980,10 @@ _.extend(AppRunner.prototype, {
 
       break;
     }
+
+    // Allow the process to exit normally, since optimistic file watchers
+    // may be keeping the event loop busy.
+    closeAllWatchers();
 
     // Giving up for good.
     self._cleanUpPromises();
