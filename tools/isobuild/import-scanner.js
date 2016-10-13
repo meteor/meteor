@@ -551,7 +551,7 @@ export default class ImportScanner {
       // Append this file to the output array and record its index.
       this._addFile(absImportedPath, depFile);
 
-      if (archMatches(this.bundleArch, "os") &&
+      if (! this.isWeb() &&
           depFile.installPath.startsWith("node_modules/")) {
         // On the server, modules in node_modules directories will be
         // handled natively by Node, so we don't need to build a
@@ -561,6 +561,10 @@ export default class ImportScanner {
 
       this._scanFile(depFile);
     });
+  }
+
+  isWeb() {
+    return archMatches(this.bundleArch, "web");
   }
 
   _readFile(absPath) {
@@ -663,7 +667,7 @@ export default class ImportScanner {
 
     const dirs = this._splitPath(pathDirname(installPath));
     const isApp = ! this.name;
-    const bundlingForWeb = archMatches(this.bundleArch, "web");
+    const bundlingForWeb = this.isWeb();
 
     const topLevelDir = dirs[0];
     if (topLevelDir === "private" ||
@@ -720,7 +724,7 @@ export default class ImportScanner {
 
     if (isApp &&
         Resolver.isNative(id) &&
-        archMatches(this.bundleArch, "web")) {
+        this.isWeb()) {
       // To ensure the native module can be evaluated at runtime, register
       // a dependency on meteor-node-stubs/deps/<id>.js.
       const stubId = Resolver.getNativeStubId(id);
