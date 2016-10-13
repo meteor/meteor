@@ -1,6 +1,5 @@
 var assert = require("assert");
 var _ = require('underscore');
-var path = require('path');
 
 var archinfo = require('./utils/archinfo.js');
 var buildmessage = require('./utils/buildmessage.js');
@@ -594,26 +593,37 @@ _.extend(ProjectContext.prototype, {
   },
 
   _localPackageSearchDirs: function () {
-    var self = this;
-    var searchDirs = [files.pathJoin(self._projectDirForLocalPackages, 'packages')];
+    const self = this;
+    let searchDirs = [
+      files.pathJoin(self._projectDirForLocalPackages, 'packages'),
+    ];
 
     // User can provide additional package directories to search in
-    // METEOR_PACKAGE_DIRS (colon-separated),
-    // This was added after 1.4.0.1
-    var envPackageDirs = process.env.METEOR_PACKAGE_DIRS || process.env.PACKAGE_DIRS;
+    // METEOR_PACKAGE_DIRS (semi-colon/colon-separated, depending on OS),
 
-    // If the PACKAGE_DIRS, warn users to migrate to the new env vars.
+    // PACKAGE_DIRS Deprecated in 2016-10
+    // Warn users to migrate from PACKAGE_DIRS to METEOR_PACKAGE_DIRS
     if (process.env.PACKAGE_DIRS) {
-      console.warn("For compatibility reasons, the 'PACKAGE_DIRS' environment"
-                   + " variable is deprecated and will be removed in a future"
-                   + " release of Meteor.  Developers should now use"
-                   + " 'METEOR_PACKAGE_DIRS'.");
+      Console.warn('For compatibility, the PACKAGE_DIRS environment variable',
+        'is deprecated and will be removed in a future Meteor release.');
+      Console.warn('Developers should now use METEOR_PACKAGE_DIRS and',
+        'Windows projects should now use a semi-colon (;) to separate paths.');
     }
-    if (! self._ignorePackageDirsEnvVar && envPackageDirs) {
+
+    function packageDirsFromEnvVar(envVar, delimiter = files.pathOsDelimiter) {
+      return process.env[envVar] && process.env[envVar].split(delimiter) || [];
+    }
+
+    const envPackageDirs = [
+    // METEOR_PACKAGE_DIRS should use the arch-specific delimiter
+      ...(packageDirsFromEnvVar('METEOR_PACKAGE_DIRS')),
+      // PACKAGE_DIRS (deprecated) always used ':' separator (yes, even Windows)
+      ...(packageDirsFromEnvVar('PACKAGE_DIRS', ':')),
+    ];
+
+    if (! self._ignorePackageDirsEnvVar && envPackageDirs.length) {
       // path.delimiter was added in v0.9.3
-      _.each(envPackageDirs.split(path.delimiter), function (p) {
-        searchDirs.push(files.pathResolve(p));
-      });
+      envPackageDirs.forEach( p => searchDirs.push(files.pathResolve(p)) );
     }
 
     if (! self._ignoreCheckoutPackages && files.inCheckout()) {
