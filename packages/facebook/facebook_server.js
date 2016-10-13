@@ -106,3 +106,27 @@ var getIdentity = function (accessToken, fields) {
 Facebook.retrieveCredential = function(credentialToken, credentialSecret) {
   return OAuth.retrieveCredential(credentialToken, credentialSecret);
 };
+
+// Make sure a token is a valid access token for facebook
+Facebook.isTokenValid = function(fbAccessToken) {
+  let fbAppIdForToken;
+  try {
+    fbAppIdForToken = JSON.parse(HTTP.get(
+      "https://graph.facebook.com/app", {
+        params: { access_token: fbAccessToken }
+      }).content).id;
+  } catch (e) {
+    if (e.response) {
+      const errorType = JSON.parse(e.response.content).error.type;
+      if (errorType === 'OAuthException') {
+        return false;
+      }
+    } else {
+      throw(e); 
+    }
+  }
+
+  const fbAppId = ServiceConfiguration.configurations.findOne({service: 'facebook'}).appId;
+
+  return fbAppId === fbAppIdForToken;
+};
