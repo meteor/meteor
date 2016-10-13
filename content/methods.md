@@ -197,7 +197,7 @@ export const updateText = new ValidatedMethod({
 });
 ```
 
-You call it the same way you call the advanced Method above, but the Method definition is significantly simpler. We believe this style of Method lets you clearly see the important parts - the name of the Method sent over the wire, the format of the expected arguments, and the JavaScript namespace by which the Method can be referenced.
+You call it the same way you call the advanced Method above, but the Method definition is significantly simpler. We believe this style of Method lets you clearly see the important parts - the name of the Method sent over the wire, the format of the expected arguments, and the JavaScript namespace by which the Method can be referenced. Validated methods only accept a single argument and a callback function.
 
 <h2 id="errors">Error handling</h2>
 
