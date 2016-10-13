@@ -85,7 +85,8 @@ can run Meteor directly from a Git checkout using these steps:
     anywhere you would normally call the system `meteor`.  For example,:
 
     ```sh
-    any-app-directory $ /path/to/meteor-checkout/meteor
+    $ cd my-app/
+    $ /path/to/meteor-checkout/meteor run
     ```
 
     > _Note:_ When running from a `git` checkout, you cannot pin apps to specific
