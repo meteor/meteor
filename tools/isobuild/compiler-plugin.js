@@ -1088,14 +1088,38 @@ export class PackageSourceBatch {
 
     this._warnAboutMissingModules(allMissingNodeModules);
 
+    const meteorProvidesBabelRuntime = map.has("babel-runtime");
+
     scannerMap.forEach((scanner, name) => {
       const isApp = ! name;
+      const isWeb = scanner.isWeb();
+      const outputFiles = scanner.getOutputFiles();
 
       if (isApp) {
         const appFilesWithoutNodeModules = [];
 
-        scanner.getOutputFiles().forEach(file => {
+        outputFiles.forEach(file => {
           const parts = file.installPath.split("/");
+
+          if (meteorProvidesBabelRuntime || ! isWeb) {
+            // If the Meteor babel-runtime package is installed, it will
+            // provide implementations for babel-runtime/helpers/* and
+            // babel-runtime/regenerator at runtime, so we should filter
+            // out any node_modules/babel-runtime/* modules from the app.
+            // If the Meteor babel-runtime package is not installed, then
+            // we should rely on node_modules/babel-runtime/* instead. On
+            // the server that still means removing bundled files here and
+            // relying on programs/server/npm/node_modules/babel-runtime,
+            // but on the web these bundled files are all we have, so we'd
+            // better not remove them.
+            if (parts[0] === "node_modules" &&
+                parts[1] === "babel-runtime" &&
+                // Can't just be node_modules/babel-runtime.
+                parts.length > 2) {
+              return;
+            }
+          }
+
           const nodeModulesIndex = parts.indexOf("node_modules");
 
           if (nodeModulesIndex === -1 || (nodeModulesIndex === 0 &&
@@ -1118,7 +1142,7 @@ export class PackageSourceBatch {
         map.get(null).files = appFilesWithoutNodeModules;
 
       } else {
-        map.get(name).files = scanner.getOutputFiles();
+        map.get(name).files = outputFiles;
       }
     });
 
