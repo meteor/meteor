@@ -20,6 +20,12 @@
   been updated to version 2.2.10.
   [#7780](https://github.com/meteor/meteor/pull/7780)
 
+* The `meteor` tool is now prevented from running as `root` as this is
+  not recommended and can cause issues with permissions.  In some environments,
+  (e.g. Docker), it may still be desired to run as `root` and this can be
+  permitted by passing `--unsafe-perm` to the `meteor` command.
+  [#7821](https://github.com/meteor/meteor/pull/7821)
+
 * When the Meteor development server shuts down, it now attempts to kill
   the `mongod` process it spawned, in addition to killing any running
   `mongod` processes when the server first starts up.
@@ -71,9 +77,6 @@
   reconfigure the Mongo replica set when using the WiredTiger storage
   engine, instead of failing to start Mongo.
   [#7840](https://github.com/meteor/meteor/pull/7840).
-
-* Running Meteor with root privileges now displays a warning.
-  [#7821](https://github.com/meteor/meteor/pull/7821)
 
 ## v1.4.1.2
 
