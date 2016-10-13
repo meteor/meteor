@@ -61,7 +61,7 @@ can run Meteor directly from a Git checkout using these steps:
 
 0. **_(Optional)_ Compile dependencies**
 
-    > This optional step requires `git`, a C and C++ compiler, autotools, and scons.
+    > This optional step requires a C and C++ compiler, autotools, and scons.
     > If this step is skipped, Meteor will simply download pre-built binaries.
 
     To build everything from scratch (`node`, `npm`, `mongodb`, etc.) run the following:
