@@ -204,7 +204,9 @@ export default class Resolver {
   }
 
   _resolveNodeModule(id, absParentPath) {
-    let resolved = null;
+    if (! Resolver.isTopLevel(id)) {
+      return null;
+    }
 
     if (Resolver.isNative(id) &&
         archMatches(this.targetArch, "os")) {
@@ -233,6 +235,8 @@ export default class Resolver {
         return sourceRoot = pathDirname(path);
       }
     });
+
+    let resolved = null;
 
     if (sourceRoot) {
       let dir = absParentPath; // It's ok for absParentPath to be a directory!
