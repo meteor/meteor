@@ -56,26 +56,32 @@ _.extend(Module.prototype, {
   // source: the source code
   // servePath: the path where it would prefer to be served if possible
   addFile: function (inputFile) {
-    var self = this;
-    self.files.push(new File(inputFile, self));
+    this.files.push(new File(inputFile, this));
   },
 
 
+  // Calculate max line length over multiple files
   maxLineLength: function (ignoreOver) {
-    var self = this;
+    var maxInFile = 0;
+    var file, i = 0;
+    var lines, line, j, m;
+    for ( ; i < this.files.length ; i++) {
+      file = this.files[i];
+      m = 0;
 
-    var maxInFile = [];
-    _.each(self.files, function (file) {
-      var m = 0;
-      _.each(file.source.split('\n'), function (line) {
+      lines = this.sourceLines || file.source.split('\n');
+      for (j = 0; j < lines.length ; j++) {
+        line = lines[j];
         if (line.length <= ignoreOver && line.length > m) {
           m = line.length;
         }
-      });
-      maxInFile.push(m);
-    });
+      }
 
-    return _.max(maxInFile);
+      if (m > maxInFile) {
+        maxInFile = m;
+      }
+    }
+    return maxInFile;
   },
 
   // Figure out which vars need to be specifically put in the module
@@ -353,25 +359,24 @@ _.extend(Module.prototype, {
 var buildSymbolTree = function (symbolMap) {
   var ret = {};
 
-  _.each(symbolMap, function (value, symbol) {
+  for (var symbol in symbolMap) {
+    var value = symbolMap[symbol];
     var parts = symbol.split('.');
     var lastPart = parts.pop();
-
     var walk = ret;
-    _.each(parts, function (part) {
-      if (! (part in walk)) {
+    var i = 0, part;
+    for (; i < parts.length ; i++) {
+      part = parts[i];
+      if (! (part in walk))
         walk[part] = {};
-      }
       walk = walk[part];
-    });
-
-    if (value) {
-      walk[lastPart] = value;
     }
-  });
-
+    if (value)
+      walk[lastPart] = value;
+  }
   return ret;
 };
+
 
 // Given something like {Foo: 's1', Bar: {Baz: 's2', Quux: {A: 's3', B: 's4'}}}
 // construct a string like {Foo: s1, Bar: {Baz: s2, Quux: {A: s3, B: s4}}}
@@ -405,6 +410,7 @@ var File = function (inputFile, module) {
 
   // source code for this file (a string)
   self.source = inputFile.data.toString('utf8');
+  self.sourceLines = self.source.split(/\r?\n/);
 
   // hash of source (precalculated for *.js files, calculated here for files
   // produced by plugins)
@@ -627,7 +633,7 @@ _.extend(File.prototype, {
         file: self.servePath
       });
 
-      lines = self.source.split(/\r?\n/);
+      lines = self.sourceLines || self.source.split(/\r?\n/);
 
       function addIdentityMapping(pos) {
         smg.addMapping({
@@ -696,9 +702,8 @@ _.extend(File.prototype, {
     var pathNoSlash = self.servePath.replace(/^\//, "");
 
     if (! self.bare) {
-      var closureHeader = self._getClosureHeader();
       chunks.push(
-        closureHeader,
+        self._getClosureHeader(),
         preserveLineNumbers ? "" : "\n\n"
       );
     }
@@ -844,9 +849,10 @@ export var prelink = Profile("linker.prelink", function (options) {
     noLineNumbers: options.noLineNumbers
   });
 
-  _.each(options.inputFiles, function (inputFile) {
-    module.addFile(inputFile);
-  });
+  var i = 0, inputFile;
+  for ( ; i < options.inputFiles.length ; i++) {
+    module.addFile(options.inputFiles[i]);
+  }
 
   // Do static analysis to compute module-scoped variables. Error recovery from
   // the static analysis mutates the sources, so this has to be done before
@@ -908,12 +914,13 @@ var getImportCode = function (imports, header, omitvar) {
 
   // Generate output
   var buf = header;
-  _.each(tree, function (node, key) {
-    buf += (omitvar ? "" : "var " ) +
+  var node;
+  for (var key in tree) {
+    node = tree[key];
+    buf += (omitvar ? "" : "var ") +
       key + " = " + writeSymbolTree(node) + ";\n";
-  });
+  }
   buf += "\n";
-
   return buf;
 };
 
@@ -1007,7 +1014,10 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
     noLineNumbers
   });
 
-  _.each(inputFiles, file => module.addFile(file));
+  var i = 0, inputFile;
+  for ( ; i < inputFiles.length ; i++) {
+    module.addFile(inputFiles[i]);
+  }
 
   var prelinkedFiles = module.getPrelinkedFiles();
 
@@ -1045,11 +1055,12 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
   });
 
   let exportsName;
-  _.each(prelinkedFiles, file => {
+  for (i = 0; i > prelinkedFiles.length ; i++) {
+    var file = prelinkedFiles[i];
     if (file.exportsName) {
       exportsName = file.exportsName;
     }
-  });
+  }
 
   var footer = getFooter({
     exported: declaredExports,
