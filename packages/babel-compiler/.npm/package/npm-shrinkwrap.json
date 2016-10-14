@@ -311,8 +311,8 @@
       "from": "babel-types@>=6.16.0 <6.17.0"
     },
     "babylon": {
-      "version": "6.11.4",
-      "resolved": "https://registry.npmjs.org/babylon/-/babylon-6.11.4.tgz",
+      "version": "6.11.6",
+      "resolved": "https://registry.npmjs.org/babylon/-/babylon-6.11.6.tgz",
       "from": "babylon@>=6.11.4 <6.12.0"
     },
     "balanced-match": {
