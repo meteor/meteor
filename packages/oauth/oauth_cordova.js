@@ -44,7 +44,6 @@ OAuth.showPopup = function (url, callback, dimensions) {
       // https://issues.apache.org/jira/browse/CB-2285.
       //
       // XXX Can we make this timeout smaller?
-
       setTimeout(function () {
         popup.close();
         callback();
