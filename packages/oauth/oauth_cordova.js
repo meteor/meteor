@@ -48,7 +48,7 @@ OAuth.showPopup = function (url, callback, dimensions) {
       setTimeout(function () {
         popup.close();
         callback();
-      }, 500);
+      }, 100);
     }
   };
 
