@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Wrapper around the bcrypt npm package",
-  version: "0.9.2-beta.9",
+  version: "0.9.2-beta.10",
   documentation: null
 });
 
