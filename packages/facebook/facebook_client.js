@@ -37,8 +37,8 @@ Facebook.requestCredential = function (options, credentialRequestCompleteCallbac
         '&state=' + OAuth._stateParam(loginStyle, credentialToken, options && options.redirectUrl);
 
   // Handle authentication type (e.g. for force login you need authType: "reauthenticate")
-  if (options && options.authType) {
-    loginUrl += "&authType=" + encodeURIComponent(options.authType);
+  if (options && options.auth_type) {
+    loginUrl += "&auth_type=" + encodeURIComponent(options.auth_type);
   }
 
   OAuth.launchLogin({
