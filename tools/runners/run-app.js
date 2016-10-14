@@ -571,19 +571,10 @@ _.extend(AppRunner.prototype, {
       }
 
       var bundleResult = Profile.run((firstRun?"B":"Reb")+"uild App", () => {
-        var includeNodeModules = 'symlink';
-
-        // On Windows we cannot symlink node_modules. Copying them is too slow.
-        // Instead receive the NODE_PATH env that we need to set and set it
-        // later on running.
-        if (process.platform === 'win32') {
-          includeNodeModules = 'reference-directly';
-        }
-
         var bundleResult = bundler.bundle({
           projectContext: self.projectContext,
           outputPath: bundlePath,
-          includeNodeModules: includeNodeModules,
+          includeNodeModules: "symlink",
           buildOptions: self.buildOptions,
           hasCachedBundle: !! cachedServerWatchSet,
           previousBuilders: self.builders
