@@ -420,8 +420,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
     const absPathTo = files.pathJoin(this.buildPath, to);
 
-    let canSymlink = !! symlink;
-    if (canSymlink) {
+    if (symlink) {
       if (specificFiles) {
         throw new Error("can't copy only specific paths with a single symlink");
       }
@@ -429,12 +428,6 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       if (this.usedAsFile[to]) {
         throw new Error("tried to copy a directory onto " + to +
                         " but it is is already a file");
-      }
-
-      // Symlinks don't work exactly the same way on Windows, and furthermore
-      // they request Admin permissions to set.
-      if (process.platform === 'win32') {
-        canSymlink = false;
       }
     }
 
@@ -451,7 +444,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     }
 
     let walk = (absFrom, relTo) => {
-      if (canSymlink && ! (relTo in this.usedAsFile)) {
+      if (symlink && ! (relTo in this.usedAsFile)) {
         this._ensureDirectory(files.pathDirname(relTo));
         const absTo = files.pathResolve(this.buildPath, relTo);
         symlinkWithOverwrite(absFrom, absTo);
@@ -651,13 +644,23 @@ function atomicallyRewriteFile(path, data, options) {
 // create a symlink, overwriting the target link, file, or directory
 // if it exists
 function symlinkWithOverwrite(source, target) {
+  const args = [source, target];
+
+  if (process.platform === "win32") {
+    if (! files.stat(source).isDirectory()) {
+      throw new Error("symlink source must be a directory: " + source);
+    }
+
+    args[2] = "junction";
+  }
+
   try {
-    files.symlink(source, target);
+    files.symlink(...args);
   } catch (e) {
     if (e.code === 'EEXIST') {
       // overwrite existing link, file, or directory
       files.rm_recursive(target);
-      files.symlink(source, target);
+      files.symlink(...args);
     } else {
       throw e;
     }
