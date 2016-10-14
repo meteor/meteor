@@ -1,8 +1,35 @@
 ## v.NEXT
 
+## v1.4.2
+
+* This release implements a number of rebuild performance optimizations.
+  As you edit files in development, the server should restart and rebuild
+  much more quickly, especially if you have many `node_modules` files.
+  See https://github.com/meteor/meteor/pull/7668 for more details.
+
+* The `cordova-lib` npm package has been updated to 6.3.1, along with
+  cordova-android (5.2.2) and cordova-ios (4.2.1), and various plugins.
+
 * The `node-pre-gyp` npm package has been updated to 0.6.30.
 
 * The `fibers` npm package has been updated to 1.0.14.
+
+* The `lru-cache` npm package has been updated to 4.0.1.
+
+* The `mongodb` npm package used by the `npm-mongo` Meteor package has
+  been updated to version 2.2.10.
+  [#7780](https://github.com/meteor/meteor/pull/7780)
+
+* The `meteor` tool is now prevented from running as `root` as this is
+  not recommended and can cause issues with permissions.  In some environments,
+  (e.g. Docker), it may still be desired to run as `root` and this can be
+  permitted by passing `--unsafe-perm` to the `meteor` command.
+  [#7821](https://github.com/meteor/meteor/pull/7821)
+
+* When the Meteor development server shuts down, it now attempts to kill
+  the `mongod` process it spawned, in addition to killing any running
+  `mongod` processes when the server first starts up.
+  https://github.com/meteor/meteor/pull/7668/commits/295d3d5678228f06ee0ab6c0d60139849a0ea192
 
 * Blaze-related packages have been extracted to
   [`meteor/blaze`](https://github.com/meteor/blaze), and the main
@@ -21,6 +48,35 @@
 * The default content security policy (CSP) for Cordova now includes `ws:`
   and `wss:` WebSocket protocols.
   [#7774](https://github.com/meteor/meteor/pull/7774)
+
+* `meteor npm` commands are now configured to use `dev_bundle/.npm` as the
+  npm cache directory by default, which should make npm commands less
+  sensitive to non-reproducible factors in the external environment.
+  https://github.com/meteor/meteor/pull/7668/commits/3313180a6ff33ee63602f7592a9506012029e919
+
+* The `meteor <command> ...` syntax will now work for any command
+  installed in `dev_bundle/bin`, except for Meteor's own commands.
+
+* The `meteor test` command now supports the `--no-release-check` flag.
+  https://github.com/meteor/meteor/pull/7668/commits/7097f78926f331fb9e70a06300ce1711adae2850
+
+* JavaScript module bundles on the server no longer include transitive
+  `node_modules` dependencies, since those dependencies can be evaluated
+  directly by Node. This optimization should improve server rebuild times
+  for apps and packages with large `node_modules` directories.
+  https://github.com/meteor/meteor/pull/7668/commits/03c5346873849151cecc3e00606c6e5aa13b3bbc
+
+* The `standard-minifier-css` package now does basic caching for the
+  expensive `mergeCss` function.
+  https://github.com/meteor/meteor/pull/7668/commits/bfa67337dda1e90610830611fd99dcb1bd44846a
+
+* The `coffeescript` package now natively supports `import` and `export`
+  declarations. [#7818](https://github.com/meteor/meteor/pull/7818)
+
+* Running Meteor with a different `--port` will now automatically
+  reconfigure the Mongo replica set when using the WiredTiger storage
+  engine, instead of failing to start Mongo.
+  [#7840](https://github.com/meteor/meteor/pull/7840).
 
 ## v1.4.1.2
 

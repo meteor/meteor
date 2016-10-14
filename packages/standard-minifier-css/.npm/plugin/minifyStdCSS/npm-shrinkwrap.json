@@ -1,9 +1,24 @@
 {
   "dependencies": {
+    "lru-cache": {
+      "version": "4.0.1",
+      "resolved": "https://registry.npmjs.org/lru-cache/-/lru-cache-4.0.1.tgz",
+      "from": "lru-cache@4.0.1"
+    },
+    "pseudomap": {
+      "version": "1.0.2",
+      "resolved": "https://registry.npmjs.org/pseudomap/-/pseudomap-1.0.2.tgz",
+      "from": "pseudomap@>=1.0.1 <2.0.0"
+    },
     "source-map": {
-      "version": "0.5.3",
-      "resolved": "https://registry.npmjs.org/source-map/-/source-map-0.5.3.tgz",
-      "from": "https://registry.npmjs.org/source-map/-/source-map-0.5.3.tgz"
+      "version": "0.5.6",
+      "resolved": "https://registry.npmjs.org/source-map/-/source-map-0.5.6.tgz",
+      "from": "source-map@0.5.6"
+    },
+    "yallist": {
+      "version": "2.0.0",
+      "resolved": "https://registry.npmjs.org/yallist/-/yallist-2.0.0.tgz",
+      "from": "yallist@>=2.0.0 <3.0.0"
     }
   }
 }

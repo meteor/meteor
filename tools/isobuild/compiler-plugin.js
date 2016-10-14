@@ -16,6 +16,9 @@ import {Console} from '../console/console.js';
 import ImportScanner from './import-scanner.js';
 import {cssToCommonJS} from "./css-modules.js";
 import Resolver from "./resolver.js";
+import {
+  optimisticStatOrNull,
+} from "../fs/optimistic.js";
 
 import { isTestFilePath } from './test-files.js';
 
@@ -59,7 +62,7 @@ import { isTestFilePath } from './test-files.js';
 // Cache the (slightly post-processed) results of linker.fullLink.
 const CACHE_SIZE = process.env.METEOR_LINKER_CACHE_SIZE || 1024*1024*100;
 const CACHE_DEBUG = !! process.env.METEOR_TEST_PRINT_LINKER_CACHE_DEBUG;
-const LINKER_CACHE_SALT = 9; // Increment this number to force relinking.
+const LINKER_CACHE_SALT = 10; // Increment this number to force relinking.
 const LINKER_CACHE = new LRU({
   max: CACHE_SIZE,
   // Cache is measured in bytes. We don't care about servePath.
@@ -205,6 +208,10 @@ class InputFile extends buildPluginModule.InputFile {
     // document.
     this._resourceSlot = resourceSlot;
 
+    // Map from absolute paths to stat objects (or null if the file does
+    // not exist).
+    this._statCache = Object.create(null);
+
     // Map from control file names (e.g. package.json, .babelrc) to
     // absolute paths, or null to indicate absence.
     this._controlFileCache = Object.create(null);
@@ -278,6 +285,12 @@ class InputFile extends buildPluginModule.InputFile {
     return this.readAndWatchFileWithHash(path).contents;
   }
 
+  _stat(absPath) {
+    return _.has(this._statCache, absPath)
+      ? this._statCache[absPath]
+      : this._statCache[absPath] = optimisticStatOrNull(absPath);
+  }
+
   // Search ancestor directories for control files (e.g. package.json,
   // .babelrc), and return the absolute path of the first one found, or
   // null if the search failed.
@@ -296,7 +309,7 @@ class InputFile extends buildPluginModule.InputFile {
     while (true) {
       absPath = files.pathJoin(sourceRoot, dir, basename);
 
-      const stat = files.statOrNull(absPath);
+      const stat = this._stat(absPath);
       if (stat && stat.isFile()) {
         return this._controlFileCache[basename] = absPath;
       }
@@ -335,9 +348,9 @@ class InputFile extends buildPluginModule.InputFile {
       this.getPathInPackage()
     );
 
-    let resolved = this._resolveCacheLookup(id, parentPath);
-    if (resolved) {
-      return resolved;
+    const resId = this._resolveCacheLookup(id, parentPath);
+    if (resId) {
+      return resId;
     }
 
     const parentStat = files.statOrNull(parentPath);
@@ -347,9 +360,15 @@ class InputFile extends buildPluginModule.InputFile {
     }
 
     const resolver = batch.getResolver();
+    const resolved = resolver.resolve(id, parentPath);
 
-    return this._resolveCacheStore(
-      id, parentPath, resolver.resolve(id, parentPath).id);
+    if (resolved === "missing") {
+      const error = new Error("Cannot find module '" + id + "'");
+      error.code = "MODULE_NOT_FOUND";
+      throw error;
+    }
+
+    return this._resolveCacheStore(id, parentPath, resolved.id);
   }
 
   require(id, parentPath) {
@@ -873,17 +892,12 @@ export class PackageSourceBatch {
       }
     });
 
-    return this._resolver = new Resolver({
+    return this._resolver = Resolver.getOrCreate({
+      caller: "PackageSourceBatch#getResolver",
       sourceRoot: this.sourceRoot,
       targetArch: this.processor.arch,
       extensions: this.importExtensions,
       nodeModulesPaths,
-      watchSet: this.unibuild.watchSet,
-      onMissing(id) {
-        const error = new Error("Cannot find module '" + id + "'");
-        error.code = "MODULE_NOT_FOUND";
-        throw error;
-      }
     });
   }
 
@@ -1074,14 +1088,38 @@ export class PackageSourceBatch {
 
     this._warnAboutMissingModules(allMissingNodeModules);
 
+    const meteorProvidesBabelRuntime = map.has("babel-runtime");
+
     scannerMap.forEach((scanner, name) => {
       const isApp = ! name;
+      const isWeb = scanner.isWeb();
+      const outputFiles = scanner.getOutputFiles();
 
       if (isApp) {
         const appFilesWithoutNodeModules = [];
 
-        scanner.getOutputFiles().forEach(file => {
+        outputFiles.forEach(file => {
           const parts = file.installPath.split("/");
+
+          if (meteorProvidesBabelRuntime || ! isWeb) {
+            // If the Meteor babel-runtime package is installed, it will
+            // provide implementations for babel-runtime/helpers/* and
+            // babel-runtime/regenerator at runtime, so we should filter
+            // out any node_modules/babel-runtime/* modules from the app.
+            // If the Meteor babel-runtime package is not installed, then
+            // we should rely on node_modules/babel-runtime/* instead. On
+            // the server that still means removing bundled files here and
+            // relying on programs/server/npm/node_modules/babel-runtime,
+            // but on the web these bundled files are all we have, so we'd
+            // better not remove them.
+            if (parts[0] === "node_modules" &&
+                parts[1] === "babel-runtime" &&
+                // Can't just be node_modules/babel-runtime.
+                parts.length > 2) {
+              return;
+            }
+          }
+
           const nodeModulesIndex = parts.indexOf("node_modules");
 
           if (nodeModulesIndex === -1 || (nodeModulesIndex === 0 &&
@@ -1104,7 +1142,7 @@ export class PackageSourceBatch {
         map.get(null).files = appFilesWithoutNodeModules;
 
       } else {
-        map.get(name).files = scanner.getOutputFiles();
+        map.get(name).files = outputFiles;
       }
     });
 

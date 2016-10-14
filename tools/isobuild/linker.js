@@ -453,15 +453,6 @@ var File = function (inputFile, module) {
   self.module = module;
 };
 
-// findAssignedGlobals is somewhat slow, and we often compute assigned variables
-// on the same file multiple times in one process (notably, a single file is
-// often processed for two or three different unibuilds, and is processed again
-// when rebuilding a package when another file has changed). We cache the
-// calculated variables under the source file's hash (calculating the source
-// file's hash is faster than running findAssignedGlobals, and in the case of
-// *.js files we have the hash already anyway).
-var ASSIGNED_GLOBALS_CACHE = {};
-
 _.extend(File.prototype, {
   // Return the globals in this file as an array of symbol names.  For
   // example: if the code references 'Foo.bar.baz' and 'Quux', and
@@ -470,13 +461,8 @@ _.extend(File.prototype, {
   computeAssignedVariables: Profile("linker File#computeAssignedVariables", function () {
     var self = this;
 
-    if (_.has(ASSIGNED_GLOBALS_CACHE, self.sourceHash)) {
-      return ASSIGNED_GLOBALS_CACHE[self.sourceHash];
-    }
-
     try {
-      return ASSIGNED_GLOBALS_CACHE[self.sourceHash] =
-        _.keys(findAssignedGlobals(self.source, self.sourceHash));
+      return _.keys(findAssignedGlobals(self.source, self.sourceHash));
     } catch (e) {
       if (!e.$ParseError) {
         throw e;
@@ -610,47 +596,15 @@ _.extend(File.prototype, {
 
       consumer = new sourcemap.SourceMapConsumer(result.map);
 
-    } else if (noLineNumbers && preserveLineNumbers) {
-      // No need to generate a source map if we don't want line numbers.
-      result = {
-        code: self.source,
-        map: null
-      };
-
     } else {
-      // If we're planning to annotate the source with line number
-      // comments (e.g. because we're combining this file with others in a
-      // package), and we don't already have a source map, then we need to
-      // generate one, but it doesn't have to be very detailed, since we
-      // we can use a dumb implementation of originalPositionFor.
-      const smg = new sourcemap.SourceMapGenerator({
-        file: self.servePath
-      });
-
-      lines = self.source.split(/\r?\n/);
-
-      function addIdentityMapping(pos) {
-        smg.addMapping({
-          original: pos,
-          generated: pos,
-          source: self.servePath,
-        });
-      }
-
-      for (var line = 1; line <= lines.length; ++line) {
-        addIdentityMapping({ line, column: 0 });
-      }
-
-      smg.setSourceContent(self.servePath, self.source);
-
       result = {
         code: self.source,
-        map: smg.toJSON(),
+        map: null,
       };
 
       // Generating line number comments for really big files is not
       // really worth it when there's no meaningful self.sourceMap.
-      if (self.source.length < 500000) {
+      if (! noLineNumbers && result.code.length < 500000) {
         consumer = {
           originalPositionFor(pos) {
             return pos;

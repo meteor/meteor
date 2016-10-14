@@ -1809,8 +1809,8 @@ class JsImage {
   // Write this image out to disk
   //
   // options:
-  // - includeNodeModules: falsy or 'symlink' or 'reference-directly'.
-  //   Documented on exports.bundle.
+  // - includeNodeModules: falsy or 'symlink', documented on
+  //   exports.bundle.
   //
   // Returns an object with the following keys:
   // - controlFile: the path (relative to 'builder') of the control file for
@@ -1834,14 +1834,12 @@ class JsImage {
       if (! options.includeNodeModules ||
           options.includeNodeModules === 'symlink') {
         modulesPhysicalLocation = nmd.getPreferredBundlePath("bundle");
-      } else if (options.includeNodeModules === 'reference-directly') {
-        modulesPhysicalLocation = nmd.sourcePath;
       } else {
         // This is some option we didn't expect - someone has added another case
         // to the includeNodeModules option but didn't update this if block.
         // Fail hard.
-        throw new Error("Option includeNodeModules wasn't falsy, 'symlink', " +
-          "or 'reference-directly'. It was: " + options.includeNodeModules);
+        throw new Error("Option includeNodeModules wasn't falsy or 'symlink'. " +
+                        "It was: " + options.includeNodeModules);
       }
 
       nmd = nmd.copy();
@@ -2139,8 +2137,8 @@ class ServerTarget extends JsImageTarget {
 
   // Output the finished target to disk
   // options:
-  // - includeNodeModules: falsy, 'symlink' or 'reference-directly',
-  //   documented in exports.bundle
+  // - includeNodeModules: falsy or 'symlink', documented in
+  //   exports.bundle.
   // - getRelativeTargetPath: a function that takes {forTarget:
   //   Target, relativeTo: Target} and return the path of one target
   //   in the bundle relative to another. hack to get the path of the
@@ -2203,16 +2201,11 @@ class ServerTarget extends JsImageTarget {
       builder.write('node_modules', {
         symlink: files.pathJoin(files.getDevBundle(), 'server-lib', 'node_modules')
       });
-    } else if (options.includeNodeModules === 'reference-directly') {
-      nodePath.push(
-        files.pathJoin(files.getDevBundle(), 'server-lib', 'node_modules')
-      );
     } else if (options.includeNodeModules) {
       // This is some option we didn't expect - someone has added another case
       // to the includeNodeModules option but didn't update this if block. Fail
       // hard.
-      throw new Error("Option includeNodeModules wasn't falsy, 'symlink', " +
-        "or 'reference-directly'.");
+      throw new Error("Option includeNodeModules wasn't falsy or 'symlink'");
     }
 
     // Linked JavaScript image (including static assets, assuming that there are
@@ -2501,14 +2494,6 @@ Find out more about Meteor at meteor.com.
  *   $NODE_PATH because then random node_modules directories above cwd take
  *   precedence.) To make it even hackier, this also means we make node_modules
  *   directories for packages symlinks instead of copies.
- *   + 'reference-directly' - don't copy the files of node modules.
- *   Instead, use paths directly to files we already have on the file-system: in
- *   package catalog, isopacks folder or the dev_bundle folder.
- *   return the NODE_PATH string with the resulting bundle that would be set as
- *   the NODE_PATH environment variable when the node process is running. (The
- *   fallback option for Windows). For isopacks (meteor packages), link to the
- *   location of the locally stored isopack build (e.g.
- *   ~/.meteor/packages/package/version/npm)
  *
  * - buildOptions: may include
  *   - minifyMode: string, type of minification for the CSS and JS assets

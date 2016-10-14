@@ -285,7 +285,7 @@ if (process.platform === 'win32') {
         resolve(mongoPort);
       });
       client.on('error', () => resolve(null));
-    }).await();
+    }).catch(() => null).await();
   }
 }
 

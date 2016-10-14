@@ -134,7 +134,7 @@ export class IsopackCache {
           packageInfo.version
         );
 
-        return files.realpath(files.pathJoin(isopackPath, arch));
+        return files.pathJoin(isopackPath, arch);
       }
     }
 

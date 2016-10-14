@@ -4,15 +4,15 @@ import utils from '../utils/utils.js';
 import buildmessage from '../utils/buildmessage.js';
 
 import { oldToNew as oldToNewPluginIds, newToOld as newToOldPluginIds }
-  from 'cordova-lib/node_modules/cordova-registry-mapper';
+  from 'cordova-registry-mapper';
 
 export const CORDOVA_ARCH = "web.cordova";
 
 export const CORDOVA_PLATFORMS = ['ios', 'android'];
 
 export const CORDOVA_PLATFORM_VERSIONS = {
-  'android': '5.1.1',
-  'ios': '4.1.0'
+  'android': '5.2.2',
+  'ios': '4.2.1'
 };
 
 const PLATFORM_TO_DISPLAY_NAME_MAP = {

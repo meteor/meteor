@@ -4,7 +4,7 @@ import {Script} from "vm";
 import {
   isString, isEmpty, has, keys, each, map, omit,
 } from "underscore";
-import {sha1, readAndWatchFileWithHash} from "../fs/watch.js";
+import {sha1} from "../fs/watch.js";
 import {matches as archMatches} from "../utils/archinfo.js";
 import {findImportedModuleIdentifiers} from "./js-analyze.js";
 import {cssToCommonJS} from "./css-modules.js";
@@ -20,10 +20,15 @@ import {
   pathBasename,
   pathExtname,
   pathIsAbsolute,
-  statOrNull as realStatOrNull,
   convertToOSPath,
   convertToPosixPath,
 } from "../fs/files.js";
+
+import {
+  optimisticReadFile,
+  optimisticStatOrNull,
+  optimisticHashOrNull,
+} from "../fs/optimistic.js";
 
 import Resolver from "./resolver.js";
 
@@ -115,27 +120,21 @@ export default class ImportScanner {
     this.allMissingNodeModules = Object.create(null);
     this.outputFiles = [];
 
-    this.resolver = new Resolver({
+    this.resolver = Resolver.getOrCreate({
+      caller: "ImportScanner#constructor",
+
       sourceRoot,
       targetArch: bundleArch,
       extensions,
       nodeModulesPaths,
-      watchSet,
-
-      onPackageJson(path, pkg) {
-        return scanner._addPkgJsonToOutput(path, pkg);
-      },
-
-      onMissing(id, parentPath) {
-        return scanner._onMissing(id, parentPath);
-      },
 
       statOrNull(absPath) {
         const file = scanner._getFile(absPath);
         if (file) {
           return fakeFileStat;
         }
-        return realStatOrNull(absPath);
+
+        return optimisticStatOrNull(absPath);
       }
     });
   }
@@ -456,6 +455,22 @@ export default class ImportScanner {
     return result;
   }
 
+  _resolve(id, absPath) {
+    const resolved = this.resolver.resolve(id, absPath);
+
+    if (resolved === "missing") {
+      return this._onMissing(id, absPath);
+    }
+
+    if (resolved && resolved.packageJsonMap) {
+      each(resolved.packageJsonMap, (pkg, path) => {
+        this._addPkgJsonToOutput(path, pkg);
+      });
+    }
+
+    return resolved;
+  }
+
   _scanFile(file) {
     const absPath = pathJoin(this.sourceRoot, file.sourcePath);
 
@@ -474,7 +489,7 @@ export default class ImportScanner {
     }
 
     each(file.deps, (info, id) => {
-      const resolved = this.resolver.resolve(id, absPath);
+      const resolved = this._resolve(id, absPath);
       if (! resolved) {
         return;
       }
@@ -536,7 +551,7 @@ export default class ImportScanner {
       // Append this file to the output array and record its index.
       this._addFile(absImportedPath, depFile);
 
-      if (archMatches(this.bundleArch, "os") &&
+      if (! this.isWeb() &&
           depFile.installPath.startsWith("node_modules/")) {
         // On the server, modules in node_modules directories will be
         // handled natively by Node, so we don't need to build a
@@ -548,9 +563,15 @@ export default class ImportScanner {
     });
   }
 
+  isWeb() {
+    return archMatches(this.bundleArch, "web");
+  }
+
   _readFile(absPath) {
-    let { contents, hash } =
-      readAndWatchFileWithHash(this.watchSet, absPath);
+    const contents = optimisticReadFile(absPath);
+    const hash = optimisticHashOrNull(absPath);
+
+    this.watchSet.addFile(absPath, hash);
 
     return {
       data: contents,
@@ -646,7 +667,7 @@ export default class ImportScanner {
 
     const dirs = this._splitPath(pathDirname(installPath));
     const isApp = ! this.name;
-    const bundlingForWeb = archMatches(this.bundleArch, "web");
+    const bundlingForWeb = this.isWeb();
 
     const topLevelDir = dirs[0];
     if (topLevelDir === "private" ||
@@ -703,7 +724,7 @@ export default class ImportScanner {
 
     if (isApp &&
         Resolver.isNative(id) &&
-        archMatches(this.bundleArch, "web")) {
+        this.isWeb()) {
       // To ensure the native module can be evaluated at runtime, register
       // a dependency on meteor-node-stubs/deps/<id>.js.
       const stubId = Resolver.getNativeStubId(id);
@@ -712,7 +733,7 @@ export default class ImportScanner {
             parentFile.deps) {
           parentFile.deps[stubId] = parentFile.deps[id];
         }
-        return this.resolver.resolve(stubId, absParentPath);
+        return this._resolve(stubId, absParentPath);
       }
     }
 
@@ -770,6 +791,11 @@ export default class ImportScanner {
       };
 
       this._addFile(pkgJsonPath, pkgFile);
+
+      const hash = optimisticHashOrNull(pkgJsonPath);
+      if (hash) {
+        this.watchSet.addFile(pkgJsonPath, hash);
+      }
     }
   }
 }
