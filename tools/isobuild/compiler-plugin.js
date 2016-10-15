@@ -1114,8 +1114,8 @@ export class PackageSourceBatch {
             // better not remove them.
             if (parts[0] === "node_modules" &&
                 parts[1] === "babel-runtime" &&
-                // Can't just be node_modules/babel-runtime.
-                parts.length > 2) {
+                (parts[2] === "helpers" ||
+                 parts[2].startsWith("regenerator"))) {
               return;
             }
           }
