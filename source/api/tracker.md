@@ -101,7 +101,7 @@ after processing outstanding invalidations.
 It is illegal to call `flush` from inside a `flush` or from a running
 computation.
 
-The <a href="https://github.com/meteor/docs/blob/master/long-form/tracker-manual.md#the-flush-cycle">Tracker manual<a>
+The [Tracker manual](https://github.com/meteor/docs/blob/master/long-form/tracker-manual.md#the-flush-cycle)
 describes the motivation for the flush cycle and the guarantees made by
 `Tracker.flush` and `Tracker.afterFlush`.
 
@@ -299,9 +299,8 @@ A Dependency's dependent computations are always valid (they have
 either by the Dependency itself or some other way, it is immediately
 removed.
 
-See the <a href="http://manual.meteor.com/#tracker-reactivevaluewithdependency">
-Meteor Manual</a> to learn how to create a reactive data source using
-  Tracker.Dependency.
+See the [Tracker manual](https://github.com/meteor/docs/blob/master/long-form/tracker-manual.md#creating-a-reactive-value-using-trackerdependency)
+to learn how to create a reactive data source using `Tracker.Dependency`.
 
 {% apibox "Tracker.Dependency#changed" %}
 
