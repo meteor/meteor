@@ -17,6 +17,6 @@ Package.onUse(function (api) {
   api.use("es5-shim", { weak: true });
   api.use("modules");
   api.use("promise"); // Needed by Regenerator.
-  api.addFiles("babel-runtime.js");
+  api.mainModule("babel-runtime.js");
   api.export("meteorBabelHelpers");
 });

@@ -2,7 +2,40 @@ var hasOwn = Object.prototype.hasOwnProperty;
 var S = typeof Symbol === "function" ? Symbol : {};
 var iteratorSymbol = S.iterator || "@@iterator";
 
-meteorBabelHelpers = require("meteor-babel-helpers");
+exports.meteorBabelHelpers = require("meteor-babel-helpers");
+
+// Returns true if a given absolute identifier will be provided at runtime
+// by the babel-runtime package.
+exports.checkHelper = function checkHelper(id) {
+  var parts = id.split("/");
+  var index = 0;
+
+  // Skip over leading / and node_modules.
+  if (parts[index] === "") ++index;
+  if (parts[index] === "node_modules") ++index;
+
+  if (parts[index] !== "babel-runtime") {
+    return false;
+  }
+
+  // Skip over babel-runtime.
+  ++index;
+
+  if (parts.length - index === 2) {
+    return parts[index] === "helpers" &&
+      hasOwn.call(BabelRuntime, stripDotJS(parts[index + 1]));
+  }
+
+  if (parts.length - index === 1) {
+    return stripDotJS(parts[index]) === "regenerator";
+  }
+
+  return false;
+};
+
+function stripDotJS(name) {
+  return name.replace(/\.js$/, "");
+}
 
 var BabelRuntime = {
   // es6.templateLiterals
