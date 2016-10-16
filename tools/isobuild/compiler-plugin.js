@@ -771,6 +771,15 @@ class ResourceSlot {
   }
 }
 
+let babelRuntime;
+function checkBabelRuntimeHelper(id) {
+  if (! babelRuntime) {
+    babelRuntime = require("../tool-env/isopackets.js")
+      .load("runtime")["babel-runtime"];
+  }
+  return babelRuntime.checkHelper(id);
+}
+
 export class PackageSourceBatch {
   constructor(unibuild, processor, {
     sourceRoot,
@@ -1112,10 +1121,7 @@ export class PackageSourceBatch {
             // relying on programs/server/npm/node_modules/babel-runtime,
             // but on the web these bundled files are all we have, so we'd
             // better not remove them.
-            if (parts[0] === "node_modules" &&
-                parts[1] === "babel-runtime" &&
-                (parts[2] === "helpers" ||
-                 parts[2].startsWith("regenerator"))) {
+            if (checkBabelRuntimeHelper(file.installPath)) {
               return;
             }
           }
