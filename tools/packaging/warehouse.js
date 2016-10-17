@@ -33,7 +33,7 @@
 ///
 /// The warehouse is not used at all when running from a
 /// checkout. Only local packages will be loaded (from
-/// CHECKOUT/packages or within a directory in the PACKAGE_DIRS
+/// CHECKOUT/packages or within a directory in the METEOR_PACKAGE_DIRS
 /// environment variable). The setup of that is handled by release.js.
 
 var os = require("os");

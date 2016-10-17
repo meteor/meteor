@@ -505,7 +505,7 @@ modified.
 Packages may be specified by name or by path. If a package argument
 contains a '/', it is loaded from a directory of that name; otherwise,
 the package name is resolved according to the usual package search
-algorithm ('packages' subdirectory of the current app, $PACKAGE_DIRS
+algorithm ('packages' subdirectory of the current app, $METEOR_PACKAGE_DIRS
 directories, and core packages in that order). You can test any number
 of packages simultaneously. If you don't specify any package names
 then all available packages will be tested.
@@ -778,7 +778,7 @@ and rebuilds the package from scratch. Packages are specified by name.
 
 If you pass no arguments, this will rebuild all local packages.
 That includes packages found through the
-PACKAGE_DIRS environment variable, local packages in the current
+METEOR_PACKAGE_DIRS environment variable, local packages in the current
 application, and, if running Meteor from a checkout, the packages in
 the checkout. It doesn't include any packages for which we don't have
 the source.
