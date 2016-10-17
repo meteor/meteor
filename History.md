@@ -20,6 +20,11 @@
 * The `meteor <command> ...` syntax will now work for any command
   installed in `dev_bundle/bin`, except for Meteor's own commands.
 
+* Incomplete package downloads will now fail (and be retried several
+  times) instead of silently succeeding, which was the cause of the
+  dreaded `Error: ENOENT: no such file or directory, open... os.json`
+  error. [#7806](https://github.com/meteor/meteor/issues/7806)
+
 ## v1.4.1.2
 
 * Node has been upgraded to version 4.6.0, a recommended security release:
