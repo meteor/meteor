@@ -41,59 +41,56 @@ meteor
 
 ## Slow Start (for developers)
 
-If you want to run on the bleeding edge, or help develop Meteor, you
-can run Meteor directly from a git checkout.
+If you want to run on the bleeding edge, or [help contribute to Meteor](Contributing.md), you
+can run Meteor directly from a Git checkout using these steps:
 
-```bash
-git clone --recursive git://github.com/meteor/meteor.git
-cd meteor
-```
+0. **Clone from GitHub**
 
-The `--recursive` flag ensures that submodules will be initialized and
-updated as part of the cloning process. If you cloned the `meteor`
-repository without the `--recursive` flag, you can equivalently run
+    ```sh
+    $ git clone --recursive https://github.com/meteor/meteor.git
+    $ cd meteor
+    ```
 
-```bash
-git submodule update --init --recursive
-```
+    > ##### Important note about Git submodules!
+    >
+    > This repository uses Git submodules.  If you clone without the `--recursive` flag,
+    > re-fetch with `git pull` or experience "`Depending on unknown package`" errors,
+    > run the following in the repository root to sync things up again:
+    >
+    >     $ git submodule update --init --recursive
 
-in the root of the `meteor` repository. The typical symptom of not
-updating submodules will be `Error: Depending on unknown package ...`
-when you run most Meteor commands.
+0. **_(Optional)_ Compile dependencies**
 
-If you're the sort of person who likes to build everything from scratch,
-you can build all the Meteor dependencies (node.js, npm, mongodb, etc)
-with the provided script. This requires git, a C and C++ compiler,
-autotools, and scons. If you do not run this script, Meteor will
-automatically download pre-compiled binaries when you first run it.
+    > This optional step requires a C and C++ compiler, autotools, and scons.
+    > If this step is skipped, Meteor will simply download pre-built binaries.
 
-```bash
-# OPTIONAL
-./scripts/generate-dev-bundle.sh
-```
+    To build everything from scratch (`node`, `npm`, `mongodb`, etc.) run the following:
 
-Now you can run meteor directly from the checkout (if you did not
-build the dependency bundle above, this will take a few moments to
-download a pre-build version).
+    ```sh
+    $ ./scripts/generate-dev-bundle.sh # OPTIONAL!
+    ```
 
-```bash
-./meteor --help
-```
+0. **Run a Meteor command to install dependencies**
 
-From your checkout, you can read the docs locally. The `/docs` directory is a
-meteor application, so simply change into the `/docs` directory and launch
-the app:
+    > If you did not compile dependencies above, this will also download the binaries.
 
-```bash
-cd docs/
-../meteor
-```
 
-You'll then be able to read the docs locally in your browser at
-`http://localhost:3000/`.
+    ```sh
+    $ ./meteor --help
+    ```
 
-Note that if you run Meteor from a git checkout, you cannot pin apps to specific
-Meteor releases or run using different Meteor releases using `--release`.
+0. **Ready to Go!**
+
+    Your local Meteor checkout is now ready to use!  You can use this `./meteor`
+    anywhere you would normally call the system `meteor`.  For example,:
+
+    ```sh
+    $ cd my-app/
+    $ /path/to/meteor-checkout/meteor run
+    ```
+
+    > _Note:_ When running from a `git` checkout, you cannot pin apps to specific
+    > Meteor releases or change the release using `--release`.
 
 ## Uninstalling Meteor
 

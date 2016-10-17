@@ -97,6 +97,7 @@ export class AccountsCommon {
    * @param {Number} options.loginExpirationInDays The number of days from when a user logs in until their token expires and they are logged out. Defaults to 90. Set to `null` to disable login expiration.
    * @param {String} options.oauthSecretKey When using the `oauth-encryption` package, the 16 byte key using to encrypt sensitive account credentials in the database, encoded in base64.  This option may only be specifed on the server.  See packages/oauth-encryption/README.md for details.
    * @param {Number} options.passwordResetTokenExpirationInDays The number of days from when a link to reset password is sent until token expires and user can't reset password with the link anymore. Defaults to 3.
+   * @param {Number} options.passwordEnrollTokenExpirationInDays The number of days from when a link to set inital password is sent until token expires and user can't set password with the link anymore. Defaults to 30.
    */
   config(options) {
     var self = this;
@@ -128,7 +129,7 @@ export class AccountsCommon {
     }
 
     // validate option keys
-    var VALID_KEYS = ["sendVerificationEmail", "forbidClientAccountCreation",
+    var VALID_KEYS = ["sendVerificationEmail", "forbidClientAccountCreation", "passwordEnrollTokenExpirationInDays",
                       "restrictCreationByEmailDomain", "loginExpirationInDays", "passwordResetTokenExpirationInDays"];
     _.each(_.keys(options), function (key) {
       if (!_.contains(VALID_KEYS, key)) {
@@ -217,6 +218,11 @@ export class AccountsCommon {
             DEFAULT_PASSWORD_RESET_TOKEN_EXPIRATION_DAYS) * 24 * 60 * 60 * 1000;
   }
 
+  _getPasswordEnrollTokenLifetimeMs() {
+    return (this._options.passwordEnrollTokenExpirationInDays ||
+        DEFAULT_PASSWORD_ENROLL_TOKEN_EXPIRATION_DAYS) * 24 * 60 * 60 * 1000;
+  }
+
   _tokenExpiration(when) {
     // We pass when through the Date constructor for backwards compatibility;
     // `when` used to be a number.
@@ -259,6 +265,8 @@ Meteor.user = function () {
 var DEFAULT_LOGIN_EXPIRATION_DAYS = 90;
 // how long (in days) until reset password token expires
 var DEFAULT_PASSWORD_RESET_TOKEN_EXPIRATION_DAYS = 3;
+// how long (in days) until enrol password token expires
+var DEFAULT_PASSWORD_ENROLL_TOKEN_EXPIRATION_DAYS = 30;
 // Clients don't try to auto-login with a token that is going to expire within
 // .1 * DEFAULT_LOGIN_EXPIRATION_DAYS, capped at MIN_TOKEN_LIFETIME_CAP_SECS.
 // Tries to avoid abrupt disconnects from expiring tokens.
