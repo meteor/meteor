@@ -797,7 +797,7 @@ modifiers](http://docs.mongodb.org/manual/reference/operator/update/).
 
 Sorts may be specified using your choice of several syntaxes:
 
-```
+```js
 // All of these do the same thing (sort in ascending order by
 // key "a", breaking ties in descending order of key "b")
 
