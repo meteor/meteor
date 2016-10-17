@@ -299,7 +299,15 @@ _.extend(exports, {
     // require it until we definitely need it.
     Console.debug("Doing HTTP request: ", options.method || 'GET', options.url);
     var request = require('request');
-    var req = request(options, callback);
+    var req = request(options, function (error, response, body) {
+      const contentLength = Number(response.headers["content-length"]);
+      if (contentLength > 0 && body.length < contentLength) {
+        error = new Error(
+          "Expected " + contentLength + " bytes in request body " +
+            "but received only " + body.length);
+      }
+      return callback.call(this, error, response, body);
+    });
 
     if (_.isFunction(onRequest)) {
       onRequest(req);
