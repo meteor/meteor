@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Dictionary data structure allowing non-string keys",
-  version: '1.0.9-beta.12'
+  version: '1.0.9-beta.13'
 });
 
 Package.onUse(function (api) {
