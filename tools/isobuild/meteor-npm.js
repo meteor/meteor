@@ -22,13 +22,6 @@ import {
   convert as convertColonsInPath
 } from "../utils/colon-converter.js";
 
-import {
-  optimisticLStat,
-  optimisticStatOrNull,
-  optimisticReadFile,
-  optimisticReaddir,
-} from "../fs/optimistic.js";
-
 var meteorNpm = exports;
 
 // if a user exits meteor while we're trying to create a .npm
@@ -140,11 +133,11 @@ export function getProdPackageNames(nodeModulesDir) {
   // Returns true iff dir is a package directory.
   function walk(dir) {
     const packageJsonPath = files.pathJoin(dir, "package.json");
-    const packageJsonStat = optimisticStatOrNull(packageJsonPath);
+    const packageJsonStat = files.statOrNull(packageJsonPath);
 
     if (packageJsonStat &&
         packageJsonStat.isFile()) {
-      const pkg = JSON.parse(optimisticReadFile(packageJsonPath));
+      const pkg = JSON.parse(files.readFile(packageJsonPath));
       const nodeModulesDir = files.pathJoin(dir, "node_modules");
       nodeModulesDirStack.push(nodeModulesDir);
 
@@ -194,7 +187,7 @@ export function getProdPackageNames(nodeModulesDir) {
     for (let i = nodeModulesDirStack.length - 1; i >= 0; --i) {
       const nodeModulesDir = nodeModulesDirStack[i];
       const candidate = files.pathJoin(nodeModulesDir, name);
-      const stat = optimisticStatOrNull(candidate);
+      const stat = files.statOrNull(candidate);
       if (stat && stat.isDirectory()) {
         return candidate;
       }
@@ -437,13 +430,13 @@ function copyNpmPackageWithSymlinkedNodeModules(fromPkgDir, toPkgDir) {
 }
 
 const isPortable = Profile("meteorNpm.isPortable", dir => {
-  const lstat = optimisticLStat(dir);
+  const lstat = files.lstat(dir);
   if (! lstat.isDirectory()) {
     // Non-directory files are portable unless they end with .node.
     return ! dir.endsWith(".node");
   }
 
-  const pkgJsonStat = optimisticStatOrNull(files.pathJoin(dir, "package.json"));
+  const pkgJsonStat = files.statOrNull(files.pathJoin(dir, "package.json"));
   const canCache = pkgJsonStat && pkgJsonStat.isFile();
   const portableFile = files.pathJoin(dir, ".meteor-portable");
 
@@ -455,7 +448,7 @@ const isPortable = Profile("meteorNpm.isPortable", dir => {
     // directories, so that they will get cleared away the next time those
     // packages are (re)installed.
     try {
-      return JSON.parse(optimisticReadFile(portableFile));
+      return JSON.parse(files.readFile(portableFile));
     } catch (e) {
       if (! (e instanceof SyntaxError ||
              e.code === "ENOENT")) {
@@ -468,7 +461,7 @@ const isPortable = Profile("meteorNpm.isPortable", dir => {
     fs.unlink(portableFile, error => {});
   }
 
-  const result = optimisticReaddir(dir).every(
+  const result = files.readdir(dir).every(
     // Ignore files that start with a ".", such as .bin directories.
     itemName => itemName.startsWith(".") ||
       isPortable(files.pathJoin(dir, itemName)));
