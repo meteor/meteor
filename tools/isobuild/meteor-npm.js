@@ -22,6 +22,11 @@ import {
   convert as convertColonsInPath
 } from "../utils/colon-converter.js";
 
+import {
+  dirtyNpmPackageByPath,
+  dirtyNpmPackageByName,
+} from "../fs/optimistic.js";
+
 var meteorNpm = exports;
 
 // if a user exits meteor while we're trying to create a .npm
@@ -340,6 +345,8 @@ Profile("meteorNpm.rebuildIfNonPortable", function (nodeModulesDir) {
   // If the `npm rebuild` command succeeded, overwrite the original
   // package directories with the rebuilt package directories.
   dirsToRebuild.forEach(function (pkgPath) {
+    dirtyNpmPackageByPath(pkgPath);
+
     const actualNodeModulesDir =
       files.pathJoin(pkgPath, "node_modules");
 
@@ -682,6 +689,8 @@ var completeNpmDirectory = function (packageName, newPackageNpmDir,
   createReadme(newPackageNpmDir);
   createNodeVersion(newPackageNpmDir);
   files.renameDirAlmostAtomically(newPackageNpmDir, packageNpmDir);
+
+  Object.keys(npmDependencies).forEach(dirtyNpmPackageByName);
 };
 
 var createReadme = function (newPackageNpmDir) {
