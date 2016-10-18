@@ -461,6 +461,17 @@ _.extend(File.prototype, {
   computeAssignedVariables: Profile("linker File#computeAssignedVariables", function () {
     var self = this;
 
+    if (self.installPath) {
+      const parts = self.installPath.split("/");
+      const nmi = parts.indexOf("node_modules");
+      if (nmi >= 0 && parts[nmi + 1] !== "meteor") {
+        // If this file is in a node_modules directory and is not part of
+        // a Meteor package, then we don't care about capturing its global
+        // variable assignments.
+        return [];
+      }
+    }
+
     try {
       return _.keys(findAssignedGlobals(self.source, self.sourceHash));
     } catch (e) {

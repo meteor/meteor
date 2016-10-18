@@ -23,9 +23,11 @@ import {
 } from "../utils/colon-converter.js";
 
 import {
+  dirtyNpmPackageByPath,
+  dirtyNpmPackageByName,
   optimisticLStat,
   optimisticStatOrNull,
-  optimisticReadFile,
+  optimisticReadJsonOrNull,
   optimisticReaddir,
 } from "../fs/optimistic.js";
 
@@ -144,7 +146,7 @@ export function getProdPackageNames(nodeModulesDir) {
 
     if (packageJsonStat &&
         packageJsonStat.isFile()) {
-      const pkg = JSON.parse(optimisticReadFile(packageJsonPath));
+      const pkg = optimisticReadJsonOrNull(packageJsonPath);
       const nodeModulesDir = files.pathJoin(dir, "node_modules");
       nodeModulesDirStack.push(nodeModulesDir);
 
@@ -266,16 +268,8 @@ function rebuildVersionsAreCompatible(pkgPath) {
   const versionFile =
     files.pathJoin(pkgPath, lastRebuildJSONFilename);
 
-  try {
-    var versions = JSON.parse(files.readFile(versionFile));
-  } catch (e) {
-    if (! (e instanceof SyntaxError ||
-           e.code === "ENOENT")) {
-      throw e;
-    }
-  }
-
-  return versionsAreCompatible(versions);
+  return versionsAreCompatible(
+    optimisticReadJsonOrNull(versionFile));
 }
 
 // Rebuilds any binary dependencies in the given node_modules directory,
@@ -347,6 +341,8 @@ Profile("meteorNpm.rebuildIfNonPortable", function (nodeModulesDir) {
   // If the `npm rebuild` command succeeded, overwrite the original
   // package directories with the rebuilt package directories.
   dirsToRebuild.forEach(function (pkgPath) {
+    dirtyNpmPackageByPath(pkgPath);
+
     const actualNodeModulesDir =
       files.pathJoin(pkgPath, "node_modules");
 
@@ -454,13 +450,9 @@ const isPortable = Profile("meteorNpm.isPortable", dir => {
     // put .meteor-portable files only in the individual top-level package
     // directories, so that they will get cleared away the next time those
     // packages are (re)installed.
-    try {
-      return JSON.parse(optimisticReadFile(portableFile));
-    } catch (e) {
-      if (! (e instanceof SyntaxError ||
-             e.code === "ENOENT")) {
-        throw e;
-      }
+    const result = optimisticReadJsonOrNull(portableFile);
+    if (result) {
+      return result;
     }
   } else {
     // Clean up any .meteor-portable files we mistakenly wrote in
@@ -689,6 +681,8 @@ var completeNpmDirectory = function (packageName, newPackageNpmDir,
   createReadme(newPackageNpmDir);
   createNodeVersion(newPackageNpmDir);
   files.renameDirAlmostAtomically(newPackageNpmDir, packageNpmDir);
+
+  Object.keys(npmDependencies).forEach(dirtyNpmPackageByName);
 };
 
 var createReadme = function (newPackageNpmDir) {

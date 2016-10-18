@@ -21,7 +21,7 @@ import LRU from "lru-cache";
 import { wrap } from "optimism";
 import {
   optimisticStatOrNull,
-  optimisticReadFile,
+  optimisticReadJsonOrNull,
 } from "../fs/optimistic.js";
 
 const nativeModulesMap = Object.create(null);
@@ -279,26 +279,9 @@ export default class Resolver {
     return resolved || "missing";
   }
 
-  _readPkgJson(path) {
-    if (! optimisticStatOrNull(path)) {
-      return null;
-    }
-
-    try {
-      return JSON.parse(optimisticReadFile(path));
-    } catch (e) {
-      if (! (e instanceof SyntaxError ||
-             e.code === "ENOENT")) {
-        throw e;
-      }
-    }
-
-    return null;
-  }
-
   _resolvePkgJsonMain(dirPath, _seenDirPaths) {
     const pkgJsonPath = pathJoin(dirPath, "package.json");
-    const pkg = this._readPkgJson(pkgJsonPath);
+    const pkg = optimisticReadJsonOrNull(pkgJsonPath);
     if (! pkg) {
       return null;
     }

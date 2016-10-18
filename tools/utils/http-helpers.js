@@ -37,6 +37,14 @@ class ConcatStream extends Writable {
 
     return this.chunks[0];
   }
+
+  end(force = false) {
+    // Override the Writable#end method to ignore any .end() calls for
+    // this stream, since we likely want to resume the download later.
+    if (force === true) {
+      super.end();
+    }
+  }
 }
 
 // Helper that tracks bytes written to a writable
@@ -299,7 +307,17 @@ _.extend(exports, {
     // require it until we definitely need it.
     Console.debug("Doing HTTP request: ", options.method || 'GET', options.url);
     var request = require('request');
-    var req = request(options, callback);
+    var req = request(options, function (error, response, body) {
+      if (! error && response && body) {
+        const contentLength = Number(response.headers["content-length"]);
+        if (contentLength > 0 && body.length < contentLength) {
+          error = new Error(
+            "Expected " + contentLength + " bytes in request body " +
+              "but received only " + body.length);
+        }
+      }
+      return callback.call(this, error, response, body);
+    });
 
     if (_.isFunction(onRequest)) {
       onRequest(req);
@@ -470,13 +488,15 @@ _.extend(exports, {
       }
     }
 
-
     const result = attempt().await();
     const response = result.response
     if (response.statusCode >= 400 && response.statusCode < 600) {
       const href = response.request.href;
       throw Error(`Could not get ${href}; server returned [${response.statusCode}]`);
     }
+
+    // Really end the stream if we got this far.
+    outputStream.end(true);
 
     return outputStream.getBuffer();
   }
