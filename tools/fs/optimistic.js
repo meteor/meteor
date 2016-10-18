@@ -12,6 +12,10 @@ import {
   readdir,
 } from "./files.js";
 
+// When in doubt, the optimistic caching system can be completely disabled
+// by setting this environment variable.
+const ENABLED = ! process.env.METEOR_DISABLE_OPTIMISTIC_CACHING;
+
 function makeOptimistic(name, fn) {
   const wrapper = wrap(function (...args) {
     const packageName = getNpmPackageName(args[0]);
@@ -21,6 +25,11 @@ function makeOptimistic(name, fn) {
     return fn.apply(this, args);
   }, {
     makeCacheKey(...args) {
+      if (! ENABLED) {
+        // Cache nothing when the optimistic caching system is disabled.
+        return;
+      }
+
       const path = args[0];
       if (! pathIsAbsolute(path)) {
         return;
