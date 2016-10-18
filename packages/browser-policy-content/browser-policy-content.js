@@ -105,7 +105,7 @@ var addSourceForDirective = function (directive, src) {
     var toAdd = [];
 
     //Only add single quotes to CSP2 script digests
-    if (/^((sha)(256|384|512)-)/.test(src)) {
+    if (/^(sha(256|384|512)-)/i.test(src)) {
       toAdd.push("'" + src + "'");
     } else {
       src = src.toLowerCase();
