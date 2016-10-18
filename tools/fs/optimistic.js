@@ -122,9 +122,9 @@ export const optimisticStatOrNull = makeOptimistic("statOrNull", statOrNull);
 export const optimisticLStat = makeOptimistic("lstat", lstat);
 export const optimisticReadFile = makeOptimistic("readFile", readFile);
 export const optimisticReaddir = makeOptimistic("readdir", readdir);
-export const optimisticHashOrNull = makeOptimistic("hashOrNull", path => {
+export const optimisticHashOrNull = makeOptimistic("hashOrNull", (...args) => {
   try {
-    return sha1(optimisticReadFile(path));
+    return sha1(optimisticReadFile(...args));
 
   } catch (e) {
     if (e.code !== "EISDIR" &&
@@ -133,5 +133,18 @@ export const optimisticHashOrNull = makeOptimistic("hashOrNull", path => {
     }
   }
 
+  return null;
+});
+
+export const optimisticReadJsonOrNull =
+makeOptimistic("readJsonOrNull", (...args) => {
+  try {
+    return JSON.parse(optimisticReadFile(...args));
+  } catch (e) {
+    if (! (e instanceof SyntaxError ||
+           e.code === "ENOENT")) {
+      throw e;
+    }
+  }
   return null;
 });
