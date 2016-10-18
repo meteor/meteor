@@ -18,6 +18,8 @@ Package.onUse(function(api) {
     ['twitter_configure.html', 'twitter_configure.js'],
     'client');
 
+  api.addFiles('twitter_common.js', ['server', 'client']);
+
   api.addFiles('twitter_server.js', 'server');
   api.addFiles('twitter_client.js', 'client');
 });
