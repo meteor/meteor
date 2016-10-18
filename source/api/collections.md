@@ -720,7 +720,7 @@ setTimeout(function () {handle.stop();}, 5000);
 {% apibox "Mongo.ObjectID" %}
 
 `Mongo.ObjectID` follows the same API as the [Node MongoDB driver
-`ObjectID`](http://mongodb.github.com/node-mongodb-native/api-bson-generated/objectid.html)
+`ObjectID`](http://mongodb.github.io/node-mongodb-native/2.2/api/ObjectID.html)
 class. Note that you must use the `equals` method (or [`EJSON.equals`](#ejson_equals)) to
 compare them; the `===` operator will not work. If you are writing generic code
 that needs to deal with `_id` fields that may be either strings or `ObjectID`s, use
