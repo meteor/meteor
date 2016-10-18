@@ -1,12 +1,16 @@
-Twitter = {};
-
 var urls = {
   requestToken: "https://api.twitter.com/oauth/request_token",
   authorize: "https://api.twitter.com/oauth/authorize",
   accessToken: "https://api.twitter.com/oauth/access_token",
-  authenticate: "https://api.twitter.com/oauth/authenticate"
+  authenticate: function (oauthBinding, params) {
+    return OAuth._queryParamsWithAuthTokenUrl(
+      "https://api.twitter.com/oauth/authenticate",
+      oauthBinding,
+      params,
+      Twitter.validParamsAuthenticate
+    );
+  }
 };
-
 
 // https://dev.twitter.com/docs/api/1.1/get/account/verify_credentials
 Twitter.whitelistedFields = ['profile_image_url', 'profile_image_url_https', 'lang', 'email'];

@@ -1,5 +1,26 @@
 var url = Npm.require("url");
 
+OAuth._queryParamsWithAuthTokenUrl = function (authUrl, oauthBinding, params, whitelistedQueryParams) {
+  params = params || {};
+  var redirectUrlObj = url.parse(authUrl, true);
+
+  _.extend(
+    redirectUrlObj.query,
+    _.pick(params.query, whitelistedQueryParams),
+    {
+      oauth_token: oauthBinding.requestToken,
+    }
+  );
+
+  // Clear the `search` so it is rebuilt by Node's `url` from the `query` above.
+  // Using previous versions of the Node `url` module, this was just set to ""
+  // However, Node 6 docs seem to indicate that this should be `undefined`.
+  delete redirectUrlObj.search;
+
+  // Reconstruct the URL back with provided query parameters merged with oauth_token
+  return url.format(redirectUrlObj);
+};
+
 // connect middleware
 OAuth._requestHandlers['1'] = function (service, query, res) {
   var config = ServiceConfiguration.configurations.findOne({service: service.serviceName});
@@ -30,19 +51,19 @@ OAuth._requestHandlers['1'] = function (service, query, res) {
       oauthBinding.requestTokenSecret);
 
     // support for scope/name parameters
-    var redirectUrl = undefined;
+    var redirectUrl;
+    var authParams = {
+      query: query
+    };
+
     if(typeof urls.authenticate === "function") {
-      redirectUrl = urls.authenticate(oauthBinding, {
-        query: query
-      });
+      redirectUrl = urls.authenticate(oauthBinding, authParams);
     } else {
-      // Parse the URL to support additional query parameters in urls.authenticate
-      var redirectUrlObj = url.parse(urls.authenticate, true);
-      redirectUrlObj.query = redirectUrlObj.query || {};
-      redirectUrlObj.query.oauth_token = oauthBinding.requestToken;
-      redirectUrlObj.search = '';
-      // Reconstruct the URL back with provided query parameters merged with oauth_token
-      redirectUrl = url.format(redirectUrlObj);
+      redirectUrl = OAuth._queryParamsWithAuthTokenUrl(
+        urls.authenticate,
+        oauthBinding,
+        authParams
+      );
     }
 
     // redirect to provider login, which will redirect back to "step 2" below
