@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Base64 encoding and decoding",
-  version: '1.0.10-beta.13'
+  version: '1.0.10-rc.0'
 });
 
 Package.onUse(function (api) {
