@@ -113,16 +113,24 @@ fi
 DEV_BUNDLE="$SCRIPT_DIR/dev_bundle"
 METEOR="$SCRIPT_DIR/tools/index.js"
 
+# Set the nofile ulimit as high as permitted by the hard-limit/kernel
+if [ "$(ulimit -Sn)" != "unlimited" ]; then
+    if [ "$(uname -s)" = "Darwin" ]; then
+        maxfilesuse="$(sysctl -n kern.maxfilesperproc)"
+    else
+        maxfilesuse="$(ulimit -Hn)"
+    fi
 
-# Try higher ulimit maxfiles settings until permitted by the kernel
-if [ "$(ulimit -n)" != "unlimited" ] && ! [ "$(ulimit -n)" -gt 32768 ] ; then
-    ulimit -n 32768 > /dev/null 2>&1 || \
-    ulimit -n 16384 > /dev/null 2>&1 || \
-    ulimit -n 8192 > /dev/null 2>&1 || \
-    ulimit -n 4096 > /dev/null 2>&1 || \
-    ulimit -n 2048 > /dev/null 2>&1 || \
-    ulimit -n 1024 > /dev/null 2>&1 || \
-    ulimit -n 512 > /dev/null 2>&1
+    if [ -n "${maxfilesuse}" ] && [ "${maxfilesuse}" != "unlimited" ]; then
+        if ! ulimit -Sn ${maxfilesuse} > /dev/null 2>&1; then
+            echo "Warning: Meteor was unable to raise the limit for number of open files"
+            echo "for the current user.  Please consider filing an issue at:"
+            echo ""
+            echo "  https://github.com/meteor/meteor/issues"
+            echo ""
+            echo "Please include the output of 'uname -a', 'ulimit -H' and 'ulimit -S'"
+        fi
+    fi
 fi
 
 # We used to set $NODE_PATH here to include the node_modules from the dev
