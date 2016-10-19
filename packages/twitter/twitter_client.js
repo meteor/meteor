@@ -37,11 +37,13 @@ Twitter.requestCredential = function (options, credentialRequestCompleteCallback
   }
 
   // Support additional, permitted parameters
-  var addlParams = Twitter.validParamsAuthenticate;
-  for (var i = 0, len = addlParams.length; i < len; i++) {
-    if (options && options[addlParams[i]]) {
-      loginPath += "&" + addlParams[i] + "=" + encodeURIComponent(options[addlParams[i]]);
-    }
+  if (options) {
+    var hasOwn = Object.prototype.hasOwnProperty;
+    Twitter.validParamsAuthenticate.forEach(function (param) {
+      if (hasOwn.call(options, param)) {
+        loginPath += "&" + param + "=" + encodeURIComponent(options[param]);
+      }
+    });
   }
 
   var loginUrl = Meteor.absoluteUrl(loginPath);
