@@ -102,19 +102,26 @@ var addSourceForDirective = function (directive, src) {
   if (_.contains(_.values(keywords), src)) {
     cspSrcs[directive].push(src);
   } else {
-    src = src.toLowerCase();
-
-    // Trim trailing slashes.
-    src = src.replace(/\/+$/, '');
-
     var toAdd = [];
-    // If there is no protocol, add both http:// and https://.
-    if (! /^([a-z0-9.+-]+:)/.test(src)) {
-      toAdd.push("http://" + src);
-      toAdd.push("https://" + src);
+
+    //Only add single quotes to CSP2 script digests
+    if (/^(sha(256|384|512)-)/i.test(src)) {
+      toAdd.push("'" + src + "'");
     } else {
-      toAdd.push(src);
+      src = src.toLowerCase();
+
+      // Trim trailing slashes.
+      src = src.replace(/\/+$/, '');
+
+      // If there is no protocol, add both http:// and https://.
+      if (! /^([a-z0-9.+-]+:)/.test(src)) {
+        toAdd.push("http://" + src);
+        toAdd.push("https://" + src);
+      } else {
+        toAdd.push(src);
+      }
     }
+
     _.each(toAdd, function (s) {
       cspSrcs[directive].push(s);
     });

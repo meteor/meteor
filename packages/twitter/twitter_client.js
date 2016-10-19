@@ -1,5 +1,3 @@
-Twitter = {};
-
 // Request Twitter credentials for the user
 // @param options {optional}  XXX support options.requestPermissions
 // @param credentialRequestCompleteCallback {Function} Callback function to call on
@@ -38,9 +36,14 @@ Twitter.requestCredential = function (options, credentialRequestCompleteCallback
     }
   }
 
-  // Handle force login (request the user to enter their credentials)
-  if (options && options.force_login) {
-    loginPath += "&force_login=true";
+  // Support additional, permitted parameters
+  if (options) {
+    var hasOwn = Object.prototype.hasOwnProperty;
+    Twitter.validParamsAuthenticate.forEach(function (param) {
+      if (hasOwn.call(options, param)) {
+        loginPath += "&" + param + "=" + encodeURIComponent(options[param]);
+      }
+    });
   }
 
   var loginUrl = Meteor.absoluteUrl(loginPath);
