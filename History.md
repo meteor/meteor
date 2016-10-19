@@ -2,6 +2,9 @@
 
 ## v1.4.1.3
 
+* Node has been updated to version 4.6.1:
+  https://nodejs.org/en/blog/release/v4.6.1/
+
 * The `fibers` npm package has been upgraded to version 1.0.15.
 
 ## v1.4.1.2
