@@ -122,14 +122,7 @@ if [ "$(ulimit -Sn)" != "unlimited" ]; then
     fi
 
     if [ -n "${maxfilesuse}" ] && [ "${maxfilesuse}" != "unlimited" ]; then
-        if ! ulimit -Sn ${maxfilesuse} > /dev/null 2>&1; then
-            echo "Warning: Meteor was unable to raise the limit for number of open files"
-            echo "for the current user.  Please consider filing an issue at:"
-            echo ""
-            echo "  https://github.com/meteor/meteor/issues"
-            echo ""
-            echo "Please include the output of 'uname -a', 'ulimit -H' and 'ulimit -S'"
-        fi
+        ulimit -Sn ${maxfilesuse} > /dev/null 2>&1
     fi
 fi
 
