@@ -581,7 +581,13 @@ export default class ImportScanner {
   }
 
   _readModule(absPath) {
-    const info = this._readFile(absPath);
+    try {
+      var info = this._readFile(absPath);
+    } catch (e) {
+      if (e.code !== "ENOENT") throw e;
+      return null;
+    }
+
     const dataString = info.dataString;
 
     // Same logic/comment as stripBOM in node/lib/module.js:
