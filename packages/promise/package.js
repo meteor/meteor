@@ -7,7 +7,7 @@ Package.describe({
 });
 
 Npm.depends({
-  "meteor-promise": "0.7.4",
+  "meteor-promise": "0.8.0",
   "promise": "7.1.1"
 });
 

@@ -17,6 +17,9 @@
 
 * The `lru-cache` npm package has been updated to 4.0.1.
 
+* The `meteor-promise` npm package has been updated to 0.8.0 for better
+  asynchronous stack traces.
+
 * The `mongodb` npm package used by the `npm-mongo` Meteor package has
   been updated to version 2.2.10.
   [#7780](https://github.com/meteor/meteor/pull/7780)

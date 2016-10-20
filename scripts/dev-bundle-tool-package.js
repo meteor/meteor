@@ -15,7 +15,7 @@ var packageJson = {
     "node-gyp": "3.4.0",
     "node-pre-gyp": "0.6.30",
     "meteor-babel": "0.13.0",
-    "meteor-promise": "0.7.2",
+    "meteor-promise": "0.8.0",
     fibers: "1.0.15",
     promise: "7.1.1",
     // So that Babel 6 can emit require("babel-runtime/helpers/...") calls.
