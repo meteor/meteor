@@ -15,8 +15,6 @@
 
 * The `node-pre-gyp` npm package has been updated to 0.6.30.
 
-* The `fibers` npm package has been updated to 1.0.14.
-
 * The `lru-cache` npm package has been updated to 4.0.1.
 
 * The `mongodb` npm package used by the `npm-mongo` Meteor package has
@@ -85,6 +83,10 @@
   times) instead of silently succeeding, which was the cause of the
   dreaded `Error: ENOENT: no such file or directory, open... os.json`
   error. [#7806](https://github.com/meteor/meteor/issues/7806)
+
+## v1.4.1.3
+
+* The `fibers` npm package has been upgraded to version 1.0.15.
 
 ## v1.4.1.2
 
