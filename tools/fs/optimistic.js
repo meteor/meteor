@@ -148,12 +148,12 @@ export const optimisticHashOrNull = makeOptimistic("hashOrNull", (...args) => {
 export const optimisticReadJsonOrNull =
 makeOptimistic("readJsonOrNull", (...args) => {
   try {
-    return JSON.parse(optimisticReadFile(...args));
+    var buffer = optimisticReadFile(...args);
   } catch (e) {
-    if (! (e instanceof SyntaxError ||
-           e.code === "ENOENT")) {
+    if (e.code !== "ENOENT") {
       throw e;
     }
+    return null;
   }
-  return null;
+  return JSON.parse(buffer);
 });
