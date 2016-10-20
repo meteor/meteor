@@ -1,5 +1,9 @@
 ## v.NEXT
 
+## v1.4.1.3
+
+* The `fibers` npm package has been upgraded to version 1.0.15.
+
 ## v1.4.1.2
 
 * Node has been upgraded to version 4.6.0, a recommended security release:
