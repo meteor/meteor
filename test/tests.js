@@ -11,6 +11,17 @@ if (! Promise) {
 
 require("../promise_server.js").makeCompatible(Promise, Fiber);
 
+function wait(ms) {
+  var self = this;
+  var args = Array.prototype.slice.call(arguments, 1);
+
+  return new Promise(function (resolve) {
+    setTimeout(function () {
+      resolve.apply(self, args);
+    }, ms);
+  });
+}
+
 describe("Promise.await", function () {
   it("should work inside an existing Fiber", Promise.async(function () {
     assert.strictEqual(Promise.await(42), 42);
@@ -45,6 +56,30 @@ describe("Promise.await", function () {
     } catch (error) {
       assert.strictEqual(error, reason);
     }
+  }));
+
+  it("should not hang when inner promise returned from callback", Promise.async(function () {
+    function go(n) {
+      return n === 0
+        ? Promise.resolve("done")
+        : wait(0, n - 1).then(go);
+    }
+
+    var results = Promise.all([
+      wait(50, "a").then(function (a) {
+        return wait(100, a + "b").then(function (ab) {
+          return wait(2, ab + "c");
+        });
+      }),
+      go(10),
+      go(20)
+    ]).await();
+
+    assert.deepEqual(results, [
+      "abc",
+      "done",
+      "done"
+    ]);
   }));
 });
 
