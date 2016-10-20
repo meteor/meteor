@@ -72,7 +72,20 @@ exports.makeCompatible = function (Promise, Fiber) {
       tryCatchNextTick(fiber, throwInto, [error]);
     });
 
-    return Fiber.yield();
+    return stackSafeYield(Fiber, awaitPromise);
+  }
+
+  function stackSafeYield(Fiber, caller) {
+    try {
+      return Fiber.yield();
+    } catch (thrown) {
+      if (thrown) {
+        var e = new Error;
+        Error.captureStackTrace(e, caller);
+        thrown.stack += e.stack.replace(/^.*?\n/, "\n => awaited here:\n");
+      }
+      throw thrown;
+    }
   }
 
   // Return a wrapper function that returns a Promise for the eventual

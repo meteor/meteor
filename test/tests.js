@@ -364,3 +364,30 @@ describe("promise_client.js", function () {
     return p;
   });
 });
+
+describe("stack traces", function () {
+  it("should reflect awaiting context(s) as well", Promise.async(function test() {
+    function inner() {
+      throw new Error("oyez");
+    }
+
+    var middle = Promise.async(function middle() {
+      return Promise.await(new Promise(inner));
+    });
+
+    var outer = Promise.async(function outer() {
+      return Promise.await(middle());
+    });
+
+    return outer().catch(function (error) {
+      assert.strictEqual(error.message, "oyez");
+
+      var sections = error.stack.split("=> awaited here:");
+      assert.strictEqual(sections.length, 3);
+
+      assert.notStrictEqual(sections[0].indexOf("at inner"), -1);
+      assert.notStrictEqual(sections[1].indexOf("at middle"), -1);
+      assert.notStrictEqual(sections[2].indexOf("at outer"), -1);
+    });
+  }));
+});
