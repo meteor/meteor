@@ -75,7 +75,7 @@ mv package.json npm-shrinkwrap.json "${DIR}/etc/"
 # bloats our dev bundle. Remove all the ones other than our
 # architecture. (Expression based on build.js in fibers source.)
 shrink_fibers () {
-    FIBERS_ARCH=$(node -p -e 'process.platform + "-" + process.arch + "-v8-" + /[0-9]+\.[0-9]+/.exec(process.versions.v8)[0]')
+    FIBERS_ARCH=$(node -p -e 'process.platform + "-" + process.arch + "-" + process.versions.modules')
     mv $FIBERS_ARCH ..
     rm -rf *
     mv ../$FIBERS_ARCH .
