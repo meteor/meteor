@@ -23,8 +23,7 @@ import {
 } from "../utils/colon-converter.js";
 
 import {
-  dirtyNpmPackageByPath,
-  dirtyNpmPackageByName,
+  dirtyNodeModulesDirectory,
   optimisticLStat,
   optimisticStatOrNull,
   optimisticReadJsonOrNull,
@@ -338,11 +337,11 @@ Profile("meteorNpm.rebuildIfNonPortable", function (nodeModulesDir) {
     return false;
   }
 
+  dirtyNodeModulesDirectory(nodeModulesDir);
+
   // If the `npm rebuild` command succeeded, overwrite the original
   // package directories with the rebuilt package directories.
   dirsToRebuild.forEach(function (pkgPath) {
-    dirtyNpmPackageByPath(pkgPath);
-
     const actualNodeModulesDir =
       files.pathJoin(pkgPath, "node_modules");
 
@@ -668,22 +667,27 @@ var createFreshNpmDirectory = function (packageName, newPackageNpmDir,
 };
 
 // Shared code for updateExistingNpmDirectory and createFreshNpmDirectory.
-var completeNpmDirectory = function (packageName, newPackageNpmDir,
-                                     packageNpmDir, npmDependencies) {
+function completeNpmDirectory(
+  packageName,
+  newPackageNpmDir,
+  packageNpmDir,
+  npmDependencies,
+) {
   // Create a shrinkwrap file.
   shrinkwrap(newPackageNpmDir);
 
   // And stow a copy of npm-shrinkwrap too.
   files.copyFile(
     files.pathJoin(newPackageNpmDir, 'npm-shrinkwrap.json'),
-    files.pathJoin(newPackageNpmDir, 'node_modules', '.npm-shrinkwrap.json'));
+    files.pathJoin(newPackageNpmDir, 'node_modules', '.npm-shrinkwrap.json')
+  );
 
   createReadme(newPackageNpmDir);
   createNodeVersion(newPackageNpmDir);
   files.renameDirAlmostAtomically(newPackageNpmDir, packageNpmDir);
 
-  Object.keys(npmDependencies).forEach(dirtyNpmPackageByName);
-};
+  dirtyNodeModulesDirectory(files.pathJoin(packageNpmDir, "node_modules"));
+}
 
 var createReadme = function (newPackageNpmDir) {
   // This file gets checked in to version control by users, so resist the

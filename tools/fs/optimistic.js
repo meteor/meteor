@@ -17,13 +17,10 @@ import {
 const ENABLED = ! process.env.METEOR_DISABLE_OPTIMISTIC_CACHING;
 
 function makeOptimistic(name, fn) {
-  const wrapper = wrap(function (...args) {
-    const packageName = getNpmPackageName(args[0]);
-    if (packageName) {
-      dependOnNpmPackage(packageName);
-    }
+  const wrapper = wrap(ENABLED ? function (...args) {
+    maybeDependOnNodeModules(args[0]);
     return fn.apply(this, args);
-  }, {
+  } : fn, {
     makeCacheKey(...args) {
       if (! ENABLED) {
         // Cache nothing when the optimistic caching system is disabled.
@@ -54,18 +51,20 @@ function makeOptimistic(name, fn) {
 
     subscribe(...args) {
       const path = args[0];
-      assert.ok(pathIsAbsolute(path));
 
-      // Only start watchers for files not in node_modules directories.
-      // This means caching the result until the server is restarted, or
-      // until we call dirtyNpmPackageBy{Path,Name} explicitly, but that's
-      // better than wasting thousands of watchers on rarely-changing
-      // node_modules files.
-      if (getNpmPackageName(path)) {
+      // Starting a watcher for every single file contained within a
+      // node_modules directory would be prohibitively expensive, so
+      // instead we rely on dependOnNodeModules to tell us when files in
+      // node_modules directories might have changed.
+      if (path.split(pathSep).indexOf("node_modules") >= 0) {
         return;
       }
 
-      var watcher = watch(path, () => wrapper.dirty(...args));
+      assert.ok(pathIsAbsolute(path));
+
+      let watcher = watch(path, () => {
+        wrapper.dirty(...args);
+      });
 
       return () => {
         if (watcher) {
@@ -79,52 +78,61 @@ function makeOptimistic(name, fn) {
   return Profile("optimistic " + name, wrapper);
 }
 
-// Return the name of the subdirectory just after the last node_modules
-// directory in the given path, if possible; else return undefined.
-function getNpmPackageName(path) {
-  if (typeof path === "string") {
-    const parts = path.split(pathSep);
+function maybeDependOnNodeModules(path) {
+  if (typeof path !== "string") {
+    return;
+  }
 
-    // In case the path ends with node_modules, look for the previous
-    // node_modules directory.
-    const lastAcceptableIndex = parts.length - 2;
-    const index = parts.lastIndexOf("node_modules", lastAcceptableIndex);
+  const parts = path.split(pathSep);
 
-    if (index >= 0) {
-      return parts[index + 1] || void 0;
+  while (true) {
+    const index = parts.lastIndexOf("node_modules");
+    if (index < 0) {
+      return;
     }
+
+    parts.length = index + 1;
+    dependOnNodeModules(parts.join(pathSep));
+    assert.strictEqual(parts.pop(), "node_modules");
   }
 }
 
-// See comment in dependOnNpmPackage.
 let npmDepCount = 0;
 
 // Called by any optimistic function that receives a */node_modules/* path
 // as its first argument, so that we can later bulk-invalidate the results
-// of those calls when/if the package (or, more precisely, any package of
-// the same name) changes.
-const dependOnNpmPackage = wrap(packageName => {
+// of those calls if the contents of the node_modules directory change.
+// Note that this strategy will not detect changes within subdirectories
+// of this node_modules directory, but that's ok because the use case we
+// care about is adding or removing npm packages.
+const dependOnNodeModules = wrap(nodeModulesDir => {
+  assert(pathIsAbsolute(nodeModulesDir));
+  assert(nodeModulesDir.endsWith(pathSep + "node_modules"));
+
   // Always return something different to prevent optimism from
   // second-guessing the dirtiness of this function.
   return ++npmDepCount;
+
+}, {
+  subscribe(nodeModulesDir) {
+    let watcher = watch(
+      nodeModulesDir,
+      () => dependOnNodeModules.dirty(nodeModulesDir),
+    );
+
+    return function () {
+      if (watcher) {
+        watcher.close();
+        watcher = null;
+      }
+    };
+  }
 });
 
-// Invalidate all optimistic results derived from paths involving npm
-// packages with the given packageName. If there are multiple copies of
-// the package installed, they all get invalidated, because that's a small
-// price to pay for the comfort of not having to keep the copies straight
-// as they get copied around, deleted, et cetera.
-export function dirtyNpmPackageByName(packageName) {
-  dependOnNpmPackage.dirty(packageName);
-}
-
-// Invalidate all optimistic results derived from paths involving an npm
-// package whose name equals getNpmPackageName(path).
-export function dirtyNpmPackageByPath(path) {
-  const packageName = getNpmPackageName(path);
-  if (packageName) {
-    dirtyNpmPackageByName(packageName);
-  }
+// Invalidate all optimistic results derived from paths involving the
+// given node_modules directory.
+export function dirtyNodeModulesDirectory(nodeModulesDir) {
+  dependOnNodeModules.dirty(nodeModulesDir);
 }
 
 export const optimisticStatOrNull = makeOptimistic("statOrNull", statOrNull);
