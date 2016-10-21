@@ -9,7 +9,7 @@ Package.onUse(function(api) {
   api.use('http', ['server']);
   api.use('underscore', 'server');
   api.use('random', 'client');
-  api.use('service-configuration', 'client');
+  api.use('service-configuration', ['client', 'server']);
 
   api.addFiles('facebook_client.js', 'client');
   api.addFiles('facebook_server.js', 'server');
