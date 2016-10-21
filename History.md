@@ -5,6 +5,8 @@
 * Node has been updated to version 4.6.1:
   https://nodejs.org/en/blog/release/v4.6.1/
 
+* The `mongodb` npm package has been upgraded to version 2.2.11.
+
 * The `fibers` npm package has been upgraded to version 1.0.15.
 
 * Running Meteor with a different `--port` will now automatically
