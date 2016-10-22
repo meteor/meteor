@@ -116,7 +116,7 @@ selftest.define("versioning hot code push", function (options) {
   });
 });
 
-selftest.define("javascript hot code push", function (options) {
+selftest.define("javascript hot code push", ["slow"], function (options) {
   var s = new Sandbox({
     clients: options.clients
   });
@@ -223,6 +223,7 @@ appcache`);
     run.match("jsVar: undefined");
 
     s.write("client/test.js", "jsVar = 'bar'");
+    run.waitSecs(20);
     run.match("client connected: 1");
     run.match("jsVar: bar");
 

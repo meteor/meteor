@@ -51,6 +51,22 @@ var runOldTest = function (filename, extraEnv) {
 // will take another look at them later, but it is not worth that much more time
 // before 0.9.0.
 //
+selftest.define("watch", ["slow"], function () {
+  var runFuture = runOldTest.future();
+  var futures = [
+    // Run with pathwatcher (if possible)
+    runFuture('test-watch.js'),
+    // Run with fs.watchFile fallback
+    runFuture('test-watch.js', {
+      METEOR_WATCH_FORCE_POLLING: 1
+    })
+  ];
+  Future.wait(futures);
+  // Throw if any threw.
+  _.each(futures, function (f) {
+    f.get();
+  });
+});
 
 selftest.define("bundler-assets", ["checkout"], function () {
   runOldTest('test-bundler-assets.js');

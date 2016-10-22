@@ -1202,7 +1202,7 @@ export class PackageSourceBatch {
           return;
         }
 
-        if (packageDir === "babel-runtime") {
+        if (checkBabelRuntimeHelper(id)) {
           // Don't print warnings for babel-runtime/helpers/* modules,
           // since we provide most of those.
           return;

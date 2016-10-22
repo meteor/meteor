@@ -2,8 +2,8 @@
 # use 32bit by default
 $PLATFORM = "windows_x86"
 $MONGO_VERSION = "3.2.6"
-$NODE_VERSION = "4.6.0"
-$NPM_VERSION = "3.10.8"
+$NODE_VERSION = "4.6.1"
+$NPM_VERSION = "3.10.9"
 $PYTHON_VERSION = "2.7.12" # For node-gyp
 
 # take it form the environment if exists
