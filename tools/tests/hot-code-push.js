@@ -223,6 +223,7 @@ appcache`);
     run.match("jsVar: undefined");
 
     s.write("client/test.js", "jsVar = 'bar'");
+    run.waitSecs(20);
     run.match("client connected: 1");
     run.match("jsVar: bar");
 
