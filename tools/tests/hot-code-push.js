@@ -116,7 +116,7 @@ selftest.define("versioning hot code push", function (options) {
   });
 });
 
-selftest.define("javascript hot code push", function (options) {
+selftest.define("javascript hot code push", ["slow"], function (options) {
   var s = new Sandbox({
     clients: options.clients
   });
