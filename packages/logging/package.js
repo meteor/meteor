@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Logging facility.",
-  version: '1.1.16-rc.1'
+  version: '1.1.16-rc.2'
 });
 
 Npm.depends({
