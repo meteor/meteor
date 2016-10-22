@@ -1,6 +1,7 @@
 import * as watchLibrary from "pathwatcher";
 import { Profile } from "../tool-env/profile.js";
 import {
+  statOrNull,
   pathDirname,
   convertToOSPath,
   convertToStandardPath,
@@ -28,6 +29,11 @@ const WATCHER_CLEANUP_DELAY_MS = 30000;
 
 const watchers = Object.create(null);
 
+// Pathwatcher complains (using console.error, ugh) if you try to watch
+// two files with the same stat.ino number but different paths, so we have
+// to deduplicate files by ino.
+const watchersByIno = new Map;
+
 function acquireWatcher(absPath, callback) {
   const entry = watchers[absPath] || (
     watchers[absPath] = startNewWatcher(absPath));
@@ -45,6 +51,22 @@ function acquireWatcher(absPath, callback) {
 }
 
 function startNewWatcher(absPath) {
+  const stat = statOrNull(absPath);
+  const ino = stat && stat.ino;
+  if (ino > 0 && watchersByIno.has(ino)) {
+    return watchersByIno.get(ino);
+  }
+
+  function safeUnwatch() {
+    if (watcher) {
+      watcher.close();
+      watcher = null;
+      if (ino > 0) {
+        watchersByIno.delete(ino);
+      }
+    }
+  }
+
   let lastWatcherEventTime = +new Date;
   const callbacks = new Set;
   let watcherCleanupTimer = null;
@@ -53,15 +75,12 @@ function startNewWatcher(absPath) {
 
   function fire(event) {
     if (event !== "change") {
-      if (watcher) {
-        // When we receive a "delete" or "rename" event, the watcher is
-        // probably not going to generate any more notifications for this
-        // file, so we close and nullify the watcher to ensure that
-        // entry.rewatch() will attempt to reestablish the watcher the
-        // next time we call safeWatcher.watch.
-        watcher.close();
-        watcher = null;
-      }
+      // When we receive a "delete" or "rename" event, the watcher is
+      // probably not going to generate any more notifications for this
+      // file, so we close and nullify the watcher to ensure that
+      // entry.rewatch() will attempt to reestablish the watcher the next
+      // time we call safeWatcher.watch.
+      safeUnwatch();
 
       // Make sure we don't throttle the watchFile callback after a
       // "delete" or "rename" event, since it is now our only reliable
@@ -166,14 +185,13 @@ function startNewWatcher(absPath) {
         watcherCleanupTimer = null;
       }
 
-      if (watcher) {
-        watcher.close();
-        watcher = null;
-      }
+      safeUnwatch();
 
       unwatchFile(absPath, watchFileWrapper);
     }
   };
+
+  watchersByIno.set(ino, entry);
 
   return entry;
 }
