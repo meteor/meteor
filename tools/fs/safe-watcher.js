@@ -191,7 +191,9 @@ function startNewWatcher(absPath) {
     }
   };
 
-  watchersByIno.set(ino, entry);
+  if (ino > 0) {
+    watchersByIno.set(ino, entry);
+  }
 
   return entry;
 }
