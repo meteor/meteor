@@ -7,9 +7,6 @@
   much more quickly, especially if you have many `node_modules` files.
   See https://github.com/meteor/meteor/pull/7668 for more details.
 
-* Node has been updated to version 4.6.1:
-  https://nodejs.org/en/blog/release/v4.6.1/
-
 * The `cordova-lib` npm package has been updated to 6.3.1, along with
   cordova-android (5.2.2) and cordova-ios (4.2.1), and various plugins.
 
@@ -20,20 +17,11 @@
 * The `meteor-promise` npm package has been updated to 0.8.0 for better
   asynchronous stack traces.
 
-* The `mongodb` npm package used by the `npm-mongo` Meteor package has
-  been updated to version 2.2.10.
-  [#7780](https://github.com/meteor/meteor/pull/7780)
-
 * The `meteor` tool is now prevented from running as `root` as this is
   not recommended and can cause issues with permissions.  In some environments,
   (e.g. Docker), it may still be desired to run as `root` and this can be
   permitted by passing `--unsafe-perm` to the `meteor` command.
   [#7821](https://github.com/meteor/meteor/pull/7821)
-
-* When the Meteor development server shuts down, it now attempts to kill
-  the `mongod` process it spawned, in addition to killing any running
-  `mongod` processes when the server first starts up.
-  https://github.com/meteor/meteor/pull/7668/commits/295d3d5678228f06ee0ab6c0d60139849a0ea192
 
 * Blaze-related packages have been extracted to
   [`meteor/blaze`](https://github.com/meteor/blaze), and the main
@@ -58,9 +46,6 @@
   sensitive to non-reproducible factors in the external environment.
   https://github.com/meteor/meteor/pull/7668/commits/3313180a6ff33ee63602f7592a9506012029e919
 
-* The `meteor <command> ...` syntax will now work for any command
-  installed in `dev_bundle/bin`, except for Meteor's own commands.
-
 * The `meteor test` command now supports the `--no-release-check` flag.
   https://github.com/meteor/meteor/pull/7668/commits/7097f78926f331fb9e70a06300ce1711adae2850
 
@@ -77,19 +62,34 @@
 * The `coffeescript` package now natively supports `import` and `export`
   declarations. [#7818](https://github.com/meteor/meteor/pull/7818)
 
+## v1.4.1.3
+
+* Node has been updated to version 4.6.1:
+  https://nodejs.org/en/blog/release/v4.6.1/
+
+* The `mongodb` npm package used by the `npm-mongo` Meteor package has
+  been updated to version 2.2.11.
+  [#7780](https://github.com/meteor/meteor/pull/7780)
+
+* The `fibers` npm package has been upgraded to version 1.0.15.
+
 * Running Meteor with a different `--port` will now automatically
   reconfigure the Mongo replica set when using the WiredTiger storage
   engine, instead of failing to start Mongo.
   [#7840](https://github.com/meteor/meteor/pull/7840).
 
+* When the Meteor development server shuts down, it now attempts to kill
+  the `mongod` process it spawned, in addition to killing any running
+  `mongod` processes when the server first starts up.
+  https://github.com/meteor/meteor/pull/7668/commits/295d3d5678228f06ee0ab6c0d60139849a0ea192
+
+* The `meteor <command> ...` syntax will now work for any command
+  installed in `dev_bundle/bin`, except for Meteor's own commands.
+
 * Incomplete package downloads will now fail (and be retried several
   times) instead of silently succeeding, which was the cause of the
   dreaded `Error: ENOENT: no such file or directory, open... os.json`
   error. [#7806](https://github.com/meteor/meteor/issues/7806)
-
-## v1.4.1.3
-
-* The `fibers` npm package has been upgraded to version 1.0.15.
 
 ## v1.4.1.2
 
