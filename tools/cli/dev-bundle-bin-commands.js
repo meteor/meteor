@@ -1,11 +1,8 @@
 // Note that this file is required before we install our Babel hooks in
 // ../tool-env/install-babel.js, so we can't use ES2015+ syntax here.
 
+var fs = require("fs");
 var path = require("path");
-var win32Extensions = {
-  node: ".exe",
-  npm: ".cmd"
-};
 
 // The dev_bundle/bin command has to come immediately after the meteor
 // command, as in `meteor npm` or `meteor node`, because we don't want to
@@ -14,22 +11,22 @@ var devBundleBinCommand = process.argv[2];
 var args = process.argv.slice(3);
 
 function getChildProcess() {
-  if (! win32Extensions.hasOwnProperty(devBundleBinCommand)) {
+  if (typeof devBundleBinCommand !== "string") {
     return Promise.resolve(null);
   }
 
   var helpers = require("./dev-bundle-bin-helpers.js");
-
-  if (process.platform === "win32") {
-    devBundleBinCommand += win32Extensions[devBundleBinCommand];
-  }
 
   return Promise.all([
     helpers.getDevBundle(),
     helpers.getEnv()
   ]).then(function (devBundleAndEnv) {
     var devBundleDir = devBundleAndEnv[0];
-    var cmd = path.join(devBundleDir, "bin", devBundleBinCommand);
+    var cmd = helpers.getCommand(devBundleBinCommand, devBundleDir);
+    if (! cmd) {
+      return null;
+    }
+
     var env = devBundleAndEnv[1];
     var child = require("child_process").spawn(cmd, args, {
       stdio: "inherit",
