@@ -2213,6 +2213,13 @@ class ServerTarget extends JsImageTarget {
     var jsImage = self.toJsImage();
     jsImage.write(builder, { includeNodeModules: options.includeNodeModules });
 
+    const toolsDir = files.pathDirname(
+      files.convertToStandardPath(__dirname));
+
+    builder.write("profile.js", {
+      file: files.pathJoin(toolsDir, "tool-env", "profile.js"),
+    });
+
     // Server bootstrap
     _.each([
       "boot.js",
@@ -2225,7 +2232,7 @@ class ServerTarget extends JsImageTarget {
     ], function (filename) {
       builder.write(filename, {
         file: files.pathJoin(
-          files.pathDirname(files.convertToStandardPath(__dirname)),
+          toolsDir,
           'static-assets',
           'server',
           filename

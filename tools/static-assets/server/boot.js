@@ -8,6 +8,7 @@ var sourcemap_support = require('source-map-support');
 var bootUtils = require('./boot-utils.js');
 var files = require('./mini-files.js');
 var npmRequire = require('./npm-require.js').require;
+var Profile = require('./profile.js').Profile;
 
 // This code is duplicated in tools/main.js.
 var MIN_NODE_VERSION = 'v0.10.41';
@@ -123,8 +124,7 @@ var startCheckForLiveParent = function (parentPid) {
   }
 };
 
-
-Fiber(function () {
+var loadServerBundles = Profile("Load server bundles", function () {
   _.each(serverJson.load, function (fileInfo) {
     var code = fs.readFileSync(path.resolve(serverDir, fileInfo.path));
     var nonLocalNodeModulesPaths = [];
@@ -289,18 +289,23 @@ Fiber(function () {
     if (isModulesRuntime) {
       args.push(npmRequire);
     }
-    func.apply(global, args);
-  });
 
+    Profile(fileInfo.path, func).apply(global, args);
+  });
+});
+
+var callStartupHooks = Profile("Call Meteor.startup hooks", function () {
   // run the user startup hooks.  other calls to startup() during this can still
   // add hooks to the end.
   while (__meteor_bootstrap__.startupHooks.length) {
     var hook = __meteor_bootstrap__.startupHooks.shift();
-    hook();
+    Profile.time(hook.stack || "(unknown)", hook);
   }
   // Setting this to null tells Meteor.startup to call hooks immediately.
   __meteor_bootstrap__.startupHooks = null;
+});
 
+var runMain = Profile("Run main()", function () {
   // find and run main()
   // XXX hack. we should know the package that contains main.
   var mains = [];
@@ -330,4 +335,12 @@ Fiber(function () {
   if (process.env.METEOR_PARENT_PID) {
     startCheckForLiveParent(process.env.METEOR_PARENT_PID);
   }
+});
+
+Fiber(function () {
+  Profile.run("Server startup", function () {
+    loadServerBundles();
+    callStartupHooks();
+    runMain();
+  });
 }).run();
