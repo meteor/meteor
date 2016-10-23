@@ -7,6 +7,12 @@
   much more quickly, especially if you have many `node_modules` files.
   See https://github.com/meteor/meteor/pull/7668 for more details.
 
+> Note: the `METEOR_PROFILE` environment variable now provides data for
+  server startup time as well as build time, which should make it easier
+  to tell which of your packages are responsible for slow startup times.
+  Please include the output of `METEOR_PROFILE=10 meteor run` with any
+  GitHub issue about rebuild performance.
+
 * `npm` has been upgraded to version 3.10.9.
 
 * The `cordova-lib` npm package has been updated to 6.3.1, along with
