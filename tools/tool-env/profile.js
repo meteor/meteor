@@ -255,7 +255,7 @@ var Profile = function (bucketName, f) {
     return f;
   }
 
-  return function () {
+  return Object.assign(function profileWrapper() {
     if (! running) {
       return f.apply(this, arguments);
     }
@@ -298,7 +298,7 @@ var Profile = function (bucketName, f) {
     if (err) {
       throw err;
     }
-  };
+  }, f);
 };
 
 var time = function (bucket, f) {
