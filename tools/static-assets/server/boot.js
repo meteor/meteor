@@ -161,7 +161,9 @@ var loadServerBundles = Profile("Load server bundles", function () {
        * @locus Server
        * @memberOf Npm
        */
-      require: function (name) {
+      require: Profile(function getBucketName(name) {
+        return "Npm.require(" + JSON.stringify(name) + ")";
+      }, function (name) {
         if (nonLocalNodeModulesPaths.length === 0) {
           return require(name);
         }
@@ -200,7 +202,7 @@ var loadServerBundles = Profile("Load server bundles", function () {
               "'. Did you forget to call 'Npm.depends' in package.js " +
               "within the '" + packageName + "' package?");
           }
-      }
+      })
     };
     var getAsset = function (assetPath, encoding, callback) {
       var fut;

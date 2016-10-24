@@ -1639,7 +1639,9 @@ class JsImage {
       var env = _.extend({
         Package: ret,
         Npm: {
-          require: function (name) {
+          require: Profile(function (name) {
+            return "Npm.require(" + JSON.stringify(name) + ")";
+          }, function (name) {
             let fullPath;
 
             _.some(item.nodeModulesDirectories, nmd => {
@@ -1673,7 +1675,7 @@ class JsImage {
                   item.targetPath + ". Check your Npm.depends().");
               return undefined;
             }
-          }
+          })
         },
 
         /**
