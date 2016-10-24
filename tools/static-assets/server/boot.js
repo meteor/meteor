@@ -266,7 +266,7 @@ var loadServerBundles = Profile("Load server bundles", function () {
 
     var wrapParts = ["(function(Npm,Assets"];
     if (isModulesRuntime) {
-      wrapParts.push(",npmRequire");
+      wrapParts.push(",npmRequire,Profile");
     }
     // \n is necessary in case final line is a //-comment
     wrapParts.push("){", code, "\n})");
@@ -289,7 +289,7 @@ var loadServerBundles = Profile("Load server bundles", function () {
     var func = require('vm').runInThisContext(wrapped, scriptPath, true);
     var args = [Npm, Assets];
     if (isModulesRuntime) {
-      args.push(npmRequire);
+      args.push(npmRequire, Profile);
     }
 
     Profile(fileInfo.path, func).apply(global, args);

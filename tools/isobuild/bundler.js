@@ -1711,6 +1711,7 @@ class JsImage {
 
       if (item.targetPath === "packages/modules-runtime.js") {
         env.npmRequire = self._makeNpmRequire(nodeModulesDirsByPackageName);
+        env.Profile = Profile;
       }
 
       try {
