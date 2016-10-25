@@ -1811,18 +1811,17 @@ class JsImage {
 
   // Write this image out to disk
   //
-  // options:
-  // - includeNodeModules: falsy or 'symlink', documented on
-  //   exports.bundle.
-  //
   // Returns an object with the following keys:
   // - controlFile: the path (relative to 'builder') of the control file for
   // the image
   // - nodePath: an array of paths required to be set in the NODE_PATH
   // environment variable.
-  write(builder, options) {
+  write(builder, {
+    buildMode,
+    // falsy or 'symlink', documented on exports.bundle
+    includeNodeModules,
+  } = {}) {
     var self = this;
-    options = options || {};
 
     builder.reserve("program.json");
 
@@ -1834,15 +1833,15 @@ class JsImage {
       // We need to find the actual file system location for the node modules
       // this JS Image uses, so that we can add it to nodeModulesDirectories
       var modulesPhysicalLocation;
-      if (! options.includeNodeModules ||
-          options.includeNodeModules === 'symlink') {
+      if (! includeNodeModules ||
+          includeNodeModules === 'symlink') {
         modulesPhysicalLocation = nmd.getPreferredBundlePath("bundle");
       } else {
         // This is some option we didn't expect - someone has added another case
         // to the includeNodeModules option but didn't update this if block.
         // Fail hard.
         throw new Error("Option includeNodeModules wasn't falsy or 'symlink'. " +
-                        "It was: " + options.includeNodeModules);
+                        "It was: " + includeNodeModules);
       }
 
       nmd = nmd.copy();
@@ -1969,10 +1968,11 @@ class JsImage {
           from: nmd.sourcePath,
           to: nmd.preferredBundlePath,
           npmDiscards: nmd.npmDiscards,
-          symlink: (options.includeNodeModules === 'symlink')
+          symlink: includeNodeModules === 'symlink'
         };
 
         const prodPackagePredicate =
+          buildMode === "production" &&
           nmd.local && // Only filter local node_modules directories.
           nmd.getProdPackagePredicate();
 
@@ -2139,17 +2139,19 @@ class ServerTarget extends JsImageTarget {
   }
 
   // Output the finished target to disk
-  // options:
-  // - includeNodeModules: falsy or 'symlink', documented in
-  //   exports.bundle.
-  // - getRelativeTargetPath: a function that takes {forTarget:
-  //   Target, relativeTo: Target} and return the path of one target
-  //   in the bundle relative to another. hack to get the path of the
-  //   client target.. we'll find a better solution here eventually
   //
   // Returns the path (relative to 'builder') of the control file for
   // the plugin and the required NODE_PATH.
-  write(builder, options) {
+  write(builder, {
+    buildMode,
+    // falsy or 'symlink', documented in exports.bundle
+    includeNodeModules,
+    // a function that takes {forTarget: Target, relativeTo: Target} and
+    // return the path of one target in the bundle relative to another. hack
+    // to get the path of the client target.. we'll find a better solution
+    // here eventually
+    getRelativeTargetPath,
+  }) {
     var self = this;
     var nodePath = [];
 
@@ -2161,8 +2163,10 @@ class ServerTarget extends JsImageTarget {
     var clientTargetPaths = {};
     if (self.clientTargets) {
       _.each(self.clientTargets, function (target) {
-        clientTargetPaths[target.arch] = files.pathJoin(options.getRelativeTargetPath({
-          forTarget: target, relativeTo: self}), 'program.json');
+        clientTargetPaths[target.arch] = files.pathJoin(getRelativeTargetPath({
+          forTarget: target,
+          relativeTo: self,
+        }), 'program.json');
       });
     }
 
@@ -2200,11 +2204,11 @@ class ServerTarget extends JsImageTarget {
     // This is a hack to make 'meteor run' faster (so you don't have to run 'npm
     // install' using the above package.json and npm-shrinkwrap.json on every
     // rebuild).
-    if (options.includeNodeModules === 'symlink') {
+    if (includeNodeModules === 'symlink') {
       builder.write('node_modules', {
         symlink: files.pathJoin(files.getDevBundle(), 'server-lib', 'node_modules')
       });
-    } else if (options.includeNodeModules) {
+    } else if (includeNodeModules) {
       // This is some option we didn't expect - someone has added another case
       // to the includeNodeModules option but didn't update this if block. Fail
       // hard.
@@ -2214,7 +2218,10 @@ class ServerTarget extends JsImageTarget {
     // Linked JavaScript image (including static assets, assuming that there are
     // any JS files at all)
     var jsImage = self.toJsImage();
-    jsImage.write(builder, { includeNodeModules: options.includeNodeModules });
+    jsImage.write(builder, {
+      buildMode,
+      includeNodeModules,
+    });
 
     const toolsDir = files.pathDirname(
       files.convertToStandardPath(__dirname));
@@ -2298,15 +2305,20 @@ var writeTargetToPath = Profile(
     includeNodeModules,
     getRelativeTargetPath,
     previousBuilder,
-    minifyMode
+    buildMode,
+    minifyMode,
   }) {
     var builder = new Builder({
       outputPath: files.pathJoin(outputPath, 'programs', name),
       previousBuilder
     });
 
-    var targetBuild = target.write(
-      builder, {includeNodeModules, getRelativeTargetPath, minifyMode});
+    var targetBuild = target.write(builder, {
+      includeNodeModules,
+      getRelativeTargetPath,
+      buildMode,
+      minifyMode,
+    });
 
     builder.complete();
 
@@ -2354,6 +2366,7 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", function (
     releaseName,
     getRelativeTargetPath,
     previousBuilders,
+    buildMode,
     minifyMode
   }) {
 
@@ -2439,6 +2452,7 @@ Find out more about Meteor at meteor.com.
           releaseName,
           getRelativeTargetPath,
           previousBuilder,
+          buildMode,
           minifyMode
         });
 
@@ -2754,7 +2768,9 @@ function bundle({
           const previousBuilder = previousBuilders && previousBuilders[name];
           var targetBuild = writeTargetToPath(
             name, target, outputPath,
-            _.extend({}, writeOptions, {previousBuilder})
+            _.extend({
+              buildMode: buildOptions.buildMode,
+            }, writeOptions, {previousBuilder})
          );
           nodePath = nodePath.concat(targetBuild.nodePath);
           clientWatchSet.merge(target.getWatchSet());
@@ -2764,7 +2780,9 @@ function bundle({
         starResult = writeSiteArchive(
           targets,
           outputPath,
-          _.extend({}, writeOptions, {previousBuilders})
+          _.extend({
+            buildMode: buildOptions.buildMode,
+          }, writeOptions, {previousBuilders})
         );
 
         nodePath = nodePath.concat(starResult.nodePath);
