@@ -1451,6 +1451,9 @@ files.readLinkToMeteorScript = function (linkLocation, platform) {
 //   A helpful file to import for this purpose is colon-converter.js, which also
 //   knows how to convert various configuration file formats.
 
+// If this environment variable is set, fs.*Sync methods will always be used
+// by wrapFsFunc instead of yielding wrappers for asynchronous fs.* methods.
+const YIELD_ALLOWED = ! process.env.METEOR_DISABLE_FS_FIBERS;
 
 files.fsFixPath = {};
 /**
@@ -1485,7 +1488,11 @@ function wrapFsFunc(fsFuncName, pathArgIndices, options) {
         args[i] = files.convertToOSPath(args[i]);
       }
 
-      const canYield = Fiber.current && Fiber.yield && ! Fiber.yield.disallowed;
+      const canYield = YIELD_ALLOWED &&
+        Fiber.current &&
+        Fiber.yield &&
+        ! Fiber.yield.disallowed;
+
       const shouldBeSync = alwaysSync || sync;
       // There's some overhead in awaiting a Promise of an async call,
       // vs just doing the sync call, which for a call like "stat"

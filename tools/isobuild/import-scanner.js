@@ -581,6 +581,21 @@ export default class ImportScanner {
   }
 
   _readModule(absPath) {
+    let ext = pathExtname(absPath).toLowerCase();
+
+    if (ext === ".node") {
+      const dataString = "throw new Error(" + JSON.stringify(
+        this.isWeb()
+          ? "cannot load native .node modules on the client"
+          : "module.useNode() must succeed for native .node modules"
+      ) + ");\n";
+
+      const data = new Buffer(dataString, "utf8");
+      const hash = sha1(data);
+
+      return { data, dataString, hash };
+    }
+
     try {
       var info = this._readFile(absPath);
     } catch (e) {
@@ -598,7 +613,6 @@ export default class ImportScanner {
       info.dataString = info.dataString.slice(1);
     }
 
-    let ext = pathExtname(absPath).toLowerCase();
     if (! has(defaultExtensionHandlers, ext)) {
       if (canBeParsedAsPlainJS(dataString)) {
         ext = ".js";
