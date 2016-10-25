@@ -59,7 +59,7 @@
     "eslint": "3.6.1",
     "eslint-config-airbnb": "12.0.0",
     "eslint-plugin-import": "2.0.1",
-    "eslint-plugin-jsx-a11y": "^3.0.0",
+    "eslint-plugin-jsx-a11y": "^2.2.3",
     "eslint-plugin-react": "6.4.1",
     "ghooks": "1.3.2",
     "mocha": "3.1.2",
@@ -71,7 +71,7 @@
     "validate-commit-msg": "2.8.2"
   },
   "peerDependencies": {
-    "eslint": "^3.7.0"
+    "eslint": "^3.0.0"
   },
   "engines": {
     "node": ">=4"
