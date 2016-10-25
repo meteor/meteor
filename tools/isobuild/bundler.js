@@ -1972,7 +1972,13 @@ class JsImage {
         };
 
         const prodPackagePredicate =
-          buildMode === "production" &&
+          // This condition essentially means we don't strip devDependencies
+          // when running tests, which is important for use cases like the one
+          // described in #7953. Note that devDependencies can still be used
+          // when buildMode === "development" because the app has access to
+          // the original node_modules.
+          (buildMode === "production" ||
+           buildMode === "development") &&
           nmd.local && // Only filter local node_modules directories.
           nmd.getProdPackagePredicate();
 
