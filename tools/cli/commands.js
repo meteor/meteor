@@ -259,7 +259,7 @@ var runCommandOptions = {
     'no-release-check': { type: Boolean },
     production: { type: Boolean },
     'raw-logs': { type: Boolean },
-    settings: { type: String },
+    settings: { type: String, short: "s" },
     verbose: { type: Boolean, short: "v" },
     // With --once, meteor does not re-run the project if it crashes
     // and does not monitor for file changes. Intentionally
@@ -787,6 +787,10 @@ var buildCommands = {
     server: { type: String },
     // XXX COMPAT WITH 0.9.2.2
     "mobile-port": { type: String },
+    // Indicates whether these build is running headless, e.g. in a
+    // continuous integration building environment, where visual niceties
+    // like progress bars and spinners are unimportant.
+    headless: { type: Boolean },
     verbose: { type: Boolean, short: "v" },
     'allow-incompatible-update': { type: Boolean }
   },
@@ -818,6 +822,11 @@ main.registerCommand(_.extend({ name: 'bundle', hidden: true
 
 var buildCommand = function (options) {
   Console.setVerbose(!!options.verbose);
+  if (options.headless) {
+    // There's no point in spinning the spinner when we're running
+    // automated builds.
+    Console.setHeadless(true);
+  }
   // XXX output, to stderr, the name of the file written to (for human
   // comfort, especially since we might change the name)
 
@@ -1236,7 +1245,7 @@ main.registerCommand({
   options: {
     'delete': { type: Boolean, short: 'D' },
     debug: { type: Boolean },
-    settings: { type: String },
+    settings: { type: String, short: 's' },
     // No longer supported, but we still parse it out so that we can
     // print a custom error message.
     password: { type: String },
@@ -1434,7 +1443,7 @@ testCommandOptions = {
     'debug-port': { type: String },
     deploy: { type: String },
     production: { type: Boolean },
-    settings: { type: String },
+    settings: { type: String, short: 's' },
     // Indicates whether these self-tests are running headless, e.g. in a
     // continuous integration testing environment, where visual niceties
     // like progress bars and spinners are unimportant.
@@ -1796,6 +1805,7 @@ var runTestAppForPackages = function (projectContext, options) {
       oplogUrl: process.env.MONGO_OPLOG_URL,
       mobileServerUrl: options.mobileServerUrl,
       once: options.once,
+      noReleaseCheck: options['no-release-check'] || process.env.METEOR_NO_RELEASE_CHECK,
       recordPackageUsage: false,
       selenium: options.selenium,
       seleniumBrowser: options['selenium-browser'],

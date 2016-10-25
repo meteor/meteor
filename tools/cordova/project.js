@@ -16,8 +16,8 @@ import './protect-string-proto.js'; // must always come before 'cordova-lib'
 import { cordova as cordova_lib, events as cordova_events, CordovaError }
   from 'cordova-lib';
 import cordova_util from 'cordova-lib/src/cordova/util.js';
-import superspawn from 'cordova-lib/node_modules/cordova-common/src/superspawn.js';
-import PluginInfoProvider from 'cordova-lib/node_modules/cordova-common/src/PluginInfo/PluginInfoProvider.js';
+import superspawn from 'cordova-common/src/superspawn.js';
+import PluginInfoProvider from 'cordova-common/src/PluginInfo/PluginInfoProvider.js';
 
 import { CORDOVA_PLATFORMS, CORDOVA_PLATFORM_VERSIONS, displayNameForPlatform, displayNamesForPlatforms,
   newPluginId, convertPluginVersions, convertToGitUrl } from './index.js';
@@ -51,28 +51,29 @@ const pinnedPlatformVersions = CORDOVA_PLATFORM_VERSIONS;
 // Versions are taken from cordova-lib's package.json and should be updated
 // when we update to a newer version of cordova-lib.
 const pinnedPluginVersions = {
-  "cordova-plugin-battery-status": "1.1.1",
-  "cordova-plugin-camera": "2.1.1",
-  "cordova-plugin-console": "1.0.2",
-  "cordova-plugin-contacts": "2.0.1",
-  "cordova-plugin-device": "1.1.1",
-  "cordova-plugin-device-motion": "1.2.0",
-  "cordova-plugin-device-orientation": "1.0.2",
-  "cordova-plugin-dialogs": "1.2.0",
-  "cordova-plugin-file": "4.1.1",
-  "cordova-plugin-file-transfer": "1.5.0",
-  "cordova-plugin-geolocation": "2.1.0",
-  "cordova-plugin-globalization": "1.0.3",
-  "cordova-plugin-inappbrowser": "1.3.0",
+  "cordova-plugin-battery-status": "1.2.0",
+  "cordova-plugin-camera": "2.3.0",
+  "cordova-plugin-console": "1.0.4",
+  "cordova-plugin-contacts": "2.2.0",
+  "cordova-plugin-device": "1.1.3",
+  "cordova-plugin-device-motion": "1.2.2",
+  "cordova-plugin-device-orientation": "1.0.4",
+  "cordova-plugin-dialogs": "1.3.0",
+  "cordova-plugin-file": "4.3.0",
+  "cordova-plugin-file-transfer": "1.6.0",
+  "cordova-plugin-geolocation": "2.3.0",
+  "cordova-plugin-globalization": "1.0.4",
+  "cordova-plugin-inappbrowser": "1.5.0",
   "cordova-plugin-legacy-whitelist": "1.1.1",
-  "cordova-plugin-media": "2.2.0",
-  "cordova-plugin-media-capture": "1.2.0",
-  "cordova-plugin-network-information": "1.2.0",
-  "cordova-plugin-splashscreen": "3.2.1",
-  "cordova-plugin-statusbar": "2.1.2",
-  "cordova-plugin-test-framework": "1.1.1",
-  "cordova-plugin-vibration": "2.1.0",
-  "cordova-plugin-whitelist": "1.2.1"
+  "cordova-plugin-media": "2.4.0",
+  "cordova-plugin-media-capture": "1.4.0",
+  "cordova-plugin-network-information": "1.3.0",
+  "cordova-plugin-splashscreen": "4.0.0",
+  "cordova-plugin-statusbar": "2.2.0",
+  "cordova-plugin-test-framework": "1.1.3",
+  "cordova-plugin-vibration": "2.1.2",
+  "cordova-plugin-whitelist": "1.3.0",
+  "cordova-plugin-wkwebview-engine": "1.1.0"
 }
 
 export class CordovaProject {
@@ -152,8 +153,14 @@ outdated platforms`);
       // Create the Cordova project root directory
       files.mkdir_p(files.pathDirname(this.projectRoot));
 
-      const config = { lib:
-        { www: { url: files.convertToOSPath(templatePath) } } };
+      const config = {
+        lib: {
+          www: {
+            url: files.convertToOSPath(templatePath),
+            template: true
+          }
+        }
+      };
 
       // Don't set cwd to project root in runCommands because it doesn't
       // exist yet
@@ -210,6 +217,13 @@ outdated platforms`);
 
   prepareForPlatform(platform) {
     assert(platform);
+
+    // Temporary workaround for Cordova iOS bug until
+    // https://issues.apache.org/jira/browse/CB-11731 has been released
+    delete require.cache[files.pathJoin(this.projectRoot,
+      'platforms/ios/cordova/lib/configMunger.js')];
+    delete require.cache[files.pathJoin(this.projectRoot,
+      'platforms/ios/cordova/lib/prepare.js')];
 
     const commandOptions = _.extend(this.defaultOptions,
       { platforms: [platform] });
@@ -314,7 +328,7 @@ to build apps for ${displayNameForPlatform(platform)}.`);
       for (requirement of requirements) {
         const name = requirement.name;
         if (requirement.installed) {
-          Console.success(name);
+          Console.success(name, "installed");
         } else {
           const reason = requirement.metadata && requirement.metadata.reason;
           if (reason) {

@@ -173,11 +173,13 @@ import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
 
 // files to ignore when bundling. node has no globs, so use regexps
 exports.ignoreFiles = [
-    /~$/, /^\.#/, /^#.*#$/,  // emacs swap files
-    /^\..*\.sw.$/,  // vim swap files
-    /^\.DS_Store\/?$/, /^ehthumbs\.db$/, /^Icon.$/, /^Thumbs\.db$/,
-    /^\.meteor\/$/, /* avoids scanning N^2 files when bundling all packages */
-    /^\.git\/$/ /* often has too many files to watch */
+    /~$/, /^\.#/,
+    /^(\.meteor\/|\.git\/|Thumbs\.db|\.DS_Store\/?|Icon\r|ehthumbs\.db|\..*\.sw.|#.*#)$/,
+      /* .meteor => avoids scanning N^2 files when bundling all packages
+        .git => often has too many files to watch 
+        ....sw(.) => vim swap files
+        #.*# => emacs swap files
+      */
 ];
 
 function rejectBadPath(p) {
@@ -248,6 +250,13 @@ export class NodeModulesDirectory {
     // accessible from other modules in the app or package.
     this.local = !! local;
 
+    // A test package often shares its .sourcePath with the non-test
+    // package, so it's important to be able to tell them apart,
+    // especially when we'd like to treat .sourcePath as a unique key.
+    this.isTestPackage =
+      typeof packageName === "string" &&
+      /^local-test[:_]/.test(packageName);
+
     // Optionally, files to discard.
     this.npmDiscards = npmDiscards;
   }
@@ -274,8 +283,9 @@ export class NodeModulesDirectory {
 
     const isApp = ! this.packageName;
     if (! isApp) {
-      const name = colonConverter.convert(this.packageName);
       const relParts = relPath.split(files.pathSep);
+      const name = colonConverter.convert(
+        this.packageName.replace(/^local-test[:_]/, ""));
 
       if (relParts[0] === ".npm") {
         // Normalize .npm/package/node_modules/... paths so that they get
@@ -415,6 +425,72 @@ export class NodeModulesDirectory {
     }
 
     return nodeModulesDirectories;
+  }
+
+  // Returns a predicate function that determines if a given directory is
+  // contained by a production package directory in this.sourcePath.
+  getProdPackagePredicate() {
+    if (this._prodPackagePredicate) {
+      return this._prodPackagePredicate;
+    }
+
+    const sourcePath = this.sourcePath;
+    const prodPackageNames = meteorNpm.getProdPackageNames(sourcePath);
+    if (! prodPackageNames) {
+      // Indicates that no directories should be excluded from the set of
+      // production packages. Equivalent to returning dir => true.
+      return null;
+    }
+
+    const prodPackageTree = Object.create(null);
+    const complete = Symbol();
+    let maxPartCount = 0;
+
+    Object.keys(prodPackageNames).forEach(name => {
+      const parts = name.split("/");
+      let tree = prodPackageTree;
+
+      parts.forEach(part => {
+        tree = tree[part] || (tree[part] = Object.create(null));
+      });
+
+      tree[complete] = true;
+      maxPartCount = Math.max(parts.length, maxPartCount);
+    });
+
+    return this._prodPackagePredicate = function isWithinProdPackage(dir) {
+      const parts = files.pathRelative(sourcePath, dir)
+        .split(files.pathSep);
+
+      let start = parts.lastIndexOf("node_modules") + 1;
+
+      if (parts.length - start > maxPartCount) {
+        // We're deep enough inside node_modules that it's safe to
+        // say we should have returned false earlier.
+        return true;
+      }
+
+      let tree = prodPackageTree;
+
+      for (let pos = start; pos < parts.length; ++pos) {
+        const part = parts[pos];
+        const branch = tree[part];
+
+        if (! branch) {
+          // This dir is not prefixed by a production package name.
+          return false;
+        }
+
+        if (branch[complete]) {
+          // This dir is prefixed by a complete production package name.
+          break;
+        }
+
+        tree = branch;
+      }
+
+      return true;
+    };
   }
 }
 
@@ -1020,8 +1096,8 @@ class Target {
             }
 
             _.each(unibuild.nodeModulesDirectories, nmd => {
-              this.nodeModulesDirectories[nmd.sourcePath] = nmd;
-              f.nodeModulesDirectories[nmd.sourcePath] = nmd;
+              addNodeModulesDirToObject(nmd, this.nodeModulesDirectories);
+              addNodeModulesDirToObject(nmd, f.nodeModulesDirectories);
             });
           }
 
@@ -1216,6 +1292,26 @@ class Target {
 ].forEach((method) => {
   Target.prototype[method] = Profile(`Target#${method}`, Target.prototype[method]);
 });
+
+// Sets `obj[nmd.sourcePath] = nmd` unless the key already exists and the
+// old nmd object is for a non-test package. Since nmd.sourcePath can be
+// shared by test and non-test packages, this logic prefers the non-test
+// nmd object when possible. Returns true iff the given nmd was added.
+function addNodeModulesDirToObject(nmd, obj) {
+  if (_.has(obj, nmd.sourcePath)) {
+    const old = obj[nmd.sourcePath];
+    // If the old NodeModulesDirectory object is not a test package, or
+    // the new one is a test package, keep the old one.
+    if (! old.isTestPackage ||
+        nmd.isTestPackage) {
+      return false;
+    }
+  }
+
+  obj[nmd.sourcePath] = nmd;
+
+  return true;
+}
 
 //////////////////// ClientTarget ////////////////////
 
@@ -1543,7 +1639,9 @@ class JsImage {
       var env = _.extend({
         Package: ret,
         Npm: {
-          require: function (name) {
+          require: Profile(function (name) {
+            return "Npm.require(" + JSON.stringify(name) + ")";
+          }, function (name) {
             let fullPath;
 
             _.some(item.nodeModulesDirectories, nmd => {
@@ -1577,7 +1675,7 @@ class JsImage {
                   item.targetPath + ". Check your Npm.depends().");
               return undefined;
             }
-          }
+          })
         },
 
         /**
@@ -1613,6 +1711,7 @@ class JsImage {
 
       if (item.targetPath === "packages/modules-runtime.js") {
         env.npmRequire = self._makeNpmRequire(nodeModulesDirsByPackageName);
+        env.Profile = Profile;
       }
 
       try {
@@ -1712,18 +1811,17 @@ class JsImage {
 
   // Write this image out to disk
   //
-  // options:
-  // - includeNodeModules: falsy or 'symlink' or 'reference-directly'.
-  //   Documented on exports.bundle.
-  //
   // Returns an object with the following keys:
   // - controlFile: the path (relative to 'builder') of the control file for
   // the image
   // - nodePath: an array of paths required to be set in the NODE_PATH
   // environment variable.
-  write(builder, options) {
+  write(builder, {
+    buildMode,
+    // falsy or 'symlink', documented on exports.bundle
+    includeNodeModules,
+  } = {}) {
     var self = this;
-    options = options || {};
 
     builder.reserve("program.json");
 
@@ -1735,22 +1833,20 @@ class JsImage {
       // We need to find the actual file system location for the node modules
       // this JS Image uses, so that we can add it to nodeModulesDirectories
       var modulesPhysicalLocation;
-      if (! options.includeNodeModules ||
-          options.includeNodeModules === 'symlink') {
+      if (! includeNodeModules ||
+          includeNodeModules === 'symlink') {
         modulesPhysicalLocation = nmd.getPreferredBundlePath("bundle");
-      } else if (options.includeNodeModules === 'reference-directly') {
-        modulesPhysicalLocation = nmd.sourcePath;
       } else {
         // This is some option we didn't expect - someone has added another case
         // to the includeNodeModules option but didn't update this if block.
         // Fail hard.
-        throw new Error("Option includeNodeModules wasn't falsy, 'symlink', " +
-          "or 'reference-directly'. It was: " + options.includeNodeModules);
+        throw new Error("Option includeNodeModules wasn't falsy or 'symlink'. " +
+                        "It was: " + includeNodeModules);
       }
 
       nmd = nmd.copy();
       nmd.preferredBundlePath = modulesPhysicalLocation;
-      nodeModulesDirectories[nmd.sourcePath] = nmd;
+      addNodeModulesDirToObject(nmd, nodeModulesDirectories);
     });
 
     // If multiple load files share the same asset, only write one copy of
@@ -1768,8 +1864,6 @@ class JsImage {
         node_modules: {}
       };
 
-      const nodeModulesPaths = [];
-
       _.each(item.nodeModulesDirectories, nmd => {
         // We need to make sure to use the directory name we got from
         // builder.generateFilename here.
@@ -1782,30 +1876,19 @@ class JsImage {
             "string"
           );
 
-          // Eventually we would prefer to write these node_modules
-          // properties with object values instead of string values, like
-          // we're doing here, but older versions of meteor-tool won't be
-          // able to load images like that, so we have to wait until
-          // everyone is using a version of the tool that knows how to
-          // read object-valued node_modules properties.
           loadItem.node_modules[generatedNMD.preferredBundlePath] =
             generatedNMD.toJSON();
-
-          if (nmd.local) {
-            nodeModulesPaths.push(generatedNMD.preferredBundlePath);
-          } else {
-            // Give .npm/package/node_modules directories preference in
-            // the selection of a single bundle path below.
-            nodeModulesPaths.unshift(generatedNMD.preferredBundlePath);
-          }
         }
       });
 
-      if (nodeModulesPaths.length > 0) {
-        // For backwards compatibility, we unfortunately can only write
-        // node_modules as a single string.
-        loadItem.node_modules = nodeModulesPaths[0];
-      } else {
+      const preferredPaths = Object.keys(loadItem.node_modules);
+      if (preferredPaths.length === 1) {
+        // For backwards compatibility, if there's only one node_modules
+        // directory, store it as a single string.
+        loadItem.node_modules = preferredPaths[0];
+      } else if (preferredPaths.length === 0) {
+        // If there are no node_modules directories, don't confuse older
+        // versions of Meteor by storing an empty object.
         delete loadItem.node_modules;
       }
 
@@ -1885,28 +1968,21 @@ class JsImage {
           from: nmd.sourcePath,
           to: nmd.preferredBundlePath,
           npmDiscards: nmd.npmDiscards,
-          symlink: (options.includeNodeModules === 'symlink')
+          symlink: includeNodeModules === 'symlink'
         };
 
-        if (nmd.local) {
-          const prodPackageTree = Object.create(null);
-          const complete = Symbol();
-          let maxPartCount = 0;
+        const prodPackagePredicate =
+          // This condition essentially means we don't strip devDependencies
+          // when running tests, which is important for use cases like the one
+          // described in #7953. Note that devDependencies can still be used
+          // when buildMode === "development" because the app has access to
+          // the original node_modules.
+          (buildMode === "production" ||
+           buildMode === "development") &&
+          nmd.local && // Only filter local node_modules directories.
+          nmd.getProdPackagePredicate();
 
-          Object.keys(
-            meteorNpm.getProdPackageNames(nmd.sourcePath)
-          ).forEach(name => {
-            const parts = name.split("/");
-            let tree = prodPackageTree;
-
-            parts.forEach(part => {
-              tree = tree[part] || (tree[part] = Object.create(null));
-            });
-
-            tree[complete] = true;
-            maxPartCount = Math.max(parts.length, maxPartCount);
-          });
-
+        if (prodPackagePredicate) {
           // When copying a local node_modules directory, ignore any npm
           // package directories not in the list of production package
           // names, as determined by meteorNpm.getProdPackageNames. Note
@@ -1917,39 +1993,7 @@ class JsImage {
           // package's "dependencies", then every copy of that package
           // will be copied to the destination directory. A little bit of
           // overcopying vastly simplifies the job of directoryFilter.
-          copyOptions.directoryFilter = function isWithinProdPackage(dir) {
-            const parts = files.pathRelative(nmd.sourcePath, dir)
-              .split(files.pathSep);
-
-            let start = parts.lastIndexOf("node_modules") + 1;
-
-            if (parts.length - start > maxPartCount) {
-              // We're deep enough inside node_modules that it's safe to
-              // say we should have returned false earlier.
-              return true;
-            }
-
-            let tree = prodPackageTree;
-
-            for (let pos = start; pos < parts.length; ++pos) {
-              const part = parts[pos];
-              const branch = tree[part];
-
-              if (! branch) {
-                // This dir is not prefixed by a production package name.
-                return false;
-              }
-
-              if (branch[complete]) {
-                // This dir is prefixed by a complete production package name.
-                break;
-              }
-
-              tree = branch;
-            }
-
-            return true;
-          };
+          copyOptions.directoryFilter = prodPackagePredicate;
         }
 
         builder.copyDirectory(copyOptions);
@@ -2101,17 +2145,19 @@ class ServerTarget extends JsImageTarget {
   }
 
   // Output the finished target to disk
-  // options:
-  // - includeNodeModules: falsy, 'symlink' or 'reference-directly',
-  //   documented in exports.bundle
-  // - getRelativeTargetPath: a function that takes {forTarget:
-  //   Target, relativeTo: Target} and return the path of one target
-  //   in the bundle relative to another. hack to get the path of the
-  //   client target.. we'll find a better solution here eventually
   //
   // Returns the path (relative to 'builder') of the control file for
   // the plugin and the required NODE_PATH.
-  write(builder, options) {
+  write(builder, {
+    buildMode,
+    // falsy or 'symlink', documented in exports.bundle
+    includeNodeModules,
+    // a function that takes {forTarget: Target, relativeTo: Target} and
+    // return the path of one target in the bundle relative to another. hack
+    // to get the path of the client target.. we'll find a better solution
+    // here eventually
+    getRelativeTargetPath,
+  }) {
     var self = this;
     var nodePath = [];
 
@@ -2123,8 +2169,10 @@ class ServerTarget extends JsImageTarget {
     var clientTargetPaths = {};
     if (self.clientTargets) {
       _.each(self.clientTargets, function (target) {
-        clientTargetPaths[target.arch] = files.pathJoin(options.getRelativeTargetPath({
-          forTarget: target, relativeTo: self}), 'program.json');
+        clientTargetPaths[target.arch] = files.pathJoin(getRelativeTargetPath({
+          forTarget: target,
+          relativeTo: self,
+        }), 'program.json');
       });
     }
 
@@ -2162,26 +2210,31 @@ class ServerTarget extends JsImageTarget {
     // This is a hack to make 'meteor run' faster (so you don't have to run 'npm
     // install' using the above package.json and npm-shrinkwrap.json on every
     // rebuild).
-    if (options.includeNodeModules === 'symlink') {
+    if (includeNodeModules === 'symlink') {
       builder.write('node_modules', {
         symlink: files.pathJoin(files.getDevBundle(), 'server-lib', 'node_modules')
       });
-    } else if (options.includeNodeModules === 'reference-directly') {
-      nodePath.push(
-        files.pathJoin(files.getDevBundle(), 'server-lib', 'node_modules')
-      );
-    } else if (options.includeNodeModules) {
+    } else if (includeNodeModules) {
       // This is some option we didn't expect - someone has added another case
       // to the includeNodeModules option but didn't update this if block. Fail
       // hard.
-      throw new Error("Option includeNodeModules wasn't falsy, 'symlink', " +
-        "or 'reference-directly'.");
+      throw new Error("Option includeNodeModules wasn't falsy or 'symlink'");
     }
 
     // Linked JavaScript image (including static assets, assuming that there are
     // any JS files at all)
     var jsImage = self.toJsImage();
-    jsImage.write(builder, { includeNodeModules: options.includeNodeModules });
+    jsImage.write(builder, {
+      buildMode,
+      includeNodeModules,
+    });
+
+    const toolsDir = files.pathDirname(
+      files.convertToStandardPath(__dirname));
+
+    builder.write("profile.js", {
+      file: files.pathJoin(toolsDir, "tool-env", "profile.js"),
+    });
 
     // Server bootstrap
     _.each([
@@ -2195,7 +2248,7 @@ class ServerTarget extends JsImageTarget {
     ], function (filename) {
       builder.write(filename, {
         file: files.pathJoin(
-          files.pathDirname(files.convertToStandardPath(__dirname)),
+          toolsDir,
           'static-assets',
           'server',
           filename
@@ -2258,15 +2311,20 @@ var writeTargetToPath = Profile(
     includeNodeModules,
     getRelativeTargetPath,
     previousBuilder,
-    minifyMode
+    buildMode,
+    minifyMode,
   }) {
     var builder = new Builder({
       outputPath: files.pathJoin(outputPath, 'programs', name),
       previousBuilder
     });
 
-    var targetBuild = target.write(
-      builder, {includeNodeModules, getRelativeTargetPath, minifyMode});
+    var targetBuild = target.write(builder, {
+      includeNodeModules,
+      getRelativeTargetPath,
+      buildMode,
+      minifyMode,
+    });
 
     builder.complete();
 
@@ -2314,6 +2372,7 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", function (
     releaseName,
     getRelativeTargetPath,
     previousBuilders,
+    buildMode,
     minifyMode
   }) {
 
@@ -2399,6 +2458,7 @@ Find out more about Meteor at meteor.com.
           releaseName,
           getRelativeTargetPath,
           previousBuilder,
+          buildMode,
           minifyMode
         });
 
@@ -2464,14 +2524,6 @@ Find out more about Meteor at meteor.com.
  *   $NODE_PATH because then random node_modules directories above cwd take
  *   precedence.) To make it even hackier, this also means we make node_modules
  *   directories for packages symlinks instead of copies.
- *   + 'reference-directly' - don't copy the files of node modules.
- *   Instead, use paths directly to files we already have on the file-system: in
- *   package catalog, isopacks folder or the dev_bundle folder.
- *   return the NODE_PATH string with the resulting bundle that would be set as
- *   the NODE_PATH environment variable when the node process is running. (The
- *   fallback option for Windows). For isopacks (meteor packages), link to the
- *   location of the locally stored isopack build (e.g.
- *   ~/.meteor/packages/package/version/npm)
  *
  * - buildOptions: may include
  *   - minifyMode: string, type of minification for the CSS and JS assets
@@ -2722,7 +2774,9 @@ function bundle({
           const previousBuilder = previousBuilders && previousBuilders[name];
           var targetBuild = writeTargetToPath(
             name, target, outputPath,
-            _.extend({}, writeOptions, {previousBuilder})
+            _.extend({
+              buildMode: buildOptions.buildMode,
+            }, writeOptions, {previousBuilder})
          );
           nodePath = nodePath.concat(targetBuild.nodePath);
           clientWatchSet.merge(target.getWatchSet());
@@ -2732,7 +2786,9 @@ function bundle({
         starResult = writeSiteArchive(
           targets,
           outputPath,
-          _.extend({}, writeOptions, {previousBuilders})
+          _.extend({
+            buildMode: buildOptions.buildMode,
+          }, writeOptions, {previousBuilders})
         );
 
         nodePath = nodePath.concat(starResult.nodePath);

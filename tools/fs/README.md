@@ -36,10 +36,7 @@ copied to a built bundle (`boot.js`). The shared code is stored in
 Since node.js doesn't ship a stable library to watch a folder on all
 file-systems, a wrapper is used. The wrapper checks if the native functionality
 works, if not (while on Windows, or a virtualized shared file-system like in
-VirtualBox), a 5s long-polling is used.
-
-The polling and its numbers are tweakable with the environment variables
-`METEOR_WATCH_POLLING_INTERVAL_MS` and `METEOR_WATCH_FORCE_POLLING`.
+VirtualBox), polling is used.
 
 ## Watchset
 

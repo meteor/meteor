@@ -2,6 +2,9 @@ import assert from "assert";
 import "regenerator-runtime/runtime";
 export const ModulesTestPackage = "loaded";
 
+import { parse } from "acorn";
+assert.strictEqual(typeof parse, "function");
+
 export function checkPackageVars() {
   if (Meteor.isClient) {
     assert.strictEqual(ClientPackageVar, "client");

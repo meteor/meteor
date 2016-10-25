@@ -1,11 +1,16 @@
 Package.describe({
   summary: "Generates the boilerplate html from program's manifest",
-  version: '1.0.9'
+  version: '1.0.11'
 });
 
 Package.onUse(function (api) {
-  api.use(['underscore',  'spacebars-compiler',
-           'spacebars', 'htmljs', 'ui'], 'server');
+  api.use([
+    'underscore@1.0.9',
+    'spacebars-compiler@1.0.12',
+    'spacebars@1.0.12',
+    'htmljs@1.0.10',
+    'ui@1.0.11',
+  ], 'server');
   api.addFiles(['boilerplate-generator.js'], 'server');
   api.export(['Boilerplate'], 'server');
   // These are spacebars templates, but we process them manually with the

@@ -5,9 +5,16 @@ export SELF_TEST_EXCLUDE="^can't publish package with colons|^old cli tests|^log
 # Don't print as many progress indicators
 export EMACS=t
 
+# Clear dev_bundle/.npm to ensure consistent test runs.
+./meteor npm cache clear
+
 # Since PhantomJS has been removed from dev_bundle/lib/node_modules
 # (#6905), but self-test still needs it, install it now.
 ./meteor npm install -g phantomjs-prebuilt browserstack-webdriver
+
+# Make sure we have initialized and updated submodules such as
+# packages/non-core/blaze.
+git submodule update --init --recursive
 
 # run different jobs based on CicleCI parallel container index
 case $CIRCLE_NODE_INDEX in

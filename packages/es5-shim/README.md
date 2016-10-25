@@ -1,4 +1,6 @@
 # es5-shim
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/es5-shim) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/es5-shim)
+***
 
 This package improves ECMAScript 5 compliance in all browers, particularly older browsers, and especially Internet Explorer 8 (and earlier).
 

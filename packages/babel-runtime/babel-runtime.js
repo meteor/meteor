@@ -2,7 +2,58 @@ var hasOwn = Object.prototype.hasOwnProperty;
 var S = typeof Symbol === "function" ? Symbol : {};
 var iteratorSymbol = S.iterator || "@@iterator";
 
-meteorBabelHelpers = require("meteor-babel-helpers");
+var hasDefineProperty = false;
+try {
+  // IE 8 has a broken Object.defineProperty, so feature-test by
+  // trying to call it.
+  Object.defineProperty({}, 'x', {});
+  hasDefineProperty = true;
+} catch (e) {}
+
+function defineProperties(target, props) {
+  for (var i = 0; i < props.length; i++) {
+    var descriptor = props[i];
+    descriptor.enumerable = descriptor.enumerable || false;
+    descriptor.configurable = true;
+    if ("value" in descriptor) descriptor.writable = true;
+    Object.defineProperty(target, descriptor.key, descriptor);
+  }
+}
+
+exports.meteorBabelHelpers = require("meteor-babel-helpers");
+
+// Returns true if a given absolute identifier will be provided at runtime
+// by the babel-runtime package.
+exports.checkHelper = function checkHelper(id) {
+  var parts = id.split("/");
+  var index = 0;
+
+  // Skip over leading / and node_modules.
+  if (parts[index] === "") ++index;
+  if (parts[index] === "node_modules") ++index;
+
+  if (parts[index] !== "babel-runtime") {
+    return false;
+  }
+
+  // Skip over babel-runtime.
+  ++index;
+
+  if (parts.length - index === 2) {
+    return parts[index] === "helpers" &&
+      hasOwn.call(BabelRuntime, stripDotJS(parts[index + 1]));
+  }
+
+  if (parts.length - index === 1) {
+    return stripDotJS(parts[index]) === "regenerator";
+  }
+
+  return false;
+};
+
+function stripDotJS(name) {
+  return name.replace(/\.js$/, "");
+}
 
 var BabelRuntime = {
   // es6.templateLiterals
@@ -96,42 +147,37 @@ var BabelRuntime = {
     }
   },
 
-  createClass: (function () {
-    var hasDefineProperty = false;
-    try {
-      // IE 8 has a broken Object.defineProperty, so feature-test by
-      // trying to call it.
-      Object.defineProperty({}, 'x', {});
-      hasDefineProperty = true;
-    } catch (e) {}
-
-    function defineProperties(target, props) {
-      for (var i = 0; i < props.length; i++) {
-        var descriptor = props[i];
-        descriptor.enumerable = descriptor.enumerable || false;
-        descriptor.configurable = true;
-        if ("value" in descriptor) descriptor.writable = true;
-        Object.defineProperty(target, descriptor.key, descriptor);
-      }
+  defineProperty: function (obj, key, value) {
+    if (hasDefineProperty && (key in obj)) {
+      Object.defineProperty(obj, key, {
+        value: value,
+        enumerable: true,
+        configurable: true,
+        writable: true
+      });
+    } else {
+      obj[key] = value;
     }
 
-    return function (Constructor, protoProps, staticProps) {
-      if (! hasDefineProperty) {
-        // e.g. `class Foo { get bar() {} }`.  If you try to use getters and
-        // setters in IE 8, you will get a big nasty error, with or without
-        // Babel.  I don't know of any other syntax features besides getters
-        // and setters that will trigger this error.
-        throw new Error(
-          "Your browser does not support this type of class property.  " +
-            "For example, Internet Explorer 8 does not support getters and " +
-            "setters.");
-      }
+    return obj;
+  },
 
-      if (protoProps) defineProperties(Constructor.prototype, protoProps);
-      if (staticProps) defineProperties(Constructor, staticProps);
-      return Constructor;
-    };
-  })(),
+  createClass: function (Constructor, protoProps, staticProps) {
+    if (! hasDefineProperty) {
+      // e.g. `class Foo { get bar() {} }`.  If you try to use getters and
+      // setters in IE 8, you will get a big nasty error, with or without
+      // Babel.  I don't know of any other syntax features besides getters
+      // and setters that will trigger this error.
+      throw new Error(
+        "Your browser does not support this type of class property.  " +
+          "For example, Internet Explorer 8 does not support getters and " +
+          "setters.");
+    }
+
+    if (protoProps) defineProperties(Constructor.prototype, protoProps);
+    if (staticProps) defineProperties(Constructor, staticProps);
+    return Constructor;
+  },
 
   "typeof": function (obj) {
     return obj && obj.constructor === Symbol ? "symbol" : typeof obj;

@@ -83,8 +83,14 @@ export class CoffeeCompiler extends CachingCompiler {
 
     let sourceMap = JSON.parse(output.v3SourceMap);
 
-    if (source.indexOf('`') !== -1) {
-      // If source contains backticks, pass the coffee output through babel-compiler
+    output.js = stripExportedVars(
+      output.js,
+      inputFile.getDeclaredExports().map(e => e.name)
+    );
+
+    if (/`|\b(?:import|export|yield)\b/.test(source)) {
+      // If source contains backticks or features that output as ES2015+,
+      // pass the coffee output through babel-compiler
       const doubleRoastedCoffee =
         this.babelCompiler.processOneFileForTarget(inputFile, output.js);
 
@@ -108,10 +114,7 @@ export class CoffeeCompiler extends CachingCompiler {
       }
     }
 
-    return addSharedHeader(stripExportedVars(
-      output.js,
-      inputFile.getDeclaredExports().map(e => e.name)
-    ), sourceMap);
+    return addSharedHeader(output.js, sourceMap);
   }
 
   addCompileResult(inputFile, sourceWithMap) {

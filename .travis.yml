@@ -3,7 +3,6 @@ node_js:
   - "4.0"
 cache:
   directories:
-    - "dev_bundle"
     - ".meteor"
     - ".babel-cache"
 script: TEST_PACKAGES_EXCLUDE="less" ./packages/test-in-console/run.sh

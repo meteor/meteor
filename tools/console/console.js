@@ -541,6 +541,8 @@ var Console = function (options) {
 
   options = options || {};
 
+  self._headless = false;
+
   // The progress display we are showing on-screen
   self._progressDisplay = new ProgressDisplayNone(self);
 
@@ -920,12 +922,12 @@ _.extend(Console.prototype, {
 
   // A wrapper around Console.info. Prints the message out in green (if pretty),
   // with the CHECKMARK as the bullet point in front of it.
-  success: function (message) {
+  success: function (message, uglySuccessKeyword = "success") {
     var self = this;
     var checkmark;
 
     if (! self._pretty) {
-      return self.info(message);
+      return self.info(`${message}: ${uglySuccessKeyword}`);
     }
 
     if (process.platform === "win32") {
@@ -958,7 +960,7 @@ _.extend(Console.prototype, {
     var self = this;
 
     if (! self._pretty) {
-      return printFn(message);
+      return self[printFn](message);
     }
 
     var xmark = chalk.red('\u2717');
@@ -1265,12 +1267,16 @@ _.extend(Console.prototype, {
     self._setProgressDisplay(newProgressDisplay);
   },
 
-  setHeadless(headless) {
-    if (typeof headless === "undefined") headless = true;
-    headless = !! headless;
+  isHeadless() {
+    return this._headless;
+  },
+
+  setHeadless(headless = true) {
+    this._headless = !! headless;
+
     if (this._progressDisplay &&
         this._progressDisplay.setHeadless) {
-      this._progressDisplay.setHeadless(headless);
+      this._progressDisplay.setHeadless(this._headless);
     }
   },
 

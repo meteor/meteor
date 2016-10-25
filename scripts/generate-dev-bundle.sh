@@ -131,7 +131,6 @@ delete sqlite3/node_modules/nan
 delete sqlite3/node_modules/node-pre-gyp
 delete wordwrap/test
 delete moment/min
-delete cordova-app-hello-world
 
 # Remove esprima tests to reduce the size of the dev bundle
 find . -path '*/esprima-fb/test' | xargs rm -rf

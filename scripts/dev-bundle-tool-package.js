@@ -11,11 +11,11 @@ var packageJson = {
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
-    npm: "3.10.8",
+    npm: "3.10.9",
     "node-gyp": "3.4.0",
-    "node-pre-gyp": "0.6.29",
-    "meteor-babel": "0.12.0",
-    "meteor-promise": "0.7.2",
+    "node-pre-gyp": "0.6.30",
+    "meteor-babel": "0.13.0",
+    "meteor-promise": "0.8.0",
     fibers: "1.0.15",
     promise: "7.1.1",
     // So that Babel 6 can emit require("babel-runtime/helpers/...") calls.
@@ -34,6 +34,7 @@ var packageJson = {
     kexec: "2.0.2",
     "source-map": "0.5.3",
     "node-inspector": "0.12.8",
+    "v8-profiler": "5.6.5",
     chalk: "0.5.1",
     sqlite3: "3.1.3",
     netroute: "1.0.2",
@@ -41,6 +42,7 @@ var packageJson = {
     "wordwrap": "0.0.2",
     "moment": "2.8.4",
     "rimraf": "2.4.3",
+    "glob": "7.0.6",
     // XXX: When we update this, see if it fixes this Github issue:
     // https://github.com/jgm/CommonMark/issues/276 . If it does, remove the
     // workaround from the tool.
@@ -49,10 +51,10 @@ var packageJson = {
     // 2.4.0 (more or less, the package.json change isn't committed) plus our PR
     // https://github.com/williamwicks/node-eachline/pull/4
     eachline: "https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da",
-    pathwatcher: "6.7.0",
-    runas: "3.1.1",
-    'lru-cache': '2.6.4',
-    'cordova-lib': "6.0.0",
+    pathwatcher: "6.7.1",
+    optimism: "0.3.3",
+    'lru-cache': '4.0.1',
+    'cordova-lib': "6.3.1",
     longjohn: '0.2.11'
   }
 };

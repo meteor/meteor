@@ -1,4 +1,6 @@
 # reload
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/reload) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/reload)
+***
 
 The `reload` package handles the process of *migrating* an app:
 serializing the app's state, then shutting down and restarting the app

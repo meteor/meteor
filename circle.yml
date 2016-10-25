@@ -1,3 +1,7 @@
+checkout:
+  post:
+    - git submodule update --init
+
 dependencies:
   pre:
     # https://github.com/meteor/docs/blob/version-NEXT/long-form/file-change-watcher-efficiency.md
@@ -7,7 +11,9 @@ dependencies:
     - ".meteor"
     - ".babel-cache"
   override:
-    - ./meteor --get-ready
+    # shouldn't take longer than 10 minutes
+    - METEOR_PRETTY_OUTPUT=0 ./meteor --get-ready:
+        timeout: 600
 
 test:
   override:

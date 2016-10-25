@@ -255,14 +255,14 @@ var Profile = function (bucketName, f) {
     return f;
   }
 
-  return function (...args) {
+  return Object.assign(function profileWrapper() {
     if (! running) {
-      return f.apply(this, args);
+      return f.apply(this, arguments);
     }
 
     var name;
     if (_.isFunction(bucketName)) {
-      name = bucketName.apply(this, args);
+      name = bucketName.apply(this, arguments);
     } else {
       name = bucketName;
     }
@@ -280,7 +280,7 @@ var Profile = function (bucketName, f) {
     var start = process.hrtime();
     var err = null;
     try {
-      return f.apply(this, args);
+      return f.apply(this, arguments);
     }
     catch (e) {
       err = e;
@@ -298,7 +298,7 @@ var Profile = function (bucketName, f) {
     if (err) {
       throw err;
     }
-  };
+  }, f);
 };
 
 var time = function (bucket, f) {
@@ -386,7 +386,8 @@ var injectOtherTime = function (entry) {
   entries.push(other);
 };
 
-var reportOn = function (entry, isLastLeafStack = []) {
+var reportOn = function (entry, isLastLeafStack) {
+  isLastLeafStack = isLastLeafStack || [];
   var stats = entryStats(entry);
   var isParent = hasSignificantChildren(entry);
   var name = entryName(entry);

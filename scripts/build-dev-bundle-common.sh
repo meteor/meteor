@@ -7,7 +7,7 @@ UNAME=$(uname)
 ARCH=$(uname -m)
 MONGO_VERSION=3.2.6
 NODE_VERSION=4.6.1
-NPM_VERSION=3.10.8
+NPM_VERSION=3.10.9
 
 if [ "$UNAME" == "Linux" ] ; then
     if [ "$ARCH" != "i686" -a "$ARCH" != "x86_64" ] ; then

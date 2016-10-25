@@ -1,11 +1,83 @@
 ## v.NEXT
 
+## v1.4.2
+
+* This release implements a number of rebuild performance optimizations.
+  As you edit files in development, the server should restart and rebuild
+  much more quickly, especially if you have many `node_modules` files.
+  See https://github.com/meteor/meteor/pull/7668 for more details.
+
+> Note: the `METEOR_PROFILE` environment variable now provides data for
+  server startup time as well as build time, which should make it easier
+  to tell which of your packages are responsible for slow startup times.
+  Please include the output of `METEOR_PROFILE=10 meteor run` with any
+  GitHub issue about rebuild performance.
+
+* `npm` has been upgraded to version 3.10.9.
+
+* The `cordova-lib` npm package has been updated to 6.3.1, along with
+  cordova-android (5.2.2) and cordova-ios (4.2.1), and various plugins.
+
+* The `node-pre-gyp` npm package has been updated to 0.6.30.
+
+* The `lru-cache` npm package has been updated to 4.0.1.
+
+* The `meteor-promise` npm package has been updated to 0.8.0 for better
+  asynchronous stack traces.
+
+* The `meteor` tool is now prevented from running as `root` as this is
+  not recommended and can cause issues with permissions.  In some environments,
+  (e.g. Docker), it may still be desired to run as `root` and this can be
+  permitted by passing `--unsafe-perm` to the `meteor` command.
+  [#7821](https://github.com/meteor/meteor/pull/7821)
+
+* Blaze-related packages have been extracted to
+  [`meteor/blaze`](https://github.com/meteor/blaze), and the main
+  [`meteor/meteor`](https://github.com/meteor/meteor) repository now
+  refers to them via git submodules (see
+  [#7633](https://github.com/meteor/meteor/pull/7633)).
+  When running `meteor` from a checkout, you must now update these
+  submodules by running
+  ```sh
+  git submodule update --init --recursive
+  ```
+  in the root directory of your `meteor` checkout.
+
+* Accounts.forgotPassword and .verifyEmail no longer throw errors if callback is provided. [Issue #5664](https://github.com/meteor/meteor/issues/5664) [Origin PR #5681](https://github.com/meteor/meteor/pull/5681) [Merged PR](https://github.com/meteor/meteor/pull/7117)
+
+* The default content security policy (CSP) for Cordova now includes `ws:`
+  and `wss:` WebSocket protocols.
+  [#7774](https://github.com/meteor/meteor/pull/7774)
+
+* `meteor npm` commands are now configured to use `dev_bundle/.npm` as the
+  npm cache directory by default, which should make npm commands less
+  sensitive to non-reproducible factors in the external environment.
+  https://github.com/meteor/meteor/pull/7668/commits/3313180a6ff33ee63602f7592a9506012029e919
+
+* The `meteor test` command now supports the `--no-release-check` flag.
+  https://github.com/meteor/meteor/pull/7668/commits/7097f78926f331fb9e70a06300ce1711adae2850
+
+* JavaScript module bundles on the server no longer include transitive
+  `node_modules` dependencies, since those dependencies can be evaluated
+  directly by Node. This optimization should improve server rebuild times
+  for apps and packages with large `node_modules` directories.
+  https://github.com/meteor/meteor/pull/7668/commits/03c5346873849151cecc3e00606c6e5aa13b3bbc
+
+* The `standard-minifier-css` package now does basic caching for the
+  expensive `mergeCss` function.
+  https://github.com/meteor/meteor/pull/7668/commits/bfa67337dda1e90610830611fd99dcb1bd44846a
+
+* The `coffeescript` package now natively supports `import` and `export`
+  declarations. [#7818](https://github.com/meteor/meteor/pull/7818)
+
 ## v1.4.1.3
 
 * Node has been updated to version 4.6.1:
   https://nodejs.org/en/blog/release/v4.6.1/
 
-* The `mongodb` npm package has been upgraded to version 2.2.11.
+* The `mongodb` npm package used by the `npm-mongo` Meteor package has
+  been updated to version 2.2.11.
+  [#7780](https://github.com/meteor/meteor/pull/7780)
 
 * The `fibers` npm package has been upgraded to version 1.0.15.
 
@@ -36,9 +108,9 @@
 
 ## v1.4.1.1
 
-* Update the version of our Node MongoDB driver to 2.2.7 to fix a bug in
+* Update the version of our Node MongoDB driver to 2.2.8 to fix a bug in
   reconnection logic, leading to some `update` and `remove` commands being
-  treated as `insert`s. [#7594](https://github.com/meteor/meteor/issue/7594)
+  treated as `insert`s. [#7594](https://github.com/meteor/meteor/issues/7594)
 
 ## v1.4.1
 

@@ -289,7 +289,8 @@ seqChangedToArray = function (lastSeqArray, array, callbacks) {
       id = "-" + item;
     } else if (typeof item === 'number' ||
                typeof item === 'boolean' ||
-               item === undefined) {
+               item === undefined ||
+               item === null) {
       id = item;
     } else if (typeof item === 'object') {
       id = (item && ('_id' in item)) ? item._id : index;
@@ -300,7 +301,7 @@ seqChangedToArray = function (lastSeqArray, array, callbacks) {
 
     var idString = idStringify(id);
     if (idsUsed[idString]) {
-      if (typeof item === 'object' && '_id' in item)
+      if (item && typeof item === 'object' && '_id' in item)
         warn("duplicate id " + id + " in", array);
       id = Random.id();
     } else {

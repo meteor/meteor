@@ -14,6 +14,11 @@ var compileStepModule = require('./compiler-deprecated-compile-step.js');
 var Profile = require('../tool-env/profile.js').Profile;
 import { SourceProcessorSet } from './build-plugin.js';
 
+import {
+  optimisticReadFile,
+  optimisticHashOrNull,
+} from "../fs/optimistic.js";
+
 var compiler = exports;
 
 // Whenever you change anything about the code that generates isopacks, bump
@@ -29,7 +34,7 @@ var compiler = exports;
 // dependencies. (At least for now, packages only used in target creation (eg
 // minifiers) don't require you to update BUILT_BY, though you will need to quit
 // and rerun "meteor run".)
-compiler.BUILT_BY = 'meteor/22';
+compiler.BUILT_BY = 'meteor/24';
 
 // This is a list of all possible architectures that a build can target. (Client
 // is expanded into 'web.browser' and 'web.cordova')
@@ -550,12 +555,10 @@ api.addAssets('${relPath}', 'client').`);
       return;
     }
 
-    // readAndWatchFileWithHash returns an object carrying a buffer with the
-    // file-contents. The buffer contains the original data of the file (no EOL
-    // transforms from the tools/files.js part).
-    const file = watch.readAndWatchFileWithHash(watchSet, absPath);
-    const hash = file.hash;
-    const contents = file.contents;
+    const contents = optimisticReadFile(absPath);
+    const hash = optimisticHashOrNull(absPath);
+    const file = { contents, hash };
+    watchSet.addFile(absPath, hash);
 
     Console.nudge(true);
 

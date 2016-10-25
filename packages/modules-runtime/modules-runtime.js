@@ -4,6 +4,15 @@ var hasOwn = options.hasOwnProperty;
 // RegExp matching strings that don't start with a `.` or a `/`.
 var topLevelIdPattern = /^[^./]/;
 
+if (typeof Profile === "function" &&
+    process.env.METEOR_PROFILE) {
+  options.wrapRequire = function (require) {
+    return Profile(function (id) {
+      return "require(" + JSON.stringify(id) + ")";
+    }, require);
+  };
+}
+
 // This function will be called whenever a module identifier that hasn't
 // been installed is required. For backwards compatibility, and so that we
 // can require binary dependencies on the server, we implement the

@@ -54,7 +54,7 @@ Options:
                    example, --mobile-server=https://example.com:443).
   --production     Simulate production mode. Minify and bundle CSS and JS files.
   --raw-logs       Run without parsing logs from stdout and stderr.
-  --settings       Set optional data for Meteor.settings on the server.
+  --settings, -s   Set optional data for Meteor.settings on the server.
   --release        Specify the release of Meteor to use.
   --verbose        Print all output from builds logs.
   --no-lint        Don't run linters used by the app on every rebuild.
@@ -410,13 +410,13 @@ The --delete flag permanently removes a deployed application, including
 all of its stored data.
 
 Options:
-  --delete, -D  permanently delete this deployment
-  --debug       deploy in debug mode (don't minify, etc)
-  --settings    set optional data for Meteor.settings
+  --delete, -D    permanently delete this deployment
+  --debug         deploy in debug mode (don't minify, etc)
+  --settings, -s  set optional data for Meteor.settings
   --allow-incompatible-update   Allow packages in your project to be upgraded or
-                downgraded to versions that are potentially incompatible with
-                the current versions, if required to satisfy all package version
-                constraints.
+                  downgraded to versions that are potentially incompatible with
+                  the current versions, if required to satisfy all package version
+                  constraints.
 
 
 >>> logs
@@ -505,7 +505,7 @@ modified.
 Packages may be specified by name or by path. If a package argument
 contains a '/', it is loaded from a directory of that name; otherwise,
 the package name is resolved according to the usual package search
-algorithm ('packages' subdirectory of the current app, $PACKAGE_DIRS
+algorithm ('packages' subdirectory of the current app, $METEOR_PACKAGE_DIRS
 directories, and core packages in that order). You can test any number
 of packages simultaneously. If you don't specify any package names
 then all available packages will be tested.
@@ -527,7 +527,7 @@ Options:
                     URL scheme (for example,
                     --mobile-server=https://example.com:443).
   --production      Simulate production mode. Minify and bundle CSS, JS files.
-  --settings        Set optional data for Meteor.settings on the server
+  --settings, -s    Set optional data for Meteor.settings on the server
 
   --ios,            Run tests in an emulator or on a mobile device. All of
   --android,        the tests for client and server will run in addition to
@@ -581,7 +581,7 @@ Options:
                     URL scheme (for example,
                     --mobile-server=https://example.com:443).
   --raw-logs        Run without parsing logs from stdout and stderr.
-  --settings        Set optional data for Meteor.settings on the server
+  --settings, -s    Set optional data for Meteor.settings on the server
 
   --ios,            Run tests in an emulator or on a mobile device. All of
   --android,        the tests for client and server will run in addition to
@@ -778,7 +778,7 @@ and rebuilds the package from scratch. Packages are specified by name.
 
 If you pass no arguments, this will rebuild all local packages.
 That includes packages found through the
-PACKAGE_DIRS environment variable, local packages in the current
+METEOR_PACKAGE_DIRS environment variable, local packages in the current
 application, and, if running Meteor from a checkout, the packages in
 the checkout. It doesn't include any packages for which we don't have
 the source.

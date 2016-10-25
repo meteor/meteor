@@ -190,4 +190,12 @@ Tinytest.add("logging - format", function (test) {
       Log.format({message: "message", time: time, level: level, file: "app.js", line: 42}),
       level.charAt(0).toUpperCase() + '20120908-07:06:05.004' + utcOffsetStr + ' (app.js:42) message');
   });
+
+  test.matches(Log.format({
+    message: "oyez",
+    time: new Date,
+    level: "error"
+  }, {
+    color: true
+  }), /oyez/);
 });
