@@ -13,8 +13,8 @@ There are many ways to contribute to the Meteor Project. Here’s a list of tech
 - [Triaging issues](https://github.com/meteor/meteor/blob/devel/IssueTriage.md)
 - [Contributing to documentation](https://github.com/meteor/docs/blob/master/Contributing.md) 
 - [Submitting pull requests](https://github.com/meteor/meteor/blob/devel/Contributing.md#making-changes-to-meteor-core) 
-- Reviewing pull requests 
-- Maintaining a community package
+- [Reviewing pull requests](https://github.com/meteor/meteor/blob/devel/Contributing.md#reviewer) 
+- [Maintaining a community package](https://github.com/meteor/meteor/blob/devel/Contributing.md#community-package-maintainer)
 
 There are also several ways to contribute to the Meteor Project outside of GitHub, like organizing or speaking at [Meetups](https://www.meetup.com/topics/meteor/) and events and helping to moderate our [forums](https://forums.meteor.com/). Stay tuned for more documentation around non-code contributions. 
 
@@ -67,18 +67,18 @@ Current Documentation Maintainers:
 Community package maintainers are community members who maintain packages outside of Meteor core. This requires code to be extracted from meteor/meteor, and entails a high level of responsibility. For this reason, community maintainers generally (and currently) must first become an advanced contributor to Meteor core and have 4-5 non-trivial pull requests merged that went through the proper contribution workflow. At that point, core contributors may make the case for breaking out a particular core package, and assist in the technical process around doing so. 
 
 Current Community Package Maintainers: 
-- @mitar for [Blaze](https://github.com/meteor/blaze) 
+- [@mitar](https://github.com/mitar) for [Blaze](https://github.com/meteor/blaze) 
 
 #### Community Manager
 
 The community manager helps to coordinate resources, documentation, events, and other supportive work needed to ensure the health of the Meteor project.
 
 Current Community Manager:
-- @theadactyl
+- [@theadactyl](https://github.com/theadactyl)
 
 ### Tracking project work
 
-Right now, the best place to track the work being done on Meteor is to take a look at the latest release milestone [here](https://github.com/meteor/meteor/milestones). We also curate specific issues that would make great pull requests from the community with the [pull requests encouraged tag](https://github.com/meteor/meteor/issues?q=is%3Aopen+is%3Aissue+label%3Apull-requests-encouraged).
+Right now, the best place to track the work being done on Meteor is to take a look at the latest release milestone [here](https://github.com/meteor/meteor/milestones). We also curate specific issues that would make great pull requests for community contributors with the [pull requests encouraged tag](https://github.com/meteor/meteor/issues?q=is%3Aopen+is%3Aissue+label%3Apull-requests-encouraged).
 
 <h2 id="reporting-bug">Reporting a bug in Meteor</h2>
 
