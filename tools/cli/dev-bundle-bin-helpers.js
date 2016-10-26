@@ -82,6 +82,10 @@ exports.getEnv = function (options) {
       env.NPM_CONFIG_CACHE = path.join(devBundleDir, ".npm");
     }
 
+    if (env.METEOR_UNSAFE_PERM) {
+      env.NPM_CONFIG_UNSAFE_PERM = env.METEOR_UNSAFE_PERM;
+    }
+
     // This allows node-gyp to find Node headers and libraries in
     // dev_bundle/.node-gyp.
     env.USERPROFILE = devBundleDir;
