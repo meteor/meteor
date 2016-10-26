@@ -2,7 +2,7 @@ Accounts._noConnectionCloseDelayForTest = true;
 
 if (Meteor.isServer) {
   Accounts.removeDefaultRateLimit();
-  
+
   Meteor.methods({
     getResetToken: function () {
       var token = Meteor.users.findOne(this.userId).services.password.reset;
@@ -557,8 +557,8 @@ if (Meteor.isClient) (function () {
       }, 10 * 1000, 100);
     }
   ]);
-  
-  
+
+
   testAsyncMulti("passwords - forgotPassword client return error when empty email", [
     function (test, expect) {
       // setup
@@ -578,7 +578,36 @@ if (Meteor.isClient) (function () {
       }, /Must pass options\.email/);
     },
   ]);
- 
+
+  Tinytest.add(
+    'passwords - forgotPassword only passes callback value to forgotPassword '
+    + 'Method if callback is defined',
+    function (test) {
+      let methodCallArgumentCount = 0;
+      const originalMethodCall = Accounts.connection.call;
+      const stubMethodCall = (...args) => {
+        methodCallArgumentCount = args.length;
+      }
+      Accounts.connection.call = stubMethodCall;
+
+      Accounts.forgotPassword({ email: 'test@meteor.com' });
+      test.equal(
+        methodCallArgumentCount,
+        2,
+        'Method call should have 2 arguments since no callback is passed in'
+      );
+
+      Accounts.forgotPassword({ email: 'test@meteor.com' }, () => {});
+      test.equal(
+        methodCallArgumentCount,
+        3,
+        'Method call should have 3 arguments since a callback is passed in'
+      );
+
+      Accounts.connection.call = originalMethodCall;
+    }
+  );
+
   testAsyncMulti("passwords - verifyEmail client return error when empty token", [
     function (test, expect) {
       // setup
@@ -598,7 +627,7 @@ if (Meteor.isClient) (function () {
       }, /Need to pass token/);
     },
   ]);
- 
+
   testAsyncMulti("passwords - resetPassword errors", [
     function (test, expect) {
       // setup
