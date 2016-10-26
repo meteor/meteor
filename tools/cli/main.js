@@ -497,6 +497,12 @@ var springboard = function (rel, options) {
   // appropriate tools's meteor shell script.
   var newArgv = process.argv.slice(2);
 
+  // Don't pass the allow-superuser flags to springboarded versions since they
+  // may not know how to use them. See meteor/meteor#7959
+  newArgv = newArgv.filter(function (arg) {
+    return arg !== "--unsafe-perm" && arg !== "--allow-superuser";
+  });
+
   if (_.has(options, 'releaseOverride')) {
     // We used to just append --release=<releaseOverride> to the arguments, and
     // though that's probably safe in practice, it makes us worry about things
@@ -616,7 +622,11 @@ Fiber(function () {
   // tight timetable for 1.0 and there is no advantage to doing it now
   // rather than later. #ImprovingCrossVersionOptionParsing
 
-  var isBoolean = { "--help": true, "--unsafe-perm": true };
+  var isBoolean = {
+    "--help": true,
+    "--unsafe-perm": true,
+    "--allow-superuser": true,
+  };
   var walkCommands = function (node) {
     _.each(node, function (value, key) {
       if (value instanceof Command) {
