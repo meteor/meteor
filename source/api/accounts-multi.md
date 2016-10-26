@@ -49,7 +49,9 @@ These functions return an object with a single method, `stop`.  Calling
 
 On the server, the callbacks get a single argument, the same attempt info
 object as [`validateLoginAttempt`](#accounts_validateloginattempt). On the
-client, no arguments are passed.
+client, the callback argument is an object containing a single `error` 
+property set to the `Error`-object which was received from the failed login 
+attempt.
 
 {% apibox "AccountsCommon#onLogout" %}
 

@@ -157,10 +157,13 @@ Available functions are:
 
 * `Meteor.loginWithMeteorDeveloperAccount`
 * `Meteor.loginWithFacebook`
+  * `options` may also include [Facebook's `auth_type` parameter](https://developers.facebook.com/docs/facebook-login/manually-build-a-login-flow#reaskperms)
 * `Meteor.loginWithGithub`
 * `Meteor.loginWithGoogle`
+  * `options` may also include [Google's additional URI parameters](https://developers.google.com/identity/protocols/OpenIDConnect#authenticationuriparameters)
 * `Meteor.loginWithMeetup`
 * `Meteor.loginWithTwitter`
+  * `options` may also include [Twitter's `force_login` parameter](https://dev.twitter.com/oauth/reference/get/oauth/authenticate)
 * `Meteor.loginWithWeibo`
 
 These functions initiate the login process with an external
