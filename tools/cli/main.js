@@ -768,33 +768,40 @@ Fiber(function () {
     rawArgs.push(term);
   }
 
-  // Prevent running meteor as root
-  if (process.getuid) {
-    // On UNIX platforms.
-    if (process.getuid() === 0){
-      if (_.has(rawOptions, '--unsafe-perm')) {
-        // Meteor is running as root and has the --unsafe-perm flag, just notice.
-        Console.info("");
-        Console.info("You have run Meteor as root.",
-        "Your permissions in your app directory will be incorrect if you ever attempt to perform any Meteor tasks as your non-root user.",
-        "You probably didn't want this, but you can fix it by running the following from the root of your project:");
-        Console.info("");
-        Console.info("sudo chown -Rh <username> .meteor/local");
-        Console.info("");
-        // Fix issue when running `sudo meteor --unsafe-perm`, --unsafe-perm: unknown option.
-        delete rawOptions['--unsafe-perm'];
-      }
-      else {
-        // Meteor is running as root without the --unsafe-perm flag, notice and stop.
-        Console.error("");
-        Console.error("You are attempting to run Meteor as the \"root\" user.",
-        "If you are developing, this is almost certainly *not* what you want to do and will likely result in incorrect file permissions.",
-        "However, if you are running this in a build process (CI, etc.) or you are absolutely sure you know what you are doing,",
-        "add the `--unsafe-perm` flag to this command to proceed.");
-        Console.error("");
+  if (_.has(rawOptions, "--unsafe-perm")) {
+    process.env.METEOR_UNSAFE_PERM = "true";
+    delete rawOptions["--unsafe-perm"];
+  }
 
-        process.exit(1);
-      }
+  // Prevent running meteor as root on UNIX platforms.
+  if (process.getuid &&
+      process.getuid() === 0) {
+    const unsafePerm = !! (
+      process.env.METEOR_UNSAFE_PERM &&
+      JSON.parse(process.env.METEOR_UNSAFE_PERM));
+
+    if (! unsafePerm) {
+      // Meteor is running as root without $METEOR_UNSAFE_PERM, notice and stop.
+      Console.error("");
+      Console.error(
+        "You are attempting to run Meteor as the root user.",
+        "If you are developing, this is almost certainly *not* what you want to do and will likely result in incorrect file permissions.",
+        "However, if you are running this command in a build process (CI, etc.), or you are absolutely sure you know what you are doing,",
+        "set the $METEOR_UNSAFE_PERM environment variable to proceed."
+      );
+    }
+
+    Console.info("");
+    Console.info(
+      "Even with $METEOR_UNSAFE_PERM or --unsafe-perm, permissions in your app directory will be incorrect if you ever attempt to perform any Meteor tasks as a non-root user.",
+      "If you need to fix your permissions, run the following command from the root of your project:"
+    );
+    Console.info("");
+    Console.info(Console.command("  sudo chown -Rh <username> .meteor/local"));
+    Console.info("");
+
+    if (! unsafePerm) {
+      process.exit(1);
     }
   }
 
