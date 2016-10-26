@@ -220,6 +220,7 @@ Accounts.forgotPassword = function(options, callback) {
   if (!options.email) {
     return reportError(new Meteor.Error(400, "Must pass options.email"), callback);
   }
+
   if (callback) {
     Accounts.connection.call("forgotPassword", options, callback);
   } else {
