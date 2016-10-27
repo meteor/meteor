@@ -81,14 +81,14 @@ package) so that Meteor will pick up the local dependency.
 Provide basic package information with `Package.describe(options)`. To publish a
 package, you must define `summary` and `version`.
 
-{% apibox "Package.describe" %}
+{% apibox "PackageNamespace#describe" nested: %}
 
 Define dependencies and expose package methods with the
 `Package.onUse` handler. This section lets you define what packages your package
 depends on, what packages are implied by your package, and what object your
 package is exported to.
 
-{% apibox "Package.onUse" %}
+{% apibox "PackageNamespace#onUse" nested: %}
 
 {% apibox "PackageAPI#versionsFrom" %}
 {% apibox "PackageAPI#use" %}
@@ -107,15 +107,15 @@ If you used `meteor create` to set up your package, Meteor will create the
 required scaffolding in `package.js`, and you'll only need to add unit test code
 in the `_test.js` file that was created.
 
-{% apibox "Package.onTest" %}
+{% apibox "PackageNamespace#onTest" nested: %}
 
 Meteor packages can include NPM packages and Cordova plugins by using
 `Npm.depends` and `Cordova.depends` in the `package.js` file.
 
-{% apibox "Npm.depends" %}
+{% apibox "PackageNpm#depends" nested: %}
 {% apibox "Npm.require" %}
-{% apibox "Cordova.depends" %}
-{% apibox "Package.registerBuildPlugin" %}
+{% apibox "PackageCordova#depends" nested: %}
+{% apibox "PackageNamespace#registerBuildPlugin" nested: %}
 {% apibox "Plugin.registerSourceHandler" nested:true %}
 
 <h2 id="build-plugin-api">Build Plugins API</h2>
