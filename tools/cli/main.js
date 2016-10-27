@@ -768,39 +768,41 @@ Fiber(function () {
     rawArgs.push(term);
   }
 
-  if (_.has(rawOptions, "--unsafe-perm")) {
-    process.env.METEOR_UNSAFE_PERM = "true";
+  if (_.has(rawOptions, "--allow-superuser") ||
+      _.has(rawOptions, "--unsafe-perm")) {
+    process.env.METEOR_ALLOW_SUPERUSER = "true";
+    delete rawOptions["--allow-superuser"];
     delete rawOptions["--unsafe-perm"];
   }
 
   // Prevent running meteor as root on UNIX platforms.
   if (process.getuid &&
       process.getuid() === 0) {
-    const unsafePerm = !! (
-      process.env.METEOR_UNSAFE_PERM &&
-      JSON.parse(process.env.METEOR_UNSAFE_PERM));
+    const allowSuperuser = !! (
+      process.env.METEOR_ALLOW_SUPERUSER &&
+      JSON.parse(process.env.METEOR_ALLOW_SUPERUSER));
 
-    if (! unsafePerm) {
-      // Meteor is running as root without $METEOR_UNSAFE_PERM, notice and stop.
+    if (! allowSuperuser) {
+      // Meteor is running as root without METEOR_ALLOW_SUPERUSER, notice and stop.
       Console.error("");
       Console.error(
-        "You are attempting to run Meteor as the root user.",
+        "You are attempting to run Meteor as the 'root' superuser.",
         "If you are developing, this is almost certainly *not* what you want to do and will likely result in incorrect file permissions.",
         "However, if you are running this command in a build process (CI, etc.), or you are absolutely sure you know what you are doing,",
-        "set the $METEOR_UNSAFE_PERM environment variable to proceed."
+        "set the METEOR_ALLOW_SUPERUSER environment variable or pass --allow-superuser to proceed."
       );
     }
 
     Console.info("");
     Console.info(
-      "Even with $METEOR_UNSAFE_PERM or --unsafe-perm, permissions in your app directory will be incorrect if you ever attempt to perform any Meteor tasks as a non-root user.",
+      "Even with METEOR_ALLOW_SUPERUSER or --allow-superuser, permissions in your app directory will be incorrect if you ever attempt to perform any Meteor tasks as a normal user.",
       "If you need to fix your permissions, run the following command from the root of your project:"
     );
     Console.info("");
     Console.info(Console.command("  sudo chown -Rh <username> .meteor/local"));
     Console.info("");
 
-    if (! unsafePerm) {
+    if (! allowSuperuser) {
       process.exit(1);
     }
   }
