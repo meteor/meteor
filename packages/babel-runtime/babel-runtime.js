@@ -86,7 +86,7 @@ var BabelRuntime = {
     if (superClass) {
       if (Object.create) {
         // All but IE 8
-        subClass.prototype = Object.create(superClass.prototype, {
+        subClass.prototype = Object.create(superClass && superClass.prototype, {
           constructor: {
             value: subClass,
             enumerable: false,
@@ -105,45 +105,15 @@ var BabelRuntime = {
         var F = function () {
           this.constructor = subClass;
         };
-        F.prototype = superClass.prototype;
+        F.prototype = superClass && superClass.prototype;
         subClass.prototype = new F();
       }
 
-      // For modern browsers, this would be `subClass.__proto__ = superClass`,
-      // but IE <=10 don't support `__proto__`, and in this case the difference
-      // would be detectable; code that works in modern browsers could easily
-      // fail on IE 8 if we ever used the `__proto__` trick.
-      //
-      // There's no perfect way to make static methods inherited if they are
-      // assigned after declaration of the classes.  The best we can do is
-      // to copy them.  In other words, when you write `class Foo
-      // extends Bar`, we copy the static methods from Bar onto Foo, but future
-      // ones are not copied.
-      //
-      // For correctness when writing code, don't add static methods to a class
-      // after you subclass it.
-
-      // The ecmascript-runtime package provides adequate polyfills for
-      // all of these Object.* functions (and Array#forEach), and anyone
-      // using babel-runtime is almost certainly using it because of the
-      // ecmascript package, which also implies ecmascript-runtime.
-      Object.getOwnPropertyNames(superClass).forEach(function (k) {
-        // This property descriptor dance preserves getter/setter behavior
-        // in browsers that support accessor properties (all except
-        // IE8). In IE8, the superClass can't have accessor properties
-        // anyway, so this code is still safe.
-        var descriptor = Object.getOwnPropertyDescriptor(superClass, k);
-        if (descriptor && typeof descriptor === "object") {
-          if (Object.getOwnPropertyDescriptor(subClass, k)) {
-            // If subClass already has a property by this name, then it
-            // would not be inherited, so it should not be copied. This
-            // notably excludes properties like .prototype and .name.
-            return;
-          }
-
-          Object.defineProperty(subClass, k, descriptor);
-        }
-      });
+      if (Object.setPrototypeOf) {
+        Object.setPrototypeOf(subClass, superClass);
+      } else {
+        subClass.__proto__ = superClass;
+      }
     }
   },
 
