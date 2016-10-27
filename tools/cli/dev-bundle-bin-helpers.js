@@ -82,8 +82,10 @@ exports.getEnv = function (options) {
       env.NPM_CONFIG_CACHE = path.join(devBundleDir, ".npm");
     }
 
-    if (env.METEOR_UNSAFE_PERM) {
-      env.NPM_CONFIG_UNSAFE_PERM = env.METEOR_UNSAFE_PERM;
+    if (env.METEOR_ALLOW_SUPERUSER) {
+      // Note that env.METEOR_ALLOW_SUPERUSER could be "0" or "false", which
+      // should propagate falsy semantics to NPM_CONFIG_UNSAFE_PERM.
+      env.NPM_CONFIG_UNSAFE_PERM = env.METEOR_ALLOW_SUPERUSER;
     }
 
     // This allows node-gyp to find Node headers and libraries in
