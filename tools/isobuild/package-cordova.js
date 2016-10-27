@@ -1,9 +1,13 @@
 import { ensureOnlyValidVersions } from "../utils/utils.js";
 import buildmessage from "../utils/buildmessage.js";
 
-// == Class of the `Cordova` object visible in package.js ==
-
 export class PackageCordova {
+  /**
+   * @summary Class of the 'Cordova' object visible in package.js
+   * @locus package.js
+   * @instanceName Cordova
+   * @showInstanceName true
+   */
   constructor() {
     this._dependencies = null;
   }
@@ -39,7 +43,6 @@ export class PackageCordova {
    * ```
    *
    * @locus package.js
-   * @memberOf  Cordova
    */
   depends(dependencies) {
     // XXX make cordovaDependencies be separate between use and test, so that
