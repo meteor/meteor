@@ -52,16 +52,18 @@ $webclient.DownloadFile($node_link, "$DIR\bin\node.exe")
 
 # On Windows we provide a reliable version of python.exe for use by
 # node-gyp (the tool that rebuilds binary node modules). #WinPy
-$py_msi_link = "http://www.python.org/ftp/python/${PYTHON_VERSION}/python-${PYTHON_VERSION}.msi"
-$py_msi = "${DIR}\python.msi"
-$webclient.DownloadFile($py_msi_link, $py_msi)
-$py_dir = "${DIR}\python"
-msiexec /i "$py_msi" TARGETDIR="$py_dir" /quiet /qn /norestart
-$env:PATH = "${py_dir};${env:PATH}"
+
+cd "$DIR"
+$py_s3_url = "https://s3.amazonaws.com/com.meteor.static/windows-python/python-${PYTHON_VERSION}.7z"
+$py_archive = "${DIR}\python.7z"
+$webclient.DownloadFile($py_s3_url, $py_archive)
+& "$DIR\bin\7z.exe" x "$py_archive"
+rm -Recurse -Force "$py_archive"
+$env:PATH = "${DIR}\python;${env:PATH}"
+python --version
 
 # download initial version of npm
 $npm_zip = "$DIR\bin\npm.zip"
-
 # These dist/npm archives were only published for 1.x versions of npm, and
 # this is the most recent one.
 $npm_link = "https://nodejs.org/dist/npm/npm-1.4.12.zip"
@@ -155,9 +157,6 @@ cp "$DIR\mongodb\$mongo_name\bin\mongo.exe" $DIR\mongodb\bin
 
 rm -Recurse -Force $mongo_zip
 rm -Recurse -Force "$DIR\mongodb\$mongo_name"
-
-rm -Recurse -Force "$py_msi"
-python --version
 
 cd $DIR
 
