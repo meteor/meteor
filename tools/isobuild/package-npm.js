@@ -4,9 +4,13 @@ import NpmDiscards from "./npm-discards.js";
 
 const nodeRequire = require;
 
-// == Class of the `Npm` object visible in package.js ==
-
 export class PackageNpm {
+  /**
+   * @summary Class of the 'Npm' object visible in package.js
+   * @locus package.js
+   * @instanceName Npm
+   * @showInstanceName true
+   */
   constructor() {
     // Files to be stripped from the installed NPM dependency tree. See
     // the Npm.strip comment below for further usage information.
@@ -20,7 +24,7 @@ export class PackageNpm {
    * @param  {Object} dependencies An object where the keys are package
    * names and the values are one of:
    *   1. Version numbers in string form
-   *   2. Http(s) URLs to a git commit by SHA.   
+   *   2. Http(s) URLs to a git commit by SHA.
    *   3. Git URLs in the format described [here](https://docs.npmjs.com/files/package.json#git-urls-as-dependencies)
    *
    * Https URL example:
@@ -41,7 +45,6 @@ export class PackageNpm {
    * });
    * ```
    * @locus package.js
-   * @memberOf  Npm
    */
   depends(dependencies) {
     // XXX make dependencies be separate between use and test, so that

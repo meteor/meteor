@@ -3,9 +3,13 @@ import { inCheckout } from "../fs/files.js";
 import buildmessage from "../utils/buildmessage.js";
 import packageVersionParser from "../packaging/package-version-parser.js";
 
-// == Class of the 'Package' object visible in package.js ==
-
 export class PackageNamespace {
+  /**
+   * @summary Class of the 'Package' object visible in package.js
+   * @locus package.js
+   * @instanceName Package
+   * @showInstanceName true
+   */
   constructor(packageSource) {
     this._packageSource = packageSource;
     this._fileAndDepLoader = null;
@@ -22,7 +26,7 @@ export class PackageNamespace {
   /**
    * @summary Provide basic package information.
    * @locus package.js
-   * @memberOf Package
+   * @memberOf PackageNamespace
    * @param {Object} options
    * @param {String} options.summary A concise 1-2 sentence description of
    * the package, required for publication.
@@ -149,7 +153,6 @@ export class PackageNamespace {
   /**
    * @summary Define package dependencies and expose package methods.
    * @locus package.js
-   * @memberOf Package
    * @param {Function} func A function that takes in the package control `api` object, which keeps track of dependencies and exports.
    */
   onUse(f) {
@@ -175,7 +178,6 @@ export class PackageNamespace {
   /**
    * @summary Define dependencies and expose package methods for unit tests.
    * @locus package.js
-   * @memberOf Package
    * @param {Function} func A function that takes in the package control 'api' object, which keeps track of dependencies and exports.
    */
   onTest(f) {
@@ -245,7 +247,6 @@ export class PackageNamespace {
    * @param {Object} options.npmDependencies An object where the keys
    * are NPM package names, and the values are the version numbers of
    * required NPM packages, just like in [Npm.depends](#Npm-depends).
-   * @memberOf Package
    * @locus package.js
    */
   registerBuildPlugin(options) {
