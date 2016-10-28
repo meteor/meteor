@@ -1441,6 +1441,7 @@ testCommandOptions = {
     // XXX COMPAT WITH 0.9.2.2
     'mobile-port': { type: String },
     'debug-port': { type: String },
+    'no-release-check': { type: Boolean },
     deploy: { type: String },
     production: { type: Boolean },
     settings: { type: String, short: 's' },
