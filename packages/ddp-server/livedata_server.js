@@ -937,6 +937,7 @@ _.extend(Session.prototype, {
  * @summary The server's side of a subscription
  * @class Subscription
  * @instanceName this
+ * @showInstanceName true
  */
 var Subscription = function (
     session, handler, subscriptionId, params, name) {

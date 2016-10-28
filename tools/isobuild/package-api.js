@@ -74,6 +74,7 @@ function forAllMatchingArchs (archs, f) {
  * @name  PackageAPI
  * @class PackageAPI
  * @instanceName api
+ * @showInstanceName true
  * @global
  * @summary Type of the API object passed into the `Package.onUse` function.
  */
