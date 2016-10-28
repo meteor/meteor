@@ -52,7 +52,7 @@ function makeOptimistic(name, fn) {
     subscribe(...args) {
       const path = args[0];
 
-      if (! shouldWatch(name, path)) {
+      if (! shouldWatch(path)) {
         return;
       }
 
@@ -74,16 +74,7 @@ function makeOptimistic(name, fn) {
   return Profile("optimistic " + name, wrapper);
 }
 
-function shouldWatch(functionName, path) {
-  if (functionName === "isSymbolicLink") {
-    // It's important that we don't call optimisticIsSymbolicLink
-    // recursively (see below), so instead we watch every path passed to
-    // optimisticIsSymbolicLink. This makes optimisticIsSymbolicLink more
-    // costly than other optimistic functions, which is why we don't
-    // export it from this module.
-    return true;
-  }
-
+function shouldWatch(path) {
   const parts = path.split(pathSep);
   const nmi = parts.indexOf("node_modules");
 
@@ -204,15 +195,24 @@ makeOptimistic("readJsonOrNull", (...args) => {
   return JSON.parse(buffer);
 });
 
-// Not exported because shouldWatch watches any path passed to this
-// function, which makes optimisticIsSymbolicLink somewhat more costly
-// than other optimistic functions.
-const optimisticIsSymbolicLink =
-makeOptimistic("isSymbolicLink", path => {
+const optimisticIsSymbolicLink = wrap(path => {
   try {
     return lstat(path).isSymbolicLink();
   } catch (e) {
     if (e.code !== "ENOENT") throw e;
     return false;
+  }
+}, {
+  subscribe(path) {
+    let watcher = watch(path, () => {
+      optimisticIsSymbolicLink.dirty(path);
+    });
+
+    return function () {
+      if (watcher) {
+        watcher.close();
+        watcher = null;
+      }
+    };
   }
 });
