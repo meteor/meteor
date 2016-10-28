@@ -52,11 +52,7 @@ function makeOptimistic(name, fn) {
     subscribe(...args) {
       const path = args[0];
 
-      // Starting a watcher for every single file contained within a
-      // node_modules directory would be prohibitively expensive, so
-      // instead we rely on dependOnNodeModules to tell us when files in
-      // node_modules directories might have changed.
-      if (path.split(pathSep).indexOf("node_modules") >= 0) {
+      if (! shouldWatch(name, path)) {
         return;
       }
 
@@ -76,6 +72,48 @@ function makeOptimistic(name, fn) {
   });
 
   return Profile("optimistic " + name, wrapper);
+}
+
+function shouldWatch(functionName, path) {
+  if (functionName === "isSymbolicLink") {
+    // It's important that we don't call optimisticIsSymbolicLink
+    // recursively (see below), so instead we watch every path passed to
+    // optimisticIsSymbolicLink. This makes optimisticIsSymbolicLink more
+    // costly than other optimistic functions, which is why we don't
+    // export it from this module.
+    return true;
+  }
+
+  const parts = path.split(pathSep);
+  const nmi = parts.indexOf("node_modules");
+
+  if (nmi < 0) {
+    // Watch everything not in a node_modules directory.
+    return true;
+  }
+
+  if (nmi < parts.length - 1) {
+    const nmi2 = parts.indexOf("node_modules", nmi + 1);
+    if (nmi2 > nmi) {
+      // If this path is nested inside more than one node_modules
+      // directory, then it isn't part of a linked npm package, so we
+      // should not watch it.
+      return false;
+    }
+
+    const packageDir = parts.slice(0, nmi + 2).join(pathSep);
+    if (optimisticIsSymbolicLink(packageDir)) {
+      // If this path is in a linked npm package, then it might be under
+      // active development, so we should watch it.
+      return true;
+    }
+  }
+
+  // Starting a watcher for every single file contained within a
+  // node_modules directory would be prohibitively expensive, so
+  // instead we rely on dependOnNodeModules to tell us when files in
+  // node_modules directories might have changed.
+  return false;
 }
 
 function maybeDependOnNodeModules(path) {
@@ -164,4 +202,17 @@ makeOptimistic("readJsonOrNull", (...args) => {
     return null;
   }
   return JSON.parse(buffer);
+});
+
+// Not exported because shouldWatch watches any path passed to this
+// function, which makes optimisticIsSymbolicLink somewhat more costly
+// than other optimistic functions.
+const optimisticIsSymbolicLink =
+makeOptimistic("isSymbolicLink", path => {
+  try {
+    return lstat(path).isSymbolicLink();
+  } catch (e) {
+    if (e.code !== "ENOENT") throw e;
+    return false;
+  }
 });
