@@ -19,7 +19,7 @@ export class PackageNpm {
   }
 
   /**
-  * @summary Specify which [NPM](https://www.npmjs.org/) packages
+   * @summary Specify which [NPM](https://www.npmjs.org/) packages
    * your Meteor package depends on.
    * @param  {Object} dependencies An object where the keys are package
    * names and the values are one of:
