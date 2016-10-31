@@ -495,13 +495,23 @@ var springboard = function (rel, options) {
 
   // Strip off the "node" and "meteor.js" from argv and replace it with the
   // appropriate tools's meteor shell script.
-  var newArgv = process.argv.slice(2);
-
-  // Don't pass the allow-superuser flags to springboarded versions since they
-  // may not know how to use them. See meteor/meteor#7959
-  newArgv = newArgv.filter(function (arg) {
-    return arg !== "--unsafe-perm" && arg !== "--allow-superuser";
-  });
+  var newArgv = [];
+  const argc = process.argv.length;
+  for (var i = 2; i < argc; ++i) {
+    const arg = process.argv[i];
+    if (arg === "--unsafe-perm" ||
+        arg === "--allow-superuser") {
+      // Don't pass the --unsafe-perm or --allow-superuser flags to
+      // springboarded versions since they may not know how to use them,
+      // but set the METEOR_ALLOW_SUPERUSER environment variable in case
+      // the springboarded version needs it. See meteor/meteor#7959.
+      if (! _.has(process.env, "METEOR_ALLOW_SUPERUSER")) {
+        process.env.METEOR_ALLOW_SUPERUSER = "true";
+      }
+      continue;
+    }
+    newArgv.push(arg);
+  }
 
   if (_.has(options, 'releaseOverride')) {
     // We used to just append --release=<releaseOverride> to the arguments, and
