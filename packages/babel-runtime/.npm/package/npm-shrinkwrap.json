@@ -3,12 +3,7 @@
     "meteor-babel-helpers": {
       "version": "0.0.3",
       "resolved": "https://registry.npmjs.org/meteor-babel-helpers/-/meteor-babel-helpers-0.0.3.tgz",
-      "from": "https://registry.npmjs.org/meteor-babel-helpers/-/meteor-babel-helpers-0.0.3.tgz"
-    },
-    "regenerator-runtime": {
-      "version": "0.9.5",
-      "resolved": "https://registry.npmjs.org/regenerator-runtime/-/regenerator-runtime-0.9.5.tgz",
-      "from": "regenerator-runtime@0.9.5"
+      "from": "meteor-babel-helpers@0.0.3"
     }
   }
 }
