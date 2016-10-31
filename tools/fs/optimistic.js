@@ -92,7 +92,15 @@ function shouldWatch(path) {
       return false;
     }
 
-    const packageDir = parts.slice(0, nmi + 2).join(pathSep);
+    const packageDirParts = parts.slice(0, nmi + 2);
+
+    if (parts[nmi + 1].startsWith("@")) {
+      // For linked @scoped npm packages, the symlink is nested inside the
+      // @scoped directory (which is a child of node_modules).
+      packageDirParts.push(parts[nmi + 2]);
+    }
+
+    const packageDir = packageDirParts.join(pathSep);
     if (optimisticIsSymbolicLink(packageDir)) {
       // If this path is in a linked npm package, then it might be under
       // active development, so we should watch it.
