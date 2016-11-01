@@ -20,6 +20,10 @@ selftest.define("create", function () {
     selftest.fail("Failed to add a version specifier to `meteor-base` package");
   }
 
+  // Install basic packages like babel-runtime and meteor-node-stubs from
+  // package.json.
+  s.run("npm install").waitSecs(15);
+
   // Now, can we run it?
   run = s.run();
   run.waitSecs(15);
