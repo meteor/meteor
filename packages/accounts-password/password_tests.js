@@ -581,7 +581,7 @@ if (Meteor.isClient) (function () {
 
   Tinytest.add(
     'passwords - forgotPassword only passes callback value to forgotPassword '
-    + 'Method if callback is defined',
+    + 'Method if callback is defined (to address issue #5676)',
     function (test) {
       let methodCallArgumentCount = 0;
       const originalMethodCall = Accounts.connection.call;
