@@ -20,7 +20,7 @@ selftest.define("npm", ["net"], function () {
     run = s.run("--once", "--raw-logs");
     run.tellMongo(MONGO_LISTENING);
     if (i === 0) {
-      run.waitSecs(2);
+      run.waitSecs(30);
       // use match instead of read because on a built release we can
       // also get an update message here.
       run.match(

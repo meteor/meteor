@@ -140,8 +140,6 @@ main.registerCommand({
     'allow-incompatible-update': { type: Boolean }
   }
 }, function (options) {
-  require("./commands.js").installDefaultNpmDeps(options.appDir);
-
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
     allowIncompatibleUpdate: options['allow-incompatible-update']
