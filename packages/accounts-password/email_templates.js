@@ -26,18 +26,7 @@ Accounts.emailTemplates = {
     subject: function(user) {
       return "How to reset your password on " + Accounts.emailTemplates.siteName;
     },
-    text: function(user, url) {
-      var greeting = (user.profile && user.profile.name) ?
-            ("Hello " + user.profile.name + ",") : "Hello,";
-      return `${greeting}
-
-To reset your password, simply click the link below.
-
-${url}
-
-Thanks.
-`;
-    }
+    text: greet("To reset your password")
   },
   verifyEmail: {
     subject: function(user) {
