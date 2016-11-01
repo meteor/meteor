@@ -1566,7 +1566,7 @@ function doTestCommand(options) {
     projectContextOptions.projectDir = testRunnerAppDir;
     projectContextOptions.projectDirForLocalPackages = options.appDir;
 
-    installDefaultNpmDepsForTestPackages(testRunnerAppDir);
+    installDefaultNpmDeps(testRunnerAppDir);
     if (buildmessage.jobHasMessages()) {
       return;
     }
@@ -1717,9 +1717,9 @@ function doTestCommand(options) {
   ));
 }
 
-function installDefaultNpmDepsForTestPackages(testRunnerAppDir) {
+export function installDefaultNpmDeps(appDir) {
   const testAppPkgJsonPath =
-    files.pathJoin(testRunnerAppDir, "package.json");
+    files.pathJoin(appDir, "package.json");
 
   if (files.statOrNull(testAppPkgJsonPath)) {
     // Do nothing if the test directory already has a package.json file,
@@ -1740,7 +1740,7 @@ function installDefaultNpmDepsForTestPackages(testRunnerAppDir) {
       "utf8",
     );
 
-    const installResult = runNpmCommand(["install"], testRunnerAppDir);
+    const installResult = runNpmCommand(["install"], appDir);
     if (! installResult.success) {
       buildmessage.error(
         "Could not install npm dependencies for test-packages: " +
