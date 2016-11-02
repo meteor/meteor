@@ -77,9 +77,17 @@ exports.getEnv = function (options) {
 
     var env = Object.create(process.env);
 
+    // Make sure `meteor npm install --global ...` installs into
+    // dev_bundle/lib/node_modules by default.
+    if (! env.NPM_CONFIG_PREFIX) {
+      env.NPM_CONFIG_PREFIX = devBundleDir;
+    }
+
     // Make sure we don't try to use the global ~/.npm cache accidentally.
     if (! env.NPM_CONFIG_CACHE) {
-      env.NPM_CONFIG_CACHE = path.join(devBundleDir, ".npm");
+      env.NPM_CONFIG_CACHE = path.join(
+        // If the user set NPM_CONFIG_PREFIX, respect that.
+        env.NPM_CONFIG_PREFIX, ".npm");
     }
 
     if (env.METEOR_ALLOW_SUPERUSER) {
