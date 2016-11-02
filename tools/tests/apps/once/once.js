@@ -14,6 +14,8 @@ if (process.env.RUN_ONCE_OUTCOME === "hang") {
 
 if (process.env.RUN_ONCE_OUTCOME === "mongo") {
   var test = new Mongo.Collection('test');
-  test.insert({ value: 86 });
-  process.exit(test.findOne().value);
+  Meteor.startup(function () {
+    test.insert({ value: 86 });
+    process.exit(test.findOne().value);
+  });
 }
