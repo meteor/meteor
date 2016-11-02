@@ -449,7 +449,12 @@ const isPortable = Profile("meteorNpm.isPortable", dir => {
     // put .meteor-portable files only in the individual top-level package
     // directories, so that they will get cleared away the next time those
     // packages are (re)installed.
-    const result = optimisticReadJsonOrNull(portableFile);
+    const result = optimisticReadJsonOrNull(portableFile, {
+      // Make optimisticReadJsonOrNull return null if there's a
+      // SyntaxError when parsing the .meteor-portable file.
+      allowSyntaxError: true
+    });
+
     if (result) {
       return result;
     }
