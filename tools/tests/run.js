@@ -175,6 +175,9 @@ selftest.define("run --once", ["yet-unsolved-windows-failure"], function () {
   s.unlink('empty.js');
   s.write('.meteor/release', originalRelease);
 
+  // Wait for Mongo to exit after Meteor exits.
+  utils.sleepMs(2000);
+
   // Try it with a real Mongo. Make sure that it actually starts one.
   s = new Sandbox;
   s.createApp("onceapp", "once");
