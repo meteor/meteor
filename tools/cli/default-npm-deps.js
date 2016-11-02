@@ -3,26 +3,28 @@ import {
   pathJoin,
   statOrNull,
   writeFile,
+  unlink,
 } from "../fs/files.js";
 
 const INSTALL_JOB_MESSAGE = "installing dependencies from package.json";
 
 export function install(appDir) {
-  const testAppPkgJsonPath = pathJoin(appDir, "package.json");
+  const packageJsonPath = pathJoin(appDir, "package.json");
+  const needTempPackageJson = ! statOrNull(packageJsonPath);
 
-  if (! statOrNull(testAppPkgJsonPath)) {
+  if (needTempPackageJson) {
     const { dependencies } = require("../static-assets/skel/package.json");
 
     // Write a minimial package.json with the same dependencies as the
     // default new-app package.json file.
     writeFile(
-      testAppPkgJsonPath,
+      packageJsonPath,
       JSON.stringify({ dependencies }, null, 2) + "\n",
       "utf8",
     );
   }
 
-  return buildmessage.enterJob(INSTALL_JOB_MESSAGE, function () {
+  const ok = buildmessage.enterJob(INSTALL_JOB_MESSAGE, function () {
     const { runNpmCommand } = require("../isobuild/meteor-npm.js");
 
     const installResult = runNpmCommand(["install"], appDir);
@@ -36,4 +38,11 @@ export function install(appDir) {
 
     return true;
   });
+
+  if (needTempPackageJson) {
+    // Clean up the temporary package.json file created above.
+    unlink(packageJsonPath);
+  }
+
+  return ok;
 }
