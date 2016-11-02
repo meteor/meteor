@@ -1566,7 +1566,7 @@ function doTestCommand(options) {
     projectContextOptions.projectDir = testRunnerAppDir;
     projectContextOptions.projectDirForLocalPackages = options.appDir;
 
-    installDefaultNpmDeps(testRunnerAppDir);
+    require("./default-npm-deps.js").install(testRunnerAppDir);
     if (buildmessage.jobHasMessages()) {
       return;
     }
@@ -1715,34 +1715,6 @@ function doTestCommand(options) {
       proxyHost: parsedServerUrl.hostname,
     }
   ));
-}
-
-export function installDefaultNpmDeps(appDir) {
-  const testAppPkgJsonPath =
-    files.pathJoin(appDir, "package.json");
-
-  if (! files.statOrNull(testAppPkgJsonPath)) {
-    const { dependencies } = require("../static-assets/skel/package.json");
-
-    // Write a minimial package.json with the same dependencies as the
-    // default new-app package.json file.
-    files.writeFile(
-      testAppPkgJsonPath,
-      JSON.stringify({ dependencies }, null, 2) + "\n",
-      "utf8",
-    );
-  }
-
-  const jobMessage = "installing dependencies from package.json";
-  buildmessage.enterJob(jobMessage, function () {
-    const { runNpmCommand } = require("../isobuild/meteor-npm.js");
-    const installResult = runNpmCommand(["install"], appDir);
-    if (! installResult.success) {
-      buildmessage.error(
-        "Could not install npm dependencies for test-packages: " +
-          installResult.error);
-    }
-  });
 }
 
 // Returns the "local-test:*" package names for the given package names (or for

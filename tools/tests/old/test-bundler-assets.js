@@ -25,7 +25,7 @@ var makeProjectContext = function (appName) {
 
   files.cp_r(testAppDir, projectDir);
 
-  require("../../cli/commands.js").installDefaultNpmDeps(projectDir);
+  require("../../cli/default-npm-deps.js").install(projectDir);
 
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: projectDir

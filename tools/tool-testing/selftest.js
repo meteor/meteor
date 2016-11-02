@@ -703,7 +703,7 @@ _.extend(Sandbox.prototype, {
       upgradersFile.appendUpgraders(upgraders.allUpgraders());
     }
 
-    require("../cli/commands.js").installDefaultNpmDeps(absoluteTo);
+    require("../cli/default-npm-deps.js").install(absoluteTo);
 
     if (options.dontPrepareApp) {
       return;
