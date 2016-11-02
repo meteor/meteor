@@ -191,16 +191,22 @@ export const optimisticHashOrNull = makeOptimistic("hashOrNull", (...args) => {
 });
 
 export const optimisticReadJsonOrNull =
-makeOptimistic("readJsonOrNull", (...args) => {
+makeOptimistic("readJsonOrNull", (path, options) => {
   try {
-    var buffer = optimisticReadFile(...args);
+    return JSON.parse(optimisticReadFile(path, options));
+
   } catch (e) {
-    if (e.code !== "ENOENT") {
-      throw e;
+    if (e.code === "ENOENT") {
+      return null;
     }
-    return null;
+
+    if (e instanceof SyntaxError &&
+        options && options.allowSyntaxError) {
+      return null;
+    }
+
+    throw e;
   }
-  return JSON.parse(buffer);
 });
 
 const optimisticIsSymbolicLink = wrap(path => {

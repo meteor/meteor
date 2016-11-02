@@ -1,12 +1,11 @@
 Package.describe({
   name: "babel-runtime",
   summary: "Runtime support for output of Babel transpiler",
-  version: '0.1.13-beta.0',
+  version: '1.0.0-beta.0',
   documentation: 'README.md'
 });
 
 Npm.depends({
-  "regenerator-runtime": "0.9.5",
   "meteor-babel-helpers": "0.0.3"
 });
 
