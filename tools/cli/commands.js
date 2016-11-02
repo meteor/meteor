@@ -1721,16 +1721,8 @@ export function installDefaultNpmDeps(appDir) {
   const testAppPkgJsonPath =
     files.pathJoin(appDir, "package.json");
 
-  if (files.statOrNull(testAppPkgJsonPath)) {
-    // Do nothing if the test directory already has a package.json file,
-    // likely because the developer passed a custom --test-dir-path.
-    return;
-  }
-
-  const jobMessage = "installing test npm dependencies";
-  buildmessage.enterJob(jobMessage, function () {
+  if (! files.statOrNull(testAppPkgJsonPath)) {
     const { dependencies } = require("../static-assets/skel/package.json");
-    const { runNpmCommand } = require("../isobuild/meteor-npm.js");
 
     // Write a minimial package.json with the same dependencies as the
     // default new-app package.json file.
@@ -1739,7 +1731,11 @@ export function installDefaultNpmDeps(appDir) {
       JSON.stringify({ dependencies }, null, 2) + "\n",
       "utf8",
     );
+  }
 
+  const jobMessage = "installing dependencies from package.json";
+  buildmessage.enterJob(jobMessage, function () {
+    const { runNpmCommand } = require("../isobuild/meteor-npm.js");
     const installResult = runNpmCommand(["install"], appDir);
     if (! installResult.success) {
       buildmessage.error(
