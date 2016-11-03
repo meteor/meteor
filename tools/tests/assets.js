@@ -28,3 +28,27 @@ selftest.define("assets - unicode asset names are allowed", () => {
   run.match(/3 - absoluteFilePath:(.*)macaverde.txt/);
   run.stop();
 });
+
+// Verify path strings can be Unicode normalized through the
+// tools/static-assets/server/mini-files.js#unicodeNormalizePath helper
+selftest.define(
+  "assets - helper exists to unicode normalize path strings",
+  () => {
+    const files = require('../static-assets/server/mini-files.js');
+
+    selftest.expectEqual(null, files.unicodeNormalizePath(null));
+
+    const unicodeNormalizedPath = '/path/maça verde.txt'.normalize('NFC');
+    const testPaths = [
+      '/path/maça verde.txt',
+      '/path/mac\u0327a verde.txt',
+      '/path/ma\xE7a verde.txt',
+    ];
+    testPaths.forEach((path) => {
+      selftest.expectEqual(
+        unicodeNormalizedPath,
+        files.unicodeNormalizePath(path)
+      );
+    });
+  }
+);

@@ -10,13 +10,13 @@ if (Meteor.isServer) {
     'ma\xE7a verde.txt',
   ];
 
-  for (let i = 0; i < filenames.length; i++) {
-    console.log(`${i + 1} - getText: ${Assets.getText(filenames[i])}`);
-  }
+  filenames.forEach((filename, index) => {
+    console.log(`${index + 1} - getText: ${Assets.getText(filename)}`);
+  });
 
-  for (let i = 0; i < filenames.length; i++) {
+  filenames.forEach((filename, index) => {
     console.log(
-      `${i + 1} - absoluteFilePath: ${Assets.absoluteFilePath(filenames[i])}`
+      `${index + 1} - absoluteFilePath: ${Assets.absoluteFilePath(filename)}`
     );
-  }
+  });
 }
