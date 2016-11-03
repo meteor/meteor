@@ -25,7 +25,7 @@ if (process.env.RUN_ONCE_OUTCOME === "mongo") {
       }
 
       console.log("insert failed; retrying:", String(e.stack || e));
-      setTimeout(tryInsert, 1000);
+      Meteor.setTimeout(tryInsert, 1000);
       return;
     }
 
