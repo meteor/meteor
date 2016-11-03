@@ -20,6 +20,11 @@ selftest.define("assets - unicode asset names are allowed", () => {
   s.createApp('myapp', 'unicode-asset-app');
   s.cd('myapp');
   const run = startRun(s);
-  run.match('Hello world!');
+  run.match('1 - getText: Hello world!');
+  run.match('2 - getText: Hello world!');
+  run.match('3 - getText: Hello world!');
+  run.match(/1 - absoluteFilePath:(.*)macaverde.txt/);
+  run.match(/2 - absoluteFilePath:(.*)macaverde.txt/);
+  run.match(/3 - absoluteFilePath:(.*)macaverde.txt/);
   run.stop();
 });

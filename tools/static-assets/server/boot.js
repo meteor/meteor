@@ -227,6 +227,10 @@ var loadServerBundles = Profile("Load server bundles", function () {
       // written on Windows.
       assetPath = files.convertToStandardPath(assetPath);
 
+      // Normalize the asset path to prevent Unicode string mismatches when
+      // using this string elsewhere.
+      assetPath = assetPath.normalize('NFC');
+
       if (!fileInfo.assets || !_.has(fileInfo.assets, assetPath)) {
         _callback(new Error("Unknown asset: " + assetPath));
       } else {
@@ -251,6 +255,10 @@ var loadServerBundles = Profile("Load server bundles", function () {
        * @param {String} assetPath The path of the asset, relative to the application's `private` subdirectory.
        */
       absoluteFilePath: function (assetPath) {
+        // Normalize the asset path to prevent Unicode string mismatches when
+        // using this string elsewhere.
+        assetPath = assetPath.normalize('NFC');
+
         if (!fileInfo.assets || !_.has(fileInfo.assets, assetPath)) {
           throw new Error("Unknown asset: " + assetPath);
         }
