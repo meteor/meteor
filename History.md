@@ -1,5 +1,43 @@
 ## v.NEXT
 
+## v1.4.2.1
+
+* Installing the `babel-runtime` npm package in your application
+  `node_modules` directory is now required for most Babel-transformed code
+  to work, as the Meteor `babel-runtime` package no longer attempts to
+  provide custom implementations of Babel helper functions. To install
+  the `babel-runtime` package, simply run the command
+  ```sh
+  meteor npm install --save babel-runtime
+  ```
+  in any Meteor application directory. The Meteor `babel-runtime` package
+  version has been bumped to 1.0.0 to reflect this major change.
+  [#7995](https://github.com/meteor/meteor/pull/7995)
+
+* File system operations performed by the command-line tool no longer use
+  fibers unless the `METEOR_DISABLE_FS_FIBERS` environment variable is
+  explicitly set to a falsy value. For larger apps, this change results in
+  significant build performance improvements due to the creation of fewer
+  fibers and the avoidance of unnecessary asyncronous delays.
+  https://github.com/meteor/meteor/pull/7975/commits/ca4baed90ae0675e55c93976411d4ed91f12dd63
+
+* Running Meteor as `root` is still discouraged, and results in a fatal
+  error by default, but the `--allow-superuser` flag now works as claimed.
+  [#7959](https://github.com/meteor/meteor/issues/7959)
+
+* The `dev_bundle\python\python.exe` executable has been restored to the
+  Windows dev bundle, which may help with `meteor npm rebuild` commands.
+  [#7960](https://github.com/meteor/meteor/issues/7960)
+
+* Changes within linked npm packages now trigger a partial rebuild,
+  whereas previously (in 1.4.2) they were ignored.
+  [#7978](https://github.com/meteor/meteor/issues/7978)
+
+* Miscellaneous fixed bugs:
+  [#7974](https://github.com/meteor/meteor/issues/7974)
+  [#7956](https://github.com/meteor/meteor/issues/7956)
+  [#8007](https://github.com/meteor/meteor/issues/8007)
+
 ## v1.4.2
 
 * This release implements a number of rebuild performance optimizations.
