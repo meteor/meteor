@@ -771,15 +771,6 @@ class ResourceSlot {
   }
 }
 
-let babelRuntime;
-function checkBabelRuntimeHelper(id) {
-  if (! babelRuntime) {
-    babelRuntime = require("../tool-env/isopackets.js")
-      .load("runtime")["babel-runtime"];
-  }
-  return babelRuntime.checkHelper(id);
-}
-
 export class PackageSourceBatch {
   constructor(unibuild, processor, {
     sourceRoot,
@@ -1097,11 +1088,8 @@ export class PackageSourceBatch {
 
     this._warnAboutMissingModules(allMissingNodeModules);
 
-    const meteorProvidesBabelRuntime = map.has("babel-runtime");
-
     scannerMap.forEach((scanner, name) => {
       const isApp = ! name;
-      const isWeb = scanner.isWeb();
       const outputFiles = scanner.getOutputFiles();
 
       if (isApp) {
@@ -1109,23 +1097,6 @@ export class PackageSourceBatch {
 
         outputFiles.forEach(file => {
           const parts = file.installPath.split("/");
-
-          if (meteorProvidesBabelRuntime || ! isWeb) {
-            // If the Meteor babel-runtime package is installed, it will
-            // provide implementations for babel-runtime/helpers/* and
-            // babel-runtime/regenerator at runtime, so we should filter
-            // out any node_modules/babel-runtime/* modules from the app.
-            // If the Meteor babel-runtime package is not installed, then
-            // we should rely on node_modules/babel-runtime/* instead. On
-            // the server that still means removing bundled files here and
-            // relying on programs/server/npm/node_modules/babel-runtime,
-            // but on the web these bundled files are all we have, so we'd
-            // better not remove them.
-            if (checkBabelRuntimeHelper(file.installPath)) {
-              return;
-            }
-          }
-
           const nodeModulesIndex = parts.indexOf("node_modules");
 
           if (nodeModulesIndex === -1 || (nodeModulesIndex === 0 &&
@@ -1199,12 +1170,6 @@ export class PackageSourceBatch {
         const packageDir = parts[0];
         if (packageDir === "meteor") {
           // Don't print warnings for uninstalled Meteor packages.
-          return;
-        }
-
-        if (checkBabelRuntimeHelper(id)) {
-          // Don't print warnings for babel-runtime/helpers/* modules,
-          // since we provide most of those.
           return;
         }
 

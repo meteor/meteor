@@ -67,7 +67,7 @@ Current Documentation Maintainers:
 Community package maintainers are community members who maintain packages outside of Meteor core. This requires code to be extracted from meteor/meteor, and entails a high level of responsibility. For this reason, community maintainers generally (and currently) must first become an advanced contributor to Meteor core and have 4-5 non-trivial pull requests merged that went through the proper contribution workflow. At that point, core contributors may make the case for breaking out a particular core package, and assist in the technical process around doing so. 
 
 Current Community Package Maintainers: 
-- [@mitar](https://github.com/mitar) for [Blaze](https://github.com/meteor/blaze) 
+- [@mitar](https://github.com/mitar) for [Blaze](https://github.com/meteor/blaze)
 
 #### Community Manager
 

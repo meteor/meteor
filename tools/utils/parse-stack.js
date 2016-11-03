@@ -83,9 +83,9 @@ export function markTop(f) {
 function parseStackFrames(frames) {
   let stop = false;
   let ret = [];
-  frames.forEach((frame) => {
+  frames.some(frame => {
     if (stop) {
-      return;
+      return true;
     }
 
     let m;
@@ -109,8 +109,7 @@ function parseStackFrames(frames) {
         return;
       }
       if (m[1].match(/(?:^|\.)__bottom_mark__$/)) {
-        stop = true;
-        return;
+        return stop = true;
       }
       ret.push({
         func: m[1],
@@ -134,8 +133,13 @@ function parseStackFrames(frames) {
 
     if (m = frame.match(/^\s*-\s*-\s*-\s*-\s*-\s*$/)) {
       // Stop parsing if we reach a stack split from a Future
-      stop = true;
-      return;
+      return stop = true;
+    }
+
+    if (frame.startsWith(" => awaited here:")) {
+      // The meteor-promise library inserts " => awaited here:" lines to
+      // indicate async boundaries.
+      return stop = true;
     }
 
     if (_.isEmpty(ret)) {

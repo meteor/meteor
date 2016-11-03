@@ -18,12 +18,19 @@ var tmpDir = function () {
 };
 
 var makeProjectContext = function (appName) {
+  var testAppDir = files.pathJoin(
+    files.convertToStandardPath(__dirname), appName);
+
   var projectDir = files.mkdtemp("test-bundler-assets");
-  files.cp_r(files.pathJoin(files.convertToStandardPath(__dirname), appName),
-    projectDir);
+
+  files.cp_r(testAppDir, projectDir);
+
+  require("../../cli/default-npm-deps.js").install(projectDir);
+
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: projectDir
   });
+
   doOrThrow(function () {
     projectContext.prepareProjectForBuild();
   });

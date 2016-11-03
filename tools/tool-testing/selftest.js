@@ -243,57 +243,116 @@ var newSelfTestCatalog = function () {
 var Matcher = function (run) {
   var self = this;
   self.buf = "";
+  self.fullBuffer = "";
   self.ended = false;
-  self.matchPattern = null;
-  self.matchPromise = null;
-  self.matchStrict = null;
+  self.resetMatch();
   self.run = run; // used only to set a field on exceptions
+  self.endPromise = new Promise(resolve => {
+    self.resolveEndPromise = resolve;
+  });
 };
 
 _.extend(Matcher.prototype, {
   write: function (data) {
     var self = this;
     self.buf += data;
+    self.fullBuffer += data;
     self._tryMatch();
   },
 
-  match: function (pattern, timeout, strict) {
+  resetMatch() {
+    const mp = this.matchPromise;
+
+    this.matchPattern = null;
+    this.matchPromise = null;
+    this.matchStrict = null;
+    this.matchFullBuffer = false;
+
+    return mp;
+  },
+
+  rejectMatch(error) {
+    const mp = this.resetMatch();
+    if (mp) {
+      mp.reject(error);
+    } else {
+      // If this.matchPromise was not defined, we should not swallow this
+      // error, so we must throw it instead.
+      throw error;
+    }
+  },
+
+  resolveMatch(value) {
+    const mp = this.resetMatch();
+    if (mp) {
+      mp.resolve(value);
+    }
+  },
+
+  match(pattern, timeout, strict) {
+    return this.matchAsync(pattern, { timeout, strict }).await();
+  },
+
+  // Like match, but returns a Promise without calling .await().
+  matchAsync(pattern, {
+    timeout = null,
+    strict = false,
+    matchFullBuffer = false,
+  }) {
     var self = this;
     if (self.matchPromise) {
-      throw new Error("already have a match pending?");
+      return Promise.reject(new Error("already have a match pending?"));
     }
     self.matchPattern = pattern;
     self.matchStrict = strict;
+    self.matchFullBuffer = matchFullBuffer;
     var mp = self.matchPromise = fiberHelpers.makeFulfillablePromise();
     self._tryMatch(); // could clear self.matchPromise
 
     var timer = null;
     if (timeout) {
       timer = setTimeout(function () {
-        var pattern = self.matchPattern;
-        self.matchPattern = null;
-        self.matchStrict = null;
-        self.matchPromise = null;
-        mp.reject(new TestFailure('match-timeout', {
+        self.rejectMatch(new TestFailure('match-timeout', {
           run: self.run,
-          pattern: pattern
+          pattern: self.matchPattern
         }));
       }, timeout * 1000);
+    } else {
+      return mp;
     }
 
-    try {
-      return mp.await();
-    } finally {
-      if (timer) {
-        clearTimeout(timer);
-      }
-    }
+    return mp.then(result => {
+      clearTimeout(timer);
+      return result;
+    }, error => {
+      clearTimeout(timer);
+      throw error;
+    });
   },
 
-  end: function () {
+  matchBeforeEnd(pattern, timeout) {
+    return this._beforeEnd(() => this.matchAsync(pattern, {
+      timeout: timeout || 15,
+      matchFullBuffer: true,
+    }));
+  },
+
+  _beforeEnd(promiseCallback) {
+    return this.endPromise = this.endPromise.then(promiseCallback);
+  },
+
+  end() {
+    return this.endAsync().await();
+  },
+
+  endAsync() {
     var self = this;
-    self.ended = true;
-    self._tryMatch();
+    self.resolveEndPromise();
+    return self._beforeEnd(() => {
+      self.ended = true;
+      self._tryMatch();
+      return self.matchPromise;
+    });
   },
 
   matchEmpty: function () {
@@ -315,36 +374,37 @@ _.extend(Matcher.prototype, {
 
     var ret = null;
 
-    if (self.matchPattern instanceof RegExp) {
+    if (self.matchFullBuffer) {
+      // Note: self.matchStrict is ignored if self.matchFullBuffer truthy.
+      if (self.matchPattern instanceof RegExp) {
+        ret = self.fullBuffer.match(self.matchPattern);
+      } else if (self.fullBuffer.indexOf(self.matchPattern) >= 0) {
+        ret = self.matchPattern;
+      }
+
+    } else if (self.matchPattern instanceof RegExp) {
       var m = self.buf.match(self.matchPattern);
       if (m) {
         if (self.matchStrict && m.index !== 0) {
-          self.matchPromise = null;
-          self.matchStrict = null;
-          self.matchPattern = null;
           Console.info("Extra junk is: ", self.buf.substr(0, m.index));
-          mp.reject(new TestFailure('junk-before', {
+          return self.rejectMatch(new TestFailure('junk-before', {
             run: self.run,
             pattern: self.matchPattern
           }));
-          return;
         }
         ret = m;
         self.buf = self.buf.slice(m.index + m[0].length);
       }
+
     } else {
       var i = self.buf.indexOf(self.matchPattern);
       if (i !== -1) {
         if (self.matchStrict && i !== 0) {
-          self.matchPromise = null;
-          self.matchStrict = null;
-          self.matchPattern = null;
           Console.info("Extra junk is: ", self.buf.substr(0, i));
-          mp.reject(new TestFailure('junk-before', {
+          return self.rejectMatch(new TestFailure('junk-before', {
             run: self.run,
             pattern: self.matchPattern
           }));
-          return;
         }
         ret = self.matchPattern;
         self.buf = self.buf.slice(i + self.matchPattern.length);
@@ -352,21 +412,14 @@ _.extend(Matcher.prototype, {
     }
 
     if (ret !== null) {
-      self.matchPromise = null;
-      self.matchStrict = null;
-      self.matchPattern = null;
-      mp.resolve(ret);
-      return;
+      return self.resolveMatch(ret);
     }
 
     if (self.ended) {
-      var failure = new TestFailure('no-match', { run: self.run,
-                                                  pattern: self.matchPattern });
-      self.matchPromise = null;
-      self.matchStrict = null;
-      self.matchPattern = null;
-      mp.reject(failure);
-      return;
+      return self.rejectMatch(new TestFailure('no-match', {
+        run: self.run,
+        pattern: self.matchPattern
+      }));
     }
   }
 });
@@ -649,6 +702,8 @@ _.extend(Sandbox.prototype, {
     if (_.isEmpty(upgradersFile.readUpgraders())) {
       upgradersFile.appendUpgraders(upgraders.allUpgraders());
     }
+
+    require("../cli/default-npm-deps.js").install(absoluteTo);
 
     if (options.dontPrepareApp) {
       return;
@@ -1183,6 +1238,8 @@ var Run = function (execPath, options) {
   self.stderrMatcher = new Matcher(self);
   self.outputLog = new OutputLog(self);
 
+  self.matcherEndPromise = null;
+
   self.exitStatus = undefined; // 'null' means failed rather than exited
   self.exitPromiseResolvers = [];
   var opts = options.args || [];
@@ -1238,6 +1295,15 @@ _.extend(Run.prototype, {
     self.client.connect();
   },
 
+  // Useful for matching one-time patterns not sensitive to ordering.
+  matchBeforeExit: markStack(function (pattern) {
+    return this.stdoutMatcher.matchBeforeEnd(pattern);
+  }),
+
+  matchErrBeforeExit: markStack(function (pattern) {
+    return this.stderrMatcher.matchBeforeEnd(pattern);
+  }),
+
   _exited: function (status) {
     var self = this;
 
@@ -1254,8 +1320,15 @@ _.extend(Run.prototype, {
       resolve();
     });
 
-    self.stdoutMatcher.end();
-    self.stderrMatcher.end();
+    self._endMatchers();
+  },
+
+  _endMatchers() {
+    return this.matcherEndPromise =
+      this.matcherEndPromise || Promise.all([
+        this.stdoutMatcher.endAsync(),
+        this.stderrMatcher.endAsync()
+      ]);
   },
 
   _ensureStarted: function () {
@@ -1395,6 +1468,8 @@ _.extend(Run.prototype, {
   expectExit: markStack(function (code) {
     var self = this;
     self._ensureStarted();
+
+    self._endMatchers().await();
 
     if (self.exitStatus === undefined) {
       var timeout = self.baseTimeout + self.extraTime;

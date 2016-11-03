@@ -1566,6 +1566,11 @@ function doTestCommand(options) {
     projectContextOptions.projectDir = testRunnerAppDir;
     projectContextOptions.projectDirForLocalPackages = options.appDir;
 
+    require("./default-npm-deps.js").install(testRunnerAppDir);
+    if (buildmessage.jobHasMessages()) {
+      return;
+    }
+
     // Find any packages mentioned by a path instead of a package name. We will
     // load them explicitly into the catalog.
     var packagesByPath = _.filter(options.args, function (p) {

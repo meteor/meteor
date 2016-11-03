@@ -20,13 +20,26 @@ selftest.define("create", function () {
     selftest.fail("Failed to add a version specifier to `meteor-base` package");
   }
 
+  const packageJson = JSON.parse(s.read("package.json"));
+  if (! packageJson.dependencies.hasOwnProperty("babel-runtime")) {
+    selftest.fail("New app package.json does not depend on babel-runtime");
+  }
+
+  // Install basic packages like babel-runtime and meteor-node-stubs from
+  // package.json.
+  run = s.run("npm", "install");
+  run.waitSecs(15);
+  run.expectExit(0);
+
   // Now, can we run it?
   run = s.run();
-  run.waitSecs(15);
+  run.waitSecs(60);
   run.match("foobar");
   run.match("proxy.");
   // Do not print out the changes to the versions file!
+  run.waitSecs(15);
   run.read("\n=>");
+  run.waitSecs(5);
   run.match("MongoDB");
   run.waitSecs(5);
   run.match("your app");

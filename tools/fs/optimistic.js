@@ -52,11 +52,7 @@ function makeOptimistic(name, fn) {
     subscribe(...args) {
       const path = args[0];
 
-      // Starting a watcher for every single file contained within a
-      // node_modules directory would be prohibitively expensive, so
-      // instead we rely on dependOnNodeModules to tell us when files in
-      // node_modules directories might have changed.
-      if (path.split(pathSep).indexOf("node_modules") >= 0) {
+      if (! shouldWatch(path)) {
         return;
       }
 
@@ -76,6 +72,47 @@ function makeOptimistic(name, fn) {
   });
 
   return Profile("optimistic " + name, wrapper);
+}
+
+function shouldWatch(path) {
+  const parts = path.split(pathSep);
+  const nmi = parts.indexOf("node_modules");
+
+  if (nmi < 0) {
+    // Watch everything not in a node_modules directory.
+    return true;
+  }
+
+  if (nmi < parts.length - 1) {
+    const nmi2 = parts.indexOf("node_modules", nmi + 1);
+    if (nmi2 > nmi) {
+      // If this path is nested inside more than one node_modules
+      // directory, then it isn't part of a linked npm package, so we
+      // should not watch it.
+      return false;
+    }
+
+    const packageDirParts = parts.slice(0, nmi + 2);
+
+    if (parts[nmi + 1].startsWith("@")) {
+      // For linked @scoped npm packages, the symlink is nested inside the
+      // @scoped directory (which is a child of node_modules).
+      packageDirParts.push(parts[nmi + 2]);
+    }
+
+    const packageDir = packageDirParts.join(pathSep);
+    if (optimisticIsSymbolicLink(packageDir)) {
+      // If this path is in a linked npm package, then it might be under
+      // active development, so we should watch it.
+      return true;
+    }
+  }
+
+  // Starting a watcher for every single file contained within a
+  // node_modules directory would be prohibitively expensive, so
+  // instead we rely on dependOnNodeModules to tell us when files in
+  // node_modules directories might have changed.
+  return false;
 }
 
 function maybeDependOnNodeModules(path) {
@@ -154,14 +191,42 @@ export const optimisticHashOrNull = makeOptimistic("hashOrNull", (...args) => {
 });
 
 export const optimisticReadJsonOrNull =
-makeOptimistic("readJsonOrNull", (...args) => {
+makeOptimistic("readJsonOrNull", (path, options) => {
   try {
-    var buffer = optimisticReadFile(...args);
+    return JSON.parse(optimisticReadFile(path, options));
+
   } catch (e) {
-    if (e.code !== "ENOENT") {
-      throw e;
+    if (e.code === "ENOENT") {
+      return null;
     }
-    return null;
+
+    if (e instanceof SyntaxError &&
+        options && options.allowSyntaxError) {
+      return null;
+    }
+
+    throw e;
   }
-  return JSON.parse(buffer);
+});
+
+const optimisticIsSymbolicLink = wrap(path => {
+  try {
+    return lstat(path).isSymbolicLink();
+  } catch (e) {
+    if (e.code !== "ENOENT") throw e;
+    return false;
+  }
+}, {
+  subscribe(path) {
+    let watcher = watch(path, () => {
+      optimisticIsSymbolicLink.dirty(path);
+    });
+
+    return function () {
+      if (watcher) {
+        watcher.close();
+        watcher = null;
+      }
+    };
+  }
 });
