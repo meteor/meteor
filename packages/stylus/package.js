@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'Expressive, dynamic, robust CSS',
-  version: "2.513.7-beta.1"
+  version: "2.513.7-rc.0"
 });
 
 Package.registerBuildPlugin({
