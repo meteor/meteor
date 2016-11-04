@@ -477,7 +477,16 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
             return cachedExternalPath;
           }
 
-          const real = files.realpath(thisAbsFrom, this._realpathCache);
+          try {
+            var real = files.realpath(
+              thisAbsFrom,
+              this._realpathCache
+            );
+          } catch (e) {
+            if (e.code !== "ENOENT") throw e;
+            return cachedExternalPath = false;
+          }
+
           const isExternal =
             files.pathRelative(_currentRealRootDir, real).startsWith("..");
 
