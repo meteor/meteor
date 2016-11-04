@@ -22,6 +22,7 @@ import {
   convert as convertColonsInPath
 } from "../utils/colon-converter.js";
 
+import { wrap as wrapOptimistic } from "optimism";
 import {
   dirtyNodeModulesDirectory,
   optimisticLStat,
@@ -133,7 +134,7 @@ meteorNpm.updateDependencies = function (packageName,
 
 // Returns a flattened dictionary of npm package names used in production,
 // or false if there is no package.json file in the parent directory.
-export function getProdPackageNames(nodeModulesDir) {
+export const getProdPackageNames = wrapOptimistic(nodeModulesDir => {
   const names = Object.create(null);
   const dirs = Object.create(null);
   const nodeModulesDirStack = [];
@@ -208,7 +209,7 @@ export function getProdPackageNames(nodeModulesDir) {
   // Concretely, this means your app needs to have a package.json file if
   // you want any npm packages to be excluded in production.
   return walk(files.pathDirname(nodeModulesDir)) && names;
-}
+});
 
 const lastRebuildJSONFilename = ".meteor-last-rebuild-version.json";
 
