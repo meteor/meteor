@@ -156,7 +156,7 @@ these guidelines:
  * Include tests that prove your code works.
 
  * Follow the
-   [MDG style guide](https://github.com/meteor/meteor/wiki/Meteor-Style-Guide)
+   [MDG style guide](https://guide.meteor.com/code-style.html#javascript)
    for code and commit messages.
 
  * Be sure your author field in git is properly filled out with your full name
