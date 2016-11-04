@@ -483,7 +483,10 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
               this._realpathCache
             );
           } catch (e) {
-            if (e.code !== "ENOENT") throw e;
+            if (e.code !== "ENOENT" &&
+                e.code !== "ELOOP") {
+              throw e;
+            }
             return cachedExternalPath = false;
           }
 
