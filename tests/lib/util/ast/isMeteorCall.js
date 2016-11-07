@@ -20,9 +20,9 @@ describe('isMeteorCall', () => {
             },
           },
         },
-        'foo'
+        'foo',
       ),
-      true
+      true,
     )
   })
 })
