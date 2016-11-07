@@ -55,11 +55,20 @@ function setCacheDir(cacheDir) {
   var reifyCompiler = require("reify/lib/compiler");
 
   compileCache = new Cache(function (source, options) {
-    var ast = parse(source); // TODO Cache parsed ASTs somehow?
-    var result = require("babel-core")
-      .transformFromAst(ast, source, options);
-    result.code = reifyCompiler.compile(result.code);
-    return result;
+    var reifyResult = reifyCompiler.compile(source, {
+      // Use Babel's parser during Reify compilation.
+      parse: parse,
+      // Return the modified AST as reifyResult.ast.
+      ast: true,
+      // Generate let declarations for imported symbols.
+      generateLetDeclarations: true
+    });
+
+    return require("babel-core").transformFromAst(
+      reifyResult.ast,
+      reifyResult.code,
+      options
+    );
   }, cacheDir);
 }
 exports.setCacheDir = setCacheDir;

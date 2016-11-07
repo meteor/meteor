@@ -54,11 +54,13 @@ exports.getDefaults = function getDefaults(features) {
         require("./plugins/sanitize-for-in-objects.js")
       );
     }
-
-    if (features.legacyModules) {
-      options.plugins.push(babelModulesPlugin);
-    }
   }
+
+  // Even though we use Reify to transpile `import` and `export`
+  // declarations in the original source, Babel sometimes inserts its own
+  // `import` declarations later on, and of course Babel knows best how to
+  // compile those declarations.
+  options.plugins.push(babelModulesPlugin);
 
   return options;
 };
