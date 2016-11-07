@@ -9,7 +9,7 @@ describe('getExecutorsFromTest', () => {
           type: 'Identifier',
           name: 'Meteor',
         })
-      }
+      },
     )
   })
 
@@ -74,7 +74,7 @@ describe('getExecutorsFromTest', () => {
               name: 'isNotAMeteorProp',
             },
           })
-        }
+        },
       )
     })
   })
