@@ -29,14 +29,14 @@ describe("meteor-babel", () => {
 });
 
 describe("Babel", function() {
-  it("es3.{property,memberExpression}Literals", () => {
+  it("es3.propertyLiterals", () => {
     function getCatch(value) {
       let obj = { catch: value };
       return obj.catch;
     }
 
     assert.strictEqual(getCatch(42), 42);
-    assert.ok(getCatch.toString().indexOf('obj["catch"]') >= 0);
+    assert.ok(getCatch.toString().indexOf("obj.catch") >= 0);
     assert.ok(getCatch.toString().indexOf('"catch":') >= 0);
   });
 
