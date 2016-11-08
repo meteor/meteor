@@ -378,4 +378,17 @@ describe("Reify", function () {
     assert.deepEqual(gen.next(), { value: "b", done: false });
     assert.deepEqual(gen.next(), { value: void 0, done: true });
   });
+
+  it("should work after await in async functions", function () {
+    return async function () {
+      import { value } from "./export-value-a.js";
+
+      assert.strictEqual(
+        await Promise.resolve("asdf"),
+        "asdf"
+      );
+
+      assert.strictEqual(value, "a");
+    }();
+  });
 });
