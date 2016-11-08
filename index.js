@@ -2,6 +2,7 @@ var assert = require("assert");
 var getDefaultOptions = require("./options.js").getDefaults;
 var Cache = require("./cache.js");
 var compileCache; // Lazily initialized.
+var reifyCompiler = require("reify/lib/compiler");
 var parseOptions = {
   sourceType: "module",
   strictMode: false,
@@ -47,29 +48,27 @@ exports.compile = function compile(source, options, deps) {
   return compileCache.get(source, options, deps);
 };
 
+function compile(source, options) {
+  var reifyResult = reifyCompiler.compile(source, {
+    // Use Babel's parser during Reify compilation.
+    parse: parse,
+    // Return the modified AST as reifyResult.ast.
+    ast: true,
+    // Generate let declarations for imported symbols.
+    generateLetDeclarations: true
+  });
+
+  return require("babel-core").transformFromAst(
+    reifyResult.ast,
+    reifyResult.code,
+    options
+  );
+}
+
 function setCacheDir(cacheDir) {
-  if (compileCache && compileCache.dir === cacheDir) {
-    return;
+  if (! (compileCache && compileCache.dir === cacheDir)) {
+    compileCache = new Cache(compile, cacheDir);
   }
-
-  var reifyCompiler = require("reify/lib/compiler");
-
-  compileCache = new Cache(function (source, options) {
-    var reifyResult = reifyCompiler.compile(source, {
-      // Use Babel's parser during Reify compilation.
-      parse: parse,
-      // Return the modified AST as reifyResult.ast.
-      ast: true,
-      // Generate let declarations for imported symbols.
-      generateLetDeclarations: true
-    });
-
-    return require("babel-core").transformFromAst(
-      reifyResult.ast,
-      reifyResult.code,
-      options
-    );
-  }, cacheDir);
 }
 exports.setCacheDir = setCacheDir;
 
