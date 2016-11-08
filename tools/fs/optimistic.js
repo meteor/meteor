@@ -174,6 +174,14 @@ export function dirtyNodeModulesDirectory(nodeModulesDir) {
 
 export const optimisticStatOrNull = makeOptimistic("statOrNull", statOrNull);
 export const optimisticLStat = makeOptimistic("lstat", lstat);
+export const optimisticLStatOrNull = makeOptimistic("lstatOrNull", path => {
+  try {
+    return optimisticLStat(path);
+  } catch (e) {
+    if (e.code !== "ENOENT") throw e;
+    return null;
+  }
+});
 export const optimisticReadFile = makeOptimistic("readFile", readFile);
 export const optimisticReaddir = makeOptimistic("readdir", readdir);
 export const optimisticHashOrNull = makeOptimistic("hashOrNull", (...args) => {

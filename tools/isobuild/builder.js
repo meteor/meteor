@@ -6,7 +6,7 @@ import {Profile} from '../tool-env/profile.js';
 import {
   optimisticReadFile,
   optimisticReaddir,
-  optimisticLStat,
+  optimisticLStatOrNull,
 } from "../fs/optimistic.js";
 
 // Builder is in charge of writing "bundles" to disk, which are
@@ -497,9 +497,11 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           return cachedExternalPath = isExternal && real;
         };
 
-        let fileStatus = optimisticLStat(thisAbsFrom);
+        let fileStatus = optimisticLStatOrNull(thisAbsFrom);
 
-        if (! symlink && fileStatus.isSymbolicLink()) {
+        if (! symlink &&
+            fileStatus &&
+            fileStatus.isSymbolicLink()) {
           // If copyDirectory is not allowed to create symbolic links to
           // external files, and this file is a symbolic link that points
           // to an external file, update fileStatus so that we copy this
@@ -512,15 +514,20 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
             // Update fileStatus to match the actual file rather than the
             // symbolic link, thus forcing the file to be copied below.
-            fileStatus = optimisticLStat(externalPath);
+            fileStatus = optimisticLStatOrNull(externalPath);
 
-            if (fileStatus.isDirectory()) {
+            if (fileStatus && fileStatus.isDirectory()) {
               // Update _currentRealRootDir so that we can judge
               // isExternal relative to this new root directory when
               // traversing nested directories.
               _currentRealRootDir = externalPath;
             }
           }
+        }
+
+        if (! fileStatus) {
+          // If the file did not exist, skip it.
+          return;
         }
 
         let itemForMatch = item;
