@@ -1,5 +1,11 @@
 ## v.NEXT
 
+* `meteor create` now has a new `--full` option, which generates an larger app,
+  demonstrating development techniques highlighted in the
+  [Meteor Guide](http://guide.meteor.com)
+
+  [PR #7807](https://github.com/meteor/meteor/pull/7807)
+
 ## v1.4.2.1
 
 * Installing the `babel-runtime` npm package in your application
