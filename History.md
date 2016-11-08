@@ -33,6 +33,10 @@
   whereas previously (in 1.4.2) they were ignored.
   [#7978](https://github.com/meteor/meteor/issues/7978)
 
+* The `meteor-babel` npm package has been upgraded to version 0.14.0,
+  fixing [#8021](https://github.com/meteor/meteor/issues/8021) and
+  [#7662](https://github.com/meteor/meteor/issues/7662).
+
 * Miscellaneous fixed bugs:
   [#7974](https://github.com/meteor/meteor/issues/7974)
   [#7956](https://github.com/meteor/meteor/issues/7956)
