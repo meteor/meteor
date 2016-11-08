@@ -186,7 +186,9 @@ function getImportedModuleId(node) {
   if (node.type === "CallExpression" &&
       node.callee.type === "MemberExpression" &&
       isIdWithName(node.callee.object, "module") &&
-      isIdWithName(node.callee.property, "import")) {
+      (isIdWithName(node.callee.property, "import") ||
+       (isStringLiteral(node.callee.property) &&
+        node.callee.property.value === "import"))) {
     const args = node.arguments;
     const argc = args.length;
     if (argc > 0) {
