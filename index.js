@@ -19,7 +19,6 @@ module.exports = {
     [require("babel-plugin-transform-es2015-for-of"), {
       loose: true
     }],
-    require("babel-plugin-transform-es2015-function-name"),
     require("babel-plugin-transform-es2015-literals"),
     require("babel-plugin-transform-es2015-object-super"),
     require("babel-plugin-transform-es2015-parameters"),
