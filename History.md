@@ -17,7 +17,15 @@
   demonstrating development techniques highlighted in the
   [Meteor Guide](http://guide.meteor.com)
 
+  [Issue #6974](https://github.com/meteor/meteor/issues/6974)
   [PR #7807](https://github.com/meteor/meteor/pull/7807)
+
+* Minimongo now supports `$min`, `$max` and partially supports `$currentDate`.
+
+  [Issue #7857](https://github.com/meteor/meteor/issues/7857)
+  [PR #7858](https://github.com/meteor/meteor/pull/7858)
+
+
 
 ## v1.4.2.1
 
