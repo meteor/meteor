@@ -359,4 +359,23 @@ describe("Reify", function () {
     assert.strictEqual(def, "value: a");
     assert.strictEqual(value, "a");
   });
+
+  it("should work for imports in generator functions", function () {
+    function *g() {
+      {
+        import { value } from "./export-value-a.js";
+        yield value;
+      }
+
+      {
+        import { value } from "./export-value-b.js";
+        yield value;
+      }
+    }
+
+    var gen = g();
+    assert.deepEqual(gen.next(), { value: "a", done: false });
+    assert.deepEqual(gen.next(), { value: "b", done: false });
+    assert.deepEqual(gen.next(), { value: void 0, done: true });
+  });
 });
