@@ -560,9 +560,17 @@ class File {
     return `File: [info=${this.info}]`;
   }
 
+  static _salt() {
+    // Increment this number to force rehashing.
+    return 1;
+  }
+
   hash() {
     if (! this._hash) {
-      this._hash = watch.sha1(this.contents());
+      this._hash = watch.sha1(
+        String(File._salt()),
+        this.contents(),
+      );
     }
     return this._hash;
   }
