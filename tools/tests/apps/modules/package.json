@@ -16,6 +16,7 @@
     "winston": "^2.2.0"
   },
   "scripts": {
-    "test": "METEOR_PROFILE=100 ../../../../meteor test --full-app --driver-package avital:mocha"
+    "test": "METEOR_PROFILE=100 ../../../../meteor test --full-app --driver-package avital:mocha",
+    "test-packages": "../../../../meteor test-packages --driver-package avital:mocha packages/modules-test-package"
   }
 }
