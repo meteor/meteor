@@ -34,8 +34,11 @@
   [#7978](https://github.com/meteor/meteor/issues/7978)
 
 * Miscellaneous fixed bugs:
-  [#7974](https://github.com/meteor/meteor/issues/7974)
+  [#2876](https://github.com/meteor/meteor/issues/2876)
+  [#7154](https://github.com/meteor/meteor/issues/7154)
   [#7956](https://github.com/meteor/meteor/issues/7956)
+  [#7974](https://github.com/meteor/meteor/issues/7974)
+  [#8005](https://github.com/meteor/meteor/issues/8005)
   [#8007](https://github.com/meteor/meteor/issues/8007)
 
 ## v1.4.2
