@@ -58,11 +58,20 @@ function compile(source, options) {
     generateLetDeclarations: true
   });
 
-  return require("babel-core").transformFromAst(
+  var babelResult = require("babel-core").transformFromAst(
     reifyResult.ast,
     reifyResult.code,
     options
   );
+
+  if (babelResult.map) {
+    // The reifyCompiler.compile step doesn't alter any line numbers, so
+    // it's safe to use the original source (before reification) for the
+    // source map returned by Babel.
+    babelResult.map.sourcesContent[0] = source;
+  }
+
+  return babelResult;
 }
 
 function setCacheDir(cacheDir) {
