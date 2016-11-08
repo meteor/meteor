@@ -343,3 +343,20 @@ val = "zxcv";`;
     });
   });
 });
+
+describe("Reify", function () {
+  it("should declare imported symbols with block scope", function () {
+    import def, { value } from "./export-value-a.js";
+    assert.strictEqual(def, "value: a");
+
+    if (value === "a") {
+      import def, { value as bVal } from "./export-value-b.js";
+      assert.strictEqual(def, "value: b");
+      assert.strictEqual(bVal, "b");
+      assert.strictEqual(value, "a");
+    }
+
+    assert.strictEqual(def, "value: a");
+    assert.strictEqual(value, "a");
+  });
+});
