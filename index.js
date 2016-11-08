@@ -32,7 +32,6 @@ module.exports = {
     require("babel-plugin-transform-es2015-unicode-regex"),
     require("babel-plugin-syntax-object-rest-spread"),
     require("babel-plugin-transform-object-rest-spread"),
-    require("babel-plugin-transform-es3-member-expression-literals"),
     require("babel-plugin-transform-es3-property-literals"),
     require("babel-plugin-transform-flow-strip-types"),
     require("babel-plugin-transform-regenerator")
