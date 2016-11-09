@@ -1451,9 +1451,11 @@ files.readLinkToMeteorScript = function (linkLocation, platform) {
 //   A helpful file to import for this purpose is colon-converter.js, which also
 //   knows how to convert various configuration file formats.
 
-// If this environment variable is set, fs.*Sync methods will always be used
-// by wrapFsFunc instead of yielding wrappers for asynchronous fs.* methods.
-const YIELD_ALLOWED = ! process.env.METEOR_DISABLE_FS_FIBERS;
+// Fibers are disabled by default for files.* operations unless
+// process.env.METEOR_DISABLE_FS_FIBERS parses to a falsy value.
+const YIELD_ALLOWED = !! (
+  _.has(process.env, "METEOR_DISABLE_FS_FIBERS") &&
+  ! JSON.parse(process.env.METEOR_DISABLE_FS_FIBERS));
 
 files.fsFixPath = {};
 /**

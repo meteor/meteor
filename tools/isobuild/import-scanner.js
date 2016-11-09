@@ -648,7 +648,12 @@ export default class ImportScanner {
     if (this.name) {
       // If we're bundling a package, prefix path with
       // node_modules/<package name>/.
-      path = pathJoin("node_modules", "meteor", this.name, path);
+      path = pathJoin(
+        "node_modules",
+        "meteor",
+        this.name.replace(/^local-test[:_]/, ""),
+        path,
+      );
     }
 
     // Install paths should always be delimited by /.

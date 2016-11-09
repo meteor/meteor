@@ -553,17 +553,31 @@ class File {
     this.assets = null;
 
     this._contents = options.data || null; // contents, if known, as a Buffer
-    this._hash = options.hash || null; // hash, if known, as a hex string
+    this._hashOfContents = options.hash || null;
+    this._hash = null;
   }
 
   toString() {
     return `File: [info=${this.info}]`;
   }
 
+  static _salt() {
+    // Increment this number to force rehashing.
+    return 1;
+  }
+
   hash() {
     if (! this._hash) {
-      this._hash = watch.sha1(this.contents());
+      if (! this._hashOfContents) {
+        this._hashOfContents = watch.sha1(this.contents());
+      }
+
+      this._hash = watch.sha1(
+        String(File._salt()),
+        this._hashOfContents,
+      );
     }
+
     return this._hash;
   }
 
@@ -587,7 +601,7 @@ class File {
     }
     this._contents = b;
     // Un-cache hash.
-    this._hash = null;
+    this._hashOfContents = this._hash = null;
   }
 
   size() {

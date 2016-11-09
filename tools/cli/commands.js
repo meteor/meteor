@@ -1441,6 +1441,7 @@ testCommandOptions = {
     // XXX COMPAT WITH 0.9.2.2
     'mobile-port': { type: String },
     'debug-port': { type: String },
+    'no-release-check': { type: Boolean },
     deploy: { type: String },
     production: { type: Boolean },
     settings: { type: String, short: 's' },
@@ -1564,6 +1565,11 @@ function doTestCommand(options) {
     global.testCommandMetadata.driverPackage = options['driver-package'] || 'test-in-browser';
     projectContextOptions.projectDir = testRunnerAppDir;
     projectContextOptions.projectDirForLocalPackages = options.appDir;
+
+    require("./default-npm-deps.js").install(testRunnerAppDir);
+    if (buildmessage.jobHasMessages()) {
+      return;
+    }
 
     // Find any packages mentioned by a path instead of a package name. We will
     // load them explicitly into the catalog.

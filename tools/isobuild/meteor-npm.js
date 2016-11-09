@@ -22,6 +22,7 @@ import {
   convert as convertColonsInPath
 } from "../utils/colon-converter.js";
 
+import { wrap as wrapOptimistic } from "optimism";
 import {
   dirtyNodeModulesDirectory,
   optimisticLStat,
@@ -133,7 +134,7 @@ meteorNpm.updateDependencies = function (packageName,
 
 // Returns a flattened dictionary of npm package names used in production,
 // or false if there is no package.json file in the parent directory.
-export function getProdPackageNames(nodeModulesDir) {
+export const getProdPackageNames = wrapOptimistic(nodeModulesDir => {
   const names = Object.create(null);
   const dirs = Object.create(null);
   const nodeModulesDirStack = [];
@@ -208,7 +209,7 @@ export function getProdPackageNames(nodeModulesDir) {
   // Concretely, this means your app needs to have a package.json file if
   // you want any npm packages to be excluded in production.
   return walk(files.pathDirname(nodeModulesDir)) && names;
-}
+});
 
 const lastRebuildJSONFilename = ".meteor-last-rebuild-version.json";
 
@@ -431,6 +432,8 @@ function copyNpmPackageWithSymlinkedNodeModules(fromPkgDir, toPkgDir) {
   });
 }
 
+const portableCache = Object.create(null);
+
 const isPortable = Profile("meteorNpm.isPortable", dir => {
   const lstat = optimisticLStat(dir);
   if (! lstat.isDirectory()) {
@@ -449,10 +452,18 @@ const isPortable = Profile("meteorNpm.isPortable", dir => {
     // put .meteor-portable files only in the individual top-level package
     // directories, so that they will get cleared away the next time those
     // packages are (re)installed.
-    const result = optimisticReadJsonOrNull(portableFile);
+    const result = _.has(portableCache, portableFile)
+      ? portableCache[portableFile]
+      : optimisticReadJsonOrNull(portableFile, {
+          // Make optimisticReadJsonOrNull return null if there's a
+          // SyntaxError when parsing the .meteor-portable file.
+          allowSyntaxError: true
+        });
+
     if (result) {
       return result;
     }
+
   } else {
     // Clean up any .meteor-portable files we mistakenly wrote in
     // directories that do not contain package.json files. #7296
@@ -471,8 +482,16 @@ const isPortable = Profile("meteorNpm.isPortable", dir => {
     fs.writeFile(
       portableFile,
       JSON.stringify(result) + "\n",
-      error => {},
+      error => {
+        // Once the asynchronous write finishes (successful or not), we no
+        // longer need to cache the written value in memory.
+        delete portableCache[portableFile];
+      },
     );
+
+    // Cache the result immediately in memory so that the asynchronous
+    // write won't confuse synchronous optimisticReadJsonOrNull calls.
+    portableCache[portableFile] = result;
   }
 
   return result;

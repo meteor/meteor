@@ -257,10 +257,10 @@ export function readFile(absPath) {
   }
 };
 
-export function sha1(contents) {
+export function sha1(...args) {
   return Profile("sha1", function () {
     var hash = createHash('sha1');
-    hash.update(contents);
+    args.forEach(arg => hash.update(arg));
     return hash.digest('hex');
   })();
 }

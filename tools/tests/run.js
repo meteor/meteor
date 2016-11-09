@@ -174,13 +174,14 @@ selftest.define("run --once", ["yet-unsolved-windows-failure"], function () {
   run.forbidAll("updated");
   s.unlink('empty.js');
   s.write('.meteor/release', originalRelease);
+});
 
-  // Try it with a real Mongo. Make sure that it actually starts one.
-  s = new Sandbox;
+selftest.define("run --once with real Mongo", function () {
+  var s = new Sandbox;
   s.createApp("onceapp", "once");
   s.cd("onceapp");
   s.set("RUN_ONCE_OUTCOME", "mongo");
-  run = s.run("--once");
+  var run = s.run("--once");
   run.waitSecs(30);
   run.expectExit(86);
 });
