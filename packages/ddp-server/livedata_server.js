@@ -809,23 +809,32 @@ _.extend(Session.prototype, {
     self.collectionViews = {};
     self.userId = userId;
 
-    // Save the old named subs, and reset to having no subscriptions.
-    var oldNamedSubs = self._namedSubs;
-    self._namedSubs = {};
-    self._universalSubs = [];
+    // _setUserId is normally called from a Meteor method with
+    // DDP._CurrentInvocation set. But DDP._CurrentInvocation is not expected
+    // to be set inside a publish function, so we temporary unset it.
+    // Otherwise, this can lead to a problem that if a publish function is
+    // calling server-side Meteor methods, their this.connection property is
+    // set when publish function is restarted here, but the property should
+    // not be set.
+    DDP._CurrentInvocation.withValue(null, function () {
+      // Save the old named subs, and reset to having no subscriptions.
+      var oldNamedSubs = self._namedSubs;
+      self._namedSubs = {};
+      self._universalSubs = [];
 
-    _.each(oldNamedSubs, function (sub, subscriptionId) {
-      self._namedSubs[subscriptionId] = sub._recreate();
-      // nb: if the handler throws or calls this.error(), it will in fact
-      // immediately send its 'nosub'. This is OK, though.
-      self._namedSubs[subscriptionId]._runHandler();
+      _.each(oldNamedSubs, function (sub, subscriptionId) {
+        self._namedSubs[subscriptionId] = sub._recreate();
+        // nb: if the handler throws or calls this.error(), it will in fact
+        // immediately send its 'nosub'. This is OK, though.
+        self._namedSubs[subscriptionId]._runHandler();
+      });
+
+      // Allow newly-created universal subs to be started on our connection in
+      // parallel with the ones we're spinning up here, and spin up universal
+      // subs.
+      self._dontStartNewUniversalSubs = false;
+      self.startUniversalSubs();
     });
-
-    // Allow newly-created universal subs to be started on our connection in
-    // parallel with the ones we're spinning up here, and spin up universal
-    // subs.
-    self._dontStartNewUniversalSubs = false;
-    self.startUniversalSubs();
 
     // Start sending messages again, beginning with the diff from the previous
     // state of the world to the current state. No yields are allowed during
