@@ -519,14 +519,7 @@ Meteor.methods({forgotPassword: function (options) {
 // send the user an email with a link that when opened allows the user
 // to set a new password, without the old password.
 
-/**
- * @summary Send an email with a link the user can use to reset their password.
- * @locus Server
- * @param {String} userId The id of the user to send email to.
- * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.
- * @importFromPackage accounts-base
- */
-Accounts.sendResetPasswordEmail = function (userId, email) {
+Accounts._sendResetPasswordEmail = function (userId, email) {
   // Make sure the user exists, and email is one of their addresses.
   var user = Meteor.users.findOne(userId);
   if (!user)
@@ -575,7 +568,18 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
     options.headers = Accounts.emailTemplates.headers;
   }
 
-  Email.send(options);
+  return options;
+};
+
+/**
+ * @summary Send an email with a link the user can use to reset their password.
+ * @locus Server
+ * @param {String} userId The id of the user to send email to.
+ * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.
+ * @importFromPackage accounts-base
+ */
+Accounts.sendResetPasswordEmail = function (userId, email) {
+  Email.send(Accounts._sendResetPasswordEmail(userId, email));
 };
 
 // send the user an email informing them that their account was created, with
@@ -586,14 +590,7 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
 // This is not called automatically. It must be called manually if you
 // want to use enrollment emails.
 
-/**
- * @summary Send an email with a link the user can use to set their initial password.
- * @locus Server
- * @param {String} userId The id of the user to send email to.
- * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.
- * @importFromPackage accounts-base
- */
-Accounts.sendEnrollmentEmail = function (userId, email) {
+Accounts._sendEnrollmentEmail = function (userId, email) {
   // XXX refactor! This is basically identical to sendResetPasswordEmail.
 
   // Make sure the user exists, and email is in their addresses.
@@ -645,7 +642,18 @@ Accounts.sendEnrollmentEmail = function (userId, email) {
     options.headers = Accounts.emailTemplates.headers;
   }
 
-  Email.send(options);
+  return options;
+};
+
+/**
+ * @summary Send an email with a link the user can use to set their initial password.
+ * @locus Server
+ * @param {String} userId The id of the user to send email to.
+ * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.
+ * @importFromPackage accounts-base
+ */
+Accounts.sendEnrollmentEmail = function (userId, email) {
+  Email.send(Accounts._sendEnrollmentEmail(userId, email));
 };
 
 
@@ -736,14 +744,7 @@ Meteor.methods({resetPassword: function (token, newPassword) {
 // send the user an email with a link that when opened marks that
 // address as verified
 
-/**
- * @summary Send an email with a link the user can use verify their email address.
- * @locus Server
- * @param {String} userId The id of the user to send email to.
- * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first unverified email in the list.
- * @importFromPackage accounts-base
- */
-Accounts.sendVerificationEmail = function (userId, address) {
+Accounts._sendVerificationEmail = function (userId, address) {
   // XXX Also generate a link using which someone can delete this
   // account if they own said address but weren't those who created
   // this account.
@@ -805,7 +806,18 @@ Accounts.sendVerificationEmail = function (userId, address) {
     options.headers = Accounts.emailTemplates.headers;
   }
 
-  Email.send(options);
+  return options;
+};
+
+/**
+ * @summary Send an email with a link the user can use verify their email address.
+ * @locus Server
+ * @param {String} userId The id of the user to send email to.
+ * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first unverified email in the list.
+ * @importFromPackage accounts-base
+ */
+Accounts.sendVerificationEmail = function (userId, email) {
+  Email.send(Accounts._sendVerificationEmail(userId, email));
 };
 
 // Take token from sendVerificationEmail, mark the email as verified,
