@@ -108,7 +108,6 @@ export default class ImportScanner {
     nodeModulesPaths = [],
     watchSet,
   }) {
-    const scanner = this;
     assert.ok(isString(sourceRoot));
 
     this.name = name;
@@ -122,21 +121,28 @@ export default class ImportScanner {
 
     this.resolver = Resolver.getOrCreate({
       caller: "ImportScanner#constructor",
-
       sourceRoot,
       targetArch: bundleArch,
       extensions,
       nodeModulesPaths,
-
-      statOrNull(absPath) {
-        const file = scanner._getFile(absPath);
-        if (file) {
-          return fakeFileStat;
-        }
-
-        return optimisticStatOrNull(absPath);
-      }
     });
+
+    // Since Resolver.getOrCreate may have returned a cached Resolver
+    // instance, it's important to update its statOrNull method so that it
+    // is bound to this ImportScanner object rather than the previous one.
+    this.resolver.statOrNull = (absPath) => {
+      const stat = optimisticStatOrNull(absPath);
+      if (stat) {
+        return stat;
+      }
+
+      const file = this._getFile(absPath);
+      if (file) {
+        return fakeFileStat;
+      }
+
+      return null;
+    };
   }
 
   _getFile(absPath) {

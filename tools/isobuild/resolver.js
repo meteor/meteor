@@ -64,13 +64,12 @@ export default class Resolver {
     targetArch,
     extensions = [".js", ".json"],
     nodeModulesPaths = [],
-    statOrNull = optimisticStatOrNull,
   }) {
     this.sourceRoot = sourceRoot;
     this.extensions = extensions;
     this.targetArch = targetArch;
     this.nodeModulesPaths = nodeModulesPaths;
-    this.statOrNull = statOrNull;
+    this.statOrNull = optimisticStatOrNull;
 
     this.resolve = wrap((id, absParentPath) => {
       return this._resolve(id, absParentPath);
