@@ -2,18 +2,22 @@
 //
 // https://guide.meteor.com/testing.html
 
-import { Meteor } from 'meteor/meteor';
+/* eslint-env mocha */
+/* eslint-disable func-names, prefer-arrow-callback */
+
 import { assert } from 'meteor/practicalmeteor:chai';
 import { Links } from '../links.js';
 import { PublicationCollector } from 'meteor/johanbrook:publication-collector';
 import './publications.js';
 
 describe('links publications', function () {
-
-  beforeEach(() => {
+  beforeEach(function () {
     Links.remove({});
-    Links.insert({ title: 'meteor homepage', url: 'https://www.meteor.com'});
-  })
+    Links.insert({
+      title: 'meteor homepage',
+      url: 'https://www.meteor.com',
+    });
+  });
 
   describe('links.all', function () {
     it('sends all links', function (done) {
@@ -24,4 +28,4 @@ describe('links publications', function () {
       });
     });
   });
-})
+});
