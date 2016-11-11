@@ -271,7 +271,8 @@ If you need to modify a package to do something that the published version doesn
 A Meteor app can load Atmosphere packages in one of three ways, and it looks for a matching package name in the following order:
 
 1. Package source code in the `packages/` directory inside your app.
-2. Package source code in directories indicated by setting a `PACKAGE_DIRS` environment variable before running any `meteor` command. You can add multiple directories by separating the paths with a `:` on OSX or Linux, or a `;` on Windows. For example: `PACKAGE_DIRS=../first/directory:../second/directory`, or on Windows: `set PACKAGE_DIRS=..\first\directory;..\second\directory`.
+2. Package source code in directories indicated by setting a `METEOR_PACKAGE_DIRS` environment variable before running any `meteor` command. You can add multiple directories by separating the paths with a `:` on OSX or Linux, or a `;` on Windows. For example: `METEOR_PACKAGE_DIRS=../first/directory:../second/directory`, or on Windows: `set PACKAGE_DIRS=..\first\directory;..\second\directory`.
+ > Note: Prior to Meteor 1.4.2, `METEOR_PACKAGE_DIRS` was simply `PACKAGE_DIRS`.  For compatibility reasons, developers should use `METEOR_PACKAGE_DIRS` going forward.
 3. Pre-built package from Atmosphere. The package is cached in `~/.meteor/packages` on Mac/Linux or `%LOCALAPPDATA%\.meteor\packages` on Windows, and only loaded into your app as it is built.
 
 You can use (1) or (2) to override the version from Atmosphere. You can even do this to load patched versions of Meteor core packages - just copy the code of the package from [Meteor's GitHub repository](https://github.com/meteor/meteor/tree/devel/packages), and edit away.
