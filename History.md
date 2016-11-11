@@ -1,5 +1,9 @@
 ## v.NEXT
 
+## v1.4.2.2
+
+* Node has been upgraded to version 4.6.2.
+
 * The `facebook` package has been split into:
   - `facebook-oauth` (the part that allows oauth w/ FB directly) and
   - `facebook-config-ui` (the Blaze configuration templates for accounts-ui)
@@ -21,14 +25,11 @@
   [PR #7807](https://github.com/meteor/meteor/pull/7807)
 
 * Minimongo now supports `$min`, `$max` and partially supports `$currentDate`.
-
   [Issue #7857](https://github.com/meteor/meteor/issues/7857)
   [PR #7858](https://github.com/meteor/meteor/pull/7858)
 
 * Fix for [Issue #5676](https://github.com/meteor/meteor/issues/5676)
   [PR #7968](https://github.com/meteor/meteor/pull/7968)
-
-
 
 ## v1.4.2.1
 
