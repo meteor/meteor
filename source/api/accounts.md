@@ -147,6 +147,13 @@ will be logged out.
 
 If there are multiple users with a username or email only differing in case, a case sensitive match is required. Although `createUser` won't let you create users with ambiguous usernames or emails, this could happen with existing databases or if you modify the users collection directly.
 
+This method can fail throwing one of the following errors:
+* "Unrecognized options for login request [400]" if `user` or `password` is undefined.
+* "Match failed [400]" if `user` isn't an Object or String, or `password` isn't a String.
+* "User not found [403]" if the email or username provided in `user` doesn't belong to a registered user.
+* "Incorrect password [403]" if the password provided is incorrect.
+* "User has no password set [403]" if `user` doesn't have a password.
+
 This function is provided by the `accounts-password` package. See the
 [Passwords](#accounts_passwords) section below.
 
