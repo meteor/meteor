@@ -1,8 +1,10 @@
+import { Links } from '/imports/api/links/links.js';
+import { Meteor } from 'meteor/meteor';
 import './info.html';
-import { Links } from '/imports/api/links/links.js'
-import { Meteor } from 'meteor/meteor'
 
-Template.info.onCreated(function infoOnCreated() {
+/* eslint-disable func-names, prefer-arrow-callback */
+
+Template.info.onCreated(function () {
   Meteor.subscribe('links.all');
 });
 
@@ -13,21 +15,20 @@ Template.info.helpers({
 });
 
 Template.info.events({
-  'submit .info-link-add': function (e){
-    e.preventDefault();
+  'submit .info-link-add'(event) {
+    event.preventDefault();
 
-    const target = e.target;
+    const target = event.target;
     const title = target.title;
     const url = target.url;
 
-    Meteor.call('links.insert', title.value, url.value, function (error) {
-      if(error){
+    Meteor.call('links.insert', title.value, url.value, (error) => {
+      if (error) {
         alert(error.error);
-      }
-      else{
+      } else {
         title.value = '';
         url.value = '';
       }
     });
-  }
-})
+  },
+});

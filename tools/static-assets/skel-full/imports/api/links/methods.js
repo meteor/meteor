@@ -1,8 +1,8 @@
 // Methods related to links
 
 import { Meteor } from 'meteor/meteor';
-import { Links } from './links.js';
 import { check } from 'meteor/check';
+import { Links } from './links.js';
 
 Meteor.methods({
   'links.insert'(title, url) {
@@ -10,10 +10,15 @@ Meteor.methods({
     check(title, String);
 
     // Check if this is a valid url
-    if (!url.match(/((http|https)\:\/\/)+[a-zA-Z0-9\.\/\?\:@\-_=#]+\.([a-zA-Z0-9\&\.\/\?\:@\-_=#])*/g)){
-      throw new Meteor.Error('Bad url. I.e https://www.meteor.com');
+    const re = /((http|https)\:\/\/)+[a-zA-Z0-9\.\/\?\:@\-_=#]+\.([a-zA-Z0-9\&\.\/\?\:@\-_=#])*/g;
+    if (!url.match(re)) {
+      throw new Meteor.Error('Invalid URL.');
     }
 
-    return Links.insert({url, title, createdAt: new Date()});
-  }
+    return Links.insert({
+      url,
+      title,
+      createdAt: new Date(),
+    });
+  },
 });
