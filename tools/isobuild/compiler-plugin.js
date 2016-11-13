@@ -938,6 +938,7 @@ export class PackageSourceBatch {
 
       map.set(name, {
         files: inputFiles,
+        mainModule: _.find(inputFiles, file => file.mainModule) || null,
         importExtensions: batch.importExtensions,
       });
     });
@@ -961,9 +962,8 @@ export class PackageSourceBatch {
       map.forEach((info, name) => {
         if (! name) return;
 
-        let mainModule = _.find(info.files, file => file.mainModule);
-        mainModule = mainModule ?
-          `meteor/${name}/${mainModule.targetPath}` : false;
+        const mainModule = info.mainModule &&
+          `meteor/${name}/${info.mainModule.targetPath}`;
 
         meteorPackageInstalls.push(
           "install(" + JSON.stringify(name) +
@@ -1040,11 +1040,24 @@ export class PackageSourceBatch {
         let name = null;
 
         if (parts[0] === "meteor") {
+          let found = false;
+          name = parts[1];
+
           if (parts.length > 2) {
-            name = parts[1];
             parts[1] = ".";
             id = parts.slice(1).join("/");
+            found = true;
+
           } else {
+            const entry = map.get(name);
+            const mainModule = entry && entry.mainModule;
+            if (mainModule) {
+              id = "./" + mainModule.sourcePath;
+              found = true;
+            }
+          }
+
+          if (! found) {
             return;
           }
         }

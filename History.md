@@ -18,6 +18,22 @@
 * Fix for [Issue #5676](https://github.com/meteor/meteor/issues/5676)
   [PR #7968](https://github.com/meteor/meteor/pull/7968)
 
+* It is now possible for packages to specify a *lazy* main module:
+  ```js
+  Package.onUse(function (api) {
+    api.mainModule("client.js", "client", { lazy: true });
+  });
+  ```
+  This means the `client.js` module will not be evaluated during app
+  startup unless/until another module imports it, and will not even be
+  included in the client bundle if no importing code is found. **Note 1:**
+  packages with lazy main modules cannot use `api.export` to export global
+  symbols to other packages/apps. **Note 2:** packages with lazy main
+  modules should be restricted to Meteor 1.4.2.2 or later via
+  `api.versionsFrom("1.4.2.2")`, since older versions of Meteor cannot
+  import lazy main modules using `import "meteor/<package name>"` but must
+  explicitly name the module: `import "meteor/<package name>/client.js"`.
+
 ## v1.4.2.1
 
 * Installing the `babel-runtime` npm package in your application

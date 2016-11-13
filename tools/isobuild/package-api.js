@@ -346,13 +346,15 @@ _.extend(PackageAPI.prototype, {
     this._addFiles("sources", paths, arch, fileOptions);
   },
 
-  mainModule(path, arch) {
+  mainModule(path, arch, fileOptions = {}) {
     arch = toArchArray(arch);
+
     forAllMatchingArchs(arch, a => {
       const filesForArch = this.files[a];
       const source = {
         relPath: pathRelative(".", path),
         fileOptions: {
+          ...fileOptions,
           mainModule: true
         }
       };
@@ -366,7 +368,21 @@ _.extend(PackageAPI.prototype, {
 
       filesForArch.main = source;
       filesForArch.sources.push(source);
+
+      this._forbidExportWithLazyMain(a);
     });
+  },
+
+  _forbidExportWithLazyMain(arch) {
+    const filesForArch = this.files[arch];
+    if (filesForArch.main &&
+        filesForArch.main.fileOptions.lazy &&
+        this.exports[arch].length > 0) {
+      buildmessage.error(
+        "Architecture " + JSON.stringify(arch) + " cannot both " +
+          "export symbols and have a lazy main module"
+      );
+    }
   },
 
   /**
@@ -586,8 +602,14 @@ _.extend(PackageAPI.prototype, {
         // recover by ignoring
         return;
       }
+
       forAllMatchingArchs(arch, function (w) {
-        self.exports[w].push({name: symbol, testOnly: !!options.testOnly});
+        self.exports[w].push({
+          name: symbol,
+          testOnly: !! options.testOnly,
+        });
+
+        self._forbidExportWithLazyMain(w);
       });
     });
   }
