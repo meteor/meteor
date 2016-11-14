@@ -138,7 +138,7 @@ var rewriteRules = function (rules, mergedCssPath) {
         // We don't rewrite URLs starting with a protocol definition such as
         // http, https, or data, or those with network-path references
         // i.e. //img.domain.com/cat.gif
-        if (resource.protocol !== null || resource.href.startsWith('//')) {
+        if (resource.protocol !== null || resource.href.startsWith('//') || resource.href.startsWith('#')) {
           continue;
         }
 
