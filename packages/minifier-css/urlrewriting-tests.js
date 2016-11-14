@@ -6,13 +6,13 @@ Tinytest.add("minifier-css - url rewriting when merging", function (test) {
 
   var parseOptions = { source: null, position: true };
 
-  var t = function(relativeUrl, absoluteUrl, desc) {
+  function t(relativeUrl, absoluteUrl, desc) {
     var ast1 = CssTools.parseCss(stylesheet(relativeUrl), parseOptions);
     var ast2 = CssTools.parseCss(stylesheet(absoluteUrl), parseOptions);
     CssTools.rewriteCssUrls(ast1);
 
     test.equal(CssTools.stringifyCss(ast1), CssTools.stringifyCss(ast2), desc);
-  };
+  }
 
   parseOptions.source = 'packages/nameOfPackage/style.css';
   t('../image.png', 'packages/image.png', 'parent directory');
@@ -42,7 +42,6 @@ Tinytest.add("minifier-css - url rewriting when merging", function (test) {
   t('"http://i.imgur.com/fBcdJIh.gif"', '"http://i.imgur.com/fBcdJIh.gif"', 'complete quoted URL');
   t('data:image/png;base64,iVBORw0K=', 'data:image/png;base64,iVBORw0K=', 'data URI');
   t('http://', 'http://', 'malformed URL');
-
 });
 
 Tinytest.add("minifier-css - url rewriting with media queries (ast rule recursion)", function (test) {
