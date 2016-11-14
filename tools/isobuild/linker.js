@@ -1002,6 +1002,21 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
     return [];
   }
 
+  // If none of the prelinkedFiles contain any code, then the only
+  // possible purpose of this package is to re-export imported symbols, so
+  // we filter the set of imported symbols according to declaredExports.
+  // When there are no declaredExports, this effectively slims the package
+  // bundle down to just Package[name] = {}.
+  if (prelinkedFiles.every(file => ! file.source)) {
+    const newImports = {};
+    declaredExports.forEach(name => {
+      if (_.has(imports, name)) {
+        newImports[name] = imports[name]
+      }
+    });
+    imports = newImports;
+  }
+
   // Otherwise we're making a package and we have to actually combine the files
   // into a single scope.
   var header = getHeader({
