@@ -145,7 +145,7 @@ var rewriteRules = function (rules, mergedCssPath) {
         // Rewrite relative paths (that refers to the internal application tree)
         // to absolute paths (addressable from the public build).
         if (isRelative(resource.path)) {
-          absolutePath = pathJoin(basePath, resource.path);
+          absolutePath = pathJoin(basePath, resource.path + resource.hash);
         } else {
           absolutePath = resource.path;
         }
