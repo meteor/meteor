@@ -150,7 +150,7 @@ var rewriteRules = function (rules, mergedCssPath) {
           absolutePath = resource.path;
         }
         
-        if(resource.hash){
+        if (resource.hash) {
           absolutePath += resource.hash;
         }
 
