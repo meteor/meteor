@@ -1,5 +1,7 @@
 ## v.NEXT
 
+* Node has been upgraded to version 6.9.1.
+
 ## v1.4.2.1
 
 * Installing the `babel-runtime` npm package in your application
