@@ -1,5 +1,9 @@
 ## v.NEXT
 
+* Node has been upgraded to version 6.10.1.
+
+## v1.5, TBD
+
 * Running `meteor add dynamic-import` installs support for ECMAScript
   [dynamic `import(...)`](https://github.com/tc39/proposal-dynamic-import),
   a new language feature which allows for asynchronous module fetching
@@ -9,7 +13,7 @@
   information about how dynamic `import(...)` works in Meteor, and how to
   use it in your applications.
 
-## v1.4.3.3, TBD
+## v1.4.4, TBD
 
 * Thanks to the outstanding efforts of @sethmurphy18, the `minifier-js`
   package now uses [Babili](https://github.com/babel/babili) instead of
