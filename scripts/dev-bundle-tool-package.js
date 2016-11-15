@@ -36,7 +36,7 @@ var packageJson = {
     "node-inspector": "0.12.8",
     "v8-profiler": "5.6.5",
     chalk: "0.5.1",
-    sqlite3: "3.1.3",
+    sqlite3: "3.1.8",
     netroute: "1.0.2",
     "http-proxy": "1.11.1",
     "wordwrap": "0.0.2",

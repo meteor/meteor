@@ -127,7 +127,6 @@ ln -s ../../node-gyp ./
 popd
 
 delete sqlite3/deps
-delete sqlite3/node_modules/nan
 delete sqlite3/node_modules/node-pre-gyp
 delete wordwrap/test
 delete moment/min
