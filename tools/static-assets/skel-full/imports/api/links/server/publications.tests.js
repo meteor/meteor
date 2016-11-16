@@ -2,9 +2,6 @@
 //
 // https://guide.meteor.com/testing.html
 
-/* eslint-env mocha */
-/* eslint-disable func-names, prefer-arrow-callback */
-
 import { assert } from 'meteor/practicalmeteor:chai';
 import { Links } from '../links.js';
 import { PublicationCollector } from 'meteor/johanbrook:publication-collector';
