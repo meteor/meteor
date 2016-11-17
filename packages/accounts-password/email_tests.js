@@ -30,8 +30,13 @@ testAsyncMulti("accounts emails - reset password flow", [
       "getInterceptedEmails", this.email, expect((error, result) => {
         test.equal(error, undefined);
         test.notEqual(result, undefined);
-        test.equal(result.length, 2); // the first is the email verification
-        var options = result[1];
+        test.equal(result.length, 2);
+        // the first is the email verification
+        var options = result[0];
+        test.equal(options.headers['My-Custom-Header2'], 'Cool2');
+
+        // the second is the reset password
+        options = result[1];
 
         var re = new RegExp(Meteor.absoluteUrl() + "#/reset-password/(\\S*)");
         var match = options.text.match(re);
@@ -92,8 +97,12 @@ reset password flow with case insensitive email`, [
       "getInterceptedEmails", this.email, expect((error, result) => {
         test.equal(error, undefined);
         test.notEqual(result, undefined);
-        test.equal(result.length, 2); // the first is the email verification
-        var options = result[1];
+        // the first is the email verification
+        var options = result[0];
+        test.equal(options.headers['My-Custom-Header2'], 'Cool2');
+
+        // the second is the reset password
+        options = result[1];
 
         var re = new RegExp(Meteor.absoluteUrl() + "#/reset-password/(\\S*)");
         var match = options.text.match(re);
@@ -147,6 +156,7 @@ var getVerifyEmailToken = function (email, test, expect) {
 
       test.equal(options.from, 'test@meteor.com');
       test.equal(options.headers['My-Custom-Header'], 'Cool');
+      test.equal(options.headers['My-Custom-Header2'], 'Cool2');
     }));
 };
 
