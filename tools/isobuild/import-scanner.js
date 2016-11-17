@@ -28,6 +28,7 @@ import {
   optimisticReadFile,
   optimisticStatOrNull,
   optimisticHashOrNull,
+  shouldWatch,
 } from "../fs/optimistic.js";
 
 import Resolver from "./resolver.js";
@@ -108,7 +109,6 @@ export default class ImportScanner {
     nodeModulesPaths = [],
     watchSet,
   }) {
-    const scanner = this;
     assert.ok(isString(sourceRoot));
 
     this.name = name;
@@ -122,21 +122,28 @@ export default class ImportScanner {
 
     this.resolver = Resolver.getOrCreate({
       caller: "ImportScanner#constructor",
-
       sourceRoot,
       targetArch: bundleArch,
       extensions,
       nodeModulesPaths,
-
-      statOrNull(absPath) {
-        const file = scanner._getFile(absPath);
-        if (file) {
-          return fakeFileStat;
-        }
-
-        return optimisticStatOrNull(absPath);
-      }
     });
+
+    // Since Resolver.getOrCreate may have returned a cached Resolver
+    // instance, it's important to update its statOrNull method so that it
+    // is bound to this ImportScanner object rather than the previous one.
+    this.resolver.statOrNull = (absPath) => {
+      const stat = optimisticStatOrNull(absPath);
+      if (stat) {
+        return stat;
+      }
+
+      const file = this._getFile(absPath);
+      if (file) {
+        return fakeFileStat;
+      }
+
+      return null;
+    };
   }
 
   _getFile(absPath) {
@@ -551,11 +558,19 @@ export default class ImportScanner {
       // Append this file to the output array and record its index.
       this._addFile(absImportedPath, depFile);
 
+      // On the server, modules in node_modules directories will be
+      // handled natively by Node, so we don't need to build a
+      // meteorInstall-style bundle beyond the entry-point module.
       if (! this.isWeb() &&
-          depFile.installPath.startsWith("node_modules/")) {
-        // On the server, modules in node_modules directories will be
-        // handled natively by Node, so we don't need to build a
-        // meteorInstall-style bundle beyond the entry-point module.
+          depFile.installPath.startsWith("node_modules/") &&
+          // If optimistic functions care about this file, e.g. because it
+          // resides in a linked npm package, then we should allow it to
+          // be watched by including it in the server bundle by not
+          // returning here. Note that inclusion in the server bundle is
+          // an unnecessary consequence of this logic, since Node will
+          // still evaluate this module natively on the server. What we
+          // really care about is watching the file for changes.
+          ! shouldWatch(absImportedPath)) {
         return;
       }
 

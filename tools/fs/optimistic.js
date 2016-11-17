@@ -74,7 +74,7 @@ function makeOptimistic(name, fn) {
   return Profile("optimistic " + name, wrapper);
 }
 
-function shouldWatch(path) {
+export const shouldWatch = wrap(path => {
   const parts = path.split(pathSep);
   const nmi = parts.indexOf("node_modules");
 
@@ -113,7 +113,7 @@ function shouldWatch(path) {
   // instead we rely on dependOnNodeModules to tell us when files in
   // node_modules directories might have changed.
   return false;
-}
+});
 
 function maybeDependOnNodeModules(path) {
   if (typeof path !== "string") {

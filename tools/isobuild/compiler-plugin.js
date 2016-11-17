@@ -62,7 +62,7 @@ import { isTestFilePath } from './test-files.js';
 // Cache the (slightly post-processed) results of linker.fullLink.
 const CACHE_SIZE = process.env.METEOR_LINKER_CACHE_SIZE || 1024*1024*100;
 const CACHE_DEBUG = !! process.env.METEOR_TEST_PRINT_LINKER_CACHE_DEBUG;
-const LINKER_CACHE_SALT = 12; // Increment this number to force relinking.
+const LINKER_CACHE_SALT = 13; // Increment this number to force relinking.
 const LINKER_CACHE = new LRU({
   max: CACHE_SIZE,
   // Cache is measured in bytes. We don't care about servePath.
@@ -239,17 +239,21 @@ class InputFile extends buildPluginModule.InputFile {
     return ! this.getPackageName();
   }
 
-  getSourceRoot() {
+  getSourceRoot(tolerant = false) {
     const sourceRoot = this._resourceSlot.packageSourceBatch.sourceRoot;
 
-    if (! _.isString(sourceRoot)) {
+    if (_.isString(sourceRoot)) {
+      return sourceRoot;
+    }
+
+    if (! tolerant) {
       const name = this.getPackageName();
       throw new Error(
         "Unknown source root for " + (
           name ? "package " + name : "app"));
     }
 
-    return sourceRoot;
+    return null;
   }
 
   getPathInPackage() {
@@ -300,14 +304,16 @@ class InputFile extends buildPluginModule.InputFile {
       return absPath;
     }
 
-    const sourceRoot = this._resourceSlot.packageSourceBatch.sourceRoot;
+    const sourceRoot = this.getSourceRoot(true);
     if (! _.isString(sourceRoot)) {
       return this._controlFileCache[basename] = null;
     }
 
-    let dir = files.pathDirname(this.getPathInPackage());
+    let dir = files.pathDirname(
+      files.pathJoin(sourceRoot, this.getPathInPackage()));
+
     while (true) {
-      absPath = files.pathJoin(sourceRoot, dir, basename);
+      absPath = files.pathJoin(dir, basename);
 
       const stat = this._stat(absPath);
       if (stat && stat.isFile()) {
@@ -319,6 +325,7 @@ class InputFile extends buildPluginModule.InputFile {
         return this._controlFileCache[basename] = null;
       }
 
+      if (dir === sourceRoot) break;
       let parentDir = files.pathDirname(dir);
       if (parentDir === dir) break;
       dir = parentDir;
@@ -341,10 +348,8 @@ class InputFile extends buildPluginModule.InputFile {
   }
 
   resolve(id, parentPath) {
-    const batch = this._resourceSlot.packageSourceBatch;
-
     parentPath = parentPath || files.pathJoin(
-      batch.sourceRoot,
+      this.getSourceRoot(),
       this.getPathInPackage()
     );
 
@@ -353,12 +358,13 @@ class InputFile extends buildPluginModule.InputFile {
       return resId;
     }
 
-    const parentStat = files.statOrNull(parentPath);
+    const parentStat = optimisticStatOrNull(parentPath);
     if (! parentStat ||
         ! parentStat.isFile()) {
       throw new Error("Not a file: " + parentPath);
     }
 
+    const batch = this._resourceSlot.packageSourceBatch;
     const resolver = batch.getResolver();
     const resolved = resolver.resolve(id, parentPath);
 
@@ -372,6 +378,12 @@ class InputFile extends buildPluginModule.InputFile {
   }
 
   require(id, parentPath) {
+    return this._require(id, parentPath);
+  }
+
+  // This private helper method exists to prevent ambiguity between the
+  // module-global `require` function and the method name.
+  _require(id, parentPath) {
     return require(this.resolve(id, parentPath));
   }
 
@@ -938,6 +950,7 @@ export class PackageSourceBatch {
 
       map.set(name, {
         files: inputFiles,
+        mainModule: _.find(inputFiles, file => file.mainModule) || null,
         importExtensions: batch.importExtensions,
       });
     });
@@ -961,9 +974,8 @@ export class PackageSourceBatch {
       map.forEach((info, name) => {
         if (! name) return;
 
-        let mainModule = _.find(info.files, file => file.mainModule);
-        mainModule = mainModule ?
-          `meteor/${name}/${mainModule.targetPath}` : false;
+        const mainModule = info.mainModule &&
+          `meteor/${name}/${info.mainModule.targetPath}`;
 
         meteorPackageInstalls.push(
           "install(" + JSON.stringify(name) +
@@ -1040,11 +1052,24 @@ export class PackageSourceBatch {
         let name = null;
 
         if (parts[0] === "meteor") {
+          let found = false;
+          name = parts[1];
+
           if (parts.length > 2) {
-            name = parts[1];
             parts[1] = ".";
             id = parts.slice(1).join("/");
+            found = true;
+
           } else {
+            const entry = map.get(name);
+            const mainModule = entry && entry.mainModule;
+            if (mainModule) {
+              id = "./" + mainModule.sourcePath;
+              found = true;
+            }
+          }
+
+          if (! found) {
             return;
           }
         }
