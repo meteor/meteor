@@ -14,9 +14,11 @@ Npm.depends({
 Package.onUse(function(api) {
   api.use('ecmascript');
   api.use('templating');
-  api.mainModule("client.js", "client");
+  api.mainModule("client.js", "client", {
+    lazy: true
+  });
   api.mainModule("server.js", "server");
-  api.export("ModulesTestPackage");
+  api.export("ModulesTestPackage", "server");
 });
 
 Package.onTest(function (api) {

@@ -563,7 +563,7 @@ class File {
 
   static _salt() {
     // Increment this number to force rehashing.
-    return 1;
+    return 2;
   }
 
   hash() {

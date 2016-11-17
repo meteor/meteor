@@ -220,7 +220,12 @@ Accounts.forgotPassword = function(options, callback) {
   if (!options.email) {
     return reportError(new Meteor.Error(400, "Must pass options.email"), callback);
   }
-  Accounts.connection.call("forgotPassword", options, callback);
+
+  if (callback) {
+    Accounts.connection.call("forgotPassword", options, callback);
+  } else {
+    Accounts.connection.call("forgotPassword", options);
+  }
 };
 
 // Resets a password based on a token originally created by

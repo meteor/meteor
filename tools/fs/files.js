@@ -479,12 +479,14 @@ files.cp_r = function(from, to, options = {}) {
         return;
       }
 
+      const fullFrom = files.pathJoin(from, f);
+
       if (options.transformFilename) {
         f = options.transformFilename(f);
       }
 
       files.cp_r(
-        files.pathJoin(from, f),
+        fullFrom,
         files.pathJoin(to, f),
         options
       );

@@ -12,6 +12,14 @@ Sometimes, for code sharing, the JS files can be imported by parts of the tool
 destination on `meteor create` command. The important part of the skeleton is
 the packages it includes by default.
 
+## skel-bare - Empty App Skeleton
+
+Similar to `skel`, `skel-bare` is copied on `meteor create --bare` command.
+
+## skel-full - Scaffold App Skeleton
+
+Similar to `skel`, `skel-full` is copied on `meteor create --full` command.
+
 ## skel-pack - Package Skeleton
 
 Similar to `skel`, `skel-pack` is copied on `meteor create --package` command.
