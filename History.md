@@ -1,5 +1,16 @@
 ## v.NEXT
 
+## v1.4.2.3
+
+* Style improvements for `meteor create --full`.
+  [#8045](https://github.com/meteor/meteor/pull/8045)
+
+> Note: Meteor 1.4.2.2 was finalized before
+  [#8045](https://github.com/meteor/meteor/pull/8045) was merged, but
+  those changes were [deemed important
+  enough](https://github.com/meteor/meteor/pull/8044#issuecomment-260913739)
+  to skip recommending 1.4.2.2 and instead immediately release 1.4.2.3.
+
 ## v1.4.2.2
 
 * Node has been upgraded to version 4.6.2.
