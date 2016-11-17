@@ -341,10 +341,8 @@ class InputFile extends buildPluginModule.InputFile {
   }
 
   resolve(id, parentPath) {
-    const batch = this._resourceSlot.packageSourceBatch;
-
     parentPath = parentPath || files.pathJoin(
-      batch.sourceRoot,
+      this.getSourceRoot(),
       this.getPathInPackage()
     );
 
@@ -353,12 +351,13 @@ class InputFile extends buildPluginModule.InputFile {
       return resId;
     }
 
-    const parentStat = files.statOrNull(parentPath);
+    const parentStat = optimisticStatOrNull(parentPath);
     if (! parentStat ||
         ! parentStat.isFile()) {
       throw new Error("Not a file: " + parentPath);
     }
 
+    const batch = this._resourceSlot.packageSourceBatch;
     const resolver = batch.getResolver();
     const resolved = resolver.resolve(id, parentPath);
 
