@@ -239,17 +239,21 @@ class InputFile extends buildPluginModule.InputFile {
     return ! this.getPackageName();
   }
 
-  getSourceRoot() {
+  getSourceRoot(tolerant = false) {
     const sourceRoot = this._resourceSlot.packageSourceBatch.sourceRoot;
 
-    if (! _.isString(sourceRoot)) {
+    if (_.isString(sourceRoot)) {
+      return sourceRoot;
+    }
+
+    if (! tolerant) {
       const name = this.getPackageName();
       throw new Error(
         "Unknown source root for " + (
           name ? "package " + name : "app"));
     }
 
-    return sourceRoot;
+    return null;
   }
 
   getPathInPackage() {
@@ -300,14 +304,16 @@ class InputFile extends buildPluginModule.InputFile {
       return absPath;
     }
 
-    const sourceRoot = this._resourceSlot.packageSourceBatch.sourceRoot;
+    const sourceRoot = this.getSourceRoot(true);
     if (! _.isString(sourceRoot)) {
       return this._controlFileCache[basename] = null;
     }
 
-    let dir = files.pathDirname(this.getPathInPackage());
+    let dir = files.pathDirname(
+      files.pathJoin(sourceRoot, this.getPathInPackage()));
+
     while (true) {
-      absPath = files.pathJoin(sourceRoot, dir, basename);
+      absPath = files.pathJoin(dir, basename);
 
       const stat = this._stat(absPath);
       if (stat && stat.isFile()) {
@@ -319,6 +325,7 @@ class InputFile extends buildPluginModule.InputFile {
         return this._controlFileCache[basename] = null;
       }
 
+      if (dir === sourceRoot) break;
       let parentDir = files.pathDirname(dir);
       if (parentDir === dir) break;
       dir = parentDir;
