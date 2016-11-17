@@ -372,6 +372,12 @@ class InputFile extends buildPluginModule.InputFile {
   }
 
   require(id, parentPath) {
+    return this._require(id, parentPath);
+  }
+
+  // This private helper method exists to prevent ambiguity between the
+  // module-global `require` function and the method name.
+  _require(id, parentPath) {
     return require(this.resolve(id, parentPath));
   }
 
