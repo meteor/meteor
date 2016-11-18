@@ -24,7 +24,8 @@ module.exports = {
     'import/extensions': 0,
 
     // disabled so that we're not expecting to find 'meteor' within
-    // our dependencies. there may be a better solution to this.
+    // our dependencies.
+    // XXX: this *should* be taken care of by eslint-import-resolver-meteor, investigate.
     'import/no-extraneous-dependencies': 0,
 
     'no-underscore-dangle': 0,
