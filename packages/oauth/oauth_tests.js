@@ -116,8 +116,9 @@ Tinytest.add("oauth - _endOfLoginResponse with redirect loginStyle supports unsp
       credentials: {},
       loginStyle: 'redirect',
       query: {
-        // {"redirectUrl": "http://localhost:3000/"}
-        state: 'eyJyZWRpcmVjdFVybCI6ICJodHRwOi8vbG9jYWxob3N0OjMwMDAvIn0='
+        state: new Buffer(JSON.stringify({
+          redirectUrl: __meteor_runtime_config__.ROOT_URL
+        }), 'binary').toString('base64')
       }
     };
     OAuth._endOfLoginResponse(res, details);
@@ -143,8 +144,9 @@ Tinytest.add("oauth - _endOfLoginResponse with redirect loginStyle supports ROOT
       credentials: {},
       loginStyle: 'redirect',
       query: {
-        // {"redirectUrl": "http://localhost:3000/"}
-        state: 'eyJyZWRpcmVjdFVybCI6ICJodHRwOi8vbG9jYWxob3N0OjMwMDAvIn0='
+        state: new Buffer(JSON.stringify({
+          redirectUrl: __meteor_runtime_config__.ROOT_URL
+        }), 'binary').toString('base64')
       }
     };
     OAuth._endOfLoginResponse(res, details);
