@@ -14,4 +14,5 @@ Add the following to your package.json
 
 # Todo
 
-Figure out peerDependency installation.
+- Figure out peerDependency installation.
+- Determine where this might live on npm
