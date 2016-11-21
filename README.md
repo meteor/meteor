@@ -4,15 +4,7 @@ This is an eslint configuration for Meteor based on the [Meteor Guide](https://g
 
 # Usage
 
-Add the following to .eslintrc
-
-```json
-{
-  "extends": "eslint-config-meteor"
-}
-```
-
-and optionally your package.json
+Add the following to your package.json
 
 ```json
 "eslintConfig": {
