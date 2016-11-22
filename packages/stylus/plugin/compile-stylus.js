@@ -157,7 +157,7 @@ class StylusCompiler extends MultiFileCachingCompiler {
 
     const style = stylus(inputFile.getContentsAsString())
             .use(nib())
-            .use(autoprefixer(fileOptions.autoprefixer || {}))
+            .use(autoprefixer(fileOptions.autoprefixer || {browsers: []}))
             .set('filename', inputFile.getPathInPackage())
             .set('sourcemap', { inline: false, comment: false })
             .set('cache', false)
