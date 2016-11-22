@@ -844,8 +844,10 @@ _.extend(Connection.prototype, {
         randomSeed: function () { return randomSeedGenerator(); }
       });
 
-      if (!alreadyInSimulation)
+      if (!alreadyInSimulation) {
+        self._flushBufferedWrites();
         self._saveOriginals();
+      }
 
       try {
         // Note that unlike in the corresponding server code, we never audit
