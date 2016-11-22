@@ -844,10 +844,8 @@ _.extend(Connection.prototype, {
         randomSeed: function () { return randomSeedGenerator(); }
       });
 
-      if (!alreadyInSimulation) {
-        self._flushBufferedWrites();
+      if (!alreadyInSimulation)
         self._saveOriginals();
-      }
 
       try {
         // Note that unlike in the corresponding server code, we never audit
@@ -979,6 +977,7 @@ _.extend(Connection.prototype, {
   // documents.
   _saveOriginals: function () {
     var self = this;
+    self._flushBufferedWrites();
     _.each(self._stores, function (s) {
       s.saveOriginals();
     });
