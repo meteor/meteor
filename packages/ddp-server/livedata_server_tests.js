@@ -84,7 +84,7 @@ testAsyncMulti(
 
 Meteor.methods({
   livedata_server_test_inner: function () {
-    return this.connection.id;
+    return this.connection && this.connection.id;
   },
 
   livedata_server_test_outer: function () {
@@ -173,6 +173,57 @@ Tinytest.addAsync(
           onComplete();
         };
         clientConn.subscribe("livedata_server_test_sub", serverConn.id);
+      }
+    );
+  }
+);
+
+var methodCallResults = {};
+
+Meteor.publish("livedata_server_test_sub_with_method", function (connectionId) {
+  if (! methodCallResults[connectionId]) {
+    methodCallResults[connectionId] = [];
+  }
+  methodCallResults[connectionId].push(Meteor.call('livedata_server_test_inner'));
+  this.ready();
+});
+
+Meteor.methods({
+  livedata_server_test_setuserid: function (userId) {
+    this.setUserId(userId);
+  }
+});
+
+Tinytest.addAsync(
+  "livedata server - no connection in a method called from a publish function",
+  function (test, onComplete) {
+    makeTestConnection(
+      test,
+      function (clientConn, serverConn) {
+        clientConn.call('livedata_server_test_setuserid', null);
+
+        var handle = clientConn.subscribe("livedata_server_test_sub_with_method", serverConn.id, {
+          onStop: function (error) {
+            test.isFalse(error, error);
+            clientConn.disconnect();
+
+            // Both times, also after rerun, connection should be null
+            // inside a server-side called method should be null.
+            test.equal(methodCallResults[serverConn.id], [null, null]);
+            delete methodCallResults[serverConn.id];
+
+            onComplete();
+          },
+          onReady: function () {
+            // Connection inside a server-side called method should be null.
+            test.equal(methodCallResults[serverConn.id], [null]);
+
+            // With this call we force publish function to rerun.
+            clientConn.call('livedata_server_test_setuserid', 'someUserId');
+
+            handle.stop()
+          }
+        });
       }
     );
   }
