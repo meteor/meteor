@@ -419,4 +419,4 @@ This is the known Isobuild feature "packages" sorted by the first release of Met
 - `isopack-2@1.0.0`: This package is published only in `isopack-2` format and won't work in versions
 of Meteor that don't support that format.
 - `prod-only@1.0.0`: Allows use of the `prodOnly` flag in `Package.describe`.
-- `isobuild:cordova@5.2.0`: This package depends on a specific version of Cordova, most likely as a result of the Cordova plugins it depends on.
+- `isobuild:cordova@5.4.0`: This package depends on a specific version of Cordova, most likely as a result of the Cordova plugins it depends on.
