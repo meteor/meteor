@@ -41,7 +41,7 @@ $webclient.DownloadFile("http://www.7-zip.org/a/7z1602.msi", "$DIR\7z\7z.msi")
 $webclient.DownloadFile("http://www.7-zip.org/a/7z1602-extra.7z", "$DIR\7z\extra.7z")
 msiexec /i 7z.msi /quiet /qn /norestart
 ping -n 4 127.0.0.1 | out-null
-& "C:\Program Files*\7-Zip\7z.exe" x extra.7z
+& "C:\Program Files\7-Zip\7z.exe" x extra.7z
 mv 7za.exe "$DIR\bin\7z.exe"
 cd "$DIR\bin"
 
@@ -168,8 +168,8 @@ cd "$DIR\.."
 # rename the folder with the devbundle
 cmd /c rename "$DIR" "dev_bundle_${PLATFORM}_${BUNDLE_VERSION}"
 
-& "C:\Program Files*\7-zip\7z.exe" a -ttar dev_bundle.tar "dev_bundle_${PLATFORM}_${BUNDLE_VERSION}"
-& "C:\Program Files*\7-zip\7z.exe" a -tgzip "${CHECKOUT_DIR}\dev_bundle_${PLATFORM}_${BUNDLE_VERSION}.tar.gz" dev_bundle.tar
+& "C:\Program Files\7-zip\7z.exe" a -ttar dev_bundle.tar "dev_bundle_${PLATFORM}_${BUNDLE_VERSION}"
+& "C:\Program Files\7-zip\7z.exe" a -tgzip "${CHECKOUT_DIR}\dev_bundle_${PLATFORM}_${BUNDLE_VERSION}.tar.gz" dev_bundle.tar
 del dev_bundle.tar
 cmd /c rmdir "dev_bundle_${PLATFORM}_${BUNDLE_VERSION}" /s /q
 
