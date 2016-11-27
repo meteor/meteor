@@ -58,6 +58,10 @@ function compile(source, options) {
     generateLetDeclarations: true
   });
 
+  // Since Reify inserts code without updating ast.tokens, it's better to
+  // destroy unreliable token information. Don't worry; Babel can cope.
+  delete reifyResult.ast.tokens;
+
   var babelResult = require("babel-core").transformFromAst(
     reifyResult.ast,
     reifyResult.code,
