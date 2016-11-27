@@ -498,8 +498,8 @@
       }
     },
     "reify": {
-      "version": "0.4.3",
-      "resolved": "https://registry.npmjs.org/reify/-/reify-0.4.3.tgz",
+      "version": "0.4.4",
+      "resolved": "https://registry.npmjs.org/reify/-/reify-0.4.4.tgz",
       "from": "reify@>=0.4.0 <0.5.0"
     },
     "repeating": {

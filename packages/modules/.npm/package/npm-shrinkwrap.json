@@ -21,9 +21,9 @@
       "from": "magic-string@>=0.16.0 <0.17.0"
     },
     "reify": {
-      "version": "0.4.3",
-      "resolved": "https://registry.npmjs.org/reify/-/reify-0.4.3.tgz",
-      "from": "reify@0.4.3"
+      "version": "0.4.4",
+      "resolved": "https://registry.npmjs.org/reify/-/reify-0.4.4.tgz",
+      "from": "reify@0.4.4"
     },
     "vlq": {
       "version": "0.2.1",
