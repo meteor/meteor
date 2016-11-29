@@ -191,19 +191,6 @@ export default class ImportScanner {
       // something plausible. #6411 #6383
       const absPath = pathJoin(this.sourceRoot, file.sourcePath);
 
-      const dotExt = "." + file.type;
-      const dataString = file.data.toString("utf8");
-      file.dataString = defaultExtensionHandlers[dotExt].call(
-        file,
-        dataString,
-        file.hash,
-      );
-
-      if (! (file.data instanceof Buffer) ||
-          file.dataString !== dataString) {
-        file.data = new Buffer(file.dataString, "utf8");
-      }
-
       // Files that are not eagerly evaluated (lazy) will only be included
       // in the bundle if they are actually imported. Files that are
       // eagerly evaluated are effectively "imported" as entry points.
@@ -219,6 +206,27 @@ export default class ImportScanner {
     });
 
     return this;
+  }
+
+  _getDataString(file) {
+    if (typeof file.dataString === "string") {
+      return file.dataString;
+    }
+
+    const dotExt = "." + file.type;
+    const dataString = file.data.toString("utf8");
+    file.dataString = defaultExtensionHandlers[dotExt].call(
+      file,
+      dataString,
+      file.hash,
+    );
+
+    if (! (file.data instanceof Buffer) ||
+        file.dataString !== dataString) {
+      file.data = new Buffer(file.dataString, "utf8");
+    }
+
+    return file.dataString;
   }
 
   // Make sure file.sourcePath is defined, and handle the possibility that
@@ -272,8 +280,8 @@ export default class ImportScanner {
       // there's only one target module, (3) the plugin author can easily
       // control which file comes last, and (4) it's always possible to
       // import the target modules individually.
-      sourceFile.dataString += "module.exports = require(" +
-        JSON.stringify(relativeId) + ");\n";
+      sourceFile.dataString = this._getDataString(sourceFile) +
+        "module.exports = require(" + JSON.stringify(relativeId) + ");\n";
       sourceFile.data = new Buffer(sourceFile.dataString, "utf8");
       sourceFile.hash = sha1(sourceFile.data);
       sourceFile.deps[relativeId] = {};
@@ -284,6 +292,8 @@ export default class ImportScanner {
   // maps and updating all other properties appropriately. Once this
   // combination is done, oldFile should be kept and newFile discarded.
   _combineFiles(oldFile, newFile) {
+    const scanner = this;
+
     function checkProperty(name) {
       if (has(oldFile, name)) {
         if (! has(newFile, name)) {
@@ -315,9 +325,10 @@ export default class ImportScanner {
     function getChunk(file) {
       const consumer = file.sourceMap &&
         new SourceMapConsumer(file.sourceMap);
+      const dataString = scanner._getDataString(file);
       const node = consumer &&
-        SourceNode.fromStringWithSourceMap(file.dataString, consumer);
-      return node || file.dataString;
+        SourceNode.fromStringWithSourceMap(dataString, consumer);
+      return node || dataString;
     }
 
     const {
@@ -471,7 +482,7 @@ export default class ImportScanner {
     }
 
     const result = findImportedModuleIdentifiers(
-      file.dataString,
+      this._getDataString(file),
       file.hash,
     );
 
