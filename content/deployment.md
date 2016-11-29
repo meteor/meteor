@@ -132,8 +132,10 @@ In order to deploy to Galaxy, you'll need to [sign up for an account](https://ww
 Once you've done that, it's easy to [deploy to Galaxy](http://galaxy-guide.meteor.com/deploy-guide.html). You just need to [add some environment variables to your settings file](http://galaxy-guide.meteor.com/environment-variables.html) to point it at your MongoDB, and you can deploy with:
 
 ```bash
-DEPLOY_HOSTNAME=us-east-1.galaxy-deploy.meteor.com meteor deploy your-app.com --settings production-settings.json
+DEPLOY_HOSTNAME=galaxy.meteor.com meteor deploy your-app.com --settings production-settings.json
 ```
+
+To deploy to the EU region, set DEPLOY_HOSTNAME to eu-west-1.galaxy.meteor.com.
 
 In order for Galaxy to work with your custom domain (`your-app.com` in this case), you need to [set up your DNS to point at Galaxy](http://galaxy-guide.meteor.com/dns.html). Once you've done this, you should be able to reach your site from a browser.
 
