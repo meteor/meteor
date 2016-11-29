@@ -302,6 +302,9 @@ var Session = function (server, version, socket, options) {
   }).run();
 
   if (version !== 'pre1' && options.heartbeatInterval !== 0) {
+    // We no longer need the low level timeout because we have heartbeating.
+    socket.setWebsocketTimeout(0);
+
     self.heartbeat = new DDPCommon.Heartbeat({
       heartbeatInterval: options.heartbeatInterval,
       heartbeatTimeout: options.heartbeatTimeout,
