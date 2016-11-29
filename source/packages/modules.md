@@ -153,40 +153,17 @@ Note that dynamic calls to `require()` (where the name being required can change
 
 CoffeeScript has been a first-class supported language since Meteor’s early days. Even though today we recommend ES2015, we still intend to support CoffeeScript fully.
 
-CoffeeScript lacks support for `import` and `export`, though [the project maintainers are in the early stages of working to change that](https://github.com/jashkenas/coffeescript/issues/4078). In the meantime, CoffeeScript users can enjoy Meteor’s new modules support by using CommonJS syntax. If you use CoffeeScript’s [destructuring](http://coffeescript.org/#destructuring), the syntax is remarkably similar to the ES2015 examples you see above. For example, ES2015 `import` lines like these:
+As of CoffeeScript 1.11.0, [CoffeeScript supports `import` and `export` statements natively](http://coffeescript.org/#modules). Make sure you are using the latest version of the [CoffeeScript package](https://atmospherejs.com/meteor/coffeescript) in your project to get this support. New projects created today will get this version with `meteor add coffeescript`. Make sure you don’t forget to include the `ecmascript` and `modules` packages: `meteor add ecmascript`. (The `modules` package is implied by `ecmascript`.)
 
-```js
-import { AccountsTemplates } from 'meteor/useraccounts:core';
-import '../imports/startup/client/routes.js';
+CoffeeScript `import` syntax is nearly identical to the ES2015 syntax you see above:
+
+```coffee
+import { Meteor } from 'meteor/meteor'
+import { SimpleSchema } from 'meteor/aldeed:simple-schema'
+import { Lists } from './lists.coffee'
 ```
 
-can be written in CoffeeScript using CommonJS `require` like this:
-
-```coffeescript
-{ AccountsTemplates } = require 'meteor/useraccounts:core'
-require '../imports/startup/client/routes.coffee'
-```
-
-(assuming you rename `routes.js` to `routes.coffee`). Note that files don’t need a `module.exports` if they’re required like `routes.coffee` is in this example, without assignment to any variable. The code in `routes.coffee` will simply be included and executed in place of the above `require` statement.
-
-ES2015 `export` statements like these:
-
-```js
-export const insert = new ValidatedMethod({ // ...
-export default incompleteCountDenormalizer;
-```
-
-can be rewritten to use CommonJS `module.exports`:
-
-```coffeescript
-module.exports.insert = new ValidatedMethod # ...
-module.exports = incompleteCountDenormalizer
-```
-
-You can also simply write `exports` instead of `module.exports` if you prefer.
-
-As of Meteor 1.3.3, you can also enclose ES2015 code in [backticks](http://coffeescript.org/#embedded).
-
+You can also use traditional CommonJS syntax with CoffeeScript.
 
 ## Modular application structure
 
