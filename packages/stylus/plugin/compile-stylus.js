@@ -155,13 +155,16 @@ class StylusCompiler extends MultiFileCachingCompiler {
 
     const f = new Future;
 
-    const style = stylus(inputFile.getContentsAsString())
-            .use(nib())
-            .use(autoprefixer(fileOptions.autoprefixer || {browsers: []}))
-            .set('filename', inputFile.getPathInPackage())
-            .set('sourcemap', { inline: false, comment: false })
-            .set('cache', false)
-            .set('importer', importer);
+    let style = stylus(inputFile.getContentsAsString()).use(nib())
+
+    if (fileOptions.autoprefixer) {
+      style = style.use(autoprefixer(fileOptions.autoprefixer))
+    }
+
+    style = style.set('filename', inputFile.getPathInPackage())
+                 .set('sourcemap', { inline: false, comment: false })
+                 .set('cache', false)
+                 .set('importer', importer);
 
     style.render(f.resolver());
     let css;
