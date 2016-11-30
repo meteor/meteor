@@ -309,7 +309,7 @@ var ProgressDisplayFull = function (console) {
   self._progressBarRenderer = new ProgressBarRenderer(PROGRESS_BAR_FORMAT, options);
   self._progressBarRenderer.start = new Date();
 
-  self._headless = !!(process.env.METEOR_HEADLESS && process.env.METEOR_HEADLESS != '0');
+  self._headless = !!(process.env.METEOR_HEADLESS && JSON.parse(process.env.METEOR_HEADLESS));
 
   self._spinnerRenderer = new SpinnerRenderer();
 
