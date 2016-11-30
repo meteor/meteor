@@ -13,6 +13,8 @@
   [Issue #7715](https://github.com/meteor/meteor/issues/7715)
   [PR #7728](https://github.com/meteor/meteor/pull/7728)
 
+* Add support for frame-ancestors CSP option in browser-policy [#7970](https://github.com/meteor/meteor/pull/7970)
+
 ## v1.4.2.3
 
 * Style improvements for `meteor create --full`.
