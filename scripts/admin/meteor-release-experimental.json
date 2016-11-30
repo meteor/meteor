@@ -1,8 +1,8 @@
 {
  "track": "abernix:METEOR-TEST",
- "version": "1.4.2.3-beta.59",
+ "version": "1.4.2.3-beta.60",
  "recommended": false,
- "tool": "abernix:meteor-tool@1.4.2-3-beta.59",
+ "tool": "abernix:meteor-tool@1.4.2-3-beta.60",
  "packages": {},
  "official": false,
  "description": "Meteor"
