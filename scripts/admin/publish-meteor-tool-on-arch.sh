@@ -52,7 +52,7 @@ set -u
 if [ -d meteor ]; then
   rm -rf meteor
 fi
-git clone --recursive https://github.com/meteor/meteor.git
+git clone --recursive https://github.com/abernix/meteor.git
 cd meteor
 git fetch --tags
 END
