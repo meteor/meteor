@@ -13,7 +13,12 @@
   [Issue #7715](https://github.com/meteor/meteor/issues/7715)
   [PR #7728](https://github.com/meteor/meteor/pull/7728)
 
-* Add support for frame-ancestors CSP option in browser-policy [#7970](https://github.com/meteor/meteor/pull/7970)
+* The `meteor-babel` npm package has been upgraded to version 0.14.3,
+  fixing [#8021](https://github.com/meteor/meteor/issues/8021) and
+  [#7662](https://github.com/meteor/meteor/issues/7662).
+
+* Added support for frame-ancestors CSP option in browser-policy.
+  [#7970](https://github.com/meteor/meteor/pull/7970)
 
 ## v1.4.2.3
 
