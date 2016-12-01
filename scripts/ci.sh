@@ -49,11 +49,20 @@ should_run_test () {
   test $(($1 % $CIRCLE_NODE_TOTAL)) -eq $CIRCLE_NODE_INDEX
 }
 
+# Keep track of errors, but let the tests all finish. This is necessary since
+# more than one of the following tests may be executed from a single run if
+# parallelism is lower than the number of tests.
+exit_code=0
+
+# Also, if any uncaught errors slip through, fail the build.
+set -e
+
 if should_run_test 0; then
   echo "Running warehouse self-tests"
   ./meteor self-test --headless \
       --with-tag "custom-warehouse" \
-      --exclude "$SELF_TEST_EXCLUDE"
+      --exclude "$SELF_TEST_EXCLUDE" \
+    || exit_code=$?
 fi
 
 if should_run_test 1; then
@@ -61,7 +70,8 @@ if should_run_test 1; then
   ./meteor self-test --headless \
       --file "^[a-b]|^c[a-n]|^co[a-l]|^compiler-plugins" \
       --without-tag "custom-warehouse" \
-      --exclude "$SELF_TEST_EXCLUDE"
+      --exclude "$SELF_TEST_EXCLUDE" \
+    || exit_code=$?
 fi
 
 if should_run_test 2; then
@@ -69,7 +79,8 @@ if should_run_test 2; then
   ./meteor self-test --headless \
       --file "^co[n-z]|^c[p-z]|^[d-k]" \
       --without-tag "custom-warehouse" \
-      --exclude "$SELF_TEST_EXCLUDE"
+      --exclude "$SELF_TEST_EXCLUDE" \
+    || exit_code=$?
 fi
 
 if should_run_test 3; then
@@ -77,7 +88,8 @@ if should_run_test 3; then
   ./meteor self-test --headless \
       --file "^[l-o]" \
       --without-tag "custom-warehouse" \
-      --exclude "$SELF_TEST_EXCLUDE"
+      --exclude "$SELF_TEST_EXCLUDE" \
+    || exit_code=$?
 fi
 
 if should_run_test 4; then
@@ -85,7 +97,8 @@ if should_run_test 4; then
   ./meteor self-test --headless \
       --file "^p" \
       --without-tag "custom-warehouse" \
-      --exclude "$SELF_TEST_EXCLUDE"
+      --exclude "$SELF_TEST_EXCLUDE" \
+    || exit_code=$?
 fi
 
 if should_run_test 5; then
@@ -93,7 +106,8 @@ if should_run_test 5; then
   ./meteor self-test --headless \
       --file "^run" \
       --without-tag "custom-warehouse" \
-      --exclude "$SELF_TEST_EXCLUDE"
+      --exclude "$SELF_TEST_EXCLUDE" \
+    || exit_code=$?
 fi
 
 if should_run_test 6; then
@@ -101,7 +115,8 @@ if should_run_test 6; then
   ./meteor self-test --headless \
       --file "^r(?!un)|^s" \
       --without-tag "custom-warehouse" \
-      --exclude "$SELF_TEST_EXCLUDE"
+      --exclude "$SELF_TEST_EXCLUDE" \
+    || exit_code=$?
 fi
 
 if should_run_test 7; then
@@ -109,5 +124,8 @@ if should_run_test 7; then
   ./meteor self-test --headless \
       --file "^[t-z]|^command-line" \
       --without-tag "custom-warehouse" \
-      --exclude "$SELF_TEST_EXCLUDE"
+      --exclude "$SELF_TEST_EXCLUDE" \
+    || exit_code=$?
 fi
+
+exit $exit_code
