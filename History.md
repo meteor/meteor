@@ -1,5 +1,7 @@
 ## v.NEXT
 
+* The `npm` npm package has been upgraded to version 4.0.2.
+
 * The `facebook` package has been split into:
   - `facebook-oauth` (the part that allows oauth w/ FB directly) and
   - `facebook-config-ui` (the Blaze configuration templates for accounts-ui)
