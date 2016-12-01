@@ -4,6 +4,8 @@
 
 * Node has been upgraded to version 4.7.3.
 
+* The `npm` npm package has been upgraded to version 4.1.2.
+
 * Fix for [Issue #8136](https://github.com/meteor/meteor/issues/8136).
 
 ## v1.4.2.3
