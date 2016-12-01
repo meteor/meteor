@@ -7,42 +7,17 @@
 #   A multiplation factor that can be used to raise the wait-time on
 #   various longer-running tests.  Useful for slower (or faster!) hardware.
 # - ADDL_SELF_TEST_EXCLUDE: (optional)
-#   A list of additional regexes to skip, in addition to the defaults.
+#   A regex or list of additional regexes to skip.
 
 # Export this one so it's available in the node environment.
 export TIMEOUT_SCALE_FACTOR=${TIMEOUT_SCALE_FACTOR:-15}
 
-# Define the default tests which will be skipped.  One per line.
-test -z "$SELF_TEST_EXCLUDE" && read -r -d '' SELF_TEST_EXCLUDE <<-'EOF'
-^can't publish package with colons
-^compiler plugins - addAssets
-^logs - logged (in|out)
-^minifiers can't register non-js
-^minifiers: apps can't use
-^mongo - logged (in|out)
-^old cli tests
-EOF
+# Skip these tests always.  Add other tests with ADDL_SELF_TEST_EXCLUDE.
+SELF_TEST_EXCLUDE="^can't publish package with colons|^old cli tests|^logs - logged (in|out)|^mongo - logged (in|out)|^minifiers can't register non-js|^minifiers: apps can't use|^compiler plugins - addAssets"
 
-# Helper function to join lines.
-joinLines () {
-  joined=""
-  IFS="$(printf '\n ')" && IFS="${IFS% }"
-  for add in $1
-  do
-    joined="${joined:+${joined}${2:-,}}${add}"
-  done
-  unset IFS
-  echo "$joined"
-}
-
-# Merge tests into a single, one-line regex.
-SELF_TEST_EXCLUDE=$(joinLines "$SELF_TEST_EXCLUDE" "|")
-
-# Add additional tests.
+# If no SELF_TEST_EXCLUDE is defined, use those defined here by default
 if ! [ -z "$ADDL_SELF_TEST_EXCLUDE" ]; then
-  SELF_TEST_EXCLUDE=(
-    "${SELF_TEST_EXCLUDE}|$(joinLines "$ADDL_SELF_TEST_EXCLUDE")"
-  )
+  SELF_TEST_EXCLUDE="${SELF_TEST_EXCLUDE}|${ADDL_SELF_TEST_EXCLUDE}"
 fi
 
 # Don't print as many progress indicators
