@@ -19,6 +19,8 @@
 
 * Added support for frame-ancestors CSP option in browser-policy.
   [#7970](https://github.com/meteor/meteor/pull/7970)
+  
+* You can now use autoprefixer with stylus files added via packages [#7727](https://github.com/meteor/meteor/pull/7727)
 
 ## v1.4.2.3
 
