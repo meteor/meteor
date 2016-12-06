@@ -415,7 +415,8 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     specificFiles,
     symlink,
     npmDiscards,
-    directoryFilter,
+    // Optional predicate to filter files and directories.
+    filter,
   }) {
     if (to.slice(-1) === files.pathSep) {
       to = to.slice(0, -1);
@@ -541,16 +542,18 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           return;
         }
 
+        if (typeof filter === "function" &&
+            ! filter(thisAbsFrom, isDirectory)) {
+          return;
+        }
+
         if (npmDiscards instanceof NpmDiscards &&
             npmDiscards.shouldDiscard(thisAbsFrom, isDirectory)) {
           return;
         }
 
         if (isDirectory) {
-          if (typeof directoryFilter !== "function" ||
-              directoryFilter(thisAbsFrom)) {
-            walk(thisAbsFrom, thisRelTo, _currentRealRootDir);
-          }
+          walk(thisAbsFrom, thisRelTo, _currentRealRootDir);
 
         } else if (fileStatus.isSymbolicLink()) {
           symlinkWithOverwrite(
