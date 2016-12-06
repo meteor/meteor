@@ -65,6 +65,10 @@ export class CoffeeCompiler extends CachingCompiler {
     ];
   }
 
+  setDiskCacheDirectory(cacheDir) {
+    this.babelCompiler.setDiskCacheDirectory(cacheDir);
+  }
+
   compileOneFile(inputFile) {
     const source = inputFile.getContentsAsString();
     const compileOptions = this._getCompileOptions(inputFile);
