@@ -23,6 +23,8 @@ fi
 # Don't print as many progress indicators
 export EMACS=t
 
+export METEOR_HEADLESS=true
+
 if [ -z "$CIRCLE_NODE_TOTAL" ] || [ -z "$CIRCLE_NODE_INDEX" ]; then
   # In the case where these aren't set, just pretend like we're a single node.
   # This is also handy if the user is using another CI service besides CircleCI
