@@ -1,9 +1,3 @@
-if (Meteor.isServer) {
-  var path = Npm.require('path');
-  var Fiber = Npm.require('fibers');
-  var Future = Npm.require(path.join('fibers', 'future'));
-}
-
 // @param url {String|Object} URL to Meteor app,
 //   or an object as a test hook (see code)
 // Options:
@@ -172,6 +166,9 @@ var Connection = function (url, options) {
   // if true, the next data update should reset all stores. (set during
   // reconnect.)
   self._resetStores = false;
+
+  // Number of method simulations (stubs) currently executing.
+  self._pendingSimulationCount = 0;
 
   // name -> array of updates for (yet to be created) collections
   self._updatesForUnknownStores = {};
@@ -676,27 +673,32 @@ _.extend(Connection.prototype, {
   // options:
   // - onLateError {Function(error)} called if an error was received after the ready event.
   //     (errors received before ready cause an error to be thrown)
-  _subscribeAndWait: function (name, args, options) {
-    var self = this;
-    var f = new Future();
-    var ready = false;
-    var handle;
+  _subscribeAndWait(name, args, options) {
     args = args || [];
-    args.push({
-      onReady: function () {
-        ready = true;
-        f['return']();
-      },
-      onError: function (e) {
-        if (!ready)
-          f['throw'](e);
-        else
-          options && options.onLateError && options.onLateError(e);
-      }
+
+    const promise = new Promise((resolve, reject) => {
+      let ready = false;
+
+      args.push({
+        onReady() {
+          ready = true;
+          resolve();
+        },
+
+        onError(e) {
+          if (! ready) {
+            reject(e);
+          } else if (options && options.onLateError) {
+            options.onLateError(e);
+          }
+        }
+      });
     });
 
-    handle = self.subscribe.apply(self, [name].concat(args));
-    f.wait();
+    const handle = this.subscribe(name, ...args);
+
+    promise.await();
+
     return handle;
   },
 
@@ -720,12 +722,12 @@ _.extend(Connection.prototype, {
    * @param {EJSONable} [arg1,arg2...] Optional method arguments
    * @param {Function} [asyncCallback] Optional callback, which is called asynchronously with the error or result after the method is complete. If not provided, the method runs synchronously if possible (see below).
    */
-  call: function (name /* .. [arguments] .. callback */) {
-    // if it's a function, the last argument is the result callback,
-    // not a parameter to the remote method.
-    var args = Array.prototype.slice.call(arguments, 1);
-    if (args.length && typeof args[args.length - 1] === "function")
+  call(name, ...args) {
+    if (args.length && typeof args[args.length - 1] === "function") {
+      // If it's a function, the last argument is the result callback,
+      // not a parameter to the remote method.
       var callback = args.pop();
+    }
     return this.apply(name, args, callback);
   },
 
@@ -763,7 +765,7 @@ _.extend(Connection.prototype, {
    * @param {Boolean} options.noRetry (Client only) if true, don't send this method again on reload, simply call the callback an error with the error code 'invocation-failed'.
    * @param {Function} [asyncCallback] Optional callback; same semantics as in [`Meteor.call`](#meteor_call).
    */
-  apply: function (name, args, options, callback) {
+  apply(name, args, options, callback) {
     var self = this;
 
     // We were passed 3 arguments. They may be either (name, args, options)
@@ -788,100 +790,38 @@ _.extend(Connection.prototype, {
     // while because of a wait method).
     args = EJSON.clone(args);
 
-    // Lazily allocate method ID once we know that it'll be needed.
-    var methodId = (function () {
-      var id;
-      return function () {
-        if (id === undefined)
-          id = '' + (self._nextMethodId++);
-        return id;
-      };
-    })();
+    const methodId = self._makeLazyMethodIdGetter();
 
     var enclosing = DDP._CurrentInvocation.get();
     var alreadyInSimulation = enclosing && enclosing.isSimulation;
 
-    // Lazily generate a randomSeed, only if it is requested by the stub.
-    // The random streams only have utility if they're used on both the client
-    // and the server; if the client doesn't generate any 'random' values
-    // then we don't expect the server to generate any either.
-    // Less commonly, the server may perform different actions from the client,
-    // and may in fact generate values where the client did not, but we don't
-    // have any client-side values to match, so even here we may as well just
-    // use a random seed on the server.  In that case, we don't pass the
-    // randomSeed to save bandwidth, and we don't even generate it to save a
-    // bit of CPU and to avoid consuming entropy.
-    var randomSeed = null;
-    var randomSeedGenerator = function () {
-      if (randomSeed === null) {
-        randomSeed = DDPCommon.makeRpcSeed(enclosing, name);
-      }
-      return randomSeed;
-    };
+    const randomSeedGenerator =
+      self._makeRandomSeedGenerator(enclosing, name);
 
-    // Run the stub, if we have one. The stub is supposed to make some
-    // temporary writes to the database to give the user a smooth experience
-    // until the actual result of executing the method comes back from the
-    // server (whereupon the temporary writes to the database will be reversed
-    // during the beginUpdate/endUpdate process.)
-    //
-    // Normally, we ignore the return value of the stub (even if it is an
-    // exception), in favor of the real return value from the server. The
-    // exception is if the *caller* is a stub. In that case, we're not going
-    // to do a RPC, so we use the return value of the stub as our return
-    // value.
-
-    var stub = self._methodHandlers[name];
-    if (stub) {
-      var setUserId = function(userId) {
-        self.setUserId(userId);
-      };
-
-      var invocation = new DDPCommon.MethodInvocation({
-        isSimulation: true,
-        userId: self.userId(),
-        setUserId: setUserId,
-        randomSeed: function () { return randomSeedGenerator(); }
-      });
-
-      if (!alreadyInSimulation)
-        self._saveOriginals();
-
-      try {
-        // Note that unlike in the corresponding server code, we never audit
-        // that stubs check() their arguments.
-        var stubReturnValue = DDP._CurrentInvocation.withValue(invocation, function () {
-          if (Meteor.isServer) {
-            // Because saveOriginals and retrieveOriginals aren't reentrant,
-            // don't allow stubs to yield.
-            return Meteor._noYieldsAllowed(function () {
-              // re-clone, so that the stub can't affect our caller's values
-              return stub.apply(invocation, EJSON.clone(args));
-            });
-          } else {
-            return stub.apply(invocation, EJSON.clone(args));
-          }
-        });
-      }
-      catch (e) {
-        var exception = e;
-      }
-
-      if (!alreadyInSimulation)
-        self._retrieveAndStoreOriginals(methodId());
-    }
+    const stubResult = self._simulateMethod({
+      name, args, methodId, randomSeedGenerator
+    });
 
     // If we're in a simulation, stop and return the result we have,
     // rather than going on to do an RPC. If there was no stub,
     // we'll end up returning undefined.
     if (alreadyInSimulation) {
-      if (callback) {
-        callback(exception, stubReturnValue);
-        return undefined;
+      if (! stubResult) {
+        // If there is no stubResult because there was no stub, but we are
+        // in a simulation, return nothing.
+        return;
       }
-      if (exception)
-        throw exception;
-      return stubReturnValue;
+
+      if (callback) {
+        callback(stubResult.exception, stubResult.returnValue);
+        return;
+      }
+
+      if (_.has(stubResult, "exception")) {
+        throw stubResult.exception;
+      }
+
+      return stubResult.returnValue;
     }
 
     // If an exception occurred in a stub, and we're ignoring it
@@ -891,12 +831,17 @@ _.extend(Connection.prototype, {
     //
     // Tests can set the 'expected' flag on an exception so it won't
     // go to log.
-    if (exception) {
+    if (stubResult && _.has(stubResult, "exception")) {
       if (options.throwStubExceptions) {
-        throw exception;
-      } else if (!exception.expected) {
-        Meteor._debug("Exception while simulating the effect of invoking '" +
-          name + "'", exception, exception.stack);
+        throw stubResult.exception;
+      }
+
+      if (! stubResult.exception.expected) {
+        Meteor._debug(
+          `Exception while simulating the effect of invoking '${name}'`,
+          stubResult.exception,
+          stubResult.exception.stack
+        );
       }
     }
 
@@ -918,8 +863,11 @@ _.extend(Connection.prototype, {
       } else {
         // On the server, make the function synchronous. Throw on
         // errors, return on success.
-        var future = new Future;
-        callback = future.resolver();
+        var promise = new Promise((resolve, reject) => {
+          callback = (error, result) => {
+            error ? reject(error) : resolve(result);
+          };
+        });
       }
     }
     // Send the RPC. Note that on the client, it is important that the
@@ -933,11 +881,11 @@ _.extend(Connection.prototype, {
     };
 
     // Send the randomSeed only if we used it
-    if (randomSeed !== null) {
-      message.randomSeed = randomSeed;
+    if (randomSeedGenerator.seed) {
+      message.randomSeed = randomSeedGenerator.seed;
     }
 
-    var methodInvoker = new MethodInvoker({
+    self._enqueueMethodInvoker(new MethodInvoker({
       methodId: methodId(),
       callback: callback,
       connection: self,
@@ -945,31 +893,254 @@ _.extend(Connection.prototype, {
       wait: !!options.wait,
       message: message,
       noRetry: !!options.noRetry
-    });
-
-    if (options.wait) {
-      // It's a wait method! Wait methods go in their own block.
-      self._outstandingMethodBlocks.push(
-        {wait: true, methods: [methodInvoker]});
-    } else {
-      // Not a wait method. Start a new block if the previous block was a wait
-      // block, and add it to the last block of methods.
-      if (_.isEmpty(self._outstandingMethodBlocks) ||
-          _.last(self._outstandingMethodBlocks).wait)
-        self._outstandingMethodBlocks.push({wait: false, methods: []});
-      _.last(self._outstandingMethodBlocks).methods.push(methodInvoker);
-    }
-
-    // If we added it to the first block, send it out now.
-    if (self._outstandingMethodBlocks.length === 1)
-      methodInvoker.sendMessage();
+    }), options.wait);
 
     // If we're using the default callback on the server,
     // block waiting for the result.
-    if (future) {
-      return future.wait();
+    if (promise) {
+      return promise.await();
     }
-    return options.returnStubValue ? stubReturnValue : undefined;
+
+    if (options.returnStubValue) {
+      return stubResult && stubResult.returnValue;
+    }
+  },
+
+  _makeLazyMethodIdGetter() {
+    let id;
+    return () => {
+      if (id === undefined) {
+        id = String(this._nextMethodId++);
+      }
+      return id;
+    };
+  },
+
+  _makeRandomSeedGenerator(invocation, name) {
+    // Lazily generate a randomSeed, only if it is requested by the stub.
+    // The random streams only have utility if they're used on both the client
+    // and the server; if the client doesn't generate any 'random' values
+    // then we don't expect the server to generate any either.
+    // Less commonly, the server may perform different actions from the client,
+    // and may in fact generate values where the client did not, but we don't
+    // have any client-side values to match, so even here we may as well just
+    // use a random seed on the server.  In that case, we don't pass the
+    // randomSeed to save bandwidth, and we don't even generate it to save a
+    // bit of CPU and to avoid consuming entropy.
+    return function randomSeedGenerator() {
+      return randomSeedGenerator.seed || (
+        randomSeedGenerator.seed =
+          DDPCommon.makeRpcSeed(invocation, name)
+      );
+    };
+  },
+
+  _simulateMethod({ name, args, methodId, randomSeedGenerator }) {
+    const stub = this._methodHandlers[name];
+
+    // Run the stub, if we have one. The stub is supposed to make some
+    // temporary writes to the database to give the user a smooth experience
+    // until the actual result of executing the method comes back from the
+    // server (whereupon the temporary writes to the database will be reversed
+    // during the beginUpdate/endUpdate process.)
+    //
+    // Normally, we ignore the return value of the stub (even if it is an
+    // exception), in favor of the real return value from the server. The
+    // exception is if the *caller* is a stub. In that case, we're not going
+    // to do a RPC, so we use the return value of the stub as our return
+    // value.
+
+    if (stub) {
+      const enclosing = DDP._CurrentInvocation.get();
+      const alreadyInSimulation = enclosing && enclosing.isSimulation;
+      const invocation = new DDPCommon.MethodInvocation({
+        isSimulation: true,
+        userId: this.userId(),
+        setUserId: userId => this.setUserId(userId),
+        randomSeed: randomSeedGenerator
+      });
+
+      if (! alreadyInSimulation &&
+          this._pendingSimulationCount++ === 0) {
+        this._saveOriginals();
+      }
+
+      const finish = () => {
+        if (! alreadyInSimulation &&
+            --this._pendingSimulationCount === 0) {
+          this._retrieveAndStoreOriginals(methodId());
+        }
+      };
+
+      const result = {};
+
+      try {
+        result.returnValue = DDP._CurrentInvocation.withValue(
+          invocation,
+          // Note that unlike in the corresponding server code, we never
+          // audit that stubs check() their arguments.
+          () => stub.apply(
+            invocation,
+            // Re-clone, so that the stub can't affect our caller's values.
+            EJSON.clone(args)
+          )
+        );
+
+        result.promise = Promise.resolve(result.returnValue);
+
+      } catch (exception) {
+        result.exception = exception;
+        result.promise = Promise.reject(exception);
+      }
+
+      if (! alreadyInSimulation) {
+        if (result.promise === result.returnValue) {
+          // If result.promise and result.returnValue are the same object,
+          // then result.returnValue must have been a Promise, so we
+          // should wait for it to be fulfilled before unblocking the
+          // message buffer.
+          result.promise.done(finish, finish);
+        } else {
+          // If result.returnValue was not a Promise, then unblock the
+          // message buffer synchronously.
+          finish();
+        }
+      }
+
+      return result;
+    }
+  },
+
+  _enqueueMethodInvoker(methodInvoker, wait) {
+    if (wait) {
+      // It's a wait method! Wait methods go in their own block.
+      this._outstandingMethodBlocks.push({
+        wait: true,
+        methods: [methodInvoker]
+      });
+    } else {
+      // Not a wait method. Start a new block if the previous block was a wait
+      // block, and add it to the last block of methods.
+      let lastBlock = _.last(this._outstandingMethodBlocks);
+      if (! lastBlock || lastBlock.wait) {
+        lastBlock = { wait: false, methods: [] };
+        this._outstandingMethodBlocks.push(lastBlock);
+      }
+      lastBlock.methods.push(methodInvoker);
+    }
+
+    // If we added it to the first block, send it out now.
+    if (this._outstandingMethodBlocks.length === 1) {
+      methodInvoker.sendMessage();
+    }
+  },
+
+  callAsync(name, ...args) {
+    return this.applyAsync(name, args);
+  },
+
+  applyAsync(name, args, {
+    onResultReceived,
+    returnStubValue = false,
+    // Note that the default value of options.throwStubExceptions for
+    // Connection#applyAsync is different from Connection#apply. Unless
+    // the caller explicitly disables options.throwStubExceptions,
+    // exceptions thrown by stubs will be exposed to the calling code, and
+    // will prevent the RPC from being sent to the server.
+    throwStubExceptions = true,
+    wait = false,
+  } = {}) {
+    // Keep our args safe from mutation (eg if we don't send the message for a
+    // while because of a wait method).
+    args = EJSON.clone(args);
+
+    const methodId = this._makeLazyMethodIdGetter();
+    const enclosing = DDP._CurrentInvocation.get();
+    const alreadyInSimulation = enclosing && enclosing.isSimulation;
+    const randomSeedGenerator =
+      this._makeRandomSeedGenerator(enclosing, name);
+
+    const stubResult = this._simulateMethod({
+      name, args, methodId, randomSeedGenerator
+    });
+
+    const stubPromise = Promise.resolve(stubResult && stubResult.promise);
+
+    // If we're in a simulation, stop and return the result we have,
+    // rather than going on to do an RPC. If there was no stub, the value
+    // of afterStubPromise will end up being undefined.
+    if (alreadyInSimulation) {
+      return stubPromise;
+    }
+
+    // At this point we're definitely doing an RPC, and we're going to
+    // return the value of the RPC to the caller.
+
+    let rpcPromise;
+    const ensureRPCSent = () => {
+      if (rpcPromise) {
+        return rpcPromise;
+      }
+
+      // Send the RPC. Note that on the client, it is important that the
+      // stub have finished before we send the RPC, so that we know we have
+      // a complete list of which local documents the stub wrote.
+      const message = {
+        msg: 'method',
+        method: name,
+        params: args,
+        id: methodId()
+      };
+
+      // Send the randomSeed only if we used it
+      if (randomSeedGenerator.seed) {
+        message.randomSeed = randomSeedGenerator.seed;
+      }
+
+      return rpcPromise = new Promise((resolve, reject) => {
+        this._enqueueMethodInvoker(new MethodInvoker({
+          message,
+          onResultReceived,
+          methodId: methodId(),
+          callback(error, result) {
+            error ? reject(error) : resolve(result);
+          },
+          connection: this,
+          wait: !! wait
+        }), wait);
+      })
+    }
+
+    if (! throwStubExceptions) {
+      // If we explicitly don't care about stub exceptions, then we can go
+      // ahead and send the RPC without waiting on the stub.
+      ensureRPCSent();
+    }
+
+    return stubPromise.then(result => {
+      const rpcPromise = ensureRPCSent();
+      return returnStubValue ? result : rpcPromise;
+    }, exception => {
+        // If an exception occurred in the stub, and we did not explicitly
+        // pass options.throwStubExceptions === false, then abort the RPC
+        // and throw the stub exception instead.
+        if (throwStubExceptions) {
+          throw exception;
+        }
+
+        // Tests can set the 'expected' flag on an exception so it won't
+        // go to log.
+        if (! exception.expected) {
+          Meteor._debug(
+            `Exception while simulating the effect of invoking '${name}'`,
+            exception,
+            exception.stack
+          );
+        }
+
+        return ensureRPCSent();
+      }
+    );
   },
 
   // Before calling a method stub, prepare all stores to track changes and allow
@@ -1109,12 +1280,14 @@ _.extend(Connection.prototype, {
       self._userIdDeps.changed();
   },
 
-  // Returns true if we are in a state after reconnect of waiting for subs to be
-  // revived or early methods to finish their data, or we are waiting for a
-  // "wait" method to finish.
+  // Returns true if there are pending method simulations, or we are in a
+  // state after reconnect of waiting for subs to be revived or early
+  // methods to finish their data, or we are waiting for a "wait" method
+  // to finish.
   _waitingForQuiescence: function () {
     var self = this;
-    return (! _.isEmpty(self._subsBeingRevived) ||
+    return (self._pendingSimulationCount > 0 ||
+            ! _.isEmpty(self._subsBeingRevived) ||
             ! _.isEmpty(self._methodsBlockingQuiescence));
   },
 
