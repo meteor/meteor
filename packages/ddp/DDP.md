@@ -99,17 +99,22 @@ a `pong` message. If the received `ping` message includes an `id` field, the
 ## Managing Data:
 
 ### Messages:
-
+#### Subscription
  * `sub` (client -> server):
    - `id`: string (an arbitrary client-determined identifier for this subscription)
    - `name`: string (the name of the subscription)
    - `params`: optional array of EJSON items (parameters to the subscription)
  * `unsub` (client -> server):
    - `id`: string (the id passed to 'sub')
+ * `ready` (server -> client):
+   - `subs`: array of strings (ids passed to 'sub' which have sent their
+     initial batch of data)
  * `nosub` (server -> client):
    - `id`: string (the id passed to 'sub')
    - `error`: optional Error (an error raised by the subscription as it
     concludes, or sub-not-found)
+
+#### Collections
  * `added` (server -> client):
    - `collection`: string (collection name)
    - `id`: string (document ID)
@@ -122,9 +127,6 @@ a `pong` message. If the received `ping` message includes an `id` field, the
  * `removed` (server -> client):
    - `collection`: string (collection name)
    - `id`: string (document ID)
- * `ready` (server -> client):
-   - `subs`: array of strings (ids passed to 'sub' which have sent their
-     initial batch of data)
  * `addedBefore` (server -> client):
    - `collection`: string (collection name)
    - `id`: string (document ID)
@@ -240,7 +242,9 @@ error is an Object with the following fields:
 
  * `error`: string (previously a number. See appendix 3)
  * `reason`: optional string
+ * `message`: optional string
  * `details`: optional string
+ * `errorType`: optional string
 
 Such an Error is used to represent errors raised by the method or subscription,
 as well as an attempt to subscribe to an unknown subscription or call an unknown
