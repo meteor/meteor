@@ -1014,12 +1014,22 @@ ${cordova.displayNameForPlatform(platform)}` }, () => {
               'platforms', platform);
             const platformOutputPath = files.pathJoin(outputPath, platform);
 
+            // Prepare the project once again to ensure that it is up to date
+            // with current build options.  For example, --server=example.com
+            // is utilized in the Cordova builder to write boilerplate HTML and
+            // various config.xml settings (e.g. access policies)
+            if (platform === 'ios') {
+              cordovaProject.prepareForPlatform(platform, buildOptions);
+            } else if (platform === 'android') {
+              cordovaProject.buildForPlatform(platform, buildOptions);
+            }
+
+            // Once prepared, copy the bundle to the final location.
             files.cp_r(buildPath,
               files.pathJoin(platformOutputPath, 'project'));
 
+            // Make some platform-specific adjustments to the resulting build.
             if (platform === 'ios') {
-              cordovaProject.prepareForPlatform(platform, buildOptions);
-
               files.writeFile(
                 files.pathJoin(platformOutputPath, 'README'),
 `This is an auto-generated XCode project for your iOS application.
@@ -1028,8 +1038,6 @@ Instructions for publishing your iOS app to App Store can be found at:
 https://github.com/meteor/meteor/wiki/How-to-submit-your-iOS-app-to-App-Store
 `, "utf8");
             } else if (platform === 'android') {
-              cordovaProject.buildForPlatform(platform, buildOptions);
-
               const apkPath = files.pathJoin(buildPath, 'build/outputs/apk',
                 options.debug ? 'android-debug.apk' : 'android-release-unsigned.apk')
 
