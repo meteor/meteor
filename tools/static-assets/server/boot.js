@@ -132,6 +132,25 @@ var specialArgPaths = {
       npmRequire: npmRequire,
       Profile: Profile
     };
+  },
+
+  "packages/dynamic-import.js": function (file) {
+    var dynamicImportInfo = {};
+
+    Object.keys(configJson.clientPaths).map(function (key) {
+      var programJsonPath = path.resolve(configJson.clientPaths[key]);
+      var programJson = require(programJsonPath);
+
+      dynamicImportInfo[key] = {
+        dynamicRoot: path.join(path.dirname(programJsonPath), "dynamic")
+      };
+    });
+
+    dynamicImportInfo.server = {
+      dynamicRoot: path.join(serverDir, "dynamic")
+    };
+
+    return { dynamicImportInfo: dynamicImportInfo };
   }
 };
 
