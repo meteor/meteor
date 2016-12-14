@@ -85,7 +85,7 @@ React = require 'react'
 When using CoffeeScript, not only the syntax to import variables is different, but also the export has to be done in a different way. Variables to be exported are put in the `exports` object:
 
 ```cs
-exports.Lists = ListsCollection 'Lists'
+exports.Lists = ListsCollection 'lists'
 ```
 
 <h2 id="javascript-structure">File structure</h2>

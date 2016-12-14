@@ -219,7 +219,7 @@ class ListsCollection extends Mongo.Collection {
   }
 }
 
-Lists = new ListsCollection('Lists');
+Lists = new ListsCollection('lists');
 ```
 
 <h3 id="hooks">Hooks on insert/update/remove</h3>
@@ -366,7 +366,7 @@ Migrations.add({
       const execute = Meteor.wrapAsync(batch.execute, batch);
       return execute();
     }
-  
+
     return true;
   },
   down() {

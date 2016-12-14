@@ -187,7 +187,7 @@ Collections should be named as a plural noun, in [PascalCase](https://en.wikiped
 
 ```js
 // Defining a collection
-Lists = new Mongo.Collection('Lists');
+Lists = new Mongo.Collection('lists');
 ```
 
 Fields in the database should be camelCased just like your JavaScript variable names.
