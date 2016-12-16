@@ -1055,20 +1055,23 @@ _.extend(PackageSource.prototype, {
       return value;
     });
 
-    function makeCacheKey(dir) {
-      return baseCacheKey + "\0" + dir;
-    }
-
     function find(dir, depth, inNodeModules) {
       // Remove trailing slash.
       dir = dir.replace(/\/$/, "");
 
-      // If we're in a node_modules directory, cache the results of the
+      // If this is a node_modules directory, cache the results of the
       // find function for the duration of the process.
-      const cacheKey = inNodeModules && makeCacheKey(dir);
-      if (cacheKey &&
-          cacheKey in self._findSourcesCache) {
-        return self._findSourcesCache[cacheKey];
+      let cacheSaver = null;
+      if (files.pathBasename(dir) == "node_modules") {
+        // Key by absolute path so npmAutoInstall can invalidate by absolute path.
+        const absDir = files.pathJoin(self.sourceRoot, dir);
+        self._findSourcesCache[absDir] = self._findSourcesCache[absDir] || {};
+        if (baseCacheKey in self._findSourcesCache[absDir]) {
+          return self._findSourcesCache[absDir][baseCacheKey];
+        }
+        cacheSaver = (sources) => {
+          self._findSourcesCache[absDir][baseCacheKey] = sources;
+        }
       }
 
       if (loopChecker.check(dir)) {
@@ -1125,8 +1128,8 @@ _.extend(PackageSource.prototype, {
         sources.push(...find(nodeModulesDir, depth + 1, true));
       }
 
-      if (cacheKey) {
-        self._findSourcesCache[cacheKey] = sources;
+      if (cacheSaver) {
+        cacheSaver(sources);
       }
 
       return sources;
@@ -1494,6 +1497,12 @@ _.extend(PackageSource.prototype, {
 
   displayName() {
     return this.name === null ? 'the app' : this.name;
+  }
+});
+
+_.extend(PackageSource, {
+  invalidateSourcesCache(absDir) {
+    delete PackageSource.prototype._findSourcesCache[absDir];
   }
 });
 

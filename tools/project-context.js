@@ -10,12 +10,15 @@ var files = require('./fs/files.js');
 var isopackCacheModule = require('./isobuild/isopack-cache.js');
 var isopackets = require('./tool-env/isopackets.js');
 var packageMapModule = require('./packaging/package-map.js');
+var PackageSource = require('./isobuild/package-source.js');
 var release = require('./packaging/release.js');
 var tropohouse = require('./packaging/tropohouse.js');
 var utils = require('./utils/utils.js');
 var watch = require('./fs/watch.js');
 var Profile = require('./tool-env/profile.js').Profile;
 import { KNOWN_ISOBUILD_FEATURE_PACKAGES } from './isobuild/compiler.js';
+import child_process from 'child_process';
+import { optimisticReadJsonOrNull } from './fs/optimistic.js';
 
 // The ProjectContext represents all the context associated with an app:
 // metadata files in the `.meteor` directory, the choice of package versions
@@ -54,7 +57,8 @@ var STAGE = {
   RESOLVE_CONSTRAINTS: '_downloadMissingPackages',
   DOWNLOAD_MISSING_PACKAGES: '_buildLocalPackages',
   BUILD_LOCAL_PACKAGES: '_saveChangedMetadata',
-  SAVE_CHANGED_METADATA: 'DONE'
+  SAVE_CHANGED_METADATA: '_npmAutoInstall',
+  NPM_AUTO_INSTALL: 'DONE'
 };
 
 _.extend(ProjectContext.prototype, {
@@ -203,6 +207,9 @@ _.extend(ProjectContext.prototype, {
     // Initialized by _buildLocalPackages.
     self.isopackCache = null;
 
+    // Initialized by _npmAutoInstall.
+    self._npmAutoInstallWatchSet = null;
+
     self._completedStage = STAGE.INITIAL;
 
     // The resolverResultCache is used by the constraint solver; to
@@ -243,11 +250,16 @@ _.extend(ProjectContext.prototype, {
       this._completeStagesThrough(STAGE.SAVE_CHANGED_METADATA);
     });
   },
+  npmAutoInstall: function () {
+    Profile.run('ProjectContext npmAutoInstall', () => {
+      this._completeStagesThrough(STAGE.NPM_AUTO_INSTALL);
+    });
+  },
   prepareProjectForBuild: function () {
-    // This is the same as saveChangedMetadata, but if we insert stages after
+    // This is the same as npmAutoInstall, but if we insert stages after
     // that one it will continue to mean "fully finished".
     Profile.run('ProjectContext prepareProjectForBuild', () => {
-      this._completeStagesThrough(STAGE.SAVE_CHANGED_METADATA);
+      this._completeStagesThrough(STAGE.NPM_AUTO_INSTALL);
     });
   },
 
@@ -260,7 +272,7 @@ _.extend(ProjectContext.prototype, {
         // This error gets thrown if you request to go to a stage that's earlier
         // than where you started. Note that the error will be mildly confusing
         // because the key of STAGE does not match the value.
-        if (self.completedStage === STAGE.SAVE_CHANGED_METADATA)
+        if (self.completedStage === STAGE.NPM_AUTO_INSTALL)
           throw Error("can't find requested stage " + targetStage);
 
         // The actual value of STAGE.FOO is the name of the method that takes
@@ -390,6 +402,10 @@ _.extend(ProjectContext.prototype, {
       function (metadataFile) {
         metadataFile && watchSet.merge(metadataFile.watchSet);
       });
+
+    if (self._npmAutoInstallWatchSet) {
+      watchSet.merge(self._npmAutoInstallWatchSet);
+    }
 
     if (self.localCatalog) {
       watchSet.merge(self.localCatalog.packageLocationWatchSet);
@@ -830,6 +846,85 @@ _.extend(ProjectContext.prototype, {
     }
 
     self._completedStage = STAGE.SAVE_CHANGED_METADATA;
+  }),
+
+  _npmAutoInstall: Profile('_npmAutoInstall', function() {
+    var self = this;
+
+    // XXX How much should be inside the job?
+    buildmessage.enterJob("checking app npm dependencies", function() {
+      self._npmAutoInstallWatchSet = new watch.WatchSet;
+      var contents = watch.readAndWatchFile(self._npmAutoInstallWatchSet,
+        files.pathJoin(self.projectDir, 'package.json'));
+      var packageJson = JSON.parse(contents);
+      if (packageJson && packageJson.meteor && packageJson.meteor.npmAutoInstall) {
+        var config = packageJson.meteor.npmAutoInstall;
+        // LATER: Add defaults here?
+        var nodeModulesDir = files.pathJoin(self.projectDir, 'node_modules');
+        var stateFilename = files.pathJoin(nodeModulesDir, '.meteor-autoinstall-state');
+        // Don't watch this one; it isn't a reasonable use case.
+        var state = optimisticReadJsonOrNull(stateFilename, { allowSyntaxError: true });
+        var watchSet;
+        // XXX: Anything read from JSON could be malformed.  Check error handling.
+        if (state != null && state.command == config.command &&
+            JSON.stringify(state.watchSpec) == JSON.stringify(config.watchSpec) /* XXX Better API? */ &&
+            watch.isUpToDate(watchSet = watch.WatchSet.fromJSON(state.watchSet))) {
+          // Up to date
+          self._npmAutoInstallWatchSet.merge(watchSet);
+        } else {
+          // Need to reinstall
+          PackageSource.invalidateSourcesCache(nodeModulesDir);
+          watchSet = new watch.WatchSet;
+          for (let file of config.watchSpec)
+            watch.readAndWatchFile(watchSet, files.pathJoin(self.projectDir, file));
+          // Merge watch set first, because if autoinstall fails, we want to retry
+          // when a watched file changes.  (Of course, it could also fail for
+          // environmental reasons.  Do the best we can.)
+          self._npmAutoInstallWatchSet.merge(watchSet);
+          // There's a race condition here if the watch files change between our
+          // read and the command and then change back after the command.  It
+          // doesn't look like we can do anything about this.
+          Console.enableProgressDisplay(false);
+          try {
+            Console.arrowInfo(`Running npm auto-install command: ${config.command}`);
+            var errorMessage = new Promise(function (resolve) {
+              // XXX Ensure that the first "meteor" on the path is the current copy of Meteor.
+              // XXX Windows compatibility?  Does package.json need to specify a different command for Windows?
+              // Manual "/bin/sh -c" can be removed when Meteor moves to a version
+              // of Node that has https://github.com/nodejs/node/pull/4598 .
+              var child = child_process.spawn('/bin/sh', ['-c', config.command],
+                {cwd: self.projectDir, stdio: 'inherit'});
+              child.on('error', function(error) {
+                resolve(`Failed to run npm auto-install command (${config.command}): ${error.message}`);
+              });
+              child.on('close', function(code, signal) {
+                resolve(
+                  signal ? `npm auto-install command (${config.command}) exited with signal ${signal}` :
+                  code ? `npm auto-install command (${config.command}) exited with code ${code}` :
+                  null);
+              });
+            }).await();
+          } finally {
+            // XXX Assuming that progress display was enabled before we started.
+            // There doesn't seem to be a way to query this.
+            Console.enableProgressDisplay(true);
+          }
+          if (errorMessage != null) {
+            buildmessage.error(errorMessage);
+            // Other code seems to return without updating self._completedStage
+            // when there's an error.  Is that right?
+            return;
+          } else {
+            Console.arrowInfo("npm auto-install successful");
+          }
+          state = {command: config.command, watchSpec: config.watchSpec, watchSet: watchSet.toJSON()};
+          // XXX Do we have to worry about node_modules not existing?
+          files.writeFile(stateFilename, JSON.stringify(state, null, 2) + '\n', 'utf8');
+        }
+      }
+
+      self._completedStage = STAGE.NPM_AUTO_INSTALL;
+    });
   })
 });
 
