@@ -548,10 +548,12 @@ LocalCollection.prototype.insert = function (doc, callback) {
   // field name restrictions:
   // https://docs.mongodb.com/manual/reference/limits/#Restrictions-on-Field-Names
   if (doc) {
-    const invalidFieldMatches = JSON.stringify(doc).match(/"([^"]*\.[^"]*)":/);
-    if (invalidFieldMatches && invalidFieldMatches.length === 2) {
-      throw MinimongoError(`Field ${invalidFieldMatches[1]} must not contain '.'`);
-    }
+    JSON.stringify(doc, (key, value) => {
+      if (key.indexOf('.') > -1) {
+        throw MinimongoError(`Field ${key} must not contain '.'`);
+      }
+      return value;
+    });
   }
 
   if (!_.has(doc, '_id')) {
