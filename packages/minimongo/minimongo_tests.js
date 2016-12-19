@@ -2109,21 +2109,21 @@ Tinytest.add("minimongo - modify", function (test) {
 
   var upsert = function (query, mod, expected) {
     var coll = new LocalCollection;
-    
+
     var result = coll.upsert(query, mod);
-    
+
     var actual = coll.findOne();
-    
+
     if (expected._id) {
       test.equal(result.insertedId, expected._id);
     }
     else {
       delete actual._id;
     }
-    
+
     test.equal(actual, expected);
   };
-  
+
   // document replacement
   modify({}, {}, {});
   modify({a: 12}, {}, {}); // tested against mongodb
@@ -2496,9 +2496,9 @@ Tinytest.add("minimongo - modify", function (test) {
   modify({a: 0}, {$setOnInsert: {a: 12}}, {a: 0});
   upsert({a: 12}, {$setOnInsert: {b: 12}}, {a: 12, b: 12});
   upsert({a: 12}, {$setOnInsert: {_id: 'test'}}, {_id: 'test', a: 12});
-  
+
   exception({}, {$set: {_id: 'bad'}});
-  
+
   // $bit
   // unimplemented
 
@@ -3206,4 +3206,29 @@ Tinytest.add("minimongo - reactive skip/limit count while updating", function(te
   test.equal(count, 1);
 
   c.stop();
+});
+
+// Makes sure inserts cannot be performed using field names that have
+// dots in them, to meet Mongo's field name restrictions. See:
+// https://docs.mongodb.com/manual/reference/limits/#Restrictions-on-Field-Names
+Tinytest.add("minimongo - cannot insert using invalid field names", function (test) {
+  const collection = new LocalCollection();
+
+  // Quick test to make sure non-dot field inserts are working
+  collection.insert({ a: 'b' });
+
+  // Quick test to make sure field values with dots are allowed
+  collection.insert({ a: 'b.c' });
+
+  // Verify top level dot-field inserts are prohibited
+  ['a.b', '.b', 'a.', 'a.b.c'].forEach((field) => {
+    test.throws(function () {
+      collection.insert({ [field]: 'c' });
+    }, `Field ${field} must not contain '.'`);
+  });
+
+  // Verify nested dot-field inserts are prohibited
+  test.throws(function () {
+    collection.insert({ a: { b: { 'c.d': 'e' } } });
+  }, "Field c.d must not contain '.'");
 });

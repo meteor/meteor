@@ -544,6 +544,16 @@ LocalCollection.prototype.insert = function (doc, callback) {
   var self = this;
   doc = EJSON.clone(doc);
 
+  // Make sure field names do not contain dots to line up with Mongo's
+  // field name restrictions:
+  // https://docs.mongodb.com/manual/reference/limits/#Restrictions-on-Field-Names
+  if (doc) {
+    const invalidFieldMatches = JSON.stringify(doc).match(/"([^"]*\.[^"]*)":/);
+    if (invalidFieldMatches && invalidFieldMatches.length === 2) {
+      throw MinimongoError(`Field ${invalidFieldMatches[1]} must not contain '.'`);
+    }
+  }
+
   if (!_.has(doc, '_id')) {
     // if you really want to use ObjectIDs, set this global.
     // Mongo.Collection specifies its own ids and does not use this code.
@@ -1110,4 +1120,3 @@ LocalCollection.prototype.resumeObservers = function () {
   }
   self._observeQueue.drain();
 };
-
