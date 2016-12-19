@@ -549,7 +549,7 @@ LocalCollection.prototype.insert = function (doc, callback) {
   // https://docs.mongodb.com/manual/reference/limits/#Restrictions-on-Field-Names
   if (doc) {
     JSON.stringify(doc, (key, value) => {
-      if (key.indexOf('.') > -1) {
+      if (_.isString(key) && key.indexOf('.') > -1) {
         throw MinimongoError(`Field ${key} must not contain '.'`);
       }
       return value;
