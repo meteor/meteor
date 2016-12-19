@@ -2,7 +2,7 @@
 [Source code of released version](https://github.com/meteor/meteor/tree/master/packages/force-ssl) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/force-ssl)
 ***
 
-This package, part of [Webapp](https://www.meteor.com/webapp), causes
+This package, part of [Webapp](https://github.com/meteor/meteor/tree/devel/packages/webapp), causes
 Meteor to redirect insecure connections (HTTP) to a secure URL
 (HTTPS). Use this package to ensure that communication to the server
 is always encrypted to protect users from active spoofing attacks.
