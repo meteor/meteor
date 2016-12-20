@@ -1,10 +1,84 @@
 # Contributing to Meteor
 
-Thank you for contributing to the Meteor project! Please read the guidelines below or it might be
-hard for the community to help you with your issue or pull request.
+We are excited to have your help building Meteor &mdash; both the platform and the community behind it. Please read the project overview and guidelines for contributing bug reports and new code, or it might be hard for the community to help you with your issue or pull request.
 
-We are excited to have your help building Meteor &mdash; both the platform and the
-community behind it. Here's how you can help with bug reports and new code.
+<h2 id="project-overview">Project overview</h2>
+
+Before we jump into detailed guidelines for opening and triaging issues and submitting pull requests, here is some information about how our project is structured and resources you should refer to as you start contributing. 
+
+### Ways to contribute
+
+There are many ways to contribute to the Meteor Project. Here’s a list of technical contributions with increasing levels of involvement and required knowledge of Meteor’s code and operations.  
+- [Reporting a bug](https://github.com/meteor/meteor/blob/devel/Contributing.md#reporting-a-bug-in-meteor)
+- [Triaging issues](https://github.com/meteor/meteor/blob/devel/IssueTriage.md)
+- [Contributing to documentation](https://github.com/meteor/docs/blob/master/Contributing.md) 
+- [Submitting pull requests](https://github.com/meteor/meteor/blob/devel/Contributing.md#making-changes-to-meteor-core) 
+- [Reviewing pull requests](https://github.com/meteor/meteor/blob/devel/Contributing.md#reviewer) 
+- [Maintaining a community package](https://github.com/meteor/meteor/blob/devel/Contributing.md#community-package-maintainer)
+
+There are also several ways to contribute to the Meteor Project outside of GitHub, like organizing or speaking at [Meetups](https://www.meetup.com/topics/meteor/) and events and helping to moderate our [forums](https://forums.meteor.com/). Stay tuned for more documentation around non-code contributions. 
+
+If you can think of any changes to the project or documentation that would improve the contributor experience, let us know by opening an issue!
+
+### Project roles
+
+We’ve just begun to create more defined project roles for Meteor. Here are descriptions of the existing project roles, along with the current contributors taking on those roles today. 
+
+#### Issue Triager 
+
+Issue Triagers are members of the community that meet with us weekly to help triage Meteor’s open issues and bug reports. Once you’ve begun triaging issues regularly on your own, we will invite you to join our dedicated Slack channel to participate in these regular coordination sessions. 
+
+Current Issue Triagers: 
+- [@hwillson](https://github.com/hwillson)
+- [@laosb](https://github.com/laosb)
+- [@abernix](https://github.com/abernix)
+- [@lorensr](https://github.com/lorensr)
+
+#### Reviewer
+
+Our most regular and experienced Issue Triagers sometimes move on to doing code reviews for pull requests, and have input into which pull requests should be merged. 
+
+Current Reviewers:
+- [@lorensr](https://github.com/lorensr)
+- [@abernix](https://github.com/abernix)
+
+#### Core Committer 
+
+For now, the only contributors with commit access to meteor/meteor are employees of Meteor Development Group, the company that sponsors the Meteor project. We're actively exploring adding non-MDG core committers who have distinguished themselves in other contribution areas.  
+
+Project Lead: [@benjamn](https://github.com/benjamn)
+
+Current Core Committers: 
+- [@tmeasday](https://github.com/tmeasday)
+- [@zol](https://github.com/zol)
+- [@glasser](https://github.com/glasser)
+- [@stubailo](https://github.com/stubailo)
+
+#### Documentation Maintainer
+
+Documentation Maintainers are regular documentation contributors that have been given the ability to merge docs changes on [meteor/docs](https://github.com/meteor/docs). 
+
+Current Documentation Maintainers:
+- [@tmeasday](https://github.com/tmeasday)
+- [@lorensr](https://github.com/lorensr)
+
+#### Community Package Maintainer:
+
+Community package maintainers are community members who maintain packages outside of Meteor core. This requires code to be extracted from meteor/meteor, and entails a high level of responsibility. For this reason, community maintainers generally (and currently) must first become an advanced contributor to Meteor core and have 4-5 non-trivial pull requests merged that went through the proper contribution workflow. At that point, core contributors may make the case for breaking out a particular core package, and assist in the technical process around doing so. 
+
+Current Community Package Maintainers: 
+- [@mitar](https://github.com/mitar) for [Blaze](https://github.com/meteor/blaze)
+
+#### Community Manager
+
+The community manager helps to coordinate resources, documentation, events, and other supportive work needed to ensure the health of the Meteor project.
+
+Current Community Manager:
+- [@theadactyl](https://github.com/theadactyl)
+
+### Tracking project work
+
+Right now, the best place to track the work being done on Meteor is to take a look at the latest release milestone [here](https://github.com/meteor/meteor/milestones). We also curate specific issues that would make great pull requests for community contributors with the [pull requests encouraged tag](https://github.com/meteor/meteor/issues?q=is%3Aopen+is%3Aissue+label%3Apull-requests-encouraged).
 
 <h2 id="reporting-bug">Reporting a bug in Meteor</h2>
 
@@ -61,9 +135,8 @@ for more details on proposing changes to core code.
 As of May 2016, we use GitHub to track feature requests. Feature request issues get the `feature` label, as well as a label
 corresponding to the Meteor subproject that they are a part of.
 
-Meteor is a big project with [many](https://www.meteor.com/projects)
-[subprojects](https://github.com/meteor/meteor/labels). Right now, the project
-doesn't have as many
+Meteor is a big project with [many subprojects](https://github.com/meteor/meteor/tree/devel/packages). 
+Right now, the project doesn't have as many
 [core developers (we're hiring!)](https://www.meteor.com/jobs/core-developer)
 as subprojects, so we're not able to work on every single subproject every
 month.  We use our [roadmap](Roadmap.md) to communicate the high level features we're prioritizing over the near and medium term.
@@ -157,7 +230,7 @@ these guidelines:
  * Include tests that prove your code works.
 
  * Follow the
-   [MDG style guide](https://github.com/meteor/meteor/wiki/Meteor-Style-Guide)
+   [MDG style guide](https://guide.meteor.com/code-style.html#javascript)
    for code and commit messages.
 
  * Be sure your author field in git is properly filled out with your full name

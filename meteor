@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-BUNDLE_VERSION=4.1.4
+BUNDLE_VERSION=4.7.5
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
@@ -113,17 +113,17 @@ fi
 DEV_BUNDLE="$SCRIPT_DIR/dev_bundle"
 METEOR="$SCRIPT_DIR/tools/index.js"
 
+# Set the nofile ulimit as high as permitted by the hard-limit/kernel
+if [ "$(ulimit -Sn)" != "unlimited" ]; then
+    if [ "$(uname -s)" = "Darwin" ]; then
+        maxfilesuse="$(sysctl -n kern.maxfilesperproc)"
+    else
+        maxfilesuse="$(ulimit -Hn)"
+    fi
 
-# Bump our file descriptor ulimit as high as it will go. This is a
-# temporary workaround for dependancy watching holding open too many
-# files: https://app.asana.com/0/364581412985/472479912325
-if [ "$(ulimit -n)" != "unlimited" ] ; then
-    ulimit -n 16384 > /dev/null 2>&1 || \
-    ulimit -n 8192 > /dev/null 2>&1 || \
-    ulimit -n 4096 > /dev/null 2>&1 || \
-    ulimit -n 2048 > /dev/null 2>&1 || \
-    ulimit -n 1024 > /dev/null 2>&1 || \
-    ulimit -n 512 > /dev/null 2>&1
+    if [ -n "${maxfilesuse}" ] && [ "${maxfilesuse}" != "unlimited" ]; then
+        ulimit -Sn ${maxfilesuse} > /dev/null 2>&1
+    fi
 fi
 
 # We used to set $NODE_PATH here to include the node_modules from the dev

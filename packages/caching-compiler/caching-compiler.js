@@ -163,15 +163,22 @@ CachingCompilerBase = class CachingCompilerBase {
   // processing on the file write.
   _writeFileAsync(filename, contents) {
     const tempFilename = filename + '.tmp.' + Random.id();
-    fs.writeFile(tempFilename, contents, (err) => {
-      // ignore errors, it's just a cache
-      if (err) {
-        return;
+    if (this._cacheDebugEnabled) {
+      // Write cache file synchronously when cache debugging enabled.
+      try {
+        fs.writeFileSync(tempFilename, contents);
+        fs.renameSync(tempFilename, filename);
+      } catch (e) {
+        // ignore errors, it's just a cache
       }
-      fs.rename(tempFilename, filename, (err) => {
-        // ignore this error too.
+    } else {
+      fs.writeFile(tempFilename, contents, err => {
+        // ignore errors, it's just a cache
+        if (! err) {
+          fs.rename(tempFilename, filename, err => {});
+        }
       });
-    });
+    }
   }
 
   // Helper function. Returns the body of the file as a string, or null if it

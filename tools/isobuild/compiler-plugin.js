@@ -16,6 +16,9 @@ import {Console} from '../console/console.js';
 import ImportScanner from './import-scanner.js';
 import {cssToCommonJS} from "./css-modules.js";
 import Resolver from "./resolver.js";
+import {
+  optimisticStatOrNull,
+} from "../fs/optimistic.js";
 
 import { isTestFilePath } from './test-files.js';
 
@@ -59,7 +62,7 @@ import { isTestFilePath } from './test-files.js';
 // Cache the (slightly post-processed) results of linker.fullLink.
 const CACHE_SIZE = process.env.METEOR_LINKER_CACHE_SIZE || 1024*1024*100;
 const CACHE_DEBUG = !! process.env.METEOR_TEST_PRINT_LINKER_CACHE_DEBUG;
-const LINKER_CACHE_SALT = 9; // Increment this number to force relinking.
+const LINKER_CACHE_SALT = 13; // Increment this number to force relinking.
 const LINKER_CACHE = new LRU({
   max: CACHE_SIZE,
   // Cache is measured in bytes. We don't care about servePath.
@@ -205,6 +208,10 @@ class InputFile extends buildPluginModule.InputFile {
     // document.
     this._resourceSlot = resourceSlot;
 
+    // Map from absolute paths to stat objects (or null if the file does
+    // not exist).
+    this._statCache = Object.create(null);
+
     // Map from control file names (e.g. package.json, .babelrc) to
     // absolute paths, or null to indicate absence.
     this._controlFileCache = Object.create(null);
@@ -232,17 +239,21 @@ class InputFile extends buildPluginModule.InputFile {
     return ! this.getPackageName();
   }
 
-  getSourceRoot() {
+  getSourceRoot(tolerant = false) {
     const sourceRoot = this._resourceSlot.packageSourceBatch.sourceRoot;
 
-    if (! _.isString(sourceRoot)) {
+    if (_.isString(sourceRoot)) {
+      return sourceRoot;
+    }
+
+    if (! tolerant) {
       const name = this.getPackageName();
       throw new Error(
         "Unknown source root for " + (
           name ? "package " + name : "app"));
     }
 
-    return sourceRoot;
+    return null;
   }
 
   getPathInPackage() {
@@ -278,6 +289,12 @@ class InputFile extends buildPluginModule.InputFile {
     return this.readAndWatchFileWithHash(path).contents;
   }
 
+  _stat(absPath) {
+    return _.has(this._statCache, absPath)
+      ? this._statCache[absPath]
+      : this._statCache[absPath] = optimisticStatOrNull(absPath);
+  }
+
   // Search ancestor directories for control files (e.g. package.json,
   // .babelrc), and return the absolute path of the first one found, or
   // null if the search failed.
@@ -287,16 +304,18 @@ class InputFile extends buildPluginModule.InputFile {
       return absPath;
     }
 
-    const sourceRoot = this._resourceSlot.packageSourceBatch.sourceRoot;
+    const sourceRoot = this.getSourceRoot(true);
     if (! _.isString(sourceRoot)) {
       return this._controlFileCache[basename] = null;
     }
 
-    let dir = files.pathDirname(this.getPathInPackage());
-    while (true) {
-      absPath = files.pathJoin(sourceRoot, dir, basename);
+    let dir = files.pathDirname(
+      files.pathJoin(sourceRoot, this.getPathInPackage()));
 
-      const stat = files.statOrNull(absPath);
+    while (true) {
+      absPath = files.pathJoin(dir, basename);
+
+      const stat = this._stat(absPath);
       if (stat && stat.isFile()) {
         return this._controlFileCache[basename] = absPath;
       }
@@ -306,6 +325,7 @@ class InputFile extends buildPluginModule.InputFile {
         return this._controlFileCache[basename] = null;
       }
 
+      if (dir === sourceRoot) break;
       let parentDir = files.pathDirname(dir);
       if (parentDir === dir) break;
       dir = parentDir;
@@ -328,31 +348,42 @@ class InputFile extends buildPluginModule.InputFile {
   }
 
   resolve(id, parentPath) {
-    const batch = this._resourceSlot.packageSourceBatch;
-
     parentPath = parentPath || files.pathJoin(
-      batch.sourceRoot,
+      this.getSourceRoot(),
       this.getPathInPackage()
     );
 
-    let resolved = this._resolveCacheLookup(id, parentPath);
-    if (resolved) {
-      return resolved;
+    const resId = this._resolveCacheLookup(id, parentPath);
+    if (resId) {
+      return resId;
     }
 
-    const parentStat = files.statOrNull(parentPath);
+    const parentStat = optimisticStatOrNull(parentPath);
     if (! parentStat ||
         ! parentStat.isFile()) {
       throw new Error("Not a file: " + parentPath);
     }
 
+    const batch = this._resourceSlot.packageSourceBatch;
     const resolver = batch.getResolver();
+    const resolved = resolver.resolve(id, parentPath);
 
-    return this._resolveCacheStore(
-      id, parentPath, resolver.resolve(id, parentPath).id);
+    if (resolved === "missing") {
+      const error = new Error("Cannot find module '" + id + "'");
+      error.code = "MODULE_NOT_FOUND";
+      throw error;
+    }
+
+    return this._resolveCacheStore(id, parentPath, resolved.id);
   }
 
   require(id, parentPath) {
+    return this._require(id, parentPath);
+  }
+
+  // This private helper method exists to prevent ambiguity between the
+  // module-global `require` function and the method name.
+  _require(id, parentPath) {
     return require(this.resolve(id, parentPath));
   }
 
@@ -695,7 +726,8 @@ class ResourceSlot {
       if (_.isString(options.data)) {
         options.data = new Buffer(options.data);
       } else {
-        throw new Error("'data' option to addAsset must be a Buffer or String.");
+        throw new Error("'data' option to addAsset must be a Buffer or " +
+                        "String: " + self.inputResource.path);
       }
     }
 
@@ -873,17 +905,12 @@ export class PackageSourceBatch {
       }
     });
 
-    return this._resolver = new Resolver({
+    return this._resolver = Resolver.getOrCreate({
+      caller: "PackageSourceBatch#getResolver",
       sourceRoot: this.sourceRoot,
       targetArch: this.processor.arch,
       extensions: this.importExtensions,
       nodeModulesPaths,
-      watchSet: this.unibuild.watchSet,
-      onMissing(id) {
-        const error = new Error("Cannot find module '" + id + "'");
-        error.code = "MODULE_NOT_FOUND";
-        throw error;
-      }
     });
   }
 
@@ -924,6 +951,7 @@ export class PackageSourceBatch {
 
       map.set(name, {
         files: inputFiles,
+        mainModule: _.find(inputFiles, file => file.mainModule) || null,
         importExtensions: batch.importExtensions,
       });
     });
@@ -947,9 +975,8 @@ export class PackageSourceBatch {
       map.forEach((info, name) => {
         if (! name) return;
 
-        let mainModule = _.find(info.files, file => file.mainModule);
-        mainModule = mainModule ?
-          `meteor/${name}/${mainModule.targetPath}` : false;
+        const mainModule = info.mainModule &&
+          `meteor/${name}/${info.mainModule.targetPath}`;
 
         meteorPackageInstalls.push(
           "install(" + JSON.stringify(name) +
@@ -1026,11 +1053,24 @@ export class PackageSourceBatch {
         let name = null;
 
         if (parts[0] === "meteor") {
+          let found = false;
+          name = parts[1];
+
           if (parts.length > 2) {
-            name = parts[1];
             parts[1] = ".";
             id = parts.slice(1).join("/");
+            found = true;
+
           } else {
+            const entry = map.get(name);
+            const mainModule = entry && entry.mainModule;
+            if (mainModule) {
+              id = "./" + mainModule.sourcePath;
+              found = true;
+            }
+          }
+
+          if (! found) {
             return;
           }
         }
@@ -1076,11 +1116,12 @@ export class PackageSourceBatch {
 
     scannerMap.forEach((scanner, name) => {
       const isApp = ! name;
+      const outputFiles = scanner.getOutputFiles();
 
       if (isApp) {
         const appFilesWithoutNodeModules = [];
 
-        scanner.getOutputFiles().forEach(file => {
+        outputFiles.forEach(file => {
           const parts = file.installPath.split("/");
           const nodeModulesIndex = parts.indexOf("node_modules");
 
@@ -1104,7 +1145,7 @@ export class PackageSourceBatch {
         map.get(null).files = appFilesWithoutNodeModules;
 
       } else {
-        map.get(name).files = scanner.getOutputFiles();
+        map.get(name).files = outputFiles;
       }
     });
 
@@ -1155,12 +1196,6 @@ export class PackageSourceBatch {
         const packageDir = parts[0];
         if (packageDir === "meteor") {
           // Don't print warnings for uninstalled Meteor packages.
-          return;
-        }
-
-        if (packageDir === "babel-runtime") {
-          // Don't print warnings for babel-runtime/helpers/* modules,
-          // since we provide most of those.
           return;
         }
 

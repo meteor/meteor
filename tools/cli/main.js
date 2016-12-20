@@ -292,6 +292,28 @@ require('./commands-cordova.js');
 require('./commands-aliases.js');
 
 ///////////////////////////////////////////////////////////////////////////////
+// Record all the top-level commands as JSON
+///////////////////////////////////////////////////////////////////////////////
+
+export const meteorCommandsJsonPath = files.pathJoin(
+  files.getDevBundle(), "bin", ".meteor-commands.json"
+);
+
+export function dumpMeteorCommands() {
+  const all = Object.create(null);
+  Object.keys(commands).forEach(name => all[name] = true);
+  const json = JSON.stringify(all, null, 2);
+  files.writeFile(meteorCommandsJsonPath, json + "\n");
+  return all;
+}
+
+if (files.inCheckout()) {
+  // If we're running Meteor from a checkout, dump the commands every
+  // time, so that the file remains up to date.
+  dumpMeteorCommands();
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // Long-form help
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -473,7 +495,23 @@ var springboard = function (rel, options) {
 
   // Strip off the "node" and "meteor.js" from argv and replace it with the
   // appropriate tools's meteor shell script.
-  var newArgv = process.argv.slice(2);
+  var newArgv = [];
+  const argc = process.argv.length;
+  for (var i = 2; i < argc; ++i) {
+    const arg = process.argv[i];
+    if (arg === "--unsafe-perm" ||
+        arg === "--allow-superuser") {
+      // Don't pass the --unsafe-perm or --allow-superuser flags to
+      // springboarded versions since they may not know how to use them,
+      // but set the METEOR_ALLOW_SUPERUSER environment variable in case
+      // the springboarded version needs it. See meteor/meteor#7959.
+      if (! _.has(process.env, "METEOR_ALLOW_SUPERUSER")) {
+        process.env.METEOR_ALLOW_SUPERUSER = "true";
+      }
+      continue;
+    }
+    newArgv.push(arg);
+  }
 
   if (_.has(options, 'releaseOverride')) {
     // We used to just append --release=<releaseOverride> to the arguments, and
@@ -594,7 +632,11 @@ Fiber(function () {
   // tight timetable for 1.0 and there is no advantage to doing it now
   // rather than later. #ImprovingCrossVersionOptionParsing
 
-  var isBoolean = { "--help": true };
+  var isBoolean = {
+    "--help": true,
+    "--unsafe-perm": true,
+    "--allow-superuser": true,
+  };
   var walkCommands = function (node) {
     _.each(node, function (value, key) {
       if (value instanceof Command) {
@@ -744,6 +786,45 @@ Fiber(function () {
 
     // It is a plain old argument!
     rawArgs.push(term);
+  }
+
+  if (_.has(rawOptions, "--allow-superuser") ||
+      _.has(rawOptions, "--unsafe-perm")) {
+    process.env.METEOR_ALLOW_SUPERUSER = "true";
+    delete rawOptions["--allow-superuser"];
+    delete rawOptions["--unsafe-perm"];
+  }
+
+  // Prevent running meteor as root on UNIX platforms.
+  if (process.getuid &&
+      process.getuid() === 0) {
+    const allowSuperuser = !! (
+      process.env.METEOR_ALLOW_SUPERUSER &&
+      JSON.parse(process.env.METEOR_ALLOW_SUPERUSER));
+
+    if (! allowSuperuser) {
+      // Meteor is running as root without METEOR_ALLOW_SUPERUSER, notice and stop.
+      Console.error("");
+      Console.error(
+        "You are attempting to run Meteor as the 'root' superuser.",
+        "If you are developing, this is almost certainly *not* what you want to do and will likely result in incorrect file permissions.",
+        "However, if you are running this command in a build process (CI, etc.), or you are absolutely sure you know what you are doing,",
+        "set the METEOR_ALLOW_SUPERUSER environment variable or pass --allow-superuser to proceed."
+      );
+    }
+
+    Console.info("");
+    Console.info(
+      "Even with METEOR_ALLOW_SUPERUSER or --allow-superuser, permissions in your app directory will be incorrect if you ever attempt to perform any Meteor tasks as a normal user.",
+      "If you need to fix your permissions, run the following command from the root of your project:"
+    );
+    Console.info("");
+    Console.info(Console.command("  sudo chown -Rh <username> .meteor/local"));
+    Console.info("");
+
+    if (! allowSuperuser) {
+      process.exit(1);
+    }
   }
 
   // Figure out if we're running in a directory that is part of a Meteor

@@ -2086,7 +2086,12 @@ Tinytest.add("minimongo - modify", function (test) {
     coll.update(query, mod);
     var actual = coll.findOne();
     delete actual._id;  // added by insert
-    test.equal(actual, expected, EJSON.stringify({input: doc, mod: mod}));
+
+    if (typeof expected === "function") {
+      expected(actual, EJSON.stringify({input: doc, mod: mod}));
+    } else {
+      test.equal(actual, expected, EJSON.stringify({input: doc, mod: mod}));
+    }
   };
   var modify = function (doc, mod, expected) {
     modifyWithQuery(doc, {}, mod, expected);
@@ -2234,6 +2239,53 @@ Tinytest.add("minimongo - modify", function (test) {
   modify({a: {b: 2}}, {$inc: {'a.b': 10}}, {a: {b: 12}});
   modify({a: {b: 2}}, {$inc: {'a.c': 10}}, {a: {b: 2, c: 10}});
   exception({}, {$inc: {_id: 1}});
+
+  // $currentDate
+  modify({}, {$currentDate: {a: true}}, (result, msg) => { test.instanceOf(result.a,Date,msg) });
+  modify({}, {$currentDate: {a: {$type: "date"}}}, (result, msg) => { test.instanceOf(result.a,Date,msg) });
+  exception({}, {$currentDate: {a: false}});
+  exception({}, {$currentDate: {a: {}}});
+  exception({}, {$currentDate: {a: {$type: "timestamp"}}});
+
+  // $min
+  modify({a: 1, b: 2}, {$min: {b: 1}}, {a: 1, b: 1});
+  modify({a: 1, b: 2}, {$min: {b: 3}}, {a: 1, b: 2});
+  modify({a: 1, b: 2}, {$min: {c: 10}}, {a: 1, b: 2, c: 10});
+  exception({a: 1}, {$min: {a: '10'}});
+  exception({a: 1}, {$min: {a: true}});
+  exception({a: 1}, {$min: {a: [10]}});
+  exception({a: '1'}, {$min: {a: 10}});
+  exception({a: [1]}, {$min: {a: 10}});
+  exception({a: {}}, {$min: {a: 10}});
+  exception({a: false}, {$min: {a: 10}});
+  exception({a: null}, {$min: {a: 10}});
+  modify({a: [1, 2]}, {$min: {'a.1': 1}}, {a: [1, 1]});
+  modify({a: [1, 2]}, {$min: {'a.1': 3}}, {a: [1, 2]});
+  modify({a: [1, 2]}, {$min: {'a.2': 10}}, {a: [1, 2, 10]});
+  modify({a: [1, 2]}, {$min: {'a.3': 10}}, {a: [1, 2, null, 10]});
+  modify({a: {b: 2}}, {$min: {'a.b': 1}}, {a: {b: 1}});
+  modify({a: {b: 2}}, {$min: {'a.c': 10}}, {a: {b: 2, c: 10}});
+  exception({}, {$min: {_id: 1}});
+
+  // $max
+  modify({a: 1, b: 2}, {$max: {b: 1}}, {a: 1, b: 2});
+  modify({a: 1, b: 2}, {$max: {b: 3}}, {a: 1, b: 3});
+  modify({a: 1, b: 2}, {$max: {c: 10}}, {a: 1, b: 2, c: 10});
+  exception({a: 1}, {$max: {a: '10'}});
+  exception({a: 1}, {$max: {a: true}});
+  exception({a: 1}, {$max: {a: [10]}});
+  exception({a: '1'}, {$max: {a: 10}});
+  exception({a: [1]}, {$max: {a: 10}});
+  exception({a: {}}, {$max: {a: 10}});
+  exception({a: false}, {$max: {a: 10}});
+  exception({a: null}, {$max: {a: 10}});
+  modify({a: [1, 2]}, {$max: {'a.1': 3}}, {a: [1, 3]});
+  modify({a: [1, 2]}, {$max: {'a.1': 1}}, {a: [1, 2]});
+  modify({a: [1, 2]}, {$max: {'a.2': 10}}, {a: [1, 2, 10]});
+  modify({a: [1, 2]}, {$max: {'a.3': 10}}, {a: [1, 2, null, 10]});
+  modify({a: {b: 2}}, {$max: {'a.b': 3}}, {a: {b: 3}});
+  modify({a: {b: 2}}, {$max: {'a.c': 10}}, {a: {b: 2, c: 10}});
+  exception({}, {$max: {_id: 1}});
 
   // $set
   modify({a: 1, b: 2}, {$set: {a: 10}}, {a: 10, b: 2});

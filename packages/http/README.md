@@ -1,4 +1,6 @@
 # http
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/http) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/http)
+***
 
 `HTTP` provides an HTTP request API on the client and server.  To use
 these functions, add the HTTP package to your project with `$ meteor add http`.

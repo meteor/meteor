@@ -12,9 +12,10 @@ var MONGO_LISTENING =
 function startRun(sandbox) {
   var run = sandbox.run();
   run.match("myapp");
-  run.match("proxy");
+  run.matchBeforeExit("Started proxy");
   run.tellMongo(MONGO_LISTENING);
-  run.match("MongoDB");
+  run.matchBeforeExit("Started MongoDB");
+  run.waitSecs(15);
   return run;
 };
 
@@ -114,6 +115,7 @@ selftest.define("compiler plugin caching - coffee", () => {
     // archMatching:'web'.  We'll see this more clearly when the next call later
     // is "#2" --- we didn't miss a call!
     // App prints this:
+    run.waitSecs(15);
     run.match("Hello world");
 
     // Check that the CSS is what we expect.
@@ -142,6 +144,7 @@ selftest.define("compiler plugin caching - coffee", () => {
     // preprocessor file in it. This should not require us to render anything.
     s.append("packages/local-pack/package.js", "\n// foo\n");
     cacheMatch('Ran (#2) on: []');
+    run.waitSecs(15);
     run.match("Hello world");
 
     function setVariable(variableName, value) {
@@ -204,6 +207,7 @@ selftest.define("compiler plugin caching - coffee", () => {
     cacheMatch('Loaded {}/top.' + extension);
     cacheMatch('Loaded {}/yet-another-root.' + extension);
     cacheMatch(`Ran (#1) on: ["/top.${ extension }"]`);
+    run.waitSecs(15);
     run.match('Hello world');
     checkCSS(expectedBorderStyles);
 
@@ -329,8 +333,9 @@ selftest.define("compiler plugins - compiler throws", () => {
   // XXX This is wrong! The path on disk is packages/local-plugin/plugin.js, but
   // at some point we switched to the servePath which is based on the *plugin*'s
   // "package" name.
-  run.matchErr('packages/compilePrintme/plugin.js:5:1: Error in my ' +
-               'registerCompiler callback!');
+  run.matchErr(
+    /packages\/compilePrintme_plugin\.js:\d+:\d+: Error in my registerCompiler callback!/
+  );
   run.expectExit(1);
 });
 

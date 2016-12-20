@@ -1,3 +1,7 @@
+# sha
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/sha) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/sha)
+***
+
 An implementation of the [SHA256](https://en.wikipedia.org/wiki/SHA-2) secure hash function, available in all environments.
 
 ## Usage

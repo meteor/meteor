@@ -1,4 +1,6 @@
 # appcache
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/appcache) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/appcache)
+***
 
 The `appcache` package, part of
 [Webapp](https://www.meteor.com/webapp), stores the static parts of a

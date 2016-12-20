@@ -302,8 +302,8 @@ _.extend(Mongo.Collection.prototype, {
    * @param {Boolean} options.reactive (Client only) Default `true`; pass `false` to disable reactivity
    * @param {Function} options.transform Overrides `transform` on the  [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation.
    * @param {Boolean} options.disableOplog (Server only) Pass true to disable oplog-tailing on this query. This affects the way server processes calls to `observe` on this query. Disabling the oplog can be useful when working with data that updates in large batches.
-   * @param {Number} options.pollingIntervalMs (Server only) How often to poll this query when observing on the server. In milliseconds. Defaults to 10 seconds.
-   * @param {Number} options.pollingThrottleMs (Server only) Minimum time to allow between re-polling. Increasing this will save CPU and mongo load at the expense of slower updates to users. Decreasing this is not recommended. In milliseconds. Defaults to 50 milliseconds.
+   * @param {Number} options.pollingIntervalMs (Server only) When oplog is disabled (through the use of `disableOplog` or when otherwise not available), the frequency (in milliseconds) of how often to poll this query when observing on the server. Defaults to 10000ms (10 seconds).
+   * @param {Number} options.pollingThrottleMs (Server only) When oplog is disabled (through the use of `disableOplog` or when otherwise not available), the minimum time (in milliseconds) to allow between re-polling when observing on the server. Increasing this will save CPU and mongo load at the expense of slower updates to users. Decreasing this is not recommended. Defaults to 50ms.
    * @returns {Mongo.Cursor}
    */
   find: function (/* selector, options */) {
@@ -704,7 +704,7 @@ Mongo.Collection.prototype._createCappedCollection = function (byteSize, maxDocu
 };
 
 /**
- * @summary Returns the [`Collection`](http://mongodb.github.io/node-mongodb-native/1.4/api-generated/collection.html) object corresponding to this collection from the [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
+ * @summary Returns the [`Collection`](http://mongodb.github.io/node-mongodb-native/2.2/api/Collection.html) object corresponding to this collection from the [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
  * @locus Server
  */
 Mongo.Collection.prototype.rawCollection = function () {
@@ -716,7 +716,7 @@ Mongo.Collection.prototype.rawCollection = function () {
 };
 
 /**
- * @summary Returns the [`Db`](http://mongodb.github.io/node-mongodb-native/1.4/api-generated/db.html) object corresponding to this collection's database connection from the [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
+ * @summary Returns the [`Db`](http://mongodb.github.io/node-mongodb-native/2.2/api/Db.html) object corresponding to this collection's database connection from the [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
  * @locus Server
  */
 Mongo.Collection.prototype.rawDatabase = function () {

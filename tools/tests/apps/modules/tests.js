@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 import moment from "moment";
 import shared from "./imports/shared";
-import {Meteor as ImportedMeteor} from "meteor/meteor";
+import { Meteor as ImportedMeteor } from "meteor/meteor";
 
 describe("app modules", () => {
   it("can be imported using absolute identifiers", () => {
@@ -166,6 +166,20 @@ describe("css modules", () => {
   it("should be importable by a package", () => {
     assert.strictEqual(
       $(".pkg-lazy-css.imported").css("padding"),
+      "0px"
+    );
+
+    assert.strictEqual(
+      $(".pkg-lazy-css.not-imported").css("padding"),
+      "0px"
+    );
+
+    // Since client.js is a lazy main module, its side effects don't
+    // happen until we import it for the first time (here).
+    require("meteor/modules-test-package/client.js");
+
+    assert.strictEqual(
+      $(".pkg-lazy-css.imported").css("padding"),
       "20px"
     );
 
@@ -293,8 +307,18 @@ describe("Meteor packages", () => {
   });
 
   it("can be local", () => {
-    assert.strictEqual(ModulesTestPackage, "loaded");
+    // ModulesTestPackage is only api.export-ed on the server.
+    if (Meteor.isServer) {
+      assert.strictEqual(ModulesTestPackage, "loaded");
+    }
+    if (Meteor.isClient) {
+      assert.strictEqual(typeof ModulesTestPackage, "undefined");
+    }
+
+    // But it is importable by both client and server.
     const mtp = require("meteor/modules-test-package");
+    assert.strictEqual(mtp.ModulesTestPackage, "loaded");
+
     assert.strictEqual(mtp.where, Meteor.isServer ? "server" : "client");
   });
 

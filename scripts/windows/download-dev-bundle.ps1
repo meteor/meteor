@@ -9,11 +9,10 @@ $CHECKOUT_DIR = split-path -parent $scripts_path
 $BUNDLE_VERSION = select-string -Path ($CHECKOUT_DIR + "\meteor") -Pattern 'BUNDLE_VERSION=(\S+)'  | % { $_.Matches[0].Groups[1].Value } | select-object -First 1
 $BUNDLE_VERSION = $BUNDLE_VERSION.Trim()
 
-echo "Will get you a dev_bundle for $PLATFORM version $BUNDLE_VERSION"
+Write-Host "Will get you a dev_bundle for $PLATFORM version $BUNDLE_VERSION"
 
 $TARBALL="dev_bundle_${PLATFORM}_${BUNDLE_VERSION}.tar.gz"
 
-echo "Going to download the dependency kit from the Internet"
 $ErrorActionPreference = "Stop"
 
 # duplicated in top-level meteor script:
@@ -29,10 +28,18 @@ if ("$env:USE_TEST_DEV_BUNDLE_SERVER" -ne "") {
 $devbundle_link = $DEV_BUNDLE_URL_ROOT + $TARBALL
 $devbundle_zip = $CHECKOUT_DIR + "\" + $TARBALL
 
-$webclient = New-Object System.Net.WebClient
-$webclient.DownloadFile($devbundle_link, $devbundle_zip)
+if (Test-Path $devbundle_zip) {
+  Write-Host "Skipping download and installing kit from $devbundle_zip"
+} else {
+  Write-Host "Going to download the dependency kit from the Internet"
 
-echo "... downloaded"
+  $webclient = New-Object System.Net.WebClient
+  $webclient.DownloadFile($devbundle_link, $devbundle_zip)
+
+  Write-Host "... downloaded"
+}
+
+Write-Host "Extracting $TARBALL to the dev_bundle directory"
 
 cmd /C "7z.exe x $devbundle_zip -so | 7z.exe x -aoa -si -ttar -o$CHECKOUT_DIR\dev_bundle_XXX" | out-null
 
@@ -42,5 +49,14 @@ $target_path = $CHECKOUT_DIR + "\dev_bundle"
 Move-Item  $downloaded_path $target_path
 
 Remove-Item -Recurse -Force $downloaded_tmp
-Remove-Item -Force $devbundle_zip
 
+if ("$env:SAVE_DEV_BUNDLE_TARBALL" -ne "") {
+  Write-Host "Saving the dev_bundle tarball since " -NoNewLine
+  Write-Host "'SAVE_DEV_BUNDLE_TARBALL' is set in your environment. " -NoNewLine
+  Write-Host "Remember, these can get quite large!"
+} else {
+  Write-Host "Removing dev_bundle tarball. You can preserve this in " -NoNewLine
+  Write-Host "the future by setting 'SAVE_DEV_BUNDLE_TARBALL' in " -NoNewLine
+  Write-Host "your environment."
+  Remove-Item -Force $devbundle_zip
+}

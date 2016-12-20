@@ -64,16 +64,13 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       // compilation, give it the following file extension: .es5.js
       ! excludedFileExtensionPattern.test(inputFilePath)) {
 
-    var targetCouldBeInternetExplorer8 =
-      inputFile.getArch() === "web.browser";
-
     var extraFeatures = Object.assign({}, this.extraFeatures);
 
     if (! extraFeatures.hasOwnProperty("jscript")) {
       // Perform some additional transformations to improve compatibility
       // in older browsers (e.g. wrapping named function expressions, per
       // http://kiro.me/blog/nfe_dilemma.html).
-      extraFeatures.jscript = targetCouldBeInternetExplorer8;
+      extraFeatures.jscript = true;
     }
 
     var babelOptions = Babel.getDefaultOptions(extraFeatures);

@@ -76,9 +76,15 @@ function registerNodeModules(name, node_modules) {
       parts.forEach(function (part, i) {
         if (part === "npm") {
           addByParts(parts.slice(i + 1), node_modules);
+
         } else if (part === ".npm") {
+          if (name) {
+            parts.unshift("node_modules", "meteor", name);
+          }
+
           if (parts[i + 1] === "package") {
             addByParts(parts.slice(i + 2), node_modules);
+
           } else if (parts[i + 1] === "plugin") {
             assert.strictEqual(parts[i + 2], name);
             addByParts(parts.slice(i + 3), node_modules);
@@ -100,12 +106,10 @@ function registerNodeModules(name, node_modules) {
     assert.notEqual(parts[0], "");
     assert.notEqual(parts[0], "..");
 
-    if (name) {
-      parts.unshift("node_modules", "meteor", name);
-    }
-
     // Ensure a leading / character.
-    parts.unshift("");
+    if (parts[0].length > 0) {
+      parts.unshift("");
+    }
 
     nodeModulesRegistry[parts.join("/")] = absPath;
   }

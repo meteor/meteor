@@ -1,12 +1,11 @@
-var crypto = Npm.require("crypto");
-// XXX We hope to be able to use the `crypto` module exclusively when
-// Node supports GCM in version 0.11.
-var gcm = NpmModuleNodeAesGcm;
-
-OAuthEncryption = {};
-
+var crypto = require("crypto");
 var gcmKey = null;
+var OAuthEncryption = exports.OAuthEncryption = {};
+var objToStr = Object.prototype.toString;
 
+function isString(value) {
+  return objToStr.call(value) === "[object String]";
+}
 
 // Node leniently ignores non-base64 characters when parsing a base64
 // string, but we want to provide a more informative error message if
@@ -17,7 +16,7 @@ var gcmKey = null;
 // Exported for the convenience of tests.
 //
 OAuthEncryption._isBase64 = function (str) {
-  return _.isString(str) && /^[A-Za-z0-9\+\/]*\={0,2}$/.test(str);
+  return isString(str) && /^[A-Za-z0-9\+\/]*\={0,2}$/.test(str);
 };
 
 
@@ -54,9 +53,10 @@ OAuthEncryption.loadKey = function (key) {
 // credentials such as access tokens from being used by a different
 // user.
 //
-// We would actually like the user id to be AAD (additional
-// authenticated data), but the node crypto API does not currently have
-// support for specifying AAD.
+// We might someday like the user id to be AAD (additional authenticated
+// data), but the Node 0.10.x crypto API did not support specifying AAD,
+// and it's not clear that we want to incur the compatibility issues of
+// relying on that feature, even though it's now supported by Node 4.
 //
 OAuthEncryption.seal = function (data, userId) {
   if (! gcmKey) {
@@ -67,13 +67,19 @@ OAuthEncryption.seal = function (data, userId) {
     data: data,
     userId: userId
   }));
+
   var iv = crypto.randomBytes(12);
-  var result = gcm.encrypt(gcmKey, iv, plaintext, new Buffer([]) /* aad */);
+  var cipher = crypto.createCipheriv("aes-128-gcm", gcmKey, iv);
+  cipher.setAAD(new Buffer([]));
+  var chunks = [cipher.update(plaintext)];
+  chunks.push(cipher.final());
+  var encrypted = Buffer.concat(chunks);
+
   return {
     iv: iv.toString("base64"),
-    ciphertext: result.ciphertext.toString("base64"),
+    ciphertext: encrypted.toString("base64"),
     algorithm: "aes-128-gcm",
-    authTag: result.auth_tag.toString("base64")
+    authTag: cipher.getAuthTag().toString("base64")
   };
 };
 
@@ -96,23 +102,24 @@ OAuthEncryption.open = function (ciphertext, userId) {
       throw new Error();
     }
 
-    var result = gcm.decrypt(
+    var decipher = crypto.createDecipheriv(
+      "aes-128-gcm",
       gcmKey,
-      new Buffer(ciphertext.iv, "base64"),
-      new Buffer(ciphertext.ciphertext, "base64"),
-      new Buffer([]), /* aad */
-      new Buffer(ciphertext.authTag, "base64")
+      new Buffer(ciphertext.iv, "base64")
     );
 
-    if (! result.auth_ok) {
-      throw new Error();
-    }
+    decipher.setAAD(new Buffer([]));
+    decipher.setAuthTag(new Buffer(ciphertext.authTag, "base64"));
+    var chunks = [decipher.update(
+      new Buffer(ciphertext.ciphertext, "base64"))];
+    chunks.push(decipher.final());
+    var plaintext = Buffer.concat(chunks).toString("utf8");
 
     var err;
     var data;
 
     try {
-      data = EJSON.parse(result.plaintext.toString());
+      data = EJSON.parse(plaintext);
     } catch (e) {
       err = new Error();
     }
@@ -137,7 +144,7 @@ OAuthEncryption.isSealed = function (maybeCipherText) {
     OAuthEncryption._isBase64(maybeCipherText.iv) &&
     OAuthEncryption._isBase64(maybeCipherText.ciphertext) &&
     OAuthEncryption._isBase64(maybeCipherText.authTag) &&
-    _.isString(maybeCipherText.algorithm);
+    isString(maybeCipherText.algorithm);
 };
 
 

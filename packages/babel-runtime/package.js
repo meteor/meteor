@@ -1,12 +1,11 @@
 Package.describe({
   name: "babel-runtime",
   summary: "Runtime support for output of Babel transpiler",
-  version: '0.1.10',
+  version: '1.0.1',
   documentation: 'README.md'
 });
 
 Npm.depends({
-  "regenerator-runtime": "0.9.5",
   "meteor-babel-helpers": "0.0.3"
 });
 
@@ -17,6 +16,6 @@ Package.onUse(function (api) {
   api.use("es5-shim", { weak: true });
   api.use("modules");
   api.use("promise"); // Needed by Regenerator.
-  api.addFiles("babel-runtime.js");
+  api.mainModule("babel-runtime.js");
   api.export("meteorBabelHelpers");
 });

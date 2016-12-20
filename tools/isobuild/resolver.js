@@ -5,17 +5,24 @@ import {
   has,
 } from "underscore";
 
-import { readAndWatchFileWithHash } from "../fs/watch.js";
+import { sha1 } from "../fs/watch.js";
 import { matches as archMatches } from "../utils/archinfo.js";
 import {
   pathJoin,
   pathRelative,
   pathNormalize,
   pathDirname,
-  statOrNull as realStatOrNull,
   convertToOSPath,
   convertToPosixPath,
 } from "../fs/files.js";
+
+import LRU from "lru-cache";
+
+import { wrap } from "optimism";
+import {
+  optimisticStatOrNull,
+  optimisticReadJsonOrNull,
+} from "../fs/optimistic.js";
 
 const nativeModulesMap = Object.create(null);
 const nativeNames = Object.keys(process.binding("natives"));
@@ -38,29 +45,40 @@ nativeNames.forEach(id => {
   nativeModulesMap[id] =  "meteor-node-stubs/deps/" + id;
 });
 
+const resolverCache = new LRU({
+  max: Math.pow(2, 12)
+});
+
 export default class Resolver {
+  static getOrCreate(options) {
+    const key = JSON.stringify(options);
+    let resolver = resolverCache.get(key);
+    if (! resolver) {
+      resolverCache.set(key, resolver = new Resolver(options));
+    }
+    return resolver;
+  }
+
   constructor({
     sourceRoot,
     targetArch,
     extensions = [".js", ".json"],
     nodeModulesPaths = [],
-    watchSet = null,
-    onPackageJson,
-    onMissing,
-    statOrNull = realStatOrNull,
   }) {
     this.sourceRoot = sourceRoot;
     this.extensions = extensions;
     this.targetArch = targetArch;
     this.nodeModulesPaths = nodeModulesPaths;
-    this.watchSet = watchSet;
-    this.onPackageJson = onPackageJson;
-    this.onMissing = onMissing;
-    this.statOrNull = statOrNull;
+    this.statOrNull = optimisticStatOrNull;
 
-    this._resolveCache = new Map;
-    this._statCache = new Map;
-    this._pkgJsonCache = new Map;
+    this.resolve = wrap((id, absParentPath) => {
+      return this._resolve(id, absParentPath);
+    }, {
+      makeCacheKey(id, absParentPath) {
+        // Only the directory of the absParentPath matters for caching.
+        return JSON.stringify([id, pathDirname(absParentPath)]);
+      }
+    });
   }
 
   static isTopLevel(id) {
@@ -78,21 +96,20 @@ export default class Resolver {
   // Resolve the given module identifier to an object { path, stat } or
   // null, relative to an absolute parent path. The _seenDirPaths
   // parameter is for internal use only and should be ommitted.
-  resolve(id, absParentPath, _seenDirPaths) {
-    if (! this._resolveCache.has(id)) {
-      this._resolveCache.set(id, Object.create(null));
-    }
-
-    const byParentDir = this._resolveCache.get(id);
-    const absParentDir = pathDirname(absParentPath);
-    if (has(byParentDir, absParentDir)) {
-      return byParentDir[absParentDir];
-    }
-
+  _resolve(id, absParentPath, _seenDirPaths) {
     let resolved =
       this._resolveAbsolute(id, absParentPath) ||
       this._resolveRelative(id, absParentPath) ||
       this._resolveNodeModule(id, absParentPath);
+
+    if (typeof resolved === "string") {
+      // The _resolveNodeModule method can return "missing" to indicate
+      // that the ImportScanner should look elsewhere for this module,
+      // such as in the app node_modules directory.
+      return resolved;
+    }
+
+    let packageJsonMap = null;
 
     while (resolved && resolved.stat.isDirectory()) {
       let dirPath = resolved.path;
@@ -106,8 +123,17 @@ export default class Resolver {
         resolved = this._resolvePkgJsonMain(dirPath, _seenDirPaths);
         if (resolved) {
           // The _resolvePkgJsonMain call above may have returned a
-          // directory, so continue the loop to make sure we fully resolve
-          // it to a non-directory.
+          // directory, so first merge resolved.packageJsonMap into
+          // packageJsonMap so that we don't forget the package.json we
+          // just resolved, then continue the loop to make sure we fully
+          // resolve the "main" module identifier to a non-directory.
+          // Technically this could involve even more package.json files,
+          // but in practice the "main" property will almost always name a
+          // directory containing an index.js file.
+          Object.assign(
+            packageJsonMap || (packageJsonMap = Object.create(null)),
+            resolved.packageJsonMap,
+          );
           continue;
         }
       }
@@ -123,21 +149,21 @@ export default class Resolver {
     }
 
     if (resolved) {
+      if (packageJsonMap) {
+        resolved.packageJsonMap = packageJsonMap;
+      }
+
       resolved.id = convertToPosixPath(
         convertToOSPath(resolved.path),
         true
       );
     }
 
-    return byParentDir[absParentDir] = resolved;
+    return resolved;
   }
 
   _joinAndStat(...joinArgs) {
     const joined = pathJoin(...joinArgs);
-    if (this._statCache.has(joined)) {
-      return this._statCache.get(joined);
-    }
-
     const path = pathNormalize(joined);
     const exactStat = this.statOrNull(path);
     const exactResult = exactStat && { path, stat: exactStat };
@@ -162,7 +188,6 @@ export default class Resolver {
       result = exactResult;
     }
 
-    this._statCache.set(joined, result);
     return result;
   }
 
@@ -178,7 +203,9 @@ export default class Resolver {
   }
 
   _resolveNodeModule(id, absParentPath) {
-    let resolved = null;
+    if (! Resolver.isTopLevel(id)) {
+      return null;
+    }
 
     if (Resolver.isNative(id) &&
         archMatches(this.targetArch, "os")) {
@@ -207,6 +234,8 @@ export default class Resolver {
         return sourceRoot = pathDirname(path);
       }
     });
+
+    let resolved = null;
 
     if (sourceRoot) {
       let dir = absParentPath; // It's ok for absParentPath to be a directory!
@@ -238,10 +267,6 @@ export default class Resolver {
       });
     }
 
-    if (! resolved && isFunction(this.onMissing)) {
-      return this.onMissing(id, absParentPath);
-    }
-
     // If the dependency is still not resolved, it might be handled by the
     // fallback function defined in meteor/packages/modules/modules.js, or
     // it might be imported in code that will never run on this platform,
@@ -250,32 +275,12 @@ export default class Resolver {
     // dependencies here, we just don't have enough information to make
     // that determination until the code actually runs.
 
-    return resolved;
-  }
-
-  _readPkgJson(path) {
-    if (this._pkgJsonCache.has(path)) {
-      return this._pkgJsonCache.get(path);
-    }
-
-    let result = null;
-    try {
-      result = JSON.parse(
-        readAndWatchFileWithHash(this.watchSet, path).contents);
-    } catch (e) {
-      if (! (e instanceof SyntaxError ||
-             e.code === "ENOENT")) {
-        throw e;
-      }
-    }
-
-    this._pkgJsonCache.set(path, result);
-    return result;
+    return resolved || "missing";
   }
 
   _resolvePkgJsonMain(dirPath, _seenDirPaths) {
     const pkgJsonPath = pathJoin(dirPath, "package.json");
-    const pkg = this._readPkgJson(pkgJsonPath);
+    const pkg = optimisticReadJsonOrNull(pkgJsonPath);
     if (! pkg) {
       return null;
     }
@@ -299,27 +304,23 @@ export default class Resolver {
 
     if (isString(main)) {
       pkgSubset.main = main;
-    }
 
-    if (isFunction(this.onPackageJson)) {
-      this.onPackageJson(pkgJsonPath, pkgSubset);
-    }
-
-    if (isString(main)) {
       // The "main" field of package.json does not have to begin with ./
       // to be considered relative, so first we try simply appending it to
       // the directory path before falling back to a full resolve, which
       // might return a package from a node_modules directory.
-      return this._joinAndStat(dirPath, main) ||
-        // The _tryToResolveImportedPath method takes a file object as its
-        // first parameter, but only the .sourcePath and .deps properties
-        // are ever used, so we can get away with passing a fake file
-        // object with only those properties.
-        this.resolve(
-          main,
-          pkgJsonPath,
-          _seenDirPaths
-        );
+      const resolved = this._joinAndStat(dirPath, main) ||
+        this._resolve(main, pkgJsonPath, _seenDirPaths);
+
+      if (resolved) {
+        if (! resolved.packageJsonMap) {
+          resolved.packageJsonMap = Object.create(null);
+        }
+
+        resolved.packageJsonMap[pkgJsonPath] = pkgSubset;
+
+        return resolved;
+      }
     }
 
     return null;

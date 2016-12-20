@@ -94,7 +94,7 @@ ObserveSequence = {
 
         if (!seq) {
           seqArray = seqChangedToEmpty(lastSeqArray, callbacks);
-        } else if (seq instanceof Array) {
+        } else if (_.isArray(seq)) {
           seqArray = seqChangedToArray(lastSeqArray, seq, callbacks);
         } else if (isStoreCursor(seq)) {
           var result /* [seqArray, activeObserveHandle] */ =
@@ -126,7 +126,7 @@ ObserveSequence = {
   fetch: function (seq) {
     if (!seq) {
       return [];
-    } else if (seq instanceof Array) {
+    } else if (_.isArray(seq)) {
       return seq;
     } else if (isStoreCursor(seq)) {
       return seq.fetch();
@@ -289,7 +289,8 @@ seqChangedToArray = function (lastSeqArray, array, callbacks) {
       id = "-" + item;
     } else if (typeof item === 'number' ||
                typeof item === 'boolean' ||
-               item === undefined) {
+               item === undefined ||
+               item === null) {
       id = item;
     } else if (typeof item === 'object') {
       id = (item && ('_id' in item)) ? item._id : index;
@@ -300,7 +301,7 @@ seqChangedToArray = function (lastSeqArray, array, callbacks) {
 
     var idString = idStringify(id);
     if (idsUsed[idString]) {
-      if (typeof item === 'object' && '_id' in item)
+      if (item && typeof item === 'object' && '_id' in item)
         warn("duplicate id " + id + " in", array);
       id = Random.id();
     } else {

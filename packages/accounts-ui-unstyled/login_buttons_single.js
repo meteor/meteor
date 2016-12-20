@@ -8,7 +8,15 @@ var loginResultCallback = function (serviceName, err) {
   } else if (err instanceof Accounts.LoginCancelledError) {
     // do nothing
   } else if (err instanceof ServiceConfiguration.ConfigError) {
-    loginButtonsSession.configureService(serviceName);
+    if (Template._configureLoginServiceDialog.templateForService(serviceName)) {
+      loginButtonsSession.configureService(serviceName);
+    } else {
+      loginButtonsSession.errorMessage(
+        "No configuration for " + capitalize(serviceName) + ".\n" +
+        "Use `ServiceConfiguration` to configure it or " +
+        "install the `" +serviceName + "-config-ui` package."
+      );
+    }
   } else {
     loginButtonsSession.errorMessage(err.reason || "Unknown error");
   }
@@ -55,6 +63,11 @@ Template._loginButtonsLoggedOutSingleLoginButton.events({
 });
 
 Template._loginButtonsLoggedOutSingleLoginButton.helpers({
+  // not configured and has no config UI
+  cannotConfigure: function() {
+    return !ServiceConfiguration.configurations.findOne({service: this.name})
+      && !Template._configureLoginServiceDialog.templateForService(this.name);
+  },
   configured: function () {
     return !!ServiceConfiguration.configurations.findOne({service: this.name});
   },

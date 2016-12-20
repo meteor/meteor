@@ -69,6 +69,11 @@ var convertToStandardLineEndings = function (fileContents) {
                      .replace(new RegExp("\r", "g"), "\n");
 };
 
+// Return the Unicode Normalization Form of the passed in path string, using
+// "Normalization Form Canonical Composition"
+const unicodeNormalizePath = (path) => {
+  return (path) ? path.normalize('NFC') : path;
+};
 
 // wrappings for path functions that always run as they were on unix (using
 // forward slashes)
@@ -117,3 +122,4 @@ files.convertToPosixPath = toPosixPath;
 
 files.convertToStandardLineEndings = convertToStandardLineEndings;
 files.convertToOSLineEndings = convertToOSLineEndings;
+files.unicodeNormalizePath = unicodeNormalizePath;

@@ -256,9 +256,10 @@ var runCommandOptions = {
     'mobile-port': { type: String },
     'app-port': { type: String },
     'debug-port': { type: String },
+    'no-release-check': { type: Boolean },
     production: { type: Boolean },
     'raw-logs': { type: Boolean },
-    settings: { type: String },
+    settings: { type: String, short: "s" },
     verbose: { type: Boolean, short: "v" },
     // With --once, meteor does not re-run the project if it crashes
     // and does not monitor for file changes. Intentionally
@@ -328,7 +329,7 @@ function doRunCommand(options) {
   if (options.production) {
     Console.warn(
       "Warning: The --production flag should only be used to simulate production " +
-      "bundling for testing purposes. Use meteor build to create a bundle for " + 
+      "bundling for testing purposes. Use meteor build to create a bundle for " +
       "production deployment. See: https://guide.meteor.com/deployment.html"
     );
   }
@@ -374,6 +375,7 @@ function doRunCommand(options) {
     oplogUrl: process.env.MONGO_OPLOG_URL,
     mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
     once: options.once,
+    noReleaseCheck: options['no-release-check'] || process.env.METEOR_NO_RELEASE_CHECK,
     cordovaRunner: cordovaRunner
   });
 }
@@ -431,7 +433,9 @@ main.registerCommand({
   options: {
     list: { type: Boolean },
     example: { type: String },
-    package: { type: Boolean }
+    package: { type: Boolean },
+    full: { type: Boolean },
+    bare: { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -574,7 +578,7 @@ main.registerCommand({
 
     Console.info();
     Console.info("To create an example, simply", Console.command("git clone"),
-      "the relevant repository and branch (run", 
+      "the relevant repository and branch (run",
       Console.command("'meteor create --example <name>'"),
       " to see the full command).");
     return 0;
@@ -674,7 +678,16 @@ main.registerCommand({
     toIgnore.push(/(\.html|\.js|\.css)/)
   }
 
-  files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets', 'skel'), appPath, {
+  let skelName = 'skel';
+
+  if(options.bare){
+    skelName += '-bare';
+  }
+  else if(options.full){
+    skelName += '-full';
+  }
+
+  files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets', skelName), appPath, {
     transformFilename: function (f) {
       return transform(f);
     },
@@ -731,6 +744,8 @@ main.registerCommand({
   // the packages (or maybe an unpredictable subset based on what happens to be
   // in the template's versions file).
 
+  require("./default-npm-deps.js").install(appPath);
+
   var appNameToDisplay = appPathAsEntered === "." ?
     "current directory" : `'${appPathAsEntered}'`;
 
@@ -757,6 +772,11 @@ main.registerCommand({
   }
 
   Console.info(
+    Console.command("meteor npm install"),
+    Console.options({ indent: 2 }),
+  );
+
+  Console.info(
     Console.command("meteor"), Console.options({ indent: 2 }));
 
   Console.info("");
@@ -764,6 +784,15 @@ main.registerCommand({
   Console.info(
     Console.url("https://www.meteor.com/learn"),
       Console.options({ indent: 2 }));
+
+  if (!options.full && !options.bare){
+    // Notice people about --bare and --full
+    const bareOptionNotice = 'meteor create --bare to create an empty app.';
+    const fullOptionNotice = 'meteor create --full to create a scaffolded app.';
+
+    Console.info("");
+    Console.info(bareOptionNotice + '\n' + fullOptionNotice);
+  }
 
   Console.info("");
 });
@@ -785,6 +814,10 @@ var buildCommands = {
     server: { type: String },
     // XXX COMPAT WITH 0.9.2.2
     "mobile-port": { type: String },
+    // Indicates whether these build is running headless, e.g. in a
+    // continuous integration building environment, where visual niceties
+    // like progress bars and spinners are unimportant.
+    headless: { type: Boolean },
     verbose: { type: Boolean, short: "v" },
     'allow-incompatible-update': { type: Boolean }
   },
@@ -816,6 +849,11 @@ main.registerCommand(_.extend({ name: 'bundle', hidden: true
 
 var buildCommand = function (options) {
   Console.setVerbose(!!options.verbose);
+  if (options.headless) {
+    // There's no point in spinning the spinner when we're running
+    // automated builds.
+    Console.setHeadless(true);
+  }
   // XXX output, to stderr, the name of the file written to (for human
   // comfort, especially since we might change the name)
 
@@ -972,18 +1010,28 @@ ${Console.command("meteor build ../output")}`,
           { title: `building Cordova app for \
 ${cordova.displayNameForPlatform(platform)}` }, () => {
             let buildOptions = { release: !options.debug };
-            
+
             const buildPath = files.pathJoin(
               projectContext.getProjectLocalDirectory('cordova-build'),
               'platforms', platform);
             const platformOutputPath = files.pathJoin(outputPath, platform);
 
+            // Prepare the project once again to ensure that it is up to date
+            // with current build options.  For example, --server=example.com
+            // is utilized in the Cordova builder to write boilerplate HTML and
+            // various config.xml settings (e.g. access policies)
+            if (platform === 'ios') {
+              cordovaProject.prepareForPlatform(platform, buildOptions);
+            } else if (platform === 'android') {
+              cordovaProject.buildForPlatform(platform, buildOptions);
+            }
+
+            // Once prepared, copy the bundle to the final location.
             files.cp_r(buildPath,
               files.pathJoin(platformOutputPath, 'project'));
 
+            // Make some platform-specific adjustments to the resulting build.
             if (platform === 'ios') {
-              cordovaProject.prepareForPlatform(platform, buildOptions);
-
               files.writeFile(
                 files.pathJoin(platformOutputPath, 'README'),
 `This is an auto-generated XCode project for your iOS application.
@@ -992,8 +1040,6 @@ Instructions for publishing your iOS app to App Store can be found at:
 https://github.com/meteor/meteor/wiki/How-to-submit-your-iOS-app-to-App-Store
 `, "utf8");
             } else if (platform === 'android') {
-              cordovaProject.buildForPlatform(platform, buildOptions);
-
               const apkPath = files.pathJoin(buildPath, 'build/outputs/apk',
                 options.debug ? 'android-debug.apk' : 'android-release-unsigned.apk')
 
@@ -1197,7 +1243,7 @@ main.registerCommand({
       Console.command("meteor deploy appname"), Console.options({ indent: 2 }));
     return 1;
   }
-  
+
   if (process.env.MONGO_URL) {
     Console.info("As a precaution, meteor reset only clears the local database that is " +
                  "provided by meteor run for development. The database specified with " +
@@ -1234,7 +1280,7 @@ main.registerCommand({
   options: {
     'delete': { type: Boolean, short: 'D' },
     debug: { type: Boolean },
-    settings: { type: String },
+    settings: { type: String, short: 's' },
     // No longer supported, but we still parse it out so that we can
     // print a custom error message.
     password: { type: String },
@@ -1430,9 +1476,10 @@ testCommandOptions = {
     // XXX COMPAT WITH 0.9.2.2
     'mobile-port': { type: String },
     'debug-port': { type: String },
+    'no-release-check': { type: Boolean },
     deploy: { type: String },
     production: { type: Boolean },
-    settings: { type: String },
+    settings: { type: String, short: 's' },
     // Indicates whether these self-tests are running headless, e.g. in a
     // continuous integration testing environment, where visual niceties
     // like progress bars and spinners are unimportant.
@@ -1554,6 +1601,11 @@ function doTestCommand(options) {
     projectContextOptions.projectDir = testRunnerAppDir;
     projectContextOptions.projectDirForLocalPackages = options.appDir;
 
+    require("./default-npm-deps.js").install(testRunnerAppDir);
+    if (buildmessage.jobHasMessages()) {
+      return;
+    }
+
     // Find any packages mentioned by a path instead of a package name. We will
     // load them explicitly into the catalog.
     var packagesByPath = _.filter(options.args, function (p) {
@@ -1628,7 +1680,7 @@ function doTestCommand(options) {
 
     global.testCommandMetadata.isAppTest = options['full-app'];
     global.testCommandMetadata.isTest = !global.testCommandMetadata.isAppTest;
-    
+
     projectContextOptions.projectDir = options.appDir;
     projectContextOptions.projectLocalDir = files.pathJoin(testRunnerAppDir, '.meteor', 'local');
 
@@ -1657,7 +1709,8 @@ function doTestCommand(options) {
     copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'bundler-cache');
     copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'isopacks');
     copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'plugin-cache');
-    
+    copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'shell');
+
     projectContext = new projectContextModule.ProjectContext(projectContextOptions);
 
     main.captureAndExit("=> Errors while setting up tests:", function () {
@@ -1759,7 +1812,7 @@ var runTestAppForPackages = function (projectContext, options) {
     minifyMode: options.production ? 'production' : 'development'
   };
   buildOptions.buildMode = "test";
-  
+
   if (options.deploy) {
     // Run the constraint solver and build local packages.
     main.captureAndExit("=> Errors while initializing project:", function () {
@@ -1793,6 +1846,7 @@ var runTestAppForPackages = function (projectContext, options) {
       oplogUrl: process.env.MONGO_OPLOG_URL,
       mobileServerUrl: options.mobileServerUrl,
       once: options.once,
+      noReleaseCheck: options['no-release-check'] || process.env.METEOR_NO_RELEASE_CHECK,
       recordPackageUsage: false,
       selenium: options.selenium,
       seleniumBrowser: options['selenium-browser'],

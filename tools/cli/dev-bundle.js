@@ -29,7 +29,11 @@ function getDevBundleDir() {
 
   var localDir = path.join(path.dirname(releaseFile), "local");
   if (! statOrNull(localDir, "isDirectory")) {
-    return defaultDevBundlePromise;
+    try {
+      fs.mkdirSync(localDir);
+    } catch (e) {
+      return defaultDevBundlePromise;
+    }
   }
 
   var devBundleLink = path.join(localDir, "dev_bundle");
@@ -48,7 +52,9 @@ function getDevBundleDir() {
     return defaultDevBundlePromise;
   }
 
-  return getDevBundleForRelease(release).then(function (devBundleDir) {
+  return Promise.resolve(
+    getDevBundleForRelease(release)
+  ).then(function (devBundleDir) {
     if (devBundleDir) {
       links.makeLink(devBundleDir, devBundleLink);
       return devBundleDir;

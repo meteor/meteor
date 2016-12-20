@@ -4,7 +4,7 @@ import {Script} from "vm";
 import {
   isString, isEmpty, has, keys, each, map, omit,
 } from "underscore";
-import {sha1, readAndWatchFileWithHash} from "../fs/watch.js";
+import {sha1} from "../fs/watch.js";
 import {matches as archMatches} from "../utils/archinfo.js";
 import {findImportedModuleIdentifiers} from "./js-analyze.js";
 import {cssToCommonJS} from "./css-modules.js";
@@ -20,10 +20,16 @@ import {
   pathBasename,
   pathExtname,
   pathIsAbsolute,
-  statOrNull as realStatOrNull,
   convertToOSPath,
   convertToPosixPath,
 } from "../fs/files.js";
+
+import {
+  optimisticReadFile,
+  optimisticStatOrNull,
+  optimisticHashOrNull,
+  shouldWatch,
+} from "../fs/optimistic.js";
 
 import Resolver from "./resolver.js";
 
@@ -103,7 +109,6 @@ export default class ImportScanner {
     nodeModulesPaths = [],
     watchSet,
   }) {
-    const scanner = this;
     assert.ok(isString(sourceRoot));
 
     this.name = name;
@@ -115,29 +120,30 @@ export default class ImportScanner {
     this.allMissingNodeModules = Object.create(null);
     this.outputFiles = [];
 
-    this.resolver = new Resolver({
+    this.resolver = Resolver.getOrCreate({
+      caller: "ImportScanner#constructor",
       sourceRoot,
       targetArch: bundleArch,
       extensions,
       nodeModulesPaths,
-      watchSet,
-
-      onPackageJson(path, pkg) {
-        return scanner._addPkgJsonToOutput(path, pkg);
-      },
-
-      onMissing(id, parentPath) {
-        return scanner._onMissing(id, parentPath);
-      },
-
-      statOrNull(absPath) {
-        const file = scanner._getFile(absPath);
-        if (file) {
-          return fakeFileStat;
-        }
-        return realStatOrNull(absPath);
-      }
     });
+
+    // Since Resolver.getOrCreate may have returned a cached Resolver
+    // instance, it's important to update its statOrNull method so that it
+    // is bound to this ImportScanner object rather than the previous one.
+    this.resolver.statOrNull = (absPath) => {
+      const stat = optimisticStatOrNull(absPath);
+      if (stat) {
+        return stat;
+      }
+
+      const file = this._getFile(absPath);
+      if (file) {
+        return fakeFileStat;
+      }
+
+      return null;
+    };
   }
 
   _getFile(absPath) {
@@ -456,6 +462,22 @@ export default class ImportScanner {
     return result;
   }
 
+  _resolve(id, absPath) {
+    const resolved = this.resolver.resolve(id, absPath);
+
+    if (resolved === "missing") {
+      return this._onMissing(id, absPath);
+    }
+
+    if (resolved && resolved.packageJsonMap) {
+      each(resolved.packageJsonMap, (pkg, path) => {
+        this._addPkgJsonToOutput(path, pkg);
+      });
+    }
+
+    return resolved;
+  }
+
   _scanFile(file) {
     const absPath = pathJoin(this.sourceRoot, file.sourcePath);
 
@@ -474,7 +496,7 @@ export default class ImportScanner {
     }
 
     each(file.deps, (info, id) => {
-      const resolved = this.resolver.resolve(id, absPath);
+      const resolved = this._resolve(id, absPath);
       if (! resolved) {
         return;
       }
@@ -536,13 +558,35 @@ export default class ImportScanner {
       // Append this file to the output array and record its index.
       this._addFile(absImportedPath, depFile);
 
+      // On the server, modules in node_modules directories will be
+      // handled natively by Node, so we don't need to build a
+      // meteorInstall-style bundle beyond the entry-point module.
+      if (! this.isWeb() &&
+          depFile.installPath.startsWith("node_modules/") &&
+          // If optimistic functions care about this file, e.g. because it
+          // resides in a linked npm package, then we should allow it to
+          // be watched by including it in the server bundle by not
+          // returning here. Note that inclusion in the server bundle is
+          // an unnecessary consequence of this logic, since Node will
+          // still evaluate this module natively on the server. What we
+          // really care about is watching the file for changes.
+          ! shouldWatch(absImportedPath)) {
+        return;
+      }
+
       this._scanFile(depFile);
     });
   }
 
+  isWeb() {
+    return archMatches(this.bundleArch, "web");
+  }
+
   _readFile(absPath) {
-    let { contents, hash } =
-      readAndWatchFileWithHash(this.watchSet, absPath);
+    const contents = optimisticReadFile(absPath);
+    const hash = optimisticHashOrNull(absPath);
+
+    this.watchSet.addFile(absPath, hash);
 
     return {
       data: contents,
@@ -552,7 +596,28 @@ export default class ImportScanner {
   }
 
   _readModule(absPath) {
-    const info = this._readFile(absPath);
+    let ext = pathExtname(absPath).toLowerCase();
+
+    if (ext === ".node") {
+      const dataString = "throw new Error(" + JSON.stringify(
+        this.isWeb()
+          ? "cannot load native .node modules on the client"
+          : "module.useNode() must succeed for native .node modules"
+      ) + ");\n";
+
+      const data = new Buffer(dataString, "utf8");
+      const hash = sha1(data);
+
+      return { data, dataString, hash };
+    }
+
+    try {
+      var info = this._readFile(absPath);
+    } catch (e) {
+      if (e.code !== "ENOENT") throw e;
+      return null;
+    }
+
     const dataString = info.dataString;
 
     // Same logic/comment as stripBOM in node/lib/module.js:
@@ -563,7 +628,6 @@ export default class ImportScanner {
       info.dataString = info.dataString.slice(1);
     }
 
-    let ext = pathExtname(absPath).toLowerCase();
     if (! has(defaultExtensionHandlers, ext)) {
       if (canBeParsedAsPlainJS(dataString)) {
         ext = ".js";
@@ -599,7 +663,12 @@ export default class ImportScanner {
     if (this.name) {
       // If we're bundling a package, prefix path with
       // node_modules/<package name>/.
-      path = pathJoin("node_modules", "meteor", this.name, path);
+      path = pathJoin(
+        "node_modules",
+        "meteor",
+        this.name.replace(/^local-test[:_]/, ""),
+        path,
+      );
     }
 
     // Install paths should always be delimited by /.
@@ -638,7 +707,7 @@ export default class ImportScanner {
 
     const dirs = this._splitPath(pathDirname(installPath));
     const isApp = ! this.name;
-    const bundlingForWeb = archMatches(this.bundleArch, "web");
+    const bundlingForWeb = this.isWeb();
 
     const topLevelDir = dirs[0];
     if (topLevelDir === "private" ||
@@ -695,7 +764,7 @@ export default class ImportScanner {
 
     if (isApp &&
         Resolver.isNative(id) &&
-        archMatches(this.bundleArch, "web")) {
+        this.isWeb()) {
       // To ensure the native module can be evaluated at runtime, register
       // a dependency on meteor-node-stubs/deps/<id>.js.
       const stubId = Resolver.getNativeStubId(id);
@@ -704,7 +773,7 @@ export default class ImportScanner {
             parentFile.deps) {
           parentFile.deps[stubId] = parentFile.deps[id];
         }
-        return this.resolver.resolve(stubId, absParentPath);
+        return this._resolve(stubId, absParentPath);
       }
     }
 
@@ -762,6 +831,11 @@ export default class ImportScanner {
       };
 
       this._addFile(pkgJsonPath, pkgFile);
+
+      const hash = optimisticHashOrNull(pkgJsonPath);
+      if (hash) {
+        this.watchSet.addFile(pkgJsonPath, hash);
+      }
     }
   }
 }

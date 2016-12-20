@@ -144,9 +144,11 @@ main.registerCommand({
     projectDir: options.appDir,
     allowIncompatibleUpdate: options['allow-incompatible-update']
   });
+
   main.captureAndExit("=> Errors while initializing project:", function () {
     projectContext.prepareProjectForBuild();
   });
+
   projectContext.packageMapDelta.displayOnConsole();
 });
 
@@ -603,15 +605,21 @@ main.registerCommand({
 
   // Download the source to the package.
   var sourceTarball = buildmessage.enterJob("downloading package source", function () {
-    return httpHelpers.getUrl({
+    return httpHelpers.getUrlWithResuming({
       url: pkgVersion.source.url,
       encoding: null
     });
   });
 
+  if (buildmessage.jobHasMessages()) {
+    return 1;
+  }
+
   var sourcePath = files.mkdtemp('package-source');
-  // XXX check tarballHash!
-  files.extractTarGz(sourceTarball, sourcePath);
+  buildmessage.enterJob("extracting package source", () => {
+    // XXX check tarballHash!
+    files.extractTarGz(sourceTarball, sourcePath);
+  });
 
   // XXX Factor out with packageClient.bundleSource so that we don't
   // have knowledge of the tarball structure in two places.
@@ -857,7 +865,9 @@ main.registerCommand({
     // Ensure that all packages and their tests are built. (We need to build
     // tests so that we can include their sources in source tarballs.)
     var allPackagesWithTests = projectContext.localCatalog.getAllPackageNames();
-    var allPackages = projectContext.localCatalog.getAllNonTestPackageNames();
+    var allPackages = projectContext.localCatalog.getAllNonTestPackageNames({
+      includeNonCore: false,
+    });
     projectContext.projectConstraintsFile.addConstraints(
       _.map(allPackagesWithTests, function (p) {
         return utils.parsePackageConstraint(p);
@@ -1540,7 +1550,8 @@ main.registerCommand({
   options: {
     patch: { type: Boolean },
     "packages-only": { type: Boolean },
-    "allow-incompatible-update": { type: Boolean }
+    "allow-incompatible-update": { type: Boolean },
+    "all-packages": { type: Boolean }
   },
   // We have to be able to work without a release, since 'meteor
   // update' is how you fix apps that don't have a release.
@@ -1605,14 +1616,62 @@ main.registerCommand({
   // args), take patches to indirect dependencies.
   var upgradeIndirectDepPatchVersions = false;
   if (options.args.length === 0) {
-    projectContext.projectConstraintsFile.eachConstraint(function (constraint) {
-      if (! compiler.isIsobuildFeaturePackage(constraint.package)) {
-        upgradePackageNames.push(constraint.package);
-      }
-    });
+    // "all-packages" means update every package we depend on. The default
+    // is to tend to leave indirect dependencies (i.e. things not listed in
+    // `.meteor/packages`) alone.
+    if (options["all-packages"]) {
+      upgradePackageNames = _.filter(
+        _.keys(projectContext.packageMapFile.getCachedVersions()),
+        packageName => ! compiler.isIsobuildFeaturePackage(packageName)
+      );
+    }
+
+    if (upgradePackageNames.length === 0) {
+      projectContext.projectConstraintsFile.eachConstraint(function (constraint) {
+        if (! compiler.isIsobuildFeaturePackage(constraint.package)) {
+          upgradePackageNames.push(constraint.package);
+        }
+      });
+    }
+
     upgradeIndirectDepPatchVersions = true;
+
   } else {
+    if (options["all-packages"]) {
+      Console.error("You cannot both specify a list of packages to"
+       + " update and pass --all-packages.");
+       exit(1)
+    }
+
     upgradePackageNames = options.args;
+  }
+
+  const upgradePackagesWithoutCordova =
+    upgradePackageNames.filter(name => name.split(':')[0] !== 'cordova');
+  if (!_.isEqual(upgradePackagesWithoutCordova, upgradePackageNames)) {
+    // There are some cordova packages in the list to update.
+    // We should tell users how to update cordova packages.
+    Console.warn();
+    Console.warn("To add/upgrade a Cordova plugin in your Meteor project, run:");
+    Console.warn();
+    Console.warn(
+      Console.command("meteor add cordova:PLUGIN-NAME@x.y.z"),
+      Console.options({ indent: 2 }));
+    Console.warn();
+    Console.warn("The 'PLUGIN-NAME' should be an official plugin name",
+      "(e.g. cordova-plugin-media) and the 'x.y.z' should be an available version of",
+      "the plugin. The latest version can be found with the following command:");
+    Console.warn();
+    Console.warn(
+      Console.command("meteor npm view PLUGIN-NAME version"),
+      Console.options({ indent: 2 }));
+    if (upgradePackagesWithoutCordova.length !== 0) {
+      Console.warn();
+      Console.warn('The non-Cordova packages will now be updated...');
+    }
+    Console.warn();
+    // Exclude cordova packages
+    upgradePackageNames = upgradePackagesWithoutCordova;
   }
 
   // Try to resolve constraints, allowing the given packages to be upgraded.
@@ -1629,11 +1688,13 @@ main.registerCommand({
 
       // If the user explicitly mentioned some packages to upgrade, they must
       // actually end up in our solution!
-      _.each(options.args, function (packageName) {
-        if (! projectContext.packageMap.getInfo(packageName)) {
-          buildmessage.error(packageName + ': package is not in the project');
-        }
-      });
+      if (options.args.length !== 0) {
+        _.each(upgradePackageNames, function (packageName) {
+          if (! projectContext.packageMap.getInfo(packageName)) {
+            buildmessage.error(packageName + ': package is not in the project');
+          }
+        });
+      }
       if (buildmessage.jobHasMessages()) {
         return;
       }
@@ -1693,9 +1754,10 @@ main.registerCommand({
       Console.info("\nNewer versions of the following indirect dependencies" +
                    " are available:");
       _.each(nonlatestIndirectDeps, printItem);
-      Console.info(
-        "To update one or more of these packages, pass their names to " +
-          "`meteor update`.");
+      Console.info([
+        "To update one or more of these packages, pass their names to ",
+        "`meteor update`, or just run `meteor update --all-packages`."
+      ].join("\n"));
     }
   }
 });
@@ -2555,7 +2617,7 @@ main.registerCommand({
   try {
     Console.rawInfo(
         "Changing homepage on "
-          + name + " to " + url + "...");
+          + name + " to " + url + "...\n");
       packageClient.callPackageServer(conn,
           '_changePackageHomepage', name, url);
       Console.info(" done");
@@ -2608,7 +2670,7 @@ main.registerCommand({
     _.each(versions, function (version) {
       Console.rawInfo(
         "Setting " + name + "@" + version + " as " +
-         status + " migrated ... ");
+         status + " migrated ...\n");
       packageClient.callPackageServer(
         conn,
         '_changeVersionMigrationStatus',

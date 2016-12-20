@@ -68,7 +68,7 @@ var wordwrap = require('wordwrap');
 var PROGRESS_DEBUG = !!process.env.METEOR_PROGRESS_DEBUG;
 var FORCE_PRETTY=undefined;
 var CARRIAGE_RETURN =
-  (process.platform === 'win32' && process.stdout.isTTY ? new Array(249).join('\b') : '\r');
+  (process.platform === 'win32' && process.stdout.isTTY && process.title !== 'Windows PowerShell' ? new Array(249).join('\b') : '\r');
 
 if (process.env.METEOR_PRETTY_OUTPUT) {
   FORCE_PRETTY = process.env.METEOR_PRETTY_OUTPUT != '0';
@@ -309,7 +309,10 @@ var ProgressDisplayFull = function (console) {
   self._progressBarRenderer = new ProgressBarRenderer(PROGRESS_BAR_FORMAT, options);
   self._progressBarRenderer.start = new Date();
 
-  self._headless = false;
+  self._headless = !! (
+    process.env.METEOR_HEADLESS &&
+    JSON.parse(process.env.METEOR_HEADLESS)
+  );
 
   self._spinnerRenderer = new SpinnerRenderer();
 
@@ -540,6 +543,11 @@ var Console = function (options) {
   var self = this;
 
   options = options || {};
+
+  self._headless = !! (
+    process.env.METEOR_HEADLESS &&
+    JSON.parse(process.env.METEOR_HEADLESS)
+  );
 
   // The progress display we are showing on-screen
   self._progressDisplay = new ProgressDisplayNone(self);
@@ -920,12 +928,12 @@ _.extend(Console.prototype, {
 
   // A wrapper around Console.info. Prints the message out in green (if pretty),
   // with the CHECKMARK as the bullet point in front of it.
-  success: function (message) {
+  success: function (message, uglySuccessKeyword = "success") {
     var self = this;
     var checkmark;
 
     if (! self._pretty) {
-      return self.info(message);
+      return self.info(`${message}: ${uglySuccessKeyword}`);
     }
 
     if (process.platform === "win32") {
@@ -958,7 +966,7 @@ _.extend(Console.prototype, {
     var self = this;
 
     if (! self._pretty) {
-      return printFn(message);
+      return self[printFn](message);
     }
 
     var xmark = chalk.red('\u2717');
@@ -1265,12 +1273,16 @@ _.extend(Console.prototype, {
     self._setProgressDisplay(newProgressDisplay);
   },
 
-  setHeadless(headless) {
-    if (typeof headless === "undefined") headless = true;
-    headless = !! headless;
+  isHeadless() {
+    return this._headless;
+  },
+
+  setHeadless(headless = true) {
+    this._headless = !! headless;
+
     if (this._progressDisplay &&
         this._progressDisplay.setHeadless) {
-      this._progressDisplay.setHeadless(headless);
+      this._progressDisplay.setHeadless(this._headless);
     }
   },
 

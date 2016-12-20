@@ -3,7 +3,6 @@ var util = require('util');
 var Future = require('fibers/future');
 var fiberHelpers = require('../utils/fiber-helpers.js');
 var child_process = require('child_process');
-var webdriver = require('browserstack-webdriver');
 
 var files = require('../fs/files.js');
 var utils = require('../utils/utils.js');
@@ -13,6 +12,7 @@ var archinfo = require('../utils/archinfo.js');
 var config = require('../meteor-services/config.js');
 var buildmessage = require('../utils/buildmessage.js');
 var execFileSync = require('../utils/processes.js').execFileSync;
+var { getUrlWithResuming } = require("../utils/http-helpers.js");
 var Builder = require('../isobuild/builder.js').default;
 
 var catalog = require('../packaging/catalog/catalog.js');
@@ -27,18 +27,27 @@ var release = require('../packaging/release.js');
 var projectContextModule = require('../project-context.js');
 var upgraders = require('../upgraders.js');
 
-try {
-  var phantomjs = require('phantomjs-prebuilt');
-} catch (e) {
-  throw new Error([
-    "Please install PhantomJS by running the following command:",
-    "",
-    "  /path/to/meteor npm install -g phantomjs-prebuilt",
-    "",
-    "Where `/path/to/meteor` is the executable you used to run this self-test.",
-    ""
-  ].join("\n"));
+require("../tool-env/install-runtime.js");
+
+function checkTestOnlyDependency(name) {
+  try {
+    var absPath = require.resolve(name);
+  } catch (e) {
+    throw new Error([
+      "Please install " + name + " by running the following command:",
+      "",
+      "  /path/to/meteor npm install -g " + name,
+      "",
+      "Where `/path/to/meteor` is the executable you used to run this self-test.",
+      ""
+    ].join("\n"));
+  }
+
+  return require(absPath);
 }
+
+var phantomjs = checkTestOnlyDependency("phantomjs-prebuilt");
+var webdriver = checkTestOnlyDependency('browserstack-webdriver');
 
 // To allow long stack traces that cross async boundaries
 require('longjohn');
@@ -140,7 +149,8 @@ var ROOT_PACKAGES_TO_BUILD_IN_SANDBOX = [
   "insecure",
   "standard-minifier-css",
   "standard-minifier-js",
-  "es5-shim"
+  "es5-shim",
+  "shell-server"
 ];
 
 var setUpBuiltPackageTropohouse = function () {
@@ -199,14 +209,19 @@ var newSelfTestCatalog = function () {
   var messages = buildmessage.capture(
     { title: "scanning local core packages" },
     function () {
+      const packagesDir =
+        files.pathJoin(files.getCurrentToolsDir(), 'packages');
+
       // When building a fake warehouse from a checkout, we use local packages,
       // but *ONLY THOSE FROM THE CHECKOUT*: not app packages or $PACKAGE_DIRS
       // packages.  One side effect of this: we really really expect them to all
       // build, and we're fine with dying if they don't (there's no worries
       // about needing to springboard).
       selfTestCatalog.initialize({
-        localPackageSearchDirs: [files.pathJoin(
-          files.getCurrentToolsDir(), 'packages')]
+        localPackageSearchDirs: [
+          packagesDir,
+          files.pathJoin(packagesDir, "non-core", "*", "packages"),
+        ],
       });
     });
   if (messages.hasMessages()) {
@@ -228,57 +243,116 @@ var newSelfTestCatalog = function () {
 var Matcher = function (run) {
   var self = this;
   self.buf = "";
+  self.fullBuffer = "";
   self.ended = false;
-  self.matchPattern = null;
-  self.matchPromise = null;
-  self.matchStrict = null;
+  self.resetMatch();
   self.run = run; // used only to set a field on exceptions
+  self.endPromise = new Promise(resolve => {
+    self.resolveEndPromise = resolve;
+  });
 };
 
 _.extend(Matcher.prototype, {
   write: function (data) {
     var self = this;
     self.buf += data;
+    self.fullBuffer += data;
     self._tryMatch();
   },
 
-  match: function (pattern, timeout, strict) {
+  resetMatch() {
+    const mp = this.matchPromise;
+
+    this.matchPattern = null;
+    this.matchPromise = null;
+    this.matchStrict = null;
+    this.matchFullBuffer = false;
+
+    return mp;
+  },
+
+  rejectMatch(error) {
+    const mp = this.resetMatch();
+    if (mp) {
+      mp.reject(error);
+    } else {
+      // If this.matchPromise was not defined, we should not swallow this
+      // error, so we must throw it instead.
+      throw error;
+    }
+  },
+
+  resolveMatch(value) {
+    const mp = this.resetMatch();
+    if (mp) {
+      mp.resolve(value);
+    }
+  },
+
+  match(pattern, timeout, strict) {
+    return this.matchAsync(pattern, { timeout, strict }).await();
+  },
+
+  // Like match, but returns a Promise without calling .await().
+  matchAsync(pattern, {
+    timeout = null,
+    strict = false,
+    matchFullBuffer = false,
+  }) {
     var self = this;
     if (self.matchPromise) {
-      throw new Error("already have a match pending?");
+      return Promise.reject(new Error("already have a match pending?"));
     }
     self.matchPattern = pattern;
     self.matchStrict = strict;
+    self.matchFullBuffer = matchFullBuffer;
     var mp = self.matchPromise = fiberHelpers.makeFulfillablePromise();
     self._tryMatch(); // could clear self.matchPromise
 
     var timer = null;
     if (timeout) {
       timer = setTimeout(function () {
-        var pattern = self.matchPattern;
-        self.matchPattern = null;
-        self.matchStrict = null;
-        self.matchPromise = null;
-        mp.reject(new TestFailure('match-timeout', {
+        self.rejectMatch(new TestFailure('match-timeout', {
           run: self.run,
-          pattern: pattern
+          pattern: self.matchPattern
         }));
       }, timeout * 1000);
+    } else {
+      return mp;
     }
 
-    try {
-      return mp.await();
-    } finally {
-      if (timer) {
-        clearTimeout(timer);
-      }
-    }
+    return mp.then(result => {
+      clearTimeout(timer);
+      return result;
+    }, error => {
+      clearTimeout(timer);
+      throw error;
+    });
   },
 
-  end: function () {
+  matchBeforeEnd(pattern, timeout) {
+    return this._beforeEnd(() => this.matchAsync(pattern, {
+      timeout: timeout || 15,
+      matchFullBuffer: true,
+    }));
+  },
+
+  _beforeEnd(promiseCallback) {
+    return this.endPromise = this.endPromise.then(promiseCallback);
+  },
+
+  end() {
+    return this.endAsync().await();
+  },
+
+  endAsync() {
     var self = this;
-    self.ended = true;
-    self._tryMatch();
+    self.resolveEndPromise();
+    return self._beforeEnd(() => {
+      self.ended = true;
+      self._tryMatch();
+      return self.matchPromise;
+    });
   },
 
   matchEmpty: function () {
@@ -300,36 +374,37 @@ _.extend(Matcher.prototype, {
 
     var ret = null;
 
-    if (self.matchPattern instanceof RegExp) {
+    if (self.matchFullBuffer) {
+      // Note: self.matchStrict is ignored if self.matchFullBuffer truthy.
+      if (self.matchPattern instanceof RegExp) {
+        ret = self.fullBuffer.match(self.matchPattern);
+      } else if (self.fullBuffer.indexOf(self.matchPattern) >= 0) {
+        ret = self.matchPattern;
+      }
+
+    } else if (self.matchPattern instanceof RegExp) {
       var m = self.buf.match(self.matchPattern);
       if (m) {
         if (self.matchStrict && m.index !== 0) {
-          self.matchPromise = null;
-          self.matchStrict = null;
-          self.matchPattern = null;
           Console.info("Extra junk is: ", self.buf.substr(0, m.index));
-          mp.reject(new TestFailure('junk-before', {
+          return self.rejectMatch(new TestFailure('junk-before', {
             run: self.run,
             pattern: self.matchPattern
           }));
-          return;
         }
         ret = m;
         self.buf = self.buf.slice(m.index + m[0].length);
       }
+
     } else {
       var i = self.buf.indexOf(self.matchPattern);
       if (i !== -1) {
         if (self.matchStrict && i !== 0) {
-          self.matchPromise = null;
-          self.matchStrict = null;
-          self.matchPattern = null;
           Console.info("Extra junk is: ", self.buf.substr(0, i));
-          mp.reject(new TestFailure('junk-before', {
+          return self.rejectMatch(new TestFailure('junk-before', {
             run: self.run,
             pattern: self.matchPattern
           }));
-          return;
         }
         ret = self.matchPattern;
         self.buf = self.buf.slice(i + self.matchPattern.length);
@@ -337,21 +412,14 @@ _.extend(Matcher.prototype, {
     }
 
     if (ret !== null) {
-      self.matchPromise = null;
-      self.matchStrict = null;
-      self.matchPattern = null;
-      mp.resolve(ret);
-      return;
+      return self.resolveMatch(ret);
     }
 
     if (self.ended) {
-      var failure = new TestFailure('no-match', { run: self.run,
-                                                  pattern: self.matchPattern });
-      self.matchPromise = null;
-      self.matchStrict = null;
-      self.matchPattern = null;
-      mp.reject(failure);
-      return;
+      return self.rejectMatch(new TestFailure('no-match', {
+        run: self.run,
+        pattern: self.matchPattern
+      }));
     }
   }
 });
@@ -634,6 +702,8 @@ _.extend(Sandbox.prototype, {
     if (_.isEmpty(upgradersFile.readUpgraders())) {
       upgradersFile.appendUpgraders(upgraders.allUpgraders());
     }
+
+    require("../cli/default-npm-deps.js").install(absoluteTo);
 
     if (options.dontPrepareApp) {
       return;
@@ -1072,10 +1142,8 @@ _.extend(BrowserStackClient.prototype, {
   },
 
   _launchBrowserStackTunnel: function (callback) {
-    var self = this;
-    var browserStackPath =
-      files.pathJoin(files.getDevBundle(), 'bin', 'BrowserStackLocal');
-    files.chmod(browserStackPath, 0o755);
+    const self = this;
+    const browserStackPath = ensureBrowserStack();
 
     var args = [
       browserStackPath,
@@ -1099,6 +1167,42 @@ _.extend(BrowserStackClient.prototype, {
     });
   }
 });
+
+function ensureBrowserStack() {
+  const browserStackPath = files.pathJoin(
+    files.getDevBundle(),
+    'bin',
+    'BrowserStackLocal'
+  );
+
+  const browserStackStat = files.statOrNull(browserStackPath);
+  if (! browserStackStat) {
+    const host = "browserstack-binaries.s3.amazonaws.com";
+    const OS = process.platform === "darwin" ? "osx" : "linux";
+    const ARCH = process.arch === "x64" ? "x86_64" : "i686";
+    const tarGz = `BrowserStackLocal-07-03-14-${OS}-${ARCH}.gz`;
+    const url = `https:\/\/${host}/${tarGz}`;
+
+    buildmessage.enterJob("downloading BrowserStack binaries", () => {
+      return new Promise((resolve, reject) => {
+        const browserStackStream =
+          files.createWriteStream(browserStackPath);
+
+        browserStackStream.on("error", reject);
+        browserStackStream.on("end", resolve);
+
+        const gunzip = require("zlib").createGunzip();
+        gunzip.pipe(browserStackStream);
+        gunzip.write(getUrlWithResuming(url));
+        gunzip.end();
+      }).await();
+    });
+  }
+
+  files.chmod(browserStackPath, 0o755);
+
+  return browserStackPath;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Run
@@ -1133,6 +1237,8 @@ var Run = function (execPath, options) {
   self.stdoutMatcher = new Matcher(self);
   self.stderrMatcher = new Matcher(self);
   self.outputLog = new OutputLog(self);
+
+  self.matcherEndPromise = null;
 
   self.exitStatus = undefined; // 'null' means failed rather than exited
   self.exitPromiseResolvers = [];
@@ -1189,6 +1295,15 @@ _.extend(Run.prototype, {
     self.client.connect();
   },
 
+  // Useful for matching one-time patterns not sensitive to ordering.
+  matchBeforeExit: markStack(function (pattern) {
+    return this.stdoutMatcher.matchBeforeEnd(pattern);
+  }),
+
+  matchErrBeforeExit: markStack(function (pattern) {
+    return this.stderrMatcher.matchBeforeEnd(pattern);
+  }),
+
   _exited: function (status) {
     var self = this;
 
@@ -1205,8 +1320,15 @@ _.extend(Run.prototype, {
       resolve();
     });
 
-    self.stdoutMatcher.end();
-    self.stderrMatcher.end();
+    self._endMatchers();
+  },
+
+  _endMatchers() {
+    return this.matcherEndPromise =
+      this.matcherEndPromise || Promise.all([
+        this.stdoutMatcher.endAsync(),
+        this.stderrMatcher.endAsync()
+      ]);
   },
 
   _ensureStarted: function () {
@@ -1346,6 +1468,8 @@ _.extend(Run.prototype, {
   expectExit: markStack(function (code) {
     var self = this;
     self._ensureStarted();
+
+    self._endMatchers().await();
 
     if (self.exitStatus === undefined) {
       var timeout = self.baseTimeout + self.extraTime;

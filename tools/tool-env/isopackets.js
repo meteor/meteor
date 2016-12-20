@@ -56,7 +56,7 @@ export const ISOPACKETS = {
   'constraint-solver': ['constraint-solver'],
   'cordova-support': ['boilerplate-generator', 'logging', 'webapp-hashing',
                       'xmlbuilder'],
-  'logging': ['logging']
+  'logging': ['logging'],
 };
 
 // Caches isopackets in memory (each isopacket only needs to be loaded
@@ -221,14 +221,19 @@ var newIsopacketBuildingCatalog = function () {
   var messages = buildmessage.capture(
     { title: "scanning local core packages" },
     function () {
+      const packagesDir =
+        files.pathJoin(files.getCurrentToolsDir(), 'packages');
+
       // When running from a checkout, isopacket building does use local
       // packages, but *ONLY THOSE FROM THE CHECKOUT*: not app packages or
       // $PACKAGE_DIRS packages.  One side effect of this: we really really
       // expect them to all build, and we're fine with dying if they don't
       // (there's no worries about needing to springboard).
       isopacketCatalog.initialize({
-        localPackageSearchDirs: [files.pathJoin(
-          files.getCurrentToolsDir(), 'packages')],
+        localPackageSearchDirs: [
+          packagesDir,
+          files.pathJoin(packagesDir, "non-core", "*", "packages"),
+        ],
         buildingIsopackets: true
       });
     });

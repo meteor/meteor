@@ -1,4 +1,6 @@
-# [ecmascript](https://github.com/meteor/meteor/tree/devel/packages/ecmascript)
+# ecmascript
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/ecmascript) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/ecmascript)
+***
 
 This package lets you use new JavaScript language features that are part
 of the [ECMAScript 2015

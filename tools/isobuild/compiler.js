@@ -14,6 +14,11 @@ var compileStepModule = require('./compiler-deprecated-compile-step.js');
 var Profile = require('../tool-env/profile.js').Profile;
 import { SourceProcessorSet } from './build-plugin.js';
 
+import {
+  optimisticReadFile,
+  optimisticHashOrNull,
+} from "../fs/optimistic.js";
+
 var compiler = exports;
 
 // Whenever you change anything about the code that generates isopacks, bump
@@ -29,7 +34,7 @@ var compiler = exports;
 // dependencies. (At least for now, packages only used in target creation (eg
 // minifiers) don't require you to update BUILT_BY, though you will need to quit
 // and rerun "meteor run".)
-compiler.BUILT_BY = 'meteor/22';
+compiler.BUILT_BY = 'meteor/26';
 
 // This is a list of all possible architectures that a build can target. (Client
 // is expanded into 'web.browser' and 'web.cordova')
@@ -73,8 +78,10 @@ compiler.compile = Profile(function (packageSource, options) {
         // Plugins have their own npm dependencies separate from the
         // rest of the package, so they need their own separate npm
         // shrinkwrap and cache state.
-        npmDir: files.pathResolve(
-          files.pathJoin(packageSource.sourceRoot, '.npm', 'plugin', info.name))
+        npmDir: files.pathResolve(files.pathJoin(
+          packageSource.sourceRoot,
+          '.npm', 'plugin', colonConverter.convert(info.name)
+        ))
       });
       // Add this plugin's dependencies to our "plugin dependency"
       // WatchSet. buildResult.watchSet will end up being the merged
@@ -548,12 +555,10 @@ api.addAssets('${relPath}', 'client').`);
       return;
     }
 
-    // readAndWatchFileWithHash returns an object carrying a buffer with the
-    // file-contents. The buffer contains the original data of the file (no EOL
-    // transforms from the tools/files.js part).
-    const file = watch.readAndWatchFileWithHash(watchSet, absPath);
-    const hash = file.hash;
-    const contents = file.contents;
+    const contents = optimisticReadFile(absPath);
+    const hash = optimisticHashOrNull(absPath);
+    const file = { contents, hash };
+    watchSet.addFile(absPath, hash);
 
     Console.nudge(true);
 
@@ -623,8 +628,34 @@ api.addAssets('${relPath}', 'client').`);
     return _.pick(symbol, ['name', 'testOnly']);
   });
 
-  const isPortable = process.env.METEOR_FORCE_PORTABLE ||
-    _.every(nodeModulesDirectories, nmd => nmd.isPortable());
+  // By default, consider this isopack "portable" unless
+  // process.env.METEOR_ALLOW_NON_PORTABLE is truthy or the name of the
+  // package is "meteor-tool", in which case we determine portability by
+  // scanning node_modules directories for binary .node files.
+  // Non-portable packages must publish platform-specific builds using
+  // publish-for-arch, whereas portable packages can avoid running
+  // publish-for-arch and rely instead on the package consumer to rebuild
+  // binary npm dependencies when necessary.
+  let isPortable = true;
+  if (! process.env.METEOR_FORCE_PORTABLE) {
+    // Make sure we've rebuilt these npm packages according to the current
+    // process.{platform,arch,versions}.
+    _.each(nodeModulesDirectories, nmd => {
+      if (nmd.local) {
+        // Meteor never attempts to modify the contents of local
+        // node_modules directories (such as the one in the root directory
+        // of an application), so we call nmd.rebuildIfNonPortable() only
+        // when nmd.local is false.
+      } else {
+        nmd.rebuildIfNonPortable();
+      }
+    });
+
+    if (process.env.METEOR_ALLOW_NON_PORTABLE ||
+        isopk.name === "meteor-tool") {
+      isPortable = _.every(nodeModulesDirectories, nmd => nmd.isPortable());
+    }
+  }
 
   // *** Consider npm dependencies and portability
   var arch = inputSourceArch.arch;

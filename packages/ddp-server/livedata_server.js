@@ -302,6 +302,9 @@ var Session = function (server, version, socket, options) {
   }).run();
 
   if (version !== 'pre1' && options.heartbeatInterval !== 0) {
+    // We no longer need the low level timeout because we have heartbeating.
+    socket.setWebsocketTimeout(0);
+
     self.heartbeat = new DDPCommon.Heartbeat({
       heartbeatInterval: options.heartbeatInterval,
       heartbeatTimeout: options.heartbeatTimeout,
@@ -546,6 +549,11 @@ _.extend(Session.prototype, {
           blocked = false;
           processNext();
         };
+
+        self.server.onMessageHook.each(function (callback) {
+          callback(msg, self);
+          return true;
+        });
 
         if (_.has(self.protocol_handlers, msg.msg))
           self.protocol_handlers[msg.msg].call(self, msg, unblock);
@@ -937,6 +945,7 @@ _.extend(Session.prototype, {
  * @summary The server's side of a subscription
  * @class Subscription
  * @instanceName this
+ * @showInstanceName true
  */
 var Subscription = function (
     session, handler, subscriptionId, params, name) {
@@ -1320,6 +1329,11 @@ Server = function (options) {
     debugPrintExceptions: "onConnection callback"
   });
 
+  // Map of callbacks to call when a new message comes in.
+  self.onMessageHook = new Hook({
+    debugPrintExceptions: "onMessage callback"
+  });
+
   self.publish_handlers = {};
   self.universal_publish_handlers = [];
 
@@ -1401,6 +1415,18 @@ _.extend(Server.prototype, {
   onConnection: function (fn) {
     var self = this;
     return self.onConnectionHook.register(fn);
+  },
+
+  /**
+   * @summary Register a callback to be called when a new DDP message is received.
+   * @locus Server
+   * @param {function} callback The function to call when a new DDP message is received.
+   * @memberOf Meteor
+   * @importFromPackage meteor
+   */
+  onMessage: function (fn) {
+    var self = this;
+    return self.onMessageHook.register(fn);
   },
 
   _handleConnect: function (socket, msg) {

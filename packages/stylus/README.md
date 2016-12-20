@@ -1,15 +1,17 @@
 # stylus
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/stylus) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/stylus)
+***
 
 [Stylus](http://learnboost.github.com/stylus/) is a CSS pre-processor with a
 simple syntax and expressive dynamic behavior. It allows for more compact
 stylesheets and helps reduce code duplication in CSS files.
 
-With the `stylus` package installed, `.main.styl` files in your application are
-automatically compiled to CSS and the results are included in the client CSS
-bundle.
+With the `stylus` package installed, files with the `.styl` extension are sent
+through the `stylus` CSS pre-processor and the results are included in the
+client CSS bundle.
 
-The `stylus` package also includes `nib` support. Add `@import 'nib'` to your
-`.main.styl` files to enable cross-browser mixins such as `linear-gradient` and
+The `stylus` package also includes `nib` support. Add `@import 'nib'` to any
+`*.styl` file to enable cross-browser mixins such as `linear-gradient` and
 `border-radius`.
 
 If you want to `@import` a file, give it the extension `.import.styl`

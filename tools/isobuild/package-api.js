@@ -4,8 +4,15 @@ var buildmessage = require('../utils/buildmessage.js');
 var utils = require('../utils/utils.js');
 var compiler = require('./compiler.js');
 var archinfo = require('../utils/archinfo.js');
-var files = require('../fs/files.js');
 var catalog = require('../packaging/catalog/catalog.js');
+
+// It's important that we import these functions individually instead of
+// importing the whole files.* namespace, because now it's easier to tell
+// that this module doesn't actually touch the file system.
+import {
+  pathRelative,
+  convertToPosixPath,
+} from "../fs/files.js";
 
 function toArray (x) {
   if (_.isArray(x)) {
@@ -67,10 +74,11 @@ function forAllMatchingArchs (archs, f) {
  * @name  PackageAPI
  * @class PackageAPI
  * @instanceName api
+ * @showInstanceName true
  * @global
  * @summary Type of the API object passed into the `Package.onUse` function.
  */
-function PackageAPI (options) {
+export function PackageAPI(options) {
   var self = this;
   assert.ok(self instanceof PackageAPI);
 
@@ -338,13 +346,15 @@ _.extend(PackageAPI.prototype, {
     this._addFiles("sources", paths, arch, fileOptions);
   },
 
-  mainModule(path, arch) {
+  mainModule(path, arch, fileOptions = {}) {
     arch = toArchArray(arch);
+
     forAllMatchingArchs(arch, a => {
       const filesForArch = this.files[a];
       const source = {
-        relPath: files.pathRelative(".", path),
+        relPath: pathRelative(".", path),
         fileOptions: {
+          ...fileOptions,
           mainModule: true
         }
       };
@@ -358,7 +368,21 @@ _.extend(PackageAPI.prototype, {
 
       filesForArch.main = source;
       filesForArch.sources.push(source);
+
+      this._forbidExportWithLazyMain(a);
     });
+  },
+
+  _forbidExportWithLazyMain(arch) {
+    const filesForArch = this.files[arch];
+    if (filesForArch.main &&
+        filesForArch.main.fileOptions.lazy &&
+        this.exports[arch].length > 0) {
+      buildmessage.error(
+        "Architecture " + JSON.stringify(arch) + " cannot both " +
+          "export symbols and have a lazy main module"
+      );
+    }
   },
 
   /**
@@ -407,14 +431,14 @@ _.extend(PackageAPI.prototype, {
     // consisting of two components. #WindowsPathApi
     paths = _.map(paths, function (p) {
       // Normalize ./foo.js to foo.js.
-      p = files.pathRelative(".", p);
+      p = pathRelative(".", p);
 
       if (p.indexOf('/') !== -1) {
         // it is already a Unix-style path most likely
         return p;
       }
 
-      return files.convertToPosixPath(p, true);
+      return convertToPosixPath(p, true);
     });
 
     var errors = [];
@@ -578,8 +602,14 @@ _.extend(PackageAPI.prototype, {
         // recover by ignoring
         return;
       }
+
       forAllMatchingArchs(arch, function (w) {
-        self.exports[w].push({name: symbol, testOnly: !!options.testOnly});
+        self.exports[w].push({
+          name: symbol,
+          testOnly: !! options.testOnly,
+        });
+
+        self._forbidExportWithLazyMain(w);
       });
     });
   }
@@ -587,5 +617,3 @@ _.extend(PackageAPI.prototype, {
 
 // XXX COMPAT WITH 0.8.x
 PackageAPI.prototype.add_files = PackageAPI.prototype.addFiles;
-
-exports.PackageAPI = PackageAPI;

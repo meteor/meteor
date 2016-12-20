@@ -130,15 +130,18 @@ MongoConnection = function (url, options) {
   self._observeMultiplexers = {};
   self._onFailoverHook = new Hook;
 
-  var mongoOptions = _.extend({db: {safe: true}, server: {}, replSet: {}},
-                               Mongo._connectionOptions);
-
-  // Set autoReconnect to true, unless passed on the URL. Why someone
-  // would want to set autoReconnect to false, I'm not really sure, but
-  // keeping this for backwards compatibility for now.
-  if (!(/[\?&]auto_?[rR]econnect=/.test(url))) {
-    mongoOptions.server.auto_reconnect = true;
-  }
+  var mongoOptions = _.extend({
+    db: { safe: true },
+    // http://mongodb.github.io/node-mongodb-native/2.2/api/Server.html
+    server: {
+      // Reconnect on error.
+      autoReconnect: true,
+      // Try to reconnect forever, instead of stopping after 30 tries (the
+      // default), with each attempt separated by 1000ms.
+      reconnectTries: Infinity
+    },
+    replSet: {}
+  }, Mongo._connectionOptions);
 
   // Disable the native parser by default, unless specifically enabled
   // in the mongo URL.
@@ -605,7 +608,7 @@ var isModificationMod = function (mod) {
 var transformResult = function (driverResult) {
   var meteorResult = { numberAffected: 0 };
   if (driverResult) {
-    mongoResult = driverResult.result;
+    var mongoResult = driverResult.result;
 
     // On updates with upsert:true, the inserted values come as a list of
     // upserted values -- even with options.multi, when the upsert does insert,

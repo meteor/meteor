@@ -12,6 +12,7 @@ var util = require('util');
 var _ = require('underscore');
 var Fiber = require('fibers');
 var crypto = require('crypto');
+var spawn = require("child_process").spawn;
 
 var rimraf = require('rimraf');
 var sourcemap = require('source-map');
@@ -20,7 +21,6 @@ var sourceMapRetrieverStack = require('../tool-env/source-map-retriever-stack.js
 var utils = require('../utils/utils.js');
 var cleanup = require('../tool-env/cleanup.js');
 var buildmessage = require('../utils/buildmessage.js');
-var watch = require('./watch.js');
 var fiberHelpers = require('../utils/fiber-helpers.js');
 var colonConverter = require('../utils/colon-converter.js');
 
@@ -214,7 +214,7 @@ files.getCurrentToolsDir = function () {
 files.getSettings = function (filename, watchSet) {
   buildmessage.assertInCapture();
   var absPath = files.pathResolve(filename);
-  var buffer = watch.readAndWatchFile(watchSet, absPath);
+  var buffer = require("./watch.js").readAndWatchFile(watchSet, absPath);
   if (buffer === null) {
     buildmessage.error("file not found (settings file)",
                        { file: filename });
@@ -260,26 +260,40 @@ files.prettyPath = function (p) {
 
 // Like statSync, but null if file not found
 files.statOrNull = function (path) {
+  return statOrNull(path);
+};
+
+function statOrNull(path, preserveSymlinks) {
   try {
-    return files.stat(path);
+    return preserveSymlinks
+      ? files.lstat(path)
+      : files.stat(path);
   } catch (e) {
-    if (e.code == "ENOENT") {
+    if (e.code === "ENOENT") {
       return null;
     }
     throw e;
   }
-};
+}
 
 // Like rm -r.
 files.rm_recursive = Profile("files.rm_recursive", function (p) {
-  if (Fiber.current && Fiber.yield && ! Fiber.yield.disallowed) {
-    new Promise((resolve, reject) => {
-      rimraf(files.convertToOSPath(p), err => {
-        err ? reject(err) : resolve();
-      });
-    }).await();
-  } else {
-    rimraf.sync(files.convertToOSPath(p));
+  const path = files.convertToOSPath(p);
+  try {
+    rimraf.sync(path);
+  } catch (e) {
+    if (e.code === "ENOTEMPTY" &&
+        Fiber.current &&
+        Fiber.yield &&
+        ! Fiber.yield.disallowed) {
+      new Promise((resolve, reject) => {
+        rimraf(path, err => {
+          err ? reject(err) : resolve();
+        });
+      }).await();
+      return;
+    }
+    throw e;
   }
 });
 
@@ -433,9 +447,7 @@ files.mkdir_p = function (dir, mode) {
   return pathIsDirectory(p);
 };
 
-// Roughly like cp -R. 'from' should be a directory. 'to' can either
-// be a directory, or it can not exist (in which case it will be
-// created with mkdir_p).
+// Roughly like cp -R.
 //
 // The output files will be readable and writable by everyone that the umask
 // allows, and executable by everyone (modulo umask) if the original file was
@@ -449,49 +461,63 @@ files.mkdir_p = function (dir, mode) {
 // If options.ignore is present, it should be a list of regexps. Any
 // file whose basename matches one of the regexps, before
 // transformation, will be skipped.
-files.cp_r = function (from, to, options) {
-  options = options || {};
+files.cp_r = function(from, to, options = {}) {
+  from = files.pathResolve(from);
 
-  var absFrom = files.pathResolve(from);
-  files.mkdir_p(to, 0o755);
+  const stat = statOrNull(from, options.preserveSymlinks);
+  if (! stat) {
+    return;
+  }
 
-  _.each(files.readdir(from), function (f) {
-    if (_.any(options.ignore || [], function (pattern) {
-      return f.match(pattern);
-    })) {
-      return;
-    }
+  if (stat.isDirectory()) {
+    files.mkdir_p(to, 0o755);
 
-    var fullFrom = files.pathJoin(from, f);
-    if (options.transformFilename) {
-      f = options.transformFilename(f);
-    }
-    var fullTo = files.pathJoin(to, f);
-    var stats = options.preserveSymlinks
-          ? files.lstat(fullFrom) : files.stat(fullFrom);
-    if (stats.isDirectory()) {
-      files.cp_r(fullFrom, fullTo, options);
-    } else if (stats.isSymbolicLink()) {
-      var linkText = files.readlink(fullFrom);
-      files.symlink(linkText, fullTo);
-    } else {
-      var absFullFrom = files.pathResolve(fullFrom);
-
-      // Create the file as readable and writable by everyone, and executable by
-      // everyone if the original file is executably by owner. (This mode will
-      // be modified by umask.) We don't copy the mode *directly* because this
-      // function is used by 'meteor create' which is copying from the read-only
-      // tools tree into a writable app.
-      var mode = (stats.mode & 0o100) ? 0o777 : 0o666;
-      if (!options.transformContents) {
-        copyFileHelper(fullFrom, fullTo, mode);
-      } else {
-        var contents = files.readFile(fullFrom);
-        contents = options.transformContents(contents, f);
-        files.writeFile(fullTo, contents, { mode: mode });
+    files.readdir(from).forEach(f => {
+      if (options.ignore &&
+          _.any(options.ignore,
+                pattern => f.match(pattern))) {
+        return;
       }
+
+      const fullFrom = files.pathJoin(from, f);
+
+      if (options.transformFilename) {
+        f = options.transformFilename(f);
+      }
+
+      files.cp_r(
+        fullFrom,
+        files.pathJoin(to, f),
+        options
+      );
+    })
+
+    return;
+  }
+
+  files.mkdir_p(files.pathDirname(to));
+
+  if (stat.isSymbolicLink()) {
+    files.symlink(files.readlink(from), to);
+
+  } else {
+    // Create the file as readable and writable by everyone, and
+    // executable by everyone if the original file is executable by
+    // owner. (This mode will be modified by umask.) We don't copy the
+    // mode *directly* because this function is used by 'meteor create'
+    // which is copying from the read-only tools tree into a writable app.
+    const mode = (stat.mode & 0o100) ? 0o777 : 0o666;
+
+    if (options.transformContents) {
+      files.writeFile(to, options.transformContents(
+        files.readFile(from),
+        files.pathBasename(from)
+      ), { mode });
+
+    } else {
+      copyFileHelper(from, to, mode);
     }
-  });
+  }
 };
 
 /**
@@ -695,19 +721,151 @@ files.extractTarGz = function (buffer, destPath, options) {
   var tempDir = files.pathJoin(parentDir, '.tmp' + utils.randomToken());
   files.mkdir_p(tempDir);
 
+  if (! _.has(options, "verbose")) {
+    options.verbose = require("../console/console.js").Console.verbose;
+  }
+
+  const startTime = +new Date;
+
+  let promise = process.platform === "win32"
+    ? tryExtractWithNative7z(buffer, tempDir, options)
+    : tryExtractWithNativeTar(buffer, tempDir, options)
+
+  promise = promise.catch(
+    error => tryExtractWithNpmTar(buffer, tempDir, options)
+  );
+
+  promise.await();
+
+  // succeed!
+  var topLevelOfArchive = files.readdir(tempDir)
+    // On Windows, the 7z.exe tool sometimes creates an auxiliary
+    // PaxHeader directory.
+    .filter(file => ! file.startsWith("PaxHeader"));
+
+  if (topLevelOfArchive.length !== 1) {
+    throw new Error(
+      "Extracted archive '" + tempDir + "' should only contain one entry");
+  }
+
+  var extractDir = files.pathJoin(tempDir, topLevelOfArchive[0]);
+  makeTreeReadOnly(extractDir);
+  files.rename(extractDir, destPath);
+  files.rm_recursive(tempDir);
+
+  if (options.verbose) {
+    console.log("Finished extracting in", new Date - startTime, "ms");
+  }
+};
+
+function ensureDirectoryEmpty(dir) {
+  files.readdir(dir).forEach(file => {
+    files.rm_recursive(files.pathJoin(dir, file));
+  });
+}
+
+function tryExtractWithNativeTar(buffer, tempDir, options) {
+  ensureDirectoryEmpty(tempDir);
+
+  if (options.forceConvert) {
+    return Promise.reject(new Error(
+      "Native tar cannot convert colons in package names"));
+  }
+
+  return new Promise((resolve, reject) => {
+    const flags = options.verbose ? "-xzvf" : "-xzf";
+    const tarProc = spawn("tar", [flags, "-"], {
+      cwd: files.convertToOSPath(tempDir),
+      stdio: options.verbose ? [
+        "pipe", // Always need to write to tarProc.stdin.
+        process.stdout,
+        process.stderr
+      ] : "pipe",
+    });
+
+    tarProc.on("error", reject);
+    tarProc.on("exit", resolve);
+
+    tarProc.stdin.write(buffer);
+    tarProc.stdin.end();
+  });
+}
+
+function tryExtractWithNative7z(buffer, tempDir, options) {
+  ensureDirectoryEmpty(tempDir);
+
+  if (options.forceConvert) {
+    return Promise.reject(new Error(
+      "Native 7z.exe cannot convert colons in package names"));
+  }
+
+  const exeOSPath = files.convertToOSPath(
+    files.pathJoin(files.getCurrentNodeBinDir(), "7z.exe"));
+  const tarGzBasename = "out.tar.gz";
+  const spawnOptions = {
+    cwd: files.convertToOSPath(tempDir),
+    stdio: options.verbose ? "inherit" : "pipe",
+  };
+
+  files.writeFile(files.pathJoin(tempDir, tarGzBasename), buffer);
+
+  return new Promise((resolve, reject) => {
+    spawn(exeOSPath, [
+      "x", "-y", tarGzBasename
+    ], spawnOptions)
+      .on("error", reject)
+      .on("exit", resolve);
+
+  }).then(code => {
+    assert.strictEqual(code, 0);
+
+    let tarBasename;
+    const foundTar = files.readdir(tempDir).some(file => {
+      if (file !== tarGzBasename) {
+        tarBasename = file;
+        return true;
+      }
+    });
+
+    assert.ok(foundTar, "failed to find .tar file");
+
+    function cleanUp() {
+      files.unlink(files.pathJoin(tempDir, tarGzBasename));
+      files.unlink(files.pathJoin(tempDir, tarBasename));
+    }
+
+    return new Promise((resolve, reject) => {
+      spawn(exeOSPath, [
+        "x", "-y", tarBasename
+      ], spawnOptions)
+        .on("error", reject)
+        .on("exit", resolve);
+
+    }).then(code => {
+      cleanUp();
+      return code;
+    }, error => {
+      cleanUp();
+      throw error;
+    });
+  });
+}
+
+function tryExtractWithNpmTar(buffer, tempDir, options) {
+  ensureDirectoryEmpty(tempDir);
+
   var tar = require("tar");
   var zlib = require("zlib");
 
-  new Promise(function (resolve, reject) {
+  return new Promise((resolve, reject) => {
     var gunzip = zlib.createGunzip().on('error', reject);
-
     var extractor = new tar.Extract({
       path: files.convertToOSPath(tempDir)
     }).on('entry', function (e) {
       if (process.platform === "win32" || options.forceConvert) {
-        // On Windows, try to convert old packages that have colons in paths
-        // by blindly replacing all of the paths. Otherwise, we can't even
-        // extract the tarball
+        // On Windows, try to convert old packages that have colons in
+        // paths by blindly replacing all of the paths. Otherwise, we
+        // can't even extract the tarball
         e.path = colonConverter.convert(e.path);
       }
     }).on('error', reject)
@@ -718,20 +876,8 @@ files.extractTarGz = function (buffer, destPath, options) {
     gunzip.pipe(extractor);
     gunzip.write(buffer);
     gunzip.end();
-  }).await();
-
-  // succeed!
-  var topLevelOfArchive = files.readdir(tempDir);
-  if (topLevelOfArchive.length !== 1) {
-    throw new Error(
-      "Extracted archive '" + tempDir + "' should only contain one entry");
-  }
-
-  var extractDir = files.pathJoin(tempDir, topLevelOfArchive[0]);
-  makeTreeReadOnly(extractDir);
-  files.rename(extractDir, destPath);
-  files.rmdir(tempDir);
-};
+  });
+}
 
 // Tar-gzips a directory, returning a stream that can then be piped as
 // needed.  The tar archive will contain a top-level directory named
@@ -1307,6 +1453,11 @@ files.readLinkToMeteorScript = function (linkLocation, platform) {
 //   A helpful file to import for this purpose is colon-converter.js, which also
 //   knows how to convert various configuration file formats.
 
+// Fibers are disabled by default for files.* operations unless
+// process.env.METEOR_DISABLE_FS_FIBERS parses to a falsy value.
+const YIELD_ALLOWED = !! (
+  _.has(process.env, "METEOR_DISABLE_FS_FIBERS") &&
+  ! JSON.parse(process.env.METEOR_DISABLE_FS_FIBERS));
 
 files.fsFixPath = {};
 /**
@@ -1341,7 +1492,11 @@ function wrapFsFunc(fsFuncName, pathArgIndices, options) {
         args[i] = files.convertToOSPath(args[i]);
       }
 
-      const canYield = Fiber.current && Fiber.yield && ! Fiber.yield.disallowed;
+      const canYield = YIELD_ALLOWED &&
+        Fiber.current &&
+        Fiber.yield &&
+        ! Fiber.yield.disallowed;
+
       const shouldBeSync = alwaysSync || sync;
       // There's some overhead in awaiting a Promise of an async call,
       // vs just doing the sync call, which for a call like "stat"
@@ -1350,7 +1505,8 @@ function wrapFsFunc(fsFuncName, pathArgIndices, options) {
       // conditions, so we get a nice performance boost from making
       // these calls sync.
       const isQuickie = (fsFuncName === 'stat' ||
-                         fsFuncName === 'rename');
+                         fsFuncName === 'rename' ||
+                         fsFuncName === 'symlink');
 
       if (canYield && shouldBeSync && !isQuickie) {
         const promise = new Promise((resolve, reject) => {
@@ -1573,17 +1729,6 @@ files.watchFile = function (...args) {
 files.unwatchFile = function (...args) {
   args[0] = files.convertToOSPath(args[0]);
   return fs.unwatchFile(...args);
-};
-
-// wrap pathwatcher because it works with file system paths
-// XXX we don't currently convert the path argument passed to the watch
-//     callback, but we currently don't use the argument either
-files.pathwatcherWatch = function (...args) {
-  args[0] = files.convertToOSPath(args[0]);
-  // don't import pathwatcher until the moment we actually need it
-  // pathwatcher has a record of keeping some global state
-  var pathwatcher = require('pathwatcher');
-  return require("pathwatcher").watch(...args);
 };
 
 files.readBufferWithLengthAndOffset = function (filename, length, offset) {

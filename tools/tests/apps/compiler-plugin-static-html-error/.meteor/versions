@@ -42,7 +42,7 @@ retry@1.0.4-plugins.0
 routepolicy@1.0.6-plugins.0
 spacebars@1.0.7-plugins.0
 spacebars-compiler@1.0.7-plugins.1
-static-html@0.0.1
+static-html@1.0.12
 templating@1.1.2-plugins.1
 templating-tools@0.0.1
 tracker@1.0.8-plugins.0

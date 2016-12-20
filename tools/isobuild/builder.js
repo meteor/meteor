@@ -1,7 +1,13 @@
+import assert from "assert";
 import {WatchSet, readAndWatchFile, sha1} from '../fs/watch.js';
 import files from '../fs/files.js';
 import NpmDiscards from './npm-discards.js';
 import {Profile} from '../tool-env/profile.js';
+import {
+  optimisticReadFile,
+  optimisticReaddir,
+  optimisticLStatOrNull,
+} from "../fs/optimistic.js";
 
 // Builder is in charge of writing "bundles" to disk, which are
 // directory trees such as site archives, programs, and packages.  In
@@ -59,6 +65,8 @@ export default class Builder {
 
     this.writtenHashes = {};
     this.previousWrittenHashes = {};
+
+    this._realpathCache = Object.create(null);
 
     // foo/bar => foo/.build1234.bar
     // Should we include a random number? The advantage is that multiple
@@ -407,7 +415,8 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     specificFiles,
     symlink,
     npmDiscards,
-    directoryFilter,
+    // Optional predicate to filter files and directories.
+    filter,
   }) {
     if (to.slice(-1) === files.pathSep) {
       to = to.slice(0, -1);
@@ -415,8 +424,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
     const absPathTo = files.pathJoin(this.buildPath, to);
 
-    let canSymlink = !! symlink;
-    if (canSymlink) {
+    if (symlink) {
       if (specificFiles) {
         throw new Error("can't copy only specific paths with a single symlink");
       }
@@ -424,12 +432,6 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       if (this.usedAsFile[to]) {
         throw new Error("tried to copy a directory onto " + to +
                         " but it is is already a file");
-      }
-
-      // Symlinks don't work exactly the same way on Windows, and furthermore
-      // they request Admin permissions to set.
-      if (process.platform === 'win32') {
-        canSymlink = false;
       }
     }
 
@@ -445,8 +447,12 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       });
     }
 
-    let walk = (absFrom, relTo) => {
-      if (canSymlink && ! (relTo in this.usedAsFile)) {
+    const walk = (
+      absFrom,
+      relTo,
+      _currentRealRootDir = absFrom
+    ) => {
+      if (symlink && ! (relTo in this.usedAsFile)) {
         this._ensureDirectory(files.pathDirname(relTo));
         const absTo = files.pathResolve(this.buildPath, relTo);
         symlinkWithOverwrite(absFrom, absTo);
@@ -455,15 +461,75 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
       this._ensureDirectory(relTo);
 
-      files.readdir(absFrom).forEach(item => {
-        const thisAbsFrom = files.pathResolve(absFrom, item);
+      optimisticReaddir(absFrom).forEach(item => {
+        let thisAbsFrom = files.pathResolve(absFrom, item);
         const thisRelTo = files.pathJoin(relTo, item);
 
         if (specificPaths && !(thisRelTo in specificPaths)) {
           return;
         }
 
-        const fileStatus = files.lstat(thisAbsFrom);
+        // Returns files.realpath(thisAbsFrom), iff it is external to
+        // _currentRealRootDir, using caching because this function might
+        // be called more than once.
+        let cachedExternalPath;
+        const getExternalPath = () => {
+          if (typeof cachedExternalPath !== "undefined") {
+            return cachedExternalPath;
+          }
+
+          try {
+            var real = files.realpath(
+              thisAbsFrom,
+              this._realpathCache
+            );
+          } catch (e) {
+            if (e.code !== "ENOENT" &&
+                e.code !== "ELOOP") {
+              throw e;
+            }
+            return cachedExternalPath = false;
+          }
+
+          const isExternal =
+            files.pathRelative(_currentRealRootDir, real).startsWith("..");
+
+          // Now cachedExternalPath is either a string or false.
+          return cachedExternalPath = isExternal && real;
+        };
+
+        let fileStatus = optimisticLStatOrNull(thisAbsFrom);
+
+        if (! symlink &&
+            fileStatus &&
+            fileStatus.isSymbolicLink()) {
+          // If copyDirectory is not allowed to create symbolic links to
+          // external files, and this file is a symbolic link that points
+          // to an external file, update fileStatus so that we copy this
+          // file as a normal file rather than as a symbolic link.
+
+          const externalPath = getExternalPath();
+          if (externalPath) {
+            // Copy from the real path rather than the link path.
+            thisAbsFrom = externalPath;
+
+            // Update fileStatus to match the actual file rather than the
+            // symbolic link, thus forcing the file to be copied below.
+            fileStatus = optimisticLStatOrNull(externalPath);
+
+            if (fileStatus && fileStatus.isDirectory()) {
+              // Update _currentRealRootDir so that we can judge
+              // isExternal relative to this new root directory when
+              // traversing nested directories.
+              _currentRealRootDir = externalPath;
+            }
+          }
+        }
+
+        if (! fileStatus) {
+          // If the file did not exist, skip it.
+          return;
+        }
 
         let itemForMatch = item;
         const isDirectory = fileStatus.isDirectory();
@@ -476,20 +542,25 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           return;
         }
 
+        if (typeof filter === "function" &&
+            ! filter(thisAbsFrom, isDirectory)) {
+          return;
+        }
+
         if (npmDiscards instanceof NpmDiscards &&
             npmDiscards.shouldDiscard(thisAbsFrom, isDirectory)) {
           return;
         }
 
         if (isDirectory) {
-          if (typeof directoryFilter !== "function" ||
-              directoryFilter(thisAbsFrom)) {
-            walk(thisAbsFrom, thisRelTo);
-          }
+          walk(thisAbsFrom, thisRelTo, _currentRealRootDir);
 
         } else if (fileStatus.isSymbolicLink()) {
           symlinkWithOverwrite(
-            files.readlink(thisAbsFrom),
+            // Symbolic links pointing to relative external paths are less
+            // portable than absolute links, so getExternalPath() is
+            // preferred if it returns a path.
+            getExternalPath() || files.readlink(thisAbsFrom),
             files.pathResolve(this.buildPath, thisRelTo)
           );
 
@@ -500,16 +571,27 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         } else {
           // XXX can't really optimize this copying without reading
           // the file into memory to calculate the hash.
-          files.copyFile(thisAbsFrom,
-                         files.pathResolve(this.buildPath, thisRelTo),
-                         fileStatus.mode);
+          files.writeFile(
+            files.pathResolve(this.buildPath, thisRelTo),
+            // The reason we call files.writeFile here instead of
+            // files.copyFile is so that we can read the file using
+            // optimisticReadFile instead of files.createReadStream.
+            optimisticReadFile(thisAbsFrom),
+            // Logic borrowed from files.copyFile: "Create the file as
+            // readable and writable by everyone, and executable by everyone
+            // if the original file is executably by owner. (This mode will be
+            // modified by umask.) We don't copy the mode *directly* because
+            // this function is used by 'meteor create' which is copying from
+            // the read-only tools tree into a writable app."
+            { mode: (fileStatus.mode & 0o100) ? 0o777 : 0o666 },
+          );
 
           this.usedAsFile[thisRelTo] = true;
         }
       });
     };
 
-    walk(from, to);
+    walk(files.realpath(from, this._realpathCache), to);
   }
 
   // Returns a new Builder-compatible object that works just like a
@@ -644,13 +726,23 @@ function atomicallyRewriteFile(path, data, options) {
 // create a symlink, overwriting the target link, file, or directory
 // if it exists
 function symlinkWithOverwrite(source, target) {
+  const args = [source, target];
+
+  if (process.platform === "win32") {
+    if (! files.stat(source).isDirectory()) {
+      throw new Error("symlink source must be a directory: " + source);
+    }
+
+    args[2] = "junction";
+  }
+
   try {
-    files.symlink(source, target);
+    files.symlink(...args);
   } catch (e) {
     if (e.code === 'EEXIST') {
       // overwrite existing link, file, or directory
       files.rm_recursive(target);
-      files.symlink(source, target);
+      files.symlink(...args);
     } else {
       throw e;
     }

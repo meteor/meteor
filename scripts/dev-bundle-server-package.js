@@ -9,8 +9,8 @@ var packageJson = {
   // Version is not important but is needed to prevent warnings.
   version: "0.0.0",
   dependencies: {
-    "meteor-promise": "0.7.2",
-    fibers: "1.0.13",
+    "meteor-promise": "0.8.0",
+    fibers: "1.0.15",
     promise: "7.1.1",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
     // in the package too) because we should consider using lodash instead

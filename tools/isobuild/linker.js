@@ -453,15 +453,6 @@ var File = function (inputFile, module) {
   self.module = module;
 };
 
-// findAssignedGlobals is somewhat slow, and we often compute assigned variables
-// on the same file multiple times in one process (notably, a single file is
-// often processed for two or three different unibuilds, and is processed again
-// when rebuilding a package when another file has changed). We cache the
-// calculated variables under the source file's hash (calculating the source
-// file's hash is faster than running findAssignedGlobals, and in the case of
-// *.js files we have the hash already anyway).
-var ASSIGNED_GLOBALS_CACHE = {};
-
 _.extend(File.prototype, {
   // Return the globals in this file as an array of symbol names.  For
   // example: if the code references 'Foo.bar.baz' and 'Quux', and
@@ -470,13 +461,19 @@ _.extend(File.prototype, {
   computeAssignedVariables: Profile("linker File#computeAssignedVariables", function () {
     var self = this;
 
-    if (_.has(ASSIGNED_GLOBALS_CACHE, self.sourceHash)) {
-      return ASSIGNED_GLOBALS_CACHE[self.sourceHash];
+    if (self.installPath) {
+      const parts = self.installPath.split("/");
+      const nmi = parts.indexOf("node_modules");
+      if (nmi >= 0 && parts[nmi + 1] !== "meteor") {
+        // If this file is in a node_modules directory and is not part of
+        // a Meteor package, then we don't care about capturing its global
+        // variable assignments.
+        return [];
+      }
     }
 
     try {
-      return ASSIGNED_GLOBALS_CACHE[self.sourceHash] =
-        _.keys(findAssignedGlobals(self.source, self.sourceHash));
+      return _.keys(findAssignedGlobals(self.source, self.sourceHash));
     } catch (e) {
       if (!e.$ParseError) {
         throw e;
@@ -610,47 +607,15 @@ _.extend(File.prototype, {
 
       consumer = new sourcemap.SourceMapConsumer(result.map);
 
-    } else if (noLineNumbers && preserveLineNumbers) {
-      // No need to generate a source map if we don't want line numbers.
-      result = {
-        code: self.source,
-        map: null
-      };
-
     } else {
-      // If we're planning to annotate the source with line number
-      // comments (e.g. because we're combining this file with others in a
-      // package), and we don't already have a source map, then we need to
-      // generate one, but it doesn't have to be very detailed, since we
-      // we can use a dumb implementation of originalPositionFor.
-      const smg = new sourcemap.SourceMapGenerator({
-        file: self.servePath
-      });
-
-      lines = self.source.split(/\r?\n/);
-
-      function addIdentityMapping(pos) {
-        smg.addMapping({
-          original: pos,
-          generated: pos,
-          source: self.servePath,
-        });
-      }
-
-      for (var line = 1; line <= lines.length; ++line) {
-        addIdentityMapping({ line, column: 0 });
-      }
-
-      smg.setSourceContent(self.servePath, self.source);
-
       result = {
         code: self.source,
-        map: smg.toJSON(),
+        map: null,
       };
 
       // Generating line number comments for really big files is not
       // really worth it when there's no meaningful self.sourceMap.
-      if (self.source.length < 500000) {
+      if (! noLineNumbers && result.code.length < 500000) {
         consumer = {
           originalPositionFor(pos) {
             return pos;
@@ -1037,6 +1002,21 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
     return [];
   }
 
+  // If none of the prelinkedFiles contain any code, then the only
+  // possible purpose of this package is to re-export imported symbols, so
+  // we filter the set of imported symbols according to declaredExports.
+  // When there are no declaredExports, this effectively slims the package
+  // bundle down to just Package[name] = {}.
+  if (prelinkedFiles.every(file => ! file.source)) {
+    const newImports = {};
+    declaredExports.forEach(name => {
+      if (_.has(imports, name)) {
+        newImports[name] = imports[name]
+      }
+    });
+    imports = newImports;
+  }
+
   // Otherwise we're making a package and we have to actually combine the files
   // into a single scope.
   var header = getHeader({
@@ -1057,27 +1037,28 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
     name
   });
 
+  if (includeSourceMapInstructions) {
+    header = SOURCE_MAP_INSTRUCTIONS_COMMENT + "\n\n" + header;
+  }
+
+  // Bias the source map by the length of the header without
+  // (fully) parsing and re-serializing it. (We used to do this
+  // with the source-map library, but it was incredibly slow,
+  // accounting for over half of bundling time.) It would be nice
+  // if we could use "index maps" for this (the 'sections' key),
+  // as that would let us avoid even JSON-parsing the source map,
+  // but that doesn't seem to be supported by Firefox yet.
+  if (header.charAt(header.length - 1) !== "\n") {
+    // make sure it's a whole number of lines
+    header += "\n";
+  }
+  var headerLines = header.split('\n').length - 1;
+  var headerContent = (new Array(headerLines + 1).join(';'));
+
   return _.map(prelinkedFiles, function (file) {
     if (file.sourceMap) {
-      if (includeSourceMapInstructions) {
-        header = SOURCE_MAP_INSTRUCTIONS_COMMENT + "\n\n" + header;
-      }
-
-      // Bias the source map by the length of the header without
-      // (fully) parsing and re-serializing it. (We used to do this
-      // with the source-map library, but it was incredibly slow,
-      // accounting for over half of bundling time.) It would be nice
-      // if we could use "index maps" for this (the 'sections' key),
-      // as that would let us avoid even JSON-parsing the source map,
-      // but that doesn't seem to be supported by Firefox yet.
-      if (header.charAt(header.length - 1) !== "\n") {
-        // make sure it's a whole number of lines
-        header += "\n";
-      }
-      var headerLines = header.split('\n').length - 1;
       var sourceMap = file.sourceMap;
-      sourceMap.mappings = (new Array(headerLines + 1).join(';')) +
-        sourceMap.mappings;
+      sourceMap.mappings = headerContent + sourceMap.mappings;
       return {
         source: header + file.source + footer,
         sourcePath: file.sourcePath,

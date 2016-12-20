@@ -593,21 +593,49 @@ _.extend(ProjectContext.prototype, {
   },
 
   _localPackageSearchDirs: function () {
-    var self = this;
-    var searchDirs = [files.pathJoin(self._projectDirForLocalPackages, 'packages')];
+    const self = this;
+    let searchDirs = [
+      files.pathJoin(self._projectDirForLocalPackages, 'packages'),
+    ];
 
-    if (! self._ignorePackageDirsEnvVar && process.env.PACKAGE_DIRS) {
-      // User can provide additional package directories to search in
-      // PACKAGE_DIRS (colon-separated).
-      _.each(process.env.PACKAGE_DIRS.split(':'), function (p) {
-        searchDirs.push(files.pathResolve(p));
-      });
+    // User can provide additional package directories to search in
+    // METEOR_PACKAGE_DIRS (semi-colon/colon-separated, depending on OS),
+
+    // PACKAGE_DIRS Deprecated in 2016-10
+    // Warn users to migrate from PACKAGE_DIRS to METEOR_PACKAGE_DIRS
+    if (process.env.PACKAGE_DIRS) {
+      Console.warn('For compatibility, the PACKAGE_DIRS environment variable',
+        'is deprecated and will be removed in a future Meteor release.');
+      Console.warn('Developers should now use METEOR_PACKAGE_DIRS and',
+        'Windows projects should now use a semi-colon (;) to separate paths.');
+    }
+
+    function packageDirsFromEnvVar(envVar, delimiter = files.pathOsDelimiter) {
+      return process.env[envVar] && process.env[envVar].split(delimiter) || [];
+    }
+
+    const envPackageDirs = [
+    // METEOR_PACKAGE_DIRS should use the arch-specific delimiter
+      ...(packageDirsFromEnvVar('METEOR_PACKAGE_DIRS')),
+      // PACKAGE_DIRS (deprecated) always used ':' separator (yes, even Windows)
+      ...(packageDirsFromEnvVar('PACKAGE_DIRS', ':')),
+    ];
+
+    if (! self._ignorePackageDirsEnvVar && envPackageDirs.length) {
+      // path.delimiter was added in v0.9.3
+      envPackageDirs.forEach( p => searchDirs.push(files.pathResolve(p)) );
     }
 
     if (! self._ignoreCheckoutPackages && files.inCheckout()) {
       // Running from a checkout, so use the Meteor core packages from the
       // checkout.
-      searchDirs.push(files.pathJoin(files.getCurrentToolsDir(), 'packages'));
+      const packagesDir =
+        files.pathJoin(files.getCurrentToolsDir(), 'packages');
+
+      searchDirs.push(
+        packagesDir,
+        files.pathJoin(packagesDir, "non-core", "*", "packages"),
+      );
     }
     return searchDirs;
   },

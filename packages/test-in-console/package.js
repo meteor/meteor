@@ -1,10 +1,9 @@
 Package.describe({
   summary: "Run tests noninteractively, with results going to the console.",
-  version: '1.0.12'
+  version: '1.0.14'
 });
 
 Package.onUse(function (api) {
-
   api.use(['tinytest', 'underscore', 'random', 'ejson', 'check']);
   api.use('http', 'server');
 

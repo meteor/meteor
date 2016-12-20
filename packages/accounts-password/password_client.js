@@ -1,3 +1,12 @@
+// Used in the various functions below to handle errors consistently
+function reportError(error, callback) {
+   if (callback) {
+     callback(error);
+   } else {
+     throw error;
+   }
+};
+
 // Attempt to log in with a password.
 //
 // @param selector {String|Object} One of the following:
@@ -55,7 +64,7 @@ Meteor.loginWithPassword = function (selector, password, callback) {
         }, callback);
       }
       else if (error) {
-        callback && callback(error);
+        reportError(error, callback);
       } else {
         callback && callback();
       }
@@ -83,9 +92,9 @@ var srpUpgradePath = function (options, callback) {
     details = EJSON.parse(options.upgradeError.details);
   } catch (e) {}
   if (!(details && details.format === 'srp')) {
-    callback && callback(
+    reportError(
       new Meteor.Error(400, "Password is old. Please reset your " +
-                       "password."));
+                       "password."), callback);
   } else {
     Accounts.callLoginMethod({
       methodArguments: [{
@@ -97,7 +106,6 @@ var srpUpgradePath = function (options, callback) {
     });
   }
 };
-
 
 // Attempt to log in as a new user.
 
@@ -118,8 +126,7 @@ Accounts.createUser = function (options, callback) {
   if (typeof options.password !== 'string')
     throw new Error("options.password must be a string");
   if (!options.password) {
-    callback(new Meteor.Error(400, "Password may not be empty"));
-    return;
+    return reportError(new Meteor.Error(400, "Password may not be empty"), callback);
   }
 
   // Replace password with the hashed password.
@@ -150,14 +157,12 @@ Accounts.createUser = function (options, callback) {
  */
 Accounts.changePassword = function (oldPassword, newPassword, callback) {
   if (!Meteor.user()) {
-    callback && callback(new Error("Must be logged in to change password."));
-    return;
+    return reportError(new Error("Must be logged in to change password."), callback);
   }
 
   check(newPassword, String);
   if (!newPassword) {
-    callback(new Meteor.Error(400, "Password may not be empty"));
-    return;
+    return reportError(new Meteor.Error(400, "Password may not be empty"), callback);
   }
 
   Accounts.connection.apply(
@@ -177,7 +182,7 @@ Accounts.changePassword = function (oldPassword, newPassword, callback) {
             plaintextPassword: oldPassword
           }, function (err) {
             if (err) {
-              callback && callback(err);
+              reportError(err, callback);
             } else {
               // Now that we've successfully migrated from srp to
               // bcrypt, try changing the password again.
@@ -186,8 +191,8 @@ Accounts.changePassword = function (oldPassword, newPassword, callback) {
           });
         } else {
           // A normal error, not an error telling us to upgrade to bcrypt
-          callback && callback(
-            error || new Error("No result from changePassword."));
+          reportError(
+            error || new Error("No result from changePassword."), callback);
         }
       } else {
         callback && callback();
@@ -212,9 +217,15 @@ Accounts.changePassword = function (oldPassword, newPassword, callback) {
  * @importFromPackage accounts-base
  */
 Accounts.forgotPassword = function(options, callback) {
-  if (!options.email)
-    throw new Error("Must pass options.email");
-  Accounts.connection.call("forgotPassword", options, callback);
+  if (!options.email) {
+    return reportError(new Meteor.Error(400, "Must pass options.email"), callback);
+  }
+
+  if (callback) {
+    Accounts.connection.call("forgotPassword", options, callback);
+  } else {
+    Accounts.connection.call("forgotPassword", options);
+  }
 };
 
 // Resets a password based on a token originally created by
@@ -237,8 +248,7 @@ Accounts.resetPassword = function(token, newPassword, callback) {
   check(newPassword, String);
 
   if (!newPassword) {
-    callback(new Meteor.Error(400, "Password may not be empty"));
-    return;
+    return reportError(new Meteor.Error(400, "Password may not be empty"), callback);
   }
 
   Accounts.callLoginMethod({
@@ -261,8 +271,9 @@ Accounts.resetPassword = function(token, newPassword, callback) {
  * @importFromPackage accounts-base
  */
 Accounts.verifyEmail = function(token, callback) {
-  if (!token)
-    throw new Error("Need to pass token");
+  if (!token) {
+    return reportError(new Meteor.Error(400, "Need to pass token"), callback);
+  }
 
   Accounts.callLoginMethod({
     methodName: 'verifyEmail',

@@ -1,4 +1,6 @@
 # Less
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/less) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/less)
+***
 
 The Less package provides a compiler build plugin for the Meteor build tool. It
 handles the compilation of `*.less` files to CSS.

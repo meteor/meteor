@@ -1,4 +1,6 @@
 # TinyTest
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/tinytest) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/tinytest)
+***
 
 After reading this, you'll know:
 

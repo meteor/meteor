@@ -65,6 +65,11 @@ export class CoffeeCompiler extends CachingCompiler {
     ];
   }
 
+  setDiskCacheDirectory(cacheDir) {
+    this.babelCompiler.setDiskCacheDirectory(cacheDir);
+    return super.setDiskCacheDirectory(cacheDir);
+  }
+
   compileOneFile(inputFile) {
     const source = inputFile.getContentsAsString();
     const compileOptions = this._getCompileOptions(inputFile);
@@ -83,35 +88,38 @@ export class CoffeeCompiler extends CachingCompiler {
 
     let sourceMap = JSON.parse(output.v3SourceMap);
 
-    if (source.indexOf('`') !== -1) {
-      // If source contains backticks, pass the coffee output through babel-compiler
-      const doubleRoastedCoffee =
-        this.babelCompiler.processOneFileForTarget(inputFile, output.js);
+    output.js = stripExportedVars(
+      output.js,
+      inputFile.getDeclaredExports().map(e => e.name)
+    );
 
-      if (doubleRoastedCoffee != null &&
-          doubleRoastedCoffee.data != null) {
-        output.js = doubleRoastedCoffee.data;
+    // CoffeeScript contains a handful of features that output as ES2015+,
+    // such as modules, generator functions, for…of, and tagged template
+    // literals. Because they’re too varied to detect, pass all CoffeeScript
+    // compiler output through the Babel compiler.
+    const doubleRoastedCoffee =
+      this.babelCompiler.processOneFileForTarget(inputFile, output.js);
 
-        if (doubleRoastedCoffee.sourceMap) {
-          // Combine the original CoffeeScript source map with the one
-          // produced by this.babelCompiler.processOneFileForTarget.
-          const smg = new SourceMapGenerator(
-            new SourceMapConsumer(doubleRoastedCoffee.sourceMap));
-          smg.applySourceMap(new SourceMapConsumer(sourceMap));
-          sourceMap = smg.toJSON();
-        } else {
-          // If the .coffee file is contained by a node_modules directory,
-          // then BabelCompiler will not transpile it, and there will be
-          // no sourceMap, but that's fine because the original
-          // CoffeeScript sourceMap will still be valid.
-        }
+    if (doubleRoastedCoffee != null &&
+        doubleRoastedCoffee.data != null) {
+      output.js = doubleRoastedCoffee.data;
+
+      if (doubleRoastedCoffee.sourceMap) {
+        // Combine the original CoffeeScript source map with the one
+        // produced by this.babelCompiler.processOneFileForTarget.
+        const smg = new SourceMapGenerator(
+          new SourceMapConsumer(doubleRoastedCoffee.sourceMap));
+        smg.applySourceMap(new SourceMapConsumer(sourceMap));
+        sourceMap = smg.toJSON();
+      } else {
+        // If the .coffee file is contained by a node_modules directory,
+        // then BabelCompiler will not transpile it, and there will be
+        // no sourceMap, but that's fine because the original
+        // CoffeeScript sourceMap will still be valid.
       }
     }
 
-    return addSharedHeader(stripExportedVars(
-      output.js,
-      inputFile.getDeclaredExports().map(e => e.name)
-    ), sourceMap);
+    return addSharedHeader(output.js, sourceMap);
   }
 
   addCompileResult(inputFile, sourceWithMap) {

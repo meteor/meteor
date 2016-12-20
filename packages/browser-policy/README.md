@@ -1,4 +1,6 @@
 # browser-policy
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/browser-policy) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/browser-policy)
+***
 
 The `browser-policy` family of packages, part of
 [Webapp](https://www.meteor.com/webapp), lets you set security-related
@@ -64,7 +66,10 @@ that are allowed to frame your app. (This is a limitation of the
 X-Frame-Options header.) Example values of <code>origin</code> include
 "http://example.com" and "https://foo.example.com". <b>This value of
 the X-Frame-Options header is not yet supported in Chrome or Safari
-and will be ignored in those browsers.</b>
+and will be ignored in those browsers. If you need Chrome and/or Safari
+support, or need to allow multiple domains to frame your application,
+you can use the frame-ancestors CSP option via the
+BrowserPolicy.content.allowFrameAncestorsOrigin() function </b>
 </dd>
 
 
@@ -124,7 +129,7 @@ Disallows inline CSS.
 
 Finally, you can configure a whitelist of allowed requests that various types of
 content can make. The following functions are defined for the content types
-script, object, image, media, font, frame, style, and connect.
+script, object, image, media, font, frame, frame-ancestors, style, and connect.
 
 <dl>
 

@@ -33,7 +33,7 @@
 ///
 /// The warehouse is not used at all when running from a
 /// checkout. Only local packages will be loaded (from
-/// CHECKOUT/packages or within a directory in the PACKAGE_DIRS
+/// CHECKOUT/packages or within a directory in the METEOR_PACKAGE_DIRS
 /// environment variable). The setup of that is handled by release.js.
 
 var os = require("os");
@@ -394,8 +394,13 @@ _.extend(warehouse, {
               "/" + version +
               "/" + name + '-' + version + "-" + platform + ".tar.gz";
 
-        var tarball = httpHelpers.getUrl({url: packageUrl, encoding: null});
+        var tarball = httpHelpers.getUrlWithResuming({
+          url: packageUrl,
+          encoding: null
+        });
+
         files.extractTarGz(tarball, packageDir);
+
         if (!dontWriteFreshFile) {
           files.writeFile(warehouse.getPackageFreshFile(name, version), '');
         }
