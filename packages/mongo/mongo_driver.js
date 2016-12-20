@@ -63,8 +63,7 @@ var replaceMongoAtomWithMeteor = function (document) {
   if (document instanceof MongoDB.ObjectID) {
     return new Mongo.ObjectID(document.toHexString());
   }
-  if (document["EJSON$type"] && document["EJSON$value"]
-      && _.size(document) === 2) {
+  if (document["EJSON$type"] && document["EJSON$value"] && _.size(document) === 2) {
     return EJSON.fromJSONValue(replaceNames(unmakeMongoLegal, document));
   }
   if (document instanceof MongoDB.Timestamp) {
@@ -494,7 +493,6 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
     throw new Error(
       "Only plain objects may be used as replacement" +
         " documents in MongoDB");
-    return;
   }
 
   if (!options) options = {};
@@ -522,11 +520,11 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
     var knownId = selector._id || mod._id;
 
     if (options._forbidReplace && ! isModify) {
-      var e = new Error("Invalid modifier. Replacements are forbidden.");
+      var err = new Error("Invalid modifier. Replacements are forbidden.");
       if (callback) {
-        return callback(e);
+        return callback(err);
       } else {
-        throw e;
+        throw err;
       }
     }
 
@@ -936,7 +934,7 @@ Cursor.prototype._publishCursor = function (sub) {
 Cursor.prototype._getCollectionName = function () {
   var self = this;
   return self._cursorDescription.collectionName;
-}
+};
 
 Cursor.prototype.observe = function (callbacks) {
   var self = this;
@@ -1092,7 +1090,7 @@ _.extend(SynchronousCursor.prototype, {
     return self.map(_.identity);
   },
 
-  count: function (applySkipLimit: false) {
+  count: function (applySkipLimit = false) {
     var self = this;
     return self._synchronousCount(applySkipLimit).wait();
   },
@@ -1120,18 +1118,19 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback) {
   var cursor = self._createSynchronousCursor(cursorDescription);
 
   var stopped = false;
-  var lastTS = undefined;
+  var lastTS;
   var loop = function () {
+    var doc = null;
     while (true) {
       if (stopped)
         return;
       try {
-        var doc = cursor._nextObject();
+        doc = cursor._nextObject();
       } catch (err) {
         // There's no good way to figure out if this was actually an error
         // from Mongo. Ah well. But either way, we need to retry the cursor
         // (unless the failure was because the observe got stopped).
-        doc = null;
+        // `doc` is already `null` here;
       }
       // Since cursor._nextObject can yield, we need to check again to see if
       // we've been stopped before calling the callback.
@@ -1350,9 +1349,7 @@ MongoConnection.prototype._observeChangesTailable = function (
   // error if you didn't provide them.
   if ((ordered && !callbacks.addedBefore) ||
       (!ordered && !callbacks.added)) {
-    throw new Error("Can't observe an " + (ordered ? "ordered" : "unordered")
-                    + " tailable cursor without a "
-                    + (ordered ? "addedBefore" : "added") + " callback");
+    throw new Error("Can't observe an " + (ordered ? "ordered" : "unordered") + " tailable cursor without a " + (ordered ? "addedBefore" : "added") + " callback");
   }
 
   return self.tail(cursorDescription, function (doc) {
