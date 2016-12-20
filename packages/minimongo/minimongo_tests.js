@@ -3209,7 +3209,7 @@ Tinytest.add("minimongo - reactive skip/limit count while updating", function(te
 });
 
 // Makes sure inserts cannot be performed using field names that have
-// dots in them, to meet Mongo's field name restrictions. See:
+// Mongo restricted characters in them ('.', '$', '\0'):
 // https://docs.mongodb.com/manual/reference/limits/#Restrictions-on-Field-Names
 Tinytest.add("minimongo - cannot insert using invalid field names", function (test) {
   const collection = new LocalCollection();
@@ -3224,11 +3224,33 @@ Tinytest.add("minimongo - cannot insert using invalid field names", function (te
   ['a.b', '.b', 'a.', 'a.b.c'].forEach((field) => {
     test.throws(function () {
       collection.insert({ [field]: 'c' });
-    }, `Field ${field} must not contain '.'`);
+    }, `Key ${field} must not contain '.'`);
   });
 
   // Verify nested dot-field inserts are prohibited
   test.throws(function () {
     collection.insert({ a: { b: { 'c.d': 'e' } } });
-  }, "Field c.d must not contain '.'");
+  }, "Key c.d must not contain '.'");
+
+  // Verify field names starting with $ are prohibited
+  test.throws(function () {
+    collection.insert({ '$a': 'b' });
+  }, "Key $a must not start with '$'");
+
+  // Verify nested field names starting with $ are prohibited
+  test.throws(function () {
+    collection.insert({ a: { b: { '$c': 'd' } } });
+  }, "Key $c must not start with '$'");
+
+  // Verify top level fields with null characters are prohibited
+  ['\0a', 'a\0', 'a\0b', '\u0000a', 'a\u0000', 'a\u0000b'].forEach((field) => {
+    test.throws(function () {
+      collection.insert({ [field]: 'c' });
+    }, `Key ${field} must not contain null bytes`);
+  });
+
+  // Verify nested field names with null characters are prohibited
+  test.throws(function () {
+    collection.insert({ a: { b: { '\0c': 'd' } } });
+  }, 'Key \0c must not contain null bytes');
 });

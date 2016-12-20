@@ -544,13 +544,19 @@ LocalCollection.prototype.insert = function (doc, callback) {
   var self = this;
   doc = EJSON.clone(doc);
 
-  // Make sure field names do not contain dots to line up with Mongo's
-  // field name restrictions:
+  // Make sure field names do not contain Mongo restricted
+  // characters ('.', '$', '\0').
   // https://docs.mongodb.com/manual/reference/limits/#Restrictions-on-Field-Names
   if (doc) {
+    const invalidCharMsg = {
+      '.': "contain '.'",
+      '$': "start with '$'",
+      '\0': "contain null bytes",
+    };
     JSON.stringify(doc, (key, value) => {
-      if (_.isString(key) && key.indexOf('.') > -1) {
-        throw MinimongoError(`Field ${key} must not contain '.'`);
+      let match;
+      if (_.isString(key) && (match = key.match(/^\$|\.|\0/))) {
+        throw MinimongoError(`Key ${key} must not ${invalidCharMsg[match[0]]}`);
       }
       return value;
     });
