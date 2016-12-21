@@ -683,7 +683,7 @@ var runWebAppServer = function () {
         // make this hack work, we need to return the CSS file as a 200, which
         // would otherwise be cached.)
         headers['Content-Type'] = 'text/css; charset=utf-8';
-        headers['Cache-Control'] = 'no-cache, must-revalidate, proxy-revalidate';
+        headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, proxy-revalidate';
         headers['Expires'] = 'Thu, 01 Dec 1983 20:00:00 GMT';
         res.writeHead(200, headers);
         res.write(".meteor-css-not-found-error { width: 0px;}");
@@ -696,7 +696,7 @@ var runWebAppServer = function () {
         // Serve an uncached 404. (We can't use the same hack we use for CSS,
         // because actually acting on that hack requires us to have the JS
         // already!)
-        headers['Cache-Control'] = 'no-cache, must-revalidate, proxy-revalidate';
+        headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, proxy-revalidate';
         headers['Expires'] = 'Thu, 01 Dec 1983 20:00:00 GMT';
         res.writeHead(404, headers);
         res.end("404 Not Found");
