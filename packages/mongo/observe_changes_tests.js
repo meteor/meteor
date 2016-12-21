@@ -10,10 +10,8 @@ _.each ([{added:'added', forceOrdered: true},
          {added: 'addedBefore', forceOrdered: false}], function (options) {
            var added = options.added;
            var forceOrdered = options.forceOrdered;
-  Tinytest.addAsync("observeChanges - single id - basics "
-                    + added
-                    + (forceOrdered ? " force ordered" : ""),
-                    function (test, onComplete) {
+
+  Tinytest.addAsync("observeChanges - single id - basics " + added + (forceOrdered ? " force ordered" : ""), function (test, onComplete) {
     var c = makeCollection();
     var counter = 0;
     var callbacks = [added, "changed", "removed"];
@@ -74,7 +72,7 @@ Tinytest.addAsync("observeChanges - callback isolation", function (test, onCompl
     var fooid = c.insert({apples: "ok"});
     logger.expectResult("added", [fooid, {apples: "ok"}]);
 
-    c.update(fooid, {apples: "not ok"})
+    c.update(fooid, {apples: "not ok"});
     logger.expectResult("changed", [fooid, {apples: "not ok"}]);
 
     test.equal(c.findOne(fooid).apples, "not ok");

@@ -7,4 +7,4 @@
 Mongo.setConnectionOptions = function setConnectionOptions (options) {
   check(options, Object);
   Mongo._connectionOptions = options;
-}
+};
