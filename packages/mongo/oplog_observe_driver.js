@@ -336,9 +336,7 @@ _.extend(OplogObserveDriver.prototype, {
       var comparator = self._comparator;
       var maxPublished = (limit && self._published.size() > 0) ?
         self._published.get(self._published.maxElementId()) : null;
-      var maxBuffered = (limit && self._unpublishedBuffer.size() > 0)
-        ? self._unpublishedBuffer.get(self._unpublishedBuffer.maxElementId())
-        : null;
+      var maxBuffered = (limit && self._unpublishedBuffer.size() > 0) ? self._unpublishedBuffer.get(self._unpublishedBuffer.maxElementId()) : null;
       // The query is unlimited or didn't publish enough documents yet or the
       // new document would fit into published set pushing the maximum element
       // out, then we need to publish the doc.
@@ -402,6 +400,7 @@ _.extend(OplogObserveDriver.prototype, {
         var comparator = self._comparator;
         var minBuffered = self._limit && self._unpublishedBuffer.size() &&
           self._unpublishedBuffer.get(self._unpublishedBuffer.minElementId());
+        var maxBuffered;
 
         if (publishedBefore) {
           // Unlimited case where the document stays in published once it
@@ -423,7 +422,7 @@ _.extend(OplogObserveDriver.prototype, {
             // after the change doc doesn't stay in the published, remove it
             self._removePublished(id);
             // but it can move into buffered now, check it
-            var maxBuffered = self._unpublishedBuffer.get(
+            maxBuffered = self._unpublishedBuffer.get(
               self._unpublishedBuffer.maxElementId());
 
             var toBuffer = self._safeAppendToBuffer ||
@@ -446,7 +445,7 @@ _.extend(OplogObserveDriver.prototype, {
 
           var maxPublished = self._published.get(
             self._published.maxElementId());
-          var maxBuffered = self._unpublishedBuffer.size() &&
+          maxBuffered = self._unpublishedBuffer.size() &&
                 self._unpublishedBuffer.get(
                   self._unpublishedBuffer.maxElementId());
 
