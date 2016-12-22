@@ -608,7 +608,7 @@ var isModificationMod = function (mod) {
 var transformResult = function (driverResult) {
   var meteorResult = { numberAffected: 0 };
   if (driverResult) {
-    mongoResult = driverResult.result;
+    var mongoResult = driverResult.result;
 
     // On updates with upsert:true, the inserted values come as a list of
     // upserted values -- even with options.multi, when the upsert does insert,

@@ -13,7 +13,7 @@
 export TIMEOUT_SCALE_FACTOR=${TIMEOUT_SCALE_FACTOR:-15}
 
 # Skip these tests always.  Add other tests with ADDL_SELF_TEST_EXCLUDE.
-SELF_TEST_EXCLUDE="^can't publish package with colons|^old cli tests|^logs - logged (in|out)|^mongo - logged (in|out)|^minifiers can't register non-js|^minifiers: apps can't use|^compiler plugins - addAssets"
+SELF_TEST_EXCLUDE="^old cli tests|^minifiers can't register non-js|^minifiers: apps can't use|^compiler plugins - addAssets"
 
 # If no SELF_TEST_EXCLUDE is defined, use those defined here by default
 if ! [ -z "$ADDL_SELF_TEST_EXCLUDE" ]; then
@@ -22,6 +22,8 @@ fi
 
 # Don't print as many progress indicators
 export EMACS=t
+
+export METEOR_HEADLESS=true
 
 if [ -z "$CIRCLE_NODE_TOTAL" ] || [ -z "$CIRCLE_NODE_INDEX" ]; then
   # In the case where these aren't set, just pretend like we're a single node.
