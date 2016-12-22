@@ -183,7 +183,7 @@ meteor build /path/to/build --architecture os.linux.x86_64
 This will provide you with a bundled application `.tar.gz` which you can extract and run without the `meteor` tool.  The environment you choose will need the correct version of Node.js and connectivity to a MongoDB server.
 
 Depending on the version of Meteor you are using, you should install the proper version of `node` using the appropriate installation process for your platform.
-* Node 4.6.1 for *Meteor 1.4.x*
+* Node 4.6.2 for *Meteor 1.4.x*
 * Node 0.10.43 for *Meteor 1.3.x and earlier*
 
 > If you use a mis-matched version of Node when deploying your application, you will encounter errors!
