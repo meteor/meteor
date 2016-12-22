@@ -3254,3 +3254,35 @@ Tinytest.add("minimongo - cannot insert using invalid field names", function (te
     collection.insert({ a: { b: { '\0c': 'd' } } });
   }, 'Key \0c must not contain null bytes');
 });
+
+// Makes sure $set's cannot be performed using null bytes
+// https://docs.mongodb.com/manual/reference/limits/#Restrictions-on-Field-Names
+Tinytest.add("minimongo - cannot $set with null bytes", function (test) {
+  const collection = new LocalCollection();
+
+  // Quick test to make sure non-null byte $set's are working
+  const id = collection.insert({ a: 'b', 'c': 'd' });
+  collection.update({ _id: id }, { $set: { e: 'f' } });
+
+  // Verify $set's with null bytes throw an exception
+  test.throws(() => {
+    collection.update({ _id: id }, { $set: { '\0a': 'b' } });
+  }, 'Key \0a must not contain null bytes');
+});
+
+// Makes sure $rename's cannot be performed using null bytes
+// https://docs.mongodb.com/manual/reference/limits/#Restrictions-on-Field-Names
+Tinytest.add("minimongo - cannot $rename with null bytes", function (test) {
+  const collection = new LocalCollection();
+
+  // Quick test to make sure non-null byte $rename's are working
+  let id = collection.insert({ a: 'b', c: 'd' });
+  collection.update({ _id: id }, { $rename: { a: 'a1', c: 'c1' } });
+
+  // Verify $rename's with null bytes throw an exception
+  collection.remove({});
+  id = collection.insert({ a: 'b', c: 'd' });
+  test.throws(() => {
+    collection.update({ _id: id }, { $rename: { a: '\0a', c: 'c\0' } });
+  }, "The 'to' field for $rename cannot contain an embedded null byte");
+});
