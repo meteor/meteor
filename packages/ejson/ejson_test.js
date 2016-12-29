@@ -96,6 +96,17 @@ Tinytest.add("ejson - clone", function (test) {
     test.equal(clonedArgs, [1, 2, "foo", [4]]);
   };
   testCloneArgs(1, 2, "foo", [4]);
+
+  test.throws(
+    function() {
+      var obj1 = {};
+      var obj2 = {obj1: obj1};
+      obj1.obj2 = obj2;
+
+      EJSON.clone(obj1);
+    },
+    /can not clone circular structure/
+  );
 });
 
 Tinytest.add("ejson - stringify", function (test) {
