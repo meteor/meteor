@@ -454,6 +454,27 @@ EJSON.equals = function (a, b, options) {
   }
 };
 
+function isCyclic (obj) {
+  var seenObjects = [];
+
+  function detect (obj) {
+    if (obj && typeof obj === 'object') {
+      if (seenObjects.indexOf(obj) !== -1) {
+        return true;
+      }
+      seenObjects.push(obj);
+      for (var key in obj) {
+        if (obj.hasOwnProperty(key) && detect(obj[key])) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  return detect(obj);
+}
+
 /**
  * @summary Return a deep copy of `val`.
  * @locus Anywhere
@@ -496,6 +517,11 @@ EJSON.clone = function (v) {
     return EJSON.fromJSONValue(EJSON.clone(EJSON.toJSONValue(v)), true);
   }
   // handle other objects
+
+  if (isCyclic(v)) {
+    throw new Error("EJSON.clone can not clone circular structure");
+  }
+
   ret = {};
   _.each(v, function (value, key) {
     ret[key] = EJSON.clone(value);
