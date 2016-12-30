@@ -49,6 +49,37 @@ set to `true`.
 
 {% apibox "EJSON.addType" %}
 
+The factory function passed to the `EJSON.addType` method should create an instance of our custom type and initialize it with values from an object passed as the first argument of the factory function. Here is an example:
+
+```js
+class Distance {
+  constructor(value, unit) {
+    this.value = value;
+    this.unit = unit;
+  }
+
+  // Convert our type to JSON.
+  toJSONValue() {
+    return {
+      value: this.value,
+      unit: this.unit
+    };
+  }
+
+  // Unique type name.
+  typeName() {
+    return 'Distance';
+  }
+}
+
+EJSON.addType('Distance', function fromJSONValue(json) {
+  return new Distance(json.value, json.unit);
+});
+
+EJSON.stringify(new Distance(10, 'm'));
+// "{"$type":"Distance","$value":{"value":10,"unit":"m"}}"
+```
+
 When you add a type to EJSON, Meteor will be able to use that type in:
 
  - publishing objects of your type if you pass them to publish handlers.
