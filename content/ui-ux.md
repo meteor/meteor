@@ -443,7 +443,7 @@ We can now distinguish between the 5 states above based on these conditions:
 1. `countReady` is false, or `count > 0` and `items` is still empty. (These are actually two different states, but it doesn't seem important to visually separate them).
 2. `items.length === requested && requested < count`
 3. `0 < items.length < requested`
-4. `items.length === requested && count > 0`
+4. `items.length === requested && requested === count && count > 0`
 5. `count === 0`
 
 You can see that although the situation is a little complex, it's also completely determined by the arguments and thus very much testable. A component style guide helps immeasurably in seeing all these states easily! In Galaxy we have each state in our style guide for each of the lists of our app and we can ensure all work as expected and appear correctly:
