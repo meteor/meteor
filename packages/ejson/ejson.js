@@ -454,25 +454,25 @@ EJSON.equals = function (a, b, options) {
   }
 };
 
-function isCyclic (obj) {
-  var seenObjects = [];
+function isCyclic (obj, seen) {
+  if (typeof obj !== 'object') {
+    return false;
+  }
 
-  function detect (obj) {
-    if (obj && typeof obj === 'object') {
-      if (seenObjects.indexOf(obj) !== -1) {
-        return true;
-      }
-      seenObjects.push(obj);
-      for (var key in obj) {
-        if (obj.hasOwnProperty(key) && detect(obj[key])) {
+  seen.push(obj);
+
+  for (var key in obj) {
+    if (obj.hasOwnProperty(key)) {
+      var val = obj[key];
+      if (typeof val === 'object') {
+        if (seen.indexOf(val) > -1 || isCyclic(val, seen.slice())) {
           return true;
         }
       }
     }
-    return false;
   }
 
-  return detect(obj);
+  return false;
 }
 
 /**
@@ -518,7 +518,7 @@ EJSON.clone = function (v) {
   }
   // handle other objects
 
-  if (isCyclic(v)) {
+  if (isCyclic(v, [])) {
     throw new Error("EJSON.clone can not clone circular structure");
   }
 
