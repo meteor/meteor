@@ -546,17 +546,17 @@ Meteor.methods({forgotPassword: function (options) {
   Accounts.sendResetPasswordEmail(user._id, caseSensitiveEmail);
 }});
 
-// send the user an email with a link that when opened allows the user
-// to set a new password, without the old password.
-
 /**
- * @summary Send an email with a link the user can use to reset their password.
+ * @summary Creates options for email sending for reset password and enroll account emails.
+ * You can use this function when customizing a reset password or enroll account email sending.
  * @locus Server
  * @param {String} userId The id of the user to send email to.
- * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.
+ * @param {String} email Which address of the user's to send the email to. This address must be in the user's `emails` list. If `null`, defaults to the first email in the list.
+ * @param {String} reason String `resetPassword` or `enrollAccount`.
+ * @returns {Object} Object with {email, user, token, url} values.
  * @importFromPackage accounts-base
  */
-Accounts.sendResetPasswordEmail = function (userId, email) {
+Accounts.createPasswordToken = function (userId, email, reason) {
   // Make sure the user exists, and email is one of their addresses.
   var user = Meteor.users.findOne(userId);
   if (!user) {
@@ -573,45 +573,90 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
     handleError("No such email for user.");
   }
 
+  var tokenReason;
+  if (reason === 'resetPassword') {
+    tokenReason = 'reset';
+  }
+  else if (reason === 'enrollAccount') {
+    tokenReason = 'enroll';
+  }
+  else {
+    throw new Error("Unknown reason: " + reason);
+  }
+
   var token = Random.secret();
   var when = new Date();
   var tokenRecord = {
     token: token,
     email: email,
     when: when,
-    reason: 'reset'
+    reason: tokenReason
   };
   Meteor.users.update(userId, {$set: {
     "services.password.reset": tokenRecord
   }});
+
   // before passing to template, update user object with new token
   Meteor._ensure(user, 'services', 'password').reset = tokenRecord;
 
-  var resetPasswordUrl = Accounts.urls.resetPassword(token);
+  var url = Accounts.urls[reason](token);
 
+  return {email, user, token, url};
+};
+
+/**
+ * @summary Creates options for email sending for reset password and enroll account emails.
+ * You can use this function when customizing a reset password or enroll account email sending.
+ * @locus Server
+ * @param {Object} email Which address of the user's to send the email to.
+ * @param {Object} user The user object to generate options for.
+ * @param {String} url URL to which user is directed to confirm the email.
+ * @param {String} reason String `resetPassword` or `enrollAccount`.
+ * @returns {Object} Options which can be passed to `Email.send`.
+ * @importFromPackage accounts-base
+ */
+Accounts.tokenEmailOptions = function (email, user, url, reason) {
   var options = {
     to: email,
-    from: Accounts.emailTemplates.resetPassword.from
-      ? Accounts.emailTemplates.resetPassword.from(user)
+    from: Accounts.emailTemplates[reason].from
+      ? Accounts.emailTemplates[reason].from(user)
       : Accounts.emailTemplates.from,
-    subject: Accounts.emailTemplates.resetPassword.subject(user)
+    subject: Accounts.emailTemplates[reason].subject(user)
   };
 
-  if (typeof Accounts.emailTemplates.resetPassword.text === 'function') {
+  if (typeof Accounts.emailTemplates[reason].text === 'function') {
     options.text =
-      Accounts.emailTemplates.resetPassword.text(user, resetPasswordUrl);
+      Accounts.emailTemplates[reason].text(user, url);
   }
 
-  if (typeof Accounts.emailTemplates.resetPassword.html === 'function') {
+  if (typeof Accounts.emailTemplates[reason].html === 'function') {
     options.html =
-      Accounts.emailTemplates.resetPassword.html(user, resetPasswordUrl);
+      Accounts.emailTemplates[reason].html(user, url);
   }
 
   if (typeof Accounts.emailTemplates.headers === 'object') {
     options.headers = Accounts.emailTemplates.headers;
   }
 
+  return options;
+};
+
+// send the user an email with a link that when opened allows the user
+// to set a new password, without the old password.
+
+/**
+ * @summary Send an email with a link the user can use to reset their password.
+ * @locus Server
+ * @param {String} userId The id of the user to send email to.
+ * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.
+ * @returns {Object} Object with {email, user, token, url, options} values.
+ * @importFromPackage accounts-base
+ */
+Accounts.sendResetPasswordEmail = function (userId, email) {
+  let {email: realEmail, user, token, url} = Accounts.createPasswordToken(userId, email, 'resetPassword');
+  let options = Accounts.tokenEmailOptions(realEmail, user, url, 'resetPassword');
   Email.send(options);
+  return {email: realEmail, user, token, url, options};
 };
 
 // send the user an email informing them that their account was created, with
@@ -627,65 +672,14 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
  * @locus Server
  * @param {String} userId The id of the user to send email to.
  * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.
+ * @returns {Object} Object with {email, user, token, url, options} values.
  * @importFromPackage accounts-base
  */
 Accounts.sendEnrollmentEmail = function (userId, email) {
-  // XXX refactor! This is basically identical to sendResetPasswordEmail.
-
-  // Make sure the user exists, and email is in their addresses.
-  var user = Meteor.users.findOne(userId);
-  if (!user) {
-    throw new Error("Can't find user");
-  }
-  // pick the first email if we weren't passed an email.
-  if (!email && user.emails && user.emails[0]) {
-    email = user.emails[0].address;
-  }
-  // make sure we have a valid email
-  if (!email || !_.contains(_.pluck(user.emails || [], 'address'), email)) {
-    throw new Error("No such email for user.");
-  }
-
-  var token = Random.secret();
-  var when = new Date();
-  var tokenRecord = {
-    token: token,
-    email: email,
-    when: when,
-    reason: 'enroll'
-  };
-  Meteor.users.update(userId, {$set: {
-    "services.password.reset": tokenRecord
-  }});
-
-  // before passing to template, update user object with new token
-  Meteor._ensure(user, 'services', 'password').reset = tokenRecord;
-
-  var enrollAccountUrl = Accounts.urls.enrollAccount(token);
-
-  var options = {
-    to: email,
-    from: Accounts.emailTemplates.enrollAccount.from
-      ? Accounts.emailTemplates.enrollAccount.from(user)
-      : Accounts.emailTemplates.from,
-    subject: Accounts.emailTemplates.enrollAccount.subject(user)
-  };
-
-  if (typeof Accounts.emailTemplates.enrollAccount.text === 'function') {
-    options.text =
-      Accounts.emailTemplates.enrollAccount.text(user, enrollAccountUrl);
-  }
-
-  if (typeof Accounts.emailTemplates.enrollAccount.html === 'function') {
-    options.html =
-      Accounts.emailTemplates.enrollAccount.html(user, enrollAccountUrl);
-  }
-
-  if (typeof Accounts.emailTemplates.headers === 'object') {
-    options.headers = Accounts.emailTemplates.headers;
-  }
-
+  let {email: realEmail, user, token, url} = Accounts.createPasswordToken(userId, email, 'enrollAccount');
+  let options = Accounts.tokenEmailOptions(realEmail, user, url, 'enrollAccount');
   Email.send(options);
+  return {email: realEmail, user, token, url, options};
 };
 
 
