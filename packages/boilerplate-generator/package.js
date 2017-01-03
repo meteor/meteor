@@ -1,15 +1,15 @@
 Package.describe({
   summary: "Generates the boilerplate html from program's manifest",
-  version: '1.0.11'
+  version: '1.0.12'
 });
 
 Package.onUse(function (api) {
   api.use([
     'underscore@1.0.9',
-    'spacebars-compiler@1.0.12',
-    'spacebars@1.0.12',
-    'htmljs@1.0.10',
-    'ui@1.0.11',
+    'spacebars-compiler@1.0.13',
+    'spacebars@1.0.13',
+    'htmljs@1.0.11',
+    'ui@1.0.12',
   ], 'server');
   api.addFiles(['boilerplate-generator.js'], 'server');
   api.export(['Boilerplate'], 'server');
