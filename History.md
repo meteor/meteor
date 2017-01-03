@@ -22,7 +22,16 @@
 * Added support for frame-ancestors CSP option in browser-policy.
   [#7970](https://github.com/meteor/meteor/pull/7970)
   
-* You can now use autoprefixer with stylus files added via packages [#7727](https://github.com/meteor/meteor/pull/7727)
+* You can now use autoprefixer with stylus files added via packages.
+  [#7727](https://github.com/meteor/meteor/pull/7727)
+
+* The `"main"` field of `package.json` modules will no longer be
+  overwritten with the value of the optional `"browser"` field, now that
+  the `install` npm package can make sense of the `"browser"` field at
+  runtime. If you experience module resolution failures on the client
+  after updating Meteor, make sure you've updated the `modules-runtime`
+  Meteor package to at least version 0.7.8.
+  [#8213](https://github.com/meteor/meteor/pull/8213)
 
 ## v1.4.2.3
 
