@@ -43,7 +43,7 @@ export default class HelloWorld extends React.Component {
 }
 ```
 
-You can render a component heirarchy to the DOM using the `react-dom` package:
+You can render a component hierarchy to the DOM using the `react-dom` package:
 
 ```jsx
 import { Meteor } from 'meteor/meteor';
