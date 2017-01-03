@@ -5,7 +5,7 @@ cache:
   directories:
     - ".meteor"
     - ".babel-cache"
-script: TEST_PACKAGES_EXCLUDE="less" ./packages/test-in-console/run.sh
+script: TEST_PACKAGES_EXCLUDE="less,blaze" ./packages/test-in-console/run.sh
 sudo: false
 env:
   - CXX=g++-4.8
