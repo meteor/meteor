@@ -3,7 +3,7 @@
 ***
 
 The `browser-policy` family of packages, part of
-[Webapp](https://www.meteor.com/webapp), lets you set security-related
+[Webapp](https://github.com/meteor/meteor/tree/master/packages/webapp), lets you set security-related
 policies that will be enforced by newer browsers. These policies help
 you prevent and mitigate common attacks like cross-site scripting and
 clickjacking.
