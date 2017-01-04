@@ -52,7 +52,7 @@ Todos = new Mongo.Collection('todos');
 
 It does something totally different!
 
-On the client, there is no direct connection to the MongoDB database, and in fact a synchronous API to it is not possible (nor probably what you want). Instead, on the client, a collection is a client side *cache* of the database. This is achieved thanks to the [Minimongo](https://www.meteor.com/mini-databases) library---an in-memory, all JS, implementation of the MongoDB API. What this means is that on the client, when you write:
+On the client, there is no direct connection to the MongoDB database, and in fact a synchronous API to it is not possible (nor probably what you want). Instead, on the client, a collection is a client side *cache* of the database. This is achieved thanks to the [Minimongo](https://github.com/meteor/meteor/blob/master/packages/minimongo/README.md) library---an in-memory, all JS, implementation of the MongoDB API. What this means is that on the client, when you write:
 
 ```js
 // This line is changing an in-memory Minimongo data structure
