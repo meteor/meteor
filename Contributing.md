@@ -276,3 +276,7 @@ example that you just want to run the Spacebars test suite. Just simple do `./me
 ./packages/spacebars-tests` and it will just run the test files from that one package. You can
 examine the `package.js` file for the `onTest` block, it outlines all the test files that should be
 run.
+
+### Running Meteor Tool tests
+
+While TinyTest and the `test-packages` command can be used to test internal Meteor packages, they cannot be used to test the Meteor Tool itself. The Meteor Tool is a node app that uses a home-grown "self test" system. For details on how to run Meteor Tool "self tests", please refer to the [Testing section of the Meteor Tool README](https://github.com/meteor/meteor/blob/master/tools/README.md#testing).

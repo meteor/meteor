@@ -591,8 +591,12 @@ var launchMongo = function (options) {
       // Connect to the intended primary and start a replset.
       var db = new mongoNpmModule.Db(
         'meteor',
-        new mongoNpmModule.Server('127.0.0.1', options.port, {poolSize: 1}),
+        new mongoNpmModule.Server('127.0.0.1', options.port, {
+          poolSize: 1,
+          socketOptions: {connectTimeoutMS: 30000},
+        }),
         {safe: true});
+
       yieldingMethod(db, 'open');
       if (stopped) {
         return;

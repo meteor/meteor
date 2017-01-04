@@ -59,3 +59,96 @@ Tinytest.add(
     test.equal(OAuth._retrievePendingCredential(key, secret), cred);
   }
 );
+
+Tinytest.add("oauth - _endOfLoginResponse with popup loginStyle supports unspecified ROOT_URL_PATH_PREFIX",
+  function (test) {
+    var res = {
+      writeHead: function () {},
+      end: function (content) {
+        test.matches(
+          content,
+          /\/packages\/oauth\/end_of_popup_response\.js/
+        );
+      }
+    };
+    var details = {
+      credentials: {},
+      loginStyle: 'popup'
+    };
+    OAuth._endOfLoginResponse(res, details);
+  }
+);
+
+Tinytest.add("oauth - _endOfLoginResponse with popup loginStyle supports ROOT_URL_PATH_PREFIX",
+  function (test) {
+    var rootUrlPathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX;
+    __meteor_runtime_config__.ROOT_URL_PATH_PREFIX = '/test-root-url-prefix';
+    var res = {
+      writeHead: function () {},
+      end: function (content) {
+        __meteor_runtime_config__.ROOT_URL_PATH_PREFIX = rootUrlPathPrefix;
+        test.matches(
+          content,
+          /\/test-root-url-prefix\/packages\/oauth\/end_of_popup_response\.js/
+        );
+      }
+    };
+    var details = {
+      credentials: {},
+      loginStyle: 'popup'
+    };
+    OAuth._endOfLoginResponse(res, details);
+  }
+);
+
+Tinytest.add("oauth - _endOfLoginResponse with redirect loginStyle supports unspecified ROOT_URL_PATH_PREFIX",
+  function (test) {
+    var res = {
+      writeHead: function () {},
+      end: function (content) {
+        test.matches(
+          content,
+          /\/packages\/oauth\/end_of_redirect_response\.js/
+        );
+      }
+    };
+    var details = {
+      credentials: {},
+      loginStyle: 'redirect',
+      query: {
+        state: new Buffer(JSON.stringify({
+          redirectUrl: __meteor_runtime_config__.ROOT_URL
+        }), 'binary').toString('base64')
+      }
+    };
+    OAuth._endOfLoginResponse(res, details);
+  }
+);
+
+
+Tinytest.add("oauth - _endOfLoginResponse with redirect loginStyle supports ROOT_URL_PATH_PREFIX",
+  function (test) {
+    var rootUrlPathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX;
+    __meteor_runtime_config__.ROOT_URL_PATH_PREFIX = '/test-root-url-prefix';
+    var res = {
+      writeHead: function () {},
+      end: function (content) {
+        __meteor_runtime_config__.ROOT_URL_PATH_PREFIX = rootUrlPathPrefix;
+        test.matches(
+          content,
+          /\/test-root-url-prefix\/packages\/oauth\/end_of_redirect_response\.js/
+        );
+      }
+    };
+    var details = {
+      credentials: {},
+      loginStyle: 'redirect',
+      query: {
+        state: new Buffer(JSON.stringify({
+          redirectUrl: __meteor_runtime_config__.ROOT_URL
+        }), 'binary').toString('base64')
+      }
+    };
+    OAuth._endOfLoginResponse(res, details);
+  }
+);

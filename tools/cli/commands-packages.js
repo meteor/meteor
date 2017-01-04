@@ -2617,7 +2617,7 @@ main.registerCommand({
   try {
     Console.rawInfo(
         "Changing homepage on "
-          + name + " to " + url + "...");
+          + name + " to " + url + "...\n");
       packageClient.callPackageServer(conn,
           '_changePackageHomepage', name, url);
       Console.info(" done");
@@ -2670,7 +2670,7 @@ main.registerCommand({
     _.each(versions, function (version) {
       Console.rawInfo(
         "Setting " + name + "@" + version + " as " +
-         status + " migrated ... ");
+         status + " migrated ...\n");
       packageClient.callPackageServer(
         conn,
         '_changeVersionMigrationStatus',
