@@ -94,7 +94,7 @@ ObserveSequence = {
 
         if (!seq) {
           seqArray = seqChangedToEmpty(lastSeqArray, callbacks);
-        } else if (seq instanceof Array) {
+        } else if (_.isArray(seq)) {
           seqArray = seqChangedToArray(lastSeqArray, seq, callbacks);
         } else if (isStoreCursor(seq)) {
           var result /* [seqArray, activeObserveHandle] */ =
@@ -126,7 +126,7 @@ ObserveSequence = {
   fetch: function (seq) {
     if (!seq) {
       return [];
-    } else if (seq instanceof Array) {
+    } else if (_.isArray(seq)) {
       return seq;
     } else if (isStoreCursor(seq)) {
       return seq.fetch();

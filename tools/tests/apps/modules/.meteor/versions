@@ -2,7 +2,7 @@ allow-deny@1.0.5
 autoupdate@1.3.12
 avital:mocha@2.1.0_10
 babel-compiler@6.13.0
-babel-runtime@1.0.0
+babel-runtime@1.0.1
 base64@1.0.10
 binary-heap@1.0.10
 blaze@2.1.9
@@ -14,14 +14,14 @@ caching-html-compiler@1.0.7
 callback-hook@1.0.10
 check@1.2.4
 client-only-ecmascript@0.0.1
-coffeescript@1.11.1_3
+coffeescript@1.11.1_4
 ddp@1.2.5
 ddp-client@1.3.2
-ddp-common@1.2.7
-ddp-server@1.3.11
+ddp-common@1.2.8
+ddp-server@1.3.12
 deps@1.0.12
 diff-sequence@1.0.7
-ecmascript@0.6.0
+ecmascript@0.6.1
 ecmascript-runtime@0.3.15
 ejson@1.0.13
 es5-shim@4.6.15
@@ -40,7 +40,7 @@ meteor@1.6.0
 meteor-base@1.0.4
 minifier-css@1.2.15
 minifier-js@1.2.15
-minimongo@1.0.18
+minimongo@1.0.19
 mobile-experience@1.0.4
 mobile-status-bar@1.0.13
 modules@0.7.7
