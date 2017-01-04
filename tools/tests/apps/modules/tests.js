@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 import moment from "moment";
 import shared from "./imports/shared";
-import {Meteor as ImportedMeteor} from "meteor/meteor";
+import { Meteor as ImportedMeteor } from "meteor/meteor";
 
 describe("app modules", () => {
   it("can be imported using absolute identifiers", () => {

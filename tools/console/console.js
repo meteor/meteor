@@ -68,7 +68,7 @@ var wordwrap = require('wordwrap');
 var PROGRESS_DEBUG = !!process.env.METEOR_PROGRESS_DEBUG;
 var FORCE_PRETTY=undefined;
 var CARRIAGE_RETURN =
-  (process.platform === 'win32' && process.stdout.isTTY ? new Array(249).join('\b') : '\r');
+  (process.platform === 'win32' && process.stdout.isTTY && process.title !== 'Windows PowerShell' ? new Array(249).join('\b') : '\r');
 
 if (process.env.METEOR_PRETTY_OUTPUT) {
   FORCE_PRETTY = process.env.METEOR_PRETTY_OUTPUT != '0';
@@ -309,7 +309,10 @@ var ProgressDisplayFull = function (console) {
   self._progressBarRenderer = new ProgressBarRenderer(PROGRESS_BAR_FORMAT, options);
   self._progressBarRenderer.start = new Date();
 
-  self._headless = false;
+  self._headless = !! (
+    process.env.METEOR_HEADLESS &&
+    JSON.parse(process.env.METEOR_HEADLESS)
+  );
 
   self._spinnerRenderer = new SpinnerRenderer();
 
@@ -541,7 +544,10 @@ var Console = function (options) {
 
   options = options || {};
 
-  self._headless = false;
+  self._headless = !! (
+    process.env.METEOR_HEADLESS &&
+    JSON.parse(process.env.METEOR_HEADLESS)
+  );
 
   // The progress display we are showing on-screen
   self._progressDisplay = new ProgressDisplayNone(self);

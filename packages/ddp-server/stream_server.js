@@ -86,6 +86,25 @@ StreamServer = function () {
   self._redirectWebsocketEndpoint();
 
   self.server.on('connection', function (socket) {
+    // We want to make sure that if a client connects to us and does the initial
+    // Websocket handshake but never gets to the DDP handshake, that we
+    // eventually kill the socket.  Once the DDP handshake happens, DDP
+    // heartbeating will work. And before the Websocket handshake, the timeouts
+    // we set at the server level in webapp_server.js will work. But
+    // faye-websocket calls setTimeout(0) on any socket it takes over, so there
+    // is an "in between" state where this doesn't happen.  We work around this
+    // by explicitly setting the socket timeout to a relatively large time here,
+    // and setting it back to zero when we set up the heartbeat in
+    // livedata_server.js.
+    socket.setWebsocketTimeout = function (timeout) {
+      if ((socket.protocol === 'websocket' ||
+           socket.protocol === 'websocket-raw')
+          && socket._session.recv) {
+        socket._session.recv.connection.setTimeout(timeout);
+      }
+    };
+    socket.setWebsocketTimeout(45 * 1000);
+
     socket.send = function (data) {
       socket.write(data);
     };
