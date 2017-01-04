@@ -96,17 +96,6 @@ Tinytest.add("ejson - clone", function (test) {
     test.equal(clonedArgs, [1, 2, "foo", [4]]);
   };
   testCloneArgs(1, 2, "foo", [4]);
-
-  test.throws(
-    function() {
-      var obj1 = {};
-      var obj2 = {obj1: obj1};
-      obj1.obj2 = obj2;
-
-      EJSON.clone(obj1);
-    },
-    /can not clone circular structure/
-  );
 });
 
 Tinytest.add("ejson - stringify", function (test) {
@@ -240,4 +229,34 @@ Tinytest.add("ejson - custom types", function (test) {
   var clone = EJSON.clone(obj);
   clone.address.city = 'Sherbrooke';
   test.notEqual( obj, clone );
+});
+
+Tinytest.add("ejson - isCyclic", function (test) {
+  test.isFalse(EJSON.isCyclic(1));
+  test.isFalse(EJSON.isCyclic('1'));
+  test.isFalse(EJSON.isCyclic(new Date));
+  test.isFalse(EJSON.isCyclic(/regex/));
+  test.isFalse(EJSON.isCyclic(function f() {}));
+
+  var normalObj1 = {a: 1, b: '2', c: {d: {}}};
+  test.isFalse(EJSON.isCyclic(normalObj1));
+
+  var normalObj2 = {};
+  var normalObj3 = {};
+  normalObj2.a = normalObj3;
+  normalObj2.b = normalObj3;
+  normalObj2.c = {d: normalObj3};
+  test.isFalse(EJSON.isCyclic(normalObj2));
+
+  var normalObj4 = new EJSONTest.Address('HCM', 'VN');
+  test.isFalse(EJSON.isCyclic(normalObj4));
+
+  var cyclicObj1 = {};
+  cyclicObj1.obj = cyclicObj1;
+  test.isTrue(EJSON.isCyclic(cyclicObj1));
+
+  var t = {};
+  t.t = t;
+  var cyclicObj2 = new EJSONTest.Holder(t);
+  test.isTrue(EJSON.isCyclic(cyclicObj2));
 });

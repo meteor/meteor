@@ -475,6 +475,18 @@ function isCyclic (obj, seen) {
   return false;
 }
 
+EJSON.isCyclic = function(v) {
+  if (typeof v !== 'object' || v === null || v instanceof Date || v instanceof RegExp) {
+    return false;
+  }
+
+  if (EJSON._isCustomType(v)) {
+    return EJSON.isCyclic(EJSON.toJSONValue(v));
+  }
+
+  return isCyclic(v, []);
+}
+
 /**
  * @summary Return a deep copy of `val`.
  * @locus Anywhere
@@ -517,10 +529,6 @@ EJSON.clone = function (v) {
     return EJSON.fromJSONValue(EJSON.clone(EJSON.toJSONValue(v)), true);
   }
   // handle other objects
-
-  if (isCyclic(v, [])) {
-    throw new Error("EJSON.clone can not clone circular structure");
-  }
 
   ret = {};
   _.each(v, function (value, key) {
