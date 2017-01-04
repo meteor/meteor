@@ -2,6 +2,8 @@
 [Source code of released version](https://github.com/meteor/meteor/tree/master/packages/fastclick) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/fastclick)
 ***
 
+> **Warning:** As of late 2015 most mobile browsers - notably Chrome and Safari - no longer have a 300ms touch delay, so fastclick offers no benefit on newer browsers, and risks introducing [bugs](https://github.com/ftlabs/fastclick/issues) into your application. Consider carefully whether you really need to use it.
+
 FastClick is a simple, easy-to-use library for eliminating the 300ms delay
 between a physical tap and the firing of a `click` event on mobile browsers. The
 aim is to make your application feel less laggy and more responsive while
