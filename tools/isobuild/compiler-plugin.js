@@ -664,7 +664,7 @@ class ResourceSlot {
         // If a compiler plugin calls addJavaScript with the same
         // sourcePath, that code should take precedence over this empty
         // stub, so this property marks the resource as disposable.
-        emtpyStub: true,
+        implicit: true,
         lazy: true,
       });
 
