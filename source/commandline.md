@@ -69,8 +69,7 @@ existing app, this command will create a package in the packages
 directory.
 
 You can use `meteor create --bare` to create an empty project. Or
-`meteor create --full` to create a scaffolded modular project introduced in Meteor 1.3.
-
+`meteor create --full` to create a module-based, scaffolded project which closely matches the structure recommended by the [Meteor Guide](https://guide.meteor.com/).
 
 <h2 id="meteorloginlogout">meteor login / logout</h2>
 
