@@ -59,8 +59,6 @@ const CAPABILITIES = ['showDeployMessages', 'canTransferAuthorization'];
 //   body, or a generic 'try again later' message, as appropriate
 
 var deployRpc = function (options) {
-  var genericError = "Server error (please try again later)";
-
   options = _.clone(options);
   options.headers = _.clone(options.headers || {});
   if (options.headers.cookie) {
@@ -96,7 +94,12 @@ var deployRpc = function (options) {
   var ret = { statusCode: response.statusCode };
 
   if (response.statusCode !== 200) {
-    ret.errorMessage = body.length > 0 ? body : genericError;
+    if (body.length > 0) {
+      ret.errorMessage = body;
+    } else {
+      ret.errorMessage = "Server error " + response.statusCode +
+        " (please try again later)";
+    }
     return ret;
   }
 
@@ -105,7 +108,9 @@ var deployRpc = function (options) {
     try {
       ret.payload = JSON.parse(body);
     } catch (e) {
-      ret.errorMessage = genericError;
+      ret.errorMessage =
+        "Server error (please try again later)\n"
+        + "Invalid JSON: " + body;
       return ret;
     }
   } else if (contentType === "text/plain; charset=utf-8") {
@@ -123,7 +128,8 @@ var deployRpc = function (options) {
     delete ret.payload;
     delete ret.message;
 
-    ret.errorMessage = genericError;
+    ret.errorMessage = "Server error (please try again later)\n" +
+      "Response missing expected keys.";
   }
 
   return ret;
