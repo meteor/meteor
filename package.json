@@ -56,7 +56,7 @@
     "colors": "1.1.2",
     "coveralls": "2.11.15",
     "cz-conventional-changelog": "1.2.0",
-    "eslint": "3.12.1",
+    "eslint": "3.13.0",
     "eslint-config-airbnb": "13.0.0",
     "eslint-plugin-import": "2.1.0",
     "eslint-plugin-jsx-a11y": "^3.0.1",
