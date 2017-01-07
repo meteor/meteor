@@ -27,10 +27,9 @@ DiffSequence.diffQueryUnorderedChanges = function (oldResults, newResults,
     var oldDoc = oldResults.get(id);
     if (oldDoc) {
       if (observer.changed && !EJSON.equals(oldDoc, newDoc)) {
-        var projectedNew = projectionFn(newDoc);
-        var projectedOld = projectionFn(oldDoc);
-        var changedFields =
-              DiffSequence.makeChangedFields(projectedNew, projectedOld);
+        var projectedNew = projectionFn(newDoc, false);
+        var projectedOld = projectionFn(oldDoc, false);
+        var changedFields = DiffSequence.makeChangedFields(projectedNew, projectedOld);
         if (! _.isEmpty(changedFields)) {
           observer.changed(id, changedFields);
         }
@@ -175,8 +174,8 @@ DiffSequence.diffQueryOrderedChanges = function (old_results, new_results,
       } else {
         // moved
         oldDoc = old_results[old_index_of_id[newDoc._id]];
-        projectedNew = projectionFn(newDoc);
-        projectedOld = projectionFn(oldDoc);
+        projectedNew = projectionFn(newDoc, false);
+        projectedOld = projectionFn(oldDoc, false);
         fields = DiffSequence.makeChangedFields(projectedNew, projectedOld);
         if (!_.isEmpty(fields)) {
           observer.changed && observer.changed(newDoc._id, fields);
@@ -187,8 +186,8 @@ DiffSequence.diffQueryOrderedChanges = function (old_results, new_results,
     if (groupId) {
       newDoc = new_results[endOfGroup];
       oldDoc = old_results[old_index_of_id[newDoc._id]];
-      projectedNew = projectionFn(newDoc);
-      projectedOld = projectionFn(oldDoc);
+      projectedNew = projectionFn(newDoc, false);
+      projectedOld = projectionFn(oldDoc, false);
       fields = DiffSequence.makeChangedFields(projectedNew, projectedOld);
       if (!_.isEmpty(fields)) {
         observer.changed && observer.changed(newDoc._id, fields);

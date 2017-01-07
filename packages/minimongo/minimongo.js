@@ -937,8 +937,8 @@ LocalCollection._updateInResults = function (query, doc, old_doc) {
   if (!EJSON.equals(doc._id, old_doc._id))
     throw new Error("Can't change a doc's _id while updating");
   var projectionFn = query.projectionFn;
-  var changedFields = DiffSequence.makeChangedFields(
-    projectionFn(doc), projectionFn(old_doc));
+  var changedFields = EJSON.clone(DiffSequence.makeChangedFields(
+    projectionFn(doc, false), projectionFn(old_doc, false)));
 
   if (!query.ordered) {
     if (!_.isEmpty(changedFields)) {

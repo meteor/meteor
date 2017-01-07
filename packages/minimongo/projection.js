@@ -12,12 +12,13 @@ LocalCollection._compileProjection = function (fields) {
   var details = projectionDetails(fields);
 
   // returns transformed doc according to ruleTree
-  var transform = function (doc, ruleTree) {
+  var transform = function (doc, ruleTree, clone=true) {
     // Special case for "sets"
     if (_.isArray(doc))
       return _.map(doc, function (subdoc) { return transform(subdoc, ruleTree); });
 
-    var res = details.including ? {} : EJSON.clone(doc);
+    var skipClone = !clone && _.size(ruleTree) === 0;
+    var res = details.including ? {} : (skipClone ? doc : EJSON.clone(doc));
     _.each(ruleTree, function (rule, key) {
       if (!_.has(doc, key))
         return;
@@ -35,8 +36,8 @@ LocalCollection._compileProjection = function (fields) {
     return res;
   };
 
-  return function (obj) {
-    var res = transform(obj, details.tree);
+  return function (obj, clone=true) {
+    var res = transform(obj, details.tree, clone);
 
     if (_idProjection && _.has(obj, '_id'))
       res._id = obj._id;
