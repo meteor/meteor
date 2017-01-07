@@ -1621,6 +1621,11 @@ _.extend(Server.prototype, {
     if (!handler) {
       exception = new Meteor.Error(404, `Method '${name}' not found`);
     } else {
+      // Check for circular structure in arguments list
+      if (EJSON.isCyclic(args)) {
+        throw new Error(`Arguments passed to ${name} contain circular structure`);
+      }
+
       // If this is a method call from within another method, get the
       // user state from the outer method, otherwise don't allow
       // setUserId to be called
