@@ -458,17 +458,38 @@ export class NodeModulesDirectory {
       maxPartCount = Math.max(parts.length, maxPartCount);
     });
 
-    return this._prodPackagePredicate = function isWithinProdPackage(dir) {
-      const parts = files.pathRelative(sourcePath, dir)
+    return this._prodPackagePredicate = function isWithinProdPackage(path) {
+      const parts = files.pathRelative(sourcePath, path)
         .split(files.pathSep);
 
-      let start = parts.lastIndexOf("node_modules") + 1;
+      // Normalize away trailing files.pathSep characters.
+      while (parts[parts.length - 1] === "") {
+        parts.pop();
+      }
 
-      if (parts.length - start > maxPartCount) {
-        // We're deep enough inside node_modules that it's safe to
-        // say we should have returned false earlier.
+      const start = parts.lastIndexOf("node_modules") + 1;
+
+      if (parts[start] === ".bin") {
+        if (start === parts.length - 1) {
+          // Permit node_modules/.bin directories, so that we can filter
+          // their contents below.
+          return true;
+        }
+
+        const real = files.realpath(path);
+        if (real !== path) {
+          // If node_modules/.bin/command is a symlink, determine the
+          // answer by calling isWithinProdPackage(real).
+          return isWithinProdPackage(real);
+        }
+
+        // If node_modules/.bin/command is not a symlink, then it's hard
+        // to tell which package is responsible for it, so don't strip it.
         return true;
       }
+
+      // Strip away any parts not related to the package name.
+      parts.length = start + maxPartCount;
 
       let tree = prodPackageTree;
 
@@ -2006,8 +2027,8 @@ class JsImage {
           // "devDependencies", but it also gets listed in some other
           // package's "dependencies", then every copy of that package
           // will be copied to the destination directory. A little bit of
-          // overcopying vastly simplifies the job of directoryFilter.
-          copyOptions.directoryFilter = prodPackagePredicate;
+          // overcopying vastly simplifies the job of the filter.
+          copyOptions.filter = prodPackagePredicate;
         }
 
         builder.copyDirectory(copyOptions);

@@ -6,13 +6,13 @@ Tinytest.add("minifier-css - url rewriting when merging", function (test) {
 
   var parseOptions = { source: null, position: true };
 
-  var t = function(relativeUrl, absoluteUrl, desc) {
+  function t(relativeUrl, absoluteUrl, desc) {
     var ast1 = CssTools.parseCss(stylesheet(relativeUrl), parseOptions);
     var ast2 = CssTools.parseCss(stylesheet(absoluteUrl), parseOptions);
     CssTools.rewriteCssUrls(ast1);
 
     test.equal(CssTools.stringifyCss(ast1), CssTools.stringifyCss(ast2), desc);
-  };
+  }
 
   parseOptions.source = 'packages/nameOfPackage/style.css';
   t('../image.png', 'packages/image.png', 'parent directory');
@@ -42,7 +42,6 @@ Tinytest.add("minifier-css - url rewriting when merging", function (test) {
   t('"http://i.imgur.com/fBcdJIh.gif"', '"http://i.imgur.com/fBcdJIh.gif"', 'complete quoted URL');
   t('data:image/png;base64,iVBORw0K=', 'data:image/png;base64,iVBORw0K=', 'data URI');
   t('http://', 'http://', 'malformed URL');
-
 });
 
 Tinytest.add("minifier-css - url rewriting with media queries (ast rule recursion)", function (test) {
@@ -95,5 +94,53 @@ Tinytest.add("minifier-css - url rewriting with media queries (ast rule recursio
   t('"http://i.imgur.com/fBcdJIh.gif"', '"http://i.imgur.com/fBcdJIh.gif"', 'complete quoted URL');
   t('data:image/png;base64,iVBORw0K=', 'data:image/png;base64,iVBORw0K=', 'data URI');
   t('http://', 'http://', 'malformed URL');
+
+});
+
+Tinytest.add("minifier-css - url rewriting with hash symbols", function (test) {
+  var stylesheet = function(backgroundPath) {
+    return "body { background-image: url(" + backgroundPath + ")}"
+  };
+
+  var parseOptions = { source: null, position: true };
+
+  var t = function(relativeUrl, absoluteUrl, desc) {
+    var ast1 = CssTools.parseCss(stylesheet(relativeUrl), parseOptions);
+    var ast2 = CssTools.parseCss(stylesheet(absoluteUrl), parseOptions);
+    CssTools.rewriteCssUrls(ast1);
+
+    test.equal(CssTools.stringifyCss(ast1), CssTools.stringifyCss(ast2), desc);
+  };
+
+  parseOptions.source = 'packages/nameOfPackage/style.css';
+  t('../filters.svg#theFilterId', 'packages/filters.svg#theFilterId', 'parent directory');
+  t('./../filters.svg#theFilterId', 'packages/filters.svg#theFilterId', 'parent directory');
+  t('../nameOfPackage2/filters.svg#theFilterId', 'packages/nameOfPackage2/filters.svg#theFilterId', 'cousin directory');
+  t('../../filters.svg#theFilterId', 'filters.svg#theFilterId', 'grand parent directory');
+  t('./filters.svg#theFilterId', 'packages/nameOfPackage/filters.svg#theFilterId', 'current directory');
+  t('./child/filters.svg#theFilterId', 'packages/nameOfPackage/child/filters.svg#theFilterId', 'child directory');
+  t('child/filters.svg#theFilterId', 'packages/nameOfPackage/child/filters.svg#theFilterId', 'child directory');
+  t('/filters.svg#theFilterId', 'filters.svg#theFilterId', 'absolute url');
+  t('"/filters.svg#theFilterId"', '"filters.svg#theFilterId"', 'double quoted url');
+  t("'/filters.svg#theFilterId'", "'filters.svg#theFilterId'", 'single quoted url');
+  t('"./../filters.svg#theFilterId"', '"packages/filters.svg#theFilterId"', 'quoted parent directory');
+  t('http://i.imgur.com/filters.svg#theFilterId', 'http://i.imgur.com/filters.svg#theFilterId', 'complete URL');
+  t('"http://i.imgur.com/filters.svg#theFilterId"', '"http://i.imgur.com/filters.svg#theFilterId"', 'complete quoted URL');
+  t('data:image/png;base64,iVBORw0K=#theFilterId', 'data:image/png;base64,iVBORw0K=#theFilterId', 'data URI');
+  t('http://', 'http://', 'malformed URL');
+  t('#theFilterId', '#theFilterId', 'URL starting with a #');
+
+  parseOptions.source = 'application/client/dir/other-style.css';
+  t('./filters.svg#theFilterId', 'filters.svg#theFilterId', 'base path is root');
+  t('./child/filters.svg#theFilterId', 'child/filters.svg#theFilterId', 'child directory from root');
+  t('child/filters.svg#theFilterId', 'child/filters.svg#theFilterId', 'child directory from root');
+  t('/filters.svg#theFilterId', 'filters.svg#theFilterId', 'absolute url');
+  t('"/filters.svg#theFilterId"', '"filters.svg#theFilterId"', 'double quoted url');
+  t("'/filters.svg#theFilterId'", "'filters.svg#theFilterId'", 'single quoted url');
+  t('http://i.imgur.com/filters.svg#theFilterId', 'http://i.imgur.com/filters.svg#theFilterId', 'complete URL');
+  t('"http://i.imgur.com/filters.svg#theFilterId"', '"http://i.imgur.com/filters.svg#theFilterId"', 'complete quoted URL');
+  t('data:image/png;base64,iVBORw0K=#theFilterId', 'data:image/png;base64,iVBORw0K=#theFilterId', 'data URI');
+  t('http://', 'http://', 'malformed URL');
+  t('#theFilterId', '#theFilterId', 'URL starting with a #');
 
 });

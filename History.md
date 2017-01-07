@@ -1,5 +1,38 @@
 ## v.NEXT
 
+* The `npm` npm package has been upgraded to version 4.0.2.
+
+* The `facebook` package has been split into:
+  - `facebook-oauth` (the part that allows oauth w/ FB directly) and
+  - `facebook-config-ui` (the Blaze configuration templates for accounts-ui)
+
+  This means you can now use `[accounts-]facebook` without needing Blaze.
+
+  If you are using `accounts-ui` and `accounts-facebook`, you will probably
+  need to install the `facebook-config-ui` package if you want to configure it
+  using the Accounts UI.
+
+  [Issue #7715](https://github.com/meteor/meteor/issues/7715)
+  [PR #7728](https://github.com/meteor/meteor/pull/7728)
+
+* The `meteor-babel` npm package has been upgraded to version 0.14.3,
+  fixing [#8021](https://github.com/meteor/meteor/issues/8021) and
+  [#7662](https://github.com/meteor/meteor/issues/7662).
+
+* Added support for frame-ancestors CSP option in browser-policy.
+  [#7970](https://github.com/meteor/meteor/pull/7970)
+  
+* You can now use autoprefixer with stylus files added via packages.
+  [#7727](https://github.com/meteor/meteor/pull/7727)
+
+* The `"main"` field of `package.json` modules will no longer be
+  overwritten with the value of the optional `"browser"` field, now that
+  the `install` npm package can make sense of the `"browser"` field at
+  runtime. If you experience module resolution failures on the client
+  after updating Meteor, make sure you've updated the `modules-runtime`
+  Meteor package to at least version 0.7.8.
+  [#8213](https://github.com/meteor/meteor/pull/8213)
+
 ## v1.4.2.3
 
 * Style improvements for `meteor create --full`.
@@ -23,6 +56,7 @@
   [PR #7807](https://github.com/meteor/meteor/pull/7807)
 
 * Minimongo now supports `$min`, `$max` and partially supports `$currentDate`.
+
   [Issue #7857](https://github.com/meteor/meteor/issues/7857)
   [PR #7858](https://github.com/meteor/meteor/pull/7858)
 

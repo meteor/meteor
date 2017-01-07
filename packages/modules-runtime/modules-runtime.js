@@ -13,6 +13,10 @@ if (typeof Profile === "function" &&
   };
 }
 
+// On the client, make package resolution prefer the "browser" field of
+// package.json files to the "main" field.
+options.browser = Meteor.isClient;
+
 // This function will be called whenever a module identifier that hasn't
 // been installed is required. For backwards compatibility, and so that we
 // can require binary dependencies on the server, we implement the

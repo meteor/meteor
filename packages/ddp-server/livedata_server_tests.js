@@ -82,7 +82,6 @@ testAsyncMulti(
   }]
 );
 
-
 Meteor.methods({
   livedata_server_test_inner: function () {
     return this.connection.id;
@@ -92,6 +91,28 @@ Meteor.methods({
     return Meteor.call('livedata_server_test_inner');
   }
 });
+
+
+Tinytest.addAsync(
+    "livedata server - onMessage hook",
+    function (test, onComplete) {
+
+        var cb = Meteor.onMessage(function (msg, session) {
+            test.equal(msg.method, 'livedata_server_test_inner');
+            cb.stop();
+            onComplete();
+        });
+
+        makeTestConnection(
+            test,
+            function (clientConn, serverConn) {
+                clientConn.call('livedata_server_test_inner');
+                clientConn.disconnect();
+            },
+            onComplete
+        );
+    }
+);
 
 
 Tinytest.addAsync(

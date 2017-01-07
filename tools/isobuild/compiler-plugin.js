@@ -726,7 +726,8 @@ class ResourceSlot {
       if (_.isString(options.data)) {
         options.data = new Buffer(options.data);
       } else {
-        throw new Error("'data' option to addAsset must be a Buffer or String.");
+        throw new Error("'data' option to addAsset must be a Buffer or " +
+                        "String: " + self.inputResource.path);
       }
     }
 

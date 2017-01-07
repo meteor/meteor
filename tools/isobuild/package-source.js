@@ -1179,9 +1179,10 @@ _.extend(PackageSource.prototype, {
             // Recurse on this directory.
             assetDirs.push(item);
           } else {
-            // This file is an asset.
+            // This file is an asset. Make sure filenames are Unicode
+            // normalized.
             assets.push({
-              relPath: item
+              relPath: item.normalize('NFC')
             });
           }
         });

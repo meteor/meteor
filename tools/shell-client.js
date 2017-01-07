@@ -137,6 +137,7 @@ Cp.setUpSocket = function setUpSocket(sock, key) {
     // Sending a JSON-stringified options object (even just an empty
     // object) over the socket is required to start the REPL session.
     sock.write(JSON.stringify({
+      columns: process.stdout.columns,
       terminal: ! process.env.EMACS,
       key: key
     }) + "\n");
