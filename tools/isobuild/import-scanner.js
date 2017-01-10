@@ -296,8 +296,13 @@ export default class ImportScanner {
       }
 
       if (oldFile[name] !== newFile[name]) {
+        const fuzzyCase =
+          oldFile.sourcePath.toLowerCase() === newFile.sourcePath.toLowerCase();
+
         throw new Error(
-          "Attempting to combine different files:\n" +
+          "Attempting to combine different files" +
+            ( fuzzyCase ? " (is the filename case slightly different?)" : "") +
+            ":\n" +
             inspect(omit(oldFile, "dataString")) + "\n" +
             inspect(omit(newFile, "dataString")) + "\n"
         );
