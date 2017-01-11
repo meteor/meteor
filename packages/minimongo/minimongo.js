@@ -103,7 +103,7 @@ LocalCollection.Cursor = function (collection, selector, options) {
   self.limit = options.limit;
   self.fields = options.fields;
 
-  self._projectionFn = LocalCollection._compileProjection(self.fields || {});
+  self._projectionFn = LocalCollection._compileProjection(self.fields || {}, _.clone);
 
   self._transform = LocalCollection.wrapTransform(options.transform);
 
@@ -937,8 +937,8 @@ LocalCollection._updateInResults = function (query, doc, old_doc) {
   if (!EJSON.equals(doc._id, old_doc._id))
     throw new Error("Can't change a doc's _id while updating");
   var projectionFn = query.projectionFn;
-  var changedFields = EJSON.clone(DiffSequence.makeChangedFields(
-    projectionFn(doc, false), projectionFn(old_doc, false)));
+  var changedFields = DiffSequence.makeChangedFields(
+    projectionFn(doc), projectionFn(old_doc));
 
   if (!query.ordered) {
     if (!_.isEmpty(changedFields)) {
@@ -1001,7 +1001,7 @@ LocalCollection.prototype._recomputeResults = function (query, oldResults) {
   if (! self.paused) {
     LocalCollection._diffQueryChanges(
       query.ordered, oldResults, query.results, query,
-      { projectionFn: doc => query.projectionFn(doc, _.clone) });
+      { projectionFn: query.projectionFn });
   }
 };
 
@@ -1122,7 +1122,7 @@ LocalCollection.prototype.resumeObservers = function () {
       // pass the query object for its observer callbacks.
       LocalCollection._diffQueryChanges(
         query.ordered, query.resultsSnapshot, query.results, query,
-        {projectionFn: doc => query.projectionFn(doc, _.clone)});
+        {projectionFn: query.projectionFn});
     }
     query.resultsSnapshot = null;
   }

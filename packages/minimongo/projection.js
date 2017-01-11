@@ -5,17 +5,17 @@
 //            @returns - Object: a document with the fields filtered out
 //                       according to projection rules. Doesn't retain subfields
 //                       of passed argument.
-LocalCollection._compileProjection = function (fields) {
+LocalCollection._compileProjection = function (fields, clone=EJSON.clone) {
   LocalCollection._checkSupportedProjection(fields);
 
   var _idProjection = _.isUndefined(fields._id) ? true : fields._id;
   var details = projectionDetails(fields);
 
   // returns transformed doc according to ruleTree
-  var transform = function (doc, ruleTree, clone) {
+  var transform = function (doc, ruleTree) {
     // Special case for "sets"
     if (_.isArray(doc))
-      return _.map(doc, function (subdoc) { return transform(subdoc, ruleTree, clone); });
+      return _.map(doc, function (subdoc) { return transform(subdoc, ruleTree); });
 
     var res = details.including ? {} : clone(doc);
     _.each(ruleTree, function (rule, key) {
@@ -24,7 +24,7 @@ LocalCollection._compileProjection = function (fields) {
       if (_.isObject(rule)) {
         // For sub-objects/subsets we branch
         if (_.isObject(doc[key]))
-          res[key] = transform(doc[key], rule, clone);
+          res[key] = transform(doc[key], rule);
         // Otherwise we don't even touch this subfield
       } else if (details.including)
         res[key] = clone(doc[key]);
@@ -35,8 +35,8 @@ LocalCollection._compileProjection = function (fields) {
     return res;
   };
 
-  return function (obj, clone=EJSON.clone) {
-    var res = transform(obj, details.tree, clone);
+  return function (obj) {
+    var res = transform(obj, details.tree);
 
     if (_idProjection && _.has(obj, '_id'))
       res._id = obj._id;
