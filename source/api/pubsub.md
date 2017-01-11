@@ -142,8 +142,8 @@ project that includes the `autopublish` package.  Your publish function
 will still work.
 {% endpullquote %}
 
-Read more about publications and how to use them in the [Data Loading]
-(http://guide.meteor.com/data-loading.html) article in the Meteor Guide.
+Read more about publications and how to use them in the 
+[Data Loading](http://guide.meteor.com/data-loading.html) article in the Meteor Guide.
 
 {% apibox "Subscription#userId" %}
 
