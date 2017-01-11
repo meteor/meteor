@@ -101,7 +101,17 @@ _.extend(Rule.prototype, {
     // Delete the old counters dictionary to allow for garbage collection
     self.counters = {};
     self._lastResetTime = new Date().getTime();
-  }
+  },
+  _executeCallback(reply) {
+    try {
+      if (this.options.callback) {
+        this.options.callback(reply);
+      }
+    } catch (e) {
+      // Do not throw error here
+      console.error(e);
+    }
+  },
 });
 
 // Initialize rules to be an empty dictionary.
@@ -133,7 +143,10 @@ RateLimiter.prototype.check = function (input) {
   var reply = {
     allowed: true,
     timeToReset: 0,
-    numInvocationsLeft: Infinity
+    numInvocationsLeft: Infinity,
+    userId: input.userId,
+    clientAddress: input.clientAddress,
+    connectionId: input.connectionId,
   };
 
   var matchedRules = self._findAllMatchingRules(input);
@@ -160,6 +173,7 @@ RateLimiter.prototype.check = function (input) {
       };
       reply.allowed = false;
       reply.numInvocationsLeft = 0;
+      rule._executeCallback(reply);
     } else {
       // If this is an allowed attempt and we haven't failed on any of the
       // other rules that match, update the reply field.
@@ -169,6 +183,7 @@ RateLimiter.prototype.check = function (input) {
         reply.numInvocationsLeft = rule.options.numRequestsAllowed -
           numInvocations;
       }
+      rule._executeCallback(reply);
     }
   });
   return reply;
@@ -187,15 +202,20 @@ RateLimiter.prototype.check = function (input) {
  * interval. Default = 10.
  * @param {integer} intervalTime Optional. Number of milliseconds before
  * rule's counters are reset. Default = 1000.
+ * @param {function} callback Optional. Function to be called after a
+ * rule is executed. An object will be passed to this callback having
+ * these properties: allowed, timeToReset, numInvocationsLeft, userId,
+ * clientAddress, connectionId.
  * @return {string} Returns unique rule id
  */
 RateLimiter.prototype.addRule = function (rule, numRequestsAllowed,
-  intervalTime) {
+  intervalTime, cb) {
   var self = this;
 
   var options = {
     numRequestsAllowed: numRequestsAllowed || DEFAULT_REQUESTS_PER_INTERVAL,
-    intervalTime: intervalTime || DEFAULT_INTERVAL_TIME_IN_MILLISECONDS
+    intervalTime: intervalTime || DEFAULT_INTERVAL_TIME_IN_MILLISECONDS,
+    callback: cb && Meteor.bindEnvironment(cb),
   };
 
   var newRule = new Rule(options, rule);
