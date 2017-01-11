@@ -1001,7 +1001,7 @@ LocalCollection.prototype._recomputeResults = function (query, oldResults) {
   if (! self.paused) {
     LocalCollection._diffQueryChanges(
       query.ordered, oldResults, query.results, query,
-      { projectionFn: query.projectionFn });
+      { projectionFn: doc => query.projectionFn(doc, _.clone) });
   }
 };
 
@@ -1122,7 +1122,7 @@ LocalCollection.prototype.resumeObservers = function () {
       // pass the query object for its observer callbacks.
       LocalCollection._diffQueryChanges(
         query.ordered, query.resultsSnapshot, query.results, query,
-        {projectionFn: query.projectionFn});
+        {projectionFn: doc => query.projectionFn(doc, _.clone)});
     }
     query.resultsSnapshot = null;
   }
