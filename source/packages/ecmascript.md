@@ -187,7 +187,7 @@ Here is a list of the Babel transformers that are currently enabled:
   for (var x of [1, 2, 3]) {
     sum += x;
   }
-  x; // 6
+  sum; // 6
   ```
 
 * [`es6.destructuring`](http://babeljs.io/docs/learn-es2015/#destructuring)<br>
