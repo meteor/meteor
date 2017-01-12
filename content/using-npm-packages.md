@@ -194,7 +194,7 @@ npm install -g shrinkpack
 Then use it directly after you shrinkwrap
 
 ```bash
-meteor npm install moment
+meteor npm install --save moment
 meteor npm shrinkwrap
 shrinkpack
 ```
