@@ -62,7 +62,7 @@ meteor add barbatus:typescript
 
 It is necessary to configure TypeScript with a `tsconfig.json` file. More info about that can be found [here](http://www.typescriptlang.org/docs/handbook/tsconfig-json.html).
 
-A guide on installation, configuration and usage of TypeScript with meteor is currently being written.
+A guide on installation, configuration and usage of TypeScript with Meteor is currently being written.
 
 <h2 id="blaze-templates">Templates and HTML</h2>
 
