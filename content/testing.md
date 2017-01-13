@@ -238,10 +238,11 @@ A simple example of a reusable component to test is the [`Todos_item`](https://g
 /* eslint-env mocha */
 /* eslint-disable func-names, prefer-arrow-callback */
 
-import { Factory } from 'meteor/factory';
+import { Factory } from 'meteor/dburles:factory';
 import { chai } from 'meteor/practicalmeteor:chai';
 import { Template } from 'meteor/templating';
 import { $ } from 'meteor/jquery';
+import { Todos } from '../../../api/todos/todos';
 
 
 import { withRenderedTemplate } from '../../test-helpers.js';
@@ -259,7 +260,7 @@ describe('Todos_item', function () {
   it('renders correctly with simple data', function () {
     const todo = Factory.build('todo', { checked: false });
     const data = {
-      todo,
+      todo: Todos._transform(todo),
       onEditingChange: () => 0,
     };
 
@@ -322,7 +323,7 @@ We can use the [Factory package's](#test-data) `.build()` API to create a test d
 We can also apply the same structure to testing React components and recommend the [Enzyme](https://github.com/airbnb/enzyme) package, which simulates a React component's environment and allows you to query it using CSS selectors. A larger suite of tests is available in the [react branch of the Todos app](https://github.com/meteor/todos/tree/react), but let's look at a simple example for now:
 
 ```js
-import { Factory } from 'meteor/factory';
+import { Factory } from 'meteor/dburles:factory';
 import React from 'react';
 import { shallow } from 'enzyme';
 import { chai } from 'meteor/practicalmeteor:chai';
@@ -343,7 +344,7 @@ describe('TodoItem', () => {
 The test is slightly simpler than the Blaze version above because the React sample app is not internationalized. Otherwise, it's conceptually identical. We use Enzyme's `shallow` function to render the `TodoItem` component, and the resulting object to query the document, and also to simulate user interactions. And here's an example of simulating a user checking the todo item:
 
 ```js
-import { Factory } from 'meteor/factory';
+import { Factory } from 'meteor/dburles:factory';
 import React from 'react';
 import { shallow } from 'enzyme';
 import { sinon } from 'meteor/practicalmeteor:sinon';
@@ -459,7 +460,7 @@ In the [Todos](https://github.com/meteor/todos) example app, we have an integrat
 /* eslint-disable func-names, prefer-arrow-callback */
 
 import { Meteor } from 'meteor/meteor';
-import { Factory } from 'meteor/factory';
+import { Factory } from 'meteor/dburles:factory';
 import { Random } from 'meteor/random';
 import { chai } from 'meteor/practicalmeteor:chai';
 import StubCollections from 'meteor/hwillson:stub-collections';
@@ -628,7 +629,7 @@ Similar to the way we cleared the database using a method in the `beforeEach` in
 // ensuring the method is always available
 
 import { Meteor } from 'meteor/meteor';
-import { Factory } from 'meteor/factory';
+import { Factory } from 'meteor/dburles:factory';
 import { resetDatabase } from 'meteor/xolvio:cleaner';
 import { Random } from 'meteor/random';
 import { _ } from 'meteor/underscore';
