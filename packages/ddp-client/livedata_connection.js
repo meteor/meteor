@@ -786,7 +786,7 @@ _.extend(Connection.prototype, {
 
     // Check for circular structure in arguments list
     if (EJSON.isCyclic(args)) {
-      throw new Error(`Arguments passed to ${name} contain circular structure`);
+      throw new Error('Arguments passed to ' + name + ' contain circular structure');
     }
 
     // Keep our args safe from mutation (eg if we don't send the message for a
