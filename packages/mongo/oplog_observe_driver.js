@@ -1,4 +1,3 @@
-var Fiber = Npm.require('fibers');
 var Future = Npm.require('fibers/future');
 
 var PHASE = {
