@@ -419,8 +419,8 @@ testAsyncMulti("httpcall - params", [
     do_test("GET", "/", {foo:"bar", fruit:"apple"}, "/?foo=bar&fruit=apple", "");
     do_test("POST", "/", {foo:"bar", fruit:"apple"}, "/", "foo=bar&fruit=apple");
     do_test("POST", "/", {foo:"bar", fruit:"apple"}, "/", "foo=bar&fruit=apple");
-    do_test("GET", "/", {'foo!':"bang!"}, {}, "/?foo%21=bang%21", "");
-    do_test("POST", "/", {'foo!':"bang!"}, {}, "/", "foo%21=bang%21");
+    do_test("GET", "/", {'foo?':"bang?"}, {}, "/?foo%3F=bang%3F", "");
+    do_test("POST", "/", {'foo?':"bang?"}, {}, "/", "foo%3F=bang%3F");
     do_test("POST", "/", {foo:"bar", fruit:"apple"}, {
       content: "stuff!"}, "/?foo=bar&fruit=apple", "stuff!");
     do_test("POST", "/", {foo:"bar", greeting:"Hello World"}, {
