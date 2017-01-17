@@ -85,7 +85,6 @@ OplogObserveDriver = function (options) {
 
   self._registerPhaseChange(PHASE.QUERYING);
 
-  var selector = self._cursorDescription.selector;
   self._matcher = options.matcher;
   var projection = self._cursorDescription.options.fields || {};
   self._projectionFn = LocalCollection._compileProjection(projection);
@@ -124,10 +123,11 @@ OplogObserveDriver = function (options) {
             self._needToPollQuery();
           } else {
             // All other operators should be handled depending on phase
-            if (self._phase === PHASE.QUERYING)
+            if (self._phase === PHASE.QUERYING) {
               self._handleOplogEntryQuerying(op);
-            else
+            } else {
               self._handleOplogEntrySteadyOrFetching(op);
+            }
           }
         }));
       }
@@ -727,10 +727,11 @@ _.extend(OplogObserveDriver.prototype, {
       var cursor = self._cursorForQuery({ limit: self._limit * 2 });
       try {
         cursor.forEach(function (doc, i) {  // yields
-          if (!self._limit || i < self._limit)
+          if (!self._limit || i < self._limit) {
             newResults.set(doc._id, doc);
-          else
+          } else {
             newBuffer.set(doc._id, doc);
+          }
         });
         break;
       } catch (e) {
@@ -975,10 +976,11 @@ OplogObserveDriver.cursorSupported = function (cursorDescription, matcher) {
     try {
       LocalCollection._checkSupportedProjection(options.fields);
     } catch (e) {
-      if (e.name === "MinimongoError")
+      if (e.name === "MinimongoError") {
         return false;
-      else
+      } else {
         throw e;
+      }
     }
   }
 
