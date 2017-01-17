@@ -1,17 +1,20 @@
 var makeCollection = function () {
-  if (Meteor.isServer)
+  if (Meteor.isServer) {
     return new Mongo.Collection(Random.id());
-  else
+  } else {
     return new Mongo.Collection(null);
+  }
 };
 
-_.each ([{added:'added', forceOrdered: true},
-         {added:'added', forceOrdered: false},
+_.each ([{added: 'added', forceOrdered: true},
+         {added: 'added', forceOrdered: false},
          {added: 'addedBefore', forceOrdered: false}], function (options) {
-           var added = options.added;
-           var forceOrdered = options.forceOrdered;
+  var added = options.added;
+  var forceOrdered = options.forceOrdered;
 
-  Tinytest.addAsync("observeChanges - single id - basics " + added + (forceOrdered ? " force ordered" : ""), function (test, onComplete) {
+  Tinytest.addAsync("observeChanges - single id - basics " + added
+                    + (forceOrdered ? " force ordered" : ""),
+                    function (test, onComplete) {
     var c = makeCollection();
     var counter = 0;
     var callbacks = [added, "changed", "removed"];
@@ -25,11 +28,12 @@ _.each ([{added:'added', forceOrdered: true},
     var fooid = c.insert({noodles: "good", bacon: "bad", apples: "ok"});
 
     var handle = c.find(fooid).observeChanges(logger);
-    if (added === 'added')
-      logger.expectResult(added, [fooid, {noodles: "good", bacon: "bad",apples: "ok"}]);
-    else
+    if (added === 'added') {
+      logger.expectResult(added, [fooid, {noodles: "good", bacon: "bad", apples: "ok"}]);
+    } else {
       logger.expectResult(added,
                           [fooid, {noodles: "good", bacon: "bad", apples: "ok"}, null]);
+    }
     c.update(fooid, {noodles: "alright", potatoes: "tasty", apples: "ok"});
     logger.expectResult("changed",
                         [fooid, {noodles: "alright", potatoes: "tasty", bacon: undefined}]);
