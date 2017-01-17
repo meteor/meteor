@@ -273,12 +273,12 @@ MongoConnection.prototype._createCappedCollection = function (
 // after the observer notifiers have added themselves to the write
 // fence), you should call 'committed()' on the object returned.
 MongoConnection.prototype._maybeBeginWrite = function () {
-  var self = this;
   var fence = DDPServer._CurrentWriteFence.get();
-  if (fence)
+  if (fence) {
     return fence.beginWrite();
-  else
+  } else {
     return {committed: function () {}};
+  }
 };
 
 // Internal interface: adds a callback which is called when the Mongo primary
@@ -322,10 +322,11 @@ var writeCallback = function (write, refresh, callback) {
       }
     }
     write.committed();
-    if (callback)
+    if (callback) {
       callback(err, result);
-    else if (err)
+    } else if (err) {
       throw err;
+    }
   };
 };
 
@@ -366,16 +367,15 @@ MongoConnection.prototype._insert = function (collection_name, document,
     var collection = self.rawCollection(collection_name);
     collection.insert(replaceTypes(document, replaceMeteorAtomWithMongo),
                       {safe: true}, callback);
-  } catch (e) {
+  } catch (err) {
     write.committed();
-    throw e;
+    throw err;
   }
 };
 
 // Cause queries that may be affected by the selector to poll in this write
 // fence.
 MongoConnection.prototype._refresh = function (collectionName, selector) {
-  var self = this;
   var refreshKey = {collection: collectionName};
   // If we know which documents we're removing, don't poll queries that are
   // specific to other documents. (Note that multiple notifications here should
@@ -398,10 +398,11 @@ MongoConnection.prototype._remove = function (collection_name, selector,
   if (collection_name === "___meteor_failure_test_collection") {
     var e = new Error("Failure test");
     e.expected = true;
-    if (callback)
+    if (callback) {
       return callback(e);
-    else
+    } else {
       throw e;
+    }
   }
 
   var write = self._maybeBeginWrite();
@@ -417,9 +418,9 @@ MongoConnection.prototype._remove = function (collection_name, selector,
     };
     collection.remove(replaceTypes(selector, replaceMeteorAtomWithMongo),
                        {safe: true}, wrappedCallback);
-  } catch (e) {
+  } catch (err) {
     write.committed();
-    throw e;
+    throw err;
   }
 };
 
@@ -473,10 +474,11 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
   if (collection_name === "___meteor_failure_test_collection") {
     var e = new Error("Failure test");
     e.expected = true;
-    if (callback)
+    if (callback) {
       return callback(e);
-    else
+    } else {
       throw e;
+    }
   }
 
   // explicit safety check. null and undefined can crash the mongo
@@ -546,14 +548,15 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
         // This callback does not need to be bindEnvironment'ed because
         // simulateUpsertWithInsertedId() wraps it and then passes it through
         // bindEnvironmentForWrite.
-        function (err, result) {
+        function (error, result) {
           // If we got here via a upsert() call, then options._returnObject will
           // be set and we should return the whole object. Otherwise, we should
           // just return the number of affected docs to match the mongo API.
-          if (result && ! options._returnObject)
-            callback(err, result.numberAffected);
-          else
-            callback(err, result);
+          if (result && ! options._returnObject) {
+            callback(error, result.numberAffected);
+          } else {
+            callback(error, result);
+          }
         }
       );
     } else {
@@ -1348,7 +1351,9 @@ MongoConnection.prototype._observeChangesTailable = function (
   // error if you didn't provide them.
   if ((ordered && !callbacks.addedBefore) ||
       (!ordered && !callbacks.added)) {
-    throw new Error("Can't observe an " + (ordered ? "ordered" : "unordered") + " tailable cursor without a " + (ordered ? "addedBefore" : "added") + " callback");
+    throw new Error("Can't observe an " + (ordered ? "ordered" : "unordered")
+                    + " tailable cursor without a "
+                    + (ordered ? "addedBefore" : "added") + " callback");
   }
 
   return self.tail(cursorDescription, function (doc) {
