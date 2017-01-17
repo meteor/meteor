@@ -9,7 +9,6 @@
 
 var path = Npm.require('path');
 var MongoDB = NpmModuleMongodb;
-var Fiber = Npm.require('fibers');
 var Future = Npm.require(path.join('fibers', 'future'));
 
 MongoInternals = {};
