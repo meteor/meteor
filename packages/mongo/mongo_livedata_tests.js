@@ -490,12 +490,13 @@ Tinytest.addAsync("mongo-livedata - fuzz test, " + idGeneration, function(test, 
         } else if (op === 1 || op === 2) {
           var val;
           x = correct[which];
-          if (op === 1)
+          if (op === 1) {
             // Small change, not likely to cause a move
             val = x + (rnd(2) ? -1 : 1);
-          else
+          } else {
             // Large change, likely to cause a move
             val = rnd(1000000);
+          }
           coll.update({run: run, x: x}, {$set: {x: val}});
           correct[which] = val;
           max_counters.change++;
@@ -1191,10 +1192,11 @@ if (Meteor.isServer) {
       test.isTrue(setsEqual(ids, bufferIds), "expected: " + ids + "; got: " + bufferIds);
     };
     var testSafeAppendToBufferFlag = function (expected) {
-      if (expected)
+      if (expected) {
         test.isTrue(o.handle._multiplexer._observeDriver._safeAppendToBuffer);
-      else
+      } else {
         test.isFalse(o.handle._multiplexer._observeDriver._safeAppendToBuffer);
+      }
     };
 
     var ids = {};
@@ -3001,7 +3003,9 @@ _.extend(TestCustomType.prototype, {
     return new TestCustomType(this.myHead, this.myTail);
   },
   equals: function (other) {
-    return other instanceof TestCustomType && EJSON.equals(this.myHead, other.myHead) && EJSON.equals(this.myTail, other.myTail);
+    return other instanceof TestCustomType
+      && EJSON.equals(this.myHead, other.myHead)
+      && EJSON.equals(this.myTail, other.myTail);
   },
   typeName: function () {
     return 'someCustomType';
