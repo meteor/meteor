@@ -89,7 +89,13 @@ Tinytest.add('collection - call native find with sort function',
     if (Meteor.isServer) {
       test.throws(
         function () {
-          nativeCollection.find({}, {sort: function(){}}).map(function (doc) { return doc.a; });
+          nativeCollection
+            .find({}, {
+              sort: function () {},
+            })
+            .map(function (doc) {
+              return doc.a;
+            });
         },
         /Illegal sort clause/
       );
