@@ -149,3 +149,20 @@ Tinytest.add('mongo livedata - native upsert - MONGO passing id insert', functio
 
   test.equal(EJSON.equals(inserted, {_id: 'meu id'}), true);
 });
+
+Tinytest.add('mongo livedata - native upsert - MONGO replacing id upsert error', function (test) {
+  var collName = Random.id();
+  var coll = new Mongo.Collection('native_upsert_'+collName, {idGeneration: 'MONGO'});
+  var error;
+
+  var result = coll.upsert({foo: 1}, {_id: 'meu id'});
+  try {
+    var inserted = coll.upsert({foo: 1}, {$set: {
+      _id: 'meuu id'}
+    });
+  } catch (e) {
+    error = e;
+  }
+
+  test.equal(error.toString(), 'MinimongoError: Mod on _id not allowed');
+});
