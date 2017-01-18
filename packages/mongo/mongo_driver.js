@@ -634,16 +634,26 @@ var NUM_OPTIMISTIC_TRIES = 3;
 MongoConnection._isCannotChangeIdError = function (err) {
   // First check for what this error looked like in Mongo 2.4.  Either of these
   // checks should work, but just to be safe...
-  if (err.code === 13596)
+  if (err.code === 13596) {
     return true;
-  if (err.errmsg.indexOf("cannot change _id of a document") === 0)
+  }
+
+  // Mongo 3.2.* returns error as next Object:
+  // {name: String, code: Number, err: String}
+  // Older Mongo returns:
+  // {name: String, code: Number, errmsg: String}
+  var error = err.errmsg || err.err;
+
+  if (error.indexOf('cannot change _id of a document') === 0) {
     return true;
+  }
 
   // Now look for what it looks like in Mongo 2.6.  We don't use the error code
   // here, because the error code we observed it producing (16837) appears to be
   // a far more generic error code based on examining the source.
-  if (err.errmsg.indexOf("The _id field cannot be changed") === 0)
+  if (error.indexOf('The _id field cannot be changed') === 0) {
     return true;
+  }
 
   return false;
 };
