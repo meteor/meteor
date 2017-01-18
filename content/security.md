@@ -184,14 +184,17 @@ const LISTS_METHODS = _.pluck([
 ], 'name');
 
 // Only allow 5 list operations per connection per second
-DDPRateLimiter.addRule({
-  name(name) {
-    return _.contains(LISTS_METHODS, name);
-  },
 
-  // Rate limit per connection ID
-  connectionId() { return true; }
-}, 5, 1000);
+if (Meteor.isServer) {
+  DDPRateLimiter.addRule({
+    name(name) {
+      return _.contains(LISTS_METHODS, name);
+    },
+
+    // Rate limit per connection ID
+    connectionId() { return true; }
+  }, 5, 1000);
+}
 ```
 
 This will make every Method only callable 5 times per second per connection. This is a rate limit that shouldn't be noticeable by the user at all, but will prevent a malicious script from totally flooding the server with requests. You will need to tune the limit parameters to match your app's needs.
