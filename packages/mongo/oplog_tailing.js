@@ -214,9 +214,8 @@ _.extend(OplogHandle.prototype, {
       { ismaster: 1 }, f.resolver());
     var isMasterDoc = f.wait();
 
-    if (!(isMasterDoc && isMasterDoc.setName)) {
-      throw Error("$MONGO_OPLOG_URL must be set to the 'local' database of " +
-                  "a Mongo replica set");
+    if (!isMasterDoc) {
+      throw Error("Oplog can not connect to PRIMARY in Mongo replica set");
     }
 
     // Find the last oplog entry.
