@@ -461,20 +461,26 @@ Meteor.publishComposite('Todos.admin.inList', function(listId) {
   const userId = this.userId;
   return {
     find() {
-      return Meteor.users.find({userId, admin: true});
+      return Meteor.users.find({_id: userId, admin: true}, {fields: {admin: 1}});
     },
     children: [{
-      find() {
+      find(user) {
         // We don't need to worry about the list.userId changing this time
-        return [
-          Lists.find(listId),
-          Todos.find({listId})
-        ];
-      }  
+        return Lists.find(listId);
+      }
+    },
+    {
+      find(user) {
+        return Todos.find({listId});
+      }
     }]
   };
 });
 ```
+
+Note that we explicitly set the `Meteor.users` query fields, as `publish-composite` publishes all of the returned cursors to the client and re-runs the child computations whenever the cursor changes. 
+
+Limiting the results serves a double purpose: it both prevents sensitive fields from being disclosed to the client and limits recomputation to the relevant fields only (namely, the `admin` field).
 
 <h3 id="custom-publication">Custom publications with the low level API</h3>
 
