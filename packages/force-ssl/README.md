@@ -15,6 +15,12 @@ certificate. A proxy server that terminates SSL in front of a Meteor
 bundle must set the standard `x-forwarded-proto` header for the
 `force-ssl` package to work.
 
-Applications deployed to `meteor.com` subdomains with
-`meteor deploy` are automatically served via HTTPS using Meteor's
-certificate.
+If you're deploying your app to [Galaxy](https://www.meteor.com/hosting), we
+recommend using Galaxy's built-in "Force HTTPS" setting (on the specific domain
+in the "Domains & Encryption" section of your app's Settings tab) instead of
+this package.  This package read a header to guess whether or not a connection
+arrived over HTTPS, and uses a heuristic to guess if it's running in development
+mode; the Galaxy feature can directly observe which port the connection arrived
+on and by its nature is not involved in development mode.  We recommend this
+package only for deployment platforms that do not have their own "Force HTTPS"
+feature.
