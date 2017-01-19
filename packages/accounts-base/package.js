@@ -62,6 +62,7 @@ Package.onTest(function (api) {
     'accounts-password'
   ]);
 
+  api.addFiles('accounts_tests_setup.js', 'server');
   api.mainModule('server_tests.js', 'server');
   api.mainModule('client_tests.js', 'client');
 });

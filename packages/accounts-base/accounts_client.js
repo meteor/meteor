@@ -17,6 +17,9 @@ export class AccountsClient extends AccountsCommon {
     this._loggingIn = false;
     this._loggingInDeps = new Tracker.Dependency;
 
+    this._loggingOut = false;
+    this._loggingOutDeps = new Tracker.Dependency;
+
     this._loginServicesHandle =
       this.connection.subscribe("meteor.loginServiceConfiguration");
 
@@ -49,6 +52,13 @@ export class AccountsClient extends AccountsCommon {
     }
   }
 
+  _setLoggingOut(x) {
+    if (this._loggingOut !== x) {
+      this._loggingOut = x;
+      this._loggingOutDeps.changed();
+    }
+  }
+
   /**
    * @summary True if a login method (such as `Meteor.loginWithPassword`, `Meteor.loginWithFacebook`, or `Accounts.createUser`) is currently in progress. A reactive data source.
    * @locus Client
@@ -59,15 +69,26 @@ export class AccountsClient extends AccountsCommon {
   }
 
   /**
+   * @summary True if a logout method (such as `Meteor.logout`) is currently in progress. A reactive data source.
+   * @locus Client
+   */
+  loggingOut() {
+    this._loggingOutDeps.depend();
+    return this._loggingOut;
+  }
+
+  /**
    * @summary Log the user out.
    * @locus Client
    * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
    */
   logout(callback) {
     var self = this;
+    self._setLoggingOut(true);
     self.connection.apply('logout', [], {
       wait: true
     }, function (error, result) {
+      self._setLoggingOut(false);
       if (error) {
         callback && callback(error);
       } else {
@@ -136,6 +157,15 @@ var Ap = AccountsClient.prototype;
  */
 Meteor.loggingIn = function () {
   return Accounts.loggingIn();
+};
+
+/**
+ * @summary True if a logout method (such as `Meteor.logout`) is currently in progress. A reactive data source.
+ * @locus Client
+ * @importFromPackage meteor
+ */
+Meteor.loggingOut = function () {
+  return Accounts.loggingOut();
 };
 
 ///
@@ -437,5 +467,25 @@ if (Package.blaze) {
    */
   Package.blaze.Blaze.Template.registerHelper('loggingIn', function () {
     return Meteor.loggingIn();
+  });
+
+  /**
+   * @global
+   * @name  loggingOut
+   * @isHelper true
+   * @summary Calls [Meteor.loggingOut()](#meteor_loggingout).
+   */
+  Package.blaze.Blaze.Template.registerHelper('loggingOut', function () {
+    return Meteor.loggingOut();
+  });
+
+  /**
+   * @global
+   * @name  loggingInOut
+   * @isHelper true
+   * @summary Calls [Meteor.loggingIn()](#meteor_loggingin) or [Meteor.loggingOut()](#meteor_loggingout).
+   */
+  Package.blaze.Blaze.Template.registerHelper('loggingInOut', function () {
+    return (Meteor.loggingIn() || Meteor.loggingOut());
   });
 }
