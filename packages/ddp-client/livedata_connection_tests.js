@@ -1981,6 +1981,82 @@ if (Meteor.isClient) {
     // Server wrote a different value, make sure it's visible now.
     test.isTrue(coll.findOne('aaa').value == 333);
   });
+
+  Tinytest.add("livedata stub - buffering and methods interaction", function (test) {
+    var stream = new StubStream();
+    var conn = newConnection(stream, {
+      // A very high values so that all messages are effectively buffered.
+      bufferedWritesInterval: 10000,
+      bufferedWritesMaxAge: 10000
+    });
+
+    startAndConnect(test, stream);
+
+    var collName = Random.id();
+    var coll = new Mongo.Collection(collName, {connection: conn});
+
+    conn.methods({
+      update_value: function () {
+        const value = coll.findOne('aaa').subscription;
+        // Method should have access to the latest value of the collection.
+        coll.update('aaa', {$set: {method: value + 110}});
+      }
+    });
+
+    // Set up test subscription.
+    var sub = conn.subscribe('test_data');
+    var subMessage = JSON.parse(stream.sent.shift());
+    test.equal(subMessage, {msg: 'sub', name: 'test_data',
+                            params: [], id:subMessage.id});
+    test.length(stream.sent, 0);
+
+    var subDocMessage = {msg: 'added', collection: collName,
+                         id: 'aaa', fields: {subscription: 111}};
+
+    var subReadyMessage = {msg: 'ready', 'subs': [subMessage.id]};
+
+    stream.receive(subDocMessage);
+    stream.receive(subReadyMessage);
+    test.equal(coll.findOne('aaa').subscription, 111);
+
+    var subDocChangeMessage = {msg: 'changed', collection: collName,
+                               id: 'aaa', fields: {subscription: 112}};
+
+    stream.receive(subDocChangeMessage);
+    // Still 111 because buffer has not been flushed.
+    test.equal(coll.findOne('aaa').subscription, 111);
+
+    // Call updates the stub.
+    conn.call('update_value');
+
+    // Observe the stub-written value.
+    test.equal(coll.findOne('aaa').method, 222);
+    // subscription field is updated to the latest value
+    // because of the method call.
+    test.equal(coll.findOne('aaa').subscription, 112);
+
+    var methodMessage = JSON.parse(stream.sent.shift());
+    test.equal(methodMessage, {msg: 'method', method: 'update_value',
+                               params: [], id:methodMessage.id});
+    test.length(stream.sent, 0);
+
+    // "Server-side" change from the method arrives and method returns.
+    // With potentially fixed value for method field, if stub didn't
+    // use 112 as the subscription field value.
+    stream.receive({msg: 'changed', collection: collName,
+                         id: 'aaa', fields: {method: 222}});
+    stream.receive({msg: 'updated', 'methods': [methodMessage.id]});
+    stream.receive({msg: 'result', id:methodMessage.id, result:null});
+
+    test.equal(coll.findOne('aaa').method, 222);
+    test.equal(coll.findOne('aaa').subscription, 112);
+
+    // Buffer should already be flushed because of a non-update message.
+    // And after a flush we really want subscription field to be 112.
+    conn._flushBufferedWrites();
+    test.equal(coll.findOne('aaa').method, 222);
+    test.equal(coll.findOne('aaa').subscription, 112);
+  });
 }
 
 // XXX also test:

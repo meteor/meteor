@@ -26,7 +26,7 @@ Tinytest.add('mongo livedata - native upsert - id type MONGO with MODIFIERS inse
   test.equal(result.numberAffected, 1);
 
   test.isTrue(inserted._id instanceof Mongo.ObjectID);
-  test.equal(inserted._id, result.insertedId)
+  test.equal(inserted._id, result.insertedId);
 
   delete inserted['_id'];
   test.equal(EJSON.equals(inserted, {foo: 1, bar: 2}), true);

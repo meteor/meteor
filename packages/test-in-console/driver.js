@@ -59,7 +59,7 @@ var expected = 0;
 var resultSet = {};
 var toReport = [];
 
-var hrefPath = document.location.href.split("/");
+var hrefPath = window.location.href.split("/");
 var platform = decodeURIComponent(hrefPath.length && hrefPath[hrefPath.length - 1]);
 if (!platform)
   platform = "local";

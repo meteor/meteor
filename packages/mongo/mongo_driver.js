@@ -9,7 +9,6 @@
 
 var path = Npm.require('path');
 var MongoDB = NpmModuleMongodb;
-var Fiber = Npm.require('fibers');
 var Future = Npm.require(path.join('fibers', 'future'));
 
 MongoInternals = {};
@@ -63,8 +62,7 @@ var replaceMongoAtomWithMeteor = function (document) {
   if (document instanceof MongoDB.ObjectID) {
     return new Mongo.ObjectID(document.toHexString());
   }
-  if (document["EJSON$type"] && document["EJSON$value"]
-      && _.size(document) === 2) {
+  if (document["EJSON$type"] && document["EJSON$value"] && _.size(document) === 2) {
     return EJSON.fromJSONValue(replaceNames(unmakeMongoLegal, document));
   }
   if (document instanceof MongoDB.Timestamp) {
@@ -275,12 +273,12 @@ MongoConnection.prototype._createCappedCollection = function (
 // after the observer notifiers have added themselves to the write
 // fence), you should call 'committed()' on the object returned.
 MongoConnection.prototype._maybeBeginWrite = function () {
-  var self = this;
   var fence = DDPServer._CurrentWriteFence.get();
-  if (fence)
+  if (fence) {
     return fence.beginWrite();
-  else
+  } else {
     return {committed: function () {}};
+  }
 };
 
 // Internal interface: adds a callback which is called when the Mongo primary
@@ -324,10 +322,11 @@ var writeCallback = function (write, refresh, callback) {
       }
     }
     write.committed();
-    if (callback)
+    if (callback) {
       callback(err, result);
-    else if (err)
+    } else if (err) {
       throw err;
+    }
   };
 };
 
@@ -368,16 +367,15 @@ MongoConnection.prototype._insert = function (collection_name, document,
     var collection = self.rawCollection(collection_name);
     collection.insert(replaceTypes(document, replaceMeteorAtomWithMongo),
                       {safe: true}, callback);
-  } catch (e) {
+  } catch (err) {
     write.committed();
-    throw e;
+    throw err;
   }
 };
 
 // Cause queries that may be affected by the selector to poll in this write
 // fence.
 MongoConnection.prototype._refresh = function (collectionName, selector) {
-  var self = this;
   var refreshKey = {collection: collectionName};
   // If we know which documents we're removing, don't poll queries that are
   // specific to other documents. (Note that multiple notifications here should
@@ -400,10 +398,11 @@ MongoConnection.prototype._remove = function (collection_name, selector,
   if (collection_name === "___meteor_failure_test_collection") {
     var e = new Error("Failure test");
     e.expected = true;
-    if (callback)
+    if (callback) {
       return callback(e);
-    else
+    } else {
       throw e;
+    }
   }
 
   var write = self._maybeBeginWrite();
@@ -419,9 +418,9 @@ MongoConnection.prototype._remove = function (collection_name, selector,
     };
     collection.remove(replaceTypes(selector, replaceMeteorAtomWithMongo),
                        {safe: true}, wrappedCallback);
-  } catch (e) {
+  } catch (err) {
     write.committed();
-    throw e;
+    throw err;
   }
 };
 
@@ -475,10 +474,11 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
   if (collection_name === "___meteor_failure_test_collection") {
     var e = new Error("Failure test");
     e.expected = true;
-    if (callback)
+    if (callback) {
       return callback(e);
-    else
+    } else {
       throw e;
+    }
   }
 
   // explicit safety check. null and undefined can crash the mongo
@@ -494,7 +494,6 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
     throw new Error(
       "Only plain objects may be used as replacement" +
         " documents in MongoDB");
-    return;
   }
 
   if (!options) options = {};
@@ -522,11 +521,11 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
     var knownId = selector._id || mod._id;
 
     if (options._forbidReplace && ! isModify) {
-      var e = new Error("Invalid modifier. Replacements are forbidden.");
+      var err = new Error("Invalid modifier. Replacements are forbidden.");
       if (callback) {
-        return callback(e);
+        return callback(err);
       } else {
-        throw e;
+        throw err;
       }
     }
 
@@ -549,14 +548,15 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
         // This callback does not need to be bindEnvironment'ed because
         // simulateUpsertWithInsertedId() wraps it and then passes it through
         // bindEnvironmentForWrite.
-        function (err, result) {
+        function (error, result) {
           // If we got here via a upsert() call, then options._returnObject will
           // be set and we should return the whole object. Otherwise, we should
           // just return the number of affected docs to match the mongo API.
-          if (result && ! options._returnObject)
-            callback(err, result.numberAffected);
-          else
-            callback(err, result);
+          if (result && ! options._returnObject) {
+            callback(error, result.numberAffected);
+          } else {
+            callback(error, result);
+          }
         }
       );
     } else {
@@ -936,7 +936,7 @@ Cursor.prototype._publishCursor = function (sub) {
 Cursor.prototype._getCollectionName = function () {
   var self = this;
   return self._cursorDescription.collectionName;
-}
+};
 
 Cursor.prototype.observe = function (callbacks) {
   var self = this;
@@ -1092,7 +1092,7 @@ _.extend(SynchronousCursor.prototype, {
     return self.map(_.identity);
   },
 
-  count: function (applySkipLimit: false) {
+  count: function (applySkipLimit = false) {
     var self = this;
     return self._synchronousCount(applySkipLimit).wait();
   },
@@ -1120,13 +1120,14 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback) {
   var cursor = self._createSynchronousCursor(cursorDescription);
 
   var stopped = false;
-  var lastTS = undefined;
+  var lastTS;
   var loop = function () {
+    var doc = null;
     while (true) {
       if (stopped)
         return;
       try {
-        var doc = cursor._nextObject();
+        doc = cursor._nextObject();
       } catch (err) {
         // There's no good way to figure out if this was actually an error
         // from Mongo. Ah well. But either way, we need to retry the cursor
