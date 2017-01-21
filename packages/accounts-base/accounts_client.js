@@ -14,11 +14,8 @@ export class AccountsClient extends AccountsCommon {
   constructor(options) {
     super(options);
 
-    this._loggingIn = false;
-    this._loggingInDeps = new Tracker.Dependency;
-
-    this._loggingOut = false;
-    this._loggingOutDeps = new Tracker.Dependency;
+    this._loggingIn = new ReactiveVar(false);
+    this._loggingOut = new ReactiveVar(false);
 
     this._loginServicesHandle =
       this.connection.subscribe("meteor.loginServiceConfiguration");
@@ -46,17 +43,7 @@ export class AccountsClient extends AccountsCommon {
   // also uses it to make loggingIn() be true during the beginPasswordExchange
   // method call too.
   _setLoggingIn(x) {
-    if (this._loggingIn !== x) {
-      this._loggingIn = x;
-      this._loggingInDeps.changed();
-    }
-  }
-
-  _setLoggingOut(x) {
-    if (this._loggingOut !== x) {
-      this._loggingOut = x;
-      this._loggingOutDeps.changed();
-    }
+    this._loggingIn.set(x);
   }
 
   /**
@@ -64,8 +51,7 @@ export class AccountsClient extends AccountsCommon {
    * @locus Client
    */
   loggingIn() {
-    this._loggingInDeps.depend();
-    return this._loggingIn;
+    return this._loggingIn.get();
   }
 
   /**
@@ -73,8 +59,7 @@ export class AccountsClient extends AccountsCommon {
    * @locus Client
    */
   loggingOut() {
-    this._loggingOutDeps.depend();
-    return this._loggingOut;
+    return this._loggingOut.get();
   }
 
   /**
@@ -84,11 +69,11 @@ export class AccountsClient extends AccountsCommon {
    */
   logout(callback) {
     var self = this;
-    self._setLoggingOut(true);
+    self._loggingOut.set(true);
     self.connection.apply('logout', [], {
       wait: true
     }, function (error, result) {
-      self._setLoggingOut(false);
+      self._loggingOut.set(false);
       if (error) {
         callback && callback(error);
       } else {
