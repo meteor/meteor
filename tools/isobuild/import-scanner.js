@@ -52,8 +52,10 @@ const defaultExtensionHandlers = {
   },
 
   ".json"(dataString) {
+    const file = this;
+    file.jsonData = JSON.parse(dataString);
     return "module.exports = " +
-      JSON.stringify(JSON.parse(dataString), null, 2) +
+      JSON.stringify(file.jsonData, null, 2) +
       ";\n";
   },
 
@@ -191,8 +193,11 @@ export default class ImportScanner {
 
       const dotExt = "." + file.type;
       const dataString = file.data.toString("utf8");
-      file.dataString = defaultExtensionHandlers[dotExt](
-        dataString, file.hash);
+      file.dataString = defaultExtensionHandlers[dotExt].call(
+        file,
+        dataString,
+        file.hash,
+      );
 
       if (! (file.data instanceof Buffer) ||
           file.dataString !== dataString) {
@@ -714,7 +719,8 @@ export default class ImportScanner {
       }
     }
 
-    info.dataString = defaultExtensionHandlers[ext](
+    info.dataString = defaultExtensionHandlers[ext].call(
+      info,
       info.dataString,
       info.hash,
     );
@@ -919,6 +925,7 @@ export default class ImportScanner {
     const pkgFile = {
       type: "js", // We represent the JSON module with JS.
       data,
+      jsonData: pkg,
       deps: {}, // Avoid accidentally re-scanning this file.
       sourcePath: relPkgJsonPath,
       installPath: this._getInstallPath(pkgJsonPath),
