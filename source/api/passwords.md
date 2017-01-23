@@ -123,7 +123,7 @@ To customize the contents of the email, see
 
 This is an `Object` with several fields that are used to generate text/html
 for the emails sent by `sendResetPasswordEmail`, `sendEnrollmentEmail`,
-and `sendVerificationEmail`.
+and `sendVerificationEmail`. Their respective contents can be set by setting the `resetPassword`, `enrollAccount` and `verifyEmail` fields on the `Object`.
 
 Override fields of the object by assigning to them:
 
@@ -165,5 +165,13 @@ Accounts.emailTemplates.enrollAccount.text = function (user, url) {
 Accounts.emailTemplates.resetPassword.from = function () {
    // Overrides value set in Accounts.emailTemplates.from when resetting passwords
    return "AwesomeSite Password Reset <no-reply@example.com>";
+};
+Accounts.emailTemplates.verifyEmail = {
+   subject() {
+      return "Activate your account now!";
+   },
+   text (user, url) {
+      return "Hey " + user + "! You might not have access to all our features by clicking this email validation link: " + url;
+   }
 };
 ```
