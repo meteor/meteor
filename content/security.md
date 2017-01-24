@@ -435,16 +435,23 @@ This is a very short section, but it deserves its own place in the table of cont
 
 **Every production Meteor app that handles user data should run with SSL.**
 
-For the uninitiated, this means all of your HTTP requests should go over HTTPS, and all websocket data should be sent over WSS.
-
 Yes, Meteor does hash your password or login token on the client before sending it over the wire, but that only prevents an attacker from figuring out your password - it doesn't prevent them from logging in as you, since they could just send the hashed password to the server to log in! No matter how you slice it, logging in requires the client to send sensitive data  to the server, and the only way to secure that transfer is by using SSL. Note that the same issue is present when using cookies for authentication in a normal HTTP web application, so any app that needs to reliably identify users should be running on SSL.
-
-You can ensure that any unsecured connection to your app redirects to a secure connection by adding the `force-ssl` package.
 
 #### Setting up SSL
 
-1. On [Galaxy](deployment.html#galaxy), most things are set up for you, but you need to add a certificate. [See the help article about SSL on Galaxy](http://galaxy-guide.meteor.com/encryption.html).
-2. If you are running on your own [infrastructure](deployment.html#custom-deployment), there are a few options for setting up SSL, mostly through configuring a proxy web server. See the articles: [Josh Owens on SSL and Meteor](http://joshowens.me/ssl-and-meteor-js/), [SSL on Meteorpedia](http://www.meteorpedia.com/read/SSL), and [Digital Ocean tutorial with an Nginx config](https://www.digitalocean.com/community/tutorials/how-to-deploy-a-meteor-js-application-on-ubuntu-14-04-with-nginx).
+* On [Galaxy](deployment.html#galaxy), configuration of SSL is automatic. [See the help article about SSL on Galaxy](http://galaxy-guide.meteor.com/encryption.html).
+* If you are running on your own [infrastructure](deployment.html#custom-deployment), there are a few options for setting up SSL, mostly through configuring a proxy web server. See the articles: [Josh Owens on SSL and Meteor](http://joshowens.me/ssl-and-meteor-js/), [SSL on Meteorpedia](http://www.meteorpedia.com/read/SSL), and [Digital Ocean tutorial with an Nginx config](https://www.digitalocean.com/community/tutorials/how-to-deploy-a-meteor-js-application-on-ubuntu-14-04-with-nginx).
+
+#### Forcing SSL
+
+Generally speaking, all production HTTP requests should go over HTTPS, and all WebSocket data should be sent over WSS.
+
+It's best to handle the redirection from HTTP to HTTPS on the platform which handles the SSL certificates and termination.
+
+* On [Galaxy](deployment.html#galaxy), simply enable the "Force HTTPS" setting on a specific domain in the "Domains & Encryption" section of the application's "Settings" tab.
+* Other deployments *may* have control panel options or may need to be manually configured on the the proxy server (e.g. HAProxy, nginx, etc.). The articles linked above provide some assistance on this.
+
+In the event that a platform does not offer the ability to configure this, the `force-ssl` package can be added to the project and Meteor will attempt to intelligently redirect based on the presence of the `x-forwarded-for` header.
 
 <h2 id="checklist">Security checklist</h2>
 
