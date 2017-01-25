@@ -45,7 +45,7 @@ export class CoffeeCompiler extends CachingCompiler {
       // Return a source map.
       sourceMap: true,
       // Include the original source in the source map (sourcesContent field).
-      inline: true,
+      inlineMap: true,
       // This becomes the "file" field of the source map.
       generatedFile: '/' + this._outputFilePath(inputFile),
       // This becomes the "sources" field of the source map.
