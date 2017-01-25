@@ -8,10 +8,10 @@ Package.onUse(function(api) {
   api.use('oauth', ['client', 'server']);
   api.use('http', ['server']);
   api.use(['underscore', 'service-configuration'], ['client', 'server']);
-  api.use(['random', 'templating@1.2.13'], 'client');
-
-  api.export('Google');
+  api.use('random', 'client');
 
   api.addFiles('google_server.js', 'server');
   api.addFiles('google_client.js', 'client');
+
+  api.export('Google');
 });
