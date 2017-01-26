@@ -1,17 +1,19 @@
 ## v.NEXT
 
-* The `facebook` package has been split into:
-  - `facebook-oauth` (the part that allows oauth w/ FB directly) and
-  - `facebook-config-ui` (the Blaze configuration templates for accounts-ui)
+* The `facebook`, `twitter` and `google` packages has been split into:
+  - `<service>-oauth` (the part that allows oauth w/ FB/Twitter/Google directly) and
+  - `<service>-config-ui` (the Blaze configuration templates for accounts-ui)
 
-  This means you can now use `[accounts-]facebook` without needing Blaze.
+  This means you can now use `[accounts-]<service>` without needing Blaze.
 
-  If you are using `accounts-ui` and `accounts-facebook`, you will probably
-  need to install the `facebook-config-ui` package if you want to configure it
+  If you are using `accounts-ui` and `accounts-<service>`, you will probably
+  need to install the `<service>-config-ui` package if you want to configure it
   using the Accounts UI.
 
   [Issue #7715](https://github.com/meteor/meteor/issues/7715)
-  [PR #7728](https://github.com/meteor/meteor/pull/7728)
+  [PR(`facebook`) #7728](https://github.com/meteor/meteor/pull/7728)
+  [PR(`google`) #8275](https://github.com/meteor/meteor/pull/8275)
+  [PR(`twitter`) #8283](https://github.com/meteor/meteor/pull/8283)
 
 * The `meteor-babel` npm package has been upgraded to version 0.14.3,
   fixing [#8021](https://github.com/meteor/meteor/issues/8021) and
@@ -19,7 +21,7 @@
 
 * Added support for frame-ancestors CSP option in browser-policy.
   [#7970](https://github.com/meteor/meteor/pull/7970)
-  
+
 * You can now use autoprefixer with stylus files added via packages.
   [#7727](https://github.com/meteor/meteor/pull/7727)
 
