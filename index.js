@@ -3,13 +3,11 @@ var meteorAliases = {};
 
 Object.keys(map).forEach(function (id) {
   if (typeof map[id] === "string") {
-    try {
-      exports[id] = meteorAliases[id + ".js"] =
-        require.resolve(map[id]);
-    } catch (e) {
-      // Resolution can fail at runtime if the stub was not included in the
-      // bundle because nothing depended on it.
-    }
+    var aliasParts = module.id.split("/");
+    aliasParts.pop();
+    aliasParts.push("node_modules", map[id]);
+    exports[id] = meteorAliases[id + ".js"] =
+      aliasParts.join("/");
   } else {
     exports[id] = map[id];
     meteorAliases[id + ".js"] = function(){};
