@@ -658,7 +658,7 @@ _.extend(File.prototype, {
     }
 
     var chunks = [];
-    var pathNoSlash = self.servePath.replace(/^\//, "");
+    var pathNoSlash = self.servePath.replace(/^\//, "").replace(/:/g, '_');
 
     if (! self.bare) {
       var closureHeader = self._getClosureHeader();
