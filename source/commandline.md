@@ -74,8 +74,7 @@ Log in and out of your account using Meteor's authentication system.
 
 You can pass `METEOR_SESSION_FILE=token.json` before `meteor login` to generate
 a login session token so you don't have to share your login credentials with
-third-party service providers. You can revoke the token at any time from your
-[accounts settings page](https://www.meteor.com/account-settings/login-locations).
+third-party service providers.
 
 Once you have your account you can log in and log out from the command line, and
 check your username with `meteor whoami`.
