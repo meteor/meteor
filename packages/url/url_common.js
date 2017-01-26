@@ -9,7 +9,7 @@ var encodeString = function (str) {
 URL._encodeParams = function (params, prefix) {
   var str = [];
   for (var p in params) {
-    if (params.hasOwnProperty(p)) {
+    if (Object.prototype.hasOwnProperty.call(params, p)) {
       var k = prefix ? prefix + '[' + p + ']' : p, v = params[p];
       if (typeof v === 'object') {
         str.push(this._encodeParams(v, k));
