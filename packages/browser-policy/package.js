@@ -6,6 +6,7 @@ Package.describe({
 Package.onUse(function (api) {
   api.use(['browser-policy-content', 'browser-policy-framing'], 'server');
   api.imply(['browser-policy-common'], 'server');
+  api.export('BrowserPolicy', 'server');
 });
 
 Package.onTest(function (api) {

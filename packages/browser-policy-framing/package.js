@@ -7,4 +7,5 @@ Package.onUse(function (api) {
   api.imply(["browser-policy-common"], "server");
   api.use(["underscore", "browser-policy-common"], "server");
   api.addFiles("browser-policy-framing.js", "server");
+  api.export('BrowserPolicy', 'server');
 });
