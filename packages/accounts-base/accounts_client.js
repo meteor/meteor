@@ -466,11 +466,11 @@ if (Package.blaze) {
 
   /**
    * @global
-   * @name  loggingInOut
+   * @name  loggingInOrOut
    * @isHelper true
    * @summary Calls [Meteor.loggingIn()](#meteor_loggingin) or [Meteor.loggingOut()](#meteor_loggingout).
    */
-  Package.blaze.Blaze.Template.registerHelper('loggingInOut', function () {
+  Package.blaze.Blaze.Template.registerHelper('loggingInOrOut', function () {
     return (Meteor.loggingIn() || Meteor.loggingOut());
   });
 }
