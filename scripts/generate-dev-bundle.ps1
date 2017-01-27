@@ -37,8 +37,8 @@ $shell = New-Object -com shell.application
 
 mkdir "$DIR\7z"
 cd "$DIR\7z"
-$webclient.DownloadFile("http://www.7-zip.org/a/7z1602.msi", "$DIR\7z\7z.msi")
-$webclient.DownloadFile("http://www.7-zip.org/a/7z1602-extra.7z", "$DIR\7z\extra.7z")
+$webclient.DownloadFile("http://www.7-zip.org/a/7z1604.msi", "$DIR\7z\7z.msi")
+$webclient.DownloadFile("http://www.7-zip.org/a/7z1604-extra.7z", "$DIR\7z\extra.7z")
 msiexec /i 7z.msi /quiet /qn /norestart
 ping -n 4 127.0.0.1 | out-null
 & "C:\Program Files\7-Zip\7z.exe" x extra.7z
