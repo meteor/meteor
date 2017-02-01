@@ -1,6 +1,7 @@
 package com.meteor.webapp;
 
 import android.content.SharedPreferences;
+import android.util.Log;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -62,13 +63,24 @@ class WebAppConfiguration {
     }
 
     public Set<String> getBlacklistedVersions() {
-        return preferences.getStringSet("blacklistedVersions", Collections.EMPTY_SET);
+        Set<String> blacklistedVersions = preferences.getStringSet("blacklistedVersions", Collections.EMPTY_SET);
+        Log.d("BLACKLIST", "getBlacklistedVersions: " + blacklistedVersions);
+        return blacklistedVersions;
     }
 
     public void addBlacklistedVersion(String version) {
+        Set<String> blacklistedVersionForRetry = preferences.getStringSet("blacklistedVersionsForRetry", Collections.EMPTY_SET);
         Set<String> blacklistedVersions = new HashSet<String>(getBlacklistedVersions());
         blacklistedVersions.add(version);
-        preferences.edit().putStringSet("blacklistedVersions", blacklistedVersions).commit();
+
+        if (blacklistedVersionForRetry.isEmpty()) {
+            Log.d("BLACKLIST", "blacklisting version for retry: " + blacklistedVersions);
+            preferences.edit().putStringSet("blacklistedVersionsForRetry", blacklistedVersions).commit();
+        } else {
+            Log.d("BLACKLIST", "blacklisting version for real: " + blacklistedVersions);
+            preferences.edit().putStringSet("blacklistedVersionsForRetry", Collections.EMPTY_SET).commit();
+            preferences.edit().putStringSet("blacklistedVersions", blacklistedVersions).commit();
+        }
     }
 
     public void reset() {

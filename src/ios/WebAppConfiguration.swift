@@ -1,6 +1,6 @@
 final class WebAppConfiguration {
   let userDefaults = UserDefaults.standard
-  
+
   /// The appId as defined in the runtime config
   var appId: String? {
     get {
@@ -12,13 +12,13 @@ final class WebAppConfiguration {
         if oldValue != nil {
           NSLog("appId seems to have changed, new: \(newValue!), old: \(oldValue!)")
         }
-        
+
         userDefaults.set(newValue, forKey: "MeteorWebAppId")
         userDefaults.synchronize()
       }
     }
   }
-  
+
   /// The rootURL as defined in the runtime config
   var rootURL: URL? {
     get {
@@ -30,19 +30,19 @@ final class WebAppConfiguration {
         if oldValue != nil {
           NSLog("ROOT_URL seems to have changed, new: \(newValue!), old: \(oldValue!)")
         }
-        
+
         userDefaults.set(newValue, forKey: "MeteorWebAppRootURL")
         userDefaults.synchronize()
       }
     }
   }
-  
+
   /// The Cordova compatibility version as specified in the asset manifest
   var cordovaCompatibilityVersion: String? {
     get {
       return userDefaults.string(forKey: "MeteorWebAppCordovaCompatibilityVersion")
     }
-    
+
     set {
       if newValue != cordovaCompatibilityVersion {
         if newValue == nil {
@@ -54,13 +54,13 @@ final class WebAppConfiguration {
       }
     }
   }
-  
+
   /// The last seen initial version of the asset bundle
   var lastSeenInitialVersion: String? {
     get {
       return userDefaults.string(forKey: "MeteorWebAppLastSeenInitialVersion")
     }
-    
+
     set {
       if newValue != lastSeenInitialVersion {
         if newValue == nil {
@@ -72,7 +72,7 @@ final class WebAppConfiguration {
       }
     }
   }
-  
+
   /// The last downloaded version of the asset bundle
   var lastDownloadedVersion: String? {
     get {
@@ -113,27 +113,39 @@ final class WebAppConfiguration {
   /// Blacklisted asset bundle versions
   var blacklistedVersions: [String] {
     get {
-      return userDefaults.array(forKey: "MeteorWebAppBlacklistedVersions") as? [String] ?? []
+      let blvs = userDefaults.array(forKey: "MeteorWebAppBlacklistedVersions") as? [String] ?? []
+      print("BLACKLIST - getBlacklistedVersions: \(blvs)");
+      return blvs
     }
 
     set {
       if newValue != blacklistedVersions {
         if newValue.isEmpty {
+          print("BLACKLIST - removing blacklisted versions");
+          userDefaults.removeObject(forKey: "MeteorWebAppBlacklistedForRetry")
           userDefaults.removeObject(forKey: "MeteorWebAppBlacklistedVersions")
         } else {
-          userDefaults.set(newValue, forKey: "MeteorWebAppBlacklistedVersions")
+          let retryAttempted = userDefaults.object(forKey: "MeteorWebAppBlacklistedForRetry")
+          if retryAttempted == nil {
+            print("BLACKLIST - blacklisting version \(newValue) for retry");
+            userDefaults.set(newValue, forKey: "MeteorWebAppBlacklistedForRetry")
+          } else {
+            print("BLACKLIST - removing retry list and blacklisting \(newValue) for ever")
+            userDefaults.removeObject(forKey: "MeteorWebAppBlacklistedForRetry")
+            userDefaults.set(newValue, forKey: "MeteorWebAppBlacklistedVersions")
+          }
         }
         userDefaults.synchronize()
       }
     }
   }
-  
+
   func addBlacklistedVersion(_ version: String) {
     var blacklistedVersions = self.blacklistedVersions
     blacklistedVersions.append(version)
     self.blacklistedVersions = blacklistedVersions
   }
-  
+
   func reset() {
     cordovaCompatibilityVersion = nil
     lastSeenInitialVersion = nil
