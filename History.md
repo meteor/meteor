@@ -8,6 +8,10 @@
 
 * Fix for [Issue #8136](https://github.com/meteor/meteor/issues/8136).
 
+* The version of 7-zip included in the Windows dev bundle has been
+  upgraded from 1602 to 1604 in an attempt to mitigate [Issue
+  #7688](https://github.com/meteor/meteor/issues/7688).
+
 ## v1.4.2.3
 
 * Style improvements for `meteor create --full`.
