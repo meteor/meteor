@@ -2,6 +2,8 @@
 
 ## v1.4.2.4
 
+* Node has been upgraded to version 4.7.3.
+
 * Fix for [Issue #8136](https://github.com/meteor/meteor/issues/8136).
 
 ## v1.4.2.3
