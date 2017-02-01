@@ -1,5 +1,9 @@
 ## v.NEXT
 
+## v1.4.2.4
+
+* Fix for [Issue #8136](https://github.com/meteor/meteor/issues/8136).
+
 ## v1.4.2.3
 
 * Style improvements for `meteor create --full`.
