@@ -5,9 +5,10 @@ var watch = require('../fs/watch.js');
 var Profile = require('../tool-env/profile.js').Profile;
 import assert from 'assert';
 import LRU from 'lru-cache';
-import {sourceMapLength} from '../utils/utils.js';
+import { sourceMapLength } from '../utils/utils.js';
 import files from '../fs/files.js';
-import {findAssignedGlobals} from './js-analyze.js';
+import { findAssignedGlobals } from './js-analyze.js';
+import { convert as convertColons } from '../utils/colon-converter.js';
 
 // A rather small cache size, assuming only one module is being linked
 // most of the time.
@@ -658,7 +659,7 @@ _.extend(File.prototype, {
     }
 
     var chunks = [];
-    var pathNoSlash = self.servePath.replace(/^\//, "");
+    var pathNoSlash = convertColons(self.servePath.replace(/^\//, ""));
 
     if (! self.bare) {
       var closureHeader = self._getClosureHeader();
