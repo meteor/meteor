@@ -1,7 +1,5 @@
 ## v.NEXT
 
-* The `npm` npm package has been upgraded to version 4.0.2.
-
 * The `facebook` package has been split into:
   - `facebook-oauth` (the part that allows oauth w/ FB directly) and
   - `facebook-config-ui` (the Blaze configuration templates for accounts-ui)
@@ -24,6 +22,22 @@
   
 * You can now use autoprefixer with stylus files added via packages.
   [#7727](https://github.com/meteor/meteor/pull/7727)
+
+## v1.4.2.4
+
+* Node has been upgraded to version 4.7.3.
+
+* The `npm` npm package has been upgraded to version 4.1.2.
+
+* Fix for [Issue #8136](https://github.com/meteor/meteor/issues/8136).
+
+* Fix for [Issue #8222](https://github.com/meteor/meteor/issues/8222).
+
+* Fix for [Issue #7849](https://github.com/meteor/meteor/issues/7849).
+
+* The version of 7-zip included in the Windows dev bundle has been
+  upgraded from 1602 to 1604 in an attempt to mitigate [Issue
+  #7688](https://github.com/meteor/meteor/issues/7688).
 
 * The `"main"` field of `package.json` modules will no longer be
   overwritten with the value of the optional `"browser"` field, now that

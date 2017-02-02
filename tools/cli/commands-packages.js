@@ -701,7 +701,18 @@ main.registerCommand({
   maxArgs: 1,
   options: {
     'create-track': { type: Boolean },
-    'from-checkout': { type: Boolean }
+    'from-checkout': { type: Boolean },
+    // Normally the publish-release script will complain if the source of
+    // a core package differs in any way from what was previously
+    // published for the current version of the package. However, if the
+    // package was deliberately republished independently from a Meteor
+    // release, and those changes have not yet been merged to the master
+    // branch, then the complaint may be spurious. If you have verified
+    // that current release contains no meaningful changes (since the
+    // previous official release) to the packages that are being
+    // complained about, then you can pass the --skip-tree-hashing flag to
+    // disable the treeHash check.
+    'skip-tree-hashing': { type: Boolean },
   },
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
@@ -949,7 +960,11 @@ main.registerCommand({
               // haven't bumped the version number yet; either way,
               // you should probably bump the version number.
               somethingChanged = true;
-            } else {
+            } else if (! options["skip-tree-hashing"] ||
+                       // Always check the treeHash of the meteor-tool
+                       // package, since it must have been modified if a
+                       // new release is being published.
+                       packageName === "meteor-tool") {
               // Save the isopack, just to get its hash.
               var bundleBuildResult = packageClient.bundleBuild(
                 isopk,
