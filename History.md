@@ -1,5 +1,29 @@
 ## v.NEXT
 
+## v1.4.2.4
+
+* Node has been upgraded to version 4.7.3.
+
+* The `npm` npm package has been upgraded to version 4.1.2.
+
+* Fix for [Issue #8136](https://github.com/meteor/meteor/issues/8136).
+
+* Fix for [Issue #8222](https://github.com/meteor/meteor/issues/8222).
+
+* Fix for [Issue #7849](https://github.com/meteor/meteor/issues/7849).
+
+* The version of 7-zip included in the Windows dev bundle has been
+  upgraded from 1602 to 1604 in an attempt to mitigate [Issue
+  #7688](https://github.com/meteor/meteor/issues/7688).
+
+* The `"main"` field of `package.json` modules will no longer be
+  overwritten with the value of the optional `"browser"` field, now that
+  the `install` npm package can make sense of the `"browser"` field at
+  runtime. If you experience module resolution failures on the client
+  after updating Meteor, make sure you've updated the `modules-runtime`
+  Meteor package to at least version 0.7.8.
+  [#8213](https://github.com/meteor/meteor/pull/8213)
+
 ## v1.4.2.3
 
 * Style improvements for `meteor create --full`.

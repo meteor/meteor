@@ -160,14 +160,14 @@ export default class ImportScanner {
     if (old) {
       // If the old file is just an empty stub, let the new file take
       // precedence over it.
-      if (old.emptyStub === true) {
+      if (old.implicit === true) {
         return this.absPathToOutputIndex[absPath] = file;
       }
 
       // If the new file is just an empty stub, pretend the _addFile
       // succeeded by returning the old file, so that we won't try to call
       // _combineFiles needlessly.
-      if (file.emptyStub === true) {
+      if (file.implicit === true) {
         return old;
       }
 
@@ -505,6 +505,16 @@ export default class ImportScanner {
 
       let depFile = this._getFile(absImportedPath);
       if (depFile) {
+        // If the module was imported implicitly before, update to the
+        // explicit version now.
+        if (depFile.implicit === true) {
+          const file = this._readModule(absImportedPath);
+          if (file) {
+            depFile.implicit = false;
+            Object.assign(depFile, file);
+          }
+        }
+
         // Avoid scanning files that we've scanned before, but mark them
         // as imported so we know to include them in the bundle if they
         // are lazy. Eager files and files that we have imported before do
@@ -828,6 +838,13 @@ export default class ImportScanner {
         hash: sha1(data),
         lazy: true,
         imported: true,
+        // Since _addPkgJsonToOutput is only ever called for package.json
+        // files that are involved in resolving package directories, and
+        // pkg is only a subset of the information in the actual
+        // package.json module, we mark it as imported implicitly, so that
+        // the subset can be overridden by the actual module if this
+        // package.json file is imported explicitly elsewhere.
+        implicit: true,
       };
 
       this._addFile(pkgJsonPath, pkgFile);
