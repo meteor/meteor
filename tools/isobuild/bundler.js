@@ -176,7 +176,7 @@ exports.ignoreFiles = [
     /~$/, /^\.#/,
     /^(\.meteor\/|\.git\/|Thumbs\.db|\.DS_Store\/?|Icon\r|ehthumbs\.db|\..*\.sw.|#.*#)$/,
       /* .meteor => avoids scanning N^2 files when bundling all packages
-        .git => often has too many files to watch 
+        .git => often has too many files to watch
         ....sw(.) => vim swap files
         #.*# => emacs swap files
       */
@@ -671,7 +671,7 @@ class File {
 
     // XXX replacing colons with underscores as colon is hard to escape later
     // on different targets and generally is not a good separator for web.
-    url = url.replace(/:/g, '_');
+    url = colonConverter.convert(url);
     this.url = url;
   }
 
@@ -686,7 +686,7 @@ class File {
     // XXX same as in setUrlFromRelPath, we replace colons with a different
     // separator to avoid difficulties further. E.g.: on Windows it is not a
     // valid char in filename, Cordova also rejects it, etc.
-    this.targetPath = this.targetPath.replace(/:/g, '_');
+    this.targetPath = colonConverter.convert(this.targetPath);
   }
 
   // Set a source map for this File. sourceMap is given as a string.
