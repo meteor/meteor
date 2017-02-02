@@ -18,7 +18,10 @@ Package.onUse(function(api) {
     bare: true
   });
 
-  api.addFiles("modules-runtime.js");
+  api.addFiles("options.js");
+  api.addFiles("client.js", "client");
+  api.addFiles("server.js", "server");
+
   api.export("meteorInstall");
 });
 
