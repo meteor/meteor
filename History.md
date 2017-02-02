@@ -36,8 +36,8 @@
 * Fix for [Issue #7849](https://github.com/meteor/meteor/issues/7849).
 
 * The version of 7-zip included in the Windows dev bundle has been
-  upgraded from 1602 to 1604 in an attempt to mitigate [Issue
-  #7688](https://github.com/meteor/meteor/issues/7688).
+  upgraded from 1602 to 1604 in an attempt to mitigate
+  [Issue #7688](https://github.com/meteor/meteor/issues/7688).
 
 * The `"main"` field of `package.json` modules will no longer be
   overwritten with the value of the optional `"browser"` field, now that
