@@ -2,4 +2,4 @@
 // package.json files to the "main" field.
 makeInstallerOptions.browser = true;
 
-meteorInstall = makeInstaller(makeInstallerOptions);
+install = makeInstaller(makeInstallerOptions);

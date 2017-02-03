@@ -21,6 +21,7 @@ Package.onUse(function(api) {
   api.addFiles("options.js");
   api.addFiles("client.js", "client");
   api.addFiles("server.js", "server");
+  api.addFiles("meteor-install.js");
 
   api.export("meteorInstall");
 });
