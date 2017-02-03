@@ -1,5 +1,11 @@
 ## v.NEXT
 
+## v1.4.2.5
+
+* Reverted [#8213](https://github.com/meteor/meteor/pull/8213) as the change was deemed too significant for this release.
+
+> Note: The decision to revert the above change was made late in the Meteor 1.4.2.4 release process, before it was ever recommended but too late in the process to avoid the additional increment of the version number.  See [#8311](https://github.com/meteor/meteor/pull/8311) for additional information.  This change will still be released in an upcoming version of Meteor but only after it is polished a bit more to ensure a seemless upgrade.
+
 ## v1.4.2.4
 
 * Node has been upgraded to version 4.7.3.
@@ -15,6 +21,14 @@
 * The version of 7-zip included in the Windows dev bundle has been
   upgraded from 1602 to 1604 in an attempt to mitigate [Issue
   #7688](https://github.com/meteor/meteor/issues/7688).
+
+* The `"main"` field of `package.json` modules will no longer be
+  overwritten with the value of the optional `"browser"` field, now that
+  the `install` npm package can make sense of the `"browser"` field at
+  runtime. If you experience module resolution failures on the client
+  after updating Meteor, make sure you've updated the `modules-runtime`
+  Meteor package to at least version 0.7.8.
+  [#8213](https://github.com/meteor/meteor/pull/8213)
 
 ## v1.4.2.3
 
