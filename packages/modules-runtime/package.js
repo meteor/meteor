@@ -1,13 +1,13 @@
 Package.describe({
   name: "modules-runtime",
-  version: "0.7.8",
+  version: "0.7.7",
   summary: "CommonJS module system",
   git: "https://github.com/benjamn/install",
   documentation: "README.md"
 });
 
 Npm.depends({
-  install: "0.8.4"
+  install: "0.8.2"
 });
 
 Package.onUse(function(api) {
