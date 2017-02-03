@@ -1,9 +1,9 @@
 {
   "dependencies": {
     "install": {
-      "version": "0.8.2",
-      "resolved": "https://registry.npmjs.org/install/-/install-0.8.2.tgz",
-      "from": "install@0.8.2"
+      "version": "0.8.4",
+      "resolved": "https://registry.npmjs.org/install/-/install-0.8.4.tgz",
+      "from": "install@0.8.4"
     }
   }
 }
