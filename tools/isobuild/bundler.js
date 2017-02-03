@@ -677,7 +677,7 @@ class File {
 
   setTargetPathFromRelPath(relPath) {
     // XXX hack
-    if (relPath.match(/^packages\//) || relPath.match(/^assets\//)) {
+    if (relPath.match(/^(packages|assets|dynamic)\//)) {
       this.targetPath = relPath;
     } else {
       this.targetPath = files.pathJoin('app', relPath);
@@ -1173,29 +1173,42 @@ class Target {
 
   // Minify the JS in this target
   minifyJs(minifierDef, minifyMode) {
-    const sources = _.map(this.js, function (file) {
-      return new JsFile(file, {
-        arch: this.arch
-      });
+    const staticFiles = [];
+    const dynamicFiles = [];
+
+    this.js.forEach(file => {
+      const jsf = new JsFile(file, { arch: this.arch });
+      if (file.targetPath.startsWith("dynamic/")) {
+        dynamicFiles.push(jsf);
+      } else {
+        staticFiles.push(jsf);
+      }
     });
-    var minifier = minifierDef.userPlugin.processFilesForBundle.bind(
-      minifierDef.userPlugin);
+
+    var minifier = minifierDef.userPlugin.processFilesForBundle
+      .bind(minifierDef.userPlugin);
 
     buildmessage.enterJob('minifying app code', function () {
       try {
         var markedMinifier = buildmessage.markBoundary(minifier);
-        markedMinifier(sources, { minifyMode });
+        markedMinifier(staticFiles, { minifyMode });
+        dynamicFiles.forEach(file => {
+          markedMinifier([file], { minifyMode });
+        });
       } catch (e) {
         buildmessage.exception(e);
       }
     });
 
-    this.js = _.flatten(sources.map((source) => {
-      return source._minifiedFiles.map((file) => {
+    const js = [];
+
+    function handle(source, dynamic) {
+      const newFiles = source._minifiedFiles.map(file => {
         const newFile = new File({
           info: 'minified js',
-          data: new Buffer(file.data, 'utf8')
+          data: new Buffer(file.data, 'utf8'),
         });
+
         if (file.sourceMap) {
           newFile.setSourceMap(file.sourceMap, '/');
         }
@@ -1203,13 +1216,24 @@ class Target {
         if (file.path) {
           newFile.setUrlFromRelPath(file.path);
           newFile.targetPath = file.path;
+        } else if (dynamic) {
+          const { targetPath } = source._source;
+          newFile.setUrlFromRelPath(targetPath);
+          newFile.targetPath = targetPath;
         } else {
           newFile.setUrlToHash('.js', '?meteor_js_resource=true');
         }
 
         return newFile;
       });
-    }));
+
+      js.push(...newFiles);
+    }
+
+    staticFiles.forEach(file => handle(file, false));
+    dynamicFiles.forEach(file => handle(file, true));
+
+    this.js = js;
   }
 
   // For every source file we process, sets the domain name to
@@ -1477,9 +1501,27 @@ class ClientTarget extends Target {
       manifestItem.size = file.size();
       manifestItem.hash = file.hash();
 
-      writeFile(file, builder);
+      writeFile(file, {
+        sourceMapUrl: manifestItem.sourceMapUrl,
+      }, builder);
 
-      manifest.push(manifestItem);
+      if (! file.targetPath.startsWith("dynamic/")) {
+        manifest.push(manifestItem);
+      } else if (file.sourceMap) {
+        // If the file is dynamic, we don't need/want the file itself to
+        // be served by the web server, but we do want its source map (if
+        // defined) to be accessible via HTTP, so that we can refer to it
+        // by URL rather than embedding it as a very long data URL comment
+        // in the file.
+        manifest.push({
+          type: "json",
+          path: manifestItem.sourceMap,
+          url: manifestItem.sourceMapUrl,
+          where: manifestItem.where,
+          cacheable: manifestItem.cacheable,
+          hash: manifestItem.hash,
+        });
+      }
     });
 
     ['head', 'body'].forEach((type) => {
@@ -1980,7 +2022,9 @@ class JsImage {
         });
       }
 
-      load.push(loadItem);
+      if (! item.targetPath.startsWith("dynamic/")) {
+        load.push(loadItem);
+      }
     });
 
     const rebuildDirs = Object.create(null);
@@ -2324,7 +2368,7 @@ class ServerTarget extends JsImageTarget {
   ServerTarget.prototype[method] = Profile(`ServerTarget#${method}`, ServerTarget.prototype[method]);
 });
 
-var writeFile = Profile("bundler writeFile", function (file, builder) {
+var writeFile = Profile("bundler writeFile", function (file, options, builder) {
   if (! file.targetPath) {
     throw new Error("No targetPath?");
   }
@@ -2336,7 +2380,21 @@ var writeFile = Profile("bundler writeFile", function (file, builder) {
   // to wait until the server is actually driven by the manifest
   // (rather than just serving all of the files in a certain
   // directories)
-  builder.write(file.targetPath, { data: file.contents(), hash: file.hash() });
+
+  let data = file.contents();
+  const hash = file.hash();
+
+  if (options.sourceMapUrl) {
+    // TODO Remove any existing //# sourceMappingURL=, and maybe unify
+    // with similar logic in JsImage#write.
+    data = Buffer.concat([data, new Buffer([
+      "",
+      "//# sourceMappingURL=" + options.sourceMapUrl,
+      ""
+    ].join("\n"), "utf8")]);
+  }
+
+  builder.write(file.targetPath, { data, hash });
 });
 
 // Writes a target a path in 'programs'
