@@ -7,7 +7,7 @@ Package.describe({
 });
 
 Npm.depends({
-  install: "0.8.4"
+  install: "0.8.7"
 });
 
 Package.onUse(function(api) {
