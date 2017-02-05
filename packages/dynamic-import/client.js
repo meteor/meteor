@@ -43,23 +43,49 @@ Module.prototype.dynamicImport = function (id) {
         }
       );
 
-    }).then(function (resultsTree) {
-      function walk(tree) {
-        if (typeof tree === "string") {
-          return (0, eval)("(" + tree + ")");
-        }
-
-        Object.keys(tree).forEach(function (name) {
-          tree[name] = walk(tree[name]);
-        });
-
-        return tree;
-      }
-
-      meteorInstall(walk(resultsTree)); // TODO Options!
-    }).then(get);
+    }).then(installResults).then(get);
   });
 };
+
+function installResults(resultsTree) {
+  var parts = [""];
+  var trees = [];
+  var options = [];
+
+  function walk(tree) {
+    if (typeof tree === "string") {
+      var meta = requireMeta(parts.join("/"));
+      var optionsIndex = options.indexOf(meta.options);
+      if (optionsIndex < 0) {
+        options[optionsIndex = options.length] = meta.options;
+        trees.push(Object.create(null));
+      }
+
+      // The results tree is partitioned into separate trees according
+      // to the meta.options object that governs the tree. Usually the
+      // number of trees will be approximately one, because options
+      // are shared by entire bundles.
+      addToTree(
+        trees[optionsIndex],
+        meta.module.id,
+        (0, eval)("(" + tree + ")")
+      );
+
+    } else {
+      Object.keys(tree).forEach(function (name) {
+        parts.push(name);
+        walk(tree[name]);
+        parts.pop(name);
+      });
+    }
+  }
+
+  walk(resultsTree);
+
+  trees.forEach(function (tree, i) {
+    meteorInstall(tree, options[i]);
+  });
+}
 
 function addToTree(tree, id, value) {
   var parts = id.split("/");

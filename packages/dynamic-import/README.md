@@ -21,4 +21,5 @@ Remaining work:
 - [ ] Batch multiple __dynamicImport method calls.
 - [x] Make sure client-only reloads work (revisit _read caching).
 - [x] Make sure path manipulation is Windows-safe.
+- [x] Install dynamic modules with correct `meteorInstall` options.
 - [ ] Tests!
