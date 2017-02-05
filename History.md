@@ -19,11 +19,11 @@
 
 * Added support for frame-ancestors CSP option in browser-policy.
   [#7970](https://github.com/meteor/meteor/pull/7970)
-  
+
 * You can now use autoprefixer with stylus files added via packages.
   [#7727](https://github.com/meteor/meteor/pull/7727)
 
-## v1.4.2.4
+## v1.4.2.4, ?
 
 * Node has been upgraded to version 4.7.3.
 
@@ -47,7 +47,7 @@
   Meteor package to at least version 0.7.8.
   [#8213](https://github.com/meteor/meteor/pull/8213)
 
-## v1.4.2.3
+## v1.4.2.3, 2016-Nov-17
 
 * Style improvements for `meteor create --full`.
   [#8045](https://github.com/meteor/meteor/pull/8045)
@@ -58,7 +58,7 @@
   enough](https://github.com/meteor/meteor/pull/8044#issuecomment-260913739)
   to skip recommending 1.4.2.2 and instead immediately release 1.4.2.3.
 
-## v1.4.2.2
+## v1.4.2.2, 2016-Nov-15
 
 * Node has been upgraded to version 4.6.2.
 
@@ -93,7 +93,7 @@
   import lazy main modules using `import "meteor/<package name>"` but must
   explicitly name the module: `import "meteor/<package name>/client.js"`.
 
-## v1.4.2.1
+## v1.4.2.1, 2016-Nov-8
 
 * Installing the `babel-runtime` npm package in your application
   `node_modules` directory is now required for most Babel-transformed code
@@ -135,7 +135,7 @@
   [#8005](https://github.com/meteor/meteor/issues/8005)
   [#8007](https://github.com/meteor/meteor/issues/8007)
 
-## v1.4.2
+## v1.4.2, 2016-Oct-25
 
 * This release implements a number of rebuild performance optimizations.
   As you edit files in development, the server should restart and rebuild
@@ -205,7 +205,7 @@
 * The `coffeescript` package now natively supports `import` and `export`
   declarations. [#7818](https://github.com/meteor/meteor/pull/7818)
 
-## v1.4.1.3
+## v1.4.1.3, 2016-Oct-21
 
 * Node has been updated to version 4.6.1:
   https://nodejs.org/en/blog/release/v4.6.1/
@@ -234,20 +234,20 @@
   dreaded `Error: ENOENT: no such file or directory, open... os.json`
   error. [#7806](https://github.com/meteor/meteor/issues/7806)
 
-## v1.4.1.2
+## v1.4.1.2, 2016-Oct-4
 
 * Node has been upgraded to version 4.6.0, a recommended security release:
   https://nodejs.org/en/blog/release/v4.6.0/
 
 * `npm` has been upgraded to version 3.10.8.
 
-## v1.4.1.1
+## v1.4.1.1, 2016-Aug-24
 
 * Update the version of our Node MongoDB driver to 2.2.8 to fix a bug in
   reconnection logic, leading to some `update` and `remove` commands being
   treated as `insert`s. [#7594](https://github.com/meteor/meteor/issues/7594)
 
-## v1.4.1
+## v1.4.1, 2016-Aug-18
 
 * Node has been upgraded to 4.5.0.
 
@@ -362,13 +362,13 @@
   `meteor --no-release-check` or `METEOR_NO_RELEASE_CHECK=1 meteor`.
   [#7445](https://github.com/meteor/meteor/pull/7445)
 
-## v1.4.0.1
+## v1.4.0.1, 2016-Jul-29
 
 * Fix issue with the 1.4 tool springboarding to older releases (see [Issue #7491](https://github.com/meteor/meteor/issues/7491))
 
 * Fix issue with running in development on Linux 32bit [Issue #7511](https://github.com/meteor/meteor/issues/7511)
 
-## v1.4
+## v1.4, 2016-Jul-25
 
 * Node has been upgraded to 4.4.7.
 
@@ -414,13 +414,13 @@
   [#7416](https://github.com/meteor/meteor/issues/7416)
 * Added Angular2 boilerplate example [#7364](https://github.com/meteor/meteor/pull/7363)
 
-## v1.3.5.1
+## v1.3.5.1, 2016-Jul-18
 
 * This release fixed a small bug in 1.3.5 that prevented updating apps
   whose `.meteor/release` files refer to releases no longer installed in
   `~/.meteor/packages/meteor-tool`. [576468eae8d8dd7c1fe2fa381ac51dee5cb792cd](https://github.com/meteor/meteor/commit/576468eae8d8dd7c1fe2fa381ac51dee5cb792cd)
 
-## v1.3.5
+## v1.3.5, 2016-Jul-16
 
 * Failed Meteor package downloads are now automatically resumed from the
   point of failure, up to ten times, with a five-second delay between
@@ -456,7 +456,7 @@
   provided to `meteor {node,npm}`, the `node-gyp` tool will infer the
   appropriate version (though it still defaults to "2015").
 
-## v1.3.4.4
+## v1.3.4.4, 2016-Jul-10
 
 * Fixed [#7374](https://github.com/meteor/meteor/issues/7374).
 
@@ -466,7 +466,7 @@
   configured using `.npmrc` files or command-line flags.
   [0689cae25a3e0da3615a402cdd0bec94ce8455c8](https://github.com/meteor/meteor/commit/0689cae25a3e0da3615a402cdd0bec94ce8455c8)
 
-## v1.3.4.3
+## v1.3.4.3, 2016-Jul-8
 
 * Node has been upgraded to 0.10.46.
 
@@ -488,7 +488,7 @@
 * The `.meteor/dev_bundle` symbolic link is now ignored by
   `.meteor/.gitignore`.
 
-## v1.3.4.2
+## v1.3.4.2, 2016-Jul-7
 
 * The `meteor node` and `meteor npm` commands now respect
   `.meteor/release` when resolving which versions of `node` and `npm` to
@@ -518,7 +518,7 @@
   [#7309](https://github.com/meteor/meteor/issues/7309)
   [#7312](https://github.com/meteor/meteor/issues/7312)
 
-## v1.3.4.1
+## v1.3.4.1, 2016-Jun-23
 
 * Increased the default HTTP timeout for requests made by the `meteor`
   command-line tool to 60 seconds (previously 30), and [disabled the
@@ -528,7 +528,7 @@
 * Minor bug fixes: [#7281](https://github.com/meteor/meteor/pull/7281)
   [#7276](https://github.com/meteor/meteor/pull/7276)
 
-## v1.3.4
+## v1.3.4, 2016-Jun-22
 
 * The version of `npm` used by `meteor npm` and when installing
   `Npm.depends` dependencies of Meteor packages has been upgraded from
@@ -567,7 +567,7 @@
   [#7255](https://github.com/meteor/meteor/pull/7255)
   [#7239](https://github.com/meteor/meteor/pull/7239)
 
-## v1.3.3.1
+## v1.3.3.1, 2016-Jun-17
 
 * Fixed bugs:
   [#7226](https://github.com/meteor/meteor/pull/7226)
@@ -596,7 +596,7 @@
 
 * Adds `Accounts.onLogout()` a hook directly analogous to `Accounts.onLogin()`. [PR #6889](https://github.com/meteor/meteor/pull/6889)
 
-## v1.3.3
+## v1.3.3, 2016-Jun-10
 
 * Node has been upgraded from 0.10.43 to 0.10.45.
 
@@ -711,13 +711,13 @@
 
 * Miscellaneous fixed bugs: #6877 #6843 #6881
 
-## v1.3.2.4
+## v1.3.2.4, 2016-Apr-20
 
 > Meteor 1.3.2.4 was published because publishing 1.3.2.3 failed in an
 unrecoverable way. Meteor 1.3.2.4 contains no additional changes beyond
 the changes in 1.3.2.3.
 
-## v1.3.2.3
+## v1.3.2.3, 2016-Apr-20
 
 * Reverted accidental changes included in 1.3.2.1 and 1.3.2.2 that
   improved DDP performance by batching updates, but broke some packages
@@ -725,17 +725,17 @@ the changes in 1.3.2.3.
   https://github.com/meteor/meteor/pull/5680 for more details. These
   changes will be reinstated in 1.3.3.
 
-## v1.3.2.2
+## v1.3.2.2, 2016-Apr-18
 
 * Fixed bugs #6819 and #6831.
 
-## v1.3.2.1
+## v1.3.2.1, 2016-Apr-15
 
 * Fixed faulty comparison of `.sourcePath` and `.targetPath` properties of
   files scanned by the `ImportScanner`, which caused problems for apps
   using the `tap:i18n` package. 6e792a7cf25847b8cd5d5664a0ff45c9fffd9e57
 
-## v1.3.2
+## v1.3.2, 2016-Apr-15
 
 * The `meteor/meteor` repository now includes a `Roadmap.md` file:
   https://github.com/meteor/meteor/blob/devel/Roadmap.md
@@ -771,7 +771,7 @@ the changes in 1.3.2.3.
 
 * Fixed unintended change to `Match.Optional` which caused it to behave the same as the new `Match.Maybe` and incorrectly matching `null` where it previously would not have allowed it. #6735
 
-## v1.3.1
+## v1.3.1, 2016-Apr-3
 
 * Long isopacket node_modules paths have been shortened, fixing upgrade
   problems on Windows. #6609
@@ -796,7 +796,7 @@ the changes in 1.3.2.3.
   added in package.js. Now those errors are reported when/if the files are
   imported by the ImportScanner. be986fd70926c9dd8eff6d8866205f236c8562c4
 
-## v1.3
+## v1.3, 2016-Mar-27
 
 ### ES2015/Modules
 
