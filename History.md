@@ -17,6 +17,8 @@
   fixing [#8021](https://github.com/meteor/meteor/issues/8021) and
   [#7662](https://github.com/meteor/meteor/issues/7662).
 
+* The `reify` npm package has been upgraded to 0.4.7.
+
 * Added support for frame-ancestors CSP option in browser-policy.
   [#7970](https://github.com/meteor/meteor/pull/7970)
   
