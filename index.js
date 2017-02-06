@@ -8,22 +8,7 @@ var parseOptions = {
   strictMode: false,
   allowImportExportEverywhere: true,
   allowReturnOutsideFunction: true,
-  plugins: [
-    "asyncFunctions",
-    "asyncGenerators",
-    "classConstructorCall",
-    "classProperties",
-    "decorators",
-    "doExpressions",
-    "exponentiationOperator",
-    "exportExtensions",
-    "flow",
-    "functionBind",
-    "functionSent",
-    "jsx",
-    "objectRestSpread",
-    "trailingFunctionCommas"
-  ]
+  plugins: ["*", "jsx", "flow"]
 };
 
 // Make sure that module.import and module.export are defined in the
