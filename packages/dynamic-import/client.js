@@ -1,6 +1,7 @@
 var Module = module.constructor;
 var delayPromise = Promise.resolve();
 var requireMeta = meteorInstall._requireMeta;
+var cache = require("./cache.js");
 
 Module.prototype.dynamicImport = function (id) {
   // The real (not meta) parent module.
@@ -11,41 +12,73 @@ Module.prototype.dynamicImport = function (id) {
   }
 
   return delayPromise.then(get).catch(function (error) {
+    var message = error.message;
+    if (! (message &&
+           message.startsWith("Cannot find module"))) {
+      throw error;
+    }
+
     // Require the current module from the complete meta graph.
     var meta = requireMeta(module.id);
-    var missingTree = Object.create(null);
+    var missingTree;
+    var localTree;
 
     function walk(meta) {
-      if (meta.dynamic && ! meta.pending) {
-        meta.pending = true;
-        addToTree(missingTree, meta.module.id, 1);
-        meta.eachChild(walkChild);
+      if (meta.dynamic) {
+        return meta.pending || (meta.pending = add(
+          meta.module.id,
+          meta.version
+        ).then(function () {
+          return allChildren(meta, walkChild);
+        }));
       }
     }
 
-    function walkChild(childModule) {
-      walk(childModule.exports);
+    function add(id, version) {
+      return cache.check(id, version).then(function (code) {
+        addToTree(localTree = localTree || Object.create(null), id, code);
+      }, function (missing) {
+        addToTree(missingTree = missingTree || Object.create(null), id, 1);
+      });
     }
 
-    // The meta.eachChild iteration includes all child modules imported by
-    // meta.module, not just the child explicitly required here, so that
-    // implicit modules like package.json will be included too. See
-    // meteor/packages/modules-runtime/meteor-install.js for the
-    // definition of meta.eachChild.
-    meta.eachChild(walkChild, [id]);
+    function walkChild(childModule) {
+      return walk(childModule.exports);
+    }
 
-    return new Promise(function (resolve, reject) {
-      Meteor.call(
-        "__dynamicImport",
-        missingTree,
-        function (error, resultsTree) {
-          error ? reject(error) : resolve(resultsTree);
-        }
-      );
-
-    }).then(installResults).then(get);
+    return allChildren(meta, walkChild, [id]).then(function () {
+      if (localTree) {
+        installResults(localTree);
+      }
+      return missingTree && fetchMissing(missingTree);
+    }).then(get);
   });
 };
+
+// The allChildren iteration includes all child modules imported by
+// meta.module, not just the child explicitly required here, so that
+// implicit modules like package.json will be included too.
+function allChildren(meta, callback, idsToRequire) {
+  var results = [];
+  // See meteor/packages/modules-runtime/meteor-install.js for the
+  // definition of meta.eachChild.
+  meta.eachChild(function (child) {
+    results.push(callback(child));
+  }, idsToRequire);
+  return Promise.all(results);
+}
+
+function fetchMissing(missingTree) {
+  return new Promise(function (resolve, reject) {
+    Meteor.call(
+      "__dynamicImport",
+      missingTree,
+      function (error, resultsTree) {
+        error ? reject(error) : resolve(resultsTree);
+      }
+    );
+  }).then(installResults);
+}
 
 function installResults(resultsTree) {
   var parts = [""];
@@ -70,6 +103,9 @@ function installResults(resultsTree) {
         meta.module.id,
         (0, eval)("(" + tree + ")")
       );
+
+      // Intentionally do not delay resolution waiting for the cache.
+      cache.set(meta.module.id, meta.version, tree);
 
     } else {
       Object.keys(tree).forEach(function (name) {

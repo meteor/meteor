@@ -8,11 +8,11 @@ Remaining work:
 - [x] Modules are minified but not merged in production
   - [x] Wrap modules with function to enable better minification
 - [ ] Babel transform from `import(...)` to `module.importAsync(...)`
-- [ ] Bundle cachability story
+- [x] Local module caching.
 - [x] Compact `previous` state representation
 - [x] Improve dependency resolution in `packages/dynamic-import/server.js`
 - [x] Report static import/syntax/etc. errors for async files
-- [ ] What about old/new versions of code?
+- [x] What about old/new versions of code?
 - [ ] What about package pseudo-globals (imports)?
 - [x] What about dynamic stubs?
 - [x] Avoid creating dynamic files on the server.
