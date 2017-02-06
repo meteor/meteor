@@ -7,7 +7,7 @@ Remaining work:
 - [x] Make `import(...)` work on the server
 - [x] Modules are minified but not merged in production
   - [x] Wrap modules with function to enable better minification
-- [ ] Babel transform from `import(...)` to `module.importAsync(...)`
+- [x] Babel transform from `import(...)` to `module.importAsync(...)`
 - [x] Local module caching.
 - [x] Compact `previous` state representation
 - [x] Improve dependency resolution in `packages/dynamic-import/server.js`

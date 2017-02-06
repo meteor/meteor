@@ -13,7 +13,7 @@
   [Issue #7715](https://github.com/meteor/meteor/issues/7715)
   [PR #7728](https://github.com/meteor/meteor/pull/7728)
 
-* The `meteor-babel` npm package has been upgraded to version 0.14.3,
+* The `meteor-babel` npm package has been upgraded to version 0.15.1,
   fixing [#8021](https://github.com/meteor/meteor/issues/8021) and
   [#7662](https://github.com/meteor/meteor/issues/7662).
 
