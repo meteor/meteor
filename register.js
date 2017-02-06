@@ -15,6 +15,8 @@ var config = {
   babelOptions: require("./options").getDefaults()
 };
 
+config.babelOptions.sourceMap = "inline";
+
 exports.setSourceMapRootPath = function (smrp) {
   config.sourceMapRootPath = smrp;
   return exports;

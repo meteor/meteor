@@ -20,7 +20,7 @@ var babelModulesPlugin = [function () {
 exports.getDefaults = function getDefaults(features) {
   var options = {
     compact: false,
-    sourceMap: "inline",
+    sourceMap: false,
     ast: false,
     babelrc: false,
     // "Loose" mode gets us faster and more IE-compatible transpilations of:
