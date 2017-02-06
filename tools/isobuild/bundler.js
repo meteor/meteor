@@ -1981,11 +1981,11 @@ class JsImage {
         );
 
         var sourceMapFileName = files.pathBasename(loadItem.sourceMap);
+
         // Remove any existing sourceMappingURL line. (eg, if roundtripping
         // through JsImage.readFromDisk, don't end up with two!)
-        item.source = item.source.replace(
-            /\n\/\/# sourceMappingURL=.+\n?$/g, '');
-        item.source += "\n//# sourceMappingURL=" + sourceMapFileName + "\n";
+        item.source = addSourceMappingURL(item.source, sourceMapFileName);
+
         if (item.sourceMapRoot) {
           loadItem.sourceMapRoot = item.sourceMapRoot;
         }
@@ -2385,17 +2385,26 @@ var writeFile = Profile("bundler writeFile", function (file, options, builder) {
   const hash = file.hash();
 
   if (options.sourceMapUrl) {
-    // TODO Remove any existing //# sourceMappingURL=, and maybe unify
-    // with similar logic in JsImage#write.
-    data = Buffer.concat([data, new Buffer([
-      "",
-      "//# sourceMappingURL=" + options.sourceMapUrl,
-      ""
-    ].join("\n"), "utf8")]);
+    data = new Buffer(
+      addSourceMappingURL(data, options.sourceMapUrl),
+      "utf8"
+    );
   }
 
   builder.write(file.targetPath, { data, hash });
 });
+
+// The data argument may be either a Buffer or a string, but this function
+// always returns a string.
+function addSourceMappingURL(data, url) {
+  const dataString = data
+    // If data is a Buffer, convert it to a string.
+    .toString("utf8")
+    // Remove any existing source map comments.
+    .replace(/\/\/# sourceMappingURL=[^\n]+/g, '//');
+  // Append the new source map comment to the end of the code.
+  return dataString + "\n//# sourceMappingURL=" + url + "\n";
+}
 
 // Writes a target a path in 'programs'
 var writeTargetToPath = Profile(
