@@ -392,3 +392,15 @@ describe("Reify", function () {
     }();
   });
 });
+
+describe("dynamic import(...)", function () {
+  import meteorBabel from "../index.js";
+
+  it("should compile to module.dynamicImport(...)", function () {
+    const code = 'wait(import("meteor/dynamic-import"));';
+    assert.strictEqual(
+      meteorBabel.compile(code).code,
+      code.replace("import", "module.dynamicImport")
+    );
+  });
+});
