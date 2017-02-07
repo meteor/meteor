@@ -1178,8 +1178,25 @@ class Target {
 
     this.js.forEach(file => {
       const jsf = new JsFile(file, { arch: this.arch });
+
       if (file.targetPath.startsWith("dynamic/")) {
+        // Make sure file._hash is cached.
+        file.hash();
+
+        // Dynamic files consist of a single anonymous function
+        // expression, which some minifiers (e.g. UglifyJS) either fail to
+        // parse or mistakenly eliminate as dead code. To avoid these
+        // problems, we temporarily name the function __minifyJs.
+        file._contents = new Buffer(
+          file.contents()
+            .toString("utf8")
+            .replace(/^\s*function\s*\(/,
+                     "function __minifyJs("),
+          "utf8"
+        );
+
         dynamicFiles.push(jsf);
+
       } else {
         staticFiles.push(jsf);
       }
@@ -1204,6 +1221,11 @@ class Target {
 
     function handle(source, dynamic) {
       const newFiles = source._minifiedFiles.map(file => {
+        // Remove the function name __minifyJs that was added above.
+        file.data = file.data
+          .replace(/^\s*function\s+__minifyJs\s*\(/,
+                   "function(");
+
         const newFile = new File({
           info: 'minified js',
           data: new Buffer(file.data, 'utf8'),

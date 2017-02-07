@@ -585,12 +585,7 @@ _.extend(File.prototype, {
 
   _getClosureHeader() {
     if (this._useMeteorInstall()) {
-      // The wrapper function is named "module" so that the UglifyJS
-      // minifier will parse it as a function declaration, because
-      // UglifyJS has trouble parsing single function expressions. If the
-      // module refers to `module`, however, it will be referring to the
-      // parameter of that name, rather than the function name.
-      const headerParts = ["function module("];
+      const headerParts = ["function("];
 
       if (this.source.match(/\b__dirname\b/)) {
         headerParts.push("require,exports,module,__filename,__dirname");
