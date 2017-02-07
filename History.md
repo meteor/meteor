@@ -23,6 +23,10 @@
 * You can now use autoprefixer with stylus files added via packages.
   [#7727](https://github.com/meteor/meteor/pull/7727)
 
+* Restored [#8213](https://github.com/meteor/meteor/pull/8213)
+  after those changes were reverted in
+  [v1.4.2.5](https://github.com/meteor/meteor/blob/devel/History.md#v1425).
+
 ## v1.4.2.5
 
 * Reverted [#8213](https://github.com/meteor/meteor/pull/8213) as the
@@ -50,6 +54,14 @@
 * The version of 7-zip included in the Windows dev bundle has been
   upgraded from 1602 to 1604 in an attempt to mitigate
   [Issue #7688](https://github.com/meteor/meteor/issues/7688).
+
+* The `"main"` field of `package.json` modules will no longer be
+  overwritten with the value of the optional `"browser"` field, now that
+  the `install` npm package can make sense of the `"browser"` field at
+  runtime. If you experience module resolution failures on the client
+  after updating Meteor, make sure you've updated the `modules-runtime`
+  Meteor package to at least version 0.7.8.
+  [#8213](https://github.com/meteor/meteor/pull/8213)
 
 * The `"main"` field of `package.json` modules will no longer be
   overwritten with the value of the optional `"browser"` field, now that
