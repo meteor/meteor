@@ -1,5 +1,18 @@
 ## v.NEXT
 
+* Versions of Meteor [core
+  packages](https://github.com/meteor/meteor/tree/release-1.4.3/packages)
+  are once again constrained by the current Meteor release. Before Meteor
+  1.4, the current release dictated the exact version of every installed
+  core package, which meant newer core packages could not be installed
+  without publishing a new Meteor release. In order to support incremental
+  development of core packages, Meteor 1.4 removed all release-based
+  constraints on core package versions (#7084). Now, in Meteor 1.4.3, each
+  core package version must be patch-compatible with whatever version of
+  the package was current when the Meteor release was published. This
+  middle ground restores meaning to Meteor releases, yet still permits
+  patch updates to core packages.
+
 * The `facebook` package has been split into:
   - `facebook-oauth` (the part that allows oauth w/ FB directly) and
   - `facebook-config-ui` (the Blaze configuration templates for accounts-ui)
