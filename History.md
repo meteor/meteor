@@ -23,6 +23,18 @@
 * You can now use autoprefixer with stylus files added via packages.
   [#7727](https://github.com/meteor/meteor/pull/7727)
 
+## v1.4.2.5
+
+* Reverted [#8213](https://github.com/meteor/meteor/pull/8213) as the
+  change was deemed too significant for this release.
+
+> Note: The decision to revert the above change was made late in the
+  Meteor 1.4.2.4 release process, before it was ever recommended but too
+  late in the process to avoid the additional increment of the version number.
+  See [#8311](https://github.com/meteor/meteor/pull/8311) for additional
+  information. This change will still be released in an upcoming version
+  of Meteor with a more seamless upgrade.
+
 ## v1.4.2.4
 
 * Node has been upgraded to version 4.7.3.
