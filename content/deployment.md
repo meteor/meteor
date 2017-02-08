@@ -151,7 +151,27 @@ Once you are setup with Galaxy, deployment is simple (just re-run the `meteor de
 
 <h4 id="galaxy-mongo">MongoDB hosting services to use with Galaxy</h4>
 
-If you are using Galaxy (or need a production quality, managed MongoDB for one of the other options listed here), it's usually a good idea to use a [MongoDB hosting provider](http://galaxy-guide.meteor.com/mongodb.html). There are a variety of options out there, but a good choice is [mLab](https://mlab.com/). The main things to look for are support for oplog tailing, and a presence in the us-east-1 or eu-west-1 AWS region.
+If you are using Galaxy (or need a production quality, managed MongoDB for one of the other options listed here), it's usually a good idea to use a [hosted MongoDB service](http://galaxy-guide.meteor.com/mongodb.html). There are a variety of services out there, we recommend that you select one of the below services depending on your requirements:
+
+* [mLab](https://www.mlab.com)
+* [compose](https://www.compose.io)
+* [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
+
+When selecting a hosted MongoDB service for production it is important to assess the features that the service provides. Below is a nonexhaustive list of features to consider when selecting a service:
+
+* Supports the MongoDB version you wish to run
+* Storage Engine Support (MMAPv1 or WiredTiger) - Since Meteor 1.4 WiredTiger is the default storage engine
+* Support for Replica Sets & Oplog tailing
+* AWS Region - For performance your app and database should be in the same AWS region (For Galaxy this is us-east-1 or eu-west-1)
+* Monitoring & Automated alerting
+* Continuous backups & Automated snapshots
+* Access Control, IP whitelisting, and AWS VPC Peering
+* Encryption of data in-flight and at-rest
+* Cost and pricing granularity
+* Instance size & options
+* Instance configurability - Independently configure your CPU, memory, storage and disk I/O speed.
+
+You can read this [detailed guide](https://www.okgrow.com/posts/mongodb-atlas-setup) by OK GROW! for step-by-step instructions to deploying a production ready MongoDB database on MongoDB Atlas.
 
 <h3 id="mup">Meteor Up</h3>
 
