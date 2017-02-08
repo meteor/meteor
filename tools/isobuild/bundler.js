@@ -469,6 +469,12 @@ export class NodeModulesDirectory {
 
       const start = parts.lastIndexOf("node_modules") + 1;
 
+      if (start >= parts.length) {
+        // If "node_modules" is the final part, then there's nothing
+        // futher to examine, yet.
+        return true;
+      }
+
       if (parts[start] === ".bin") {
         if (start === parts.length - 1) {
           // Permit node_modules/.bin directories, so that we can filter
@@ -489,7 +495,7 @@ export class NodeModulesDirectory {
       }
 
       // Strip away any parts not related to the package name.
-      parts.length = start + maxPartCount;
+      parts.length = Math.min(start + maxPartCount, parts.length);
 
       let tree = prodPackageTree;
 
