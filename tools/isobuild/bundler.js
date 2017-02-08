@@ -1223,6 +1223,7 @@ class Target {
       const newFiles = source._minifiedFiles.map(file => {
         // Remove the function name __minifyJs that was added above.
         file.data = file.data
+          .toString("utf8")
           .replace(/^\s*function\s+__minifyJs\s*\(/,
                    "function(");
 
