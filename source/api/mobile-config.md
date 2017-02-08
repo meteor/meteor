@@ -67,14 +67,14 @@ For example this Cordova whitelist syntax:
 
 ```
 <access origin="https://www.google-analytics.com" />
-<allow-navigation="https://example.com" />
+<allow-navigation href="https://example.com" />
 ```
 
 is equivalent to:
 
 ```
 App.accessRule('https://www.google-analytics.com');
-App.accessRule('https://examples.com', 'navigation');
+App.accessRule('https://example.com', 'navigation');
 ```
 
 {% apibox "App.configurePlugin" %}
