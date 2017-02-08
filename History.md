@@ -1,5 +1,13 @@
 ## v.NEXT
 
+## v1.4.2.6
+
+* Fixed a critical [bug](https://github.com/meteor/meteor/issues/8325)
+  that was introduced by the fix for
+  [Issue #8136](https://github.com/meteor/meteor/issues/8136), which
+  caused some npm packages in nested `node_modules` directories to be
+  omitted from bundles produced by `meteor build` and `meteor deploy`.
+
 ## v1.4.2.5
 
 * Reverted [#8213](https://github.com/meteor/meteor/pull/8213) as the
