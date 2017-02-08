@@ -9,10 +9,10 @@ var metaInstall = makeInstaller({
 meteorInstall = function (tree, options) {
   if (isObject(tree)) {
     var meta = Object.create(null);
-    var modules = Object.create(null);
-    walk(options, tree, meta, modules);
+    var real = Object.create(null);
+    walk(options, tree, meta, real);
     metaInstall(meta, options);
-    return install(modules, options);
+    return install(real, options);
   }
 
   return install();
@@ -30,11 +30,11 @@ function getOrSet(obj, name) {
   return obj[name] = obj[name] || Object.create(null);
 }
 
-function walk(options, input, meta, modules) {
+function walk(options, input, meta, real) {
   Object.keys(input).forEach(function (name) {
     var value = input[name];
 
-    if (tryChild(value, name, meta, modules, options)) {
+    if (tryChild(value, name, meta, real, options)) {
       // If the value was a leaf node that we were able to handle, then we
       // don't need to (and can't) keep walking it.
       return;
@@ -45,7 +45,7 @@ function walk(options, input, meta, modules) {
         options,
         value,
         getOrSet(meta, name),
-        getOrSet(modules, name)
+        getOrSet(real, name)
       );
     }
   });
@@ -53,11 +53,11 @@ function walk(options, input, meta, modules) {
   return this;
 }
 
-function tryChild(value, name, meta, modules, options) {
+function tryChild(value, name, meta, real, options) {
   function tryFunc(value) {
     if (typeof value === "function") {
       meta[name] = makeMetaFunc({}, false, options);
-      modules[name] = value;
+      real[name] = value;
       return true;
     }
   }
@@ -68,7 +68,7 @@ function tryChild(value, name, meta, modules, options) {
       // brackets. When we find one of these objects, we install it in the
       // meta graph, but not in the installed modules graph. Later, this
       // information may be used to fetch dynamic modules from the server,
-      // which will then be installed into the modules graph.
+      // which will then be installed into the real graph.
       if (isObject(value)) {
         meta[name] = makeMetaFunc(value, true, options);
         return true;
@@ -91,10 +91,10 @@ function tryChild(value, name, meta, modules, options) {
 
   // The install.js library supports a notion of aliases, represented by
   // module identifier strings. This functionality works the same way in
-  // both the meta graph and the modules graph.
+  // both the meta graph and the real graph.
   if (typeof value === "string") {
     meta[name] = value;
-    modules[name] = value;
+    real[name] = value;
     return true;
   }
 }
