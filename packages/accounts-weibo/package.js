@@ -8,8 +8,8 @@ Package.onUse(function(api) {
   // Export Accounts (etc) to packages using this one.
   api.imply('accounts-base', ['client', 'server']);
   api.use('accounts-oauth', ['client', 'server']);
-  api.use('twitter-oauth');
-  api.imply('twitter-oauth');
+  api.use('weibo-oauth');
+  api.imply('weibo-oauth');
 
   api.use(['accounts-ui', 'weibo-config-ui'], ['client', 'server'], { weak: true });
   api.addFiles("notice.js");
