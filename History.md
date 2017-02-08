@@ -1,10 +1,11 @@
 ## v.NEXT
 
-* The `facebook`, `twitter` and `google` packages has been split into:
-  - `<service>-oauth` (the part that allows oauth w/ FB/Twitter/Google directly) and
-  - `<service>-config-ui` (the Blaze configuration templates for accounts-ui)
+* The individual account "service" packages (`facebook`, `google`, `twitter`,
+  `github`, `meteor-developer`, `meetup` and `weibo`) have been split into:
+  - `<service>-oauth` (which interfaces with the `<service>` directly) and
+  - `<service>-config-ui` (the Blaze configuration templates for `accounts-ui`)
 
-  This means you can now use `[accounts-]<service>` without needing Blaze.
+  This means you can now use `accounts-<service>` without needing Blaze.
 
   If you are using `accounts-ui` and `accounts-<service>`, you will probably
   need to install the `<service>-config-ui` package if you want to configure it
@@ -14,6 +15,10 @@
   [PR(`facebook`) #7728](https://github.com/meteor/meteor/pull/7728)
   [PR(`google`) #8275](https://github.com/meteor/meteor/pull/8275)
   [PR(`twitter`) #8283](https://github.com/meteor/meteor/pull/8283)
+  [PR(`github`) #8303](https://github.com/meteor/meteor/pull/8303)
+  [PR(`meteor-developer`) #8305](https://github.com/meteor/meteor/pull/8305)
+  [PR(`meetup`) #8231](https://github.com/meteor/meteor/pull/8231)
+  [PR(`weibo`) #8302](https://github.com/meteor/meteor/pull/8302)
 
 * The `meteor-babel` npm package has been upgraded to version 0.14.3,
   fixing [#8021](https://github.com/meteor/meteor/issues/8021) and
