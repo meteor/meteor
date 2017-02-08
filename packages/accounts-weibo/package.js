@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Login service for Sina Weibo accounts",
-  version: "1.0.11"
+  version: "1.1.0"
 });
 
 Package.onUse(function(api) {
@@ -8,9 +8,11 @@ Package.onUse(function(api) {
   // Export Accounts (etc) to packages using this one.
   api.imply('accounts-base', ['client', 'server']);
   api.use('accounts-oauth', ['client', 'server']);
-  api.use('weibo', ['client', 'server']);
+  api.use('weibo-oauth');
+  api.imply('weibo-oauth');
 
-  api.addFiles('weibo_login_button.css', 'client');
+  api.use(['accounts-ui', 'weibo-config-ui'], ['client', 'server'], { weak: true });
+  api.addFiles("notice.js");
 
   api.addFiles("weibo.js");
 });
