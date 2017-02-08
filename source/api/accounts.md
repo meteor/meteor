@@ -9,7 +9,7 @@ packages add the concept of user documents stored in the database, and
 additional packages add [secure password
 authentication](#accounts_passwords), [integration with third party
 login services](#meteor_loginwithexternalservice), and a [pre-built user
-interface](#accountsui).
+interface](/packages/accounts-ui.html).
 
 The basic Accounts system is in the `accounts-base` package, but
 applications typically include this automatically by adding one of the
@@ -90,7 +90,8 @@ treats the following fields specially:
 
 Like all [Mongo.Collection](#collections)s, you can access all
 documents on the server, but only those specifically published by the server are
-available on the client.
+available on the client. You can also use all Collection methods, for instance
+`Meteor.users.remove` on the server to delete a user.
 
 By default, the current user's `username`, `emails` and `profile` are
 published to the client. You can publish additional fields for the
