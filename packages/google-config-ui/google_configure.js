@@ -1,6 +1,10 @@
 Template.configureLoginServiceDialogForGoogle.helpers({
   siteUrl: function () {
-    return Meteor.absoluteUrl();
+    var url = Meteor.absoluteUrl();
+    if (url.slice(-1) === "/") {
+      url = url.slice(0,-1)
+    }
+    return url;
   }
 });
 
