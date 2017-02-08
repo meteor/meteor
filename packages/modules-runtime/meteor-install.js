@@ -99,9 +99,26 @@ function tryChild(value, name, meta, real, options) {
   }
 }
 
+var requireReal = install();
+
 function makeMetaFunc(value, dynamic, options) {
   return function (require, exports, module) {
     Object.assign(exports, value);
+
+    if (! dynamic &&
+        module.id.endsWith("/package.json")) {
+      // If the package.json file is not dynamic, require it from the real
+      // graph to read its "main" and "browser" properties.
+      var pkg = requireReal(module.id);
+
+      if (typeof pkg.main === "string") {
+        exports.main = pkg.main;
+      }
+
+      if (typeof pkg.browser === "string") {
+        exports.browser = pkg.browser;
+      }
+    }
 
     exports.module = module;
     exports.dynamic = !! dynamic;
