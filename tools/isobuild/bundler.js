@@ -1552,6 +1552,9 @@ class ClientTarget extends Target {
           cacheable: manifestItem.cacheable,
           hash: manifestItem.hash,
         });
+
+      } else {
+        writeFile(file, builder);
       }
     });
 
