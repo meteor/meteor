@@ -562,9 +562,11 @@ export default class ImportScanner {
 
       let depFile = this._getFile(absImportedPath);
       if (depFile) {
-        // If the module was imported implicitly before, update to the
+        // If the module is an implicit package.json stub, update to the
         // explicit version now.
-        if (depFile.implicit === true) {
+        if (depFile.jsonData &&
+            depFile.installPath.endsWith("/package.json") &&
+            depFile.implicit === true) {
           const file = this._readModule(absImportedPath);
           if (file) {
             depFile.implicit = false;
