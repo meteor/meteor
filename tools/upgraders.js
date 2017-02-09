@@ -239,6 +239,35 @@ the guide about breaking changes here:`,
     packagesFile.writeIfModified();
   },
 
+  "1.4.3-split-accounts-packages": function (projectContext) {
+    const packagesFile = projectContext.projectConstraintsFile;
+    const usingAccountsUI = !! packagesFile.getConstraint("accounts-ui");
+
+    function split(service) {
+      if (usingAccountsUI &&
+          packagesFile.getConstraint("accounts-" + service)) {
+        packagesFile.addPackages([service + "-config-ui"]);
+      }
+
+      if (packagesFile.getConstraint(service)) {
+        packagesFile.removePackages([service]);
+        packagesFile.addPackages([
+          service + "-oauth",
+        ]);
+      }
+    }
+
+    split("facebook");
+    split("google");
+    split("twitter");
+    split("github");
+    split("meteor-developer");
+    split("meetup");
+    split("weibo");
+
+    packagesFile.writeIfModified();
+  },
+
   ////////////
   // PLEASE. When adding new upgraders that print mesasges, follow the
   // examples for 0.9.0 and 0.9.1 above. Specifically, formatting
