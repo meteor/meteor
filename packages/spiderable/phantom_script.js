@@ -13,15 +13,23 @@ var isReady = function () {
         || Package.spiderable.Spiderable === undefined) {
       return false;
     }
-    return Package.spiderable.Spiderable.isReady();
-  });
-};
+    
+    var spiderableIsReady = Package.spiderable.Spiderable.isReady();
+    
+    if (spiderableIsReady) {
+      // Remove all script tags except JSON-LD
+      var scriptTags = document.querySelectorAll('script:not([type="application/ld+json"])');
+      for (var i = 0; i < scriptTags.length; i++) {
+        scriptTags[i].parentNode.removeChild(scriptTags[i]);
+      }
 
-var dumpPageContent = function () {
-  var out = page.content;
-  out = out.replace(/<script[^>]+>(.|\n|\r)*?<\/script\s*>/ig, '');
-  out = out.replace('<meta name="fragment" content="!">', '');
-  console.log(out);
+      // Remove meta fragment content
+      var fragment = document.querySelector('meta[name="fragment"][content="!"]');
+      fragment.parentNode.removeChild(fragment);
+    }
+    
+    return spiderableIsReady;
+  });
 };
 
 page.open(url, function(status) {
@@ -31,7 +39,7 @@ page.open(url, function(status) {
 
 setInterval(function() {
   if (isReady()) {
-    dumpPageContent();
+    console.log(page.content);
     phantom.exit();
   }
 }, 100);
