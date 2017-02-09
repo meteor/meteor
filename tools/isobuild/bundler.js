@@ -2419,10 +2419,11 @@ var writeFile = Profile("bundler writeFile", function (file, builder, options) {
   const hash = file.hash();
 
   if (options && options.sourceMapUrl) {
-    data = new Buffer(
-      addSourceMappingURL(data, options.sourceMapUrl),
-      "utf8"
-    );
+    data = addSourceMappingURL(data, options.sourceMapUrl);
+  }
+
+  if (! Buffer.isBuffer(data)) {
+    data = new Buffer(data, "utf8");
   }
 
   builder.write(file.targetPath, { data, hash });
