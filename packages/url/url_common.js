@@ -8,9 +8,11 @@ var encodeString = function (str) {
 // arrays properly.
 URL._encodeParams = function (params, prefix) {
   var str = [];
+  var isParamsArray = Array.isArray(params);
   for (var p in params) {
     if (Object.prototype.hasOwnProperty.call(params, p)) {
-      var k = prefix ? prefix + '[' + p + ']' : p, v = params[p];
+      var k = prefix ? prefix + '[' + (isParamsArray ? '' : p) + ']' : p;
+      var v = params[p];
       if (typeof v === 'object') {
         str.push(this._encodeParams(v, k));
       } else {
