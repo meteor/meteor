@@ -1,11 +1,9 @@
-console.warn();
-console.warn('This package (meteor-developer) has been deprecated.');
 console.warn(
-  'To use the `MeteorDeveloperAccounts` symbol, use the '
-  + '`meteor-developer-oauth` package and import from it.'
+  "The `meteor-developer` package has been deprecated.\n" +
+  "\n" +
+  "To use the `MeteorDeveloperAccounts` symbol, add the\n" +
+  "`meteor-developer-oauth` package and import from it.\n" +
+  "\n" +
+  "If you need the Blaze OAuth configuration UI, add\n" +
+  "`meteor-developer-config-ui` alongside `accounts-ui`."
 );
-console.warn(
-  'If you need the Blaze OAuth configuration UI, add '
-  + '`meteor-developer-config-ui` alongside `accounts-ui`.'
-);
-console.warn();
