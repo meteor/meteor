@@ -1530,13 +1530,15 @@ class ClientTarget extends Target {
       manifestItem.size = file.size();
       manifestItem.hash = file.hash();
 
-      writeFile(file, {
-        sourceMapUrl: manifestItem.sourceMapUrl,
-      }, builder);
-
       if (! file.targetPath.startsWith("dynamic/")) {
+        writeFile(file, builder);
         manifest.push(manifestItem);
-      } else if (file.sourceMap) {
+
+      } else if (manifestItem.sourceMapUrl) {
+        writeFile(file, builder, {
+          sourceMapUrl: manifestItem.sourceMapUrl,
+        });
+
         // If the file is dynamic, we don't need/want the file itself to
         // be served by the web server, but we do want its source map (if
         // defined) to be accessible via HTTP, so that we can refer to it
@@ -2397,7 +2399,7 @@ class ServerTarget extends JsImageTarget {
   ServerTarget.prototype[method] = Profile(`ServerTarget#${method}`, ServerTarget.prototype[method]);
 });
 
-var writeFile = Profile("bundler writeFile", function (file, options, builder) {
+var writeFile = Profile("bundler writeFile", function (file, builder, options) {
   if (! file.targetPath) {
     throw new Error("No targetPath?");
   }
@@ -2413,7 +2415,7 @@ var writeFile = Profile("bundler writeFile", function (file, options, builder) {
   let data = file.contents();
   const hash = file.hash();
 
-  if (options.sourceMapUrl) {
+  if (options && options.sourceMapUrl) {
     data = new Buffer(
       addSourceMappingURL(data, options.sourceMapUrl),
       "utf8"
@@ -2430,7 +2432,7 @@ function addSourceMappingURL(data, url) {
     // If data is a Buffer, convert it to a string.
     .toString("utf8")
     // Remove any existing source map comments.
-    .replace(/\/\/# sourceMappingURL=[^\n]+/g, '//');
+    .replace(/\n\/\/# sourceMappingURL=[^\n]+/g, "");
   // Append the new source map comment to the end of the code.
   return dataString + "\n//# sourceMappingURL=" + url + "\n";
 }
