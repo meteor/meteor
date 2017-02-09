@@ -1,6 +1,6 @@
 Package.describe({
   name: "dynamic-import",
-  version: "0.1.0-beta.2",
+  version: "0.1.0-beta.3",
   summary: "Support for module.dynamicImport(id).then(namespace => ...)",
   documentation: "README.md"
 });
