@@ -1,11 +1,9 @@
-console.warn();
-console.warn('This package (meetup) has been deprecated.');
 console.warn(
-  'To use the `Meetup` symbol, use the `meetup-oauth` package and import '
-  + 'from it.'
+  "The `meetup` package has been deprecated.\n" +
+  "\n" +
+  "To use the `Meetup` symbol, add the `meetup-oauth` package\n" +
+  "and import from it.\n" +
+  "\n" +
+  "If you need the Blaze OAuth configuration UI, add\n" +
+  "`meetup-config-ui` alongside `accounts-ui`."
 );
-console.warn(
-  'If you need the Blaze OAuth configuration UI, add '
-  + '`meetup-config-ui` alongside `accounts-ui`.'
-);
-console.warn();

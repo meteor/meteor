@@ -1,7 +1,5 @@
 Facebook = {};
 
-var querystring = Npm.require('querystring');
-
 Facebook.handleAuthFromAccessToken = function handleAuthFromAccessToken(accessToken, expiresAt) {
   // include all fields from facebook
   // http://developers.facebook.com/docs/reference/login/public-profile-and-friend-list/
@@ -54,30 +52,21 @@ var getTokenResponse = function (query) {
   try {
     // Request an access token
     responseContent = HTTP.get(
-      "https://graph.facebook.com/v2.2/oauth/access_token", {
+      "https://graph.facebook.com/v2.8/oauth/access_token", {
         params: {
           client_id: config.appId,
           redirect_uri: OAuth._redirectUri('facebook', config),
           client_secret: OAuth.openSecret(config.secret),
           code: query.code
         }
-      }).content;
+      }).data;
   } catch (err) {
     throw _.extend(new Error("Failed to complete OAuth handshake with Facebook. " + err.message),
                    {response: err.response});
   }
 
-  // If 'responseContent' parses as JSON, it is an error.
-  // XXX which facebook error causes this behvaior?
-  if (isJSON(responseContent)) {
-    throw new Error("Failed to complete OAuth handshake with Facebook. " + responseContent);
-  }
-
-  // Success!  Extract the facebook access token and expiration
-  // time from the response
-  var parsedResponse = querystring.parse(responseContent);
-  var fbAccessToken = parsedResponse.access_token;
-  var fbExpires = parsedResponse.expires;
+  var fbAccessToken = responseContent.access_token;
+  var fbExpires = responseContent.expires_in;
 
   if (!fbAccessToken) {
     throw new Error("Failed to complete OAuth handshake with facebook " +
@@ -91,10 +80,10 @@ var getTokenResponse = function (query) {
 
 var getIdentity = function (accessToken, fields) {
   try {
-    return HTTP.get("https://graph.facebook.com/v2.4/me", {
+    return HTTP.get("https://graph.facebook.com/v2.8/me", {
       params: {
         access_token: accessToken,
-        fields: fields
+        fields: fields.join(",")
       }
     }).data;
   } catch (err) {

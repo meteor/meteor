@@ -1,11 +1,9 @@
-console.warn();
-console.warn('This package (github) has been deprecated.');
 console.warn(
-  'To use the `Github` symbol, use the `github-oauth` package '
-  + 'and import from it.'
+  "The `github` package has been deprecated.\n" +
+  "\n" +
+  "To use the `Github` symbol, add the `github-oauth` package\n" +
+  "and import from it.\n" +
+  "\n" +
+  "If you need the Blaze OAuth configuration UI, add\n" +
+  "`github-config-ui` alongside `accounts-ui`."
 );
-console.warn(
-  'If you need the Blaze OAuth configuration UI, add '
-  + '`github-config-ui` alongside `accounts-ui`.'
-);
-console.warn();

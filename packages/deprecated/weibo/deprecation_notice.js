@@ -1,11 +1,9 @@
-console.warn();
-console.warn('This package (weibo) has been deprecated.');
 console.warn(
-  "To use the `Weibo` symbol, use the `weibo-oauth` package " +
-  "and import from it."
-);
-console.warn(
-  "If you need the Blaze OAuth configuration UI, add " +
+  "The `weibo` package has been deprecated.\n" +
+  "\n" +
+  "To use the `Weibo` symbol, add the `weibo-oauth` package\n" +
+  "and import from it.\n" +
+  "\n" +
+  "If you need the Blaze OAuth configuration UI, add\n" +
   "`weibo-config-ui` alongside `accounts-ui`."
 );
-console.warn();

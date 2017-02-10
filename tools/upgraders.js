@@ -239,6 +239,52 @@ the guide about breaking changes here:`,
     packagesFile.writeIfModified();
   },
 
+  "1.4.3-split-account-service-packages": function (projectContext) {
+
+    maybePrintNoticeHeader();
+    Console.info(
+`The account packages for different services (e.g. facebook, twitter, \
+google, etc.) have been split and now make it possible to avoid bundling Blaze \
+in the client bundle for projects not using Blaze. If found in the \
+.meteor/packages file, these packages have been split automatically. Assuming \
+there are no other Blaze dependencies, the "<service>-config-ui" package can \
+be removed if there is no need for the Blaze configuration interface.`,
+      Console.options({ bulletPoint: "1.4.3: " })
+    );
+
+    const packagesFile = projectContext.projectConstraintsFile;
+
+    // The transformations to be made here are:
+    //   * Existence of `accounts-<service>` **adds** `<service>-config-ui`
+    //   * Existence of `<service>` **changes to** `<service>-oauth`
+    // https://github.com/meteor/meteor/issues/7715#issuecomment-276529351
+
+    const servicesAffected = [
+      'facebook',
+      'github',
+      'google',
+      'meetup',
+      'meteor-developer',
+      'twitter',
+      'weibo',
+    ];
+
+    servicesAffected.forEach(service => {
+      // If `accounts-<service>`, we just add the configuration UI
+      if (packagesFile.getConstraint(`accounts-${service}`)) {
+        packagesFile.addPackages([`${service}-config-ui`]);
+      }
+
+      // If `<service>`, it changes to `<service>-oauth`
+      if (packagesFile.getConstraint(service)) {
+        packagesFile.removePackages([service])
+        packagesFile.addPackages([`${service}-oauth`]);
+      }
+    });
+
+    packagesFile.writeIfModified();
+  },
+
   ////////////
   // PLEASE. When adding new upgraders that print mesasges, follow the
   // examples for 0.9.0 and 0.9.1 above. Specifically, formatting
