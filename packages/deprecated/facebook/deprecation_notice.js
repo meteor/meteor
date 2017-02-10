@@ -1,11 +1,9 @@
-console.warn();
-console.warn('This package (facebook) has been deprecated.');
 console.warn(
-  "To use the `Facebook` symbol, use the `facebook-oauth` package " +
-  "and import from it."
+  "The `facebook` package has been deprecated.\n" +
+  "\n" +
+  "To use the `Facebook` symbol, add the `facebook-oauth` package\n" +
+  "and import from it.\n" +
+  "\n" +
+  "If you need the Blaze OAuth configuration UI, add\n" +
+  "`facebook-config-ui` alongside `accounts-ui`."
 );
-console.warn(
-    "If you need the Blaze OAuth configuration UI, add " +
-    "`facebook-config-ui` alongside `accounts-ui`."
-);
-console.warn();

@@ -1,5 +1,7 @@
 ## v.NEXT
 
+## v1.4.3
+
 * Versions of Meteor [core
   packages](https://github.com/meteor/meteor/tree/release-1.4.3/packages)
   are once again constrained by the current Meteor release. Before Meteor
@@ -24,14 +26,14 @@
   need to install the `<service>-config-ui` package if you want to configure it
   using the Accounts UI.
 
-  [Issue #7715](https://github.com/meteor/meteor/issues/7715)
-  [PR(`facebook`) #7728](https://github.com/meteor/meteor/pull/7728)
-  [PR(`google`) #8275](https://github.com/meteor/meteor/pull/8275)
-  [PR(`twitter`) #8283](https://github.com/meteor/meteor/pull/8283)
-  [PR(`github`) #8303](https://github.com/meteor/meteor/pull/8303)
-  [PR(`meteor-developer`) #8305](https://github.com/meteor/meteor/pull/8305)
-  [PR(`meetup`) #8231](https://github.com/meteor/meteor/pull/8231)
-  [PR(`weibo`) #8302](https://github.com/meteor/meteor/pull/8302)
+  - [Issue #7715](https://github.com/meteor/meteor/issues/7715)
+  - [PR(`facebook`) #7728](https://github.com/meteor/meteor/pull/7728)
+  - [PR(`google`) #8275](https://github.com/meteor/meteor/pull/8275)
+  - [PR(`twitter`) #8283](https://github.com/meteor/meteor/pull/8283)
+  - [PR(`github`) #8303](https://github.com/meteor/meteor/pull/8303)
+  - [PR(`meteor-developer`) #8305](https://github.com/meteor/meteor/pull/8305)
+  - [PR(`meetup`) #8321](https://github.com/meteor/meteor/pull/8321)
+  - [PR(`weibo`) #8302](https://github.com/meteor/meteor/pull/8302)
 
 * The `meteor-babel` npm package has been upgraded to version 0.15.1,
   fixing [#8021](https://github.com/meteor/meteor/issues/8021) and
