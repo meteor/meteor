@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Utility code for constructing URLs",
-  version: "1.1.0-rc.6"
+  version: "1.1.0"
 });
 
 Package.onUse(function(api) {
