@@ -15,6 +15,10 @@
   middle ground restores meaning to Meteor releases, yet still permits
   patch updates to core packages.
 
+* The `coffeescript` Meteor package has been moved from
+  `packages/coffeescript` to `packages/non-core/coffeescript`, so that it
+  will not be subject to the constraints described above.
+
 * The individual account "service" packages (`facebook`, `google`, `twitter`,
   `github`, `meteor-developer`, `meetup` and `weibo`) have been split into:
   - `<service>-oauth` (which interfaces with the `<service>` directly) and
@@ -48,6 +52,12 @@
 * Restored [#8213](https://github.com/meteor/meteor/pull/8213)
   after those changes were reverted in
   [v1.4.2.5](https://github.com/meteor/meteor/blob/devel/History.md#v1425).
+
+* npm dependencies of Meteor packages will now be automatically rebuilt if
+  the npm package's `package.json` file has "scripts" section containing a
+  `preinstall`, `install`, or `postinstall` command, as well as when the
+  npm package contains any `.node` files. Discussion
+  [here](https://github.com/meteor/meteor/issues/8225#issuecomment-275044900).
 
 ## v1.4.2.6, 2017-Feb-8
 
