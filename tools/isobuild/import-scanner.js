@@ -499,6 +499,13 @@ export default class ImportScanner {
         const packageJsonFile =
           this._addPkgJsonToOutput(path, pkg, forDynamicImport);
 
+        if (! parentFile.installPath) {
+          // If parentFile is not installable, then we won't return it
+          // from getOutputFiles, so we don't need to worry about
+          // recording any parentFile.deps[id].helpers.
+          return;
+        }
+
         const relativeId = this._getRelativeImportId(
           parentFile.installPath,
           packageJsonFile.installPath
@@ -518,7 +525,7 @@ export default class ImportScanner {
     const relativeId = convertToPosixPath(pathRelative(
       pathDirname(parentPath),
       childPath
-    ));
+    ), true);
 
     // If the result of pathRelative does not already start with a "." or
     // a "/", prepend a "./" to make it a valid relative identifier
