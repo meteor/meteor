@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'Blaze configuration templates for the Meetup OAuth flow.',
-  version: '1.0.0-rc.4'
+  version: '1.0.0-rc.5'
 });
 
 Package.onUse(function (api) {
