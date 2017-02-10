@@ -1,4 +1,4 @@
-if (Package['accounts-ui'] && (Package['github-config-ui'] === undefined)) {
+if (Package['accounts-ui'] && !Package.hasOwnProperty('github-config-ui')) {
   console.warn(
     "Note: You're using accounts-ui and accounts-github,\n" +
     "but didn't install the configuration UI for the GitHub\n" +
