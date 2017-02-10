@@ -35,8 +35,10 @@ httpServer.addListener('request', function (req, res) {
   // Determine if the connection was over SSL at any point. Either we
   // received it as SSL, or a proxy did and translated it for us.
   var isSsl = req.connection.pair ||
-      (req.headers['x-forwarded-proto'] &&
-       req.headers['x-forwarded-proto'].indexOf('https') !== -1);
+      ( ( req.headers['x-forwarded-proto'] &&                                                             
+       req.headers['x-forwarded-proto'].indexOf('https') !== -1) ||                                     
+       (req.headers['X_FORWARDED_PROTO'] &&                                                             
+       req.headers['X_FORWARDED_PROTO'].indexOf('https') !== -1) );
 
   if (!isLocal && !isSsl) {
     // connection is not cool. send a 302 redirect!
