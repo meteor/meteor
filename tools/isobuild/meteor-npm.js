@@ -434,6 +434,9 @@ function copyNpmPackageWithSymlinkedNodeModules(fromPkgDir, toPkgDir) {
 
 const portableCache = Object.create(null);
 
+// Increment this version to trigger the full portability check again.
+const portableVersion = 1;
+
 const isPortable = Profile("meteorNpm.isPortable", dir => {
   const lstat = optimisticLStat(dir);
   if (! lstat.isDirectory()) {
@@ -441,9 +444,11 @@ const isPortable = Profile("meteorNpm.isPortable", dir => {
     return ! dir.endsWith(".node");
   }
 
-  const pkgJsonStat = optimisticStatOrNull(files.pathJoin(dir, "package.json"));
+  const pkgJsonPath = files.pathJoin(dir, "package.json");
+  const pkgJsonStat = optimisticStatOrNull(pkgJsonPath);
   const canCache = pkgJsonStat && pkgJsonStat.isFile();
-  const portableFile = files.pathJoin(dir, ".meteor-portable");
+  const portableFile = files.pathJoin(
+    dir, ".meteor-portable-" + portableVersion + ".json");
 
   if (canCache) {
     // Cache previous results by writing a boolean value to a hidden file
@@ -470,10 +475,20 @@ const isPortable = Profile("meteorNpm.isPortable", dir => {
     fs.unlink(portableFile, error => {});
   }
 
-  const result = optimisticReaddir(dir).every(
-    // Ignore files that start with a ".", such as .bin directories.
-    itemName => itemName.startsWith(".") ||
-      isPortable(files.pathJoin(dir, itemName)));
+  const pkgJson = canCache && optimisticReadJsonOrNull(pkgJsonPath);
+  const hasBuildScript =
+    pkgJson &&
+    pkgJson.scripts &&
+    (pkgJson.scripts.preinstall ||
+     pkgJson.scripts.install ||
+     pkgJson.scripts.postinstall);
+
+  const result = hasBuildScript
+    ? false // Build scripts may not be portable.
+    : optimisticReaddir(dir).every(
+      // Ignore files that start with a ".", such as .bin directories.
+      itemName => itemName.startsWith(".") ||
+        isPortable(files.pathJoin(dir, itemName)));
 
   if (canCache) {
     // Write the .meteor-portable file asynchronously, and don't worry

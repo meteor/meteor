@@ -482,8 +482,9 @@ export class NodeModulesDirectory {
           return true;
         }
 
-        const real = files.realpath(path);
-        if (real !== path) {
+        const real = realpathOrNull(path);
+        if (typeof real === "string" &&
+            real !== path) {
           // If node_modules/.bin/command is a symlink, determine the
           // answer by calling isWithinProdPackage(real).
           return isWithinProdPackage(real);
@@ -518,6 +519,15 @@ export class NodeModulesDirectory {
 
       return true;
     };
+  }
+}
+
+function realpathOrNull(path) {
+  try {
+    return files.realpath(path);
+  } catch (e) {
+    if (e.code !== "ENOENT") throw e;
+    return null;
   }
 }
 

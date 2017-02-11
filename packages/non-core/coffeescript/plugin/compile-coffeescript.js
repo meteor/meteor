@@ -44,8 +44,6 @@ export class CoffeeCompiler extends CachingCompiler {
       literate: inputFile.getExtension() !== 'coffee',
       // Return a source map.
       sourceMap: true,
-      // Include the original source in the source map (sourcesContent field).
-      inlineMap: true,
       // This becomes the "file" field of the source map.
       generatedFile: '/' + this._outputFilePath(inputFile),
       // This becomes the "sources" field of the source map.
@@ -87,6 +85,7 @@ export class CoffeeCompiler extends CachingCompiler {
     }
 
     let sourceMap = JSON.parse(output.v3SourceMap);
+    sourceMap.sourcesContent = [source];
 
     output.js = stripExportedVars(
       output.js,
@@ -104,11 +103,19 @@ export class CoffeeCompiler extends CachingCompiler {
         doubleRoastedCoffee.data != null) {
       output.js = doubleRoastedCoffee.data;
 
-      if (doubleRoastedCoffee.sourceMap) {
+      const coffeeSourceMap = doubleRoastedCoffee.sourceMap;
+
+      if (coffeeSourceMap) {
+        // Reference the compiled CoffeeScript file so that `applySourceMap`
+        // below can match it with the source map produced by the CoffeeScript
+        // compiler.
+        coffeeSourceMap.sources[0] = '/' + this._outputFilePath(inputFile);
+
         // Combine the original CoffeeScript source map with the one
         // produced by this.babelCompiler.processOneFileForTarget.
-        const smg = new SourceMapGenerator(
-          new SourceMapConsumer(doubleRoastedCoffee.sourceMap));
+        const smg = SourceMapGenerator.fromSourceMap(
+          new SourceMapConsumer(coffeeSourceMap)
+        );
         smg.applySourceMap(new SourceMapConsumer(sourceMap));
         sourceMap = smg.toJSON();
       } else {

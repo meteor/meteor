@@ -154,7 +154,7 @@ describe("css modules", () => {
     // beginning of the <head>. If the corresponding module ever gets
     // imported, its module.exports object should be an empty stub, rather
     // than a <style> node added dynamically to the <head>.
-    assert.deepEqual(require("./eager.css"), {});
+    assert.deepEqual(Object.keys(require("./eager.css")), []);
   });
 
   it("should be importable by an app", () => {

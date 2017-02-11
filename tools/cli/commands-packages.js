@@ -1660,6 +1660,23 @@ main.registerCommand({
 
     upgradePackageNames = options.args;
   }
+  // We want to use the project's release for constraints even if we are
+  // currently running a newer release (eg if we ran 'meteor update --patch' and
+  // updated to an older patch release).  (If the project has release 'none'
+  // because this is just 'updating packages', this can be null. Also, if we're
+  // running from a checkout this should be null even if the file doesn't say
+  // 'none'.)
+  var releaseRecordForConstraints = null;
+  if (! files.inCheckout() &&
+      projectContext.releaseFile.normalReleaseSpecified()) {
+    releaseRecordForConstraints = catalog.official.getReleaseVersion(
+      projectContext.releaseFile.releaseTrack,
+      projectContext.releaseFile.releaseVersion);
+    if (! releaseRecordForConstraints) {
+      throw Error("unknown release " +
+                  projectContext.releaseFile.displayReleaseName);
+    }
+  }
 
   const upgradePackagesWithoutCordova =
     upgradePackageNames.filter(name => name.split(':')[0] !== 'cordova');
@@ -1691,6 +1708,7 @@ main.registerCommand({
 
   // Try to resolve constraints, allowing the given packages to be upgraded.
   projectContext.reset({
+    releaseForConstraints: releaseRecordForConstraints,
     upgradePackageNames: upgradePackageNames,
     upgradeIndirectDepPatchVersions: upgradeIndirectDepPatchVersions
   });
