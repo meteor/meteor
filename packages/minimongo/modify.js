@@ -244,6 +244,11 @@ var MODIFIERS = {
       e.setPropertyError = true;
       throw e;
     }
+    if (_.isString(field) && field.indexOf('\0') > -1) {
+      // Null bytes are not allowed in Mongo field names
+      // https://docs.mongodb.com/manual/reference/limits/#Restrictions-on-Field-Names
+      throw MinimongoError(`Key ${field} must not contain null bytes`);
+    }
     target[field] = arg;
   },
   $setOnInsert: function (target, field, arg) {
@@ -457,6 +462,11 @@ var MODIFIERS = {
       throw MinimongoError("$rename source field invalid");
     if (typeof arg !== "string")
       throw MinimongoError("$rename target must be a string");
+    if (arg.indexOf('\0') > -1) {
+      // Null bytes are not allowed in Mongo field names
+      // https://docs.mongodb.com/manual/reference/limits/#Restrictions-on-Field-Names
+      throw MinimongoError("The 'to' field for $rename cannot contain an embedded null byte");
+    }
     if (target === undefined)
       return;
     var v = target[field];

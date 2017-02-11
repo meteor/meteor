@@ -2,7 +2,7 @@
 [Source code of released version](https://github.com/meteor/meteor/tree/master/packages/routepolicy) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/routepolicy)
 ***
 
-RoutePolicy, part of [Webapp](https://www.meteor.com/webapp), is a
+RoutePolicy, part of [Webapp](https://github.com/meteor/meteor/tree/master/packages/webapp), is a
 low-level API for declaring the offline access semantics that apply to
 portions of the app's URL space. This is information is necessary when
 generating HTML5 Appcache manifests.

@@ -1,14 +1,23 @@
 Package.describe({
   summary: "Meteor's client-side datastore: a port of MongoDB to Javascript",
-  version: '1.0.19'
+  version: '1.0.20'
 });
 
 Package.onUse(function (api) {
   api.export('LocalCollection');
   api.export('Minimongo');
   api.export('MinimongoTest', { testOnly: true });
-  api.use(['underscore', 'ejson', 'id-map', 'ordered-dict', 'tracker',
-           'mongo-id', 'random', 'diff-sequence']);
+  api.use([
+    'underscore',
+    'ejson',
+    'id-map',
+    'ordered-dict',
+    'tracker',
+    'mongo-id',
+    'random',
+    'diff-sequence',
+    'ecmascript'
+  ]);
   // This package is used for geo-location queries such as $near
   api.use('geojson-utils');
   // This package is used to get diff results on arrays and objects
@@ -39,8 +48,17 @@ Package.onUse(function (api) {
 Package.onTest(function (api) {
   api.use('minimongo', ['client', 'server']);
   api.use('test-helpers', 'client');
-  api.use(['tinytest', 'underscore', 'ejson', 'ordered-dict',
-           'random', 'tracker', 'reactive-var', 'mongo-id']);
+  api.use([
+    'tinytest',
+    'underscore',
+    'ejson',
+    'ordered-dict',
+    'random',
+    'tracker',
+    'reactive-var',
+    'mongo-id',
+    'ecmascript'
+  ]);
   api.addFiles('minimongo_tests.js', 'client');
   api.addFiles('wrap_transform_tests.js');
   api.addFiles('minimongo_server_tests.js', 'server');

@@ -285,26 +285,30 @@ export default class Resolver {
       return null;
     }
 
-    let main = pkg.main;
+    // Output a JS module that exports just the "name", "version", "main",
+    // and "browser" properties (if defined) from the package.json file.
+    const pkgSubset = {};
 
-    if (archMatches(this.targetArch, "web") &&
-        isString(pkg.browser)) {
-      main = pkg.browser;
+    if (has(pkg, "name")) {
+      pkgSubset.name = pkg.name;
     }
-
-    // Output a JS module that exports just the "name", "version", and
-    // "main" properties defined in the package.json file.
-    const pkgSubset = {
-      name: pkg.name,
-    };
 
     if (has(pkg, "version")) {
       pkgSubset.version = pkg.version;
     }
 
-    if (isString(main)) {
-      pkgSubset.main = main;
+    let main = pkg.main;
+    if (has(pkg, "main")) {
+      pkgSubset.main = pkg.main;
+    }
 
+    if (archMatches(this.targetArch, "web") &&
+        isString(pkg.browser)) {
+      main = pkg.browser;
+      pkgSubset.browser = pkg.browser;
+    }
+
+    if (isString(main)) {
       // The "main" field of package.json does not have to begin with ./
       // to be considered relative, so first we try simply appending it to
       // the directory path before falling back to a full resolve, which

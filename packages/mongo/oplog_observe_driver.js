@@ -1,4 +1,3 @@
-var Fiber = Npm.require('fibers');
 var Future = Npm.require('fibers/future');
 
 var PHASE = {
@@ -86,7 +85,6 @@ OplogObserveDriver = function (options) {
 
   self._registerPhaseChange(PHASE.QUERYING);
 
-  var selector = self._cursorDescription.selector;
   self._matcher = options.matcher;
   var projection = self._cursorDescription.options.fields || {};
   self._projectionFn = LocalCollection._compileProjection(projection);
@@ -125,10 +123,11 @@ OplogObserveDriver = function (options) {
             self._needToPollQuery();
           } else {
             // All other operators should be handled depending on phase
-            if (self._phase === PHASE.QUERYING)
+            if (self._phase === PHASE.QUERYING) {
               self._handleOplogEntryQuerying(op);
-            else
+            } else {
               self._handleOplogEntrySteadyOrFetching(op);
+            }
           }
         }));
       }
@@ -402,6 +401,7 @@ _.extend(OplogObserveDriver.prototype, {
         var comparator = self._comparator;
         var minBuffered = self._limit && self._unpublishedBuffer.size() &&
           self._unpublishedBuffer.get(self._unpublishedBuffer.minElementId());
+        var maxBuffered;
 
         if (publishedBefore) {
           // Unlimited case where the document stays in published once it
@@ -423,7 +423,7 @@ _.extend(OplogObserveDriver.prototype, {
             // after the change doc doesn't stay in the published, remove it
             self._removePublished(id);
             // but it can move into buffered now, check it
-            var maxBuffered = self._unpublishedBuffer.get(
+            maxBuffered = self._unpublishedBuffer.get(
               self._unpublishedBuffer.maxElementId());
 
             var toBuffer = self._safeAppendToBuffer ||
@@ -446,7 +446,7 @@ _.extend(OplogObserveDriver.prototype, {
 
           var maxPublished = self._published.get(
             self._published.maxElementId());
-          var maxBuffered = self._unpublishedBuffer.size() &&
+          maxBuffered = self._unpublishedBuffer.size() &&
                 self._unpublishedBuffer.get(
                   self._unpublishedBuffer.maxElementId());
 
@@ -727,10 +727,11 @@ _.extend(OplogObserveDriver.prototype, {
       var cursor = self._cursorForQuery({ limit: self._limit * 2 });
       try {
         cursor.forEach(function (doc, i) {  // yields
-          if (!self._limit || i < self._limit)
+          if (!self._limit || i < self._limit) {
             newResults.set(doc._id, doc);
-          else
+          } else {
             newBuffer.set(doc._id, doc);
+          }
         });
         break;
       } catch (e) {
@@ -975,10 +976,11 @@ OplogObserveDriver.cursorSupported = function (cursorDescription, matcher) {
     try {
       LocalCollection._checkSupportedProjection(options.fields);
     } catch (e) {
-      if (e.name === "MinimongoError")
+      if (e.name === "MinimongoError") {
         return false;
-      else
+      } else {
         throw e;
+      }
     }
   }
 

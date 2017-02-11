@@ -296,8 +296,13 @@ export default class ImportScanner {
       }
 
       if (oldFile[name] !== newFile[name]) {
+        const fuzzyCase =
+          oldFile.sourcePath.toLowerCase() === newFile.sourcePath.toLowerCase();
+
         throw new Error(
-          "Attempting to combine different files:\n" +
+          "Attempting to combine different files" +
+            ( fuzzyCase ? " (is the filename case slightly different?)" : "") +
+            ":\n" +
             inspect(omit(oldFile, "dataString")) + "\n" +
             inspect(omit(newFile, "dataString")) + "\n"
         );
@@ -505,9 +510,11 @@ export default class ImportScanner {
 
       let depFile = this._getFile(absImportedPath);
       if (depFile) {
-        // If the module was imported implicitly before, update to the
+        // If the module is an implicit package.json stub, update to the
         // explicit version now.
-        if (depFile.implicit === true) {
+        if (depFile.jsonData &&
+            depFile.installPath.endsWith("/package.json") &&
+            depFile.implicit === true) {
           const file = this._readModule(absImportedPath);
           if (file) {
             depFile.implicit = false;
@@ -821,38 +828,42 @@ export default class ImportScanner {
   }
 
   _addPkgJsonToOutput(pkgJsonPath, pkg) {
-    if (! this._getFile(pkgJsonPath)) {
-      const data = new Buffer(map(pkg, (value, key) => {
-        return `exports.${key} = ${JSON.stringify(value)};\n`;
-      }).join(""));
+    const file = this._getFile(pkgJsonPath);
+    if (file) {
+      // If the file already exists, don't modify or replace it.
+      return;
+    }
 
-      const relPkgJsonPath = pathRelative(this.sourceRoot, pkgJsonPath);
+    const data = new Buffer(map(pkg, (value, key) => {
+      return `exports.${key} = ${JSON.stringify(value)};\n`;
+    }).join(""));
 
-      const pkgFile = {
-        type: "js", // We represent the JSON module with JS.
-        data,
-        deps: {}, // Avoid accidentally re-scanning this file.
-        sourcePath: relPkgJsonPath,
-        installPath: this._getInstallPath(pkgJsonPath),
-        servePath: relPkgJsonPath,
-        hash: sha1(data),
-        lazy: true,
-        imported: true,
-        // Since _addPkgJsonToOutput is only ever called for package.json
-        // files that are involved in resolving package directories, and
-        // pkg is only a subset of the information in the actual
-        // package.json module, we mark it as imported implicitly, so that
-        // the subset can be overridden by the actual module if this
-        // package.json file is imported explicitly elsewhere.
-        implicit: true,
-      };
+    const relPkgJsonPath = pathRelative(this.sourceRoot, pkgJsonPath);
 
-      this._addFile(pkgJsonPath, pkgFile);
+    const pkgFile = {
+      type: "js", // We represent the JSON module with JS.
+      data,
+      deps: {}, // Avoid accidentally re-scanning this file.
+      sourcePath: relPkgJsonPath,
+      installPath: this._getInstallPath(pkgJsonPath),
+      servePath: relPkgJsonPath,
+      hash: sha1(data),
+      lazy: true,
+      imported: true,
+      // Since _addPkgJsonToOutput is only ever called for package.json
+      // files that are involved in resolving package directories, and pkg
+      // is only a subset of the information in the actual package.json
+      // module, we mark it as imported implicitly, so that the subset can
+      // be overridden by the actual module if this package.json file is
+      // imported explicitly elsewhere.
+      implicit: true,
+    };
 
-      const hash = optimisticHashOrNull(pkgJsonPath);
-      if (hash) {
-        this.watchSet.addFile(pkgJsonPath, hash);
-      }
+    this._addFile(pkgJsonPath, pkgFile);
+
+    const hash = optimisticHashOrNull(pkgJsonPath);
+    if (hash) {
+      this.watchSet.addFile(pkgJsonPath, hash);
     }
   }
 }

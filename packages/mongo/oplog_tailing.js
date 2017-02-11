@@ -129,13 +129,14 @@ _.extend(OplogHandle.prototype, {
     // Calling waitUntilCaughtUp requries us to wait for the oplog connection to
     // be ready.
     self._readyFuture.wait();
+    var lastEntry;
 
     while (!self._stopped) {
       // We need to make the selector at least as restrictive as the actual
       // tailing selector (ie, we need to specify the DB name) or else we might
       // find a TS that won't show up in the actual tail stream.
       try {
-        var lastEntry = self._oplogLastEntryConnection.findOne(
+        lastEntry = self._oplogLastEntryConnection.findOne(
           OPLOG_COLLECTION, self._baseOplogSelector,
           {fields: {ts: 1}, sort: {$natural: -1}});
         break;
@@ -169,8 +170,7 @@ _.extend(OplogHandle.prototype, {
     // but it's conceivable that if we fail over from one primary to another,
     // the oplog entries we see will go backwards.
     var insertAfter = self._catchingUpFutures.length;
-    while (insertAfter - 1 > 0
-           && self._catchingUpFutures[insertAfter - 1].ts.greaterThan(ts)) {
+    while (insertAfter - 1 > 0 && self._catchingUpFutures[insertAfter - 1].ts.greaterThan(ts)) {
       insertAfter--;
     }
     var f = new Future;
@@ -317,9 +317,7 @@ _.extend(OplogHandle.prototype, {
   _setLastProcessedTS: function (ts) {
     var self = this;
     self._lastProcessedTS = ts;
-    while (!_.isEmpty(self._catchingUpFutures)
-           && self._catchingUpFutures[0].ts.lessThanOrEqual(
-             self._lastProcessedTS)) {
+    while (!_.isEmpty(self._catchingUpFutures) && self._catchingUpFutures[0].ts.lessThanOrEqual(self._lastProcessedTS)) {
       var sequencer = self._catchingUpFutures.shift();
       sequencer.future.return();
     }

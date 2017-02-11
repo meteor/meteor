@@ -63,18 +63,14 @@ Mongo.Collection = function (name, options) {
   switch (options.idGeneration) {
   case 'MONGO':
     self._makeNewID = function () {
-      var src = name
-            ? DDP.randomStream('/collection/' + name)
-            : Random.insecure;
+      var src = name ? DDP.randomStream('/collection/' + name) : Random.insecure;
       return new Mongo.ObjectID(src.hexString(24));
     };
     break;
   case 'STRING':
   default:
     self._makeNewID = function () {
-      var src = name
-            ? DDP.randomStream('/collection/' + name)
-            : Random.insecure;
+      var src = name ? DDP.randomStream('/collection/' + name) : Random.insecure;
       return src.id();
     };
     break;
@@ -247,8 +243,7 @@ Mongo.Collection = function (name, options) {
   }
 
   // autopublish
-  if (Package.autopublish && !options._preventAutopublish && self._connection
-      && self._connection.publish) {
+  if (Package.autopublish && !options._preventAutopublish && self._connection && self._connection.publish) {
     self._connection.publish(null, function () {
       return self.find();
     }, {is_auto: true});
@@ -423,7 +418,7 @@ function convertRegexpToMongoSelector(regexp) {
     selector.$options = regexOptions;
 
   return selector;
-};
+}
 
 // 'insert' immediately returns the inserted document's new _id.
 // The others return values immediately if you are in a stub, an in-memory
@@ -474,8 +469,7 @@ Mongo.Collection.prototype.insert = function insert(doc, callback) {
   doc = _.extend({}, doc);
 
   if ('_id' in doc) {
-    if (!doc._id || !(typeof doc._id === 'string'
-          || doc._id instanceof Mongo.ObjectID)) {
+    if (!doc._id || !(typeof doc._id === 'string' || doc._id instanceof Mongo.ObjectID)) {
       throw new Error("Meteor requires document _id fields to be non-empty strings or ObjectIDs");
     }
   } else {
@@ -511,8 +505,7 @@ Mongo.Collection.prototype.insert = function insert(doc, callback) {
     return result;
   };
 
-  const wrappedCallback = wrapCallback(
-    callback, chooseReturnValueFromCollectionResult);
+  const wrappedCallback = wrapCallback(callback, chooseReturnValueFromCollectionResult);
 
   if (this._isRemoteCollection()) {
     const result = this._callMutatorMethod("insert", [doc], wrappedCallback);
@@ -534,7 +527,7 @@ Mongo.Collection.prototype.insert = function insert(doc, callback) {
     }
     throw e;
   }
-}
+};
 
 /**
  * @summary Modify one or more documents in the collection. Returns the number of matched documents.
@@ -560,8 +553,7 @@ Mongo.Collection.prototype.update = function update(selector, modifier, ...optio
   if (options && options.upsert) {
     // set `insertedId` if absent.  `insertedId` is a Meteor extension.
     if (options.insertedId) {
-      if (!(typeof options.insertedId === 'string'
-            || options.insertedId instanceof Mongo.ObjectID))
+      if (!(typeof options.insertedId === 'string' || options.insertedId instanceof Mongo.ObjectID))
         throw new Error("insertedId must be string or ObjectID");
     } else if (! selector._id) {
       options.insertedId = this._makeNewID();
@@ -595,7 +587,7 @@ Mongo.Collection.prototype.update = function update(selector, modifier, ...optio
     }
     throw e;
   }
-}
+};
 
 /**
  * @summary Remove documents from the collection
@@ -636,7 +628,7 @@ Mongo.Collection.prototype.remove = function remove(selector, callback) {
 Mongo.Collection.prototype._isRemoteCollection = function _isRemoteCollection() {
   // XXX see #MeteorServerNull
   return this._connection && this._connection !== Meteor.server;
-}
+};
 
 // Convert the callback to not return a result if there is an error
 function wrapCallback(callback, convertResult) {

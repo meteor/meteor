@@ -101,6 +101,13 @@ Tinytest.add("tracker - nested run", function (test) {
 
   expect('abcdef');
 
+  test.isTrue(a.hasDependents());
+  test.isTrue(b.hasDependents());
+  test.isTrue(c.hasDependents());
+  test.isTrue(d.hasDependents());
+  test.isTrue(e.hasDependents());
+  test.isTrue(f.hasDependents());
+
   b.changed();
   expect(''); // didn't flush yet
   Tracker.flush();
@@ -124,6 +131,14 @@ Tinytest.add("tracker - nested run", function (test) {
   // no more running!
   changeAndExpect(e, '');
   changeAndExpect(f, '');
+
+  test.isTrue(a.hasDependents());
+  test.isTrue(b.hasDependents());
+  test.isTrue(c.hasDependents());
+  test.isFalse(d.hasDependents());
+  test.isFalse(e.hasDependents());
+  test.isFalse(f.hasDependents());
+
   // rerun C
   changeAndExpect(c, 'cdef');
   changeAndExpect(e, 'ef');
@@ -132,6 +147,14 @@ Tinytest.add("tracker - nested run", function (test) {
   changeAndExpect(b, 'bcdef');
   changeAndExpect(e, 'ef');
   changeAndExpect(f, 'f');
+
+  test.isTrue(a.hasDependents());
+  test.isTrue(b.hasDependents());
+  test.isTrue(c.hasDependents());
+  test.isTrue(d.hasDependents());
+  test.isTrue(e.hasDependents());
+  test.isTrue(f.hasDependents());
+
   // kill A
   a.changed();
   changeAndExpect(f, '');

@@ -14,7 +14,7 @@ var packageJson = {
     npm: "4.1.2",
     "node-gyp": "3.4.0",
     "node-pre-gyp": "0.6.30",
-    "meteor-babel": "0.13.0",
+    "meteor-babel": "0.14.3",
     "meteor-promise": "0.8.0",
     fibers: "1.0.15",
     promise: "7.1.1",
@@ -54,7 +54,7 @@ var packageJson = {
     pathwatcher: "6.7.1",
     optimism: "0.3.3",
     'lru-cache': '4.0.1',
-    'cordova-lib': "6.3.1",
+    'cordova-lib': "6.4.0",
     longjohn: '0.2.11'
   }
 };
