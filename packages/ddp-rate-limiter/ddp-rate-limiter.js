@@ -67,8 +67,8 @@ DDPRateLimiter.setErrorMessage = function (message) {
  * @param {function} callback function to be called after a rule is executed.
  * @locus Server
  */
-DDPRateLimiter.addRule = function (matcher, numRequests, timeInterval, cb) {
-  return rateLimiter.addRule(matcher, numRequests, timeInterval, cb);
+DDPRateLimiter.addRule = function (matcher, numRequests, timeInterval, callback) {
+  return rateLimiter.addRule(matcher, numRequests, timeInterval, callback);
 };
 
 DDPRateLimiter.printRules = function () {

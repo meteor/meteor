@@ -102,10 +102,10 @@ _.extend(Rule.prototype, {
     self.counters = {};
     self._lastResetTime = new Date().getTime();
   },
-  _executeCallback(reply) {
+  _executeCallback(reply, ruleInput) {
     try {
       if (this.options.callback) {
-        this.options.callback(reply);
+        this.options.callback(reply, ruleInput);
       }
     } catch (e) {
       // Do not throw error here
@@ -144,9 +144,6 @@ RateLimiter.prototype.check = function (input) {
     allowed: true,
     timeToReset: 0,
     numInvocationsLeft: Infinity,
-    userId: input.userId,
-    clientAddress: input.clientAddress,
-    connectionId: input.connectionId,
   };
 
   var matchedRules = self._findAllMatchingRules(input);
@@ -173,7 +170,7 @@ RateLimiter.prototype.check = function (input) {
       };
       reply.allowed = false;
       reply.numInvocationsLeft = 0;
-      rule._executeCallback(reply);
+      rule._executeCallback(reply, input);
     } else {
       // If this is an allowed attempt and we haven't failed on any of the
       // other rules that match, update the reply field.
@@ -183,7 +180,7 @@ RateLimiter.prototype.check = function (input) {
         reply.numInvocationsLeft = rule.options.numRequestsAllowed -
           numInvocations;
       }
-      rule._executeCallback(reply);
+      rule._executeCallback(reply, input);
     }
   });
   return reply;
@@ -203,19 +200,26 @@ RateLimiter.prototype.check = function (input) {
  * @param {integer} intervalTime Optional. Number of milliseconds before
  * rule's counters are reset. Default = 1000.
  * @param {function} callback Optional. Function to be called after a
- * rule is executed. An object will be passed to this callback having
- * these properties: allowed, timeToReset, numInvocationsLeft, userId,
- * clientAddress, connectionId.
+ * rule is executed. Two objects will be passed to this function.
+ * The first one is the result of RateLimiter.prototype.check
+ * The second is the input object of the rule, it has the following structure:
+ * {
+ *   'type': string - either 'method' or 'subscription'
+ *   'name': string - the name of the method or subscription being called
+ *   'userId': string - the user ID attempting the method or subscription
+ *   'connectionId': string - a string representing the user's DDP connection
+ *   'clientAddress': string - the IP address of the user
+ * }
  * @return {string} Returns unique rule id
  */
 RateLimiter.prototype.addRule = function (rule, numRequestsAllowed,
-  intervalTime, cb) {
+  intervalTime, callback) {
   var self = this;
 
   var options = {
     numRequestsAllowed: numRequestsAllowed || DEFAULT_REQUESTS_PER_INTERVAL,
     intervalTime: intervalTime || DEFAULT_INTERVAL_TIME_IN_MILLISECONDS,
-    callback: cb && Meteor.bindEnvironment(cb),
+    callback: callback && Meteor.bindEnvironment(callback),
   };
 
   var newRule = new Rule(options, rule);
