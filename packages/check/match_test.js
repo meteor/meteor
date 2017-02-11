@@ -100,6 +100,10 @@ Tinytest.add("check - check", function (test) {
   fails({a: 1, b:2}, Match.ObjectIncluding({b: String}));
   fails({a: 1, b:2}, Match.ObjectIncluding({c: String}));
   fails({}, {a: Number});
+  matches({nodeType: 1}, {nodeType: Match.Any});
+  matches({nodeType: 1}, Match.ObjectIncluding({nodeType: Match.Any}));
+  fails({nodeType: 1}, {nodeType: String});
+  fails({}, Match.ObjectIncluding({nodeType: Match.Any}));
 
   // Match.Optional does not match on a null value, unless the allowed type is itself "null"
   fails(null, Match.Optional(String));
