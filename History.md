@@ -69,6 +69,10 @@
   npm package contains any `.node` files. Discussion
   [here](https://github.com/meteor/meteor/issues/8225#issuecomment-275044900).
 
+* The `meteor create` command now runs `meteor npm install` automatically
+  to install dependencies specified in the default `package.json` file.
+  [#8108](https://github.com/meteor/meteor/pull/8108)
+
 ## v1.4.2.6, 2017-02-08
 
 * Fixed a critical [bug](https://github.com/meteor/meteor/issues/8325)
