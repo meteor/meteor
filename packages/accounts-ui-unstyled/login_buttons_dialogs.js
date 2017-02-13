@@ -237,8 +237,8 @@ var updateSaveDisabled = function () {
 
 // Returns the appropriate template for this login service.  This
 // template should be defined in the service's package
-var configureLoginServiceDialogTemplateForService = function () {
-  var serviceName = loginButtonsSession.get('configureLoginServiceDialogServiceName');
+Template._configureLoginServiceDialog.templateForService = function(serviceName) {
+  serviceName = serviceName || loginButtonsSession.get('configureLoginServiceDialogServiceName');
   // XXX Service providers should be able to specify their configuration
   // template name.
   return Template['configureLoginServiceDialogFor' +
@@ -248,7 +248,7 @@ var configureLoginServiceDialogTemplateForService = function () {
 };
 
 var configurationFields = function () {
-  var template = configureLoginServiceDialogTemplateForService();
+  var template = Template._configureLoginServiceDialog.templateForService();
   return template.fields();
 };
 
@@ -261,7 +261,7 @@ Template._configureLoginServiceDialog.helpers({
   },
   configurationSteps: function () {
     // renders the appropriate template
-    return configureLoginServiceDialogTemplateForService();
+    return Template._configureLoginServiceDialog.templateForService();
   },
   saveDisabled: function () {
     return loginButtonsSession.get('configureLoginServiceDialogSaveDisabled');

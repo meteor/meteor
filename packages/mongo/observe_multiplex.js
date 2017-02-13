@@ -37,8 +37,7 @@ _.extend(ObserveMultiplexer.prototype, {
     // incrementing _addHandleTasksScheduledButNotPerformed and never
     // decrementing it.
     if (!self._queue.safeToRunTask())
-      throw new Error(
-        "Can't call observeChanges from an observe callback on the same query");
+      throw new Error("Can't call observeChanges from an observe callback on the same query");
     ++self._addHandleTasksScheduledButNotPerformed;
 
     Package.facts && Package.facts.Facts.incrementServerFact(

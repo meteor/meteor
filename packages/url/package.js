@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Utility code for constructing URLs",
-  version: "1.0.11"
+  version: "1.1.0"
 });
 
 Package.onUse(function(api) {
@@ -11,4 +11,9 @@ Package.onUse(function(api) {
   api.addFiles('url_server.js', 'server');
 });
 
-// tests are in the http package
+Package.onTest(function (api) {
+  api.use(['tinytest', 'url']);
+  api.addFiles('url_tests.js');
+});
+
+// More tests can be found in the http package

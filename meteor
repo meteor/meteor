@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-BUNDLE_VERSION=4.7.10
+# Note: the next version should be 4.7.11, since 4.7.10 was used to
+# publish Meteor 1.4.2.7.
+BUNDLE_VERSION=4.7.8
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.

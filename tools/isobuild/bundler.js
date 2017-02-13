@@ -176,7 +176,7 @@ exports.ignoreFiles = [
     /~$/, /^\.#/,
     /^(\.meteor\/|\.git\/|Thumbs\.db|\.DS_Store\/?|Icon\r|ehthumbs\.db|\..*\.sw.|#.*#)$/,
       /* .meteor => avoids scanning N^2 files when bundling all packages
-        .git => often has too many files to watch 
+        .git => often has too many files to watch
         ....sw(.) => vim swap files
         #.*# => emacs swap files
       */
@@ -482,8 +482,9 @@ export class NodeModulesDirectory {
           return true;
         }
 
-        const real = files.realpath(path);
-        if (real !== path) {
+        const real = realpathOrNull(path);
+        if (typeof real === "string" &&
+            real !== path) {
           // If node_modules/.bin/command is a symlink, determine the
           // answer by calling isWithinProdPackage(real).
           return isWithinProdPackage(real);
@@ -518,6 +519,15 @@ export class NodeModulesDirectory {
 
       return true;
     };
+  }
+}
+
+function realpathOrNull(path) {
+  try {
+    return files.realpath(path);
+  } catch (e) {
+    if (e.code !== "ENOENT") throw e;
+    return null;
   }
 }
 
@@ -677,7 +687,7 @@ class File {
 
     // XXX replacing colons with underscores as colon is hard to escape later
     // on different targets and generally is not a good separator for web.
-    url = url.replace(/:/g, '_');
+    url = colonConverter.convert(url);
     this.url = url;
   }
 
@@ -692,7 +702,7 @@ class File {
     // XXX same as in setUrlFromRelPath, we replace colons with a different
     // separator to avoid difficulties further. E.g.: on Windows it is not a
     // valid char in filename, Cordova also rejects it, etc.
-    this.targetPath = this.targetPath.replace(/:/g, '_');
+    this.targetPath = colonConverter.convert(this.targetPath);
   }
 
   // Set a source map for this File. sourceMap is given as a string.

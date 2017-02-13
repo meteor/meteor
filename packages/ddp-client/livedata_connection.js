@@ -977,6 +977,8 @@ _.extend(Connection.prototype, {
   // documents.
   _saveOriginals: function () {
     var self = this;
+    if (!self._waitingForQuiescence())
+      self._flushBufferedWrites();
     _.each(self._stores, function (s) {
       s.saveOriginals();
     });
