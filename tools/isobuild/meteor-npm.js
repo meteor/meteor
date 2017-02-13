@@ -623,24 +623,42 @@ var updateExistingNpmDirectory = function (packageName, newPackageNpmDir,
     logUpdateDependencies(packageName, npmDependencies);
   }
 
+  makeNewPackageNpmDir(newPackageNpmDir);
+
   let preservedShrinkwrap;
 
   if (_.isEmpty(npmDependencies)) {
     // If there are no npmDependencies, make sure nothing is installed.
     preservedShrinkwrap = { dependencies: {} };
+
   } else if (isSubtreeOf(npmTree, minShrinkwrapTree)) {
     // If the top-level npm dependencies are already encompassed by the
     // npm-shrinkwrap.json file, then reuse that file.
     preservedShrinkwrap = shrinkwrappedDependenciesTree;
+
   } else {
-    // Otherwise install only the required npm packages and their
-    // dependencies.
-    preservedShrinkwrap = npmTree;
+    // Otherwise install npmTree.dependencies as if we were creating a new
+    // .npm/package directory, and leave preservedShrinkwrap empty.
+    _.each(npmTree.dependencies, (info, name) => {
+      const installed = minInstalledTree.dependencies[name];
+      if (! installed || installed.version !== info.version) {
+        installNpmModule(name, info.version, newPackageNpmDir);
+      }
+    });
+
+    // Note: as of npm@4.0.0, npm-shrinkwrap.json files are regarded as
+    // "canonical," meaning `npm install` (without a package argument)
+    // will only install dependencies mentioned in npm-shrinkwrap.json.
+    // That's why we can't just update installedDependenciesTree to
+    // include npmTree.dependencies and hope for the best, because if the
+    // new versions of the required top-level packages have any additional
+    // transitive dependencies, those dependencies will not be installed
+    // unless previously mentioned in npm-shrinkwrap.json. Reference:
+    // https://github.com/npm/npm/blob/latest/CHANGELOG.md#no-more-partial-shrinkwraps-breaking
   }
 
-  makeNewPackageNpmDir(newPackageNpmDir);
-
-  if (!_.isEmpty(preservedShrinkwrap.dependencies)) {
+  if (! _.isEmpty(preservedShrinkwrap &&
+                  preservedShrinkwrap.dependencies)) {
     const newShrinkwrapFile = files.pathJoin(
       newPackageNpmDir,
       'npm-shrinkwrap.json'

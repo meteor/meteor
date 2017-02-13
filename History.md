@@ -1,5 +1,11 @@
 ## v.NEXT
 
+* Partial `npm-shrinkwrap.json` files are now disregarded when
+  (re)installing npm dependencies of Meteor packages, fixing
+  [#8349](https://github.com/meteor/meteor/issues/8349). Further
+  discussion of the new `npm` behavior can be found
+  [here](https://github.com/npm/npm/blob/latest/CHANGELOG.md#no-more-partial-shrinkwraps-breaking).
+
 ## v1.4.3
 
 * Versions of Meteor [core
