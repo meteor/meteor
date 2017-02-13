@@ -1,5 +1,58 @@
 # Development
 
+## Running from a Git checkout
+
+If you want to run on the bleeding edge, or [help contribute to Meteor](Contributing.md), you
+can run Meteor directly from a Git checkout using these steps:
+
+0. **Clone from GitHub**
+
+    ```sh
+    $ git clone --recursive https://github.com/meteor/meteor.git
+    $ cd meteor
+    ```
+
+    > ##### Important note about Git submodules!
+    >
+    > This repository uses Git submodules.  If you clone without the `--recursive` flag,
+    > re-fetch with `git pull` or experience "`Depending on unknown package`" errors,
+    > run the following in the repository root to sync things up again:
+    >
+    >     $ git submodule update --init --recursive
+
+0. **_(Optional)_ Compile dependencies**
+
+    > This optional step requires a C and C++ compiler, autotools, and scons.
+    > If this step is skipped, Meteor will simply download pre-built binaries.
+
+    To build everything from scratch (`node`, `npm`, `mongodb`, etc.) run the following:
+
+    ```sh
+    $ ./scripts/generate-dev-bundle.sh # OPTIONAL!
+    ```
+
+0. **Run a Meteor command to install dependencies**
+
+    > If you did not compile dependencies above, this will also download the binaries.
+
+
+    ```sh
+    $ ./meteor --help
+    ```
+
+0. **Ready to Go!**
+
+    Your local Meteor checkout is now ready to use!  You can use this `./meteor`
+    anywhere you would normally call the system `meteor`.  For example,:
+
+    ```sh
+    $ cd my-app/
+    $ /path/to/meteor-checkout/meteor run
+    ```
+
+    > _Note:_ When running from a `git` checkout, you cannot pin apps to specific
+    > Meteor releases or change the release using `--release`.
+
 ## Tests
 
 ### Running tests on Meteor core
