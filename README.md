@@ -45,6 +45,9 @@ If you're interested in developing Meteor itself, or running unreleased,
 bleeding-edge code, please refer to the details found in
 [Development.md](Development.md).
 
+To find more information about contributing to Meteor (whether fixing bugs or
+adding features), please see [Contributing.md](Contributing.md).
+
 ## Uninstalling Meteor
 
 Aside from a short launcher shell script, Meteor installs itself inside your
