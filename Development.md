@@ -76,7 +76,7 @@ Specific portions of package tests can be run by passing a `<package name>` or `
 
     ./meteor test-packages mongo
 
-### Running Meteor Tool tests
+### Running Meteor Tool self-tests
 
 While TinyTest and the `test-packages` command can be used to test internal Meteor packages, they cannot be used to test the Meteor Tool itself. The Meteor Tool is a node app that uses a home-grown "self test" system. For details on how to run Meteor Tool "self tests", please refer to the [Testing section of the Meteor Tool README](https://github.com/meteor/meteor/blob/master/tools/README.md#testing).
 
