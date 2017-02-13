@@ -41,6 +41,10 @@
   - [PR(`meetup`) #8321](https://github.com/meteor/meteor/pull/8321)
   - [PR(`weibo`) #8302](https://github.com/meteor/meteor/pull/8302)
 
+* The `npm` npm package is still at version 4.1.2 (as it was when Meteor
+  1.4.3 was originally published), even though `npm` was downgraded to
+  3.10.9 in Meteor 1.4.2.7.
+
 * The `meteor-babel` npm package has been upgraded to version 0.14.3,
   fixing [#8021](https://github.com/meteor/meteor/issues/8021) and
   [#7662](https://github.com/meteor/meteor/issues/7662).
