@@ -72,17 +72,9 @@ full test-suite (including the tests you added) to ensure you haven't broken any
 
 Exactly in the same way that [`test-packages` works in standalone Meteor apps](https://guide.meteor.com/writing-atmosphere-packages.html#testing), the `test-packages` command will start up a Meteor app with [TinyTest](./packages/tinytest/README.md).  To view the results, just connect to `http://localhost:3000` (or your specified port) and view the results.
 
-Specific portions of package tests can be run by passing a `<package name>` to the `test-packages` command. For example, to run `mongo` tests, it's possible to run:
+Specific portions of package tests can be run by passing a `<package name>` or `<package path>` to the `test-packages` command. For example, to run `mongo` tests, it's possible to run:
 
     ./meteor test-packages mongo
-
-#### Running a subset of tests
-
-You can also just run a subset of tests from one package to speed up testing time. Let's say for
-example that you just want to run the Spacebars test suite. Just simple do `./meteor test-packages
-./packages/spacebars-tests` and it will just run the test files from that one package. You can
-examine the `package.js` file for the `onTest` block, it outlines all the test files that should be
-run.
 
 ### Running Meteor Tool tests
 
