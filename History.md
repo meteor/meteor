@@ -41,6 +41,10 @@
   - [PR(`meetup`) #8321](https://github.com/meteor/meteor/pull/8321)
   - [PR(`weibo`) #8302](https://github.com/meteor/meteor/pull/8302)
 
+* The `npm` npm package is still at version 4.1.2 (as it was when Meteor
+  1.4.3 was originally published), even though `npm` was downgraded to
+  3.10.9 in Meteor 1.4.2.7.
+
 * The `meteor-babel` npm package has been upgraded to version 0.14.3,
   fixing [#8021](https://github.com/meteor/meteor/issues/8021) and
   [#7662](https://github.com/meteor/meteor/issues/7662).
@@ -64,6 +68,11 @@
 * The `meteor create` command now runs `meteor npm install` automatically
   to install dependencies specified in the default `package.json` file.
   [#8108](https://github.com/meteor/meteor/pull/8108)
+
+## v1.4.2.7, 2017-02-13
+
+* The `npm` npm package has been *downgraded* from version 4.1.2 back to
+  version 3.10.9, reverting the upgrade in Meteor 1.4.2.4.
 
 ## v1.4.2.6, 2017-02-08
 
@@ -89,7 +98,10 @@
 
 * Node has been upgraded to version 4.7.3.
 
-* The `npm` npm package has been upgraded to version 4.1.2.
+* The `npm` npm package has been upgraded from version 3.10.9 to 4.1.2.
+
+> Note: This change was later deemed too substantial for a point release
+  and was reverted in Meteor 1.4.2.7.
 
 * Fix for [Issue #8136](https://github.com/meteor/meteor/issues/8136).
 
