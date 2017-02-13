@@ -24,7 +24,7 @@ the same versions of 'node' and 'npm' that Meteor uses internally.
 Npm commands like 'yarn', 'jsdoc', etc., can also be installed within
 Meteor itself and used within all apps using the same version.
 
-First install them in your Meteor context with:
+First install them in your Meteor global context with:
 
     meteor npm install --global <package name>
 
