@@ -13,7 +13,7 @@
   discussion of the new `npm` behavior can be found
   [here](https://github.com/npm/npm/blob/latest/CHANGELOG.md#no-more-partial-shrinkwraps-breaking).
 
-## v1.4.3
+## v1.4.3, 2017-02-13
 
 * Versions of Meteor [core
   packages](https://github.com/meteor/meteor/tree/release-1.4.3/packages)
