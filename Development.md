@@ -58,9 +58,9 @@ can run Meteor directly from a Git checkout using these steps:
 ### Test against the local meteor copy
 
 When running any of tests, be sure run them against the checked-out copy of Meteor instead of
-the globally-installed version.  This means ensuring that the command being ran is `path-to-meteor-checkout/meteor` and not just `meteor`.
+the globally-installed version.  This means ensuring that the command is `path-to-meteor-checkout/meteor` and not just `meteor`.
 
-This is important so that tests are ran against the version in development and not the stable Meteor release.
+This is important so that tests are run against the version in development and not the stable (installed) Meteor release.
 
 ### Running tests on Meteor core
 
