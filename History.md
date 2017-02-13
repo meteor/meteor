@@ -1,6 +1,11 @@
 ## v.NEXT
 
-## v1.4.2.6
+## v1.4.2.7, 2017-02-13
+
+* The `npm` npm package has been *downgraded* from version 4.1.2 back to
+  version 3.10.9, reverting the upgrade in Meteor 1.4.2.4.
+
+## v1.4.2.6, 2017-02-08
 
 * Fixed a critical [bug](https://github.com/meteor/meteor/issues/8325)
   that was introduced by the fix for
@@ -24,7 +29,10 @@
 
 * Node has been upgraded to version 4.7.3.
 
-* The `npm` npm package has been upgraded to version 4.1.2.
+* The `npm` npm package has been upgraded from version 3.10.9 to 4.1.2.
+
+> Note: This change was later deemed too substantial for a point release
+  and was reverted in Meteor 1.4.2.7.
 
 * Fix for [Issue #8136](https://github.com/meteor/meteor/issues/8136).
 
