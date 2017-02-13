@@ -82,11 +82,15 @@ While TinyTest and the `test-packages` command can be used to test internal Mete
 
 For even more details on how to run Meteor Tool "self tests", please refer to the [Testing section of the Meteor Tool README](https://github.com/meteor/meteor/blob/master/tools/README.md#testing).
 
+#### Prerequisites
+
 To reduce the size of the Meteor distribution, some parts of the self-test system must be installed separately, including `phantomjs-prebuilt` and `browserstack-webdriver`.
 
 A notification will be displayed when attempting to use the `self-test` commands if these dependencies are not installed.  Make sure to install them into your checkout when prompted:
 
     ./meteor npm install -g phantomjs-prebuilt browserstack-webdriver
+
+#### Listing available tests
 
 To see a list of the tests which are included in the self-test system, list them with the `--list` option:
 
