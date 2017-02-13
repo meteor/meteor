@@ -53,6 +53,14 @@ can run Meteor directly from a Git checkout using these steps:
     > _Note:_ When running from a `git` checkout, you cannot pin apps to specific
     > Meteor releases or change the release using `--release`.
 
+## Additional documentation
+
+The Meteor core is best documented within the code itself, however, many components also have a `README.md` in their respective directories.
+
+Some compartmentalized portions of Meteor are broken into packages ([see a list of packages](packages/)) and they almost all have a `README.md` within their directory.  For example, [`ddp`](packages/ddp/README.md), [`ecmascript`](packages/ecmascript/README.md) and [`tinytest`](packages/tinytest/README.md).
+
+For the rest, try looking nearby for a `README.md`.  For example, [`isobuild`](tools/isobuild/README.md) or [`cordova`](tools/cordova/README.md).
+
 ## Tests
 
 ### Test against the local meteor copy
