@@ -59,10 +59,15 @@ can run Meteor directly from a Git checkout using these steps:
 
 When you are working with code in the core Meteor packages, you will want to make sure you run the
 full test-suite (including the tests you added) to ensure you haven't broken anything in Meteor. The
-`test-packages` command will do just that for you.
+`test-packages` command will do just that for you:
 
-The test packages command will start up a Meteor app with TinyTest setup, just connect to
-http://localhost:3000 or your specified port, like you would do with a normal meteor app.
+    ./meteor test-packages
+
+Exactly in the same way that [`test-packages` works in standalone Meteor apps](https://guide.meteor.com/writing-atmosphere-packages.html#testing), the `test-packages` command will start up a Meteor app with [TinyTest](./packages/tinytest/README.md).  To view the results, just connect to `http://localhost:3000` (or your specified port) and view the results.
+
+Specific portions of package tests can be run by passing a `<package name>` to the `test-packages` command. For example, to run `mongo` tests, it's possible to run:
+
+    ./meteor test-packages mongo
 
 #### Run against your local meteor copy
 
