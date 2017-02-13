@@ -96,6 +96,21 @@ To see a list of the tests which are included in the self-test system, list them
 
     ./meteor self-test --list
 
+#### Running specific tests
+
+The self-test commands support a regular-expression syntax in order to specific/search for specific tests.  For example, to search for tests starting with `a` or `b`, it's possible to run:
+
+    ./meteor self-test "^[a-b]" --list
+
+Simply remove the `--list` flag to actually run the matching tests.
+
+#### Excluding specific tests
+
+In a similar way to the method of specifying which tests TO run, there is a way to specify which tests should NOT run.  Again, using regular-expressions, this command will NOT list any tests which start with `a` or `b`:
+
+    ./meteor self-test --exclude "^[a-b]" --list
+
+Simply remove the `--list` flag to actually run the matching tests.
 
 ### Continuous integration
 
