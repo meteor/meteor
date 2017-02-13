@@ -55,6 +55,13 @@ can run Meteor directly from a Git checkout using these steps:
 
 ## Tests
 
+#### Test against the local meteor copy
+
+When running any of tests, be sure run them against the checked-out copy of Meteor instead of
+the globally-installed version.  This means ensuring that the command being ran is `path-to-meteor-checkout/meteor` and not just `meteor`.
+
+This is important so that tests are ran against the version in development and not the stable Meteor release.
+
 ### Running tests on Meteor core
 
 When you are working with code in the core Meteor packages, you will want to make sure you run the
@@ -68,18 +75,6 @@ Exactly in the same way that [`test-packages` works in standalone Meteor apps](h
 Specific portions of package tests can be run by passing a `<package name>` to the `test-packages` command. For example, to run `mongo` tests, it's possible to run:
 
     ./meteor test-packages mongo
-
-#### Run against your local meteor copy
-
-When running `test-packages`, be sure that you use the current directory copy of Meteor instead of
-the installed version. Here is the INCORRECT way: `meteor test-packages`.
-
-The CORRECT way is to use `./meteor test-packages` to run the full test suite against the branch you
-are on.
-
-This is important because you want to make sure you are running the test-packages command against
-the Meteor code on the branch you have pulled from GitHub, rather than the stable Meteor release you
-have installed on your computer.
 
 #### Running a subset of tests
 
