@@ -54,6 +54,14 @@
   - [PR(`meetup`) #8321](https://github.com/meteor/meteor/pull/8321)
   - [PR(`weibo`) #8302](https://github.com/meteor/meteor/pull/8302)
 
+* The `url` and `http` packages now encode to a less error-prone
+  format which more closely resembles that used by PHP, Ruby, `jQuery.param`
+  and others. `Object`s and `Array`s can now be encoded, however, if you have
+  previously relied on `Array`s passed as `params` being simply `join`-ed with
+  commas, you may need to adjust your `HTTP.call` implementations.
+  [#8261](https://github.com/meteor/meteor/pull/8261) and
+  [#8342](https://github.com/meteor/meteor/pull/8342).
+
 * The `npm` npm package is still at version 4.1.2 (as it was when Meteor
   1.4.3 was originally published), even though `npm` was downgraded to
   3.10.9 in Meteor 1.4.2.7.
