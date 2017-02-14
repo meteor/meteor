@@ -1,6 +1,6 @@
 ## v.NEXT
 
-## v1.4.3.1
+## v1.4.3.1, 2017-02-14
 
 * The `meteor-babel` npm package has been upgraded to version 0.14.4,
   fixing [#8349](https://github.com/meteor/meteor/issues/8349).
