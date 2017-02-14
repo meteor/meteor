@@ -1,5 +1,12 @@
 ## v.NEXT
 
+## v1.4.3.1
+
+* The `meteor-babel` npm package has been upgraded to version 0.14.4,
+  fixing [#8349](https://github.com/meteor/meteor/issues/8349).
+
+* The `reify` npm package has been upgraded to version 0.4.9.
+
 * Partial `npm-shrinkwrap.json` files are now disregarded when
   (re)installing npm dependencies of Meteor packages, fixing
   [#8349](https://github.com/meteor/meteor/issues/8349). Further
