@@ -1,6 +1,22 @@
 ## v.NEXT
 
-## v1.4.3
+* The `meteor-babel` npm package has been upgraded to version 0.15.2,
+  with support for dynamic `import(...)` syntax.
+
+## v1.4.3.1, 2017-02-14
+
+* The `meteor-babel` npm package has been upgraded to version 0.14.4,
+  fixing [#8349](https://github.com/meteor/meteor/issues/8349).
+
+* The `reify` npm package has been upgraded to version 0.4.9.
+
+* Partial `npm-shrinkwrap.json` files are now disregarded when
+  (re)installing npm dependencies of Meteor packages, fixing
+  [#8349](https://github.com/meteor/meteor/issues/8349). Further
+  discussion of the new `npm` behavior can be found
+  [here](https://github.com/npm/npm/blob/latest/CHANGELOG.md#no-more-partial-shrinkwraps-breaking).
+
+## v1.4.3, 2017-02-13
 
 * Versions of Meteor [core
   packages](https://github.com/meteor/meteor/tree/release-1.4.3/packages)
@@ -41,7 +57,19 @@
   - [PR(`meetup`) #8321](https://github.com/meteor/meteor/pull/8321)
   - [PR(`weibo`) #8302](https://github.com/meteor/meteor/pull/8302)
 
-* The `meteor-babel` npm package has been upgraded to version 0.15.1,
+* The `url` and `http` packages now encode to a less error-prone
+  format which more closely resembles that used by PHP, Ruby, `jQuery.param`
+  and others. `Object`s and `Array`s can now be encoded, however, if you have
+  previously relied on `Array`s passed as `params` being simply `join`-ed with
+  commas, you may need to adjust your `HTTP.call` implementations.
+  [#8261](https://github.com/meteor/meteor/pull/8261) and
+  [#8342](https://github.com/meteor/meteor/pull/8342).
+
+* The `npm` npm package is still at version 4.1.2 (as it was when Meteor
+  1.4.3 was originally published), even though `npm` was downgraded to
+  3.10.9 in Meteor 1.4.2.7.
+
+* The `meteor-babel` npm package has been upgraded to version 0.14.3,
   fixing [#8021](https://github.com/meteor/meteor/issues/8021) and
   [#7662](https://github.com/meteor/meteor/issues/7662).
 
@@ -62,6 +90,15 @@
   `preinstall`, `install`, or `postinstall` command, as well as when the
   npm package contains any `.node` files. Discussion
   [here](https://github.com/meteor/meteor/issues/8225#issuecomment-275044900).
+
+* The `meteor create` command now runs `meteor npm install` automatically
+  to install dependencies specified in the default `package.json` file.
+  [#8108](https://github.com/meteor/meteor/pull/8108)
+
+## v1.4.2.7, 2017-02-13
+
+* The `npm` npm package has been *downgraded* from version 4.1.2 back to
+  version 3.10.9, reverting the upgrade in Meteor 1.4.2.4.
 
 ## v1.4.2.6, 2017-02-08
 
@@ -87,7 +124,10 @@
 
 * Node has been upgraded to version 4.7.3.
 
-* The `npm` npm package has been upgraded to version 4.1.2.
+* The `npm` npm package has been upgraded from version 3.10.9 to 4.1.2.
+
+> Note: This change was later deemed too substantial for a point release
+  and was reverted in Meteor 1.4.2.7.
 
 * Fix for [Issue #8136](https://github.com/meteor/meteor/issues/8136).
 
