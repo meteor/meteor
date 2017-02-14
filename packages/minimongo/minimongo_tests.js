@@ -630,6 +630,73 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
 
   nomatch({a: {$size: 2}}, {a: [[2,2]]}); // tested against mongodb
 
+
+  // $bitsAllClear - number
+  match({a: {$bitsAllClear: [0,1,2,3]}}, {a: 0});
+  match({a: {$bitsAllClear: [0,1,2,3]}}, {a: 0b10000});
+  nomatch({a: {$bitsAllClear: [0,1,2,3]}}, {a: 0b1});
+  nomatch({a: {$bitsAllClear: [0,1,2,3]}}, {a: 0b10});
+  nomatch({a: {$bitsAllClear: [0,1,2,3]}}, {a: 0b100});
+  nomatch({a: {$bitsAllClear: [0,1,2,3]}}, {a: 0b1000});
+
+  // $bitsAllClear - buffer
+  match({a: {$bitsAllClear: new Uint8Array([3])}}, {a: new Uint8Array([4])});
+  match({a: {$bitsAllClear: new Uint8Array([0, 1])}}, {a: new Uint8Array([255])});  // 256 should not be set for 255.
+  match({a: {$bitsAllClear: new Uint8Array([3])}}, {a: 4 });
+
+  match({a: {$bitsAllClear: new Uint8Array([3])}}, {a: 0 });
+
+  // $bitsAllSet - number
+  match({a: {$bitsAllSet: [0,1,2,3]}}, {a: 0b1111});
+  nomatch({a: {$bitsAllSet: [0,1,2,3]}}, {a: 0b111});
+  nomatch({a: {$bitsAllSet: [0,1,2,3]}}, {a: 256});
+  nomatch({a: {$bitsAllSet: [0,1,2,3]}}, {a: 50000});
+  match({a: {$bitsAllSet: [0,1,2]}}, {a: 15});
+  match({a: {$bitsAllSet: [0, 12]}}, {a: 0b1000000000001});
+  nomatch({a: {$bitsAllSet: [0, 12]}}, {a: 0b1000000000000});
+  nomatch({a: {$bitsAllSet: [0, 12]}}, {a: 0b1});
+
+  // $bitsAllSet - buffer
+  match({a: {$bitsAllSet: new Uint8Array([3])}}, {a: new Uint8Array([3])});
+  match({a: {$bitsAllSet: new Uint8Array([7])}}, {a: new Uint8Array([15])});
+  match({a: {$bitsAllSet: new Uint8Array([3])}}, {a: 3 });
+
+  // $bitsAnySet - number
+  match({a: {$bitsAnySet: [0,1,2,3]}}, {a: 0b1});
+  match({a: {$bitsAnySet: [0,1,2,3]}}, {a: 0b10});
+  match({a: {$bitsAnySet: [0,1,2,3]}}, {a: 0b100});
+  match({a: {$bitsAnySet: [0,1,2,3]}}, {a: 0b1000});
+  match({a: {$bitsAnySet: [4]}}, {a: 0b10000});
+  nomatch({a: {$bitsAnySet: [0,1,2,3]}}, {a: 0b10000});
+  nomatch({a: {$bitsAnySet: [0,1,2,3]}}, {a: 0});
+
+  // $bitsAnySet - buffer
+  match({a: {$bitsAnySet: new Uint8Array([3])}}, {a: new Uint8Array([7])});
+  match({a: {$bitsAnySet: new Uint8Array([15])}}, {a: new Uint8Array([7])});
+  match({a: {$bitsAnySet: new Uint8Array([3])}}, {a: 1 });
+
+  // $bitsAnyClear - number
+  match({a: {$bitsAnyClear: [0,1,2,3]}}, {a: 0});
+  match({a: {$bitsAnyClear: [0,1,2,3]}}, {a: 0b1});
+  match({a: {$bitsAnyClear: [0,1,2,3]}}, {a: 0b10});
+  match({a: {$bitsAnyClear: [0,1,2,3]}}, {a: 0b100});
+  match({a: {$bitsAnyClear: [0,1,2,3]}}, {a: 0b1000});
+  match({a: {$bitsAnyClear: [0,1,2,3]}}, {a: 0b10000});
+  nomatch({a: {$bitsAnyClear: [0,1,2,3]}}, {a: 0b1111});
+  match({a: {$bitsAnyClear: [0,1,2,3]}}, {a: 0b111});
+  nomatch({a: {$bitsAnyClear: [0,1,2]}}, {a: 0b111});
+  match({a: {$bitsAnyClear: [0,1,2,3]}}, {a: 0b11});
+  nomatch({a: {$bitsAnyClear: [0,1]}}, {a: 0b11});
+  match({a: {$bitsAnyClear: [0,1,2,3]}}, {a: 0b1});
+  nomatch({a: {$bitsAnyClear: [0]}}, {a: 0b1});
+  nomatch({a: {$bitsAnyClear: [4]}}, {a: 0b10000});
+
+  // $bitsAnyClear - buffer
+  match({a: {$bitsAnyClear: new Uint8Array([8])}}, {a: new Uint8Array([7])});
+  match({a: {$bitsAnyClear: new Uint8Array([1])}}, {a: new Uint8Array([0])});
+  match({a: {$bitsAnyClear: new Uint8Array([1])}}, {a: 4 });
+
+
   // $type
   match({a: {$type: 1}}, {a: 1.1});
   match({a: {$type: 1}}, {a: 1});

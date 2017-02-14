@@ -551,6 +551,47 @@ var makeInequality = function (cmpValueComparator) {
   };
 };
 
+var isBitSet = function (value, bit) {
+  if (value === 0)
+    return false;
+  return (value & 1 << bit) !== 0;
+};
+
+var eightBits = [0,1,2,3,4,5,6,7];
+var get8BitsSet = function (value) {
+  if (value === 0)
+    return [];
+  return _.filter(eightBits, function (bit) {
+    return isBitSet(value, bit);
+  });
+};
+
+var convertNumberToUint8Array = function(number) {
+  var numOfBits = number.toString(2).length;
+  var num8BitGroups = Math.ceil(numOfBits / 8);
+  var byteArray = new Uint8Array(num8BitGroups);
+
+  for ( var index = 0; index < byteArray.length; index ++ ) {
+    var byte = number & 0xff;
+    byteArray [ index ] = byte;
+    number = (number - byte) / 256;
+  }
+
+  return byteArray;
+};
+
+var ensureOperandUint8Array = function (operand) {
+  if (!(operand instanceof Uint8Array)) {
+    operand = _.reduce(operand, function (num, n) {
+      return num | (1 << n);
+    }, 0);
+
+    operand = convertNumberToUint8Array(operand);
+  }
+
+  return operand;
+};
+
 // Each element selector contains:
 //  - compileElementSelector, a function with args:
 //    - operand - the "right hand side" of the operator
@@ -646,6 +687,108 @@ ELEMENT_OPERATORS = {
       return function (value) {
         return value !== undefined
           && LocalCollection._f._type(value) === operand;
+      };
+    }
+  },
+  $bitsAnyClear: {
+    compileElementSelector: function (operand, valueSelector, matcher) {
+      if (!isArray(operand) && !(operand instanceof Uint8Array))
+        throw Error("$bitsAnyClear has to be an Array");
+      return function (value) {
+        if (typeof value !== 'number' && !(value instanceof Uint8Array))
+          return false;
+
+        if (value === 0)
+          return true;
+
+        operand = ensureOperandUint8Array(operand);
+
+        if (!(value instanceof Uint8Array))
+          value = convertNumberToUint8Array(value);
+
+        return typeof _.find(operand, function (op, i) {
+            var bitsSetOp = get8BitsSet(op);
+            var bitsSetVal = get8BitsSet(value[i]);
+
+            return typeof _.find(bitsSetOp, function (bit) {
+                return bitsSetVal.indexOf(bit) === -1;
+              }) === 'undefined';
+          }) === 'undefined';
+      };
+    }
+  },
+  $bitsAllClear: {
+    compileElementSelector: function (operand, valueSelector, matcher) {
+      if (!isArray(operand) && !(operand instanceof Uint8Array))
+        throw Error("$bitsAllClear has to be an Array");
+      return function (value) {
+        if (typeof value !== 'number' && !(value instanceof Uint8Array))
+          return false;
+
+        if (value === 0)
+          return true;
+
+        operand = ensureOperandUint8Array(operand);
+
+        if (!(value instanceof Uint8Array))
+          value = convertNumberToUint8Array(value);
+
+        return _.filter(operand, function (op, i) {
+          var bitsSetOp = get8BitsSet(op);
+          var bitsSetVal = get8BitsSet(value[i]);
+
+          return typeof _.find(bitsSetOp, function (bit) {
+            return bitsSetVal.indexOf(bit) !== -1;
+          }) !== 'undefined';
+        }).length === 0;
+      };
+    }
+  },
+  $bitsAllSet: {
+    compileElementSelector: function (operand, valueSelector, matcher) {
+      if (!isArray(operand) && !(operand instanceof Uint8Array))
+        throw Error("$bitsAllSet has to be an Array");
+      return function (value) {
+        if (typeof value !== 'number' && !(value instanceof Uint8Array))
+          return false;
+
+        operand = ensureOperandUint8Array(operand);
+
+        if (!(value instanceof Uint8Array))
+          value = convertNumberToUint8Array(value);
+
+        return _.filter(operand, function (op, i) {
+            var bitsSetOp = get8BitsSet(op);
+            var bitsSetVal = get8BitsSet(value[i]);
+
+            return typeof _.find(bitsSetOp, function (bit) {
+                return bitsSetVal.indexOf(bit) === -1;
+              }) !== 'undefined';
+          }).length === 0;
+      };
+    }
+  },
+  $bitsAnySet: {
+    compileElementSelector: function (operand, valueSelector, matcher) {
+      if (!isArray(operand) && !(operand instanceof Uint8Array))
+        throw Error("$bitsAnySet has to be an Array");
+      return function (value) {
+        if (typeof value !== 'number' && !(value instanceof Uint8Array))
+          return false;
+
+        operand = ensureOperandUint8Array(operand);
+
+        if (!(value instanceof Uint8Array))
+          value = convertNumberToUint8Array(value);
+
+        return typeof _.find(operand, function (op, i) {
+            var bitsSetOp = get8BitsSet(op);
+            var bitsSetVal = get8BitsSet(value[i]);
+
+            return typeof _.find(bitsSetOp, function (bit) {
+                return bitsSetVal.indexOf(bit) !== -1;
+              }) === 'undefined';
+          }) === 'undefined';
       };
     }
   },
