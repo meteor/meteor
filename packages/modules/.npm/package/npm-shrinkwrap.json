@@ -1,8 +1,8 @@
 {
   "dependencies": {
     "acorn": {
-      "version": "4.0.9",
-      "resolved": "https://registry.npmjs.org/acorn/-/acorn-4.0.9.tgz",
+      "version": "4.0.11",
+      "resolved": "https://registry.npmjs.org/acorn/-/acorn-4.0.11.tgz",
       "from": "acorn@>=4.0.5 <4.1.0"
     },
     "acorn-es7-plugin": {
@@ -21,9 +21,9 @@
       "from": "magic-string@>=0.19.0 <0.20.0"
     },
     "reify": {
-      "version": "0.4.7",
-      "resolved": "https://registry.npmjs.org/reify/-/reify-0.4.7.tgz",
-      "from": "reify@0.4.7"
+      "version": "0.4.9",
+      "resolved": "https://registry.npmjs.org/reify/-/reify-0.4.9.tgz",
+      "from": "reify@0.4.9"
     },
     "vlq": {
       "version": "0.2.1",
