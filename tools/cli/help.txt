@@ -3,7 +3,7 @@
 Usage: meteor [--release <release>] [--help] <built-in command> [args]
        meteor help <built-in command>
        meteor [--version] [--arch]
-       meteor <node | npm | npm command> [args]
+       meteor <node | npm | other> [args]
        
 
 With no arguments, 'meteor' runs the project in the current
@@ -17,21 +17,26 @@ Built-in Commands:
 
 See 'meteor help <built-in command>' for details on a command.
 
+Other Commands:
+
 Meteor also bundles 'node' and 'npm' by default. If you use the
 commands 'meteor node' or 'meteor npm', you will be running
 the same versions of 'node' and 'npm' that Meteor uses internally.
 
-Npm commands like 'yarn', 'jsdoc', etc., can also be installed within
-Meteor itself and used within all apps using the same version.
-
-First install them in your Meteor global context with:
+Other commands can be installed in the same directory as 'node' and
+'npm' and used in all apps using the same version of Meteor. An easy
+way to install such commands is to 'meteor npm install --global' an
+npm package ('yarn', 'jsdoc', etc.) that provides the command:
 
     meteor npm install --global <package name>
 
-And then they can be used with:
+Any executable program(s) added by this command can be invoked just
+like 'meteor node' or 'meteor npm' (for example, 'meteor yarn'):
 
-    meteor <npm command> [args]
+    meteor <other command> [args]
 
+Note that you may need to reinstall these commands after updating to
+a different version of Meteor.
 
 
 >>> run
