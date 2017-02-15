@@ -316,7 +316,7 @@ export default class Resolver {
       const resolved = this._joinAndStat(dirPath, main) ||
         this._resolve(main, pkgJsonPath, _seenDirPaths);
 
-      if (resolved) {
+      if (resolved && typeof resolved === "object") {
         if (! resolved.packageJsonMap) {
           resolved.packageJsonMap = Object.create(null);
         }
