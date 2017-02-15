@@ -24,9 +24,9 @@ commands 'meteor node' or 'meteor npm', you will be running
 the same versions of 'node' and 'npm' that Meteor uses internally.
 
 Other commands can be installed in the same directory as 'node' and
-'npm' and used in all apps using the same version of Meteor. An easy
-way to install such commands is to 'meteor npm install --global' an
-npm package ('yarn', 'jsdoc', etc.) that provides the command:
+'npm' and used in all apps using the same version of Meteor. The
+easiest way to install such commands is to add a global npm package
+('yarn', 'jsdoc', etc.) that provides the command:
 
     meteor npm install --global <package name>
 
