@@ -741,7 +741,7 @@ ELEMENT_OPERATORS = {
         return _.filter(operand, function (op, i) {
           var bitsSetOp = get8BitsSet(op);
           var bitsSetVal = get8BitsSet(value[i]);
-// bits all clear
+
           return !_.isUndefined(
             _.find(bitsSetOp, function (bit) {
               return bitsSetVal.indexOf(bit) !== -1;
