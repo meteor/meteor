@@ -13,6 +13,7 @@ Package.onUse(function (api) {
   api.use('random', ['client', 'server']);
   api.use('ejson', 'server');
   api.use('callback-hook', ['client', 'server']);
+  api.use('reactive-var', 'client');
 
   // use unordered to work around a circular dependency
   // (service-configuration needs Accounts.connection)
@@ -62,6 +63,7 @@ Package.onTest(function (api) {
     'accounts-password'
   ]);
 
+  api.addFiles('accounts_tests_setup.js', 'server');
   api.mainModule('server_tests.js', 'server');
   api.mainModule('client_tests.js', 'client');
 });
