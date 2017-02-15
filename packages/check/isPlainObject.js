@@ -1,4 +1,4 @@
-// Copy of jQuery.isPlainObject for the server side from jQuery v1.11.2.
+// Copy of jQuery.isPlainObject for the server side from jQuery v3.1.1.
 
 var class2type = {};
 
@@ -6,60 +6,30 @@ var toString = class2type.toString;
 
 var hasOwn = class2type.hasOwnProperty;
 
-var support = {};
+var fnToString = hasOwn.toString;
 
-// Populate the class2type map
-_.each("Boolean Number String Function Array Date RegExp Object Error".split(" "), function(name, i) {
-  class2type[ "[object " + name + "]" ] = name.toLowerCase();
-});
+var ObjectFunctionString = fnToString.call(Object);
 
-function type( obj ) {
-  if ( obj == null ) {
-    return obj + "";
-  }
-  return typeof obj === "object" || typeof obj === "function" ?
-    class2type[ toString.call(obj) ] || "object" :
-    typeof obj;
-}
-
-function isWindow( obj ) {
-  /* jshint eqeqeq: false */
-  return obj != null && obj == obj.window;
-}
+var getProto = Object.getPrototypeOf;
 
 exports.isPlainObject = function( obj ) {
-  var key;
+  var proto,
+    Ctor;
 
-  // Must be an Object.
-  // Because of IE, we also have to check the presence of the constructor property.
-  // Make sure that DOM nodes and window objects don't pass through, as well
-  if ( !obj || type(obj) !== "object" || obj.nodeType || isWindow( obj ) ) {
+  // Detect obvious negatives
+  // Use toString instead of jQuery.type to catch host objects
+  if (!obj || toString.call(obj) !== "[object Object]") {
     return false;
   }
 
-  try {
-    // Not own constructor property must be Object
-    if ( obj.constructor &&
-         !hasOwn.call(obj, "constructor") &&
-         !hasOwn.call(obj.constructor.prototype, "isPrototypeOf") ) {
-      return false;
-    }
-  } catch ( e ) {
-    // IE8,9 Will throw exceptions on certain host objects #9897
-    return false;
+  proto = getProto(obj);
+
+  // Objects with no prototype (e.g., `Object.create( null )`) are plain
+  if (!proto) {
+    return true;
   }
 
-  // Support: IE<9
-  // Handle iteration over inherited properties before own properties.
-  if ( support.ownLast ) {
-    for ( key in obj ) {
-      return hasOwn.call( obj, key );
-    }
-  }
-
-  // Own properties are enumerated firstly, so to speed up,
-  // if last one is own, then all properties are own.
-  for ( key in obj ) {}
-
-  return key === undefined || hasOwn.call( obj, key );
+  // Objects with prototype are plain iff they were constructed by a global Object function
+  Ctor = hasOwn.call(proto, "constructor") && proto.constructor;
+  return typeof Ctor === "function" && fnToString.call(Ctor) === ObjectFunctionString;
 };
