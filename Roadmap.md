@@ -13,7 +13,7 @@ Items can be added to this roadmap by first getting design approval for a soluti
 
 ## Page load performance improvements
 
-*Status: [In progress](https://github.com/meteor/meteor/pull/8327)*
+*Tracking pull request: https://github.com/meteor/meteor/pull/8327*
 
 Just as Meteor 1.4.2 took aim at rebuild performance, Meteor 1.5 will be all about production app performance, specifically client-side application startup time.
 
@@ -28,7 +28,7 @@ Other optimizations include making it possible to remove (or dynamically load) l
 
 ## Upgrade to Node 6
 
-Tracking pull request: https://github.com/meteor/meteor/pull/6923
+*Tracking pull request: https://github.com/meteor/meteor/pull/6923*
 
 Upgrading Node will allow Meteor to take better advantage of native support for new ECMAScript features on the server, which should speed up build performance and may also improve runtime performance, thanks to performance improvements in Node itself.
 
