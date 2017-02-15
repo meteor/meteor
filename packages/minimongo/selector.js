@@ -571,13 +571,18 @@ var convertNumberToUint8Array = function(number) {
   var num8BitGroups = Math.ceil(numOfBits / 8);
   var byteArray = new Uint8Array(num8BitGroups);
 
-  for ( var index = 0; index < byteArray.length; index ++ ) {
+  for (var i = 0; i < byteArray.length; i++) {
     var byte = number & 0xff;
-    byteArray [ index ] = byte;
+    byteArray[i] = byte;
     number = (number - byte) / 256;
   }
 
   return byteArray;
+};
+
+var ensureUint8Array = function (number) {
+  return (number instanceof Uint8Array) ?
+    number : convertNumberToUint8Array(number);
 };
 
 var ensureOperandUint8Array = function (operand) {
@@ -702,18 +707,16 @@ ELEMENT_OPERATORS = {
           return true;
 
         operand = ensureOperandUint8Array(operand);
-
-        if (!(value instanceof Uint8Array))
-          value = convertNumberToUint8Array(value);
+        value = ensureUint8Array(value);
 
         return typeof _.find(operand, function (op, i) {
-            var bitsSetOp = get8BitsSet(op);
-            var bitsSetVal = get8BitsSet(value[i]);
+          var bitsSetOp = get8BitsSet(op);
+          var bitsSetVal = get8BitsSet(value[i]);
 
-            return typeof _.find(bitsSetOp, function (bit) {
-                return bitsSetVal.indexOf(bit) === -1;
-              }) === 'undefined';
-          }) === 'undefined';
+          return typeof _.find(bitsSetOp, function (bit) {
+              return bitsSetVal.indexOf(bit) === -1;
+            }) === 'undefined';
+        }) === 'undefined';
       };
     }
   },
@@ -729,9 +732,7 @@ ELEMENT_OPERATORS = {
           return true;
 
         operand = ensureOperandUint8Array(operand);
-
-        if (!(value instanceof Uint8Array))
-          value = convertNumberToUint8Array(value);
+        value = ensureUint8Array(value);
 
         return _.filter(operand, function (op, i) {
           var bitsSetOp = get8BitsSet(op);
@@ -753,17 +754,15 @@ ELEMENT_OPERATORS = {
           return false;
 
         operand = ensureOperandUint8Array(operand);
-
-        if (!(value instanceof Uint8Array))
-          value = convertNumberToUint8Array(value);
+        value = ensureUint8Array(value);
 
         return _.filter(operand, function (op, i) {
-            var bitsSetOp = get8BitsSet(op);
-            var bitsSetVal = get8BitsSet(value[i]);
+          var bitsSetOp = get8BitsSet(op);
+          var bitsSetVal = get8BitsSet(value[i]);
 
-            return typeof _.find(bitsSetOp, function (bit) {
-                return bitsSetVal.indexOf(bit) === -1;
-              }) !== 'undefined';
+          return typeof _.find(bitsSetOp, function (bit) {
+            return bitsSetVal.indexOf(bit) === -1;
+          }) !== 'undefined';
           }).length === 0;
       };
     }
@@ -777,18 +776,16 @@ ELEMENT_OPERATORS = {
           return false;
 
         operand = ensureOperandUint8Array(operand);
-
-        if (!(value instanceof Uint8Array))
-          value = convertNumberToUint8Array(value);
+        value = ensureUint8Array(value);
 
         return typeof _.find(operand, function (op, i) {
-            var bitsSetOp = get8BitsSet(op);
-            var bitsSetVal = get8BitsSet(value[i]);
+          var bitsSetOp = get8BitsSet(op);
+          var bitsSetVal = get8BitsSet(value[i]);
 
-            return typeof _.find(bitsSetOp, function (bit) {
-                return bitsSetVal.indexOf(bit) !== -1;
-              }) === 'undefined';
+          return typeof _.find(bitsSetOp, function (bit) {
+            return bitsSetVal.indexOf(bit) !== -1;
           }) === 'undefined';
+        }) === 'undefined';
       };
     }
   },
