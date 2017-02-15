@@ -597,6 +597,42 @@ var ensureOperandUint8Array = function (operand) {
   return operand;
 };
 
+var bitsClear = function (bitsSetOp, bitsSetVal) {
+  return _.isUndefined(
+    _.find(bitsSetOp, function (bit) {
+      return bitsSetVal.indexOf(bit) === -1;
+    })
+  );
+};
+
+var bitsSet = function (bitsSetOp, bitsSetVal) {
+  return _.isUndefined(
+    _.find(bitsSetOp, function (bit) {
+      return bitsSetVal.indexOf(bit) !== -1;
+    })
+  );
+};
+
+var anyBitCompare = function (operand, value, setOrClear) {
+  return _.isUndefined(
+    _.find(operand, function (op, i) {
+      var bitsSetOp = get8BitsSet(op);
+      var bitsSetVal = get8BitsSet(value[i]);
+
+      return setOrClear(bitsSetOp, bitsSetVal);
+    })
+  );
+};
+
+var allBitCompare = function (operand, value, setOrClear) {
+  return _.filter(operand, function (op, i) {
+      var bitsSetOp = get8BitsSet(op);
+      var bitsSetVal = get8BitsSet(value[i]);
+
+      return !setOrClear(bitsSetOp, bitsSetVal);
+    }).length === 0;
+};
+
 // Each element selector contains:
 //  - compileElementSelector, a function with args:
 //    - operand - the "right hand side" of the operator
@@ -709,18 +745,7 @@ ELEMENT_OPERATORS = {
         operand = ensureOperandUint8Array(operand);
         value = ensureUint8Array(value);
 
-        return _.isUndefined(
-          _.find(operand, function (op, i) {
-            var bitsSetOp = get8BitsSet(op);
-            var bitsSetVal = get8BitsSet(value[i]);
-
-            return _.isUndefined(
-              _.find(bitsSetOp, function (bit) {
-                return bitsSetVal.indexOf(bit) === -1;
-              })
-            );
-          })
-        );
+        return anyBitCompare(operand, value, bitsClear);
       };
     }
   },
@@ -738,16 +763,7 @@ ELEMENT_OPERATORS = {
         operand = ensureOperandUint8Array(operand);
         value = ensureUint8Array(value);
 
-        return _.filter(operand, function (op, i) {
-          var bitsSetOp = get8BitsSet(op);
-          var bitsSetVal = get8BitsSet(value[i]);
-
-          return !_.isUndefined(
-            _.find(bitsSetOp, function (bit) {
-              return bitsSetVal.indexOf(bit) !== -1;
-            })
-          );
-        }).length === 0;
+        return allBitCompare(operand, value, bitsSet);
       };
     }
   },
@@ -762,16 +778,7 @@ ELEMENT_OPERATORS = {
         operand = ensureOperandUint8Array(operand);
         value = ensureUint8Array(value);
 
-        return _.filter(operand, function (op, i) {
-          var bitsSetOp = get8BitsSet(op);
-          var bitsSetVal = get8BitsSet(value[i]);
-
-            return !_.isUndefined(
-              _.find(bitsSetOp, function (bit) {
-                return bitsSetVal.indexOf(bit) === -1;
-              })
-            );
-          }).length === 0;
+        return allBitCompare(operand, value, bitsClear);
       };
     }
   },
@@ -791,11 +798,7 @@ ELEMENT_OPERATORS = {
             var bitsSetOp = get8BitsSet(op);
             var bitsSetVal = get8BitsSet(value[i]);
 
-            return _.isUndefined(
-              _.find(bitsSetOp, function (bit) {
-                return bitsSetVal.indexOf(bit) !== -1;
-              })
-            )
+            return bitsSet(bitsSetOp, bitsSetVal);
           })
         );
       };
