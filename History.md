@@ -1,5 +1,10 @@
 ## v.NEXT
 
+* The `check` package has had its copy of `jQuery.isPlainObject`
+  updated to a newer implementation to resolve an issue where the
+  `nodeType` property of an object couldn't be checked, fixing
+  [#7354](https://github.com/meteor/meteor/issues/7354).
+
 ## v1.4.3.1, 2017-02-14
 
 * The `meteor-babel` npm package has been upgraded to version 0.14.4,
