@@ -73,4 +73,55 @@ describe("dynamic import(...)", function () {
       return b.promise;
     });
   });
+
+  it("imports from lazy packages", function () {
+    let missing = false;
+    const dynamicId = [
+      "meteor", "lazy-test-package", "dynamic"
+    ].join("/");
+
+    try {
+      // Synchronous dynamic requires should fail if the module has not
+      // been fetched dynamically yet.
+      require(dynamicId);
+    } catch (e) {
+      missing = true;
+    }
+
+    if (Meteor.isClient) {
+      // Dynamic modules only exist on the client. On the server, modules
+      // imported via dynamic import(...) are treated the same as
+      // statically imported modules.
+      assert.strictEqual(missing, true);
+    }
+
+    return Promise.all([
+      import("meteor/lazy-test-package").then(lazy => {
+        const requiredName = require([
+          "meteor", "lazy-test-package"
+        ].join("/")).name;
+
+        assert.strictEqual(
+          lazy.name,
+          "/node_modules/meteor/lazy-test-package/main.js"
+        );
+
+        assert.strictEqual(lazy.name, requiredName);
+      }),
+
+      import("meteor/lazy-test-package/dynamic").then(dynamic => {
+        assert.strictEqual(
+          dynamic.name,
+          "/node_modules/meteor/lazy-test-package/dynamic.js"
+        );
+
+        // Now the synchronous dynamic require succeeds because the module
+        // has been fetched dynamically.
+        assert.strictEqual(
+          require(dynamicId).name,
+          dynamic.name
+        );
+      })
+    ]);
+  });
 });
