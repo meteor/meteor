@@ -306,9 +306,9 @@
   declarations. [#7818](https://github.com/meteor/meteor/pull/7818)
 
 * Due to changes in how Cordova generates version numbers for iOS and Android
-  apps, you may experience issues with apps updates on user devices.  To avoid
+  apps, you may experience issues with apps updating on user devices.  To avoid
   this, consider managing the `buildNumber` manually using
-  `App.info('buildNumber', 'XXX');` in `mobile-config.js. There are additional
+  `App.info('buildNumber', 'XXX');` in `mobile-config.js`. There are additional
   considerations if you have been setting `android:versionCode` or
   `ios-CFBundleVersion`.  See
   [#7205](https://github.com/meteor/meteor/issues/7205) and
