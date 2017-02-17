@@ -129,3 +129,17 @@ Not every test which is defined in a test spec is actually ran by the CI server.
 > Please Note: Windows
 >
 > There is not currently a continuous integration system setup for Windows.  Additionally, not all tests are known to work on Windows.  If you're able to take time to improve those tests, it would be greatly appreciated.  Currently, there isn't an official list of known tests which do not run on Windows, but a PR to note those here and get them fixed would be ideal!
+
+#### Running your own CircleCI
+
+Since Meteor is a free, open-source project, you can run tests in the context of your own CircleCI account at no cost (up to the maximum number of containers allowed by them) during development and prior to submitting a pull-request.  For some, this may be quicker or more convenient than running tests on their own workstation.  As an added advantage, when your tests are "green", that status will be immediately shown (as passing) when a pull-request is opened with the official Meteor repository.
+
+To enable CircleCI for your development:
+
+0. Make sure you have an account with [CircleCI](https://circleci.com)
+0. Make sure you have [forked](https://help.github.com/articles/fork-a-repo/) [Meteor](https://github.com/meteor/meteor) into your own GitHub account.
+0. Go to the [Add Projects](https://circleci.com/add-projects) page on CircleCI.
+0. On the left, click on your GitHub username.
+0. On the right, find `meteor`
+0. Click on the "Build project" button next to `meteor`.
+0. Your build will start automatically!
