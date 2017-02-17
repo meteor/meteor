@@ -27,7 +27,6 @@ Package.onTest(function (api) {
   api.use('webapp', 'server');
   api.use('underscore');
   api.use('random');
-  api.use('jquery', 'client');
   api.use('http', ['client', 'server']);
   api.use('tinytest');
   api.use('test-helpers', ['client', 'server']);
