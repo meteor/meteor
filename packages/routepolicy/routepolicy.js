@@ -65,6 +65,7 @@ _.extend(RoutePolicyConstructor.prototype, {
       return null;
     if (!Package.webapp || !Package.webapp.WebApp
         || !Package.webapp.WebApp.clientPrograms
+        || !Package.webapp.WebApp.clientPrograms[Package.webapp.WebApp.defaultArch]
         || !Package.webapp.WebApp.clientPrograms[Package.webapp.WebApp.defaultArch].manifest) {
       // Hack: If we don't have a manifest, deal with it
       // gracefully. This lets us load livedata into a nodejs

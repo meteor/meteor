@@ -246,18 +246,18 @@ var boilerplateByArch = {};
 //
 // If a previous connect middleware has rendered content for the head or body,
 // returns the boilerplate with that content patched in otherwise
-// memoizes on HTML attributes (used by, eg, appcache) and whether inline 
+// memoizes on HTML attributes (used by, eg, appcache) and whether inline
 // scripts are currently allowed.
 // XXX so far this function is always called with arch === 'web.browser'
 var memoizedBoilerplate = {};
 var getBoilerplate = function (request, arch) {
   var useMemoized = ! (request.dynamicHead || request.dynamicBody);
   var htmlAttributes = getHtmlAttributes(request);
-  
+
   if (useMemoized) {
-    // The only thing that changes from request to request (unless extra 
-    // content is added to the head or body) are the HTML attributes 
-    // (used by, eg, appcache) and whether inline scripts are allowed, so we 
+    // The only thing that changes from request to request (unless extra
+    // content is added to the head or body) are the HTML attributes
+    // (used by, eg, appcache) and whether inline scripts are allowed, so we
     // can memoize based on that.
     var memHash = JSON.stringify({
       inlineScriptsAllowed: inlineScriptsAllowed,
@@ -272,11 +272,11 @@ var getBoilerplate = function (request, arch) {
     }
     return memoizedBoilerplate[memHash];
   }
-  
-  var boilerplateOptions = _.extend({ 
-    htmlAttributes: htmlAttributes 
+
+  var boilerplateOptions = _.extend({
+    htmlAttributes: htmlAttributes
   }, _.pick(request, 'dynamicHead', 'dynamicBody'));
-  
+
   return boilerplateByArch[arch].toHTML(boilerplateOptions);
 };
 
@@ -724,18 +724,20 @@ var runWebAppServer = function () {
       }
 
       var boilerplate;
-      try {
-        boilerplate = getBoilerplate(request, archKey);
-      } catch (e) {
-        Log.error("Error running template: " + e.stack);
-        res.writeHead(500, headers);
-        res.end();
-        return undefined;
+      if(archKey !== 'server') {
+        try {
+          boilerplate = getBoilerplate(request, archKey);
+          res.write(boilerplate);
+        } catch (e) {
+          Log.error("Error running template: " + e.stack);
+          res.writeHead(500, headers);
+          res.end();
+          return undefined;
+        }
       }
 
       var statusCode = res.statusCode ? res.statusCode : 200;
       res.writeHead(statusCode, headers);
-      res.write(boilerplate);
       res.end();
       return undefined;
     }).run();
@@ -804,7 +806,9 @@ var runWebAppServer = function () {
   // middlewares and update __meteor_runtime_config__, then keep going to set up
   // actually serving HTML.
   main = function (argv) {
-    WebAppInternals.generateBoilerplate();
+    if(WebApp.defaultArch !== 'server') {
+      WebAppInternals.generateBoilerplate();
+    }
 
     // only start listening after all the startup code has run.
     var localPort = WebAppInternals.parsePort(process.env.PORT) || 0;

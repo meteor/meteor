@@ -1190,7 +1190,7 @@ exports.PlatformList = function (options) {
 };
 
 // These platforms are always present and can be neither added or removed
-exports.PlatformList.DEFAULT_PLATFORMS = ['browser', 'server'];
+exports.PlatformList.DEFAULT_PLATFORMS = ['server'];
 
 _.extend(exports.PlatformList.prototype, {
   _readFile: function () {
