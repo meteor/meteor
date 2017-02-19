@@ -66,3 +66,20 @@ exports.getDefaults = function getDefaults(features) {
 
   return options;
 };
+
+exports.getMinifierDefaults = function getMinifierDefaults() {
+  var options = {
+    // Generate code in loose mode
+    compact: false,
+    // Don't generate a source map, we do that during compilation
+    sourceMap: false,
+    // We don't need to generate AST code
+    ast: false,
+    // Do not honor babelrc settings, would conflict with compilation
+    babelrc: false,
+    // Only include Babili, because we are only minifying, not compiling.
+    presets: [require("babel-preset-babili")],
+  }
+
+  return options;
+};

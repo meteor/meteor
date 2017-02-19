@@ -1,5 +1,6 @@
 var assert = require("assert");
 var getDefaultOptions = require("./options.js").getDefaults;
+var getMinifierOptions = require("./options.js").getMinifierDefaults;
 var Cache = require("./cache.js");
 var compileCache; // Lazily initialized.
 var reifyCompiler = require("reify/lib/compiler");
@@ -19,6 +20,7 @@ require("reify/node/runtime");
 // so if you only want to modify the default options, call this function
 // first, modify the result, and then pass those options to compile.
 exports.getDefaultOptions = getDefaultOptions;
+exports.getMinifierOptions = getMinifierOptions;
 
 function parse(source) {
   return require("babylon").parse(source, parseOptions);
@@ -60,6 +62,17 @@ function compile(source, options) {
     babelResult.map.sourcesContent[0] = source;
   }
 
+  return babelResult;
+}
+
+exports.minify = function minify(source, options) {
+  options = options || getMinifierOptions();
+
+  // We are not compiling the code in this step, only minifying, so reify is not used.
+  var babelResult = require("babel-core").transform(source, options);
+
+  // We don't generate a source map here because we told Babel to generate one for us.
+  // See https://github.com/meteor/babel/blob/master/options.js
   return babelResult;
 }
 
