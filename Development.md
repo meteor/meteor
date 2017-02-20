@@ -143,3 +143,11 @@ To enable CircleCI for your development:
 0. On the right, find `meteor`
 0. Click on the "Build project" button next to `meteor`.
 0. Your build will start automatically!
+
+## Code style
+
+* New contributions should follow the [Meteor Style Guide](https://github.com/meteor/javascript/) as closely as possible.
+  * The Meteor Style Guide is very close to the [Airbnb Style Guide](https://github.com/airbnb/javascript) with a few notable changes.
+* New code should match existing code (in the same vicinity) when the context of a change is minimal, but larger amounts of new code should follow the guide.
+* Do not change code that doesn't directly relate to the feature/bug that you're working on.
+* Basic linting is accomplished (via ESLint) by running `./scripts/admin/eslint/eslint.sh`.
