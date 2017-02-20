@@ -151,3 +151,12 @@ To enable CircleCI for your development:
 * New code should match existing code (in the same vicinity) when the context of a change is minimal, but larger amounts of new code should follow the guide.
 * Do not change code that doesn't directly relate to the feature/bug that you're working on.
 * Basic linting is accomplished (via ESLint) by running `./scripts/admin/eslint/eslint.sh`.
+
+## Commit messages
+
+Good commit messages are very important and you should make sure to explain what is changing and why.  The commit message should include:
+
+* A short and helpful commit title (maximum 80 characters).
+* A commit description which clearly explains the change if it's not super-obvious by the title.  Some description always helps!
+* Reference related issues and pull-requests by number in the description body (e.g. "#9999").
+* Add "Fixes", "Closes" or "Resolves" if that the addition of that commit fully fixes the issue.
