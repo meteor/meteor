@@ -18,7 +18,7 @@ There are many ways to contribute to the Meteor Project. Here’s a list of tech
 
 There are also several ways to contribute to the Meteor Project outside of GitHub, like organizing or speaking at [Meetups](https://www.meetup.com/topics/meteor/) and events and helping to moderate our [forums](https://forums.meteor.com/). Stay tuned for more documentation around non-code contributions. 
 
-If you can think of any changes to the project or documentation that would improve the contributor experience, let us know by opening an issue!
+If you can think of any changes to the project or [documentation](https://github.com/meteor/docs) that would improve the contributor experience, let us know by opening an issue!
 
 ### Project roles
 
