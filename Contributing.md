@@ -78,7 +78,15 @@ Current Community Manager:
 
 ### Tracking project work
 
-Right now, the best place to track the work being done on Meteor is to take a look at the latest release milestone [here](https://github.com/meteor/meteor/milestones). We also curate specific issues that would make great pull requests for community contributors with the [pull requests encouraged tag](https://github.com/meteor/meteor/issues?q=is%3Aopen+is%3Aissue+label%3Apull-requests-encouraged).
+Right now, the best place to track the work being done on Meteor is to take a look at the latest release milestone [here](https://github.com/meteor/meteor/milestones).
+
+### Finding work
+
+We curate specific issues that would make great pull requests for community contributors by applying the [`pull-requests-encouraged` label](https://github.com/meteor/meteor/issues?q=is%3Aopen+is%3Aissue+label%3Apull-requests-encouraged).
+
+Issues which *also* have the [`confirmed` label](https://github.com/meteor/meteor/issues?q=is%3Aissue%20is%3Aopen%20label%3Apull-requests-encouraged%20label%3Aconfirmed) are considered to have their details clear enough to begin working on.
+
+Any issue which does not have the `confirmed` label still requires discussion on implementation details but input and positive commentary is welcome!  Any pull-request opened on an issue which is not `confirmed` is still welcome, however the pull-request is more likely to be sent back for reworking than a `confirmed` issue.  If in doubt about the best way to implement something, please create additional conversation on the issue.
 
 <h2 id="reporting-bug">Reporting a bug in Meteor</h2>
 
