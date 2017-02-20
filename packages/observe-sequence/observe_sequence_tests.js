@@ -93,6 +93,37 @@ runOneObserveSequenceTestCase = function (test, sequenceFunc,
              compress(EJSON.stringify(expectedCallbacks, {canonical: true, indent: true})));
 };
 
+// This creates an object subclassed from Array
+const hasProp = {}.hasOwnProperty;
+const extend = function(child, parent) {
+  function ctor() {
+    this.constructor = child;
+  }
+  for(let key in parent) {
+    if(hasProp.call(parent, key)) {
+      child[key] = parent[key];
+      console.log('key: ' + key);
+    }
+  }
+  ctor.prototype = parent.prototype;
+  child.prototype = new ctor();
+  child.__super__ = parent.prototype;
+  return child;
+};
+const ArraySubclass = (function (superClass) {
+  extend(ArraySubclass, superClass);
+
+  function ArraySubclass() {
+    if (arguments.length > 0) {
+      const items = this.slice.call(arguments, 0);
+      this.splice.apply(this, [0, 0].concat(this.slice.call(items)));
+    }
+  }
+
+  return ArraySubclass;
+
+})(Array);
+
 Tinytest.add('observe-sequence - initial data for all sequence types', function (test) {
   runOneObserveSequenceTestCase(test, function () {
     return null;
@@ -552,6 +583,26 @@ Tinytest.add('observe-sequence - string arrays', function (test) {
 
 Tinytest.add('observe-sequence - number arrays', function (test) {
   var seq = [1, 1, 2];
+  var dep = new Tracker.Dependency;
+
+  runOneObserveSequenceTestCase(test, function () {
+    dep.depend();
+    return seq;
+  }, function () {
+    seq = [1, 3, 2, 3];
+    dep.changed();
+  }, [
+    {addedAt: [1, 1, 0, null]},
+    {addedAt: [{NOT: 1}, 1, 1, null]},
+    {addedAt: [2, 2, 2, null]},
+    {removedAt: [{NOT: 1}, 1, 1]},
+    {addedAt: [3, 3, 1, 2]},
+    {addedAt: [{NOT: 3}, 3, 3, null]}
+  ]);
+});
+
+Tinytest.add('observe-sequence - subclassed number arrays', function (test) {
+  var seq = new ArraySubclass(1, 1, 2);
   var dep = new Tracker.Dependency;
 
   runOneObserveSequenceTestCase(test, function () {
