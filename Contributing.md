@@ -20,6 +20,14 @@ There are also several ways to contribute to the Meteor Project outside of GitHu
 
 If you can think of any changes to the project or [documentation](https://github.com/meteor/docs) that would improve the contributor experience, let us know by opening an issue!
 
+### Finding work
+
+We curate specific issues that would make great pull requests for community contributors by applying the [`pull-requests-encouraged` label](https://github.com/meteor/meteor/issues?q=is%3Aopen+is%3Aissue+label%3Apull-requests-encouraged).
+
+Issues which *also* have the [`confirmed` label](https://github.com/meteor/meteor/issues?q=is%3Aissue%20is%3Aopen%20label%3Apull-requests-encouraged%20label%3Aconfirmed) are considered to have their details clear enough to begin working on.
+
+Any issue which does not have the `confirmed` label still requires discussion on implementation details but input and positive commentary is welcome!  Any pull-request opened on an issue which is not `confirmed` is still welcome, however the pull-request is more likely to be sent back for reworking than a `confirmed` issue.  If in doubt about the best way to implement something, please create additional conversation on the issue.
+
 ### Project roles
 
 We’ve just begun to create more defined project roles for Meteor. Here are descriptions of the existing project roles, along with the current contributors taking on those roles today. 
@@ -79,14 +87,6 @@ Current Community Manager:
 ### Tracking project work
 
 Right now, the best place to track the work being done on Meteor is to take a look at the latest release milestone [here](https://github.com/meteor/meteor/milestones).  Also, the [Meteor Roadmap](Roadmap.md) contains high-level information on the current priorities of the project.
-
-### Finding work
-
-We curate specific issues that would make great pull requests for community contributors by applying the [`pull-requests-encouraged` label](https://github.com/meteor/meteor/issues?q=is%3Aopen+is%3Aissue+label%3Apull-requests-encouraged).
-
-Issues which *also* have the [`confirmed` label](https://github.com/meteor/meteor/issues?q=is%3Aissue%20is%3Aopen%20label%3Apull-requests-encouraged%20label%3Aconfirmed) are considered to have their details clear enough to begin working on.
-
-Any issue which does not have the `confirmed` label still requires discussion on implementation details but input and positive commentary is welcome!  Any pull-request opened on an issue which is not `confirmed` is still welcome, however the pull-request is more likely to be sent back for reworking than a `confirmed` issue.  If in doubt about the best way to implement something, please create additional conversation on the issue.
 
 <h2 id="reporting-bug">Reporting a bug in Meteor</h2>
 
