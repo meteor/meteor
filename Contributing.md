@@ -78,7 +78,7 @@ Current Community Manager:
 
 ### Tracking project work
 
-Right now, the best place to track the work being done on Meteor is to take a look at the latest release milestone [here](https://github.com/meteor/meteor/milestones).
+Right now, the best place to track the work being done on Meteor is to take a look at the latest release milestone [here](https://github.com/meteor/meteor/milestones).  Also, the [Meteor Roadmap](Roadmap.md) contains high-level information on the current priorities of the project.
 
 ### Finding work
 
