@@ -39,6 +39,7 @@ Current Issue Triagers:
 Our most regular and experienced Issue Triagers sometimes move on to doing code reviews for pull requests, and have input into which pull requests should be merged. 
 
 Current Reviewers:
+- [@hwillson](https://github.com/hwillson)
 - [@lorensr](https://github.com/lorensr)
 - [@abernix](https://github.com/abernix)
 
@@ -49,8 +50,7 @@ For now, the only contributors with commit access to meteor/meteor are employees
 Project Lead: [@benjamn](https://github.com/benjamn)
 
 Current Core Committers: 
-- [@tmeasday](https://github.com/tmeasday)
-- [@zol](https://github.com/zol)
+- [@abernix](https://github.com/abernix)
 - [@glasser](https://github.com/glasser)
 - [@stubailo](https://github.com/stubailo)
 
@@ -59,7 +59,7 @@ Current Core Committers:
 Documentation Maintainers are regular documentation contributors that have been given the ability to merge docs changes on [meteor/docs](https://github.com/meteor/docs). 
 
 Current Documentation Maintainers:
-- [@tmeasday](https://github.com/tmeasday)
+- [@abernix](https://github.com/abernix)
 - [@lorensr](https://github.com/lorensr)
 
 #### Community Package Maintainer:
