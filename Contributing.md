@@ -12,7 +12,7 @@ There are many ways to contribute to the Meteor Project. Here’s a list of tech
 - [Reporting a bug](https://github.com/meteor/meteor/blob/devel/Contributing.md#reporting-a-bug-in-meteor)
 - [Triaging issues](https://github.com/meteor/meteor/blob/devel/IssueTriage.md)
 - [Contributing to documentation](https://github.com/meteor/docs/blob/master/Contributing.md) 
-- [Submitting pull requests](https://github.com/meteor/meteor/blob/devel/Contributing.md#making-changes-to-meteor-core) 
+- [Submitting pull requests](https://github.com/meteor/meteor/blob/devel/Contributing.md#making-changes-to-meteor-core) (See "Finding work" below)
 - [Reviewing pull requests](https://github.com/meteor/meteor/blob/devel/Contributing.md#reviewer) 
 - [Maintaining a community package](https://github.com/meteor/meteor/blob/devel/Contributing.md#community-package-maintainer)
 
