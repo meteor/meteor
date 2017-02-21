@@ -124,4 +124,26 @@ describe("dynamic import(...)", function () {
       })
     ]);
   });
+
+  it("gives dynamic modules access to package variables", async function () {
+    const dynamic = await import("meteor/lazy-test-package/dynamic");
+    dynamic.checkHelper();
+
+    const a = await import("meteor/helper-package/dynamic/a");
+    const b = await import("meteor/helper-package/dynamic/b.coffee");
+
+    assert.strictEqual(a.shared, b.shared);
+    assert.deepEqual(a.shared, {
+      "/node_modules/meteor/helper-package/dynamic/a.js": true,
+      "/node_modules/meteor/helper-package/dynamic/b.coffee.js": true
+    });
+
+    assert.strictEqual(
+      (await import("meteor/helper-package")).Helper,
+      // Since these tests are defined in an application that uses the
+      // global scope for imported package variables, global.Helper should
+      // be identical to the Helper symbol exported by helper-package.
+      global.Helper
+    );
+  });
 });

@@ -245,9 +245,7 @@ _.extend(Module.prototype, {
         return;
       }
 
-      const dynamic = file.lazy && file.imported === "dynamic";
-
-      if (dynamic) {
+      if (file.isDynamic()) {
         const servePath = "dynamic/" + file.installPath;
         const { code: source, map } =
           file.getPrelinkedOutput({
@@ -352,7 +350,7 @@ _.extend(Module.prototype, {
     // allows us to call meteorInstall just once to install everything.
     chunks.push("var require = meteorInstall(");
     walk(tree);
-    chunks.push(",", JSON.stringify(self.meteorInstallOptions), ");");
+    chunks.push(",", self._stringifyInstallOptions(), ");");
 
     if (moduleCount === 0) {
       // If no files were actually added to the chunks array, roll back
@@ -361,6 +359,40 @@ _.extend(Module.prototype, {
     }
 
     return moduleCount;
+  },
+
+  _stringifyInstallOptions() {
+    let optionsString =
+      JSON.stringify(this.meteorInstallOptions, null, 2);
+
+    if (this.useGlobalNamespace) {
+      return optionsString;
+    }
+
+    if (! this.files.some(file => file.isDynamic())) {
+      // If the package contains no files that can be imported
+      // dynamically, then we don't need to provide an options.eval
+      // function for evaluating dynamic modules.
+      return optionsString;
+    }
+
+    assert.ok(optionsString.endsWith("\n}"));
+
+    // If this package is not using the global namespace, pass an
+    // options.eval method to meteorInstall, so that code added later can
+    // have access to the same shared package variables as other code in
+    // the package.
+    return optionsString.slice(0, optionsString.length - 2) + [
+      ",",
+      "  eval: function () {",
+      "    return eval(arguments[0]);",
+      "  }",
+      "}"
+    ].join("\n");
+  },
+
+  _hasDynamicModules() {
+    return this.files.some(file => file.isDynamic());
   },
 
   // Adds require calls to the chunks array for all modules that should be
@@ -581,6 +613,10 @@ _.extend(File.prototype, {
 
   _useMeteorInstall() {
     return this.module.meteorInstallOptions;
+  },
+
+  isDynamic() {
+    return this.lazy && this.imported === "dynamic";
   },
 
   _getClosureHeader() {

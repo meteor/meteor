@@ -90,7 +90,21 @@ function installResults(resultsTree) {
       addToTree(
         trees[optionsIndex],
         meta.module.id,
-        (0, eval)("(" + tree + ")")
+        // By calling (meta.options.eval || eval) in a wrapper function,
+        // we delay the cost of parsing and evaluating the module code
+        // until the module is first imported.
+        function () {
+          // If an options.eval function was provided in the second
+          // argument to meteorInstall when this bundle was first
+          // installed, use that function to parse and evaluate the
+          // dynamic module code in the scope of the package. Otherwise
+          // fall back to indirect (global) eval.
+          return (meta.options.eval || eval)(
+            // Wrap the function(require,exports,module){...} expression
+            // in parentheses to force it to be parsed as an expression.
+            "(" + tree + ")"
+          ).apply(this, arguments);
+        }
       );
 
       // Intentionally do not delay resolution waiting for the cache.

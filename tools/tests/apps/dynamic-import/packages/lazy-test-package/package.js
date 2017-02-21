@@ -5,6 +5,8 @@ Package.describe({
 
 Package.onUse(function(api) {
   api.use("ecmascript");
+  api.use("helper-package");
+
   api.mainModule("main.js", [
     "client",
     "server"
