@@ -1,4 +1,4 @@
-# Meteor
+![Imgur](http://i.imgur.com/XwTwNPJ.png)
 
 [![TravisCI Status](https://travis-ci.org/meteor/meteor.svg?branch=devel)](https://travis-ci.org/meteor/meteor)
 [![CircleCI Status](https://circleci.com/gh/meteor/meteor/tree/devel.svg?style=shield&circle-token=c2d3c041506bd493ef3795ffa4448684cfce97b8)](https://circleci.com/gh/meteor/meteor/tree/devel)
@@ -24,11 +24,11 @@ Meteor is an open-source, production-ready, real-time full-stack web application
 
 Meteor has isomorphic APIs. This means that Meteor uses the same methods that work on the server to work on the client. Meteor makes it easier for an entire full-stack app to be built by only one developer, or for a team to easily collaborate and understand code across a project.
 
-##### Cross-Platform Code (Android, iOS, Web) 
+#### Cross-Platform Code (Android, iOS, Web) 
 
 Meteor allows for very rapid prototyping and produces cross-platform code for apps to run on the web, Android, and iOS. 
 
-##### Develop With One Language
+#### Develop With One Language
 
 Web developers often need to know different technologies and may become frustrated when working on the front-end, back-end, or the database. With Meteor, you can build and manage them all with JavaScript. 
 
@@ -42,10 +42,10 @@ Development using JavaScript in all environments:
 
 The default database already included in Meteor is the [MongoDB](https://github.com/mongodb/mongo) database, but there are alternatives:
 
-- [meteor-pg](https://github.com/Richie765/meteor-pg) - PostgreSQL
-- [numtel:pg](https://github.com/numtel/meteor-pg) - Reactive PostgreSQL 
-- [numtel:mysql](https://github.com/numtel/meteor-mysql) - Reactive MySQL
-- [simple:rethink](https://github.com/Slava/meteor-rethinkdb) - RethinkDB
+- [PostgreSQL](https://github.com/Richie765/meteor-pg)  
+- [Reactive PostgreSQL](https://github.com/numtel/meteor-pg)  
+- [Reactive MySQL](https://github.com/numtel/meteor-mysql) 
+- [RethinkDB](https://github.com/Slava/meteor-rethinkdb)  
 
 
 ### Meteor Works in Real-time
@@ -64,7 +64,7 @@ As part of Meteor's security, it uses the publish-subscribe messaging pattern to
 
 Meteor Galaxy is the cloud service platform for operating and managing Meteor applications. It offers a free [hosting](https://www.meteor.com/galaxy/signup) option for simple apps, smaller plans for projects that are not commercial level, and paid options for business plans.   
 
-##### Deploying Meteor Applications
+#### Deploying Meteor Applications
 
 Meteor Web Apps can be deployed using <code>meteor deploy</code>, and you can run as many copies of your app as you need. Features to manage your apps include application logs and SSL cert management. 
 
