@@ -12,7 +12,6 @@ Npm.strip({
 });
 
 Package.onUse(function (api) {
-  api.use('underscore', 'server');
   api.export(['UglifyJSMinify', 'UglifyJS']);
   api.addFiles(['minifier.js'], 'server');
 });
