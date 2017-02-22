@@ -12,6 +12,7 @@ Package.onUse(function (api) {
   api.use("localstorage");
   api.use("promise");
   api.use("ddp");
+  api.use("check");
   api.use("ecmascript", "server");
   api.mainModule("client.js", "client");
   api.mainModule("server.js", "server");
