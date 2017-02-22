@@ -68,6 +68,11 @@ You can use the `--package` option, to create a new package. If used in an
 existing app, this command will create a package in the packages
 directory.
 
+You can use `meteor create --bare` to scaffold a basic, empty project or
+`meteor create --full` for a more complete, imports-based project which
+closely matches the structure recommended by the
+[Meteor Guide](https://guide.meteor.com/).
+
 <h2 id="meteorloginlogout">meteor login / logout</h2>
 
 Log in and out of your account using Meteor's authentication system.
