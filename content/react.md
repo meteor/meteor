@@ -215,8 +215,7 @@ import { Lists } from '../../api/lists/lists.js';
 import { createContainer } from 'meteor/react-meteor-data';
 import ListPage from '../pages/ListPage.js';
 
-export default ListPageContainer = createContainer(({ params }) => {
-  const { id } = params;
+export default ListPageContainer = createContainer(({ id }) => {
   const todosHandle = Meteor.subscribe('todos.inList', id);
   const loading = !todosHandle.ready();
   const list = Lists.findOne(id);
@@ -237,7 +236,7 @@ The container component created by `createContainer()` will reactively rerender 
 Although this `ListPageContainer` container is intended to be instantiated by the React Router (which passes in the props automatically), if we did ever want to create one manually, we would need to pass in the props to the container component (which then get passed into our data function above):
 
 ```jsx
-<ListPageContainer params={{id: '7'}}/>
+<ListPageContainer id={7}/>
 ```
 
 <h3 id="preventing-rerenders">Preventing re-renders</h3>
