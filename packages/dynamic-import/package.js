@@ -6,6 +6,8 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
+  api.use("browser-policy-content", { weak: true });
+
   api.use("modules");
   api.use("localstorage");
   api.use("promise");

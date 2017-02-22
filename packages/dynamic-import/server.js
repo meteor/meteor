@@ -4,6 +4,8 @@ import {
   join as pathJoin,
   normalize as pathNormalize,
 } from "path";
+
+import "./security.js";
 import "./client.js";
 
 const hasOwn = Object.prototype.hasOwnProperty;
