@@ -305,6 +305,15 @@
 * The `coffeescript` package now natively supports `import` and `export`
   declarations. [#7818](https://github.com/meteor/meteor/pull/7818)
 
+* Due to changes in how Cordova generates version numbers for iOS and Android
+  apps, you may experience issues with apps updating on user devices.  To avoid
+  this, consider managing the `buildNumber` manually using
+  `App.info('buildNumber', 'XXX');` in `mobile-config.js`. There are additional
+  considerations if you have been setting `android:versionCode` or
+  `ios-CFBundleVersion`.  See
+  [#7205](https://github.com/meteor/meteor/issues/7205) and
+  [#6978](https://github.com/meteor/meteor/issues/6978) for more information.
+
 ## v1.4.1.3, 2016-10-21
 
 * Node has been updated to version 4.6.1:
