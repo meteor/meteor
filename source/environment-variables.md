@@ -11,7 +11,7 @@ Bind the application server to a specific network interface by IP address, for e
 
 <h2 id="DISABLE_WEBSOCKETS">DISABLE_WEBSOCKETS</h2>
 
-In the event that your own deployment platform does not support WebSockets, or you are confident that you will not benefit from them, setting this variable with `DISABLE_WEBSOCKET=1` will explicitly disable WebSockets and forcibly resort to the fallback polling-mechanism, instead of trying to detect this automatically.
+In the event that your own deployment platform does not support WebSockets, or you are confident that you will not benefit from them, setting this variable with `DISABLE_WEBSOCKETS=1` will explicitly disable WebSockets and forcibly resort to the fallback polling-mechanism, instead of trying to detect this automatically.
 
 <h2 id="HTTP_FORWARDED_COUNT">HTTP_FORWARDED_COUNT</h2>
 
