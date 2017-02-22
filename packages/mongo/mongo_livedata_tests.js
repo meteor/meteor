@@ -2198,6 +2198,18 @@ Tinytest.add('mongo-livedata - rewrite selector', function (test) {
   var oid = new Mongo.ObjectID();
   test.equal(Mongo.Collection._rewriteSelector(oid),
              {_id: oid});
+
+  // Make sure selectors with "length" properties are handled properly
+  // (verifies issue #8329 has been resolved).
+  const SomeSelector = function (length) {
+    this.length = length;
+  };
+  const length = 2;
+  const testSelector = new SomeSelector(length);
+  test.equal(
+    Mongo.Collection._rewriteSelector(testSelector),
+    { length }
+  );
 });
 
 testAsyncMulti('mongo-livedata - specified _id', [
