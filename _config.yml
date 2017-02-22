@@ -67,6 +67,7 @@ sidebar_categories:
     - packages/webapp
   Command Line:
     - commandline
+    - environment-variables
 github_repo: 'meteor/docs'
 content_root: 'source'
 
