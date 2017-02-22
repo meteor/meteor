@@ -33,9 +33,9 @@ MongoDB server oplog URL. If you're using a replica set (which you should), cons
 
 MongoDB server URL. Give a fully qualified URL (or comma-separated list of URLs) like `MONGO_URL="mongodb://user@password:myserver.com:10139"`. For more information see the [MongoDB docs](https://docs.mongodb.com/manual/reference/connection-string/).
 
-<h2 id="PACKAGE_DIRS">PACKAGE_DIRS</h2>
+<h2 id="METEOR_PACKAGE_DIRS">METEOR_PACKAGE_DIRS</h2>
 
-Colon-delimited list of local package directories to look in, outside your normal application structure, for example: `PACKAGE_DIRS="/usr/local/my_packages/"`
+Colon-delimited list of local package directories to look in, outside your normal application structure, for example: `METEOR_PACKAGE_DIRS="/usr/local/my_packages/"`. Note that this used to be `PACKAGE_DIRS` but was changed in Meteor 1.4.2.
 
 <h2 id="PORT">PORT</h2>
 
