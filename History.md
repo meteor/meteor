@@ -43,6 +43,9 @@
   `packages/coffeescript` to `packages/non-core/coffeescript`, so that it
   will not be subject to the constraints described above.
 
+* CoffeeScript source maps should be now be working properly in development.
+  [#8298](https://github.com/meteor/meteor/pull/8298)
+
 * The individual account "service" packages (`facebook`, `google`, `twitter`,
   `github`, `meteor-developer`, `meetup` and `weibo`) have been split into:
   - `<service>-oauth` (which interfaces with the `<service>` directly) and
