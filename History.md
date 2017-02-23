@@ -35,6 +35,10 @@
   ground restores meaning to Meteor releases, yet still permits patch
   updates to core packages.
 
+* The `cordova-lib` npm package has been updated to 6.4.0, along with
+  cordova-android (6.1.1) and cordova-ios (4.3.0), and various plugins.
+  [#8239](https://github.com/meteor/meteor/pull/8239)
+
 * The `coffeescript` Meteor package has been moved from
   `packages/coffeescript` to `packages/non-core/coffeescript`, so that it
   will not be subject to the constraints described above.
