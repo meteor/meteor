@@ -1517,7 +1517,7 @@ class ClientTarget extends Target {
     const program = {
       format: "web-program-pre1",
       manifest: manifest
-    }
+    };
 
     if (this.arch === 'web.cordova') {
       const { WebAppHashing } =
@@ -2464,7 +2464,7 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", function (
 
       builder.write('README', { data: new Buffer(
 `This is a Meteor application bundle. It has only one external dependency:
-Node.js 4.4.7 or newer. To run the application:
+Node.js ${process.version}. To run the application:
 
   $ (cd programs/server && npm install)
   $ export MONGO_URL='mongodb://user:password@host:port/databasename'
@@ -2866,7 +2866,7 @@ function bundle({
     nodePath,
     builders
   };
-};
+}
 
 // Returns null if there are no lint warnings and the app has no linters
 // defined. Returns an empty MessageSet if the app has a linter defined but
