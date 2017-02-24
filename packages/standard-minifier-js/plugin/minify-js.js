@@ -121,7 +121,7 @@ UglifyJSMinifier.prototype.processFilesForBundle = function (files, options) {
       var minified;
       try {
         minified = UglifyJSMinify(file.getContentsAsString(), minifyOptions);
-        if (! minified.code) {
+        if (!(minified && typeof minified.code === "string")) {
           throw new Error();
         }
       } catch (err) {
