@@ -147,6 +147,14 @@ Tinytest.add('observe-sequence - initial data for all sequence types', function 
     {addedAt: ["37", {_id: "37", bar: 2}, 1, null]}
   ]);
 
+  // sub-classed arrays
+  runOneObserveSequenceTestCase(test, function () {
+    return new ArraySubclass({_id: "13", foo: 1}, {_id: "37", bar: 2});
+  }, function () {}, [
+    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
+    {addedAt: ["37", {_id: "37", bar: 2}, 1, null]}
+  ]);
+
   runOneObserveSequenceTestCase(test, function () {
     var coll = new Mongo.Collection(null);
     coll.insert({_id: "13", foo: 1});
@@ -609,7 +617,7 @@ Tinytest.add('observe-sequence - subclassed number arrays', function (test) {
     dep.depend();
     return seq;
   }, function () {
-    seq = [1, 3, 2, 3];
+    seq = new ArraySubclass(1, 3, 2, 3);
     dep.changed();
   }, [
     {addedAt: [1, 1, 0, null]},

@@ -9,6 +9,8 @@ var warn = function () {
   }
 };
 
+function isArray(arr) {return arr instanceof Array || _.isArray(arr)}
+
 var idStringify = MongoID.idStringify;
 var idParse = MongoID.idParse;
 
@@ -94,7 +96,7 @@ ObserveSequence = {
 
         if (!seq) {
           seqArray = seqChangedToEmpty(lastSeqArray, callbacks);
-        } else if (seq instanceof Array || _.isArray(seq)) {
+        } else if (isArray(seq)) {
           seqArray = seqChangedToArray(lastSeqArray, seq, callbacks);
         } else if (isStoreCursor(seq)) {
           var result /* [seqArray, activeObserveHandle] */ =
@@ -126,7 +128,7 @@ ObserveSequence = {
   fetch: function (seq) {
     if (!seq) {
       return [];
-    } else if (seq instanceof Array || _.isArray(seq)) {
+    } else if (isArray(seq)) {
       return seq;
     } else if (isStoreCursor(seq)) {
       return seq.fetch();
