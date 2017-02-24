@@ -94,8 +94,7 @@ UglifyJSMinifier.prototype.processFilesForBundle = function (files, options) {
             // So in that case, 2 lines back is the file path.
             var parseErrorPath = contents[c - 2]
               .substring(3)
-              .replace(/\s+\/\//, "")
-            ;
+              .replace(/\s+\/\//, "");
 
             var minError = new Error(
               "UglifyJS minification error: \n\n" +
