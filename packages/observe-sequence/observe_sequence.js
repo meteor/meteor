@@ -9,6 +9,11 @@ var warn = function () {
   }
 };
 
+// isArray returns true for arrays of these types:
+// standard arrays: instanceof Array === true, _.isArray(arr) === true
+// vm generated arrays: instanceOf Array === false, _.isArray(arr) === true
+// subclassed arrays: instanceof Array === true, _.isArray(arr) === false
+// see specific tests
 function isArray(arr) {return arr instanceof Array || _.isArray(arr)}
 
 var idStringify = MongoID.idStringify;
