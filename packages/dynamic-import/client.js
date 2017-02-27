@@ -39,20 +39,21 @@ Module.prototype.dynamicImport = function (id) {
     var localTree;
     var missingTree;
 
-    return Promise.all(Object.keys(versions).map(function (id) {
-      return cache.check(id, versions[id]).then(function (code) {
-        addToTree(localTree = localTree || Object.create(null), id, code);
-      }, function (missing) {
-        addToTree(missingTree = missingTree || Object.create(null), id, 1);
+    return cache.checkMany(versions).then(function (sources) {
+      Object.keys(sources).forEach(function (id) {
+        var source = sources[id];
+        if (source) {
+          addToTree(localTree = localTree || Object.create(null), id, source);
+        } else {
+          addToTree(missingTree = missingTree || Object.create(null), id, 1);
+        }
       });
 
-    })).then(function () {
       if (localTree) {
-        installResults(localTree);
+        installResults(localTree, true);
       }
 
       return missingTree && fetchMissing(missingTree);
-
     }).then(get);
   });
 };
@@ -69,10 +70,11 @@ function fetchMissing(missingTree) {
   }).then(installResults);
 }
 
-function installResults(resultsTree) {
+function installResults(resultsTree, doNotCache) {
   var parts = [""];
   var trees = [];
   var options = [];
+  var versionsAndSourcesById = Object.create(null);
 
   function walk(tree) {
     if (typeof tree === "string") {
@@ -108,7 +110,12 @@ function installResults(resultsTree) {
       );
 
       // Intentionally do not delay resolution waiting for the cache.
-      cache.set(meta.module.id, meta.version, tree);
+      if (! doNotCache) {
+        versionsAndSourcesById[meta.module.id] = {
+          version: meta.version,
+          source: tree
+        };
+      }
 
     } else {
       Object.keys(tree).forEach(function (name) {
@@ -124,6 +131,10 @@ function installResults(resultsTree) {
   trees.forEach(function (tree, i) {
     meteorInstall(tree, options[i]);
   });
+
+  if (! doNotCache) {
+    cache.setMany(versionsAndSourcesById);
+  }
 }
 
 function addToTree(tree, id, value) {

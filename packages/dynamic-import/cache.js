@@ -1,70 +1,122 @@
-var PREFIX = "dynamic-import:";
-var ID_PREFIX = PREFIX + "id:";
-var VERSION_PREFIX = PREFIX + "version:";
-var RESOLVED = Promise.resolve();
-var MISSING_ERROR = new Error("version not found");
-var MISSING = Promise.reject(MISSING_ERROR);
-// Silence uncaught rejection warnings.
-MISSING.catch(function(){});
-var pendingClean = null;
+var dbPromise;
 
-function getItem(key) {
-  var value = Meteor._localStorage.getItem(key);
-  return typeof value === "string"
-    ? Promise.resolve(value)
-    : MISSING;
-}
+function withDB(callback) {
+  dbPromise = dbPromise || new Promise(function (resolve, reject) {
+    var request = global.indexedDB.open("MeteorDynamicImportCache", 1);
 
-function setItem(key, value) {
-  Meteor._localStorage.setItem(key, value);
-}
+    request.onupgradeneeded = function (event) {
+      var db = event.target.result;
+      db.createObjectStore("versionsById", { keyPath: "id" });
+      db.createObjectStore("sourcesByVersion", { keyPath: "version" });
+    };
 
-function clean() {
-  clearTimeout(pendingClean);
-  pendingClean = null;
-
-  var activeVersions = Object.create(null);
-  var allVersions = Object.create(null);
-
-  Object.keys(Meteor._localStorage).forEach(function (key) {
-    if (key.startsWith(ID_PREFIX)) {
-      activeVersions[Meteor._localStorage.getItem(key)] = true;
-    } else if (key.startsWith(VERSION_PREFIX)) {
-      var version = key.slice(VERSION_PREFIX.length);
-      allVersions[version] = key;
-    }
+    request.onerror = reject;
+    request.onsuccess = function (event) {
+      resolve(event.target.result);
+    };
   });
 
-  Object.keys(allVersions).forEach(function (version) {
-    if (activeVersions[version] !== true) {
-      Meteor._localStorage.removeItem(allVersions[version]);
-    }
-  });
+  return dbPromise.then(callback);
 }
 
-exports.check = function check(id, currentVersion) {
+var checkTxn;
+
+exports.checkMany = function (versions) {
+  var ids = Object.keys(versions);
+  var sourcesById = Object.create(null);
+
+  // Initialize sourcesById with null values to indicate all sources are
+  // missing (unless replaced with actual sources below).
+  ids.forEach(function (id) {
+    sourcesById[id] = null;
+  });
+
   if (! Meteor.isProduction) {
-    return MISSING;
+    return Promise.resolve(sourcesById);
   }
 
-  return getItem(ID_PREFIX + id).then(function (previousVersion) {
-    return currentVersion === previousVersion
-      ? getItem(VERSION_PREFIX + previousVersion)
-      : MISSING;
+  return withDB(function (db) {
+    checkTxn = checkTxn || db.transaction([
+      "versionsById",
+      "sourcesByVersion"
+    ], "readonly");
+
+    var versionsById = checkTxn.objectStore("versionsById");
+    var sourcesByVersion = checkTxn.objectStore("sourcesByVersion");
+
+    return Promise.all(ids.map(function (id) {
+      return get(versionsById, id).then(function (result) {
+        var previousVersion = result && result.version;
+        if (previousVersion === versions[id]) {
+          return get(
+            sourcesByVersion,
+            result.version
+          ).then(function (result) {
+            if (result) {
+              sourcesById[id] = result.source;
+            }
+          });
+        }
+      });
+
+    })).then(function () {
+      checkTxn = null;
+      return sourcesById;
+    });
   });
 };
 
-exports.set = function set(id, version, value) {
-  if (! Meteor.isProduction) {
-    return RESOLVED;
-  }
+function get(store, key) {
+  return new Promise(function (resolve, reject) {
+    var request = store.get(key);
+    request.onerror = reject;
+    request.onsuccess = function (event) {
+      resolve(event.target.result);
+    };
+  });
+}
 
-  if (! pendingClean) {
-    pendingClean = setTimeout(clean, 1000);
+exports.setMany = function (versionsAndSourcesById) {
+  if (Meteor.isProduction) {
+    setTimeout(function () {
+      setMany(versionsAndSourcesById);
+    }, 100);
   }
-
-  return Promise.all([
-    setItem(VERSION_PREFIX + version, value),
-    setItem(ID_PREFIX + id, version)
-  ]);
 };
+
+function setMany(versionsAndSourcesById) {
+  return withDB(function (db) {
+    var setTxn = db.transaction([
+      "versionsById",
+      "sourcesByVersion"
+    ], "readwrite");
+
+    var versionsById = setTxn.objectStore("versionsById");
+    var sourcesByVersion = setTxn.objectStore("sourcesByVersion");
+    var promises = [];
+
+    Object.keys(versionsAndSourcesById).forEach(function (id) {
+      var info = versionsAndSourcesById[id];
+
+      promises.push(put(versionsById, {
+        id: id,
+        version: info.version
+      }));
+
+      promises.push(put(sourcesByVersion, {
+        version: info.version,
+        source: info.source
+      }));
+    });
+
+    return Promise.all(promises);
+  });
+};
+
+function put(store, object) {
+  return new Promise(function (resolve, reject) {
+    var request = store.put(object);
+    request.onerror = reject;
+    request.onsuccess = resolve;
+  });
+}
