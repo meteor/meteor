@@ -772,11 +772,6 @@ main.registerCommand({
   }
 
   Console.info(
-    Console.command("meteor npm install"),
-    Console.options({ indent: 2 }),
-  );
-
-  Console.info(
     Console.command("meteor"), Console.options({ indent: 2 }));
 
   Console.info("");
