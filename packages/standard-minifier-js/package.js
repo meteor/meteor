@@ -8,7 +8,7 @@ Package.describe({
 Package.registerBuildPlugin({
   name: "minifyStdJS",
   use: [
-    'minifier-js'
+    'minifier-js@1.2.18-beta.0'
   ],
   sources: [
     'plugin/minify-js.js'
