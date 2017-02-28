@@ -160,4 +160,4 @@ Good commit messages are very important and you should make sure to explain what
 * A short and helpful commit title (maximum 80 characters).
 * A commit description which clearly explains the change if it's not super-obvious by the title.  Some description always helps!
 * Reference related issues and pull-requests by number in the description body (e.g. "#9999").
-* Add "Fixes", "Closes" or "Resolves" if that the addition of that commit fully fixes the issue.
+* Add "Fixes" before the issue number if the addition of that commit fully resolves the issue.
