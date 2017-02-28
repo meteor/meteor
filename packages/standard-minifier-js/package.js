@@ -2,18 +2,18 @@ Package.describe({
   name: 'standard-minifier-js',
   version: '2.0.0',
   summary: 'Standard javascript minifiers used with Meteor apps by default.',
-  documentation: 'README.md'
+  documentation: 'README.md',
 });
 
 Package.registerBuildPlugin({
   name: "minifyStdJS",
   use: [
-    'minifier-js',
-    'ecmascript'
+    'minifier-js@2.0.0',
+    'ecmascript@0.6.3',
   ],
   sources: [
-    'plugin/minify-js.js'
-  ]
+    'plugin/minify-js.js',
+  ],
 });
 
 Package.onUse(function(api) {

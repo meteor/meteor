@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
-  api.use('babel-compiler');
+  api.use('babel-compiler@6.15.0');
   api.export(['meteorBabelMinify']);
   api.addFiles(['minifier.js'], 'server');
 });

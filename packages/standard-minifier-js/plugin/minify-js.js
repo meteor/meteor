@@ -11,6 +11,8 @@ Plugin.registerMinifier({
 class meteorBabelMinifier {
   constructor() {}
 
+  settings() {}
+
   processFilesForBundle(files, options) {
     let mode = options.minifyMode;
 
@@ -20,7 +22,7 @@ class meteorBabelMinifier {
         file.addJavaScript({
           data: file.getContentsAsBuffer(),
           sourceMap: file.getSourceMap(),
-          path: file.getPathInBundle()
+          path: file.getPathInBundle(),
         });
       });
       return;
