@@ -1,5 +1,10 @@
 ## v.NEXT
 
+* The `standard-minifier-js` and `minifier-js` packages now have improved
+  error capturing to provide more information on otherwise unhelpful errors
+  thrown when UglifyJS encounters ECMAScript grammar it is not familiar with.
+  [#8414](https://github.com/meteor/meteor/pull/8414)
+
 ## v1.4.3.1, 2017-02-14
 
 * The `meteor-babel` npm package has been upgraded to version 0.14.4,
