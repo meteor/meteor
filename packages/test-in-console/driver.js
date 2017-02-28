@@ -31,9 +31,13 @@ var getName = function (result) {
 };
 
 // Calls console.log, but returns silently if console.log is not available
+// Also, due to a bug currently, we're joining these arguments together
+// instead of allowing them to have the normal glory of
+// ConsoleMessage.parameters
+// https://bugs.chromium.org/p/chromedriver/issues/detail?id=669
 var log = function (/*arguments*/) {
   if (typeof console !== 'undefined') {
-    console.log.apply(console, arguments);
+    console.log.call(console, Array.from(arguments).join(" "));
   }
 };
 
