@@ -1,2 +1,1 @@
-UglifyJS = Npm.require('uglify-js');
-UglifyJSMinify = UglifyJS.minify;
+meteorBabelMinify = Babel.minify;
