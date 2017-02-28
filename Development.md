@@ -151,6 +151,7 @@ To enable CircleCI for your development:
 * New code should match existing code (in the same vicinity) when the context of a change is minimal, but larger amounts of new code should follow the guide.
 * Do not change code that doesn't directly relate to the feature/bug that you're working on.
 * Basic linting is accomplished (via ESLint) by running `./scripts/admin/eslint/eslint.sh`.
+  * Many files have not been converted yet and are thus [excluded](https://github.com/meteor/meteor/blob/master/.eslintignore).
 
 ## Commit messages
 
