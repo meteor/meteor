@@ -50,8 +50,18 @@ can run Meteor directly from a Git checkout using these steps:
     $ /path/to/meteor-checkout/meteor run
     ```
 
-    > _Note:_ When running from a `git` checkout, you cannot pin apps to specific
-    > Meteor releases or change the release using `--release`.
+    > _Tip:_ Consider making an easy-to-run alias for frequent use:
+    >
+    >     alias mymeteor=/path/to-meteor-checkout/meteor
+    >
+    > This allows the use of `mymeteor` in place of `meteor`.  To persist this
+    > across shell logouts, simply add it to `~/.bashrc` or `.zshrc`.
+
+## Notes when running from a checkout
+
+The following are some distict differences you must pay attention to when running Meteor from a checkout:
+
+  * You cannot pin apps to specific Meteor releases or change the release using `--release`.
 
 ## Additional documentation
 
