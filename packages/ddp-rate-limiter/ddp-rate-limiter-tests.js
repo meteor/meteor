@@ -77,6 +77,68 @@ testAsyncMulti("ddp rate limiter - matchers get passed correct arguments", [
   }
 ]);
 
+testAsyncMulti("ddp rate limiter - callbacks get passed correct arguments", [
+  function (test, expect) {
+    _.extend(this, createTestUser(test, expect));
+  },
+  function (test, expect) {
+    var self = this;
+    Meteor.call("addRuleToDDPRateLimiter", expect(function(error, result) {
+     self.ruleId = result;
+    }));
+  },
+  function (test, expect) {
+    Meteor.call('dummyMethod', expect(function() {}));
+  },
+  function (test, expect) {
+    var self = this;
+    Meteor.call(
+      "getLastRateLimitEvent", expect(function (error, result) {
+        test.isTrue(result.reply.allowed);
+        test.isTrue(result.reply.timeToReset < RATE_LIMIT_INTERVAL_TIME_MS);
+        test.equal(result.reply.numInvocationsLeft, 4);
+
+        test.equal(result.ruleInput.userId, Meteor.userId());
+        test.equal(result.ruleInput.type, 'method');
+        test.equal(result.ruleInput.name, 'dummyMethod');
+      }));
+  },
+  function (test, expect) {
+    // Wait for the rule to reset
+    Meteor.setTimeout(expect(), RATE_LIMIT_INTERVAL_TIME_MS);
+  },
+  function (test, expect) {
+    // Call RATE_LIMIT_NUM_CALLS + 1 times to make the rule exceed limit and reject the execution
+    for (var i = 0; i < RATE_LIMIT_NUM_CALLS + 1; i++) {
+      Meteor.call('dummyMethod', expect(function() {}));
+    }
+  },
+  function (test, expect) {
+    var self = this;
+    Meteor.call(
+      "getLastRateLimitEvent", expect(function (error, result) {
+        test.isFalse(result.reply.allowed);
+        test.isTrue(result.reply.timeToReset < RATE_LIMIT_INTERVAL_TIME_MS);
+        test.equal(result.reply.numInvocationsLeft, 0);
+
+        test.equal(result.ruleInput.userId, Meteor.userId());
+        test.equal(result.ruleInput.type, 'method');
+        test.equal(result.ruleInput.name, 'dummyMethod');
+      }));
+  },
+  function (test, expect) {
+    Meteor.call("removeUserByUsername", this.username, expect(function () {}));
+  },
+  function (test, expect) {
+    var self = this;
+    // Cleanup
+    Meteor.call('removeRuleFromDDPRateLimiter', self.ruleId,
+      expect(function(error, result) {
+        test.equal(result,true);
+    }));
+  }
+]);
+
 testAsyncMulti("ddp rate limiter - we can return with type 'subscription'", [
   function (test, expect) {
     var self = this;
