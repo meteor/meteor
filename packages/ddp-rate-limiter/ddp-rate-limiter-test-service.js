@@ -40,7 +40,12 @@ Meteor.methods({
         return true;
       },
       connectionId: this.connection.id
-    }, RATE_LIMIT_NUM_CALLS, RATE_LIMIT_INTERVAL_TIME_MS);
+    }, RATE_LIMIT_NUM_CALLS, RATE_LIMIT_INTERVAL_TIME_MS, function(reply, ruleInput) {
+      if (connection.lastMethodName !== 'getLastRateLimitEvent'){
+        connection.lastRateLimitEvent.reply = reply;
+        connection.lastRateLimitEvent.ruleInput = ruleInput;
+      }
+    });
 
     return this.ruleId;
   },
