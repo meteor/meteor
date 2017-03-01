@@ -182,7 +182,7 @@ updated to their most recent version.
 To get more information about why a package is kept from upgrading, run the
 following:
 
-    meteor add package@<target-version>
+    meteor add <package>@<target-version>
 
 Options:
   --packages-only  Update the package versions only. Do not update the release.
