@@ -180,8 +180,7 @@ the project. This means that some packages, while updated, might still not be
 updated to their most recent version.
 
 To get more information about why a package is kept from upgrading, run the
-following (replacing the package name and version with the package listed
-in the "Newer versions" message):
+following:
 
     meteor add package@<target-version>
 
