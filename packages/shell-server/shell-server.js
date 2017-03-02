@@ -390,16 +390,12 @@ var evalCommandPromise = Promise.resolve();
 function evalCommand(command, context, filename, callback) {
   var repl = this;
 
-  function finish(error, result) {
-    if (error) {
-      if (repl._RecoverableError &&
-          isRecoverableError(error, repl)) {
-        callback(new repl._RecoverableError(error));
-      } else {
-        callback(error);
-      }
+  function wrapErrorIfRecoverable(error) {
+    if (repl._RecoverableError &&
+        isRecoverableError(error, repl)) {
+      return new repl._RecoverableError(error);
     } else {
-      callback(null, result);
+      return error;
     }
   }
 
@@ -424,7 +420,7 @@ function evalCommand(command, context, filename, callback) {
     try {
       command = Package.ecmascript.ECMAScript.compileForShell(command);
     } catch (error) {
-      finish(error);
+      callback(wrapErrorIfRecoverable(error));
       return;
     }
   }
@@ -435,13 +431,13 @@ function evalCommand(command, context, filename, callback) {
       displayErrors: false
     });
   } catch (parseError) {
-    finish(parseError);
+    callback(wrapErrorIfRecoverable(parseError));
     return;
   }
 
   evalCommandPromise.then(function () {
-    finish(null, script.runInThisContext());
-  }).catch(finish);
+    callback(null, script.runInThisContext());
+  }).catch(callback);
 }
 
 function stripParens(command) {
