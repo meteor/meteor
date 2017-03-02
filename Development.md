@@ -20,17 +20,6 @@ can run Meteor directly from a Git checkout using these steps:
     >
     >     $ git submodule update --init --recursive
 
-0. **_(Optional)_ Compile dependencies**
-
-    > This optional step requires a C and C++ compiler, autotools, and scons.
-    > If this step is skipped, Meteor will simply download pre-built binaries.
-
-    To build everything from scratch (`node`, `npm`, `mongodb`, etc.) run the following:
-
-    ```sh
-    $ ./scripts/generate-dev-bundle.sh # OPTIONAL!
-    ```
-
 0. **Run a Meteor command to install dependencies**
 
     > If you did not compile dependencies above, this will also download the binaries.
@@ -62,6 +51,38 @@ can run Meteor directly from a Git checkout using these steps:
 The following are some distict differences you must pay attention to when running Meteor from a checkout:
 
   * You cannot pin apps to specific Meteor releases or change the release using `--release`.
+  
+## The "Dev Bundle"
+
+The "dev bundle" (identified as the `dev_bundle` in the folder structure) is a generated bundle of code, packages and tools which are essential to providing the functionality of the Meteor tool (`meteor`) and the app bundles which it builds.
+
+When `meteor` is run from a checkout, a `dev_bundle` is automatically downloaded and should be sufficient for most development.  However, some more substantial changes will require rebuilding the `dev_bundle`.  This include changes to the:
+
+* Node version
+* NPM version
+* Mongo version
+* Packages [used by `meteor-tool`](scripts/dev-bundle-tool-package.js)
+* Packages [used by the server bundle](scripts/dev-bundle-server-package.js)
+
+While it may be tempting to make changes to these variables, please consider the repercussions (including compatibility and stability) and make sure to test changes extensively.  For example, major version changes (especially to Node and Mongo) usually requires substantial changes to other components.
+
+### "Dev Bundle" versions
+
+The working version number of the `dev_bundle` to be downloaded (or generated) is stored as `BUNDLE_VERSION` at the top of the [`meteor`](./meteor) script.  When submitting a pull request which changes components of the `dev_bundle`, the minor version should be bumped (at the very least).  In local development, it is advisable to use a different major version (e.g. `100.0.0`) so as not to clash with the official versions which cached locally.
+
+Cached versions of the `dev_bundle` are stored in the root directory of the checkout.  Keeping them around will prevent the need to re-download them when switching between branches, but they do become quite large as they collect so delete them as necessary!
+
+### Rebuilding the "Dev Bundle"
+
+Rebuilding requires a C and C++ compiler, `autotools`, and `scons`.
+
+To build everything from scratch (`node`, `npm`, `mongodb`, etc.) and re-package NPM modules, simply run the following script:
+
+```sh
+$ ./scripts/generate-dev-bundle.sh
+```
+
+This will generate a new tarball (`dev_bundle_<Platform>_<arch>_<version>.tar.gz`) in the root of the checkout.  Assuming you bumped the `BUNDLE_VERSION`, the new version will be extracted automatically when you run `./meteor`.  If you are rebuilding the same version (or didn't bump the version number), you should delete the existing `dev_bundle` directory to ensure the new tarball is extracted when you run `./meteor`.
 
 ## Additional documentation
 
