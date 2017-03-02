@@ -149,6 +149,8 @@ In a similar way to the method of specifying which tests TO run, there is a way 
 
 Simply remove the `--list` flag to actually run the matching tests.
 
+#### More reading
+
 For even more details on how to run Meteor Tool "self tests", please refer to the [Testing section of the Meteor Tool README](https://github.com/meteor/meteor/blob/master/tools/README.md#testing).
 
 ### Continuous integration
