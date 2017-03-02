@@ -48,7 +48,7 @@ can run Meteor directly from a Git checkout using these steps:
 
 ## Notes when running from a checkout
 
-The following are some distict differences you must pay attention to when running Meteor from a checkout:
+The following are some distinct differences you must pay attention to when running Meteor from a checkout:
 
   * You cannot pin apps to specific Meteor releases or change the release using `--release`.
   
@@ -58,13 +58,13 @@ The "dev bundle" (identified as the `dev_bundle` in the folder structure) is a g
 
 When `meteor` is run from a checkout, a `dev_bundle` is automatically downloaded and should be sufficient for most development.  However, some more substantial changes will require rebuilding the `dev_bundle`.  This include changes to the:
 
-* Node version
-* NPM version
-* Mongo version
+* Node.js version
+* npm version
+* MongoDB version
 * Packages [used by `meteor-tool`](scripts/dev-bundle-tool-package.js)
 * Packages [used by the server bundle](scripts/dev-bundle-server-package.js)
 
-While it may be tempting to make changes to these variables, please consider the repercussions (including compatibility and stability) and make sure to test changes extensively.  For example, major version changes (especially to Node and Mongo) usually requires substantial changes to other components.
+While it may be tempting to make changes to these variables, please consider the repercussions (including compatibility and stability) and make sure to test changes extensively.  For example, major version changes (especially to Node.js and MongoDB) usually requires substantial changes to other components.
 
 ### "Dev Bundle" versions
 
@@ -76,7 +76,7 @@ Cached versions of the `dev_bundle` are stored in the root directory of the chec
 
 Rebuilding requires a C and C++ compiler, `autotools`, and `scons`.
 
-To build everything from scratch (`node`, `npm`, `mongodb`, etc.) and re-package NPM modules, simply run the following script:
+To build everything from scratch and re-package dependencies, simply run the following script:
 
 ```sh
 $ ./scripts/generate-dev-bundle.sh
@@ -109,7 +109,7 @@ full test-suite (including the tests you added) to ensure you haven't broken any
 
     ./meteor test-packages
 
-Exactly in the same way that [`test-packages` works in standalone Meteor apps](https://guide.meteor.com/writing-atmosphere-packages.html#testing), the `test-packages` command will start up a Meteor app with [TinyTest](./packages/tinytest/README.md).  To view the results, just connect to `http://localhost:3000` (or your specified port) and view the results.
+Exactly in the same way that [`test-packages` works in standalone Meteor apps](https://guide.meteor.com/writing-atmosphere-packages.html#testing), the `test-packages` command will start up a Meteor app with [TinyTest](./packages/tinytest/README.md).  To view the results, just connect to `http://localhost:3000`.
 
 Specific portions of package tests can be run by passing a `<package name>` or `<package path>` to the `test-packages` command. For example, to run `mongo` tests, it's possible to run:
 
@@ -118,8 +118,6 @@ Specific portions of package tests can be run by passing a `<package name>` or `
 ### Running Meteor Tool self-tests
 
 While TinyTest and the `test-packages` command can be used to test internal Meteor packages, they cannot be used to test the Meteor Tool itself. The Meteor Tool is a node app that uses a home-grown "self test" system.
-
-For even more details on how to run Meteor Tool "self tests", please refer to the [Testing section of the Meteor Tool README](https://github.com/meteor/meteor/blob/master/tools/README.md#testing).
 
 #### Prerequisites
 
@@ -151,9 +149,11 @@ In a similar way to the method of specifying which tests TO run, there is a way 
 
 Simply remove the `--list` flag to actually run the matching tests.
 
+For even more details on how to run Meteor Tool "self tests", please refer to the [Testing section of the Meteor Tool README](https://github.com/meteor/meteor/blob/master/tools/README.md#testing).
+
 ### Continuous integration
 
-Any time a pull-request is submitted or a commit is pushed directly to the `devel` branch, continuous integration tests will be started automatically by the CI server.  These are run by [Circle CI](https://circleci.com/) and defined in the [`circle.yml` file](./circle.yml) file.  Even more specifically, the tests to run and the containers to run them under are defined in the [`/scripts/ci.sh`](scripts/ci.sh) script, which is a script which can run locally to replicate the exact tests.
+Any time a pull-request is submitted or a commit is pushed directly to the `devel` branch, continuous integration tests will be started automatically by the CI server.  These are run by [Circle CI](https://circleci.com/) and defined in the [`circle.yml` file](./circle.yml).  Even more specifically, the tests to run and the containers to run them under are defined in the [`/scripts/ci.sh`](scripts/ci.sh) script, which is a script which can run locally to replicate the exact tests.
 
 Not every test which is defined in a test spec is actually ran by the CI server.  Some tests are simply too long-running and some tests are just no longer relevant.  As one particular example, there is a suite of very slow tests grouped into a `slow` designator within the test framework.  These can be executed by adding the `--slow` option to the `self-test` command.
 
