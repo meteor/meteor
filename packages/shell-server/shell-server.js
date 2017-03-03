@@ -267,6 +267,11 @@ class Server {
       }
     });
 
+    // TODO: Node 6: Revisit this as repl._RecoverableError is now exported.
+    //       as `Recoverable` from `repl`.  Maybe revisit this entirely
+    //       as the docs have been updated too:
+    //       https://nodejs.org/api/repl.html#repl_custom_evaluation_functions
+    //       https://github.com/nodejs/node/blob/v6.x/lib/repl.js#L1398
     // Trigger one recoverable error using the default eval function, just
     // to capture the Recoverable error constructor, so that our custom
     // evalCommand function can wrap recoverable errors properly.
