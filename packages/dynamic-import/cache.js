@@ -76,15 +76,35 @@ function get(store, key) {
   });
 }
 
+var pendingVersionsAndSourcesById = Object.create(null);
+
 exports.setMany = function (versionsAndSourcesById) {
   if (Meteor.isProduction) {
-    setTimeout(function () {
-      setMany(versionsAndSourcesById);
-    }, 100);
+    Object.assign(
+      pendingVersionsAndSourcesById,
+      versionsAndSourcesById
+    );
+
+    // Delay the call to flushSetMany so that it doesn't contribute to the
+    // amount of time it takes to call module.dynamicImport.
+    if (! flushSetMany.timer) {
+      flushSetMany.timer = setTimeout(flushSetMany, 100);
+    }
   }
 };
 
-function setMany(versionsAndSourcesById) {
+function flushSetMany() {
+  if (checkTxn) {
+    // If checkMany is currently underway, postpone the flush until later,
+    // since updating the cache is less important than reading from it.
+    return flushSetMany.timer = setTimeout(flushSetMany, 100);
+  }
+
+  flushSetMany.timer = null;
+
+  var versionsAndSourcesById = pendingVersionsAndSourcesById;
+  pendingVersionsAndSourcesById = Object.create(null);
+
   return withDB(function (db) {
     var setTxn = db.transaction([
       "versionsById",
@@ -111,7 +131,7 @@ function setMany(versionsAndSourcesById) {
 
     return Promise.all(promises);
   });
-};
+}
 
 function put(store, object) {
   return new Promise(function (resolve, reject) {
