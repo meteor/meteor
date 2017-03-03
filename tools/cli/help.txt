@@ -174,7 +174,7 @@ options. ('meteor update foo:awesome').
 
 Passing --all-packages will update all packages, including indirect
 dependencies, to their latest compatible versions. This is similar to passing
-the names of all project packages to the meteor update command. Note that
+the names of all project packages to the 'meteor update' command. Note that
 updated packages must meet the constraints imposed by other packages used by
 the project. This means that some packages, while updated, might still not be
 updated to their most recent version.
