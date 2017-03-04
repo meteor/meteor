@@ -66,10 +66,10 @@ export class AccountsClient extends AccountsCommon {
   }
 
   /**
-   * @summary TBF
+   * @summary Register a new login function on client. Intended for OAuth package authors. You can call the login function by using `Accounts.callLoginFunction`.
    * @locus Client
-   * @param {String} funcName TBF.
-   * @param {Function} func TBF.
+   * @param {String} funcName The name of your login function. Used by `Accounts.callLoginFunction`. Should be the OAuth provider name accordingly.
+   * @param {Function} func The actual function you want to call. Just write it in the manner of `loginWithFoo`.
    */
   registerClientLoginFunction(funcName, func) {
     if (this._loginFuncs[funcName]) {
@@ -78,9 +78,10 @@ export class AccountsClient extends AccountsCommon {
     this._loginFuncs[funcName] = func;
   }
   /**
-   * @summary TBF
+   * @summary Call a login function defined using `Accounts.registerClientLoginFunction`.
    * @locus Client
-   * @param {String} funcName TBF.
+   * @param {String} funcName The name of the login function you wanted to call.
+   * @param {Array} funcArgs The `arguments` for the login function.
    */
   callLoginFunction(funcName, funcArgs) {
     if (!this._loginFuncs[funcName]) {
