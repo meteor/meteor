@@ -13,6 +13,9 @@ export class AccountsCommon {
     // and accounts-ui-unstyled.
     this._options = {};
 
+    // This is for .registerClientLoginFunction & .callLoginFunction.
+    this._loginFuncs = {};
+
     // Note that setting this.connection = null causes this.users to be a
     // LocalCollection, which is not what we want.
     this.connection = undefined;
@@ -146,6 +149,31 @@ export class AccountsCommon {
         self._options[key] = options[key];
       }
     });
+  }
+
+  /**
+   * @summary TBF
+   * @locus Anywhere
+   * @param {String} funcName TBF.
+   * @param {Function} func TBF.
+   */
+  registerClientLoginFunction(funcName, func) {
+      if (this._loginFuncs[funcName]) {
+          throw new Error(`${funcName} has been defined already`);
+      }
+      this._loginFuncs[funcName] = func;
+  }
+
+  /**
+   * @summary TBF
+   * @locus Anywhere
+   * @param {String} funcName TBF.
+   */
+  callLoginFunction(funcName, ...funcArgs) {
+      if (!this._loginFuncs[funcName]) {
+          throw new Error(`${funcName} was not defined`);
+      }
+      return this._loginFuncs[funcName](funcArgs);
   }
 
   /**
