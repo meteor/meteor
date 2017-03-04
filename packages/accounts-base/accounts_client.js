@@ -28,6 +28,9 @@ export class AccountsClient extends AccountsCommon {
 
     // Defined in localstorage_token.js.
     this._initLocalStorage();
+
+    // This is for .registerClientLoginFunction & .callLoginFunction.
+    this._loginFuncs = {};
   }
 
   ///
@@ -60,6 +63,30 @@ export class AccountsClient extends AccountsCommon {
    */
   loggingOut() {
     return this._loggingOut.get();
+  }
+
+  /**
+   * @summary TBF
+   * @locus Client
+   * @param {String} funcName TBF.
+   * @param {Function} func TBF.
+   */
+  registerClientLoginFunction(funcName, func) {
+      if (this._loginFuncs[funcName]) {
+          throw new Error(`${funcName} has been defined already`);
+      }
+      this._loginFuncs[funcName] = func;
+  }
+  /**
+   * @summary TBF
+   * @locus Client
+   * @param {String} funcName TBF.
+   */
+  callLoginFunction(funcName, ...funcArgs) {
+      if (!this._loginFuncs[funcName]) {
+          throw new Error(`${funcName} was not defined`);
+      }
+      return this._loginFuncs[funcName](funcArgs);
   }
 
   /**
