@@ -1,6 +1,21 @@
 import assert from "assert";
 
 describe("dynamic import(...)", function () {
+  if (global.indexedDB) {
+    const saveCache = process.env.METEOR_SAVE_DYNAMIC_IMPORT_CACHE;
+    if (! (saveCache && JSON.parse(saveCache))) {
+      it("cleared the IndexedDB cache", function () {
+        return new Promise((resolve, reject) => {
+          const deleteRequest =
+            global.indexedDB.deleteDatabase("MeteorDynamicImportCache");
+          deleteRequest.onerror =
+          deleteRequest.onblocked =
+          deleteRequest.onsuccess = resolve;
+        });
+      });
+    }
+  }
+
   it("import same module both statically and dynamically", function () {
     import moment from "moment";
     return import("./imports/date").then(date => {
