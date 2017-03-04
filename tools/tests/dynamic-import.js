@@ -13,7 +13,7 @@ selftest.define("dynamic import(...) in production", function () {
   s.cd("dynamic-import-test-app-prod", run.bind(s, true));
 });
 
-function run(prod) {
+function run(isProduction) {
   const sandbox = this;
   const args = [
     "test",
@@ -22,8 +22,11 @@ function run(prod) {
     "--driver-package", "dispatch:mocha-phantomjs"
   ];
 
-  if (prod) {
+  if (isProduction) {
+    sandbox.set("NODE_ENV", "production");
     args.push("--production");
+  } else {
+    sandbox.set("NODE_ENV", "development");
   }
 
   const run = sandbox.run(...args);
