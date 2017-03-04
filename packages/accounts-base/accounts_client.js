@@ -72,10 +72,10 @@ export class AccountsClient extends AccountsCommon {
    * @param {Function} func TBF.
    */
   registerClientLoginFunction(funcName, func) {
-      if (this._loginFuncs[funcName]) {
-          throw new Error(`${funcName} has been defined already`);
-      }
-      this._loginFuncs[funcName] = func;
+    if (this._loginFuncs[funcName]) {
+      throw new Error(`${funcName} has been defined already`);
+    }
+    this._loginFuncs[funcName] = func;
   }
   /**
    * @summary TBF
@@ -83,10 +83,10 @@ export class AccountsClient extends AccountsCommon {
    * @param {String} funcName TBF.
    */
   callLoginFunction(funcName, ...funcArgs) {
-      if (!this._loginFuncs[funcName]) {
-          throw new Error(`${funcName} was not defined`);
-      }
-      return this._loginFuncs[funcName](funcArgs);
+    if (!this._loginFuncs[funcName]) {
+      throw new Error(`${funcName} was not defined`);
+    }
+    return this._loginFuncs[funcName](funcArgs);
   }
 
   /**
