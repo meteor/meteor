@@ -1,16 +1,20 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 
-selftest.define("dynamic import(...)", function () {
+selftest.define("dynamic import(...) in development", function () {
   const s = new Sandbox();
-  s.createApp("dynamic-import-test-app", "dynamic-import");
-  s.cd("dynamic-import-test-app", function () {
-    run(s, false);
-    run(s, true);
-  });
+  s.createApp("dynamic-import-test-app-devel", "dynamic-import");
+  s.cd("dynamic-import-test-app-devel", run.bind(s, false));
 });
 
-function run(sandbox, prod) {
+selftest.define("dynamic import(...) in production", function () {
+  const s = new Sandbox();
+  s.createApp("dynamic-import-test-app-prod", "dynamic-import");
+  s.cd("dynamic-import-test-app-prod", run.bind(s, true));
+});
+
+function run(prod) {
+  const sandbox = this;
   const args = [
     "test",
     "--once",
