@@ -82,7 +82,7 @@ export class AccountsClient extends AccountsCommon {
    * @locus Client
    * @param {String} funcName TBF.
    */
-  callLoginFunction(funcName, ...funcArgs) {
+  callLoginFunction(funcName, funcArgs) {
     if (!this._loginFuncs[funcName]) {
       throw new Error(`${funcName} was not defined`);
     }
