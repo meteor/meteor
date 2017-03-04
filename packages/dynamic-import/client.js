@@ -58,13 +58,34 @@ Module.prototype.dynamicImport = function (id) {
   });
 };
 
+// Results from fetchMissing must be delivered in the same order as calls
+// to fetchMissing, because previous results may include modules needed by
+// more recent calls. In practice, results are usually delivered in order,
+// but might be delivered out of order because the __dynamicImport method
+// calls this.unblock(). To achieve this ordering of results while still
+// allowing parallel __dynamicImport method calls, we keep track of the
+// most recent Promise returned by fetchMissing, and delay resolving the
+// next Promise until the previous Promise has been resolved or rejected.
+var lastFetchMissingPromise = delayPromise;
+
 function fetchMissing(missingTree) {
-  return new Promise(function (resolve, reject) {
+  // Save the Promise that was most recent when fetchMissing was called.
+  var previousPromise = lastFetchMissingPromise;
+
+  // Update lastFetchMissingPromise immediately, without waiting for
+  // the results to be delivered.
+  return lastFetchMissingPromise = new Promise(function (resolve, reject) {
     Meteor.call(
       "__dynamicImport",
       missingTree,
       function (error, resultsTree) {
-        error ? reject(error) : resolve(resultsTree);
+        if (error) {
+          reject(error);
+        } else {
+          resolve = resolve.bind(null, resultsTree)
+          // Continue even if previousPromise was rejected.
+          previousPromise.then(resolve, resolve);
+        }
       }
     );
   }).then(installResults);

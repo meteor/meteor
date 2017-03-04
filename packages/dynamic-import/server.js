@@ -22,6 +22,7 @@ Object.keys(dynamicImportInfo).forEach(platform => {
 Meteor.methods({
   __dynamicImport(tree) {
     check(tree, Object);
+    this.unblock();
 
     const platform = this.connection ? "web.browser" : "server";
     const pathParts = [];
