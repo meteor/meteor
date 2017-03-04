@@ -19,7 +19,7 @@ function withDB(callback) {
   return dbPromise.then(callback);
 }
 
-var checkTxn;
+var checkCount = 0;
 
 exports.checkMany = function (versions) {
   var ids = Object.keys(versions);
@@ -36,45 +36,44 @@ exports.checkMany = function (versions) {
   }
 
   return withDB(function (db) {
-    checkTxn = checkTxn || db.transaction([
+    var txn = db.transaction([
       "versionsById",
       "sourcesByVersion"
     ], "readonly");
 
-    var versionsById = checkTxn.objectStore("versionsById");
-    var sourcesByVersion = checkTxn.objectStore("sourcesByVersion");
+    var versionsById = txn.objectStore("versionsById");
+    var sourcesByVersion = txn.objectStore("sourcesByVersion");
+
+    ++checkCount;
 
     return Promise.all(ids.map(function (id) {
-      return get(versionsById, id).then(function (result) {
-        var previousVersion = result && result.version;
-        if (previousVersion === versions[id]) {
-          return get(
-            sourcesByVersion,
-            result.version
-          ).then(function (result) {
-            if (result) {
-              sourcesById[id] = result.source;
-            }
-          });
-        }
+      return new Promise(function (resolve, reject) {
+        var versionRequest = versionsById.get(id);
+        versionRequest.onerror = reject;
+        versionRequest.onsuccess = function (event) {
+          var result = event.target.result;
+          var previousVersion = result && result.version;
+          if (previousVersion === versions[id]) {
+            var sourceRequest = sourcesByVersion.get(previousVersion);
+            sourceRequest.onerror = reject;
+            sourceRequest.onsuccess = function (event) {
+              var result = event.target.result;
+              if (result) {
+                sourcesById[id] = result.source;
+              }
+              resolve();
+            };
+          } else {
+            resolve();
+          }
+        };
       });
-
     })).then(function () {
-      checkTxn = null;
+      --checkCount;
       return sourcesById;
     });
   });
 };
-
-function get(store, key) {
-  return new Promise(function (resolve, reject) {
-    var request = store.get(key);
-    request.onerror = reject;
-    request.onsuccess = function (event) {
-      resolve(event.target.result);
-    };
-  });
-}
 
 var pendingVersionsAndSourcesById = Object.create(null);
 
@@ -94,7 +93,7 @@ exports.setMany = function (versionsAndSourcesById) {
 };
 
 function flushSetMany() {
-  if (checkTxn) {
+  if (checkCount > 0) {
     // If checkMany is currently underway, postpone the flush until later,
     // since updating the cache is less important than reading from it.
     return flushSetMany.timer = setTimeout(flushSetMany, 100);
