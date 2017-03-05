@@ -18,13 +18,19 @@ function withDB(callback) {
       db.createObjectStore("sourcesByVersion", { keyPath: "version" });
     };
 
-    request.onerror = reject;
+    request.onerror = makeOnError(reject);
     request.onsuccess = function (event) {
       resolve(event.target.result);
     };
   });
 
   return dbPromise.then(callback);
+}
+
+function makeOnError(reject) {
+  return function (event) {
+    reject(event.target.error);
+  };
 }
 
 var checkTxn;
@@ -78,13 +84,13 @@ exports.checkMany = function (versions) {
     return Promise.all(ids.map(function (id) {
       return new Promise(function (resolve, reject) {
         var versionRequest = versionsById.get(id);
-        versionRequest.onerror = reject;
+        versionRequest.onerror = makeOnError(reject);
         versionRequest.onsuccess = function (event) {
           var result = event.target.result;
           var previousVersion = result && result.version;
           if (previousVersion === versions[id]) {
             var sourceRequest = sourcesByVersion.get(previousVersion);
-            sourceRequest.onerror = reject;
+            sourceRequest.onerror = makeOnError(reject);
             sourceRequest.onsuccess = function (event) {
               var result = event.target.result;
               if (result) {
@@ -164,7 +170,7 @@ function flushSetMany() {
 function put(store, object) {
   return new Promise(function (resolve, reject) {
     var request = store.put(object);
-    request.onerror = reject;
+    request.onerror = makeOnError(reject);
     request.onsuccess = resolve;
   });
 }
