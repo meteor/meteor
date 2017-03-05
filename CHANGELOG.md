@@ -3,6 +3,7 @@ title: Changelog
 order: 1001
 description: A log of significant changes to the Meteor Guide.
 ---
+- 2017/03/05: Removed unsupported packages from the testing page, and updated the content with supported ones.
 - 2017/02/08: Updated MongoDb hosting services with more details and recommendations. [PR#609](https://github.com/meteor/guide/pull/609)
 - 2017/01/19: Updated recommendations for forcing SSL to avoid the `force-ssl` package when possible.
 - 2017/01/07: Created new section "TypeScript".
