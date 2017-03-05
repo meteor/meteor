@@ -1,8 +1,16 @@
 var dbPromise;
 
+function getIDB() {
+  if (typeof indexedDB !== "undefined") return indexedDB;
+  if (typeof webkitIndexedDB !== "undefined") return webkitIndexedDB;
+  if (typeof mozIndexedDB !== "undefined") return mozIndexedDB;
+  if (typeof OIndexedDB !== "undefined") return OIndexedDB;
+  if (typeof msIndexedDB !== "undefined") return msIndexedDB;
+}
+
 function withDB(callback) {
   dbPromise = dbPromise || new Promise(function (resolve, reject) {
-    var request = global.indexedDB.open("MeteorDynamicImportCache", 1);
+    var request = getIDB().open("MeteorDynamicImportCache", 1);
 
     request.onupgradeneeded = function (event) {
       var db = event.target.result;
