@@ -19,7 +19,34 @@ function withDB(callback) {
   return dbPromise.then(callback);
 }
 
+var checkTxn;
 var checkCount = 0;
+
+function acquireCheckTransaction(db) {
+  if (++checkCount === 1) {
+    checkTxn = db.transaction([
+      "versionsById",
+      "sourcesByVersion"
+    ], "readonly");
+
+    var store = checkTxn.objectStore("versionsById");
+
+    // Keep this transaction alive as long as checkTxn is defined.
+    (function spin() {
+      if (checkTxn) {
+        store.get(-Infinity).onsuccess = spin;
+      }
+    }());
+  }
+
+  return checkTxn;
+}
+
+function releaseCheckTransaction() {
+  if (--checkCount === 0) {
+    checkTxn = null;
+  }
+}
 
 exports.checkMany = function (versions) {
   var ids = Object.keys(versions);
@@ -36,15 +63,9 @@ exports.checkMany = function (versions) {
   }
 
   return withDB(function (db) {
-    var txn = db.transaction([
-      "versionsById",
-      "sourcesByVersion"
-    ], "readonly");
-
+    var txn = acquireCheckTransaction(db);
     var versionsById = txn.objectStore("versionsById");
     var sourcesByVersion = txn.objectStore("sourcesByVersion");
-
-    ++checkCount;
 
     return Promise.all(ids.map(function (id) {
       return new Promise(function (resolve, reject) {
@@ -69,7 +90,7 @@ exports.checkMany = function (versions) {
         };
       });
     })).then(function () {
-      --checkCount;
+      releaseCheckTransaction();
       return sourcesById;
     });
   });
@@ -93,7 +114,7 @@ exports.setMany = function (versionsAndSourcesById) {
 };
 
 function flushSetMany() {
-  if (checkCount > 0) {
+  if (checkTxn) {
     // If checkMany is currently underway, postpone the flush until later,
     // since updating the cache is less important than reading from it.
     return flushSetMany.timer = setTimeout(flushSetMany, 100);
