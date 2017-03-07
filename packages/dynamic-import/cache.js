@@ -1,3 +1,4 @@
+var hasOwn = Object.prototype.hasOwnProperty;
 var dbPromise;
 
 function getIDB() {
@@ -10,12 +11,26 @@ function getIDB() {
 
 function withDB(callback) {
   dbPromise = dbPromise || new Promise(function (resolve, reject) {
-    var request = getIDB().open("MeteorDynamicImportCache", 1);
+    var idb = getIDB();
+    if (! idb) {
+      throw new Error("IndexedDB not available");
+    }
+
+    // Incrementing the version number causes all existing object stores
+    // to be deleted and recreates those specified by objectStoreMap.
+    var request = idb.open("MeteorDynamicImportCache", 2);
 
     request.onupgradeneeded = function (event) {
       var db = event.target.result;
-      db.createObjectStore("versionsById", { keyPath: "id" });
-      db.createObjectStore("sourcesByVersion", { keyPath: "version" });
+
+      // It's fine to delete existing object stores since onupgradeneeded
+      // is only called when we change the DB version number, and the data
+      // we're storing is disposable/reconstructible.
+      Array.from(db.objectStoreNames).forEach(db.deleteObjectStore, db);
+
+      Object.keys(objectStoreMap).forEach(function (name) {
+        db.createObjectStore(name, objectStoreMap[name]);
+      });
     };
 
     request.onerror = makeOnError(reject, "indexedDB.open");
@@ -26,6 +41,10 @@ function withDB(callback) {
 
   return dbPromise.then(callback);
 }
+
+var objectStoreMap = {
+  sourcesByVersion: { keyPath: "version" }
+};
 
 function makeOnError(reject, source) {
   return function (event) {
@@ -54,11 +73,9 @@ exports.checkMany = function (versions) {
 
   return withDB(function (db) {
     var txn = db.transaction([
-      "versionsById",
       "sourcesByVersion"
     ], "readonly");
 
-    var versionsById = txn.objectStore("versionsById");
     var sourcesByVersion = txn.objectStore("sourcesByVersion");
 
     ++checkCount;
@@ -70,24 +87,14 @@ exports.checkMany = function (versions) {
 
     return Promise.all(ids.map(function (id) {
       return new Promise(function (resolve, reject) {
-        var versionRequest = versionsById.get(id);
-        versionRequest.onerror = makeOnError(reject, "versionsById.get");
-        versionRequest.onsuccess = function (event) {
+        var sourceRequest = sourcesByVersion.get(versions[id]);
+        sourceRequest.onerror = makeOnError(reject, "sourcesByVersion.get");
+        sourceRequest.onsuccess = function (event) {
           var result = event.target.result;
-          var previousVersion = result && result.version;
-          if (previousVersion === versions[id]) {
-            var sourceRequest = sourcesByVersion.get(previousVersion);
-            sourceRequest.onerror = makeOnError(reject, "sourcesByVersion.get");
-            sourceRequest.onsuccess = function (event) {
-              var result = event.target.result;
-              if (result) {
-                sourcesById[id] = result.source;
-              }
-              resolve();
-            };
-          } else {
-            resolve();
+          if (result) {
+            sourcesById[id] = result.source;
           }
+          resolve();
         };
       });
     })).then(finish, finish);
@@ -125,29 +132,20 @@ function flushSetMany() {
 
   return withDB(function (db) {
     var setTxn = db.transaction([
-      "versionsById",
       "sourcesByVersion"
     ], "readwrite");
 
-    var versionsById = setTxn.objectStore("versionsById");
     var sourcesByVersion = setTxn.objectStore("sourcesByVersion");
-    var promises = [];
 
-    Object.keys(versionsAndSourcesById).forEach(function (id) {
-      var info = versionsAndSourcesById[id];
-
-      promises.push(put(versionsById, {
-        id: id,
-        version: info.version
-      }));
-
-      promises.push(put(sourcesByVersion, {
-        version: info.version,
-        source: info.source
-      }));
-    });
-
-    return Promise.all(promises);
+    return Promise.all(
+      Object.keys(versionsAndSourcesById).map(function (id) {
+        var info = versionsAndSourcesById[id];
+        return put(sourcesByVersion, {
+          version: info.version,
+          source: info.source
+        });
+      })
+    );
   });
 }
 
