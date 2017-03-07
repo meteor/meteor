@@ -115,7 +115,12 @@ The easiest way to get a working Android development environment is by installin
 
 Please refer to [the Android Studio installation instructions](http://developer.android.com/sdk/installing/index.html?pkg=studio) for more details on the exact steps to follow.
 
-> There is no need to use Android Studio if you prefer a stand-alone install. Just make sure you install the most recent versions of the [Android SDK Tools](http://developer.android.com/sdk/index.html#Other) and download the required [additional packages](http://developer.android.com/sdk/installing/adding-packages.html) yourself using the [Android SDK Manager](http://developer.android.com/tools/help/sdk-manager.html). Make sure to select SDK Platform API 23, because that is what the version of Cordova we bundle requires.
+> There is no need to use Android Studio if you prefer a stand-alone install. Just make sure you install the most recent versions of the [Android SDK Tools](http://developer.android.com/sdk/index.html#Other) and download the required [additional packages](http://developer.android.com/sdk/installing/adding-packages.html) yourself using the [Android SDK Manager](http://developer.android.com/tools/help/sdk-manager.html).
+
+Make sure to select the correct version of the [Android Studio SDK Tools](https://developer.android.com/studio/releases/sdk-tools.html):
+
+ * Meteor 1.4.3.1 or later: SDK Tools v.25
+ * Meteor 1.4.2.x or before: SDK Tools v.23
 
 <h4 id="ubuntu-make">Using Ubuntu Make</h4>
 
