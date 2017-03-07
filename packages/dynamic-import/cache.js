@@ -29,10 +29,10 @@ function withDB(callback) {
 
 function makeOnError(reject, source) {
   return function (event) {
-    var error = new Error("IndexedDB failure in " + source);
-    var idbError = event.target.error;
-    error.stack = idbError && idbError.stack;
-    reject(error);
+    reject(new Error(
+      "IndexedDB failure in " + source + " " +
+        JSON.stringify(event.target)
+    ));
   };
 }
 
