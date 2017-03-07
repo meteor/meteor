@@ -18,7 +18,7 @@ function withDB(callback) {
       db.createObjectStore("sourcesByVersion", { keyPath: "version" });
     };
 
-    request.onerror = makeOnError(reject);
+    request.onerror = makeOnError(reject, "indexedDB.open");
     request.onsuccess = function (event) {
       resolve(event.target.result);
     };
@@ -27,9 +27,12 @@ function withDB(callback) {
   return dbPromise.then(callback);
 }
 
-function makeOnError(reject) {
+function makeOnError(reject, source) {
   return function (event) {
-    reject(event.target.error);
+    var error = new Error("IndexedDB failure in " + source);
+    var idbError = event.target.error;
+    error.stack = idbError && idbError.stack;
+    reject(error);
   };
 }
 
@@ -84,13 +87,13 @@ exports.checkMany = function (versions) {
     return Promise.all(ids.map(function (id) {
       return new Promise(function (resolve, reject) {
         var versionRequest = versionsById.get(id);
-        versionRequest.onerror = makeOnError(reject);
+        versionRequest.onerror = makeOnError(reject, "versionsById.get");
         versionRequest.onsuccess = function (event) {
           var result = event.target.result;
           var previousVersion = result && result.version;
           if (previousVersion === versions[id]) {
             var sourceRequest = sourcesByVersion.get(previousVersion);
-            sourceRequest.onerror = makeOnError(reject);
+            sourceRequest.onerror = makeOnError(reject, "sourcesByVersion.get");
             sourceRequest.onsuccess = function (event) {
               var result = event.target.result;
               if (result) {
@@ -170,7 +173,7 @@ function flushSetMany() {
 function put(store, object) {
   return new Promise(function (resolve, reject) {
     var request = store.put(object);
-    request.onerror = makeOnError(reject);
+    request.onerror = makeOnError(reject, store.name + ".put");
     request.onsuccess = resolve;
   });
 }
