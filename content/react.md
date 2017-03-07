@@ -334,7 +334,7 @@ Meteor.startup(() => {
 });
 ```
 
-When using React Router in Meteor, you can follow roughly the [same principles](routing.html) as when using Flow Router, but you should also consider the idioms outlined in React Router's own  [documentation](https://github.com/reactjs/react-router/blob/latest/docs/Introduction.md).
+When using React Router in Meteor, you can follow roughly the [same principles](routing.html) as when using Flow Router, but you should also consider the idioms outlined in React Router's own  [documentation](https://github.com/ReactTraining/react-router).
 
 These include some notable differences like:
  - React Router encourages you to couple your URL design and layout hierarchy in the route definition. Flow Router is more flexible, although it can involve much more boilerplate as a result.
