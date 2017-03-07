@@ -12,8 +12,12 @@ dependencies:
     - ".babel-cache"
   override:
     # shouldn't take longer than 10 minutes
-    - METEOR_PRETTY_OUTPUT=0 METEOR_DISABLE_OPTIMISTIC_CACHING=1 ./meteor --get-ready:
+    - ./meteor --get-ready:
         timeout: 600
+        environment:
+          METEOR_PRETTY_OUTPUT: 0
+          METEOR_DISABLE_OPTIMISTIC_CACHING: 1
+          TOOL_NODE_FLAGS: --expose-gc
 
 test:
   override:
