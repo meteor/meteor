@@ -63,6 +63,11 @@ exports.checkMany = function (versions) {
 
     ++checkCount;
 
+    function finish() {
+      --checkCount;
+      return sourcesById;
+    }
+
     return Promise.all(ids.map(function (id) {
       return new Promise(function (resolve, reject) {
         var versionRequest = versionsById.get(id);
@@ -85,10 +90,7 @@ exports.checkMany = function (versions) {
           }
         };
       });
-    })).then(function () {
-      --checkCount;
-      return sourcesById;
-    });
+    })).then(finish, finish);
   });
 };
 
