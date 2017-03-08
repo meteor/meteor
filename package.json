@@ -1,7 +1,7 @@
 {
   "name": "meteor-babel",
   "author": "Ben <ben@meteor.com>",
-  "version": "0.15.2",
+  "version": "0.16.0",
   "license": "MIT",
   "description": "Babel wrapper package for use with Meteor",
   "keywords": [
@@ -33,6 +33,7 @@
     "babel-plugin-syntax-dynamic-import": "^6.18.0",
     "babel-plugin-transform-es2015-modules-commonjs": "^6.22.0",
     "babel-plugin-transform-runtime": "^6.22.0",
+    "babel-preset-babili": "^0.0.11",
     "babel-preset-meteor": "6.22.0",
     "babel-preset-react": "^6.22.0",
     "babel-runtime": "^6.22.0",
