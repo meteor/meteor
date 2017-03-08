@@ -570,7 +570,7 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
               // inserting a new doc and we know its id, then
               // return that id as well.
 
-              if (options.upsert && knownId) {
+              if (options.upsert && meteorResult.insertedId && knownId) {
                 meteorResult.insertedId = knownId;
               }
               callback(err, meteorResult);
@@ -606,8 +606,8 @@ var isModificationMod = function (mod) {
 };
 
 var transformResult = function (driverResult) {
-  var meteorResult = { numberAffected: (_.isNumber(driverResult)) ? driverResult : 0 };
-  if (driverResult && driverResult.result) {
+  var meteorResult = { numberAffected: 0 };
+  if (driverResult) {
     var mongoResult = driverResult.result;
 
     // On updates with upsert:true, the inserted values come as a list of
@@ -740,11 +740,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
                         bindEnvironmentForWrite(function (err, result) {
                           if (err) {
                             callback(err);
-                          } else if (_.isNumber(result) && result != 0) {
-                            callback(null, {
-                              numberAffected: result
-                            });
-                          } else if (result && result.result && result.result.n != 0) {
+                          } else if (result && result.result.n != 0) {
                             callback(null, {
                               numberAffected: result.result.n
                             });
@@ -772,7 +768,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
                           }
                         } else {
                           callback(null, {
-                            numberAffected: (_.isNumber(result)) ? result : result.result.upserted.length,
+                            numberAffected: result.result.upserted.length,
                             insertedId: insertedId,
                           });
                         }
