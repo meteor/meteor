@@ -140,19 +140,15 @@ function flushSetMany() {
     return Promise.all(
       Object.keys(versionsAndSourcesById).map(function (id) {
         var info = versionsAndSourcesById[id];
-        return put(sourcesByVersion, {
-          version: info.version,
-          source: info.source
+        return new Promise(function (resolve, reject) {
+          var request = sourcesByVersion.put({
+            version: info.version,
+            source: info.source
+          });
+          request.onerror = makeOnError(reject, "sourcesByVersion.put");
+          request.onsuccess = resolve;
         });
       })
     );
-  });
-}
-
-function put(store, object) {
-  return new Promise(function (resolve, reject) {
-    var request = store.put(object);
-    request.onerror = makeOnError(reject, store.name + ".put");
-    request.onsuccess = resolve;
   });
 }
