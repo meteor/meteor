@@ -38,7 +38,7 @@ function run(isProduction) {
 
   const run = sandbox.run(...args);
 
-  run.waitSecs(60);
+  run.waitSecs(90);
   run.match("App running at");
   run.match("SERVER FAILURES: 0");
   run.match("CLIENT FAILURES: 0");
