@@ -475,7 +475,13 @@ const isPortable = Profile("meteorNpm.isPortable", dir => {
     fs.unlink(portableFile, error => {});
   }
 
-  const pkgJson = canCache && optimisticReadJsonOrNull(pkgJsonPath);
+  const pkgJson = canCache && optimisticReadJsonOrNull(pkgJsonPath, {
+    // A syntactically incorrect `package.json` isn't likely to have other
+    // effects since the npm itself likely won't install but the developer has
+    // no control over that happening so we should allow this.
+    allowSyntaxError: true
+  });
+
   const hasBuildScript =
     pkgJson &&
     pkgJson.scripts &&
