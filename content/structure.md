@@ -98,7 +98,7 @@ These `main.js` files won't do anything themselves, but they should import some 
 
 <h3 id="example-app-structure">Example directory layout</h3>
 
-To start, let's look at our [Todos example application](https://github.com/meteor/todos), which is a great example to follow when structuring your app. Here's an overview of its directory structure:
+To start, let's look at our [Todos example application](https://github.com/meteor/todos), which is a great example to follow when structuring your app. Below is an overview of its directory structure. You can generate a new app with this structure using the command `meteor create appName --full`.
 
 ```sh
 imports/
