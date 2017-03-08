@@ -10,7 +10,7 @@ Package.describe({
 });
 
 Npm.depends({
-  'meteor-babel': 'git+https://github.com/eagerestwolf/babel#master'
+  'meteor-babel': '0.16.0'
 });
 
 Package.onUse(function (api) {
