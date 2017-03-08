@@ -67,7 +67,7 @@ There are two main kinds of test driver packages:
 
 <img src="images/mocha-test-results.png">
 
-- **Console reporters**: These run completely on the command-line and are primary used for automated testing like [continuous integration](#ci) (as we'll see, typically PhantomJS is used to drive such tests).
+- **Console reporters**: These run completely on the command-line and are primary used for automated testing like [continuous integration](#ci).
 
 <h3 id="mocha">Recommended: Mocha</h3>
 
@@ -76,9 +76,8 @@ In this article, we'll use the popular [Mocha](https://mochajs.org) test runner 
 There are several options. Choose the ones that makes sense for your app. You may depend on more than one and set up different test commands for different situations.
 
 * [practicalmeteor:mocha](https://atmospherejs.com/practicalmeteor/mocha) Runs client and server package or app tests and displays all results in a browser. Use [spacejam](https://www.npmjs.com/package/spacejam) for command line / CI support.
-* [dispatch:mocha-phantomjs](https://atmospherejs.com/dispatch/mocha-phantomjs) Runs client and server package or app tests using PhantomJS and reports all results in the server console. Can be used for running tests on a CI server. Has a watch mode.
+* [dispatch:mocha](https://atmospherejs.com/dispatch/mocha) Runs client and/or server package or app tests and reports all results in the server console. Supports various browsers for running client tests, including PhantomJS, Selenium ChromeDriver, and Electron. Can be used for running tests on a CI server. Has a watch mode.
 * [dispatch:mocha-browser](https://atmospherejs.com/dispatch/mocha-browser) Runs client and server package or app tests with Mocha reporting client results in a web browser and server results in the server console. Has a watch mode.
-* [dispatch:mocha](https://atmospherejs.com/dispatch/mocha) Runs server-only package or app tests with Mocha and reports all results in the server console. Can be used for running tests on a CI server. Has a watch mode.
 
 These packages don't do anything in development or production mode. They declare themselves `testOnly` so they are not even loaded outside of testing. But when our app is run in [test mode](#test-modes), the test driver package takes over, executing test code on both the client and server, and rendering results to the browser.
 
