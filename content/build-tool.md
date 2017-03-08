@@ -211,6 +211,8 @@ Every Meteor app comes with production minification by default with the `standar
 
 Minification usually happens when you `meteor deploy` or `meteor build` your app. If you have an error in production that you suspect is related to minification, you can run the minified version of your app locally with `meteor --production`.
 
+> Note that files with the `.min.js` filename extension are not minified by `standard-minifier-js`.
+
 <h2 id="build-plugins">Build plugins</h2>
 
 The most powerful feature of Meteor's build system is the ability to define custom build plugins. If you find yourself writing scripts that mangle one type of file into another, merge multiple files, or something else, it's likely that these scripts would be better implemented as a build plugin. The `ecmascript`, `templating`, and `coffeescript` packages are all implemented as build plugins, so you can replace them with your own versions if you want to!
