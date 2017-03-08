@@ -1,4 +1,6 @@
-if (Package['accounts-ui'] && !Package.hasOwnProperty('weibo-config-ui')) {
+if (Package['accounts-ui']
+    && !Package['service-configuration']
+    && !Package.hasOwnProperty('weibo-config-ui')) {
   console.warn(
     "Note: You're using accounts-ui and accounts-weibo,\n" +
     "but didn't install the configuration UI for the Weibo\n" +

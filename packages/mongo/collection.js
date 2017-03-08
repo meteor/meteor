@@ -378,7 +378,8 @@ Mongo.Collection._rewriteSelector = function (selector) {
     return {_id: Random.id()};
 
   var ret = {};
-  _.each(selector, function (value, key) {
+  Object.keys(selector).forEach((key) => {
+    const value = selector[key];
     // Mongo supports both {field: /foo/} and {field: {$regex: /foo/}}
     if (value instanceof RegExp) {
       ret[key] = convertRegexpToMongoSelector(value);
@@ -388,8 +389,7 @@ Mongo.Collection._rewriteSelector = function (selector) {
       // override the ones set on $regex.
       if (value.$options !== undefined)
         ret[key].$options = value.$options;
-    }
-    else if (_.contains(['$or','$and','$nor'], key)) {
+    } else if (_.contains(['$or','$and','$nor'], key)) {
       // Translate lower levels of $and/$or/$nor
       ret[key] = _.map(value, function (v) {
         return Mongo.Collection._rewriteSelector(v);

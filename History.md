@@ -43,9 +43,16 @@
   ground restores meaning to Meteor releases, yet still permits patch
   updates to core packages.
 
+* The `cordova-lib` npm package has been updated to 6.4.0, along with
+  cordova-android (6.1.1) and cordova-ios (4.3.0), and various plugins.
+  [#8239](https://github.com/meteor/meteor/pull/8239)
+
 * The `coffeescript` Meteor package has been moved from
   `packages/coffeescript` to `packages/non-core/coffeescript`, so that it
   will not be subject to the constraints described above.
+
+* CoffeeScript source maps should be now be working properly in development.
+  [#8298](https://github.com/meteor/meteor/pull/8298)
 
 * The individual account "service" packages (`facebook`, `google`, `twitter`,
   `github`, `meteor-developer`, `meetup` and `weibo`) have been split into:
@@ -314,6 +321,15 @@
 
 * The `coffeescript` package now natively supports `import` and `export`
   declarations. [#7818](https://github.com/meteor/meteor/pull/7818)
+
+* Due to changes in how Cordova generates version numbers for iOS and Android
+  apps, you may experience issues with apps updating on user devices.  To avoid
+  this, consider managing the `buildNumber` manually using
+  `App.info('buildNumber', 'XXX');` in `mobile-config.js`. There are additional
+  considerations if you have been setting `android:versionCode` or
+  `ios-CFBundleVersion`.  See
+  [#7205](https://github.com/meteor/meteor/issues/7205) and
+  [#6978](https://github.com/meteor/meteor/issues/6978) for more information.
 
 ## v1.4.1.3, 2016-10-21
 
