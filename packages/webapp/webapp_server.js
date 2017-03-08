@@ -788,7 +788,7 @@ var runWebAppServer = function () {
     connectHandlers: packageAndAppHandlers,
     rawConnectHandlers: rawConnectHandlers,
     httpServer: httpServer,
-    connectMiddleware: app,
+    connectApp: app,
     // For testing.
     suppressConnectErrors: function () {
       suppressConnectErrors = true;
