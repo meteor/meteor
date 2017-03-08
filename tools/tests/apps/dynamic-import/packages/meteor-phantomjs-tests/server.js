@@ -3,7 +3,7 @@ const childProcess = Npm.require('child_process');
 
 const PHANTOMJS_SCRIPT_FILE_NAME = 'phantomjsScript.js';
 
-function startPhantom({
+export function startPhantom({
   stdout,
   stderr,
   done,
@@ -15,7 +15,24 @@ function startPhantom({
     console.log('PhantomJS Script Path:', scriptPath);
   }
 
-  const phantomProcess = childProcess.execFile(phantomjs.path, [scriptPath], {
+  const args = [];
+  const keyPrefix = "METEOR_PHANTOMJS_";
+  Object.keys(process.env).forEach(key => {
+    if (key.startsWith(keyPrefix)) {
+      console.log(keyPrefix);
+      args.push(
+        "--" + key
+          .slice(keyPrefix.length)
+          .toLowerCase()
+          .replace(/_/g, "-"),
+        process.env[key]
+      );
+    }
+  });
+
+  args.push(scriptPath);
+
+  const phantomProcess = childProcess.execFile(phantomjs.path, args, {
     env: {
       ROOT_URL: process.env.ROOT_URL,
     },
@@ -32,5 +49,3 @@ function startPhantom({
   phantomProcess.stdout.on('data', stdout);
   phantomProcess.stderr.on('data', stderr);
 }
-
-export { startPhantom };
