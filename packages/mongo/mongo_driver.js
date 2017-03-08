@@ -128,17 +128,12 @@ MongoConnection = function (url, options) {
   self._observeMultiplexers = {};
   self._onFailoverHook = new Hook;
 
-  var mongoOptions = _.extend({
-    db: { safe: true },
-    // http://mongodb.github.io/node-mongodb-native/2.2/api/Server.html
-    server: {
-      // Reconnect on error.
-      autoReconnect: true,
-      // Try to reconnect forever, instead of stopping after 30 tries (the
-      // default), with each attempt separated by 1000ms.
-      reconnectTries: Infinity
-    },
-    replSet: {}
+  var mongoOptions = Object.assign({
+    // Reconnect on error.
+    autoReconnect: true,
+    // Try to reconnect forever, instead of stopping after 30 tries (the
+    // default), with each attempt separated by 1000ms.
+    reconnectTries: Infinity
   }, Mongo._connectionOptions);
 
   // Disable the native parser by default, unless specifically enabled
@@ -150,7 +145,7 @@ MongoConnection = function (url, options) {
   //   to a different platform (aka deploy)
   // We should revisit this after binary npm module support lands.
   if (!(/[\?&]native_?[pP]arser=/.test(url))) {
-    mongoOptions.db.native_parser = false;
+    mongoOptions.native_parser = false;
   }
 
   // Internally the oplog connections specify their own poolSize
@@ -158,8 +153,7 @@ MongoConnection = function (url, options) {
   if (_.has(options, 'poolSize')) {
     // If we just set this for "server", replSet will override it. If we just
     // set it for replSet, it will be ignored if we're not using a replSet.
-    mongoOptions.server.poolSize = options.poolSize;
-    mongoOptions.replSet.poolSize = options.poolSize;
+    mongoOptions.poolSize = options.poolSize;
   }
 
   self.db = null;
