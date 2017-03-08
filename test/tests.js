@@ -28,7 +28,17 @@ describe("meteor-babel", () => {
   });
 
   it("should minify the code provided", function() {
-    const code = "class Mangler { constructor(program) { this.program = program; } } /* need this since otherwise Mangler isn't used */ new Mangler();";
+    const code = [
+      "class Mangler {",
+      "  constructor(program) {",
+      "    this.program = program;",
+      "  }",
+      "}",
+      "",
+      "// need this since otherwise Mangler isn't used",
+      "new Mangler();"
+    ].join("\n");
+
     assert.strictEqual(
       meteorBabel.minify(code).code,
       "class Mangler{constructor(a){this.program=a}}new Mangler;"
