@@ -57,6 +57,8 @@ specify a different port use the `--debug-port <port>` option.
 The same debugging functionality can be achieved by adding the `--debug-port <port>`
 option to other `meteor` tool commands, such as `meteor run` and `meteor test-packages`.
 
+> **Note:** Due to a [bug in `node-inspector`](https://github.com/node-inspector/node-inspector/issues/903), pushing "Enter" after a command on the Node Inspector Console will not successfully send the command to the server.  If you require this functionality, please consider using Safari or `meteor shell` in order to interact with the server console until the `node-inspector` project [fixes the bug](https://github.com/node-inspector/node-inspector/pull/955).  Alternatively, there is a hot-patch available [in this comment](https://github.com/meteor/meteor/issues/7991#issuecomment-266709459) on [#7991](https://github.com/meteor/meteor/issues/7991).
+
 
 <h2 id="meteorcreate">meteor create <i>name</i></h2>
 
