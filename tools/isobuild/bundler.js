@@ -2244,8 +2244,8 @@ class ServerTarget extends JsImageTarget {
     serverPkgJson.scripts = serverPkgJson.scripts || {};
     serverPkgJson.scripts.install = "node npm-rebuild.js";
 
-    serverPkgJson.dependencies["node-gyp"] = "3.4.0";
-    serverPkgJson.dependencies["node-pre-gyp"] = "0.6.29";
+    serverPkgJson.dependencies["node-gyp"] = "3.5.0";
+    serverPkgJson.dependencies["node-pre-gyp"] = "0.6.33";
 
     builder.write('package.json', {
       data: new Buffer(
