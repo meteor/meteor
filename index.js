@@ -3,14 +3,6 @@ var getDefaultOptions = require("./options.js").getDefaults;
 var getMinifierOptions = require("./options.js").getMinifierDefaults;
 var Cache = require("./cache.js");
 var compileCache; // Lazily initialized.
-var reifyCompiler = require("reify/lib/compiler");
-var parseOptions = {
-  sourceType: "module",
-  strictMode: false,
-  allowImportExportEverywhere: true,
-  allowReturnOutsideFunction: true,
-  plugins: ["*", "jsx", "flow"]
-};
 
 // Make sure that module.import and module.export are defined in the
 // current Node process.
@@ -22,10 +14,8 @@ require("reify/node/runtime");
 exports.getDefaultOptions = getDefaultOptions;
 exports.getMinifierOptions = getMinifierOptions;
 
-function parse(source) {
-  return require("babylon").parse(source, parseOptions);
-}
-exports.parse = parse;
+var parse = exports.parse =
+  require("reify/lib/parsers/babylon.js").parse;
 
 exports.compile = function compile(source, options, deps) {
   options = options || getDefaultOptions();
@@ -36,33 +26,14 @@ exports.compile = function compile(source, options, deps) {
 };
 
 function compile(source, options) {
-  var reifyResult = reifyCompiler.compile(source, {
-    // Use Babel's parser during Reify compilation.
-    parse: parse,
-    // Return the modified AST as reifyResult.ast.
-    ast: true,
-    // Generate let declarations for imported symbols.
-    generateLetDeclarations: true
-  });
+  var ast = parse(source);
 
   // Since Reify inserts code without updating ast.tokens, it's better to
   // destroy unreliable token information. Don't worry; Babel can cope.
-  delete reifyResult.ast.tokens;
+  delete ast.tokens;
 
-  var babelResult = require("babel-core").transformFromAst(
-    reifyResult.ast,
-    reifyResult.code,
-    options
-  );
-
-  if (babelResult.map) {
-    // The reifyCompiler.compile step doesn't alter any line numbers, so
-    // it's safe to use the original source (before reification) for the
-    // source map returned by Babel.
-    babelResult.map.sourcesContent[0] = source;
-  }
-
-  return babelResult;
+  return require("babel-core")
+    .transformFromAst(ast, source, options);
 }
 
 exports.minify = function minify(source, options) {
