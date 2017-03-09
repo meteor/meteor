@@ -115,10 +115,11 @@ function getBabelResult(filename) {
       }
     }
 
-    babelOptions.filename = filename;
     babelOptions.sourceFileName = filename;
     babelOptions.sourceMapTarget = filename + ".map";
   }
+
+  babelOptions.filename = filename;
 
   return meteorBabel.compile(source, babelOptions);
 }
