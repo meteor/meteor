@@ -50,7 +50,7 @@ can run Meteor directly from a Git checkout using these steps:
     > This allows the use of `mymeteor` in place of `meteor`.  To persist this
     > across shell logouts, simply add it to `~/.bashrc` or `.zshrc`.
 
-## Notes when running from a checkout
+### Notes when running from a checkout
 
 The following are some distinct differences you must pay attention to when running Meteor from a checkout:
 
