@@ -5,9 +5,12 @@ import forwarded from 'forwarded-http';
 // localhost (supports "forwarded" and "x-forwarded-for").
 const isLocalConnection = (req) => {
   const localhostRegexp = /^\s*(127\.0\.0\.1|\[?::1\]?)\s*$/;
-  const request = Object.assign(req);
-  request.connection.remoteAddress =
-    request.connection.remoteAddress || req.socket.remoteAddress;
+  const request = Object.create(req);
+  request.connection = Object.assign(
+    {},
+    req.connection,
+    { remoteAddress: req.connection.remoteAddress || req.socket.remoteAddress }
+  );
   const forwardedParams = forwarded(request);
   let isLocal = true;
   Object.keys(forwardedParams.for).forEach((forKey) => {
