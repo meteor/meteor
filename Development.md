@@ -1,5 +1,9 @@
 # Development
 
+This document is intended to provide instructions and helpful information for developers who are [contributing](Contributing.md) [pull-requests](https://github.com/meteor/meteor/pulls/) (or otherwise making changes) to **Meteor Core itself (not Meteor apps)**.
+
+As the first suggestion to the reader of this document: If, during the course of development, a Meteor-specific process is revealed which is helpful and not documented here, please consider editing this document and submitting a pull-request.  Another developer will be thankful!
+
 ## Running from a Git checkout
 
 If you want to run on the bleeding edge, or [help contribute to Meteor](Contributing.md), you
