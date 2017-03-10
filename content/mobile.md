@@ -119,8 +119,9 @@ Please refer to [the Android Studio installation instructions](http://developer.
 
 Make sure to select the correct version of the [Android Studio SDK Tools](https://developer.android.com/studio/releases/sdk-tools.html):
 
- * Meteor 1.4.3.1 or later: SDK Tools v.25
- * Meteor 1.4.2.x or before: SDK Tools v.23
+ * Meteor 1.4.3.1 or later: Android SDK Tools v.25.**2**.x
+   * v.25.**3**.x (or newer) **will not work** due to [extensive changes](https://developer.android.com/studio/releases/sdk-tools.html) in v.25.3.0.  See [this issue](https://github.com/meteor/meteor/issues/8464) for more information.
+ * Meteor 1.4.2.x or before: Android SDK Tools v.23
 
 <h4 id="ubuntu-make">Using Ubuntu Make</h4>
 
