@@ -48,21 +48,22 @@ All code written in CoffeeScript compiles to JavaScript under the hood, and is c
 
 <h3 id="typescript">TypeScript</h3>
 
-[TypeScript](https://www.typescriptlang.org/) is ES2015 with optional types.
+[TypeScript](https://www.typescriptlang.org/) is modern JavaScript with optional types and more.
 
-Make sure you are familiar with the [new features introduced by ES2015](https://www.sitepoint.com/es2015-useful-parts-rundown-best-new-features/), as many people mistakenly confuse those with features introduced by TypeScript.
-
-Adding types to your code makes it easier for your development environment, yourself, and your colleagues, to understand.
+Adding types will make your code more readable and less prone to runtime errors.
 
 TypeScript can be installed with:
 
 ```sh
+meteor remove ecmascript
 meteor add barbatus:typescript
 ```
 
-It is necessary to configure TypeScript with a `tsconfig.json` file. More info about that can be found [here](http://www.typescriptlang.org/docs/handbook/tsconfig-json.html).
+It is necessary to configure the TypeScript compiler with a `tsconfig.json` file.
 
-A guide on installation, configuration and usage of TypeScript with Meteor is currently being written.
+A complete guide on installation, configuration, and usage of TypeScript, and how type definitions for libraries are installed, can be found [here](https://medium.com/@birkskyum/modern-meteor-development-with-typescript-introduction-836f2a89f79).
+
+The guide also includes sample applications created with Angular, React, Vue, and Blaze—all written in TypeScript. See the code [here](https://github.com/birkskyum/meteor-typescript-samples).
 
 <h2 id="blaze-templates">Templates and HTML</h2>
 
