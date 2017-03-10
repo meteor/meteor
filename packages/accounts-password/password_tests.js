@@ -1697,6 +1697,34 @@ if (Meteor.isServer) (function () {
     }
   )
 
+  Tinytest.add(
+    'passwords - enroll tokens don\'t get cleaned up when reset tokens are cleaned up',
+    function (test) {
+      var email = test.id + '-intercept@example.com';
+      var userId = Accounts.createUser({email: email, password: 'password'});
+      Accounts.sendEnrollmentEmail(userId, email);
+      test.isTrue(!!Meteor.users.findOne(userId).services.password.reset);
+
+      Accounts._expirePasswordResetTokens(new Date(), userId);
+
+      test.isTrue(Meteor.users.findOne(userId).services.password.reset);
+    }
+  )
+
+  Tinytest.add(
+    'passwords - reset tokens don\'t get cleaned up when enroll tokens are cleaned up',
+    function (test) {
+      var email = test.id + '-intercept@example.com';
+      var userId = Accounts.createUser({email: email, password: 'password'});
+      Accounts.sendResetPasswordEmail(userId, email);
+      test.isTrue(!!Meteor.users.findOne(userId).services.password.reset);
+
+      Accounts._expirePasswordEnrollTokens(new Date(), userId);
+
+      test.isTrue(Meteor.users.findOne(userId).services.password.reset);
+    }
+  )
+
   // We should be able to change the username
   Tinytest.add("passwords - change username", function (test) {
     var username = Random.id();
