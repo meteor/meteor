@@ -785,13 +785,13 @@ There are two principal ways to do it: on the developer's machine before allowin
 
 We've seen one example of running tests on the command line, using our `meteor npm run chimp-test` mode.
 
-We can also use a command-line driver for Mocha [`dispatch:mocha-phantomjs`](http://atmospherejs.com/dispatch/mocha-phantomjs) to run our standard tests on the command line.
+We can also use a command-line driver for Mocha [`dispatch:mocha`](https://atmospherejs.com/dispatch/mocha) to run our standard tests on the command line.
 
 Adding and using the package is straightforward:
 
 ```bash
-meteor add dispatch:mocha-phantomjs
-meteor test --once --driver-package dispatch:mocha-phantomjs
+meteor add dispatch:mocha
+meteor test --once --driver-package dispatch:mocha
 ```
 
 (The `--once` argument ensures the Meteor process stops once the test is done).
@@ -801,7 +801,7 @@ We can also add that command to our `package.json` as a `test` script:
 ```json
 {
   "scripts": {
-    "test": "meteor test --once --driver-package dispatch:mocha-phantomjs"
+    "test": "meteor test --once --driver-package dispatch:mocha"
   }
 }
 ```
