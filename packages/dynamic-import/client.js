@@ -178,5 +178,12 @@ function getNamespace(module, id) {
     }
   });
 
+  // This helps with Babel interop, since we're not just returning the
+  // module.exports object.
+  Object.defineProperty(namespace, "__esModule", {
+    value: true,
+    enumerable: false
+  });
+
   return namespace;
 }
