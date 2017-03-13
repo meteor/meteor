@@ -38,7 +38,7 @@
   "homepage": "https://github.com/dferber90/eslint-plugin-meteor",
   "bugs": "https://github.com/dferber90/eslint-plugin-meteor/issues",
   "dependencies": {
-    "babel-register": "6.23.0",
+    "babel-register": "6.24.0",
     "babel-runtime": "6.23.0",
     "escope": "3.6.0",
     "invariant": "2.2.2",
@@ -47,8 +47,8 @@
     "path-exists": "3.0.0"
   },
   "devDependencies": {
-    "babel-cli": "6.23.0",
-    "babel-core": "6.23.1",
+    "babel-cli": "6.24.0",
+    "babel-core": "6.24.0",
     "babel-plugin-transform-object-rest-spread": "6.23.0",
     "babel-plugin-transform-runtime": "6.23.0",
     "babel-preset-es2015": "6.24.0",
