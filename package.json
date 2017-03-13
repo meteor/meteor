@@ -33,6 +33,31 @@
     "util": "^0.10.3",
     "vm-browserify": "0.0.4"
   },
+  "bundledDependencies": [
+    "assert",
+    "browserify-zlib",
+    "buffer",
+    "console-browserify",
+    "constants-browserify",
+    "crypto-browserify",
+    "domain-browser",
+    "events",
+    "http-browserify",
+    "https-browserify",
+    "os-browserify",
+    "path-browserify",
+    "process",
+    "punycode",
+    "querystring-es3",
+    "readable-stream",
+    "stream-browserify",
+    "string_decoder",
+    "timers-browserify",
+    "tty-browserify",
+    "url",
+    "util",
+    "vm-browserify"
+  ],
   "devDependencies": {
     "rimraf": "^2.5.2"
   },
