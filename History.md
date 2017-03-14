@@ -3,6 +3,24 @@
 * The `meteor-babel` npm package has been upgraded to version 0.15.2,
   with support for dynamic `import(...)` syntax.
 
+## v1.4.3.2, 2017-03-14
+
+* Node has been upgraded to version 4.8.0.
+
+* The `npm` npm package has been upgraded to version 4.3.0.
+
+* The `node-gyp` npm package has been upgraded to 3.5.0.
+
+* The `node-pre-gyp` npm package has been updated to 0.6.33.
+
+* The bundled version of MongoDB used by `meteor run` in development
+  has been upgraded to 3.2.12.
+
+* The `mongodb` npm package used by the `npm-mongo` Meteor package has
+  been updated to version 2.2.24.
+  [PR #8453](https://github.com/meteor/meteor/pull/8453)
+  [Issue #8449](https://github.com/meteor/meteor/issues/8449)
+
 * The `check` package has had its copy of `jQuery.isPlainObject`
   updated to a newer implementation to resolve an issue where the
   `nodeType` property of an object couldn't be checked, fixing
@@ -12,6 +30,77 @@
   error capturing to provide more information on otherwise unhelpful errors
   thrown when UglifyJS encounters ECMAScript grammar it is not familiar with.
   [#8414](https://github.com/meteor/meteor/pull/8414)
+
+* Similar in behavior to `Meteor.loggingIn()`, `accounts-base` now offers a
+  reactive `Meteor.loggingOut()` method (and related Blaze helpers,
+  `loggingOut` and `loggingInOrOut`).
+  [PR #8271](https://github.com/meteor/meteor/pull/8271)
+  [Issue #1331](https://github.com/meteor/meteor/issues/1331)
+  [Issue #769](https://github.com/meteor/meteor/issues/769)
+
+* Using `length` as a selector field name and with a `Number` as a value
+  in a `Mongo.Collection` transformation will no longer cause odd results.
+  [#8329](https://github.com/meteor/meteor/issues/8329).
+
+* `observe-sequence` (and thus Blaze) now properly supports `Array`s which were
+  created in a vm or across frame boundaries, even if they were sub-classed.
+  [Issue #8160](https://github.com/meteor/meteor/issues/8160)
+  [PR #8401](https://github.com/meteor/meteor/pull/8401)
+
+* Minimongo now supports `$bitsAllClear`, `$bitsAllSet`, `$bitsAnySet` and
+  `$bitsAnyClear`.
+  [#8350](https://github.com/meteor/meteor/pull/8350)
+
+* A new [Development.md](Development.md) document has been created to provide
+  an easier path for developers looking to make contributions to Meteor Core
+  (that is, the `meteor` tool itself) along with plenty of helpful reminders
+  for those that have already done so!
+  [#8267](https://github.com/meteor/meteor/pull/8267)
+
+* The suggestion to add a `{oauth-service}-config-ui` package will no longer be
+  made on the console if `service-configuration` package is already installed.
+  [Issue #8366](https://github.com/meteor/meteor/issues/8366)
+  [PR #8429](https://github.com/meteor/meteor/pull/8429)
+
+* `Meteor.apply`'s `throwStubExceptions` option is now properly documented in
+  the documentation whereas it was previously only mentioned in the Guide.
+  [Issue #8435](https://github.com/meteor/meteor/issues/8435)
+  [PR #8443](https://github.com/meteor/meteor/pull/8443)
+
+* `DDPRateLimiter.addRule` now accepts a callback which will be executed after
+  a rule is executed, allowing additional actions to be taken if necessary.
+  [Issue #5541](https://github.com/meteor/meteor/issues/5541)
+  [PR #8237](https://github.com/meteor/meteor/pull/8237)
+
+* `jquery` is no longer a dependency of the `http` package.
+  [#8389](https://github.com/meteor/meteor/pull/8389)
+
+* `jquery` is no longer in the default package list after running
+  `meteor create`, however is still available thanks to `blaze-html-templates`.
+  If you still require jQuery, the recommended approach is to install it from
+  npm with `meteor npm install --save jquery` and then `import`-ing it into your
+  application.
+  [#8388](https://github.com/meteor/meteor/pull/8388)
+
+* The `shell-server` package (i.e. `meteor shell`) has been updated to more
+  gracefully handle recoverable errors (such as `SyntaxError`s) in the same
+  fashion as the Node REPL.
+  [Issue #8290](https://github.com/meteor/meteor/issues/8290)
+  [PR #8446](https://github.com/meteor/meteor/pull/8446)
+
+* The `webapp` package now reveals a `WebApp.connectApp` to make it easier to
+  provide custom error middleware.
+  [#8403](https://github.com/meteor/meteor/pull/8403)
+
+* The `meteor update --all-packages` command has been properly documented in
+  command-line help (i.e. `meteor update --help`).
+  [PR #8431](https://github.com/meteor/meteor/pull/8431)
+  [Issue #8154](https://github.com/meteor/meteor/issues/8154)
+
+* Syntax errors encountered while scanning `package.json` files for binary
+  dependencies are now safely and silently ignored.
+  [Issue #8427](https://github.com/meteor/meteor/issues/8427)
+  [PR #8468](https://github.com/meteor/meteor/pull/8468)
 
 ## v1.4.3.1, 2017-02-14
 

@@ -6,6 +6,6 @@ Package.describe({
 });
 
 Package.onUse(function(api) {
-  api.use("ecmascript@0.5.7", "server");
+  api.use("ecmascript", "server");
   api.mainModule("main.js", "server");
 });
