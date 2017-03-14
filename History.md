@@ -1,6 +1,6 @@
 ## v.NEXT
 
-## v1.4.3.2, TBD
+## v1.4.3.2, 2017-03-14
 
 * Node has been upgraded to version 4.8.0.
 
