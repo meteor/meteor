@@ -1,3 +1,4 @@
+var babelPresetMeteor = require("babel-preset-meteor");
 var strictModulesPluginFactory =
   require("babel-plugin-transform-es2015-modules-commonjs");
 
@@ -18,26 +19,18 @@ var babelModulesPlugin = [function () {
 }];
 
 exports.getDefaults = function getDefaults(features) {
-  var babelPresetMeteor = require("babel-preset-meteor");
-  var options = {
-    compact: false,
-    sourceMap: false,
-    ast: false,
-    babelrc: false,
-    // "Loose" mode gets us faster and more IE-compatible transpilations of:
-    // classes, computed properties, modules, for-of, and template literals.
-    // Basically all the transformers that support "loose".
-    // http://babeljs.io/docs/usage/loose/
-    presets: [babelPresetMeteor]
+  var combined = {
+    presets: [babelPresetMeteor],
+    plugins: []
   };
 
-  babelPresetMeteor.plugins.push(
+  combined.plugins.push(
     require("./plugins/dynamic-import.js")
   );
 
   if (! (features &&
          features.runtime === false)) {
-    babelPresetMeteor.plugins.push([
+    combined.plugins.push([
       require("babel-plugin-transform-runtime"),
       { // Avoid importing polyfills for things like Object.keys, which
         // Meteor already shims in other ways.
@@ -47,13 +40,11 @@ exports.getDefaults = function getDefaults(features) {
 
   if (features) {
     if (features.react) {
-      var presets = babelPresetMeteor.presets || [];
-      presets.push(require("babel-preset-react"));
-      babelPresetMeteor.presets = presets;
+      combined.presets.push(require("babel-preset-react"));
     }
 
     if (features.jscript) {
-      babelPresetMeteor.plugins.push(
+      combined.plugins.push(
         require("./plugins/named-function-expressions.js"),
         require("./plugins/sanitize-for-in-objects.js")
       );
@@ -64,9 +55,15 @@ exports.getDefaults = function getDefaults(features) {
   // declarations in the original source, Babel sometimes inserts its own
   // `import` declarations later on, and of course Babel knows best how to
   // compile those declarations.
-  babelPresetMeteor.plugins.push(babelModulesPlugin);
+  combined.plugins.push(babelModulesPlugin);
 
-  return options;
+  return {
+    compact: false,
+    sourceMap: false,
+    ast: false,
+    babelrc: false,
+    presets: [combined]
+  };
 };
 
 exports.getMinifierDefaults = function getMinifierDefaults() {
