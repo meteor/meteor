@@ -197,7 +197,7 @@ BCp._inferHelper = function (
 
     function req(id) {
       try {
-        return reqMightThrow(id);
+        return requireWithPrefix(inputFile, id, prefix);
       } catch (e) {
         if (e.code !== "MODULE_NOT_FOUND") {
           throw e;
@@ -216,55 +216,6 @@ BCp._inferHelper = function (
 
         return null;
       }
-    }
-
-    function reqMightThrow(id) {
-      var isTopLevel = "./".indexOf(id.charAt(0)) < 0;
-      var presetOrPlugin;
-      var presetOrPluginMeta;
-
-      if (isTopLevel) {
-        try {
-          // If the identifier is top-level, try to prefix it with
-          // "babel-plugin-" or "babel-preset-".
-          presetOrPlugin = inputFile.require(prefix + id);
-          presetOrPluginMeta = inputFile.require(
-            packageNameFromTopLevelModuleId(prefix + id) + '/package.json');
-        } catch (e) {
-          if (e.code !== "MODULE_NOT_FOUND") {
-            throw e;
-          }
-          // Fall back to requiring the plugin as-is if the prefix failed.
-          presetOrPlugin = inputFile.require(id);
-          presetOrPluginMeta = inputFile.require(
-            packageNameFromTopLevelModuleId(id) + '/package.json');
-        }
-
-      } else {
-        // If the identifier is not top-level, but relative or absolute,
-        // then it will be required as-is, so that you can implement your
-        // own Babel plugins locally, rather than always using plugins
-        // installed from npm.
-        presetOrPlugin = inputFile.require(id, controlFilePath);
-
-        // Note that inputFile.readAndWatchFileWithHash converts module
-        // identifers to OS-specific paths if necessary.
-        var absId = inputFile.resolve(id, controlFilePath);
-        var info = inputFile.readAndWatchFileWithHash(absId);
-
-        presetOrPluginMeta = {
-          name: absId,
-          version: info.hash
-        };
-      }
-
-      return {
-        name: presetOrPluginMeta.name,
-        version: presetOrPluginMeta.version,
-        module: presetOrPlugin.__esModule
-          ? presetOrPlugin.default
-          : presetOrPlugin
-      };
     }
 
     var filtered = [];
@@ -312,6 +263,55 @@ BCp._inferHelper = function (
 
   return false;
 };
+
+function requireWithPrefix(inputFile, id, prefix) {
+  var isTopLevel = "./".indexOf(id.charAt(0)) < 0;
+  var presetOrPlugin;
+  var presetOrPluginMeta;
+
+  if (isTopLevel) {
+    try {
+      // If the identifier is top-level, try to prefix it with
+      // "babel-plugin-" or "babel-preset-".
+      presetOrPlugin = inputFile.require(prefix + id);
+      presetOrPluginMeta = inputFile.require(
+        packageNameFromTopLevelModuleId(prefix + id) + '/package.json');
+    } catch (e) {
+      if (e.code !== "MODULE_NOT_FOUND") {
+        throw e;
+      }
+      // Fall back to requiring the plugin as-is if the prefix failed.
+      presetOrPlugin = inputFile.require(id);
+      presetOrPluginMeta = inputFile.require(
+        packageNameFromTopLevelModuleId(id) + '/package.json');
+    }
+
+  } else {
+    // If the identifier is not top-level, but relative or absolute,
+    // then it will be required as-is, so that you can implement your
+    // own Babel plugins locally, rather than always using plugins
+    // installed from npm.
+    presetOrPlugin = inputFile.require(id, controlFilePath);
+
+    // Note that inputFile.readAndWatchFileWithHash converts module
+    // identifers to OS-specific paths if necessary.
+    var absId = inputFile.resolve(id, controlFilePath);
+    var info = inputFile.readAndWatchFileWithHash(absId);
+
+    presetOrPluginMeta = {
+      name: absId,
+      version: info.hash
+    };
+  }
+
+  return {
+    name: presetOrPluginMeta.name,
+    version: presetOrPluginMeta.version,
+    module: presetOrPlugin.__esModule
+      ? presetOrPlugin.default
+      : presetOrPlugin
+  };
+}
 
 // 'react-hot-loader/babel' => 'react-hot-loader'
 function packageNameFromTopLevelModuleId(id) {
