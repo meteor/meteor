@@ -2,7 +2,7 @@
 
 # Meteor Roadmap
 
-**Up to date as of January 13, 2017**
+**Up to date as of February 15, 2017**
 
 This document describes the high level features the Meteor project maintainers have decided to prioritize in the near- to medium-term future. A large fraction of the maintainers’ time will be dedicated to working on the features described here. As with any roadmap, this is a living document that will evolve as priorities and dependencies shift; we aim to update the roadmap with any changes or status updates on a monthly basis.
 
@@ -11,25 +11,26 @@ Contributors are encouraged to focus their efforts on work that aligns with the 
 Items can be added to this roadmap by first getting design approval for a solution to an open issue, as outlined by our [contributing guidelines](https://github.com/meteor/meteor/blob/devel/Contributing.md). Then, when a contributor has committed to solving the issue in the short to medium term, they can submit a PR to add that work to the roadmap. All other PRs to the roadmap will be rejected.
 
 
-## Upgrade to Node 6
-
-Tracking pull request: https://github.com/meteor/meteor/pull/6923
-
-
 ## Page load performance improvements
 
-*Status: In progress*
+*Tracking pull request: https://github.com/meteor/meteor/pull/8327*
+
+Just as Meteor 1.4.2 took aim at rebuild performance, Meteor 1.5 will be all about production app performance, specifically client-side application startup time.
 
 Fast initial page load times are somewhat less important for single-page reactive web apps than for other kinds of websites, but large Meteor apps with lots of packages tend to load quite a bit of JavaScript, and the cost of all that network traffic, parsing, and evaluation definitely adds up.
 
 Speeding up page load times will require a combination of new tools for asynchronous JavaScript delivery (code splitting), dead code elimination, deferred evaluation of JavaScript modules, and performance profiling (so that developers can identify expensive packages).
 
+The banner feature of this effort will be first-class support for [dynamic `import(...)`](https://github.com/tc39/proposal-dynamic-import), which enables asynchronous module fetching.
 
-## Build system improvements
+Other optimizations include making it possible to remove (or dynamically load) large dependencies like `jquery` and `underscore`, and caching JavaScript modules more agressively on the client.
 
-*Status: In progress*
 
-Meteor 1.4.2 addressed a number of critical performance problems with the Meteor build system, but there are still more areas left for improvement. For example, Meteor could take better advantage of native support for new ECMAScript features in Node 4 (and eventually Node 6) on the server.
+## Upgrade to Node 6
+
+*Tracking pull request: https://github.com/meteor/meteor/pull/6923*
+
+Upgrading Node will allow Meteor to take better advantage of native support for new ECMAScript features on the server, which should speed up build performance and may also improve runtime performance, thanks to performance improvements in Node itself.
 
 
 ## Full transition to npm

@@ -128,17 +128,12 @@ MongoConnection = function (url, options) {
   self._observeMultiplexers = {};
   self._onFailoverHook = new Hook;
 
-  var mongoOptions = _.extend({
-    db: { safe: true },
-    // http://mongodb.github.io/node-mongodb-native/2.2/api/Server.html
-    server: {
-      // Reconnect on error.
-      autoReconnect: true,
-      // Try to reconnect forever, instead of stopping after 30 tries (the
-      // default), with each attempt separated by 1000ms.
-      reconnectTries: Infinity
-    },
-    replSet: {}
+  var mongoOptions = Object.assign({
+    // Reconnect on error.
+    autoReconnect: true,
+    // Try to reconnect forever, instead of stopping after 30 tries (the
+    // default), with each attempt separated by 1000ms.
+    reconnectTries: Infinity
   }, Mongo._connectionOptions);
 
   // Disable the native parser by default, unless specifically enabled
@@ -150,7 +145,7 @@ MongoConnection = function (url, options) {
   //   to a different platform (aka deploy)
   // We should revisit this after binary npm module support lands.
   if (!(/[\?&]native_?[pP]arser=/.test(url))) {
-    mongoOptions.db.native_parser = false;
+    mongoOptions.native_parser = false;
   }
 
   // Internally the oplog connections specify their own poolSize
@@ -158,8 +153,7 @@ MongoConnection = function (url, options) {
   if (_.has(options, 'poolSize')) {
     // If we just set this for "server", replSet will override it. If we just
     // set it for replSet, it will be ignored if we're not using a replSet.
-    mongoOptions.server.poolSize = options.poolSize;
-    mongoOptions.replSet.poolSize = options.poolSize;
+    mongoOptions.poolSize = options.poolSize;
   }
 
   self.db = null;
@@ -634,16 +628,26 @@ var NUM_OPTIMISTIC_TRIES = 3;
 MongoConnection._isCannotChangeIdError = function (err) {
   // First check for what this error looked like in Mongo 2.4.  Either of these
   // checks should work, but just to be safe...
-  if (err.code === 13596)
+  if (err.code === 13596) {
     return true;
-  if (err.errmsg.indexOf("cannot change _id of a document") === 0)
+  }
+
+  // Mongo 3.2.* returns error as next Object:
+  // {name: String, code: Number, err: String}
+  // Older Mongo returns:
+  // {name: String, code: Number, errmsg: String}
+  var error = err.errmsg || err.err;
+
+  if (error.indexOf('cannot change _id of a document') === 0) {
     return true;
+  }
 
   // Now look for what it looks like in Mongo 2.6.  We don't use the error code
   // here, because the error code we observed it producing (16837) appears to be
   // a far more generic error code based on examining the source.
-  if (err.errmsg.indexOf("The _id field cannot be changed") === 0)
+  if (error.indexOf('The _id field cannot be changed') === 0) {
     return true;
+  }
 
   return false;
 };
