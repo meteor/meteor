@@ -18,6 +18,7 @@ var babelModulesPlugin = [function () {
 }];
 
 exports.getDefaults = function getDefaults(features) {
+  var babelPresetMeteor = require("babel-preset-meteor");
   var options = {
     compact: false,
     sourceMap: false,
@@ -27,15 +28,16 @@ exports.getDefaults = function getDefaults(features) {
     // classes, computed properties, modules, for-of, and template literals.
     // Basically all the transformers that support "loose".
     // http://babeljs.io/docs/usage/loose/
-    presets: [require("babel-preset-meteor")],
-    plugins: [
-      require("./plugins/dynamic-import.js"),
-    ]
+    presets: [babelPresetMeteor]
   };
+
+  babelPresetMeteor.plugins.push(
+    require("./plugins/dynamic-import.js")
+  );
 
   if (! (features &&
          features.runtime === false)) {
-    options.plugins.push([
+    babelPresetMeteor.plugins.push([
       require("babel-plugin-transform-runtime"),
       { // Avoid importing polyfills for things like Object.keys, which
         // Meteor already shims in other ways.
@@ -45,13 +47,13 @@ exports.getDefaults = function getDefaults(features) {
 
   if (features) {
     if (features.react) {
-      options.presets.push(
-        require("babel-preset-react")
-      );
+      var presets = babelPresetMeteor.presets || [];
+      presets.push(require("babel-preset-react"));
+      babelPresetMeteor.presets = presets;
     }
 
     if (features.jscript) {
-      options.plugins.push(
+      babelPresetMeteor.plugins.push(
         require("./plugins/named-function-expressions.js"),
         require("./plugins/sanitize-for-in-objects.js")
       );
@@ -62,7 +64,7 @@ exports.getDefaults = function getDefaults(features) {
   // declarations in the original source, Babel sometimes inserts its own
   // `import` declarations later on, and of course Babel knows best how to
   // compile those declarations.
-  options.plugins.push(babelModulesPlugin);
+  babelPresetMeteor.plugins.push(babelModulesPlugin);
 
   return options;
 };
