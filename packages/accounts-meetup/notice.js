@@ -1,4 +1,6 @@
-if (Package['accounts-ui'] && !Package.hasOwnProperty('meetup-config-ui')) {
+if (Package['accounts-ui']
+    && !Package['service-configuration']
+    && !Package.hasOwnProperty('meetup-config-ui')) {
   console.warn(
     "Note: You're using accounts-ui and accounts-meetup,\n" +
     "but didn't install the configuration UI for the Meetup\n" +
