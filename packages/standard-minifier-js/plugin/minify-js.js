@@ -2,13 +2,13 @@ Plugin.registerMinifier({
   extensions: ['js'],
   archMatching: 'web'
 }, function () {
-  var minifier = new meteorBabelMinifier();
+  var minifier = new MeteorBabelMinifier();
   return minifier;
 });
 
-function meteorBabelMinifier () {};
+function MeteorBabelMinifier () {};
 
-meteorBabelMinifier.prototype.processFilesForBundle = function(files, options) {
+MeteorBabelMinifier.prototype.processFilesForBundle = function(files, options) {
   var mode = options.minifyMode;
 
   // don't minify anything for development
