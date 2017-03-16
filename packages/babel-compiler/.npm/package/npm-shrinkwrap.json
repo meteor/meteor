@@ -280,9 +280,9 @@
       "from": "babel-plugin-transform-es2015-modules-commonjs@>=6.22.0 <7.0.0"
     },
     "babel-plugin-transform-es2015-modules-reify": {
-      "version": "0.4.6",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-modules-reify/-/babel-plugin-transform-es2015-modules-reify-0.4.6.tgz",
-      "from": "babel-plugin-transform-es2015-modules-reify@>=0.4.6 <0.5.0"
+      "version": "0.5.0",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-modules-reify/-/babel-plugin-transform-es2015-modules-reify-0.5.0.tgz",
+      "from": "babel-plugin-transform-es2015-modules-reify@>=0.5.0 <0.6.0"
     },
     "babel-plugin-transform-es2015-object-super": {
       "version": "6.22.0",
@@ -440,9 +440,9 @@
       "from": "babel-preset-flow@>=6.23.0 <7.0.0"
     },
     "babel-preset-meteor": {
-      "version": "6.23.1",
-      "resolved": "https://registry.npmjs.org/babel-preset-meteor/-/babel-preset-meteor-6.23.1.tgz",
-      "from": "babel-preset-meteor@6.23.1"
+      "version": "6.24.0",
+      "resolved": "https://registry.npmjs.org/babel-preset-meteor/-/babel-preset-meteor-6.24.0.tgz",
+      "from": "babel-preset-meteor@6.24.0"
     },
     "babel-preset-react": {
       "version": "6.23.0",
@@ -595,9 +595,9 @@
       "from": "magic-string@>=0.19.0 <0.20.0"
     },
     "meteor-babel": {
-      "version": "0.17.2",
-      "resolved": "https://registry.npmjs.org/meteor-babel/-/meteor-babel-0.17.2.tgz",
-      "from": "meteor-babel@0.17.2"
+      "version": "0.18.0",
+      "resolved": "https://registry.npmjs.org/meteor-babel/-/meteor-babel-0.18.0.tgz",
+      "from": "meteor-babel@0.18.0"
     },
     "meteor-babel-helpers": {
       "version": "0.0.3",
@@ -687,9 +687,9 @@
       }
     },
     "reify": {
-      "version": "0.4.16",
-      "resolved": "https://registry.npmjs.org/reify/-/reify-0.4.16.tgz",
-      "from": "reify@>=0.4.14 <0.5.0"
+      "version": "0.5.1",
+      "resolved": "https://registry.npmjs.org/reify/-/reify-0.5.1.tgz",
+      "from": "reify@>=0.5.1 <0.6.0"
     },
     "repeating": {
       "version": "2.0.1",
