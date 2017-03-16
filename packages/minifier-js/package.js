@@ -1,6 +1,6 @@
 Package.describe({
   summary: "JavaScript minifier",
-  version: "2.0.0-beta.1"
+  version: "2.0.0-beta.2"
 });
 
 Package.onUse(function (api) {
