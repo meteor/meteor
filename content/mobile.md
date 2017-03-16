@@ -459,23 +459,21 @@ For example, here we prepare our android and ios hardware permissions for a WebR
 `meteor add cordova:cordova.plugins.diagnostic@3.0.2`
 
 ```js
-if ( Meteor.isCordova ) {
-    cordova.plugins.diagnostic.isMicrophoneAuthorized( function ( authorized ) {
-        if ( !authorized ) {
-            cordova.plugins.diagnostic.requestMicrophoneAuthorization( function ( granted ) {
-                console.log( "Microphone access is: " + ( granted ? "granted" : "denied" ) );
-            }, function ( error ) { //... } );      
-        }
-    }, function ( error ) { //... } );
-
-    cordova.plugins.diagnostic.isCameraAuthorized( function( authorized ){
-     
-        if ( !authorized ) {
-            cordova.plugins.diagnostic.requestCameraAuthorization( function ( granted ) {
-                console.log( "Authorization request for camera use was " + ( granted ? "granted" : "denied" ) );
-            }, function ( error ) { //.. } );
-        }
-    }, function ( error ) { //.. } );
+if (Meteor.isCordova) {
+  cordova.plugins.diagnostic.isCameraAuthorized(
+    authorized => {
+      if (!authorized) {
+        cordova.plugins.diagnostic.requestCameraAuthorization(
+          granted => {
+            console.log( "Authorization request for camera use was " +
+              (granted ? "granted" : "denied"));
+          },
+          error => { console.error(error); }
+        );
+      }
+    },
+    error => { console.error(error); }
+  );
 }
 ```
 
