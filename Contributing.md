@@ -209,6 +209,10 @@ We have found that writing software to meet both these standards at the
 same time is hard but
 incredibly rewarding.  We hope you come to feel the same way.
 
+### Understanding the core
+
+For more information about how to work with Meteor core, take a look at the [Development](Development.md) document which explains many important details, including how to [run from a checkout](Development.md#running-from-a-git-checkout), [run tests](Development.md#tests), and more.
+
 ### Proposing your change
 
 You'll have the best chance of getting a change into core if you can build consensus in the community for it. Start by creating a well specified feature request as a Github issue.
@@ -237,9 +241,10 @@ these guidelines:
 
  * Include tests that prove your code works.
 
- * Follow the
-   [MDG style guide](https://guide.meteor.com/code-style.html#javascript)
-   for code and commit messages.
+ * Follow appropriate style for
+   [code contributions](Development.md#code-style)
+   and
+   [commit messages](Development.md#commit-messages)
 
  * Be sure your author field in git is properly filled out with your full name
  and email address so we can credit you.
