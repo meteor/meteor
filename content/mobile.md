@@ -452,7 +452,7 @@ What is often confusing to people is that setting `App.accessRule` is not enough
 
 To get around these restrictions, you'll have to use what is known as [Cross-Origin Resource Sharing (CORS)](https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS). In contrast to the whitelisting mechanism configured on the client, CORS relies on headers set by the server. In other words, in order to allow access to a remote resource, you may have to make configuration changes on the server, such as setting a `Access-Control-Allow-Origin` header.
 
-<h3 id="csp">Runtime Permissions</h3>
+<h3 id="csp">System Permissions</h3>
 When using e.g. camera, microphone or any other native mobile phone features in Cordova, since Android 6 (Marshmallow) it became necessary to request permissions additionally at runtime. In such case you need to add the cordova diagnostic plugin which manages exactly this. (https://github.com/dpa99c/cordova-diagnostic-plugin)
 
 For example, here we prepare our android and ios hardware permissions for a WebRTC session 
