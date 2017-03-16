@@ -1,5 +1,34 @@
 ## v.NEXT
 
+* Thanks to the outstanding efforts of @sethmurphy18, the `minifier-js`
+  package now uses [Babili](https://github.com/babel/babili) instead of
+  [UglifyJS](https://github.com/mishoo/UglifyJS2), resolving numerous
+  long-standing bugs due to UglifyJS's poor support for ES2015+ syntax.
+  [Issue #8378](https://github.com/meteor/meteor/issues/8378)
+  [PR #8397](https://github.com/meteor/meteor/pull/8397)
+
+* The `meteor-babel` npm package has been upgraded to version 0.18.0, and
+  `reify` has been upgraded to version 0.5.1, fixing several subtle bugs
+  introduced by Meteor 1.4.3 (see below), including
+  [issue #8461](https://github.com/meteor/meteor/issues/8461).
+
+* The Reify module compiler is now a Babel plugin, making it possible for
+  other custom Babel plugins configured in `.babelrc` or `package.json`
+  files to run before Reify, fixing bugs that resulted from running Reify
+  before other plugins in Meteor 1.4.3.
+  [Issue #8399](https://github.com/meteor/meteor/issues/8399)
+  [Issue #8422](https://github.com/meteor/meteor/issues/8422)
+  [`meteor-babel` issue #13](https://github.com/meteor/babel/issues/13)
+
+* Two new `export ... from ...` syntax extensions are now supported:
+  ```js
+  export * as namespace from "./module"
+  export def from "./module"
+  ```
+  Read the ECMA262 proposals here:
+  * https://github.com/leebyron/ecmascript-export-ns-from
+  * https://github.com/leebyron/ecmascript-export-default-from
+
 ## v1.4.3.2, 2017-03-14
 
 * Node has been upgraded to version 4.8.0.
