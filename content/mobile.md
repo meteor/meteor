@@ -275,8 +275,8 @@ To avoid this, we try to detect faulty versions and revert to the last known goo
 
 By default, the startup timeout is set to 20 seconds. If your app needs more time to startup (or considerably less), you can use [`App.setPreference`](http://docs.meteor.com/api/mobile-config.html#App-setPreference) to set `WebAppStartupTimeout` to another value.
 
-> Note that the value is set in milliseconds
-> ```js
+```js
+// The timeout is specified in milliseconds!
 App.setPreference('WebAppStartupTimeout', 30000);
 ```
 
