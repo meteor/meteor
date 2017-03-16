@@ -12,6 +12,8 @@
   introduced by Meteor 1.4.3 (see below), including
   [issue #8461](https://github.com/meteor/meteor/issues/8461).
 
+* The `reify` npm package has been upgraded to version 0.5.1.
+
 * The Reify module compiler is now a Babel plugin, making it possible for
   other custom Babel plugins configured in `.babelrc` or `package.json`
   files to run before Reify, fixing bugs that resulted from running Reify
