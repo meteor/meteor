@@ -819,34 +819,48 @@ if (Meteor.isClient) {
 
     startAndConnect(test, stream);
 
-    var methodCallbackFired = false;
-    var methodCallbackErrored = false;
+    var firstMethodCallbackFired = false;
+    var firsMethodCallbackErrored = false;
+    var secondMethodCallbackFired = false;
+    var secondMethodCallbackErrored = false;
+
     // call with noRetry true so that the method should fail to retry on reconnect.
     conn.apply('do_something', [], {noRetry: true}, function(error) {
-      methodCallbackFired = true;
+      firstMethodCallbackFired = true;
       // failure on reconnect should trigger an error.
       if (error && error.error === 'invocation-failed') {
-        methodCallbackErrored = true;
+        firstMethodCallbackErrored = true;
+      }
+    });
+    conn.apply('do_something_else', [], {noRetry: true}, function(error) {
+      secondMethodCallbackFired = true;
+      // failure on reconnect should trigger an error.
+      if (error && error.error === 'invocation-failed') {
+        secondMethodCallbackErrored = true;
       }
     });
 
-    //The method has not succeeded yet
-    test.isFalse(methodCallbackFired);
-    // reconnect.
+    // The method has not succeeded yet
+    test.isFalse(firstMethodCallbackFired);
+    test.isFalse(secondMethodCallbackFired);
+
+    // send the methods
     stream.sent.shift();
-    // "receive the message"
+    stream.sent.shift();
+    // reconnect
     stream.reset();
 
     // verify that a reconnect message was sent.
     testGotMessage(test, stream, makeConnectMessage(SESSION_ID));
-
     // Make sure that the stream triggers connection.
     stream.receive({msg: 'connected', session: SESSION_ID + 1});
 
     //The method callback should fire even though the stream has not sent a response.
     //the callback should have been fired with an error.
-    test.isTrue(methodCallbackFired);
-    test.isTrue(methodCallbackErrored);
+    test.isTrue(firstMethodCallbackFired);
+    test.isTrue(firstMethodCallbackErrored);
+    test.isTrue(secondMethodCallbackFired);
+    test.isTrue(secondMethodCallbackErrored);
 
     // verify that the method message was not sent.
     test.isUndefined(stream.sent.shift());
