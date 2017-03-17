@@ -31,6 +31,17 @@
   * https://github.com/leebyron/ecmascript-export-ns-from
   * https://github.com/leebyron/ecmascript-export-default-from
 
+* When `Meteor.call` is used on the server to invoke a method that
+  returns a `Promise` object, the result will no longer be the `Promise`
+  object, but the resolved value of the `Promise`.
+  [Issue #8367](https://github.com/meteor/meteor/issues/8367)
+
+* If you actually want a `Promise` when calling `Meteor.call` or
+  `Meteor.apply` on the server, use `Meteor.callAsync` and/or
+  `Meteor.applyAsync` instead.
+  [Issue #8367](https://github.com/meteor/meteor/issues/8367),
+  https://github.com/meteor/meteor/commit/0cbd25111d1249a61ca7adce23fad5215408c821
+
 ## v1.4.3.2, 2017-03-14
 
 * Node has been upgraded to version 4.8.0.
