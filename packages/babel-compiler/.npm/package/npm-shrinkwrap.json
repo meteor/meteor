@@ -595,9 +595,9 @@
       "from": "magic-string@>=0.19.0 <0.20.0"
     },
     "meteor-babel": {
-      "version": "0.18.0",
-      "resolved": "https://registry.npmjs.org/meteor-babel/-/meteor-babel-0.18.0.tgz",
-      "from": "meteor-babel@0.18.0"
+      "version": "0.18.1",
+      "resolved": "https://registry.npmjs.org/meteor-babel/-/meteor-babel-0.18.1.tgz",
+      "from": "meteor-babel@0.18.1"
     },
     "meteor-babel-helpers": {
       "version": "0.0.3",
