@@ -37,14 +37,13 @@ function compile(source, options) {
 }
 
 exports.minify = function minify(source, options) {
-  options = options || getMinifierOptions();
-
-  // We are not compiling the code in this step, only minifying, so reify is not used.
-  var babelResult = require("babel-core").transform(source, options);
-
-  // We don't generate a source map here because we told Babel to generate one for us.
-  // See https://github.com/meteor/babel/blob/master/options.js
-  return babelResult;
+  // We are not compiling the code in this step, only minifying, so reify
+  // is not used.
+  return require("babel-core").transformFromAst(
+    parse(source),
+    source,
+    options || getMinifierOptions()
+  );
 }
 
 function setCacheDir(cacheDir) {
