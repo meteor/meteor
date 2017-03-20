@@ -8,11 +8,11 @@
   [PR #8397](https://github.com/meteor/meteor/pull/8397)
 
 * The `meteor-babel` npm package has been upgraded to version 0.18.1, and
-  `reify` has been upgraded to version 0.5.6, fixing several subtle bugs
+  `reify` has been upgraded to version 0.5.1, fixing several subtle bugs
   introduced by Meteor 1.4.3 (see below), including
   [issue #8461](https://github.com/meteor/meteor/issues/8461).
 
-* The `reify` npm package has been upgraded to version 0.5.6.
+* The `reify` npm package has been upgraded to version 0.5.1.
 
 * The Reify module compiler is now a Babel plugin, making it possible for
   other custom Babel plugins configured in `.babelrc` or `package.json`
