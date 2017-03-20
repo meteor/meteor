@@ -7,12 +7,12 @@
   [Issue #8378](https://github.com/meteor/meteor/issues/8378)
   [PR #8397](https://github.com/meteor/meteor/pull/8397)
 
-* The `meteor-babel` npm package has been upgraded to version 0.18.0, and
-  `reify` has been upgraded to version 0.5.1, fixing several subtle bugs
+* The `meteor-babel` npm package has been upgraded to version 0.18.1, and
+  `reify` has been upgraded to version 0.5.6, fixing several subtle bugs
   introduced by Meteor 1.4.3 (see below), including
   [issue #8461](https://github.com/meteor/meteor/issues/8461).
 
-* The `reify` npm package has been upgraded to version 0.5.1.
+* The `reify` npm package has been upgraded to version 0.5.6.
 
 * The Reify module compiler is now a Babel plugin, making it possible for
   other custom Babel plugins configured in `.babelrc` or `package.json`
@@ -36,7 +36,7 @@
   object, but the resolved value of the `Promise`.
   [Issue #8367](https://github.com/meteor/meteor/issues/8367)
 
-* If you actually want a `Promise` when calling `Meteor.call` or
+> Note: if you actually want a `Promise` when calling `Meteor.call` or
   `Meteor.apply` on the server, use `Meteor.callAsync` and/or
   `Meteor.applyAsync` instead.
   [Issue #8367](https://github.com/meteor/meteor/issues/8367),
