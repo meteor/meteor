@@ -879,6 +879,14 @@ function tryExtractWithNpmTar(buffer, tempDir, options) {
   });
 }
 
+// In the same fashion as node-pre-gyp does, add the executable
+// bit but only if the read bit was present.  Same as:
+// https://github.com/mapbox/node-pre-gyp/blob/7a28f4b0f562ba4712722fefe4eeffb7b20fbf7a/lib/install.js#L71-L77
+// and others reported in: https://github.com/npm/node-tar/issues/7
+function addExecBitWhenReadBitPresent(fileMode) {
+  return fileMode |= (fileMode >>> 2) & 0o111;
+}
+
 // Tar-gzips a directory, returning a stream that can then be piped as
 // needed.  The tar archive will contain a top-level directory named
 // after dirPath.
@@ -886,6 +894,12 @@ files.createTarGzStream = function (dirPath, options) {
   var tar = require("tar");
   var fstream = require('fstream');
   var zlib = require("zlib");
+
+  // Create a segment of the file path which we will look for to
+  // identify exactly what we think is a "bin" file (that is, something
+  // which should be expected to work within the context of an
+  // 'npm run-script').
+  var binPathMatch = ["", "node_modules", ".bin", ""].join(path.sep);
 
   // Don't use `{ path: dirPath, type: 'Directory' }` as an argument to
   // fstream.Reader. This triggers a collection of odd behaviors in fstream
@@ -926,8 +940,13 @@ files.createTarGzStream = function (dirPath, options) {
       // setting it in an 'entry' handler is the same strategy that npm
       // does, so we do that here too.
       if (entry.type === "Directory") {
-        entry.mode = (entry.mode || entry.props.mode) | 0o500;
-        entry.props.mode = entry.mode;
+        entry.props.mode = addExecBitWhenReadBitPresent(entry.props.mode);
+      }
+
+      // In a similar way as for directories, but only if is in a path
+      // location that is expected to be executable (npm "bin" links)
+      if (entry.type === "File" && entry.path.indexOf(binPathMatch) > -1) {
+        entry.props.mode = addExecBitWhenReadBitPresent(entry.props.mode);
       }
 
       return true;
