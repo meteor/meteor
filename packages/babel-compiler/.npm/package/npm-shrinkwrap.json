@@ -5,11 +5,6 @@
       "resolved": "https://registry.npmjs.org/acorn/-/acorn-4.0.11.tgz",
       "from": "acorn@>=4.0.5 <4.1.0"
     },
-    "acorn-es7-plugin": {
-      "version": "1.1.5",
-      "resolved": "https://registry.npmjs.org/acorn-es7-plugin/-/acorn-es7-plugin-1.1.5.tgz",
-      "from": "acorn-es7-plugin@>=1.1.0 <1.2.0"
-    },
     "ansi-regex": {
       "version": "2.1.1",
       "resolved": "https://registry.npmjs.org/ansi-regex/-/ansi-regex-2.1.1.tgz",
@@ -21,9 +16,9 @@
       "from": "ansi-styles@>=2.2.1 <3.0.0"
     },
     "ast-types": {
-      "version": "0.9.6",
-      "resolved": "https://registry.npmjs.org/ast-types/-/ast-types-0.9.6.tgz",
-      "from": "ast-types@>=0.9.5 <0.10.0"
+      "version": "0.9.10",
+      "resolved": "https://registry.npmjs.org/ast-types/-/ast-types-0.9.10.tgz",
+      "from": "ast-types@>=0.9.9 <0.10.0"
     },
     "babel-code-frame": {
       "version": "6.22.0",
@@ -687,8 +682,8 @@
       }
     },
     "reify": {
-      "version": "0.5.1",
-      "resolved": "https://registry.npmjs.org/reify/-/reify-0.5.1.tgz",
+      "version": "0.5.6",
+      "resolved": "https://registry.npmjs.org/reify/-/reify-0.5.6.tgz",
       "from": "reify@>=0.5.1 <0.6.0"
     },
     "repeating": {
@@ -707,8 +702,8 @@
       "from": "source-map@>=0.5.0 <0.6.0"
     },
     "source-map-support": {
-      "version": "0.4.13",
-      "resolved": "https://registry.npmjs.org/source-map-support/-/source-map-support-0.4.13.tgz",
+      "version": "0.4.14",
+      "resolved": "https://registry.npmjs.org/source-map-support/-/source-map-support-0.4.14.tgz",
       "from": "source-map-support@>=0.4.2 <0.5.0"
     },
     "strip-ansi": {
