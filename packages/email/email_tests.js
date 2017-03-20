@@ -33,6 +33,7 @@ Tinytest.add("email - fully customizable", function (test) {
     });
     // XXX brittle if mailcomposer changes header order, etc
     test.equal(stream.getContentsAsString("utf8"),
+               "Email disabled since SMTP server not set (via system $MAIL_URL or Meteor.Startup).\n" + 
                "====== BEGIN MAIL #0 ======\n" +
                devWarningBanner +
                "MIME-Version: 1.0\r\n" +
