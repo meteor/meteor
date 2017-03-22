@@ -5,7 +5,9 @@
 ///
 
 var assert = require("assert");
-var fs = require("fs");
+var fs = require('fs');
+fs.move = require('fs-extra').move;
+fs.moveSync = require('fs-extra').moveSync;
 var path = require('path');
 var os = require('os');
 var util = require('util');
@@ -981,7 +983,7 @@ files.renameDirAlmostAtomically = function (fromDir, toDir) {
   // Get old dir out of the way, if it exists.
   var movedOldDir = true;
   try {
-    files.rename(toDir, garbageDir);
+    files.move(toDir, garbageDir);
   } catch (e) {
     if (e.code !== 'ENOENT') {
       throw e;
@@ -990,7 +992,7 @@ files.renameDirAlmostAtomically = function (fromDir, toDir) {
   }
 
   // Now rename the directory.
-  files.rename(fromDir, toDir);
+  files.move(fromDir, toDir);
 
   // ... and delete the old one.
   if (movedOldDir) {
@@ -1608,6 +1610,7 @@ wrapFsFunc("readFile", [0], {
 wrapFsFunc("stat", [0]);
 wrapFsFunc("lstat", [0]);
 wrapFsFunc("rename", [0, 1]);
+wrapFsFunc("move", [0]);
 
 // After the outermost files.withCache call returns, the withCacheCache is
 // reset to null so that it does not survive server restarts.
