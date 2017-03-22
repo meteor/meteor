@@ -1664,7 +1664,7 @@ files.existsSync = function (path, callback) {
   return !! files.statOrNull(path);
 };
 
-if (process.platform === "win32") {
+if (files.isWindowsLikeFilesystem()) {
   var rename = files.rename;
 
   files.rename = function (from, to) {
@@ -1677,7 +1677,7 @@ if (process.platform === "win32") {
         rename(from, to);
         success = true;
       } catch (err) {
-        if (err.code !== 'EPERM') {
+        if (err.code !== 'EPERM' && err.code !== 'EACCES') {
           throw err;
         }
       }
