@@ -42,6 +42,16 @@
   [Issue #8367](https://github.com/meteor/meteor/issues/8367),
   https://github.com/meteor/meteor/commit/0cbd25111d1249a61ca7adce23fad5215408c821
 
+* On Windows, bundles built during `meteor build` or `meteor deploy` will
+  maintain the executable bit for commands installed in the
+  `node_modules\.bin` directory.
+  [PR #8503](https://github.com/meteor/meteor/pull/8503)
+
+* On Windows, the upgrades to Node, `npm` and `mongodb` mentioned in the 1.4.3.2
+  release are now included after being mistakenly overlooked.  An admin script
+  enhancement has been applied this from happening again.
+  [PR #8505](https://github.com/meteor/meteor/pull/8505)
+
 ## v1.4.3.2, 2017-03-14
 
 * Node has been upgraded to version 4.8.0.
