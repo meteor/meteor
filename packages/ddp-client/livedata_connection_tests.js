@@ -820,7 +820,7 @@ if (Meteor.isClient) {
     startAndConnect(test, stream);
 
     var firstMethodCallbackFired = false;
-    var firsMethodCallbackErrored = false;
+    var firstMethodCallbackErrored = false;
     var secondMethodCallbackFired = false;
     var secondMethodCallbackErrored = false;
 
