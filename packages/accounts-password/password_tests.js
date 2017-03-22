@@ -1704,10 +1704,11 @@ if (Meteor.isServer) (function () {
       var userId = Accounts.createUser({email: email, password: 'password'});
       
       Accounts.sendEnrollmentEmail(userId, email);
-      test.isTrue(!!Meteor.users.findOne(userId).services.password.reset);
+      var enrollToken = Meteor.users.findOne(userId).services.password.reset;
+      test.isTrue(enrollToken);
 
       Accounts._expirePasswordResetTokens(new Date(), userId);
-      test.isTrue(Meteor.users.findOne(userId).services.password.reset);
+      test.equal(enrollToken, Meteor.users.findOne(userId).services.password.reset);
     }
   )
 
@@ -1716,12 +1717,13 @@ if (Meteor.isServer) (function () {
     function (test) {
       var email = test.id + '-intercept@example.com';
       var userId = Accounts.createUser({email: email, password: 'password'});
+
       Accounts.sendResetPasswordEmail(userId, email);
-      test.isTrue(!!Meteor.users.findOne(userId).services.password.reset);
+      var resetToken = Meteor.users.findOne(userId).services.password.reset;
+      test.isTrue(resetToken);
 
       Accounts._expirePasswordEnrollTokens(new Date(), userId);
-
-      test.isTrue(Meteor.users.findOne(userId).services.password.reset);
+      test.equal(resetToken,Meteor.users.findOne(userId).services.password.reset);
     }
   )
 
