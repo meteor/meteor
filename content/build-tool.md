@@ -65,6 +65,12 @@ A complete guide on installation, configuration, and usage of TypeScript, and ho
 
 The guide also includes sample applications created with Angular, React, Vue, and Blaze—all written in TypeScript. See the code [here](https://github.com/birkskyum/meteor-typescript-samples).
 
+<h4 id="typescript-conditional-imports">Conditional imports</h4>
+
+TypeScript does not support nested `import` statements, therefore conditionally importing modules requires you to use the `require` statement (see [Using `require`](https://guide.meteor.com/structure.html#using-require)).
+
+To maintain type safety, you can take advantage of TypeScript's import elision and reference the types using the `typeof` keyword. See the [TypeScript handbook article](https://www.typescriptlang.org/docs/handbook/modules.html#optional-module-loading-and-other-advanced-loading-scenarios) for details or [this blog post](http://ideasintosoftware.com/typescript-conditional-imports/) for a concrete Meteor example.
+
 <h2 id="blaze-templates">Templates and HTML</h2>
 
 Since Meteor uses client-side rendering for your app's UI, all of your HTML code, UI components, and templates need to be compiled to JavaScript. There are a few options at your disposal to write your UI code.
