@@ -188,6 +188,17 @@ Meteor Up has multiple projects so select what is best for your project:
 
 For further assistance, consult the documentation for the option you select.
 
+<h3 id="docker">Docker</h3>
+
+To orchestrate your own container-based deployment there are existing base images to consider before rolling your own:
+
+ - **[jshimko/meteor-launchpad](https://github.com/jshimko/meteor-launchpad)**
+ - [meteorhacks/meteord](https://github.com/kadirahq/meteord)
+ - [chriswessels/meteor-tupperware](https://github.com/chriswessels/meteor-tupperware)
+
+
+_The recommendation above is primarily based on current state of maintenance to address upstream security vulnerabilities. Review the Dockerfiles and build scripts to make your own assessment._
+
 <h3 id="custom-deployment">Custom deployment</h3>
 
 If you want to figure out your hosting solution completely from scratch, the Meteor tool has a command `meteor build` that creates a deployment bundle that contains a plain Node.js application. Any npm dependencies must be installed before issuing the `meteor build` command to be included in the bundle. You can host this application wherever you like and there are many options in terms of how you set it up and configure it.

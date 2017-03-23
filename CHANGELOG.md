@@ -3,6 +3,8 @@ title: Changelog
 order: 1001
 description: A log of significant changes to the Meteor Guide.
 ---
+
+- 2017/03/22: Added Docker section within Deployment and Monitoring.
 - 2017/03/05: Updated "Testing" to use the replacement `dispatch:mocha` package instead of the previous suggestions from `dispatch:*`. [PR#618](https://github.com/meteor/guide/pull/618) [PR#614](https://github.com/meteor/guide/pull/614)
 - 2017/02/08: Updated MongoDb hosting services with more details and recommendations. [PR#609](https://github.com/meteor/guide/pull/609)
 - 2017/01/19: Updated recommendations for forcing SSL to avoid the `force-ssl` package when possible.
