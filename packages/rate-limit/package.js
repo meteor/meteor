@@ -11,6 +11,7 @@ Package.describe({
 });
 
 Package.onUse(function(api) {
+  api.use('ecmascript');
   api.use('underscore');
   api.use('random');
   api.addFiles('rate-limit.js');
