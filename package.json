@@ -21,7 +21,7 @@
     "babel-plugin-transform-es2015-destructuring": "^6.22.0",
     "babel-plugin-transform-es2015-for-of": "^6.22.0",
     "babel-plugin-transform-es2015-literals": "^6.22.0",
-    "babel-plugin-transform-es2015-modules-reify": "^0.5.1",
+    "babel-plugin-transform-es2015-modules-reify": "^0.6.0",
     "babel-plugin-transform-es2015-object-super": "^6.22.0",
     "babel-plugin-transform-es2015-parameters": "^6.22.0",
     "babel-plugin-transform-es2015-shorthand-properties": "^6.22.0",
