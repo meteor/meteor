@@ -1,3 +1,5 @@
+import { DDP, LivedataTest } from "./namespace.js";
+
 // @param endpoint {String} URL to Meteor app
 //   "http://subdomain.meteor.com/" or "/" or
 //   "ddp+sockjs://foo-**.meteor.com/sockjs"
@@ -9,45 +11,44 @@
 // We don't do any heartbeating. (The logic that did this in sockjs was removed,
 // because it used a built-in sockjs mechanism. We could do it with WebSocket
 // ping frames or with DDP-level messages.)
-LivedataTest.ClientStream = function (endpoint, options) {
-  var self = this;
-  options = options || {};
+LivedataTest.ClientStream = class ClientStream {
+  constructor(endpoint, options) {
+    const self = this;
+    options = options || {};
 
-  self.options = _.extend({
-    retry: true
-  }, options);
+    self.options = Object.assign({
+      retry: true
+    }, options);
 
-  self.client = null;  // created in _launchConnection
-  self.endpoint = endpoint;
+    self.client = null;  // created in _launchConnection
+    self.endpoint = endpoint;
 
-  self.headers = self.options.headers || {};
-  self.npmFayeOptions = self.options.npmFayeOptions || {};
+    self.headers = self.options.headers || {};
+    self.npmFayeOptions = self.options.npmFayeOptions || {};
 
-  self._initCommon(self.options);
+    self._initCommon(self.options);
 
-  //// Kickoff!
-  self._launchConnection();
-};
-
-_.extend(LivedataTest.ClientStream.prototype, {
+    //// Kickoff!
+    self._launchConnection();
+  }
 
   // data is a utf8 string. Data sent while not connected is dropped on
   // the floor, and it is up the user of this API to retransmit lost
   // messages on 'reset'
-  send: function (data) {
+  send(data) {
     var self = this;
     if (self.currentStatus.connected) {
       self.client.send(data);
     }
-  },
+  }
 
   // Changes where this connection points
-  _changeUrl: function (url) {
+  _changeUrl(url) {
     var self = this;
     self.endpoint = url;
-  },
+  }
 
-  _onConnect: function (client) {
+  _onConnect(client) {
     var self = this;
 
     if (client !== self.client) {
@@ -86,9 +87,9 @@ _.extend(LivedataTest.ClientStream.prototype, {
     // fire resets. This must come after status change so that clients
     // can call send from within a reset callback.
     _.each(self.eventCallbacks.reset, function (callback) { callback(); });
-  },
+  }
 
-  _cleanup: function (maybeError) {
+  _cleanup(maybeError) {
     var self = this;
 
     self._clearConnectionTimer();
@@ -101,18 +102,18 @@ _.extend(LivedataTest.ClientStream.prototype, {
         callback(maybeError);
       });
     }
-  },
+  }
 
-  _clearConnectionTimer: function () {
+  _clearConnectionTimer() {
     var self = this;
 
     if (self.connectionTimer) {
       clearTimeout(self.connectionTimer);
       self.connectionTimer = null;
     }
-  },
+  }
 
-  _getProxyUrl: function (targetUrl) {
+  _getProxyUrl(targetUrl) {
     var self = this;
     // Similar to code in tools/http-helpers.js.
     var proxy = process.env.HTTP_PROXY || process.env.http_proxy || null;
@@ -121,9 +122,9 @@ _.extend(LivedataTest.ClientStream.prototype, {
       proxy = process.env.HTTPS_PROXY || process.env.https_proxy || proxy;
     }
     return proxy;
-  },
+  }
 
-  _launchConnection: function () {
+  _launchConnection() {
     var self = this;
     self._cleanup(); // cleanup the old socket, if there was one.
 
@@ -200,4 +201,4 @@ _.extend(LivedataTest.ClientStream.prototype, {
       });
     });
   }
-});
+};

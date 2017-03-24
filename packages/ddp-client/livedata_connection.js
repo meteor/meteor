@@ -1,3 +1,6 @@
+import { DDP, LivedataTest } from "./namespace.js";
+import { MongoIDMap } from "./id_map.js";
+
 if (Meteor.isServer) {
   var path = Npm.require('path');
   var Fiber = Npm.require('fibers');

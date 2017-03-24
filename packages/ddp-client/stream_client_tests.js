@@ -1,3 +1,5 @@
+import { LivedataTest } from "./namespace.js";
+
 var Fiber = Npm.require('fibers');
 
 testAsyncMulti("stream client - callbacks run in a fiber", [
