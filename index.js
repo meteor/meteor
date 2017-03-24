@@ -1,8 +1,10 @@
-var assert = require("assert");
-var getDefaultOptions = require("./options.js").getDefaults;
-var getMinifierOptions = require("./options.js").getMinifierDefaults;
-var Cache = require("./cache.js");
-var compileCache; // Lazily initialized.
+"use strict";
+
+const assert = require("assert");
+const getDefaultOptions = require("./options.js").getDefaults;
+const getMinifierOptions = require("./options.js").getMinifierDefaults;
+const Cache = require("./cache.js");
+let compileCache; // Lazily initialized.
 
 // Make sure that module.import and module.export are defined in the
 // current Node process.
@@ -14,7 +16,7 @@ require("reify/node/runtime");
 exports.getDefaultOptions = getDefaultOptions;
 exports.getMinifierOptions = getMinifierOptions;
 
-var parse = exports.parse =
+const parse = exports.parse =
   require("reify/lib/parsers/babylon.js").parse;
 
 exports.compile = function compile(source, options, deps) {
@@ -26,18 +28,18 @@ exports.compile = function compile(source, options, deps) {
 };
 
 function compile(source, options) {
-  var ast = parse(source);
+  let ast = parse(source);
 
   // Since Reify inserts code without updating ast.tokens, it's better to
   // destroy unreliable token information. Don't worry; Babel can cope.
   delete ast.tokens;
 
-  var inputSourceMap;
-  var babelCore = require("babel-core");
-  var result;
+  let inputSourceMap;
+  const babelCore = require("babel-core");
+  let result;
 
   function transform(presets) {
-    var optionsCopy = Object.assign({}, options);
+    const optionsCopy = Object.assign({}, options);
 
     delete optionsCopy.plugins;
     optionsCopy.presets = presets;
@@ -47,7 +49,7 @@ function compile(source, options) {
       optionsCopy.inputSourceMap = inputSourceMap;
     }
 
-    var result = babelCore.transformFromAst(ast, source, optionsCopy);
+    const result = babelCore.transformFromAst(ast, source, optionsCopy);
 
     source = result.code;
     ast = result.ast;
