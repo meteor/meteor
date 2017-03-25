@@ -117,7 +117,7 @@ MeteorBabelMinifier.prototype.processFilesForBundle = function(files, options) {
         var minified;
 
         try {
-          minified = meteorBabelMinify(file.getContentsAsString());
+          minified = meteorJsMinify(file.getContentsAsString());
 
           if (!(minified && typeof minified.code === "string")) {
             throw new Error();
