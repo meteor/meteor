@@ -66,7 +66,11 @@ Accounts._checkPassword = function (user, password) {
   password = getPasswordString(password);
 
   if (! bcryptCompare(password, user.services.password.bcrypt)) {
-    result.error = new Meteor.Error(403, "Incorrect password");
+    if(Accounts._options.ambiguousErrorMessages) {
+      result.error = new Meteor.Error(403, "Login failure. Please check your username and password.");  
+    } else {
+      result.error = new Meteor.Error(403, "Incorrect password");  
+    }
   }
 
   return result;
@@ -202,7 +206,11 @@ var checkForCaseInsensitiveDuplicates = function (fieldName, displayName, fieldV
         // Otherwise, check to see if there are multiple matches or a match
         // that is not us
         (matchedUsers.length > 1 || matchedUsers[0]._id !== ownUserId))) {
-      throw new Meteor.Error(403, displayName + " already exists.");
+      if(Accounts._options.ambiguousErrorMessages) {
+        throw new Meteor.Error(403, "Login failure. Please check your username and password.");
+      } else {
+        throw new Meteor.Error(403, displayName + " already exists.");
+      }
     }
   }
 };
@@ -254,12 +262,22 @@ Accounts.registerLoginHandler("password", function (options) {
 
 
   var user = Accounts._findUserByQuery(options.user);
-  if (!user)
-    throw new Meteor.Error(403, "User not found");
-
+  if (!user) {
+    if(Accounts._options.ambiguousErrorMessages) {
+      throw new Meteor.Error(403, "Login failure. Please check your username and password.");
+    } else {
+      throw new Meteor.Error(403, "User not found");
+    }
+  }
+    
   if (!user.services || !user.services.password ||
-      !(user.services.password.bcrypt || user.services.password.srp))
-    throw new Meteor.Error(403, "User has no password set");
+      !(user.services.password.bcrypt || user.services.password.srp)) {
+    if(Accounts._options.ambiguousErrorMessages) {
+      throw new Meteor.Error(403, "Login failure. Please check your username and password.");
+    } else {
+      throw new Meteor.Error(403, "User has no password set");
+    }
+  }
 
   if (!user.services.password.bcrypt) {
     if (typeof options.password === "string") {
@@ -272,10 +290,16 @@ Accounts.registerLoginHandler("password", function (options) {
         identity: verifier.identity, salt: verifier.salt});
 
       if (verifier.verifier !== newVerifier.verifier) {
-        return {
-          userId: user._id,
-          error: new Meteor.Error(403, "Incorrect password")
-        };
+        if(Accounts._options.ambiguousErrorMessages) {
+          return {
+            error: new Meteor.Error(403, "Login failure. Please check your username and password.")
+          }
+        } else {
+          return {
+            userId: user._id,
+            error: new Meteor.Error(403, "Incorrect password")
+          };
+        }  
       }
 
       return {userId: user._id};
@@ -320,16 +344,27 @@ Accounts.registerLoginHandler("password", function (options) {
   });
 
   var user = Accounts._findUserByQuery(options.user);
-  if (!user)
-    throw new Meteor.Error(403, "User not found");
+  if (!user) {
+    if(Accounts._options.ambiguousErrorMessages) {
+      throw new Meteor.Error(403, "Login failure. Please check your username and password.");
+    } else {
+      throw new Meteor.Error(403, "User not found");
+    }
+  }
 
   // Check to see if another simultaneous login has already upgraded
   // the user record to bcrypt.
   if (user.services && user.services.password && user.services.password.bcrypt)
     return checkPassword(user, options.password);
 
-  if (!(user.services && user.services.password && user.services.password.srp))
-    throw new Meteor.Error(403, "User has no password set");
+  if (!(user.services && user.services.password && user.services.password.srp)) {
+    if(Accounts._options.ambiguousErrorMessages) {
+      throw new Meteor.Error(403, "Login failure. Please check your username and password.");
+    } else {
+      throw new Meteor.Error(403, "User has no password set");
+    }
+  }
+  
 
   var v1 = user.services.password.srp.verifier;
   var v2 = SRP.generateVerifier(
@@ -339,11 +374,18 @@ Accounts.registerLoginHandler("password", function (options) {
       salt: user.services.password.srp.salt
     }
   ).verifier;
-  if (v1 !== v2)
-    return {
-      userId: user._id,
-      error: new Meteor.Error(403, "Incorrect password")
-    };
+  if (v1 !== v2) {
+    if(Accounts._options.ambiguousErrorMessages) {
+      return {
+        error: new Meteor.Error(403, "Login failure. Please check your username and password.")
+      };
+    } else {
+      return {
+        userId: user._id,
+        error: new Meteor.Error(403, "Incorrect password")
+      };
+    }
+  }
 
   // Upgrade to bcrypt on successful login.
   var salted = hashPassword(options.password);
@@ -377,8 +419,13 @@ Accounts.setUsername = function (userId, newUsername) {
   check(newUsername, NonEmptyString);
 
   var user = Meteor.users.findOne(userId);
-  if (!user)
-    throw new Meteor.Error(403, "User not found");
+  if (!user) {
+    if(Accounts._options.ambiguousErrorMessages) {
+      throw new Meteor.Error(403, "Login failure. Please check your username and password.");
+    } else {
+      throw new Meteor.Error(403, "User not found");
+    }  
+  }
 
   var oldUsername = user.username;
 
@@ -421,12 +468,22 @@ Meteor.methods({changePassword: function (oldPassword, newPassword) {
     throw new Meteor.Error(401, "Must be logged in");
 
   var user = Meteor.users.findOne(this.userId);
-  if (!user)
-    throw new Meteor.Error(403, "User not found");
+  if (!user) {
+    if(Accounts._options.ambiguousErrorMessages) {
+      throw new Meteor.Error(403, "Login failure. Please check your username and password.");
+    } else {
+      throw new Meteor.Error(403, "User not found");
+    }
+  }    
 
   if (!user.services || !user.services.password ||
-      (!user.services.password.bcrypt && !user.services.password.srp))
-    throw new Meteor.Error(403, "User has no password set");
+      (!user.services.password.bcrypt && !user.services.password.srp)) {
+    if(Accounts._options.ambiguousErrorMessages) {
+      throw new Meteor.Error(403, "Login failure. Please check your username and password.");
+    } else {
+      throw new Meteor.Error(403, "User has no password set");
+    }
+  }
 
   if (! user.services.password.bcrypt) {
     throw new Meteor.Error(400, "old password format", EJSON.stringify({
@@ -505,8 +562,14 @@ Meteor.methods({forgotPassword: function (options) {
   check(options, {email: String});
 
   var user = Accounts.findUserByEmail(options.email);
-  if (!user)
-    throw new Meteor.Error(403, "User not found");
+  if (!user) {
+    if(Accounts._options.ambiguousErrorMessages) {
+      // If ambiguousErrorMessages is set, we don't want to give away that the email does not exist, so just return as if everything is a-OK
+      return
+    } else {
+      throw new Meteor.Error(403, "User not found");
+    }
+  }
 
   const emails = _.pluck(user.emails || [], 'address');
   const caseSensitiveEmail = _.find(emails, email => {
@@ -529,14 +592,26 @@ Meteor.methods({forgotPassword: function (options) {
 Accounts.sendResetPasswordEmail = function (userId, email) {
   // Make sure the user exists, and email is one of their addresses.
   var user = Meteor.users.findOne(userId);
-  if (!user)
-    throw new Error("Can't find user");
+  if (!user) {
+    if(Accounts._options.ambiguousErrorMessages) {
+      // If ambiguousErrorMessages is set, we don't want to give away that the user does not exist, so just return as if everything is a-OK
+      return
+    } else {
+      throw new Error("Can't find user");
+    }
+  }
   // pick the first email if we weren't passed an email.
   if (!email && user.emails && user.emails[0])
     email = user.emails[0].address;
   // make sure we have a valid email
-  if (!email || !_.contains(_.pluck(user.emails || [], 'address'), email))
-    throw new Error("No such email for user.");
+  if (!email || !_.contains(_.pluck(user.emails || [], 'address'), email)) {
+    if(Accounts._options.ambiguousErrorMessages) {
+      // If ambiguousErrorMessages is set, we don't want to give away that the user does not exist, so just return as if everything is a-OK
+      return
+    } else {
+      throw new Error("No such email for user.");
+    }
+  }
 
   var token = Random.secret();
   var when = new Date();
