@@ -844,7 +844,7 @@ const galaxyDiscoveryCache = new Map;
 function getDeployURL(site) {
   // Always trust explicitly configuration via env.
   if (process.env.DEPLOY_HOSTNAME) {
-    return Promise.resolve(addScheme(process.env.DEPLOY_HOSTNAME));
+    return Promise.resolve(addScheme(process.env.DEPLOY_HOSTNAME.trim()));
   }
 
   const defaultURL = "https://us-east-1.galaxy-deploy.meteor.com";

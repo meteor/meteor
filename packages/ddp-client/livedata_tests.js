@@ -1,3 +1,5 @@
+import { DDP, LivedataTest } from "./namespace.js";
+
 // XXX should check error codes
 var failure = function (test, code, reason) {
   return function (error, result) {
