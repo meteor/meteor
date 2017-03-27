@@ -18,12 +18,12 @@
   [Issue #8378](https://github.com/meteor/meteor/issues/8378)
   [PR #8397](https://github.com/meteor/meteor/pull/8397)
 
-* The `meteor-babel` npm package has been upgraded to version 0.18.0, and
-  `reify` has been upgraded to version 0.5.1, fixing several subtle bugs
+* The `meteor-babel` npm package has been upgraded to version 0.19.1, and
+  `reify` has been upgraded to version 0.6.6, fixing several subtle bugs
   introduced by Meteor 1.4.3 (see below), including
   [issue #8461](https://github.com/meteor/meteor/issues/8461).
 
-* The `reify` npm package has been upgraded to version 0.5.1.
+* The `reify` npm package has been upgraded to version 0.6.6.
 
 * The Reify module compiler is now a Babel plugin, making it possible for
   other custom Babel plugins configured in `.babelrc` or `package.json`
@@ -41,6 +41,27 @@
   Read the ECMA262 proposals here:
   * https://github.com/leebyron/ecmascript-export-ns-from
   * https://github.com/leebyron/ecmascript-export-default-from
+
+* When `Meteor.call` is used on the server to invoke a method that
+  returns a `Promise` object, the result will no longer be the `Promise`
+  object, but the resolved value of the `Promise`.
+  [Issue #8367](https://github.com/meteor/meteor/issues/8367)
+
+> Note: if you actually want a `Promise` when calling `Meteor.call` or
+  `Meteor.apply` on the server, use `Meteor.callAsync` and/or
+  `Meteor.applyAsync` instead.
+  [Issue #8367](https://github.com/meteor/meteor/issues/8367),
+  https://github.com/meteor/meteor/commit/0cbd25111d1249a61ca7adce23fad5215408c821
+
+* On Windows, bundles built during `meteor build` or `meteor deploy` will
+  maintain the executable bit for commands installed in the
+  `node_modules\.bin` directory.
+  [PR #8503](https://github.com/meteor/meteor/pull/8503)
+
+* On Windows, the upgrades to Node, `npm` and `mongodb` mentioned in the 1.4.3.2
+  release are now included after being mistakenly overlooked.  An admin script
+  enhancement has been applied this from happening again.
+  [PR #8505](https://github.com/meteor/meteor/pull/8505)
 
 ## v1.4.3.2, 2017-03-14
 

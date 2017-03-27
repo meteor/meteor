@@ -35,7 +35,8 @@ function tryToParse(source, hash) {
   return ast;
 }
 
-var dependencyKeywordPattern = /\b(require|import|export|dynamicImport)\b/g;
+var dependencyKeywordPattern =
+  /\b(?:require|import|importSync|dynamicImport|export)\b/g;
 
 /**
  * The `findImportedModuleIdentifiers` function takes a string of module
@@ -211,6 +212,7 @@ function getImportedModuleInfo(node) {
                isIdWithName(node.callee.object, "module")) {
       const propertyName =
         isPropertyWithName(node.callee.property, "import") ||
+        isPropertyWithName(node.callee.property, "importSync") ||
         isPropertyWithName(node.callee.property, "dynamicImport");
 
       if (propertyName) {

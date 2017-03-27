@@ -2,5 +2,5 @@
  * @namespace DDP
  * @summary Namespace for DDP-related methods/classes.
  */
-DDP          = {};
-LivedataTest = {};
+export const DDP = {};
+export const LivedataTest = {};

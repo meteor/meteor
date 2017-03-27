@@ -1,3 +1,5 @@
+import { DDP, LivedataTest } from "./namespace.js";
+
 LivedataTest.SUPPORTED_DDP_VERSIONS = DDPCommon.SUPPORTED_DDP_VERSIONS;
 
 // This is private but it's used in a few places. accounts-base uses
