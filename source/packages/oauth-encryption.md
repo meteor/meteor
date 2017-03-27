@@ -14,7 +14,7 @@ The encryption key is 16 bytes, encoded in base64.
 To generate a key:
 
 ```bash
-$ ~/.meteor/tools/latest/bin/node -e 'console.log(require("crypto").randomBytes(16).toString("base64"))'
+$ meteor node -e 'console.log(require("crypto").randomBytes(16).toString("base64"))'
 ```
 
 
