@@ -9,7 +9,7 @@ As the first suggestion to the reader of this document: If, during the course of
 If you want to run on the bleeding edge, or [help contribute to Meteor](Contributing.md), you
 can run Meteor directly from a Git checkout using these steps:
 
-0. **Clone from GitHub**
+1. **Clone from GitHub**
 
     ```sh
     $ git clone --recursive https://github.com/meteor/meteor.git
