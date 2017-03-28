@@ -1,6 +1,6 @@
 machine:
   node:
-    version: 0.12
+    version: 4
 
 checkout:
   post:
