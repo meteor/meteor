@@ -548,21 +548,23 @@ Mongo.Collection.prototype.insert = function insert(doc, callback) {
 Mongo.Collection.prototype.update = function update(selector, modifier, ...optionsAndCallback) {
   const callback = popCallbackFromArgs(optionsAndCallback);
 
-  const insertedId = this._makeNewID();
-  selector = Mongo.Collection._rewriteSelector(selector, insertedId);
-
   // We've already popped off the callback, so we are left with an array
   // of one or zero items
   const options = _.clone(optionsAndCallback[0]) || {};
+  let insertedId;
   if (options && options.upsert) {
     // set `insertedId` if absent.  `insertedId` is a Meteor extension.
     if (options.insertedId) {
       if (!(typeof options.insertedId === 'string' || options.insertedId instanceof Mongo.ObjectID))
         throw new Error("insertedId must be string or ObjectID");
+      insertedId = options.insertedId;
     } else if (! selector._id) {
+      insertedId = this._makeNewID();
       options.insertedId = insertedId;
     }
   }
+
+  selector = Mongo.Collection._rewriteSelector(selector, insertedId);
 
   const wrappedCallback = wrapCallback(callback);
 
