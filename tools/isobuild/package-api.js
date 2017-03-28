@@ -127,9 +127,8 @@ _.extend(PackageAPI.prototype, {
   // options can include:
   //
   // - unordered: if true, don't require this package to load
-  //   before us -- just require it to be loaded anytime. Also
-  //   don't bring this package's imports into our
-  //   namespace. If false, override a true value specified in
+  //   before us -- just require it to be loaded anytime. If
+  //   false, override a true value specified in
   //   a previous call to use for this package name. (A
   //   limitation of the current implementation is that this
   //   flag is not tracked per-environment or per-role.)  This

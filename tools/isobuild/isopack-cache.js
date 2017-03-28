@@ -8,6 +8,7 @@ var watch = require('../fs/watch.js');
 var colonConverter = require('../utils/colon-converter.js');
 var Profile = require('../tool-env/profile.js').Profile;
 var archinfo = require('../utils/archinfo.js');
+import { requestGarbageCollection } from "../utils/gc.js";
 
 export class IsopackCache {
   constructor(options) {
@@ -74,6 +75,7 @@ export class IsopackCache {
     } else {
       self._packageMap.eachPackage(function (name, packageInfo) {
         self._ensurePackageLoaded(name, onStack);
+        requestGarbageCollection();
       });
     }
   }

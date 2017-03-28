@@ -3,7 +3,6 @@ var path = require("path");
 var stream = require("stream");
 var fs = require("fs");
 var net = require("net");
-var tty = require("tty");
 var vm = require("vm");
 var _ = require("underscore");
 var INFO_FILE_MODE = parseInt("600", 8); // Only the owner can read or write.
@@ -119,6 +118,12 @@ class Server {
       }
       delete options.key;
 
+      // Set the columns to what is being requested by the client.
+      if (options.columns && socket) {
+        socket.columns = options.columns;
+      }
+      delete options.columns;
+
       if (options.evaluateAndExit) {
         evalCommand.call(
           Object.create(null), // Dummy repl object without ._RecoverableError.
@@ -165,13 +170,6 @@ class Server {
 
   startREPL(options) {
     var self = this;
-
-    if (! options.output.columns) {
-      // The REPL's tab completion logic assumes process.stdout is a TTY,
-      // and while that isn't technically true here, we can get tab
-      // completion to behave correctly if we fake the .columns property.
-      options.output.columns = getTerminalWidth();
-    }
 
     // Make sure this function doesn't try to write anything to the output
     // stream after it has been closed.
@@ -269,6 +267,11 @@ class Server {
       }
     });
 
+    // TODO: Node 6: Revisit this as repl._RecoverableError is now exported.
+    //       as `Recoverable` from `repl`.  Maybe revisit this entirely
+    //       as the docs have been updated too:
+    //       https://nodejs.org/api/repl.html#repl_custom_evaluation_functions
+    //       https://github.com/nodejs/node/blob/v6.x/lib/repl.js#L1398
     // Trigger one recoverable error using the default eval function, just
     // to capture the Recoverable error constructor, so that our custom
     // evalCommand function can wrap recoverable errors properly.
@@ -384,19 +387,6 @@ function getHistoryFile(shellDir) {
   return path.join(shellDir, "history");
 }
 
-function getTerminalWidth() {
-  try {
-    // Inspired by https://github.com/TooTallNate/ttys/blob/master/index.js
-    var fd = fs.openSync("/dev/tty", "r");
-    assert.ok(tty.isatty(fd));
-    var ws = new tty.WriteStream(fd);
-    ws.end();
-    return ws.columns;
-  } catch (fancyApproachWasTooFancy) {
-    return 80;
-  }
-}
-
 // Shell commands need to be executed in a Fiber in case they call into
 // code that yields. Using a Promise is an even better idea, since it runs
 // its callbacks in Fibers drawn from a pool, so the Fibers are recycled.
@@ -405,16 +395,12 @@ var evalCommandPromise = Promise.resolve();
 function evalCommand(command, context, filename, callback) {
   var repl = this;
 
-  function finish(error, result) {
-    if (error) {
-      if (repl._RecoverableError &&
-          isRecoverableError(error, repl)) {
-        callback(new repl._RecoverableError(error));
-      } else {
-        callback(error);
-      }
+  function wrapErrorIfRecoverable(error) {
+    if (repl._RecoverableError &&
+        isRecoverableError(error, repl)) {
+      return new repl._RecoverableError(error);
     } else {
-      callback(null, result);
+      return error;
     }
   }
 
@@ -439,7 +425,7 @@ function evalCommand(command, context, filename, callback) {
     try {
       command = Package.ecmascript.ECMAScript.compileForShell(command);
     } catch (error) {
-      finish(error);
+      callback(wrapErrorIfRecoverable(error));
       return;
     }
   }
@@ -450,13 +436,13 @@ function evalCommand(command, context, filename, callback) {
       displayErrors: false
     });
   } catch (parseError) {
-    finish(parseError);
+    callback(wrapErrorIfRecoverable(parseError));
     return;
   }
 
   evalCommandPromise.then(function () {
-    finish(null, script.runInThisContext());
-  }).catch(finish);
+    callback(null, script.runInThisContext());
+  }).catch(callback);
 }
 
 function stripParens(command) {

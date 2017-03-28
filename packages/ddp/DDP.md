@@ -240,7 +240,8 @@ error is an Object with the following fields:
 
  * `error`: string (previously a number. See appendix 3)
  * `reason`: optional string
- * `details`: optional string
+ * `message`: optional string
+ * `errorType`: pre-defined string with a value of `Meteor.Error`
 
 Such an Error is used to represent errors raised by the method or subscription,
 as well as an attempt to subscribe to an unknown subscription or call an unknown

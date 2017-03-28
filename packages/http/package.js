@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Make HTTP calls to remote servers",
-  version: '1.2.10'
+  version: '1.2.12'
 });
 
 Npm.depends({
@@ -27,7 +27,6 @@ Package.onTest(function (api) {
   api.use('webapp', 'server');
   api.use('underscore');
   api.use('random');
-  api.use('jquery', 'client');
   api.use('http', ['client', 'server']);
   api.use('tinytest');
   api.use('test-helpers', ['client', 'server']);

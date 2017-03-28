@@ -630,6 +630,73 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
 
   nomatch({a: {$size: 2}}, {a: [[2,2]]}); // tested against mongodb
 
+
+  // $bitsAllClear - number
+  match({a: {$bitsAllClear: [0,1,2,3]}}, {a: 0});
+  match({a: {$bitsAllClear: [0,1,2,3]}}, {a: 0b10000});
+  nomatch({a: {$bitsAllClear: [0,1,2,3]}}, {a: 0b1});
+  nomatch({a: {$bitsAllClear: [0,1,2,3]}}, {a: 0b10});
+  nomatch({a: {$bitsAllClear: [0,1,2,3]}}, {a: 0b100});
+  nomatch({a: {$bitsAllClear: [0,1,2,3]}}, {a: 0b1000});
+
+  // $bitsAllClear - buffer
+  match({a: {$bitsAllClear: new Uint8Array([3])}}, {a: new Uint8Array([4])});
+  match({a: {$bitsAllClear: new Uint8Array([0, 1])}}, {a: new Uint8Array([255])});  // 256 should not be set for 255.
+  match({a: {$bitsAllClear: new Uint8Array([3])}}, {a: 4 });
+
+  match({a: {$bitsAllClear: new Uint8Array([3])}}, {a: 0 });
+
+  // $bitsAllSet - number
+  match({a: {$bitsAllSet: [0,1,2,3]}}, {a: 0b1111});
+  nomatch({a: {$bitsAllSet: [0,1,2,3]}}, {a: 0b111});
+  nomatch({a: {$bitsAllSet: [0,1,2,3]}}, {a: 256});
+  nomatch({a: {$bitsAllSet: [0,1,2,3]}}, {a: 50000});
+  match({a: {$bitsAllSet: [0,1,2]}}, {a: 15});
+  match({a: {$bitsAllSet: [0, 12]}}, {a: 0b1000000000001});
+  nomatch({a: {$bitsAllSet: [0, 12]}}, {a: 0b1000000000000});
+  nomatch({a: {$bitsAllSet: [0, 12]}}, {a: 0b1});
+
+  // $bitsAllSet - buffer
+  match({a: {$bitsAllSet: new Uint8Array([3])}}, {a: new Uint8Array([3])});
+  match({a: {$bitsAllSet: new Uint8Array([7])}}, {a: new Uint8Array([15])});
+  match({a: {$bitsAllSet: new Uint8Array([3])}}, {a: 3 });
+
+  // $bitsAnySet - number
+  match({a: {$bitsAnySet: [0,1,2,3]}}, {a: 0b1});
+  match({a: {$bitsAnySet: [0,1,2,3]}}, {a: 0b10});
+  match({a: {$bitsAnySet: [0,1,2,3]}}, {a: 0b100});
+  match({a: {$bitsAnySet: [0,1,2,3]}}, {a: 0b1000});
+  match({a: {$bitsAnySet: [4]}}, {a: 0b10000});
+  nomatch({a: {$bitsAnySet: [0,1,2,3]}}, {a: 0b10000});
+  nomatch({a: {$bitsAnySet: [0,1,2,3]}}, {a: 0});
+
+  // $bitsAnySet - buffer
+  match({a: {$bitsAnySet: new Uint8Array([3])}}, {a: new Uint8Array([7])});
+  match({a: {$bitsAnySet: new Uint8Array([15])}}, {a: new Uint8Array([7])});
+  match({a: {$bitsAnySet: new Uint8Array([3])}}, {a: 1 });
+
+  // $bitsAnyClear - number
+  match({a: {$bitsAnyClear: [0,1,2,3]}}, {a: 0});
+  match({a: {$bitsAnyClear: [0,1,2,3]}}, {a: 0b1});
+  match({a: {$bitsAnyClear: [0,1,2,3]}}, {a: 0b10});
+  match({a: {$bitsAnyClear: [0,1,2,3]}}, {a: 0b100});
+  match({a: {$bitsAnyClear: [0,1,2,3]}}, {a: 0b1000});
+  match({a: {$bitsAnyClear: [0,1,2,3]}}, {a: 0b10000});
+  nomatch({a: {$bitsAnyClear: [0,1,2,3]}}, {a: 0b1111});
+  match({a: {$bitsAnyClear: [0,1,2,3]}}, {a: 0b111});
+  nomatch({a: {$bitsAnyClear: [0,1,2]}}, {a: 0b111});
+  match({a: {$bitsAnyClear: [0,1,2,3]}}, {a: 0b11});
+  nomatch({a: {$bitsAnyClear: [0,1]}}, {a: 0b11});
+  match({a: {$bitsAnyClear: [0,1,2,3]}}, {a: 0b1});
+  nomatch({a: {$bitsAnyClear: [0]}}, {a: 0b1});
+  nomatch({a: {$bitsAnyClear: [4]}}, {a: 0b10000});
+
+  // $bitsAnyClear - buffer
+  match({a: {$bitsAnyClear: new Uint8Array([8])}}, {a: new Uint8Array([7])});
+  match({a: {$bitsAnyClear: new Uint8Array([1])}}, {a: new Uint8Array([0])});
+  match({a: {$bitsAnyClear: new Uint8Array([1])}}, {a: 4 });
+
+
   // $type
   match({a: {$type: 1}}, {a: 1.1});
   match({a: {$type: 1}}, {a: 1});
@@ -2109,21 +2176,21 @@ Tinytest.add("minimongo - modify", function (test) {
 
   var upsert = function (query, mod, expected) {
     var coll = new LocalCollection;
-    
+
     var result = coll.upsert(query, mod);
-    
+
     var actual = coll.findOne();
-    
+
     if (expected._id) {
       test.equal(result.insertedId, expected._id);
     }
     else {
       delete actual._id;
     }
-    
+
     test.equal(actual, expected);
   };
-  
+
   // document replacement
   modify({}, {}, {});
   modify({a: 12}, {}, {}); // tested against mongodb
@@ -2496,9 +2563,9 @@ Tinytest.add("minimongo - modify", function (test) {
   modify({a: 0}, {$setOnInsert: {a: 12}}, {a: 0});
   upsert({a: 12}, {$setOnInsert: {b: 12}}, {a: 12, b: 12});
   upsert({a: 12}, {$setOnInsert: {_id: 'test'}}, {_id: 'test', a: 12});
-  
+
   exception({}, {$set: {_id: 'bad'}});
-  
+
   // $bit
   // unimplemented
 
@@ -3206,4 +3273,83 @@ Tinytest.add("minimongo - reactive skip/limit count while updating", function(te
   test.equal(count, 1);
 
   c.stop();
+});
+
+// Makes sure inserts cannot be performed using field names that have
+// Mongo restricted characters in them ('.', '$', '\0'):
+// https://docs.mongodb.com/manual/reference/limits/#Restrictions-on-Field-Names
+Tinytest.add("minimongo - cannot insert using invalid field names", function (test) {
+  const collection = new LocalCollection();
+
+  // Quick test to make sure non-dot field inserts are working
+  collection.insert({ a: 'b' });
+
+  // Quick test to make sure field values with dots are allowed
+  collection.insert({ a: 'b.c' });
+
+  // Verify top level dot-field inserts are prohibited
+  ['a.b', '.b', 'a.', 'a.b.c'].forEach((field) => {
+    test.throws(function () {
+      collection.insert({ [field]: 'c' });
+    }, `Key ${field} must not contain '.'`);
+  });
+
+  // Verify nested dot-field inserts are prohibited
+  test.throws(function () {
+    collection.insert({ a: { b: { 'c.d': 'e' } } });
+  }, "Key c.d must not contain '.'");
+
+  // Verify field names starting with $ are prohibited
+  test.throws(function () {
+    collection.insert({ '$a': 'b' });
+  }, "Key $a must not start with '$'");
+
+  // Verify nested field names starting with $ are prohibited
+  test.throws(function () {
+    collection.insert({ a: { b: { '$c': 'd' } } });
+  }, "Key $c must not start with '$'");
+
+  // Verify top level fields with null characters are prohibited
+  ['\0a', 'a\0', 'a\0b', '\u0000a', 'a\u0000', 'a\u0000b'].forEach((field) => {
+    test.throws(function () {
+      collection.insert({ [field]: 'c' });
+    }, `Key ${field} must not contain null bytes`);
+  });
+
+  // Verify nested field names with null characters are prohibited
+  test.throws(function () {
+    collection.insert({ a: { b: { '\0c': 'd' } } });
+  }, 'Key \0c must not contain null bytes');
+});
+
+// Makes sure $set's cannot be performed using null bytes
+// https://docs.mongodb.com/manual/reference/limits/#Restrictions-on-Field-Names
+Tinytest.add("minimongo - cannot $set with null bytes", function (test) {
+  const collection = new LocalCollection();
+
+  // Quick test to make sure non-null byte $set's are working
+  const id = collection.insert({ a: 'b', 'c': 'd' });
+  collection.update({ _id: id }, { $set: { e: 'f' } });
+
+  // Verify $set's with null bytes throw an exception
+  test.throws(() => {
+    collection.update({ _id: id }, { $set: { '\0a': 'b' } });
+  }, 'Key \0a must not contain null bytes');
+});
+
+// Makes sure $rename's cannot be performed using null bytes
+// https://docs.mongodb.com/manual/reference/limits/#Restrictions-on-Field-Names
+Tinytest.add("minimongo - cannot $rename with null bytes", function (test) {
+  const collection = new LocalCollection();
+
+  // Quick test to make sure non-null byte $rename's are working
+  let id = collection.insert({ a: 'b', c: 'd' });
+  collection.update({ _id: id }, { $rename: { a: 'a1', c: 'c1' } });
+
+  // Verify $rename's with null bytes throw an exception
+  collection.remove({});
+  id = collection.insert({ a: 'b', c: 'd' });
+  test.throws(() => {
+    collection.update({ _id: id }, { $rename: { a: '\0a', c: 'c\0' } });
+  }, "The 'to' field for $rename cannot contain an embedded null byte");
 });

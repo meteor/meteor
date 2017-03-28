@@ -761,12 +761,34 @@ var runWebAppServer = function () {
   // own.
   httpServer.on('request', WebApp._timeoutAdjustmentRequestCallback);
 
+  // If the client gave us a bad request, tell it instead of just closing the
+  // socket. This lets load balancers in front of us differentiate between "a
+  // server is randomly closing sockets for no reason" and "client sent a bad
+  // request".
+  //
+  // This will only work on Node 6; Node 4 destroys the socket before calling
+  // this event. See https://github.com/nodejs/node/pull/4557/ for details.
+  httpServer.on('clientError', (err, socket) => {
+    // Pre-Node-6, do nothing.
+    if (socket.destroyed) {
+      return;
+    }
+
+    if (err.message === 'Parse Error') {
+      socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
+    } else {
+      // For other errors, use the default behavior as if we had no clientError
+      // handler.
+      socket.destroy(err);
+    }
+  });
 
   // start up app
   _.extend(WebApp, {
     connectHandlers: packageAndAppHandlers,
     rawConnectHandlers: rawConnectHandlers,
     httpServer: httpServer,
+    connectApp: app,
     // For testing.
     suppressConnectErrors: function () {
       suppressConnectErrors = true;

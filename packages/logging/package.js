@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Logging facility.",
-  version: '1.1.16'
+  version: '1.1.17'
 });
 
 Npm.depends({
@@ -12,7 +12,7 @@ Npm.strip({
 });
 
 Cordova.depends({
-  'cordova-plugin-console': '1.0.4'
+  'cordova-plugin-console': '1.0.5'
 });
 
 Package.onUse(function (api) {

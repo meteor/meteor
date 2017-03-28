@@ -6,7 +6,7 @@ import {
   unlink,
 } from "../fs/files.js";
 
-const INSTALL_JOB_MESSAGE = "installing dependencies from package.json";
+const INSTALL_JOB_MESSAGE = "installing npm dependencies";
 
 export function install(appDir) {
   const packageJsonPath = pathJoin(appDir, "package.json");

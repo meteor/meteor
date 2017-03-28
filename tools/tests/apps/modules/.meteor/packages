@@ -6,20 +6,21 @@
 
 meteor-base@1.0.4             # Packages every Meteor app needs to have
 mobile-experience@1.0.4       # Packages for a great mobile UX
-mongo@1.1.14                   # The database Meteor supports right now
+mongo@1.1.15                   # The database Meteor supports right now
 blaze-html-templates@1.0.4    # Compile .html files into Meteor Blaze views
 session@1.1.7                 # Client-side reactive dictionary for your app
 jquery@1.11.10                  # Helpful client-side library
-tracker@1.1.1                 # Meteor's client-side reactive programming library
+tracker@1.1.2                 # Meteor's client-side reactive programming library
 
 es5-shim@4.6.15                # ECMAScript 5 compatibility for older browsers.
-ecmascript@0.5.9              # Enable ECMAScript2015+ syntax in app code
+ecmascript@0.6.3              # Enable ECMAScript2015+ syntax in app code
 
+coffeescript@1.11.1_4
 modules-test-package
-avital:mocha
-standard-minifier-css@1.3.2
-standard-minifier-js@1.2.1
+dispatch:mocha-phantomjs
+dispatch:mocha-browser
+standard-minifier-css@1.3.3
+standard-minifier-js@1.2.2
 client-only-ecmascript
 modules-test-plugin
-shell-server@0.2.1
-coffeescript
+shell-server@0.2.2

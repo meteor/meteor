@@ -134,6 +134,7 @@ _.extend(PollingObserveDriver.prototype, {
       return;
 
     var first = false;
+    var newResults;
     var oldResults = self._results;
     if (!oldResults) {
       first = true;
@@ -149,7 +150,7 @@ _.extend(PollingObserveDriver.prototype, {
 
     // Get the new query results. (This yields.)
     try {
-      var newResults = self._synchronousCursor.getRawObjects(self._ordered);
+      newResults = self._synchronousCursor.getRawObjects(self._ordered);
     } catch (e) {
       if (first && typeof(e.code) === 'number') {
         // This is an error document sent to us by mongod, not a connection

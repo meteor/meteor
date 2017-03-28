@@ -434,6 +434,9 @@ function copyNpmPackageWithSymlinkedNodeModules(fromPkgDir, toPkgDir) {
 
 const portableCache = Object.create(null);
 
+// Increment this version to trigger the full portability check again.
+const portableVersion = 1;
+
 const isPortable = Profile("meteorNpm.isPortable", dir => {
   const lstat = optimisticLStat(dir);
   if (! lstat.isDirectory()) {
@@ -441,9 +444,11 @@ const isPortable = Profile("meteorNpm.isPortable", dir => {
     return ! dir.endsWith(".node");
   }
 
-  const pkgJsonStat = optimisticStatOrNull(files.pathJoin(dir, "package.json"));
+  const pkgJsonPath = files.pathJoin(dir, "package.json");
+  const pkgJsonStat = optimisticStatOrNull(pkgJsonPath);
   const canCache = pkgJsonStat && pkgJsonStat.isFile();
-  const portableFile = files.pathJoin(dir, ".meteor-portable");
+  const portableFile = files.pathJoin(
+    dir, ".meteor-portable-" + portableVersion + ".json");
 
   if (canCache) {
     // Cache previous results by writing a boolean value to a hidden file
@@ -470,10 +475,26 @@ const isPortable = Profile("meteorNpm.isPortable", dir => {
     fs.unlink(portableFile, error => {});
   }
 
-  const result = optimisticReaddir(dir).every(
-    // Ignore files that start with a ".", such as .bin directories.
-    itemName => itemName.startsWith(".") ||
-      isPortable(files.pathJoin(dir, itemName)));
+  const pkgJson = canCache && optimisticReadJsonOrNull(pkgJsonPath, {
+    // A syntactically incorrect `package.json` isn't likely to have other
+    // effects since the npm itself likely won't install but the developer has
+    // no control over that happening so we should allow this.
+    allowSyntaxError: true
+  });
+
+  const hasBuildScript =
+    pkgJson &&
+    pkgJson.scripts &&
+    (pkgJson.scripts.preinstall ||
+     pkgJson.scripts.install ||
+     pkgJson.scripts.postinstall);
+
+  const result = hasBuildScript
+    ? false // Build scripts may not be portable.
+    : optimisticReaddir(dir).every(
+      // Ignore files that start with a ".", such as .bin directories.
+      itemName => itemName.startsWith(".") ||
+        isPortable(files.pathJoin(dir, itemName)));
 
   if (canCache) {
     // Write the .meteor-portable file asynchronously, and don't worry
@@ -608,24 +629,42 @@ var updateExistingNpmDirectory = function (packageName, newPackageNpmDir,
     logUpdateDependencies(packageName, npmDependencies);
   }
 
+  makeNewPackageNpmDir(newPackageNpmDir);
+
   let preservedShrinkwrap;
 
   if (_.isEmpty(npmDependencies)) {
     // If there are no npmDependencies, make sure nothing is installed.
     preservedShrinkwrap = { dependencies: {} };
+
   } else if (isSubtreeOf(npmTree, minShrinkwrapTree)) {
     // If the top-level npm dependencies are already encompassed by the
     // npm-shrinkwrap.json file, then reuse that file.
     preservedShrinkwrap = shrinkwrappedDependenciesTree;
+
   } else {
-    // Otherwise install only the required npm packages and their
-    // dependencies.
-    preservedShrinkwrap = npmTree;
+    // Otherwise install npmTree.dependencies as if we were creating a new
+    // .npm/package directory, and leave preservedShrinkwrap empty.
+    _.each(npmTree.dependencies, (info, name) => {
+      const installed = minInstalledTree.dependencies[name];
+      if (! installed || installed.version !== info.version) {
+        installNpmModule(name, info.version, newPackageNpmDir);
+      }
+    });
+
+    // Note: as of npm@4.0.0, npm-shrinkwrap.json files are regarded as
+    // "canonical," meaning `npm install` (without a package argument)
+    // will only install dependencies mentioned in npm-shrinkwrap.json.
+    // That's why we can't just update installedDependenciesTree to
+    // include npmTree.dependencies and hope for the best, because if the
+    // new versions of the required top-level packages have any additional
+    // transitive dependencies, those dependencies will not be installed
+    // unless previously mentioned in npm-shrinkwrap.json. Reference:
+    // https://github.com/npm/npm/blob/latest/CHANGELOG.md#no-more-partial-shrinkwraps-breaking
   }
 
-  makeNewPackageNpmDir(newPackageNpmDir);
-
-  if (!_.isEmpty(preservedShrinkwrap.dependencies)) {
+  if (! _.isEmpty(preservedShrinkwrap &&
+                  preservedShrinkwrap.dependencies)) {
     const newShrinkwrapFile = files.pathJoin(
       newPackageNpmDir,
       'npm-shrinkwrap.json'

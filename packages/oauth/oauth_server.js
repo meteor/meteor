@@ -342,7 +342,10 @@ var renderEndOfLoginResponse = function (options) {
     throw new Error('invalid loginStyle: ' + options.loginStyle);
   }
 
-  var result = template.replace(/##CONFIG##/, JSON.stringify(config));
+  var result = template.replace(/##CONFIG##/, JSON.stringify(config))
+    .replace(
+      /##ROOT_URL_PATH_PREFIX##/, __meteor_runtime_config__.ROOT_URL_PATH_PREFIX
+    );
 
   return "<!DOCTYPE html>\n" + result;
 };

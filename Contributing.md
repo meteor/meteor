@@ -12,13 +12,21 @@ There are many ways to contribute to the Meteor Project. Here’s a list of tech
 - [Reporting a bug](https://github.com/meteor/meteor/blob/devel/Contributing.md#reporting-a-bug-in-meteor)
 - [Triaging issues](https://github.com/meteor/meteor/blob/devel/IssueTriage.md)
 - [Contributing to documentation](https://github.com/meteor/docs/blob/master/Contributing.md) 
-- [Submitting pull requests](https://github.com/meteor/meteor/blob/devel/Contributing.md#making-changes-to-meteor-core) 
+- [Submitting pull requests](https://github.com/meteor/meteor/blob/devel/Contributing.md#making-changes-to-meteor-core) (See "Finding work" below)
 - [Reviewing pull requests](https://github.com/meteor/meteor/blob/devel/Contributing.md#reviewer) 
 - [Maintaining a community package](https://github.com/meteor/meteor/blob/devel/Contributing.md#community-package-maintainer)
 
 There are also several ways to contribute to the Meteor Project outside of GitHub, like organizing or speaking at [Meetups](https://www.meetup.com/topics/meteor/) and events and helping to moderate our [forums](https://forums.meteor.com/). Stay tuned for more documentation around non-code contributions. 
 
-If you can think of any changes to the project or documentation that would improve the contributor experience, let us know by opening an issue!
+If you can think of any changes to the project, [documentation](https://github.com/meteor/docs), or [guide](https://github.com/meteor/guide) that would improve the contributor experience, let us know by opening an issue!
+
+### Finding work
+
+We curate specific issues that would make great pull requests for community contributors by applying the [`pull-requests-encouraged` label](https://github.com/meteor/meteor/issues?q=is%3Aopen+is%3Aissue+label%3Apull-requests-encouraged).
+
+Issues which *also* have the [`confirmed` label](https://github.com/meteor/meteor/issues?q=is%3Aissue%20is%3Aopen%20label%3Apull-requests-encouraged%20label%3Aconfirmed) are considered to have their details clear enough to begin working on.
+
+Any issue which does not have the `confirmed` label still requires discussion on implementation details but input and positive commentary is welcome!  Any pull-request opened on an issue which is not `confirmed` is still welcome, however the pull-request is more likely to be sent back for reworking than a `confirmed` issue.  If in doubt about the best way to implement something, please create additional conversation on the issue.
 
 ### Project roles
 
@@ -39,6 +47,7 @@ Current Issue Triagers:
 Our most regular and experienced Issue Triagers sometimes move on to doing code reviews for pull requests, and have input into which pull requests should be merged. 
 
 Current Reviewers:
+- [@hwillson](https://github.com/hwillson)
 - [@lorensr](https://github.com/lorensr)
 - [@abernix](https://github.com/abernix)
 
@@ -49,8 +58,7 @@ For now, the only contributors with commit access to meteor/meteor are employees
 Project Lead: [@benjamn](https://github.com/benjamn)
 
 Current Core Committers: 
-- [@tmeasday](https://github.com/tmeasday)
-- [@zol](https://github.com/zol)
+- [@abernix](https://github.com/abernix)
 - [@glasser](https://github.com/glasser)
 - [@stubailo](https://github.com/stubailo)
 
@@ -59,7 +67,7 @@ Current Core Committers:
 Documentation Maintainers are regular documentation contributors that have been given the ability to merge docs changes on [meteor/docs](https://github.com/meteor/docs). 
 
 Current Documentation Maintainers:
-- [@tmeasday](https://github.com/tmeasday)
+- [@abernix](https://github.com/abernix)
 - [@lorensr](https://github.com/lorensr)
 
 #### Community Package Maintainer:
@@ -78,7 +86,7 @@ Current Community Manager:
 
 ### Tracking project work
 
-Right now, the best place to track the work being done on Meteor is to take a look at the latest release milestone [here](https://github.com/meteor/meteor/milestones). We also curate specific issues that would make great pull requests for community contributors with the [pull requests encouraged tag](https://github.com/meteor/meteor/issues?q=is%3Aopen+is%3Aissue+label%3Apull-requests-encouraged).
+Right now, the best place to track the work being done on Meteor is to take a look at the latest release milestone [here](https://github.com/meteor/meteor/milestones).  Also, the [Meteor Roadmap](Roadmap.md) contains high-level information on the current priorities of the project.
 
 <h2 id="reporting-bug">Reporting a bug in Meteor</h2>
 
@@ -247,32 +255,3 @@ Meteor now has groups defined to cover different areas of the codebase. If you n
 * Documentation - This includes the Guide, the Docs, and any supporting material. You can mention @guide in the PR.
 
 Including the people above is no guarantee that you will get a response, or ultimately that your pull request will be accepted. This section exists to give some minor guidance on internal Meteor Development Group team structures.
-
-### Running tests on Meteor core
-
-When you are working with code in the core Meteor packages, you will want to make sure you run the
-full test-suite (including the tests you added) to ensure you haven't broken anything in Meteor. The
-`test-packages` command will do just that for you.
-
-The test packages command will start up a Meteor app with TinyTest setup, just connect to
-http://localhost:3000 or your specified port, like you would do with a normal meteor app.
-
-#### Run against your local meteor copy
-
-When running `test-packages`, be sure that you use the current directory copy of Meteor instead of
-the installed version. Here is the INCORRECT way: `meteor test-packages`.
-
-The CORRECT way is to use `./meteor test-packages` to run the full test suite against the branch you
-are on.
-
-This is important because you want to make sure you are running the test-packages command against
-the Meteor code on the branch you have pulled from GitHub, rather than the stable Meteor release you
-have installed on your computer.
-
-#### Running a subset of tests
-
-You can also just run a subset of tests from one package to speed up testing time. Let's say for
-example that you just want to run the Spacebars test suite. Just simple do `./meteor test-packages
-./packages/spacebars-tests` and it will just run the test files from that one package. You can
-examine the `package.js` file for the `onTest` block, it outlines all the test files that should be
-run.

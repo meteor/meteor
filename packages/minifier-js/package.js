@@ -1,10 +1,10 @@
 Package.describe({
   summary: "JavaScript minifier",
-  version: "1.2.15"
+  version: "1.2.18"
 });
 
 Npm.depends({
-  "uglify-js": "2.7.0"
+  "uglify-js": "2.7.5"
 });
 
 Npm.strip({
@@ -12,7 +12,6 @@ Npm.strip({
 });
 
 Package.onUse(function (api) {
-  api.use('underscore', 'server');
   api.export(['UglifyJSMinify', 'UglifyJS']);
   api.addFiles(['minifier.js'], 'server');
 });

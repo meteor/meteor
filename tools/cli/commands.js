@@ -744,6 +744,8 @@ main.registerCommand({
   // the packages (or maybe an unpredictable subset based on what happens to be
   // in the template's versions file).
 
+  require("./default-npm-deps.js").install(appPath);
+
   var appNameToDisplay = appPathAsEntered === "." ?
     "current directory" : `'${appPathAsEntered}'`;
 
@@ -768,11 +770,6 @@ main.registerCommand({
       Console.command("cd " + appPathWithQuotesIfSpaces),
         Console.options({ indent: 2 }));
   }
-
-  Console.info(
-    Console.command("meteor npm install"),
-    Console.options({ indent: 2 }),
-  );
 
   Console.info(
     Console.command("meteor"), Console.options({ indent: 2 }));

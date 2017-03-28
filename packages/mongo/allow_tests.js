@@ -13,7 +13,7 @@ if (Meteor.isServer) {
     check(nonce, String);
     check(idGeneration, String);
     var cursors = [];
-    var needToConfigure = undefined;
+    var needToConfigure;
 
     // helper for defining a collection. we are careful to create just one
     // Mongo.Collection even if the sub body is rerun, by caching them.

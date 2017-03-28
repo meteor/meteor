@@ -184,12 +184,26 @@ _.extend(AppProcess.prototype, {
     if (self.settings) {
       env.METEOR_SETTINGS = self.settings;
     } else {
+      // Warn the developer that we are not going to use their environment var.
+      if (env.METEOR_SETTINGS) {
+        runLog.log(
+          "WARNING: The 'METEOR_SETTINGS' environment variable is ignored " +
+          "when running in development (as you are doing now).  Instead, use " +
+          "the '--settings settings.json' option to see reactive changes " +
+          "when settings are changed.  For more information, see the " +
+          "documentation for 'Meteor.settings': " +
+          "https://docs.meteor.com/api/core.html#Meteor-settings" +
+          "\n");
+      }
+
+      // To provide a consistent, reactive experience in development, do
+      // not use settings provided via the environment variable.
       delete env.METEOR_SETTINGS;
     }
     if (self.testMetadata) {
       env.TEST_METADATA = JSON.stringify(self.testMetadata);
     } else {
-      delete env.TEST_METADATA; 
+      delete env.TEST_METADATA;
     }
     if (self.listenHost) {
       env.BIND_IP = self.listenHost;
