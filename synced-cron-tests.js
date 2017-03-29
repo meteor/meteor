@@ -227,3 +227,16 @@ Tinytest.add('Single time schedules don\'t break', function(test) {
   // this would throw without our patch for #41
   SyncedCron._laterSetTimeout(_.identity, schedule);
 });
+
+
+Tinytest.add('Do not persist when flag is set to false', function (test) {
+  SyncedCron._reset();
+
+  var testEntryNoPersist = _.extend({}, TestEntry, {persist: false});
+
+  SyncedCron.add(testEntryNoPersist);
+
+  const now = new Date();
+  SyncedCron._entryWrapper(testEntryNoPersist)(now);
+  test.equal(SyncedCron._collection.find().count(), 0);
+});

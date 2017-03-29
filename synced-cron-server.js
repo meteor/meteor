@@ -117,6 +117,11 @@ SyncedCron.add = function(entry) {
   check(entry.name, String);
   check(entry.schedule, Function);
   check(entry.job, Function);
+  check(entry.persist, Match.Optional(Boolean));
+
+  if (entry.persist === undefined) {
+    entry.persist = true;
+  }
 
   // check
   if (!this._entries[entry.name]) {
@@ -191,26 +196,30 @@ SyncedCron._entryWrapper = function(entry) {
     intendedAt = new Date(intendedAt.getTime());
     intendedAt.setMilliseconds(0);
 
-    var jobHistory = {
-      intendedAt: intendedAt,
-      name: entry.name,
-      startedAt: new Date()
-    };
+    var jobHistory;
 
-    // If we have a dup key error, another instance has already tried to run
-    // this job.
-    try {
-      jobHistory._id = self._collection.insert(jobHistory);
-    } catch(e) {
-      // http://www.mongodb.org/about/contributors/error-codes/
-      // 11000 == duplicate key error
-      if (e.name === 'MongoError' && e.code === 11000) {
-        log.info('Not running "' + entry.name + '" again.');
-        return;
-      }
+    if (entry.persist) {
+      jobHistory = {
+        intendedAt: intendedAt,
+        name: entry.name,
+        startedAt: new Date()
+      };
 
-      throw e;
-    };
+      // If we have a dup key error, another instance has already tried to run
+      // this job.
+      try {
+        jobHistory._id = self._collection.insert(jobHistory);
+      } catch(e) {
+        // http://www.mongodb.org/about/contributors/error-codes/
+        // 11000 == duplicate key error
+        if (e.name === 'MongoError' && e.code === 11000) {
+          log.info('Not running "' + entry.name + '" again.');
+          return;
+        }
+
+        throw e;
+      };
+    }
 
     // run and record the job
     try {
@@ -218,20 +227,24 @@ SyncedCron._entryWrapper = function(entry) {
       var output = entry.job(intendedAt,entry.name); // <- Run the actual job
 
       log.info('Finished "' + entry.name + '".');
-      self._collection.update({_id: jobHistory._id}, {
-        $set: {
-          finishedAt: new Date(),
-          result: output
-        }
-      });
+      if(entry.persist) {
+        self._collection.update({_id: jobHistory._id}, {
+          $set: {
+            finishedAt: new Date(),
+            result: output
+          }
+        });
+      }
     } catch(e) {
       log.info('Exception "' + entry.name +'" ' + ((e && e.stack) ? e.stack : e));
-      self._collection.update({_id: jobHistory._id}, {
-        $set: {
-          finishedAt: new Date(),
-          error: (e && e.stack) ? e.stack : e
-        }
-      });
+      if(entry.persist) {
+        self._collection.update({_id: jobHistory._id}, {
+          $set: {
+            finishedAt: new Date(),
+            error: (e && e.stack) ? e.stack : e
+          }
+        });
+      }
     }
   };
 }
