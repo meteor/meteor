@@ -12,54 +12,54 @@ The `package.js` file below is an example of how to use the packaging API. The
 rest of this section will explain the specific API commands in greater detail.
 
 ```js
-/* Information about this package */
+// Information about this package:
 Package.describe({
-  // Short two-sentence summary.
-  summary: "What this does",
-  // Version number.
-  version: "1.0.0",
-  // Optional.  Default is package directory name.
-  name: "username:package-name",
-  // Optional github URL to your source repository.
-  git: "https://github.com/something/something.git",
+  // Short two-sentence summary
+  summary: 'What this does',
+  // Version number
+  version: '1.0.0',
+  // Optional, default is package directory name
+  name: 'username:package-name',
+  // Optional GitHub URL to your source repository
+  git: 'https://github.com/something/something.git'
 });
 
-/* This defines your actual package */
-Package.onUse(function (api) {
-  // If no version is specified for an 'api.use' dependency, use the
-  // one defined in Meteor 0.9.0.
-  api.versionsFrom('0.9.0');
-  // Use Underscore package, but only on the server.
-  // Version not specified, so it will be as of Meteor 0.9.0.
+// This defines your actual package:
+Package.onUse((api) => {
+  // If no version is specified for an `api.use` dependency, use the one defined
+  // in Meteor 1.4.3.1.
+  api.versionsFrom('1.4.3.1');
+  // Use the `underscore` package, but only on the server. Version not
+  // specified, so it will be as of Meteor 1.4.3.1.
   api.use('underscore', 'server');
-  // Use kadira:flow-router, version 1.0.0 or newer.
+  // Use `kadira:flow-router`, version 2.12.1 or newer.
   api.use('kadira:flow-router@2.12.1');
-  // Give users of this package access to active-route's Javascript helpers
+  // Give users of this package access to active-route's JavaScript helpers.
   api.imply('zimme:active-route@2.3.2')
-  // Export the object 'Email' to packages or apps that use this package.
+  // Export the object `Email` to packages or apps that use this package.
   api.export('Email', 'server');
   // Specify the source code for the package.
   api.addFiles('email.js', 'server');
-
-  // When using ecmascript or modules packages, you can use this instead of
-  // api.export and api.addFiles:
+  // When using `ecmascript` or `modules` packages, you can use this instead of
+  // `api.export` and `api.addFiles`.
   api.mainModule('email.js', 'server');
 });
 
-/* This defines the tests for the package */
-Package.onTest(function (api) {
-  // Sets up a dependency on this package
+// This defines the tests for the package:
+Package.onTest((api) => {
+  // Sets up a dependency on this package.
   api.use('username:package-name');
-  // Allows you to use the mocha test framework
+  // Use the Mocha test framework.
   api.use('practicalmeteor:mocha@2.4.5_2');
-  // Specify the source code for the package tests
+  // Specify the source code for the package tests.
   api.addFiles('email_tests.js', 'server');
 });
 
-/* This lets you use npm packages in your package */
+// This lets you use npm packages in your package:
 Npm.depends({
-  simplesmtp: "0.3.10",
-  "stream-buffers": "0.2.5"});
+  simplesmtp: '0.3.10',
+  'stream-buffers': '0.2.5'
+});
 ```
 
 `api.mainModule` is documented in the [modules](http://docs.meteor.com/packages/modules.html#Modular-package-structure) section.
@@ -131,7 +131,7 @@ performs on the application and packages source:
 1. Gather source files from the app folder or read `package.js` file for a
   package.
 2. Lint all source files and print the linting warnings.
-3. Compile the source files like CoffeeScript, ES6, Less or Templates to plain
+3. Compile the source files like CoffeeScript, ES2015, Less, or Templates to plain
   JavaScript and CSS.
 4. Link the JavaScript files: wrap them into closures and provide necessary
   package imports.
@@ -164,21 +164,18 @@ examples of linters are [JSHint](http://jshint.com/about/) and
 To register a linter build plugin in your package, you need to do a couple of
 things in your `package.js`:
 - depend on the `isobuild:linter-plugin@1.0.0` package
-- register a build plugin: `Package.registerBuildPlugin({name, sources, ... });`
+- register a build plugin: `Package.registerBuildPlugin({ name, sources, ... });`
   (see [docs](http://docs.meteor.com/#/full/Package-registerBuildPlugin))
 
 In your build plugin sources, register a Linter Plugin: provide details such as
 a name, list of extensions and filenames the plugin will handle and a factory
-function that returns an instance of a linter class. Ex.:
+function that returns an instance of a linter class. Example:
 
-```javascript
+```js
 Plugin.registerLinter({
-  extensions: ["js"],
-  filenames: [".linterrc"]
-}, function () {
-  var linter = new MyLinter();
-  return linter;
-});
+  extensions: ['js'],
+  filenames: ['.linterrc']
+}, () => new MyLinter);
 ```
 
 In this example, we register a linter that runs on all `js` files and also reads
@@ -188,23 +185,20 @@ The `MyLinter` class should now implement the `processFilesForPackage`
 method. The method should accept two arguments: a list of files and an options
 object.
 
-```javascript
-function MyLinter() {}
-MyLinter.prototype.processFilesForPackage = function (files, options) {
-  var globals = options.globals;
+```js
+class MyLinter {
+  processFilesForPackage(files, options) {
+    files.forEach((file) => {
+      // Lint the file.
+      const lint = lintFile(file.getContentsAsString());
 
-  files.forEach(function (file) {
-    // lint the file
-    var lint = lintFile(file.getContentsAsString());
-    if (lint) {
-      // if there are linting errors, output them
-      file.error({
-        message: lint.text,
-        column: lint.column,
-        line: lint.line
-      });
-    }
-  });
+      if (lint) {
+        // If there are linting errors, output them.
+        const { message, line, column } = lint;
+        file.error({ message, line, column });
+      }
+    });
+  }
 }
 ```
 
@@ -221,40 +215,42 @@ See an example of a linting plugin implemented in Core: [jshint](https://github.
 Compilers are programs that take the source files and output JavaScript or
 CSS. They also can output parts of HTML that is added to the `<head>` tag and
 static assets. Examples for the compiler plugins are: CoffeeScript, Babel.js,
-JSX compilers, Jade templating compiler and others.
+JSX compilers, Pug templating compiler and others.
 
 To register a compiler plugin in your package, you need to do the following in
 your `package.js` file:
 - depend on the `isobuild:compiler-plugin@1.0.0` package
-- register a build plugin: `Package.registerBuildPlugin({name, sources, ... });`
+- register a build plugin: `Package.registerBuildPlugin({ name, sources, ... });`
   (see [docs](http://docs.meteor.com/#/full/Package-registerBuildPlugin))
 
 In your build plugin source, register a Compiler Plugin: similar to other types
 of build plugins, provide the details, extensions and filenames and a factory
 function that returns an instance of the compiler. Ex.:
 
-```javascript
+```js
 Plugin.registerCompiler({
-  extensions: ["jade", "tpl.jade"],
+  extensions: ['pug', 'tpl.pug'],
   filenames: []
-}, function () {
-  var compiler  = new JadeCompiler();
-  return compiler;
-});
+}, () => new PugCompiler);
 ```
 
 The compiler class must implement the `processFilesForTarget` method that is
 given the source files for a target (server or client part of the package/app).
 
-```javascript
-function JadeCompiler() {}
-JadeCompiler.prototype.processFilesForTarget = function (files) {
-  files.forEach(function (file) {
-    // process and add the output
-    var output = compileJade(file.getContentsAsString());
-    file.addJavaScript({ data: output, path: file.getPathInPackage() + '.js' });
-  });
-};
+```js
+class PugCompiler {
+  processFilesForTarget(files) {
+    files.forEach((file) => {
+      // Process and add the output.
+      const output = compilePug(file.getContentsAsString());
+
+      file.addJavaScript({
+        data: output,
+        path: `${file.getPathInPackage()}.js`
+      });
+    });
+  }
+}
 ```
 
 Besides the common methods available on the input files' class, the following
@@ -284,8 +280,8 @@ Meteor implements a couple of compilers as Core packages, good examples would be
 the
 [Blaze templating](https://github.com/meteor/meteor/tree/devel/packages/templating)
 package and the
-[EcmaScript](https://github.com/meteor/meteor/tree/devel/packages/ecmascript)
-package (compiles ES6/7 to JavaScript that can run in the browsers).
+[ecmascript](https://github.com/meteor/meteor/tree/devel/packages/ecmascript)
+package (compiles ES2015+ to JavaScript that can run in the browsers).
 
 <h3 id="build-plugin-minifiers">Minifiers</h3>
 
@@ -300,51 +296,49 @@ There are two types of minifiers one can add: a minifier processing JavaScript
 To register a minifier plugin in your package, add the following in your
 `package.js` file:
 - depend on `isobuild:minifier-plugin@1.0.0` package
-- register a build plugin: `Package.registerBuildPlugin({name, sources, ... });`
+- register a build plugin: `Package.registerBuildPlugin({ name, sources, ... });`
   (see [docs](http://docs.meteor.com/#/full/Package-registerBuildPlugin))
 
 In your build plugin source, register a Minifier Plugin. Similar to Linter and
 Compiler plugin, specify the interested extensions (`css` or `js`). The factory
 function returns an instance of the minifier class.
 
-```javascript
+```js
 Plugin.registerMinifier({
-  extensions: ["js"],
-  filenames: []
-}, function () {
-  var minifier  = new UglifyJsMinifier();
-  return minifier;
-});
+  extensions: ['js']
+}, () => new UglifyJsMinifier);
 ```
 
 The minifier class must implement the method `processFilesForBundle`. The first
 argument is a list of processed files and the options object specifies if the
 minifier is ran in production mode or development mode.
 
-```javascript
-function UglifyJsMinifier() {}
-UglifyJsMinifier.prototype.processFileForBundle = function (files, options) {
-var minifyMode = options.minifiyMode;
-  if (minifyMode === 'development') {
-    // don't minify in development
-    files.forEach(function (file) {
+```js
+class UglifyJsMinifier {
+  processFilesForBundle(files, options) {
+    const { minifyMode } = options;
+
+    if (minifyMode === 'development') {
+      // Don't minify in development.
+      file.forEach((file) => {
+        file.addJavaScript({
+          data: file.getContentsAsBuffer(),
+          sourceMap: file.getSourceMap(),
+          path: file.getPathInBundle()
+        });
+      });
+
+      return;
+    }
+
+    // Minify in production.
+    files.forEach((file) => {
       file.addJavaScript({
-        data: file.getContentsAsBuffer(),
-        sourceMap: file.getSourceMap(),
+        data: uglifyjs.minify(file.getContentsAsBuffer()),
         path: file.getPathInBundle()
       });
     });
-
-    return;
   }
-
-  // in production mode minifiy:
-  files.forEach(function (file) {
-    file.addJavaScript({
-      data: uglifyjs.minify(file.getContentsAsBuffer()),
-      path: file.getPathInBundle()
-    });
-  });
 }
 ```
 
@@ -352,10 +346,10 @@ In this example, we re-add the same files in the development mode to avoid
 unnecessary work and then we minify the files in production mode.
 
 Besides the common input files' methods, these methods are available:
-- getPathInBundle - returns a path of the processed file in the bundle.
-- getSourceMap - returns the source-map for the processed file if there is such.
-- addJavaScript - same as compilers
-- addStylesheet - same as compilers
+- `getPathInBundle` - returns a path of the processed file in the bundle.
+- `getSourceMap` - returns the source-map for the processed file if there is such.
+- `addJavaScript` - same as compilers
+- `addStylesheet` - same as compilers
 
 Right now, Meteor Core ships with the `standard-minifiers` package that can be
 replaced with a custom one. The
@@ -372,11 +366,11 @@ For the fast rebuilds between the Isobuild process runs, plugins can implement o
 
 There is a core package called `caching-compiler` that implements most of the common logic of keeping both in-memory and on-disk caches. The easiest way to implement caching correctly is to subclass the `CachingCompiler` or `MultiFileCachingCompiler` class from this package in your build plugin. `CachingCompiler` is for compilers that consider each file completely independently; `MultiFileCachingCompiler` is for compilers that allow files to reference each other. To get this class in your plugin namespace, add a dependency to the plugin definition:
 
-```javascript
+```js
 Package.registerBuildPlugin({
-  name: "compileGG",
-  use: [ 'caching-compiler@1.0.0' ],
-  sources: [ 'plugin/compile-gg.js' ]
+  name: 'compileGG',
+  use: ['caching-compiler@1.0.0'],
+  sources: ['plugin/compile-gg.js']
 });
 ```
 <h3 id="build-plugin-file-system">Accessing File System</h3>
@@ -391,18 +385,17 @@ Also `Plugin` provides helper functions `convertToStandardPath` and `convertToOS
 
 Example:
 
-```javascript
-// on Windows
-var fs = Plugin.fs;
-var path = Plugin.path;
+```js
+// On Windows
+const fs = Plugin.fs;
+const path = Plugin.path;
 
-var filepath = path.join('/C/Program Files', 'Program/file.txt');
+const filePath = path.join('/C/Program Files', 'Program/file.txt');
+console.log(filePath); // Prints '/C/Program Files/Program/file.txt'
 
-console.log(filepath); // prints "/C/Program Files/Program/file.txt"
+fs.writeFileSync(filePath, 'Hello.'); // Writes to 'C:\Program Files\Program\file.txt'
 
-fs.writeFileSync(filepath, "Hello."); // writes to C:\Program Files\Program\file.txt
-
-console.log(Plugin.convertToOsPath(filepath)); // prints "C:\Program Files\Program\file.txt"
+console.log(Plugin.convertToOsPath(filePath)); // Prints 'C:\Program Files\Program\file.txt'
 ```
 
 <h2 id="isobuild-features">Isobuild Feature Packages</h2>

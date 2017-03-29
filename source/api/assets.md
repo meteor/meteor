@@ -20,7 +20,7 @@ directory called `nested` with a file called `data.txt` inside it, then server
 code can read `data.txt` by running:
 
 ```js
-var data = Assets.getText('nested/data.txt');
+const data = Assets.getText('nested/data.txt');
 ```
 
 Note: Packages can only access their own assets. If you need to read the assets of a different package, or of the enclosing app, you need to get a reference to that package's `Assets` object.

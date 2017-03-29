@@ -33,9 +33,9 @@ followed by your application code.
 ```js
 // On server startup, if the database is empty, create some initial data.
 if (Meteor.isServer) {
-  Meteor.startup(function () {
+  Meteor.startup(() => {
     if (Rooms.find().count() === 0) {
-      Rooms.insert({name: "Initial room"});
+      Rooms.insert({ name: 'Initial room' });
     }
   });
 }

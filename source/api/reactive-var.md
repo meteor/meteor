@@ -18,7 +18,7 @@ usual contract for reactive data sources.
 
 A ReactiveVar is similar to a Session variable, with a few differences:
 
-* ReactiveVars don't have global names, like the "foo" in `Session.get("foo")`.
+* ReactiveVars don't have global names, like the "foo" in `Session.get('foo')`.
   Instead, they may be created and used locally, for example attached to a
   template instance, as in: `this.foo.get()`.
 

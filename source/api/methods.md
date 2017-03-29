@@ -11,22 +11,22 @@ Example:
 
 ```js
 Meteor.methods({
-  foo: function (arg1, arg2) {
+  foo(arg1, arg2) {
     check(arg1, String);
     check(arg2, [Number]);
 
-    // .. do stuff ..
+    // Do stuff...
 
     if (/* you want to throw an error */) {
-      throw new Meteor.Error("pants-not-found", "Can't find my pants");
+      throw new Meteor.Error('pants-not-found', "Can't find my pants");
     }
 
-    return "some return value";
+    return 'some return value';
   },
 
-  bar: function () {
-    // .. do other stuff ..
-    return "baz";
+  bar() {
+    // Do other stuff...
+    return 'baz';
   }
 });
 ```
@@ -139,10 +139,12 @@ will not throw an exception.  When the method is complete (which may or
 may not happen before `Meteor.call` returns), the callback will be
 called with two arguments: `error` and `result`. If an error was thrown,
 then `error` will be the exception object.  Otherwise, `error` will be
-undefined and the return value (possibly undefined) will be in `result`.
+`undefined` and the return value (possibly `undefined`) will be in `result`.
 
-    // async call
-    Meteor.call('foo', 1, 2, function (error, result) { ... } );
+```js
+// Asynchronous call
+Meteor.call('foo', 1, 2, (error, result) => { ... });
+```
 
 If you do not pass a callback on the server, the method invocation will
 block until the method is complete.  It will eventually return the
@@ -150,8 +152,10 @@ return value of the method, or it will throw an exception if the method
 threw an exception. (Possibly mapped to 500 Server Error if the
 exception happened remotely and it was not a `Meteor.Error` exception.)
 
-    // sync call
-    var result = Meteor.call('foo', 1, 2);
+```js
+// Synchronous call
+const result = Meteor.call('foo', 1, 2);
+```
 
 On the client, if you do not pass a callback and you are not inside a
 stub, `call` will return `undefined`, and you will have no way to get
@@ -212,15 +216,18 @@ interval.
 
 
 Here's example of defining a rule and adding it into the `DDPRateLimiter`:
-```javascript
-// Define a rule that matches login attempts by non-admin users
-var loginRule = {
-  userId: function (userId) {
-    return Meteor.users.findOne(userId).type !== 'Admin';
+```js
+// Define a rule that matches login attempts by non-admin users.
+const loginRule = {
+  userId(userId) {
+    const user = Meteor.users.findOne(userId);
+    return user && user.type !== 'admin';
   },
+
   type: 'method',
   name: 'login'
-}
+};
+
 // Add the rule, allowing up to 5 messages every 1000 milliseconds.
 DDPRateLimiter.addRule(loginRule, 5, 1000);
 ```

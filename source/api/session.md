@@ -8,9 +8,9 @@ store an arbitrary set of key-value pairs. Use it to store things like
 the currently selected item in a list.
 
 What's special about `Session` is that it's reactive. If
-you call [`Session.get`](#session_get)`("currentList")`
+you call [`Session.get`](#session_get)`('currentList')`
 from inside a template, the template will automatically be rerendered
-whenever [`Session.set`](#session_set)`("currentList", x)` is called.
+whenever [`Session.set`](#session_set)`('currentList', x)` is called.
 
 To add `Session` to your application, run this command in your terminal:
 
@@ -23,13 +23,13 @@ meteor add session
 Example:
 
 ```js
-Tracker.autorun(function () {
-  Meteor.subscribe("chat-history", {room: Session.get("currentRoomId")});
+Tracker.autorun(() => {
+  Meteor.subscribe('chatHistory', { room: Session.get('currentRoomId') });
 });
 
-// Causes the function passed to Tracker.autorun to be re-run, so
-// that the chat-history subscription is moved to the room "home".
-Session.set("currentRoomId", "home");
+// Causes the function passed to `Tracker.autorun` to be rerun, so that the
+// 'chatHistory' subscription is moved to the room 'home'.
+Session.set('currentRoomId', 'home');
 ```
 
 `Session.set` can also be called with an object of keys and values, which is
@@ -37,8 +37,8 @@ equivalent to calling `Session.set` individually on each key/value pair.
 
 ```js
 Session.set({
-  a: "foo",
-  b: "bar"
+  a: 'foo',
+  b: 'bar'
 });
 ```
 
@@ -52,24 +52,24 @@ variable every time a new version of your app is loaded.
 Example:
 
 ```html
-<!-- in main.html -->
+<!-- main.html -->
 <template name="main">
   <p>We've always been at war with {{theEnemy}}.</p>
 </template>
 ```
 
 ```js
-// in main.js
+// main.js
 Template.main.helpers({
-  theEnemy: function () {
-    return Session.get("enemy");
+  theEnemy() {
+    return Session.get('enemy');
   }
 });
 
-Session.set("enemy", "Eastasia");
+Session.set('enemy', 'Eastasia');
 // Page will say "We've always been at war with Eastasia"
 
-Session.set("enemy", "Eurasia");
+Session.set('enemy', 'Eurasia');
 // Page will change to say "We've always been at war with Eurasia"
 ```
 
@@ -78,23 +78,25 @@ Session.set("enemy", "Eurasia");
 
 If value is a scalar, then these two expressions do the same thing:
 
-    (1) Session.get("key") === value
-    (2) Session.equals("key", value)
+```js
+Session.get('key') === value
+Session.equals('key', value)
+```
 
-... but the second one is always better. It triggers fewer invalidations
+...but the second one is always better. It triggers fewer invalidations
 (template redraws), making your program more efficient.
 
 Example:
 
 ```html
 <template name="postsView">
-{{! Show a dynamically updating list of items. Let the user click on an
-    item to select it. The selected item is given a CSS class so it
-    can be rendered differently. }}
+  {{! Show a dynamically updating list of items. Let the user click on an item
+      to select it. The selected item is given a CSS class, so it can be
+      rendered differently. }}
 
-{{#each posts}}
-  {{> postItem }}
-{{/each}}
+  {{#each posts}}
+    {{> postItem}}
+  {{/each}}
 </template>
 
 <template name="postItem">
@@ -103,23 +105,23 @@ Example:
 ```
 
 ```js
-// in JS file
 Template.postsView.helpers({
-  posts: function() {
+  posts() {
     return Posts.find();
   }
 });
 
 Template.postItem.helpers({
-  postClass: function() {
-    return Session.equals("selectedPost", this._id) ?
-      "selected" : "";
+  postClass() {
+    return Session.equals('selectedPost', this._id)
+      ? 'selected'
+      : '';
   }
 });
 
 Template.postItem.events({
-  'click': function() {
-    Session.set("selectedPost", this._id);
+  'click'() {
+    Session.set('selectedPost', this._id);
   }
 });
 ```

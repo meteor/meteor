@@ -152,19 +152,23 @@ Override fields of the object by assigning to them:
 Example:
 
 ```js
-Accounts.emailTemplates.siteName = "AwesomeSite";
-Accounts.emailTemplates.from = "AwesomeSite Admin <accounts@example.com>";
-Accounts.emailTemplates.enrollAccount.subject = function (user) {
-    return "Welcome to Awesome Town, " + user.profile.name;
+Accounts.emailTemplates.siteName = 'AwesomeSite';
+Accounts.emailTemplates.from = 'AwesomeSite Admin <accounts@example.com>';
+
+Accounts.emailTemplates.enrollAccount.subject = (user) => {
+  return `Welcome to Awesome Town, ${user.profile.name}`;
 };
-Accounts.emailTemplates.enrollAccount.text = function (user, url) {
-   return "You have been selected to participate in building a better future!"
-     + " To activate your account, simply click the link below:\n\n"
-     + url;
+
+Accounts.emailTemplates.enrollAccount.text = (user, url) => {
+  return 'You have been selected to participate in building a better future!'
+    + ' To activate your account, simply click the link below:\n\n'
+    + url;
 };
-Accounts.emailTemplates.resetPassword.from = function () {
-   // Overrides value set in Accounts.emailTemplates.from when resetting passwords
-   return "AwesomeSite Password Reset <no-reply@example.com>";
+
+Accounts.emailTemplates.resetPassword.from = () => {
+  // Overrides the value set in `Accounts.emailTemplates.from` when resetting
+  // passwords.
+  return 'AwesomeSite Password Reset <no-reply@example.com>';
 };
 Accounts.emailTemplates.verifyEmail = {
    subject() {

@@ -55,7 +55,7 @@ If you have files too large to fit in the cache you can disable
 caching by URL prefix.  For example,
 
 ```js
-Meteor.AppCache.config({onlineOnly: ['/online/']});
+Meteor.AppCache.config({ onlineOnly: ['/online/'] });
 ```
 
 causes files in your `public/online` directory to not be cached, and

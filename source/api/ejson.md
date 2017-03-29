@@ -17,8 +17,8 @@ and a binary buffer would be serialized in EJSON as:
 
 ```json
 {
-  "d": {"$date": 1358205756553},
-  "b": {"$binary": "c3VyZS4="}
+  "d": { "$date": 1358205756553 },
+  "b": { "$binary": "c3VyZS4=" }
 }
 ```
 
@@ -77,7 +77,7 @@ EJSON.addType('Distance', function fromJSONValue(json) {
 });
 
 EJSON.stringify(new Distance(10, 'm'));
-// "{"$type":"Distance","$value":{"value":10,"unit":"m"}}"
+// Returns '{"$type":"Distance","$value":{"value":10,"unit":"m"}}'
 ```
 
 When you add a type to EJSON, Meteor will be able to use that type in:
@@ -102,7 +102,7 @@ For example, the `toJSONValue` method for
 ```js
 function () {
   return this.toHexString();
-};
+}
 ```
 
 {% apibox "EJSON.CustomType#clone" %}

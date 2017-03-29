@@ -32,7 +32,7 @@ statement `api.use('ecmascript');` in the `Package.onUse` callback in your
 `package.js` file:
 
 ```js
-Package.onUse(function (api) {
+Package.onUse((api) => {
   api.use('ecmascript');
 });
 ```
@@ -70,7 +70,7 @@ Here is a list of the Babel transformers that are currently enabled:
   Enables multi-line strings delimited by backticks instead of quotation
   marks, with variable interpolation:
   ```js
-  var name = "Ben";
+  var name = 'Ben';
   var message = `My name is:
   ${name}`;
   ```
@@ -101,7 +101,7 @@ Here is a list of the Babel transformers that are currently enabled:
   const GOLDEN_RATIO = (1 + Math.sqrt(5)) / 2;
 
   // This reassignment will be forbidden by the compiler:
-  GOLDEN_RATIO = "new value";
+  GOLDEN_RATIO = 'new value';
   ```
 
 * [`es6.blockScoping`](http://babeljs.io/docs/learn-es2015/#let-const)<br>
@@ -144,16 +144,16 @@ Here is a list of the Babel transformers that are currently enabled:
   ```js
   var counter = 0;
   function getKeyName() {
-    return "key" + counter++;
+    return 'key' + counter++;
   }
 
   var obj = {
-    [getKeyName()]: "zero",
-    [getKeyName()]: "one",
+    [getKeyName()]: 'zero',
+    [getKeyName()]: 'one',
   };
 
-  obj.key0; // "zero"
-  obj.key1; // "one"
+  obj.key0; // 'zero'
+  obj.key1; // 'one'
   ```
 
 * [`es6.parameters`](http://babeljs.io/docs/learn-es2015/#default-rest-spread)<br>
@@ -176,7 +176,7 @@ Here is a list of the Babel transformers that are currently enabled:
   `Function.prototype.apply`:
   ```js
   add(1, ...[2, 3, 4], 5); // 15
-  new Node("name", ...children);
+  new Node('name', ...children);
   [1, ...[2, 3, 4], 5]; // [1, 2, 3, 4, 5]
   ```
 
@@ -212,10 +212,10 @@ Here is a list of the Babel transformers that are currently enabled:
   function run({ command, args, callback }) { ... }
 
   run({
-    command: "git",
-    args: ["status", "."],
+    command: 'git',
+    args: ['status', '.'],
     callback(error, status) { ... },
-    unused: "whatever"
+    unused: 'whatever'
   });
   ```
 

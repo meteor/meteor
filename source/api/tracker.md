@@ -32,12 +32,14 @@ For example, you can monitor a cursor (which is a reactive data
 source) and aggregate it into a session variable:
 
 ```js
-Tracker.autorun(function () {
-  var oldest = _.max(Monkeys.find().fetch(), function (monkey) {
+Tracker.autorun(() => {
+  const oldest = _.max(Monkeys.find().fetch(), (monkey) => {
     return monkey.age;
   });
-  if (oldest)
-    Session.set("oldest", oldest.name);
+
+  if (oldest) {
+    Session.set('oldest', oldest.name);
+  }
 });
 ```
 
@@ -46,12 +48,13 @@ something the first time it does, calling `stop` on the computation to
 prevent further rerunning:
 
 ```js
-Tracker.autorun(function (c) {
-  if (! Session.equals("shouldAlert", true))
+Tracker.autorun((computation) => {
+  if (!Session.equals('shouldAlert', true)) {
     return;
+  }
 
-  c.stop();
-  alert("Oh no!");
+  computation.stop();
+  alert('Oh no!');
 });
 ```
 
@@ -177,11 +180,10 @@ of calling callbacks, but ensures that it will never be rerun.
 Example:
 
 ```js
-// if we're in a computation, then perform some clean-up
-// when the current computation is invalidated (rerun or
-// stopped)
+// If we're in a computation, then perform some clean-up when the current
+// computation is invalidated (rerun or stopped).
 if (Tracker.active) {
-  Tracker.onInvalidate(function () {
+  Tracker.onInvalidate(() => {
     x.destroy();
     y.finalize();
   });
@@ -258,20 +260,21 @@ accompanied by a Dependency object that tracks the computations that depend
 on it, as in this example:
 
 ```js
-var weather = "sunny";
-var weatherDep = new Tracker.Dependency;
+let weather = 'sunny';
+const weatherDep = new Tracker.Dependency;
 
-var getWeather = function () {
-  weatherDep.depend()
+function getWeather() {
+  weatherDep.depend();
   return weather;
-};
+}
 
-var setWeather = function (w) {
-  weather = w;
-  // (could add logic here to only call changed()
-  // if the new value is different from the old)
+function setWeather(newWeather) {
+  weather = newWeather;
+
+  // Note: We could add logic here to only call `changed` if the new value is
+  // different from the old value.
   weatherDep.changed();
-};
+}
 ```
 
 This example implements a weather data source with a simple getter and
@@ -287,9 +290,9 @@ query, while another might represent just the number of documents in
 the result.  A Dependency could represent whether the weather is sunny
 or not, or whether the temperature is above freezing.
 [`Session.equals`](#session_equals) is implemented this way for
-efficiency.  When you call `Session.equals("weather", "sunny")`, the
+efficiency.  When you call `Session.equals('weather', 'sunny')`, the
 current computation is made to depend on an internal Dependency that
-does not change if the weather goes from, say, "rainy" to "cloudy".
+does not change if the weather goes from, say, `rainy` to `cloudy`.
 
 Conceptually, the only two things a Dependency can do are gain a
 dependent and change.

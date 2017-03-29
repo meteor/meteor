@@ -91,7 +91,7 @@ connection is already closed, the callback will be called immediately.
 {% enddtdd %}
 
 {% dtdd name:"clientAddress" type:"String" %}
-  The IP address of the client in dotted form (such as `"127.0.0.1"`).
+  The IP address of the client in dotted form (such as `127.0.0.1`).
 
   If you're running your Meteor server behind a proxy (so that clients
   are connecting to the proxy instead of to your server directly),
@@ -99,7 +99,7 @@ connection is already closed, the callback will be called immediately.
   for the correct IP address to be reported by `clientAddress`.
 
   Set `HTTP_FORWARDED_COUNT` to an integer representing the number of
-  proxies in front of your server.  For example, you'd set it to `"1"`
+  proxies in front of your server.  For example, you'd set it to `1`
   when your server was behind one proxy.
 {% enddtdd %}
 

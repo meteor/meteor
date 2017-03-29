@@ -30,28 +30,26 @@ client could send, to prevent your server from being used as a relay
 by spammers.)
 
 ```js
-// In your server code: define a method that the client can call
+// Server: Define a method that the client can call.
 Meteor.methods({
-  sendEmail: function (to, from, subject, text) {
+  sendEmail(to, from, subject, text) {
+    // Make sure that all arguments are strings.
     check([to, from, subject, text], [String]);
 
-    // Let other method calls from the same client start running,
-    // without waiting for the email sending to complete.
+    // Let other method calls from the same client start running, without
+    // waiting for the email sending to complete.
     this.unblock();
 
-    Email.send({
-      to: to,
-      from: from,
-      subject: subject,
-      text: text
-    });
+    Email.send({ to, from, subject, text });
   }
 });
 
-// In your client code: asynchronously send an email
-Meteor.call('sendEmail',
-            'alice@example.com',
-            'bob@example.com',
-            'Hello from Meteor!',
-            'This is a test of Email.send.');
+// Client: Asynchronously send an email.
+Meteor.call(
+  'sendEmail',
+  'alice@example.com',
+  'bob@example.com',
+  'Hello from Meteor!',
+  'This is a test of Email.send.'
+);
 ```

@@ -11,7 +11,7 @@ We think you’re going to love the new module system, and that's why it will be
 
 For apps, this is as easy as `meteor add modules`, or (even better) `meteor add ecmascript`, since the `ecmascript` package *implies* the `modules` package.
 
-For packages, you can enable `modules` by adding `api.use("modules")` to the `Package.onUse` or `Package.onTest` sections of your `package.js` file.
+For packages, you can enable `modules` by adding `api.use('modules')` to the `Package.onUse` or `Package.onTest` sections of your `package.js` file.
 
 Now, you might be wondering what good the `modules` package is without the `ecmascript` package, since `ecmascript` enables `import` and `export` syntax. By itself, the `modules` package provides the CommonJS `require` and `exports` primitives that may be familiar if you’ve ever written Node code, and the `ecmascript` package simply compiles `import` and `export` statements to CommonJS. The `require` and `export` primitives also allow Node modules to run within Meteor application code without modification. Furthermore, keeping `modules` separate allows us to use `require` and `exports` in places where using `ecmascript` is tricky, such as the implementation of the `ecmascript` package itself.
 
@@ -30,9 +30,9 @@ First, you can `export` any named declaration on the same line where it was decl
 export var a = ...;
 export let b = ...;
 export const c = ...;
-export function d() {...}
-export function* e() {...}
-export class F {...}
+export function d() { ... }
+export function* e() { ... }
+export class F { ... }
 ```
 
 These declarations make the variables `a`, `b`, `c` (and so on) available not only within the scope of the `exporter.js` module, but also to other modules that `import` from `exporter.js`.
@@ -41,18 +41,18 @@ If you prefer, you can `export` variables by name, rather than prefixing their d
 
 ```js
 // exporter.js
-function g() {...}
+function g() { ... }
 let h = g();
 
-// at the end of the file
-export {g, h};
+// At the end of the file
+export { g, h };
 ```
 
 All of these exports are *named*, which means other modules can import them using those names:
 
 ```js
 // importer.js
-import {a, c, F, h} from "./exporter";
+import { a, c, F, h } from './exporter';
 new F(a, c).method(h);
 ```
 
@@ -60,14 +60,14 @@ If you’d rather use different names, you’ll be glad to know `export` and `im
 
 ```js
 // exporter.js
-export {g as x};
-g(); // same as calling y() in importer.js
+export { g as x };
+g(); // Same as calling `y()` in importer.js
 ```
 
 ```js
 // importer.js
-import {x as y} from "./exporter";
-y(); // same as calling g() in exporter.js
+import { x as y } from './exporter';
+y(); // Same as calling `g()` in exporter.js
 ```
 
 As with CommonJS `module.exports`, it is possible to define a single *default* export:
@@ -81,7 +81,7 @@ This default export may then be imported without curly braces, using any name th
 
 ```js
 // importer.js
-import Value from "./exporter";
+import Value from './exporter';
 // Value is identical to the exported expression
 ```
 
@@ -89,14 +89,14 @@ Unlike CommonJS `module.exports`, the use of default exports does not prevent th
 
 ```js
 // importer.js
-import Value, {a, F} from "./exporter";
+import Value, { a, F } from './exporter';
 ```
 
 In fact, the default export is conceptually just another named export whose name happens to be "default":
 
 ```js
 // importer.js
-import {default as Value, a, F} from "./exporter";
+import { default as Value, a, F } from './exporter';
 ```
 
 These examples should get you started with `import` and `export` syntax. For further reading, here is a very detailed [explanation](http://www.2ality.com/2014/09/es6-modules-final.html) by [Axel Rauschmayer](https://twitter.com/rauschma) of every variation of `import` and `export` syntax.
@@ -126,18 +126,18 @@ Note that files don’t need a `module.exports` if they’re required like `rout
 ES2015 `export` statements like these:
 
 ```js
-export const insert = new ValidatedMethod({ // ...
+export const insert = new ValidatedMethod({ ... });
 export default incompleteCountDenormalizer;
 ```
 
 can be rewritten to use CommonJS `module.exports`:
 
 ```js
-module.exports.insert = new ValidatedMethod({ // ...
+module.exports.insert = new ValidatedMethod({ ... });
 module.exports.default = incompleteCountDenormalizer;
 ```
 
-You can also simply write `exports` instead of `module.exports` if you prefer. If you need to `require` from an ES2015 module with a `default` export, you can access the export with `require("package").default`.
+You can also simply write `exports` instead of `module.exports` if you prefer. If you need to `require` from an ES2015 module with a `default` export, you can access the export with `require('package').default`.
 
 There is a case where you might *need* to use CommonJS, even if your project has the `ecmascript` package: if you want to conditionally include a module. `import` statements must be at top-level scope, so they cannot be within an `if` block. If you’re writing a common file, loaded on both client and server, you might want to import a module in only one or the other environment:
 
@@ -171,46 +171,46 @@ Before the release of Meteor 1.3, the only way to share values between files in 
 
 If you are familiar with modules in Node, you might expect modules not to be evaluated until the first time you import them. However, because earlier versions of Meteor evaluated all of your code when the application started, and we care about backwards compatibility, eager evaluation is still the default behavior.
 
-If you would like a module to be evaluated *lazily* (in other words: on demand, the first time you import it, just like Node does it), then you should put that module in an `imports/` directory (anywhere in your app, not just the root directory), and include that directory when you import the module: `import {stuff} from "./imports/lazy"`. Note: files contained by `node_modules/` directories will also be evaluated lazily (more on that below).
+If you would like a module to be evaluated *lazily* (in other words: on demand, the first time you import it, just like Node does it), then you should put that module in an `imports/` directory (anywhere in your app, not just the root directory), and include that directory when you import the module: `import {stuff} from './imports/lazy'`. Note: files contained by `node_modules/` directories will also be evaluated lazily (more on that below).
 
 Lazy evaluation will very likely become the default behavior in a future version of Meteor, but if you want to embrace it as fully as possible in the meantime, we recommend putting all your modules inside either `client/imports/` or `server/imports/` directories, with just a single entry point for each architecture: `client/main.js` and `server/main.js`. The `main.js` files will be evaluated eagerly, giving your application a chance to import modules from the `imports/` directories.
 
 ## Modular package structure
 
-If you are a package author, in addition to putting `api.use("modules")` or `api.use("ecmascript")` in the `Package.onUse` section of your `package.js` file, you can also use a new API called `api.mainModule` to specify the main entry point for your package:
+If you are a package author, in addition to putting `api.use('modules')` or `api.use('ecmascript')` in the `Package.onUse` section of your `package.js` file, you can also use a new API called `api.mainModule` to specify the main entry point for your package:
 
 ```js
 Package.describe({
-  name: "my-modular-package"
+  name: 'my-modular-package'
 });
 
 Npm.depends({
-  moment: "2.10.6"
+  moment: '2.10.6'
 });
 
-Package.onUse(function (api) {
-  api.use("modules");
-  api.mainModule("server.js", "server");
-  api.mainModule("client.js", "client");
-  api.export("Foo");
+Package.onUse((api) => {
+  api.use('modules');
+  api.mainModule('server.js', 'server');
+  api.mainModule('client.js', 'client');
+  api.export('Foo');
 });
 ```
 
 Now `server.js` and `client.js` can import other files from the package source directory, even if those files have not been added using the `api.addFiles` function.
 
-When you use `api.mainModule`, the exports of the main module are exposed globally as `Package["my-modular-package"]`, along with any symbols exported by `api.export`, and thus become available to any code that imports the package. In other words, the main module gets to decide what value of `Foo` will be exported by `api.export`, as well as providing other properties that can be explicitly imported from the package:
+When you use `api.mainModule`, the exports of the main module are exposed globally as `Package['my-modular-package']`, along with any symbols exported by `api.export`, and thus become available to any code that imports the package. In other words, the main module gets to decide what value of `Foo` will be exported by `api.export`, as well as providing other properties that can be explicitly imported from the package:
 
 ```js
-// In an application that uses my-modular-package:
-import {Foo as ExplicitFoo, bar} from "meteor/my-modular-package";
-console.log(Foo); // Auto-imported because of api.export.
-console.log(ExplicitFoo); // Explicitly imported, but identical to Foo.
+// In an application that uses 'my-modular-package':
+import { Foo as ExplicitFoo, bar } from 'meteor/my-modular-package';
+console.log(Foo); // Auto-imported because of `api.export`.
+console.log(ExplicitFoo); // Explicitly imported, but identical to `Foo`.
 console.log(bar); // Exported by server.js or client.js, but not auto-imported.
 ```
 
-Note that the `import` is `from "meteor/my-modular-package"`, not `from "my-modular-package"`. Meteor package identifier strings must include the prefix `meteor/...` to disambiguate them from npm packages.
+Note that the `import` is `from 'meteor/my-modular-package'`, not `from 'my-modular-package'`. Meteor package identifier strings must include the prefix `meteor/...` to disambiguate them from npm packages.
 
-Finally, since this package is using the new `modules` package, and the package `Npm.depends` on the "moment" npm package, modules within the package can `import moment from "moment"` on both the client and the server. This is great news, because previous versions of Meteor allowed npm imports only on the server, via `Npm.require`.
+Finally, since this package is using the new `modules` package, and the package `Npm.depends` on the "moment" npm package, modules within the package can `import moment from 'moment'` on both the client and the server. This is great news, because previous versions of Meteor allowed npm imports only on the server, via `Npm.require`.
 
 ## Local `node_modules`
 
@@ -221,7 +221,7 @@ meteor create modular-app
 cd modular-app
 mkdir node_modules
 npm install moment
-echo 'import moment from "moment";' >> modular-app.js
+echo "import moment from 'moment';" >> modular-app.js
 echo 'console.log(moment().calendar());' >> modular-app.js
 meteor
 ```
@@ -238,28 +238,28 @@ Thanks to modules, any load-order dependency you might imagine can be resolved b
 
 ```js
 // a.js
-import {bThing} from "./b";
-console.log(bThing, "in a.js");
+import { bThing } from './b';
+console.log(bThing, 'in a.js');
 ```
 
 ```js
 // b.js
-export var bThing = "a thing defined in b.js";
-console.log(bThing, "in b.js");
+export var bThing = 'a thing defined in b.js';
+console.log(bThing, 'in b.js');
 ```
 
 Sometimes a module doesn’t actually need to import anything from another module, but you still want to be sure the other module gets evaluated first. In such situations, you can use an even simpler `import` syntax:
 
 ```js
 // c.js
-import "./a";
-console.log("in c.js");
+import './a';
+console.log('in c.js');
 ```
 
 No matter which of these modules is imported first, the order of the `console.log` calls will always be:
 
 ```js
-console.log(bThing, "in b.js");
-console.log(bThing, "in a.js");
-console.log("in c.js");
+console.log(bThing, 'in b.js');
+console.log(bThing, 'in a.js');
+console.log('in c.js');
 ```

@@ -9,7 +9,7 @@ login service's application secret key and users' access tokens.
 
 ## Generating a Key
 
-The encryption key is 16 bytes, encoded in base64.
+The encryption key is 16 bytes, encoded in Base64.
 
 To generate a key:
 
@@ -23,7 +23,7 @@ $ meteor node -e 'console.log(require("crypto").randomBytes(16).toString("base64
 On the server only, use the `oauthSecretKey` option to `Accounts.config`:
 
 ```js
-Accounts.config({oauthSecretKey: "onsqJ+1e4iGFlV0nhZYobg=="});
+Accounts.config({ oauthSecretKey: 'onsqJ+1e4iGFlV0nhZYobg==' });
 ```
 
 This call to `Accounts.config` should be made at load time (place at
@@ -34,7 +34,7 @@ To avoid storing the secret key in your application's source code, you
 can use [`Meteor.settings`](http://docs.meteor.com/#meteor_settings):
 
 ```js
-Accounts.config({oauthSecretKey: Meteor.settings.oauthSecretKey});
+Accounts.config({ oauthSecretKey: Meteor.settings.oauthSecretKey });
 ```
 
 
@@ -47,22 +47,30 @@ token is encrypted.  The relevant fields in the service data are then
 encrypted.
 
 ```js
-Meteor.users.find({ $and: [
-    { 'services.twitter.accessToken': {$exists: true} },
-    { 'services.twitter.accessToken.algorithm': {$exists: false} }
-  ] }).
-forEach(function (userDoc) {
-  var set = {};
-  _.each(['accessToken', 'accessTokenSecret', 'refreshToken'], function (field) {
-    var plaintext = userDoc.services.twitter[field];
-    if (!_.isString(plaintext))
+const cursor = Meteor.users.find({
+  $and: [
+    { 'services.twitter.accessToken': { $exists: true } },
+    { 'services.twitter.accessToken.algorithm': { $exists: false } }
+  ]
+});
+
+cursor.forEach((userDoc) => {
+  const set = {};
+
+  ['accessToken', 'accessTokenSecret', 'refreshToken'].forEach((field) => {
+    const plaintext = userDoc.services.twitter[field];
+
+    if (!_.isString(plaintext)) {
       return;
-    set['services.twitter.' + field] = OAuthEncryption.seal(
-      userDoc.services.twitter[field],
+    }
+
+    set[`services.twitter.${field}`] = OAuthEncryption.seal(
+      plaintext,
       userDoc._id
     );
   });
-  Meteor.users.update(userDoc._id, {$set: set});
+
+  Meteor.users.update(userDoc._id, { $set: set });
 });
 ```
 
@@ -73,7 +81,7 @@ Meteor accounts packages, you can load the OAuth encryption key
 directly using `OAuthEncryption.loadKey`:
 
 ```js
-OAuthEncryption.loadKey("onsqJ+1e4iGFlV0nhZYobg==");
+OAuthEncryption.loadKey('onsqJ+1e4iGFlV0nhZYobg==');
 ```
 
 If you call `retrieveCredential` (such as
@@ -84,8 +92,8 @@ will be encrypted.
 You can decrypt them using `OAuth.openSecrets`:
 
 ```js
-var credentials = Twitter.retrieveCredential(token);
-var serviceData = OAuth.openSecrets(credentials.serviceData);
+const credentials = Twitter.retrieveCredential(token);
+const serviceData = OAuth.openSecrets(credentials.serviceData);
 ```
 
 ## Using oauth-encryption on Windows

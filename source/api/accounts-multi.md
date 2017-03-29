@@ -109,14 +109,17 @@ Example:
 
 ```js
 // Validate username, sending a specific error message on failure.
-Accounts.validateNewUser(function (user) {
-  if (user.username && user.username.length >= 3)
+Accounts.validateNewUser((user) => {
+  if (user.username && user.username.length >= 3) {
     return true;
-  throw new Meteor.Error(403, "Username must have at least 3 characters");
+  } else {
+    throw new Meteor.Error(403, 'Username must have at least 3 characters');
+  }
 });
+
 // Validate username, without a specific error message.
-Accounts.validateNewUser(function (user) {
-  return user.username !== "root";
+Accounts.validateNewUser((user) => {
+  return user.username !== 'root';
 });
 ```
 
@@ -153,16 +156,16 @@ hook. This can only be called once.
 
 Example:
 
-<!-- XXX replace d6 with _.random once we have underscore 1.4.2 -->
-
 ```js
-// Support for playing D&D: Roll 3d6 for dexterity
-Accounts.onCreateUser(function(options, user) {
-  var d6 = function () { return Math.floor(Random.fraction() * 6) + 1; };
-  user.dexterity = d6() + d6() + d6();
+// Support for playing D&D: Roll 3d6 for dexterity.
+Accounts.onCreateUser((options, user) => {
+  user.dexterity = _.random(1, 6) + _.random(1, 6) + _.random(1, 6);
+
   // We still want the default hook's 'profile' behavior.
-  if (options.profile)
+  if (options.profile) {
     user.profile = options.profile;
+  }
+
   return user;
 });
 ```
@@ -230,8 +233,9 @@ error generally have no need to run if the attempt has already been determined
 to fail, and should start with
 
 ```js
-if (!attempt.allowed)
+if (!attempt.allowed) {
   return false;
+}
 ```
 
 <h2 id="accounts_rate_limit">Rate Limiting</h2>

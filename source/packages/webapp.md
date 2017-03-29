@@ -18,10 +18,10 @@ handling requests through `WebApp.connectHandlers`.
 Here's an example that will let you handle a specific URL:
 
 ```js
-// Listen to incoming HTTP requests, can only be used on the server
-WebApp.connectHandlers.use("/hello", function(req, res, next) {
+// Listen to incoming HTTP requests (can only be used on the server).
+WebApp.connectHandlers.use('/hello', (req, res, next) => {
   res.writeHead(200);
-  res.end("Hello world from: " + Meteor.release);
+  res.end(`Hello world from: ${Meteor.release}`);
 });
 ```
 

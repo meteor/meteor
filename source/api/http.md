@@ -37,8 +37,8 @@ an absolute URL including protocol and host name on the server, but may be
 relative to the current host on the client.  The `query` option
 replaces the query string of `url`.  Parameters specified in `params`
 that are put in the URL are appended to any query string.
-For example, with a `url` of `"/path?query"` and
-`params` of `{foo:"bar"}`, the final URL will be `"/path?query&foo=bar"`.
+For example, with a `url` of `'/path?query'` and
+`params` of `{ foo: 'bar' }`, the final URL will be `'/path?query&foo=bar'`.
 
 The `params` are put in the URL or the request body, depending on the
 type of request.  In the case of request with no bodies, like GET and
@@ -82,30 +82,35 @@ Contents of the result object:
 Example server method:
 
 ```js
-Meteor.methods({checkTwitter: function (userId) {
-  check(userId, String);
-  this.unblock();
-  try {
-    var result = HTTP.call("GET", "http://api.twitter.com/xyz",
-                           {params: {user: userId}});
-    return true;
-  } catch (e) {
-    // Got a network error, time-out or HTTP error in the 400 or 500 range.
-    return false;
+Meteor.methods({
+  checkTwitter(userId) {
+    check(userId, String);
+    this.unblock();
+
+    try {
+      const result = HTTP.call('GET', 'http://api.twitter.com/xyz', {
+        params: { user: userId }
+      });
+
+      return true;
+    } catch (e) {
+      // Got a network error, timeout, or HTTP error in the 400 or 500 range.
+      return false;
+    }
   }
-}});
+});
 ```
 
 Example asynchronous HTTP call:
 
 ```js
-HTTP.call("POST", "http://api.twitter.com/xyz",
-          {data: {some: "json", stuff: 1}},
-          function (error, result) {
-            if (!error) {
-              Session.set("twizzled", true);
-            }
-          });
+HTTP.call('POST', 'http://api.twitter.com/xyz', {
+  data: { some: 'json', stuff: 1 }
+}, () => (error, result) {
+  if (!error) {
+    Session.set('twizzled', true);
+  }
+});
 ```
 
 {% apibox "HTTP.get" %}

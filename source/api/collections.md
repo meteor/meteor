@@ -17,10 +17,9 @@ property whose value is unique in the collection, which Meteor will set when you
 first create the document.
 
 ```js
-// common code on client and server declares a DDP-managed mongo
-// collection.
-Chatrooms = new Mongo.Collection("chatrooms");
-Messages = new Mongo.Collection("messages");
+// Common code on client and server declares a DDP-managed Mongo collection.
+const Chatrooms = new Mongo.Collection('chatrooms');
+const Messages = new Mongo.Collection('messages');
 ```
 
 The function returns an object with methods to [`insert`](#insert)
@@ -31,14 +30,14 @@ compatible with the popular Mongo database API.  The same database API
 works on both the client and the server (see below).
 
 ```js
-// return array of my messages
-var myMessages = Messages.find({userId: Session.get('myUserId')}).fetch();
+// Return an array of my messages.
+const myMessages = Messages.find({ userId: Session.get('myUserId') }).fetch();
 
-// create a new message
-Messages.insert({text: "Hello, world!"});
+// Create a new message.
+Messages.insert({ text: 'Hello, world!' });
 
-// mark my first message as "important"
-Messages.update(myMessages[0]._id, {$set: {important: true}});
+// Mark my first message as important.
+Messages.update(myMessages[0]._id, { $set: { important: true } });
 ```
 
 If you pass a `name` when you create the collection, then you are
@@ -89,27 +88,28 @@ and instead call [`Meteor.publish`](#meteor_publish) to specify which parts of
 your collection should be published to which users.
 
 ```js
-// Create a collection called Posts and put a document in it. The
-// document will be immediately visible in the local copy of the
-// collection. It will be written to the server-side database
-// a fraction of a second later, and a fraction of a second
-// after that, it will be synchronized down to any other clients
-// that are subscribed to a query that includes it (see
-// Meteor.subscribe and autopublish)
-Posts = new Mongo.Collection("posts");
-Posts.insert({title: "Hello world", body: "First post"});
+// Create a collection called `Posts` and put a document in it. The document
+// will be immediately visible in the local copy of the collection. It will be
+// written to the server-side database a fraction of a second later, and a
+// fraction of a second after that, it will be synchronized down to any other
+// clients that are subscribed to a query that includes it (see
+// `Meteor.subscribe` and `autopublish`).
+const Posts = new Mongo.Collection('posts');
+Posts.insert({ title: 'Hello world', body: 'First post' });
 
-// Changes are visible immediately -- no waiting for a round trip to
-// the server.
+// Changes are visible immediately—no waiting for a round trip to the server.
 assert(Posts.find().count() === 1);
 
-// Create a temporary, local collection. It works just like any other
-// collection, but it doesn't send changes to the server, and it
-// can't receive any data from subscriptions.
-Scratchpad = new Mongo.Collection;
-for (var i = 0; i < 10; i++)
-  Scratchpad.insert({number: i * 2});
-assert(Scratchpad.find({number: {$lt: 9}}).count() === 5);
+// Create a temporary, local collection. It works just like any other collection
+// but it doesn't send changes to the server, and it can't receive any data from
+// subscriptions.
+const Scratchpad = new Mongo.Collection;
+
+for (let i = 0; i < 10; i += 1) {
+  Scratchpad.insert({ number: i * 2 });
+}
+
+assert(Scratchpad.find({ number: { $lt: 9 } }).count() === 5);
 ```
 
 Generally, you'll assign `Mongo.Collection` objects in your app to global
@@ -125,24 +125,25 @@ can also specify `transform` on a particular `find`, `findOne`, `allow`, or
 the value of the document's `_id` field (though it's OK to leave it out).
 
 ```js
-// An Animal class that takes a document in its constructor
-Animal = function (doc) {
-  _.extend(this, doc);
-};
-_.extend(Animal.prototype, {
-  makeNoise: function () {
+// An animal class that takes a document in its constructor.
+class Animal {
+  constructor(doc) {
+    _.extend(this, doc);
+  }
+
+  makeNoise() {
     console.log(this.sound);
   }
+}
+
+// Define a collection that uses `Animal` as its document.
+const Animals = new Mongo.Collection('animals', {
+  transform: (doc) => new Animal(doc)
 });
 
-// Define a Collection that uses Animal as its document
-Animals = new Mongo.Collection("Animals", {
-  transform: function (doc) { return new Animal(doc); }
-});
-
-// Create an Animal and call its makeNoise method
-Animals.insert({name: "raptor", sound: "roar"});
-Animals.findOne({name: "raptor"}).makeNoise(); // prints "roar"
+// Create an animal and call its `makeNoise` method.
+Animals.insert({ name: 'raptor', sound: 'roar' });
+Animals.findOne({ name: 'raptor' }).makeNoise(); // Prints 'roar'
 ```
 
 `transform` functions are not called reactively.  If you want to add a
@@ -239,9 +240,10 @@ undefined.  If the insert is successful, `error` is undefined and
 Example:
 
 ```js
-var groceriesId = Lists.insert({name: "Groceries"});
-Items.insert({list: groceriesId, name: "Watercress"});
-Items.insert({list: groceriesId, name: "Persimmons"});
+const groceriesId = Lists.insert({ name: 'Groceries' });
+
+Items.insert({ list: groceriesId, name: 'Watercress' });
+Items.insert({ list: groceriesId, name: 'Persimmons' });
 ```
 
 {% apibox "Mongo.Collection#update" %}
@@ -283,12 +285,14 @@ indicating the number of affected documents if the update was successful.
 Client example:
 
 ```js
-// When the givePoints button in the admin dashboard is pressed,
-// give 5 points to the current player. The new score will be
-// immediately visible on everyone's screens.
+// When the 'give points' button in the admin dashboard is pressed, give 5
+// points to the current player. The new score will be immediately visible on
+// everyone's screens.
 Template.adminDashboard.events({
-  'click .givePoints': function () {
-    Players.update(Session.get("currentPlayer"), {$inc: {score: 5}});
+  'click .give-points'() {
+    Players.update(Session.get('currentPlayer'), {
+      $inc: { score: 5 }
+    });
   }
 });
 ```
@@ -296,14 +300,14 @@ Template.adminDashboard.events({
 Server example:
 
 ```js
-// Give the "Winner" badge to each user with a score greater than
-// 10. If they are logged in and their badge list is visible on the
-// screen, it will update automatically as they watch.
+// Give the 'Winner' badge to each user with a score greater than 10. If they
+// are logged in and their badge list is visible on the screen, it will update
+// automatically as they watch.
 Meteor.methods({
-  declareWinners: function () {
-    Players.update({score: {$gt: 10}},
-                   {$addToSet: {badges: "Winner"}},
-                   {multi: true});
+  declareWinners() {
+    Players.update({ score: { $gt: 10 } }, {
+      $addToSet: { badges: 'Winner' }
+    }, { multi: true });
   }
 });
 ```
@@ -361,27 +365,26 @@ console.  If you provide a callback, Meteor will call that function with an
 error argument if there was an error, or a second argument indicating the number
 of removed documents if the remove was successful.
 
-Client example:
+Example (client):
 
 ```js
-// When the remove button is clicked on a chat message, delete
-// that message.
+// When the 'remove' button is clicked on a chat message, delete that message.
 Template.chat.events({
-  'click .remove': function () {
+  'click .remove'() {
     Messages.remove(this._id);
   }
 });
 ```
 
-Server example:
+Example (server):
 
 ```js
-// When the server starts, clear the log, and delete all players
-// with a karma of less than -2.
-Meteor.startup(function () {
+// When the server starts, clear the log and delete all players with a karma of
+// less than -2.
+Meteor.startup(() => {
   if (Meteor.isServer) {
     Logs.remove({});
-    Players.remove({karma: {$lt: -2}});
+    Players.remove({ karma: { $lt: -2 } });
   }
 });
 ```
@@ -428,11 +431,11 @@ proposed update.) Return `true` to permit the change.
 
 `fieldNames` is an array of the (top-level) fields in `doc` that the
 client wants to modify, for example
-`['name',`&nbsp;`'score']`.
+`['name', 'score']`.
 
 `modifier` is the raw Mongo modifier that
 the client wants to execute; for example,
-`{$set: {'name.first': "Alice"}, $inc: {score: 1}}`.
+`{ $set: { 'name.first': 'Alice' }, $inc: { score: 1 } }`.
 
 Only Mongo modifiers are supported (operations like `$set` and `$push`).
 If the user tries to replace the entire document rather than use
@@ -459,41 +462,44 @@ names to retrieve.
 Example:
 
 ```js
-// Create a collection where users can only modify documents that
-// they own. Ownership is tracked by an 'owner' field on each
-// document. All documents must be owned by the user that created
-// them and ownership can't be changed. Only a document's owner
-// is allowed to delete it, and the 'locked' attribute can be
+// Create a collection where users can only modify documents that they own.
+// Ownership is tracked by an `owner` field on each document. All documents must
+// be owned by the user that created them and ownership can't be changed. Only a
+// document's owner is allowed to delete it, and the `locked` attribute can be
 // set on a document to prevent its accidental deletion.
-
-Posts = new Mongo.Collection("posts");
+const Posts = new Mongo.Collection('posts');
 
 Posts.allow({
-  insert: function (userId, doc) {
-    // the user must be logged in, and the document must be owned by the user
-    return (userId && doc.owner === userId);
+  insert(userId, doc) {
+    // The user must be logged in and the document must be owned by the user.
+    return userId && doc.owner === userId;
   },
-  update: function (userId, doc, fields, modifier) {
-    // can only change your own documents
+
+  update(userId, doc, fields, modifier) {
+    // Can only change your own documents.
     return doc.owner === userId;
   },
-  remove: function (userId, doc) {
-    // can only remove your own documents
+
+  remove(userId, doc) {
+    // Can only remove your own documents.
     return doc.owner === userId;
   },
+
   fetch: ['owner']
 });
 
 Posts.deny({
-  update: function (userId, doc, fields, modifier) {
-    // can't change owners
+  update(userId, doc, fields, modifier) {
+    // Can't change owners.
     return _.contains(fields, 'owner');
   },
-  remove: function (userId, doc) {
-    // can't remove locked documents
+
+  remove(userId, doc) {
+    // Can't remove locked documents.
     return doc.locked;
   },
-  fetch: ['locked'] // no need to fetch 'owner'
+
+  fetch: ['locked'] // No need to fetch `owner`
 });
 ```
 
@@ -548,11 +554,12 @@ the matching documents.
 Examples:
 
 ```js
-// Print the titles of the five top-scoring posts
-var topPosts = Posts.find({}, {sort: {score: -1}, limit: 5});
-var count = 0;
-topPosts.forEach(function (post) {
-  console.log("Title of post " + count + ": " + post.title);
+// Print the titles of the five top-scoring posts.
+const topPosts = Posts.find({}, { sort: { score: -1 }, limit: 5 });
+let count = 0;
+
+topPosts.forEach((post) => {
+  console.log(`Title of post ${count}: ${post.title}`);
   count += 1;
 });
 ```
@@ -700,21 +707,23 @@ Example:
 
 ```js
 // Keep track of how many administrators are online.
-var count = 0;
-var query = Users.find({admin: true, onlineNow: true});
-var handle = query.observeChanges({
-  added: function (id, user) {
-    count++;
-    console.log(user.name + " brings the total to " + count + " admins.");
+let count = 0;
+const cursor = Users.find({ admin: true, onlineNow: true });
+
+const handle = cursor.observeChanges({
+  added(id, user) {
+    count += 1;
+    console.log(`${user.name} brings the total to ${count} admins.`);
   },
-  removed: function () {
-    count--;
-    console.log("Lost one. We're now down to " + count + " admins.");
+
+  removed() {
+    count -= 1;
+    console.log(`Lost one. We're now down to ${count} admins.`);
   }
 });
 
 // After five seconds, stop keeping the count.
-setTimeout(function () {handle.stop();}, 5000);
+setTimeout(() => handle.stop(), 5000);
 ```
 
 {% apibox "Mongo.ObjectID" %}
@@ -739,27 +748,27 @@ A slightly more complex form of selector is an object containing a set of keys
 that must match in a document:
 
 ```js
-// Matches all documents where deleted is false
-{deleted: false}
+// Matches all documents where `deleted` is false.
+{ deleted: false }
 
-// Matches all documents where the name and cognomen are as given
-{name: "Rhialto", cognomen: "the Marvelous"}
+// Matches all documents where the `name` and `cognomen` are as given.
+{ name: 'Rhialto', cognomen: 'the Marvelous' }
 
-// Matches every document
+// Matches every document.
 {}
 ```
 
 But they can also contain more complicated tests:
 
 ```js
-// Matches documents where age is greater than 18
-{age: {$gt: 18}}
+// Matches documents where `age` is greater than 18.
+{ age: { $gt: 18 } }
 
-// Also matches documents where tags is an array containing "popular"
-{tags: "popular"}
+// Matches documents where `tags` is an array containing 'popular'.
+{ tags: 'popular' }
 
-// Matches documents where fruit is one of three possibilities
-{fruit: {$in: ["peach", "plum", "pear"]}}
+// Matches documents where `fruit` is one of three possibilities.
+{ fruit: { $in: ['peach', 'plum', 'pear'] } }
 ```
 
 See the [complete
@@ -771,12 +780,12 @@ A modifier is an object that describes how to update a document in
 place by changing some of its fields. Some examples:
 
 ```js
-// Set the 'admin' property on the document to true
-{$set: {admin: true}}
+// Set the `admin` property on the document to true.
+{ $set: { admin: true } }
 
-// Add 2 to the 'votes' property, and add "Traz"
-// to the end of the 'supporters' array
-{$inc: {votes: 2}, $push: {supporters: "Traz"}}
+// Add 2 to the `votes` property and add 'Traz' to the end of the `supporters`
+// array.
+{ $inc: { votes: 2 }, $push: { supporters: 'Traz' } }
 ```
 
 But if a modifier doesn't contain any $-operators, then it is instead
@@ -784,9 +793,9 @@ interpreted as a literal document, and completely replaces whatever was
 previously in the database. (Literal document modifiers are not currently
 supported by [validated updates](#allow).)
 
-```
-// Find the document with id "123", and completely replace it.
-Users.update({_id: "123"}, {name: "Alice", friends: ["Bob"]});
+```js
+// Find the document with ID '123' and completely replace it.
+Users.update({ _id: '123' }, { name: 'Alice', friends: ['Bob'] });
 ```
 
 See the [full list of
@@ -798,19 +807,17 @@ modifiers](http://docs.mongodb.org/manual/reference/operator/update/).
 Sorts may be specified using your choice of several syntaxes:
 
 ```js
-// All of these do the same thing (sort in ascending order by
-// key "a", breaking ties in descending order of key "b")
+// All of these do the same thing (sort in ascending order by key `a`, breaking
+// ties in descending order of key `b`).
+[['a', 'asc'], ['b', 'desc']]
+['a', ['b', 'desc']]
+{ a: 1, b: -1 }
 
-[["a", "asc"], ["b", "desc"]]
-["a", ["b", "desc"]]
-{a: 1, b: -1}
+// Sorted by `createdAt` descending.
+Users.find({}, { sort: { createdAt: -1 } });
 
-// Sorted by createdAt descending
-Users.find({}, {sort: {createdAt: -1}})
-
-// Sorted by createdAt descending and by name ascending
-Users.find({}, {sort: [ ["createdAt", "desc"], ["name", "asc"] ] })
-
+// Sorted by `createdAt` descending and by `name` ascending.
+Users.find({}, { sort: [['createdAt', 'desc'], ['name', 'asc']] });
 ```
 
 The last form will only work if your JavaScript implementation
@@ -833,14 +840,14 @@ dictionary whose keys are field names and whose values are `0`. All unspecified
 fields are included.
 
 ```js
-Users.find({}, {fields: {password: 0, hash: 0}})
+Users.find({}, { fields: { password: 0, hash: 0 } });
 ```
 
 To include only specific fields in the result documents, use `1` as
 the value. The `_id` field is still included in the result.
 
 ```js
-Users.find({}, {fields: {firstname: 1, lastname: 1}})
+Users.find({}, { fields: { firstname: 1, lastname: 1 } });
 ```
 
 With one exception, it is not possible to mix inclusion and exclusion styles:
@@ -860,13 +867,16 @@ yet.
 A more advanced example:
 
 ```js
-Users.insert({ alterEgos: [{ name: "Kira", alliance: "murderer" },
-                           { name: "L", alliance: "police" }],
-               name: "Yagami Light" });
+Users.insert({
+  alterEgos: [
+    { name: 'Kira', alliance: 'murderer' },
+    { name: 'L', alliance: 'police' }
+  ],
+  name: 'Yagami Light'
+});
 
 Users.findOne({}, { fields: { 'alterEgos.name': 1, _id: 0 } });
-
-// returns { alterEgos: [{ name: "Kira" }, { name: "L" }] }
+// Returns { alterEgos: [{ name: 'Kira' }, { name: 'L' }] }
 ```
 
 See <a href="http://docs.mongodb.org/manual/tutorial/project-fields-from-query-results/#projection">

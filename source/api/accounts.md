@@ -43,26 +43,26 @@ user document:
 
 ```js
 {
-  _id: "bbca5d6a-2156-41c4-89da-0329e8c99a4f",  // Meteor.userId()
-  username: "cool_kid_13", // unique name
+  _id: 'QwkSmTCZiw5KDx3L6',  // Meteor.userId()
+  username: 'cool_kid_13', // Unique name
   emails: [
-    // each email address can only belong to one user.
-    { address: "cool@example.com", verified: true },
-    { address: "another@different.com", verified: false }
+    // Each email address can only belong to one user.
+    { address: 'cool@example.com', verified: true },
+    { address: 'another@different.com', verified: false }
   ],
-  createdAt: Wed Aug 21 2013 15:16:52 GMT-0700 (PDT),
+  createdAt: new Date('Wed Aug 21 2013 15:16:52 GMT-0700 (PDT)'),
   profile: {
     // The profile is writable by the user by default.
-    name: "Joe Schmoe"
+    name: 'Joe Schmoe'
   },
   services: {
     facebook: {
-      id: "709050", // facebook id
-      accessToken: "AAACCgdX7G2...AbV9AZDZD"
+      id: '709050', // Facebook ID
+      accessToken: 'AAACCgdX7G2...AbV9AZDZD'
     },
     resume: {
       loginTokens: [
-        { token: "97e8c205-c7e4-47c9-9bea-8e2ccc0694cd",
+        { token: '97e8c205-c7e4-47c9-9bea-8e2ccc0694cd',
           when: 1349761684048 }
       ]
     }
@@ -98,18 +98,19 @@ published to the client. You can publish additional fields for the
 current user with:
 
 ```js
-// server
-Meteor.publish("userData", function () {
+// Server
+Meteor.publish('userData', function () {
   if (this.userId) {
-    return Meteor.users.find({_id: this.userId},
-                             {fields: {'other': 1, 'things': 1}});
+    return Meteor.users.find({ _id: this.userId }, {
+      fields: { other: 1, things: 1 }
+    });
   } else {
     this.ready();
   }
 });
 
-// client
-Meteor.subscribe("userData");
+// Client
+Meteor.subscribe('userData');
 ```
 
 If the autopublish package is installed, information about all users
@@ -128,7 +129,7 @@ Users are by default allowed to specify their own `profile` field with
 their user document:
 
 ```js
-Meteor.users.deny({update: function () { return true; }});
+Meteor.users.deny({ update: () => true });
 ```
 
 {% apibox "Meteor.loggingIn" %}
@@ -219,12 +220,12 @@ Then, in your app:
 
 ```js
 ServiceConfiguration.configurations.upsert(
-  { service: "weibo" },
+  { service: 'weibo' },
   {
     $set: {
-      clientId: "1292962797",
-      loginStyle: "popup",
-      secret: "75a730b58f5691de5522789070c319bc"
+      clientId: '1292962797',
+      loginStyle: 'popup',
+      secret: '75a730b58f5691de5522789070c319bc'
     }
   }
 );
@@ -239,12 +240,13 @@ meteor add accounts-github
 
 and use the `Meteor.loginWithGithub` function:
 
-```javascript
+```js
 Meteor.loginWithGithub({
   requestPermissions: ['user', 'public_repo']
-}, function (err) {
-  if (err)
-    Session.set('errorMessage', err.reason || 'Unknown error');
+}, (error) => {
+  if (error) {
+    Session.set('errorMessage', error.reason || 'Unknown error');
+  }
 });
 ```
 
@@ -265,7 +267,7 @@ When configuring OAuth login with a provider (such as Facebook or Google), Meteo
 
 You can also pick which type of login to do by passing an option to [`Meteor.loginWith<ExternalService>`](#meteor_loginwithexternalservice)
 
-Usually, the popup-based flow is preferable because the user will not have to reload your whole app at the end of the login flow. However, the popup-based flow requires browser features such as `window.close` and `window.opener` that are not available in all mobile environments. In particular, we recommend using `Meteor.loginWith<ExternalService>({ loginStyle: "redirect" })` in the following environments:
+Usually, the popup-based flow is preferable because the user will not have to reload your whole app at the end of the login flow. However, the popup-based flow requires browser features such as `window.close` and `window.opener` that are not available in all mobile environments. In particular, we recommend using `Meteor.loginWith<ExternalService>({ loginStyle: 'redirect' })` in the following environments:
 
 * Inside UIWebViews (when your app is loaded inside a mobile app)
 * In Safari on iOS8 (`window.close` is not supported due to a bug)

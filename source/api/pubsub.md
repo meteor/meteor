@@ -31,26 +31,33 @@ conflict, the resulting value will be one of the published values, chosen
 arbitrarily.
 
 ```js
-// server: publish the rooms collection, minus secret info...
-Meteor.publish("rooms", function () {
-  return Rooms.find({}, {fields: {secretInfo: 0}});
+// Server: Publish the `Rooms` collection, minus secret info...
+Meteor.publish('rooms', function () {
+  return Rooms.find({}, {
+    fields: { secretInfo: 0 }
+  });
 });
 
-// ... and publish secret info for rooms where the logged-in user
-// is an admin. If the client subscribes to both streams, the records
-// are merged together into the same documents in the Rooms collection.
-// Note that currently object values are not recursively merged, so the
-// fields that differ must be top level fields.
-Meteor.publish("adminSecretInfo", function () {
-  return Rooms.find({admin: this.userId}, {fields: {secretInfo: 1}});
+// ...and publish secret info for rooms where the logged-in user is an admin. If
+// the client subscribes to both publications, the records are merged together
+// into the same documents in the `Rooms` collection. Note that currently object
+// values are not recursively merged, so the fields that differ must be top
+// level fields.
+Meteor.publish('adminSecretInfo', function () {
+  return Rooms.find({ admin: this.userId }, {
+    fields: { secretInfo: 1 }
+  });
 });
 
-// publish dependent documents and simulate joins
-Meteor.publish("roomAndMessages", function (roomId) {
+// Publish dependent documents and simulate joins.
+Meteor.publish('roomAndMessages', function (roomId) {
   check(roomId, String);
+
   return [
-    Rooms.find({_id: roomId}, {fields: {secretInfo: 0}}),
-    Messages.find({roomId: roomId})
+    Rooms.find({ _id: roomId }, {
+      fields: { secretInfo: 0 }
+    }),
+    Messages.find({ roomId })
   ];
 });
 ```
@@ -67,73 +74,76 @@ assumed to be using the low-level `added`/`changed`/`removed` interface, and it
 **must also call [`ready`](#publish_ready) once the initial record set is
 complete**.
 
-Example:
+Example (server):
 
 ```js
-// server: publish the current size of a collection
-Meteor.publish("counts-by-room", function (roomId) {
-  var self = this;
+// Publish the current size of a collection.
+Meteor.publish('countsByRoom', function (roomId) {
   check(roomId, String);
-  var count = 0;
-  var initializing = true;
 
-  // observeChanges only returns after the initial `added` callbacks
-  // have run. Until then, we don't want to send a lot of
-  // `self.changed()` messages - hence tracking the
-  // `initializing` state.
-  var handle = Messages.find({roomId: roomId}).observeChanges({
-    added: function (id) {
-      count++;
-      if (!initializing)
-        self.changed("counts", roomId, {count: count});
+  let count = 0;
+  let initializing = true;
+
+  // `observeChanges` only returns after the initial `added` callbacks have run.
+  // Until then, we don't want to send a lot of `changed` messages—hence
+  // tracking the `initializing` state.
+  const handle = Messages.find({ roomId }).observeChanges({
+    added: (id) => {
+      count += 1;
+
+      if (!initializing) {
+        this.changed('counts', roomId, { count });
+      }
     },
-    removed: function (id) {
-      count--;
-      self.changed("counts", roomId, {count: count});
+
+    removed: (id) => {
+      count -= 1;
+      this.changed('counts', roomId, { count });
     }
-    // don't care about changed
+
+    // We don't care about `changed` events.
   });
 
-  // Instead, we'll send one `self.added()` message right after
-  // observeChanges has returned, and mark the subscription as
-  // ready.
+  // Instead, we'll send one `added` message right after `observeChanges` has
+  // returned, and mark the subscription as ready.
   initializing = false;
-  self.added("counts", roomId, {count: count});
-  self.ready();
+  this.added('counts', roomId, { count });
+  this.ready();
 
-  // Stop observing the cursor when client unsubs.
-  // Stopping a subscription automatically takes
-  // care of sending the client any removed messages.
-  self.onStop(function () {
-    handle.stop();
-  });
+  // Stop observing the cursor when the client unsubscribes. Stopping a
+  // subscription automatically takes care of sending the client any `removed`
+  // messages.
+  this.onStop(() => handle.stop());
 });
 
-// client: declare collection to hold count object
-Counts = new Mongo.Collection("counts");
-
-// client: subscribe to the count for the current room
-Tracker.autorun(function () {
-  Meteor.subscribe("counts-by-room", Session.get("roomId"));
-});
-
-// client: use the new collection
-console.log("Current room has " +
-            Counts.findOne(Session.get("roomId")).count +
-            " messages.");
-
-// server: sometimes publish a query, sometimes publish nothing
-Meteor.publish("secretData", function () {
+// Sometimes publish a query, sometimes publish nothing.
+Meteor.publish('secretData', function () {
   if (this.userId === 'superuser') {
     return SecretData.find();
   } else {
-    // Declare that no data is being published. If you leave this line
-    // out, Meteor will never consider the subscription ready because
-    // it thinks you're using the added/changed/removed interface where
-    // you have to explicitly call this.ready().
+    // Declare that no data is being published. If you leave this line out,
+    // Meteor will never consider the subscription ready because it thinks
+    // you're using the `added/changed/removed` interface where you have to
+    // explicitly call `this.ready`.
     return [];
   }
 });
+```
+
+Example (client):
+
+```js
+// Declare a collection to hold the count object.
+const Counts = new Mongo.Collection('counts');
+
+// Subscribe to the count for the current room.
+Tracker.autorun(() => {
+  Meteor.subscribe('countsByRoom', Session.get('roomId'));
+});
+
+// Use the new collection.
+const roomCount = Counts.findOne(Session.get('roomId')).count;
+console.log(`Current room has ${roomCount} messages.`);
 ```
 
 {% pullquote 'warning' %}
@@ -142,7 +152,7 @@ project that includes the `autopublish` package.  Your publish function
 will still work.
 {% endpullquote %}
 
-Read more about publications and how to use them in the 
+Read more about publications and how to use them in the
 [Data Loading](http://guide.meteor.com/data-loading.html) article in the Meteor Guide.
 
 {% apibox "Subscription#userId" %}
@@ -175,14 +185,14 @@ callbacks.  Meteor will queue incoming records until you declare the
 collection name.
 
 ```js
-// okay to subscribe (and possibly receive data) before declaring
-// the client collection that will hold it.  assume "allplayers"
-// publishes data from server's "players" collection.
-Meteor.subscribe("allplayers");
+// It's okay to subscribe (and possibly receive data) before declaring the
+// client collection that will hold it. Assume 'allPlayers' publishes data from
+// the server's 'players' collection.
+Meteor.subscribe('allPlayers');
 ...
-// client queues incoming players records until ...
-...
-Players = new Mongo.Collection("players");
+
+// The client queues incoming 'players' records until the collection is created:
+const Players = new Mongo.Collection('players');
 ```
 
 The client will see a document if the document is currently in the published
@@ -237,14 +247,14 @@ parameters), Meteor is smart enough to skip a wasteful
 unsubscribe/resubscribe. For example:
 
 ```js
-Tracker.autorun(function () {
-  Meteor.subscribe("chat", {room: Session.get("current-room")});
-  Meteor.subscribe("privateMessages");
+Tracker.autorun(() => {
+  Meteor.subscribe('chat', { room: Session.get('currentRoom') });
+  Meteor.subscribe('privateMessages');
 });
 ```
 
 This subscribes you to the chat messages in the current room and to your private
-messages. When you change rooms by calling `Session.set("current-room",
-"new-room")`, Meteor will subscribe to the new room's chat messages,
+messages. When you change rooms by calling `Session.set('currentRoom',
+'newRoom')`, Meteor will subscribe to the new room's chat messages,
 unsubscribe from the original room's chat messages, and continue to
 stay subscribed to your private messages.
