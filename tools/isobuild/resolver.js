@@ -176,7 +176,7 @@ export default class Resolver {
       this.extensions.some(ext => {
         const pathWithExt = path + ext;
         const stat = this.statOrNull(pathWithExt);
-        if (stat) {
+        if (stat && ! stat.isDirectory()) {
           return result = { path: pathWithExt, stat };
         }
       });
