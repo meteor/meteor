@@ -562,7 +562,7 @@ Tracker._runFlush = function (options) {
  * one argument: the Computation object that will be returned.
  * @param {Object} [options]
  * @param {Function} options.onError Optional. The function to run when an error
- * happens in the Computation. The only argument it recieves is the Error
+ * happens in the Computation. The only argument it receives is the Error
  * thrown. Defaults to the error being logged to the console.
  * @returns {Tracker.Computation}
  */
