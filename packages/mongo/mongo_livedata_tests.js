@@ -2218,7 +2218,7 @@ Tinytest.add('mongo-livedata - rewrite selector', function (test) {
     + 'auto-generated _id string'
   );
   test.equal(
-    Mongo.Collection._rewriteSelector({ _id: null }, oid),
+    Mongo.Collection._rewriteSelector({ _id: null }, { fallbackId: oid }),
     { _id: oid },
     'Passing in a falsey selector _id and a fallback ID should return a '
     + 'selector with an _id using the fallback ID'

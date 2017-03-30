@@ -364,7 +364,7 @@ Mongo.Collection._publishCursor = function (cursor, sub, collection) {
 // replaced by $regex. If a falsey _id is sent in, a new string _id will be
 // generated and returned; if a fallbackId is provided, it will be returned
 // instead.
-Mongo.Collection._rewriteSelector = (selector, fallbackId) => {
+Mongo.Collection._rewriteSelector = (selector, { fallbackId } = {}) => {
   // shorthand -- scalars match _id
   if (LocalCollection._selectorIsId(selector))
     selector = {_id: selector};
@@ -564,7 +564,8 @@ Mongo.Collection.prototype.update = function update(selector, modifier, ...optio
     }
   }
 
-  selector = Mongo.Collection._rewriteSelector(selector, insertedId);
+  selector =
+    Mongo.Collection._rewriteSelector(selector, { fallbackId: insertedId });
 
   const wrappedCallback = wrapCallback(callback);
 
