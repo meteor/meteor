@@ -278,18 +278,16 @@ function statOrNull(path, preserveSymlinks) {
   }
 }
 
-// Like rm -r.
-files.rm_recursive = Profile("files.rm_recursive", function (p) {
-  const path = files.convertToOSPath(p);
+function callAndTolerateBusyFilesystem(syncFsFunc, asyncFsFunc, ...args) {
   try {
-    rimraf.sync(path);
+    syncFsFunc.apply(this, args);
   } catch (e) {
     if (e.code === "ENOTEMPTY" &&
         Fiber.current &&
         Fiber.yield &&
         ! Fiber.yield.disallowed) {
       new Promise((resolve, reject) => {
-        rimraf(path, err => {
+        asyncFsFunc.call(this, ...args, err => {
           err ? reject(err) : resolve();
         });
       }).await();
@@ -297,6 +295,38 @@ files.rm_recursive = Profile("files.rm_recursive", function (p) {
     }
     throw e;
   }
+}
+
+function callWithRetries(fsFunc, tolerable=[], ...args) {
+  // retries are necessarily only on Windows, because the rename call can fail
+  // with EBUSY, which means the file is "busy"
+  let maxTries = 10;
+  let success = false;
+  while (! success && maxTries-- > 0) {
+    try {
+      fsFunc.apply(this, args);
+      success = true;
+    } catch (err) {
+      if (!tolerable.includes(err.code)) {
+        throw err;
+      }
+    }
+  }
+  return success;
+}
+
+// The move and moveSync functions from fs-extra, while great at many things
+// aren't capable of resolving busy filesystem issues (such as those encountered
+// on Windows) since it's not Fiber-aware.
+files.moveWithBenefits = Profile("files.moveWithBenefits", function (f, t) {
+  return callAndTolerateBusyFilesystem(fs.moveSync, fs.move,
+    files.convertToOSPath(f), files.convertToOSPath(t));
+});
+
+// Like rm -r.
+files.rm_recursive = Profile("files.rm_recursive", function (p) {
+  return callAndTolerateBusyFilesystem(rimraf.sync, rimraf,
+    files.convertToOSPath(p));
 });
 
 // Makes all files in a tree read-only.
@@ -983,7 +1013,7 @@ files.renameDirAlmostAtomically = function (fromDir, toDir) {
   // Get old dir out of the way, if it exists.
   var movedOldDir = true;
   try {
-    files.move(toDir, garbageDir);
+    files.moveWithBenefits(toDir, garbageDir);
   } catch (e) {
     if (e.code !== 'ENOENT') {
       throw e;
@@ -992,7 +1022,7 @@ files.renameDirAlmostAtomically = function (fromDir, toDir) {
   }
 
   // Now rename the directory.
-  files.move(fromDir, toDir);
+  files.moveWithBenefits(fromDir, toDir);
 
   // ... and delete the old one.
   if (movedOldDir) {
@@ -1684,28 +1714,20 @@ files.existsSync = function (path, callback) {
 };
 
 if (files.isWindowsLikeFilesystem()) {
-  var rename = files.rename;
+  const tolerable = ['EPERM', 'EACCES'];
 
-  files.rename = function (from, to) {
-    // retries are necessarily only on Windows, because the rename call can fail
-    // with EBUSY, which means the file is "busy"
-    var maxTries = 10;
-    var success = false;
-    while (! success && maxTries-- > 0) {
-      try {
-        rename(from, to);
-        success = true;
-      } catch (err) {
-        if (err.code !== 'EPERM' && err.code !== 'EACCES') {
-          throw err;
-        }
+  function makeRenameFunction(name) {
+    let original = files[name];
+    files[name] = function (from, to) {
+      if (! callWithRetries(original, tolerable, from, to)) {
+        files.cp_r(from, to);
+        files.rm_recursive(from);
       }
-    }
-    if (! success) {
-      files.cp_r(from, to);
-      files.rm_recursive(from);
-    }
-  };
+    };
+  }
+
+  makeRenameFunction("rename");
+  makeRenameFunction("move");
 }
 
 // Warning: doesn't convert slashes in the second 'cache' arg
