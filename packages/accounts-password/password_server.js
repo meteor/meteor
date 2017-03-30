@@ -66,12 +66,28 @@ Accounts._checkPassword = function (user, password) {
   password = getPasswordString(password);
 
   if (! bcryptCompare(password, user.services.password.bcrypt)) {
-    result.error = new Meteor.Error(403, "Incorrect password");
+    result.error = handleError("Incorrect password", false);
   }
 
   return result;
 };
 var checkPassword = Accounts._checkPassword;
+
+///
+/// ERROR HANDLER
+///
+const handleError = (msg, throwError = true) => {
+  const error = new Meteor.Error(
+    403, 
+    Accounts._options.ambiguousErrorMessages
+      ? "Login failure. Please check your login credentials."
+      : msg
+  );
+  if (throwError) {
+    throw error;
+  }
+  return error;
+};
 
 ///
 /// LOGIN
@@ -202,7 +218,7 @@ var checkForCaseInsensitiveDuplicates = function (fieldName, displayName, fieldV
         // Otherwise, check to see if there are multiple matches or a match
         // that is not us
         (matchedUsers.length > 1 || matchedUsers[0]._id !== ownUserId))) {
-      throw new Meteor.Error(403, displayName + " already exists.");
+      handleError(displayName + " already exists.");
     }
   }
 };
@@ -254,12 +270,14 @@ Accounts.registerLoginHandler("password", function (options) {
 
 
   var user = Accounts._findUserByQuery(options.user);
-  if (!user)
-    throw new Meteor.Error(403, "User not found");
+  if (!user) {
+    handleError("User not found");
+  }
 
   if (!user.services || !user.services.password ||
-      !(user.services.password.bcrypt || user.services.password.srp))
-    throw new Meteor.Error(403, "User has no password set");
+      !(user.services.password.bcrypt || user.services.password.srp)) {
+    handleError("User has no password set");
+  }
 
   if (!user.services.password.bcrypt) {
     if (typeof options.password === "string") {
@@ -273,8 +291,8 @@ Accounts.registerLoginHandler("password", function (options) {
 
       if (verifier.verifier !== newVerifier.verifier) {
         return {
-          userId: user._id,
-          error: new Meteor.Error(403, "Incorrect password")
+          userId: Accounts._options.ambiguousErrorMessages ? null : user._id,
+          error: handleError("Incorrect password", false)
         };
       }
 
@@ -310,8 +328,9 @@ Accounts.registerLoginHandler("password", function (options) {
 //
 // XXX COMPAT WITH 0.8.1.3
 Accounts.registerLoginHandler("password", function (options) {
-  if (!options.srp || !options.password)
+  if (!options.srp || !options.password) {
     return undefined; // don't handle
+  }
 
   check(options, {
     user: userQueryValidator,
@@ -320,16 +339,19 @@ Accounts.registerLoginHandler("password", function (options) {
   });
 
   var user = Accounts._findUserByQuery(options.user);
-  if (!user)
-    throw new Meteor.Error(403, "User not found");
+  if (!user) {
+    handleError("User not found");
+  }
 
   // Check to see if another simultaneous login has already upgraded
   // the user record to bcrypt.
-  if (user.services && user.services.password && user.services.password.bcrypt)
+  if (user.services && user.services.password && user.services.password.bcrypt) {
     return checkPassword(user, options.password);
+  }
 
-  if (!(user.services && user.services.password && user.services.password.srp))
-    throw new Meteor.Error(403, "User has no password set");
+  if (!(user.services && user.services.password && user.services.password.srp)) {
+    handleError("User has no password set");
+  }
 
   var v1 = user.services.password.srp.verifier;
   var v2 = SRP.generateVerifier(
@@ -339,11 +361,12 @@ Accounts.registerLoginHandler("password", function (options) {
       salt: user.services.password.srp.salt
     }
   ).verifier;
-  if (v1 !== v2)
+  if (v1 !== v2) {
     return {
-      userId: user._id,
-      error: new Meteor.Error(403, "Incorrect password")
+      userId: Accounts._options.ambiguousErrorMessages ? null : user._id,
+      error: handleError("Incorrect password", false)
     };
+  }
 
   // Upgrade to bcrypt on successful login.
   var salted = hashPassword(options.password);
@@ -377,8 +400,9 @@ Accounts.setUsername = function (userId, newUsername) {
   check(newUsername, NonEmptyString);
 
   var user = Meteor.users.findOne(userId);
-  if (!user)
-    throw new Meteor.Error(403, "User not found");
+  if (!user) {
+    handleError("User not found");
+  }
 
   var oldUsername = user.username;
 
@@ -417,16 +441,19 @@ Meteor.methods({changePassword: function (oldPassword, newPassword) {
   check(oldPassword, passwordValidator);
   check(newPassword, passwordValidator);
 
-  if (!this.userId)
+  if (!this.userId) {
     throw new Meteor.Error(401, "Must be logged in");
+  }
 
   var user = Meteor.users.findOne(this.userId);
-  if (!user)
-    throw new Meteor.Error(403, "User not found");
+  if (!user) {
+    handleError("User not found");
+  }
 
   if (!user.services || !user.services.password ||
-      (!user.services.password.bcrypt && !user.services.password.srp))
-    throw new Meteor.Error(403, "User has no password set");
+      (!user.services.password.bcrypt && !user.services.password.srp)) {
+    handleError("User has no password set");
+  }
 
   if (! user.services.password.bcrypt) {
     throw new Meteor.Error(400, "old password format", EJSON.stringify({
@@ -436,8 +463,9 @@ Meteor.methods({changePassword: function (oldPassword, newPassword) {
   }
 
   var result = checkPassword(user, oldPassword);
-  if (result.error)
+  if (result.error) {
     throw result.error;
+  }
 
   var hashed = hashPassword(newPassword);
 
@@ -476,8 +504,9 @@ Accounts.setPassword = function (userId, newPlaintextPassword, options) {
   options = _.extend({logout: true}, options);
 
   var user = Meteor.users.findOne(userId);
-  if (!user)
+  if (!user) {
     throw new Meteor.Error(403, "User not found");
+  }
 
   var update = {
     $unset: {
@@ -505,8 +534,9 @@ Meteor.methods({forgotPassword: function (options) {
   check(options, {email: String});
 
   var user = Accounts.findUserByEmail(options.email);
-  if (!user)
-    throw new Meteor.Error(403, "User not found");
+  if (!user) {
+    handleError("User not found");
+  }
 
   const emails = _.pluck(user.emails || [], 'address');
   const caseSensitiveEmail = _.find(emails, email => {
@@ -529,14 +559,19 @@ Meteor.methods({forgotPassword: function (options) {
 Accounts.sendResetPasswordEmail = function (userId, email) {
   // Make sure the user exists, and email is one of their addresses.
   var user = Meteor.users.findOne(userId);
-  if (!user)
-    throw new Error("Can't find user");
+  if (!user) {
+    handleError("Can't find user");
+  }
+
   // pick the first email if we weren't passed an email.
-  if (!email && user.emails && user.emails[0])
+  if (!email && user.emails && user.emails[0]) {
     email = user.emails[0].address;
+  }
+
   // make sure we have a valid email
-  if (!email || !_.contains(_.pluck(user.emails || [], 'address'), email))
-    throw new Error("No such email for user.");
+  if (!email || !_.contains(_.pluck(user.emails || [], 'address'), email)) {
+    handleError("No such email for user.");
+  }
 
   var token = Random.secret();
   var when = new Date();
@@ -567,9 +602,10 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
       Accounts.emailTemplates.resetPassword.text(user, resetPasswordUrl);
   }
 
-  if (typeof Accounts.emailTemplates.resetPassword.html === 'function')
+  if (typeof Accounts.emailTemplates.resetPassword.html === 'function') {
     options.html =
       Accounts.emailTemplates.resetPassword.html(user, resetPasswordUrl);
+  }
 
   if (typeof Accounts.emailTemplates.headers === 'object') {
     options.headers = Accounts.emailTemplates.headers;
@@ -598,14 +634,17 @@ Accounts.sendEnrollmentEmail = function (userId, email) {
 
   // Make sure the user exists, and email is in their addresses.
   var user = Meteor.users.findOne(userId);
-  if (!user)
+  if (!user) {
     throw new Error("Can't find user");
+  }
   // pick the first email if we weren't passed an email.
-  if (!email && user.emails && user.emails[0])
+  if (!email && user.emails && user.emails[0]) {
     email = user.emails[0].address;
+  }
   // make sure we have a valid email
-  if (!email || !_.contains(_.pluck(user.emails || [], 'address'), email))
+  if (!email || !_.contains(_.pluck(user.emails || [], 'address'), email)) {
     throw new Error("No such email for user.");
+  }
 
   var token = Random.secret();
   var when = new Date();
@@ -637,9 +676,10 @@ Accounts.sendEnrollmentEmail = function (userId, email) {
       Accounts.emailTemplates.enrollAccount.text(user, enrollAccountUrl);
   }
 
-  if (typeof Accounts.emailTemplates.enrollAccount.html === 'function')
+  if (typeof Accounts.emailTemplates.enrollAccount.html === 'function') {
     options.html =
       Accounts.emailTemplates.enrollAccount.html(user, enrollAccountUrl);
+  }
 
   if (typeof Accounts.emailTemplates.headers === 'object') {
     options.headers = Accounts.emailTemplates.headers;
@@ -664,8 +704,9 @@ Meteor.methods({resetPassword: function (token, newPassword) {
 
       var user = Meteor.users.findOne({
         "services.password.reset.token": token});
-      if (!user)
+      if (!user) {
         throw new Meteor.Error(403, "Token expired");
+      }
       var when = user.services.password.reset.when;
       var reason = user.services.password.reset.reason;
       var tokenLifetimeMs = Accounts._getPasswordResetTokenLifetimeMs();

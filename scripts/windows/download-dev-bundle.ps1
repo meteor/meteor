@@ -42,6 +42,9 @@ if (Test-Path $devbundle_zip) {
 Write-Host "Extracting $TARBALL to the dev_bundle directory"
 
 cmd /C "7z.exe x $devbundle_zip -so | 7z.exe x -aoa -si -ttar -o$CHECKOUT_DIR\dev_bundle_XXX" | out-null
+if ($LASTEXITCODE -ne 0) {
+  Exit 1
+}
 
 $downloaded_tmp = $CHECKOUT_DIR + "\dev_bundle_XXX"
 $downloaded_path = $downloaded_tmp + "\dev_bundle_" + $PLATFORM + "_" + $BUNDLE_VERSION
