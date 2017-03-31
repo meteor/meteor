@@ -1,7 +1,7 @@
 {
   "name": "meteor-promise",
   "author": "Ben Newman <ben@meteor.com>",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "ES6 Promise polyfill with Fiber support",
   "keywords": [
     "meteor",
