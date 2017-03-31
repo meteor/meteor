@@ -2,6 +2,8 @@
 
 * Node has been upgraded to version 6.10.1.
 
+* The `meteor-promise` npm package has been upgraded to version 0.8.2.
+
 ## v1.5, TBD
 
 * Running `meteor add dynamic-import` installs support for ECMAScript
