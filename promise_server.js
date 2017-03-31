@@ -11,16 +11,13 @@ exports.makeCompatible = function (Promise, Fiber) {
   // Replace Promise.prototype.then with a wrapper that ensures the
   // onResolved and onRejected callbacks always run in a Fiber.
   Promise.prototype.then = function (onResolved, onRejected) {
-    var P = this.constructor;
+    var Promise = this.constructor;
 
-    if (typeof P.Fiber === "function") {
-      var fiber = P.Fiber.current;
-      var dynamics = cloneFiberOwnProperties(fiber);
-
+    if (typeof Promise.Fiber === "function") {
       return es6PromiseThen.call(
         this,
-        wrapCallback(onResolved, P, dynamics),
-        wrapCallback(onRejected, P, dynamics)
+        wrapCallback(onResolved, Promise),
+        wrapCallback(onRejected, Promise)
       );
     }
 
@@ -131,6 +128,11 @@ function wrapCallback(callback, Promise, dynamics) {
     return callback;
   }
 
+  if (isNativeFunction(callback)) {
+    return callback;
+  }
+
+  var dynamics = cloneFiberOwnProperties(Promise.Fiber.current);
   var result = function (arg) {
     return fiberPool.run({
       callback: callback,
@@ -144,6 +146,14 @@ function wrapCallback(callback, Promise, dynamics) {
   result._meteorPromiseAlreadyWrapped = true;
 
   return result;
+}
+
+var funToStr = Function.prototype.toString;
+var nativeNeedle = "{ [native code] }";
+
+function isNativeFunction(value) {
+  return typeof value === "function" &&
+    funToStr.call(value).endsWith(nativeNeedle);
 }
 
 function cloneFiberOwnProperties(fiber) {
