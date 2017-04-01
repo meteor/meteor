@@ -8,16 +8,15 @@ exports.makeCompatible = function (Promise, Fiber) {
     Promise.Fiber = Fiber;
   }
 
-  if (es6PromiseThen.name === "meteorPromise_then") {
-    return;  // Already compatible.
+  if (es6PromiseThen.name === "meteorPromiseThen") {
+    return; // Already compatible.
   }
 
-  // Replace Promise.prototype.then with a wrapper that ensures the
-  // onResolved and onRejected callbacks always run in a Fiber.
-  Promise.prototype.then = function meteorPromise_then(onResolved, onRejected) {
+  function meteorPromiseThen(onResolved, onRejected) {
     var Promise = this.constructor;
 
-    if (typeof Promise.Fiber === "function" && !this._meteorPromiseAlreadyWrapped) {
+    if (typeof Promise.Fiber === "function" &&
+        ! this._meteorPromiseAlreadyWrapped) {
       return es6PromiseThen.call(
         this,
         wrapCallback(onResolved, Promise),
@@ -26,7 +25,11 @@ exports.makeCompatible = function (Promise, Fiber) {
     }
 
     return es6PromiseThen.call(this, onResolved, onRejected);
-  };
+  }
+
+  // Replace Promise.prototype.then with a wrapper that ensures the
+  // onResolved and onRejected callbacks always run in a Fiber.
+  Promise.prototype.then = meteorPromiseThen;
 
   Promise.awaitAll = function (args) {
     return awaitPromise(this.all(args));
@@ -139,7 +142,11 @@ function wrapCallback(callback, Promise) {
       args: [arg], // Avoid dealing with arguments objects.
       dynamics: dynamics
     }, Promise);
+
+    // Avoid wrapping the native resolver functions that will be attached
+    // to this promise per https://github.com/meteor/promise/issues/18.
     promise._meteorPromiseAlreadyWrapped = true;
+
     return promise;
   };
 
@@ -148,14 +155,6 @@ function wrapCallback(callback, Promise) {
   result._meteorPromiseAlreadyWrapped = true;
 
   return result;
-}
-
-var funToStr = Function.prototype.toString;
-var nativeNeedle = "{ [native code] }";
-
-function isNativeFunction(value) {
-  return typeof value === "function" &&
-    funToStr.call(value).endsWith(nativeNeedle);
 }
 
 function cloneFiberOwnProperties(fiber) {
