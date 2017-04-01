@@ -8,12 +8,16 @@ exports.makeCompatible = function (Promise, Fiber) {
     Promise.Fiber = Fiber;
   }
 
+  if (es6PromiseThen.name === "meteorPromise_then") {
+    return;  // Already compatible.
+  }
+
   // Replace Promise.prototype.then with a wrapper that ensures the
   // onResolved and onRejected callbacks always run in a Fiber.
-  Promise.prototype.then = function (onResolved, onRejected) {
+  Promise.prototype.then = function meteorPromise_then(onResolved, onRejected) {
     var Promise = this.constructor;
 
-    if (typeof Promise.Fiber === "function") {
+    if (typeof Promise.Fiber === "function" && !this._meteorPromiseAlreadyWrapped) {
       return es6PromiseThen.call(
         this,
         wrapCallback(onResolved, Promise),
@@ -117,7 +121,7 @@ exports.makeCompatible = function (Promise, Fiber) {
   };
 };
 
-function wrapCallback(callback, Promise, dynamics) {
+function wrapCallback(callback, Promise) {
   if (! callback) {
     return callback;
   }
@@ -128,17 +132,15 @@ function wrapCallback(callback, Promise, dynamics) {
     return callback;
   }
 
-  if (isNativeFunction(callback)) {
-    return callback;
-  }
-
   var dynamics = cloneFiberOwnProperties(Promise.Fiber.current);
   var result = function (arg) {
-    return fiberPool.run({
+    var promise = fiberPool.run({
       callback: callback,
       args: [arg], // Avoid dealing with arguments objects.
       dynamics: dynamics
     }, Promise);
+    promise._meteorPromiseAlreadyWrapped = true;
+    return promise;
   };
 
   // Flag this callback as not wanting to be called in a fiber because it is
