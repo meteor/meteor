@@ -86,6 +86,9 @@ export class AccountsCommon {
   // - passwordResetTokenExpirationInDays {Number}
   //     Number of days since password reset token creation until the
   //     token cannt be used any longer (password reset token expires).
+  // - ambiguousErrorMessages {Boolean}
+  //     Return ambiguous error messages from login failures to prevent
+  //     user enumeration.
 
   /**
    * @summary Set global accounts options.
@@ -98,6 +101,7 @@ export class AccountsCommon {
    * @param {String} options.oauthSecretKey When using the `oauth-encryption` package, the 16 byte key using to encrypt sensitive account credentials in the database, encoded in base64.  This option may only be specifed on the server.  See packages/oauth-encryption/README.md for details.
    * @param {Number} options.passwordResetTokenExpirationInDays The number of days from when a link to reset password is sent until token expires and user can't reset password with the link anymore. Defaults to 3.
    * @param {Number} options.passwordEnrollTokenExpirationInDays The number of days from when a link to set inital password is sent until token expires and user can't set password with the link anymore. Defaults to 30.
+   * @param {Boolean} options.ambiguousErrorMessages Return ambiguous error messages from login failures to prevent user enumeration. Defaults to false.
    */
   config(options) {
     var self = this;
@@ -130,7 +134,8 @@ export class AccountsCommon {
 
     // validate option keys
     var VALID_KEYS = ["sendVerificationEmail", "forbidClientAccountCreation", "passwordEnrollTokenExpirationInDays",
-                      "restrictCreationByEmailDomain", "loginExpirationInDays", "passwordResetTokenExpirationInDays"];
+                      "restrictCreationByEmailDomain", "loginExpirationInDays", "passwordResetTokenExpirationInDays",
+                      "ambiguousErrorMessages"];
     _.each(_.keys(options), function (key) {
       if (!_.contains(VALID_KEYS, key)) {
         throw new Error("Accounts.config: Invalid key: " + key);
