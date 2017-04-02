@@ -91,6 +91,15 @@ var echoTest = function (item) {
 };
 
 testAsyncMulti("livedata - basic method invocation", [
+  // Call with circurlar structure
+  function (test, expect) {
+    test.throws(function() {
+      var obj = {};
+      obj.obj = obj;
+      Meteor.call('nothing', obj);
+    }, /Arguments passed to nothing contain circular structure/);
+  },
+
   // Unknown methods
   function (test, expect) {
     if (Meteor.isServer) {
