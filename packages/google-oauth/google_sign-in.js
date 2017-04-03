@@ -6,7 +6,7 @@ var gplusPromise = new Promise(function (resolve, reject) {
     return;
   }
 
-  document.addEventListener("deviceready", function () {
+  Meteor.startup(function () {
     var plugins = global.plugins;
     var gplus = plugins && plugins.googleplus;
     if (gplus) {
@@ -14,7 +14,7 @@ var gplusPromise = new Promise(function (resolve, reject) {
     } else {
       reject(new Error("plugins.googleplus not defined"));
     }
-  }, false);
+  });
 });
 
 function tolerateUnhandledRejection() {}
