@@ -555,10 +555,11 @@ export default class ImportScanner {
     }
 
     each(file.deps, (info, id) => {
-      // Asynchronous module fetching only really makes sense on the
-      // client (even though it works equally well on the server), so it's
-      // better if forDynamicImport never becomes true on the server.
-      const dynamic = this.isWeb() && (forDynamicImport || info.dynamic);
+      // Asynchronous module fetching only really makes sense in the
+      // browser (even though it works equally well on the server), so
+      // it's better if forDynamicImport never becomes true on the server.
+      const dynamic = this.isWebBrowser() &&
+        (forDynamicImport || info.dynamic);
 
       const resolved = this._resolve(file, id, dynamic);
       if (! resolved) {
@@ -671,7 +672,12 @@ export default class ImportScanner {
   }
 
   isWeb() {
+    // Returns true for web.cordova as well as web.browser.
     return ! archMatches(this.bundleArch, "os");
+  }
+
+  isWebBrowser() {
+    return archMatches(this.bundleArch, "web.browser");
   }
 
   _readFile(absPath) {

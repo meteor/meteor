@@ -1,6 +1,17 @@
 var hasOwn = Object.prototype.hasOwnProperty;
 var dbPromise;
 
+var canUseCache =
+  // The server doesn't benefit from dynamic module fetching, and almost
+  // certainly doesn't support IndexedDB.
+  Meteor.isClient &&
+  // Cordova bundles all modules into the monolithic initial bundle, so
+  // the dynamic module cache won't be necessary.
+  ! Meteor.isCordova &&
+  // Caching can be confusing in development, and is designed to be a
+  // transparent optimization for production performance.
+  Meteor.isProduction;
+
 function getIDB() {
   if (typeof indexedDB !== "undefined") return indexedDB;
   if (typeof webkitIndexedDB !== "undefined") return webkitIndexedDB;
@@ -67,7 +78,7 @@ exports.checkMany = function (versions) {
     sourcesById[id] = null;
   });
 
-  if (! Meteor.isProduction) {
+  if (! canUseCache) {
     return Promise.resolve(sourcesById);
   }
 
@@ -104,7 +115,7 @@ exports.checkMany = function (versions) {
 var pendingVersionsAndSourcesById = Object.create(null);
 
 exports.setMany = function (versionsAndSourcesById) {
-  if (Meteor.isProduction) {
+  if (canUseCache) {
     Object.assign(
       pendingVersionsAndSourcesById,
       versionsAndSourcesById
