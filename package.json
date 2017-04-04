@@ -1,5 +1,5 @@
 {
-  "name": "eslint-config-meteor",
+  "name": "@meteorjs/eslint-config-meteor",
   "version": "1.0.0",
   "description": "Eslint configuration for Meteor",
   "main": "index.js",
