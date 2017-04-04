@@ -1,6 +1,6 @@
 {
   "name": "@meteorjs/eslint-config-meteor",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Eslint configuration for Meteor",
   "main": "index.js",
   "scripts": {
