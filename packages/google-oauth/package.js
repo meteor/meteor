@@ -3,8 +3,14 @@ Package.describe({
   version: "1.2.1-rc.6"
 });
 
+var cordovaPluginGooglePlusURL =
+  // This revision is from the "update-entitlements-plist-files" branch.
+  // This logic can be reverted when/if this PR is merged:
+  // https://github.com/EddyVerbruggen/cordova-plugin-googleplus/pull/366
+  "https://github.com/meteor/cordova-plugin-googleplus.git#3095abe327e710ab04059ae9d3521bd4037c5a37";
+
 Cordova.depends({
-  "cordova-plugin-googleplus": "5.1.1"
+  "cordova-plugin-googleplus": cordovaPluginGooglePlusURL
 });
 
 Package.onUse(function(api) {
