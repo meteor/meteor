@@ -28,7 +28,15 @@ module.exports = {
     // XXX: this *should* be taken care of by eslint-import-resolver-meteor, investigate.
     'import/no-extraneous-dependencies': 0,
 
-    'no-underscore-dangle': 0,
+    'no-underscore-dangle': [
+      'error',
+      {
+        allow: [
+          '_id',
+          '_ensureIndex'
+        ]
+      }
+    ],
     'object-shorthand': [
       'error',
       'always',
