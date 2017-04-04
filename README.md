@@ -8,11 +8,10 @@ Add the following to your package.json
 
 ```json
 "eslintConfig": {
-  "extends": "eslint-config-meteor"
+  "extends": "@meteorjs/eslint-config-meteor"
 }
 ```
 
 # Todo
 
 - Figure out peerDependency installation.
-- Determine where this might live on npm
