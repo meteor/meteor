@@ -8,14 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dburles/eslint-config-meteor.git"
+    "url": "git+https://github.com/meteor/eslint-config-meteor.git"
   },
   "author": "David Burles",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/dburles/eslint-config-meteor/issues"
+    "url": "https://github.com/meteor/eslint-config-meteor/issues"
   },
-  "homepage": "https://github.com/dburles/eslint-config-meteor#readme",
+  "homepage": "https://github.com/meteor/eslint-config-meteor#readme",
   "peerDependencies": {
     "babel-eslint": ">= 7",
     "eslint": ">= 3",
