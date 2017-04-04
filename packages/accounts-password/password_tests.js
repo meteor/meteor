@@ -1474,7 +1474,7 @@ if (Meteor.isServer) (function () {
   );
 
   Tinytest.add(
-    'passwords - reset password doesn\t work if email changed after email sent',
+    "passwords - reset password doesn't work if email changed after email sent",
     function (test) {
       var username = Random.id();
       var email = username + '-intercept@example.com';
@@ -1688,12 +1688,42 @@ if (Meteor.isServer) (function () {
     function (test) {
       var email = test.id + '-intercept@example.com';
       var userId = Accounts.createUser({email: email, password: 'password'});
+      
       Accounts.sendEnrollmentEmail(userId, email);
       test.isTrue(!!Meteor.users.findOne(userId).services.password.reset);
 
       Accounts._expirePasswordEnrollTokens(new Date(), userId);
-
       test.isUndefined(Meteor.users.findOne(userId).services.password.reset);
+    }
+  )
+
+  Tinytest.add(
+    "passwords - enroll tokens don't get cleaned up when reset tokens are cleaned up",
+    function (test) {
+      var email = test.id + '-intercept@example.com';
+      var userId = Accounts.createUser({email: email, password: 'password'});
+      
+      Accounts.sendEnrollmentEmail(userId, email);
+      var enrollToken = Meteor.users.findOne(userId).services.password.reset;
+      test.isTrue(enrollToken);
+
+      Accounts._expirePasswordResetTokens(new Date(), userId);
+      test.equal(enrollToken, Meteor.users.findOne(userId).services.password.reset);
+    }
+  )
+
+  Tinytest.add(
+    "passwords - reset tokens don't get cleaned up when enroll tokens are cleaned up",
+    function (test) {
+      var email = test.id + '-intercept@example.com';
+      var userId = Accounts.createUser({email: email, password: 'password'});
+
+      Accounts.sendResetPasswordEmail(userId, email);
+      var resetToken = Meteor.users.findOne(userId).services.password.reset;
+      test.isTrue(resetToken);
+
+      Accounts._expirePasswordEnrollTokens(new Date(), userId);
+      test.equal(resetToken,Meteor.users.findOne(userId).services.password.reset);
     }
   )
 

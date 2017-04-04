@@ -13,6 +13,14 @@ var assert = require("assert");
 // after bootup (since they block all concurrency!)
 var files = module.exports;
 
+// Detect that we are on a Windows-like Filesystem, such as that in a WSL
+// (Windows Subsystem for Linux) even if it otherwise looks like we're on Unix.
+// https://github.com/Microsoft/BashOnWindows/issues/423#issuecomment-221627364
+var isWindowsLikeFilesystem = function () {
+  return process.platform === "win32" ||
+    (os.release().indexOf("Microsoft") > -1);
+};
+
 var toPosixPath = function (p, partialPath) {
   // Sometimes, you can have a path like \Users\IEUser on windows, and this
   // actually means you want C:\Users\IEUser
@@ -114,6 +122,8 @@ files.pathIsAbsolute = wrapPathFunction("isAbsolute");
 files.pathSep = '/';
 files.pathDelimiter = ':';
 files.pathOsDelimiter = path.delimiter;
+
+files.isWindowsLikeFilesystem = isWindowsLikeFilesystem;
 
 files.convertToStandardPath = convertToStandardPath;
 files.convertToOSPath = convertToOSPath;

@@ -1076,14 +1076,16 @@ Ap._generateStampedLoginToken = function () {
 ///
 
 function expirePasswordToken(accounts, oldestValidDate, tokenFilter, userId) {
-  var userFilter = userId ? {_id: userId} : {};
-
-  accounts.users.update(_.extend(userFilter, tokenFilter, {
+  const userFilter = userId ? {_id: userId} : {};
+  const resetRangeOr = { 
     $or: [
       { "services.password.reset.when": { $lt: oldestValidDate } },
       { "services.password.reset.when": { $lt: +oldestValidDate } }
     ]
-  }), {
+  };
+  const expireFilter = { $and: [tokenFilter, resetRangeOr] };
+
+  accounts.users.update({...userFilter, ...expireFilter}, {
     $unset: {
       "services.password.reset": ""
     }

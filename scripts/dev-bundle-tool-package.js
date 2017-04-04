@@ -11,13 +11,14 @@ var packageJson = {
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
-    npm: "4.1.2",
-    "node-gyp": "3.4.0",
-    "node-pre-gyp": "0.6.30",
+    npm: "4.3.0",
+    "node-gyp": "3.5.0",
+    "node-pre-gyp": "0.6.33",
     "meteor-babel": "0.14.4",
     "meteor-promise": "0.8.0",
     fibers: "1.0.15",
     promise: "7.1.1",
+    "fs-extra": "2.1.0",
     // So that Babel 6 can emit require("babel-runtime/helpers/...") calls.
     "babel-runtime": "6.9.2",
     // For various ES2015 polyfills, such as Map and Set.
