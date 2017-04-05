@@ -1,5 +1,16 @@
 ## v.NEXT
 
+* Node has been upgraded to version 4.8.1.
+
+* The `npm` npm package has been upgraded to version 4.4.4.
+  It should be noted that this version reduces extra noise
+  previously included in some npm errors.
+
+* The `node-gyp` npm package has been upgraded to 3.6.0 which
+  adds support for VS2017 on Windows.
+
+* The `node-pre-gyp` npm package has been updated to 0.6.36.
+
 * Thanks to the outstanding efforts of @sethmurphy18, the `minifier-js`
   package now uses [Babili](https://github.com/babel/babili) instead of
   [UglifyJS](https://github.com/mishoo/UglifyJS2), resolving numerous
