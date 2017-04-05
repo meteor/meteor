@@ -297,9 +297,9 @@ function callAndTolerateBusyFilesystem(syncFsFunc, asyncFsFunc, ...args) {
   }
 }
 
-function callWithRetries(fsFunc, tolerable=[], ...args) {
-  // retries are necessarily only on Windows, because the rename call can fail
-  // with EBUSY, which means the file is "busy"
+function callWithRetries(fsFunc, tolerableFsErrorCodes=[], ...args) {
+  // retries are probably only necessary only on Windows, since some fs calls
+  // can fail with EBUSY (or similar), which means the file is "busy" (for now).
   let maxTries = 10;
   let success = false;
   while (! success && maxTries-- > 0) {
@@ -307,7 +307,7 @@ function callWithRetries(fsFunc, tolerable=[], ...args) {
       fsFunc.apply(this, args);
       success = true;
     } catch (err) {
-      if (!tolerable.includes(err.code)) {
+      if (! tolerableFsErrorCodes.includes(err.code)) {
         throw err;
       }
     }
@@ -318,7 +318,7 @@ function callWithRetries(fsFunc, tolerable=[], ...args) {
 // The move and moveSync functions from fs-extra, while great at many things
 // aren't capable of resolving busy filesystem issues (such as those encountered
 // on Windows) since it's not Fiber-aware.
-files.moveWithBenefits = Profile("files.moveWithBenefits", function (f, t) {
+files.moveWithFsTolerance = Profile("files.moveWithFsTolerance", function (f, t) {
   return callAndTolerateBusyFilesystem(fs.moveSync, fs.move,
     files.convertToOSPath(f), files.convertToOSPath(t));
 });
@@ -1013,7 +1013,7 @@ files.renameDirAlmostAtomically = function (fromDir, toDir) {
   // Get old dir out of the way, if it exists.
   var movedOldDir = true;
   try {
-    files.moveWithBenefits(toDir, garbageDir);
+    files.moveWithFsTolerance(toDir, garbageDir);
   } catch (e) {
     if (e.code !== 'ENOENT') {
       throw e;
@@ -1022,7 +1022,7 @@ files.renameDirAlmostAtomically = function (fromDir, toDir) {
   }
 
   // Now rename the directory.
-  files.moveWithBenefits(fromDir, toDir);
+  files.moveWithFsTolerance(fromDir, toDir);
 
   // ... and delete the old one.
   if (movedOldDir) {
@@ -1714,20 +1714,20 @@ files.existsSync = function (path, callback) {
 };
 
 if (files.isWindowsLikeFilesystem()) {
-  const tolerable = ['EPERM', 'EACCES'];
+  const tolerableFsErrorCodes = ['EPERM', 'EACCES'];
 
-  function makeRenameFunction(name) {
-    let original = files[name];
+  function makeRenamesqueFunction(name) {
+    const original = files[name];
     files[name] = function (from, to) {
-      if (! callWithRetries(original, tolerable, from, to)) {
+      if (! callWithRetries(original, tolerableFsErrorCodes, from, to)) {
         files.cp_r(from, to);
         files.rm_recursive(from);
       }
     };
   }
 
-  makeRenameFunction("rename");
-  makeRenameFunction("move");
+  makeRenamesqueFunction("rename");
+  makeRenamesqueFunction("move");
 }
 
 // Warning: doesn't convert slashes in the second 'cache' arg
