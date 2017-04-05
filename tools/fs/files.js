@@ -1581,8 +1581,6 @@ wrapFsFunc("lstat", [0]);
 wrapFsFunc("rename", [0, 1]);
 wrapFsFunc("move", [0, 1]);
 
-
-
 // After the outermost files.withCache call returns, the withCacheCache is
 // reset to null so that it does not survive server restarts.
 let withCacheCache = null;
@@ -1716,46 +1714,43 @@ wrapFsFunc("readlink", [0]);
 // toDir does not exist" and "you can end up with garbage directories
 // sitting around", but not "there's any time where toDir exists but
 // is in a state other than initial or final".)
-files.renameDirAlmostAtomically = function (fromDir, toDir) {
-  var garbageDir = toDir + '-garbage-' + utils.randomToken();
+files.renameDirAlmostAtomically =
+  Profile("files.renameDirAlmostAtomically", function (fromDir, toDir) {
+    var garbageDir = toDir + '-garbage-' + utils.randomToken();
 
-  // Get old dir out of the way, if it exists.
-  var movedOldDir = true;
-  try {
-    files.moveWithFsTolerance(toDir, garbageDir);
-  } catch (e) {
-    if (e.code !== 'ENOENT') {
-      throw e;
+    // Get old dir out of the way, if it exists.
+    var movedOldDir = true;
+    try {
+      files.moveWithFsTolerance(toDir, garbageDir);
+    } catch (e) {
+      if (e.code !== 'ENOENT') {
+        throw e;
+      }
+      movedOldDir = false;
     }
-    movedOldDir = false;
-  }
 
-  // Now rename the directory.
-  files.moveWithFsTolerance(fromDir, toDir);
+    // Now rename the directory.
+    files.moveWithFsTolerance(fromDir, toDir);
 
-  // ... and delete the old one.
-  if (movedOldDir) {
-    files.rm_recursive(garbageDir);
-  }
-};
-files.renameDirAlmostAtomically = Profile("files.renameDirAlmostAtomically",
-                                          files.renameDirAlmostAtomically);
+    // ... and delete the old one.
+    if (movedOldDir) {
+      files.rm_recursive(garbageDir);
+    }
+  });
 
-files.writeFileAtomically = function (filename, contents) {
-  const parentDir = files.pathDirname(filename);
-  files.mkdir_p(parentDir);
+files.writeFileAtomically =
+  Profile("files.writeFileAtomically", function (filename, contents) {
+    const parentDir = files.pathDirname(filename);
+    files.mkdir_p(parentDir);
 
-  const tmpFile = files.pathJoin(
-    parentDir,
-    '.' + files.pathBasename(filename) + '.' + utils.randomToken()
-  );
+    const tmpFile = files.pathJoin(
+      parentDir,
+      '.' + files.pathBasename(filename) + '.' + utils.randomToken()
+    );
 
-  files.writeFile(tmpFile, contents);
-  files.rename(tmpFile, filename);
-};
-files.writeFileAtomically = Profile("files.writeFileAtomically",
-                                    files.writeFileAtomically);
-
+    files.writeFile(tmpFile, contents);
+    files.rename(tmpFile, filename);
+  });
 
 // These don't need to be Fiberized
 files.createReadStream = function (...args) {
