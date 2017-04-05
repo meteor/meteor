@@ -6,9 +6,9 @@
       "from": "core-js@2.4.1"
     },
     "meteor-ecmascript-runtime": {
-      "version": "0.2.10",
-      "resolved": "https://registry.npmjs.org/meteor-ecmascript-runtime/-/meteor-ecmascript-runtime-0.2.10.tgz",
-      "from": "meteor-ecmascript-runtime@0.2.10"
+      "version": "0.2.11",
+      "resolved": "https://registry.npmjs.org/meteor-ecmascript-runtime/-/meteor-ecmascript-runtime-0.2.11.tgz",
+      "from": "meteor-ecmascript-runtime@0.2.11"
     }
   }
 }

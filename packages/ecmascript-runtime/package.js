@@ -7,7 +7,7 @@ Package.describe({
 });
 
 Npm.depends({
-  "meteor-ecmascript-runtime": "0.2.10",
+  "meteor-ecmascript-runtime": "0.2.11",
 });
 
 Package.onUse(function(api) {
