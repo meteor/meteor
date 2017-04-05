@@ -50,10 +50,23 @@ Tinytest.add("core-js - Array", function (test) {
   test.equal([2, 3, 4].findIndex(isOdd), 1);
 });
 
-Tinytest.add("core-js - Number", function () {
+Tinytest.add("core-js - Number", function (test) {
   // Make sure https://github.com/grigio/meteor-babel/issues/5 is not a
   // problem for us.
   check(1234, Number);
+  test.equal(typeof Number.isFinite, "function");
+  test.equal(typeof Number.isNaN, "function");
+  test.equal(typeof Number.isInteger, "function");
+  test.equal(typeof Number.isSafeInteger, "function");
+  test.equal(typeof Number.parseFloat, "function");
+  test.equal(typeof Number.parseInt, "function");
+  test.equal(typeof Number.EPSILON, "number");
+  test.equal(typeof Number.MAX_SAFE_INTEGER, "number");
+  test.equal(typeof Number.MIN_SAFE_INTEGER, "number");
+  test.equal(typeof Number.prototype.toFixed, "function");
+  test.equal(typeof Number.prototype.toPrecision, "function");
+  test.equal(typeof parseFloat, "function");
+  test.equal(typeof parseInt, "function");
 });
 
 Tinytest.add("core-js - Object", function (test) {

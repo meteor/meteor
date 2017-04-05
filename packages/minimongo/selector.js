@@ -567,7 +567,7 @@ var getOperandBitmask = function(operand, selector) {
   // position list
   // If querying a list of bit positions, each <position> must be a non-negative integer. Bit positions start at 0 from the least significant bit.
   else if (isArray(operand) && operand.every(function (e) {
-    return _.isNumber(e) && e >= 0
+    return Number.isInteger(e) && e >= 0
   })) {
     var buffer = new ArrayBuffer((Math.max(...operand) >> 3) + 1)
     var view = new Uint8Array(buffer)
