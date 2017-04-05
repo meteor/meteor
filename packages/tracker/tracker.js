@@ -456,6 +456,15 @@ Tracker.flush = function (options) {
                       throwFirstError: options && options._throwFirstError });
 };
 
+/**
+ * @summary True if we are computing a computation now, either first time or recompute.  This matches Tracker.active unless we are inside Tracker.nonreactive, which nullfies currentComputation even though an enclosing computation may still be running.
+ * @locus Client
+ * @returns {Boolean}
+ */
+Tracker.inFlush = function () {
+  return inFlush;
+}
+
 // Run all pending computations and afterFlush callbacks.  If we were not called
 // directly via Tracker.flush, this may return before they're all done to allow
 // the event loop to run a little before continuing.
@@ -471,7 +480,7 @@ Tracker._runFlush = function (options) {
   // any useful notion of a nested flush.
   //
   // https://app.asana.com/0/159908330244/385138233856
-  if (inFlush)
+  if (Tracker.inFlush())
     throw new Error("Can't call Tracker.flush while flushing");
 
   if (inCompute)
