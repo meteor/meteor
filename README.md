@@ -4,6 +4,19 @@ This is an [ESLint](https://eslint.org) configuration for [Meteor](https://www.m
 
 # Usage
 
+## Install
+
+Install by running:
+
+```sh
+meteor npm install --save-dev @meteorjs/eslint-config/meteor
+```
+
+> Using `meteor npm` is optional for this package, but best-practice for Meteor
+  projects in general.
+
+## Configure
+
 Add the following to your package.json
 
 ```json
