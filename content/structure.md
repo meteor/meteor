@@ -78,7 +78,13 @@ If you need to `require` from an ES2015 module with a `default` export, you can 
 See the Docs: [Modules » Syntax » CoffeeScript](https://docs.meteor.com/packages/modules.html#CoffeeScript)
 
 ```cs
-exports.Lists = ListsCollection 'lists'
+// lists.coffee
+
+export Lists = new Collection 'lists'
+```
+
+```cs
+import { Lists } from './lists.coffee'
 ```
 
 <h2 id="javascript-structure">File structure</h2>
