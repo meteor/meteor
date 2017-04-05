@@ -24,7 +24,7 @@ These should be installed manually, per the [`package.json`](package.json).
 
 ## Configure
 
-Add the following to your package.json
+Add the following to your `package.json`:
 
 ```json
 "eslintConfig": {
