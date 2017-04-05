@@ -2210,6 +2210,19 @@ Tinytest.add('mongo-livedata - rewrite selector', function (test) {
     Mongo.Collection._rewriteSelector(testSelector),
     { length }
   );
+
+  test.matches(
+    Mongo.Collection._rewriteSelector({ _id: null })._id,
+    /^\S+$/,
+    'Passing in a falsey selector _id should return a selector with a new '
+    + 'auto-generated _id string'
+  );
+  test.equal(
+    Mongo.Collection._rewriteSelector({ _id: null }, { fallbackId: oid }),
+    { _id: oid },
+    'Passing in a falsey selector _id and a fallback ID should return a '
+    + 'selector with an _id using the fallback ID'
+  );
 });
 
 testAsyncMulti('mongo-livedata - specified _id', [
