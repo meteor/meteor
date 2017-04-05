@@ -315,20 +315,6 @@ function callWithRetries(fsFunc, tolerableFsErrorCodes=[], ...args) {
   return success;
 }
 
-// The move and moveSync functions from fs-extra, while great at many things
-// aren't capable of resolving busy filesystem issues (such as those encountered
-// on Windows) since it's not Fiber-aware.
-files.moveWithFsTolerance = Profile("files.moveWithFsTolerance", function (f, t) {
-  return callAndTolerateBusyFilesystem(fs.moveSync, fs.move,
-    files.convertToOSPath(f), files.convertToOSPath(t));
-});
-
-// Like rm -r.
-files.rm_recursive = Profile("files.rm_recursive", function (p) {
-  return callAndTolerateBusyFilesystem(rimraf.sync, rimraf,
-    files.convertToOSPath(p));
-});
-
 // Makes all files in a tree read-only.
 var makeTreeReadOnly = function (p) {
   try {
@@ -1000,53 +986,6 @@ files.createTarball = function (dirPath, tarball, options) {
   }).await();
 };
 
-// Use this if you'd like to replace a directory with another
-// directory as close to atomically as possible. It's better than
-// recursively deleting the target directory first and then
-// renaming. (Failure modes here include "there's a brief moment where
-// toDir does not exist" and "you can end up with garbage directories
-// sitting around", but not "there's any time where toDir exists but
-// is in a state other than initial or final".)
-files.renameDirAlmostAtomically = function (fromDir, toDir) {
-  var garbageDir = toDir + '-garbage-' + utils.randomToken();
-
-  // Get old dir out of the way, if it exists.
-  var movedOldDir = true;
-  try {
-    files.moveWithFsTolerance(toDir, garbageDir);
-  } catch (e) {
-    if (e.code !== 'ENOENT') {
-      throw e;
-    }
-    movedOldDir = false;
-  }
-
-  // Now rename the directory.
-  files.moveWithFsTolerance(fromDir, toDir);
-
-  // ... and delete the old one.
-  if (movedOldDir) {
-    files.rm_recursive(garbageDir);
-  }
-};
-files.renameDirAlmostAtomically = Profile("files.renameDirAlmostAtomically",
-                                          files.renameDirAlmostAtomically);
-
-files.writeFileAtomically = function (filename, contents) {
-  const parentDir = files.pathDirname(filename);
-  files.mkdir_p(parentDir);
-
-  const tmpFile = files.pathJoin(
-    parentDir,
-    '.' + files.pathBasename(filename) + '.' + utils.randomToken()
-  );
-
-  files.writeFile(tmpFile, contents);
-  files.rename(tmpFile, filename);
-};
-files.writeFileAtomically = Profile("files.writeFileAtomically",
-                                    files.writeFileAtomically);
-
 // Like fs.symlinkSync, but creates a temporay link and renames it over the
 // file; this means it works even if the file already exists.
 // Do not use this function on Windows, it won't work.
@@ -1642,6 +1581,8 @@ wrapFsFunc("lstat", [0]);
 wrapFsFunc("rename", [0, 1]);
 wrapFsFunc("move", [0, 1]);
 
+
+
 // After the outermost files.withCache call returns, the withCacheCache is
 // reset to null so that it does not survive server restarts.
 let withCacheCache = null;
@@ -1730,6 +1671,20 @@ if (files.isWindowsLikeFilesystem()) {
   makeRenamesqueFunction("move");
 }
 
+// The move and moveSync functions from fs-extra, while great at many things
+// aren't capable of resolving busy filesystem issues (such as those encountered
+// on Windows) since it's not Fiber-aware.
+files.moveWithFsTolerance = Profile("files.moveWithFsTolerance", function (f, t) {
+  return callAndTolerateBusyFilesystem(fs.moveSync, fs.move,
+    files.convertToOSPath(f), files.convertToOSPath(t));
+});
+
+// Like rm -r.
+files.rm_recursive = Profile("files.rm_recursive", function (p) {
+  return callAndTolerateBusyFilesystem(rimraf.sync, rimraf,
+    files.convertToOSPath(p));
+});
+
 // Warning: doesn't convert slashes in the second 'cache' arg
 wrapFsFunc("realpath", [0], {
   modifyReturnValue: files.convertToStandardPath
@@ -1753,6 +1708,54 @@ wrapFsFunc("write", []);
 wrapFsFunc("close", []);
 wrapFsFunc("symlink", [0, 1]);
 wrapFsFunc("readlink", [0]);
+
+// Use this if you'd like to replace a directory with another
+// directory as close to atomically as possible. It's better than
+// recursively deleting the target directory first and then
+// renaming. (Failure modes here include "there's a brief moment where
+// toDir does not exist" and "you can end up with garbage directories
+// sitting around", but not "there's any time where toDir exists but
+// is in a state other than initial or final".)
+files.renameDirAlmostAtomically = function (fromDir, toDir) {
+  var garbageDir = toDir + '-garbage-' + utils.randomToken();
+
+  // Get old dir out of the way, if it exists.
+  var movedOldDir = true;
+  try {
+    files.moveWithFsTolerance(toDir, garbageDir);
+  } catch (e) {
+    if (e.code !== 'ENOENT') {
+      throw e;
+    }
+    movedOldDir = false;
+  }
+
+  // Now rename the directory.
+  files.moveWithFsTolerance(fromDir, toDir);
+
+  // ... and delete the old one.
+  if (movedOldDir) {
+    files.rm_recursive(garbageDir);
+  }
+};
+files.renameDirAlmostAtomically = Profile("files.renameDirAlmostAtomically",
+                                          files.renameDirAlmostAtomically);
+
+files.writeFileAtomically = function (filename, contents) {
+  const parentDir = files.pathDirname(filename);
+  files.mkdir_p(parentDir);
+
+  const tmpFile = files.pathJoin(
+    parentDir,
+    '.' + files.pathBasename(filename) + '.' + utils.randomToken()
+  );
+
+  files.writeFile(tmpFile, contents);
+  files.rename(tmpFile, filename);
+};
+files.writeFileAtomically = Profile("files.writeFileAtomically",
+                                    files.writeFileAtomically);
+
 
 // These don't need to be Fiberized
 files.createReadStream = function (...args) {
