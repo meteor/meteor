@@ -73,16 +73,9 @@ Note that dynamic calls to `require()` (where the name being required can change
 
 If you need to `require` from an ES2015 module with a `default` export, you can grab the export with `require("package").default`.
 
-Another situation where you'll need to use `require` is in CoffeeScript files. As CS doesn't support the `import` syntax yet, you should use `require`:
+<h3 id="exporting-from-coffeescript">Using CoffeeScript</h3>
 
-```cs
-{ FlowRouter } = require 'meteor/kadira:flow-router'
-React = require 'react'
-```
-
-<h3 id="exporting-from-coffeescript">Exporting with CoffeeScript</h3>
-
-When using CoffeeScript, not only the syntax to import variables is different, but also the export has to be done in a different way. Variables to be exported are put in the `exports` object:
+See the Docs: [Modules » Syntax » CoffeeScript](https://docs.meteor.com/packages/modules.html#CoffeeScript)
 
 ```cs
 exports.Lists = ListsCollection 'lists'
