@@ -15,6 +15,13 @@ meteor npm install --save-dev @meteorjs/eslint-config/meteor
 > Using `meteor npm` is optional for this package, but best-practice for Meteor
   projects in general.
 
+### Peer Dependencies
+
+This package has several `peerDependencies` listed in its `package.json` which
+will produce warnings if they are not installed when running the install above.
+
+These should be installed manually, per the [`package.json`](package.json).
+
 ## Configure
 
 Add the following to your package.json
