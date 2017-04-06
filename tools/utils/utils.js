@@ -222,6 +222,14 @@ exports.randomToken = function () {
   return (Math.random() * 0x100000000 + 1).toString(36);
 };
 
+// Like utils.randomToken, except a legal variable name, i.e. the first
+// character is guaranteed to be [a-z] and the rest [a-z0-9].
+exports.randomIdentifier = function () {
+  const firstLetter = String.fromCharCode(
+    "a".charCodeAt(0) + Math.floor(Math.random() * 26));
+  return firstLetter + Math.random().toString(36).slice(2);
+};
+
 // Returns a random non-privileged port number.
 exports.randomPort = function () {
   return 20000 + Math.floor(Math.random() * 10000);
