@@ -687,7 +687,16 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     // case of renameDirAlmostAtomically since that one is constructing files to
     // be checked in to version control, but here we could get away with it.
     if (this.buildPath !== this.outputPath) {
-      files.renameDirAlmostAtomically(this.buildPath, this.outputPath);
+      try {
+        files.rename(this.buildPath, this.outputPath);
+      } catch (e) {
+        if (e.code === "EXDEV") {
+          files.rm_recursive(this.outputPath);
+          files.cp_r(this.buildPath, this.outputPath);
+        } else {
+          throw e;
+        }
+      }
     }
   }
 
