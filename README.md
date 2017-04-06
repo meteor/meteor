@@ -9,7 +9,7 @@ This is an [ESLint](https://eslint.org) configuration for [Meteor](https://www.m
 Install by running:
 
 ```sh
-meteor npm install --save-dev @meteorjs/eslint-config/meteor
+meteor npm install --save-dev @meteorjs/eslint-config-meteor
 ```
 
 > Using `meteor npm` is optional for this package, but best-practice for Meteor
