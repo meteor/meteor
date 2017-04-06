@@ -40,12 +40,6 @@
   * https://github.com/leebyron/ecmascript-export-ns-from
   * https://github.com/leebyron/ecmascript-export-default-from
 
-* The `fs-extra` npm is now used for certain file-system operations in order to
-  accommodate environments where some tasks (like sym-links) aren't possible.
-  [Issue #7852](https://github.com/meteor/meteor/issues/7852)
-  [PR #8491](https://github.com/meteor/meteor/pull/8491)
-  [PR #8560](https://github.com/meteor/meteor/pull/8560)
-
 * When `Meteor.call` is used on the server to invoke a method that
   returns a `Promise` object, the result will no longer be the `Promise`
   object, but the resolved value of the `Promise`.
