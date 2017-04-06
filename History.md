@@ -1,5 +1,9 @@
 # Change Log / History
 
+## 1.0.4, 2017-04-06
+
+* Changes to peerDependency installation instructions.
+
 ## 1.0.3, 2017-04-05
 
 * `no-underscore-dangle` errors will not trigger on `_id` and `_ensureIndex`,
