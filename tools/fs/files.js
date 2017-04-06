@@ -986,45 +986,49 @@ files.createTarball = function (dirPath, tarball, options) {
 // toDir does not exist" and "you can end up with garbage directories
 // sitting around", but not "there's any time where toDir exists but
 // is in a state other than initial or final".)
-files.renameDirAlmostAtomically = function (fromDir, toDir) {
-  var garbageDir = toDir + '-garbage-' + utils.randomToken();
+files.renameDirAlmostAtomically =
+  Profile("files.renameDirAlmostAtomically", function (fromDir, toDir) {
+    var garbageDir = toDir + '-garbage-' + utils.randomToken();
 
-  // Get old dir out of the way, if it exists.
-  var movedOldDir = true;
-  try {
-    files.rename(toDir, garbageDir);
-  } catch (e) {
-    if (e.code !== 'ENOENT') {
-      throw e;
+    // Get old dir out of the way, if it exists.
+    var movedOldDir = true;
+    try {
+      files.rename(toDir, garbageDir);
+    } catch (e) {
+      if (e.code !== 'ENOENT') {
+        throw e;
+      }
+      movedOldDir = false;
     }
-    movedOldDir = false;
-  }
 
-  // Now rename the directory.
-  files.rename(fromDir, toDir);
+    // Now rename the directory.
+    try {
+      files.rename(fromDir, toDir);
+    } catch (e) {
+      if (e.code === "EXDEV") {
+        files.cp_r
+      }
+    }
 
-  // ... and delete the old one.
-  if (movedOldDir) {
-    files.rm_recursive(garbageDir);
-  }
-};
-files.renameDirAlmostAtomically = Profile("files.renameDirAlmostAtomically",
-                                          files.renameDirAlmostAtomically);
+    // ... and delete the old one.
+    if (movedOldDir) {
+      files.rm_recursive(garbageDir);
+    }
+  });
 
-files.writeFileAtomically = function (filename, contents) {
-  const parentDir = files.pathDirname(filename);
-  files.mkdir_p(parentDir);
+files.writeFileAtomically =
+  Profile("files.writeFileAtomically", function (filename, contents) {
+    const parentDir = files.pathDirname(filename);
+    files.mkdir_p(parentDir);
 
-  const tmpFile = files.pathJoin(
-    parentDir,
-    '.' + files.pathBasename(filename) + '.' + utils.randomToken()
-  );
+    const tmpFile = files.pathJoin(
+      parentDir,
+      '.' + files.pathBasename(filename) + '.' + utils.randomToken()
+    );
 
-  files.writeFile(tmpFile, contents);
-  files.rename(tmpFile, filename);
-};
-files.writeFileAtomically = Profile("files.writeFileAtomically",
-                                    files.writeFileAtomically);
+    files.writeFile(tmpFile, contents);
+    files.rename(tmpFile, filename);
+  });
 
 // Like fs.symlinkSync, but creates a temporay link and renames it over the
 // file; this means it works even if the file already exists.
