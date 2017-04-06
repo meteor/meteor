@@ -987,31 +987,53 @@ files.createTarball = function (dirPath, tarball, options) {
 // sitting around", but not "there's any time where toDir exists but
 // is in a state other than initial or final".)
 files.renameDirAlmostAtomically =
-  Profile("files.renameDirAlmostAtomically", function (fromDir, toDir) {
-    var garbageDir = toDir + '-garbage-' + utils.randomToken();
+  Profile("files.renameDirAlmostAtomically", (fromDir, toDir) => {
+    const garbageDir = `${toDir}-garbage-${utils.randomToken()}`;
 
     // Get old dir out of the way, if it exists.
-    var movedOldDir = true;
+    let cleanupGarbage = false;
+    let forceCopy = false;
     try {
       files.rename(toDir, garbageDir);
+      cleanupGarbage = true;
     } catch (e) {
-      if (e.code !== 'ENOENT') {
+      if (e.code === 'EXDEV') {
+        // Some (notably Docker) file systems will fail to do a seemingly
+        // harmless operation, such as renaming, on what is apparently the same
+        // file system.  AUFS will do this even if the `fromDir` and `toDir`
+        // are on the same layer, and OverlayFS will fail if the `fromDir` and
+        // `toDir` are on different layers.  In these cases, we will not be
+        // atomic and will need to do a recursive copy.
+        forceCopy = true;
+      } else if (e.code !== 'ENOENT') {
+        // No such file or directory is okay, but anything else is not.
         throw e;
       }
-      movedOldDir = false;
     }
 
-    // Now rename the directory.
-    try {
-      files.rename(fromDir, toDir);
-    } catch (e) {
-      if (e.code === "EXDEV") {
-        files.cp_r
+    if (! forceCopy) {
+      try {
+        files.rename(fromDir, toDir);
+      } catch (e) {
+        // It's possible that there may not have been a `toDir` to have
+        // advanced warning about this, so we're prepared to handle it again.
+        if (e.code === 'EXDEV') {
+          forceCopy = true;
+        } else {
+          throw e;
+        }
       }
     }
 
-    // ... and delete the old one.
-    if (movedOldDir) {
+    // If we've been forced to jeopardize our atomicity due to file-system
+    // limitations, we'll resort to copying.
+    if (forceCopy) {
+      files.rm_recursive(toDir);
+      files.cp_r(fromDir, toDir);
+    }
+
+    // ... and take out the trash.
+    if (cleanupGarbage) {
       files.rm_recursive(garbageDir);
     }
   });
