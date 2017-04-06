@@ -688,7 +688,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     // be checked in to version control, but here we could get away with it.
     if (this.buildPath !== this.outputPath) {
       try {
-        files.rename(this.buildPath, this.outputPath);
+        files.renameDirAlmostAtomically(this.buildPath, this.outputPath);
       } catch (e) {
         if (e.code === "EXDEV") {
           files.rm_recursive(this.outputPath);
