@@ -18,7 +18,7 @@ meteor npm install --save-dev @meteorjs/eslint-config-meteor
 
 This package has several [peer dependencies](https://nodejs.org/en/blog/npm/peer-dependencies/) listed in its [`package.json`'s `peerDependencies` section](package.json).  Warnings will be encountered during the installation step above if the project doesn't already use these modules.
 
-If you're familiar with the process, the peer dependencies can be installed manually (per the `package.json`) or you can consider using an automated tool:
+The peer dependencies can be installed manually by following the `package.json` specification and using `meteor npm install --save-dev <package>` or, alternatively, using an automated tool:
 
 ```sh
 $ # Install `install-peerdeps` within the current Meteor tool version.
