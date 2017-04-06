@@ -9,17 +9,16 @@ This is an [ESLint](https://eslint.org) configuration for [Meteor](https://www.m
 Install by running:
 
 ```sh
-meteor npm install --save-dev @meteorjs/eslint-config/meteor
+meteor npm install --save-dev @meteorjs/eslint-config-meteor
 ```
 
-> Using `meteor npm` is optional for this package, but best-practice for Meteor
-  projects in general.
+> Using `meteor npm` is optional for this package, but best-practice for Meteor projects in general.
 
 ### Peer Dependencies
 
-This package has several `peerDependencies` listed in its `package.json` which will produce warnings if they are not installed when running the install above.
+This package has several [peer dependencies](https://nodejs.org/en/blog/npm/peer-dependencies/) listed in its [`package.json`'s `peerDependencies` section](package.json).  Warnings will be encountered during the installation step above if the project doesn't already use these modules.
 
-If you're familiar with the process, these can be installed manually, per the [`package.json`](package.json), or you can consider using an automated tool:
+If you're familiar with the process, the peer dependencies can be installed manually (per the `package.json`) or you can consider using an automated tool:
 
 ```sh
 $ # Install `install-peerdeps` within the current Meteor tool version.
@@ -30,14 +29,10 @@ $ meteor install-peerdeps --dev @meteorjs/eslint-config-meteor
 
 ## Configure
 
-Add the following to your `package.json`:
+Add the following to the project's `package.json`:
 
 ```json
 "eslintConfig": {
   "extends": "@meteorjs/eslint-config-meteor"
 }
 ```
-
-# Todo
-
-- Figure out peerDependency installation.
