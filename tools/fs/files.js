@@ -289,19 +289,22 @@ function statOrNull(path, preserveSymlinks) {
   }
 }
 
+files.rm_recursive_async = (path) => {
+  return new Promise((resolve, reject) => {
+    rimraf(files.convertToOSPath(path), err => err
+      ? reject(err)
+      : resolve());
+  });
+};
+
 // Like rm -r.
-files.rm_recursive = Profile("files.rm_recursive", function (p) {
-  const path = files.convertToOSPath(p);
+files.rm_recursive = Profile("files.rm_recursive", (path) => {
   try {
-    rimraf.sync(path);
+    rimraf.sync(files.convertToOSPath(path));
   } catch (e) {
     if (e.code === "ENOTEMPTY" &&
         canYield()) {
-      new Promise((resolve, reject) => {
-        rimraf(path, err => {
-          err ? reject(err) : resolve();
-        });
-      }).await();
+      files.rm_recursive_async(path).await();
       return;
     }
     throw e;
@@ -1034,7 +1037,8 @@ files.renameDirAlmostAtomically =
 
     // ... and take out the trash.
     if (cleanupGarbage) {
-      files.rm_recursive(garbageDir);
+      // We don't care about how long this takes, so we'll let it go async.
+      files.rm_recursive_async(garbageDir);
     }
   });
 
