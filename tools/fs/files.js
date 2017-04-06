@@ -5,9 +5,7 @@
 ///
 
 var assert = require("assert");
-var fs = require('fs');
-fs.move = require('fs-extra').move;
-fs.moveSync = require('fs-extra').moveSync;
+var fs = require("fs");
 var path = require('path');
 var os = require('os');
 var util = require('util');
@@ -49,6 +47,19 @@ var useParsedSourceMap = function (pathForSourceMap) {
 
 // Try this source map first
 sourceMapRetrieverStack.push(useParsedSourceMap);
+
+// Fibers are disabled by default for files.* operations unless
+// process.env.METEOR_DISABLE_FS_FIBERS parses to a falsy value.
+const YIELD_ALLOWED = !! (
+  _.has(process.env, "METEOR_DISABLE_FS_FIBERS") &&
+  ! JSON.parse(process.env.METEOR_DISABLE_FS_FIBERS));
+
+function canYield() {
+  return YIELD_ALLOWED &&
+    Fiber.current &&
+    Fiber.yield &&
+    ! Fiber.yield.disallowed;
+}
 
 // given a predicate function and a starting path, traverse upwards
 // from the path until we find a path that satisfies the predicate.
@@ -278,42 +289,27 @@ function statOrNull(path, preserveSymlinks) {
   }
 }
 
-function callAndTolerateBusyFilesystem(syncFsFunc, asyncFsFunc, ...args) {
+files.rm_recursive_async = (path) => {
+  return new Promise((resolve, reject) => {
+    rimraf(files.convertToOSPath(path), err => err
+      ? reject(err)
+      : resolve());
+  });
+};
+
+// Like rm -r.
+files.rm_recursive = Profile("files.rm_recursive", (path) => {
   try {
-    syncFsFunc.apply(this, args);
+    rimraf.sync(files.convertToOSPath(path));
   } catch (e) {
     if (e.code === "ENOTEMPTY" &&
-        Fiber.current &&
-        Fiber.yield &&
-        ! Fiber.yield.disallowed) {
-      new Promise((resolve, reject) => {
-        asyncFsFunc.call(this, ...args, err => {
-          err ? reject(err) : resolve();
-        });
-      }).await();
+        canYield()) {
+      files.rm_recursive_async(path).await();
       return;
     }
     throw e;
   }
-}
-
-function callWithRetries(fsFunc, tolerableFsErrorCodes=[], ...args) {
-  // retries are probably only necessary only on Windows, since some fs calls
-  // can fail with EBUSY (or similar), which means the file is "busy" (for now).
-  let maxTries = 10;
-  let success = false;
-  while (! success && maxTries-- > 0) {
-    try {
-      fsFunc.apply(this, args);
-      success = true;
-    } catch (err) {
-      if (! tolerableFsErrorCodes.includes(err.code)) {
-        throw err;
-      }
-    }
-  }
-  return success;
-}
+});
 
 // Makes all files in a tree read-only.
 var makeTreeReadOnly = function (p) {
@@ -986,6 +982,80 @@ files.createTarball = function (dirPath, tarball, options) {
   }).await();
 };
 
+// Use this if you'd like to replace a directory with another
+// directory as close to atomically as possible. It's better than
+// recursively deleting the target directory first and then
+// renaming. (Failure modes here include "there's a brief moment where
+// toDir does not exist" and "you can end up with garbage directories
+// sitting around", but not "there's any time where toDir exists but
+// is in a state other than initial or final".)
+files.renameDirAlmostAtomically =
+  Profile("files.renameDirAlmostAtomically", (fromDir, toDir) => {
+    const garbageDir = `${toDir}-garbage-${utils.randomToken()}`;
+
+    // Get old dir out of the way, if it exists.
+    let cleanupGarbage = false;
+    let forceCopy = false;
+    try {
+      files.rename(toDir, garbageDir);
+      cleanupGarbage = true;
+    } catch (e) {
+      if (e.code === 'EXDEV') {
+        // Some (notably Docker) file systems will fail to do a seemingly
+        // harmless operation, such as renaming, on what is apparently the same
+        // file system.  AUFS will do this even if the `fromDir` and `toDir`
+        // are on the same layer, and OverlayFS will fail if the `fromDir` and
+        // `toDir` are on different layers.  In these cases, we will not be
+        // atomic and will need to do a recursive copy.
+        forceCopy = true;
+      } else if (e.code !== 'ENOENT') {
+        // No such file or directory is okay, but anything else is not.
+        throw e;
+      }
+    }
+
+    if (! forceCopy) {
+      try {
+        files.rename(fromDir, toDir);
+      } catch (e) {
+        // It's possible that there may not have been a `toDir` to have
+        // advanced warning about this, so we're prepared to handle it again.
+        if (e.code === 'EXDEV') {
+          forceCopy = true;
+        } else {
+          throw e;
+        }
+      }
+    }
+
+    // If we've been forced to jeopardize our atomicity due to file-system
+    // limitations, we'll resort to copying.
+    if (forceCopy) {
+      files.rm_recursive(toDir);
+      files.cp_r(fromDir, toDir);
+    }
+
+    // ... and take out the trash.
+    if (cleanupGarbage) {
+      // We don't care about how long this takes, so we'll let it go async.
+      files.rm_recursive_async(garbageDir);
+    }
+  });
+
+files.writeFileAtomically =
+  Profile("files.writeFileAtomically", function (filename, contents) {
+    const parentDir = files.pathDirname(filename);
+    files.mkdir_p(parentDir);
+
+    const tmpFile = files.pathJoin(
+      parentDir,
+      '.' + files.pathBasename(filename) + '.' + utils.randomToken()
+    );
+
+    files.writeFile(tmpFile, contents);
+    files.rename(tmpFile, filename);
+  });
+
 // Like fs.symlinkSync, but creates a temporay link and renames it over the
 // file; this means it works even if the file already exists.
 // Do not use this function on Windows, it won't work.
@@ -1443,12 +1513,6 @@ files.readLinkToMeteorScript = function (linkLocation, platform) {
 //   A helpful file to import for this purpose is colon-converter.js, which also
 //   knows how to convert various configuration file formats.
 
-// Fibers are disabled by default for files.* operations unless
-// process.env.METEOR_DISABLE_FS_FIBERS parses to a falsy value.
-const YIELD_ALLOWED = !! (
-  _.has(process.env, "METEOR_DISABLE_FS_FIBERS") &&
-  ! JSON.parse(process.env.METEOR_DISABLE_FS_FIBERS));
-
 files.fsFixPath = {};
 /**
  * Wrap a function from node's fs module to use the right slashes for this OS
@@ -1482,11 +1546,6 @@ function wrapFsFunc(fsFuncName, pathArgIndices, options) {
         args[i] = files.convertToOSPath(args[i]);
       }
 
-      const canYield = YIELD_ALLOWED &&
-        Fiber.current &&
-        Fiber.yield &&
-        ! Fiber.yield.disallowed;
-
       const shouldBeSync = alwaysSync || sync;
       // There's some overhead in awaiting a Promise of an async call,
       // vs just doing the sync call, which for a call like "stat"
@@ -1498,7 +1557,9 @@ function wrapFsFunc(fsFuncName, pathArgIndices, options) {
                          fsFuncName === 'rename' ||
                          fsFuncName === 'symlink');
 
-      if (canYield && shouldBeSync && !isQuickie) {
+      if (canYield() &&
+          shouldBeSync &&
+          ! isQuickie) {
         const promise = new Promise((resolve, reject) => {
           args.push((err, value) => {
             if (options.noErr) {
@@ -1579,7 +1640,6 @@ wrapFsFunc("readFile", [0], {
 wrapFsFunc("stat", [0]);
 wrapFsFunc("lstat", [0]);
 wrapFsFunc("rename", [0, 1]);
-wrapFsFunc("move", [0, 1]);
 
 // After the outermost files.withCache call returns, the withCacheCache is
 // reset to null so that it does not survive server restarts.
@@ -1653,35 +1713,29 @@ files.existsSync = function (path, callback) {
 };
 
 if (files.isWindowsLikeFilesystem()) {
-  const tolerableFsErrorCodes = ['EPERM', 'EACCES'];
+  var rename = files.rename;
 
-  function makeRenamesqueFunction(name) {
-    const original = files[name];
-    files[name] = function (from, to) {
-      if (! callWithRetries(original, tolerableFsErrorCodes, from, to)) {
-        files.cp_r(from, to);
-        files.rm_recursive(from);
+  files.rename = function (from, to) {
+    // retries are necessarily only on Windows, because the rename call can fail
+    // with EBUSY, which means the file is "busy"
+    var maxTries = 10;
+    var success = false;
+    while (! success && maxTries-- > 0) {
+      try {
+        rename(from, to);
+        success = true;
+      } catch (err) {
+        if (err.code !== 'EPERM' && err.code !== 'EACCES') {
+          throw err;
+        }
       }
-    };
-  }
-
-  makeRenamesqueFunction("rename");
-  makeRenamesqueFunction("move");
+    }
+    if (! success) {
+      files.cp_r(from, to);
+      files.rm_recursive(from);
+    }
+  };
 }
-
-// The move and moveSync functions from fs-extra, while great at many things
-// aren't capable of resolving busy filesystem issues (such as those encountered
-// on Windows) since it's not Fiber-aware.
-files.moveWithFsTolerance = Profile("files.moveWithFsTolerance", function (f, t) {
-  return callAndTolerateBusyFilesystem(fs.moveSync, fs.move,
-    files.convertToOSPath(f), files.convertToOSPath(t));
-});
-
-// Like rm -r.
-files.rm_recursive = Profile("files.rm_recursive", function (p) {
-  return callAndTolerateBusyFilesystem(rimraf.sync, rimraf,
-    files.convertToOSPath(p));
-});
 
 // Warning: doesn't convert slashes in the second 'cache' arg
 wrapFsFunc("realpath", [0], {
@@ -1706,51 +1760,6 @@ wrapFsFunc("write", []);
 wrapFsFunc("close", []);
 wrapFsFunc("symlink", [0, 1]);
 wrapFsFunc("readlink", [0]);
-
-// Use this if you'd like to replace a directory with another
-// directory as close to atomically as possible. It's better than
-// recursively deleting the target directory first and then
-// renaming. (Failure modes here include "there's a brief moment where
-// toDir does not exist" and "you can end up with garbage directories
-// sitting around", but not "there's any time where toDir exists but
-// is in a state other than initial or final".)
-files.renameDirAlmostAtomically =
-  Profile("files.renameDirAlmostAtomically", function (fromDir, toDir) {
-    var garbageDir = toDir + '-garbage-' + utils.randomToken();
-
-    // Get old dir out of the way, if it exists.
-    var movedOldDir = true;
-    try {
-      files.moveWithFsTolerance(toDir, garbageDir);
-    } catch (e) {
-      if (e.code !== 'ENOENT') {
-        throw e;
-      }
-      movedOldDir = false;
-    }
-
-    // Now rename the directory.
-    files.moveWithFsTolerance(fromDir, toDir);
-
-    // ... and delete the old one.
-    if (movedOldDir) {
-      files.rm_recursive(garbageDir);
-    }
-  });
-
-files.writeFileAtomically =
-  Profile("files.writeFileAtomically", function (filename, contents) {
-    const parentDir = files.pathDirname(filename);
-    files.mkdir_p(parentDir);
-
-    const tmpFile = files.pathJoin(
-      parentDir,
-      '.' + files.pathBasename(filename) + '.' + utils.randomToken()
-    );
-
-    files.writeFile(tmpFile, contents);
-    files.rename(tmpFile, filename);
-  });
 
 // These don't need to be Fiberized
 files.createReadStream = function (...args) {
