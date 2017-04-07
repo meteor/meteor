@@ -1,5 +1,13 @@
 ## v.NEXT
 
+## v1.4.4.1, TBD
+
+* A change in Meteor 1.4.4 to remove "garbage" directories asynchronously
+  in `files.renameDirAlmostAtomically` had unintended consequences for
+  rebuilding some npm packages, so that change was reverted, and those
+  directories are now removed before `files.renameDirAlmostAtomically`
+  returns. [PR #8574](https://github.com/meteor/meteor/pull/8574)
+
 ## v1.4.4, 2017-04-07
 
 * Node has been upgraded to version 4.8.1.

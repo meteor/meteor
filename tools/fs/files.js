@@ -1038,7 +1038,7 @@ files.renameDirAlmostAtomically =
     // ... and take out the trash.
     if (cleanupGarbage) {
       // We don't care about how long this takes, so we'll let it go async.
-      files.rm_recursive_async(garbageDir);
+      files.rm_recursive(garbageDir);
     }
   });
 
