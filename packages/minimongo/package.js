@@ -7,6 +7,7 @@ Package.onUse(function (api) {
   api.export('LocalCollection');
   api.export('Minimongo');
   api.export('MinimongoTest', { testOnly: true });
+  api.export('MinimongoError', { testOnly: true });
   api.use([
     'underscore',
     'ejson',
