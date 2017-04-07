@@ -9,7 +9,7 @@ As the first suggestion to the reader of this document: If, during the course of
 If you want to run on the bleeding edge, or [help contribute to Meteor](Contributing.md), you
 can run Meteor directly from a Git checkout using these steps:
 
-0. **Clone from GitHub**
+1. **Clone from GitHub**
 
     ```sh
     $ git clone --recursive https://github.com/meteor/meteor.git
@@ -173,7 +173,7 @@ Since Meteor is a free, open-source project, you can run tests in the context of
 
 To enable CircleCI for your development:
 
-0. Make sure you have an account with [CircleCI](https://circleci.com)
+1. Make sure you have an account with [CircleCI](https://circleci.com)
 0. Make sure you have [forked](https://help.github.com/articles/fork-a-repo/) [Meteor](https://github.com/meteor/meteor) into your own GitHub account.
 0. Go to the [Add Projects](https://circleci.com/add-projects) page on CircleCI.
 0. On the left, click on your GitHub username.

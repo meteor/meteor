@@ -1,3 +1,6 @@
+import { DDP, LivedataTest } from "./namespace.js";
+import { MongoIDMap } from "./id_map.js";
+
 if (Meteor.isServer) {
   var path = Npm.require('path');
   var Fiber = Npm.require('fibers');
@@ -299,29 +302,22 @@ var Connection = function (url, options) {
     if (self._outstandingMethodBlocks.length > 0) {
       // If there is an outstanding method block, we only care about the first one as that is the
       // one that could have already sent messages with no response, that are not allowed to retry.
-      _.each(self._outstandingMethodBlocks[0].methods, function(methodInvoker) {
-        // If the message wasn't sent or it's allowed to retry, do nothing.
+      const currentMethodBlock = self._outstandingMethodBlocks[0].methods;
+      self._outstandingMethodBlocks[0].methods = currentMethodBlock.filter((methodInvoker) => {
+
+        // Methods with 'noRetry' option set are not allowed to re-send after
+        // recovering dropped connection.
         if (methodInvoker.sentMessage && methodInvoker.noRetry) {
-          // The next loop serves to get the index in the current method block of this method.
-          var currentMethodBlock = self._outstandingMethodBlocks[0].methods;
-          var loopMethod;
-          for (var i = 0; i < currentMethodBlock.length; i++) {
-            loopMethod = currentMethodBlock[i];
-            if (loopMethod.methodId === methodInvoker.methodId) {
-              break;
-            }
-          }
-
-          // Remove from current method block. This may leave the block empty, but we
-          // don't move on to the next block until the callback has been delivered, in
-          // _outstandingMethodFinished.
-          currentMethodBlock.splice(i, 1);
-
           // Make sure that the method is told that it failed.
           methodInvoker.receiveResult(new Meteor.Error('invocation-failed',
             'Method invocation might have failed due to dropped connection. ' +
             'Failing because `noRetry` option was passed to Meteor.apply.'));
         }
+
+        // Only keep a method if it wasn't sent or it's allowed to retry.
+        // This may leave the block empty, but we don't move on to the next
+        // block until the callback has been delivered, in _outstandingMethodFinished.
+        return !(methodInvoker.sentMessage && methodInvoker.noRetry);
       });
     }
 

@@ -1,12 +1,38 @@
-Google = {};
+var Google = require("./namespace.js");
+var Accounts = require("meteor/accounts-base").Accounts;
 
 // https://developers.google.com/accounts/docs/OAuth2Login#userinfocall
 Google.whitelistedFields = ['id', 'email', 'verified_email', 'name', 'given_name',
                    'family_name', 'picture', 'locale', 'timezone', 'gender'];
 
+Accounts.registerLoginHandler(function (request) {
+  if (request.googleSignIn !== true) {
+    return;
+  }
+
+  var res = HTTP.get(
+    "https://www.googleapis.com/oauth2/v3/tokeninfo",
+    { headers: { "User-Agent": "Meteor/1.0" },
+      params: { id_token: request.idToken }}
+  );
+
+  if (res.error) {
+    throw res.error;
+  }
+
+  if (res.statusCode === 200 &&
+      res.data.sub === request.userId) {
+    return Accounts.updateOrCreateUserFromExternalService("google", {
+      id: request.userId,
+      idToken: request.idToken,
+      accessToken: request.accessToken,
+      email: request.email,
+      picture: request.imageUrl
+    });
+  }
+});
 
 OAuth.registerService('google', 2, null, function(query) {
-
   var response = getTokens(query);
   var expiresAt = (+new Date) + (1000 * parseInt(response.expiresIn, 10));
   var accessToken = response.accessToken;

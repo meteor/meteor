@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Meteor's latency-compensated distributed data client",
-  version: '1.3.3',
+  version: '1.3.4',
   documentation: null
 });
 
@@ -12,7 +12,7 @@ Npm.depends({
 
 Package.onUse(function (api) {
   api.use(['check', 'random', 'ejson', 'underscore', 'tracker',
-           'retry', 'id-map'],
+           'retry', 'id-map', 'ecmascript'],
           ['client', 'server']);
 
   // common functionality
@@ -25,9 +25,6 @@ Package.onUse(function (api) {
   // _idParse, _idStringify.
   api.use('mongo-id', ['client', 'server']);
 
-  api.addFiles('namespace.js', ['client', 'server']);
-
-  api.addFiles('id_map.js', ['client', 'server']);
   api.addFiles(['sockjs-0.3.4.js', 'stream_client_sockjs.js'], 'client');
   api.addFiles('stream_client_nodejs.js', 'server');
   api.addFiles('stream_client_common.js', ['client', 'server']);
@@ -39,10 +36,9 @@ Package.onUse(function (api) {
 
   api.addFiles('client_convenience.js', 'client');
 
+  api.mainModule("namespace.js");
   api.export('DDP');
-  api.export('LivedataTest', {testOnly: true});
 });
-
 
 Package.onTest(function (api) {
   api.use('livedata', ['client', 'server']);

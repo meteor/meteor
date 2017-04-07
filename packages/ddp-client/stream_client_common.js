@@ -1,3 +1,5 @@
+import { DDP, LivedataTest } from "./namespace.js";
+
 // XXX from Underscore.String (http://epeli.github.com/underscore.string/)
 var startsWith = function(str, starts) {
   return str.length >= starts.length &&

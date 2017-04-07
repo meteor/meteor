@@ -35,7 +35,7 @@ function tryToParse(source, hash) {
   return ast;
 }
 
-var dependencyKeywordPattern = /\b(require|import|export)\b/g;
+var dependencyKeywordPattern = /\b(?:require|import|importSync|export)\b/g;
 
 /**
  * The `findImportedModuleIdentifiers` function takes a string of module
@@ -182,13 +182,20 @@ function isStringLiteral(node) {
      typeof node.value === "string"));
 }
 
+function isPropertyWithName(node, name) {
+  if (isIdWithName(node, name) ||
+      (isStringLiteral(node) &&
+       node.value === name)) {
+    return name;
+  }
+}
+
 function getImportedModuleId(node) {
   if (node.type === "CallExpression" &&
       node.callee.type === "MemberExpression" &&
       isIdWithName(node.callee.object, "module") &&
-      (isIdWithName(node.callee.property, "import") ||
-       (isStringLiteral(node.callee.property) &&
-        node.callee.property.value === "import"))) {
+      (isPropertyWithName(node.callee.property, "import") ||
+       isPropertyWithName(node.callee.property, "importSync"))) {
     const args = node.arguments;
     const argc = args.length;
     if (argc > 0) {
