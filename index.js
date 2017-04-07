@@ -4,7 +4,6 @@ module.exports = {
     allowImportExportEverywhere: true
   },
   env: {
-    meteor: true,
     node: true,
     browser: true
   },
