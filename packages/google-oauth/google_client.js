@@ -1,4 +1,4 @@
-Google = {};
+var Google = require("./namespace.js");
 
 // Request Google credentials for the user
 // @param options {optional}

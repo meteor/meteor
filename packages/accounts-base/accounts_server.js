@@ -1077,7 +1077,7 @@ Ap._generateStampedLoginToken = function () {
 
 function expirePasswordToken(accounts, oldestValidDate, tokenFilter, userId) {
   const userFilter = userId ? {_id: userId} : {};
-  const resetRangeOr = { 
+  const resetRangeOr = {
     $or: [
       { "services.password.reset.when": { $lt: oldestValidDate } },
       { "services.password.reset.when": { $lt: +oldestValidDate } }

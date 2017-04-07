@@ -111,7 +111,7 @@ app bundle (`pluginVersionsFromStarManifest`, a combination of
 `.meteor/cordova-plugins` for stand-alone plugin installs and the plugins added
 as dependencies of packages through `Cordova.depends`).
 The `pluginsConfiguration` comes from `App.configurePlugin` calls in
-`meteor-config.js`.
+`mobile-config.js`.
 
 Uses methods `CordovaProject#listInstalledPluginVersions()`,
 `CordovaProject#addPlugin(name, version, config)`,

@@ -1583,79 +1583,32 @@ _.extend(Server.prototype, {
     });
   },
 
-  call: function (name /*, arguments */) {
-    // if it's a function, the last argument is the result callback,
-    // not a parameter to the remote method.
-    var args = Array.prototype.slice.call(arguments, 1);
-    if (args.length && typeof args[args.length - 1] === "function")
+  call: function (name, ...args) {
+    if (args.length && typeof args[args.length - 1] === "function") {
+      // If it's a function, the last argument is the result callback, not
+      // a parameter to the remote method.
       var callback = args.pop();
+    }
+
     return this.apply(name, args, callback);
   },
 
-  // @param options {Optional Object}
-  // @param callback {Optional Function}
-  apply: function (name, args, options, callback) {
-    var self = this;
+  // A version of the call method that always returns a Promise.
+  callAsync: function (name, ...args) {
+    return this.applyAsync(name, args);
+  },
 
+  apply: function (name, args, options, callback) {
     // We were passed 3 arguments. They may be either (name, args, options)
     // or (name, args, callback)
-    if (!callback && typeof options === 'function') {
+    if (! callback && typeof options === 'function') {
       callback = options;
       options = {};
-    }
-    options = options || {};
-
-    if (callback)
-      // It's not really necessary to do this, since we immediately
-      // run the callback in this fiber before returning, but we do it
-      // anyway for regularity.
-      // XXX improve error message (and how we report it)
-      callback = Meteor.bindEnvironment(
-        callback,
-        "delivering result of invoking '" + name + "'"
-      );
-
-    // Run the handler
-    var handler = self.method_handlers[name];
-    var exception;
-    if (!handler) {
-      exception = new Meteor.Error(404, `Method '${name}' not found`);
     } else {
-      // If this is a method call from within another method, get the
-      // user state from the outer method, otherwise don't allow
-      // setUserId to be called
-      var userId = null;
-      var setUserId = function() {
-        throw new Error("Can't call setUserId on a server initiated method call");
-      };
-      var connection = null;
-      var currentInvocation = DDP._CurrentInvocation.get();
-      if (currentInvocation) {
-        userId = currentInvocation.userId;
-        setUserId = function(userId) {
-          currentInvocation.setUserId(userId);
-        };
-        connection = currentInvocation.connection;
-      }
-
-      var invocation = new DDPCommon.MethodInvocation({
-        isSimulation: false,
-        userId: userId,
-        setUserId: setUserId,
-        connection: connection,
-        randomSeed: DDPCommon.makeRpcSeed(currentInvocation, name)
-      });
-      try {
-        var result = DDP._CurrentInvocation.withValue(invocation, function () {
-          return maybeAuditArgumentChecks(
-            handler, invocation, EJSON.clone(args), "internal call to '" +
-              name + "'");
-        });
-        result = EJSON.clone(result);
-      } catch (e) {
-        exception = e;
-      }
+      options = options || {};
     }
+
+    const promise = this.applyAsync(name, args, options);
 
     // Return the result in whichever way the caller asked for it. Note that we
     // do NOT block on the write fence in an analogous way to how the client
@@ -1663,12 +1616,59 @@ _.extend(Server.prototype, {
     // cursor observe callbacks have fired when your callback is invoked. (We
     // can change this if there's a real use case.)
     if (callback) {
-      callback(exception, result);
-      return undefined;
+      promise.then(
+        result => callback(undefined, result),
+        exception => callback(exception)
+      );
+    } else {
+      return promise.await();
     }
-    if (exception)
-      throw exception;
-    return result;
+  },
+
+  // @param options {Optional Object}
+  applyAsync: function (name, args, options) {
+    // Run the handler
+    var handler = this.method_handlers[name];
+    if (! handler) {
+      return Promise.reject(
+        new Meteor.Error(404, `Method '${name}' not found`)
+      );
+    }
+
+    // If this is a method call from within another method, get the
+    // user state from the outer method, otherwise don't allow
+    // setUserId to be called
+    var userId = null;
+    var setUserId = function() {
+      throw new Error("Can't call setUserId on a server initiated method call");
+    };
+    var connection = null;
+    var currentInvocation = DDP._CurrentInvocation.get();
+    if (currentInvocation) {
+      userId = currentInvocation.userId;
+      setUserId = function(userId) {
+        currentInvocation.setUserId(userId);
+      };
+      connection = currentInvocation.connection;
+    }
+
+    var invocation = new DDPCommon.MethodInvocation({
+      isSimulation: false,
+      userId,
+      setUserId,
+      connection,
+      randomSeed: DDPCommon.makeRpcSeed(currentInvocation, name)
+    });
+
+    return new Promise(resolve => resolve(
+      DDP._CurrentInvocation.withValue(
+        invocation,
+        () => maybeAuditArgumentChecks(
+          handler, invocation, EJSON.clone(args),
+          "internal call to '" + name + "'"
+        )
+      )
+    )).then(EJSON.clone);
   },
 
   _urlForSession: function (sessionId) {

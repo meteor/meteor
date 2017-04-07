@@ -374,7 +374,6 @@ describe("Meteor packages", () => {
 
     } else {
       assert.deepEqual(require("meteor/client-only-ecmascript"), {
-        __esModule: true,
         name: "client-only-ecmascript",
         imported: "/node_modules/meteor/client-only-ecmascript/imported.js",
         ClientTypeof: {
