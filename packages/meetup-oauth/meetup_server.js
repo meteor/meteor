@@ -2,13 +2,16 @@ Meetup = {};
 
 OAuth.registerService('meetup', 2, null, function(query) {
 
-  var accessToken = getAccessToken(query);
+  var response = getAccessToken(query);
+  var accessToken = response.access_token;
+  var expiresAt = (+new Date) + (1000 * response.expires_in);
   var identity = getIdentity(accessToken);
 
   return {
     serviceData: {
       id: identity.id,
-      accessToken: accessToken
+      accessToken: accessToken,
+      expiresAt: expiresAt
     },
     options: {profile: {name: identity.name}}
   };
@@ -38,7 +41,7 @@ var getAccessToken = function (query) {
   if (response.data.error) { // if the http response was a json object with an error attribute
     throw new Error("Failed to complete OAuth handshake with Meetup. " + response.data.error);
   } else {
-    return response.data.access_token;
+    return response.data;
   }
 };
 

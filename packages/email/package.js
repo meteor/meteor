@@ -1,13 +1,13 @@
 Package.describe({
   summary: "Send email messages",
-  version: "1.1.18"
+  version: "1.2.0"
 });
 
 Npm.depends({
-  // Pinned at older version. 0.1.16+ uses mimelib, not mimelib-noiconv which is
-  // much bigger. We need a better solution.
-  mailcomposer: "0.1.15",
-  simplesmtp: "0.3.34",
+  mailcomposer: "4.0.1",
+  // Using smtp-connection@2 (instead of latest) because it shares
+  // nodemailer-shared with mailcomposer@4:
+  "smtp-connection": "2.12.2",
   "stream-buffers": "0.2.5"});
 
 Package.onUse(function (api) {

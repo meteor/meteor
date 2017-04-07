@@ -1,5 +1,6 @@
 var Future = Npm.require('fibers/future');
 var urlModule = Npm.require('url');
+var SMTPConnection = Npm.require('smtp-connection');
 
 Email = {};
 EmailTest = {};
@@ -13,7 +14,7 @@ EmailInternals = {
   }
 };
 
-var MailComposer = EmailInternals.NpmModules.mailcomposer.module.MailComposer;
+var mailcomposer = EmailInternals.NpmModules.mailcomposer.module;
 
 var makePool = function (mailUrlString) {
   var mailUrl = urlModule.parse(mailUrlString);
@@ -29,15 +30,18 @@ var makePool = function (mailUrlString) {
             pass: parts[1]};
   }
 
-  var simplesmtp = Npm.require('simplesmtp');
-  var pool = simplesmtp.createClientPool(
-    port,  // Defaults to 25
-    mailUrl.hostname,  // Defaults to "localhost"
-    { secureConnection: (port === 465) || (mailUrl.protocol === 'smtps:'),
-      // XXX allow maxConnections to be configured?
-      auth: auth });
+  var pool = new SMTPConnection({
+    port: port,  // Defaults to 25
+    host: mailUrl.hostname,  // Defaults to "localhost"
+    secure: (port === 465) || (mailUrl.protocol === 'smtps:')
+  });
+  Meteor.wrapAsync(pool.connect, pool)();
+  if (auth) {
+      //_.bind(Future.wrap(pool.login), pool)(auth).wait();
+      Meteor.wrapAsync(pool.login, pool)(auth);
+  }
 
-  pool._future_wrapped_sendMail = _.bind(Future.wrap(pool.sendMail), pool);
+  pool._syncSend = Meteor.wrapAsync(pool.send, pool);
   return pool;
 };
 
@@ -75,18 +79,18 @@ var devModeSend = function (mc) {
   stream.write("====== BEGIN MAIL #" + devmode_mail_id + " ======\n");
   stream.write("(Mail not sent; to enable sending, set the MAIL_URL " +
                "environment variable.)\n");
-  mc.streamMessage();
-  mc.pipe(stream, {end: false});
+  var readStream = mc.createReadStream();
+  readStream.pipe(stream, {end: false});
   var future = new Future;
-  mc.on('end', function () {
+  readStream.on('end', function () {
     stream.write("====== END MAIL #" + devmode_mail_id + " ======\n");
-    future['return']();
+    future.return();
   });
   future.wait();
 };
 
 var smtpSend = function (pool, mc) {
-  pool._future_wrapped_sendMail(mc).wait();
+  pool._syncSend(mc.getEnvelope(), mc.createReadStream());
 };
 
 /**
@@ -131,25 +135,33 @@ EmailTest.hookSend = function (f) {
  * If the `MAIL_URL` environment variable is set, actually sends the email.
  * Otherwise, prints the contents of the email to standard out.
  *
- * Note that this package is based on mailcomposer version `0.1.15`, so make
+ * Note that this package is based on mailcomposer version `4.0.1`, so make
  * sure to refer to the documentation for that version if using the
  * `attachments` or `mailComposer` options.
- * [Click here to read the mailcomposer 0.1.15 docs](https://github.com/andris9/mailcomposer/blob/7c0422b2de2dc61a60ba27cfa3353472f662aeb5/README.md).
+ * [Click here to read the mailcomposer 4.0.1 docs](https://github.com/nodemailer/mailcomposer/blob/v4.0.1/README.md).
  *
  * @locus Server
  * @param {Object} options
- * @param {String} options.from "From:" address (required)
+ * @param {String} [options.from] "From:" address (required)
  * @param {String|String[]} options.to,cc,bcc,replyTo
  *   "To:", "Cc:", "Bcc:", and "Reply-To:" addresses
+ * @param {String} [options.inReplyTo] Message-ID this message is replying to
+ * @param {String|String[]} [options.references] Array (or space-separated string) of Message-IDs to refer to
+ * @param {String} [options.messageId] Message-ID for this message; otherwise, will be set to a random value
  * @param {String} [options.subject]  "Subject:" line
  * @param {String} [options.text|html] Mail body (in plain text and/or HTML)
+ * @param {String} [options.watchHtml] Mail body in HTML specific for Apple Watch 
+ * @param {String} [options.icalEvent] iCalendar event attachment 
  * @param {Object} [options.headers] Dictionary of custom headers
  * @param {Object[]} [options.attachments] Array of attachment objects, as
- * described in the [mailcomposer documentation](https://github.com/andris9/mailcomposer/blob/7c0422b2de2dc61a60ba27cfa3353472f662aeb5/README.md#add-attachments).
+ * described in the [mailcomposer documentation](https://github.com/nodemailer/mailcomposer/blob/v4.0.1/README.md#attachments).
  * @param {MailComposer} [options.mailComposer] A [MailComposer](https://github.com/andris9/mailcomposer)
- * object representing the message to be sent. Overrides all other options. You
- * can access the `mailcomposer` npm module at
- * `EmailInternals.NpmModules.mailcomposer.module`.
+ * object (or its `compile()` output) representing the message to be sent.
+ * Overrides all other options. You can access the `mailcomposer` npm module at
+ * `EmailInternals.NpmModules.mailcomposer.module`. This module is a function
+ * which assembles a MailComposer object and immediately `compile()`s it.
+ * Alternatively, you can create and pass a MailComposer object via
+ * `new EmailInternals.NpmModules.mailcomposer.module.MailComposer`.
  */
 Email.send = function (options) {
   for (var i = 0; i < sendHooks.length; i++)
@@ -159,32 +171,17 @@ Email.send = function (options) {
   var mc;
   if (options.mailComposer) {
     mc = options.mailComposer;
-  } else {
-    mc = new MailComposer();
-
-    // setup message data
-    mc.setMessageOption({
-      from: options.from,
-      to: options.to,
-      cc: options.cc,
-      bcc: options.bcc,
-      replyTo: options.replyTo,
-      subject: options.subject,
-      text: options.text,
-      html: options.html
-    });
-
-    _.each(options.headers, function (value, name) {
-      mc.addHeader(name, value);
-    });
-
-    if (!options.headers || !options.headers.hasOwnProperty('Date')) {
-      mc.addHeader('Date', new Date().toUTCString().replace(/GMT/, '+0000'));
+    if (mc.compile) {
+      mc = mc.compile();
     }
+  } else {
+    // mailcomposer now automatically adds date if omitted
+    //if (!options.hasOwnProperty('date') &&
+    //    (!options.headers || !options.headers.hasOwnProperty('Date'))) {
+    //  options['date'] = new Date().toUTCString().replace(/GMT/, '+0000');
+    //}
 
-    _.each(options.attachments, function(attachment){
-      mc.addAttachment(attachment);
-    });
+    mc = mailcomposer(options);
   }
 
   var pool = getPool();

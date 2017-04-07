@@ -2,7 +2,7 @@
 
 # Meteor Roadmap
 
-**Up to date as of February 15, 2017**
+**Up to date as of March 17, 2017**
 
 This document describes the high level features the Meteor project maintainers have decided to prioritize in the near- to medium-term future. A large fraction of the maintainers’ time will be dedicated to working on the features described here. As with any roadmap, this is a living document that will evolve as priorities and dependencies shift; we aim to update the roadmap with any changes or status updates on a monthly basis.
 
@@ -21,10 +21,27 @@ Fast initial page load times are somewhat less important for single-page reactiv
 
 Speeding up page load times will require a combination of new tools for asynchronous JavaScript delivery (code splitting), dead code elimination, deferred evaluation of JavaScript modules, and performance profiling (so that developers can identify expensive packages).
 
+### Dynamic `import(...)`
+
 The banner feature of this effort will be first-class support for [dynamic `import(...)`](https://github.com/tc39/proposal-dynamic-import), which enables asynchronous module fetching.
 
-Other optimizations include making it possible to remove (or dynamically load) large dependencies like `jquery` and `underscore`, and caching JavaScript modules more agressively on the client.
+Read the recent [blog post](https://blog.meteor.com/meteor-1-5-react-loadable-f029a320e59c) for an overview of how this system will work in Meteor 1.5.
 
+Remaining work can be found [here](https://github.com/meteor/meteor/blob/release-1.5/packages/dynamic-import/TODO.md), though not all of those ideas will necessarily block the initial 1.5 release.
+
+### Making large dependencies optional
+
+Making it possible to remove (or dynamically load) large dependencies like `jquery`, `underscore`, and `minimongo` will have a significant impact on bundle sizes.
+
+### More aggressive client caching
+
+Using `Cache-Control: immutable` to cache the initial JavaScript bundle will reduce the amortized cost of downloading the initial JavaScript bundle in newer browsers.
+
+Dynamic `import(...)` benefits dramatically from storing previously-received module versions in [IndexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API), though it may be possible to use IndexedDB in a faster way.
+
+### Better dead code elimination
+
+Although Meteor minifies JavaScript in production, and modules that are never imported are not included in the client bundle, Meteor could do a better job of removing code within modules that will never be used, according to static analysis. The static syntax of ECMAScript 2015 `import` and `export` declarations should make this analysis easier.
 
 ## Upgrade to Node 6
 
