@@ -1,5 +1,7 @@
 ## v.NEXT
 
+## v1.4.4, 2017-04-07
+
 * Node has been upgraded to version 4.8.1.
 
 * The `npm` npm package has been upgraded to version 4.4.4.
