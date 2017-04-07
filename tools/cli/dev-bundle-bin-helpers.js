@@ -77,6 +77,9 @@ exports.getEnv = function (options) {
 
     var env = Object.create(process.env);
 
+    // Make sure notifications to update npm aren't presented to the user.
+    env.NPM_CONFIG_NO_UPDATE_NOTIFIER = true;
+
     // Make sure `meteor npm install --global ...` installs into
     // dev_bundle/lib/node_modules by default.
     if (! env.NPM_CONFIG_PREFIX) {
