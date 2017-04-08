@@ -6,7 +6,7 @@ set -u
 UNAME=$(uname)
 ARCH=$(uname -m)
 MONGO_VERSION=3.2.12
-NODE_VERSION=6.10.1
+NODE_VERSION=6.10.2
 NPM_VERSION=4.4.4
 
 if [ "$UNAME" == "Linux" ] ; then

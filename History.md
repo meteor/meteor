@@ -1,6 +1,6 @@
 ## v.NEXT
 
-* Node has been upgraded to version 6.10.1.
+* Node has been upgraded to version 6.10.2.
 
 * The `meteor-promise` npm package has been upgraded to version 0.8.2.
 
