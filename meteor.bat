@@ -16,6 +16,10 @@ IF EXIST "%~dp0\.git" (
     REM need `< con` so that we can run this file from Node
     REM (See http://stackoverflow.com/questions/9155289/calling-powershell-from-nodejs)
     PowerShell.exe -executionpolicy ByPass -file "%~dp0\scripts\windows\download-dev-bundle.ps1" < con
+    IF errorlevel 1 (
+      echo An error occurred while obtaining the dev_bundle.  Please try again.
+      exit /b 1
+    )
   )
 
   rem if dev_bundle is the wrong version, remove it and get a new one
@@ -28,6 +32,10 @@ IF EXIST "%~dp0\.git" (
       exit /b 1
     )
     PowerShell.exe -executionpolicy ByPass -file "%~dp0\scripts\windows\download-dev-bundle.ps1" < con
+    IF errorlevel 1 (
+      echo An error occurred while obtaining the dev_bundle.  Please try again.
+      exit /b 1
+    )
   )
 
   rem Only set this when we're in a checkout. When running from a release,
@@ -38,7 +46,7 @@ IF EXIST "%~dp0\.git" (
 SET NODE_PATH=%~dp0\dev_bundle\lib\node_modules
 SET BABEL_CACHE_DIR=%~dp0\.babel-cache
 
-"%~dp0\dev_bundle\bin\node.exe" "%~dp0\tools\index.js" %*
+"%~dp0\dev_bundle\bin\node.exe" %TOOL_NODE_FLAGS% "%~dp0\tools\index.js" %*
 ENDLOCAL
 
 EXIT /b %ERRORLEVEL%

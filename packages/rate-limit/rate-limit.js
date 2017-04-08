@@ -102,7 +102,7 @@ _.extend(Rule.prototype, {
     self.counters = {};
     self._lastResetTime = new Date().getTime();
   },
-  _executeCallback(reply, ruleInput) {
+  _executeCallback: function (reply, ruleInput) {
     try {
       if (this.options.callback) {
         this.options.callback(reply, ruleInput);

@@ -1,3 +1,5 @@
+var semver = Npm.require("semver");
+
 /**
  * A compiler that can be instantiated with features and used inside
  * Plugin.registerCompiler
@@ -12,6 +14,10 @@ BabelCompiler = function BabelCompiler(extraFeatures) {
 var BCp = BabelCompiler.prototype;
 var excludedFileExtensionPattern = /\.(es5|min)\.js$/i;
 var hasOwn = Object.prototype.hasOwnProperty;
+
+// There's no way to tell the current Meteor version, but we can infer
+// whether it's Meteor 1.4.4 or earlier by checking the Node version.
+var isMeteorPre144 = semver.lt(process.version, "4.8.1");
 
 BCp.processFilesForTarget = function (inputFiles) {
   // Reset this cache for each batch processed.
@@ -101,6 +107,19 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       }
 
       throw e;
+    }
+
+    if (isMeteorPre144) {
+      // Versions of meteor-tool earlier than 1.4.4 do not understand that
+      // module.importSync is synonymous with the deprecated module.import
+      // and thus fail to register dependencies for importSync calls.
+      // This string replacement may seem a bit hacky, but it will tide us
+      // over until everyone has updated to Meteor 1.4.4.
+      // https://github.com/meteor/meteor/issues/8572
+      result.code = result.code.replace(
+        /\bmodule\.importSync\b/g,
+        "module.import"
+      );
     }
 
     toBeAdded.data = result.code;

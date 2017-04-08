@@ -948,38 +948,34 @@ var getShrinkwrappedDependencies = function (dir) {
   return treeToDependencies(getShrinkwrappedDependenciesTree(dir));
 };
 
-var installNpmModule = function (name, version, dir) {
+const installNpmModule = meteorNpm.installNpmModule = (name, version, dir) => {
 
-  var installArg = utils.isNpmUrl(version)
-    ? version : (name + "@" + version);
+  const installArg = utils.isNpmUrl(version)
+    ? version
+    : `${name}@${version}`;
 
   // We don't use npm.commands.install since we couldn't figure out
   // how to silence all output (specifically the installed tree which
   // is printed out with `console.log`)
-  //
-  // We used to use --force here, because the NPM cache is broken! See
-  // https://github.com/npm/npm/issues/3265 Basically, switching
-  // back and forth between a tarball fork of version X and the real
-  // version X could confuse NPM. But the main reason to use tarball
-  // URLs is to get a fork of the latest version with some fix, so
-  // it was easy to trigger this!
-  //
-  // We now use a forked version of npm with our PR
-  // https://github.com/npm/npm/pull/5137 to work around this.
-  var result = runNpmCommand(["install", installArg], dir);
+  const result = runNpmCommand(["install", installArg], dir);
 
   if (! result.success) {
-    var pkgNotFound = "404 '" + utils.quotemeta(name) +
-          "' is not in the npm registry";
-    var versionNotFound = "version not found: " + utils.quotemeta(name) +
-          '@' + utils.quotemeta(version);
+    const pkgNotFound =
+      `404  '${utils.quotemeta(name)}' is not in the npm registry`;
+
+    const versionNotFound =
+      "No compatible version found: " +
+      `${utils.quotemeta(name)}@${utils.quotemeta(version)}`;
+
     if (result.stderr.match(new RegExp(pkgNotFound))) {
-      buildmessage.error("there is no npm package named '" + name + "'");
+      buildmessage.error(
+        `there is no npm package named '${name}' in the npm registry`);
     } else if (result.stderr.match(new RegExp(versionNotFound))) {
-      buildmessage.error(name + " version " + version + " " +
-                         "is not available in the npm registry");
+      buildmessage.error(
+        `${name} version ${version} is not available in the npm registry`);
     } else {
-      buildmessage.error(`couldn't install npm package ${name}@${version}: ${result.error}`);
+      buildmessage.error(
+        `couldn't install npm package ${name}@${version}: ${result.error}`);
     }
 
     // Recover by returning false from updateDependencies

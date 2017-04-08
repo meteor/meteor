@@ -141,6 +141,7 @@ selftest.define("change cordova plugins", ["cordova"], function () {
   run = s.run();
   run.match("myapp");
   run.match("proxy");
+  run.waitSecs(30);
   run.match("MongoDB");
   run.match("your app");
   run.match("running at");
