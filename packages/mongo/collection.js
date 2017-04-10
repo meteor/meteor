@@ -361,8 +361,10 @@ Mongo.Collection._publishCursor = function (cursor, sub, collection) {
 // protect against dangerous selectors.  falsey and {_id: falsey} are both
 // likely programmer error, and not what you want, particularly for destructive
 // operations.  JS regexps don't serialize over DDP but can be trivially
-// replaced by $regex.
-Mongo.Collection._rewriteSelector = function (selector) {
+// replaced by $regex. If a falsey _id is sent in, a new string _id will be
+// generated and returned; if a fallbackId is provided, it will be returned
+// instead.
+Mongo.Collection._rewriteSelector = (selector, { fallbackId } = {}) => {
   // shorthand -- scalars match _id
   if (LocalCollection._selectorIsId(selector))
     selector = {_id: selector};
@@ -373,9 +375,10 @@ Mongo.Collection._rewriteSelector = function (selector) {
     throw new Error("Mongo selector can't be an array.");
   }
 
-  if (!selector || (('_id' in selector) && !selector._id))
+  if (!selector || (('_id' in selector) && !selector._id)) {
     // can't match anything
-    return {_id: Random.id()};
+    return { _id: fallbackId || Random.id() };
+  }
 
   var ret = {};
   Object.keys(selector).forEach((key) => {
@@ -545,20 +548,24 @@ Mongo.Collection.prototype.insert = function insert(doc, callback) {
 Mongo.Collection.prototype.update = function update(selector, modifier, ...optionsAndCallback) {
   const callback = popCallbackFromArgs(optionsAndCallback);
 
-  selector = Mongo.Collection._rewriteSelector(selector);
-
   // We've already popped off the callback, so we are left with an array
   // of one or zero items
   const options = _.clone(optionsAndCallback[0]) || {};
+  let insertedId;
   if (options && options.upsert) {
     // set `insertedId` if absent.  `insertedId` is a Meteor extension.
     if (options.insertedId) {
       if (!(typeof options.insertedId === 'string' || options.insertedId instanceof Mongo.ObjectID))
         throw new Error("insertedId must be string or ObjectID");
+      insertedId = options.insertedId;
     } else if (! selector._id) {
-      options.insertedId = this._makeNewID();
+      insertedId = this._makeNewID();
+      options.insertedId = insertedId;
     }
   }
+
+  selector =
+    Mongo.Collection._rewriteSelector(selector, { fallbackId: insertedId });
 
   const wrappedCallback = wrapCallback(callback);
 

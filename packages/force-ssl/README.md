@@ -1,11 +1,14 @@
 # force-ssl
-[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/force-ssl) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/force-ssl)
-***
 
-This package, part of [Webapp](https://github.com/meteor/meteor/tree/master/packages/webapp), causes
-Meteor to redirect insecure connections (HTTP) to a secure URL
-(HTTPS). Use this package to ensure that communication to the server
-is always encrypted to protect users from active spoofing attacks.
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/force-ssl) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/force-ssl)
+
+## Purpose
+
+This package, part of
+[Webapp](https://github.com/meteor/meteor/tree/master/packages/webapp),
+causes Meteor to redirect insecure connections (HTTP) to a secure URL
+(HTTPS). Use this package to ensure that communication to the server is
+always encrypted to protect users from active spoofing attacks.
 
 Meteor bundles (i.e. `meteor build`) do not include an HTTPS server or
 certificate. A proxy server that terminates SSL in front of a Meteor

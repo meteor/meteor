@@ -1,5 +1,89 @@
 ## v.NEXT
 
+## v1.4.4.1, 2017-04-07
+
+* A change in Meteor 1.4.4 to remove "garbage" directories asynchronously
+  in `files.renameDirAlmostAtomically` had unintended consequences for
+  rebuilding some npm packages, so that change was reverted, and those
+  directories are now removed before `files.renameDirAlmostAtomically`
+  returns. [PR #8574](https://github.com/meteor/meteor/pull/8574)
+
+## v1.4.4, 2017-04-07
+
+* Node has been upgraded to version 4.8.1.
+
+* The `npm` npm package has been upgraded to version 4.4.4.
+  It should be noted that this version reduces extra noise
+  previously included in some npm errors.
+
+* The `node-gyp` npm package has been upgraded to 3.6.0 which
+  adds support for VS2017 on Windows.
+
+* The `node-pre-gyp` npm package has been updated to 0.6.36.
+
+* Thanks to the outstanding efforts of @sethmurphy18, the `minifier-js`
+  package now uses [Babili](https://github.com/babel/babili) instead of
+  [UglifyJS](https://github.com/mishoo/UglifyJS2), resolving numerous
+  long-standing bugs due to UglifyJS's poor support for ES2015+ syntax.
+  [Issue #8378](https://github.com/meteor/meteor/issues/8378)
+  [PR #8397](https://github.com/meteor/meteor/pull/8397)
+
+* The `meteor-babel` npm package has been upgraded to version 0.19.1, and
+  `reify` has been upgraded to version 0.6.6, fixing several subtle bugs
+  introduced by Meteor 1.4.3 (see below), including
+  [issue #8461](https://github.com/meteor/meteor/issues/8461).
+
+* The Reify module compiler is now a Babel plugin, making it possible for
+  other custom Babel plugins configured in `.babelrc` or `package.json`
+  files to run before Reify, fixing bugs that resulted from running Reify
+  before other plugins in Meteor 1.4.3.
+  [Issue #8399](https://github.com/meteor/meteor/issues/8399)
+  [Issue #8422](https://github.com/meteor/meteor/issues/8422)
+  [`meteor-babel` issue #13](https://github.com/meteor/babel/issues/13)
+
+* Two new `export ... from ...` syntax extensions are now supported:
+  ```js
+  export * as namespace from "./module"
+  export def from "./module"
+  ```
+  Read the ECMA262 proposals here:
+  * https://github.com/leebyron/ecmascript-export-ns-from
+  * https://github.com/leebyron/ecmascript-export-default-from
+
+* When `Meteor.call` is used on the server to invoke a method that
+  returns a `Promise` object, the result will no longer be the `Promise`
+  object, but the resolved value of the `Promise`.
+  [Issue #8367](https://github.com/meteor/meteor/issues/8367)
+
+> Note: if you actually want a `Promise` when calling `Meteor.call` or
+  `Meteor.apply` on the server, use `Meteor.callAsync` and/or
+  `Meteor.applyAsync` instead.
+  [Issue #8367](https://github.com/meteor/meteor/issues/8367),
+  https://github.com/meteor/meteor/commit/0cbd25111d1249a61ca7adce23fad5215408c821
+
+* The `mailcomposer` and `smtp-connection` npms have been updated to resolve an
+  issue with the encoding of long header lines.
+  [Issue #8425](https://github.com/meteor/meteor/issues/8425)
+  [PR #8495](https://github.com/meteor/meteor/pull/8495)
+
+* `Accounts.config` now supports an `ambiguousErrorMessages` option which
+  enabled generalization of messages produced by the `accounts-*` packages.
+  [PR #8520](https://github.com/meteor/meteor/pull/8520)
+
+* A bug which caused account enrollment tokens to be deleted too soon was fixed.
+  [Issue #8218](https://github.com/meteor/meteor/issues/8218)
+  [PR #8474](https://github.com/meteor/meteor/pull/8474)
+
+* On Windows, bundles built during `meteor build` or `meteor deploy` will
+  maintain the executable bit for commands installed in the
+  `node_modules\.bin` directory.
+  [PR #8503](https://github.com/meteor/meteor/pull/8503)
+
+* On Windows, the upgrades to Node.js, `npm` and `mongodb` are now in-sync with
+  other archs again after being mistakenly overlooked in 1.4.3.2.  An admin
+  script enhancement has been applied to prevent this from happening again.
+  [PR #8505](https://github.com/meteor/meteor/pull/8505)
+
 ## v1.4.3.2, 2017-03-14
 
 * Node has been upgraded to version 4.8.0.

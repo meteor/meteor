@@ -1688,7 +1688,7 @@ if (Meteor.isServer) (function () {
     function (test) {
       var email = test.id + '-intercept@example.com';
       var userId = Accounts.createUser({email: email, password: 'password'});
-      
+
       Accounts.sendEnrollmentEmail(userId, email);
       test.isTrue(!!Meteor.users.findOne(userId).services.password.reset);
 
@@ -1702,7 +1702,7 @@ if (Meteor.isServer) (function () {
     function (test) {
       var email = test.id + '-intercept@example.com';
       var userId = Accounts.createUser({email: email, password: 'password'});
-      
+
       Accounts.sendEnrollmentEmail(userId, email);
       var enrollToken = Meteor.users.findOne(userId).services.password.reset;
       test.isTrue(enrollToken);

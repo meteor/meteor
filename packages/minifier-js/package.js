@@ -3,8 +3,12 @@ Package.describe({
   version: "2.0.0"
 });
 
+Npm.depends({
+  "uglify-js": "2.8.21"
+});
+
 Package.onUse(function (api) {
   api.use('babel-compiler');
-  api.export(['meteorBabelMinify']);
+  api.export(['meteorJsMinify']);
   api.addFiles(['minifier.js'], 'server');
 });
