@@ -1525,11 +1525,16 @@ class ClientTarget extends Target {
 
       const cordovaCompatibilityVersions =
         _.object(_.map(CORDOVA_PLATFORM_VERSIONS, (version, platform) => {
-          let cordovaDependencies = Object.assign({}, this.cordovaDependencies);
-          let pluginsExcludedFromCompatibilityHash = process.env.CORDOVA_COMPATIBILITY_VERSION_EXCLUDE || '';
-          cordovaDependencies = _.omit(cordovaDependencies, pluginsExcludedFromCompatibilityHash.split(';'));
 
-          const hash = process.env[`CORDOVA_COMPATIBILITY_VERSION_${platform.toUpperCase()}`] ||
+          const pluginsExcludedFromCompatibilityHash = (process.env.METEOR_CORDOVA_COMPAT_VERSION_EXCLUDE || '')
+            .split(',');
+
+          const cordovaDependencies = Object.assign(
+            Object.create(null),
+            _.omit(this.cordovaDependencies, pluginsExcludedFromCompatibilityHash)
+          );
+
+          const hash = process.env[`METEOR_CORDOVA_COMPAT_VERSION_${platform.toUpperCase()}`] ||
               WebAppHashing.calculateCordovaCompatibilityHash(
                 version,
                 cordovaDependencies);
