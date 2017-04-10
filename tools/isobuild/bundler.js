@@ -1522,11 +1522,17 @@ class ClientTarget extends Target {
     if (this.arch === 'web.cordova') {
       const { WebAppHashing } =
         loadIsopacket('cordova-support')['webapp-hashing'];
+
       const cordovaCompatibilityVersions =
         _.object(_.map(CORDOVA_PLATFORM_VERSIONS, (version, platform) => {
-          const hash = WebAppHashing.calculateCordovaCompatibilityHash(
-            version,
-            this.cordovaDependencies);
+          let cordovaDependencies = Object.assign({}, this.cordovaDependencies);
+          let pluginsExcludedFromCompatibilityHash = process.env.CORDOVA_COMPATIBILITY_VERSION_EXCLUDE || '';
+          cordovaDependencies = _.omit(cordovaDependencies, pluginsExcludedFromCompatibilityHash.split(';'));
+
+          const hash = process.env[`CORDOVA_COMPATIBILITY_VERSION_${platform.toUpperCase()}`] ||
+              WebAppHashing.calculateCordovaCompatibilityHash(
+                version,
+                cordovaDependencies);
           return [platform, hash];
         }));
       program.cordovaCompatibilityVersions = cordovaCompatibilityVersions;
