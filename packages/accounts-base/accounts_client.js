@@ -78,7 +78,21 @@ export class AccountsClient extends AccountsCommon {
     this._loginFuncs[funcName] = func;
   }
   /**
-   * @summary Call a login function defined using `Accounts.registerClientLoginFunction`.
+   * @summary Call a login function defined using `Accounts.registerClientLoginFunction`. Except the first argument,
+   Other arguments are passed to the login function accordingly. Use applyLoginFunction if you want to pass in an
+   `arguments` which contains all arguments for the login function.
+   * @locus Client
+   * @param {String} funcName The name of the login function you wanted to call.
+   */
+  callLoginFunction(funcName, ...funcArgs) {
+    if (!this._loginFuncs[funcName]) {
+      throw new Error(`${funcName} was not defined`);
+    }
+    return this._loginFuncs[funcName].apply(this, funcArgs);
+  }
+  /**
+   * @summary Same as ``callLoginFunction` but accept an `arguments` which contains all arguments for the login
+   function.
    * @locus Client
    * @param {String} funcName The name of the login function you wanted to call.
    * @param {Array} funcArgs The `arguments` for the login function.
