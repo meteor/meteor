@@ -13,7 +13,7 @@ if (Meteor.isClient) {
   };
   Accounts.registerClientLoginFunction('github', loginWithGithub);
   Meteor.loginWithGithub = function () {
-    return Accounts.callLoginFunction('github', arguments);
+    return Accounts.applyLoginFunction('github', arguments);
   };
 } else {
   Accounts.addAutopublishFields({

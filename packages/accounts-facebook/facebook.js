@@ -13,7 +13,7 @@ if (Meteor.isClient) {
   };
   Accounts.registerClientLoginFunction('facebook', loginWithFacebook);
   Meteor.loginWithFacebook = function () {
-    return Accounts.callLoginFunction('facebook', arguments);
+    return Accounts.applyLoginFunction('facebook', arguments);
   };
 } else {
   Accounts.addAutopublishFields({

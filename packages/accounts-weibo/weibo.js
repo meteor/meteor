@@ -13,7 +13,7 @@ if (Meteor.isClient) {
   };
   Accounts.registerClientLoginFunction('weibo', loginWithWeibo);
   Meteor.loginWithWeibo = function () {
-    return Accounts.callLoginFunction('weibo', arguments);
+    return Accounts.applyLoginFunction('weibo', arguments);
   };
 } else {
   Accounts.addAutopublishFields({

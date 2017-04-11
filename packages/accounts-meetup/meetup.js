@@ -13,7 +13,7 @@ if (Meteor.isClient) {
   };
   Accounts.registerClientLoginFunction('meetup', loginWithMeetup);
   Meteor.loginWithMeetup = function () {
-    return Accounts.callLoginFunction('meetup', arguments);
+    return Accounts.applyLoginFunction('meetup', arguments);
   };
 } else {
   Accounts.addAutopublishFields({

@@ -14,7 +14,7 @@ if (Meteor.isClient) {
   };
   Accounts.registerClientLoginFunction('meteor-developer', loginWithMeteorDeveloperAccount);
   Meteor.loginWithMeteorDeveloperAccount = function () {
-    return Accounts.callLoginFunction('meteor-developer', arguments);
+    return Accounts.applyLoginFunction('meteor-developer', arguments);
   };
 } else {
   Accounts.addAutopublishFields({

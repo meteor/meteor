@@ -32,7 +32,7 @@ if (Meteor.isClient) {
   };
   Accounts.registerClientLoginFunction('google', loginWithGoogle);
   Meteor.loginWithGoogle = function () {
-    return Accounts.callLoginFunction('google', arguments);
+    return Accounts.applyLoginFunction('google', arguments);
   };
 } else {
   Accounts.addAutopublishFields({

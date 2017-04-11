@@ -13,7 +13,7 @@ if (Meteor.isClient) {
   };
   Accounts.registerClientLoginFunction('twitter', loginWithTwitter);
   Meteor.loginWithTwitter = function () {
-    return Accounts.callLoginFunction('twitter', arguments);
+    return Accounts.applyLoginFunction('twitter', arguments);
   };
 } else {
   var autopublishedFields = _.map(
