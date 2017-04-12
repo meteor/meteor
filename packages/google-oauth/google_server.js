@@ -1,5 +1,6 @@
 var Google = require("./namespace.js");
 var Accounts = require("meteor/accounts-base").Accounts;
+var hasOwn = Object.prototype.hasOwnProperty;
 
 // https://developers.google.com/accounts/docs/OAuth2Login#userinfocall
 Google.whitelistedFields = ['id', 'email', 'verified_email', 'name', 'given_name',
@@ -20,8 +21,14 @@ function getServiceData(query) {
     scope: scopes
   };
 
-  var fields = _.pick(identity, Google.whitelistedFields);
-  _.extend(serviceData, fields);
+  var fields = Object.create(null);
+  Google.whitelistedFields.forEach(function (name) {
+    if (hasOwn.call(identity, name)) {
+      fields[name] = identity[name];
+    }
+  });
+
+  Object.assign(serviceData, fields);
 
   // only set the token in serviceData if it's there. this ensures
   // that we don't lose old ones (since we only get this on the first
@@ -40,15 +47,16 @@ Accounts.registerLoginHandler(function (request) {
     return;
   }
 
-  const res = getServiceData({code: request.serverAuthCode});
-
-  return Accounts.updateOrCreateUserFromExternalService("google", _.extend({
+  return Accounts.updateOrCreateUserFromExternalService("google", {
     id: request.userId,
     idToken: request.idToken,
     accessToken: request.accessToken,
     email: request.email,
-    picture: request.imageUrl
-  }, res.serviceData));
+    picture: request.imageUrl,
+    ...getServiceData({
+      code: request.serverAuthCode
+    }).serviceData,
+  });
 });
 
 OAuth.registerService('google', 2, null, getServiceData);
@@ -73,8 +81,10 @@ var getTokens = function (query) {
         grant_type: 'authorization_code'
       }});
   } catch (err) {
-    throw _.extend(new Error("Failed to complete OAuth handshake with Google. " + err.message),
-                   {response: err.response});
+    throw Object.assign(
+      new Error("Failed to complete OAuth handshake with Google. " + err.message),
+      { response: err.response }
+    );
   }
 
   if (response.data.error) { // if the http response was a json object with an error attribute
@@ -95,8 +105,10 @@ var getIdentity = function (accessToken) {
       "https://www.googleapis.com/oauth2/v1/userinfo",
       {params: {access_token: accessToken}}).data;
   } catch (err) {
-    throw _.extend(new Error("Failed to fetch identity from Google. " + err.message),
-                   {response: err.response});
+    throw Object.assign(
+      new Error("Failed to fetch identity from Google. " + err.message),
+      { response: err.response }
+    );
   }
 };
 
@@ -106,8 +118,10 @@ var getScopes = function (accessToken) {
       "https://www.googleapis.com/oauth2/v1/tokeninfo",
       {params: {access_token: accessToken}}).data.scope.split(' ');
   } catch (err) {
-    throw _.extend(new Error("Failed to fetch tokeninfo from Google. " + err.message),
-                   {response: err.response});
+    throw Object.assign(
+      new Error("Failed to fetch tokeninfo from Google. " + err.message),
+      { response: err.response }
+    );
   }
 };
 

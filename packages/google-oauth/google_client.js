@@ -1,5 +1,13 @@
 var Google = require("./namespace.js");
 
+var ILLEGAL_PARAMETERS = {
+  'response_type': 1,
+  'client_id': 1,
+  'scope': 1,
+  'redirect_uri': 1,
+  'state': 1
+};
+
 // Request Google credentials for the user
 // @param options {optional}
 // @param credentialRequestCompleteCallback {Function} Callback function to call on
@@ -24,24 +32,26 @@ Google.requestCredential = function (options, credentialRequestCompleteCallback)
   var credentialToken = Random.secret();
 
   // we need the email scope to get user id from google.
-  var requiredScope = ['email'];
-  var scope = ['profile'];
-  if (options.requestPermissions)
-    scope = options.requestPermissions;
-  scope = _.union(scope, requiredScope);
+  var requiredScopes = { 'email': 1 };
+  var scopes = options.requestPermissions || ['profile'];
+  scopes.forEach(function (scope) {
+    requiredScopes[scope] = 1;
+  });
+  scopes = Object.keys(requiredScopes);
 
   var loginUrlParameters = {};
   if (config.loginUrlParameters){
-    _.extend(loginUrlParameters, config.loginUrlParameters)
+    Object.assign(loginUrlParameters, config.loginUrlParameters);
   }
   if (options.loginUrlParameters){
-    _.extend(loginUrlParameters, options.loginUrlParameters)
+    Object.assign(loginUrlParameters, options.loginUrlParameters);
   }
-  var ILLEGAL_PARAMETERS = ['response_type', 'client_id', 'scope', 'redirect_uri', 'state'];
-    // validate options keys
-  _.each(_.keys(loginUrlParameters), function (key) {
-    if (_.contains(ILLEGAL_PARAMETERS, key))
+
+  // validate options keys
+  Object.keys(loginUrlParameters).forEach(function (key) {
+    if (ILLEGAL_PARAMETERS.hasOwnProperty(key)) {
       throw new Error("Google.requestCredential: Invalid loginUrlParameter: " + key);
+    }
   });
 
   // backwards compatible options
@@ -60,16 +70,17 @@ Google.requestCredential = function (options, credentialRequestCompleteCallback)
 
   var loginStyle = OAuth._loginStyle('google', config, options);
   // https://developers.google.com/accounts/docs/OAuth2WebServer#formingtheurl
-  _.extend(loginUrlParameters, {
+  Object.assign(loginUrlParameters, {
     "response_type": "code",
     "client_id":  config.clientId,
-    "scope": scope.join(' '), // space delimited
+    "scope": scopes.join(' '), // space delimited
     "redirect_uri": OAuth._redirectUri('google', config),
     "state": OAuth._stateParam(loginStyle, credentialToken, options.redirectUrl)
   });
   var loginUrl = 'https://accounts.google.com/o/oauth2/auth?' +
-    _.map(loginUrlParameters, function(value, param){
-      return encodeURIComponent(param) + '=' + encodeURIComponent(value);
+    Object.keys(loginUrlParameters).map(function (param) {
+      return encodeURIComponent(param) + '=' +
+        encodeURIComponent(loginUrlParameters[param]);
     }).join("&");
 
   OAuth.launchLogin({
