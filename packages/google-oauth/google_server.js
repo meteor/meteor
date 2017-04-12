@@ -5,34 +5,7 @@ var Accounts = require("meteor/accounts-base").Accounts;
 Google.whitelistedFields = ['id', 'email', 'verified_email', 'name', 'given_name',
                    'family_name', 'picture', 'locale', 'timezone', 'gender'];
 
-Accounts.registerLoginHandler(function (request) {
-  if (request.googleSignIn !== true) {
-    return;
-  }
-
-  var res = HTTP.get(
-    "https://www.googleapis.com/oauth2/v3/tokeninfo",
-    { headers: { "User-Agent": "Meteor/1.0" },
-      params: { id_token: request.idToken }}
-  );
-
-  if (res.error) {
-    throw res.error;
-  }
-
-  if (res.statusCode === 200 &&
-      res.data.sub === request.userId) {
-    return Accounts.updateOrCreateUserFromExternalService("google", {
-      id: request.userId,
-      idToken: request.idToken,
-      accessToken: request.accessToken,
-      email: request.email,
-      picture: request.imageUrl
-    });
-  }
-});
-
-OAuth.registerService('google', 2, null, function(query) {
+function getServiceData(query) {
   var response = getTokens(query);
   var expiresAt = (+new Date) + (1000 * parseInt(response.expiresIn, 10));
   var accessToken = response.accessToken;
@@ -60,7 +33,25 @@ OAuth.registerService('google', 2, null, function(query) {
     serviceData: serviceData,
     options: {profile: {name: identity.name}}
   };
+}
+
+Accounts.registerLoginHandler(function (request) {
+  if (request.googleSignIn !== true) {
+    return;
+  }
+
+  const res = getServiceData({code: request.serverAuthCode});
+
+  return Accounts.updateOrCreateUserFromExternalService("google", _.extend({
+    id: request.userId,
+    idToken: request.idToken,
+    accessToken: request.accessToken,
+    email: request.email,
+    picture: request.imageUrl
+  }, res.serviceData));
 });
+
+OAuth.registerService('google', 2, null, getServiceData);
 
 // returns an object containing:
 // - accessToken
