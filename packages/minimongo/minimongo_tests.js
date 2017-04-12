@@ -163,6 +163,22 @@ Tinytest.add("minimongo - basics", function (test) {
 
 });
 
+Tinytest.add("minimongo - error - no options", function (test) {
+  try {
+    throw MinimongoError("Not fun to have errors");
+  } catch (e) {
+    test.equal(e.message, "Not fun to have errors");
+  }
+});
+
+Tinytest.add("minimongo - error - with field", function (test) {
+  try {
+    throw MinimongoError("Cats are no fun", { field: "mice" });
+  } catch (e) {
+    test.equal(e.message, "Cats are no fun for field 'mice'");
+  }
+});
+
 Tinytest.add("minimongo - cursors", function (test) {
   var c = new LocalCollection();
   var res;

@@ -1,12 +1,13 @@
 Package.describe({
   summary: "Meteor's client-side datastore: a port of MongoDB to Javascript",
-  version: '1.0.21'
+  version: '1.0.22'
 });
 
 Package.onUse(function (api) {
   api.export('LocalCollection');
   api.export('Minimongo');
   api.export('MinimongoTest', { testOnly: true });
+  api.export('MinimongoError', { testOnly: true });
   api.use([
     'underscore',
     'ejson',
