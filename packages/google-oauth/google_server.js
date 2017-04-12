@@ -1,38 +1,12 @@
 var Google = require("./namespace.js");
 var Accounts = require("meteor/accounts-base").Accounts;
+var hasOwn = Object.prototype.hasOwnProperty;
 
 // https://developers.google.com/accounts/docs/OAuth2Login#userinfocall
 Google.whitelistedFields = ['id', 'email', 'verified_email', 'name', 'given_name',
                    'family_name', 'picture', 'locale', 'timezone', 'gender'];
 
-Accounts.registerLoginHandler(function (request) {
-  if (request.googleSignIn !== true) {
-    return;
-  }
-
-  var res = HTTP.get(
-    "https://www.googleapis.com/oauth2/v3/tokeninfo",
-    { headers: { "User-Agent": "Meteor/1.0" },
-      params: { id_token: request.idToken }}
-  );
-
-  if (res.error) {
-    throw res.error;
-  }
-
-  if (res.statusCode === 200 &&
-      res.data.sub === request.userId) {
-    return Accounts.updateOrCreateUserFromExternalService("google", {
-      id: request.userId,
-      idToken: request.idToken,
-      accessToken: request.accessToken,
-      email: request.email,
-      picture: request.imageUrl
-    });
-  }
-});
-
-OAuth.registerService('google', 2, null, function(query) {
+function getServiceData(query) {
   var response = getTokens(query);
   var expiresAt = (+new Date) + (1000 * parseInt(response.expiresIn, 10));
   var accessToken = response.accessToken;
@@ -47,8 +21,14 @@ OAuth.registerService('google', 2, null, function(query) {
     scope: scopes
   };
 
-  var fields = _.pick(identity, Google.whitelistedFields);
-  _.extend(serviceData, fields);
+  var fields = Object.create(null);
+  Google.whitelistedFields.forEach(function (name) {
+    if (hasOwn.call(identity, name)) {
+      fields[name] = identity[name];
+    }
+  });
+
+  Object.assign(serviceData, fields);
 
   // only set the token in serviceData if it's there. this ensures
   // that we don't lose old ones (since we only get this on the first
@@ -60,7 +40,26 @@ OAuth.registerService('google', 2, null, function(query) {
     serviceData: serviceData,
     options: {profile: {name: identity.name}}
   };
+}
+
+Accounts.registerLoginHandler(function (request) {
+  if (request.googleSignIn !== true) {
+    return;
+  }
+
+  return Accounts.updateOrCreateUserFromExternalService("google", {
+    id: request.userId,
+    idToken: request.idToken,
+    accessToken: request.accessToken,
+    email: request.email,
+    picture: request.imageUrl,
+    ...getServiceData({
+      code: request.serverAuthCode
+    }).serviceData,
+  });
 });
+
+OAuth.registerService('google', 2, null, getServiceData);
 
 // returns an object containing:
 // - accessToken
@@ -82,8 +81,10 @@ var getTokens = function (query) {
         grant_type: 'authorization_code'
       }});
   } catch (err) {
-    throw _.extend(new Error("Failed to complete OAuth handshake with Google. " + err.message),
-                   {response: err.response});
+    throw Object.assign(
+      new Error("Failed to complete OAuth handshake with Google. " + err.message),
+      { response: err.response }
+    );
   }
 
   if (response.data.error) { // if the http response was a json object with an error attribute
@@ -104,8 +105,10 @@ var getIdentity = function (accessToken) {
       "https://www.googleapis.com/oauth2/v1/userinfo",
       {params: {access_token: accessToken}}).data;
   } catch (err) {
-    throw _.extend(new Error("Failed to fetch identity from Google. " + err.message),
-                   {response: err.response});
+    throw Object.assign(
+      new Error("Failed to fetch identity from Google. " + err.message),
+      { response: err.response }
+    );
   }
 };
 
@@ -115,8 +118,10 @@ var getScopes = function (accessToken) {
       "https://www.googleapis.com/oauth2/v1/tokeninfo",
       {params: {access_token: accessToken}}).data.scope.split(' ');
   } catch (err) {
-    throw _.extend(new Error("Failed to fetch tokeninfo from Google. " + err.message),
-                   {response: err.response});
+    throw Object.assign(
+      new Error("Failed to fetch tokeninfo from Google. " + err.message),
+      { response: err.response }
+    );
   }
 };
 
