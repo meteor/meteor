@@ -1,9 +1,6 @@
 // TODO Somehow expose a hash of these plugin options?
 module.exports = {
   plugins: [
-    [require("babel-plugin-transform-es2015-modules-reify"), {
-      generateLetDeclarations: true
-    }],
     require("babel-plugin-check-es2015-constants"),
     require("babel-plugin-syntax-flow"),
     require("babel-plugin-syntax-trailing-function-commas"),
