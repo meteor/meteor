@@ -1,24 +1,14 @@
 {
   "dependencies": {
     "acorn": {
-      "version": "4.0.11",
-      "resolved": "https://registry.npmjs.org/acorn/-/acorn-4.0.11.tgz",
-      "from": "acorn@>=4.0.5 <4.1.0"
-    },
-    "magic-string": {
-      "version": "0.19.0",
-      "resolved": "https://registry.npmjs.org/magic-string/-/magic-string-0.19.0.tgz",
-      "from": "magic-string@>=0.19.0 <0.20.0"
+      "version": "5.0.3",
+      "resolved": "https://registry.npmjs.org/acorn/-/acorn-5.0.3.tgz",
+      "from": "acorn@>=5.0.0 <5.1.0"
     },
     "reify": {
-      "version": "0.6.6",
-      "resolved": "https://registry.npmjs.org/reify/-/reify-0.6.6.tgz",
-      "from": "reify@0.6.6"
-    },
-    "vlq": {
-      "version": "0.2.1",
-      "resolved": "https://registry.npmjs.org/vlq/-/vlq-0.2.1.tgz",
-      "from": "vlq@>=0.2.1 <0.3.0"
+      "version": "0.7.4",
+      "resolved": "https://registry.npmjs.org/reify/-/reify-0.7.4.tgz",
+      "from": "reify@0.7.4"
     }
   }
 }
