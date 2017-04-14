@@ -411,6 +411,19 @@ describe("Reify", function () {
   });
 });
 
+export const instance = new (class {
+  run() {
+    import assert from "assert";
+    return assert;
+  }
+});
+
+describe("Meteor bug #8595", function () {
+  it("should be fixed", function () {
+    assert.strictEqual(instance.run(), require("assert"));
+  });
+});
+
 describe("dynamic import(...)", function () {
   import meteorBabel from "../index.js";
 
