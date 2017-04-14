@@ -10,7 +10,7 @@ Package.describe({
 });
 
 Npm.depends({
-  'meteor-babel': '0.20.0'
+  'meteor-babel': '0.20.1'
 });
 
 Package.onUse(function (api) {
