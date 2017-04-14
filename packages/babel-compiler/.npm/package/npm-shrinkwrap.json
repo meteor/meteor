@@ -580,9 +580,9 @@
       "from": "loose-envify@>=1.0.0 <2.0.0"
     },
     "meteor-babel": {
-      "version": "0.20.0",
-      "resolved": "https://registry.npmjs.org/meteor-babel/-/meteor-babel-0.20.0.tgz",
-      "from": "meteor-babel@0.20.0"
+      "version": "0.20.1",
+      "resolved": "https://registry.npmjs.org/meteor-babel/-/meteor-babel-0.20.1.tgz",
+      "from": "meteor-babel@0.20.1"
     },
     "meteor-babel-helpers": {
       "version": "0.0.3",
