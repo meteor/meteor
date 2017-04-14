@@ -1,4 +1,5 @@
 var babelPresetMeteor = require("babel-preset-meteor");
+var reifyPlugin = require("babel-plugin-transform-es2015-modules-reify");
 var strictModulesPluginFactory =
   require("babel-plugin-transform-es2015-modules-commonjs");
 
@@ -21,7 +22,11 @@ var babelModulesPlugin = [function () {
 exports.getDefaults = function getDefaults(features) {
   var combined = {
     presets: [babelPresetMeteor],
-    plugins: []
+    plugins: [
+      [reifyPlugin, {
+        generateLetDeclarations: true
+      }]
+    ]
   };
 
   combined.plugins.push(
