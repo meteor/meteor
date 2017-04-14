@@ -1,5 +1,9 @@
 ## v.NEXT
 
+* The `meteor-babel` npm package has been upgraded to version 0.20.1, and
+  the `reify` npm package has been upgraded to version 0.7.4, fixing
+  [issue #8595](https://github.com/meteor/meteor/issues/8595).
+
 ## v1.4.4.1, 2017-04-07
 
 * A change in Meteor 1.4.4 to remove "garbage" directories asynchronously
