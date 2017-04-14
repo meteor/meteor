@@ -24,7 +24,8 @@ exports.getDefaults = function getDefaults(features) {
     presets: [babelPresetMeteor],
     plugins: [
       [reifyPlugin, {
-        generateLetDeclarations: true
+        generateLetDeclarations: true,
+        enforceStrictMode: false
       }]
     ]
   };
