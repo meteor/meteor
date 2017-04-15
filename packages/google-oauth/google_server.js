@@ -6,47 +6,21 @@ var hasOwn = Object.prototype.hasOwnProperty;
 Google.whitelistedFields = ['id', 'email', 'verified_email', 'name', 'given_name',
                    'family_name', 'picture', 'locale', 'timezone', 'gender'];
 
-Accounts.registerLoginHandler(function (request) {
-  if (request.googleSignIn !== true) {
-    return;
-  }
-
-  var res = HTTP.get(
-    "https://www.googleapis.com/oauth2/v3/tokeninfo",
-    { headers: { "User-Agent": "Meteor/1.0" },
-      params: { id_token: request.idToken }}
-  );
-
-  if (res.error) {
-    throw res.error;
-  }
-
-  if (res.statusCode === 200 &&
-      res.data.sub === request.userId) {
-    return Accounts.updateOrCreateUserFromExternalService("google", {
-      id: request.userId,
-      idToken: request.idToken,
-      accessToken: request.accessToken,
-      email: request.email,
-      picture: request.imageUrl
-    });
-  }
-});
-
-OAuth.registerService('google', 2, null, function(query) {
-  var response = getTokens(query);
-  var expiresAt = (+new Date) + (1000 * parseInt(response.expiresIn, 10));
-  var accessToken = response.accessToken;
-  var idToken = response.idToken;
+function getServiceDataFromTokens(tokens) {
+  var accessToken = tokens.accessToken;
+  var idToken = tokens.idToken;
   var scopes = getScopes(accessToken);
   var identity = getIdentity(accessToken);
-
   var serviceData = {
     accessToken: accessToken,
     idToken: idToken,
-    expiresAt: expiresAt,
     scope: scopes
   };
+
+  if (hasOwn.call(tokens, "expiresAt")) {
+    serviceData.expiresAt =
+      Date.now() + 1000 * parseInt(tokens.expiresIn, 10);
+  }
 
   var fields = Object.create(null);
   Google.whitelistedFields.forEach(function (name) {
@@ -60,14 +34,46 @@ OAuth.registerService('google', 2, null, function(query) {
   // only set the token in serviceData if it's there. this ensures
   // that we don't lose old ones (since we only get this on the first
   // log in attempt)
-  if (response.refreshToken)
-    serviceData.refreshToken = response.refreshToken;
+  if (tokens.refreshToken) {
+    serviceData.refreshToken = tokens.refreshToken;
+  }
 
   return {
     serviceData: serviceData,
-    options: {profile: {name: identity.name}}
+    options: {
+      profile: {
+        name: identity.name
+      }
+    }
   };
+}
+
+Accounts.registerLoginHandler(function (request) {
+  if (request.googleSignIn !== true) {
+    return;
+  }
+
+  const { serviceData } = getServiceDataFromTokens({
+    accessToken: request.accessToken,
+    refreshToken: request.refreshToken,
+    idToken: request.idToken,
+  });
+
+  return Accounts.updateOrCreateUserFromExternalService("google", {
+    id: request.userId,
+    idToken: request.idToken,
+    accessToken: request.accessToken,
+    email: request.email,
+    picture: request.imageUrl,
+    ...serviceData,
+  });
 });
+
+function getServiceData(query) {
+  return getServiceDataFromTokens(getTokens(query));
+}
+
+OAuth.registerService('google', 2, null, getServiceData);
 
 // returns an object containing:
 // - accessToken
