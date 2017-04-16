@@ -1,6 +1,6 @@
 var Future = Npm.require('fibers/future');
 var urlModule = Npm.require('url');
-var SMTPConnection = Npm.require('smtp-connection');
+var nodemailer = Npm.require('node4mailer');
 
 Email = {};
 EmailTest = {};
@@ -8,51 +8,43 @@ EmailTest = {};
 EmailInternals = {
   NpmModules: {
     mailcomposer: {
-      version: Npm.require('mailcomposer/package.json').version,
-      module: Npm.require('mailcomposer')
+      version: Npm.require('node4mailer/package.json').version,
+      module: Npm.require('node4mailer/lib/mail-composer')
+    },
+    nodemailer: {
+      version: Npm.require('node4mailer/package.json').version,
+      module: Npm.require('node4mailer')
     }
   }
 };
 
-var mailcomposer = EmailInternals.NpmModules.mailcomposer.module;
+var MailComposer = EmailInternals.NpmModules.mailcomposer.module;
 
-var makePool = function (mailUrlString) {
-  var mailUrl = urlModule.parse(mailUrlString);
+var makeTransport = function (mailUrlString) {
+  var mailUrl = urlModule.parse(mailUrlString, true);
   if (mailUrl.protocol !== 'smtp:' && mailUrl.protocol !== 'smtps:')
     throw new Error("Email protocol in $MAIL_URL (" +
                     mailUrlString + ") must be 'smtp' or 'smtps'");
+  // Allow overriding pool setting, but default to true.
+  if (!mailUrl.query)
+    mailUrl.query = {};
+  if (!mailUrl.query.pool)
+    mailUrl.query.pool = 'true';
+  mailUrlString = urlModule.format(mailUrl);
 
-  var port = +(mailUrl.port);
-  var auth = false;
-  if (mailUrl.auth) {
-    var parts = mailUrl.auth.split(':', 2);
-    auth = {user: parts[0],
-            pass: parts[1]};
-  }
-
-  var pool = new SMTPConnection({
-    port: port,  // Defaults to 25
-    host: mailUrl.hostname,  // Defaults to "localhost"
-    secure: (port === 465) || (mailUrl.protocol === 'smtps:')
-  });
-  Meteor.wrapAsync(pool.connect, pool)();
-  if (auth) {
-      //_.bind(Future.wrap(pool.login), pool)(auth).wait();
-      Meteor.wrapAsync(pool.login, pool)(auth);
-  }
-
-  pool._syncSend = Meteor.wrapAsync(pool.send, pool);
-  return pool;
+  var transport = nodemailer.createTransport(mailUrlString);
+  transport._syncSendMail = Meteor.wrapAsync(transport.sendMail, transport);
+  return transport;
 };
 
-var getPool = function() {
+var getTransport = function() {
   // We delay this check until the first call to Email.send, in case someone
   // set process.env.MAIL_URL in startup code. Then we store in a cache until
   // process.env.MAIL_URL changes.
   var url = process.env.MAIL_URL;
   if (this.cacheKey === undefined || this.cacheKey !== url) {
     this.cacheKey = url;
-    this.cache = url ? makePool(url) : null;
+    this.cache = url ? makeTransport(url) : null;
   }
   return this.cache;
 }
@@ -70,7 +62,7 @@ EmailTest.restoreOutputStream = function () {
   output_stream = process.stdout;
 };
 
-var devModeSend = function (mc) {
+var devModeSend = function (mail) {
   var devmode_mail_id = next_devmode_mail_id++;
 
   var stream = output_stream;
@@ -79,7 +71,7 @@ var devModeSend = function (mc) {
   stream.write("====== BEGIN MAIL #" + devmode_mail_id + " ======\n");
   stream.write("(Mail not sent; to enable sending, set the MAIL_URL " +
                "environment variable.)\n");
-  var readStream = mc.createReadStream();
+  var readStream = new MailComposer(mail).compile().createReadStream();
   readStream.pipe(stream, {end: false});
   var future = new Future;
   readStream.on('end', function () {
@@ -89,8 +81,8 @@ var devModeSend = function (mc) {
   future.wait();
 };
 
-var smtpSend = function (pool, mc) {
-  pool._syncSend(mc.getEnvelope(), mc.createReadStream());
+var smtpSend = function (transport, mail) {
+  transport._syncSendMail(mail);
 };
 
 /**
@@ -155,39 +147,30 @@ EmailTest.hookSend = function (f) {
  * @param {Object} [options.headers] Dictionary of custom headers
  * @param {Object[]} [options.attachments] Array of attachment objects, as
  * described in the [mailcomposer documentation](https://github.com/nodemailer/mailcomposer/blob/v4.0.1/README.md#attachments).
- * @param {MailComposer} [options.mailComposer] A [MailComposer](https://github.com/andris9/mailcomposer)
- * object (or its `compile()` output) representing the message to be sent.
- * Overrides all other options. You can access the `mailcomposer` npm module at
- * `EmailInternals.NpmModules.mailcomposer.module`. This module is a function
- * which assembles a MailComposer object and immediately `compile()`s it.
- * Alternatively, you can create and pass a MailComposer object via
- * `new EmailInternals.NpmModules.mailcomposer.module.MailComposer`.
+ * @param {MailComposer} [options.mailComposer] A [MailComposer](https://nodemailer.com/extras/mailcomposer/)
+ * object representing the message to be sent.  Overrides all other options.
+ * You can create a `MailComposer` object via
+ * `new EmailInternals.NpmModules.mailcomposer.module`.
  */
 Email.send = function (options) {
   for (var i = 0; i < sendHooks.length; i++)
     if (! sendHooks[i](options))
       return;
 
-  var mc;
   if (options.mailComposer) {
-    mc = options.mailComposer;
-    if (mc.compile) {
-      mc = mc.compile();
-    }
+    options = options.mailComposer.mail;
   } else {
     // mailcomposer now automatically adds date if omitted
     //if (!options.hasOwnProperty('date') &&
     //    (!options.headers || !options.headers.hasOwnProperty('Date'))) {
     //  options['date'] = new Date().toUTCString().replace(/GMT/, '+0000');
     //}
-
-    mc = mailcomposer(options);
   }
 
-  var pool = getPool();
-  if (pool) {
-    smtpSend(pool, mc);
+  var transport = getTransport();
+  if (transport) {
+    smtpSend(transport, options);
   } else {
-    devModeSend(mc);
+    devModeSend(options);
   }
 };
