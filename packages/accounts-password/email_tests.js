@@ -160,7 +160,12 @@ var loggedIn = function (test, expect) {
 testAsyncMulti("accounts emails - verify email flow", [
   function (test, expect) {
     this.email = Random.id() + "-intercept@example.com";
-    this.anotherEmail = Random.id() + "-intercept@example.com";
+    const emailId = Random.id();
+    this.anotherEmail = emailId.toLowerCase() + "-intercept@example.com";
+    // Add the same email as 'anotherEmail' but in upper case in order to check if
+    // the verification token will be removed for the email in upperCase and in
+    // lowerCase.
+    this.anotherEmailCaps = emailId.toUpperCase() +"-INTERCEPT@example.com";
     Accounts.createUser(
       {email: this.email, password: 'foobar'},
       loggedIn(test, expect));
@@ -219,6 +224,35 @@ testAsyncMulti("accounts emails - verify email flow", [
   function (test, expect) {
     test.equal(Meteor.user().emails[1].address, this.anotherEmail);
     test.isTrue(Meteor.user().emails[1].verified);
+  },
+  function (test, expect) {
+    Accounts.connection.call(
+      "addEmailForTestAndVerify", this.anotherEmailCaps,
+      expect((error, result) => {
+        test.isFalse(error);
+        test.equal(Meteor.user().emails.length, 3);
+        test.equal(Meteor.user().emails[2].address, this.anotherEmailCaps);
+        test.isFalse(Meteor.user().emails[2].verified);
+      }));
+  },
+  function (test, expect) {
+    getVerifyEmailToken(this.anotherEmailCaps, test, expect);
+  },
+  function (test, expect) {
+    // Log out, to test that verifyEmail logs us back in. (And if we don't
+    // do that, waitUntilLoggedIn won't be able to prevent race conditions.)
+    Meteor.logout(expect((error) => {
+      test.equal(error, undefined);
+      test.equal(Meteor.user(), null);
+    }));
+  },
+  function (test, expect) {
+    Accounts.verifyEmail(verifyEmailToken,
+                         loggedIn(test, expect));
+  },
+  function (test, expect) {
+    test.equal(Meteor.user().emails[2].address, this.anotherEmailCaps);
+    test.isTrue(Meteor.user().emails[2].verified);
   },
   function (test, expect) {
     Meteor.logout(expect((error) => {
