@@ -37,9 +37,9 @@ var makeTransport = function (mailUrlString) {
     mailUrl.query.pool = 'true';
   }
 
-  mailUrlString = urlModule.format(mailUrl);
+  var transport = nodemailer.createTransport(
+    urlModule.format(mailUrl));
 
-  var transport = nodemailer.createTransport(mailUrlString);
   transport._syncSendMail = Meteor.wrapAsync(transport.sendMail, transport);
   return transport;
 };
