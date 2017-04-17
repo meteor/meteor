@@ -22,14 +22,21 @@ var MailComposer = EmailInternals.NpmModules.mailcomposer.module;
 
 var makeTransport = function (mailUrlString) {
   var mailUrl = urlModule.parse(mailUrlString, true);
-  if (mailUrl.protocol !== 'smtp:' && mailUrl.protocol !== 'smtps:')
+
+  if (mailUrl.protocol !== 'smtp:' && mailUrl.protocol !== 'smtps:') {
     throw new Error("Email protocol in $MAIL_URL (" +
                     mailUrlString + ") must be 'smtp' or 'smtps'");
+  }
+
   // Allow overriding pool setting, but default to true.
-  if (!mailUrl.query)
+  if (!mailUrl.query) {
     mailUrl.query = {};
-  if (!mailUrl.query.pool)
+  }
+
+  if (!mailUrl.query.pool) {
     mailUrl.query.pool = 'true';
+  }
+
   mailUrlString = urlModule.format(mailUrl);
 
   var transport = nodemailer.createTransport(mailUrlString);
@@ -49,12 +56,12 @@ var getTransport = function() {
   return this.cache;
 }
 
-var next_devmode_mail_id = 0;
+var nextDevModeMailId = 0;
 var output_stream = process.stdout;
 
 // Testing hooks
 EmailTest.overrideOutputStream = function (stream) {
-  next_devmode_mail_id = 0;
+  nextDevModeMailId = 0;
   output_stream = stream;
 };
 
@@ -63,19 +70,19 @@ EmailTest.restoreOutputStream = function () {
 };
 
 var devModeSend = function (mail) {
-  var devmode_mail_id = next_devmode_mail_id++;
+  var devModeMailId = nextDevModeMailId++;
 
   var stream = output_stream;
 
   // This approach does not prevent other writers to stdout from interleaving.
-  stream.write("====== BEGIN MAIL #" + devmode_mail_id + " ======\n");
+  stream.write("====== BEGIN MAIL #" + devModeMailId + " ======\n");
   stream.write("(Mail not sent; to enable sending, set the MAIL_URL " +
                "environment variable.)\n");
   var readStream = new MailComposer(mail).compile().createReadStream();
   readStream.pipe(stream, {end: false});
   var future = new Future;
   readStream.on('end', function () {
-    stream.write("====== END MAIL #" + devmode_mail_id + " ======\n");
+    stream.write("====== END MAIL #" + devModeMailId + " ======\n");
     future.return();
   });
   future.wait();
@@ -97,28 +104,6 @@ EmailTest.hookSend = function (f) {
   sendHooks.push(f);
 };
 
-// Old comment below
-/**
- * Send an email.
- *
- * Connects to the mail server configured via the MAIL_URL environment
- * variable. If unset, prints formatted message to stdout. The "from" option
- * is required, and at least one of "to", "cc", and "bcc" must be provided;
- * all other options are optional.
- *
- * @param options
- * @param options.from {String} RFC5322 "From:" address
- * @param options.to {String|String[]} RFC5322 "To:" address[es]
- * @param options.cc {String|String[]} RFC5322 "Cc:" address[es]
- * @param options.bcc {String|String[]} RFC5322 "Bcc:" address[es]
- * @param options.replyTo {String|String[]} RFC5322 "Reply-To:" address[es]
- * @param options.subject {String} RFC5322 "Subject:" line
- * @param options.text {String} RFC5322 mail body (plain text)
- * @param options.html {String} RFC5322 mail body (HTML)
- * @param options.headers {Object} custom RFC5322 headers (dictionary)
- */
-
-// New API doc comment below
 /**
  * @summary Send an email. Throws an `Error` on failure to contact mail server
  * or if mail server returns an error. All fields should match
@@ -127,10 +112,9 @@ EmailTest.hookSend = function (f) {
  * If the `MAIL_URL` environment variable is set, actually sends the email.
  * Otherwise, prints the contents of the email to standard out.
  *
- * Note that this package is based on mailcomposer version `4.0.1`, so make
- * sure to refer to the documentation for that version if using the
- * `attachments` or `mailComposer` options.
- * [Click here to read the mailcomposer 4.0.1 docs](https://github.com/nodemailer/mailcomposer/blob/v4.0.1/README.md).
+ * Note that this package is based on **mailcomposer 4**, so make sure to refer to
+ * [the documentation](https://github.com/nodemailer/mailcomposer/blob/v4.0.1/README.md)
+ * for that version when using the `attachments` or `mailComposer` options.
  *
  * @locus Server
  * @param {Object} options
@@ -142,12 +126,12 @@ EmailTest.hookSend = function (f) {
  * @param {String} [options.messageId] Message-ID for this message; otherwise, will be set to a random value
  * @param {String} [options.subject]  "Subject:" line
  * @param {String} [options.text|html] Mail body (in plain text and/or HTML)
- * @param {String} [options.watchHtml] Mail body in HTML specific for Apple Watch 
- * @param {String} [options.icalEvent] iCalendar event attachment 
+ * @param {String} [options.watchHtml] Mail body in HTML specific for Apple Watch
+ * @param {String} [options.icalEvent] iCalendar event attachment
  * @param {Object} [options.headers] Dictionary of custom headers
  * @param {Object[]} [options.attachments] Array of attachment objects, as
  * described in the [mailcomposer documentation](https://github.com/nodemailer/mailcomposer/blob/v4.0.1/README.md#attachments).
- * @param {MailComposer} [options.mailComposer] A [MailComposer](https://nodemailer.com/extras/mailcomposer/)
+ * @param {MailComposer} [options.mailComposer] A [MailComposer](https://nodemailer.com/extras/mailcomposer/#e-mail-message-fields)
  * object representing the message to be sent.  Overrides all other options.
  * You can create a `MailComposer` object via
  * `new EmailInternals.NpmModules.mailcomposer.module`.
@@ -159,12 +143,6 @@ Email.send = function (options) {
 
   if (options.mailComposer) {
     options = options.mailComposer.mail;
-  } else {
-    // mailcomposer now automatically adds date if omitted
-    //if (!options.hasOwnProperty('date') &&
-    //    (!options.headers || !options.headers.hasOwnProperty('Date'))) {
-    //  options['date'] = new Date().toUTCString().replace(/GMT/, '+0000');
-    //}
   }
 
   var transport = getTransport();
