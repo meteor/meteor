@@ -27,11 +27,7 @@ LocalCollection._modify = function (doc, mod, options) {
       throw MinimongoError("Cannot change the _id of a document");
 
     // replace the whole document
-    for (var k in mod) {
-      if (/\./.test(k))
-        throw MinimongoError(
-          "When replacing document, field name may not contain '.'");
-    }
+    hasValidFieldNames(mod);
     newDoc = mod;
   } else {
     // apply modifiers to the doc.
@@ -155,8 +151,7 @@ var findModTarget = function (doc, keyparts, options) {
                       "' of list value " + JSON.stringify(doc[keypart]));
       }
     } else {
-      if (keypart.length && keypart.substr(0, 1) === '$')
-        throw MinimongoError("can't set field named " + keypart);
+      isValidFieldName(keypart);
       if (!(keypart in doc)) {
         if (options.noCreate)
           return undefined;
@@ -251,11 +246,7 @@ var MODIFIERS = {
       e.setPropertyError = true;
       throw e;
     }
-    if (_.isString(field) && field.indexOf('\0') > -1) {
-      // Null bytes are not allowed in Mongo field names
-      // https://docs.mongodb.com/manual/reference/limits/#Restrictions-on-Field-Names
-      throw MinimongoError(`Key ${field} must not contain null bytes`);
-    }
+    hasValidFieldNames(arg);
     target[field] = arg;
   },
   $setOnInsert: function (target, field, arg) {
@@ -279,6 +270,7 @@ var MODIFIERS = {
 
     if (!(arg && arg.$each)) {
       // Simple mode: not $each
+      hasValidFieldNames(arg);
       target[field].push(arg);
       return;
     }
@@ -287,6 +279,7 @@ var MODIFIERS = {
     var toPush = arg.$each;
     if (!(toPush instanceof Array))
       throw MinimongoError("$each must be an array", { field });
+    hasValidFieldNames(toPush);
 
     // Parse $position
     var position = undefined;
@@ -356,6 +349,7 @@ var MODIFIERS = {
   $pushAll: function (target, field, arg) {
     if (!(typeof arg === "object" && arg instanceof Array))
       throw MinimongoError("Modifier $pushAll/pullAll allowed for arrays only");
+    hasValidFieldNames(arg);
     var x = target[field];
     if (x === undefined)
       target[field] = arg;
@@ -371,13 +365,13 @@ var MODIFIERS = {
     var isEach = false;
     if (typeof arg === "object") {
       //check if first key is '$each'
-      for (var k in arg) {
-        if (k === "$each")
-          isEach = true;
-        break;
+      const keys = Object.keys(arg);
+      if (keys[0] === "$each"){
+        isEach = true;
       }
     }
     var values = isEach ? arg["$each"] : [arg];
+    hasValidFieldNames(values);
     var x = target[field];
     if (x === undefined)
       target[field] = values;

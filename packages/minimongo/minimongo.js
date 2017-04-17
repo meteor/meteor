@@ -548,23 +548,7 @@ LocalCollection.prototype.insert = function (doc, callback) {
   var self = this;
   doc = EJSON.clone(doc);
 
-  // Make sure field names do not contain Mongo restricted
-  // characters ('.', '$', '\0').
-  // https://docs.mongodb.com/manual/reference/limits/#Restrictions-on-Field-Names
-  if (doc) {
-    const invalidCharMsg = {
-      '.': "contain '.'",
-      '$': "start with '$'",
-      '\0': "contain null bytes",
-    };
-    JSON.stringify(doc, (key, value) => {
-      let match;
-      if (_.isString(key) && (match = key.match(/^\$|\.|\0/))) {
-        throw MinimongoError(`Key ${key} must not ${invalidCharMsg[match[0]]}`);
-      }
-      return value;
-    });
-  }
+  hasValidFieldNames(doc);
 
   if (!_.has(doc, '_id')) {
     // if you really want to use ObjectIDs, set this global.
