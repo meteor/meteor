@@ -22,7 +22,7 @@ function canonicalize(string) {
   // Remove generated content for test.equal to succeed.
   return string.replace(/Message-ID: <[^<>]*>\r\n/, "Message-ID: <...>\r\n")
                .replace(/Date: (?!dummy).*\r\n/, "Date: ...\r\n")
-               .replace(/----[^\s"]+/g, "----...");
+               .replace(/(boundary="|^--)--[^\s"]+?(-Part|")/mg, "$1--...$2");
 }
 
 Tinytest.add("email - fully customizable", function (test) {
@@ -55,7 +55,7 @@ Tinytest.add("email - fully customizable", function (test) {
                "\r\n" +
                "This is the body\n" +
                "of the message\n" +
-               "From us." +
+               "From us.\r\n" +
                "====== END MAIL #0 ======\n");
   });
 });
@@ -108,33 +108,23 @@ Tinytest.add("email - multiple e-mails same stream", function (test) {
 Tinytest.add("email - using mail composer", function (test) {
   smokeEmailTest(function (stream) {
     // Test direct MailComposer usage.
-    var mcs = [
-      // Test with MailComposer object (without compiling).
-      new EmailInternals.NpmModules.mailcomposer.module.MailComposer({
-        from: "a@b.com",
-        text: "body"
-      }),
-      // Test calling module as a function, which compiles MailComposer object.
-      EmailInternals.NpmModules.mailcomposer.module({
-        from: "a@b.com",
-        text: "body"
-      })
-    ];
-    for (var i = 0; i < mcs.length; i++) {
-      Email.send({mailComposer: mcs[i]});
-      test.equal(canonicalize(stream.getContentsAsString("utf8")),
-                 "====== BEGIN MAIL #"+i+" ======\n" +
-                 devWarningBanner +
-                 "Content-Type: text/plain\r\n" +
-                 "From: a@b.com\r\n" +
-                 "Message-ID: <...>\r\n" +
-                 "Content-Transfer-Encoding: 7bit\r\n" +
-                 "Date: ...\r\n" +
-                 "MIME-Version: 1.0\r\n" +
-                 "\r\n" +
-                 "body" +
-                 "====== END MAIL #"+i+" ======\n");
-    }
+    var mc = new EmailInternals.NpmModules.mailcomposer.module({
+      from: "a@b.com",
+      text: "body"
+    });
+    Email.send({mailComposer: mc});
+    test.equal(canonicalize(stream.getContentsAsString("utf8")),
+               "====== BEGIN MAIL #0 ======\n" +
+               devWarningBanner +
+               "Content-Type: text/plain\r\n" +
+               "From: a@b.com\r\n" +
+               "Message-ID: <...>\r\n" +
+               "Content-Transfer-Encoding: 7bit\r\n" +
+               "Date: ...\r\n" +
+               "MIME-Version: 1.0\r\n" +
+               "\r\n" +
+               "body\r\n" +
+               "====== END MAIL #0 ======\n");
   });
 });
 
@@ -181,7 +171,7 @@ Tinytest.add("email - long lines", function (test) {
                "MIME-Version: 1.0\r\n" +
                "\r\n" +
                "This is a very very very very very very very very very very " +
-               "very very long =\r\ntext" +
+               "very very long =\r\ntext\r\n" +
                "====== END MAIL #0 ======\n");
   });
 });
@@ -208,7 +198,7 @@ Tinytest.add("email - unicode", function (test) {
                "Date: ...\r\n" +
                "MIME-Version: 1.0\r\n" +
                "\r\n" +
-               "I =E2=99=A5 Meteor" +
+               "I =E2=99=A5 Meteor\r\n" +
                "====== END MAIL #0 ======\n");
   });
 });
@@ -227,24 +217,24 @@ Tinytest.add("email - text and html", function (test) {
                "====== BEGIN MAIL #0 ======\n" +
                devWarningBanner +
                "Content-Type: multipart/alternative;\r\n" +
-               ' boundary="----..."\r\n' +
+               ' boundary="--...-Part_1"\r\n' +
                "From: foo@example.com\r\n" +
                "To: bar@example.com\r\n" +
                "Message-ID: <...>\r\n" +
                "Date: ...\r\n" +
                "MIME-Version: 1.0\r\n" +
                "\r\n" +
-               "----...\r\n" +
+               "----...-Part_1\r\n" +
                "Content-Type: text/plain\r\n" +
                "Content-Transfer-Encoding: 7bit\r\n" +
                "\r\n" +
                "*Cool*, man\r\n" +
-               "----...\r\n" +
+               "----...-Part_1\r\n" +
                "Content-Type: text/html\r\n" +
                "Content-Transfer-Encoding: 7bit\r\n" +
                "\r\n" +
                "<i>Cool</i>, man\r\n" +
-               "----...\r\n" +
+               "----...-Part_1--\r\n" +
                "====== END MAIL #0 ======\n");
   });
 });
