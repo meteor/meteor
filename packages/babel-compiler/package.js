@@ -14,7 +14,7 @@ Npm.depends({
 });
 
 Package.onUse(function (api) {
-  api.use('ecmascript-runtime');
+  api.use('ecmascript-runtime', 'server');
 
   api.addFiles([
     'babel.js',
