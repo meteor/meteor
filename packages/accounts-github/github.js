@@ -1,7 +1,7 @@
 Accounts.oauth.registerService('github');
 
 if (Meteor.isClient) {
-  Meteor.loginWithGithub = function(options, callback) {
+  const loginWithGithub = function(options, callback) {
     // support a callback without options
     if (! callback && typeof options === "function") {
       callback = options;
@@ -10,6 +10,10 @@ if (Meteor.isClient) {
 
     var credentialRequestCompleteCallback = Accounts.oauth.credentialRequestCompleteHandler(callback);
     Github.requestCredential(options, credentialRequestCompleteCallback);
+  };
+  Accounts.registerClientLoginFunction('github', loginWithGithub);
+  Meteor.loginWithGithub = function () {
+    return Accounts.applyLoginFunction('github', arguments);
   };
 } else {
   Accounts.addAutopublishFields({
