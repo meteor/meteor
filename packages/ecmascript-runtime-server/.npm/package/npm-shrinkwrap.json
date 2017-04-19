@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "core-js": {
+      "version": "2.4.1",
+      "resolved": "https://registry.npmjs.org/core-js/-/core-js-2.4.1.tgz",
+      "from": "core-js@2.4.1"
+    }
+  }
+}
