@@ -1,3 +1,5 @@
+import { assertHasValidFieldNames, assertIsValidFieldName } from './validation.js';
+
 // XXX need a strategy for passing the binding of $ into this
 // function, from the compiled selector
 //
@@ -27,7 +29,7 @@ LocalCollection._modify = function (doc, mod, options) {
       throw MinimongoError("Cannot change the _id of a document");
 
     // replace the whole document
-    hasValidFieldNames(mod);
+    assertHasValidFieldNames(mod);
     newDoc = mod;
   } else {
     // apply modifiers to the doc.
@@ -151,7 +153,7 @@ var findModTarget = function (doc, keyparts, options) {
                       "' of list value " + JSON.stringify(doc[keypart]));
       }
     } else {
-      isValidFieldName(keypart);
+      assertIsValidFieldName(keypart);
       if (!(keypart in doc)) {
         if (options.noCreate)
           return undefined;
@@ -246,7 +248,7 @@ var MODIFIERS = {
       e.setPropertyError = true;
       throw e;
     }
-    hasValidFieldNames(arg);
+    assertHasValidFieldNames(arg);
     target[field] = arg;
   },
   $setOnInsert: function (target, field, arg) {
@@ -270,7 +272,7 @@ var MODIFIERS = {
 
     if (!(arg && arg.$each)) {
       // Simple mode: not $each
-      hasValidFieldNames(arg);
+      assertHasValidFieldNames(arg);
       target[field].push(arg);
       return;
     }
@@ -279,7 +281,7 @@ var MODIFIERS = {
     var toPush = arg.$each;
     if (!(toPush instanceof Array))
       throw MinimongoError("$each must be an array", { field });
-    hasValidFieldNames(toPush);
+    assertHasValidFieldNames(toPush);
 
     // Parse $position
     var position = undefined;
@@ -349,7 +351,7 @@ var MODIFIERS = {
   $pushAll: function (target, field, arg) {
     if (!(typeof arg === "object" && arg instanceof Array))
       throw MinimongoError("Modifier $pushAll/pullAll allowed for arrays only");
-    hasValidFieldNames(arg);
+    assertHasValidFieldNames(arg);
     var x = target[field];
     if (x === undefined)
       target[field] = arg;
@@ -371,7 +373,7 @@ var MODIFIERS = {
       }
     }
     var values = isEach ? arg["$each"] : [arg];
-    hasValidFieldNames(values);
+    assertHasValidFieldNames(values);
     var x = target[field];
     if (x === undefined)
       target[field] = values;

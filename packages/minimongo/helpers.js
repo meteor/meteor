@@ -43,28 +43,3 @@ isOperatorObject = function (valueSelector, inconsistentOK) {
 isNumericKey = function (s) {
   return /^[0-9]+$/.test(s);
 };
-
-// Make sure field names do not contain Mongo restricted
-// characters ('.', '$', '\0').
-// https://docs.mongodb.com/manual/reference/limits/#Restrictions-on-Field-Names
-const invalidCharMsg = {
-  '.': "contain '.'",
-  '$': "start with '$'",
-  '\0': "contain null bytes",
-};
-isValidFieldName = function (key){
-      let match;
-      if (_.isString(key) && (match = key.match(/^\$|\.|\0/))) {
-        throw MinimongoError(`Key ${key} must not ${invalidCharMsg[match[0]]}`);
-      }
-}
-
-// checks if all field names in an object are valid
-hasValidFieldNames = function(doc){
-  if (doc && typeof doc === "object") {
-    JSON.stringify(doc, (key, value) => {
-      isValidFieldName(key);
-      return value;
-    });
-  }
-}
