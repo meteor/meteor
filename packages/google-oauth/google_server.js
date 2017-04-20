@@ -60,6 +60,35 @@ OAuth.registerService('google', 2, null, function(query) {
     serviceData: serviceData,
     options: {profile: {name: identity.name}}
   };
+}
+
+Accounts.registerLoginHandler(function (request) {
+  if (request.googleSignIn !== true) {
+    return;
+  }
+
+  const tokens = {
+    accessToken: request.accessToken,
+    refreshToken: request.refreshToken,
+    idToken: request.idToken,
+  };
+
+  if (request.serverAuthCode) {
+    Object.assign(tokens, getTokens({
+      code: request.serverAuthCode
+    }));
+  }
+
+  const result = getServiceDataFromTokens(tokens);
+
+  return Accounts.updateOrCreateUserFromExternalService("google", {
+    id: request.userId,
+    idToken: request.idToken,
+    accessToken: request.accessToken,
+    email: request.email,
+    picture: request.imageUrl,
+    ...result.serviceData,
+  }, result.options);
 });
 
 // returns an object containing:
