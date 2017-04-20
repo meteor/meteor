@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Google OAuth flow",
-  version: "1.2.1"
+  version: "1.2.4"
 });
 
 var cordovaPluginGooglePlusURL =
@@ -14,12 +14,11 @@ Cordova.depends({
 });
 
 Package.onUse(function(api) {
-  api.use("modules");
-  api.use("promise");
+  api.use("ecmascript");
   api.use('oauth2', ['client', 'server']);
   api.use('oauth', ['client', 'server']);
   api.use('http', ['server']);
-  api.use(['underscore', 'service-configuration'], ['client', 'server']);
+  api.use('service-configuration');
   api.use('random', 'client');
 
   api.addFiles('google_server.js', 'server');

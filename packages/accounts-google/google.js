@@ -1,7 +1,7 @@
 Accounts.oauth.registerService('google');
 
 if (Meteor.isClient) {
-  Meteor.loginWithGoogle = function(options, callback) {
+  const loginWithGoogle = function(options, callback) {
     // support a callback without options
     if (! callback && typeof options === "function") {
       callback = options;
@@ -29,6 +29,10 @@ if (Meteor.isClient) {
     }
     var credentialRequestCompleteCallback = Accounts.oauth.credentialRequestCompleteHandler(callback);
     Google.requestCredential(options, credentialRequestCompleteCallback);
+  };
+  Accounts.registerClientLoginFunction('google', loginWithGoogle);
+  Meteor.loginWithGoogle = function () {
+    return Accounts.applyLoginFunction('google', arguments);
   };
 } else {
   Accounts.addAutopublishFields({

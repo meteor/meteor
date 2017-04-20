@@ -59,12 +59,14 @@ exports.signIn = Google.signIn = function (options, callback) {
 
 function getScopes(options) {
   // we need the email scope to get user id from google.
-  var requiredScopes = ['email'];
-  var scopes = ['profile'];
-  if (options && options.requestPermissions) {
-    scopes = options.requestPermissions;
-  }
-  return _.union(scopes, requiredScopes);
+  var requiredScopes = { 'email': 1 };
+  var scopes = options.requestPermissions || ['profile'];
+
+  scopes.forEach(function (scope) {
+    requiredScopes[scope] = 1;
+  });
+
+  return Object.keys(requiredScopes);
 }
 
 exports.signOut = Google.signOut = function () {
