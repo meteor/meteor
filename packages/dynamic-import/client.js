@@ -172,7 +172,7 @@ function addToTree(tree, id, value) {
 function getNamespace(module, id) {
   var namespace = Object.create(null);
 
-  module.import(id, {
+  module.importSync(id, {
     "*": function (value, name) {
       namespace[name] = value;
     }
