@@ -53,11 +53,19 @@ Accounts.registerLoginHandler(function (request) {
     return;
   }
 
-  const { serviceData } = getServiceDataFromTokens({
+  const tokens = {
     accessToken: request.accessToken,
     refreshToken: request.refreshToken,
     idToken: request.idToken,
-  });
+  };
+
+  if (request.serverAuthCode) {
+    Object.assign(tokens, getTokens({
+      code: request.serverAuthCode
+    }));
+  }
+
+  const result = getServiceDataFromTokens(tokens);
 
   return Accounts.updateOrCreateUserFromExternalService("google", {
     id: request.userId,
@@ -65,8 +73,8 @@ Accounts.registerLoginHandler(function (request) {
     accessToken: request.accessToken,
     email: request.email,
     picture: request.imageUrl,
-    ...serviceData,
-  });
+    ...result.serviceData,
+  }, result.options);
 });
 
 function getServiceData(query) {

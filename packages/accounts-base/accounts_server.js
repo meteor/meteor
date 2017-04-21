@@ -1502,6 +1502,8 @@ function setupUsersCollection(users) {
                      { sparse: 1 });
   // For expiring login tokens
   users._ensureIndex("services.resume.loginTokens.when", { sparse: 1 });
+  // For expiring password tokens
+  users._ensureIndex('services.password.reset.when', { sparse: 1 });
 }
 
 ///
