@@ -262,9 +262,7 @@ _.extend(Module.prototype, {
           dynamic: true,
         });
 
-        const entry = {
-          version: file.sourceHash,
-        };
+        const entry = {};
 
         if (! _.isEmpty(file.deps)) {
           entry.deps = file.deps;
@@ -283,26 +281,16 @@ _.extend(Module.prototype, {
           }
         }
 
-        this._addToTree([entry], file.installPath, tree);
+        addToTree([entry], file.installPath, tree);
 
       } else {
         // If the file is not dynamic, then it should be included in the
         // initial bundle, so we add it to the static tree.
-        this._addToTree(file, file.installPath, tree);
+        addToTree(file, file.installPath, tree);
       }
     });
 
     return tree;
-  },
-
-  _addToTree(obj, path, tree) {
-    const parts = path.split("/");
-    const lastIndex = parts.length - 1;
-    parts.forEach((part, i) => {
-      tree = _.has(tree, part)
-        ? tree[part]
-        : tree[part] = i < lastIndex ? {} : obj;
-    });
   },
 
   // Take the tree generated in getPrelinkedFiles and populate the chunks
@@ -433,6 +421,19 @@ _.extend(Module.prototype, {
     return exportsName;
   }
 });
+
+// Insert the given value into the tree by splitting the path and
+// creating/following nested objects properties named by each component of
+// the split path.
+export function addToTree(value, path, tree) {
+  const parts = path.split("/");
+  const lastIndex = parts.length - 1;
+  parts.forEach((part, i) => {
+    tree = _.has(tree, part)
+      ? tree[part]
+      : tree[part] = i < lastIndex ? {} : value;
+  });
+}
 
 // Given 'symbolMap' like {Foo: 's1', 'Bar.Baz': 's2', 'Bar.Quux.A': 's3', 'Bar.Quux.B': 's4'}
 // return something like

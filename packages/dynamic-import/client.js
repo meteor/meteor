@@ -21,11 +21,13 @@ Module.prototype.dynamicImport = function (id) {
     // Require the parent module from the complete meta graph.
     var meta = requireMeta(module.id);
     var versions = Object.create(null);
+    var dynamicVersions = require("./dynamic-versions.js");
 
     function walk(meta) {
       if (meta.dynamic && ! meta.pending) {
         meta.pending = true;
-        versions[meta.module.id] = meta.version;
+        var id = meta.module.id;
+        versions[id] = getFromTree(dynamicVersions, id);
         meta.eachChild(walkChild);
       }
     }
@@ -100,6 +102,7 @@ function installResults(resultsTree, doNotCache) {
   function walk(tree) {
     if (typeof tree === "string") {
       var meta = requireMeta(parts.join("/"));
+      var id = meta.module.id;
       var optionsIndex = options.indexOf(meta.options);
       if (optionsIndex < 0) {
         options[optionsIndex = options.length] = meta.options;
@@ -112,7 +115,7 @@ function installResults(resultsTree, doNotCache) {
       // are shared by entire bundles.
       addToTree(
         trees[optionsIndex],
-        meta.module.id,
+        id,
         // By calling (meta.options.eval || eval) in a wrapper function,
         // we delay the cost of parsing and evaluating the module code
         // until the module is first imported.
@@ -132,10 +135,13 @@ function installResults(resultsTree, doNotCache) {
 
       // Intentionally do not delay resolution waiting for the cache.
       if (! doNotCache) {
-        versionsAndSourcesById[meta.module.id] = {
-          version: meta.version,
-          source: tree
-        };
+        var version = getFromTree(require("./dynamic-versions.js"), id);
+        if (version) {
+          versionsAndSourcesById[id] = {
+            version: version,
+            source: tree
+          };
+        }
       }
 
     } else {
@@ -156,6 +162,14 @@ function installResults(resultsTree, doNotCache) {
   if (! doNotCache) {
     cache.setMany(versionsAndSourcesById);
   }
+}
+
+function getFromTree(tree, id) {
+  id.split("/").every(function (part) {
+    return ! part || (tree = tree[part]);
+  });
+
+  return tree;
 }
 
 function addToTree(tree, id, value) {

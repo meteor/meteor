@@ -159,6 +159,7 @@ import Builder from './builder.js';
 var compilerPluginModule = require('./compiler-plugin.js');
 import { JsFile, CssFile } from './minifier-plugin.js';
 var meteorNpm = require('./meteor-npm.js');
+import { addToTree } from "./linker.js";
 
 var files = require('../fs/files.js');
 var archinfo = require('../utils/archinfo.js');
@@ -1056,6 +1057,9 @@ class Target {
     const jsOutputFilesMap = compilerPluginModule.PackageSourceBatch
       .computeJsOutputFilesMap(sourceBatches);
 
+    const versions = {};
+    const dynamicImportFiles = new Set;
+
     // Copy their resources into the bundle in order
     sourceBatches.forEach((sourceBatch) => {
       const unibuild = sourceBatch.unibuild;
@@ -1177,6 +1181,16 @@ class Target {
         throw new Error('Unknown type ' + resource.type);
       });
 
+      this.js.forEach(file => {
+        if (file.targetPath === "packages/dynamic-import.js") {
+          dynamicImportFiles.add(file);
+        }
+
+        if (file.targetPath.startsWith("dynamic/")) {
+          addToTree(file.hash(), file.targetPath, versions);
+        }
+      });
+
       // Depend on the source files that produced these resources.
       this.watchSet.merge(unibuild.watchSet);
 
@@ -1184,6 +1198,15 @@ class Target {
       // that were used in these resources. Depend on them as well.
       // XXX assumes that this merges cleanly
        this.watchSet.merge(unibuild.pkg.pluginWatchSet);
+    });
+
+    dynamicImportFiles.forEach(file => {
+      file.setContents(
+        new Buffer(file.contents("utf8").replace(
+          "__DYNAMIC_VERSIONS__",
+          () => JSON.stringify(versions.dynamic || {})
+        ), "utf8")
+      );
     });
   }
 
