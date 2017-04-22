@@ -81,23 +81,25 @@ _.extend(Minimongo.Sorter.prototype, {
   getComparator: function (options) {
     var self = this;
 
-    // If we have no distances, just use the comparator from the source
-    // specification (which defaults to "everything is equal".
-    if (!options || !options.distances) {
+    // If sort is specified or have no distances, just use the comparator from 
+    // the source specification (which defaults to "everything is equal".
+    // issue #3599
+    // https://docs.mongodb.com/manual/reference/operator/query/near/#sort-operation
+    // sort effectively overrides $near
+    if (self._sortSpecParts.length || !options || !options.distances) {
       return self._getBaseComparator();
     }
 
     var distances = options.distances;
 
-    // Return a comparator which first tries the sort specification, and if that
-    // says "it's equal", breaks ties using $near distances.
-    return composeComparators([self._getBaseComparator(), function (a, b) {
+    // Return a comparator which compares using $near distances.
+    return function (a, b) {
       if (!distances.has(a._id))
         throw Error("Missing distance for " + a._id);
       if (!distances.has(b._id))
         throw Error("Missing distance for " + b._id);
       return distances.get(a._id) - distances.get(b._id);
-    }]);
+    };
   },
 
   _getPaths: function () {

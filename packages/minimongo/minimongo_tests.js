@@ -3158,13 +3158,14 @@ Tinytest.add("minimongo - $near operator tests", function (test) {
   // 'y'.
   testNear([2, 2], 1000, ['x', 'y']);
 
-  // Ensure that distance is used as a tie-breaker for sort.
+  // issue #3599
+  // Ensure that distance are not used as a tie-breaker for sort.
   test.equal(
     _.pluck(coll.find({'a.b': {$near: [1, 1]}}, {sort: {k: 1}}).fetch(), '_id'),
     ['x', 'y']);
   test.equal(
     _.pluck(coll.find({'a.b': {$near: [5, 5]}}, {sort: {k: 1}}).fetch(), '_id'),
-    ['y', 'x']);
+    ['x', 'y']);
 
   var operations = [];
   var cbs = log_callbacks(operations);
