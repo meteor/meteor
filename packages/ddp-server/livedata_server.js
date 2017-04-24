@@ -1657,12 +1657,21 @@ _.extend(Server.prototype, {
     };
     var connection = null;
     var currentInvocation = DDP._CurrentInvocation.get();
+    var currentPublicationInvocation = DDP._CurrentPublicationInvocation.get();
+    var randomSeed = null;
     if (currentInvocation) {
       userId = currentInvocation.userId;
       setUserId = function(userId) {
         currentInvocation.setUserId(userId);
       };
       connection = currentInvocation.connection;
+      randomSeed = DDPCommon.makeRpcSeed(currentInvocation, name);
+    } else if (currentPublicationInvocation) {
+      userId = currentPublicationInvocation.userId;
+      setUserId = function(userId) {
+        currentPublicationInvocation._session._setUserId(userId);
+      };
+      connection = currentPublicationInvocation.connection;
     }
 
     var invocation = new DDPCommon.MethodInvocation({
@@ -1670,7 +1679,7 @@ _.extend(Server.prototype, {
       userId,
       setUserId,
       connection,
-      randomSeed: DDPCommon.makeRpcSeed(currentInvocation, name)
+      randomSeed
     });
 
     return new Promise(resolve => resolve(
