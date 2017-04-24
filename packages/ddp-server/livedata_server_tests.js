@@ -159,6 +159,15 @@ Meteor.publish("livedata_server_test_sub", function (connectionId) {
   this.stop();
 });
 
+Meteor.publish("livedata_server_test_sub_method", function(connectionId) {
+  var callback = onSubscription[connectionId];
+  if (callback) {
+    var id = Meteor.call('livedata_server_test_inner');
+    callback(id);
+  }
+  this.stop();
+});
+
 
 Tinytest.addAsync(
   "livedata server - connection in publish function",
@@ -193,6 +202,24 @@ Meteor.methods({
     this.setUserId(userId);
   }
 });
+
+Tinytest.addAsync(
+  "livedata server - connection in method called from publish function",
+  function (test, onComplete) {
+    makeTestConnection(
+      test,
+      function (clientConn, serverConn) {
+        onSubscription[serverConn.id] = function (id) {
+          delete onSubscription[serverConn.id];
+          test.equal(id, serverConn.id);
+          clientConn.disconnect();
+          onComplete();
+        };
+        clientConn.subscribe("livedata_server_test_sub_method", serverConn.id);
+      }
+    );
+  }
+);
 
 Tinytest.addAsync(
   "livedata server - no connection in a method called from a publish function",
