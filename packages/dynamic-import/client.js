@@ -2,8 +2,13 @@ var Module = module.constructor;
 var delayPromise = Promise.resolve();
 var requireMeta = meteorInstall._requireMeta;
 var cache = require("./cache.js");
+var Mp = Module.prototype;
 
-Module.prototype.dynamicImport = function (id) {
+// Call module.dynamicImport(id) to fetch a module and any/all of its
+// dependencies that have not already been fetched, and evaluate them as
+// soon as they arrive. This runtime API makes it very easy to implement
+// ECMAScript dynamic import(...) syntax.
+Mp.dynamicImport = function (id) {
   // The real (not meta) parent module.
   var module = this;
 
@@ -18,45 +23,59 @@ Module.prototype.dynamicImport = function (id) {
       throw error;
     }
 
-    // Require the parent module from the complete meta graph.
-    var meta = requireMeta(module.id);
-    var versions = Object.create(null);
-    var dynamicVersions = require("./dynamic-versions.js");
+    return module.prefetch(id).then(get);
+  });
+};
 
-    function walk(meta) {
-      if (meta.dynamic && ! meta.pending) {
-        meta.pending = true;
-        var id = meta.module.id;
-        versions[id] = getFromTree(dynamicVersions, id);
-        meta.eachChild(walkChild);
+// Call module.prefetch(id) to fetch modules without evaluating them.
+// Returns a Promise that resolves to an Error object if importing the
+// given id failed, and null otherwise.
+Mp.prefetch = function (id) {
+  // Require the parent module from the complete meta graph.
+  var meta = requireMeta(this.id);
+  var versions = Object.create(null);
+  var dynamicVersions = require("./dynamic-versions.js");
+
+  function walk(meta) {
+    if (meta.dynamic && ! meta.pending) {
+      meta.pending = true;
+      var id = meta.module.id;
+      versions[id] = getFromTree(dynamicVersions, id);
+      meta.eachChild(walkChild);
+    }
+  }
+
+  function walkChild(childModule) {
+    return walk(childModule.exports);
+  }
+
+  meta.eachChild(walkChild, [id]);
+
+  var error = meta.errors && meta.errors[id];
+  if (error) {
+    // If there was an error resolving the top-level id, let that error be
+    // the final result of the module.prefetch(id) promise.
+    return Promise.resolve(error);
+  }
+
+  return cache.checkMany(versions).then(function (sources) {
+    var localTree = null;
+    var missingTree = null;
+
+    Object.keys(sources).forEach(function (id) {
+      var source = sources[id];
+      if (source) {
+        addToTree(localTree = localTree || Object.create(null), id, source);
+      } else {
+        addToTree(missingTree = missingTree || Object.create(null), id, 1);
       }
+    });
+
+    if (localTree) {
+      installResults(localTree, true);
     }
 
-    function walkChild(childModule) {
-      return walk(childModule.exports);
-    }
-
-    meta.eachChild(walkChild, [id]);
-
-    var localTree;
-    var missingTree;
-
-    return cache.checkMany(versions).then(function (sources) {
-      Object.keys(sources).forEach(function (id) {
-        var source = sources[id];
-        if (source) {
-          addToTree(localTree = localTree || Object.create(null), id, source);
-        } else {
-          addToTree(missingTree = missingTree || Object.create(null), id, 1);
-        }
-      });
-
-      if (localTree) {
-        installResults(localTree, true);
-      }
-
-      return missingTree && fetchMissing(missingTree);
-    }).then(get);
+    return missingTree && fetchMissing(missingTree);
   });
 };
 
@@ -162,6 +181,8 @@ function installResults(resultsTree, doNotCache) {
   if (! doNotCache) {
     cache.setMany(versionsAndSourcesById);
   }
+
+  return null;
 }
 
 function getFromTree(tree, id) {

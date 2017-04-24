@@ -124,6 +124,16 @@ function makeMetaFunc(value, dynamic, options) {
     exports.dynamic = !! dynamic;
     exports.options = options;
 
+    function quietRequire(id) {
+      try {
+        return require(id);
+      } catch (error) {
+        (exports.errors =
+         exports.errors || Object.create(null)
+        )[id] = error;
+      }
+    }
+
     // One of the purposes of the meta graph is to support traversing
     // module dependencies without evaluating any actual module code.
     // The eachChild function is essential to that traversal.
@@ -134,7 +144,7 @@ function makeMetaFunc(value, dynamic, options) {
       idsToRequire = idsToRequire || (value && value.deps);
 
       if (Array.isArray(idsToRequire)) {
-        idsToRequire.forEach(require);
+        idsToRequire.forEach(quietRequire);
       }
 
       // After requiring any/all dependencies of this module, iterate over
