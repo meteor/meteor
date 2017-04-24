@@ -6,3 +6,4 @@ LivedataTest.SUPPORTED_DDP_VERSIONS = DDPCommon.SUPPORTED_DDP_VERSIONS;
 // it to get the current user. Meteor.setTimeout and friends clear
 // it. We can probably find a better way to factor this.
 DDP._CurrentInvocation = new Meteor.EnvironmentVariable;
+DDP._CurrentPublicationInvocation = new Meteor.EnvironmentVariable;

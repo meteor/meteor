@@ -1041,12 +1041,16 @@ _.extend(Subscription.prototype, {
 
     var self = this;
     try {
-      var res = maybeAuditArgumentChecks(
-        self._handler, self, EJSON.clone(self._params),
-        // It's OK that this would look weird for universal subscriptions,
-        // because they have no arguments so there can never be an
-        // audit-argument-checks failure.
-        "publisher '" + self._name + "'");
+      var res = DDP._CurrentPublicationInvocation.withValue(
+        self,
+        () => maybeAuditArgumentChecks(
+          self._handler, self, EJSON.clone(self._params),
+          // It's OK that this would look weird for universal subscriptions,
+          // because they have no arguments so there can never be an
+          // audit-argument-checks failure.
+          "publisher '" + self._name + "'"
+        )
+      );
     } catch (e) {
       self.error(e);
       return;
