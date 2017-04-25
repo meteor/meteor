@@ -16,6 +16,16 @@
   to press "Enter" in the inspector console.
   [Issue #8469](https://github.com/meteor/meteor/issues/8469)
 
+* The `email` package has had its `mailcomposer` npm package swapped with
+  a Node 4 fork of `nodemailer` due to its ability to support connection pooling
+  in a similar fashion as the original `mailcomposer`.
+  [Issue #8591](https://github.com/meteor/meteor/issues/8591)
+  [PR #8605](https://github.com/meteor/meteor/pull/8605)
+
+* A new `Tracker.inFlush()` has been added to provide a global Tracker
+  "flushing" state.
+  [PR #8565](https://github.com/meteor/meteor/pull/8565).
+
 * The `meteor-babel` npm package has been upgraded to version 0.20.1, and
   the `reify` npm package has been upgraded to version 0.7.4, fixing
   [issue #8595](https://github.com/meteor/meteor/issues/8595).
