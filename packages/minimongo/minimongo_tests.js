@@ -2624,6 +2624,8 @@ Tinytest.add("minimongo - modify", function (test) {
   upsert({a: 12}, {$setOnInsert: {_id: 'test'}}, {_id: 'test', a: 12});
   upsert({"a.b": 10}, {$setOnInsert: {a: {b: 10, c: 12}}}, {a: {b: 10, c: 12}});
   upsert({"a.b": 10}, {$setOnInsert: {c: 12}}, {a: {b: 10}, c: 12});
+  upsert({"_id": 'test'}, {$setOnInsert: {c: 12}}, {_id: 'test', c: 12});
+  upsert('test', {$setOnInsert: {c: 12}}, {_id: 'test', c: 12});
   upsertException({a: 0}, {$setOnInsert: {$a: 12}});
   upsertException({a: 0}, {$setOnInsert: {'\0a': 12}});
   upsert({a: 0}, {$setOnInsert: {b: {a:1}}}, {a:0, b:{a:1}});
