@@ -106,7 +106,7 @@ _.extend(AppProcess.prototype, {
 
     eachline(self.proc.stderr, 'utf8', async function (line) {
       if (self.debugPort &&
-          line.indexOf("debugger listening on port ") >= 0) {
+          line.indexOf("Debugger listening on") >= 0) {
         Console.enableProgressDisplay(false);
         return;
       }
