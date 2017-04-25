@@ -11,7 +11,7 @@ var packageJson = {
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
-    npm: "4.4.4",
+    npm: "4.5.0",
     "node-gyp": "3.6.0",
     "node-pre-gyp": "0.6.34",
     "meteor-babel": "0.20.1",
@@ -33,8 +33,8 @@ var packageJson = {
     tar: "2.2.1",
     kexec: "2.0.2",
     "source-map": "0.5.3",
-    "node-inspector": "0.12.8",
-    "v8-profiler": "5.6.5",
+    "node-inspector": "1.1.1",
+    "v8-profiler": "5.7.0",
     chalk: "0.5.1",
     sqlite3: "3.1.3",
     netroute: "1.0.2",
