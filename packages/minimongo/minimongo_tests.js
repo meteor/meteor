@@ -2396,7 +2396,7 @@ Tinytest.add("minimongo - modify", function (test) {
   exception({}, {$set: {_id: 4}});
   exception({_id: 4}, {$set: {_id: 4}});  // even not-changing _id is bad
   //restricted field names
-  exception({a:{}}, {$set:{a:{$a:1}}}); 
+  exception({a:{}}, {$set:{a:{$a:1}}});
   exception({ a: {} }, { $set: { a: { c:
               [{ b: { $a: 1 } }] } } });
   exception({a:{}}, {$set:{a:{'\0a':1}}});
@@ -2527,21 +2527,21 @@ Tinytest.add("minimongo - modify", function (test) {
   modify({}, {$addToSet: {a: {$each: [1]}}}, {a: [1]});
   modify({a: []}, {$addToSet: {'a.1': 99}}, {a: [null, [99]]});
   modify({a: {}}, {$addToSet: {'a.x': 99}}, {a: {x: [99]}});
-  
+
   // invalid field names
   exception({}, {$addToSet: {a: {$b:1}}});
   exception({}, {$addToSet: {a: {"a.b":1}}});
   exception({}, {$addToSet: {a: {"a.":1}}});
   exception({}, {$addToSet: {a: {'\u0000a':1}}});
-  exception({a: [1, 2]}, {$addToSet: {a:{$each: [3, 1, {$a:1}]}}}); 
-  exception({a: [1, 2]}, {$addToSet: {a:{$each: [3, 1, {'\0a':1}]}}}); 
-  exception({a: [1, 2]}, {$addToSet: {a:{$each: [3, 1, [{$a:1}]]}}}); 
-  exception({a: [1, 2]}, {$addToSet: {a:{$each: [3, 1, [{b:{c:[{a:1},{"d.s":2}]}}]]}}}); 
+  exception({a: [1, 2]}, {$addToSet: {a:{$each: [3, 1, {$a:1}]}}});
+  exception({a: [1, 2]}, {$addToSet: {a:{$each: [3, 1, {'\0a':1}]}}});
+  exception({a: [1, 2]}, {$addToSet: {a:{$each: [3, 1, [{$a:1}]]}}});
+  exception({a: [1, 2]}, {$addToSet: {a:{$each: [3, 1, [{b:{c:[{a:1},{"d.s":2}]}}]]}}});
   exception({a: [1, 2]}, {$addToSet: {a:{b: [3, 1, [{b:{c:[{a:1},{"d.s":2}]}}]]}}});
   //$each is first element and thus an operator
   modify({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, 4], b: 12}}},{a: [ 1, 2, 3, 4 ]});
   // this should fail because $each is now a field name (not first in object) and thus invalid field name with $
-  exception({a: [1, 2]}, {$addToSet: {a: {b: 12, $each: [3, 1, 4]}}}); 
+  exception({a: [1, 2]}, {$addToSet: {a: {b: 12, $each: [3, 1, 4]}}});
 
   // $pop
   modify({}, {$pop: {a: 1}}, {}); // tested
@@ -2622,6 +2622,8 @@ Tinytest.add("minimongo - modify", function (test) {
   modify({a: 0}, {$setOnInsert: {a: 12}}, {a: 0});
   upsert({a: 12}, {$setOnInsert: {b: 12}}, {a: 12, b: 12});
   upsert({a: 12}, {$setOnInsert: {_id: 'test'}}, {_id: 'test', a: 12});
+  upsert({"a.b": 10}, {$setOnInsert: {a: {b: 10, c: 12}}}, {a: {b: 10, c: 12}});
+  upsert({"a.b": 10}, {$setOnInsert: {c: 12}}, {a: {b: 10}, c: 12});
   upsertException({a: 0}, {$setOnInsert: {$a: 12}});
   upsertException({a: 0}, {$setOnInsert: {'\0a': 12}});
   upsert({a: 0}, {$setOnInsert: {b: {a:1}}}, {a:0, b:{a:1}});

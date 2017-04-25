@@ -782,7 +782,9 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   // generate an id for it.
   var insertedId;
   if (updateCount === 0 && options.upsert) {
-    var newDoc = LocalCollection._removeDollarOperators(selector);
+    var newDoc = {};
+    var selectorMod = {$set: LocalCollection._removeDollarOperators(selector)};
+    LocalCollection._modify(newDoc, selectorMod, {isInsert: true});
     LocalCollection._modify(newDoc, mod, {isInsert: true});
     if (! newDoc._id && options.insertedId)
       newDoc._id = options.insertedId;
