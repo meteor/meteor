@@ -31,8 +31,10 @@ Mp.dynamicImport = function (id) {
 // Returns a Promise that resolves to an Error object if importing the
 // given id failed, and null otherwise.
 Mp.prefetch = function (id) {
+  var module = this;
+
   // Require the parent module from the complete meta graph.
-  var meta = requireMeta(this.id);
+  var meta = requireMeta(module.id);
   var versions = Object.create(null);
   var dynamicVersions = require("./dynamic-versions.js");
 
@@ -53,9 +55,12 @@ Mp.prefetch = function (id) {
 
   var error = meta.errors && meta.errors[id];
   if (error) {
-    // If there was an error resolving the top-level id, let that error be
-    // the final result of the module.prefetch(id) promise.
-    return Promise.resolve(error);
+    // If module.prefetch(id) fails, the failure will probably be reported
+    // as an uncaught promise rejection, unless the calling code
+    // deliberately handles the rejection. This seems appropriate because
+    // failed prefetches should not be fatal to the application, yet they
+    // should be noticeable, so that they can be cleaned up at some point.
+    return Promise.reject(error);
   }
 
   return cache.checkMany(versions).then(function (sources) {
@@ -76,6 +81,12 @@ Mp.prefetch = function (id) {
     }
 
     return missingTree && fetchMissing(missingTree);
+
+  }).then(function () {
+    // If everything was successful, the final result of the
+    // module.prefetch(id) promise will be the fully-resolved absolute
+    // form of the given identifier.
+    return module.resolve(id);
   });
 };
 

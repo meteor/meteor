@@ -153,13 +153,20 @@ describe("dynamic import(...)", function () {
     import { shared } from "./imports/prefetch-child";
     assert.deepEqual(shared, {});
 
-    const error = await module.prefetch("./imports/nonexistent.js");
-    assert.ok(error instanceof Error);
-    assert.ok(error.message.startsWith("Cannot find module"));
+    const rejection = module.prefetch("./imports/nonexistent.js");
+    let threw = false;
+    try {
+      await rejection;
+    } catch (e) {
+      assert.ok(e instanceof Error);
+      assert.ok(e.message.startsWith("Cannot find module"));
+      threw = true;
+    }
+    assert.strictEqual(threw, true);
 
     assert.strictEqual(
       await module.prefetch("./tests"),
-      null // Indicates no error.
+      "/tests.js"
     );
 
     return module.prefetch("./imports/prefetch").then(() => {
