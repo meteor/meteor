@@ -4,6 +4,13 @@
   the `reify` npm package has been upgraded to version 0.7.4, fixing
   [issue #8595](https://github.com/meteor/meteor/issues/8595).
 
+* Node has been upgraded to version 4.8.2.
+
+* The `npm` npm package has been upgraded to version 4.5.0.
+  Note that when using npm `scripts` there has been a change regarding
+  what happens when `SIGINT` (Ctrl-C) is received.  Read more
+  [here](https://github.com/npm/npm/releases/tag/v4.5.0).
+
 ## v1.4.4.1, 2017-04-07
 
 * A change in Meteor 1.4.4 to remove "garbage" directories asynchronously
