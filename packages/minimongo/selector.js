@@ -1296,3 +1296,14 @@ LocalCollection._removeDollarOperators = function (selector) {
       selectorDoc[k] = selector[k];
   return selectorDoc;
 };
+
+// Oddball function used by upsert.
+LocalCollection._removeNestedProperties = function (selector) {
+  const selectorDoc = {};
+  for (let k in selector) {
+     if (!k.includes('.')) {
+        selectorDoc[k] = selector[k];
+     }
+  }
+  return selectorDoc;
+};
