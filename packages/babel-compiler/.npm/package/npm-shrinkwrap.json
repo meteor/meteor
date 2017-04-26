@@ -270,9 +270,9 @@
       "from": "babel-plugin-transform-es2015-modules-commonjs@>=6.22.0 <7.0.0"
     },
     "babel-plugin-transform-es2015-modules-reify": {
-      "version": "0.7.0",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-modules-reify/-/babel-plugin-transform-es2015-modules-reify-0.7.0.tgz",
-      "from": "babel-plugin-transform-es2015-modules-reify@>=0.7.0 <0.8.0"
+      "version": "0.8.0",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-modules-reify/-/babel-plugin-transform-es2015-modules-reify-0.8.0.tgz",
+      "from": "babel-plugin-transform-es2015-modules-reify@>=0.8.0 <0.9.0"
     },
     "babel-plugin-transform-es2015-object-super": {
       "version": "6.24.1",
@@ -465,8 +465,8 @@
       "from": "babel-types@>=6.22.0 <7.0.0"
     },
     "babylon": {
-      "version": "6.16.1",
-      "resolved": "https://registry.npmjs.org/babylon/-/babylon-6.16.1.tgz",
+      "version": "6.17.0",
+      "resolved": "https://registry.npmjs.org/babylon/-/babylon-6.17.0.tgz",
       "from": "babylon@>=6.15.0 <7.0.0"
     },
     "balanced-match": {
@@ -500,8 +500,8 @@
       "from": "core-js@>=2.4.0 <3.0.0"
     },
     "debug": {
-      "version": "2.6.3",
-      "resolved": "https://registry.npmjs.org/debug/-/debug-2.6.3.tgz",
+      "version": "2.6.4",
+      "resolved": "https://registry.npmjs.org/debug/-/debug-2.6.4.tgz",
       "from": "debug@>=2.1.1 <3.0.0"
     },
     "detect-indent": {
@@ -580,9 +580,9 @@
       "from": "loose-envify@>=1.0.0 <2.0.0"
     },
     "meteor-babel": {
-      "version": "0.20.1",
-      "resolved": "https://registry.npmjs.org/meteor-babel/-/meteor-babel-0.20.1.tgz",
-      "from": "meteor-babel@0.20.1"
+      "version": "0.20.2",
+      "resolved": "https://registry.npmjs.org/meteor-babel/-/meteor-babel-0.20.2.tgz",
+      "from": "meteor-babel@0.20.2"
     },
     "meteor-babel-helpers": {
       "version": "0.0.3",
@@ -599,15 +599,25 @@
       "resolved": "https://registry.npmjs.org/minimist/-/minimist-0.0.8.tgz",
       "from": "minimist@0.0.8"
     },
+    "minipass": {
+      "version": "1.1.9",
+      "resolved": "https://registry.npmjs.org/minipass/-/minipass-1.1.9.tgz",
+      "from": "minipass@>=1.1.6 <2.0.0"
+    },
+    "minizlib": {
+      "version": "1.0.2",
+      "resolved": "https://registry.npmjs.org/minizlib/-/minizlib-1.0.2.tgz",
+      "from": "minizlib@>=1.0.2 <2.0.0"
+    },
     "mkdirp": {
       "version": "0.5.1",
       "resolved": "https://registry.npmjs.org/mkdirp/-/mkdirp-0.5.1.tgz",
       "from": "mkdirp@>=0.5.1 <0.6.0"
     },
     "ms": {
-      "version": "0.7.2",
-      "resolved": "https://registry.npmjs.org/ms/-/ms-0.7.2.tgz",
-      "from": "ms@0.7.2"
+      "version": "0.7.3",
+      "resolved": "https://registry.npmjs.org/ms/-/ms-0.7.3.tgz",
+      "from": "ms@0.7.3"
     },
     "number-is-nan": {
       "version": "1.0.1",
@@ -640,8 +650,8 @@
       "from": "regenerate@>=1.2.1 <2.0.0"
     },
     "regenerator-runtime": {
-      "version": "0.10.3",
-      "resolved": "https://registry.npmjs.org/regenerator-runtime/-/regenerator-runtime-0.10.3.tgz",
+      "version": "0.10.4",
+      "resolved": "https://registry.npmjs.org/regenerator-runtime/-/regenerator-runtime-0.10.4.tgz",
       "from": "regenerator-runtime@>=0.10.0 <0.11.0"
     },
     "regenerator-transform": {
@@ -672,9 +682,9 @@
       }
     },
     "reify": {
-      "version": "0.7.4",
-      "resolved": "https://registry.npmjs.org/reify/-/reify-0.7.4.tgz",
-      "from": "reify@>=0.7.2 <0.8.0"
+      "version": "0.8.2",
+      "resolved": "https://registry.npmjs.org/reify/-/reify-0.8.2.tgz",
+      "from": "reify@>=0.8.0 <0.9.0"
     },
     "repeating": {
       "version": "2.0.1",
@@ -715,6 +725,11 @@
       "version": "1.0.1",
       "resolved": "https://registry.npmjs.org/trim-right/-/trim-right-1.0.1.tgz",
       "from": "trim-right@>=1.0.1 <2.0.0"
+    },
+    "yallist": {
+      "version": "3.0.2",
+      "resolved": "https://registry.npmjs.org/yallist/-/yallist-3.0.2.tgz",
+      "from": "yallist@>=3.0.0 <4.0.0"
     }
   }
 }

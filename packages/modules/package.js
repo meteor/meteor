@@ -6,7 +6,7 @@ Package.describe({
 });
 
 Npm.depends({
-  reify: "0.7.4"
+  reify: "0.8.2"
 });
 
 Package.onUse(function(api) {

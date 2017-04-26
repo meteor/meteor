@@ -9,9 +9,10 @@
   information about how dynamic `import(...)` works in Meteor, and how to
   use it in your applications.
 
-* The `meteor-babel` npm package has been upgraded to version 0.20.1, and
-  the `reify` npm package has been upgraded to version 0.7.4, fixing
-  [issue #8595](https://github.com/meteor/meteor/issues/8595).
+* The `meteor-babel` npm package has been upgraded to version 0.20.2, and
+  the `reify` npm package has been upgraded to version 0.8.2, fixing
+  [issue #8595](https://github.com/meteor/meteor/issues/8595) and
+  improving compilation performance.
 
 ## v1.4.4.1, 2017-04-07
 
