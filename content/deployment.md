@@ -60,7 +60,7 @@ What URL will users use to access your site? You'll probably need to register a 
 
 <h3 id="ssl">SSL Certificate</h3>
 
-It's always a good idea to use SSL for Meteor applications (see the [Security Article](security.html#ssl) to find out why). Once you have a registered domain name, you'll need to generate an SSL certificate with a certificate authority for your domain. If you deploy to Galaxy, you can [generate a free SSL certificate with a single click](http://galaxy-guide.meteor.com/encryption.html#lets-encrypt)(courtesy of Let's Encrypt!).
+It's always a good idea to use SSL for Meteor applications (see the [Security Article](security.html#ssl) to find out why). Once you have a registered domain name, you'll need to generate an SSL certificate with a certificate authority for your domain. If you deploy to Galaxy, you can [generate a free SSL certificate with a single click](http://galaxy-guide.meteor.com/encryption.html#lets-encrypt) (courtesy of Let's Encrypt!).
 
 <h3 id="cdn">CDN</h3>
 
@@ -149,30 +149,6 @@ Once you are setup with Galaxy, deployment is simple (just re-run the `meteor de
 
 <img src="images/galaxy-scaling.png">
 
-<h4 id="galaxy-mongo">MongoDB hosting services to use with Galaxy</h4>
-
-If you are using Galaxy (or need a production quality, managed MongoDB for one of the other options listed here), it's usually a good idea to use a [hosted MongoDB service](http://galaxy-guide.meteor.com/mongodb.html). There are a variety of services out there, we recommend that you select one of the below services depending on your requirements:
-
-* [mLab](https://www.mlab.com)
-* [compose](https://www.compose.io)
-* [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
-
-When selecting a hosted MongoDB service for production it is important to assess the features that the service provides. Below is a nonexhaustive list of features to consider when selecting a service:
-
-* Supports the MongoDB version you wish to run
-* Storage Engine Support (MMAPv1 or WiredTiger) - Since Meteor 1.4 WiredTiger is the default storage engine
-* Support for Replica Sets & Oplog tailing
-* AWS Region - For performance your app and database should be in the same AWS region (For Galaxy this is us-east-1 or eu-west-1)
-* Monitoring & Automated alerting
-* Continuous backups & Automated snapshots
-* Access Control, IP whitelisting, and AWS VPC Peering
-* Encryption of data in-flight and at-rest
-* Cost and pricing granularity
-* Instance size & options
-* Instance configurability - Independently configure your CPU, memory, storage and disk I/O speed.
-
-You can read this [detailed guide](https://www.okgrow.com/posts/mongodb-atlas-setup) by OK GROW! for step-by-step instructions to deploying a production ready MongoDB database on MongoDB Atlas.
-
 <h3 id="mup">Meteor Up</h3>
 
 Meteor Up, often referred to as "mupx" or "mup", is a third-party open-source tool that can be used to deploy Meteor application to any online server over SSH. It handles some of the essential deployment requirements, but you will still need to do a lot of work to get your load balancing and version updates working smoothly.  It's essentially a way to automate the manual steps of using `meteor build` and putting that bundle on your server.
@@ -232,6 +208,37 @@ MONGO_URL=mongodb://localhost:27017/myapp ROOT_URL=http://my-app.com node main.j
 
 
 Unless you have a specific need to roll your own hosting environment, the other options here are definitely easier, and probably make for a better setup than doing everything from scratch. Operating a Meteor app in a way that it works correctly for everyone can be complex, and [Galaxy](#galaxy) handles a lot of the specifics like routing clients to the right containers and handling coordinated version updates for you.
+
+<h2 id="galaxy-mongo">MongoDB options</h2>
+
+When you deploy your Meteor server, you need a `MONGO_URL` that points to your MongoDB database. You can either use a hosted MongoDB service or set up and run your own MongoDB server. We recommend using a hosted service, as the time saved and peace of mind are usually worth the higher monthly cost. In either case, the database should be hosted in the same region as the Meteor server (for lower latency). For example if your app is hosted on Galaxy in `us-east-1` (on AWS), then you could create a database on [Compose](https://www.compose.io) in `AWS us-east-1` or on [Amazon Lightsail](https://amazonlightsail.com/) in `us-east-1`.
+
+<h3 id="hosted-service">Hosted service (recommended)</h3>
+
+There are a variety of services out there, and we recommend that you select one of the below services depending on your requirements:
+
+* [mLab](https://www.mlab.com)
+* [Compose](https://www.compose.io)
+* [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
+
+When selecting a hosted MongoDB service for production it is important to assess the features that the service provides. Below is a nonexhaustive list of features to consider when selecting a service:
+
+* Supports the MongoDB version you wish to run
+* Storage Engine Support (MMAPv1 or WiredTiger) – Since Meteor 1.4 WiredTiger is the default storage engine
+* Support for Replica Sets & Oplog tailing
+* Monitoring & Automated alerting
+* Continuous backups & Automated snapshots
+* Access Control, IP whitelisting, and AWS VPC Peering
+* Encryption of data in-flight and at-rest
+* Cost and pricing granularity
+* Instance size & options
+* Instance configurability – Independently configure your CPU, memory, storage and disk I/O speed.
+
+You can read this [detailed guide](https://www.okgrow.com/posts/mongodb-atlas-setup) by OK GROW! for step-by-step instructions to deploying a production ready MongoDB database on MongoDB Atlas.
+
+<h3 id="own-server">Own server</h3>
+
+You can install MongoDB on your own server—one you own, rent, or a VPS (recommended) like [DigitalOcean](https://www.digitalocean.com/) or [Lightsail](https://amazonlightsail.com/). As you can see from the above section, there are many aspects of database setup and maintenance that you have to take care of. For example, to get the best performance, you should choose a server with an [SSD](https://docs.mongodb.com/manual/administration/production-notes/#use-solid-state-disks-ssds) large enough to fit your data and with enough RAM to fit the working set (indexes + active documents) in memory.
 
 <h2 id="process">Deployment process</h2>
 
