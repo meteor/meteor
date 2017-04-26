@@ -3232,6 +3232,35 @@ Tinytest.add("minimongo - $near operator tests", function (test) {
   handle.stop();
 });
 
+// issue #2077
+Tinytest.add("minimongo - $near and $geometry for legacy coordinates", function(test){
+  var coll = new LocalCollection();
+
+  coll.insert({
+    loc: {
+      x: 1,
+      y: 1
+    }
+  });
+  coll.insert({
+    loc: [-1,-1]
+  });
+  coll.insert({
+    loc: [40,-10]
+  });
+  coll.insert({
+    loc: {
+      x: -10,
+      y: 40
+    }
+  });
+
+  test.equal(coll.find({ 'loc': { $near: [0, 0], $maxDistance: 4 } }).count(), 2);
+  test.equal(coll.find({ 'loc': { $near: {$geometry: {type: "Point", coordinates: [0, 0]}}} }).count(), 4);
+  test.equal(coll.find({ 'loc': { $near: {$geometry: {type: "Point", coordinates: [0, 0]}, $maxDistance:200000}}}).count(), 2);
+
+});
+
 // Regression test for #4377. Previously, "replace" updates didn't clone the
 // argument.
 Tinytest.add("minimongo - update should clone", function (test) {
