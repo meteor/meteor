@@ -18,7 +18,7 @@
 // Main entry point.
 //   var matcher = new Minimongo.Matcher({a: {$gt: 5}});
 //   if (matcher.documentMatches({a: 7})) ...
-Minimongo.Matcher = function (selector) {
+Minimongo.Matcher = function (selector, isUpdate = false) {
   var self = this;
   // A set (object mapping string -> *) of all of the document paths looked
   // at by the selector. Also includes the empty string if it may look at any
@@ -41,6 +41,10 @@ Minimongo.Matcher = function (selector) {
   // Sorter._useWithMatcher.
   self._selector = null;
   self._docMatcher = self._compileSelector(selector);
+  // Set to true if selection is done for an update operation
+  // Default is false
+  // Used for $near array update (issue #3599)
+  self._isUpdate = isUpdate;
 };
 
 _.extend(Minimongo.Matcher.prototype, {
@@ -497,7 +501,9 @@ var VALUE_OPERATORS = {
           return;
         result.result = true;
         result.distance = curDistance;
-        if (!branch.arrayIndices)
+        if (matcher._isUpdate)
+          result.arrayIndices = [0,0];
+        else if (!branch.arrayIndices)
           delete result.arrayIndices;
         else
           result.arrayIndices = branch.arrayIndices;
