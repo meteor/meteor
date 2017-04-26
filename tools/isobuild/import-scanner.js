@@ -6,7 +6,10 @@ import {
 } from "underscore";
 import {sha1} from "../fs/watch.js";
 import {matches as archMatches} from "../utils/archinfo.js";
-import {findImportedModuleIdentifiers} from "./js-analyze.js";
+import {
+  findImportedModuleIdentifiers,
+  reifyCompileWithCache,
+} from "./js-analyze.js";
 import {cssToCommonJS} from "./css-modules.js";
 import buildmessage from "../utils/buildmessage.js";
 import LRU from "lru-cache";
@@ -740,6 +743,12 @@ export default class ImportScanner {
       info.hash,
     );
 
+    if (this.isWeb()) {
+      const result = reifyCompileWithCache(info.dataString, info.hash);
+      info.dataString = result.code;
+      info.deps = result.deps;
+    }
+
     if (info.dataString !== dataString) {
       info.data = new Buffer(info.dataString, "utf8");
     }
@@ -932,7 +941,11 @@ export default class ImportScanner {
     }
 
     const data = new Buffer(map(pkg, (value, key) => {
-      return `exports.${key} = ${JSON.stringify(value)};\n`;
+      const isIdentifier = /^[_$a-zA-Z]\w*$/.test(key);
+      const prop = isIdentifier
+        ? "." + key
+        : "[" + JSON.stringify(key) + "]";
+      return `exports${prop} = ${JSON.stringify(value)};\n`;
     }).join(""));
 
     const relPkgJsonPath = pathRelative(this.sourceRoot, pkgJsonPath);

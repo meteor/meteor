@@ -270,15 +270,17 @@ _.extend(Module.prototype, {
 
         if (file.installPath.endsWith("/package.json") &&
             file.jsonData) {
-          const main = file.jsonData.main;
-          if (_.isString(main)) {
-            entry.main = main;
+          function tryMain(name) {
+            const value = file.jsonData[name];
+            if (_.isString(value)) {
+              entry[name] = value;
+            }
           }
 
-          const browser = file.jsonData.browser;
-          if (_.isString(browser)) {
-            entry.browser = browser;
-          }
+          tryMain("browser");
+          tryMain("module");
+          tryMain("jsnext:main");
+          tryMain("main");
         }
 
         addToTree([entry], file.installPath, tree);

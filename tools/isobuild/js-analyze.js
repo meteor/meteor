@@ -1,5 +1,7 @@
-import { parse } from 'meteor-babel';
+import { parse as meteorBabelParse } from 'meteor-babel';
 import { analyze as analyzeScope } from 'escope';
+import { Profile } from "../tool-env/profile.js";
+import { compile as reifyCompile } from "reify/lib/compiler.js";
 import LRU from "lru-cache";
 
 const hasOwn = Object.prototype.hasOwnProperty;
@@ -20,7 +22,7 @@ function tryToParse(source, hash) {
   let ast;
 
   try {
-    ast = parse(source);
+    ast = meteorBabelParse(source);
   } catch (e) {
     if (typeof e.loc === 'object') {
       e.$ParseError = true;
@@ -34,6 +36,54 @@ function tryToParse(source, hash) {
 
   return ast;
 }
+
+// Map from file hash to Reify-compiled output.
+const REIFY_COMPILE_CACHE = new LRU({
+  max: Math.pow(2, 20),
+  length(result) {
+    return result.code.length;
+  }
+});
+
+export const reifyCompileWithCache = Profile(
+  "reifyCompileWithCache (js-analyze.js)",
+  function (source, hash) {
+    if (hash && REIFY_COMPILE_CACHE.has(hash)) {
+      return REIFY_COMPILE_CACHE.get(hash);
+    }
+
+    const result = reifyCompile(source, {
+      // Do not modify the AST, nor bother returning result.ast.
+      ast: false,
+      // It's not our job to enforce strict mode here.
+      enforceStrictMode: false,
+      // We may be generating code for JavaScript environments that don't
+      // support const and let declarations (e.g. older browsers), so it
+      // would be dangerous at this stage to introduce such declarations.
+      // Fortunately, reifyCompileWithCache is only called for modules in
+      // node_modules, which should only be using top-level import and
+      // export declarations, so there should not be any difference.
+      generateLetDeclarations: false,
+      // Same concern for arrow functions as for const/let declarations.
+      avoidArrowFunctions: true,
+      parse(code) {
+        // Avoid double-parsing the input source, but allow Reify to parse
+        // other strings using the meteor-babel parser.
+        return code === source
+          ? tryToParse(code, hash)
+          : meteorBabelParse(code);
+      }
+    });
+
+    result.deps = findImportedModuleIdentifiers(source, hash);
+
+    if (hash) {
+      REIFY_COMPILE_CACHE.set(hash, result);
+    }
+
+    return result;
+  }
+);
 
 var dependencyKeywordPattern =
   /\b(?:require|import|importSync|dynamicImport|export)\b/g;

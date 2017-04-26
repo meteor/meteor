@@ -3,7 +3,8 @@
 // metadata about all available modules, not only those already installed
 // but also modules that can be fetched dynamically.
 var metaInstall = makeInstaller({
-  browser: makeInstallerOptions.browser
+  browser: makeInstallerOptions.browser,
+  mainFields: makeInstallerOptions.mainFields
 });
 
 meteorInstall = function (tree, options) {
@@ -111,16 +112,24 @@ function makeMetaFunc(value, dynamic, options) {
       // graph to read its "main" and "browser" properties.
       var pkg = requireReal(module.id);
 
-      if (typeof pkg.main === "string") {
-        exports.main = pkg.main;
+      function copy(name) {
+        if (typeof pkg[name] === "string") {
+          exports[name] = pkg[name];
+        }
       }
 
-      if (typeof pkg.browser === "string") {
-        exports.browser = pkg.browser;
+      if (Meteor.isClient) {
+        copy("browser");
+        copy("module");
+        copy("jsnext:main");
       }
+
+      copy("main");
     }
 
-    exports.module = module;
+    // This needs to have a different name from the "module" property that
+    // may have been added above.
+    exports.mod = module;
     exports.dynamic = !! dynamic;
     exports.options = options;
 

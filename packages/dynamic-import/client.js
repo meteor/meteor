@@ -41,7 +41,7 @@ Mp.prefetch = function (id) {
   function walk(meta) {
     if (meta.dynamic && ! meta.pending) {
       meta.pending = true;
-      var id = meta.module.id;
+      var id = meta.mod.id;
       versions[id] = getFromTree(dynamicVersions, id);
       meta.eachChild(walkChild);
     }
@@ -132,7 +132,7 @@ function installResults(resultsTree, doNotCache) {
   function walk(tree) {
     if (typeof tree === "string") {
       var meta = requireMeta(parts.join("/"));
-      var id = meta.module.id;
+      var id = meta.mod.id;
       var optionsIndex = options.indexOf(meta.options);
       if (optionsIndex < 0) {
         options[optionsIndex = options.length] = meta.options;
