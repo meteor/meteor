@@ -14,6 +14,37 @@
   [issue #8595](https://github.com/meteor/meteor/issues/8595) and
   improving compilation performance.
 
+## v1.4.4.2, TBD
+
+* Node has been upgraded to version 4.8.2.
+
+* The `npm` npm package has been upgraded to version 4.5.0.
+  Note that when using npm `scripts` there has been a change regarding
+  what happens when `SIGINT` (Ctrl-C) is received.  Read more
+  [here](https://github.com/npm/npm/releases/tag/v4.5.0).
+
+* Fix a regression which prevented us from displaying a helpful banner when
+  running `meteor debug` because of a change in Node.js.
+
+* Update `node-inspector` npm to 1.1.1, fixing a problem encountered when trying
+  to press "Enter" in the inspector console.
+  [Issue #8469](https://github.com/meteor/meteor/issues/8469)
+
+* The `email` package has had its `mailcomposer` npm package swapped with
+  a Node 4 fork of `nodemailer` due to its ability to support connection pooling
+  in a similar fashion as the original `mailcomposer`.
+  [Issue #8591](https://github.com/meteor/meteor/issues/8591)
+  [PR #8605](https://github.com/meteor/meteor/pull/8605)
+
+* A new `Tracker.inFlush()` has been added to provide a global Tracker
+  "flushing" state.
+  [PR #8565](https://github.com/meteor/meteor/pull/8565).
+
+* The `meteor-babel` npm package has been upgraded to version 0.20.1, and
+  the `reify` npm package has been upgraded to version 0.7.4, fixing
+  [issue #8595](https://github.com/meteor/meteor/issues/8595).
+  (This was fixed between full Meteor releases, but is being mentioned here.)
+
 ## v1.4.4.1, 2017-04-07
 
 * A change in Meteor 1.4.4 to remove "garbage" directories asynchronously

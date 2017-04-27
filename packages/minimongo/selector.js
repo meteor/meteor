@@ -435,9 +435,10 @@ var VALUE_OPERATORS = {
       throw Error("$near can't be inside another $ operator");
     matcher._hasGeoQuery = true;
 
-    // There are two kinds of geodata in MongoDB: coordinate pairs and
+    // There are two kinds of geodata in MongoDB: legacy coordinate pairs and
     // GeoJSON. They use different distance metrics, too. GeoJSON queries are
-    // marked with a $geometry property.
+    // marked with a $geometry property, though legacy coordinates can be 
+    // matched using $geometry.
 
     var maxDistance, point, distance;
     if (isPlainObject(operand) && _.has(operand, '$geometry')) {
@@ -448,8 +449,11 @@ var VALUE_OPERATORS = {
         // XXX: for now, we don't calculate the actual distance between, say,
         // polygon and circle. If people care about this use-case it will get
         // a priority.
-        if (!value || !value.type)
+        if (!value)
           return null;
+        if(!value.type)
+          return GeoJSON.pointDistance(point,
+            { type: "Point", coordinates: pointToArray(value) });
         if (value.type === "Point") {
           return GeoJSON.pointDistance(point, value);
         } else {
@@ -481,6 +485,9 @@ var VALUE_OPERATORS = {
       branchedValues = expandArraysInBranches(branchedValues);
       var result = {result: false};
       _.each(branchedValues, function (branch) {
+        if (!(typeof branch.value === "object")){
+          return;
+        }
         var curDistance = distance(branch.value);
         // Skip branches that aren't real points or are too far away.
         if (curDistance === null || curDistance > maxDistance)

@@ -1,3 +1,5 @@
+import { assertHasValidFieldNames } from './validation.js';
+
 // XXX type checking on selectors (graceful error if malformed)
 
 // LocalCollection: a set of documents that supports queries and modifiers.
@@ -540,31 +542,13 @@ LocalCollection.Cursor.prototype._depend = function (changers, _allow_unordered)
   }
 };
 
-// XXX enforce rule that field names can't start with '$' or contain '.'
-// (real mongodb does in fact enforce this)
 // XXX possibly enforce that 'undefined' does not appear (we assume
 // this in our handling of null and $exists)
 LocalCollection.prototype.insert = function (doc, callback) {
   var self = this;
   doc = EJSON.clone(doc);
 
-  // Make sure field names do not contain Mongo restricted
-  // characters ('.', '$', '\0').
-  // https://docs.mongodb.com/manual/reference/limits/#Restrictions-on-Field-Names
-  if (doc) {
-    const invalidCharMsg = {
-      '.': "contain '.'",
-      '$': "start with '$'",
-      '\0': "contain null bytes",
-    };
-    JSON.stringify(doc, (key, value) => {
-      let match;
-      if (_.isString(key) && (match = key.match(/^\$|\.|\0/))) {
-        throw MinimongoError(`Key ${key} must not ${invalidCharMsg[match[0]]}`);
-      }
-      return value;
-    });
-  }
+  assertHasValidFieldNames(doc);
 
   if (!_.has(doc, '_id')) {
     // if you really want to use ObjectIDs, set this global.
