@@ -15,7 +15,7 @@ var packageJson = {
     "node-gyp": "3.6.0",
     "node-pre-gyp": "0.6.34",
     "meteor-babel": "0.20.2",
-    reify: "0.8.2",
+    reify: "0.8.3",
     "meteor-promise": "0.8.0",
     fibers: "1.0.15",
     promise: "7.1.1",

@@ -16,9 +16,9 @@
       "from": "minizlib@>=1.0.2 <2.0.0"
     },
     "reify": {
-      "version": "0.8.2",
-      "resolved": "https://registry.npmjs.org/reify/-/reify-0.8.2.tgz",
-      "from": "reify@0.8.2"
+      "version": "0.8.3",
+      "resolved": "https://registry.npmjs.org/reify/-/reify-0.8.3.tgz",
+      "from": "reify@0.8.3"
     },
     "yallist": {
       "version": "3.0.2",

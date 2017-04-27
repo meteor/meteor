@@ -10,7 +10,7 @@
   use it in your applications.
 
 * The `meteor-babel` npm package has been upgraded to version 0.20.2, and
-  the `reify` npm package has been upgraded to version 0.8.2, fixing
+  the `reify` npm package has been upgraded to version 0.8.3, fixing
   [issue #8595](https://github.com/meteor/meteor/issues/8595) and
   improving compilation performance.
 
