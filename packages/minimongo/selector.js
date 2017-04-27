@@ -488,25 +488,29 @@ var VALUE_OPERATORS = {
       // each within-$maxDistance branching point.
       branchedValues = expandArraysInBranches(branchedValues);
       var result = {result: false};
-      _.each(branchedValues, function (branch) {
-        if (!(typeof branch.value === "object")){
-          return;
+      _.every(branchedValues, function (branch) {
+        // if operation is an update, don't skip branches, just return the first one (#3599)
+        if (!matcher._isUpdate){
+          if (!(typeof branch.value === "object")){
+            return true;
+          }
+          var curDistance = distance(branch.value);
+          // Skip branches that aren't real points or are too far away.
+          if (curDistance === null || curDistance > maxDistance)
+            return true;
+          // Skip anything that's a tie.
+          if (result.distance !== undefined && result.distance <= curDistance)
+            return true;
         }
-        var curDistance = distance(branch.value);
-        // Skip branches that aren't real points or are too far away.
-        if (curDistance === null || curDistance > maxDistance)
-          return;
-        // Skip anything that's a tie.
-        if (result.distance !== undefined && result.distance <= curDistance)
-          return;
         result.result = true;
         result.distance = curDistance;
-        if (matcher._isUpdate)
-          result.arrayIndices = [0,0];
-        else if (!branch.arrayIndices)
+        if (!branch.arrayIndices)
           delete result.arrayIndices;
         else
           result.arrayIndices = branch.arrayIndices;
+        if (matcher._isUpdate)
+          return false;
+        return true;
       });
       return result;
     };
