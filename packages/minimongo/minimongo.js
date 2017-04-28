@@ -782,20 +782,22 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   // generate an id for it.
   var insertedId;
   if (updateCount === 0 && options.upsert) {
-    var newDoc = {};
-     
-    if (LocalCollection._selectorIsId(selector)) {
-      selector = {_id: selector}
+
+    let selectorModifier = LocalCollection._selectorIsId(selector) 
+      ? { _id: selector } 
+      : selector;
+
+    selectorModifier = LocalCollection._removeDollarOperators(selectorModifier);
+
+    const newDoc = {};
+    if (selectorModifier._id) {
+      newDoc._id = selectorModifier._id;
+      delete selectorModifier._id;
     }
 
-    var selectorDocument = LocalCollection._removeDollarOperators(selector);
-
-    if (selectorDocument._id) {
-      newDoc._id = selectorDocument._id;
-      delete selectorDocument._id;
-    }
-
-    LocalCollection._modify(newDoc, {$set: selectorDocument});
+    // This double _modify call is made to help work around an issue where collection 
+    // upserts won't work properly, with nested properties (see issue #8631).
+    LocalCollection._modify(newDoc, {$set: selectorModifier});
     LocalCollection._modify(newDoc, mod, {isInsert: true});
 
     if (! newDoc._id && options.insertedId)
