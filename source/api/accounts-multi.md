@@ -159,14 +159,16 @@ Example:
 ```js
 // Support for playing D&D: Roll 3d6 for dexterity.
 Accounts.onCreateUser((options, user) => {
-  user.dexterity = _.random(1, 6) + _.random(1, 6) + _.random(1, 6);
+  const customizedUser = Object.assign({
+    dexterity: _.random(1, 6) + _.random(1, 6) + _.random(1, 6),
+  }, user);
 
   // We still want the default hook's 'profile' behavior.
   if (options.profile) {
-    user.profile = options.profile;
+    customizedUser.profile = options.profile;
   }
 
-  return user;
+  return customizedUser;
 });
 ```
 
