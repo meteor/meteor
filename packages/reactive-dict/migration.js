@@ -1,3 +1,5 @@
+import { ReactiveDict } from './reactive-dict';
+
 ReactiveDict._migratedDictData = {}; // name -> data
 ReactiveDict._dictsToMigrate = {}; // name -> ReactiveDict
 
@@ -34,3 +36,5 @@ if (Meteor.isClient && Package.reload) {
     return [true, {dicts: dataToMigrate}];
   });
 }
+
+export { ReactiveDict };
