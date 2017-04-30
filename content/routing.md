@@ -249,7 +249,7 @@ It's best to keep all logic around what to render in the component hierarchy (i.
 
 Of course, we might find that we need to share this functionality between multiple pages of our app that require access control. We can easily share functionality between templates by wrapping them in a wrapper "layout" component which includes the behavior we want.
 
-You can create wrapper components by using the "template as block helper" ability of Blaze (see the [Blaze Article](blaze.html#block-helpers)). Here's how we could write an authorization template:
+You can create wrapper components by using the "template as block helper" ability of Blaze (see the [Blaze Article](http://blazejs.org/guide/spacebars.html#Block-Helpers)). Here's how we could write an authorization template:
 
 ```html
 <template name="App_forceLoggedIn">

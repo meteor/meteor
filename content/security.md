@@ -462,7 +462,7 @@ This is a collection of points to check about your app that might catch common e
 1. [Deny writes to the `profile` field on user documents.](accounts.html#dont-use-profile)
 1. [Use Methods instead of client-side insert/update/remove and allow/deny.](security.html#allow-deny)
 1. Use specific selectors and [filter fields](http://guide.meteor.com/security.html#fields) in publications.
-1. Don't use [raw HTML inclusion in Blaze](blaze.html#rendering-html) unless you really know what you are doing.
+1. Don't use [raw HTML inclusion in Blaze](http://blazejs.org/guide/spacebars.html#Rendering-raw-HTML) unless you really know what you are doing.
 1. [Make sure secret API keys and passwords aren't in your source code.](security.html#api-keys)
 1. Secure the data, not the UI - redirecting away from a client-side route does nothing for security, it's just a nice UX feature.
 1. [Don't ever trust user IDs passed from the client.](http://guide.meteor.com/security.html#user-id-client) Use `this.userId` inside Methods and publications.

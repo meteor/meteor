@@ -135,7 +135,7 @@ In this code snippet we can see two important techniques for subscribing in Blaz
 
 2. Calling `this.autorun` sets up a reactive context which will re-initialize the subscription whenever the reactive function `this.getListId()` changes.
 
-Read more about Blaze subscriptions in the [Blaze article](blaze.html#subscribing), and about tracking loading state inside UI components in the [UI article](ui-ux.html#subscription-readiness).
+Read more about Blaze subscriptions in the [Blaze article](http://blazejs.org/api/templates.html#Blaze-TemplateInstance-subscribe), and about tracking loading state inside UI components in the [UI article](ui-ux.html#subscription-readiness).
 
 <h3 id="fetching">Fetching data</h3>
 
@@ -478,7 +478,7 @@ Meteor.publishComposite('Todos.admin.inList', function(listId) {
 });
 ```
 
-Note that we explicitly set the `Meteor.users` query fields, as `publish-composite` publishes all of the returned cursors to the client and re-runs the child computations whenever the cursor changes. 
+Note that we explicitly set the `Meteor.users` query fields, as `publish-composite` publishes all of the returned cursors to the client and re-runs the child computations whenever the cursor changes.
 
 Limiting the results serves a double purpose: it both prevents sensitive fields from being disclosed to the client and limits recomputation to the relevant fields only (namely, the `admin` field).
 

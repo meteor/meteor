@@ -77,9 +77,9 @@ Since Meteor uses client-side rendering for your app's UI, all of your HTML code
 
 <h3 id="blaze-spacebars">Blaze HTML templates</h3>
 
-The aptly named `blaze-html-templates` package that comes with every new Meteor app by default compiles your `.html` files written using [Spacebars](blaze.html#spacebars) into Blaze-compatible JavaScript code. You can also add `blaze-html-templates` to any of your packages to compile template files located in the package.
+The aptly named `blaze-html-templates` package that comes with every new Meteor app by default compiles your `.html` files written using [Spacebars](http://blazejs.org/api/spacebars.html) into Blaze-compatible JavaScript code. You can also add `blaze-html-templates` to any of your packages to compile template files located in the package.
 
-[Read about how to use Blaze and Spacebars in the Blaze article.](blaze.html)
+[Read about how to use Blaze and Spacebars in the Blaze article.](http://blazejs.org/guide/spacebars.html)
 
 <h3 id="blaze-jade">Blaze Jade templates</h3>
 

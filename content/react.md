@@ -129,7 +129,7 @@ Note that there a few caveats:
 
 <h4 id="passing-callbacks-from-blaze">Passing callbacks to a React component</h4>
 
-To pass a callback to a React component that you are including with this helper, simply make a [template helper that returns a function](http://guide.meteor.com/blaze.html#pass-callbacks), and pass it in as a prop, like so:
+To pass a callback to a React component that you are including with this helper, simply make a [template helper that returns a function](http://blazejs.org/guide/reusable-components.html#Pass-callbacks), and pass it in as a prop, like so:
 
 ```js
 Template.userDisplay.helpers({
