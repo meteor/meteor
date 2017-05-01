@@ -93,7 +93,7 @@ var getIdentity = function (accessToken, fields) {
     return HTTP.get("https://graph.facebook.com/v2.8/me", {
       params: {
         access_token: accessToken,
-        appsecret_proof: hmac.digest('hex')
+        appsecret_proof: hmac.digest('hex'),
         fields: fields.join(",")
       }
     }).data;
