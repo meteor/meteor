@@ -121,50 +121,7 @@ var replaceTypes = function (document, atomTransformer) {
   return ret;
 };
 
-
-MongoConnection = function (url, options) {
-  var self = this;
-  options = options || {};
-  self._observeMultiplexers = {};
-  self._onFailoverHook = new Hook;
-
-  var mongoOptions = Object.assign({
-    // Reconnect on error.
-    autoReconnect: true,
-    // Try to reconnect forever, instead of stopping after 30 tries (the
-    // default), with each attempt separated by 1000ms.
-    reconnectTries: Infinity
-  }, Mongo._connectionOptions);
-
-  // Disable the native parser by default, unless specifically enabled
-  // in the mongo URL.
-  // - The native driver can cause errors which normally would be
-  //   thrown, caught, and handled into segfaults that take down the
-  //   whole app.
-  // - Binary modules don't yet work when you bundle and move the bundle
-  //   to a different platform (aka deploy)
-  // We should revisit this after binary npm module support lands.
-  if (!(/[\?&]native_?[pP]arser=/.test(url))) {
-    mongoOptions.native_parser = false;
-  }
-
-  // Internally the oplog connections specify their own poolSize
-  // which we don't want to overwrite with any user defined value
-  if (_.has(options, 'poolSize')) {
-    // If we just set this for "server", replSet will override it. If we just
-    // set it for replSet, it will be ignored if we're not using a replSet.
-    mongoOptions.poolSize = options.poolSize;
-  }
-
-  self.db = null;
-  // We keep track of the ReplSet's primary, so that we can trigger hooks when
-  // it changes.  The Node driver's joined callback seems to fire way too
-  // often, which is why we need to track it ourselves.
-  self._primary = null;
-  self._oplogHandle = null;
-  self._docFetcher = null;
-
-
+var connectToDb = function (future, self, url, mongoOptions) {
   var connectFuture = new Future;
   MongoDB.connect(
     url,
@@ -208,7 +165,67 @@ MongoConnection = function (url, options) {
   );
 
   // Wait for the connection to be successful; throws on failure.
-  self.db = connectFuture.wait();
+  try {
+    var db = connectFuture.wait();
+    console.log('connected');
+    delete self._dbConnectTimeout;
+    future['return'](db);
+  }
+  catch (error) {
+    // wait and retry in 5 seconds
+    console.log('connection failed. retrying in 5 seconds...');
+    self._dbConnectTimeout = setTimeout(Meteor.bindEnvironment(connectToDb.bind(this, future, self, url, mongoOptions)), 5000);
+  }
+  return connectFuture;
+};
+
+
+MongoConnection = function (url, options) {
+  var self = this;
+  options = options || {};
+  self._observeMultiplexers = {};
+  self._onFailoverHook = new Hook;
+
+  var mongoOptions = Object.assign({
+    // Reconnect on error.
+    autoReconnect: true,
+    // Try to reconnect forever, instead of stopping after 30 tries (the
+    // default), with each attempt separated by 1000ms.
+    reconnectTries: Infinity
+  }, Mongo._connectionOptions);
+
+  // Disable the native parser by default, unless specifically enabled
+  // in the mongo URL.
+  // - The native driver can cause errors which normally would be
+  //   thrown, caught, and handled into segfaults that take down the
+  //   whole app.
+  // - Binary modules don't yet work when you bundle and move the bundle
+  //   to a different platform (aka deploy)
+  // We should revisit this after binary npm module support lands.
+  if (!(/[\?&]native_?[pP]arser=/.test(url))) {
+    mongoOptions.native_parser = false;
+  }
+
+  // Internally the oplog connections specify their own poolSize
+  // which we don't want to overwrite with any user defined value
+  if (_.has(options, 'poolSize')) {
+    // If we just set this for "server", replSet will override it. If we just
+    // set it for replSet, it will be ignored if we're not using a replSet.
+    mongoOptions.poolSize = options.poolSize;
+  }
+
+  self.db = null;
+  // We keep track of the ReplSet's primary, so that we can trigger hooks when
+  // it changes.  The Node driver's joined callback seems to fire way too
+  // often, which is why we need to track it ourselves.
+  self._primary = null;
+  self._oplogHandle = null;
+  self._docFetcher = null;
+
+  console.log('initial mongo connection...')
+  var connectedFuture = new Future;
+  connectToDb(connectedFuture, self, url, mongoOptions);
+  self.db = connectedFuture.wait();
 
   if (options.oplogUrl && ! Package['disable-oplog']) {
     self._oplogHandle = new OplogHandle(options.oplogUrl, self.db.databaseName);
@@ -221,6 +238,10 @@ MongoConnection.prototype.close = function() {
 
   if (! self.db)
     throw Error("close called before Connection created?");
+
+  if (self._dbConnectTimeout) {
+    clearTimeout(self._dbConnectTimeout);
+  }
 
   // XXX probably untested
   var oplogHandle = self._oplogHandle;
