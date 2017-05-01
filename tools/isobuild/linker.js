@@ -30,6 +30,9 @@ var packageDot = function (name) {
   }
 };
 
+// Used for testing whether line ends with backslash (multi-line string)
+const MULTILINE_STRING_REGEX = /\\\s*$/;
+
 ///////////////////////////////////////////////////////////////////////////////
 // Module
 ///////////////////////////////////////////////////////////////////////////////
@@ -637,7 +640,7 @@ _.extend(File.prototype, {
         var line = lines[i];
         var len = line.length;
         if (len < width &&
-            line[len - 1] !== "\\") {
+            !MULTILINE_STRING_REGEX.test(line)) {
           var pos = consumer.originalPositionFor({
             line: i + 1,
             column: 0
@@ -654,7 +657,6 @@ _.extend(File.prototype, {
           }
         }
       }
-
       result.code = lines.join("\n");
     }
 
