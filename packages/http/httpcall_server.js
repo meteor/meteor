@@ -64,6 +64,10 @@ var _call = function(method, url, options, callback) {
   }
 
   _.extend(headers, options.headers || {});
+  
+  if (typeof options.encoding === 'undefined') {
+    options.encoding = "utf8";
+  }
 
   // wrap callback to add a 'response' property on an error, in case
   // we have both (http 4xx/5xx error, which has a response payload)
@@ -86,7 +90,7 @@ var _call = function(method, url, options, callback) {
   var reqOptions = _.extend({
     url: newUrl,
     method: method,
-    encoding: "utf8",
+    encoding: options.encoding,
     jar: false,
     timeout: options.timeout,
     body: content,
