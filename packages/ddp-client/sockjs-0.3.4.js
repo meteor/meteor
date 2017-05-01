@@ -2015,7 +2015,24 @@ InfoReceiver.prototype.doXhr = function(base_url, AjaxObject) {
         tref = null;
         if (status === 200) {
             var rtt = (new Date()).getTime() - t0;
-            var info = JSON.parse(text);
+
+// <METEOR>
+  // https://github.com/meteor/meteor/issues/2177
+            // catch parse errors for when meteor server is crashing and
+            // producing error log messages for any request
+            try {
+              var info = JSON.parse(text);
+            } catch (error) {
+              if (text.match(/Your app is crashing. Here's the latest log./)) {
+                // should we hard refresh, pass the error along, or log the
+                // message by some other means like console.log/Meteor.debug
+                return that.emit('finish');
+              } else {
+                throw error;
+              }
+            }
+// </METEOR>
+
             if (typeof info !== 'object') info = {};
             that.emit('finish', info, rtt);
         } else {
