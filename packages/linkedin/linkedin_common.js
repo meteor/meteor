@@ -1,0 +1,2 @@
+// @export LinkedIn
+LinkedIn = {};
