@@ -137,11 +137,11 @@ Template.timer.onDestroyed(function () {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-Template.d3Demo.left = function () {
+Template.d3Demo.LeftCirclesInstance = function () {
   return { group: "left" };
 };
 
-Template.d3Demo.right = function () {
+Template.d3Demo.RightCirclesInstance = function () {
   return { group: "right" };
 };
 
