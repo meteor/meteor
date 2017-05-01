@@ -7,7 +7,7 @@ Package.describe({
 });
 
 Npm.depends({
-  install: "0.8.9"
+  install: "0.9.5"
 });
 
 Package.onUse(function(api) {
@@ -21,7 +21,6 @@ Package.onUse(function(api) {
   api.addFiles("options.js");
   api.addFiles("client.js", "client");
   api.addFiles("server.js", "server");
-  api.addFiles("meteor-install.js");
 
   api.export("meteorInstall");
 });

@@ -262,18 +262,16 @@ _.extend(Module.prototype, {
           dynamic: true,
         });
 
-        const entry = {};
-
-        if (! _.isEmpty(file.deps)) {
-          entry.deps = file.deps;
-        }
+        const stubArray = file.deps.slice(0);
 
         if (file.installPath.endsWith("/package.json") &&
             file.jsonData) {
+          const stub = {};
+
           function tryMain(name) {
             const value = file.jsonData[name];
             if (_.isString(value)) {
-              entry[name] = value;
+              stub[name] = value;
             }
           }
 
@@ -281,9 +279,11 @@ _.extend(Module.prototype, {
           tryMain("module");
           tryMain("jsnext:main");
           tryMain("main");
+
+          stubArray.push(stub);
         }
 
-        addToTree([entry], file.installPath, tree);
+        addToTree(stubArray, file.installPath, tree);
 
       } else {
         // If the file is not dynamic, then it should be included in the

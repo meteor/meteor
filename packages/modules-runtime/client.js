@@ -4,4 +4,4 @@ makeInstallerOptions.browser = true;
 makeInstallerOptions.mainFields =
   ["browser", "module", "jsnext:main", "main"];
 
-install = makeInstaller(makeInstallerOptions);
+meteorInstall = makeInstaller(makeInstallerOptions);
