@@ -121,6 +121,6 @@ Meteor.bindEnvironment = function (func, onException, _this) {
 
     if (Fiber.current)
       return runWithEnvironment();
-    Fiber(runWithEnvironment).run();
+    return Fiber(runWithEnvironment).run();
   };
 };
