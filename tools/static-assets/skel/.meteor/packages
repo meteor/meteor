@@ -10,6 +10,7 @@ mongo                   # The database Meteor supports right now
 blaze-html-templates@1.0.4 # Compile .html files into Meteor Blaze views
 reactive-var            # Reactive variable for tracker
 tracker                 # Meteor's client-side reactive programming library
+devtools                # Tools that improve the developer experience
 
 standard-minifier-css   # CSS minifier run for production mode
 standard-minifier-js    # JS minifier run for production mode

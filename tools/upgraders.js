@@ -219,7 +219,6 @@ the guide about breaking changes here:`,
       packagesFile.removePackages(['standard-minifiers']);
 
       packagesFile.addPackages([
-        // These packages replace meteor-platform in newly created apps
         'standard-minifier-css',
         'standard-minifier-js',
       ]);
@@ -283,6 +282,16 @@ be removed if there is no need for the Blaze configuration interface.`,
     });
 
     packagesFile.writeIfModified();
+  },
+
+  "1.3.1-devtools-package": function(projectContext) {
+    // The "hot-code-push" package previously implied by "meteor-base" is now
+    // included as part of "devtools"
+
+    if (packagesFile.getConstraint('meteor-base')) {
+      packagesFile.addPackages(['devtools']);
+    }
+    projectContext.projectConstraintsFile.writeIfModified();
   },
 
   ////////////
