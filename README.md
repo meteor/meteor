@@ -13,6 +13,7 @@ With Meteor you write apps:
 * using your choice of popular open-source libraries
 
 Try the getting started [tutorial](https://www.meteor.com/try).
+Looking for a full guide? [Here](https://guide.meteor.com) it is.
 
 Next, read the [guide](http://guide.meteor.com) or the reference documentation at http://docs.meteor.com/.
 
