@@ -119,6 +119,10 @@ HTTP.call = function(method, url, options, callback) {
       }, options.timeout);
     };
 
+    // Allow option onProgress
+    if (typeof options.onProgress === 'function')
+      xhr.upload.onprogress = options.onProgress;
+
     // callback on complete
     xhr.onreadystatechange = function(evt) {
       if (xhr.readyState === 4) { // COMPLETE
@@ -192,4 +196,6 @@ HTTP.call = function(method, url, options, callback) {
     callback(err);
   }
 
+  // Return handle if user wants to abort
+  return xhr;
 };
