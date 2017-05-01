@@ -36,6 +36,7 @@ LaunchScreen = {
 
     // Returns a launch screen handle with a release method
     return {
+      holdCount: holdCount,
       release: release
     };
   }
