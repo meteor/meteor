@@ -180,6 +180,14 @@ _.extend(ReactiveDict.prototype, {
     });
 
   },
+  
+  remove: function (key) {
+    var self = this;
+
+    delete self.keys[key];
+
+    self.allDeps.changed();
+  },
 
   delete: function(key) {
     var self = this;
