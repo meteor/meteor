@@ -8,9 +8,9 @@ applications.
 
 With Meteor you write apps:
 
-* in pure JavaScript
-* that send data over the wire, rather than HTML
-* using your choice of popular open-source libraries
+* In pure JavaScript
+* That send data over the wire, rather than HTML
+* Using your choice of popular open-source libraries
 
 Try the getting started [tutorial](https://www.meteor.com/try).
 
