@@ -18,12 +18,8 @@ export class AccountsCommon {
     this.connection = undefined;
     this._initConnection(options || {});
 
-    // There is an allow call in accounts_server.js that restricts writes to
-    // this collection.
-    this.users = new Mongo.Collection("users", {
-      _preventAutopublish: true,
-      connection: this.connection
-    });
+    // If Collection exists get it, if not create a new one
+    this.users = this._getUsersCollection();
 
     // Callback exceptions are printed with Meteor._debug and ignored.
     this._onLoginHook = new Hook({
@@ -211,6 +207,23 @@ export class AccountsCommon {
     } else {
       this.connection = Meteor.connection;
     }
+  }
+
+  _getUsersCollection() {
+    // Check if the "users" collection exists.
+    // We assume that it is under the Meteor.users ns
+    // 
+    // However, if the collection exists return it,
+    // otherwise create and return a new one.
+    if (Meteor.users instanceof Mongo.Collection &&
+        Meteor.users._name === "users") {
+      return Meteor.users;
+    }
+
+    return new Mongo.Collection("users", {
+      _preventAutopublish: true,
+      connection: this.connection
+    });
   }
 
   _getTokenLifetimeMs() {
