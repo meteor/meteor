@@ -55,7 +55,11 @@ _.extend(Meteor.EnvironmentVariable.prototype, {
       currentValues[this.slot] = value;
       var ret = func();
     } finally {
+      // func may yield, and a bindEnvironment will replace the object
+      // in _meteor_dynamics, so make sure we actually save the
+      // original values back
       currentValues[this.slot] = saved;
+      Fiber.current._meteor_dynamics = currentValues;
     }
 
     return ret;
