@@ -1,11 +1,11 @@
 var uglify;
 
-meteorJsMinify = function (source) {
+meteorJsMinify = function (source, options) {
   var result = {};
   uglify = uglify || Npm.require("uglify-js");
 
   try {
-    result.code = uglify.minify(source, {
+    result.code = uglify.minify(source, options || {
       fromString: true,
       compress: {
         drop_debugger: false,
