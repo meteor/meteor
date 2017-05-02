@@ -14,7 +14,7 @@
   [issue #8595](https://github.com/meteor/meteor/issues/8595) and
   improving compilation performance.
 
-## v1.4.4.2, TBD
+## v1.4.4.2, 2017-05-02
 
 * Node has been upgraded to version 4.8.2.
 
@@ -35,6 +35,12 @@
   in a similar fashion as the original `mailcomposer`.
   [Issue #8591](https://github.com/meteor/meteor/issues/8591)
   [PR #8605](https://github.com/meteor/meteor/pull/8605)
+
+    > Note: The `MAIL_URL` should be configured with a scheme which matches the
+    > protocol desired by your e-mail vendor/mail-transport agent.  For
+    > encrypted connections (typically listening on port 465 or 587), this means
+    > using `smtps://`.  Unencrypted connections should continue to use
+    > `smtp://`.
 
 * A new `Tracker.inFlush()` has been added to provide a global Tracker
   "flushing" state.
