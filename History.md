@@ -22,6 +22,12 @@
   [Issue #8591](https://github.com/meteor/meteor/issues/8591)
   [PR #8605](https://github.com/meteor/meteor/pull/8605)
 
+    > Note: The `MAIL_URL` should be configured with a scheme which matches the
+    > protocol desired by your e-mail vendor/mail-transport agent.  For
+    > encrypted connections (typically listening on port 465 or 587), this means
+    > using `smtps://`.  Unencrypted connections should continue to use
+    > `smtp://`.
+
 * A new `Tracker.inFlush()` has been added to provide a global Tracker
   "flushing" state.
   [PR #8565](https://github.com/meteor/meteor/pull/8565).
