@@ -33,7 +33,8 @@ meteorInstall.fetch = function (ids) {
     Object.keys(sources).forEach(function (id) {
       var source = sources[id];
       if (source) {
-        addToTree(tree, id, makeModuleFunction(source, ids[id]));
+        var info = ids[id];
+        addToTree(tree, id, makeModuleFunction(source, info.options));
       } else {
         addToTree(missing = missing || Object.create(null), id, 1);
       }
@@ -45,9 +46,9 @@ meteorInstall.fetch = function (ids) {
 
       Object.keys(flatResults).forEach(function (id) {
         var source = flatResults[id];
-        var options = ids[id];
+        var info = ids[id];
 
-        addToTree(tree, id, makeModuleFunction(source, options));
+        addToTree(tree, id, makeModuleFunction(source, info.options));
 
         var version = getFromTree(dynamicVersions, id);
         if (version) {
