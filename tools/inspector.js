@@ -145,7 +145,7 @@ DEp.connectToChildProcess = function connectToChildProcess(child) {
   // port (not debugPort!), and create a connection to that port so that
   // the child process can communicate with node-inspector.
   child.stderr.on("data", function onData(buffer) {
-    var match = /debugger listening on port (\d+)/i
+    var match = /debugger listening on .+:(\d+)\n/i
       .exec(buffer.toString("utf8"));
     if (match) {
       child.stderr.removeListener("data", onData);

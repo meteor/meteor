@@ -1,3 +1,5 @@
+import { assertHasValidFieldNames, assertIsValidFieldName } from './validation.js';
+
 // XXX need a strategy for passing the binding of $ into this
 // function, from the compiled selector
 //
@@ -27,11 +29,7 @@ LocalCollection._modify = function (doc, mod, options) {
       throw MinimongoError("Cannot change the _id of a document");
 
     // replace the whole document
-    for (var k in mod) {
-      if (/\./.test(k))
-        throw MinimongoError(
-          "When replacing document, field name may not contain '.'");
-    }
+    assertHasValidFieldNames(mod);
     newDoc = mod;
   } else {
     // apply modifiers to the doc.
@@ -155,8 +153,7 @@ var findModTarget = function (doc, keyparts, options) {
                       "' of list value " + JSON.stringify(doc[keypart]));
       }
     } else {
-      if (keypart.length && keypart.substr(0, 1) === '$')
-        throw MinimongoError("can't set field named " + keypart);
+      assertIsValidFieldName(keypart);
       if (!(keypart in doc)) {
         if (options.noCreate)
           return undefined;
@@ -185,20 +182,24 @@ var MODIFIERS = {
   $currentDate: function (target, field, arg) {
     if (typeof arg === "object" && arg.hasOwnProperty("$type")) {
        if (arg.$type !== "date") {
-         throw MinimongoError("Minimongo does currently only support the date type in $currentDate modifiers");
+          throw MinimongoError(
+            "Minimongo does currently only support the date type " +
+            "in $currentDate modifiers",
+            { field });
        }
     } else if (arg !== true) {
-      throw MinimongoError("Invalid $currentDate modifier");
+      throw MinimongoError("Invalid $currentDate modifier", { field });
     }
     target[field] = new Date();
   },
   $min: function (target, field, arg) {
     if (typeof arg !== "number") {
-      throw MinimongoError("Modifier $min allowed for numbers only");
+      throw MinimongoError("Modifier $min allowed for numbers only", { field });
     }
     if (field in target) {
       if (typeof target[field] !== "number") {
-        throw MinimongoError("Cannot apply $min modifier to non-number");
+        throw MinimongoError(
+          "Cannot apply $min modifier to non-number", { field });
       }
       if (target[field] > arg) {
         target[field] = arg;
@@ -209,11 +210,12 @@ var MODIFIERS = {
   },
   $max: function (target, field, arg) {
     if (typeof arg !== "number") {
-      throw MinimongoError("Modifier $max allowed for numbers only");
+      throw MinimongoError("Modifier $max allowed for numbers only", { field });
     }
     if (field in target) {
       if (typeof target[field] !== "number") {
-        throw MinimongoError("Cannot apply $max modifier to non-number");
+        throw MinimongoError(
+          "Cannot apply $max modifier to non-number", { field });
       }
       if (target[field] < arg) {
          target[field] = arg;
@@ -224,10 +226,11 @@ var MODIFIERS = {
   },
   $inc: function (target, field, arg) {
     if (typeof arg !== "number")
-      throw MinimongoError("Modifier $inc allowed for numbers only");
+      throw MinimongoError("Modifier $inc allowed for numbers only", { field });
     if (field in target) {
       if (typeof target[field] !== "number")
-        throw MinimongoError("Cannot apply $inc modifier to non-number");
+        throw MinimongoError(
+          "Cannot apply $inc modifier to non-number", { field });
       target[field] += arg;
     } else {
       target[field] = arg;
@@ -235,20 +238,17 @@ var MODIFIERS = {
   },
   $set: function (target, field, arg) {
     if (!_.isObject(target)) { // not an array or an object
-      var e = MinimongoError("Cannot set property on non-object field");
+      var e = MinimongoError(
+        "Cannot set property on non-object field", { field });
       e.setPropertyError = true;
       throw e;
     }
     if (target === null) {
-      var e = MinimongoError("Cannot set property on null");
+      var e = MinimongoError("Cannot set property on null", { field });
       e.setPropertyError = true;
       throw e;
     }
-    if (_.isString(field) && field.indexOf('\0') > -1) {
-      // Null bytes are not allowed in Mongo field names
-      // https://docs.mongodb.com/manual/reference/limits/#Restrictions-on-Field-Names
-      throw MinimongoError(`Key ${field} must not contain null bytes`);
-    }
+    assertHasValidFieldNames(arg);
     target[field] = arg;
   },
   $setOnInsert: function (target, field, arg) {
@@ -267,10 +267,12 @@ var MODIFIERS = {
     if (target[field] === undefined)
       target[field] = [];
     if (!(target[field] instanceof Array))
-      throw MinimongoError("Cannot apply $push modifier to non-array");
+      throw MinimongoError(
+        "Cannot apply $push modifier to non-array", { field });
 
     if (!(arg && arg.$each)) {
       // Simple mode: not $each
+      assertHasValidFieldNames(arg);
       target[field].push(arg);
       return;
     }
@@ -278,16 +280,18 @@ var MODIFIERS = {
     // Fancy mode: $each (and maybe $slice and $sort and $position)
     var toPush = arg.$each;
     if (!(toPush instanceof Array))
-      throw MinimongoError("$each must be an array");
+      throw MinimongoError("$each must be an array", { field });
+    assertHasValidFieldNames(toPush);
 
     // Parse $position
     var position = undefined;
     if ('$position' in arg) {
       if (typeof arg.$position !== "number")
-        throw MinimongoError("$position must be a numeric value");
+        throw MinimongoError("$position must be a numeric value", { field });
       // XXX should check to make sure integer
       if (arg.$position < 0)
-        throw MinimongoError("$position in $push must be zero or positive");
+        throw MinimongoError(
+          "$position in $push must be zero or positive", { field });
       position = arg.$position;
     }
 
@@ -295,10 +299,11 @@ var MODIFIERS = {
     var slice = undefined;
     if ('$slice' in arg) {
       if (typeof arg.$slice !== "number")
-        throw MinimongoError("$slice must be a numeric value");
+        throw MinimongoError("$slice must be a numeric value", { field });
       // XXX should check to make sure integer
       if (arg.$slice > 0)
-        throw MinimongoError("$slice in $push must be zero or negative");
+        throw MinimongoError(
+          "$slice in $push must be zero or negative", { field });
       slice = arg.$slice;
     }
 
@@ -306,7 +311,7 @@ var MODIFIERS = {
     var sortFunction = undefined;
     if (arg.$sort) {
       if (slice === undefined)
-        throw MinimongoError("$sort requires $slice to be present");
+        throw MinimongoError("$sort requires $slice to be present", { field });
       // XXX this allows us to use a $sort whose value is an array, but that's
       // actually an extension of the Node driver, so it won't work
       // server-side. Could be confusing!
@@ -315,7 +320,7 @@ var MODIFIERS = {
       for (var i = 0; i < toPush.length; i++) {
         if (LocalCollection._f._type(toPush[i]) !== 3) {
           throw MinimongoError("$push like modifiers using $sort " +
-                      "require all elements to be objects");
+                      "require all elements to be objects", { field });
         }
       }
     }
@@ -346,11 +351,13 @@ var MODIFIERS = {
   $pushAll: function (target, field, arg) {
     if (!(typeof arg === "object" && arg instanceof Array))
       throw MinimongoError("Modifier $pushAll/pullAll allowed for arrays only");
+    assertHasValidFieldNames(arg);
     var x = target[field];
     if (x === undefined)
       target[field] = arg;
     else if (!(x instanceof Array))
-      throw MinimongoError("Cannot apply $pushAll modifier to non-array");
+      throw MinimongoError(
+        "Cannot apply $pushAll modifier to non-array", { field });
     else {
       for (var i = 0; i < arg.length; i++)
         x.push(arg[i]);
@@ -360,18 +367,19 @@ var MODIFIERS = {
     var isEach = false;
     if (typeof arg === "object") {
       //check if first key is '$each'
-      for (var k in arg) {
-        if (k === "$each")
-          isEach = true;
-        break;
+      const keys = Object.keys(arg);
+      if (keys[0] === "$each"){
+        isEach = true;
       }
     }
     var values = isEach ? arg["$each"] : [arg];
+    assertHasValidFieldNames(values);
     var x = target[field];
     if (x === undefined)
       target[field] = values;
     else if (!(x instanceof Array))
-      throw MinimongoError("Cannot apply $addToSet modifier to non-array");
+      throw MinimongoError(
+        "Cannot apply $addToSet modifier to non-array", { field });
     else {
       _.each(values, function (value) {
         for (var i = 0; i < x.length; i++)
@@ -388,7 +396,8 @@ var MODIFIERS = {
     if (x === undefined)
       return;
     else if (!(x instanceof Array))
-      throw MinimongoError("Cannot apply $pop modifier to non-array");
+      throw MinimongoError(
+        "Cannot apply $pop modifier to non-array", { field });
     else {
       if (typeof arg === 'number' && arg < 0)
         x.splice(0, 1);
@@ -403,7 +412,8 @@ var MODIFIERS = {
     if (x === undefined)
       return;
     else if (!(x instanceof Array))
-      throw MinimongoError("Cannot apply $pull/pullAll modifier to non-array");
+      throw MinimongoError(
+        "Cannot apply $pull/pullAll modifier to non-array", { field });
     else {
       var out = [];
       if (arg != null && typeof arg === "object" && !(arg instanceof Array)) {
@@ -430,14 +440,16 @@ var MODIFIERS = {
   },
   $pullAll: function (target, field, arg) {
     if (!(typeof arg === "object" && arg instanceof Array))
-      throw MinimongoError("Modifier $pushAll/pullAll allowed for arrays only");
+      throw MinimongoError(
+        "Modifier $pushAll/pullAll allowed for arrays only", { field });
     if (target === undefined)
       return;
     var x = target[field];
     if (x === undefined)
       return;
     else if (!(x instanceof Array))
-      throw MinimongoError("Cannot apply $pull/pullAll modifier to non-array");
+      throw MinimongoError(
+        "Cannot apply $pull/pullAll modifier to non-array", { field });
     else {
       var out = [];
       for (var i = 0; i < x.length; i++) {
@@ -457,15 +469,17 @@ var MODIFIERS = {
   $rename: function (target, field, arg, keypath, doc) {
     if (keypath === arg)
       // no idea why mongo has this restriction..
-      throw MinimongoError("$rename source must differ from target");
+      throw MinimongoError("$rename source must differ from target", { field });
     if (target === null)
-      throw MinimongoError("$rename source field invalid");
+      throw MinimongoError("$rename source field invalid", { field });
     if (typeof arg !== "string")
-      throw MinimongoError("$rename target must be a string");
+      throw MinimongoError("$rename target must be a string", { field });
     if (arg.indexOf('\0') > -1) {
       // Null bytes are not allowed in Mongo field names
       // https://docs.mongodb.com/manual/reference/limits/#Restrictions-on-Field-Names
-      throw MinimongoError("The 'to' field for $rename cannot contain an embedded null byte");
+      throw MinimongoError(
+        "The 'to' field for $rename cannot contain an embedded null byte",
+        { field });
     }
     if (target === undefined)
       return;
@@ -475,13 +489,13 @@ var MODIFIERS = {
     var keyparts = arg.split('.');
     var target2 = findModTarget(doc, keyparts, {forbidArray: true});
     if (target2 === null)
-      throw MinimongoError("$rename target field invalid");
+      throw MinimongoError("$rename target field invalid", { field });
     var field2 = keyparts.pop();
     target2[field2] = v;
   },
   $bit: function (target, field, arg) {
     // XXX mongo only supports $bit on integers, and we only support
     // native javascript numbers (doubles) so far, so we can't support $bit
-    throw MinimongoError("$bit is not supported");
+    throw MinimongoError("$bit is not supported", { field });
   }
 };
