@@ -310,12 +310,16 @@ _.extend(exports, {
     var req = request(options, function (error, response, body) {
       if (! error && response && body) {
         const contentLength = Number(response.headers["content-length"]);
-        if (contentLength > 0 && body.length < contentLength) {
+        const actualLength = Buffer.byteLength(body);
+
+        if (contentLength > 0 &&
+            actualLength < contentLength) {
           error = new Error(
             "Expected " + contentLength + " bytes in request body " +
-              "but received only " + body.length);
+              "but received only " + actualLength);
         }
       }
+
       return callback.call(this, error, response, body);
     });
 
