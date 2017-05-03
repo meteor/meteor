@@ -2301,13 +2301,6 @@ Tinytest.add("minimongo - modify", function (test) {
                   {'a.x': 1, 'a.y': 3},
                   {$set: {'a.$.z': 5}},
                   {a: [{x: 1}, {y: 3, z: 5}]});
-  // with $near, make sure it finds the closest one
-  modifyWithQuery({a: [{b: [1,1]},
-                       {b: [ [3,3], [4,4] ]},
-                       {b: [9,9]}]},
-                  {'a.b': {$near: [5, 5]}},
-                  {$set: {'a.$.b': 'k'}},
-                  {a: [{b: [1,1]}, {b: 'k'}, {b: [9,9]}]});
   modifyWithQuery({a: [{x: 1}, {y: 1}, {x: 1, y: 1}]},
                   {a: {$elemMatch: {x: 1, y: 1}}},
                   {$set: {'a.$.x': 2}},
@@ -2316,6 +2309,56 @@ Tinytest.add("minimongo - modify", function (test) {
                   {'a.b': {$elemMatch: {x: 1, y: 1}}},
                   {$set: {'a.$.b': 3}},
                   {a: [{b: 3}]});
+  // with $near, make sure it does not find the closest one (#3599)
+  modifyWithQuery({a: []},
+                  {'a.b': {$near: [5, 5]}},
+                  {$set: {'a.$.b': 'k'}},
+                  {"a":[]});
+  modifyWithQuery({a: [{b: [ [3,3], [4,4] ]}]},
+                  {'a.b': {$near: [5, 5]}},
+                  {$set: {'a.$.b': 'k'}},
+                  {"a":[{"b":"k"}]});
+  modifyWithQuery({a: [{b: [1,1]},
+                       {b: [ [3,3], [4,4] ]},
+                       {b: [9,9]}]},
+                  {'a.b': {$near: [5, 5]}},
+                  {$set: {'a.$.b': 'k'}},
+                  {"a":[{"b":"k"},{"b":[[3,3],[4,4]]},{"b":[9,9]}]}); 
+  modifyWithQuery({a: [{b: [1,1]},
+                       {b: [ [3,3], [4,4] ]},
+                       {b: [9,9]}]},
+                  {'a.b': {$near: [9, 9], $maxDistance: 1}},
+                  {$set: {'a.$.b': 'k'}},
+                  {"a":[{"b":"k"},{"b":[[3,3],[4,4]]},{"b":[9,9]}]}); 
+  modifyWithQuery({a: [{b: [1,1]},
+                       {b: [ [3,3], [4,4] ]},
+                       {b: [9,9]}]},
+                  {'a.b': {$near: [9, 9]}},
+                  {$set: {'a.$.b': 'k'}},
+                  {"a":[{"b":"k"},{"b":[[3,3],[4,4]]},{"b":[9,9]}]});
+  modifyWithQuery({a: [{b: [9,9]},
+                       {b: [ [3,3], [4,4] ]},
+                       {b: [9,9]}]},
+                  {'a.b': {$near: [9, 9]}},
+                  {$set: {'a.$.b': 'k'}},
+                  {"a":[{"b":"k"},{"b":[[3,3],[4,4]]},{"b":[9,9]}]});
+  modifyWithQuery({a: [{b:[4,3]},
+                       {c: [1,1]}]},
+                  {'a.c': {$near: [1, 1]}},
+                  {$set: {'a.$.c': 'k'}},
+                  {"a":[{"c": "k", "b":[4,3]},{"c":[1,1]}]});
+  modifyWithQuery({a: [{c: [9,9]},
+                       {b: [ [3,3], [4,4] ]},
+                       {b: [1,1]}]},
+                  {'a.b': {$near: [1, 1]}},
+                  {$set: {'a.$.b': 'k'}},
+                  {"a":[{"c": [9,9], "b":"k"},{"b": [ [3,3], [4,4]]},{"b":[1,1]}]});  
+  modifyWithQuery({a: [{c: [9,9], b:[4,3]},
+                       {b: [ [3,3], [4,4] ]},
+                       {b: [1,1]}]},
+                  {'a.b': {$near: [1, 1]}},
+                  {$set: {'a.$.b': 'k'}},
+                  {"a":[{"c": [9,9], "b":"k"},{"b": [ [3,3], [4,4]]},{"b":[1,1]}]});
 
   // $inc
   modify({a: 1, b: 2}, {$inc: {a: 10}}, {a: 11, b: 2});
@@ -3220,13 +3263,14 @@ Tinytest.add("minimongo - $near operator tests", function (test) {
   // 'y'.
   testNear([2, 2], 1000, ['x', 'y']);
 
-  // Ensure that distance is used as a tie-breaker for sort.
+  // issue #3599
+  // Ensure that distance is not used as a tie-breaker for sort.
   test.equal(
     _.pluck(coll.find({'a.b': {$near: [1, 1]}}, {sort: {k: 1}}).fetch(), '_id'),
     ['x', 'y']);
   test.equal(
     _.pluck(coll.find({'a.b': {$near: [5, 5]}}, {sort: {k: 1}}).fetch(), '_id'),
-    ['y', 'x']);
+    ['x', 'y']);
 
   var operations = [];
   var cbs = log_callbacks(operations);

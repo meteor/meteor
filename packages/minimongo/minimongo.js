@@ -699,7 +699,7 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   }
   if (!options) options = {};
 
-  var matcher = new Minimongo.Matcher(selector);
+  var matcher = new Minimongo.Matcher(selector, true);
 
   // Save the original results of any query that we might need to
   // _recomputeResults on, because _modifyAndNotify will mutate the objects in
