@@ -63,6 +63,8 @@ This threatens to leave many older Android devices behind however, because they 
 You can add the Crosswalk plugin to your app with `meteor add crosswalk`.
 > If you receive an error message trying to run the app on your device after adding or removing the Crosswalk plugin, you may have to remove the existing app from your device first.
 
+Important: The Crosswalk project is not maintained anymore. The last Crosswalk release was Crosswalk 23. Read more in this [announcement](https://crosswalk-project.org/blog/crosswalk-final-release.html)
+
 <h3 id="adding-platforms">Adding Cordova platforms</h3>
 
 Every Meteor project targets a set of platforms. Platforms can be added to a Meteor project with `meteor add-platform`.
