@@ -92,7 +92,7 @@ This will generate a new tarball (`dev_bundle_<Platform>_<arch>_<version>.tar.gz
 
 It's important to note that while `dev_bundle` pull requests are accepted/reviewed, a new `dev_bundle` can only be published to MDG's Meteor infrastructure by an MDG staff member. This means that the build tool and package tests of submitted `dev_bundle` pull requests will always initially fail (since the new `dev_bundle` hasn't yet been built/published by MDG, which means it can't be downloaded by Meteor's continuous integration environment). 
 
-When submitting a `dev_bundle` PR, please mention @meteor/platform in the PR, requesting to have a new `dev_bundle` built/published.
+Pull requests that contain `dev_bundle` changes will be noted by repo collaborators, and a request to have a new `dev_bundle` built/published will be forwarded to MDG.
 
 ## Additional documentation
 
