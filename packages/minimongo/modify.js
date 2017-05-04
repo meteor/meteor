@@ -301,9 +301,6 @@ var MODIFIERS = {
       if (typeof arg.$slice !== "number")
         throw MinimongoError("$slice must be a numeric value", { field });
       // XXX should check to make sure integer
-      if (arg.$slice > 0)
-        throw MinimongoError(
-          "$slice in $push must be zero or negative", { field });
       slice = arg.$slice;
     }
 
@@ -344,8 +341,10 @@ var MODIFIERS = {
     if (slice !== undefined) {
       if (slice === 0)
         target[field] = [];  // differs from Array.slice!
-      else
+      else if (slice < 0)
         target[field] = target[field].slice(slice);
+      else 
+        target[field] = target[field].slice(0, slice);        
     }
   },
   $pushAll: function (target, field, arg) {

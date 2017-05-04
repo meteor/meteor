@@ -27,7 +27,10 @@ ReactiveDict = function (dictName) {
       this.name = dictName;
     } else if (typeof dictName === 'object') {
       // back-compat case: dictName is actually migrationData
-      this.keys = dictName;
+      this.keys = {};
+      for (let [key, value] of Object.entries(dictName)) {
+        this.keys[key] = stringify(value);
+      }
     } else {
       throw new Error("Invalid ReactiveDict argument: " + dictName);
     }
