@@ -173,7 +173,7 @@ If you'd like to contribution to Meteor's documentation, head over to https://gi
 
 ## Blaze
 
-Blaze is lives in its [own repository](https://github.com/meteor/blaze/) with its own [issue tracker and feature prioritization](https://github.com/meteor/blaze/issues/) and is not tracked within Meteor core.
+Blaze lives in its [own repository](https://github.com/meteor/blaze/) with its own [issue tracker and feature prioritization](https://github.com/meteor/blaze/issues/) and is not tracked within Meteor core.
 
 ## Making changes to Meteor core
 
