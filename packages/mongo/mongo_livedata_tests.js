@@ -1301,6 +1301,29 @@ testAsyncMulti('mongo-livedata - upsert without callback, ' + idGeneration, [
   }
 ]);
 
+// Regression test for https://github.com/meteor/meteor/issues/8666.
+testAsyncMulti('mongo-livedata - upsert with an undefined selector, ' + idGeneration, [
+  function (test, expect) {
+    this.collectionName = Random.id();
+    if (Meteor.isClient) {
+      Meteor.call('createInsecureCollection', this.collectionName);
+      Meteor.subscribe('c-' + this.collectionName, expect());
+    }
+  }, function (test, expect) {
+    var coll = new Mongo.Collection(this.collectionName, collectionOptions);
+    var testWidget = {
+      name: 'Widget name'
+    };
+    coll.upsert(testWidget._id, testWidget, expect(function (error, insertDetails) {
+      test.isFalse(error);
+      test.equal(
+        coll.findOne(insertDetails.insertedId),
+        Object.assign({ _id: insertDetails.insertedId }, testWidget)
+      );
+    }));
+  }
+]);
+
 // See https://github.com/meteor/meteor/issues/594.
 testAsyncMulti('mongo-livedata - document with length, ' + idGeneration, [
   function (test, expect) {

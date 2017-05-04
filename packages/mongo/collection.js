@@ -558,7 +558,7 @@ Mongo.Collection.prototype.update = function update(selector, modifier, ...optio
       if (!(typeof options.insertedId === 'string' || options.insertedId instanceof Mongo.ObjectID))
         throw new Error("insertedId must be string or ObjectID");
       insertedId = options.insertedId;
-    } else if (! selector._id) {
+    } else if (!selector || !selector._id) {
       insertedId = this._makeNewID();
       options.insertedId = insertedId;
     }
