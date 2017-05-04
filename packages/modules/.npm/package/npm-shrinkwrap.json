@@ -6,19 +6,19 @@
       "from": "acorn@>=5.0.0 <5.1.0"
     },
     "minipass": {
-      "version": "1.1.9",
-      "resolved": "https://registry.npmjs.org/minipass/-/minipass-1.1.9.tgz",
-      "from": "minipass@>=1.1.6 <2.0.0"
+      "version": "2.0.0",
+      "resolved": "https://registry.npmjs.org/minipass/-/minipass-2.0.0.tgz",
+      "from": "minipass@>=2.0.0 <3.0.0"
     },
     "minizlib": {
-      "version": "1.0.2",
-      "resolved": "https://registry.npmjs.org/minizlib/-/minizlib-1.0.2.tgz",
-      "from": "minizlib@>=1.0.2 <2.0.0"
+      "version": "1.0.3",
+      "resolved": "https://registry.npmjs.org/minizlib/-/minizlib-1.0.3.tgz",
+      "from": "minizlib@>=1.0.3 <2.0.0"
     },
     "reify": {
-      "version": "0.8.3",
-      "resolved": "https://registry.npmjs.org/reify/-/reify-0.8.3.tgz",
-      "from": "reify@0.8.3"
+      "version": "0.9.2",
+      "resolved": "https://registry.npmjs.org/reify/-/reify-0.9.2.tgz",
+      "from": "reify@0.9.2"
     },
     "yallist": {
       "version": "3.0.2",
