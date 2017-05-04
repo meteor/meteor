@@ -6,10 +6,7 @@ import {
 } from "underscore";
 import {sha1} from "../fs/watch.js";
 import {matches as archMatches} from "../utils/archinfo.js";
-import {
-  findImportedModuleIdentifiers,
-  reifyCompileWithCache,
-} from "./js-analyze.js";
+import {findImportedModuleIdentifiers} from "./js-analyze.js";
 import {cssToCommonJS} from "./css-modules.js";
 import buildmessage from "../utils/buildmessage.js";
 import LRU from "lru-cache";
@@ -742,12 +739,6 @@ export default class ImportScanner {
       info.dataString,
       info.hash,
     );
-
-    if (this.isWeb()) {
-      const result = reifyCompileWithCache(info.dataString, info.hash);
-      info.dataString = result.code;
-      info.deps = result.deps;
-    }
 
     if (info.dataString !== dataString) {
       info.data = new Buffer(info.dataString, "utf8");

@@ -31,16 +31,10 @@ describe("dynamic import(...)", function () {
   });
 
   it("static package.json, static package", function () {
-    import * as pkg from "acorn/package.json";
+    import { name } from "acorn/package.json";
     import acorn from "acorn";
-    assert.strictEqual(pkg.name, "acorn");
+    assert.strictEqual(name, "acorn");
     assert.strictEqual(typeof acorn.parse, "function");
-    assert.strictEqual(
-      require.resolve("acorn"),
-      Meteor.isServer
-        ? "/node_modules/acorn/dist/acorn.js"
-        : "/node_modules/acorn/dist/acorn.es.js"
-    );
   });
 
   it("static package.json, dynamic package", function () {

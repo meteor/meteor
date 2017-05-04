@@ -276,8 +276,6 @@ _.extend(Module.prototype, {
           }
 
           tryMain("browser");
-          tryMain("module");
-          tryMain("jsnext:main");
           tryMain("main");
 
           stubArray.push(stub);

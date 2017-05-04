@@ -308,8 +308,6 @@ export default class Resolver {
 
     if (archMatches(this.targetArch, "web")) {
       tryMain("browser");
-      tryMain("module");
-      tryMain("jsnext:main");
     }
 
     tryMain("main");
