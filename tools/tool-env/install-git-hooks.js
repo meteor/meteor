@@ -40,6 +40,12 @@ export default function installGitHooks() {
   }
 
   allPossibleHooks.map((hookName) => {
+    if (!files.exists(hookDestination)) {
+      // Don't do anything if the hook destination does not exist, eg.,
+      // we are not running from a git clone.
+      return;
+    }
+
     const hookFile = files.pathJoin(hookDestination, hookName);
     const sourceFile = files.pathJoin(hookSource, hookName);
     const meteorHookFile = hookFile + METEOR_HOOK_SUFFIX;
