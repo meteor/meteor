@@ -1,5 +1,7 @@
 # ESLint-plugin-Meteor
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/dferber90/eslint-plugin-meteor.svg)](https://greenkeeper.io/)
+
 Meteor specific linting rules for ESLint
 
 [![Build Status][travis-image]][travis-url]
