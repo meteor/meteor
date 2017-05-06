@@ -1286,6 +1286,10 @@ class Target {
           newFile.setUrlToHash('.js', '?meteor_js_resource=true');
         }
 
+        if (! dynamic) {
+          console.log(file.stats);
+        }
+
         return newFile;
       });
 
