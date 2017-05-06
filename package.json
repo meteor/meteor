@@ -60,7 +60,7 @@
     "eslint-config-airbnb": "14.1.0",
     "eslint-plugin-import": "2.1.0",
     "eslint-plugin-jsx-a11y": "^4.0.0",
-    "eslint-plugin-react": "6.10.3",
+    "eslint-plugin-react": "7.0.0",
     "ghooks": "1.3.2",
     "mocha": "3.3.0",
     "nyc": "10.3.2",
