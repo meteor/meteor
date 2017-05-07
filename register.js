@@ -2,12 +2,9 @@ var assert = require("assert");
 var path = require("path");
 var fs = require("fs");
 var hasOwn = Object.hasOwnProperty;
-var defaultHandler = require.extensions[".js"];
 var convertSourceMap = require("convert-source-map");
 var meteorBabel = require("./index.js");
 var util = require("./util.js");
-
-require("reify/node");
 
 var config = {
   sourceMapRootPath: null,
@@ -36,7 +33,12 @@ exports.setBabelOptions = function (options) {
   return exports;
 };
 
-require.extensions[".js"] = function(module, filename) {
+// It's important to call require("reify/node") before saving the
+// defaultHandler, since Reify modifies require.extensions.
+require("reify/node");
+var defaultHandler = require.extensions[".js"];
+
+(require.extensions[".js"] = function(module, filename) {
   if (shouldNotTransform(filename)) {
     defaultHandler(module, filename);
   } else {
@@ -45,7 +47,7 @@ require.extensions[".js"] = function(module, filename) {
       filename
     );
   }
-};
+}).reified = defaultHandler.reified;
 
 exports.retrieveSourceMap = function(filename) {
   if (shouldNotTransform(filename)) {
