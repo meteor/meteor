@@ -4,6 +4,15 @@
   `ReactiveDict`. No longer run migration logic when used on the server,
   this is to prevent duplicate name error on reloads. Initial data is now
   properly serialized.
+* Fix issue with publications temporarily having `DDP._CurrentInvocation` set on
+  re-run after a user logged in. This would cause method calls from within
+  publish functions to unexpectedly having `this.connection` available.
+* Support `DDP._CurrentPublicationInvocation` and `DDP._CurrentMethodInvocation`,
+  `DDP._CurrentInvocation` is kept for backwards-compatibility. This change
+  allows method calls from publications to inherit the connection from the
+  the publication which called the method.
+* `Meteor.userId()` and `Meteor.user()` can now be used in both method calls and
+  publications.
 
 ## v1.4.4.3, 2017-05-22
 
