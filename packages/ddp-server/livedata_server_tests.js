@@ -89,6 +89,10 @@ Meteor.methods({
 
   livedata_server_test_outer: function () {
     return Meteor.call('livedata_server_test_inner');
+  },
+
+  livedata_server_test_setuserid: function (userId) {
+    this.setUserId(userId);
   }
 });
 
@@ -159,13 +163,28 @@ Meteor.publish("livedata_server_test_sub", function (connectionId) {
   this.stop();
 });
 
-Meteor.publish("livedata_server_test_sub_method", function(connectionId) {
+Meteor.publish("livedata_server_test_sub_method", function (connectionId) {
   var callback = onSubscription[connectionId];
   if (callback) {
     var id = Meteor.call('livedata_server_test_inner');
     callback(id);
   }
   this.stop();
+});
+
+Meteor.publish("livedata_server_test_sub_context", function (connectionId, userId) {
+  var callback = onSubscription[connectionId];
+  var methodInvocation = DDP._CurrentMethodInvocation.get();
+  var publicationInvocation = DDP._CurrentPublicationInvocation.get();
+  if (callback) {
+    callback.call(this, methodInvocation, publicationInvocation);
+  }
+  if (this.userId) {
+    this.stop();
+  } else {
+    this.ready();
+    Meteor.call('livedata_server_test_setuserid', userId);
+  }
 });
 
 
@@ -187,22 +206,6 @@ Tinytest.addAsync(
   }
 );
 
-var methodCallResults = {};
-
-Meteor.publish("livedata_server_test_sub_with_method", function (connectionId) {
-  if (! methodCallResults[connectionId]) {
-    methodCallResults[connectionId] = [];
-  }
-  methodCallResults[connectionId].push(Meteor.call('livedata_server_test_inner'));
-  this.ready();
-});
-
-Meteor.methods({
-  livedata_server_test_setuserid: function (userId) {
-    this.setUserId(userId);
-  }
-});
-
 Tinytest.addAsync(
   "livedata server - connection in method called from publish function",
   function (test, onComplete) {
@@ -222,35 +225,24 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "livedata server - no connection in a method called from a publish function",
+  "livedata server - verify context in publish function",
   function (test, onComplete) {
     makeTestConnection(
       test,
       function (clientConn, serverConn) {
-        clientConn.call('livedata_server_test_setuserid', null);
-
-        var handle = clientConn.subscribe("livedata_server_test_sub_with_method", serverConn.id, {
-          onStop: function (error) {
-            test.isFalse(error, error);
+        var userId = 'someUserId';
+        onSubscription[serverConn.id] = function (methodInvocation, publicationInvocation) {
+          // DDP._CurrentMethodInvocation should be undefined in a publish function
+          test.isUndefined(methodInvocation, 'Should have been undefined');
+          // DDP._CurrentPublicationInvocation should be set in a publish function
+          test.isNotUndefined(publicationInvocation, 'Should have been defined');
+          if (this.userId === userId) {
+            delete onSubscription[serverConn.id];
             clientConn.disconnect();
-
-            // Both times, also after rerun, connection should be null
-            // inside a server-side called method should be null.
-            test.equal(methodCallResults[serverConn.id], [null, null]);
-            delete methodCallResults[serverConn.id];
-
             onComplete();
-          },
-          onReady: function () {
-            // Connection inside a server-side called method should be null.
-            test.equal(methodCallResults[serverConn.id], [null]);
-
-            // With this call we force publish function to rerun.
-            clientConn.call('livedata_server_test_setuserid', 'someUserId');
-
-            handle.stop()
           }
-        });
+        }
+        clientConn.subscribe("livedata_server_test_sub_context", serverConn.id, userId);
       }
     );
   }
