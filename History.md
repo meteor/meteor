@@ -9,10 +9,19 @@
   information about how dynamic `import(...)` works in Meteor, and how to
   use it in your applications.
 
-* The `meteor-babel` npm package has been upgraded to version 0.20.3, and
-  the `reify` npm package has been upgraded to version 0.9.2, fixing
+* The `meteor-babel` npm package has been upgraded to version 0.21.1.
+
+* The `reify` npm package has been upgraded to version 0.11.0, fixing
   [issue #8595](https://github.com/meteor/meteor/issues/8595) and
   improving compilation and runtime performance.
+
+> Note: With this version of Reify, `import` declarations are compiled to
+  `module.watch(require(id), ...)` instead of `module.importSync(id, ...)`
+  or the older `module.import(id, ...)`. The behavior of the compiled code
+  should be the same as before, but the details seemed different enough to
+  warrant a note.
+
+* The `install` npm package has been upgraded to version 0.10.1.
 
 ## v1.4.4.2, 2017-05-02
 
