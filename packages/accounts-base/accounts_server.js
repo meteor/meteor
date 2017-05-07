@@ -77,7 +77,7 @@ export class AccountsServer extends AccountsCommon {
     // user expects. The way to make this work in a publish is to do
     // Meteor.find(this.userId).observe and recompute when the user
     // record changes.
-    const currentInvocation = DDP._CurrentInvocation.get() || DDP._CurrentPublicationInvocation.get();
+    const currentInvocation = DDP._CurrentMethodInvocation.get() || DDP._CurrentPublicationInvocation.get();
     if (!currentInvocation)
       throw new Error("Meteor.userId can only be invoked in method calls or publications.");
     return currentInvocation.userId;

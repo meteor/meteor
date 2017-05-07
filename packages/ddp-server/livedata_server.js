@@ -714,7 +714,7 @@ _.extend(Session.prototype, {
 
         resolve(DDPServer._CurrentWriteFence.withValue(
           fence,
-          () => DDP._CurrentInvocation.withValue(
+          () => DDP._CurrentMethodInvocation.withValue(
             invocation,
             () => maybeAuditArgumentChecks(
               handler, invocation, msg.params,
@@ -810,13 +810,10 @@ _.extend(Session.prototype, {
     self.userId = userId;
 
     // _setUserId is normally called from a Meteor method with
-    // DDP._CurrentInvocation set. But DDP._CurrentInvocation is not expected
-    // to be set inside a publish function, so we temporary unset it.
-    // Otherwise, this can lead to a problem that if a publish function is
-    // calling server-side Meteor methods, their this.connection property is
-    // set when publish function is restarted here, but the property should
-    // not be set.
-    DDP._CurrentInvocation.withValue(undefined, function () {
+    // DDP._CurrentMethodInvocation set. But DDP._CurrentMethodInvocation is not
+    // expected to be set inside a publish function, so we temporary unset it.
+    // Inside a publish function DDP._CurrentPublicationInvocation is set.
+    DDP._CurrentMethodInvocation.withValue(undefined, function () {
       // Save the old named subs, and reset to having no subscriptions.
       var oldNamedSubs = self._namedSubs;
       self._namedSubs = {};
@@ -1656,16 +1653,16 @@ _.extend(Server.prototype, {
       throw new Error("Can't call setUserId on a server initiated method call");
     };
     var connection = null;
-    var currentInvocation = DDP._CurrentInvocation.get();
+    var currentMethodInvocation = DDP._CurrentMethodInvocation.get();
     var currentPublicationInvocation = DDP._CurrentPublicationInvocation.get();
     var randomSeed = null;
-    if (currentInvocation) {
-      userId = currentInvocation.userId;
+    if (currentMethodInvocation) {
+      userId = currentMethodInvocation.userId;
       setUserId = function(userId) {
-        currentInvocation.setUserId(userId);
+        currentMethodInvocation.setUserId(userId);
       };
-      connection = currentInvocation.connection;
-      randomSeed = DDPCommon.makeRpcSeed(currentInvocation, name);
+      connection = currentMethodInvocation.connection;
+      randomSeed = DDPCommon.makeRpcSeed(currentMethodInvocation, name);
     } else if (currentPublicationInvocation) {
       userId = currentPublicationInvocation.userId;
       setUserId = function(userId) {
@@ -1683,7 +1680,7 @@ _.extend(Server.prototype, {
     });
 
     return new Promise(resolve => resolve(
-      DDP._CurrentInvocation.withValue(
+      DDP._CurrentMethodInvocation.withValue(
         invocation,
         () => maybeAuditArgumentChecks(
           handler, invocation, EJSON.clone(args),

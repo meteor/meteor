@@ -301,9 +301,9 @@ Tinytest.addAsync(
 
 Meteor.methods({
   testResolvedPromise(arg) {
-    const invocation1 = DDP._CurrentInvocation.get();
+    const invocation1 = DDP._CurrentMethodInvocation.get();
     return Promise.resolve(arg).then(result => {
-      const invocation2 = DDP._CurrentInvocation.get();
+      const invocation2 = DDP._CurrentMethodInvocation.get();
       // This equality holds because Promise callbacks are bound to the
       // dynamic environment where .then was called.
       if (invocation1 !== invocation2) {
