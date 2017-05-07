@@ -816,7 +816,7 @@ _.extend(Session.prototype, {
     // calling server-side Meteor methods, their this.connection property is
     // set when publish function is restarted here, but the property should
     // not be set.
-    DDP._CurrentInvocation.withValue(null, function () {
+    DDP._CurrentInvocation.withValue(undefined, function () {
       // Save the old named subs, and reset to having no subscriptions.
       var oldNamedSubs = self._namedSubs;
       self._namedSubs = {};
