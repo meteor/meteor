@@ -1645,9 +1645,9 @@ _.extend(Server.prototype, {
       );
     }
 
-    // If this is a method call from within another method, get the
-    // user state from the outer method, otherwise don't allow
-    // setUserId to be called
+    // If this is a method call from within another method or publish function,
+    // get the user state from the outer method or publish function, otherwise
+    // don't allow setUserId to be called
     var userId = null;
     var setUserId = function() {
       throw new Error("Can't call setUserId on a server initiated method call");

@@ -8,5 +8,5 @@ LivedataTest.SUPPORTED_DDP_VERSIONS = DDPCommon.SUPPORTED_DDP_VERSIONS;
 DDP._CurrentMethodInvocation = new Meteor.EnvironmentVariable;
 DDP._CurrentPublicationInvocation = new Meteor.EnvironmentVariable;
 
-// Keep DDP._CurrentInvocation for backwards-compatibility.
+// XXX: Keep DDP._CurrentInvocation for backwards-compatibility.
 DDP._CurrentInvocation = DDP._CurrentMethodInvocation;
