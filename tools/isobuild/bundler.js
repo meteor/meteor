@@ -171,6 +171,7 @@ var packageVersionParser = require('../packaging/package-version-parser.js');
 var release = require('../packaging/release.js');
 import { load as loadIsopacket } from '../tool-env/isopackets.js';
 import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
+import { gzipSync } from "zlib";
 
 // files to ignore when bundling. node has no globs, so use regexps
 exports.ignoreFiles = [
@@ -1259,7 +1260,7 @@ class Target {
     const js = [];
 
     function handle(source, dynamic) {
-      const newFiles = source._minifiedFiles.map(file => {
+      source._minifiedFiles.forEach(file => {
         // Remove the function name __minifyJs that was added above.
         file.data = file.data
           .toString("utf8")
@@ -1286,14 +1287,40 @@ class Target {
           newFile.setUrlToHash('.js', '?meteor_js_resource=true');
         }
 
-        if (! dynamic) {
-          console.log(file.stats);
+        js.push(newFile);
+
+        if (file.stats &&
+            ! dynamic &&
+            minifyMode === "production") {
+          // If the minifier reported any statistics, serve those data as
+          // a .stats.json file alongside the newFile.
+          const contents = newFile.contents();
+          const statsFile = new File({
+            info: "bundle size stats JSON",
+            data: new Buffer(JSON.stringify({
+              totalMinifiedBytes: contents.length,
+              totalMinifiedGzipBytes: gzipSync(contents).length,
+              minifiedBytesByPackage: file.stats,
+            }, null, 2) + "\n", "utf8")
+          });
+
+          statsFile.url = newFile.url.replace(/\.js\b/, ".stats.json");
+          statsFile.targetPath =
+            newFile.targetPath.replace(/\.js\b/, ".stats.json");
+          statsFile.cacheable = true;
+          statsFile.type = "json";
+
+          if (statsFile.url !== newFile.url &&
+              statsFile.targetPath !== newFile.targetPath) {
+            // If the minifier used a file extension other than .js, the
+            // .replace calls above won't inject the .stats.json extension
+            // into the statsFile.{url,targetPath} strings, and it would
+            // be a mistake to serve the statsFile with the same URL as
+            // the real JS bundle. This should be a very uncommon case.
+            js.push(statsFile);
+          }
         }
-
-        return newFile;
       });
-
-      js.push(...newFiles);
     }
 
     staticFiles.forEach(file => handle(file, false));
@@ -1511,7 +1538,7 @@ class ClientTarget extends Target {
     const eachResource = function (f) {
       ["js", "css", "asset"].forEach((type) => {
         this[type].forEach((file) => {
-          f(file, type);
+          f(file, file.type || type);
         });
       });
     }.bind(this);
