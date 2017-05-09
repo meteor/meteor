@@ -1298,6 +1298,10 @@ class Target {
           const statsFile = new File({
             info: "bundle size stats JSON",
             data: new Buffer(JSON.stringify({
+              minifier: {
+                name: minifierDef.isopack.name,
+                version: minifierDef.isopack.version,
+              },
               totalMinifiedBytes: contents.length,
               totalMinifiedGzipBytes: gzipSync(contents).length,
               minifiedBytesByPackage: file.stats,
