@@ -25,6 +25,18 @@
 
 * The `install` npm package has been upgraded to version 0.10.1.
 
+* If you're using the `standard-minifier-js` Meteor package, as most
+  Meteor developers do, it will now produce a detailed analysis of package
+  and module sizes within your production `.js` bundle whenever you run
+  `meteor build` or `meteor run --production`. These data are served by
+  the application web server at the same URL as the minified `.js` bundle,
+  except with a `.stats.json` file extension instead of `.js`. If you're
+  using a different minifier plugin, and would like to support similar
+  functionality, refer to
+  [these](https://github.com/meteor/meteor/pull/8327/commits/084801237a8c288d99ec82b0fbc1c76bdf1aab16)
+  [commits](https://github.com/meteor/meteor/pull/8327/commits/1c8bc7353e9a8d526880634a58c506b423c4a55e)
+  for inspiration.
+
 ## v1.4.4.2, 2017-05-02
 
 * Node has been upgraded to version 4.8.2.
