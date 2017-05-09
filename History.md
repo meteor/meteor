@@ -1,5 +1,7 @@
 ## v.NEXT
 
+* Node has been upgraded to version 4.8.3.
+
 * Running `meteor add dynamic-import` installs support for ECMAScript
   [dynamic `import(...)`](https://github.com/tc39/proposal-dynamic-import),
   a new language feature which allows for asynchronous module fetching
