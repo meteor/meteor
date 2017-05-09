@@ -540,7 +540,7 @@ If you need to customize configuration files, a workaround is to create a dummy 
 
 <h3 id="building-for-production">Building for production</h3>
 
-Use `meteor build <build-output-directory> --server <host>:<port>` to build your app for production.
+Use `meteor build <build-output-directory> --server=<host>:<port>` to build your app for production.
 
 The `<host>` and `<port>` should be the address of the server you want your app to connect to.
 
