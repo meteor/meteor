@@ -45,6 +45,12 @@ require.extensions[".js"] = function(module, filename) {
       getBabelResult(filename).code,
       filename
     );
+
+    // As of version 0.10.0, the Reify require.extensions[".js"] handler
+    // is responsible for running parent setters after the module has
+    // finished loading for the first time, so we need to call that method
+    // here because we are not calling the defaultHandler.
+    module.runSetters();
   }
 };
 
