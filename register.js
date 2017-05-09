@@ -37,8 +37,7 @@ exports.setBabelOptions = function (options) {
 // defaultHandler, since Reify modifies require.extensions.
 require("reify/node");
 var defaultHandler = require.extensions[".js"];
-
-(require.extensions[".js"] = function(module, filename) {
+require.extensions[".js"] = function(module, filename) {
   if (shouldNotTransform(filename)) {
     defaultHandler(module, filename);
   } else {
@@ -47,7 +46,7 @@ var defaultHandler = require.extensions[".js"];
       filename
     );
   }
-}).reified = defaultHandler.reified;
+};
 
 exports.retrieveSourceMap = function(filename) {
   if (shouldNotTransform(filename)) {
