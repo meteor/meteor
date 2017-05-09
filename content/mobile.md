@@ -159,7 +159,7 @@ You will then have to reload `.bash_profile` (by executing `source ~/.bash_profi
 
 The current Android emulator tends to be rather slow and can be unstable, so our recommendation is to run your app on a physical device instead.
 
-If you do want to run on an emulator however, you will have to create an Android Virtual Device (AVD) using the [AVD Manager](http://developer.android.com/tools/devices/managing-avds.html). Make sure to configure one with API level 23, because that is what the version of Cordova we bundle requires.
+If you do want to run on an emulator however, you will have to create an Android Virtual Device (AVD) using the [AVD Manager](http://developer.android.com/tools/devices/managing-avds.html). Make sure to configure an AVD with an API level that is supported by the version of [Cordova Android](https://github.com/apache/cordova-android/blob/master/RELEASENOTES.md) you are using.
 
 <h2 id ="running-your-app">Developing on a device</h2>
 
