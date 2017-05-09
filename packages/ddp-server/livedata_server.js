@@ -1223,6 +1223,7 @@ _.extend(Subscription.prototype, {
    */
   onStop: function (callback) {
     var self = this;
+    callback = Meteor.bindEnvironment(callback, 'onStop callback', self);
     if (self._isDeactivated())
       callback();
     else

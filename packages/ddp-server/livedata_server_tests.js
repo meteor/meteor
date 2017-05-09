@@ -176,9 +176,20 @@ Meteor.publish("livedata_server_test_sub_context", function (connectionId, userI
   var callback = onSubscription[connectionId];
   var methodInvocation = DDP._CurrentMethodInvocation.get();
   var publicationInvocation = DDP._CurrentPublicationInvocation.get();
+
+  // Check the publish function's environment variables and context.
   if (callback) {
     callback.call(this, methodInvocation, publicationInvocation);
   }
+
+  // Check that onStop callback is have the same context as the publish function
+  // and that it runs with the same environment variables as this publish function.
+  this.onStop(function () {
+    var onStopMethodInvocation = DDP._CurrentMethodInvocation.get();
+    var onStopPublicationInvocation = DDP._CurrentPublicationInvocation.get();
+    callback.call(this, onStopMethodInvocation, onStopPublicationInvocation, true);
+  });
+
   if (this.userId) {
     this.stop();
   } else {
@@ -231,12 +242,12 @@ Tinytest.addAsync(
       test,
       function (clientConn, serverConn) {
         var userId = 'someUserId';
-        onSubscription[serverConn.id] = function (methodInvocation, publicationInvocation) {
+        onSubscription[serverConn.id] = function (methodInvocation, publicationInvocation, fromOnStop) {
           // DDP._CurrentMethodInvocation should be undefined in a publish function
           test.isUndefined(methodInvocation, 'Should have been undefined');
           // DDP._CurrentPublicationInvocation should be set in a publish function
           test.isNotUndefined(publicationInvocation, 'Should have been defined');
-          if (this.userId === userId) {
+          if (this.userId === userId && fromOnStop) {
             delete onSubscription[serverConn.id];
             clientConn.disconnect();
             onComplete();
