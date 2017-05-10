@@ -203,6 +203,26 @@ LocalCollection.Cursor.prototype.map = function (callback, thisArg) {
 };
 
 /**
+ * @summary Filter all matching documents with a callback.  Returns an Array.
+ * @locus Anywhere
+ * @method map
+ * @instance
+ * @memberOf Mongo.Cursor
+ * @param {IterationCallback} callback Function to call. It will be called with three arguments: the document, a 0-based index, and <em>cursor</em> itself.
+ * @param {Any} [thisArg] An object which will be the value of `this` inside `callback`.
+ */
+LocalCollection.Cursor.prototype.filter = function (callback, thisArg) {
+  var self = this;
+  var res = [];
+  self.forEach(function (doc, index) {
+    if (callback.call(thisArg, doc, index, self)) {
+      res.push(doc);
+    }
+  });
+  return res;
+};
+
+/**
  * @summary Return all matching documents as an Array.
  * @memberOf Mongo.Cursor
  * @method  fetch
