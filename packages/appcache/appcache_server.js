@@ -115,14 +115,13 @@ WebApp.connectHandlers.use(function (req, res, next) {
   manifest += "\n";
 
   manifest += "FALLBACK:\n";
-  manifest += "/ /" + "\n";
   // Add a fallback entry for each uncacheable asset we added above.
   //
   // This means requests for the bare url (/image.png instead of
   // /image.png?hash) will work offline. Online, however, the browser
   // will send a request to the server. Users can remove this extra
   // request to the server and have the asset served from cache by
-  // specifying the full URL with hash in their code (manually, with
+  // specifying the full URL with hash in their code (manually, or with
   // some sort of URL rewriting helper)
   _.each(WebApp.clientPrograms[WebApp.defaultArch].manifest, function (resource) {
     if (resource.where === 'client' &&
@@ -136,9 +135,6 @@ WebApp.connectHandlers.use(function (req, res, next) {
   manifest += "\n";
 
   manifest += "NETWORK:\n";
-  // TODO adding the manifest file to NETWORK should be unnecessary?
-  // Want more testing to be sure.
-  manifest += "/app.manifest" + "\n";
   _.each(
     [].concat(
       RoutePolicy.urlPrefixesFor('network'),
