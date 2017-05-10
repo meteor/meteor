@@ -47,6 +47,9 @@ exports.getDefaults = function getDefaults(features) {
   if (features) {
     if (features.react) {
       combined.presets.push(require("babel-preset-react"));
+      combined.plugins.push(
+        require("babel-plugin-transform-class-properties")
+      );
     }
 
     if (features.jscript) {

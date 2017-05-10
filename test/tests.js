@@ -5,6 +5,8 @@ import {
   helper as testHelper,
 } from "./test-module";
 
+const hasOwn = Object.prototype.hasOwnProperty;
+
 describe("meteor-babel", () => {
   import meteorBabel from "../index.js";
 
@@ -268,6 +270,33 @@ val = "zxcv";`;
 
     assert.strictEqual(calledCreateClass, true);
     assert.strictEqual(calledCreateElement, true);
+  });
+
+  it("class properties", function () {
+    class Bork {
+      instanceProperty = "bork";
+      boundFunction = () => {
+        return this.instanceProperty;
+      }
+
+      static staticProperty = "blep";
+      static staticFunction = function() {
+        return this.staticProperty;
+      }
+    }
+
+    const bork = new Bork;
+
+    assert.strictEqual(hasOwn.call(bork, "boundFunction"), true);
+    assert.strictEqual(
+      hasOwn.call(Bork.prototype, "boundFunction"),
+      false
+    );
+
+    assert.strictEqual((0, bork.boundFunction)(), "bork");
+
+    assert.strictEqual(Bork.staticProperty, "blep");
+    assert.strictEqual(Bork.staticFunction(), Bork.staticProperty);
   });
 
   const expectedFns = [
