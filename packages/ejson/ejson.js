@@ -82,7 +82,7 @@ var isInfOrNan = function (obj) {
 var builtinConverters = [
   { // Date
     matchJSONValue: function (obj) {
-      return _.has(obj, '$date') && _.size(obj) === 1;
+      return _.has(obj, '$date') && hasSize(obj, 1);
     },
     matchObject: function (obj) {
       return obj instanceof Date;
@@ -97,7 +97,7 @@ var builtinConverters = [
   { // NaN, Inf, -Inf. (These are the only objects with typeof !== 'object'
     // which we match.)
     matchJSONValue: function (obj) {
-      return _.has(obj, '$InfNaN') && _.size(obj) === 1;
+      return _.has(obj, '$InfNaN') && hasSize(obj, 1);
     },
     matchObject: isInfOrNan,
     toJSONValue: function (obj) {
@@ -116,7 +116,7 @@ var builtinConverters = [
   },
   { // Binary
     matchJSONValue: function (obj) {
-      return _.has(obj, '$binary') && _.size(obj) === 1;
+      return _.has(obj, '$binary') && hasSize(obj, 1);
     },
     matchObject: function (obj) {
       return typeof Uint8Array !== 'undefined' && obj instanceof Uint8Array
@@ -131,10 +131,10 @@ var builtinConverters = [
   },
   { // Escaping one level
     matchJSONValue: function (obj) {
-      return _.has(obj, '$escape') && _.size(obj) === 1;
+      return _.has(obj, '$escape') && hasSize(obj, 1);
     },
     matchObject: function (obj) {
-      if (_.isEmpty(obj) || _.size(obj) > 2) {
+      if (!hasSize(obj, 1)) {
         return false;
       }
       return _.any(builtinConverters, function (converter) {
@@ -158,7 +158,7 @@ var builtinConverters = [
   },
   { // Custom
     matchJSONValue: function (obj) {
-      return _.has(obj, '$type') && _.has(obj, '$value') && _.size(obj) === 2;
+      return _.has(obj, '$type') && _.has(obj, '$value') && hasSize(obj, 2);
     },
     matchObject: function (obj) {
       return EJSON._isCustomType(obj);
@@ -450,7 +450,7 @@ EJSON.equals = function (a, b, options) {
       i++;
       return true;
     });
-    return ret && _.size(b) === i;
+    return ret && hasSize(b, i);
   }
 };
 
