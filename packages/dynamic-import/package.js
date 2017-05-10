@@ -6,6 +6,10 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
+  // Do not allow this package to be used in pre-Meteor 1.5 apps.
+  api.use("isobuild:dynamic-import@1.5.0");
+
+  // Modify browser policy only if browser-policy packages are used.
   api.use("browser-policy-content", { weak: true });
 
   api.use("modules");

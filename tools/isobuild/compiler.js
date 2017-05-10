@@ -1021,5 +1021,9 @@ export const KNOWN_ISOBUILD_FEATURE_PACKAGES = {
   // One scenario is a package depending on a Cordova plugin or version
   // that is only available on npm, which means downloading the plugin is not
   // supported on versions of Cordova below 5.0.0.
-  'isobuild:cordova': ['5.4.0']
+  'isobuild:cordova': ['5.4.0'],
+
+  // This package requires functionality introduced in meteor-tool@1.5.0
+  // to enable dynamic module fetching via import(...).
+  'isobuild:dynamic-import': ['1.5.0'],
 };
