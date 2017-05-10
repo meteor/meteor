@@ -472,6 +472,65 @@ Meteor.isClient && testAsyncMulti("httpcall - beforeSend", [
 ]);
 
 
+testAsyncMulti("httpcall - binary", [
+  function(test, expect) {
+    
+    // "blob" and "document" are client-only
+    if (Meteor.isClient) {
+      HTTP.call(
+              "GET", url_prefix() + "/binary",
+              {responseType: "blob"},
+      expect(function(error, result) {
+        test.isFalse(error);
+        test.isTrue(result);
+        test.equal(result.statusCode, 200);
+        test.instanceOf(result.content, Blob);
+      }));
+      
+      HTTP.call(
+              "GET", url_prefix() + "/document",
+              {responseType: "document"},
+      expect(function(error, result) {
+        test.isFalse(error);
+        test.isTrue(result);
+        test.equal(result.statusCode, 200);
+        test.instanceOf(result.content, Document);
+      }));
+    }
+
+    HTTP.call(
+            "GET", url_prefix() + "/binary",
+            {responseType: "arraybuffer"},
+    expect(function(error, result) {
+      test.isFalse(error);
+      test.isTrue(result);
+      test.equal(result.statusCode, 200);
+      test.instanceOf(result.content, ArrayBuffer);
+    }));
+
+    HTTP.call(
+            "GET", url_prefix() + "/binary",
+            {responseType: "ejson-binary"},
+    expect(function(error, result) {
+      test.isFalse(error);
+      test.isTrue(result);
+      test.equal(result.statusCode, 200);
+      test.isTrue(EJSON.isBinary(result.content));
+    }));
+
+    HTTP.call(
+            "GET", url_prefix() + "/foo",
+            {responseType: "json"},
+    expect(function(error, result) {
+      test.isFalse(error);
+      test.isTrue(result);
+      test.equal(result.statusCode, 200);
+      test.instanceOf(result.content, Object);
+    }));
+
+  }
+]);
+
 if (Meteor.isServer) {
   // This is testing the server's static file sending code, not the http
   // package. It's here because it is very similar to the other tests
