@@ -129,6 +129,31 @@ var builtinConverters = [
       return Base64.decode(obj.$binary);
     }
   },
+  {
+    // Reference
+    matchJSONValue: function (obj) {
+      return _.has(obj, '$ref') && _.size(obj) === 1;
+    },
+    matchObject: function (obj) {
+      return false;
+    },
+    toJSONValue: function (obj) {
+      return false;
+    },
+    fromJSONValue: function (obj, base) {
+      var value = obj.$ref;
+      var refData = value.split('.');
+      // reference always starts with 'base', so remove first element
+      refData.splice(0, 1);
+      var cObj = base;
+
+      while(refData.length > 0){
+        cObj = cObj[refData.shift()];
+      }
+
+      return cObj;
+    }
+  },
   { // Escaping one level
     matchJSONValue: function (obj) {
       return _.has(obj, '$escape') && _.size(obj) === 1;
@@ -199,33 +224,61 @@ EJSON._getConverters = function () {
 // for both arrays and objects, in-place modification.
 var adjustTypesToJSONValue =
 EJSON._adjustTypesToJSONValue = function (obj) {
-  // Is it an atom that we need to adjust?
-  if (obj === null)
-    return null;
-  var maybeChanged = toJSONValueHelper(obj);
-  if (maybeChanged !== undefined)
-    return maybeChanged;
+  var visited = []; // contains objects/arrays that we have visited
+  var vData = []; // contains data about visited objects
+  var parent = null; // used in recursion - to store parent node in vData
+  var cKey = null; // used in recursion - to store current key in vData
+  
+  var _adjust = function(obj){
+    // Is it an atom that we need to adjust?
+    if (obj === null)
+      return null;
+    var maybeChanged = toJSONValueHelper(obj);
+    if (maybeChanged !== undefined)
+      return maybeChanged;
 
-  // Other atoms are unchanged.
-  if (typeof obj !== 'object')
+    // Other atoms are unchanged.
+    if (typeof obj !== 'object')
+      return obj;
+
+    visited.push(obj);
+    vData.push({parent: parent, key: cKey, obj: obj});
+    // Iterate over array or object structure.
+    _.each(obj, function (value, key) {
+      if (typeof value !== 'object' && value !== undefined &&
+          !isInfOrNan(value))
+        return; // continue
+
+      var changed = toJSONValueHelper(value);
+      if (changed) {
+        obj[key] = changed;
+        return; // on to the next key
+      }
+      var vIdx = visited.indexOf(value);
+      if(vIdx === -1){
+        // if we get here, value is an object but not adjustable
+        // at this level.  recurse.
+        cKey = key;
+        parent = obj;
+        _adjust(value);
+      } else {
+        // this is a circular reference
+        var refData = '';
+        var visitedNode = vData[vIdx];
+        while(visitedNode.parent !== null){
+          refData = '.' + visitedNode.key + refData;
+          visitedNode = vData[visited.indexOf(visitedNode.parent)];
+        }
+
+        obj[key] = {
+          '$ref': 'base' + refData
+        };
+      }
+    });
     return obj;
-
-  // Iterate over array or object structure.
-  _.each(obj, function (value, key) {
-    if (typeof value !== 'object' && value !== undefined &&
-        !isInfOrNan(value))
-      return; // continue
-
-    var changed = toJSONValueHelper(value);
-    if (changed) {
-      obj[key] = changed;
-      return; // on to the next key
-    }
-    // if we get here, value is an object but not adjustable
-    // at this level.  recurse.
-    adjustTypesToJSONValue(value);
-  });
-  return obj;
+  };
+  
+  return _adjust(obj);
 };
 
 // Either return the JSON-compatible version of the argument, or undefined (if
@@ -262,29 +315,35 @@ EJSON.toJSONValue = function (item) {
 //
 var adjustTypesFromJSONValue =
 EJSON._adjustTypesFromJSONValue = function (obj) {
-  if (obj === null)
-    return null;
-  var maybeChanged = fromJSONValueHelper(obj);
-  if (maybeChanged !== obj)
-    return maybeChanged;
+  var _base = obj; // stores base object (in case we recurse somewhere)
+  
+  var _adjust = function(obj){
+    if (obj === null)
+      return null;
+    var maybeChanged = fromJSONValueHelper(obj);
+    if (maybeChanged !== obj)
+      return maybeChanged;
 
-  // Other atoms are unchanged.
-  if (typeof obj !== 'object')
-    return obj;
+    // Other atoms are unchanged.
+    if (typeof obj !== 'object')
+      return obj;
 
-  _.each(obj, function (value, key) {
-    if (typeof value === 'object') {
-      var changed = fromJSONValueHelper(value);
-      if (value !== changed) {
-        obj[key] = changed;
-        return;
+    _.each(obj, function (value, key) {
+      if (typeof value === 'object') {
+        var changed = fromJSONValueHelper(value, _base);
+        if (value !== changed) {
+          obj[key] = changed;
+          return;
+        }
+        // if we get here, value is an object but not adjustable
+        // at this level.  recurse.
+        _adjust(value);
       }
-      // if we get here, value is an object but not adjustable
-      // at this level.  recurse.
-      adjustTypesFromJSONValue(value);
-    }
-  });
-  return obj;
+    });
+    return obj;
+  };
+  
+  return _adjust(obj);
 };
 
 // Either return the argument changed to have the non-json
@@ -292,7 +351,7 @@ EJSON._adjustTypesFromJSONValue = function (obj) {
 
 // DOES NOT RECURSE.  For actually getting the fully-changed value, use
 // EJSON.fromJSONValue
-var fromJSONValueHelper = function (value) {
+var fromJSONValueHelper = function (value /* arguments */) {
   if (typeof value === 'object' && value !== null) {
     if (_.size(value) <= 2
         && _.all(value, function (v, k) {
@@ -301,7 +360,7 @@ var fromJSONValueHelper = function (value) {
       for (var i = 0; i < builtinConverters.length; i++) {
         var converter = builtinConverters[i];
         if (converter.matchJSONValue(value)) {
-          return converter.fromJSONValue(value);
+          return converter.fromJSONValue.apply(this, arguments);
         }
       }
     }
@@ -374,84 +433,108 @@ EJSON.isBinary = function (obj) {
  * @param {Boolean} options.keyOrderSensitive Compare in key sensitive order, if supported by the JavaScript implementation.  For example, `{a: 1, b: 2}` is equal to `{b: 2, a: 1}` only when `keyOrderSensitive` is `false`.  The default is `false`.
  */
 EJSON.equals = function (a, b, options) {
-  var i;
-  var keyOrderSensitive = !!(options && options.keyOrderSensitive);
-  if (a === b)
-    return true;
-  if (_.isNaN(a) && _.isNaN(b))
-    return true; // This differs from the IEEE spec for NaN equality, b/c we don't want
-                 // anything ever with a NaN to be poisoned from becoming equal to anything.
-  if (!a || !b) // if either one is falsy, they'd have to be === to be equal
-    return false;
-  if (!(typeof a === 'object' && typeof b === 'object'))
-    return false;
-  if (a instanceof Date && b instanceof Date)
-    return a.valueOf() === b.valueOf();
-  if (EJSON.isBinary(a) && EJSON.isBinary(b)) {
-    if (a.length !== b.length)
-      return false;
-    for (i = 0; i < a.length; i++) {
-      if (a[i] !== b[i])
-        return false;
-    }
-    return true;
-  }
-  if (typeof (a.equals) === 'function')
-    return a.equals(b, options);
-  if (typeof (b.equals) === 'function')
-    return b.equals(a, options);
-  if (a instanceof Array) {
-    if (!(b instanceof Array))
-      return false;
-    if (a.length !== b.length)
-      return false;
-    for (i = 0; i < a.length; i++) {
-      if (!EJSON.equals(a[i], b[i], options))
-        return false;
-    }
-    return true;
-  }
-  // fallback for custom types that don't implement their own equals
-  switch (EJSON._isCustomType(a) + EJSON._isCustomType(b)) {
-    case 1: return false;
-    case 2: return EJSON.equals(EJSON.toJSONValue(a), EJSON.toJSONValue(b));
-  }
-  // fall back to structural equality of objects
-  var ret;
-  if (keyOrderSensitive) {
-    var bKeys = [];
-    _.each(b, function (val, x) {
-        bKeys.push(x);
-    });
-    i = 0;
-    ret = _.all(a, function (val, x) {
-      if (i >= bKeys.length) {
-        return false;
-      }
-      if (x !== bKeys[i]) {
-        return false;
-      }
-      if (!EJSON.equals(val, b[bKeys[i]], options)) {
-        return false;
-      }
-      i++;
+  var aVisited = []; // visited objects in a
+  var bVisited = []; // visited objects in b
+  
+  var _equals = function(a, b, options){
+    var i;
+    var keyOrderSensitive = !!(options && options.keyOrderSensitive);
+    if (a === b)
       return true;
-    });
-    return ret && i === bKeys.length;
-  } else {
-    i = 0;
-    ret = _.all(a, function (val, key) {
-      if (!_.has(b, key)) {
+    if (_.isNaN(a) && _.isNaN(b))
+      return true; // This differs from the IEEE spec for NaN equality, b/c we don't want
+                   // anything ever with a NaN to be poisoned from becoming equal to anything.
+    if (!a || !b) // if either one is falsy, they'd have to be === to be equal
+      return false;
+    if (!(typeof a === 'object' && typeof b === 'object'))
+      return false;
+    if (a instanceof Date && b instanceof Date)
+      return a.valueOf() === b.valueOf();
+    if (EJSON.isBinary(a) && EJSON.isBinary(b)) {
+      if (a.length !== b.length)
         return false;
+      for (i = 0; i < a.length; i++) {
+        if (a[i] !== b[i])
+          return false;
       }
-      if (!EJSON.equals(val, b[key], options)) {
-        return false;
-      }
-      i++;
       return true;
-    });
-    return ret && _.size(b) === i;
-  }
+    }
+    if (typeof (a.equals) === 'function')
+      return a.equals(b, options);
+    if (typeof (b.equals) === 'function')
+      return b.equals(a, options);
+    if (a instanceof Array) {
+      if (!(b instanceof Array))
+        return false;
+      if (a.length !== b.length)
+        return false;
+      for (i = 0; i < a.length; i++) {
+        if (!_equals(a[i], b[i], options))
+          return false;
+      }
+      return true;
+    }
+    // fallback for custom types that don't implement their own equals
+    switch (EJSON._isCustomType(a) + EJSON._isCustomType(b)) {
+      case 1: return false;
+      case 2: return _equals(EJSON.toJSONValue(a), EJSON.toJSONValue(b));
+    }
+    // fall back to structural equality of objects
+    var ret;
+    aVisited.push(a);
+    bVisited.push(b);
+    
+    if (keyOrderSensitive) {
+      var bKeys = [];
+      _.each(b, function (val, x) {
+          bKeys.push(x);
+      });
+      i = 0;
+      ret = _.all(a, function (val, x) {
+        if (i >= bKeys.length) {
+          return false;
+        }
+        if (x !== bKeys[i]) {
+          return false;
+        }
+        var aVIdx = aVisited.indexOf(val);
+        if(aVIdx === -1){
+          if (!_equals(val, b[bKeys[i]], options)) {
+            return false;
+          }
+        } else {
+          if(bVisited.indexOf(b[bKeys[i]]) !== aVIdx){
+            return false;
+          }
+        }
+        i++;
+        return true;
+      });
+      return ret && i === bKeys.length;
+    } else {
+      i = 0;
+      ret = _.all(a, function (val, key) {
+        if (!_.has(b, key)) {
+          return false;
+        }
+        var aVIdx = aVisited.indexOf(val);
+        if(aVIdx === -1){
+          if (!_equals(val, b[key], options)) {
+            return false;
+          }
+        } else {
+          if(bVisited.indexOf(b[key]) !== aVIdx){
+            return false;
+          }
+        }
+        i++;
+        return true;
+      });
+      return ret && _.size(b) === i;
+    }
+  };
+  
+  return _equals(a, b, options);
 };
 
 /**
@@ -460,47 +543,64 @@ EJSON.equals = function (a, b, options) {
  * @param {EJSON} val A value to copy.
  */
 EJSON.clone = function (v) {
-  var ret;
-  if (typeof v !== "object")
-    return v;
-  if (v === null)
-    return null; // null has typeof "object"
-  if (v instanceof Date)
-    return new Date(v.getTime());
-  // RegExps are not really EJSON elements (eg we don't define a serialization
-  // for them), but they're immutable anyway, so we can support them in clone.
-  if (v instanceof RegExp)
-    return v;
-  if (EJSON.isBinary(v)) {
-    ret = EJSON.newBinary(v.length);
-    for (var i = 0; i < v.length; i++) {
-      ret[i] = v[i];
+  var visited = []; // objects that we have seen throughout the cloning process
+  var clones = []; // clones of the objects that we have seen
+  
+  var _clone = function(v){
+    var ret;
+    if (typeof v !== "object")
+      return v;
+    if (v === null)
+      return null; // null has typeof "object"
+    if (v instanceof Date)
+      return new Date(v.getTime());
+    // RegExps are not really EJSON elements (eg we don't define a serialization
+    // for them), but they're immutable anyway, so we can support them in clone.
+    if (v instanceof RegExp)
+      return v;
+    if (EJSON.isBinary(v)) {
+      ret = EJSON.newBinary(v.length);
+      for (var i = 0; i < v.length; i++) {
+        ret[i] = v[i];
+      }
+      return ret;
     }
+    // XXX: Use something better than underscore's isArray
+    if (_.isArray(v) || _.isArguments(v)) {
+      // For some reason, _.map doesn't work in this context on Opera (weird test
+      // failures).
+      ret = [];
+      for (i = 0; i < v.length; i++)
+        ret[i] = _clone(v[i]);
+      return ret;
+    }
+    // handle general user-defined typed Objects if they have a clone method
+    if (typeof v.clone === 'function') {
+      return v.clone();
+    }
+    // handle other custom types
+    if (EJSON._isCustomType(v)) {
+      return EJSON.fromJSONValue(_clone(EJSON.toJSONValue(v)), true);
+    }
+    // handle other objects
+    ret = {};
+    visited.push(v);
+    clones.push(ret);
+    
+    _.each(v, function (value, key) {
+      // check for circular references. If there is a circular reference, insert
+      // the clone of the object
+      var vIdx = visited.indexOf(value);
+      if(vIdx === -1){
+        ret[key] = _clone(value);
+      } else {
+        ret[key] = clones[vIdx];
+      }
+    });
     return ret;
   }
-  // XXX: Use something better than underscore's isArray
-  if (_.isArray(v) || _.isArguments(v)) {
-    // For some reason, _.map doesn't work in this context on Opera (weird test
-    // failures).
-    ret = [];
-    for (i = 0; i < v.length; i++)
-      ret[i] = EJSON.clone(v[i]);
-    return ret;
-  }
-  // handle general user-defined typed Objects if they have a clone method
-  if (typeof v.clone === 'function') {
-    return v.clone();
-  }
-  // handle other custom types
-  if (EJSON._isCustomType(v)) {
-    return EJSON.fromJSONValue(EJSON.clone(EJSON.toJSONValue(v)), true);
-  }
-  // handle other objects
-  ret = {};
-  _.each(v, function (value, key) {
-    ret[key] = EJSON.clone(value);
-  });
-  return ret;
+  
+  return _clone(v);
 };
 
 /**
