@@ -1157,15 +1157,19 @@ Logic._defineFormula(Logic.HalfAdderCarry, 'hcarry', {
   }
 });
 
-Logic.FullAdderSum = function (formula1, formula2, formula3) {
-  if (assert) assert(formula1, isFormulaOrTerm);
-  if (assert) assert(formula2, isFormulaOrTerm);
-  if (assert) assert(formula3, isFormulaOrTerm);
-  if (assert) assertNumArgs(arguments.length, 3, "Logic.FullAdderSum");
-  this.a = formula1;
-  this.b = formula2;
-  this.c = formula3;
-};
+function fullAdder(componentName) {
+  return function (formula1, formula2, formula3) {
+    if (assert) assert(formula1, isFormulaOrTerm);
+    if (assert) assert(formula2, isFormulaOrTerm);
+    if (assert) assert(formula3, isFormulaOrTerm);
+    if (assert) assertNumArgs(arguments.length, 3, componentName);
+    this.a = formula1;
+    this.b = formula2;
+    this.c = formula3;
+  };
+}
+
+Logic.FullAdderSum = fullAdder("Logic.FullAdderSum");
 
 Logic._defineFormula(Logic.FullAdderSum, 'fsum', {
   generateClauses: function (isTrue, t) {
@@ -1173,15 +1177,7 @@ Logic._defineFormula(Logic.FullAdderSum, 'fsum', {
   }
 });
 
-Logic.FullAdderCarry = function (formula1, formula2, formula3) {
-  if (assert) assert(formula1, isFormulaOrTerm);
-  if (assert) assert(formula2, isFormulaOrTerm);
-  if (assert) assert(formula3, isFormulaOrTerm);
-  if (assert) assertNumArgs(arguments.length, 3, "Logic.FullAdderCarry");
-  this.a = formula1;
-  this.b = formula2;
-  this.c = formula3;
-};
+Logic.FullAdderCarry = fullAdder("Logic.FullAdderCarry");
 
 Logic._defineFormula(Logic.FullAdderCarry, 'fcarry', {
   generateClauses: function (isTrue, t) {
