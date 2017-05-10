@@ -1601,8 +1601,16 @@ class ClientTarget extends Target {
       writeFile(file, builder);
       manifest.push(manifestItem);
 
-      if (file.targetPath.startsWith("dynamic/") &&
-          manifestItem.sourceMapUrl) {
+      if (! file.targetPath.startsWith("dynamic/")) {
+        return;
+      }
+
+      // Another measure for preventing this file from being loaded
+      // eagerly as a <script> tag, in addition to manifestItem.path being
+      // prefixed with "dynamic/".
+      manifestItem.type = "dynamic js";
+
+      if (manifestItem.sourceMapUrl) {
         // If the file is a dynamic module, we don't embed its source map
         // in the file itself (because base64-encoded data: URLs for
         // source maps can be very large), but rather include a normal URL
