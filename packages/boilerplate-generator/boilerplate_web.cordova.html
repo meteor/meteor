@@ -24,7 +24,6 @@
     }
   </script>
 
-  <script type="text/javascript" src="/cordova.js"></script>
 {{#each js}}  <script type="text/javascript" src="{{url}}"></script>
 {{/each}}
 {{#each additionalStaticJs}}
@@ -37,6 +36,7 @@
             src='{{rootUrlPathPrefix}}{{pathname}}'></script>
   {{/if}}
 {{/each}}
+  <script type="text/javascript" src="/cordova.js"></script>
   {{{head}}}
 </head>
 
