@@ -1598,20 +1598,20 @@ class ClientTarget extends Target {
       manifestItem.size = file.size();
       manifestItem.hash = file.hash();
 
-      if (! file.targetPath.startsWith("dynamic/")) {
-        writeFile(file, builder);
-        manifest.push(manifestItem);
+      writeFile(file, builder);
+      manifest.push(manifestItem);
 
-      } else if (manifestItem.sourceMapUrl) {
+      if (file.targetPath.startsWith("dynamic/") &&
+          manifestItem.sourceMapUrl) {
+        // If the file is a dynamic module, we don't embed its source map
+        // in the file itself (because base64-encoded data: URLs for
+        // source maps can be very large), but rather include a normal URL
+        // referring to the source map, so that it can be loaded from the
+        // web server when needed.
         writeFile(file, builder, {
           sourceMapUrl: manifestItem.sourceMapUrl,
         });
 
-        // If the file is dynamic, we don't need/want the file itself to
-        // be served by the web server, but we do want its source map (if
-        // defined) to be accessible via HTTP, so that we can refer to it
-        // by URL rather than embedding it as a very long data URL comment
-        // in the file.
         manifest.push({
           type: "json",
           path: manifestItem.sourceMap,
@@ -1620,9 +1620,6 @@ class ClientTarget extends Target {
           cacheable: manifestItem.cacheable,
           hash: manifestItem.hash,
         });
-
-      } else {
-        writeFile(file, builder);
       }
     });
 
