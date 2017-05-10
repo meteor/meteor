@@ -12,7 +12,7 @@ Module.prototype.dynamicImport = function (id) {
   });
 };
 
-// Called by Module.prototype.fetch if there are any missing dynamic
+// Called by Module.prototype.prefetch if there are any missing dynamic
 // modules that need to be fetched.
 meteorInstall.fetch = function (ids) {
   var tree = Object.create(null);
