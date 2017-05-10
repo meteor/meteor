@@ -48,6 +48,7 @@
         <CustomAction Id="BulkRemoveMeteorFiles"  BinaryKey="WiXHelper" Return="check" DllEntry="BulkRemoveMeteorFiles" />
         <CustomAction Id="SetFolderPackages"  Property="METEORDIR_PACKAGES" Value="[METEOR_DIR].meteor\packages" />
         <CustomAction Id="SetFolderPkg_Meta"  Property="METEORDIR_PKG_META" Value="[METEOR_DIR].meteor\package-metadata" />
+        <CustomActionRef Id="WixBroadcastEnvironmentChange" />
 
         <InstallExecuteSequence>
             <Custom Action="Download_MeteorPackage"  After="InstallFiles">NOT Installed</Custom>
