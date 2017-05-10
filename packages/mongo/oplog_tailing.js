@@ -121,15 +121,51 @@ _.extend(OplogHandle.prototype, {
   // currently visible.
   // XXX become convinced that this is actually safe even if oplogConnection
   // is some kind of pool
-  waitUntilCaughtUp: function () {
+  _oplogCheckRunning: false,
+  _oplogCheckCallbacks: [],
+  waitUntilCaughtUp: function() {
     var self = this;
-    if (self._stopped)
-      throw new Error("Called waitUntilCaughtUp on stopped handle!");
-
     // Calling waitUntilCaughtUp requries us to wait for the oplog connection to
     // be ready.
     self._readyFuture.wait();
     var lastEntry;
+
+    if (self._stopped) {
+      throw new Error("Called waitUntilCaughtUp on stopped handle!");
+    }
+    
+    var f = new Future();
+    self._oplogCheckCallbacks.push(f.return.bind(f));
+    self._tryFindingOplogLastEntry();
+    f.wait();
+  },
+  _tryFindingOplogLastEntry: function () {
+    var self = this;
+    
+    if(self._oplogCheckRunning) {
+      return;
+    }
+
+    var callbacks = self._oplogCheckCallbacks;
+    if(callbacks.length === 0) {
+      return;
+    }
+
+    function startProcess() {
+      self._oplogCheckRunning = true;
+      self._oplogCheckCallbacks = [];
+    }
+
+    function completeProcess() {
+      callbacks.forEach(function(c) {
+        c();
+      });
+
+      self._oplogCheckRunning = false;
+      self._tryFindingOplogLastEntry();
+    }
+
+    startProcess();
 
     while (!self._stopped) {
       // We need to make the selector at least as restrictive as the actual
@@ -149,22 +185,22 @@ _.extend(OplogHandle.prototype, {
     }
 
     if (self._stopped)
-      return;
+      return completeProcess();
 
     if (!lastEntry) {
       // Really, nothing in the oplog? Well, we've processed everything.
-      return;
+      return completeProcess();
     }
 
     var ts = lastEntry.ts;
-    if (!ts)
+    if (!ts) {
       throw Error("oplog entry without ts: " + EJSON.stringify(lastEntry));
+    }
 
     if (self._lastProcessedTS && ts.lessThanOrEqual(self._lastProcessedTS)) {
       // We've already caught up to here.
-      return;
+      return completeProcess();
     }
-
 
     // Insert the future into our list. Almost always, this will be at the end,
     // but it's conceivable that if we fail over from one primary to another,
@@ -176,6 +212,8 @@ _.extend(OplogHandle.prototype, {
     var f = new Future;
     self._catchingUpFutures.splice(insertAfter, 0, {ts: ts, future: f});
     f.wait();
+
+    return completeProcess();
   },
   _startTailing: function () {
     var self = this;
