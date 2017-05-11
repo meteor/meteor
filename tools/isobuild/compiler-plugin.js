@@ -1292,12 +1292,13 @@ export class PackageSourceBatch {
       noLineNumbers: !isWeb
     };
 
-    const cacheKey = sha1(JSON.stringify({
+    const fileHashes = [];
+    const cacheKeyPrefix = sha1(JSON.stringify({
       LINKER_CACHE_SALT,
       linkerOptions,
       files: jsResources.map((inputFile) => {
+        fileHashes.push(inputFile.hash);
         return {
-          hash: inputFile.hash,
           installPath: inputFile.installPath,
           sourceMap: !! inputFile.sourceMap,
           mainModule: inputFile.mainModule,
@@ -1307,6 +1308,8 @@ export class PackageSourceBatch {
         };
       })
     }));
+    const cacheKeySuffix = sha1(JSON.stringify(fileHashes));
+    const cacheKey = `${cacheKeyPrefix}_${cacheKeySuffix}`;
 
     {
       const inMemoryCached = LINKER_CACHE.get(cacheKey);
@@ -1394,8 +1397,19 @@ export class PackageSourceBatch {
     if (canCache) {
       LINKER_CACHE.set(cacheKey, ret);
       if (cacheFilename) {
+        const cacheKeySuffixRegex = new RegExp('_' + cacheKeySuffix, 'g');
+        const oldCacheFilename =
+          cacheFilename.replace(cacheKeySuffixRegex, '_*');
         // Write asynchronously.
-        Fiber(() => files.writeFileAtomically(cacheFilename, retAsJSON)).run();
+        Fiber(() => {
+          try {
+            files.rm_recursive(oldCacheFilename);
+          } catch (error) {
+            // If we can't remove the old cache file, we'll just continue
+            // writing the new file.
+          }
+          files.writeFileAtomically(cacheFilename, retAsJSON);
+        }).run();
       }
     }
 
