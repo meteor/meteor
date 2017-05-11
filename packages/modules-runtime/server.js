@@ -32,8 +32,8 @@ makeInstallerOptions.fallback.resolve = function (id, parentId, error) {
   throw error;
 };
 
-install = makeInstaller(makeInstallerOptions);
-var Module = install.Module;
+meteorInstall = makeInstaller(makeInstallerOptions);
+var Module = meteorInstall.Module;
 
 Module.prototype.useNode = function () {
   if (typeof npmRequire !== "function") {

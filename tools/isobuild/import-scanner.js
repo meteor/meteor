@@ -932,7 +932,11 @@ export default class ImportScanner {
     }
 
     const data = new Buffer(map(pkg, (value, key) => {
-      return `exports.${key} = ${JSON.stringify(value)};\n`;
+      const isIdentifier = /^[_$a-zA-Z]\w*$/.test(key);
+      const prop = isIdentifier
+        ? "." + key
+        : "[" + JSON.stringify(key) + "]";
+      return `exports${prop} = ${JSON.stringify(value)};\n`;
     }).join(""));
 
     const relPkgJsonPath = pathRelative(this.sourceRoot, pkgJsonPath);

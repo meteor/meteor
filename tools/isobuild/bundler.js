@@ -159,6 +159,7 @@ import Builder from './builder.js';
 var compilerPluginModule = require('./compiler-plugin.js');
 import { JsFile, CssFile } from './minifier-plugin.js';
 var meteorNpm = require('./meteor-npm.js');
+import { addToTree } from "./linker.js";
 
 var files = require('../fs/files.js');
 var archinfo = require('../utils/archinfo.js');
@@ -170,6 +171,7 @@ var packageVersionParser = require('../packaging/package-version-parser.js');
 var release = require('../packaging/release.js');
 import { load as loadIsopacket } from '../tool-env/isopackets.js';
 import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
+import { gzipSync } from "zlib";
 
 // files to ignore when bundling. node has no globs, so use regexps
 exports.ignoreFiles = [
@@ -353,7 +355,7 @@ export class NodeModulesDirectory {
     // Options consumed by readDirsFromJSON are listed above. Any other
     // options will be passed on to NodeModulesDirectory constructor via
     // this callerInfo object:
-    ...callerInfo,
+    ...callerInfo
   }) {
     assert.strictEqual(typeof callerInfo.sourceRoot, "string");
 
@@ -1056,6 +1058,9 @@ class Target {
     const jsOutputFilesMap = compilerPluginModule.PackageSourceBatch
       .computeJsOutputFilesMap(sourceBatches);
 
+    const versions = {};
+    const dynamicImportFiles = new Set;
+
     // Copy their resources into the bundle in order
     sourceBatches.forEach((sourceBatch) => {
       const unibuild = sourceBatch.unibuild;
@@ -1177,6 +1182,16 @@ class Target {
         throw new Error('Unknown type ' + resource.type);
       });
 
+      this.js.forEach(file => {
+        if (file.targetPath === "packages/dynamic-import.js") {
+          dynamicImportFiles.add(file);
+        }
+
+        if (file.targetPath.startsWith("dynamic/")) {
+          addToTree(file.hash(), file.targetPath, versions);
+        }
+      });
+
       // Depend on the source files that produced these resources.
       this.watchSet.merge(unibuild.watchSet);
 
@@ -1184,6 +1199,15 @@ class Target {
       // that were used in these resources. Depend on them as well.
       // XXX assumes that this merges cleanly
        this.watchSet.merge(unibuild.pkg.pluginWatchSet);
+    });
+
+    dynamicImportFiles.forEach(file => {
+      file.setContents(
+        new Buffer(file.contents("utf8").replace(
+          "__DYNAMIC_VERSIONS__",
+          () => JSON.stringify(versions.dynamic || {})
+        ), "utf8")
+      );
     });
   }
 
@@ -1236,7 +1260,7 @@ class Target {
     const js = [];
 
     function handle(source, dynamic) {
-      const newFiles = source._minifiedFiles.map(file => {
+      source._minifiedFiles.forEach(file => {
         // Remove the function name __minifyJs that was added above.
         file.data = file.data
           .toString("utf8")
@@ -1263,10 +1287,44 @@ class Target {
           newFile.setUrlToHash('.js', '?meteor_js_resource=true');
         }
 
-        return newFile;
-      });
+        js.push(newFile);
 
-      js.push(...newFiles);
+        if (file.stats &&
+            ! dynamic &&
+            minifyMode === "production") {
+          // If the minifier reported any statistics, serve those data as
+          // a .stats.json file alongside the newFile.
+          const contents = newFile.contents();
+          const statsFile = new File({
+            info: "bundle size stats JSON",
+            data: new Buffer(JSON.stringify({
+              minifier: {
+                name: minifierDef.isopack.name,
+                version: minifierDef.isopack.version,
+              },
+              totalMinifiedBytes: contents.length,
+              totalMinifiedGzipBytes: gzipSync(contents).length,
+              minifiedBytesByPackage: file.stats,
+            }, null, 2) + "\n", "utf8")
+          });
+
+          statsFile.url = newFile.url.replace(/\.js\b/, ".stats.json");
+          statsFile.targetPath =
+            newFile.targetPath.replace(/\.js\b/, ".stats.json");
+          statsFile.cacheable = true;
+          statsFile.type = "json";
+
+          if (statsFile.url !== newFile.url &&
+              statsFile.targetPath !== newFile.targetPath) {
+            // If the minifier used a file extension other than .js, the
+            // .replace calls above won't inject the .stats.json extension
+            // into the statsFile.{url,targetPath} strings, and it would
+            // be a mistake to serve the statsFile with the same URL as
+            // the real JS bundle. This should be a very uncommon case.
+            js.push(statsFile);
+          }
+        }
+      });
     }
 
     staticFiles.forEach(file => handle(file, false));
@@ -1484,7 +1542,7 @@ class ClientTarget extends Target {
     const eachResource = function (f) {
       ["js", "css", "asset"].forEach((type) => {
         this[type].forEach((file) => {
-          f(file, type);
+          f(file, file.type || type);
         });
       });
     }.bind(this);
@@ -1540,20 +1598,28 @@ class ClientTarget extends Target {
       manifestItem.size = file.size();
       manifestItem.hash = file.hash();
 
-      if (! file.targetPath.startsWith("dynamic/")) {
-        writeFile(file, builder);
-        manifest.push(manifestItem);
+      writeFile(file, builder);
+      manifest.push(manifestItem);
 
-      } else if (manifestItem.sourceMapUrl) {
+      if (! file.targetPath.startsWith("dynamic/")) {
+        return;
+      }
+
+      // Another measure for preventing this file from being loaded
+      // eagerly as a <script> tag, in addition to manifestItem.path being
+      // prefixed with "dynamic/".
+      manifestItem.type = "dynamic js";
+
+      if (manifestItem.sourceMapUrl) {
+        // If the file is a dynamic module, we don't embed its source map
+        // in the file itself (because base64-encoded data: URLs for
+        // source maps can be very large), but rather include a normal URL
+        // referring to the source map, so that it can be loaded from the
+        // web server when needed.
         writeFile(file, builder, {
           sourceMapUrl: manifestItem.sourceMapUrl,
         });
 
-        // If the file is dynamic, we don't need/want the file itself to
-        // be served by the web server, but we do want its source map (if
-        // defined) to be accessible via HTTP, so that we can refer to it
-        // by URL rather than embedding it as a very long data URL comment
-        // in the file.
         manifest.push({
           type: "json",
           path: manifestItem.sourceMap,
@@ -1562,9 +1628,6 @@ class ClientTarget extends Target {
           cacheable: manifestItem.cacheable,
           hash: manifestItem.hash,
         });
-
-      } else {
-        writeFile(file, builder);
       }
     });
 
@@ -1592,11 +1655,22 @@ class ClientTarget extends Target {
     if (this.arch === 'web.cordova') {
       const { WebAppHashing } =
         loadIsopacket('cordova-support')['webapp-hashing'];
+
       const cordovaCompatibilityVersions =
         _.object(_.map(CORDOVA_PLATFORM_VERSIONS, (version, platform) => {
-          const hash = WebAppHashing.calculateCordovaCompatibilityHash(
-            version,
-            this.cordovaDependencies);
+
+          const pluginsExcludedFromCompatibilityHash = (process.env.METEOR_CORDOVA_COMPAT_VERSION_EXCLUDE || '')
+            .split(',');
+
+          const cordovaDependencies = Object.assign(
+            Object.create(null),
+            _.omit(this.cordovaDependencies, pluginsExcludedFromCompatibilityHash)
+          );
+
+          const hash = process.env[`METEOR_CORDOVA_COMPAT_VERSION_${platform.toUpperCase()}`] ||
+              WebAppHashing.calculateCordovaCompatibilityHash(
+                version,
+                cordovaDependencies);
           return [platform, hash];
         }));
       program.cordovaCompatibilityVersions = cordovaCompatibilityVersions;

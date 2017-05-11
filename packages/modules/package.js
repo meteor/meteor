@@ -1,12 +1,12 @@
 Package.describe({
   name: "modules",
-  version: "0.9.0-beta.14",
+  version: "0.9.0-rc.1",
   summary: "CommonJS module system",
   documentation: "README.md"
 });
 
 Npm.depends({
-  reify: "0.6.6"
+  reify: "0.11.0"
 });
 
 Package.onUse(function(api) {
@@ -15,6 +15,5 @@ Package.onUse(function(api) {
   api.mainModule("client.js", "client");
   api.mainModule("server.js", "server");
   api.export("meteorInstall");
-  api.export("Buffer");
   api.export("process");
 });

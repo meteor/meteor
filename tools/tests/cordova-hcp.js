@@ -39,3 +39,50 @@ selftest.define(
 
     run.stop();
 });
+
+selftest.define(
+  "cordova METEOR_CORDOVA_COMPAT_VERSION_* works", ["cordova", "slow"], function () {
+    var s = new Sandbox();
+    var run;
+
+    var androidCompatibilityVersion = '2.0';
+
+    // Override the compatibility version for android with METEOR_CORDOVA_COMPAT_VERSION_ANDROID.
+    s.env.METEOR_CORDOVA_COMPAT_VERSION_ANDROID = androidCompatibilityVersion;
+
+    s.createApp("myapp", "standard-app");
+    s.cd("myapp");
+
+    var platforms = s.read(".meteor/platforms");
+    s.write(".meteor/platforms", platforms + "\nandroid\n");
+
+    run = s.run("run", "android", "--mobile-server", "example.com");
+    run.waitSecs(30);
+    run.match("Started your app");
+
+    var result = JSON.parse(httpHelpers.getUrl(
+        "http://localhost:3000/__cordova/manifest.json"));
+
+    // Check in the manifest if the overridden version was used.
+    selftest.expectEqual(result.cordovaCompatibilityVersions.android, androidCompatibilityVersion);
+
+    run.stop();
+    // Save the iOS compatibility version.
+    var iosCompatibilityVersion = result.cordovaCompatibilityVersions.ios;
+
+    // Now exclude one of the plugins from compatibility version calculation.
+    s.env.METEOR_CORDOVA_COMPAT_VERSION_EXCLUDE = 'cordova-plugin-meteor-webapp,any-other-plugin';
+
+    run = s.run("run", "android", "--mobile-server", "example.com");
+    run.waitSecs(30);
+    run.match("Started your app");
+
+    result = JSON.parse(httpHelpers.getUrl(
+        "http://localhost:3000/__cordova/manifest.json"));
+
+    // Version should be different. There is no need to check if the particular plugin was not taken into account,
+    // if the version has changed it's proof enough.
+    selftest.expectFalse(result.cordovaCompatibilityVersions.ios === iosCompatibilityVersion);
+
+    run.stop();
+});

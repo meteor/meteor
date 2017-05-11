@@ -1,4 +1,5 @@
 Facebook = {};
+var crypto = Npm.require('crypto');
 
 Facebook.handleAuthFromAccessToken = function handleAuthFromAccessToken(accessToken, expiresAt) {
   // include all fields from facebook
@@ -79,10 +80,20 @@ var getTokenResponse = function (query) {
 };
 
 var getIdentity = function (accessToken, fields) {
+  var config = ServiceConfiguration.configurations.findOne({service: 'facebook'});
+  if (!config)
+    throw new ServiceConfiguration.ConfigError();
+
+  // Generate app secret proof that is a sha256 hash of the app access token, with the app secret as the key
+  // https://developers.facebook.com/docs/graph-api/securing-requests#appsecret_proof
+  var hmac = crypto.createHmac('sha256', OAuth.openSecret(config.secret));
+  hmac.update(accessToken);
+
   try {
     return HTTP.get("https://graph.facebook.com/v2.8/me", {
       params: {
         access_token: accessToken,
+        appsecret_proof: hmac.digest('hex'),
         fields: fields.join(",")
       }
     }).data;

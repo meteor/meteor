@@ -98,15 +98,18 @@ exports.checkMany = function (versions) {
 
     return Promise.all(ids.map(function (id) {
       return new Promise(function (resolve, reject) {
-        var sourceRequest = sourcesByVersion.get(versions[id]);
-        sourceRequest.onerror = makeOnError(reject, "sourcesByVersion.get");
-        sourceRequest.onsuccess = function (event) {
-          var result = event.target.result;
-          if (result) {
-            sourcesById[id] = result.source;
-          }
-          resolve();
-        };
+        var version = versions[id];
+        if (version) {
+          var sourceRequest = sourcesByVersion.get(versions[id]);
+          sourceRequest.onerror = makeOnError(reject, "sourcesByVersion.get");
+          sourceRequest.onsuccess = function (event) {
+            var result = event.target.result;
+            if (result) {
+              sourcesById[id] = result.source;
+            }
+            resolve();
+          };
+        } else resolve();
       });
     })).then(finish, finish);
   });

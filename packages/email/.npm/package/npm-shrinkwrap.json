@@ -1,79 +1,14 @@
 {
   "dependencies": {
-    "addressparser": {
-      "version": "1.0.1",
-      "resolved": "https://registry.npmjs.org/addressparser/-/addressparser-1.0.1.tgz",
-      "from": "addressparser@1.0.1"
-    },
-    "buildmail": {
-      "version": "4.0.1",
-      "resolved": "https://registry.npmjs.org/buildmail/-/buildmail-4.0.1.tgz",
-      "from": "buildmail@4.0.1"
-    },
-    "httpntlm": {
-      "version": "1.6.1",
-      "resolved": "https://registry.npmjs.org/httpntlm/-/httpntlm-1.6.1.tgz",
-      "from": "httpntlm@1.6.1"
-    },
-    "httpreq": {
-      "version": "0.4.23",
-      "resolved": "https://registry.npmjs.org/httpreq/-/httpreq-0.4.23.tgz",
-      "from": "httpreq@>=0.4.22"
-    },
-    "iconv-lite": {
-      "version": "0.4.15",
-      "resolved": "https://registry.npmjs.org/iconv-lite/-/iconv-lite-0.4.15.tgz",
-      "from": "iconv-lite@0.4.15"
-    },
-    "libbase64": {
-      "version": "0.1.0",
-      "resolved": "https://registry.npmjs.org/libbase64/-/libbase64-0.1.0.tgz",
-      "from": "libbase64@0.1.0"
-    },
-    "libmime": {
-      "version": "3.0.0",
-      "resolved": "https://registry.npmjs.org/libmime/-/libmime-3.0.0.tgz",
-      "from": "libmime@3.0.0"
-    },
-    "libqp": {
-      "version": "1.1.0",
-      "resolved": "https://registry.npmjs.org/libqp/-/libqp-1.1.0.tgz",
-      "from": "libqp@1.1.0"
-    },
-    "mailcomposer": {
-      "version": "4.0.1",
-      "resolved": "https://registry.npmjs.org/mailcomposer/-/mailcomposer-4.0.1.tgz",
-      "from": "mailcomposer@4.0.1"
-    },
-    "nodemailer-fetch": {
-      "version": "1.6.0",
-      "resolved": "https://registry.npmjs.org/nodemailer-fetch/-/nodemailer-fetch-1.6.0.tgz",
-      "from": "nodemailer-fetch@1.6.0"
-    },
-    "nodemailer-shared": {
-      "version": "1.1.0",
-      "resolved": "https://registry.npmjs.org/nodemailer-shared/-/nodemailer-shared-1.1.0.tgz",
-      "from": "nodemailer-shared@1.1.0"
-    },
-    "punycode": {
-      "version": "1.4.1",
-      "resolved": "https://registry.npmjs.org/punycode/-/punycode-1.4.1.tgz",
-      "from": "punycode@1.4.1"
-    },
-    "smtp-connection": {
-      "version": "2.12.2",
-      "resolved": "https://registry.npmjs.org/smtp-connection/-/smtp-connection-2.12.2.tgz",
-      "from": "smtp-connection@2.12.2"
+    "node4mailer": {
+      "version": "4.0.2",
+      "resolved": "https://registry.npmjs.org/node4mailer/-/node4mailer-4.0.2.tgz",
+      "from": "node4mailer@4.0.2"
     },
     "stream-buffers": {
       "version": "0.2.5",
       "resolved": "https://registry.npmjs.org/stream-buffers/-/stream-buffers-0.2.5.tgz",
       "from": "stream-buffers@0.2.5"
-    },
-    "underscore": {
-      "version": "1.7.0",
-      "resolved": "https://registry.npmjs.org/underscore/-/underscore-1.7.0.tgz",
-      "from": "underscore@>=1.7.0 <1.8.0"
     }
   }
 }

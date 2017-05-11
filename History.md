@@ -6,6 +6,8 @@
 
 ## v1.5, TBD
 
+* Node has been upgraded to version 4.8.3.
+
 * Running `meteor add dynamic-import` installs support for ECMAScript
   [dynamic `import(...)`](https://github.com/tc39/proposal-dynamic-import),
   a new language feature which allows for asynchronous module fetching
@@ -14,6 +16,71 @@
   and [PR #8327](https://github.com/meteor/meteor/pull/8327) for more
   information about how dynamic `import(...)` works in Meteor, and how to
   use it in your applications.
+
+* The `meteor-babel` npm package has been upgraded to version 0.21.2,
+  enabling the latest Reify compiler and the transform-class-properties
+  plugin, among other improvements.
+
+* The `reify` npm package has been upgraded to version 0.11.0, fixing
+  [issue #8595](https://github.com/meteor/meteor/issues/8595) and
+  improving compilation and runtime performance.
+
+> Note: With this version of Reify, `import` declarations are compiled to
+  `module.watch(require(id), ...)` instead of `module.importSync(id, ...)`
+  or the older `module.import(id, ...)`. The behavior of the compiled code
+  should be the same as before, but the details seemed different enough to
+  warrant a note.
+
+* The `install` npm package has been upgraded to version 0.10.1.
+
+* If you're using the `standard-minifier-js` Meteor package, as most
+  Meteor developers do, it will now produce a detailed analysis of package
+  and module sizes within your production `.js` bundle whenever you run
+  `meteor build` or `meteor run --production`. These data are served by
+  the application web server at the same URL as the minified `.js` bundle,
+  except with a `.stats.json` file extension instead of `.js`. If you're
+  using a different minifier plugin, and would like to support similar
+  functionality, refer to
+  [these](https://github.com/meteor/meteor/pull/8327/commits/084801237a8c288d99ec82b0fbc1c76bdf1aab16)
+  [commits](https://github.com/meteor/meteor/pull/8327/commits/1c8bc7353e9a8d526880634a58c506b423c4a55e)
+  for inspiration.
+
+## v1.4.4.2, 2017-05-02
+
+* Node has been upgraded to version 4.8.2.
+
+* The `npm` npm package has been upgraded to version 4.5.0.
+  Note that when using npm `scripts` there has been a change regarding
+  what happens when `SIGINT` (Ctrl-C) is received.  Read more
+  [here](https://github.com/npm/npm/releases/tag/v4.5.0).
+
+* Fix a regression which prevented us from displaying a helpful banner when
+  running `meteor debug` because of a change in Node.js.
+
+* Update `node-inspector` npm to 1.1.1, fixing a problem encountered when trying
+  to press "Enter" in the inspector console.
+  [Issue #8469](https://github.com/meteor/meteor/issues/8469)
+
+* The `email` package has had its `mailcomposer` npm package swapped with
+  a Node 4 fork of `nodemailer` due to its ability to support connection pooling
+  in a similar fashion as the original `mailcomposer`.
+  [Issue #8591](https://github.com/meteor/meteor/issues/8591)
+  [PR #8605](https://github.com/meteor/meteor/pull/8605)
+
+    > Note: The `MAIL_URL` should be configured with a scheme which matches the
+    > protocol desired by your e-mail vendor/mail-transport agent.  For
+    > encrypted connections (typically listening on port 465 or 587), this means
+    > using `smtps://`.  Unencrypted connections should continue to use
+    > `smtp://`.
+
+* A new `Tracker.inFlush()` has been added to provide a global Tracker
+  "flushing" state.
+  [PR #8565](https://github.com/meteor/meteor/pull/8565).
+
+* The `meteor-babel` npm package has been upgraded to version 0.20.1, and
+  the `reify` npm package has been upgraded to version 0.7.4, fixing
+  [issue #8595](https://github.com/meteor/meteor/issues/8595).
+  (This was fixed between full Meteor releases, but is being mentioned here.)
 
 ## v1.4.4.1, 2017-04-07
 

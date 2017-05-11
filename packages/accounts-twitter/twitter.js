@@ -1,7 +1,7 @@
 Accounts.oauth.registerService('twitter');
 
 if (Meteor.isClient) {
-  Meteor.loginWithTwitter = function(options, callback) {
+  const loginWithTwitter = function(options, callback) {
     // support a callback without options
     if (! callback && typeof options === "function") {
       callback = options;
@@ -10,6 +10,10 @@ if (Meteor.isClient) {
 
     var credentialRequestCompleteCallback = Accounts.oauth.credentialRequestCompleteHandler(callback);
     Twitter.requestCredential(options, credentialRequestCompleteCallback);
+  };
+  Accounts.registerClientLoginFunction('twitter', loginWithTwitter);
+  Meteor.loginWithTwitter = function () {
+    return Accounts.applyLoginFunction('twitter', arguments);
   };
 } else {
   var autopublishedFields = _.map(

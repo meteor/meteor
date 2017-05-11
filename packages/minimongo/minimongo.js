@@ -1,3 +1,5 @@
+import { assertHasValidFieldNames } from './validation.js';
+
 // XXX type checking on selectors (graceful error if malformed)
 
 // LocalCollection: a set of documents that supports queries and modifiers.
@@ -40,7 +42,11 @@ Minimongo = {};
 // Use it to export private functions to test in Tinytest.
 MinimongoTest = {};
 
-MinimongoError = function (message) {
+MinimongoError = function (message, options={}) {
+  if (typeof message === "string" && options.field) {
+    message += ` for field '${options.field}'`;
+  }
+
   var e = new Error(message);
   e.name = "MinimongoError";
   return e;
@@ -536,31 +542,13 @@ LocalCollection.Cursor.prototype._depend = function (changers, _allow_unordered)
   }
 };
 
-// XXX enforce rule that field names can't start with '$' or contain '.'
-// (real mongodb does in fact enforce this)
 // XXX possibly enforce that 'undefined' does not appear (we assume
 // this in our handling of null and $exists)
 LocalCollection.prototype.insert = function (doc, callback) {
   var self = this;
   doc = EJSON.clone(doc);
 
-  // Make sure field names do not contain Mongo restricted
-  // characters ('.', '$', '\0').
-  // https://docs.mongodb.com/manual/reference/limits/#Restrictions-on-Field-Names
-  if (doc) {
-    const invalidCharMsg = {
-      '.': "contain '.'",
-      '$': "start with '$'",
-      '\0': "contain null bytes",
-    };
-    JSON.stringify(doc, (key, value) => {
-      let match;
-      if (_.isString(key) && (match = key.match(/^\$|\.|\0/))) {
-        throw MinimongoError(`Key ${key} must not ${invalidCharMsg[match[0]]}`);
-      }
-      return value;
-    });
-  }
+  assertHasValidFieldNames(doc);
 
   if (!_.has(doc, '_id')) {
     // if you really want to use ObjectIDs, set this global.
@@ -711,7 +699,7 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   }
   if (!options) options = {};
 
-  var matcher = new Minimongo.Matcher(selector);
+  var matcher = new Minimongo.Matcher(selector, true);
 
   // Save the original results of any query that we might need to
   // _recomputeResults on, because _modifyAndNotify will mutate the objects in
@@ -794,8 +782,24 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   // generate an id for it.
   var insertedId;
   if (updateCount === 0 && options.upsert) {
-    var newDoc = LocalCollection._removeDollarOperators(selector);
+
+    let selectorModifier = LocalCollection._selectorIsId(selector) 
+      ? { _id: selector } 
+      : selector;
+
+    selectorModifier = LocalCollection._removeDollarOperators(selectorModifier);
+
+    const newDoc = {};
+    if (selectorModifier._id) {
+      newDoc._id = selectorModifier._id;
+      delete selectorModifier._id;
+    }
+
+    // This double _modify call is made to help work around an issue where collection 
+    // upserts won't work properly, with nested properties (see issue #8631).
+    LocalCollection._modify(newDoc, {$set: selectorModifier});
     LocalCollection._modify(newDoc, mod, {isInsert: true});
+
     if (! newDoc._id && options.insertedId)
       newDoc._id = options.insertedId;
     insertedId = self.insert(newDoc);

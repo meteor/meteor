@@ -148,6 +148,35 @@ describe("dynamic import(...)", function () {
       global.Helper
     );
   });
+
+  it("works with module.prefetch(id)", async function () {
+    import { shared } from "./imports/prefetch-child";
+    assert.deepEqual(shared, {});
+
+    const rejection = module.prefetch("./imports/nonexistent.js");
+    let threw = false;
+    try {
+      await rejection;
+    } catch (e) {
+      assert.ok(e instanceof Error);
+      assert.ok(e.message.startsWith("Cannot find module"));
+      threw = true;
+    }
+    assert.strictEqual(threw, true);
+
+    assert.strictEqual(
+      await module.prefetch("./tests"),
+      "/tests.js"
+    );
+
+    return module.prefetch("./imports/prefetch").then(() => {
+      assert.deepEqual(shared, {});
+    }).then(() => {
+      import { name } from "./imports/prefetch.js";
+      assert.strictEqual(name, "/imports/prefetch.js");
+      assert.deepEqual(shared, { [name]: true });
+    });
+  });
 });
 
 function maybeClearDynamicImportCache() {
