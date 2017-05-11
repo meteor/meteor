@@ -13,7 +13,7 @@ Npm.depends({
 });
 
 Package.onUse(function(api) {
-  api.versionsFrom('1.4.4.1');
+  api.use('isobuild:dynamic-import@1.5.0');
   api.use([
     'ecmascript',
     'dynamic-import',

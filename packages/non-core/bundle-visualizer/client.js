@@ -9,7 +9,7 @@ import * as classes from "./classNames.js";
 import "./style.css";
 
 Meteor.startup(() => {
-  import("./sunburst.js").then(({ Sunburst }) => main(Sunburst));
+  import("./sunburst.js").then(s => main(s.Sunburst));
 });
 
 function main(builder) {
@@ -29,7 +29,7 @@ function main(builder) {
 
     // Load the JSON, which is `d3-hierarchy` digestible.
     if (result) {
-      (new builder({ container })).loadJson(result);
+      new builder({ container }).loadJson(result);
     }
   });
 }

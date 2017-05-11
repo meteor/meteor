@@ -59,12 +59,10 @@ const DEFAULT_COLORS = {
 };
 
 export class Sunburst {
-  constructor(
-    {
-      container,
-      colors = DEFAULT_COLORS,
-    } = {}
-  ) {
+  constructor({
+    container,
+    colors = DEFAULT_COLORS,
+  } = {}) {
     this.elements = {};
     this.colors = colors;
     this.totalSize = 0;
