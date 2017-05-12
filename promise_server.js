@@ -38,7 +38,15 @@ exports.makeCompatible = function (Promise, Fiber) {
 
   // Replace Promise.prototype.then with a wrapper that ensures the
   // onResolved and onRejected callbacks always run in a Fiber.
-  Promise.prototype.then = meteorPromiseThen;
+  Object.defineProperty(Promise.prototype, "then", {
+    value: meteorPromiseThen,
+    enumerable: true,
+    // Don't let older versions of the meteor-promise library overwrite
+    // this version of Promise.prototype.then...
+    writable: false,
+    // ... unless they also call Object.defineProperty.
+    configurable: true
+  });
 
   Promise.awaitAll = function (args) {
     return awaitPromise(this.all(args));

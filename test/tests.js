@@ -349,6 +349,9 @@ describe("promise_client.js", function () {
     };
 
     var Promise = require("promise");
+    var desc = Object.getOwnPropertyDescriptor(Promise.prototype, "then");
+    desc.writable = true;
+    Object.defineProperty(Promise.prototype, "then", desc);
     require("../promise_client.js").makeCompatible(Promise);
 
     var p = Promise.resolve(1234).then(function (value) {
