@@ -14,14 +14,23 @@ exports.makeCompatible = function (Promise, Fiber) {
 
   function meteorPromiseThen(onResolved, onRejected) {
     var Promise = this.constructor;
+    var Fiber = Promise.Fiber;
 
-    if (typeof Promise.Fiber === "function" &&
+    if (typeof Fiber === "function" &&
         ! this._meteorPromiseAlreadyWrapped) {
-      return es6PromiseThen.call(
-        this,
-        wrapCallback(onResolved, Promise),
-        wrapCallback(onRejected, Promise)
-      );
+      onResolved = wrapCallback(onResolved, Promise);
+      onRejected = wrapCallback(onRejected, Promise);
+
+      // Just in case we're wrapping a .then method defined by an older
+      // version of this library, make absolutely sure it doesn't attempt
+      // to rewrap the callbacks, and instead calls its own original
+      // es6PromiseThen function.
+      Promise.Fiber = null;
+      try {
+        return es6PromiseThen.call(this, onResolved, onRejected);
+      } finally {
+        Promise.Fiber = Fiber;
+      }
     }
 
     return es6PromiseThen.call(this, onResolved, onRejected);
