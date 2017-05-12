@@ -7,12 +7,12 @@ Package.describe({
 });
 
 Npm.depends({
-  "meteor-promise": "0.8.2",
+  "meteor-promise": "0.8.4",
   "promise": "7.1.1"
 });
 
 Package.onUse(function(api) {
-  api.use("modules@0.7.6");
+  api.use("modules");
   api.mainModule("client.js", "client");
   api.mainModule("server.js", "server");
   api.export("Promise");

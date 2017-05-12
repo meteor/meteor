@@ -2,7 +2,7 @@
 
 * Node has been upgraded to version 6.10.3.
 
-* The `meteor-promise` npm package has been upgraded to version 0.8.2.
+* The `meteor-promise` npm package has been upgraded to version 0.8.4.
 
 ## v1.5, TBD
 
