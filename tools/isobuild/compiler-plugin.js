@@ -1294,7 +1294,6 @@ export class PackageSourceBatch {
 
     const fileHashes = [];
     const cacheKeyPrefix = sha1(JSON.stringify({
-      LINKER_CACHE_SALT,
       linkerOptions,
       files: jsResources.map((inputFile) => {
         fileHashes.push(inputFile.hash);
@@ -1308,7 +1307,10 @@ export class PackageSourceBatch {
         };
       })
     }));
-    const cacheKeySuffix = sha1(JSON.stringify(fileHashes));
+    const cacheKeySuffix = sha1(JSON.stringify({
+      LINKER_CACHE_SALT,
+      fileHashes
+    }));
     const cacheKey = `${cacheKeyPrefix}_${cacheKeySuffix}`;
 
     {
