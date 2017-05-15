@@ -14,6 +14,7 @@ var utils = require('../utils/utils.js');
 var buildPluginModule = require('./build-plugin.js');
 var Console = require('../console/console.js').Console;
 var Profile = require('../tool-env/profile.js').Profile;
+import { requestGarbageCollection } from "../utils/gc.js";
 
 var rejectBadPath = function (p) {
   if (p.match(/\.\./)) {
@@ -1802,6 +1803,8 @@ _.extend(Isopack.prototype, {
       symlink: false
     });
 
+    requestGarbageCollection();
+
     // Build all of the isopackets now, so that no build step is required when
     // you're actually running meteor from a release in order to load packages.
     var isopacketBuildContext = isopackets.makeIsopacketBuildContext();
@@ -1812,6 +1815,8 @@ _.extend(Isopack.prototype, {
       // process are going to be the current tool's isopackets, not the
       // isopackets that we're writing out.
       _.each(isopackets.ISOPACKETS, function (packages, isopacketName) {
+        requestGarbageCollection();
+
         buildmessage.enterJob({
           title: "compiling " + isopacketName + " packages for the tool"
         }, function () {
@@ -1829,6 +1834,8 @@ _.extend(Isopack.prototype, {
           if (buildmessage.jobHasMessages()) {
             return;
           }
+
+          requestGarbageCollection();
 
           image.write(
             builder.enter(files.pathJoin('isopackets', isopacketName)));
