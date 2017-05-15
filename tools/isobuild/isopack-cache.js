@@ -383,6 +383,8 @@ export class IsopackCache {
               });
             }
           }
+
+          requestGarbageCollection();
         }
       }
 
