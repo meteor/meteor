@@ -447,7 +447,10 @@ _.extend(ProjectContext.prototype, {
     // If the file doesn't exist or has no non-empty lines, regenerate the
     // token.
     if (!appId) {
-      appId = utils.randomToken() + utils.randomToken() + utils.randomToken();
+      appId = [
+        utils.randomIdentifier(),
+        utils.randomIdentifier()
+      ].join(".");
 
       var comment = (
 "# This file contains a token that is unique to your project.\n" +
