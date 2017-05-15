@@ -50,7 +50,9 @@ function withDB(callback) {
     };
   });
 
-  return dbPromise.then(callback);
+  return dbPromise.then(callback, function (error) {
+    return callback(null);
+  });
 }
 
 var objectStoreMap = {
@@ -63,6 +65,13 @@ function makeOnError(reject, source) {
       "IndexedDB failure in " + source + " " +
         JSON.stringify(event.target)
     ));
+
+    // Returning true from an onerror callback function prevents an
+    // InvalidStateError in Firefox during Private Browsing. Silencing
+    // that error is safe because we handle the error more gracefully by
+    // passing it to the Promise reject function above.
+    // https://github.com/meteor/meteor/issues/8697
+    return true;
   };
 }
 
@@ -83,6 +92,12 @@ exports.checkMany = function (versions) {
   }
 
   return withDB(function (db) {
+    if (! db) {
+      // We thought we could used IndexedDB, but something went wrong
+      // while opening the database, so err on the side of safety.
+      return sourcesById;
+    }
+
     var txn = db.transaction([
       "sourcesByVersion"
     ], "readonly");
@@ -145,6 +160,12 @@ function flushSetMany() {
   pendingVersionsAndSourcesById = Object.create(null);
 
   return withDB(function (db) {
+    if (! db) {
+      // We thought we could used IndexedDB, but something went wrong
+      // while opening the database, so err on the side of safety.
+      return;
+    }
+
     var setTxn = db.transaction([
       "sourcesByVersion"
     ], "readwrite");

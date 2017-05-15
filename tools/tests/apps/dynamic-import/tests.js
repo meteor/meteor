@@ -189,7 +189,10 @@ function maybeClearDynamicImportCache() {
             global.indexedDB.deleteDatabase("MeteorDynamicImportCache");
           deleteRequest.onerror =
           deleteRequest.onblocked =
-          deleteRequest.onsuccess = resolve;
+          deleteRequest.onsuccess = function (arg) {
+            resolve(arg);
+            return true;
+          };
         });
       });
     }
