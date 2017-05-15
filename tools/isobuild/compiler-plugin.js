@@ -10,7 +10,6 @@ var _ = require('underscore');
 var Profile = require('../tool-env/profile.js').Profile;
 import {sha1, readAndWatchFileWithHash} from  '../fs/watch.js';
 import LRU from 'lru-cache';
-import Fiber from 'fibers';
 import {sourceMapLength} from '../utils/utils.js';
 import {Console} from '../console/console.js';
 import ImportScanner from './import-scanner.js';
@@ -1313,19 +1312,19 @@ export class PackageSourceBatch {
     }));
     const cacheKey = `${cacheKeyPrefix}_${cacheKeySuffix}`;
 
-    {
-      const inMemoryCached = LINKER_CACHE.get(cacheKey);
-      if (inMemoryCached) {
-        if (CACHE_DEBUG) {
-          console.log('LINKER IN-MEMORY CACHE HIT:',
-                      linkerOptions.name, bundleArch);
-        }
-        return inMemoryCached;
+    if (LINKER_CACHE.has(cacheKey)) {
+      if (CACHE_DEBUG) {
+        console.log('LINKER IN-MEMORY CACHE HIT:',
+                    linkerOptions.name, bundleArch);
       }
+      return LINKER_CACHE.get(cacheKey);
     }
 
-    const cacheFilename = self.linkerCacheDir && files.pathJoin(
-      self.linkerCacheDir, cacheKey + '.cache');
+    const cacheFilename = self.linkerCacheDir &&
+      files.pathJoin(self.linkerCacheDir, cacheKey + '.cache');
+
+    const wildcardCacheFilename = cacheFilename &&
+      files.pathJoin(self.linkerCacheDir, cacheKeyPrefix + "_*.cache");
 
     // The return value from _linkJS includes Buffers, but we want everything to
     // be JSON for writing to the disk cache. This function converts the string
@@ -1399,19 +1398,14 @@ export class PackageSourceBatch {
     if (canCache) {
       LINKER_CACHE.set(cacheKey, ret);
       if (cacheFilename) {
-        const cacheKeySuffixRegex = new RegExp('_' + cacheKeySuffix, 'g');
-        const oldCacheFilename =
-          cacheFilename.replace(cacheKeySuffixRegex, '_*');
         // Write asynchronously.
-        Fiber(() => {
+        Promise.resolve().then(() => {
           try {
-            files.rm_recursive(oldCacheFilename);
-          } catch (error) {
-            // If we can't remove the old cache file, we'll just continue
-            // writing the new file.
+            files.rm_recursive(wildcardCacheFilename);
+          } finally {
+            files.writeFileAtomically(cacheFilename, retAsJSON);
           }
-          files.writeFileAtomically(cacheFilename, retAsJSON);
-        }).run();
+        });
       }
     }
 
