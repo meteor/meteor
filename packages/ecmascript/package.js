@@ -36,4 +36,5 @@ Package.onTest(function (api) {
   api.addFiles("bare-test-file.js", ["client", "server"], {
     bare: true
   });
+  api.addFiles("shell-tests.js", 'server');
 });
