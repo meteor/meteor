@@ -15,6 +15,18 @@
   information about how dynamic `import(...)` works in Meteor, and how to
   use it in your applications.
 
+* The `ecmascript-runtime` package, which provides polyfills for various
+  new ECMAScript runtime APIs and language features, has been split into
+  `ecmascript-runtime-client` and `ecmascript-runtime-server`, to reflect
+  the different needs of browsers versus Node 4. The client runtime now
+  relies on the `core-js` library found in the `node_modules` directory of
+  the application, rather than a private duplicate installed via
+  `Npm.depends`. This is unlikely to be a disruptive change for most
+  developers, since the `babel-runtime` npm package is expected to be
+  installed, and `core-js` is a dependency of `babel-runtime`, so
+  `node_modules/core-js` should already be present. If that's not the
+  case, just run `meteor npm install --save core-js` to install it.
+
 * The `meteor-babel` npm package has been upgraded to version 0.21.2,
   enabling the latest Reify compiler and the transform-class-properties
   plugin, among other improvements.
