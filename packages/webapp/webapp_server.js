@@ -6,6 +6,7 @@ var os = Npm.require("os");
 var path = Npm.require("path");
 var url = Npm.require("url");
 var crypto = Npm.require("crypto");
+var net = Npm.require("net");
 
 var connect = Npm.require('connect');
 var parseurl = Npm.require('parseurl');
@@ -439,9 +440,9 @@ var getUrlPrefixForArch = function (arch) {
     '' : '/' + '__' + arch.replace(/^web\./, '');
 };
 
-// parse port to see if its a Windows Server style named pipe. If so, return as-is (String), otherwise return as Int
+// parse port to see if it's a Windows Server-style named pipe or a UNIX path/filename for a UNIX domain socket file. If so, return as-is (String), otherwise return as Int
 WebAppInternals.parsePort = function (port) {
-  if( /\\\\?.+\\pipe\\?.+/.test(port) ) {
+  if( /\\\\?.+\\pipe\\?.+/.test(port) || /^(.+)\/([^/]+)$/.test(port) ) {
     return port;
   }
 
@@ -815,7 +816,55 @@ var runWebAppServer = function () {
     var localPort = WebAppInternals.parsePort(process.env.PORT) || 0;
     var host = process.env.BIND_IP;
     var localIp = host || '0.0.0.0';
-    httpServer.listen(localPort, localIp, Meteor.bindEnvironment(function() {
+
+    if (typeof localPort == "number")
+    {
+      var listenOptions = { port: localPort, host: host };
+    }
+    else
+    {
+      var socketPath = localPort;
+      var listenOptions = { path: socketPath };
+
+      httpServer.on('error', Meteor.bindEnvironment(function(e) {
+
+        if (e.code == 'EADDRINUSE') {
+
+	  var clientSocket = new net.Socket();
+
+          clientSocket.on('error', Meteor.bindEnvironment(function(e) {
+
+            if (e.code == 'ECONNREFUSED') {
+
+              console.log("Deleting stale socket file");
+              fs.unlinkSync(socketPath);
+
+              httpServer.listen(listenOptions, Meteor.bindEnvironment(function() {
+                 if (process.env.METEOR_PRINT_ON_LISTEN)
+                   console.log("LISTENING"); // must match run-app.js
+
+                 var callbacks = onListeningCallbacks;
+                 onListeningCallbacks = null;
+                 _.each(callbacks, function (x) { x(); });
+
+               }, function (e) {
+                 console.error("Error listening:", e);
+                 console.error(e && e.stack);
+               }));
+
+            }
+          }));
+
+          clientSocket.connect({ path: socketPath }, function() {
+            console.log("Another server is already listening on socket: " + socketPath + ", exiting.");
+            process.exit();
+          });
+              
+        }
+      }));
+    }
+
+    httpServer.listen(listenOptions, Meteor.bindEnvironment(function() {
       if (process.env.METEOR_PRINT_ON_LISTEN)
         console.log("LISTENING"); // must match run-app.js
 
