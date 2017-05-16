@@ -13,9 +13,9 @@ dependencies:
     - ".meteor"
     - ".babel-cache"
   override:
-    # shouldn't take longer than 10 minutes
-    - ./meteor --get-ready:
-        timeout: 600
+    # shouldn't take longer than 5 minutes
+    - ./meteor --help:
+        timeout: 300
         environment:
           METEOR_PRETTY_OUTPUT: 0
           METEOR_DISABLE_OPTIMISTIC_CACHING: 1
