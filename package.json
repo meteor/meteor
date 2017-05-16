@@ -62,7 +62,7 @@
     "eslint-plugin-jsx-a11y": "^5.0.0",
     "eslint-plugin-react": "7.0.1",
     "ghooks": "2.0.0",
-    "mocha": "3.3.0",
+    "mocha": "3.4.1",
     "nyc": "10.3.2",
     "readline-sync": "1.4.7",
     "rewire": "2.5.2",
