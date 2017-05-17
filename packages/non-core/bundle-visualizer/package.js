@@ -1,5 +1,5 @@
 Package.describe({
-  version: '1.0.0',
+  version: '1.0.1',
   summary: 'Meteor bundle analysis and visualization.',
   documentation: 'README.md',
 });
