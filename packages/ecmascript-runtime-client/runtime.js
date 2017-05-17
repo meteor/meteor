@@ -36,21 +36,21 @@ Set = exports.Set = core.Set;
 //
 // Supported browsers: http://browserl.ist/?q=last+3+versions
 //
-// Note that the es6.reflect.* modules have been commented out for bundle
-// size reasons, and the es6.promise modules are not used because Meteor
-// provides its own Promise polyfill.
+// Note that the es6.reflect.* and es6.typed.* modules have been commented
+// out for bundle size reasons, and the es6.promise modules are not used
+// because Meteor provides its own Promise polyfill.
 
-require("core-js/modules/es6.typed.array-buffer");
-require("core-js/modules/es6.typed.data-view");
-require("core-js/modules/es6.typed.int8-array");
-require("core-js/modules/es6.typed.uint8-array");
-require("core-js/modules/es6.typed.uint8-clamped-array");
-require("core-js/modules/es6.typed.int16-array");
-require("core-js/modules/es6.typed.uint16-array");
-require("core-js/modules/es6.typed.int32-array");
-require("core-js/modules/es6.typed.uint32-array");
-require("core-js/modules/es6.typed.float32-array");
-require("core-js/modules/es6.typed.float64-array");
+// require("core-js/modules/es6.typed.array-buffer");
+// require("core-js/modules/es6.typed.data-view");
+// require("core-js/modules/es6.typed.int8-array");
+// require("core-js/modules/es6.typed.uint8-array");
+// require("core-js/modules/es6.typed.uint8-clamped-array");
+// require("core-js/modules/es6.typed.int16-array");
+// require("core-js/modules/es6.typed.uint16-array");
+// require("core-js/modules/es6.typed.int32-array");
+// require("core-js/modules/es6.typed.uint32-array");
+// require("core-js/modules/es6.typed.float32-array");
+// require("core-js/modules/es6.typed.float64-array");
 require("core-js/modules/es6.weak-map");
 require("core-js/modules/es6.weak-set");
 // require("core-js/modules/es6.reflect.apply");

@@ -26,19 +26,19 @@ Set = exports.Set = core.Set;
 //   ]
 // }
 //
-// Note that the es6.reflect.* modules have been commented out for bundle
-// size reasons.
+// Note that the es6.reflect.* and es6.typed.* modules have been commented
+// out for bundle size reasons.
 
-require("core-js/modules/es6.typed.array-buffer");
-require("core-js/modules/es6.typed.int8-array");
-require("core-js/modules/es6.typed.uint8-array");
-require("core-js/modules/es6.typed.uint8-clamped-array");
-require("core-js/modules/es6.typed.int16-array");
-require("core-js/modules/es6.typed.uint16-array");
-require("core-js/modules/es6.typed.int32-array");
-require("core-js/modules/es6.typed.uint32-array");
-require("core-js/modules/es6.typed.float32-array");
-require("core-js/modules/es6.typed.float64-array");
+// require("core-js/modules/es6.typed.array-buffer");
+// require("core-js/modules/es6.typed.int8-array");
+// require("core-js/modules/es6.typed.uint8-array");
+// require("core-js/modules/es6.typed.uint8-clamped-array");
+// require("core-js/modules/es6.typed.int16-array");
+// require("core-js/modules/es6.typed.uint16-array");
+// require("core-js/modules/es6.typed.int32-array");
+// require("core-js/modules/es6.typed.uint32-array");
+// require("core-js/modules/es6.typed.float32-array");
+// require("core-js/modules/es6.typed.float64-array");
 require("core-js/modules/es6.weak-map");
 require("core-js/modules/es6.weak-set");
 // require("core-js/modules/es6.reflect.apply");
