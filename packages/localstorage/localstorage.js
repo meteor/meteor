@@ -6,11 +6,13 @@
 // Accessing window.localStorage can also immediately throw an error in IE (#1291).
 
 var hasOwn = Object.prototype.hasOwnProperty;
-var storage = global.localStorage;
 var key = '_localstorage_test_' + Random.id();
 var retrieved;
+var storage;
 
 try {
+  storage = global.localStorage;
+  
   if (storage) {
     storage.setItem(key, key);
     retrieved = storage.getItem(key);
