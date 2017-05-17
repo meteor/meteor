@@ -817,65 +817,46 @@ var runWebAppServer = function () {
     var host = process.env.BIND_IP;
     var localIp = host || '0.0.0.0';
 
-    if (typeof localPort == "number")
-    {
+    var startHttpServer = function(listenOptions) {
+      httpServer.listen(listenOptions, Meteor.bindEnvironment(function() {
+        if (process.env.METEOR_PRINT_ON_LISTEN)
+          console.log("LISTENING"); // must match run-app.js
+
+        var callbacks = onListeningCallbacks;
+        onListeningCallbacks = null;
+        _.each(callbacks, function (x) { x(); });
+
+      }, function (e) {
+        console.error("Error listening:", e);
+        console.error(e && e.stack);
+      }));
+    };
+
+    if (typeof localPort == "number") {
       var listenOptions = { port: localPort, host: host };
-    }
-    else
-    {
+    } else {
       var socketPath = localPort;
       var listenOptions = { path: socketPath };
 
       httpServer.on('error', Meteor.bindEnvironment(function(e) {
-
         if (e.code == 'EADDRINUSE') {
-
 	  var clientSocket = new net.Socket();
-
           clientSocket.on('error', Meteor.bindEnvironment(function(e) {
-
             if (e.code == 'ECONNREFUSED') {
-
               console.log("Deleting stale socket file");
               fs.unlinkSync(socketPath);
-
-              httpServer.listen(listenOptions, Meteor.bindEnvironment(function() {
-                 if (process.env.METEOR_PRINT_ON_LISTEN)
-                   console.log("LISTENING"); // must match run-app.js
-
-                 var callbacks = onListeningCallbacks;
-                 onListeningCallbacks = null;
-                 _.each(callbacks, function (x) { x(); });
-
-               }, function (e) {
-                 console.error("Error listening:", e);
-                 console.error(e && e.stack);
-               }));
-
+              startHttpServer(listenOptions);
             }
           }));
-
           clientSocket.connect({ path: socketPath }, function() {
             console.log("Another server is already listening on socket: " + socketPath + ", exiting.");
             process.exit();
-          });
-              
+          });              
         }
       }));
     }
 
-    httpServer.listen(listenOptions, Meteor.bindEnvironment(function() {
-      if (process.env.METEOR_PRINT_ON_LISTEN)
-        console.log("LISTENING"); // must match run-app.js
-
-      var callbacks = onListeningCallbacks;
-      onListeningCallbacks = null;
-      _.each(callbacks, function (x) { x(); });
-
-    }, function (e) {
-      console.error("Error listening:", e);
-      console.error(e && e.stack);
-    }));
+    startHttpServer(listenOptions);
 
     return 'DAEMON';
   };
