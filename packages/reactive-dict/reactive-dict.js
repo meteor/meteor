@@ -1,120 +1,129 @@
 // XXX come up with a serialization method which canonicalizes object key
 // order, which would allow us to use objects as values for equals.
-var stringify = function (value) {
-  if (value === undefined)
+function stringify(value) {
+  if (value === undefined) {
     return 'undefined';
+  }
   return EJSON.stringify(value);
-};
-var parse = function (serialized) {
-  if (serialized === undefined || serialized === 'undefined')
-    return undefined;
-  return EJSON.parse(serialized);
-};
+}
 
-var changed = function (v) {
+function parse(serialized) {
+  if (serialized === undefined || serialized === 'undefined') {
+    return undefined;
+  }
+  return EJSON.parse(serialized);
+}
+
+function changed(v) {
   v && v.changed();
-};
+}
 
 // XXX COMPAT WITH 0.9.1 : accept migrationData instead of dictName
-ReactiveDict = function (dictName) {
-  // this.keys: key -> value
-  if (dictName) {
-    if (typeof dictName === 'string') {
-      // the normal case, argument is a string name.
-      // _registerDictForMigrate will throw an error on duplicate name.
-      ReactiveDict._registerDictForMigrate(dictName, this);
-      this.keys = ReactiveDict._loadMigratedDict(dictName) || {};
-      this.name = dictName;
-    } else if (typeof dictName === 'object') {
-      // back-compat case: dictName is actually migrationData
-      this.keys = {};
-      for (let [key, value] of Object.entries(dictName)) {
-        this.keys[key] = stringify(value);
-      }
-    } else {
-      throw new Error("Invalid ReactiveDict argument: " + dictName);
-    }
-  } else {
-    // no name given; no migration will be performed
+export class ReactiveDict {
+  constructor(dictName, dictData) {
+    // this.keys: key -> value
     this.keys = {};
+
+    if (dictName) {
+      // name given; migration will be performed
+      if (typeof dictName === 'string') {
+        // the normal case, argument is a string name.
+
+        // Only run migration logic on client, it will cause
+        // duplicate name errors on server during reloads.
+        // _registerDictForMigrate will throw an error on duplicate name.
+        Meteor.isClient && ReactiveDict._registerDictForMigrate(dictName, this);
+        const migratedData = Meteor.isClient && ReactiveDict._loadMigratedDict(dictName);
+
+        if (migratedData) {
+          // Don't stringify migrated data
+          this.keys = migratedData;
+        } else {
+          // Use _setObject to make sure values are stringified
+          this._setObject(dictData || {});
+        }
+        this.name = dictName;
+      } else if (typeof dictName === 'object') {
+        // back-compat case: dictName is actually migrationData
+        // Use _setObject to make sure values are stringified
+        this._setObject(dictName);
+      } else {
+        throw new Error("Invalid ReactiveDict argument: " + dictName);
+      }
+    } else if (typeof dictData === 'object') {
+      this._setObject(dictData);
+    }
+
+    this.allDeps = new Tracker.Dependency;
+    this.keyDeps = {}; // key -> Dependency
+    this.keyValueDeps = {}; // key -> Dependency
   }
 
-  this.allDeps = new Tracker.Dependency;
-  this.keyDeps = {}; // key -> Dependency
-  this.keyValueDeps = {}; // key -> Dependency
-};
-
-_.extend(ReactiveDict.prototype, {
   // set() began as a key/value method, but we are now overloading it
   // to take an object of key/value pairs, similar to backbone
   // http://backbonejs.org/#Model-set
-
-  set: function (keyOrObject, value) {
-    var self = this;
-
+  set(keyOrObject, value) {
     if ((typeof keyOrObject === 'object') && (value === undefined)) {
       // Called as `dict.set({...})`
-      self._setObject(keyOrObject);
+      this._setObject(keyOrObject);
       return;
     }
     // the input isn't an object, so it must be a key
     // and we resume with the rest of the function
-    var key = keyOrObject;
+    const key = keyOrObject;
 
     value = stringify(value);
 
-    var keyExisted = _.has(self.keys, key);
-    var oldSerializedValue = keyExisted ? self.keys[key] : 'undefined';
-    var isNewValue = (value !== oldSerializedValue);
+    const keyExisted = _.has(this.keys, key);
+    const oldSerializedValue = keyExisted ? this.keys[key] : 'undefined';
+    const isNewValue = (value !== oldSerializedValue);
 
-    self.keys[key] = value;
+    this.keys[key] = value;
 
     if (isNewValue || !keyExisted) {
-      self.allDeps.changed();
+      // Using the changed utility function here because this.allDeps might not exist yet,
+      // when setting initial data from constructor
+      changed(this.allDeps);
     }
 
-    if (isNewValue) {
-      changed(self.keyDeps[key]);
-      if (self.keyValueDeps[key]) {
-        changed(self.keyValueDeps[key][oldSerializedValue]);
-        changed(self.keyValueDeps[key][value]);
+    // Don't trigger changes when setting initial data from constructor,
+    // this.KeyDeps is undefined in this case
+    if (isNewValue && this.keyDeps) {
+      changed(this.keyDeps[key]);
+      if (this.keyValueDeps[key]) {
+        changed(this.keyValueDeps[key][oldSerializedValue]);
+        changed(this.keyValueDeps[key][value]);
       }
     }
-  },
+  }
 
-  setDefault: function (keyOrObject, value) {
-    var self = this;
-
+  setDefault(keyOrObject, value) {
     if ((typeof keyOrObject === 'object') && (value === undefined)) {
       // Called as `dict.setDefault({...})`
-      self._setDefaultObject(keyOrObject);
+      this._setDefaultObject(keyOrObject);
       return;
     }
     // the input isn't an object, so it must be a key
     // and we resume with the rest of the function
-    var key = keyOrObject;
+    const key = keyOrObject;
 
-    if (! _.has(self.keys, key)) {
-      self.set(key, value);
+    if (! _.has(this.keys, key)) {
+      this.set(key, value);
     }
-  },
+  }
 
-  get: function (key) {
-    var self = this;
-    self._ensureKey(key);
-    self.keyDeps[key].depend();
-    return parse(self.keys[key]);
-  },
+  get(key) {
+    this._ensureKey(key);
+    this.keyDeps[key].depend();
+    return parse(this.keys[key]);
+  }
 
-  equals: function (key, value) {
-    var self = this;
-
+  equals(key, value) {
     // Mongo.ObjectID is in the 'mongo' package
-    var ObjectID = null;
+    let ObjectID = null;
     if (Package.mongo) {
       ObjectID = Package.mongo.Mongo.ObjectID;
     }
-
     // We don't allow objects (or arrays that might include objects) for
     // .equals, because JSON.stringify doesn't canonicalize object key
     // order. (We can make equals have the right return value by parsing the
@@ -133,104 +142,98 @@ _.extend(ReactiveDict.prototype, {
         value !== null) {
       throw new Error("ReactiveDict.equals: value must be scalar");
     }
-    var serializedValue = stringify(value);
+    const serializedValue = stringify(value);
 
     if (Tracker.active) {
-      self._ensureKey(key);
+      this._ensureKey(key);
 
-      if (! _.has(self.keyValueDeps[key], serializedValue))
-        self.keyValueDeps[key][serializedValue] = new Tracker.Dependency;
+      if (! _.has(this.keyValueDeps[key], serializedValue)) {
+        this.keyValueDeps[key][serializedValue] = new Tracker.Dependency;
+      }
 
-      var isNew = self.keyValueDeps[key][serializedValue].depend();
+      var isNew = this.keyValueDeps[key][serializedValue].depend();
       if (isNew) {
-        Tracker.onInvalidate(function () {
+        Tracker.onInvalidate(() => {
           // clean up [key][serializedValue] if it's now empty, so we don't
           // use O(n) memory for n = values seen ever
-          if (! self.keyValueDeps[key][serializedValue].hasDependents())
-            delete self.keyValueDeps[key][serializedValue];
+          if (! this.keyValueDeps[key][serializedValue].hasDependents()) {
+            delete this.keyValueDeps[key][serializedValue];
+          }
         });
       }
     }
 
-    var oldValue = undefined;
-    if (_.has(self.keys, key)) oldValue = parse(self.keys[key]);
+    let oldValue = undefined;
+    if (_.has(this.keys, key)) {
+      oldValue = parse(this.keys[key]);
+    }
     return EJSON.equals(oldValue, value);
-  },
+  }
 
-  all: function() {
+  all() {
     this.allDeps.depend();
-    var ret = {};
-    _.each(this.keys, function(value, key) {
+    let ret = {};
+    _.each(this.keys, (value, key) => {
       ret[key] = parse(value);
     });
     return ret;
-  },
+  }
 
-  clear: function() {
-    var self = this;
+  clear() {
+    const oldKeys = this.keys;
+    this.keys = {};
 
-    var oldKeys = self.keys;
-    self.keys = {};
+    this.allDeps.changed();
 
-    self.allDeps.changed();
-
-    _.each(oldKeys, function(value, key) {
-      changed(self.keyDeps[key]);
-      if (self.keyValueDeps[key]) {
-        changed(self.keyValueDeps[key][value]);
-        changed(self.keyValueDeps[key]['undefined']);
+    _.each(oldKeys, (value, key) => {
+      changed(this.keyDeps[key]);
+      if (this.keyValueDeps[key]) {
+        changed(this.keyValueDeps[key][value]);
+        changed(this.keyValueDeps[key]['undefined']);
       }
     });
+  }
 
-  },
+  delete(key) {
+    let didRemove = false;
 
-  delete: function(key) {
-    var self = this;
-    var didRemove = false;
-
-    if (_.has(self.keys, key)) {
-      var oldValue = self.keys[key];
-      delete self.keys[key];
-      changed(self.keyDeps[key]);
-      if (self.keyValueDeps[key]) {
-        changed(self.keyValueDeps[key][oldValue]);
-        changed(self.keyValueDeps[key]['undefined']);
+    if (_.has(this.keys, key)) {
+      const oldValue = this.keys[key];
+      delete this.keys[key];
+      changed(this.keyDeps[key]);
+      if (this.keyValueDeps[key]) {
+        changed(this.keyValueDeps[key][oldValue]);
+        changed(this.keyValueDeps[key]['undefined']);
       }
-      self.allDeps.changed();
+      this.allDeps.changed();
       didRemove = true;
     }
-
     return didRemove;
-  },
+  }
 
-  _setObject: function (object) {
-    var self = this;
-
-    _.each(object, function (value, key){
-      self.set(key, value);
+  _setObject(object) {
+    _.each(object, (value, key) => {
+      this.set(key, value);
     });
-  },
+  }
 
-  _setDefaultObject: function (object) {
-    var self = this;
-
-    _.each(object, function (value, key){
-      self.setDefault(key, value);
+  _setDefaultObject(object) {
+    _.each(object, (value, key) => {
+      this.setDefault(key, value);
     });
-  },
+  }
 
-  _ensureKey: function (key) {
-    var self = this;
-    if (!(key in self.keyDeps)) {
-      self.keyDeps[key] = new Tracker.Dependency;
-      self.keyValueDeps[key] = {};
+  _ensureKey(key) {
+    if (!(key in this.keyDeps)) {
+      this.keyDeps[key] = new Tracker.Dependency;
+      this.keyValueDeps[key] = {};
     }
-  },
+  }
 
   // Get a JSON value that can be passed to the constructor to
   // create a new ReactiveDict with the same contents as this one
-  _getMigrationData: function () {
+  _getMigrationData() {
     // XXX sanitize and make sure it's JSONible?
     return this.keys;
   }
-});
+}
