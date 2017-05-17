@@ -12,7 +12,15 @@ try {
   ].join("\n"));
 }
 
-var core = require("core-js/modules/_core");
+var core = function () {
+  try {
+    return require("core-js/modules/_core");
+  } catch (e) {
+    // Older versions of core-js had a different file layout.
+    return require("core-js/modules/$.core");
+  }
+}();
+
 Symbol = exports.Symbol = core.Symbol;
 Map = exports.Map = core.Map;
 Set = exports.Set = core.Set;
