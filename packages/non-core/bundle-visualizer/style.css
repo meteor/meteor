@@ -10,6 +10,7 @@
 
 .meteorBundleVisualizer.meteorBundleVisualizerRootContainer {
   position: absolute;
+  z-index: 99999;
   top: 0;
   font-family: 'Open Sans', sans-serif;
   font-size: 12px;
