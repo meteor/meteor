@@ -1598,10 +1598,9 @@ class ClientTarget extends Target {
       manifestItem.size = file.size();
       manifestItem.hash = file.hash();
 
-      writeFile(file, builder);
-      manifest.push(manifestItem);
-
       if (! file.targetPath.startsWith("dynamic/")) {
+        writeFile(file, builder);
+        manifest.push(manifestItem);
         return;
       }
 
@@ -1610,12 +1609,20 @@ class ClientTarget extends Target {
       // prefixed with "dynamic/".
       manifestItem.type = "dynamic js";
 
-      if (manifestItem.sourceMapUrl) {
+      // Add the dynamic module to the manifest so that it can be
+      // requested via HTTP from the web server. Note, however, that we
+      // typically request dynamic modules via DDP, since we can compress
+      // the entire response more easily that way. We expose dynamic
+      // modules via HTTP here mostly to unlock future experimentation.
+      manifest.push(manifestItem);
+
+      if (manifestItem.sourceMap &&
+          manifestItem.sourceMapUrl) {
         // If the file is a dynamic module, we don't embed its source map
         // in the file itself (because base64-encoded data: URLs for
         // source maps can be very large), but rather include a normal URL
-        // referring to the source map, so that it can be loaded from the
-        // web server when needed.
+        // referring to the source map (as a comment), so that it can be
+        // loaded from the web server when needed.
         writeFile(file, builder, {
           sourceMapUrl: manifestItem.sourceMapUrl,
         });
@@ -1628,6 +1635,19 @@ class ClientTarget extends Target {
           cacheable: manifestItem.cacheable,
           hash: manifestItem.hash,
         });
+
+        // Now that we've written the module with a source map URL comment
+        // embedded in it, and also made sure the source map is exposed by
+        // the web server, we do not need to include the source map URL in
+        // the manifest, because then it would also be provided via the
+        // X-SourceMap HTTP header, redundantly.
+        delete manifestItem.sourceMap;
+        delete manifestItem.sourceMapUrl;
+
+      } else {
+        // If the dynamic module does not have a source map, just write it
+        // normally.
+        writeFile(file, builder);
       }
     });
 
