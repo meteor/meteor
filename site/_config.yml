@@ -11,6 +11,7 @@ language:
 timezone:
 github_repo: meteor/guide
 apis:
+  gtm: GTM-MBQ369M
   segment: zQx6cQifkTU79E3L0XAnmrOXP2A5bC6r
   docsearch:
     apiKey: bdf6b09d12024f6bae3631a0dfdd4a7f
