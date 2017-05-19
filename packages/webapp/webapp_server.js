@@ -440,15 +440,6 @@ var getUrlPrefixForArch = function (arch) {
     '' : '/' + '__' + arch.replace(/^web\./, '');
 };
 
-// parse port to see if it's a Windows Server-style named pipe or a UNIX path/filename for a UNIX domain socket file. If so, return as-is (String), otherwise return as Int
-WebAppInternals.parsePort = function (port) {
-  if( /\\\\?.+\\pipe\\?.+/.test(port) || /^(.+)\/([^/]+)$/.test(port) ) {
-    return port;
-  }
-
-  return parseInt(port);
-};
-
 var runWebAppServer = function () {
   var shuttingDown = false;
   var syncQueue = new Meteor._SynchronousQueue();
@@ -813,7 +804,7 @@ var runWebAppServer = function () {
     WebAppInternals.generateBoilerplate();
 
     // only start listening after all the startup code has run.
-    var localPort = WebAppInternals.parsePort(process.env.PORT) || 0;
+    var localPort = process.env.PORT || 0;
     var host = process.env.BIND_IP;
     var localIp = host || '0.0.0.0';
 
@@ -832,32 +823,63 @@ var runWebAppServer = function () {
       }));
     };
 
-    if (typeof localPort == "number") {
-      var listenOptions = { port: localPort, host: host };
-    } else {
+    localPort = isNaN(Number(localPort)) ? localPort : Number(localPort);
+
+    if (typeof localPort == "string") {
       var socketPath = localPort;
       var listenOptions = { path: socketPath };
 
-      httpServer.on('error', Meteor.bindEnvironment(function(e) {
-        if (e.code == 'EADDRINUSE') {
-	  var clientSocket = new net.Socket();
-          clientSocket.on('error', Meteor.bindEnvironment(function(e) {
-            if (e.code == 'ECONNREFUSED') {
-              console.log("Deleting stale socket file");
-              fs.unlinkSync(socketPath);
-              startHttpServer(listenOptions);
-            }
-          }));
-          clientSocket.connect({ path: socketPath }, function() {
-            console.log("Another server is already listening on socket: " + socketPath + ", exiting.");
+      // Test to see if the socket path is Windows Server-style named pipe with the
+      // format: \\.\pipe\{randomstring} or \\{servername}\pipe\{randomstring}
+      // Otherwise, treat it as a UNIX domain socket path pointing to a socket file
+      if ( /\\\\?.+\\pipe\\?.+/.test(socketPath)) {
+        startHttpServer(listenOptions);
+      } else {
+        if (fs.existsSync(socketPath)) {
+          if (fs.statSync(socketPath).isSocket()) {
+            var clientSocket = new net.Socket();
+            clientSocket.on('error', Meteor.bindEnvironment(function(e) {
+              //If there is an existing socket file that we cannot connect to,
+              //it must be stale as it is not associated with a running server
+              if (e.code == 'ECONNREFUSED') {
+                console.log("Deleting stale socket file");
+                fs.unlinkSync(socketPath);
+                startHttpServer(listenOptions);
+              }
+            }));
+            clientSocket.connect({ path: socketPath }, function() {
+              //If there is a running server listening on that socket file,
+              //we have to leave the file alone to avoid preventing other clients
+              //from connecting to it.
+              console.error("Another server is already listening on socket: " + socketPath + ", exiting.");
+              process.exit();
+            });
+          } else {
+            //There is an existing file at socketPath that is not a socket,
+            //so we will leave it alone and exit
+            console.error("Cannot listen on socket: " + socketPath + ", exiting.");
             process.exit();
-          });              
+          }
+        } else {
+          startHttpServer(listenOptions);
         }
-      }));
+        //Clean up the socket file when we've finished to avoid leaving a stale one
+        //That situation should only be able to happen if the running node process is
+        //killed via signal 9 (SIGKILL).
+        process.on('exit', Meteor.bindEnvironment(function(e) {
+          fs.unlinkSync(socketPath);
+        }));
+        process.on('SIGINT', Meteor.bindEnvironment(function(e) {
+          process.exit();
+        }));
+      }
+    } else if (typeof localPort == "number") {
+      var listenOptions = { port: localPort, host: host };
+      startHttpServer(localPort);
+    } else {
+      console.error("Invalid PORT specified");
+      process.exit();
     }
-
-    startHttpServer(listenOptions);
-
     return 'DAEMON';
   };
 };
