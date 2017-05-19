@@ -23,7 +23,7 @@
   publications.
 
 * `this.onStop` callbacks in publications are now run with the publication's
-  context and with it's `EnvironmentVariable`'s bound.
+  context and with its `EnvironmentVariable`'s bound.
 
 ## v1.4.4.3, 2017-05-22
 
