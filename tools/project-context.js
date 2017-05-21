@@ -1192,6 +1192,9 @@ exports.PlatformList = function (options) {
 // These platforms are always present and can be neither added or removed
 exports.PlatformList.DEFAULT_PLATFORMS = ['browser', 'server'];
 
+// Cordova platforms.
+exports.PlatformList.CORDOVA_PLATFORMS = ['ios', 'android'];
+
 _.extend(exports.PlatformList.prototype, {
   _readFile: function () {
     var self = this;
@@ -1239,8 +1242,8 @@ _.extend(exports.PlatformList.prototype, {
 
   getCordovaPlatforms: function () {
     var self = this;
-    return _.difference(self._platforms,
-                        exports.PlatformList.DEFAULT_PLATFORMS);
+    return _.intersection(self._platforms,
+                          exports.PlatformList.CORDOVA_PLATFORMS);
   },
 
   usesCordova: function () {
