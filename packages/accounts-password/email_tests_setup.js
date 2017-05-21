@@ -48,7 +48,10 @@ Meteor.methods({
     Meteor.users.update(
       {_id: this.userId},
       {$push: {emails: {address: email, verified: false}}});
-    Accounts.sendVerificationEmail(this.userId, email);
+    Accounts.sendVerificationEmail(this.userId, email, function (options, user, verifyEmailUrl) {
+      options.headers['My-Custom-Header2'] = 'Cool2';
+      return options;
+    });
   },
 
   createUserOnServer: function (email) {
