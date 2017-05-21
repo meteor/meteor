@@ -719,7 +719,7 @@ Ap._initServerPublications = function () {
         }
       });
     } else {
-      return null;
+      return this.ready();
     }
   }, /*suppress autopublish warning*/{is_auto: true});
 
