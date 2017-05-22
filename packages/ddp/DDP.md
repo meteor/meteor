@@ -1,6 +1,7 @@
 # DDP Specification
 
-DDP is a protocol between a client and a server that supports two operations:
+[Distributed Data Protocol](https://www.meteor.com/ddp) is a protocol between
+a client and a server that supports two operations:
 
  * Remote procedure calls by the client to the server.
  * The client subscribing to a set of documents, and the server keeping the
