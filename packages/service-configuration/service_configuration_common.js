@@ -16,6 +16,13 @@ ServiceConfiguration.configurations = new Mongo.Collection(
 // easier to write a configuration wizard that works only in insecure
 // mode.
 
+// Only one configuration should ever exist for each service.
+// MongoDB has deprecated dropDups, but it seems like the right choice
+// to use the feature while it remains available.    
+ServiceConfiguration.configurations._ensureIndex(
+    { "service": 1 },
+    { unique: true, dropDups: true }
+);
 
 // Thrown when trying to use a login service which is not configured
 ServiceConfiguration.ConfigError = function (serviceName) {
