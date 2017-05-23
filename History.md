@@ -2,8 +2,6 @@
 
 ## v1.5, TBD
 
-* Node has been upgraded to version 4.8.3.
-
 * The `meteor-base` package implies a new `dynamic-import` package, which
   provides runtime support for [the proposed ECMAScript dynamic
   `import(...)` syntax](https://github.com/tc39/proposal-dynamic-import),
@@ -94,6 +92,14 @@
   `install`, `preinstall`, or `postinstall`. Previously, a package was
   considered non-portable only if it contained any `.node` binary modules.
   [Issue #8225](https://github.com/meteor/meteor/issues/8225)
+
+## v1.4.4.3, 2017-05-22
+
+* Node has been upgraded to version 4.8.3.
+
+* A bug in checking body lengths of HTTP responses that was affecting
+  Galaxy deploys has been fixed.
+  [PR #8709](https://github.com/meteor/meteor/pull/8709).
 
 ## v1.4.4.2, 2017-05-02
 
