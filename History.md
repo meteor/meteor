@@ -1,5 +1,13 @@
 ## v.NEXT
 
+## v1.4.4.3, 2017-05-22
+
+* Node has been upgraded to version 4.8.3.
+
+* A bug in checking body lengths of HTTP responses that was affecting
+  Galaxy deploys has been fixed.
+  [PR #8709](https://github.com/meteor/meteor/pull/8709).
+
 ## v1.4.4.2, 2017-05-02
 
 * Node has been upgraded to version 4.8.2.
