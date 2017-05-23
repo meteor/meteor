@@ -16,6 +16,9 @@ Try the getting started [tutorial](https://www.meteor.com/try).
 
 Next, read the [guide](http://guide.meteor.com) or the reference documentation at http://docs.meteor.com/.
 
+
+[![Build Status](https://buildhive.cloudbees.com/job/michaelneale/job/meteor/badge/icon)](https://buildhive.cloudbees.com/job/michaelneale/job/meteor/)
+
 ## Quick Start
 
 On Windows, simply go to https://www.meteor.com/install and use the Windows installer.
