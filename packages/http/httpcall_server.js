@@ -86,7 +86,7 @@ var _call = function(method, url, options, callback) {
   var reqOptions = _.extend({
     url: newUrl,
     method: method,
-    encoding: "utf8",
+    encoding: (options.encoding || "utf8"),
     jar: false,
     timeout: options.timeout,
     body: content,
