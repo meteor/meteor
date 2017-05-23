@@ -597,7 +597,7 @@ Mongo.Collection.prototype.update = function update(selector, modifier, ...optio
 };
 
 /**
- * @summary Remove documents from the collection
+ * @summary Remove documents from the collection. Returns the number of items affected.
  * @locus Anywhere
  * @method remove
  * @memberOf Mongo.Collection
