@@ -1,0 +1,49 @@
+/* 
+ * XXX Hack to make chosen work when bundled. This needs to be included
+ * _after_ the standard chosen css files.
+ *
+ * After being bundled, all CSS is minified and served from the "/" dir.
+ * Thus, we need to provide absolute paths to the icons here.
+ */
+
+.chzn-container-single .chzn-single abbr {
+  background: url('/packages/jquery-chosen/img/chosen-sprite.png') right top no-repeat;
+}
+
+.chzn-container-single .chzn-single div b {
+  background: url('/packages/jquery-chosen/img/chosen-sprite.png') no-repeat 0 0;
+}
+
+.chzn-container-single .chzn-search input {
+  background: #fff url('/packages/jquery-chosen/img/chosen-sprite.png') no-repeat 100% -22px;
+  background: url('/packages/jquery-chosen/img/chosen-sprite.png') no-repeat 100% -22px, -webkit-gradient(linear, 0% 0%, 0% 100%, color-stop(1%, #eeeeee), color-stop(15%, #ffffff));
+  background: url('/packages/jquery-chosen/img/chosen-sprite.png') no-repeat 100% -22px, -webkit-linear-gradient(top, #eeeeee 1%, #ffffff 15%);
+  background: url('/packages/jquery-chosen/img/chosen-sprite.png') no-repeat 100% -22px, -moz-linear-gradient(top, #eeeeee 1%, #ffffff 15%);
+  background: url('/packages/jquery-chosen/img/chosen-sprite.png') no-repeat 100% -22px, -o-linear-gradient(top, #eeeeee 1%, #ffffff 15%);
+  background: url('/packages/jquery-chosen/img/chosen-sprite.png') no-repeat 100% -22px, -ms-linear-gradient(top, #eeeeee 1%, #ffffff 15%);
+  background: url('/packages/jquery-chosen/img/chosen-sprite.png') no-repeat 100% -22px, linear-gradient(top, #eeeeee 1%, #ffffff 15%);
+}
+
+.chzn-container-multi .chzn-choices .search-choice .search-choice-close {
+  background: url('/packages/jquery-chosen/img/chosen-sprite.png') right top no-repeat;
+}
+
+.chzn-container .chzn-results-scroll-down span {
+  background: url('/packages/jquery-chosen/img/chosen-sprite.png') no-repeat -4px -3px;
+}
+
+.chzn-container .chzn-results-scroll-up span {
+  background: url('/packages/jquery-chosen/img/chosen-sprite.png') no-repeat -22px -3px;
+}
+
+.chzn-rtl .chzn-search input {
+  background: #fff url('/packages/jquery-chosen/img/chosen-sprite.png') no-repeat -38px -22px;
+  background: url('/packages/jquery-chosen/img/chosen-sprite.png') no-repeat -38px -22px, -webkit-gradient(linear, 0% 0%, 0% 100%, color-stop(1%, #eeeeee), color-stop(15%, #ffffff));
+  background: url('/packages/jquery-chosen/img/chosen-sprite.png') no-repeat -38px -22px, -webkit-linear-gradient(top, #eeeeee 1%, #ffffff 15%);  
+  background: url('/packages/jquery-chosen/img/chosen-sprite.png') no-repeat -38px -22px, -moz-linear-gradient(top, #eeeeee 1%, #ffffff 15%);
+  background: url('/packages/jquery-chosen/img/chosen-sprite.png') no-repeat -38px -22px, -o-linear-gradient(top, #eeeeee 1%, #ffffff 15%);
+  background: url('/packages/jquery-chosen/img/chosen-sprite.png') no-repeat -38px -22px, -ms-linear-gradient(top, #eeeeee 1%, #ffffff 15%);
+  background: url('/packages/jquery-chosen/img/chosen-sprite.png') no-repeat -38px -22px, linear-gradient(top, #eeeeee 1%, #ffffff 15%);
+  padding: 4px 5px 4px 20px;
+  direction: rtl;
+}
