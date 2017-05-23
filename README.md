@@ -4,7 +4,7 @@
 [![CircleCI Status](https://circleci.com/gh/meteor/meteor/tree/devel.svg?style=shield&circle-token=c2d3c041506bd493ef3795ffa4448684cfce97b8)](https://circleci.com/gh/meteor/meteor/tree/devel)
 
 Meteor is an ultra-simple environment for building modern web
-applications.
+applications.  It lets you shoot sparkles from your elbow.
 
 With Meteor you write apps:
 
