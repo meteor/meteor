@@ -27,7 +27,7 @@ Set this to however many number of proxies you have running before your Meteor a
 ## MAIL_URL
 (_development, production_)
 
-If you're using an external mail service like [Postmark](https://www.postmarkapp.com), [Mandrill](https://www.mandrillapp.com), [MailGun](https://www.mailgun.com) or [SendGrid](https://www.sendgrid.net), you can provide a SMTP URL for your Meteor app to use to send e-mail. For example: `MAIL_URL="smtp://user@pass:yourservice.com:587"`.
+If you're using an external mail service like [Postmark](https://www.postmarkapp.com), [Mandrill](https://www.mandrillapp.com), [MailGun](https://www.mailgun.com) or [SendGrid](https://www.sendgrid.net), you can provide a SMTP URL for your Meteor app to use to send e-mail. For example: `MAIL_URL="smtp://user:pass@yourservice.com:587"`.
 
 ## METEOR_SETTINGS
 (_production_)
@@ -39,12 +39,12 @@ When running your bundled application in production mode, pass a string of JSON 
 ## MONGO_OPLOG_URL
 (_development, production_)
 
-MongoDB server oplog URL. If you're using a replica set (which you should), construct this url like so: `MONGO_URL="mongodb://user@password:myserver.com:10139/local?replicaSet=(your replica set)&authSource=(your auth source)"`
+MongoDB server oplog URL. If you're using a replica set (which you should), construct this url like so: `MONGO_URL="mongodb://user:password@myserver.com:10139/local?replicaSet=(your replica set)&authSource=(your auth source)"`
 
 ## MONGO_URL
 (_development, production_)
 
-MongoDB server URL. Give a fully qualified URL (or comma-separated list of URLs) like `MONGO_URL="mongodb://user@password:myserver.com:10139"`. For more information see the [MongoDB docs](https://docs.mongodb.com/manual/reference/connection-string/).
+MongoDB server URL. Give a fully qualified URL (or comma-separated list of URLs) like `MONGO_URL="mongodb://user:password@myserver.com:10139"`. For more information see the [MongoDB docs](https://docs.mongodb.com/manual/reference/connection-string/).
 
 ## METEOR_PACKAGE_DIRS
 (_development, production_)
