@@ -120,6 +120,10 @@ computation.
 This value is useful for data source implementations to determine
 whether they are being accessed reactively or not.
 
+{% apibox "Tracker.inFlush" %}
+
+This value indicates, wether a flush is in progress or not.
+
 {% apibox "Tracker.currentComputation" %}
 
 It's very rare to need to access `currentComputation` directly.  The
