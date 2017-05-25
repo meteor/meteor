@@ -103,14 +103,14 @@ Tinytest.add('collection - call native find with sort function',
   }
 );
 
-Tinytest.add('collection - calling native find with maxTimeMS should timeout',
+Tinytest.add('collection - calling native find with maxTimeMs should timeout',
   function(test) {
     var collectionName = 'findOptions1' + test.id;
     var collection = new Mongo.Collection(collectionName);
     collection.insert({a: 1});
 
     function doTest() {
-      return collection.find({$where: "sleep(100) || true"}, {maxTimeMS: 50}).count();
+      return collection.find({$where: "sleep(100) || true"}, {maxTimeMs: 50}).count();
     }
     if (Meteor.isServer) {
       test.throws(doTest);
@@ -138,7 +138,7 @@ Tinytest.add('collection - calling native find with $reverse hint should reverse
   }
 );
 
-Tinytest.add('collection - calling native find with good hint and maxTimeMS should succeed',
+Tinytest.add('collection - calling native find with good hint and maxTimeMs should succeed',
   function(test) {
     var collectionName = 'findOptions3' + test.id;
     var collection = new Mongo.Collection(collectionName);
@@ -147,6 +147,6 @@ Tinytest.add('collection - calling native find with good hint and maxTimeMS shou
       collection.rawCollection().createIndex({a: 1});
     }
 
-    test.equal(collection.find({}, {hint: {a: 1}, maxTimeMS: 1000}).count(), 1);
+    test.equal(collection.find({}, {hint: {a: 1}, maxTimeMs: 1000}).count(), 1);
   }
 );

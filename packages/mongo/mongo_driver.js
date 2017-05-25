@@ -992,8 +992,8 @@ MongoConnection.prototype._createSynchronousCursor = function(
     replaceTypes(cursorDescription.selector, replaceMeteorAtomWithMongo),
     cursorOptions.fields, mongoOptions);
 
-  if (typeof cursorOptions.maxTimeMS !== 'undefined') {
-    dbCursor = dbCursor.maxTimeMS(cursorOptions.maxTimeMS);
+  if (typeof cursorOptions.maxTimeMs !== 'undefined') {
+    dbCursor = dbCursor.maxTimeMS(cursorOptions.maxTimeMs);
   }
   if (typeof cursorOptions.hint !== 'undefined') {
     dbCursor = dbCursor.hint(cursorOptions.hint);
