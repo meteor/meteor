@@ -3,6 +3,7 @@ var path = require("path");
 var fs = require("fs");
 var util = require("./util.js");
 var meteorBabelVersion = require("./package.json").version;
+var reifyVersion = require("reify/package.json").version;
 var hasOwn = Object.prototype.hasOwnProperty;
 
 function Cache(fillFn, cacheDir) {
@@ -56,10 +57,17 @@ Cp.loadCacheFromDisk = function () {
 
 Cp.get = function (source, options, deps) {
   var cacheHash;
-  if (deps && deps.sourceHash)
-    cacheHash = util.deepHash(meteorBabelVersion, options, deps);
-  else
-    cacheHash = util.deepHash(meteorBabelVersion, source, options, deps);
+  if (deps && deps.sourceHash) {
+    cacheHash = util.deepHash(
+      meteorBabelVersion, reifyVersion,
+      options, deps
+    );
+  } else {
+    cacheHash = util.deepHash(
+      meteorBabelVersion, reifyVersion,
+      source, options, deps
+    );
+  }
   
   var cacheFile = cacheHash + ".json";
   var fullCacheFile = path.join(this.dir, cacheFile);
