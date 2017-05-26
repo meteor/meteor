@@ -546,6 +546,16 @@ Meteor.methods({forgotPassword: function (options) {
   Accounts.sendResetPasswordEmail(user._id, caseSensitiveEmail);
 }});
 
+/**
+ * @summary Generates a reset token record.
+ * @locus Server
+ * @param {String} userId The id of the user to generate the reset token record for.
+ * @param {String} email Which address of the user to generate the reset token record for. This address must be in the user's `emails` list. If `null`, defaults to the first email in the list.
+ * @param {String} reason `resetPassword` or `enrollAccount`.
+ * @param {Object} [extraTokenData] Optional additional data to be added into the token record.
+ * @returns {Object} Object with {email, user, tokenRecord} values.
+ * @importFromPackage accounts-base
+ */
 Accounts.generateResetTokenRecord = function (userId, email, reason, extraTokenData) {
   // Make sure the user exists, and email is one of their addresses.
   var user = Meteor.users.findOne(userId);
@@ -587,6 +597,15 @@ Accounts.generateResetTokenRecord = function (userId, email, reason, extraTokenD
   return {email, user, tokenRecord};
 };
 
+/**
+ * @summary Generates an e-mail verification token record.
+ * @locus Server
+ * @param {String} userId The id of the user to generate the  e-mail verification token record for.
+ * @param {String} email Which address of the user to generate the e-mail verification token record for. This address must be in the user's `emails` list. If `null`, defaults to the first unverified email in the list.
+ * @param {Object} [extraTokenData] Optional additional data to be added into the token record.
+ * @returns {Object} Object with {email, user, tokenRecord} values.
+ * @importFromPackage accounts-base
+ */
 Accounts.generateVerificationTokenRecord = function (userId, email, extraTokenData) {
   // Make sure the user exists, and email is one of their addresses.
   var user = Meteor.users.findOne(userId);
@@ -624,13 +643,9 @@ Accounts.generateVerificationTokenRecord = function (userId, email, extraTokenDa
 };
 
 /**
- * @summary Creates options for email sending for reset password and enroll account emails.
- * You can use this function when customizing a reset password or enroll account email sending.
- * @locus Server
- * @param {String} userId The id of the user to send email to.
- * @param {String} email Which address of the user's to send the email to. This address must be in the user's `emails` list. If `null`, defaults to the first email in the list.
- * @param {String} reason String `resetPassword` or `enrollAccount`.
- * @returns {Object} Object with {email, user, token, url} values.
+ * @summary Saves the reset token record into database in user's document.
+ * @param {Object} user User for which to save the reset token record for.
+ * @param {Object} tokenRecord The reset token record to be saved.
  * @importFromPackage accounts-base
  */
 Accounts.saveResetTokenRecord = function (user, tokenRecord) {
@@ -642,6 +657,12 @@ Accounts.saveResetTokenRecord = function (user, tokenRecord) {
   Meteor._ensure(user, 'services', 'password').reset = tokenRecord;
 };
 
+/**
+ * @summary Saves the e-mail verification token record into database in user's document.
+ * @param {Object} user User for which to save the e-mail verification token record for.
+ * @param {Object} tokenRecord The e-mail verification token record to be saved.
+ * @importFromPackage accounts-base
+ */
 Accounts.saveVerificationTokenRecord = function (user, tokenRecord) {
   Meteor.users.update({_id: userId}, {$push: {
     'services.email.verificationTokens': tokenRecord
@@ -662,7 +683,7 @@ Accounts.saveVerificationTokenRecord = function (user, tokenRecord) {
  * @param {Object} email Which address of the user's to send the email to.
  * @param {Object} user The user object to generate options for.
  * @param {String} url URL to which user is directed to confirm the email.
- * @param {String} reason generateOptionsForEmail`resetPassword` or `enrollAccount`.
+ * @param {String} reason `resetPassword` or `enrollAccount`.
  * @returns {Object} Options which can be passed to `Email.send`.
  * @importFromPackage accounts-base
  */
@@ -698,7 +719,7 @@ Accounts.generateOptionsForEmail = function (email, user, url, reason) {
  * @locus Server
  * @param {String} userId The id of the user to send email to.
  * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.
- * @returns {Object} Object with {email, user, token, url, options} values.
+ * @returns {Object} Object with {email, user, tokenRecord, url, options} values.
  * @importFromPackage accounts-base
  */
 Accounts.sendResetPasswordEmail = function (userId, email, extraTokenData) {
@@ -723,7 +744,7 @@ Accounts.sendResetPasswordEmail = function (userId, email, extraTokenData) {
  * @locus Server
  * @param {String} userId The id of the user to send email to.
  * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.
- * @returns {Object} Object with {email, user, token, url, options} values.
+ * @returns {Object} Object with {email, user, tokenRecord, url, options} values.
  * @importFromPackage accounts-base
  */
 Accounts.sendEnrollmentEmail = function (userId, email, extraTokenData) {
@@ -829,6 +850,7 @@ Meteor.methods({resetPassword: function (token, newPassword) {
  * @locus Server
  * @param {String} userId The id of the user to send email to.
  * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first unverified email in the list.
+ * @returns {Object} Object with {email, user, tokenRecord, url, options} values.
  * @importFromPackage accounts-base
  */
 Accounts.sendVerificationEmail = function (userId, email, extraTokenData) {
