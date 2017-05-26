@@ -830,8 +830,8 @@ Accounts.sendVerificationEmail = function (userId, email) {
 
   const {email: realEmail, user, tokenRecord} = Accounts.generateVerificationTokenRecord(userId, email);
   Accounts.saveVerificationTokenRecord(user, tokenRecord);
-  var url = Accounts.urls.verifyEmail(tokenRecord.token);
-  var options = Accounts.generateOptionsForEmail(realEmail, user, url, 'verifyEmail');
+  const url = Accounts.urls.verifyEmail(tokenRecord.token);
+  const options = Accounts.generateOptionsForEmail(realEmail, user, url, 'verifyEmail');
   Email.send(options);
   return {email: realEmail, user, tokenRecord, url, options};
 };
