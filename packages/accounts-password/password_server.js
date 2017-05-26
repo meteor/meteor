@@ -611,11 +611,11 @@ Accounts.createPasswordToken = function (userId, email, reason) {
  * @param {Object} email Which address of the user's to send the email to.
  * @param {Object} user The user object to generate options for.
  * @param {String} url URL to which user is directed to confirm the email.
- * @param {String} reason String `resetPassword` or `enrollAccount`.
+ * @param {String} reason generateOptionsForEmail`resetPassword` or `enrollAccount`.
  * @returns {Object} Options which can be passed to `Email.send`.
  * @importFromPackage accounts-base
  */
-Accounts.tokenEmailOptions = function (email, user, url, reason) {
+Accounts.generateOptionsForEmail = function (email, user, url, reason) {
   var options = {
     to: email,
     from: Accounts.emailTemplates[reason].from
@@ -654,7 +654,7 @@ Accounts.tokenEmailOptions = function (email, user, url, reason) {
  */
 Accounts.sendResetPasswordEmail = function (userId, email) {
   let {email: realEmail, user, token, url} = Accounts.createPasswordToken(userId, email, 'resetPassword');
-  let options = Accounts.tokenEmailOptions(realEmail, user, url, 'resetPassword');
+  let options = Accounts.generateOptionsForEmail(realEmail, user, url, 'resetPassword');
   Email.send(options);
   return {email: realEmail, user, token, url, options};
 };
@@ -677,7 +677,7 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
  */
 Accounts.sendEnrollmentEmail = function (userId, email) {
   let {email: realEmail, user, token, url} = Accounts.createPasswordToken(userId, email, 'enrollAccount');
-  let options = Accounts.tokenEmailOptions(realEmail, user, url, 'enrollAccount');
+  let options = Accounts.generateOptionsForEmail(realEmail, user, url, 'enrollAccount');
   Email.send(options);
   return {email: realEmail, user, token, url, options};
 };
