@@ -625,13 +625,11 @@ Accounts.generateOptionsForEmail = function (email, user, url, reason) {
   };
 
   if (typeof Accounts.emailTemplates[reason].text === 'function') {
-    options.text =
-      Accounts.emailTemplates[reason].text(user, url);
+    options.text = Accounts.emailTemplates[reason].text(user, url);
   }
 
   if (typeof Accounts.emailTemplates[reason].html === 'function') {
-    options.html =
-      Accounts.emailTemplates[reason].html(user, url);
+    options.html = Accounts.emailTemplates[reason].html(user, url);
   }
 
   if (typeof Accounts.emailTemplates.headers === 'object') {
@@ -653,8 +651,8 @@ Accounts.generateOptionsForEmail = function (email, user, url, reason) {
  * @importFromPackage accounts-base
  */
 Accounts.sendResetPasswordEmail = function (userId, email) {
-  let {email: realEmail, user, token, url} = Accounts.createPasswordToken(userId, email, 'resetPassword');
-  let options = Accounts.generateOptionsForEmail(realEmail, user, url, 'resetPassword');
+  const {email: realEmail, user, token, url} = Accounts.createPasswordToken(userId, email, 'resetPassword');
+  const options = Accounts.generateOptionsForEmail(realEmail, user, url, 'resetPassword');
   Email.send(options);
   return {email: realEmail, user, token, url, options};
 };
@@ -676,8 +674,8 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
  * @importFromPackage accounts-base
  */
 Accounts.sendEnrollmentEmail = function (userId, email) {
-  let {email: realEmail, user, token, url} = Accounts.createPasswordToken(userId, email, 'enrollAccount');
-  let options = Accounts.generateOptionsForEmail(realEmail, user, url, 'enrollAccount');
+  const {email: realEmail, user, token, url} = Accounts.createPasswordToken(userId, email, 'enrollAccount');
+  const options = Accounts.generateOptionsForEmail(realEmail, user, url, 'enrollAccount');
   Email.send(options);
   return {email: realEmail, user, token, url, options};
 };
