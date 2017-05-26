@@ -81,9 +81,9 @@
       "from": "babel-helper-is-void-0@>=0.0.1 <0.0.2"
     },
     "babel-helper-mark-eval-scopes": {
-      "version": "0.0.3",
-      "resolved": "https://registry.npmjs.org/babel-helper-mark-eval-scopes/-/babel-helper-mark-eval-scopes-0.0.3.tgz",
-      "from": "babel-helper-mark-eval-scopes@>=0.0.3 <0.0.4"
+      "version": "0.1.1",
+      "resolved": "https://registry.npmjs.org/babel-helper-mark-eval-scopes/-/babel-helper-mark-eval-scopes-0.1.1.tgz",
+      "from": "babel-helper-mark-eval-scopes@>=0.1.1 <0.2.0"
     },
     "babel-helper-optimise-call-expression": {
       "version": "6.24.1",
@@ -96,9 +96,9 @@
       "from": "babel-helper-regex@>=6.24.1 <7.0.0"
     },
     "babel-helper-remove-or-void": {
-      "version": "0.0.1",
-      "resolved": "https://registry.npmjs.org/babel-helper-remove-or-void/-/babel-helper-remove-or-void-0.0.1.tgz",
-      "from": "babel-helper-remove-or-void@>=0.0.1 <0.0.2"
+      "version": "0.1.1",
+      "resolved": "https://registry.npmjs.org/babel-helper-remove-or-void/-/babel-helper-remove-or-void-0.1.1.tgz",
+      "from": "babel-helper-remove-or-void@>=0.1.1 <0.2.0"
     },
     "babel-helper-replace-supers": {
       "version": "6.24.1",
@@ -138,8 +138,8 @@
       }
     },
     "babel-plugin-minify-dead-code-elimination": {
-      "version": "0.1.4",
-      "resolved": "https://registry.npmjs.org/babel-plugin-minify-dead-code-elimination/-/babel-plugin-minify-dead-code-elimination-0.1.4.tgz",
+      "version": "0.1.6",
+      "resolved": "https://registry.npmjs.org/babel-plugin-minify-dead-code-elimination/-/babel-plugin-minify-dead-code-elimination-0.1.6.tgz",
       "from": "babel-plugin-minify-dead-code-elimination@>=0.1.3 <0.2.0"
     },
     "babel-plugin-minify-flip-comparisons": {
@@ -340,18 +340,18 @@
       "from": "babel-plugin-transform-inline-consecutive-adds@>=0.0.2 <0.0.3"
     },
     "babel-plugin-transform-member-expression-literals": {
-      "version": "6.8.1",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-member-expression-literals/-/babel-plugin-transform-member-expression-literals-6.8.1.tgz",
+      "version": "6.8.3",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-member-expression-literals/-/babel-plugin-transform-member-expression-literals-6.8.3.tgz",
       "from": "babel-plugin-transform-member-expression-literals@>=6.8.1 <7.0.0"
     },
     "babel-plugin-transform-merge-sibling-variables": {
-      "version": "6.8.2",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-merge-sibling-variables/-/babel-plugin-transform-merge-sibling-variables-6.8.2.tgz",
+      "version": "6.8.4",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-merge-sibling-variables/-/babel-plugin-transform-merge-sibling-variables-6.8.4.tgz",
       "from": "babel-plugin-transform-merge-sibling-variables@>=6.8.2 <7.0.0"
     },
     "babel-plugin-transform-minify-booleans": {
-      "version": "6.8.0",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-minify-booleans/-/babel-plugin-transform-minify-booleans-6.8.0.tgz",
+      "version": "6.8.2",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-minify-booleans/-/babel-plugin-transform-minify-booleans-6.8.2.tgz",
       "from": "babel-plugin-transform-minify-booleans@>=6.8.0 <7.0.0"
     },
     "babel-plugin-transform-object-rest-spread": {
@@ -360,8 +360,8 @@
       "from": "babel-plugin-transform-object-rest-spread@>=6.22.0 <7.0.0"
     },
     "babel-plugin-transform-property-literals": {
-      "version": "6.8.1",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-property-literals/-/babel-plugin-transform-property-literals-6.8.1.tgz",
+      "version": "6.8.3",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-property-literals/-/babel-plugin-transform-property-literals-6.8.3.tgz",
       "from": "babel-plugin-transform-property-literals@>=6.8.1 <7.0.0"
     },
     "babel-plugin-transform-react-display-name": {
@@ -395,13 +395,13 @@
       "from": "babel-plugin-transform-regexp-constructors@>=0.0.5 <0.0.6"
     },
     "babel-plugin-transform-remove-console": {
-      "version": "6.8.1",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-remove-console/-/babel-plugin-transform-remove-console-6.8.1.tgz",
+      "version": "6.8.3",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-remove-console/-/babel-plugin-transform-remove-console-6.8.3.tgz",
       "from": "babel-plugin-transform-remove-console@>=6.8.0 <7.0.0"
     },
     "babel-plugin-transform-remove-debugger": {
-      "version": "6.8.1",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-remove-debugger/-/babel-plugin-transform-remove-debugger-6.8.1.tgz",
+      "version": "6.8.3",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-remove-debugger/-/babel-plugin-transform-remove-debugger-6.8.3.tgz",
       "from": "babel-plugin-transform-remove-debugger@>=6.8.0 <7.0.0"
     },
     "babel-plugin-transform-remove-undefined": {
@@ -415,8 +415,8 @@
       "from": "babel-plugin-transform-runtime@>=6.22.0 <7.0.0"
     },
     "babel-plugin-transform-simplify-comparison-operators": {
-      "version": "6.8.1",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-simplify-comparison-operators/-/babel-plugin-transform-simplify-comparison-operators-6.8.1.tgz",
+      "version": "6.8.3",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-simplify-comparison-operators/-/babel-plugin-transform-simplify-comparison-operators-6.8.3.tgz",
       "from": "babel-plugin-transform-simplify-comparison-operators@>=6.8.1 <7.0.0"
     },
     "babel-plugin-transform-strict-mode": {
@@ -425,8 +425,8 @@
       "from": "babel-plugin-transform-strict-mode@>=6.24.1 <7.0.0"
     },
     "babel-plugin-transform-undefined-to-void": {
-      "version": "6.8.0",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-undefined-to-void/-/babel-plugin-transform-undefined-to-void-6.8.0.tgz",
+      "version": "6.8.2",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-undefined-to-void/-/babel-plugin-transform-undefined-to-void-6.8.2.tgz",
       "from": "babel-plugin-transform-undefined-to-void@>=6.8.0 <7.0.0"
     },
     "babel-preset-babili": {
@@ -475,8 +475,8 @@
       "from": "babel-types@>=6.22.0 <7.0.0"
     },
     "babylon": {
-      "version": "6.17.0",
-      "resolved": "https://registry.npmjs.org/babylon/-/babylon-6.17.0.tgz",
+      "version": "6.17.1",
+      "resolved": "https://registry.npmjs.org/babylon/-/babylon-6.17.1.tgz",
       "from": "babylon@>=6.15.0 <7.0.0"
     },
     "balanced-match": {
@@ -510,8 +510,8 @@
       "from": "core-js@>=2.4.0 <3.0.0"
     },
     "debug": {
-      "version": "2.6.6",
-      "resolved": "https://registry.npmjs.org/debug/-/debug-2.6.6.tgz",
+      "version": "2.6.8",
+      "resolved": "https://registry.npmjs.org/debug/-/debug-2.6.8.tgz",
       "from": "debug@>=2.1.1 <3.0.0"
     },
     "detect-indent": {
@@ -590,9 +590,9 @@
       "from": "loose-envify@>=1.0.0 <2.0.0"
     },
     "meteor-babel": {
-      "version": "0.21.2",
-      "resolved": "https://registry.npmjs.org/meteor-babel/-/meteor-babel-0.21.2.tgz",
-      "from": "meteor-babel@0.21.2"
+      "version": "0.21.3",
+      "resolved": "https://registry.npmjs.org/meteor-babel/-/meteor-babel-0.21.3.tgz",
+      "from": "meteor-babel@0.21.3"
     },
     "meteor-babel-helpers": {
       "version": "0.0.3",
@@ -610,8 +610,8 @@
       "from": "minimist@0.0.8"
     },
     "minipass": {
-      "version": "2.0.1",
-      "resolved": "https://registry.npmjs.org/minipass/-/minipass-2.0.1.tgz",
+      "version": "2.0.2",
+      "resolved": "https://registry.npmjs.org/minipass/-/minipass-2.0.2.tgz",
       "from": "minipass@>=2.0.0 <3.0.0"
     },
     "minizlib": {
@@ -625,9 +625,9 @@
       "from": "mkdirp@>=0.5.1 <0.6.0"
     },
     "ms": {
-      "version": "0.7.3",
-      "resolved": "https://registry.npmjs.org/ms/-/ms-0.7.3.tgz",
-      "from": "ms@0.7.3"
+      "version": "2.0.0",
+      "resolved": "https://registry.npmjs.org/ms/-/ms-2.0.0.tgz",
+      "from": "ms@2.0.0"
     },
     "number-is-nan": {
       "version": "1.0.1",
@@ -692,8 +692,8 @@
       }
     },
     "reify": {
-      "version": "0.11.0",
-      "resolved": "https://registry.npmjs.org/reify/-/reify-0.11.0.tgz",
+      "version": "0.11.13",
+      "resolved": "https://registry.npmjs.org/reify/-/reify-0.11.13.tgz",
       "from": "reify@>=0.11.0 <0.12.0"
     },
     "repeating": {
