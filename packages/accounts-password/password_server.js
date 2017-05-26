@@ -649,7 +649,7 @@ Accounts.generateVerificationTokenRecord = function (userId, email, extraTokenDa
  * @importFromPackage accounts-base
  */
 Accounts.saveResetTokenRecord = function (user, tokenRecord) {
-  Meteor.users.update(user._id, {$set: {
+  Meteor.users.update({_id: user._id}, {$set: {
     'services.password.reset': tokenRecord
   }});
 
@@ -664,7 +664,7 @@ Accounts.saveResetTokenRecord = function (user, tokenRecord) {
  * @importFromPackage accounts-base
  */
 Accounts.saveVerificationTokenRecord = function (user, tokenRecord) {
-  Meteor.users.update({_id: userId}, {$push: {
+  Meteor.users.update({_id: user._id}, {$push: {
     'services.email.verificationTokens': tokenRecord
   }});
 
@@ -748,7 +748,7 @@ Accounts.sendResetPasswordEmail = function (userId, email, extraTokenData) {
  * @importFromPackage accounts-base
  */
 Accounts.sendEnrollmentEmail = function (userId, email, extraTokenData) {
-  const {email: realEmail, user, tokenRecord} = Accounts.generatResetTokenRecord(userId, email, 'enrollAccount', extraTokenData);
+  const {email: realEmail, user, tokenRecord} = Accounts.generateResetTokenRecord(userId, email, 'enrollAccount', extraTokenData);
   Accounts.saveResetTokenRecord(user, tokenRecord);
   const url = Accounts.urls.enrollAccount(tokenRecord.token);
   const options = Accounts.generateOptionsForEmail(realEmail, user, url, 'enrollAccount');
