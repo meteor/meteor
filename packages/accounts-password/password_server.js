@@ -546,17 +546,7 @@ Meteor.methods({forgotPassword: function (options) {
   Accounts.sendResetPasswordEmail(user._id, caseSensitiveEmail);
 }});
 
-/**
- * @summary Creates options for email sending for reset password and enroll account emails.
- * You can use this function when customizing a reset password or enroll account email sending.
- * @locus Server
- * @param {String} userId The id of the user to send email to.
- * @param {String} email Which address of the user's to send the email to. This address must be in the user's `emails` list. If `null`, defaults to the first email in the list.
- * @param {String} reason String `resetPassword` or `enrollAccount`.
- * @returns {Object} Object with {email, user, token, url} values.
- * @importFromPackage accounts-base
- */
-Accounts.createPasswordToken = function (userId, email, reason) {
+Accounts.generateResetTokenRecord = function (userId, email, reason) {
   // Make sure the user exists, and email is one of their addresses.
   var user = Meteor.users.findOne(userId);
   if (!user) {
@@ -573,35 +563,88 @@ Accounts.createPasswordToken = function (userId, email, reason) {
     handleError("No such email for user.");
   }
 
-  var tokenReason;
+  var tokenRecord = {
+    token: Random.secret(),
+    email: email,
+    when: new Date()
+  };
+
   if (reason === 'resetPassword') {
-    tokenReason = 'reset';
+    tokenRecord.reason = 'reset';
   }
   else if (reason === 'enrollAccount') {
-    tokenReason = 'enroll';
+    tokenRecord.reason = 'enroll';
   }
-  else {
-    throw new Error("Unknown reason: " + reason);
+  else if (reason) {
+    // fallback so that this function can be used for unknown reasons as well
+    tokenRecord.reason = reason;
   }
 
-  var token = Random.secret();
-  var when = new Date();
+  return {email, user, tokenRecord};
+};
+
+Accounts.generateVerificationTokenRecord = function (userId, email) {
+  // Make sure the user exists, and email is one of their addresses.
+  var user = Meteor.users.findOne(userId);
+  if (!user) {
+    handleError("Can't find user");
+  }
+
+  // pick the first unverified email if we weren't passed an email.
+  if (!email) {
+    var emailRecord = _.find(user.emails || [], function (e) { return !e.verified; });
+    email = (emailRecord || {}).address;
+
+    if (!email) {
+      handleError("That user has no unverified email addresses.");
+    }
+  }
+
+  // make sure we have a valid email
+  if (!email || !_.contains(_.pluck(user.emails || [], 'address'), email)) {
+    handleError("No such email for user.");
+  }
+
   var tokenRecord = {
-    token: token,
-    email: email,
-    when: when,
-    reason: tokenReason
+    token: Random.secret(),
+    // TODO: This should probably be renamed to "email" to match reset token record.
+    address: email,
+    when: new Date()
   };
-  Meteor.users.update(userId, {$set: {
-    "services.password.reset": tokenRecord
+
+  return {email, user, tokenRecord};
+};
+
+/**
+ * @summary Creates options for email sending for reset password and enroll account emails.
+ * You can use this function when customizing a reset password or enroll account email sending.
+ * @locus Server
+ * @param {String} userId The id of the user to send email to.
+ * @param {String} email Which address of the user's to send the email to. This address must be in the user's `emails` list. If `null`, defaults to the first email in the list.
+ * @param {String} reason String `resetPassword` or `enrollAccount`.
+ * @returns {Object} Object with {email, user, token, url} values.
+ * @importFromPackage accounts-base
+ */
+Accounts.saveResetTokenRecord = function (user, tokenRecord) {
+  Meteor.users.update(user._id, {$set: {
+    'services.password.reset': tokenRecord
   }});
 
   // before passing to template, update user object with new token
   Meteor._ensure(user, 'services', 'password').reset = tokenRecord;
+};
 
-  var url = Accounts.urls[reason](token);
+Accounts.saveVerificationTokenRecord = function (user, tokenRecord) {
+  Meteor.users.update({_id: userId}, {$push: {
+    'services.email.verificationTokens': tokenRecord
+  }});
 
-  return {email, user, token, url};
+  // before passing to template, update user object with new token
+  Meteor._ensure(user, 'services', 'email');
+  if (!user.services.email.verificationTokens) {
+    user.services.email.verificationTokens = [];
+  }
+  user.services.email.verificationTokens.push(tokenRecord);
 };
 
 /**
@@ -651,10 +694,12 @@ Accounts.generateOptionsForEmail = function (email, user, url, reason) {
  * @importFromPackage accounts-base
  */
 Accounts.sendResetPasswordEmail = function (userId, email) {
-  const {email: realEmail, user, token, url} = Accounts.createPasswordToken(userId, email, 'resetPassword');
+  const {email: realEmail, user, tokenRecord} = Accounts.generateResetTokenRecord(userId, email, 'resetPassword');
+  Accounts.saveResetTokenRecord(user, tokenRecord);
+  const url = Accounts.urls.resetPassword(tokenRecord.token);
   const options = Accounts.generateOptionsForEmail(realEmail, user, url, 'resetPassword');
   Email.send(options);
-  return {email: realEmail, user, token, url, options};
+  return {email: realEmail, user, tokenRecord, url, options};
 };
 
 // send the user an email informing them that their account was created, with
@@ -674,10 +719,12 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
  * @importFromPackage accounts-base
  */
 Accounts.sendEnrollmentEmail = function (userId, email) {
-  const {email: realEmail, user, token, url} = Accounts.createPasswordToken(userId, email, 'enrollAccount');
+  const {email: realEmail, user, tokenRecord} = Accounts.generatResetTokenRecord(userId, email, 'enrollAccount');
+  Accounts.saveResetTokenRecord(user, tokenRecord);
+  const url = Accounts.urls.enrollAccount(tokenRecord.token);
   const options = Accounts.generateOptionsForEmail(realEmail, user, url, 'enrollAccount');
   Email.send(options);
-  return {email: realEmail, user, token, url, options};
+  return {email: realEmail, user, tokenRecord, url, options};
 };
 
 
@@ -776,69 +823,17 @@ Meteor.methods({resetPassword: function (token, newPassword) {
  * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first unverified email in the list.
  * @importFromPackage accounts-base
  */
-Accounts.sendVerificationEmail = function (userId, address) {
+Accounts.sendVerificationEmail = function (userId, email) {
   // XXX Also generate a link using which someone can delete this
   // account if they own said address but weren't those who created
   // this account.
 
-  // Make sure the user exists, and address is one of their addresses.
-  var user = Meteor.users.findOne(userId);
-  if (!user)
-    throw new Error("Can't find user");
-  // pick the first unverified address if we weren't passed an address.
-  if (!address) {
-    var email = _.find(user.emails || [],
-                       function (e) { return !e.verified; });
-    address = (email || {}).address;
-
-    if (!address) {
-      throw new Error("That user has no unverified email addresses.");
-    }
-  }
-  // make sure we have a valid address
-  if (!address || !_.contains(_.pluck(user.emails || [], 'address'), address))
-    throw new Error("No such email address for user.");
-
-
-  var tokenRecord = {
-    token: Random.secret(),
-    address: address,
-    when: new Date()};
-  Meteor.users.update(
-    {_id: userId},
-    {$push: {'services.email.verificationTokens': tokenRecord}});
-
-  // before passing to template, update user object with new token
-  Meteor._ensure(user, 'services', 'email');
-  if (!user.services.email.verificationTokens) {
-    user.services.email.verificationTokens = [];
-  }
-  user.services.email.verificationTokens.push(tokenRecord);
-
-  var verifyEmailUrl = Accounts.urls.verifyEmail(tokenRecord.token);
-
-  var options = {
-    to: address,
-    from: Accounts.emailTemplates.verifyEmail.from
-      ? Accounts.emailTemplates.verifyEmail.from(user)
-      : Accounts.emailTemplates.from,
-    subject: Accounts.emailTemplates.verifyEmail.subject(user)
-  };
-
-  if (typeof Accounts.emailTemplates.verifyEmail.text === 'function') {
-    options.text =
-      Accounts.emailTemplates.verifyEmail.text(user, verifyEmailUrl);
-  }
-
-  if (typeof Accounts.emailTemplates.verifyEmail.html === 'function')
-    options.html =
-      Accounts.emailTemplates.verifyEmail.html(user, verifyEmailUrl);
-
-  if (typeof Accounts.emailTemplates.headers === 'object') {
-    options.headers = Accounts.emailTemplates.headers;
-  }
-
+  const {email: realEmail, user, tokenRecord} = Accounts.generateVerificationTokenRecord(userId, email);
+  Accounts.saveVerificationTokenRecord(user, tokenRecord);
+  var url = Accounts.urls.verifyEmail(tokenRecord.token);
+  var options = Accounts.generateOptionsForEmail(realEmail, user, url, 'verifyEmail');
   Email.send(options);
+  return {email: realEmail, user, tokenRecord, url, options};
 };
 
 // Take token from sendVerificationEmail, mark the email as verified,
