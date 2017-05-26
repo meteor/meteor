@@ -25,6 +25,8 @@
   `node_modules/core-js` should already be present. If that's not the
   case, just run `meteor npm install --save core-js` to install it.
 
+* The `npm` npm package has been upgraded to version 4.6.1.
+
 * The `meteor-babel` npm package has been upgraded to version 0.21.2,
   enabling the latest Reify compiler and the transform-class-properties
   plugin, among other improvements.
