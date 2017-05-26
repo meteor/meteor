@@ -1,5 +1,15 @@
 import assert from "assert";
 
+function assertDeepEqual(a, b) {
+  const aWithoutDefault = Object.assign({}, a);
+  delete aWithoutDefault.default;
+
+  const bWithoutDefault = Object.assign({}, b);
+  delete bWithoutDefault.default;
+
+  assert.deepEqual(aWithoutDefault, bWithoutDefault);
+}
+
 describe("dynamic import(...)", function () {
   maybeClearDynamicImportCache();
 
@@ -25,7 +35,7 @@ describe("dynamic import(...)", function () {
     }
 
     return import("console").then(console => {
-      assert.deepEqual(console, require(stubId));
+      assertDeepEqual(console, require(stubId));
       assert.strictEqual(typeof console.log, "function");
     });
   });
@@ -42,7 +52,7 @@ describe("dynamic import(...)", function () {
     return import("private").then(priv => {
       assert.strictEqual(name, "private");
       assert.strictEqual(typeof priv.makeAccessor, "function");
-      assert.deepEqual(priv, require("pri" + "vate"));
+      assertDeepEqual(priv, require("pri" + "vate"));
     });
   });
 
@@ -51,7 +61,7 @@ describe("dynamic import(...)", function () {
     return import("arson/package.json").then(({ name }) => {
       assert.strictEqual(name, "arson");
       assert.strictEqual(typeof arson.encode, "function");
-      assert.deepEqual(arson, require("ar" + "son"));
+      assertDeepEqual(arson, require("ar" + "son"));
     });
   });
 
@@ -62,7 +72,7 @@ describe("dynamic import(...)", function () {
     ]).then(([{ name }, React]) => {
       assert.strictEqual(name, "react");
       assert.strictEqual(typeof React.createClass, "function");
-      assert.deepEqual(React, require("re" + "act"));
+      assertDeepEqual(React, require("re" + "act"));
     });
   });
 
@@ -135,7 +145,7 @@ describe("dynamic import(...)", function () {
     const b = await import("meteor/helper-package/dynamic/b.coffee");
 
     assert.strictEqual(a.shared, b.shared);
-    assert.deepEqual(a.shared, {
+    assertDeepEqual(a.shared, {
       "/node_modules/meteor/helper-package/dynamic/a.js": true,
       "/node_modules/meteor/helper-package/dynamic/b.coffee.js": true
     });
@@ -151,7 +161,7 @@ describe("dynamic import(...)", function () {
 
   it("works with module.prefetch(id)", async function () {
     import { shared } from "./imports/prefetch-child";
-    assert.deepEqual(shared, {});
+    assertDeepEqual(shared, {});
 
     const rejection = module.prefetch("./imports/nonexistent.js");
     let threw = false;
@@ -170,11 +180,11 @@ describe("dynamic import(...)", function () {
     );
 
     return module.prefetch("./imports/prefetch").then(() => {
-      assert.deepEqual(shared, {});
+      assertDeepEqual(shared, {});
     }).then(() => {
       import { name } from "./imports/prefetch.js";
       assert.strictEqual(name, "/imports/prefetch.js");
-      assert.deepEqual(shared, { [name]: true });
+      assertDeepEqual(shared, { [name]: true });
     });
   });
 });

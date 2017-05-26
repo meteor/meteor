@@ -139,11 +139,11 @@ function addToTree(tree, id, value) {
 }
 
 function getNamespace(module, id) {
-  var namespace = Object.create(null);
+  var namespace;
 
   module.watch(module.require(id), {
-    "*": function (value, name) {
-      namespace[name] = value;
+    "*": function (ns) {
+      namespace = ns;
     }
   });
 
