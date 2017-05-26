@@ -546,7 +546,7 @@ Meteor.methods({forgotPassword: function (options) {
   Accounts.sendResetPasswordEmail(user._id, caseSensitiveEmail);
 }});
 
-Accounts.generateResetTokenRecord = function (userId, email, reason) {
+Accounts.generateResetTokenRecord = function (userId, email, reason, extraTokenData) {
   // Make sure the user exists, and email is one of their addresses.
   var user = Meteor.users.findOne(userId);
   if (!user) {
@@ -580,10 +580,14 @@ Accounts.generateResetTokenRecord = function (userId, email, reason) {
     tokenRecord.reason = reason;
   }
 
+  if (extraTokenData) {
+    _.extend(tokenRecord, extraTokenData);
+  }
+
   return {email, user, tokenRecord};
 };
 
-Accounts.generateVerificationTokenRecord = function (userId, email) {
+Accounts.generateVerificationTokenRecord = function (userId, email, extraTokenData) {
   // Make sure the user exists, and email is one of their addresses.
   var user = Meteor.users.findOne(userId);
   if (!user) {
@@ -611,6 +615,10 @@ Accounts.generateVerificationTokenRecord = function (userId, email) {
     address: email,
     when: new Date()
   };
+
+  if (extraTokenData) {
+    _.extend(tokenRecord, extraTokenData);
+  }
 
   return {email, user, tokenRecord};
 };
@@ -693,8 +701,8 @@ Accounts.generateOptionsForEmail = function (email, user, url, reason) {
  * @returns {Object} Object with {email, user, token, url, options} values.
  * @importFromPackage accounts-base
  */
-Accounts.sendResetPasswordEmail = function (userId, email) {
-  const {email: realEmail, user, tokenRecord} = Accounts.generateResetTokenRecord(userId, email, 'resetPassword');
+Accounts.sendResetPasswordEmail = function (userId, email, extraTokenData) {
+  const {email: realEmail, user, tokenRecord} = Accounts.generateResetTokenRecord(userId, email, 'resetPassword', extraTokenData);
   Accounts.saveResetTokenRecord(user, tokenRecord);
   const url = Accounts.urls.resetPassword(tokenRecord.token);
   const options = Accounts.generateOptionsForEmail(realEmail, user, url, 'resetPassword');
@@ -718,8 +726,8 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
  * @returns {Object} Object with {email, user, token, url, options} values.
  * @importFromPackage accounts-base
  */
-Accounts.sendEnrollmentEmail = function (userId, email) {
-  const {email: realEmail, user, tokenRecord} = Accounts.generatResetTokenRecord(userId, email, 'enrollAccount');
+Accounts.sendEnrollmentEmail = function (userId, email, extraTokenData) {
+  const {email: realEmail, user, tokenRecord} = Accounts.generatResetTokenRecord(userId, email, 'enrollAccount', extraTokenData);
   Accounts.saveResetTokenRecord(user, tokenRecord);
   const url = Accounts.urls.enrollAccount(tokenRecord.token);
   const options = Accounts.generateOptionsForEmail(realEmail, user, url, 'enrollAccount');
@@ -823,12 +831,12 @@ Meteor.methods({resetPassword: function (token, newPassword) {
  * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first unverified email in the list.
  * @importFromPackage accounts-base
  */
-Accounts.sendVerificationEmail = function (userId, email) {
+Accounts.sendVerificationEmail = function (userId, email, extraTokenData) {
   // XXX Also generate a link using which someone can delete this
   // account if they own said address but weren't those who created
   // this account.
 
-  const {email: realEmail, user, tokenRecord} = Accounts.generateVerificationTokenRecord(userId, email);
+  const {email: realEmail, user, tokenRecord} = Accounts.generateVerificationTokenRecord(userId, email, extraTokenData);
   Accounts.saveVerificationTokenRecord(user, tokenRecord);
   const url = Accounts.urls.verifyEmail(tokenRecord.token);
   const options = Accounts.generateOptionsForEmail(realEmail, user, url, 'verifyEmail');
