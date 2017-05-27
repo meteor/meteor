@@ -692,8 +692,8 @@
       }
     },
     "reify": {
-      "version": "0.11.14",
-      "resolved": "https://registry.npmjs.org/reify/-/reify-0.11.14.tgz",
+      "version": "0.11.15",
+      "resolved": "https://registry.npmjs.org/reify/-/reify-0.11.15.tgz",
       "from": "reify@>=0.11.0 <0.12.0"
     },
     "repeating": {
