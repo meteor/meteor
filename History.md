@@ -43,6 +43,9 @@
 
 * The `install` npm package has been upgraded to version 0.10.1.
 
+* The `uglify-js` npm package has been upgraded to version 3.0.12, fixing
+  [#8704](https://github.com/meteor/meteor/issues/8704).
+
 * If you're using the `standard-minifier-js` Meteor package, as most
   Meteor developers do, it will now produce a detailed analysis of package
   and module sizes within your production `.js` bundle whenever you run
