@@ -1,6 +1,6 @@
 ## v.NEXT
 
-## v1.5, TBD
+## v1.5, 2017-05-30
 
 * The `meteor-base` package implies a new `dynamic-import` package, which
   provides runtime support for [the proposed ECMAScript dynamic
