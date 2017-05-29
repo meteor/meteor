@@ -1,6 +1,6 @@
 {
   "name": "meteor-node-stubs",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "dependencies": {
     "asn1.js": {
       "version": "4.9.0",
