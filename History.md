@@ -27,11 +27,11 @@
 
 * The `npm` npm package has been upgraded to version 4.6.1.
 
-* The `meteor-babel` npm package has been upgraded to version 0.21.3,
+* The `meteor-babel` npm package has been upgraded to version 0.21.4,
   enabling the latest Reify compiler and the transform-class-properties
   plugin, among other improvements.
 
-* The `reify` npm package has been upgraded to version 0.11.15, fixing
+* The `reify` npm package has been upgraded to version 0.11.18, fixing
   [issue #8595](https://github.com/meteor/meteor/issues/8595) and
   improving compilation and runtime performance.
 

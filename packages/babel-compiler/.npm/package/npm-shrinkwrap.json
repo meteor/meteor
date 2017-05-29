@@ -590,9 +590,9 @@
       "from": "loose-envify@>=1.0.0 <2.0.0"
     },
     "meteor-babel": {
-      "version": "0.21.3",
-      "resolved": "https://registry.npmjs.org/meteor-babel/-/meteor-babel-0.21.3.tgz",
-      "from": "meteor-babel@0.21.3"
+      "version": "0.21.4",
+      "resolved": "https://registry.npmjs.org/meteor-babel/-/meteor-babel-0.21.4.tgz",
+      "from": "meteor-babel@0.21.4"
     },
     "meteor-babel-helpers": {
       "version": "0.0.3",
@@ -692,9 +692,9 @@
       }
     },
     "reify": {
-      "version": "0.11.15",
-      "resolved": "https://registry.npmjs.org/reify/-/reify-0.11.15.tgz",
-      "from": "reify@>=0.11.0 <0.12.0"
+      "version": "0.11.18",
+      "resolved": "https://registry.npmjs.org/reify/-/reify-0.11.18.tgz",
+      "from": "reify@>=0.11.18 <0.12.0"
     },
     "repeating": {
       "version": "2.0.1",
