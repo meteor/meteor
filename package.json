@@ -18,9 +18,9 @@
     "domain-browser": "^1.1.7",
     "events": "^1.1.1",
     "http-browserify": "^1.7.0",
-    "https-browserify": "0.0.1",
+    "https-browserify": "^0.0.1",
     "os-browserify": "^0.2.1",
-    "path-browserify": "0.0.0",
+    "path-browserify": "^0.0.0",
     "process": "^0.11.9",
     "punycode": "^1.4.1",
     "querystring-es3": "^0.2.1",
@@ -28,10 +28,10 @@
     "stream-browserify": "^2.0.1",
     "string_decoder": "^0.10.31",
     "timers-browserify": "^1.4.2",
-    "tty-browserify": "0.0.0",
+    "tty-browserify": "^0.0.0",
     "url": "^0.11.0",
     "util": "^0.10.3",
-    "vm-browserify": "0.0.4"
+    "vm-browserify": "^0.0.4"
   },
   "bundledDependencies": [
     "assert",
