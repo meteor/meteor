@@ -1787,9 +1787,10 @@ main.registerCommand({
       Console.info("\nNewer versions of the following indirect dependencies" +
                    " are available:");
       _.each(nonlatestIndirectDeps, printItem);
-      Console.info([
-        "To update one or more of these packages, pass their names to ",
-        "`meteor update`, or just run `meteor update --all-packages`."
+      Console.info(["These versions may not be compatible with your project.",
+        "To update one or more of these packages to their latest",
+        "compatible versions, pass their names to `meteor update`,",
+        "or just run `meteor update --all-packages`.",
       ].join("\n"));
     }
   }
