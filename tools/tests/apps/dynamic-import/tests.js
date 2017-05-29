@@ -187,6 +187,13 @@ describe("dynamic import(...)", function () {
       assertDeepEqual(shared, { [name]: true });
     });
   });
+
+  it("can import module.exports = {...}-style modules", () => {
+    return import("./imports/module-exports-esModule").then(m => {
+      assert.strictEqual(typeof m, "object");
+      assert.deepEqual(m, {});
+    });
+  });
 });
 
 function maybeClearDynamicImportCache() {
