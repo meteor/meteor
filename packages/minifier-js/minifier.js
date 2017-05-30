@@ -2,7 +2,7 @@ var uglify;
 
 meteorJsMinify = function (source) {
   var result = {};
-  uglify = uglify || Npm.require("uglify-js");
+  uglify = uglify || Npm.require("uglify-es");
 
   try {
     var uglifyResult = uglify.minify(source, {
