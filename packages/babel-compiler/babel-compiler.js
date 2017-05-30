@@ -86,8 +86,8 @@ BCp.processOneFileForTarget = function (inputFile, source) {
     babelOptions.sourceMap = true;
     babelOptions.filename =
       babelOptions.sourceFileName = packageName
-      ? "/packages/" + packageName + "/" + inputFilePath
-      : "/" + inputFilePath;
+      ? "packages/" + packageName + "/" + inputFilePath
+      : inputFilePath;
 
     babelOptions.sourceMapTarget = babelOptions.filename + ".map";
 

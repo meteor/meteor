@@ -8,10 +8,10 @@ function install(name, mainModule) {
   // /node_modules/meteor/<name>/index.js, in the rare but possible event
   // that the package contains a file called index.js (#6590).
 
-  if (mainModule) {
-    meteorDir[name + ".js"] = [mainModule, function (require, e, module) {
-      module.exports = require(mainModule);
-    }];
+  if (typeof mainModule === "string") {
+    // Set up an alias from /node_modules/meteor/<package>.js to the main
+    // module, e.g. meteor/<package>/index.js.
+    meteorDir[name + ".js"] = mainModule;
   } else {
     // back compat with old Meteor packages
     meteorDir[name + ".js"] = function (r, e, module) {

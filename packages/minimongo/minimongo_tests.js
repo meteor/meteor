@@ -2301,13 +2301,6 @@ Tinytest.add("minimongo - modify", function (test) {
                   {'a.x': 1, 'a.y': 3},
                   {$set: {'a.$.z': 5}},
                   {a: [{x: 1}, {y: 3, z: 5}]});
-  // with $near, make sure it finds the closest one
-  modifyWithQuery({a: [{b: [1,1]},
-                       {b: [ [3,3], [4,4] ]},
-                       {b: [9,9]}]},
-                  {'a.b': {$near: [5, 5]}},
-                  {$set: {'a.$.b': 'k'}},
-                  {a: [{b: [1,1]}, {b: 'k'}, {b: [9,9]}]});
   modifyWithQuery({a: [{x: 1}, {y: 1}, {x: 1, y: 1}]},
                   {a: {$elemMatch: {x: 1, y: 1}}},
                   {$set: {'a.$.x': 2}},
@@ -2316,6 +2309,56 @@ Tinytest.add("minimongo - modify", function (test) {
                   {'a.b': {$elemMatch: {x: 1, y: 1}}},
                   {$set: {'a.$.b': 3}},
                   {a: [{b: 3}]});
+  // with $near, make sure it does not find the closest one (#3599)
+  modifyWithQuery({a: []},
+                  {'a.b': {$near: [5, 5]}},
+                  {$set: {'a.$.b': 'k'}},
+                  {"a":[]});
+  modifyWithQuery({a: [{b: [ [3,3], [4,4] ]}]},
+                  {'a.b': {$near: [5, 5]}},
+                  {$set: {'a.$.b': 'k'}},
+                  {"a":[{"b":"k"}]});
+  modifyWithQuery({a: [{b: [1,1]},
+                       {b: [ [3,3], [4,4] ]},
+                       {b: [9,9]}]},
+                  {'a.b': {$near: [5, 5]}},
+                  {$set: {'a.$.b': 'k'}},
+                  {"a":[{"b":"k"},{"b":[[3,3],[4,4]]},{"b":[9,9]}]}); 
+  modifyWithQuery({a: [{b: [1,1]},
+                       {b: [ [3,3], [4,4] ]},
+                       {b: [9,9]}]},
+                  {'a.b': {$near: [9, 9], $maxDistance: 1}},
+                  {$set: {'a.$.b': 'k'}},
+                  {"a":[{"b":"k"},{"b":[[3,3],[4,4]]},{"b":[9,9]}]}); 
+  modifyWithQuery({a: [{b: [1,1]},
+                       {b: [ [3,3], [4,4] ]},
+                       {b: [9,9]}]},
+                  {'a.b': {$near: [9, 9]}},
+                  {$set: {'a.$.b': 'k'}},
+                  {"a":[{"b":"k"},{"b":[[3,3],[4,4]]},{"b":[9,9]}]});
+  modifyWithQuery({a: [{b: [9,9]},
+                       {b: [ [3,3], [4,4] ]},
+                       {b: [9,9]}]},
+                  {'a.b': {$near: [9, 9]}},
+                  {$set: {'a.$.b': 'k'}},
+                  {"a":[{"b":"k"},{"b":[[3,3],[4,4]]},{"b":[9,9]}]});
+  modifyWithQuery({a: [{b:[4,3]},
+                       {c: [1,1]}]},
+                  {'a.c': {$near: [1, 1]}},
+                  {$set: {'a.$.c': 'k'}},
+                  {"a":[{"c": "k", "b":[4,3]},{"c":[1,1]}]});
+  modifyWithQuery({a: [{c: [9,9]},
+                       {b: [ [3,3], [4,4] ]},
+                       {b: [1,1]}]},
+                  {'a.b': {$near: [1, 1]}},
+                  {$set: {'a.$.b': 'k'}},
+                  {"a":[{"c": [9,9], "b":"k"},{"b": [ [3,3], [4,4]]},{"b":[1,1]}]});  
+  modifyWithQuery({a: [{c: [9,9], b:[4,3]},
+                       {b: [ [3,3], [4,4] ]},
+                       {b: [1,1]}]},
+                  {'a.b': {$near: [1, 1]}},
+                  {$set: {'a.$.b': 'k'}},
+                  {"a":[{"c": [9,9], "b":"k"},{"b": [ [3,3], [4,4]]},{"b":[1,1]}]});
 
   // $inc
   modify({a: 1, b: 2}, {$inc: {a: 10}}, {a: 11, b: 2});
@@ -2396,7 +2439,7 @@ Tinytest.add("minimongo - modify", function (test) {
   exception({}, {$set: {_id: 4}});
   exception({_id: 4}, {$set: {_id: 4}});  // even not-changing _id is bad
   //restricted field names
-  exception({a:{}}, {$set:{a:{$a:1}}}); 
+  exception({a:{}}, {$set:{a:{$a:1}}});
   exception({ a: {} }, { $set: { a: { c:
               [{ b: { $a: 1 } }] } } });
   exception({a:{}}, {$set:{a:{'\0a':1}}});
@@ -2434,8 +2477,6 @@ Tinytest.add("minimongo - modify", function (test) {
          {a: [1, 2, 3]});
   modify({a: [true]}, {$push: {a: {$each: [1, 2, 3]}}},
          {a: [true, 1, 2, 3]});
-  // No positive numbers for $slice
-  exception({}, {$push: {a: {$each: [], $slice: 5}}});
   modify({a: [true]}, {$push: {a: {$each: [1, 2, 3], $slice: -2}}},
          {a: [2, 3]});
   modify({a: [false, true]}, {$push: {a: {$each: [1], $slice: -2}}},
@@ -2486,6 +2527,17 @@ Tinytest.add("minimongo - modify", function (test) {
   modify({}, {$push: {a: {$each: [{' ':1}]}}}, {a: [ { ' ': 1 } ]});
   exception({}, {$push: {a: {$each: [{'.':1}]}}});
 
+  // #issue 5167
+  // $push $slice with positive numbers
+  modify({}, {$push: {a: {$each: [], $slice: 5}}}, {a:[]});
+  modify({a:[1,2,3]}, {$push: {a: {$each: [], $slice: 1}}}, {a:[1]});
+  modify({a:[1,2,3]}, {$push: {a: {$each: [4,5], $slice: 1}}}, {a:[1]});
+  modify({a:[1,2,3]}, {$push: {a: {$each: [4,5], $slice: 2}}}, {a:[1,2]});
+  modify({a:[1,2,3]}, {$push: {a: {$each: [4,5], $slice: 4}}}, {a:[1,2,3,4]});
+  modify({a:[1,2,3]}, {$push: {a: {$each: [4,5], $slice: 5}}}, {a:[1,2,3,4,5]});
+  modify({a:[1,2,3]}, {$push: {a: {$each: [4,5], $slice: 10}}}, {a:[1,2,3,4,5]});
+
+
   // $pushAll
   modify({}, {$pushAll: {a: [1]}}, {a: [1]});
   modify({a: []}, {$pushAll: {a: [1]}}, {a: [1]});
@@ -2527,21 +2579,21 @@ Tinytest.add("minimongo - modify", function (test) {
   modify({}, {$addToSet: {a: {$each: [1]}}}, {a: [1]});
   modify({a: []}, {$addToSet: {'a.1': 99}}, {a: [null, [99]]});
   modify({a: {}}, {$addToSet: {'a.x': 99}}, {a: {x: [99]}});
-  
+
   // invalid field names
   exception({}, {$addToSet: {a: {$b:1}}});
   exception({}, {$addToSet: {a: {"a.b":1}}});
   exception({}, {$addToSet: {a: {"a.":1}}});
   exception({}, {$addToSet: {a: {'\u0000a':1}}});
-  exception({a: [1, 2]}, {$addToSet: {a:{$each: [3, 1, {$a:1}]}}}); 
-  exception({a: [1, 2]}, {$addToSet: {a:{$each: [3, 1, {'\0a':1}]}}}); 
-  exception({a: [1, 2]}, {$addToSet: {a:{$each: [3, 1, [{$a:1}]]}}}); 
-  exception({a: [1, 2]}, {$addToSet: {a:{$each: [3, 1, [{b:{c:[{a:1},{"d.s":2}]}}]]}}}); 
+  exception({a: [1, 2]}, {$addToSet: {a:{$each: [3, 1, {$a:1}]}}});
+  exception({a: [1, 2]}, {$addToSet: {a:{$each: [3, 1, {'\0a':1}]}}});
+  exception({a: [1, 2]}, {$addToSet: {a:{$each: [3, 1, [{$a:1}]]}}});
+  exception({a: [1, 2]}, {$addToSet: {a:{$each: [3, 1, [{b:{c:[{a:1},{"d.s":2}]}}]]}}});
   exception({a: [1, 2]}, {$addToSet: {a:{b: [3, 1, [{b:{c:[{a:1},{"d.s":2}]}}]]}}});
   //$each is first element and thus an operator
   modify({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, 4], b: 12}}},{a: [ 1, 2, 3, 4 ]});
   // this should fail because $each is now a field name (not first in object) and thus invalid field name with $
-  exception({a: [1, 2]}, {$addToSet: {a: {b: 12, $each: [3, 1, 4]}}}); 
+  exception({a: [1, 2]}, {$addToSet: {a: {b: 12, $each: [3, 1, 4]}}});
 
   // $pop
   modify({}, {$pop: {a: 1}}, {}); // tested
@@ -2622,6 +2674,10 @@ Tinytest.add("minimongo - modify", function (test) {
   modify({a: 0}, {$setOnInsert: {a: 12}}, {a: 0});
   upsert({a: 12}, {$setOnInsert: {b: 12}}, {a: 12, b: 12});
   upsert({a: 12}, {$setOnInsert: {_id: 'test'}}, {_id: 'test', a: 12});
+  upsert({"a.b": 10}, {$setOnInsert: {a: {b: 10, c: 12}}}, {a: {b: 10, c: 12}});
+  upsert({"a.b": 10}, {$setOnInsert: {c: 12}}, {a: {b: 10}, c: 12});
+  upsert({"_id": 'test'}, {$setOnInsert: {c: 12}}, {_id: 'test', c: 12});
+  upsert('test', {$setOnInsert: {c: 12}}, {_id: 'test', c: 12});
   upsertException({a: 0}, {$setOnInsert: {$a: 12}});
   upsertException({a: 0}, {$setOnInsert: {'\0a': 12}});
   upsert({a: 0}, {$setOnInsert: {b: {a:1}}}, {a:0, b:{a:1}});
@@ -3207,13 +3263,14 @@ Tinytest.add("minimongo - $near operator tests", function (test) {
   // 'y'.
   testNear([2, 2], 1000, ['x', 'y']);
 
-  // Ensure that distance is used as a tie-breaker for sort.
+  // issue #3599
+  // Ensure that distance is not used as a tie-breaker for sort.
   test.equal(
     _.pluck(coll.find({'a.b': {$near: [1, 1]}}, {sort: {k: 1}}).fetch(), '_id'),
     ['x', 'y']);
   test.equal(
     _.pluck(coll.find({'a.b': {$near: [5, 5]}}, {sort: {k: 1}}).fetch(), '_id'),
-    ['y', 'x']);
+    ['x', 'y']);
 
   var operations = [];
   var cbs = log_callbacks(operations);

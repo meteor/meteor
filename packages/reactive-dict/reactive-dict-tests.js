@@ -6,6 +6,16 @@ Tinytest.add('ReactiveDict - set to undefined', function (test) {
   test.equal(dict.get('foo'), undefined);
 });
 
+Tinytest.add('ReactiveDict - initialize with data', function (test) {
+  var now = new Date();
+  var dict = new ReactiveDict({
+    now: now
+  });
+  
+  var nowFromDict = dict.get('now');
+  test.equal(nowFromDict, now);
+});
+
 Tinytest.add('ReactiveDict - setDefault', function (test) {
   var dict = new ReactiveDict;
   dict.set('A', 'blah');

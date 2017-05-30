@@ -1,3 +1,5 @@
+import { extractModuleSizesTree } from "./stats.js";
+
 Plugin.registerMinifier({
   extensions: ['js'],
   archMatching: 'web'
@@ -108,37 +110,52 @@ MeteorBabelMinifier.prototype.processFilesForBundle = function(files, options) {
     }
   }
 
-  var allJs = '';
-  files.forEach(function (file) {
-      // Don't reminify *.min.js.
-      if (/\.min\.js$/.test(file.getPathInBundle())) {
-        allJs += file.getContentsAsString();
-      } else {
-        var minified;
+  const toBeAdded = {
+    data: "",
+    stats: Object.create(null)
+  };
 
-        try {
-          minified = meteorJsMinify(file.getContentsAsString());
+  files.forEach(file => {
+    // Don't reminify *.min.js.
+    if (/\.min\.js$/.test(file.getPathInBundle())) {
+      toBeAdded.data += file.getContentsAsString();
+    } else {
+      var minified;
 
-          if (!(minified && typeof minified.code === "string")) {
-            throw new Error();
-          }
-        } catch (err) {
-          var filePath = file.getPathInBundle();
+      try {
+        minified = meteorJsMinify(file.getContentsAsString());
 
-          maybeThrowMinifyErrorBySourceFile(err, file);
-
-          err.message += " while minifying " + filePath;
-          throw err;
+        if (!(minified && typeof minified.code === "string")) {
+          throw new Error();
         }
 
-        allJs += minified.code;
-      }
-      allJs += '\n\n';
+      } catch (err) {
+        var filePath = file.getPathInBundle();
 
-      Plugin.nudge();
-    });
+        maybeThrowMinifyErrorBySourceFile(err, file);
+
+        err.message += " while minifying " + filePath;
+        throw err;
+      }
+
+      const tree = extractModuleSizesTree(minified.code);
+      if (tree) {
+        toBeAdded.stats[file.getPathInBundle()] =
+          [Buffer.byteLength(minified.code), tree];
+      } else {
+        toBeAdded.stats[file.getPathInBundle()] =
+          Buffer.byteLength(minified.code);
+      }
+
+      toBeAdded.data += minified.code;
+    }
+
+    toBeAdded.data += '\n\n';
+
+    Plugin.nudge();
+  });
 
   if (files.length) {
-    files[0].addJavaScript({ data: allJs });
+    files[0].addJavaScript(toBeAdded);
   }
 };

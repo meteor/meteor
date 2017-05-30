@@ -35,7 +35,8 @@ function tryToParse(source, hash) {
   return ast;
 }
 
-var dependencyKeywordPattern = /\b(?:require|import|importSync|export)\b/g;
+var dependencyKeywordPattern =
+  /\b(?:require|import|importSync|dynamicImport|export)\b/g;
 
 /**
  * The `findImportedModuleIdentifiers` function takes a string of module
@@ -95,9 +96,14 @@ export function findImportedModuleIdentifiers(source, hash) {
           return addIdentifier(id, "require", requireIsBound);
         }
 
-        id = getImportedModuleId(node);
-        if (typeof id === "string") {
-          return addIdentifier(id, "import", requireIsBound);
+        const importInfo = getImportedModuleInfo(node);
+        if (importInfo) {
+          return addIdentifier(
+            importInfo.id,
+            "import",
+            requireIsBound,
+            importInfo.dynamic
+          );
         }
 
         // Continue traversing the children of this node.
@@ -117,10 +123,17 @@ export function findImportedModuleIdentifiers(source, hash) {
     }
   }
 
-  function addIdentifier(id, type, requireIsBound) {
+  function addIdentifier(id, type, requireIsBound, isDynamic) {
     const entry = hasOwn.call(identifiers, id)
       ? identifiers[id]
-      : identifiers[id] = { possiblySpurious: true };
+      : identifiers[id] = {
+          possiblySpurious: true,
+          dynamic: !! isDynamic
+        };
+
+    if (! isDynamic) {
+      entry.dynamic = false;
+    }
 
     if (type === "require") {
       // If the identifier comes from a require call, but require is not a
@@ -182,38 +195,66 @@ function isStringLiteral(node) {
      typeof node.value === "string"));
 }
 
+function getImportedModuleInfo(node) {
+  switch (node.type) {
+  case "CallExpression":
+    if (node.callee.type === "Import" ||
+        isIdWithName(node.callee, "import")) {
+      const firstArg = node.arguments[0];
+      if (isStringLiteral(firstArg)) {
+        return {
+          id: firstArg.value,
+          dynamic: true,
+        };
+      }
+
+    } else if (node.callee.type === "MemberExpression" &&
+               isIdWithName(node.callee.object, "module")) {
+      const propertyName =
+        isPropertyWithName(node.callee.property, "import") ||
+        isPropertyWithName(node.callee.property, "importSync") ||
+        isPropertyWithName(node.callee.property, "dynamicImport");
+
+      if (propertyName) {
+        const dynamic = propertyName === "dynamicImport";
+        const args = node.arguments;
+        const argc = args.length;
+
+        if (argc > 0) {
+          const arg = args[0];
+          if (isStringLiteral(arg)) {
+            return {
+              id: arg.value,
+              dynamic,
+            };
+          }
+        }
+      }
+    }
+
+    return null;
+
+  case "ImportDeclaration":
+  case "ExportAllDeclaration":
+  case "ExportNamedDeclaration":
+    // The .source of an ImportDeclaration or Export{Named,All}Declaration
+    // is always a string-valued Literal node, if not null.
+    if (isNode(node.source)) {
+      return {
+        id: node.source.value,
+        dynamic: false,
+      };
+    }
+
+    return null;
+  }
+}
+
 function isPropertyWithName(node, name) {
   if (isIdWithName(node, name) ||
       (isStringLiteral(node) &&
        node.value === name)) {
     return name;
-  }
-}
-
-function getImportedModuleId(node) {
-  if (node.type === "CallExpression" &&
-      node.callee.type === "MemberExpression" &&
-      isIdWithName(node.callee.object, "module") &&
-      (isPropertyWithName(node.callee.property, "import") ||
-       isPropertyWithName(node.callee.property, "importSync"))) {
-    const args = node.arguments;
-    const argc = args.length;
-    if (argc > 0) {
-      const arg = args[0];
-      if (isStringLiteral(arg)) {
-        return arg.value;
-      }
-    }
-  }
-
-  if (node.type === "ImportDeclaration" ||
-      node.type === "ExportAllDeclaration" ||
-      node.type === "ExportNamedDeclaration") {
-    // The .source of an ImportDeclaration or Export{Named,All}Declaration
-    // is always a string-valued Literal node, if not null.
-    if (isNode(node.source)) {
-      return node.source.value;
-    }
   }
 }
 
