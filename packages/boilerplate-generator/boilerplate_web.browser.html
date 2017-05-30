@@ -12,7 +12,7 @@
 {{else}}
 <script type='text/javascript' src='{{rootUrlPathPrefix}}/meteor_runtime_config.js'></script>
 {{/if}}
-{{#each js}}  <script type="text/javascript" src="{{../bundledJsCssUrlRewriteHook url}}"></script>
+{{#each js}}  <script type="text/javascript" crossorigin="anonymous" src="{{../bundledJsCssUrlRewriteHook url}}"></script>
 {{/each}}
 {{#each additionalStaticJs}}
   {{#if ../inlineScriptsAllowed}}
