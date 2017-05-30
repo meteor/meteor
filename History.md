@@ -43,6 +43,8 @@
 
 * The `install` npm package has been upgraded to version 0.10.1.
 
+* The `meteor-promise` npm package has been upgraded to version 0.8.4.
+
 * The `uglify-js` npm package has been upgraded to version 3.0.13, fixing
   [#8704](https://github.com/meteor/meteor/issues/8704).
 
