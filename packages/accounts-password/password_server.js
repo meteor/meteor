@@ -610,8 +610,14 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
   if (typeof Accounts.emailTemplates.headers === 'object') {
     options.headers = Accounts.emailTemplates.headers;
   }
+  else if (typeof Accounts.emailTemplates.headers === 'function') {
+    options.headers =
+      Accounts.emailTemplates.headers(user, resetPasswordUrl, 'reset');
+  }
 
   Email.send(options);
+
+  return options;
 };
 
 // send the user an email informing them that their account was created, with
@@ -684,8 +690,14 @@ Accounts.sendEnrollmentEmail = function (userId, email) {
   if (typeof Accounts.emailTemplates.headers === 'object') {
     options.headers = Accounts.emailTemplates.headers;
   }
+  else if (typeof Accounts.emailTemplates.headers === 'function') {
+    options.headers =
+      Accounts.emailTemplates.headers(user, enrollAccountUrl, 'enroll');
+  }
 
   Email.send(options);
+
+  return options;
 };
 
 
@@ -845,8 +857,14 @@ Accounts.sendVerificationEmail = function (userId, address) {
   if (typeof Accounts.emailTemplates.headers === 'object') {
     options.headers = Accounts.emailTemplates.headers;
   }
+  else if (typeof Accounts.emailTemplates.headers === 'function') {
+    options.headers =
+      Accounts.emailTemplates.headers(user, verifyEmailUrl, 'verify');
+  }
 
   Email.send(options);
+
+  return options;
 };
 
 // Take token from sendVerificationEmail, mark the email as verified,

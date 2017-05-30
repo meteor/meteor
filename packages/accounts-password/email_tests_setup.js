@@ -19,11 +19,6 @@ Accounts.emailTemplates.resetPassword.from =
       return 'test@meteor.com';
     };
 
-// add a custom header to check against
-Accounts.emailTemplates.headers = {
-  'My-Custom-Header' : 'Cool'
-};
-
 EmailTest.hookSend(function (options) {
   var to = options.to;
   if (!to || to.toUpperCase().indexOf('INTERCEPT') === -1) {
@@ -56,5 +51,21 @@ Meteor.methods({
     var userId = Accounts.createUser({email: email});
     Accounts.sendEnrollmentEmail(userId);
     return Meteor.users.findOne(userId);
+  },
+
+  changeHeadersToObject: function () {
+    // add a custom header to check against
+    Accounts.emailTemplates.headers = {
+      'My-Custom-Header' : 'Cool'
+    };
+  },
+
+  changeHeadersToFunction: function () {
+    // add a custom header to check against
+    Accounts.emailTemplates.headers = function (user, enrollAccountUrl, type) {
+      return {
+        'My-Custom-Header' : 'Cool/' + type
+      };
+    };
   }
 });

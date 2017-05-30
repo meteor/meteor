@@ -20,6 +20,14 @@ testAsyncMulti("accounts emails - reset password flow", [
         Meteor.call("addEmailForTestAndVerify", this.email);
       }));
   },
+  // This time we use object-based headers configuration.
+  function (test, expect) {
+    Accounts.connection.call(
+      "changeHeadersToObject", expect((error, result) => {
+        test.equal(error, undefined);
+        test.equal(result, undefined);
+      }));
+  },
   function (test, expect) {
     Accounts.forgotPassword({email: this.email}, expect((error) => {
       test.equal(error, undefined);
@@ -82,6 +90,14 @@ reset password flow with case insensitive email`, [
         Meteor.call("addEmailForTestAndVerify", this.email);
       }));
   },
+  // This time we use function-based headers configuration.
+  function (test, expect) {
+    Accounts.connection.call(
+      "changeHeadersToFunction", expect((error, result) => {
+        test.equal(error, undefined);
+        test.equal(result, undefined);
+      }));
+  },
   function (test, expect) {
     Accounts.forgotPassword({email: "ada-intercept@example.com" + this.randomSuffix}, expect((error) => {
       test.equal(error, undefined);
@@ -102,7 +118,7 @@ reset password flow with case insensitive email`, [
         test.isTrue(options.html.match(re));
 
         test.equal(options.from, 'test@meteor.com');
-        test.equal(options.headers['My-Custom-Header'], 'Cool');
+        test.equal(options.headers['My-Custom-Header'], 'Cool/reset');
       }));
   },
   function (test, expect) {
@@ -158,6 +174,14 @@ var loggedIn = function (test, expect) {
 };
 
 testAsyncMulti("accounts emails - verify email flow", [
+  // This time we use object-based headers configuration.
+  function (test, expect) {
+    Accounts.connection.call(
+      "changeHeadersToObject", expect((error, result) => {
+        test.equal(error, undefined);
+        test.equal(result, undefined);
+      }));
+  },
   function (test, expect) {
     this.email = Random.id() + "-intercept@example.com";
     const emailId = Random.id();
@@ -270,7 +294,7 @@ var getEnrollAccountToken = function (email, test, expect) {
       test.equal(result.length, 1);
       var options = result[0];
 
-      var re = new RegExp(Meteor.absoluteUrl() + "#/enroll-account/(\\S*)")
+      var re = new RegExp(Meteor.absoluteUrl() + "#/enroll-account/(\\S*)");
       var match = options.text.match(re);
       test.isTrue(match);
       enrollAccountToken = match[1];
@@ -282,6 +306,14 @@ var getEnrollAccountToken = function (email, test, expect) {
 };
 
 testAsyncMulti("accounts emails - enroll account flow", [
+  // This time we use object-based headers configuration.
+  function (test, expect) {
+    Accounts.connection.call(
+      "changeHeadersToObject", expect((error, result) => {
+        test.equal(error, undefined);
+        test.equal(result, undefined);
+      }));
+  },
   function (test, expect) {
     this.email = Random.id() + "-intercept@example.com";
     Accounts.connection.call("createUserOnServer", this.email,
