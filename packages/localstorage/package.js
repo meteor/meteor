@@ -1,17 +1,15 @@
 Package.describe({
   summary: "Simulates local storage on IE 6,7 using userData",
-  version: "1.0.12"
+  version: "1.1.0"
 });
 
 Package.onUse(function (api) {
-  api.use('random', 'client');
-
-  api.addFiles('localstorage.js', 'client');
+  api.use('random');
+  api.addFiles('localstorage.js');
 });
 
 Package.onTest(function (api) {
-  api.use('localstorage', 'client');
+  api.use('localstorage');
   api.use('tinytest');
-
-  api.addFiles('localstorage_tests.js', 'client');
+  api.addFiles('localstorage_tests.js');
 });

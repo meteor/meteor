@@ -5,10 +5,30 @@
       "resolved": "https://registry.npmjs.org/acorn/-/acorn-5.0.3.tgz",
       "from": "acorn@>=5.0.0 <5.1.0"
     },
+    "minipass": {
+      "version": "2.0.2",
+      "resolved": "https://registry.npmjs.org/minipass/-/minipass-2.0.2.tgz",
+      "from": "minipass@>=2.0.0 <3.0.0"
+    },
+    "minizlib": {
+      "version": "1.0.3",
+      "resolved": "https://registry.npmjs.org/minizlib/-/minizlib-1.0.3.tgz",
+      "from": "minizlib@>=1.0.3 <2.0.0"
+    },
     "reify": {
-      "version": "0.7.4",
-      "resolved": "https://registry.npmjs.org/reify/-/reify-0.7.4.tgz",
-      "from": "reify@0.7.4"
+      "version": "0.11.21",
+      "resolved": "https://registry.npmjs.org/reify/-/reify-0.11.21.tgz",
+      "from": "reify@0.11.21"
+    },
+    "semver": {
+      "version": "5.3.0",
+      "resolved": "https://registry.npmjs.org/semver/-/semver-5.3.0.tgz",
+      "from": "semver@>=5.3.0 <6.0.0"
+    },
+    "yallist": {
+      "version": "3.0.2",
+      "resolved": "https://registry.npmjs.org/yallist/-/yallist-3.0.2.tgz",
+      "from": "yallist@>=3.0.0 <4.0.0"
     }
   }
 }

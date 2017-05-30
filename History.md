@@ -5,6 +5,106 @@
   this is to prevent duplicate name error on reloads. Initial data is now
   properly serialized.
 
+## v1.5, 2017-05-30
+
+* The `meteor-base` package implies a new `dynamic-import` package, which
+  provides runtime support for [the proposed ECMAScript dynamic
+  `import(...)` syntax](https://github.com/tc39/proposal-dynamic-import),
+  enabling asynchronous module fetching or "code splitting." If your app
+  does not use the `meteor-base` package, you can use the package by
+  simply running `meteor add dynamic-import`. See this [blog
+  post](https://blog.meteor.com/meteor-1-5-react-loadable-f029a320e59c)
+  and [PR #8327](https://github.com/meteor/meteor/pull/8327) for more
+  information about how dynamic `import(...)` works in Meteor, and how to
+  use it in your applications.
+
+* The `ecmascript-runtime` package, which provides polyfills for various
+  new ECMAScript runtime APIs and language features, has been split into
+  `ecmascript-runtime-client` and `ecmascript-runtime-server`, to reflect
+  the different needs of browsers versus Node 4. The client runtime now
+  relies on the `core-js` library found in the `node_modules` directory of
+  the application, rather than a private duplicate installed via
+  `Npm.depends`. This is unlikely to be a disruptive change for most
+  developers, since the `babel-runtime` npm package is expected to be
+  installed, and `core-js` is a dependency of `babel-runtime`, so
+  `node_modules/core-js` should already be present. If that's not the
+  case, just run `meteor npm install --save core-js` to install it.
+
+* The `npm` npm package has been upgraded to version 4.6.1.
+
+* The `meteor-babel` npm package has been upgraded to version 0.21.4,
+  enabling the latest Reify compiler and the transform-class-properties
+  plugin, among other improvements.
+
+* The `reify` npm package has been upgraded to version 0.11.21, fixing
+  [issue #8595](https://github.com/meteor/meteor/issues/8595) and
+  improving compilation and runtime performance.
+
+> Note: With this version of Reify, `import` declarations are compiled to
+  `module.watch(require(id), ...)` instead of `module.importSync(id, ...)`
+  or the older `module.import(id, ...)`. The behavior of the compiled code
+  should be the same as before, but the details seemed different enough to
+  warrant a note.
+
+* The `install` npm package has been upgraded to version 0.10.1.
+
+* The `meteor-promise` npm package has been upgraded to version 0.8.4.
+
+* The `uglify-js` npm package has been upgraded to version 3.0.13, fixing
+  [#8704](https://github.com/meteor/meteor/issues/8704).
+
+* If you're using the `standard-minifier-js` Meteor package, as most
+  Meteor developers do, it will now produce a detailed analysis of package
+  and module sizes within your production `.js` bundle whenever you run
+  `meteor build` or `meteor run --production`. These data are served by
+  the application web server at the same URL as the minified `.js` bundle,
+  except with a `.stats.json` file extension instead of `.js`. If you're
+  using a different minifier plugin, and would like to support similar
+  functionality, refer to
+  [these](https://github.com/meteor/meteor/pull/8327/commits/084801237a8c288d99ec82b0fbc1c76bdf1aab16)
+  [commits](https://github.com/meteor/meteor/pull/8327/commits/1c8bc7353e9a8d526880634a58c506b423c4a55e)
+  for inspiration.
+
+* To visualize the bundle size data produced by `standard-minifier-js`,
+  run `meteor add bundle-visualizer` and then start your development
+  server in production mode with `meteor run --production`. Be sure to
+  remove the `bundle-visualizer` package before actually deploying your
+  app, or the visualization will be displayed to your users.
+
+* If you've been developing an app with multiple versions of Meteor, or
+  testing with beta versions, and you haven't recently run `meteor reset`,
+  your `.meteor/local/bundler-cache` directory may have become quite
+  large. This is just a friendly reminder that this directory is perfectly
+  safe to delete, and Meteor will repopulate it with only the most recent
+  cached bundles.
+
+* Apps created with `meteor create --bare` now use the `static-html`
+  package for processing `.html` files instead of `blaze-html-templates`,
+  to avoid large unnecessary dependencies like the `jquery` package.
+
+* Babel plugins now receive file paths without leading `/` characters,
+  which should prevent confusion about whether the path should be treated
+  as absolute. [PR #8610](https://github.com/meteor/meteor/pull/8610)
+
+* It is now possible to override the Cordova iOS and/or Android
+  compatibility version by setting the `METEOR_CORDOVA_COMPAT_VERSION_IOS`
+  and/or `METEOR_CORDOVA_COMPAT_VERSION_ANDROID` environment variables.
+  [PR #8581](https://github.com/meteor/meteor/pull/8581)
+
+* Modules in `node_modules` directories will no longer automatically have
+  access to the `Buffer` polyfill on the client, since that polyfill
+  contributed more than 22KB of minified JavaScript to the client bundle,
+  and was rarely used. If you really need the Buffer API on the client,
+  you should now obtain it explicitly with `require("buffer").Buffer`.
+  [Issue #8645](https://github.com/meteor/meteor/issues/8645).
+
+* Packages in `node_modules` directories are now considered non-portable
+  (and thus may be automatically rebuilt for the current architecture), if
+  their `package.json` files contain any of the following install hooks:
+  `install`, `preinstall`, or `postinstall`. Previously, a package was
+  considered non-portable only if it contained any `.node` binary modules.
+  [Issue #8225](https://github.com/meteor/meteor/issues/8225)
+
 ## v1.4.4.3, 2017-05-22
 
 * Node has been upgraded to version 4.8.3.
@@ -309,6 +409,8 @@
 * The `meteor-babel` npm package has been upgraded to version 0.14.3,
   fixing [#8021](https://github.com/meteor/meteor/issues/8021) and
   [#7662](https://github.com/meteor/meteor/issues/7662).
+
+* The `reify` npm package has been upgraded to 0.4.7.
 
 * Added support for frame-ancestors CSP option in browser-policy.
   [#7970](https://github.com/meteor/meteor/pull/7970)

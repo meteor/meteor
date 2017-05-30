@@ -1,18 +1,18 @@
 Package.describe({
   name: "promise",
-  version: "0.8.8",
+  version: "0.8.9",
   summary: "ECMAScript 2015 Promise polyfill with Fiber support",
   git: "https://github.com/meteor/promise",
   documentation: "README.md"
 });
 
 Npm.depends({
-  "meteor-promise": "0.8.0",
+  "meteor-promise": "0.8.4",
   "promise": "7.1.1"
 });
 
 Package.onUse(function(api) {
-  api.use("modules@0.7.6");
+  api.use("modules");
   api.mainModule("client.js", "client");
   api.mainModule("server.js", "server");
   api.export("Promise");

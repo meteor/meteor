@@ -5,14 +5,20 @@ meteorJsMinify = function (source) {
   uglify = uglify || Npm.require("uglify-js");
 
   try {
-    result.code = uglify.minify(source, {
-      fromString: true,
+    var uglifyResult = uglify.minify(source, {
       compress: {
         drop_debugger: false,
         unused: false,
         dead_code: false
       }
-    }).code;
+    });
+
+    if (typeof uglifyResult.code === "string") {
+      result.code = uglifyResult.code;
+    } else {
+      throw uglifyResult.error ||
+        new Error("unknown uglify.minify failure");
+    }
 
   } catch (e) {
     // Although Babel.minify can handle a wider variety of ECMAScript
