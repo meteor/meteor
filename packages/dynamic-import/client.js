@@ -34,7 +34,7 @@ meteorInstall.fetch = function (ids) {
       var source = sources[id];
       if (source) {
         var info = ids[id];
-        addToTree(tree, id, makeModuleFunction(source, info.options));
+        addToTree(tree, id, makeModuleFunction(id, source, info.options));
       } else {
         addToTree(missing = missing || Object.create(null), id, 1);
       }
@@ -48,7 +48,7 @@ meteorInstall.fetch = function (ids) {
         var source = flatResults[id];
         var info = ids[id];
 
-        addToTree(tree, id, makeModuleFunction(source, info.options));
+        addToTree(tree, id, makeModuleFunction(id, source, info.options));
 
         var version = getFromTree(dynamicVersions, id);
         if (version) {
@@ -88,7 +88,7 @@ function flattenModuleTree(tree) {
   return result;
 }
 
-function makeModuleFunction(source, options) {
+function makeModuleFunction(id, source, options) {
   // By calling (options && options.eval || eval) in a wrapper function,
   // we delay the cost of parsing and evaluating the module code until the
   // module is first imported.
@@ -100,7 +100,7 @@ function makeModuleFunction(source, options) {
     return (options && options.eval || eval)(
       // Wrap the function(require,exports,module){...} expression in
       // parentheses to force it to be parsed as an expression.
-      "(" + source + ")"
+      "(" + source + ")\n//# sourceURL=" + id
     ).apply(this, arguments);
   };
 }
