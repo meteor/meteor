@@ -15,8 +15,8 @@ var packageJson = {
     "node-gyp": "3.6.0",
     "node-pre-gyp": "0.6.34",
     "meteor-babel": "0.21.4",
-    reify: "0.11.21",
     "meteor-promise": "0.8.4",
+    reify: "0.11.21",
     fibers: "1.0.15",
     promise: "7.1.1",
     // So that Babel 6 can emit require("babel-runtime/helpers/...") calls.
@@ -37,7 +37,7 @@ var packageJson = {
     "node-inspector": "1.1.1",
     "v8-profiler": "5.7.0",
     chalk: "0.5.1",
-    sqlite3: "3.1.3",
+    sqlite3: "3.1.8",
     netroute: "1.0.2",
     "http-proxy": "1.11.1",
     "wordwrap": "0.0.2",

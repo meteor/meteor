@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Reactive dictionary",
-  version: '1.1.9'
+  version: '1.2.0-pre.1'
 });
 
 Package.onUse(function (api) {

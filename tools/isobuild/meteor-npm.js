@@ -435,7 +435,7 @@ function copyNpmPackageWithSymlinkedNodeModules(fromPkgDir, toPkgDir) {
 const portableCache = Object.create(null);
 
 // Increment this version to trigger the full portability check again.
-const portableVersion = 1;
+const portableVersion = 2;
 
 const isPortable = Profile("meteorNpm.isPortable", dir => {
   const lstat = optimisticLStat(dir);
