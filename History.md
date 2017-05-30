@@ -9,12 +9,12 @@
 
 ## v1.5, 2017-05-30
 
-* Node has been upgraded to version 4.8.3.
-
-* Running `meteor add dynamic-import` installs support for ECMAScript
-  [dynamic `import(...)`](https://github.com/tc39/proposal-dynamic-import),
-  a new language feature which allows for asynchronous module fetching
-  (sometimes referred to as "code splitting"). See this [blog
+* The `meteor-base` package implies a new `dynamic-import` package, which
+  provides runtime support for [the proposed ECMAScript dynamic
+  `import(...)` syntax](https://github.com/tc39/proposal-dynamic-import),
+  enabling asynchronous module fetching or "code splitting." If your app
+  does not use the `meteor-base` package, you can use the package by
+  simply running `meteor add dynamic-import`. See this [blog
   post](https://blog.meteor.com/meteor-1-5-react-loadable-f029a320e59c)
   and [PR #8327](https://github.com/meteor/meteor/pull/8327) for more
   information about how dynamic `import(...)` works in Meteor, and how to
