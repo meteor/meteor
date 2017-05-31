@@ -1,11 +1,20 @@
 Accounts.oauth.registerService('google');
 
 if (Meteor.isClient) {
-  Meteor.loginWithGoogle = function(options, callback) {
+  const loginWithGoogle = function(options, callback) {
     // support a callback without options
     if (! callback && typeof options === "function") {
       callback = options;
       options = null;
+    }
+
+    if (Meteor.isCordova &&
+        Google.signIn) {
+      // After 20 April 2017, Google OAuth login will no longer work from
+      // a WebView, so Cordova apps must use Google Sign-In instead.
+      // https://github.com/meteor/meteor/issues/8253
+      Google.signIn(options, callback);
+      return;
     }
 
     // Use Google's domain-specific login page if we want to restrict creation to
@@ -20,6 +29,10 @@ if (Meteor.isClient) {
     }
     var credentialRequestCompleteCallback = Accounts.oauth.credentialRequestCompleteHandler(callback);
     Google.requestCredential(options, credentialRequestCompleteCallback);
+  };
+  Accounts.registerClientLoginFunction('google', loginWithGoogle);
+  Meteor.loginWithGoogle = function () {
+    return Accounts.applyLoginFunction('google', arguments);
   };
 } else {
   Accounts.addAutopublishFields({

@@ -1,7 +1,6 @@
 require("./install-packages.js");
 require("./stubs.js");
-require("./buffer.js");
 require("./process.js");
-require("reify/lib/runtime").enable(module.constructor);
+require("./reify.js");
 
 exports.addStyles = require("./css").addStyles;

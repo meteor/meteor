@@ -285,6 +285,12 @@ be removed if there is no need for the Blaze configuration interface.`,
     packagesFile.writeIfModified();
   },
 
+  "1.5-add-dynamic-import-package": function (projectContext) {
+    const packagesFile = projectContext.projectConstraintsFile;
+    packagesFile.addPackages(["dynamic-import"]);
+    packagesFile.writeIfModified();
+  },
+
   ////////////
   // PLEASE. When adding new upgraders that print mesasges, follow the
   // examples for 0.9.0 and 0.9.1 above. Specifically, formatting

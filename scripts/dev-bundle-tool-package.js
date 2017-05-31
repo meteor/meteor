@@ -11,18 +11,18 @@ var packageJson = {
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
-    npm: "4.3.0",
-    "node-gyp": "3.5.0",
-    "node-pre-gyp": "0.6.33",
-    "meteor-babel": "0.14.4",
-    "meteor-promise": "0.8.0",
+    npm: "4.6.1",
+    "node-gyp": "3.6.0",
+    "node-pre-gyp": "0.6.34",
+    "meteor-babel": "0.21.4",
+    reify: "0.11.21",
+    "meteor-promise": "0.8.4",
     fibers: "1.0.15",
     promise: "7.1.1",
-    "fs-extra": "2.1.0",
     // So that Babel 6 can emit require("babel-runtime/helpers/...") calls.
     "babel-runtime": "6.9.2",
     // For various ES2015 polyfills, such as Map and Set.
-    "meteor-ecmascript-runtime": "0.2.9",
+    "meteor-ecmascript-runtime": "0.3.0",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
     // in the package too) because we should consider using lodash instead
     // (and there are backwards-incompatible changes either way).
@@ -34,8 +34,8 @@ var packageJson = {
     tar: "2.2.1",
     kexec: "2.0.2",
     "source-map": "0.5.3",
-    "node-inspector": "0.12.8",
-    "v8-profiler": "5.6.5",
+    "node-inspector": "1.1.1",
+    "v8-profiler": "5.7.0",
     chalk: "0.5.1",
     sqlite3: "3.1.3",
     netroute: "1.0.2",

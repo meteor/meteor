@@ -18,7 +18,7 @@
 // Main entry point.
 //   var matcher = new Minimongo.Matcher({a: {$gt: 5}});
 //   if (matcher.documentMatches({a: 7})) ...
-Minimongo.Matcher = function (selector) {
+Minimongo.Matcher = function (selector, isUpdate = false) {
   var self = this;
   // A set (object mapping string -> *) of all of the document paths looked
   // at by the selector. Also includes the empty string if it may look at any
@@ -41,6 +41,10 @@ Minimongo.Matcher = function (selector) {
   // Sorter._useWithMatcher.
   self._selector = null;
   self._docMatcher = self._compileSelector(selector);
+  // Set to true if selection is done for an update operation
+  // Default is false
+  // Used for $near array update (issue #3599)
+  self._isUpdate = isUpdate;
 };
 
 _.extend(Minimongo.Matcher.prototype, {
@@ -435,9 +439,10 @@ var VALUE_OPERATORS = {
       throw Error("$near can't be inside another $ operator");
     matcher._hasGeoQuery = true;
 
-    // There are two kinds of geodata in MongoDB: coordinate pairs and
+    // There are two kinds of geodata in MongoDB: legacy coordinate pairs and
     // GeoJSON. They use different distance metrics, too. GeoJSON queries are
-    // marked with a $geometry property.
+    // marked with a $geometry property, though legacy coordinates can be 
+    // matched using $geometry.
 
     var maxDistance, point, distance;
     if (isPlainObject(operand) && _.has(operand, '$geometry')) {
@@ -448,8 +453,11 @@ var VALUE_OPERATORS = {
         // XXX: for now, we don't calculate the actual distance between, say,
         // polygon and circle. If people care about this use-case it will get
         // a priority.
-        if (!value || !value.type)
+        if (!value)
           return null;
+        if(!value.type)
+          return GeoJSON.pointDistance(point,
+            { type: "Point", coordinates: pointToArray(value) });
         if (value.type === "Point") {
           return GeoJSON.pointDistance(point, value);
         } else {
@@ -480,20 +488,29 @@ var VALUE_OPERATORS = {
       // each within-$maxDistance branching point.
       branchedValues = expandArraysInBranches(branchedValues);
       var result = {result: false};
-      _.each(branchedValues, function (branch) {
-        var curDistance = distance(branch.value);
-        // Skip branches that aren't real points or are too far away.
-        if (curDistance === null || curDistance > maxDistance)
-          return;
-        // Skip anything that's a tie.
-        if (result.distance !== undefined && result.distance <= curDistance)
-          return;
+      _.every(branchedValues, function (branch) {
+        // if operation is an update, don't skip branches, just return the first one (#3599)
+        if (!matcher._isUpdate){
+          if (!(typeof branch.value === "object")){
+            return true;
+          }
+          var curDistance = distance(branch.value);
+          // Skip branches that aren't real points or are too far away.
+          if (curDistance === null || curDistance > maxDistance)
+            return true;
+          // Skip anything that's a tie.
+          if (result.distance !== undefined && result.distance <= curDistance)
+            return true;
+        }
         result.result = true;
         result.distance = curDistance;
         if (!branch.arrayIndices)
           delete result.arrayIndices;
         else
           result.arrayIndices = branch.arrayIndices;
+        if (matcher._isUpdate)
+          return false;
+        return true;
       });
       return result;
     };

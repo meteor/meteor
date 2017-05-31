@@ -6,6 +6,32 @@ Tinytest.add('ReactiveDict - set to undefined', function (test) {
   test.equal(dict.get('foo'), undefined);
 });
 
+Tinytest.add('ReactiveDict - initialize with data', function (test) {
+  var now = new Date();
+  var dict = new ReactiveDict({
+    now: now
+  });
+
+  var nowFromDict = dict.get('now');
+  test.equal(nowFromDict, now);
+
+  // Test with static value here as a named dict could
+  // be migrated if code reload happens while testing
+  dict = new ReactiveDict('foo', {
+    foo: 'bar'
+  });
+
+  nowFromDict = dict.get('foo');
+  test.equal(nowFromDict, 'bar');
+
+  dict = new ReactiveDict(undefined, {
+    now: now
+  });
+
+  nowFromDict = dict.get('now');
+  test.equal(nowFromDict, now);
+});
+
 Tinytest.add('ReactiveDict - setDefault', function (test) {
   var dict = new ReactiveDict;
   dict.set('A', 'blah');

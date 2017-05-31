@@ -1,7 +1,7 @@
 Accounts.oauth.registerService('meetup');
 
 if (Meteor.isClient) {
-  Meteor.loginWithMeetup = function(options, callback) {
+  const loginWithMeetup = function(options, callback) {
     // support a callback without options
     if (! callback && typeof options === "function") {
       callback = options;
@@ -10,6 +10,10 @@ if (Meteor.isClient) {
 
     var credentialRequestCompleteCallback = Accounts.oauth.credentialRequestCompleteHandler(callback);
     Meetup.requestCredential(options, credentialRequestCompleteCallback);
+  };
+  Accounts.registerClientLoginFunction('meetup', loginWithMeetup);
+  Meteor.loginWithMeetup = function () {
+    return Accounts.applyLoginFunction('meetup', arguments);
   };
 } else {
   Accounts.addAutopublishFields({

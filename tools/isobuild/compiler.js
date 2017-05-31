@@ -34,7 +34,7 @@ var compiler = exports;
 // dependencies. (At least for now, packages only used in target creation (eg
 // minifiers) don't require you to update BUILT_BY, though you will need to quit
 // and rerun "meteor run".)
-compiler.BUILT_BY = 'meteor/26';
+compiler.BUILT_BY = 'meteor/29';
 
 // This is a list of all possible architectures that a build can target. (Client
 // is expanded into 'web.browser' and 'web.cordova')
@@ -1021,5 +1021,9 @@ export const KNOWN_ISOBUILD_FEATURE_PACKAGES = {
   // One scenario is a package depending on a Cordova plugin or version
   // that is only available on npm, which means downloading the plugin is not
   // supported on versions of Cordova below 5.0.0.
-  'isobuild:cordova': ['5.4.0']
+  'isobuild:cordova': ['5.4.0'],
+
+  // This package requires functionality introduced in meteor-tool@1.5.0
+  // to enable dynamic module fetching via import(...).
+  'isobuild:dynamic-import': ['1.5.0'],
 };

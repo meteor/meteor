@@ -1,9 +1,6 @@
 # determine the platform
 # use 32bit by default
 $PLATFORM = "windows_x86"
-$MONGO_VERSION = "3.2.6"
-$NODE_VERSION = "4.7.3"
-$NPM_VERSION = "4.1.2"
 $PYTHON_VERSION = "2.7.12" # For node-gyp
 
 # take it form the environment if exists
@@ -13,10 +10,22 @@ if (Test-Path env:PLATFORM) {
 
 $script_path = Split-Path -parent $MyInvocation.MyCommand.Definition
 $CHECKOUT_DIR = Split-Path -parent $script_path
+$common_script = "${script_path}\build-dev-bundle-common.sh"
+
+function Get-ShellScriptVariableFromFile {
+  Param ([string]$Path, [string]$Name)
+  $v = Select-String -Path $Path -Pattern "^\s*${Name}=(\S+)" | % { $_.Matches[0].Groups[1].Value } | Select-Object -First 1
+  $v = $v.Trim()
+  Write-Output $v
+}
 
 # extract the bundle version from the meteor bash script
-$BUNDLE_VERSION = Select-String -Path ($CHECKOUT_DIR + "\meteor") -Pattern 'BUNDLE_VERSION=(\S+)'  | % { $_.Matches[0].Groups[1].Value } | Select-Object -First 1
-$BUNDLE_VERSION = $BUNDLE_VERSION.Trim()
+$BUNDLE_VERSION = Get-ShellScriptVariableFromFile -Path "${CHECKOUT_DIR}\meteor" -Name 'BUNDLE_VERSION'
+
+# extract the major package versions from the build-dev-bundle-common script.
+$MONGO_VERSION = Get-ShellScriptVariableFromFile -Path $common_script -Name 'MONGO_VERSION'
+$NODE_VERSION = Get-ShellScriptVariableFromFile -Path $common_script -Name 'NODE_VERSION'
+$NPM_VERSION = Get-ShellScriptVariableFromFile -Path $common_script -Name 'NPM_VERSION'
 
 # generate-dev-bundle-xxxxxxxx shortly
 # convert relative path to absolute path because not all commands know how to deal with this themselves

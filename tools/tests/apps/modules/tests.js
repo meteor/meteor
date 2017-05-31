@@ -213,12 +213,20 @@ describe("native node_modules", () => {
   });
 
   it("can be implemented by wrapper npm packages", () => {
+    if (! global.Buffer) {
+      global.Buffer = require("buffer").Buffer;
+    }
+
     const Stream = require("stream");
     assert.strictEqual(typeof Stream, "function");
     assert.strictEqual(typeof Stream.Readable, "function");
   });
 
   it("can all be imported", () => {
+    if (! global.Buffer) {
+      global.Buffer = require("buffer").Buffer;
+    }
+
     require("_stream_duplex");
     require("_stream_passthrough");
     require("_stream_readable");
@@ -374,7 +382,6 @@ describe("Meteor packages", () => {
 
     } else {
       assert.deepEqual(require("meteor/client-only-ecmascript"), {
-        __esModule: true,
         name: "client-only-ecmascript",
         imported: "/node_modules/meteor/client-only-ecmascript/imported.js",
         ClientTypeof: {

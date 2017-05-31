@@ -5,9 +5,7 @@
 ///
 
 var assert = require("assert");
-var fs = require('fs');
-fs.move = require('fs-extra').move;
-fs.moveSync = require('fs-extra').moveSync;
+var fs = require("fs");
 var path = require('path');
 var os = require('os');
 var util = require('util');
@@ -49,6 +47,19 @@ var useParsedSourceMap = function (pathForSourceMap) {
 
 // Try this source map first
 sourceMapRetrieverStack.push(useParsedSourceMap);
+
+// Fibers are disabled by default for files.* operations unless
+// process.env.METEOR_DISABLE_FS_FIBERS parses to a falsy value.
+const YIELD_ALLOWED = !! (
+  _.has(process.env, "METEOR_DISABLE_FS_FIBERS") &&
+  ! JSON.parse(process.env.METEOR_DISABLE_FS_FIBERS));
+
+function canYield() {
+  return YIELD_ALLOWED &&
+    Fiber.current &&
+    Fiber.yield &&
+    ! Fiber.yield.disallowed;
+}
 
 // given a predicate function and a starting path, traverse upwards
 // from the path until we find a path that satisfies the predicate.
@@ -278,21 +289,22 @@ function statOrNull(path, preserveSymlinks) {
   }
 }
 
+files.rm_recursive_async = (path) => {
+  return new Promise((resolve, reject) => {
+    rimraf(files.convertToOSPath(path), err => err
+      ? reject(err)
+      : resolve());
+  });
+};
+
 // Like rm -r.
-files.rm_recursive = Profile("files.rm_recursive", function (p) {
-  const path = files.convertToOSPath(p);
+files.rm_recursive = Profile("files.rm_recursive", (path) => {
   try {
-    rimraf.sync(path);
+    rimraf.sync(files.convertToOSPath(path));
   } catch (e) {
     if (e.code === "ENOTEMPTY" &&
-        Fiber.current &&
-        Fiber.yield &&
-        ! Fiber.yield.disallowed) {
-      new Promise((resolve, reject) => {
-        rimraf(path, err => {
-          err ? reject(err) : resolve();
-        });
-      }).await();
+        canYield()) {
+      files.rm_recursive_async(path).await();
       return;
     }
     throw e;
@@ -881,6 +893,14 @@ function tryExtractWithNpmTar(buffer, tempDir, options) {
   });
 }
 
+// In the same fashion as node-pre-gyp does, add the executable
+// bit but only if the read bit was present.  Same as:
+// https://github.com/mapbox/node-pre-gyp/blob/7a28f4b0f562ba4712722fefe4eeffb7b20fbf7a/lib/install.js#L71-L77
+// and others reported in: https://github.com/npm/node-tar/issues/7
+function addExecBitWhenReadBitPresent(fileMode) {
+  return fileMode |= (fileMode >>> 2) & 0o111;
+}
+
 // Tar-gzips a directory, returning a stream that can then be piped as
 // needed.  The tar archive will contain a top-level directory named
 // after dirPath.
@@ -888,6 +908,12 @@ files.createTarGzStream = function (dirPath, options) {
   var tar = require("tar");
   var fstream = require('fstream');
   var zlib = require("zlib");
+
+  // Create a segment of the file path which we will look for to
+  // identify exactly what we think is a "bin" file (that is, something
+  // which should be expected to work within the context of an
+  // 'npm run-script').
+  var binPathMatch = ["", "node_modules", ".bin", ""].join(path.sep);
 
   // Don't use `{ path: dirPath, type: 'Directory' }` as an argument to
   // fstream.Reader. This triggers a collection of odd behaviors in fstream
@@ -928,8 +954,13 @@ files.createTarGzStream = function (dirPath, options) {
       // setting it in an 'entry' handler is the same strategy that npm
       // does, so we do that here too.
       if (entry.type === "Directory") {
-        entry.mode = (entry.mode || entry.props.mode) | 0o500;
-        entry.props.mode = entry.mode;
+        entry.props.mode = addExecBitWhenReadBitPresent(entry.props.mode);
+      }
+
+      // In a similar way as for directories, but only if is in a path
+      // location that is expected to be executable (npm "bin" links)
+      if (entry.type === "File" && entry.path.indexOf(binPathMatch) > -1) {
+        entry.props.mode = addExecBitWhenReadBitPresent(entry.props.mode);
       }
 
       return true;
@@ -958,45 +989,72 @@ files.createTarball = function (dirPath, tarball, options) {
 // toDir does not exist" and "you can end up with garbage directories
 // sitting around", but not "there's any time where toDir exists but
 // is in a state other than initial or final".)
-files.renameDirAlmostAtomically = function (fromDir, toDir) {
-  var garbageDir = toDir + '-garbage-' + utils.randomToken();
+files.renameDirAlmostAtomically =
+  Profile("files.renameDirAlmostAtomically", (fromDir, toDir) => {
+    const garbageDir = `${toDir}-garbage-${utils.randomToken()}`;
 
-  // Get old dir out of the way, if it exists.
-  var movedOldDir = true;
-  try {
-    files.move(toDir, garbageDir);
-  } catch (e) {
-    if (e.code !== 'ENOENT') {
-      throw e;
+    // Get old dir out of the way, if it exists.
+    let cleanupGarbage = false;
+    let forceCopy = false;
+    try {
+      files.rename(toDir, garbageDir);
+      cleanupGarbage = true;
+    } catch (e) {
+      if (e.code === 'EXDEV') {
+        // Some (notably Docker) file systems will fail to do a seemingly
+        // harmless operation, such as renaming, on what is apparently the same
+        // file system.  AUFS will do this even if the `fromDir` and `toDir`
+        // are on the same layer, and OverlayFS will fail if the `fromDir` and
+        // `toDir` are on different layers.  In these cases, we will not be
+        // atomic and will need to do a recursive copy.
+        forceCopy = true;
+      } else if (e.code !== 'ENOENT') {
+        // No such file or directory is okay, but anything else is not.
+        throw e;
+      }
     }
-    movedOldDir = false;
-  }
 
-  // Now rename the directory.
-  files.move(fromDir, toDir);
+    if (! forceCopy) {
+      try {
+        files.rename(fromDir, toDir);
+      } catch (e) {
+        // It's possible that there may not have been a `toDir` to have
+        // advanced warning about this, so we're prepared to handle it again.
+        if (e.code === 'EXDEV') {
+          forceCopy = true;
+        } else {
+          throw e;
+        }
+      }
+    }
 
-  // ... and delete the old one.
-  if (movedOldDir) {
-    files.rm_recursive(garbageDir);
-  }
-};
-files.renameDirAlmostAtomically = Profile("files.renameDirAlmostAtomically",
-                                          files.renameDirAlmostAtomically);
+    // If we've been forced to jeopardize our atomicity due to file-system
+    // limitations, we'll resort to copying.
+    if (forceCopy) {
+      files.rm_recursive(toDir);
+      files.cp_r(fromDir, toDir);
+    }
 
-files.writeFileAtomically = function (filename, contents) {
-  const parentDir = files.pathDirname(filename);
-  files.mkdir_p(parentDir);
+    // ... and take out the trash.
+    if (cleanupGarbage) {
+      // We don't care about how long this takes, so we'll let it go async.
+      files.rm_recursive(garbageDir);
+    }
+  });
 
-  const tmpFile = files.pathJoin(
-    parentDir,
-    '.' + files.pathBasename(filename) + '.' + utils.randomToken()
-  );
+files.writeFileAtomically =
+  Profile("files.writeFileAtomically", function (filename, contents) {
+    const parentDir = files.pathDirname(filename);
+    files.mkdir_p(parentDir);
 
-  files.writeFile(tmpFile, contents);
-  files.rename(tmpFile, filename);
-};
-files.writeFileAtomically = Profile("files.writeFileAtomically",
-                                    files.writeFileAtomically);
+    const tmpFile = files.pathJoin(
+      parentDir,
+      '.' + files.pathBasename(filename) + '.' + utils.randomToken()
+    );
+
+    files.writeFile(tmpFile, contents);
+    files.rename(tmpFile, filename);
+  });
 
 // Like fs.symlinkSync, but creates a temporay link and renames it over the
 // file; this means it works even if the file already exists.
@@ -1455,12 +1513,6 @@ files.readLinkToMeteorScript = function (linkLocation, platform) {
 //   A helpful file to import for this purpose is colon-converter.js, which also
 //   knows how to convert various configuration file formats.
 
-// Fibers are disabled by default for files.* operations unless
-// process.env.METEOR_DISABLE_FS_FIBERS parses to a falsy value.
-const YIELD_ALLOWED = !! (
-  _.has(process.env, "METEOR_DISABLE_FS_FIBERS") &&
-  ! JSON.parse(process.env.METEOR_DISABLE_FS_FIBERS));
-
 files.fsFixPath = {};
 /**
  * Wrap a function from node's fs module to use the right slashes for this OS
@@ -1494,11 +1546,6 @@ function wrapFsFunc(fsFuncName, pathArgIndices, options) {
         args[i] = files.convertToOSPath(args[i]);
       }
 
-      const canYield = YIELD_ALLOWED &&
-        Fiber.current &&
-        Fiber.yield &&
-        ! Fiber.yield.disallowed;
-
       const shouldBeSync = alwaysSync || sync;
       // There's some overhead in awaiting a Promise of an async call,
       // vs just doing the sync call, which for a call like "stat"
@@ -1510,7 +1557,9 @@ function wrapFsFunc(fsFuncName, pathArgIndices, options) {
                          fsFuncName === 'rename' ||
                          fsFuncName === 'symlink');
 
-      if (canYield && shouldBeSync && !isQuickie) {
+      if (canYield() &&
+          shouldBeSync &&
+          ! isQuickie) {
         const promise = new Promise((resolve, reject) => {
           args.push((err, value) => {
             if (options.noErr) {
@@ -1591,7 +1640,6 @@ wrapFsFunc("readFile", [0], {
 wrapFsFunc("stat", [0]);
 wrapFsFunc("lstat", [0]);
 wrapFsFunc("rename", [0, 1]);
-wrapFsFunc("move", [0]);
 
 // After the outermost files.withCache call returns, the withCacheCache is
 // reset to null so that it does not survive server restarts.

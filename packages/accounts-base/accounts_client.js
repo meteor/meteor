@@ -28,6 +28,9 @@ export class AccountsClient extends AccountsCommon {
 
     // Defined in localstorage_token.js.
     this._initLocalStorage();
+
+    // This is for .registerClientLoginFunction & .callLoginFunction.
+    this._loginFuncs = {};
   }
 
   ///
@@ -60,6 +63,49 @@ export class AccountsClient extends AccountsCommon {
    */
   loggingOut() {
     return this._loggingOut.get();
+  }
+
+  /**
+   * @summary Register a new login function on the client. Intended for OAuth package authors. You can call the login function by using 
+   `Accounts.callLoginFunction` or `Accounts.callLoginFunction`.
+   * @locus Client
+   * @param {String} funcName The name of your login function. Used by `Accounts.callLoginFunction` and `Accounts.applyLoginFunction`.
+   Should be the OAuth provider name accordingly.
+   * @param {Function} func The actual function you want to call. Just write it in the manner of `loginWithFoo`.
+   */
+  registerClientLoginFunction(funcName, func) {
+    if (this._loginFuncs[funcName]) {
+      throw new Error(`${funcName} has been defined already`);
+    }
+    this._loginFuncs[funcName] = func;
+  }
+
+  /**
+   * @summary Call a login function defined using `Accounts.registerClientLoginFunction`. Excluding the first argument, all remaining
+   arguments are passed to the login function accordingly. Use `applyLoginFunction` if you want to pass in an arguments array that contains
+   all arguments for the login function.
+   * @locus Client
+   * @param {String} funcName The name of the login function you wanted to call.
+   */
+  callLoginFunction(funcName, ...funcArgs) {
+    if (!this._loginFuncs[funcName]) {
+      throw new Error(`${funcName} was not defined`);
+    }
+    return this._loginFuncs[funcName].apply(this, funcArgs);
+  }
+
+  /**
+   * @summary Same as ``callLoginFunction` but accept an `arguments` which contains all arguments for the login
+   function.
+   * @locus Client
+   * @param {String} funcName The name of the login function you wanted to call.
+   * @param {Array} funcArgs The `arguments` for the login function.
+   */
+  applyLoginFunction(funcName, funcArgs) {
+    if (!this._loginFuncs[funcName]) {
+      throw new Error(`${funcName} was not defined`);
+    }
+    return this._loginFuncs[funcName].apply(this, funcArgs);
   }
 
   /**

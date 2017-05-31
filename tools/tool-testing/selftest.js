@@ -1999,7 +1999,10 @@ var runTests = function (options) {
   _.each(testList.filteredTests, function (test) {
     totalRun++;
     Console.error(test.file + ": " + test.name + " ... ");
+    runTest(test);
+  });
 
+  function runTest(test, tries = 3) {
     var failure = null;
     try {
       runningTest = test;
@@ -2017,6 +2020,16 @@ var runTests = function (options) {
 
     if (failure) {
       Console.error("... fail!", Console.options({ indent: 2 }));
+
+      if (--tries > 0) {
+        Console.error(
+          "... retrying (" + tries + (tries === 1 ? " try" : " tries") + " remaining) ...",
+          Console.options({ indent: 2 })
+        );
+
+        return runTest(test, tries);
+      }
+
       failedTests.push(test);
       testList.notifyFailed(test);
 
@@ -2078,7 +2091,7 @@ var runTests = function (options) {
         "... ok (" + durationMs + " ms)",
         Console.options({ indent: 2 }));
     }
-  });
+  }
 
   testList.saveTestState();
 

@@ -1077,7 +1077,7 @@ Ap._generateStampedLoginToken = function () {
 
 function expirePasswordToken(accounts, oldestValidDate, tokenFilter, userId) {
   const userFilter = userId ? {_id: userId} : {};
-  const resetRangeOr = { 
+  const resetRangeOr = {
     $or: [
       { "services.password.reset.when": { $lt: oldestValidDate } },
       { "services.password.reset.when": { $lt: +oldestValidDate } }
@@ -1502,6 +1502,8 @@ function setupUsersCollection(users) {
                      { sparse: 1 });
   // For expiring login tokens
   users._ensureIndex("services.resume.loginTokens.when", { sparse: 1 });
+  // For expiring password tokens
+  users._ensureIndex('services.password.reset.when', { sparse: 1 });
 }
 
 ///
