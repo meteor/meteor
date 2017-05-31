@@ -297,11 +297,12 @@ export default AppContainer = createContainer(props => {
 
 <h3 id="using-react-router">React Router</h3>
 
-Using React Router is also straightforward. Once you `meteor npm install --save react-router`, you can simply export a list of nested routes as you would in any other React Router driven React application:
+Using React Router is also straightforward. Once you `meteor npm install --save react-router history`, you can simply export a list of nested routes as you would in any other React Router driven React application:
 
 ```js
 import React from 'react';
-import { Router, Route, browserHistory } from 'react-router';
+import { Router, Route } from 'react-router';
+import createBrowserHistory from 'history/createBrowserHistory';
 
 // route components
 import AppContainer from '../../ui/containers/AppContainer.js';
@@ -310,14 +311,17 @@ import AuthPageSignIn from '../../ui/pages/AuthPageSignIn.js';
 import AuthPageJoin from '../../ui/pages/AuthPageJoin.js';
 import NotFoundPage from '../../ui/pages/NotFoundPage.js';
 
+const browserHistory = createBrowserHistory();
+
 export const renderRoutes = () => (
   <Router history={browserHistory}>
-    <Route path="/" component={AppContainer}>
+    <div>
+      <Route exact path="/" component={AppContainer}/>
       <Route path="lists/:id" component={ListPageContainer}/>
       <Route path="signin" component={AuthPageSignIn}/>
       <Route path="join" component={AuthPageJoin}/>
       <Route path="*" component={NotFoundPage}/>
-    </Route>
+    <div>
   </Router>
 );
 ```
