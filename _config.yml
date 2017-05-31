@@ -56,6 +56,7 @@ sidebar_categories:
   Packages:
     - packages/appcache
     - packages/accounts-ui
+    - packages/bundle-visualizer
     - packages/audit-argument-checks
     - packages/coffeescript
     - packages/ecmascript
