@@ -949,7 +949,23 @@ Cursor.prototype.observe = function (callbacks) {
 
 Cursor.prototype.observeChanges = function (callbacks) {
   var self = this;
+  var methods = [
+    'addedAt',
+    'added',
+    'changedAt',
+    'changed',
+    'removedAt',
+    'removed',
+    'movedTo'
+  ];
   var ordered = LocalCollection._observeChangesCallbacksAreOrdered(callbacks);
+
+  methods.forEach(function (method) {
+    if (callbacks[method] && typeof callbacks[method] == "function") {
+      callbacks[method] = Meteor.bindEnvironment(callbacks[method]);
+    }
+  });
+  
   return self._mongo._observeChanges(
     self._cursorDescription, ordered, callbacks);
 };
