@@ -395,7 +395,8 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
                   info.sourceMapUrl);
   }
 
-  if (info.type === "js") {
+  if (info.type === "js" ||
+      info.type === "dynamic js") {
     res.setHeader("Content-Type", "application/javascript; charset=UTF-8");
   } else if (info.type === "css") {
     res.setHeader("Content-Type", "text/css; charset=UTF-8");

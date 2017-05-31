@@ -6,9 +6,9 @@
       "from": "asap@>=2.0.3 <2.1.0"
     },
     "meteor-promise": {
-      "version": "0.8.0",
-      "resolved": "https://registry.npmjs.org/meteor-promise/-/meteor-promise-0.8.0.tgz",
-      "from": "meteor-promise@0.8.0"
+      "version": "0.8.4",
+      "resolved": "https://registry.npmjs.org/meteor-promise/-/meteor-promise-0.8.4.tgz",
+      "from": "meteor-promise@0.8.4"
     },
     "promise": {
       "version": "7.1.1",

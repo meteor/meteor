@@ -159,6 +159,7 @@ import Builder from './builder.js';
 var compilerPluginModule = require('./compiler-plugin.js');
 import { JsFile, CssFile } from './minifier-plugin.js';
 var meteorNpm = require('./meteor-npm.js');
+import { addToTree } from "./linker.js";
 
 var files = require('../fs/files.js');
 var archinfo = require('../utils/archinfo.js');
@@ -170,6 +171,7 @@ var packageVersionParser = require('../packaging/package-version-parser.js');
 var release = require('../packaging/release.js');
 import { load as loadIsopacket } from '../tool-env/isopackets.js';
 import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
+import { gzipSync } from "zlib";
 
 // files to ignore when bundling. node has no globs, so use regexps
 exports.ignoreFiles = [
@@ -693,7 +695,7 @@ class File {
 
   setTargetPathFromRelPath(relPath) {
     // XXX hack
-    if (relPath.match(/^packages\//) || relPath.match(/^assets\//)) {
+    if (relPath.match(/^(packages|assets|dynamic)\//)) {
       this.targetPath = relPath;
     } else {
       this.targetPath = files.pathJoin('app', relPath);
@@ -1056,6 +1058,9 @@ class Target {
     const jsOutputFilesMap = compilerPluginModule.PackageSourceBatch
       .computeJsOutputFilesMap(sourceBatches);
 
+    const versions = {};
+    const dynamicImportFiles = new Set;
+
     // Copy their resources into the bundle in order
     sourceBatches.forEach((sourceBatch) => {
       const unibuild = sourceBatch.unibuild;
@@ -1177,6 +1182,16 @@ class Target {
         throw new Error('Unknown type ' + resource.type);
       });
 
+      this.js.forEach(file => {
+        if (file.targetPath === "packages/dynamic-import.js") {
+          dynamicImportFiles.add(file);
+        }
+
+        if (file.targetPath.startsWith("dynamic/")) {
+          addToTree(file.hash(), file.targetPath, versions);
+        }
+      });
+
       // Depend on the source files that produced these resources.
       this.watchSet.merge(unibuild.watchSet);
 
@@ -1185,33 +1200,78 @@ class Target {
       // XXX assumes that this merges cleanly
        this.watchSet.merge(unibuild.pkg.pluginWatchSet);
     });
+
+    dynamicImportFiles.forEach(file => {
+      file.setContents(
+        new Buffer(file.contents("utf8").replace(
+          "__DYNAMIC_VERSIONS__",
+          () => JSON.stringify(versions.dynamic || {})
+        ), "utf8")
+      );
+    });
   }
 
   // Minify the JS in this target
   minifyJs(minifierDef, minifyMode) {
-    const sources = _.map(this.js, function (file) {
-      return new JsFile(file, {
-        arch: this.arch
-      });
+    const staticFiles = [];
+    const dynamicFiles = [];
+
+    this.js.forEach(file => {
+      const jsf = new JsFile(file, { arch: this.arch });
+
+      if (file.targetPath.startsWith("dynamic/")) {
+        // Make sure file._hash is cached.
+        file.hash();
+
+        // Dynamic files consist of a single anonymous function
+        // expression, which some minifiers (e.g. UglifyJS) either fail to
+        // parse or mistakenly eliminate as dead code. To avoid these
+        // problems, we temporarily name the function __minifyJs.
+        file._contents = new Buffer(
+          file.contents()
+            .toString("utf8")
+            .replace(/^\s*function\s*\(/,
+                     "function __minifyJs("),
+          "utf8"
+        );
+
+        dynamicFiles.push(jsf);
+
+      } else {
+        staticFiles.push(jsf);
+      }
     });
-    var minifier = minifierDef.userPlugin.processFilesForBundle.bind(
-      minifierDef.userPlugin);
+
+    var minifier = minifierDef.userPlugin.processFilesForBundle
+      .bind(minifierDef.userPlugin);
 
     buildmessage.enterJob('minifying app code', function () {
       try {
         var markedMinifier = buildmessage.markBoundary(minifier);
-        markedMinifier(sources, { minifyMode });
+        markedMinifier(staticFiles, { minifyMode });
+        dynamicFiles.forEach(file => {
+          markedMinifier([file], { minifyMode });
+        });
       } catch (e) {
         buildmessage.exception(e);
       }
     });
 
-    this.js = _.flatten(sources.map((source) => {
-      return source._minifiedFiles.map((file) => {
+    const js = [];
+
+    function handle(source, dynamic) {
+      source._minifiedFiles.forEach(file => {
+        // Remove the function name __minifyJs that was added above.
+        file.data = file.data
+          .toString("utf8")
+          .replace(/^\s*function\s+__minifyJs\s*\(/,
+                   "function(");
+
         const newFile = new File({
           info: 'minified js',
-          data: new Buffer(file.data, 'utf8')
+          data: new Buffer(file.data, 'utf8'),
         });
+
         if (file.sourceMap) {
           newFile.setSourceMap(file.sourceMap, '/');
         }
@@ -1219,13 +1279,58 @@ class Target {
         if (file.path) {
           newFile.setUrlFromRelPath(file.path);
           newFile.targetPath = file.path;
+        } else if (dynamic) {
+          const { targetPath } = source._source;
+          newFile.setUrlFromRelPath(targetPath);
+          newFile.targetPath = targetPath;
         } else {
           newFile.setUrlToHash('.js', '?meteor_js_resource=true');
         }
 
-        return newFile;
+        js.push(newFile);
+
+        if (file.stats &&
+            ! dynamic &&
+            minifyMode === "production") {
+          // If the minifier reported any statistics, serve those data as
+          // a .stats.json file alongside the newFile.
+          const contents = newFile.contents();
+          const statsFile = new File({
+            info: "bundle size stats JSON",
+            data: new Buffer(JSON.stringify({
+              minifier: {
+                name: minifierDef.isopack.name,
+                version: minifierDef.isopack.version,
+              },
+              totalMinifiedBytes: contents.length,
+              totalMinifiedGzipBytes: gzipSync(contents).length,
+              minifiedBytesByPackage: file.stats,
+            }, null, 2) + "\n", "utf8")
+          });
+
+          statsFile.url = newFile.url.replace(/\.js\b/, ".stats.json");
+          statsFile.targetPath =
+            newFile.targetPath.replace(/\.js\b/, ".stats.json");
+          statsFile.cacheable = true;
+          statsFile.type = "json";
+
+          if (statsFile.url !== newFile.url &&
+              statsFile.targetPath !== newFile.targetPath) {
+            // If the minifier used a file extension other than .js, the
+            // .replace calls above won't inject the .stats.json extension
+            // into the statsFile.{url,targetPath} strings, and it would
+            // be a mistake to serve the statsFile with the same URL as
+            // the real JS bundle. This should be a very uncommon case.
+            js.push(statsFile);
+          }
+        }
       });
-    }));
+    }
+
+    staticFiles.forEach(file => handle(file, false));
+    dynamicFiles.forEach(file => handle(file, true));
+
+    this.js = js;
   }
 
   // For every source file we process, sets the domain name to
@@ -1437,7 +1542,7 @@ class ClientTarget extends Target {
     const eachResource = function (f) {
       ["js", "css", "asset"].forEach((type) => {
         this[type].forEach((file) => {
-          f(file, type);
+          f(file, file.type || type);
         });
       });
     }.bind(this);
@@ -1493,9 +1598,57 @@ class ClientTarget extends Target {
       manifestItem.size = file.size();
       manifestItem.hash = file.hash();
 
-      writeFile(file, builder);
+      if (! file.targetPath.startsWith("dynamic/")) {
+        writeFile(file, builder);
+        manifest.push(manifestItem);
+        return;
+      }
 
+      // Another measure for preventing this file from being loaded
+      // eagerly as a <script> tag, in addition to manifestItem.path being
+      // prefixed with "dynamic/".
+      manifestItem.type = "dynamic js";
+
+      // Add the dynamic module to the manifest so that it can be
+      // requested via HTTP from the web server. Note, however, that we
+      // typically request dynamic modules via DDP, since we can compress
+      // the entire response more easily that way. We expose dynamic
+      // modules via HTTP here mostly to unlock future experimentation.
       manifest.push(manifestItem);
+
+      if (manifestItem.sourceMap &&
+          manifestItem.sourceMapUrl) {
+        // If the file is a dynamic module, we don't embed its source map
+        // in the file itself (because base64-encoded data: URLs for
+        // source maps can be very large), but rather include a normal URL
+        // referring to the source map (as a comment), so that it can be
+        // loaded from the web server when needed.
+        writeFile(file, builder, {
+          sourceMapUrl: manifestItem.sourceMapUrl,
+        });
+
+        manifest.push({
+          type: "json",
+          path: manifestItem.sourceMap,
+          url: manifestItem.sourceMapUrl,
+          where: manifestItem.where,
+          cacheable: manifestItem.cacheable,
+          hash: manifestItem.hash,
+        });
+
+        // Now that we've written the module with a source map URL comment
+        // embedded in it, and also made sure the source map is exposed by
+        // the web server, we do not need to include the source map URL in
+        // the manifest, because then it would also be provided via the
+        // X-SourceMap HTTP header, redundantly.
+        delete manifestItem.sourceMap;
+        delete manifestItem.sourceMapUrl;
+
+      } else {
+        // If the dynamic module does not have a source map, just write it
+        // normally.
+        writeFile(file, builder);
+      }
     });
 
     ['head', 'body'].forEach((type) => {
@@ -1966,11 +2119,11 @@ class JsImage {
         );
 
         var sourceMapFileName = files.pathBasename(loadItem.sourceMap);
+
         // Remove any existing sourceMappingURL line. (eg, if roundtripping
         // through JsImage.readFromDisk, don't end up with two!)
-        item.source = item.source.replace(
-            /\n\/\/# sourceMappingURL=.+\n?$/g, '');
-        item.source += "\n//# sourceMappingURL=" + sourceMapFileName + "\n";
+        item.source = addSourceMappingURL(item.source, sourceMapFileName);
+
         if (item.sourceMapRoot) {
           loadItem.sourceMapRoot = item.sourceMapRoot;
         }
@@ -2007,7 +2160,9 @@ class JsImage {
         });
       }
 
-      load.push(loadItem);
+      if (! item.targetPath.startsWith("dynamic/")) {
+        load.push(loadItem);
+      }
     });
 
     const rebuildDirs = Object.create(null);
@@ -2351,7 +2506,7 @@ class ServerTarget extends JsImageTarget {
   ServerTarget.prototype[method] = Profile(`ServerTarget#${method}`, ServerTarget.prototype[method]);
 });
 
-var writeFile = Profile("bundler writeFile", function (file, builder) {
+var writeFile = Profile("bundler writeFile", function (file, builder, options) {
   if (! file.targetPath) {
     throw new Error("No targetPath?");
   }
@@ -2363,8 +2518,32 @@ var writeFile = Profile("bundler writeFile", function (file, builder) {
   // to wait until the server is actually driven by the manifest
   // (rather than just serving all of the files in a certain
   // directories)
-  builder.write(file.targetPath, { data: file.contents(), hash: file.hash() });
+
+  let data = file.contents();
+  const hash = file.hash();
+
+  if (options && options.sourceMapUrl) {
+    data = addSourceMappingURL(data, options.sourceMapUrl);
+  }
+
+  if (! Buffer.isBuffer(data)) {
+    data = new Buffer(data, "utf8");
+  }
+
+  builder.write(file.targetPath, { data, hash });
 });
+
+// The data argument may be either a Buffer or a string, but this function
+// always returns a string.
+function addSourceMappingURL(data, url) {
+  const dataString = data
+    // If data is a Buffer, convert it to a string.
+    .toString("utf8")
+    // Remove any existing source map comments.
+    .replace(/\n\/\/# sourceMappingURL=[^\n]+/g, "");
+  // Append the new source map comment to the end of the code.
+  return dataString + "\n//# sourceMappingURL=" + url + "\n";
+}
 
 // Writes a target a path in 'programs'
 var writeTargetToPath = Profile(
