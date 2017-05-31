@@ -106,7 +106,7 @@ Example asynchronous HTTP call:
 ```js
 HTTP.call('POST', 'http://api.twitter.com/xyz', {
   data: { some: 'json', stuff: 1 }
-}, () => (error, result) {
+}, (error, result) => {
   if (!error) {
     Session.set('twizzled', true);
   }
