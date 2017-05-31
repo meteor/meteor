@@ -430,6 +430,7 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
   }
 };
 
+// XXX Duplicate of a function in bundler.js.
 var getUrlPrefixForArch = function (arch) {
   // XXX we rely on the fact that arch names don't contain slashes
   // in that case we would need to uri escape it
@@ -473,12 +474,10 @@ var runWebAppServer = function () {
         if (! clientJsonPath || ! clientDir || ! clientJson)
           throw new Error("Client config file not parsed.");
 
-        var urlPrefix = getUrlPrefixForArch(arch);
-
         var manifest = clientJson.manifest;
         _.each(manifest, function (item) {
           if (item.url && item.where === "client") {
-            staticFiles[urlPrefix + getItemPathname(item.url)] = {
+            staticFiles[getItemPathname(item.url)] = {
               absolutePath: path.join(clientDir, item.path),
               cacheable: item.cacheable,
               hash: item.hash,
@@ -490,7 +489,7 @@ var runWebAppServer = function () {
             if (item.sourceMap) {
               // Serve the source map too, under the specified URL. We assume all
               // source maps are cacheable.
-              staticFiles[urlPrefix + getItemPathname(item.sourceMapUrl)] = {
+              staticFiles[getItemPathname(item.sourceMapUrl)] = {
                 absolutePath: path.join(clientDir, item.sourceMap),
                 cacheable: true
               };
@@ -512,6 +511,8 @@ var runWebAppServer = function () {
         };
 
         WebApp.clientPrograms[arch] = program;
+
+        var urlPrefix = getUrlPrefixForArch(arch);
 
         // Serve the program as a string at /foo/<arch>/manifest.json
         // XXX change manifest.json -> program.json
