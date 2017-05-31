@@ -482,7 +482,7 @@ Mongo.Collection.prototype.insert = function insert(doc, callback) {
     // This optimization saves us passing both the randomSeed and the id
     // Passing both is redundant.
     if (this._isRemoteCollection()) {
-      const enclosing = DDP._CurrentInvocation.get();
+      const enclosing = DDP._CurrentMethodInvocation.get();
       if (!enclosing) {
         generateId = false;
       }

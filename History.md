@@ -5,6 +5,26 @@
   this is to prevent duplicate name error on reloads. Initial data is now
   properly serialized.
 
+* Fix issue with publications temporarily having `DDP._CurrentInvocation` set on
+  re-run after a user logged in. This would cause method calls from within
+  publish functions to unexpectedly having `this.connection` available.
+
+* Support `DDP._CurrentPublicationInvocation` and `DDP._CurrentMethodInvocation`,
+  `DDP._CurrentInvocation` is kept for backwards-compatibility. This change
+  allows method calls from publications to inherit the connection from the
+  the publication which called the method.
+
+    > Note: If you're calling methods from publications that are using `this.connection`
+    > to see if the method was called from server code or not. These checks will now
+    > be more restrictive because `this.connection` will now be available when a
+    > method is called from a publication.
+
+* `Meteor.userId()` and `Meteor.user()` can now be used in both method calls and
+  publications.
+
+* `this.onStop` callbacks in publications are now run with the publication's
+  context and with its `EnvironmentVariable`'s bound.
+
 ## v1.5, 2017-05-30
 
 * The `meteor-base` package implies a new `dynamic-import` package, which

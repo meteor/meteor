@@ -714,7 +714,7 @@ _.extend(Session.prototype, {
 
         resolve(DDPServer._CurrentWriteFence.withValue(
           fence,
-          () => DDP._CurrentInvocation.withValue(
+          () => DDP._CurrentMethodInvocation.withValue(
             invocation,
             () => maybeAuditArgumentChecks(
               handler, invocation, msg.params,
@@ -809,23 +809,29 @@ _.extend(Session.prototype, {
     self.collectionViews = {};
     self.userId = userId;
 
-    // Save the old named subs, and reset to having no subscriptions.
-    var oldNamedSubs = self._namedSubs;
-    self._namedSubs = {};
-    self._universalSubs = [];
+    // _setUserId is normally called from a Meteor method with
+    // DDP._CurrentMethodInvocation set. But DDP._CurrentMethodInvocation is not
+    // expected to be set inside a publish function, so we temporary unset it.
+    // Inside a publish function DDP._CurrentPublicationInvocation is set.
+    DDP._CurrentMethodInvocation.withValue(undefined, function () {
+      // Save the old named subs, and reset to having no subscriptions.
+      var oldNamedSubs = self._namedSubs;
+      self._namedSubs = {};
+      self._universalSubs = [];
 
-    _.each(oldNamedSubs, function (sub, subscriptionId) {
-      self._namedSubs[subscriptionId] = sub._recreate();
-      // nb: if the handler throws or calls this.error(), it will in fact
-      // immediately send its 'nosub'. This is OK, though.
-      self._namedSubs[subscriptionId]._runHandler();
+      _.each(oldNamedSubs, function (sub, subscriptionId) {
+        self._namedSubs[subscriptionId] = sub._recreate();
+        // nb: if the handler throws or calls this.error(), it will in fact
+        // immediately send its 'nosub'. This is OK, though.
+        self._namedSubs[subscriptionId]._runHandler();
+      });
+
+      // Allow newly-created universal subs to be started on our connection in
+      // parallel with the ones we're spinning up here, and spin up universal
+      // subs.
+      self._dontStartNewUniversalSubs = false;
+      self.startUniversalSubs();
     });
-
-    // Allow newly-created universal subs to be started on our connection in
-    // parallel with the ones we're spinning up here, and spin up universal
-    // subs.
-    self._dontStartNewUniversalSubs = false;
-    self.startUniversalSubs();
 
     // Start sending messages again, beginning with the diff from the previous
     // state of the world to the current state. No yields are allowed during
@@ -1032,12 +1038,16 @@ _.extend(Subscription.prototype, {
 
     var self = this;
     try {
-      var res = maybeAuditArgumentChecks(
-        self._handler, self, EJSON.clone(self._params),
-        // It's OK that this would look weird for universal subscriptions,
-        // because they have no arguments so there can never be an
-        // audit-argument-checks failure.
-        "publisher '" + self._name + "'");
+      var res = DDP._CurrentPublicationInvocation.withValue(
+        self,
+        () => maybeAuditArgumentChecks(
+          self._handler, self, EJSON.clone(self._params),
+          // It's OK that this would look weird for universal subscriptions,
+          // because they have no arguments so there can never be an
+          // audit-argument-checks failure.
+          "publisher '" + self._name + "'"
+        )
+      );
     } catch (e) {
       self.error(e);
       return;
@@ -1213,6 +1223,7 @@ _.extend(Subscription.prototype, {
    */
   onStop: function (callback) {
     var self = this;
+    callback = Meteor.bindEnvironment(callback, 'onStop callback', self);
     if (self._isDeactivated())
       callback();
     else
@@ -1635,21 +1646,30 @@ _.extend(Server.prototype, {
       );
     }
 
-    // If this is a method call from within another method, get the
-    // user state from the outer method, otherwise don't allow
-    // setUserId to be called
+    // If this is a method call from within another method or publish function,
+    // get the user state from the outer method or publish function, otherwise
+    // don't allow setUserId to be called
     var userId = null;
     var setUserId = function() {
       throw new Error("Can't call setUserId on a server initiated method call");
     };
     var connection = null;
-    var currentInvocation = DDP._CurrentInvocation.get();
-    if (currentInvocation) {
-      userId = currentInvocation.userId;
+    var currentMethodInvocation = DDP._CurrentMethodInvocation.get();
+    var currentPublicationInvocation = DDP._CurrentPublicationInvocation.get();
+    var randomSeed = null;
+    if (currentMethodInvocation) {
+      userId = currentMethodInvocation.userId;
       setUserId = function(userId) {
-        currentInvocation.setUserId(userId);
+        currentMethodInvocation.setUserId(userId);
       };
-      connection = currentInvocation.connection;
+      connection = currentMethodInvocation.connection;
+      randomSeed = DDPCommon.makeRpcSeed(currentMethodInvocation, name);
+    } else if (currentPublicationInvocation) {
+      userId = currentPublicationInvocation.userId;
+      setUserId = function(userId) {
+        currentPublicationInvocation._session._setUserId(userId);
+      };
+      connection = currentPublicationInvocation.connection;
     }
 
     var invocation = new DDPCommon.MethodInvocation({
@@ -1657,11 +1677,11 @@ _.extend(Server.prototype, {
       userId,
       setUserId,
       connection,
-      randomSeed: DDPCommon.makeRpcSeed(currentInvocation, name)
+      randomSeed
     });
 
     return new Promise(resolve => resolve(
-      DDP._CurrentInvocation.withValue(
+      DDP._CurrentMethodInvocation.withValue(
         invocation,
         () => maybeAuditArgumentChecks(
           handler, invocation, EJSON.clone(args),
