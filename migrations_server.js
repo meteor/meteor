@@ -44,10 +44,8 @@ Migrations = {
   },
   config: function(opts) {
     this.options = _.extend({}, this.options, opts);
-  }
-};
-
-Migrations._collection = new Mongo.Collection(Migrations.options.collectionName);
+  },
+}
 
 /*
   Logger factory function. Takes a prefix string and options object
@@ -89,6 +87,11 @@ function createLogger(prefix) {
 var log;
 
 Meteor.startup(function () {
+  var options = Migrations.options;
+
+  // collection holding the control record
+  Migrations._collection = new Mongo.Collection(options.collectionName);
+
   log = createLogger('Migrations');
 
   ['info', 'warn', 'error', 'debug'].forEach(function(level) {
