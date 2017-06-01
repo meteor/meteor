@@ -581,11 +581,9 @@ Accounts.generateResetTokenRecord = function (userId, email, reason, extraTokenD
 
   if (reason === 'resetPassword') {
     tokenRecord.reason = 'reset';
-  }
-  else if (reason === 'enrollAccount') {
+  } else if (reason === 'enrollAccount') {
     tokenRecord.reason = 'enroll';
-  }
-  else if (reason) {
+  } else if (reason) {
     // fallback so that this function can be used for unknown reasons as well
     tokenRecord.reason = reason;
   }
