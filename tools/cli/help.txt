@@ -86,6 +86,7 @@ Options:
                    downgraded to versions that are potentially incompatible with
                    the current versions, if required to satisfy all package
                    version constraints.
+  --bundle-visualizer           Run with bundle-visualizer package.
 
 >>> debug
 Run the project, but suspend the server process for debugging.
