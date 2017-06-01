@@ -1,7 +1,7 @@
 var fs = require("fs");
 var path = require("path");
-var depsDir = path.join(__dirname, "deps");
-var map = require("./map.json");
+var depsDir = path.join(__dirname, "..", "deps");
+var map = require("../map.json");
 
 // Each file in the `deps` directory expresses the dependencies of a stub.
 // For example, `deps/http.js` calls `require("http-browserify")` to
@@ -18,7 +18,7 @@ fs.mkdir(depsDir, function () {
   require("rimraf")("deps/*.js", function (error) {
     if (error) throw error;
     Object.keys(map).forEach(function (id) {
-      fs.writeFile(
+      fs.writeFileSync(
         path.join(depsDir, id + ".js"),
         typeof map[id] === "string"
           ? "require(" + JSON.stringify(map[id]) + ");\n"

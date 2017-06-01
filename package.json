@@ -6,7 +6,7 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "prepublish": "node build-deps.js"
+    "prepublish": "node scripts/build-deps.js"
   },
   "dependencies": {
     "assert": "^1.4.1",
