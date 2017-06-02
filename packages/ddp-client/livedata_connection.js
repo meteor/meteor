@@ -77,6 +77,7 @@ var Connection = function (url, options) {
   self._version = null;   // The DDP version agreed on by client and server.
   self._stores = {}; // name -> object with methods
   self._methodHandlers = {}; // name -> func
+  self._methodMocks = {}; // name -> func
   self._nextMethodId = 1;
   self._supportedDDPVersions = options.supportedDDPVersions;
 
@@ -707,6 +708,22 @@ _.extend(Connection.prototype, {
     });
   },
 
+  stubMethods: function (methods) {
+    var self = this;
+    _.each(methods, function (func, name) {
+      if (typeof func !== 'function')
+        throw new Error("Method '" + name + "' must be a function");
+      self._methodMocks[name] = func;
+    });
+  },
+
+  unstubMethods: function (methodNames) {
+    var self = this;
+    methodNames.forEach(function (methodName) {
+      delete self._methodMocks[methodName];
+    });
+  },
+
   /**
    * @memberOf Meteor
    * @importFromPackage meteor
@@ -934,7 +951,10 @@ _.extend(Connection.prototype, {
       message.randomSeed = randomSeed;
     }
 
-    var methodInvoker = new MethodInvoker({
+    var MethodInvokerImplementation = self._methodMocks[name] ?
+      MethodStubInvoker : MethodInvoker;
+
+    var methodInvoker = new MethodInvokerImplementation({
       methodId: methodId(),
       callback: callback,
       connection: self,

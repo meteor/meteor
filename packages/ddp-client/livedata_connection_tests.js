@@ -1566,6 +1566,97 @@ _.each(LivedataTest.SUPPORTED_DDP_VERSIONS, function (version) {
   });
 });
 
+Tinytest.addAsync(
+  "livedata stub - stubbing a method for testing to return something",
+  function (test, onComplete) {
+    var stream = new StubStream();
+    var conn = newConnection(stream);
+
+    startAndConnect(test, stream);
+
+    conn.methods({
+      foo: function () {
+        return 'not mocked';
+      }
+    });
+
+    conn.stubMethods({
+      foo: function () {
+        return 'mocked';
+      }
+    });
+
+    conn.call('foo', function (error, result) {
+      test.equal(error, undefined);
+      test.equal(result, 'mocked');
+      onComplete();
+    });
+  }
+);
+
+Tinytest.addAsync(
+  "livedata stub - stubbing a method for testing to throw",
+  function (test, onComplete) {
+    var stream = new StubStream();
+    var conn = newConnection(stream);
+
+    startAndConnect(test, stream);
+
+    conn.methods({
+      foo: function () {
+        return 'not mocked';
+      }
+    });
+
+    var error = new Error('mocked method error');
+
+    conn.stubMethods({
+      foo: function () {
+        throw error;
+      }
+    });
+
+    conn.call('foo', function (error, result) {
+      test.equal(error, error);
+      test.equal(result, undefined);
+      onComplete();
+    });
+  }
+);
+
+Tinytest.add(
+  "livedata stub - unstubbing a method after a test",
+  function (test) {
+    var stream = new StubStream();
+    var conn = newConnection(stream);
+
+    startAndConnect(test, stream);
+
+    conn.methods({
+      foo: function () {
+        return 'not mocked';
+      }
+    });
+
+    conn.stubMethods({
+      foo: function () {
+        return 'mocked'
+      }
+    });
+
+    conn.unstubMethods(['foo']);
+
+    conn.call('foo', _.identity);
+
+    testGotMessage(test, stream, {
+      msg: 'method',
+      method: 'foo',
+      params: '*',
+      id: '*'
+    });
+  }
+);
+
 var getSelfConnectionUrl = function () {
   if (Meteor.isClient) {
     var ddpUrl = Meteor._relativeToSiteRootUrl("/");
