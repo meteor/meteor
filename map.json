@@ -5,7 +5,7 @@
   "cluster": null,
   "console": "console-browserify",
   "constants": "constants-browserify",
-  "crypto": "crypto-browserify",
+  "crypto": "../wrappers/crypto.js",
   "core-util-is": null,
   "dgram": null,
   "dns": null,
