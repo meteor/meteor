@@ -110,7 +110,7 @@ export class AccountsServer extends AccountsCommon {
   /**
    * @summary Customize new user creation.
    * @locus Server
-   * @param {Function} func Called whenever a new user is created. Return the new user object, or throw an `Error` to abort the creation.
+   * @param {Function} func Called whenever a new user is being created before the record is inserted in the db . Return the new user object, or throw an `Error` to abort the creation.
    */
   onCreateUser(func) {
     if (this._onCreateUserHook) {
@@ -118,6 +118,19 @@ export class AccountsServer extends AccountsCommon {
     }
 
     this._onCreateUserHook = func;
+  }
+
+  /**
+   * @summary Register a function to be called every time a user has been created.
+   * @locus Server
+   * @param {Function} func Called whenever a new user has been created.
+   */
+  onUserCreated(func) {
+    if (this._onCreatedUserHook) {
+      throw new Error("Can only call onUserCreated once");
+    }
+
+    this._onCreatedUserHook = func;
   }
 };
 
@@ -1323,6 +1336,9 @@ Ap.insertUserDoc = function (options, user) {
   var userId;
   try {
     userId = this.users.insert(fullUser);
+    if (this._onCreatedUserHook) {
+      this._onCreatedUserHook(fullUser);
+    }
   } catch (e) {
     // XXX string parsing sucks, maybe
     // https://jira.mongodb.org/browse/SERVER-3069 will get fixed one day
