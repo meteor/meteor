@@ -13,7 +13,7 @@
   "fs": null,
   "http": "http-browserify",
   "https": "https-browserify",
-  "module": null,
+  "module": "../wrappers/module.js",
   "net": null,
   "os": "os-browserify/browser.js",
   "path": "path-browserify",
