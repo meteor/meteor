@@ -290,6 +290,5 @@ Migrations._reset = function() {
 
 // unlock control
 Migrations.unlock = function() {
-  this._list = [{ version: 0, up: function() {} }];
   this._collection.update({ _id: 'control' }, { $set: { locked: false } });
 };
