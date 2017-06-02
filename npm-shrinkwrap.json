@@ -1,6 +1,6 @@
 {
   "name": "meteor-node-stubs",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "dependencies": {
     "asn1.js": {
       "version": "4.9.0",
@@ -303,8 +303,8 @@
     },
     "readable-stream": {
       "version": "2.2.10",
-      "from": "git://github.com/meteor/readable-stream.git",
-      "resolved": "git://github.com/meteor/readable-stream.git#2e9112d7d31a2af6e0682db0e18679b1e5fd4694"
+      "from": "git+https://github.com/meteor/readable-stream.git",
+      "resolved": "git+https://github.com/meteor/readable-stream.git#2e9112d7d31a2af6e0682db0e18679b1e5fd4694"
     },
     "rimraf": {
       "version": "2.6.1",
