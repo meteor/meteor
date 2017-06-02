@@ -25,3 +25,4 @@ dispatch:mocha-phantomjs
 dispatch:mocha-browser
 lazy-test-package
 helper-package
+user:colon-name
