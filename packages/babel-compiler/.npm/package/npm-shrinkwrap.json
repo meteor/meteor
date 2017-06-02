@@ -475,8 +475,8 @@
       "from": "babel-types@>=6.22.0 <7.0.0"
     },
     "babylon": {
-      "version": "6.17.1",
-      "resolved": "https://registry.npmjs.org/babylon/-/babylon-6.17.1.tgz",
+      "version": "6.17.2",
+      "resolved": "https://registry.npmjs.org/babylon/-/babylon-6.17.2.tgz",
       "from": "babylon@>=6.15.0 <7.0.0"
     },
     "balanced-match": {
@@ -692,8 +692,8 @@
       }
     },
     "reify": {
-      "version": "0.11.21",
-      "resolved": "https://registry.npmjs.org/reify/-/reify-0.11.21.tgz",
+      "version": "0.11.22",
+      "resolved": "https://registry.npmjs.org/reify/-/reify-0.11.22.tgz",
       "from": "reify@>=0.11.18 <0.12.0"
     },
     "repeating": {

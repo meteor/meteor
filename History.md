@@ -31,6 +31,8 @@
   context and with its `EnvironmentVariable`s bound.
   [PR #8629](https://github.com/meteor/meteor/pull/8629)
 
+* The `reify` npm package has been upgraded to version 0.11.22.
+
 ## v1.5, 2017-05-30
 
 * The `meteor-base` package implies a new `dynamic-import` package, which
