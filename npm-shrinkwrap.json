@@ -12,6 +12,12 @@
       "from": "assert@1.4.1",
       "resolved": "https://registry.npmjs.org/assert/-/assert-1.4.1.tgz"
     },
+    "balanced-match": {
+      "version": "0.4.2",
+      "from": "balanced-match@>=0.4.1 <0.5.0",
+      "resolved": "https://registry.npmjs.org/balanced-match/-/balanced-match-0.4.2.tgz",
+      "dev": true
+    },
     "Base64": {
       "version": "0.2.1",
       "from": "Base64@>=0.2.0 <0.3.0",
@@ -26,6 +32,12 @@
       "version": "4.11.6",
       "from": "bn.js@>=4.1.1 <5.0.0",
       "resolved": "https://registry.npmjs.org/bn.js/-/bn.js-4.11.6.tgz"
+    },
+    "brace-expansion": {
+      "version": "1.1.7",
+      "from": "brace-expansion@>=1.1.7 <2.0.0",
+      "resolved": "https://registry.npmjs.org/brace-expansion/-/brace-expansion-1.1.7.tgz",
+      "dev": true
     },
     "brorand": {
       "version": "1.0.6",
@@ -82,6 +94,12 @@
       "from": "cipher-base@>=1.0.0 <2.0.0",
       "resolved": "https://registry.npmjs.org/cipher-base/-/cipher-base-1.0.3.tgz"
     },
+    "concat-map": {
+      "version": "0.0.1",
+      "from": "concat-map@0.0.1",
+      "resolved": "https://registry.npmjs.org/concat-map/-/concat-map-0.0.1.tgz",
+      "dev": true
+    },
     "console-browserify": {
       "version": "1.1.0",
       "from": "console-browserify@1.1.0",
@@ -91,11 +109,6 @@
       "version": "1.0.0",
       "from": "constants-browserify@1.0.0",
       "resolved": "https://registry.npmjs.org/constants-browserify/-/constants-browserify-1.0.0.tgz"
-    },
-    "core-util-is": {
-      "version": "1.0.2",
-      "from": "core-util-is@>=1.0.0 <1.1.0",
-      "resolved": "https://registry.npmjs.org/core-util-is/-/core-util-is-1.0.2.tgz"
     },
     "create-ecdh": {
       "version": "4.0.0",
@@ -152,6 +165,18 @@
       "from": "evp_bytestokey@>=1.0.0 <2.0.0",
       "resolved": "https://registry.npmjs.org/evp_bytestokey/-/evp_bytestokey-1.0.0.tgz"
     },
+    "fs.realpath": {
+      "version": "1.0.0",
+      "from": "fs.realpath@>=1.0.0 <2.0.0",
+      "resolved": "https://registry.npmjs.org/fs.realpath/-/fs.realpath-1.0.0.tgz",
+      "dev": true
+    },
+    "glob": {
+      "version": "7.1.2",
+      "from": "glob@>=7.0.5 <8.0.0",
+      "resolved": "https://registry.npmjs.org/glob/-/glob-7.1.2.tgz",
+      "dev": true
+    },
     "hash.js": {
       "version": "1.0.3",
       "from": "hash.js@>=1.0.0 <2.0.0",
@@ -177,6 +202,12 @@
       "from": "indexof@0.0.1",
       "resolved": "https://registry.npmjs.org/indexof/-/indexof-0.0.1.tgz"
     },
+    "inflight": {
+      "version": "1.0.6",
+      "from": "inflight@>=1.0.4 <2.0.0",
+      "resolved": "https://registry.npmjs.org/inflight/-/inflight-1.0.6.tgz",
+      "dev": true
+    },
     "inherits": {
       "version": "2.0.1",
       "from": "inherits@2.0.1",
@@ -197,6 +228,18 @@
       "from": "minimalistic-assert@>=1.0.0 <2.0.0",
       "resolved": "https://registry.npmjs.org/minimalistic-assert/-/minimalistic-assert-1.0.0.tgz"
     },
+    "minimatch": {
+      "version": "3.0.4",
+      "from": "minimatch@>=3.0.4 <4.0.0",
+      "resolved": "https://registry.npmjs.org/minimatch/-/minimatch-3.0.4.tgz",
+      "dev": true
+    },
+    "once": {
+      "version": "1.4.0",
+      "from": "once@>=1.3.0 <2.0.0",
+      "resolved": "https://registry.npmjs.org/once/-/once-1.4.0.tgz",
+      "dev": true
+    },
     "os-browserify": {
       "version": "0.2.1",
       "from": "os-browserify@0.2.1",
@@ -216,6 +259,12 @@
       "version": "0.0.0",
       "from": "path-browserify@0.0.0",
       "resolved": "https://registry.npmjs.org/path-browserify/-/path-browserify-0.0.0.tgz"
+    },
+    "path-is-absolute": {
+      "version": "1.0.1",
+      "from": "path-is-absolute@>=1.0.0 <2.0.0",
+      "resolved": "https://registry.npmjs.org/path-is-absolute/-/path-is-absolute-1.0.1.tgz",
+      "dev": true
     },
     "pbkdf2": {
       "version": "3.0.9",
@@ -261,6 +310,12 @@
       "version": "2.2.1",
       "from": "readable-stream@2.2.1",
       "resolved": "https://registry.npmjs.org/readable-stream/-/readable-stream-2.2.1.tgz"
+    },
+    "rimraf": {
+      "version": "2.6.1",
+      "from": "rimraf@>=2.5.2 <3.0.0",
+      "resolved": "https://registry.npmjs.org/rimraf/-/rimraf-2.6.1.tgz",
+      "dev": true
     },
     "ripemd160": {
       "version": "1.0.1",
@@ -318,6 +373,12 @@
       "version": "0.0.4",
       "from": "vm-browserify@0.0.4",
       "resolved": "https://registry.npmjs.org/vm-browserify/-/vm-browserify-0.0.4.tgz"
+    },
+    "wrappy": {
+      "version": "1.0.2",
+      "from": "wrappy@>=1.0.0 <2.0.0",
+      "resolved": "https://registry.npmjs.org/wrappy/-/wrappy-1.0.2.tgz",
+      "dev": true
     }
   }
 }
