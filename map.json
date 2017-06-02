@@ -6,7 +6,6 @@
   "console": "console-browserify",
   "constants": "constants-browserify",
   "crypto": "../wrappers/crypto.js",
-  "core-util-is": null,
   "dgram": null,
   "dns": null,
   "domain": "domain-browser",
