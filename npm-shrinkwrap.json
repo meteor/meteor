@@ -79,11 +79,6 @@
       "from": "buffer@4.9.1",
       "resolved": "https://registry.npmjs.org/buffer/-/buffer-4.9.1.tgz"
     },
-    "buffer-shims": {
-      "version": "1.0.0",
-      "from": "buffer-shims@>=1.0.0 <2.0.0",
-      "resolved": "https://registry.npmjs.org/buffer-shims/-/buffer-shims-1.0.0.tgz"
-    },
     "buffer-xor": {
       "version": "1.0.3",
       "from": "buffer-xor@>=1.0.2 <2.0.0",
@@ -307,9 +302,9 @@
       "resolved": "https://registry.npmjs.org/randombytes/-/randombytes-2.0.3.tgz"
     },
     "readable-stream": {
-      "version": "2.2.1",
-      "from": "readable-stream@2.2.1",
-      "resolved": "https://registry.npmjs.org/readable-stream/-/readable-stream-2.2.1.tgz"
+      "version": "2.2.10",
+      "from": "git://github.com/meteor/readable-stream.git",
+      "resolved": "git://github.com/meteor/readable-stream.git#2e9112d7d31a2af6e0682db0e18679b1e5fd4694"
     },
     "rimraf": {
       "version": "2.6.1",
@@ -322,6 +317,11 @@
       "from": "ripemd160@>=1.0.0 <2.0.0",
       "resolved": "https://registry.npmjs.org/ripemd160/-/ripemd160-1.0.1.tgz"
     },
+    "safe-buffer": {
+      "version": "5.0.1",
+      "from": "safe-buffer@>=5.0.1 <6.0.0",
+      "resolved": "https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.0.1.tgz"
+    },
     "sha.js": {
       "version": "2.4.8",
       "from": "sha.js@>=2.3.6 <3.0.0",
@@ -333,9 +333,9 @@
       "resolved": "https://registry.npmjs.org/stream-browserify/-/stream-browserify-2.0.1.tgz"
     },
     "string_decoder": {
-      "version": "0.10.31",
-      "from": "string_decoder@0.10.31",
-      "resolved": "https://registry.npmjs.org/string_decoder/-/string_decoder-0.10.31.tgz"
+      "version": "1.0.1",
+      "from": "string_decoder@1.0.1",
+      "resolved": "https://registry.npmjs.org/string_decoder/-/string_decoder-1.0.1.tgz"
     },
     "timers-browserify": {
       "version": "1.4.2",
