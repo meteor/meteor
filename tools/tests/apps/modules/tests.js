@@ -266,6 +266,11 @@ describe("native node_modules", () => {
     require("vm");
     require("zlib");
   });
+
+  Meteor.isClient &&
+  it('should return Module from require("module")', () => {
+    assert.ok(module instanceof require("module"));
+  });
 });
 
 describe("local node_modules", () => {
