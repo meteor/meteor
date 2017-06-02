@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'Define and run db migrations.',
-  version: '1.0.1',
+  version: '1.0.2',
   name: 'percolate:migrations',
   git: 'https://github.com/percolatestudio/meteor-migrations.git',
 });
@@ -14,6 +14,7 @@ Package.on_use(function(api) {
 });
 
 Package.on_test(function(api) {
+  api.use('ecmascript');
   api.use(['percolate:migrations', 'tinytest']);
   api.addFiles('migrations_tests.js', ['server']);
 });
