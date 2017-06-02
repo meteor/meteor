@@ -3,7 +3,12 @@ Tinytest.add('Migrates up once and only once.', function(test) {
   Migrations._reset();
 
   // first one
-  Migrations.add({up: function () {run.push('u1');}, version: 1});
+  Migrations.add({
+    up: function() {
+      run.push('u1');
+    },
+    version: 1,
+  });
 
   // migrates once
   Migrations.migrateTo('latest');
@@ -22,9 +27,13 @@ Tinytest.add('Migrates up once and back down.', function(test) {
 
   // first one
   Migrations.add({
-    up: function () {run.push('u1');},
-    down: function () {run.push('d1');},
-    version: 1
+    up: function() {
+      run.push('u1');
+    },
+    down: function() {
+      run.push('d1');
+    },
+    version: 1,
   });
 
   Migrations.migrateTo('latest');
@@ -42,7 +51,12 @@ Tinytest.add('Migrates up several times.', function(test) {
   Migrations._reset();
 
   // first one
-  Migrations.add({up: function () {run.push('u1');}, version: 1});
+  Migrations.add({
+    up: function() {
+      run.push('u1');
+    },
+    version: 1,
+  });
 
   // migrates once
   Migrations.migrateTo('latest');
@@ -50,8 +64,18 @@ Tinytest.add('Migrates up several times.', function(test) {
   test.equal(Migrations.getVersion(), 1);
 
   // add two more, out of order
-  Migrations.add({up: function () {run.push('u4');}, version: 4});
-  Migrations.add({up: function () {run.push('u3');}, version: 3});
+  Migrations.add({
+    up: function() {
+      run.push('u4');
+    },
+    version: 4,
+  });
+  Migrations.add({
+    up: function() {
+      run.push('u3');
+    },
+    version: 3,
+  });
 
   // should run the next two nicely in order
   Migrations.migrateTo('latest');
@@ -64,13 +88,27 @@ Tinytest.add('Tests migrating down', function(test) {
   Migrations._reset();
 
   // add the migrations
-  Migrations.add({up: function () {run.push('u1');}, version: 1});
-  Migrations.add({up: function () {run.push('u2');}, version: 2});
   Migrations.add({
-    up: function () {run.push('u3');},
-    down: function () {run.push('d3');},
+    up: function() {
+      run.push('u1');
+    },
+    version: 1,
+  });
+  Migrations.add({
+    up: function() {
+      run.push('u2');
+    },
+    version: 2,
+  });
+  Migrations.add({
+    up: function() {
+      run.push('u3');
+    },
+    down: function() {
+      run.push('d3');
+    },
     version: 3,
-    name: 'Down Migration' //give it a name, just for shits
+    name: 'Down Migration', //give it a name, just for shits
   });
 
   // migrates up
@@ -98,9 +136,13 @@ Tinytest.add('Tests migrating down to version 0', function(test) {
   test.equal(Migrations.getVersion(), 0);
 
   Migrations.add({
-    up: function () {run.push('u1');},
-    down: function () {run.push('d1');},
-    version: 1
+    up: function() {
+      run.push('u1');
+    },
+    down: function() {
+      run.push('d1');
+    },
+    version: 1,
   });
 
   // migrates up
@@ -119,13 +161,16 @@ Tinytest.add('Checks that locking works correctly', function(test) {
   Migrations._reset();
 
   // add the migrations
-  Migrations.add({version: 1, up: function () {
-    run.push('u1');
+  Migrations.add({
+    version: 1,
+    up: function() {
+      run.push('u1');
 
-    // attempts a migration from within the migration, this should have no
-    // effect due to locking
-    Migrations.migrateTo('latest');
-  }});
+      // attempts a migration from within the migration, this should have no
+      // effect due to locking
+      Migrations.migrateTo('latest');
+    },
+  });
 
   // migrates up, should only migrate once
   Migrations.migrateTo('latest');
@@ -146,9 +191,12 @@ Tinytest.add('Checks that rerun works correctly', function(test) {
   Migrations._reset();
 
   // add the migrations
-  Migrations.add({version: 1, up: function () {
-    run.push('u1');
-  }});
+  Migrations.add({
+    version: 1,
+    up: function() {
+      run.push('u1');
+    },
+  });
 
   Migrations.migrateTo('latest');
   test.equal(run, ['u1']);
@@ -165,46 +213,60 @@ Tinytest.add('Checks that rerun works correctly', function(test) {
   test.equal(Migrations.getVersion(), 1);
 });
 
-Tinytest.add('Checks that rerun works even if there are missing versions', function(test) {
-  var run = []; //keeps track of migrations in here
-  Migrations._reset();
+Tinytest.add(
+  'Checks that rerun works even if there are missing versions',
+  function(test) {
+    var run = []; //keeps track of migrations in here
+    Migrations._reset();
 
-  // add the migration with a missing step
-  Migrations.add({version: 3, up: function () {
-    run.push('u1');
-  }});
+    // add the migration with a missing step
+    Migrations.add({
+      version: 3,
+      up: function() {
+        run.push('u1');
+      },
+    });
 
-  Migrations.migrateTo('latest');
-  test.equal(run, ['u1']);
-  test.equal(Migrations.getVersion(), 3);
+    Migrations.migrateTo('latest');
+    test.equal(run, ['u1']);
+    test.equal(Migrations.getVersion(), 3);
 
-  // shouldn't migrate
-  Migrations.migrateTo(3);
-  test.equal(run, ['u1']);
-  test.equal(Migrations.getVersion(), 3);
+    // shouldn't migrate
+    Migrations.migrateTo(3);
+    test.equal(run, ['u1']);
+    test.equal(Migrations.getVersion(), 3);
 
-  // should migrate again
-  Migrations.migrateTo('3,rerun');
-  test.equal(run, ['u1', 'u1']);
-  test.equal(Migrations.getVersion(), 3);
-});
+    // should migrate again
+    Migrations.migrateTo('3,rerun');
+    test.equal(run, ['u1', 'u1']);
+    test.equal(Migrations.getVersion(), 3);
+  },
+);
 
-Tinytest.add('Migration callbacks include the migration as an argument', function(test) {
-  var contextArg;
-  Migrations._reset();
+Tinytest.add(
+  'Migration callbacks include the migration as an argument',
+  function(test) {
+    var contextArg;
+    Migrations._reset();
 
-  // add the migrations
-  var migration = {
-    version: 1,
-    up: function(m) { contextArg = m; }
-  };
-  Migrations.add(migration);
+    // add the migrations
+    var migration = {
+      version: 1,
+      up: function(m) {
+        contextArg = m;
+      },
+    };
+    Migrations.add(migration);
 
-  Migrations.migrateTo(1);
-  test.equal(contextArg === migration, true);
-});
+    Migrations.migrateTo(1);
+    test.equal(contextArg === migration, true);
+  },
+);
 
-Tinytest.addAsync('Migrations can log to injected logger', function(test, done) {
+Tinytest.addAsync('Migrations can log to injected logger', function(
+  test,
+  done,
+) {
   Migrations._reset();
 
   // Ensure this logging code only runs once. More than once and we get
@@ -219,34 +281,37 @@ Tinytest.addAsync('Migrations can log to injected logger', function(test, done) 
     }
   };
 
-  Migrations.add({ version: 1, up: function() { } });
+  Migrations.add({ version: 1, up: function() {} });
   Migrations.migrateTo(1);
 
   Migrations.options.logger = null;
 });
 
-Tinytest.addAsync('Migrations should pass correct arguments to logger', function(test, done) {
-  Migrations._reset();
+Tinytest.addAsync(
+  'Migrations should pass correct arguments to logger',
+  function(test, done) {
+    Migrations._reset();
 
-  // Ensure this logging code only runs once. More than once and we get
-  // Tinytest errors that the test "returned multiple times", or "Trace: event
-  // after complete!". Give me a ping, Vasili. One ping only, please.
-  var calledDone = false;
-  var logger = function(opts) {
-    if (!calledDone) {
-      calledDone = true;
-      test.include(opts, 'level');
-      test.include(opts, 'message');
-      test.include(opts, 'tag');
-      test.equal(opts.tag, 'Migrations');
-      done();
-    }
-  };
+    // Ensure this logging code only runs once. More than once and we get
+    // Tinytest errors that the test "returned multiple times", or "Trace: event
+    // after complete!". Give me a ping, Vasili. One ping only, please.
+    var calledDone = false;
+    var logger = function(opts) {
+      if (!calledDone) {
+        calledDone = true;
+        test.include(opts, 'level');
+        test.include(opts, 'message');
+        test.include(opts, 'tag');
+        test.equal(opts.tag, 'Migrations');
+        done();
+      }
+    };
 
-  Migrations.options.logger = logger;
+    Migrations.options.logger = logger;
 
-  Migrations.add({ version: 1, up: function() { } });
-  Migrations.migrateTo(1);
+    Migrations.add({ version: 1, up: function() {} });
+    Migrations.migrateTo(1);
 
-  Migrations.options.logger = null;
-});
+    Migrations.options.logger = null;
+  },
+);
