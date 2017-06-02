@@ -46,7 +46,10 @@ Meteor.methods({
 
 function read(pathParts, platform) {
   const { dynamicRoot } = dynamicImportInfo[platform];
-  const absPath = pathNormalize(pathJoin(dynamicRoot, ...pathParts));
+  const absPath = pathNormalize(pathJoin(
+    dynamicRoot,
+    pathJoin(...pathParts).replace(/:/g, "_")
+  ));
 
   if (! absPath.startsWith(dynamicRoot)) {
     throw new Meteor.Error("bad dynamic module path");
