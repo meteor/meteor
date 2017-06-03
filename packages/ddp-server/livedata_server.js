@@ -1718,8 +1718,18 @@ DDPServer._calculateVersion = calculateVersion;
 // "blind" exceptions other than those that were deliberately thrown to signal
 // errors to the client
 var wrapInternalException = function (exception, context) {
-  if (!exception || exception instanceof Meteor.Error)
-    return exception;
+  if (!exception) return exception;
+
+  // To allow packages to throw errors intended for the client but not have to
+  // depend on the Meteor.Error class, `isClientSafe` can be set to true on any
+  // error before it is thrown.
+  if (exception.isClientSafe) {
+    const originalMessage = exception.message;
+    exception = new Meteor.Error(exception.error, exception.reason, exception.details);
+    exception.message = originalMessage;
+  }
+
+  if (exception instanceof Meteor.Error) return exception;
 
   // tests can set the 'expected' flag on an exception so it won't go to the
   // server log
