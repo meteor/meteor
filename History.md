@@ -1,5 +1,9 @@
 ## v.NEXT
 
+* Subscriptions onReady now fire on re-subscription with the same arguments.
+  [PR #8754](https://github.com/meteor/meteor/pull/8754)
+  [Issue #1173](https://github.com/meteor/meteor/issues/1173)
+
 * `reactive-dict` now supports setting initial data when defining a named
   `ReactiveDict`. No longer run migration logic when used on the server,
   this is to prevent duplicate name error on reloads. Initial data is now
