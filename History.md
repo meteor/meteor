@@ -7,6 +7,10 @@
   present when `observe` or `observeChanges` was called are now available
   inside the callbacks. [PR #8734](https://github.com/meteor/meteor/pull/8734)
 
+* Subscriptions onReady now fire on re-subscription with the same arguments.
+  [PR #8754](https://github.com/meteor/meteor/pull/8754)
+  [Issue #1173](https://github.com/meteor/meteor/issues/1173)
+
 * `reactive-dict` now supports setting initial data when defining a named
   `ReactiveDict`. No longer run migration logic when used on the server,
   this is to prevent duplicate name error on reloads. Initial data is now
