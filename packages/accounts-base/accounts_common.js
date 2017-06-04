@@ -20,7 +20,7 @@ export class AccountsCommon {
 
     // There is an allow call in accounts_server.js that restricts writes to
     // this collection.
-    this.users = new Mongo.Collection("users", {
+    this.users = new Mongo.Collection(options.userCollectionName || "users", {
       _preventAutopublish: true,
       connection: this.connection
     });
@@ -89,6 +89,9 @@ export class AccountsCommon {
   // - ambiguousErrorMessages {Boolean}
   //     Return ambiguous error messages from login failures to prevent
   //     user enumeration.
+  // - userCollectionName {Boolean}
+  //     Sets the name of the collection where users are stored.
+  //     Defaults to "users";
 
   /**
    * @summary Set global accounts options.
@@ -102,6 +105,7 @@ export class AccountsCommon {
    * @param {Number} options.passwordResetTokenExpirationInDays The number of days from when a link to reset password is sent until token expires and user can't reset password with the link anymore. Defaults to 3.
    * @param {Number} options.passwordEnrollTokenExpirationInDays The number of days from when a link to set inital password is sent until token expires and user can't set password with the link anymore. Defaults to 30.
    * @param {Boolean} options.ambiguousErrorMessages Return ambiguous error messages from login failures to prevent user enumeration. Defaults to false.
+   * @param {String} options.userCollectionName Sets the name of the collection where users are stored. Defaults to "users";
    */
   config(options) {
     var self = this;
