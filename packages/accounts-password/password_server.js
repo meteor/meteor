@@ -644,24 +644,34 @@ Accounts.generateVerificationTokenRecord = function (userId, email, extraTokenDa
  * @summary Saves the reset token record into database in user's document.
  * @param {Object} user User for which to save the reset token record for.
  * @param {Object} tokenRecord The reset token record to be saved.
+ * @returns {Object} User object with added token record.
  * @importFromPackage accounts-base
  */
 Accounts.saveResetTokenRecord = function (user, tokenRecord) {
+  // clone so that we do not change the input
+  user = EJSON.clone(user);
+
   Meteor.users.update({_id: user._id}, {$set: {
     'services.password.reset': tokenRecord
   }});
 
   // before passing to template, update user object with new token
   Meteor._ensure(user, 'services', 'password').reset = tokenRecord;
+
+  return user;
 };
 
 /**
  * @summary Saves the e-mail verification token record into database in user's document.
  * @param {Object} user User for which to save the e-mail verification token record for.
  * @param {Object} tokenRecord The e-mail verification token record to be saved.
+ * @returns {Object} User object with added token record.
  * @importFromPackage accounts-base
  */
 Accounts.saveVerificationTokenRecord = function (user, tokenRecord) {
+  // clone so that we do not change the input
+  user = EJSON.clone(user);
+
   Meteor.users.update({_id: user._id}, {$push: {
     'services.email.verificationTokens': tokenRecord
   }});
@@ -672,6 +682,8 @@ Accounts.saveVerificationTokenRecord = function (user, tokenRecord) {
     user.services.email.verificationTokens = [];
   }
   user.services.email.verificationTokens.push(tokenRecord);
+
+  return user;
 };
 
 /**
@@ -717,16 +729,18 @@ Accounts.generateOptionsForEmail = function (email, user, url, reason) {
  * @locus Server
  * @param {String} userId The id of the user to send email to.
  * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.
+ * @param {Object} [extraTokenData] Optional additional data to be added into the token record.
  * @returns {Object} Object with {email, user, tokenRecord, url, options} values.
  * @importFromPackage accounts-base
  */
 Accounts.sendResetPasswordEmail = function (userId, email, extraTokenData) {
-  const {email: realEmail, user, tokenRecord} = Accounts.generateResetTokenRecord(userId, email, 'resetPassword', extraTokenData);
-  Accounts.saveResetTokenRecord(user, tokenRecord);
+  const {email: realEmail, user, tokenRecord} =
+    Accounts.generateResetTokenRecord(userId, email, 'resetPassword', extraTokenData);
+  const userWithTokenRecord = Accounts.saveResetTokenRecord(user, tokenRecord);
   const url = Accounts.urls.resetPassword(tokenRecord.token);
-  const options = Accounts.generateOptionsForEmail(realEmail, user, url, 'resetPassword');
+  const options = Accounts.generateOptionsForEmail(realEmail, userWithTokenRecord, url, 'resetPassword');
   Email.send(options);
-  return {email: realEmail, user, tokenRecord, url, options};
+  return {email: realEmail, user: userWithTokenRecord, tokenRecord, url, options};
 };
 
 // send the user an email informing them that their account was created, with
@@ -742,16 +756,18 @@ Accounts.sendResetPasswordEmail = function (userId, email, extraTokenData) {
  * @locus Server
  * @param {String} userId The id of the user to send email to.
  * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.
+ * @param {Object} [extraTokenData] Optional additional data to be added into the token record.
  * @returns {Object} Object with {email, user, tokenRecord, url, options} values.
  * @importFromPackage accounts-base
  */
 Accounts.sendEnrollmentEmail = function (userId, email, extraTokenData) {
-  const {email: realEmail, user, tokenRecord} = Accounts.generateResetTokenRecord(userId, email, 'enrollAccount', extraTokenData);
-  Accounts.saveResetTokenRecord(user, tokenRecord);
+  const {email: realEmail, user, tokenRecord} =
+    Accounts.generateResetTokenRecord(userId, email, 'enrollAccount', extraTokenData);
+  const userWithTokenRecord = Accounts.saveResetTokenRecord(user, tokenRecord);
   const url = Accounts.urls.enrollAccount(tokenRecord.token);
-  const options = Accounts.generateOptionsForEmail(realEmail, user, url, 'enrollAccount');
+  const options = Accounts.generateOptionsForEmail(realEmail, userWithTokenRecord, url, 'enrollAccount');
   Email.send(options);
-  return {email: realEmail, user, tokenRecord, url, options};
+  return {email: realEmail, user: userWithTokenRecord, tokenRecord, url, options};
 };
 
 
@@ -848,6 +864,7 @@ Meteor.methods({resetPassword: function (token, newPassword) {
  * @locus Server
  * @param {String} userId The id of the user to send email to.
  * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first unverified email in the list.
+ * @param {Object} [extraTokenData] Optional additional data to be added into the token record.
  * @returns {Object} Object with {email, user, tokenRecord, url, options} values.
  * @importFromPackage accounts-base
  */
@@ -856,12 +873,13 @@ Accounts.sendVerificationEmail = function (userId, email, extraTokenData) {
   // account if they own said address but weren't those who created
   // this account.
 
-  const {email: realEmail, user, tokenRecord} = Accounts.generateVerificationTokenRecord(userId, email, extraTokenData);
-  Accounts.saveVerificationTokenRecord(user, tokenRecord);
+  const {email: realEmail, user, tokenRecord} =
+    Accounts.generateVerificationTokenRecord(userId, email, extraTokenData);
+  const userWithTokenRecord = Accounts.saveVerificationTokenRecord(user, tokenRecord);
   const url = Accounts.urls.verifyEmail(tokenRecord.token);
-  const options = Accounts.generateOptionsForEmail(realEmail, user, url, 'verifyEmail');
+  const options = Accounts.generateOptionsForEmail(realEmail, userWithTokenRecord, url, 'verifyEmail');
   Email.send(options);
-  return {email: realEmail, user, tokenRecord, url, options};
+  return {email: realEmail, user: userWithTokenRecord, tokenRecord, url, options};
 };
 
 // Take token from sendVerificationEmail, mark the email as verified,
