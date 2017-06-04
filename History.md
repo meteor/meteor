@@ -1,5 +1,10 @@
 ## v.NEXT
 
+* `observe`/`observeChanges` callbacks are now bound.
+  The same `EnvironmentVariable`s that was present when
+  `observe`/`observeChanges` was called is now available inside the callbacks.
+  [PR #8734](https://github.com/meteor/meteor/pull/8734)
+
 * `reactive-dict` now supports setting initial data when defining a named
   `ReactiveDict`. No longer run migration logic when used on the server,
   this is to prevent duplicate name error on reloads. Initial data is now
