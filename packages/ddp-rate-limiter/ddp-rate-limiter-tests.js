@@ -148,7 +148,8 @@ testAsyncMulti("ddp rate limiter - we can return with type 'subscription'", [
       }));
   },
   function (test, expect) {
-    Meteor.subscribe('testSubscription');
+    var self = this;
+    self.handle = Meteor.subscribe('testSubscription');
     Meteor.call('getLastRateLimitEvent', expect(function(error, result){
       test.equal(error, undefined);
       test.equal(result.type, "subscription");
@@ -159,6 +160,7 @@ testAsyncMulti("ddp rate limiter - we can return with type 'subscription'", [
   function (test, expect) {
     var self = this;
     // Cleanup
+    self.handle.stop();
     Meteor.call('removeRuleFromDDPRateLimiter', self.ruleId,
       expect(function(error, result) {
         test.equal(result, true);
@@ -176,8 +178,9 @@ testAsyncMulti("ddp rate limiter - rate limits to subscriptions", [
     );
   },
   function (test, expect) {
-    this.doSub = function (cb) {
-      Meteor.subscribe('testSubscription', {
+    var self = this;
+    self.doSub = function (cb) {
+      self.handle = Meteor.subscribe('testSubscription', {
         onReady: function () {
           cb(null, true);
         },
@@ -217,6 +220,11 @@ testAsyncMulti("ddp rate limiter - rate limits to subscriptions", [
       expectedResult: true,
       expectedIntervalTimeInMs: false
     });
+  },
+  function (test, expect) {
+    var self = this;
+    // Cleanup
+    self.handle.stop();
   }
 ]);
 

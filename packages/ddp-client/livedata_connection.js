@@ -566,9 +566,26 @@ _.extend(Connection.prototype, {
     // We only look for one such sub; if there are N apparently-identical subs
     // being invalidated, we will require N matching subscribe calls to keep
     // them all active.
-    var existing = _.find(self._subscriptions, function (sub) {
-      return sub.inactive && sub.name === name &&
-        EJSON.equals(sub.params, params);
+    var existing;
+
+    // Is there an existing sub with the same name and param already
+    // ready? If so, we can instantly mark new subscription as ready.
+    var ready = false;
+
+    _.some(self._subscriptions, function (sub) {
+      if (sub.name === name && EJSON.equals(sub.params, params)) {
+        if (sub.ready) {
+          ready = true;
+        }
+
+        if (sub.inactive) {
+          existing = sub;
+        }
+      }
+
+      if (existing && ready) {
+        return true;
+      }
     });
 
     var id;
@@ -600,12 +617,12 @@ _.extend(Connection.prototype, {
     } else {
       // New sub! Generate an id, save it locally, and send message.
       id = Random.id();
-      self._subscriptions[id] = {
+      var subRecord = self._subscriptions[id] = {
         id: id,
         name: name,
         params: EJSON.clone(params),
         inactive: false,
-        ready: false,
+        ready: ready,
         readyDeps: new Tracker.Dependency,
         readyCallback: callbacks.onReady,
         // XXX COMPAT WITH 1.0.3.1 #errorCallback
@@ -626,6 +643,11 @@ _.extend(Connection.prototype, {
         }
       };
       self._send({msg: 'sub', id: id, name: name, params: params});
+
+      if (ready) {
+        subRecord.readyCallback && subRecord.readyCallback();
+        subRecord.readyDeps.changed();
+      }
     }
 
     // return a handle to the application.
