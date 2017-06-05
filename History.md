@@ -13,6 +13,34 @@
   this is to prevent duplicate name error on reloads. Initial data is now
   properly serialized.
 
+* Add `DDP._CurrentPublicationInvocation` and `DDP._CurrentMethodInvocation`.
+  `DDP._CurrentInvocation` remains for backwards-compatibility. This change
+  allows method calls from publications to inherit the `connection` from the
+  the publication which called the method.
+  [PR #8629](https://github.com/meteor/meteor/pull/8629)
+
+  > Note: If you're calling methods from publications that are using `this.connection`
+  > to see if the method was called from server code or not. These checks will now
+  > be more restrictive because `this.connection` will now be available when a
+  > method is called from a publication.
+
+* Fix issue with publications temporarily having `DDP._CurrentInvocation` set on
+  re-run after a user logged in.  This is now provided through
+  `DDP._CurrentPublicationInvocation` at all times inside a publication,
+  as described above.
+  [PR #8031](https://github.com/meteor/meteor/pull/8031)
+  [PR #8629](https://github.com/meteor/meteor/pull/8629)
+
+* `Meteor.userId()` and `Meteor.user()` can now be used in both method calls and
+  publications.
+  [PR #8629](https://github.com/meteor/meteor/pull/8629)
+
+* `this.onStop` callbacks in publications are now run with the publication's
+  context and with its `EnvironmentVariable`s bound.
+  [PR #8629](https://github.com/meteor/meteor/pull/8629)
+
+* The `reify` npm package has been upgraded to version 0.11.22.
+
 ## v1.5, 2017-05-30
 
 * The `meteor-base` package implies a new `dynamic-import` package, which

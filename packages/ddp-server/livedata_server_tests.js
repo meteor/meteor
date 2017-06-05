@@ -84,11 +84,15 @@ testAsyncMulti(
 
 Meteor.methods({
   livedata_server_test_inner: function () {
-    return this.connection.id;
+    return this.connection && this.connection.id;
   },
 
   livedata_server_test_outer: function () {
     return Meteor.call('livedata_server_test_inner');
+  },
+
+  livedata_server_test_setuserid: function (userId) {
+    this.setUserId(userId);
   }
 });
 
@@ -159,6 +163,41 @@ Meteor.publish("livedata_server_test_sub", function (connectionId) {
   this.stop();
 });
 
+Meteor.publish("livedata_server_test_sub_method", function (connectionId) {
+  var callback = onSubscription[connectionId];
+  if (callback) {
+    var id = Meteor.call('livedata_server_test_inner');
+    callback(id);
+  }
+  this.stop();
+});
+
+Meteor.publish("livedata_server_test_sub_context", function (connectionId, userId) {
+  var callback = onSubscription[connectionId];
+  var methodInvocation = DDP._CurrentMethodInvocation.get();
+  var publicationInvocation = DDP._CurrentPublicationInvocation.get();
+
+  // Check the publish function's environment variables and context.
+  if (callback) {
+    callback.call(this, methodInvocation, publicationInvocation);
+  }
+
+  // Check that onStop callback is have the same context as the publish function
+  // and that it runs with the same environment variables as this publish function.
+  this.onStop(function () {
+    var onStopMethodInvocation = DDP._CurrentMethodInvocation.get();
+    var onStopPublicationInvocation = DDP._CurrentPublicationInvocation.get();
+    callback.call(this, onStopMethodInvocation, onStopPublicationInvocation, true);
+  });
+
+  if (this.userId) {
+    this.stop();
+  } else {
+    this.ready();
+    Meteor.call('livedata_server_test_setuserid', userId);
+  }
+});
+
 
 Tinytest.addAsync(
   "livedata server - connection in publish function",
@@ -173,6 +212,48 @@ Tinytest.addAsync(
           onComplete();
         };
         clientConn.subscribe("livedata_server_test_sub", serverConn.id);
+      }
+    );
+  }
+);
+
+Tinytest.addAsync(
+  "livedata server - connection in method called from publish function",
+  function (test, onComplete) {
+    makeTestConnection(
+      test,
+      function (clientConn, serverConn) {
+        onSubscription[serverConn.id] = function (id) {
+          delete onSubscription[serverConn.id];
+          test.equal(id, serverConn.id);
+          clientConn.disconnect();
+          onComplete();
+        };
+        clientConn.subscribe("livedata_server_test_sub_method", serverConn.id);
+      }
+    );
+  }
+);
+
+Tinytest.addAsync(
+  "livedata server - verify context in publish function",
+  function (test, onComplete) {
+    makeTestConnection(
+      test,
+      function (clientConn, serverConn) {
+        var userId = 'someUserId';
+        onSubscription[serverConn.id] = function (methodInvocation, publicationInvocation, fromOnStop) {
+          // DDP._CurrentMethodInvocation should be undefined in a publish function
+          test.isUndefined(methodInvocation, 'Should have been undefined');
+          // DDP._CurrentPublicationInvocation should be set in a publish function
+          test.isNotUndefined(publicationInvocation, 'Should have been defined');
+          if (this.userId === userId && fromOnStop) {
+            delete onSubscription[serverConn.id];
+            clientConn.disconnect();
+            onComplete();
+          }
+        }
+        clientConn.subscribe("livedata_server_test_sub_context", serverConn.id, userId);
       }
     );
   }
@@ -231,9 +312,9 @@ Tinytest.addAsync(
 
 Meteor.methods({
   testResolvedPromise(arg) {
-    const invocation1 = DDP._CurrentInvocation.get();
+    const invocation1 = DDP._CurrentMethodInvocation.get();
     return Promise.resolve(arg).then(result => {
-      const invocation2 = DDP._CurrentInvocation.get();
+      const invocation2 = DDP._CurrentMethodInvocation.get();
       // This equality holds because Promise callbacks are bound to the
       // dynamic environment where .then was called.
       if (invocation1 !== invocation2) {

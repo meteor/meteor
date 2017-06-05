@@ -213,32 +213,18 @@ describe("native node_modules", () => {
   });
 
   it("can be implemented by wrapper npm packages", () => {
-    if (! global.Buffer) {
-      global.Buffer = require("buffer").Buffer;
-    }
-
     const Stream = require("stream");
     assert.strictEqual(typeof Stream, "function");
     assert.strictEqual(typeof Stream.Readable, "function");
   });
 
   it("can all be imported", () => {
-    if (! global.Buffer) {
-      global.Buffer = require("buffer").Buffer;
-    }
-
-    require("_stream_duplex");
-    require("_stream_passthrough");
-    require("_stream_readable");
-    require("_stream_transform");
-    require("_stream_writable");
     require("assert");
     require("buffer");
     require("child_process");
     require("cluster");
     require("console");
     require("constants");
-    require("crypto");
     require("dgram");
     require("dns");
     require("domain");
@@ -256,6 +242,11 @@ describe("native node_modules", () => {
     require("readline");
     require("repl");
     require("stream");
+    require("_stream_duplex");
+    require("_stream_passthrough");
+    require("_stream_readable");
+    require("_stream_transform");
+    require("_stream_writable");
     require("string_decoder");
     require("sys");
     require("timers");
@@ -265,6 +256,16 @@ describe("native node_modules", () => {
     require("util");
     require("vm");
     require("zlib");
+
+    // The crypto package automatically polyfills global.Buffer on the
+    // client, so save it for last to ensure that none of the packages
+    // above depend on global.Buffer.
+    require("crypto");
+  });
+
+  Meteor.isClient &&
+  it('should return Module from require("module")', () => {
+    assert.ok(module instanceof require("module"));
   });
 });
 
