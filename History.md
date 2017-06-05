@@ -2,6 +2,12 @@
 
 * Node has been upgraded to version 6.10.3.
 
+* The `fibers` npm package has been upgraded to version 2.0.0.
+
+* The `reify` npm package has been upgraded to version 0.11.22.
+
+* The `pathwatcher` npm package has been upgraded to version 7.0.0.
+
 * `reactive-dict` now supports setting initial data when defining a named
   `ReactiveDict`. No longer run migration logic when used on the server,
   this is to prevent duplicate name error on reloads. Initial data is now

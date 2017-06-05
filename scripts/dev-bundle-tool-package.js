@@ -16,8 +16,8 @@ var packageJson = {
     "node-pre-gyp": "0.6.34",
     "meteor-babel": "0.21.4",
     "meteor-promise": "0.8.4",
-    reify: "0.11.21",
-    fibers: "1.0.15",
+    reify: "0.11.22",
+    fibers: "2.0.0",
     promise: "7.1.1",
     // So that Babel 6 can emit require("babel-runtime/helpers/...") calls.
     "babel-runtime": "6.9.2",
@@ -50,7 +50,7 @@ var packageJson = {
     // 2.4.0 (more or less, the package.json change isn't committed) plus our PR
     // https://github.com/williamwicks/node-eachline/pull/4
     eachline: "https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da",
-    pathwatcher: "6.7.1",
+    pathwatcher: "7.0.0",
     optimism: "0.3.3",
     'lru-cache': '4.0.1',
     'cordova-lib': "6.4.0",
