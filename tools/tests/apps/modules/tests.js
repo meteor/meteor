@@ -237,7 +237,6 @@ describe("native node_modules", () => {
     require("os");
     require("path");
     require("process");
-    require("punycode");
     require("querystring");
     require("readline");
     require("repl");

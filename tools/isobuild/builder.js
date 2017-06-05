@@ -66,8 +66,6 @@ export default class Builder {
     this.writtenHashes = {};
     this.previousWrittenHashes = {};
 
-    this._realpathCache = Object.create(null);
-
     // foo/bar => foo/.build1234.bar
     // Should we include a random number? The advantage is that multiple
     // builds can run in parallel. The disadvantage is that stale build
@@ -479,10 +477,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           }
 
           try {
-            var real = files.realpath(
-              thisAbsFrom,
-              this._realpathCache
-            );
+            var real = files.realpath(thisAbsFrom);
           } catch (e) {
             if (e.code !== "ENOENT" &&
                 e.code !== "ELOOP") {
@@ -591,7 +586,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       });
     };
 
-    walk(files.realpath(from, this._realpathCache), to);
+    walk(files.realpath(from), to);
   }
 
   // Returns a new Builder-compatible object that works just like a
