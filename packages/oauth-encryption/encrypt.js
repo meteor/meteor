@@ -35,7 +35,7 @@ OAuthEncryption.loadKey = function (key) {
   if (! OAuthEncryption._isBase64(key))
     throw new Error("The OAuth encryption key must be encoded in base64");
 
-  var buf = new Buffer(key, "base64");
+  var buf = Buffer.from(key, "base64");
 
   if (buf.length !== 16)
     throw new Error("The OAuth encryption AES-128-GCM key must be 16 bytes in length");
@@ -63,14 +63,14 @@ OAuthEncryption.seal = function (data, userId) {
     throw new Error("No OAuth encryption key loaded");
   }
 
-  var plaintext = new Buffer(EJSON.stringify({
+  var plaintext = Buffer.from(EJSON.stringify({
     data: data,
     userId: userId
   }));
 
   var iv = crypto.randomBytes(12);
   var cipher = crypto.createCipheriv("aes-128-gcm", gcmKey, iv);
-  cipher.setAAD(new Buffer([]));
+  cipher.setAAD(Buffer.from([]));
   var chunks = [cipher.update(plaintext)];
   chunks.push(cipher.final());
   var encrypted = Buffer.concat(chunks);
@@ -105,13 +105,13 @@ OAuthEncryption.open = function (ciphertext, userId) {
     var decipher = crypto.createDecipheriv(
       "aes-128-gcm",
       gcmKey,
-      new Buffer(ciphertext.iv, "base64")
+      Buffer.from(ciphertext.iv, "base64")
     );
 
-    decipher.setAAD(new Buffer([]));
-    decipher.setAuthTag(new Buffer(ciphertext.authTag, "base64"));
+    decipher.setAAD(Buffer.from([]));
+    decipher.setAuthTag(Buffer.from(ciphertext.authTag, "base64"));
     var chunks = [decipher.update(
-      new Buffer(ciphertext.ciphertext, "base64"))];
+      Buffer.from(ciphertext.ciphertext, "base64"))];
     chunks.push(decipher.final());
     var plaintext = Buffer.concat(chunks).toString("utf8");
 

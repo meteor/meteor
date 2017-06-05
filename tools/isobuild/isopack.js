@@ -1260,7 +1260,7 @@ _.extend(Isopack.prototype, {
       // directory.)
       // XXX Remove this once we can.
       builder.write("package.js", {
-        data: new Buffer(
+        data: Buffer.from(
           ("// This file is included for compatibility with the Meteor " +
            "0.6.4 package downloader.\n"),
           "utf8")
@@ -1344,7 +1344,7 @@ _.extend(Isopack.prototype, {
         _.each(unibuild.resources, function (resource) {
           if (_.contains(["head", "body"], resource.type)) {
             if (concat[resource.type].length) {
-              concat[resource.type].push(new Buffer("\n", "utf8"));
+              concat[resource.type].push(Buffer.from("\n", "utf8"));
               offset[resource.type]++;
             }
             if (! (resource.data instanceof Buffer)) {
@@ -1585,7 +1585,7 @@ _.extend(Isopack.prototype, {
                             results.files.length);
               }
               prelinkFile = results.files[0];
-              prelinkData = new Buffer(prelinkFile.source, 'utf8');
+              prelinkData = Buffer.from(prelinkFile.source, 'utf8');
 
               _.each(results.assignedVariables, function (name) {
                 if (_.has(packageVariableNames, name)) {
@@ -1631,7 +1631,7 @@ _.extend(Isopack.prototype, {
 
               prelinkResource.sourceMap = builder.writeToGeneratedFilename(
                 files.pathJoin(legacyDir, prelinkFile.servePath + '.map'),
-                { data: new Buffer(prelinkFile.sourceMap, 'utf8') }
+                { data: Buffer.from(prelinkFile.sourceMap, 'utf8') }
               );
             }
             newResources.push(prelinkResource);
@@ -1773,17 +1773,17 @@ _.extend(Isopack.prototype, {
       var sourceMapUrlComment = "//# sourceMappingURL=" + files.pathBasename(path + ".map");
 
       builder.write(path, {
-        data: new Buffer(transpiled.code + "\n" + sourceMapUrlComment, 'utf8')
+        data: Buffer.from(transpiled.code + "\n" + sourceMapUrlComment, 'utf8')
       });
 
       builder.write(path + ".map", {
-        data: new Buffer(JSON.stringify(transpiled.map), 'utf8')
+        data: Buffer.from(JSON.stringify(transpiled.map), 'utf8')
       });
     });
 
     var gitSha = utils.runGitInCheckout('rev-parse', 'HEAD');
     builder.reserve('isopackets', {directory: true});
-    builder.write('.git_version.txt', {data: new Buffer(gitSha, 'utf8')});
+    builder.write('.git_version.txt', {data: Buffer.from(gitSha, 'utf8')});
 
     builder.copyDirectory({
       from: files.getCurrentToolsDir(),

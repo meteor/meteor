@@ -170,7 +170,7 @@ var writeSessionData = function (data) {
 
     try {
       // Write `data` to the file.
-      var buf = new Buffer(JSON.stringify(data, undefined, 2), 'utf8');
+      var buf = Buffer.from(JSON.stringify(data, undefined, 2), 'utf8');
       files.write(fd, buf, 0, buf.length, 0);
     } finally {
       files.close(fd);

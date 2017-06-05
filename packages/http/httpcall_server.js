@@ -55,7 +55,7 @@ var _call = function(method, url, options, callback) {
     if (options.auth.indexOf(':') < 0)
       throw new Error('auth option should be of the form "username:password"');
     headers['Authorization'] = "Basic "+
-      (new Buffer(options.auth, "ascii")).toString("base64");
+      Buffer.from(options.auth, "ascii").toString("base64");
   }
 
   if (paramsForBody) {

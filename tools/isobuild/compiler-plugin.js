@@ -645,7 +645,7 @@ class ResourceSlot {
       // when needed.
       resource.type = "js";
       resource.data =
-        new Buffer(cssToCommonJS(data, resource.hash), "utf8");
+        Buffer.from(cssToCommonJS(data, resource.hash), "utf8");
 
       self.jsOutputResources.push(resource);
 
@@ -657,7 +657,7 @@ class ResourceSlot {
       self.jsOutputResources.push({
         ...resource,
         type: "js",
-        data: new Buffer(
+        data: Buffer.from(
           "// These styles have already been applied to the document.\n",
           "utf8"),
         // If a compiler plugin calls addJavaScript with the same
@@ -668,7 +668,7 @@ class ResourceSlot {
       });
 
       resource.type = "css";
-      resource.data = new Buffer(data, 'utf8'),
+      resource.data = Buffer.from(data, 'utf8'),
 
       // XXX do we need to call convertSourceMapPaths here like we did
       //     in legacy handlers?
@@ -693,7 +693,7 @@ class ResourceSlot {
 
     const targetPath = options.path || sourcePath;
 
-    var data = new Buffer(
+    var data = Buffer.from(
       files.convertToStandardLineEndings(options.data), 'utf8');
 
     self.jsOutputResources.push({
@@ -723,7 +723,7 @@ class ResourceSlot {
 
     if (! (options.data instanceof Buffer)) {
       if (_.isString(options.data)) {
-        options.data = new Buffer(options.data);
+        options.data = Buffer.from(options.data);
       } else {
         throw new Error("'data' option to addAsset must be a Buffer or " +
                         "String: " + self.inputResource.path);
@@ -760,7 +760,7 @@ class ResourceSlot {
 
     self.outputResources.push({
       type: options.section,
-      data: new Buffer(files.convertToStandardLineEndings(options.data), 'utf8'),
+      data: Buffer.from(files.convertToStandardLineEndings(options.data), 'utf8'),
       lazy: self._isLazy(options),
     });
   }
@@ -774,7 +774,7 @@ class ResourceSlot {
       sourcePath: this.inputResource.path,
       targetPath: this.inputResource.path,
       servePath: this.inputResource.path,
-      data: new Buffer(
+      data: Buffer.from(
         "throw new Error(" + JSON.stringify(message) + ");\n",
         "utf8"),
       lazy: true,
@@ -988,7 +988,7 @@ export class PackageSourceBatch {
         return false;
       }
 
-      file.data = new Buffer(
+      file.data = Buffer.from(
         file.data.toString("utf8") + "\n" +
           meteorPackageInstalls.join(""),
         "utf8"
@@ -1331,7 +1331,7 @@ export class PackageSourceBatch {
     // version to the Buffer version.
     function bufferifyJSONReturnValue(resources) {
       resources.forEach((r) => {
-        r.data = new Buffer(r.data, 'utf8');
+        r.data = Buffer.from(r.data, 'utf8');
       });
     }
 

@@ -201,7 +201,7 @@ export default class ImportScanner {
 
       if (! (file.data instanceof Buffer) ||
           file.dataString !== dataString) {
-        file.data = new Buffer(file.dataString, "utf8");
+        file.data = Buffer.from(file.dataString, "utf8");
       }
 
       // Files that are not eagerly evaluated (lazy) will only be included
@@ -274,7 +274,7 @@ export default class ImportScanner {
       // import the target modules individually.
       sourceFile.dataString += "module.exports = require(" +
         JSON.stringify(relativeId) + ");\n";
-      sourceFile.data = new Buffer(sourceFile.dataString, "utf8");
+      sourceFile.data = Buffer.from(sourceFile.dataString, "utf8");
       sourceFile.hash = sha1(sourceFile.data);
       sourceFile.deps[relativeId] = {};
     }
@@ -332,7 +332,7 @@ export default class ImportScanner {
     });
 
     oldFile.dataString = combinedDataString;
-    oldFile.data = new Buffer(oldFile.dataString, "utf8");
+    oldFile.data = Buffer.from(oldFile.dataString, "utf8");
     oldFile.hash = sha1(oldFile.data);
 
     // If either oldFile or newFile has been imported non-dynamically,
@@ -703,7 +703,7 @@ export default class ImportScanner {
           : "module.useNode() must succeed for native .node modules"
       ) + ");\n";
 
-      const data = new Buffer(dataString, "utf8");
+      const data = Buffer.from(dataString, "utf8");
       const hash = sha1(data);
 
       return { data, dataString, hash };
@@ -741,7 +741,7 @@ export default class ImportScanner {
     );
 
     if (info.dataString !== dataString) {
-      info.data = new Buffer(info.dataString, "utf8");
+      info.data = Buffer.from(info.dataString, "utf8");
     }
 
     return info;
@@ -931,7 +931,7 @@ export default class ImportScanner {
       return file;
     }
 
-    const data = new Buffer(map(pkg, (value, key) => {
+    const data = Buffer.from(map(pkg, (value, key) => {
       const isIdentifier = /^[_$a-zA-Z]\w*$/.test(key);
       const prop = isIdentifier
         ? "." + key

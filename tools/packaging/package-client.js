@@ -189,7 +189,7 @@ var _updateServerPackageData = function (dataStore, options) {
 
     if (remoteData.collectionsCompressed) {
       var zlib = require('zlib');
-      var colsGzippedBuffer = new Buffer(
+      var colsGzippedBuffer = Buffer.from(
         remoteData.collectionsCompressed, 'base64');
       var colsJSON = new Promise((resolve, reject) => {
         zlib.gunzip(colsGzippedBuffer, (err, res) => {

@@ -297,7 +297,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
     atomicallyRewriteFile(
       absPath,
-      new Buffer(JSON.stringify(data, null, 2), 'utf8'),
+      Buffer.from(JSON.stringify(data, null, 2), 'utf8'),
       {mode: 0o444});
 
     this.usedAsFile[relPath] = true;

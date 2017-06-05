@@ -1203,7 +1203,7 @@ class Target {
 
     dynamicImportFiles.forEach(file => {
       file.setContents(
-        new Buffer(file.contents("utf8").replace(
+        Buffer.from(file.contents("utf8").replace(
           "__DYNAMIC_VERSIONS__",
           () => JSON.stringify(versions.dynamic || {})
         ), "utf8")
@@ -1227,7 +1227,7 @@ class Target {
         // expression, which some minifiers (e.g. UglifyJS) either fail to
         // parse or mistakenly eliminate as dead code. To avoid these
         // problems, we temporarily name the function __minifyJs.
-        file._contents = new Buffer(
+        file._contents = Buffer.from(
           file.contents()
             .toString("utf8")
             .replace(/^\s*function\s*\(/,
@@ -1269,7 +1269,7 @@ class Target {
 
         const newFile = new File({
           info: 'minified js',
-          data: new Buffer(file.data, 'utf8'),
+          data: Buffer.from(file.data, 'utf8'),
         });
 
         if (file.sourceMap) {
@@ -1297,7 +1297,7 @@ class Target {
           const contents = newFile.contents();
           const statsFile = new File({
             info: "bundle size stats JSON",
-            data: new Buffer(JSON.stringify({
+            data: Buffer.from(JSON.stringify({
               minifier: {
                 name: minifierDef.isopack.name,
                 version: minifierDef.isopack.version,
@@ -1510,7 +1510,7 @@ class ClientTarget extends Target {
       return source._minifiedFiles.map((file) => {
         const newFile = new File({
           info: 'minified css',
-          data: new Buffer(file.data, 'utf8')
+          data: Buffer.from(file.data, 'utf8')
         });
         if (file.sourceMap) {
           newFile.setSourceMap(file.sourceMap, '/');
@@ -1572,7 +1572,7 @@ class ClientTarget extends Target {
         // three characters (not the single quote) and then strips everything up
         // to a newline.
         // https://groups.google.com/forum/#!topic/mozilla.dev.js-sourcemap/3QBr4FBng5g
-        return new Buffer(")]}'\n" + sourceMap, 'utf8');
+        return Buffer.from(")]}'\n" + sourceMap, 'utf8');
       });
 
       if (file.sourceMap) {
@@ -1582,7 +1582,7 @@ class ClientTarget extends Target {
         if (minifyMode === 'production') {
           mapData = antiXSSIPrepend(JSON.stringify(file.sourceMap));
         } else {
-          mapData = new Buffer(JSON.stringify(file.sourceMap), 'utf8');
+          mapData = Buffer.from(JSON.stringify(file.sourceMap), 'utf8');
         }
 
         manifestItem.sourceMap = builder.writeToGeneratedFilename(
@@ -1654,7 +1654,7 @@ class ClientTarget extends Target {
     ['head', 'body'].forEach((type) => {
       const data = this[type].join('\n');
       if (data) {
-        const dataBuffer = new Buffer(data, 'utf8');
+        const dataBuffer = Buffer.from(data, 'utf8');
         const dataFile = builder.writeToGeneratedFilename(
           type + '.html', { data: dataBuffer });
         manifest.push({
@@ -2115,7 +2115,7 @@ class JsImage {
         // Write the source map.
         loadItem.sourceMap = builder.writeToGeneratedFilename(
           sourceMapBaseName,
-          { data: new Buffer(JSON.stringify(item.sourceMap), 'utf8') }
+          { data: Buffer.from(JSON.stringify(item.sourceMap), 'utf8') }
         );
 
         var sourceMapFileName = files.pathBasename(loadItem.sourceMap);
@@ -2131,7 +2131,7 @@ class JsImage {
 
       loadItem.path = builder.writeToGeneratedFilename(
         item.targetPath,
-        { data: new Buffer(item.source, 'utf8') });
+        { data: Buffer.from(item.source, 'utf8') });
 
       if (!_.isEmpty(item.assets)) {
         // For package code, static assets go inside a directory inside
@@ -2220,7 +2220,7 @@ class JsImage {
     // This JSON file will be read by npm-rebuild.js, which is executed to
     // trigger rebuilds for all non-portable npm packages.
     builder.write("npm-rebuilds.json", {
-      data: new Buffer(
+      data: Buffer.from(
         JSON.stringify(Object.keys(rebuildDirs), null, 2) + "\n",
         "utf8"
       )
@@ -2414,7 +2414,7 @@ class ServerTarget extends JsImageTarget {
     serverPkgJson.dependencies["node-pre-gyp"] = "0.6.34";
 
     builder.write('package.json', {
-      data: new Buffer(
+      data: Buffer.from(
         JSON.stringify(serverPkgJson, null, 2) + "\n",
         "utf8"
       )
@@ -2527,7 +2527,7 @@ var writeFile = Profile("bundler writeFile", function (file, builder, options) {
   }
 
   if (! Buffer.isBuffer(data)) {
-    data = new Buffer(data, "utf8");
+    data = Buffer.from(data, "utf8");
   }
 
   builder.write(file.targetPath, { data, hash });
@@ -2642,17 +2642,17 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", function (
     });
 
     builder.write('.node_version.txt', {
-      data: new Buffer(process.version + '\n', 'utf8')
+      data: Buffer.from(process.version + '\n', 'utf8')
     });
 
     // Affordances for standalone use
     if (targets.server) {
       // add program.json as the first argument after "node main.js" to the boot script.
       builder.write('main.js', {
-        data: new Buffer(exports._mainJsContents, 'utf8')
+        data: Buffer.from(exports._mainJsContents, 'utf8')
       });
 
-      builder.write('README', { data: new Buffer(
+      builder.write('README', { data: Buffer.from(
 `This is a Meteor application bundle. It has only one external dependency:
 Node.js ${process.version}. To run the application:
 

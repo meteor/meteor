@@ -525,7 +525,7 @@ main.registerCommand({
         },
         transformContents: function (contents, f) {
           if ((/(\.html|\.js|\.css)/).test(f)) {
-            return new Buffer(transform(contents.toString()));
+            return Buffer.from(transform(contents.toString()));
           } else {
             return contents;
           }
@@ -693,7 +693,7 @@ main.registerCommand({
     },
     transformContents: function (contents, f) {
       if ((/(\.html|\.js|\.css)/).test(f)) {
-        return new Buffer(transform(contents.toString()));
+        return Buffer.from(transform(contents.toString()));
       } else {
         return contents;
       }
