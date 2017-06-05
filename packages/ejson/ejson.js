@@ -454,6 +454,39 @@ EJSON.equals = function (a, b, options) {
   }
 };
 
+function isCyclic (obj, seen) {
+  if (typeof obj !== 'object') {
+    return false;
+  }
+
+  seen.push(obj);
+
+  for (var key in obj) {
+    if (obj.hasOwnProperty(key)) {
+      var val = obj[key];
+      if (typeof val === 'object') {
+        if (seen.indexOf(val) > -1 || isCyclic(val, seen.slice())) {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+EJSON.isCyclic = function(v) {
+  if (typeof v !== 'object' || v === null || v instanceof Date || v instanceof RegExp) {
+    return false;
+  }
+
+  if (EJSON._isCustomType(v)) {
+    return EJSON.isCyclic(EJSON.toJSONValue(v));
+  }
+
+  return isCyclic(v, []);
+}
+
 /**
  * @summary Return a deep copy of `val`.
  * @locus Anywhere
@@ -496,6 +529,7 @@ EJSON.clone = function (v) {
     return EJSON.fromJSONValue(EJSON.clone(EJSON.toJSONValue(v)), true);
   }
   // handle other objects
+
   ret = {};
   _.each(v, function (value, key) {
     ret[key] = EJSON.clone(value);
