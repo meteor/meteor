@@ -33,6 +33,11 @@
 
 * The `reify` npm package has been upgraded to version 0.11.22.
 
+* Illegal characters in paths written in build output directories will now
+  be replaced with `_`s rather than removed, so that file and directory
+  names consisting of only illegal characters do not become empty
+  strings. [PR #8765](https://github.com/meteor/meteor/pull/8765).
+
 ## v1.5, 2017-05-30
 
 * The `meteor-base` package implies a new `dynamic-import` package, which
