@@ -13,7 +13,9 @@ meteor add email
 The server reads from the `MAIL_URL` environment variable to determine how to
 send mail. Currently, Meteor supports sending mail over SMTP; the `MAIL_URL`
 environment variable should be of the form
-`smtp://USERNAME:PASSWORD@HOST:PORT`.
+`smtp://USERNAME:PASSWORD@HOST:PORT` or `smtps://USERNAME:PASSWORD@HOST:PORT`.
+The `smtps://` form should be used if the mail server uses TLS/SSL, as many
+mail providers do (the `s` is for "secure", and common for ports 465 & 587).
 
 If `MAIL_URL` is not set, `Email.send` outputs the message to standard output
 instead.
