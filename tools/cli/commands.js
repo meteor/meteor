@@ -270,7 +270,8 @@ var runCommandOptions = {
     'no-lint': { type: Boolean },
     // Allow the version solver to make breaking changes to the versions
     // of top-level dependencies.
-    'allow-incompatible-update': { type: Boolean }
+    'allow-incompatible-update': { type: Boolean },
+    'extra-packages': { type: String }
   },
   catalogRefresh: new catalog.Refresh.Never()
 };
@@ -289,10 +290,16 @@ function doRunCommand(options) {
   const { parsedServerUrl, parsedMobileServerUrl } =
     parseServerOptionsForRunCommand(options, runTargets);
 
+  var includePackages = [];
+  if (options['extra-packages']) {
+    includePackages = options['extra-packages'].split(',');
+  }
+
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
     allowIncompatibleUpdate: options['allow-incompatible-update'],
-    lintAppAndLocalPackages: !options['no-lint']
+    lintAppAndLocalPackages: !options['no-lint'],
+    includePackages: includePackages,
   });
 
   main.captureAndExit("=> Errors while initializing project:", function () {

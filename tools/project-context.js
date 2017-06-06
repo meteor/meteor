@@ -68,6 +68,8 @@ _.extend(ProjectContext.prototype, {
     self.projectDir = options.projectDir;
     self.tropohouse = options.tropohouse || tropohouse.default;
 
+    self._includePackages = options.includePackages;
+
     self._packageMapFilename = options.packageMapFilename ||
       files.pathJoin(self.projectDir, '.meteor', 'versions');
 
@@ -322,7 +324,8 @@ _.extend(ProjectContext.prototype, {
 
       // Read .meteor/packages.
       self.projectConstraintsFile = new exports.ProjectConstraintsFile({
-        projectDir: self.projectDir
+        projectDir: self.projectDir,
+        includePackages: self._includePackages
       });
       if (buildmessage.jobHasMessages())
         return;
@@ -874,6 +877,9 @@ exports.ProjectConstraintsFile = function (options) {
   self.filename = files.pathJoin(options.projectDir, '.meteor', 'packages');
   self.watchSet = null;
 
+  // List of packages that should be included if not provided in .meteor/packages
+  self._includePackages = options.includePackages || [];
+
   // Have we modified the in-memory representation since reading from disk?
   self._modified = null;
   // List of each line in the file; object with keys:
@@ -949,6 +955,21 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
       }
       self._constraintMap[lineRecord.constraint.package] = lineRecord;
     });
+
+    _.each(self._includePackages, function (pkg) {
+      var lineRecord = {
+        leadingSpace: '',
+        trailingSpaceAndComment: '',
+        constraint: utils.parsePackageConstraint(pkg.trim()),
+        skipOnWrite: true
+      };
+
+      if (_.has(self._constraintMap, lineRecord.constraint.package))
+        return;
+
+      self._constraintLines.push(lineRecord);
+      self._constraintMap[lineRecord.constraint.package] = lineRecord;
+    });
   },
 
   writeIfModified: function () {
@@ -959,6 +980,9 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
   _write: function () {
     var self = this;
     var lines = _.map(self._constraintLines, function (lineRecord) {
+      // Don't write packages that were not loaded from .meteor/packages
+      if (lineRecord.skipOnWrite)
+        return;
       var lineParts = [lineRecord.leadingSpace];
       if (lineRecord.constraint) {
         lineParts.push(lineRecord.constraint.package);
