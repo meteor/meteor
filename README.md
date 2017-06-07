@@ -18,7 +18,7 @@ Next, read the [guide](http://guide.meteor.com) or the reference documentation a
 
 ## Quick Start
 
-On Windows, simply go to https://www.meteor.com/install and use the Windows installer.
+On Windows, the installer can be found at https://www.meteor.com/install.
 
 On Linux/macOS, use this line:
 
@@ -47,22 +47,15 @@ Building an application with Meteor?
 * Having problems? Ask for help at: http://stackoverflow.com/questions/tagged/meteor
 * Discussion forums: https://forums.meteor.com/
 
-Interested in contributing to Meteor?
+Interested in helping or contributing to Meteor?  These resources will help:
 
-* Issue tracker: https://github.com/meteor/meteor/issues
-* Contribution guidelines: https://github.com/meteor/meteor/tree/devel/Contributing.md
+* [Core development guide](Development.md)
+* [Contribution guidelines](Contributing.md)
+* [Feature requests](https://github.com/meteor/meteor-feature-requests/)
+* [Issue tracker](https://github.com/meteor/meteor/issues)
 
-We are hiring!  Visit https://www.meteor.com/jobs to
+We are hiring!  Visit [meteor.io/jobs](https://www.meteor.io/jobs/) to
 learn more about working full-time on the Meteor project.
-
-## Slow Start (for developers)
-
-If you're interested in developing Meteor itself, or running unreleased,
-bleeding-edge code, please refer to the details found in
-[Development.md](Development.md).
-
-To find more information about contributing to Meteor (whether fixing bugs or
-adding features), please see [Contributing.md](Contributing.md).
 
 ## Uninstalling Meteor
 
