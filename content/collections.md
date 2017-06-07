@@ -69,13 +69,14 @@ To write data back to the server, you use a *Method*, the subject of the [method
 
 <h3 id="local-collections">Local collections</h3>
 
-There is a third way to use a collection in Meteor. On the client or server, if you create a collection but pass `null` instead of a name:
+There is a third way to use a collection in Meteor. On the client or server, if you create a collection in one of these two ways:
 
 ```js
 SelectedTodos = new Mongo.Collection(null);
+SelectedTodos = new Mongo.Collection('selectedtodos', {connection: null});
 ```
 
-This creates a *local collection*. This is a Minimongo collection that has no database connection (ordinarily a named collection would either be directly connected to the database on the server, or via a subscription on the client).
+This creates a *local collection*. This is a Minimongo collection that has no database connection (ordinarily a collection would either be directly connected to the database on the server, or via a subscription on the client).
 
 A local collection is a convenient way to use the full power of the Minimongo library for in-memory storage. For instance, you might use it instead of a simple array if you need to execute complex queries over your data. Or you may want to take advantage of its *reactivity* on the client to drive some UI in a way that feels natural in Meteor.
 
