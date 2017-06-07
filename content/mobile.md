@@ -565,6 +565,7 @@ From this point on, the process for building the app archive and submitting it t
 In order to build your app for Android, you will need to [configure your app](#configuring-your-app) with at least a version number, and the required set of app icons and launch screens.
 
 After running `meteor build` the generated APK will be copied from the `<build-output-directory>/android/project/build/outputs/apk` directory to `<build-output-directory>/android/release-unsigned.apk`.
+> If you have installed the [Crosswalk plugin](https://crosswalk-project.org/) you will need to manually copy the APK file `cp ~/build-output-directory/android/project/build/outputs/apk/android-armv7-release-unsigned.apk ~/build-output-directory/android/release-unsigned.apk`
 
 Before submitting the APK(s) to the Play Store, you will need to sign the APK and run [`zipalign`](http://developer.android.com/tools/help/zipalign.html) on it to optimize the archive.
 
@@ -576,7 +577,6 @@ keytool -genkey -alias your-app-name -keyalg RSA -keysize 2048 -validity 10000
 ```
 Optionally, you can specify `--keystore` to use a different keystore. Don't forget to specify the same keystore when signing the APK.
 > Note: Ensure that you have secure backups of your keystore (`~/.keystore` is the default). If you publish an app to the Play Store and then lose the key with which you signed your app, you will not be able to publish any updates to your app, since you must always sign all versions of your app with the same key.
-
 
 Now, you can sign the APK:
 ```sh
