@@ -124,9 +124,16 @@ Please refer to [the Android Studio installation instructions](http://developer.
 
 Make sure to select the correct version of the [Android Studio SDK Tools](https://developer.android.com/studio/releases/sdk-tools.html):
 
- * Meteor 1.4.3.1 or later: Android SDK Tools v.25.**2**.x or v.26.0.0 or later
+ * Meteor 1.4.3.1 or later: Android SDK Tools v.25.**2**.x ([mac](https://dl.google.com/android/repository/tools_r25.2.3-macosx.zip), [linux](https://dl.google.com/android/repository/tools_r25.2.3-linux.zip), [windows](https://dl.google.com/android/repository/tools_r25.2.3-windows.zip)) or v.26.0.0 or later
  * v.25.**3.0** **will not work** due to [extensive changes](https://developer.android.com/studio/releases/sdk-tools.html).  See [issue #8464](https://github.com/meteor/meteor/issues/8464) for more information.
- * Meteor 1.4.2.x or before: Android SDK Tools v.23
+ * Meteor 1.4.2.x or before: Android SDK Tools v.23 ([mac](https://dl.google.com/android/repository/tools_r23.0.1-macosx.zip), [linux](https://dl.google.com/android/repository/tools_r23.0.1-linux.zip), [windows](https://dl.google.com/android/repository/tools_r23.0.1-windows.zip))
+
+To install an older version of SDK tools:
+
+* Download the version that you need from the above links
+* Replace the `tools/` folder in `~/Library/Android/sdk/`
+
+> Note: If you're using older version of Meteor, you may also need to install an older version of Android SDK, for example with the Android SDK Manager that comes with Android Studio.
 
 <h4 id="ubuntu-make">Using Ubuntu Make</h4>
 
