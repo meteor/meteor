@@ -1088,7 +1088,7 @@ Meteor.methods({createUser: function (options) {
       // a token to verify the user's primary email, and send it to
       // that address.
       if (options.email && Accounts._options.sendVerificationEmail)
-        Accounts.sendVerificationEmail(userId, options.email);
+        Accounts.sendVerificationEmail(userId);
 
       // client gets logged in as the new user afterwards.
       return {userId: userId};
