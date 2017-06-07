@@ -82,7 +82,7 @@ In order to build and run mobile apps, you will need to install some prerequisit
 
 <h3 id="installing-prerequisites-ios">iOS</h3>
 
-In order to build and run iOS apps, you will need a Mac with Xcode 7.2 or higher installed.
+In order to build and run iOS apps, you will need a Mac with [Apple Xcode](https://developer.apple.com/xcode/) developer tools installed. We recommend installing the latest version, but you should also check the [Meteor history](https://github.com/meteor/meteor/blob/devel/History.md) for any specific version dependencies.
 
 <h4>Installing Xcode from the App Store</h4>
 
@@ -93,6 +93,9 @@ In order to build and run iOS apps, you will need a Mac with Xcode 7.2 or higher
 After the download and installation completes, you will need to accept the license agreement. If you start Xcode for the first time, a dialog will pop up where you can read the license agreement and accept it. You can close Xcode directly afterwards.
 
 A shortcut is to run `sudo xcodebuild -license accept` from the command line. (You will still be expected to have read and understood the [Xcode and Apple SDKs Agreement](https://www.apple.com/legal/sla/docs/xcode.pdf)).
+
+> As of [Cordova iOS 4.3.0](https://cordova.apache.org/announcements/2016/10/24/ios-release.html) you may also need to `sudo gem install cocoapods` to resolve a dependency with [PhoneGap Push Plugin](http://phonegap.com/blog/2016/11/03/phonegap-plugin-push-1.9.0/dependency). 
+
 
 <h3 id="installing-prerequisites-android">Android</h3>
 
@@ -121,8 +124,8 @@ Please refer to [the Android Studio installation instructions](http://developer.
 
 Make sure to select the correct version of the [Android Studio SDK Tools](https://developer.android.com/studio/releases/sdk-tools.html):
 
- * Meteor 1.4.3.1 or later: Android SDK Tools v.25.**2**.x
-   * v.25.**3**.x (or newer) **will not work** due to [extensive changes](https://developer.android.com/studio/releases/sdk-tools.html) in v.25.3.0.  See [this issue](https://github.com/meteor/meteor/issues/8464) for more information.
+ * Meteor 1.4.3.1 or later: Android SDK Tools v.25.**2**.x or v.26.0.0 or later
+ * v.25.**3.0** **will not work** due to [extensive changes](https://developer.android.com/studio/releases/sdk-tools.html).  See [issue #8464](https://github.com/meteor/meteor/issues/8464) for more information.
  * Meteor 1.4.2.x or before: Android SDK Tools v.23
 
 <h4 id="ubuntu-make">Using Ubuntu Make</h4>
@@ -168,7 +171,7 @@ If you do want to run on an emulator however, you will have to create an Android
 During development, the Meteor [build tool](build-tool.html) integrates with Cordova to run your app on a physical device or the iOS Simulator/Android emulator. In addition to starting a development server and MongoDB instance as usual, `meteor run` accepts arguments to run the app on one or more mobile targets:
 
 - `ios`: Runs the app on the iOS Simulator
-> Currently, this will always run your app on a simulated iPhone 6s Plus. Use `ios-device` to open Xcode and select another simulator instead.
+> This will run your app on a default simulated iOS device. You can open Xcode to install and select another simulated device.
 - `ios-device`: Opens Xcode, where you can run the app on a connected iOS device or simulator
 - `android`: Runs the app on the Android emulator
 > The current Android emulator tends to be rather slow and can be unstable. Our recommendation is to run on a physical device or to use an alternative emulator like [Genymotion](https://www.genymotion.com).
@@ -184,7 +187,7 @@ A Meteor app should be able to connect to a server in order to load data and to 
 
 <h3 id="running-on-ios">On iOS</h3>
 
-> Note: If you haven't previously developed iOS apps, or haven't used the connected device for development, a series of dialogs and warnings may appear as Xcode resolves code signing issues. It may also prompt you for permission to access the key in your keychain. See [Apple's instructions](https://developer.apple.com/library/mac/documentation/IDEs/Conceptual/AppDistributionGuide/LaunchingYourApponDevices/LaunchingYourApponDevices.html#//apple_ref/doc/uid/TP40012582-CH27-SW4) for more information.
+> Note: If you haven't previously developed iOS apps, or haven't used the connected device for development, a series of dialogs and warnings may appear as Xcode resolves code signing issues. It may also prompt you for permission to access the key in your keychain. See [Apple's instructions](https://developer.apple.com/library/mac/documentation/IDEs/Conceptual/AppDistributionGuide/LaunchingYourApponDevices/LaunchingYourApponDevices.html#//apple_ref/doc/uid/TP40012582-CH27-SW4) for more information. You will also need to join the [Apple Developer Program](https://developer.apple.com/programs/) to deploy your app on the Apple iOS App Store.
 
 1. Make sure the device is connected to your computer via a USB cable.
 1. Connect the device to a WiFi network that allows for communication with the server.
