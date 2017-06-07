@@ -39,6 +39,22 @@ cd try-meteor
 meteor
 ```
 
+## Developer Resources
+
+Building an application with Meteor?
+
+* Announcement list: sign up at http://www.meteor.com/
+* Having problems? Ask for help at: http://stackoverflow.com/questions/tagged/meteor
+* Discussion forums: https://forums.meteor.com/
+
+Interested in contributing to Meteor?
+
+* Issue tracker: https://github.com/meteor/meteor/issues
+* Contribution guidelines: https://github.com/meteor/meteor/tree/devel/Contributing.md
+
+We are hiring!  Visit https://www.meteor.com/jobs to
+learn more about working full-time on the Meteor project.
+
 ## Slow Start (for developers)
 
 If you're interested in developing Meteor itself, or running unreleased,
@@ -59,19 +75,3 @@ sudo rm /usr/local/bin/meteor
 ```
 
 On Windows, just run the uninstaller from your Control Panel.
-
-## Developer Resources
-
-Building an application with Meteor?
-
-* Announcement list: sign up at http://www.meteor.com/
-* Having problems? Ask for help at: http://stackoverflow.com/questions/tagged/meteor
-* Discussion forums: https://forums.meteor.com/
-
-Interested in contributing to Meteor?
-
-* Issue tracker: https://github.com/meteor/meteor/issues
-* Contribution guidelines: https://github.com/meteor/meteor/tree/devel/Contributing.md
-
-We are hiring!  Visit https://www.meteor.com/jobs to
-learn more about working full-time on the Meteor project.
