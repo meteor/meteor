@@ -587,6 +587,8 @@ Options:
   --verbose         Print all output from builds logs.
   --no-lint         Don't run linters used by the tested packages on every
                     test app rebuild.
+  --extra-packages  Run with additional packages (comma separated, for
+                    example: --extra-packages "package-name1, package-name2@1.2.3")
 >>> test
 Test the application
 Usage: meteor test --driver-package <driver> [options]
@@ -639,6 +641,8 @@ Options:
                     for tests. Defaults to the system's temporary directory,
                     usually /tmp.
   --verbose         Print all output from builds logs.
+  --extra-packages  Run with additional packages (comma separated, for
+                    example: --extra-packages "package-name1, package-name2@1.2.3")
 
 >>> self-test
 Run tests of the 'meteor' tool.
