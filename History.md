@@ -8,6 +8,8 @@
 
 * The `pathwatcher` npm package has been upgraded to version 7.0.0.
 
+* The `http-proxy` npm package has been upgraded to version 1.16.2.
+
 * `reactive-dict` now supports setting initial data when defining a named
   `ReactiveDict`. No longer run migration logic when used on the server,
   this is to prevent duplicate name error on reloads. Initial data is now

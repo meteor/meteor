@@ -37,7 +37,7 @@ var packageJson = {
     chalk: "0.5.1",
     sqlite3: "3.1.8",
     netroute: "1.0.2",
-    "http-proxy": "1.11.1",
+    "http-proxy": "1.16.2",
     "wordwrap": "0.0.2",
     "moment": "2.8.4",
     "rimraf": "2.4.3",
