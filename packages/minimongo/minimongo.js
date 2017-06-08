@@ -109,7 +109,7 @@ LocalCollection.Cursor = function (collection, selector, options) {
   self.limit = options.limit;
   self.fields = options.fields;
 
-  self._projectionFn = LocalCollection._compileProjection(self.fields || {});
+  self._projectionFn = LocalCollection._compileProjection(self.fields || {}, _.clone);
 
   self._transform = LocalCollection.wrapTransform(options.transform);
 

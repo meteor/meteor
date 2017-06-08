@@ -5,7 +5,7 @@
 //            @returns - Object: a document with the fields filtered out
 //                       according to projection rules. Doesn't retain subfields
 //                       of passed argument.
-LocalCollection._compileProjection = function (fields) {
+LocalCollection._compileProjection = function (fields, clone=EJSON.clone) {
   LocalCollection._checkSupportedProjection(fields);
 
   var _idProjection = _.isUndefined(fields._id) ? true : fields._id;
@@ -17,7 +17,7 @@ LocalCollection._compileProjection = function (fields) {
     if (_.isArray(doc))
       return _.map(doc, function (subdoc) { return transform(subdoc, ruleTree); });
 
-    var res = details.including ? {} : EJSON.clone(doc);
+    var res = details.including ? {} : clone(doc);
     _.each(ruleTree, function (rule, key) {
       if (!_.has(doc, key))
         return;
@@ -27,7 +27,7 @@ LocalCollection._compileProjection = function (fields) {
           res[key] = transform(doc[key], rule);
         // Otherwise we don't even touch this subfield
       } else if (details.including)
-        res[key] = EJSON.clone(doc[key]);
+        res[key] = clone(doc[key]);
       else
         delete res[key];
     });
