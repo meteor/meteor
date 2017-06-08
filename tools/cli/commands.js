@@ -338,7 +338,7 @@ function doRunCommand(options) {
     runLog.setRawLogs(true);
   }
 
-  let webArchs = ['web.browser'];
+  let webArchs = [];
   if (!_.isEmpty(runTargets) || options['mobile-server']) {
     webArchs.push("web.cordova");
   }
