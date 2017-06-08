@@ -1,3 +1,5 @@
+var fs = require('fs');
+
 MongoInternals.RemoteCollectionDriver = function (
   mongo_url, options) {
   var self = this;
@@ -30,6 +32,22 @@ MongoInternals.defaultRemoteCollectionDriver = _.once(function () {
 
   if (process.env.MONGO_OPLOG_URL) {
     connectionOptions.oplogUrl = process.env.MONGO_OPLOG_URL;
+  }
+
+  if (process.env.MONGO_SSL_VALIDATE) {
+    connectionOptions.sslValidate = process.env.MONGO_SSL_VALIDATE;
+  }
+
+  if (process.env.MONGO_SSL_KEY_PATH) {
+    connectionOptions.sslKey = fs.readFileSync(process.env.MONGO_SSL_KEY_PATH);
+  }
+
+  if (process.env.MONGO_SSL_CERT_PATH) {
+    connectionOptions.sslCert = fs.readFileSync(process.env.MONGO_SSL_CERT_PATH);
+  }
+
+  if (process.env.MONGO_SSL_CA_PATH) {
+    connectionOptions.sslCa = fs.readFileSync(process.env.MONGO_SSL_CA_PATH);
   }
 
   if (! mongoUrl)
