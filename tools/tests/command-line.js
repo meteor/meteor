@@ -318,11 +318,14 @@ selftest.define("argument parsing", function () {
     run.expectExit(0);
   });
 
-  s.createApp("app-with-extra-packages", "extra-packages-option");
+  s.createApp("app-with-extra-packages", "extra-packages-option", {
+    dontPrepareApp: true
+  });
   s.cd("app-with-extra-packages", function () {
-    run = s.run("--extra-packages", "extra-package-1");
+    run = s.run("--extra-packages", "extra-package-1, extra-package-2@=0.0.2");
     run.waitSecs(60);
-    run.match("extra-package-1: foobar")
+    run.match("extra-package-1: foobar");
+    run.match("extra-package-2: barfoo");
     run.stop();
   });
 });
