@@ -292,7 +292,7 @@ function doRunCommand(options) {
 
   var includePackages = [];
   if (options['extra-packages']) {
-    includePackages = options['extra-packages'].split(',');
+    includePackages = options['extra-packages'].trim().split(/\s*,\s*/);
   }
 
   var projectContext = new projectContextModule.ProjectContext({
