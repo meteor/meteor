@@ -101,6 +101,10 @@ var wrapPathFunction = function (name, partialPaths) {
       var result = f.apply(path, args);
       if (typeof result === "string") {
         result = toPosixPath(result, partialPaths);
+        // if final path is without root, add it from initial argument
+        if (name === 'join' && ! /^\/[A-Za-z](\/|$)/.test(result) && /^\/[A-Za-z](\/|$)/.test(arguments[0])) {
+          result = '/' + arguments[0][1] + result;
+        }
       }
 
       return result;
