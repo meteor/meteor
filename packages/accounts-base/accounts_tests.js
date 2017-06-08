@@ -100,6 +100,27 @@ Tinytest.add('accounts - updateOrCreateUserFromExternalService - Twitter', funct
   Meteor.users.remove(uid1);
 });
 
+Tinytest.add('accounts - updateOrCreateUserFromExternalService - WITH HOOK', function (test) {
+	// Create user in the first pass
+	var user1 = Accounts.updateOrCreateUserFromExternalService('twitter', {id: 'test', monkey: 'blue'}, {profile: {externalServiceHook: 1}});
+
+	// Set a new selector to query the user with (could be $or selector, or whatever Mongo selector the user wants to find a user to update)
+	Accounts.onUpdateUserFindExistingUserHooks = [
+		function(selector, serviceName, serviceData, options){
+			return {"profile.externalServiceHook": options.profile.externalServiceHook};
+		}
+	];
+
+	var user2 = Accounts.updateOrCreateUserFromExternalService('github', {id: 'test', monkey: 'red'}, {profile: {externalServiceHook: 1}});
+
+	test.equal(user1.userId, user2.userId);
+	var users = Meteor.users.find({"profile.externalServiceHook": 1}).fetch();
+	test.length(users, 1);
+
+	//Cleanup
+	Accounts.onUpdateUserFindExistingUserHooks = [];
+	Meteor.users.remove(user1.userId);
+});
 
 Tinytest.add('accounts - insertUserDoc username', function (test) {
   var userIn = {
