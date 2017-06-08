@@ -50,3 +50,7 @@ require('core-js/modules/es6.number.max-safe-integer');
 require('core-js/modules/es6.number.min-safe-integer');
 require('core-js/modules/es6.number.parse-float');
 require('core-js/modules/es6.number.parse-int');
+
+// Typed Arrays
+require('core-js/modules/es6.typed.uint8-array');
+require('core-js/modules/es6.typed.uint32-array');
