@@ -1533,7 +1533,9 @@ testCommandOptions = {
     'test-packages': { type: Boolean, 'default': false },
 
     // For 'test-packages': Run in "full app" mode
-    'full-app': { type: Boolean, 'default': false }
+    'full-app': { type: Boolean, 'default': false },
+
+    'extra-packages': { type: String }
   }
 };
 
@@ -1591,12 +1593,19 @@ function doTestCommand(options) {
     runLog.setRawLogs(true);
   }
 
+  var includePackages = [];
+  if (options['extra-packages']) {
+    includePackages = options['extra-packages'].trim().split(/\s*,\s*/);
+  }
+
   var projectContextOptions = {
     serverArchitectures: serverArchitectures,
     allowIncompatibleUpdate: options['allow-incompatible-update'],
-    lintAppAndLocalPackages: !options['no-lint']
+    lintAppAndLocalPackages: !options['no-lint'],
+    includePackages: includePackages
   };
   var projectContext;
+
 
   if (options["test-packages"]) {
     global.testCommandMetadata.driverPackage = options['driver-package'] || 'test-in-browser';
