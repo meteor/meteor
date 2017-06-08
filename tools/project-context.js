@@ -68,6 +68,8 @@ _.extend(ProjectContext.prototype, {
     self.projectDir = options.projectDir;
     self.tropohouse = options.tropohouse || tropohouse.default;
 
+    self._includePackages = options.includePackages;
+
     self._packageMapFilename = options.packageMapFilename ||
       files.pathJoin(self.projectDir, '.meteor', 'versions');
 
@@ -322,7 +324,8 @@ _.extend(ProjectContext.prototype, {
 
       // Read .meteor/packages.
       self.projectConstraintsFile = new exports.ProjectConstraintsFile({
-        projectDir: self.projectDir
+        projectDir: self.projectDir,
+        includePackages: self._includePackages
       });
       if (buildmessage.jobHasMessages())
         return;
@@ -874,6 +877,9 @@ exports.ProjectConstraintsFile = function (options) {
   self.filename = files.pathJoin(options.projectDir, '.meteor', 'packages');
   self.watchSet = null;
 
+  // List of packages that should be included if not provided in .meteor/packages
+  self._includePackages = options.includePackages || [];
+
   // Have we modified the in-memory representation since reading from disk?
   self._modified = null;
   // List of each line in the file; object with keys:
@@ -948,6 +954,17 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
         return;  // recover by ignoring
       }
       self._constraintMap[lineRecord.constraint.package] = lineRecord;
+    });
+
+    _.each(self._includePackages, function (package) {
+      if (_.has(self._constraintMap, package))
+        return;
+
+      var lineRecord =
+            { leadingSpace: '', constraint: null, trailingSpaceAndComment: '' };
+      self._constraintLines.push(lineRecord);
+      lineRecord.constraint = utils.parsePackageConstraint(package);
+      self._constraintMap[package] = lineRecord;
     });
   },
 
