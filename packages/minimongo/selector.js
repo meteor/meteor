@@ -604,7 +604,7 @@ var getValueBitmask = function (value, length) {
   if (Number.isSafeInteger(value)) {
     // $bits... will not match numerical values that cannot be represented as a signed 64-bit integer
     // This can be the case if a value is either too large or small to fit in a signed 64-bit integer, or if it has a fractional component.
-    var buffer = new ArrayBuffer(Math.max(...[length, 2 * Uint32Array.BYTES_PER_ELEMENT]))
+    var buffer = new ArrayBuffer(Math.max(length, 2 * Uint32Array.BYTES_PER_ELEMENT));
     var view = new Uint32Array(buffer, 0, 2)
     view[0] = (value % ((1 << 16) * (1 << 16))) | 0
     view[1] = (value / ((1 << 16) * (1 << 16))) | 0
