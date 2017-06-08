@@ -317,6 +317,14 @@ selftest.define("argument parsing", function () {
     run = s.run("list");
     run.expectExit(0);
   });
+
+  s.createApp("app-with-extra-packages", "extra-packages-option");
+  s.cd("app-with-extra-packages", function () {
+    run = s.run("--extra-packages", "extra-package-1");
+    run.waitSecs(60);
+    run.match("extra-package-1: foobar")
+    run.stop();
+  });
 });
 
 
