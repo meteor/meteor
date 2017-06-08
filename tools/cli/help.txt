@@ -86,7 +86,8 @@ Options:
                    downgraded to versions that are potentially incompatible with
                    the current versions, if required to satisfy all package
                    version constraints.
-  --extra-packages Run with additional packages (comma separated)
+  --extra-packages Run with additional packages (comma separated, for
+                   example: --extra-packages "package-name1, package-name2@1.2.3")
 
 >>> debug
 Run the project, but suspend the server process for debugging.
