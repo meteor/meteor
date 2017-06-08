@@ -325,10 +325,14 @@ var loadServerBundles = Profile("Load server bundles", function () {
 
     var scriptPath =
       parsedSourceMaps[absoluteFilePath] ? absoluteFilePath : fileInfoOSPath;
-    // The final 'true' is an undocumented argument to runIn[Foo]Context that
-    // causes it to print out a descriptive error message on parse error. It's
-    // what require() uses to generate its errors.
-    var func = require('vm').runInThisContext(wrapped, scriptPath, true);
+
+    var script = new (require('vm').Script)(wrapped, {
+      filename: scriptPath,
+      displayErrors: true
+    });
+
+    var func = script.runInThisContext();
+
     var args = [Npm, Assets];
 
     specialKeys.forEach(function (key) {
