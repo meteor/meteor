@@ -2857,6 +2857,13 @@ Tinytest.add("minimongo - modify", function (test) {
   upsertException({a: 0}, {$setOnInsert: {b: {'a.b':1}}});
   upsertException({a: 0}, {$setOnInsert: {b: {'\0a':1}}});
 
+  // Test for https://github.com/meteor/meteor/issues/8775.
+  upsert(
+    { a: { $exists: true }},
+    { $setOnInsert: { a: 123 }},
+    { a: 123 }
+  );
+
   exception({}, {$set: {_id: 'bad'}});
 
   // $bit

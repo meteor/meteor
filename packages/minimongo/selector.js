@@ -1253,9 +1253,9 @@ LocalCollection._f = {
 
 // Oddball function used by upsert.
 LocalCollection._removeDollarOperators = function (selector) {
-  var selectorDoc = {};
-  for (var k in selector)
-    if (k.substr(0, 1) !== '$')
-      selectorDoc[k] = selector[k];
-  return selectorDoc;
+  return JSON.parse(JSON.stringify(selector, (key, value) => {
+    if (! key.startsWith("$")) {
+      return value;
+    }
+  }));
 };
