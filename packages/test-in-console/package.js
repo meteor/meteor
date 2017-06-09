@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Run tests noninteractively, with results going to the console.",
-  version: '1.1.0-alpha.3'
+  version: '1.1.0-alpha.4'
 });
 
 Package.onUse(function (api) {
