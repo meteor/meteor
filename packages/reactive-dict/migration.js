@@ -4,8 +4,11 @@ ReactiveDict._migratedDictData = {}; // name -> data
 ReactiveDict._dictsToMigrate = {}; // name -> ReactiveDict
 
 ReactiveDict._loadMigratedDict = function (dictName) {
-  if (_.has(ReactiveDict._migratedDictData, dictName))
-    return ReactiveDict._migratedDictData[dictName];
+  if (_.has(ReactiveDict._migratedDictData, dictName)) {
+    const data = ReactiveDict._migratedDictData[dictName];
+    delete ReactiveDict._migratedDictData[dictName];
+    return data;
+  }
 
   return null;
 };
