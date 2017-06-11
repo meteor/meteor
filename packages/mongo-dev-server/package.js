@@ -1,0 +1,11 @@
+Package.describe({
+  debugOnly: true,
+  documentation: 'README.md',
+  name: 'mongo-dev-server',
+  summary: 'Start MongoDB alongside Meteor, in development mode.',
+  version: '1.0.0',
+});
+
+Package.onUse(function (api) {
+  api.addFiles('info.js', 'server');
+});

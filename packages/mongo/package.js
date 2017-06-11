@@ -34,7 +34,8 @@ Package.onUse(function (api) {
     'diff-sequence',
     'mongo-id',
     'check',
-    'ecmascript'
+    'ecmascript',
+    'mongo-dev-server',
   ]);
 
   // Binary Heap data structure is used to optimize oplog observe driver
