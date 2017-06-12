@@ -46,6 +46,16 @@ describe("meteor-babel", () => {
       "class Mangler{constructor(a){this.program=a}}new Mangler;"
     );
   });
+
+  it("should inline process.env.NODE_ENV", function () {
+    const code = "console.log(process.env.NODE_ENV);"
+    assert.strictEqual(
+      meteorBabel.minify(code, meteorBabel.getMinifierOptions({
+        inlineNodeEnv: "oyez"
+      })).code,
+      'console.log("oyez");'
+    );
+  });
 });
 
 describe("Babel", function() {

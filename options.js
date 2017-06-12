@@ -75,7 +75,7 @@ exports.getDefaults = function getDefaults(features) {
   };
 };
 
-exports.getMinifierDefaults = function getMinifierDefaults() {
+exports.getMinifierDefaults = function getMinifierDefaults(features) {
   var options = {
     // Generate code in loose mode
     compact: false,
@@ -85,8 +85,19 @@ exports.getMinifierDefaults = function getMinifierDefaults() {
     ast: false,
     // Do not honor babelrc settings, would conflict with compilation
     babelrc: false,
+    // May be modified according to provided features below.
+    plugins: [],
     // Only include Babili, because we are only minifying, not compiling.
-    presets: [require("babel-preset-babili")],
+    presets: [require("babel-preset-babili")]
+  };
+
+  if (features) {
+    if (features.inlineNodeEnv) {
+      options.plugins.push([
+        require("./plugins/inline-node-env.js"),
+        { nodeEnv: features.inlineNodeEnv }
+      ]);
+    }
   }
 
   return options;
