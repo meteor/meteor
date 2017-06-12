@@ -31,6 +31,9 @@
   context and with its `EnvironmentVariable`s bound.
   [PR #8629](https://github.com/meteor/meteor/pull/8629)
 
+* The `minifier-js` package will now replace `process.env.NODE_ENV` with
+  its string value (or `"development"` if unspecified).
+
 * The `meteor-babel` npm package has been upgraded to version 0.21.5.
 
 * The `reify` npm package has been upgraded to version 0.11.22.
