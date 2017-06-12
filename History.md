@@ -31,6 +31,8 @@
   context and with its `EnvironmentVariable`s bound.
   [PR #8629](https://github.com/meteor/meteor/pull/8629)
 
+* The `meteor-babel` npm package has been upgraded to version 0.21.5.
+
 * The `reify` npm package has been upgraded to version 0.11.22.
 
 * Illegal characters in paths written in build output directories will now
