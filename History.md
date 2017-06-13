@@ -5,6 +5,14 @@
   this is to prevent duplicate name error on reloads. Initial data is now
   properly serialized.
 
+* `accounts-password` now uses `example.com` as a default "from" address instead
+  of `meteor.com`. This change could break account-related e-mail notifications
+  (forgot password, activation, etc.) for applications which do not properly
+  configure a "from" domain since e-mail providers will often reject mail sent
+  from `example.com`. Ensure that `Accounts.emailTemplates.from` is set to a
+  proper domain in all applications.
+  [PR #8760](https://github.com/meteor/meteor/issues/8760)
+
 * Add `DDP._CurrentPublicationInvocation` and `DDP._CurrentMethodInvocation`.
   `DDP._CurrentInvocation` remains for backwards-compatibility. This change
   allows method calls from publications to inherit the `connection` from the
