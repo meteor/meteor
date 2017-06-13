@@ -2,6 +2,10 @@
 
 * Node has been upgraded to version 8.1.1.
 
+* The `node-gyp` npm package has been upgraded to version 3.6.2.
+
+* The `node-pre-gyp` npm package has been updated to version 0.6.36.
+
 * The `fibers` npm package has been upgraded to version 2.0.0.
 
 * The `pathwatcher` npm package has been upgraded to version 7.0.0.
@@ -217,7 +221,7 @@
 * The `node-gyp` npm package has been upgraded to 3.6.0 which
   adds support for VS2017 on Windows.
 
-* The `node-pre-gyp` npm package has been updated to 0.6.36.
+* The `node-pre-gyp` npm package has been updated to 0.6.34.
 
 * Thanks to the outstanding efforts of @sethmurphy18, the `minifier-js`
   package now uses [Babili](https://github.com/babel/babili) instead of
