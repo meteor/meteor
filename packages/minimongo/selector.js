@@ -441,7 +441,7 @@ var VALUE_OPERATORS = {
 
     // There are two kinds of geodata in MongoDB: legacy coordinate pairs and
     // GeoJSON. They use different distance metrics, too. GeoJSON queries are
-    // marked with a $geometry property, though legacy coordinates can be 
+    // marked with a $geometry property, though legacy coordinates can be
     // matched using $geometry.
 
     var maxDistance, point, distance;
@@ -1251,11 +1251,19 @@ LocalCollection._f = {
   }
 };
 
-// Oddball function used by upsert.
+// Oddball function used by upsert. Make sure that when we're removing
+// $ operators we don't accidently remove the "oid" (MongoID.ObjectID)
+// EJSON type (which includes $type and $value properties).
 LocalCollection._removeDollarOperators = function (selector) {
-  return JSON.parse(JSON.stringify(selector, (key, value) => {
-    if (! key.startsWith("$")) {
-      return value;
-    }
-  }));
+  return EJSON.parse(
+    JSON.stringify(
+      EJSON.toJSONValue(selector),
+      function (key, value) {
+        if (EJSON.fromJSONValue(this) instanceof MongoID.ObjectID
+            || !key.startsWith("$")) {
+          return value;
+        }
+      }
+    )
+  );
 };
