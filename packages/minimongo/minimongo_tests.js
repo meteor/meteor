@@ -2881,6 +2881,25 @@ Tinytest.add("minimongo - modify", function (test) {
     { $setOnInsert: { a: 123 } },
     { a: 123 },
   );
+  const testDate = new Date('2017-01-01');
+  upsert(
+    { someDate: testDate },
+    { $setOnInsert: { a: 123 } },
+    { someDate: testDate, a: 123 },
+  );
+  upsert(
+    {
+      a: Object.create(null, {
+        $exists: {
+          writable: true,
+          configurable: true,
+          value: true
+        }
+      }),
+    },
+    { $setOnInsert: { a: 123 } },
+    { a: 123 },
+  );
 
   exception({}, {$set: {_id: 'bad'}});
 

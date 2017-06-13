@@ -1251,19 +1251,22 @@ LocalCollection._f = {
   }
 };
 
-// Oddball function used by upsert. Make sure that when we're removing
-// $ operators we don't accidently remove the "oid" (MongoID.ObjectID)
-// EJSON type (which includes $type and $value properties).
-LocalCollection._removeDollarOperators = function (selector) {
-  return EJSON.parse(
-    JSON.stringify(
-      EJSON.toJSONValue(selector),
-      function (key, value) {
-        if (EJSON.fromJSONValue(this) instanceof MongoID.ObjectID
-            || !key.startsWith("$")) {
-          return value;
-        }
+// Oddball function used by upsert.
+LocalCollection._removeDollarOperators = (selector) => {
+  const cleansed = {};
+
+  Object.keys(selector).forEach((key) => {
+    const value = selector[key];
+    if (key.charAt(0) !== '$') {
+      if (value !== null
+          && value.constructor
+          && value.constructor.prototype === Object.prototype) {
+        cleansed[key] = LocalCollection._removeDollarOperators(value);
+      } else {
+        cleansed[key] = value;
       }
-    )
-  );
+    }
+  });
+
+  return cleansed;
 };
