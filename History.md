@@ -1,6 +1,6 @@
 ## v.NEXT
 
-* Node has been upgraded to version 8.1.0.
+* Node has been upgraded to version 8.1.1.
 
 * The `fibers` npm package has been upgraded to version 2.0.0.
 
