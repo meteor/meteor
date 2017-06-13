@@ -1,5 +1,7 @@
 ## v.NEXT
 
+## v1.5.1, TBD
+
 * `reactive-dict` now supports setting initial data when defining a named
   `ReactiveDict`. No longer run migration logic when used on the server,
   this is to prevent duplicate name error on reloads. Initial data is now
@@ -36,7 +38,7 @@
 
 * The `meteor-babel` npm package has been upgraded to version 0.21.5.
 
-* The `reify` npm package has been upgraded to version 0.11.22.
+* The `reify` npm package has been upgraded to version 0.11.23.
 
 * Illegal characters in paths written in build output directories will now
   be replaced with `_`s rather than removed, so that file and directory
