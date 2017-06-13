@@ -4,11 +4,11 @@
 
 * The `fibers` npm package has been upgraded to version 2.0.0.
 
-* The `reify` npm package has been upgraded to version 0.11.22.
-
 * The `pathwatcher` npm package has been upgraded to version 7.0.0.
 
 * The `http-proxy` npm package has been upgraded to version 1.16.2.
+
+## v1.5.1, TBD
 
 * `reactive-dict` now supports setting initial data when defining a named
   `ReactiveDict`. No longer run migration logic when used on the server,
@@ -41,7 +41,12 @@
   context and with its `EnvironmentVariable`s bound.
   [PR #8629](https://github.com/meteor/meteor/pull/8629)
 
-* The `reify` npm package has been upgraded to version 0.11.22.
+* The `minifier-js` package will now replace `process.env.NODE_ENV` with
+  its string value (or `"development"` if unspecified).
+
+* The `meteor-babel` npm package has been upgraded to version 0.21.5.
+
+* The `reify` npm package has been upgraded to version 0.11.24.
 
 * Illegal characters in paths written in build output directories will now
   be replaced with `_`s rather than removed, so that file and directory
