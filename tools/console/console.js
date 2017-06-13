@@ -1325,15 +1325,6 @@ Console.prototype.readLine = function (options) {
   var previousProgressDisplay = self._progressDisplay;
   self._setProgressDisplay(new ProgressDisplayNone());
 
-  Object.getOwnPropertySymbols(process.stdin).forEach(sym => {
-    if (/^Symbol\(\w+-decoder\)$/.test(String(sym))) {
-      // Node 8.1.0 fails to attach a 'data' listener to process.stdin if
-      // it already has a StringDecoder property, so we have to remove
-      // that property if we want to use process.stdin again. #node8
-      delete process.stdin[sym];
-    }
-  });
-
   // Read a line, throwing away the echoed characters into our dummy stream.
   var rl = readline.createInterface({
     input: process.stdin,
