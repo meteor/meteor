@@ -388,7 +388,7 @@ main.registerCommand(_.extend(
   { name: 'debug' },
   runCommandOptions
 ), function (options) {
-  options['debug-port'] = options['debug-port'] || '5858';
+  options['debug-port'] = options['debug-port'] || '9229';
   return doRunCommand(options);
 });
 

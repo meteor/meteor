@@ -107,7 +107,7 @@ with one addition:
 Options:
   --debug-port   Port on which the server process debugger should listen
                  for incoming connections from debugging clients, such as
-                 node-inspector (default 5858).
+                 node-inspector (default 9229).
 
 
 >>> create

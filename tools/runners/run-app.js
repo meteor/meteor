@@ -106,13 +106,22 @@ _.extend(AppProcess.prototype, {
 
     eachline(self.proc.stderr, 'utf8', async function (line) {
       if (self.debugPort &&
-          line.indexOf("Debugger listening on") >= 0) {
-        Console.enableProgressDisplay(false);
-        return;
+          line.indexOf("Debugger attached") >= 0) {
+        self.proc.send({
+          meteorDebugMessage: "continue",
+          break: true,
+        });
       }
 
       runLog.logAppOutput(line, true);
     });
+
+    if (! self.debugPort) {
+      self.proc.send({
+        meteorDebugMessage: "continue",
+        break: false,
+      });
+    }
 
     // Watch for exit and for stdio to be fully closed (so that we don't miss
     // log lines).
@@ -251,13 +260,8 @@ _.extend(AppProcess.prototype, {
     // Setting options
     var opts = _.clone(self.nodeOptions);
 
-    var attach;
     if (self.debugPort) {
-      attach = require('../inspector.js').start(self.debugPort, entryPoint);
-
-      // If you do opts.push("--debug", port) it doesn't work on Windows
-      // for some reason.
-      opts.push("--debug=" + attach.suggestedDebugBrkPort);
+      opts.push("--inspect=" + self.debugPort);
     }
 
     opts.push(entryPoint);
@@ -271,11 +275,6 @@ _.extend(AppProcess.prototype, {
       env: self._computeEnvironment(),
       stdio: ioOptions
     });
-
-    // Attach inspector
-    if (attach) {
-      attach(child);
-    }
 
     return child;
   }

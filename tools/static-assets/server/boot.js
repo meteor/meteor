@@ -42,6 +42,18 @@ if (!process.env.APP_ID) {
 // Map from load path to its source map.
 var parsedSourceMaps = {};
 
+const meteorDebugFuture = new Future;
+process.on("message", function onMessage(msg) {
+  if (msg && msg.meteorDebugMessage === "continue") {
+    process.removeListener("message", onMessage);
+    if (msg.break) {
+      setTimeout(() => meteorDebugFuture.return(true), 500);
+    } else {
+      meteorDebugFuture.return(false);
+    }
+  }
+});
+
 // Read all the source maps into memory once.
 _.each(serverJson.load, function (fileInfo) {
   if (fileInfo.sourceMap) {
@@ -155,6 +167,8 @@ var specialArgPaths = {
 };
 
 var loadServerBundles = Profile("Load server bundles", function () {
+  var infos = [];
+
   _.each(serverJson.load, function (fileInfo) {
     var code = fs.readFileSync(path.resolve(serverDir, fileInfo.path));
     var nonLocalNodeModulesPaths = [];
@@ -339,7 +353,18 @@ var loadServerBundles = Profile("Load server bundles", function () {
       args.push(specialArgs[key]);
     });
 
-    Profile(fileInfo.path, func).apply(global, args);
+    infos.push({
+      fn: Profile(fileInfo.path, func),
+      args
+    });
+  });
+
+  if (meteorDebugFuture.wait()) {
+    require("./debug.js");
+  }
+
+  infos.forEach(info => {
+    info.fn.apply(global, info.args);
   });
 });
 
