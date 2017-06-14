@@ -1606,7 +1606,6 @@ function doTestCommand(options) {
   };
   var projectContext;
 
-
   if (options["test-packages"]) {
     global.testCommandMetadata.driverPackage = options['driver-package'] || 'test-in-browser';
     projectContextOptions.projectDir = testRunnerAppDir;
