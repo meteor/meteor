@@ -7,6 +7,10 @@
 loglevel = error
 progress = false
 
+# The URL prefix for downloading headers was broken in Node 8.1.1, so for
+# safety make sure it is always set appropriately.
+disturl = "https://nodejs.org/download/release"
+
 # By default if the NPM registry is unavailable, it will timeout after more than 60s.
 # These settings make sure we throw an error faster
 fetch-retries = 1
