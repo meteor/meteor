@@ -1,6 +1,15 @@
 ## v.NEXT
 
-* Subscriptions onReady now fire on re-subscription with the same arguments.
+* A subscription's `onReady` is now fired again during a re-subscription, even
+  if the subscription has the same arguments.  Previously, when subscribing
+  to a publication the `onReady` would have only been called if the arguments
+  were different, creating a confusing difference in functionality.  This may be
+  breaking behavior if an app uses the firing of `onReady` as an assumption
+  that the data was just received from the server.  If such functionality is
+  still necessary, consider using
+  [`observe`](https://docs.meteor.com/api/collections.html#Mongo-Cursor-observe)
+  or
+  [`observeChanges`](https://docs.meteor.com/api/collections.html#Mongo-Cursor-observeChanges)
   [PR #8754](https://github.com/meteor/meteor/pull/8754)
   [Issue #1173](https://github.com/meteor/meteor/issues/1173)
 
