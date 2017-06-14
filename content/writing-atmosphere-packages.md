@@ -260,13 +260,17 @@ You can read more about testing in Meteor in the [Testing article](testing.html)
 
 To publish your package to Atmosphere, run [`meteor publish`](http://docs.meteor.com/#/full/meteorpublish) from the package directory. To publish a package the package name must follow the format of `username:my-package` and the package must contain a [SemVer version number](#version-constraints).
 
-<h3 id="local-vs-published">Local vs. published packages</h3>
+<h3 id="local-vs-published">Cache format</h3>
 
 If you've ever looked inside Meteor's package cache at `~/.meteor/packages`, you know that the on-disk format of a built Meteor package is completely different from the way the source code looks when you're developing the package. The idea is that the target format of a package can remain consistent even if the API for development changes.
 
-<h2 id="overriding-atmosphere-packages">Overriding packages with a local version</h2>
+<h2 id="local-packages">Local packages</h2>
 
-If you need to modify a package to do something that the published version doesn't do, you can edit a local version of the package on your computer.
+As an alternative to publishing your package on Atmosphere, if you want to keep your package private, you can place it in your Meteor app in the `packages/` directory, for instance `packages/foo/`, and then add it to your app with `meteor add foo`.
+
+<h3 id="overriding-atmosphere-packages">Overriding published packages with a local version</h3>
+
+If you need to modify an Atmosphere package to do something that the published version doesn't do, you can edit a local version of the package on your computer.
 
 A Meteor app can load Atmosphere packages in one of three ways, and it looks for a matching package name in the following order:
 
