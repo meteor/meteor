@@ -41,6 +41,23 @@ rm -rf "${MONGO_NAME}"
 export PATH="$DIR/bin:$PATH"
 
 cd "$DIR/lib"
+
+# Make node-gyp install Node headers and libraries in $DIR/.node-gyp/.
+# https://github.com/nodejs/node-gyp/blob/4ee31329e0/lib/node-gyp.js#L52
+export HOME="$DIR"
+export USERPROFILE="$DIR"
+
+# Work around https://github.com/nodejs/node-gyp/issues/1230.
+export npm_config_disturl="https://nodejs.org/download/release"
+
+# Make sure the latest version of node-gyp is installed at the top level.
+npm install node-gyp
+
+node "${DIR}/lib/node_modules/node-gyp/bin/node-gyp.js" install
+INCLUDE_PATH="${DIR}/.node-gyp/${NODE_VERSION}/include/node"
+echo "Contents of ${INCLUDE_PATH}:"
+ls -al "$INCLUDE_PATH"
+
 # Overwrite the bundled version with the latest version of npm.
 npm install "npm@$NPM_VERSION"
 
@@ -94,15 +111,6 @@ cp -R node_modules/* "${DIR}/lib/node_modules/"
 # Also include node_modules/.bin, so that `meteor npm` can make use of
 # commands like node-gyp and node-pre-gyp.
 cp -R node_modules/.bin "${DIR}/lib/node_modules/"
-
-# Make node-gyp install Node headers and libraries in $DIR/.node-gyp/.
-# https://github.com/nodejs/node-gyp/blob/4ee31329e0/lib/node-gyp.js#L52
-export HOME="$DIR"
-export USERPROFILE="$DIR"
-node "${DIR}/lib/node_modules/node-gyp/bin/node-gyp.js" install
-INCLUDE_PATH="${DIR}/.node-gyp/${NODE_VERSION}/include/node"
-echo "Contents of ${INCLUDE_PATH}:"
-ls -al "$INCLUDE_PATH"
 
 cd "${DIR}/lib"
 
