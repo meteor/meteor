@@ -184,8 +184,9 @@
     > Note: The `MAIL_URL` should be configured with a scheme which matches the
     > protocol desired by your e-mail vendor/mail-transport agent.  For
     > encrypted connections (typically listening on port 465), this means
-    > using `smtps://`.  Unencrypted connections or connections that are secured by means of a connection upgrade (typically those listening on port 587) should continue to use
-    > `smtp://`.
+    > using `smtps://`.  Unencrypted connections or connections that are secured
+    > by means of a connection upgrade (typically those listening on port 587)
+    > should continue to use `smtp://`.
 
 * A new `Tracker.inFlush()` has been added to provide a global Tracker
   "flushing" state.
