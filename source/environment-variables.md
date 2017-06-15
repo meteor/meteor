@@ -27,7 +27,7 @@ Set this to however many number of proxies you have running before your Meteor a
 ## MAIL_URL
 (_development, production_)
 
-If you're using an external mail service like [Postmark](https://www.postmarkapp.com), [Mandrill](https://www.mandrillapp.com), [MailGun](https://www.mailgun.com) or [SendGrid](https://www.sendgrid.net), you can provide a SMTP URL for your Meteor app to use to send e-mail. For example: `MAIL_URL="smtps://user:pass@yourservice.com:587"`.  If the e-mail server is **not** using TLS or SSL, then `smtp://` can be used in place of `smtps://` (the `s` is for "secure").
+If you're using an external mail service like [Postmark](https://www.postmarkapp.com), [Mandrill](https://www.mandrillapp.com), [MailGun](https://www.mailgun.com) or [SendGrid](https://www.sendgrid.net), you can provide a SMTP URL for your Meteor app to use to send e-mail. For example: `MAIL_URL="smtps://user:pass@yourservice.com:465"`.  If the e-mail server is **not** using TLS/SSL or uses connection upgrade (e.g. on port `587`) then `smtp://` can be used in place of `smtps://` (the `s` is for "secure"). For more information see the [Nodemailer docs](https://nodemailer.com/smtp/)
 
 ## METEOR_SETTINGS
 (_production_)
