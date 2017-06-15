@@ -2900,6 +2900,16 @@ Tinytest.add("minimongo - modify", function (test) {
     { $setOnInsert: { a: 123 } },
     { a: 123 },
   );
+  upsert(
+    { foo: { $exists: true, $type: 2 }},
+    { $setOnInsert: { bar: 'baz' } },
+    { bar: 'baz' }
+  );
+  upsert(
+    { foo: {} },
+    { $setOnInsert: { bar: 'baz' } },
+    { foo: {}, bar: 'baz' }
+  );
 
   exception({}, {$set: {_id: 'bad'}});
 
