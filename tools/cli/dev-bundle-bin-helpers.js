@@ -103,10 +103,6 @@ exports.getEnv = function (options) {
     // dev_bundle/.node-gyp.
     env.USERPROFILE = devBundleDir;
 
-    // The URL prefix for downloading headers was broken in Node 8.1.1, so
-    // for safety make sure it is always set appropriately.
-    env.NPM_CONFIG_DISTURL = "https://nodejs.org/download/release";
-
     var PATH = env.PATH || env.Path;
     if (PATH) {
       paths.push(PATH);

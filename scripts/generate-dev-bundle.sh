@@ -47,9 +47,6 @@ cd "$DIR/lib"
 export HOME="$DIR"
 export USERPROFILE="$DIR"
 
-# Work around https://github.com/nodejs/node-gyp/issues/1230.
-export npm_config_disturl="https://nodejs.org/download/release"
-
 # Make sure the latest version of node-gyp is installed at the top level.
 npm install node-gyp
 
