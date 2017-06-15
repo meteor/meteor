@@ -1,6 +1,6 @@
 ## v.NEXT
 
-* Node has been upgraded to version 8.1.1.
+* Node has been upgraded to version 8.1.2.
 
 * The `node-gyp` npm package has been upgraded to version 3.6.2.
 
