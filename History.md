@@ -38,6 +38,15 @@
   names consisting of only illegal characters do not become empty
   strings. [PR #8765](https://github.com/meteor/meteor/pull/8765).
 
+* The Meteor Tool can now be run with "extra" packages (packages that aren't
+  saved in `.meteor/packages`) by using the CLI `--extra-packages` option.
+  For example: `meteor run --extra-packages "bundle-visualizer"`. Both
+  `meteor test` and `meteor test-packages` also support the
+  `--extra-packages` option.
+  Note: Packages specified using the `--extra-packages` option override
+  version constraints from `.meteor/packages`.
+  [PR #8769](https://github.com/meteor/meteor/pull/8769)
+
 ## v1.5, 2017-05-30
 
 * The `meteor-base` package implies a new `dynamic-import` package, which
