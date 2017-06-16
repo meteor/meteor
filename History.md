@@ -39,7 +39,7 @@
   strings. [PR #8765](https://github.com/meteor/meteor/pull/8765).
 
 * The `coffeescript` package has been updated to use CoffeeScript version
-  1.12.6.
+  1.12.6. [PR #8777](https://github.com/meteor/meteor/pull/8777)
 
 ## v1.5, 2017-05-30
 
