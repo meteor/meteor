@@ -949,7 +949,25 @@ Cursor.prototype.observe = function (callbacks) {
 
 Cursor.prototype.observeChanges = function (callbacks) {
   var self = this;
+  var methods = [
+    'addedAt',
+    'added',
+    'changedAt',
+    'changed',
+    'removedAt',
+    'removed',
+    'movedTo'
+  ];
   var ordered = LocalCollection._observeChangesCallbacksAreOrdered(callbacks);
+
+  // XXX: Can we find out if callbacks are from observe?
+  var exceptionName = ' observe/observeChanges callback'; 
+  methods.forEach(function (method) {
+    if (callbacks[method] && typeof callbacks[method] == "function") {
+      callbacks[method] = Meteor.bindEnvironment(callbacks[method], method + exceptionName);
+    }
+  });
+  
   return self._mongo._observeChanges(
     self._cursorDescription, ordered, callbacks);
 };
