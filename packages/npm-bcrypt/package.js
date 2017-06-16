@@ -9,7 +9,7 @@ Npm.depends({
 });
 
 Package.onUse(function (api) {
-  api.use("modules@0.7.5", "server");
+  api.use("modules", "server");
   api.mainModule("wrapper.js", "server");
   api.export("NpmModuleBcrypt", "server");
 });
