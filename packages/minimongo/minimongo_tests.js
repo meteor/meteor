@@ -2947,6 +2947,9 @@ Tinytest.add("minimongo - modify", function (test) {
   // Test nested fields
   upsert({"$and": [{"a.a": "foo"}, {"$or": [{"a.b": "baz"}]}]}, {"$set": {"c": "foo"}}, {"a": {"a": "foo", "b": "baz"}, "c": "foo"})
 
+  // Test for https://github.com/meteor/meteor/issues/5294
+  upsert({"a": {"$ne": 444}},{"$push": {"a": 123}}, {"a": [123]})
+
   // Nested fields don't work with literal objects
   upsertException({"a": {}, "a.b": "foo"}, {});
 
@@ -2967,7 +2970,7 @@ Tinytest.add("minimongo - modify", function (test) {
   upsertException({"a": {"b": "foo", "$eq": "bar"}}, {})
 
   var mongoIdForUpsert = new MongoID.ObjectID();
-  upsert({_id: mongoIdForUpsert},{$setOnInsert:{a:123}},{a:123})
+  upsert({_id: mongoIdForUpsert},{$setOnInsert: {a: 123}},{a: 123})
 
   exception({}, {$set: {_id: 'bad'}});
 
