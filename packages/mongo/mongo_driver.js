@@ -512,7 +512,21 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
     var mongoMod = replaceTypes(mod, replaceMeteorAtomWithMongo);
 
     var isModify = isModificationMod(mongoMod);
-    var knownId = selector._id || mod._id;
+
+    var newDoc;
+    // Run this code up front so that it fails fast if someone uses
+    // a Mongo update operator we don't support.
+    if (isModify) {
+      // We've already run replaceTypes/replaceMeteorAtomWithMongo on
+      // selector and mod.  We assume it doesn't matter, as far as
+      // the behavior of modifiers is concerned, whether `_modify`
+      // is run on EJSON or on mongo-converted EJSON.
+      newDoc = LocalCollection._createUpsertDocument(selector, mod);
+    } else {
+      newDoc = mod;
+    }
+
+    var knownId = newDoc._id;
 
     if (options._forbidReplace && ! isModify) {
       var err = new Error("Invalid modifier. Replacements are forbidden.");
@@ -538,7 +552,7 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
       //     https://github.com/meteor/meteor/issues/2278#issuecomment-64252706
       simulateUpsertWithInsertedId(
         collection, mongoSelector, mongoMod,
-        isModify, options,
+        newDoc, options,
         // This callback does not need to be bindEnvironment'ed because
         // simulateUpsertWithInsertedId() wraps it and then passes it through
         // bindEnvironmentForWrite.
@@ -653,7 +667,7 @@ MongoConnection._isCannotChangeIdError = function (err) {
 };
 
 var simulateUpsertWithInsertedId = function (collection, selector, mod,
-                                             isModify, options, callback) {
+                                             newDoc, options, callback) {
   // STRATEGY:  First try doing a plain update.  If it affected 0 documents,
   // then without affecting the database, we know we should probably do an
   // insert.  We then do a *conditional* insert that will fail in the case
@@ -667,51 +681,6 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
   // circumstances (though sufficiently heavy contention with writers
   // disagreeing on the existence of an object will cause writes to fail
   // in theory).
-
-  var newDoc;
-  // Run this code up front so that it fails fast if someone uses
-  // a Mongo update operator we don't support.
-  if (isModify) {
-    // We've already run replaceTypes/replaceMeteorAtomWithMongo on
-    // selector and mod.  We assume it doesn't matter, as far as
-    // the behavior of modifiers is concerned, whether `_modify`
-    // is run on EJSON or on mongo-converted EJSON.
-    var selectorDoc = LocalCollection._removeDollarOperators(selector);
-
-    newDoc = selectorDoc;
-
-    // Convert dotted keys into objects. (Resolves issue #4522).
-    _.each(newDoc, function (value, key) {
-      var trail = key.split(".");
-
-      if (trail.length > 1) {
-        //Key is dotted. Convert it into an object.
-        delete newDoc[key];
-
-        var obj = newDoc,
-            leaf = trail.pop();
-
-        // XXX It is not quite certain what should be done if there are clashing
-        // keys on the trail of the dotted key. For now we will just override it
-        // It wouldn't be a very sane query in the first place, but should look
-        // up what mongo does in this case.
-
-        while ((key = trail.shift())) {
-          if (typeof obj[key] !== "object") {
-            obj[key] = {};
-          }
-
-          obj = obj[key];
-        }
-
-        obj[leaf] = value;
-      }
-    });
-
-    LocalCollection._modify(newDoc, mod, {isInsert: true});
-  } else {
-    newDoc = mod;
-  }
 
   var insertedId = options.insertedId; // must exist
   var mongoOptsForUpdate = {

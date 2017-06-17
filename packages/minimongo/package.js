@@ -28,6 +28,7 @@ Package.onUse(function (api) {
     'minimongo.js',
     'wrap_transform.js',
     'helpers.js',
+    'upsert_document.js',
     'selector.js',
     'sort.js',
     'projection.js',

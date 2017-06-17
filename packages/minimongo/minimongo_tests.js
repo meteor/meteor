@@ -2911,6 +2911,64 @@ Tinytest.add("minimongo - modify", function (test) {
     { foo: {}, bar: 'baz' }
   );
 
+
+  // Tests for https://github.com/meteor/meteor/issues/8806
+
+  upsert({"a": {"b": undefined, "c": null}}, {"$set": {"c": "foo"}}, {"a": {"b": undefined, "c": null}, "c": "foo"})
+  upsert({"a": {"$eq": "bar" }}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
+  // $all with 1 statement is similar to $eq
+  upsert({"a": {"$all": ["bar"] }}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
+  upsert({"a": {"$eq": "bar" }, "b": "baz"}, {"$set": {"c": "foo"}}, {"a": "bar", "b": "baz", "c": "foo"})
+
+  upsert({"a": {"$exists": true}}, {"$set": {"c": "foo"}}, {"c": "foo"})
+  upsert({"a": {"$exists": true, "$eq": "foo"}}, {"$set": {"c": "foo"}}, {"a": "foo", "c": "foo"})
+  upsert({"a": {"$gt": 3, "$eq": 2}}, {"$set": {"c": "foo"}}, {"a": 2, "c": "foo"})
+
+  // $and
+  upsert({"$and": [{"a": {"$eq": "bar"}}]}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
+  upsert({"$and": [{"a": {"$all": ["bar"]}}]}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
+  upsert({"$and": [{"a": {"$all": ["bar"]}}]}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
+
+  // $or with one statement is handled similar to $and
+  upsert({"$or": [{"a": "bar"}]}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
+
+  // $or with multiple statements is ignored
+  upsert({"$or": [{"a": "bar"}, {"b": "baz"}]}, {"$set": {"c": "foo"}}, {"c": "foo"})
+
+  // Negative logical operators are ignored
+  upsert({"$nor": [{"a": "bar"}]}, {"$set": {"c": "foo"}}, {"c": "foo"})
+
+  // Filter out empty objects after filtering out operators
+  upsert({"a": {"$exists": true}}, {"$set": {"c": "foo"}}, {"c": "foo"})
+
+  // But leave actual empty objects
+  upsert({"a": {}}, {"$set": {"c": "foo"}}, {"a": {}, "c": "foo"})
+
+  // Test nested fields
+  upsert({"$and": [{"a.a": "foo"}, {"$or": [{"a.b": "baz"}]}]}, {"$set": {"c": "foo"}}, {"a": {"a": "foo", "b": "baz"}, "c": "foo"})
+
+  // Nested fields don't work with literal objects
+  upsertException({"a": {}, "a.b": "foo"}, {});
+
+  // You can't set the same field twice
+  upsertException({"$and": [{"a": "foo"}, {"a": "foo"}]}, {}); //not even with same value
+  upsertException({"a": {"$all": ["foo", "bar"]}}, {});
+  upsertException({"$and": [{"a": {"$eq": "foo"}}, {"$or": [{"a": {"$all": ["bar"]}}]}]}, {});
+
+  // You can't have nested dotted fields
+  upsertException({"a": {"foo.bar": "baz"}}, {});
+
+  // You can't have dollar-prefixed fields above the first level (logical operators not counted)
+  upsertException({"a": {"a": {"$eq": "foo"}}}, {});
+  upsertException({"a": {"a": {"$exists": true}}}, {});
+
+  // You can't mix operators with other fields
+  upsertException({"a": {"$eq": "bar", "b": "foo"}}, {})
+  upsertException({"a": {"b": "foo", "$eq": "bar"}}, {})
+
+  var mongoIdForUpsert = new MongoID.ObjectID();
+  upsert({_id: mongoIdForUpsert},{$setOnInsert:{a:123}},{a:123})
+
   exception({}, {$set: {_id: 'bad'}});
 
   // $bit
