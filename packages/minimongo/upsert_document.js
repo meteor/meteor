@@ -50,7 +50,7 @@ populateDocumentWithQueryFields = function (query, document = {}) {
 function populateDocumentWithKeyValue(document, key, value) {
     if (value && Object.getPrototypeOf(value) === Object.prototype) {
         populateDocumentWithObject(document, key, value);
-    } else {
+    } else if (!(value instanceof RegExp)) {
         insertIntoDocument(document, key, value);
     }
 }
