@@ -272,9 +272,23 @@ Hot code push greatly improves the development experience, but on mobile, it is 
 
 However, it is important to realize that hot code push can only be used to update the HTML, CSS, JavaScript code and other assets making up your web app. Changes to native code will still require you [to submit a new version of your app to the store](#building-and-submitting).
 
-In order to avoid a situation where JavaScript code that relies on changed native code is pushed to a client, we calculate a compatibility version from the Cordova platform and plugin versions, and only download a new version to a device when there is an exact match. This means any change to the list of plugins, or updating to a Meteor release which contains a new platform version, will block hot code push to existing mobile clients until the app has been updated from the store.
+In order to avoid a situation where JavaScript code that relies on changed native code is pushed to a client, we calculate a compatibility version hash from the Cordova platform and plugin versions, and only download a new version to a device when there is an exact match. This means any change to the list of plugins, or updating to a Meteor release which contains a new platform version, will block hot code push to existing mobile clients until the app has been updated from the store.
 
 Something else to keep in mind is that your server-side code should be prepared to handle requests from older client versions, which may not yet have been updated. As you make changes to your data schema or publication functions for example, you may want to reflect on how this will impact backwards compatibility.
+
+<h3 id="controlling-compatibility-version">Controlling compatibility version</h3>
+
+The compatibility version can be found in the `cordovaCompatibilityVersions` attribute of the JSON file served at `ROOT_URL/__cordova/manifest.json` during `meteor run [ios/android]`.
+
+![cordovaCompatibilityVersions](http://i.imgur.com/Wx7iOWu.png)
+
+You may want to override the compatibility version if you want hot code push to reach older apps that don't have the latest version of your native code from the app store. Let's say you're developing an iOS app, you have the plugin `cordova-plugin-camera@2.4.0`, and your app has the compatibility version pictured above, `3ed5b9318b2916b595f7721759ead4d708dfbd46`. If you were to update to version `2.4.1` of `cordova-plugin-camera`, your server would generate a new compatibility version and your users' apps would stop receiving hot code pushes. However, you can tell your server to use the old compatilibity version: 
+
+```
+CORDOVA_COMPATIBILITY_VERSION_IOS=3ed5b9318b2916b595f7721759ead4d708dfbd46 meteor run ios-device
+```
+
+Now your users' apps will continue receiving hot code pushes. However, they won't get the new version of the Cordova plugin until they update from the app store. In this case, that's okay, because we only updated a patch version, so the `cordova-plugin-camera` API didn't change. But if you had added a new plugin, like `cordova-plugin-gyroscope`, and changed your Javascript to call `navigator.gyroscope.getCurrent()`, then when the old apps get the new JS code, they will throw the error: `Uncaught TypeError: Cannot read property 'getCurrent' of undefined`.
 
 <h3 id="configuring-server-for-hot-code-push">Configuring your server</h3>
 
@@ -286,7 +300,7 @@ The reason this is needed is because updates delivered through hot code push rep
 
 <h3 id="recovering-from-faulty-versions">Recovering from faulty versions</h3>
 
-Hot code pushing updated JavaScript code to a device could accidentally push code containing errors, which might leave users with a broken app (a 'white screen of death', in the worst case), and could even disable hot code push (because the code that makes a connection to the server may no longer run).
+Hot code pushing new JavaScript code to a device could accidentally push code containing errors, which might leave users with a broken app (a "white screen of death" in the worst case), and could even disable hot code push (because the code that makes a connection to the server may no longer run).
 
 To avoid this, we try to detect faulty versions and revert to the last known good version when this happens. The way detection works is that we expect all `Meteor.startup()` callbacks to complete within a set period of time. If this doesn't happen we consider the version faulty and will rollback the update. Unless the version on the server has been updated in the meantime, the server will try to hot code push the faulty version again. Therefore, we blacklist faulty versions on the device so we know not to retry.
 
