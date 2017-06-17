@@ -2944,6 +2944,9 @@ Tinytest.add("minimongo - modify", function (test) {
   // But leave actual empty objects
   upsert({"a": {}}, {"$set": {"c": "foo"}}, {"a": {}, "c": "foo"})
 
+   // Also filter out shorthand regexp notation
+  upsert({"a": /a/}, {"$set": {"c": "foo"}}, {"c": "foo"})
+
   // Test nested fields
   upsert({"$and": [{"a.a": "foo"}, {"$or": [{"a.b": "baz"}]}]}, {"$set": {"c": "foo"}}, {"a": {"a": "foo", "b": "baz"}, "c": "foo"})
 
@@ -2969,8 +2972,14 @@ Tinytest.add("minimongo - modify", function (test) {
   upsertException({"a": {"$eq": "bar", "b": "foo"}}, {})
   upsertException({"a": {"b": "foo", "$eq": "bar"}}, {})
 
-  var mongoIdForUpsert = new MongoID.ObjectID();
+  var mongoIdForUpsert = new MongoID.ObjectID('44915733af80844fa1cef07a');
   upsert({_id: mongoIdForUpsert},{$setOnInsert: {a: 123}},{a: 123})
+
+  // Test for https://github.com/meteor/meteor/issues/7758
+  upsert({n_id: mongoIdForUpsert, c_n: "bar"},
+    {$set: { t_t_o: "foo"}},
+    {n_id: mongoIdForUpsert, t_t_o: "foo", c_n: "bar"});
+
 
   exception({}, {$set: {_id: 'bad'}});
 
