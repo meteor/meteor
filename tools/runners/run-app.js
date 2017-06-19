@@ -107,20 +107,12 @@ _.extend(AppProcess.prototype, {
       if (self.debugPort &&
           line.indexOf("Debugger attached") >= 0) {
         self.proc.send({
-          meteorDebugMessage: "continue",
-          break: true,
+          meteorDebugCommand: "continue"
         });
       }
 
       runLog.logAppOutput(line, true);
     });
-
-    if (! self.debugPort) {
-      self.proc.send({
-        meteorDebugMessage: "continue",
-        break: false,
-      });
-    }
 
     // Watch for exit and for stdio to be fully closed (so that we don't miss
     // log lines).
@@ -224,6 +216,12 @@ _.extend(AppProcess.prototype, {
     // the HTTP forwarded count.
     env.HTTP_FORWARDED_COUNT =
       "" + ((parseInt(process.env['HTTP_FORWARDED_COUNT']) || 0) + 1);
+
+    if (self.debugPort) {
+      env.METEOR_INSPECT_BRK = self.debugPort;
+    } else {
+      delete env.METEOR_INSPECT_BRK;
+    }
 
     var shellDir = self.projectContext.getMeteorShellDirectory();
     files.mkdir_p(shellDir);
