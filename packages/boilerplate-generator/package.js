@@ -3,6 +3,7 @@ Package.describe({
   version: '1.1.0'
 });
 
+if(false){
 Package.onUse(function (api) {
   api.use([
     'underscore',
@@ -22,3 +23,16 @@ Package.onUse(function (api) {
     'boilerplate_web.cordova.html'
   ], 'server');
 });
+} else {
+
+Package.onUse(function (api) {
+  api.use([
+    'underscore',
+  ], 'server');
+  api.addFiles([
+    'boilerplate_web_template.js',
+    'boilerplate-generator-v2.js'
+  ], 'server');
+  api.export(['Boilerplate'], 'server');
+});
+}
