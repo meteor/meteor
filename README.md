@@ -1,4 +1,4 @@
-# <a href='https://www.meteor.com'><img src='https://user-images.githubusercontent.com/841294/26841702-0902bbee-4af3-11e7-9805-0618da66a246.png' height='60'></a>
+# <a href='https://www.meteor.com'><img src='https://user-images.githubusercontent.com/841294/26841702-0902bbee-4af3-11e7-9805-0618da66a246.png' height='60' alt='Meteor'></a>
 
 [![TravisCI Status](https://travis-ci.org/meteor/meteor.svg?branch=devel)](https://travis-ci.org/meteor/meteor)
 [![CircleCI Status](https://circleci.com/gh/meteor/meteor/tree/devel.svg?style=shield&circle-token=c2d3c041506bd493ef3795ffa4448684cfce97b8)](https://circleci.com/gh/meteor/meteor/tree/devel)
@@ -18,7 +18,7 @@ Next, read the [guide](http://guide.meteor.com) or the reference documentation a
 
 ## Quick Start
 
-On Windows, simply go to https://www.meteor.com/install and use the Windows installer.
+On Windows, the installer can be found at https://www.meteor.com/install.
 
 On Linux/macOS, use this line:
 
@@ -39,14 +39,23 @@ cd try-meteor
 meteor
 ```
 
-## Slow Start (for developers)
+## Developer Resources
 
-If you're interested in developing Meteor itself, or running unreleased,
-bleeding-edge code, please refer to the details found in
-[Development.md](Development.md).
+Building an application with Meteor?
 
-To find more information about contributing to Meteor (whether fixing bugs or
-adding features), please see [Contributing.md](Contributing.md).
+* Announcement list: sign up at http://www.meteor.com/
+* Having problems? Ask for help at: http://stackoverflow.com/questions/tagged/meteor
+* Discussion forums: https://forums.meteor.com/
+
+Interested in helping or contributing to Meteor?  These resources will help:
+
+* [Core development guide](Development.md)
+* [Contribution guidelines](Contributing.md)
+* [Feature requests](https://github.com/meteor/meteor-feature-requests/)
+* [Issue tracker](https://github.com/meteor/meteor/issues)
+
+We are hiring!  Visit [meteor.io/jobs](https://www.meteor.io/jobs/) to
+learn more about working full-time on the Meteor project.
 
 ## Uninstalling Meteor
 
@@ -59,19 +68,3 @@ sudo rm /usr/local/bin/meteor
 ```
 
 On Windows, just run the uninstaller from your Control Panel.
-
-## Developer Resources
-
-Building an application with Meteor?
-
-* Announcement list: sign up at http://www.meteor.com/
-* Having problems? Ask for help at: http://stackoverflow.com/questions/tagged/meteor
-* Discussion forums: https://forums.meteor.com/
-
-Interested in contributing to Meteor?
-
-* Issue tracker: https://github.com/meteor/meteor/issues
-* Contribution guidelines: https://github.com/meteor/meteor/tree/devel/Contributing.md
-
-We are hiring!  Visit https://www.meteor.com/jobs to
-learn more about working full-time on the Meteor project.
