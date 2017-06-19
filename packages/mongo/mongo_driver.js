@@ -513,18 +513,15 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
 
     var isModify = isModificationMod(mongoMod);
 
-    var newDoc;
+    var isModify = LocalCollection._isModificationMod(mongoMod);
+
+    // We've already run replaceTypes/replaceMeteorAtomWithMongo on
+    // selector and mod.  We assume it doesn't matter, as far as
+    // the behavior of modifiers is concerned, whether `_modify`
+    // is run on EJSON or on mongo-converted EJSON.
+    var newDoc = LocalCollection._createUpsertDocument(mongoSelector, mongoMod);
     // Run this code up front so that it fails fast if someone uses
     // a Mongo update operator we don't support.
-    if (isModify) {
-      // We've already run replaceTypes/replaceMeteorAtomWithMongo on
-      // selector and mod.  We assume it doesn't matter, as far as
-      // the behavior of modifiers is concerned, whether `_modify`
-      // is run on EJSON or on mongo-converted EJSON.
-      newDoc = LocalCollection._createUpsertDocument(selector, mod);
-    } else {
-      newDoc = mod;
-    }
 
     var knownId = newDoc._id;
 
@@ -594,23 +591,6 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
     write.committed();
     throw e;
   }
-};
-
-var isModificationMod = function (mod) {
-  var isReplace = false;
-  var isModify = false;
-  for (var k in mod) {
-    if (k.substr(0, 1) === '$') {
-      isModify = true;
-    } else {
-      isReplace = true;
-    }
-  }
-  if (isModify && isReplace) {
-    throw new Error(
-      "Update parameter cannot have both modifier and non-modifier fields.");
-  }
-  return isModify;
 };
 
 var transformResult = function (driverResult) {
