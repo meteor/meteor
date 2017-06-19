@@ -947,6 +947,18 @@ var getHeader = function (options) {
     );
   }
 
+  if (options.combinedServePath || options.name) {
+    chunks.push("/* Package reflection */\n");
+    if (options.name) {
+      chunks.push("var PackageName = " + JSON.stringify(options.name) + ";\n");
+    }
+    if (options.combinedServePath) {
+      chunks.push("var PackagePath = " +
+        JSON.stringify(options.combinedServePath.replace(/^\//, '')) + ";\n");
+    }
+    chunks.push("\n");
+  }
+
   return chunks.join('');
 };
 
@@ -1114,7 +1126,9 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
   // into a single scope.
   var header = getHeader({
     imports,
-    packageVariables: _.union(assignedVariables, declaredExports)
+    packageVariables: _.union(assignedVariables, declaredExports),
+    combinedServePath,
+    name
   });
 
   let exportsName;
