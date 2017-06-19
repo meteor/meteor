@@ -1118,10 +1118,30 @@ LocalCollection.prototype.resumeObservers = function () {
   self._observeQueue.drain();
 };
 
+LocalCollection._isModificationMod = function (mod) {
+  var isReplace = false;
+  var isModify = false;
+  for (var k in mod) {
+    if (k.substr(0, 1) === '$') {
+      isModify = true;
+    } else {
+      isReplace = true;
+    }
+  }
+  if (isModify && isReplace) {
+    throw new Error(
+      "Update parameter cannot have both modifier and non-modifier fields.");
+  }
+  return isModify;
+};
 
 // Calculates the document to insert in case we're doing an upsert and the selector
 // does not match any elements
 LocalCollection._createUpsertDocument = function (selector, modifier) {
+  if (!LocalCollection._isModificationMod(modifier)) {
+    return modifier;
+  } else {
+
     let selectorDocument = populateDocumentWithQueryFields(selector);
 
     const newDoc = {};
@@ -1131,8 +1151,9 @@ LocalCollection._createUpsertDocument = function (selector, modifier) {
     }
 
     // This double _modify call is made to help with nested properties (see issue #8631).
-    LocalCollection._modify(newDoc, {$set: selectorDocument});
-    LocalCollection._modify(newDoc, modifier, {isInsert: true});
+    LocalCollection._modify(newDoc, { $set: selectorDocument });
+    LocalCollection._modify(newDoc, modifier, { isInsert: true });
 
     return newDoc;
+  }
 };
