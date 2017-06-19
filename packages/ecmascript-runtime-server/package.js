@@ -11,13 +11,6 @@ Npm.depends({
 });
 
 Package.onUse(function(api) {
-  // If the es5-shim package is installed, make sure it loads before
-  // ecmascript-runtime-server, since the runtime uses some ES5 APIs like
-  // Object.defineProperties that are buggy in older browsers.
-  api.use("es5-shim", { weak: true });
-  api.use(["modules", "promise"], "server");
+  api.use("modules", "server");
   api.mainModule("runtime.js", "server");
-  api.export("Symbol", "server");
-  api.export("Map", "server");
-  api.export("Set", "server");
 });
