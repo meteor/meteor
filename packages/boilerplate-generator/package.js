@@ -4,6 +4,7 @@ Package.describe({
 });
 
 var USE_OLD_BOILERPLATE_GENERATOR = true;
+USE_OLD_BOILERPLATE_GENERATOR = false; // uncomment this line to use the new boilerplate generator
 if(USE_OLD_BOILERPLATE_GENERATOR){
 Package.onUse(function (api) {
   api.use([
