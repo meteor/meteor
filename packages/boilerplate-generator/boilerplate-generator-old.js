@@ -11,9 +11,11 @@ Boilerplate = function (arch, manifest, options) {
   options = options || {};
   self.template = _getTemplate(arch);
   self.baseData = null;
+  self.func = null;
 
-  self._generateBoilerplateFromManifest(
+  self._generateBoilerplateFromManifestAndSource(
     manifest,
+    self.template,
     options
   );
 };
@@ -25,10 +27,12 @@ Boilerplate = function (arch, manifest, options) {
 Boilerplate.prototype.toHTML = function (extraData) {
   var self = this;
 
-  if (! self.baseData || ! self.template)
+  if (! self.baseData || ! self.func)
     throw new Error('Boilerplate did not instantiate correctly.');
 
-  return  "<!DOCTYPE html>\n" + self.template(_.extend(self.baseData, extraData));
+  return  "<!DOCTYPE html>\n" +
+    Blaze.toHTML(Blaze.With(_.extend(self.baseData, extraData),
+                            self.func));
 };
 
 // XXX Exported to allow client-side only changes to rebuild the boilerplate
@@ -38,8 +42,8 @@ Boilerplate.prototype.toHTML = function (extraData) {
 // or rewritten.
 // Optionally takes pathMapper for resolving relative file system paths.
 // Optionally allows to override fields of the data context.
-Boilerplate.prototype._generateBoilerplateFromManifest =
-  function (manifest, options) {
+Boilerplate.prototype._generateBoilerplateFromManifestAndSource =
+  function (manifest, boilerplateSource, options) {
     var self = this;
     // map to the identity by default
     var urlMapper = options.urlMapper || _.identity;
@@ -84,14 +88,19 @@ Boilerplate.prototype._generateBoilerplateFromManifest =
           readUtf8FileSync(pathMapper(item.path));
       }
     });
+    var boilerplateRenderCode = SpacebarsCompiler.compile(
+      boilerplateSource, { isBody: true });
+
+    // Note that we are actually depending on eval's local environment capture
+    // so that UI and HTML are visible to the eval'd code.
+    // XXX the template we are evaluating relies on the fact that UI is globally
+      // available.
+    global.UI = UI;
+    self.func = eval(boilerplateRenderCode);
     self.baseData = boilerplateBaseData;
 };
 
 var _getTemplate = _.memoize(function (arch) {
-  if (arch === 'web.browser') {
-    return Boilerplate_Web_Browser_Template;
-  } else if (arch === 'web.cordova') {
-  } else {
-    throw new Error('Unsupported arch: ' + arch);
-  }
+  var filename = 'boilerplate_' + arch + '.html';
+  return Assets.getText(filename);
 });

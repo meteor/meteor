@@ -3,7 +3,8 @@ Package.describe({
   version: '1.1.0'
 });
 
-if(false){
+var USE_OLD_BOILERPLATE_GENERATOR = true;
+if(USE_OLD_BOILERPLATE_GENERATOR){
 Package.onUse(function (api) {
   api.use([
     'underscore',
@@ -12,7 +13,7 @@ Package.onUse(function (api) {
     'htmljs',
     'ui',
   ], 'server');
-  api.addFiles(['boilerplate-generator.js'], 'server');
+  api.addFiles(['boilerplate-generator-old.js'], 'server');
   api.export(['Boilerplate'], 'server');
   // These are spacebars templates, but we process them manually with the
   // spacebars compiler rather than letting the 'templating' package (which
@@ -31,7 +32,7 @@ Package.onUse(function (api) {
   ], 'server');
   api.addFiles([
     'boilerplate_web_template.js',
-    'boilerplate-generator-v2.js'
+    'boilerplate-generator.js'
   ], 'server');
   api.export(['Boilerplate'], 'server');
 });
