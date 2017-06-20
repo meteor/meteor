@@ -42,7 +42,7 @@ var packageJson = {
     "http-proxy": "1.11.1",
     "wordwrap": "0.0.2",
     "moment": "2.8.4",
-    "rimraf": "2.4.3",
+    "rimraf": "2.6.1",
     "glob": "7.0.6",
     // XXX: When we update this, see if it fixes this Github issue:
     // https://github.com/jgm/CommonMark/issues/276 . If it does, remove the

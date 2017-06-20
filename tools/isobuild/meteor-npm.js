@@ -646,10 +646,7 @@ var updateExistingNpmDirectory = function (packageName, newPackageNpmDir,
     // Otherwise install npmTree.dependencies as if we were creating a new
     // .npm/package directory, and leave preservedShrinkwrap empty.
     _.each(npmTree.dependencies, (info, name) => {
-      const installed = minInstalledTree.dependencies[name];
-      if (! installed || installed.version !== info.version) {
-        installNpmModule(name, info.version, newPackageNpmDir);
-      }
+      installNpmModule(name, info.version, newPackageNpmDir);
     });
 
     // Note: as of npm@4.0.0, npm-shrinkwrap.json files are regarded as
