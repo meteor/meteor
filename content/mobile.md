@@ -284,11 +284,21 @@ The compatibility version can be found in the `cordovaCompatibilityVersions` att
 
 You may want to override the compatibility version if you want hot code push to reach older apps that don't have the latest version of your native code from the app store. Let's say you're developing an iOS app, you have the plugin `cordova-plugin-camera@2.4.0`, and your app has the compatibility version pictured above, `3ed5b9318b2916b595f7721759ead4d708dfbd46`. If you were to update to version `2.4.1` of `cordova-plugin-camera`, your server would generate a new compatibility version and your users' apps would stop receiving hot code pushes. However, you can tell your server to use the old compatilibity version: 
 
-```
+```sh
 CORDOVA_COMPATIBILITY_VERSION_IOS=3ed5b9318b2916b595f7721759ead4d708dfbd46 meteor run ios-device
 ```
 
 Now your users' apps will continue receiving hot code pushes. However, they won't get the new version of the Cordova plugin until they update from the app store. In this case, that's okay, because we only updated a patch version, so the `cordova-plugin-camera` API didn't change. But if you had added a new plugin, like `cordova-plugin-gyroscope`, and changed your Javascript to call `navigator.gyroscope.getCurrent()`, then when the old apps get the new JS code, they will throw the error: `Uncaught TypeError: Cannot read property 'getCurrent' of undefined`.
+
+Another option is using the `METEOR_CORDOVA_COMPAT_VERSION_EXCLUDE` environment variable. If you were to do this:
+
+```sh
+meteor add cordova-plugin-camera
+meteor add cordova-plugin-gyroscope
+METEOR_CORDOVA_COMPAT_VERSION_EXCLUDE='cordova-plugin-camera,cordova-plugin-gyroscope' meteor run ios-device
+```
+
+your compatibility version would not change.
 
 <h3 id="configuring-server-for-hot-code-push">Configuring your server</h3>
 
