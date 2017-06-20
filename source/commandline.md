@@ -36,8 +36,14 @@ same as `meteor run`.
 To pass additional options to Node.js use the `NODE_OPTIONS` environment variable.
 For example: `NODE_OPTIONS='--debug'` or `NODE_OPTIONS='--debug-brk'`
 
-Run `meteor help run` to see the full list of options.
+To specify a port to listen on (instead of the default 3000), use `--port [PORT]`.
+(The development server also uses port `N+1` for the default MongoDB instance)
 
+For example: `meteor run --port 4000` 
+will run the development server on `http://localhost:4000`
+and the development MongoDB instance on `mongodb://localhost:4001`.
+
+Run `meteor help run` to see the full list of options.
 
 <h2 id="meteordebug">meteor debug</h2>
 
