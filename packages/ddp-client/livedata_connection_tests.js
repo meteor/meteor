@@ -291,11 +291,11 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
 
   // Change the foo subscription and flush. We should sub to the new foo
   // subscription, re-sub to the stopper subscription, and then unsub from the old
-  // foo subscription.  The bar subscription should be unaffected. The completer
-  // subscription should *NOT* call its new onReady callback, because we only
-  // call at most one onReady for a given reactively-saved subscription.
+  // foo subscription. The bar subscription should be unaffected. The completer
+  // subscription should call its new onReady callback, because we always
+  // call onReady for a given reactively-saved subscription.
   // The completerHandle should have been reestablished to the ready handle.
-  rFoo.set("foo2");
+  rFoo.set("foo2"); 
   Tracker.flush();
   test.length(stream.sent, 3);
 
@@ -312,17 +312,17 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
   message = JSON.parse(stream.sent.shift());
   test.equal(message, {msg: 'unsub', id: idFoo1});
 
-  test.equal(onReadyCount, {completer: 1});
+  test.equal(onReadyCount, {completer: 2});
   test.isTrue(completerReady);
 
   // Ready the stopper and bar subs. Completing stopper should call only the
   // onReady from the new subscription because they were separate subscriptions
   // started at different times and the first one was explicitly torn down by
-  // the client; completing bar should call only the onReady from the new
-  // subscription because we only call at most one onReady per reactively-saved
+  // the client; completing bar should call the onReady from the new
+  // subscription because we always call onReady for a given reactively-saved
   // subscription.
   stream.receive({msg: 'ready', 'subs': [idStopperAgain, idBar1]});
-  test.equal(onReadyCount, {completer: 1, bar1: 1, stopper: 1});
+  test.equal(onReadyCount, {completer: 2, bar1: 1, stopper: 1});
 
   // Shut down the autorun. This should unsub us from all current subs at flush
   // time.
@@ -1310,15 +1310,24 @@ Tinytest.add("livedata stub - reactive resub", function (test) {
   });
 
   markAllReady();
+  var message = JSON.parse(stream.sent.shift());
+  delete message.id;
+  test.equal(message, {msg: 'sub', name: 'foo-sub', params: ['A']});
   test.equal(fooReady, 1);
 
   // Rerun the inner autorun with different subscription
-  // arguments.  Detect the re-sub via onReady.
+  // arguments.
   fooArg.set('B');
   test.isTrue(inner.invalidated);
   Tracker.flush();
   test.isFalse(inner.invalidated);
   markAllReady();
+  message = JSON.parse(stream.sent.shift());
+  delete message.id;
+  test.equal(message, {msg: 'sub', name: 'foo-sub', params: ['B']});
+  message = JSON.parse(stream.sent.shift());
+  delete message.id;
+  test.equal(message, {msg: 'unsub'});
   test.equal(fooReady, 2);
 
   // Rerun inner again with same args; should be no re-sub.
@@ -1327,7 +1336,8 @@ Tinytest.add("livedata stub - reactive resub", function (test) {
   Tracker.flush();
   test.isFalse(inner.invalidated);
   markAllReady();
-  test.equal(fooReady, 2);
+  test.isUndefined(stream.sent.shift());  test.isUndefined(stream.sent.shift());
+  test.equal(fooReady, 3);
 
   // Rerun outer!  Should still be no re-sub even though
   // the inner computation is stopped and a new one is
@@ -1337,13 +1347,20 @@ Tinytest.add("livedata stub - reactive resub", function (test) {
   Tracker.flush();
   test.isFalse(inner.invalidated);
   markAllReady();
-  test.equal(fooReady, 2);
+  test.isUndefined(stream.sent.shift());
+  test.equal(fooReady, 4);
 
   // Change the subscription.  Now we should get an onReady.
   fooArg.set('C');
   Tracker.flush();
   markAllReady();
-  test.equal(fooReady, 3);
+  message = JSON.parse(stream.sent.shift());
+  delete message.id;
+  test.equal(message, {msg: 'sub', name: 'foo-sub', params: ['C']});
+  message = JSON.parse(stream.sent.shift());
+  delete message.id;
+  test.equal(message, {msg: 'unsub'});
+  test.equal(fooReady, 5);
 });
 
 
