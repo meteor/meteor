@@ -127,7 +127,7 @@ class Server {
       if (options.evaluateAndExit) {
         evalCommand.call(
           Object.create(null), // Dummy repl object without ._RecoverableError.
-          "(" + options.evaluateAndExit.command + ")",
+          options.evaluateAndExit.command,
           null, // evalCommand ignores the context parameter, anyway
           options.evaluateAndExit.filename || "<meteor shell>",
           function (error, result) {
