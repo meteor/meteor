@@ -8,7 +8,7 @@
 
 * The `fibers` npm package has been upgraded to version 2.0.0.
 
-* The `pathwatcher` npm package has been upgraded to version 7.0.0.
+* The `pathwatcher` npm package has been upgraded to version 7.1.0.
 
 * The `http-proxy` npm package has been upgraded to version 1.16.2.
 
