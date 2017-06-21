@@ -2495,13 +2495,13 @@ Tinytest.add("minimongo - modify", function (test) {
                        {b: [9,9]}]},
                   {'a.b': {$near: [5, 5]}},
                   {$set: {'a.$.b': 'k'}},
-                  {"a":[{"b":"k"},{"b":[[3,3],[4,4]]},{"b":[9,9]}]}); 
+                  {"a":[{"b":"k"},{"b":[[3,3],[4,4]]},{"b":[9,9]}]});
   modifyWithQuery({a: [{b: [1,1]},
                        {b: [ [3,3], [4,4] ]},
                        {b: [9,9]}]},
                   {'a.b': {$near: [9, 9], $maxDistance: 1}},
                   {$set: {'a.$.b': 'k'}},
-                  {"a":[{"b":"k"},{"b":[[3,3],[4,4]]},{"b":[9,9]}]}); 
+                  {"a":[{"b":"k"},{"b":[[3,3],[4,4]]},{"b":[9,9]}]});
   modifyWithQuery({a: [{b: [1,1]},
                        {b: [ [3,3], [4,4] ]},
                        {b: [9,9]}]},
@@ -2524,7 +2524,7 @@ Tinytest.add("minimongo - modify", function (test) {
                        {b: [1,1]}]},
                   {'a.b': {$near: [1, 1]}},
                   {$set: {'a.$.b': 'k'}},
-                  {"a":[{"c": [9,9], "b":"k"},{"b": [ [3,3], [4,4]]},{"b":[1,1]}]});  
+                  {"a":[{"c": [9,9], "b":"k"},{"b": [ [3,3], [4,4]]},{"b":[1,1]}]});
   modifyWithQuery({a: [{c: [9,9], b:[4,3]},
                        {b: [ [3,3], [4,4] ]},
                        {b: [1,1]}]},
@@ -2862,6 +2862,53 @@ Tinytest.add("minimongo - modify", function (test) {
     { a: { $exists: true }},
     { $setOnInsert: { a: 123 }},
     { a: 123 }
+  );
+
+  // Tests for https://github.com/meteor/meteor/issues/8794.
+  const testObjectId = new MongoID.ObjectID();
+  upsert(
+    { _id: testObjectId },
+    { $setOnInsert: { a: 123 } },
+    { _id: testObjectId, a: 123 },
+  );
+  upsert(
+    { someOtherId: testObjectId },
+    { $setOnInsert: { a: 123 } },
+    { someOtherId: testObjectId, a: 123 },
+  );
+  upsert(
+    { a: { $eq: testObjectId } },
+    { $setOnInsert: { a: 123 } },
+    { a: 123 },
+  );
+  const testDate = new Date('2017-01-01');
+  upsert(
+    { someDate: testDate },
+    { $setOnInsert: { a: 123 } },
+    { someDate: testDate, a: 123 },
+  );
+  upsert(
+    {
+      a: Object.create(null, {
+        $exists: {
+          writable: true,
+          configurable: true,
+          value: true
+        }
+      }),
+    },
+    { $setOnInsert: { a: 123 } },
+    { a: 123 },
+  );
+  upsert(
+    { foo: { $exists: true, $type: 2 }},
+    { $setOnInsert: { bar: 'baz' } },
+    { bar: 'baz' }
+  );
+  upsert(
+    { foo: {} },
+    { $setOnInsert: { bar: 'baz' } },
+    { foo: {}, bar: 'baz' }
   );
 
   exception({}, {$set: {_id: 'bad'}});

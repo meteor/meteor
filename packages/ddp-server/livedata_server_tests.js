@@ -328,6 +328,17 @@ Meteor.methods({
     return Promise.resolve(arg).then(result => {
       throw new Meteor.Error(result + " raised Meteor.Error");
     });
+  },
+
+  testRejectedPromiseWithGenericError(arg) {
+    return Promise.resolve(arg).then(result => {
+      const error = new Error('MESSAGE');
+      error.error = 'ERROR';
+      error.reason = 'REASON';
+      error.details = { foo: 'bar' };
+      error.isClientSafe = true;
+      throw error;
+    });
   }
 });
 
@@ -365,14 +376,33 @@ Tinytest.addAsync(
       );
     });
 
+    const clientCallRejectedPromiseWithGenericError = new Promise(resolve => {
+      clientConn.call(
+        "testRejectedPromiseWithGenericError",
+        (error, result) => resolve({
+          message: error.message,
+          error: error.error,
+          reason: error.reason,
+          details: error.details,
+        })
+      );
+    });
+
     Promise.all([
       clientCallPromise,
       clientCallRejectedPromise,
+      clientCallRejectedPromiseWithGenericError,
       serverCallAsyncPromise,
       serverApplyAsyncPromise
     ]).then(results => test.equal(results, [
       "clientConn.call with callback after waiting",
       "[with callback raised Meteor.Error]",
+      {
+        message: 'REASON [ERROR]',
+        error: 'ERROR',
+        reason: 'REASON',
+        details: { foo: 'bar' },
+      },
       "Meteor.server.callAsync after waiting",
       "Meteor.server.applyAsync after waiting"
     ]), error => test.fail(error))

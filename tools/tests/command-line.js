@@ -317,6 +317,44 @@ selftest.define("argument parsing", function () {
     run = s.run("list");
     run.expectExit(0);
   });
+
+  s.createApp("app-with-extra-packages", "extra-packages-option", {
+    dontPrepareApp: true
+  });
+  s.cd("app-with-extra-packages", function () {
+    run = s.run("--extra-packages", "extra-package-1, extra-package-2@=0.0.2");
+    run.waitSecs(60);
+    run.match("extra-package-1: foobar");
+    run.match("extra-package-2: barfoo");
+    run.stop();
+  });
+
+  s.createApp("app-with-extra-packages", "extra-packages-option", {
+    dontPrepareApp: true
+  });
+  s.cd("app-with-extra-packages", function () {
+    run = s.run("test",
+      "--extra-packages", "practicalmeteor:mocha, extra-package-1, extra-package-2@=0.0.2",
+      "--driver-package", "practicalmeteor:mocha");
+    run.waitSecs(60);
+    run.match("extra-package-1: foobar");
+    run.match("extra-package-2: barfoo");
+    run.stop();
+  });
+
+  s.createApp("app-with-extra-packages", "extra-packages-option", {
+    dontPrepareApp: true
+  });
+  s.cd("app-with-extra-packages", function () {
+    run = s.run("test-packages", "--once",
+      "--driver-package", "test-server-tests-in-console-once",
+      "--extra-packages", "extra-package-1, extra-package-2@=0.0.2",
+      "extra-package-1", "extra-package-2");
+    run.waitSecs(60);
+    run.match("extra-package-1 - example test");
+    run.match("extra-package-2 - example test");
+    run.expectExit(0);
+  });
 });
 
 

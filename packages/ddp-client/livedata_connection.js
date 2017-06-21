@@ -582,8 +582,15 @@ _.extend(Connection.prototype, {
         // an onReady callback inside an autorun; the semantics we provide is
         // that at the time the sub first becomes ready, we call the last
         // onReady callback provided, if any.)
-        if (!existing.ready)
+        // If the sub is already ready, run the ready callback right away.
+        // It seems that users would expect an onReady callback inside an
+        // autorun to trigger once the the sub first becomes ready and also
+        // when re-subs happens.
+        if (existing.ready) {
+          callbacks.onReady();
+        } else {
           existing.readyCallback = callbacks.onReady;
+        }
       }
 
       // XXX COMPAT WITH 1.0.3.1 we used to have onError but now we call
