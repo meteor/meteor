@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
-  api.use(['underscore', 'base64']);
+  api.use(['ecmascript', 'underscore', 'base64']);
   api.export('EJSON');
   api.export('EJSONTest', {testOnly: true});
   api.addFiles('ejson.js', ['client', 'server']);
