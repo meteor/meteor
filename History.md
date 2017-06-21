@@ -2,6 +2,13 @@
 
 * Node has been upgraded to version 8.1.2.
 
+* The `npm` npm package has been upgraded to version 5.0.3, a major
+  upgrade from 4.6.1, requiring internal updates to dependency management
+  logic for Meteor packages that use `Npm.depends`. While these changes
+  should be backwards-compatible for existing Meteor packages, if you are
+  the maintainer of any packages, you should pay close attention to your
+  `npm-shrinkwrap.json` files when first using this version of `npm`.
+
 * The `node-gyp` npm package has been upgraded to version 3.6.2.
 
 * The `node-pre-gyp` npm package has been updated to version 0.6.36.
