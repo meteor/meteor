@@ -66,6 +66,8 @@
 
 * The `reify` npm package has been upgraded to version 0.11.24.
 
+* The `uglify-js` npm package has been upgraded to version 3.0.18.
+
 * Illegal characters in paths written in build output directories will now
   be replaced with `_`s rather than removed, so that file and directory
   names consisting of only illegal characters do not become empty
