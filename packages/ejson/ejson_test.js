@@ -230,3 +230,35 @@ Tinytest.add("ejson - custom types", function (test) {
   clone.address.city = 'Sherbrooke';
   test.notEqual( obj, clone );
 });
+
+// Verify objects with a property named "length" can be handled by the EJSON
+// API properly (see https://github.com/meteor/meteor/issues/5175).
+Tinytest.add(
+  "ejson - handle objects with properties named 'length'",
+  function (test) {
+    var Widget = function () {
+      this.length = 10;
+    };
+    var widget = new Widget();
+
+    var toJsonWidget = EJSON.toJSONValue(widget);
+    test.equal(widget, toJsonWidget);
+
+    var fromJsonWidget = EJSON.fromJSONValue(widget);
+    test.equal(widget, fromJsonWidget);
+
+    var stringifiedWidget = EJSON.stringify(widget);
+    test.equal(stringifiedWidget, '{"length":10}');
+
+    var parsedWidget = EJSON.parse('{"length":10}');
+    test.equal({ length: 10 }, parsedWidget);
+
+    test.isFalse(EJSON.isBinary(widget));
+
+    var widget2 = new Widget();
+    test.isTrue(widget, widget2);
+
+    var clonedWidget = EJSON.clone(widget);
+    test.equal(widget, clonedWidget);
+  }
+);
