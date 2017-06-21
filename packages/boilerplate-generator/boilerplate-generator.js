@@ -1,51 +1,46 @@
-var fs = Npm.require('fs');
-var path = Npm.require('path');
+import BoilerplateWebBrowserTemplate from './boilerplate_web_browser_template';
+import BoilerplateWebCordovaTemplate from './boilerplate_web_cordova_template';
+const fs = Npm.require('fs');
+const path = Npm.require('path');
 
 // Copied from webapp_server
-var readUtf8FileSync = function (filename) {
-  return Meteor.wrapAsync(fs.readFile)(filename, 'utf8');
-};
+const readUtf8FileSync = filename => Meteor.wrapAsync(fs.readFile)(filename, 'utf8');
 
-Boilerplate = function (arch, manifest, options) {
-  var self = this;
-  options = options || {};
-  self.template = _getTemplate(arch);
-  self.baseData = null;
+export class Boilerplate {
+  constructor (arch, manifest, options) {
+    options = options || {};
+    this.template = _getTemplate(arch);
+    this.baseData = null;
 
-  self._generateBoilerplateFromManifest(
-    manifest,
-    options
-  );
-};
+    this._generateBoilerplateFromManifest(
+      manifest,
+      options
+    );
+  }
 
-// The 'extraData' argument can be used to extend 'self.baseData'. Its
-// purpose is to allow you to specify data that you might not know at
-// the time that you construct the Boilerplate object. (e.g. it is used
-// by 'webapp' to specify data that is only known at request-time).
-Boilerplate.prototype.toHTML = function (extraData) {
-  var self = this;
+  // The 'extraData' argument can be used to extend 'self.baseData'. Its
+  // purpose is to allow you to specify data that you might not know at
+  // the time that you construct the Boilerplate object. (e.g. it is used
+  // by 'webapp' to specify data that is only known at request-time).
+  toHTML (extraData) {
+    if (!this.baseData || !this.template)
+      throw new Error('Boilerplate did not instantiate correctly.');
 
-  if (! self.baseData || ! self.template)
-    throw new Error('Boilerplate did not instantiate correctly.');
+    return  "<!DOCTYPE html>\n" + this.template(_.extend(this.baseData, extraData));
+  }
 
-  return  "<!DOCTYPE html>\n" + self.template(_.extend(self.baseData, extraData));
-};
+  // XXX Exported to allow client-side only changes to rebuild the boilerplate
+  // without requiring a full server restart.
+  // Produces an HTML string with given manifest and boilerplateSource.
+  // Optionally takes urlMapper in case urls from manifest need to be prefixed
+  // or rewritten.
+  // Optionally takes pathMapper for resolving relative file system paths.
+  // Optionally allows to override fields of the data context.
+  _generateBoilerplateFromManifest (manifest, options) {
+    const urlMapper = options.urlMapper || _.identity;
+    const pathMapper = options.pathMapper || _.identity;
 
-// XXX Exported to allow client-side only changes to rebuild the boilerplate
-// without requiring a full server restart.
-// Produces an HTML string with given manifest and boilerplateSource.
-// Optionally takes urlMapper in case urls from manifest need to be prefixed
-// or rewritten.
-// Optionally takes pathMapper for resolving relative file system paths.
-// Optionally allows to override fields of the data context.
-Boilerplate.prototype._generateBoilerplateFromManifest =
-  function (manifest, options) {
-    var self = this;
-    // map to the identity by default
-    var urlMapper = options.urlMapper || _.identity;
-    var pathMapper = options.pathMapper || _.identity;
-
-    var boilerplateBaseData = {
+    const boilerplateBaseData = {
       css: [],
       js: [],
       head: '',
@@ -56,9 +51,9 @@ Boilerplate.prototype._generateBoilerplateFromManifest =
     // allow the caller to extend the default base data
     _.extend(boilerplateBaseData, options.baseDataExtension);
 
-    _.each(manifest, function (item) {
-      var urlPath = urlMapper(item.url);
-      var itemObj = { url: urlPath };
+    _.each(manifest, item => {
+      const urlPath = urlMapper(item.url);
+      const itemObj = { url: urlPath };
 
       if (options.inline) {
         itemObj.scriptContent = readUtf8FileSync(
@@ -70,9 +65,9 @@ Boilerplate.prototype._generateBoilerplateFromManifest =
         boilerplateBaseData.css.push(itemObj);
       }
       if (item.type === 'js' && item.where === 'client' &&
-          // Dynamic JS modules should not be loaded eagerly in the
-          // initial HTML of the app.
-          ! item.path.startsWith('dynamic/')) {
+        // Dynamic JS modules should not be loaded eagerly in the
+        // initial HTML of the app.
+        !item.path.startsWith('dynamic/')) {
         boilerplateBaseData.js.push(itemObj);
       }
       if (item.type === 'head') {
@@ -84,14 +79,18 @@ Boilerplate.prototype._generateBoilerplateFromManifest =
           readUtf8FileSync(pathMapper(item.path));
       }
     });
-    self.baseData = boilerplateBaseData;
+    this.baseData = boilerplateBaseData;
+  }
 };
 
-var _getTemplate = _.memoize(function (arch) {
+// Returns a template function that, when called, produces the boilerplate
+// html as a string.
+const _getTemplate = _.memoize(arch => {
+  arch = 'web.cordova';
   if (arch === 'web.browser') {
-    return Boilerplate_Web_Browser_Template;
+    return BoilerplateWebBrowserTemplate;
   } else if (arch === 'web.cordova') {
-    throw new Error('Cordova template not implemented');
+    return BoilerplateWebCordovaTemplate;
   } else {
     throw new Error('Unsupported arch: ' + arch);
   }
