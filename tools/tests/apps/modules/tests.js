@@ -207,11 +207,6 @@ describe("native node_modules", () => {
     assert.strictEqual(typeof require("repl").start, "function");
   });
 
-  Meteor.isClient &&
-  it("can be overridden on the client", () => {
-    assert.strictEqual(require("repl").notEmpty, true);
-  });
-
   it("can be implemented by wrapper npm packages", () => {
     const Stream = require("stream");
     assert.strictEqual(typeof Stream, "function");
