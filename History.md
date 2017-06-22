@@ -7,7 +7,10 @@
   logic for Meteor packages that use `Npm.depends`. While these changes
   should be backwards-compatible for existing Meteor packages, if you are
   the maintainer of any packages, you should pay close attention to your
-  `npm-shrinkwrap.json` files when first using this version of `npm`.
+  `npm-shrinkwrap.json` files when first using this version of `npm`. For
+  normal Meteor application development, this change primarily affects the
+  version of `npm` used by `meteor npm ...` commands.
+  [PR #8835](https://github.com/meteor/meteor/pull/8835)
 
 * The `node-gyp` npm package has been upgraded to version 3.6.2.
 
