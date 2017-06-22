@@ -2951,10 +2951,19 @@ Tinytest.add("minimongo - modify", function (test) {
   upsert({"$and": [{"a.a": "foo"}, {"$or": [{"a.b": "baz"}]}]}, {"$set": {"c": "foo"}}, {"a": {"a": "foo", "b": "baz"}, "c": "foo"})
 
   // Test for https://github.com/meteor/meteor/issues/5294
+  //
   upsert({"a": {"$ne": 444}},{"$push": {"a": 123}}, {"a": [123]})
+
+  // Mod takes precedence over query
+  upsert({"a": "foo"},{"a": "bar"}, {"a": "bar"})
+  upsert({"a": "foo"},{"$set":{"a": "bar"}}, {"a": "bar"})
 
   // Nested fields don't work with literal objects
   upsertException({"a": {}, "a.b": "foo"}, {});
+
+  // You can't have an ambiguious ID
+  upsertException({"_id":"foo"}, {"_id":"bar"});
+  upsertException({"_id":"foo"}, {"$set":{"_id":"bar"}});
 
   // You can't set the same field twice
   upsertException({"$and": [{"a": "foo"}, {"a": "foo"}]}, {}); //not even with same value

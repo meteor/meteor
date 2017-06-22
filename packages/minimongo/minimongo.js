@@ -1138,22 +1138,30 @@ LocalCollection._isModificationMod = function (mod) {
 // Calculates the document to insert in case we're doing an upsert and the selector
 // does not match any elements
 LocalCollection._createUpsertDocument = function (selector, modifier) {
-  if (!LocalCollection._isModificationMod(modifier)) {
-    return modifier;
-  } else {
-
-    let selectorDocument = populateDocumentWithQueryFields(selector);
-
-    const newDoc = {};
-    if (selectorDocument._id) {
-      newDoc._id = selectorDocument._id;
-      delete selectorDocument._id;
-    }
-
-    // This double _modify call is made to help with nested properties (see issue #8631).
-    LocalCollection._modify(newDoc, { $set: selectorDocument });
-    LocalCollection._modify(newDoc, modifier, { isInsert: true });
-
-    return newDoc;
+  let selectorDocument = populateDocumentWithQueryFields(selector)
+  const isModify = LocalCollection._isModificationMod(modifier)
+  
+  const newDoc = {}
+  if (selectorDocument._id) {
+    newDoc._id = selectorDocument._id
+    delete selectorDocument._id
   }
-};
+
+  // This double _modify call is made to help with nested properties (see issue #8631).
+  LocalCollection._modify(newDoc, { $set: selectorDocument })
+  LocalCollection._modify(newDoc, modifier, { isInsert: true })
+
+  if (selectorDocument._id && newDoc._id !== selectorDocument._id) {
+    if (isModify) {
+      throw new Error(`After applying the update to the document {_id: "${selectorDocument._id}" , ...}, the (immutable) field '_id' was found to have been altered to _id: "${newDoc._id}"`)
+    }else {
+      throw new Error(`The _id field cannot be changed from {_id: "${selectorDocument._id}"} to {_id: "${newDoc._id}"}`)
+    }
+  }
+
+  if (isModify) {
+    return newDoc
+  } else {
+    return modifier
+  }
+}
