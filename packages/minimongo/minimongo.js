@@ -1148,20 +1148,17 @@ LocalCollection._createUpsertDocument = function (selector, modifier) {
   }
 
   // This double _modify call is made to help with nested properties (see issue #8631).
+  // We do this even if it's a replacement for validation purposes (e.g. ambiguous id's)
   LocalCollection._modify(newDoc, { $set: selectorDocument })
   LocalCollection._modify(newDoc, modifier, { isInsert: true })
-
-  if (selectorDocument._id && newDoc._id !== selectorDocument._id) {
-    if (isModify) {
-      throw new Error(`After applying the update to the document {_id: "${selectorDocument._id}" , ...}, the (immutable) field '_id' was found to have been altered to _id: "${newDoc._id}"`)
-    }else {
-      throw new Error(`The _id field cannot be changed from {_id: "${selectorDocument._id}"} to {_id: "${newDoc._id}"}`)
-    }
-  }
 
   if (isModify) {
     return newDoc
   } else {
+    // Replacement can take _id from query document
+    if (newDoc._id) {
+      modifier._id = newDoc._id;
+    }
     return modifier
   }
 }
