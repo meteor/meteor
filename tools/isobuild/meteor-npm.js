@@ -994,10 +994,10 @@ const installNpmModule = meteorNpm.installNpmModule = (name, version, dir) => {
 
   if (! result.success) {
     const pkgNotFound =
-      `404  '${utils.quotemeta(name)}' is not in the npm registry`;
+      `404 Not Found: ${utils.quotemeta(name)}@${utils.quotemeta(version)}`;
 
     const versionNotFound =
-      "No compatible version found: " +
+      "No matching version found for " +
       `${utils.quotemeta(name)}@${utils.quotemeta(version)}`;
 
     if (result.stderr.match(new RegExp(pkgNotFound))) {
