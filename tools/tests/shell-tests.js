@@ -42,5 +42,13 @@ selftest.define("meteor shell", function () {
   shell.match("oky dok");
   shell.expectExit(0);
 
+  shell = s.run("shell");
+  // Now check importing a module
+  shell.write('import { Meteor } from "meteor/meteor"\n');
+  shell.proc.stdin.end();
+  shell.waitSecs(10);
+  shell.match("undefined");
+  shell.expectExit(0);
+
   server.stop();
 });

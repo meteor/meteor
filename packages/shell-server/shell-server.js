@@ -203,30 +203,7 @@ class Server {
       configurable: true
     });
 
-    if (Package.modules) {
-      // Use the same `require` function and `module` object visible to the
-      // application.
-      var toBeInstalled = {};
-      var shellModuleName = "meteor-shell-" +
-        Math.random().toString(36).slice(2) + ".js";
-
-      toBeInstalled[shellModuleName] = function (require, exports, module) {
-        repl.context.module = module;
-        repl.context.require = require;
-
-        // Tab completion sometimes uses require.extensions, but only for
-        // the keys.
-        require.extensions = {
-          ".js": true,
-          ".json": true,
-          ".node": true,
-        };
-      };
-
-      // This populates repl.context.{module,require} by evaluating the
-      // module defined above.
-      Package.modules.meteorInstall(toBeInstalled)("./" + shellModuleName);
-    }
+    setRequireAndModule(repl.context);
 
     repl.context.repl = repl;
 
@@ -441,7 +418,17 @@ function evalCommand(command, context, filename, callback) {
   }
 
   evalCommandPromise.then(function () {
-    callback(null, script.runInThisContext());
+
+    if (repl.input) {
+      callback(null, script.runInThisContext());
+    } else {
+      // If repl didn't start, `require` and `module` are not visible
+      // in the vm context
+      setRequireAndModule(global);
+
+      callback(null, script.runInThisContext());
+    }
+
   }).catch(callback);
 }
 
@@ -484,4 +471,32 @@ function isRecoverableError(e, repl) {
   }
 
   return false;
+}
+
+function setRequireAndModule(context) {
+
+  if (Package.modules) {
+    // Use the same `require` function and `module` object visible to the
+    // application.
+    var toBeInstalled = {};
+    var shellModuleName = "meteor-shell-" +
+      Math.random().toString(36).slice(2) + ".js";
+
+    toBeInstalled[shellModuleName] = function (require, exports, module) {
+      context.module = module;
+      context.require = require;
+
+      // Tab completion sometimes uses require.extensions, but only for
+      // the keys.
+      require.extensions = {
+        ".js": true,
+        ".json": true,
+        ".node": true,
+      };
+    };
+
+    // This populates repl.context.{module,require} by evaluating the
+    // module defined above.
+    Package.modules.meteorInstall(toBeInstalled)("./" + shellModuleName);
+  }
 }
