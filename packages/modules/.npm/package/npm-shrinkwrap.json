@@ -1,34 +1,35 @@
 {
+  "lockfileVersion": 1,
   "dependencies": {
     "acorn": {
       "version": "5.0.3",
       "resolved": "https://registry.npmjs.org/acorn/-/acorn-5.0.3.tgz",
-      "from": "acorn@>=5.0.0 <5.1.0"
+      "integrity": "sha1-xGDfCEkUY/AozLguqzcwvwEIez0="
     },
     "minipass": {
       "version": "2.0.2",
       "resolved": "https://registry.npmjs.org/minipass/-/minipass-2.0.2.tgz",
-      "from": "minipass@>=2.0.0 <3.0.0"
+      "integrity": "sha1-+uXHgSQFH1b9IAffABLg2senUs4="
     },
     "minizlib": {
       "version": "1.0.3",
       "resolved": "https://registry.npmjs.org/minizlib/-/minizlib-1.0.3.tgz",
-      "from": "minizlib@>=1.0.3 <2.0.0"
+      "integrity": "sha1-1cGr93vhVGGZUuJTM27Mq5sqMvU="
     },
     "reify": {
       "version": "0.11.24",
       "resolved": "https://registry.npmjs.org/reify/-/reify-0.11.24.tgz",
-      "from": "reify@0.11.24"
+      "integrity": "sha1-QR+5C99Vxfobx9l2vrCdyVQBif4="
     },
     "semver": {
       "version": "5.3.0",
       "resolved": "https://registry.npmjs.org/semver/-/semver-5.3.0.tgz",
-      "from": "semver@>=5.3.0 <6.0.0"
+      "integrity": "sha1-myzl094C0XxgEq0yaqa00M9U+U8="
     },
     "yallist": {
       "version": "3.0.2",
       "resolved": "https://registry.npmjs.org/yallist/-/yallist-3.0.2.tgz",
-      "from": "yallist@>=3.0.0 <4.0.0"
+      "integrity": "sha1-hFK0u36Dx8GI2AQcGoN8dz1ti7k="
     }
   }
 }
