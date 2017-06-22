@@ -35,9 +35,6 @@ if [ -z "$CIRCLE_NODE_TOTAL" ] || [ -z "$CIRCLE_NODE_INDEX" ]; then
   echo "Running all tests!"
 fi
 
-# Clear dev_bundle/.npm to ensure consistent test runs.
-./meteor npm cache clear
-
 # Since PhantomJS has been removed from dev_bundle/lib/node_modules
 # (#6905), but self-test still needs it, install it now.
 ./meteor npm install -g phantomjs-prebuilt browserstack-webdriver
