@@ -914,8 +914,15 @@ function getInstalledDependenciesTree(dir) {
         version: pkg.version
       };
 
+      const from = pkg._from || pkg.from;
+      if (from &&
+          utils.isNpmUrl(from) &&
+          ! utils.isNpmUrl(info.version)) {
+        info.version = from;
+      }
+
       const resolved = pkg._resolved || pkg.resolved;
-      if (resolved) {
+      if (resolved && resolved !== info.version) {
         info.resolved = resolved;
       }
 
