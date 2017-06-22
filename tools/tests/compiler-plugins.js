@@ -101,6 +101,7 @@ selftest.define("compiler plugin caching - coffee", () => {
 
     const cacheMatch = selftest.markStack((message) => {
       run.match(`CACHE(${ packageName }): ${ message }`);
+      run.waitSecs(30);
     });
 
     // First program built (web.browser) compiles everything.
