@@ -1,14 +1,14 @@
-import BoilerplateWebBrowserTemplate from './boilerplate_web_browser_template';
-import BoilerplateWebCordovaTemplate from './boilerplate_web_cordova_template';
-const fs = Npm.require('fs');
-const path = Npm.require('path');
+import fs from 'fs';
+import path from 'path';
+
+import WebBrowserTemplate from './boilerplate_web_browser_template';
+import WebCordovaTemplate from './boilerplate_web_cordova_template';
 
 // Copied from webapp_server
 const readUtf8FileSync = filename => Meteor.wrapAsync(fs.readFile)(filename, 'utf8');
 
 export class Boilerplate {
-  constructor (arch, manifest, options) {
-    options = options || {};
+  constructor (arch, manifest, options = {}) {
     this.template = _getTemplate(arch);
     this.baseData = null;
 
@@ -26,7 +26,7 @@ export class Boilerplate {
     if (!this.baseData || !this.template)
       throw new Error('Boilerplate did not instantiate correctly.');
 
-    return  "<!DOCTYPE html>\n" + this.template(_.extend(this.baseData, extraData));
+    return  "<!DOCTYPE html>\n" + this.template(Object.assign({}, this.baseData, extraData));
   }
 
   // XXX Exported to allow client-side only changes to rebuild the boilerplate
@@ -86,11 +86,10 @@ export class Boilerplate {
 // Returns a template function that, when called, produces the boilerplate
 // html as a string.
 const _getTemplate = _.memoize(arch => {
-  arch = 'web.cordova';
   if (arch === 'web.browser') {
-    return BoilerplateWebBrowserTemplate;
+    return WebBrowserTemplate;
   } else if (arch === 'web.cordova') {
-    return BoilerplateWebCordovaTemplate;
+    return WebCordovaTemplate;
   } else {
     throw new Error('Unsupported arch: ' + arch);
   }
