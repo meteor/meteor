@@ -1,14 +1,13 @@
-import fs from 'fs';
-import path from 'path';
+import { readFile } from 'fs';
 
 import WebBrowserTemplate from './boilerplate_web_browser_template';
 import WebCordovaTemplate from './boilerplate_web_cordova_template';
 
 // Copied from webapp_server
-const readUtf8FileSync = filename => Meteor.wrapAsync(fs.readFile)(filename, 'utf8');
+const readUtf8FileSync = filename => Meteor.wrapAsync(readFile)(filename, 'utf8');
 
 export class Boilerplate {
-  constructor (arch, manifest, options = {}) {
+  constructor(arch, manifest, options = {}) {
     this.template = _getTemplate(arch);
     this.baseData = null;
 
@@ -26,7 +25,8 @@ export class Boilerplate {
     if (!this.baseData || !this.template)
       throw new Error('Boilerplate did not instantiate correctly.');
 
-    return  "<!DOCTYPE html>\n" + this.template(Object.assign({}, this.baseData, extraData));
+    return  "<!DOCTYPE html>\n" +
+      this.template(Object.assign({}, this.baseData, extraData));
   }
 
   // XXX Exported to allow client-side only changes to rebuild the boilerplate

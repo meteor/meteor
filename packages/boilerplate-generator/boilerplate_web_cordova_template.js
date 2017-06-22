@@ -2,7 +2,7 @@
 // Replicates the template defined in boilerplate_web.cordova.html
 // Arguments: root : { htmlAttributes, css : [{ url }], bundledJsCssUrlRewriteHook : Function, head, dynamicHead, body, dynamicBody, inlineScriptsAllowed, additionalStaticJs, meteorRuntimeConfig }
 
-export default function(manifest) {
+export default function (manifest) {
   const root = manifest;
   // XXX do we need to do some validation on the properties of root?
   return [].concat(

@@ -2,7 +2,7 @@
 // Replicates the template defined in boilerplate_web.browser.html
 // Arguments: root : { htmlAttributes, css : [{ url }], bundledJsCssUrlRewriteHook : Function, head, dynamicHead, body, dynamicBody, inlineScriptsAllowed, additionalStaticJs, meteorRuntimeConfig }
 
-export default function(manifest) {
+export default function (manifest) {
   const root = manifest;
   // XXX do we need to do some validation on the properties of root?
   return [].concat(
@@ -64,7 +64,7 @@ export default function(manifest) {
       '</html>'
     ],
 
-    ['', '<!-- Generated for cordova by boilerplate-generator -->']
+    ['', '<!-- Generated for browser by boilerplate-generator -->']
   ).join('\n');
 }
 
