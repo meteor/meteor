@@ -2340,7 +2340,10 @@ Tinytest.add("minimongo - modify", function (test) {
     // The query is relevant for 'a.$.b'.
     coll.update(query, mod);
     var actual = coll.findOne();
-    delete actual._id;  // added by insert
+
+    if(!expected._id){
+      delete actual._id;  // added by insert
+    }
 
     if (typeof expected === "function") {
       expected(actual, EJSON.stringify({input: doc, mod: mod}));
@@ -2378,6 +2381,21 @@ Tinytest.add("minimongo - modify", function (test) {
 
     test.equal(actual, expected);
   };
+
+  var upsertUpdate = function (initialDoc, query, mod, expected) {
+    var coll = new LocalCollection;
+
+    coll.insert(initialDoc);
+    var result = coll.upsert(query, mod);
+
+    var actual = coll.findOne();
+
+    if (!expected._id) {
+      delete actual._id;
+    }
+
+    test.equal(actual, expected);
+  }
 
   var upsertException = function (query, mod) {
     var coll = new LocalCollection;
@@ -2608,8 +2626,12 @@ Tinytest.add("minimongo - modify", function (test) {
   modify({a: [1], b: 2}, {$set: {'a.2': 9}}, {a: [1, null, 9], b: 2});
   modify({a: {b: 1}}, {$set: {'a.c': 9}}, {a: {b: 1, c: 9}});
   modify({}, {$set: {'x._id': 4}}, {x: {_id: 4}});
+  
+  // Changing _id is disallowed
   exception({}, {$set: {_id: 4}});
-  exception({_id: 4}, {$set: {_id: 4}});  // even not-changing _id is bad
+  exception({_id: 1}, {$set: {_id: 4}})
+  modify({_id: 4}, {$set: {_id: 4}}, {_id: 4});  // not-changing _id is not bad
+  
   //restricted field names
   exception({a:{}}, {$set:{a:{$a:1}}});
   exception({ a: {} }, { $set: { a: { c:
@@ -2951,12 +2973,14 @@ Tinytest.add("minimongo - modify", function (test) {
   upsert({"$and": [{"a.a": "foo"}, {"$or": [{"a.b": "baz"}]}]}, {"$set": {"c": "foo"}}, {"a": {"a": "foo", "b": "baz"}, "c": "foo"})
 
   // Test for https://github.com/meteor/meteor/issues/5294
-  //
-  upsert({"a": {"$ne": 444}},{"$push": {"a": 123}}, {"a": [123]})
+  upsert({"a": {"$ne": 444}}, {"$push": {"a": 123}}, {"a": [123]})
 
   // Mod takes precedence over query
-  upsert({"a": "foo"},{"a": "bar"}, {"a": "bar"})
-  upsert({"a": "foo"},{"$set":{"a": "bar"}}, {"a": "bar"})
+  upsert({"a": "foo"}, {"a": "bar"}, {"a": "bar"})
+  upsert({"a": "foo"}, {"$set":{"a": "bar"}}, {"a": "bar"})
+
+  // Replacement can take _id from query
+  upsert({"_id": "foo", "foo": "bar"}, {"bar": "foo"}, {"_id": "foo", "bar": "foo"})
 
   // Nested fields don't work with literal objects
   upsertException({"a": {}, "a.b": "foo"}, {});
