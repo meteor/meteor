@@ -237,6 +237,33 @@ WebApp._timeoutAdjustmentRequestCallback = function (req, res) {
 //   - baseData: XXX
 var boilerplateByArch = {};
 
+// Register a callback function that can selectively modify boilerplate
+// data given arguments (data, request, arch). The key should be a unique
+// identifier, to prevent accumulating duplicate callbacks from the same
+// call site over time. Callbacks will be called in the order they were
+// registered. A callback should return false if it did not make any
+// changes affecting the boilerplate. Passing null deletes the callback.
+// Any previous callback registered for this key will be returned.
+const boilerplateDataCallbacks = Object.create(null);
+WebAppInternals.registerBoilerplateDataCallback = function (key, callback) {
+  const previousCallback = boilerplateDataCallbacks[key];
+  if (previousCallback) {
+    // Delete any existing callback first, so the new callback is always a
+    // new property, and thus will come last in Object.keys order.
+    delete boilerplateDataCallbacks[key];
+  }
+
+  if (typeof callback === "function") {
+    boilerplateDataCallbacks[key] = callback;
+  } else if (callback !== null) {
+    throw new Error("Bad callback: " + callback);
+  }
+
+  // Return the previous callback in case the new callback needs to call
+  // it; for example, when the new callback is a wrapper for the old.
+  return previousCallback;
+};
+
 // Given a request (as returned from `categorizeRequest`), return the
 // boilerplate HTML to serve for that request.
 //
@@ -247,33 +274,61 @@ var boilerplateByArch = {};
 // XXX so far this function is always called with arch === 'web.browser'
 var memoizedBoilerplate = {};
 var getBoilerplate = function (request, arch) {
-  var useMemoized = ! (request.dynamicHead || request.dynamicBody);
-  var htmlAttributes = getHtmlAttributes(request);
-  
+  const boilerplate = boilerplateByArch[arch];
+  let madeChanges = false;
+  let baseDataCopy; // Lazy copy of boilerplate.baseData.
+
+  Object.keys(boilerplateDataCallbacks).forEach(key => {
+    const callback = boilerplateDataCallbacks[key];
+
+    // Copy boilerplate.baseData only if there are any callbacks.
+    baseDataCopy = baseDataCopy || { ...boilerplate.baseData };
+
+    // Callbacks should return false if they did not make any changes.
+    if (callback(baseDataCopy, request, arch) !== false) {
+      madeChanges = true;
+    }
+  });
+
+  const htmlAttributes = getHtmlAttributes(request);
+  const useMemoized = ! (
+    request.dynamicHead ||
+    request.dynamicBody ||
+    madeChanges
+  );
+
   if (useMemoized) {
-    // The only thing that changes from request to request (unless extra 
-    // content is added to the head or body) are the HTML attributes 
-    // (used by, eg, appcache) and whether inline scripts are allowed, so we 
-    // can memoize based on that.
+    // The only thing that changes from request to request (unless extra
+    // content is added to the head or body, or boilerplateDataCallbacks
+    // modified the data) are the HTML attributes (used by, eg, appcache)
+    // and whether inline scripts are allowed, so memoize based on that.
     var memHash = JSON.stringify({
-      inlineScriptsAllowed: inlineScriptsAllowed,
-      htmlAttributes: htmlAttributes,
-      arch: arch
+      inlineScriptsAllowed,
+      htmlAttributes,
+      arch,
     });
 
     if (! memoizedBoilerplate[memHash]) {
       memoizedBoilerplate[memHash] = boilerplateByArch[arch].toHTML({
-        htmlAttributes: htmlAttributes
+        htmlAttributes,
       });
     }
+
     return memoizedBoilerplate[memHash];
   }
-  
-  var boilerplateOptions = _.extend({ 
-    htmlAttributes: htmlAttributes 
+
+  var boilerplateOptions = Object.assign({
+    htmlAttributes,
   }, _.pick(request, 'dynamicHead', 'dynamicBody'));
+
+  if (madeChanges) {
+    boilerplateOptions = Object.assign(
+      baseDataCopy,
+      boilerplateOptions
+    );
+  }
   
-  return boilerplateByArch[arch].toHTML(boilerplateOptions);
+  return boilerplate.toHTML(boilerplateOptions);
 };
 
 WebAppInternals.generateBoilerplateInstance = function (arch,

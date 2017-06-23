@@ -156,6 +156,42 @@ Tinytest.add("webapp - generating boilerplate should not change runtime config",
   test.isFalse(__meteor_runtime_config__.WEBAPP_TEST_KEY);
 });
 
+Tinytest.add("webapp - WebAppInternals.registerBoilerplateDataCallback", function (test) {
+  const key = "from webapp_tests.js";
+  let callCount = 0;
+
+  function callback(data, request, arch) {
+    test.equal(arch, "web.browser");
+    test.equal(request.url, "http://example.com");
+    test.equal(data.body, "");
+    data.body = "<div>oyez</div>";
+    ++callCount;
+  }
+
+  WebAppInternals.registerBoilerplateDataCallback(key, callback);
+
+  test.equal(callCount, 0);
+
+  const req = new http.IncomingMessage();
+  req.url = "http://example.com";
+  req.browser = { name: "headless" };
+
+  const html = WebAppInternals.getBoilerplate(req, "web.browser");
+
+  test.equal(callCount, 1);
+
+  test.isTrue(html.indexOf([
+    "<body>",
+    "<div>oyez</div>"
+  ].join("\n")) >= 0);
+
+  test.equal(
+    // Make sure this callback doesn't get called again after this test.
+    WebAppInternals.registerBoilerplateDataCallback(key, null),
+    callback
+  );
+});
+
 // Support 'named pipes' (strings) as ports for support of Windows Server / Azure deployments
 Tinytest.add("webapp - port should be parsed as int unless it is a named pipe", function(test){
   // Named pipes on Windows Server follow the format: \\.\pipe\{randomstring} or \\{servername}\pipe\{randomstring}
