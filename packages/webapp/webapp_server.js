@@ -275,22 +275,19 @@ WebAppInternals.registerBoilerplateDataCallback = function (key, callback) {
 var memoizedBoilerplate = {};
 var getBoilerplate = function (request, arch) {
   const boilerplate = boilerplateByArch[arch];
-  let madeChanges = false;
-  let baseDataCopy; // Lazy copy of boilerplate.baseData.
+  const data = Object.assign({}, boilerplate.baseData, {
+    htmlAttributes: getHtmlAttributes(request),
+  }, _.pick(request, "dynamicHead", "dynamicBody"));
 
+  let madeChanges = false;
   Object.keys(boilerplateDataCallbacks).forEach(key => {
     const callback = boilerplateDataCallbacks[key];
-
-    // Copy boilerplate.baseData only if there are any callbacks.
-    baseDataCopy = baseDataCopy || { ...boilerplate.baseData };
-
     // Callbacks should return false if they did not make any changes.
-    if (callback(baseDataCopy, request, arch) !== false) {
+    if (callback(data, request, arch) !== false) {
       madeChanges = true;
     }
   });
 
-  const htmlAttributes = getHtmlAttributes(request);
   const useMemoized = ! (
     request.dynamicHead ||
     request.dynamicBody ||
@@ -304,31 +301,19 @@ var getBoilerplate = function (request, arch) {
     // and whether inline scripts are allowed, so memoize based on that.
     var memHash = JSON.stringify({
       inlineScriptsAllowed,
-      htmlAttributes,
+      htmlAttributes: data.htmlAttributes,
       arch,
     });
 
     if (! memoizedBoilerplate[memHash]) {
-      memoizedBoilerplate[memHash] = boilerplateByArch[arch].toHTML({
-        htmlAttributes,
-      });
+      memoizedBoilerplate[memHash] =
+        boilerplateByArch[arch].toHTML(data);
     }
 
     return memoizedBoilerplate[memHash];
   }
-
-  var boilerplateOptions = Object.assign({
-    htmlAttributes,
-  }, _.pick(request, 'dynamicHead', 'dynamicBody'));
-
-  if (madeChanges) {
-    boilerplateOptions = Object.assign(
-      baseDataCopy,
-      boilerplateOptions
-    );
-  }
   
-  return boilerplate.toHTML(boilerplateOptions);
+  return boilerplate.toHTML(data);
 };
 
 WebAppInternals.generateBoilerplateInstance = function (arch,
