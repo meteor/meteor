@@ -1654,7 +1654,6 @@ if (Meteor.isServer) {
       err = e;
     }
     test.isTrue(err);
-    console.log("WUUUK");
     test.isTrue(MongoInternals.Connection._isCannotChangeIdError(err));
 
     try {
