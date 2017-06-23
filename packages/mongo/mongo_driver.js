@@ -574,7 +574,7 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
       );
     } else {
       
-      if (options.upsert && !knownId && isModify) {
+      if (options.upsert && !knownId && options.insertedId && isModify) {
         if (!mongoMod.hasOwnProperty('$setOnInsert')) {
           mongoMod.$setOnInsert = {};
         }
@@ -591,10 +591,14 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
               // If this was an upsert() call, and we ended up
               // inserting a new doc and we know its id, then
               // return that id as well.
-
-              if (options.upsert && meteorResult.insertedId && knownId) {
-                meteorResult.insertedId = knownId;
+              if (options.upsert && meteorResult.insertedId) {
+                if (knownId) {
+                  meteorResult.insertedId = knownId;
+                } else if (meteorResult.insertedId instanceof MongoDB.ObjectID) {
+                  meteorResult.insertedId = new Mongo.ObjectID(meteorResult.insertedId.toHexString());
+                }
               }
+
               callback(err, meteorResult);
             } else {
               callback(err, meteorResult.numberAffected);
