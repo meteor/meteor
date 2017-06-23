@@ -696,39 +696,39 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
       callback(new Error("Upsert failed after " + NUM_OPTIMISTIC_TRIES + " tries."));
     } else {
       collection.update(selector, mod, mongoOptsForUpdate,
-                      bindEnvironmentForWrite(function (err, result) {
-                        if (err) {
-                          callback(err);
-                        } else if (result && result.result.n != 0) {
-                          callback(null, {
-                            numberAffected: result.result.n
-                          });
-                        } else {
-                          doConditionalInsert();
-                        }
-                      }));
+                        bindEnvironmentForWrite(function (err, result) {
+                          if (err) {
+                            callback(err);
+                          } else if (result && result.result.n != 0) {
+                            callback(null, {
+                              numberAffected: result.result.n
+                            });
+                          } else {
+                            doConditionalInsert();
+                          }
+                        }));
     }
   };
 
   var doConditionalInsert = function () {
     collection.update(selector, replacementWithId, mongoOptsForInsert,
-                    bindEnvironmentForWrite(function (err, result) {
-                      if (err) {
-                        // figure out if this is a
-                        // "cannot change _id of document" error, and
-                        // if so, try doUpdate() again, up to 3 times.
-                        if (MongoConnection._isCannotChangeIdError(err)) {
-                          doUpdate();
+                      bindEnvironmentForWrite(function (err, result) {
+                        if (err) {
+                          // figure out if this is a
+                          // "cannot change _id of document" error, and
+                          // if so, try doUpdate() again, up to 3 times.
+                          if (MongoConnection._isCannotChangeIdError(err)) {
+                            doUpdate();
+                          } else {
+                            callback(err);
+                          }
                         } else {
-                          callback(err);
+                          callback(null, {
+                            numberAffected: result.result.upserted.length,
+                            insertedId: insertedId,
+                          });
                         }
-                      } else {
-                        callback(null, {
-                          numberAffected: result.result.upserted.length,
-                          insertedId: insertedId,
-                        });
-                      }
-                    }));
+                      }));
   };
 
   doUpdate();
