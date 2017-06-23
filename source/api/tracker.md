@@ -122,7 +122,7 @@ whether they are being accessed reactively or not.
 
 {% apibox "Tracker.inFlush" %}
 
-This value indicates, wether a flush is in progress or not.
+This value indicates, whether a flush is in progress or not.
 
 {% apibox "Tracker.currentComputation" %}
 
