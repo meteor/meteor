@@ -80,8 +80,10 @@ _.extend(Holder, {
 
 EJSON.addType("Holder", Holder.fromJSONValue);
 
-_.extend(EJSONTest, {
+const EJSONTest = {
   Address: Address,
   Person: Person,
   Holder: Holder
-});
+};
+
+export default EJSONTest;

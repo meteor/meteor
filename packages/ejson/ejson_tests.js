@@ -1,3 +1,5 @@
+import EJSONTest from './custom_models_for_tests';
+
 Tinytest.add("ejson - keyOrderSensitive", function (test) {
   test.isTrue(EJSON.equals({
     a: {b: 1, c: 2},

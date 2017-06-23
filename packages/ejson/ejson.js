@@ -3,9 +3,6 @@
  * @summary Namespace for EJSON functions
  */
 EJSON = {};
-EJSONTest = {};
-
-
 
 // Custom type interface definition
 /**
@@ -338,7 +335,8 @@ For EJSON values, the serialization fully represents the value. For non-EJSON va
 EJSON.stringify = function (item, options) {
   var json = EJSON.toJSONValue(item);
   if (options && (options.canonical || options.indent)) {
-    return EJSON._canonicalStringify(json, options);
+    import canonicalStringify from './stringify';
+    return canonicalStringify(json, options);
   } else {
     return JSON.stringify(json);
   }
