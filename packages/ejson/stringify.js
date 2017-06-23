@@ -96,10 +96,7 @@ var str = function (key, holder, singleIndent, outerIndent, canonical) {
   }
 }
 
-// If the JSON object does not yet have a stringify method, give it one.
-
 const canonicalStringify = function (value, options) {
-// EJSON._canonicalStringify = function (value, options) {
   // Make a fake root object containing our value under the key of ''.
   // Return the result of stringifying the value.
   options = _.extend({
