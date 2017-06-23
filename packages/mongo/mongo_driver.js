@@ -520,18 +520,19 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
 
     // Run this code up front so that it fails fast if someone uses
     // a Mongo update operator we don't support.
-    let newDoc;
-    try {
-       newDoc = LocalCollection._createUpsertDocument(mongoSelector, mongoMod);
-    } catch (err) {
-      if (callback) {
-        return callback(err);
-      } else {
-        throw err;
+    let knownId;
+    if (options.upsert) {
+      try {
+        let newDoc = LocalCollection._createUpsertDocument(selector, mod);
+        knownId = newDoc._id;
+      } catch (err) {
+        if (callback) {
+          return callback(err);
+        } else {
+          throw err;
+        }
       }
     }
-  
-    var knownId = newDoc._id;
 
     if (options._forbidReplace && !isModify) {
       var err = new Error("Invalid modifier. Replacements are forbidden.");
@@ -573,12 +574,12 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
       );
     } else {
       
-      if (!knownId && isModify) {
+      if (options.upsert && !knownId && isModify) {
         if (!mongoMod.hasOwnProperty('$setOnInsert')) {
           mongoMod.$setOnInsert = {};
         }
         knownId = options.insertedId;
-        mongoMod.$setOnInsert._id = replaceMeteorAtomWithMongo(options.insertedId);
+        Object.assign(mongoMod.$setOnInsert, replaceTypes({_id: options.insertedId}, replaceMeteorAtomWithMongo));
       }
 
       collection.update(
@@ -679,7 +680,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
     upsert: true
   };
 
-  var replacementWithId = _.extend(
+  var replacementWithId = Object.assign(
     replaceTypes({_id: insertedId}, replaceMeteorAtomWithMongo),
     mod);
 
