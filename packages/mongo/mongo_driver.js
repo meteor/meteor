@@ -513,6 +513,15 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
 
     var isModify = LocalCollection._isModificationMod(mongoMod);
 
+    if (options._forbidReplace && !isModify) {
+      var err = new Error("Invalid modifier. Replacements are forbidden.");
+      if (callback) {
+        return callback(err);
+      } else {
+        throw err;
+      }
+    }
+
     // We've already run replaceTypes/replaceMeteorAtomWithMongo on
     // selector and mod.  We assume it doesn't matter, as far as
     // the behavior of modifiers is concerned, whether `_modify`
@@ -531,15 +540,6 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
         } else {
           throw err;
         }
-      }
-    }
-
-    if (options._forbidReplace && !isModify) {
-      var err = new Error("Invalid modifier. Replacements are forbidden.");
-      if (callback) {
-        return callback(err);
-      } else {
-        throw err;
       }
     }
 
@@ -581,7 +581,7 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
         knownId = options.insertedId;
         Object.assign(mongoMod.$setOnInsert, replaceTypes({_id: options.insertedId}, replaceMeteorAtomWithMongo));
       }
-
+      
       collection.update(
         mongoSelector, mongoMod, mongoOpts,
         bindEnvironmentForWrite(function (err, result) {
