@@ -1156,6 +1156,7 @@ LocalCollection._createUpsertDocument = function (selector, modifier) {
     return newDoc
   } else {
     // Replacement can take _id from query document
+    modifier = EJSON.clone(modifier);
     if (newDoc._id) {
       modifier._id = newDoc._id;
     }
