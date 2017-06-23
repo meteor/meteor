@@ -2341,7 +2341,7 @@ Tinytest.add("minimongo - modify", function (test) {
     coll.update(query, mod);
     var actual = coll.findOne();
 
-    if(!expected._id){
+    if (!expected._id) {
       delete actual._id;  // added by insert
     }
 
@@ -2982,6 +2982,9 @@ Tinytest.add("minimongo - modify", function (test) {
   // Replacement can take _id from query
   upsert({"_id": "foo", "foo": "bar"}, {"bar": "foo"}, {"_id": "foo", "bar": "foo"})
 
+  // Replacement update keeps _id
+  upsertUpdate({"_id": "foo", "bar": "baz"}, {"_id":"foo"}, {"bar": "crow"}, {"_id": "foo", "bar": "crow"});
+  
   // Nested fields don't work with literal objects
   upsertException({"a": {}, "a.b": "foo"}, {});
 
