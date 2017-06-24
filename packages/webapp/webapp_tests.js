@@ -78,7 +78,7 @@ Tinytest.add("webapp - additional static javascript", function (test) {
   // before settng it back to what it was originally.
   WebAppInternals.setInlineScriptsAllowed(true);
 
-  Meteor._noYieldsAllowed(function () {
+  (function () {
     var boilerplate = WebAppInternals.getBoilerplate({
       browser: "doesn't-matter",
       url: "also-doesnt-matter"
@@ -100,14 +100,14 @@ Tinytest.add("webapp - additional static javascript", function (test) {
         nextCalled = true;
       });
     test.isTrue(nextCalled);
-  });
+  })();
 
   // When inline scripts are disallowed, the script body should not be
   // inlined, and the script should be included in a <script src="..">
   // tag.
   WebAppInternals.setInlineScriptsAllowed(false);
 
-  Meteor._noYieldsAllowed(function () {
+  (function () {
     var boilerplate = WebAppInternals.getBoilerplate({
       browser: "doesn't-matter",
       url: "also-doesnt-matter"
@@ -129,7 +129,7 @@ Tinytest.add("webapp - additional static javascript", function (test) {
     var resBody = res.getBody();
     test.isTrue(resBody.indexOf(additionalScript) !== -1);
     test.equal(res.statusCode, 200);
-  });
+  })();
 
   WebAppInternals.setInlineScriptsAllowed(origInlineScriptsAllowed);
 });
