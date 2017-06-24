@@ -273,20 +273,27 @@ WebAppInternals.registerBoilerplateDataCallback = function (key, callback) {
 // scripts are currently allowed.
 // XXX so far this function is always called with arch === 'web.browser'
 var memoizedBoilerplate = {};
-var getBoilerplate = function (request, arch) {
+
+function getBoilerplate(request, arch) {
+  return getBoilerplateAsync(request, arch).await();
+}
+
+async function getBoilerplateAsync(request, arch) {
   const boilerplate = boilerplateByArch[arch];
   const data = Object.assign({}, boilerplate.baseData, {
     htmlAttributes: getHtmlAttributes(request),
   }, _.pick(request, "dynamicHead", "dynamicBody"));
 
   let madeChanges = false;
-  Object.keys(boilerplateDataCallbacks).forEach(key => {
+
+  for (const key of Object.keys(boilerplateDataCallbacks)) {
     const callback = boilerplateDataCallbacks[key];
+    const result = await callback(data, request, arch);
     // Callbacks should return false if they did not make any changes.
-    if (callback(data, request, arch) !== false) {
+    if (result !== false) {
       madeChanges = true;
     }
-  });
+  }
 
   const useMemoized = ! (
     request.dynamicHead ||
@@ -314,7 +321,7 @@ var getBoilerplate = function (request, arch) {
   }
   
   return boilerplate.toHTML(data);
-};
+}
 
 WebAppInternals.generateBoilerplateInstance = function (arch,
                                                         manifest,
@@ -767,22 +774,19 @@ function runWebAppServer() {
         archKey = archKeyCleaned;
       }
 
-      var boilerplate;
-      try {
-        boilerplate = getBoilerplate(request, archKey);
-      } catch (e) {
+      return getBoilerplateAsync(
+        request,
+        archKey
+      ).then(boilerplate => {
+        var statusCode = res.statusCode ? res.statusCode : 200;
+        res.writeHead(statusCode, headers);
+        res.write(boilerplate);
+        res.end();
+      }, error => {
         Log.error("Error running template: " + e.stack);
         res.writeHead(500, headers);
         res.end();
-        return;
-      }
-
-      var statusCode = res.statusCode ? res.statusCode : 200;
-      res.writeHead(statusCode, headers);
-      res.write(boilerplate);
-      res.end();
-
-      return;
+      });
     });
   });
 
