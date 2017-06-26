@@ -849,36 +849,38 @@ function runWebAppServer() {
         f();
     }
   });
+
+  // Let the rest of the packages (and Meteor.startup hooks) insert connect
+  // middlewares and update __meteor_runtime_config__, then keep going to set up
+  // actually serving HTML.
+  exports.main = function (argv) {
+    WebAppInternals.generateBoilerplate();
+
+    // only start listening after all the startup code has run.
+    var localPort = WebAppInternals.parsePort(process.env.PORT) || 0;
+    var host = process.env.BIND_IP;
+    var localIp = host || '0.0.0.0';
+    httpServer.listen(localPort, localIp, Meteor.bindEnvironment(function() {
+      if (process.env.METEOR_PRINT_ON_LISTEN) {
+        console.log("LISTENING"); // must match run-app.js
+      }
+
+      var callbacks = onListeningCallbacks;
+      onListeningCallbacks = null;
+      _.each(callbacks, function (x) { x(); });
+
+    }, function (e) {
+      console.error("Error listening:", e);
+      console.error(e && e.stack);
+    }));
+
+    return 'DAEMON';
+  };
 }
+
 
 runWebAppServer();
 
-// Let the rest of the packages (and Meteor.startup hooks) insert connect
-// middlewares and update __meteor_runtime_config__, then keep going to set up
-// actually serving HTML.
-export function main(argv) {
-  WebAppInternals.generateBoilerplate();
-
-  // Only start listening after all the startup code has run.
-  var localPort = WebAppInternals.parsePort(process.env.PORT) || 0;
-  var host = process.env.BIND_IP;
-  var localIp = host || '0.0.0.0';
-  WebApp.httpServer.listen(localPort, localIp, Meteor.bindEnvironment(function() {
-    if (process.env.METEOR_PRINT_ON_LISTEN) {
-      console.log("LISTENING"); // must match run-app.js
-    }
-
-    var callbacks = onListeningCallbacks;
-    onListeningCallbacks = null;
-    _.each(callbacks, function (x) { x(); });
-
-  }, function (e) {
-    console.error("Error listening:", e);
-    console.error(e && e.stack);
-  }));
-
-  return 'DAEMON';
-}
 
 var inlineScriptsAllowed = true;
 
