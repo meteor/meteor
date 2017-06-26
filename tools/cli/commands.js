@@ -784,7 +784,7 @@ main.registerCommand({
   Console.info("");
   Console.info("If you are new to Meteor, try some of the learning resources here:");
   Console.info(
-    Console.url("https://www.meteor.com/learn"),
+    Console.url("https://www.meteor.com/tutorials"),
       Console.options({ indent: 2 }));
 
   if (!options.full && !options.bare){
@@ -1039,7 +1039,7 @@ ${cordova.displayNameForPlatform(platform)}` }, () => {
 `This is an auto-generated XCode project for your iOS application.
 
 Instructions for publishing your iOS app to App Store can be found at:
-https://github.com/meteor/meteor/wiki/How-to-submit-your-iOS-app-to-App-Store
+https://guide.meteor.com/mobile.html#submitting-ios
 `, "utf8");
             } else if (platform === 'android') {
               const apkPath = files.pathJoin(buildPath, 'build/outputs/apk',
@@ -1055,7 +1055,7 @@ https://github.com/meteor/meteor/wiki/How-to-submit-your-iOS-app-to-App-Store
 `This is an auto-generated Gradle project for your Android application.
 
 Instructions for publishing your Android app to Play Store can be found at:
-https://github.com/meteor/meteor/wiki/How-to-submit-your-Android-app-to-Play-Store
+https://guide.meteor.com/mobile.html#submitting-android
 `, "utf8");
             }
         });
