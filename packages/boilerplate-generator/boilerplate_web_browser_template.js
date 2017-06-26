@@ -2,8 +2,7 @@
 // Replicates the template defined in boilerplate_web.browser.html
 // Arguments: root : { htmlAttributes, css : [{ url }], bundledJsCssUrlRewriteHook : Function, head, dynamicHead, body, dynamicBody, inlineScriptsAllowed, additionalStaticJs, meteorRuntimeConfig }
 
-export default function (manifest) {
-  const root = manifest;
+export default function (root) {
   // XXX do we need to do some validation on the properties of root?
   return [].concat(
     [
@@ -30,15 +29,14 @@ export default function (manifest) {
       root.body,
       root.dynamicBody,
       '',
-      _.template(root.inlineScriptsAllowed
-        ? '  <script type="text/javascript"><%= contents %></script>'
-        : '  <script type="text/javascript" src="<%- src %>"></script>'
-      )({
-        contents: _.template('__meteor_runtime_config__ = JSON.parse(decodeURIComponent(<%= conf %>))')({
+      (root.inlineScriptsAllowed
+        ? _.template('  <script type="text/javascript">__meteor_runtime_config__ = JSON.parse(decodeURIComponent(<%= conf %>))</script>')({
           conf: root.meteorRuntimeConfig
-        }),
-        src: root.rootUrlPathPrefix + '/meteor_runtime_config.js'
-      }),
+        })
+        : _.template('  <script type="text/javascript" src="<%- src %>/meteor_runtime_config.js"></script>')({
+          src: root.rootUrlPathPrefix
+        })
+      ) ,
       ''
     ],
 
@@ -49,13 +47,13 @@ export default function (manifest) {
     ),
 
     _.map(root.additionalStaticJs, ({contents, pathname}) => (
-      _.template(root.inlineScriptsAllowed
-        ? '  <script><%= contents %></script>'
-        : '  <script type="text/javascript" src="<%- src %>"></script>'
-      )({
-        contents: contents,
-        src: root.rootUrlPathPrefix + pathname
-      })
+      (root.inlineScriptsAllowed
+        ? _.template('  <script><%= contents %></script>')({
+          contents: contents
+        })
+        : _.template('  <script type="text/javascript" src="<%- src %>"></script>')({
+          src: root.rootUrlPathPrefix + pathname
+        }))
     )),
 
     [

@@ -44,15 +44,17 @@ export default function (manifest) {
         src: url
       })
     ),
-    _.map(root.additionalStaticJs, ({pathname, contents}) =>
-      _.template(inlineScriptsAllowed
-        ? '  <script type="text/javascript"><%= contents %></script>'
-        : '  <script type="text/javascript" src="<%- src %>"></script>'
-      )({
-        src: root.rootUrlPathPrefix + pathname,
-        contents: contents
-      })
-    ),
+
+    _.map(root.additionalStaticJs, ({contents, pathname}) => (
+      (root.inlineScriptsAllowed
+        ? _.template('  <script><%= contents %></script>')({
+          contents: contents
+        })
+        : _.template('  <script type="text/javascript" src="<%- src %>"></script>')({
+          src: root.rootUrlPathPrefix + pathname
+        }))
+    )),
+
     [
       '',
       root.head,

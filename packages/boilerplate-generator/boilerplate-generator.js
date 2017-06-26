@@ -85,7 +85,7 @@ export class Boilerplate {
 
 // Returns a template function that, when called, produces the boilerplate
 // html as a string.
-const _getTemplate = _.memoize(arch => {
+const _getTemplate = arch => {
   if (arch === 'web.browser') {
     return WebBrowserTemplate;
   } else if (arch === 'web.cordova') {
@@ -93,4 +93,4 @@ const _getTemplate = _.memoize(arch => {
   } else {
     throw new Error('Unsupported arch: ' + arch);
   }
-});
+};
