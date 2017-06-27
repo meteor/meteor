@@ -63,7 +63,7 @@
     "eslint-plugin-react": "7.0.1",
     "ghooks": "2.0.0",
     "mocha": "3.4.2",
-    "nyc": "11.0.2",
+    "nyc": "11.0.3",
     "readline-sync": "1.4.7",
     "rewire": "2.5.2",
     "rimraf": "2.6.1",
