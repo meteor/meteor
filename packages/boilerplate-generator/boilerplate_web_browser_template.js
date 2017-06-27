@@ -61,8 +61,6 @@ export default function (root) {
       '</body>',
       '</html>'
     ],
-
-    ['', '<!-- Generated for browser by boilerplate-generator -->']
   ).join('\n');
 }
 

@@ -65,8 +65,6 @@ export default function (manifest) {
       '</body>',
       '</html>'
     ],
-
-    ['', '<!-- Generated for cordova by boilerplate-generator -->']
   ).join('\n');
 }
 
