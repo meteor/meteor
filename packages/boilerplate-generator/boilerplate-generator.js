@@ -31,7 +31,7 @@ Boilerplate.prototype.toHTML = function (extraData) {
     throw new Error('Boilerplate did not instantiate correctly.');
 
   return  "<!DOCTYPE html>\n" +
-    Blaze.toHTML(Blaze.With(_.extend(self.baseData, extraData),
+    Blaze.toHTML(Blaze.With(_.extend({}, self.baseData, extraData),
                             self.func));
 };
 

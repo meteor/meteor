@@ -71,8 +71,7 @@ function openXcodeProject(projectDir) {
         "app on an iOS device. For further instructions, visit this " +
         "wiki page: ") +
       Console.url(
-        "https://github.com/meteor/meteor/wiki/" +
-        "How-to-run-your-app-on-an-iOS-device"
+        "https://guide.meteor.com/mobile.html#running-on-ios"
     ));
     Console.info();
   } catch (error) {
@@ -85,8 +84,7 @@ ${error.message}`);
     Console.error(message);
     Console.error(
       chalk.green("Instructions for running your app on an iOS device: ") +
-      Console.url("https://github.com/meteor/meteor/wiki/" +
-        "How-to-run-your-app-on-an-iOS-device")
+      Console.url("https://guide.meteor.com/mobile.html#running-on-ios")
     );
     Console.error();
   }
