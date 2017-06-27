@@ -24,6 +24,11 @@
 
 ## v1.5.1, TBD
 
+* A new core Meteor package called `server-render` provides generic
+  support for server-side rendering of HTML, as described in the package's
+  [`README.md`](https://github.com/meteor/meteor/blob/release-1.5.1/packages/server-render/README.md).
+  [PR #8841](https://github.com/meteor/meteor/pull/8841)
+
 * All `observe` and `observeChanges` callbacks are now bound using
   `Meteor.bindEnvironment`.  The same `EnvironmentVariable`s that were
   present when `observe` or `observeChanges` was called are now available
