@@ -783,7 +783,7 @@ function runWebAppServer() {
         res.write(boilerplate);
         res.end();
       }, error => {
-        Log.error("Error running template: " + e.stack);
+        Log.error("Error running template: " + error.stack);
         res.writeHead(500, headers);
         res.end();
       });
