@@ -265,6 +265,14 @@ export function sha1(...args) {
   })();
 }
 
+export function sha256(...args) {
+  return Profile("sha256", function () {
+    var hash = createHash('sha256');
+    args.forEach(arg => hash.update(arg));
+    return hash.digest('hex');
+  })();
+}
+
 export function readDirectory({absPath, include, exclude, names}) {
   // Read the directory.
   try {
