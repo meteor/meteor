@@ -1,0 +1,102 @@
+.meteorBundleVisualizer.meteorBundleVisualizerMask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background-color: #cdcdcd;
+  opacity: 0.5;
+}
+
+.meteorBundleVisualizer.meteorBundleVisualizerRootContainer {
+  position: absolute;
+  z-index: 99999;
+  top: 0;
+  font-family: 'Open Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  width: 960px;
+  height: 700px;
+  margin: 10px;
+}
+
+.meteorBundleVisualizer.meteorBundleVisualizerRootContainer
+  .meteorBundleVisualizerMain
+{
+  float: left;
+  width: 950px;
+}
+
+.meteorBundleVisualizer.meteorBundleVisualizerRootContainer
+  .meteorBundleVisualizerSequence
+{
+  width: 800px;
+  height: 70px;
+}
+
+.meteorBundleVisualizer.meteorBundleVisualizerRootContainer
+  .meteorBundleVisualizerSequence text,
+{
+  font-weight: 600;
+  fill: #fff;
+}
+
+.meteorBundleVisualizer.meteorBundleVisualizerRootContainer
+  .meteorBundleVisualizerChart
+{
+  position: relative;
+}
+
+.meteorBundleVisualizer.meteorBundleVisualizerRootContainer
+  .meteorBundleVisualizerChart path
+{
+  stroke: #fff;
+}
+
+.meteorBundleVisualizer.meteorBundleVisualizerRootContainer
+  .meteorBundleVisualizerExplanation
+{
+  position: absolute;
+  top: 260px;
+  left: 405px;
+  width: 140px;
+  text-align: center;
+  color: #000;
+  z-index: -1;
+}
+
+.meteorBundleVisualizer.meteorBundleVisualizerRootContainer
+  .meteorBundleVisualizerPercentage
+{
+  font-size: 2.5em;
+}
+
+.meteorBundleVisualizer.meteorBundleVisualizerRootContainer
+  .meteorBundleVisualizerBytes
+{
+  font-size: 2em;
+  font-weight: bold;
+}
+
+.meteorBundleVisualizer.meteorBundleVisualizerRootContainer
+  .meteorBundleVisualizerTrail
+{
+    position: absolute;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 12px;
+    left: 0;
+    min-width: 180px;
+    font-weight: bold;
+}
+
+.meteorBundleVisualizer.meteorBundleVisualizerRootContainer
+  .meteorBundleVisualizerTrail .meteorBundleVisualizerTrailSegment
+{
+  height: 40px;
+  border-radius: 3px;
+  border: 2px dotted black;
+  text-align: center;
+  vertical-align: middle;
+  line-height: 40px;
+  margin-bottom: 5px;
+}

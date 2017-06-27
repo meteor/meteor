@@ -308,14 +308,21 @@ _.extend(exports, {
     Console.debug("Doing HTTP request: ", options.method || 'GET', options.url);
     var request = require('request');
     var req = request(options, function (error, response, body) {
-      if (! error && response && body) {
+      if (! error &&
+          response &&
+          (typeof body === "string" ||
+           Buffer.isBuffer(body))) {
         const contentLength = Number(response.headers["content-length"]);
-        if (contentLength > 0 && body.length < contentLength) {
+        const actualLength = Buffer.byteLength(body);
+
+        if (contentLength > 0 &&
+            actualLength < contentLength) {
           error = new Error(
             "Expected " + contentLength + " bytes in request body " +
-              "but received only " + body.length);
+              "but received only " + actualLength);
         }
       }
+
       return callback.call(this, error, response, body);
     });
 

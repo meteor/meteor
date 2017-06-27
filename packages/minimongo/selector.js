@@ -18,7 +18,7 @@
 // Main entry point.
 //   var matcher = new Minimongo.Matcher({a: {$gt: 5}});
 //   if (matcher.documentMatches({a: 7})) ...
-Minimongo.Matcher = function (selector) {
+Minimongo.Matcher = function (selector, isUpdate = false) {
   var self = this;
   // A set (object mapping string -> *) of all of the document paths looked
   // at by the selector. Also includes the empty string if it may look at any
@@ -41,6 +41,10 @@ Minimongo.Matcher = function (selector) {
   // Sorter._useWithMatcher.
   self._selector = null;
   self._docMatcher = self._compileSelector(selector);
+  // Set to true if selection is done for an update operation
+  // Default is false
+  // Used for $near array update (issue #3599)
+  self._isUpdate = isUpdate;
 };
 
 _.extend(Minimongo.Matcher.prototype, {
@@ -435,9 +439,10 @@ var VALUE_OPERATORS = {
       throw Error("$near can't be inside another $ operator");
     matcher._hasGeoQuery = true;
 
-    // There are two kinds of geodata in MongoDB: coordinate pairs and
+    // There are two kinds of geodata in MongoDB: legacy coordinate pairs and
     // GeoJSON. They use different distance metrics, too. GeoJSON queries are
-    // marked with a $geometry property.
+    // marked with a $geometry property, though legacy coordinates can be
+    // matched using $geometry.
 
     var maxDistance, point, distance;
     if (isPlainObject(operand) && _.has(operand, '$geometry')) {
@@ -448,8 +453,11 @@ var VALUE_OPERATORS = {
         // XXX: for now, we don't calculate the actual distance between, say,
         // polygon and circle. If people care about this use-case it will get
         // a priority.
-        if (!value || !value.type)
+        if (!value)
           return null;
+        if(!value.type)
+          return GeoJSON.pointDistance(point,
+            { type: "Point", coordinates: pointToArray(value) });
         if (value.type === "Point") {
           return GeoJSON.pointDistance(point, value);
         } else {
@@ -480,20 +488,29 @@ var VALUE_OPERATORS = {
       // each within-$maxDistance branching point.
       branchedValues = expandArraysInBranches(branchedValues);
       var result = {result: false};
-      _.each(branchedValues, function (branch) {
-        var curDistance = distance(branch.value);
-        // Skip branches that aren't real points or are too far away.
-        if (curDistance === null || curDistance > maxDistance)
-          return;
-        // Skip anything that's a tie.
-        if (result.distance !== undefined && result.distance <= curDistance)
-          return;
+      _.every(branchedValues, function (branch) {
+        // if operation is an update, don't skip branches, just return the first one (#3599)
+        if (!matcher._isUpdate){
+          if (!(typeof branch.value === "object")){
+            return true;
+          }
+          var curDistance = distance(branch.value);
+          // Skip branches that aren't real points or are too far away.
+          if (curDistance === null || curDistance > maxDistance)
+            return true;
+          // Skip anything that's a tie.
+          if (result.distance !== undefined && result.distance <= curDistance)
+            return true;
+        }
         result.result = true;
         result.distance = curDistance;
         if (!branch.arrayIndices)
           delete result.arrayIndices;
         else
           result.arrayIndices = branch.arrayIndices;
+        if (matcher._isUpdate)
+          return false;
+        return true;
       });
       return result;
     };
@@ -551,87 +568,62 @@ var makeInequality = function (cmpValueComparator) {
   };
 };
 
-var isBitSet = function (value, bit) {
-  if (value === 0)
-    return false;
-  return (value & 1 << bit) !== 0;
-};
-
-var eightBits = [0,1,2,3,4,5,6,7];
-var get8BitsSet = function (value) {
-  if (value === 0)
-    return [];
-  return _.filter(eightBits, function (bit) {
-    return isBitSet(value, bit);
-  });
-};
-
-var convertNumberToUint8Array = function(number) {
-  var numOfBits = number.toString(2).length;
-  var num8BitGroups = Math.ceil(numOfBits / 8);
-  var byteArray = new Uint8Array(num8BitGroups);
-
-  for (var i = 0; i < byteArray.length; i++) {
-    var byte = number & 0xff;
-    byteArray[i] = byte;
-    number = (number - byte) / 256;
+// Helpers for $bitsAllSet/$bitsAnySet/$bitsAllClear/$bitsAnyClear.
+var getOperandBitmask = function(operand, selector) {
+  // numeric bitmask
+  // You can provide a numeric bitmask to be matched against the operand field. It must be representable as a non-negative 32-bit signed integer.
+  // Otherwise, $bitsAllSet will return an error.
+  if (Number.isInteger(operand) && operand >= 0) {
+    return new Uint8Array(new Int32Array([operand]).buffer)
   }
-
-  return byteArray;
-};
-
-var ensureUint8Array = function (number) {
-  return (number instanceof Uint8Array) ?
-    number : convertNumberToUint8Array(number);
-};
-
-var ensureOperandUint8Array = function (operand) {
-  if (!(operand instanceof Uint8Array)) {
-    operand = _.reduce(operand, function (num, n) {
-      return num | (1 << n);
-    }, 0);
-
-    operand = convertNumberToUint8Array(operand);
+  // bindata bitmask
+  // You can also use an arbitrarily large BinData instance as a bitmask.
+  else if (EJSON.isBinary(operand)) {
+    return new Uint8Array(operand.buffer)
   }
-
-  return operand;
-};
-
-var bitsClear = function (bitsSetOp, bitsSetVal) {
-  return _.isUndefined(
-    _.find(bitsSetOp, function (bit) {
-      return bitsSetVal.indexOf(bit) === -1;
+  // position list
+  // If querying a list of bit positions, each <position> must be a non-negative integer. Bit positions start at 0 from the least significant bit.
+  else if (isArray(operand) && operand.every(function (e) {
+    return Number.isInteger(e) && e >= 0
+  })) {
+    var buffer = new ArrayBuffer((Math.max(...operand) >> 3) + 1)
+    var view = new Uint8Array(buffer)
+    operand.forEach(function (x) {
+      view[x >> 3] |= (1 << (x & 0x7))
     })
-  );
-};
-
-var bitsSet = function (bitsSetOp, bitsSetVal) {
-  return _.isUndefined(
-    _.find(bitsSetOp, function (bit) {
-      return bitsSetVal.indexOf(bit) !== -1;
-    })
-  );
-};
-
-var anyBitCompare = function (operand, value, setOrClear) {
-  return _.isUndefined(
-    _.find(operand, function (op, i) {
-      var bitsSetOp = get8BitsSet(op);
-      var bitsSetVal = get8BitsSet(value[i]);
-
-      return setOrClear(bitsSetOp, bitsSetVal);
-    })
-  );
-};
-
-var allBitCompare = function (operand, value, setOrClear) {
-  return _.filter(operand, function (op, i) {
-      var bitsSetOp = get8BitsSet(op);
-      var bitsSetVal = get8BitsSet(value[i]);
-
-      return !setOrClear(bitsSetOp, bitsSetVal);
-    }).length === 0;
-};
+    return view
+  }
+  // bad operand
+  else {
+    throw Error(`operand to ${selector} must be a numeric bitmask (representable as a non-negative 32-bit signed integer), a bindata bitmask or an array with bit positions (non-negative integers)`)
+  }
+}
+var getValueBitmask = function (value, length) {
+  // The field value must be either numerical or a BinData instance. Otherwise, $bits... will not match the current document.
+  // numerical
+  if (Number.isSafeInteger(value)) {
+    // $bits... will not match numerical values that cannot be represented as a signed 64-bit integer
+    // This can be the case if a value is either too large or small to fit in a signed 64-bit integer, or if it has a fractional component.
+    var buffer = new ArrayBuffer(Math.max(length, 2 * Uint32Array.BYTES_PER_ELEMENT));
+    var view = new Uint32Array(buffer, 0, 2)
+    view[0] = (value % ((1 << 16) * (1 << 16))) | 0
+    view[1] = (value / ((1 << 16) * (1 << 16))) | 0
+    // sign extension
+    if (value < 0) {
+      view = new Uint8Array(buffer, 2)
+      view.forEach(function (byte, idx) {
+        view[idx] = 0xff
+      })
+    }
+    return new Uint8Array(buffer)
+  }
+  // bindata
+  else if (EJSON.isBinary(value)) {
+    return new Uint8Array(value.buffer)
+  }
+  // no match
+  return false
+}
 
 // Each element selector contains:
 //  - compileElementSelector, a function with args:
@@ -731,77 +723,48 @@ ELEMENT_OPERATORS = {
       };
     }
   },
-  $bitsAnyClear: {
-    compileElementSelector: function (operand, valueSelector, matcher) {
-      if (!isArray(operand) && !(operand instanceof Uint8Array))
-        throw Error("$bitsAnyClear has to be an Array");
-      return function (value) {
-        if (typeof value !== 'number' && !(value instanceof Uint8Array))
-          return false;
-
-        if (value === 0)
-          return true;
-
-        operand = ensureOperandUint8Array(operand);
-        value = ensureUint8Array(value);
-
-        return anyBitCompare(operand, value, bitsClear);
-      };
-    }
-  },
-  $bitsAllClear: {
-    compileElementSelector: function (operand, valueSelector, matcher) {
-      if (!isArray(operand) && !(operand instanceof Uint8Array))
-        throw Error("$bitsAllClear has to be an Array");
-      return function (value) {
-        if (typeof value !== 'number' && !(value instanceof Uint8Array))
-          return false;
-
-        if (value === 0)
-          return true;
-
-        operand = ensureOperandUint8Array(operand);
-        value = ensureUint8Array(value);
-
-        return allBitCompare(operand, value, bitsSet);
-      };
-    }
-  },
   $bitsAllSet: {
-    compileElementSelector: function (operand, valueSelector, matcher) {
-      if (!isArray(operand) && !(operand instanceof Uint8Array))
-        throw Error("$bitsAllSet has to be an Array");
+    compileElementSelector: function (operand) {
+      var op = getOperandBitmask(operand, '$bitsAllSet')
       return function (value) {
-        if (typeof value !== 'number' && !(value instanceof Uint8Array))
-          return false;
-
-        operand = ensureOperandUint8Array(operand);
-        value = ensureUint8Array(value);
-
-        return allBitCompare(operand, value, bitsClear);
-      };
+        var bitmask = getValueBitmask(value, op.length)
+        return bitmask && op.every(function (byte, idx) {
+          return ((bitmask[idx] & byte) == byte)
+        })
+      }
     }
   },
   $bitsAnySet: {
-    compileElementSelector: function (operand, valueSelector, matcher) {
-      if (!isArray(operand) && !(operand instanceof Uint8Array))
-        throw Error("$bitsAnySet has to be an Array");
+    compileElementSelector: function (operand) {
+      var query = getOperandBitmask(operand, '$bitsAnySet')
       return function (value) {
-        if (typeof value !== 'number' && !(value instanceof Uint8Array))
-          return false;
-
-        operand = ensureOperandUint8Array(operand);
-        value = ensureUint8Array(value);
-
-        return _.isUndefined(
-          _.find(operand, function (op, i) {
-            var bitsSetOp = get8BitsSet(op);
-            var bitsSetVal = get8BitsSet(value[i]);
-
-            return bitsSet(bitsSetOp, bitsSetVal);
-          })
-        );
-      };
+        var bitmask = getValueBitmask(value, query.length)
+        return bitmask && query.some(function (byte, idx) {
+          return ((~bitmask[idx] & byte) !== byte)
+        })
+      }
+    }
+  },
+  $bitsAllClear: {
+    compileElementSelector: function (operand) {
+      var query = getOperandBitmask(operand, '$bitsAllClear')
+      return function (value) {
+        var bitmask = getValueBitmask(value, query.length)
+        return bitmask && query.every(function (byte, idx) {
+          return !(bitmask[idx] & byte)
+        })
+      }
+    }
+  },
+  $bitsAnyClear: {
+    compileElementSelector: function (operand) {
+      var query = getOperandBitmask(operand, '$bitsAnyClear')
+      return function (value) {
+        var bitmask = getValueBitmask(value, query.length)
+        return bitmask && query.some(function (byte, idx) {
+          return ((bitmask[idx] & byte) !== byte)
+        })
+      }
     }
   },
   $regex: {
@@ -1288,11 +1251,32 @@ LocalCollection._f = {
   }
 };
 
-// Oddball function used by upsert.
-LocalCollection._removeDollarOperators = function (selector) {
-  var selectorDoc = {};
-  for (var k in selector)
-    if (k.substr(0, 1) !== '$')
-      selectorDoc[k] = selector[k];
-  return selectorDoc;
+const objectOnlyHasDollarKeys = (object) => {
+  const keys = Object.keys(object);
+  return keys.length > 0 && keys.every(key => key.charAt(0) === '$');
+};
+
+// When performing an upsert, the incoming selector object can be re-used as
+// the upsert modifier object, as long as Mongo query and projection
+// operators (prefixed with a $ character) are removed from the newly
+// created modifier object. This function attempts to strip all $ based Mongo
+// operators when creating the upsert modifier object.
+// NOTE: There is a known issue here in that some Mongo $ based opeartors
+// should not actually be stripped.
+// See https://github.com/meteor/meteor/issues/8806.
+LocalCollection._removeDollarOperators = (selector) => {
+  let cleansed = {};
+  Object.keys(selector).forEach((key) => {
+    const value = selector[key];
+    if (key.charAt(0) !== '$' && !objectOnlyHasDollarKeys(value)) {
+      if (value !== null
+          && value.constructor
+          && Object.getPrototypeOf(value) === Object.prototype) {
+        cleansed[key] = LocalCollection._removeDollarOperators(value);
+      } else {
+        cleansed[key] = value;
+      }
+    }
+  });
+  return cleansed;
 };

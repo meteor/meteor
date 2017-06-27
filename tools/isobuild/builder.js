@@ -143,7 +143,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
         if (needToMkdir) {
           // It's new -- create it
-          files.mkdir(files.pathJoin(this.buildPath, partial), 0o755);
+          files.mkdir_p(files.pathJoin(this.buildPath, partial), 0o755);
         }
         this.usedAsFile[partial] = false;
       } else if (this.usedAsFile[partial]) {
@@ -169,7 +169,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         throw new Error(`Path contains forbidden segment '${part}'`);
       }
 
-      part = part.replace(/[^a-zA-Z0-9._\:\-@]/g, '');
+      part = part.replace(/[^a-zA-Z0-9._\:\-@#]/g, '_');
 
       // If at last component, pull extension (if any) off of part
       let ext = '';
@@ -345,7 +345,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
             }
           }
           if (needToMkdir) {
-            files.mkdir(files.pathJoin(this.buildPath, soFar), 0o755);
+            files.mkdir_p(files.pathJoin(this.buildPath, soFar), 0o755);
           }
           this.usedAsFile[soFar] = false;
         }

@@ -51,17 +51,27 @@ selftest.define("modules - import chain for packages", () => {
 
   s.createApp("myapp", "package-tests");
   s.cd("myapp");
-  s.write(".meteor/packages",
-    "meteor-base \n modules \n with-add-files \n with-main-module");
-  s.write("main.js", `
-    var packageNameA = require('meteor/with-add-files').name;
-    var packageNameB = require('meteor/with-main-module').name;
 
-    console.log('with-add-files: ' + packageNameA);
-    console.log('with-main-module: ' + packageNameB);
-  `);
+  s.write(".meteor/packages", [
+    "meteor-base",
+    "modules",
+    "with-add-files",
+    "with-main-module",
+    ""
+  ].join("\n"));
+
+  s.write("main.js", [
+    "var packageNameA = require('meteor/with-add-files').name;",
+    "var packageNameB = require('meteor/with-main-module').name;",
+    "",
+    "console.log('with-add-files: ' + packageNameA);",
+    "console.log('with-main-module: ' + packageNameB);",
+    ""
+  ].join("\n"));
 
   const run = startRun(s);
+
+  run.waitSecs(30);
 
   // On the server, we just check that importing *works*, not *how* it works
   run.match("with-add-files: with-add-files");

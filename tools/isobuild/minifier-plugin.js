@@ -60,13 +60,9 @@ export class JsFile extends InputFile {
   // - sourceMap
   // - path
   // - hash?
+  // - stats?
   addJavaScript(options) {
-    const self = this;
-    self._minifiedFiles.push({
-      data: options.data,
-      sourceMap: options.sourceMap,
-      path: options.path
-    });
+    this._minifiedFiles.push({ ...options });
   }
 }
 
@@ -75,12 +71,9 @@ export class CssFile extends InputFile {
   // - sourceMap
   // - path
   // - hash?
+  // - stats?
   addStylesheet(options) {
-    this._minifiedFiles.push({
-      data: options.data,
-      sourceMap: options.sourceMap,
-      path: options.path
-    });
+    this._minifiedFiles.push({ ...options });
   }
 }
 

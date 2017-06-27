@@ -270,7 +270,8 @@ var runCommandOptions = {
     'no-lint': { type: Boolean },
     // Allow the version solver to make breaking changes to the versions
     // of top-level dependencies.
-    'allow-incompatible-update': { type: Boolean }
+    'allow-incompatible-update': { type: Boolean },
+    'extra-packages': { type: String }
   },
   catalogRefresh: new catalog.Refresh.Never()
 };
@@ -289,10 +290,16 @@ function doRunCommand(options) {
   const { parsedServerUrl, parsedMobileServerUrl } =
     parseServerOptionsForRunCommand(options, runTargets);
 
+  var includePackages = [];
+  if (options['extra-packages']) {
+    includePackages = options['extra-packages'].trim().split(/\s*,\s*/);
+  }
+
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
     allowIncompatibleUpdate: options['allow-incompatible-update'],
-    lintAppAndLocalPackages: !options['no-lint']
+    lintAppAndLocalPackages: !options['no-lint'],
+    includePackages: includePackages,
   });
 
   main.captureAndExit("=> Errors while initializing project:", function () {
@@ -777,7 +784,7 @@ main.registerCommand({
   Console.info("");
   Console.info("If you are new to Meteor, try some of the learning resources here:");
   Console.info(
-    Console.url("https://www.meteor.com/learn"),
+    Console.url("https://www.meteor.com/tutorials"),
       Console.options({ indent: 2 }));
 
   if (!options.full && !options.bare){
@@ -1032,7 +1039,7 @@ ${cordova.displayNameForPlatform(platform)}` }, () => {
 `This is an auto-generated XCode project for your iOS application.
 
 Instructions for publishing your iOS app to App Store can be found at:
-https://github.com/meteor/meteor/wiki/How-to-submit-your-iOS-app-to-App-Store
+https://guide.meteor.com/mobile.html#submitting-ios
 `, "utf8");
             } else if (platform === 'android') {
               const apkPath = files.pathJoin(buildPath, 'build/outputs/apk',
@@ -1048,7 +1055,7 @@ https://github.com/meteor/meteor/wiki/How-to-submit-your-iOS-app-to-App-Store
 `This is an auto-generated Gradle project for your Android application.
 
 Instructions for publishing your Android app to Play Store can be found at:
-https://github.com/meteor/meteor/wiki/How-to-submit-your-Android-app-to-Play-Store
+https://guide.meteor.com/mobile.html#submitting-android
 `, "utf8");
             }
         });
@@ -1526,7 +1533,9 @@ testCommandOptions = {
     'test-packages': { type: Boolean, 'default': false },
 
     // For 'test-packages': Run in "full app" mode
-    'full-app': { type: Boolean, 'default': false }
+    'full-app': { type: Boolean, 'default': false },
+
+    'extra-packages': { type: String }
   }
 };
 
@@ -1584,10 +1593,16 @@ function doTestCommand(options) {
     runLog.setRawLogs(true);
   }
 
+  var includePackages = [];
+  if (options['extra-packages']) {
+    includePackages = options['extra-packages'].trim().split(/\s*,\s*/);
+  }
+
   var projectContextOptions = {
     serverArchitectures: serverArchitectures,
     allowIncompatibleUpdate: options['allow-incompatible-update'],
-    lintAppAndLocalPackages: !options['no-lint']
+    lintAppAndLocalPackages: !options['no-lint'],
+    includePackages: includePackages
   };
   var projectContext;
 

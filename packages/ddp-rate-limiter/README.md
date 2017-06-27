@@ -8,6 +8,9 @@ DDP Rate Limiter package
 A rate limiter added directly to DDP that provides an API to add rules to
 Meteor methods and collections.
 
+For example usage, check out 
+[the docs](http://docs.meteor.com/api/methods.html#ddpratelimiter).
+
 ### Pre-defined Defaults
 
 If the `accounts-base` package is added to your
@@ -40,24 +43,3 @@ example, we check the database to avoid rate limiting admin users.
 
 When we add the rule to DDPRateLimiter, we also specify the number of messages
 that we allow and the time interval on which the rate limit is reset.
-
-### Example Usage
-
-For example, let's add a rule for all login methods that restrict all users
-but admins to 5 login attempts per second:
-
-```javascript
-// Define a rule that matches login attempts by non-admin users
-var loginRule = {
-  userId: function (userId) {
-    return Meteor.users.findOne(userId).type !== 'Admin';
-  },
-  type: 'method',
-  name: 'login'
-}
-// Add the rule, allowing up to 5 messages every 1000 milliseconds.
-DDPRateLimiter.addRule(loginRule, 5, 1000);
-```
-
-For more information, check out the documentation on the [DDP Rate Limiter]
-(http://docs.meteor.com/#ddpratelimiter).
