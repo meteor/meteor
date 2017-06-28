@@ -1,6 +1,9 @@
 Package.describe({
   summary: "Password support for accounts",
-  version: "2.2.0-beta.3"
+  // Note: 2.2.0-beta.3 was published during the Meteor 1.6 prerelease
+  // process, so it might be best to skip to 2.3.x instead of reusing
+  // 2.2.x in the future.
+  version: "1.5.0"
 });
 
 Package.onUse(function(api) {
