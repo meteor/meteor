@@ -10,7 +10,7 @@
 #   A regex or list of additional regexes to skip.
 
 # Export this one so it's available in the node environment.
-export TIMEOUT_SCALE_FACTOR=${TIMEOUT_SCALE_FACTOR:-15}
+export TIMEOUT_SCALE_FACTOR=${TIMEOUT_SCALE_FACTOR:-4}
 
 # Skip these tests always.  Add other tests with ADDL_SELF_TEST_EXCLUDE.
 SELF_TEST_EXCLUDE="^old cli tests|^minifiers can't register non-js|^minifiers: apps can't use|^compiler plugins - addAssets"
