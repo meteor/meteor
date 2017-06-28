@@ -24,17 +24,11 @@ if (key === retrieved) {
   if (Meteor.isServer) {
     Meteor._localStorage = storage;
   } else {
-    // IE11 doesn't handle properly attempts to change methods of the
-    // window.localStorage, attempts to do so will result in the complete
-    // break of the localStorage system for the domain in which it is
-    // done - until the user clean the browser/domain cache.
-    //
-    // Therefore, in the web, we don't set Meteor._localStorage to be a
-    // reference to window.localStorage . Instead, we set proxy methods.
-    //
-    // This will allow package developers that will find a need to change
-    // the behavior of Meteor._localStorage methods to do so without breaking
-    // the localStorage system on IE11. (e.g. meteorhacks:fast-render)
+    // Some browsers (e.g. IE11) don't properly handle attempts to change 
+    // window.localStorage methods. By using proxy methods to expose 
+    // window.localStorage functionality, developers can change 
+    // the behavior of Meteor._localStorage methods without breaking 
+    // window.localStorage.
 
     Meteor._localStorage = {
       getItem: function (key) {
