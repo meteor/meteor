@@ -1,5 +1,5 @@
 import {AccountsClient} from "./accounts_client.js";
-var Ap = AccountsClient.prototype;
+const Ap = AccountsClient.prototype;
 
 // This file deals with storing a login token and user id in the
 // browser's localStorage facility. It polls local storage every few
@@ -8,7 +8,7 @@ var Ap = AccountsClient.prototype;
 
 // Login with a Meteor access token. This is the only public function
 // here.
-Meteor.loginWithToken = function (token, callback) {
+Meteor.loginWithToken = (token, callback) => {
   return Accounts.loginWithToken(token, callback);
 };
 
@@ -79,7 +79,7 @@ Ap._storedUserId = function () {
 };
 
 Ap._unstoreLoginTokenIfExpiresSoon = function () {
-  var tokenExpires = this._storedLoginTokenExpires();
+  const tokenExpires = this._storedLoginTokenExpires();
   if (tokenExpires && this._tokenExpiresSoon(new Date(tokenExpires))) {
     this._unstoreLoginToken();
   }
@@ -89,13 +89,11 @@ Ap._unstoreLoginTokenIfExpiresSoon = function () {
 /// AUTO-LOGIN
 ///
 
-Ap._initLocalStorage = function () {
-  var self = this;
-
+Ap._initLocalStorage = () => {
   // Key names to use in localStorage
-  self.LOGIN_TOKEN_KEY = "Meteor.loginToken";
-  self.LOGIN_TOKEN_EXPIRES_KEY = "Meteor.loginTokenExpires";
-  self.USER_ID_KEY = "Meteor.userId";
+  this.LOGIN_TOKEN_KEY = "Meteor.loginToken";
+  this.LOGIN_TOKEN_EXPIRES_KEY = "Meteor.loginTokenExpires";
+  this.USER_ID_KEY = "Meteor.userId";
 
   var rootUrlPathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX;
   if (rootUrlPathPrefix || this.connection !== Meteor.connection) {
@@ -109,28 +107,28 @@ Ap._initLocalStorage = function () {
     if (rootUrlPathPrefix) {
       namespace += ":" + rootUrlPathPrefix;
     }
-    self.LOGIN_TOKEN_KEY += namespace;
-    self.LOGIN_TOKEN_EXPIRES_KEY += namespace;
-    self.USER_ID_KEY += namespace;
+    this.LOGIN_TOKEN_KEY += namespace;
+    this.LOGIN_TOKEN_EXPIRES_KEY += namespace;
+    this.USER_ID_KEY += namespace;
   }
 
-  if (self._autoLoginEnabled) {
+  if (this._autoLoginEnabled) {
     // Immediately try to log in via local storage, so that any DDP
     // messages are sent after we have established our user account
-    self._unstoreLoginTokenIfExpiresSoon();
-    var token = self._storedLoginToken();
+    this._unstoreLoginTokenIfExpiresSoon();
+    const token = this._storedLoginToken();
     if (token) {
       // On startup, optimistically present us as logged in while the
       // request is in flight. This reduces page flicker on startup.
-      var userId = self._storedUserId();
-      userId && self.connection.setUserId(userId);
-      self.loginWithToken(token, function (err) {
+      const userId = this._storedUserId();
+      userId && this.connection.setUserId(userId);
+      this.loginWithToken(token, err => {
         if (err) {
           Meteor._debug("Error logging in with token: " + err);
-          self.makeClientLoggedOut();
+          this.makeClientLoggedOut();
         }
 
-        self._pageLoadLogin({
+        this._pageLoadLogin({
           type: "resume",
           allowed: !err,
           error: err,
@@ -146,40 +144,38 @@ Ap._initLocalStorage = function () {
 
   // Poll local storage every 3 seconds to login if someone logged in in
   // another tab
-  self._lastLoginTokenWhenPolled = token;
+  this._lastLoginTokenWhenPolled = token;
 
-  if (self._pollIntervalTimer) {
+  if (this._pollIntervalTimer) {
     // Unlikely that _initLocalStorage will be called more than once for
     // the same AccountsClient instance, but just in case...
-    clearInterval(self._pollIntervalTimer);
+    clearInterval(this._pollIntervalTimer);
   }
 
-  self._pollIntervalTimer = setInterval(function () {
-    self._pollStoredLoginToken();
+  this._pollIntervalTimer = setInterval(() => {
+    this._pollStoredLoginToken();
   }, 3000);
 };
 
-Ap._pollStoredLoginToken = function () {
-  var self = this;
-
-  if (! self._autoLoginEnabled) {
+Ap._pollStoredLoginToken = () => {
+  if (!this._autoLoginEnabled) {
     return;
   }
 
-  var currentLoginToken = self._storedLoginToken();
+  const currentLoginToken = this._storedLoginToken();
 
   // != instead of !== just to make sure undefined and null are treated the same
-  if (self._lastLoginTokenWhenPolled != currentLoginToken) {
+  if (this._lastLoginTokenWhenPolled != currentLoginToken) {
     if (currentLoginToken) {
-      self.loginWithToken(currentLoginToken, function (err) {
+      this.loginWithToken(currentLoginToken, err => {
         if (err) {
-          self.makeClientLoggedOut();
+          this.makeClientLoggedOut();
         }
       });
     } else {
-      self.logout();
+      this.logout();
     }
   }
 
-  self._lastLoginTokenWhenPolled = currentLoginToken;
+  this._lastLoginTokenWhenPolled = currentLoginToken;
 };
