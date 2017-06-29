@@ -17,7 +17,7 @@ var packageJson = {
     // (and there are backwards-incompatible changes either way).
     underscore: "1.5.2",
     "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e",
-    semver: "4.1.0"
+    semver: "4.3.2"
   },
   // These are only used in dev mode (by shell.js) so end-users can avoid
   // needing to install them if they use `npm install --production`.
