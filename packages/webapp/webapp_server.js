@@ -1,3 +1,4 @@
+import assert from "assert";
 import { readFile } from "fs";
 import { createServer } from "http";
 import {
@@ -238,7 +239,7 @@ WebApp._timeoutAdjustmentRequestCallback = function (req, res) {
 var boilerplateByArch = {};
 
 // Register a callback function that can selectively modify boilerplate
-// data given arguments (data, request, arch). The key should be a unique
+// data given arguments (request, data, arch). The key should be a unique
 // identifier, to prevent accumulating duplicate callbacks from the same
 // call site over time. Callbacks will be called in the order they were
 // registered. A callback should return false if it did not make any
@@ -247,21 +248,17 @@ var boilerplateByArch = {};
 const boilerplateDataCallbacks = Object.create(null);
 WebAppInternals.registerBoilerplateDataCallback = function (key, callback) {
   const previousCallback = boilerplateDataCallbacks[key];
-  if (previousCallback) {
-    // Delete any existing callback first, so the new callback is always a
-    // new property, and thus will come last in Object.keys order.
-    delete boilerplateDataCallbacks[key];
-  }
 
   if (typeof callback === "function") {
     boilerplateDataCallbacks[key] = callback;
-  } else if (callback !== null) {
-    throw new Error("Bad callback: " + callback);
+  } else {
+    assert.strictEqual(callback, null);
+    delete boilerplateDataCallbacks[key];
   }
 
   // Return the previous callback in case the new callback needs to call
   // it; for example, when the new callback is a wrapper for the old.
-  return previousCallback;
+  return previousCallback || null;
 };
 
 // Given a request (as returned from `categorizeRequest`), return the
@@ -278,30 +275,38 @@ function getBoilerplate(request, arch) {
   return getBoilerplateAsync(request, arch).await();
 }
 
-async function getBoilerplateAsync(request, arch) {
+function getBoilerplateAsync(request, arch) {
   const boilerplate = boilerplateByArch[arch];
   const data = Object.assign({}, boilerplate.baseData, {
     htmlAttributes: getHtmlAttributes(request),
   }, _.pick(request, "dynamicHead", "dynamicBody"));
 
   let madeChanges = false;
+  let promise = Promise.resolve();
 
-  for (const key of Object.keys(boilerplateDataCallbacks)) {
-    const callback = boilerplateDataCallbacks[key];
-    const result = await callback(data, request, arch);
-    // Callbacks should return false if they did not make any changes.
-    if (result !== false) {
-      madeChanges = true;
+  Object.keys(boilerplateDataCallbacks).forEach(key => {
+    promise = promise.then(() => {
+      const callback = boilerplateDataCallbacks[key];
+      return callback(request, data, arch);
+    }).then(result => {
+      // Callbacks should return false if they did not make any changes.
+      if (result !== false) {
+        madeChanges = true;
+      }
+    });
+  });
+
+  return promise.then(() => {
+    const useMemoized = ! (
+      data.dynamicHead ||
+      data.dynamicBody ||
+      madeChanges
+    );
+
+    if (! useMemoized) {
+      return boilerplate.toHTML(data);
     }
-  }
 
-  const useMemoized = ! (
-    request.dynamicHead ||
-    request.dynamicBody ||
-    madeChanges
-  );
-
-  if (useMemoized) {
     // The only thing that changes from request to request (unless extra
     // content is added to the head or body, or boilerplateDataCallbacks
     // modified the data) are the HTML attributes (used by, eg, appcache)
@@ -318,9 +323,7 @@ async function getBoilerplateAsync(request, arch) {
     }
 
     return memoizedBoilerplate[memHash];
-  }
-  
-  return boilerplate.toHTML(data);
+  });
 }
 
 WebAppInternals.generateBoilerplateInstance = function (arch,
