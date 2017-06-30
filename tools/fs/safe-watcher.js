@@ -17,9 +17,14 @@ if (process.platform === "win32") {
   WATCHER_ENABLED = false;
 }
 
-var PRIORITIZE_CHANGED =
-  process.env.METEOR_WATCH_PRIORITIZE_CHANGED &&
-  JSON.parse(process.env.METEOR_WATCH_PRIORITIZE_CHANGED);
+// Default to prioritizing changed files, but disable that behavior (and
+// thus prioritize all files equally) if METEOR_WATCH_PRIORITIZE_CHANGED
+// is explicitly set to a string that parses to a falsy value.
+var PRIORITIZE_CHANGED = true;
+if (process.env.METEOR_WATCH_PRIORITIZE_CHANGED &&
+    ! JSON.parse(process.env.METEOR_WATCH_PRIORITIZE_CHANGED)) {
+  PRIORITIZE_CHANGED = false;
+}
 
 var DEFAULT_POLLING_INTERVAL =
   ~~process.env.METEOR_WATCH_POLLING_INTERVAL_MS || 5000;
