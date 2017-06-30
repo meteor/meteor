@@ -1,5 +1,13 @@
 ## v.NEXT
 
+* The `accounts-facebook` and `facebook-oauth` packages have been updated to
+  use the v2.9 of the Facebook Graph API for the Login Dialog since the v2.2
+  version will be deprecated by Facebook in July.  There shouldn't be a problem
+  regardless since Facebook simply rolls over to the next active version
+  (v2.3, in this case) however this should assist in avoiding deprecation
+  warnings and should enable any new functionality which has become available.
+  [PR #8858](https://github.com/meteor/meteor/pull/8858)
+
 * `observe`/`observeChanges` callbacks are now bound using `Meteor.bindEnvironment`.
   The same `EnvironmentVariable`s that were present when `observe`/`observeChanges`
   was called are now available inside the callbacks.
