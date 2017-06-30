@@ -12,7 +12,7 @@ selftest.define("meteor shell", function () {
 
   var shell = s.run("shell");
   // First try a simple one-line expression.
-  shell.write("{server:Meteor.isServer}\n");
+  shell.write("({server:Meteor.isServer})\n");
   shell.proc.stdin.end();
   shell.waitSecs(10);
   shell.match('{"server":true}');
@@ -40,6 +40,14 @@ selftest.define("meteor shell", function () {
   shell.proc.stdin.end();
   shell.waitSecs(10);
   shell.match("oky dok");
+  shell.expectExit(0);
+
+  shell = s.run("shell");
+  // Now check importing a module
+  shell.write('import { Meteor } from "meteor/meteor"\n');
+  shell.proc.stdin.end();
+  shell.waitSecs(10);
+  shell.match("undefined");
   shell.expectExit(0);
 
   server.stop();
