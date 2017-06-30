@@ -17,6 +17,10 @@ if (process.platform === "win32") {
   WATCHER_ENABLED = false;
 }
 
+var PRIORITIZE_CHANGED =
+  process.env.METEOR_WATCH_PRIORITIZE_CHANGED &&
+  JSON.parse(process.env.METEOR_WATCH_PRIORITIZE_CHANGED);
+
 var DEFAULT_POLLING_INTERVAL =
   ~~process.env.METEOR_WATCH_POLLING_INTERVAL_MS || 5000;
 
@@ -37,7 +41,17 @@ const entriesByIno = new Map;
 // Set of paths for which a change event has been fired, watched with
 // watchLibrary.watch if available. This could be an LRU cache, but in
 // practice it should never grow large enough for that to matter.
-const recentlyChanged = new Set;
+const changedPaths = new Set;
+
+function hasPriority(absPath) {
+  // If we're not prioritizing changed files, then all files have
+  // priority, which means they should be watched with native file
+  // watchers if the platform supports them. If we are prioritizing
+  // changed files, then only changed files get priority.
+  return PRIORITIZE_CHANGED
+    ? changedPaths.has(absPath)
+    : true;
+}
 
 function acquireWatcher(absPath, callback) {
   const entry = entries[absPath] || (
@@ -82,7 +96,7 @@ function startNewWatcher(absPath) {
       return DEFAULT_POLLING_INTERVAL;
     }
 
-    if (recentlyChanged.has(absPath)) {
+    if (hasPriority(absPath)) {
       return NO_WATCHER_POLLING_INTERVAL;
     }
 
@@ -108,7 +122,7 @@ function startNewWatcher(absPath) {
       lastWatcherEventTime = 0;
 
     } else {
-      recentlyChanged.add(absPath);
+      changedPaths.add(absPath);
       rewatch();
     }
 
@@ -128,7 +142,7 @@ function startNewWatcher(absPath) {
   }
 
   function rewatch() {
-    if (recentlyChanged.has(absPath)) {
+    if (hasPriority(absPath)) {
       if (watcher) {
         // Already watching; nothing to do.
         return;
