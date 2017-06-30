@@ -321,7 +321,7 @@ export const renderRoutes = () => (
       <Route path="signin" component={AuthPageSignIn}/>
       <Route path="join" component={AuthPageJoin}/>
       <Route path="*" component={NotFoundPage}/>
-    <div>
+    </div>
   </Router>
 );
 ```
