@@ -125,6 +125,11 @@ Specific portions of package tests can be run by passing a `<package name>` or `
 
     ./meteor test-packages mongo
 
+For more fine-grained control, if you're interested in running only the specific tests that relate to the functionality you're working on, you can filter individual tests by using the `TINYTEST_FILTER` environment variable (which supports regex's). For example, to run only the package tests that verify `new Mongo.Collection` behavior, try:
+
+    TINYTEST_FILTER="collection - call new Mongo.Collection" ./meteor test-packages
+
+
 ### Running Meteor Tool self-tests
 
 While TinyTest and the `test-packages` command can be used to test internal Meteor packages, they cannot be used to test the Meteor Tool itself. The Meteor Tool is a node app that uses a home-grown "self test" system.
