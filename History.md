@@ -1,5 +1,11 @@
 ## v.NEXT
 
+* Meteor has been upgraded to support Mongo 3.4.5 by default (the bundled
+  version used by `meteor run` has been upgraded). Internally it now uses the
+  2.2.29 version of the `mongodb` npm driver, and has been tested against
+  Mongo databases ranging from versions 2.6.10 to 3.4.5.
+  [FR #129](https://github.com/meteor/meteor-feature-requests/issues/129)
+
 * `observe`/`observeChanges` callbacks are now bound using `Meteor.bindEnvironment`.
   The same `EnvironmentVariable`s that were present when `observe`/`observeChanges`
   was called are now available inside the callbacks.
