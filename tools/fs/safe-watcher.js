@@ -34,6 +34,11 @@ const entries = Object.create(null);
 // to deduplicate files by ino.
 const entriesByIno = new Map;
 
+// Set of paths for which a change event has been fired, watched with
+// watchLibrary.watch if available. This could be an LRU cache, but in
+// practice it should never grow large enough for that to matter.
+const recentlyChanged = new Set;
+
 function acquireWatcher(absPath, callback) {
   const entry = entries[absPath] || (
     entries[absPath] = startNewWatcher(absPath));
@@ -71,7 +76,22 @@ function startNewWatcher(absPath) {
   const callbacks = new Set;
   let watcherCleanupTimer = null;
   let watcher;
-  let pollingInterval;
+
+  function getPollingInterval() {
+    if (watcher) {
+      return DEFAULT_POLLING_INTERVAL;
+    }
+
+    if (recentlyChanged.has(absPath)) {
+      return NO_WATCHER_POLLING_INTERVAL;
+    }
+
+    if (WATCHER_ENABLED) {
+      return DEFAULT_POLLING_INTERVAL;
+    }
+
+    return NO_WATCHER_POLLING_INTERVAL;
+  }
 
   function fire(event) {
     if (event !== "change") {
@@ -86,6 +106,10 @@ function startNewWatcher(absPath) {
       // "delete" or "rename" event, since it is now our only reliable
       // source of file change notifications.
       lastWatcherEventTime = 0;
+
+    } else {
+      recentlyChanged.add(absPath);
+      rewatch();
     }
 
     callbacks.forEach(cb => cb.call(this, event));
@@ -104,16 +128,15 @@ function startNewWatcher(absPath) {
   }
 
   function rewatch() {
-    if (watcher) {
-      // Already watching; nothing to do.
-      return;
+    if (recentlyChanged.has(absPath)) {
+      if (watcher) {
+        // Already watching; nothing to do.
+        return;
+      }
+      watcher = watchLibraryWatch(absPath, watchWrapper);
+    } else if (watcher) {
+      safeUnwatch();
     }
-
-    watcher = watchLibraryWatch(absPath, watchWrapper);
-
-    pollingInterval = watcher
-      ? DEFAULT_POLLING_INTERVAL
-      : NO_WATCHER_POLLING_INTERVAL;
 
     // This is a no-op if we're not watching the file.
     unwatchFile(absPath, watchFileWrapper);
@@ -125,7 +148,7 @@ function startNewWatcher(absPath) {
     // CPU cycles.
     watchFile(absPath, {
       persistent: false,
-      interval: pollingInterval,
+      interval: getPollingInterval(),
     }, watchFileWrapper);
   }
 
@@ -142,12 +165,10 @@ function startNewWatcher(absPath) {
 
     // If a watcher event fired in the last polling interval, ignore
     // this event.
-    if (new Date - lastWatcherEventTime > pollingInterval) {
+    if (new Date - lastWatcherEventTime > getPollingInterval()) {
       fire.call(this, "change");
     }
   }
-
-  rewatch();
 
   const entry = {
     callbacks,
