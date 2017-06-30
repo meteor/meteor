@@ -27,16 +27,16 @@ var NO_WATCHER_POLLING_INTERVAL =
 // file watchers, but it's to our advantage if they survive restarts.
 const WATCHER_CLEANUP_DELAY_MS = 30000;
 
-const watchers = Object.create(null);
+const entries = Object.create(null);
 
 // Pathwatcher complains (using console.error, ugh) if you try to watch
 // two files with the same stat.ino number but different paths, so we have
 // to deduplicate files by ino.
-const watchersByIno = new Map;
+const entriesByIno = new Map;
 
 function acquireWatcher(absPath, callback) {
-  const entry = watchers[absPath] || (
-    watchers[absPath] = startNewWatcher(absPath));
+  const entry = entries[absPath] || (
+    entries[absPath] = startNewWatcher(absPath));
 
   // Watches successfully established in the past may have become invalid
   // because the watched file was deleted or renamed, so we need to make
@@ -53,8 +53,8 @@ function acquireWatcher(absPath, callback) {
 function startNewWatcher(absPath) {
   const stat = statOrNull(absPath);
   const ino = stat && stat.ino;
-  if (ino > 0 && watchersByIno.has(ino)) {
-    return watchersByIno.get(ino);
+  if (ino > 0 && entriesByIno.has(ino)) {
+    return entriesByIno.get(ino);
   }
 
   function safeUnwatch() {
@@ -62,7 +62,7 @@ function startNewWatcher(absPath) {
       watcher.close();
       watcher = null;
       if (ino > 0) {
-        watchersByIno.delete(ino);
+        entriesByIno.delete(ino);
       }
     }
   }
@@ -154,7 +154,7 @@ function startNewWatcher(absPath) {
     rewatch,
 
     release(callback) {
-      if (! watchers[absPath]) {
+      if (! entries[absPath]) {
         return;
       }
 
@@ -177,8 +177,8 @@ function startNewWatcher(absPath) {
     },
 
     close() {
-      if (watchers[absPath] !== entry) return;
-      watchers[absPath] = null;
+      if (entries[absPath] !== entry) return;
+      entries[absPath] = null;
 
       if (watcherCleanupTimer) {
         clearTimeout(watcherCleanupTimer);
@@ -192,15 +192,15 @@ function startNewWatcher(absPath) {
   };
 
   if (ino > 0) {
-    watchersByIno.set(ino, entry);
+    entriesByIno.set(ino, entry);
   }
 
   return entry;
 }
 
 export function closeAllWatchers() {
-  Object.keys(watchers).forEach(absPath => {
-    const entry = watchers[absPath];
+  Object.keys(entries).forEach(absPath => {
+    const entry = entries[absPath];
     if (entry) {
       entry.close();
     }
