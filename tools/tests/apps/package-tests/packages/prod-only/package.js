@@ -3,6 +3,7 @@ Package.describe({
   prodOnly: true
 });
 
-Package.onUse(function(api) {
-  api.addFiles('prod-only.js');
+Package.onUse(function (api) {
+  api.mainModule('prod-only.js');
+  api.export('ProdOnly');
 });

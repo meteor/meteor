@@ -3,7 +3,7 @@ Package.describe({
   debugOnly: true
 });
 
-Package.onUse(function(api) {
-  api.addFiles('debug-only.js');
-  api.export('Debug');
+Package.onUse(function (api) {
+  api.mainModule('debug-only.js');
+  api.export('DebugOnly');
 });
