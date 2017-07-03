@@ -280,15 +280,17 @@ selftest.define("add debugOnly and prodOnly packages", [], function () {
   s.cd("myapp");
   s.set("METEOR_OFFLINE_CATALOG", "t");
 
-    // Add a debugOnly package. It should work during a normal run, but print
-  // nothing in production mode.
+  // Add a debug-only package. It should be available during a normal run, but
+  // not avialable in production mode.
   run = s.run("add", "debug-only");
   run.match("debug-only");
   run.expectExit(0);
 
   s.mkdir("server");
-  s.write("server/exit-test.js",
-          "process.exit(global.DEBUG_ONLY_LOADED ? 234 : 235)");
+  s.write(
+    "server/exit-test.js",
+    "process.exit(Package['debug-only'] "
+     + "&& Package['debug-only'].DebugOnly ? 234 : 235);");
 
   run = s.run("--once");
   run.waitSecs(15);
@@ -298,14 +300,16 @@ selftest.define("add debugOnly and prodOnly packages", [], function () {
   run.waitSecs(15);
   run.expectExit(235);
 
-  // Add prod-only package, which sets GLOBAL.PROD_ONLY_LOADED.
+  // Add a prod-only package. It should only be available in production mode.
   run = s.run("add", "prod-only");
   run.match("prod-only");
   run.expectExit(0);
 
   s.mkdir("server");
-  s.write("server/exit-test.js", // overwrite
-          "process.exit(global.PROD_ONLY_LOADED ? 234 : 235)");
+  s.write(
+    "server/exit-test.js",
+    "process.exit(Package['prod-only'] "
+     + "&& Package['prod-only'].ProdOnly ? 234 : 235);");
 
   run = s.run("--once");
   run.waitSecs(15);
