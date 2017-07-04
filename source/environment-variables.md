@@ -58,7 +58,7 @@ Colon-delimited list of local package directories to look in, outside your norma
 
 Which port the app should listen on, for example: `PORT=3030`
 
-See also: [`BIND_IP`](#BIND_IP).
+See also: [`BIND_IP`](#BIND-IP).
 
 > In development, this can be accomplished with `meteor run --port <port>`.
 
