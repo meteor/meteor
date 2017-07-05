@@ -1718,8 +1718,19 @@ DDPServer._calculateVersion = calculateVersion;
 // "blind" exceptions other than those that were deliberately thrown to signal
 // errors to the client
 var wrapInternalException = function (exception, context) {
-  if (!exception || exception instanceof Meteor.Error)
+  if (!exception) return exception;
+
+  // To allow packages to throw errors intended for the client but not have to
+  // depend on the Meteor.Error class, `isClientSafe` can be set to true on any
+  // error before it is thrown.
+  if (exception.isClientSafe) {
+    if (!(exception instanceof Meteor.Error)) {
+      const originalMessage = exception.message;
+      exception = new Meteor.Error(exception.error, exception.reason, exception.details);
+      exception.message = originalMessage;
+    }
     return exception;
+  }
 
   // tests can set the 'expected' flag on an exception so it won't go to the
   // server log
@@ -1736,10 +1747,10 @@ var wrapInternalException = function (exception, context) {
   // provided a "sanitized" version with more context than 500 Internal server
   // error? Use that.
   if (exception.sanitizedError) {
-    if (exception.sanitizedError instanceof Meteor.Error)
+    if (exception.sanitizedError.isClientSafe)
       return exception.sanitizedError;
     Meteor._debug("Exception " + context + " provides a sanitizedError that " +
-                  "is not a Meteor.Error; ignoring");
+                  "does not have isClientSafe property set; ignoring");
   }
 
   return new Meteor.Error(500, "Internal server error");

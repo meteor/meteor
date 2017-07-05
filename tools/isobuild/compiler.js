@@ -973,7 +973,7 @@ export function isIsobuildFeaturePackage(packageName) {
 
 // If you update this data structure to add more feature packages, you should
 // update the wiki page here:
-// https://github.com/meteor/meteor/wiki/Isobuild-Feature-Packages
+// https://docs.meteor.com/api/packagejs.html#isobuild-features
 export const KNOWN_ISOBUILD_FEATURE_PACKAGES = {
   // This package directly calls Plugin.registerCompiler. Package authors
   // must explicitly depend on this feature package to use the API.

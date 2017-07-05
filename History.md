@@ -1,9 +1,30 @@
 ## v.NEXT
 
+* The `accounts-facebook` and `facebook-oauth` packages have been updated to
+  use the v2.9 of the Facebook Graph API for the Login Dialog since the v2.2
+  version will be deprecated by Facebook in July.  There shouldn't be a problem
+  regardless since Facebook simply rolls over to the next active version
+  (v2.3, in this case) however this should assist in avoiding deprecation
+  warnings and should enable any new functionality which has become available.
+  [PR #8858](https://github.com/meteor/meteor/pull/8858)
+
+* `observe`/`observeChanges` callbacks are now bound using `Meteor.bindEnvironment`.
+  The same `EnvironmentVariable`s that were present when `observe`/`observeChanges`
+  was called are now available inside the callbacks.
+  [PR #8734](https://github.com/meteor/meteor/pull/8734)
+
 * `reactive-dict` now supports setting initial data when defining a named
   `ReactiveDict`. No longer run migration logic when used on the server,
   this is to prevent duplicate name error on reloads. Initial data is now
   properly serialized.
+
+* `accounts-password` now uses `example.com` as a default "from" address instead
+  of `meteor.com`. This change could break account-related e-mail notifications
+  (forgot password, activation, etc.) for applications which do not properly
+  configure a "from" domain since e-mail providers will often reject mail sent
+  from `example.com`. Ensure that `Accounts.emailTemplates.from` is set to a
+  proper domain in all applications.
+  [PR #8760](https://github.com/meteor/meteor/issues/8760)
 
 * Add `DDP._CurrentPublicationInvocation` and `DDP._CurrentMethodInvocation`.
   `DDP._CurrentInvocation` remains for backwards-compatibility. This change
@@ -37,6 +58,19 @@
   be replaced with `_`s rather than removed, so that file and directory
   names consisting of only illegal characters do not become empty
   strings. [PR #8765](https://github.com/meteor/meteor/pull/8765).
+
+* Additional "extra" packages (packages that aren't saved in `.meteor/packages`)
+  can be included temporarily using the `--extra-packages`
+  option.  For example: `meteor run --extra-packages "bundle-visualizer"`.
+  Both `meteor test` and `meteor test-packages` also support the
+  `--extra-packages` option and commas separate multiple package names.
+  [PR #8769](https://github.com/meteor/meteor/pull/8769)
+
+  > Note: Packages specified using the `--extra-packages` option override
+  > version constraints from `.meteor/packages`.
+
+* The `coffeescript` package has been updated to use CoffeeScript version
+  1.12.6. [PR #8777](https://github.com/meteor/meteor/pull/8777)
 
 ## v1.5, 2017-05-30
 
@@ -170,9 +204,11 @@
 
     > Note: The `MAIL_URL` should be configured with a scheme which matches the
     > protocol desired by your e-mail vendor/mail-transport agent.  For
-    > encrypted connections (typically listening on port 465 or 587), this means
-    > using `smtps://`.  Unencrypted connections should continue to use
-    > `smtp://`.
+    > encrypted connections (typically listening on port 465), this means
+    > using `smtps://`.  Unencrypted connections or those secured through
+    > a `STARTTLS` connection upgrade (typically using port 587 and sometimes
+    > port 25) should continue to use `smtp://`.  TLS/SSL will be automatically
+    > enabled if the mail provider supports it.
 
 * A new `Tracker.inFlush()` has been added to provide a global Tracker
   "flushing" state.
