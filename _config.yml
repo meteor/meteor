@@ -54,11 +54,11 @@ sidebar_categories:
     - api/packagejs
     - api/mobile-config
   Packages:
-    - packages/appcache
-    - packages/apollo
     - packages/accounts-ui
-    - packages/bundle-visualizer
+    - packages/apollo
+    - packages/appcache
     - packages/audit-argument-checks
+    - packages/bundle-visualizer
     - packages/coffeescript
     - packages/ecmascript
     - packages/jquery
