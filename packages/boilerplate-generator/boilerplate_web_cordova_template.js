@@ -1,6 +1,6 @@
 // Template function for rendering the boilerplate html for cordova
 
-export default function ({
+export default function({
   meteorRuntimeConfig,
   rootUrlPathPrefix,
   inlineScriptsAllowed,
