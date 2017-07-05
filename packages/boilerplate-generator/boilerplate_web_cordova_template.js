@@ -1,10 +1,19 @@
 // Template function for rendering the boilerplate html for cordova
-// Replicates the template defined in boilerplate_web.cordova.html
-// Arguments: root : { htmlAttributes, css : [{ url }], bundledJsCssUrlRewriteHook : Function, head, dynamicHead, body, dynamicBody, inlineScriptsAllowed, additionalStaticJs, meteorRuntimeConfig }
 
-export default function (manifest) {
-  const root = manifest;
-  // XXX do we need to do some validation on the properties of root?
+export default function ({
+  meteorRuntimeConfig,
+  rootUrlPathPrefix,
+  inlineScriptsAllowed,
+  css,
+  js,
+  additionalStaticJs,
+  htmlAttributes,
+  bundledJsCssUrlRewriteHook,
+  head,
+  body,
+  dynamicHead,
+  dynamicBody,
+}) {
   return [].concat(
     [
       '<html>',
@@ -16,7 +25,7 @@ export default function (manifest) {
       '  <meta http-equiv="Content-Security-Policy" content="default-src * gap: data: blob: \'unsafe-inline\' \'unsafe-eval\' ws: wss:;">',
     ],
     // We are explicitly not using bundledJsCssUrlRewriteHook: in cordova we serve assets up directly from disk, so rewriting the URL does not make sense
-    _.map(root.css, ({url}) =>
+    _.map(css, ({url}) =>
       _.template('  <link rel="stylesheet" type="text/css" class="__meteor-css__" href="<%- href %>">')({
         href: url
       })
@@ -24,7 +33,7 @@ export default function (manifest) {
     [
       '  <script type="text/javascript">',
       _.template('    __meteor_runtime_config__ = JSON.parse(decodeURIComponent(<%= conf %>));')({
-        conf: root.meteorRuntimeConfig
+        conf: meteorRuntimeConfig
       }),
       '    if (/Android/i.test(navigator.userAgent)) {',
       // When Android app is emulated, it cannot connect to localhost,
@@ -39,29 +48,29 @@ export default function (manifest) {
       '',
       '  <script type="text/javascript" src="/cordova.js"></script>'
     ],
-    _.map(root.js, ({url}) =>
+    _.map(js, ({url}) =>
       _.template('  <script type="text/javascript" src="<%- src %>"></script>')({
         src: url
       })
     ),
 
-    _.map(root.additionalStaticJs, ({contents, pathname}) => (
-      (root.inlineScriptsAllowed
+    _.map(additionalStaticJs, ({contents, pathname}) => (
+      (inlineScriptsAllowed
         ? _.template('  <script><%= contents %></script>')({
           contents: contents
         })
         : _.template('  <script type="text/javascript" src="<%- src %>"></script>')({
-          src: root.rootUrlPathPrefix + pathname
+          src: rootUrlPathPrefix + pathname
         }))
     )),
 
     [
       '',
-      root.head,
+      head,
       '</head>',
       '',
       '<body>',
-      root.body,
+      body,
       '</body>',
       '</html>'
     ],

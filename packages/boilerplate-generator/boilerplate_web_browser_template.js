@@ -1,12 +1,22 @@
 // Template function for rendering the boilerplate html for browsers
-// Replicates the template defined in boilerplate_web.browser.html
-// Arguments: root : { htmlAttributes, css : [{ url }], bundledJsCssUrlRewriteHook : Function, head, dynamicHead, body, dynamicBody, inlineScriptsAllowed, additionalStaticJs, meteorRuntimeConfig }
 
-export default function (root) {
-  // XXX do we need to do some validation on the properties of root?
+export default function ({
+  meteorRuntimeConfig,
+  rootUrlPathPrefix,
+  inlineScriptsAllowed,
+  css,
+  js,
+  additionalStaticJs,
+  htmlAttributes,
+  bundledJsCssUrlRewriteHook,
+  head,
+  body,
+  dynamicHead,
+  dynamicBody,
+}) {
   return [].concat(
     [
-      '<html' +_.map(root.htmlAttributes, (value, key) =>
+      '<html' +_.map(htmlAttributes, (value, key) =>
         _.template(' <%= attrName %>="<%- attrValue %>"')({
           attrName: key,
           attrValue: value
@@ -15,44 +25,44 @@ export default function (root) {
       '<head>'
     ],
 
-    _.map(root.css, ({url}) =>
+    _.map(css, ({url}) =>
       _.template('  <link rel="stylesheet" type="text/css" class="__meteor-css__" href="<%- href %>">')({
-        href: root.bundledJsCssUrlRewriteHook(url)
+        href: bundledJsCssUrlRewriteHook(url)
       })
     ),
 
     [
-      root.head,
-      root.dynamicHead,
+      head,
+      dynamicHead,
       '</head>',
       '<body>',
-      root.body,
-      root.dynamicBody,
+      body,
+      dynamicBody,
       '',
-      (root.inlineScriptsAllowed
+      (inlineScriptsAllowed
         ? _.template('  <script type="text/javascript">__meteor_runtime_config__ = JSON.parse(decodeURIComponent(<%= conf %>))</script>')({
-          conf: root.meteorRuntimeConfig
+          conf: meteorRuntimeConfig
         })
         : _.template('  <script type="text/javascript" src="<%- src %>/meteor_runtime_config.js"></script>')({
-          src: root.rootUrlPathPrefix
+          src: rootUrlPathPrefix
         })
       ) ,
       ''
     ],
 
-    _.map(root.js, ({url}) =>
+    _.map(js, ({url}) =>
       _.template('  <script type="text/javascript" src="<%- src %>"></script>')({
-        src: root.bundledJsCssUrlRewriteHook(url)
+        src: bundledJsCssUrlRewriteHook(url) + '&hello=bye'
       })
     ),
 
-    _.map(root.additionalStaticJs, ({contents, pathname}) => (
-      (root.inlineScriptsAllowed
+    _.map(additionalStaticJs, ({contents, pathname}) => (
+      (inlineScriptsAllowed
         ? _.template('  <script><%= contents %></script>')({
           contents: contents
         })
         : _.template('  <script type="text/javascript" src="<%- src %>"></script>')({
-          src: root.rootUrlPathPrefix + pathname
+          src: rootUrlPathPrefix + pathname
         }))
     )),
 
