@@ -22,11 +22,12 @@ export class Boilerplate {
   // the time that you construct the Boilerplate object. (e.g. it is used
   // by 'webapp' to specify data that is only known at request-time).
   toHTML (extraData) {
-    if (!this.baseData || !this.template)
+    if (!this.baseData || !this.template) {
       throw new Error('Boilerplate did not instantiate correctly.');
+    }
 
     return  "<!DOCTYPE html>\n" +
-      this.template(Object.assign({}, this.baseData, extraData));
+      this.template({ ...this.baseData, ...extraData });
   }
 
   // XXX Exported to allow client-side only changes to rebuild the boilerplate
@@ -36,26 +37,27 @@ export class Boilerplate {
   // or rewritten.
   // Optionally takes pathMapper for resolving relative file system paths.
   // Optionally allows to override fields of the data context.
-  _generateBoilerplateFromManifest (manifest, options) {
-    const urlMapper = options.urlMapper || _.identity;
-    const pathMapper = options.pathMapper || _.identity;
+  _generateBoilerplateFromManifest (manifest, {
+    urlMapper = _.identity,
+    pathMapper = _.identity,
+    baseDataExtension,
+    inline,
+  } = {}) {
 
     const boilerplateBaseData = {
       css: [],
       js: [],
       head: '',
       body: '',
-      meteorManifest: JSON.stringify(manifest)
+      meteorManifest: JSON.stringify(manifest),
+      ...baseDataExtension,
     };
-
-    // allow the caller to extend the default base data
-    _.extend(boilerplateBaseData, options.baseDataExtension);
 
     _.each(manifest, item => {
       const urlPath = urlMapper(item.url);
       const itemObj = { url: urlPath };
 
-      if (options.inline) {
+      if (inline) {
         itemObj.scriptContent = readUtf8FileSync(
           pathMapper(item.path));
         itemObj.inline = true;
