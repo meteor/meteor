@@ -543,9 +543,10 @@ _.extend(StatusPoller.prototype, {
 // because it allows us to call 'instance of' on the last argument of variadic
 // functions. This allows us to keep the signature of our custom output
 // functions (ex: info) roughly the same as the originals.
-var ConsoleOptions = function (o) {
-  var self = this;
-  self.options = o;
+class ConsoleOptions {
+  constructor(o) {
+    this.options = o;
+  }
 }
 
 var LEVEL_CODE_ERROR = 4;
