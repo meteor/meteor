@@ -565,10 +565,14 @@ export const LEVEL_DEBUG = { code: LEVEL_CODE_DEBUG };
 // into the language, this can be moved into the `Console` class.
 class ConsoleBase {}
 Object.assign(ConsoleBase.prototype, {
+  // Log levels
   LEVEL_ERROR,
   LEVEL_WARN,
   LEVEL_INFO,
   LEVEL_DEBUG,
+
+  // Other Console constants.
+  CARRIAGE_RETURN,
 });
 
 class Console extends ConsoleBase {
@@ -1311,4 +1315,3 @@ class Console extends ConsoleBase {
 }
 
 exports.Console = new Console;
-exports.Console.CARRIAGE_RETURN = CARRIAGE_RETURN;
