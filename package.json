@@ -60,18 +60,18 @@
     "eslint-config-airbnb": "15.0.2",
     "eslint-plugin-import": "2.7.0",
     "eslint-plugin-jsx-a11y": "^6.0.2",
-    "eslint-plugin-react": "7.0.1",
-    "ghooks": "2.0.0",
+    "eslint-plugin-react": "7.1.0",
+    "husky": "0.14.3",
     "mocha": "3.4.2",
-    "nyc": "11.0.3",
+    "nyc": "10.3.2",
     "readline-sync": "1.4.7",
     "rewire": "2.5.2",
     "rimraf": "2.6.1",
-    "semantic-release": "6.3.2",
+    "semantic-release": "6.3.6",
     "validate-commit-msg": "2.12.2"
   },
   "peerDependencies": {
-    "eslint": "^4.1.1"
+    "eslint": ">= 3.7.0 < 5"
   },
   "engines": {
     "node": ">=4"
