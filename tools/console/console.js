@@ -539,6 +539,25 @@ _.extend(StatusPoller.prototype, {
   }
 });
 
+// We use a special class to represent the options that we send to the Console
+// because it allows us to call 'instance of' on the last argument of variadic
+// functions. This allows us to keep the signature of our custom output
+// functions (ex: info) roughly the same as the originals.
+var ConsoleOptions = function (o) {
+  var self = this;
+  self.options = o;
+}
+
+var LEVEL_CODE_ERROR = 4;
+var LEVEL_CODE_WARN = 3;
+var LEVEL_CODE_INFO = 2;
+var LEVEL_CODE_DEBUG = 1;
+
+var LEVEL_ERROR = { code: LEVEL_CODE_ERROR };
+var LEVEL_WARN = { code: LEVEL_CODE_WARN };
+var LEVEL_INFO = { code: LEVEL_CODE_INFO };
+var LEVEL_DEBUG = { code: LEVEL_CODE_DEBUG };
+
 var Console = function (options) {
   var self = this;
 
@@ -580,25 +599,6 @@ var Console = function (options) {
     self.enableProgressDisplay(false);
   });
 };
-
-var LEVEL_CODE_ERROR = 4;
-var LEVEL_CODE_WARN = 3;
-var LEVEL_CODE_INFO = 2;
-var LEVEL_CODE_DEBUG = 1;
-
-var LEVEL_ERROR = { code: LEVEL_CODE_ERROR };
-var LEVEL_WARN = { code: LEVEL_CODE_WARN };
-var LEVEL_INFO = { code: LEVEL_CODE_INFO };
-var LEVEL_DEBUG = { code: LEVEL_CODE_DEBUG };
-
-// We use a special class to represent the options that we send to the Console
-// because it allows us to call 'instance of' on the last argument of variadic
-// functions. This allows us to keep the signature of our custom output
-// functions (ex: info) roughly the same as the originals.
-var ConsoleOptions = function (o) {
-  var self = this;
-  self.options = o;
-}
 
 _.extend(Console.prototype, {
   LEVEL_ERROR: LEVEL_ERROR,
