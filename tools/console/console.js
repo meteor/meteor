@@ -129,18 +129,15 @@ var toFixedLength = function (text, length) {
 
 // No-op progress display, that means we don't have to handle the 'no progress
 // display' case
-var ProgressDisplayNone = function () {
-};
-
-_.extend(ProgressDisplayNone.prototype, {
-  depaint: function () {
-    // No-op
-  },
-
-  repaint: function () {
+class ProgressDisplayNone {
+  depaint() {
     // No-op
   }
-});
+
+  repaint() {
+    // No-op
+  }
+}
 
 // Status display only, primarily for use with emacs
 // No fancy terminal support available, but we have a TTY.
