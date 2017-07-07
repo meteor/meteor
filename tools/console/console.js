@@ -78,38 +78,38 @@ if (! process.env.METEOR_COLOR) {
   chalk.enabled = false;
 }
 
-var STATUS_MAX_LENGTH = 40;
+const STATUS_MAX_LENGTH = 40;
 
-var PROGRESS_MAX_WIDTH = 40;
-var PROGRESS_BAR_FORMAT = '[:bar] :percent :etas';
-var TEMP_STATUS_LENGTH = STATUS_MAX_LENGTH + 12;
+const PROGRESS_MAX_WIDTH = 40;
+const PROGRESS_BAR_FORMAT = '[:bar] :percent :etas';
+const TEMP_STATUS_LENGTH = STATUS_MAX_LENGTH + 12;
 
-var STATUS_INTERVAL_MS = 50;
+const STATUS_INTERVAL_MS = 50;
 
 // Message to show when we don't know what we're doing
 // XXX: ? FALLBACK_STATUS = 'Pondering';
-var FALLBACK_STATUS = '';
+const FALLBACK_STATUS = '';
 
 // If there is a part of the larger text, and we really want to make sure that
 // it doesn't get split up, we will replace the space with a utf character that
 // we are not likely to use anywhere else. This one looks like the a BLACK SUN
 // WITH RAYS. We intentionally want to NOT use a space-like character: it should
 // be obvious that something has gone wrong if this ever gets printed.
-var SPACE_REPLACEMENT = '\u2600';
+const SPACE_REPLACEMENT = '\u2600';
 // In Javascript, replace only replaces the first occurance and this is the
 // proposed alternative.
-var replaceAll = function (str, search, replace) {
+const replaceAll = function (str, search, replace) {
  return str.split(search).join(replace);
 };
 
-var spacesArray = new Array(200).join(' ');
-var spacesString = function (length) {
+let spacesArray = new Array(200).join(' ');
+const spacesString = (length) => {
   if (length > spacesArray.length) {
     spacesArray = new Array(length * 2).join(' ');
   }
   return spacesArray.substring(0, length);
 };
-var ARROW = "=> ";
+const ARROW = "=> ";
 
 
 var toFixedLength = function (text, length) {
