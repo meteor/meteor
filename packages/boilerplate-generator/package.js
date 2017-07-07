@@ -8,6 +8,6 @@ Package.onUse(api => {
   api.use([
     'underscore',
   ], 'server');
-  api.mainModule('boilerplate-generator.js', 'server');
+  api.mainModule('generator.js', 'server');
   api.export('Boilerplate', 'server');
 });
