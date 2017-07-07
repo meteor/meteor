@@ -324,16 +324,14 @@ class ProgressDisplayFull {
     self._lastWrittenLine = null;
     self._lastWrittenTime = 0;
   }
-}
 
-_.extend(ProgressDisplayFull.prototype, {
-  depaint: function () {
+  depaint() {
     var self = this;
 
     self._stream.write(spacesString(self._printedLength) + CARRIAGE_RETURN);
-  },
+  }
 
-  updateStatus: function (status) {
+  updateStatus(status) {
     var self = this;
 
     if (status == self._status) {
@@ -342,9 +340,9 @@ _.extend(ProgressDisplayFull.prototype, {
 
     self._status = status;
     self._render();
-  },
+  }
 
-  updateProgress: function (fraction, startTime) {
+  updateProgress(fraction, startTime) {
     var self = this;
 
     self._fraction = fraction;
@@ -355,18 +353,18 @@ _.extend(ProgressDisplayFull.prototype, {
       self._progressBarRenderer.start = startTime;
     }
     self._render();
-  },
+  }
 
-  repaint: function () {
+  repaint() {
     var self = this;
     self._render();
-  },
+  }
 
   setHeadless(headless) {
     this._headless = !! headless;
-  },
+  }
 
-  _render: function () {
+  _render() {
     var self = this;
 
     // XXX: Throttle these updates?
@@ -434,7 +432,7 @@ _.extend(ProgressDisplayFull.prototype, {
       self._printedLength = length;
     }
   }
-});
+}
 
 var StatusPoller = function (console) {
   var self = this;
