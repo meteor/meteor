@@ -21,7 +21,7 @@ export class Boilerplate {
   // purpose is to allow you to specify data that you might not know at
   // the time that you construct the Boilerplate object. (e.g. it is used
   // by 'webapp' to specify data that is only known at request-time).
-  toHTML (extraData) {
+  toHTML(extraData) {
     if (!this.baseData || !this.template) {
       throw new Error('Boilerplate did not instantiate correctly.');
     }
@@ -37,7 +37,7 @@ export class Boilerplate {
   // or rewritten.
   // Optionally takes pathMapper for resolving relative file system paths.
   // Optionally allows to override fields of the data context.
-  _generateBoilerplateFromManifest (manifest, {
+  _generateBoilerplateFromManifest(manifest, {
     urlMapper = _.identity,
     pathMapper = _.identity,
     baseDataExtension,
