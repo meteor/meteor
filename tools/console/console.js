@@ -241,20 +241,22 @@ class SpinnerRenderer {
 }
 
 // Renders a progressbar.  Based on the npm 'progress' module, but tailored to our needs (i.e. renders to string)
-var ProgressBarRenderer = function (format, options) {
-  var self = this;
+class ProgressBarRenderer {
+  constructor(format, options) {
+    var self = this;
 
-  options = options || {};
+    options = options || {};
 
-  self.fmt = format;
-  self.curr = 0;
-  self.total = 100;
-  self.maxWidth = options.maxWidth || self.total;
-  self.chars = {
-    complete   : '=',
-    incomplete : ' '
-  };
-};
+    self.fmt = format;
+    self.curr = 0;
+    self.total = 100;
+    self.maxWidth = options.maxWidth || self.total;
+    self.chars = {
+      complete   : '=',
+      incomplete : ' '
+    };
+  }
+}
 
 _.extend(ProgressBarRenderer.prototype, {
   asString: function (availableSpace) {
