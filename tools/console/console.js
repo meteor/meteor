@@ -209,36 +209,36 @@ _.extend(ProgressDisplayStatus.prototype, {
   }
 });
 
-var SpinnerRenderer = function () {
-  var self = this;
-  self.frames = ['-', '\\', '|', '/'];
-  self.start = +(new Date);
-  self.interval = 250;
-  //// I looked at some Unicode indeterminate progress indicators, such as:
-  ////
-  //// spinner = "▁▃▄▅▆▇▆▅▄▃".split('');
-  //// spinner = "▉▊▋▌▍▎▏▎▍▌▋▊▉".split('');
-  //// spinner = "▏▎▍▌▋▊▉▊▋▌▍▎▏▁▃▄▅▆▇▆▅▄▃".split('');
-  //// spinner = "▉▊▋▌▍▎▏▎▍▌▋▊▉▇▆▅▄▃▁▃▄▅▆▇".split('');
-  //// spinner = "⠉⠒⠤⣀⠤⠒".split('');
-  ////
-  //// but none of them really seemed like an improvement. I think
-  //// the case for using unicode would be stronger in a determinate
-  //// progress indicator.
-  ////
-  //// There are also some four-frame options such as ◐◓◑◒ at
-  ////   http://stackoverflow.com/a/2685827/157965
-  //// but all of the ones I tried look terrible in the terminal.
-};
+class SpinnerRenderer {
+  constructor() {
+    this.frames = ['-', '\\', '|', '/'];
+    this.start = +(new Date);
+    this.interval = 250;
+    //// I looked at some Unicode indeterminate progress indicators, such as:
+    ////
+    //// spinner = "▁▃▄▅▆▇▆▅▄▃".split('');
+    //// spinner = "▉▊▋▌▍▎▏▎▍▌▋▊▉".split('');
+    //// spinner = "▏▎▍▌▋▊▉▊▋▌▍▎▏▁▃▄▅▆▇▆▅▄▃".split('');
+    //// spinner = "▉▊▋▌▍▎▏▎▍▌▋▊▉▇▆▅▄▃▁▃▄▅▆▇".split('');
+    //// spinner = "⠉⠒⠤⣀⠤⠒".split('');
+    ////
+    //// but none of them really seemed like an improvement. I think
+    //// the case for using unicode would be stronger in a determinate
+    //// progress indicator.
+    ////
+    //// There are also some four-frame options such as ◐◓◑◒ at
+    ////   http://stackoverflow.com/a/2685827/157965
+    //// but all of the ones I tried look terrible in the terminal.
+  }
 
-SpinnerRenderer.prototype.asString = function () {
-  var self = this;
-  var now = +(new Date);
+  asString() {
+    var now = +(new Date);
 
-  var t = now - self.start;
-  var frame = Math.floor(t / self.interval) % self.frames.length;
-  return self.frames[frame];
-};
+    var t = now - this.start;
+    var frame = Math.floor(t / this.interval) % this.frames.length;
+    return this.frames[frame];
+  }
+}
 
 // Renders a progressbar.  Based on the npm 'progress' module, but tailored to our needs (i.e. renders to string)
 var ProgressBarRenderer = function (format, options) {
