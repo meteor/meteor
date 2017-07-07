@@ -155,15 +155,17 @@ _.extend(ProgressDisplayNone.prototype, {
 // Emacs doesn't get overwhelemd (we should throttle them anyway).
 // There's also a bug when using the progress bar in Emacs where
 // the cursor doesn't seem to return to column 0.
-var ProgressDisplayStatus = function (console) {
-  var self = this;
+class ProgressDisplayStatus {
+  constructor(console) {
+    var self = this;
 
-  self._console = console;
-  self._stream = console._stream;
+    self._console = console;
+    self._stream = console._stream;
 
-  self._status = null;
-  self._wroteStatusMessage = false;
-};
+    self._status = null;
+    self._wroteStatusMessage = false;
+  }
+}
 
 _.extend(ProgressDisplayStatus.prototype, {
   depaint: function () {
