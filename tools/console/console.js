@@ -450,10 +450,8 @@ class StatusPoller {
     self._startPoller();
     self._stop = false;
   }
-}
 
-_.extend(StatusPoller.prototype, {
-  _startPoller: function () {
+  _startPoller() {
     var self = this;
 
     if (self._pollPromise) {
@@ -467,22 +465,22 @@ _.extend(StatusPoller.prototype, {
         utils.sleepMs(STATUS_INTERVAL_MS);
       }
     })();
-  },
+  }
 
-  stop: function () {
+  stop() {
     var self = this;
 
     self._stop = true;
-  },
+  }
 
-  statusPoll: function () {
+  statusPoll() {
     var self = this;
     if (self._throttledStatusPoll.isAllowed()) {
       self._statusPoll();
     }
-  },
+  }
 
-  _statusPoll: function () {
+  _statusPoll() {
     var self = this;
 
     // XXX: Early exit here if we're not showing status at all?
@@ -539,7 +537,7 @@ _.extend(StatusPoller.prototype, {
       });
     }
   }
-});
+}
 
 // We use a special class to represent the options that we send to the Console
 // because it allows us to call 'instance of' on the last argument of variadic
