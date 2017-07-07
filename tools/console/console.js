@@ -292,37 +292,39 @@ _.extend(ProgressBarRenderer.prototype, {
 });
 
 
-var ProgressDisplayFull = function (console) {
-  var self = this;
+class ProgressDisplayFull {
+  constructor(console) {
+    var self = this;
 
-  self._console = console;
-  self._stream = console._stream;
+    self._console = console;
+    self._stream = console._stream;
 
-  self._status = '';
+    self._status = '';
 
-  var options = {
-    complete: '=',
-    incomplete: ' ',
-    maxWidth: PROGRESS_MAX_WIDTH,
-    total: 100
-  };
-  self._progressBarRenderer = new ProgressBarRenderer(PROGRESS_BAR_FORMAT, options);
-  self._progressBarRenderer.start = new Date();
+    var options = {
+      complete: '=',
+      incomplete: ' ',
+      maxWidth: PROGRESS_MAX_WIDTH,
+      total: 100
+    };
+    self._progressBarRenderer = new ProgressBarRenderer(PROGRESS_BAR_FORMAT, options);
+    self._progressBarRenderer.start = new Date();
 
-  self._headless = !! (
-    process.env.METEOR_HEADLESS &&
-    JSON.parse(process.env.METEOR_HEADLESS)
-  );
+    self._headless = !! (
+      process.env.METEOR_HEADLESS &&
+      JSON.parse(process.env.METEOR_HEADLESS)
+    );
 
-  self._spinnerRenderer = new SpinnerRenderer();
+    self._spinnerRenderer = new SpinnerRenderer();
 
-  self._fraction = undefined;
+    self._fraction = undefined;
 
-  self._printedLength = 0;
+    self._printedLength = 0;
 
-  self._lastWrittenLine = null;
-  self._lastWrittenTime = 0;
-};
+    self._lastWrittenLine = null;
+    self._lastWrittenTime = 0;
+  }
+}
 
 _.extend(ProgressDisplayFull.prototype, {
   depaint: function () {
