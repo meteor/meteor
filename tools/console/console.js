@@ -98,9 +98,7 @@ const FALLBACK_STATUS = '';
 const SPACE_REPLACEMENT = '\u2600';
 // In Javascript, replace only replaces the first occurance and this is the
 // proposed alternative.
-const replaceAll = function (str, search, replace) {
- return str.split(search).join(replace);
-};
+const replaceAll = (str, search, replace) => str.split(search).join(replace);
 
 let spacesArray = new Array(200).join(' ');
 const spacesString = (length) => {
@@ -112,7 +110,7 @@ const spacesString = (length) => {
 const ARROW = "=> ";
 
 
-var toFixedLength = function (text, length) {
+const toFixedLength = (text, length) => {
   text = text || "";
 
   // pad or truncate `text` to length
@@ -488,7 +486,7 @@ class StatusPoller {
       rootProgress.dump(process.stdout, {skipDone: true});
     }
 
-    var reportState = function (state, startTime) {
+    const reportState = (state, startTime) => {
       var progressDisplay = self._console._progressDisplay;
       // Do the % computation, if it is going to be used
       if (progressDisplay.updateProgress) {
@@ -523,7 +521,7 @@ class StatusPoller {
     progressDisplay.updateStatus && progressDisplay.updateStatus(title);
 
     if (watching) {
-      watching.addWatcher(function (state) {
+      watching.addWatcher((state) => {
         if (watching != self._watching) {
           // No longer active
           // XXX: De-register with watching? (we don't bother right now because dead tasks tell no status)
