@@ -559,46 +559,48 @@ var LEVEL_WARN = { code: LEVEL_CODE_WARN };
 var LEVEL_INFO = { code: LEVEL_CODE_INFO };
 var LEVEL_DEBUG = { code: LEVEL_CODE_DEBUG };
 
-var Console = function (options) {
-  var self = this;
+class Console {
+  constructor(options) {
+    var self = this;
 
-  options = options || {};
+    options = options || {};
 
-  self._headless = !! (
-    process.env.METEOR_HEADLESS &&
-    JSON.parse(process.env.METEOR_HEADLESS)
-  );
+    self._headless = !! (
+      process.env.METEOR_HEADLESS &&
+      JSON.parse(process.env.METEOR_HEADLESS)
+    );
 
-  // The progress display we are showing on-screen
-  self._progressDisplay = new ProgressDisplayNone(self);
+    // The progress display we are showing on-screen
+    self._progressDisplay = new ProgressDisplayNone(self);
 
-  self._statusPoller = null;
+    self._statusPoller = null;
 
-  self._throttledYield = new utils.ThrottledYield();
+    self._throttledYield = new utils.ThrottledYield();
 
-  self.verbose = false;
+    self.verbose = false;
 
-  // Legacy helpers
-  self.stdout = {};
-  self.stderr = {};
+    // Legacy helpers
+    self.stdout = {};
+    self.stderr = {};
 
-  self._stream = process.stdout;
+    self._stream = process.stdout;
 
-  self._pretty = (FORCE_PRETTY !== undefined ? FORCE_PRETTY : false);
-  self._progressDisplayEnabled = false;
+    self._pretty = (FORCE_PRETTY !== undefined ? FORCE_PRETTY : false);
+    self._progressDisplayEnabled = false;
 
-  self._logThreshold = LEVEL_CODE_INFO;
-  var logspec = process.env.METEOR_LOG;
-  if (logspec) {
-    logspec = logspec.trim().toLowerCase();
-    if (logspec == 'debug') {
-      self._logThreshold = LEVEL_CODE_DEBUG;
+    self._logThreshold = LEVEL_CODE_INFO;
+    var logspec = process.env.METEOR_LOG;
+    if (logspec) {
+      logspec = logspec.trim().toLowerCase();
+      if (logspec == 'debug') {
+        self._logThreshold = LEVEL_CODE_DEBUG;
+      }
     }
-  }
 
-  cleanup.onExit(function (sig) {
-    self.enableProgressDisplay(false);
-  });
+    cleanup.onExit(function (sig) {
+      self.enableProgressDisplay(false);
+    });
+  }
 };
 
 _.extend(Console.prototype, {
@@ -1111,7 +1113,7 @@ _.extend(Console.prototype, {
   //        character limit instead of trailing off with '...'. Useful for
   //        printing directories, for examle.
   //      - indent: indent the entire table by a given number of spaces.
-  printTwoColumns : function (rows, options) {
+  printTwoColumns(rows, options) {
     var self = this;
     options = options || {};
 
