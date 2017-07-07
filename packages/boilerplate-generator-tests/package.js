@@ -8,6 +8,6 @@ Package.describe({
 Package.onTest(function (api) {
   api.use('ecmascript');
   api.use(['tinytest', 'boilerplate-generator'], 'server');
-  api.addFiles('browser_test.js', 'server');
-  api.addFiles('cordova_test.js', 'server');
+  api.addFiles('web.browser_tests.js', 'server');
+  api.addFiles('web.cordova_tests.js', 'server');
 });
