@@ -1295,64 +1295,63 @@ _.extend(Console.prototype, {
     oldProgressDisplay.depaint();
 
     self._progressDisplay = newProgressDisplay;
-  }
-});
+  },
 
-// options:
-//   - echo (boolean): defaults to true
-//   - prompt (string)
-//   - stream: defaults to process.stdout (you might want process.stderr)
-Console.prototype.readLine = function (options) {
-  var self = this;
+  // options:
+  //   - echo (boolean): defaults to true
+  //   - prompt (string)
+  //   - stream: defaults to process.stdout (you might want process.stderr)
+  readLine: function (options) {
+    var self = this;
 
-  options = _.extend({
-    echo: true,
-    stream: self._stream
-  }, options);
+    options = _.extend({
+      echo: true,
+      stream: self._stream
+    }, options);
 
-  var silentStream = {
-    write: function () {
-    },
-    on: function () {
-    },
-    end: function () {
-    },
-    isTTY: options.stream.isTTY,
-    removeListener: function () {
-    }
-  };
-
-  var previousProgressDisplay = self._progressDisplay;
-  self._setProgressDisplay(new ProgressDisplayNone());
-
-  // Read a line, throwing away the echoed characters into our dummy stream.
-  var rl = readline.createInterface({
-    input: process.stdin,
-    output: options.echo ? options.stream : silentStream,
-    // `terminal: options.stream.isTTY` is the default, but emacs shell users
-    // don't want fancy ANSI.
-    terminal: options.stream.isTTY && process.env.EMACS !== 't'
-  });
-
-  if (! options.echo) {
-    options.stream.write(options.prompt);
-  } else {
-    rl.setPrompt(options.prompt);
-    rl.prompt();
-  }
-
-  return new Promise(function (resolve) {
-    rl.on('line', function (line) {
-      rl.close();
-      if (! options.echo) {
-        options.stream.write("\n");
+    var silentStream = {
+      write: function () {
+      },
+      on: function () {
+      },
+      end: function () {
+      },
+      isTTY: options.stream.isTTY,
+      removeListener: function () {
       }
-      self._setProgressDisplay(previousProgressDisplay);
-      resolve(line);
-    });
-  }).await();
-};
+    };
 
+    var previousProgressDisplay = self._progressDisplay;
+    self._setProgressDisplay(new ProgressDisplayNone());
+
+    // Read a line, throwing away the echoed characters into our dummy stream.
+    var rl = readline.createInterface({
+      input: process.stdin,
+      output: options.echo ? options.stream : silentStream,
+      // `terminal: options.stream.isTTY` is the default, but emacs shell users
+      // don't want fancy ANSI.
+      terminal: options.stream.isTTY && process.env.EMACS !== 't'
+    });
+
+    if (! options.echo) {
+      options.stream.write(options.prompt);
+    } else {
+      rl.setPrompt(options.prompt);
+      rl.prompt();
+    }
+
+    return new Promise(function (resolve) {
+      rl.on('line', function (line) {
+        rl.close();
+        if (! options.echo) {
+          options.stream.write("\n");
+        }
+        self._setProgressDisplay(previousProgressDisplay);
+        resolve(line);
+      });
+    }).await();
+  },
+});
 
 exports.Console = new Console;
 exports.Console.CARRIAGE_RETURN = CARRIAGE_RETURN;
