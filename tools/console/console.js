@@ -434,21 +434,23 @@ class ProgressDisplayFull {
   }
 }
 
-var StatusPoller = function (console) {
-  var self = this;
+class StatusPoller {
+  constructor(console) {
+    var self = this;
 
-  // The current progress we are watching
-  self._watching = null;
+    // The current progress we are watching
+    self._watching = null;
 
-  self._console = console;
+    self._console = console;
 
-  self._pollPromise = null;
-  self._throttledStatusPoll = new utils.Throttled({
-    interval: STATUS_INTERVAL_MS
-  });
-  self._startPoller();
-  self._stop = false;
-};
+    self._pollPromise = null;
+    self._throttledStatusPoll = new utils.Throttled({
+      interval: STATUS_INTERVAL_MS
+    });
+    self._startPoller();
+    self._stop = false;
+  }
+}
 
 _.extend(StatusPoller.prototype, {
   _startPoller: function () {
