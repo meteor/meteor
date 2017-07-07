@@ -165,10 +165,8 @@ class ProgressDisplayStatus {
     self._status = null;
     self._wroteStatusMessage = false;
   }
-}
 
-_.extend(ProgressDisplayStatus.prototype, {
-  depaint: function () {
+  depaint() {
     var self = this;
     // For the non-progress-bar status mode, we may need to
     // clear some characters that we printed with a trailing `\r`.
@@ -177,13 +175,13 @@ _.extend(ProgressDisplayStatus.prototype, {
       self._stream.write(spaces + CARRIAGE_RETURN);
       self._wroteStatusMessage = false;
     }
-  },
+  }
 
-  repaint: function () {
+  repaint() {
     // We don't repaint after a log message (is that right?)
-  },
+  }
 
-  updateStatus: function (status) {
+  updateStatus(status) {
     var self = this;
 
     if (status == self._status) {
@@ -192,9 +190,9 @@ _.extend(ProgressDisplayStatus.prototype, {
 
     self._status = status;
     self._render();
-  },
+  }
 
-  _render: function () {
+  _render() {
     var self = this;
 
     var text = self._status;
@@ -209,7 +207,7 @@ _.extend(ProgressDisplayStatus.prototype, {
       self._wroteStatusMessage = true;
     }
   }
-});
+}
 
 class SpinnerRenderer {
   constructor() {
