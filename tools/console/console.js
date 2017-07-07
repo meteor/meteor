@@ -256,10 +256,8 @@ class ProgressBarRenderer {
       incomplete : ' '
     };
   }
-}
 
-_.extend(ProgressBarRenderer.prototype, {
-  asString: function (availableSpace) {
+  asString(availableSpace) {
     var self = this;
 
     var ratio = self.curr / self.total;
@@ -291,7 +289,7 @@ _.extend(ProgressBarRenderer.prototype, {
 
     return str;
   }
-});
+}
 
 
 class ProgressDisplayFull {
