@@ -574,92 +574,88 @@ Object.assign(ConsoleBase.prototype, {
 class Console extends ConsoleBase {
   constructor(options) {
     super();
-    var self = this;
 
     options = options || {};
 
-    self._headless = !! (
+    this._headless = !! (
       process.env.METEOR_HEADLESS &&
       JSON.parse(process.env.METEOR_HEADLESS)
     );
 
     // The progress display we are showing on-screen
-    self._progressDisplay = new ProgressDisplayNone(self);
+    this._progressDisplay = new ProgressDisplayNone(this);
 
-    self._statusPoller = null;
+    this._statusPoller = null;
 
-    self._throttledYield = new utils.ThrottledYield();
+    this._throttledYield = new utils.ThrottledYield();
 
-    self.verbose = false;
+    this.verbose = false;
 
     // Legacy helpers
-    self.stdout = {};
-    self.stderr = {};
+    this.stdout = {};
+    this.stderr = {};
 
-    self._stream = process.stdout;
+    this._stream = process.stdout;
 
-    self._pretty = (FORCE_PRETTY !== undefined ? FORCE_PRETTY : false);
-    self._progressDisplayEnabled = false;
+    this._pretty = (FORCE_PRETTY !== undefined ? FORCE_PRETTY : false);
+    this._progressDisplayEnabled = false;
 
-    self._logThreshold = LEVEL_CODE_INFO;
+    this._logThreshold = LEVEL_CODE_INFO;
     var logspec = process.env.METEOR_LOG;
     if (logspec) {
       logspec = logspec.trim().toLowerCase();
       if (logspec == 'debug') {
-        self._logThreshold = LEVEL_CODE_DEBUG;
+        this._logThreshold = LEVEL_CODE_DEBUG;
       }
     }
 
-    cleanup.onExit(function (sig) {
-      self.enableProgressDisplay(false);
+    cleanup.onExit((sig) => {
+      this.enableProgressDisplay(false);
     });
   }
 
   setPretty(pretty) {
-    var self = this;
     // If we're being forced, do nothing.
     if (FORCE_PRETTY !== undefined) {
       return;
     }
     // If no change, do nothing.
-    if (self._pretty === pretty) {
+    if (this._pretty === pretty) {
       return;
     }
-    self._pretty = pretty;
-    self._updateProgressDisplay();
+    this._pretty = pretty;
+    this._updateProgressDisplay();
   }
 
   // Runs f with the progress display visible (ie, with progress display enabled
   // and pretty). Resets both flags to their original values after f runs.
   withProgressDisplayVisible(f) {
-    var self = this;
-    var originalPretty = self._pretty;
-    var originalProgressDisplayEnabled = self._progressDisplayEnabled;
+    var originalPretty = this._pretty;
+    var originalProgressDisplayEnabled = this._progressDisplayEnabled;
 
     // Turn both flags on.
-    self._pretty = self._progressDisplayEnabled = true;
+    this._pretty = this._progressDisplayEnabled = true;
 
     // Update the screen if anything changed.
     if (! originalPretty || ! originalProgressDisplayEnabled) {
-      self._updateProgressDisplay();
+      this._updateProgressDisplay();
     }
 
     try {
       return f();
     } finally {
       // Reset the flags.
-      self._pretty = originalPretty;
-      self._progressDisplayEnabled = originalProgressDisplayEnabled;
+      this._pretty = originalPretty;
+      this._progressDisplayEnabled = originalProgressDisplayEnabled;
       // Update the screen if anything changed.
       if (! originalPretty || ! originalProgressDisplayEnabled) {
-        self._updateProgressDisplay();
+        this._updateProgressDisplay();
       }
     }
   }
 
   setVerbose(verbose) {
-    var self = this;
-    self.verbose = verbose;
+    this.verbose = verbose;
   }
 
   // Get the current width of the Console.
@@ -700,12 +696,11 @@ class Console extends ConsoleBase {
   // anything that depends for correctness on not yielding.  You can also call nudge(false)
   // if you just want to update the spinner and not yield, but you should avoid this.
   nudge(canYield) {
-    var self = this;
-    if (self._statusPoller) {
-      self._statusPoller.statusPoll();
+    if (this._statusPoller) {
+      this._statusPoller.statusPoll();
     }
     if (canYield === undefined || canYield === true) {
-      self._throttledYield.yield();
+      this._throttledYield.yield();
     }
   }
 
@@ -743,7 +738,6 @@ class Console extends ConsoleBase {
   //  - message: Arguments to the original function, parsed as a string.
   //
   _parseVariadicInput(args) {
-    var self = this;
     var msgArgs;
     var options;
     // If the last argument is an instance of ConsoleOptions, then we should
@@ -756,7 +750,7 @@ class Console extends ConsoleBase {
       msgArgs = args;
       options = {};
     }
-    var message = self._format(msgArgs);
+    var message = this._format(msgArgs);
     return { message: message, options: options };
   }
 
@@ -772,13 +766,12 @@ class Console extends ConsoleBase {
   // Don't pretty-fy this output by trying to, for example, line-wrap it. Just
   // print it to the screen as it is.
   rawDebug(...args) {
-    var self = this;
-    if (! self.isDebugEnabled()) {
+    if (! this.isDebugEnabled()) {
       return;
     }
 
-    var message = self._format(args);
-    self._print(LEVEL_DEBUG, message);
+    var message = this._format(args);
+    this._print(LEVEL_DEBUG, message);
   }
 
   // By default, Console.debug automatically line wraps the output.
@@ -791,11 +784,10 @@ class Console extends ConsoleBase {
   //     characters. See _wrap for more details.
   //
   debug(...args) {
-    var self = this;
-    if (! self.isDebugEnabled()) { return; }
+    if (! this.isDebugEnabled()) { return; }
 
-    var message = self._prettifyMessage(args);
-    self._print(LEVEL_DEBUG, message);
+    var message = this._prettifyMessage(args);
+    this._print(LEVEL_DEBUG, message);
   }
 
   isInfoEnabled() {
@@ -805,24 +797,22 @@ class Console extends ConsoleBase {
   // Don't pretty-fy this output by trying to, for example, line-wrap it. Just
   // print it to the screen as it is.
   rawInfo(...args) {
-    var self = this;
-    if (! self.isInfoEnabled()) {
+    if (! this.isInfoEnabled()) {
       return;
     }
 
-    var message = self._format(args);
-    self._print(LEVEL_INFO, message);
+    var message = this._format(args);
+    this._print(LEVEL_INFO, message);
   }
 
   // Generally, we want to process the output for legibility, for example, by
   // wrapping it. For raw output (ex: stack traces, user logs, etc), use the
   // rawInfo function. For more information about options, see: debug.
   info(...args) {
-    var self = this;
-    if (! self.isInfoEnabled()) { return; }
+    if (! this.isInfoEnabled()) { return; }
 
-    var message = self._prettifyMessage(args);
-    self._print(LEVEL_INFO, message);
+    var message = this._prettifyMessage(args);
+    this._print(LEVEL_INFO, message);
   }
 
   isWarnEnabled() {
@@ -830,70 +820,59 @@ class Console extends ConsoleBase {
   }
 
   rawWarn(...args) {
-    var self = this;
-    if (! self.isWarnEnabled()) {
+    if (! this.isWarnEnabled()) {
       return;
     }
 
-    var message = self._format(args);
-    self._print(LEVEL_WARN, message);
+    var message = this._format(args);
+    this._print(LEVEL_WARN, message);
   }
 
   // Generally, we want to process the output for legibility, for example, by
   // wrapping it. For raw output (ex: stack traces, user logs, etc), use the
   // rawWarn function. For more information about options, see: debug.
   warn(...args) {
-    var self = this;
-    if (! self.isWarnEnabled()) { return; }
+    if (! this.isWarnEnabled()) { return; }
 
-    var message = self._prettifyMessage(args);
-    self._print(LEVEL_WARN, message);
+    var message = this._prettifyMessage(args);
+    this._print(LEVEL_WARN, message);
   }
 
   rawError(...args) {
-    var self = this;
-
-    var message = self._format(args);
-    self._print(LEVEL_ERROR, message);
+    var message = this._format(args);
+    this._print(LEVEL_ERROR, message);
   }
 
   // Generally, we want to process the output for legibility, for example, by
   // wrapping it. For raw output (ex: stack traces, user logs, etc), use the
   // rawError function. For more information about options, see: debug.
   error(...args) {
-    var self = this;
-
-    var message = self._prettifyMessage(args);
-    self._print(LEVEL_ERROR, message);
+    var message = this._prettifyMessage(args);
+    this._print(LEVEL_ERROR, message);
   }
 
   // Prints a special ANSI sequence that "clears" the screen (on most terminal
   // emulators just scrolls the contents down and resets the position).
   // References: http://en.wikipedia.org/wiki/ANSI_escape_code#CSI_codes
   clear() {
-    var self = this;
-
-    self.rawInfo('\u001b[2J\u001b[0;0H');
+    this.rawInfo('\u001b[2J\u001b[0;0H');
   }
 
   _prettifyMessage(msgArguments) {
-    var self = this;
-    var parsedArgs = self._parseVariadicInput(msgArguments);
+    var parsedArgs = this._parseVariadicInput(msgArguments);
     var wrapOpts = {
       indent: parsedArgs.options.indent,
       bulletPoint: parsedArgs.options.bulletPoint
     };
 
-    var wrappedMessage = self._wrapText(parsedArgs.message, wrapOpts);
+    var wrappedMessage = this._wrapText(parsedArgs.message, wrapOpts);
     wrappedMessage += "\n";
     return wrappedMessage;
   }
 
   _print(level, message) {
-    var self = this;
-
     // We need to hide the progress bar/spinner before printing the message
-    var progressDisplay = self._progressDisplay;
+    var progressDisplay = this._progressDisplay;
     progressDisplay.depaint();
 
     // stdout/stderr is determined by the log level
@@ -912,7 +891,7 @@ class Console extends ConsoleBase {
 
     // Pick the color/weight if in pretty mode
     var style = null;
-    if (level && self._pretty) {
+    if (level && this._pretty) {
       switch (level.code) {
         case LEVEL_CODE_ERROR:
           style = chalk.bold.red;
@@ -938,11 +917,10 @@ class Console extends ConsoleBase {
   // A wrapper around Console.info. Prints the message out in green (if pretty),
   // with the CHECKMARK as the bullet point in front of it.
   success(message, uglySuccessKeyword = "success") {
-    var self = this;
     var checkmark;
 
-    if (! self._pretty) {
-      return self.info(`${message}: ${uglySuccessKeyword}`);
+    if (! this._pretty) {
+      return this.info(`${message}: ${uglySuccessKeyword}`);
     }
 
     if (process.platform === "win32") {
@@ -951,77 +929,66 @@ class Console extends ConsoleBase {
       checkmark = chalk.green('\u2713'); // CHECKMARK
     }
 
-    return self.info(
+    return this.info(
         chalk.green(message),
-        self.options({ bulletPoint: checkmark  + " "}));
+        this.options({ bulletPoint: checkmark  + " "}));
   }
 
   // Wrapper around Console.info. Prints the message out in red (if pretty)
   // with the BALLOT X as the bullet point in front of it.
   failInfo(message) {
-    var self = this;
-    return self._fail(message, "info");
+    return this._fail(message, "info");
   }
 
   // Wrapper around Console.warn. Prints the message out in red (if pretty)
   // with the ascii x as the bullet point in front of it.
   failWarn(message) {
-    var self = this;
-    return self._fail(message, "warn");
+    return this._fail(message, "warn");
   }
 
   // Print the message in red (if pretty) with an x bullet point in front of it.
   _fail(message, printFn) {
-    var self = this;
-
-    if (! self._pretty) {
-      return self[printFn](message);
+    if (! this._pretty) {
+      return this[printFn](message);
     }
 
     var xmark = chalk.red('\u2717');
-    return self[printFn](
+    return this[printFn](
         chalk.red(message),
-        self.options({ bulletPoint: xmark + " " }));
+        this.options({ bulletPoint: xmark + " " }));
   }
 
   // Wrapper around Console.warn that prints a large "WARNING" label in front.
   labelWarn(message) {
-    var self = this;
-    return self.warn(message, self.options({ bulletPoint: "WARNING: " }));
+    return this.warn(message, this.options({ bulletPoint: "WARNING: " }));
   }
 
   // Wrappers around Console functions to prints an "=> " in front. Optional
   // indent to indent the arrow.
   arrowError(message, indent) {
-    var self = this;
-    return self._arrowPrint("error", message, indent);
+    return this._arrowPrint("error", message, indent);
   }
   arrowWarn(message, indent) {
-    var self = this;
-    return self._arrowPrint("warn", message, indent);
+    return this._arrowPrint("warn", message, indent);
   }
   arrowInfo(message, indent) {
-    var self = this;
-    return self._arrowPrint("info", message, indent);
+    return this._arrowPrint("info", message, indent);
   }
   _arrowPrint(printFn, message, indent) {
-    var self = this;
     indent = indent || 0;
-    return self[printFn](
+    return this[printFn](
       message,
-      self.options({ bulletPoint: ARROW, indent: indent }));
+      this.options({ bulletPoint: ARROW, indent: indent }));
   }
 
   // A wrapper around console.error. Given an error and some background
   // information, print out the correct set of messages depending on verbose
   // level, etc.
   printError(err, info) {
-    var self = this;
-
     var message = err.message;
     if (! message) {
       message = "Unexpected error";
-      if (self.verbose) {
+      if (this.verbose) {
         message += " (" + err.toString() + ")";
       }
     }
@@ -1030,18 +997,16 @@ class Console extends ConsoleBase {
       message = info + ": " + message;
     }
 
-    self.error(message);
-    if (self.verbose && err.stack) {
-      self.rawInfo(err.stack + "\n");
+    this.error(message);
+    if (this.verbose && err.stack) {
+      this.rawInfo(err.stack + "\n");
     }
   }
 
   // A wrapper to print out buildmessage errors.
   printMessages(messages) {
-    var self = this;
-
     if (messages.hasMessages()) {
-      self.error("\n" + messages.formatMessages());
+      this.error("\n" + messages.formatMessages());
     }
   }
 
@@ -1055,14 +1020,12 @@ class Console extends ConsoleBase {
   //
   // If pretty print is on, this will also bold the commands.
   command(message) {
-    var self = this;
-    var unwrapped = self.noWrap(message);
-    return self.bold(unwrapped);
+    var unwrapped = this.noWrap(message);
+    return this.bold(unwrapped);
   }
 
   // Underline the URLs (if pretty print is on).
   url(message) {
-    var self = this;
     // If we are going to print URLs with spaces, we should turn spaces into
     // things browsers understand.
     var unspaced =
@@ -1070,17 +1033,16 @@ class Console extends ConsoleBase {
     // There is no need to call noWrap here, since that only handles spaces (and
     // we have done that). If it ever handles things other than spaces, we
     // should make sure to call it here.
-    return self.underline(unspaced);
+    return this.underline(unspaced);
   }
 
   // Format a filepath to not wrap. This does NOT automatically escape spaces
   // (ie: add a slash in front so the user could copy paste the file path into a
   // terminal).
   path(message) {
-    var self = this;
     // Make sure that we don't wrap this.
-    var unwrapped = self.noWrap(message);
-    return self.bold(unwrapped);
+    var unwrapped = this.noWrap(message);
+    return this.bold(unwrapped);
   }
 
   // Do not wrap this substring when you send it into a non-raw print function.
@@ -1092,9 +1054,7 @@ class Console extends ConsoleBase {
 
   // A wrapper around the underline functionality of chalk.
   underline(message) {
-    var self = this;
-
-    if (! self._pretty) {
+    if (! this._pretty) {
       return message;
     }
     return chalk.underline(message);
@@ -1102,9 +1062,7 @@ class Console extends ConsoleBase {
 
   // A wrapper around the bold functionality of chalk.
   bold(message) {
-    var self = this;
-
-    if (! self._pretty) {
+    if (! this._pretty) {
       return message;
     }
     return chalk.bold(message);
@@ -1120,11 +1078,10 @@ class Console extends ConsoleBase {
   //        printing directories, for examle.
   //      - indent: indent the entire table by a given number of spaces.
   printTwoColumns(rows, options) {
-    var self = this;
     options = options || {};
 
     var longest = '';
-    _.each(rows, function (row) {
+    _.each(rows, row => {
       var col0 = row[0] || '';
       if (col0.length > longest.length) {
         longest = col0;
@@ -1132,15 +1089,15 @@ class Console extends ConsoleBase {
     });
 
     var pad = longest.replace(/./g, ' ');
-    var width = self.width();
+    var width = this.width();
     var indent =
       options.indent ? Array(options.indent + 1).join(' ') : "";
 
     var out = '';
-    _.each(rows, function (row) {
+    _.each(rows, row => {
       var col0 = row[0] || '';
       var col1 = row[1] || '';
-      var line = indent + self.bold(col0) + pad.substr(col0.length);
+      var line = indent + this.bold(col0) + pad.substr(col0.length);
       line += "  " + col1;
       if (! options.ignoreWidth && line.length > width) {
         line = line.substr(0, width - 3) + '...';
@@ -1148,9 +1105,9 @@ class Console extends ConsoleBase {
       out += line + "\n";
     });
 
-    var level = options.level || self.LEVEL_INFO;
+    var level = options.level || this.LEVEL_INFO;
     out += "\n";
-    self._print(level, out);
+    this._print(level, out);
 
     return out;
   }
@@ -1170,7 +1127,6 @@ class Console extends ConsoleBase {
   //   - indent: (see: Console.options)
   //
   _wrapText(text, options) {
-    var self = this;
     options = options || {};
 
     // Compute the maximum offset on the bulk of the message.
@@ -1184,7 +1140,7 @@ class Console extends ConsoleBase {
 
     // Get the maximum width, or if we are not running in a terminal (self-test,
     // for example), default to 80 columns.
-    var max = self.width();
+    var max = this.width();
 
     var wrappedText;
     if (process.env.METEOR_NO_WORDWRAP) {
@@ -1195,7 +1151,7 @@ class Console extends ConsoleBase {
       } else {
         wrappedText = text;
       }
-      wrappedText = _.map(wrappedText.split('\n'), function (s) {
+      wrappedText = _.map(wrappedText.split('\n'), s => {
         if (s === "") {
           return "";
         }
@@ -1227,59 +1183,55 @@ class Console extends ConsoleBase {
 
   // Enables the progress bar, or disables it when called with (false)
   enableProgressDisplay(enabled) {
-    var self = this;
-
     // No arg => enable
     if (enabled === undefined) {
       enabled = true;
     }
 
-    if (self._progressDisplayEnabled === enabled) {
+    if (this._progressDisplayEnabled === enabled) {
       return;
     }
 
-    self._progressDisplayEnabled = enabled;
-    self._updateProgressDisplay();
+    this._progressDisplayEnabled = enabled;
+    this._updateProgressDisplay();
   }
 
   // In response to a change in setPretty or enableProgressDisplay,
   // configure the appropriate progressDisplay
   _updateProgressDisplay() {
-    var self = this;
-
     var newProgressDisplay;
 
-    if (! self._progressDisplayEnabled) {
+    if (! this._progressDisplayEnabled) {
       newProgressDisplay = new ProgressDisplayNone();
-    } else if ((! self._stream.isTTY) || (! self._pretty)) {
+    } else if ((! this._stream.isTTY) || (! this._pretty)) {
       // No progress bar if not in pretty / on TTY.
-      newProgressDisplay = new ProgressDisplayNone(self);
-    } else if (self._stream.isTTY && ! self._stream.columns) {
+      newProgressDisplay = new ProgressDisplayNone(this);
+    } else if (this._stream.isTTY && ! this._stream.columns) {
       // We might be in a pseudo-TTY that doesn't support
       // clearLine() and cursorTo(...).
       // It's important that we only enter status message mode
       // if self._pretty, so that we don't start displaying
       // status messages too soon.
       // XXX See note where ProgressDisplayStatus is defined.
-      newProgressDisplay = new ProgressDisplayStatus(self);
+      newProgressDisplay = new ProgressDisplayStatus(this);
     } else {
       // Otherwise we can do the full progress bar
-      newProgressDisplay = new ProgressDisplayFull(self);
+      newProgressDisplay = new ProgressDisplayFull(this);
     }
 
     // Start/stop the status poller, so we never block exit
-    if (self._progressDisplayEnabled) {
-      if (! self._statusPoller) {
-        self._statusPoller = new StatusPoller(self);
+    if (this._progressDisplayEnabled) {
+      if (! this._statusPoller) {
+        this._statusPoller = new StatusPoller(this);
       }
     } else {
-      if (self._statusPoller) {
-        self._statusPoller.stop();
-        self._statusPoller = null;
+      if (this._statusPoller) {
+        this._statusPoller.stop();
+        this._statusPoller = null;
       }
     }
 
-    self._setProgressDisplay(newProgressDisplay);
+    this._setProgressDisplay(newProgressDisplay);
   }
 
   isHeadless() {
@@ -1296,14 +1248,12 @@ class Console extends ConsoleBase {
   }
 
   _setProgressDisplay(newProgressDisplay) {
-    var self = this;
-
     // XXX: Optimize case of no-op transitions? (same mode -> same mode)
 
-    var oldProgressDisplay = self._progressDisplay;
+    var oldProgressDisplay = this._progressDisplay;
     oldProgressDisplay.depaint();
 
-    self._progressDisplay = newProgressDisplay;
+    this._progressDisplay = newProgressDisplay;
   }
 
   // options:
@@ -1311,11 +1261,9 @@ class Console extends ConsoleBase {
   //   - prompt (string)
   //   - stream: defaults to process.stdout (you might want process.stderr)
   readLine(options) {
-    var self = this;
-
     options = _.extend({
       echo: true,
-      stream: self._stream
+      stream: this._stream
     }, options);
 
     var silentStream = {
@@ -1330,8 +1278,8 @@ class Console extends ConsoleBase {
       }
     };
 
-    var previousProgressDisplay = self._progressDisplay;
-    self._setProgressDisplay(new ProgressDisplayNone());
+    var previousProgressDisplay = this._progressDisplay;
+    this._setProgressDisplay(new ProgressDisplayNone());
 
     // Read a line, throwing away the echoed characters into our dummy stream.
     var rl = readline.createInterface({
@@ -1349,13 +1297,13 @@ class Console extends ConsoleBase {
       rl.prompt();
     }
 
-    return new Promise(function (resolve) {
-      rl.on('line', function (line) {
+    return new Promise((resolve) => {
+      rl.on('line', line => {
         rl.close();
         if (! options.echo) {
           options.stream.write("\n");
         }
-        self._setProgressDisplay(previousProgressDisplay);
+        this._setProgressDisplay(previousProgressDisplay);
         resolve(line);
       });
     }).await();
