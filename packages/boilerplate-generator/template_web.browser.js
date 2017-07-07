@@ -52,7 +52,7 @@ export default function({
 
     _.map(js, ({url}) =>
       _.template('  <script type="text/javascript" src="<%- src %>"></script>')({
-        src: bundledJsCssUrlRewriteHook(url) + '&hello=bye'
+        src: bundledJsCssUrlRewriteHook(url)
       })
     ),
 
