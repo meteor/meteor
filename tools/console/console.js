@@ -152,23 +152,20 @@ class ProgressDisplayNone {
 // the cursor doesn't seem to return to column 0.
 class ProgressDisplayStatus {
   constructor(console) {
-    var self = this;
+    this._console = console;
+    this._stream = console._stream;
 
-    self._console = console;
-    self._stream = console._stream;
-
-    self._status = null;
-    self._wroteStatusMessage = false;
+    this._status = null;
+    this._wroteStatusMessage = false;
   }
 
   depaint() {
-    var self = this;
     // For the non-progress-bar status mode, we may need to
     // clear some characters that we printed with a trailing `\r`.
-    if (self._wroteStatusMessage) {
+    if (this._wroteStatusMessage) {
       var spaces = spacesString(TEMP_STATUS_LENGTH + 1);
-      self._stream.write(spaces + CARRIAGE_RETURN);
-      self._wroteStatusMessage = false;
+      this._stream.write(spaces + CARRIAGE_RETURN);
+      this._wroteStatusMessage = false;
     }
   }
 
@@ -177,20 +174,16 @@ class ProgressDisplayStatus {
   }
 
   updateStatus(status) {
-    var self = this;
-
-    if (status == self._status) {
+    if (status == this._status) {
       return;
     }
 
-    self._status = status;
-    self._render();
+    this._status = status;
+    this._render();
   }
 
   _render() {
-    var self = this;
-
-    var text = self._status;
+    var text = this._status;
     if (text) {
       text = toFixedLength(text, STATUS_MAX_LENGTH);
     }
@@ -198,8 +191,8 @@ class ProgressDisplayStatus {
     if (text) {
       // the number of characters besides `text` here must
       // be accounted for in TEMP_STATUS_LENGTH.
-      self._stream.write('  (  ' + text + '  ... )' + CARRIAGE_RETURN);
-      self._wroteStatusMessage = true;
+      this._stream.write('  (  ' + text + '  ... )' + CARRIAGE_RETURN);
+      this._wroteStatusMessage = true;
     }
   }
 }
@@ -238,46 +231,42 @@ class SpinnerRenderer {
 // Renders a progressbar.  Based on the npm 'progress' module, but tailored to our needs (i.e. renders to string)
 class ProgressBarRenderer {
   constructor(format, options) {
-    var self = this;
-
     options = options || {};
 
-    self.fmt = format;
-    self.curr = 0;
-    self.total = 100;
-    self.maxWidth = options.maxWidth || self.total;
-    self.chars = {
+    this.fmt = format;
+    this.curr = 0;
+    this.total = 100;
+    this.maxWidth = options.maxWidth || this.total;
+    this.chars = {
       complete   : '=',
       incomplete : ' '
     };
   }
 
   asString(availableSpace) {
-    var self = this;
-
-    var ratio = self.curr / self.total;
+    var ratio = this.curr / this.total;
     ratio = Math.min(Math.max(ratio, 0), 1);
 
     var percent = ratio * 100;
     var incomplete, complete, completeLength;
-    var elapsed = new Date - self.start;
-    var eta = (percent == 100) ? 0 : elapsed * (self.total / self.curr - 1);
+    var elapsed = new Date - this.start;
+    var eta = (percent == 100) ? 0 : elapsed * (this.total / this.curr - 1);
 
     /* populate the bar template with percentages and timestamps */
-    var str = self.fmt
-      .replace(':current', self.curr)
-      .replace(':total', self.total)
+    var str = this.fmt
+      .replace(':current', this.curr)
+      .replace(':total', this.total)
       .replace(':elapsed', isNaN(elapsed) ? '0.0' : (elapsed / 1000).toFixed(1))
       .replace(':eta', (isNaN(eta) || ! isFinite(eta)) ? '0.0' : (eta / 1000).toFixed(1))
       .replace(':percent', percent.toFixed(0) + '%');
 
     /* compute the available space (non-zero) for the bar */
-    var width = Math.min(self.maxWidth, availableSpace - str.replace(':bar', '').length);
+    var width = Math.min(this.maxWidth, availableSpace - str.replace(':bar', '').length);
 
     /* NOTE: the following assumes the user has one ':bar' token */
     completeLength = Math.round(width * ratio);
-    complete = Array(completeLength + 1).join(self.chars.complete);
-    incomplete = Array(width - completeLength + 1).join(self.chars.incomplete);
+    complete = Array(completeLength + 1).join(this.chars.complete);
+    incomplete = Array(width - completeLength + 1).join(this.chars.incomplete);
 
     /* fill in the actual progress bar */
     str = str.replace(':bar', complete + incomplete);
@@ -289,12 +278,10 @@ class ProgressBarRenderer {
 
 class ProgressDisplayFull {
   constructor(console) {
-    var self = this;
+    this._console = console;
+    this._stream = console._stream;
 
-    self._console = console;
-    self._stream = console._stream;
-
-    self._status = '';
+    this._status = '';
 
     var options = {
       complete: '=',
@@ -302,57 +289,50 @@ class ProgressDisplayFull {
       maxWidth: PROGRESS_MAX_WIDTH,
       total: 100
     };
-    self._progressBarRenderer = new ProgressBarRenderer(PROGRESS_BAR_FORMAT, options);
-    self._progressBarRenderer.start = new Date();
+    this._progressBarRenderer = new ProgressBarRenderer(PROGRESS_BAR_FORMAT, options);
+    this._progressBarRenderer.start = new Date();
 
-    self._headless = !! (
+    this._headless = !! (
       process.env.METEOR_HEADLESS &&
       JSON.parse(process.env.METEOR_HEADLESS)
     );
 
-    self._spinnerRenderer = new SpinnerRenderer();
+    this._spinnerRenderer = new SpinnerRenderer();
 
-    self._fraction = undefined;
+    this._fraction = undefined;
 
-    self._printedLength = 0;
+    this._printedLength = 0;
 
-    self._lastWrittenLine = null;
-    self._lastWrittenTime = 0;
+    this._lastWrittenLine = null;
+    this._lastWrittenTime = 0;
   }
 
   depaint() {
-    var self = this;
-
-    self._stream.write(spacesString(self._printedLength) + CARRIAGE_RETURN);
+    this._stream.write(spacesString(this._printedLength) + CARRIAGE_RETURN);
   }
 
   updateStatus(status) {
-    var self = this;
-
-    if (status == self._status) {
+    if (status == this._status) {
       return;
     }
 
-    self._status = status;
-    self._render();
+    this._status = status;
+    this._render();
   }
 
   updateProgress(fraction, startTime) {
-    var self = this;
-
-    self._fraction = fraction;
+    this._fraction = fraction;
     if (fraction !== undefined) {
-      self._progressBarRenderer.curr = Math.floor(fraction * self._progressBarRenderer.total);
+      this._progressBarRenderer.curr = Math.floor(fraction * this._progressBarRenderer.total);
     }
     if (startTime) {
-      self._progressBarRenderer.start = startTime;
+      this._progressBarRenderer.start = startTime;
     }
-    self._render();
+    this._render();
   }
 
   repaint() {
-    var self = this;
-    self._render();
+    this._render();
   }
 
   setHeadless(headless) {
@@ -360,8 +340,6 @@ class ProgressDisplayFull {
   }
 
   _render() {
-    var self = this;
-
     // XXX: Throttle these updates?
     // XXX: Or maybe just jump to the correct position?
     var progressGraphic = '';
@@ -381,28 +359,28 @@ class ProgressDisplayFull {
       progressColumns = Math.min(PROGRESS_MAX_WIDTH, streamColumns - indentColumns - statusColumns);
     }
 
-    if (self._fraction !== undefined && progressColumns > 16) {
+    if (this._fraction !== undefined && progressColumns > 16) {
       // 16 is a heuristic number that allows enough space for a meaningful progress bar
-      progressGraphic = "  " + self._progressBarRenderer.asString(progressColumns - 2);
+      progressGraphic = "  " + this._progressBarRenderer.asString(progressColumns - 2);
 
-    } else if (! self._headless && progressColumns > 3) {
+    } else if (! this._headless && progressColumns > 3) {
       // 3 = 2 spaces + 1 spinner character
-      progressGraphic = "  " + self._spinnerRenderer.asString();
+      progressGraphic = "  " + this._spinnerRenderer.asString();
 
-    } else if (new Date - self._lastWrittenTime > 5 * 60 * 1000) {
+    } else if (new Date - this._lastWrittenTime > 5 * 60 * 1000) {
       // Print something every five minutes, to avoid test timeouts.
       progressGraphic = "  [ProgressDisplayFull keepalive]";
-      self._lastWrittenLine = null; // Force printing.
+      this._lastWrittenLine = null; // Force printing.
     }
 
-    if (self._status || progressGraphic) {
+    if (this._status || progressGraphic) {
       // XXX: Just update the graphic, to avoid text flicker?
 
       var line = spacesString(indentColumns);
       var length = indentColumns;
 
-      if (self._status) {
-        var fixedLength = toFixedLength(self._status, statusColumns);
+      if (this._status) {
+        var fixedLength = toFixedLength(this._status, statusColumns);
         line += chalk.bold(fixedLength);
         length += statusColumns;
       } else {
@@ -413,71 +391,62 @@ class ProgressDisplayFull {
       line += progressGraphic + CARRIAGE_RETURN;
       length += progressGraphic.length;
 
-      if (self._headless &&
-          line === self._lastWrittenLine) {
+      if (this._headless &&
+          line === this._lastWrittenLine) {
         // Don't write the exact same line twice in a row.
         return;
       }
 
-      self.depaint();
+      this.depaint();
 
-      self._stream.write(line);
-      self._lastWrittenLine = line;
-      self._lastWrittenTime = +new Date;
-      self._printedLength = length;
+      this._stream.write(line);
+      this._lastWrittenLine = line;
+      this._lastWrittenTime = +new Date;
+      this._printedLength = length;
     }
   }
 }
 
 class StatusPoller {
   constructor(console) {
-    var self = this;
-
     // The current progress we are watching
-    self._watching = null;
+    this._watching = null;
 
-    self._console = console;
+    this._console = console;
 
-    self._pollPromise = null;
-    self._throttledStatusPoll = new utils.Throttled({
+    this._pollPromise = null;
+    this._throttledStatusPoll = new utils.Throttled({
       interval: STATUS_INTERVAL_MS
     });
-    self._startPoller();
-    self._stop = false;
+    this._startPoller();
+    this._stop = false;
   }
 
   _startPoller() {
-    var self = this;
-
-    if (self._pollPromise) {
+    if (this._pollPromise) {
       throw new Error("Already started");
     }
 
-    self._pollPromise = (async() => {
+    this._pollPromise = (async() => {
       utils.sleepMs(STATUS_INTERVAL_MS);
-      while (! self._stop) {
-        self.statusPoll();
+      while (! this._stop) {
+        this.statusPoll();
         utils.sleepMs(STATUS_INTERVAL_MS);
       }
     })();
   }
 
   stop() {
-    var self = this;
-
-    self._stop = true;
+    this._stop = true;
   }
 
   statusPoll() {
-    var self = this;
-    if (self._throttledStatusPoll.isAllowed()) {
-      self._statusPoll();
+    if (this._throttledStatusPoll.isAllowed()) {
+      this._statusPoll();
     }
   }
 
   _statusPoll() {
-    var self = this;
-
     // XXX: Early exit here if we're not showing status at all?
 
     var rootProgress = buildmessage.getRootProgress();
@@ -487,7 +456,7 @@ class StatusPoller {
     }
 
     const reportState = (state, startTime) => {
-      var progressDisplay = self._console._progressDisplay;
+      var progressDisplay = this._console._progressDisplay;
       // Do the % computation, if it is going to be used
       if (progressDisplay.updateProgress) {
         if (state.end === undefined || state.end == 0) {
@@ -506,23 +475,23 @@ class StatusPoller {
 
     var watching = (rootProgress ? rootProgress.getCurrentProgress() : null);
 
-    if (self._watching === watching) {
+    if (this._watching === watching) {
       // We need to do this to keep the spinner spinning
       // XXX: Should we _only_ do this when we're showing the spinner?
       reportState(watching.getState(), watching.startTime);
       return;
     }
 
-    self._watching = watching;
+    this._watching = watching;
 
     var title = (watching != null ? watching._title : null) || FALLBACK_STATUS;
 
-    var progressDisplay = self._console._progressDisplay;
+    var progressDisplay = this._console._progressDisplay;
     progressDisplay.updateStatus && progressDisplay.updateStatus(title);
 
     if (watching) {
       watching.addWatcher((state) => {
-        if (watching != self._watching) {
+        if (watching != this._watching) {
           // No longer active
           // XXX: De-register with watching? (we don't bother right now because dead tasks tell no status)
           return;
@@ -1209,7 +1178,7 @@ class Console extends ConsoleBase {
       // We might be in a pseudo-TTY that doesn't support
       // clearLine() and cursorTo(...).
       // It's important that we only enter status message mode
-      // if self._pretty, so that we don't start displaying
+      // if this._pretty, so that we don't start displaying
       // status messages too soon.
       // XXX See note where ProgressDisplayStatus is defined.
       newProgressDisplay = new ProgressDisplayStatus(this);
