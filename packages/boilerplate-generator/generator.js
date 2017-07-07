@@ -1,7 +1,7 @@
 import { readFile } from 'fs';
 
-import WebBrowserTemplate from './template_web.browser';
-import WebCordovaTemplate from './template_web.cordova';
+import WebBrowserTemplate from './template-web.browser';
+import WebCordovaTemplate from './template-web.cordova';
 
 // Copied from webapp_server
 const readUtf8FileSync = filename => Meteor.wrapAsync(readFile)(filename, 'utf8');

@@ -1,5 +1,5 @@
 import { parse, serialize } from 'parse5';
-import { generateHTMLForArch } from './test_lib';
+import { generateHTMLForArch } from './test-lib';
 
 const html = generateHTMLForArch('web.browser');
 
