@@ -38,12 +38,17 @@ function compile(source, options) {
   const babelCore = require("babel-core");
   let result;
 
-  function transform(presets) {
+  function transform(presets, generateCode) {
     const optionsCopy = Object.assign({}, options);
 
     delete optionsCopy.plugins;
     optionsCopy.presets = presets;
     optionsCopy.ast = true;
+
+    if (! generateCode) {
+      optionsCopy.code = false;
+      optionsCopy.sourceMaps = false;
+    }
 
     const result = babelCore.transformFromAst(ast, source, optionsCopy);
 
@@ -62,7 +67,7 @@ function compile(source, options) {
   }
 
   if (options.presets) {
-    result = transform(options.presets);
+    result = transform(options.presets, true);
   }
 
   return result;
