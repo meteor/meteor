@@ -35,7 +35,6 @@ function compile(source, options) {
   // destroy unreliable token information. Don't worry; Babel can cope.
   delete ast.tokens;
 
-  let inputSourceMap;
   const babelCore = require("babel-core");
   let result;
 
@@ -46,21 +45,10 @@ function compile(source, options) {
     optionsCopy.presets = presets;
     optionsCopy.ast = true;
 
-    if (inputSourceMap) {
-      optionsCopy.inputSourceMap = inputSourceMap;
-    }
-
     const result = babelCore.transformFromAst(ast, source, optionsCopy);
-
-    source = result.code;
-    ast = result.ast;
 
     if (options.ast === false) {
       delete result.ast;
-    }
-
-    if (result.map) {
-      inputSourceMap = result.map;
     }
 
     return result;
