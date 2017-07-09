@@ -180,6 +180,42 @@ LocalCollection.Cursor.prototype.forEach = function (callback, thisArg) {
   });
 };
 
+LocalCollection.Cursor.prototype[Symbol.iterator] = function () {
+  var self = this;
+
+  var i = 0;
+  var objects = self._getRawObjects({ordered: true});
+
+  if (self.reactive) {
+    self._depend({
+      addedBefore: true,
+      removed: true,
+      changed: true,
+      movedBefore: true});
+  }
+
+  return {
+    next: function () {
+      if (i < objects.length) {
+        // This doubles as a clone operation.
+        var elt = self._projectionFn(objects[i++]);
+
+        if (self._transform)
+          elt = self._transform(elt);
+
+        return {
+          value: elt
+        };
+      }
+      else {
+        return {
+          done: true
+        };
+      }
+    }
+  };
+};
+
 LocalCollection.Cursor.prototype.getTransform = function () {
   return this._transform;
 };
