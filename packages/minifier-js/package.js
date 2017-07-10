@@ -1,6 +1,6 @@
 Package.describe({
   summary: "JavaScript minifier",
-  version: "2.1.1-rc.3"
+  version: "2.1.1-rc.4"
 });
 
 Npm.depends({
