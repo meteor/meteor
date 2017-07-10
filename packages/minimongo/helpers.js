@@ -2,7 +2,7 @@
 // arrays.
 // XXX maybe this should be EJSON.isArray
 isArray = function (x) {
-  return _.isArray(x) && !EJSON.isBinary(x);
+  return Array.isArray(x) && !EJSON.isBinary(x);
 };
 
 // XXX maybe this should be EJSON.isObject, though EJSON doesn't know about
@@ -24,7 +24,7 @@ isOperatorObject = function (valueSelector, inconsistentOK) {
     return false;
 
   var theseAreOperators = undefined;
-  _.each(valueSelector, function (value, selKey) {
+  Object.keys(valueSelector).forEach(function (selKey) {
     var thisIsOperator = selKey.substr(0, 1) === '$';
     if (theseAreOperators === undefined) {
       theseAreOperators = thisIsOperator;

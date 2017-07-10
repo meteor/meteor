@@ -13,7 +13,7 @@ LocalCollection._CachingChangeObserver = function (options) {
 
   var orderedFromCallbacks = options.callbacks &&
         LocalCollection._observeChangesCallbacksAreOrdered(options.callbacks);
-  if (_.has(options, 'ordered')) {
+  if (options.hasOwnProperty('ordered')) {
     self.ordered = options.ordered;
     if (options.callbacks && options.ordered !== orderedFromCallbacks)
       throw Error("ordered option doesn't match callbacks");
@@ -89,7 +89,7 @@ LocalCollection._observeFromObserveChanges = function (cursor, observeCallbacks)
         var self = this;
         if (suppressed || !(observeCallbacks.addedAt || observeCallbacks.added))
           return;
-        var doc = transform(_.extend(fields, {_id: id}));
+        var doc = transform(Object.assign(fields, {_id: id}));
         if (observeCallbacks.addedAt) {
           var index = indices
                 ? (before ? self.docs.indexOf(before) : self.docs.size()) : -1;
@@ -149,7 +149,7 @@ LocalCollection._observeFromObserveChanges = function (cursor, observeCallbacks)
     observeChangesCallbacks = {
       added: function (id, fields) {
         if (!suppressed && observeCallbacks.added) {
-          var doc = _.extend(fields, {_id:  id});
+          var doc = Object.assign(fields, {_id: id});
           observeCallbacks.added(transform(doc));
         }
       },

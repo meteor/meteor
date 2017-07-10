@@ -8,22 +8,23 @@
 LocalCollection._compileProjection = function (fields) {
   LocalCollection._checkSupportedProjection(fields);
 
-  var _idProjection = _.isUndefined(fields._id) ? true : fields._id;
+  var _idProjection = fields._id === undefined ? true : fields._id;
   var details = projectionDetails(fields);
 
   // returns transformed doc according to ruleTree
   var transform = function (doc, ruleTree) {
     // Special case for "sets"
-    if (_.isArray(doc))
-      return _.map(doc, function (subdoc) { return transform(subdoc, ruleTree); });
+    if (Array.isArray(doc))
+      return doc.map(function (subdoc) { return transform(subdoc, ruleTree); });
 
     var res = details.including ? {} : EJSON.clone(doc);
-    _.each(ruleTree, function (rule, key) {
-      if (!_.has(doc, key))
+    Object.keys(ruleTree).forEach(function (key) {
+      var rule = ruleTree[key];
+      if (!doc.hasOwnProperty(key))
         return;
-      if (_.isObject(rule)) {
+      if (rule === Object(rule)) {
         // For sub-objects/subsets we branch
-        if (_.isObject(doc[key]))
+        if (doc[key] === Object(doc[key]))
           res[key] = transform(doc[key], rule);
         // Otherwise we don't even touch this subfield
       } else if (details.including)
@@ -38,9 +39,9 @@ LocalCollection._compileProjection = function (fields) {
   return function (obj) {
     var res = transform(obj, details.tree);
 
-    if (_idProjection && _.has(obj, '_id'))
+    if (_idProjection && obj.hasOwnProperty('_id'))
       res._id = obj._id;
-    if (!_idProjection && _.has(res, '_id'))
+    if (!_idProjection && res.hasOwnProperty('_id'))
       delete res._id;
     return res;
   };
@@ -56,7 +57,7 @@ projectionDetails = function (fields) {
   // Find the non-_id keys (_id is handled specially because it is included unless
   // explicitly excluded). Sort the keys, so that our code to detect overlaps
   // like 'foo' and 'foo.bar' can assume that 'foo' comes first.
-  var fieldsKeys = _.keys(fields).sort();
+  var fieldsKeys = Object.keys(fields).sort();
 
   // If _id is the only field in the projection, do not remove it, since it is
   // required to determine if this is an exclusion or exclusion. Also keep an
@@ -66,12 +67,12 @@ projectionDetails = function (fields) {
   // special case, since exclusive _id is always allowed.
   if (fieldsKeys.length > 0 &&
       !(fieldsKeys.length === 1 && fieldsKeys[0] === '_id') &&
-      !(_.contains(fieldsKeys, '_id') && fields['_id']))
-    fieldsKeys = _.reject(fieldsKeys, function (key) { return key === '_id'; });
+      !(fieldsKeys.includes('_id') && fields['_id']))
+    fieldsKeys = fieldsKeys.filter(function (key) { return key !== '_id'; });
 
   var including = null; // Unknown
 
-  _.each(fieldsKeys, function (keyPath) {
+  fieldsKeys.forEach(function (keyPath) {
     var rule = !!fields[keyPath];
     if (including === null)
       including = rule;
@@ -126,20 +127,20 @@ projectionDetails = function (fields) {
 // @returns - Object: tree represented as a set of nested objects
 pathsToTree = function (paths, newLeafFn, conflictFn, tree) {
   tree = tree || {};
-  _.each(paths, function (keyPath) {
+  paths.forEach(function (keyPath) {
     var treePos = tree;
     var pathArr = keyPath.split('.');
 
-    // use _.all just for iteration with break
-    var success = _.all(pathArr.slice(0, -1), function (key, idx) {
-      if (!_.has(treePos, key))
+    // use .every just for iteration with break
+    var success = pathArr.slice(0, -1).every(function (key, idx) {
+      if (!treePos.hasOwnProperty(key))
         treePos[key] = {};
-      else if (!_.isObject(treePos[key])) {
+      else if (treePos[key] !== Object(treePos[key])) {
         treePos[key] = conflictFn(treePos[key],
                                   pathArr.slice(0, idx + 1).join('.'),
                                   keyPath);
         // break out of loop if we are failing for this path
-        if (!_.isObject(treePos[key]))
+        if (treePos[key] !== Object(treePos[key]))
           return false;
       }
 
@@ -148,8 +149,8 @@ pathsToTree = function (paths, newLeafFn, conflictFn, tree) {
     });
 
     if (success) {
-      var lastKey = _.last(pathArr);
-      if (!_.has(treePos, lastKey))
+      var lastKey = pathArr[pathArr.length - 1];
+      if (!treePos.hasOwnProperty(lastKey))
         treePos[lastKey] = newLeafFn(keyPath);
       else
         treePos[lastKey] = conflictFn(treePos[lastKey], keyPath, keyPath);
@@ -160,15 +161,16 @@ pathsToTree = function (paths, newLeafFn, conflictFn, tree) {
 };
 
 LocalCollection._checkSupportedProjection = function (fields) {
-  if (!_.isObject(fields) || _.isArray(fields))
+  if (fields !== Object(fields) || Array.isArray(fields))
     throw MinimongoError("fields option must be an object");
 
-  _.each(fields, function (val, keyPath) {
-    if (_.contains(keyPath.split('.'), '$'))
+  Object.keys(fields).forEach(function (keyPath) {
+    var val = fields[keyPath];
+    if (keyPath.split('.').includes('$'))
       throw MinimongoError("Minimongo doesn't support $ operator in projections yet.");
-    if (typeof val === 'object' && _.intersection(['$elemMatch', '$meta', '$slice'], _.keys(val)).length > 0)
+    if (typeof val === 'object' && ['$elemMatch', '$meta', '$slice'].some(key => Object.keys(val).includes(key)))
       throw MinimongoError("Minimongo doesn't support operators in projections yet.");
-    if (_.indexOf([1, 0, true, false], val) === -1)
+    if (![1, 0, true, false].includes(val))
       throw MinimongoError("Projection values should be one of 1, 0, true, or false");
   });
 };

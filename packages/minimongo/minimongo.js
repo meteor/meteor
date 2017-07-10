@@ -170,7 +170,7 @@ LocalCollection.Cursor.prototype.forEach = function (callback, thisArg) {
       movedBefore: true});
   }
 
-  _.each(objects, function (elt, i) {
+  objects.forEach(function (elt, i) {
     // This doubles as a clone operation.
     elt = self._projectionFn(elt);
 
@@ -298,7 +298,7 @@ LocalCollection.ObserveHandle = function () {};
 // XXX maybe callbacks should take a list of objects, to expose transactions?
 // XXX maybe support field limiting (to limit what you're notified on)
 
-_.extend(LocalCollection.Cursor.prototype, {
+Object.assign(LocalCollection.Cursor.prototype, {
   /**
    * @summary Watch a query.  Receive callbacks as the result set changes.
    * @locus Anywhere
@@ -388,11 +388,9 @@ _.extend(LocalCollection.Cursor.prototype, {
     }
 
     if (!options._suppress_initial && !self.collection.paused) {
-      // XXX unify ordered and unordered interface
-      var each = ordered
-            ? _.bind(_.each, null, query.results)
-            : _.bind(query.results.forEach, query.results);
-      each(function (doc) {
+      var results = query.results._map || query.results;
+      Object.keys(results).forEach(function (key) {
+        var doc = results[key];
         var fields = EJSON.clone(doc);
 
         delete fields._id;
@@ -403,7 +401,7 @@ _.extend(LocalCollection.Cursor.prototype, {
     }
 
     var handle = new LocalCollection.ObserveHandle;
-    _.extend(handle, {
+    Object.assign(handle, {
       collection: self.collection,
       stop: function () {
         if (self.reactive)
@@ -525,17 +523,16 @@ LocalCollection.Cursor.prototype._depend = function (changers, _allow_unordered)
   if (Tracker.active) {
     var v = new Tracker.Dependency;
     v.depend();
-    var notifyChange = _.bind(v.changed, v);
+    var notifyChange = v.changed.bind(v);
 
     var options = {
       _suppress_initial: true,
       _allow_unordered: _allow_unordered
     };
-    _.each(['added', 'changed', 'removed', 'addedBefore', 'movedBefore'],
-           function (fnName) {
-             if (changers[fnName])
-               options[fnName] = notifyChange;
-           });
+    ['added', 'changed', 'removed', 'addedBefore', 'movedBefore'].forEach(function (fnName) {
+      if (changers[fnName])
+        options[fnName] = notifyChange;
+    });
 
     // observeChanges will stop() when this computation is invalidated
     self.observeChanges(options);
@@ -550,7 +547,7 @@ LocalCollection.prototype.insert = function (doc, callback) {
 
   assertHasValidFieldNames(doc);
 
-  if (!_.has(doc, '_id')) {
+  if (!doc.hasOwnProperty('_id')) {
     // if you really want to use ObjectIDs, set this global.
     // Mongo.Collection specifies its own ids and does not use this code.
     doc._id = LocalCollection._useOID ? new MongoID.ObjectID()
@@ -580,7 +577,7 @@ LocalCollection.prototype.insert = function (doc, callback) {
     }
   }
 
-  _.each(queriesToRecompute, function (qid) {
+  queriesToRecompute.forEach(function (qid) {
     if (self.queries[qid])
       self._recomputeResults(self.queries[qid]);
   });
@@ -626,7 +623,8 @@ LocalCollection.prototype.remove = function (selector, callback) {
   if (self.paused && !self._savedOriginals && EJSON.equals(selector, {})) {
     var result = self._docs.size();
     self._docs.clear();
-    _.each(self.queries, function (query) {
+    Object.keys(self.queries).forEach(function (qid) {
+      var query = self.queries[qid];
       if (query.ordered) {
         query.results = [];
       } else {
@@ -653,7 +651,8 @@ LocalCollection.prototype.remove = function (selector, callback) {
   for (var i = 0; i < remove.length; i++) {
     var removeId = remove[i];
     var removeDoc = self._docs.get(removeId);
-    _.each(self.queries, function (query, qid) {
+    Object.keys(self.queries).forEach(function (qid) {
+      var query = self.queries[qid];
       if (query.dirty) return;
 
       if (query.matcher.documentMatches(removeDoc).result) {
@@ -668,14 +667,14 @@ LocalCollection.prototype.remove = function (selector, callback) {
   }
 
   // run live query callbacks _after_ we've removed the documents.
-  _.each(queryRemove, function (remove) {
+  queryRemove.forEach(function (remove) {
     var query = self.queries[remove.qid];
     if (query) {
       query.distances && query.distances.remove(remove.doc._id);
       LocalCollection._removeFromResults(query, remove.doc);
     }
   });
-  _.each(queriesToRecompute, function (qid) {
+  queriesToRecompute.forEach(function (qid) {
     var query = self.queries[qid];
     if (query)
       self._recomputeResults(query);
@@ -711,7 +710,8 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   var docMap = new LocalCollection._IdMap;
   var idsMatchedBySelector = LocalCollection._idsMatchedBySelector(selector);
 
-  _.each(self.queries, function (query, qid) {
+  Object.keys(self.queries).forEach(function (qid) {
+    var query = self.queries[qid];
     if ((query.cursor.skip || query.cursor.limit) && ! self.paused) {
       // Catch the case of a reactive `count()` on a cursor with skip
       // or limit, which registers an unordered observe. This is a
@@ -737,7 +737,7 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
         } else {
           var docToMemoize;
 
-          if (idsMatchedBySelector && !_.any(idsMatchedBySelector, function(id) {
+          if (idsMatchedBySelector && !idsMatchedBySelector.some(function(id) {
             return EJSON.equals(id, doc._id);
           })) {
             docToMemoize = doc;
@@ -770,7 +770,7 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
     return true;
   });
 
-  _.each(recomputeQids, function (dummy, qid) {
+  Object.keys(recomputeQids).forEach(function (qid) {
     var query = self.queries[qid];
     if (query)
       self._recomputeResults(query, qidToOriginalResults[qid]);
@@ -783,8 +783,8 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   var insertedId;
   if (updateCount === 0 && options.upsert) {
 
-    let selectorModifier = LocalCollection._selectorIsId(selector) 
-      ? { _id: selector } 
+    let selectorModifier = LocalCollection._selectorIsId(selector)
+      ? { _id: selector }
       : selector;
 
     selectorModifier = LocalCollection._removeDollarOperators(selectorModifier);
@@ -795,7 +795,7 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
       delete selectorModifier._id;
     }
 
-    // This double _modify call is made to help work around an issue where collection 
+    // This double _modify call is made to help work around an issue where collection
     // upserts won't work properly, with nested properties (see issue #8631).
     LocalCollection._modify(newDoc, {$set: selectorModifier});
     LocalCollection._modify(newDoc, mod, {isInsert: true});
@@ -836,7 +836,7 @@ LocalCollection.prototype.upsert = function (selector, mod, options, callback) {
     callback = options;
     options = {};
   }
-  return self.update(selector, mod, _.extend({}, options, {
+  return self.update(selector, mod, Object.assign({}, options, {
     upsert: true,
     _returnObject: true
   }), callback);
@@ -945,7 +945,7 @@ LocalCollection._updateInResults = function (query, doc, old_doc) {
     projectionFn(doc), projectionFn(old_doc));
 
   if (!query.ordered) {
-    if (!_.isEmpty(changedFields)) {
+    if (Object.keys(changedFields).length) {
       query.changed(doc._id, changedFields);
       query.results.set(doc._id, doc);
     }
@@ -954,7 +954,7 @@ LocalCollection._updateInResults = function (query, doc, old_doc) {
 
   var orig_idx = LocalCollection._findInOrderedResults(query, doc);
 
-  if (!_.isEmpty(changedFields))
+  if (Object.keys(changedFields).length)
     query.changed(doc._id, changedFields);
   if (!query.sorter)
     return;

@@ -9,7 +9,7 @@ Minimongo.Matcher.prototype.combineIntoProjection = function (projection) {
   // on all fields of the document. getSelectorPaths returns a list of paths
   // selector depends on. If one of the paths is '' (empty string) representing
   // the root or the whole document, complete projection should be returned.
-  if (_.contains(selectorPaths, ''))
+  if (selectorPaths.includes(''))
     return {};
 
   return combineImportantPathsIntoProjection(selectorPaths, projection);
@@ -17,8 +17,8 @@ Minimongo.Matcher.prototype.combineIntoProjection = function (projection) {
 
 Minimongo._pathsElidingNumericKeys = function (paths) {
   var self = this;
-  return _.map(paths, function (path) {
-    return _.reject(path.split('.'), isNumericKey).join('.');
+  return paths.map(function (path) {
+    return path.split('.').filter(function (part) { return !isNumericKey(part); }).join('.');
   });
 };
 
@@ -42,7 +42,8 @@ combineImportantPathsIntoProjection = function (paths, projection) {
     // projection is pointing at fields to exclude
     // make sure we don't exclude important paths
     var mergedExclProjection = {};
-    _.each(mergedProjection, function (incl, path) {
+    Object.keys(mergedProjection).forEach(function (path) {
+      var incl = mergedProjection[path];
       if (!incl)
         mergedExclProjection[path] = false;
     });
@@ -57,9 +58,10 @@ var treeToPaths = function (tree, prefix) {
   prefix = prefix || '';
   var result = {};
 
-  _.each(tree, function (val, key) {
-    if (_.isObject(val))
-      _.extend(result, treeToPaths(val, prefix + key + '.'));
+  Object.keys(tree).forEach(function (key) {
+    var val = tree[key];
+    if (val === Object(val))
+      Object.assign(result, treeToPaths(val, prefix + key + '.'));
     else
       result[prefix + key] = val;
   });

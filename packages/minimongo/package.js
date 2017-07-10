@@ -9,7 +9,6 @@ Package.onUse(function (api) {
   api.export('MinimongoTest', { testOnly: true });
   api.export('MinimongoError', { testOnly: true });
   api.use([
-    'underscore',
     'ejson',
     'id-map',
     'ordered-dict',
@@ -51,7 +50,6 @@ Package.onTest(function (api) {
   api.use('test-helpers', 'client');
   api.use([
     'tinytest',
-    'underscore',
     'ejson',
     'ordered-dict',
     'random',

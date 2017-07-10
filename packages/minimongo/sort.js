@@ -39,7 +39,8 @@ Minimongo.Sorter = function (spec, options) {
       }
     }
   } else if (typeof spec === "object") {
-    _.each(spec, function (value, key) {
+    Object.keys(spec).forEach(function (key) {
+      var value = spec[key];
       addSpecPart(key, value >= 0);
     });
   } else if (typeof spec === "function") {
@@ -57,14 +58,14 @@ Minimongo.Sorter = function (spec, options) {
   // modifiers as this sort order. This is only implemented on the server.
   if (self.affectedByModifier) {
     var selector = {};
-    _.each(self._sortSpecParts, function (spec) {
+    self._sortSpecParts.forEach(function (spec) {
       selector[spec.path] = 1;
     });
     self._selectorForAffectedByModifier = new Minimongo.Matcher(selector);
   }
 
   self._keyComparator = composeComparators(
-    _.map(self._sortSpecParts, function (spec, i) {
+    self._sortSpecParts.map(function (spec, i) {
       return self._keyFieldComparator(i);
     }));
 
@@ -77,11 +78,11 @@ Minimongo.Sorter = function (spec, options) {
 
 // In addition to these methods, sorter_project.js defines combineIntoProjection
 // on the server only.
-_.extend(Minimongo.Sorter.prototype, {
+Object.assign(Minimongo.Sorter.prototype, {
   getComparator: function (options) {
     var self = this;
 
-    // If sort is specified or have no distances, just use the comparator from 
+    // If sort is specified or have no distances, just use the comparator from
     // the source specification (which defaults to "everything is equal".
     // issue #3599
     // https://docs.mongodb.com/manual/reference/operator/query/near/#sort-operation
@@ -104,7 +105,7 @@ _.extend(Minimongo.Sorter.prototype, {
 
   _getPaths: function () {
     var self = this;
-    return _.pluck(self._sortSpecParts, 'path');
+    return self._sortSpecParts.map(function (part) { return part.path; });
   },
 
   // Finds the minimum key from the doc, according to the sort specs.  (We say
@@ -163,7 +164,7 @@ _.extend(Minimongo.Sorter.prototype, {
 
     var knownPaths = null;
 
-    _.each(self._sortSpecParts, function (spec, whichField) {
+    self._sortSpecParts.forEach(function (spec, whichField) {
       // Expand any leaf arrays that we find, and ignore those arrays
       // themselves.  (We never sort based on an array itself.)
       var branches = expandArraysInBranches(spec.lookup(doc), true);
@@ -175,7 +176,7 @@ _.extend(Minimongo.Sorter.prototype, {
 
       var usedPaths = false;
       valuesByIndexAndPath[whichField] = {};
-      _.each(branches, function (branch) {
+      branches.forEach(function (branch) {
         if (!branch.arrayIndices) {
           // If there are no array indices for a branch, then it must be the
           // only branch, because the only thing that produces multiple branches
@@ -188,7 +189,7 @@ _.extend(Minimongo.Sorter.prototype, {
 
         usedPaths = true;
         var path = pathFromIndices(branch.arrayIndices);
-        if (_.has(valuesByIndexAndPath[whichField], path))
+        if (valuesByIndexAndPath[whichField].hasOwnProperty(path))
           throw Error("duplicate path: " + path);
         valuesByIndexAndPath[whichField][path] = branch.value;
 
@@ -202,7 +203,7 @@ _.extend(Minimongo.Sorter.prototype, {
         // and 'a.x.y' are both arrays, but we don't allow this for now.
         // #NestedArraySort
         // XXX achieve full compatibility here
-        if (knownPaths && !_.has(knownPaths, path)) {
+        if (knownPaths && !knownPaths.hasOwnProperty(path)) {
           throw Error("cannot index parallel arrays");
         }
       });
@@ -210,13 +211,13 @@ _.extend(Minimongo.Sorter.prototype, {
       if (knownPaths) {
         // Similarly to above, paths must match everywhere, unless this is a
         // non-array field.
-        if (!_.has(valuesByIndexAndPath[whichField], '') &&
-            _.size(knownPaths) !== _.size(valuesByIndexAndPath[whichField])) {
+        if (!valuesByIndexAndPath[whichField].hasOwnProperty('') &&
+            Object.keys(knownPaths).length !== Object.keys(valuesByIndexAndPath[whichField]).length) {
           throw Error("cannot index parallel arrays!");
         }
       } else if (usedPaths) {
         knownPaths = {};
-        _.each(valuesByIndexAndPath[whichField], function (x, path) {
+        Object.keys(valuesByIndexAndPath[whichField]).forEach(function (path) {
           knownPaths[path] = true;
         });
       }
@@ -224,8 +225,8 @@ _.extend(Minimongo.Sorter.prototype, {
 
     if (!knownPaths) {
       // Easy case: no use of arrays.
-      var soleKey = _.map(valuesByIndexAndPath, function (values) {
-        if (!_.has(values, ''))
+      var soleKey = valuesByIndexAndPath.map(function (values) {
+        if (!values.hasOwnProperty(''))
           throw Error("no value in sole key case?");
         return values[''];
       });
@@ -233,11 +234,11 @@ _.extend(Minimongo.Sorter.prototype, {
       return;
     }
 
-    _.each(knownPaths, function (x, path) {
-      var key = _.map(valuesByIndexAndPath, function (values) {
-        if (_.has(values, ''))
+    Object.keys(knownPaths).forEach(function (path) {
+      var key = valuesByIndexAndPath.map(function (values) {
+        if (values.hasOwnProperty(''))
           return values[''];
-        if (!_.has(values, path))
+        if (!values.hasOwnProperty(path))
           throw Error("missing path?");
         return values[path];
       });
@@ -322,7 +323,7 @@ _.extend(Minimongo.Sorter.prototype, {
     // If we are only sorting by distance, then we're not going to bother to
     // build a key filter.
     // XXX figure out how geoqueries interact with this stuff
-    if (_.isEmpty(self._sortSpecParts))
+    if (!self._sortSpecParts.length)
       return;
 
     var selector = matcher._selector;
@@ -333,11 +334,12 @@ _.extend(Minimongo.Sorter.prototype, {
       return;
 
     var constraintsByPath = {};
-    _.each(self._sortSpecParts, function (spec, i) {
+    self._sortSpecParts.forEach(function (spec, i) {
       constraintsByPath[spec.path] = [];
     });
 
-    _.each(selector, function (subSelector, key) {
+    Object.keys(selector).forEach(function (key) {
+      var subSelector = selector[key];
       // XXX support $and and $or
 
       var constraints = constraintsByPath[key];
@@ -362,8 +364,9 @@ _.extend(Minimongo.Sorter.prototype, {
       }
 
       if (isOperatorObject(subSelector)) {
-        _.each(subSelector, function (operand, operator) {
-          if (_.contains(['$lt', '$lte', '$gt', '$gte'], operator)) {
+        Object.keys(subSelector).forEach(function (operator) {
+          var operand = subSelector[operator];
+          if (['$lt', '$lte', '$gt', '$gte'].includes(operator)) {
             // XXX this depends on us knowing that these operators don't use any
             // of the arguments to compileElementSelector other than operand.
             constraints.push(
@@ -390,12 +393,12 @@ _.extend(Minimongo.Sorter.prototype, {
     // others; we shouldn't create a key filter unless the first sort field is
     // restricted, though after that point we can restrict the other sort fields
     // or not as we wish.
-    if (_.isEmpty(constraintsByPath[self._sortSpecParts[0].path]))
+    if (!constraintsByPath[self._sortSpecParts[0].path].length)
       return;
 
     self._keyFilter = function (key) {
-      return _.all(self._sortSpecParts, function (specPart, index) {
-        return _.all(constraintsByPath[specPart.path], function (f) {
+      return self._sortSpecParts.every(function (specPart, index) {
+        return constraintsByPath[specPart.path].every(function (f) {
           return f(key[index]);
         });
       });

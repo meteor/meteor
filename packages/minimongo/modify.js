@@ -35,14 +35,16 @@ LocalCollection._modify = function (doc, mod, options) {
     // apply modifiers to the doc.
     newDoc = EJSON.clone(doc);
 
-    _.each(mod, function (operand, op) {
+    Object.keys(mod).forEach(function (op) {
+      var operand = mod[op];
       var modFunc = MODIFIERS[op];
       // Treat $setOnInsert as $set if this is an insert.
       if (options.isInsert && op === '$setOnInsert')
         modFunc = MODIFIERS['$set'];
       if (!modFunc)
         throw MinimongoError("Invalid modifier specified " + op);
-      _.each(operand, function (arg, keypath) {
+      Object.keys(operand).forEach(function (keypath) {
+        var arg = operand[keypath];
         if (keypath === '') {
           throw MinimongoError("An empty update path is not valid.");
         }
@@ -53,13 +55,13 @@ LocalCollection._modify = function (doc, mod, options) {
 
         var keyparts = keypath.split('.');
 
-        if (! _.all(keyparts, _.identity)) {
+        if (!keyparts.every(Boolean)) {
           throw MinimongoError(
             "The update path '" + keypath +
               "' contains an empty field name, which is not allowed.");
         }
 
-        var noCreate = _.has(NO_CREATE_MODIFIERS, op);
+        var noCreate = NO_CREATE_MODIFIERS.hasOwnProperty(op);
         var forbidArray = (op === "$rename");
         var target = findModTarget(newDoc, keyparts, {
           noCreate: NO_CREATE_MODIFIERS[op],
@@ -73,15 +75,15 @@ LocalCollection._modify = function (doc, mod, options) {
   }
 
   // move new document into place.
-  _.each(_.keys(doc), function (k) {
+  Object.keys(doc).forEach(function (k) {
     // Note: this used to be for (var k in doc) however, this does not
     // work right in Opera. Deleting from a doc while iterating over it
     // would sometimes cause opera to skip some keys.
     if (k !== '_id')
       delete doc[k];
   });
-  _.each(newDoc, function (v, k) {
-    doc[k] = v;
+  Object.keys(newDoc).forEach(function (k) {
+    doc[k] = newDoc[k];
   });
 };
 
@@ -237,7 +239,7 @@ var MODIFIERS = {
     }
   },
   $set: function (target, field, arg) {
-    if (!_.isObject(target)) { // not an array or an object
+    if (target !== Object(target)) { // not an array or an object
       var e = MinimongoError(
         "Cannot set property on non-object field", { field });
       e.setPropertyError = true;
@@ -343,8 +345,8 @@ var MODIFIERS = {
         target[field] = [];  // differs from Array.slice!
       else if (slice < 0)
         target[field] = target[field].slice(slice);
-      else 
-        target[field] = target[field].slice(0, slice);        
+      else
+        target[field] = target[field].slice(0, slice);
     }
   },
   $pushAll: function (target, field, arg) {
@@ -380,7 +382,7 @@ var MODIFIERS = {
       throw MinimongoError(
         "Cannot apply $addToSet modifier to non-array", { field });
     else {
-      _.each(values, function (value) {
+      values.forEach(function (value) {
         for (var i = 0; i < x.length; i++)
           if (LocalCollection._f._equal(value, x[i]))
             return;

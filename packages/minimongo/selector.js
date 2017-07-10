@@ -47,7 +47,7 @@ Minimongo.Matcher = function (selector, isUpdate = false) {
   self._isUpdate = isUpdate;
 };
 
-_.extend(Minimongo.Matcher.prototype, {
+Object.assign(Minimongo.Matcher.prototype, {
   documentMatches: function (doc) {
     if (!doc || typeof doc !== "object") {
       throw Error("documentMatches needs a document");
@@ -109,7 +109,7 @@ _.extend(Minimongo.Matcher.prototype, {
   // Returns a list of key paths the given selector is looking for. It includes
   // the empty string if there is a $where.
   _getPaths: function () {
-    return _.keys(this._paths);
+    return Object.keys(this._paths);
   }
 });
 
@@ -124,11 +124,12 @@ _.extend(Minimongo.Matcher.prototype, {
 var compileDocumentSelector = function (docSelector, matcher, options) {
   options = options || {};
   var docMatchers = [];
-  _.each(docSelector, function (subSelector, key) {
+  Object.keys(docSelector).forEach(function (key) {
+    var subSelector = docSelector[key];
     if (key.substr(0, 1) === '$') {
       // Outer operators are either logical operators (they recurse back into
       // this function), or $where.
-      if (!_.has(LOGICAL_OPERATORS, key))
+      if (!LOGICAL_OPERATORS.hasOwnProperty(key))
         throw new Error("Unrecognized logical operator: " + key);
       matcher._isSimple = false;
       docMatchers.push(LOGICAL_OPERATORS[key](subSelector, matcher,
@@ -182,7 +183,7 @@ var convertElementMatcherToBranchedMatcher = function (
         branches, options.dontIncludeLeafArrays);
     }
     var ret = {};
-    ret.result = _.any(expanded, function (element) {
+    ret.result = expanded.some(function (element) {
       var matched = elementMatcher(element.value);
 
       // Special case for $elemMatch: it means "true, and use this as an array
@@ -211,9 +212,7 @@ var convertElementMatcherToBranchedMatcher = function (
 regexpElementMatcher = function (regexp) {
   return function (value) {
     if (value instanceof RegExp) {
-      // Comparing two regexps means seeing if the regexps are identical
-      // (really!). Underscore knows how.
-      return _.isEqual(value, regexp);
+      return value.toString() === regexp.toString();
     }
     // Regexps only work against strings.
     if (typeof value !== 'string')
@@ -258,21 +257,22 @@ var operatorBranchedMatcher = function (valueSelector, matcher, isRoot) {
   // is OK.
 
   var operatorMatchers = [];
-  _.each(valueSelector, function (operand, operator) {
-    var simpleRange = _.contains(['$lt', '$lte', '$gt', '$gte'], operator) &&
-      _.isNumber(operand);
-    var simpleEquality = _.contains(['$ne', '$eq'], operator) && !_.isObject(operand);
-    var simpleInclusion = _.contains(['$in', '$nin'], operator) &&
-      _.isArray(operand) && !_.any(operand, _.isObject);
+  Object.keys(valueSelector).forEach(function (operator) {
+    var operand = valueSelector[operator];
+    var simpleRange = ['$lt', '$lte', '$gt', '$gte'].includes(operator) &&
+      typeof operand === 'number';
+    var simpleEquality = ['$ne', '$eq'].includes(operator) && operand !== Object(operand);
+    var simpleInclusion = ['$in', '$nin'].includes(operator) &&
+      Array.isArray(operand) && !operand.some(function (x) { return x === Object(x); });
 
     if (! (simpleRange || simpleInclusion || simpleEquality)) {
       matcher._isSimple = false;
     }
 
-    if (_.has(VALUE_OPERATORS, operator)) {
+    if (VALUE_OPERATORS.hasOwnProperty(operator)) {
       operatorMatchers.push(
         VALUE_OPERATORS[operator](operand, valueSelector, matcher, isRoot));
-    } else if (_.has(ELEMENT_OPERATORS, operator)) {
+    } else if (ELEMENT_OPERATORS.hasOwnProperty(operator)) {
       var options = ELEMENT_OPERATORS[operator];
       operatorMatchers.push(
         convertElementMatcherToBranchedMatcher(
@@ -289,9 +289,9 @@ var operatorBranchedMatcher = function (valueSelector, matcher, isRoot) {
 
 var compileArrayOfDocumentSelectors = function (
     selectors, matcher, inElemMatch) {
-  if (!isArray(selectors) || _.isEmpty(selectors))
+  if (!isArray(selectors) || selectors.length === 0)
     throw Error("$and/$or/$nor must be nonempty array");
-  return _.map(selectors, function (subSelector) {
+  return selectors.map(function (subSelector) {
     if (!isPlainObject(subSelector))
       throw Error("$or/$and/$nor entries need to be full objects");
     return compileDocumentSelector(
@@ -317,7 +317,7 @@ var LOGICAL_OPERATORS = {
       return matchers[0];
 
     return function (doc) {
-      var result = _.any(matchers, function (f) {
+      var result = matchers.some(function (f) {
         return f(doc).result;
       });
       // $or does NOT set arrayIndices when it has multiple
@@ -330,7 +330,7 @@ var LOGICAL_OPERATORS = {
     var matchers = compileArrayOfDocumentSelectors(
       subSelector, matcher, inElemMatch);
     return function (doc) {
-      var result = _.all(matchers, function (f) {
+      var result = matchers.every(function (f) {
         return !f(doc).result;
       });
       // Never set arrayIndices, because we only match if nothing in particular
@@ -405,7 +405,7 @@ var VALUE_OPERATORS = {
   },
   // $options just provides options for $regex; its logic is inside $regex
   $options: function (operand, valueSelector) {
-    if (!_.has(valueSelector, '$regex'))
+    if (!valueSelector.hasOwnProperty('$regex'))
       throw Error("$options needs a $regex");
     return everythingMatcher;
   },
@@ -419,11 +419,11 @@ var VALUE_OPERATORS = {
     if (!isArray(operand))
       throw Error("$all requires array");
     // Not sure why, but this seems to be what MongoDB does.
-    if (_.isEmpty(operand))
+    if (operand.length === 0)
       return nothingMatcher;
 
     var branchedMatchers = [];
-    _.each(operand, function (criterion) {
+    operand.forEach(function (criterion) {
       // XXX handle $all/$elemMatch combination
       if (isOperatorObject(criterion))
         throw Error("no $ expressions in $all");
@@ -445,7 +445,7 @@ var VALUE_OPERATORS = {
     // matched using $geometry.
 
     var maxDistance, point, distance;
-    if (isPlainObject(operand) && _.has(operand, '$geometry')) {
+    if (isPlainObject(operand) && operand.hasOwnProperty('$geometry')) {
       // GeoJSON "2dsphere" mode.
       maxDistance = operand.$maxDistance;
       point = operand.$geometry;
@@ -488,7 +488,7 @@ var VALUE_OPERATORS = {
       // each within-$maxDistance branching point.
       branchedValues = expandArraysInBranches(branchedValues);
       var result = {result: false};
-      _.every(branchedValues, function (branch) {
+      branchedValues.every(function (branch) {
         // if operation is an update, don't skip branches, just return the first one (#3599)
         if (!matcher._isUpdate){
           if (!(typeof branch.value === "object")){
@@ -523,7 +523,7 @@ var distanceCoordinatePairs = function (a, b) {
   b = pointToArray(b);
   var x = a[0] - b[0];
   var y = a[1] - b[1];
-  if (_.isNaN(x) || _.isNaN(y))
+  if (Number.isNaN(x) || Number.isNaN(y))
     return null;
   return Math.sqrt(x * x + y * y);
 };
@@ -531,7 +531,7 @@ var distanceCoordinatePairs = function (a, b) {
 // the second one to y no matter what user passes.
 // In case user passes { lon: x, lat: y } returns [x, y]
 var pointToArray = function (point) {
-  return _.map(point, _.identity);
+  return Array.isArray(point) ? point.slice() : [point.x, point.y];
 };
 
 // Helper for $lt/$gt/$lte/$gte.
@@ -671,7 +671,7 @@ ELEMENT_OPERATORS = {
         throw Error("$in needs an array");
 
       var elementMatchers = [];
-      _.each(operand, function (option) {
+      operand.forEach(function (option) {
         if (option instanceof RegExp)
           elementMatchers.push(regexpElementMatcher(option));
         else if (isOperatorObject(option))
@@ -684,7 +684,7 @@ ELEMENT_OPERATORS = {
         // Allow {a: {$in: [null]}} to match when 'a' does not exist.
         if (value === undefined)
           value = null;
-        return _.any(elementMatchers, function (e) {
+        return elementMatchers.some(function (e) {
           return e(value);
         });
       };
@@ -801,7 +801,7 @@ ELEMENT_OPERATORS = {
         throw Error("$elemMatch need an object");
 
       var subMatcher, isDocMatcher;
-      if (isOperatorObject(_.omit(operand, _.keys(LOGICAL_OPERATORS)), true)) {
+      if (isOperatorObject(Object.keys(operand).filter(key => !Object.keys(LOGICAL_OPERATORS).includes(key)).reduce(function (a, b) { return Object.assign(a, {[b]: operand[b]}); }, {}), true)) {
         subMatcher = compileValueSelector(operand, matcher);
         isDocMatcher = false;
       } else {
@@ -993,7 +993,7 @@ makeLookupFunction = function (key, options) {
     // "look up this index" in that case, not "also look up this index in all
     // the elements of the array".
     if (isArray(firstLevel) && !(nextPartIsNumeric && options.forSort)) {
-      _.each(firstLevel, function (branch, arrayIndex) {
+      firstLevel.forEach(function (branch, arrayIndex) {
         if (isPlainObject(branch)) {
           appendToResult(lookupRest(
             branch,
@@ -1009,7 +1009,7 @@ MinimongoTest.makeLookupFunction = makeLookupFunction;
 
 expandArraysInBranches = function (branches, skipTheArrays) {
   var branchesOut = [];
-  _.each(branches, function (branch) {
+  branches.forEach(function (branch) {
     var thisIsArray = isArray(branch.value);
     // We include the branch itself, *UNLESS* we it's an array that we're going
     // to iterate and we're told to skip arrays.  (That's right, we include some
@@ -1022,7 +1022,7 @@ expandArraysInBranches = function (branches, skipTheArrays) {
       });
     }
     if (thisIsArray && !branch.dontIterate) {
-      _.each(branch.value, function (leaf, i) {
+      branch.value.forEach(function (leaf, i) {
         branchesOut.push({
           value: leaf,
           arrayIndices: (branch.arrayIndices || []).concat(i)
@@ -1054,7 +1054,7 @@ var andSomeMatchers = function (subMatchers) {
 
   return function (docOrBranches) {
     var ret = {};
-    ret.result = _.all(subMatchers, function (f) {
+    ret.result = subMatchers.every(function (f) {
       var subResult = f(docOrBranches);
       // Copy a 'distance' number out of the first sub-matcher that has
       // one. Yes, this means that if there are multiple $near fields in a

@@ -16,7 +16,7 @@ LocalCollection.wrapTransform = function (transform) {
     return transform;
 
   var wrapped = function (doc) {
-    if (!_.has(doc, '_id')) {
+    if (!doc.hasOwnProperty('_id')) {
       // XXX do we ever have a transform on the oplog's collection? because that
       // collection has no _id.
       throw new Error("can only transform documents with _id");
@@ -32,7 +32,7 @@ LocalCollection.wrapTransform = function (transform) {
       throw new Error("transform must return object");
     }
 
-    if (_.has(transformed, '_id')) {
+    if (transformed.hasOwnProperty('_id')) {
       if (!EJSON.equals(transformed._id, id)) {
         throw new Error("transformed document can't have different _id");
       }

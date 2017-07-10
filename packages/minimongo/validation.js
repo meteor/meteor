@@ -8,7 +8,7 @@ const invalidCharMsg = {
 };
 export function assertIsValidFieldName(key) {
   let match;
-  if (_.isString(key) && (match = key.match(/^\$|\.|\0/))) {
+  if (typeof key === 'string' && (match = key.match(/^\$|\.|\0/))) {
     throw MinimongoError(`Key ${key} must not ${invalidCharMsg[match[0]]}`);
   }
 };

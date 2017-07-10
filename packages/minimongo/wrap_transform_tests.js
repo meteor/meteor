@@ -13,7 +13,7 @@ Tinytest.add("minimongo - wrapTransform", function (test) {
     return doc;
   };
   var transformed = wrap(validTransform)({_id: "asdf", x: 54});
-  test.equal(_.keys(transformed), ['_id', 'y', 'z']);
+  test.equal(Object.keys(transformed), ['_id', 'y', 'z']);
   test.equal(transformed.y, 42);
   test.equal(transformed.z(), 43);
 
@@ -28,7 +28,7 @@ Tinytest.add("minimongo - wrapTransform", function (test) {
     "asdf", new MongoID.ObjectID(), false, null, true,
     27, [123], /adsf/, new Date, function () {}, undefined
   ];
-  _.each(invalidObjects, function (invalidObject) {
+  invalidObjects.forEach(function (invalidObject) {
     var wrapped = wrap(function () { return invalidObject; });
     test.throws(function () {
       wrapped({_id: "asdf"});

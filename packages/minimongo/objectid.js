@@ -10,7 +10,7 @@ LocalCollection._selectorIsIdPerhapsAsObject = function (selector) {
   return LocalCollection._selectorIsId(selector) ||
     (selector && typeof selector === "object" &&
      selector._id && LocalCollection._selectorIsId(selector._id) &&
-     _.size(selector) === 1);
+     Object.keys(selector).length === 1);
 };
 
 // If this is a selector which explicitly constrains the match by ID to a finite
@@ -26,15 +26,15 @@ LocalCollection._idsMatchedBySelector = function (selector) {
     return null;
 
   // Do we have an _id clause?
-  if (_.has(selector, '_id')) {
+  if (selector.hasOwnProperty('_id')) {
     // Is the _id clause just an ID?
     if (LocalCollection._selectorIsId(selector._id))
       return [selector._id];
     // Is the _id clause {_id: {$in: ["x", "y", "z"]}}?
     if (selector._id && selector._id.$in
-        && _.isArray(selector._id.$in)
-        && !_.isEmpty(selector._id.$in)
-        && _.all(selector._id.$in, LocalCollection._selectorIsId)) {
+        && Array.isArray(selector._id.$in)
+        && selector._id.$in.length
+        && selector._id.$in.every(LocalCollection._selectorIsId)) {
       return selector._id.$in;
     }
     return null;
@@ -43,7 +43,7 @@ LocalCollection._idsMatchedBySelector = function (selector) {
   // If this is a top-level $and, and any of the clauses constrain their
   // documents, then the whole selector is constrained by any one clause's
   // constraint. (Well, by their intersection, but that seems unlikely.)
-  if (selector.$and && _.isArray(selector.$and)) {
+  if (selector.$and && Array.isArray(selector.$and)) {
     for (var i = 0; i < selector.$and.length; ++i) {
       var subIds = LocalCollection._idsMatchedBySelector(selector.$and[i]);
       if (subIds)

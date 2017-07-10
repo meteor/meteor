@@ -9,13 +9,13 @@
 Minimongo.Matcher.prototype.affectedByModifier = function (modifier) {
   var self = this;
   // safe check for $set/$unset being objects
-  modifier = _.extend({ $set: {}, $unset: {} }, modifier);
-  var modifiedPaths = _.keys(modifier.$set).concat(_.keys(modifier.$unset));
+  modifier = Object.assign({ $set: {}, $unset: {} }, modifier);
+  var modifiedPaths = Object.keys(modifier.$set).concat(Object.keys(modifier.$unset));
   var meaningfulPaths = self._getPaths();
 
-  return _.any(modifiedPaths, function (path) {
+  return modifiedPaths.some(function (path) {
     var mod = path.split('.');
-    return _.any(meaningfulPaths, function (meaningfulPath) {
+    return meaningfulPaths.some(function (meaningfulPath) {
       var sel = meaningfulPath.split('.');
       var i = 0, j = 0;
 
@@ -64,14 +64,14 @@ Minimongo.Matcher.prototype.canBecomeTrueByModifier = function (modifier) {
   if (!this.affectedByModifier(modifier))
     return false;
 
-  modifier = _.extend({$set:{}, $unset:{}}, modifier);
-  var modifierPaths = _.keys(modifier.$set).concat(_.keys(modifier.$unset));
+  modifier = Object.assign({$set:{}, $unset:{}}, modifier);
+  var modifierPaths = Object.keys(modifier.$set).concat(Object.keys(modifier.$unset));
 
   if (!self.isSimple())
     return true;
 
-  if (_.any(self._getPaths(), pathHasNumericKeys) ||
-      _.any(modifierPaths, pathHasNumericKeys))
+  if (self._getPaths().some(pathHasNumericKeys) ||
+      modifierPaths.some(pathHasNumericKeys))
     return true;
 
   // check if there is a $set or $unset that indicates something is an
@@ -79,10 +79,11 @@ Minimongo.Matcher.prototype.canBecomeTrueByModifier = function (modifier) {
   // NOTE: it is correct since we allow only scalars in $-operators
   // Example: for selector {'a.b': {$gt: 5}} the modifier {'a.b.c':7} would
   // definitely set the result to false as 'a.b' appears to be an object.
-  var expectedScalarIsObject = _.any(self._selector, function (sel, path) {
+  var expectedScalarIsObject = Object.keys(self._selector).some(function (path) {
+    var sel = self._selector[path];
     if (! isOperatorObject(sel))
       return false;
-    return _.any(modifierPaths, function (modifierPath) {
+    return modifierPaths.some(function (modifierPath) {
       return startsWith(modifierPath, path + '.');
     });
   });
@@ -149,17 +150,17 @@ Minimongo.Matcher.prototype.matchingDocument = function () {
           // Return anything from $in that matches the whole selector for this
           // path. If nothing matches, returns `undefined` as nothing can make
           // this selector into `true`.
-          return _.find(valueSelector.$in, function (x) {
+          return valueSelector.$in.find(function (x) {
             return matcher.documentMatches({ placeholder: x }).result;
           });
         } else if (onlyContainsKeys(valueSelector, ['$gt', '$gte', '$lt', '$lte'])) {
           var lowerBound = -Infinity, upperBound = Infinity;
-          _.each(['$lte', '$lt'], function (op) {
-            if (_.has(valueSelector, op) && valueSelector[op] < upperBound)
+          ['$lte', '$lt'].forEach(function (op) {
+            if (valueSelector.hasOwnProperty(op) && valueSelector[op] < upperBound)
               upperBound = valueSelector[op];
           });
-          _.each(['$gte', '$gt'], function (op) {
-            if (_.has(valueSelector, op) && valueSelector[op] > lowerBound)
+          ['$gte', '$gt'].forEach(function (op) {
+            if (valueSelector.hasOwnProperty(op) && valueSelector[op] > lowerBound)
               lowerBound = valueSelector[op];
           });
 
@@ -181,7 +182,7 @@ Minimongo.Matcher.prototype.matchingDocument = function () {
       }
       return self._selector[path];
     },
-    _.identity /*conflict resolution is no resolution*/);
+    function (x) { return x; } /*conflict resolution is no resolution*/);
 
   if (fallback)
     self._matchingDocument = null;
@@ -190,28 +191,31 @@ Minimongo.Matcher.prototype.matchingDocument = function () {
 };
 
 var getPaths = function (sel) {
-  return _.keys(new Minimongo.Matcher(sel)._paths);
-  return _.chain(sel).map(function (v, k) {
+  return Object.keys(new Minimongo.Matcher(sel)._paths);
+  return Object.keys(sel).map(function (k) {
+    var v = sel[k];
     // we don't know how to handle $where because it can be anything
     if (k === "$where")
       return ''; // matches everything
     // we branch from $or/$and/$nor operator
-    if (_.contains(['$or', '$and', '$nor'], k))
-      return _.map(v, getPaths);
+    if (['$or', '$and', '$nor'].includes(k))
+      return v.map(getPaths);
     // the value is a literal or some comparison operator
     return k;
-  }).flatten().uniq().value();
+  })
+  .reduce(function (a, b) { return a.concat(b); }, [])
+  .filter(function (a, b, c) { return c.indexOf(a) === b; });
 };
 
 // A helper to ensure object has only certain keys
 var onlyContainsKeys = function (obj, keys) {
-  return _.all(obj, function (v, k) {
-    return _.contains(keys, k);
+  return Object.keys(obj).every(function (k) {
+    return keys.includes(k);
   });
 };
 
 var pathHasNumericKeys = function (path) {
-  return _.any(path.split('.'), isNumericKey);
+  return path.split('.').some(isNumericKey);
 }
 
 // XXX from Underscore.String (http://epeli.github.com/underscore.string/)
