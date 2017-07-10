@@ -475,8 +475,8 @@
       "from": "babel-types@>=6.22.0 <7.0.0"
     },
     "babylon": {
-      "version": "6.17.3",
-      "resolved": "https://registry.npmjs.org/babylon/-/babylon-6.17.3.tgz",
+      "version": "6.17.4",
+      "resolved": "https://registry.npmjs.org/babylon/-/babylon-6.17.4.tgz",
       "from": "babylon@>=6.15.0 <7.0.0"
     },
     "balanced-match": {
@@ -555,8 +555,8 @@
       "from": "is-finite@>=1.0.0 <2.0.0"
     },
     "js-tokens": {
-      "version": "3.0.1",
-      "resolved": "https://registry.npmjs.org/js-tokens/-/js-tokens-3.0.1.tgz",
+      "version": "3.0.2",
+      "resolved": "https://registry.npmjs.org/js-tokens/-/js-tokens-3.0.2.tgz",
       "from": "js-tokens@>=3.0.0 <4.0.0"
     },
     "jsesc": {
@@ -590,9 +590,9 @@
       "from": "loose-envify@>=1.0.0 <2.0.0"
     },
     "meteor-babel": {
-      "version": "0.21.5",
-      "resolved": "https://registry.npmjs.org/meteor-babel/-/meteor-babel-0.21.5.tgz",
-      "from": "meteor-babel@0.21.5"
+      "version": "0.22.0",
+      "resolved": "https://registry.npmjs.org/meteor-babel/-/meteor-babel-0.22.0.tgz",
+      "from": "meteor-babel@0.22.0"
     },
     "meteor-babel-helpers": {
       "version": "0.0.3",
@@ -610,8 +610,8 @@
       "from": "minimist@0.0.8"
     },
     "minipass": {
-      "version": "2.0.2",
-      "resolved": "https://registry.npmjs.org/minipass/-/minipass-2.0.2.tgz",
+      "version": "2.2.1",
+      "resolved": "https://registry.npmjs.org/minipass/-/minipass-2.2.1.tgz",
       "from": "minipass@>=2.0.0 <3.0.0"
     },
     "minizlib": {

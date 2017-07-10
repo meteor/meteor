@@ -67,7 +67,7 @@
 * The `minifier-js` package will now replace `process.env.NODE_ENV` with
   its string value (or `"development"` if unspecified).
 
-* The `meteor-babel` npm package has been upgraded to version 0.21.5.
+* The `meteor-babel` npm package has been upgraded to version 0.22.0.
 
 * The `reify` npm package has been upgraded to version 0.11.24.
 
