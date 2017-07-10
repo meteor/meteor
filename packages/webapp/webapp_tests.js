@@ -160,7 +160,7 @@ Tinytest.add("webapp - WebAppInternals.registerBoilerplateDataCallback", functio
   const key = "from webapp_tests.js";
   let callCount = 0;
 
-  function callback(data, request, arch) {
+  function callback(request, data, arch) {
     test.equal(arch, "web.browser");
     test.equal(request.url, "http://example.com");
     test.equal(data.dynamicHead, "so dynamic");

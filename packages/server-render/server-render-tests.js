@@ -1,6 +1,6 @@
 import { Tinytest } from "meteor/tinytest";
 import { WebAppInternals } from "meteor/webapp";
-import { renderIntoElementById } from "meteor/server-render";
+import { onPageLoad } from "meteor/server-render";
 import { parse } from "parse5";
 
 const skeleton = `
@@ -22,26 +22,29 @@ Tinytest.add('server-render - boilerplate', function (test) {
     // Use the underlying abstraction to set the static HTML skeleton.
     WebAppInternals.registerBoilerplateDataCallback(
       "meteor/server-render",
-      (data, request, arch) => {
+      (request, data, arch) => {
         if (request.isServerRenderTest) {
           test.equal(arch, "web.browser");
           test.equal(request.url, "/server-render/test");
           data.body = skeleton;
         }
-        return realCallback.call(this, data, request, arch);
+        return realCallback.call(this, request, data, arch);
       }
     );
 
-  renderIntoElementById("container-1", request => {
-    return "<oyez/>";
+  const callback1 = onPageLoad(sink => {
+    sink.renderIntoElementById("container-1", "<oyez/>");
   });
 
   // This callback is async, and that's fine because
   // WebAppInternals.getBoilerplate is able to yield. Internally the
   // webapp package uses a function called getBoilerplateAsync, so the
   // Fiber power-tools need not be involved in typical requests.
-  renderIntoElementById("container-2", async request => {
-    return (await "oy") + (await "ez");
+  const callback2 = onPageLoad(async sink => {
+    sink.renderIntoElementById(
+      "container-2",
+      (await "oy") + (await "ez")
+    );
   });
 
   try {
@@ -95,7 +98,7 @@ Tinytest.add('server-render - boilerplate', function (test) {
       realCallback
     );
 
-    renderIntoElementById("container-1", null);
-    renderIntoElementById("container-2", null);
+    onPageLoad.remove(callback1);
+    onPageLoad.remove(callback2);
   }
 });

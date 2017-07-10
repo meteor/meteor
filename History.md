@@ -29,6 +29,21 @@
   [`README.md`](https://github.com/meteor/meteor/blob/release-1.5.1/packages/server-render/README.md).
   [PR #8841](https://github.com/meteor/meteor/pull/8841)
 
+* To reduce the total number of file descriptors held open by the Meteor
+  build system, native file watchers will now be started only for files
+  that have changed at least once. This new policy means you may have to
+  [wait up to 5000ms](https://github.com/meteor/meteor/blob/6bde360b9c075f1c78c3850eadbdfa7fe271f396/tools/fs/safe-watcher.js#L20-L21)
+  for changes to be detected when you first edit a file, but thereafter
+  changes will be detected instantaneously. In return for that small
+  initial waiting time, the number of open file descriptors will now be
+  bounded roughly by the number of files you are actively editing, rather
+  than the number of files involved in the build (often thousands), which
+  should help with issues like
+  [#8648](https://github.com/meteor/meteor/issues/8648). If you need to
+  disable the new behavior for any reason, simply set the
+  `METEOR_WATCH_PRIORITIZE_CHANGED` environment variable to `"false"`, as
+  explained in [PR #8866](https://github.com/meteor/meteor/pull/8866).
+
 * All `observe` and `observeChanges` callbacks are now bound using
   `Meteor.bindEnvironment`.  The same `EnvironmentVariable`s that were
   present when `observe` or `observeChanges` was called are now available
@@ -89,7 +104,7 @@
 * The `minifier-js` package will now replace `process.env.NODE_ENV` with
   its string value (or `"development"` if unspecified).
 
-* The `meteor-babel` npm package has been upgraded to version 0.21.5.
+* The `meteor-babel` npm package has been upgraded to version 0.22.0.
 
 * The `reify` npm package has been upgraded to version 0.11.24.
 
