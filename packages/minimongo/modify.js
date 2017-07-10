@@ -69,7 +69,9 @@ LocalCollection._modify = function (doc, mod, options) {
     });
 
     if (doc._id && !EJSON.equals(doc._id, newDoc._id)) {
-      throw MinimongoError(`After applying the update to the document {_id: "${doc._id}" , ...}, the (immutable) field '_id' was found to have been altered to _id: "${newDoc._id}"`);
+      throw MinimongoError('After applying the update to the document {_id: ' +
+      `"${doc._id}" , ...}, the (immutable) field '_id' was found to have` +
+      ` been altered to _id: "${newDoc._id}"`);
     }
   }
 
