@@ -61,9 +61,12 @@ function compile(source, options) {
 
   if (options.plugins &&
       options.plugins.length > 0) {
-    result = transform([{
-      plugins: options.plugins
-    }]);
+    result = transform(
+      [{ plugins: options.plugins }],
+      // If there are no options.presets, then this is the final transform
+      // call, so make sure we generate code.
+      ! options.presets
+    );
   }
 
   if (options.presets) {
