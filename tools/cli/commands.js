@@ -1286,7 +1286,6 @@ main.registerCommand({
   allowUnrecognizedOptions: true,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
-  Console.info(options);
   if (options.global) {   
     try {
       files.rm_recursive(path.join(process.env.HOME, '.meteor'));
