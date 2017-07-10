@@ -42,6 +42,11 @@
   [PR #8754](https://github.com/meteor/meteor/pull/8754)
   [Issue #1173](https://github.com/meteor/meteor/issues/1173)
 
+* The `minimongo` and `mongo` packages are now compliant with the upsert behavior
+  of MongoDB 2.6 and higher. **As a result support for MongoDB 2.4 has been dropped.**
+  This mainly changes the effect of the selector on newly inserted documents.
+  [PR #8815](https://github.com/meteor/meteor/pull/8815)
+
 * `reactive-dict` now supports setting initial data when defining a named
   `ReactiveDict`. No longer run migration logic when used on the server,
   this is to prevent duplicate name error on reloads. Initial data is now
