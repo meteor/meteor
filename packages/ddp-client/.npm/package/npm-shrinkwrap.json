@@ -1,19 +1,20 @@
 {
+  "lockfileVersion": 1,
   "dependencies": {
     "faye-websocket": {
       "version": "0.11.0",
       "resolved": "https://registry.npmjs.org/faye-websocket/-/faye-websocket-0.11.0.tgz",
-      "from": "faye-websocket@0.11.0",
+      "integrity": "sha1-2czw54nn23JddLxId9I6pClyrFA=",
       "dependencies": {
         "websocket-driver": {
           "version": "0.6.4",
           "resolved": "https://registry.npmjs.org/websocket-driver/-/websocket-driver-0.6.4.tgz",
-          "from": "websocket-driver@>=0.5.1",
+          "integrity": "sha1-ZbhNAhE0gNP8BeY+gJMiBCvclAs=",
           "dependencies": {
             "websocket-extensions": {
               "version": "0.1.1",
               "resolved": "https://registry.npmjs.org/websocket-extensions/-/websocket-extensions-0.1.1.tgz",
-              "from": "websocket-extensions@>=0.1.1"
+              "integrity": "sha1-domUmcGEtu91Q3fC27DNbLVdKec="
             }
           }
         }
@@ -22,12 +23,12 @@
     "lolex": {
       "version": "1.4.0",
       "resolved": "https://registry.npmjs.org/lolex/-/lolex-1.4.0.tgz",
-      "from": "lolex@1.4.0"
+      "integrity": "sha1-LycSsbwYDendzF06epbvPAuxYq0="
     },
     "permessage-deflate": {
       "version": "0.1.3",
       "resolved": "https://registry.npmjs.org/permessage-deflate/-/permessage-deflate-0.1.3.tgz",
-      "from": "permessage-deflate@0.1.3"
+      "integrity": "sha1-VnVbIrzkUKLuVoauXy7zJRNlk3k="
     }
   }
 }

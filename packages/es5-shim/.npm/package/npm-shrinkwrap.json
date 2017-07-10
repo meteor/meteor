@@ -1,9 +1,10 @@
 {
+  "lockfileVersion": 1,
   "dependencies": {
     "es5-shim": {
       "version": "4.5.9",
       "resolved": "https://registry.npmjs.org/es5-shim/-/es5-shim-4.5.9.tgz",
-      "from": "es5-shim@4.5.9"
+      "integrity": "sha1-Kh4rnlg/9f7Qwgo+4svz91IwpcA="
     }
   }
 }
