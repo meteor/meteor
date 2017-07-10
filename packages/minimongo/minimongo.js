@@ -1,4 +1,5 @@
 import { assertHasValidFieldNames } from './validation.js';
+import populateDocumentWithQueryFields from './upsert_document.js';
 
 // XXX type checking on selectors (graceful error if malformed)
 
