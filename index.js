@@ -35,32 +35,25 @@ function compile(source, options) {
   // destroy unreliable token information. Don't worry; Babel can cope.
   delete ast.tokens;
 
-  let inputSourceMap;
   const babelCore = require("babel-core");
   let result;
 
-  function transform(presets) {
+  function transform(presets, generateCode) {
     const optionsCopy = Object.assign({}, options);
 
     delete optionsCopy.plugins;
     optionsCopy.presets = presets;
     optionsCopy.ast = true;
 
-    if (inputSourceMap) {
-      optionsCopy.inputSourceMap = inputSourceMap;
+    if (! generateCode) {
+      optionsCopy.code = false;
+      optionsCopy.sourceMaps = false;
     }
 
     const result = babelCore.transformFromAst(ast, source, optionsCopy);
 
-    source = result.code;
-    ast = result.ast;
-
     if (options.ast === false) {
       delete result.ast;
-    }
-
-    if (result.map) {
-      inputSourceMap = result.map;
     }
 
     return result;
@@ -68,13 +61,16 @@ function compile(source, options) {
 
   if (options.plugins &&
       options.plugins.length > 0) {
-    result = transform([{
-      plugins: options.plugins
-    }]);
+    result = transform(
+      [{ plugins: options.plugins }],
+      // If there are no options.presets, then this is the final transform
+      // call, so make sure we generate code.
+      ! options.presets
+    );
   }
 
   if (options.presets) {
-    result = transform(options.presets);
+    result = transform(options.presets, true);
   }
 
   return result;
