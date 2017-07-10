@@ -1,4 +1,5 @@
 var main = require('./main.js');
+var path = require('path');
 var _ = require('underscore');
 var files = require('../fs/files.js');
 var deploy = require('../meteor-services/deploy.js');
@@ -1269,6 +1270,44 @@ main.registerCommand({
   files.rm_recursive(localDir);
 
   Console.info("Project reset.");
+});
+
+///////////////////////////////////////////////////////////////////////////////
+// clean
+///////////////////////////////////////////////////////////////////////////////
+
+main.registerCommand({
+  name: 'clean',
+  maxArgs: 1,
+  requiresApp: false,
+  options: {
+    'global': { type: Boolean, short: 'g' }
+  },
+  allowUnrecognizedOptions: true,
+  catalogRefresh: new catalog.Refresh.Never()
+}, function (options) {
+  if (options.global) {   
+    try {
+      files.rm_recursive(path.join(process.env.HOME, '.meteor'));
+      Console.info("Global meteor folder cleaned.");
+    } catch (err) {
+      // Don't crash and print a stack trace because we failed to delete a .meteor
+      // directory. This happens sometimes on Windows and seems to be
+      // unavoidable.
+      console.log(err);
+    }
+  } else {
+    try {
+      // clean the project
+      files.rm_recursive(path.join(__dirname,'..','..','.meteor'));
+      Console.info("Meteor folder cleaned.");
+    } catch (err) {
+      // Don't crash and print a stack trace because we failed to delete a .meteor
+      // directory. This happens sometimes on Windows and seems to be
+      // unavoidable.
+      console.log(err);
+    }
+  }    
 });
 
 ///////////////////////////////////////////////////////////////////////////////
