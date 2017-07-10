@@ -251,6 +251,7 @@ selftest.define("update during run", ["checkout", 'custom-warehouse'], function 
   run.match('localhost:3000');
   s.write('.meteor/release', DEFAULT_RELEASE_TRACK + '@v2');
   run.matchErr('to Meteor v2 from Meteor v1');
+  run.waitSecs(10);
   run.expectExit(254);
 
   // But not if the release was forced (case 1)
@@ -263,6 +264,7 @@ selftest.define("update during run", ["checkout", 'custom-warehouse'], function 
   s.write('empty.js', '');
   run.waitSecs(2);
   run.match('restarted');
+  run.waitSecs(10);
   run.stop();
   run.forbidAll("updated");
 
@@ -276,6 +278,7 @@ selftest.define("update during run", ["checkout", 'custom-warehouse'], function 
   s.write('empty.js', '');
   run.waitSecs(2);
   run.match('restarted');
+  run.waitSecs(10);
   run.stop();
   run.forbidAll("updated");
 
@@ -294,6 +297,7 @@ selftest.define("update during run", ["checkout", 'custom-warehouse'], function 
   s.write('empty.js', '');
   run.waitSecs(2);
   run.match('restarted');
+  run.waitSecs(10);
   run.stop();
   run.forbidAll("updated");
 });
