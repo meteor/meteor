@@ -468,7 +468,7 @@ EJSON.equals = function (a, b, options) {
       i++;
       return true;
     });
-    return ret && _.size(b) === i;
+    return ret && _.keys(b).length === i;
   }
 };
 
@@ -515,9 +515,11 @@ EJSON.clone = function (v) {
   }
   // handle other objects
   ret = {};
-  _.each(v, function (value, key) {
-    ret[key] = EJSON.clone(value);
-  });
+  var keys = _.keys(v);
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    ret[key] = EJSON.clone(v[key]);
+  }
   return ret;
 };
 
