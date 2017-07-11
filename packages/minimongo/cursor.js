@@ -4,8 +4,8 @@ import {LocalCollection} from './local_collection.js';
 // a defined order, limit, and offset.  creating a Cursor with LocalCollection.find(),
 export class Cursor {
   // don't call this ctor directly.  use LocalCollection.find().
-  constructor (collection, selector, options = {}) {
-this.collection = collection;
+  constructor(collection, selector, options = {}) {
+    this.collection = collection;
     this.sorter = null;
     this.matcher = new Minimongo.Matcher(selector);
 
@@ -19,7 +19,7 @@ this.collection = collection;
       this._selectorId = undefined;
       if (this.matcher.hasGeoQuery() || options.sort) {
         this.sorter = new Minimongo.Sorter(options.sort || [],
-                                           { matcher: this.matcher });
+          { matcher: this.matcher });
       }
     }
 
@@ -32,8 +32,7 @@ this.collection = collection;
     this._transform = LocalCollection.wrapTransform(options.transform);
 
     // by default, queries register w/ Tracker when it is available.
-    if (typeof Tracker !== "undefined")
-      this.reactive = (options.reactive === undefined) ? true : options.reactive;
+    if (typeof Tracker !== 'undefined') {this.reactive = options.reactive === undefined ? true : options.reactive;}
   }
 
   /**
@@ -44,10 +43,11 @@ this.collection = collection;
    * @locus Anywhere
    * @returns {Number}
    */
-  count () {
-    if (this.reactive)
+  count() {
+    if (this.reactive) {
       this._depend({added: true, removed: true},
-                   true /* allow the observe to be unordered */);
+        true /* allow the observe to be unordered */);
+    }
 
     return this._getRawObjects({ordered: true}).length;
   }
@@ -60,7 +60,7 @@ this.collection = collection;
    * @locus Anywhere
    * @returns {Object[]}
    */
-  fetch () {
+  fetch() {
     const res = [];
     this.forEach(doc => {
       res.push(doc);
@@ -82,7 +82,7 @@ this.collection = collection;
    * @param {IterationCallback} callback Function to call. It will be called with three arguments: the document, a 0-based index, and <em>cursor</em> itself.
    * @param {Any} [thisArg] An object which will be the value of `this` inside `callback`.
    */
-  forEach (callback, thisArg) {
+  forEach(callback, thisArg) {
     const objects = this._getRawObjects({ordered: true});
 
     if (this.reactive) {
@@ -97,13 +97,12 @@ this.collection = collection;
       // This doubles as a clone operation.
       elt = this._projectionFn(elt);
 
-      if (this._transform)
-        elt = this._transform(elt);
+      if (this._transform) {elt = this._transform(elt);}
       callback.call(thisArg, elt, i, this);
     });
   }
 
-  getTransform () {
+  getTransform() {
     return this._transform;
   }
 
@@ -116,7 +115,7 @@ this.collection = collection;
    * @param {IterationCallback} callback Function to call. It will be called with three arguments: the document, a 0-based index, and <em>cursor</em> itself.
    * @param {Any} [thisArg] An object which will be the value of `this` inside `callback`.
    */
-  map (callback, thisArg) {
+  map(callback, thisArg) {
     const res = [];
     this.forEach((doc, index) => {
       res.push(callback.call(thisArg, doc, index, this));
@@ -152,7 +151,7 @@ this.collection = collection;
    * @instance
    * @param {Object} callbacks Functions to call to deliver the result set as it changes
    */
-  observe (options) {
+  observe(options) {
     return LocalCollection._observeFromObserveChanges(this, options);
   }
 
@@ -163,29 +162,27 @@ this.collection = collection;
    * @instance
    * @param {Object} callbacks Functions to call to deliver the result set as it changes
    */
-  observeChanges (options) {
+  observeChanges(options) {
     const ordered = LocalCollection._observeChangesCallbacksAreOrdered(options);
 
     // there are several places that assume you aren't combining skip/limit with
     // unordered observe.  eg, update's EJSON.clone, and the "there are several"
     // comment in _modifyAndNotify
     // XXX allow skip/limit with unordered observe
-    if (!options._allow_unordered && !ordered && (this.skip || this.limit))
-      throw new Error("must use ordered observe (ie, 'addedBefore' instead of 'added') with skip or limit");
+    if (!options._allow_unordered && !ordered && (this.skip || this.limit)) {throw new Error("must use ordered observe (ie, 'addedBefore' instead of 'added') with skip or limit");}
 
-    if (this.fields && (this.fields._id === 0 || this.fields._id === false))
-      throw Error("You may not observe a cursor with {fields: {_id: 0}}");
+    if (this.fields && (this.fields._id === 0 || this.fields._id === false)) {throw Error('You may not observe a cursor with {fields: {_id: 0}}');}
 
     const query = {
       dirty: false,
       matcher: this.matcher, // not fast pathed
       sorter: ordered && this.sorter,
-      distances: (
-        this.matcher.hasGeoQuery() && ordered && new LocalCollection._IdMap),
+      distances:
+        this.matcher.hasGeoQuery() && ordered && new LocalCollection._IdMap,
       resultsSnapshot: null,
       ordered,
       cursor: this,
-      projectionFn: this._projectionFn
+      projectionFn: this._projectionFn,
     };
     let qid;
 
@@ -197,8 +194,7 @@ this.collection = collection;
     }
     query.results = this._getRawObjects({
       ordered, distances: query.distances});
-    if (this.collection.paused)
-      query.resultsSnapshot = (ordered ? [] : new LocalCollection._IdMap);
+    if (this.collection.paused) {query.resultsSnapshot = ordered ? [] : new LocalCollection._IdMap;}
 
     // wrap callbacks we were passed. callbacks only fire when not paused and
     // are never undefined
@@ -208,14 +204,12 @@ this.collection = collection;
     // furthermore, callbacks enqueue until the operation we're working on is
     // done.
     const wrapCallback = f => {
-      if (!f)
-        return () => {};
+      if (!f) {return () => {};}
       const self = this;
-      return function (/*args*/) {
+      return function(/* args*/) {
         const args = arguments;
 
-        if (self.collection.paused)
-          return;
+        if (self.collection.paused) {return;}
 
         self.collection._observeQueue.queueTask(() => {
           f.apply(this, args);
@@ -237,8 +231,7 @@ this.collection = collection;
         const fields = EJSON.clone(doc);
 
         delete fields._id;
-        if (ordered)
-          query.addedBefore(doc._id, this._projectionFn(fields), null);
+        if (ordered) {query.addedBefore(doc._id, this._projectionFn(fields), null);}
         query.added(doc._id, this._projectionFn(fields));
       });
     }
@@ -247,9 +240,8 @@ this.collection = collection;
     Object.assign(handle, {
       collection: this.collection,
       stop: () => {
-        if (this.reactive)
-          delete this.collection.queries[qid];
-      }
+        if (this.reactive) {delete this.collection.queries[qid];}
+      },
     });
 
     if (this.reactive && Tracker.active) {
@@ -273,11 +265,11 @@ this.collection = collection;
   // reason to have a "rewind" interface.  All it did was make multiple calls
   // to fetch/map/forEach return nothing the second time.
   // XXX COMPAT WITH 0.8.1
-  rewind () {}
+  rewind() {}
 
   // XXX Maybe we need a version of observe that just calls a callback if
   // anything changed.
-  _depend (changers, _allow_unordered) {
+  _depend(changers, _allow_unordered) {
     if (Tracker.active) {
       const v = new Tracker.Dependency;
       v.depend();
@@ -285,11 +277,10 @@ this.collection = collection;
 
       const options = {
         _suppress_initial: true,
-        _allow_unordered
+        _allow_unordered,
       };
       ['added', 'changed', 'removed', 'addedBefore', 'movedBefore'].forEach(fnName => {
-        if (changers[fnName])
-          options[fnName] = notifyChange;
+        if (changers[fnName]) {options[fnName] = notifyChange;}
       });
 
       // observeChanges will stop() when this computation is invalidated
@@ -297,7 +288,7 @@ this.collection = collection;
     }
   }
 
-  _getCollectionName () {
+  _getCollectionName() {
     return this.collection.name;
   }
 
@@ -316,7 +307,7 @@ this.collection = collection;
   // argument, this function will clear it and use it for this purpose (otherwise
   // it will just create its own _IdMap). The observeChanges implementation uses
   // this to remember the distances after this function returns.
-  _getRawObjects (options = {}) {
+  _getRawObjects(options = {}) {
     // XXX use OrderedDict instead of array, and make IdMap and OrderedDict
     // compatible
     const results = options.ordered ? [] : new LocalCollection._IdMap;
@@ -326,15 +317,11 @@ this.collection = collection;
       // If you have non-zero skip and ask for a single id, you get
       // nothing. This is so it matches the behavior of the '{_id: foo}'
       // path.
-      if (this.skip)
-        return results;
+      if (this.skip) {return results;}
 
       const selectedDoc = this.collection._docs.get(this._selectorId);
       if (selectedDoc) {
-        if (options.ordered)
-          results.push(selectedDoc);
-        else
-          results.set(this._selectorId, selectedDoc);
+        if (options.ordered) {results.push(selectedDoc);} else {results.set(this._selectorId, selectedDoc);}
       }
       return results;
     }
@@ -359,8 +346,7 @@ this.collection = collection;
       if (matchResult.result) {
         if (options.ordered) {
           results.push(doc);
-          if (distances && matchResult.distance !== undefined)
-            distances.set(id, matchResult.distance);
+          if (distances && matchResult.distance !== undefined) {distances.set(id, matchResult.distance);}
         } else {
           results.set(id, doc);
         }
@@ -368,13 +354,11 @@ this.collection = collection;
       // Fast path for limited unsorted queries.
       // XXX 'length' check here seems wrong for ordered
       if (this.limit && !this.skip && !this.sorter &&
-          results.length === this.limit)
-        return false;  // break
+          results.length === this.limit) {return false;}  // break
       return true;  // continue
     });
 
-    if (!options.ordered)
-      return results;
+    if (!options.ordered) {return results;}
 
     if (this.sorter) {
       const comparator = this.sorter.getComparator({distances});
@@ -382,13 +366,12 @@ this.collection = collection;
     }
 
     const idx_start = this.skip || 0;
-    const idx_end = this.limit ? (this.limit + idx_start) : results.length;
+    const idx_end = this.limit ? this.limit + idx_start : results.length;
     return results.slice(idx_start, idx_end);
   }
 
-  _publishCursor (sub) {
-    if (! this.collection.name)
-      throw new Error("Can't publish a cursor from a collection without a name.");
+  _publishCursor(sub) {
+    if (! this.collection.name) {throw new Error("Can't publish a cursor from a collection without a name.");}
     const collection = this.collection.name;
 
     // XXX minimongo should not depend on mongo-livedata!

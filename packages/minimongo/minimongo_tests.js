@@ -1,4 +1,4 @@
-Tinytest.add("minimongo - wrapTransform", test => {
+Tinytest.add('minimongo - wrapTransform', test => {
   const wrap = LocalCollection.wrapTransform;
 
   // Transforming no function gives falsey.
@@ -12,7 +12,7 @@ Tinytest.add("minimongo - wrapTransform", test => {
     doc.z = () => 43;
     return doc;
   };
-  const transformed = wrap(validTransform)({_id: "asdf", x: 54});
+  const transformed = wrap(validTransform)({_id: 'asdf', x: 54});
   test.equal(Object.keys(transformed), ['_id', 'y', 'z']);
   test.equal(transformed.y, 42);
   test.equal(transformed.z(), 43);
@@ -21,19 +21,19 @@ Tinytest.add("minimongo - wrapTransform", test => {
   const oid1 = new MongoID.ObjectID();
   const oid2 = new MongoID.ObjectID(oid1.toHexString());
   test.equal(wrap(() => ({
-    _id: oid2
+    _id: oid2,
   }))({_id: oid1}),
-             {_id: oid2});
+  {_id: oid2});
 
   // transform functions must return objects
   const invalidObjects = [
-    "asdf", new MongoID.ObjectID(), false, null, true,
-    27, [123], /adsf/, new Date, () => {}, undefined
+    'asdf', new MongoID.ObjectID(), false, null, true,
+    27, [123], /adsf/, new Date, () => {}, undefined,
   ];
   invalidObjects.forEach(invalidObject => {
     const wrapped = wrap(() => invalidObject);
     test.throws(() => {
-      wrapped({_id: "asdf"});
+      wrapped({_id: 'asdf'});
     });
   }, /transform must return object/);
 
@@ -45,7 +45,7 @@ Tinytest.add("minimongo - wrapTransform", test => {
 
   // transform functions may remove _ids
   test.equal({_id: 'a', x: 2},
-             wrap(d => {delete d._id; return d;})({_id: 'a', x: 2}));
+    wrap(d => {delete d._id; return d;})({_id: 'a', x: 2}));
 
   // test that wrapped transform functions are nonreactive
   const unwrapped = doc => {
@@ -54,7 +54,7 @@ Tinytest.add("minimongo - wrapTransform", test => {
   };
   const handle = Tracker.autorun(() => {
     test.isTrue(Tracker.active);
-    wrap(unwrapped)({_id: "xxx"});
+    wrap(unwrapped)({_id: 'xxx'});
   });
   handle.stop();
 });

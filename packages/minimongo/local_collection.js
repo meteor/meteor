@@ -4,14 +4,14 @@ import {
   isIndexable,
   isNumericKey,
   isOperatorObject,
-  projectionDetails
+  projectionDetails,
 } from './common.js';
 
 // XXX type checking on selectors (graceful error if malformed)
 
 // LocalCollection: a set of documents that supports queries and modifiers.
 export class LocalCollection {
-  constructor (name) {
+  constructor(name) {
     this.name = name;
     // _id -> document (also containing id)
     this._docs = new LocalCollection._IdMap;
@@ -55,19 +55,17 @@ export class LocalCollection {
   // XXX sort does not yet support subkeys ('a.b') .. fix that!
   // XXX add one more sort form: "key"
   // XXX tests
-  find (selector, options) {
+  find(selector, options) {
     // default syntax for everything is to omit the selector argument.
     // but if selector is explicitly passed in as false or undefined, we
     // want a selector that matches nothing.
-    if (arguments.length === 0)
-      selector = {};
+    if (arguments.length === 0) {selector = {};}
 
     return new LocalCollection.Cursor(this, selector, options);
   }
 
-  findOne (selector, options) {
-    if (arguments.length === 0)
-      selector = {};
+  findOne(selector, options) {
+    if (arguments.length === 0) {selector = {};}
 
     // NOTE: by setting limit 1 here, we end up using very inefficient
     // code that recomputes the whole query on each update. The upside is
@@ -85,7 +83,7 @@ export class LocalCollection {
 
   // XXX possibly enforce that 'undefined' does not appear (we assume
   // this in our handling of null and $exists)
-  insert (doc, callback) {
+  insert(doc, callback) {
     doc = EJSON.clone(doc);
 
     assertHasValidFieldNames(doc);
@@ -94,12 +92,11 @@ export class LocalCollection {
       // if you really want to use ObjectIDs, set this global.
       // Mongo.Collection specifies its own ids and does not use this code.
       doc._id = LocalCollection._useOID ? new MongoID.ObjectID()
-                                        : Random.id();
+        : Random.id();
     }
     const id = doc._id;
 
-    if (this._docs.has(id))
-      throw MinimongoError(`Duplicate _id '${id}'`);
+    if (this._docs.has(id)) {throw MinimongoError(`Duplicate _id '${id}'`);}
 
     this._saveOriginal(id, undefined);
     this._docs.set(id, doc);
@@ -111,36 +108,31 @@ export class LocalCollection {
       if (query.dirty) continue;
       const matchResult = query.matcher.documentMatches(doc);
       if (matchResult.result) {
-        if (query.distances && matchResult.distance !== undefined)
-          query.distances.set(id, matchResult.distance);
-        if (query.cursor.skip || query.cursor.limit)
-          queriesToRecompute.push(qid);
-        else
-          LocalCollection._insertInResults(query, doc);
+        if (query.distances && matchResult.distance !== undefined) {query.distances.set(id, matchResult.distance);}
+        if (query.cursor.skip || query.cursor.limit) {queriesToRecompute.push(qid);} else {LocalCollection._insertInResults(query, doc);}
       }
     }
 
     queriesToRecompute.forEach(qid => {
-      if (this.queries[qid])
-        this._recomputeResults(this.queries[qid]);
+      if (this.queries[qid]) {this._recomputeResults(this.queries[qid]);}
     });
     this._observeQueue.drain();
 
     // Defer because the caller likely doesn't expect the callback to be run
     // immediately.
-    if (callback)
+    if (callback) {
       Meteor.defer(() => {
         callback(null, id);
       });
+    }
     return id;
   }
 
   // Pause the observers. No callbacks from observers will fire until
   // 'resumeObservers' is called.
-  pauseObservers () {
+  pauseObservers() {
     // No-op if already paused.
-    if (this.paused)
-      return;
+    if (this.paused) {return;}
 
     // Set the 'paused' flag such that new observer messages don't fire.
     this.paused = true;
@@ -153,7 +145,7 @@ export class LocalCollection {
     }
   }
 
-  remove (selector, callback) {
+  remove(selector, callback) {
     // Easy special case: if we're not calling observeChanges callbacks and we're
     // not saving originals and we got asked to remove everything, then just empty
     // everything directly.
@@ -179,8 +171,7 @@ export class LocalCollection {
     const matcher = new Minimongo.Matcher(selector);
     const remove = [];
     this._eachPossiblyMatchingDoc(selector, (doc, id) => {
-      if (matcher.documentMatches(doc).result)
-        remove.push(id);
+      if (matcher.documentMatches(doc).result) {remove.push(id);}
     });
 
     const queriesToRecompute = [];
@@ -193,10 +184,7 @@ export class LocalCollection {
         if (query.dirty) return;
 
         if (query.matcher.documentMatches(removeDoc).result) {
-          if (query.cursor.skip || query.cursor.limit)
-            queriesToRecompute.push(qid);
-          else
-            queryRemove.push({qid, doc: removeDoc});
+          if (query.cursor.skip || query.cursor.limit) {queriesToRecompute.push(qid);} else {queryRemove.push({qid, doc: removeDoc});}
         }
       });
       this._saveOriginal(removeId, removeDoc);
@@ -213,15 +201,15 @@ export class LocalCollection {
     });
     queriesToRecompute.forEach(qid => {
       const query = this.queries[qid];
-      if (query)
-        this._recomputeResults(query);
+      if (query) {this._recomputeResults(query);}
     });
     this._observeQueue.drain();
     const result = remove.length;
-    if (callback)
+    if (callback) {
       Meteor.defer(() => {
         callback(null, result);
       });
+    }
     return result;
   }
 
@@ -229,10 +217,9 @@ export class LocalCollection {
   // notifications to bring them to the current state of the
   // database. Note that this is not just replaying all the changes that
   // happened during the pause, it is a smarter 'coalesced' diff.
-  resumeObservers () {
+  resumeObservers() {
     // No-op if not paused.
-    if (!this.paused)
-      return;
+    if (!this.paused) {return;}
 
     // Unset the 'paused' flag. Make sure to do this first, otherwise
     // observer methods won't actually fire when we trigger them.
@@ -256,9 +243,8 @@ export class LocalCollection {
     this._observeQueue.drain();
   }
 
-  retrieveOriginals () {
-    if (!this._savedOriginals)
-      throw new Error("Called retrieveOriginals without saveOriginals");
+  retrieveOriginals() {
+    if (!this._savedOriginals) {throw new Error('Called retrieveOriginals without saveOriginals');}
 
     const originals = this._savedOriginals;
     this._savedOriginals = null;
@@ -272,15 +258,14 @@ export class LocalCollection {
   // at the time of saveOriginals. (In the case of an inserted document, undefined
   // is the value.) You must alternate between calls to saveOriginals() and
   // retrieveOriginals().
-  saveOriginals () {
-    if (this._savedOriginals)
-      throw new Error("Called saveOriginals twice without retrieveOriginals");
+  saveOriginals() {
+    if (this._savedOriginals) {throw new Error('Called saveOriginals twice without retrieveOriginals');}
     this._savedOriginals = new LocalCollection._IdMap;
   }
 
   // XXX atomicity: if multi is true, and one modification fails, do
   // we rollback the whole operation, or what?
-  update (selector, mod, options, callback) {
+  update(selector, mod, options, callback) {
     if (! callback && options instanceof Function) {
       callback = options;
       options = null;
@@ -313,7 +298,7 @@ export class LocalCollection {
         }
 
         if (!(query.results instanceof Array)) {
-          throw new Error("Assertion failed: query.results not an array");
+          throw new Error('Assertion failed: query.results not an array');
         }
 
         // Clones a document to be stored in `qidToOriginalResults`
@@ -323,18 +308,17 @@ export class LocalCollection {
         const memoizedCloneIfNeeded = doc => {
           if (docMap.has(doc._id)) {
             return docMap.get(doc._id);
-          } else {
-            let docToMemoize;
-
-            if (idsMatchedBySelector && !idsMatchedBySelector.some(id => EJSON.equals(id, doc._id))) {
-              docToMemoize = doc;
-            } else {
-              docToMemoize = EJSON.clone(doc);
-            }
-
-            docMap.set(doc._id, docToMemoize);
-            return docToMemoize;
           }
+          let docToMemoize;
+
+          if (idsMatchedBySelector && !idsMatchedBySelector.some(id => EJSON.equals(id, doc._id))) {
+            docToMemoize = doc;
+          } else {
+            docToMemoize = EJSON.clone(doc);
+          }
+
+          docMap.set(doc._id, docToMemoize);
+          return docToMemoize;
         };
 
         qidToOriginalResults[qid] = query.results.map(memoizedCloneIfNeeded);
@@ -351,16 +335,14 @@ export class LocalCollection {
         this._saveOriginal(id, doc);
         this._modifyAndNotify(doc, mod, recomputeQids, queryResult.arrayIndices);
         ++updateCount;
-        if (!options.multi)
-          return false;  // break
+        if (!options.multi) {return false;}  // break
       }
       return true;
     });
 
     Object.keys(recomputeQids).forEach(qid => {
       const query = this.queries[qid];
-      if (query)
-        this._recomputeResults(query, qidToOriginalResults[qid]);
+      if (query) {this._recomputeResults(query, qidToOriginalResults[qid]);}
     });
     this._observeQueue.drain();
 
@@ -369,7 +351,6 @@ export class LocalCollection {
     // generate an id for it.
     let insertedId;
     if (updateCount === 0 && options.upsert) {
-
       let selectorModifier = LocalCollection._selectorIsId(selector)
         ? { _id: selector }
         : selector;
@@ -387,8 +368,7 @@ export class LocalCollection {
       LocalCollection._modify(newDoc, {$set: selectorModifier});
       LocalCollection._modify(newDoc, mod, {isInsert: true});
 
-      if (! newDoc._id && options.insertedId)
-        newDoc._id = options.insertedId;
+      if (! newDoc._id && options.insertedId) {newDoc._id = options.insertedId;}
       insertedId = this.insert(newDoc);
       updateCount = 1;
     }
@@ -399,32 +379,32 @@ export class LocalCollection {
     let result;
     if (options._returnObject) {
       result = {
-        numberAffected: updateCount
+        numberAffected: updateCount,
       };
-      if (insertedId !== undefined)
-        result.insertedId = insertedId;
+      if (insertedId !== undefined) {result.insertedId = insertedId;}
     } else {
       result = updateCount;
     }
 
-    if (callback)
+    if (callback) {
       Meteor.defer(() => {
         callback(null, result);
       });
+    }
     return result;
   }
 
   // A convenience wrapper on update. LocalCollection.upsert(sel, mod) is
   // equivalent to LocalCollection.update(sel, mod, { upsert: true, _returnObject:
   // true }).
-  upsert (selector, mod, options, callback) {
-    if (! callback && typeof options === "function") {
+  upsert(selector, mod, options, callback) {
+    if (! callback && typeof options === 'function') {
       callback = options;
       options = {};
     }
     return this.update(selector, mod, Object.assign({}, options, {
       upsert: true,
-      _returnObject: true
+      _returnObject: true,
     }), callback);
   }
 
@@ -432,7 +412,7 @@ export class LocalCollection {
   // f(doc, id) on each of them.  Specifically, if selector specifies
   // specific _id's, it only looks at those.  doc is *not* cloned: it is the
   // same object that is in _docs.
-  _eachPossiblyMatchingDoc (selector, f) {
+  _eachPossiblyMatchingDoc(selector, f) {
     const specificIds = LocalCollection._idsMatchedBySelector(selector);
     if (specificIds) {
       for (let i = 0; i < specificIds.length; ++i) {
@@ -440,8 +420,7 @@ export class LocalCollection {
         const doc = this._docs.get(id);
         if (doc) {
           const breakIfFalse = f(doc, id);
-          if (breakIfFalse === false)
-            break;
+          if (breakIfFalse === false) {break;}
         }
       }
     } else {
@@ -449,7 +428,7 @@ export class LocalCollection {
     }
   }
 
-  _modifyAndNotify (doc, mod, recomputeQids, arrayIndices) {
+  _modifyAndNotify(doc, mod, recomputeQids, arrayIndices) {
     const matched_before = {};
     for (let qid in this.queries) {
       const query = this.queries[qid];
@@ -475,8 +454,7 @@ export class LocalCollection {
       const before = matched_before[qid];
       const afterMatch = query.matcher.documentMatches(doc);
       const after = afterMatch.result;
-      if (after && query.distances && afterMatch.distance !== undefined)
-        query.distances.set(doc._id, afterMatch.distance);
+      if (after && query.distances && afterMatch.distance !== undefined) {query.distances.set(doc._id, afterMatch.distance);}
 
       if (query.cursor.skip || query.cursor.limit) {
         // We need to recompute any query where the doc may have been in the
@@ -486,8 +464,7 @@ export class LocalCollection {
         // applied... but if they are false, then the document definitely is NOT
         // in the output. So it's safe to skip recompute if neither before or
         // after are true.)
-        if (before || after)
-          recomputeQids[qid] = true;
+        if (before || after) {recomputeQids[qid] = true;}
       } else if (before && !after) {
         LocalCollection._removeFromResults(query, doc);
       } else if (!before && after) {
@@ -508,7 +485,7 @@ export class LocalCollection {
   // in an oldResults which was deep-copied before the modifier was applied.
   //
   // oldResults is guaranteed to be ignored if the query is not paused.
-  _recomputeResults (query, oldResults) {
+  _recomputeResults(query, oldResults) {
     if (this.paused) {
       // There's no reason to recompute the results now as we're still paused.
       // By flagging the query as "dirty", the recompute will be performed
@@ -517,10 +494,8 @@ export class LocalCollection {
       return;
     }
 
-    if (! this.paused && ! oldResults)
-      oldResults = query.results;
-    if (query.distances)
-      query.distances.clear();
+    if (! this.paused && ! oldResults) {oldResults = query.results;}
+    if (query.distances) {query.distances.clear();}
     query.results = query.cursor._getRawObjects({
       ordered: query.ordered, distances: query.distances});
 
@@ -531,15 +506,13 @@ export class LocalCollection {
     }
   }
 
-  _saveOriginal (id, doc) {
+  _saveOriginal(id, doc) {
     // Are we even trying to save originals?
-    if (!this._savedOriginals)
-      return;
+    if (!this._savedOriginals) {return;}
     // Have we previously mutated the original (and so 'doc' is not actually
     // original)?  (Note the 'has' check rather than truth: we store undefined
     // here for inserted docs!)
-    if (this._savedOriginals.has(id))
-      return;
+    if (this._savedOriginals.has(id)) {return;}
     this._savedOriginals.set(id, EJSON.clone(doc));
   }
 }
@@ -558,17 +531,16 @@ LocalCollection.ObserveHandle = ObserveHandle;
 // invoked immediately before the docs field is updated; this object is made
 // available as `this` to those callbacks.
 LocalCollection._CachingChangeObserver = class _CachingChangeObserver {
-  constructor (options = {}) {
+  constructor(options = {}) {
     const orderedFromCallbacks = options.callbacks &&
           LocalCollection._observeChangesCallbacksAreOrdered(options.callbacks);
     if (options.hasOwnProperty('ordered')) {
       this.ordered = options.ordered;
-      if (options.callbacks && options.ordered !== orderedFromCallbacks)
-        throw Error("ordered option doesn't match callbacks");
+      if (options.callbacks && options.ordered !== orderedFromCallbacks) {throw Error("ordered option doesn't match callbacks");}
     } else if (options.callbacks) {
       this.ordered = orderedFromCallbacks;
     } else {
-      throw Error("must provide ordered or callbacks");
+      throw Error('must provide ordered or callbacks');
     }
     const callbacks = options.callbacks || {};
 
@@ -591,7 +563,7 @@ LocalCollection._CachingChangeObserver = class _CachingChangeObserver {
           const doc = this.docs.get(id);
           callbacks.movedBefore && callbacks.movedBefore.call(this, id, before);
           this.docs.moveBefore(id, before || null);
-        }
+        },
       };
     } else {
       this.docs = new LocalCollection._IdMap;
@@ -601,7 +573,7 @@ LocalCollection._CachingChangeObserver = class _CachingChangeObserver {
           callbacks.added && callbacks.added.call(this, id, fields);
           doc._id = id;
           this.docs.set(id,  doc);
-        }
+        },
       };
     }
 
@@ -609,8 +581,7 @@ LocalCollection._CachingChangeObserver = class _CachingChangeObserver {
     // identical.
     this.applyChange.changed = (id, fields) => {
       const doc = this.docs.get(id);
-      if (!doc)
-        throw new Error(`Unknown id for changed: ${id}`);
+      if (!doc) {throw new Error(`Unknown id for changed: ${id}`);}
       callbacks.changed && callbacks.changed.call(
         this, id, EJSON.clone(fields));
       DiffSequence.applyChanges(doc, fields);
@@ -623,7 +594,7 @@ LocalCollection._CachingChangeObserver = class _CachingChangeObserver {
 };
 
 LocalCollection._IdMap = class _IdMap extends IdMap {
-  constructor () {
+  constructor() {
     super(MongoID.idStringify, MongoID.idParse);
   }
 };
@@ -638,18 +609,16 @@ LocalCollection._IdMap = class _IdMap extends IdMap {
 //   original _id field
 // - If the return value doesn't have an _id field, add it back.
 LocalCollection.wrapTransform = transform => {
-  if (! transform)
-    return null;
+  if (! transform) {return null;}
 
   // No need to doubly-wrap transforms.
-  if (transform.__wrappedTransform__)
-    return transform;
+  if (transform.__wrappedTransform__) {return transform;}
 
   const wrapped = doc => {
     if (!doc.hasOwnProperty('_id')) {
       // XXX do we ever have a transform on the oplog's collection? because that
       // collection has no _id.
-      throw new Error("can only transform documents with _id");
+      throw new Error('can only transform documents with _id');
     }
 
     const id = doc._id;
@@ -657,7 +626,7 @@ LocalCollection.wrapTransform = transform => {
     const transformed = Tracker.nonreactive(() => transform(doc));
 
     if (!LocalCollection._isPlainObject(transformed)) {
-      throw new Error("transform must return object");
+      throw new Error('transform must return object');
     }
 
     if (transformed.hasOwnProperty('_id')) {
@@ -685,7 +654,7 @@ LocalCollection._binarySearch = (cmp, array, value) => {
   let first = 0, rangeLength = array.length;
 
   while (rangeLength > 0) {
-    const halfRange = Math.floor(rangeLength/2);
+    const halfRange = Math.floor(rangeLength / 2);
     if (cmp(value, array[first + halfRange]) >= 0) {
       first += halfRange + 1;
       rangeLength -= halfRange + 1;
@@ -697,17 +666,13 @@ LocalCollection._binarySearch = (cmp, array, value) => {
 };
 
 LocalCollection._checkSupportedProjection = fields => {
-  if (fields !== Object(fields) || Array.isArray(fields))
-    throw MinimongoError("fields option must be an object");
+  if (fields !== Object(fields) || Array.isArray(fields)) {throw MinimongoError('fields option must be an object');}
 
   Object.keys(fields).forEach(keyPath => {
     const val = fields[keyPath];
-    if (keyPath.split('.').includes('$'))
-      throw MinimongoError("Minimongo doesn't support $ operator in projections yet.");
-    if (typeof val === 'object' && ['$elemMatch', '$meta', '$slice'].some(key => Object.keys(val).includes(key)))
-      throw MinimongoError("Minimongo doesn't support operators in projections yet.");
-    if (![1, 0, true, false].includes(val))
-      throw MinimongoError("Projection values should be one of 1, 0, true, or false");
+    if (keyPath.split('.').includes('$')) {throw MinimongoError("Minimongo doesn't support $ operator in projections yet.");}
+    if (typeof val === 'object' && ['$elemMatch', '$meta', '$slice'].some(key => Object.keys(val).includes(key))) {throw MinimongoError("Minimongo doesn't support operators in projections yet.");}
+    if (![1, 0, true, false].includes(val)) {throw MinimongoError('Projection values should be one of 1, 0, true, or false');}
   });
 };
 
@@ -727,23 +692,17 @@ LocalCollection._compileProjection = fields => {
   // returns transformed doc according to ruleTree
   const transform = (doc, ruleTree) => {
     // Special case for "sets"
-    if (Array.isArray(doc))
-      return doc.map(subdoc => transform(subdoc, ruleTree));
+    if (Array.isArray(doc)) {return doc.map(subdoc => transform(subdoc, ruleTree));}
 
     const res = details.including ? {} : EJSON.clone(doc);
     Object.keys(ruleTree).forEach(key => {
       const rule = ruleTree[key];
-      if (!doc.hasOwnProperty(key))
-        return;
+      if (!doc.hasOwnProperty(key)) {return;}
       if (rule === Object(rule)) {
         // For sub-objects/subsets we branch
-        if (doc[key] === Object(doc[key]))
-          res[key] = transform(doc[key], rule);
+        if (doc[key] === Object(doc[key])) {res[key] = transform(doc[key], rule);}
         // Otherwise we don't even touch this subfield
-      } else if (details.including)
-        res[key] = EJSON.clone(doc[key]);
-      else
-        delete res[key];
+      } else if (details.including) {res[key] = EJSON.clone(doc[key]);} else {delete res[key];}
     });
 
     return res;
@@ -752,10 +711,8 @@ LocalCollection._compileProjection = fields => {
   return obj => {
     const res = transform(obj, details.tree);
 
-    if (_idProjection && obj.hasOwnProperty('_id'))
-      res._id = obj._id;
-    if (!_idProjection && res.hasOwnProperty('_id'))
-      delete res._id;
+    if (_idProjection && obj.hasOwnProperty('_id')) {res._id = obj._id;}
+    if (!_idProjection && res.hasOwnProperty('_id')) {delete res._id;}
     return res;
   };
 };
@@ -781,12 +738,11 @@ LocalCollection._diffQueryUnorderedChanges = (oldResults, newResults, observer, 
 };
 
 LocalCollection._findInOrderedResults = (query, doc) => {
-  if (!query.ordered)
-    throw new Error("Can't call _findInOrderedResults on unordered query");
-  for (let i = 0; i < query.results.length; i++)
-    if (query.results[i] === doc)
-      return i;
-  throw Error("object missing from query");
+  if (!query.ordered) {throw new Error("Can't call _findInOrderedResults on unordered query");}
+  for (let i = 0; i < query.results.length; i++) {
+    if (query.results[i] === doc) {return i;}
+  }
+  throw Error('object missing from query');
 };
 
 // If this is a selector which explicitly constrains the match by ID to a finite
@@ -796,16 +752,13 @@ LocalCollection._findInOrderedResults = (query, doc) => {
 // access-controlled update and remove.
 LocalCollection._idsMatchedBySelector = selector => {
   // Is the selector just an ID?
-  if (LocalCollection._selectorIsId(selector))
-    return [selector];
-  if (!selector)
-    return null;
+  if (LocalCollection._selectorIsId(selector)) {return [selector];}
+  if (!selector) {return null;}
 
   // Do we have an _id clause?
   if (selector.hasOwnProperty('_id')) {
     // Is the _id clause just an ID?
-    if (LocalCollection._selectorIsId(selector._id))
-      return [selector._id];
+    if (LocalCollection._selectorIsId(selector._id)) {return [selector._id];}
     // Is the _id clause {_id: {$in: ["x", "y", "z"]}}?
     if (selector._id && selector._id.$in
         && Array.isArray(selector._id.$in)
@@ -822,8 +775,7 @@ LocalCollection._idsMatchedBySelector = selector => {
   if (selector.$and && Array.isArray(selector.$and)) {
     for (let i = 0; i < selector.$and.length; ++i) {
       const subIds = LocalCollection._idsMatchedBySelector(selector.$and[i]);
-      if (subIds)
-        return subIds;
+      if (subIds) {return subIds;}
     }
   }
 
@@ -841,11 +793,8 @@ LocalCollection._insertInResults = (query, doc) => {
       const i = LocalCollection._insertInSortedList(
         query.sorter.getComparator({distances: query.distances}),
         query.results, doc);
-      let next = query.results[i+1];
-      if (next)
-        next = next._id;
-      else
-        next = null;
+      let next = query.results[i + 1];
+      if (next) {next = next._id;} else {next = null;}
       query.addedBefore(doc._id, query.projectionFn(fields), next);
     }
     query.added(doc._id, query.projectionFn(fields));
@@ -887,8 +836,7 @@ LocalCollection._isPlainObject = x => {
 //     out when to set the fields in $setOnInsert, if present.
 LocalCollection._modify = (doc, mod, options) => {
   options = options || {};
-  if (!LocalCollection._isPlainObject(mod))
-    throw MinimongoError("Modifier must be an object");
+  if (!LocalCollection._isPlainObject(mod)) {throw MinimongoError('Modifier must be an object');}
 
   // Make sure the caller can't mutate our data structures.
   mod = EJSON.clone(mod);
@@ -898,8 +846,7 @@ LocalCollection._modify = (doc, mod, options) => {
   let newDoc;
 
   if (!isModifier) {
-    if (mod._id && !EJSON.equals(doc._id, mod._id))
-      throw MinimongoError("Cannot change the _id of a document");
+    if (mod._id && !EJSON.equals(doc._id, mod._id)) {throw MinimongoError('Cannot change the _id of a document');}
 
     // replace the whole document
     assertHasValidFieldNames(mod);
@@ -912,18 +859,16 @@ LocalCollection._modify = (doc, mod, options) => {
       const operand = mod[op];
       let modFunc = MODIFIERS[op];
       // Treat $setOnInsert as $set if this is an insert.
-      if (options.isInsert && op === '$setOnInsert')
-        modFunc = MODIFIERS['$set'];
-      if (!modFunc)
-        throw MinimongoError(`Invalid modifier specified ${op}`);
+      if (options.isInsert && op === '$setOnInsert') {modFunc = MODIFIERS.$set;}
+      if (!modFunc) {throw MinimongoError(`Invalid modifier specified ${op}`);}
       Object.keys(operand).forEach(keypath => {
         const arg = operand[keypath];
         if (keypath === '') {
-          throw MinimongoError("An empty update path is not valid.");
+          throw MinimongoError('An empty update path is not valid.');
         }
 
         if (keypath === '_id' && op !== '$setOnInsert') {
-          throw MinimongoError("Mod on _id not allowed");
+          throw MinimongoError('Mod on _id not allowed');
         }
 
         const keyparts = keypath.split('.');
@@ -934,11 +879,11 @@ LocalCollection._modify = (doc, mod, options) => {
         }
 
         const noCreate = NO_CREATE_MODIFIERS.hasOwnProperty(op);
-        const forbidArray = (op === "$rename");
+        const forbidArray = op === '$rename';
         const target = findModTarget(newDoc, keyparts, {
           noCreate: NO_CREATE_MODIFIERS[op],
-          forbidArray: (op === "$rename"),
-          arrayIndices: options.arrayIndices
+          forbidArray: op === '$rename',
+          arrayIndices: options.arrayIndices,
         });
         const field = keyparts.pop();
         modFunc(target, field, arg, keypath, newDoc);
@@ -951,8 +896,7 @@ LocalCollection._modify = (doc, mod, options) => {
     // Note: this used to be for (var k in doc) however, this does not
     // work right in Opera. Deleting from a doc while iterating over it
     // would sometimes cause opera to skip some keys.
-    if (k !== '_id')
-      delete doc[k];
+    if (k !== '_id') {delete doc[k];}
   });
   Object.keys(newDoc).forEach(k => {
     doc[k] = newDoc[k];
@@ -971,24 +915,21 @@ LocalCollection._observeFromObserveChanges = (cursor, observeCallbacks) => {
     // relative order, transforms, and applyChanges -- without the speed hit.
     const indices = !observeCallbacks._no_indices;
     observeChangesCallbacks = {
-      addedBefore (id, fields, before) {
-        if (suppressed || !(observeCallbacks.addedAt || observeCallbacks.added))
-          return;
+      addedBefore(id, fields, before) {
+        if (suppressed || !(observeCallbacks.addedAt || observeCallbacks.added)) {return;}
         const doc = transform(Object.assign(fields, {_id: id}));
         if (observeCallbacks.addedAt) {
           const index = indices
-                ? (before ? this.docs.indexOf(before) : this.docs.size()) : -1;
+            ? before ? this.docs.indexOf(before) : this.docs.size() : -1;
           observeCallbacks.addedAt(doc, index, before);
         } else {
           observeCallbacks.added(doc);
         }
       },
-      changed (id, fields) {
-        if (!(observeCallbacks.changedAt || observeCallbacks.changed))
-          return;
+      changed(id, fields) {
+        if (!(observeCallbacks.changedAt || observeCallbacks.changed)) {return;}
         let doc = EJSON.clone(this.docs.get(id));
-        if (!doc)
-          throw new Error(`Unknown id for changed: ${id}`);
+        if (!doc) {throw new Error(`Unknown id for changed: ${id}`);}
         const oldDoc = transform(EJSON.clone(doc));
         DiffSequence.applyChanges(doc, fields);
         doc = transform(doc);
@@ -999,23 +940,20 @@ LocalCollection._observeFromObserveChanges = (cursor, observeCallbacks) => {
           observeCallbacks.changed(doc, oldDoc);
         }
       },
-      movedBefore (id, before) {
-        if (!observeCallbacks.movedTo)
-          return;
+      movedBefore(id, before) {
+        if (!observeCallbacks.movedTo) {return;}
         const from = indices ? this.docs.indexOf(id) : -1;
 
         let to = indices
-              ? (before ? this.docs.indexOf(before) : this.docs.size()) : -1;
+          ? before ? this.docs.indexOf(before) : this.docs.size() : -1;
         // When not moving backwards, adjust for the fact that removing the
         // document slides everything back one slot.
-        if (to > from)
-          --to;
+        if (to > from) {--to;}
         observeCallbacks.movedTo(transform(EJSON.clone(this.docs.get(id))),
-                                 from, to, before || null);
+          from, to, before || null);
       },
-      removed (id) {
-        if (!(observeCallbacks.removedAt || observeCallbacks.removed))
-          return;
+      removed(id) {
+        if (!(observeCallbacks.removedAt || observeCallbacks.removed)) {return;}
         // technically maybe there should be an EJSON.clone here, but it's about
         // to be removed from this.docs!
         const doc = transform(this.docs.get(id));
@@ -1025,30 +963,30 @@ LocalCollection._observeFromObserveChanges = (cursor, observeCallbacks) => {
         } else {
           observeCallbacks.removed(doc);
         }
-      }
+      },
     };
   } else {
     observeChangesCallbacks = {
-      added (id, fields) {
+      added(id, fields) {
         if (!suppressed && observeCallbacks.added) {
           const doc = Object.assign(fields, {_id: id});
           observeCallbacks.added(transform(doc));
         }
       },
-      changed (id, fields) {
+      changed(id, fields) {
         if (observeCallbacks.changed) {
           const oldDoc = this.docs.get(id);
           const doc = EJSON.clone(oldDoc);
           DiffSequence.applyChanges(doc, fields);
           observeCallbacks.changed(transform(doc),
-                                   transform(EJSON.clone(oldDoc)));
+            transform(EJSON.clone(oldDoc)));
         }
       },
-      removed (id) {
+      removed(id) {
         if (observeCallbacks.removed) {
           observeCallbacks.removed(transform(this.docs.get(id)));
         }
-      }
+      },
     };
   }
 
@@ -1061,20 +999,16 @@ LocalCollection._observeFromObserveChanges = (cursor, observeCallbacks) => {
 };
 
 LocalCollection._observeCallbacksAreOrdered = callbacks => {
-  if (callbacks.addedAt && callbacks.added)
-    throw new Error("Please specify only one of added() and addedAt()");
-  if (callbacks.changedAt && callbacks.changed)
-    throw new Error("Please specify only one of changed() and changedAt()");
-  if (callbacks.removed && callbacks.removedAt)
-    throw new Error("Please specify only one of removed() and removedAt()");
+  if (callbacks.addedAt && callbacks.added) {throw new Error('Please specify only one of added() and addedAt()');}
+  if (callbacks.changedAt && callbacks.changed) {throw new Error('Please specify only one of changed() and changedAt()');}
+  if (callbacks.removed && callbacks.removedAt) {throw new Error('Please specify only one of removed() and removedAt()');}
 
   return !!(callbacks.addedAt || callbacks.movedTo || callbacks.changedAt
             || callbacks.removedAt);
 };
 
 LocalCollection._observeChangesCallbacksAreOrdered = callbacks => {
-  if (callbacks.added && callbacks.addedBefore)
-    throw new Error("Please specify only one of added() and addedBefore()");
+  if (callbacks.added && callbacks.addedBefore) {throw new Error('Please specify only one of added() and addedBefore()');}
   return !!(callbacks.addedBefore || callbacks.movedBefore);
 };
 
@@ -1117,22 +1051,21 @@ LocalCollection._removeFromResults = (query, doc) => {
 
 // Is this selector just shorthand for lookup by _id?
 LocalCollection._selectorIsId = selector => {
-  return (typeof selector === "string") ||
-    (typeof selector === "number") ||
+  return typeof selector === 'string' ||
+    typeof selector === 'number' ||
     selector instanceof MongoID.ObjectID;
 };
 
 // Is the selector just lookup by _id (shorthand or not)?
 LocalCollection._selectorIsIdPerhapsAsObject = selector => {
   return LocalCollection._selectorIsId(selector) ||
-    (selector && typeof selector === "object" &&
+    selector && typeof selector === 'object' &&
      selector._id && LocalCollection._selectorIsId(selector._id) &&
-     Object.keys(selector).length === 1);
+     Object.keys(selector).length === 1;
 };
 
 LocalCollection._updateInResults = (query, doc, old_doc) => {
-  if (!EJSON.equals(doc._id, old_doc._id))
-    throw new Error("Can't change a doc's _id while updating");
+  if (!EJSON.equals(doc._id, old_doc._id)) {throw new Error("Can't change a doc's _id while updating");}
   const projectionFn = query.projectionFn;
   const changedFields = DiffSequence.makeChangedFields(
     projectionFn(doc), projectionFn(old_doc));
@@ -1147,10 +1080,8 @@ LocalCollection._updateInResults = (query, doc, old_doc) => {
 
   const orig_idx = LocalCollection._findInOrderedResults(query, doc);
 
-  if (Object.keys(changedFields).length)
-    query.changed(doc._id, changedFields);
-  if (!query.sorter)
-    return;
+  if (Object.keys(changedFields).length) {query.changed(doc._id, changedFields);}
+  if (!query.sorter) {return;}
 
   // just take it out and put it back in again, and see if the index
   // changes
@@ -1159,37 +1090,34 @@ LocalCollection._updateInResults = (query, doc, old_doc) => {
     query.sorter.getComparator({distances: query.distances}),
     query.results, doc);
   if (orig_idx !== new_idx) {
-    let next = query.results[new_idx+1];
-    if (next)
-      next = next._id;
-    else
-      next = null;
+    let next = query.results[new_idx + 1];
+    if (next) {next = next._id;} else {next = null;}
     query.movedBefore && query.movedBefore(doc._id, next);
   }
 };
 
 const MODIFIERS = {
   $currentDate(target, field, arg) {
-    if (typeof arg === "object" && arg.hasOwnProperty("$type")) {
-       if (arg.$type !== "date") {
-          throw MinimongoError(
-            "Minimongo does currently only support the date type " +
-            "in $currentDate modifiers",
-            { field });
-       }
+    if (typeof arg === 'object' && arg.hasOwnProperty('$type')) {
+      if (arg.$type !== 'date') {
+        throw MinimongoError(
+          'Minimongo does currently only support the date type ' +
+            'in $currentDate modifiers',
+          { field });
+      }
     } else if (arg !== true) {
-      throw MinimongoError("Invalid $currentDate modifier", { field });
+      throw MinimongoError('Invalid $currentDate modifier', { field });
     }
     target[field] = new Date();
   },
   $min(target, field, arg) {
-    if (typeof arg !== "number") {
-      throw MinimongoError("Modifier $min allowed for numbers only", { field });
+    if (typeof arg !== 'number') {
+      throw MinimongoError('Modifier $min allowed for numbers only', { field });
     }
     if (field in target) {
-      if (typeof target[field] !== "number") {
+      if (typeof target[field] !== 'number') {
         throw MinimongoError(
-          "Cannot apply $min modifier to non-number", { field });
+          'Cannot apply $min modifier to non-number', { field });
       }
       if (target[field] > arg) {
         target[field] = arg;
@@ -1199,28 +1127,28 @@ const MODIFIERS = {
     }
   },
   $max(target, field, arg) {
-    if (typeof arg !== "number") {
-      throw MinimongoError("Modifier $max allowed for numbers only", { field });
+    if (typeof arg !== 'number') {
+      throw MinimongoError('Modifier $max allowed for numbers only', { field });
     }
     if (field in target) {
-      if (typeof target[field] !== "number") {
+      if (typeof target[field] !== 'number') {
         throw MinimongoError(
-          "Cannot apply $max modifier to non-number", { field });
+          'Cannot apply $max modifier to non-number', { field });
       }
       if (target[field] < arg) {
-         target[field] = arg;
+        target[field] = arg;
       }
     } else {
       target[field] = arg;
     }
   },
   $inc(target, field, arg) {
-    if (typeof arg !== "number")
-      throw MinimongoError("Modifier $inc allowed for numbers only", { field });
+    if (typeof arg !== 'number') {throw MinimongoError('Modifier $inc allowed for numbers only', { field });}
     if (field in target) {
-      if (typeof target[field] !== "number")
+      if (typeof target[field] !== 'number') {
         throw MinimongoError(
-          "Cannot apply $inc modifier to non-number", { field });
+          'Cannot apply $inc modifier to non-number', { field });
+      }
       target[field] += arg;
     } else {
       target[field] = arg;
@@ -1229,12 +1157,12 @@ const MODIFIERS = {
   $set(target, field, arg) {
     if (target !== Object(target)) { // not an array or an object
       const e = MinimongoError(
-        "Cannot set property on non-object field", { field });
+        'Cannot set property on non-object field', { field });
       e.setPropertyError = true;
       throw e;
     }
     if (target === null) {
-      const e = MinimongoError("Cannot set property on null", { field });
+      const e = MinimongoError('Cannot set property on null', { field });
       e.setPropertyError = true;
       throw e;
     }
@@ -1247,18 +1175,16 @@ const MODIFIERS = {
   $unset(target, field, arg) {
     if (target !== undefined) {
       if (target instanceof Array) {
-        if (field in target)
-          target[field] = null;
-      } else
-        delete target[field];
+        if (field in target) {target[field] = null;}
+      } else {delete target[field];}
     }
   },
   $push(target, field, arg) {
-    if (target[field] === undefined)
-      target[field] = [];
-    if (!(target[field] instanceof Array))
+    if (target[field] === undefined) {target[field] = [];}
+    if (!(target[field] instanceof Array)) {
       throw MinimongoError(
-        "Cannot apply $push modifier to non-array", { field });
+        'Cannot apply $push modifier to non-array', { field });
+    }
 
     if (!(arg && arg.$each)) {
       // Simple mode: not $each
@@ -1269,27 +1195,25 @@ const MODIFIERS = {
 
     // Fancy mode: $each (and maybe $slice and $sort and $position)
     const toPush = arg.$each;
-    if (!(toPush instanceof Array))
-      throw MinimongoError("$each must be an array", { field });
+    if (!(toPush instanceof Array)) {throw MinimongoError('$each must be an array', { field });}
     assertHasValidFieldNames(toPush);
 
     // Parse $position
     let position = undefined;
     if ('$position' in arg) {
-      if (typeof arg.$position !== "number")
-        throw MinimongoError("$position must be a numeric value", { field });
+      if (typeof arg.$position !== 'number') {throw MinimongoError('$position must be a numeric value', { field });}
       // XXX should check to make sure integer
-      if (arg.$position < 0)
+      if (arg.$position < 0) {
         throw MinimongoError(
-          "$position in $push must be zero or positive", { field });
+          '$position in $push must be zero or positive', { field });
+      }
       position = arg.$position;
     }
 
     // Parse $slice.
     let slice = undefined;
     if ('$slice' in arg) {
-      if (typeof arg.$slice !== "number")
-        throw MinimongoError("$slice must be a numeric value", { field });
+      if (typeof arg.$slice !== 'number') {throw MinimongoError('$slice must be a numeric value', { field });}
       // XXX should check to make sure integer
       slice = arg.$slice;
     }
@@ -1297,8 +1221,7 @@ const MODIFIERS = {
     // Parse $sort.
     let sortFunction = undefined;
     if (arg.$sort) {
-      if (slice === undefined)
-        throw MinimongoError("$sort requires $slice to be present", { field });
+      if (slice === undefined) {throw MinimongoError('$sort requires $slice to be present', { field });}
       // XXX this allows us to use a $sort whose value is an array, but that's
       // actually an extension of the Node driver, so it won't work
       // server-side. Could be confusing!
@@ -1306,106 +1229,84 @@ const MODIFIERS = {
       sortFunction = new Minimongo.Sorter(arg.$sort).getComparator();
       for (let i = 0; i < toPush.length; i++) {
         if (LocalCollection._f._type(toPush[i]) !== 3) {
-          throw MinimongoError("$push like modifiers using $sort " +
-                      "require all elements to be objects", { field });
+          throw MinimongoError('$push like modifiers using $sort ' +
+                      'require all elements to be objects', { field });
         }
       }
     }
 
     // Actually push.
     if (position === undefined) {
-      for (let j = 0; j < toPush.length; j++)
-        target[field].push(toPush[j]);
+      for (let j = 0; j < toPush.length; j++) {target[field].push(toPush[j]);}
     } else {
       const spliceArguments = [position, 0];
-      for (let j = 0; j < toPush.length; j++)
-        spliceArguments.push(toPush[j]);
+      for (let j = 0; j < toPush.length; j++) {spliceArguments.push(toPush[j]);}
       Array.prototype.splice.apply(target[field], spliceArguments);
     }
 
     // Actually sort.
-    if (sortFunction)
-      target[field].sort(sortFunction);
+    if (sortFunction) {target[field].sort(sortFunction);}
 
     // Actually slice.
     if (slice !== undefined) {
-      if (slice === 0)
-        target[field] = [];  // differs from Array.slice!
-      else if (slice < 0)
-        target[field] = target[field].slice(slice);
-      else
-        target[field] = target[field].slice(0, slice);
+      if (slice === 0) {target[field] = [];}  // differs from Array.slice!
+      else if (slice < 0) {target[field] = target[field].slice(slice);} else {target[field] = target[field].slice(0, slice);}
     }
   },
   $pushAll(target, field, arg) {
-    if (!(typeof arg === "object" && arg instanceof Array))
-      throw MinimongoError("Modifier $pushAll/pullAll allowed for arrays only");
+    if (!(typeof arg === 'object' && arg instanceof Array)) {throw MinimongoError('Modifier $pushAll/pullAll allowed for arrays only');}
     assertHasValidFieldNames(arg);
     const x = target[field];
-    if (x === undefined)
-      target[field] = arg;
-    else if (!(x instanceof Array))
+    if (x === undefined) {target[field] = arg;} else if (!(x instanceof Array)) {
       throw MinimongoError(
-        "Cannot apply $pushAll modifier to non-array", { field });
-    else {
-      for (let i = 0; i < arg.length; i++)
-        x.push(arg[i]);
+        'Cannot apply $pushAll modifier to non-array', { field });
+    } else {
+      for (let i = 0; i < arg.length; i++) {x.push(arg[i]);}
     }
   },
   $addToSet(target, field, arg) {
     let isEach = false;
-    if (typeof arg === "object") {
-      //check if first key is '$each'
+    if (typeof arg === 'object') {
+      // check if first key is '$each'
       const keys = Object.keys(arg);
-      if (keys[0] === "$each"){
+      if (keys[0] === '$each') {
         isEach = true;
       }
     }
-    const values = isEach ? arg["$each"] : [arg];
+    const values = isEach ? arg.$each : [arg];
     assertHasValidFieldNames(values);
     const x = target[field];
-    if (x === undefined)
-      target[field] = values;
-    else if (!(x instanceof Array))
+    if (x === undefined) {target[field] = values;} else if (!(x instanceof Array)) {
       throw MinimongoError(
-        "Cannot apply $addToSet modifier to non-array", { field });
-    else {
+        'Cannot apply $addToSet modifier to non-array', { field });
+    } else {
       values.forEach(value => {
-        for (let i = 0; i < x.length; i++)
-          if (LocalCollection._f._equal(value, x[i]))
-            return;
+        for (let i = 0; i < x.length; i++) {
+          if (LocalCollection._f._equal(value, x[i])) {return;}
+        }
         x.push(value);
       });
     }
   },
   $pop(target, field, arg) {
-    if (target === undefined)
-      return;
+    if (target === undefined) {return;}
     const x = target[field];
-    if (x === undefined)
-      return;
-    else if (!(x instanceof Array))
+    if (x === undefined) {return;} else if (!(x instanceof Array)) {
       throw MinimongoError(
-        "Cannot apply $pop modifier to non-array", { field });
-    else {
-      if (typeof arg === 'number' && arg < 0)
-        x.splice(0, 1);
-      else
-        x.pop();
+        'Cannot apply $pop modifier to non-array', { field });
+    } else {
+      if (typeof arg === 'number' && arg < 0) {x.splice(0, 1);} else {x.pop();}
     }
   },
   $pull(target, field, arg) {
-    if (target === undefined)
-      return;
+    if (target === undefined) {return;}
     const x = target[field];
-    if (x === undefined)
-      return;
-    else if (!(x instanceof Array))
+    if (x === undefined) {return;} else if (!(x instanceof Array)) {
       throw MinimongoError(
-        "Cannot apply $pull/pullAll modifier to non-array", { field });
-    else {
+        'Cannot apply $pull/pullAll modifier to non-array', { field });
+    } else {
       const out = [];
-      if (arg != null && typeof arg === "object" && !(arg instanceof Array)) {
+      if (arg != null && typeof arg === 'object' && !(arg instanceof Array)) {
         // XXX would be much nicer to compile this once, rather than
         // for each document we modify.. but usually we're not
         // modifying that many documents, so we'll let it slide for
@@ -1416,30 +1317,28 @@ const MODIFIERS = {
         // like {$gt: 4} is not normally a complete selector.
         // same issue as $elemMatch possibly?
         const matcher = new Minimongo.Matcher(arg);
-        for (let i = 0; i < x.length; i++)
-          if (!matcher.documentMatches(x[i]).result)
-            out.push(x[i]);
+        for (let i = 0; i < x.length; i++) {
+          if (!matcher.documentMatches(x[i]).result) {out.push(x[i]);}
+        }
       } else {
-        for (let i = 0; i < x.length; i++)
-          if (!LocalCollection._f._equal(x[i], arg))
-            out.push(x[i]);
+        for (let i = 0; i < x.length; i++) {
+          if (!LocalCollection._f._equal(x[i], arg)) {out.push(x[i]);}
+        }
       }
       target[field] = out;
     }
   },
   $pullAll(target, field, arg) {
-    if (!(typeof arg === "object" && arg instanceof Array))
+    if (!(typeof arg === 'object' && arg instanceof Array)) {
       throw MinimongoError(
-        "Modifier $pushAll/pullAll allowed for arrays only", { field });
-    if (target === undefined)
-      return;
+        'Modifier $pushAll/pullAll allowed for arrays only', { field });
+    }
+    if (target === undefined) {return;}
     const x = target[field];
-    if (x === undefined)
-      return;
-    else if (!(x instanceof Array))
+    if (x === undefined) {return;} else if (!(x instanceof Array)) {
       throw MinimongoError(
-        "Cannot apply $pull/pullAll modifier to non-array", { field });
-    else {
+        'Cannot apply $pull/pullAll modifier to non-array', { field });
+    } else {
       const out = [];
       for (let i = 0; i < x.length; i++) {
         let exclude = false;
@@ -1449,20 +1348,17 @@ const MODIFIERS = {
             break;
           }
         }
-        if (!exclude)
-          out.push(x[i]);
+        if (!exclude) {out.push(x[i]);}
       }
       target[field] = out;
     }
   },
   $rename(target, field, arg, keypath, doc) {
     if (keypath === arg)
-      // no idea why mongo has this restriction..
-      throw MinimongoError("$rename source must differ from target", { field });
-    if (target === null)
-      throw MinimongoError("$rename source field invalid", { field });
-    if (typeof arg !== "string")
-      throw MinimongoError("$rename target must be a string", { field });
+    // no idea why mongo has this restriction..
+    {throw MinimongoError('$rename source must differ from target', { field });}
+    if (target === null) {throw MinimongoError('$rename source field invalid', { field });}
+    if (typeof arg !== 'string') {throw MinimongoError('$rename target must be a string', { field });}
     if (arg.includes('\0')) {
       // Null bytes are not allowed in Mongo field names
       // https://docs.mongodb.com/manual/reference/limits/#Restrictions-on-Field-Names
@@ -1470,23 +1366,21 @@ const MODIFIERS = {
         "The 'to' field for $rename cannot contain an embedded null byte",
         { field });
     }
-    if (target === undefined)
-      return;
+    if (target === undefined) {return;}
     const v = target[field];
     delete target[field];
 
     const keyparts = arg.split('.');
     const target2 = findModTarget(doc, keyparts, {forbidArray: true});
-    if (target2 === null)
-      throw MinimongoError("$rename target field invalid", { field });
+    if (target2 === null) {throw MinimongoError('$rename target field invalid', { field });}
     const field2 = keyparts.pop();
     target2[field2] = v;
   },
   $bit(target, field, arg) {
     // XXX mongo only supports $bit on integers, and we only support
     // native javascript numbers (doubles) so far, so we can't support $bit
-    throw MinimongoError("$bit is not supported", { field });
-  }
+    throw MinimongoError('$bit is not supported', { field });
+  },
 };
 
 const NO_CREATE_MODIFIERS = {
@@ -1494,7 +1388,7 @@ const NO_CREATE_MODIFIERS = {
   $pop: true,
   $rename: true,
   $pull: true,
-  $pullAll: true
+  $pullAll: true,
 };
 
 // Make sure field names do not contain Mongo restricted
@@ -1502,13 +1396,13 @@ const NO_CREATE_MODIFIERS = {
 // https://docs.mongodb.com/manual/reference/limits/#Restrictions-on-Field-Names
 const invalidCharMsg = {
   '.': "contain '.'",
-  '$': "start with '$'",
-  '\0': "contain null bytes",
+  $: "start with '$'",
+  '\0': 'contain null bytes',
 };
 
 // checks if all field names in an object are valid
-function assertHasValidFieldNames (doc){
-  if (doc && typeof doc === "object") {
+function assertHasValidFieldNames(doc) {
+  if (doc && typeof doc === 'object') {
     JSON.stringify(doc, (key, value) => {
       assertIsValidFieldName(key);
       return value;
@@ -1516,7 +1410,7 @@ function assertHasValidFieldNames (doc){
   }
 }
 
-function assertIsValidFieldName (key) {
+function assertIsValidFieldName(key) {
   let match;
   if (typeof key === 'string' && (match = key.match(/^\$|\.|\0/))) {
     throw MinimongoError(`Key ${key} must not ${invalidCharMsg[match[0]]}`);
@@ -1543,69 +1437,57 @@ function assertIsValidFieldName (key) {
 function findModTarget(doc, keyparts, options = {}) {
   let usedArrayIndex = false;
   for (let i = 0; i < keyparts.length; i++) {
-    const last = (i === keyparts.length - 1);
+    const last = i === keyparts.length - 1;
     let keypart = keyparts[i];
     const indexable = isIndexable(doc);
     if (!indexable) {
-      if (options.noCreate)
-        return undefined;
+      if (options.noCreate) {return undefined;}
       const e = MinimongoError(
         `cannot use the part '${keypart}' to traverse ${doc}`);
       e.setPropertyError = true;
       throw e;
     }
     if (doc instanceof Array) {
-      if (options.forbidArray)
-        return null;
+      if (options.forbidArray) {return null;}
       if (keypart === '$') {
-        if (usedArrayIndex)
-          throw MinimongoError("Too many positional (i.e. '$') elements");
+        if (usedArrayIndex) {throw MinimongoError("Too many positional (i.e. '$') elements");}
         if (!options.arrayIndices || !options.arrayIndices.length) {
-          throw MinimongoError("The positional operator did not find the " +
-                               "match needed from the query");
+          throw MinimongoError('The positional operator did not find the ' +
+                               'match needed from the query');
         }
         keypart = options.arrayIndices[0];
         usedArrayIndex = true;
       } else if (isNumericKey(keypart)) {
         keypart = parseInt(keypart);
       } else {
-        if (options.noCreate)
-          return undefined;
+        if (options.noCreate) {return undefined;}
         throw MinimongoError(
           `can't append to array using string field name [${keypart}]`);
       }
       if (last)
-        // handle 'a.01'
-        keyparts[i] = keypart;
-      if (options.noCreate && keypart >= doc.length)
-        return undefined;
-      while (doc.length < keypart)
-        doc.push(null);
+      // handle 'a.01'
+      {keyparts[i] = keypart;}
+      if (options.noCreate && keypart >= doc.length) {return undefined;}
+      while (doc.length < keypart) {doc.push(null);}
       if (!last) {
-        if (doc.length === keypart)
-          doc.push({});
-        else if (typeof doc[keypart] !== "object")
-          throw MinimongoError(`can't modify field '${keyparts[i + 1]}' of list value ${JSON.stringify(doc[keypart])}`);
+        if (doc.length === keypart) {doc.push({});} else if (typeof doc[keypart] !== 'object') {throw MinimongoError(`can't modify field '${keyparts[i + 1]}' of list value ${JSON.stringify(doc[keypart])}`);}
       }
     } else {
       assertIsValidFieldName(keypart);
       if (!(keypart in doc)) {
-        if (options.noCreate)
-          return undefined;
-        if (!last)
-          doc[keypart] = {};
+        if (options.noCreate) {return undefined;}
+        if (!last) {doc[keypart] = {};}
       }
     }
 
-    if (last)
-      return doc;
+    if (last) {return doc;}
     doc = doc[keypart];
   }
 
   // notreached
 }
 
-function objectOnlyHasDollarKeys (object) {
+function objectOnlyHasDollarKeys(object) {
   const keys = Object.keys(object);
   return keys.length > 0 && keys.every(key => key.charAt(0) === '$');
 }
