@@ -4,39 +4,36 @@ import {LocalCollection} from './local_collection.js';
 // a defined order, limit, and offset.  creating a Cursor with LocalCollection.find(),
 export class Cursor {
   // don't call this ctor directly.  use LocalCollection.find().
-  constructor (collection, selector, options) {
-    const self = this;
-    if (!options) options = {};
-
-    self.collection = collection;
-    self.sorter = null;
-    self.matcher = new Minimongo.Matcher(selector);
+  constructor (collection, selector, options = {}) {
+this.collection = collection;
+    this.sorter = null;
+    this.matcher = new Minimongo.Matcher(selector);
 
     if (LocalCollection._selectorIsId(selector)) {
       // stash for fast path
-      self._selectorId = selector;
+      this._selectorId = selector;
     } else if (LocalCollection._selectorIsIdPerhapsAsObject(selector)) {
       // also do the fast path for { _id: idString }
-      self._selectorId = selector._id;
+      this._selectorId = selector._id;
     } else {
-      self._selectorId = undefined;
-      if (self.matcher.hasGeoQuery() || options.sort) {
-        self.sorter = new Minimongo.Sorter(options.sort || [],
-                                           { matcher: self.matcher });
+      this._selectorId = undefined;
+      if (this.matcher.hasGeoQuery() || options.sort) {
+        this.sorter = new Minimongo.Sorter(options.sort || [],
+                                           { matcher: this.matcher });
       }
     }
 
-    self.skip = options.skip;
-    self.limit = options.limit;
-    self.fields = options.fields;
+    this.skip = options.skip;
+    this.limit = options.limit;
+    this.fields = options.fields;
 
-    self._projectionFn = LocalCollection._compileProjection(self.fields || {});
+    this._projectionFn = LocalCollection._compileProjection(this.fields || {});
 
-    self._transform = LocalCollection.wrapTransform(options.transform);
+    this._transform = LocalCollection.wrapTransform(options.transform);
 
     // by default, queries register w/ Tracker when it is available.
     if (typeof Tracker !== "undefined")
-      self.reactive = (options.reactive === undefined) ? true : options.reactive;
+      this.reactive = (options.reactive === undefined) ? true : options.reactive;
   }
 
   /**
@@ -48,13 +45,11 @@ export class Cursor {
    * @returns {Number}
    */
   count () {
-    const self = this;
-
-    if (self.reactive)
-      self._depend({added: true, removed: true},
+    if (this.reactive)
+      this._depend({added: true, removed: true},
                    true /* allow the observe to be unordered */);
 
-    return self._getRawObjects({ordered: true}).length;
+    return this._getRawObjects({ordered: true}).length;
   }
 
   /**
@@ -66,9 +61,8 @@ export class Cursor {
    * @returns {Object[]}
    */
   fetch () {
-    const self = this;
     const res = [];
-    self.forEach(doc => {
+    this.forEach(doc => {
       res.push(doc);
     });
     return res;
@@ -89,12 +83,10 @@ export class Cursor {
    * @param {Any} [thisArg] An object which will be the value of `this` inside `callback`.
    */
   forEach (callback, thisArg) {
-    const self = this;
+    const objects = this._getRawObjects({ordered: true});
 
-    const objects = self._getRawObjects({ordered: true});
-
-    if (self.reactive) {
-      self._depend({
+    if (this.reactive) {
+      this._depend({
         addedBefore: true,
         removed: true,
         changed: true,
@@ -103,11 +95,11 @@ export class Cursor {
 
     objects.forEach((elt, i) => {
       // This doubles as a clone operation.
-      elt = self._projectionFn(elt);
+      elt = this._projectionFn(elt);
 
-      if (self._transform)
-        elt = self._transform(elt);
-      callback.call(thisArg, elt, i, self);
+      if (this._transform)
+        elt = this._transform(elt);
+      callback.call(thisArg, elt, i, this);
     });
   }
 
@@ -125,10 +117,9 @@ export class Cursor {
    * @param {Any} [thisArg] An object which will be the value of `this` inside `callback`.
    */
   map (callback, thisArg) {
-    const self = this;
     const res = [];
-    self.forEach((doc, index) => {
-      res.push(callback.call(thisArg, doc, index, self));
+    this.forEach((doc, index) => {
+      res.push(callback.call(thisArg, doc, index, this));
     });
     return res;
   }
@@ -162,8 +153,7 @@ export class Cursor {
    * @param {Object} callbacks Functions to call to deliver the result set as it changes
    */
   observe (options) {
-    const self = this;
-    return LocalCollection._observeFromObserveChanges(self, options);
+    return LocalCollection._observeFromObserveChanges(this, options);
   }
 
   /**
@@ -174,42 +164,40 @@ export class Cursor {
    * @param {Object} callbacks Functions to call to deliver the result set as it changes
    */
   observeChanges (options) {
-    const self = this;
-
     const ordered = LocalCollection._observeChangesCallbacksAreOrdered(options);
 
     // there are several places that assume you aren't combining skip/limit with
     // unordered observe.  eg, update's EJSON.clone, and the "there are several"
     // comment in _modifyAndNotify
     // XXX allow skip/limit with unordered observe
-    if (!options._allow_unordered && !ordered && (self.skip || self.limit))
+    if (!options._allow_unordered && !ordered && (this.skip || this.limit))
       throw new Error("must use ordered observe (ie, 'addedBefore' instead of 'added') with skip or limit");
 
-    if (self.fields && (self.fields._id === 0 || self.fields._id === false))
+    if (this.fields && (this.fields._id === 0 || this.fields._id === false))
       throw Error("You may not observe a cursor with {fields: {_id: 0}}");
 
     const query = {
       dirty: false,
-      matcher: self.matcher, // not fast pathed
-      sorter: ordered && self.sorter,
+      matcher: this.matcher, // not fast pathed
+      sorter: ordered && this.sorter,
       distances: (
-        self.matcher.hasGeoQuery() && ordered && new LocalCollection._IdMap),
+        this.matcher.hasGeoQuery() && ordered && new LocalCollection._IdMap),
       resultsSnapshot: null,
       ordered,
-      cursor: self,
-      projectionFn: self._projectionFn
+      cursor: this,
+      projectionFn: this._projectionFn
     };
     let qid;
 
     // Non-reactive queries call added[Before] and then never call anything
     // else.
-    if (self.reactive) {
-      qid = self.collection.next_qid++;
-      self.collection.queries[qid] = query;
+    if (this.reactive) {
+      qid = this.collection.next_qid++;
+      this.collection.queries[qid] = query;
     }
-    query.results = self._getRawObjects({
+    query.results = this._getRawObjects({
       ordered, distances: query.distances});
-    if (self.collection.paused)
+    if (this.collection.paused)
       query.resultsSnapshot = (ordered ? [] : new LocalCollection._IdMap);
 
     // wrap callbacks we were passed. callbacks only fire when not paused and
@@ -222,15 +210,15 @@ export class Cursor {
     const wrapCallback = f => {
       if (!f)
         return () => {};
+      const self = this;
       return function (/*args*/) {
-        const context = this;
         const args = arguments;
 
         if (self.collection.paused)
           return;
 
         self.collection._observeQueue.queueTask(() => {
-          f.apply(context, args);
+          f.apply(this, args);
         });
       };
     };
@@ -242,7 +230,7 @@ export class Cursor {
       query.movedBefore = wrapCallback(options.movedBefore);
     }
 
-    if (!options._suppress_initial && !self.collection.paused) {
+    if (!options._suppress_initial && !this.collection.paused) {
       const results = query.results._map || query.results;
       Object.keys(results).forEach(key => {
         const doc = results[key];
@@ -250,21 +238,21 @@ export class Cursor {
 
         delete fields._id;
         if (ordered)
-          query.addedBefore(doc._id, self._projectionFn(fields), null);
-        query.added(doc._id, self._projectionFn(fields));
+          query.addedBefore(doc._id, this._projectionFn(fields), null);
+        query.added(doc._id, this._projectionFn(fields));
       });
     }
 
     const handle = new LocalCollection.ObserveHandle;
     Object.assign(handle, {
-      collection: self.collection,
-      stop() {
-        if (self.reactive)
-          delete self.collection.queries[qid];
+      collection: this.collection,
+      stop: () => {
+        if (this.reactive)
+          delete this.collection.queries[qid];
       }
     });
 
-    if (self.reactive && Tracker.active) {
+    if (this.reactive && Tracker.active) {
       // XXX in many cases, the same observe will be recreated when
       // the current autorun is rerun.  we could save work by
       // letting it linger across rerun and potentially get
@@ -276,7 +264,7 @@ export class Cursor {
     }
     // run the observe callbacks resulting from the initial contents
     // before we leave the observe.
-    self.collection._observeQueue.drain();
+    this.collection._observeQueue.drain();
 
     return handle;
   }
@@ -290,8 +278,6 @@ export class Cursor {
   // XXX Maybe we need a version of observe that just calls a callback if
   // anything changed.
   _depend (changers, _allow_unordered) {
-    const self = this;
-
     if (Tracker.active) {
       const v = new Tracker.Dependency;
       v.depend();
@@ -307,13 +293,12 @@ export class Cursor {
       });
 
       // observeChanges will stop() when this computation is invalidated
-      self.observeChanges(options);
+      this.observeChanges(options);
     }
   }
 
   _getCollectionName () {
-    const self = this;
-    return self.collection.name;
+    return this.collection.name;
   }
 
   // Returns a collection of matching objects, but doesn't deep copy them.
@@ -331,28 +316,25 @@ export class Cursor {
   // argument, this function will clear it and use it for this purpose (otherwise
   // it will just create its own _IdMap). The observeChanges implementation uses
   // this to remember the distances after this function returns.
-  _getRawObjects (options) {
-    const self = this;
-    options = options || {};
-
+  _getRawObjects (options = {}) {
     // XXX use OrderedDict instead of array, and make IdMap and OrderedDict
     // compatible
     const results = options.ordered ? [] : new LocalCollection._IdMap;
 
     // fast path for single ID value
-    if (self._selectorId !== undefined) {
+    if (this._selectorId !== undefined) {
       // If you have non-zero skip and ask for a single id, you get
       // nothing. This is so it matches the behavior of the '{_id: foo}'
       // path.
-      if (self.skip)
+      if (this.skip)
         return results;
 
-      const selectedDoc = self.collection._docs.get(self._selectorId);
+      const selectedDoc = this.collection._docs.get(this._selectorId);
       if (selectedDoc) {
         if (options.ordered)
           results.push(selectedDoc);
         else
-          results.set(self._selectorId, selectedDoc);
+          results.set(this._selectorId, selectedDoc);
       }
       return results;
     }
@@ -363,7 +345,7 @@ export class Cursor {
     // live results set) object.  in other cases, distances is only used inside
     // this function.
     let distances;
-    if (self.matcher.hasGeoQuery() && options.ordered) {
+    if (this.matcher.hasGeoQuery() && options.ordered) {
       if (options.distances) {
         distances = options.distances;
         distances.clear();
@@ -372,8 +354,8 @@ export class Cursor {
       }
     }
 
-    self.collection._docs.forEach((doc, id) => {
-      const matchResult = self.matcher.documentMatches(doc);
+    this.collection._docs.forEach((doc, id) => {
+      const matchResult = this.matcher.documentMatches(doc);
       if (matchResult.result) {
         if (options.ordered) {
           results.push(doc);
@@ -385,8 +367,8 @@ export class Cursor {
       }
       // Fast path for limited unsorted queries.
       // XXX 'length' check here seems wrong for ordered
-      if (self.limit && !self.skip && !self.sorter &&
-          results.length === self.limit)
+      if (this.limit && !this.skip && !this.sorter &&
+          results.length === this.limit)
         return false;  // break
       return true;  // continue
     });
@@ -394,27 +376,26 @@ export class Cursor {
     if (!options.ordered)
       return results;
 
-    if (self.sorter) {
-      const comparator = self.sorter.getComparator({distances});
+    if (this.sorter) {
+      const comparator = this.sorter.getComparator({distances});
       results.sort(comparator);
     }
 
-    const idx_start = self.skip || 0;
-    const idx_end = self.limit ? (self.limit + idx_start) : results.length;
+    const idx_start = this.skip || 0;
+    const idx_end = this.limit ? (this.limit + idx_start) : results.length;
     return results.slice(idx_start, idx_end);
   }
 
   _publishCursor (sub) {
-    const self = this;
-    if (! self.collection.name)
+    if (! this.collection.name)
       throw new Error("Can't publish a cursor from a collection without a name.");
-    const collection = self.collection.name;
+    const collection = this.collection.name;
 
     // XXX minimongo should not depend on mongo-livedata!
     if (! Package.mongo) {
       throw new Error("Can't publish from Minimongo without the `mongo` package.");
     }
 
-    return Package.mongo.Mongo.Collection._publishCursor(self, sub, collection);
+    return Package.mongo.Mongo.Collection._publishCursor(this, sub, collection);
   }
 }

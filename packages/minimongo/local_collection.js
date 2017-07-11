@@ -86,7 +86,6 @@ export class LocalCollection {
   // XXX possibly enforce that 'undefined' does not appear (we assume
   // this in our handling of null and $exists)
   insert (doc, callback) {
-    const self = this;
     doc = EJSON.clone(doc);
 
     assertHasValidFieldNames(doc);
@@ -99,16 +98,16 @@ export class LocalCollection {
     }
     const id = doc._id;
 
-    if (self._docs.has(id))
+    if (this._docs.has(id))
       throw MinimongoError(`Duplicate _id '${id}'`);
 
-    self._saveOriginal(id, undefined);
-    self._docs.set(id, doc);
+    this._saveOriginal(id, undefined);
+    this._docs.set(id, doc);
 
     const queriesToRecompute = [];
     // trigger live queries that match
-    for (let qid in self.queries) {
-      const query = self.queries[qid];
+    for (let qid in this.queries) {
+      const query = this.queries[qid];
       if (query.dirty) continue;
       const matchResult = query.matcher.documentMatches(doc);
       if (matchResult.result) {
@@ -122,10 +121,10 @@ export class LocalCollection {
     }
 
     queriesToRecompute.forEach(qid => {
-      if (self.queries[qid])
-        self._recomputeResults(self.queries[qid]);
+      if (this.queries[qid])
+        this._recomputeResults(this.queries[qid]);
     });
-    self._observeQueue.drain();
+    this._observeQueue.drain();
 
     // Defer because the caller likely doesn't expect the callback to be run
     // immediately.
@@ -155,16 +154,14 @@ export class LocalCollection {
   }
 
   remove (selector, callback) {
-    const self = this;
-
     // Easy special case: if we're not calling observeChanges callbacks and we're
     // not saving originals and we got asked to remove everything, then just empty
     // everything directly.
-    if (self.paused && !self._savedOriginals && EJSON.equals(selector, {})) {
-      const result = self._docs.size();
-      self._docs.clear();
-      Object.keys(self.queries).forEach(qid => {
-        const query = self.queries[qid];
+    if (this.paused && !this._savedOriginals && EJSON.equals(selector, {})) {
+      const result = this._docs.size();
+      this._docs.clear();
+      Object.keys(this.queries).forEach(qid => {
+        const query = this.queries[qid];
         if (query.ordered) {
           query.results = [];
         } else {
@@ -181,7 +178,7 @@ export class LocalCollection {
 
     const matcher = new Minimongo.Matcher(selector);
     const remove = [];
-    self._eachPossiblyMatchingDoc(selector, (doc, id) => {
+    this._eachPossiblyMatchingDoc(selector, (doc, id) => {
       if (matcher.documentMatches(doc).result)
         remove.push(id);
     });
@@ -190,9 +187,9 @@ export class LocalCollection {
     const queryRemove = [];
     for (let i = 0; i < remove.length; i++) {
       const removeId = remove[i];
-      const removeDoc = self._docs.get(removeId);
-      Object.keys(self.queries).forEach(qid => {
-        const query = self.queries[qid];
+      const removeDoc = this._docs.get(removeId);
+      Object.keys(this.queries).forEach(qid => {
+        const query = this.queries[qid];
         if (query.dirty) return;
 
         if (query.matcher.documentMatches(removeDoc).result) {
@@ -202,24 +199,24 @@ export class LocalCollection {
             queryRemove.push({qid, doc: removeDoc});
         }
       });
-      self._saveOriginal(removeId, removeDoc);
-      self._docs.remove(removeId);
+      this._saveOriginal(removeId, removeDoc);
+      this._docs.remove(removeId);
     }
 
     // run live query callbacks _after_ we've removed the documents.
     queryRemove.forEach(remove => {
-      const query = self.queries[remove.qid];
+      const query = this.queries[remove.qid];
       if (query) {
         query.distances && query.distances.remove(remove.doc._id);
         LocalCollection._removeFromResults(query, remove.doc);
       }
     });
     queriesToRecompute.forEach(qid => {
-      const query = self.queries[qid];
+      const query = this.queries[qid];
       if (query)
-        self._recomputeResults(query);
+        this._recomputeResults(query);
     });
-    self._observeQueue.drain();
+    this._observeQueue.drain();
     const result = remove.length;
     if (callback)
       Meteor.defer(() => {
@@ -233,7 +230,6 @@ export class LocalCollection {
   // database. Note that this is not just replaying all the changes that
   // happened during the pause, it is a smarter 'coalesced' diff.
   resumeObservers () {
-    const self = this;
     // No-op if not paused.
     if (!this.paused)
       return;
@@ -243,11 +239,11 @@ export class LocalCollection {
     this.paused = false;
 
     for (let qid in this.queries) {
-      const query = self.queries[qid];
+      const query = this.queries[qid];
       if (query.dirty) {
         query.dirty = false;
         // re-compute results will perform `LocalCollection._diffQueryChanges` automatically.
-        self._recomputeResults(query, query.resultsSnapshot);
+        this._recomputeResults(query, query.resultsSnapshot);
       } else {
         // Diff the current results against the snapshot and send to observers.
         // pass the query object for its observer callbacks.
@@ -257,16 +253,15 @@ export class LocalCollection {
       }
       query.resultsSnapshot = null;
     }
-    self._observeQueue.drain();
+    this._observeQueue.drain();
   }
 
   retrieveOriginals () {
-    const self = this;
-    if (!self._savedOriginals)
+    if (!this._savedOriginals)
       throw new Error("Called retrieveOriginals without saveOriginals");
 
-    const originals = self._savedOriginals;
-    self._savedOriginals = null;
+    const originals = this._savedOriginals;
+    this._savedOriginals = null;
     return originals;
   }
 
@@ -278,16 +273,14 @@ export class LocalCollection {
   // is the value.) You must alternate between calls to saveOriginals() and
   // retrieveOriginals().
   saveOriginals () {
-    const self = this;
-    if (self._savedOriginals)
+    if (this._savedOriginals)
       throw new Error("Called saveOriginals twice without retrieveOriginals");
-    self._savedOriginals = new LocalCollection._IdMap;
+    this._savedOriginals = new LocalCollection._IdMap;
   }
 
   // XXX atomicity: if multi is true, and one modification fails, do
   // we rollback the whole operation, or what?
   update (selector, mod, options, callback) {
-    const self = this;
     if (! callback && options instanceof Function) {
       callback = options;
       options = null;
@@ -306,9 +299,9 @@ export class LocalCollection {
     const docMap = new LocalCollection._IdMap;
     const idsMatchedBySelector = LocalCollection._idsMatchedBySelector(selector);
 
-    Object.keys(self.queries).forEach(qid => {
-      const query = self.queries[qid];
-      if ((query.cursor.skip || query.cursor.limit) && ! self.paused) {
+    Object.keys(this.queries).forEach(qid => {
+      const query = this.queries[qid];
+      if ((query.cursor.skip || query.cursor.limit) && ! this.paused) {
         // Catch the case of a reactive `count()` on a cursor with skip
         // or limit, which registers an unordered observe. This is a
         // pretty rare case, so we just clone the entire result set with
@@ -351,12 +344,12 @@ export class LocalCollection {
 
     let updateCount = 0;
 
-    self._eachPossiblyMatchingDoc(selector, (doc, id) => {
+    this._eachPossiblyMatchingDoc(selector, (doc, id) => {
       const queryResult = matcher.documentMatches(doc);
       if (queryResult.result) {
         // XXX Should we save the original even if mod ends up being a no-op?
-        self._saveOriginal(id, doc);
-        self._modifyAndNotify(doc, mod, recomputeQids, queryResult.arrayIndices);
+        this._saveOriginal(id, doc);
+        this._modifyAndNotify(doc, mod, recomputeQids, queryResult.arrayIndices);
         ++updateCount;
         if (!options.multi)
           return false;  // break
@@ -365,11 +358,11 @@ export class LocalCollection {
     });
 
     Object.keys(recomputeQids).forEach(qid => {
-      const query = self.queries[qid];
+      const query = this.queries[qid];
       if (query)
-        self._recomputeResults(query, qidToOriginalResults[qid]);
+        this._recomputeResults(query, qidToOriginalResults[qid]);
     });
-    self._observeQueue.drain();
+    this._observeQueue.drain();
 
     // If we are doing an upsert, and we didn't modify any documents yet, then
     // it's time to do an insert. Figure out what document we are inserting, and
@@ -396,7 +389,7 @@ export class LocalCollection {
 
       if (! newDoc._id && options.insertedId)
         newDoc._id = options.insertedId;
-      insertedId = self.insert(newDoc);
+      insertedId = this.insert(newDoc);
       updateCount = 1;
     }
 
@@ -425,12 +418,11 @@ export class LocalCollection {
   // equivalent to LocalCollection.update(sel, mod, { upsert: true, _returnObject:
   // true }).
   upsert (selector, mod, options, callback) {
-    const self = this;
     if (! callback && typeof options === "function") {
       callback = options;
       options = {};
     }
-    return self.update(selector, mod, Object.assign({}, options, {
+    return this.update(selector, mod, Object.assign({}, options, {
       upsert: true,
       _returnObject: true
     }), callback);
@@ -441,12 +433,11 @@ export class LocalCollection {
   // specific _id's, it only looks at those.  doc is *not* cloned: it is the
   // same object that is in _docs.
   _eachPossiblyMatchingDoc (selector, f) {
-    const self = this;
     const specificIds = LocalCollection._idsMatchedBySelector(selector);
     if (specificIds) {
       for (let i = 0; i < specificIds.length; ++i) {
         const id = specificIds[i];
-        const doc = self._docs.get(id);
+        const doc = this._docs.get(id);
         if (doc) {
           const breakIfFalse = f(doc, id);
           if (breakIfFalse === false)
@@ -454,16 +445,14 @@ export class LocalCollection {
         }
       }
     } else {
-      self._docs.forEach(f);
+      this._docs.forEach(f);
     }
   }
 
   _modifyAndNotify (doc, mod, recomputeQids, arrayIndices) {
-    const self = this;
-
     const matched_before = {};
-    for (let qid in self.queries) {
-      const query = self.queries[qid];
+    for (let qid in this.queries) {
+      const query = this.queries[qid];
       if (query.dirty) continue;
 
       if (query.ordered) {
@@ -479,8 +468,8 @@ export class LocalCollection {
 
     LocalCollection._modify(doc, mod, {arrayIndices});
 
-    for (let qid in self.queries) {
-      const query = self.queries[qid];
+    for (let qid in this.queries) {
+      const query = this.queries[qid];
       if (query.dirty) continue;
 
       const before = matched_before[qid];
@@ -520,8 +509,7 @@ export class LocalCollection {
   //
   // oldResults is guaranteed to be ignored if the query is not paused.
   _recomputeResults (query, oldResults) {
-    const self = this;
-    if (self.paused) {
+    if (this.paused) {
       // There's no reason to recompute the results now as we're still paused.
       // By flagging the query as "dirty", the recompute will be performed
       // when resumeObservers is called.
@@ -529,14 +517,14 @@ export class LocalCollection {
       return;
     }
 
-    if (! self.paused && ! oldResults)
+    if (! this.paused && ! oldResults)
       oldResults = query.results;
     if (query.distances)
       query.distances.clear();
     query.results = query.cursor._getRawObjects({
       ordered: query.ordered, distances: query.distances});
 
-    if (! self.paused) {
+    if (! this.paused) {
       LocalCollection._diffQueryChanges(
         query.ordered, oldResults, query.results, query,
         { projectionFn: query.projectionFn });
@@ -544,16 +532,15 @@ export class LocalCollection {
   }
 
   _saveOriginal (id, doc) {
-    const self = this;
     // Are we even trying to save originals?
-    if (!self._savedOriginals)
+    if (!this._savedOriginals)
       return;
     // Have we previously mutated the original (and so 'doc' is not actually
     // original)?  (Note the 'has' check rather than truth: we store undefined
     // here for inserted docs!)
-    if (self._savedOriginals.has(id))
+    if (this._savedOriginals.has(id))
       return;
-    self._savedOriginals.set(id, EJSON.clone(doc));
+    this._savedOriginals.set(id, EJSON.clone(doc));
   }
 }
 
@@ -564,76 +551,73 @@ LocalCollection.ObserveHandle = ObserveHandle;
 // XXX maybe move these into another ObserveHelpers package or something
 
 // _CachingChangeObserver is an object which receives observeChanges callbacks
-// and keeps a cache of the current cursor state up to date in self.docs. Users
+// and keeps a cache of the current cursor state up to date in this.docs. Users
 // of this class should read the docs field but not modify it. You should pass
 // the "applyChange" field as the callbacks to the underlying observeChanges
 // call. Optionally, you can specify your own observeChanges callbacks which are
 // invoked immediately before the docs field is updated; this object is made
 // available as `this` to those callbacks.
 LocalCollection._CachingChangeObserver = class _CachingChangeObserver {
-  constructor (options) {
-    const self = this;
-    options = options || {};
-
+  constructor (options = {}) {
     const orderedFromCallbacks = options.callbacks &&
           LocalCollection._observeChangesCallbacksAreOrdered(options.callbacks);
     if (options.hasOwnProperty('ordered')) {
-      self.ordered = options.ordered;
+      this.ordered = options.ordered;
       if (options.callbacks && options.ordered !== orderedFromCallbacks)
         throw Error("ordered option doesn't match callbacks");
     } else if (options.callbacks) {
-      self.ordered = orderedFromCallbacks;
+      this.ordered = orderedFromCallbacks;
     } else {
       throw Error("must provide ordered or callbacks");
     }
     const callbacks = options.callbacks || {};
 
-    if (self.ordered) {
-      self.docs = new OrderedDict(MongoID.idStringify);
-      self.applyChange = {
-        addedBefore(id, fields, before) {
+    if (this.ordered) {
+      this.docs = new OrderedDict(MongoID.idStringify);
+      this.applyChange = {
+        addedBefore: (id, fields, before) => {
           const doc = EJSON.clone(fields);
           doc._id = id;
           callbacks.addedBefore && callbacks.addedBefore.call(
-            self, id, fields, before);
+            this, id, fields, before);
           // This line triggers if we provide added with movedBefore.
-          callbacks.added && callbacks.added.call(self, id, fields);
+          callbacks.added && callbacks.added.call(this, id, fields);
           // XXX could `before` be a falsy ID?  Technically
           // idStringify seems to allow for them -- though
           // OrderedDict won't call stringify on a falsy arg.
-          self.docs.putBefore(id, doc, before || null);
+          this.docs.putBefore(id, doc, before || null);
         },
-        movedBefore(id, before) {
-          const doc = self.docs.get(id);
-          callbacks.movedBefore && callbacks.movedBefore.call(self, id, before);
-          self.docs.moveBefore(id, before || null);
+        movedBefore: (id, before) => {
+          const doc = this.docs.get(id);
+          callbacks.movedBefore && callbacks.movedBefore.call(this, id, before);
+          this.docs.moveBefore(id, before || null);
         }
       };
     } else {
-      self.docs = new LocalCollection._IdMap;
-      self.applyChange = {
-        added(id, fields) {
+      this.docs = new LocalCollection._IdMap;
+      this.applyChange = {
+        added: (id, fields) => {
           const doc = EJSON.clone(fields);
-          callbacks.added && callbacks.added.call(self, id, fields);
+          callbacks.added && callbacks.added.call(this, id, fields);
           doc._id = id;
-          self.docs.set(id,  doc);
+          this.docs.set(id,  doc);
         }
       };
     }
 
     // The methods in _IdMap and OrderedDict used by these callbacks are
     // identical.
-    self.applyChange.changed = (id, fields) => {
-      const doc = self.docs.get(id);
+    this.applyChange.changed = (id, fields) => {
+      const doc = this.docs.get(id);
       if (!doc)
         throw new Error(`Unknown id for changed: ${id}`);
       callbacks.changed && callbacks.changed.call(
-        self, id, EJSON.clone(fields));
+        this, id, EJSON.clone(fields));
       DiffSequence.applyChanges(doc, fields);
     };
-    self.applyChange.removed = id => {
-      callbacks.removed && callbacks.removed.call(self, id);
-      self.docs.remove(id);
+    this.applyChange.removed = id => {
+      callbacks.removed && callbacks.removed.call(this, id);
+      this.docs.remove(id);
     };
   }
 };
@@ -987,60 +971,56 @@ LocalCollection._observeFromObserveChanges = (cursor, observeCallbacks) => {
     // relative order, transforms, and applyChanges -- without the speed hit.
     const indices = !observeCallbacks._no_indices;
     observeChangesCallbacks = {
-      addedBefore(id, fields, before) {
-        const self = this;
+      addedBefore (id, fields, before) {
         if (suppressed || !(observeCallbacks.addedAt || observeCallbacks.added))
           return;
         const doc = transform(Object.assign(fields, {_id: id}));
         if (observeCallbacks.addedAt) {
           const index = indices
-                ? (before ? self.docs.indexOf(before) : self.docs.size()) : -1;
+                ? (before ? this.docs.indexOf(before) : this.docs.size()) : -1;
           observeCallbacks.addedAt(doc, index, before);
         } else {
           observeCallbacks.added(doc);
         }
       },
-      changed(id, fields) {
-        const self = this;
+      changed (id, fields) {
         if (!(observeCallbacks.changedAt || observeCallbacks.changed))
           return;
-        let doc = EJSON.clone(self.docs.get(id));
+        let doc = EJSON.clone(this.docs.get(id));
         if (!doc)
           throw new Error(`Unknown id for changed: ${id}`);
         const oldDoc = transform(EJSON.clone(doc));
         DiffSequence.applyChanges(doc, fields);
         doc = transform(doc);
         if (observeCallbacks.changedAt) {
-          const index = indices ? self.docs.indexOf(id) : -1;
+          const index = indices ? this.docs.indexOf(id) : -1;
           observeCallbacks.changedAt(doc, oldDoc, index);
         } else {
           observeCallbacks.changed(doc, oldDoc);
         }
       },
-      movedBefore(id, before) {
-        const self = this;
+      movedBefore (id, before) {
         if (!observeCallbacks.movedTo)
           return;
-        const from = indices ? self.docs.indexOf(id) : -1;
+        const from = indices ? this.docs.indexOf(id) : -1;
 
         let to = indices
-              ? (before ? self.docs.indexOf(before) : self.docs.size()) : -1;
+              ? (before ? this.docs.indexOf(before) : this.docs.size()) : -1;
         // When not moving backwards, adjust for the fact that removing the
         // document slides everything back one slot.
         if (to > from)
           --to;
-        observeCallbacks.movedTo(transform(EJSON.clone(self.docs.get(id))),
+        observeCallbacks.movedTo(transform(EJSON.clone(this.docs.get(id))),
                                  from, to, before || null);
       },
-      removed(id) {
-        const self = this;
+      removed (id) {
         if (!(observeCallbacks.removedAt || observeCallbacks.removed))
           return;
         // technically maybe there should be an EJSON.clone here, but it's about
-        // to be removed from self.docs!
-        const doc = transform(self.docs.get(id));
+        // to be removed from this.docs!
+        const doc = transform(this.docs.get(id));
         if (observeCallbacks.removedAt) {
-          const index = indices ? self.docs.indexOf(id) : -1;
+          const index = indices ? this.docs.indexOf(id) : -1;
           observeCallbacks.removedAt(doc, index);
         } else {
           observeCallbacks.removed(doc);
@@ -1049,26 +1029,24 @@ LocalCollection._observeFromObserveChanges = (cursor, observeCallbacks) => {
     };
   } else {
     observeChangesCallbacks = {
-      added(id, fields) {
+      added (id, fields) {
         if (!suppressed && observeCallbacks.added) {
           const doc = Object.assign(fields, {_id: id});
           observeCallbacks.added(transform(doc));
         }
       },
-      changed(id, fields) {
-        const self = this;
+      changed (id, fields) {
         if (observeCallbacks.changed) {
-          const oldDoc = self.docs.get(id);
+          const oldDoc = this.docs.get(id);
           const doc = EJSON.clone(oldDoc);
           DiffSequence.applyChanges(doc, fields);
           observeCallbacks.changed(transform(doc),
                                    transform(EJSON.clone(oldDoc)));
         }
       },
-      removed(id) {
-        const self = this;
+      removed (id) {
         if (observeCallbacks.removed) {
-          observeCallbacks.removed(transform(self.docs.get(id)));
+          observeCallbacks.removed(transform(this.docs.get(id)));
         }
       }
     };

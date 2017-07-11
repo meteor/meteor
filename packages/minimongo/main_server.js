@@ -7,7 +7,6 @@ import {
 } from './common.js';
 
 Minimongo._pathsElidingNumericKeys = function (paths) {
-  const self = this;
   return paths.map(path => path.split('.').filter(part => !isNumericKey(part)).join('.'));
 };
 
@@ -20,11 +19,10 @@ Minimongo._pathsElidingNumericKeys = function (paths) {
 //  - $unset
 //    - 'abc.d': 1
 Minimongo.Matcher.prototype.affectedByModifier = function (modifier) {
-  const self = this;
   // safe check for $set/$unset being objects
   modifier = Object.assign({ $set: {}, $unset: {} }, modifier);
   const modifiedPaths = Object.keys(modifier.$set).concat(Object.keys(modifier.$unset));
-  const meaningfulPaths = self._getPaths();
+  const meaningfulPaths = this._getPaths();
 
   return modifiedPaths.some(path => {
     const mod = path.split('.');
@@ -66,17 +64,16 @@ Minimongo.Matcher.prototype.affectedByModifier = function (modifier) {
 // stay 'false'.
 // Currently doesn't support $-operators and numeric indices precisely.
 Minimongo.Matcher.prototype.canBecomeTrueByModifier = function (modifier) {
-  const self = this;
   if (!this.affectedByModifier(modifier))
     return false;
 
   modifier = Object.assign({$set:{}, $unset:{}}, modifier);
   const modifierPaths = Object.keys(modifier.$set).concat(Object.keys(modifier.$unset));
 
-  if (!self.isSimple())
+  if (!this.isSimple())
     return true;
 
-  if (self._getPaths().some(pathHasNumericKeys) ||
+  if (this._getPaths().some(pathHasNumericKeys) ||
       modifierPaths.some(pathHasNumericKeys))
     return true;
 
@@ -85,8 +82,8 @@ Minimongo.Matcher.prototype.canBecomeTrueByModifier = function (modifier) {
   // NOTE: it is correct since we allow only scalars in $-operators
   // Example: for selector {'a.b': {$gt: 5}} the modifier {'a.b.c':7} would
   // definitely set the result to false as 'a.b' appears to be an object.
-  const expectedScalarIsObject = Object.keys(self._selector).some(path => {
-    const sel = self._selector[path];
+  const expectedScalarIsObject = Object.keys(this._selector).some(path => {
+    const sel = this._selector[path];
     if (! isOperatorObject(sel))
       return false;
     return modifierPaths.some(modifierPath => startsWith(modifierPath, `${path}.`));
@@ -98,7 +95,7 @@ Minimongo.Matcher.prototype.canBecomeTrueByModifier = function (modifier) {
   // See if we can apply the modifier on the ideally matching object. If it
   // still matches the selector, then the modifier could have turned the real
   // object in the database into something matching.
-  const matchingDocument = EJSON.clone(self.matchingDocument());
+  const matchingDocument = EJSON.clone(this.matchingDocument());
 
   // The selector is too complex, anything can happen.
   if (matchingDocument === null)
@@ -122,15 +119,14 @@ Minimongo.Matcher.prototype.canBecomeTrueByModifier = function (modifier) {
     throw e;
   }
 
-  return self.documentMatches(matchingDocument).result;
+  return this.documentMatches(matchingDocument).result;
 };
 
 // Knows how to combine a mongo selector and a fields projection to a new fields
 // projection taking into account active fields from the passed selector.
 // @returns Object - projection object (same as fields option of mongo cursor)
 Minimongo.Matcher.prototype.combineIntoProjection = function (projection) {
-  const self = this;
-  const selectorPaths = Minimongo._pathsElidingNumericKeys(self._getPaths());
+  const selectorPaths = Minimongo._pathsElidingNumericKeys(this._getPaths());
 
   // Special case for $where operator in the selector - projection should depend
   // on all fields of the document. getSelectorPaths returns a list of paths
@@ -147,18 +143,16 @@ Minimongo.Matcher.prototype.combineIntoProjection = function (projection) {
 // { 'a.b': { ans: 42 }, 'foo.bar': null, 'foo.baz': "something" }
 // => { a: { b: { ans: 42 } }, foo: { bar: null, baz: "something" } }
 Minimongo.Matcher.prototype.matchingDocument = function () {
-  const self = this;
-
   // check if it was computed before
-  if (self._matchingDocument !== undefined)
-    return self._matchingDocument;
+  if (this._matchingDocument !== undefined)
+    return this._matchingDocument;
 
   // If the analysis of this selector is too hard for our implementation
   // fallback to "YES"
   let fallback = false;
-  self._matchingDocument = pathsToTree(self._getPaths(),
+  this._matchingDocument = pathsToTree(this._getPaths(),
     path => {
-      const valueSelector = self._selector[path];
+      const valueSelector = this._selector[path];
       if (isOperatorObject(valueSelector)) {
         // if there is a strict equality, there is a good
         // chance we can use one of those as "matching"
@@ -191,7 +185,7 @@ Minimongo.Matcher.prototype.matchingDocument = function () {
 
           return middle;
         } else if (onlyContainsKeys(valueSelector, ['$nin', '$ne'])) {
-          // Since self._isSimple makes sure $nin and $ne are not combined with
+          // Since this._isSimple makes sure $nin and $ne are not combined with
           // objects or arrays, we can confidently return an empty object as it
           // never matches any scalar.
           return {};
@@ -199,26 +193,24 @@ Minimongo.Matcher.prototype.matchingDocument = function () {
           fallback = true;
         }
       }
-      return self._selector[path];
+      return this._selector[path];
     },
     x => x);
 
   if (fallback)
-    self._matchingDocument = null;
+    this._matchingDocument = null;
 
-  return self._matchingDocument;
+  return this._matchingDocument;
 };
 
 // Minimongo.Sorter gets a similar method, which delegates to a Matcher it made
 // for this exact purpose.
 Minimongo.Sorter.prototype.affectedByModifier = function (modifier) {
-  const self = this;
-  return self._selectorForAffectedByModifier.affectedByModifier(modifier);
+  return this._selectorForAffectedByModifier.affectedByModifier(modifier);
 };
 
 Minimongo.Sorter.prototype.combineIntoProjection = function (projection) {
-  const self = this;
-  const specPaths = Minimongo._pathsElidingNumericKeys(self._getPaths());
+  const specPaths = Minimongo._pathsElidingNumericKeys(this._getPaths());
   return combineImportantPathsIntoProjection(specPaths, projection);
 };
 

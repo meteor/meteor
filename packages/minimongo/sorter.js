@@ -21,19 +21,16 @@ import {
 // first, or 0 if neither object comes before the other.
 
 export class Sorter {
-  constructor (spec, options) {
-    const self = this;
-    options = options || {};
-
-    self._sortSpecParts = [];
-    self._sortFunction = null;
+  constructor (spec, options = {}) {
+    this._sortSpecParts = [];
+    this._sortFunction = null;
 
     const addSpecPart = (path, ascending) => {
       if (!path)
         throw Error("sort keys must be non-empty");
       if (path.charAt(0) === '$')
         throw Error(`unsupported sort key: ${path}`);
-      self._sortSpecParts.push({
+      this._sortSpecParts.push({
         path,
         lookup: makeLookupFunction(path, {forSort: true}),
         ascending
@@ -54,46 +51,44 @@ export class Sorter {
         addSpecPart(key, value >= 0);
       });
     } else if (typeof spec === "function") {
-      self._sortFunction = spec;
+      this._sortFunction = spec;
     } else {
       throw Error(`Bad sort specification: ${JSON.stringify(spec)}`);
     }
 
     // If a function is specified for sorting, we skip the rest.
-    if (self._sortFunction)
+    if (this._sortFunction)
       return;
 
     // To implement affectedByModifier, we piggy-back on top of Matcher's
     // affectedByModifier code; we create a selector that is affected by the same
     // modifiers as this sort order. This is only implemented on the server.
-    if (self.affectedByModifier) {
+    if (this.affectedByModifier) {
       const selector = {};
-      self._sortSpecParts.forEach(spec => {
+      this._sortSpecParts.forEach(spec => {
         selector[spec.path] = 1;
       });
-      self._selectorForAffectedByModifier = new Minimongo.Matcher(selector);
+      this._selectorForAffectedByModifier = new Minimongo.Matcher(selector);
     }
 
-    self._keyComparator = composeComparators(
-      self._sortSpecParts.map((spec, i) => self._keyFieldComparator(i)));
+    this._keyComparator = composeComparators(
+      this._sortSpecParts.map((spec, i) => this._keyFieldComparator(i)));
 
     // If you specify a matcher for this Sorter, _keyFilter may be set to a
     // function which selects whether or not a given "sort key" (tuple of values
     // for the different sort spec fields) is compatible with the selector.
-    self._keyFilter = null;
-    options.matcher && self._useWithMatcher(options.matcher);
+    this._keyFilter = null;
+    options.matcher && this._useWithMatcher(options.matcher);
   }
 
   getComparator (options) {
-    const self = this;
-
     // If sort is specified or have no distances, just use the comparator from
     // the source specification (which defaults to "everything is equal".
     // issue #3599
     // https://docs.mongodb.com/manual/reference/operator/query/near/#sort-operation
     // sort effectively overrides $near
-    if (self._sortSpecParts.length || !options || !options.distances) {
-      return self._getBaseComparator();
+    if (this._sortSpecParts.length || !options || !options.distances) {
+      return this._getBaseComparator();
     }
 
     const distances = options.distances;
@@ -112,21 +107,18 @@ export class Sorter {
   // parts. Returns negative, 0, or positive based on using the sort spec to
   // compare fields.
   _compareKeys (key1, key2) {
-    const self = this;
-    if (key1.length !== self._sortSpecParts.length ||
-        key2.length !== self._sortSpecParts.length) {
+    if (key1.length !== this._sortSpecParts.length ||
+        key2.length !== this._sortSpecParts.length) {
       throw Error("Key has wrong length");
     }
 
-    return self._keyComparator(key1, key2);
+    return this._keyComparator(key1, key2);
   }
 
   // Iterates over each possible "key" from doc (ie, over each branch), calling
   // 'cb' with the key.
   _generateKeysFromDoc (doc, cb) {
-    const self = this;
-
-    if (self._sortSpecParts.length === 0)
+    if (this._sortSpecParts.length === 0)
       throw new Error("can't generate keys without a spec");
 
     // maps index -> ({'' -> value} or {path -> value})
@@ -136,7 +128,7 @@ export class Sorter {
 
     let knownPaths = null;
 
-    self._sortSpecParts.forEach((spec, whichField) => {
+    this._sortSpecParts.forEach((spec, whichField) => {
       // Expand any leaf arrays that we find, and ignore those arrays
       // themselves.  (We never sort based on an array itself.)
       let branches = expandArraysInBranches(spec.lookup(doc), true);
@@ -221,21 +213,19 @@ export class Sorter {
   // Returns a comparator that represents the sort specification (but not
   // including a possible geoquery distance tie-breaker).
   _getBaseComparator () {
-    const self = this;
-
-    if (self._sortFunction)
-      return self._sortFunction;
+    if (this._sortFunction)
+      return this._sortFunction;
 
     // If we're only sorting on geoquery distance and no specs, just say
     // everything is equal.
-    if (!self._sortSpecParts.length) {
+    if (!this._sortSpecParts.length) {
       return (doc1, doc2) => 0;
     }
 
     return (doc1, doc2) => {
-      const key1 = self._getMinKeyFromDoc(doc1);
-      const key2 = self._getMinKeyFromDoc(doc2);
-      return self._compareKeys(key1, key2);
+      const key1 = this._getMinKeyFromDoc(doc1);
+      const key2 = this._getMinKeyFromDoc(doc2);
+      return this._compareKeys(key1, key2);
     };
   }
 
@@ -250,18 +240,17 @@ export class Sorter {
   // 1, y: 3}]} with sort spec {'a.x': 1, 'a.y': 1}, the only keys are [0,5] and
   // [1,3], and the minimum key is [0,5]; notably, [0,3] is NOT a key.
   _getMinKeyFromDoc (doc) {
-    const self = this;
     let minKey = null;
 
-    self._generateKeysFromDoc(doc, key => {
-      if (!self._keyCompatibleWithSelector(key))
+    this._generateKeysFromDoc(doc, key => {
+      if (!this._keyCompatibleWithSelector(key))
         return;
 
       if (minKey === null) {
         minKey = key;
         return;
       }
-      if (self._compareKeys(key, minKey) < 0) {
+      if (this._compareKeys(key, minKey) < 0) {
         minKey = key;
       }
     });
@@ -274,20 +263,17 @@ export class Sorter {
   }
 
   _getPaths () {
-    const self = this;
-    return self._sortSpecParts.map(part => part.path);
+    return this._sortSpecParts.map(part => part.path);
   }
 
   _keyCompatibleWithSelector (key) {
-    const self = this;
-    return !self._keyFilter || self._keyFilter(key);
+    return !this._keyFilter || this._keyFilter(key);
   }
 
   // Given an index 'i', returns a comparator that compares two key arrays based
   // on field 'i'.
   _keyFieldComparator (i) {
-    const self = this;
-    const invert = !self._sortSpecParts[i].ascending;
+    const invert = !this._sortSpecParts[i].ascending;
     return (key1, key2) => {
       let compare = LocalCollection._f._cmp(key1[i], key2[i]);
       if (invert)
@@ -316,15 +302,13 @@ export class Sorter {
   // subtle and undocumented; we've gotten as close as we can figure out based
   // on our understanding of Mongo's behavior.
   _useWithMatcher (matcher) {
-    const self = this;
-
-    if (self._keyFilter)
+    if (this._keyFilter)
       throw Error("called _useWithMatcher twice?");
 
     // If we are only sorting by distance, then we're not going to bother to
     // build a key filter.
     // XXX figure out how geoqueries interact with this stuff
-    if (!self._sortSpecParts.length)
+    if (!this._sortSpecParts.length)
       return;
 
     const selector = matcher._selector;
@@ -335,7 +319,7 @@ export class Sorter {
       return;
 
     const constraintsByPath = {};
-    self._sortSpecParts.forEach((spec, i) => {
+    this._sortSpecParts.forEach((spec, i) => {
       constraintsByPath[spec.path] = [];
     });
 
@@ -394,10 +378,10 @@ export class Sorter {
     // others; we shouldn't create a key filter unless the first sort field is
     // restricted, though after that point we can restrict the other sort fields
     // or not as we wish.
-    if (!constraintsByPath[self._sortSpecParts[0].path].length)
+    if (!constraintsByPath[this._sortSpecParts[0].path].length)
       return;
 
-    self._keyFilter = key => self._sortSpecParts.every((specPart, index) => constraintsByPath[specPart.path].every(f => f(key[index])));
+    this._keyFilter = key => this._sortSpecParts.every((specPart, index) => constraintsByPath[specPart.path].every(f => f(key[index])));
   }
 }
 
