@@ -124,7 +124,7 @@ export class Matcher {
 LocalCollection._f = {
   // XXX for _all and _in, consider building 'inquery' at compile time..
 
-  _type: function (v) {
+  _type(v) {
     if (typeof v === "number")
       return 1;
     if (typeof v === "string")
@@ -158,13 +158,13 @@ LocalCollection._f = {
   },
 
   // deep equality test: use for literal document and array matches
-  _equal: function (a, b) {
+  _equal(a, b) {
     return EJSON.equals(a, b, {keyOrderSensitive: true});
   },
 
   // maps a type code to a value that can be used to sort values of
   // different types
-  _typeorder: function (t) {
+  _typeorder(t) {
     // http://www.mongodb.org/display/DOCS/What+is+the+Compare+Order+for+BSON+Types
     // XXX what is the correct sort position for Javascript code?
     // ('100' in the matrix below)
@@ -195,15 +195,15 @@ LocalCollection._f = {
   // semantics. (as an extension, consider 'undefined' to be less than
   // any other value.) return negative if a is less, positive if b is
   // less, or 0 if equal
-  _cmp: function (a, b) {
+  _cmp(a, b) {
     if (a === undefined)
       return b === undefined ? 0 : -1;
     if (b === undefined)
       return 1;
-    var ta = LocalCollection._f._type(a);
-    var tb = LocalCollection._f._type(b);
-    var oa = LocalCollection._f._typeorder(ta);
-    var ob = LocalCollection._f._typeorder(tb);
+    let ta = LocalCollection._f._type(a);
+    let tb = LocalCollection._f._type(b);
+    const oa = LocalCollection._f._typeorder(ta);
+    const ob = LocalCollection._f._typeorder(tb);
     if (oa !== ob)
       return oa < ob ? -1 : 1;
     if (ta !== tb)
@@ -229,9 +229,9 @@ LocalCollection._f = {
       return a < b ? -1 : (a === b ? 0 : 1);
     if (ta === 3) { // Object
       // this could be much more efficient in the expected case ...
-      var to_array = function (obj) {
-        var ret = [];
-        for (var key in obj) {
+      const to_array = obj => {
+        const ret = [];
+        for (let key in obj) {
           ret.push(key);
           ret.push(obj[key]);
         }
@@ -240,12 +240,12 @@ LocalCollection._f = {
       return LocalCollection._f._cmp(to_array(a), to_array(b));
     }
     if (ta === 4) { // Array
-      for (var i = 0; ; i++) {
+      for (let i = 0; ; i++) {
         if (i === a.length)
           return (i === b.length) ? 0 : -1;
         if (i === b.length)
           return 1;
-        var s = LocalCollection._f._cmp(a[i], b[i]);
+        const s = LocalCollection._f._cmp(a[i], b[i]);
         if (s !== 0)
           return s;
       }
@@ -255,7 +255,7 @@ LocalCollection._f = {
       // Mongo.
       if (a.length !== b.length)
         return a.length - b.length;
-      for (i = 0; i < a.length; i++) {
+      for (let i = 0; i < a.length; i++) {
         if (a[i] < b[i])
           return -1;
         if (a[i] > b[i])

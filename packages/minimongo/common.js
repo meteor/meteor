@@ -13,40 +13,30 @@ import {LocalCollection} from './local_collection.js';
 //  - dontIncludeLeafArrays, a bool which causes an argument to be passed to
 //    expandArraysInBranches if it is called
 export const ELEMENT_OPERATORS = {
-  $lt: makeInequality(function (cmpValue) {
-    return cmpValue < 0;
-  }),
-  $gt: makeInequality(function (cmpValue) {
-    return cmpValue > 0;
-  }),
-  $lte: makeInequality(function (cmpValue) {
-    return cmpValue <= 0;
-  }),
-  $gte: makeInequality(function (cmpValue) {
-    return cmpValue >= 0;
-  }),
+  $lt: makeInequality(cmpValue => cmpValue < 0),
+  $gt: makeInequality(cmpValue => cmpValue > 0),
+  $lte: makeInequality(cmpValue => cmpValue <= 0),
+  $gte: makeInequality(cmpValue => cmpValue >= 0),
   $mod: {
-    compileElementSelector: function (operand) {
+    compileElementSelector(operand) {
       if (!(Array.isArray(operand) && operand.length === 2
             && typeof(operand[0]) === 'number'
             && typeof(operand[1]) === 'number')) {
         throw Error("argument to $mod must be an array of two numbers");
       }
       // XXX could require to be ints or round or something
-      var divisor = operand[0];
-      var remainder = operand[1];
-      return function (value) {
-        return typeof value === 'number' && value % divisor === remainder;
-      };
+      const divisor = operand[0];
+      const remainder = operand[1];
+      return value => typeof value === 'number' && value % divisor === remainder;
     }
   },
   $in: {
-    compileElementSelector: function (operand) {
+    compileElementSelector(operand) {
       if (!Array.isArray(operand))
         throw Error("$in needs an array");
 
-      var elementMatchers = [];
-      operand.forEach(function (option) {
+      const elementMatchers = [];
+      operand.forEach(option => {
         if (option instanceof RegExp)
           elementMatchers.push(regexpElementMatcher(option));
         else if (isOperatorObject(option))
@@ -55,13 +45,11 @@ export const ELEMENT_OPERATORS = {
           elementMatchers.push(equalityElementMatcher(option));
       });
 
-      return function (value) {
+      return value => {
         // Allow {a: {$in: [null]}} to match when 'a' does not exist.
         if (value === undefined)
           value = null;
-        return elementMatchers.some(function (e) {
-          return e(value);
-        });
+        return elementMatchers.some(e => e(value));
       };
     }
   },
@@ -70,7 +58,7 @@ export const ELEMENT_OPERATORS = {
     // don't want to consider the element [5,5] in the leaf array [[5,5]] as a
     // possible value.
     dontExpandLeafArrays: true,
-    compileElementSelector: function (operand) {
+    compileElementSelector(operand) {
       if (typeof operand === 'string') {
         // Don't ask me why, but by experimentation, this seems to be what Mongo
         // does.
@@ -78,9 +66,7 @@ export const ELEMENT_OPERATORS = {
       } else if (typeof operand !== 'number') {
         throw Error("$size needs a number");
       }
-      return function (value) {
-        return Array.isArray(value) && value.length === operand;
-      };
+      return value => Array.isArray(value) && value.length === operand;
     }
   },
   $type: {
@@ -89,65 +75,55 @@ export const ELEMENT_OPERATORS = {
     // {$type: 4}}. Thus, when we see a leaf array, we *should* expand it but
     // should *not* include it itself.
     dontIncludeLeafArrays: true,
-    compileElementSelector: function (operand) {
+    compileElementSelector(operand) {
       if (typeof operand !== 'number')
         throw Error("$type needs a number");
-      return function (value) {
-        return value !== undefined
-          && LocalCollection._f._type(value) === operand;
-      };
+      return value => value !== undefined
+        && LocalCollection._f._type(value) === operand;
     }
   },
   $bitsAllSet: {
-    compileElementSelector: function (operand) {
-      var op = getOperandBitmask(operand, '$bitsAllSet')
-      return function (value) {
-        var bitmask = getValueBitmask(value, op.length)
-        return bitmask && op.every(function (byte, idx) {
-          return ((bitmask[idx] & byte) == byte)
-        })
-      }
+    compileElementSelector(operand) {
+      const op = getOperandBitmask(operand, '$bitsAllSet');
+      return value => {
+        const bitmask = getValueBitmask(value, op.length);
+        return bitmask && op.every((byte, idx) => (bitmask[idx] & byte) == byte);
+      };
     }
   },
   $bitsAnySet: {
-    compileElementSelector: function (operand) {
-      var query = getOperandBitmask(operand, '$bitsAnySet')
-      return function (value) {
-        var bitmask = getValueBitmask(value, query.length)
-        return bitmask && query.some(function (byte, idx) {
-          return ((~bitmask[idx] & byte) !== byte)
-        })
-      }
+    compileElementSelector(operand) {
+      const query = getOperandBitmask(operand, '$bitsAnySet');
+      return value => {
+        const bitmask = getValueBitmask(value, query.length);
+        return bitmask && query.some((byte, idx) => (~bitmask[idx] & byte) !== byte);
+      };
     }
   },
   $bitsAllClear: {
-    compileElementSelector: function (operand) {
-      var query = getOperandBitmask(operand, '$bitsAllClear')
-      return function (value) {
-        var bitmask = getValueBitmask(value, query.length)
-        return bitmask && query.every(function (byte, idx) {
-          return !(bitmask[idx] & byte)
-        })
-      }
+    compileElementSelector(operand) {
+      const query = getOperandBitmask(operand, '$bitsAllClear');
+      return value => {
+        const bitmask = getValueBitmask(value, query.length);
+        return bitmask && query.every((byte, idx) => !(bitmask[idx] & byte));
+      };
     }
   },
   $bitsAnyClear: {
-    compileElementSelector: function (operand) {
-      var query = getOperandBitmask(operand, '$bitsAnyClear')
-      return function (value) {
-        var bitmask = getValueBitmask(value, query.length)
-        return bitmask && query.some(function (byte, idx) {
-          return ((bitmask[idx] & byte) !== byte)
-        })
-      }
+    compileElementSelector(operand) {
+      const query = getOperandBitmask(operand, '$bitsAnyClear');
+      return value => {
+        const bitmask = getValueBitmask(value, query.length);
+        return bitmask && query.some((byte, idx) => (bitmask[idx] & byte) !== byte);
+      };
     }
   },
   $regex: {
-    compileElementSelector: function (operand, valueSelector) {
+    compileElementSelector(operand, valueSelector) {
       if (!(typeof operand === 'string' || operand instanceof RegExp))
         throw Error("$regex has to be a string or RegExp");
 
-      var regexp;
+      let regexp;
       if (valueSelector.$options !== undefined) {
         // Options passed in $options (even the empty string) always overrides
         // options in the RegExp object itself. (See also
@@ -159,7 +135,7 @@ export const ELEMENT_OPERATORS = {
         if (/[^gim]/.test(valueSelector.$options))
           throw new Error("Only the i, m, and g regexp options are supported");
 
-        var regexSource = operand instanceof RegExp ? operand.source : operand;
+        const regexSource = operand instanceof RegExp ? operand.source : operand;
         regexp = new RegExp(regexSource, valueSelector.$options);
       } else if (operand instanceof RegExp) {
         regexp = operand;
@@ -171,14 +147,14 @@ export const ELEMENT_OPERATORS = {
   },
   $elemMatch: {
     dontExpandLeafArrays: true,
-    compileElementSelector: function (operand, valueSelector, matcher) {
+    compileElementSelector(operand, valueSelector, matcher) {
       if (!LocalCollection._isPlainObject(operand))
         throw Error("$elemMatch need an object");
 
-      var subMatcher, isDocMatcher;
+      let subMatcher, isDocMatcher;
       if (isOperatorObject(Object.keys(operand)
-          .filter(function (key) { return !Object.keys(LOGICAL_OPERATORS).includes(key); })
-          .reduce(function (a, b) { return Object.assign(a, {[b]: operand[b]}); }, {}), true)) {
+          .filter(key => !Object.keys(LOGICAL_OPERATORS).includes(key))
+          .reduce((a, b) => Object.assign(a, {[b]: operand[b]}), {}), true)) {
         subMatcher = compileValueSelector(operand, matcher);
         isDocMatcher = false;
       } else {
@@ -191,12 +167,12 @@ export const ELEMENT_OPERATORS = {
         isDocMatcher = true;
       }
 
-      return function (value) {
+      return value => {
         if (!Array.isArray(value))
           return false;
-        for (var i = 0; i < value.length; ++i) {
-          var arrayElement = value[i];
-          var arg;
+        for (let i = 0; i < value.length; ++i) {
+          const arrayElement = value[i];
+          let arg;
           if (isDocMatcher) {
             // We can only match {$elemMatch: {b: 3}} against objects.
             // (We can also match against arrays, if there's numeric indices,
@@ -221,14 +197,14 @@ export const ELEMENT_OPERATORS = {
 
 // Operators that appear at the top level of a document selector.
 const LOGICAL_OPERATORS = {
-  $and: function (subSelector, matcher, inElemMatch) {
-    var matchers = compileArrayOfDocumentSelectors(
+  $and(subSelector, matcher, inElemMatch) {
+    const matchers = compileArrayOfDocumentSelectors(
       subSelector, matcher, inElemMatch);
     return andDocumentMatchers(matchers);
   },
 
-  $or: function (subSelector, matcher, inElemMatch) {
-    var matchers = compileArrayOfDocumentSelectors(
+  $or(subSelector, matcher, inElemMatch) {
+    const matchers = compileArrayOfDocumentSelectors(
       subSelector, matcher, inElemMatch);
 
     // Special case: if there is only one matcher, use it directly, *preserving*
@@ -236,30 +212,26 @@ const LOGICAL_OPERATORS = {
     if (matchers.length === 1)
       return matchers[0];
 
-    return function (doc) {
-      var result = matchers.some(function (f) {
-        return f(doc).result;
-      });
+    return doc => {
+      const result = matchers.some(f => f(doc).result);
       // $or does NOT set arrayIndices when it has multiple
       // sub-expressions. (Tested against MongoDB.)
-      return {result: result};
+      return {result};
     };
   },
 
-  $nor: function (subSelector, matcher, inElemMatch) {
-    var matchers = compileArrayOfDocumentSelectors(
+  $nor(subSelector, matcher, inElemMatch) {
+    const matchers = compileArrayOfDocumentSelectors(
       subSelector, matcher, inElemMatch);
-    return function (doc) {
-      var result = matchers.every(function (f) {
-        return !f(doc).result;
-      });
+    return doc => {
+      const result = matchers.every(f => !f(doc).result);
       // Never set arrayIndices, because we only match if nothing in particular
       // 'matched' (and because this is consistent with MongoDB).
-      return {result: result};
+      return {result};
     };
   },
 
-  $where: function (selectorValue, matcher) {
+  $where(selectorValue, matcher) {
     // Record that *any* path may be used.
     matcher._recordPathUsed('');
     matcher._hasWhere = true;
@@ -268,19 +240,19 @@ const LOGICAL_OPERATORS = {
       // to add 'return'; not sure exactly what it is.
       selectorValue = Function('obj', `return ${selectorValue}`);
     }
-    return function (doc) {
-      // We make the document available as both `this` and `obj`.
-      // XXX not sure what we should do if this throws
-      return {result: selectorValue.call(doc, doc)};
-    };
+    return doc => // We make the document available as both `this` and `obj`.
+    // XXX not sure what we should do if this throws
+    ({
+      result: selectorValue.call(doc, doc)
+    });
   },
 
   // This is just used as a comment in the query (in MongoDB, it also ends up in
   // query logs); it has no effect on the actual selection.
-  $comment: function () {
-    return function () {
-      return {result: true};
-    };
+  $comment() {
+    return () => ({
+      result: true
+    });
   }
 };
 
@@ -289,48 +261,46 @@ const LOGICAL_OPERATORS = {
 // "match each branched value independently and combine with
 // convertElementMatcherToBranchedMatcher".
 const VALUE_OPERATORS = {
-  $eq: function (operand) {
+  $eq(operand) {
     return convertElementMatcherToBranchedMatcher(
       equalityElementMatcher(operand));
   },
-  $not: function (operand, valueSelector, matcher) {
+  $not(operand, valueSelector, matcher) {
     return invertBranchedMatcher(compileValueSelector(operand, matcher));
   },
-  $ne: function (operand) {
+  $ne(operand) {
     return invertBranchedMatcher(convertElementMatcherToBranchedMatcher(
       equalityElementMatcher(operand)));
   },
-  $nin: function (operand) {
+  $nin(operand) {
     return invertBranchedMatcher(convertElementMatcherToBranchedMatcher(
       ELEMENT_OPERATORS.$in.compileElementSelector(operand)));
   },
-  $exists: function (operand) {
-    var exists = convertElementMatcherToBranchedMatcher(function (value) {
-      return value !== undefined;
-    });
+  $exists(operand) {
+    const exists = convertElementMatcherToBranchedMatcher(value => value !== undefined);
     return operand ? exists : invertBranchedMatcher(exists);
   },
   // $options just provides options for $regex; its logic is inside $regex
-  $options: function (operand, valueSelector) {
+  $options(operand, valueSelector) {
     if (!valueSelector.hasOwnProperty('$regex'))
       throw Error("$options needs a $regex");
     return everythingMatcher;
   },
   // $maxDistance is basically an argument to $near
-  $maxDistance: function (operand, valueSelector) {
+  $maxDistance(operand, valueSelector) {
     if (!valueSelector.$near)
       throw Error("$maxDistance needs a $near");
     return everythingMatcher;
   },
-  $all: function (operand, valueSelector, matcher) {
+  $all(operand, valueSelector, matcher) {
     if (!Array.isArray(operand))
       throw Error("$all requires array");
     // Not sure why, but this seems to be what MongoDB does.
     if (operand.length === 0)
       return nothingMatcher;
 
-    var branchedMatchers = [];
-    operand.forEach(function (criterion) {
+    const branchedMatchers = [];
+    operand.forEach(criterion => {
       // XXX handle $all/$elemMatch combination
       if (isOperatorObject(criterion))
         throw Error("no $ expressions in $all");
@@ -341,7 +311,7 @@ const VALUE_OPERATORS = {
     // SAME branch.
     return andBranchedMatchers(branchedMatchers);
   },
-  $near: function (operand, valueSelector, matcher, isRoot) {
+  $near(operand, valueSelector, matcher, isRoot) {
     if (!isRoot)
       throw Error("$near can't be inside another $ operator");
     matcher._hasGeoQuery = true;
@@ -351,12 +321,12 @@ const VALUE_OPERATORS = {
     // marked with a $geometry property, though legacy coordinates can be
     // matched using $geometry.
 
-    var maxDistance, point, distance;
+    let maxDistance, point, distance;
     if (LocalCollection._isPlainObject(operand) && operand.hasOwnProperty('$geometry')) {
       // GeoJSON "2dsphere" mode.
       maxDistance = operand.$maxDistance;
       point = operand.$geometry;
-      distance = function (value) {
+      distance = value => {
         // XXX: for now, we don't calculate the actual distance between, say,
         // polygon and circle. If people care about this use-case it will get
         // a priority.
@@ -377,14 +347,14 @@ const VALUE_OPERATORS = {
       if (!isIndexable(operand))
         throw Error("$near argument must be coordinate pair or GeoJSON");
       point = pointToArray(operand);
-      distance = function (value) {
+      distance = value => {
         if (!isIndexable(value))
           return null;
         return distanceCoordinatePairs(point, value);
       };
     }
 
-    return function (branchedValues) {
+    return branchedValues => {
       // There might be multiple points in the document that match the given
       // field. Only one of them needs to be within $maxDistance, but we need to
       // evaluate all of them and use the nearest one for the implicit sort
@@ -394,14 +364,15 @@ const VALUE_OPERATORS = {
       // actually show up *multiple times* in the result set, with one entry for
       // each within-$maxDistance branching point.
       branchedValues = expandArraysInBranches(branchedValues);
-      var result = {result: false};
-      branchedValues.every(function (branch) {
+      const result = {result: false};
+      branchedValues.every(branch => {
         // if operation is an update, don't skip branches, just return the first one (#3599)
+        let curDistance;
         if (!matcher._isUpdate){
           if (!(typeof branch.value === "object")){
             return true;
           }
-          var curDistance = distance(branch.value);
+          curDistance = distance(branch.value);
           // Skip branches that aren't real points or are too far away.
           if (curDistance === null || curDistance > maxDistance)
             return true;
@@ -434,10 +405,10 @@ function andSomeMatchers (subMatchers) {
   if (subMatchers.length === 1)
     return subMatchers[0];
 
-  return function (docOrBranches) {
-    var ret = {};
-    ret.result = subMatchers.every(function (f) {
-      var subResult = f(docOrBranches);
+  return docOrBranches => {
+    const ret = {};
+    ret.result = subMatchers.every(f => {
+      const subResult = f(docOrBranches);
       // Copy a 'distance' number out of the first sub-matcher that has
       // one. Yes, this means that if there are multiple $near fields in a
       // query, something arbitrary happens; this appears to be consistent with
@@ -470,11 +441,11 @@ const andBranchedMatchers = andSomeMatchers;
 function compileArrayOfDocumentSelectors (selectors, matcher, inElemMatch) {
   if (!Array.isArray(selectors) || selectors.length === 0)
     throw Error('$and/$or/$nor must be nonempty array');
-  return selectors.map(function (subSelector) {
+  return selectors.map(subSelector => {
     if (!LocalCollection._isPlainObject(subSelector))
       throw Error('$or/$and/$nor entries need to be full objects');
     return compileDocumentSelector(
-      subSelector, matcher, {inElemMatch: inElemMatch});
+      subSelector, matcher, {inElemMatch});
   });
 }
 
@@ -487,7 +458,7 @@ function compileArrayOfDocumentSelectors (selectors, matcher, inElemMatch) {
 // then isRoot is true. (This is used by $near.)
 export function compileDocumentSelector (docSelector, matcher, options = {}) {
   let docMatchers = [];
-  Object.keys(docSelector).forEach(function (key) {
+  Object.keys(docSelector).forEach(key => {
     let subSelector = docSelector[key];
     if (key.substr(0, 1) === '$') {
       // Outer operators are either logical operators (they recurse back into
@@ -506,7 +477,7 @@ export function compileDocumentSelector (docSelector, matcher, options = {}) {
       let lookUpByIndex = makeLookupFunction(key);
       let valueMatcher =
         compileValueSelector(subSelector, matcher, options.isRoot);
-      docMatchers.push(function (doc) {
+      docMatchers.push(doc => {
         let branchValues = lookUpByIndex(doc);
         return valueMatcher(branchValues);
       });
@@ -536,17 +507,16 @@ function compileValueSelector (valueSelector, matcher, isRoot) {
 // Given an element matcher (which evaluates a single value), returns a branched
 // value (which evaluates the element matcher on all the branches and returns a
 // more structured return value possibly including arrayIndices).
-function convertElementMatcherToBranchedMatcher (elementMatcher, options) {
-  options = options || {};
-  return function (branches) {
-    var expanded = branches;
+function convertElementMatcherToBranchedMatcher(elementMatcher, options = {}) {
+  return branches => {
+    let expanded = branches;
     if (!options.dontExpandLeafArrays) {
       expanded = expandArraysInBranches(
         branches, options.dontIncludeLeafArrays);
     }
-    var ret = {};
-    ret.result = expanded.some(function (element) {
-      var matched = elementMatcher(element.value);
+    const ret = {};
+    ret.result = expanded.some(element => {
+      let matched = elementMatcher(element.value);
 
       // Special case for $elemMatch: it means "true, and use this as an array
       // index if I didn't already have one".
@@ -574,8 +544,8 @@ function convertElementMatcherToBranchedMatcher (elementMatcher, options) {
 function distanceCoordinatePairs (a, b) {
   a = pointToArray(a);
   b = pointToArray(b);
-  var x = a[0] - b[0];
-  var y = a[1] - b[1];
+  const x = a[0] - b[0];
+  const y = a[1] - b[1];
   if (Number.isNaN(x) || Number.isNaN(y))
     return null;
   return Math.sqrt(x * x + y * y);
@@ -591,14 +561,11 @@ export function equalityElementMatcher (elementSelector) {
   // somewhere, or if you got it due to some branch being non-existent in the
   // weird special case), even though they aren't with EJSON.equals.
   if (elementSelector == null) {  // undefined or null
-    return function (value) {
-      return value == null;  // undefined or null
-    };
+    return value => // undefined or null
+    value == null;
   }
 
-  return function (value) {
-    return LocalCollection._f._equal(elementSelector, value);
-  };
+  return value => LocalCollection._f._equal(elementSelector, value);
 }
 
 function everythingMatcher (docOrBranchedValues) {
@@ -606,9 +573,9 @@ function everythingMatcher (docOrBranchedValues) {
 }
 
 export function expandArraysInBranches (branches, skipTheArrays) {
-  var branchesOut = [];
-  branches.forEach(function (branch) {
-    var thisIsArray = Array.isArray(branch.value);
+  const branchesOut = [];
+  branches.forEach(branch => {
+    const thisIsArray = Array.isArray(branch.value);
     // We include the branch itself, *UNLESS* we it's an array that we're going
     // to iterate and we're told to skip arrays.  (That's right, we include some
     // arrays even skipTheArrays is true: these are arrays that were found via
@@ -620,7 +587,7 @@ export function expandArraysInBranches (branches, skipTheArrays) {
       });
     }
     if (thisIsArray && !branch.dontIterate) {
-      branch.value.forEach(function (leaf, i) {
+      branch.value.forEach((leaf, i) => {
         branchesOut.push({
           value: leaf,
           arrayIndices: (branch.arrayIndices || []).concat(i)
@@ -646,12 +613,10 @@ function getOperandBitmask (operand, selector) {
   }
   // position list
   // If querying a list of bit positions, each <position> must be a non-negative integer. Bit positions start at 0 from the least significant bit.
-  else if (Array.isArray(operand) && operand.every(function (e) {
-    return Number.isInteger(e) && e >= 0
-  })) {
-    var buffer = new ArrayBuffer((Math.max(...operand) >> 3) + 1)
-    var view = new Uint8Array(buffer)
-    operand.forEach(function (x) {
+  else if (Array.isArray(operand) && operand.every(e => Number.isInteger(e) && e >= 0)) {
+    const buffer = new ArrayBuffer((Math.max(...operand) >> 3) + 1);
+    const view = new Uint8Array(buffer);
+    operand.forEach(x => {
       view[x >> 3] |= (1 << (x & 0x7))
     })
     return view
@@ -668,14 +633,14 @@ function getValueBitmask (value, length) {
   if (Number.isSafeInteger(value)) {
     // $bits... will not match numerical values that cannot be represented as a signed 64-bit integer
     // This can be the case if a value is either too large or small to fit in a signed 64-bit integer, or if it has a fractional component.
-    var buffer = new ArrayBuffer(Math.max(length, 2 * Uint32Array.BYTES_PER_ELEMENT));
-    var view = new Uint32Array(buffer, 0, 2)
+    const buffer = new ArrayBuffer(Math.max(length, 2 * Uint32Array.BYTES_PER_ELEMENT));
+    let view = new Uint32Array(buffer, 0, 2);
     view[0] = (value % ((1 << 16) * (1 << 16))) | 0
     view[1] = (value / ((1 << 16) * (1 << 16))) | 0
     // sign extension
     if (value < 0) {
       view = new Uint8Array(buffer, 2)
-      view.forEach(function (byte, idx) {
+      view.forEach((byte, idx) => {
         view[idx] = 0xff
       })
     }
@@ -693,8 +658,8 @@ function getValueBitmask (value, length) {
 // Note that this implicitly "deMorganizes" the wrapped function.  ie, it
 // means that ALL branch values need to fail to match innerBranchedMatcher.
 function invertBranchedMatcher (branchedMatcher) {
-  return function (branchValues) {
-    var invertMe = branchedMatcher(branchValues);
+  return branchValues => {
+    const invertMe = branchedMatcher(branchValues);
     // We explicitly choose to strip arrayIndices here: it doesn't make sense to
     // say "update the array element that does not match something", at least
     // in mongo-land.
@@ -717,9 +682,9 @@ export function isOperatorObject (valueSelector, inconsistentOK) {
   if (!LocalCollection._isPlainObject(valueSelector))
     return false;
 
-  var theseAreOperators = undefined;
-  Object.keys(valueSelector).forEach(function (selKey) {
-    var thisIsOperator = selKey.substr(0, 1) === '$';
+  let theseAreOperators = undefined;
+  Object.keys(valueSelector).forEach(selKey => {
+    const thisIsOperator = selKey.substr(0, 1) === '$';
     if (theseAreOperators === undefined) {
       theseAreOperators = thisIsOperator;
     } else if (theseAreOperators !== thisIsOperator) {
@@ -734,15 +699,13 @@ export function isOperatorObject (valueSelector, inconsistentOK) {
 // Helper for $lt/$gt/$lte/$gte.
 function makeInequality (cmpValueComparator) {
   return {
-    compileElementSelector: function (operand) {
+    compileElementSelector(operand) {
       // Arrays never compare false with non-arrays for any inequality.
       // XXX This was behavior we observed in pre-release MongoDB 2.5, but
       //     it seems to have been reverted.
       //     See https://jira.mongodb.org/browse/SERVER-11444
       if (Array.isArray(operand)) {
-        return function () {
-          return false;
-        };
+        return () => false;
       }
 
       // Special case: consider undefined and null the same (so true with
@@ -750,9 +713,9 @@ function makeInequality (cmpValueComparator) {
       if (operand === undefined)
         operand = null;
 
-      var operandType = LocalCollection._f._type(operand);
+      const operandType = LocalCollection._f._type(operand);
 
-      return function (value) {
+      return value => {
         if (value === undefined)
           value = null;
         // Comparisons are never true among things of different type (except
@@ -817,18 +780,17 @@ function makeInequality (cmpValueComparator) {
 //
 // See the test 'minimongo - lookup' for some examples of what lookup functions
 // return.
-export function makeLookupFunction (key, options) {
-  options = options || {};
-  var parts = key.split('.');
-  var firstPart = parts.length ? parts[0] : '';
-  var firstPartIsNumeric = isNumericKey(firstPart);
-  var nextPartIsNumeric = parts.length >= 2 && isNumericKey(parts[1]);
-  var lookupRest;
+export function makeLookupFunction(key, options = {}) {
+  const parts = key.split('.');
+  const firstPart = parts.length ? parts[0] : '';
+  const firstPartIsNumeric = isNumericKey(firstPart);
+  const nextPartIsNumeric = parts.length >= 2 && isNumericKey(parts[1]);
+  let lookupRest;
   if (parts.length > 1) {
     lookupRest = makeLookupFunction(parts.slice(1).join('.'));
   }
 
-  var omitUnnecessaryFields = function (retVal) {
+  const omitUnnecessaryFields = retVal => {
     if (!retVal.dontIterate)
       delete retVal.dontIterate;
     if (retVal.arrayIndices && !retVal.arrayIndices.length)
@@ -838,7 +800,7 @@ export function makeLookupFunction (key, options) {
 
   // Doc will always be a plain object or an array.
   // apply an explicit numeric index, an array.
-  return function (doc, arrayIndices) {
+  return (doc, arrayIndices) => {
     if (!arrayIndices)
       arrayIndices = [];
 
@@ -856,7 +818,7 @@ export function makeLookupFunction (key, options) {
     }
 
     // Do our first lookup.
-    var firstLevel = doc[firstPart];
+    const firstLevel = doc[firstPart];
 
     // If there is no deeper to dig, return what we found.
     //
@@ -874,7 +836,7 @@ export function makeLookupFunction (key, options) {
       return [omitUnnecessaryFields({
         value: firstLevel,
         dontIterate: Array.isArray(doc) && Array.isArray(firstLevel),
-        arrayIndices: arrayIndices})];
+        arrayIndices})];
     }
 
     // We need to dig deeper.  But if we can't, because what we've found is not
@@ -887,11 +849,11 @@ export function makeLookupFunction (key, options) {
       if (Array.isArray(doc))
         return [];
       return [omitUnnecessaryFields({value: undefined,
-                                      arrayIndices: arrayIndices})];
+                                      arrayIndices})];
     }
 
-    var result = [];
-    var appendToResult = function (more) {
+    const result = [];
+    const appendToResult = more => {
       Array.prototype.push.apply(result, more);
     };
 
@@ -916,7 +878,7 @@ export function makeLookupFunction (key, options) {
     // 'look up this index' in that case, not 'also look up this index in all
     // the elements of the array'.
     if (Array.isArray(firstLevel) && !(nextPartIsNumeric && options.forSort)) {
-      firstLevel.forEach(function (branch, arrayIndex) {
+      firstLevel.forEach((branch, arrayIndex) => {
         if (LocalCollection._isPlainObject(branch)) {
           appendToResult(lookupRest(
             branch,
@@ -932,12 +894,12 @@ export function makeLookupFunction (key, options) {
 // Object exported only for unit testing.
 // Use it to export private functions to test in Tinytest.
 MinimongoTest = {makeLookupFunction};
-MinimongoError = function (message, options = {}) {
+MinimongoError = (message, options = {}) => {
   if (typeof message === "string" && options.field) {
     message += ` for field '${options.field}'`;
   }
 
-  var e = new Error(message);
+  const e = new Error(message);
   e.name = "MinimongoError";
   return e;
 };
@@ -953,14 +915,14 @@ function operatorBranchedMatcher (valueSelector, matcher, isRoot) {
   // operator can match one branch and another can match another branch.  This
   // is OK.
 
-  var operatorMatchers = [];
-  Object.keys(valueSelector).forEach(function (operator) {
-    var operand = valueSelector[operator];
-    var simpleRange = ['$lt', '$lte', '$gt', '$gte'].includes(operator) &&
+  const operatorMatchers = [];
+  Object.keys(valueSelector).forEach(operator => {
+    const operand = valueSelector[operator];
+    const simpleRange = ['$lt', '$lte', '$gt', '$gte'].includes(operator) &&
       typeof operand === 'number';
-    var simpleEquality = ['$ne', '$eq'].includes(operator) && operand !== Object(operand);
-    var simpleInclusion = ['$in', '$nin'].includes(operator) &&
-      Array.isArray(operand) && !operand.some(function (x) { return x === Object(x); });
+    const simpleEquality = ['$ne', '$eq'].includes(operator) && operand !== Object(operand);
+    const simpleInclusion = ['$in', '$nin'].includes(operator) &&
+      Array.isArray(operand) && !operand.some(x => x === Object(x));
 
     if (! (simpleRange || simpleInclusion || simpleEquality)) {
       matcher._isSimple = false;
@@ -970,14 +932,14 @@ function operatorBranchedMatcher (valueSelector, matcher, isRoot) {
       operatorMatchers.push(
         VALUE_OPERATORS[operator](operand, valueSelector, matcher, isRoot));
     } else if (ELEMENT_OPERATORS.hasOwnProperty(operator)) {
-      var options = ELEMENT_OPERATORS[operator];
+      const options = ELEMENT_OPERATORS[operator];
       operatorMatchers.push(
         convertElementMatcherToBranchedMatcher(
           options.compileElementSelector(
             operand, valueSelector, matcher),
           options));
     } else {
-      throw new Error("Unrecognized operator: " + operator);
+      throw new Error(`Unrecognized operator: ${operator}`);
     }
   });
 
@@ -993,14 +955,13 @@ function operatorBranchedMatcher (valueSelector, matcher, isRoot) {
 //                        conflict resolution.
 // initial tree - Optional Object: starting tree.
 // @returns - Object: tree represented as a set of nested objects
-export function pathsToTree (paths, newLeafFn, conflictFn, tree) {
-  tree = tree || {};
-  paths.forEach(function (keyPath) {
-    var treePos = tree;
-    var pathArr = keyPath.split('.');
+export function pathsToTree(paths, newLeafFn, conflictFn, tree = {}) {
+  paths.forEach(keyPath => {
+    let treePos = tree;
+    const pathArr = keyPath.split('.');
 
     // use .every just for iteration with break
-    var success = pathArr.slice(0, -1).every(function (key, idx) {
+    const success = pathArr.slice(0, -1).every((key, idx) => {
       if (!treePos.hasOwnProperty(key))
         treePos[key] = {};
       else if (treePos[key] !== Object(treePos[key])) {
@@ -1017,7 +978,7 @@ export function pathsToTree (paths, newLeafFn, conflictFn, tree) {
     });
 
     if (success) {
-      var lastKey = pathArr[pathArr.length - 1];
+      const lastKey = pathArr[pathArr.length - 1];
       if (!treePos.hasOwnProperty(lastKey))
         treePos[lastKey] = newLeafFn(keyPath);
       else
@@ -1045,7 +1006,7 @@ export function projectionDetails (fields) {
   // Find the non-_id keys (_id is handled specially because it is included unless
   // explicitly excluded). Sort the keys, so that our code to detect overlaps
   // like 'foo' and 'foo.bar' can assume that 'foo' comes first.
-  var fieldsKeys = Object.keys(fields).sort();
+  let fieldsKeys = Object.keys(fields).sort();
 
   // If _id is the only field in the projection, do not remove it, since it is
   // required to determine if this is an exclusion or exclusion. Also keep an
@@ -1056,12 +1017,12 @@ export function projectionDetails (fields) {
   if (fieldsKeys.length > 0 &&
       !(fieldsKeys.length === 1 && fieldsKeys[0] === '_id') &&
       !(fieldsKeys.includes('_id') && fields['_id']))
-    fieldsKeys = fieldsKeys.filter(function (key) { return key !== '_id'; });
+    fieldsKeys = fieldsKeys.filter(key => key !== '_id');
 
-  var including = null; // Unknown
+  let including = null; // Unknown
 
-  fieldsKeys.forEach(function (keyPath) {
-    var rule = !!fields[keyPath];
+  fieldsKeys.forEach(keyPath => {
+    const rule = !!fields[keyPath];
     if (including === null)
       including = rule;
     if (including !== rule)
@@ -1070,10 +1031,10 @@ export function projectionDetails (fields) {
   });
 
 
-  var projectionRulesTree = pathsToTree(
+  const projectionRulesTree = pathsToTree(
     fieldsKeys,
-    function (path) { return including; },
-    function (node, path, fullPath) {
+    path => including,
+    (node, path, fullPath) => {
       // Check passed projection fields' keys: If you have two rules such as
       // 'foo.bar' and 'foo.bar.baz', then the result becomes ambiguous. If
       // that happens, there is a probability you are doing something wrong,
@@ -1091,22 +1052,20 @@ export function projectionDetails (fields) {
       //
       // Note, how second time the return set of keys is different.
 
-      var currentPath = fullPath;
-      var anotherPath = path;
-      throw MinimongoError("both " + currentPath + " and " + anotherPath +
-                           " found in fields option, using both of them may trigger " +
-                           "unexpected behavior. Did you mean to use only one of them?");
+      const currentPath = fullPath;
+      const anotherPath = path;
+      throw MinimongoError(`both ${currentPath} and ${anotherPath} found in fields option, using both of them may trigger unexpected behavior. Did you mean to use only one of them?`);
     });
 
   return {
     tree: projectionRulesTree,
-    including: including
+    including
   };
 }
 
 // Takes a RegExp object and returns an element matcher.
 export function regexpElementMatcher (regexp) {
-  return function (value) {
+  return value => {
     if (value instanceof RegExp) {
       return value.toString() === regexp.toString();
     }

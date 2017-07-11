@@ -5,7 +5,7 @@ import {LocalCollection} from './local_collection.js';
 export class Cursor {
   // don't call this ctor directly.  use LocalCollection.find().
   constructor (collection, selector, options) {
-    var self = this;
+    const self = this;
     if (!options) options = {};
 
     self.collection = collection;
@@ -48,7 +48,7 @@ export class Cursor {
    * @returns {Number}
    */
   count () {
-    var self = this;
+    const self = this;
 
     if (self.reactive)
       self._depend({added: true, removed: true},
@@ -66,9 +66,9 @@ export class Cursor {
    * @returns {Object[]}
    */
   fetch () {
-    var self = this;
-    var res = [];
-    self.forEach(function (doc) {
+    const self = this;
+    const res = [];
+    self.forEach(doc => {
       res.push(doc);
     });
     return res;
@@ -89,9 +89,9 @@ export class Cursor {
    * @param {Any} [thisArg] An object which will be the value of `this` inside `callback`.
    */
   forEach (callback, thisArg) {
-    var self = this;
+    const self = this;
 
-    var objects = self._getRawObjects({ordered: true});
+    const objects = self._getRawObjects({ordered: true});
 
     if (self.reactive) {
       self._depend({
@@ -101,7 +101,7 @@ export class Cursor {
         movedBefore: true});
     }
 
-    objects.forEach(function (elt, i) {
+    objects.forEach((elt, i) => {
       // This doubles as a clone operation.
       elt = self._projectionFn(elt);
 
@@ -125,9 +125,9 @@ export class Cursor {
    * @param {Any} [thisArg] An object which will be the value of `this` inside `callback`.
    */
   map (callback, thisArg) {
-    var self = this;
-    var res = [];
-    self.forEach(function (doc, index) {
+    const self = this;
+    const res = [];
+    self.forEach((doc, index) => {
       res.push(callback.call(thisArg, doc, index, self));
     });
     return res;
@@ -162,7 +162,7 @@ export class Cursor {
    * @param {Object} callbacks Functions to call to deliver the result set as it changes
    */
   observe (options) {
-    var self = this;
+    const self = this;
     return LocalCollection._observeFromObserveChanges(self, options);
   }
 
@@ -174,9 +174,9 @@ export class Cursor {
    * @param {Object} callbacks Functions to call to deliver the result set as it changes
    */
   observeChanges (options) {
-    var self = this;
+    const self = this;
 
-    var ordered = LocalCollection._observeChangesCallbacksAreOrdered(options);
+    const ordered = LocalCollection._observeChangesCallbacksAreOrdered(options);
 
     // there are several places that assume you aren't combining skip/limit with
     // unordered observe.  eg, update's EJSON.clone, and the "there are several"
@@ -188,18 +188,18 @@ export class Cursor {
     if (self.fields && (self.fields._id === 0 || self.fields._id === false))
       throw Error("You may not observe a cursor with {fields: {_id: 0}}");
 
-    var query = {
+    const query = {
       dirty: false,
       matcher: self.matcher, // not fast pathed
       sorter: ordered && self.sorter,
       distances: (
         self.matcher.hasGeoQuery() && ordered && new LocalCollection._IdMap),
       resultsSnapshot: null,
-      ordered: ordered,
+      ordered,
       cursor: self,
       projectionFn: self._projectionFn
     };
-    var qid;
+    let qid;
 
     // Non-reactive queries call added[Before] and then never call anything
     // else.
@@ -208,7 +208,7 @@ export class Cursor {
       self.collection.queries[qid] = query;
     }
     query.results = self._getRawObjects({
-      ordered: ordered, distances: query.distances});
+      ordered, distances: query.distances});
     if (self.collection.paused)
       query.resultsSnapshot = (ordered ? [] : new LocalCollection._IdMap);
 
@@ -219,17 +219,17 @@ export class Cursor {
 
     // furthermore, callbacks enqueue until the operation we're working on is
     // done.
-    var wrapCallback = function (f) {
+    const wrapCallback = f => {
       if (!f)
-        return function () {};
+        return () => {};
       return function (/*args*/) {
-        var context = this;
-        var args = arguments;
+        const context = this;
+        const args = arguments;
 
         if (self.collection.paused)
           return;
 
-        self.collection._observeQueue.queueTask(function () {
+        self.collection._observeQueue.queueTask(() => {
           f.apply(context, args);
         });
       };
@@ -243,10 +243,10 @@ export class Cursor {
     }
 
     if (!options._suppress_initial && !self.collection.paused) {
-      var results = query.results._map || query.results;
-      Object.keys(results).forEach(function (key) {
-        var doc = results[key];
-        var fields = EJSON.clone(doc);
+      const results = query.results._map || query.results;
+      Object.keys(results).forEach(key => {
+        const doc = results[key];
+        const fields = EJSON.clone(doc);
 
         delete fields._id;
         if (ordered)
@@ -255,10 +255,10 @@ export class Cursor {
       });
     }
 
-    var handle = new LocalCollection.ObserveHandle;
+    const handle = new LocalCollection.ObserveHandle;
     Object.assign(handle, {
       collection: self.collection,
-      stop: function () {
+      stop() {
         if (self.reactive)
           delete self.collection.queries[qid];
       }
@@ -270,7 +270,7 @@ export class Cursor {
       // letting it linger across rerun and potentially get
       // repurposed if the same observe is performed, using logic
       // similar to that of Meteor.subscribe.
-      Tracker.onInvalidate(function () {
+      Tracker.onInvalidate(() => {
         handle.stop();
       });
     }
@@ -290,18 +290,18 @@ export class Cursor {
   // XXX Maybe we need a version of observe that just calls a callback if
   // anything changed.
   _depend (changers, _allow_unordered) {
-    var self = this;
+    const self = this;
 
     if (Tracker.active) {
-      var v = new Tracker.Dependency;
+      const v = new Tracker.Dependency;
       v.depend();
-      var notifyChange = v.changed.bind(v);
+      const notifyChange = v.changed.bind(v);
 
-      var options = {
+      const options = {
         _suppress_initial: true,
-        _allow_unordered: _allow_unordered
+        _allow_unordered
       };
-      ['added', 'changed', 'removed', 'addedBefore', 'movedBefore'].forEach(function (fnName) {
+      ['added', 'changed', 'removed', 'addedBefore', 'movedBefore'].forEach(fnName => {
         if (changers[fnName])
           options[fnName] = notifyChange;
       });
@@ -312,7 +312,7 @@ export class Cursor {
   }
 
   _getCollectionName () {
-    var self = this;
+    const self = this;
     return self.collection.name;
   }
 
@@ -332,12 +332,12 @@ export class Cursor {
   // it will just create its own _IdMap). The observeChanges implementation uses
   // this to remember the distances after this function returns.
   _getRawObjects (options) {
-    var self = this;
+    const self = this;
     options = options || {};
 
     // XXX use OrderedDict instead of array, and make IdMap and OrderedDict
     // compatible
-    var results = options.ordered ? [] : new LocalCollection._IdMap;
+    const results = options.ordered ? [] : new LocalCollection._IdMap;
 
     // fast path for single ID value
     if (self._selectorId !== undefined) {
@@ -347,7 +347,7 @@ export class Cursor {
       if (self.skip)
         return results;
 
-      var selectedDoc = self.collection._docs.get(self._selectorId);
+      const selectedDoc = self.collection._docs.get(self._selectorId);
       if (selectedDoc) {
         if (options.ordered)
           results.push(selectedDoc);
@@ -362,7 +362,7 @@ export class Cursor {
     // in the observeChanges case, distances is actually part of the "query" (ie,
     // live results set) object.  in other cases, distances is only used inside
     // this function.
-    var distances;
+    let distances;
     if (self.matcher.hasGeoQuery() && options.ordered) {
       if (options.distances) {
         distances = options.distances;
@@ -372,8 +372,8 @@ export class Cursor {
       }
     }
 
-    self.collection._docs.forEach(function (doc, id) {
-      var matchResult = self.matcher.documentMatches(doc);
+    self.collection._docs.forEach((doc, id) => {
+      const matchResult = self.matcher.documentMatches(doc);
       if (matchResult.result) {
         if (options.ordered) {
           results.push(doc);
@@ -395,20 +395,20 @@ export class Cursor {
       return results;
 
     if (self.sorter) {
-      var comparator = self.sorter.getComparator({distances: distances});
+      const comparator = self.sorter.getComparator({distances});
       results.sort(comparator);
     }
 
-    var idx_start = self.skip || 0;
-    var idx_end = self.limit ? (self.limit + idx_start) : results.length;
+    const idx_start = self.skip || 0;
+    const idx_end = self.limit ? (self.limit + idx_start) : results.length;
     return results.slice(idx_start, idx_end);
   }
 
   _publishCursor (sub) {
-    var self = this;
+    const self = this;
     if (! self.collection.name)
       throw new Error("Can't publish a cursor from a collection without a name.");
-    var collection = self.collection.name;
+    const collection = self.collection.name;
 
     // XXX minimongo should not depend on mongo-livedata!
     if (! Package.mongo) {

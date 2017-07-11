@@ -22,26 +22,26 @@ import {
 
 export class Sorter {
   constructor (spec, options) {
-    var self = this;
+    const self = this;
     options = options || {};
 
     self._sortSpecParts = [];
     self._sortFunction = null;
 
-    var addSpecPart = function (path, ascending) {
+    const addSpecPart = (path, ascending) => {
       if (!path)
         throw Error("sort keys must be non-empty");
       if (path.charAt(0) === '$')
-        throw Error("unsupported sort key: " + path);
+        throw Error(`unsupported sort key: ${path}`);
       self._sortSpecParts.push({
-        path: path,
+        path,
         lookup: makeLookupFunction(path, {forSort: true}),
-        ascending: ascending
+        ascending
       });
     };
 
     if (spec instanceof Array) {
-      for (var i = 0; i < spec.length; i++) {
+      for (let i = 0; i < spec.length; i++) {
         if (typeof spec[i] === "string") {
           addSpecPart(spec[i], true);
         } else {
@@ -49,14 +49,14 @@ export class Sorter {
         }
       }
     } else if (typeof spec === "object") {
-      Object.keys(spec).forEach(function (key) {
-        var value = spec[key];
+      Object.keys(spec).forEach(key => {
+        const value = spec[key];
         addSpecPart(key, value >= 0);
       });
     } else if (typeof spec === "function") {
       self._sortFunction = spec;
     } else {
-      throw Error("Bad sort specification: " + JSON.stringify(spec));
+      throw Error(`Bad sort specification: ${JSON.stringify(spec)}`);
     }
 
     // If a function is specified for sorting, we skip the rest.
@@ -67,17 +67,15 @@ export class Sorter {
     // affectedByModifier code; we create a selector that is affected by the same
     // modifiers as this sort order. This is only implemented on the server.
     if (self.affectedByModifier) {
-      var selector = {};
-      self._sortSpecParts.forEach(function (spec) {
+      const selector = {};
+      self._sortSpecParts.forEach(spec => {
         selector[spec.path] = 1;
       });
       self._selectorForAffectedByModifier = new Minimongo.Matcher(selector);
     }
 
     self._keyComparator = composeComparators(
-      self._sortSpecParts.map(function (spec, i) {
-        return self._keyFieldComparator(i);
-      }));
+      self._sortSpecParts.map((spec, i) => self._keyFieldComparator(i)));
 
     // If you specify a matcher for this Sorter, _keyFilter may be set to a
     // function which selects whether or not a given "sort key" (tuple of values
@@ -87,7 +85,7 @@ export class Sorter {
   }
 
   getComparator (options) {
-    var self = this;
+    const self = this;
 
     // If sort is specified or have no distances, just use the comparator from
     // the source specification (which defaults to "everything is equal".
@@ -98,14 +96,14 @@ export class Sorter {
       return self._getBaseComparator();
     }
 
-    var distances = options.distances;
+    const distances = options.distances;
 
     // Return a comparator which compares using $near distances.
-    return function (a, b) {
+    return (a, b) => {
       if (!distances.has(a._id))
-        throw Error("Missing distance for " + a._id);
+        throw Error(`Missing distance for ${a._id}`);
       if (!distances.has(b._id))
-        throw Error("Missing distance for " + b._id);
+        throw Error(`Missing distance for ${b._id}`);
       return distances.get(a._id) - distances.get(b._id);
     };
   }
@@ -114,7 +112,7 @@ export class Sorter {
   // parts. Returns negative, 0, or positive based on using the sort spec to
   // compare fields.
   _compareKeys (key1, key2) {
-    var self = this;
+    const self = this;
     if (key1.length !== self._sortSpecParts.length ||
         key2.length !== self._sortSpecParts.length) {
       throw Error("Key has wrong length");
@@ -126,33 +124,31 @@ export class Sorter {
   // Iterates over each possible "key" from doc (ie, over each branch), calling
   // 'cb' with the key.
   _generateKeysFromDoc (doc, cb) {
-    var self = this;
+    const self = this;
 
     if (self._sortSpecParts.length === 0)
       throw new Error("can't generate keys without a spec");
 
     // maps index -> ({'' -> value} or {path -> value})
-    var valuesByIndexAndPath = [];
+    const valuesByIndexAndPath = [];
 
-    var pathFromIndices = function (indices) {
-      return indices.join(',') + ',';
-    };
+    const pathFromIndices = indices => `${indices.join(',')},`;
 
-    var knownPaths = null;
+    let knownPaths = null;
 
-    self._sortSpecParts.forEach(function (spec, whichField) {
+    self._sortSpecParts.forEach((spec, whichField) => {
       // Expand any leaf arrays that we find, and ignore those arrays
       // themselves.  (We never sort based on an array itself.)
-      var branches = expandArraysInBranches(spec.lookup(doc), true);
+      let branches = expandArraysInBranches(spec.lookup(doc), true);
 
       // If there are no values for a key (eg, key goes to an empty array),
       // pretend we found one null value.
       if (!branches.length)
         branches = [{value: null}];
 
-      var usedPaths = false;
+      let usedPaths = false;
       valuesByIndexAndPath[whichField] = {};
-      branches.forEach(function (branch) {
+      branches.forEach(branch => {
         if (!branch.arrayIndices) {
           // If there are no array indices for a branch, then it must be the
           // only branch, because the only thing that produces multiple branches
@@ -164,9 +160,9 @@ export class Sorter {
         }
 
         usedPaths = true;
-        var path = pathFromIndices(branch.arrayIndices);
+        const path = pathFromIndices(branch.arrayIndices);
         if (valuesByIndexAndPath[whichField].hasOwnProperty(path))
-          throw Error("duplicate path: " + path);
+          throw Error(`duplicate path: ${path}`);
         valuesByIndexAndPath[whichField][path] = branch.value;
 
         // If two sort fields both go into arrays, they have to go into the
@@ -193,7 +189,7 @@ export class Sorter {
         }
       } else if (usedPaths) {
         knownPaths = {};
-        Object.keys(valuesByIndexAndPath[whichField]).forEach(function (path) {
+        Object.keys(valuesByIndexAndPath[whichField]).forEach(path => {
           knownPaths[path] = true;
         });
       }
@@ -201,7 +197,7 @@ export class Sorter {
 
     if (!knownPaths) {
       // Easy case: no use of arrays.
-      var soleKey = valuesByIndexAndPath.map(function (values) {
+      const soleKey = valuesByIndexAndPath.map(values => {
         if (!values.hasOwnProperty(''))
           throw Error("no value in sole key case?");
         return values[''];
@@ -210,8 +206,8 @@ export class Sorter {
       return;
     }
 
-    Object.keys(knownPaths).forEach(function (path) {
-      var key = valuesByIndexAndPath.map(function (values) {
+    Object.keys(knownPaths).forEach(path => {
+      const key = valuesByIndexAndPath.map(values => {
         if (values.hasOwnProperty(''))
           return values[''];
         if (!values.hasOwnProperty(path))
@@ -225,7 +221,7 @@ export class Sorter {
   // Returns a comparator that represents the sort specification (but not
   // including a possible geoquery distance tie-breaker).
   _getBaseComparator () {
-    var self = this;
+    const self = this;
 
     if (self._sortFunction)
       return self._sortFunction;
@@ -233,14 +229,12 @@ export class Sorter {
     // If we're only sorting on geoquery distance and no specs, just say
     // everything is equal.
     if (!self._sortSpecParts.length) {
-      return function (doc1, doc2) {
-        return 0;
-      };
+      return (doc1, doc2) => 0;
     }
 
-    return function (doc1, doc2) {
-      var key1 = self._getMinKeyFromDoc(doc1);
-      var key2 = self._getMinKeyFromDoc(doc2);
+    return (doc1, doc2) => {
+      const key1 = self._getMinKeyFromDoc(doc1);
+      const key2 = self._getMinKeyFromDoc(doc2);
       return self._compareKeys(key1, key2);
     };
   }
@@ -256,10 +250,10 @@ export class Sorter {
   // 1, y: 3}]} with sort spec {'a.x': 1, 'a.y': 1}, the only keys are [0,5] and
   // [1,3], and the minimum key is [0,5]; notably, [0,3] is NOT a key.
   _getMinKeyFromDoc (doc) {
-    var self = this;
-    var minKey = null;
+    const self = this;
+    let minKey = null;
 
-    self._generateKeysFromDoc(doc, function (key) {
+    self._generateKeysFromDoc(doc, key => {
       if (!self._keyCompatibleWithSelector(key))
         return;
 
@@ -280,22 +274,22 @@ export class Sorter {
   }
 
   _getPaths () {
-    var self = this;
-    return self._sortSpecParts.map(function (part) { return part.path; });
+    const self = this;
+    return self._sortSpecParts.map(part => part.path);
   }
 
   _keyCompatibleWithSelector (key) {
-    var self = this;
+    const self = this;
     return !self._keyFilter || self._keyFilter(key);
   }
 
   // Given an index 'i', returns a comparator that compares two key arrays based
   // on field 'i'.
   _keyFieldComparator (i) {
-    var self = this;
-    var invert = !self._sortSpecParts[i].ascending;
-    return function (key1, key2) {
-      var compare = LocalCollection._f._cmp(key1[i], key2[i]);
+    const self = this;
+    const invert = !self._sortSpecParts[i].ascending;
+    return (key1, key2) => {
+      let compare = LocalCollection._f._cmp(key1[i], key2[i]);
       if (invert)
         compare = -compare;
       return compare;
@@ -322,7 +316,7 @@ export class Sorter {
   // subtle and undocumented; we've gotten as close as we can figure out based
   // on our understanding of Mongo's behavior.
   _useWithMatcher (matcher) {
-    var self = this;
+    const self = this;
 
     if (self._keyFilter)
       throw Error("called _useWithMatcher twice?");
@@ -333,23 +327,23 @@ export class Sorter {
     if (!self._sortSpecParts.length)
       return;
 
-    var selector = matcher._selector;
+    const selector = matcher._selector;
 
     // If the user just passed a literal function to find(), then we can't get a
     // key filter from it.
     if (selector instanceof Function)
       return;
 
-    var constraintsByPath = {};
-    self._sortSpecParts.forEach(function (spec, i) {
+    const constraintsByPath = {};
+    self._sortSpecParts.forEach((spec, i) => {
       constraintsByPath[spec.path] = [];
     });
 
-    Object.keys(selector).forEach(function (key) {
-      var subSelector = selector[key];
+    Object.keys(selector).forEach(key => {
+      const subSelector = selector[key];
       // XXX support $and and $or
 
-      var constraints = constraintsByPath[key];
+      const constraints = constraintsByPath[key];
       if (!constraints)
         return;
 
@@ -371,8 +365,8 @@ export class Sorter {
       }
 
       if (isOperatorObject(subSelector)) {
-        Object.keys(subSelector).forEach(function (operator) {
-          var operand = subSelector[operator];
+        Object.keys(subSelector).forEach(operator => {
+          const operand = subSelector[operator];
           if (['$lt', '$lte', '$gt', '$gte'].includes(operator)) {
             // XXX this depends on us knowing that these operators don't use any
             // of the arguments to compileElementSelector other than operand.
@@ -403,13 +397,7 @@ export class Sorter {
     if (!constraintsByPath[self._sortSpecParts[0].path].length)
       return;
 
-    self._keyFilter = function (key) {
-      return self._sortSpecParts.every(function (specPart, index) {
-        return constraintsByPath[specPart.path].every(function (f) {
-          return f(key[index]);
-        });
-      });
-    };
+    self._keyFilter = key => self._sortSpecParts.every((specPart, index) => constraintsByPath[specPart.path].every(f => f(key[index])));
   }
 }
 
@@ -418,9 +406,9 @@ export class Sorter {
 // comparator which uses each comparator in order and returns the first
 // non-zero value.
 function composeComparators (comparatorArray) {
-  return function (a, b) {
-    for (var i = 0; i < comparatorArray.length; ++i) {
-      var compare = comparatorArray[i](a, b);
+  return (a, b) => {
+    for (let i = 0; i < comparatorArray.length; ++i) {
+      const compare = comparatorArray[i](a, b);
       if (compare !== 0)
         return compare;
     }
