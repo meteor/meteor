@@ -1574,7 +1574,7 @@ Tinytest.add("minimongo - projection_compiler", function (test) {
 
 Tinytest.add("minimongo - fetch with fields", function (test) {
   var c = new LocalCollection();
-  Array.from({length: 30}, function (_, i) {
+  Array.from({length: 30}, function (x, i) {
     c.insert({
       something: Random.id(),
       anything: {
@@ -2107,7 +2107,7 @@ Tinytest.add("minimongo - array sort", function (test) {
         fieldValues.push(doc[field]);
     });
     test.equal(cursor.fetch().map(function (doc) { return doc[field]; }),
-               Array.from({length: Math.max.apply(null, fieldValues) + 1}, function (_, i) { return i; }));
+               Array.from({length: Math.max.apply(null, fieldValues) + 1}, function (x, i) { return i; }));
   };
 
   testCursorMatchesField(c.find({}, {sort: {'a.x': 1}}), 'up');

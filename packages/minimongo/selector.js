@@ -801,7 +801,9 @@ ELEMENT_OPERATORS = {
         throw Error("$elemMatch need an object");
 
       var subMatcher, isDocMatcher;
-      if (isOperatorObject(Object.keys(operand).filter(key => !Object.keys(LOGICAL_OPERATORS).includes(key)).reduce(function (a, b) { return Object.assign(a, {[b]: operand[b]}); }, {}), true)) {
+      if (isOperatorObject(Object.keys(operand)
+          .filter(function (key) { return !Object.keys(LOGICAL_OPERATORS).includes(key); })
+          .reduce(function (a, b) { return Object.assign(a, {[b]: operand[b]}); }, {}), true)) {
         subMatcher = compileValueSelector(operand, matcher);
         isDocMatcher = false;
       } else {
