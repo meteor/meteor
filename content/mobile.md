@@ -304,6 +304,12 @@ your compatibility version would not change.
 
 The `METEOR_CORDOVA_COMPAT_VERSION_*` env vars must be present __while building__ your app through `run`, `build` or `deploy`.
 
+<h4 id="access-versions-inside-app">Access compatibility versions inside your app</h4> 
+
+The `version` attribute of `manifest.json`, which reflects the version of only your JS bundle, is accessible from JS at `__meteor_runtime_config__.autoupdateVersionCordova`. 
+
+The `cordovaCompatibilityVersions.*` attributes can be read from the manifest file with `cordova-plugin-file`.
+
 <h3 id="configuring-server-for-hot-code-push">Configuring your server</h3>
 
 As mentioned before, mobile apps need to be able to [connect to a server](#connecting-to-the-server) to support hot code push. In production, you will need to specify which server to connect to [when building the app](#building-for-production) using the `--server` option. The specified server address is used to set `ROOT_URL` in `__meteor_runtime_config__`, which is defined as part of the generated `index.html` in the app bundle.
