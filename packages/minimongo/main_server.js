@@ -1,4 +1,10 @@
-import './common_main.js';
+import './main.js';
+import {
+  isNumericKey,
+  isOperatorObject,
+  pathsToTree,
+  projectionDetails
+} from './common.js';
 
 Minimongo._pathsElidingNumericKeys = function (paths) {
   var self = this;
@@ -278,6 +284,7 @@ function onlyContainsKeys (obj, keys) {
 
 function pathHasNumericKeys (path) {
   return path.split('.').some(isNumericKey);
+}
 
 // XXX from Underscore.String (http://epeli.github.com/underscore.string/)
 function startsWith(str, starts) {

@@ -22,8 +22,8 @@ Package.onUse(api => {
     'tracker'
   ]);
 
-  api.mainModule('common_main.js', 'client');
-  api.mainModule('server_main.js', 'server');
+  api.mainModule('main.js', 'client');
+  api.mainModule('main_server.js', 'server');
 });
 
 Package.onTest(api => {

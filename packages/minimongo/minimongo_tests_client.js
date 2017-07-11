@@ -1,4 +1,3 @@
-
 // Hack to make LocalCollection generate ObjectIDs by default.
 LocalCollection._useOID = true;
 
