@@ -24,6 +24,9 @@ Package.onUse(api => {
 
   api.addFiles('minimongo.js');
   api.addFiles('minimongo_server.js', 'server');
+
+  // api.mainModule('client_main.js', 'client');
+  // api.mainModule('server_main.js', 'server');
 });
 
 Package.onTest(api => {
