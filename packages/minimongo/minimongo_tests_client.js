@@ -2095,7 +2095,7 @@ Tinytest.add('minimongo - array sort', test => {
       if (doc.hasOwnProperty(field)) {fieldValues.push(doc[field]);}
     });
     test.equal(cursor.fetch().map(doc => doc[field]),
-      Array.from({length: Math.max.apply(null, fieldValues) + 1}, (x, i) => i));
+      Array.from({length: Math.max(...fieldValues) + 1}, (x, i) => i));
   };
 
   testCursorMatchesField(c.find({}, {sort: {'a.x': 1}}), 'up');

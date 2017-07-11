@@ -802,7 +802,7 @@ export function makeLookupFunction(key, options = {}) {
 
     const result = [];
     const appendToResult = more => {
-      Array.prototype.push.apply(result, more);
+      result.push(...more);
     };
 
     // Dig deeper: look up the rest of the parts on whatever we've found.

@@ -1241,7 +1241,7 @@ const MODIFIERS = {
     } else {
       const spliceArguments = [position, 0];
       for (let j = 0; j < toPush.length; j++) {spliceArguments.push(toPush[j]);}
-      Array.prototype.splice.apply(target[field], spliceArguments);
+      target[field].splice(...spliceArguments);
     }
 
     // Actually sort.
