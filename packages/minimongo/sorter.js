@@ -1,37 +1,3 @@
-import {LocalCollection} from './local_collection.js';
-import {Matcher} from './matcher.js';
-import {
-  isIndexable,
-  isNumericKey,
-  isOperatorObject,
-} from './common.js';
-
-
-// XXX type checking on selectors (graceful error if malformed)
-
-// LocalCollection: a set of documents that supports queries and modifiers.
-
-// Cursor: a specification for a particular subset of documents, w/
-// a defined order, limit, and offset.  creating a Cursor with LocalCollection.find(),
-
-// ObserveHandle: the return value of a live query.
-
-Minimongo = {LocalCollection, Matcher};
-
-// Object exported only for unit testing.
-// Use it to export private functions to test in Tinytest.
-MinimongoTest = {};
-
-MinimongoError = function (message, options={}) {
-  if (typeof message === "string" && options.field) {
-    message += ` for field '${options.field}'`;
-  }
-
-  var e = new Error(message);
-  e.name = "MinimongoError";
-  return e;
-};
-
 // Give a sort spec, which can be in any of these forms:
 //   {"key1": 1, "key2": -1}
 //   [["key1", "asc"], ["key2", "desc"]]
@@ -45,75 +11,73 @@ MinimongoError = function (message, options={}) {
 // first object comes first in order, 1 if the second object comes
 // first, or 0 if neither object comes before the other.
 
-Minimongo.Sorter = function (spec, options) {
-  var self = this;
-  options = options || {};
+export class Sorter {
+  constructor (spec, options) {
+    var self = this;
+    options = options || {};
 
-  self._sortSpecParts = [];
-  self._sortFunction = null;
+    self._sortSpecParts = [];
+    self._sortFunction = null;
 
-  var addSpecPart = function (path, ascending) {
-    if (!path)
-      throw Error("sort keys must be non-empty");
-    if (path.charAt(0) === '$')
-      throw Error("unsupported sort key: " + path);
-    self._sortSpecParts.push({
-      path: path,
-      lookup: makeLookupFunction(path, {forSort: true}),
-      ascending: ascending
-    });
-  };
+    var addSpecPart = function (path, ascending) {
+      if (!path)
+        throw Error("sort keys must be non-empty");
+      if (path.charAt(0) === '$')
+        throw Error("unsupported sort key: " + path);
+      self._sortSpecParts.push({
+        path: path,
+        lookup: makeLookupFunction(path, {forSort: true}),
+        ascending: ascending
+      });
+    };
 
-  if (spec instanceof Array) {
-    for (var i = 0; i < spec.length; i++) {
-      if (typeof spec[i] === "string") {
-        addSpecPart(spec[i], true);
-      } else {
-        addSpecPart(spec[i][0], spec[i][1] !== "desc");
+    if (spec instanceof Array) {
+      for (var i = 0; i < spec.length; i++) {
+        if (typeof spec[i] === "string") {
+          addSpecPart(spec[i], true);
+        } else {
+          addSpecPart(spec[i][0], spec[i][1] !== "desc");
+        }
       }
+    } else if (typeof spec === "object") {
+      Object.keys(spec).forEach(function (key) {
+        var value = spec[key];
+        addSpecPart(key, value >= 0);
+      });
+    } else if (typeof spec === "function") {
+      self._sortFunction = spec;
+    } else {
+      throw Error("Bad sort specification: " + JSON.stringify(spec));
     }
-  } else if (typeof spec === "object") {
-    Object.keys(spec).forEach(function (key) {
-      var value = spec[key];
-      addSpecPart(key, value >= 0);
-    });
-  } else if (typeof spec === "function") {
-    self._sortFunction = spec;
-  } else {
-    throw Error("Bad sort specification: " + JSON.stringify(spec));
+
+    // If a function is specified for sorting, we skip the rest.
+    if (self._sortFunction)
+      return;
+
+    // To implement affectedByModifier, we piggy-back on top of Matcher's
+    // affectedByModifier code; we create a selector that is affected by the same
+    // modifiers as this sort order. This is only implemented on the server.
+    if (self.affectedByModifier) {
+      var selector = {};
+      self._sortSpecParts.forEach(function (spec) {
+        selector[spec.path] = 1;
+      });
+      self._selectorForAffectedByModifier = new Minimongo.Matcher(selector);
+    }
+
+    self._keyComparator = composeComparators(
+      self._sortSpecParts.map(function (spec, i) {
+        return self._keyFieldComparator(i);
+      }));
+
+    // If you specify a matcher for this Sorter, _keyFilter may be set to a
+    // function which selects whether or not a given "sort key" (tuple of values
+    // for the different sort spec fields) is compatible with the selector.
+    self._keyFilter = null;
+    options.matcher && self._useWithMatcher(options.matcher);
   }
 
-  // If a function is specified for sorting, we skip the rest.
-  if (self._sortFunction)
-    return;
-
-  // To implement affectedByModifier, we piggy-back on top of Matcher's
-  // affectedByModifier code; we create a selector that is affected by the same
-  // modifiers as this sort order. This is only implemented on the server.
-  if (self.affectedByModifier) {
-    var selector = {};
-    self._sortSpecParts.forEach(function (spec) {
-      selector[spec.path] = 1;
-    });
-    self._selectorForAffectedByModifier = new Minimongo.Matcher(selector);
-  }
-
-  self._keyComparator = composeComparators(
-    self._sortSpecParts.map(function (spec, i) {
-      return self._keyFieldComparator(i);
-    }));
-
-  // If you specify a matcher for this Sorter, _keyFilter may be set to a
-  // function which selects whether or not a given "sort key" (tuple of values
-  // for the different sort spec fields) is compatible with the selector.
-  self._keyFilter = null;
-  options.matcher && self._useWithMatcher(options.matcher);
-};
-
-// In addition to these methods, sorter_project.js defines combineIntoProjection
-// on the server only.
-Object.assign(Minimongo.Sorter.prototype, {
-  getComparator: function (options) {
+  getComparator (options) {
     var self = this;
 
     // If sort is specified or have no distances, just use the comparator from
@@ -135,55 +99,24 @@ Object.assign(Minimongo.Sorter.prototype, {
         throw Error("Missing distance for " + b._id);
       return distances.get(a._id) - distances.get(b._id);
     };
-  },
+  }
 
-  _getPaths: function () {
+  // Takes in two keys: arrays whose lengths match the number of spec
+  // parts. Returns negative, 0, or positive based on using the sort spec to
+  // compare fields.
+  _compareKeys (key1, key2) {
     var self = this;
-    return self._sortSpecParts.map(function (part) { return part.path; });
-  },
+    if (key1.length !== self._sortSpecParts.length ||
+        key2.length !== self._sortSpecParts.length) {
+      throw Error("Key has wrong length");
+    }
 
-  // Finds the minimum key from the doc, according to the sort specs.  (We say
-  // "minimum" here but this is with respect to the sort spec, so "descending"
-  // sort fields mean we're finding the max for that field.)
-  //
-  // Note that this is NOT "find the minimum value of the first field, the
-  // minimum value of the second field, etc"... it's "choose the
-  // lexicographically minimum value of the key vector, allowing only keys which
-  // you can find along the same paths".  ie, for a doc {a: [{x: 0, y: 5}, {x:
-  // 1, y: 3}]} with sort spec {'a.x': 1, 'a.y': 1}, the only keys are [0,5] and
-  // [1,3], and the minimum key is [0,5]; notably, [0,3] is NOT a key.
-  _getMinKeyFromDoc: function (doc) {
-    var self = this;
-    var minKey = null;
-
-    self._generateKeysFromDoc(doc, function (key) {
-      if (!self._keyCompatibleWithSelector(key))
-        return;
-
-      if (minKey === null) {
-        minKey = key;
-        return;
-      }
-      if (self._compareKeys(key, minKey) < 0) {
-        minKey = key;
-      }
-    });
-
-    // This could happen if our key filter somehow filters out all the keys even
-    // though somehow the selector matches.
-    if (minKey === null)
-      throw Error("sort selector found no keys in doc?");
-    return minKey;
-  },
-
-  _keyCompatibleWithSelector: function (key) {
-    var self = this;
-    return !self._keyFilter || self._keyFilter(key);
-  },
+    return self._keyComparator(key1, key2);
+  }
 
   // Iterates over each possible "key" from doc (ie, over each branch), calling
   // 'cb' with the key.
-  _generateKeysFromDoc: function (doc, cb) {
+  _generateKeysFromDoc (doc, cb) {
     var self = this;
 
     if (self._sortSpecParts.length === 0)
@@ -278,37 +211,11 @@ Object.assign(Minimongo.Sorter.prototype, {
       });
       cb(key);
     });
-  },
-
-  // Takes in two keys: arrays whose lengths match the number of spec
-  // parts. Returns negative, 0, or positive based on using the sort spec to
-  // compare fields.
-  _compareKeys: function (key1, key2) {
-    var self = this;
-    if (key1.length !== self._sortSpecParts.length ||
-        key2.length !== self._sortSpecParts.length) {
-      throw Error("Key has wrong length");
-    }
-
-    return self._keyComparator(key1, key2);
-  },
-
-  // Given an index 'i', returns a comparator that compares two key arrays based
-  // on field 'i'.
-  _keyFieldComparator: function (i) {
-    var self = this;
-    var invert = !self._sortSpecParts[i].ascending;
-    return function (key1, key2) {
-      var compare = LocalCollection._f._cmp(key1[i], key2[i]);
-      if (invert)
-        compare = -compare;
-      return compare;
-    };
-  },
+  }
 
   // Returns a comparator that represents the sort specification (but not
   // including a possible geoquery distance tie-breaker).
-  _getBaseComparator: function () {
+  _getBaseComparator () {
     var self = this;
 
     if (self._sortFunction)
@@ -327,7 +234,64 @@ Object.assign(Minimongo.Sorter.prototype, {
       var key2 = self._getMinKeyFromDoc(doc2);
       return self._compareKeys(key1, key2);
     };
-  },
+  }
+
+  // Finds the minimum key from the doc, according to the sort specs.  (We say
+  // "minimum" here but this is with respect to the sort spec, so "descending"
+  // sort fields mean we're finding the max for that field.)
+  //
+  // Note that this is NOT "find the minimum value of the first field, the
+  // minimum value of the second field, etc"... it's "choose the
+  // lexicographically minimum value of the key vector, allowing only keys which
+  // you can find along the same paths".  ie, for a doc {a: [{x: 0, y: 5}, {x:
+  // 1, y: 3}]} with sort spec {'a.x': 1, 'a.y': 1}, the only keys are [0,5] and
+  // [1,3], and the minimum key is [0,5]; notably, [0,3] is NOT a key.
+  _getMinKeyFromDoc (doc) {
+    var self = this;
+    var minKey = null;
+
+    self._generateKeysFromDoc(doc, function (key) {
+      if (!self._keyCompatibleWithSelector(key))
+        return;
+
+      if (minKey === null) {
+        minKey = key;
+        return;
+      }
+      if (self._compareKeys(key, minKey) < 0) {
+        minKey = key;
+      }
+    });
+
+    // This could happen if our key filter somehow filters out all the keys even
+    // though somehow the selector matches.
+    if (minKey === null)
+      throw Error("sort selector found no keys in doc?");
+    return minKey;
+  }
+
+  _getPaths () {
+    var self = this;
+    return self._sortSpecParts.map(function (part) { return part.path; });
+  }
+
+  _keyCompatibleWithSelector (key) {
+    var self = this;
+    return !self._keyFilter || self._keyFilter(key);
+  }
+
+  // Given an index 'i', returns a comparator that compares two key arrays based
+  // on field 'i'.
+  _keyFieldComparator (i) {
+    var self = this;
+    var invert = !self._sortSpecParts[i].ascending;
+    return function (key1, key2) {
+      var compare = LocalCollection._f._cmp(key1[i], key2[i]);
+      if (invert)
+        compare = -compare;
+      return compare;
+    };
+  }
 
   // In MongoDB, if you have documents
   //    {_id: 'x', a: [1, 10]} and
@@ -348,7 +312,7 @@ Object.assign(Minimongo.Sorter.prototype, {
   // skip sort keys that don't match the selector. The logic here is pretty
   // subtle and undocumented; we've gotten as close as we can figure out based
   // on our understanding of Mongo's behavior.
-  _useWithMatcher: function (matcher) {
+  _useWithMatcher (matcher) {
     var self = this;
 
     if (self._keyFilter)
@@ -438,7 +402,7 @@ Object.assign(Minimongo.Sorter.prototype, {
       });
     };
   }
-});
+}
 
 // Given an array of comparators
 // (functions (a,b)->(negative or positive or zero)), returns a single

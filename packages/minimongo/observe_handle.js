@@ -1,2 +1,2 @@
-// the handle that comes back from observe.
+// ObserveHandle: the return value of a live query.
 export class ObserveHandle {}

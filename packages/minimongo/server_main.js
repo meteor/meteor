@@ -1,72 +1,10 @@
-// Knows how to combine a mongo selector and a fields projection to a new fields
-// projection taking into account active fields from the passed selector.
-// @returns Object - projection object (same as fields option of mongo cursor)
-Minimongo.Matcher.prototype.combineIntoProjection = function (projection) {
-  var self = this;
-  var selectorPaths = Minimongo._pathsElidingNumericKeys(self._getPaths());
-
-  // Special case for $where operator in the selector - projection should depend
-  // on all fields of the document. getSelectorPaths returns a list of paths
-  // selector depends on. If one of the paths is '' (empty string) representing
-  // the root or the whole document, complete projection should be returned.
-  if (selectorPaths.includes(''))
-    return {};
-
-  return combineImportantPathsIntoProjection(selectorPaths, projection);
-};
+import './common_main.js';
 
 Minimongo._pathsElidingNumericKeys = function (paths) {
   var self = this;
   return paths.map(function (path) {
     return path.split('.').filter(function (part) { return !isNumericKey(part); }).join('.');
   });
-};
-
-combineImportantPathsIntoProjection = function (paths, projection) {
-  var prjDetails = projectionDetails(projection);
-  var tree = prjDetails.tree;
-  var mergedProjection = {};
-
-  // merge the paths to include
-  tree = pathsToTree(paths,
-                     function (path) { return true; },
-                     function (node, path, fullPath) { return true; },
-                     tree);
-  mergedProjection = treeToPaths(tree);
-  if (prjDetails.including) {
-    // both selector and projection are pointing on fields to include
-    // so we can just return the merged tree
-    return mergedProjection;
-  } else {
-    // selector is pointing at fields to include
-    // projection is pointing at fields to exclude
-    // make sure we don't exclude important paths
-    var mergedExclProjection = {};
-    Object.keys(mergedProjection).forEach(function (path) {
-      var incl = mergedProjection[path];
-      if (!incl)
-        mergedExclProjection[path] = false;
-    });
-
-    return mergedExclProjection;
-  }
-};
-
-// Returns a set of key paths similar to
-// { 'foo.bar': 1, 'a.b.c': 1 }
-var treeToPaths = function (tree, prefix) {
-  prefix = prefix || '';
-  var result = {};
-
-  Object.keys(tree).forEach(function (key) {
-    var val = tree[key];
-    if (val === Object(val))
-      Object.assign(result, treeToPaths(val, prefix + key + '.'));
-    else
-      result[prefix + key] = val;
-  });
-
-  return result;
 };
 
 // Returns true if the modifier applied to some document may change the result
@@ -113,13 +51,6 @@ Minimongo.Matcher.prototype.affectedByModifier = function (modifier) {
       return true;
     });
   });
-};
-
-// Minimongo.Sorter gets a similar method, which delegates to a Matcher it made
-// for this exact purpose.
-Minimongo.Sorter.prototype.affectedByModifier = function (modifier) {
-  var self = this;
-  return self._selectorForAffectedByModifier.affectedByModifier(modifier);
 };
 
 // @param modifier - Object: MongoDB-styled modifier with `$set`s and `$unsets`
@@ -192,6 +123,23 @@ Minimongo.Matcher.prototype.canBecomeTrueByModifier = function (modifier) {
   return self.documentMatches(matchingDocument).result;
 };
 
+// Knows how to combine a mongo selector and a fields projection to a new fields
+// projection taking into account active fields from the passed selector.
+// @returns Object - projection object (same as fields option of mongo cursor)
+Minimongo.Matcher.prototype.combineIntoProjection = function (projection) {
+  var self = this;
+  var selectorPaths = Minimongo._pathsElidingNumericKeys(self._getPaths());
+
+  // Special case for $where operator in the selector - projection should depend
+  // on all fields of the document. getSelectorPaths returns a list of paths
+  // selector depends on. If one of the paths is '' (empty string) representing
+  // the root or the whole document, complete projection should be returned.
+  if (selectorPaths.includes(''))
+    return {};
+
+  return combineImportantPathsIntoProjection(selectorPaths, projection);
+};
+
 // Returns an object that would match the selector if possible or null if the
 // selector is too complex for us to analyze
 // { 'a.b': { ans: 42 }, 'foo.bar': null, 'foo.baz': "something" }
@@ -261,7 +209,50 @@ Minimongo.Matcher.prototype.matchingDocument = function () {
   return self._matchingDocument;
 };
 
-var getPaths = function (sel) {
+// Minimongo.Sorter gets a similar method, which delegates to a Matcher it made
+// for this exact purpose.
+Minimongo.Sorter.prototype.affectedByModifier = function (modifier) {
+  var self = this;
+  return self._selectorForAffectedByModifier.affectedByModifier(modifier);
+};
+
+Minimongo.Sorter.prototype.combineIntoProjection = function (projection) {
+  var self = this;
+  var specPaths = Minimongo._pathsElidingNumericKeys(self._getPaths());
+  return combineImportantPathsIntoProjection(specPaths, projection);
+};
+
+function combineImportantPathsIntoProjection (paths, projection) {
+  var prjDetails = projectionDetails(projection);
+  var tree = prjDetails.tree;
+  var mergedProjection = {};
+
+  // merge the paths to include
+  tree = pathsToTree(paths,
+                     function (path) { return true; },
+                     function (node, path, fullPath) { return true; },
+                     tree);
+  mergedProjection = treeToPaths(tree);
+  if (prjDetails.including) {
+    // both selector and projection are pointing on fields to include
+    // so we can just return the merged tree
+    return mergedProjection;
+  } else {
+    // selector is pointing at fields to include
+    // projection is pointing at fields to exclude
+    // make sure we don't exclude important paths
+    var mergedExclProjection = {};
+    Object.keys(mergedProjection).forEach(function (path) {
+      var incl = mergedProjection[path];
+      if (!incl)
+        mergedExclProjection[path] = false;
+    });
+
+    return mergedExclProjection;
+  }
+}
+
+function getPaths (sel) {
   return Object.keys(new Minimongo.Matcher(sel)._paths);
   return Object.keys(sel).map(function (k) {
     var v = sel[k];
@@ -276,26 +267,37 @@ var getPaths = function (sel) {
   })
   .reduce(function (a, b) { return a.concat(b); }, [])
   .filter(function (a, b, c) { return c.indexOf(a) === b; });
-};
+}
 
 // A helper to ensure object has only certain keys
-var onlyContainsKeys = function (obj, keys) {
+function onlyContainsKeys (obj, keys) {
   return Object.keys(obj).every(function (k) {
     return keys.includes(k);
   });
-};
-
-var pathHasNumericKeys = function (path) {
-  return path.split('.').some(isNumericKey);
 }
 
+function pathHasNumericKeys (path) {
+  return path.split('.').some(isNumericKey);
+
 // XXX from Underscore.String (http://epeli.github.com/underscore.string/)
-var startsWith = function(str, starts) {
+function startsWith(str, starts) {
   return str.length >= starts.length &&
     str.substring(0, starts.length) === starts;
-};
-Minimongo.Sorter.prototype.combineIntoProjection = function (projection) {
-  var self = this;
-  var specPaths = Minimongo._pathsElidingNumericKeys(self._getPaths());
-  return combineImportantPathsIntoProjection(specPaths, projection);
-};
+}
+
+// Returns a set of key paths similar to
+// { 'foo.bar': 1, 'a.b.c': 1 }
+function treeToPaths (tree, prefix) {
+  prefix = prefix || '';
+  var result = {};
+
+  Object.keys(tree).forEach(function (key) {
+    var val = tree[key];
+    if (val === Object(val))
+      Object.assign(result, treeToPaths(val, prefix + key + '.'));
+    else
+      result[prefix + key] = val;
+  });
+
+  return result;
+}

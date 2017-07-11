@@ -1,6 +1,9 @@
 import {Cursor} from './cursor.js';
 import {ObserveHandle} from './observe_handle.js';
 
+// XXX type checking on selectors (graceful error if malformed)
+
+// LocalCollection: a set of documents that supports queries and modifiers.
 export class LocalCollection {
   static Cursor = Cursor;
 

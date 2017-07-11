@@ -1186,7 +1186,18 @@ function makeLookupFunction (key, options) {
   };
 }
 
-MinimongoTest.makeLookupFunction = makeLookupFunction;
+// Object exported only for unit testing.
+// Use it to export private functions to test in Tinytest.
+MinimongoTest = {makeLookupFunction};
+MinimongoError = function (message, options = {}) {
+  if (typeof message === "string" && options.field) {
+    message += ` for field '${options.field}'`;
+  }
+
+  var e = new Error(message);
+  e.name = "MinimongoError";
+  return e;
+};
 
 function nothingMatcher (docOrBranchedValues) {
   return {result: false};
