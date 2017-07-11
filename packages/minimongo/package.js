@@ -1,64 +1,46 @@
 Package.describe({
-  summary: "Meteor's client-side datastore: a port of MongoDB to Javascript",
+  summary: 'Meteor\'s client-side datastore: a port of MongoDB to Javascript',
   version: '1.2.1'
 });
 
-Package.onUse(function (api) {
+Package.onUse(api => {
   api.export('LocalCollection');
   api.export('Minimongo');
+
   api.export('MinimongoTest', { testOnly: true });
   api.export('MinimongoError', { testOnly: true });
+
   api.use([
+    'diff-sequence', // This package is used to get diff results on arrays and objects
+    'ecmascript',
     'ejson',
+    'geojson-utils', // This package is used for geo-location queries such as $near
     'id-map',
-    'ordered-dict',
-    'tracker',
     'mongo-id',
+    'ordered-dict',
     'random',
-    'diff-sequence',
-    'ecmascript'
-  ]);
-  // This package is used for geo-location queries such as $near
-  api.use('geojson-utils');
-  // This package is used to get diff results on arrays and objects
-  api.use('diff-sequence');
-
-  api.addFiles([
-    'minimongo.js',
-    'wrap_transform.js',
-    'helpers.js',
-    'selector.js',
-    'sort.js',
-    'projection.js',
-    'modify.js',
-    'diff.js',
-    'id_map.js',
-    'observe.js',
-    'objectid.js'
+    'tracker'
   ]);
 
-  // Functionality used only by oplog tailing on the server side
-  api.addFiles([
-    'selector_projection.js',
-    'selector_modifier.js',
-    'sorter_projection.js'
-  ], 'server');
+  api.addFiles('minimongo.js');
+  api.addFiles('minimongo_server.js', 'server');
 });
 
-Package.onTest(function (api) {
-  api.use('minimongo', ['client', 'server']);
-  api.use('test-helpers', 'client');
+Package.onTest(api => {
+  api.use('minimongo');
   api.use([
-    'tinytest',
+    'ecmascript',
     'ejson',
+    'mongo-id',
     'ordered-dict',
     'random',
-    'tracker',
     'reactive-var',
-    'mongo-id',
-    'ecmascript'
+    'test-helpers',
+    'tinytest',
+    'tracker'
   ]);
-  api.addFiles('minimongo_tests.js', 'client');
-  api.addFiles('wrap_transform_tests.js');
-  api.addFiles('minimongo_server_tests.js', 'server');
+
+  api.addFiles('minimongo_tests.js');
+  api.addFiles('minimongo_tests_client.js', 'client');
+  api.addFiles('minimongo_tests_server.js', 'server');
 });
