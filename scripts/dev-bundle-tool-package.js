@@ -11,7 +11,7 @@ var packageJson = {
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
-    npm: "5.1.0",
+    npm: "5.2.0",
     "node-gyp": "3.6.2",
     "node-pre-gyp": "0.6.36",
     "meteor-babel": "0.22.0",
