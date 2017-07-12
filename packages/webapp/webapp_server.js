@@ -835,7 +835,7 @@ var runWebAppServer = function () {
       if ( /\\\\?.+\\pipe\\?.+/.test(socketPath)) {
         startHttpServer(listenOptions);
       } else {
-        if (fs.existsSync(socketPath)) {
+        try {
           if (fs.statSync(socketPath).isSocket()) {
             var clientSocket = new net.Socket();
             clientSocket.on('error', Meteor.bindEnvironment(function(e) {
@@ -860,8 +860,12 @@ var runWebAppServer = function () {
             console.error("Cannot listen on socket: " + socketPath + ", exiting.");
             process.exit();
           }
-        } else {
-          startHttpServer(listenOptions);
+        } catch (e) {
+          if (e.code === 'ENOENT') {
+            startHttpServer(listenOptions);
+          } else {
+            throw e;
+          }
         }
         //Clean up the socket file when we've finished to avoid leaving a stale one
         //That situation should only be able to happen if the running node process is
