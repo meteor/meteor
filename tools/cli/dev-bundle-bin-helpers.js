@@ -1,8 +1,10 @@
-var fs = require("fs");
-var path = require("path");
-var files = require("../fs/mini-files.js");
-var finder = require("./file-finder.js");
-var hasOwn = Object.prototype.hasOwnProperty;
+"use strict";
+
+const fs = require("fs");
+const path = require("path");
+const files = require("../fs/mini-files.js");
+const finder = require("./file-finder.js");
+const hasOwn = Object.prototype.hasOwnProperty;
 
 function getDevBundle() {
   return require("./dev-bundle.js");
@@ -20,7 +22,7 @@ exports.isValidCommand = function(name, devBundleDir) {
     return false;
   }
 
-  var meteorCommandsJsonPath =
+  const meteorCommandsJsonPath =
     path.join(devBundleDir, "bin", ".meteor-commands.json");
 
   try {
@@ -35,13 +37,13 @@ exports.isValidCommand = function(name, devBundleDir) {
 };
 
 exports.getEnv = function (options) {
-  var devBundle = options && options.devBundle;
-  var devBundlePromise = typeof devBundle === "string"
+  const devBundle = options && options.devBundle;
+  const devBundlePromise = typeof devBundle === "string"
     ? Promise.resolve(files.convertToOSPath(devBundle))
     : getDevBundle();
 
   return devBundlePromise.then(function (devBundleDir) {
-    var extraPaths = [
+    const extraPaths = [
       // When npm looks for node, it must find dev_bundle/bin/node.
       path.join(devBundleDir, "bin"),
     ];
@@ -58,7 +60,7 @@ exports.getEnv = function (options) {
       path.join(devBundleDir, "lib", "node_modules", ".bin")
     );
 
-    var env = Object.create(process.env);
+    const env = Object.create(process.env);
 
     // Make sure notifications to update npm aren't presented to the user.
     env.NPM_CONFIG_NO_UPDATE_NOTIFIER = true;
@@ -90,8 +92,8 @@ exports.getEnv = function (options) {
       options.extraPaths = extraPaths;
     }
 
-    var paths = extraPaths.slice(0);
-    var PATH = env.PATH || env.Path;
+    const paths = extraPaths.slice(0);
+    const PATH = env.PATH || env.Path;
     if (PATH) {
       paths.push(PATH);
     }
@@ -108,7 +110,7 @@ exports.getEnv = function (options) {
 
 // Caching env.GYP_MSVS_VERSION allows us to avoid invoking Python every
 // time Meteor runs an npm command. TODO Store this on disk?
-var cachedMSVSVersion;
+let cachedMSVSVersion;
 
 function addWindowsVariables(devBundleDir, env) {
   // On Windows we provide a reliable version of python.exe for use by
@@ -132,11 +134,11 @@ function addWindowsVariables(devBundleDir, env) {
   // If $GYP_MSVS_VERSION was not provided, use the gyp Python library to
   // infer it, or default to 2015 if that doesn't work.
   return new Promise(function (resolve) {
-    var nodeGypPylibDir = path.join(
+    const nodeGypPylibDir = path.join(
       devBundleDir, "lib", "node_modules", "node-gyp", "gyp", "pylib"
     );
 
-    var child = require("child_process").spawn(env.PYTHON, ["-c", [
+    const child = require("child_process").spawn(env.PYTHON, ["-c", [
       "from gyp.MSVSVersion import SelectVisualStudioVersion",
       "try:",
       "  print SelectVisualStudioVersion(allow_fallback=False).short_name",
@@ -147,7 +149,7 @@ function addWindowsVariables(devBundleDir, env) {
       stdio: "pipe"
     });
 
-    var chunks = [];
+    const chunks = [];
     child.stdout.on("data", function (chunk) {
       chunks.push(chunk);
     });
