@@ -121,9 +121,16 @@ full test-suite (including the tests you added) to ensure you haven't broken any
 
 Exactly in the same way that [`test-packages` works in standalone Meteor apps](https://guide.meteor.com/writing-atmosphere-packages.html#testing), the `test-packages` command will start up a Meteor app with [TinyTest](./packages/tinytest/README.md).  To view the results, just connect to `http://localhost:3000`.
 
-Specific portions of package tests can be run by passing a `<package name>` or `<package path>` to the `test-packages` command. For example, to run `mongo` tests, it's possible to run:
+#### Running specific tests
+
+Specific package tests can be run by passing a `<package name>` or `<package path>` to the `test-packages` command. For example, to run `mongo` tests, it's possible to run:
 
     ./meteor test-packages mongo
+
+For more fine-grained control, if you're interested in running only the specific tests that relate to the functionality you're working on, you can filter individual tests by using the `TINYTEST_FILTER` environment variable (which supports regex's). For example, to run only the package tests that verify `new Mongo.Collection` behavior, try:
+
+    TINYTEST_FILTER="collection - call new Mongo.Collection" ./meteor test-packages
+
 
 ### Running Meteor Tool self-tests
 
