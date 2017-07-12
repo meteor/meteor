@@ -8,6 +8,7 @@
 var fs = require("fs");
 var path = require("path");
 var links = require("./dev-bundle-links.js");
+var finder = require("./file-finder.js");
 var rootDir = path.resolve(__dirname, "..", "..");
 var defaultDevBundlePromise =
   Promise.resolve(path.join(rootDir, "dev_bundle"));
@@ -17,28 +18,18 @@ function getDevBundleDir() {
   // checkout, because it's always better to respect the .meteor/release
   // file of the current app, if possible.
 
-  var releaseFile = find(
-    process.cwd(),
-    makeStatTest("isFile"),
-    ".meteor", "release"
-  );
-
+  var releaseFile = finder.findReleaseFile();
   if (! releaseFile) {
     return defaultDevBundlePromise;
   }
 
-  var localDir = path.join(path.dirname(releaseFile), "local");
-  if (! statOrNull(localDir, "isDirectory")) {
-    try {
-      fs.mkdirSync(localDir);
-    } catch (e) {
-      return defaultDevBundlePromise;
-    }
+  var localDir = finder.findLocalDir(releaseFile);
+  if (! localDir) {
+    return defaultDevBundlePromise;
   }
 
   var devBundleLink = path.join(localDir, "dev_bundle");
-  var devBundleStat = statOrNull(devBundleLink);
-  if (devBundleStat) {
+  if (finder.statOrNull(devBundleLink)) {
     return new Promise(function (resolve) {
       resolve(links.readLink(devBundleLink));
     });
@@ -73,34 +64,18 @@ function getDevBundleForRelease(release) {
   var track = parts[0];
   var version = parts.slice(1).join("@");
 
-  var packageMetadataDir = find(
-    rootDir,
-    makeStatTest("isDirectory"),
-    ".meteor", "package-metadata"
-  );
-
+  var packageMetadataDir = finder.findPackageMetadataDir();
   if (! packageMetadataDir) {
     return null;
   }
 
-  var meteorToolDir = path.resolve(
-    packageMetadataDir,
-    "..", "packages", "meteor-tool"
-  );
-
-  var meteorToolStat = statOrNull(meteorToolDir, "isDirectory");
-  if (! meteorToolStat) {
+  var meteorToolDir = finder.findMeteorToolDir(packageMetadataDir);
+  if (! meteorToolDir) {
     return null;
   }
 
-  var dbPath = path.join(
-    packageMetadataDir,
-    "v2.0.1",
-    "packages.data.db"
-  );
-
-  var dbStat = statOrNull(dbPath, "isFile");
-  if (! dbStat) {
+  var dbPath = finder.findDbPath(packageMetadataDir);
+  if (! meteorToolDir) {
     return null;
   }
 
@@ -126,8 +101,7 @@ function getDevBundleForRelease(release) {
         "dev_bundle"
       );
 
-      var devBundleStat = statOrNull(devBundleDir, "isDirectory");
-      if (devBundleStat) {
+      if (finder.statOrNull(devBundleDir, "isDirectory")) {
         return devBundleDir;
       }
     }
@@ -138,53 +112,6 @@ function getDevBundleForRelease(release) {
     console.error(error.stack || error);
     return null;
   });
-}
-
-function statOrNull(path, statMethod) {
-  try {
-    var stat = fs.statSync(path);
-  } catch (e) {
-    if (e.code !== "ENOENT") {
-      throw e;
-    }
-  }
-
-  if (stat) {
-    if (typeof statMethod === "string") {
-      if (stat[statMethod]()) {
-        return stat;
-      }
-    } else {
-      return stat;
-    }
-  }
-
-  return null;
-}
-
-function find(dir, predicate) {
-  var joinArgs = Array.prototype.slice.call(arguments, 2);
-  joinArgs.unshift(null);
-
-  while (true) {
-    joinArgs[0] = dir;
-    var joined = path.join.apply(path, joinArgs);
-    if (predicate(joined)) {
-      return joined;
-    }
-
-    var parentDir = path.dirname(dir);
-    if (parentDir === dir) break;
-    dir = parentDir;
-  }
-
-  return null;
-}
-
-function makeStatTest(method) {
-  return function (file) {
-    return statOrNull(file, method);
-  };
 }
 
 function getHostArch() {
