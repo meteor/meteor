@@ -10,24 +10,52 @@ var path = require("path");
 var devBundleBinCommand = process.argv[2];
 var args = process.argv.slice(3);
 
+// On Windows, try the .cmd and .exe extensions.
+var isWindows = process.platform === "win32";
+var extensions = isWindows ? [".cmd", ".exe"] : [""];
+
 function getChildProcess() {
   if (typeof devBundleBinCommand !== "string") {
     return Promise.resolve(null);
   }
 
   var helpers = require("./dev-bundle-bin-helpers.js");
+  var getEnvOptions = {};
 
   return Promise.all([
     helpers.getDevBundle(),
-    helpers.getEnv()
+    helpers.getEnv(getEnvOptions)
   ]).then(function (devBundleAndEnv) {
     var devBundleDir = devBundleAndEnv[0];
-    var cmd = helpers.getCommand(devBundleBinCommand, devBundleDir);
+    var env = devBundleAndEnv[1];
+
+    // Strip leading and/or trailing whitespace.
+    var name = devBundleBinCommand.replace(/^\s+|\s+$/g, "");
+
+    if (! helpers.isValidCommand(name, devBundleDir)) {
+      return null;
+    }
+
+    var cmd = null;
+
+    getEnvOptions.extraPaths.some(function (dir) {
+      return extensions.some(function (ext) {
+        var candidate = path.join(dir, name + ext);
+        try {
+          if (fs.statSync(candidate).isFile()) {
+            cmd = candidate;
+            return true;
+          }
+        } catch (e) {
+          return false;
+        }
+      });
+    });
+
     if (! cmd) {
       return null;
     }
 
-    var env = devBundleAndEnv[1];
     var child = require("child_process").spawn(cmd, args, {
       stdio: "inherit",
       env: env

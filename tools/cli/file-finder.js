@@ -85,6 +85,28 @@ exports.findDbPath = function (packageMetadataDir) {
   return dbPath;
 };
 
+exports.findNodeModulesDotBinDirs = function () {
+  const dirs = [];
+
+  const releaseFile = exports.findReleaseFile();
+  if (! releaseFile) {
+    return dirs;
+  }
+
+  const rootAppDir = path.resolve(releaseFile, "..", "..");
+
+  find(process.cwd(), dir => {
+    const dotBinDir = path.join(dir, "node_modules", ".bin");
+    if (statOrNull(dotBinDir, "isDirectory")) {
+      dirs.push(dotBinDir);
+    }
+
+    return dir === rootAppDir;
+  });
+
+  return dirs;
+};
+
 function statOrNull(path, statMethod) {
   let stat;
 

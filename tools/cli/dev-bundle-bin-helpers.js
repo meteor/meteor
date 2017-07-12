@@ -1,8 +1,7 @@
 var fs = require("fs");
 var path = require("path");
 var files = require("../fs/mini-files.js");
-var isWindows = process.platform === "win32";
-var extensions = isWindows ? [".cmd", ".exe"] : [""];
+var finder = require("./file-finder.js");
 var hasOwn = Object.prototype.hasOwnProperty;
 
 function getDevBundle() {
@@ -10,32 +9,7 @@ function getDevBundle() {
 }
 exports.getDevBundle = getDevBundle;
 
-exports.getCommand = function (name, devBundleDir) {
-  var result = null;
-
-  // Strip leading and/or trailing whitespace.
-  name = name.replace(/^\s+|\s+$/g, "");
-
-  if (! isValidCommand(name, devBundleDir)) {
-    return result;
-  }
-
-  extensions.some(function (ext) {
-    var cmd = path.join(devBundleDir, "bin", name + ext);
-    try {
-      if (fs.statSync(cmd).isFile()) {
-        result = cmd;
-        return true;
-      }
-    } catch (e) {
-      return false;
-    }
-  });
-
-  return result;
-};
-
-function isValidCommand(name, devBundleDir) {
+exports.isValidCommand = function(name, devBundleDir) {
   if (name === "node" ||
       name === "npm") {
     return true;
@@ -58,7 +32,7 @@ function isValidCommand(name, devBundleDir) {
   // If `meteor <name>` is already a Meteor command, don't let anything in
   // dev_bundle/bin override it.
   return ! hasOwn.call(meteorCommands, name);
-}
+};
 
 exports.getEnv = function (options) {
   var devBundle = options && options.devBundle;
@@ -67,13 +41,22 @@ exports.getEnv = function (options) {
     : getDevBundle();
 
   return devBundlePromise.then(function (devBundleDir) {
-    var paths = [
+    var extraPaths = [
       // When npm looks for node, it must find dev_bundle/bin/node.
       path.join(devBundleDir, "bin"),
+    ];
+
+    // Include any local node_modules/.bin directories.
+    extraPaths.push.apply(
+      extraPaths,
+      finder.findNodeModulesDotBinDirs()
+    );
+
+    extraPaths.push(
       // Also make available any scripts installed by packages in
       // dev_bundle/lib/node_modules, such as node-gyp.
       path.join(devBundleDir, "lib", "node_modules", ".bin")
-    ];
+    );
 
     var env = Object.create(process.env);
 
@@ -103,6 +86,11 @@ exports.getEnv = function (options) {
     // dev_bundle/.node-gyp.
     env.USERPROFILE = devBundleDir;
 
+    if (options) {
+      options.extraPaths = extraPaths;
+    }
+
+    var paths = extraPaths.slice(0);
     var PATH = env.PATH || env.Path;
     if (PATH) {
       paths.push(PATH);
