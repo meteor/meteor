@@ -1,5 +1,5 @@
-import {Cursor} from './cursor.js';
-import {ObserveHandle} from './observe_handle.js';
+import Cursor from './cursor.js';
+import ObserveHandle from './observe_handle.js';
 import {
   isIndexable,
   isNumericKey,
@@ -10,7 +10,7 @@ import {
 // XXX type checking on selectors (graceful error if malformed)
 
 // LocalCollection: a set of documents that supports queries and modifiers.
-export class LocalCollection {
+export default class LocalCollection {
   constructor(name) {
     this.name = name;
     // _id -> document (also containing id)

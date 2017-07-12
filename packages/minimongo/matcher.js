@@ -1,4 +1,4 @@
-import {LocalCollection} from './local_collection.js';
+import LocalCollection from './local_collection.js';
 import {
   compileDocumentSelector,
   nothingMatcher,
@@ -24,7 +24,7 @@ import {
 // Main entry point.
 //   var matcher = new Minimongo.Matcher({a: {$gt: 5}});
 //   if (matcher.documentMatches({a: 7})) ...
-export class Matcher {
+export default class Matcher {
   constructor(selector, isUpdate) {
     // A set (object mapping string -> *) of all of the document paths looked
     // at by the selector. Also includes the empty string if it may look at any

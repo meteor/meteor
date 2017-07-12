@@ -1,8 +1,8 @@
-import {LocalCollection} from './local_collection.js';
+import LocalCollection from './local_collection.js';
 
 // Cursor: a specification for a particular subset of documents, w/
 // a defined order, limit, and offset.  creating a Cursor with LocalCollection.find(),
-export class Cursor {
+export default class Cursor {
   // don't call this ctor directly.  use LocalCollection.find().
   constructor(collection, selector, options = {}) {
     this.collection = collection;

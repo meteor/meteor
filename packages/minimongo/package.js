@@ -22,8 +22,8 @@ Package.onUse(api => {
     'tracker',
   ]);
 
-  api.mainModule('main.js', 'client');
-  api.mainModule('main_server.js', 'server');
+  api.mainModule('minimongo_client.js', 'client');
+  api.mainModule('minimongo_server.js', 'server');
 });
 
 Package.onTest(api => {

@@ -1,4 +1,4 @@
-import './main.js';
+import './minimongo_common.js';
 import {
   isNumericKey,
   isOperatorObject,

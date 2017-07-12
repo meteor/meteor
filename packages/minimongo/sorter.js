@@ -20,7 +20,7 @@ import {
 // first object comes first in order, 1 if the second object comes
 // first, or 0 if neither object comes before the other.
 
-export class Sorter {
+export default class Sorter {
   constructor(spec, options = {}) {
     this._sortSpecParts = [];
     this._sortFunction = null;

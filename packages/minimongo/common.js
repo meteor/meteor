@@ -1,4 +1,4 @@
-import {LocalCollection} from './local_collection.js';
+import LocalCollection from './local_collection.js';
 
 // Each element selector contains:
 //  - compileElementSelector, a function with args:

@@ -1,2 +1,2 @@
 // ObserveHandle: the return value of a live query.
-export class ObserveHandle {}
+export default class ObserveHandle {}
