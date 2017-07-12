@@ -2,6 +2,8 @@
 
 ## v1.5.1, TBD
 
+* Node has been upgraded to version 4.8.4.
+
 * A new core Meteor package called `server-render` provides generic
   support for server-side rendering of HTML, as described in the package's
   [`README.md`](https://github.com/meteor/meteor/blob/release-1.5.1/packages/server-render/README.md).
