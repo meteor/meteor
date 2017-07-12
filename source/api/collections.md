@@ -31,7 +31,7 @@ works on both the client and the server (see below).
 
 ```js
 // Return an array of my messages.
-const myMessages = Messages.find({ userId: Session.get('myUserId') }).fetch();
+const myMessages = Messages.find({ userId: Meteor.userId() }).fetch();
 
 // Create a new message.
 Messages.insert({ text: 'Hello, world!' });
