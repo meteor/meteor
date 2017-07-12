@@ -168,7 +168,8 @@ For further assistance, consult the documentation for the option you select.
 
 To orchestrate your own container-based deployment there are existing base images to consider before rolling your own:
 
- - **[jshimko/meteor-launchpad](https://github.com/jshimko/meteor-launchpad)**
+ - [tozd/docker-meteor](https://github.com/tozd/docker-meteor) with Mongo and Nginx images
+ - [jshimko/meteor-launchpad](https://github.com/jshimko/meteor-launchpad)
  - [meteorhacks/meteord](https://github.com/kadirahq/meteord)
  - [chriswessels/meteor-tupperware](https://github.com/chriswessels/meteor-tupperware)
 
