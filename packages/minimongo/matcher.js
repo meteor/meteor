@@ -54,7 +54,8 @@ export default class Matcher {
   }
 
   documentMatches(doc) {
-    if (doc !== Object(doc)) {throw Error('documentMatches needs a document');}
+    if (doc !== Object(doc))
+      throw Error('documentMatches needs a document');
 
     return this._docMatcher(doc);
   }
@@ -79,6 +80,7 @@ export default class Matcher {
       this._isSimple = false;
       this._selector = selector;
       this._recordPathUsed('');
+
       return doc => ({result: !!selector.call(doc)});
     }
 
@@ -86,6 +88,7 @@ export default class Matcher {
     if (LocalCollection._selectorIsId(selector)) {
       this._selector = {_id: selector};
       this._recordPathUsed('_id');
+
       return doc => ({result: EJSON.equals(doc._id, selector)});
     }
 
@@ -98,9 +101,8 @@ export default class Matcher {
     }
 
     // Top level can't be an array or true or binary.
-    if (Array.isArray(selector) ||
-        EJSON.isBinary(selector) ||
-        typeof selector === 'boolean') {throw new Error(`Invalid selector: ${selector}`);}
+    if (Array.isArray(selector) || EJSON.isBinary(selector) || typeof selector === 'boolean')
+      throw new Error(`Invalid selector: ${selector}`);
 
     this._selector = EJSON.clone(selector);
 
@@ -121,21 +123,40 @@ export default class Matcher {
 // helpers used by compiled selector code
 LocalCollection._f = {
   // XXX for _all and _in, consider building 'inquery' at compile time..
-
   _type(v) {
-    if (typeof v === 'number') {return 1;}
-    if (typeof v === 'string') {return 2;}
-    if (typeof v === 'boolean') {return 8;}
-    if (Array.isArray(v)) {return 4;}
-    if (v === null) {return 10;}
-    if (v instanceof RegExp)
+    if (typeof v === 'number')
+      return 1;
+
+    if (typeof v === 'string')
+      return 2;
+
+    if (typeof v === 'boolean')
+      return 8;
+
+    if (Array.isArray(v))
+      return 4;
+
+    if (v === null)
+      return 10;
+
     // note that typeof(/x/) === "object"
-    {return 11;}
-    if (typeof v === 'function') {return 13;}
-    if (v instanceof Date) {return 9;}
-    if (EJSON.isBinary(v)) {return 5;}
-    if (v instanceof MongoID.ObjectID) {return 7;}
-    return 3; // object
+    if (v instanceof RegExp)
+      return 11;
+
+    if (typeof v === 'function')
+      return 13;
+
+    if (v instanceof Date)
+      return 9;
+
+    if (EJSON.isBinary(v))
+      return 5;
+
+    if (v instanceof MongoID.ObjectID)
+      return 7;
+
+    // object
+    return 3;
 
     // XXX support some/all of these:
     // 14, symbol
@@ -151,14 +172,14 @@ LocalCollection._f = {
     return EJSON.equals(a, b, {keyOrderSensitive: true});
   },
 
-  // maps a type code to a value that can be used to sort values of
-  // different types
+  // maps a type code to a value that can be used to sort values of different types
   _typeorder(t) {
     // http://www.mongodb.org/display/DOCS/What+is+the+Compare+Order+for+BSON+Types
     // XXX what is the correct sort position for Javascript code?
     // ('100' in the matrix below)
     // XXX minkey/maxkey
-    return [-1,  // (not a type)
+    return [
+      -1,  // (not a type)
       1,   // number
       2,   // string
       3,   // object
@@ -176,7 +197,7 @@ LocalCollection._f = {
       100, // JS code
       1,   // 32-bit int
       8,   // Mongo timestamp
-      1,    // 64-bit int
+      1    // 64-bit int
     ][t];
   },
 
@@ -185,23 +206,32 @@ LocalCollection._f = {
   // any other value.) return negative if a is less, positive if b is
   // less, or 0 if equal
   _cmp(a, b) {
-    if (a === undefined) {return b === undefined ? 0 : -1;}
-    if (b === undefined) {return 1;}
+    if (a === undefined)
+      return b === undefined ? 0 : -1;
+
+    if (b === undefined)
+      return 1;
+
     let ta = LocalCollection._f._type(a);
     let tb = LocalCollection._f._type(b);
+
     const oa = LocalCollection._f._typeorder(ta);
     const ob = LocalCollection._f._typeorder(tb);
-    if (oa !== ob) {return oa < ob ? -1 : 1;}
+
+    if (oa !== ob)
+      return oa < ob ? -1 : 1;
+
+    // XXX need to implement this if we implement Symbol or integers, or Timestamp
     if (ta !== tb)
-    // XXX need to implement this if we implement Symbol or integers, or
-    // Timestamp
-    {throw Error('Missing type coercion logic in _cmp');}
+      throw Error('Missing type coercion logic in _cmp');
+
     if (ta === 7) { // ObjectID
       // Convert to string.
       ta = tb = 2;
       a = a.toHexString();
       b = b.toHexString();
     }
+
     if (ta === 9) { // Date
       // Convert to millis.
       ta = tb = 1;
@@ -210,47 +240,71 @@ LocalCollection._f = {
     }
 
     if (ta === 1) // double
-    {return a - b;}
+      return a - b;
+
     if (tb === 2) // string
-    {return a < b ? -1 : a === b ? 0 : 1;}
+      return a < b ? -1 : a === b ? 0 : 1;
+
     if (ta === 3) { // Object
       // this could be much more efficient in the expected case ...
-      const to_array = obj => {
-        const ret = [];
-        for (let key in obj) {
-          ret.push(key);
-          ret.push(obj[key]);
+      const toArray = object => {
+        const result = [];
+
+        for (let key in object) {
+          result.push(key);
+          result.push(object[key]);
         }
-        return ret;
+
+        return result;
       };
-      return LocalCollection._f._cmp(to_array(a), to_array(b));
+
+      return LocalCollection._f._cmp(toArray(a), toArray(b));
     }
+
     if (ta === 4) { // Array
       for (let i = 0; ; i++) {
-        if (i === a.length) {return i === b.length ? 0 : -1;}
-        if (i === b.length) {return 1;}
+        if (i === a.length)
+          return i === b.length ? 0 : -1;
+
+        if (i === b.length)
+          return 1;
+
         const s = LocalCollection._f._cmp(a[i], b[i]);
-        if (s !== 0) {return s;}
+        if (s !== 0)
+          return s;
       }
     }
+
     if (ta === 5) { // binary
       // Surprisingly, a small binary blob is always less than a large one in
       // Mongo.
-      if (a.length !== b.length) {return a.length - b.length;}
+      if (a.length !== b.length)
+        return a.length - b.length;
+
       for (let i = 0; i < a.length; i++) {
-        if (a[i] < b[i]) {return -1;}
-        if (a[i] > b[i]) {return 1;}
+        if (a[i] < b[i])
+          return -1;
+
+        if (a[i] > b[i])
+          return 1;
       }
+
       return 0;
     }
+
     if (ta === 8) { // boolean
-      if (a) return b ? 0 : 1;
+      if (a)
+        return b ? 0 : 1;
+
       return b ? -1 : 0;
     }
+
     if (ta === 10) // null
-    {return 0;}
+      return 0;
+
     if (ta === 11) // regexp
-    {throw Error('Sorting not supported on regular expression');} // XXX
+      throw Error('Sorting not supported on regular expression'); // XXX
+
     // 13: javascript code
     // 14: symbol
     // 15: javascript code with scope
@@ -260,7 +314,8 @@ LocalCollection._f = {
     // 255: minkey
     // 127: maxkey
     if (ta === 13) // javascript code
-    {throw Error('Sorting not supported on Javascript code');} // XXX
+      throw Error('Sorting not supported on Javascript code'); // XXX
+
     throw Error('Unknown type to sort');
   },
 };
