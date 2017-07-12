@@ -44,7 +44,7 @@ export class AccountsCommon {
 
   /**
    * @summary Get the current user id, or `null` if no user is logged in. A reactive data source.
-   * @locus Anywhere but publish functions
+   * @locus Anywhere
    */
   userId() {
     throw new Error("userId method not implemented");
@@ -52,7 +52,7 @@ export class AccountsCommon {
 
   /**
    * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.
-   * @locus Anywhere but publish functions
+   * @locus Anywhere
    */
   user() {
     var userId = this.userId();

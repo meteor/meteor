@@ -68,6 +68,8 @@ _.extend(ProjectContext.prototype, {
     self.projectDir = options.projectDir;
     self.tropohouse = options.tropohouse || tropohouse.default;
 
+    self._includePackages = options.includePackages;
+
     self._packageMapFilename = options.packageMapFilename ||
       files.pathJoin(self.projectDir, '.meteor', 'versions');
 
@@ -322,7 +324,8 @@ _.extend(ProjectContext.prototype, {
 
       // Read .meteor/packages.
       self.projectConstraintsFile = new exports.ProjectConstraintsFile({
-        projectDir: self.projectDir
+        projectDir: self.projectDir,
+        includePackages: self._includePackages
       });
       if (buildmessage.jobHasMessages())
         return;
@@ -874,6 +877,9 @@ exports.ProjectConstraintsFile = function (options) {
   self.filename = files.pathJoin(options.projectDir, '.meteor', 'packages');
   self.watchSet = null;
 
+  // List of packages that should be included if not provided in .meteor/packages
+  self._includePackages = options.includePackages || [];
+
   // Have we modified the in-memory representation since reading from disk?
   self._modified = null;
   // List of each line in the file; object with keys:
@@ -903,6 +909,15 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
     // fixed by _ensureProjectDir!)
     if (contents === null)
       throw Error("packages file missing: " + self.filename);
+
+    var extraConstraintMap = {};
+    _.each(self._includePackages, function (pkg) {
+      var lineRecord = {
+        constraint: utils.parsePackageConstraint(pkg.trim()),
+        skipOnWrite: true
+      };
+      extraConstraintMap[lineRecord.constraint.package] = lineRecord;
+    });
 
     var lines = files.splitBufferToLines(contents);
     // Don't keep a record for the space at the end of the file.
@@ -939,6 +954,10 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
       if (! lineRecord.constraint)
         return;  // recover by ignoring
 
+      // Mark as not iterable if already included in self._includePackages
+      if (_.has(extraConstraintMap, lineRecord.constraint.package))
+        lineRecord.skipOnRead = true;
+
       if (_.has(self._constraintMap, lineRecord.constraint.package)) {
         buildmessage.error(
           "Package name appears twice: " + lineRecord.constraint.package, {
@@ -947,6 +966,12 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
           });
         return;  // recover by ignoring
       }
+      self._constraintMap[lineRecord.constraint.package] = lineRecord;
+    });
+
+    _.each(_.keys(extraConstraintMap), function (key) {
+      var lineRecord = extraConstraintMap[key];
+      self._constraintLines.push(lineRecord);
       self._constraintMap[lineRecord.constraint.package] = lineRecord;
     });
   },
@@ -959,6 +984,9 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
   _write: function () {
     var self = this;
     var lines = _.map(self._constraintLines, function (lineRecord) {
+      // Don't write packages that were not loaded from .meteor/packages
+      if (lineRecord.skipOnWrite)
+        return;
       var lineParts = [lineRecord.leadingSpace];
       if (lineRecord.constraint) {
         lineParts.push(lineRecord.constraint.package);
@@ -985,7 +1013,7 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
   eachConstraint: function (iterator) {
     var self = this;
     _.each(self._constraintLines, function (lineRecord) {
-      if (lineRecord.constraint)
+      if (! lineRecord.skipOnRead && lineRecord.constraint)
         iterator(lineRecord.constraint);
     });
   },

@@ -712,6 +712,178 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   match({a: {$bitsAnyClear: new Uint8Array([1])}}, {a: new Uint8Array([0])});
   match({a: {$bitsAnyClear: new Uint8Array([1])}}, {a: 4 });
 
+  // taken from: https://github.com/mongodb/mongo/blob/master/jstests/core/bittest.js
+  var c = new LocalCollection;
+  function matchCount(query, count) {
+    const matches = c.find(query).count()
+    if (matches !== count) {
+      test.fail({message: "minimongo match count failure: matched " + matches + " times, but should match " + count + " times",
+        query: JSON.stringify(query),
+        count: JSON.stringify(count)
+      });
+    }
+  }
+
+  // Tests on numbers.
+
+  c.insert({a: 0})
+  c.insert({a: 1})
+  c.insert({a: 54})
+  c.insert({a: 88})
+  c.insert({a: 255})
+
+  // Tests with bitmask.
+  matchCount({a: {$bitsAllSet: 0}}, 5)
+  matchCount({a: {$bitsAllSet: 1}}, 2)
+  matchCount({a: {$bitsAllSet: 16}}, 3)
+  matchCount({a: {$bitsAllSet: 54}}, 2)
+  matchCount({a: {$bitsAllSet: 55}}, 1)
+  matchCount({a: {$bitsAllSet: 88}}, 2)
+  matchCount({a: {$bitsAllSet: 255}}, 1)
+  matchCount({a: {$bitsAllClear: 0}}, 5)
+  matchCount({a: {$bitsAllClear: 1}}, 3)
+  matchCount({a: {$bitsAllClear: 16}}, 2)
+  matchCount({a: {$bitsAllClear: 129}}, 3)
+  matchCount({a: {$bitsAllClear: 255}}, 1)
+  matchCount({a: {$bitsAnySet: 0}}, 0)
+  matchCount({a: {$bitsAnySet: 9}}, 3)
+  matchCount({a: {$bitsAnySet: 255}}, 4)
+  matchCount({a: {$bitsAnyClear: 0}}, 0)
+  matchCount({a: {$bitsAnyClear: 18}}, 3)
+  matchCount({a: {$bitsAnyClear: 24}}, 3)
+  matchCount({a: {$bitsAnyClear: 255}}, 4)
+
+  // Tests with array of bit positions.
+  matchCount({a: {$bitsAllSet: []}}, 5)
+  matchCount({a: {$bitsAllSet: [0]}}, 2)
+  matchCount({a: {$bitsAllSet: [4]}}, 3)
+  matchCount({a: {$bitsAllSet: [1, 2, 4, 5]}}, 2)
+  matchCount({a: {$bitsAllSet: [0, 1, 2, 4, 5]}}, 1)
+  matchCount({a: {$bitsAllSet: [3, 4, 6]}}, 2)
+  matchCount({a: {$bitsAllSet: [0, 1, 2, 3, 4, 5, 6, 7]}}, 1)
+  matchCount({a: {$bitsAllClear: []}}, 5)
+  matchCount({a: {$bitsAllClear: [0]}}, 3)
+  matchCount({a: {$bitsAllClear: [4]}}, 2)
+  matchCount({a: {$bitsAllClear: [1, 7]}}, 3)
+  matchCount({a: {$bitsAllClear: [0, 1, 2, 3, 4, 5, 6, 7]}}, 1)
+  matchCount({a: {$bitsAnySet: []}}, 0)
+  matchCount({a: {$bitsAnySet: [1, 3]}}, 3)
+  matchCount({a: {$bitsAnySet: [0, 1, 2, 3, 4, 5, 6, 7]}}, 4)
+  matchCount({a: {$bitsAnyClear: []}}, 0)
+  matchCount({a: {$bitsAnyClear: [1, 4]}}, 3)
+  matchCount({a: {$bitsAnyClear: [3, 4]}}, 3)
+  matchCount({a: {$bitsAnyClear: [0, 1, 2, 3, 4, 5, 6, 7]}}, 4)
+
+  // Tests with multiple predicates.
+  matchCount({a: {$bitsAllSet: 54, $bitsAllClear: 201}}, 1)
+
+  // Tests on negative numbers
+
+  c.remove({})
+  c.insert({a: -0})
+  c.insert({a: -1})
+  c.insert({a: -54})
+
+  // Tests with bitmask.
+  matchCount({a: {$bitsAllSet: 0}}, 3)
+  matchCount({a: {$bitsAllSet: 2}}, 2)
+  matchCount({a: {$bitsAllSet: 127}}, 1)
+  matchCount({a: {$bitsAllSet: 74}}, 2)
+  matchCount({a: {$bitsAllClear: 0}}, 3)
+  matchCount({a: {$bitsAllClear: 53}}, 2)
+  matchCount({a: {$bitsAllClear: 127}}, 1)
+  matchCount({a: {$bitsAnySet: 0}}, 0)
+  matchCount({a: {$bitsAnySet: 2}}, 2)
+  matchCount({a: {$bitsAnySet: 127}}, 2)
+  matchCount({a: {$bitsAnyClear: 0}}, 0)
+  matchCount({a: {$bitsAnyClear: 53}}, 2)
+  matchCount({a: {$bitsAnyClear: 127}}, 2)
+
+  // Tests with array of bit positions.
+  var allPositions = []
+  for (var i = 0; i < 64; i++) {
+     allPositions.push(i)
+  }
+
+  matchCount({a: {$bitsAllSet: []}}, 3)
+  matchCount({a: {$bitsAllSet: [1]}}, 2)
+  matchCount({a: {$bitsAllSet: allPositions}}, 1)
+  matchCount({a: {$bitsAllSet: [1, 7, 6, 3, 100]}}, 2)
+  matchCount({a: {$bitsAllClear: []}}, 3)
+  matchCount({a: {$bitsAllClear: [5, 4, 2, 0]}}, 2)
+  matchCount({a: {$bitsAllClear: allPositions}}, 1)
+  matchCount({a: {$bitsAnySet: []}}, 0)
+  matchCount({a: {$bitsAnySet: [1]}}, 2)
+  matchCount({a: {$bitsAnySet: allPositions}}, 2)
+  matchCount({a: {$bitsAnyClear: []}}, 0)
+  matchCount({a: {$bitsAnyClear: [0, 2, 4, 5, 100]}}, 2)
+  matchCount({a: {$bitsAnyClear: allPositions}}, 2)
+
+  // Tests with multiple predicates.
+  matchCount({a: {$bitsAllSet: 74, $bitsAllClear: 53}}, 1)
+
+  // Tests on BinData.
+
+  c.remove({})
+  c.insert({a: EJSON.parse('{"$binary": "AAAAAAAAAAAAAAAAAAAAAAAAAAAA"}')})
+  c.insert({a: EJSON.parse('{"$binary": "AANgAAAAAAAAAAAAAAAAAAAAAAAA"}')})
+  c.insert({a: EJSON.parse('{"$binary": "JANgqwetkqwklEWRbWERKKJREtbq"}')})
+  c.insert({a: EJSON.parse('{"$binary": "////////////////////////////"}')})
+
+  // Tests with binary string bitmask.
+  matchCount({a: {$bitsAllSet: EJSON.parse('{"$binary": "AAAAAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 4)
+  matchCount({a: {$bitsAllSet: EJSON.parse('{"$binary": "AANgAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 3)
+  matchCount({a: {$bitsAllSet: EJSON.parse('{"$binary": "JANgqwetkqwklEWRbWERKKJREtbq"}')}}, 2)
+  matchCount({a: {$bitsAllSet: EJSON.parse('{"$binary": "////////////////////////////"}')}}, 1)
+  matchCount({a: {$bitsAllClear: EJSON.parse('{"$binary": "AAAAAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 4)
+  matchCount({a: {$bitsAllClear: EJSON.parse('{"$binary": "AAyfAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 3)
+  matchCount({a: {$bitsAllClear: EJSON.parse('{"$binary": "JAyfqwetkqwklEWRbWERKKJREtbq"}')}}, 2)
+  matchCount({a: {$bitsAllClear: EJSON.parse('{"$binary": "////////////////////////////"}')}}, 1)
+  matchCount({a: {$bitsAnySet: EJSON.parse('{"$binary": "AAAAAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 0)
+  matchCount({a: {$bitsAnySet: EJSON.parse('{"$binary": "AAyfAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 1)
+  matchCount({a: {$bitsAnySet: EJSON.parse('{"$binary": "JAyfqwetkqwklEWRbWERKKJREtbq"}')}}, 2)
+  matchCount({a: {$bitsAnySet: EJSON.parse('{"$binary": "////////////////////////////"}')}}, 3)
+  matchCount({a: {$bitsAnyClear: EJSON.parse('{"$binary": "AAAAAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 0)
+  matchCount({a: {$bitsAnyClear: EJSON.parse('{"$binary": "AANgAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 1)
+  matchCount({a: {$bitsAnyClear: EJSON.parse('{"$binary": "JANgqwetkqwklEWRbWERKKJREtbq"}')}}, 2)
+  matchCount({a: {$bitsAnyClear: EJSON.parse('{"$binary": "////////////////////////////"}')}}, 3)
+
+  // Tests with multiple predicates.
+  matchCount({
+      a: {
+          $bitsAllSet: EJSON.parse('{"$binary": "AANgAAAAAAAAAAAAAAAAAAAAAAAA"}'),
+          $bitsAllClear: EJSON.parse('{"$binary": "//yf////////////////////////"}')
+      }
+  }, 1)
+
+  c.remove({})
+
+  nomatch({a: {$bitsAllSet: 1}}, {a: false})
+  nomatch({a: {$bitsAllSet: 1}}, {a: NaN})
+  nomatch({a: {$bitsAllSet: 1}}, {a: Infinity})
+  nomatch({a: {$bitsAllSet: 1}}, {a: null})
+  nomatch({a: {$bitsAllSet: 1}}, {a: 'asdf'})
+  nomatch({a: {$bitsAllSet: 1}}, {a: ['a', 'b']})
+  nomatch({a: {$bitsAllSet: 1}}, {a: {foo: 'bar'}})
+  nomatch({a: {$bitsAllSet: 1}}, {a: 1.2})
+  nomatch({a: {$bitsAllSet: 1}}, {a: "1"})
+
+  _.each([
+    false,
+    NaN,
+    Infinity,
+    null,
+    'asdf',
+    ['a', 'b'],
+    {foo: 'bar'},
+    1.2,
+    "1",
+    [0, -1]
+  ], function (badValue) {
+    test.throws(function () {
+      match({a: {$bitsAllSet: badValue}}, {a: 42});
+    });
+  });
 
   // $type
   match({a: {$type: 1}}, {a: 1.1});
@@ -2323,13 +2495,13 @@ Tinytest.add("minimongo - modify", function (test) {
                        {b: [9,9]}]},
                   {'a.b': {$near: [5, 5]}},
                   {$set: {'a.$.b': 'k'}},
-                  {"a":[{"b":"k"},{"b":[[3,3],[4,4]]},{"b":[9,9]}]}); 
+                  {"a":[{"b":"k"},{"b":[[3,3],[4,4]]},{"b":[9,9]}]});
   modifyWithQuery({a: [{b: [1,1]},
                        {b: [ [3,3], [4,4] ]},
                        {b: [9,9]}]},
                   {'a.b': {$near: [9, 9], $maxDistance: 1}},
                   {$set: {'a.$.b': 'k'}},
-                  {"a":[{"b":"k"},{"b":[[3,3],[4,4]]},{"b":[9,9]}]}); 
+                  {"a":[{"b":"k"},{"b":[[3,3],[4,4]]},{"b":[9,9]}]});
   modifyWithQuery({a: [{b: [1,1]},
                        {b: [ [3,3], [4,4] ]},
                        {b: [9,9]}]},
@@ -2352,7 +2524,7 @@ Tinytest.add("minimongo - modify", function (test) {
                        {b: [1,1]}]},
                   {'a.b': {$near: [1, 1]}},
                   {$set: {'a.$.b': 'k'}},
-                  {"a":[{"c": [9,9], "b":"k"},{"b": [ [3,3], [4,4]]},{"b":[1,1]}]});  
+                  {"a":[{"c": [9,9], "b":"k"},{"b": [ [3,3], [4,4]]},{"b":[1,1]}]});
   modifyWithQuery({a: [{c: [9,9], b:[4,3]},
                        {b: [ [3,3], [4,4] ]},
                        {b: [1,1]}]},
@@ -2684,6 +2856,60 @@ Tinytest.add("minimongo - modify", function (test) {
   upsertException({a: 0}, {$setOnInsert: {b: {$a:1}}});
   upsertException({a: 0}, {$setOnInsert: {b: {'a.b':1}}});
   upsertException({a: 0}, {$setOnInsert: {b: {'\0a':1}}});
+
+  // Test for https://github.com/meteor/meteor/issues/8775.
+  upsert(
+    { a: { $exists: true }},
+    { $setOnInsert: { a: 123 }},
+    { a: 123 }
+  );
+
+  // Tests for https://github.com/meteor/meteor/issues/8794.
+  const testObjectId = new MongoID.ObjectID();
+  upsert(
+    { _id: testObjectId },
+    { $setOnInsert: { a: 123 } },
+    { _id: testObjectId, a: 123 },
+  );
+  upsert(
+    { someOtherId: testObjectId },
+    { $setOnInsert: { a: 123 } },
+    { someOtherId: testObjectId, a: 123 },
+  );
+  upsert(
+    { a: { $eq: testObjectId } },
+    { $setOnInsert: { a: 123 } },
+    { a: 123 },
+  );
+  const testDate = new Date('2017-01-01');
+  upsert(
+    { someDate: testDate },
+    { $setOnInsert: { a: 123 } },
+    { someDate: testDate, a: 123 },
+  );
+  upsert(
+    {
+      a: Object.create(null, {
+        $exists: {
+          writable: true,
+          configurable: true,
+          value: true
+        }
+      }),
+    },
+    { $setOnInsert: { a: 123 } },
+    { a: 123 },
+  );
+  upsert(
+    { foo: { $exists: true, $type: 2 }},
+    { $setOnInsert: { bar: 'baz' } },
+    { bar: 'baz' }
+  );
+  upsert(
+    { foo: {} },
+    { $setOnInsert: { bar: 'baz' } },
+    { foo: {}, bar: 'baz' }
+  );
 
   exception({}, {$set: {_id: 'bad'}});
 

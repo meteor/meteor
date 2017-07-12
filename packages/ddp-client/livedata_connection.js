@@ -582,8 +582,15 @@ _.extend(Connection.prototype, {
         // an onReady callback inside an autorun; the semantics we provide is
         // that at the time the sub first becomes ready, we call the last
         // onReady callback provided, if any.)
-        if (!existing.ready)
+        // If the sub is already ready, run the ready callback right away.
+        // It seems that users would expect an onReady callback inside an
+        // autorun to trigger once the the sub first becomes ready and also
+        // when re-subs happens.
+        if (existing.ready) {
+          callbacks.onReady();
+        } else {
           existing.readyCallback = callbacks.onReady;
+        }
       }
 
       // XXX COMPAT WITH 1.0.3.1 we used to have onError but now we call
@@ -795,7 +802,7 @@ _.extend(Connection.prototype, {
       };
     })();
 
-    var enclosing = DDP._CurrentInvocation.get();
+    var enclosing = DDP._CurrentMethodInvocation.get();
     var alreadyInSimulation = enclosing && enclosing.isSimulation;
 
     // Lazily generate a randomSeed, only if it is requested by the stub.
@@ -847,7 +854,7 @@ _.extend(Connection.prototype, {
       try {
         // Note that unlike in the corresponding server code, we never audit
         // that stubs check() their arguments.
-        var stubReturnValue = DDP._CurrentInvocation.withValue(invocation, function () {
+        var stubReturnValue = DDP._CurrentMethodInvocation.withValue(invocation, function () {
           if (Meteor.isServer) {
             // Because saveOriginals and retrieveOriginals aren't reentrant,
             // don't allow stubs to yield.

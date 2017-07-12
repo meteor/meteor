@@ -114,24 +114,9 @@ Meteor.methods({
       throw new Meteor.Error("no-stats-bundles", "Unable to retrieve stats");
     }
 
-    const validStatBundles = statBundles.filter(statBundle => {
-      if (statBundle &&
-        statBundle.stats &&
-        statBundle.stats.minifier &&
-        statBundle.stats.minifier.name === "standard-minifier-js" &&
-        statBundle.stats.minifier.version.startsWith("2.1.")
-      ) {
-        return true;
-      }
-    });
-
-    if (! validStatBundles.length) {
-      throw new Meteor.Error("no-valid-stats", "No valid stats bundles")
-    }
-
     return {
       name: "main",
-      children: validStatBundles.map((statBundle, index, array) => ({
+      children: statBundles.map((statBundle, index, array) => ({
         // TODO: If multiple bundles, could
         // show abbr. bundle names with:
         //   `...${bundle.name.substr(-3)}`,

@@ -394,3 +394,23 @@ testAsyncMulti("observeChanges - bad query", [
     f2.wait();
   }
 ]);
+
+if (Meteor.isServer) {
+  Tinytest.addAsync(
+    "observeChanges - EnvironmentVariable",
+    function (test, onComplete) {
+      var c = makeCollection();
+      var environmentVariable = new Meteor.EnvironmentVariable;
+      environmentVariable.withValue(true, function() {
+        var handle = c.find({}, { fields: { 'type.name': 1 }}).observeChanges({
+          added: function() {
+            test.isTrue(environmentVariable.get());
+            handle.stop();
+            onComplete();
+          }
+        });
+      });
+      c.insert({ type: { name: 'foobar' } });
+    }
+  );  
+}

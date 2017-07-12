@@ -128,7 +128,7 @@ distributes source files, so they are "fullLinked" in bunlde time together.
 ## Batch Build Plugins
 
 In Meteor 1.2, the new Build Plugin APIs have been introduced. You can read more
-about them here: [wiki](https://github.com/meteor/meteor/wiki/Build-Plugins-API).
+about them here: [wiki](https://docs.meteor.com/api/packagejs.html#build-plugin-api).
 
 The Build Plugins APIs register compilers, minifiers and linters. All of them
 are applied on different stages of the build process. Compilers are used by

@@ -16,9 +16,9 @@
       "from": "source-map@>=0.5.1 <0.6.0"
     },
     "uglify-js": {
-      "version": "3.0.13",
-      "resolved": "https://registry.npmjs.org/uglify-js/-/uglify-js-3.0.13.tgz",
-      "from": "uglify-js@3.0.13"
+      "version": "3.0.18",
+      "resolved": "https://registry.npmjs.org/uglify-js/-/uglify-js-3.0.18.tgz",
+      "from": "uglify-js@3.0.18"
     }
   }
 }

@@ -14,8 +14,8 @@ var packageJson = {
     npm: "4.6.1",
     "node-gyp": "3.6.0",
     "node-pre-gyp": "0.6.34",
-    "meteor-babel": "0.21.4",
-    reify: "0.11.21",
+    "meteor-babel": "0.22.0",
+    reify: "0.11.24",
     "meteor-promise": "0.8.4",
     fibers: "1.0.15",
     promise: "7.1.1",
@@ -42,7 +42,7 @@ var packageJson = {
     "http-proxy": "1.11.1",
     "wordwrap": "0.0.2",
     "moment": "2.8.4",
-    "rimraf": "2.4.3",
+    "rimraf": "2.6.1",
     "glob": "7.0.6",
     // XXX: When we update this, see if it fixes this Github issue:
     // https://github.com/jgm/CommonMark/issues/276 . If it does, remove the

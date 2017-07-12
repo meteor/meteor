@@ -23,9 +23,9 @@ If you can think of any changes to the project, [documentation](https://github.c
 
 ### Finding work
 
-We curate specific issues that would make great pull requests for community contributors by applying the [`pull-requests-encouraged` label](https://github.com/meteor/meteor/issues?q=is%3Aopen+is%3Aissue+label%3Apull-requests-encouraged).
+We curate specific issues that would make great pull requests for community contributors by applying the `pull-requests-encouraged` label ([bugs](https://github.com/meteor/meteor/issues?q=is%3Aopen+is%3Aissue+label%3Apull-requests-encouraged) / [feature requests](https://github.com/meteor/meteor-feature-requests/issues?q=is%3Aopen+is%3Aissue+label%3Apull-requests-encouraged)).
 
-Issues which *also* have the [`confirmed` label](https://github.com/meteor/meteor/issues?q=is%3Aissue%20is%3Aopen%20label%3Apull-requests-encouraged%20label%3Aconfirmed) are considered to have their details clear enough to begin working on.
+Issues which *also* have the `confirmed` label ([bugs](https://github.com/meteor/meteor/issues?q=is%3Aissue%20is%3Aopen%20label%3Apull-requests-encouraged%20label%3Aconfirmed) / [feature requests](https://github.com/meteor/meteor-feature-requests/issues?q=is%3Aissue%20is%3Aopen%20label%3Apull-requests-encouraged%20label%3Aconfirmed)) are considered to have their details clear enough to begin working on.
 
 Any issue which does not have the `confirmed` label still requires discussion on implementation details but input and positive commentary is welcome!  Any pull request opened on an issue which is not `confirmed` is still welcome, however the pull-request is more likely to be sent back for reworking than a `confirmed` issue.  If in doubt about the best way to implement something, please create additional conversation on the issue.
 
@@ -142,8 +142,7 @@ for more details on proposing changes to core code.
 
 ## Feature requests
 
-We use GitHub to track feature requests. Feature request issues get the `feature` label, as well as a label
-corresponding to the Meteor subproject that they are a part of.
+Feature requests are tracked in the [meteor/meteor-feature-requests](https://github.com/meteor/meteor-feature-requests) repository, and include a label that corresponds to the Meteor subproject that they are a part of.
 
 Meteor is a big project with [many sub-projects](https://github.com/meteor/meteor/tree/devel/packages). 
 There aren't as many [core developers (we're hiring!)](https://www.meteor.io/jobs/)
@@ -219,7 +218,7 @@ For more information about how to work with Meteor core, take a look at the [Dev
 
 ### Proposing your change
 
-You'll have the best chance of getting a change into core if you can build consensus in the community for it. Start by creating a well specified feature request as a Github issue.
+You'll have the best chance of getting a change into core if you can build consensus in the community for it. Start by creating a well specified feature request as a Github issue, in the [meteor/meteor-feature-requests](https://github.com/meteor/meteor-feature-requests) repository.
 
 Help drive discussion and advocate for your feature on the Github ticket (and perhaps the forums). The higher the demand for the feature and the greater the clarity of it's specification will determine the likelihood of a core contributor prioritizing your feature by flagging it with the `pull-requests-encouraged` label.
 

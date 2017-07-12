@@ -28,6 +28,12 @@ var makeTransport = function (mailUrlString) {
                     mailUrlString + ") must be 'smtp' or 'smtps'");
   }
 
+  if (mailUrl.protocol === 'smtp:' && mailUrl.port === '465') {
+    Meteor._debug("The $MAIL_URL is 'smtp://...:465'.  " +
+                  "You probably want 'smtps://' (The 's' enables TLS/SSL) " +
+                  "since '465' is typically a secure port.");
+  }
+
   // Allow overriding pool setting, but default to true.
   if (!mailUrl.query) {
     mailUrl.query = {};
