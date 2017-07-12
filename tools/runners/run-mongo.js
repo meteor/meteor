@@ -52,7 +52,8 @@ function spawnMongod(mongodPath, port, dbPath, replSetName) {
     // Use an 8MB oplog rather than 256MB. Uses less space on disk and
     // initializes faster. (Not recommended for production!)
     '--oplogSize', '8',
-    '--replSet', replSetName
+    '--replSet', replSetName,
+    '--noauth'
   ];
 
   // Use mmapv1 on 32bit platforms, as our binary doesn't support WT
@@ -533,12 +534,12 @@ var launchMongo = function (options) {
       // note: don't use "else ifs" in this, because 'data' can have multiple
       // lines
       if (/\[initandlisten\] Did not find local replica set configuration document at startup/.test(data) ||
-          /\[ReplicationExecutor\] Locally stored replica set configuration does not have a valid entry for the current node/.test(data)) {
+          /\[.*\] Locally stored replica set configuration does not have a valid entry for the current node/.test(data)) {
         replSetReadyToBeInitiated = true;
         maybeReadyToTalk();
       }
 
-      if (/ \[initandlisten\] waiting for connections on port/.test(data)) {
+      if (/ \[.*\] waiting for connections on port/.test(data)) {
         listening = true;
         maybeReadyToTalk();
       }
@@ -593,7 +594,7 @@ var launchMongo = function (options) {
         'meteor',
         new mongoNpmModule.Server('127.0.0.1', options.port, {
           poolSize: 1,
-          socketOptions: {connectTimeoutMS: 30000},
+          socketOptions: {connectTimeoutMS: 60000},
         }),
         {safe: true});
 

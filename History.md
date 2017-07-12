@@ -1,5 +1,11 @@
 ## v.NEXT
 
+* Meteor has been upgraded to support Mongo 3.4.5 by default (the bundled
+  version used by `meteor run` has been upgraded). Internally it now uses the
+  2.2.29 version of the `mongodb` npm driver, and has been tested against
+  Mongo databases ranging from versions 2.6.10 to 3.4.5.
+  [FR #129](https://github.com/meteor/meteor-feature-requests/issues/129)
+
 * The `accounts-facebook` and `facebook-oauth` packages have been updated to
   use the v2.9 of the Facebook Graph API for the Login Dialog since the v2.2
   version will be deprecated by Facebook in July.  There shouldn't be a problem
