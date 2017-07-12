@@ -182,7 +182,14 @@ To integrate the two systems, we've developed a [`react-meteor-data`](https://at
 
 <h3 id="using-createContainer">Using `createContainer`</h3>
 
-Once you've run `meteor add react-meteor-data`, you'll be able to import the `createContainer` function, which allows you to create a [container component](https://medium.com/@dan_abramov/smart-and-dumb-components-7ca2f9a7c7d0#.by86emv9b) which provides data to your presentational components.
+To use data from a Meteor collection inside a React component, install [`react-meteor-data`](https://atmospherejs.com/meteor/react-meteor-data) alongside a NPM package it utilizes, [`react-addons-pure-render-mixin`](https://www.npmjs.com/package/react-addons-pure-render-mixin):
+
+```sh
+meteor npm install --save react-addons-pure-render-mixin
+meteor add react-meteor-data
+```
+
+Once installed, you'll be able to import the `createContainer` function, which allows you to create a [container component](https://medium.com/@dan_abramov/smart-and-dumb-components-7ca2f9a7c7d0#.by86emv9b) which provides data to your presentational components.
 
 > Note that "container components" are analogous to the "smart components" and "presentational components" to the "reusable components" in the pattern we document in the [UI/UX article](http://guide.meteor.com/ui-ux.html#components), if you'd like to read more about how this philosophy relates to Meteor.
 
