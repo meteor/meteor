@@ -1,17 +1,47 @@
 ## v.NEXT
 
-* The `accounts-facebook` and `facebook-oauth` packages have been updated to
-  use the v2.9 of the Facebook Graph API for the Login Dialog since the v2.2
-  version will be deprecated by Facebook in July.  There shouldn't be a problem
-  regardless since Facebook simply rolls over to the next active version
-  (v2.3, in this case) however this should assist in avoiding deprecation
-  warnings and should enable any new functionality which has become available.
-  [PR #8858](https://github.com/meteor/meteor/pull/8858)
+## v1.5.1, 2017-07-12
 
-* `observe`/`observeChanges` callbacks are now bound using `Meteor.bindEnvironment`.
-  The same `EnvironmentVariable`s that were present when `observe`/`observeChanges`
-  was called are now available inside the callbacks.
-  [PR #8734](https://github.com/meteor/meteor/pull/8734)
+* Node has been upgraded to version 4.8.4.
+
+* A new core Meteor package called `server-render` provides generic
+  support for server-side rendering of HTML, as described in the package's
+  [`README.md`](https://github.com/meteor/meteor/blob/release-1.5.1/packages/server-render/README.md).
+  [PR #8841](https://github.com/meteor/meteor/pull/8841)
+
+* To reduce the total number of file descriptors held open by the Meteor
+  build system, native file watchers will now be started only for files
+  that have changed at least once. This new policy means you may have to
+  [wait up to 5000ms](https://github.com/meteor/meteor/blob/6bde360b9c075f1c78c3850eadbdfa7fe271f396/tools/fs/safe-watcher.js#L20-L21)
+  for changes to be detected when you first edit a file, but thereafter
+  changes will be detected instantaneously. In return for that small
+  initial waiting time, the number of open file descriptors will now be
+  bounded roughly by the number of files you are actively editing, rather
+  than the number of files involved in the build (often thousands), which
+  should help with issues like
+  [#8648](https://github.com/meteor/meteor/issues/8648). If you need to
+  disable the new behavior for any reason, simply set the
+  `METEOR_WATCH_PRIORITIZE_CHANGED` environment variable to `"false"`, as
+  explained in [PR #8866](https://github.com/meteor/meteor/pull/8866).
+
+* All `observe` and `observeChanges` callbacks are now bound using
+  `Meteor.bindEnvironment`.  The same `EnvironmentVariable`s that were
+  present when `observe` or `observeChanges` was called are now available
+  inside the callbacks. [PR #8734](https://github.com/meteor/meteor/pull/8734)
+
+* A subscription's `onReady` is now fired again during a re-subscription, even
+  if the subscription has the same arguments.  Previously, when subscribing
+  to a publication the `onReady` would have only been called if the arguments
+  were different, creating a confusing difference in functionality.  This may be
+  breaking behavior if an app uses the firing of `onReady` as an assumption
+  that the data was just received from the server.  If such functionality is
+  still necessary, consider using
+  [`observe`](https://docs.meteor.com/api/collections.html#Mongo-Cursor-observe)
+  or
+  [`observeChanges`](https://docs.meteor.com/api/collections.html#Mongo-Cursor-observeChanges)
+  [PR #8754](https://github.com/meteor/meteor/pull/8754)
+  [Issue #1173](https://github.com/meteor/meteor/issues/1173)
+>>>>>>> master
 
 * `reactive-dict` now supports setting initial data when defining a named
   `ReactiveDict`. No longer run migration logic when used on the server,
@@ -25,6 +55,14 @@
   from `example.com`. Ensure that `Accounts.emailTemplates.from` is set to a
   proper domain in all applications.
   [PR #8760](https://github.com/meteor/meteor/issues/8760)
+
+* The `accounts-facebook` and `facebook-oauth` packages have been updated to
+  use the v2.9 of the Facebook Graph API for the Login Dialog since the v2.2
+  version will be deprecated by Facebook in July.  There shouldn't be a problem
+  regardless since Facebook simply rolls over to the next active version
+  (v2.3, in this case) however this should assist in avoiding deprecation
+  warnings and should enable any new functionality which has become available.
+  [PR #8858](https://github.com/meteor/meteor/pull/8858)
 
 * Add `DDP._CurrentPublicationInvocation` and `DDP._CurrentMethodInvocation`.
   `DDP._CurrentInvocation` remains for backwards-compatibility. This change
@@ -52,7 +90,14 @@
   context and with its `EnvironmentVariable`s bound.
   [PR #8629](https://github.com/meteor/meteor/pull/8629)
 
-* The `reify` npm package has been upgraded to version 0.11.22.
+* The `minifier-js` package will now replace `process.env.NODE_ENV` with
+  its string value (or `"development"` if unspecified).
+
+* The `meteor-babel` npm package has been upgraded to version 0.22.0.
+
+* The `reify` npm package has been upgraded to version 0.11.24.
+
+* The `uglify-js` npm package has been upgraded to version 3.0.18.
 
 * Illegal characters in paths written in build output directories will now
   be replaced with `_`s rather than removed, so that file and directory
@@ -61,7 +106,7 @@
 
 * Additional "extra" packages (packages that aren't saved in `.meteor/packages`)
   can be included temporarily using the `--extra-packages`
-  option.  For example: `meteor run --extra-packages "bundle-visualizer"`.
+  option.  For example: `meteor run --extra-packages bundle-visualizer`.
   Both `meteor test` and `meteor test-packages` also support the
   `--extra-packages` option and commas separate multiple package names.
   [PR #8769](https://github.com/meteor/meteor/pull/8769)
@@ -71,6 +116,22 @@
 
 * The `coffeescript` package has been updated to use CoffeeScript version
   1.12.6. [PR #8777](https://github.com/meteor/meteor/pull/8777)
+
+* It's now possible to pipe a series of statements to `meteor shell`,
+  whereas previously the input had to be an expression; for example:
+  ```sh
+  > echo 'import pkg from "babel-runtime/package.json";
+  quote> pkg.version' |
+  pipe> meteor shell
+  "6.23.0"
+  ```
+  [Issue #8823](https://github.com/meteor/meteor/issues/8823)
+  [PR #8833](https://github.com/meteor/meteor/pull/8833)
+
+* Any `Error` thrown by a DDP method with the `error.isClientSafe`
+  property set to `true` will now be serialized and displayed to the
+  client, whereas previously only `Meteor.Error` objects were considered
+  client-safe. [PR #8756](https://github.com/meteor/meteor/pull/8756)
 
 ## v1.5, 2017-05-30
 

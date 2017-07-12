@@ -67,8 +67,10 @@ var wordwrap = require('wordwrap');
 
 var PROGRESS_DEBUG = !!process.env.METEOR_PROGRESS_DEBUG;
 var FORCE_PRETTY=undefined;
-var CARRIAGE_RETURN =
-  (process.platform === 'win32' && process.stdout.isTTY && process.title !== 'Windows PowerShell' ? new Array(249).join('\b') : '\r');
+// Set the default CR to \r unless we're running with cmd
+var CARRIAGE_RETURN = process.platform === 'win32' &&
+      process.stdout.isTTY &&
+      process.argv[1].toLowerCase().includes('cmd') ? new Array(249).join('\b') : '\r';
 
 if (process.env.METEOR_PRETTY_OUTPUT) {
   FORCE_PRETTY = process.env.METEOR_PRETTY_OUTPUT != '0';

@@ -6,11 +6,11 @@ Package.describe({
   // isn't possible because you can't publish a non-recommended
   // release with package versions that don't have a pre-release
   // identifier at the end (eg, -dev)
-  version: '6.19.2'
+  version: '6.19.4'
 });
 
 Npm.depends({
-  'meteor-babel': '0.21.4'
+  'meteor-babel': '0.22.0'
 });
 
 Package.onUse(function (api) {

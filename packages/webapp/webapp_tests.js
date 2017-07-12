@@ -78,7 +78,7 @@ Tinytest.add("webapp - additional static javascript", function (test) {
   // before settng it back to what it was originally.
   WebAppInternals.setInlineScriptsAllowed(true);
 
-  Meteor._noYieldsAllowed(function () {
+  (function () {
     var boilerplate = WebAppInternals.getBoilerplate({
       browser: "doesn't-matter",
       url: "also-doesnt-matter"
@@ -100,14 +100,14 @@ Tinytest.add("webapp - additional static javascript", function (test) {
         nextCalled = true;
       });
     test.isTrue(nextCalled);
-  });
+  })();
 
   // When inline scripts are disallowed, the script body should not be
   // inlined, and the script should be included in a <script src="..">
   // tag.
   WebAppInternals.setInlineScriptsAllowed(false);
 
-  Meteor._noYieldsAllowed(function () {
+  (function () {
     var boilerplate = WebAppInternals.getBoilerplate({
       browser: "doesn't-matter",
       url: "also-doesnt-matter"
@@ -129,7 +129,7 @@ Tinytest.add("webapp - additional static javascript", function (test) {
     var resBody = res.getBody();
     test.isTrue(resBody.indexOf(additionalScript) !== -1);
     test.equal(res.statusCode, 200);
-  });
+  })();
 
   WebAppInternals.setInlineScriptsAllowed(origInlineScriptsAllowed);
 });
@@ -154,6 +154,44 @@ Tinytest.add("webapp - generating boilerplate should not change runtime config",
   test.isFalse(boilerplateHtml.indexOf("WEBAPP_TEST_KEY") === -1);
 
   test.isFalse(__meteor_runtime_config__.WEBAPP_TEST_KEY);
+});
+
+Tinytest.add("webapp - WebAppInternals.registerBoilerplateDataCallback", function (test) {
+  const key = "from webapp_tests.js";
+  let callCount = 0;
+
+  function callback(request, data, arch) {
+    test.equal(arch, "web.browser");
+    test.equal(request.url, "http://example.com");
+    test.equal(data.dynamicHead, "so dynamic");
+    test.equal(data.body, "");
+    data.body = "<div>oyez</div>";
+    ++callCount;
+  }
+
+  WebAppInternals.registerBoilerplateDataCallback(key, callback);
+
+  test.equal(callCount, 0);
+
+  const req = new http.IncomingMessage();
+  req.url = "http://example.com";
+  req.browser = { name: "headless" };
+  req.dynamicHead = "so dynamic";
+
+  const html = WebAppInternals.getBoilerplate(req, "web.browser");
+
+  test.equal(callCount, 1);
+
+  test.isTrue(html.indexOf([
+    "<body>",
+    "<div>oyez</div>"
+  ].join("\n")) >= 0);
+
+  test.equal(
+    // Make sure this callback doesn't get called again after this test.
+    WebAppInternals.registerBoilerplateDataCallback(key, null),
+    callback
+  );
 });
 
 // Support 'named pipes' (strings) as ports for support of Windows Server / Azure deployments
