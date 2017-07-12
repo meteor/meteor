@@ -2340,7 +2340,10 @@ Tinytest.add("minimongo - modify", function (test) {
     // The query is relevant for 'a.$.b'.
     coll.update(query, mod);
     var actual = coll.findOne();
-    delete actual._id;  // added by insert
+
+    if (!expected._id) {
+      delete actual._id;  // added by insert
+    }
 
     if (typeof expected === "function") {
       expected(actual, EJSON.stringify({input: doc, mod: mod}));
@@ -2378,6 +2381,21 @@ Tinytest.add("minimongo - modify", function (test) {
 
     test.equal(actual, expected);
   };
+
+  var upsertUpdate = function (initialDoc, query, mod, expected) {
+    var coll = new LocalCollection;
+
+    coll.insert(initialDoc);
+    var result = coll.upsert(query, mod);
+
+    var actual = coll.findOne();
+
+    if (!expected._id) {
+      delete actual._id;
+    }
+
+    test.equal(actual, expected);
+  }
 
   var upsertException = function (query, mod) {
     var coll = new LocalCollection;
@@ -2608,8 +2626,12 @@ Tinytest.add("minimongo - modify", function (test) {
   modify({a: [1], b: 2}, {$set: {'a.2': 9}}, {a: [1, null, 9], b: 2});
   modify({a: {b: 1}}, {$set: {'a.c': 9}}, {a: {b: 1, c: 9}});
   modify({}, {$set: {'x._id': 4}}, {x: {_id: 4}});
+  
+  // Changing _id is disallowed
   exception({}, {$set: {_id: 4}});
-  exception({_id: 4}, {$set: {_id: 4}});  // even not-changing _id is bad
+  exception({_id: 1}, {$set: {_id: 4}})
+  modify({_id: 4}, {$set: {_id: 4}}, {_id: 4});  // not-changing _id is not bad
+  
   //restricted field names
   exception({a:{}}, {$set:{a:{$a:1}}});
   exception({ a: {} }, { $set: { a: { c:
@@ -2910,6 +2932,90 @@ Tinytest.add("minimongo - modify", function (test) {
     { $setOnInsert: { bar: 'baz' } },
     { foo: {}, bar: 'baz' }
   );
+
+
+  // Tests for https://github.com/meteor/meteor/issues/8806
+
+  upsert({"a": {"b": undefined, "c": null}}, {"$set": {"c": "foo"}}, {"a": {"b": undefined, "c": null}, "c": "foo"})
+  upsert({"a": {"$eq": "bar" }}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
+  // $all with 1 statement is similar to $eq
+  upsert({"a": {"$all": ["bar"] }}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
+  upsert({"a": {"$eq": "bar" }, "b": "baz"}, {"$set": {"c": "foo"}}, {"a": "bar", "b": "baz", "c": "foo"})
+
+  upsert({"a": {"$exists": true}}, {"$set": {"c": "foo"}}, {"c": "foo"})
+  upsert({"a": {"$exists": true, "$eq": "foo"}}, {"$set": {"c": "foo"}}, {"a": "foo", "c": "foo"})
+  upsert({"a": {"$gt": 3, "$eq": 2}}, {"$set": {"c": "foo"}}, {"a": 2, "c": "foo"})
+
+  // $and
+  upsert({"$and": [{"a": {"$eq": "bar"}}]}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
+  upsert({"$and": [{"a": {"$all": ["bar"]}}]}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
+  upsert({"$and": [{"a": {"$all": ["bar"]}}]}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
+
+  // $or with one statement is handled similar to $and
+  upsert({"$or": [{"a": "bar"}]}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
+
+  // $or with multiple statements is ignored
+  upsert({"$or": [{"a": "bar"}, {"b": "baz"}]}, {"$set": {"c": "foo"}}, {"c": "foo"})
+
+  // Negative logical operators are ignored
+  upsert({"$nor": [{"a": "bar"}]}, {"$set": {"c": "foo"}}, {"c": "foo"})
+
+  // Filter out empty objects after filtering out operators
+  upsert({"a": {"$exists": true}}, {"$set": {"c": "foo"}}, {"c": "foo"})
+
+  // But leave actual empty objects
+  upsert({"a": {}}, {"$set": {"c": "foo"}}, {"a": {}, "c": "foo"})
+
+   // Also filter out shorthand regexp notation
+  upsert({"a": /a/}, {"$set": {"c": "foo"}}, {"c": "foo"})
+
+  // Test nested fields
+  upsert({"$and": [{"a.a": "foo"}, {"$or": [{"a.b": "baz"}]}]}, {"$set": {"c": "foo"}}, {"a": {"a": "foo", "b": "baz"}, "c": "foo"})
+
+  // Test for https://github.com/meteor/meteor/issues/5294
+  upsert({"a": {"$ne": 444}}, {"$push": {"a": 123}}, {"a": [123]})
+
+  // Mod takes precedence over query
+  upsert({"a": "foo"}, {"a": "bar"}, {"a": "bar"})
+  upsert({"a": "foo"}, {"$set":{"a": "bar"}}, {"a": "bar"})
+
+  // Replacement can take _id from query
+  upsert({"_id": "foo", "foo": "bar"}, {"bar": "foo"}, {"_id": "foo", "bar": "foo"})
+
+  // Replacement update keeps _id
+  upsertUpdate({"_id": "foo", "bar": "baz"}, {"_id":"foo"}, {"bar": "crow"}, {"_id": "foo", "bar": "crow"});
+  
+  // Nested fields don't work with literal objects
+  upsertException({"a": {}, "a.b": "foo"}, {});
+
+  // You can't have an ambiguious ID
+  upsertException({"_id":"foo"}, {"_id":"bar"});
+  upsertException({"_id":"foo"}, {"$set":{"_id":"bar"}});
+
+  // You can't set the same field twice
+  upsertException({"$and": [{"a": "foo"}, {"a": "foo"}]}, {}); //not even with same value
+  upsertException({"a": {"$all": ["foo", "bar"]}}, {});
+  upsertException({"$and": [{"a": {"$eq": "foo"}}, {"$or": [{"a": {"$all": ["bar"]}}]}]}, {});
+
+  // You can't have nested dotted fields
+  upsertException({"a": {"foo.bar": "baz"}}, {});
+
+  // You can't have dollar-prefixed fields above the first level (logical operators not counted)
+  upsertException({"a": {"a": {"$eq": "foo"}}}, {});
+  upsertException({"a": {"a": {"$exists": true}}}, {});
+
+  // You can't mix operators with other fields
+  upsertException({"a": {"$eq": "bar", "b": "foo"}}, {})
+  upsertException({"a": {"b": "foo", "$eq": "bar"}}, {})
+
+  var mongoIdForUpsert = new MongoID.ObjectID('44915733af80844fa1cef07a');
+  upsert({_id: mongoIdForUpsert},{$setOnInsert: {a: 123}},{a: 123})
+
+  // Test for https://github.com/meteor/meteor/issues/7758
+  upsert({n_id: mongoIdForUpsert, c_n: "bar"},
+    {$set: { t_t_o: "foo"}},
+    {n_id: mongoIdForUpsert, t_t_o: "foo", c_n: "bar"});
+
 
   exception({}, {$set: {_id: 'bad'}});
 

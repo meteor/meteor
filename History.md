@@ -1,5 +1,10 @@
 ## v.NEXT
 
+* The `minimongo` and `mongo` packages are now compliant with the upsert behavior
+  of MongoDB 2.6 and higher. **As a result support for MongoDB 2.4 has been dropped.**
+  This mainly changes the effect of the selector on newly inserted documents.
+  [PR #8815](https://github.com/meteor/meteor/pull/8815)
+
 * The `accounts-facebook` and `facebook-oauth` packages have been updated to
   use the v2.9 of the Facebook Graph API for the Login Dialog since the v2.2
   version will be deprecated by Facebook in July.  There shouldn't be a problem
