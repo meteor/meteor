@@ -5,12 +5,14 @@
 // but that's unavoidable if we don't want to install Babel and load all
 // the rest of the code every time we run `meteor npm` or `meteor node`.
 
-var fs = require("fs");
-var path = require("path");
-var links = require("./dev-bundle-links.js");
-var finder = require("./file-finder.js");
-var rootDir = path.resolve(__dirname, "..", "..");
-var defaultDevBundlePromise =
+"use strict";
+
+const fs = require("fs");
+const path = require("path");
+const links = require("./dev-bundle-links.js");
+const finder = require("./file-finder.js");
+const rootDir = path.resolve(__dirname, "..", "..");
+const defaultDevBundlePromise =
   Promise.resolve(path.join(rootDir, "dev_bundle"));
 
 function getDevBundleDir() {
@@ -18,24 +20,24 @@ function getDevBundleDir() {
   // checkout, because it's always better to respect the .meteor/release
   // file of the current app, if possible.
 
-  var releaseFile = finder.findReleaseFile();
+  const releaseFile = finder.findReleaseFile();
   if (! releaseFile) {
     return defaultDevBundlePromise;
   }
 
-  var localDir = finder.findLocalDir(releaseFile);
+  const localDir = finder.findLocalDir(releaseFile);
   if (! localDir) {
     return defaultDevBundlePromise;
   }
 
-  var devBundleLink = path.join(localDir, "dev_bundle");
+  const devBundleLink = path.join(localDir, "dev_bundle");
   if (finder.statOrNull(devBundleLink)) {
     return new Promise(function (resolve) {
       resolve(links.readLink(devBundleLink));
     });
   }
 
-  var release = fs.readFileSync(
+  const release = fs.readFileSync(
     releaseFile, "utf8"
   ).replace(/^\s+|\s+$/g, "");
 
@@ -56,31 +58,31 @@ function getDevBundleDir() {
 }
 
 function getDevBundleForRelease(release) {
-  var parts = release.split("@");
+  const parts = release.split("@");
   if (parts.length < 2) {
     return null;
   }
 
-  var track = parts[0];
-  var version = parts.slice(1).join("@");
+  const track = parts[0];
+  const version = parts.slice(1).join("@");
 
-  var packageMetadataDir = finder.findPackageMetadataDir();
+  const packageMetadataDir = finder.findPackageMetadataDir();
   if (! packageMetadataDir) {
     return null;
   }
 
-  var meteorToolDir = finder.findMeteorToolDir(packageMetadataDir);
+  const meteorToolDir = finder.findMeteorToolDir(packageMetadataDir);
   if (! meteorToolDir) {
     return null;
   }
 
-  var dbPath = finder.findDbPath(packageMetadataDir);
+  const dbPath = finder.findDbPath(packageMetadataDir);
   if (! meteorToolDir) {
     return null;
   }
 
-  var sqlite3 = require("sqlite3");
-  var db = new sqlite3.Database(dbPath);
+  const sqlite3 = require("sqlite3");
+  const db = new sqlite3.Database(dbPath);
 
   return new Promise(function (resolve, reject) {
     db.get(
@@ -93,8 +95,8 @@ function getDevBundleForRelease(release) {
 
   }).then(function (data) {
     if (data) {
-      var tool = JSON.parse(data.content).tool;
-      var devBundleDir = path.join(
+      const tool = JSON.parse(data.content).tool;
+      const devBundleDir = path.join(
         meteorToolDir,
         tool.split("@").slice(1).join("@"),
         "mt-" + getHostArch(),
