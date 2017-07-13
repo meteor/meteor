@@ -1139,28 +1139,29 @@ LocalCollection._isModificationMod = function (mod) {
 // Calculates the document to insert in case we're doing an upsert and the selector
 // does not match any elements
 LocalCollection._createUpsertDocument = function (selector, modifier) {
-  let selectorDocument = populateDocumentWithQueryFields(selector)
-  const isModify = LocalCollection._isModificationMod(modifier)
+  let selectorDocument = populateDocumentWithQueryFields(selector);
+  const isModify = LocalCollection._isModificationMod(modifier);
   
-  const newDoc = {}
+  const newDoc = {};
   if (selectorDocument._id) {
-    newDoc._id = selectorDocument._id
-    delete selectorDocument._id
+    newDoc._id = selectorDocument._id;
+    delete selectorDocument._id;
   }
 
   // This double _modify call is made to help with nested properties (see issue #8631).
   // We do this even if it's a replacement for validation purposes (e.g. ambiguous id's)
-  LocalCollection._modify(newDoc, { $set: selectorDocument })
-  LocalCollection._modify(newDoc, modifier, { isInsert: true })
+  LocalCollection._modify(newDoc, { $set: selectorDocument });
+  LocalCollection._modify(newDoc, modifier, { isInsert: true });
 
   if (isModify) {
-    return newDoc
-  } else {
-    // Replacement can take _id from query document
-    const replacement = Object.assign({}, modifier);
-    if (newDoc._id) {
-      replacement._id = newDoc._id;
-    }
-    return replacement
+    return newDoc;
   }
-}
+
+  // Replacement can take _id from query document
+  const replacement = Object.assign({}, modifier);
+  if (newDoc._id) {
+    replacement._id = newDoc._id;
+  }
+
+  return replacement
+};

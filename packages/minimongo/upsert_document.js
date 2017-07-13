@@ -63,10 +63,9 @@ function populateDocumentWithObject (document, key, value) {
     // Don't allow mixing '$'-prefixed with non-'$'-prefixed fields
     if (keys.length !== unprefixedKeys.length) {
       throw new Error(`unknown operator: ${unprefixedKeys[0]}`);
-    } else {
-      validateObject(value, key);
-      insertIntoDocument(document, key, value);
     }
+    validateObject(value, key);
+    insertIntoDocument(document, key, value);
   } else {
     Object.keys(value).forEach(function (k) {
       const v = value[k];
@@ -76,7 +75,7 @@ function populateDocumentWithObject (document, key, value) {
         // every value for $all should be dealt with as separate $eq-s
         v.forEach(vx => populateDocumentWithKeyValue(document, key, vx));
       }
-    })
+    });
   }
 }
 
@@ -90,12 +89,12 @@ function insertIntoDocument (document, key, value) {
       || (key.length > existingKey.length && key.indexOf(existingKey) === 0)
     ) {
       throw new Error('cannot infer query fields to set, both paths ' +
-        `${existingKey}' and '${key}' are matched`);
+        `'${existingKey}' and '${key}' are matched`);
     } else if (existingKey === key) {
-      throw new Error(`cannot infer query fields to set, path ${key} ` +
+      throw new Error(`cannot infer query fields to set, path '${key}' ` +
         'is matched twice');
     }
-  })
+  });
 
   document[key] = value;
 }
@@ -106,7 +105,7 @@ function validateObject (obj, path) {
     Object.keys(obj).forEach(function (key) {
       validateKeyInPath(key, path);
       validateObject(obj[key], path + '.' + key);
-    })
+    });
   }
 }
 

@@ -543,9 +543,12 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
       }
     }
 
-    if (options.upsert 
-      && !isModify && !knownId && options.insertedId
-      && (!(options.insertedId instanceof Mongo.ObjectID) || !options.generatedId)) {
+    if (options.upsert &&
+        ! isModify &&
+        ! knownId &&
+        options.insertedId &&
+        ! (options.insertedId instanceof Mongo.ObjectID &&
+           options.generatedId)) {
       // In case of an upsert with a replacement, where there is no _id defined
       // in either the query or the replacement doc, mongo will generate an id itself. 
       // Therefore we need this special strategy if we want to control the id ourselves.
