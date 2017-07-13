@@ -1,4 +1,5 @@
 import { assertHasValidFieldNames } from './validation.js';
+import populateDocumentWithQueryFields from './upsert_document.js';
 
 // XXX type checking on selectors (graceful error if malformed)
 
@@ -783,22 +784,7 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   var insertedId;
   if (updateCount === 0 && options.upsert) {
 
-    let selectorModifier = LocalCollection._selectorIsId(selector) 
-      ? { _id: selector } 
-      : selector;
-
-    selectorModifier = LocalCollection._removeDollarOperators(selectorModifier);
-
-    const newDoc = {};
-    if (selectorModifier._id) {
-      newDoc._id = selectorModifier._id;
-      delete selectorModifier._id;
-    }
-
-    // This double _modify call is made to help work around an issue where collection 
-    // upserts won't work properly, with nested properties (see issue #8631).
-    LocalCollection._modify(newDoc, {$set: selectorModifier});
-    LocalCollection._modify(newDoc, mod, {isInsert: true});
+    const newDoc = LocalCollection._createUpsertDocument(selector, mod);
 
     if (! newDoc._id && options.insertedId)
       newDoc._id = options.insertedId;
@@ -1131,4 +1117,51 @@ LocalCollection.prototype.resumeObservers = function () {
     query.resultsSnapshot = null;
   }
   self._observeQueue.drain();
+};
+
+LocalCollection._isModificationMod = function (mod) {
+  var isReplace = false;
+  var isModify = false;
+  for (var k in mod) {
+    if (k.substr(0, 1) === '$') {
+      isModify = true;
+    } else {
+      isReplace = true;
+    }
+  }
+  if (isModify && isReplace) {
+    throw new Error(
+      "Update parameter cannot have both modifier and non-modifier fields.");
+  }
+  return isModify;
+};
+
+// Calculates the document to insert in case we're doing an upsert and the selector
+// does not match any elements
+LocalCollection._createUpsertDocument = function (selector, modifier) {
+  let selectorDocument = populateDocumentWithQueryFields(selector);
+  const isModify = LocalCollection._isModificationMod(modifier);
+  
+  const newDoc = {};
+  if (selectorDocument._id) {
+    newDoc._id = selectorDocument._id;
+    delete selectorDocument._id;
+  }
+
+  // This double _modify call is made to help with nested properties (see issue #8631).
+  // We do this even if it's a replacement for validation purposes (e.g. ambiguous id's)
+  LocalCollection._modify(newDoc, { $set: selectorDocument });
+  LocalCollection._modify(newDoc, modifier, { isInsert: true });
+
+  if (isModify) {
+    return newDoc;
+  }
+
+  // Replacement can take _id from query document
+  const replacement = Object.assign({}, modifier);
+  if (newDoc._id) {
+    replacement._id = newDoc._id;
+  }
+
+  return replacement
 };
