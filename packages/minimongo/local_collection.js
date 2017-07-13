@@ -1200,7 +1200,7 @@ LocalCollection._selectorIsIdPerhapsAsObject = selector => {
   if (LocalCollection._selectorIsId(selector))
     return true;
 
-  return LocalCollection._selectorIsId(selector && selector._id) && Object.keys(selector).length === 1;
+  return LocalCollection._selectorIsId(selector && selector._id);
 };
 
 LocalCollection._updateInResults = (query, doc, old_doc) => {
