@@ -147,6 +147,11 @@ export class AndroidRunTarget extends CordovaRunTarget {
           loadIsopacket('cordova-support')['logging'];
 
       const logStream = eachline((line) => {
+        if (! line && this.finished) {
+          // Skip blank line at end of stream.
+          return;
+        }
+
         const logEntry = logFromAndroidLogcatLine(Log, line);
         if (logEntry) {
           return `${logEntry}\n`;

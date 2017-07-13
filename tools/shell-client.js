@@ -182,6 +182,11 @@ Cp.setUpSocket = function setUpSocket(sock, key) {
   sock.pipe(process.stdout);
 
   eachline(sock, "utf8", function(line) {
+    if (! line && this.finished) {
+      // Ignore blank lines at the end of the socket stream.
+      return;
+    }
+
     self.exitOnClose = line.indexOf(EXITING_MESSAGE) >= 0;
   });
 
