@@ -2,19 +2,19 @@
   "lockfileVersion": 1,
   "dependencies": {
     "asap": {
-      "version": "2.0.5",
-      "resolved": "https://registry.npmjs.org/asap/-/asap-2.0.5.tgz",
-      "integrity": "sha1-UidltQw1EEkOUtfc/ghe+bqWlY8="
+      "version": "2.0.6",
+      "resolved": "https://registry.npmjs.org/asap/-/asap-2.0.6.tgz",
+      "integrity": "sha1-5QNHYR1+aQlDIIu9r+vLwvuGbUY="
     },
     "meteor-promise": {
-      "version": "0.8.4",
-      "resolved": "https://registry.npmjs.org/meteor-promise/-/meteor-promise-0.8.4.tgz",
-      "integrity": "sha1-kCnj9ZaFTQT/NGxuGfMByKXlU7A="
+      "version": "0.8.5",
+      "resolved": "https://registry.npmjs.org/meteor-promise/-/meteor-promise-0.8.5.tgz",
+      "integrity": "sha512-QEqFDy7diGKbqToqm4WHrcc6Xtt31NBqr9fgen0gnDnnC2rQntN8WCsrl7xKIixnxPHIOejRfLRoooaSvvWnRg=="
     },
     "promise": {
-      "version": "7.1.1",
-      "resolved": "https://registry.npmjs.org/promise/-/promise-7.1.1.tgz",
-      "integrity": "sha1-SJZUxpJha4qlWwck+oCbt9tJxb8="
+      "version": "8.0.1",
+      "resolved": "https://registry.npmjs.org/promise/-/promise-8.0.1.tgz",
+      "integrity": "sha1-5F1osAoXZHttpxG/he1u1HII9FA="
     }
   }
 }
