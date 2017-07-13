@@ -41,7 +41,6 @@
   [`observeChanges`](https://docs.meteor.com/api/collections.html#Mongo-Cursor-observeChanges)
   [PR #8754](https://github.com/meteor/meteor/pull/8754)
   [Issue #1173](https://github.com/meteor/meteor/issues/1173)
->>>>>>> master
 
 * `reactive-dict` now supports setting initial data when defining a named
   `ReactiveDict`. No longer run migration logic when used on the server,
