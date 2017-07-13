@@ -278,6 +278,21 @@ describe("FiberPool", function () {
       }, Promise);
     });
   });
+
+  it("should ignore bogus fiber.run arguments", function () {
+    var fiberPool = require("../fiber_pool.js").makePool();
+    var fiber;
+
+    return fiberPool.setTargetFiberCount(1).run({
+      callback() {
+        fiber = Fiber.current;
+      }
+    }, Promise).then(() => {
+      assert.ok(Fiber.current instanceof Fiber);
+      assert.notStrictEqual(Fiber.current, fiber);
+      fiber.run("bogus");
+    });
+  });
 });
 
 describe("dynamic environment", function () {
