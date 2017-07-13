@@ -308,7 +308,7 @@ const VALUE_OPERATORS = {
   },
   $near(operand, valueSelector, matcher, isRoot) {
     if (!isRoot)
-      throw Error("$near can't be inside another $ operator");
+      throw Error('$near can\'t be inside another $ operator');
 
     matcher._hasGeoQuery = true;
 
@@ -549,7 +549,7 @@ function distanceCoordinatePairs(a, b) {
 // for equality with that thing.
 export function equalityElementMatcher(elementSelector) {
   if (isOperatorObject(elementSelector))
-    throw Error("Can't create equalityValueSelector for operator object");
+    throw Error('Can\'t create equalityValueSelector for operator object');
 
   // Special-case: null and undefined are equal (if you got undefined in there
   // somewhere, or if you got it due to some branch being non-existent in the

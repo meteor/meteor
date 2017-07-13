@@ -717,7 +717,7 @@ LocalCollection.wrapTransform = transform => {
 
     if (transformed.hasOwnProperty('_id')) {
       if (!EJSON.equals(transformed._id, id))
-        throw new Error("transformed document can't have different _id");
+        throw new Error('transformed document can\'t have different _id');
     } else {
       transformed._id = id;
     }
