@@ -12,7 +12,7 @@ Npm.depends({
 
 Package.onUse(function(api) {
   api.use("ecmascript");
-  api.use("webapp@1.3.17");
+  api.use("webapp");
   api.mainModule("client.js", "client");
   api.mainModule("server.js", "server");
 });
