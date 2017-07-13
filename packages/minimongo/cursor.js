@@ -9,12 +9,9 @@ export default class Cursor {
     this.sorter = null;
     this.matcher = new Minimongo.Matcher(selector);
 
-    if (LocalCollection._selectorIsId(selector)) {
-      // stash for fast path
-      this._selectorId = selector;
-    } else if (LocalCollection._selectorIsIdPerhapsAsObject(selector)) {
-      // also do the fast path for { _id: idString }
-      this._selectorId = selector._id;
+    if (LocalCollection._selectorIsIdPerhapsAsObject(selector)) {
+      // stash for fast _id and { _id }
+      this._selectorId = selector._id || selector;
     } else {
       this._selectorId = undefined;
 
@@ -83,8 +80,6 @@ export default class Cursor {
    * @param {Any} [thisArg] An object which will be the value of `this` inside `callback`.
    */
   forEach(callback, thisArg) {
-    const objects = this._getRawObjects({ordered: true});
-
     if (this.reactive) {
       this._depend({
         addedBefore: true,
@@ -93,7 +88,7 @@ export default class Cursor {
         movedBefore: true});
     }
 
-    objects.forEach((element, i) => {
+    this._getRawObjects({ordered: true}).forEach((element, i) => {
       // This doubles as a clone operation.
       element = this._projectionFn(element);
 
@@ -174,20 +169,20 @@ export default class Cursor {
     // comment in _modifyAndNotify
     // XXX allow skip/limit with unordered observe
     if (!options._allow_unordered && !ordered && (this.skip || this.limit))
-      throw new Error("must use ordered observe (ie, 'addedBefore' instead of 'added') with skip or limit");
+      throw new Error('must use ordered observe (ie, \'addedBefore\' instead of \'added\') with skip or limit');
 
     if (this.fields && (this.fields._id === 0 || this.fields._id === false))
       throw Error('You may not observe a cursor with {fields: {_id: 0}}');
 
     const query = {
-      dirty: false,
-      matcher: this.matcher, // not fast pathed
-      sorter: ordered && this.sorter,
-      distances: this.matcher.hasGeoQuery() && ordered && new LocalCollection._IdMap,
-      resultsSnapshot: null,
-      ordered,
       cursor: this,
+      dirty: false,
+      distances: this.matcher.hasGeoQuery() && ordered && new LocalCollection._IdMap,
+      matcher: this.matcher, // not fast pathed
+      ordered,
       projectionFn: this._projectionFn,
+      resultsSnapshot: null,
+      sorter: ordered && this.sorter
     };
 
     let qid;
@@ -217,10 +212,10 @@ export default class Cursor {
 
       const self = this;
       return function(/* args*/) {
-        const args = arguments;
-
         if (self.collection.paused)
           return;
+
+        const args = arguments;
 
         self.collection._observeQueue.queueTask(() => {
           fn.apply(this, args);
