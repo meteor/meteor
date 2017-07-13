@@ -660,8 +660,8 @@ main.registerCommand({
 
       // We do mind if there are non-hidden directories, because we don't want
       // to recursively check everything to do some crazy heuristic to see if
-      // we should try to creat an app.
-      var stats = files.stat(filePath);
+      // we should try to create an app.
+      var stats = files.stat(files.pathJoin(appPath, filePath));
       if (stats.isDirectory()) {
         // Could contain code
         return true;
