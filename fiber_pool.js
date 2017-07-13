@@ -16,6 +16,17 @@ function FiberPool(targetFiberCount) {
         // Call Fiber.yield() to await further instructions.
         var entry = originalYield.call(Fiber);
 
+        if (! (entry &&
+               typeof entry.callback === "function" &&
+               typeof entry.resolve === "function" &&
+               typeof entry.reject === "function")) {
+          // If someone retained a reference to this Fiber long enough to
+          // call fiber.run(value) with a value that doesn't look like an
+          // entry object, return immediately to the top of the loop to
+          // continue waiting for the next entry object.
+          continue;
+        }
+
         // Ensure this Fiber is no longer in the pool once it begins to
         // execute an entry.
         assert.strictEqual(fiberStack.indexOf(fiber), -1);
