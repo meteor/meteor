@@ -21,7 +21,27 @@ try {
 } catch (ignored) {}
 
 if (key === retrieved) {
-  Meteor._localStorage = storage;
+  if (Meteor.isServer) {
+    Meteor._localStorage = storage;
+  } else {
+    // Some browsers (e.g. IE11) don't properly handle attempts to change 
+    // window.localStorage methods. By using proxy methods to expose 
+    // window.localStorage functionality, developers can change 
+    // the behavior of Meteor._localStorage methods without breaking 
+    // window.localStorage.
+
+    Meteor._localStorage = {
+      getItem: function (key) {
+        return window.localStorage.getItem(key);
+      },
+      setItem: function (key, value) {
+        window.localStorage.setItem(key, value);
+      },
+      removeItem: function (key) {
+        window.localStorage.removeItem(key);
+      }
+    };
+  }
 }
 
 if (! Meteor._localStorage) {
