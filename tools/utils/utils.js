@@ -542,11 +542,15 @@ exports.execFileSync = function (file, args, opts) {
     var p = child_process.spawn(file, args, opts);
 
     eachline(p.stdout, fiberHelpers.bindEnvironment(function (line) {
-      process.stdout.write(line + '\n');
+      if (line || ! this.finished) {
+        process.stdout.write(line + '\n');
+      }
     }));
 
     eachline(p.stderr, fiberHelpers.bindEnvironment(function (line) {
-      process.stderr.write(line + '\n');
+      if (line || ! this.finished) {
+        process.stderr.write(line + '\n');
+      }
     }));
 
     return {
@@ -577,6 +581,11 @@ exports.execFileAsync = function (file, args, opts) {
   var mapper = opts.lineMapper || _.identity;
 
   var logOutput = fiberHelpers.bindEnvironment(function (line) {
+    if (! line && this.finished) {
+      // Ignore blank lines at the end of the output stream.
+      return;
+    }
+
     if (opts.verbose) {
       line = mapper(line);
       if (line) {

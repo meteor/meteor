@@ -85,10 +85,13 @@ _.extend(AppProcess.prototype, {
     // Start the app!
     self.proc = self._spawn();
 
-    // Send stdout and stderr to the runLog
     var realEachline = require('eachline');
     function eachline(stream, encoding, callback) {
-      realEachline(stream, encoding, (...args) => void(callback(...args)));
+      return realEachline(stream, encoding, function (line) {
+        if (line || ! this.finished) {
+          callback.apply(this, arguments);
+        }
+      });
     }
 
     eachline(self.proc.stdout, 'utf8', async function (line) {
