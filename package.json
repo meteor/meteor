@@ -52,6 +52,6 @@
     "fibers": "^1.0.15",
     "meteor-promise": "^0.8.5",
     "mocha": "^3.0.2",
-    "promise": "^7.1.1"
+    "promise": "^8.0.1"
   }
 }
