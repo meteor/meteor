@@ -18,7 +18,13 @@
 
 * The `fibers` npm package has been upgraded to version 2.0.0.
 
-* The `meteor-babel` package has been upgraded to version 0.23.0.
+* The `pathwatcher` npm package has been upgraded to version 7.1.0.
+
+* The `http-proxy` npm package has been upgraded to version 1.16.2.
+
+## v1.5.2, TBD
+
+* The `meteor-babel` package has been upgraded to version 0.23.1.
 
 * The `reify` npm package has been upgraded to version 0.12.0, which
   includes a minor breaking
@@ -35,10 +41,6 @@
 
 * The `meteor-promise` package has been upgraded to version 0.8.5,
   and the `promise` polyfill package has been upgraded to 8.0.1.
-
-* The `pathwatcher` npm package has been upgraded to version 7.1.0.
-
-* The `http-proxy` npm package has been upgraded to version 1.16.2.
 
 ## v1.5.1, 2017-07-12
 
@@ -81,7 +83,11 @@
   [`observeChanges`](https://docs.meteor.com/api/collections.html#Mongo-Cursor-observeChanges)
   [PR #8754](https://github.com/meteor/meteor/pull/8754)
   [Issue #1173](https://github.com/meteor/meteor/issues/1173)
->>>>>>> master
+
+* The `minimongo` and `mongo` packages are now compliant with the upsert behavior
+  of MongoDB 2.6 and higher. **As a result support for MongoDB 2.4 has been dropped.**
+  This mainly changes the effect of the selector on newly inserted documents.
+  [PR #8815](https://github.com/meteor/meteor/pull/8815)
 
 * `reactive-dict` now supports setting initial data when defining a named
   `ReactiveDict`. No longer run migration logic when used on the server,

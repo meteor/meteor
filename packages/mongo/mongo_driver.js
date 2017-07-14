@@ -511,10 +511,9 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
     var mongoSelector = replaceTypes(selector, replaceMeteorAtomWithMongo);
     var mongoMod = replaceTypes(mod, replaceMeteorAtomWithMongo);
 
-    var isModify = isModificationMod(mongoMod);
-    var knownId = selector._id || mod._id;
+    var isModify = LocalCollection._isModificationMod(mongoMod);
 
-    if (options._forbidReplace && ! isModify) {
+    if (options._forbidReplace && !isModify) {
       var err = new Error("Invalid modifier. Replacements are forbidden.");
       if (callback) {
         return callback(err);
@@ -523,22 +522,45 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
       }
     }
 
-    if (options.upsert && (! knownId) && options.insertedId) {
-      // XXX If we know we're using Mongo 2.6 (and this isn't a replacement)
-      //     we should be able to just use $setOnInsert instead of this
-      //     simulated upsert thing. (We can't use $setOnInsert with
-      //     replacements because there's nowhere to write it, and $setOnInsert
-      //     can't set _id on Mongo 2.4.)
-      //
-      //     Also, in the future we could do a real upsert for the mongo id
-      //     generation case, if the the node mongo driver gives us back the id
-      //     of the upserted doc (which our current version does not).
-      //
-      //     For more context, see
-      //     https://github.com/meteor/meteor/issues/2278#issuecomment-64252706
+    // We've already run replaceTypes/replaceMeteorAtomWithMongo on
+    // selector and mod.  We assume it doesn't matter, as far as
+    // the behavior of modifiers is concerned, whether `_modify`
+    // is run on EJSON or on mongo-converted EJSON.
+
+    // Run this code up front so that it fails fast if someone uses
+    // a Mongo update operator we don't support.
+    let knownId;
+    if (options.upsert) {
+      try {
+        let newDoc = LocalCollection._createUpsertDocument(selector, mod);
+        knownId = newDoc._id;
+      } catch (err) {
+        if (callback) {
+          return callback(err);
+        } else {
+          throw err;
+        }
+      }
+    }
+
+    if (options.upsert &&
+        ! isModify &&
+        ! knownId &&
+        options.insertedId &&
+        ! (options.insertedId instanceof Mongo.ObjectID &&
+           options.generatedId)) {
+      // In case of an upsert with a replacement, where there is no _id defined
+      // in either the query or the replacement doc, mongo will generate an id itself. 
+      // Therefore we need this special strategy if we want to control the id ourselves.
+
+      // We don't need to do this when:
+      // - This is not a replacement, so we can add an _id to $setOnInsert
+      // - The id is defined by query or mod we can just add it to the replacement doc
+      // - The user did not specify any id preference and the id is a Mongo ObjectId, 
+      //     then we can just let Mongo generate the id
+
       simulateUpsertWithInsertedId(
-        collection, mongoSelector, mongoMod,
-        isModify, options,
+        collection, mongoSelector, mongoMod, options,
         // This callback does not need to be bindEnvironment'ed because
         // simulateUpsertWithInsertedId() wraps it and then passes it through
         // bindEnvironmentForWrite.
@@ -554,6 +576,15 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
         }
       );
     } else {
+      
+      if (options.upsert && !knownId && options.insertedId && isModify) {
+        if (!mongoMod.hasOwnProperty('$setOnInsert')) {
+          mongoMod.$setOnInsert = {};
+        }
+        knownId = options.insertedId;
+        Object.assign(mongoMod.$setOnInsert, replaceTypes({_id: options.insertedId}, replaceMeteorAtomWithMongo));
+      }
+      
       collection.update(
         mongoSelector, mongoMod, mongoOpts,
         bindEnvironmentForWrite(function (err, result) {
@@ -563,10 +594,14 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
               // If this was an upsert() call, and we ended up
               // inserting a new doc and we know its id, then
               // return that id as well.
-
-              if (options.upsert && meteorResult.insertedId && knownId) {
-                meteorResult.insertedId = knownId;
+              if (options.upsert && meteorResult.insertedId) {
+                if (knownId) {
+                  meteorResult.insertedId = knownId;
+                } else if (meteorResult.insertedId instanceof MongoDB.ObjectID) {
+                  meteorResult.insertedId = new Mongo.ObjectID(meteorResult.insertedId.toHexString());
+                }
               }
+
               callback(err, meteorResult);
             } else {
               callback(err, meteorResult.numberAffected);
@@ -580,23 +615,6 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
     write.committed();
     throw e;
   }
-};
-
-var isModificationMod = function (mod) {
-  var isReplace = false;
-  var isModify = false;
-  for (var k in mod) {
-    if (k.substr(0, 1) === '$') {
-      isModify = true;
-    } else {
-      isReplace = true;
-    }
-  }
-  if (isModify && isReplace) {
-    throw new Error(
-      "Update parameter cannot have both modifier and non-modifier fields.");
-  }
-  return isModify;
 };
 
 var transformResult = function (driverResult) {
@@ -626,26 +644,18 @@ var NUM_OPTIMISTIC_TRIES = 3;
 
 // exposed for testing
 MongoConnection._isCannotChangeIdError = function (err) {
-  // First check for what this error looked like in Mongo 2.4.  Either of these
-  // checks should work, but just to be safe...
-  if (err.code === 13596) {
-    return true;
-  }
 
   // Mongo 3.2.* returns error as next Object:
-  // {name: String, code: Number, err: String}
-  // Older Mongo returns:
   // {name: String, code: Number, errmsg: String}
+  // Older Mongo returns:
+  // {name: String, code: Number, err: String}
   var error = err.errmsg || err.err;
 
-  if (error.indexOf('cannot change _id of a document') === 0) {
-    return true;
-  }
-
-  // Now look for what it looks like in Mongo 2.6.  We don't use the error code
-  // here, because the error code we observed it producing (16837) appears to be
+  // We don't use the error code here
+  // because the error code we observed it producing (16837) appears to be
   // a far more generic error code based on examining the source.
-  if (error.indexOf('The _id field cannot be changed') === 0) {
+  if (error.indexOf('The _id field cannot be changed') === 0
+    || error.indexOf("the (immutable) field '_id' was found to have been altered to _id") !== -1) {
     return true;
   }
 
@@ -653,65 +663,19 @@ MongoConnection._isCannotChangeIdError = function (err) {
 };
 
 var simulateUpsertWithInsertedId = function (collection, selector, mod,
-                                             isModify, options, callback) {
-  // STRATEGY:  First try doing a plain update.  If it affected 0 documents,
-  // then without affecting the database, we know we should probably do an
-  // insert.  We then do a *conditional* insert that will fail in the case
-  // of a race condition.  This conditional insert is actually an
-  // upsert-replace with an _id, which will never successfully update an
-  // existing document.  If this upsert fails with an error saying it
-  // couldn't change an existing _id, then we know an intervening write has
-  // caused the query to match something.  We go back to step one and repeat.
+                                             options, callback) {
+  // STRATEGY: First try doing an upsert with a generated ID.
+  // If this throws an error about changing the ID on an existing document
+  // then without affecting the database, we know we should probably try
+  // an update without the generated ID. If it affected 0 documents, 
+  // then without affecting the database, we the document that first
+  // gave the error is probably removed and we need to try an insert again
+  // We go back to step one and repeat.
   // Like all "optimistic write" schemes, we rely on the fact that it's
   // unlikely our writes will continue to be interfered with under normal
   // circumstances (though sufficiently heavy contention with writers
   // disagreeing on the existence of an object will cause writes to fail
   // in theory).
-
-  var newDoc;
-  // Run this code up front so that it fails fast if someone uses
-  // a Mongo update operator we don't support.
-  if (isModify) {
-    // We've already run replaceTypes/replaceMeteorAtomWithMongo on
-    // selector and mod.  We assume it doesn't matter, as far as
-    // the behavior of modifiers is concerned, whether `_modify`
-    // is run on EJSON or on mongo-converted EJSON.
-    var selectorDoc = LocalCollection._removeDollarOperators(selector);
-
-    newDoc = selectorDoc;
-
-    // Convert dotted keys into objects. (Resolves issue #4522).
-    _.each(newDoc, function (value, key) {
-      var trail = key.split(".");
-
-      if (trail.length > 1) {
-        //Key is dotted. Convert it into an object.
-        delete newDoc[key];
-
-        var obj = newDoc,
-            leaf = trail.pop();
-
-        // XXX It is not quite certain what should be done if there are clashing
-        // keys on the trail of the dotted key. For now we will just override it
-        // It wouldn't be a very sane query in the first place, but should look
-        // up what mongo does in this case.
-
-        while ((key = trail.shift())) {
-          if (typeof obj[key] !== "object") {
-            obj[key] = {};
-          }
-
-          obj = obj[key];
-        }
-
-        obj[leaf] = value;
-      }
-    });
-
-    LocalCollection._modify(newDoc, mod, {isInsert: true});
-  } else {
-    newDoc = mod;
-  }
 
   var insertedId = options.insertedId; // must exist
   var mongoOptsForUpdate = {
@@ -722,6 +686,10 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
     safe: true,
     upsert: true
   };
+
+  var replacementWithId = Object.assign(
+    replaceTypes({_id: insertedId}, replaceMeteorAtomWithMongo),
+    mod);
 
   var tries = NUM_OPTIMISTIC_TRIES;
 
@@ -746,9 +714,6 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
   };
 
   var doConditionalInsert = function () {
-    var replacementWithId = _.extend(
-      replaceTypes({_id: insertedId}, replaceMeteorAtomWithMongo),
-      newDoc);
     collection.update(selector, replacementWithId, mongoOptsForInsert,
                       bindEnvironmentForWrite(function (err, result) {
                         if (err) {

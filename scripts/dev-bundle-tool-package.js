@@ -14,11 +14,11 @@ var packageJson = {
     npm: "5.2.0",
     "node-gyp": "3.6.2",
     "node-pre-gyp": "0.6.36",
-    "meteor-babel": "0.23.0",
+    "meteor-babel": "0.23.1",
     "meteor-promise": "0.8.5",
+    promise: "8.0.1",
     reify: "0.12.0",
     fibers: "2.0.0",
-    promise: "8.0.1",
     // So that Babel 6 can emit require("babel-runtime/helpers/...") calls.
     "babel-runtime": "6.9.2",
     // For various ES2015 polyfills, such as Map and Set.
