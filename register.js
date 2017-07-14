@@ -6,6 +6,8 @@ var convertSourceMap = require("convert-source-map");
 var meteorBabel = require("./index.js");
 var util = require("./util.js");
 
+require("reify/lib/runtime").enable(module.constructor);
+
 var config = {
   sourceMapRootPath: null,
   allowedDirectories: Object.create(null),
@@ -33,9 +35,6 @@ exports.setBabelOptions = function (options) {
   return exports;
 };
 
-// It's important to call require("reify/node") before saving the
-// defaultHandler, since Reify modifies require.extensions.
-require("reify/node");
 var defaultHandler = require.extensions[".js"];
 require.extensions[".js"] = function(module, filename) {
   if (shouldNotTransform(filename)) {
