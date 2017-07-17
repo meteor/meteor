@@ -172,6 +172,7 @@ var release = require('../packaging/release.js');
 import { load as loadIsopacket } from '../tool-env/isopackets.js';
 import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
 import { gzipSync } from "zlib";
+import globToRegexp from './glob-to-regexp'; // .meteorignore glob pattern to regexp
 
 // files to ignore when bundling. node has no globs, so use regexps
 exports.ignoreFiles = [
@@ -183,6 +184,62 @@ exports.ignoreFiles = [
         #.*# => emacs swap files
       */
 ];
+
+const METEOR_IGNORE = '.meteorignore'
+
+/*
+    .meteorignore works *like*
+    https://git-scm.com/docs/gitignore
+    what's implemented: 
+      - blank line separator for readability
+      - A line starting with # as a comment, \# or [#] is not comment.
+      - Trailing spaces are ignored.
+      - glob stars ** matches all directory. 
+        for example trailing /** matches eveying inside   */   
+//       a/**/b matches a/b a/x/b, a/x/y/b...  
+/*
+    what's implemented but not in the specification.
+      - ? for match single character
+      - [] to match character group.
+
+    What's not effective: (doesn't work.)
+      - ! negative pattern won't be effective unless the below known issue is resolved.
+
+    known issue:
+      ignoreFiles take regExp list with default logical *or*, 
+      instead of glob pattern list with optional logical *and* for negative pattern.
+        *        # ignore all files
+        !*.html  # but (AND) not ignore *.html, ignore files that matches * AND !*.html
+        !*.css   # (AND) not ignore *.css
+        !*.js    # (AND) not ignore *.js
+*/
+
+if (files.exists(METEOR_IGNORE)) {
+  var dotIgnoreFiles = files.readFile(METEOR_IGNORE).toString('utf8')
+  exports.ignoreFiles = exports.ignoreFiles.concat( // wanted use array spread operator .push(...dotIgnoreFiles.split( maybe from v1.6
+    dotIgnoreFiles
+      .split(/\n/)
+      .map(v => {
+        if(v.includes('#')) {
+          var hashIndex = v.indexOf('#')
+          if (hashIndex === 0) // if a line begins with hash, discard the line.
+            return ''
+          else (
+            hashIndex > 0 && ( 
+              v[hashIndex - 1] !== '\\' || ( // to satisfy backslash ('\') in front of the first hash for patterns that begin with a hash.
+                v[hashIndex - 1] !== '[' && v[hashIndex + 1] !== ']'  // undocumented [#] to match hash, not a comment
+              ) 
+            ) 
+          ) 
+            return v.replace(/#.*$/, '').trim();
+        } else {
+          return v.trim();
+        }
+      }) // remove # comment except \# or [#] to satisfy .gitignore comment rule.
+      .filter(v => '' !== v)
+      .map(v => globToRegexp(v, {extended: true, globstars: true})) // extended: ? single charactor, [a-z] matches, globstars: a/**/b patterns
+  )
+}
 
 function rejectBadPath(p) {
   if (p.startsWith("..")) {
