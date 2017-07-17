@@ -49,7 +49,8 @@ var packageJson = {
     // workaround from the tool.
     "commonmark": "0.15.0",
     escope: "3.2.0",
-    split: "1.0.0",
+    split2: "2.1.1",
+    multipipe: "1.0.2",
     pathwatcher: "6.7.1",
     optimism: "0.3.3",
     'lru-cache': '4.0.1',

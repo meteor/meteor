@@ -1,4 +1,5 @@
-import split from "split";
+import split from "split2";
+import pipe from "multipipe";
 import { Transform } from "stream";
 
 export function eachline(stream, callback) {
@@ -6,9 +7,13 @@ export function eachline(stream, callback) {
 }
 
 export function transform(callback) {
-  const t = new Transform();
+  const splitStream = split(/\r?\n/, null, {
+    trailing: false
+  });
 
-  t._transform = async function (chunk, encoding, done) {
+  const transform = new Transform();
+
+  transform._transform = async function (chunk, encoding, done) {
     let line = chunk.toString("utf8");
     try {
       line = await callback(line);
@@ -19,7 +24,8 @@ export function transform(callback) {
     done(null, line);
   };
 
-  return split(/\r?\n/, null, {
-    trailing: false
-  }).pipe(t);
+  return pipe(
+    splitStream,
+    transform,
+  );
 }
