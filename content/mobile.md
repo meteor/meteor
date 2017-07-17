@@ -94,7 +94,7 @@ After the download and installation completes, you will need to accept the licen
 
 A shortcut is to run `sudo xcodebuild -license accept` from the command line. (You will still be expected to have read and understood the [Xcode and Apple SDKs Agreement](https://www.apple.com/legal/sla/docs/xcode.pdf)).
 
-> As of [Cordova iOS 4.3.0](https://cordova.apache.org/announcements/2016/10/24/ios-release.html) you may also need to `sudo gem install cocoapods` to resolve a dependency with [PhoneGap Push Plugin](http://phonegap.com/blog/2016/11/03/phonegap-plugin-push-1.9.0/dependency). 
+> As of [Cordova iOS 4.3.0](https://cordova.apache.org/announcements/2016/10/24/ios-release.html) you may also need to `sudo gem install cocoapods` to resolve a dependency with [PhoneGap Push Plugin](https://github.com/phonegap/phonegap-plugin-push/blob/master/docs/INSTALLATION.md). 
 
 
 <h3 id="installing-prerequisites-android">Android</h3>
