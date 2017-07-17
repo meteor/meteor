@@ -22,7 +22,7 @@ var packageJson = {
   // These are only used in dev mode (by shell.js) so end-users can avoid
   // needing to install them if they use `npm install --production`.
   devDependencies: {
-    eachline: "3.0.5",
+    split: "1.0.0",
     chalk: "0.5.1"
   }
 };
