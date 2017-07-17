@@ -531,7 +531,7 @@ exports.isValidVersion = function (version, {forCordova}) {
 
 exports.execFileSync = function (file, args, opts) {
   var child_process = require('child_process');
-  var eachline = require('eachline');
+  var { eachline } = require('./eachline.js');
 
   opts = opts || {};
   if (! _.has(opts, 'maxBuffer')) {
@@ -541,17 +541,13 @@ exports.execFileSync = function (file, args, opts) {
   if (opts && opts.pipeOutput) {
     var p = child_process.spawn(file, args, opts);
 
-    eachline(p.stdout, fiberHelpers.bindEnvironment(function (line) {
-      if (line || ! this.finished) {
-        process.stdout.write(line + '\n');
-      }
-    }));
+    eachline(p.stdout, function (line) {
+      process.stdout.write(line + '\n');
+    });
 
-    eachline(p.stderr, fiberHelpers.bindEnvironment(function (line) {
-      if (line || ! this.finished) {
-        process.stderr.write(line + '\n');
-      }
-    }));
+    eachline(p.stderr, function (line) {
+      process.stderr.write(line + '\n');
+    });
 
     return {
       success: ! new Promise(function (resolve) {
@@ -576,23 +572,18 @@ exports.execFileSync = function (file, args, opts) {
 exports.execFileAsync = function (file, args, opts) {
   opts = opts || {};
   var child_process = require('child_process');
-  var eachline = require('eachline');
+  var { eachline } = require('./eachline.js');
   var p = child_process.spawn(file, args, opts);
   var mapper = opts.lineMapper || _.identity;
 
-  var logOutput = fiberHelpers.bindEnvironment(function (line) {
-    if (! line && this.finished) {
-      // Ignore blank lines at the end of the output stream.
-      return;
-    }
-
+  function logOutput(line) {
     if (opts.verbose) {
       line = mapper(line);
       if (line) {
         console.log(line);
       }
     }
-  });
+  }
 
   eachline(p.stdout, logOutput);
   eachline(p.stderr, logOutput);
