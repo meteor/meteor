@@ -1602,7 +1602,7 @@ function doTestCommand(options) {
   }
 
   if (!testRunnerAppDir) {
-    testRunnerAppDir = files.mkdtemp('meteor-test-run')
+    testRunnerAppDir = files.mkdtemp('meteor-test-run');
   }
 
   // Download packages for our architecture, and for the deploy server's
