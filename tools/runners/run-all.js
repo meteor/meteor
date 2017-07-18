@@ -81,7 +81,10 @@ class Runner {
     self.mongoRunner = null;
     if (mongoUrl) {
       oplogUrl = disableOplog ? null : oplogUrl;
-    } else if (hasMongoDevServerPackage) {
+    } else if (hasMongoDevServerPackage
+        || process.env.METEOR_TEST_FAKE_MONGOD_CONTROL_PORT) {
+      // The mongo-dev-server package is required to start Mongo, but
+      // tests using fake-mongod are exempted.
       self.mongoRunner = new MongoRunner({
         projectLocalDir: self.projectContext.projectLocalDir,
         port: mongoPort,
