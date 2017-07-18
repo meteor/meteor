@@ -7,5 +7,6 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
-  api.addFiles('info.js', 'server');
+  api.use('modules');
+  api.mainModule('server.js', 'server');
 });

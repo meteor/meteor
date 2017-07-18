@@ -70,14 +70,14 @@ class Runner {
       proxyToHost: appHost,
       onFailure
     });
-    
+
     buildmessage.capture(function () {
       self.projectContext.resolveConstraints();
     });
 
     const packageMap = self.projectContext.packageMap;
-    const hasMongoDevServerPackage = packageMap && packageMap.getInfo('mongo-dev-server') != null;
-
+    const hasMongoDevServerPackage =
+      packageMap && packageMap.getInfo('mongo-dev-server') != null;
     self.mongoRunner = null;
     if (mongoUrl) {
       oplogUrl = disableOplog ? null : oplogUrl;
