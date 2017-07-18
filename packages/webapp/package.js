@@ -16,7 +16,7 @@ Npm.strip({
 Cordova.depends({
   'cordova-plugin-whitelist': '1.3.2',
   'cordova-plugin-wkwebview-engine': '1.1.3',
-  'cordova-plugin-meteor-webapp': '1.4.1'
+  'cordova-plugin-meteor-webapp': '1.4.2'
 });
 
 Package.onUse(function (api) {
