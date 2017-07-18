@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
   id="cordova-plugin-meteor-webapp"
-  version="1.4.0">
+  version="1.4.2">
   <name>Meteor Webapp</name>
   <description>Cordova plugin that serves a Meteor web app through a local server and implements hot code push</description>
   <keywords>cordova,meteor</keywords>
