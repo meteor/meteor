@@ -41,7 +41,7 @@ When running your bundled application in production mode, pass a string of JSON 
 ## MONGO_OPLOG_URL
 (_development, production_)
 
-MongoDB server oplog URL. If you're using a replica set (which you should), construct this url like so: `MONGO_URL="mongodb://user:password@myserver.com:10139/local?replicaSet=(your replica set)&authSource=(your auth source)"`
+MongoDB server oplog URL. If you're using a replica set (which you should), construct this url like so: `MONGO_OPLOG_URL="mongodb://user:password@myserver.com:10139/local?replicaSet=(your replica set)&authSource=(your auth source)"`
 
 ## MONGO_URL
 (_development, production_)
