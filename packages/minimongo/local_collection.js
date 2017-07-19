@@ -4,6 +4,7 @@ import {
   isIndexable,
   isNumericKey,
   isOperatorObject,
+  populateDocumentWithQueryFields,
   projectionDetails,
 } from './common.js';
 
@@ -405,19 +406,7 @@ export default class LocalCollection {
     // generate an id for it.
     let insertedId;
     if (updateCount === 0 && options.upsert) {
-      const selectorModifier = LocalCollection._removeDollarOperators(LocalCollection._selectorIsId(selector) ? {_id: selector} : selector);
-      const doc = {};
-
-      if (selectorModifier._id) {
-        doc._id = selectorModifier._id;
-        delete selectorModifier._id;
-      }
-
-      // This double _modify call is made to help work around an issue where collection
-      // upserts won't work properly, with nested properties (see issue #8631).
-      LocalCollection._modify(doc, {$set: selectorModifier});
-      LocalCollection._modify(doc, mod, {isInsert: true});
-
+      const doc = LocalCollection._createUpsertDocument(selector, mod);
       if (! doc._id && options.insertedId)
         doc._id = options.insertedId;
 
@@ -828,6 +817,37 @@ LocalCollection._compileProjection = fields => {
   };
 };
 
+// Calculates the document to insert in case we're doing an upsert and the selector
+// does not match any elements
+LocalCollection._createUpsertDocument = (selector, modifier) => {
+  const selectorDocument = populateDocumentWithQueryFields(selector);
+  const isModify = LocalCollection._isModificationMod(modifier);
+
+  const newDoc = {};
+
+  if (selectorDocument._id) {
+    newDoc._id = selectorDocument._id;
+    delete selectorDocument._id;
+  }
+
+  // This double _modify call is made to help with nested properties (see issue #8631).
+  // We do this even if it's a replacement for validation purposes (e.g. ambiguous id's)
+  LocalCollection._modify(newDoc, {$set: selectorDocument});
+  LocalCollection._modify(newDoc, modifier, {isInsert: true});
+
+  if (isModify) {
+    return newDoc;
+  }
+
+  // Replacement can take _id from query document
+  const replacement = Object.assign({}, modifier);
+  if (newDoc._id) {
+    replacement._id = newDoc._id;
+  }
+
+  return replacement;
+};
+
 LocalCollection._diffObjects = (left, right, callbacks) => {
   return DiffSequence.diffObjects(left, right, callbacks);
 };
@@ -945,6 +965,25 @@ LocalCollection._insertInSortedList = (cmp, array, value) => {
   return i;
 };
 
+LocalCollection._isModificationMod = mod => {
+  let isModify = false;
+  let isReplace = false;
+
+  for (const key in mod) {
+    if (key.substr(0, 1) === '$') {
+      isModify = true;
+    } else {
+      isReplace = true;
+    }
+  }
+
+  if (isModify && isReplace) {
+    throw new Error('Update parameter cannot have both modifier and non-modifier fields.');
+  }
+
+  return isModify;
+};
+
 // XXX maybe this should be EJSON.isObject, though EJSON doesn't know about
 // RegExp
 // XXX note that _type(undefined) === 3!!!!
@@ -990,9 +1029,6 @@ LocalCollection._modify = (doc, modifier, options = {}) => {
         if (keypath === '')
           throw MinimongoError('An empty update path is not valid.');
 
-        if (keypath === '_id' && operator !== '$setOnInsert')
-          throw MinimongoError('Mod on _id not allowed');
-
         const keyparts = keypath.split('.');
 
         if (!keyparts.every(Boolean))
@@ -1009,9 +1045,12 @@ LocalCollection._modify = (doc, modifier, options = {}) => {
         modFunc(target, keyparts.pop(), arg, keypath, newDoc);
       });
     });
+
+    if (doc._id && !EJSON.equals(doc._id, newDoc._id))
+      throw MinimongoError(`After applying the update to the document {_id: "${doc._id}", ...}, the (immutable) field '_id' was found to have been altered to _id: "${newDoc._id}"`);
   } else {
     if (modifier._id && !EJSON.equals(doc._id, modifier._id))
-      throw MinimongoError('Cannot change the _id of a document');
+      throw MinimongoError(`The _id field cannot be changed from {_id: "${doc._id}"} to {_id: "${modifier._id}"}`);
 
     // replace the whole document
     assertHasValidFieldNames(modifier);
@@ -1149,31 +1188,6 @@ LocalCollection._observeChangesCallbacksAreOrdered = callbacks => {
     throw new Error('Please specify only one of added() and addedBefore()');
 
   return !!(callbacks.addedBefore || callbacks.movedBefore);
-};
-
-// When performing an upsert, the incoming selector object can be re-used as
-// the upsert modifier object, as long as Mongo query and projection
-// operators (prefixed with a $ character) are removed from the newly
-// created modifier object. This function attempts to strip all $ based Mongo
-// operators when creating the upsert modifier object.
-// NOTE: There is a known issue here in that some Mongo $ based opeartors
-// should not actually be stripped.
-// See https://github.com/meteor/meteor/issues/8806.
-LocalCollection._removeDollarOperators = selector => {
-  const cleansed = {};
-
-  Object.keys(selector).forEach((key) => {
-    const value = selector[key];
-
-    if (key.charAt(0) !== '$' && !objectOnlyHasDollarKeys(value)) {
-      if (value !== null && value.constructor && Object.getPrototypeOf(value) === Object.prototype)
-        cleansed[key] = LocalCollection._removeDollarOperators(value);
-      else
-        cleansed[key] = value;
-    }
-  });
-
-  return cleansed;
 };
 
 LocalCollection._removeFromResults = (query, doc) => {
@@ -1687,9 +1701,4 @@ function findModTarget(doc, keyparts, options = {}) {
   }
 
   // notreached
-}
-
-function objectOnlyHasDollarKeys(object) {
-  const keys = Object.keys(object);
-  return keys.length > 0 && keys.every(key => key.charAt(0) === '$');
 }

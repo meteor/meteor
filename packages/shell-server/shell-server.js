@@ -418,17 +418,14 @@ function evalCommand(command, context, filename, callback) {
   }
 
   evalCommandPromise.then(function () {
-
     if (repl.input) {
       callback(null, script.runInThisContext());
     } else {
       // If repl didn't start, `require` and `module` are not visible
-      // in the vm context
+      // in the vm context.
       setRequireAndModule(global);
-
       callback(null, script.runInThisContext());
     }
-
   }).catch(callback);
 }
 
@@ -474,7 +471,6 @@ function isRecoverableError(e, repl) {
 }
 
 function setRequireAndModule(context) {
-
   if (Package.modules) {
     // Use the same `require` function and `module` object visible to the
     // application.
