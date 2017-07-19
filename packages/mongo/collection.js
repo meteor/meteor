@@ -562,6 +562,7 @@ Mongo.Collection.prototype.update = function update(selector, modifier, ...optio
       insertedId = options.insertedId;
     } else if (!selector || !selector._id) {
       insertedId = this._makeNewID();
+      options.generatedId = true;
       options.insertedId = insertedId;
     }
   }

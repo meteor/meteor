@@ -1,0 +1,19 @@
+{
+  "dependencies": {
+    "magic-string": {
+      "version": "0.21.3",
+      "resolved": "https://registry.npmjs.org/magic-string/-/magic-string-0.21.3.tgz",
+      "from": "magic-string@0.21.3"
+    },
+    "parse5": {
+      "version": "3.0.2",
+      "resolved": "https://registry.npmjs.org/parse5/-/parse5-3.0.2.tgz",
+      "from": "parse5@3.0.2"
+    },
+    "vlq": {
+      "version": "0.2.2",
+      "resolved": "https://registry.npmjs.org/vlq/-/vlq-0.2.2.tgz",
+      "from": "vlq@>=0.2.1 <0.3.0"
+    }
+  }
+}
