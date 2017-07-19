@@ -213,8 +213,14 @@ export class AccountsCommon {
     }
   }
 
-  _getTokenLifetimeMs() {
-    return (this._options.loginExpirationInDays ||
+  // The options argument is only used by tests.
+  _getTokenLifetimeMs(options) {
+    options = options || this._options;
+    if (options.loginExpirationInDays === null) {
+      // We disable login expiration by returning Infinity
+      return Infinity;
+    }
+    return (options.loginExpirationInDays ||
             DEFAULT_LOGIN_EXPIRATION_DAYS) * 24 * 60 * 60 * 1000;
   }
 
