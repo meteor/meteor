@@ -280,7 +280,12 @@ async function maybeSuggestRaisingWatchLimit(error) {
       error.errno === constants.ENOSPC &&
       // The only suggestion we currently have is for Linux.
       archinfo.matches(archinfo.host(), 'os.linux')) {
+
+    // Check suggestedRaisingWatchLimit again because archinfo.host() may
+    // have yielded.
+    if (suggestedRaisingWatchLimit) return;
     suggestedRaisingWatchLimit = true;
+
     var Console = require('../console/console.js').Console;
     if (! Console.isHeadless()) {
       Console.arrowWarn(
