@@ -1049,7 +1049,7 @@ LocalCollection._modify = (doc, modifier, options = {}) => {
     if (doc._id && !EJSON.equals(doc._id, newDoc._id))
       throw MinimongoError(`After applying the update to the document {_id: "${doc._id}", ...}, the (immutable) field '_id' was found to have been altered to _id: "${newDoc._id}"`);
   } else {
-    if (modifier._id && !EJSON.equals(doc._id, modifier._id))
+    if (doc._id && modifier._id && !EJSON.equals(doc._id, modifier._id))
       throw MinimongoError(`The _id field cannot be changed from {_id: "${doc._id}"} to {_id: "${modifier._id}"}`);
 
     // replace the whole document
