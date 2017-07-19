@@ -1034,8 +1034,6 @@ LocalCollection._modify = (doc, modifier, options = {}) => {
         if (!keyparts.every(Boolean))
           throw MinimongoError(`The update path '${keypath}' contains an empty field name, which is not allowed.`);
 
-        const noCreate = NO_CREATE_MODIFIERS.hasOwnProperty(operator);
-        const forbidArray = operator === '$rename';
         const target = findModTarget(newDoc, keyparts, {
           arrayIndices: options.arrayIndices,
           forbidArray: operator === '$rename',
@@ -1214,7 +1212,7 @@ LocalCollection._selectorIsIdPerhapsAsObject = selector => {
   if (LocalCollection._selectorIsId(selector))
     return true;
 
-  return LocalCollection._selectorIsId(selector && selector._id);
+  return LocalCollection._selectorIsId(selector && selector._id) && Object.keys(selector).length === 1;
 };
 
 LocalCollection._updateInResults = (query, doc, old_doc) => {
