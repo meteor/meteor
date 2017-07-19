@@ -72,7 +72,7 @@ is equivalent to:
 
 ```js
 App.accessRule('https://www.google-analytics.com');
-App.accessRule('https://example.com', 'navigation');
+App.accessRule('https://example.com', { type: 'navigation' });
 ```
 
 {% apibox "App.configurePlugin" %}
