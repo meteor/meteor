@@ -2,6 +2,9 @@
 
 # Meteor Roadmap
 
+**Update 20 Jul 2017
+Bake React-Native into Meteor instead of Cordova :)
+
 **Up to date as of March 17, 2017**
 
 This document describes the high level features the Meteor project maintainers have decided to prioritize in the near- to medium-term future. A large fraction of the maintainers’ time will be dedicated to working on the features described here. As with any roadmap, this is a living document that will evolve as priorities and dependencies shift; we aim to update the roadmap with any changes or status updates on a monthly basis.
