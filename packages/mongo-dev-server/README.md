@@ -3,7 +3,7 @@
 [Source code of released version](https://github.com/meteor/meteor/tree/master/packages/mongo-dev-server) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/mongo-dev-server)
 ***
 
-When the `mongo-dev-server` package is included in a Meteor application, a  
+When the `mongo-dev-server` package is included in a Meteor application, a
 local development MongoDB server is started alongside the application. This
 package is mostly used internally, as it is included by default with any
 application that has a dependency on `mongo` (which is most Meteor
