@@ -189,10 +189,10 @@ selftest.define("checkout", ['checkout'], function () {
   s.cd('myapp', function () {
     s.write(".meteor/release", "something");
     run = s.run("list");
-    run.waitSecs(10);
     run.readErr("=> Running Meteor from a checkout");
     run.matchErr("project version");
     run.matchErr("(Meteor something)\n");
+    run.waitSecs(30);
     run.expectExit(0);
   });
 });
