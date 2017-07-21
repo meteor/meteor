@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'Login service for Meteor developer accounts',
-  version: '1.4.0-beta.10'
+  version: '1.4.0-beta.11'
 });
 
 Package.onUse(function (api) {
