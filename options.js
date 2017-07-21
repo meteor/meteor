@@ -20,6 +20,11 @@ var babelModulesPlugin = [function () {
 }];
 
 exports.getDefaults = function getDefaults(features) {
+  if (features &&
+      features.nodeMajorVersion >= 8) {
+    return getDefaultsForNode8(features);
+  }
+
   var combined = {
     presets: [babelPresetMeteor],
     plugins: [
@@ -74,6 +79,60 @@ exports.getDefaults = function getDefaults(features) {
     presets: [combined]
   };
 };
+
+function getDefaultsForNode8(features) {
+  const plugins = [
+    // Support Flow type syntax by simply stripping it out.
+    require("babel-plugin-syntax-flow"),
+    require("babel-plugin-transform-flow-strip-types"),
+
+    // Compile import/export syntax with Reify.
+    [reifyPlugin, {
+      generateLetDeclarations: true,
+      enforceStrictMode: false
+    }],
+
+    // Make assigning to imported symbols a syntax error.
+    require("babel-plugin-check-es2015-constants"),
+
+    // Not fully supported in Node 8 without the --harmony flag.
+    require("babel-plugin-syntax-object-rest-spread"),
+    require("babel-plugin-transform-object-rest-spread"),
+
+    // Ensure that async functions run in a Fiber, while also taking
+    // full advantage of native async/await support in Node 8.
+    [require("./plugins/async-await.js"), {
+      // Do not transform `await x` to `Promise.await(x)`, since Node
+      // 8 has native support for await expressions.
+      useNativeAsyncAwait: true
+    }],
+
+    // Transform `import(id)` to `module.dynamicImport(id)`.
+    require("./plugins/dynamic-import.js"),
+
+    // Enable class property syntax for server-side React code.
+    require("babel-plugin-transform-class-properties"),
+  ];
+
+  const presets = [{
+    plugins
+  }];
+
+  if (features) {
+    if (features.react) {
+      // Enable JSX syntax for server-side React code.
+      presets.push(require("babel-preset-react"));
+    }
+  }
+
+  return {
+    compact: false,
+    sourceMap: false,
+    ast: false,
+    babelrc: false,
+    presets
+  };
+}
 
 exports.getMinifierDefaults = function getMinifierDefaults(features) {
   var options = {

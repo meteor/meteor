@@ -6,6 +6,7 @@ import {
 } from "./test-module";
 
 const hasOwn = Object.prototype.hasOwnProperty;
+const isNode8OrLater = parseInt(process.versions.node) >= 8;
 
 describe("meteor-babel", () => {
   import meteorBabel from "../index.js";
@@ -59,7 +60,8 @@ describe("meteor-babel", () => {
 });
 
 describe("Babel", function() {
-  it("es3.propertyLiterals", () => {
+  (isNode8OrLater ? xit : it)
+  ("es3.propertyLiterals", () => {
     function getCatch(value) {
       let obj = { catch: value };
       return obj.catch;
@@ -317,7 +319,8 @@ val = "zxcv";`;
     "function C("
   ];
 
-  it("jscript", function jscript() {
+  (isNode8OrLater ? xit : it)
+  ("jscript", function jscript() {
     let f = function f() {
       return f;
     };
@@ -332,7 +335,8 @@ val = "zxcv";`;
     assert.deepEqual(fns, expectedFns);
   });
 
-  it("for-in loop sanitization", function loop() {
+  (isNode8OrLater ? xit : it)
+  ("for-in loop sanitization", function loop() {
     Array.prototype.dummy = () => {};
 
     // Use the full version of sanitizeForInObject even though these tests
