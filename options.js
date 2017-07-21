@@ -1,10 +1,12 @@
-var babelPresetMeteor = require("babel-preset-meteor");
-var reifyPlugin = require("babel-plugin-transform-es2015-modules-reify");
-var strictModulesPluginFactory =
+"use strict";
+
+const babelPresetMeteor = require("babel-preset-meteor");
+const reifyPlugin = require("babel-plugin-transform-es2015-modules-reify");
+const strictModulesPluginFactory =
   require("babel-plugin-transform-es2015-modules-commonjs");
 
-var babelModulesPlugin = [function () {
-  var plugin = strictModulesPluginFactory.apply(this, arguments);
+const babelModulesPlugin = [function () {
+  const plugin = strictModulesPluginFactory.apply(this, arguments);
   // Since babel-preset-meteor uses an exact version of the
   // babel-plugin-transform-es2015-modules-commonjs transform (6.8.0), we
   // can be sure this plugin.inherits property is indeed the
@@ -25,7 +27,7 @@ exports.getDefaults = function getDefaults(features) {
     return getDefaultsForNode8(features);
   }
 
-  var combined = {
+  const combined = {
     presets: [babelPresetMeteor],
     plugins: [
       [reifyPlugin, {
@@ -135,7 +137,7 @@ function getDefaultsForNode8(features) {
 }
 
 exports.getMinifierDefaults = function getMinifierDefaults(features) {
-  var options = {
+  const options = {
     // Generate code in loose mode
     compact: false,
     // Don't generate a source map, we do that during compilation
