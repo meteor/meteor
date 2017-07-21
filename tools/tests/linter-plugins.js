@@ -109,7 +109,7 @@ selftest.define('linter plugins - linting package with `meteor lint`', () => {
   s.cd('myapp/packages/my-package');
 
   const run = s.run('lint');
-  run.waitSecs(10);
+  run.waitSecs(15);
 
   const messages = [
     /While linting files .* my-package .*Server/,
