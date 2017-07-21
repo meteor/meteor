@@ -311,6 +311,19 @@ val = "zxcv";`;
     assert.strictEqual(Bork.staticFunction(), Bork.staticProperty);
   });
 
+  it("async class methods", async function () {
+    class C {
+      async run(arg) {
+        return (await arg) + 1;
+      }
+    }
+
+    assert.strictEqual(
+      await new C().run(Promise.resolve(1234)),
+      1235
+    );
+  });
+
   const expectedFns = [
     "function jscript(",
     "function (", // Wrapper IIFE for f.
