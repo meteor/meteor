@@ -28,6 +28,11 @@ module.exports = function (babel) {
             innerFn.async = true;
           }
 
+          // If the original node was an arrow function, the inner
+          // function should be as well. However, the inner function
+          // should always be an expression, not a declaration.
+          innerFn.type = node.type.replace(/Declaration$/, "Expression");
+
           // Calling the async function with Promise.asyncApply is
           // important to ensure that the part before the first await
           // expression runs synchronously in its own Fiber, even when
