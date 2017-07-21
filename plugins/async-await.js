@@ -4,6 +4,7 @@ module.exports = function (babel) {
   const t = babel.types;
 
   return {
+    name: "transform-meteor-async-await",
     visitor: {
       Function: {
         exit: function (path) {
