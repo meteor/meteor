@@ -3,6 +3,9 @@
 // they are available.
 require("./install-promise.js");
 
+// Enable the module.{watch,export,...} runtime API needed by Reify.
+require("reify/lib/runtime").enable(module.constructor);
+
 var Mp = module.constructor.prototype;
 var moduleLoad = Mp.load;
 Mp.load = function (filename) {
