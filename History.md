@@ -12,6 +12,9 @@
   version of `npm` used by `meteor npm ...` commands.
   [PR #8835](https://github.com/meteor/meteor/pull/8835)
 
+* The `meteor-babel` package has been upgraded to version 0.24.1, to take
+  better advantage of native language features in Node 8.
+
 * The `node-gyp` npm package has been upgraded to version 3.6.2.
 
 * The `node-pre-gyp` npm package has been updated to version 0.6.36.
