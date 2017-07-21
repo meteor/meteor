@@ -94,6 +94,21 @@ var builtinConverters = [
       return new Date(obj.$date);
     }
   },
+  { // RegExp
+    matchJSONValue: function (obj) {
+      return _.has(obj, '$regexp') && _.has(obj, '$flags') && _.size(obj) === 2;
+    },
+    matchObject: function (obj) {
+      return obj instanceof RegExp;
+    },
+    toJSONValue: function (regexp) {
+      return { $regexp: regexp.source, $flags: regexp.flags };
+    },
+    fromJSONValue: function (obj) {
+      //replaces duplicate / invalid flags
+      return new RegExp(obj.$regexp, obj.$flags.replace(/[^gimuy]/g,'').replace(/(.)(?=.*\1)/g, ''));
+    }
+  },
   { // NaN, Inf, -Inf. (These are the only objects with typeof !== 'object'
     // which we match.)
     matchJSONValue: function (obj) {

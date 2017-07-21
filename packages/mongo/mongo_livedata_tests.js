@@ -2152,87 +2152,14 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
 });  // end idGeneration parametrization
 
 Tinytest.add('mongo-livedata - rewrite selector', function (test) {
-  test.equal(Mongo.Collection._rewriteSelector({x: /^o+B/im}),
-             {x: {$regex: '^o+B', $options: 'im'}});
-  test.equal(Mongo.Collection._rewriteSelector({x: {$regex: /^o+B/im}}),
-             {x: {$regex: '^o+B', $options: 'im'}});
-  test.equal(Mongo.Collection._rewriteSelector({x: /^o+B/}),
-             {x: {$regex: '^o+B'}});
-  test.equal(Mongo.Collection._rewriteSelector({x: {$regex: /^o+B/}}),
-             {x: {$regex: '^o+B'}});
+ 
   test.equal(Mongo.Collection._rewriteSelector('foo'),
              {_id: 'foo'});
 
-  test.equal(
-    Mongo.Collection._rewriteSelector(
-      {'$or': [
-        {x: /^o/},
-        {y: /^p/},
-        {z: 'q'},
-        {w: {$regex: /^r/}}
-      ]}
-    ),
-    {'$or': [
-      {x: {$regex: '^o'}},
-      {y: {$regex: '^p'}},
-      {z: 'q'},
-      {w: {$regex: '^r'}}
-    ]}
-  );
-
-  test.equal(
-    Mongo.Collection._rewriteSelector(
-      {'$or': [
-        {'$and': [
-          {x: /^a/i},
-          {y: /^b/},
-          {z: {$regex: /^c/i}},
-          {w: {$regex: '^[abc]', $options: 'i'}}, // make sure we don't break vanilla selectors
-          {v: {$regex: /O/, $options: 'i'}}, // $options should override the ones on the RegExp object
-          {u: {$regex: /O/m, $options: 'i'}} // $options should override the ones on the RegExp object
-        ]},
-        {'$nor': [
-          {s: /^d/},
-          {t: /^e/i},
-          {u: {$regex: /^f/i}},
-          // even empty string overrides built-in flags
-          {v: {$regex: /^g/i, $options: ''}}
-        ]}
-      ]}
-    ),
-    {'$or': [
-      {'$and': [
-        {x: {$regex: '^a', $options: 'i'}},
-        {y: {$regex: '^b'}},
-        {z: {$regex: '^c', $options: 'i'}},
-        {w: {$regex: '^[abc]', $options: 'i'}},
-        {v: {$regex: 'O', $options: 'i'}},
-        {u: {$regex: 'O', $options: 'i'}}
-      ]},
-      {'$nor': [
-        {s: {$regex: '^d'}},
-        {t: {$regex: '^e', $options: 'i'}},
-        {u: {$regex: '^f', $options: 'i'}},
-        {v: {$regex: '^g', $options: ''}}
-      ]}
-    ]}
-  );
 
   var oid = new Mongo.ObjectID();
   test.equal(Mongo.Collection._rewriteSelector(oid),
              {_id: oid});
-
-  // Make sure selectors with "length" properties are handled properly
-  // (verifies issue #8329 has been resolved).
-  const SomeSelector = function (length) {
-    this.length = length;
-  };
-  const length = 2;
-  const testSelector = new SomeSelector(length);
-  test.equal(
-    Mongo.Collection._rewriteSelector(testSelector),
-    { length }
-  );
 
   test.matches(
     Mongo.Collection._rewriteSelector({ _id: null })._id,
