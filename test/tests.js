@@ -416,6 +416,12 @@ val = "zxcv";`;
       assert.deepEqual(markers, ["before", "after"]);
     });
   });
+
+  it("async arrow functions", async () => {
+    const addOneAsync = async arg => (await arg) + 1;
+    const sum = await addOneAsync(2345);
+    assert.strictEqual(sum, 2346);
+  });
 });
 
 describe("Reify", function () {

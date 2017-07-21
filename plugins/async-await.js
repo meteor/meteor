@@ -17,11 +17,11 @@ module.exports = function (babel) {
           // returns a Promise.
           node.async = false;
 
-          const innerFn = t.functionExpression(
-            null, // anonymous
-            node.params.slice(0),
-            node.body
-          );
+          const innerFn = Object.assign({}, node);
+
+          // The inner function has no parameters of its own, but can
+          // refer to the outer parameters of the original function.
+          innerFn.params = [];
 
           if (this.opts.useNativeAsyncAwait) {
             // The inner function called by Promise.asyncApply should be
@@ -29,13 +29,20 @@ module.exports = function (babel) {
             innerFn.async = true;
           }
 
-          // If the original node was an ArrowFunctionExpression, the
-          // inner function should be as well. However, the inner function
-          // should always be an Expression, not a Declaration or
-          // something more exotic like a ClassMethod.
           if (/^(|Arrow|Generator)Function/.test(node.type)) {
+            // If the original node was an ArrowFunctionExpression, the
+            // inner function should be as well. However, the inner
+            // function should always be an Expression, not a Declaration
+            // or something more exotic like a ClassMethod.
             innerFn.type = node.type.replace(/Declaration$/, "Expression");
+          } else {
+            // For any other kind of function (e.g. ClassMethod), make
+            // sure the inner function is a simple FunctionExpression.
+            innerFn.type = "FunctionExpression";
           }
+
+          // tl;dr: innerFn must now be an Expression.
+          t.assertExpression(innerFn);
 
           // Calling the async function with Promise.asyncApply is
           // important to ensure that the part before the first await
@@ -50,8 +57,7 @@ module.exports = function (babel) {
                   false
                 ), [
                   innerFn,
-                  t.thisExpression(),
-                  t.identifier("arguments")
+                  t.thisExpression()
                 ]
               )
             )
