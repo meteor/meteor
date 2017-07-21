@@ -1183,7 +1183,7 @@ MongoConnection.prototype._observeChanges = function (
     throw Error("You may not observe a cursor with {fields: {_id: 0}}");
   }
 
-  var observeKey = JSON.stringify(
+  var observeKey = EJSON.stringify(
     _.extend({ordered: ordered}, cursorDescription));
 
   var multiplexer, observeDriver;

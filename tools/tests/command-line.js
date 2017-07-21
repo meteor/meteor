@@ -315,6 +315,7 @@ selftest.define("argument parsing", function () {
   s.createApp('myapp', 'standard-app');
   s.cd('myapp', function () {
     run = s.run("list");
+    run.waitSecs(30);
     run.expectExit(0);
   });
 
