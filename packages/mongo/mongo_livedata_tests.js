@@ -1646,10 +1646,10 @@ if (Meteor.isServer) {
     var run = test.runId();
     var coll = new Mongo.Collection("livedata_upsert_errorparse_collection_"+run, collectionOptions);
 
-    coll.insert({_id: 'foobar'});
+    coll.insert({_id:'foobar', foo: 'bar'});
     var err;
     try {
-      coll.update({_id: 'foobar'}, {_id: 'cowbar'});
+      coll.update({foo: 'bar'}, {_id: 'cowbar'});
     } catch (e) {
       err = e;
     }

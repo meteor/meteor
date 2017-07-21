@@ -2,7 +2,6 @@ var assert = require("assert");
 var fs = require("fs");
 var path = require("path");
 var net = require("net");
-var eachline = require("eachline");
 var chalk = require("chalk");
 var EOL = require("os").EOL;
 
@@ -181,7 +180,7 @@ Cp.setUpSocket = function setUpSocket(sock, key) {
 
   sock.pipe(process.stdout);
 
-  eachline(sock, "utf8", function(line) {
+  require("./utils/eachline.js").eachline(sock, function (line) {
     self.exitOnClose = line.indexOf(EXITING_MESSAGE) >= 0;
   });
 

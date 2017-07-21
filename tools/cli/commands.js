@@ -660,8 +660,8 @@ main.registerCommand({
 
       // We do mind if there are non-hidden directories, because we don't want
       // to recursively check everything to do some crazy heuristic to see if
-      // we should try to creat an app.
-      var stats = files.stat(filePath);
+      // we should try to create an app.
+      var stats = files.stat(files.pathJoin(appPath, filePath));
       if (stats.isDirectory()) {
         // Could contain code
         return true;
@@ -1579,8 +1579,31 @@ function doTestCommand(options) {
   // cleaned up on process exit. Using a temporary app dir means that we can
   // run multiple "test-packages" commands in parallel without them stomping
   // on each other.
-  var testRunnerAppDir =
-        options['test-app-path'] || files.mkdtemp('meteor-test-run');
+  let testRunnerAppDir;
+  const testAppPath = options['test-app-path'];
+  if (testAppPath) {
+    try {
+      if (files.mkdir_p(testAppPath, 0o700)) {
+        testRunnerAppDir = testAppPath;
+      } else {
+        Console.error(
+          'The specified --test-app-path directory could not be used, as ' +
+          `"${testAppPath}" already exists and it is not a directory.`
+        );
+        return 1;
+      }
+    } catch (error) {
+      Console.error(
+        'Unable to create the specified --test-app-path directory of ' +
+        `"${testAppPath}".`
+      );
+      throw error;
+    }
+  }
+
+  if (!testRunnerAppDir) {
+    testRunnerAppDir = files.mkdtemp('meteor-test-run');
+  }
 
   // Download packages for our architecture, and for the deploy server's
   // architecture if we're deploying.
@@ -1611,7 +1634,19 @@ function doTestCommand(options) {
     projectContextOptions.projectDir = testRunnerAppDir;
     projectContextOptions.projectDirForLocalPackages = options.appDir;
 
-    require("./default-npm-deps.js").install(testRunnerAppDir);
+    try {
+      require("./default-npm-deps.js").install(testRunnerAppDir);
+    } catch (error) {
+      if (error.code === 'EACCES' && options['test-app-path']) {
+        Console.error(
+          'The specified --test-app-path directory of ' +
+          `"${testRunnerAppDir}" exists, but the current user does not have ` +
+          `read/write permission in it.`
+        );
+      }
+      throw error;
+    }
+
     if (buildmessage.jobHasMessages()) {
       return;
     }

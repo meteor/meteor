@@ -9,9 +9,9 @@ var packageJson = {
   // Version is not important but is needed to prevent warnings.
   version: "0.0.0",
   dependencies: {
-    "meteor-promise": "0.8.4",
+    "meteor-promise": "0.8.5",
     fibers: "1.0.15",
-    promise: "7.1.1",
+    promise: "8.0.1",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
     // in the package too) because we should consider using lodash instead
     // (and there are backwards-incompatible changes either way).
@@ -22,12 +22,10 @@ var packageJson = {
   // These are only used in dev mode (by shell.js) so end-users can avoid
   // needing to install them if they use `npm install --production`.
   devDependencies: {
-    // 2.4.0 (more or less, the package.json change isn't committed) plus our PR
-    // https://github.com/williamwicks/node-eachline/pull/4
-    eachline: "https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da",
+    split2: "2.1.1",
+    multipipe: "1.0.2",
     chalk: "0.5.1"
   }
 };
-
 
 process.stdout.write(JSON.stringify(packageJson, null, 2) + '\n');
