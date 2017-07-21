@@ -1,3 +1,6 @@
+const isNode8OrLater = Meteor.isServer &&
+  parseInt(process.versions.node) >= 8;
+
 Tinytest.add("ecmascript - runtime - template literals", (test) => {
   function dump(pieces) {
     var copy = {};
@@ -9,9 +12,20 @@ Tinytest.add("ecmascript - runtime - template literals", (test) => {
   const foo = 'B';
   // uses `babelHelpers.taggedTemplateLiteralLoose`
   test.equal(`\u0041${foo}C`, 'ABC');
-  test.equal(dump`\u0041${foo}C`,
-             [{0:'A', 1: 'C', raw: ['\\u0041', 'C']},
-              ['B']]);
+
+  const expected = [{
+    0: 'A',
+    1: 'C',
+    raw: ['\\u0041', 'C']
+  }, [
+    'B'
+  ]];
+
+  if (isNode8OrLater) {
+    delete expected[0].raw;
+  }
+
+  test.equal(dump`\u0041${foo}C`, expected);
 });
 
 Tinytest.add("ecmascript - runtime - classes - basic", (test) => {
@@ -265,9 +279,14 @@ Tinytest.add("ecmascript - runtime - destructuring", (test) => {
 
   const {} = {};
 
-  test.throws(() => {
-    const {} = null;
-  }, /Cannot destructure undefined/);
+  test.throws(
+    () => {
+      const {} = null;
+    },
+    isNode8OrLater
+      ? /Cannot match against 'undefined' or 'null'/
+      : /Cannot destructure undefined/
+  );
 
   const [x, y, z] = function*() {
     let x = 1;
