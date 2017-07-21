@@ -3,6 +3,7 @@ module.exports = function () {
   var buildImport = template("module.dynamicImport(SOURCE)");
 
   return {
+    name: "transform-meteor-dynamic-import",
     inherits: require("babel-plugin-syntax-dynamic-import"),
     visitor: {
       CallExpression: function (path) {

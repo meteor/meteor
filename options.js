@@ -1,10 +1,12 @@
-var babelPresetMeteor = require("babel-preset-meteor");
-var reifyPlugin = require("babel-plugin-transform-es2015-modules-reify");
-var strictModulesPluginFactory =
+"use strict";
+
+const babelPresetMeteor = require("babel-preset-meteor");
+const reifyPlugin = require("babel-plugin-transform-es2015-modules-reify");
+const strictModulesPluginFactory =
   require("babel-plugin-transform-es2015-modules-commonjs");
 
-var babelModulesPlugin = [function () {
-  var plugin = strictModulesPluginFactory.apply(this, arguments);
+const babelModulesPlugin = [function () {
+  const plugin = strictModulesPluginFactory.apply(this, arguments);
   // Since babel-preset-meteor uses an exact version of the
   // babel-plugin-transform-es2015-modules-commonjs transform (6.8.0), we
   // can be sure this plugin.inherits property is indeed the
@@ -20,7 +22,12 @@ var babelModulesPlugin = [function () {
 }];
 
 exports.getDefaults = function getDefaults(features) {
-  var combined = {
+  if (features &&
+      features.nodeMajorVersion >= 8) {
+    return getDefaultsForNode8(features);
+  }
+
+  const combined = {
     presets: [babelPresetMeteor],
     plugins: [
       [reifyPlugin, {
@@ -75,8 +82,62 @@ exports.getDefaults = function getDefaults(features) {
   };
 };
 
+function getDefaultsForNode8(features) {
+  const plugins = [
+    // Support Flow type syntax by simply stripping it out.
+    require("babel-plugin-syntax-flow"),
+    require("babel-plugin-transform-flow-strip-types"),
+
+    // Compile import/export syntax with Reify.
+    [reifyPlugin, {
+      generateLetDeclarations: true,
+      enforceStrictMode: false
+    }],
+
+    // Make assigning to imported symbols a syntax error.
+    require("babel-plugin-check-es2015-constants"),
+
+    // Not fully supported in Node 8 without the --harmony flag.
+    require("babel-plugin-syntax-object-rest-spread"),
+    require("babel-plugin-transform-object-rest-spread"),
+
+    // Ensure that async functions run in a Fiber, while also taking
+    // full advantage of native async/await support in Node 8.
+    [require("./plugins/async-await.js"), {
+      // Do not transform `await x` to `Promise.await(x)`, since Node
+      // 8 has native support for await expressions.
+      useNativeAsyncAwait: true
+    }],
+
+    // Transform `import(id)` to `module.dynamicImport(id)`.
+    require("./plugins/dynamic-import.js"),
+
+    // Enable class property syntax for server-side React code.
+    require("babel-plugin-transform-class-properties"),
+  ];
+
+  const presets = [{
+    plugins
+  }];
+
+  if (features) {
+    if (features.react) {
+      // Enable JSX syntax for server-side React code.
+      presets.push(require("babel-preset-react"));
+    }
+  }
+
+  return {
+    compact: false,
+    sourceMap: false,
+    ast: false,
+    babelrc: false,
+    presets
+  };
+}
+
 exports.getMinifierDefaults = function getMinifierDefaults(features) {
-  var options = {
+  const options = {
     // Generate code in loose mode
     compact: false,
     // Don't generate a source map, we do that during compilation
