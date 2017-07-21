@@ -94,6 +94,14 @@ function getDefaultsForNode8(features) {
       enforceStrictMode: false
     }],
 
+    // Import helpers from the babel-runtime package rather than
+    // redefining them at the top of each module.
+    [require("babel-plugin-transform-runtime"), {
+      // Avoid importing polyfills for things like Object.keys, which
+      // Meteor already shims in other ways.
+      polyfill: false
+    }],
+
     // Make assigning to imported symbols a syntax error.
     require("babel-plugin-check-es2015-constants"),
 
@@ -114,6 +122,10 @@ function getDefaultsForNode8(features) {
 
     // Enable class property syntax for server-side React code.
     require("babel-plugin-transform-class-properties"),
+
+    // In case babel-plugin-transform-runtime generated any import
+    // declarations after reifyPlugin ran, make sure to compile them.
+    babelModulesPlugin
   ];
 
   const presets = [{
