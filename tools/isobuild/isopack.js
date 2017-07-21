@@ -1759,7 +1759,9 @@ _.extend(Isopack.prototype, {
         inputFileContents = inputFileContents.replace(/^.*#RemoveInProd.*$/mg, "");
       }
 
-      var babelOptions = babel.getDefaultOptions();
+      var babelOptions = babel.getDefaultOptions({
+        nodeMajorVersion: parseInt(process.versions.node)
+      });
 
       _.extend(babelOptions, {
         filename: path,
