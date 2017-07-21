@@ -38,7 +38,6 @@ module.exports = function (babel) {
           // expression runs synchronously in its own Fiber, even when
           // there is native support for async/await.
           node.body = t.blockStatement([
-            t.expressionStatement(t.stringLiteral("use strict")),
             t.returnStatement(
               t.callExpression(
                 t.memberExpression(
