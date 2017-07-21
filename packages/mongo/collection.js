@@ -362,8 +362,7 @@ Mongo.Collection._publishCursor = function (cursor, sub, collection) {
 
 // protect against dangerous selectors.  falsey and {_id: falsey} are both
 // likely programmer error, and not what you want, particularly for destructive
-// operations.  JS regexps don't serialize over DDP but can be trivially
-// replaced by $regex. If a falsey _id is sent in, a new string _id will be
+// operations. If a falsey _id is sent in, a new string _id will be
 // generated and returned; if a fallbackId is provided, it will be returned
 // instead.
 Mongo.Collection._rewriteSelector = (selector, { fallbackId } = {}) => {
@@ -382,48 +381,8 @@ Mongo.Collection._rewriteSelector = (selector, { fallbackId } = {}) => {
     return { _id: fallbackId || Random.id() };
   }
 
-  var ret = {};
-  Object.keys(selector).forEach((key) => {
-    const value = selector[key];
-    // Mongo supports both {field: /foo/} and {field: {$regex: /foo/}}
-    if (value instanceof RegExp) {
-      ret[key] = convertRegexpToMongoSelector(value);
-    } else if (value && value.$regex instanceof RegExp) {
-      ret[key] = convertRegexpToMongoSelector(value.$regex);
-      // if value is {$regex: /foo/, $options: ...} then $options
-      // override the ones set on $regex.
-      if (value.$options !== undefined)
-        ret[key].$options = value.$options;
-    } else if (_.contains(['$or','$and','$nor'], key)) {
-      // Translate lower levels of $and/$or/$nor
-      ret[key] = _.map(value, function (v) {
-        return Mongo.Collection._rewriteSelector(v);
-      });
-    } else {
-      ret[key] = value;
-    }
-  });
-  return ret;
-};
-
-// convert a JS RegExp object to a Mongo {$regex: ..., $options: ...}
-// selector
-function convertRegexpToMongoSelector(regexp) {
-  check(regexp, RegExp); // safety belt
-
-  var selector = {$regex: regexp.source};
-  var regexOptions = '';
-  // JS RegExp objects support 'i', 'm', and 'g'. Mongo regex $options
-  // support 'i', 'm', 'x', and 's'. So we support 'i' and 'm' here.
-  if (regexp.ignoreCase)
-    regexOptions += 'i';
-  if (regexp.multiline)
-    regexOptions += 'm';
-  if (regexOptions)
-    selector.$options = regexOptions;
-
   return selector;
-}
+};
 
 // 'insert' immediately returns the inserted document's new _id.
 // The others return values immediately if you are in a stub, an in-memory
