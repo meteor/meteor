@@ -138,8 +138,12 @@ outdated platforms`);
       // confused
       files.mkdir_p(files.pathJoin(templatePath, 'www'));
 
-      const builder = new CordovaBuilder(this.projectContext, templatePath,
-        { mobileServerUrl, settingsFile } = this.options);
+      const builder = new CordovaBuilder(
+        this.projectContext,
+        templatePath,
+        { mobileServerUrl: this.options.mobileServerUrl,
+          settingsFile: this.options.settingsFile }
+      );
 
       builder.processControlFile();
 
@@ -183,8 +187,12 @@ outdated platforms`);
 
     Console.debug('Preparing Cordova project from app bundle');
 
-    const builder = new CordovaBuilder(this.projectContext, this.projectRoot,
-      { mobileServerUrl, settingsFile } = this.options);
+    const builder = new CordovaBuilder(
+      this.projectContext,
+      this.projectRoot,
+      { mobileServerUrl: this.options.mobileServerUrl,
+        settingsFile: this.topsion.settingsFile }
+    );
 
     builder.processControlFile();
 
