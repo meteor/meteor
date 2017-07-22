@@ -4,6 +4,7 @@ import * as safeWatcher from './safe-watcher.js';
 import {createHash} from "crypto";
 import {coalesce} from '../utils/func-utils.js';
 import {Profile} from '../tool-env/profile.js';
+import ignore from 'ignore';
 
 import {
   optimisticStatOrNull,
@@ -265,6 +266,62 @@ export function sha1(...args) {
   })();
 }
 
+const METEOR_IGNORE = '.meteorignore'
+
+var appDir = files.findAppDir(files.cwd());
+var cacheMeteorIgnore = {};
+var cacheMeteorIgnoreRules = {};
+
+function readMeteorIgnore(path) {
+  if (cacheMeteorIgnore.hasOwnProperty(path)) {
+    return cacheMeteorIgnore[path];
+  }
+  var fileMeteorIgnore = files.pathJoin(path, METEOR_IGNORE)
+  if (files.exists(fileMeteorIgnore)) {
+    return cacheMeteorIgnore[path] = files.readFile(fileMeteorIgnore)
+      .toString('utf8')
+      .split(/\n/)
+      .filter(v => v)  // remove '' line
+  }
+  else {
+    return [];
+  }
+}
+
+function filterMeteorIgnore(path) {
+  if (cacheMeteorIgnoreRules.hasOwnProperty(path)) {
+    return cacheMeteorIgnoreRules[path];
+  }
+  var rules = readMeteorIgnore(path)
+  while (appDir !== path) {
+    path = path.split('/').slice(0, -1).join('/'); // move up path
+    rules = rules.concat(readMeteorIgnore(path));
+  }
+  return rules.length
+    ? (cacheMeteorIgnoreRules[path] = ignore().add(rules))
+    : null;
+}
+
+function isInPath(source, str) {
+  return source.indexOf('/' + str + '/') > -1 || source.endsWith('/' + str)
+}
+
+function meteorIgnore(absPath, contents) {
+  if (!isInPath(absPath, 'node_modules') && !isInPath(absPath, 'imports')) {
+    var ig = filterMeteorIgnore(absPath)
+    if (ig) {
+      contents = ig.filter(
+        contents.map(v =>
+          files.pathJoin(absPath, v).slice(appDir.length + 1) // cut appDir and /
+        )
+      ).map(v =>
+        v.split('/').slice(-1)[0] // path.basename
+      );
+    }
+  }
+  return contents;
+}
+
 export function readDirectory({absPath, include, exclude, names}) {
   // Read the directory.
   try {
@@ -276,6 +333,8 @@ export function readDirectory({absPath, include, exclude, names}) {
     }
     throw e;
   }
+
+  contents = meteorIgnore(absPath, contents);
 
   // Add slashes to the end of directories.
   var contentsWithSlashes = [];
