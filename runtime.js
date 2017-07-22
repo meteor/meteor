@@ -1,5 +1,7 @@
 require("meteor-babel-helpers");
-require("reify/lib/runtime").enable(module.constructor);
+
+var Module = module.constructor;
+require("reify/lib/runtime").enable(Module.prototype);
 
 require("meteor-promise").makeCompatible(
   global.Promise = global.Promise ||
