@@ -12,10 +12,23 @@ require("reify/lib/runtime").enable(Module.prototype);
 var config = {
   sourceMapRootPath: null,
   allowedDirectories: Object.create(null),
-  babelOptions: require("./options").getDefaults()
+  babelOptions: null
 };
 
-config.babelOptions.sourceMap = "inline";
+function setBabelOptions(options) {
+  config.babelOptions = Object.assign({}, options, {
+    // Overrides for default options:
+    sourceMap: "inline"
+  });
+  return exports;
+}
+
+// Set default config.babelOptions.
+setBabelOptions(require("./options.js").getDefaults({
+  nodeMajorVersion: parseInt(process.versions.node)
+}));
+
+exports.setBabelOptions = setBabelOptions;
 
 exports.setSourceMapRootPath = function (smrp) {
   config.sourceMapRootPath = smrp;
@@ -28,11 +41,6 @@ exports.allowDirectory = function (dir) {
   // real path, and thus may not appear to be contained by an allowed
   // directory, even though it should be.
   config.allowedDirectories[fs.realpathSync(dir)] = true;
-  return exports;
-};
-
-exports.setBabelOptions = function (options) {
-  config.babelOptions = options;
   return exports;
 };
 
