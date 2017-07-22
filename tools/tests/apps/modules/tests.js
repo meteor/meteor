@@ -424,7 +424,6 @@ describe("ecmascript miscellany", () => {
   it("rest paramters in inner arrow functions (#6312)", () => {
     const rev = (...args) => args.reverse();
     assert.deepEqual(rev(1, 2, 3), [3, 2, 1]);
-    assert.ok(rev.toString().match(/\barguments\b/));
   });
 
   it("rest parameters in property arrow functions (#6514)", () => {
