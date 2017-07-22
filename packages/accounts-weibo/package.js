@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Login service for Sina Weibo accounts",
-  version: "1.3.0-beta.11"
+  version: "1.3.0-beta.12"
 });
 
 Package.onUse(function(api) {
