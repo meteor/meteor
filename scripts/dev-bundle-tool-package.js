@@ -56,6 +56,7 @@ var packageJson = {
     optimism: "0.3.3",
     'lru-cache': '4.0.1',
     'cordova-lib': "6.4.0",
+    ignore: "3.3.3",
     longjohn: '0.2.11'
   }
 };
