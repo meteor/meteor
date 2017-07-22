@@ -13,6 +13,10 @@ function babelRegister() {
     nodeMajorVersion: parseInt(process.versions.node)
   });
 
+  // Make sure that source maps are included in the generated code for
+  // meteor/tools modules.
+  babelOptions.sourceMap = "inline";
+
   meteorBabel.setCacheDir(cacheDir);
 
   require('meteor-babel/register')
