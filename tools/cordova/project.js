@@ -333,7 +333,7 @@ to build apps for ${displayNameForPlatform(platform)}.`);
       Console.info();
 
       Console.info("Status of the individual requirements:");
-      for (requirement of requirements) {
+      for (const requirement of requirements) {
         const name = requirement.name;
         if (requirement.installed) {
           Console.success(name, "installed");

@@ -28,7 +28,7 @@ export class CordovaRunner {
     let satisfied = true;
     const messages = buildmessage.capture(
       { title: `checking platform requirements` }, () => {
-      for (platform of this.platformsForRunTargets) {
+      for (const platform of this.platformsForRunTargets) {
         satisfied =
           this.cordovaProject.checkPlatformRequirements(platform) &&
           satisfied;
