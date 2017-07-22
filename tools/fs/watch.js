@@ -266,6 +266,29 @@ export function sha1(...args) {
   })();
 }
 
+//
+// .meteorignore specifies intentionally untracked files and directories. #8921
+//
+// Features:
+// - `ignore` module is used. It supports https://git-scm.com/docs/gitignore
+// - be located before `include`, `exclude` regexp filter instead of using it.
+// - used cache for faster load. 
+// - works with autoupdate feature.
+// - skips node_modules and imports subdirectories. (Is there any reason to be included?)
+// - allows multiple .meteorignore files in different directories, 
+//   each governing the files contained by its own directory.
+//
+// Known issues: 
+// - single character ? and range of character [a-z] are not supported. (not in the git man page)
+// - Update rules for subdirectories in .meteorignore (like client/*.ts in the app directory) 
+//   will not activate autoupdate. You need to restart meteor for the case.
+//   If you want autoupdated .meteorignore for a directory 
+//   you need to write the directory's own .meteorignore in the directory.
+// 
+// Written by: Isaac Han
+// Github id: i4han
+//
+
 const METEOR_IGNORE = '.meteorignore'
 
 var appDir = files.findAppDir(files.cwd());
@@ -275,15 +298,16 @@ var cacheMeteorIgnore = {};
 function readMeteorIgnore(path) {
   var fileMeteorIgnore = files.pathJoin(path, METEOR_IGNORE)
   var stat = files.statOrNull(fileMeteorIgnore)
-  if (stat === null) {
-    return [];           // if .meteorignore is not found.
+  if (stat === null) { // .meteorignore is not found.
+    return [];  
   } else if (
-    mtimeMeteorIgnore[path] === stat.mtime && // if modified time has not changed 
-    cacheMeteorIgnore.hasOwnProperty(path)    // and has cached ignore then 
+    // stat.mtime is an object. It needs to be converted to sting to compare
+    mtimeMeteorIgnore[path] === stat.mtime.toString() && 
+    cacheMeteorIgnore.hasOwnProperty(path) 
   ) {
-    return cacheMeteorIgnore[path];           // use the cache.
+    return cacheMeteorIgnore[path];   // use the cached instead of the file.
   } else {
-    mtimeMeteorIgnore[path] = stat.mtime;     // store the modified time to check the cache.
+    mtimeMeteorIgnore[path] = stat.mtime.toString(); // store the modified time to check the cache.
     return cacheMeteorIgnore[path] = files.readFile(fileMeteorIgnore)
       .toString('utf8')
       .split(/\n/)
@@ -326,6 +350,8 @@ function meteorIgnore(absPath, contents) {
   }
   return contents;
 }
+
+// end of .meteorignore update.
 
 export function readDirectory({absPath, include, exclude, names}) {
   // Read the directory.
