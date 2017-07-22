@@ -4,6 +4,7 @@ import * as safeWatcher from './safe-watcher.js';
 import {createHash} from "crypto";
 import {coalesce} from '../utils/func-utils.js';
 import {Profile} from '../tool-env/profile.js';
+import ignore from 'ignore';
 
 import {
   optimisticStatOrNull,
@@ -265,6 +266,67 @@ export function sha1(...args) {
   })();
 }
 
+const METEOR_IGNORE = '.meteorignore'
+
+var appDir = files.findAppDir(files.cwd());
+var mtimeMeteorIgnore = {};
+var cacheMeteorIgnore = {};
+
+function readMeteorIgnore(path) {
+  var fileMeteorIgnore = files.pathJoin(path, METEOR_IGNORE)
+  var stat = files.statOrNull(fileMeteorIgnore)
+  if (stat === null) {
+    return [];           // if .meteorignore is not found.
+  } else if (
+    mtimeMeteorIgnore[path] === stat.mtime && // if modified time has not changed 
+    cacheMeteorIgnore.hasOwnProperty(path)    // and has cached ignore then 
+  ) {
+    return cacheMeteorIgnore[path];           // use the cache.
+  } else {
+    mtimeMeteorIgnore[path] = stat.mtime;     // store the modified time to check the cache.
+    return cacheMeteorIgnore[path] = files.readFile(fileMeteorIgnore)
+      .toString('utf8')
+      .split(/\n/)
+      .filter(v => v);  // remove '' line. Don't trim because there may be \(space) at the end of line.
+  }
+}
+
+function filterMeteorIgnore(path) {
+  var rules = readMeteorIgnore(path)
+  // move up path .split('/').slice(0, -1).join('/') until it arrives to addDir or ''
+  while (appDir !== path && path) {
+    path = path.split('/').slice(0, -1).join('/');
+    rules = rules.concat(readMeteorIgnore(path));  
+  }
+  return rules.length
+    ? ignore().add(rules)
+    : null;
+}
+
+function isInPath(source, str) {
+  return source.indexOf('/' + str + '/') > -1 || source.endsWith('/' + str)
+}
+
+
+function meteorIgnore(absPath, contents) {
+  if (
+    !isInPath(absPath, 'node_modules') && 
+    !isInPath(absPath, 'imports') &&            // skip if current path is in node_modules or imports
+    absPath.slice(0, appDir.length) === appDir  // check if current path is in the appDir
+  ) { 
+    var ig = filterMeteorIgnore(absPath)
+    if (ig) {
+      contents = ig.filter(           // contents are a list of basenames (no path just filename). 
+        contents.map(v =>             // In order to be used by ignore filter
+          files.pathJoin(absPath, v)  // path from the *appDir* should be added to the contents list.  
+            .slice(appDir.length + 1) // A full path (not from appDir) is given, it should be cut like 'client/'
+        )                             // Otherwise it will not be filtered by 'client/' in .meteorignore.
+      ).map(v => v.split('/').slice(-1)[0]); // This line is to make path.basename. Back to list of basename.
+    }
+  }
+  return contents;
+}
+
 export function readDirectory({absPath, include, exclude, names}) {
   // Read the directory.
   try {
@@ -276,6 +338,9 @@ export function readDirectory({absPath, include, exclude, names}) {
     }
     throw e;
   }
+
+  // Filter .meteorignore rules from current path to appDir
+  contents = meteorIgnore(absPath, contents);
 
   // Add slashes to the end of directories.
   var contentsWithSlashes = [];
