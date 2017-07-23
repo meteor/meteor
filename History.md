@@ -15,6 +15,9 @@
 * The `meteor-babel` package has been upgraded to version 0.24.4, to take
   better advantage of native language features in Node 8.
 
+* The `meteor-promise` package has been upgraded to version 0.8.6, to
+  enable better handling of `UnhandledPromiseRejectionWarning`s.
+
 * The `node-gyp` npm package has been upgraded to version 3.6.2.
 
 * The `node-pre-gyp` npm package has been updated to version 0.6.36.

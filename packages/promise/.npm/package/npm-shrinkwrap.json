@@ -7,9 +7,9 @@
       "integrity": "sha1-5QNHYR1+aQlDIIu9r+vLwvuGbUY="
     },
     "meteor-promise": {
-      "version": "0.8.5",
-      "resolved": "https://registry.npmjs.org/meteor-promise/-/meteor-promise-0.8.5.tgz",
-      "integrity": "sha512-QEqFDy7diGKbqToqm4WHrcc6Xtt31NBqr9fgen0gnDnnC2rQntN8WCsrl7xKIixnxPHIOejRfLRoooaSvvWnRg=="
+      "version": "0.8.6",
+      "resolved": "https://registry.npmjs.org/meteor-promise/-/meteor-promise-0.8.6.tgz",
+      "integrity": "sha512-HP6tOr67z/9XU2Dr0F2SSr8WRTuE23AG9Dj578DCJPEYHs67OLKBviU8A8rwvbwMD7Lu2+Of+yAMz2Wd8r4yxg=="
     },
     "promise": {
       "version": "8.0.1",

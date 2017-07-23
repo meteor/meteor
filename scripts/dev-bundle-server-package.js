@@ -9,7 +9,7 @@ var packageJson = {
   // Version is not important but is needed to prevent warnings.
   version: "0.0.0",
   dependencies: {
-    "meteor-promise": "0.8.5",
+    "meteor-promise": "0.8.6",
     fibers: "2.0.0",
     promise: "8.0.1",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
