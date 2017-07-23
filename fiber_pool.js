@@ -40,15 +40,12 @@ function FiberPool(targetFiberCount) {
         }
 
         try {
-          var result = entry.callback.apply(
+          entry.resolve(entry.callback.apply(
             entry.context || null,
             entry.args || []
-          );
-
-          setImmediate(entry.resolve.bind(entry, result));
-
+          ));
         } catch (error) {
-          setImmediate(entry.reject.bind(entry, error));
+          entry.reject(error);
         }
 
         // Remove all own properties of the fiber before returning it to
