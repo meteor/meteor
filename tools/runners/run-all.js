@@ -138,7 +138,7 @@ class Runner {
 
           if (tries > 0) {
             self.mongoRunner.stop();
-            setTimeout(startMongo, 1000);
+            setTimeout(() => startMongo(tries), 1000);
           } else {
             self.mongoRunner._fail();
           }
