@@ -2,7 +2,7 @@ Package.describe({
   // These tests are in a separate package so that we can Npm.depend on
   // parse5, a html parsing library.
   summary: "Tests for the boilerplate-generator package",
-  version: '1.0.0-beta152.5',
+  version: '1.0.0-beta152.6',
   documentation: null
 });
 
