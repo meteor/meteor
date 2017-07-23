@@ -25,6 +25,10 @@
   [Issue #5121](https://github.com/meteor/meteor/issues/5121)
   [PR #8917](https://github.com/meteor/meteor/pull/8917)
 
+* The `cordova-lib` npm package has been updated to 7.0.1, along with
+  cordova-android (6.2.3) and cordova-ios (4.4.0), and various plugins.
+  [PR #8919](https://github.com/meteor/meteor/pull/8919), resolves [issue  #8686](https://github.com/meteor/meteor/issues/8686) and Android build issues  [#8408](https://github.com/meteor/meteor/issues/8408), [#8424](https://github.com/meteor/meteor/issues/8424), and [#8464](https://github.com/meteor/meteor/issues/8464)
+
 ## v1.5.1, 2017-07-12
 
 * Node has been upgraded to version 4.8.4.
