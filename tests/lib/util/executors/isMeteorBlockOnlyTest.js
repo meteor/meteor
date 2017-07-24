@@ -1,5 +1,5 @@
-import assert from 'assert'
-import isMeteorBlockOnlyTest from '../../../../lib/util/executors/isMeteorBlockOnlyTest'
+import assert from 'assert';
+import isMeteorBlockOnlyTest from '../../../../lib/util/executors/isMeteorBlockOnlyTest';
 
 describe('isMeteorBlockOnlyTest', () => {
   it('accepts a valid MemberExpression', () => {
@@ -13,9 +13,9 @@ describe('isMeteorBlockOnlyTest', () => {
         type: 'Identifier',
         name: 'isClient',
       },
-    })
-    assert.ok(result)
-  })
+    });
+    assert.ok(result);
+  });
 
   it('accepts a valid computed MemberExpression', () => {
     const result = isMeteorBlockOnlyTest({
@@ -29,9 +29,9 @@ describe('isMeteorBlockOnlyTest', () => {
         type: 'Literal',
         value: 'isCordova',
       },
-    })
-    assert.ok(result)
-  })
+    });
+    assert.ok(result);
+  });
 
   it('does not accept an invalid MemberExpression', () => {
     const result = isMeteorBlockOnlyTest({
@@ -44,9 +44,9 @@ describe('isMeteorBlockOnlyTest', () => {
         type: 'Identifier',
         name: 'isClient',
       },
-    })
-    assert.ok(!result)
-  })
+    });
+    assert.ok(!result);
+  });
 
   it('accepts a valid UnaryExpression', () => {
     const result = isMeteorBlockOnlyTest({
@@ -63,9 +63,9 @@ describe('isMeteorBlockOnlyTest', () => {
           name: 'isServer',
         },
       },
-    })
-    assert.ok(result)
-  })
+    });
+    assert.ok(result);
+  });
 
   it('does not accept an invalid UnaryExpression', () => {
     const result = isMeteorBlockOnlyTest({
@@ -82,9 +82,9 @@ describe('isMeteorBlockOnlyTest', () => {
           name: 'isClient',
         },
       },
-    })
-    assert.ok(!result)
-  })
+    });
+    assert.ok(!result);
+  });
 
   it('accepts a valid LogicalExpression', () => {
     const result = isMeteorBlockOnlyTest({
@@ -127,9 +127,9 @@ describe('isMeteorBlockOnlyTest', () => {
           name: 'isCordova',
         },
       },
-    })
-    assert.ok(result)
-  })
+    });
+    assert.ok(result);
+  });
 
   it('does not accept an invalid LogicalExpression', () => {
     const result = isMeteorBlockOnlyTest({
@@ -172,14 +172,14 @@ describe('isMeteorBlockOnlyTest', () => {
           name: 'isCordova',
         },
       },
-    })
-    assert.ok(!result)
-  })
+    });
+    assert.ok(!result);
+  });
 
   it('returns false for unresolvable expressions', () => {
-    const result = isMeteorBlockOnlyTest({ type: 'Identifier' })
-    assert.ok(!result)
-  })
+    const result = isMeteorBlockOnlyTest({ type: 'Identifier' });
+    assert.ok(!result);
+  });
 
   it('returns false for invalid unary expressions', () => {
     const result = isMeteorBlockOnlyTest({
@@ -196,7 +196,7 @@ describe('isMeteorBlockOnlyTest', () => {
           name: 'isClient',
         },
       },
-    })
-    assert.ok(!result)
-  })
-})
+    });
+    assert.ok(!result);
+  });
+});

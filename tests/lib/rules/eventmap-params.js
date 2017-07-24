@@ -9,14 +9,14 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-import { RuleTester } from 'eslint'
-import rule from '../../../lib/rules/eventmap-params'
+import { RuleTester } from 'eslint';
+import rule from '../../../lib/rules/eventmap-params';
 
 // -----------------------------------------------------------------------------
 // Tests
 // -----------------------------------------------------------------------------
 
-const ruleTester = new RuleTester()
+const ruleTester = new RuleTester();
 ruleTester.run('eventmap-params', rule, {
   valid: [
     `
@@ -63,9 +63,11 @@ ruleTester.run('eventmap-params', rule, {
           'submit form': function (evt) {}
         })
       `,
-      options: [{
-        eventParamName: 'evt',
-      }],
+      options: [
+        {
+          eventParamName: 'evt',
+        },
+      ],
     },
     {
       code: `
@@ -73,10 +75,12 @@ ruleTester.run('eventmap-params', rule, {
           'submit form': function (evt, tmplInst) {}
         })
       `,
-      options: [{
-        eventParamName: 'evt',
-        templateInstanceParamName: 'tmplInst',
-      }],
+      options: [
+        {
+          eventParamName: 'evt',
+          templateInstanceParamName: 'tmplInst',
+        },
+      ],
     },
     `
       Template.foo.events({
@@ -128,9 +132,11 @@ ruleTester.run('eventmap-params', rule, {
           'submit form': function (evt, templateInstance) {}
         })
       `,
-      options: [{
-        eventParamName: 'evt',
-      }],
+      options: [
+        {
+          eventParamName: 'evt',
+        },
+      ],
     },
     {
       code: `
@@ -138,9 +144,11 @@ ruleTester.run('eventmap-params', rule, {
           'submit form': function (event, tmplInst) {}
         })
       `,
-      options: [{
-        templateInstanceParamName: 'tmplInst',
-      }],
+      options: [
+        {
+          templateInstanceParamName: 'tmplInst',
+        },
+      ],
     },
     {
       code: `
@@ -157,9 +165,11 @@ ruleTester.run('eventmap-params', rule, {
         })
       `,
       parserOptions: { ecmaVersion: 6 },
-      options: [{
-        preventDestructuring: 'event',
-      }],
+      options: [
+        {
+          preventDestructuring: 'event',
+        },
+      ],
     },
     {
       code: `
@@ -168,10 +178,12 @@ ruleTester.run('eventmap-params', rule, {
         })
       `,
       parserOptions: { ecmaVersion: 6 },
-      options: [{
-        preventDestructuring: 'event',
-        eventParamName: 'evt',
-      }],
+      options: [
+        {
+          preventDestructuring: 'event',
+          eventParamName: 'evt',
+        },
+      ],
     },
     {
       code: `
@@ -180,9 +192,11 @@ ruleTester.run('eventmap-params', rule, {
         })
       `,
       parserOptions: { ecmaVersion: 6 },
-      options: [{
-        preventDestructuring: 'templateInstance',
-      }],
+      options: [
+        {
+          preventDestructuring: 'templateInstance',
+        },
+      ],
     },
   ],
 
@@ -194,8 +208,14 @@ ruleTester.run('eventmap-params', rule, {
         })
       `,
       errors: [
-        { message: 'Invalid parameter name, use "event" instead', type: 'Identifier' },
-        { message: 'Invalid parameter name, use "templateInstance" instead', type: 'Identifier' },
+        {
+          message: 'Invalid parameter name, use "event" instead',
+          type: 'Identifier',
+        },
+        {
+          message: 'Invalid parameter name, use "templateInstance" instead',
+          type: 'Identifier',
+        },
       ],
     },
     {
@@ -205,8 +225,14 @@ ruleTester.run('eventmap-params', rule, {
         })
       `,
       errors: [
-        { message: 'Invalid parameter name, use "event" instead', type: 'Identifier' },
-        { message: 'Invalid parameter name, use "templateInstance" instead', type: 'Identifier' },
+        {
+          message: 'Invalid parameter name, use "event" instead',
+          type: 'Identifier',
+        },
+        {
+          message: 'Invalid parameter name, use "templateInstance" instead',
+          type: 'Identifier',
+        },
       ],
     },
     {
@@ -216,8 +242,14 @@ ruleTester.run('eventmap-params', rule, {
         })
       `,
       errors: [
-        { message: 'Invalid parameter name, use "event" instead', type: 'Identifier' },
-        { message: 'Invalid parameter name, use "templateInstance" instead', type: 'Identifier' },
+        {
+          message: 'Invalid parameter name, use "event" instead',
+          type: 'Identifier',
+        },
+        {
+          message: 'Invalid parameter name, use "templateInstance" instead',
+          type: 'Identifier',
+        },
       ],
     },
     {
@@ -227,8 +259,14 @@ ruleTester.run('eventmap-params', rule, {
         })
       `,
       errors: [
-        { message: 'Invalid parameter name, use "event" instead', type: 'Identifier' },
-        { message: 'Invalid parameter name, use "templateInstance" instead', type: 'Identifier' },
+        {
+          message: 'Invalid parameter name, use "event" instead',
+          type: 'Identifier',
+        },
+        {
+          message: 'Invalid parameter name, use "templateInstance" instead',
+          type: 'Identifier',
+        },
       ],
     },
     {
@@ -238,8 +276,14 @@ ruleTester.run('eventmap-params', rule, {
         })
       `,
       errors: [
-        { message: 'Invalid parameter name, use "event" instead', type: 'Identifier' },
-        { message: 'Invalid parameter name, use "templateInstance" instead', type: 'Identifier' },
+        {
+          message: 'Invalid parameter name, use "event" instead',
+          type: 'Identifier',
+        },
+        {
+          message: 'Invalid parameter name, use "templateInstance" instead',
+          type: 'Identifier',
+        },
       ],
       parserOptions: { ecmaVersion: 6 },
     },
@@ -250,7 +294,10 @@ ruleTester.run('eventmap-params', rule, {
         })
       `,
       errors: [
-        { message: 'Invalid parameter name, use "event" instead', type: 'Identifier' },
+        {
+          message: 'Invalid parameter name, use "event" instead',
+          type: 'Identifier',
+        },
       ],
     },
     {
@@ -260,7 +307,10 @@ ruleTester.run('eventmap-params', rule, {
         })
       `,
       errors: [
-        { message: 'Invalid parameter name, use "templateInstance" instead', type: 'Identifier' },
+        {
+          message: 'Invalid parameter name, use "templateInstance" instead',
+          type: 'Identifier',
+        },
       ],
     },
     {
@@ -272,8 +322,14 @@ ruleTester.run('eventmap-params', rule, {
         }
       `,
       errors: [
-        { message: 'Invalid parameter name, use "event" instead', type: 'Identifier' },
-        { message: 'Invalid parameter name, use "templateInstance" instead', type: 'Identifier' },
+        {
+          message: 'Invalid parameter name, use "event" instead',
+          type: 'Identifier',
+        },
+        {
+          message: 'Invalid parameter name, use "templateInstance" instead',
+          type: 'Identifier',
+        },
       ],
     },
     {
@@ -282,11 +338,16 @@ ruleTester.run('eventmap-params', rule, {
           'submit form': function (foo, templateInstance) {}
         })
       `,
-      options: [{
-        eventParamName: 'evt',
-      }],
+      options: [
+        {
+          eventParamName: 'evt',
+        },
+      ],
       errors: [
-        { message: 'Invalid parameter name, use "evt" instead', type: 'Identifier' },
+        {
+          message: 'Invalid parameter name, use "evt" instead',
+          type: 'Identifier',
+        },
       ],
     },
     {
@@ -295,11 +356,16 @@ ruleTester.run('eventmap-params', rule, {
           'submit form': function (foo, instance) {}
         })
       `,
-      options: [{
-        templateInstanceParamName: 'instance',
-      }],
+      options: [
+        {
+          templateInstanceParamName: 'instance',
+        },
+      ],
       errors: [
-        { message: 'Invalid parameter name, use "event" instead', type: 'Identifier' },
+        {
+          message: 'Invalid parameter name, use "event" instead',
+          type: 'Identifier',
+        },
       ],
     },
     {
@@ -308,11 +374,16 @@ ruleTester.run('eventmap-params', rule, {
         'submit form': function (evt, foo) {}
       })
       `,
-      options: [{
-        eventParamName: 'evt',
-      }],
+      options: [
+        {
+          eventParamName: 'evt',
+        },
+      ],
       errors: [
-        { message: 'Invalid parameter name, use "templateInstance" instead', type: 'Identifier' },
+        {
+          message: 'Invalid parameter name, use "templateInstance" instead',
+          type: 'Identifier',
+        },
       ],
     },
     {
@@ -321,11 +392,16 @@ ruleTester.run('eventmap-params', rule, {
         'submit form': function (event, foo) {}
       })
       `,
-      options: [{
-        templateInstanceParamName: 'instance',
-      }],
+      options: [
+        {
+          templateInstanceParamName: 'instance',
+        },
+      ],
       errors: [
-        { message: 'Invalid parameter name, use "instance" instead', type: 'Identifier' },
+        {
+          message: 'Invalid parameter name, use "instance" instead',
+          type: 'Identifier',
+        },
       ],
     },
     {
@@ -335,11 +411,16 @@ ruleTester.run('eventmap-params', rule, {
         })
       `,
       parserOptions: { ecmaVersion: 6 },
-      options: [{
-        preventDestructuring: 'event',
-      }],
+      options: [
+        {
+          preventDestructuring: 'event',
+        },
+      ],
       errors: [
-        { message: 'Unexpected destructuring, use name "event"', type: 'ObjectPattern' },
+        {
+          message: 'Unexpected destructuring, use name "event"',
+          type: 'ObjectPattern',
+        },
       ],
     },
     {
@@ -349,11 +430,16 @@ ruleTester.run('eventmap-params', rule, {
         })
       `,
       parserOptions: { ecmaVersion: 6 },
-      options: [{
-        preventDestructuring: 'templateInstance',
-      }],
+      options: [
+        {
+          preventDestructuring: 'templateInstance',
+        },
+      ],
       errors: [
-        { message: 'Unexpected destructuring, use name "templateInstance"', type: 'ObjectPattern' },
+        {
+          message: 'Unexpected destructuring, use name "templateInstance"',
+          type: 'ObjectPattern',
+        },
       ],
     },
     {
@@ -363,11 +449,16 @@ ruleTester.run('eventmap-params', rule, {
         })
       `,
       parserOptions: { ecmaVersion: 6 },
-      options: [{
-        preventDestructuring: 'both',
-      }],
+      options: [
+        {
+          preventDestructuring: 'both',
+        },
+      ],
       errors: [
-        { message: 'Unexpected destructuring, use name "event"', type: 'ObjectPattern' },
+        {
+          message: 'Unexpected destructuring, use name "event"',
+          type: 'ObjectPattern',
+        },
       ],
     },
     {
@@ -377,13 +468,18 @@ ruleTester.run('eventmap-params', rule, {
         })
       `,
       parserOptions: { ecmaVersion: 6 },
-      options: [{
-        preventDestructuring: 'both',
-        templateInstanceParamName: 'instance',
-      }],
+      options: [
+        {
+          preventDestructuring: 'both',
+          templateInstanceParamName: 'instance',
+        },
+      ],
       errors: [
-        { message: 'Unexpected destructuring, use name "instance"', type: 'ObjectPattern' },
+        {
+          message: 'Unexpected destructuring, use name "instance"',
+          type: 'ObjectPattern',
+        },
       ],
     },
   ],
-})
+});

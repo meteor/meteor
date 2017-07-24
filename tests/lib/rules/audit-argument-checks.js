@@ -7,14 +7,14 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-import { RuleTester } from 'eslint'
-import rule from '../../../lib/rules/audit-argument-checks'
+import { RuleTester } from 'eslint';
+import rule from '../../../lib/rules/audit-argument-checks';
 
 // -----------------------------------------------------------------------------
 // Tests
 // -----------------------------------------------------------------------------
 
-const ruleTester = new RuleTester()
+const ruleTester = new RuleTester();
 ruleTester.run('audit-argument-checks', rule, {
   valid: [
     'foo()',
@@ -23,11 +23,20 @@ ruleTester.run('audit-argument-checks', rule, {
     'Meteor["publish"]()',
     'Meteor.publish()',
 
-    { code: 'Meteor.publish("foo", function ({ x }) {})', parserOptions: { ecmaVersion: 6 } },
-    { code: 'Meteor.publish("foo", () => {})', parserOptions: { ecmaVersion: 6 } },
+    {
+      code: 'Meteor.publish("foo", function ({ x }) {})',
+      parserOptions: { ecmaVersion: 6 },
+    },
+    {
+      code: 'Meteor.publish("foo", () => {})',
+      parserOptions: { ecmaVersion: 6 },
+    },
     'Meteor.publish("foo", function () {})',
     'Meteor.publish("foo", function (bar) { check(bar, Match.Any); })',
-    { code: 'Meteor.publish("foo", (bar) =>  { check(bar, Match.Any); })', parserOptions: { ecmaVersion: 6 } },
+    {
+      code: 'Meteor.publish("foo", (bar) =>  { check(bar, Match.Any); })',
+      parserOptions: { ecmaVersion: 6 },
+    },
     'Meteor.publish("foo", function (bar, baz) { check(bar, Match.Any); check(baz, Match.Any); })',
 
     'Meteor.methods()',
@@ -42,52 +51,67 @@ ruleTester.run('audit-argument-checks', rule, {
   invalid: [
     {
       code: 'Meteor.publish("foo", function (bar) { foo(); })',
-      errors: [{
-        message: '"bar" is not checked',
-        type: 'Identifier',
-      }],
+      errors: [
+        {
+          message: '"bar" is not checked',
+          type: 'Identifier',
+        },
+      ],
     },
     {
       code: 'Meteor["publish"]("foo", function (bar) { foo(); })',
-      errors: [{
-        message: '"bar" is not checked',
-        type: 'Identifier',
-      }],
+      errors: [
+        {
+          message: '"bar" is not checked',
+          type: 'Identifier',
+        },
+      ],
     },
     {
       code: 'Meteor.publish("foo", function (bar) {})',
-      errors: [{
-        message: '"bar" is not checked',
-        type: 'Identifier',
-      }],
+      errors: [
+        {
+          message: '"bar" is not checked',
+          type: 'Identifier',
+        },
+      ],
     },
     {
-      code: 'Meteor.publish("foo", function (bar, baz) { check(bar, Match.Any); })',
-      errors: [{
-        message: '"baz" is not checked',
-        type: 'Identifier',
-      }],
+      code:
+        'Meteor.publish("foo", function (bar, baz) { check(bar, Match.Any); })',
+      errors: [
+        {
+          message: '"baz" is not checked',
+          type: 'Identifier',
+        },
+      ],
     },
     {
       code: 'Meteor.methods({ foo: function (bar) {} })',
-      errors: [{
-        message: '"bar" is not checked',
-        type: 'Identifier',
-      }],
+      errors: [
+        {
+          message: '"bar" is not checked',
+          type: 'Identifier',
+        },
+      ],
     },
     {
       code: 'Meteor.methods({ foo: function () {}, foo2: function (bar) {} })',
-      errors: [{
-        message: '"bar" is not checked',
-        type: 'Identifier',
-      }],
+      errors: [
+        {
+          message: '"bar" is not checked',
+          type: 'Identifier',
+        },
+      ],
     },
     {
       code: 'Meteor.methods({ foo () {}, foo2 (bar) {} })',
-      errors: [{
-        message: '"bar" is not checked',
-        type: 'Identifier',
-      }],
+      errors: [
+        {
+          message: '"bar" is not checked',
+          type: 'Identifier',
+        },
+      ],
       parserOptions: { ecmaVersion: 6 },
     },
     {
@@ -101,10 +125,12 @@ ruleTester.run('audit-argument-checks', rule, {
           }
         })
       `,
-      errors: [{
-        message: '"bar" is not checked',
-        type: 'Identifier',
-      }],
+      errors: [
+        {
+          message: '"bar" is not checked',
+          type: 'Identifier',
+        },
+      ],
       parserOptions: { ecmaVersion: 6 },
     },
     {
@@ -113,11 +139,13 @@ ruleTester.run('audit-argument-checks', rule, {
           foo: (bar) => 2
         })
       `,
-      errors: [{
-        message: '"bar" is not checked',
-        type: 'Identifier',
-      }],
+      errors: [
+        {
+          message: '"bar" is not checked',
+          type: 'Identifier',
+        },
+      ],
       parserOptions: { ecmaVersion: 6 },
     },
   ],
-})
+});

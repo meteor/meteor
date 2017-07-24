@@ -1,15 +1,19 @@
 /* eslint-disable no-console, max-len, import/no-extraneous-dependencies */
 
-const readlineSync = require('readline-sync')
-const colors = require('colors/safe')
-const fs = require('fs')
+const readlineSync = require('readline-sync');
+const colors = require('colors/safe');
+const fs = require('fs');
 
-console.log('Scaffolding new rule. Please give the following details.')
-const authorName = readlineSync.question(colors.green('What is your name? '))
-const ruleId = readlineSync.question(colors.green('What is the rule ID? '))
-const desc = readlineSync.question(colors.green('Type a short description of this rule: '))
-const failingExample = readlineSync.question(colors.green('Type a short example of the code that will fail: '))
-const escapedFailingExample = failingExample.replace(/'/g, '\\\'')
+console.log('Scaffolding new rule. Please give the following details.');
+const authorName = readlineSync.question(colors.green('What is your name? '));
+const ruleId = readlineSync.question(colors.green('What is the rule ID? '));
+const desc = readlineSync.question(
+  colors.green('Type a short description of this rule: ')
+);
+const failingExample = readlineSync.question(
+  colors.green('Type a short example of the code that will fail: ')
+);
+const escapedFailingExample = failingExample.replace(/'/g, "\\'");
 
 const doc = `# ${desc} (${ruleId})
 
@@ -48,8 +52,7 @@ Give a short description of when it would be appropriate to turn off this rule.
 
 If there are other links that describe the issue this rule addresses, please include them here in a bulleted list.
 
-`
-
+`;
 
 const rule = `/**
  * @fileoverview ${desc}
@@ -78,7 +81,7 @@ export const schema = [
   // fill in your schema
 ]
 
-`
+`;
 
 const test = `/**
  * @fileoverview ${desc}
@@ -107,45 +110,45 @@ ruleTester.run('${ruleId}', rule, {
   ],
 })
 
-`
+`;
 
-const docFileName = `docs/rules/${ruleId}.md`
-const ruleFileName = `lib/rules/${ruleId}.js`
-const testFileName = `tests/lib/rules/${ruleId}.js`
+const docFileName = `docs/rules/${ruleId}.md`;
+const ruleFileName = `lib/rules/${ruleId}.js`;
+const testFileName = `tests/lib/rules/${ruleId}.js`;
 
 const writeOptions = {
   encoding: 'utf8',
   flag: 'wx',
-}
+};
 
 try {
-  fs.writeFileSync(ruleFileName, rule, writeOptions)
-  fs.writeFileSync(testFileName, test, writeOptions)
-  fs.writeFileSync(docFileName, doc, writeOptions)
+  fs.writeFileSync(ruleFileName, rule, writeOptions);
+  fs.writeFileSync(testFileName, test, writeOptions);
+  fs.writeFileSync(docFileName, doc, writeOptions);
 
-  console.log('')
-  console.log(colors.green('✓ ') + colors.white(`create ${ruleFileName}`))
-  console.log(colors.green('✓ ') + colors.white(`create ${testFileName}`))
-  console.log(colors.green('✓ ') + colors.white(`create ${docFileName}`))
+  console.log('');
+  console.log(colors.green('✓ ') + colors.white(`create ${ruleFileName}`));
+  console.log(colors.green('✓ ') + colors.white(`create ${testFileName}`));
+  console.log(colors.green('✓ ') + colors.white(`create ${docFileName}`));
 } catch (e) {
   if (e.code === 'EEXIST') {
-    console.log(colors.red(`Aborting because rule already exists (${e.path})`))
+    console.log(colors.red(`Aborting because rule already exists (${e.path})`));
 
     // clean up already created files
     switch (e.path) {
       case ruleFileName:
-        break
+        break;
       case testFileName:
-        fs.unlinkSync(ruleFileName)
-        break
+        fs.unlinkSync(ruleFileName);
+        break;
       case docFileName:
-        fs.unlinkSync(ruleFileName)
-        fs.unlinkSync(testFileName)
-        break
+        fs.unlinkSync(ruleFileName);
+        fs.unlinkSync(testFileName);
+        break;
       default:
-        break
+        break;
     }
   } else {
-    console.log(e)
+    console.log(e);
   }
 }

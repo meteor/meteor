@@ -1,9 +1,9 @@
-import assert from 'assert'
-import filterExecutorsByAncestors from '../../../../lib/util/executors/filterExecutorsByAncestors'
+import assert from 'assert';
+import filterExecutorsByAncestors from '../../../../lib/util/executors/filterExecutorsByAncestors';
 
 describe('filterExecutorsByAncestors', () => {
   it('filters on MemberExpression for isClient', () => {
-    const consequent = { type: 'BlockStatement' }
+    const consequent = { type: 'BlockStatement' };
     const result = filterExecutorsByAncestors(new Set(['browser', 'server']), [
       { type: 'Program' },
       {
@@ -22,13 +22,13 @@ describe('filterExecutorsByAncestors', () => {
         consequent,
       },
       consequent,
-    ])
-    assert.equal(result.size, 1)
-    assert.ok(result.has('browser'))
-  })
+    ]);
+    assert.equal(result.size, 1);
+    assert.ok(result.has('browser'));
+  });
 
   it('filters on MemberExpression for else-block of isClient', () => {
-    const alternate = { type: 'BlockStatement' }
+    const alternate = { type: 'BlockStatement' };
     const result = filterExecutorsByAncestors(new Set(['browser', 'server']), [
       { type: 'Program' },
       {
@@ -47,14 +47,14 @@ describe('filterExecutorsByAncestors', () => {
         alternate,
       },
       alternate,
-    ])
-    assert.equal(result.size, 1)
-    assert.ok(result.has('server'))
-  })
+    ]);
+    assert.equal(result.size, 1);
+    assert.ok(result.has('server'));
+  });
 
   it('warns on hierarchical error', () => {
     assert.throws(() => {
-      const consequent = { type: 'BlockStatement' }
+      const consequent = { type: 'BlockStatement' };
       filterExecutorsByAncestors(new Set(['browser', 'server']), [
         { type: 'Program' },
         {
@@ -72,12 +72,12 @@ describe('filterExecutorsByAncestors', () => {
           },
         },
         consequent,
-      ])
-    })
-  })
+      ]);
+    });
+  });
 
   it('filters on MemberExpression for isServer', () => {
-    const consequent = { type: 'BlockStatement' }
+    const consequent = { type: 'BlockStatement' };
     const result = filterExecutorsByAncestors(new Set(['server', 'cordova']), [
       { type: 'Program' },
       {
@@ -96,13 +96,13 @@ describe('filterExecutorsByAncestors', () => {
         consequent,
       },
       consequent,
-    ])
-    assert.equal(result.size, 1)
-    assert.ok(result.has('server'))
-  })
+    ]);
+    assert.equal(result.size, 1);
+    assert.ok(result.has('server'));
+  });
 
   it('filters on MemberExpression for isCordova', () => {
-    const consequent = { type: 'BlockStatement' }
+    const consequent = { type: 'BlockStatement' };
     const result = filterExecutorsByAncestors(new Set(['browser', 'cordova']), [
       { type: 'Program' },
       {
@@ -121,42 +121,45 @@ describe('filterExecutorsByAncestors', () => {
         consequent,
       },
       consequent,
-    ])
-    assert.equal(result.size, 1)
-    assert.ok(result.has('cordova'))
-  })
+    ]);
+    assert.equal(result.size, 1);
+    assert.ok(result.has('cordova'));
+  });
 
   it('filters on UnaryExpression', () => {
-    const consequent = { type: 'BlockStatement' }
-    const result = filterExecutorsByAncestors(new Set(['browser', 'server', 'cordova']), [
-      { type: 'Program' },
-      {
-        type: 'IfStatement',
-        test: {
-          type: 'UnaryExpression',
-          operator: '!',
-          argument: {
-            type: 'MemberExpression',
-            object: {
-              type: 'Identifier',
-              name: 'Meteor',
-            },
-            property: {
-              type: 'Identifier',
-              name: 'isClient',
+    const consequent = { type: 'BlockStatement' };
+    const result = filterExecutorsByAncestors(
+      new Set(['browser', 'server', 'cordova']),
+      [
+        { type: 'Program' },
+        {
+          type: 'IfStatement',
+          test: {
+            type: 'UnaryExpression',
+            operator: '!',
+            argument: {
+              type: 'MemberExpression',
+              object: {
+                type: 'Identifier',
+                name: 'Meteor',
+              },
+              property: {
+                type: 'Identifier',
+                name: 'isClient',
+              },
             },
           },
+          consequent,
         },
         consequent,
-      },
-      consequent,
-    ])
-    assert.equal(result.size, 1)
-    assert.ok(result.has('server'))
-  })
+      ]
+    );
+    assert.equal(result.size, 1);
+    assert.ok(result.has('server'));
+  });
 
   it('ignores unresolvable IfStatements is in ancestors', () => {
-    const consequent = { type: 'BlockStatement' }
+    const consequent = { type: 'BlockStatement' };
     const result = filterExecutorsByAncestors(new Set(['browser', 'server']), [
       { type: 'Program' },
       {
@@ -165,9 +168,9 @@ describe('filterExecutorsByAncestors', () => {
         consequent,
       },
       consequent,
-    ])
-    assert.equal(result.size, 2)
-    assert.ok(result.has('browser'))
-    assert.ok(result.has('server'))
-  })
-})
+    ]);
+    assert.equal(result.size, 2);
+    assert.ok(result.has('browser'));
+    assert.ok(result.has('server'));
+  });
+});
