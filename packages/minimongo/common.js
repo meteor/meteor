@@ -124,8 +124,7 @@ export const ELEMENT_OPERATORS = {
       let regexp;
       if (valueSelector.$options !== undefined) {
         // Options passed in $options (even the empty string) always overrides
-        // options in the RegExp object itself. (See also
-        // Mongo.Collection._rewriteSelector.)
+        // options in the RegExp object itself.
 
         // Be clear that we only support the JS-supported options, not extended
         // ones (eg, Mongo supports x and s). Ideally we would implement x and s

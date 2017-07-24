@@ -109,6 +109,7 @@ selftest.define("change packages during hot code push", [], function () {
   run.waitSecs(5);
   run.match("myapp");
   run.match("proxy");
+  run.waitSecs(5);
   run.match("MongoDB");
   run.waitSecs(5);
   run.match("your app");

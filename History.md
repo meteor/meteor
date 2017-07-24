@@ -1,5 +1,10 @@
 ## v.NEXT
 
+* `Accounts.config` no longer mistakenly allows tokens to expire when
+  the `loginExpirationInDays` option is set to `null`.
+  [Issue #5121](https://github.com/meteor/meteor/issues/5121)
+  [PR #8917](https://github.com/meteor/meteor/pull/8917)
+
 ## v1.5.1, 2017-07-12
 
 * Node has been upgraded to version 4.8.4.
