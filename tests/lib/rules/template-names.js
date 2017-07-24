@@ -31,6 +31,10 @@ ruleTester.run('template-names', rule, {
       options: ['snake-case'],
     },
     {
+      code: 'Template.Foo_bar.helpers({})',
+      options: ['upper-snake-case'],
+    },
+    {
       code: 'Template.fooBar.helpers({})',
       options: ['camel-case'],
     },
@@ -138,6 +142,17 @@ ruleTester.run('template-names', rule, {
       errors: [
         {
           message: 'Invalid template name, expected name to be in snake-case',
+          type: 'MemberExpression',
+        },
+      ],
+    },
+    {
+      code: 'Template["foo_bar"].helpers({})',
+      options: ['upper-snake-case'],
+      errors: [
+        {
+          message:
+            'Invalid template name, expected name to be in upper-snake-case',
           type: 'MemberExpression',
         },
       ],
