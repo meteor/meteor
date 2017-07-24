@@ -3,6 +3,7 @@
   "author": "Dominik Ferber <dominik.ferber+npm@gmail.com>",
   "description": "Meteor specific linting rules for ESLint",
   "main": "dist/index.js",
+  "version": "4.0.1",
   "publishConfig": {
     "tag": "next"
   },
