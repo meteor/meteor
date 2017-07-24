@@ -32,7 +32,11 @@ export default class Sorter {
       if (path.charAt(0) === '$')
         throw Error(`unsupported sort key: ${path}`);
 
-      this._sortSpecParts.push({ascending, lookup: makeLookupFunction(path, {forSort: true}), path});
+      this._sortSpecParts.push({
+        ascending,
+        lookup: makeLookupFunction(path, {forSort: true}),
+        path
+      });
     };
 
     if (spec instanceof Array) {
@@ -58,8 +62,9 @@ export default class Sorter {
       return;
 
     // To implement affectedByModifier, we piggy-back on top of Matcher's
-    // affectedByModifier code; we create a selector that is affected by the same
-    // modifiers as this sort order. This is only implemented on the server.
+    // affectedByModifier code; we create a selector that is affected by the
+    // same modifiers as this sort order. This is only implemented on the
+    // server.
     if (this.affectedByModifier) {
       const selector = {};
 
@@ -70,7 +75,9 @@ export default class Sorter {
       this._selectorForAffectedByModifier = new Minimongo.Matcher(selector);
     }
 
-    this._keyComparator = composeComparators(this._sortSpecParts.map((spec, i) => this._keyFieldComparator(i)));
+    this._keyComparator = composeComparators(
+      this._sortSpecParts.map((spec, i) => this._keyFieldComparator(i))
+    );
 
     // If you specify a matcher for this Sorter, _keyFilter may be set to a
     // function which selects whether or not a given "sort key" (tuple of values
@@ -108,7 +115,8 @@ export default class Sorter {
   // parts. Returns negative, 0, or positive based on using the sort spec to
   // compare fields.
   _compareKeys(key1, key2) {
-    if (key1.length !== this._sortSpecParts.length || key2.length !== this._sortSpecParts.length)
+    if (key1.length !== this._sortSpecParts.length ||
+        key2.length !== this._sortSpecParts.length)
       throw Error('Key has wrong length');
 
     return this._keyComparator(key1, key2);
@@ -176,7 +184,8 @@ export default class Sorter {
       if (knownPaths) {
         // Similarly to above, paths must match everywhere, unless this is a
         // non-array field.
-        if (!element.hasOwnProperty('') && Object.keys(knownPaths).length !== Object.keys(element).length)
+        if (!element.hasOwnProperty('') &&
+            Object.keys(knownPaths).length !== Object.keys(element).length)
           throw Error('cannot index parallel arrays!');
       } else if (usedPaths) {
         knownPaths = {};
@@ -364,12 +373,19 @@ export default class Sorter {
           if (['$lt', '$lte', '$gt', '$gte'].includes(operator)) {
             // XXX this depends on us knowing that these operators don't use any
             // of the arguments to compileElementSelector other than operand.
-            constraints.push(ELEMENT_OPERATORS[operator].compileElementSelector(operand));
+            constraints.push(
+              ELEMENT_OPERATORS[operator].compileElementSelector(operand)
+            );
           }
 
           // See comments in the RegExp block above.
           if (operator === '$regex' && !subSelector.$options)
-            constraints.push(ELEMENT_OPERATORS.$regex.compileElementSelector(operand, subSelector));
+            constraints.push(
+              ELEMENT_OPERATORS.$regex.compileElementSelector(
+                operand,
+                subSelector
+              )
+            );
 
           // XXX support {$exists: true}, $mod, $type, $in, $elemMatch
         });
@@ -388,7 +404,11 @@ export default class Sorter {
     if (!constraintsByPath[this._sortSpecParts[0].path].length)
       return;
 
-    this._keyFilter = key => this._sortSpecParts.every((specPart, index) => constraintsByPath[specPart.path].every(fn => fn(key[index])));
+    this._keyFilter = key =>
+      this._sortSpecParts.every((specPart, index) =>
+        constraintsByPath[specPart.path].every(fn => fn(key[index]))
+      )
+    ;
   }
 }
 

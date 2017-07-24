@@ -103,7 +103,9 @@ export default class Matcher {
     }
 
     // Top level can't be an array or true or binary.
-    if (Array.isArray(selector) || EJSON.isBinary(selector) || typeof selector === 'boolean')
+    if (Array.isArray(selector) ||
+        EJSON.isBinary(selector) ||
+        typeof selector === 'boolean')
       throw new Error(`Invalid selector: ${selector}`);
 
     this._selector = EJSON.clone(selector);
@@ -174,7 +176,8 @@ LocalCollection._f = {
     return EJSON.equals(a, b, {keyOrderSensitive: true});
   },
 
-  // maps a type code to a value that can be used to sort values of different types
+  // maps a type code to a value that can be used to sort values of different
+  // types
   _typeorder(t) {
     // http://www.mongodb.org/display/DOCS/What+is+the+Compare+Order+for+BSON+Types
     // XXX what is the correct sort position for Javascript code?
@@ -223,7 +226,8 @@ LocalCollection._f = {
     if (oa !== ob)
       return oa < ob ? -1 : 1;
 
-    // XXX need to implement this if we implement Symbol or integers, or Timestamp
+    // XXX need to implement this if we implement Symbol or integers, or
+    // Timestamp
     if (ta !== tb)
       throw Error('Missing type coercion logic in _cmp');
 

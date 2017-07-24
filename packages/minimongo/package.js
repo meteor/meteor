@@ -11,10 +11,12 @@ Package.onUse(api => {
   api.export('MinimongoError', { testOnly: true });
 
   api.use([
-    'diff-sequence', // This package is used to get diff results on arrays and objects
+    // This package is used to get diff results on arrays and objects
+    'diff-sequence',
     'ecmascript',
     'ejson',
-    'geojson-utils', // This package is used for geo-location queries such as $near
+    // This package is used for geo-location queries such as $near
+    'geojson-utils',
     'id-map',
     'mongo-id',
     'ordered-dict',

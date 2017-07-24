@@ -1,7 +1,7 @@
 import LocalCollection from './local_collection.js';
 
-// Cursor: a specification for a particular subset of documents, w/
-// a defined order, limit, and offset.  creating a Cursor with LocalCollection.find(),
+// Cursor: a specification for a particular subset of documents, w/ a defined
+// order, limit, and offset.  creating a Cursor with LocalCollection.find(),
 export default class Cursor {
   // don't call this ctor directly.  use LocalCollection.find().
   constructor(collection, selector, options = {}) {
@@ -16,7 +16,10 @@ export default class Cursor {
       this._selectorId = undefined;
 
       if (this.matcher.hasGeoQuery() || options.sort)
-        this.sorter = new Minimongo.Sorter(options.sort || [], {matcher: this.matcher});
+        this.sorter = new Minimongo.Sorter(
+          options.sort || [],
+          {matcher: this.matcher}
+        );
     }
 
     this.skip = options.skip || 0;
@@ -42,7 +45,8 @@ export default class Cursor {
    */
   count() {
     if (this.reactive)
-      this._depend({added: true, removed: true}, true /* allow the observe to be unordered */);
+      // allow the observe to be unordered
+      this._depend({added: true, removed: true}, true);
 
     return this._getRawObjects({ordered: true}).length;
   }
@@ -71,13 +75,18 @@ export default class Cursor {
    * @param {Number} index
    */
   /**
-   * @summary Call `callback` once for each matching document, sequentially and synchronously.
+   * @summary Call `callback` once for each matching document, sequentially and
+   *          synchronously.
    * @locus Anywhere
    * @method  forEach
    * @instance
    * @memberOf Mongo.Cursor
-   * @param {IterationCallback} callback Function to call. It will be called with three arguments: the document, a 0-based index, and <em>cursor</em> itself.
-   * @param {Any} [thisArg] An object which will be the value of `this` inside `callback`.
+   * @param {IterationCallback} callback Function to call. It will be called
+   *                                     with three arguments: the document, a
+   *                                     0-based index, and <em>cursor</em>
+   *                                     itself.
+   * @param {Any} [thisArg] An object which will be the value of `this` inside
+   *                        `callback`.
    */
   forEach(callback, thisArg) {
     if (this.reactive) {
@@ -109,8 +118,12 @@ export default class Cursor {
    * @method map
    * @instance
    * @memberOf Mongo.Cursor
-   * @param {IterationCallback} callback Function to call. It will be called with three arguments: the document, a 0-based index, and <em>cursor</em> itself.
-   * @param {Any} [thisArg] An object which will be the value of `this` inside `callback`.
+   * @param {IterationCallback} callback Function to call. It will be called
+   *                                     with three arguments: the document, a
+   *                                     0-based index, and <em>cursor</em>
+   *                                     itself.
+   * @param {Any} [thisArg] An object which will be the value of `this` inside
+   *                        `callback`.
    */
   map(callback, thisArg) {
     const result = [];
@@ -148,18 +161,22 @@ export default class Cursor {
    * @locus Anywhere
    * @memberOf Mongo.Cursor
    * @instance
-   * @param {Object} callbacks Functions to call to deliver the result set as it changes
+   * @param {Object} callbacks Functions to call to deliver the result set as it
+   *                           changes
    */
   observe(options) {
     return LocalCollection._observeFromObserveChanges(this, options);
   }
 
   /**
-   * @summary Watch a query.  Receive callbacks as the result set changes.  Only the differences between the old and new documents are passed to the callbacks.
+   * @summary Watch a query. Receive callbacks as the result set changes. Only
+   *          the differences between the old and new documents are passed to
+   *          the callbacks.
    * @locus Anywhere
    * @memberOf Mongo.Cursor
    * @instance
-   * @param {Object} callbacks Functions to call to deliver the result set as it changes
+   * @param {Object} callbacks Functions to call to deliver the result set as it
+   *                           changes
    */
   observeChanges(options) {
     const ordered = LocalCollection._observeChangesCallbacksAreOrdered(options);
@@ -169,15 +186,24 @@ export default class Cursor {
     // comment in _modifyAndNotify
     // XXX allow skip/limit with unordered observe
     if (!options._allow_unordered && !ordered && (this.skip || this.limit))
-      throw new Error('must use ordered observe (ie, \'addedBefore\' instead of \'added\') with skip or limit');
+      throw new Error(
+        'must use ordered observe (ie, \'addedBefore\' instead of \'added\') ' +
+        'with skip or limit'
+      );
 
     if (this.fields && (this.fields._id === 0 || this.fields._id === false))
       throw Error('You may not observe a cursor with {fields: {_id: 0}}');
 
+    const distances = (
+      this.matcher.hasGeoQuery() &&
+      ordered &&
+      new LocalCollection._IdMap
+    );
+
     const query = {
       cursor: this,
       dirty: false,
-      distances: this.matcher.hasGeoQuery() && ordered && new LocalCollection._IdMap,
+      distances,
       matcher: this.matcher, // not fast pathed
       ordered,
       projectionFn: this._projectionFn,
@@ -291,10 +317,11 @@ export default class Cursor {
 
       const options = {_allow_unordered, _suppress_initial: true};
 
-      ['added', 'addedBefore', 'changed', 'movedBefore', 'removed'].forEach(fn => {
-        if (changers[fn])
-          options[fn] = notify;
-      });
+      ['added', 'addedBefore', 'changed', 'movedBefore', 'removed']
+        .forEach(fn => {
+          if (changers[fn])
+            options[fn] = notify;
+        });
 
       // observeChanges will stop() when this computation is invalidated
       this.observeChanges(options);
@@ -307,19 +334,20 @@ export default class Cursor {
 
   // Returns a collection of matching objects, but doesn't deep copy them.
   //
-  // If ordered is set, returns a sorted array, respecting sorter, skip, and limit
-  // properties of the query.  if sorter is falsey, no sort -- you get the natural
-  // order.
+  // If ordered is set, returns a sorted array, respecting sorter, skip, and
+  // limit properties of the query.  if sorter is falsey, no sort -- you get the
+  // natural order.
   //
-  // If ordered is not set, returns an object mapping from ID to doc (sorter, skip
-  // and limit should not be set).
+  // If ordered is not set, returns an object mapping from ID to doc (sorter,
+  // skip and limit should not be set).
   //
   // If ordered is set and this cursor is a $near geoquery, then this function
   // will use an _IdMap to track each distance from the $near argument point in
   // order to use it as a sort key. If an _IdMap is passed in the 'distances'
-  // argument, this function will clear it and use it for this purpose (otherwise
-  // it will just create its own _IdMap). The observeChanges implementation uses
-  // this to remember the distances after this function returns.
+  // argument, this function will clear it and use it for this purpose
+  // (otherwise it will just create its own _IdMap). The observeChanges
+  // implementation uses this to remember the distances after this function
+  // returns.
   _getRawObjects(options = {}) {
     // XXX use OrderedDict instead of array, and make IdMap and OrderedDict
     // compatible
@@ -347,9 +375,9 @@ export default class Cursor {
 
     // slow path for arbitrary selector, sort, skip, limit
 
-    // in the observeChanges case, distances is actually part of the "query" (ie,
-    // live results set) object.  in other cases, distances is only used inside
-    // this function.
+    // in the observeChanges case, distances is actually part of the "query"
+    // (ie, live results set) object.  in other cases, distances is only used
+    // inside this function.
     let distances;
     if (this.matcher.hasGeoQuery() && options.ordered) {
       if (options.distances) {
@@ -376,7 +404,12 @@ export default class Cursor {
 
       // Fast path for limited unsorted queries.
       // XXX 'length' check here seems wrong for ordered
-      return !this.limit || this.skip || this.sorter || results.length !== this.limit;
+      return (
+        !this.limit ||
+        this.skip ||
+        this.sorter ||
+        results.length !== this.limit
+      );
     });
 
     if (!options.ordered)
@@ -388,17 +421,30 @@ export default class Cursor {
     if (!this.limit && !this.skip)
       return results;
 
-    return results.slice(this.skip, this.limit ? this.limit + this.skip : results.length);
+    return results.slice(
+      this.skip,
+      this.limit ? this.limit + this.skip : results.length
+    );
   }
 
   _publishCursor(subscription) {
     // XXX minimongo should not depend on mongo-livedata!
-    if (!Package.mongo)
-      throw new Error('Can\'t publish from Minimongo without the `mongo` package.');
+    if (!Package.mongo) {
+      throw new Error(
+        'Can\'t publish from Minimongo without the `mongo` package.'
+      );
+    }
 
-    if (!this.collection.name)
-      throw new Error('Can\'t publish a cursor from a collection without a name.');
+    if (!this.collection.name) {
+      throw new Error(
+        'Can\'t publish a cursor from a collection without a name.'
+      );
+    }
 
-    return Package.mongo.Mongo.Collection._publishCursor(this, subscription, this.collection.name);
+    return Package.mongo.Mongo.Collection._publishCursor(
+      this,
+      subscription,
+      this.collection.name
+    );
   }
 }

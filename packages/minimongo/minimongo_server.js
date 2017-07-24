@@ -6,7 +6,9 @@ import {
   projectionDetails,
 } from './common.js';
 
-Minimongo._pathsElidingNumericKeys = paths => paths.map(path => path.split('.').filter(part => !isNumericKey(part)).join('.'));
+Minimongo._pathsElidingNumericKeys = paths => paths.map(path =>
+  path.split('.').filter(part => !isNumericKey(part)).join('.')
+);
 
 // Returns true if the modifier applied to some document may change the result
 // of matching the document by selector
@@ -20,8 +22,11 @@ Minimongo.Matcher.prototype.affectedByModifier = function(modifier) {
   // safe check for $set/$unset being objects
   modifier = Object.assign({$set: {}, $unset: {}}, modifier);
 
-  const modifiedPaths = Object.keys(modifier.$set).concat(Object.keys(modifier.$unset));
   const meaningfulPaths = this._getPaths();
+  const modifiedPaths = [].concat(
+    Object.keys(modifier.$set),
+    Object.keys(modifier.$unset)
+  );
 
   return modifiedPaths.some(path => {
     const mod = path.split('.');
@@ -77,9 +82,13 @@ Minimongo.Matcher.prototype.canBecomeTrueByModifier = function(modifier) {
 
   modifier = Object.assign({$set: {}, $unset: {}}, modifier);
 
-  const modifierPaths = Object.keys(modifier.$set).concat(Object.keys(modifier.$unset));
+  const modifierPaths = [].concat(
+    Object.keys(modifier.$set),
+    Object.keys(modifier.$unset)
+  );
 
-  if (this._getPaths().some(pathHasNumericKeys) || modifierPaths.some(pathHasNumericKeys))
+  if (this._getPaths().some(pathHasNumericKeys) ||
+      modifierPaths.some(pathHasNumericKeys))
     return true;
 
   // check if there is a $set or $unset that indicates something is an
@@ -91,7 +100,9 @@ Minimongo.Matcher.prototype.canBecomeTrueByModifier = function(modifier) {
     if (!isOperatorObject(this._selector[path]))
       return false;
 
-    return modifierPaths.some(modifierPath => modifierPath.startsWith(`${path}.`));
+    return modifierPaths.some(modifierPath =>
+      modifierPath.startsWith(`${path}.`)
+    );
   });
 
   if (expectedScalarIsObject)
@@ -153,7 +164,8 @@ Minimongo.Matcher.prototype.matchingDocument = function() {
   if (this._matchingDocument !== undefined)
     return this._matchingDocument;
 
-  // If the analysis of this selector is too hard for our implementation fallback to "YES"
+  // If the analysis of this selector is too hard for our implementation
+  // fallback to "YES"
   let fallback = false;
 
   this._matchingDocument = pathsToTree(
@@ -175,7 +187,9 @@ Minimongo.Matcher.prototype.matchingDocument = function() {
           // Return anything from $in that matches the whole selector for this
           // path. If nothing matches, returns `undefined` as nothing can make
           // this selector into `true`.
-          return valueSelector.$in.find(placeholder => matcher.documentMatches({placeholder}).result);
+          return valueSelector.$in.find(placeholder =>
+            matcher.documentMatches({placeholder}).result
+          );
         }
 
         if (onlyContainsKeys(valueSelector, ['$gt', '$gte', '$lt', '$lte'])) {
@@ -183,19 +197,22 @@ Minimongo.Matcher.prototype.matchingDocument = function() {
           let upperBound = Infinity;
 
           ['$lte', '$lt'].forEach(op => {
-            if (valueSelector.hasOwnProperty(op) && valueSelector[op] < upperBound)
+            if (valueSelector.hasOwnProperty(op) &&
+                valueSelector[op] < upperBound)
               upperBound = valueSelector[op];
           });
 
           ['$gte', '$gt'].forEach(op => {
-            if (valueSelector.hasOwnProperty(op) && valueSelector[op] > lowerBound)
+            if (valueSelector.hasOwnProperty(op) &&
+                valueSelector[op] > lowerBound)
               lowerBound = valueSelector[op];
           });
 
           const middle = (lowerBound + upperBound) / 2;
           const matcher = new Minimongo.Matcher({placeholder: valueSelector});
 
-          if (!matcher.documentMatches({placeholder: middle}).result && (middle === lowerBound || middle === upperBound))
+          if (!matcher.documentMatches({placeholder: middle}).result &&
+              (middle === lowerBound || middle === upperBound))
             fallback = true;
 
           return middle;
@@ -228,14 +245,22 @@ Minimongo.Sorter.prototype.affectedByModifier = function(modifier) {
 };
 
 Minimongo.Sorter.prototype.combineIntoProjection = function(projection) {
-  return combineImportantPathsIntoProjection(Minimongo._pathsElidingNumericKeys(this._getPaths()), projection);
+  return combineImportantPathsIntoProjection(
+    Minimongo._pathsElidingNumericKeys(this._getPaths()),
+    projection
+  );
 };
 
 function combineImportantPathsIntoProjection(paths, projection) {
   const details = projectionDetails(projection);
 
   // merge the paths to include
-  const tree = pathsToTree(paths, path => true, (node, path, fullPath) => true, details.tree);
+  const tree = pathsToTree(
+    paths,
+    path => true,
+    (node, path, fullPath) => true,
+    details.tree
+  );
   const mergedProjection = treeToPaths(tree);
 
   if (details.including) {
@@ -272,7 +297,9 @@ function getPaths(selector) {
 
   //   // the value is a literal or some comparison operator
   //   return k;
-  // }).reduce((a, b) => a.concat(b), []).filter((a, b, c) => c.indexOf(a) === b);
+  // })
+  //   .reduce((a, b) => a.concat(b), [])
+  //   .filter((a, b, c) => c.indexOf(a) === b);
 }
 
 // A helper to ensure object has only certain keys

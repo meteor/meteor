@@ -27,7 +27,9 @@ export const ELEMENT_OPERATORS = {
       // XXX could require to be ints or round or something
       const divisor = operand[0];
       const remainder = operand[1];
-      return value => typeof value === 'number' && value % divisor === remainder;
+      return value => (
+        typeof value === 'number' && value % divisor === remainder
+      );
     },
   },
   $in: {
@@ -77,7 +79,9 @@ export const ELEMENT_OPERATORS = {
     compileElementSelector(operand) {
       if (typeof operand !== 'number')
         throw Error('$type needs a number');
-      return value => value !== undefined && LocalCollection._f._type(value) === operand;
+      return value => (
+        value !== undefined && LocalCollection._f._type(value) === operand
+      );
     },
   },
   $bitsAllSet: {
@@ -132,8 +136,8 @@ export const ELEMENT_OPERATORS = {
         if (/[^gim]/.test(valueSelector.$options))
           throw new Error('Only the i, m, and g regexp options are supported');
 
-        const regexSource = operand instanceof RegExp ? operand.source : operand;
-        regexp = new RegExp(regexSource, valueSelector.$options);
+        const source = operand instanceof RegExp ? operand.source : operand;
+        regexp = new RegExp(source, valueSelector.$options);
       } else if (operand instanceof RegExp) {
         regexp = operand;
       } else {
@@ -160,7 +164,8 @@ export const ELEMENT_OPERATORS = {
         // because of the slightly different calling convention.
         // {$elemMatch: {x: 3}} means "an element has a field x:3", not
         // "consists only of a field x:3". Also, regexps and sub-$ are allowed.
-        subMatcher = compileDocumentSelector(operand, matcher, {inElemMatch: true});
+        subMatcher =
+          compileDocumentSelector(operand, matcher, {inElemMatch: true});
       } else {
         subMatcher = compileValueSelector(operand, matcher);
       }
@@ -198,12 +203,17 @@ export const ELEMENT_OPERATORS = {
 // Operators that appear at the top level of a document selector.
 const LOGICAL_OPERATORS = {
   $and(subSelector, matcher, inElemMatch) {
-    const matchers = compileArrayOfDocumentSelectors(subSelector, matcher, inElemMatch);
-    return andDocumentMatchers(matchers);
+    return andDocumentMatchers(
+      compileArrayOfDocumentSelectors(subSelector, matcher, inElemMatch)
+    );
   },
 
   $or(subSelector, matcher, inElemMatch) {
-    const matchers = compileArrayOfDocumentSelectors(subSelector, matcher, inElemMatch);
+    const matchers = compileArrayOfDocumentSelectors(
+      subSelector,
+      matcher,
+      inElemMatch
+    );
 
     // Special case: if there is only one matcher, use it directly, *preserving*
     // any arrayIndices it returns.
@@ -219,7 +229,11 @@ const LOGICAL_OPERATORS = {
   },
 
   $nor(subSelector, matcher, inElemMatch) {
-    const matchers = compileArrayOfDocumentSelectors(subSelector, matcher, inElemMatch);
+    const matchers = compileArrayOfDocumentSelectors(
+      subSelector,
+      matcher,
+      inElemMatch
+    );
     return doc => {
       const result = matchers.every(fn => !fn(doc).result);
       // Never set arrayIndices, because we only match if nothing in particular
@@ -257,19 +271,29 @@ const LOGICAL_OPERATORS = {
 // convertElementMatcherToBranchedMatcher".
 const VALUE_OPERATORS = {
   $eq(operand) {
-    return convertElementMatcherToBranchedMatcher(equalityElementMatcher(operand));
+    return convertElementMatcherToBranchedMatcher(
+      equalityElementMatcher(operand)
+    );
   },
   $not(operand, valueSelector, matcher) {
     return invertBranchedMatcher(compileValueSelector(operand, matcher));
   },
   $ne(operand) {
-    return invertBranchedMatcher(convertElementMatcherToBranchedMatcher(equalityElementMatcher(operand)));
+    return invertBranchedMatcher(
+      convertElementMatcherToBranchedMatcher(equalityElementMatcher(operand))
+    );
   },
   $nin(operand) {
-    return invertBranchedMatcher(convertElementMatcherToBranchedMatcher(ELEMENT_OPERATORS.$in.compileElementSelector(operand)));
+    return invertBranchedMatcher(
+      convertElementMatcherToBranchedMatcher(
+        ELEMENT_OPERATORS.$in.compileElementSelector(operand)
+      )
+    );
   },
   $exists(operand) {
-    const exists = convertElementMatcherToBranchedMatcher(value => value !== undefined);
+    const exists = convertElementMatcherToBranchedMatcher(
+      value => value !== undefined
+    );
     return operand ? exists : invertBranchedMatcher(exists);
   },
   // $options just provides options for $regex; its logic is inside $regex
@@ -316,7 +340,8 @@ const VALUE_OPERATORS = {
     // marked with a $geometry property, though legacy coordinates can be
     // matched using $geometry.
     let maxDistance, point, distance;
-    if (LocalCollection._isPlainObject(operand) && operand.hasOwnProperty('$geometry')) {
+    if (LocalCollection._isPlainObject(operand) &&
+        operand.hasOwnProperty('$geometry')) {
       // GeoJSON "2dsphere" mode.
       maxDistance = operand.$maxDistance;
       point = operand.$geometry;
@@ -326,11 +351,19 @@ const VALUE_OPERATORS = {
         // a priority.
         if (!value)
           return null;
+
         if (!value.type)
-          return GeoJSON.pointDistance(point, {type: 'Point', coordinates: pointToArray(value)});
+          return GeoJSON.pointDistance(
+            point,
+            {type: 'Point', coordinates: pointToArray(value)}
+          );
+
         if (value.type === 'Point')
           return GeoJSON.pointDistance(point, value);
-        return GeoJSON.geometryWithinRadius(value, point, maxDistance) ? 0 : maxDistance + 1;
+
+        return GeoJSON.geometryWithinRadius(value, point, maxDistance)
+          ? 0
+          : maxDistance + 1;
       };
     } else {
       maxDistance = valueSelector.$maxDistance;
@@ -358,7 +391,8 @@ const VALUE_OPERATORS = {
       // each within-$maxDistance branching point.
       const result = {result: false};
       expandArraysInBranches(branchedValues).every(branch => {
-        // if operation is an update, don't skip branches, just return the first one (#3599)
+        // if operation is an update, don't skip branches, just return the first
+        // one (#3599)
         let curDistance;
         if (!matcher._isUpdate) {
           if (!(typeof branch.value === 'object'))
@@ -411,7 +445,9 @@ function andSomeMatchers(subMatchers) {
       // one. Yes, this means that if there are multiple $near fields in a
       // query, something arbitrary happens; this appears to be consistent with
       // Mongo.
-      if (subResult.result && subResult.distance !== undefined && match.distance === undefined)
+      if (subResult.result &&
+          subResult.distance !== undefined &&
+          match.distance === undefined)
         match.distance = subResult.distance;
 
       // Similarly, propagate arrayIndices from sub-matchers... but to match
@@ -476,7 +512,11 @@ export function compileDocumentSelector(docSelector, matcher, options = {}) {
       matcher._recordPathUsed(key);
 
     const lookUpByIndex = makeLookupFunction(key);
-    const valueMatcher = compileValueSelector(subSelector, matcher, options.isRoot);
+    const valueMatcher = compileValueSelector(
+      subSelector,
+      matcher,
+      options.isRoot
+    );
 
     return doc => valueMatcher(lookUpByIndex(doc));
   });
@@ -491,12 +531,17 @@ export function compileDocumentSelector(docSelector, matcher, options = {}) {
 function compileValueSelector(valueSelector, matcher, isRoot) {
   if (valueSelector instanceof RegExp) {
     matcher._isSimple = false;
-    return convertElementMatcherToBranchedMatcher(regexpElementMatcher(valueSelector));
+    return convertElementMatcherToBranchedMatcher(
+      regexpElementMatcher(valueSelector)
+    );
   }
+
   if (isOperatorObject(valueSelector))
     return operatorBranchedMatcher(valueSelector, matcher, isRoot);
 
-  return convertElementMatcherToBranchedMatcher(equalityElementMatcher(valueSelector));
+  return convertElementMatcherToBranchedMatcher(
+    equalityElementMatcher(valueSelector)
+  );
 }
 
 // Given an element matcher (which evaluates a single value), returns a branched
@@ -580,7 +625,10 @@ export function expandArraysInBranches(branches, skipTheArrays) {
 
     if (thisIsArray && !branch.dontIterate) {
       branch.value.forEach((value, i) => {
-        branchesOut.push({arrayIndices: (branch.arrayIndices || []).concat(i), value});
+        branchesOut.push({
+          arrayIndices: (branch.arrayIndices || []).concat(i),
+          value
+        });
       });
     }
   });
@@ -591,7 +639,8 @@ export function expandArraysInBranches(branches, skipTheArrays) {
 // Helpers for $bitsAllSet/$bitsAnySet/$bitsAllClear/$bitsAnyClear.
 function getOperandBitmask(operand, selector) {
   // numeric bitmask
-  // You can provide a numeric bitmask to be matched against the operand field. It must be representable as a non-negative 32-bit signed integer.
+  // You can provide a numeric bitmask to be matched against the operand field.
+  // It must be representable as a non-negative 32-bit signed integer.
   // Otherwise, $bitsAllSet will return an error.
   if (Number.isInteger(operand) && operand >= 0)
     return new Uint8Array(new Int32Array([operand]).buffer);
@@ -602,8 +651,10 @@ function getOperandBitmask(operand, selector) {
     return new Uint8Array(operand.buffer);
 
   // position list
-  // If querying a list of bit positions, each <position> must be a non-negative integer. Bit positions start at 0 from the least significant bit.
-  if (Array.isArray(operand) && operand.every(x => Number.isInteger(x) && x >= 0)) {
+  // If querying a list of bit positions, each <position> must be a non-negative
+  // integer. Bit positions start at 0 from the least significant bit.
+  if (Array.isArray(operand) &&
+      operand.every(x => Number.isInteger(x) && x >= 0)) {
     const buffer = new ArrayBuffer((Math.max(...operand) >> 3) + 1);
     const view = new Uint8Array(buffer);
 
@@ -615,16 +666,26 @@ function getOperandBitmask(operand, selector) {
   }
 
   // bad operand
-  throw Error(`operand to ${selector} must be a numeric bitmask (representable as a non-negative 32-bit signed integer), a bindata bitmask or an array with bit positions (non-negative integers)`);
+  throw Error(
+    `operand to ${selector} must be a numeric bitmask (representable as a ` +
+    'non-negative 32-bit signed integer), a bindata bitmask or an array with ' +
+    'bit positions (non-negative integers)'
+  );
 }
 
 function getValueBitmask(value, length) {
-  // The field value must be either numerical or a BinData instance. Otherwise, $bits... will not match the current document.
+  // The field value must be either numerical or a BinData instance. Otherwise,
+  // $bits... will not match the current document.
+
   // numerical
   if (Number.isSafeInteger(value)) {
-    // $bits... will not match numerical values that cannot be represented as a signed 64-bit integer
-    // This can be the case if a value is either too large or small to fit in a signed 64-bit integer, or if it has a fractional component.
-    const buffer = new ArrayBuffer(Math.max(length, 2 * Uint32Array.BYTES_PER_ELEMENT));
+    // $bits... will not match numerical values that cannot be represented as a
+    // signed 64-bit integer. This can be the case if a value is either too
+    // large or small to fit in a signed 64-bit integer, or if it has a
+    // fractional component.
+    const buffer = new ArrayBuffer(
+      Math.max(length, 2 * Uint32Array.BYTES_PER_ELEMENT)
+    );
 
     let view = new Uint32Array(buffer, 0, 2);
     view[0] = value % ((1 << 16) * (1 << 16)) | 0;
@@ -658,9 +719,14 @@ function insertIntoDocument(document, key, value) {
       (existingKey.length > key.length && existingKey.indexOf(key) === 0) ||
       (key.length > existingKey.length && key.indexOf(existingKey) === 0)
     ) {
-      throw new Error(`cannot infer query fields to set, both paths '${existingKey}' and '${key}' are matched`);
+      throw new Error(
+        `cannot infer query fields to set, both paths '${existingKey}' and ` +
+        `'${key}' are matched`
+      );
     } else if (existingKey === key) {
-      throw new Error(`cannot infer query fields to set, path '${key}' is matched twice`);
+      throw new Error(
+        `cannot infer query fields to set, path '${key}' is matched twice`
+      );
     }
   });
 
@@ -701,8 +767,11 @@ export function isOperatorObject(valueSelector, inconsistentOK) {
     if (theseAreOperators === undefined) {
       theseAreOperators = thisIsOperator;
     } else if (theseAreOperators !== thisIsOperator) {
-      if (!inconsistentOK)
-        throw new Error(`Inconsistent operator: ${JSON.stringify(valueSelector)}`);
+      if (!inconsistentOK) {
+        throw new Error(
+          `Inconsistent operator: ${JSON.stringify(valueSelector)}`
+        );
+      }
 
       theseAreOperators = false;
     }
@@ -799,7 +868,10 @@ function makeInequality(cmpValueComparator) {
 export function makeLookupFunction(key, options = {}) {
   const parts = key.split('.');
   const firstPart = parts.length ? parts[0] : '';
-  const lookupRest = parts.length > 1 && makeLookupFunction(parts.slice(1).join('.'));
+  const lookupRest = (
+    parts.length > 1 &&
+    makeLookupFunction(parts.slice(1).join('.'))
+  );
 
   const omitUnnecessaryFields = result => {
     if (!result.dontIterate)
@@ -888,7 +960,8 @@ export function makeLookupFunction(key, options = {}) {
     // selector), we skip the branching: we ONLY allow the numeric part to mean
     // 'look up this index' in that case, not 'also look up this index in all
     // the elements of the array'.
-    if (Array.isArray(firstLevel) && !(isNumericKey(parts[1]) && options.forSort)) {
+    if (Array.isArray(firstLevel) &&
+        !(isNumericKey(parts[1]) && options.forSort)) {
       firstLevel.forEach((branch, arrayIndex) => {
         if (LocalCollection._isPlainObject(branch))
           appendToResult(lookupRest(branch, arrayIndices.concat(arrayIndex)));
@@ -925,9 +998,21 @@ function operatorBranchedMatcher(valueSelector, matcher, isRoot) {
   const operatorMatchers = Object.keys(valueSelector).map(operator => {
     const operand = valueSelector[operator];
 
-    const simpleRange = ['$lt', '$lte', '$gt', '$gte'].includes(operator) && typeof operand === 'number';
-    const simpleEquality = ['$ne', '$eq'].includes(operator) && operand !== Object(operand);
-    const simpleInclusion = ['$in', '$nin'].includes(operator) && Array.isArray(operand) && !operand.some(x => x === Object(x));
+    const simpleRange = (
+      ['$lt', '$lte', '$gt', '$gte'].includes(operator) &&
+      typeof operand === 'number'
+    );
+
+    const simpleEquality = (
+      ['$ne', '$eq'].includes(operator) &&
+      operand !== Object(operand)
+    );
+
+    const simpleInclusion = (
+      ['$in', '$nin'].includes(operator)
+      && Array.isArray(operand)
+      && !operand.some(x => x === Object(x))
+    );
 
     if (!(simpleRange || simpleInclusion || simpleEquality))
       matcher._isSimple = false;
@@ -937,7 +1022,10 @@ function operatorBranchedMatcher(valueSelector, matcher, isRoot) {
 
     if (ELEMENT_OPERATORS.hasOwnProperty(operator)) {
       const options = ELEMENT_OPERATORS[operator];
-      return convertElementMatcherToBranchedMatcher(options.compileElementSelector(operand, valueSelector, matcher), options);
+      return convertElementMatcherToBranchedMatcher(
+        options.compileElementSelector(operand, valueSelector, matcher),
+        options
+      );
     }
 
     throw new Error(`Unrecognized operator: ${operator}`);
@@ -965,7 +1053,11 @@ export function pathsToTree(paths, newLeafFn, conflictFn, root = {}) {
       if (!tree.hasOwnProperty(key)) {
         tree[key] = {};
       } else if (tree[key] !== Object(tree[key])) {
-        tree[key] = conflictFn(tree[key], pathArray.slice(0, i + 1).join('.'), path);
+        tree[key] = conflictFn(
+          tree[key],
+          pathArray.slice(0, i + 1).join('.'),
+          path
+        );
 
         // break out of loop if we are failing for this path
         if (tree[key] !== Object(tree[key]))
@@ -997,8 +1089,10 @@ function pointToArray(point) {
 }
 
 // Creating a document from an upsert is quite tricky.
-// E.g. this selector: {"$or": [{"b.foo": {"$all": ["bar"]}}]}, should result in: {"b.foo": "bar"}
-// But this selector: {"$or": [{"b": {"foo": {"$all": ["bar"]}}}]} should throw an error
+// E.g. this selector: {"$or": [{"b.foo": {"$all": ["bar"]}}]}, should result
+// in: {"b.foo": "bar"}
+// But this selector: {"$or": [{"b": {"foo": {"$all": ["bar"]}}}]} should throw
+// an error
 
 // Some rules (found mainly with trial & error, so there might be more):
 // - handle all childs of $and (or implicit $and)
@@ -1007,7 +1101,8 @@ function pointToArray(point) {
 // - ignore $nor and $not nodes
 // - throw when a value can not be set unambiguously
 // - every value for $all should be dealt with as separate $eq-s
-// - threat all children of $all as $eq setters (=> set if $all.length === 1, otherwise throw error)
+// - threat all children of $all as $eq setters (=> set if $all.length === 1,
+//   otherwise throw error)
 // - you can not mix '$'-prefixed keys and non-'$'-prefixed keys
 // - you can only have dotted keys on a root-level
 // - you can not have '$'-prefixed keys more than one-level deep in an object
@@ -1043,7 +1138,9 @@ function populateDocumentWithObject(document, key, value) {
         populateDocumentWithKeyValue(document, key, object);
       } else if (op === '$all') {
         // every value for $all should be dealt with as separate $eq-s
-        object.forEach(element => populateDocumentWithKeyValue(document, key, element));
+        object.forEach(element =>
+          populateDocumentWithKeyValue(document, key, element)
+        );
       }
     });
   }
@@ -1058,7 +1155,9 @@ export function populateDocumentWithQueryFields(query, document = {}) {
 
       if (key === '$and') {
         // handle explicit $and
-        value.forEach(element => populateDocumentWithQueryFields(element, document));
+        value.forEach(element =>
+          populateDocumentWithQueryFields(element, document)
+        );
       } else if (key === '$or') {
         // handle $or nodes with exactly 1 child
         if (value.length === 1)
@@ -1084,9 +1183,9 @@ export function populateDocumentWithQueryFields(query, document = {}) {
 //  (exception for '_id' as it is a special case handled separately)
 //  - including - Boolean - "take only certain fields" type of projection
 export function projectionDetails(fields) {
-  // Find the non-_id keys (_id is handled specially because it is included unless
-  // explicitly excluded). Sort the keys, so that our code to detect overlaps
-  // like 'foo' and 'foo.bar' can assume that 'foo' comes first.
+  // Find the non-_id keys (_id is handled specially because it is included
+  // unless explicitly excluded). Sort the keys, so that our code to detect
+  // overlaps like 'foo' and 'foo.bar' can assume that 'foo' comes first.
   let fieldsKeys = Object.keys(fields).sort();
 
   // If _id is the only field in the projection, do not remove it, since it is
@@ -1108,8 +1207,11 @@ export function projectionDetails(fields) {
       including = rule;
 
     // This error message is copied from MongoDB shell
-    if (including !== rule)
-      throw MinimongoError('You cannot currently mix including and excluding fields.');
+    if (including !== rule) {
+      throw MinimongoError(
+        'You cannot currently mix including and excluding fields.'
+      );
+    }
   });
 
   const projectionRulesTree = pathsToTree(
@@ -1127,14 +1229,18 @@ export function projectionDetails(fields) {
       // Example, assume following in mongo shell:
       // > db.coll.insert({ a: { b: 23, c: 44 } })
       // > db.coll.find({}, { 'a': 1, 'a.b': 1 })
-      // { "_id" : ObjectId("520bfe456024608e8ef24af3"), "a" : { "b" : 23 } }
+      // {"_id": ObjectId("520bfe456024608e8ef24af3"), "a": {"b": 23}}
       // > db.coll.find({}, { 'a.b': 1, 'a': 1 })
-      // { "_id" : ObjectId("520bfe456024608e8ef24af3"), "a" : { "b" : 23, "c" : 44 } }
+      // {"_id": ObjectId("520bfe456024608e8ef24af3"), "a": {"b": 23, "c": 44}}
       //
       // Note, how second time the return set of keys is different.
       const currentPath = fullPath;
       const anotherPath = path;
-      throw MinimongoError(`both ${currentPath} and ${anotherPath} found in fields option, using both of them may trigger unexpected behavior. Did you mean to use only one of them?`);
+      throw MinimongoError(
+        `both ${currentPath} and ${anotherPath} found in fields option, ` +
+        'using both of them may trigger unexpected behavior. Did you mean to ' +
+        'use only one of them?'
+      );
     });
 
   return {including, tree: projectionRulesTree};
@@ -1165,10 +1271,17 @@ export function regexpElementMatcher(regexp) {
 // Objects that are nested more then 1 level cannot have dotted fields
 // or fields starting with '$'
 function validateKeyInPath(key, path) {
-  if (key.includes('.'))
-    throw new Error(`The dotted field '${key}' in '${path}.${key} is not valid for storage.`);
-  if (key[0] === '$')
-    throw new Error(`The dollar ($) prefixed field  '${path}.${key} is not valid for storage.`);
+  if (key.includes('.')) {
+    throw new Error(
+      `The dotted field '${key}' in '${path}.${key} is not valid for storage.`
+    );
+  }
+
+  if (key[0] === '$') {
+    throw new Error(
+      `The dollar ($) prefixed field  '${path}.${key} is not valid for storage.`
+    );
+  }
 }
 
 // Recursively validates an object that is nested more than one level deep
