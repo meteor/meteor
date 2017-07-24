@@ -7,14 +7,14 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-import { RuleTester } from 'eslint'
-import rule from '../../../lib/rules/no-zero-timeout'
+import { RuleTester } from 'eslint';
+import rule from '../../../lib/rules/no-zero-timeout';
 
 // -----------------------------------------------------------------------------
 // Tests
 // -----------------------------------------------------------------------------
 
-const ruleTester = new RuleTester()
+const ruleTester = new RuleTester();
 ruleTester.run('no-zero-timeout', rule, {
   valid: [
     'Meteor.setTimeout()',
@@ -29,38 +29,48 @@ ruleTester.run('no-zero-timeout', rule, {
   invalid: [
     {
       code: 'Meteor.setTimeout(function () {}, 0)',
-      errors: [{
-        message: 'Timeout of 0. Use `Meteor.defer` instead',
-        type: 'CallExpression',
-      }],
+      errors: [
+        {
+          message: 'Timeout of 0. Use `Meteor.defer` instead',
+          type: 'CallExpression',
+        },
+      ],
     },
     {
       code: 'Meteor["setTimeout"](function () {}, 0)',
-      errors: [{
-        message: 'Timeout of 0. Use `Meteor.defer` instead',
-        type: 'CallExpression',
-      }],
+      errors: [
+        {
+          message: 'Timeout of 0. Use `Meteor.defer` instead',
+          type: 'CallExpression',
+        },
+      ],
     },
     {
       code: 'Meteor.setTimeout(foo, 0)',
-      errors: [{
-        message: 'Timeout of 0. Use `Meteor.defer` instead',
-        type: 'CallExpression',
-      }],
+      errors: [
+        {
+          message: 'Timeout of 0. Use `Meteor.defer` instead',
+          type: 'CallExpression',
+        },
+      ],
     },
     {
       code: 'Meteor.setTimeout(function () {})',
-      errors: [{
-        message: 'Implicit timeout of 0',
-        type: 'CallExpression',
-      }],
+      errors: [
+        {
+          message: 'Implicit timeout of 0',
+          type: 'CallExpression',
+        },
+      ],
     },
     {
       code: 'Meteor.setTimeout(foo)',
-      errors: [{
-        message: 'Implicit timeout of 0',
-        type: 'CallExpression',
-      }],
+      errors: [
+        {
+          message: 'Implicit timeout of 0',
+          type: 'CallExpression',
+        },
+      ],
     },
   ],
-})
+});

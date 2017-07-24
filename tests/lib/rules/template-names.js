@@ -9,10 +9,10 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-import { RuleTester } from 'eslint'
-import rule from '../../../lib/rules/template-names'
+import { RuleTester } from 'eslint';
+import rule from '../../../lib/rules/template-names';
 
-const ruleTester = new RuleTester()
+const ruleTester = new RuleTester();
 
 ruleTester.run('template-names', rule, {
   valid: [
@@ -44,70 +44,103 @@ ruleTester.run('template-names', rule, {
     {
       code: 'Template.foo_bar.onCreated',
       errors: [
-        { message: 'Invalid template name, expected name to be in camel-case', type: 'MemberExpression' },
+        {
+          message: 'Invalid template name, expected name to be in camel-case',
+          type: 'MemberExpression',
+        },
       ],
     },
     {
       code: 'Template.foo_bar.onRendered',
       errors: [
-        { message: 'Invalid template name, expected name to be in camel-case', type: 'MemberExpression' },
+        {
+          message: 'Invalid template name, expected name to be in camel-case',
+          type: 'MemberExpression',
+        },
       ],
     },
     {
       code: 'Template.foo_bar.onDestroyed',
       errors: [
-        { message: 'Invalid template name, expected name to be in camel-case', type: 'MemberExpression' },
+        {
+          message: 'Invalid template name, expected name to be in camel-case',
+          type: 'MemberExpression',
+        },
       ],
     },
     {
       code: 'Template.foo_bar.events',
       errors: [
-        { message: 'Invalid template name, expected name to be in camel-case', type: 'MemberExpression' },
+        {
+          message: 'Invalid template name, expected name to be in camel-case',
+          type: 'MemberExpression',
+        },
       ],
     },
     {
       code: 'Template.foo_bar.helpers',
       errors: [
-        { message: 'Invalid template name, expected name to be in camel-case', type: 'MemberExpression' },
+        {
+          message: 'Invalid template name, expected name to be in camel-case',
+          type: 'MemberExpression',
+        },
       ],
     },
     {
       code: 'Template.foo_bar.created',
       errors: [
-        { message: 'Invalid template name, expected name to be in camel-case', type: 'MemberExpression' },
+        {
+          message: 'Invalid template name, expected name to be in camel-case',
+          type: 'MemberExpression',
+        },
       ],
     },
     {
       code: 'Template.foo_bar.rendered',
       errors: [
-        { message: 'Invalid template name, expected name to be in camel-case', type: 'MemberExpression' },
+        {
+          message: 'Invalid template name, expected name to be in camel-case',
+          type: 'MemberExpression',
+        },
       ],
     },
     {
       code: 'Template.foo_bar.destroyed',
       errors: [
-        { message: 'Invalid template name, expected name to be in camel-case', type: 'MemberExpression' },
+        {
+          message: 'Invalid template name, expected name to be in camel-case',
+          type: 'MemberExpression',
+        },
       ],
     },
     {
       code: 'Template.foo_bar.helpers({})',
       errors: [
-        { message: 'Invalid template name, expected name to be in camel-case', type: 'MemberExpression' },
+        {
+          message: 'Invalid template name, expected name to be in camel-case',
+          type: 'MemberExpression',
+        },
       ],
     },
     {
       code: 'Template.foo_bar.helpers({})',
       options: ['pascal-case'],
       errors: [
-        { message: 'Invalid template name, expected name to be in pascal-case', type: 'MemberExpression' },
+        {
+          message: 'Invalid template name, expected name to be in pascal-case',
+          type: 'MemberExpression',
+        },
       ],
     },
     {
       code: 'Template["foo-bar"].helpers({})',
       options: ['snake-case'],
       errors: [
-        { message: 'Invalid template name, expected name to be in snake-case', type: 'MemberExpression' },
+        {
+          message: 'Invalid template name, expected name to be in snake-case',
+          type: 'MemberExpression',
+        },
       ],
     },
   ],
-})
+});

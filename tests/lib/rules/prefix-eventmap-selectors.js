@@ -5,10 +5,10 @@
  * See LICENSE file in root directory for full license.
  */
 
-import { RuleTester } from 'eslint'
-import rule from '../../../lib/rules/prefix-eventmap-selectors'
+import { RuleTester } from 'eslint';
+import rule from '../../../lib/rules/prefix-eventmap-selectors';
 
-const ruleTester = new RuleTester()
+const ruleTester = new RuleTester();
 
 ruleTester.run('prefix-eventmap-selectors', rule, {
   valid: [
@@ -66,62 +66,68 @@ ruleTester.run('prefix-eventmap-selectors', rule, {
     {
       code: 'Template.foo.events({"click .foo": function () {}})',
       errors: [
-        { message: 'Expected selector to be prefixed with "js-"', type: 'Literal' },
+        {
+          message: 'Expected selector to be prefixed with "js-"',
+          type: 'Literal',
+        },
       ],
     },
     {
       code: 'Template.foo.events({"click .foo"() {}})',
       parserOptions: { ecmaVersion: 6 },
       errors: [
-        { message: 'Expected selector to be prefixed with "js-"', type: 'Literal' },
+        {
+          message: 'Expected selector to be prefixed with "js-"',
+          type: 'Literal',
+        },
       ],
     },
     {
       code: 'Template.foo.events({"click .foo": () => {}})',
       parserOptions: { ecmaVersion: 6 },
       errors: [
-        { message: 'Expected selector to be prefixed with "js-"', type: 'Literal' },
+        {
+          message: 'Expected selector to be prefixed with "js-"',
+          type: 'Literal',
+        },
       ],
     },
     {
-      code: 'Template.foo.events({"click .js-foo": () => {}, "click .foo": () => {}})',
+      code:
+        'Template.foo.events({"click .js-foo": () => {}, "click .foo": () => {}})',
       parserOptions: { ecmaVersion: 6 },
       errors: [
-        { message: 'Expected selector to be prefixed with "js-"', type: 'Literal' },
+        {
+          message: 'Expected selector to be prefixed with "js-"',
+          type: 'Literal',
+        },
       ],
     },
     // ------------------------------------------------------------------------
     // Strict mode
     // ------------------------------------------------------------------------
     {
-      code: 'Template.foo.events({"click .js-foo": () => {}, "click input": () => {}})',
+      code:
+        'Template.foo.events({"click .js-foo": () => {}, "click input": () => {}})',
       options: ['js-', 'strict'],
       parserOptions: { ecmaVersion: 6 },
-      errors: [
-        { message: 'Expected selector to be a class', type: 'Literal' },
-      ],
+      errors: [{ message: 'Expected selector to be a class', type: 'Literal' }],
     },
     {
       code: 'Template.foo.events({"click": () => {}})',
       options: ['js-', 'strict'],
       parserOptions: { ecmaVersion: 6 },
-      errors: [
-        { message: 'Missing selector', type: 'Literal' },
-      ],
+      errors: [{ message: 'Missing selector', type: 'Literal' }],
     },
     {
       code: 'Template.foo.events({"click #js-xy": function () {}})',
       options: ['js-', 'strict'],
-      errors: [
-        { message: 'Expected selector to be a class', type: 'Literal' },
-      ],
+      errors: [{ message: 'Expected selector to be a class', type: 'Literal' }],
     },
     {
       code: 'Template.foo.events({"click [data-foo=bar]": function () {}})',
       options: ['js-', 'strict'],
-      errors: [
-        { message: 'Expected selector to be a class', type: 'Literal' },
-      ],
+      errors: [{ message: 'Expected selector to be a class', type: 'Literal' }],
     },
     {
       code: `
@@ -136,7 +142,10 @@ ruleTester.run('prefix-eventmap-selectors', rule, {
       parserOptions: { ecmaVersion: 6 },
       errors: [
         { message: 'Missing selector', type: 'Literal' },
-        { message: 'Expected selector to be prefixed with "js-"', type: 'Literal' },
+        {
+          message: 'Expected selector to be prefixed with "js-"',
+          type: 'Literal',
+        },
         { message: 'Expected selector to be a class', type: 'Literal' },
         { message: 'Expected selector to be a class', type: 'Literal' },
       ],
@@ -149,7 +158,10 @@ ruleTester.run('prefix-eventmap-selectors', rule, {
       options: ['bar-'],
       parserOptions: { ecmaVersion: 6 },
       errors: [
-        { message: 'Expected selector to be prefixed with "bar-"', type: 'Literal' },
+        {
+          message: 'Expected selector to be prefixed with "bar-"',
+          type: 'Literal',
+        },
       ],
     },
     // ------------------------------------------------------------------------
@@ -162,4 +174,4 @@ ruleTester.run('prefix-eventmap-selectors', rule, {
       ],
     },
   ],
-})
+});

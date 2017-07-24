@@ -9,20 +9,16 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-import { RuleTester } from 'eslint'
-import rule from '../../../lib/rules/no-session'
+import { RuleTester } from 'eslint';
+import rule from '../../../lib/rules/no-session';
 
 // -----------------------------------------------------------------------------
 // Tests
 // -----------------------------------------------------------------------------
 
-
-const ruleTester = new RuleTester()
+const ruleTester = new RuleTester();
 ruleTester.run('no-session', rule, {
-  valid: [
-    'session.get("foo")',
-    'foo(Session)',
-  ],
+  valid: ['session.get("foo")', 'foo(Session)'],
 
   invalid: [
     {
@@ -31,11 +27,33 @@ ruleTester.run('no-session', rule, {
           Session.set("foo", true)
         }
       `,
-      errors: [{ message: 'Unexpected Session statement', type: 'MemberExpression' }],
+      errors: [
+        { message: 'Unexpected Session statement', type: 'MemberExpression' },
+      ],
     },
-    { code: 'Session.set("foo", true)', errors: [{ message: 'Unexpected Session statement', type: 'MemberExpression' }] },
-    { code: 'Session.get("foo")', errors: [{ message: 'Unexpected Session statement', type: 'MemberExpression' }] },
-    { code: 'Session.clear("foo")', errors: [{ message: 'Unexpected Session statement', type: 'MemberExpression' }] },
-    { code: 'Session.all()', errors: [{ message: 'Unexpected Session statement', type: 'MemberExpression' }] },
+    {
+      code: 'Session.set("foo", true)',
+      errors: [
+        { message: 'Unexpected Session statement', type: 'MemberExpression' },
+      ],
+    },
+    {
+      code: 'Session.get("foo")',
+      errors: [
+        { message: 'Unexpected Session statement', type: 'MemberExpression' },
+      ],
+    },
+    {
+      code: 'Session.clear("foo")',
+      errors: [
+        { message: 'Unexpected Session statement', type: 'MemberExpression' },
+      ],
+    },
+    {
+      code: 'Session.all()',
+      errors: [
+        { message: 'Unexpected Session statement', type: 'MemberExpression' },
+      ],
+    },
   ],
-})
+});

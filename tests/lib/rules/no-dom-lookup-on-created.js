@@ -5,10 +5,10 @@
  * See LICENSE file in root directory for full license.
  */
 
-import { RuleTester } from 'eslint'
-import rule from '../../../lib/rules/no-dom-lookup-on-created'
+import { RuleTester } from 'eslint';
+import rule from '../../../lib/rules/no-dom-lookup-on-created';
 
-const ruleTester = new RuleTester()
+const ruleTester = new RuleTester();
 
 ruleTester.run('no-dom-lookup-on-created', rule, {
   valid: [
@@ -38,7 +38,11 @@ ruleTester.run('no-dom-lookup-on-created', rule, {
         })
       `,
       errors: [
-        { message: 'Accessing DOM from "onCreated" is forbidden. Try from "onRendered" instead.', type: 'CallExpression' },
+        {
+          message:
+            'Accessing DOM from "onCreated" is forbidden. Try from "onRendered" instead.',
+          type: 'CallExpression',
+        },
       ],
     },
     {
@@ -48,8 +52,12 @@ ruleTester.run('no-dom-lookup-on-created', rule, {
         })
       `,
       errors: [
-        { message: 'Accessing DOM from "onCreated" is forbidden. Try from "onRendered" instead.', type: 'CallExpression' },
+        {
+          message:
+            'Accessing DOM from "onCreated" is forbidden. Try from "onRendered" instead.',
+          type: 'CallExpression',
+        },
       ],
     },
   ],
-})
+});

@@ -9,10 +9,10 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-import { RuleTester } from 'eslint'
-import rule from '../../../lib/rules/prefer-session-equals'
+import { RuleTester } from 'eslint';
+import rule from '../../../lib/rules/prefer-session-equals';
 
-const ruleTester = new RuleTester()
+const ruleTester = new RuleTester();
 
 ruleTester.run('prefer-session-equals', rule, {
   valid: [
@@ -86,4 +86,4 @@ ruleTester.run('prefer-session-equals', rule, {
       ],
     },
   ],
-})
+});
