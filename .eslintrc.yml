@@ -1,7 +1,16 @@
 root: true # ignore config in main folder
-extends: airbnb/base
+
+extends:
+  - airbnb/base
+  - prettier
+
 env:
   node: true
+  mocha: true
+
+plugins:
+  - prettier
 
 rules:
-  semi: [2, "never"]
+  prettier/prettier: ["error", {"trailingComma": "es5", "singleQuote": true}]
+  semi: ["error", "always"]
