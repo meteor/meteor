@@ -18,7 +18,7 @@
     "coveralls": "cat ./coverage/lcov.info | coveralls",
     "lint": "eslint ./",
     "prebuild": "npm run clean && mkdir dist",
-    "prepublish": "npm run build",
+    "prepublishOnly": "npm run build",
     "pretest": "npm run lint",
     "rule": "babel scripts/new-rule.js | node",
     "semantic-release": "semantic-release pre && npm publish && semantic-release post",
