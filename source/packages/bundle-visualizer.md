@@ -47,7 +47,7 @@ $ meteor add bundle-visualizer
 $ meteor --production
 ```
 
-If you have Meteor 1.5.1, you can use the `--extra-packages` flag, which will only add the visualizer package to your app temporily.
+If you have Meteor 1.5.1, you can use the `--extra-packages` flag, which will only add the visualizer package to your app temporarily.
 
 ```sh
 $ cd app/
