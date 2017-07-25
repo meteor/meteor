@@ -61,6 +61,7 @@ sidebar_categories:
     - packages/audit-argument-checks
     - packages/bundle-visualizer
     - packages/coffeescript
+    - packages/dynamic-import
     - packages/ecmascript
     - packages/jquery
     - packages/less
