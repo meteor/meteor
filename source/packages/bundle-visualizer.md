@@ -47,6 +47,13 @@ $ meteor add bundle-visualizer
 $ meteor --production
 ```
 
+If you have Meteor 1.5.1, you can use the `--extra-packages` flag, which will only add the visualizer package to your app temporily.
+
+```sh
+$ cd app/
+$ meteor --production --extra-packages bundle-visualizer
+```
+
 ### Viewing
 
 Once enabled, view the application in a web-browser as usual
@@ -61,3 +68,5 @@ application.
 ```sh
 $ meteor remove bundle-visualizer
 ```
+
+If you used the `--extra-packages` flag in Meteor 1.5.1, this step is not necessary.
