@@ -541,6 +541,7 @@ function realpathOrNull(path) {
 // - sourcePath: path to file on disk that will provide our contents
 // - data: contents of the file as a Buffer
 // - hash: optional, sha1 hash of the file contents, if known
+// - sha256: sha256 hash of the file contents
 // - sourceMap: if 'data' is given, can be given instead of
 //   sourcePath. a string or a JS Object. Will be stored as Object.
 // - cacheable
@@ -594,6 +595,15 @@ class File {
     this._contents = options.data || null; // contents, if known, as a Buffer
     this._hashOfContents = options.hash || null;
     this._hash = null;
+
+    this._sha256 = null; // SHA256 hash, as a hex string
+  }
+
+  sha256() {
+    if (! this._sha256) {
+      this._sha256 = watch.sha256(this.contents());
+    }
+    return this._sha256;
   }
 
   toString() {
@@ -1597,6 +1607,7 @@ class ClientTarget extends Target {
       // Set this now, in case we mutated the file's contents.
       manifestItem.size = file.size();
       manifestItem.hash = file.hash();
+      manifestItem.sha256 = file.sha256();
 
       if (! file.targetPath.startsWith("dynamic/")) {
         writeFile(file, builder);
