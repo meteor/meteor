@@ -1,5 +1,17 @@
 ## v.NEXT
 
+* A new package called `mongo-dev-server` has been created and wired into
+  `mongo` as a dependency. As long as this package is included in a Meteor
+  application (which it is by default since all new Meteor apps have `mongo`
+  as a dependency), a local development MongoDB server is started alongside
+  the application. This package was created to provide a way to disable the
+  local development Mongo server, when `mongo` isn't needed (e.g. when using
+  Meteor as a build system only). If an application has no dependency on
+  `mongo`, the `mongo-dev-server` package is not added, which means no local
+  development Mongo server is started.
+  [Feature Request #31](https://github.com/meteor/meteor-feature-requests/issues/31)
+  [PR #8853](https://github.com/meteor/meteor/pull/8853)
+
 * `Accounts.config` no longer mistakenly allows tokens to expire when
   the `loginExpirationInDays` option is set to `null`.
   [Issue #5121](https://github.com/meteor/meteor/issues/5121)
