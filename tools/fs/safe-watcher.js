@@ -17,6 +17,15 @@ if (process.platform === "win32") {
   WATCHER_ENABLED = false;
 }
 
+// Default to prioritizing changed files, but disable that behavior (and
+// thus prioritize all files equally) if METEOR_WATCH_PRIORITIZE_CHANGED
+// is explicitly set to a string that parses to a falsy value.
+var PRIORITIZE_CHANGED = true;
+if (process.env.METEOR_WATCH_PRIORITIZE_CHANGED &&
+    ! JSON.parse(process.env.METEOR_WATCH_PRIORITIZE_CHANGED)) {
+  PRIORITIZE_CHANGED = false;
+}
+
 var DEFAULT_POLLING_INTERVAL =
   ~~process.env.METEOR_WATCH_POLLING_INTERVAL_MS || 5000;
 
@@ -27,16 +36,31 @@ var NO_WATCHER_POLLING_INTERVAL =
 // file watchers, but it's to our advantage if they survive restarts.
 const WATCHER_CLEANUP_DELAY_MS = 30000;
 
-const watchers = Object.create(null);
+const entries = Object.create(null);
 
 // Pathwatcher complains (using console.error, ugh) if you try to watch
 // two files with the same stat.ino number but different paths, so we have
 // to deduplicate files by ino.
-const watchersByIno = new Map;
+const entriesByIno = new Map;
+
+// Set of paths for which a change event has been fired, watched with
+// watchLibrary.watch if available. This could be an LRU cache, but in
+// practice it should never grow large enough for that to matter.
+const changedPaths = new Set;
+
+function hasPriority(absPath) {
+  // If we're not prioritizing changed files, then all files have
+  // priority, which means they should be watched with native file
+  // watchers if the platform supports them. If we are prioritizing
+  // changed files, then only changed files get priority.
+  return PRIORITIZE_CHANGED
+    ? changedPaths.has(absPath)
+    : true;
+}
 
 function acquireWatcher(absPath, callback) {
-  const entry = watchers[absPath] || (
-    watchers[absPath] = startNewWatcher(absPath));
+  const entry = entries[absPath] || (
+    entries[absPath] = startNewWatcher(absPath));
 
   // Watches successfully established in the past may have become invalid
   // because the watched file was deleted or renamed, so we need to make
@@ -53,8 +77,8 @@ function acquireWatcher(absPath, callback) {
 function startNewWatcher(absPath) {
   const stat = statOrNull(absPath);
   const ino = stat && stat.ino;
-  if (ino > 0 && watchersByIno.has(ino)) {
-    return watchersByIno.get(ino);
+  if (ino > 0 && entriesByIno.has(ino)) {
+    return entriesByIno.get(ino);
   }
 
   function safeUnwatch() {
@@ -62,7 +86,7 @@ function startNewWatcher(absPath) {
       watcher.close();
       watcher = null;
       if (ino > 0) {
-        watchersByIno.delete(ino);
+        entriesByIno.delete(ino);
       }
     }
   }
@@ -71,7 +95,22 @@ function startNewWatcher(absPath) {
   const callbacks = new Set;
   let watcherCleanupTimer = null;
   let watcher;
-  let pollingInterval;
+
+  function getPollingInterval() {
+    if (watcher) {
+      return DEFAULT_POLLING_INTERVAL;
+    }
+
+    if (hasPriority(absPath)) {
+      return NO_WATCHER_POLLING_INTERVAL;
+    }
+
+    if (WATCHER_ENABLED) {
+      return DEFAULT_POLLING_INTERVAL;
+    }
+
+    return NO_WATCHER_POLLING_INTERVAL;
+  }
 
   function fire(event) {
     if (event !== "change") {
@@ -86,6 +125,10 @@ function startNewWatcher(absPath) {
       // "delete" or "rename" event, since it is now our only reliable
       // source of file change notifications.
       lastWatcherEventTime = 0;
+
+    } else {
+      changedPaths.add(absPath);
+      rewatch();
     }
 
     callbacks.forEach(cb => cb.call(this, event));
@@ -104,16 +147,15 @@ function startNewWatcher(absPath) {
   }
 
   function rewatch() {
-    if (watcher) {
-      // Already watching; nothing to do.
-      return;
+    if (hasPriority(absPath)) {
+      if (watcher) {
+        // Already watching; nothing to do.
+        return;
+      }
+      watcher = watchLibraryWatch(absPath, watchWrapper);
+    } else if (watcher) {
+      safeUnwatch();
     }
-
-    watcher = watchLibraryWatch(absPath, watchWrapper);
-
-    pollingInterval = watcher
-      ? DEFAULT_POLLING_INTERVAL
-      : NO_WATCHER_POLLING_INTERVAL;
 
     // This is a no-op if we're not watching the file.
     unwatchFile(absPath, watchFileWrapper);
@@ -125,7 +167,7 @@ function startNewWatcher(absPath) {
     // CPU cycles.
     watchFile(absPath, {
       persistent: false,
-      interval: pollingInterval,
+      interval: getPollingInterval(),
     }, watchFileWrapper);
   }
 
@@ -142,19 +184,17 @@ function startNewWatcher(absPath) {
 
     // If a watcher event fired in the last polling interval, ignore
     // this event.
-    if (new Date - lastWatcherEventTime > pollingInterval) {
+    if (new Date - lastWatcherEventTime > getPollingInterval()) {
       fire.call(this, "change");
     }
   }
-
-  rewatch();
 
   const entry = {
     callbacks,
     rewatch,
 
     release(callback) {
-      if (! watchers[absPath]) {
+      if (! entries[absPath]) {
         return;
       }
 
@@ -177,8 +217,8 @@ function startNewWatcher(absPath) {
     },
 
     close() {
-      if (watchers[absPath] !== entry) return;
-      watchers[absPath] = null;
+      if (entries[absPath] !== entry) return;
+      entries[absPath] = null;
 
       if (watcherCleanupTimer) {
         clearTimeout(watcherCleanupTimer);
@@ -192,15 +232,15 @@ function startNewWatcher(absPath) {
   };
 
   if (ino > 0) {
-    watchersByIno.set(ino, entry);
+    entriesByIno.set(ino, entry);
   }
 
   return entry;
 }
 
 export function closeAllWatchers() {
-  Object.keys(watchers).forEach(absPath => {
-    const entry = watchers[absPath];
+  Object.keys(entries).forEach(absPath => {
+    const entry = entries[absPath];
     if (entry) {
       entry.close();
     }

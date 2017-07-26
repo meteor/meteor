@@ -187,6 +187,20 @@ Tinytest.add('ejson - parse', test => {
   );
 });
 
+
+Tinytest.add("ejson - regexp", function (test) {
+  test.equal(
+    EJSON.stringify(/foo/gi),
+    "{\"$regexp\":\"foo\",\"$flags\":\"gi\"}"
+  );
+  var d = new RegExp("foo", "gi");
+  var obj = { $regexp: "foo", $flags: "gi" };
+
+  var eObj = EJSON.toJSONValue(obj);
+  var roundTrip = EJSON.fromJSONValue(eObj);
+  test.equal(obj, roundTrip);
+});
+
 Tinytest.add('ejson - custom types', test => {
   const testSameConstructors = (someObj, compareWith) => {
     test.equal(someObj.constructor, compareWith.constructor);

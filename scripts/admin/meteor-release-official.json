@@ -1,6 +1,6 @@
 {
   "track": "METEOR",
-  "version": "1.5",
+  "version": "1.5.1",
   "recommended": false,
   "official": true,
   "description": "The Official Meteor Distribution"

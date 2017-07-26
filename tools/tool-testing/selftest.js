@@ -1045,7 +1045,13 @@ _.extend(PhantomClient.prototype, {
       files.convertToOSPath(scriptPath), self.url],
       {}, function (error, stdout, stderr) {
         if (self._logError && error) {
-          console.log("PhantomJS exited with error ", error, "\nstdout:\n", stdout, "\nstderr:\n", stderr);
+          console.log(
+            "PhantomJS exited with error ", error,
+            "\nstdout:\n", stdout,
+            "\nstderr:\n", stderr
+          );
+        } else if (stderr) {
+          console.log("PhantomJS stderr:\n", stderr);
         }
       });
   },

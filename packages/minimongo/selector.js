@@ -775,8 +775,7 @@ ELEMENT_OPERATORS = {
       var regexp;
       if (valueSelector.$options !== undefined) {
         // Options passed in $options (even the empty string) always overrides
-        // options in the RegExp object itself. (See also
-        // Mongo.Collection._rewriteSelector.)
+        // options in the RegExp object itself. 
 
         // Be clear that we only support the JS-supported options, not extended
         // ones (eg, Mongo supports x and s). Ideally we would implement x and s
@@ -1249,34 +1248,4 @@ LocalCollection._f = {
       throw Error("Sorting not supported on Javascript code"); // XXX
     throw Error("Unknown type to sort");
   }
-};
-
-const objectOnlyHasDollarKeys = (object) => {
-  const keys = Object.keys(object);
-  return keys.length > 0 && keys.every(key => key.charAt(0) === '$');
-};
-
-// When performing an upsert, the incoming selector object can be re-used as
-// the upsert modifier object, as long as Mongo query and projection
-// operators (prefixed with a $ character) are removed from the newly
-// created modifier object. This function attempts to strip all $ based Mongo
-// operators when creating the upsert modifier object.
-// NOTE: There is a known issue here in that some Mongo $ based opeartors
-// should not actually be stripped.
-// See https://github.com/meteor/meteor/issues/8806.
-LocalCollection._removeDollarOperators = (selector) => {
-  let cleansed = {};
-  Object.keys(selector).forEach((key) => {
-    const value = selector[key];
-    if (key.charAt(0) !== '$' && !objectOnlyHasDollarKeys(value)) {
-      if (value !== null
-          && value.constructor
-          && Object.getPrototypeOf(value) === Object.prototype) {
-        cleansed[key] = LocalCollection._removeDollarOperators(value);
-      } else {
-        cleansed[key] = value;
-      }
-    }
-  });
-  return cleansed;
 };

@@ -100,6 +100,8 @@ selftest.define("change packages during hot code push", [], function () {
   var s = new Sandbox();
   var run;
 
+  s.set("METEOR_WATCH_PRIORITIZE_CHANGED", "false");
+
   // Starting a run
   s.createApp("myapp", "package-tests");
   s.cd("myapp");
@@ -107,6 +109,7 @@ selftest.define("change packages during hot code push", [], function () {
   run.waitSecs(5);
   run.match("myapp");
   run.match("proxy");
+  run.waitSecs(5);
   run.match("MongoDB");
   run.waitSecs(5);
   run.match("your app");

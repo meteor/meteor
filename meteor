@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-BUNDLE_VERSION=4.8.18
+BUNDLE_VERSION=4.8.21
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
@@ -132,4 +132,7 @@ fi
 # the script take precedence over $NODE_PATH; it used to be that users would
 # screw up their meteor installs by have a ~/node_modules
 
-exec "$DEV_BUNDLE/bin/node" ${TOOL_NODE_FLAGS} "$METEOR" "$@"
+exec "$DEV_BUNDLE/bin/node" \
+     --expose-gc \
+     ${TOOL_NODE_FLAGS} \
+     "$METEOR" "$@"
