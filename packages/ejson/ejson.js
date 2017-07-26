@@ -105,22 +105,31 @@ const builtinConverters = [
     },
   },
   { // RegExp
-    matchJSONValue: function (obj) {
-      return _.has(obj, '$regexp') && _.has(obj, '$flags') && _.size(obj) === 2;
+    matchJSONValue(obj) {
+      return hasOwn(obj, '$regexp')
+        && hasOwn(obj, '$flags')
+        && Object.keys(obj).length === 2;
     },
-    matchObject: function (obj) {
+    matchObject(obj) {
       return obj instanceof RegExp;
     },
-    toJSONValue: function (regexp) {
-      return { $regexp: regexp.source, $flags: regexp.flags };
+    toJSONValue(regexp) {
+      return {
+        $regexp: regexp.source,
+        $flags: regexp.flags
+      };
     },
-    fromJSONValue: function (obj) {
-      // replaces duplicate / invalid flags
-      // cut of flags to 50 chars to avoid abusing regex for DOS
-      return new RegExp(obj.$regexp, obj.$flags.substr(0, 50)
-                                               .replace(/[^gimuy]/g,'')
-                                               .replace(/(.)(?=.*\1)/g, ''));
-    }
+    fromJSONValue(obj) {
+      // Replaces duplicate / invalid flags.
+      return new RegExp(
+        obj.$regexp,
+        obj.$flags
+          // Cut off flags at 50 chars to avoid abusing RegExp for DOS.
+          .slice(0, 50)
+          .replace(/[^gimuy]/g,'')
+          .replace(/(.)(?=.*\1)/g, '')
+      );
+    },
   },
   { // NaN, Inf, -Inf. (These are the only objects with typeof !== 'object'
     // which we match.)
