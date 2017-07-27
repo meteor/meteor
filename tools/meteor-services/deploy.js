@@ -58,7 +58,7 @@ const CAPABILITIES = ['showDeployMessages', 'canTransferAuthorization'];
 //   derived from either a transport-level exception, the response
 //   body, or a generic 'try again later' message, as appropriate
 
-var deployRpc = function (options) {
+function deployRpc(options) {
   options = _.clone(options);
   options.headers = _.clone(options.headers || {});
   if (options.headers.cookie) {
@@ -152,7 +152,7 @@ var deployRpc = function (options) {
 //   accounts server but our authentication actually fails, then prompt
 //   the user to log in with a username and password and then resend the
 //   RPC.
-var authedRpc = function (options) {
+function authedRpc(options) {
   var rpcOptions = _.clone(options);
   var preflight = rpcOptions.preflight;
   delete rpcOptions.preflight;
@@ -243,7 +243,7 @@ var authedRpc = function (options) {
 // When the user is trying to do something with an app that they are not
 // authorized for, instruct them to get added via 'meteor authorized
 // --add' or switch accounts.
-var printUnauthorizedMessage = function () {
+function printUnauthorizedMessage() {
   var username = auth.loggedInUsername();
   Console.error("Sorry, that site belongs to a different user.");
   if (username) {
@@ -261,7 +261,7 @@ var printUnauthorizedMessage = function () {
 // syntactically good, canonicalize it (this essentially means
 // stripping 'http://' or a trailing '/' if present) and return it. If
 // not, print an error message to stderr and return null.
-var canonicalizeSite = function (site) {
+function canonicalizeSite(site) {
   // There are actually two different bugs here. One is that the meteor deploy
   // server does not support apps whose total site length is greater than 63
   // (because of how it generates Mongo database names); that can be fixed on
@@ -314,7 +314,7 @@ var canonicalizeSite = function (site) {
 //   stats server.
 // - buildOptions: the 'buildOptions' argument to the bundler
 // - rawOptions: any unknown options that were passed to the command line tool
-var bundleAndDeploy = function (options) {
+export function bundleAndDeploy(options) {
   if (options.recordPackageUsage === undefined) {
     options.recordPackageUsage = true;
   }
@@ -452,7 +452,7 @@ var bundleAndDeploy = function (options) {
   return 0;
 };
 
-var deleteApp = function (site) {
+export function deleteApp(site) {
   site = canonicalizeSite(site);
   if (! site) {
     return 1;
@@ -483,7 +483,7 @@ var deleteApp = function (site) {
 // messages.  Returns the result of the RPC if successful, or null
 // otherwise (including if auth failed or if the user is not authorized
 // for this site).
-var checkAuthThenSendRpc = function (site, operation, what) {
+function checkAuthThenSendRpc(site, operation, what) {
   var preflight = authedRpc({
     operation: operation,
     site: site,
@@ -550,7 +550,7 @@ var checkAuthThenSendRpc = function (site, operation, what) {
 // On failure, prints a message to stderr and returns null. Otherwise,
 // returns a temporary authenticated Mongo URL allowing access to this
 // site's database.
-var temporaryMongoUrl = function (site) {
+export function temporaryMongoUrl(site) {
   site = canonicalizeSite(site);
   if (! site) {
     // canonicalizeSite printed an error
@@ -566,7 +566,7 @@ var temporaryMongoUrl = function (site) {
   }
 };
 
-var logs = function (site) {
+export function logs(site) {
   site = canonicalizeSite(site);
   if (! site) {
     return 1;
@@ -583,7 +583,7 @@ var logs = function (site) {
   }
 };
 
-var listAuthorized = function (site) {
+export function listAuthorized(site) {
   site = canonicalizeSite(site);
   if (! site) {
     return 1;
@@ -627,7 +627,7 @@ var listAuthorized = function (site) {
 };
 
 // action is "add", "transfer" or "remove"
-var changeAuthorized = function (site, action, username) {
+export function changeAuthorized(site, action, username) {
   site = canonicalizeSite(site);
   if (! site) {
     // canonicalizeSite will have already printed an error
@@ -657,7 +657,7 @@ var changeAuthorized = function (site, action, username) {
   return 0;
 };
 
-var listSites = function () {
+export function listSites() {
   var result = deployRpc({
     method: "GET",
     operation: "authorized-apps",
@@ -759,11 +759,3 @@ async function discoverGalaxy(site, scheme) {
   }
   return body.deployURL;
 }
-
-exports.bundleAndDeploy = bundleAndDeploy;
-exports.deleteApp = deleteApp;
-exports.temporaryMongoUrl = temporaryMongoUrl;
-exports.logs = logs;
-exports.listAuthorized = listAuthorized;
-exports.changeAuthorized = changeAuthorized;
-exports.listSites = listSites;
