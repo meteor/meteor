@@ -205,36 +205,6 @@ var authedRpc = function (options) {
     return preflight ? { } : deployRpc(rpcOptions);
   }
 
-  if (info.protection === "password") {
-    if (preflight) {
-      return { protection: info.protection };
-    }
-    // Password protected. Read a password, hash it, and include the
-    // hashed password as a query parameter when doing the RPC.
-    var password;
-    password = Console.readLine({
-      echo: false,
-      prompt: "Password: ",
-      stream: process.stderr
-    });
-
-    // Hash the password so we never send plaintext over the
-    // wire. Doesn't actually make us more secure, but it means we
-    // won't leak a user's password, which they might use on other
-    // sites too.
-    var crypto = require('crypto');
-    var hash = crypto.createHash('sha1');
-    hash.update('S3krit Salt!');
-    hash.update(password);
-    password = hash.digest('hex');
-
-    rpcOptions = _.clone(rpcOptions);
-    rpcOptions.qs = _.clone(rpcOptions.qs || {});
-    rpcOptions.qs.password = password;
-
-    return deployRpc(rpcOptions);
-  }
-
   if (info.protection === "account") {
     if (! _.has(info, 'authorized')) {
       // Absence of this implies that we are not an authorized user on
@@ -399,12 +369,7 @@ var bundleAndDeploy = function (options) {
     return 1;
   }
 
-  if (preflight.protection === "password") {
-    printLegacyPasswordMessage(site);
-    Console.error("If it's not your site, please try a different name!");
-    return 1;
-
-  } else if (preflight.protection === "account" &&
+  if (preflight.protection === "account" &&
              ! preflight.authorized) {
     printUnauthorizedMessage();
     return 1;
@@ -547,10 +512,7 @@ var checkAuthThenSendRpc = function (site, operation, what) {
     return null;
   }
 
-  if (preflight.protection === "password") {
-    printLegacyPasswordMessage(site);
-    return null;
-  } else if (preflight.protection === "account" &&
+  if (preflight.protection === "account" &&
              ! preflight.authorized) {
     if (! auth.isLoggedIn()) {
       // Maybe the user is authorized for this app but not logged in
@@ -656,11 +618,6 @@ var listAuthorized = function (site) {
 
   if (! _.has(info, 'protection')) {
     Console.info("<anyone>");
-    return 0;
-  }
-
-  if (info.protection === "password") {
-    Console.info("<password>");
     return 0;
   }
 
