@@ -121,11 +121,13 @@ const builtinConverters = [
     },
     fromJSONValue(obj) {
       // Replaces duplicate / invalid flags
+      // Cut off flags to 50 chars to avoid abusing regex for DOS
+      const flags = obj.$flags.substr(0, 50);
       return new RegExp(
         obj.$regexp,
-        obj.$flags.replace(/[^gimuy]/g,'').replace(/(.)(?=.*\1)/g, '')
+        flags.replace(/[^gimuy]/g,'').replace(/(.)(?=.*\1)/g, '')
       );
-    },
+    }
   },
   { // NaN, Inf, -Inf. (These are the only objects with typeof !== 'object'
     // which we match.)
