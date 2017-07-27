@@ -66,7 +66,7 @@ function deployRpc(options) {
   if (options.headers.cookie) {
     throw new Error("sorry, can't combine cookie headers yet");
   }
-  options.qs = _.extend({}, options.qs, {capabilities: CAPABILITIES});
+  options.qs = Object.assign({}, options.qs, {capabilities: CAPABILITIES});
 
   const deployURLBase = getDeployURL(options.site).await();
 
@@ -410,7 +410,7 @@ export function bundleAndDeploy(options) {
       method: 'POST',
       operation: 'deploy',
       site: site,
-      qs: _.extend({}, options.rawOptions, settings !== null ? {settings: settings} : {}),
+      qs: Object.assign({}, options.rawOptions, settings !== null ? {settings: settings} : {}),
       bodyStream: files.createTarGzStream(files.pathJoin(buildDir, 'bundle')),
       expectPayload: ['url'],
       preflightPassword: preflight.preflightPassword,
