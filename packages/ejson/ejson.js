@@ -105,8 +105,11 @@ var builtinConverters = [
       return { $regexp: regexp.source, $flags: regexp.flags };
     },
     fromJSONValue: function (obj) {
-      //replaces duplicate / invalid flags
-      return new RegExp(obj.$regexp, obj.$flags.replace(/[^gimuy]/g,'').replace(/(.)(?=.*\1)/g, ''));
+      // replaces duplicate / invalid flags
+      // cut of flags to 50 chars to avoid abusing regex for DOS
+      return new RegExp(obj.$regexp, obj.$flags.substr(0, 50)
+                                               .replace(/[^gimuy]/g,'')
+                                               .replace(/(.)(?=.*\1)/g, ''));
     }
   },
   { // NaN, Inf, -Inf. (These are the only objects with typeof !== 'object'
