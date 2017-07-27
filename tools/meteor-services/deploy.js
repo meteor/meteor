@@ -4,14 +4,24 @@
 // prompt for password
 // send RPC with or without password as required
 
-var files = require('../fs/files.js');
-var httpHelpers = require('../utils/http-helpers.js');
-var buildmessage = require('../utils/buildmessage.js');
-var config = require('./config.js');
-var auth = require('./auth.js');
-var _ = require('underscore');
-var stats = require('./stats.js');
-var Console = require('../console/console.js').Console;
+import {
+  pathJoin,
+  createTarGzStream,
+  getSettings,
+  mkdtemp,
+} from '../fs/files.js';
+import { request } from '../utils/http-helpers.js';
+import buildmessage from '../utils/buildmessage.js';
+import {
+  pollForRegistrationCompletion,
+  doInteractivePasswordLogin,
+  loggedInUsername,
+  isLoggedIn,
+  maybePrintRegistrationLink,
+} from './auth.js';
+import _ from 'underscore';
+import { recordPackages } from './stats.js';
+import { Console } from '../console/console.js';
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
@@ -76,7 +86,7 @@ function deployRpc(options) {
 
   // XXX: Reintroduce progress for upload
   try {
-    var result = httpHelpers.request(_.extend(options, {
+    var result = request(Object.assign(options, {
       url: deployURLBase + '/' + options.operation +
         (options.site ? ('/' + options.site) : ''),
       method: options.method || 'GET',
@@ -180,7 +190,7 @@ function authedRpc(options) {
       username: username,
       suppressErrorMessage: true
     };
-    if (auth.doInteractivePasswordLogin(loginOptions)) {
+    if (doInteractivePasswordLogin(loginOptions)) {
       return authedRpc(options);
     } else {
       return {
@@ -216,7 +226,7 @@ function authedRpc(options) {
       } else {
         return {
           statusCode: null,
-          errorMessage: auth.isLoggedIn() ?
+          errorMessage: isLoggedIn() ?
             // XXX better error message (probably need to break out of
             // the 'errorMessage printed with brief prefix' pattern)
             "Not an authorized user on this site" :
@@ -246,7 +256,7 @@ function authedRpc(options) {
 // authorized for, instruct them to get added via 'meteor authorized
 // --add' or switch accounts.
 function printUnauthorizedMessage() {
-  var username = auth.loggedInUsername();
+  var username = loggedInUsername();
   Console.error("Sorry, that site belongs to a different user.");
   if (username) {
     Console.error("You are currently logged in as " + username + ".");
@@ -336,10 +346,10 @@ export function bundleAndDeploy(options) {
   // they'll get an email prompt instead of a username prompt because
   // the command-line tool didn't have time to learn about their
   // username before the credential was expired.
-  auth.pollForRegistrationCompletion({
+  pollForRegistrationCompletion({
     noLogout: true
   });
-  var promptIfAuthFails = (auth.loggedInUsername() !== null);
+  var promptIfAuthFails = (loggedInUsername() !== null);
 
   // Check auth up front, rather than after the (potentially lengthy)
   // bundling process.
@@ -362,8 +372,8 @@ export function bundleAndDeploy(options) {
     return 1;
   }
 
-  var buildDir = files.mkdtemp('build_tar');
-  var bundlePath = files.pathJoin(buildDir, 'bundle');
+  var buildDir = mkdtemp('build_tar');
+  var bundlePath = pathJoin(buildDir, 'bundle');
 
   Console.info('Deploying your app...');
 
@@ -373,7 +383,7 @@ export function bundleAndDeploy(options) {
     rootPath: process.cwd()
   }, function () {
     if (options.settingsFile) {
-      settings = files.getSettings(options.settingsFile);
+      settings = getSettings(options.settingsFile);
     }
   });
 
@@ -398,7 +408,7 @@ export function bundleAndDeploy(options) {
   }
 
   if (options.recordPackageUsage) {
-    stats.recordPackages({
+    recordPackages({
       what: "sdk.deploy",
       projectContext: options.projectContext,
       site: site
@@ -411,7 +421,7 @@ export function bundleAndDeploy(options) {
       operation: 'deploy',
       site: site,
       qs: Object.assign({}, options.rawOptions, settings !== null ? {settings: settings} : {}),
-      bodyStream: files.createTarGzStream(files.pathJoin(buildDir, 'bundle')),
+      bodyStream: createTarGzStream(pathJoin(buildDir, 'bundle')),
       expectPayload: ['url'],
       preflightPassword: preflight.preflightPassword,
       // Disable the HTTP timeout for this POST request.
@@ -501,10 +511,10 @@ function checkAuthThenSendRpc(site, operation, what) {
 
   if (preflight.protection === "account" &&
              ! preflight.authorized) {
-    if (! auth.isLoggedIn()) {
+    if (! isLoggedIn()) {
       // Maybe the user is authorized for this app but not logged in
       // yet, so give them a login prompt.
-      var loginResult = auth.doUsernamePasswordLogin({ retry: true });
+      var loginResult = doUsernamePasswordLogin({ retry: true });
       if (loginResult) {
         // Once we've logged in, retry the whole operation. We need to
         // do the preflight request again instead of immediately moving
@@ -580,7 +590,7 @@ export function logs(site) {
     return 1;
   } else {
     Console.info(result.message);
-    auth.maybePrintRegistrationLink({ leadingNewline: true });
+    maybePrintRegistrationLink({ leadingNewline: true });
     return 0;
   }
 };
@@ -615,7 +625,7 @@ export function listAuthorized(site) {
       return 1;
     }
 
-    Console.info((auth.loggedInUsername() || "<you>"));
+    Console.info((loggedInUsername() || "<you>"));
     _.each(info.authorized, function (username) {
       if (username) {
         // Current username rules don't let you register anything that we might
@@ -738,7 +748,7 @@ async function discoverGalaxy(site, scheme) {
           scheme + "://" + site + "/.well-known/meteor/deploy-url";
   // If httpHelpers.request throws, the returned Promise will reject, which is
   // fine.
-  const { response, body } = httpHelpers.request({
+  const { response, body } = request({
     url: discoveryURL,
     json: true,
     strictSSL: true,
