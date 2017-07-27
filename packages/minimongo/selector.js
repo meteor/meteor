@@ -142,10 +142,15 @@ var compileDocumentSelector = function (docSelector, matcher, options) {
       var lookUpByIndex = makeLookupFunction(key);
       var valueMatcher =
         compileValueSelector(subSelector, matcher, options.isRoot);
-      docMatchers.push(function (doc) {
-        var branchValues = lookUpByIndex(doc);
-        return valueMatcher(branchValues);
-      });
+      // Don't add a matcher if subSelector is a function -- this is to match
+      // the behavior of Meteor on the server (inherited from the node mongodb
+      // driver), which is to ignore any part of a selector which is a function.
+      if (typeof subSelector !== 'function') {
+        docMatchers.push(function (doc) {
+          var branchValues = lookUpByIndex(doc);
+          return valueMatcher(branchValues);
+        });
+      }
     }
   });
 
