@@ -129,10 +129,10 @@ function deployRpc(options) {
     ret.message = body;
   }
 
-  var hasAllExpectedKeys = _.all(_.map(
-    options.expectPayload || [], function (key) {
-      return ret.payload && hasOwn.call(ret.payload, key);
-    }));
+  const hasAllExpectedKeys =
+    (options.expectPayload || [])
+      .map(key => ret.payload && hasOwn.call(ret.payload, key))
+      .every(x => x);
 
   if ((options.expectPayload && ! hasOwn.call(ret, 'payload')) ||
       (options.expectMessage && ! hasOwn.call(ret, 'message')) ||
@@ -626,7 +626,7 @@ export function listAuthorized(site) {
     }
 
     Console.info((loggedInUsername() || "<you>"));
-    _.each(info.authorized, function (username) {
+    info.authorized.forEach(username => {
       if (username) {
         // Current username rules don't let you register anything that we might
         // want to split over multiple lines (ex: containing a space), but we
@@ -687,10 +687,9 @@ export function listSites() {
       ! result.payload.sites.length) {
     Console.info("You don't have any sites yet.");
   } else {
-    result.payload.sites.sort();
-    _.each(result.payload.sites, function (site) {
-      Console.info(site);
-    });
+    result.payload.sites
+      .sort()
+      .forEach(site => Console.info(site));
   }
   return 0;
 };
