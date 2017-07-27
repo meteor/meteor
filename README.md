@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/percolatestudio/meteor-migrations.svg?branch=master)](https://travis-ci.org/percolatestudio/meteor-migrations)
 
-A simple migration system for [Meteor](http://meteor.com) supporting up/downwards migrations and command line usage.
+A simple migration system for [Meteor](http://meteor.com) supporting up/downwards migrations and command line usage. There is also [a fork available](https://github.com/emmanuelbuah/mgdb-migrator) for use outside of Meteor.
 
 ## Installation
 
