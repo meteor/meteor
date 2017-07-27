@@ -12,6 +12,7 @@ meteorJsMinify = function (source) {
         drop_debugger: false,
         unused: false,
         dead_code: false,
+        collapse_vars: false,
         global_defs: {
           "process.env.NODE_ENV": NODE_ENV
         }
