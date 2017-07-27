@@ -240,21 +240,6 @@ var authedRpc = function (options) {
   };
 };
 
-// When the user is trying to do something with a legacy
-// password-protected app, instruct them to claim it with 'meteor
-// claim'.
-var printLegacyPasswordMessage = function (site) {
-  Console.error(
-    "\nThis site was deployed with an old version of Meteor that used " +
-    "site passwords instead of user accounts. Now we have a much better " +
-    "system, Meteor developer accounts.");
-  Console.error();
-  Console.error("If this is your site, please claim it into your account with");
-  Console.error(
-    Console.command("meteor claim " + site),
-    Console.options({ indent: 2 }));
-};
-
 // When the user is trying to do something with an app that they are not
 // authorized for, instruct them to get added via 'meteor authorized
 // --add' or switch accounts.
@@ -672,88 +657,6 @@ var changeAuthorized = function (site, action, username) {
   return 0;
 };
 
-var claim = function (site) {
-  site = canonicalizeSite(site);
-  if (! site) {
-    // canonicalizeSite will have already printed an error
-    return 1;
-  }
-
-  // Check to see if it's even a claimable site, so that we can print
-  // a more appropriate message than we'd get if we called authedRpc
-  // straight away (at a cost of an extra REST call)
-  var infoResult = deployRpc({
-    operation: 'info',
-    site: site,
-    printDeployURL: true
-  });
-  if (infoResult.statusCode === 404) {
-    Console.error(
-      "There isn't a site deployed at that address. Use " +
-      Console.command("'meteor deploy'") + " " +
-      "if you'd like to deploy your app here.");
-    return 1;
-  }
-
-  if (infoResult.payload && infoResult.payload.protection === "account") {
-    if (infoResult.payload.authorized) {
-      Console.error("That site already belongs to you.\n");
-    } else {
-      Console.error("Sorry, that site belongs to someone else.\n");
-    }
-    return 1;
-  }
-
-  if (infoResult.payload &&
-      infoResult.payload.protection === "password") {
-    Console.info(
-      "To claim this site and transfer it to your account, enter the",
-      "site password one last time.");
-    Console.info();
-  }
-
-  var result = authedRpc({
-    method: 'POST',
-    operation: 'claim',
-    site: site,
-    promptIfAuthFails: true
-  });
-
-  if (result.errorMessage) {
-    auth.pollForRegistrationCompletion();
-    if (! auth.loggedInUsername() &&
-        auth.registrationUrl()) {
-      Console.error(
-        "You need to set a password on your Meteor developer account before",
-        "you can claim sites. You can do that here in under a minute:");
-      Console.error(Console.url(auth.registrationUrl()));
-      Console.error();
-    } else {
-      Console.error("Couldn't claim site: " + result.errorMessage);
-    }
-    return 1;
-  }
-
-  Console.info(site + ": " + "successfully transferred to your account.");
-  Console.info();
-  Console.info("Show authorized users with:");
-  Console.info(
-    Console.command("meteor authorized " + site),
-    Console.options({ indent: 2 }));
-  Console.info();
-  Console.info("Add authorized users with:");
-  Console.info(
-    Console.command("meteor authorized " + site + " --add <username>"),
-    Console.options({ indent: 2 }));
-  Console.info();
-  Console.info("Remove authorized users with:");
-  Console.info(
-    Console.command("meteor authorized " + site + " --remove <username>"),
-    Console.options({ indent: 2 }));
-  Console.info();
-  return 0;
-};
-
 var listSites = function () {
   var result = deployRpc({
     method: "GET",
@@ -863,5 +766,4 @@ exports.temporaryMongoUrl = temporaryMongoUrl;
 exports.logs = logs;
 exports.listAuthorized = listAuthorized;
 exports.changeAuthorized = changeAuthorized;
-exports.claim = claim;
 exports.listSites = listSites;
