@@ -19,7 +19,7 @@ import {
   isLoggedIn,
   maybePrintRegistrationLink,
 } from './auth.js';
-import _ from 'underscore';
+import { clone } from 'underscore';
 import { recordPackages } from './stats.js';
 import { Console } from '../console/console.js';
 
@@ -71,8 +71,8 @@ const CAPABILITIES = ['showDeployMessages', 'canTransferAuthorization'];
 //   body, or a generic 'try again later' message, as appropriate
 
 function deployRpc(options) {
-  options = _.clone(options);
-  options.headers = _.clone(options.headers || {});
+  options = clone(options);
+  options.headers = clone(options.headers || {});
   if (options.headers.cookie) {
     throw new Error("sorry, can't combine cookie headers yet");
   }
@@ -165,7 +165,7 @@ function deployRpc(options) {
 //   the user to log in with a username and password and then resend the
 //   RPC.
 function authedRpc(options) {
-  var rpcOptions = _.clone(options);
+  var rpcOptions = clone(options);
   var preflight = rpcOptions.preflight;
   delete rpcOptions.preflight;
 
