@@ -13,6 +13,8 @@ var _ = require('underscore');
 var stats = require('./stats.js');
 var Console = require('../console/console.js').Console;
 
+const hasOwn = Object.prototype.hasOwnProperty;
+
 const CAPABILITIES = ['showDeployMessages', 'canTransferAuthorization'];
 
 // Make a synchronous RPC to the "classic" MDG deploy API. The deploy
@@ -119,11 +121,11 @@ function deployRpc(options) {
 
   var hasAllExpectedKeys = _.all(_.map(
     options.expectPayload || [], function (key) {
-      return ret.payload && _.has(ret.payload, key);
+      return ret.payload && hasOwn.call(ret.payload, key);
     }));
 
-  if ((options.expectPayload && ! _.has(ret, 'payload')) ||
-      (options.expectMessage && ! _.has(ret, 'message')) ||
+  if ((options.expectPayload && ! hasOwn.call(ret, 'payload')) ||
+      (options.expectMessage && ! hasOwn.call(ret, 'message')) ||
       ! hasAllExpectedKeys) {
     delete ret.payload;
     delete ret.message;
@@ -198,7 +200,7 @@ function authedRpc(options) {
   }
   var info = infoResult.payload;
 
-  if (! _.has(info, 'protection')) {
+  if (! hasOwn.call(info, 'protection')) {
     // Not protected.
     //
     // XXX should prompt the user to claim the app (only if deploying?)
@@ -206,7 +208,7 @@ function authedRpc(options) {
   }
 
   if (info.protection === "account") {
-    if (! _.has(info, 'authorized')) {
+    if (! hasOwn.call(info, 'authorized')) {
       // Absence of this implies that we are not an authorized user on
       // this app
       if (preflight) {
@@ -601,13 +603,13 @@ export function listAuthorized(site) {
   }
   var info = result.payload;
 
-  if (! _.has(info, 'protection')) {
+  if (! hasOwn.call(info, 'protection')) {
     Console.info("<anyone>");
     return 0;
   }
 
   if (info.protection === "account") {
-    if (! _.has(info, 'authorized')) {
+    if (! hasOwn.call(info, 'authorized')) {
       Console.error("Couldn't get authorized users list: " +
                     "You are not authorized");
       return 1;
@@ -754,7 +756,7 @@ async function discoverGalaxy(site, scheme) {
     throw new Error(
       "unexpected galaxyDiscoveryVersion: " + body.galaxyDiscoveryVersion);
   }
-  if (!_.has(body, "deployURL")) {
+  if (! hasOwn.call(body, "deployURL")) {
     throw new Error("no deployURL");
   }
   return body.deployURL;
