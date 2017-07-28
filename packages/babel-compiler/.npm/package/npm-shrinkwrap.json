@@ -456,9 +456,9 @@
       "integrity": "sha1-fhDhOi9xBlvfrVoXh7pFvKbe118="
     },
     "babel-runtime": {
-      "version": "6.23.0",
-      "resolved": "https://registry.npmjs.org/babel-runtime/-/babel-runtime-6.23.0.tgz",
-      "integrity": "sha1-CpSJ8UTecO+zzkMArM2zKeL8VDs="
+      "version": "6.25.0",
+      "resolved": "https://registry.npmjs.org/babel-runtime/-/babel-runtime-6.25.0.tgz",
+      "integrity": "sha1-M7mOql1IK7AajRqmtDetKwGuxBw="
     },
     "babel-template": {
       "version": "6.25.0",
@@ -591,9 +591,9 @@
       "integrity": "sha1-0aitM/qc4OcT1l/dCsi3SNR4yEg="
     },
     "meteor-babel": {
-      "version": "0.24.4",
-      "resolved": "https://registry.npmjs.org/meteor-babel/-/meteor-babel-0.24.4.tgz",
-      "integrity": "sha512-N5kOeFrnCWXUNDLpon2AiDc+wLSA1s3Eh69mKlehskhBRycXoGmtfAIFL39VD0qLiKtLXuwK6GJL/+ZvUvllww=="
+      "version": "0.24.5",
+      "resolved": "https://registry.npmjs.org/meteor-babel/-/meteor-babel-0.24.5.tgz",
+      "integrity": "sha512-rq86PA/TsYxjFFzMO7TGVd+ZA3ct9G+FZJZc9DfYJj0AJg2xwp4lYR0YIVMppVASK4eU71YK1P0mBvEG3j6rFw=="
     },
     "meteor-babel-helpers": {
       "version": "0.0.3",
@@ -703,9 +703,9 @@
       "integrity": "sha1-UhTFOpJtNVJwdSf7q0FdvAjQbdo="
     },
     "semver": {
-      "version": "5.3.0",
-      "resolved": "https://registry.npmjs.org/semver/-/semver-5.3.0.tgz",
-      "integrity": "sha1-myzl094C0XxgEq0yaqa00M9U+U8="
+      "version": "5.4.1",
+      "resolved": "https://registry.npmjs.org/semver/-/semver-5.4.1.tgz",
+      "integrity": "sha512-WfG/X9+oATh81XtllIo/I8gOiY9EXRdv1cQdyykeXK17YcUW3EXUAi2To4pcH6nZtJPr7ZOpM5OMyWJZm+8Rsg=="
     },
     "slash": {
       "version": "1.0.0",
