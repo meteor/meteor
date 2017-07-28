@@ -4,10 +4,9 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
+  api.use('modules');
+  api.mainModule('package-version-parser.js');
   api.export('PackageVersion');
-  api.use('underscore');
-  api.addFiles(['semver410.js',
-                'package-version-parser.js']);
 });
 
 Package.onTest(function (api) {

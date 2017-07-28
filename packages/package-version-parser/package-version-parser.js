@@ -1,14 +1,9 @@
-// This file is in tools/packaging/package-version-parser.js and is symlinked to
-// packages/package-version-parser/package-version-parser.js. It's part of both
-// the tool and the package!  We don't use an isopacket for it because it used
-// to be required as part of building isopackets (though that may no longer be
-// true).
-var inTool = typeof Package === 'undefined';
+var inTool = typeof Package === "undefined";
 
-
-var semver = inTool ?
-  require ('../../dev_bundle/lib/node_modules/semver') : SemVer410;
-var __ = inTool ? require('../../dev_bundle/lib/node_modules/underscore') : _;
+// Provided by dev_bundle/server-lib/node_modules/semver.
+var semver = inTool
+  ? module.parent.require("semver")
+  : require("semver");
 
 // Takes in a meteor version string, for example 1.2.3-rc.5_1+12345.
 //
@@ -108,15 +103,13 @@ var PV = function (versionString) {
   this._semverParsed = null; // populate lazily
 };
 
+// Set module.exports for tools/packaging/package-version-parser.js and
+// module.exports.PackageVersion for api.export("PackageVersion").
+PV.PackageVersion = module.exports = PV;
+
 PV.parse = function (versionString) {
   return new PV(versionString);
 };
-
-if (inTool) {
-  module.exports = PV;
-} else {
-  PackageVersion = PV;
-}
 
 // Converts a meteor version into a large floating point number, which
 // is (more or less [*]) unique to that version. Satisfies the
@@ -156,7 +149,7 @@ var prereleaseIdentifierToFraction = function (prerelease) {
   if (prerelease.length === 0)
     return 0;
 
-  return __.reduce(prerelease, function (memo, part, index) {
+  return prerelease.reduce(function (memo, part, index) {
     var digit;
     if (typeof part === 'number') {
       digit = part+1;
@@ -289,7 +282,7 @@ PV.VersionConstraint = function (vConstraintString) {
   } else {
     // Parse out the versionString.
     var parts = vConstraintString.split(/ *\|\| */);
-    alternatives = __.map(parts, function (alt) {
+    alternatives = parts.map(function (alt) {
       if (! alt) {
         throwVersionParserError("Invalid constraint string: " +
                                 vConstraintString);
@@ -420,7 +413,8 @@ PV.validatePackageName = function (packageName, options) {
   // (There is already a package ending with a `-` and one with two consecutive `-`
   // in troposphere, though they both look like typos.)
 
-  if (packageName[0] === ":" || __.last(packageName) === ":") {
+  if (packageName.startsWith(":") ||
+      packageName.endsWith(":")) {
     throwVersionParserError("Package names may not start or end with a colon: " +
                             JSON.stringify(packageName));
   }

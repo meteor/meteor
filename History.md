@@ -48,10 +48,34 @@
 * The `meteor-promise` package has been upgraded to version 0.8.5,
   and the `promise` polyfill package has been upgraded to 8.0.1.
 
+* The `semver` npm package has been upgraded to version 5.3.0.
+  [PR #8859](https://github.com/meteor/meteor/pull/8859)
+
+* A new package called `mongo-dev-server` has been created and wired into
+  `mongo` as a dependency. As long as this package is included in a Meteor
+  application (which it is by default since all new Meteor apps have `mongo`
+  as a dependency), a local development MongoDB server is started alongside
+  the application. This package was created to provide a way to disable the
+  local development Mongo server, when `mongo` isn't needed (e.g. when using
+  Meteor as a build system only). If an application has no dependency on
+  `mongo`, the `mongo-dev-server` package is not added, which means no local
+  development Mongo server is started.
+  [Feature Request #31](https://github.com/meteor/meteor-feature-requests/issues/31)
+  [PR #8853](https://github.com/meteor/meteor/pull/8853)
+
 * `Accounts.config` no longer mistakenly allows tokens to expire when
   the `loginExpirationInDays` option is set to `null`.
   [Issue #5121](https://github.com/meteor/meteor/issues/5121)
   [PR #8917](https://github.com/meteor/meteor/pull/8917)
+
+* The `cordova-lib` npm package has been updated to 7.0.1, along with
+  cordova-android (6.2.3) and cordova-ios (4.4.0), and various plugins.
+  [PR #8919](https://github.com/meteor/meteor/pull/8919) resolves the
+  umbrella [issue #8686](https://github.com/meteor/meteor/issues/8686), as
+  well as several Android build issues:
+  [#8408](https://github.com/meteor/meteor/issues/8408),
+  [#8424](https://github.com/meteor/meteor/issues/8424), and
+  [#8464](https://github.com/meteor/meteor/issues/8464).
 
 ## v1.5.1, 2017-07-12
 
