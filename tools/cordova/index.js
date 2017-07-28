@@ -3,8 +3,7 @@ import assert from 'assert';
 import utils from '../utils/utils.js';
 import buildmessage from '../utils/buildmessage.js';
 
-import { oldToNew as oldToNewPluginIds, newToOld as newToOldPluginIds }
-  from 'cordova-registry-mapper';
+import { oldToNew as oldToNewPluginIds } from 'cordova-registry-mapper';
 
 export const CORDOVA_ARCH = "web.cordova";
 
