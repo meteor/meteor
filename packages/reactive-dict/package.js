@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Reactive dictionary",
-  version: '1.2.0-beta.14'
+  version: '1.2.0-beta.15'
 });
 
 Package.onUse(function (api) {
