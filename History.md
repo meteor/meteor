@@ -28,6 +28,8 @@
 
 * The `http-proxy` npm package has been upgraded to version 1.16.2.
 
+* The `semver` npm package has been upgraded to version 5.4.1.
+
 ## v1.5.2, TBD
 
 * The `meteor-babel` package has been upgraded to version 0.23.1.
