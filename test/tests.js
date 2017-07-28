@@ -322,6 +322,22 @@ val = "zxcv";`;
       await new C().run(Promise.resolve(1234)),
       1235
     );
+
+    class D extends C {
+      async go(arg) {
+        return (await super.run(arg)) + 1;
+      }
+    }
+
+    assert.strictEqual(
+      await new D().run(Promise.resolve(3)),
+      4
+    );
+
+    assert.strictEqual(
+      await new D().go(Promise.resolve(3)),
+      5
+    );
   });
 
   const expectedFns = [
