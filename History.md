@@ -20,6 +20,9 @@
 * The `meteor-promise` package has been upgraded to version 0.8.5,
   and the `promise` polyfill package has been upgraded to 8.0.1.
 
+* The `semver` npm package has been upgraded to version 5.3.0.
+  [PR #8859](https://github.com/meteor/meteor/pull/8859)
+
 * A new package called `mongo-dev-server` has been created and wired into
   `mongo` as a dependency. As long as this package is included in a Meteor
   application (which it is by default since all new Meteor apps have `mongo`
