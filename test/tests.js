@@ -433,11 +433,21 @@ val = "zxcv";`;
     });
   });
 
-  it("async arrow functions", async () => {
+  it("async arrow functions", async function () {
     const addOneAsync = async arg => (await arg) + 1;
     const sum = await addOneAsync(2345);
     assert.strictEqual(sum, 2346);
-  });
+
+    const self = this;
+    assert.strictEqual(self.isSelf, true);
+    const checkThis = async () => assert.strictEqual(this, self);
+    await checkThis();
+    await checkThis.call({});
+    await checkThis.call(null);
+    await checkThis.call();
+  }.bind({
+    isSelf: true
+  }));
 });
 
 describe("Reify", function () {

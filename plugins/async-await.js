@@ -30,21 +30,25 @@ module.exports = function (babel) {
             !! this.opts.useNativeAsyncAwait
           );
 
+          const promiseResultExpression = t.callExpression(
+            t.memberExpression(
+              t.identifier("Promise"),
+              t.identifier("asyncApply"),
+              false
+            ), [innerFn]
+          );
+
           // Calling the async function with Promise.asyncApply is
           // important to ensure that the part before the first await
           // expression runs synchronously in its own Fiber, even when
           // there is native support for async/await.
-          node.body = t.blockStatement([
-            t.returnStatement(
-              t.callExpression(
-                t.memberExpression(
-                  t.identifier("Promise"),
-                  t.identifier("asyncApply"),
-                  false
-                ), [innerFn]
-              )
-            )
-          ]);
+          if (node.type === "ArrowFunctionExpression") {
+            node.body = promiseResultExpression;
+          } else {
+            node.body = t.blockStatement([
+              t.returnStatement(promiseResultExpression)
+            ]);
+          }
         }
       },
 
