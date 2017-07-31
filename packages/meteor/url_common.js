@@ -14,7 +14,7 @@ Meteor.absoluteUrl = function (path, options) {
     path = undefined;
   }
   // merge options with defaults
-  options = _.extend({}, Meteor.absoluteUrl.defaultOptions, options || {});
+  options = Object.assign({}, Meteor.absoluteUrl.defaultOptions, options || {});
 
   var url = options.rootUrl;
   if (!url)

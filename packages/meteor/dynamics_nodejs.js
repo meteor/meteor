@@ -16,51 +16,51 @@ Meteor.EnvironmentVariable = function () {
   this.slot = nextSlot++;
 };
 
-_.extend(Meteor.EnvironmentVariable.prototype, {
-  get: function () {
-    Meteor._nodeCodeMustBeInFiber();
+var EVp = Meteor.EnvironmentVariable.prototype;
 
-    return Fiber.current._meteor_dynamics &&
-      Fiber.current._meteor_dynamics[this.slot];
-  },
+EVp.get = function () {
+  Meteor._nodeCodeMustBeInFiber();
 
-  // Most Meteor code ought to run inside a fiber, and the
-  // _nodeCodeMustBeInFiber assertion helps you remember to include appropriate
-  // bindEnvironment calls (which will get you the *right value* for your
-  // environment variables, on the server).
-  //
-  // In some very special cases, it's more important to run Meteor code on the
-  // server in non-Fiber contexts rather than to strongly enforce the safeguard
-  // against forgetting to use bindEnvironment. For example, using `check` in
-  // some top-level constructs like connect handlers without needing unnecessary
-  // Fibers on every request is more important that possibly failing to find the
-  // correct argumentChecker. So this function is just like get(), but it
-  // returns null rather than throwing when called from outside a Fiber. (On the
-  // client, it is identical to get().)
-  getOrNullIfOutsideFiber: function () {
-    if (!Fiber.current)
-      return null;
-    return this.get();
-  },
+  return Fiber.current._meteor_dynamics &&
+    Fiber.current._meteor_dynamics[this.slot];
+};
 
-  withValue: function (value, func) {
-    Meteor._nodeCodeMustBeInFiber();
+// Most Meteor code ought to run inside a fiber, and the
+// _nodeCodeMustBeInFiber assertion helps you remember to include appropriate
+// bindEnvironment calls (which will get you the *right value* for your
+// environment variables, on the server).
+//
+// In some very special cases, it's more important to run Meteor code on the
+// server in non-Fiber contexts rather than to strongly enforce the safeguard
+// against forgetting to use bindEnvironment. For example, using `check` in
+// some top-level constructs like connect handlers without needing unnecessary
+// Fibers on every request is more important that possibly failing to find the
+// correct argumentChecker. So this function is just like get(), but it
+// returns null rather than throwing when called from outside a Fiber. (On the
+// client, it is identical to get().)
+EVp.getOrNullIfOutsideFiber = function () {
+  if (!Fiber.current)
+    return null;
+  return this.get();
+};
 
-    if (!Fiber.current._meteor_dynamics)
-      Fiber.current._meteor_dynamics = [];
-    var currentValues = Fiber.current._meteor_dynamics;
+EVp.withValue = function (value, func) {
+  Meteor._nodeCodeMustBeInFiber();
 
-    var saved = currentValues[this.slot];
-    try {
-      currentValues[this.slot] = value;
-      var ret = func();
-    } finally {
-      currentValues[this.slot] = saved;
-    }
+  if (!Fiber.current._meteor_dynamics)
+    Fiber.current._meteor_dynamics = [];
+  var currentValues = Fiber.current._meteor_dynamics;
 
-    return ret;
+  var saved = currentValues[this.slot];
+  try {
+    currentValues[this.slot] = value;
+    var ret = func();
+  } finally {
+    currentValues[this.slot] = saved;
   }
-});
+
+  return ret;
+};
 
 // Meteor application code is always supposed to be run inside a
 // fiber. bindEnvironment ensures that the function it wraps is run from
@@ -84,7 +84,8 @@ _.extend(Meteor.EnvironmentVariable.prototype, {
 Meteor.bindEnvironment = function (func, onException, _this) {
   Meteor._nodeCodeMustBeInFiber();
 
-  var boundValues = _.clone(Fiber.current._meteor_dynamics || []);
+  var dynamics = Fiber.current._meteor_dynamics;
+  var boundValues = dynamics ? dynamics.slice() : [];
 
   if (!onException || typeof(onException) === 'string') {
     var description = onException || "callback of async function";
@@ -99,14 +100,14 @@ Meteor.bindEnvironment = function (func, onException, _this) {
   }
 
   return function (/* arguments */) {
-    var args = _.toArray(arguments);
+    var args = Array.prototype.slice.call(arguments);
 
     var runWithEnvironment = function () {
       var savedValues = Fiber.current._meteor_dynamics;
       try {
         // Need to clone boundValues in case two fibers invoke this
         // function at the same time
-        Fiber.current._meteor_dynamics = _.clone(boundValues);
+        Fiber.current._meteor_dynamics = boundValues.slice();
         var ret = func.apply(_this, args);
       } catch (e) {
         // note: callback-hook currently relies on the fact that if onException
