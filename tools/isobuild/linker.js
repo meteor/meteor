@@ -398,6 +398,9 @@ _.extend(Module.prototype, {
     // Now that we have installed everything in this package or
     // application, immediately require the non-lazy modules and
     // evaluate the bare files.
+
+    const eagerModuleFiles = [];
+
     _.each(this.files, file => {
       if (file.bare) {
         chunks.push("\n", file.getPrelinkedOutput({
@@ -405,6 +408,12 @@ _.extend(Module.prototype, {
           noLineNumbers: this.noLineNumbers
         }));
       } else if (moduleCount > 0 && ! file.lazy) {
+        eagerModuleFiles.push(file);
+      }
+    });
+
+    if (eagerModuleFiles.length > 0) {
+      _.each(eagerModuleFiles, file => {
         if (file.mainModule) {
           exportsName = "exports";
         }
@@ -415,8 +424,8 @@ _.extend(Module.prototype, {
           JSON.stringify("./" + file.installPath),
           ");"
         );
-      }
-    });
+      });
+    }
 
     return exportsName;
   }
