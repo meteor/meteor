@@ -15,8 +15,6 @@ Npm.depends({
 });
 
 Package.onUse(function (api) {
-  api.use('underscore', ['client', 'server']);
-
   api.use('isobuild:compiler-plugin@1.0.0');
 
   api.export('Meteor');
