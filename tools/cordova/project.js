@@ -191,7 +191,7 @@ outdated platforms`);
       this.projectContext,
       this.projectRoot,
       { mobileServerUrl: this.options.mobileServerUrl,
-        settingsFile: this.topsion.settingsFile }
+        settingsFile: this.options.settingsFile }
     );
 
     builder.processControlFile();
