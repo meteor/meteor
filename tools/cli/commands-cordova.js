@@ -6,6 +6,7 @@ import buildmessage from '../utils/buildmessage.js';
 import files from '../fs/files.js';
 import {
   CORDOVA_PLATFORMS,
+  ensureDevBundleDependencies,
   filterPlatforms,
 } from '../cordova';
 
@@ -120,6 +121,7 @@ main.registerCommand({
   catalogRefresh: new catalog.Refresh.Never(),
   notOnWindows: false
 }, function (options) {
+  ensureDevBundleDependencies();
   doAddPlatform(options);
 });
 
@@ -131,6 +133,7 @@ main.registerCommand({
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
+  ensureDevBundleDependencies();
   doRemovePlatform(options);
 });
 

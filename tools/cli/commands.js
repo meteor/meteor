@@ -365,6 +365,8 @@ function doRunCommand(options) {
       });
     }
 
+    import { ensureDevBundleDependencies } from '../cordova';
+    ensureDevBundleDependencies();
     prepareCordovaProject();
   }
 
@@ -1800,6 +1802,8 @@ function doTestCommand(options) {
       });
     }
 
+    import { ensureDevBundleDependencies } from '../cordova';
+    ensureDevBundleDependencies();
     prepareCordovaProject();
   }
 
