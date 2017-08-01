@@ -13,6 +13,8 @@ dependencies:
     - ".meteor"
     - ".babel-cache"
   override:
+    - rm -rf dev_bundle/
+    - ./scripts/generate-dev-bundle.sh
     # shouldn't take longer than 5 minutes
     - ./meteor --help:
         timeout: 300
