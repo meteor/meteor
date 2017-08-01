@@ -22,18 +22,7 @@ function createProjectContext(appDir) {
   return projectContext;
 }
 
-// Add one or more Cordova platforms
-main.registerCommand({
-  name: 'add-platform',
-  options: {
-    verbose: { type: Boolean, short: "v" }
-  },
-  minArgs: 1,
-  maxArgs: Infinity,
-  requiresApp: true,
-  catalogRefresh: new catalog.Refresh.Never(),
-  notOnWindows: false
-}, function (options) {
+function doAddPlatform(options) {
   import { CordovaProject } from '../cordova/project.js';
 
   Console.setVerbose(!!options.verbose);
@@ -77,6 +66,21 @@ main.registerCommand({
       }
     }
   });
+}
+
+// Add one or more Cordova platforms
+main.registerCommand({
+  name: 'add-platform',
+  options: {
+    verbose: { type: Boolean, short: "v" }
+  },
+  minArgs: 1,
+  maxArgs: Infinity,
+  requiresApp: true,
+  catalogRefresh: new catalog.Refresh.Never(),
+  notOnWindows: false
+}, function (options) {
+  doAddPlatform(options);
 });
 
 // Remove one or more Cordova platforms
