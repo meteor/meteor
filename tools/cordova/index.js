@@ -3,8 +3,6 @@ import assert from 'assert';
 import utils from '../utils/utils.js';
 import buildmessage from '../utils/buildmessage.js';
 
-import { oldToNew as oldToNewPluginIds } from 'cordova-registry-mapper';
-
 export const CORDOVA_ARCH = "web.cordova";
 
 export const CORDOVA_PLATFORMS = ['ios', 'android'];
@@ -61,6 +59,7 @@ export function pluginVersionsFromStarManifest(star) {
 }
 
 export function newPluginId(id) {
+  import { oldToNew as oldToNewPluginIds } from 'cordova-registry-mapper';
   return oldToNewPluginIds[id];
 }
 
