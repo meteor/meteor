@@ -251,20 +251,41 @@ var parseSimpleConstraint = function (constraintString) {
     throw new Error("Non-empty string required");
   }
 
-  var type, versionString;
+  var result = {};
+  var needToCheckValidity = true;
 
   if (constraintString.charAt(0) === '=') {
-    type = "exactly";
-    versionString = constraintString.substr(1);
+    result.type = "exactly";
+    result.versionString = constraintString.slice(1);
+
   } else {
-    type = "compatible-with";
-    versionString = constraintString;
+    result.type = "compatible-with";
+
+    if (constraintString.charAt(0) === "~") {
+      var semversion = PV.parse(
+        result.versionString = constraintString.slice(1)
+      ).semver;
+
+      var range = new semver.Range("~" + semversion);
+
+      result.test = function (version) {
+        return range.test(PV.parse(version).semver);
+      };
+
+      // Already checked by calling PV.parse above.
+      needToCheckValidity = false;
+
+    } else {
+      result.versionString = constraintString;
+    }
   }
 
-  // This will throw if the version string is invalid.
-  PV.getValidServerVersion(versionString);
+  if (needToCheckValidity) {
+    // This will throw if the version string is invalid.
+    PV.getValidServerVersion(result.versionString);
+  }
 
-  return { type: type, versionString: versionString };
+  return result;
 };
 
 
