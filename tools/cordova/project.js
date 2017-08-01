@@ -631,6 +631,8 @@ mobile-config.js accordingly.`);
 
         this.removePlugins(pluginsToRemove);
 
+        let pluginVersionsToInstall;
+
         // Now install the necessary plugins.
         if (shouldReinstallAllPlugins) {
           pluginVersionsToInstall = pluginVersions;
