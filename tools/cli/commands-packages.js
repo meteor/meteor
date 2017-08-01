@@ -1172,9 +1172,9 @@ main.registerCommand({
     const dontExpand = new Set(topLevelSet.values());
 
     // Recursive function that outputs each package
-    const printPackage = function (package, isWeak, indent1, indent2) {
-      const packageName = package.packageName;
-      const depsObj = package.dependencies || {};
+    const printPackage = function (packageToPrint, isWeak, indent1, indent2) {
+      const packageName = packageToPrint.packageName;
+      const depsObj = packageToPrint.dependencies || {};
       let deps = Object.keys(depsObj).sort();
       // Ignore references to a meteor version or isobuild marker packages
       deps = deps.filter(dep => {
@@ -1201,7 +1201,7 @@ main.registerCommand({
         suffix += topLevelSet.has(packageName) ? ' (top level)' : ' (expanded above)';
       }
 
-      Console.info(indent1 + packageName + '@' + package.version + suffix);
+      Console.info(indent1 + packageName + '@' + packageToPrint.version + suffix);
       if (shouldExpand) {
         dontExpand.add(packageName);
         deps.forEach((dep, index) => {
@@ -1224,11 +1224,11 @@ main.registerCommand({
 
     const topLevelNames = Array.from(topLevelSet.values()).sort();
     topLevelNames.forEach((dep, index) => {
-      const package = packageDetails.get(dep);
-      if (package) {
+      const topLevelPackage = packageDetails.get(dep);
+      if (topLevelPackage) {
         // Force top level packages to be expanded
-        dontExpand.delete(package.packageName);
-        printPackage(package, false, '', '');
+        dontExpand.delete(topLevelPackage.packageName);
+        printPackage(topLevelPackage, false, '', '');
       }
     });
 
