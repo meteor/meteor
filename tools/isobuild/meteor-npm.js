@@ -988,8 +988,21 @@ var getShrinkwrappedDependencies = function (dir) {
   return treeToDependencies(getShrinkwrappedDependenciesTree(dir));
 };
 
-const installNpmModule = meteorNpm.installNpmModule = (name, version, dir) => {
+const moduleDoesResolve = meteorNpm.moduleDoesResolve = (dep) => {
+  try {
+    require.resolve(dep);
+  } catch (e) {
+    if (e.code !== 'MODULE_NOT_FOUND') {
+      throw e;
+    }
 
+    return false;
+  }
+
+  return true;
+};
+
+const installNpmModule = meteorNpm.installNpmModule = (name, version, dir) => {
   const installArg = utils.isNpmUrl(version)
     ? version
     : `${name}@${version}`;
