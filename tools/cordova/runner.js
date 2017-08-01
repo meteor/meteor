@@ -82,7 +82,7 @@ export class CordovaRunner {
         return;
       }
 
-      for (platform of this.platformsForRunTargets) {
+      for (let platform of this.platformsForRunTargets) {
         this.cordovaProject.prepareForPlatform(platform);
       }
     });
