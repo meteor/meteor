@@ -403,7 +403,7 @@ from Cordova project`, async () => {
 
     const installedPlatforms = this.listInstalledPlatforms();
 
-    for (platform of platforms) {
+    for (let platform of platforms) {
       if (_.contains(installedPlatforms, platform)) {
         continue;
       }
@@ -411,7 +411,7 @@ from Cordova project`, async () => {
       this.addPlatform(platform);
     }
 
-    for (platform of installedPlatforms) {
+    for (let platform of installedPlatforms) {
       if (!_.contains(platforms, platform) &&
         _.contains(CORDOVA_PLATFORMS, platform)) {
         this.removePlatform(platform);
