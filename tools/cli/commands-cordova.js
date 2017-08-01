@@ -68,29 +68,7 @@ function doAddPlatform(options) {
   });
 }
 
-// Add one or more Cordova platforms
-main.registerCommand({
-  name: 'add-platform',
-  options: {
-    verbose: { type: Boolean, short: "v" }
-  },
-  minArgs: 1,
-  maxArgs: Infinity,
-  requiresApp: true,
-  catalogRefresh: new catalog.Refresh.Never(),
-  notOnWindows: false
-}, function (options) {
-  doAddPlatform(options);
-});
-
-// Remove one or more Cordova platforms
-main.registerCommand({
-  name: 'remove-platform',
-  minArgs: 1,
-  maxArgs: Infinity,
-  requiresApp: true,
-  catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
+function doRemovePlatform(options) {
   import { CordovaProject } from '../cordova/project.js';
   import { PlatformList } from '../project-context.js';
 
@@ -128,6 +106,32 @@ version of Meteor`);
       cordovaProject.ensurePlatformsAreSynchronized(cordovaPlatforms);
     }
   });
+}
+
+// Add one or more Cordova platforms
+main.registerCommand({
+  name: 'add-platform',
+  options: {
+    verbose: { type: Boolean, short: "v" }
+  },
+  minArgs: 1,
+  maxArgs: Infinity,
+  requiresApp: true,
+  catalogRefresh: new catalog.Refresh.Never(),
+  notOnWindows: false
+}, function (options) {
+  doAddPlatform(options);
+});
+
+// Remove one or more Cordova platforms
+main.registerCommand({
+  name: 'remove-platform',
+  minArgs: 1,
+  maxArgs: Infinity,
+  requiresApp: true,
+  catalogRefresh: new catalog.Refresh.Never()
+}, function (options) {
+  doRemovePlatform(options);
 });
 
 main.registerCommand({
