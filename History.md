@@ -1,5 +1,12 @@
 ## v.NEXT
 
+* The `star.json` manifest created within the root of a `meteor build` bundle
+  will now contain `nodeVersion` and `npmVersion` which will specify the exact
+  versions of Node.js and npm (respectively) which the Meteor release was
+  bundled with.  The `.node_version.txt` file will still be written into the
+  root of the bundle, but it may be deprecated in a future version of Meteor.
+  [PR #8956](https://github.com/meteor/meteor/pull/8956)
+
 * A new package called `mongo-dev-server` has been created and wired into
   `mongo` as a dependency. As long as this package is included in a Meteor
   application (which it is by default since all new Meteor apps have `mongo`
