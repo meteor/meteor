@@ -183,6 +183,51 @@ selftest.define("change packages during hot code push", [], function () {
   run.stop();
 });
 
+selftest.define("add debugOnly and prodOnly packages", [], function () {
+  var s = new Sandbox();
+  var run;
+
+  // Starting a run
+  s.createApp("myapp", "package-tests");
+  s.cd("myapp");
+  s.set("METEOR_OFFLINE_CATALOG", "t");
+
+    // Add a debugOnly package. It should work during a normal run, but print
+  // nothing in production mode.
+  run = s.run("add", "debug-only");
+  run.match("debug-only");
+  run.expectExit(0);
+
+  s.mkdir("server");
+  s.write("server/exit-test.js",
+          "process.exit(global.DEBUG_ONLY_LOADED ? 234 : 235)");
+
+  run = s.run("--once");
+  run.waitSecs(15);
+  run.expectExit(234);
+
+  run = s.run("--once", "--production");
+  run.waitSecs(15);
+  run.expectExit(235);
+
+  // Add prod-only package, which sets GLOBAL.PROD_ONLY_LOADED.
+  run = s.run("add", "prod-only");
+  run.match("prod-only");
+  run.expectExit(0);
+
+  s.mkdir("server");
+  s.write("server/exit-test.js", // overwrite
+          "process.exit(global.PROD_ONLY_LOADED ? 234 : 235)");
+
+  run = s.run("--once");
+  run.waitSecs(15);
+  run.expectExit(235);
+
+  run = s.run("--once", "--production");
+  run.waitSecs(15);
+  run.expectExit(234);
+});
+
 // Add packages through the command line. Make sure that the correct set of
 // changes is reflected in .meteor/packages, .meteor/versions and list.
 selftest.define("add packages to app", [], function () {
@@ -272,51 +317,6 @@ selftest.define("add packages to app", [], function () {
   run.match("no-description\n");
   run.expectEnd();
   run.expectExit(0);
-});
-
-selftest.define("add debugOnly and prodOnly packages", [], function () {
-  var s = new Sandbox();
-  var run;
-
-  // Starting a run
-  s.createApp("myapp", "package-tests");
-  s.cd("myapp");
-  s.set("METEOR_OFFLINE_CATALOG", "t");
-
-    // Add a debugOnly package. It should work during a normal run, but print
-  // nothing in production mode.
-  run = s.run("add", "debug-only");
-  run.match("debug-only");
-  run.expectExit(0);
-
-  s.mkdir("server");
-  s.write("server/exit-test.js",
-          "process.exit(global.DEBUG_ONLY_LOADED ? 234 : 235)");
-
-  run = s.run("--once");
-  run.waitSecs(15);
-  run.expectExit(234);
-
-  run = s.run("--once", "--production");
-  run.waitSecs(15);
-  run.expectExit(235);
-
-  // Add prod-only package, which sets GLOBAL.PROD_ONLY_LOADED.
-  run = s.run("add", "prod-only");
-  run.match("prod-only");
-  run.expectExit(0);
-
-  s.mkdir("server");
-  s.write("server/exit-test.js", // overwrite
-          "process.exit(global.PROD_ONLY_LOADED ? 234 : 235)");
-
-  run = s.run("--once");
-  run.waitSecs(15);
-  run.expectExit(235);
-
-  run = s.run("--once", "--production");
-  run.waitSecs(15);
-  run.expectExit(234);
 });
 
 selftest.define("add package with both debugOnly and prodOnly", [], function () {
