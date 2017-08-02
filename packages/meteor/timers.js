@@ -1,17 +1,28 @@
-var withoutInvocation = function (f) {
+function withoutInvocation(f) {
   if (Package.ddp) {
-    var _CurrentMethodInvocation = Package.ddp.DDP._CurrentMethodInvocation;
-    if (_CurrentMethodInvocation.get() && _CurrentMethodInvocation.get().isSimulation)
-      throw new Error("Can't set timers inside simulations");
-    return function () { _CurrentMethodInvocation.withValue(null, f); };
-  }
-  else
-    return f;
-};
+    var DDP = Package.ddp.DDP;
+    var CurrentInvocation =
+      DDP._CurrentMethodInvocation ||
+      // For backwards compatibility, as explained in this issue:
+      // https://github.com/meteor/meteor/issues/8947
+      DDP._CurrentInvocation;
 
-var bindAndCatch = function (context, f) {
+    var invocation = CurrentInvocation.get();
+    if (invocation && invocation.isSimulation) {
+      throw new Error("Can't set timers inside simulations");
+    }
+
+    return function () {
+      CurrentInvocation.withValue(null, f);
+    };
+  } else {
+    return f;
+  }
+}
+
+function bindAndCatch(context, f) {
   return Meteor.bindEnvironment(withoutInvocation(f), context);
-};
+}
 
 // Meteor.setTimeout and Meteor.setInterval callbacks scheduled
 // inside a server method are not part of the method invocation and
