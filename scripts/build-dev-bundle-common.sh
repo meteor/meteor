@@ -7,6 +7,9 @@ UNAME=$(uname)
 ARCH=$(uname -m)
 MONGO_VERSION=3.2.15
 NODE_VERSION=4.8.4
+NODE_FROM_SRC=true
+# 3a97f12 = meteor/node#v4.8.4-patch
+NODE_COMMIT_HASH=3a97f129312ebbbc7e1b4282176bf0cd88ee9406
 NPM_VERSION=4.6.1
 
 if [ "$UNAME" == "Linux" ] ; then
@@ -70,6 +73,8 @@ else
     echo "Unknown architecture: $UNAME $ARCH"
     exit 1
 fi
+
+NODE_SRC_TGZ="node-v${NODE_VERSION}.tar.gz"
 
 SCRIPTS_DIR=$(dirname $0)
 cd "$SCRIPTS_DIR/.."
