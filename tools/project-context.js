@@ -651,7 +651,11 @@ _.extend(ProjectContext.prototype, {
         files.pathJoin(files.getCurrentToolsDir(), 'packages');
 
       searchDirs.push(
+        // Include packages like packages/ecmascript.
         packagesDir,
+        // Include packages like packages/non-core/coffeescript.
+        files.pathJoin(packagesDir, "non-core"),
+        // Include packages like packages/non-core/blaze/packages/blaze.
         files.pathJoin(packagesDir, "non-core", "*", "packages"),
       );
     }
