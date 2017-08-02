@@ -511,16 +511,6 @@ Options:
   --list        list authorized users and organizations (the default)
 
 
->>> claim
-Claim a site deployed with an old Meteor version.
-Usage: meteor claim <site>
-
-If you deployed a site with an old version of Meteor that did not have
-support for developer accounts, you can use this command to claim that
-site into your account. If you had set a password on the site you will
-be prompted for it one last time.
-
-
 >>> login
 Log in to your Meteor developer account.
 Usage: meteor login [--email]

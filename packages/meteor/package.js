@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Core Meteor environment",
-  version: '1.7.0'
+  version: '1.7.1'
 });
 
 Package.registerBuildPlugin({
@@ -15,8 +15,6 @@ Npm.depends({
 });
 
 Package.onUse(function (api) {
-  api.use('underscore', ['client', 'server']);
-
   api.use('isobuild:compiler-plugin@1.0.0');
 
   api.export('Meteor');
