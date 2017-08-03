@@ -1023,7 +1023,7 @@ var PhantomClient = function (options) {
     }
   );
 
-  self.npm = require("phantomjs-prebuilt");
+  self.npmPackageExports = require("phantomjs-prebuilt");
 
   self.name = "phantomjs";
   self.process = null;
@@ -1037,7 +1037,7 @@ _.extend(PhantomClient.prototype, {
   connect: function () {
     var self = this;
 
-    var phantomPath = self.npm.path;
+    var phantomPath = self.npmPackageExports.path;
 
     var scriptPath = files.pathJoin(files.getCurrentToolsDir(), "tools",
       "tool-testing", "phantom", "open-url.js");
@@ -1083,7 +1083,7 @@ var BrowserStackClient = function (options) {
     }
   );
 
-  self.npm = require('browserstack-webdriver');
+  self.npmPackageExports = require('browserstack-webdriver');
 
   self.tunnelProcess = null;
   self.driver = null;
@@ -1128,7 +1128,7 @@ _.extend(BrowserStackClient.prototype, {
         throw error;
       }
 
-      self.driver = new self.npm.Builder().
+      self.driver = new self.npmPackageExports.Builder().
         usingServer('http://hub.browserstack.com/wd/hub').
         withCapabilities(capabilities).
         build();
