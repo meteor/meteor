@@ -49,9 +49,6 @@ function checkTestOnlyDependency(name) {
 var phantomjs = checkTestOnlyDependency("phantomjs-prebuilt");
 var webdriver = checkTestOnlyDependency('browserstack-webdriver');
 
-// To allow long stack traces that cross async boundaries
-require('longjohn');
-
 // Exception representing a test failure
 var TestFailure = function (reason, details) {
   var self = this;
