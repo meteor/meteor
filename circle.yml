@@ -26,3 +26,7 @@ test:
     - ./scripts/ci.sh :
         parallel: true
         timeout: 1200
+        environment:
+          # Cleaning up temp directories at the end of a test run may be a
+          # contributing factor to segmentation faults, so don't bother.
+          METEOR_SAVE_TMPDIRS: 1
