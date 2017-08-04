@@ -11,7 +11,6 @@ var Console = require('../console/console.js').Console;
 var archinfo = require('../utils/archinfo.js');
 var config = require('../meteor-services/config.js');
 var buildmessage = require('../utils/buildmessage.js');
-var execFileSync = require('../utils/processes.js').execFileSync;
 var { getUrlWithResuming } = require("../utils/http-helpers.js");
 var Builder = require('../isobuild/builder.js').default;
 
@@ -26,6 +25,8 @@ var release = require('../packaging/release.js');
 
 var projectContextModule = require('../project-context.js');
 var upgraders = require('../upgraders.js');
+
+export { execFileSync } from '../utils/processes.js';
 
 import { ensureDependencies } from '../cli/dev-bundle-helpers.js';
 
@@ -52,19 +53,19 @@ class TestFailure {
 // Use this to decorate functions that throw TestFailure. Decorate the
 // first function that should not be included in the call stack shown
 // to the user.
-var markStack = function (f) {
+export function markStack(f) {
   return parseStack.markTop(f);
-};
+}
 
 // Call from a test to throw a TestFailure exception and bail out of the test
-var fail = markStack(function (reason) {
+export const fail = markStack(function (reason) {
   throw new TestFailure(reason);
 });
 
 // Call from a test to assert that 'actual' is equal to 'expected',
 // with 'actual' being the value that the test got and 'expected'
 // being the expected value
-var expectEqual = markStack(function (actual, expected) {
+export const expectEqual = markStack(function (actual, expected) {
   var Package = isopackets.load('ejson');
   if (! Package.ejson.EJSON.equals(actual, expected)) {
     throw new TestFailure("not-equal", {
@@ -75,19 +76,20 @@ var expectEqual = markStack(function (actual, expected) {
 });
 
 // Call from a test to assert that 'actual' is truthy.
-var expectTrue = markStack(function (actual) {
+export const expectTrue = markStack(function (actual) {
   if (! actual) {
     throw new TestFailure('not-true');
   }
 });
+
 // Call from a test to assert that 'actual' is falsey.
-var expectFalse = markStack(function (actual) {
+export const expectFalse = markStack(function (actual) {
   if (actual) {
     throw new TestFailure('not-false');
   }
 });
 
-var expectThrows = markStack(function (f) {
+export const expectThrows = markStack(function (f) {
   var threw = false;
   try {
     f();
@@ -100,7 +102,7 @@ var expectThrows = markStack(function (f) {
   }
 });
 
-var doOrThrow = function (f) {
+export function doOrThrow(f) {
   var ret;
   var messages = buildmessage.capture(function () {
     ret = f();
@@ -109,7 +111,7 @@ var doOrThrow = function (f) {
     throw Error(messages.formatMessages());
   }
   return ret;
-};
+}
 
 // Our current strategy for running tests that need warehouses is to build all
 // packages from the checkout into this temporary tropohouse directory, and for
@@ -142,7 +144,7 @@ var ROOT_PACKAGES_TO_BUILD_IN_SANDBOX = [
   "shell-server"
 ];
 
-var setUpBuiltPackageTropohouse = function () {
+function setUpBuiltPackageTropohouse() {
   if (builtPackageTropohouseDir) {
     return;
   }
@@ -219,7 +221,7 @@ var newSelfTestCatalog = function () {
     throw new Error("scan failed?");
   }
   return selfTestCatalog;
-};
+}
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -554,7 +556,7 @@ class OutputLog {
 //   - browserstack: true if browserstack clients should be used
 //   - port: the port that the clients should run on
 
-class Sandbox {
+export class Sandbox {
   constructor(options) {
     var self = this;
     // default options
@@ -1067,7 +1069,7 @@ class PhantomClient extends Client {
 }
 
 // BrowserStackClient
-var browserStackKey = null;
+let browserStackKey = null;
 
 class BrowserStackClient extends Client {
   constructor(options) {
@@ -1239,7 +1241,7 @@ function ensureBrowserStack() {
 //
 // Arguments in the 'args' option are not assumed to be standard paths, so
 // calling any of the 'files.*' methods on them is not safe.
-class Run {
+export class Run {
   constructor(execPath, options) {
     var self = this;
 
@@ -1732,7 +1734,7 @@ var getAllTests = function () {
   return allTests;
 };
 
-var define = function (name, tagsList, f) {
+export function define(name, tagsList, f) {
   if (typeof tagsList === "function") {
     // tagsList is optional
     f = tagsList;
@@ -1973,11 +1975,11 @@ class TestList {
   }
 }
 
-var getTestStateFilePath = function () {
+function getTestStateFilePath() {
   return files.pathJoin(files.getHomeDir(), '.meteortest');
 };
 
-var readTestState = function () {
+function readTestState() {
   var testStateFile = getTestStateFilePath();
   var testState;
   if (files.exists(testStateFile)) {
@@ -1989,13 +1991,13 @@ var readTestState = function () {
   return testState;
 };
 
-var writeTestState = function (testState) {
+function writeTestState(testState) {
   var testStateFile = getTestStateFilePath();
   files.writeFile(testStateFile, JSON.stringify(testState), 'utf8');
-};
+}
 
 // Same options as getFilteredTests.  Writes to stdout and stderr.
-var listTests = function (options) {
+export function listTests(options) {
   var testList = getFilteredTests(options);
 
   if (! testList.allTests.length) {
@@ -2015,7 +2017,7 @@ var listTests = function (options) {
   Console.error();
   Console.error(testList.filteredTests.length + " tests listed.");
   Console.error(testList.generateSkipReport());
-};
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Running tests
@@ -2025,7 +2027,7 @@ var listTests = function (options) {
 //          fileRegexp,
 //          clients:
 //             - browserstack (need s3cmd credentials)
-var runTests = function (options) {
+export function runTests(options) {
   var testList = getFilteredTests(options);
 
   if (! testList.allTests.length) {
@@ -2192,19 +2194,3 @@ var runTests = function (options) {
 // the run() method on the sandbox to set up a new run of meteor with
 // arguments of your choice, and then use functions like match(),
 // write(), and expectExit() to script that run.
-
-_.extend(exports, {
-  runTests: runTests,
-  listTests: listTests,
-  markStack: markStack,
-  define: define,
-  Sandbox: Sandbox,
-  Run: Run,
-  fail: fail,
-  expectEqual: expectEqual,
-  expectThrows: expectThrows,
-  expectTrue: expectTrue,
-  expectFalse: expectFalse,
-  execFileSync: execFileSync,
-  doOrThrow: doOrThrow
-});
