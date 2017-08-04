@@ -29,7 +29,7 @@ import { Tropohouse } from '../packaging/tropohouse.js';
 var packageMapModule = require('../packaging/package-map.js');
 var release = require('../packaging/release.js');
 
-var projectContextModule = require('../project-context.js');
+import { FinishedUpgraders } from '../project-context.js';
 var upgraders = require('../upgraders.js');
 
 require("../tool-env/install-runtime.js");
@@ -705,7 +705,7 @@ export class Sandbox {
     // Make sure the apps don't run any upgraders, unless they intentionally
     // have a partial upgraders file
     var upgradersFile =
-      new projectContextModule.FinishedUpgraders({projectDir: absoluteTo});
+      new FinishedUpgraders({projectDir: absoluteTo});
     if (_.isEmpty(upgradersFile.readUpgraders())) {
       upgradersFile.appendUpgraders(upgraders.allUpgraders());
     }
