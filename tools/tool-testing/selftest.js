@@ -27,7 +27,7 @@ import { load as isoPacketsLoad } from '../tool-env/isopackets.js';
 
 import { Tropohouse } from '../packaging/tropohouse.js';
 import { PackageMap } from '../packaging/package-map.js';
-var release = require('../packaging/release.js');
+import { current as releaseCurrent } from '../packaging/release.js';
 
 import { FinishedUpgraders } from '../project-context.js';
 var upgraders = require('../upgraders.js');
@@ -687,8 +687,8 @@ export class Sandbox {
     // run with our release by default.
     if (options.release) {
       self.write(files.pathJoin(to, '.meteor/release'), options.release);
-    } else if (!self.warehouse && release.current.isProperRelease()) {
-      self.write(files.pathJoin(to, '.meteor/release'), release.current.name);
+    } else if (!self.warehouse && releaseCurrent.isProperRelease()) {
+      self.write(files.pathJoin(to, '.meteor/release'), releaseCurrent.name);
     }
 
     // Make sure the apps don't run any upgraders, unless they intentionally
@@ -876,8 +876,8 @@ export class Sandbox {
     // By default (ie, with no mock warehouse and no --release arg) we should be
     // testing the actual release this is built in, so we pretend that it is the
     // latest release.
-    if (!self.warehouse && release.current.isProperRelease()) {
-      env.METEOR_TEST_LATEST_RELEASE = release.current.name;
+    if (!this.warehouse && releaseCurrent.isProperRelease()) {
+      env.METEOR_TEST_LATEST_RELEASE = releaseCurrent.name;
     }
 
     // Allow user to set TOOL_NODE_FLAGS for self-test app.
