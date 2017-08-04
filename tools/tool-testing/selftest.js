@@ -1837,106 +1837,108 @@ var getFilteredTests = function (options) {
 // ran and passed (for the `--changed` option).  If a testState is
 // provided, the notifyFailed and saveTestState can be used to modify
 // the testState appropriately and write it out.
-var TestList = function (allTests, tagsToSkip, tagsToMatch, testState) {
-  tagsToSkip = (tagsToSkip || []);
-  testState = (testState || null); // optional
+class TestList {
+  constructor(allTests, tagsToSkip, tagsToMatch, testState) {
+    tagsToSkip = (tagsToSkip || []);
+    testState = (testState || null); // optional
 
-  var self = this;
-  self.allTests = allTests;
-  self.skippedTags = tagsToSkip;
-  self.skipCounts = {};
-  self.testState = testState;
+    var self = this;
+    self.allTests = allTests;
+    self.skippedTags = tagsToSkip;
+    self.skipCounts = {};
+    self.testState = testState;
 
-  _.each(tagsToSkip, function (tag) {
-    self.skipCounts[tag] = 0;
-  });
-
-  self.fileInfo = {}; // path -> {hash, hasSkips, hasFailures}
-
-  self.filteredTests = _.filter(allTests, function (test) {
-
-    if (! self.fileInfo[test.file]) {
-      self.fileInfo[test.file] = {
-        hash: test.fileHash,
-        hasSkips: false,
-        hasFailures: false
-      };
-    }
-    var fileInfo = self.fileInfo[test.file];
-
-    if (tagsToMatch.length) {
-      var matches = _.any(tagsToMatch, function(tag) {
-        return _.contains(test.tags, tag);
-      })
-      if (!matches) {
-        return false;
-      }
-    }
-
-    // We look for tagsToSkip *in order*, and when we decide to
-    // skip a test, we don't keep looking at more tags, and we don't
-    // add the test to any further "skip counts".
-    return !_.any(tagsToSkip, function (tag) {
-      if (_.contains(test.tags, tag)) {
-        self.skipCounts[tag]++;
-        fileInfo.hasSkips = true;
-        return true;
-      } else {
-        return false;
-      }
+    _.each(tagsToSkip, function (tag) {
+      self.skipCounts[tag] = 0;
     });
-  });
-};
 
-// Mark a test's file as having failures.  This prevents
-// saveTestState from saving its hash as a potentially
-// "unchanged" file to be skipped in a future run.
-TestList.prototype.notifyFailed = function (test) {
-  this.fileInfo[test.file].hasFailures = true;
-};
+    self.fileInfo = {}; // path -> {hash, hasSkips, hasFailures}
 
-// If this TestList was constructed with a testState,
-// modify it and write it out based on which tests
-// were skipped and which tests had failures.
-TestList.prototype.saveTestState = function () {
-  var self = this;
-  var testState = self.testState;
-  if (! (testState && self.filteredTests.length)) {
-    return;
+    self.filteredTests = _.filter(allTests, function (test) {
+
+      if (! self.fileInfo[test.file]) {
+        self.fileInfo[test.file] = {
+          hash: test.fileHash,
+          hasSkips: false,
+          hasFailures: false
+        };
+      }
+      var fileInfo = self.fileInfo[test.file];
+
+      if (tagsToMatch.length) {
+        var matches = _.any(tagsToMatch, function(tag) {
+          return _.contains(test.tags, tag);
+        })
+        if (!matches) {
+          return false;
+        }
+      }
+
+      // We look for tagsToSkip *in order*, and when we decide to
+      // skip a test, we don't keep looking at more tags, and we don't
+      // add the test to any further "skip counts".
+      return !_.any(tagsToSkip, function (tag) {
+        if (_.contains(test.tags, tag)) {
+          self.skipCounts[tag]++;
+          fileInfo.hasSkips = true;
+          return true;
+        } else {
+          return false;
+        }
+      });
+    });
   }
 
-  _.each(self.fileInfo, function (info, f) {
-    if (info.hasFailures) {
-      delete testState.lastPassedHashes[f];
-    } else if (! info.hasSkips) {
-      testState.lastPassedHashes[f] = info.hash;
+  // Mark a test's file as having failures.  This prevents
+  // saveTestState from saving its hash as a potentially
+  // "unchanged" file to be skipped in a future run.
+  notifyFailed(test) {
+    this.fileInfo[test.file].hasFailures = true;
+  }
+
+  // If this TestList was constructed with a testState,
+  // modify it and write it out based on which tests
+  // were skipped and which tests had failures.
+  saveTestState() {
+    var self = this;
+    var testState = self.testState;
+    if (! (testState && self.filteredTests.length)) {
+      return;
     }
-  });
 
-  writeTestState(testState);
-};
+    _.each(self.fileInfo, function (info, f) {
+      if (info.hasFailures) {
+        delete testState.lastPassedHashes[f];
+      } else if (! info.hasSkips) {
+        testState.lastPassedHashes[f] = info.hash;
+      }
+    });
 
-// Return a string like "Skipped 1 foo test\nSkipped 5 bar tests\n"
-TestList.prototype.generateSkipReport = function () {
-  var self = this;
-  var result = '';
+    writeTestState(testState);
+  }
 
-  _.each(self.skippedTags, function (tag) {
-    var count = self.skipCounts[tag];
-    if (count) {
-      var noun = "test" + (count > 1 ? "s" : ""); // "test" or "tests"
-      // "non-matching tests" or "tests in other files"
-      var nounPhrase = (/ /.test(tag) ?
-                        (noun + " " + tag) : (tag + " " + noun));
-      // " (foo)" or ""
-      var parenthetical = (tagDescriptions[tag] ? " (" +
-                           tagDescriptions[tag] + ")" : '');
-      result += ("Skipped " + count + " " + nounPhrase + parenthetical + '\n');
-    }
-  });
+  // Return a string like "Skipped 1 foo test\nSkipped 5 bar tests\n"
+  generateSkipReport() {
+    var self = this;
+    var result = '';
 
-  return result;
-};
+    _.each(self.skippedTags, function (tag) {
+      var count = self.skipCounts[tag];
+      if (count) {
+        var noun = "test" + (count > 1 ? "s" : ""); // "test" or "tests"
+        // "non-matching tests" or "tests in other files"
+        var nounPhrase = (/ /.test(tag) ?
+                          (noun + " " + tag) : (tag + " " + noun));
+        // " (foo)" or ""
+        var parenthetical = (tagDescriptions[tag] ? " (" +
+                            tagDescriptions[tag] + ")" : '');
+        result += ("Skipped " + count + " " + nounPhrase + parenthetical + '\n');
+      }
+    });
+
+    return result;
+  }
+}
 
 var getTestStateFilePath = function () {
   return files.pathJoin(files.getHomeDir(), '.meteortest');
