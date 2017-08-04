@@ -9,7 +9,7 @@ import {
   markBottom as parseStackMarkBottom,
   markTop as parseStackMarkTop,
   parse as parseStackParse,
-} from '../utils/parse-stack.js'
+} from '../utils/parse-stack.js';
 import { Console } from '../console/console.js';
 import { host as archInfoHost } from '../utils/archinfo.js';
 import {
