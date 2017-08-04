@@ -30,7 +30,7 @@ import { PackageMap } from '../packaging/package-map.js';
 import { current as releaseCurrent } from '../packaging/release.js';
 
 import { FinishedUpgraders } from '../project-context.js';
-var upgraders = require('../upgraders.js');
+import { allUpgraders } from '../upgraders.js';
 
 export { execFileSync } from '../utils/processes.js';
 
@@ -696,7 +696,7 @@ export class Sandbox {
     var upgradersFile =
       new FinishedUpgraders({projectDir: absoluteTo});
     if (_.isEmpty(upgradersFile.readUpgraders())) {
-      upgradersFile.appendUpgraders(upgraders.allUpgraders());
+      upgradersFile.appendUpgraders(allUpgraders());
     }
 
     require("../cli/default-npm-deps.js").install(absoluteTo);
