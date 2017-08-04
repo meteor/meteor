@@ -6,7 +6,7 @@ var child_process = require('child_process');
 var files = require('../fs/files.js');
 var utils = require('../utils/utils.js');
 var parseStack = require('../utils/parse-stack.js');
-var Console = require('../console/console.js').Console;
+import { Console } from '../console/console.js';
 var archinfo = require('../utils/archinfo.js');
 var config = require('../meteor-services/config.js');
 var buildmessage = require('../utils/buildmessage.js');
