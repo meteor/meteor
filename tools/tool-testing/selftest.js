@@ -18,7 +18,7 @@ var catalogRemote = require('../packaging/catalog/catalog-remote.js');
 var isopackCacheModule = require('../isobuild/isopack-cache.js');
 var isopackets = require('../tool-env/isopackets.js');
 
-var tropohouseModule = require('../packaging/tropohouse.js');
+import { Tropohouse } from '../packaging/tropohouse.js';
 var packageMapModule = require('../packaging/package-map.js');
 var release = require('../packaging/release.js');
 
@@ -153,7 +153,7 @@ function setUpBuiltPackageTropohouse() {
     throw Error("running self-test with METEOR_PACKAGE_SERVER_URL set?");
   }
 
-  var tropohouse = new tropohouseModule.Tropohouse(builtPackageTropohouseDir);
+  var tropohouse = new Tropohouse(builtPackageTropohouseDir);
   tropohouseLocalCatalog = newSelfTestCatalog();
   var versions = {};
   _.each(
