@@ -20,7 +20,7 @@ import { capture, enterJob } from '../utils/buildmessage.js';
 import { getUrlWithResuming } from '../utils/http-helpers.js';
 import Builder from '../isobuild/builder.js';
 
-var catalog = require('../packaging/catalog/catalog.js');
+import { DEFAULT_TRACK } from '../packaging/catalog/catalog.js';
 import { RemoteCatalog } from '../packaging/catalog/catalog-remote.js';
 import { IsopackCache } from '../isobuild/isopack-cache.js';
 var isopackets = require('../tool-env/isopackets.js');
@@ -960,7 +960,7 @@ export class Sandbox {
     }
 
     stubCatalog.collections.releaseTracks.push({
-      name: catalog.DEFAULT_TRACK,
+      name: DEFAULT_TRACK,
       _id: utils.randomToken()
     });
 
@@ -968,7 +968,7 @@ export class Sandbox {
     _.each(releases, function (configuration, releaseName) {
       // Release info
       stubCatalog.collections.releaseVersions.push({
-        track: catalog.DEFAULT_TRACK,
+        track: DEFAULT_TRACK,
         _id: Math.random().toString(),
         version: releaseName,
         orderKey: releaseName,
