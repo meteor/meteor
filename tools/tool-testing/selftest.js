@@ -5,7 +5,11 @@ var child_process = require('child_process');
 
 var files = require('../fs/files.js');
 var utils = require('../utils/utils.js');
-var parseStack = require('../utils/parse-stack.js');
+import {
+  markBottom as parseStackMarkBottom,
+  markTop as parseStackMarkTop,
+  parse as parseStackParse,
+} from '../utils/parse-stack.js'
 import { Console } from '../console/console.js';
 import { host as archInfoHost } from '../utils/archinfo.js';
 var config = require('../meteor-services/config.js');
@@ -53,7 +57,7 @@ class TestFailure {
 // first function that should not be included in the call stack shown
 // to the user.
 export function markStack(f) {
-  return parseStack.markTop(f);
+  return parseStackMarkTop(f);
 }
 
 // Call from a test to throw a TestFailure exception and bail out of the test
@@ -2049,7 +2053,7 @@ export function runTests(options) {
       runningTest = test;
       var startTime = +(new Date);
       // ensure we mark the bottom of the stack each time we start a new test
-      parseStack.markBottom(() => {
+      parseStackMarkBottom(() => {
         test.f(options);
       })();
     } catch (e) {
@@ -2075,7 +2079,7 @@ export function runTests(options) {
       testList.notifyFailed(test);
 
       if (failure instanceof TestFailure) {
-        var frames = parseStack.parse(failure).outsideFiber;
+        var frames = parseStackParse(failure).outsideFiber;
         var relpath = files.pathRelative(files.getCurrentToolsDir(),
                                          frames[0].file);
         Console.rawError("  => " + failure.reason + " at " +
