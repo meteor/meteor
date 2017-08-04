@@ -22,7 +22,7 @@ import Builder from '../isobuild/builder.js';
 
 var catalog = require('../packaging/catalog/catalog.js');
 import { RemoteCatalog } from '../packaging/catalog/catalog-remote.js';
-var isopackCacheModule = require('../isobuild/isopack-cache.js');
+import { IsopackCache } from '../isobuild/isopack-cache.js';
 var isopackets = require('../tool-env/isopackets.js');
 
 import { Tropohouse } from '../packaging/tropohouse.js';
@@ -174,7 +174,7 @@ function setUpBuiltPackageTropohouse() {
   });
   // Make an isopack cache that doesn't automatically save isopacks to disk and
   // has no access to versioned packages.
-  tropohouseIsopackCache = new isopackCacheModule.IsopackCache({
+  tropohouseIsopackCache = new IsopackCache({
     packageMap: packageMap,
     includeCordovaUnibuild: true
   });
