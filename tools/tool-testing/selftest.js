@@ -17,7 +17,7 @@ import {
   getPackageStorage,
 } from '../meteor-services/config.js';
 import { capture, enterJob } from '../utils/buildmessage.js';
-var { getUrlWithResuming } = require("../utils/http-helpers.js");
+import { getUrlWithResuming } from '../utils/http-helpers.js';
 import Builder from '../isobuild/builder.js';
 
 var catalog = require('../packaging/catalog/catalog.js');
