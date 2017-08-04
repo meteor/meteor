@@ -1007,35 +1007,35 @@ class Sandbox {
 // Client
 ///////////////////////////////////////////////////////////////////////////////
 
-var Client = function (options) {
-  var self = this;
+class Client {
+  constructor(options) {
+    var self = this;
 
-  self.host = options.host;
-  self.port = options.port;
-  self.url = "http://" + self.host + ":" + self.port + '/' +
-    (Math.random() * 0x100000000 + 1).toString(36);
-  self.timeout = options.timeout || 40;
+    self.host = options.host;
+    self.port = options.port;
+    self.url = "http://" + self.host + ":" + self.port + '/' +
+      (Math.random() * 0x100000000 + 1).toString(36);
+    self.timeout = options.timeout || 40;
 
-  if (! self.connect || ! self.stop) {
-    console.log("Missing methods in subclass of Client.");
+    if (! self.connect || ! self.stop) {
+      console.log("Missing methods in subclass of Client.");
+    }
   }
-};
+}
 
 // PhantomClient
-var PhantomClient = function (options) {
-  var self = this;
-  Client.apply(this, arguments);
+class PhantomClient extends Client {
+  constructor(options) {
+    var self = this;
+    super(options);
 
-  self.name = "phantomjs";
-  self.process = null;
+    self.name = "phantomjs";
+    self.process = null;
 
-  self._logError = true;
-};
+    self._logError = true;
+  }
 
-util.inherits(PhantomClient, Client);
-
-_.extend(PhantomClient.prototype, {
-  connect: function () {
+  connect() {
     var self = this;
 
     var phantomPath = phantomjs.path;
@@ -1055,40 +1055,38 @@ _.extend(PhantomClient.prototype, {
           console.log("PhantomJS stderr:\n", stderr);
         }
       });
-  },
+  }
 
-  stop: function() {
+  stop() {
     var self = this;
     // Suppress the expected SIGTERM exit 'failure'
     self._logError = false;
     self.process && self.process.kill();
     self.process = null;
   }
-});
+}
 
 // BrowserStackClient
 var browserStackKey = null;
 
-var BrowserStackClient = function (options) {
-  var self = this;
-  Client.apply(this, arguments);
+class BrowserStackClient extends Client {
+  constructor(options) {
+    var self = this;
+    super(options);
 
-  self.tunnelProcess = null;
-  self.driver = null;
+    self.tunnelProcess = null;
+    self.driver = null;
 
-  self.browserName = options.browserName;
-  self.browserVersion = options.browserVersion;
+    self.browserName = options.browserName;
+    self.browserVersion = options.browserVersion;
 
-  self.name = "BrowserStack - " + self.browserName;
-  if (self.browserVersion) {
-    self.name += " " + self.browserVersion;
+    self.name = "BrowserStack - " + self.browserName;
+    if (self.browserVersion) {
+      self.name += " " + self.browserVersion;
+    }
   }
-};
 
-util.inherits(BrowserStackClient, Client);
-
-_.extend(BrowserStackClient.prototype, {
-  connect: function () {
+  connect() {
     var self = this;
 
     // memoize the key
@@ -1122,18 +1120,18 @@ _.extend(BrowserStackClient.prototype, {
         build();
       self.driver.get(self.url);
     });
-  },
+  }
 
-  stop: function() {
+  stop() {
     var self = this;
     self.tunnelProcess && self.tunnelProcess.kill();
     self.tunnelProcess = null;
 
     self.driver && self.driver.quit();
     self.driver = null;
-  },
+  }
 
-  _getBrowserStackKey: function () {
+  _getBrowserStackKey() {
     var outputDir = files.pathJoin(files.mkdtemp(), "key");
 
     try {
@@ -1146,9 +1144,9 @@ _.extend(BrowserStackClient.prototype, {
     } catch (e) {
       return null;
     }
-  },
+  }
 
-  _launchBrowserStackTunnel: function (callback) {
+  _launchBrowserStackTunnel(callback) {
     const self = this;
     const browserStackPath = ensureBrowserStack();
 
@@ -1173,7 +1171,7 @@ _.extend(BrowserStackClient.prototype, {
       }
     });
   }
-});
+}
 
 function ensureBrowserStack() {
   const browserStackPath = files.pathJoin(
