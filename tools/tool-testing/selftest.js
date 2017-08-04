@@ -18,7 +18,7 @@ var { getUrlWithResuming } = require("../utils/http-helpers.js");
 var Builder = require('../isobuild/builder.js').default;
 
 var catalog = require('../packaging/catalog/catalog.js');
-var catalogRemote = require('../packaging/catalog/catalog-remote.js');
+import { RemoteCatalog } from '../packaging/catalog/catalog-remote.js';
 var isopackCacheModule = require('../isobuild/isopack-cache.js');
 var isopackets = require('../tool-env/isopackets.js');
 
@@ -991,7 +991,7 @@ export class Sandbox {
       root: self.warehouse,
       serverUrl: serverUrl
     });
-    self.warehouseOfficialCatalog = new catalogRemote.RemoteCatalog();
+    self.warehouseOfficialCatalog = new RemoteCatalog();
     self.warehouseOfficialCatalog.initialize({
       packageStorage: dataFile
     });
