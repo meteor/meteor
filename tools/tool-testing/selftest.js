@@ -15,7 +15,7 @@ import { host as archInfoHost } from '../utils/archinfo.js';
 var config = require('../meteor-services/config.js');
 import { capture, enterJob } from '../utils/buildmessage.js';
 var { getUrlWithResuming } = require("../utils/http-helpers.js");
-var Builder = require('../isobuild/builder.js').default;
+import Builder from '../isobuild/builder.js';
 
 var catalog = require('../packaging/catalog/catalog.js');
 import { RemoteCatalog } from '../packaging/catalog/catalog-remote.js';
