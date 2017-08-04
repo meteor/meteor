@@ -12,7 +12,10 @@ import {
 } from '../utils/parse-stack.js'
 import { Console } from '../console/console.js';
 import { host as archInfoHost } from '../utils/archinfo.js';
-var config = require('../meteor-services/config.js');
+import {
+  getPackagesDirectoryName,
+  getPackageStorage,
+} from '../meteor-services/config.js';
 import { capture, enterJob } from '../utils/buildmessage.js';
 var { getUrlWithResuming } = require("../utils/http-helpers.js");
 import Builder from '../isobuild/builder.js';
@@ -164,7 +167,7 @@ function setUpBuiltPackageTropohouse() {
   }
   builtPackageTropohouseDir = files.mkdtemp('built-package-tropohouse');
 
-  if (config.getPackagesDirectoryName() !== 'packages') {
+  if (getPackagesDirectoryName() !== 'packages') {
     throw Error("running self-test with METEOR_PACKAGE_SERVER_URL set?");
   }
 
@@ -912,7 +915,7 @@ export class Sandbox {
     setUpBuiltPackageTropohouse();
 
     var serverUrl = self.env.METEOR_PACKAGE_SERVER_URL;
-    var packagesDirectoryName = config.getPackagesDirectoryName(serverUrl);
+    var packagesDirectoryName = getPackagesDirectoryName(serverUrl);
 
     var builder = new Builder({outputPath: self.warehouse});
     builder.copyDirectory({
@@ -987,7 +990,7 @@ export class Sandbox {
       });
     });
 
-    var dataFile = config.getPackageStorage({
+    var dataFile = getPackageStorage({
       root: self.warehouse,
       serverUrl: serverUrl
     });
