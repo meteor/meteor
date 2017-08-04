@@ -9,7 +9,7 @@ var parseStack = require('../utils/parse-stack.js');
 import { Console } from '../console/console.js';
 import { host as archInfoHost } from '../utils/archinfo.js';
 var config = require('../meteor-services/config.js');
-var buildmessage = require('../utils/buildmessage.js');
+import { capture, enterJob } from '../utils/buildmessage.js';
 var { getUrlWithResuming } = require("../utils/http-helpers.js");
 var Builder = require('../isobuild/builder.js').default;
 
@@ -103,7 +103,7 @@ export const expectThrows = markStack(function (f) {
 
 export function doOrThrow(f) {
   var ret;
-  var messages = buildmessage.capture(function () {
+  var messages = capture(function () {
     ret = f();
   });
   if (messages.hasMessages()) {
@@ -172,7 +172,7 @@ function setUpBuiltPackageTropohouse() {
     includeCordovaUnibuild: true
   });
   doOrThrow(function () {
-    buildmessage.enterJob("building self-test packages", function () {
+    enterJob("building self-test packages", function () {
       // Build the packages into the in-memory IsopackCache.
       tropohouseIsopackCache.buildLocalPackages(
         ROOT_PACKAGES_TO_BUILD_IN_SANDBOX);
@@ -196,7 +196,7 @@ var newSelfTestCatalog = function () {
 
   var catalogLocal = require('../packaging/catalog/catalog-local.js');
   var selfTestCatalog = new catalogLocal.LocalCatalog;
-  var messages = buildmessage.capture(
+  var messages = capture(
     { title: "scanning local core packages" },
     function () {
       const packagesDir =
@@ -1017,7 +1017,7 @@ class PhantomClient extends Client {
     var self = this;
     super(options);
 
-    buildmessage.enterJob(
+    enterJob(
       {
         title: 'Installing PhantomJS in Meteor tool',
       },
@@ -1075,7 +1075,7 @@ class BrowserStackClient extends Client {
     var self = this;
     super(options);
 
-    buildmessage.enterJob(
+    enterJob(
       {
         title: 'Installing BrowserStack WebDriver in Meteor tool',
       },
@@ -1202,7 +1202,7 @@ function ensureBrowserStack() {
     const tarGz = `BrowserStackLocal-07-03-14-${OS}-${ARCH}.gz`;
     const url = `https:\/\/${host}/${tarGz}`;
 
-    buildmessage.enterJob("downloading BrowserStack binaries", () => {
+    enterJob("downloading BrowserStack binaries", () => {
       return new Promise((resolve, reject) => {
         const browserStackStream =
           files.createWriteStream(browserStackPath);
