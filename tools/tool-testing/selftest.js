@@ -1,6 +1,6 @@
 var _ = require('underscore');
 var Future = require('fibers/future');
-var fiberHelpers = require('../utils/fiber-helpers.js');
+import { makeFulfillablePromise } from '../utils/fiber-helpers.js';
 var child_process = require('child_process');
 
 var files = require('../fs/files.js');
@@ -307,7 +307,7 @@ class Matcher {
     self.matchPattern = pattern;
     self.matchStrict = strict;
     self.matchFullBuffer = matchFullBuffer;
-    var mp = self.matchPromise = fiberHelpers.makeFulfillablePromise();
+    var mp = self.matchPromise = makeFulfillablePromise();
     self._tryMatch(); // could clear self.matchPromise
 
     var timer = null;
