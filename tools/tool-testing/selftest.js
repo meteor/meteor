@@ -1226,43 +1226,43 @@ function ensureBrowserStack() {
 //
 // Arguments in the 'args' option are not assumed to be standard paths, so
 // calling any of the 'files.*' methods on them is not safe.
-var Run = function (execPath, options) {
-  var self = this;
+class Run {
+  constructor(execPath, options) {
+    var self = this;
 
-  self.execPath = execPath;
-  self.cwd = options.cwd || files.convertToStandardPath(process.cwd());
-  // default env variables
-  self.env = _.extend({ SELFTEST: "t", METEOR_NO_WORDWRAP: "t" }, options.env);
-  self._args = [];
-  self.proc = null;
-  self.baseTimeout = 20;
-  self.extraTime = 0;
-  self.client = options.client;
+    self.execPath = execPath;
+    self.cwd = options.cwd || files.convertToStandardPath(process.cwd());
+    // default env variables
+    self.env = _.extend({ SELFTEST: "t", METEOR_NO_WORDWRAP: "t" }, options.env);
+    self._args = [];
+    self.proc = null;
+    self.baseTimeout = 20;
+    self.extraTime = 0;
+    self.client = options.client;
 
-  self.stdoutMatcher = new Matcher(self);
-  self.stderrMatcher = new Matcher(self);
-  self.outputLog = new OutputLog(self);
+    self.stdoutMatcher = new Matcher(self);
+    self.stderrMatcher = new Matcher(self);
+    self.outputLog = new OutputLog(self);
 
-  self.matcherEndPromise = null;
+    self.matcherEndPromise = null;
 
-  self.exitStatus = undefined; // 'null' means failed rather than exited
-  self.exitPromiseResolvers = [];
-  var opts = options.args || [];
-  self.args.apply(self, opts || []);
+    self.exitStatus = undefined; // 'null' means failed rather than exited
+    self.exitPromiseResolvers = [];
+    var opts = options.args || [];
+    self.args.apply(self, opts || []);
 
-  self.fakeMongoPort = null;
-  self.fakeMongoConnection = null;
-  if (options.fakeMongo) {
-    self.fakeMongoPort = require('../utils/utils.js').randomPort();
-    self.env.METEOR_TEST_FAKE_MONGOD_CONTROL_PORT = self.fakeMongoPort;
+    self.fakeMongoPort = null;
+    self.fakeMongoConnection = null;
+    if (options.fakeMongo) {
+      self.fakeMongoPort = require('../utils/utils.js').randomPort();
+      self.env.METEOR_TEST_FAKE_MONGOD_CONTROL_PORT = self.fakeMongoPort;
+    }
+
+    runningTest.onCleanup(function () {
+      self._stopWithoutWaiting();
+    });
   }
 
-  runningTest.onCleanup(function () {
-    self._stopWithoutWaiting();
-  });
-};
-
-_.extend(Run.prototype, {
   // Set command-line arguments. This may be called multiple times as
   // long as the run has not yet started (the run starts after the
   // first call to a function that requires it, like match()).
@@ -1270,7 +1270,7 @@ _.extend(Run.prototype, {
   // Pass as many arguments as you want. Non-object values will be
   // cast to string, and object values will be treated as maps from
   // option names to values.
-  args: function (...args) {
+  args(...args) {
     var self = this;
 
     if (self.proc) {
@@ -1288,9 +1288,9 @@ _.extend(Run.prototype, {
       }
     });
 
-  },
+  }
 
-  connectClient: function () {
+  connectClient() {
     var self = this;
     if (! self.client) {
       throw new Error("Must create Run with a client to use connectClient().");
@@ -1298,18 +1298,18 @@ _.extend(Run.prototype, {
 
     self._ensureStarted();
     self.client.connect();
-  },
+  }
 
   // Useful for matching one-time patterns not sensitive to ordering.
-  matchBeforeExit: markStack(function (pattern) {
+  matchBeforeExit(pattern) {
     return this.stdoutMatcher.matchBeforeEnd(pattern);
-  }),
+  }
 
-  matchErrBeforeExit: markStack(function (pattern) {
+  matchErrBeforeExit(pattern) {
     return this.stderrMatcher.matchBeforeEnd(pattern);
-  }),
+  }
 
-  _exited: function (status) {
+  _exited(status) {
     var self = this;
 
     if (self.exitStatus !== undefined) {
@@ -1326,7 +1326,7 @@ _.extend(Run.prototype, {
     });
 
     self._endMatchers();
-  },
+  }
 
   _endMatchers() {
     return this.matcherEndPromise =
@@ -1334,9 +1334,9 @@ _.extend(Run.prototype, {
         this.stdoutMatcher.endAsync(),
         this.stderrMatcher.endAsync()
       ]);
-  },
+  }
 
-  _ensureStarted: function () {
+  _ensureStarted() {
     var self = this;
 
     if (self.proc) {
@@ -1381,13 +1381,13 @@ _.extend(Run.prototype, {
       self.outputLog.write('stderr', data);
       self.stderrMatcher.write(data);
     });
-  },
+  }
 
   // Wait until we get text on stdout that matches 'pattern', which
   // may be a regular expression or a string. Consume stdout up to
   // that point. If this pattern does not appear after a timeout (or
   // the program exits before emitting the pattern), fail.
-  match: markStack(function (pattern, _strict) {
+  match(pattern, _strict) {
     var self = this;
     self._ensureStarted();
 
@@ -1395,10 +1395,10 @@ _.extend(Run.prototype, {
     timeout *= utils.timeoutScaleFactor;
     self.extraTime = 0;
     return self.stdoutMatcher.match(pattern, timeout, _strict);
-  }),
+  }
 
   // As expect(), but for stderr instead of stdout.
-  matchErr: markStack(function (pattern, _strict) {
+  matchErr(pattern, _strict) {
     var self = this;
     self._ensureStarted();
 
@@ -1406,18 +1406,18 @@ _.extend(Run.prototype, {
     timeout *= utils.timeoutScaleFactor;
     self.extraTime = 0;
     return self.stderrMatcher.match(pattern, timeout, _strict);
-  }),
+  }
 
   // Like match(), but won't skip ahead looking for a match. It must
   // follow immediately after the last thing we matched or read.
-  read: markStack(function (pattern) {
+  read(pattern) {
     return this.match(pattern, true);
-  }),
+  }
 
   // As read(), but for stderr instead of stdout.
-  readErr: markStack(function (pattern) {
+  readErr(pattern) {
     return this.matchErr(pattern, true);
-  }),
+  }
 
   // Assert that 'pattern' (again, a regexp or string) has not
   // occurred on stdout at any point so far in this run. Currently
@@ -1433,27 +1433,27 @@ _.extend(Run.prototype, {
   // run.expectExit(1);  // <<-- improtant to actually run the command
   // run.forbidErr("unwanted string"); // <<-- important to run **after** the
   //                                   // command ran the process.
-  forbid: markStack(function (pattern) {
+  forbid(pattern) {
     this._ensureStarted();
     this.outputLog.forbid(pattern, 'stdout');
-  }),
+  }
 
   // As forbid(), but for stderr instead of stdout.
-  forbidErr: markStack(function (pattern) {
+  forbidErr(pattern) {
     this._ensureStarted();
     this.outputLog.forbid(pattern, 'stderr');
-  }),
+  }
 
   // Combination of forbid() and forbidErr(). Forbids the pattern on
   // both stdout and stderr.
-  forbidAll: markStack(function (pattern) {
+  forbidAll(pattern) {
     this._ensureStarted();
     this.outputLog.forbid(pattern);
-  }),
+  }
 
   // Expect the program to exit without anything further being
   // printed on either stdout or stderr.
-  expectEnd: markStack(function () {
+  expectEnd() {
     var self = this;
     self._ensureStarted();
 
@@ -1464,13 +1464,13 @@ _.extend(Run.prototype, {
 
     self.stdoutMatcher.matchEmpty();
     self.stderrMatcher.matchEmpty();
-  }),
+  }
 
   // Expect the program to exit with the given (numeric) exit
   // status. Fail if the process exits with a different code, or if
   // the process does not exit after a timeout. You can also omit the
   // argument to simply wait for the program to exit.
-  expectExit: markStack(function (code) {
+  expectExit(code) {
     var self = this;
     self._ensureStarted();
 
@@ -1507,23 +1507,23 @@ _.extend(Run.prototype, {
         run: self
       });
     }
-  }),
+  }
 
   // Extend the timeout for the next operation by 'secs' seconds.
-  waitSecs: function (secs) {
+  waitSecs(secs) {
     var self = this;
     self.extraTime += secs;
-  },
+  }
 
   // Send 'string' to the program on its stdin.
-  write: function (string) {
+  write(string) {
     var self = this;
     self._ensureStarted();
     self.proc.stdin.write(string);
-  },
+  }
 
   // Kill the program and then wait for it to actually exit.
-  stop: markStack(function () {
+  stop() {
     var self = this;
     if (self.exitStatus === undefined) {
       self._ensureStarted();
@@ -1531,19 +1531,19 @@ _.extend(Run.prototype, {
       self._killProcess();
       self.expectExit();
     }
-  }),
+  }
 
   // Like stop, but doesn't wait for it to exit.
-  _stopWithoutWaiting: function () {
+  _stopWithoutWaiting() {
     var self = this;
     if (self.exitStatus === undefined && self.proc) {
       self.client && self.client.stop();
       self._killProcess();
     }
-  },
+  }
 
   // Kills the running process and it's child processes
-  _killProcess: function () {
+  _killProcess() {
     if (!this.proc) {
       throw new Error("Unexpected: `this.proc` undefined when calling _killProcess");
     }
@@ -1555,7 +1555,7 @@ _.extend(Run.prototype, {
     } else {
       this.proc.kill();
     }
-  },
+  }
 
   // If the fakeMongo option was set, sent a command to the stub
   // mongod. Available commands currently are:
@@ -1566,7 +1566,7 @@ _.extend(Run.prototype, {
   //
   // Blocks until a connection to fake-mongod can be
   // established. Throws a TestFailure if it cannot be established.
-  tellMongo: markStack(function (command) {
+  tellMongo(command) {
     var self = this;
 
     if (! self.fakeMongoPort) {
@@ -1628,9 +1628,28 @@ _.extend(Run.prototype, {
       self.fakeMongoConnection.end();
       self.fakeMongoConnection = null;
     }
-  })
-});
+  }
+}
 
+const wrapWithMarkStack = (func) => markStack(func);
+
+// `Run` class methods to wrap with `markStack`
+[
+  'expectEnd',
+  'expectExit',
+  'forbid',
+  'forbidAll',
+  'forbidErr',
+  'match',
+  'matchBeforeExit',
+  'matchErr',
+  'matchErrBeforeExit',
+  'read',
+  'readErr',
+  'stop',
+  'tellMongo',
+].forEach(functionName =>
+  Run.prototype[functionName] = wrapWithMarkStack(Run.prototype[functionName]));
 
 ///////////////////////////////////////////////////////////////////////////////
 // Defining tests
