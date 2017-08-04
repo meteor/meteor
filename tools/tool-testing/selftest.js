@@ -1636,28 +1636,29 @@ _.extend(Run.prototype, {
 // Defining tests
 ///////////////////////////////////////////////////////////////////////////////
 
-var Test = function (options) {
-  var self = this;
-  self.name = options.name;
-  self.file = options.file;
-  self.fileHash = options.fileHash;
-  self.tags = options.tags || [];
-  self.f = options.func;
-  self.cleanupHandlers = [];
-};
+class Test {
+  constructor(options) {
+    var self = this;
+    self.name = options.name;
+    self.file = options.file;
+    self.fileHash = options.fileHash;
+    self.tags = options.tags || [];
+    self.f = options.func;
+    self.cleanupHandlers = [];
+  }
 
-_.extend(Test.prototype, {
-  onCleanup: function (cleanupHandler) {
+  onCleanup(cleanupHandler) {
     this.cleanupHandlers.push(cleanupHandler);
-  },
-  cleanup: function () {
+  }
+
+  cleanup() {
     var self = this;
     _.each(self.cleanupHandlers, function (cleanupHandler) {
       cleanupHandler();
     });
     self.cleanupHandlers = [];
   }
-});
+}
 
 var allTests = null;
 var fileBeingLoaded = null;
