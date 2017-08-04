@@ -301,7 +301,7 @@ BCp._inferHelper = function (
   merge(babelOptions, babelrc, "plugins");
 
   const babelEnv = (process.env.BABEL_ENV ||
-                    process.env_NODE_ENV ||
+                    process.env.NODE_ENV ||
                     "development");
   if (babelrc && babelrc.env && babelrc.env[babelEnv]) {
     const env = babelrc.env[babelEnv];
