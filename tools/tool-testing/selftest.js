@@ -1780,7 +1780,7 @@ var getFilteredTests = function (options) {
         return test;
       }
 
-      return _.extend({}, test, { tags: test.tags.concat(newTags) });
+      return _.extend(Object.create(Object.getPrototypeOf(test)), test, { tags: test.tags.concat(newTags) });
     });
   }
 
