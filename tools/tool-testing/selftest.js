@@ -60,10 +60,9 @@ import 'longjohn';
 // Exception representing a test failure
 class TestFailure {
   constructor(reason, details) {
-    var self = this;
-    self.reason = reason;
-    self.details = details || {};
-    self.stack = (new Error).stack;
+    this.reason = reason;
+    this.details = details || {};
+    this.stack = (new Error).stack;
   }
 }
 
@@ -176,7 +175,7 @@ function setUpBuiltPackageTropohouse() {
   var versions = {};
   _.each(
     tropohouseLocalCatalog.getAllNonTestPackageNames(),
-    function (packageName) {
+    (packageName) => {
       versions[packageName] =
         tropohouseLocalCatalog.getLatestVersion(packageName).version;
   });
@@ -190,7 +189,7 @@ function setUpBuiltPackageTropohouse() {
     includeCordovaUnibuild: true
   });
   doOrThrow(function () {
-    enterJob("building self-test packages", function () {
+    enterJob("building self-test packages", () => {
       // Build the packages into the in-memory IsopackCache.
       tropohouseIsopackCache.buildLocalPackages(
         ROOT_PACKAGES_TO_BUILD_IN_SANDBOX);
@@ -202,7 +201,7 @@ function setUpBuiltPackageTropohouse() {
   // $METEOR_PACKAGE_SERVER_URL is not set in the self-test process itself) even
   // though some tests will want them to be under
   // 'packages-for-server/test-packages'; we'll fix this in _makeWarehouse.
-  tropohouseIsopackCache.eachBuiltIsopack(function (name, isopack) {
+  tropohouseIsopackCache.eachBuiltIsopack((name, isopack) => {
     tropohouse._saveIsopack(isopack, name);
   });
 };
@@ -216,7 +215,7 @@ var newSelfTestCatalog = function () {
   var selfTestCatalog = new catalogLocal.LocalCatalog;
   var messages = capture(
     { title: "scanning local core packages" },
-    function () {
+    () => {
       const packagesDir =
         files.pathJoin(files.getCurrentToolsDir(), 'packages');
 
@@ -250,22 +249,20 @@ var newSelfTestCatalog = function () {
 
 class Matcher {
   constructor(run) {
-    var self = this;
-    self.buf = "";
-    self.fullBuffer = "";
-    self.ended = false;
-    self.resetMatch();
-    self.run = run; // used only to set a field on exceptions
-    self.endPromise = new Promise(resolve => {
-      self.resolveEndPromise = resolve;
+    this.buf = "";
+    this.fullBuffer = "";
+    this.ended = false;
+    this.resetMatch();
+    this.run = run; // used only to set a field on exceptions
+    this.endPromise = new Promise(resolve => {
+      this.resolveEndPromise = resolve;
     });
   }
 
   write(data) {
-    var self = this;
-    self.buf += data;
-    self.fullBuffer += data;
-    self._tryMatch();
+    this.buf += data;
+    this.fullBuffer += data;
+    this._tryMatch();
   }
 
   resetMatch() {
@@ -307,22 +304,21 @@ class Matcher {
     strict = false,
     matchFullBuffer = false,
   }) {
-    var self = this;
-    if (self.matchPromise) {
+    if (this.matchPromise) {
       return Promise.reject(new Error("already have a match pending?"));
     }
-    self.matchPattern = pattern;
-    self.matchStrict = strict;
-    self.matchFullBuffer = matchFullBuffer;
-    var mp = self.matchPromise = makeFulfillablePromise();
-    self._tryMatch(); // could clear self.matchPromise
+    this.matchPattern = pattern;
+    this.matchStrict = strict;
+    this.matchFullBuffer = matchFullBuffer;
+    var mp = this.matchPromise = makeFulfillablePromise();
+    this._tryMatch(); // could clear this.matchPromise
 
     var timer = null;
     if (timeout) {
-      timer = setTimeout(function () {
-        self.rejectMatch(new TestFailure('match-timeout', {
-          run: self.run,
-          pattern: self.matchPattern
+      timer = setTimeout(() => {
+        this.rejectMatch(new TestFailure('match-timeout', {
+          run: this.run,
+          pattern: this.matchPattern
         }));
       }, timeout * 1000);
     } else {
@@ -354,79 +350,74 @@ class Matcher {
   }
 
   endAsync() {
-    var self = this;
-    self.resolveEndPromise();
-    return self._beforeEnd(() => {
-      self.ended = true;
-      self._tryMatch();
-      return self.matchPromise;
+    this.resolveEndPromise();
+    return this._beforeEnd(() => {
+      this.ended = true;
+      this._tryMatch();
+      return this.matchPromise;
     });
   }
 
   matchEmpty() {
-    var self = this;
-
-    if (self.buf.length > 0) {
-      Console.info("Extra junk is :", self.buf);
-      throw new TestFailure('junk-at-end', { run: self.run });
+    if (this.buf.length > 0) {
+      Console.info("Extra junk is :", this.buf);
+      throw new TestFailure('junk-at-end', { run: this.run });
     }
   }
 
   _tryMatch() {
-    var self = this;
-
-    var mp = self.matchPromise;
+    var mp = this.matchPromise;
     if (! mp) {
       return;
     }
 
     var ret = null;
 
-    if (self.matchFullBuffer) {
-      // Note: self.matchStrict is ignored if self.matchFullBuffer truthy.
-      if (self.matchPattern instanceof RegExp) {
-        ret = self.fullBuffer.match(self.matchPattern);
-      } else if (self.fullBuffer.indexOf(self.matchPattern) >= 0) {
-        ret = self.matchPattern;
+    if (this.matchFullBuffer) {
+      // Note: this.matchStrict is ignored if this.matchFullBuffer truthy.
+      if (this.matchPattern instanceof RegExp) {
+        ret = this.fullBuffer.match(this.matchPattern);
+      } else if (this.fullBuffer.indexOf(this.matchPattern) >= 0) {
+        ret = this.matchPattern;
       }
 
-    } else if (self.matchPattern instanceof RegExp) {
-      var m = self.buf.match(self.matchPattern);
+    } else if (this.matchPattern instanceof RegExp) {
+      var m = this.buf.match(this.matchPattern);
       if (m) {
-        if (self.matchStrict && m.index !== 0) {
-          Console.info("Extra junk is: ", self.buf.substr(0, m.index));
-          return self.rejectMatch(new TestFailure('junk-before', {
-            run: self.run,
-            pattern: self.matchPattern
+        if (this.matchStrict && m.index !== 0) {
+          Console.info("Extra junk is: ", this.buf.substr(0, m.index));
+          return this.rejectMatch(new TestFailure('junk-before', {
+            run: this.run,
+            pattern: this.matchPattern
           }));
         }
         ret = m;
-        self.buf = self.buf.slice(m.index + m[0].length);
+        this.buf = this.buf.slice(m.index + m[0].length);
       }
 
     } else {
-      var i = self.buf.indexOf(self.matchPattern);
+      var i = this.buf.indexOf(this.matchPattern);
       if (i !== -1) {
-        if (self.matchStrict && i !== 0) {
-          Console.info("Extra junk is: ", self.buf.substr(0, i));
-          return self.rejectMatch(new TestFailure('junk-before', {
-            run: self.run,
-            pattern: self.matchPattern
+        if (this.matchStrict && i !== 0) {
+          Console.info("Extra junk is: ", this.buf.substr(0, i));
+          return this.rejectMatch(new TestFailure('junk-before', {
+            run: this.run,
+            pattern: this.matchPattern
           }));
         }
-        ret = self.matchPattern;
-        self.buf = self.buf.slice(i + self.matchPattern.length);
+        ret = this.matchPattern;
+        this.buf = this.buf.slice(i + this.matchPattern.length);
       }
     }
 
     if (ret !== null) {
-      return self.resolveMatch(ret);
+      return this.resolveMatch(ret);
     }
 
-    if (self.ended) {
-      return self.rejectMatch(new TestFailure('no-match', {
-        run: self.run,
-        pattern: self.matchPattern
+    if (this.ended) {
+      return this.rejectMatch(new TestFailure('no-match', {
+        run: this.run,
+        pattern: this.matchPattern
       }));
     }
   }
@@ -441,29 +432,25 @@ class Matcher {
 
 class OutputLog {
   constructor(run) {
-    var self = this;
-
     // each entry is an object with keys 'channel', 'text', and if it is
     // the last entry and there was no newline terminator, 'bare'
-    self.lines = [];
+    this.lines = [];
 
     // map from a channel name to an object representing a partially
     // read line of text on that channel. That object has keys 'text'
     // (text read), 'offset' (cursor position, equal to text.length
     // unless a '\r' has been read).
-    self.buffers = {};
+    this.buffers = {};
 
     // a Run, exclusively for inclusion in exceptions
-    self.run = run;
+    this.run = run;
   }
 
   write(channel, text) {
-    var self = this;
-
-    if (! _.has(self.buffers, 'channel')) {
-      self.buffers[channel] = { text: '', offset: 0};
+    if (! _.has(this.buffers, 'channel')) {
+      this.buffers[channel] = { text: '', offset: 0};
     }
-    var b = self.buffers[channel];
+    var b = this.buffers[channel];
 
     while (text.length) {
       var m = text.match(/^[^\n\r]+/);
@@ -483,7 +470,7 @@ class OutputLog {
       }
 
       if (text[0] === '\n') {
-        self.lines.push({ channel: channel, text: b.text });
+        this.lines.push({ channel: channel, text: b.text });
         b.text = '';
         b.offset = 0;
         text = text.substr(1);
@@ -495,21 +482,18 @@ class OutputLog {
   }
 
   end() {
-    var self = this;
-
-    _.each(_.keys(self.buffers), function (channel) {
-      if (self.buffers[channel].text.length) {
-        self.lines.push({ channel: channel,
-                          text: self.buffers[channel].text,
+    _.each(_.keys(this.buffers), (channel) => {
+      if (this.buffers[channel].text.length) {
+        this.lines.push({ channel: channel,
+                          text: this.buffers[channel].text,
                           bare: true });
-        self.buffers[channel] = { text: '', offset: 0};
+        this.buffers[channel] = { text: '', offset: 0};
       }
     });
   }
 
   forbid(pattern, channel) {
-    var self = this;
-    _.each(self.lines, function (line) {
+    _.each(this.lines, (line) => {
       if (channel && channel !== line.channel) {
         return;
       }
@@ -517,14 +501,13 @@ class OutputLog {
       var match = (pattern instanceof RegExp) ?
         (line.text.match(pattern)) : (line.text.indexOf(pattern) !== -1);
       if (match) {
-        throw new TestFailure('forbidden-string-present', { run: self.run });
+        throw new TestFailure('forbidden-string-present', { run: this.run });
       }
     });
   }
 
   get() {
-    var self = this;
-    return self.lines;
+    return this.lines;
   }
 }
 
@@ -575,28 +558,27 @@ class OutputLog {
 
 export class Sandbox {
   constructor(options) {
-    var self = this;
     // default options
     options = _.extend({ clients: {} }, options);
 
-    self.root = files.mkdtemp();
-    self.warehouse = null;
+    this.root = files.mkdtemp();
+    this.warehouse = null;
 
-    self.home = files.pathJoin(self.root, 'home');
-    files.mkdir(self.home, 0o755);
-    self.cwd = self.home;
-    self.env = {};
-    self.fakeMongo = options.fakeMongo;
+    this.home = files.pathJoin(this.root, 'home');
+    files.mkdir(this.home, 0o755);
+    this.cwd = this.home;
+    this.env = {};
+    this.fakeMongo = options.fakeMongo;
 
     if (_.has(options, 'warehouse')) {
       if (!files.inCheckout()) {
         throw Error("make only use a fake warehouse in a checkout");
       }
-      self.warehouse = files.pathJoin(self.root, 'tropohouse');
-      self._makeWarehouse(options.warehouse);
+      this.warehouse = files.pathJoin(this.root, 'tropohouse');
+      this._makeWarehouse(options.warehouse);
     }
 
-    self.clients = [new PhantomClient({
+    this.clients = [new PhantomClient({
       host: 'localhost',
       port: options.clients.port || 3000
     })];
@@ -614,8 +596,8 @@ export class Sandbox {
         { browserName: 'android' }
       ];
 
-      _.each(browsers, function (browser) {
-        self.clients.push(new BrowserStackClient({
+      _.each(browsers, (browser) => {
+        this.clients.push(new BrowserStackClient({
           host: 'localhost',
           port: 3000,
           browserName: browser.browserName,
@@ -628,23 +610,21 @@ export class Sandbox {
     var meteorScript = process.platform === "win32" ? "meteor.bat" : "meteor";
 
     // Figure out the 'meteor' to run
-    if (self.warehouse) {
-      self.execPath = files.pathJoin(self.warehouse, meteorScript);
+    if (this.warehouse) {
+      this.execPath = files.pathJoin(this.warehouse, meteorScript);
     } else {
-      self.execPath = files.pathJoin(files.getCurrentToolsDir(), meteorScript);
+      this.execPath = files.pathJoin(files.getCurrentToolsDir(), meteorScript);
     }
   }
 
   // Create a new test run of the tool in this sandbox.
   run(...args) {
-    var self = this;
-
-    return new Run(self.execPath, {
-      sandbox: self,
+    return new Run(this.execPath, {
+      sandbox: this,
       args: args,
-      cwd: self.cwd,
-      env: self._makeEnv(),
-      fakeMongo: self.fakeMongo
+      cwd: this.cwd,
+      env: this._makeEnv(),
+      fakeMongo: this.fakeMongo
     });
   }
 
@@ -657,19 +637,18 @@ export class Sandbox {
   //   // post-connection checks
   // });
   testWithAllClients(f, ...args) {
-    var self = this;
     args = _.compact(args);
 
-    console.log("running test with " + self.clients.length + " client(s).");
+    console.log("running test with " + this.clients.length + " client(s).");
 
-    _.each(self.clients, function (client) {
+    _.each(this.clients, (client) => {
       console.log("testing with " + client.name + "...");
-      var run = new Run(self.execPath, {
-        sandbox: self,
+      const run = new Run(this.execPath, {
+        sandbox: this,
         args: args,
-        cwd: self.cwd,
-        env: self._makeEnv(),
-        fakeMongo: self.fakeMongo,
+        cwd: this.cwd,
+        env: this._makeEnv(),
+        fakeMongo: this.fakeMongo,
         client: client
       });
       run.baseTimeout = client.timeout;
@@ -688,18 +667,17 @@ export class Sandbox {
   //   s.createApp('myapp', 'empty');
   //   s.cd('myapp');
   createApp(to, template, options) {
-    var self = this;
     options = options || {};
-    var absoluteTo = files.pathJoin(self.cwd, to);
+    var absoluteTo = files.pathJoin(this.cwd, to);
     files.cp_r(files.pathJoin(
       files.convertToStandardPath(__dirname), '..', 'tests', 'apps', template),
         absoluteTo, { ignore: [/^local$/] });
     // If the test isn't explicitly managing a mock warehouse, ensure that apps
     // run with our release by default.
     if (options.release) {
-      self.write(files.pathJoin(to, '.meteor/release'), options.release);
-    } else if (!self.warehouse && releaseCurrent.isProperRelease()) {
-      self.write(files.pathJoin(to, '.meteor/release'), releaseCurrent.name);
+      this.write(files.pathJoin(to, '.meteor/release'), options.release);
+    } else if (!this.warehouse && releaseCurrent.isProperRelease()) {
+      this.write(files.pathJoin(to, '.meteor/release'), releaseCurrent.name);
     }
 
     // Make sure the apps don't run any upgraders, unless they intentionally
@@ -719,8 +697,8 @@ export class Sandbox {
     // Prepare the app (ie, build or download packages). We give this a nice
     // long timeout, which allows the next command to not need a bloated
     // timeout. (meteor create does this anyway.)
-    self.cd(to, function () {
-      var run = self.run("--prepare-app");
+    this.cd(to, () => {
+      var run = this.run("--prepare-app");
       // XXX Can we cache the output of running this once somewhere, so that
       // multiple calls to createApp with the same template get the same cache?
       // This is a little tricky because isopack-buildinfo.json uses absolute
@@ -743,13 +721,12 @@ export class Sandbox {
   //   s.createPackage('me_mypack', me:mypack', 'empty');
   //   s.cd('me_mypack');
   createPackage(packageDir, packageName, template) {
-    var self = this;
-    var packagePath = files.pathJoin(self.cwd, packageDir);
+    var packagePath = files.pathJoin(this.cwd, packageDir);
     var templatePackagePath = files.pathJoin(
       files.convertToStandardPath(__dirname), '..', 'tests', 'packages', template);
     files.cp_r(templatePackagePath, packagePath);
 
-    _.each(files.readdir(packagePath), function (file) {
+    _.each(files.readdir(packagePath), (file) => {
       if (file.match(/^package.*\.js$/)) {
         var packageJsFile = files.pathJoin(packagePath, file);
         files.writeFile(
@@ -773,51 +750,45 @@ export class Sandbox {
   //     s.run('add', 'somepackage');
   //   });
   cd(relativePath, callback) {
-    var self = this;
-    var previous = self.cwd;
-    self.cwd = files.pathResolve(self.cwd, relativePath);
+    var previous = this.cwd;
+    this.cwd = files.pathResolve(this.cwd, relativePath);
     if (callback) {
       callback();
-      self.cwd = previous;
+      this.cwd = previous;
     }
   }
 
   // Set an environment variable for subsequent runs.
   set(name, value) {
-    var self = this;
-    self.env[name] = value;
+    this.env[name] = value;
   }
 
   // Undo set().
   unset(name) {
-    var self = this;
-    delete self.env[name];
+    delete this.env[name];
   }
 
   // Write to a file in the sandbox, overwriting its current contents
   // if any. 'filename' is a path intepreted relative to the Sandbox's
   // cwd. 'contents' is a string (utf8 is assumed).
   write(filename, contents) {
-    var self = this;
-    files.writeFile(files.pathJoin(self.cwd, filename), contents, 'utf8');
+    files.writeFile(files.pathJoin(this.cwd, filename), contents, 'utf8');
   }
 
   // Like writeFile, but appends rather than writes.
   append(filename, contents) {
-    var self = this;
-    files.appendFile(files.pathJoin(self.cwd, filename), contents, 'utf8');
+    files.appendFile(files.pathJoin(this.cwd, filename), contents, 'utf8');
   }
 
   // Reads a file in the sandbox as a utf8 string. 'filename' is a
   // path intepreted relative to the Sandbox's cwd.  Returns null if
   // file does not exist.
   read(filename) {
-    var self = this;
-    var file = files.pathJoin(self.cwd, filename);
+    var file = files.pathJoin(this.cwd, filename);
     if (!files.exists(file)) {
       return null;
     } else {
-      return files.readFile(files.pathJoin(self.cwd, filename), 'utf8');
+      return files.readFile(files.pathJoin(this.cwd, filename), 'utf8');
     }
   }
 
@@ -825,24 +796,21 @@ export class Sandbox {
   // want to switch contents of package.js files. It is more legible to copy in
   // the backup file rather than trying to write into it manually.
   cp(from, to) {
-    var self = this;
-    var contents = self.read(from);
+    var contents = this.read(from);
     if (!contents) {
       throw new Error("File " + from + " does not exist.");
     };
-    self.write(to, contents);
+    this.write(to, contents);
   }
 
   // Delete a file in the sandbox. 'filename' is as in write().
   unlink(filename) {
-    var self = this;
-    files.unlink(files.pathJoin(self.cwd, filename));
+    files.unlink(files.pathJoin(this.cwd, filename));
   }
 
   // Make a directory in the sandbox. 'filename' is as in write().
   mkdir(dirname) {
-    var self = this;
-    var dirPath = files.pathJoin(self.cwd, dirname);
+    var dirPath = files.pathJoin(this.cwd, dirname);
     if (! files.exists(dirPath)) {
       files.mkdir(dirPath);
     }
@@ -850,35 +818,31 @@ export class Sandbox {
 
   // Rename something in the sandbox. 'oldName' and 'newName' are as in write().
   rename(oldName, newName) {
-    var self = this;
-    files.rename(files.pathJoin(self.cwd, oldName),
-                 files.pathJoin(self.cwd, newName));
+    files.rename(files.pathJoin(this.cwd, oldName),
+                 files.pathJoin(this.cwd, newName));
   }
 
   // Return the current contents of .meteorsession in the sandbox.
   readSessionFile() {
-    var self = this;
-    return files.readFile(files.pathJoin(self.root, '.meteorsession'), 'utf8');
+    return files.readFile(files.pathJoin(this.root, '.meteorsession'), 'utf8');
   }
 
   // Overwrite .meteorsession in the sandbox with 'contents'. You
   // could use this in conjunction with readSessionFile to save and
   // restore authentication states.
   writeSessionFile(contents) {
-    var self = this;
-    return files.writeFile(files.pathJoin(self.root, '.meteorsession'),
+    return files.writeFile(files.pathJoin(this.root, '.meteorsession'),
                            contents, 'utf8');
   }
 
   _makeEnv() {
-    var self = this;
-    var env = _.clone(self.env);
+    var env = _.clone(this.env);
     env.METEOR_SESSION_FILE = files.convertToOSPath(
-      files.pathJoin(self.root, '.meteorsession'));
+      files.pathJoin(this.root, '.meteorsession'));
 
-    if (self.warehouse) {
+    if (this.warehouse) {
       // Tell it where the warehouse lives.
-      env.METEOR_WAREHOUSE_DIR = files.convertToOSPath(self.warehouse);
+      env.METEOR_WAREHOUSE_DIR = files.convertToOSPath(this.warehouse);
 
       // Don't ever try to refresh the stub catalog we made.
       env.METEOR_OFFLINE_CATALOG = "t";
@@ -901,7 +865,7 @@ export class Sandbox {
   }
 
   // Writes a stub warehouse (really a tropohouse) to the directory
-  // self.warehouse. This warehouse only contains a meteor-tool package and some
+  // this.warehouse. This warehouse only contains a meteor-tool package and some
   // releases containing that tool only (and no packages).
   //
   // packageServerUrl indicates which package server we think we are using. Use
@@ -909,15 +873,13 @@ export class Sandbox {
   // you will be specifying $METEOR_PACKAGE_SERVER_URL in the environment of a
   // command you are running in this sandbox.
   _makeWarehouse(releases) {
-    var self = this;
-
     // Ensure we have a tropohouse to copy stuff out of.
     setUpBuiltPackageTropohouse();
 
-    var serverUrl = self.env.METEOR_PACKAGE_SERVER_URL;
+    var serverUrl = this.env.METEOR_PACKAGE_SERVER_URL;
     var packagesDirectoryName = getPackagesDirectoryName(serverUrl);
 
-    var builder = new Builder({outputPath: self.warehouse});
+    var builder = new Builder({outputPath: this.warehouse});
     builder.copyDirectory({
       from: files.pathJoin(builtPackageTropohouseDir, 'packages'),
       to: packagesDirectoryName,
@@ -940,8 +902,8 @@ export class Sandbox {
     var packageVersions = {};
     var toolPackageVersion = null;
 
-    tropohouseIsopackCache.eachBuiltIsopack(function (packageName, isopack) {
-      var packageRec = tropohouseLocalCatalog.getPackage(packageName);
+    tropohouseIsopackCache.eachBuiltIsopack((packageName, isopack) => {
+      const packageRec = tropohouseLocalCatalog.getPackage(packageName);
       if (! packageRec) {
         throw Error("no package record for " + packageName);
       }
@@ -976,7 +938,7 @@ export class Sandbox {
     });
 
     // Now create each requested release.
-    _.each(releases, function (configuration, releaseName) {
+    _.each(releases, (configuration, releaseName) => {
       // Release info
       stubCatalog.collections.releaseVersions.push({
         track: DEFAULT_TRACK,
@@ -991,21 +953,21 @@ export class Sandbox {
     });
 
     var dataFile = getPackageStorage({
-      root: self.warehouse,
+      root: this.warehouse,
       serverUrl: serverUrl
     });
-    self.warehouseOfficialCatalog = new RemoteCatalog();
-    self.warehouseOfficialCatalog.initialize({
+    this.warehouseOfficialCatalog = new RemoteCatalog();
+    this.warehouseOfficialCatalog.initialize({
       packageStorage: dataFile
     });
-    self.warehouseOfficialCatalog.insertData(stubCatalog);
+    this.warehouseOfficialCatalog.insertData(stubCatalog);
 
     // And a cherry on top
     // XXX this is hacky
     files.linkToMeteorScript(
-      files.pathJoin(self.warehouse, packagesDirectoryName, "meteor-tool", toolPackageVersion,
+      files.pathJoin(this.warehouse, packagesDirectoryName, "meteor-tool", toolPackageVersion,
         'mt-' + archInfoHost(), 'meteor'),
-      files.pathJoin(self.warehouse, 'meteor'));
+      files.pathJoin(this.warehouse, 'meteor'));
   }
 }
 
@@ -1015,15 +977,13 @@ export class Sandbox {
 
 class Client {
   constructor(options) {
-    var self = this;
-
-    self.host = options.host;
-    self.port = options.port;
-    self.url = "http://" + self.host + ":" + self.port + '/' +
+    this.host = options.host;
+    this.port = options.port;
+    this.url = "http://" + this.host + ":" + this.port + '/' +
       (Math.random() * 0x100000000 + 1).toString(36);
-    self.timeout = options.timeout || 40;
+    this.timeout = options.timeout || 40;
 
-    if (! self.connect || ! self.stop) {
+    if (! this.connect || ! this.stop) {
       console.log("Missing methods in subclass of Client.");
     }
   }
@@ -1032,26 +992,23 @@ class Client {
 // PhantomClient
 class PhantomClient extends Client {
   constructor(options) {
-    var self = this;
     super(options);
 
-    self.name = "phantomjs";
-    self.process = null;
+    this.name = "phantomjs";
+    this.process = null;
 
-    self._logError = true;
+    this._logError = true;
   }
 
   connect() {
-    var self = this;
-
     var phantomPath = phantomjs.path;
 
     var scriptPath = files.pathJoin(files.getCurrentToolsDir(), "tools",
       "tool-testing", "phantom", "open-url.js");
-    self.process = child_process.execFile(phantomPath, ["--load-images=no",
-      files.convertToOSPath(scriptPath), self.url],
-      {}, function (error, stdout, stderr) {
-        if (self._logError && error) {
+    this.process = child_process.execFile(phantomPath, ["--load-images=no",
+      files.convertToOSPath(scriptPath), this.url],
+      {}, (error, stdout, stderr) => {
+        if (this._logError && error) {
           console.log(
             "PhantomJS exited with error ", error,
             "\nstdout:\n", stdout,
@@ -1064,11 +1021,10 @@ class PhantomClient extends Client {
   }
 
   stop() {
-    var self = this;
     // Suppress the expected SIGTERM exit 'failure'
-    self._logError = false;
-    self.process && self.process.kill();
-    self.process = null;
+    this._logError = false;
+    this.process && this.process.kill();
+    this.process = null;
   }
 }
 
@@ -1077,27 +1033,24 @@ let browserStackKey = null;
 
 class BrowserStackClient extends Client {
   constructor(options) {
-    var self = this;
     super(options);
 
-    self.tunnelProcess = null;
-    self.driver = null;
+    this.tunnelProcess = null;
+    this.driver = null;
 
-    self.browserName = options.browserName;
-    self.browserVersion = options.browserVersion;
+    this.browserName = options.browserName;
+    this.browserVersion = options.browserVersion;
 
-    self.name = "BrowserStack - " + self.browserName;
-    if (self.browserVersion) {
-      self.name += " " + self.browserVersion;
+    this.name = "BrowserStack - " + this.browserName;
+    if (this.browserVersion) {
+      this.name += " " + this.browserVersion;
     }
   }
 
   connect() {
-    var self = this;
-
     // memoize the key
     if (browserStackKey === null) {
-      browserStackKey = self._getBrowserStackKey();
+      browserStackKey = this._getBrowserStackKey();
     }
     if (! browserStackKey) {
       throw new Error("BrowserStack key not found. Ensure that you " +
@@ -1105,36 +1058,35 @@ class BrowserStackClient extends Client {
     }
 
     var capabilities = {
-      'browserName' : self.browserName,
+      'browserName' : this.browserName,
       'browserstack.user' : 'meteor',
       'browserstack.local' : 'true',
       'browserstack.key' : browserStackKey
     };
 
-    if (self.browserVersion) {
-      capabilities.browserVersion = self.browserVersion;
+    if (this.browserVersion) {
+      capabilities.browserVersion = this.browserVersion;
     }
 
-    self._launchBrowserStackTunnel(function (error) {
+    this._launchBrowserStackTunnel((error) => {
       if (error) {
         throw error;
       }
 
-      self.driver = new webdriver.Builder().
+      this.driver = new webdriver.Builder().
         usingServer('http://hub.browserstack.com/wd/hub').
         withCapabilities(capabilities).
         build();
-      self.driver.get(self.url);
+      this.driver.get(this.url);
     });
   }
 
   stop() {
-    var self = this;
-    self.tunnelProcess && self.tunnelProcess.kill();
-    self.tunnelProcess = null;
+    this.tunnelProcess && this.tunnelProcess.kill();
+    this.tunnelProcess = null;
 
-    self.driver && self.driver.quit();
-    self.driver = null;
+    this.driver && this.driver.quit();
+    this.driver = null;
   }
 
   _getBrowserStackKey() {
@@ -1153,25 +1105,24 @@ class BrowserStackClient extends Client {
   }
 
   _launchBrowserStackTunnel(callback) {
-    const self = this;
     const browserStackPath = ensureBrowserStack();
 
     var args = [
       browserStackPath,
       browserStackKey,
-      [self.host, self.port, 0].join(','),
+      [this.host, this.port, 0].join(','),
       // Disable Live Testing and Screenshots, just test with Automate.
       '-onlyAutomate',
       // Do not wait for the server to be ready to spawn the process.
       '-skipCheck'
     ];
-    self.tunnelProcess = child_process.execFile(
+    this.tunnelProcess = child_process.execFile(
       '/usr/bin/env',
       ['bash', '-c', args.join(' ')]
     );
 
     // Called when the SSH tunnel is established.
-    self.tunnelProcess.stdout.on('data', function(data) {
+    this.tunnelProcess.stdout.on('data', (data) => {
       if (data.toString().match(/You can now access your local server/)) {
         callback();
       }
@@ -1234,38 +1185,36 @@ function ensureBrowserStack() {
 // calling any of the 'files.*' methods on them is not safe.
 export class Run {
   constructor(execPath, options) {
-    var self = this;
-
-    self.execPath = execPath;
-    self.cwd = options.cwd || files.convertToStandardPath(process.cwd());
+    this.execPath = execPath;
+    this.cwd = options.cwd || files.convertToStandardPath(process.cwd());
     // default env variables
-    self.env = _.extend({ SELFTEST: "t", METEOR_NO_WORDWRAP: "t" }, options.env);
-    self._args = [];
-    self.proc = null;
-    self.baseTimeout = 20;
-    self.extraTime = 0;
-    self.client = options.client;
+    this.env = _.extend({ SELFTEST: "t", METEOR_NO_WORDWRAP: "t" }, options.env);
+    this._args = [];
+    this.proc = null;
+    this.baseTimeout = 20;
+    this.extraTime = 0;
+    this.client = options.client;
 
-    self.stdoutMatcher = new Matcher(self);
-    self.stderrMatcher = new Matcher(self);
-    self.outputLog = new OutputLog(self);
+    this.stdoutMatcher = new Matcher(this);
+    this.stderrMatcher = new Matcher(this);
+    this.outputLog = new OutputLog(this);
 
-    self.matcherEndPromise = null;
+    this.matcherEndPromise = null;
 
-    self.exitStatus = undefined; // 'null' means failed rather than exited
-    self.exitPromiseResolvers = [];
-    var opts = options.args || [];
-    self.args.apply(self, opts || []);
+    this.exitStatus = undefined; // 'null' means failed rather than exited
+    this.exitPromiseResolvers = [];
+    const opts = options.args || [];
+    this.args.apply(this, opts || []);
 
-    self.fakeMongoPort = null;
-    self.fakeMongoConnection = null;
+    this.fakeMongoPort = null;
+    this.fakeMongoConnection = null;
     if (options.fakeMongo) {
-      self.fakeMongoPort = require('../utils/utils.js').randomPort();
-      self.env.METEOR_TEST_FAKE_MONGOD_CONTROL_PORT = self.fakeMongoPort;
+      this.fakeMongoPort = require('../utils/utils.js').randomPort();
+      this.env.METEOR_TEST_FAKE_MONGOD_CONTROL_PORT = this.fakeMongoPort;
     }
 
-    runningTest.onCleanup(function () {
-      self._stopWithoutWaiting();
+    runningTest.onCleanup(() => {
+      this._stopWithoutWaiting();
     });
   }
 
@@ -1277,19 +1226,17 @@ export class Run {
   // cast to string, and object values will be treated as maps from
   // option names to values.
   args(...args) {
-    var self = this;
-
-    if (self.proc) {
+    if (this.proc) {
       throw new Error("already started?");
     }
 
-    _.each(args, function (a) {
+    _.each(args, (a) => {
       if (typeof a !== "object") {
-        self._args.push('' + a);
+        this._args.push('' + a);
       } else {
-        _.each(a, function (value, key) {
-          self._args.push("--" + key);
-          self._args.push('' + value);
+        _.each(a, (value, key) => {
+          this._args.push("--" + key);
+          this._args.push('' + value);
         });
       }
     });
@@ -1297,13 +1244,12 @@ export class Run {
   }
 
   connectClient() {
-    var self = this;
-    if (! self.client) {
+    if (! this.client) {
       throw new Error("Must create Run with a client to use connectClient().");
     }
 
-    self._ensureStarted();
-    self.client.connect();
+    this._ensureStarted();
+    this.client.connect();
   }
 
   // Useful for matching one-time patterns not sensitive to ordering.
@@ -1316,22 +1262,20 @@ export class Run {
   }
 
   _exited(status) {
-    var self = this;
-
-    if (self.exitStatus !== undefined) {
+    if (this.exitStatus !== undefined) {
       throw new Error("already exited?");
     }
 
-    self.client && self.client.stop();
+    this.client && this.client.stop();
 
-    self.exitStatus = status;
-    var exitPromiseResolvers = self.exitPromiseResolvers;
-    self.exitPromiseResolvers = null;
-    _.each(exitPromiseResolvers, function (resolve) {
+    this.exitStatus = status;
+    var exitPromiseResolvers = this.exitPromiseResolvers;
+    this.exitPromiseResolvers = null;
+    _.each(exitPromiseResolvers, (resolve) => {
       resolve();
     });
 
-    self._endMatchers();
+    this._endMatchers();
   }
 
   _endMatchers() {
@@ -1343,49 +1287,47 @@ export class Run {
   }
 
   _ensureStarted() {
-    var self = this;
-
-    if (self.proc) {
+    if (this.proc) {
       return;
     }
 
     var env = _.clone(process.env);
-    _.extend(env, self.env);
+    _.extend(env, this.env);
 
-    self.proc = child_process.spawn(files.convertToOSPath(self.execPath),
-      self._args, {
-        cwd: files.convertToOSPath(self.cwd),
+    this.proc = child_process.spawn(files.convertToOSPath(this.execPath),
+      this._args, {
+        cwd: files.convertToOSPath(this.cwd),
         env: env
       });
 
-    self.proc.on('close', function (code, signal) {
-      if (self.exitStatus === undefined) {
-        self._exited({ code: code, signal: signal });
+    this.proc.on('close', (code, signal) => {
+      if (this.exitStatus === undefined) {
+        this._exited({ code: code, signal: signal });
       }
     });
 
-    self.proc.on('exit', function (code, signal) {
-      if (self.exitStatus === undefined) {
-        self._exited({ code: code, signal: signal });
+    this.proc.on('exit', (code, signal) => {
+      if (this.exitStatus === undefined) {
+        this._exited({ code: code, signal: signal });
       }
     });
 
-    self.proc.on('error', function (err) {
-      if (self.exitStatus === undefined) {
-        self._exited(null);
+    this.proc.on('error', (err) => {
+      if (this.exitStatus === undefined) {
+        this._exited(null);
       }
     });
 
-    self.proc.stdout.setEncoding('utf8');
-    self.proc.stdout.on('data', function (data) {
-      self.outputLog.write('stdout', data);
-      self.stdoutMatcher.write(data);
+    this.proc.stdout.setEncoding('utf8');
+    this.proc.stdout.on('data', (data) => {
+      this.outputLog.write('stdout', data);
+      this.stdoutMatcher.write(data);
     });
 
-    self.proc.stderr.setEncoding('utf8');
-    self.proc.stderr.on('data', function (data) {
-      self.outputLog.write('stderr', data);
-      self.stderrMatcher.write(data);
+    this.proc.stderr.setEncoding('utf8');
+    this.proc.stderr.on('data', (data) => {
+      this.outputLog.write('stderr', data);
+      this.stderrMatcher.write(data);
     });
   }
 
@@ -1394,24 +1336,22 @@ export class Run {
   // that point. If this pattern does not appear after a timeout (or
   // the program exits before emitting the pattern), fail.
   match(pattern, _strict) {
-    var self = this;
-    self._ensureStarted();
+    this._ensureStarted();
 
-    var timeout = self.baseTimeout + self.extraTime;
+    var timeout = this.baseTimeout + this.extraTime;
     timeout *= utils.timeoutScaleFactor;
-    self.extraTime = 0;
-    return self.stdoutMatcher.match(pattern, timeout, _strict);
+    this.extraTime = 0;
+    return this.stdoutMatcher.match(pattern, timeout, _strict);
   }
 
   // As expect(), but for stderr instead of stdout.
   matchErr(pattern, _strict) {
-    var self = this;
-    self._ensureStarted();
+    this._ensureStarted();
 
-    var timeout = self.baseTimeout + self.extraTime;
+    var timeout = this.baseTimeout + this.extraTime;
     timeout *= utils.timeoutScaleFactor;
-    self.extraTime = 0;
-    return self.stderrMatcher.match(pattern, timeout, _strict);
+    this.extraTime = 0;
+    return this.stderrMatcher.match(pattern, timeout, _strict);
   }
 
   // Like match(), but won't skip ahead looking for a match. It must
@@ -1460,16 +1400,15 @@ export class Run {
   // Expect the program to exit without anything further being
   // printed on either stdout or stderr.
   expectEnd() {
-    var self = this;
-    self._ensureStarted();
+    this._ensureStarted();
 
-    var timeout = self.baseTimeout + self.extraTime;
+    var timeout = this.baseTimeout + this.extraTime;
     timeout *= utils.timeoutScaleFactor;
-    self.extraTime = 0;
-    self.expectExit();
+    this.extraTime = 0;
+    this.expectExit();
 
-    self.stdoutMatcher.matchEmpty();
-    self.stderrMatcher.matchEmpty();
+    this.stdoutMatcher.matchEmpty();
+    this.stderrMatcher.matchEmpty();
   }
 
   // Expect the program to exit with the given (numeric) exit
@@ -1477,22 +1416,21 @@ export class Run {
   // the process does not exit after a timeout. You can also omit the
   // argument to simply wait for the program to exit.
   expectExit(code) {
-    var self = this;
-    self._ensureStarted();
+    this._ensureStarted();
 
-    self._endMatchers().await();
+    this._endMatchers().await();
 
-    if (self.exitStatus === undefined) {
-      var timeout = self.baseTimeout + self.extraTime;
+    if (this.exitStatus === undefined) {
+      var timeout = this.baseTimeout + this.extraTime;
       timeout *= utils.timeoutScaleFactor;
-      self.extraTime = 0;
+      this.extraTime = 0;
 
       var timer;
-      var promise = new Promise(function (resolve, reject) {
-        self.exitPromiseResolvers.push(resolve);
-        timer = setTimeout(function () {
-          self.exitPromiseResolvers = _.without(self.exitPromiseResolvers, resolve);
-          reject(new TestFailure('exit-timeout', { run: self }));
+      var promise = new Promise((resolve, reject) => {
+        this.exitPromiseResolvers.push(resolve);
+        timer = setTimeout(() => {
+          this.exitPromiseResolvers = _.without(this.exitPromiseResolvers, resolve);
+          reject(new TestFailure('exit-timeout', { run: this }));
         }, timeout * 1000);
       });
 
@@ -1503,48 +1441,44 @@ export class Run {
       }
     }
 
-    if (! self.exitStatus) {
-      throw new TestFailure('spawn-failure', { run: self });
+    if (! this.exitStatus) {
+      throw new TestFailure('spawn-failure', { run: this });
     }
-    if (code !== undefined && self.exitStatus.code !== code) {
+    if (code !== undefined && this.exitStatus.code !== code) {
       throw new TestFailure('wrong-exit-code', {
         expected: { code: code },
-        actual: self.exitStatus,
-        run: self
+        actual: this.exitStatus,
+        run: this
       });
     }
   }
 
   // Extend the timeout for the next operation by 'secs' seconds.
   waitSecs(secs) {
-    var self = this;
-    self.extraTime += secs;
+    this.extraTime += secs;
   }
 
   // Send 'string' to the program on its stdin.
   write(string) {
-    var self = this;
-    self._ensureStarted();
-    self.proc.stdin.write(string);
+    this._ensureStarted();
+    this.proc.stdin.write(string);
   }
 
   // Kill the program and then wait for it to actually exit.
   stop() {
-    var self = this;
-    if (self.exitStatus === undefined) {
-      self._ensureStarted();
-      self.client && self.client.stop();
-      self._killProcess();
-      self.expectExit();
+    if (this.exitStatus === undefined) {
+      this._ensureStarted();
+      this.client && this.client.stop();
+      this._killProcess();
+      this.expectExit();
     }
   }
 
   // Like stop, but doesn't wait for it to exit.
   _stopWithoutWaiting() {
-    var self = this;
-    if (self.exitStatus === undefined && self.proc) {
-      self.client && self.client.stop();
-      self._killProcess();
+    if (this.exitStatus === undefined && this.proc) {
+      this.client && this.client.stop();
+      this._killProcess();
     }
   }
 
@@ -1555,7 +1489,7 @@ export class Run {
     }
 
     if (process.platform === "win32") {
-      // looks like in Windows `self.proc.kill()` doesn't kill child
+      // looks like in Windows `this.proc.kill()` doesn't kill child
       // processes.
       utils.execFileSync("taskkill", ["/pid", this.proc.pid, '/f', '/t']);
     } else {
@@ -1573,13 +1507,11 @@ export class Run {
   // Blocks until a connection to fake-mongod can be
   // established. Throws a TestFailure if it cannot be established.
   tellMongo(command) {
-    var self = this;
-
-    if (! self.fakeMongoPort) {
+    if (! this.fakeMongoPort) {
       throw new Error("fakeMongo option on sandbox must be set");
     }
 
-    self._ensureStarted();
+    this._ensureStarted();
 
     // If it's the first time we've called tellMongo on this sandbox,
     // open a connection to fake-mongod. Wait up to 60 seconds for it
@@ -1590,22 +1522,22 @@ export class Run {
     // no reference to our end, it will get gc'd. If not, that's not
     // great, but it probably doesn't actually create any practical
     // problems since this is only for testing.
-    if (! self.fakeMongoConnection) {
+    if (! this.fakeMongoConnection) {
       var net = require('net');
 
       var lastStartTime = 0;
-      for (var attempts = 0; ! self.fakeMongoConnection && attempts < 600;
+      for (var attempts = 0; ! this.fakeMongoConnection && attempts < 600;
            attempts ++) {
         // Throttle attempts to one every 100ms
         utils.sleepMs((lastStartTime + 100) - (+ new Date));
         lastStartTime = +(new Date);
 
-        new Promise(function (resolve) {
+        new Promise((resolve) => {
           // This is all arranged so that if a previous attempt
           // belatedly succeeds, somehow, we ignore it.
-          var conn = net.connect(self.fakeMongoPort, function () {
+          var conn = net.connect(this.fakeMongoPort, () => {
             if (resolve) {
-              self.fakeMongoConnection = conn;
+              this.fakeMongoConnection = conn;
               resolve(true);
               resolve = null;
             }
@@ -1622,17 +1554,17 @@ export class Run {
         }).await();
       }
 
-      if (! self.fakeMongoConnection) {
-        throw new TestFailure("mongo-not-running", { run: self });
+      if (! this.fakeMongoConnection) {
+        throw new TestFailure("mongo-not-running", { run: this });
       }
     }
 
-    self.fakeMongoConnection.write(JSON.stringify(command) + "\n");
+    this.fakeMongoConnection.write(JSON.stringify(command) + "\n");
     // If we told it to exit, then we should close our end and connect again if
     // asked to send more.
     if (command.exit) {
-      self.fakeMongoConnection.end();
-      self.fakeMongoConnection = null;
+      this.fakeMongoConnection.end();
+      this.fakeMongoConnection = null;
     }
   }
 }
@@ -1663,13 +1595,12 @@ const wrapWithMarkStack = (func) => markStack(func);
 
 class Test {
   constructor(options) {
-    var self = this;
-    self.name = options.name;
-    self.file = options.file;
-    self.fileHash = options.fileHash;
-    self.tags = options.tags || [];
-    self.f = options.func;
-    self.cleanupHandlers = [];
+    this.name = options.name;
+    this.file = options.file;
+    this.fileHash = options.fileHash;
+    this.tags = options.tags || [];
+    this.f = options.func;
+    this.cleanupHandlers = [];
   }
 
   onCleanup(cleanupHandler) {
@@ -1677,11 +1608,10 @@ class Test {
   }
 
   cleanup() {
-    var self = this;
-    _.each(self.cleanupHandlers, function (cleanupHandler) {
+    _.each(this.cleanupHandlers, (cleanupHandler) => {
       cleanupHandler();
     });
-    self.cleanupHandlers = [];
+    this.cleanupHandlers = [];
   }
 }
 
@@ -1689,7 +1619,7 @@ var allTests = null;
 var fileBeingLoaded = null;
 var fileBeingLoadedHash = null;
 var runningTest = null;
-var getAllTests = function () {
+var getAllTests = () => {
   if (allTests) {
     return allTests;
   }
@@ -1699,7 +1629,7 @@ var getAllTests = function () {
   // are supposed to then call define() to register their tests.
   var testdir = files.pathJoin(__dirname, '..', 'tests');
   var filenames = files.readdir(testdir);
-  _.each(filenames, function (n) {
+  _.each(filenames, (n) => {
     if (! n.match(/^[^.].*\.js$/)) {
       // ends in '.js', doesn't start with '.'
       return;
@@ -1780,7 +1710,7 @@ var getFilteredTests = function (options) {
 
     // Add pseudo-tags 'non-matching', 'unchanged', 'non-galaxy' and 'in other
     // files' (but only so that we can then skip tests with those tags)
-    allTests = allTests.map(function (test) {
+    allTests = allTests.map((test) => {
       var newTags = [];
 
       if (options.fileRegexp && ! options.fileRegexp.test(test.file)) {
@@ -1867,32 +1797,30 @@ class TestList {
   constructor(allTests, tagsToSkip, tagsToMatch, testState) {
     tagsToSkip = (tagsToSkip || []);
     testState = (testState || null); // optional
+    this.allTests = allTests;
+    this.skippedTags = tagsToSkip;
+    this.skipCounts = {};
+    this.testState = testState;
 
-    var self = this;
-    self.allTests = allTests;
-    self.skippedTags = tagsToSkip;
-    self.skipCounts = {};
-    self.testState = testState;
-
-    _.each(tagsToSkip, function (tag) {
-      self.skipCounts[tag] = 0;
+    _.each(tagsToSkip, (tag) => {
+      this.skipCounts[tag] = 0;
     });
 
-    self.fileInfo = {}; // path -> {hash, hasSkips, hasFailures}
+    this.fileInfo = {}; // path -> {hash, hasSkips, hasFailures}
 
-    self.filteredTests = _.filter(allTests, function (test) {
+    this.filteredTests = _.filter(allTests, (test) => {
 
-      if (! self.fileInfo[test.file]) {
-        self.fileInfo[test.file] = {
+      if (! this.fileInfo[test.file]) {
+        this.fileInfo[test.file] = {
           hash: test.fileHash,
           hasSkips: false,
           hasFailures: false
         };
       }
-      var fileInfo = self.fileInfo[test.file];
+      var fileInfo = this.fileInfo[test.file];
 
       if (tagsToMatch.length) {
-        var matches = _.any(tagsToMatch, function(tag) {
+        var matches = _.any(tagsToMatch, (tag) => {
           return _.contains(test.tags, tag);
         })
         if (!matches) {
@@ -1903,9 +1831,9 @@ class TestList {
       // We look for tagsToSkip *in order*, and when we decide to
       // skip a test, we don't keep looking at more tags, and we don't
       // add the test to any further "skip counts".
-      return !_.any(tagsToSkip, function (tag) {
+      return !_.any(tagsToSkip, (tag) => {
         if (_.contains(test.tags, tag)) {
-          self.skipCounts[tag]++;
+          this.skipCounts[tag]++;
           fileInfo.hasSkips = true;
           return true;
         } else {
@@ -1926,13 +1854,12 @@ class TestList {
   // modify it and write it out based on which tests
   // were skipped and which tests had failures.
   saveTestState() {
-    var self = this;
-    var testState = self.testState;
-    if (! (testState && self.filteredTests.length)) {
+    var testState = this.testState;
+    if (! (testState && this.filteredTests.length)) {
       return;
     }
 
-    _.each(self.fileInfo, function (info, f) {
+    _.each(this.fileInfo, (info, f) => {
       if (info.hasFailures) {
         delete testState.lastPassedHashes[f];
       } else if (! info.hasSkips) {
@@ -1945,11 +1872,10 @@ class TestList {
 
   // Return a string like "Skipped 1 foo test\nSkipped 5 bar tests\n"
   generateSkipReport() {
-    var self = this;
     var result = '';
 
-    _.each(self.skippedTags, function (tag) {
-      var count = self.skipCounts[tag];
+    _.each(this.skippedTags, (tag) => {
+      var count = this.skipCounts[tag];
       if (count) {
         var noun = "test" + (count > 1 ? "s" : ""); // "test" or "tests"
         // "non-matching tests" or "tests in other files"
@@ -1996,9 +1922,9 @@ export function listTests(options) {
     return;
   }
 
-  _.each(_.groupBy(testList.filteredTests, 'file'), function (tests, file) {
+  _.each(_.groupBy(testList.filteredTests, 'file'), (tests, file) => {
     Console.rawInfo(file + ':\n');
-    _.each(tests, function (test) {
+    _.each(tests, (test) => {
       Console.rawInfo('  - ' + test.name +
                       (test.tags.length ? ' [' + test.tags.join(' ') + ']'
                       : '') + '\n');
@@ -2029,7 +1955,7 @@ export function runTests(options) {
   var totalRun = 0;
   var failedTests = [];
 
-  _.each(testList.filteredTests, function (test) {
+  _.each(testList.filteredTests, (test) => {
     totalRun++;
     Console.error(test.file + ": " + test.name + " ... ");
     runTest(test);
@@ -2077,7 +2003,7 @@ export function runTests(options) {
           Console.arrowError("Pattern: " + failure.details.pattern, 2);
         }
         if (failure.reason === "wrong-exit-code") {
-          var s = function (status) {
+          var s = (status) => {
             return status.signal || ('' + status.code) || "???";
           };
 
@@ -2102,7 +2028,7 @@ export function runTests(options) {
             var historyLines = options.historyLines || 100;
 
             Console.arrowError("Last " + historyLines + " lines:", 2);
-            _.each(lines.slice(-historyLines), function (line) {
+            _.each(lines.slice(-historyLines), (line) => {
               Console.rawError("  " +
                                (line.channel === "stderr" ? "2| " : "1| ") +
                                line.text +
@@ -2148,7 +2074,7 @@ export function runTests(options) {
     var failureCount = failedTests.length;
     Console.error(failureCount + " failure" +
                   (failureCount > 1 ? "s" : "") + ":");
-    _.each(failedTests, function (test) {
+    _.each(failedTests, (test) => {
       Console.rawError("  - " + test.file + ": " + test.name + "\n");
     });
     return 1;
