@@ -26,7 +26,7 @@ import { IsopackCache } from '../isobuild/isopack-cache.js';
 import { load as isoPacketsLoad } from '../tool-env/isopackets.js';
 
 import { Tropohouse } from '../packaging/tropohouse.js';
-var packageMapModule = require('../packaging/package-map.js');
+import { PackageMap } from '../packaging/package-map.js';
 var release = require('../packaging/release.js');
 
 import { FinishedUpgraders } from '../project-context.js';
@@ -169,7 +169,7 @@ function setUpBuiltPackageTropohouse() {
       versions[packageName] =
         tropohouseLocalCatalog.getLatestVersion(packageName).version;
   });
-  var packageMap = new packageMapModule.PackageMap(versions, {
+  var packageMap = new PackageMap(versions, {
     localCatalog: tropohouseLocalCatalog
   });
   // Make an isopack cache that doesn't automatically save isopacks to disk and
