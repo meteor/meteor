@@ -40,12 +40,14 @@ require("../tool-env/install-runtime.js");
 require('longjohn');
 
 // Exception representing a test failure
-var TestFailure = function (reason, details) {
-  var self = this;
-  self.reason = reason;
-  self.details = details || {};
-  self.stack = (new Error).stack;
-};
+class TestFailure {
+  constructor(reason, details) {
+    var self = this;
+    self.reason = reason;
+    self.details = details || {};
+    self.stack = (new Error).stack;
+  }
+}
 
 // Use this to decorate functions that throw TestFailure. Decorate the
 // first function that should not be included in the call stack shown
