@@ -7,7 +7,7 @@ var files = require('../fs/files.js');
 var utils = require('../utils/utils.js');
 var parseStack = require('../utils/parse-stack.js');
 import { Console } from '../console/console.js';
-var archinfo = require('../utils/archinfo.js');
+import { host as archInfoHost } from '../utils/archinfo.js';
 var config = require('../meteor-services/config.js');
 var buildmessage = require('../utils/buildmessage.js');
 var { getUrlWithResuming } = require("../utils/http-helpers.js");
@@ -986,7 +986,7 @@ export class Sandbox {
     // XXX this is hacky
     files.linkToMeteorScript(
       files.pathJoin(self.warehouse, packagesDirectoryName, "meteor-tool", toolPackageVersion,
-        'mt-' + archinfo.host(), 'meteor'),
+        'mt-' + archInfoHost(), 'meteor'),
       files.pathJoin(self.warehouse, 'meteor'));
   }
 }
