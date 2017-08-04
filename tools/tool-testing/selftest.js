@@ -433,25 +433,25 @@ class Matcher {
 // Maintains a line-by-line merged log of multiple output channels
 // (eg, stdout and stderr).
 
-var OutputLog = function (run) {
-  var self = this;
+class OutputLog {
+  constructor(run) {
+    var self = this;
 
-  // each entry is an object with keys 'channel', 'text', and if it is
-  // the last entry and there was no newline terminator, 'bare'
-  self.lines = [];
+    // each entry is an object with keys 'channel', 'text', and if it is
+    // the last entry and there was no newline terminator, 'bare'
+    self.lines = [];
 
-  // map from a channel name to an object representing a partially
-  // read line of text on that channel. That object has keys 'text'
-  // (text read), 'offset' (cursor position, equal to text.length
-  // unless a '\r' has been read).
-  self.buffers = {};
+    // map from a channel name to an object representing a partially
+    // read line of text on that channel. That object has keys 'text'
+    // (text read), 'offset' (cursor position, equal to text.length
+    // unless a '\r' has been read).
+    self.buffers = {};
 
-  // a Run, exclusively for inclusion in exceptions
-  self.run = run;
-};
+    // a Run, exclusively for inclusion in exceptions
+    self.run = run;
+  }
 
-_.extend(OutputLog.prototype, {
-  write: function (channel, text) {
+  write(channel, text) {
     var self = this;
 
     if (! _.has(self.buffers, 'channel')) {
@@ -486,9 +486,9 @@ _.extend(OutputLog.prototype, {
 
       throw new Error("conditions should have been exhaustive?");
     }
-  },
+  }
 
-  end: function () {
+  end() {
     var self = this;
 
     _.each(_.keys(self.buffers), function (channel) {
@@ -499,9 +499,9 @@ _.extend(OutputLog.prototype, {
         self.buffers[channel] = { text: '', offset: 0};
       }
     });
-  },
+  }
 
-  forbid: function (pattern, channel) {
+  forbid(pattern, channel) {
     var self = this;
     _.each(self.lines, function (line) {
       if (channel && channel !== line.channel) {
@@ -514,13 +514,13 @@ _.extend(OutputLog.prototype, {
         throw new TestFailure('forbidden-string-present', { run: self.run });
       }
     });
-  },
+  }
 
-  get: function () {
+  get() {
     var self = this;
     return self.lines;
   }
-});
+}
 
 
 ///////////////////////////////////////////////////////////////////////////////
