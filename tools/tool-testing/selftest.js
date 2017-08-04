@@ -229,25 +229,25 @@ var newSelfTestCatalog = function () {
 // Handles the job of waiting until text is seen that matches a
 // regular expression.
 
-var Matcher = function (run) {
-  var self = this;
-  self.buf = "";
-  self.fullBuffer = "";
-  self.ended = false;
-  self.resetMatch();
-  self.run = run; // used only to set a field on exceptions
-  self.endPromise = new Promise(resolve => {
-    self.resolveEndPromise = resolve;
-  });
-};
+class Matcher {
+  constructor(run) {
+    var self = this;
+    self.buf = "";
+    self.fullBuffer = "";
+    self.ended = false;
+    self.resetMatch();
+    self.run = run; // used only to set a field on exceptions
+    self.endPromise = new Promise(resolve => {
+      self.resolveEndPromise = resolve;
+    });
+  }
 
-_.extend(Matcher.prototype, {
-  write: function (data) {
+  write(data) {
     var self = this;
     self.buf += data;
     self.fullBuffer += data;
     self._tryMatch();
-  },
+  }
 
   resetMatch() {
     const mp = this.matchPromise;
@@ -258,7 +258,7 @@ _.extend(Matcher.prototype, {
     this.matchFullBuffer = false;
 
     return mp;
-  },
+  }
 
   rejectMatch(error) {
     const mp = this.resetMatch();
@@ -269,18 +269,18 @@ _.extend(Matcher.prototype, {
       // error, so we must throw it instead.
       throw error;
     }
-  },
+  }
 
   resolveMatch(value) {
     const mp = this.resetMatch();
     if (mp) {
       mp.resolve(value);
     }
-  },
+  }
 
   match(pattern, timeout, strict) {
     return this.matchAsync(pattern, { timeout, strict }).await();
-  },
+  }
 
   // Like match, but returns a Promise without calling .await().
   matchAsync(pattern, {
@@ -317,22 +317,22 @@ _.extend(Matcher.prototype, {
       clearTimeout(timer);
       throw error;
     });
-  },
+  }
 
   matchBeforeEnd(pattern, timeout) {
     return this._beforeEnd(() => this.matchAsync(pattern, {
       timeout: timeout || 15,
       matchFullBuffer: true,
     }));
-  },
+  }
 
   _beforeEnd(promiseCallback) {
     return this.endPromise = this.endPromise.then(promiseCallback);
-  },
+  }
 
   end() {
     return this.endAsync().await();
-  },
+  }
 
   endAsync() {
     var self = this;
@@ -342,18 +342,18 @@ _.extend(Matcher.prototype, {
       self._tryMatch();
       return self.matchPromise;
     });
-  },
+  }
 
-  matchEmpty: function () {
+  matchEmpty() {
     var self = this;
 
     if (self.buf.length > 0) {
       Console.info("Extra junk is :", self.buf);
       throw new TestFailure('junk-at-end', { run: self.run });
     }
-  },
+  }
 
-  _tryMatch: function () {
+  _tryMatch() {
     var self = this;
 
     var mp = self.matchPromise;
@@ -411,8 +411,7 @@ _.extend(Matcher.prototype, {
       }));
     }
   }
-});
-
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // OutputLog
