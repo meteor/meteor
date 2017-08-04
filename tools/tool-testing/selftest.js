@@ -1,5 +1,4 @@
 var _ = require('underscore');
-var util = require('util');
 var Future = require('fibers/future');
 var fiberHelpers = require('../utils/fiber-helpers.js');
 var child_process = require('child_process');
