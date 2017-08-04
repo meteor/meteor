@@ -567,70 +567,70 @@ class OutputLog {
 //   - browserstack: true if browserstack clients should be used
 //   - port: the port that the clients should run on
 
-var Sandbox = function (options) {
-  var self = this;
-  // default options
-  options = _.extend({ clients: {} }, options);
+class Sandbox {
+  constructor(options) {
+    var self = this;
+    // default options
+    options = _.extend({ clients: {} }, options);
 
-  self.root = files.mkdtemp();
-  self.warehouse = null;
+    self.root = files.mkdtemp();
+    self.warehouse = null;
 
-  self.home = files.pathJoin(self.root, 'home');
-  files.mkdir(self.home, 0o755);
-  self.cwd = self.home;
-  self.env = {};
-  self.fakeMongo = options.fakeMongo;
+    self.home = files.pathJoin(self.root, 'home');
+    files.mkdir(self.home, 0o755);
+    self.cwd = self.home;
+    self.env = {};
+    self.fakeMongo = options.fakeMongo;
 
-  if (_.has(options, 'warehouse')) {
-    if (!files.inCheckout()) {
-      throw Error("make only use a fake warehouse in a checkout");
+    if (_.has(options, 'warehouse')) {
+      if (!files.inCheckout()) {
+        throw Error("make only use a fake warehouse in a checkout");
+      }
+      self.warehouse = files.pathJoin(self.root, 'tropohouse');
+      self._makeWarehouse(options.warehouse);
     }
-    self.warehouse = files.pathJoin(self.root, 'tropohouse');
-    self._makeWarehouse(options.warehouse);
+
+    self.clients = [new PhantomClient({
+      host: 'localhost',
+      port: options.clients.port || 3000
+    })];
+
+    if (options.clients && options.clients.browserstack) {
+      var browsers = [
+        { browserName: 'firefox' },
+        { browserName: 'chrome' },
+        { browserName: 'internet explorer',
+          browserVersion: '11' },
+        { browserName: 'internet explorer',
+          browserVersion: '8',
+          timeout: 60 },
+        { browserName: 'safari' },
+        { browserName: 'android' }
+      ];
+
+      _.each(browsers, function (browser) {
+        self.clients.push(new BrowserStackClient({
+          host: 'localhost',
+          port: 3000,
+          browserName: browser.browserName,
+          browserVersion: browser.browserVersion,
+          timeout: browser.timeout
+        }));
+      });
+    }
+
+    var meteorScript = process.platform === "win32" ? "meteor.bat" : "meteor";
+
+    // Figure out the 'meteor' to run
+    if (self.warehouse) {
+      self.execPath = files.pathJoin(self.warehouse, meteorScript);
+    } else {
+      self.execPath = files.pathJoin(files.getCurrentToolsDir(), meteorScript);
+    }
   }
 
-  self.clients = [new PhantomClient({
-    host: 'localhost',
-    port: options.clients.port || 3000
-  })];
-
-  if (options.clients && options.clients.browserstack) {
-    var browsers = [
-      { browserName: 'firefox' },
-      { browserName: 'chrome' },
-      { browserName: 'internet explorer',
-        browserVersion: '11' },
-      { browserName: 'internet explorer',
-        browserVersion: '8',
-        timeout: 60 },
-      { browserName: 'safari' },
-      { browserName: 'android' }
-    ];
-
-    _.each(browsers, function (browser) {
-      self.clients.push(new BrowserStackClient({
-        host: 'localhost',
-        port: 3000,
-        browserName: browser.browserName,
-        browserVersion: browser.browserVersion,
-        timeout: browser.timeout
-      }));
-    });
-  }
-
-  var meteorScript = process.platform === "win32" ? "meteor.bat" : "meteor";
-
-  // Figure out the 'meteor' to run
-  if (self.warehouse) {
-    self.execPath = files.pathJoin(self.warehouse, meteorScript);
-  } else {
-    self.execPath = files.pathJoin(files.getCurrentToolsDir(), meteorScript);
-  }
-};
-
-_.extend(Sandbox.prototype, {
   // Create a new test run of the tool in this sandbox.
-  run: function (...args) {
+  run(...args) {
     var self = this;
 
     return new Run(self.execPath, {
@@ -640,7 +640,7 @@ _.extend(Sandbox.prototype, {
       env: self._makeEnv(),
       fakeMongo: self.fakeMongo
     });
-  },
+  }
 
   // Tests a set of clients with the argument function. Each call to f(run)
   // instantiates a Run with a different client.
@@ -650,7 +650,7 @@ _.extend(Sandbox.prototype, {
   //   run.connectClient();
   //   // post-connection checks
   // });
-  testWithAllClients: function (f, ...args) {
+  testWithAllClients(f, ...args) {
     var self = this;
     args = _.compact(args);
 
@@ -669,7 +669,7 @@ _.extend(Sandbox.prototype, {
       run.baseTimeout = client.timeout;
       f(run);
     });
-  },
+  }
 
   // Copy an app from a template into the current directory in the
   // sandbox. 'to' is the subdirectory to put the app in, and
@@ -681,7 +681,7 @@ _.extend(Sandbox.prototype, {
   // For example:
   //   s.createApp('myapp', 'empty');
   //   s.cd('myapp');
-  createApp: function (to, template, options) {
+  createApp(to, template, options) {
     var self = this;
     options = options || {};
     var absoluteTo = files.pathJoin(self.cwd, to);
@@ -722,7 +722,7 @@ _.extend(Sandbox.prototype, {
       run.waitSecs(120);
       run.expectExit(0);
     });
-  },
+  }
 
   // Same as createApp, but with a package.
   //
@@ -736,7 +736,7 @@ _.extend(Sandbox.prototype, {
   // For example:
   //   s.createPackage('me_mypack', me:mypack', 'empty');
   //   s.cd('me_mypack');
-  createPackage: function (packageDir, packageName, template) {
+  createPackage(packageDir, packageName, template) {
     var self = this;
     var packagePath = files.pathJoin(self.cwd, packageDir);
     var templatePackagePath = files.pathJoin(
@@ -752,7 +752,7 @@ _.extend(Sandbox.prototype, {
             .replace("~package-name~", packageName));
       }
     });
-  },
+  }
 
   // Change the cwd to be used for subsequent runs. For example:
   //   s.run('create', 'myapp').expectExit(0);
@@ -766,7 +766,7 @@ _.extend(Sandbox.prototype, {
   //   s.cd('app2', function () {
   //     s.run('add', 'somepackage');
   //   });
-  cd: function (relativePath, callback) {
+  cd(relativePath, callback) {
     var self = this;
     var previous = self.cwd;
     self.cwd = files.pathResolve(self.cwd, relativePath);
@@ -774,38 +774,38 @@ _.extend(Sandbox.prototype, {
       callback();
       self.cwd = previous;
     }
-  },
+  }
 
   // Set an environment variable for subsequent runs.
-  set: function (name, value) {
+  set(name, value) {
     var self = this;
     self.env[name] = value;
-  },
+  }
 
   // Undo set().
-  unset: function (name) {
+  unset(name) {
     var self = this;
     delete self.env[name];
-  },
+  }
 
   // Write to a file in the sandbox, overwriting its current contents
   // if any. 'filename' is a path intepreted relative to the Sandbox's
   // cwd. 'contents' is a string (utf8 is assumed).
-  write: function (filename, contents) {
+  write(filename, contents) {
     var self = this;
     files.writeFile(files.pathJoin(self.cwd, filename), contents, 'utf8');
-  },
+  }
 
   // Like writeFile, but appends rather than writes.
-  append: function (filename, contents) {
+  append(filename, contents) {
     var self = this;
     files.appendFile(files.pathJoin(self.cwd, filename), contents, 'utf8');
-  },
+  }
 
   // Reads a file in the sandbox as a utf8 string. 'filename' is a
   // path intepreted relative to the Sandbox's cwd.  Returns null if
   // file does not exist.
-  read: function (filename) {
+  read(filename) {
     var self = this;
     var file = files.pathJoin(self.cwd, filename);
     if (!files.exists(file)) {
@@ -813,58 +813,58 @@ _.extend(Sandbox.prototype, {
     } else {
       return files.readFile(files.pathJoin(self.cwd, filename), 'utf8');
     }
-  },
+  }
 
   // Copy the contents of one file to another.  In these series of tests, we often
   // want to switch contents of package.js files. It is more legible to copy in
   // the backup file rather than trying to write into it manually.
-  cp: function(from, to) {
+  cp(from, to) {
     var self = this;
     var contents = self.read(from);
     if (!contents) {
       throw new Error("File " + from + " does not exist.");
     };
     self.write(to, contents);
-  },
+  }
 
   // Delete a file in the sandbox. 'filename' is as in write().
-  unlink: function (filename) {
+  unlink(filename) {
     var self = this;
     files.unlink(files.pathJoin(self.cwd, filename));
-  },
+  }
 
   // Make a directory in the sandbox. 'filename' is as in write().
-  mkdir: function (dirname) {
+  mkdir(dirname) {
     var self = this;
     var dirPath = files.pathJoin(self.cwd, dirname);
     if (! files.exists(dirPath)) {
       files.mkdir(dirPath);
     }
-  },
+  }
 
   // Rename something in the sandbox. 'oldName' and 'newName' are as in write().
-  rename: function (oldName, newName) {
+  rename(oldName, newName) {
     var self = this;
     files.rename(files.pathJoin(self.cwd, oldName),
                  files.pathJoin(self.cwd, newName));
-  },
+  }
 
   // Return the current contents of .meteorsession in the sandbox.
-  readSessionFile: function () {
+  readSessionFile() {
     var self = this;
     return files.readFile(files.pathJoin(self.root, '.meteorsession'), 'utf8');
-  },
+  }
 
   // Overwrite .meteorsession in the sandbox with 'contents'. You
   // could use this in conjunction with readSessionFile to save and
   // restore authentication states.
-  writeSessionFile: function (contents) {
+  writeSessionFile(contents) {
     var self = this;
     return files.writeFile(files.pathJoin(self.root, '.meteorsession'),
                            contents, 'utf8');
-  },
+  }
 
-  _makeEnv: function () {
+  _makeEnv() {
     var self = this;
     var env = _.clone(self.env);
     env.METEOR_SESSION_FILE = files.convertToOSPath(
@@ -892,7 +892,7 @@ _.extend(Sandbox.prototype, {
     env.TOOL_NODE_FLAGS = process.env.SELF_TEST_TOOL_NODE_FLAGS || '';
 
     return env;
-  },
+  }
 
   // Writes a stub warehouse (really a tropohouse) to the directory
   // self.warehouse. This warehouse only contains a meteor-tool package and some
@@ -902,7 +902,7 @@ _.extend(Sandbox.prototype, {
   // the default, if we do not pass this in; you should pass it in any case that
   // you will be specifying $METEOR_PACKAGE_SERVER_URL in the environment of a
   // command you are running in this sandbox.
-  _makeWarehouse: function (releases) {
+  _makeWarehouse(releases) {
     var self = this;
 
     // Ensure we have a tropohouse to copy stuff out of.
@@ -1001,7 +1001,7 @@ _.extend(Sandbox.prototype, {
         'mt-' + archinfo.host(), 'meteor'),
       files.pathJoin(self.warehouse, 'meteor'));
   }
-});
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Client
