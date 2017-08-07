@@ -1025,7 +1025,13 @@ export class PackageSourceBatch {
 
       batch.resourceSlots.forEach(slot => {
         slot.jsOutputResources.forEach(resource => {
-          if (resource) {
+          if (resource &&
+              (batch.useMeteorInstall ||
+               // In case the resource was added with
+               // addLazyJavaScript, and will not be processed
+               // by the ImportScanner later, force its .data
+               // property to be computed now.
+               resource.data)) {
             inputFiles.push(resource);
           }
         });
