@@ -1492,7 +1492,7 @@ export class Run {
     if (process.platform === "win32") {
       // looks like in Windows `this.proc.kill()` doesn't kill child
       // processes.
-      utils.execFileSync("taskkill", ["/pid", this.proc.pid, '/f', '/t']);
+      execFileSync("taskkill", ["/pid", this.proc.pid, '/f', '/t']);
     } else {
       this.proc.kill();
     }
