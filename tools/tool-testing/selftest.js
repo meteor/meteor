@@ -2,7 +2,7 @@ var _ = require('underscore');
 import { makeFulfillablePromise } from '../utils/fiber-helpers.js';
 import { spawn, execFile } from 'child_process';
 
-var files = require('../fs/files.js');
+import * as files from '../fs/files.js';
 var utils = require('../utils/utils.js');
 import {
   markBottom as parseStackMarkBottom,
