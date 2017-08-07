@@ -17,6 +17,10 @@ run_env_change: &run_env_change
     sudo mkdir -p /tmp/core_dumps
     sudo chmod a+rwx /tmp/core_dumps
 
+    # Make a place for JUnit tests to live.
+    sudo mkdir -p /tmp/results/junit
+    sudo chmod -R a+rwx /tmp/results/
+
     # Set the pattern for core dumps, so we can find them.
     echo kernel.core_pattern="/tmp/core_dumps/core.%e.%p.%h.%t" | \
         sudo tee -a /etc/sysctl.conf
@@ -167,6 +171,7 @@ jobs:
             ./meteor self-test \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
+              --junit /tmp/results/junit/0.xml \
               --with-tag "custom-warehouse"
           no_output_timeout: 20m
       - run:
@@ -174,6 +179,10 @@ jobs:
       - save_cache:
           key: meteor-cache
           <<: *meteor_cache_dirs
+      - store_test_results:
+          path: /tmp/results
+      - store_artifacts:
+          path: /tmp/results
       - store_artifacts:
           path: /tmp/core_dumps
       - store_artifacts:
@@ -195,6 +204,7 @@ jobs:
             ./meteor self-test \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
+              --junit /tmp/results/junit/1.xml \
               --file '^[a-b]|^c[a-n]|^co[a-l]|^compiler-plugins' \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -203,6 +213,10 @@ jobs:
       - save_cache:
           key: meteor-cache
           <<: *meteor_cache_dirs
+      - store_test_results:
+          path: /tmp/results
+      - store_artifacts:
+          path: /tmp/results
       - store_artifacts:
           path: /tmp/core_dumps
       - store_artifacts:
@@ -224,6 +238,7 @@ jobs:
             ./meteor self-test \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
+              --junit /tmp/results/junit/2.xml \
               --file "^co[n-z]|^c[p-z]|^[d-k]" \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -232,6 +247,10 @@ jobs:
       - save_cache:
           key: meteor-cache
           <<: *meteor_cache_dirs
+      - store_test_results:
+          path: /tmp/results
+      - store_artifacts:
+          path: /tmp/results
       - store_artifacts:
           path: /tmp/core_dumps
       - store_artifacts:
@@ -253,6 +272,7 @@ jobs:
             ./meteor self-test \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
+              --junit /tmp/results/junit/3.xml \
               --file '^[l-o]' \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -261,6 +281,10 @@ jobs:
       - save_cache:
           key: meteor-cache
           <<: *meteor_cache_dirs
+      - store_test_results:
+          path: /tmp/results
+      - store_artifacts:
+          path: /tmp/results
       - store_artifacts:
           path: /tmp/core_dumps
       - store_artifacts:
@@ -282,6 +306,7 @@ jobs:
             ./meteor self-test \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
+              --junit /tmp/results/junit/4.xml \
               --file '^p' \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -290,6 +315,10 @@ jobs:
       - save_cache:
           key: meteor-cache
           <<: *meteor_cache_dirs
+      - store_test_results:
+          path: /tmp/results
+      - store_artifacts:
+          path: /tmp/results
       - store_artifacts:
           path: /tmp/core_dumps
       - store_artifacts:
@@ -311,6 +340,7 @@ jobs:
             ./meteor self-test \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
+              --junit /tmp/results/junit/5.xml \
               --file '^run' \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -319,6 +349,10 @@ jobs:
       - save_cache:
           key: meteor-cache
           <<: *meteor_cache_dirs
+      - store_test_results:
+          path: /tmp/results
+      - store_artifacts:
+          path: /tmp/results
       - store_artifacts:
           path: /tmp/core_dumps
       - store_artifacts:
@@ -340,6 +374,7 @@ jobs:
             ./meteor self-test \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
+              --junit /tmp/results/junit/6.xml \
               --file '^r(?!un)|^s' \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -348,6 +383,10 @@ jobs:
       - save_cache:
           key: meteor-cache
           <<: *meteor_cache_dirs
+      - store_test_results:
+          path: /tmp/results
+      - store_artifacts:
+          path: /tmp/results
       - store_artifacts:
           path: /tmp/core_dumps
       - store_artifacts:
@@ -369,6 +408,7 @@ jobs:
             ./meteor self-test \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
+              --junit /tmp/results/junit/7.xml \
               --file '^[t-z]|^command-line' \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -377,6 +417,10 @@ jobs:
       - save_cache:
           key: meteor-cache
           <<: *meteor_cache_dirs
+      - store_test_results:
+          path: /tmp/results
+      - store_artifacts:
+          path: /tmp/results
       - store_artifacts:
           path: /tmp/core_dumps
       - store_artifacts:

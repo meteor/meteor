@@ -1,3 +1,4 @@
+import { inspect } from 'util';
 import { makeFulfillablePromise } from '../utils/fiber-helpers.js';
 import { spawn, execFile } from 'child_process';
 import * as files from '../fs/files.js';
@@ -1605,6 +1606,7 @@ class Test {
     this.fileHash = options.fileHash;
     this.tags = options.tags || [];
     this.f = options.func;
+    this.durationMs = null;
     this.cleanupHandlers = [];
   }
 
@@ -1797,6 +1799,16 @@ function getFilteredTests(options) {
   return new TestList(allTests, tagsToSkip, tagsToMatch, testState);
 };
 
+function groupTestsByFile(tests) {
+  const grouped = {};
+  tests.forEach(test => {
+    grouped[test.file] = grouped[test.file] || [];
+    grouped[test.file].push(test);
+  });
+
+  return grouped;
+}
+
 // A TestList is the result of getFilteredTests.  It holds the original
 // list of all tests, the filtered list, and stats on how many tests
 // were skipped (see generateSkipReport).
@@ -1856,8 +1868,108 @@ class TestList {
   // Mark a test's file as having failures.  This prevents
   // saveTestState from saving its hash as a potentially
   // "unchanged" file to be skipped in a future run.
-  notifyFailed(test) {
+  notifyFailed(test, failure) {
     this.fileInfo[test.file].hasFailures = true;
+    test.failure = failure || true;
+  }
+
+  saveJUnitOutput(path) {
+    const grouped = groupTestsByFile(this.filteredTests);
+
+    // We'll form an collection of "testsuites"
+    const testSuites = [];
+
+    const attrSafe = attr => (attr || "").replace('"', "&quot;");
+    const durationForOutput = durationMs => durationMs / 1000;
+
+    // Each file is a testsuite.
+    Object.keys(grouped).forEach((file) => {
+      const testCases = [];
+
+      let countError = 0;
+      let countFailure = 0;
+
+      // Each test is a "testcase".
+      grouped[file].forEach((test) => {
+        const testCaseAttrs = [
+          `name="${attrSafe(test.name)}"`,
+        ];
+
+        if (test.durationMs) {
+          testCaseAttrs.push(`time="${durationForOutput(test.durationMs)}"`);
+        }
+
+        const testCaseAttrsString = testCaseAttrs.join(' ');
+
+        if (test.failure) {
+          let failureElement = "";
+
+          if (test.failure instanceof TestFailure) {
+            countFailure++;
+
+            failureElement = [
+              `<error type="${test.failure.reason}">`,
+              '<![CDATA[',
+              inspect(test.failure.details, { depth: 4 }),
+              ']]>',
+              '</error>',
+            ].join('\n');
+          } else {
+            countError++;
+
+            failureElement = [
+              '<failure>',
+              '<![CDATA[',
+              test.failure.stack,
+              ']]>',
+              '</failure>',
+            ].join('\n');
+          }
+
+          testCases.push(
+            [
+              `<testcase ${testCaseAttrsString}>`,
+              failureElement,
+              '</testcase>',
+            ].join('\n'),
+          );
+        } else {
+          testCases.push(`<testcase ${testCaseAttrsString}/>`);
+        }
+      });
+
+      const testSuiteAttrs = [
+        `name="${file}"`,
+        `tests="${testCases.length}"`,
+        `failures="${countFailure}"`,
+        `errors="${countError}"`,
+        `time="${durationForOutput(this.durationMs)}"`,
+      ];
+
+      const testSuiteAttrsString = testSuiteAttrs.join(' ');
+
+      testSuites.push(
+        [
+          `<testsuite ${testSuiteAttrsString}>`,
+          testCases.join('\n'),
+          '</testsuite>',
+        ].join('\n'),
+      );
+    });
+
+    const xmlHeader = '<?xml version="1.0" encoding="UTF-8"?>';
+
+    const testSuitesString = testSuites.join('\n');
+
+    files.writeFile(path,
+      [
+        xmlHeader,
+        `<testsuites>`,
+        testSuitesString,
+        `</testsuites>`,
+      ].join('\n'),
+      'utf8',
+    );
   }
 
   // If this TestList was constructed with a testState,
@@ -1933,17 +2045,11 @@ export function listTests(options) {
     return;
   }
 
-  const testsGroupedByFile = {};
-  testList.filteredTests.forEach(filteredTest => {
-    testsGroupedByFile[filteredTest.file] =
-      testsGroupedByFile[filteredTest.file] || [];
+  const grouped = groupTestsByFile(testList.filteredTests);
 
-    testsGroupedByFile[filteredTest.file].push(filteredTest);
-  });
-
-  Object.keys(testsGroupedByFile).forEach((file) => {
+  Object.keys(grouped).forEach((file) => {
     Console.rawInfo(file + ':\n');
-    testsGroupedByFile[file].forEach((test) => {
+    grouped[file].forEach((test) => {
       Console.rawInfo('  - ' + test.name +
                       (test.tags.length ? ' [' + test.tags.join(' ') + ']'
                       : '') + '\n');
@@ -1971,6 +2077,8 @@ export function runTests(options) {
     return 0;
   }
 
+  testList.startTime = new Date;
+
   let totalRun = 0;
   const failedTests = [];
 
@@ -1979,6 +2087,9 @@ export function runTests(options) {
     Console.error(test.file + ": " + test.name + " ... ");
     runTest(test);
   });
+
+  testList.endTime = new Date;
+  testList.durationMs = testList.endTime - testList.startTime;
 
   function runTest(test, tries = 3) {
     let failure = null;
@@ -1997,6 +2108,8 @@ export function runTests(options) {
       test.cleanup();
     }
 
+    test.durationMs = +(new Date) - startTime;
+
     if (failure) {
       Console.error("... fail!", Console.options({ indent: 2 }));
 
@@ -2008,9 +2121,6 @@ export function runTests(options) {
 
         return runTest(test, tries);
       }
-
-      failedTests.push(test);
-      testList.notifyFailed(test);
 
       if (failure instanceof TestFailure) {
         const frames = parseStackParse(failure).outsideFiber;
@@ -2064,15 +2174,21 @@ export function runTests(options) {
       } else {
         Console.rawError("  => Test threw exception: " + failure.stack + "\n");
       }
+
+      failedTests.push(test);
+      testList.notifyFailed(test, failure);
     } else {
-      const durationMs = +(new Date) - startTime;
       Console.error(
-        "... ok (" + durationMs + " ms)",
+        "... ok (" + test.durationMs + " ms)",
         Console.options({ indent: 2 }));
     }
   }
 
   testList.saveTestState();
+
+  if (options.junit) {
+    testList.saveJUnitOutput(options.junit);
+  }
 
   if (totalRun > 0) {
     Console.error();
