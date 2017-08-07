@@ -27,27 +27,14 @@ var release = require('../packaging/release.js');
 var projectContextModule = require('../project-context.js');
 var upgraders = require('../upgraders.js');
 
+import { ensureDependencies } from '../cli/dev-bundle-helpers.js';
+
+const DEV_DEPENDENCY_VERSIONS = {
+  'phantomjs-prebuilt': '2.1.14',
+  'browserstack-webdriver': '2.41.1',
+};
+
 require("../tool-env/install-runtime.js");
-
-function checkTestOnlyDependency(name) {
-  try {
-    var absPath = require.resolve(name);
-  } catch (e) {
-    throw new Error([
-      "Please install " + name + " by running the following command:",
-      "",
-      "  /path/to/meteor npm install -g " + name,
-      "",
-      "Where `/path/to/meteor` is the executable you used to run this self-test.",
-      ""
-    ].join("\n"));
-  }
-
-  return require(absPath);
-}
-
-var phantomjs = checkTestOnlyDependency("phantomjs-prebuilt");
-var webdriver = checkTestOnlyDependency('browserstack-webdriver');
 
 // To allow long stack traces that cross async boundaries
 require('longjohn');
@@ -1025,6 +1012,19 @@ var PhantomClient = function (options) {
   var self = this;
   Client.apply(this, arguments);
 
+  buildmessage.enterJob(
+    {
+      title: 'Installing PhantomJS in Meteor tool',
+    },
+    () => {
+      ensureDependencies({
+        'phantomjs-prebuilt': DEV_DEPENDENCY_VERSIONS['phantomjs-prebuilt'],
+      });
+    }
+  );
+
+  self.npmPackageExports = require("phantomjs-prebuilt");
+
   self.name = "phantomjs";
   self.process = null;
 
@@ -1037,7 +1037,7 @@ _.extend(PhantomClient.prototype, {
   connect: function () {
     var self = this;
 
-    var phantomPath = phantomjs.path;
+    var phantomPath = self.npmPackageExports.path;
 
     var scriptPath = files.pathJoin(files.getCurrentToolsDir(), "tools",
       "tool-testing", "phantom", "open-url.js");
@@ -1071,6 +1071,19 @@ var browserStackKey = null;
 var BrowserStackClient = function (options) {
   var self = this;
   Client.apply(this, arguments);
+
+  buildmessage.enterJob(
+    {
+      title: 'Installing BrowserStack WebDriver in Meteor tool',
+    },
+    () => {
+      ensureDependencies({
+        'browserstack-webdriver': DEV_DEPENDENCY_VERSIONS['browserstack-webdriver'],
+      });
+    }
+  );
+
+  self.npmPackageExports = require('browserstack-webdriver');
 
   self.tunnelProcess = null;
   self.driver = null;
@@ -1115,7 +1128,7 @@ _.extend(BrowserStackClient.prototype, {
         throw error;
       }
 
-      self.driver = new webdriver.Builder().
+      self.driver = new self.npmPackageExports.Builder().
         usingServer('http://hub.browserstack.com/wd/hub').
         withCapabilities(capabilities).
         build();

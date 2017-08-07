@@ -30,6 +30,11 @@
 
 * The `semver` npm package has been upgraded to version 5.4.1.
 
+* When running Meteor tool (i.e. `./meteor self-test`) tests during the course of
+  developing Meteor itself, it is no longer necessary to
+  `./meteor npm install -g phantomjs-prebuilt browserstack-webdriver`.  These
+  will now be installed automatically upon their use.
+
 ## v1.5.2, TBD
 
 * The `meteor-babel` package has been upgraded to version 0.23.1.
