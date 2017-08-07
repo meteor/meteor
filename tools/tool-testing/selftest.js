@@ -1,6 +1,5 @@
 import { makeFulfillablePromise } from '../utils/fiber-helpers.js';
 import { spawn, execFile } from 'child_process';
-
 import * as files from '../fs/files.js';
 import {
   randomPort,
@@ -22,21 +21,16 @@ import {
 import { capture, enterJob } from '../utils/buildmessage.js';
 import { getUrlWithResuming } from '../utils/http-helpers.js';
 import Builder from '../isobuild/builder.js';
-
 import { DEFAULT_TRACK } from '../packaging/catalog/catalog.js';
 import { RemoteCatalog } from '../packaging/catalog/catalog-remote.js';
 import { IsopackCache } from '../isobuild/isopack-cache.js';
 import { load as isoPacketsLoad } from '../tool-env/isopackets.js';
-
 import { Tropohouse } from '../packaging/tropohouse.js';
 import { PackageMap } from '../packaging/package-map.js';
 import { current as releaseCurrent } from '../packaging/release.js';
-
 import { FinishedUpgraders } from '../project-context.js';
 import { allUpgraders } from '../upgraders.js';
-
 import { execFileSync } from '../utils/processes.js';
-
 import { ensureDependencies } from '../cli/dev-bundle-helpers.js';
 
 const hasOwn = Object.prototype.hasOwnProperty;
