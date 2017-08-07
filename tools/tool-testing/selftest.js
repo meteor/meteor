@@ -31,7 +31,7 @@ import { current as releaseCurrent } from '../packaging/release.js';
 import { FinishedUpgraders } from '../project-context.js';
 import { allUpgraders } from '../upgraders.js';
 
-export { execFileSync } from '../utils/processes.js';
+import { execFileSync } from '../utils/processes.js';
 
 import { ensureDependencies } from '../cli/dev-bundle-helpers.js';
 
