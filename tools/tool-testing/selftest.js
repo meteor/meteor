@@ -41,10 +41,10 @@ const DEV_DEPENDENCY_VERSIONS = {
   'browserstack-webdriver': '2.41.1',
 };
 
-require("../tool-env/install-runtime.js");
+import "../tool-env/install-runtime.js";
 
 // To allow long stack traces that cross async boundaries
-require('longjohn');
+import 'longjohn';
 
 // Exception representing a test failure
 class TestFailure {
