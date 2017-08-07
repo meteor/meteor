@@ -1,6 +1,6 @@
 var _ = require('underscore');
 import { makeFulfillablePromise } from '../utils/fiber-helpers.js';
-var child_process = require('child_process');
+import { spawn, execFile } from 'child_process';
 
 var files = require('../fs/files.js');
 var utils = require('../utils/utils.js');
@@ -1006,7 +1006,7 @@ class PhantomClient extends Client {
 
     const scriptPath = files.pathJoin(files.getCurrentToolsDir(), "tools",
       "tool-testing", "phantom", "open-url.js");
-    this.process = child_process.execFile(phantomPath, ["--load-images=no",
+    this.process = execFile(phantomPath, ["--load-images=no",
       files.convertToOSPath(scriptPath), this.url],
       {}, (error, stdout, stderr) => {
         if (this._logError && error) {
@@ -1117,7 +1117,7 @@ class BrowserStackClient extends Client {
       // Do not wait for the server to be ready to spawn the process.
       '-skipCheck'
     ];
-    this.tunnelProcess = child_process.execFile(
+    this.tunnelProcess = execFile(
       '/usr/bin/env',
       ['bash', '-c', args.join(' ')]
     );
@@ -1295,7 +1295,7 @@ export class Run {
     const env = _.clone(process.env);
     _.extend(env, this.env);
 
-    this.proc = child_process.spawn(files.convertToOSPath(this.execPath),
+    this.proc = spawn(files.convertToOSPath(this.execPath),
       this._args, {
         cwd: files.convertToOSPath(this.cwd),
         env: env
