@@ -50,6 +50,9 @@
   [#8424](https://github.com/meteor/meteor/issues/8424), and
   [#8464](https://github.com/meteor/meteor/issues/8464).
 
+* The `"env"` field is now supported in `.babelrc` files.
+  [PR #8963](https://github.com/meteor/meteor/pull/8963)
+
 ## v1.5.1, 2017-07-12
 
 * Node has been upgraded to version 4.8.4.
