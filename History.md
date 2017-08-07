@@ -53,6 +53,12 @@
 * The `"env"` field is now supported in `.babelrc` files.
   [PR #8963](https://github.com/meteor/meteor/pull/8963)
 
+* Files contained by `client/compatibility/` directories or added with
+  `api.addFiles(files, ..., { bare: true })` are now evaluated before
+  importing modules with `require`, which may be a breaking change if you
+  depend on the interleaving of `bare` files with eager module evaluation.
+  [PR #8972](https://github.com/meteor/meteor/pull/8972)
+
 ## v1.5.1, 2017-07-12
 
 * Node has been upgraded to version 4.8.4.

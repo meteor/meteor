@@ -24,7 +24,7 @@ selftest.define("modules - test app", function () {
       "--driver-package", "dispatch:mocha-phantomjs"
     );
 
-    run.waitSecs(180);
+    run.waitSecs(60);
     run.match("App running at");
     run.match("SERVER FAILURES: 0");
     run.match("CLIENT FAILURES: 0");
