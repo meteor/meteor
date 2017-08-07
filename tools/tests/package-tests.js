@@ -1034,10 +1034,7 @@ selftest.define("tilde version constraints", [], function () {
 
   s.write(
     ".meteor/packages",
-    packages + [
-      "tilde-dependent",
-      "tilde-constraints@0.4.2"
-    ].join("\n")
+    packages + "tilde-dependent\n"
   );
   run.match(/tilde-constraints.*added, version 0\.4\.2/);
   run.match(/tilde-dependent.*added, version 0\.1\.0/);
