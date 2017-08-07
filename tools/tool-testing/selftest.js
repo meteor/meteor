@@ -1,5 +1,4 @@
 var _ = require('underscore');
-var Future = require('fibers/future');
 import { makeFulfillablePromise } from '../utils/fiber-helpers.js';
 var child_process = require('child_process');
 
