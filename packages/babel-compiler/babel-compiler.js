@@ -300,6 +300,16 @@ BCp._inferHelper = function (
   merge(babelOptions, babelrc, "presets");
   merge(babelOptions, babelrc, "plugins");
 
+  const babelEnv = (process.env.BABEL_ENV ||
+                    process.env.NODE_ENV ||
+                    "development");
+  if (babelrc && babelrc.env && babelrc.env[babelEnv]) {
+    const env = babelrc.env[babelEnv];
+    walkBabelRC(env);
+    merge(babelOptions, env, "presets");
+    merge(babelOptions, env, "plugins");
+  }
+
   return !! (babelrc.presets ||
              babelrc.plugins);
 };
