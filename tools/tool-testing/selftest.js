@@ -31,6 +31,8 @@ import { current as releaseCurrent } from '../packaging/release.js';
 import { FinishedUpgraders } from '../project-context.js';
 import { allUpgraders } from '../upgraders.js';
 
+import { execFileSync } from '../utils/processes.js';
+
 function checkTestOnlyDependency(name) {
   try {
     var absPath = require.resolve(name);
