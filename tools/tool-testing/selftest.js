@@ -1,4 +1,3 @@
-var _ = require('underscore');
 import { makeFulfillablePromise } from '../utils/fiber-helpers.js';
 import { spawn, execFile } from 'child_process';
 
@@ -57,6 +56,8 @@ function checkTestOnlyDependency(name) {
 
 var phantomjs = checkTestOnlyDependency("phantomjs-prebuilt");
 var webdriver = checkTestOnlyDependency('browserstack-webdriver');
+
+const hasOwn = Object.prototype.hasOwnProperty;
 
 import "../tool-env/install-runtime.js";
 
@@ -179,11 +180,9 @@ function setUpBuiltPackageTropohouse() {
   const tropohouse = new Tropohouse(builtPackageTropohouseDir);
   tropohouseLocalCatalog = newSelfTestCatalog();
   const versions = {};
-  _.each(
-    tropohouseLocalCatalog.getAllNonTestPackageNames(),
-    (packageName) => {
-      versions[packageName] =
-        tropohouseLocalCatalog.getLatestVersion(packageName).version;
+  tropohouseLocalCatalog.getAllNonTestPackageNames().forEach((packageName) => {
+    versions[packageName] =
+      tropohouseLocalCatalog.getLatestVersion(packageName).version;
   });
   const packageMap = new PackageMap(versions, {
     localCatalog: tropohouseLocalCatalog
@@ -453,7 +452,7 @@ class OutputLog {
   }
 
   write(channel, text) {
-    if (! _.has(this.buffers, 'channel')) {
+    if (! hasOwn.call(this.buffers, 'channel')) {
       this.buffers[channel] = { text: '', offset: 0};
     }
     const b = this.buffers[channel];
@@ -488,7 +487,7 @@ class OutputLog {
   }
 
   end() {
-    _.each(_.keys(this.buffers), (channel) => {
+    Object.keys(this.buffers).forEach((channel) => {
       if (this.buffers[channel].text.length) {
         this.lines.push({ channel: channel,
                           text: this.buffers[channel].text,
@@ -499,7 +498,7 @@ class OutputLog {
   }
 
   forbid(pattern, channel) {
-    _.each(this.lines, (line) => {
+    this.lines.forEach((line) => {
       if (channel && channel !== line.channel) {
         return;
       }
@@ -565,7 +564,7 @@ class OutputLog {
 export class Sandbox {
   constructor(options) {
     // default options
-    options = _.extend({ clients: {} }, options);
+    options = Object.assign({ clients: {} }, options);
 
     this.root = files.mkdtemp();
     this.warehouse = null;
@@ -576,7 +575,7 @@ export class Sandbox {
     this.env = {};
     this.fakeMongo = options.fakeMongo;
 
-    if (_.has(options, 'warehouse')) {
+    if (hasOwn.call(options, 'warehouse')) {
       if (!files.inCheckout()) {
         throw Error("make only use a fake warehouse in a checkout");
       }
@@ -602,7 +601,8 @@ export class Sandbox {
         { browserName: 'android' }
       ];
 
-      _.each(browsers, (browser) => {
+      Object.keys(browsers).forEach(browserKey => {
+        const browser = browsers[browserKey];
         this.clients.push(new BrowserStackClient({
           host: 'localhost',
           port: 3000,
@@ -643,11 +643,12 @@ export class Sandbox {
   //   // post-connection checks
   // });
   testWithAllClients(f, ...args) {
-    args = _.compact(args);
+    args = args.filter(arg => arg);
 
     console.log("running test with " + this.clients.length + " client(s).");
 
-    _.each(this.clients, (client) => {
+    Object.keys(this.clients).forEach((clientKey) => {
+      const client = this.clients[clientKey];
       console.log("testing with " + client.name + "...");
       const run = new Run(this.execPath, {
         sandbox: this,
@@ -690,7 +691,7 @@ export class Sandbox {
     // have a partial upgraders file
     const upgradersFile =
       new FinishedUpgraders({projectDir: absoluteTo});
-    if (_.isEmpty(upgradersFile.readUpgraders())) {
+    if (upgradersFile.readUpgraders().length === 0) {
       upgradersFile.appendUpgraders(allUpgraders());
     }
 
@@ -732,7 +733,7 @@ export class Sandbox {
       files.convertToStandardPath(__dirname), '..', 'tests', 'packages', template);
     files.cp_r(templatePackagePath, packagePath);
 
-    _.each(files.readdir(packagePath), (file) => {
+    files.readdir(packagePath).forEach((file) => {
       if (file.match(/^package.*\.js$/)) {
         const packageJsFile = files.pathJoin(packagePath, file);
         files.writeFile(
@@ -842,7 +843,7 @@ export class Sandbox {
   }
 
   _makeEnv() {
-    const env = _.clone(this.env);
+    const env = Object.assign(Object.create(null), this.env);
     env.METEOR_SESSION_FILE = files.convertToOSPath(
       files.pathJoin(this.root, '.meteorsession'));
 
@@ -944,7 +945,8 @@ export class Sandbox {
     });
 
     // Now create each requested release.
-    _.each(releases, (configuration, releaseName) => {
+    Object.keys(releases).forEach((releaseName) => {
+      const configuration = releases[releaseName];
       // Release info
       stubCatalog.collections.releaseVersions.push({
         track: DEFAULT_TRACK,
@@ -1194,7 +1196,7 @@ export class Run {
     this.execPath = execPath;
     this.cwd = options.cwd || files.convertToStandardPath(process.cwd());
     // default env variables
-    this.env = _.extend({ SELFTEST: "t", METEOR_NO_WORDWRAP: "t" }, options.env);
+    this.env = Object.assign({ SELFTEST: "t", METEOR_NO_WORDWRAP: "t" }, options.env);
     this._args = [];
     this.proc = null;
     this.baseTimeout = 20;
@@ -1236,11 +1238,12 @@ export class Run {
       throw new Error("already started?");
     }
 
-    _.each(args, (a) => {
+    args.forEach((a) => {
       if (typeof a !== "object") {
         this._args.push('' + a);
       } else {
-        _.each(a, (value, key) => {
+        Object.keys(a).forEach((key) => {
+          const value = a[key];
           this._args.push("--" + key);
           this._args.push('' + value);
         });
@@ -1277,7 +1280,7 @@ export class Run {
     this.exitStatus = status;
     const exitPromiseResolvers = this.exitPromiseResolvers;
     this.exitPromiseResolvers = null;
-    _.each(exitPromiseResolvers, (resolve) => {
+    exitPromiseResolvers.forEach((resolve) => {
       resolve();
     });
 
@@ -1297,8 +1300,8 @@ export class Run {
       return;
     }
 
-    const env = _.clone(process.env);
-    _.extend(env, this.env);
+    const env = Object.assign(Object.create(null), process.env);
+    Object.assign(env, this.env);
 
     this.proc = spawn(files.convertToOSPath(this.execPath),
       this._args, {
@@ -1435,7 +1438,8 @@ export class Run {
       const promise = new Promise((resolve, reject) => {
         this.exitPromiseResolvers.push(resolve);
         timer = setTimeout(() => {
-          this.exitPromiseResolvers = _.without(this.exitPromiseResolvers, resolve);
+          this.exitPromiseResolvers =
+            this.exitPromiseResolvers.filter(r => r !== resolve);
           reject(new TestFailure('exit-timeout', { run: this }));
         }, timeout * 1000);
       });
@@ -1614,7 +1618,7 @@ class Test {
   }
 
   cleanup() {
-    _.each(this.cleanupHandlers, (cleanupHandler) => {
+    this.cleanupHandlers.forEach((cleanupHandler) => {
       cleanupHandler();
     });
     this.cleanupHandlers = [];
@@ -1635,7 +1639,7 @@ const getAllTests = () => {
   // are supposed to then call define() to register their tests.
   const testdir = files.pathJoin(__dirname, '..', 'tests');
   const filenames = files.readdir(testdir);
-  _.each(filenames, (n) => {
+  filenames.forEach((n) => {
     if (! n.match(/^[^.].*\.js$/)) {
       // ends in '.js', doesn't start with '.'
       return;
@@ -1734,7 +1738,7 @@ function getFilteredTests(options) {
 
       // We make sure to not run galaxy tests unless the user explicitly asks us
       // to. Someday, this might not be the case.
-      if ( _.indexOf(test.tags, "galaxy") === -1) {
+      if (! test.tags.includes("galaxy")) {
         newTags.push('non-galaxy');
       }
 
@@ -1742,7 +1746,13 @@ function getFilteredTests(options) {
         return test;
       }
 
-      return _.extend(Object.create(Object.getPrototypeOf(test)), test, { tags: test.tags.concat(newTags) });
+      return Object.assign(
+        Object.create(Object.getPrototypeOf(test)),
+        test,
+        {
+          tags: test.tags.concat(newTags),
+        }
+      );
     });
   }
 
@@ -1809,13 +1819,13 @@ class TestList {
     this.skipCounts = {};
     this.testState = testState;
 
-    _.each(tagsToSkip, (tag) => {
+    tagsToSkip.forEach((tag) => {
       this.skipCounts[tag] = 0;
     });
 
     this.fileInfo = {}; // path -> {hash, hasSkips, hasFailures}
 
-    this.filteredTests = _.filter(allTests, (test) => {
+    this.filteredTests = allTests.filter((test) => {
 
       if (! this.fileInfo[test.file]) {
         this.fileInfo[test.file] = {
@@ -1827,9 +1837,7 @@ class TestList {
       const fileInfo = this.fileInfo[test.file];
 
       if (tagsToMatch.length) {
-        const matches = _.any(tagsToMatch, (tag) => {
-          return _.contains(test.tags, tag);
-        })
+        const matches = tagsToMatch.some((tag) => test.tags.includes(tag));
         if (!matches) {
           return false;
         }
@@ -1838,8 +1846,8 @@ class TestList {
       // We look for tagsToSkip *in order*, and when we decide to
       // skip a test, we don't keep looking at more tags, and we don't
       // add the test to any further "skip counts".
-      return !_.any(tagsToSkip, (tag) => {
-        if (_.contains(test.tags, tag)) {
+      return !tagsToSkip.some((tag) => {
+        if (test.tags.includes(tag)) {
           this.skipCounts[tag]++;
           fileInfo.hasSkips = true;
           return true;
@@ -1866,7 +1874,8 @@ class TestList {
       return;
     }
 
-    _.each(this.fileInfo, (info, f) => {
+    Object.keys(this.fileInfo).forEach((f) => {
+      const info = this.fileInfo[f];
       if (info.hasFailures) {
         delete testState.lastPassedHashes[f];
       } else if (! info.hasSkips) {
@@ -1881,7 +1890,7 @@ class TestList {
   generateSkipReport() {
     let result = '';
 
-    _.each(this.skippedTags, (tag) => {
+    this.skippedTags.forEach((tag) => {
       const count = this.skipCounts[tag];
       if (count) {
         const noun = "test" + (count > 1 ? "s" : ""); // "test" or "tests"
@@ -1929,9 +1938,17 @@ export function listTests(options) {
     return;
   }
 
-  _.each(_.groupBy(testList.filteredTests, 'file'), (tests, file) => {
+  const testsGroupedByFile = {};
+  testList.filteredTests.forEach(filteredTest => {
+    testsGroupedByFile[filteredTest.file] =
+      testsGroupedByFile[filteredTest.file] || [];
+
+    testsGroupedByFile[filteredTest.file].push(filteredTest);
+  });
+
+  Object.keys(testsGroupedByFile).forEach((file) => {
     Console.rawInfo(file + ':\n');
-    _.each(tests, (test) => {
+    testsGroupedByFile[file].forEach((test) => {
       Console.rawInfo('  - ' + test.name +
                       (test.tags.length ? ' [' + test.tags.join(' ') + ']'
                       : '') + '\n');
@@ -1962,7 +1979,7 @@ export function runTests(options) {
   let totalRun = 0;
   const failedTests = [];
 
-  _.each(testList.filteredTests, (test) => {
+  testList.filteredTests.forEach((test) => {
     totalRun++;
     Console.error(test.file + ": " + test.name + " ... ");
     runTest(test);
@@ -2036,7 +2053,7 @@ export function runTests(options) {
             const historyLines = options.historyLines || 100;
 
             Console.arrowError("Last " + historyLines + " lines:", 2);
-            _.each(lines.slice(-historyLines), (line) => {
+            lines.slice(-historyLines).forEach((line) => {
               Console.rawError("  " +
                                (line.channel === "stderr" ? "2| " : "1| ") +
                                line.text +
@@ -2082,7 +2099,7 @@ export function runTests(options) {
     const failureCount = failedTests.length;
     Console.error(failureCount + " failure" +
                   (failureCount > 1 ? "s" : "") + ":");
-    _.each(failedTests, (test) => {
+    failedTests.forEach((test) => {
       Console.rawError("  - " + test.file + ": " + test.name + "\n");
     });
     return 1;
