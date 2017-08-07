@@ -23,6 +23,12 @@
 * The `semver` npm package has been upgraded to version 5.3.0.
   [PR #8859](https://github.com/meteor/meteor/pull/8859)
 
+* The `faye-websocket` npm package has been upgraded to version 0.11.1,
+  and its dependency `websocket-driver` has been upgraded to a version
+  containing [this fix](https://github.com/faye/websocket-driver-node/issues/21),
+  thanks to [@sdarnell](https://github.com/sdarnell).
+  [meteor-feature-requests#160](https://github.com/meteor/meteor-feature-requests/issues/160)
+
 * The `star.json` manifest created within the root of a `meteor build` bundle
   will now contain `nodeVersion` and `npmVersion` which will specify the exact
   versions of Node.js and npm (respectively) which the Meteor release was
