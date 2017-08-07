@@ -32,8 +32,6 @@ import { current as releaseCurrent } from '../packaging/release.js';
 import { FinishedUpgraders } from '../project-context.js';
 import { allUpgraders } from '../upgraders.js';
 
-require("../tool-env/install-runtime.js");
-
 function checkTestOnlyDependency(name) {
   try {
     var absPath = require.resolve(name);
@@ -54,8 +52,10 @@ function checkTestOnlyDependency(name) {
 var phantomjs = checkTestOnlyDependency("phantomjs-prebuilt");
 var webdriver = checkTestOnlyDependency('browserstack-webdriver');
 
+import "../tool-env/install-runtime.js";
+
 // To allow long stack traces that cross async boundaries
-require('longjohn');
+import 'longjohn';
 
 // Exception representing a test failure
 class TestFailure {
