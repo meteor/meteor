@@ -3,7 +3,12 @@ import { makeFulfillablePromise } from '../utils/fiber-helpers.js';
 import { spawn, execFile } from 'child_process';
 
 import * as files from '../fs/files.js';
-var utils = require('../utils/utils.js');
+import {
+  randomPort,
+  randomToken,
+  sleepMs,
+  timeoutScaleFactor,
+} from '../utils/utils.js';
 import {
   markBottom as parseStackMarkBottom,
   markTop as parseStackMarkTop,
@@ -906,7 +911,7 @@ export class Sandbox {
       stubCatalog.collections.builds.push({
         buildArchitectures: isopack.buildArchitectures(),
         versionId: versionRec._id,
-        _id: utils.randomToken()
+        _id: randomToken()
       });
 
       if (packageName === "meteor-tool") {
@@ -922,7 +927,7 @@ export class Sandbox {
 
     stubCatalog.collections.releaseTracks.push({
       name: DEFAULT_TRACK,
-      _id: utils.randomToken()
+      _id: randomToken()
     });
 
     // Now create each requested release.
@@ -1223,7 +1228,7 @@ export class Run {
     this.fakeMongoPort = null;
     this.fakeMongoConnection = null;
     if (options.fakeMongo) {
-      this.fakeMongoPort = require('../utils/utils.js').randomPort();
+      this.fakeMongoPort = randomPort();
       this.env.METEOR_TEST_FAKE_MONGOD_CONTROL_PORT = this.fakeMongoPort;
     }
 
@@ -1353,7 +1358,7 @@ export class Run {
     this._ensureStarted();
 
     let timeout = this.baseTimeout + this.extraTime;
-    timeout *= utils.timeoutScaleFactor;
+    timeout *= timeoutScaleFactor;
     this.extraTime = 0;
     return this.stdoutMatcher.match(pattern, timeout, _strict);
   }
@@ -1363,7 +1368,7 @@ export class Run {
     this._ensureStarted();
 
     let timeout = this.baseTimeout + this.extraTime;
-    timeout *= utils.timeoutScaleFactor;
+    timeout *= timeoutScaleFactor;
     this.extraTime = 0;
     return this.stderrMatcher.match(pattern, timeout, _strict);
   }
@@ -1417,7 +1422,7 @@ export class Run {
     this._ensureStarted();
 
     let timeout = this.baseTimeout + this.extraTime;
-    timeout *= utils.timeoutScaleFactor;
+    timeout *= timeoutScaleFactor;
     this.extraTime = 0;
     this.expectExit();
 
@@ -1436,7 +1441,7 @@ export class Run {
 
     if (this.exitStatus === undefined) {
       let timeout = this.baseTimeout + this.extraTime;
-      timeout *= utils.timeoutScaleFactor;
+      timeout *= timeoutScaleFactor;
       this.extraTime = 0;
 
       var timer;
@@ -1543,7 +1548,7 @@ export class Run {
       for (let attempts = 0; ! this.fakeMongoConnection && attempts < 600;
            attempts ++) {
         // Throttle attempts to one every 100ms
-        utils.sleepMs((lastStartTime + 100) - (+ new Date));
+        sleepMs((lastStartTime + 100) - (+ new Date));
         lastStartTime = +(new Date);
 
         new Promise((resolve) => {
