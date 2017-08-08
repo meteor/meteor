@@ -183,6 +183,51 @@ selftest.define("change packages during hot code push", [], function () {
   run.stop();
 });
 
+selftest.define("add debugOnly and prodOnly packages", [], function () {
+  var s = new Sandbox();
+  var run;
+
+  // Starting a run
+  s.createApp("myapp", "package-tests");
+  s.cd("myapp");
+  s.set("METEOR_OFFLINE_CATALOG", "t");
+
+    // Add a debugOnly package. It should work during a normal run, but print
+  // nothing in production mode.
+  run = s.run("add", "debug-only");
+  run.match("debug-only");
+  run.expectExit(0);
+
+  s.mkdir("server");
+  s.write("server/exit-test.js",
+          "process.exit(global.DEBUG_ONLY_LOADED ? 234 : 235)");
+
+  run = s.run("--once");
+  run.waitSecs(15);
+  run.expectExit(234);
+
+  run = s.run("--once", "--production");
+  run.waitSecs(15);
+  run.expectExit(235);
+
+  // Add prod-only package, which sets GLOBAL.PROD_ONLY_LOADED.
+  run = s.run("add", "prod-only");
+  run.match("prod-only");
+  run.expectExit(0);
+
+  s.mkdir("server");
+  s.write("server/exit-test.js", // overwrite
+          "process.exit(global.PROD_ONLY_LOADED ? 234 : 235)");
+
+  run = s.run("--once");
+  run.waitSecs(15);
+  run.expectExit(235);
+
+  run = s.run("--once", "--production");
+  run.waitSecs(15);
+  run.expectExit(234);
+});
+
 // Add packages through the command line. Make sure that the correct set of
 // changes is reflected in .meteor/packages, .meteor/versions and list.
 selftest.define("add packages to app", [], function () {
@@ -272,51 +317,6 @@ selftest.define("add packages to app", [], function () {
   run.match("no-description\n");
   run.expectEnd();
   run.expectExit(0);
-});
-
-selftest.define("add debugOnly and prodOnly packages", [], function () {
-  var s = new Sandbox();
-  var run;
-
-  // Starting a run
-  s.createApp("myapp", "package-tests");
-  s.cd("myapp");
-  s.set("METEOR_OFFLINE_CATALOG", "t");
-
-    // Add a debugOnly package. It should work during a normal run, but print
-  // nothing in production mode.
-  run = s.run("add", "debug-only");
-  run.match("debug-only");
-  run.expectExit(0);
-
-  s.mkdir("server");
-  s.write("server/exit-test.js",
-          "process.exit(global.DEBUG_ONLY_LOADED ? 234 : 235)");
-
-  run = s.run("--once");
-  run.waitSecs(15);
-  run.expectExit(234);
-
-  run = s.run("--once", "--production");
-  run.waitSecs(15);
-  run.expectExit(235);
-
-  // Add prod-only package, which sets GLOBAL.PROD_ONLY_LOADED.
-  run = s.run("add", "prod-only");
-  run.match("prod-only");
-  run.expectExit(0);
-
-  s.mkdir("server");
-  s.write("server/exit-test.js", // overwrite
-          "process.exit(global.PROD_ONLY_LOADED ? 234 : 235)");
-
-  run = s.run("--once");
-  run.waitSecs(15);
-  run.expectExit(235);
-
-  run = s.run("--once", "--production");
-  run.waitSecs(15);
-  run.expectExit(234);
 });
 
 selftest.define("add package with both debugOnly and prodOnly", [], function () {
@@ -954,4 +954,150 @@ selftest.define("show readme excerpt",  function () {
   run = s.run("show", name + "@1.0.0");
   run.matchErr("Documentation not found");
   run.expectExit(1);
+});
+
+selftest.define("tilde version constraints", [], function () {
+  var s = new Sandbox();
+
+  s.set("METEOR_WATCH_PRIORITIZE_CHANGED", "false");
+
+  s.createApp("tilde-app", "package-tests");
+  s.cd("tilde-app");
+
+  var run = s.run();
+
+  run.match("tilde-app");
+  run.match("proxy");
+  run.waitSecs(10);
+  run.match("MongoDB");
+  run.waitSecs(10);
+  run.match("your app");
+  run.waitSecs(10);
+  run.match("running at");
+  run.waitSecs(60);
+
+  var packages = s.read(".meteor/packages")
+    .replace(/\n*$/m, "\n");
+
+  function setTopLevelConstraint(constraint) {
+    s.write(
+      ".meteor/packages",
+      packages + "tilde-constraints" + (
+        constraint ? "@" + constraint : ""
+      ) + "\n"
+    );
+  }
+
+  setTopLevelConstraint("");
+  run.match(/tilde-constraints.*added, version 0\.4\.2/);
+  run.match("tilde-constraints.js");
+  run.waitSecs(10);
+
+  setTopLevelConstraint("0.4.0");
+  run.match("tilde-constraints.js");
+  run.match("server restarted");
+  run.waitSecs(10);
+
+  setTopLevelConstraint("~0.4.0");
+  run.match("tilde-constraints.js");
+  run.match("server restarted");
+  run.waitSecs(10);
+
+  setTopLevelConstraint("0.4.3");
+  run.match("error: No version of tilde-constraints satisfies all constraints");
+  run.waitSecs(10);
+
+  setTopLevelConstraint("~0.4.3");
+  run.match("error: No version of tilde-constraints satisfies all constraints");
+  run.waitSecs(10);
+
+  setTopLevelConstraint("0.3.0");
+  run.match("tilde-constraints.js");
+  run.match("server restarted");
+  run.waitSecs(10);
+
+  setTopLevelConstraint("~0.3.0");
+  run.match("error: No version of tilde-constraints satisfies all constraints");
+  run.waitSecs(10);
+
+  setTopLevelConstraint("0.5.0");
+  run.match("error: No version of tilde-constraints satisfies all constraints");
+  run.waitSecs(10);
+
+  setTopLevelConstraint("~0.5.0");
+  run.match("error: No version of tilde-constraints satisfies all constraints");
+  run.waitSecs(10);
+
+  s.write(
+    ".meteor/packages",
+    packages
+  );
+  run.match(/tilde-constraints.*removed/);
+  run.waitSecs(10);
+
+  s.write(
+    ".meteor/packages",
+    packages + "tilde-dependent\n"
+  );
+  run.match(/tilde-constraints.*added, version 0\.4\.2/);
+  run.match(/tilde-dependent.*added, version 0\.1\.0/);
+  run.match("tilde-constraints.js");
+  run.match("tilde-dependent.js");
+  run.waitSecs(10);
+
+  var depPackageJsPath = "packages/tilde-dependent/package.js"
+  var depPackageJs = s.read(depPackageJsPath);
+
+  function setDepConstraint(constraint) {
+    s.write(
+      depPackageJsPath,
+      depPackageJs.replace(
+        /tilde-constraints[^"]*/g, // Syntax highlighting hack: "
+        "tilde-constraints" + (
+          constraint ? "@" + constraint : ""
+        )
+      )
+    );
+  }
+
+  setDepConstraint("0.4.0");
+  run.match("tilde-constraints.js");
+  run.match("tilde-dependent.js");
+  run.match("server restarted");
+  run.waitSecs(10);
+
+  setDepConstraint("~0.4.0");
+  run.match("tilde-constraints.js");
+  run.match("tilde-dependent.js");
+  run.match("server restarted");
+  run.waitSecs(10);
+
+  setDepConstraint("0.3.0");
+  run.match("tilde-constraints.js");
+  run.match("tilde-dependent.js");
+  run.match("server restarted");
+  run.waitSecs(10);
+
+  // TODO The rest of these tests should cause version conflicts, but it
+  // seems like version constraints between local packages are ignored,
+  // which is a larger (preexisting) problem we should investigate.
+  /*
+  setDepConstraint("=0.4.0");
+  run.match("error: No version of tilde-constraints satisfies all constraints");
+  run.waitSecs(10);
+
+  setDepConstraint("~0.3.0");
+  run.match("error: No version of tilde-constraints satisfies all constraints");
+  run.waitSecs(10);
+
+  setDepConstraint("0.4.3");
+  run.match("error: No version of tilde-constraints satisfies all constraints");
+  run.waitSecs(10);
+
+  setDepConstraint("~0.4.3");
+  run.match("error: No version of tilde-constraints satisfies all constraints");
+  run.waitSecs(10);
+  */
+
+  run.stop();
 });

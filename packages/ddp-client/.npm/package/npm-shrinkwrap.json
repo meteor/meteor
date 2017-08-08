@@ -2,23 +2,21 @@
   "lockfileVersion": 1,
   "dependencies": {
     "faye-websocket": {
-      "version": "0.11.0",
-      "resolved": "https://registry.npmjs.org/faye-websocket/-/faye-websocket-0.11.0.tgz",
-      "integrity": "sha1-2czw54nn23JddLxId9I6pClyrFA=",
+      "version": "0.11.1",
+      "resolved": "https://registry.npmjs.org/faye-websocket/-/faye-websocket-0.11.1.tgz",
+      "integrity": "sha1-8O/hjE9W5PQK/H4Gxxn9XuYYjzg=",
       "dependencies": {
         "websocket-driver": {
-          "version": "0.6.4",
-          "resolved": "https://registry.npmjs.org/websocket-driver/-/websocket-driver-0.6.4.tgz",
-          "integrity": "sha1-ZbhNAhE0gNP8BeY+gJMiBCvclAs=",
-          "dependencies": {
-            "websocket-extensions": {
-              "version": "0.1.1",
-              "resolved": "https://registry.npmjs.org/websocket-extensions/-/websocket-extensions-0.1.1.tgz",
-              "integrity": "sha1-domUmcGEtu91Q3fC27DNbLVdKec="
-            }
-          }
+          "version": "0.6.5",
+          "resolved": "https://registry.npmjs.org/websocket-driver/-/websocket-driver-0.6.5.tgz",
+          "integrity": "sha1-XLJVbOuF9Dc8bYI4qmkchFThOjY="
         }
       }
+    },
+    "http-parser-js": {
+      "version": "0.4.5",
+      "resolved": "https://registry.npmjs.org/http-parser-js/-/http-parser-js-0.4.5.tgz",
+      "integrity": "sha512-sYaqbMBf8hoS6OZBwMygxdLD3TsWgzheP55nkQ7GiR7gsn8x+2oTMCoJSAQmNm3obzOjJYT6tdTz1XcYjKyUqg=="
     },
     "lolex": {
       "version": "1.4.0",
@@ -29,6 +27,15 @@
       "version": "0.1.3",
       "resolved": "https://registry.npmjs.org/permessage-deflate/-/permessage-deflate-0.1.3.tgz",
       "integrity": "sha1-VnVbIrzkUKLuVoauXy7zJRNlk3k="
+    },
+    "websocket-driver": {
+      "version": "https://github.com/faye/websocket-driver-node/tarball/1325828a9e8b5e29c7b4758995efdb84703919ad",
+      "integrity": "sha1-R3ysWk21bTKDcB2nUGcV4rZHgIY="
+    },
+    "websocket-extensions": {
+      "version": "0.1.1",
+      "resolved": "https://registry.npmjs.org/websocket-extensions/-/websocket-extensions-0.1.1.tgz",
+      "integrity": "sha1-domUmcGEtu91Q3fC27DNbLVdKec="
     }
   }
 }

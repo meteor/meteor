@@ -58,17 +58,18 @@
 * The `semver` npm package has been upgraded to version 5.3.0.
   [PR #8859](https://github.com/meteor/meteor/pull/8859)
 
-* A new package called `mongo-dev-server` has been created and wired into
-  `mongo` as a dependency. As long as this package is included in a Meteor
-  application (which it is by default since all new Meteor apps have `mongo`
-  as a dependency), a local development MongoDB server is started alongside
-  the application. This package was created to provide a way to disable the
-  local development Mongo server, when `mongo` isn't needed (e.g. when using
-  Meteor as a build system only). If an application has no dependency on
-  `mongo`, the `mongo-dev-server` package is not added, which means no local
-  development Mongo server is started.
-  [Feature Request #31](https://github.com/meteor/meteor-feature-requests/issues/31)
-  [PR #8853](https://github.com/meteor/meteor/pull/8853)
+* The `faye-websocket` npm package has been upgraded to version 0.11.1,
+  and its dependency `websocket-driver` has been upgraded to a version
+  containing [this fix](https://github.com/faye/websocket-driver-node/issues/21),
+  thanks to [@sdarnell](https://github.com/sdarnell).
+  [meteor-feature-requests#160](https://github.com/meteor/meteor-feature-requests/issues/160)
+
+* The `star.json` manifest created within the root of a `meteor build` bundle
+  will now contain `nodeVersion` and `npmVersion` which will specify the exact
+  versions of Node.js and npm (respectively) which the Meteor release was
+  bundled with.  The `.node_version.txt` file will still be written into the
+  root of the bundle, but it may be deprecated in a future version of Meteor.
+  [PR #8956](https://github.com/meteor/meteor/pull/8956)
 
 * `Accounts.config` no longer mistakenly allows tokens to expire when
   the `loginExpirationInDays` option is set to `null`.
@@ -83,6 +84,15 @@
   [#8408](https://github.com/meteor/meteor/issues/8408),
   [#8424](https://github.com/meteor/meteor/issues/8424), and
   [#8464](https://github.com/meteor/meteor/issues/8464).
+
+* The `"env"` field is now supported in `.babelrc` files.
+  [PR #8963](https://github.com/meteor/meteor/pull/8963)
+
+* Files contained by `client/compatibility/` directories or added with
+  `api.addFiles(files, ..., { bare: true })` are now evaluated before
+  importing modules with `require`, which may be a breaking change if you
+  depend on the interleaving of `bare` files with eager module evaluation.
+  [PR #8972](https://github.com/meteor/meteor/pull/8972)
 
 ## v1.5.1, 2017-07-12
 

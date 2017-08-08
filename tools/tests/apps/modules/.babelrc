@@ -1,0 +1,10 @@
+{
+  "env": {
+    "development": {
+      "plugins": ["transform-do-expressions"]
+    },
+    "production": {
+      "plugins": ["transform-do-expressions"]
+    }
+  }
+}

@@ -78,7 +78,10 @@ function startNewWatcher(absPath) {
   const stat = statOrNull(absPath);
   const ino = stat && stat.ino;
   if (ino > 0 && entriesByIno.has(ino)) {
-    return entriesByIno.get(ino);
+    const entry = entriesByIno.get(ino);
+    if (entries[absPath] === entry) {
+      return entry;
+    }
   }
 
   function safeUnwatch() {

@@ -233,8 +233,8 @@ _.extend(Module.prototype, {
 
     _.each(this.files, file => {
       if (file.bare) {
-        // Bare files will be added in between the synchronous require
-        // calls in _chunkifyEagerRequires.
+        // Bare files will be added before the synchronous require calls
+        // in _chunkifyEagerRequires.
         return;
       }
 
@@ -384,10 +384,9 @@ _.extend(Module.prototype, {
   },
 
   // Adds require calls to the chunks array for all modules that should be
-  // eagerly evaluated, and also includes bare files in the appropriate
-  // order with respect to the require calls. Returns the name of the
-  // variable that holds the main exports object, if api.mainModule was
-  // used to define a main module.
+  // eagerly evaluated, and also includes any bare files before the
+  // require calls. Returns the name of the variable that holds the main
+  // exports object, if api.mainModule was used to define a main module.
   _chunkifyEagerRequires(chunks, moduleCount, sourceWidth) {
     assert.ok(_.isArray(chunks));
     assert.ok(_.isNumber(moduleCount));
@@ -396,8 +395,11 @@ _.extend(Module.prototype, {
     let exportsName;
 
     // Now that we have installed everything in this package or
-    // application, immediately require the non-lazy modules and
-    // evaluate the bare files.
+    // application, first evaluate the bare files, then require the
+    // non-lazy (eager) modules.
+
+    const eagerModuleFiles = [];
+
     _.each(this.files, file => {
       if (file.bare) {
         chunks.push("\n", file.getPrelinkedOutput({
@@ -405,6 +407,12 @@ _.extend(Module.prototype, {
           noLineNumbers: this.noLineNumbers
         }));
       } else if (moduleCount > 0 && ! file.lazy) {
+        eagerModuleFiles.push(file);
+      }
+    });
+
+    if (eagerModuleFiles.length > 0) {
+      _.each(eagerModuleFiles, file => {
         if (file.mainModule) {
           exportsName = "exports";
         }
@@ -415,8 +423,8 @@ _.extend(Module.prototype, {
           JSON.stringify("./" + file.installPath),
           ");"
         );
-      }
-    });
+      });
+    }
 
     return exportsName;
   }

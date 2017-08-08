@@ -36,9 +36,6 @@ const DEV_DEPENDENCY_VERSIONS = {
 
 require("../tool-env/install-runtime.js");
 
-// To allow long stack traces that cross async boundaries
-require('longjohn');
-
 // Exception representing a test failure
 var TestFailure = function (reason, details) {
   var self = this;

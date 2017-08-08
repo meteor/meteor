@@ -248,9 +248,14 @@ Options:
 >>> list
 List the packages explicitly used by your project.
 Usage: meteor list
+       meteor list --tree [--weak]
 
 Lists the packages that you have explicitly added to your project.
-This will not list transitive dependencies.
+Transitive dependencies are not listed unless you use the --tree option,
+which outputs a tree showing how packages are referenced.
+
+Options:
+  --weak           Show weakly referenced dependencies in the tree.
 
 >>> add-platform
 Add a platform to this project.
@@ -504,16 +509,6 @@ Options:
   --remove      remove an authorized user or organization (for free hosting)
   --transfer    transfer the (Galaxy) app to a new user or organization
   --list        list authorized users and organizations (the default)
-
-
->>> claim
-Claim a site deployed with an old Meteor version.
-Usage: meteor claim <site>
-
-If you deployed a site with an old version of Meteor that did not have
-support for developer accounts, you can use this command to claim that
-site into your account. If you had set a password on the site you will
-be prompted for it one last time.
 
 
 >>> login

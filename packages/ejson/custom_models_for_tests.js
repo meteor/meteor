@@ -1,87 +1,74 @@
-function Address (city, state) {
-  this.city = city;
-  this.state = state;
-}
+import { EJSON } from './ejson';
 
-Address.prototype = {
-  constructor: Address,
+class Address {
+  constructor(city, state) {
+    this.city = city;
+    this.state = state;
+  }
 
-  typeName: function () {
-    return "Address";
-  },
+  typeName() {
+    return 'Address';
+  }
 
-  toJSONValue: function () {
+  toJSONValue() {
     return {
       city: this.city,
-      state: this.state
+      state: this.state,
     };
   }
 }
 
-EJSON.addType("Address", function fromJSONValue(value) {
-  return new Address(value.city, value.state);
-});
+EJSON.addType('Address', value => new Address(value.city, value.state));
 
-function Person (name, dob, address) {
-  this.name = name;
-  this.dob = dob;
-  this.address = address;
-}
+class Person {
+  constructor(name, dob, address) {
+    this.name = name;
+    this.dob = dob;
+    this.address = address;
+  }
 
-Person.prototype = {
-  constructor: Person,
+  typeName() {
+    return 'Person';
+  }
 
-  typeName: function () {
-    return "Person";
-  },
-
-  toJSONValue: function () {
+  toJSONValue() {
     return {
       name: this.name,
       dob: EJSON.toJSONValue(this.dob),
-      address: EJSON.toJSONValue(this.address)
+      address: EJSON.toJSONValue(this.address),
     };
   }
 }
 
-_.extend(Person, {
-  fromJSONValue: function(value) {
-    return new Person(
-      value.name,
-      EJSON.fromJSONValue(value.dob),
-      EJSON.fromJSONValue(value.address)
-    );
+EJSON.addType(
+  'Person',
+  value => new Person(
+    value.name,
+    EJSON.fromJSONValue(value.dob),
+    EJSON.fromJSONValue(value.address)
+  )
+);
+
+class Holder {
+  constructor(content) {
+    this.content = content;
   }
-});
 
-EJSON.addType("Person", Person.fromJSONValue);
+  typeName() {
+    return 'Holder';
+  }
 
-function Holder (content) {
-  this.content = content;
-}
-
-Holder.prototype = {
-  constructor: Holder,
-
-  typeName: function () {
-    return "Holder";
-  },
-
-  toJSONValue: function () {
+  toJSONValue() {
     return this.content;
   }
 }
 
-_.extend(Holder, {
-  fromJSONValue: function(value) {
-    return new Holder(value);
-  }
-});
+EJSON.addType('Holder', value => new Holder(value));
 
-EJSON.addType("Holder", Holder.fromJSONValue);
+const EJSONTest = {
+  Address,
+  Person,
+  Holder,
+};
 
-_.extend(EJSONTest, {
-  Address: Address,
-  Person: Person,
-  Holder: Holder
-});
+export default EJSONTest;
