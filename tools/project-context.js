@@ -748,8 +748,9 @@ _.extend(ProjectContext.prototype, {
       var constraint = utils.parsePackageConstraint(
         // Note that this used to be an exact name@=version constraint,
         // before #7084 eliminated these constraints completely. They
-        // were reinstated in Meteor 1.4.3 as name@version constraints.
-        packageName + "@" + version);
+        // were reinstated in Meteor 1.4.3 as name@version constraints,
+        // and further refined to name@~version constraints in 1.5.2.
+        packageName + "@~" + version);
       // Add a constraint but no dependency (we don't automatically use
       // all local packages!):
       depsAndConstraints.constraints.push(constraint);
