@@ -1,5 +1,7 @@
 import LocalCollection from './local_collection.js';
 
+export const hasOwn = Object.prototype.hasOwnProperty;
+
 // Each element selector contains:
 //  - compileElementSelector, a function with args:
 //    - operand - the "right hand side" of the operator
@@ -155,7 +157,7 @@ export const ELEMENT_OPERATORS = {
 
       const isDocMatcher = !isOperatorObject(
         Object.keys(operand)
-          .filter(key => !LOGICAL_OPERATORS.hasOwnProperty(key))
+          .filter(key => !hasOwn.call(LOGICAL_OPERATORS, key))
           .reduce((a, b) => Object.assign(a, {[b]: operand[b]}), {}),
         true);
 
@@ -298,7 +300,7 @@ const VALUE_OPERATORS = {
   },
   // $options just provides options for $regex; its logic is inside $regex
   $options(operand, valueSelector) {
-    if (!valueSelector.hasOwnProperty('$regex'))
+    if (!hasOwn.call(valueSelector, '$regex'))
       throw Error('$options needs a $regex');
     return everythingMatcher;
   },
@@ -340,8 +342,7 @@ const VALUE_OPERATORS = {
     // marked with a $geometry property, though legacy coordinates can be
     // matched using $geometry.
     let maxDistance, point, distance;
-    if (LocalCollection._isPlainObject(operand) &&
-        operand.hasOwnProperty('$geometry')) {
+    if (LocalCollection._isPlainObject(operand) && hasOwn.call(operand, '$geometry')) {
       // GeoJSON "2dsphere" mode.
       maxDistance = operand.$maxDistance;
       point = operand.$geometry;
@@ -504,7 +505,7 @@ export function compileDocumentSelector(docSelector, matcher, options = {}) {
     if (key.substr(0, 1) === '$') {
       // Outer operators are either logical operators (they recurse back into
       // this function), or $where.
-      if (!LOGICAL_OPERATORS.hasOwnProperty(key))
+      if (!hasOwn.call(LOGICAL_OPERATORS, key))
         throw new Error(`Unrecognized logical operator: ${key}`);
 
       matcher._isSimple = false;
@@ -1023,10 +1024,10 @@ function operatorBranchedMatcher(valueSelector, matcher, isRoot) {
     if (!(simpleRange || simpleInclusion || simpleEquality))
       matcher._isSimple = false;
 
-    if (VALUE_OPERATORS.hasOwnProperty(operator))
+    if (hasOwn.call(VALUE_OPERATORS, operator))
       return VALUE_OPERATORS[operator](operand, valueSelector, matcher, isRoot);
 
-    if (ELEMENT_OPERATORS.hasOwnProperty(operator)) {
+    if (hasOwn.call(ELEMENT_OPERATORS, operator)) {
       const options = ELEMENT_OPERATORS[operator];
       return convertElementMatcherToBranchedMatcher(
         options.compileElementSelector(operand, valueSelector, matcher),
@@ -1056,7 +1057,7 @@ export function pathsToTree(paths, newLeafFn, conflictFn, root = {}) {
 
     // use .every just for iteration with break
     const success = pathArray.slice(0, -1).every((key, i) => {
-      if (!tree.hasOwnProperty(key)) {
+      if (!hasOwn.call(tree, key)) {
         tree[key] = {};
       } else if (tree[key] !== Object(tree[key])) {
         tree[key] = conflictFn(
@@ -1077,7 +1078,7 @@ export function pathsToTree(paths, newLeafFn, conflictFn, root = {}) {
 
     if (success) {
       const lastKey = pathArray[pathArray.length - 1];
-      if (tree.hasOwnProperty(lastKey))
+      if (hasOwn.call(tree, lastKey))
         tree[lastKey] = conflictFn(tree[lastKey], path, path);
       else
         tree[lastKey] = newLeafFn(path);

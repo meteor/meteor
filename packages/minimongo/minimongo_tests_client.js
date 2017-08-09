@@ -1,3 +1,5 @@
+import {hasOwn} from './common';
+
 // Hack to make LocalCollection generate ObjectIDs by default.
 LocalCollection._useOID = true;
 
@@ -1602,8 +1604,8 @@ Tinytest.add('minimongo - fetch with fields', test => {
          x.anything &&
          x.anything.foo &&
          x.anything.foo === 'bar' &&
-         !x.hasOwnProperty('nothing') &&
-         !x.anything.hasOwnProperty('cool')));
+         !hasOwn.call(x, 'nothing') &&
+         !hasOwn.call(x.anything, 'cool')));
 
   // Test with a selector, even field used in the selector is excluded in the
   // projection
@@ -1618,7 +1620,7 @@ Tinytest.add('minimongo - fetch with fields', test => {
          x.anything &&
          x.anything.foo === 'bar' &&
          x.anything.cool === 'hot' &&
-         !x.hasOwnProperty('nothing') &&
+         !hasOwn.call(x, 'nothing') &&
          x.i &&
          x.i >= 5));
 
@@ -2101,7 +2103,7 @@ Tinytest.add('minimongo - array sort', test => {
   const testCursorMatchesField = (cursor, field) => {
     const fieldValues = [];
     c.find().forEach(doc => {
-      if (doc.hasOwnProperty(field)) {fieldValues.push(doc[field]);}
+      if (hasOwn.call(doc, field)) {fieldValues.push(doc[field]);}
     });
     test.equal(cursor.fetch().map(doc => doc[field]),
       Array.from({length: Math.max(...fieldValues) + 1}, (x, i) => i));

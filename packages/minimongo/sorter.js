@@ -2,6 +2,7 @@ import {
   ELEMENT_OPERATORS,
   equalityElementMatcher,
   expandArraysInBranches,
+  hasOwn,
   isOperatorObject,
   makeLookupFunction,
   regexpElementMatcher,
@@ -162,7 +163,7 @@ export default class Sorter {
 
         const path = pathFromIndices(branch.arrayIndices);
 
-        if (element.hasOwnProperty(path))
+        if (hasOwn.call(element, path))
           throw Error(`duplicate path: ${path}`);
 
         element[path] = branch.value;
@@ -177,14 +178,14 @@ export default class Sorter {
         // and 'a.x.y' are both arrays, but we don't allow this for now.
         // #NestedArraySort
         // XXX achieve full compatibility here
-        if (knownPaths && !knownPaths.hasOwnProperty(path))
+        if (knownPaths && !hasOwn.call(knownPaths, path))
           throw Error('cannot index parallel arrays');
       });
 
       if (knownPaths) {
         // Similarly to above, paths must match everywhere, unless this is a
         // non-array field.
-        if (!element.hasOwnProperty('') &&
+        if (!hasOwn.call(element, '') &&
             Object.keys(knownPaths).length !== Object.keys(element).length)
           throw Error('cannot index parallel arrays!');
       } else if (usedPaths) {
@@ -201,7 +202,7 @@ export default class Sorter {
     if (!knownPaths) {
       // Easy case: no use of arrays.
       const soleKey = valuesByIndexAndPath.map(values => {
-        if (!values.hasOwnProperty(''))
+        if (!hasOwn.call(values, ''))
           throw Error('no value in sole key case?');
 
         return values[''];
@@ -214,10 +215,10 @@ export default class Sorter {
 
     Object.keys(knownPaths).forEach(path => {
       const key = valuesByIndexAndPath.map(values => {
-        if (values.hasOwnProperty(''))
+        if (hasOwn.call(values, ''))
           return values[''];
 
-        if (!values.hasOwnProperty(path))
+        if (!hasOwn.call(values, path))
           throw Error('missing path?');
 
         return values[path];

@@ -1,6 +1,7 @@
 import Cursor from './cursor.js';
 import ObserveHandle from './observe_handle.js';
 import {
+  hasOwn,
   isIndexable,
   isNumericKey,
   isOperatorObject,
@@ -92,7 +93,7 @@ export default class LocalCollection {
 
     // if you really want to use ObjectIDs, set this global.
     // Mongo.Collection specifies its own ids and does not use this code.
-    if (!doc.hasOwnProperty('_id'))
+    if (!hasOwn.call(doc, '_id'))
       doc._id = LocalCollection._useOID ? new MongoID.ObjectID() : Random.id();
 
     const id = doc._id;
@@ -618,7 +619,7 @@ LocalCollection._CachingChangeObserver = class _CachingChangeObserver {
       LocalCollection._observeChangesCallbacksAreOrdered(options.callbacks)
     );
 
-    if (options.hasOwnProperty('ordered')) {
+    if (hasOwn.call(options, 'ordered')) {
       this.ordered = options.ordered;
 
       if (options.callbacks && options.ordered !== orderedFromCallbacks)
@@ -723,7 +724,7 @@ LocalCollection.wrapTransform = transform => {
     return transform;
 
   const wrapped = doc => {
-    if (!doc.hasOwnProperty('_id')) {
+    if (!hasOwn.call(doc, '_id')) {
       // XXX do we ever have a transform on the oplog's collection? because that
       // collection has no _id.
       throw new Error('can only transform documents with _id');
@@ -738,7 +739,7 @@ LocalCollection.wrapTransform = transform => {
     if (!LocalCollection._isPlainObject(transformed))
       throw new Error('transform must return object');
 
-    if (transformed.hasOwnProperty('_id')) {
+    if (hasOwn.call(transformed, '_id')) {
       if (!EJSON.equals(transformed._id, id))
         throw new Error('transformed document can\'t have different _id');
     } else {
@@ -794,7 +795,7 @@ LocalCollection._checkSupportedProjection = fields => {
 
     if (typeof value === 'object' &&
         ['$elemMatch', '$meta', '$slice'].some(key =>
-          value.hasOwnProperty(key)
+          hasOwn.call(value, key)
         )) {
       throw MinimongoError(
         'Minimongo doesn\'t support operators in projections yet.'
@@ -830,7 +831,7 @@ LocalCollection._compileProjection = fields => {
     const result = details.including ? {} : EJSON.clone(doc);
 
     Object.keys(ruleTree).forEach(key => {
-      if (!doc.hasOwnProperty(key))
+      if (!hasOwn.call(doc, key))
         return;
 
       const rule = ruleTree[key];
@@ -853,10 +854,10 @@ LocalCollection._compileProjection = fields => {
   return doc => {
     const result = transform(doc, details.tree);
 
-    if (_idProjection && doc.hasOwnProperty('_id'))
+    if (_idProjection && hasOwn.call(doc, '_id'))
       result._id = doc._id;
 
-    if (!_idProjection && result.hasOwnProperty('_id'))
+    if (!_idProjection && hasOwn.call(result, '_id'))
       delete result._id;
 
     return result;
@@ -941,7 +942,7 @@ LocalCollection._idsMatchedBySelector = selector => {
     return null;
 
   // Do we have an _id clause?
-  if (selector.hasOwnProperty('_id')) {
+  if (hasOwn.call(selector, '_id')) {
     // Is the _id clause just an ID?
     if (LocalCollection._selectorIsId(selector._id))
       return [selector._id];
@@ -1366,7 +1367,7 @@ LocalCollection._updateInResults = (query, doc, old_doc) => {
 
 const MODIFIERS = {
   $currentDate(target, field, arg) {
-    if (typeof arg === 'object' && arg.hasOwnProperty('$type')) {
+    if (typeof arg === 'object' && hasOwn.call(arg, '$type')) {
       if (arg.$type !== 'date') {
         throw MinimongoError(
           'Minimongo does currently only support the date type in ' +

@@ -197,13 +197,13 @@ Minimongo.Matcher.prototype.matchingDocument = function() {
           let upperBound = Infinity;
 
           ['$lte', '$lt'].forEach(op => {
-            if (valueSelector.hasOwnProperty(op) &&
+            if (hasOwn.call(valueSelector, op) &&
                 valueSelector[op] < upperBound)
               upperBound = valueSelector[op];
           });
 
           ['$gte', '$gt'].forEach(op => {
-            if (valueSelector.hasOwnProperty(op) &&
+            if (hasOwn.call(valueSelector, op) &&
                 valueSelector[op] > lowerBound)
               lowerBound = valueSelector[op];
           });

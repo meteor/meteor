@@ -1,6 +1,7 @@
 import LocalCollection from './local_collection.js';
 import {
   compileDocumentSelector,
+  hasOwn,
   nothingMatcher,
 } from './common.js';
 
@@ -97,7 +98,7 @@ export default class Matcher {
     // protect against dangerous selectors.  falsey and {_id: falsey} are both
     // likely programmer error, and not what you want, particularly for
     // destructive operations.
-    if (!selector || selector.hasOwnProperty('_id') && !selector._id) {
+    if (!selector || hasOwn.call(selector, '_id') && !selector._id) {
       this._isSimple = false;
       return nothingMatcher;
     }
