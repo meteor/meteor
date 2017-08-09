@@ -538,13 +538,6 @@ export function compileDocumentSelector(docSelector, matcher, options = {}) {
   const docMatchers = Object.keys(docSelector).map(key => {
     const subSelector = docSelector[key];
 
-    // Don't add a matcher if subSelector is a function -- this is to match
-    // the behavior of Meteor on the server (inherited from the node mongodb
-    // driver), which is to ignore any part of a selector which is a function.
-    if (typeof subSelector === 'function') {
-      return undefined;
-    }
-
     if (key.substr(0, 1) === '$') {
       // Outer operators are either logical operators (they recurse back into
       // this function), or $where.
@@ -561,6 +554,13 @@ export function compileDocumentSelector(docSelector, matcher, options = {}) {
     // root.
     if (!options.inElemMatch) {
       matcher._recordPathUsed(key);
+    }
+
+    // Don't add a matcher if subSelector is a function -- this is to match
+    // the behavior of Meteor on the server (inherited from the node mongodb
+    // driver), which is to ignore any part of a selector which is a function.
+    if (typeof subSelector === 'function') {
+      return undefined;
     }
 
     const lookUpByIndex = makeLookupFunction(key);

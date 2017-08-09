@@ -1,5 +1,6 @@
 import './minimongo_common.js';
 import {
+  hasOwn,
   isNumericKey,
   isOperatorObject,
   pathsToTree,
