@@ -1,33 +1,36 @@
-var _ = require('underscore');
-var util = require('util');
-var Future = require('fibers/future');
-var fiberHelpers = require('../utils/fiber-helpers.js');
-var child_process = require('child_process');
-
-var files = require('../fs/files.js');
-var utils = require('../utils/utils.js');
-var parseStack = require('../utils/parse-stack.js');
-var Console = require('../console/console.js').Console;
-var archinfo = require('../utils/archinfo.js');
-var config = require('../meteor-services/config.js');
-var buildmessage = require('../utils/buildmessage.js');
-var execFileSync = require('../utils/processes.js').execFileSync;
-var { getUrlWithResuming } = require("../utils/http-helpers.js");
-var Builder = require('../isobuild/builder.js').default;
-
-var catalog = require('../packaging/catalog/catalog.js');
-var catalogRemote = require('../packaging/catalog/catalog-remote.js');
-var isopackCacheModule = require('../isobuild/isopack-cache.js');
-var isopackets = require('../tool-env/isopackets.js');
-
-var tropohouseModule = require('../packaging/tropohouse.js');
-var packageMapModule = require('../packaging/package-map.js');
-var release = require('../packaging/release.js');
-
-var projectContextModule = require('../project-context.js');
-var upgraders = require('../upgraders.js');
-
-require("../tool-env/install-runtime.js");
+import { makeFulfillablePromise } from '../utils/fiber-helpers.js';
+import { spawn, execFile } from 'child_process';
+import * as files from '../fs/files.js';
+import {
+  randomPort,
+  randomToken,
+  sleepMs,
+  timeoutScaleFactor,
+} from '../utils/utils.js';
+import {
+  markBottom as parseStackMarkBottom,
+  markTop as parseStackMarkTop,
+  parse as parseStackParse,
+} from '../utils/parse-stack.js';
+import { Console } from '../console/console.js';
+import { host as archInfoHost } from '../utils/archinfo.js';
+import {
+  getPackagesDirectoryName,
+  getPackageStorage,
+} from '../meteor-services/config.js';
+import { capture, enterJob } from '../utils/buildmessage.js';
+import { getUrlWithResuming } from '../utils/http-helpers.js';
+import Builder from '../isobuild/builder.js';
+import { DEFAULT_TRACK } from '../packaging/catalog/catalog.js';
+import { RemoteCatalog } from '../packaging/catalog/catalog-remote.js';
+import { IsopackCache } from '../isobuild/isopack-cache.js';
+import { load as isoPacketsLoad } from '../tool-env/isopackets.js';
+import { Tropohouse } from '../packaging/tropohouse.js';
+import { PackageMap } from '../packaging/package-map.js';
+import { current as releaseCurrent } from '../packaging/release.js';
+import { FinishedUpgraders } from '../project-context.js';
+import { allUpgraders } from '../upgraders.js';
+import { execFileSync } from '../utils/processes.js';
 
 function checkTestOnlyDependency(name) {
   try {
@@ -49,34 +52,39 @@ function checkTestOnlyDependency(name) {
 var phantomjs = checkTestOnlyDependency("phantomjs-prebuilt");
 var webdriver = checkTestOnlyDependency('browserstack-webdriver');
 
+const hasOwn = Object.prototype.hasOwnProperty;
+
+import "../tool-env/install-runtime.js";
+
 // To allow long stack traces that cross async boundaries
-require('longjohn');
+import 'longjohn';
 
 // Exception representing a test failure
-var TestFailure = function (reason, details) {
-  var self = this;
-  self.reason = reason;
-  self.details = details || {};
-  self.stack = (new Error).stack;
-};
+class TestFailure {
+  constructor(reason, details) {
+    this.reason = reason;
+    this.details = details || {};
+    this.stack = (new Error).stack;
+  }
+}
 
 // Use this to decorate functions that throw TestFailure. Decorate the
 // first function that should not be included in the call stack shown
 // to the user.
-var markStack = function (f) {
-  return parseStack.markTop(f);
-};
+export function markStack(f) {
+  return parseStackMarkTop(f);
+}
 
 // Call from a test to throw a TestFailure exception and bail out of the test
-var fail = markStack(function (reason) {
+export const fail = markStack(function (reason) {
   throw new TestFailure(reason);
 });
 
 // Call from a test to assert that 'actual' is equal to 'expected',
 // with 'actual' being the value that the test got and 'expected'
 // being the expected value
-var expectEqual = markStack(function (actual, expected) {
-  var Package = isopackets.load('ejson');
+export const expectEqual = markStack(function (actual, expected) {
+  const Package = isoPacketsLoad('ejson');
   if (! Package.ejson.EJSON.equals(actual, expected)) {
     throw new TestFailure("not-equal", {
       expected: expected,
@@ -86,20 +94,21 @@ var expectEqual = markStack(function (actual, expected) {
 });
 
 // Call from a test to assert that 'actual' is truthy.
-var expectTrue = markStack(function (actual) {
+export const expectTrue = markStack(function (actual) {
   if (! actual) {
     throw new TestFailure('not-true');
   }
 });
+
 // Call from a test to assert that 'actual' is falsey.
-var expectFalse = markStack(function (actual) {
+export const expectFalse = markStack(function (actual) {
   if (actual) {
     throw new TestFailure('not-false');
   }
 });
 
-var expectThrows = markStack(function (f) {
-  var threw = false;
+export const expectThrows = markStack(function (f) {
+  let threw = false;
   try {
     f();
   } catch (e) {
@@ -111,29 +120,29 @@ var expectThrows = markStack(function (f) {
   }
 });
 
-var doOrThrow = function (f) {
-  var ret;
-  var messages = buildmessage.capture(function () {
+export function doOrThrow(f) {
+  let ret;
+  const messages = capture(function () {
     ret = f();
   });
   if (messages.hasMessages()) {
     throw Error(messages.formatMessages());
   }
   return ret;
-};
+}
 
 // Our current strategy for running tests that need warehouses is to build all
 // packages from the checkout into this temporary tropohouse directory, and for
 // each test that need a fake warehouse, copy the built packages into the
 // test-specific warehouse directory.  This isn't particularly fast, but it'll
 // do for now. We build the packages during the first test that needs them.
-var builtPackageTropohouseDir = null;
-var tropohouseLocalCatalog = null;
-var tropohouseIsopackCache = null;
+let builtPackageTropohouseDir = null;
+let tropohouseLocalCatalog = null;
+let tropohouseIsopackCache = null;
 
 // Let's build a minimal set of packages that's enough to get self-test
 // working.  (And that doesn't need us to download any Atmosphere packages.)
-var ROOT_PACKAGES_TO_BUILD_IN_SANDBOX = [
+const ROOT_PACKAGES_TO_BUILD_IN_SANDBOX = [
   // We need the tool in order to run from the fake warehouse at all.
   "meteor-tool",
 
@@ -153,36 +162,34 @@ var ROOT_PACKAGES_TO_BUILD_IN_SANDBOX = [
   "shell-server"
 ];
 
-var setUpBuiltPackageTropohouse = function () {
+function setUpBuiltPackageTropohouse() {
   if (builtPackageTropohouseDir) {
     return;
   }
   builtPackageTropohouseDir = files.mkdtemp('built-package-tropohouse');
 
-  if (config.getPackagesDirectoryName() !== 'packages') {
+  if (getPackagesDirectoryName() !== 'packages') {
     throw Error("running self-test with METEOR_PACKAGE_SERVER_URL set?");
   }
 
-  var tropohouse = new tropohouseModule.Tropohouse(builtPackageTropohouseDir);
+  const tropohouse = new Tropohouse(builtPackageTropohouseDir);
   tropohouseLocalCatalog = newSelfTestCatalog();
-  var versions = {};
-  _.each(
-    tropohouseLocalCatalog.getAllNonTestPackageNames(),
-    function (packageName) {
-      versions[packageName] =
-        tropohouseLocalCatalog.getLatestVersion(packageName).version;
+  const versions = {};
+  tropohouseLocalCatalog.getAllNonTestPackageNames().forEach((packageName) => {
+    versions[packageName] =
+      tropohouseLocalCatalog.getLatestVersion(packageName).version;
   });
-  var packageMap = new packageMapModule.PackageMap(versions, {
+  const packageMap = new PackageMap(versions, {
     localCatalog: tropohouseLocalCatalog
   });
   // Make an isopack cache that doesn't automatically save isopacks to disk and
   // has no access to versioned packages.
-  tropohouseIsopackCache = new isopackCacheModule.IsopackCache({
+  tropohouseIsopackCache = new IsopackCache({
     packageMap: packageMap,
     includeCordovaUnibuild: true
   });
   doOrThrow(function () {
-    buildmessage.enterJob("building self-test packages", function () {
+    enterJob("building self-test packages", () => {
       // Build the packages into the in-memory IsopackCache.
       tropohouseIsopackCache.buildLocalPackages(
         ROOT_PACKAGES_TO_BUILD_IN_SANDBOX);
@@ -194,21 +201,21 @@ var setUpBuiltPackageTropohouse = function () {
   // $METEOR_PACKAGE_SERVER_URL is not set in the self-test process itself) even
   // though some tests will want them to be under
   // 'packages-for-server/test-packages'; we'll fix this in _makeWarehouse.
-  tropohouseIsopackCache.eachBuiltIsopack(function (name, isopack) {
+  tropohouseIsopackCache.eachBuiltIsopack((name, isopack) => {
     tropohouse._saveIsopack(isopack, name);
   });
 };
 
-var newSelfTestCatalog = function () {
+function newSelfTestCatalog() {
   if (! files.inCheckout()) {
     throw Error("Only can build packages from a checkout");
   }
 
-  var catalogLocal = require('../packaging/catalog/catalog-local.js');
-  var selfTestCatalog = new catalogLocal.LocalCatalog;
-  var messages = buildmessage.capture(
+  const catalogLocal = require('../packaging/catalog/catalog-local.js');
+  const selfTestCatalog = new catalogLocal.LocalCatalog;
+  const messages = capture(
     { title: "scanning local core packages" },
-    function () {
+    () => {
       const packagesDir =
         files.pathJoin(files.getCurrentToolsDir(), 'packages');
 
@@ -230,7 +237,7 @@ var newSelfTestCatalog = function () {
     throw new Error("scan failed?");
   }
   return selfTestCatalog;
-};
+}
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -240,25 +247,23 @@ var newSelfTestCatalog = function () {
 // Handles the job of waiting until text is seen that matches a
 // regular expression.
 
-var Matcher = function (run) {
-  var self = this;
-  self.buf = "";
-  self.fullBuffer = "";
-  self.ended = false;
-  self.resetMatch();
-  self.run = run; // used only to set a field on exceptions
-  self.endPromise = new Promise(resolve => {
-    self.resolveEndPromise = resolve;
-  });
-};
+class Matcher {
+  constructor(run) {
+    this.buf = "";
+    this.fullBuffer = "";
+    this.ended = false;
+    this.resetMatch();
+    this.run = run; // used only to set a field on exceptions
+    this.endPromise = new Promise(resolve => {
+      this.resolveEndPromise = resolve;
+    });
+  }
 
-_.extend(Matcher.prototype, {
-  write: function (data) {
-    var self = this;
-    self.buf += data;
-    self.fullBuffer += data;
-    self._tryMatch();
-  },
+  write(data) {
+    this.buf += data;
+    this.fullBuffer += data;
+    this._tryMatch();
+  }
 
   resetMatch() {
     const mp = this.matchPromise;
@@ -269,7 +274,7 @@ _.extend(Matcher.prototype, {
     this.matchFullBuffer = false;
 
     return mp;
-  },
+  }
 
   rejectMatch(error) {
     const mp = this.resetMatch();
@@ -280,18 +285,18 @@ _.extend(Matcher.prototype, {
       // error, so we must throw it instead.
       throw error;
     }
-  },
+  }
 
   resolveMatch(value) {
     const mp = this.resetMatch();
     if (mp) {
       mp.resolve(value);
     }
-  },
+  }
 
   match(pattern, timeout, strict) {
     return this.matchAsync(pattern, { timeout, strict }).await();
-  },
+  }
 
   // Like match, but returns a Promise without calling .await().
   matchAsync(pattern, {
@@ -299,22 +304,21 @@ _.extend(Matcher.prototype, {
     strict = false,
     matchFullBuffer = false,
   }) {
-    var self = this;
-    if (self.matchPromise) {
+    if (this.matchPromise) {
       return Promise.reject(new Error("already have a match pending?"));
     }
-    self.matchPattern = pattern;
-    self.matchStrict = strict;
-    self.matchFullBuffer = matchFullBuffer;
-    var mp = self.matchPromise = fiberHelpers.makeFulfillablePromise();
-    self._tryMatch(); // could clear self.matchPromise
+    this.matchPattern = pattern;
+    this.matchStrict = strict;
+    this.matchFullBuffer = matchFullBuffer;
+    const mp = this.matchPromise = makeFulfillablePromise();
+    this._tryMatch(); // could clear this.matchPromise
 
-    var timer = null;
+    let timer = null;
     if (timeout) {
-      timer = setTimeout(function () {
-        self.rejectMatch(new TestFailure('match-timeout', {
-          run: self.run,
-          pattern: self.matchPattern
+      timer = setTimeout(() => {
+        this.rejectMatch(new TestFailure('match-timeout', {
+          run: this.run,
+          pattern: this.matchPattern
         }));
       }, timeout * 1000);
     } else {
@@ -328,102 +332,96 @@ _.extend(Matcher.prototype, {
       clearTimeout(timer);
       throw error;
     });
-  },
+  }
 
   matchBeforeEnd(pattern, timeout) {
     return this._beforeEnd(() => this.matchAsync(pattern, {
       timeout: timeout || 15,
       matchFullBuffer: true,
     }));
-  },
+  }
 
   _beforeEnd(promiseCallback) {
     return this.endPromise = this.endPromise.then(promiseCallback);
-  },
+  }
 
   end() {
     return this.endAsync().await();
-  },
+  }
 
   endAsync() {
-    var self = this;
-    self.resolveEndPromise();
-    return self._beforeEnd(() => {
-      self.ended = true;
-      self._tryMatch();
-      return self.matchPromise;
+    this.resolveEndPromise();
+    return this._beforeEnd(() => {
+      this.ended = true;
+      this._tryMatch();
+      return this.matchPromise;
     });
-  },
+  }
 
-  matchEmpty: function () {
-    var self = this;
-
-    if (self.buf.length > 0) {
-      Console.info("Extra junk is :", self.buf);
-      throw new TestFailure('junk-at-end', { run: self.run });
+  matchEmpty() {
+    if (this.buf.length > 0) {
+      Console.info("Extra junk is :", this.buf);
+      throw new TestFailure('junk-at-end', { run: this.run });
     }
-  },
+  }
 
-  _tryMatch: function () {
-    var self = this;
-
-    var mp = self.matchPromise;
+  _tryMatch() {
+    const mp = this.matchPromise;
     if (! mp) {
       return;
     }
 
-    var ret = null;
+    let ret = null;
 
-    if (self.matchFullBuffer) {
-      // Note: self.matchStrict is ignored if self.matchFullBuffer truthy.
-      if (self.matchPattern instanceof RegExp) {
-        ret = self.fullBuffer.match(self.matchPattern);
-      } else if (self.fullBuffer.indexOf(self.matchPattern) >= 0) {
-        ret = self.matchPattern;
+    if (this.matchFullBuffer) {
+      // Note: this.matchStrict is ignored if this.matchFullBuffer truthy.
+      if (this.matchPattern instanceof RegExp) {
+        ret = this.fullBuffer.match(this.matchPattern);
+      } else if (this.fullBuffer.indexOf(this.matchPattern) >= 0) {
+        ret = this.matchPattern;
       }
 
-    } else if (self.matchPattern instanceof RegExp) {
-      var m = self.buf.match(self.matchPattern);
+    } else if (this.matchPattern instanceof RegExp) {
+      const m = this.buf.match(this.matchPattern);
       if (m) {
-        if (self.matchStrict && m.index !== 0) {
-          Console.info("Extra junk is: ", self.buf.substr(0, m.index));
-          return self.rejectMatch(new TestFailure('junk-before', {
-            run: self.run,
-            pattern: self.matchPattern
+        if (this.matchStrict && m.index !== 0) {
+          Console.info("Extra junk is: ", this.buf.substr(0, m.index));
+          return this.rejectMatch(new TestFailure('junk-before', {
+            run: this.run,
+            pattern: this.matchPattern
           }));
         }
         ret = m;
-        self.buf = self.buf.slice(m.index + m[0].length);
+        this.buf = this.buf.slice(m.index + m[0].length);
       }
 
     } else {
-      var i = self.buf.indexOf(self.matchPattern);
+      const i = this.buf.indexOf(this.matchPattern);
       if (i !== -1) {
-        if (self.matchStrict && i !== 0) {
-          Console.info("Extra junk is: ", self.buf.substr(0, i));
-          return self.rejectMatch(new TestFailure('junk-before', {
-            run: self.run,
-            pattern: self.matchPattern
+        if (this.matchStrict && i !== 0) {
+          Console.info("Extra junk is: ", this.buf.substr(0, i));
+          return this.rejectMatch(new TestFailure('junk-before', {
+            run: this.run,
+            pattern: this.matchPattern
           }));
         }
-        ret = self.matchPattern;
-        self.buf = self.buf.slice(i + self.matchPattern.length);
+        ret = this.matchPattern;
+        this.buf = this.buf.slice(i + this.matchPattern.length);
       }
     }
 
     if (ret !== null) {
-      return self.resolveMatch(ret);
+      return this.resolveMatch(ret);
     }
 
-    if (self.ended) {
-      return self.rejectMatch(new TestFailure('no-match', {
-        run: self.run,
-        pattern: self.matchPattern
+    if (this.ended) {
+      return this.rejectMatch(new TestFailure('no-match', {
+        run: this.run,
+        pattern: this.matchPattern
       }));
     }
   }
-});
-
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // OutputLog
@@ -432,34 +430,30 @@ _.extend(Matcher.prototype, {
 // Maintains a line-by-line merged log of multiple output channels
 // (eg, stdout and stderr).
 
-var OutputLog = function (run) {
-  var self = this;
+class OutputLog {
+  constructor(run) {
+    // each entry is an object with keys 'channel', 'text', and if it is
+    // the last entry and there was no newline terminator, 'bare'
+    this.lines = [];
 
-  // each entry is an object with keys 'channel', 'text', and if it is
-  // the last entry and there was no newline terminator, 'bare'
-  self.lines = [];
+    // map from a channel name to an object representing a partially
+    // read line of text on that channel. That object has keys 'text'
+    // (text read), 'offset' (cursor position, equal to text.length
+    // unless a '\r' has been read).
+    this.buffers = {};
 
-  // map from a channel name to an object representing a partially
-  // read line of text on that channel. That object has keys 'text'
-  // (text read), 'offset' (cursor position, equal to text.length
-  // unless a '\r' has been read).
-  self.buffers = {};
+    // a Run, exclusively for inclusion in exceptions
+    this.run = run;
+  }
 
-  // a Run, exclusively for inclusion in exceptions
-  self.run = run;
-};
-
-_.extend(OutputLog.prototype, {
-  write: function (channel, text) {
-    var self = this;
-
-    if (! _.has(self.buffers, 'channel')) {
-      self.buffers[channel] = { text: '', offset: 0};
+  write(channel, text) {
+    if (! hasOwn.call(this.buffers, 'channel')) {
+      this.buffers[channel] = { text: '', offset: 0};
     }
-    var b = self.buffers[channel];
+    const b = this.buffers[channel];
 
     while (text.length) {
-      var m = text.match(/^[^\n\r]+/);
+      const m = text.match(/^[^\n\r]+/);
       if (m) {
         // A run of non-control characters.
         b.text = b.text.substr(0, b.offset) +
@@ -476,7 +470,7 @@ _.extend(OutputLog.prototype, {
       }
 
       if (text[0] === '\n') {
-        self.lines.push({ channel: channel, text: b.text });
+        this.lines.push({ channel: channel, text: b.text });
         b.text = '';
         b.offset = 0;
         text = text.substr(1);
@@ -485,41 +479,37 @@ _.extend(OutputLog.prototype, {
 
       throw new Error("conditions should have been exhaustive?");
     }
-  },
+  }
 
-  end: function () {
-    var self = this;
-
-    _.each(_.keys(self.buffers), function (channel) {
-      if (self.buffers[channel].text.length) {
-        self.lines.push({ channel: channel,
-                          text: self.buffers[channel].text,
+  end() {
+    Object.keys(this.buffers).forEach((channel) => {
+      if (this.buffers[channel].text.length) {
+        this.lines.push({ channel: channel,
+                          text: this.buffers[channel].text,
                           bare: true });
-        self.buffers[channel] = { text: '', offset: 0};
+        this.buffers[channel] = { text: '', offset: 0};
       }
     });
-  },
+  }
 
-  forbid: function (pattern, channel) {
-    var self = this;
-    _.each(self.lines, function (line) {
+  forbid(pattern, channel) {
+    this.lines.forEach((line) => {
       if (channel && channel !== line.channel) {
         return;
       }
 
-      var match = (pattern instanceof RegExp) ?
+      const match = (pattern instanceof RegExp) ?
         (line.text.match(pattern)) : (line.text.indexOf(pattern) !== -1);
       if (match) {
-        throw new TestFailure('forbidden-string-present', { run: self.run });
+        throw new TestFailure('forbidden-string-present', { run: this.run });
       }
     });
-  },
-
-  get: function () {
-    var self = this;
-    return self.lines;
   }
-});
+
+  get() {
+    return this.lines;
+  }
+}
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -566,80 +556,78 @@ _.extend(OutputLog.prototype, {
 //   - browserstack: true if browserstack clients should be used
 //   - port: the port that the clients should run on
 
-var Sandbox = function (options) {
-  var self = this;
-  // default options
-  options = _.extend({ clients: {} }, options);
+export class Sandbox {
+  constructor(options) {
+    // default options
+    options = Object.assign({ clients: {} }, options);
 
-  self.root = files.mkdtemp();
-  self.warehouse = null;
+    this.root = files.mkdtemp();
+    this.warehouse = null;
 
-  self.home = files.pathJoin(self.root, 'home');
-  files.mkdir(self.home, 0o755);
-  self.cwd = self.home;
-  self.env = {};
-  self.fakeMongo = options.fakeMongo;
+    this.home = files.pathJoin(this.root, 'home');
+    files.mkdir(this.home, 0o755);
+    this.cwd = this.home;
+    this.env = {};
+    this.fakeMongo = options.fakeMongo;
 
-  if (_.has(options, 'warehouse')) {
-    if (!files.inCheckout()) {
-      throw Error("make only use a fake warehouse in a checkout");
+    if (hasOwn.call(options, 'warehouse')) {
+      if (!files.inCheckout()) {
+        throw Error("make only use a fake warehouse in a checkout");
+      }
+      this.warehouse = files.pathJoin(this.root, 'tropohouse');
+      this._makeWarehouse(options.warehouse);
     }
-    self.warehouse = files.pathJoin(self.root, 'tropohouse');
-    self._makeWarehouse(options.warehouse);
+
+    this.clients = [new PhantomClient({
+      host: 'localhost',
+      port: options.clients.port || 3000
+    })];
+
+    if (options.clients && options.clients.browserstack) {
+      const browsers = [
+        { browserName: 'firefox' },
+        { browserName: 'chrome' },
+        { browserName: 'internet explorer',
+          browserVersion: '11' },
+        { browserName: 'internet explorer',
+          browserVersion: '8',
+          timeout: 60 },
+        { browserName: 'safari' },
+        { browserName: 'android' }
+      ];
+
+      Object.keys(browsers).forEach(browserKey => {
+        const browser = browsers[browserKey];
+        this.clients.push(new BrowserStackClient({
+          host: 'localhost',
+          port: 3000,
+          browserName: browser.browserName,
+          browserVersion: browser.browserVersion,
+          timeout: browser.timeout
+        }));
+      });
+    }
+
+    const meteorScript = process.platform === "win32" ? "meteor.bat" : "meteor";
+
+    // Figure out the 'meteor' to run
+    if (this.warehouse) {
+      this.execPath = files.pathJoin(this.warehouse, meteorScript);
+    } else {
+      this.execPath = files.pathJoin(files.getCurrentToolsDir(), meteorScript);
+    }
   }
 
-  self.clients = [new PhantomClient({
-    host: 'localhost',
-    port: options.clients.port || 3000
-  })];
-
-  if (options.clients && options.clients.browserstack) {
-    var browsers = [
-      { browserName: 'firefox' },
-      { browserName: 'chrome' },
-      { browserName: 'internet explorer',
-        browserVersion: '11' },
-      { browserName: 'internet explorer',
-        browserVersion: '8',
-        timeout: 60 },
-      { browserName: 'safari' },
-      { browserName: 'android' }
-    ];
-
-    _.each(browsers, function (browser) {
-      self.clients.push(new BrowserStackClient({
-        host: 'localhost',
-        port: 3000,
-        browserName: browser.browserName,
-        browserVersion: browser.browserVersion,
-        timeout: browser.timeout
-      }));
-    });
-  }
-
-  var meteorScript = process.platform === "win32" ? "meteor.bat" : "meteor";
-
-  // Figure out the 'meteor' to run
-  if (self.warehouse) {
-    self.execPath = files.pathJoin(self.warehouse, meteorScript);
-  } else {
-    self.execPath = files.pathJoin(files.getCurrentToolsDir(), meteorScript);
-  }
-};
-
-_.extend(Sandbox.prototype, {
   // Create a new test run of the tool in this sandbox.
-  run: function (...args) {
-    var self = this;
-
-    return new Run(self.execPath, {
-      sandbox: self,
+  run(...args) {
+    return new Run(this.execPath, {
+      sandbox: this,
       args: args,
-      cwd: self.cwd,
-      env: self._makeEnv(),
-      fakeMongo: self.fakeMongo
+      cwd: this.cwd,
+      env: this._makeEnv(),
+      fakeMongo: this.fakeMongo
     });
-  },
+  }
 
   // Tests a set of clients with the argument function. Each call to f(run)
   // instantiates a Run with a different client.
@@ -649,26 +637,26 @@ _.extend(Sandbox.prototype, {
   //   run.connectClient();
   //   // post-connection checks
   // });
-  testWithAllClients: function (f, ...args) {
-    var self = this;
-    args = _.compact(args);
+  testWithAllClients(f, ...args) {
+    args = args.filter(arg => arg);
 
-    console.log("running test with " + self.clients.length + " client(s).");
+    console.log("running test with " + this.clients.length + " client(s).");
 
-    _.each(self.clients, function (client) {
+    Object.keys(this.clients).forEach((clientKey) => {
+      const client = this.clients[clientKey];
       console.log("testing with " + client.name + "...");
-      var run = new Run(self.execPath, {
-        sandbox: self,
+      const run = new Run(this.execPath, {
+        sandbox: this,
         args: args,
-        cwd: self.cwd,
-        env: self._makeEnv(),
-        fakeMongo: self.fakeMongo,
+        cwd: this.cwd,
+        env: this._makeEnv(),
+        fakeMongo: this.fakeMongo,
         client: client
       });
       run.baseTimeout = client.timeout;
       f(run);
     });
-  },
+  }
 
   // Copy an app from a template into the current directory in the
   // sandbox. 'to' is the subdirectory to put the app in, and
@@ -680,27 +668,26 @@ _.extend(Sandbox.prototype, {
   // For example:
   //   s.createApp('myapp', 'empty');
   //   s.cd('myapp');
-  createApp: function (to, template, options) {
-    var self = this;
+  createApp(to, template, options) {
     options = options || {};
-    var absoluteTo = files.pathJoin(self.cwd, to);
+    const absoluteTo = files.pathJoin(this.cwd, to);
     files.cp_r(files.pathJoin(
       files.convertToStandardPath(__dirname), '..', 'tests', 'apps', template),
         absoluteTo, { ignore: [/^local$/] });
     // If the test isn't explicitly managing a mock warehouse, ensure that apps
     // run with our release by default.
     if (options.release) {
-      self.write(files.pathJoin(to, '.meteor/release'), options.release);
-    } else if (!self.warehouse && release.current.isProperRelease()) {
-      self.write(files.pathJoin(to, '.meteor/release'), release.current.name);
+      this.write(files.pathJoin(to, '.meteor/release'), options.release);
+    } else if (!this.warehouse && releaseCurrent.isProperRelease()) {
+      this.write(files.pathJoin(to, '.meteor/release'), releaseCurrent.name);
     }
 
     // Make sure the apps don't run any upgraders, unless they intentionally
     // have a partial upgraders file
-    var upgradersFile =
-      new projectContextModule.FinishedUpgraders({projectDir: absoluteTo});
-    if (_.isEmpty(upgradersFile.readUpgraders())) {
-      upgradersFile.appendUpgraders(upgraders.allUpgraders());
+    const upgradersFile =
+      new FinishedUpgraders({projectDir: absoluteTo});
+    if (upgradersFile.readUpgraders().length === 0) {
+      upgradersFile.appendUpgraders(allUpgraders());
     }
 
     require("../cli/default-npm-deps.js").install(absoluteTo);
@@ -712,8 +699,8 @@ _.extend(Sandbox.prototype, {
     // Prepare the app (ie, build or download packages). We give this a nice
     // long timeout, which allows the next command to not need a bloated
     // timeout. (meteor create does this anyway.)
-    self.cd(to, function () {
-      var run = self.run("--prepare-app");
+    this.cd(to, () => {
+      const run = this.run("--prepare-app");
       // XXX Can we cache the output of running this once somewhere, so that
       // multiple calls to createApp with the same template get the same cache?
       // This is a little tricky because isopack-buildinfo.json uses absolute
@@ -721,7 +708,7 @@ _.extend(Sandbox.prototype, {
       run.waitSecs(120);
       run.expectExit(0);
     });
-  },
+  }
 
   // Same as createApp, but with a package.
   //
@@ -735,23 +722,22 @@ _.extend(Sandbox.prototype, {
   // For example:
   //   s.createPackage('me_mypack', me:mypack', 'empty');
   //   s.cd('me_mypack');
-  createPackage: function (packageDir, packageName, template) {
-    var self = this;
-    var packagePath = files.pathJoin(self.cwd, packageDir);
-    var templatePackagePath = files.pathJoin(
+  createPackage(packageDir, packageName, template) {
+    const packagePath = files.pathJoin(this.cwd, packageDir);
+    const templatePackagePath = files.pathJoin(
       files.convertToStandardPath(__dirname), '..', 'tests', 'packages', template);
     files.cp_r(templatePackagePath, packagePath);
 
-    _.each(files.readdir(packagePath), function (file) {
+    files.readdir(packagePath).forEach((file) => {
       if (file.match(/^package.*\.js$/)) {
-        var packageJsFile = files.pathJoin(packagePath, file);
+        const packageJsFile = files.pathJoin(packagePath, file);
         files.writeFile(
           packageJsFile,
           files.readFile(packageJsFile, "utf8")
             .replace("~package-name~", packageName));
       }
     });
-  },
+  }
 
   // Change the cwd to be used for subsequent runs. For example:
   //   s.run('create', 'myapp').expectExit(0);
@@ -765,113 +751,100 @@ _.extend(Sandbox.prototype, {
   //   s.cd('app2', function () {
   //     s.run('add', 'somepackage');
   //   });
-  cd: function (relativePath, callback) {
-    var self = this;
-    var previous = self.cwd;
-    self.cwd = files.pathResolve(self.cwd, relativePath);
+  cd(relativePath, callback) {
+    const previous = this.cwd;
+    this.cwd = files.pathResolve(this.cwd, relativePath);
     if (callback) {
       callback();
-      self.cwd = previous;
+      this.cwd = previous;
     }
-  },
+  }
 
   // Set an environment variable for subsequent runs.
-  set: function (name, value) {
-    var self = this;
-    self.env[name] = value;
-  },
+  set(name, value) {
+    this.env[name] = value;
+  }
 
   // Undo set().
-  unset: function (name) {
-    var self = this;
-    delete self.env[name];
-  },
+  unset(name) {
+    delete this.env[name];
+  }
 
   // Write to a file in the sandbox, overwriting its current contents
   // if any. 'filename' is a path intepreted relative to the Sandbox's
   // cwd. 'contents' is a string (utf8 is assumed).
-  write: function (filename, contents) {
-    var self = this;
-    files.writeFile(files.pathJoin(self.cwd, filename), contents, 'utf8');
-  },
+  write(filename, contents) {
+    files.writeFile(files.pathJoin(this.cwd, filename), contents, 'utf8');
+  }
 
   // Like writeFile, but appends rather than writes.
-  append: function (filename, contents) {
-    var self = this;
-    files.appendFile(files.pathJoin(self.cwd, filename), contents, 'utf8');
-  },
+  append(filename, contents) {
+    files.appendFile(files.pathJoin(this.cwd, filename), contents, 'utf8');
+  }
 
   // Reads a file in the sandbox as a utf8 string. 'filename' is a
   // path intepreted relative to the Sandbox's cwd.  Returns null if
   // file does not exist.
-  read: function (filename) {
-    var self = this;
-    var file = files.pathJoin(self.cwd, filename);
+  read(filename) {
+    const file = files.pathJoin(this.cwd, filename);
     if (!files.exists(file)) {
       return null;
     } else {
-      return files.readFile(files.pathJoin(self.cwd, filename), 'utf8');
+      return files.readFile(files.pathJoin(this.cwd, filename), 'utf8');
     }
-  },
+  }
 
   // Copy the contents of one file to another.  In these series of tests, we often
   // want to switch contents of package.js files. It is more legible to copy in
   // the backup file rather than trying to write into it manually.
-  cp: function(from, to) {
-    var self = this;
-    var contents = self.read(from);
+  cp(from, to) {
+    const contents = this.read(from);
     if (!contents) {
       throw new Error("File " + from + " does not exist.");
     };
-    self.write(to, contents);
-  },
+    this.write(to, contents);
+  }
 
   // Delete a file in the sandbox. 'filename' is as in write().
-  unlink: function (filename) {
-    var self = this;
-    files.unlink(files.pathJoin(self.cwd, filename));
-  },
+  unlink(filename) {
+    files.unlink(files.pathJoin(this.cwd, filename));
+  }
 
   // Make a directory in the sandbox. 'filename' is as in write().
-  mkdir: function (dirname) {
-    var self = this;
-    var dirPath = files.pathJoin(self.cwd, dirname);
+  mkdir(dirname) {
+    const dirPath = files.pathJoin(this.cwd, dirname);
     if (! files.exists(dirPath)) {
       files.mkdir(dirPath);
     }
-  },
+  }
 
   // Rename something in the sandbox. 'oldName' and 'newName' are as in write().
-  rename: function (oldName, newName) {
-    var self = this;
-    files.rename(files.pathJoin(self.cwd, oldName),
-                 files.pathJoin(self.cwd, newName));
-  },
+  rename(oldName, newName) {
+    files.rename(files.pathJoin(this.cwd, oldName),
+                 files.pathJoin(this.cwd, newName));
+  }
 
   // Return the current contents of .meteorsession in the sandbox.
-  readSessionFile: function () {
-    var self = this;
-    return files.readFile(files.pathJoin(self.root, '.meteorsession'), 'utf8');
-  },
+  readSessionFile() {
+    return files.readFile(files.pathJoin(this.root, '.meteorsession'), 'utf8');
+  }
 
   // Overwrite .meteorsession in the sandbox with 'contents'. You
   // could use this in conjunction with readSessionFile to save and
   // restore authentication states.
-  writeSessionFile: function (contents) {
-    var self = this;
-    return files.writeFile(files.pathJoin(self.root, '.meteorsession'),
+  writeSessionFile(contents) {
+    return files.writeFile(files.pathJoin(this.root, '.meteorsession'),
                            contents, 'utf8');
-  },
+  }
 
-  _makeEnv: function () {
-    var self = this;
-    var env = _.clone(self.env);
+  _makeEnv() {
+    const env = Object.assign(Object.create(null), this.env);
     env.METEOR_SESSION_FILE = files.convertToOSPath(
-      files.pathJoin(self.root, '.meteorsession'));
+      files.pathJoin(this.root, '.meteorsession'));
 
-    if (self.warehouse) {
+    if (this.warehouse) {
       // Tell it where the warehouse lives.
-      env.METEOR_WAREHOUSE_DIR = files.convertToOSPath(self.warehouse);
+      env.METEOR_WAREHOUSE_DIR = files.convertToOSPath(this.warehouse);
 
       // Don't ever try to refresh the stub catalog we made.
       env.METEOR_OFFLINE_CATALOG = "t";
@@ -880,8 +853,8 @@ _.extend(Sandbox.prototype, {
     // By default (ie, with no mock warehouse and no --release arg) we should be
     // testing the actual release this is built in, so we pretend that it is the
     // latest release.
-    if (!self.warehouse && release.current.isProperRelease()) {
-      env.METEOR_TEST_LATEST_RELEASE = release.current.name;
+    if (!this.warehouse && releaseCurrent.isProperRelease()) {
+      env.METEOR_TEST_LATEST_RELEASE = releaseCurrent.name;
     }
 
     // Allow user to set TOOL_NODE_FLAGS for self-test app.
@@ -891,26 +864,24 @@ _.extend(Sandbox.prototype, {
     env.TOOL_NODE_FLAGS = process.env.SELF_TEST_TOOL_NODE_FLAGS || '';
 
     return env;
-  },
+  }
 
   // Writes a stub warehouse (really a tropohouse) to the directory
-  // self.warehouse. This warehouse only contains a meteor-tool package and some
+  // this.warehouse. This warehouse only contains a meteor-tool package and some
   // releases containing that tool only (and no packages).
   //
   // packageServerUrl indicates which package server we think we are using. Use
   // the default, if we do not pass this in; you should pass it in any case that
   // you will be specifying $METEOR_PACKAGE_SERVER_URL in the environment of a
   // command you are running in this sandbox.
-  _makeWarehouse: function (releases) {
-    var self = this;
-
+  _makeWarehouse(releases) {
     // Ensure we have a tropohouse to copy stuff out of.
     setUpBuiltPackageTropohouse();
 
-    var serverUrl = self.env.METEOR_PACKAGE_SERVER_URL;
-    var packagesDirectoryName = config.getPackagesDirectoryName(serverUrl);
+    const serverUrl = this.env.METEOR_PACKAGE_SERVER_URL;
+    const packagesDirectoryName = getPackagesDirectoryName(serverUrl);
 
-    var builder = new Builder({outputPath: self.warehouse});
+    const builder = new Builder({outputPath: this.warehouse});
     builder.copyDirectory({
       from: files.pathJoin(builtPackageTropohouseDir, 'packages'),
       to: packagesDirectoryName,
@@ -918,7 +889,7 @@ _.extend(Sandbox.prototype, {
     });
     builder.complete();
 
-    var stubCatalog = {
+    const stubCatalog = {
       syncToken: {},
       formatVersion: "1.0",
       collections: {
@@ -930,17 +901,17 @@ _.extend(Sandbox.prototype, {
       }
     };
 
-    var packageVersions = {};
-    var toolPackageVersion = null;
+    const packageVersions = {};
+    let toolPackageVersion = null;
 
-    tropohouseIsopackCache.eachBuiltIsopack(function (packageName, isopack) {
-      var packageRec = tropohouseLocalCatalog.getPackage(packageName);
+    tropohouseIsopackCache.eachBuiltIsopack((packageName, isopack) => {
+      const packageRec = tropohouseLocalCatalog.getPackage(packageName);
       if (! packageRec) {
         throw Error("no package record for " + packageName);
       }
       stubCatalog.collections.packages.push(packageRec);
 
-      var versionRec = tropohouseLocalCatalog.getLatestVersion(packageName);
+      const versionRec = tropohouseLocalCatalog.getLatestVersion(packageName);
       if (! versionRec) {
         throw Error("no version record for " + packageName);
       }
@@ -949,7 +920,7 @@ _.extend(Sandbox.prototype, {
       stubCatalog.collections.builds.push({
         buildArchitectures: isopack.buildArchitectures(),
         versionId: versionRec._id,
-        _id: utils.randomToken()
+        _id: randomToken()
       });
 
       if (packageName === "meteor-tool") {
@@ -964,15 +935,16 @@ _.extend(Sandbox.prototype, {
     }
 
     stubCatalog.collections.releaseTracks.push({
-      name: catalog.DEFAULT_TRACK,
-      _id: utils.randomToken()
+      name: DEFAULT_TRACK,
+      _id: randomToken()
     });
 
     // Now create each requested release.
-    _.each(releases, function (configuration, releaseName) {
+    Object.keys(releases).forEach((releaseName) => {
+      const configuration = releases[releaseName];
       // Release info
       stubCatalog.collections.releaseVersions.push({
-        track: catalog.DEFAULT_TRACK,
+        track: DEFAULT_TRACK,
         _id: Math.random().toString(),
         version: releaseName,
         orderKey: releaseName,
@@ -983,68 +955,63 @@ _.extend(Sandbox.prototype, {
       });
     });
 
-    var dataFile = config.getPackageStorage({
-      root: self.warehouse,
+    const dataFile = getPackageStorage({
+      root: this.warehouse,
       serverUrl: serverUrl
     });
-    self.warehouseOfficialCatalog = new catalogRemote.RemoteCatalog();
-    self.warehouseOfficialCatalog.initialize({
+    this.warehouseOfficialCatalog = new RemoteCatalog();
+    this.warehouseOfficialCatalog.initialize({
       packageStorage: dataFile
     });
-    self.warehouseOfficialCatalog.insertData(stubCatalog);
+    this.warehouseOfficialCatalog.insertData(stubCatalog);
 
     // And a cherry on top
     // XXX this is hacky
     files.linkToMeteorScript(
-      files.pathJoin(self.warehouse, packagesDirectoryName, "meteor-tool", toolPackageVersion,
-        'mt-' + archinfo.host(), 'meteor'),
-      files.pathJoin(self.warehouse, 'meteor'));
+      files.pathJoin(this.warehouse, packagesDirectoryName, "meteor-tool", toolPackageVersion,
+        'mt-' + archInfoHost(), 'meteor'),
+      files.pathJoin(this.warehouse, 'meteor'));
   }
-});
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Client
 ///////////////////////////////////////////////////////////////////////////////
 
-var Client = function (options) {
-  var self = this;
+class Client {
+  constructor(options) {
+    this.host = options.host;
+    this.port = options.port;
+    this.url = "http://" + this.host + ":" + this.port + '/' +
+      (Math.random() * 0x100000000 + 1).toString(36);
+    this.timeout = options.timeout || 40;
 
-  self.host = options.host;
-  self.port = options.port;
-  self.url = "http://" + self.host + ":" + self.port + '/' +
-    (Math.random() * 0x100000000 + 1).toString(36);
-  self.timeout = options.timeout || 40;
-
-  if (! self.connect || ! self.stop) {
-    console.log("Missing methods in subclass of Client.");
+    if (! this.connect || ! this.stop) {
+      console.log("Missing methods in subclass of Client.");
+    }
   }
-};
+}
 
 // PhantomClient
-var PhantomClient = function (options) {
-  var self = this;
-  Client.apply(this, arguments);
+class PhantomClient extends Client {
+  constructor(options) {
+    super(options);
 
-  self.name = "phantomjs";
-  self.process = null;
+    this.name = "phantomjs";
+    this.process = null;
 
-  self._logError = true;
-};
+    this._logError = true;
+  }
 
-util.inherits(PhantomClient, Client);
+  connect() {
+    const phantomPath = phantomjs.path;
 
-_.extend(PhantomClient.prototype, {
-  connect: function () {
-    var self = this;
-
-    var phantomPath = phantomjs.path;
-
-    var scriptPath = files.pathJoin(files.getCurrentToolsDir(), "tools",
+    const scriptPath = files.pathJoin(files.getCurrentToolsDir(), "tools",
       "tool-testing", "phantom", "open-url.js");
-    self.process = child_process.execFile(phantomPath, ["--load-images=no",
-      files.convertToOSPath(scriptPath), self.url],
-      {}, function (error, stdout, stderr) {
-        if (self._logError && error) {
+    this.process = execFile(phantomPath, ["--load-images=no",
+      files.convertToOSPath(scriptPath), this.url],
+      {}, (error, stdout, stderr) => {
+        if (this._logError && error) {
           console.log(
             "PhantomJS exited with error ", error,
             "\nstdout:\n", stdout,
@@ -1054,86 +1021,79 @@ _.extend(PhantomClient.prototype, {
           console.log("PhantomJS stderr:\n", stderr);
         }
       });
-  },
-
-  stop: function() {
-    var self = this;
-    // Suppress the expected SIGTERM exit 'failure'
-    self._logError = false;
-    self.process && self.process.kill();
-    self.process = null;
   }
-});
+
+  stop() {
+    // Suppress the expected SIGTERM exit 'failure'
+    this._logError = false;
+    this.process && this.process.kill();
+    this.process = null;
+  }
+}
 
 // BrowserStackClient
-var browserStackKey = null;
+let browserStackKey = null;
 
-var BrowserStackClient = function (options) {
-  var self = this;
-  Client.apply(this, arguments);
+class BrowserStackClient extends Client {
+  constructor(options) {
+    super(options);
 
-  self.tunnelProcess = null;
-  self.driver = null;
+    this.tunnelProcess = null;
+    this.driver = null;
 
-  self.browserName = options.browserName;
-  self.browserVersion = options.browserVersion;
+    this.browserName = options.browserName;
+    this.browserVersion = options.browserVersion;
 
-  self.name = "BrowserStack - " + self.browserName;
-  if (self.browserVersion) {
-    self.name += " " + self.browserVersion;
+    this.name = "BrowserStack - " + this.browserName;
+    if (this.browserVersion) {
+      this.name += " " + this.browserVersion;
+    }
   }
-};
 
-util.inherits(BrowserStackClient, Client);
-
-_.extend(BrowserStackClient.prototype, {
-  connect: function () {
-    var self = this;
-
+  connect() {
     // memoize the key
     if (browserStackKey === null) {
-      browserStackKey = self._getBrowserStackKey();
+      browserStackKey = this._getBrowserStackKey();
     }
     if (! browserStackKey) {
       throw new Error("BrowserStack key not found. Ensure that you " +
         "have installed your S3 credentials.");
     }
 
-    var capabilities = {
-      'browserName' : self.browserName,
+    const capabilities = {
+      'browserName' : this.browserName,
       'browserstack.user' : 'meteor',
       'browserstack.local' : 'true',
       'browserstack.key' : browserStackKey
     };
 
-    if (self.browserVersion) {
-      capabilities.browserVersion = self.browserVersion;
+    if (this.browserVersion) {
+      capabilities.browserVersion = this.browserVersion;
     }
 
-    self._launchBrowserStackTunnel(function (error) {
+    this._launchBrowserStackTunnel((error) => {
       if (error) {
         throw error;
       }
 
-      self.driver = new webdriver.Builder().
+      this.driver = new webdriver.Builder().
         usingServer('http://hub.browserstack.com/wd/hub').
         withCapabilities(capabilities).
         build();
-      self.driver.get(self.url);
+      this.driver.get(this.url);
     });
-  },
+  }
 
-  stop: function() {
-    var self = this;
-    self.tunnelProcess && self.tunnelProcess.kill();
-    self.tunnelProcess = null;
+  stop() {
+    this.tunnelProcess && this.tunnelProcess.kill();
+    this.tunnelProcess = null;
 
-    self.driver && self.driver.quit();
-    self.driver = null;
-  },
+    this.driver && this.driver.quit();
+    this.driver = null;
+  }
 
-  _getBrowserStackKey: function () {
-    var outputDir = files.pathJoin(files.mkdtemp(), "key");
+  _getBrowserStackKey() {
+    const outputDir = files.pathJoin(files.mkdtemp(), "key");
 
     try {
       execFileSync("s3cmd", ["get",
@@ -1145,34 +1105,33 @@ _.extend(BrowserStackClient.prototype, {
     } catch (e) {
       return null;
     }
-  },
+  }
 
-  _launchBrowserStackTunnel: function (callback) {
-    const self = this;
+  _launchBrowserStackTunnel(callback) {
     const browserStackPath = ensureBrowserStack();
 
-    var args = [
+    const args = [
       browserStackPath,
       browserStackKey,
-      [self.host, self.port, 0].join(','),
+      [this.host, this.port, 0].join(','),
       // Disable Live Testing and Screenshots, just test with Automate.
       '-onlyAutomate',
       // Do not wait for the server to be ready to spawn the process.
       '-skipCheck'
     ];
-    self.tunnelProcess = child_process.execFile(
+    this.tunnelProcess = execFile(
       '/usr/bin/env',
       ['bash', '-c', args.join(' ')]
     );
 
     // Called when the SSH tunnel is established.
-    self.tunnelProcess.stdout.on('data', function(data) {
+    this.tunnelProcess.stdout.on('data', (data) => {
       if (data.toString().match(/You can now access your local server/)) {
         callback();
       }
     });
   }
-});
+}
 
 function ensureBrowserStack() {
   const browserStackPath = files.pathJoin(
@@ -1189,7 +1148,7 @@ function ensureBrowserStack() {
     const tarGz = `BrowserStackLocal-07-03-14-${OS}-${ARCH}.gz`;
     const url = `https:\/\/${host}/${tarGz}`;
 
-    buildmessage.enterJob("downloading BrowserStack binaries", () => {
+    enterJob("downloading BrowserStack binaries", () => {
       return new Promise((resolve, reject) => {
         const browserStackStream =
           files.createWriteStream(browserStackPath);
@@ -1227,43 +1186,41 @@ function ensureBrowserStack() {
 //
 // Arguments in the 'args' option are not assumed to be standard paths, so
 // calling any of the 'files.*' methods on them is not safe.
-var Run = function (execPath, options) {
-  var self = this;
+export class Run {
+  constructor(execPath, options) {
+    this.execPath = execPath;
+    this.cwd = options.cwd || files.convertToStandardPath(process.cwd());
+    // default env variables
+    this.env = Object.assign({ SELFTEST: "t", METEOR_NO_WORDWRAP: "t" }, options.env);
+    this._args = [];
+    this.proc = null;
+    this.baseTimeout = 20;
+    this.extraTime = 0;
+    this.client = options.client;
 
-  self.execPath = execPath;
-  self.cwd = options.cwd || files.convertToStandardPath(process.cwd());
-  // default env variables
-  self.env = _.extend({ SELFTEST: "t", METEOR_NO_WORDWRAP: "t" }, options.env);
-  self._args = [];
-  self.proc = null;
-  self.baseTimeout = 20;
-  self.extraTime = 0;
-  self.client = options.client;
+    this.stdoutMatcher = new Matcher(this);
+    this.stderrMatcher = new Matcher(this);
+    this.outputLog = new OutputLog(this);
 
-  self.stdoutMatcher = new Matcher(self);
-  self.stderrMatcher = new Matcher(self);
-  self.outputLog = new OutputLog(self);
+    this.matcherEndPromise = null;
 
-  self.matcherEndPromise = null;
+    this.exitStatus = undefined; // 'null' means failed rather than exited
+    this.exitPromiseResolvers = [];
+    const opts = options.args || [];
+    this.args.apply(this, opts || []);
 
-  self.exitStatus = undefined; // 'null' means failed rather than exited
-  self.exitPromiseResolvers = [];
-  var opts = options.args || [];
-  self.args.apply(self, opts || []);
+    this.fakeMongoPort = null;
+    this.fakeMongoConnection = null;
+    if (options.fakeMongo) {
+      this.fakeMongoPort = randomPort();
+      this.env.METEOR_TEST_FAKE_MONGOD_CONTROL_PORT = this.fakeMongoPort;
+    }
 
-  self.fakeMongoPort = null;
-  self.fakeMongoConnection = null;
-  if (options.fakeMongo) {
-    self.fakeMongoPort = require('../utils/utils.js').randomPort();
-    self.env.METEOR_TEST_FAKE_MONGOD_CONTROL_PORT = self.fakeMongoPort;
+    runningTest.onCleanup(() => {
+      this._stopWithoutWaiting();
+    });
   }
 
-  runningTest.onCleanup(function () {
-    self._stopWithoutWaiting();
-  });
-};
-
-_.extend(Run.prototype, {
   // Set command-line arguments. This may be called multiple times as
   // long as the run has not yet started (the run starts after the
   // first call to a function that requires it, like match()).
@@ -1271,63 +1228,59 @@ _.extend(Run.prototype, {
   // Pass as many arguments as you want. Non-object values will be
   // cast to string, and object values will be treated as maps from
   // option names to values.
-  args: function (...args) {
-    var self = this;
-
-    if (self.proc) {
+  args(...args) {
+    if (this.proc) {
       throw new Error("already started?");
     }
 
-    _.each(args, function (a) {
+    args.forEach((a) => {
       if (typeof a !== "object") {
-        self._args.push('' + a);
+        this._args.push('' + a);
       } else {
-        _.each(a, function (value, key) {
-          self._args.push("--" + key);
-          self._args.push('' + value);
+        Object.keys(a).forEach((key) => {
+          const value = a[key];
+          this._args.push("--" + key);
+          this._args.push('' + value);
         });
       }
     });
 
-  },
+  }
 
-  connectClient: function () {
-    var self = this;
-    if (! self.client) {
+  connectClient() {
+    if (! this.client) {
       throw new Error("Must create Run with a client to use connectClient().");
     }
 
-    self._ensureStarted();
-    self.client.connect();
-  },
+    this._ensureStarted();
+    this.client.connect();
+  }
 
   // Useful for matching one-time patterns not sensitive to ordering.
-  matchBeforeExit: markStack(function (pattern) {
+  matchBeforeExit(pattern) {
     return this.stdoutMatcher.matchBeforeEnd(pattern);
-  }),
+  }
 
-  matchErrBeforeExit: markStack(function (pattern) {
+  matchErrBeforeExit(pattern) {
     return this.stderrMatcher.matchBeforeEnd(pattern);
-  }),
+  }
 
-  _exited: function (status) {
-    var self = this;
-
-    if (self.exitStatus !== undefined) {
+  _exited(status) {
+    if (this.exitStatus !== undefined) {
       throw new Error("already exited?");
     }
 
-    self.client && self.client.stop();
+    this.client && this.client.stop();
 
-    self.exitStatus = status;
-    var exitPromiseResolvers = self.exitPromiseResolvers;
-    self.exitPromiseResolvers = null;
-    _.each(exitPromiseResolvers, function (resolve) {
+    this.exitStatus = status;
+    const exitPromiseResolvers = this.exitPromiseResolvers;
+    this.exitPromiseResolvers = null;
+    exitPromiseResolvers.forEach((resolve) => {
       resolve();
     });
 
-    self._endMatchers();
-  },
+    this._endMatchers();
+  }
 
   _endMatchers() {
     return this.matcherEndPromise =
@@ -1335,90 +1288,86 @@ _.extend(Run.prototype, {
         this.stdoutMatcher.endAsync(),
         this.stderrMatcher.endAsync()
       ]);
-  },
+  }
 
-  _ensureStarted: function () {
-    var self = this;
-
-    if (self.proc) {
+  _ensureStarted() {
+    if (this.proc) {
       return;
     }
 
-    var env = _.clone(process.env);
-    _.extend(env, self.env);
+    const env = Object.assign(Object.create(null), process.env);
+    Object.assign(env, this.env);
 
-    self.proc = child_process.spawn(files.convertToOSPath(self.execPath),
-      self._args, {
-        cwd: files.convertToOSPath(self.cwd),
+    this.proc = spawn(files.convertToOSPath(this.execPath),
+      this._args, {
+        cwd: files.convertToOSPath(this.cwd),
         env: env
       });
 
-    self.proc.on('close', function (code, signal) {
-      if (self.exitStatus === undefined) {
-        self._exited({ code: code, signal: signal });
+    this.proc.on('close', (code, signal) => {
+      if (this.exitStatus === undefined) {
+        this._exited({ code: code, signal: signal });
       }
     });
 
-    self.proc.on('exit', function (code, signal) {
-      if (self.exitStatus === undefined) {
-        self._exited({ code: code, signal: signal });
+    this.proc.on('exit', (code, signal) => {
+      if (this.exitStatus === undefined) {
+        this._exited({ code: code, signal: signal });
       }
     });
 
-    self.proc.on('error', function (err) {
-      if (self.exitStatus === undefined) {
-        self._exited(null);
+    this.proc.on('error', (err) => {
+      if (this.exitStatus === undefined) {
+        this._exited(null);
       }
     });
 
-    self.proc.stdout.setEncoding('utf8');
-    self.proc.stdout.on('data', function (data) {
-      self.outputLog.write('stdout', data);
-      self.stdoutMatcher.write(data);
+    this.proc.stdout.setEncoding('utf8');
+    this.proc.stdout.on('data', (data) => {
+      this.outputLog.write('stdout', data);
+      this.stdoutMatcher.write(data);
     });
 
-    self.proc.stderr.setEncoding('utf8');
-    self.proc.stderr.on('data', function (data) {
-      self.outputLog.write('stderr', data);
-      self.stderrMatcher.write(data);
+    this.proc.stderr.setEncoding('utf8');
+    this.proc.stderr.on('data', (data) => {
+      this.outputLog.write('stderr', data);
+      this.stderrMatcher.write(data);
     });
-  },
+  }
 
   // Wait until we get text on stdout that matches 'pattern', which
   // may be a regular expression or a string. Consume stdout up to
   // that point. If this pattern does not appear after a timeout (or
   // the program exits before emitting the pattern), fail.
-  match: markStack(function (pattern, _strict) {
-    var self = this;
-    self._ensureStarted();
+  match(pattern, _strict) {
+    this._ensureStarted();
 
-    var timeout = self.baseTimeout + self.extraTime;
-    timeout *= utils.timeoutScaleFactor;
-    self.extraTime = 0;
-    return self.stdoutMatcher.match(pattern, timeout, _strict);
-  }),
+    let timeout = this.baseTimeout + this.extraTime;
+    timeout *= timeoutScaleFactor;
+    this.extraTime = 0;
+    return this.stdoutMatcher.match(pattern, timeout, _strict);
+  }
 
   // As expect(), but for stderr instead of stdout.
-  matchErr: markStack(function (pattern, _strict) {
-    var self = this;
-    self._ensureStarted();
+  matchErr(pattern, _strict) {
+    this._ensureStarted();
 
-    var timeout = self.baseTimeout + self.extraTime;
-    timeout *= utils.timeoutScaleFactor;
-    self.extraTime = 0;
-    return self.stderrMatcher.match(pattern, timeout, _strict);
-  }),
+    let timeout = this.baseTimeout + this.extraTime;
+    timeout *= timeoutScaleFactor;
+    this.extraTime = 0;
+    return this.stderrMatcher.match(pattern, timeout, _strict);
+  }
 
   // Like match(), but won't skip ahead looking for a match. It must
   // follow immediately after the last thing we matched or read.
-  read: markStack(function (pattern) {
+  read(pattern) {
     return this.match(pattern, true);
-  }),
+  }
 
   // As read(), but for stderr instead of stdout.
-  readErr: markStack(function (pattern) {
+  readErr(pattern) {
     return this.matchErr(pattern, true);
-  }),
+  }
 
   // Assert that 'pattern' (again, a regexp or string) has not
   // occurred on stdout at any point so far in this run. Currently
@@ -1434,60 +1383,59 @@ _.extend(Run.prototype, {
   // run.expectExit(1);  // <<-- improtant to actually run the command
   // run.forbidErr("unwanted string"); // <<-- important to run **after** the
   //                                   // command ran the process.
-  forbid: markStack(function (pattern) {
+  forbid(pattern) {
     this._ensureStarted();
     this.outputLog.forbid(pattern, 'stdout');
-  }),
+  }
 
   // As forbid(), but for stderr instead of stdout.
-  forbidErr: markStack(function (pattern) {
+  forbidErr(pattern) {
     this._ensureStarted();
     this.outputLog.forbid(pattern, 'stderr');
-  }),
+  }
 
   // Combination of forbid() and forbidErr(). Forbids the pattern on
   // both stdout and stderr.
-  forbidAll: markStack(function (pattern) {
+  forbidAll(pattern) {
     this._ensureStarted();
     this.outputLog.forbid(pattern);
-  }),
+  }
 
   // Expect the program to exit without anything further being
   // printed on either stdout or stderr.
-  expectEnd: markStack(function () {
-    var self = this;
-    self._ensureStarted();
+  expectEnd() {
+    this._ensureStarted();
 
-    var timeout = self.baseTimeout + self.extraTime;
-    timeout *= utils.timeoutScaleFactor;
-    self.extraTime = 0;
-    self.expectExit();
+    let timeout = this.baseTimeout + this.extraTime;
+    timeout *= timeoutScaleFactor;
+    this.extraTime = 0;
+    this.expectExit();
 
-    self.stdoutMatcher.matchEmpty();
-    self.stderrMatcher.matchEmpty();
-  }),
+    this.stdoutMatcher.matchEmpty();
+    this.stderrMatcher.matchEmpty();
+  }
 
   // Expect the program to exit with the given (numeric) exit
   // status. Fail if the process exits with a different code, or if
   // the process does not exit after a timeout. You can also omit the
   // argument to simply wait for the program to exit.
-  expectExit: markStack(function (code) {
-    var self = this;
-    self._ensureStarted();
+  expectExit(code) {
+    this._ensureStarted();
 
-    self._endMatchers().await();
+    this._endMatchers().await();
 
-    if (self.exitStatus === undefined) {
-      var timeout = self.baseTimeout + self.extraTime;
-      timeout *= utils.timeoutScaleFactor;
-      self.extraTime = 0;
+    if (this.exitStatus === undefined) {
+      let timeout = this.baseTimeout + this.extraTime;
+      timeout *= timeoutScaleFactor;
+      this.extraTime = 0;
 
       var timer;
-      var promise = new Promise(function (resolve, reject) {
-        self.exitPromiseResolvers.push(resolve);
-        timer = setTimeout(function () {
-          self.exitPromiseResolvers = _.without(self.exitPromiseResolvers, resolve);
-          reject(new TestFailure('exit-timeout', { run: self }));
+      const promise = new Promise((resolve, reject) => {
+        this.exitPromiseResolvers.push(resolve);
+        timer = setTimeout(() => {
+          this.exitPromiseResolvers =
+            this.exitPromiseResolvers.filter(r => r !== resolve);
+          reject(new TestFailure('exit-timeout', { run: this }));
         }, timeout * 1000);
       });
 
@@ -1498,65 +1446,61 @@ _.extend(Run.prototype, {
       }
     }
 
-    if (! self.exitStatus) {
-      throw new TestFailure('spawn-failure', { run: self });
+    if (! this.exitStatus) {
+      throw new TestFailure('spawn-failure', { run: this });
     }
-    if (code !== undefined && self.exitStatus.code !== code) {
+    if (code !== undefined && this.exitStatus.code !== code) {
       throw new TestFailure('wrong-exit-code', {
         expected: { code: code },
-        actual: self.exitStatus,
-        run: self
+        actual: this.exitStatus,
+        run: this
       });
     }
-  }),
+  }
 
   // Extend the timeout for the next operation by 'secs' seconds.
-  waitSecs: function (secs) {
-    var self = this;
-    self.extraTime += secs;
-  },
+  waitSecs(secs) {
+    this.extraTime += secs;
+  }
 
   // Send 'string' to the program on its stdin.
-  write: function (string) {
-    var self = this;
-    self._ensureStarted();
-    self.proc.stdin.write(string);
-  },
+  write(string) {
+    this._ensureStarted();
+    this.proc.stdin.write(string);
+  }
 
   // Kill the program and then wait for it to actually exit.
-  stop: markStack(function () {
-    var self = this;
-    if (self.exitStatus === undefined) {
-      self._ensureStarted();
-      self.client && self.client.stop();
-      self._killProcess();
-      self.expectExit();
+  stop() {
+    if (this.exitStatus === undefined) {
+      this._ensureStarted();
+      this.client && this.client.stop();
+      this._killProcess();
+      this.expectExit();
     }
-  }),
+  }
 
   // Like stop, but doesn't wait for it to exit.
-  _stopWithoutWaiting: function () {
-    var self = this;
-    if (self.exitStatus === undefined && self.proc) {
-      self.client && self.client.stop();
-      self._killProcess();
+  _stopWithoutWaiting() {
+    if (this.exitStatus === undefined && this.proc) {
+      this.client && this.client.stop();
+      this._killProcess();
     }
-  },
+  }
 
   // Kills the running process and it's child processes
-  _killProcess: function () {
+  _killProcess() {
     if (!this.proc) {
       throw new Error("Unexpected: `this.proc` undefined when calling _killProcess");
     }
 
     if (process.platform === "win32") {
-      // looks like in Windows `self.proc.kill()` doesn't kill child
+      // looks like in Windows `this.proc.kill()` doesn't kill child
       // processes.
-      utils.execFileSync("taskkill", ["/pid", this.proc.pid, '/f', '/t']);
+      execFileSync("taskkill", ["/pid", this.proc.pid, '/f', '/t']);
     } else {
       this.proc.kill();
     }
-  },
+  }
 
   // If the fakeMongo option was set, sent a command to the stub
   // mongod. Available commands currently are:
@@ -1567,14 +1511,12 @@ _.extend(Run.prototype, {
   //
   // Blocks until a connection to fake-mongod can be
   // established. Throws a TestFailure if it cannot be established.
-  tellMongo: markStack(function (command) {
-    var self = this;
-
-    if (! self.fakeMongoPort) {
+  tellMongo(command) {
+    if (! this.fakeMongoPort) {
       throw new Error("fakeMongo option on sandbox must be set");
     }
 
-    self._ensureStarted();
+    this._ensureStarted();
 
     // If it's the first time we've called tellMongo on this sandbox,
     // open a connection to fake-mongod. Wait up to 60 seconds for it
@@ -1585,22 +1527,22 @@ _.extend(Run.prototype, {
     // no reference to our end, it will get gc'd. If not, that's not
     // great, but it probably doesn't actually create any practical
     // problems since this is only for testing.
-    if (! self.fakeMongoConnection) {
-      var net = require('net');
+    if (! this.fakeMongoConnection) {
+      const net = require('net');
 
-      var lastStartTime = 0;
-      for (var attempts = 0; ! self.fakeMongoConnection && attempts < 600;
+      let lastStartTime = 0;
+      for (let attempts = 0; ! this.fakeMongoConnection && attempts < 600;
            attempts ++) {
         // Throttle attempts to one every 100ms
-        utils.sleepMs((lastStartTime + 100) - (+ new Date));
+        sleepMs((lastStartTime + 100) - (+ new Date));
         lastStartTime = +(new Date);
 
-        new Promise(function (resolve) {
+        new Promise((resolve) => {
           // This is all arranged so that if a previous attempt
           // belatedly succeeds, somehow, we ignore it.
-          var conn = net.connect(self.fakeMongoPort, function () {
+          const conn = net.connect(this.fakeMongoPort, () => {
             if (resolve) {
-              self.fakeMongoConnection = conn;
+              this.fakeMongoConnection = conn;
               resolve(true);
               resolve = null;
             }
@@ -1617,54 +1559,72 @@ _.extend(Run.prototype, {
         }).await();
       }
 
-      if (! self.fakeMongoConnection) {
-        throw new TestFailure("mongo-not-running", { run: self });
+      if (! this.fakeMongoConnection) {
+        throw new TestFailure("mongo-not-running", { run: this });
       }
     }
 
-    self.fakeMongoConnection.write(JSON.stringify(command) + "\n");
+    this.fakeMongoConnection.write(JSON.stringify(command) + "\n");
     // If we told it to exit, then we should close our end and connect again if
     // asked to send more.
     if (command.exit) {
-      self.fakeMongoConnection.end();
-      self.fakeMongoConnection = null;
+      this.fakeMongoConnection.end();
+      this.fakeMongoConnection = null;
     }
-  })
-});
+  }
+}
 
+const wrapWithMarkStack = (func) => markStack(func);
+
+// `Run` class methods to wrap with `markStack`
+[
+  'expectEnd',
+  'expectExit',
+  'forbid',
+  'forbidAll',
+  'forbidErr',
+  'match',
+  'matchBeforeExit',
+  'matchErr',
+  'matchErrBeforeExit',
+  'read',
+  'readErr',
+  'stop',
+  'tellMongo',
+].forEach(functionName =>
+  Run.prototype[functionName] = wrapWithMarkStack(Run.prototype[functionName]));
 
 ///////////////////////////////////////////////////////////////////////////////
 // Defining tests
 ///////////////////////////////////////////////////////////////////////////////
 
-var Test = function (options) {
-  var self = this;
-  self.name = options.name;
-  self.file = options.file;
-  self.fileHash = options.fileHash;
-  self.tags = options.tags || [];
-  self.f = options.func;
-  self.cleanupHandlers = [];
-};
+class Test {
+  constructor(options) {
+    this.name = options.name;
+    this.file = options.file;
+    this.fileHash = options.fileHash;
+    this.tags = options.tags || [];
+    this.f = options.func;
+    this.cleanupHandlers = [];
+  }
 
-_.extend(Test.prototype, {
-  onCleanup: function (cleanupHandler) {
+  onCleanup(cleanupHandler) {
     this.cleanupHandlers.push(cleanupHandler);
-  },
-  cleanup: function () {
-    var self = this;
-    _.each(self.cleanupHandlers, function (cleanupHandler) {
+  }
+
+  cleanup() {
+    this.cleanupHandlers.forEach((cleanupHandler) => {
       cleanupHandler();
     });
-    self.cleanupHandlers = [];
+    this.cleanupHandlers = [];
   }
-});
+}
 
-var allTests = null;
-var fileBeingLoaded = null;
-var fileBeingLoadedHash = null;
-var runningTest = null;
-var getAllTests = function () {
+let allTests = null;
+let fileBeingLoaded = null;
+let fileBeingLoadedHash = null;
+let runningTest = null;
+const getAllTests = () => {
   if (allTests) {
     return allTests;
   }
@@ -1672,9 +1632,9 @@ var getAllTests = function () {
 
   // Load all files in the 'tests' directory that end in .js. They
   // are supposed to then call define() to register their tests.
-  var testdir = files.pathJoin(__dirname, '..', 'tests');
-  var filenames = files.readdir(testdir);
-  _.each(filenames, function (n) {
+  const testdir = files.pathJoin(__dirname, '..', 'tests');
+  const filenames = files.readdir(testdir);
+  filenames.forEach((n) => {
     if (! n.match(/^[^.].*\.js$/)) {
       // ends in '.js', doesn't start with '.'
       return;
@@ -1685,8 +1645,8 @@ var getAllTests = function () {
       }
       fileBeingLoaded = files.pathBasename(n, '.js');
 
-      var fullPath = files.pathJoin(testdir, n);
-      var contents = files.readFile(fullPath, 'utf8');
+      const fullPath = files.pathJoin(testdir, n);
+      const contents = files.readFile(fullPath, 'utf8');
       fileBeingLoadedHash =
         require('crypto').createHash('sha1').update(contents).digest('hex');
 
@@ -1700,14 +1660,14 @@ var getAllTests = function () {
   return allTests;
 };
 
-var define = function (name, tagsList, f) {
+export function define(name, tagsList, f) {
   if (typeof tagsList === "function") {
     // tagsList is optional
     f = tagsList;
     tagsList = [];
   }
 
-  var tags = tagsList.slice();
+  const tags = tagsList.slice();
   tags.sort();
 
   allTests.push(new Test({
@@ -1723,7 +1683,7 @@ var define = function (name, tagsList, f) {
 // Choosing tests
 ///////////////////////////////////////////////////////////////////////////////
 
-var tagDescriptions = {
+const tagDescriptions = {
   checkout: 'can only run from checkouts',
   net: 'require an internet connection',
   slow: 'take quite a long time; use --slow to include',
@@ -1746,17 +1706,18 @@ var tagDescriptions = {
 // and runTests.
 //
 // Options: testRegexp, fileRegexp, onlyChanged, offline, includeSlowTests, galaxyOnly
-var getFilteredTests = function (options) {
+function getFilteredTests(options) {
   options = options || {};
-  var allTests = getAllTests();
+  let allTests = getAllTests();
+  let testState;
 
   if (allTests.length) {
-    var testState = readTestState();
+    testState = readTestState();
 
     // Add pseudo-tags 'non-matching', 'unchanged', 'non-galaxy' and 'in other
     // files' (but only so that we can then skip tests with those tags)
-    allTests = allTests.map(function (test) {
-      var newTags = [];
+    allTests = allTests.map((test) => {
+      const newTags = [];
 
       if (options.fileRegexp && ! options.fileRegexp.test(test.file)) {
         newTags.push('in other files');
@@ -1772,7 +1733,7 @@ var getFilteredTests = function (options) {
 
       // We make sure to not run galaxy tests unless the user explicitly asks us
       // to. Someday, this might not be the case.
-      if ( _.indexOf(test.tags, "galaxy") === -1) {
+      if (! test.tags.includes("galaxy")) {
         newTags.push('non-galaxy');
       }
 
@@ -1780,12 +1741,18 @@ var getFilteredTests = function (options) {
         return test;
       }
 
-      return _.extend({}, test, { tags: test.tags.concat(newTags) });
+      return Object.assign(
+        Object.create(Object.getPrototypeOf(test)),
+        test,
+        {
+          tags: test.tags.concat(newTags),
+        }
+      );
     });
   }
 
   // (order of tags is significant to the "skip counts" that are displayed)
-  var tagsToSkip = [];
+  const tagsToSkip = [];
   if (options.fileRegexp) {
     tagsToSkip.push('in other files');
   }
@@ -1826,7 +1793,7 @@ var getFilteredTests = function (options) {
     tagsToSkip.push("windows");
   }
 
-  var tagsToMatch = options['with-tag'] ? [options['with-tag']] : [];
+  const tagsToMatch = options['with-tag'] ? [options['with-tag']] : [];
   return new TestList(allTests, tagsToSkip, tagsToMatch, testState);
 };
 
@@ -1838,114 +1805,111 @@ var getFilteredTests = function (options) {
 // ran and passed (for the `--changed` option).  If a testState is
 // provided, the notifyFailed and saveTestState can be used to modify
 // the testState appropriately and write it out.
-var TestList = function (allTests, tagsToSkip, tagsToMatch, testState) {
-  tagsToSkip = (tagsToSkip || []);
-  testState = (testState || null); // optional
+class TestList {
+  constructor(allTests, tagsToSkip, tagsToMatch, testState) {
+    tagsToSkip = (tagsToSkip || []);
+    testState = (testState || null); // optional
+    this.allTests = allTests;
+    this.skippedTags = tagsToSkip;
+    this.skipCounts = {};
+    this.testState = testState;
 
-  var self = this;
-  self.allTests = allTests;
-  self.skippedTags = tagsToSkip;
-  self.skipCounts = {};
-  self.testState = testState;
-
-  _.each(tagsToSkip, function (tag) {
-    self.skipCounts[tag] = 0;
-  });
-
-  self.fileInfo = {}; // path -> {hash, hasSkips, hasFailures}
-
-  self.filteredTests = _.filter(allTests, function (test) {
-
-    if (! self.fileInfo[test.file]) {
-      self.fileInfo[test.file] = {
-        hash: test.fileHash,
-        hasSkips: false,
-        hasFailures: false
-      };
-    }
-    var fileInfo = self.fileInfo[test.file];
-
-    if (tagsToMatch.length) {
-      var matches = _.any(tagsToMatch, function(tag) {
-        return _.contains(test.tags, tag);
-      })
-      if (!matches) {
-        return false;
-      }
-    }
-
-    // We look for tagsToSkip *in order*, and when we decide to
-    // skip a test, we don't keep looking at more tags, and we don't
-    // add the test to any further "skip counts".
-    return !_.any(tagsToSkip, function (tag) {
-      if (_.contains(test.tags, tag)) {
-        self.skipCounts[tag]++;
-        fileInfo.hasSkips = true;
-        return true;
-      } else {
-        return false;
-      }
+    tagsToSkip.forEach((tag) => {
+      this.skipCounts[tag] = 0;
     });
-  });
-};
 
-// Mark a test's file as having failures.  This prevents
-// saveTestState from saving its hash as a potentially
-// "unchanged" file to be skipped in a future run.
-TestList.prototype.notifyFailed = function (test) {
-  this.fileInfo[test.file].hasFailures = true;
-};
+    this.fileInfo = {}; // path -> {hash, hasSkips, hasFailures}
 
-// If this TestList was constructed with a testState,
-// modify it and write it out based on which tests
-// were skipped and which tests had failures.
-TestList.prototype.saveTestState = function () {
-  var self = this;
-  var testState = self.testState;
-  if (! (testState && self.filteredTests.length)) {
-    return;
+    this.filteredTests = allTests.filter((test) => {
+
+      if (! this.fileInfo[test.file]) {
+        this.fileInfo[test.file] = {
+          hash: test.fileHash,
+          hasSkips: false,
+          hasFailures: false
+        };
+      }
+      const fileInfo = this.fileInfo[test.file];
+
+      if (tagsToMatch.length) {
+        const matches = tagsToMatch.some((tag) => test.tags.includes(tag));
+        if (!matches) {
+          return false;
+        }
+      }
+
+      // We look for tagsToSkip *in order*, and when we decide to
+      // skip a test, we don't keep looking at more tags, and we don't
+      // add the test to any further "skip counts".
+      return !tagsToSkip.some((tag) => {
+        if (test.tags.includes(tag)) {
+          this.skipCounts[tag]++;
+          fileInfo.hasSkips = true;
+          return true;
+        } else {
+          return false;
+        }
+      });
+    });
   }
 
-  _.each(self.fileInfo, function (info, f) {
-    if (info.hasFailures) {
-      delete testState.lastPassedHashes[f];
-    } else if (! info.hasSkips) {
-      testState.lastPassedHashes[f] = info.hash;
+  // Mark a test's file as having failures.  This prevents
+  // saveTestState from saving its hash as a potentially
+  // "unchanged" file to be skipped in a future run.
+  notifyFailed(test) {
+    this.fileInfo[test.file].hasFailures = true;
+  }
+
+  // If this TestList was constructed with a testState,
+  // modify it and write it out based on which tests
+  // were skipped and which tests had failures.
+  saveTestState() {
+    const testState = this.testState;
+    if (! (testState && this.filteredTests.length)) {
+      return;
     }
-  });
 
-  writeTestState(testState);
-};
+    Object.keys(this.fileInfo).forEach((f) => {
+      const info = this.fileInfo[f];
+      if (info.hasFailures) {
+        delete testState.lastPassedHashes[f];
+      } else if (! info.hasSkips) {
+        testState.lastPassedHashes[f] = info.hash;
+      }
+    });
 
-// Return a string like "Skipped 1 foo test\nSkipped 5 bar tests\n"
-TestList.prototype.generateSkipReport = function () {
-  var self = this;
-  var result = '';
+    writeTestState(testState);
+  }
 
-  _.each(self.skippedTags, function (tag) {
-    var count = self.skipCounts[tag];
-    if (count) {
-      var noun = "test" + (count > 1 ? "s" : ""); // "test" or "tests"
-      // "non-matching tests" or "tests in other files"
-      var nounPhrase = (/ /.test(tag) ?
-                        (noun + " " + tag) : (tag + " " + noun));
-      // " (foo)" or ""
-      var parenthetical = (tagDescriptions[tag] ? " (" +
-                           tagDescriptions[tag] + ")" : '');
-      result += ("Skipped " + count + " " + nounPhrase + parenthetical + '\n');
-    }
-  });
+  // Return a string like "Skipped 1 foo test\nSkipped 5 bar tests\n"
+  generateSkipReport() {
+    let result = '';
 
-  return result;
-};
+    this.skippedTags.forEach((tag) => {
+      const count = this.skipCounts[tag];
+      if (count) {
+        const noun = "test" + (count > 1 ? "s" : ""); // "test" or "tests"
+        // "non-matching tests" or "tests in other files"
+        const nounPhrase = (/ /.test(tag) ?
+                          (noun + " " + tag) : (tag + " " + noun));
+        // " (foo)" or ""
+        const parenthetical = (tagDescriptions[tag] ? " (" +
+                            tagDescriptions[tag] + ")" : '');
+        result += ("Skipped " + count + " " + nounPhrase + parenthetical + '\n');
+      }
+    });
 
-var getTestStateFilePath = function () {
+    return result;
+  }
+}
+
+function getTestStateFilePath() {
   return files.pathJoin(files.getHomeDir(), '.meteortest');
 };
 
-var readTestState = function () {
-  var testStateFile = getTestStateFilePath();
-  var testState;
+function readTestState() {
+  const testStateFile = getTestStateFilePath();
+  let testState;
   if (files.exists(testStateFile)) {
     testState = JSON.parse(files.readFile(testStateFile, 'utf8'));
   }
@@ -1955,23 +1919,31 @@ var readTestState = function () {
   return testState;
 };
 
-var writeTestState = function (testState) {
-  var testStateFile = getTestStateFilePath();
+function writeTestState(testState) {
+  const testStateFile = getTestStateFilePath();
   files.writeFile(testStateFile, JSON.stringify(testState), 'utf8');
-};
+}
 
 // Same options as getFilteredTests.  Writes to stdout and stderr.
-var listTests = function (options) {
-  var testList = getFilteredTests(options);
+export function listTests(options) {
+  const testList = getFilteredTests(options);
 
   if (! testList.allTests.length) {
     Console.error("No tests defined.\n");
     return;
   }
 
-  _.each(_.groupBy(testList.filteredTests, 'file'), function (tests, file) {
+  const testsGroupedByFile = {};
+  testList.filteredTests.forEach(filteredTest => {
+    testsGroupedByFile[filteredTest.file] =
+      testsGroupedByFile[filteredTest.file] || [];
+
+    testsGroupedByFile[filteredTest.file].push(filteredTest);
+  });
+
+  Object.keys(testsGroupedByFile).forEach((file) => {
     Console.rawInfo(file + ':\n');
-    _.each(tests, function (test) {
+    testsGroupedByFile[file].forEach((test) => {
       Console.rawInfo('  - ' + test.name +
                       (test.tags.length ? ' [' + test.tags.join(' ') + ']'
                       : '') + '\n');
@@ -1981,7 +1953,7 @@ var listTests = function (options) {
   Console.error();
   Console.error(testList.filteredTests.length + " tests listed.");
   Console.error(testList.generateSkipReport());
-};
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Running tests
@@ -1991,30 +1963,31 @@ var listTests = function (options) {
 //          fileRegexp,
 //          clients:
 //             - browserstack (need s3cmd credentials)
-var runTests = function (options) {
-  var testList = getFilteredTests(options);
+export function runTests(options) {
+  const testList = getFilteredTests(options);
 
   if (! testList.allTests.length) {
     Console.error("No tests defined.");
     return 0;
   }
 
-  var totalRun = 0;
-  var failedTests = [];
+  let totalRun = 0;
+  const failedTests = [];
 
-  _.each(testList.filteredTests, function (test) {
+  testList.filteredTests.forEach((test) => {
     totalRun++;
     Console.error(test.file + ": " + test.name + " ... ");
     runTest(test);
   });
 
   function runTest(test, tries = 3) {
-    var failure = null;
+    let failure = null;
+    let startTime;
     try {
       runningTest = test;
-      var startTime = +(new Date);
+      startTime = +(new Date);
       // ensure we mark the bottom of the stack each time we start a new test
-      parseStack.markBottom(() => {
+      parseStackMarkBottom(() => {
         test.f(options);
       })();
     } catch (e) {
@@ -2040,8 +2013,8 @@ var runTests = function (options) {
       testList.notifyFailed(test);
 
       if (failure instanceof TestFailure) {
-        var frames = parseStack.parse(failure).outsideFiber;
-        var relpath = files.pathRelative(files.getCurrentToolsDir(),
+        const frames = parseStackParse(failure).outsideFiber;
+        const relpath = files.pathRelative(files.getCurrentToolsDir(),
                                          frames[0].file);
         Console.rawError("  => " + failure.reason + " at " +
                          relpath + ":" + frames[0].line + "\n");
@@ -2050,7 +2023,7 @@ var runTests = function (options) {
           Console.arrowError("Pattern: " + failure.details.pattern, 2);
         }
         if (failure.reason === "wrong-exit-code") {
-          var s = function (status) {
+          const s = (status) => {
             return status.signal || ('' + status.code) || "???";
           };
 
@@ -2068,14 +2041,14 @@ var runTests = function (options) {
 
         if (failure.details.run) {
           failure.details.run.outputLog.end();
-          var lines = failure.details.run.outputLog.get();
+          const lines = failure.details.run.outputLog.get();
           if (! lines.length) {
             Console.arrowError("No output", 2);
           } else {
-            var historyLines = options.historyLines || 100;
+            const historyLines = options.historyLines || 100;
 
             Console.arrowError("Last " + historyLines + " lines:", 2);
-            _.each(lines.slice(-historyLines), function (line) {
+            lines.slice(-historyLines).forEach((line) => {
               Console.rawError("  " +
                                (line.channel === "stderr" ? "2| " : "1| ") +
                                line.text +
@@ -2092,7 +2065,7 @@ var runTests = function (options) {
         Console.rawError("  => Test threw exception: " + failure.stack + "\n");
       }
     } else {
-      var durationMs = +(new Date) - startTime;
+      const durationMs = +(new Date) - startTime;
       Console.error(
         "... ok (" + durationMs + " ms)",
         Console.options({ indent: 2 }));
@@ -2111,17 +2084,17 @@ var runTests = function (options) {
     Console.error("No tests run.");
     return 0;
   } else if (failedTests.length === 0) {
-    var disclaimers = '';
+    let disclaimers = '';
     if (testList.filteredTests.length < testList.allTests.length) {
       disclaimers += " other";
     }
     Console.error("All" + disclaimers + " tests passed.");
     return 0;
   } else {
-    var failureCount = failedTests.length;
+    const failureCount = failedTests.length;
     Console.error(failureCount + " failure" +
                   (failureCount > 1 ? "s" : "") + ":");
-    _.each(failedTests, function (test) {
+    failedTests.forEach((test) => {
       Console.rawError("  - " + test.file + ": " + test.name + "\n");
     });
     return 1;
@@ -2158,19 +2131,3 @@ var runTests = function (options) {
 // the run() method on the sandbox to set up a new run of meteor with
 // arguments of your choice, and then use functions like match(),
 // write(), and expectExit() to script that run.
-
-_.extend(exports, {
-  runTests: runTests,
-  listTests: listTests,
-  markStack: markStack,
-  define: define,
-  Sandbox: Sandbox,
-  Run: Run,
-  fail: fail,
-  expectEqual: expectEqual,
-  expectThrows: expectThrows,
-  expectTrue: expectTrue,
-  expectFalse: expectFalse,
-  execFileSync: execFileSync,
-  doOrThrow: doOrThrow
-});
