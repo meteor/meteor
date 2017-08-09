@@ -15,11 +15,12 @@ export default class Cursor {
     } else {
       this._selectorId = undefined;
 
-      if (this.matcher.hasGeoQuery() || options.sort)
+      if (this.matcher.hasGeoQuery() || options.sort) {
         this.sorter = new Minimongo.Sorter(
           options.sort || [],
           {matcher: this.matcher}
         );
+      }
     }
 
     this.skip = options.skip || 0;
@@ -31,8 +32,9 @@ export default class Cursor {
     this._transform = LocalCollection.wrapTransform(options.transform);
 
     // by default, queries register w/ Tracker when it is available.
-    if (typeof Tracker !== 'undefined')
+    if (typeof Tracker !== 'undefined') {
       this.reactive = options.reactive === undefined ? true : options.reactive;
+    }
   }
 
   /**
@@ -44,9 +46,10 @@ export default class Cursor {
    * @returns {Number}
    */
   count() {
-    if (this.reactive)
+    if (this.reactive) {
       // allow the observe to be unordered
       this._depend({added: true, removed: true}, true);
+    }
 
     return this._getRawObjects({ordered: true}).length;
   }
@@ -101,8 +104,9 @@ export default class Cursor {
       // This doubles as a clone operation.
       element = this._projectionFn(element);
 
-      if (this._transform)
+      if (this._transform) {
         element = this._transform(element);
+      }
 
       callback.call(thisArg, element, i, this);
     });
@@ -185,14 +189,16 @@ export default class Cursor {
     // unordered observe.  eg, update's EJSON.clone, and the "there are several"
     // comment in _modifyAndNotify
     // XXX allow skip/limit with unordered observe
-    if (!options._allow_unordered && !ordered && (this.skip || this.limit))
+    if (!options._allow_unordered && !ordered && (this.skip || this.limit)) {
       throw new Error(
         'must use ordered observe (ie, \'addedBefore\' instead of \'added\') ' +
         'with skip or limit'
       );
+    }
 
-    if (this.fields && (this.fields._id === 0 || this.fields._id === false))
+    if (this.fields && (this.fields._id === 0 || this.fields._id === false)) {
       throw Error('You may not observe a cursor with {fields: {_id: 0}}');
+    }
 
     const distances = (
       this.matcher.hasGeoQuery() &&
@@ -222,8 +228,9 @@ export default class Cursor {
 
     query.results = this._getRawObjects({ordered, distances: query.distances});
 
-    if (this.collection.paused)
+    if (this.collection.paused) {
       query.resultsSnapshot = ordered ? [] : new LocalCollection._IdMap;
+    }
 
     // wrap callbacks we were passed. callbacks only fire when not paused and
     // are never undefined
@@ -233,13 +240,15 @@ export default class Cursor {
     // furthermore, callbacks enqueue until the operation we're working on is
     // done.
     const wrapCallback = fn => {
-      if (!fn)
+      if (!fn) {
         return () => {};
+      }
 
       const self = this;
       return function(/* args*/) {
-        if (self.collection.paused)
+        if (self.collection.paused) {
           return;
+        }
 
         const args = arguments;
 
@@ -267,8 +276,9 @@ export default class Cursor {
 
         delete fields._id;
 
-        if (ordered)
+        if (ordered) {
           query.addedBefore(doc._id, this._projectionFn(fields), null);
+        }
 
         query.added(doc._id, this._projectionFn(fields));
       });
@@ -277,8 +287,9 @@ export default class Cursor {
     const handle = Object.assign(new LocalCollection.ObserveHandle, {
       collection: this.collection,
       stop: () => {
-        if (this.reactive)
+        if (this.reactive) {
           delete this.collection.queries[qid];
+        }
       }
     });
 
@@ -319,8 +330,9 @@ export default class Cursor {
 
       ['added', 'addedBefore', 'changed', 'movedBefore', 'removed']
         .forEach(fn => {
-          if (changers[fn])
+          if (changers[fn]) {
             options[fn] = notify;
+          }
         });
 
       // observeChanges will stop() when this computation is invalidated
@@ -358,16 +370,18 @@ export default class Cursor {
       // If you have non-zero skip and ask for a single id, you get
       // nothing. This is so it matches the behavior of the '{_id: foo}'
       // path.
-      if (this.skip)
+      if (this.skip) {
         return results;
+      }
 
       const selectedDoc = this.collection._docs.get(this._selectorId);
 
       if (selectedDoc) {
-        if (options.ordered)
+        if (options.ordered) {
           results.push(selectedDoc);
-        else
+        } else {
           results.set(this._selectorId, selectedDoc);
+        }
       }
 
       return results;
@@ -395,8 +409,9 @@ export default class Cursor {
         if (options.ordered) {
           results.push(doc);
 
-          if (distances && matchResult.distance !== undefined)
+          if (distances && matchResult.distance !== undefined) {
             distances.set(id, matchResult.distance);
+          }
         } else {
           results.set(id, doc);
         }
@@ -412,14 +427,17 @@ export default class Cursor {
       );
     });
 
-    if (!options.ordered)
+    if (!options.ordered) {
       return results;
+    }
 
-    if (this.sorter)
+    if (this.sorter) {
       results.sort(this.sorter.getComparator({distances}));
+    }
 
-    if (!this.limit && !this.skip)
+    if (!this.limit && !this.skip) {
       return results;
+    }
 
     return results.slice(
       this.skip,

@@ -55,8 +55,9 @@ export default class Matcher {
   }
 
   documentMatches(doc) {
-    if (doc !== Object(doc))
+    if (doc !== Object(doc)) {
       throw Error('documentMatches needs a document');
+    }
 
     return this._docMatcher(doc);
   }
@@ -106,8 +107,9 @@ export default class Matcher {
     // Top level can't be an array or true or binary.
     if (Array.isArray(selector) ||
         EJSON.isBinary(selector) ||
-        typeof selector === 'boolean')
+        typeof selector === 'boolean') {
       throw new Error(`Invalid selector: ${selector}`);
+    }
 
     this._selector = EJSON.clone(selector);
 
@@ -129,36 +131,46 @@ export default class Matcher {
 LocalCollection._f = {
   // XXX for _all and _in, consider building 'inquery' at compile time..
   _type(v) {
-    if (typeof v === 'number')
+    if (typeof v === 'number') {
       return 1;
+    }
 
-    if (typeof v === 'string')
+    if (typeof v === 'string') {
       return 2;
+    }
 
-    if (typeof v === 'boolean')
+    if (typeof v === 'boolean') {
       return 8;
+    }
 
-    if (Array.isArray(v))
+    if (Array.isArray(v)) {
       return 4;
+    }
 
-    if (v === null)
+    if (v === null) {
       return 10;
+    }
 
     // note that typeof(/x/) === "object"
-    if (v instanceof RegExp)
+    if (v instanceof RegExp) {
       return 11;
+    }
 
-    if (typeof v === 'function')
+    if (typeof v === 'function') {
       return 13;
+    }
 
-    if (v instanceof Date)
+    if (v instanceof Date) {
       return 9;
+    }
 
-    if (EJSON.isBinary(v))
+    if (EJSON.isBinary(v)) {
       return 5;
+    }
 
-    if (v instanceof MongoID.ObjectID)
+    if (v instanceof MongoID.ObjectID) {
       return 7;
+    }
 
     // object
     return 3;
@@ -212,11 +224,13 @@ LocalCollection._f = {
   // any other value.) return negative if a is less, positive if b is
   // less, or 0 if equal
   _cmp(a, b) {
-    if (a === undefined)
+    if (a === undefined) {
       return b === undefined ? 0 : -1;
+    }
 
-    if (b === undefined)
+    if (b === undefined) {
       return 1;
+    }
 
     let ta = LocalCollection._f._type(a);
     let tb = LocalCollection._f._type(b);
@@ -224,13 +238,15 @@ LocalCollection._f = {
     const oa = LocalCollection._f._typeorder(ta);
     const ob = LocalCollection._f._typeorder(tb);
 
-    if (oa !== ob)
+    if (oa !== ob) {
       return oa < ob ? -1 : 1;
+    }
 
     // XXX need to implement this if we implement Symbol or integers, or
     // Timestamp
-    if (ta !== tb)
+    if (ta !== tb) {
       throw Error('Missing type coercion logic in _cmp');
+    }
 
     if (ta === 7) { // ObjectID
       // Convert to string.
@@ -270,38 +286,45 @@ LocalCollection._f = {
 
     if (ta === 4) { // Array
       for (let i = 0; ; i++) {
-        if (i === a.length)
+        if (i === a.length) {
           return i === b.length ? 0 : -1;
+        }
 
-        if (i === b.length)
+        if (i === b.length) {
           return 1;
+        }
 
         const s = LocalCollection._f._cmp(a[i], b[i]);
-        if (s !== 0)
+        if (s !== 0) {
           return s;
+        }
       }
     }
 
     if (ta === 5) { // binary
       // Surprisingly, a small binary blob is always less than a large one in
       // Mongo.
-      if (a.length !== b.length)
+      if (a.length !== b.length) {
         return a.length - b.length;
+      }
 
       for (let i = 0; i < a.length; i++) {
-        if (a[i] < b[i])
+        if (a[i] < b[i]) {
           return -1;
+        }
 
-        if (a[i] > b[i])
+        if (a[i] > b[i]) {
           return 1;
+        }
       }
 
       return 0;
     }
 
     if (ta === 8) { // boolean
-      if (a)
+      if (a) {
         return b ? 0 : 1;
+      }
 
       return b ? -1 : 0;
     }

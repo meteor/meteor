@@ -21,7 +21,7 @@ Package.onUse(api => {
     'mongo-id',
     'ordered-dict',
     'random',
-    'tracker',
+    'tracker'
   ]);
 
   api.mainModule('minimongo_client.js', 'client');
@@ -39,7 +39,7 @@ Package.onTest(api => {
     'reactive-var',
     'test-helpers',
     'tinytest',
-    'tracker',
+    'tracker'
   ]);
 
   api.addFiles('minimongo_tests.js');

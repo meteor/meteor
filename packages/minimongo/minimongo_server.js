@@ -74,11 +74,13 @@ Minimongo.Matcher.prototype.affectedByModifier = function(modifier) {
 // stay 'false'.
 // Currently doesn't support $-operators and numeric indices precisely.
 Minimongo.Matcher.prototype.canBecomeTrueByModifier = function(modifier) {
-  if (!this.affectedByModifier(modifier))
+  if (!this.affectedByModifier(modifier)) {
     return false;
+  }
 
-  if (!this.isSimple())
+  if (!this.isSimple()) {
     return true;
+  }
 
   modifier = Object.assign({$set: {}, $unset: {}}, modifier);
 
@@ -88,8 +90,9 @@ Minimongo.Matcher.prototype.canBecomeTrueByModifier = function(modifier) {
   );
 
   if (this._getPaths().some(pathHasNumericKeys) ||
-      modifierPaths.some(pathHasNumericKeys))
+      modifierPaths.some(pathHasNumericKeys)) {
     return true;
+  }
 
   // check if there is a $set or $unset that indicates something is an
   // object rather than a scalar in the actual object where we saw $-operator
@@ -97,16 +100,18 @@ Minimongo.Matcher.prototype.canBecomeTrueByModifier = function(modifier) {
   // Example: for selector {'a.b': {$gt: 5}} the modifier {'a.b.c':7} would
   // definitely set the result to false as 'a.b' appears to be an object.
   const expectedScalarIsObject = Object.keys(this._selector).some(path => {
-    if (!isOperatorObject(this._selector[path]))
+    if (!isOperatorObject(this._selector[path])) {
       return false;
+    }
 
     return modifierPaths.some(modifierPath =>
       modifierPath.startsWith(`${path}.`)
     );
   });
 
-  if (expectedScalarIsObject)
+  if (expectedScalarIsObject) {
     return false;
+  }
 
   // See if we can apply the modifier on the ideally matching object. If it
   // still matches the selector, then the modifier could have turned the real
@@ -114,8 +119,9 @@ Minimongo.Matcher.prototype.canBecomeTrueByModifier = function(modifier) {
   const matchingDocument = EJSON.clone(this.matchingDocument());
 
   // The selector is too complex, anything can happen.
-  if (matchingDocument === null)
+  if (matchingDocument === null) {
     return true;
+  }
 
   try {
     LocalCollection._modify(matchingDocument, modifier);
@@ -130,8 +136,9 @@ Minimongo.Matcher.prototype.canBecomeTrueByModifier = function(modifier) {
     // We don't know what real document was like but from the error raised by
     // $set on a scalar field we can reason that the structure of real document
     // is completely different.
-    if (error.name === 'MinimongoError' && error.setPropertyError)
+    if (error.name === 'MinimongoError' && error.setPropertyError) {
       return false;
+    }
 
     throw error;
   }
@@ -149,8 +156,9 @@ Minimongo.Matcher.prototype.combineIntoProjection = function(projection) {
   // on all fields of the document. getSelectorPaths returns a list of paths
   // selector depends on. If one of the paths is '' (empty string) representing
   // the root or the whole document, complete projection should be returned.
-  if (selectorPaths.includes(''))
+  if (selectorPaths.includes('')) {
     return {};
+  }
 
   return combineImportantPathsIntoProjection(selectorPaths, projection);
 };
@@ -161,8 +169,9 @@ Minimongo.Matcher.prototype.combineIntoProjection = function(projection) {
 // => { a: { b: { ans: 42 } }, foo: { bar: null, baz: "something" } }
 Minimongo.Matcher.prototype.matchingDocument = function() {
   // check if it was computed before
-  if (this._matchingDocument !== undefined)
+  if (this._matchingDocument !== undefined) {
     return this._matchingDocument;
+  }
 
   // If the analysis of this selector is too hard for our implementation
   // fallback to "YES"
@@ -198,22 +207,25 @@ Minimongo.Matcher.prototype.matchingDocument = function() {
 
           ['$lte', '$lt'].forEach(op => {
             if (hasOwn.call(valueSelector, op) &&
-                valueSelector[op] < upperBound)
+                valueSelector[op] < upperBound) {
               upperBound = valueSelector[op];
+            }
           });
 
           ['$gte', '$gt'].forEach(op => {
             if (hasOwn.call(valueSelector, op) &&
-                valueSelector[op] > lowerBound)
+                valueSelector[op] > lowerBound) {
               lowerBound = valueSelector[op];
+            }
           });
 
           const middle = (lowerBound + upperBound) / 2;
           const matcher = new Minimongo.Matcher({placeholder: valueSelector});
 
           if (!matcher.documentMatches({placeholder: middle}).result &&
-              (middle === lowerBound || middle === upperBound))
+              (middle === lowerBound || middle === upperBound)) {
             fallback = true;
+          }
 
           return middle;
         }
@@ -232,8 +244,9 @@ Minimongo.Matcher.prototype.matchingDocument = function() {
     },
     x => x);
 
-  if (fallback)
+  if (fallback) {
     this._matchingDocument = null;
+  }
 
   return this._matchingDocument;
 };
@@ -275,8 +288,9 @@ function combineImportantPathsIntoProjection(paths, projection) {
   const mergedExclProjection = {};
 
   Object.keys(mergedProjection).forEach(path => {
-    if (!mergedProjection[path])
+    if (!mergedProjection[path]) {
       mergedExclProjection[path] = false;
+    }
   });
 
   return mergedExclProjection;
@@ -288,12 +302,14 @@ function getPaths(selector) {
   // XXX remove it?
   // return Object.keys(selector).map(k => {
   //   // we don't know how to handle $where because it can be anything
-  //   if (k === '$where')
+  //   if (k === '$where') {
   //     return ''; // matches everything
+  //   }
 
   //   // we branch from $or/$and/$nor operator
-  //   if (['$or', '$and', '$nor'].includes(k))
+  //   if (['$or', '$and', '$nor'].includes(k)) {
   //     return selector[k].map(getPaths);
+  //   }
 
   //   // the value is a literal or some comparison operator
   //   return k;
@@ -318,10 +334,11 @@ function treeToPaths(tree, prefix = '') {
 
   Object.keys(tree).forEach(key => {
     const value = tree[key];
-    if (value === Object(value))
+    if (value === Object(value)) {
       Object.assign(result, treeToPaths(value, `${prefix + key}.`));
-    else
+    } else {
       result[prefix + key] = value;
+    }
   });
 
   return result;

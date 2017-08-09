@@ -27,11 +27,13 @@ export default class Sorter {
     this._sortFunction = null;
 
     const addSpecPart = (path, ascending) => {
-      if (!path)
+      if (!path) {
         throw Error('sort keys must be non-empty');
+      }
 
-      if (path.charAt(0) === '$')
+      if (path.charAt(0) === '$') {
         throw Error(`unsupported sort key: ${path}`);
+      }
 
       this._sortSpecParts.push({
         ascending,
@@ -59,8 +61,9 @@ export default class Sorter {
     }
 
     // If a function is specified for sorting, we skip the rest.
-    if (this._sortFunction)
+    if (this._sortFunction) {
       return;
+    }
 
     // To implement affectedByModifier, we piggy-back on top of Matcher's
     // affectedByModifier code; we create a selector that is affected by the
@@ -85,8 +88,9 @@ export default class Sorter {
     // for the different sort spec fields) is compatible with the selector.
     this._keyFilter = null;
 
-    if (options.matcher)
+    if (options.matcher) {
       this._useWithMatcher(options.matcher);
+    }
   }
 
   getComparator(options) {
@@ -95,18 +99,21 @@ export default class Sorter {
     // issue #3599
     // https://docs.mongodb.com/manual/reference/operator/query/near/#sort-operation
     // sort effectively overrides $near
-    if (this._sortSpecParts.length || !options || !options.distances)
+    if (this._sortSpecParts.length || !options || !options.distances) {
       return this._getBaseComparator();
+    }
 
     const distances = options.distances;
 
     // Return a comparator which compares using $near distances.
     return (a, b) => {
-      if (!distances.has(a._id))
+      if (!distances.has(a._id)) {
         throw Error(`Missing distance for ${a._id}`);
+      }
 
-      if (!distances.has(b._id))
+      if (!distances.has(b._id)) {
         throw Error(`Missing distance for ${b._id}`);
+      }
 
       return distances.get(a._id) - distances.get(b._id);
     };
@@ -117,8 +124,9 @@ export default class Sorter {
   // compare fields.
   _compareKeys(key1, key2) {
     if (key1.length !== this._sortSpecParts.length ||
-        key2.length !== this._sortSpecParts.length)
+        key2.length !== this._sortSpecParts.length) {
       throw Error('Key has wrong length');
+    }
 
     return this._keyComparator(key1, key2);
   }
@@ -126,8 +134,9 @@ export default class Sorter {
   // Iterates over each possible "key" from doc (ie, over each branch), calling
   // 'cb' with the key.
   _generateKeysFromDoc(doc, cb) {
-    if (this._sortSpecParts.length === 0)
+    if (this._sortSpecParts.length === 0) {
       throw new Error('can\'t generate keys without a spec');
+    }
 
     const pathFromIndices = indices => `${indices.join(',')},`;
 
@@ -141,10 +150,11 @@ export default class Sorter {
 
       // If there are no values for a key (eg, key goes to an empty array),
       // pretend we found one null value.
-      if (!branches.length)
+      if (!branches.length) {
         branches = [{value: null}];
+      }
 
-      const element = {};
+      const element = Object.create(null);
       let usedPaths = false;
 
       branches.forEach(branch => {
@@ -152,8 +162,9 @@ export default class Sorter {
           // If there are no array indices for a branch, then it must be the
           // only branch, because the only thing that produces multiple branches
           // is the use of arrays.
-          if (branches.length > 1)
+          if (branches.length > 1) {
             throw Error('multiple branches but no array used?');
+          }
 
           element[''] = branch.value;
           return;
@@ -163,8 +174,9 @@ export default class Sorter {
 
         const path = pathFromIndices(branch.arrayIndices);
 
-        if (hasOwn.call(element, path))
+        if (hasOwn.call(element, path)) {
           throw Error(`duplicate path: ${path}`);
+        }
 
         element[path] = branch.value;
 
@@ -178,16 +190,18 @@ export default class Sorter {
         // and 'a.x.y' are both arrays, but we don't allow this for now.
         // #NestedArraySort
         // XXX achieve full compatibility here
-        if (knownPaths && !hasOwn.call(knownPaths, path))
+        if (knownPaths && !hasOwn.call(knownPaths, path)) {
           throw Error('cannot index parallel arrays');
+        }
       });
 
       if (knownPaths) {
         // Similarly to above, paths must match everywhere, unless this is a
         // non-array field.
         if (!hasOwn.call(element, '') &&
-            Object.keys(knownPaths).length !== Object.keys(element).length)
+            Object.keys(knownPaths).length !== Object.keys(element).length) {
           throw Error('cannot index parallel arrays!');
+        }
       } else if (usedPaths) {
         knownPaths = {};
 
@@ -202,8 +216,9 @@ export default class Sorter {
     if (!knownPaths) {
       // Easy case: no use of arrays.
       const soleKey = valuesByIndexAndPath.map(values => {
-        if (!hasOwn.call(values, ''))
+        if (!hasOwn.call(values, '')) {
           throw Error('no value in sole key case?');
+        }
 
         return values[''];
       });
@@ -215,11 +230,13 @@ export default class Sorter {
 
     Object.keys(knownPaths).forEach(path => {
       const key = valuesByIndexAndPath.map(values => {
-        if (hasOwn.call(values, ''))
+        if (hasOwn.call(values, '')) {
           return values[''];
+        }
 
-        if (!hasOwn.call(values, path))
+        if (!hasOwn.call(values, path)) {
           throw Error('missing path?');
+        }
 
         return values[path];
       });
@@ -231,13 +248,15 @@ export default class Sorter {
   // Returns a comparator that represents the sort specification (but not
   // including a possible geoquery distance tie-breaker).
   _getBaseComparator() {
-    if (this._sortFunction)
+    if (this._sortFunction) {
       return this._sortFunction;
+    }
 
     // If we're only sorting on geoquery distance and no specs, just say
     // everything is equal.
-    if (!this._sortSpecParts.length)
+    if (!this._sortSpecParts.length) {
       return (doc1, doc2) => 0;
+    }
 
     return (doc1, doc2) => {
       const key1 = this._getMinKeyFromDoc(doc1);
@@ -260,22 +279,25 @@ export default class Sorter {
     let minKey = null;
 
     this._generateKeysFromDoc(doc, key => {
-      if (!this._keyCompatibleWithSelector(key))
+      if (!this._keyCompatibleWithSelector(key)) {
         return;
+      }
 
       if (minKey === null) {
         minKey = key;
         return;
       }
 
-      if (this._compareKeys(key, minKey) < 0)
+      if (this._compareKeys(key, minKey) < 0) {
         minKey = key;
+      }
     });
 
     // This could happen if our key filter somehow filters out all the keys even
     // though somehow the selector matches.
-    if (minKey === null)
+    if (minKey === null) {
       throw Error('sort selector found no keys in doc?');
+    }
 
     return minKey;
   }
@@ -319,21 +341,24 @@ export default class Sorter {
   // subtle and undocumented; we've gotten as close as we can figure out based
   // on our understanding of Mongo's behavior.
   _useWithMatcher(matcher) {
-    if (this._keyFilter)
+    if (this._keyFilter) {
       throw Error('called _useWithMatcher twice?');
+    }
 
     // If we are only sorting by distance, then we're not going to bother to
     // build a key filter.
     // XXX figure out how geoqueries interact with this stuff
-    if (!this._sortSpecParts.length)
+    if (!this._sortSpecParts.length) {
       return;
+    }
 
     const selector = matcher._selector;
 
     // If the user just passed a literal function to find(), then we can't get a
     // key filter from it.
-    if (selector instanceof Function)
+    if (selector instanceof Function) {
       return;
+    }
 
     const constraintsByPath = {};
 
@@ -346,8 +371,9 @@ export default class Sorter {
 
       // XXX support $and and $or
       const constraints = constraintsByPath[key];
-      if (!constraints)
+      if (!constraints) {
         return;
+      }
 
       // XXX it looks like the real MongoDB implementation isn't "does the
       // regexp match" but "does the value fall into a range named by the
@@ -360,8 +386,9 @@ export default class Sorter {
         // index to use, which means it only cares about regexps that match
         // one range (with a literal prefix), and both 'i' and 'm' prevent the
         // literal prefix of the regexp from actually meaning one range.
-        if (subSelector.ignoreCase || subSelector.multiline)
+        if (subSelector.ignoreCase || subSelector.multiline) {
           return;
+        }
 
         constraints.push(regexpElementMatcher(subSelector));
         return;
@@ -380,13 +407,14 @@ export default class Sorter {
           }
 
           // See comments in the RegExp block above.
-          if (operator === '$regex' && !subSelector.$options)
+          if (operator === '$regex' && !subSelector.$options) {
             constraints.push(
               ELEMENT_OPERATORS.$regex.compileElementSelector(
                 operand,
                 subSelector
               )
             );
+          }
 
           // XXX support {$exists: true}, $mod, $type, $in, $elemMatch
         });
@@ -402,8 +430,9 @@ export default class Sorter {
     // others; we shouldn't create a key filter unless the first sort field is
     // restricted, though after that point we can restrict the other sort fields
     // or not as we wish.
-    if (!constraintsByPath[this._sortSpecParts[0].path].length)
+    if (!constraintsByPath[this._sortSpecParts[0].path].length) {
       return;
+    }
 
     this._keyFilter = key =>
       this._sortSpecParts.every((specPart, index) =>
@@ -421,8 +450,9 @@ function composeComparators(comparatorArray) {
   return (a, b) => {
     for (let i = 0; i < comparatorArray.length; ++i) {
       const compare = comparatorArray[i](a, b);
-      if (compare !== 0)
+      if (compare !== 0) {
         return compare;
+      }
     }
 
     return 0;
