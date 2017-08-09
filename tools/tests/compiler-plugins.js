@@ -314,11 +314,12 @@ selftest.define("compiler plugins - inactive source", () => {
   s.createApp('myapp', 'uses-published-package-with-inactive-source');
   s.cd('myapp');
 
-  let run = startRun(s);
+  const run = s.run();
+  run.match('myapp');
+  run.matchBeforeExit('Started proxy');
   run.match('Errors prevented startup');
   run.match('no plugin found for foo.sourcish in glasser:use-sourcish');
   run.match('none is now');
-
   run.stop();
 });
 

@@ -593,7 +593,7 @@ var launchMongo = function (options) {
         'meteor',
         new mongoNpmModule.Server('127.0.0.1', options.port, {
           poolSize: 1,
-          socketOptions: {connectTimeoutMS: 30000},
+          socketOptions: {connectTimeoutMS: 60000},
         }),
         {safe: true});
 

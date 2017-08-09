@@ -160,6 +160,15 @@ Tinytest.add('minimongo - basics', test => {
   c.insert({foo: {bar: 'baz'}});
   test.equal(c.find({foo: {bam: 'baz'}}).count(), 0);
   test.equal(c.find({foo: {bar: 'baz'}}).count(), 1);
+
+  // Regression test for #5301
+  c.remove({});
+  c.insert({a: 'a', b: 'b'});
+  const noop = () => null;
+  test.equal(c.find({a: noop}).count(), 1);
+  test.equal(c.find({a: 'a', b: noop}).count(), 1);
+  test.equal(c.find({c: noop}).count(), 1);
+  test.equal(c.find({a: noop, c: 'c'}).count(), 0);
 });
 
 Tinytest.add('minimongo - error - no options', test => {

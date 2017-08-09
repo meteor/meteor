@@ -35,13 +35,13 @@ this package must be used in conjunction with the `--production` flag to the
 `meteor` tool to simulate production bundling and enable minification.
 
 > **IMPORTANT:** Since this package is active in production mode, it is critical
-> to remove this package prior to bundling or deploying the application.
+> to only add this package temporarily.  This can be easily accomplished using
+> the `--extra-packages` option to `meteor`.
 
 ### Enabling
 ```sh
 $ cd app/
-$ meteor add bundle-visualizer
-$ meteor --production
+$ meteor --extra-packages bundle-visualizer --production
 ```
 
 ### Viewing
@@ -52,9 +52,9 @@ application.
 
 ### Disabling
 
-> It is important to remove this package prior to bundling or deploying to
-> production.
+If you used `--extra-packages`, simply remove `bundle-visualizer` from the list
+of included packages and run `meteor` as normal.
 
-```sh
-$ meteor remove bundle-visualizer
-```
+> If you've added `bundle-visualizer` permanently with `meteor add`, it is
+> important to remove this package prior to bundling or deploying to
+> production with `meteor remove `bundle-visualizer`.
