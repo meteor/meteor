@@ -12,7 +12,7 @@
   version of `npm` used by `meteor npm ...` commands.
   [PR #8835](https://github.com/meteor/meteor/pull/8835)
 
-* The `meteor-babel` package has been upgraded to version 0.24.5, to take
+* The `meteor-babel` package has been upgraded to version 0.24.6, to take
   better advantage of native language features in Node 8.
 
 * The `meteor-promise` package has been upgraded to version 0.8.6, to

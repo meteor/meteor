@@ -506,9 +506,9 @@
       "integrity": "sha1-ms1whRxtXf3ZPZKC5e35SgP/RrU="
     },
     "core-js": {
-      "version": "2.4.1",
-      "resolved": "https://registry.npmjs.org/core-js/-/core-js-2.4.1.tgz",
-      "integrity": "sha1-TekR5mew6ukSTjQlS1OupvxhjT4="
+      "version": "2.5.0",
+      "resolved": "https://registry.npmjs.org/core-js/-/core-js-2.5.0.tgz",
+      "integrity": "sha1-VpwFCRi+ZIazg3VSAorgRmtxcIY="
     },
     "debug": {
       "version": "2.6.8",
@@ -591,9 +591,9 @@
       "integrity": "sha1-0aitM/qc4OcT1l/dCsi3SNR4yEg="
     },
     "meteor-babel": {
-      "version": "0.24.5",
-      "resolved": "https://registry.npmjs.org/meteor-babel/-/meteor-babel-0.24.5.tgz",
-      "integrity": "sha512-rq86PA/TsYxjFFzMO7TGVd+ZA3ct9G+FZJZc9DfYJj0AJg2xwp4lYR0YIVMppVASK4eU71YK1P0mBvEG3j6rFw=="
+      "version": "0.24.6",
+      "resolved": "https://registry.npmjs.org/meteor-babel/-/meteor-babel-0.24.6.tgz",
+      "integrity": "sha512-4LAKWDoyZJrd+lmGMYEM890mxt1N6xO5cj9MSx69NOJhCQbS6B4rIBzqEOJ70f+BSLHElxqTQcVSPGwRk/OD+Q=="
     },
     "meteor-babel-helpers": {
       "version": "0.0.3",
