@@ -342,3 +342,25 @@ Tinytest.addAsync("ecmascript - runtime - misc support", (test, done) => {
     }
   }).then(done, error => test.exception(error));
 });
+
+Tinytest.addAsync("ecmascript - runtime - async fibers", (test, done) => {
+  if (! Meteor.isServer) {
+    return done();
+  }
+
+  const Fiber = Npm.require("fibers");
+
+  function wait() {
+    return new Promise(resolve => setTimeout(resolve, 10));
+  }
+
+  async function check() {
+    const fiberBeforeAwait = Fiber.current;
+    await wait();
+    const fiberAfterAwait = Fiber.current;
+    test.isTrue(fiberBeforeAwait instanceof Fiber);
+    test.isTrue(fiberBeforeAwait === fiberAfterAwait);
+  }
+
+  check().then(done);
+});
