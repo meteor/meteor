@@ -54,8 +54,7 @@ selftest.define("static-html - throws error", () => {
   s.cd('myapp');
 
   const run = startRun(s);
-  run.match("Attributes on <head> not supported");
-  run.waitSecs(90);
+  run.matchBeforeExit("Attributes on <head> not supported");
 
   run.stop();
 });
