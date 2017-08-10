@@ -122,3 +122,34 @@ selftest.define("login", ['net'], function () {
   run.matchErr("Login failed");
   run.expectExit(1);
 });
+
+// This is a Galaxy-related command (deploy), but still pretty auth-y.
+selftest.define("login on deploy", ['net'], function () {
+  const s = new Sandbox;
+
+  const appName = testUtils.randomAppName();
+
+  s.createApp(appName, "standard-app");
+  s.cd(appName);
+
+  let run = s.run("deploy", appName);
+  run.matchErr(/You must be logged in to deploy/);
+
+  run.matchErr("Email:");
+  run.write("test@test.com\n");
+
+  run.matchErr("Logging in as test.");
+
+  run.matchErr("Password:");
+  run.write("SoVeryWrong\n");
+  run.waitSecs(commandTimeoutSecs);
+  run.matchErr("Login failed");
+
+  run.matchErr("Password:");
+  run.write("testtest\n");
+  run.waitSecs(commandTimeoutSecs);
+  run.match("Talking to Galaxy servers");
+
+  // "test" user can't actually deploy, so it will still fail.
+  run.expectExit(1);
+});

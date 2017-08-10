@@ -13,6 +13,24 @@ Tinytest.add('accounts - config validates keys', function (test) {
   });
 });
 
+// test the loginExpirationInDays config
+
+Tinytest.add( 'accounts - config - token limetime', function (test) {
+  var config = { loginExpirationInDays: 2 };
+  test.equal(Accounts._getTokenLifetimeMs(config), 2 * 24 * 60 * 60 * 1000);
+});
+
+Tinytest.add( 'accounts - config - unexpiring tokens', function (test) {
+  var config = { loginExpirationInDays: null };
+  test.equal(Accounts._getTokenLifetimeMs(config), Infinity);
+});
+
+Tinytest.add( 'accounts - config - default token limetime', function(test) {
+  var DEFAULT_LOGIN_EXPIRATION_DAYS = 90; // copied from accounts_common.js
+  var config1 = {};
+  var config2 = { loginExpirationInDays: DEFAULT_LOGIN_EXPIRATION_DAYS };
+  test.equal(Accounts._getTokenLifetimeMs(config1), Accounts._getTokenLifetimeMs(config2));
+});
 
 var idsInValidateNewUser = {};
 Accounts.validateNewUser(function (user) {

@@ -2628,7 +2628,9 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", function (
       format: "site-archive-pre1",
       builtBy,
       programs: [],
-      meteorRelease: releaseName
+      meteorRelease: releaseName,
+      nodeVersion: process.versions.node,
+      npmVersion: meteorNpm.npmVersion,
     };
     var nodePath = [];
 

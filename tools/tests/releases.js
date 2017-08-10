@@ -192,6 +192,7 @@ selftest.define("checkout", ['checkout'], function () {
     run.readErr("=> Running Meteor from a checkout");
     run.matchErr("project version");
     run.matchErr("(Meteor something)\n");
+    run.waitSecs(30);
     run.expectExit(0);
   });
 });

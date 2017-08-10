@@ -14,6 +14,7 @@ var buildmessage = require('../utils/buildmessage.js');
 var utils = require('../utils/utils.js');
 var runLog = require('../runners/run-log.js');
 var Profile = require('../tool-env/profile.js').Profile;
+import { version as npmVersion } from 'npm';
 import { execFileAsync } from "../utils/processes.js";
 import {
   get as getRebuildArgs
@@ -32,6 +33,9 @@ import {
 } from "../fs/optimistic.js";
 
 var meteorNpm = exports;
+
+// Expose the version of npm in use from the dev bundle.
+meteorNpm.npmVersion = npmVersion;
 
 // if a user exits meteor while we're trying to create a .npm
 // directory, we will have temporary directories that we clean up

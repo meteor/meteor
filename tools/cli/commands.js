@@ -660,8 +660,8 @@ main.registerCommand({
 
       // We do mind if there are non-hidden directories, because we don't want
       // to recursively check everything to do some crazy heuristic to see if
-      // we should try to creat an app.
-      var stats = files.stat(filePath);
+      // we should try to create an app.
+      var stats = files.stat(files.pathJoin(appPath, filePath));
       if (stats.isDirectory()) {
         // Could contain code
         return true;
@@ -1310,8 +1310,7 @@ main.registerCommand({
       "Setting passwords on apps is no longer supported. Now there are " +
         "user accounts and your apps are associated with your account so " +
         "that only you (and people you designate) can access them. See the " +
-        Console.command("'meteor claim'") + " and " +
-        Console.command("'meteor authorized'") + " commands.");
+        Console.command("'meteor authorized'") + " command.");
     return 1;
   }
 
@@ -1436,33 +1435,6 @@ main.registerCommand({
   } else {
     return deploy.listAuthorized(site);
   }
-});
-
-///////////////////////////////////////////////////////////////////////////////
-// claim
-///////////////////////////////////////////////////////////////////////////////
-
-main.registerCommand({
-  name: 'claim',
-  minArgs: 1,
-  maxArgs: 1,
-  catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
-  auth.pollForRegistrationCompletion();
-  var site = qualifySitename(options.args[0]);
-
-  if (! auth.isLoggedIn()) {
-    Console.error(
-      "You must be logged in to claim sites. Use " +
-      Console.command("'meteor login'") + " to log in. If you don't have a " +
-      "Meteor developer account yet, create one by clicking " +
-      Console.command("'Sign in'") + " and then " +
-      Console.command("'Create account'") + " at www.meteor.com.");
-    Console.error();
-    return 1;
-  }
-
-  return deploy.claim(site);
 });
 
 ///////////////////////////////////////////////////////////////////////////////

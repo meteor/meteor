@@ -508,6 +508,7 @@ var doInteractivePasswordLogin = function (options) {
     } else {
       loginFailed();
       if (options.retry) {
+        delete loginData.password;
         Console.error();
         continue;
       } else {

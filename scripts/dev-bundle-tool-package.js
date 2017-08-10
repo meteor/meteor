@@ -14,8 +14,8 @@ var packageJson = {
     npm: "4.6.1",
     "node-gyp": "3.6.0",
     "node-pre-gyp": "0.6.34",
-    "meteor-babel": "0.21.4",
-    reify: "0.11.22",
+    "meteor-babel": "0.22.0",
+    reify: "0.11.24",
     "meteor-promise": "0.8.4",
     fibers: "1.0.15",
     promise: "7.1.1",
@@ -56,7 +56,7 @@ var packageJson = {
     optimism: "0.3.3",
     'lru-cache': '4.0.1',
     'cordova-lib': "6.4.0",
-    longjohn: '0.2.11'
+    longjohn: '0.2.12'
   }
 };
 

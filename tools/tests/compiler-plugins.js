@@ -22,6 +22,7 @@ function startRun(sandbox) {
 // Tests the actual cache logic used by coffeescript.
 selftest.define("compiler plugin caching - coffee", () => {
   var s = new Sandbox({ fakeMongo: true });
+  s.set("METEOR_WATCH_PRIORITIZE_CHANGED", "false");
 
   s.createApp("myapp", "caching-coffee");
   s.cd("myapp");
@@ -91,6 +92,7 @@ selftest.define("compiler plugin caching - coffee", () => {
 
   selftest.define("compiler plugin caching - " + packageName, () => {
     var s = new Sandbox({ fakeMongo: true });
+    s.set("METEOR_WATCH_PRIORITIZE_CHANGED", "false");
 
     s.createApp("myapp", "caching-" + packageName);
     s.cd("myapp");
@@ -278,6 +280,7 @@ selftest.define("compiler plugin caching - local plugin", function () {
 // Test error on duplicate compiler plugins.
 selftest.define("compiler plugins - duplicate extension", () => {
   const s = new Sandbox({ fakeMongo: true });
+  s.set("METEOR_WATCH_PRIORITIZE_CHANGED", "false");
 
   s.createApp("myapp", "duplicate-compiler-extensions");
   s.cd("myapp");
@@ -311,11 +314,12 @@ selftest.define("compiler plugins - inactive source", () => {
   s.createApp('myapp', 'uses-published-package-with-inactive-source');
   s.cd('myapp');
 
-  let run = startRun(s);
+  const run = s.run();
+  run.match('myapp');
+  run.matchBeforeExit('Started proxy');
   run.match('Errors prevented startup');
   run.match('no plugin found for foo.sourcish in glasser:use-sourcish');
   run.match('none is now');
-
   run.stop();
 });
 

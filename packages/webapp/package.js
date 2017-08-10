@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Serves a Meteor app over HTTP",
-  version: '1.3.16'
+  version: '1.3.17'
 });
 
 Npm.depends({connect: "2.30.2",
@@ -30,15 +30,19 @@ Package.onUse(function (api) {
   // (browser-policy depends on webapp). So we don't explicitly depend in any
   // way on browser-policy here, but we use it when it is loaded, and it can be
   // loaded after webapp.
-  api.export(['WebApp', 'main', 'WebAppInternals'], 'server');
-  api.export(['WebApp'], 'client');
-  api.addFiles('webapp_server.js', 'server');
-  api.addFiles('webapp_client.js', 'client');
-  api.addFiles('webapp_cordova.js', 'web.cordova');
+  api.mainModule('webapp_server.js', 'server');
+  api.export('WebApp', 'server');
+  api.export('WebAppInternals', 'server');
+  api.export('main', 'server');
+
+  api.mainModule('webapp_client.js', 'client');
+  api.export('WebApp', 'client');
+
+  api.mainModule('webapp_cordova.js', 'web.cordova');
 });
 
 Package.onTest(function (api) {
-  api.use(['tinytest', 'webapp', 'http', 'underscore']);
+  api.use(['tinytest', 'ecmascript', 'webapp', 'http', 'underscore']);
   api.addFiles('webapp_tests.js', 'server');
   api.addFiles('webapp_client_tests.js', 'client');
 });
