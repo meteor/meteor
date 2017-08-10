@@ -114,7 +114,7 @@ function getDefaultsForNode8(features) {
     [require("./plugins/async-await.js"), {
       // Do not transform `await x` to `Promise.await(x)`, since Node
       // 8 has native support for await expressions.
-      useNativeAsyncAwait: true
+      useNativeAsyncAwait: false
     }],
 
     // Transform `import(id)` to `module.dynamicImport(id)`.
