@@ -24,6 +24,19 @@ regenerator.async = function () {
 // add boilerplate at the top of every file.
 require("meteor-babel").defineHelpers();
 
+var Mp = module.constructor.prototype;
+var moduleLoad = Mp.load;
+Mp.load = function (filename) {
+  var result = moduleLoad.apply(this, arguments);
+  var runSetters = this.runSetters || this.runModuleSetters;
+  if (typeof runSetters === "function") {
+    // Make sure we call module.runSetters (or module.runModuleSetters, a
+    // legacy synonym) whenever a module finishes loading.
+    runSetters.call(this);
+  }
+  return result;
+};
+
 // Installs source map support with a hook to add functions to look for
 // source maps in custom places.
 require('./source-map-retriever-stack.js');

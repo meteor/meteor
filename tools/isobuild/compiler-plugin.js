@@ -10,7 +10,6 @@ var _ = require('underscore');
 var Profile = require('../tool-env/profile.js').Profile;
 import {sha1, readAndWatchFileWithHash} from  '../fs/watch.js';
 import LRU from 'lru-cache';
-import Fiber from 'fibers';
 import {sourceMapLength} from '../utils/utils.js';
 import {Console} from '../console/console.js';
 import ImportScanner from './import-scanner.js';
@@ -62,7 +61,7 @@ import { isTestFilePath } from './test-files.js';
 // Cache the (slightly post-processed) results of linker.fullLink.
 const CACHE_SIZE = process.env.METEOR_LINKER_CACHE_SIZE || 1024*1024*100;
 const CACHE_DEBUG = !! process.env.METEOR_TEST_PRINT_LINKER_CACHE_DEBUG;
-const LINKER_CACHE_SALT = 13; // Increment this number to force relinking.
+const LINKER_CACHE_SALT = 17; // Increment this number to force relinking.
 const LINKER_CACHE = new LRU({
   max: CACHE_SIZE,
   // Cache is measured in bytes. We don't care about servePath.
@@ -1292,12 +1291,12 @@ export class PackageSourceBatch {
       noLineNumbers: !isWeb
     };
 
-    const cacheKey = sha1(JSON.stringify({
-      LINKER_CACHE_SALT,
+    const fileHashes = [];
+    const cacheKeyPrefix = sha1(JSON.stringify({
       linkerOptions,
       files: jsResources.map((inputFile) => {
+        fileHashes.push(inputFile.hash);
         return {
-          hash: inputFile.hash,
           installPath: inputFile.installPath,
           sourceMap: !! inputFile.sourceMap,
           mainModule: inputFile.mainModule,
@@ -1307,20 +1306,25 @@ export class PackageSourceBatch {
         };
       })
     }));
+    const cacheKeySuffix = sha1(JSON.stringify({
+      LINKER_CACHE_SALT,
+      fileHashes
+    }));
+    const cacheKey = `${cacheKeyPrefix}_${cacheKeySuffix}`;
 
-    {
-      const inMemoryCached = LINKER_CACHE.get(cacheKey);
-      if (inMemoryCached) {
-        if (CACHE_DEBUG) {
-          console.log('LINKER IN-MEMORY CACHE HIT:',
-                      linkerOptions.name, bundleArch);
-        }
-        return inMemoryCached;
+    if (LINKER_CACHE.has(cacheKey)) {
+      if (CACHE_DEBUG) {
+        console.log('LINKER IN-MEMORY CACHE HIT:',
+                    linkerOptions.name, bundleArch);
       }
+      return LINKER_CACHE.get(cacheKey);
     }
 
-    const cacheFilename = self.linkerCacheDir && files.pathJoin(
-      self.linkerCacheDir, cacheKey + '.cache');
+    const cacheFilename = self.linkerCacheDir &&
+      files.pathJoin(self.linkerCacheDir, cacheKey + '.cache');
+
+    const wildcardCacheFilename = cacheFilename &&
+      files.pathJoin(self.linkerCacheDir, cacheKeyPrefix + "_*.cache");
 
     // The return value from _linkJS includes Buffers, but we want everything to
     // be JSON for writing to the disk cache. This function converts the string
@@ -1395,7 +1399,13 @@ export class PackageSourceBatch {
       LINKER_CACHE.set(cacheKey, ret);
       if (cacheFilename) {
         // Write asynchronously.
-        Fiber(() => files.writeFileAtomically(cacheFilename, retAsJSON)).run();
+        Promise.resolve().then(() => {
+          try {
+            files.rm_recursive(wildcardCacheFilename);
+          } finally {
+            files.writeFileAtomically(cacheFilename, retAsJSON);
+          }
+        });
       }
     }
 

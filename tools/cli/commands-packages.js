@@ -1138,6 +1138,8 @@ main.registerCommand({
   name: 'list',
   requiresApp: true,
   options: {
+    'tree': { type: Boolean },
+    'weak': { type: Boolean },
     'allow-incompatible-update': { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
@@ -1152,6 +1154,86 @@ main.registerCommand({
   // No need to display the PackageMapDelta here, since we're about to list all
   // of the packages anyway!
 
+  if (options['tree']) {
+    const showWeak = !!options['weak'];
+    // Load package details of all used packages (inc. dependencies)
+    const packageDetails = new Map;
+    projectContext.packageMap.eachPackage(function (name, info) {
+      packageDetails.set(name, projectContext.projectCatalog.getVersion(name, info.version));
+    });
+
+    // Build a set of top level package names
+    const topLevelSet = new Set;
+    projectContext.projectConstraintsFile.eachConstraint(function (constraint) {
+      topLevelSet.add(constraint.package);
+    });
+
+    // Package that should not be expanded (top level or expanded already)
+    const dontExpand = new Set(topLevelSet.values());
+
+    // Recursive function that outputs each package
+    const printPackage = function (packageToPrint, isWeak, indent1, indent2) {
+      const packageName = packageToPrint.packageName;
+      const depsObj = packageToPrint.dependencies || {};
+      let deps = Object.keys(depsObj).sort();
+      // Ignore references to a meteor version or isobuild marker packages
+      deps = deps.filter(dep => {
+        return dep !== 'meteor' && !compiler.isIsobuildFeaturePackage(dep);
+      });
+
+      if (!showWeak) {
+        // Filter out any weakly referenced dependencies
+        deps = deps.filter(dep => {
+          let references = depsObj[dep].references || [];
+          let weakRef = references.length > 0 && references.every(r => r.weak);
+          return !weakRef;
+        });
+      }
+
+      const expandedAlready = (deps.length > 0 && dontExpand.has(packageName));
+      const shouldExpand = (deps.length > 0 && !expandedAlready && !isWeak);
+      if (indent1 !== '') {
+        indent1 += (shouldExpand ? '┬' : '─') + ' ';
+      }
+
+      let suffix = (isWeak ? '[weak]' : '');
+      if (expandedAlready) {
+        suffix += topLevelSet.has(packageName) ? ' (top level)' : ' (expanded above)';
+      }
+
+      Console.info(indent1 + packageName + '@' + packageToPrint.version + suffix);
+      if (shouldExpand) {
+        dontExpand.add(packageName);
+        deps.forEach((dep, index) => {
+          const references = depsObj[dep].references || [];
+          const weakRef = references.length > 0 && references.every(r => r.weak);
+          const last = ((index + 1) === deps.length);
+          const child = packageDetails.get(dep);
+          const newIndent1 = indent2 + (last ? '└─' : '├─');
+          const newIndent2 = indent2 + (last ? '  ' : '│ ');
+          if (child) {
+            printPackage(child, weakRef, newIndent1, newIndent2);
+          } else if (weakRef) {
+            Console.info(newIndent1 + '─ ' + dep + '[weak] package skipped');
+          } else {
+            Console.info(newIndent1 + '─ ' + dep + ' missing?');
+          }
+        });
+      }
+    };
+
+    const topLevelNames = Array.from(topLevelSet.values()).sort();
+    topLevelNames.forEach((dep, index) => {
+      const topLevelPackage = packageDetails.get(dep);
+      if (topLevelPackage) {
+        // Force top level packages to be expanded
+        dontExpand.delete(topLevelPackage.packageName);
+        printPackage(topLevelPackage, false, '', '');
+      }
+    });
+
+    return 0;
+  }
 
   var items = [];
   var newVersionsAvailable = false;
@@ -1788,8 +1870,10 @@ main.registerCommand({
                    " are available:");
       _.each(nonlatestIndirectDeps, printItem);
       Console.info([
-        "To update one or more of these packages, pass their names to ",
-        "`meteor update`, or just run `meteor update --all-packages`."
+        "These versions may not be compatible with your project.",
+        "To update one or more of these packages to their latest",
+        "compatible versions, pass their names to `meteor update`,",
+        "or just run `meteor update --all-packages`.",
       ].join("\n"));
     }
   }

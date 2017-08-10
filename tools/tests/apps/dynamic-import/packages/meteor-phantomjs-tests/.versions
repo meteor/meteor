@@ -1,0 +1,10 @@
+babel-compiler@6.6.4
+babel-runtime@0.1.8
+dispatch:phantomjs-tests@0.0.7
+ecmascript@0.4.3
+ecmascript-runtime@0.2.10
+meteor@1.1.14
+modules@0.6.1
+modules-runtime@0.6.3
+promise@0.6.7
+underscore@1.0.8

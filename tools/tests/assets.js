@@ -23,9 +23,9 @@ selftest.define("assets - unicode asset names are allowed", () => {
   run.match('1 - getText: Hello world!');
   run.match('2 - getText: Hello world!');
   run.match('3 - getText: Hello world!');
-  run.match(/1 - absoluteFilePath:(.*)maaverde.txt/);
-  run.match(/2 - absoluteFilePath:(.*)maaverde.txt/);
-  run.match(/3 - absoluteFilePath:(.*)maaverde.txt/);
+  run.match(/1 - absoluteFilePath:(.*)ma_a_verde.txt/);
+  run.match(/2 - absoluteFilePath:(.*)ma_a_verde.txt/);
+  run.match(/3 - absoluteFilePath:(.*)ma_a_verde.txt/);
   run.stop();
 });
 

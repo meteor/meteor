@@ -68,7 +68,7 @@ DDPCommon.RandomStream.get = function (scope, name) {
 
 // Creates a randomSeed for passing to a method call.
 // Note that we take enclosing as an argument,
-// though we expect it to be DDP._CurrentInvocation.get()
+// though we expect it to be DDP._CurrentMethodInvocation.get()
 // However, we often evaluate makeRpcSeed lazily, and thus the relevant
 // invocation may not be the one currently in scope.
 // If enclosing is null, we'll use Random and values won't be repeatable.

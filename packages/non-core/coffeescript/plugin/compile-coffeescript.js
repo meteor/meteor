@@ -2,13 +2,13 @@ import {
   SourceMapConsumer,
   SourceMapGenerator,
 } from 'source-map';
-import coffee from 'coffee-script';
+import coffee from 'coffeescript';
 import { BabelCompiler } from 'meteor/babel-compiler';
 
-// The coffee-script compiler overrides Error.prepareStackTrace, mostly for the
+// The CoffeeScript compiler overrides Error.prepareStackTrace, mostly for the
 // use of coffee.run which we don't use.  This conflicts with the tool's use of
 // Error.prepareStackTrace to properly show error messages in linked code.
-// Restore the tool's one after coffee-script clobbers it at import time.
+// Restore the tool's one after CoffeeScript clobbers it at import time.
 if (Error.METEOR_prepareStackTrace) {
   Error.prepareStackTrace = Error.METEOR_prepareStackTrace;
 }

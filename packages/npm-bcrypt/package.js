@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Wrapper around the bcrypt npm package",
-  version: "0.9.2",
+  version: "0.9.3",
   documentation: null
 });
 
@@ -9,7 +9,7 @@ Npm.depends({
 });
 
 Package.onUse(function (api) {
-  api.use("modules@0.7.5", "server");
+  api.use("modules", "server");
   api.mainModule("wrapper.js", "server");
   api.export("NpmModuleBcrypt", "server");
 });

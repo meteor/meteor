@@ -9,7 +9,7 @@
 
 Package.describe({
   summary: "Adaptor for using MongoDB and Minimongo over DDP",
-  version: '1.1.17'
+  version: '1.1.23'
 });
 
 Npm.depends({
@@ -21,7 +21,7 @@ Npm.strip({
 });
 
 Package.onUse(function (api) {
-  api.use('npm-mongo@2.2.24', 'server');
+  api.use('npm-mongo', 'server');
   api.use('allow-deny');
 
   api.use([
@@ -34,7 +34,8 @@ Package.onUse(function (api) {
     'diff-sequence',
     'mongo-id',
     'check',
-    'ecmascript'
+    'ecmascript',
+    'mongo-dev-server',
   ]);
 
   // Binary Heap data structure is used to optimize oplog observe driver

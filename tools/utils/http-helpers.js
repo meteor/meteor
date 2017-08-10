@@ -308,7 +308,10 @@ _.extend(exports, {
     Console.debug("Doing HTTP request: ", options.method || 'GET', options.url);
     var request = require('request');
     var req = request(options, function (error, response, body) {
-      if (! error && response && body) {
+      if (! error &&
+          response &&
+          (typeof body === "string" ||
+           Buffer.isBuffer(body))) {
         const contentLength = Number(response.headers["content-length"]);
         const actualLength = Buffer.byteLength(body);
 

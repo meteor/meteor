@@ -161,6 +161,14 @@ Tinytest.add("minimongo - basics", function (test) {
   test.equal(c.find({foo: {bam: 'baz'}}).count(), 0);
   test.equal(c.find({foo: {bar: 'baz'}}).count(), 1);
 
+  // Regression test for #5301
+  c.remove({});
+  c.insert({ a: 'a', b: 'b' });
+  const noop = () => null;
+  test.equal(c.find({ a: noop }).count(), 1);
+  test.equal(c.find({ a: 'a', b: noop }).count(), 1);
+  test.equal(c.find({ c: noop }).count(), 1);
+  test.equal(c.find({ a: noop, c: 'c' }).count(), 0);
 });
 
 Tinytest.add("minimongo - error - no options", function (test) {
@@ -712,6 +720,178 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   match({a: {$bitsAnyClear: new Uint8Array([1])}}, {a: new Uint8Array([0])});
   match({a: {$bitsAnyClear: new Uint8Array([1])}}, {a: 4 });
 
+  // taken from: https://github.com/mongodb/mongo/blob/master/jstests/core/bittest.js
+  var c = new LocalCollection;
+  function matchCount(query, count) {
+    const matches = c.find(query).count()
+    if (matches !== count) {
+      test.fail({message: "minimongo match count failure: matched " + matches + " times, but should match " + count + " times",
+        query: JSON.stringify(query),
+        count: JSON.stringify(count)
+      });
+    }
+  }
+
+  // Tests on numbers.
+
+  c.insert({a: 0})
+  c.insert({a: 1})
+  c.insert({a: 54})
+  c.insert({a: 88})
+  c.insert({a: 255})
+
+  // Tests with bitmask.
+  matchCount({a: {$bitsAllSet: 0}}, 5)
+  matchCount({a: {$bitsAllSet: 1}}, 2)
+  matchCount({a: {$bitsAllSet: 16}}, 3)
+  matchCount({a: {$bitsAllSet: 54}}, 2)
+  matchCount({a: {$bitsAllSet: 55}}, 1)
+  matchCount({a: {$bitsAllSet: 88}}, 2)
+  matchCount({a: {$bitsAllSet: 255}}, 1)
+  matchCount({a: {$bitsAllClear: 0}}, 5)
+  matchCount({a: {$bitsAllClear: 1}}, 3)
+  matchCount({a: {$bitsAllClear: 16}}, 2)
+  matchCount({a: {$bitsAllClear: 129}}, 3)
+  matchCount({a: {$bitsAllClear: 255}}, 1)
+  matchCount({a: {$bitsAnySet: 0}}, 0)
+  matchCount({a: {$bitsAnySet: 9}}, 3)
+  matchCount({a: {$bitsAnySet: 255}}, 4)
+  matchCount({a: {$bitsAnyClear: 0}}, 0)
+  matchCount({a: {$bitsAnyClear: 18}}, 3)
+  matchCount({a: {$bitsAnyClear: 24}}, 3)
+  matchCount({a: {$bitsAnyClear: 255}}, 4)
+
+  // Tests with array of bit positions.
+  matchCount({a: {$bitsAllSet: []}}, 5)
+  matchCount({a: {$bitsAllSet: [0]}}, 2)
+  matchCount({a: {$bitsAllSet: [4]}}, 3)
+  matchCount({a: {$bitsAllSet: [1, 2, 4, 5]}}, 2)
+  matchCount({a: {$bitsAllSet: [0, 1, 2, 4, 5]}}, 1)
+  matchCount({a: {$bitsAllSet: [3, 4, 6]}}, 2)
+  matchCount({a: {$bitsAllSet: [0, 1, 2, 3, 4, 5, 6, 7]}}, 1)
+  matchCount({a: {$bitsAllClear: []}}, 5)
+  matchCount({a: {$bitsAllClear: [0]}}, 3)
+  matchCount({a: {$bitsAllClear: [4]}}, 2)
+  matchCount({a: {$bitsAllClear: [1, 7]}}, 3)
+  matchCount({a: {$bitsAllClear: [0, 1, 2, 3, 4, 5, 6, 7]}}, 1)
+  matchCount({a: {$bitsAnySet: []}}, 0)
+  matchCount({a: {$bitsAnySet: [1, 3]}}, 3)
+  matchCount({a: {$bitsAnySet: [0, 1, 2, 3, 4, 5, 6, 7]}}, 4)
+  matchCount({a: {$bitsAnyClear: []}}, 0)
+  matchCount({a: {$bitsAnyClear: [1, 4]}}, 3)
+  matchCount({a: {$bitsAnyClear: [3, 4]}}, 3)
+  matchCount({a: {$bitsAnyClear: [0, 1, 2, 3, 4, 5, 6, 7]}}, 4)
+
+  // Tests with multiple predicates.
+  matchCount({a: {$bitsAllSet: 54, $bitsAllClear: 201}}, 1)
+
+  // Tests on negative numbers
+
+  c.remove({})
+  c.insert({a: -0})
+  c.insert({a: -1})
+  c.insert({a: -54})
+
+  // Tests with bitmask.
+  matchCount({a: {$bitsAllSet: 0}}, 3)
+  matchCount({a: {$bitsAllSet: 2}}, 2)
+  matchCount({a: {$bitsAllSet: 127}}, 1)
+  matchCount({a: {$bitsAllSet: 74}}, 2)
+  matchCount({a: {$bitsAllClear: 0}}, 3)
+  matchCount({a: {$bitsAllClear: 53}}, 2)
+  matchCount({a: {$bitsAllClear: 127}}, 1)
+  matchCount({a: {$bitsAnySet: 0}}, 0)
+  matchCount({a: {$bitsAnySet: 2}}, 2)
+  matchCount({a: {$bitsAnySet: 127}}, 2)
+  matchCount({a: {$bitsAnyClear: 0}}, 0)
+  matchCount({a: {$bitsAnyClear: 53}}, 2)
+  matchCount({a: {$bitsAnyClear: 127}}, 2)
+
+  // Tests with array of bit positions.
+  var allPositions = []
+  for (var i = 0; i < 64; i++) {
+     allPositions.push(i)
+  }
+
+  matchCount({a: {$bitsAllSet: []}}, 3)
+  matchCount({a: {$bitsAllSet: [1]}}, 2)
+  matchCount({a: {$bitsAllSet: allPositions}}, 1)
+  matchCount({a: {$bitsAllSet: [1, 7, 6, 3, 100]}}, 2)
+  matchCount({a: {$bitsAllClear: []}}, 3)
+  matchCount({a: {$bitsAllClear: [5, 4, 2, 0]}}, 2)
+  matchCount({a: {$bitsAllClear: allPositions}}, 1)
+  matchCount({a: {$bitsAnySet: []}}, 0)
+  matchCount({a: {$bitsAnySet: [1]}}, 2)
+  matchCount({a: {$bitsAnySet: allPositions}}, 2)
+  matchCount({a: {$bitsAnyClear: []}}, 0)
+  matchCount({a: {$bitsAnyClear: [0, 2, 4, 5, 100]}}, 2)
+  matchCount({a: {$bitsAnyClear: allPositions}}, 2)
+
+  // Tests with multiple predicates.
+  matchCount({a: {$bitsAllSet: 74, $bitsAllClear: 53}}, 1)
+
+  // Tests on BinData.
+
+  c.remove({})
+  c.insert({a: EJSON.parse('{"$binary": "AAAAAAAAAAAAAAAAAAAAAAAAAAAA"}')})
+  c.insert({a: EJSON.parse('{"$binary": "AANgAAAAAAAAAAAAAAAAAAAAAAAA"}')})
+  c.insert({a: EJSON.parse('{"$binary": "JANgqwetkqwklEWRbWERKKJREtbq"}')})
+  c.insert({a: EJSON.parse('{"$binary": "////////////////////////////"}')})
+
+  // Tests with binary string bitmask.
+  matchCount({a: {$bitsAllSet: EJSON.parse('{"$binary": "AAAAAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 4)
+  matchCount({a: {$bitsAllSet: EJSON.parse('{"$binary": "AANgAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 3)
+  matchCount({a: {$bitsAllSet: EJSON.parse('{"$binary": "JANgqwetkqwklEWRbWERKKJREtbq"}')}}, 2)
+  matchCount({a: {$bitsAllSet: EJSON.parse('{"$binary": "////////////////////////////"}')}}, 1)
+  matchCount({a: {$bitsAllClear: EJSON.parse('{"$binary": "AAAAAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 4)
+  matchCount({a: {$bitsAllClear: EJSON.parse('{"$binary": "AAyfAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 3)
+  matchCount({a: {$bitsAllClear: EJSON.parse('{"$binary": "JAyfqwetkqwklEWRbWERKKJREtbq"}')}}, 2)
+  matchCount({a: {$bitsAllClear: EJSON.parse('{"$binary": "////////////////////////////"}')}}, 1)
+  matchCount({a: {$bitsAnySet: EJSON.parse('{"$binary": "AAAAAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 0)
+  matchCount({a: {$bitsAnySet: EJSON.parse('{"$binary": "AAyfAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 1)
+  matchCount({a: {$bitsAnySet: EJSON.parse('{"$binary": "JAyfqwetkqwklEWRbWERKKJREtbq"}')}}, 2)
+  matchCount({a: {$bitsAnySet: EJSON.parse('{"$binary": "////////////////////////////"}')}}, 3)
+  matchCount({a: {$bitsAnyClear: EJSON.parse('{"$binary": "AAAAAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 0)
+  matchCount({a: {$bitsAnyClear: EJSON.parse('{"$binary": "AANgAAAAAAAAAAAAAAAAAAAAAAAA"}')}}, 1)
+  matchCount({a: {$bitsAnyClear: EJSON.parse('{"$binary": "JANgqwetkqwklEWRbWERKKJREtbq"}')}}, 2)
+  matchCount({a: {$bitsAnyClear: EJSON.parse('{"$binary": "////////////////////////////"}')}}, 3)
+
+  // Tests with multiple predicates.
+  matchCount({
+      a: {
+          $bitsAllSet: EJSON.parse('{"$binary": "AANgAAAAAAAAAAAAAAAAAAAAAAAA"}'),
+          $bitsAllClear: EJSON.parse('{"$binary": "//yf////////////////////////"}')
+      }
+  }, 1)
+
+  c.remove({})
+
+  nomatch({a: {$bitsAllSet: 1}}, {a: false})
+  nomatch({a: {$bitsAllSet: 1}}, {a: NaN})
+  nomatch({a: {$bitsAllSet: 1}}, {a: Infinity})
+  nomatch({a: {$bitsAllSet: 1}}, {a: null})
+  nomatch({a: {$bitsAllSet: 1}}, {a: 'asdf'})
+  nomatch({a: {$bitsAllSet: 1}}, {a: ['a', 'b']})
+  nomatch({a: {$bitsAllSet: 1}}, {a: {foo: 'bar'}})
+  nomatch({a: {$bitsAllSet: 1}}, {a: 1.2})
+  nomatch({a: {$bitsAllSet: 1}}, {a: "1"})
+
+  _.each([
+    false,
+    NaN,
+    Infinity,
+    null,
+    'asdf',
+    ['a', 'b'],
+    {foo: 'bar'},
+    1.2,
+    "1",
+    [0, -1]
+  ], function (badValue) {
+    test.throws(function () {
+      match({a: {$bitsAllSet: badValue}}, {a: 42});
+    });
+  });
 
   // $type
   match({a: {$type: 1}}, {a: 1.1});
@@ -2168,7 +2348,10 @@ Tinytest.add("minimongo - modify", function (test) {
     // The query is relevant for 'a.$.b'.
     coll.update(query, mod);
     var actual = coll.findOne();
-    delete actual._id;  // added by insert
+
+    if (!expected._id) {
+      delete actual._id;  // added by insert
+    }
 
     if (typeof expected === "function") {
       expected(actual, EJSON.stringify({input: doc, mod: mod}));
@@ -2206,6 +2389,21 @@ Tinytest.add("minimongo - modify", function (test) {
 
     test.equal(actual, expected);
   };
+
+  var upsertUpdate = function (initialDoc, query, mod, expected) {
+    var coll = new LocalCollection;
+
+    coll.insert(initialDoc);
+    var result = coll.upsert(query, mod);
+
+    var actual = coll.findOne();
+
+    if (!expected._id) {
+      delete actual._id;
+    }
+
+    test.equal(actual, expected);
+  }
 
   var upsertException = function (query, mod) {
     var coll = new LocalCollection;
@@ -2323,13 +2521,13 @@ Tinytest.add("minimongo - modify", function (test) {
                        {b: [9,9]}]},
                   {'a.b': {$near: [5, 5]}},
                   {$set: {'a.$.b': 'k'}},
-                  {"a":[{"b":"k"},{"b":[[3,3],[4,4]]},{"b":[9,9]}]}); 
+                  {"a":[{"b":"k"},{"b":[[3,3],[4,4]]},{"b":[9,9]}]});
   modifyWithQuery({a: [{b: [1,1]},
                        {b: [ [3,3], [4,4] ]},
                        {b: [9,9]}]},
                   {'a.b': {$near: [9, 9], $maxDistance: 1}},
                   {$set: {'a.$.b': 'k'}},
-                  {"a":[{"b":"k"},{"b":[[3,3],[4,4]]},{"b":[9,9]}]}); 
+                  {"a":[{"b":"k"},{"b":[[3,3],[4,4]]},{"b":[9,9]}]});
   modifyWithQuery({a: [{b: [1,1]},
                        {b: [ [3,3], [4,4] ]},
                        {b: [9,9]}]},
@@ -2352,7 +2550,7 @@ Tinytest.add("minimongo - modify", function (test) {
                        {b: [1,1]}]},
                   {'a.b': {$near: [1, 1]}},
                   {$set: {'a.$.b': 'k'}},
-                  {"a":[{"c": [9,9], "b":"k"},{"b": [ [3,3], [4,4]]},{"b":[1,1]}]});  
+                  {"a":[{"c": [9,9], "b":"k"},{"b": [ [3,3], [4,4]]},{"b":[1,1]}]});
   modifyWithQuery({a: [{c: [9,9], b:[4,3]},
                        {b: [ [3,3], [4,4] ]},
                        {b: [1,1]}]},
@@ -2436,8 +2634,12 @@ Tinytest.add("minimongo - modify", function (test) {
   modify({a: [1], b: 2}, {$set: {'a.2': 9}}, {a: [1, null, 9], b: 2});
   modify({a: {b: 1}}, {$set: {'a.c': 9}}, {a: {b: 1, c: 9}});
   modify({}, {$set: {'x._id': 4}}, {x: {_id: 4}});
+  
+  // Changing _id is disallowed
   exception({}, {$set: {_id: 4}});
-  exception({_id: 4}, {$set: {_id: 4}});  // even not-changing _id is bad
+  exception({_id: 1}, {$set: {_id: 4}})
+  modify({_id: 4}, {$set: {_id: 4}}, {_id: 4});  // not-changing _id is not bad
+  
   //restricted field names
   exception({a:{}}, {$set:{a:{$a:1}}});
   exception({ a: {} }, { $set: { a: { c:
@@ -2684,6 +2886,144 @@ Tinytest.add("minimongo - modify", function (test) {
   upsertException({a: 0}, {$setOnInsert: {b: {$a:1}}});
   upsertException({a: 0}, {$setOnInsert: {b: {'a.b':1}}});
   upsertException({a: 0}, {$setOnInsert: {b: {'\0a':1}}});
+
+  // Test for https://github.com/meteor/meteor/issues/8775.
+  upsert(
+    { a: { $exists: true }},
+    { $setOnInsert: { a: 123 }},
+    { a: 123 }
+  );
+
+  // Tests for https://github.com/meteor/meteor/issues/8794.
+  const testObjectId = new MongoID.ObjectID();
+  upsert(
+    { _id: testObjectId },
+    { $setOnInsert: { a: 123 } },
+    { _id: testObjectId, a: 123 },
+  );
+  upsert(
+    { someOtherId: testObjectId },
+    { $setOnInsert: { a: 123 } },
+    { someOtherId: testObjectId, a: 123 },
+  );
+  upsert(
+    { a: { $eq: testObjectId } },
+    { $setOnInsert: { a: 123 } },
+    { a: 123 },
+  );
+  const testDate = new Date('2017-01-01');
+  upsert(
+    { someDate: testDate },
+    { $setOnInsert: { a: 123 } },
+    { someDate: testDate, a: 123 },
+  );
+  upsert(
+    {
+      a: Object.create(null, {
+        $exists: {
+          writable: true,
+          configurable: true,
+          value: true
+        }
+      }),
+    },
+    { $setOnInsert: { a: 123 } },
+    { a: 123 },
+  );
+  upsert(
+    { foo: { $exists: true, $type: 2 }},
+    { $setOnInsert: { bar: 'baz' } },
+    { bar: 'baz' }
+  );
+  upsert(
+    { foo: {} },
+    { $setOnInsert: { bar: 'baz' } },
+    { foo: {}, bar: 'baz' }
+  );
+
+
+  // Tests for https://github.com/meteor/meteor/issues/8806
+
+  upsert({"a": {"b": undefined, "c": null}}, {"$set": {"c": "foo"}}, {"a": {"b": undefined, "c": null}, "c": "foo"})
+  upsert({"a": {"$eq": "bar" }}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
+  // $all with 1 statement is similar to $eq
+  upsert({"a": {"$all": ["bar"] }}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
+  upsert({"a": {"$eq": "bar" }, "b": "baz"}, {"$set": {"c": "foo"}}, {"a": "bar", "b": "baz", "c": "foo"})
+
+  upsert({"a": {"$exists": true}}, {"$set": {"c": "foo"}}, {"c": "foo"})
+  upsert({"a": {"$exists": true, "$eq": "foo"}}, {"$set": {"c": "foo"}}, {"a": "foo", "c": "foo"})
+  upsert({"a": {"$gt": 3, "$eq": 2}}, {"$set": {"c": "foo"}}, {"a": 2, "c": "foo"})
+
+  // $and
+  upsert({"$and": [{"a": {"$eq": "bar"}}]}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
+  upsert({"$and": [{"a": {"$all": ["bar"]}}]}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
+  upsert({"$and": [{"a": {"$all": ["bar"]}}]}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
+
+  // $or with one statement is handled similar to $and
+  upsert({"$or": [{"a": "bar"}]}, {"$set": {"c": "foo"}}, {"a": "bar", "c": "foo"})
+
+  // $or with multiple statements is ignored
+  upsert({"$or": [{"a": "bar"}, {"b": "baz"}]}, {"$set": {"c": "foo"}}, {"c": "foo"})
+
+  // Negative logical operators are ignored
+  upsert({"$nor": [{"a": "bar"}]}, {"$set": {"c": "foo"}}, {"c": "foo"})
+
+  // Filter out empty objects after filtering out operators
+  upsert({"a": {"$exists": true}}, {"$set": {"c": "foo"}}, {"c": "foo"})
+
+  // But leave actual empty objects
+  upsert({"a": {}}, {"$set": {"c": "foo"}}, {"a": {}, "c": "foo"})
+
+   // Also filter out shorthand regexp notation
+  upsert({"a": /a/}, {"$set": {"c": "foo"}}, {"c": "foo"})
+
+  // Test nested fields
+  upsert({"$and": [{"a.a": "foo"}, {"$or": [{"a.b": "baz"}]}]}, {"$set": {"c": "foo"}}, {"a": {"a": "foo", "b": "baz"}, "c": "foo"})
+
+  // Test for https://github.com/meteor/meteor/issues/5294
+  upsert({"a": {"$ne": 444}}, {"$push": {"a": 123}}, {"a": [123]})
+
+  // Mod takes precedence over query
+  upsert({"a": "foo"}, {"a": "bar"}, {"a": "bar"})
+  upsert({"a": "foo"}, {"$set":{"a": "bar"}}, {"a": "bar"})
+
+  // Replacement can take _id from query
+  upsert({"_id": "foo", "foo": "bar"}, {"bar": "foo"}, {"_id": "foo", "bar": "foo"})
+
+  // Replacement update keeps _id
+  upsertUpdate({"_id": "foo", "bar": "baz"}, {"_id":"foo"}, {"bar": "crow"}, {"_id": "foo", "bar": "crow"});
+  
+  // Nested fields don't work with literal objects
+  upsertException({"a": {}, "a.b": "foo"}, {});
+
+  // You can't have an ambiguious ID
+  upsertException({"_id":"foo"}, {"_id":"bar"});
+  upsertException({"_id":"foo"}, {"$set":{"_id":"bar"}});
+
+  // You can't set the same field twice
+  upsertException({"$and": [{"a": "foo"}, {"a": "foo"}]}, {}); //not even with same value
+  upsertException({"a": {"$all": ["foo", "bar"]}}, {});
+  upsertException({"$and": [{"a": {"$eq": "foo"}}, {"$or": [{"a": {"$all": ["bar"]}}]}]}, {});
+
+  // You can't have nested dotted fields
+  upsertException({"a": {"foo.bar": "baz"}}, {});
+
+  // You can't have dollar-prefixed fields above the first level (logical operators not counted)
+  upsertException({"a": {"a": {"$eq": "foo"}}}, {});
+  upsertException({"a": {"a": {"$exists": true}}}, {});
+
+  // You can't mix operators with other fields
+  upsertException({"a": {"$eq": "bar", "b": "foo"}}, {})
+  upsertException({"a": {"b": "foo", "$eq": "bar"}}, {})
+
+  var mongoIdForUpsert = new MongoID.ObjectID('44915733af80844fa1cef07a');
+  upsert({_id: mongoIdForUpsert},{$setOnInsert: {a: 123}},{a: 123})
+
+  // Test for https://github.com/meteor/meteor/issues/7758
+  upsert({n_id: mongoIdForUpsert, c_n: "bar"},
+    {$set: { t_t_o: "foo"}},
+    {n_id: mongoIdForUpsert, t_t_o: "foo", c_n: "bar"});
+
 
   exception({}, {$set: {_id: 'bad'}});
 

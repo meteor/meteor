@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Javascript dialect with fewer braces and semicolons",
-  version: "1.12.3_1"
+  version: "1.12.6_1"
 });
 
 Package.registerBuildPlugin({
@@ -8,7 +8,7 @@ Package.registerBuildPlugin({
   use: ['caching-compiler', 'ecmascript'],
   sources: ['plugin/compile-coffeescript.js'],
   npmDependencies: {
-    "coffee-script": "1.12.3",
+    "coffeescript": "1.12.6",
     "source-map": "0.5.6"
   }
 });

@@ -44,7 +44,7 @@ export class AccountsCommon {
 
   /**
    * @summary Get the current user id, or `null` if no user is logged in. A reactive data source.
-   * @locus Anywhere but publish functions
+   * @locus Anywhere
    */
   userId() {
     throw new Error("userId method not implemented");
@@ -52,7 +52,7 @@ export class AccountsCommon {
 
   /**
    * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.
-   * @locus Anywhere but publish functions
+   * @locus Anywhere
    */
   user() {
     var userId = this.userId();
@@ -213,8 +213,14 @@ export class AccountsCommon {
     }
   }
 
-  _getTokenLifetimeMs() {
-    return (this._options.loginExpirationInDays ||
+  // The options argument is only used by tests.
+  _getTokenLifetimeMs(options) {
+    options = options || this._options;
+    if (options.loginExpirationInDays === null) {
+      // We disable login expiration by returning Infinity
+      return Infinity;
+    }
+    return (options.loginExpirationInDays ||
             DEFAULT_LOGIN_EXPIRATION_DAYS) * 24 * 60 * 60 * 1000;
   }
 

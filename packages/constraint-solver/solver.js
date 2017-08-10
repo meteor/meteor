@@ -135,7 +135,7 @@ CS.Solver.prototype.analyze = function () {
           self.errors.push(
             'unsupported Isobuild feature "' + p +
             '" in top-level dependencies; see ' +
-            'https://github.com/meteor/meteor/wiki/Isobuild-Feature-Packages ' +
+            'https://docs.meteor.com/api/packagejs.html#isobuild-features ' +
             'for a list of features and the minimum Meteor release required'
           );
         } else {
@@ -863,7 +863,7 @@ CS.Solver.prototype._getAnswer = function (options) {
         var errorStr;
         if (CS.isIsobuildFeaturePackage(p)) {
           errorStr = 'unsupported Isobuild feature "' + p + '"; see ' +
-            'https://github.com/meteor/meteor/wiki/Isobuild-Feature-Packages ' +
+            'https://docs.meteor.com/api/packagejs.html#isobuild-features ' +
             'for a list of features and the minimum Meteor release required';
         } else {
           errorStr = 'unknown package: ' + p;

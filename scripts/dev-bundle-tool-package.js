@@ -11,17 +11,18 @@ var packageJson = {
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
-    npm: "4.5.0",
+    npm: "4.6.1",
     "node-gyp": "3.6.0",
     "node-pre-gyp": "0.6.34",
-    "meteor-babel": "0.20.1",
-    "meteor-promise": "0.8.0",
+    "meteor-babel": "0.22.0",
+    reify: "0.11.24",
+    "meteor-promise": "0.8.4",
     fibers: "1.0.15",
     promise: "7.1.1",
     // So that Babel 6 can emit require("babel-runtime/helpers/...") calls.
     "babel-runtime": "6.9.2",
     // For various ES2015 polyfills, such as Map and Set.
-    "meteor-ecmascript-runtime": "0.2.9",
+    "meteor-ecmascript-runtime": "0.3.0",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
     // in the package too) because we should consider using lodash instead
     // (and there are backwards-incompatible changes either way).
@@ -41,7 +42,7 @@ var packageJson = {
     "http-proxy": "1.11.1",
     "wordwrap": "0.0.2",
     "moment": "2.8.4",
-    "rimraf": "2.4.3",
+    "rimraf": "2.6.1",
     "glob": "7.0.6",
     // XXX: When we update this, see if it fixes this Github issue:
     // https://github.com/jgm/CommonMark/issues/276 . If it does, remove the
@@ -55,7 +56,7 @@ var packageJson = {
     optimism: "0.3.3",
     'lru-cache': '4.0.1',
     'cordova-lib': "6.4.0",
-    longjohn: '0.2.11'
+    longjohn: '0.2.12'
   }
 };
 

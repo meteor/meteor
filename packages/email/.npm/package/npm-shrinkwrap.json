@@ -1,9 +1,9 @@
 {
   "dependencies": {
     "node4mailer": {
-      "version": "4.0.2",
-      "resolved": "https://registry.npmjs.org/node4mailer/-/node4mailer-4.0.2.tgz",
-      "from": "node4mailer@4.0.2"
+      "version": "4.0.3",
+      "resolved": "https://registry.npmjs.org/node4mailer/-/node4mailer-4.0.3.tgz",
+      "from": "node4mailer@4.0.3"
     },
     "stream-buffers": {
       "version": "0.2.5",

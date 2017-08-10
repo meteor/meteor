@@ -12,7 +12,7 @@ export METEOR_HOME=`pwd`
 
 export PATH=$METEOR_HOME:$PATH
 # synchronously get the dev bundle and NPM modules if they're not there.
-./meteor --get-ready || exit 1
+./meteor --help || exit 1
 
 export URL='http://localhost:4096/'
 

@@ -86,6 +86,8 @@ Options:
                    downgraded to versions that are potentially incompatible with
                    the current versions, if required to satisfy all package
                    version constraints.
+  --extra-packages Run with additional packages (comma separated, for example:
+                   --extra-packages "package-name1, package-name2@1.2.3")
 
 >>> debug
 Run the project, but suspend the server process for debugging.
@@ -246,9 +248,14 @@ Options:
 >>> list
 List the packages explicitly used by your project.
 Usage: meteor list
+       meteor list --tree [--weak]
 
 Lists the packages that you have explicitly added to your project.
-This will not list transitive dependencies.
+Transitive dependencies are not listed unless you use the --tree option,
+which outputs a tree showing how packages are referenced.
+
+Options:
+  --weak           Show weakly referenced dependencies in the tree.
 
 >>> add-platform
 Add a platform to this project.
@@ -504,16 +511,6 @@ Options:
   --list        list authorized users and organizations (the default)
 
 
->>> claim
-Claim a site deployed with an old Meteor version.
-Usage: meteor claim <site>
-
-If you deployed a site with an old version of Meteor that did not have
-support for developer accounts, you can use this command to claim that
-site into your account. If you had set a password on the site you will
-be prompted for it one last time.
-
-
 >>> login
 Log in to your Meteor developer account.
 Usage: meteor login [--email]
@@ -585,6 +582,8 @@ Options:
   --verbose         Print all output from builds logs.
   --no-lint         Don't run linters used by the tested packages on every
                     test app rebuild.
+  --extra-packages  Run with additional packages (comma separated, for example:
+                    --extra-packages "package-name1, package-name2@1.2.3")
 >>> test
 Test the application
 Usage: meteor test --driver-package <driver> [options]
@@ -637,6 +636,8 @@ Options:
                     for tests. Defaults to the system's temporary directory,
                     usually /tmp.
   --verbose         Print all output from builds logs.
+  --extra-packages  Run with additional packages (comma separated, for example:
+                    --extra-packages "package-name1, package-name2@1.2.3")
 
 >>> self-test
 Run tests of the 'meteor' tool.

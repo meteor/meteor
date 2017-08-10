@@ -1,0 +1,413 @@
+version: 2
+
+# These directories are cached across all builds, currently with no
+# hashing mechanism, but we should consider doing it off dev_bundle.
+meteor_cache_dirs: &meteor_cache_dirs
+  paths:
+    - "dev_bundle"
+    - ".babel-cache"
+    - ".meteor"
+
+# A reusable "run" snippet which is ran before each test to setup the
+# environment for user-limits, core-dumps, etc.
+run_env_change: &run_env_change
+  name: Environment Changes
+  command: |
+    # Make a place to core dumps to live.
+    sudo mkdir -p /tmp/core_dumps
+    sudo chmod a+rwx /tmp/core_dumps
+
+    # Set the pattern for core dumps, so we can find them.
+    echo kernel.core_pattern="/tmp/core_dumps/core.%e.%p.%h.%t" | \
+        sudo tee -a /etc/sysctl.conf
+
+    # Note that since every "run" command starts its own shell, and I wasn't
+    # able to set this at a system wide level for all users, it's necessary to
+    # run "ulimit -c unlimited" before each command which you want to (possibly)
+    # output a core dump.
+
+    # Raise inotify user watches up higher.
+    echo fs.inotify.max_user_watches=524288 | \
+        sudo tee -a /etc/sysctl.conf
+
+    # Reload sysctl so these are in effect.
+    sudo sysctl -p
+
+# A reusable "run" snippet which enables the continued logging of memoryusage
+# to a file on disk which can be saved to build artifacts for later analysis.
+run_log_mem_use: &run_log_mem_use
+  background: true
+  name: Setup Memory Logging
+  command: |
+    # Log memory usage throughout entire build.
+    MEMUSELOG=/tmp/memuse.txt /bin/bash -c '\
+        while true; do\
+          ps -u $USER eo pid,%cpu,%mem,rss:10,vsz:10,args:20 --sort=-%mem >> $MEMUSELOG; \
+          echo "----------" >> $MEMUSELOG; \
+          sleep 1; \
+        done'
+
+# A reusable "run" snippet for saving the Node binary if a core dump is present.
+run_save_node_bin: &run_save_node_bin
+  name: Save Node Binary
+  when: on_fail
+  command: |
+    if compgen -G "/tmp/core_dumps/core.*" > /dev/null; then
+      echo "Saving Node binary since Core dump is present..."
+      cp dev_bundle/bin/node /tmp/core_dumps/node
+    fi
+
+# This environment is set to every job (and the initial build).
+build_machine_environment: &build_machine_environment
+  # Specify that we want an actual machine (ala Circle 1.0), not a Docker image.
+  machine: true
+  environment:
+    # This multiplier scales the waitSecs for selftests.
+    TIMEOUT_SCALE_FACTOR: 4
+
+    # These, mostly overlapping, flags ensure that CircleCI is as pretty as
+    # possible for a non-interactive environment.  See also: --headless.
+    EMACS: t
+    METEOR_HEADLESS: true
+    METEOR_PRETTY_OUTPUT: 0
+
+    # In an effort to stop SIGSEGV, this just doesn't bother cleaning up
+    # the mess of temp directories that Meteor makes.
+    METEOR_SAVE_TMPDIRS: 1
+
+    # Disable the optimistic caching of file watchers, which incurs a slight
+    # polling delay which is less than ideal in a CI environment where file
+    # watchers should be plentiful.
+    METEOR_DISABLE_OPTIMISTIC_CACHING: 1
+
+    # Skip these tests on every test run.
+    # For readability, this is a regex wrapped across multiple lines in quotes.
+    SELF_TEST_EXCLUDE: "\
+        ^old cli tests|\
+        ^minifiers can't register non-js|\
+        ^minifiers: apps can't use|\
+        ^compiler plugins - addAssets\
+        "
+    # These will be evaled before each command.
+    PRE_TEST_COMMANDS: |-
+        ulimit -c unlimited; # Set core dump size as Ubuntu 14.04 lacks prlimit.
+        ulimit -n 4096; # CircleCI default is soft 1024, hard 4096. Take it all.
+
+    # Enable the Garbage Collection `gc` object to be exposed so we can try
+    # to our own, hopefully more graceful, technique.
+    TOOL_NODE_FLAGS: --expose-gc
+
+    # This is only to make Meteor self-test not remind us that we can set
+    # this argument for self-tests.
+    SELF_TEST_TOOL_NODE_FLAGS: " "
+
+jobs:
+  Get Ready:
+    <<: *build_machine_environment
+    steps:
+      - run:
+          <<: *run_log_mem_use
+      - run:
+          <<: *run_env_change
+      - checkout
+      - run:
+          # https://discuss.circleci.com/t/git-submodule-url-isnt-playing-nice-with-the-cache/549/3
+          name: Git Submodules.
+          command: (git submodule sync && git submodule update --init --recursive) || (rm -fr .git/config .git/modules && git submodule deinit -f . && git submodule update --init --recursive)
+      - restore_cache:
+          key: meteor-cache
+      - run:
+          name: Get Ready
+          command: |
+            eval $PRE_TEST_COMMANDS;
+            ./meteor --help
+          # shouldn't take longer than 5 minutes
+          no_output_timeout: 5m
+      # Clear dev_bundle/.npm to ensure consistent test runs.
+      - run:
+          name: Clear npm cache
+          command: ./meteor npm cache clear
+      # Since PhantomJS has been removed from dev_bundle/lib/node_modules
+      # (#6905), but self-test still needs it, install it now.
+      - run:
+          name: Test Prereqs
+          command: ./meteor npm install -g phantomjs-prebuilt browserstack-webdriver
+      - run:
+          <<: *run_save_node_bin
+      - persist_to_workspace:
+          root: .
+          paths: .
+      - store_artifacts:
+          path: /tmp/core_dumps
+      - store_artifacts:
+          path: /tmp/memuse.txt
+
+  save_caches:
+    <<: *build_machine_environment
+    steps:
+      - attach_workspace:
+          at: .
+      - save_cache:
+          key: meteor-cache
+          <<: *meteor_cache_dirs
+
+  Group 0:
+    <<: *build_machine_environment
+    steps:
+      - run:
+          <<: *run_log_mem_use
+      - run:
+          <<: *run_env_change
+      - attach_workspace:
+          at: .
+      - run:
+          name: "Running warehouse self-tests"
+          command: |
+            eval $PRE_TEST_COMMANDS;
+            ./meteor self-test \
+              --exclude "${SELF_TEST_EXCLUDE}" \
+              --headless \
+              --with-tag "custom-warehouse"
+          no_output_timeout: 20m
+      - run:
+          <<: *run_save_node_bin
+      - save_cache:
+          key: meteor-cache
+          <<: *meteor_cache_dirs
+      - store_artifacts:
+          path: /tmp/core_dumps
+      - store_artifacts:
+          path: /tmp/memuse.txt
+
+  Group 1:
+    <<: *build_machine_environment
+    steps:
+      - run:
+          <<: *run_log_mem_use
+      - run:
+          <<: *run_env_change
+      - attach_workspace:
+          at: .
+      - run:
+          name: "Running self-test (1): A-Com"
+          command: |
+            eval $PRE_TEST_COMMANDS;
+            ./meteor self-test \
+              --exclude "${SELF_TEST_EXCLUDE}" \
+              --headless \
+              --file '^[a-b]|^c[a-n]|^co[a-l]|^compiler-plugins' \
+              --without-tag "custom-warehouse"
+          no_output_timeout: 20m
+      - run:
+          <<: *run_save_node_bin
+      - save_cache:
+          key: meteor-cache
+          <<: *meteor_cache_dirs
+      - store_artifacts:
+          path: /tmp/core_dumps
+      - store_artifacts:
+          path: /tmp/memuse.txt
+
+  Group 2:
+    <<: *build_machine_environment
+    steps:
+      - run:
+          <<: *run_log_mem_use
+      - run:
+          <<: *run_env_change
+      - attach_workspace:
+          at: .
+      - run:
+          name "Running self-test (2): Con-K"
+          command: |
+            eval $PRE_TEST_COMMANDS;
+            ./meteor self-test \
+              --exclude "${SELF_TEST_EXCLUDE}" \
+              --headless \
+              --file "^co[n-z]|^c[p-z]|^[d-k]" \
+              --without-tag "custom-warehouse"
+          no_output_timeout: 20m
+      - run:
+          <<: *run_save_node_bin
+      - save_cache:
+          key: meteor-cache
+          <<: *meteor_cache_dirs
+      - store_artifacts:
+          path: /tmp/core_dumps
+      - store_artifacts:
+          path: /tmp/memuse.txt
+
+  Group 3:
+    <<: *build_machine_environment
+    steps:
+      - run:
+          <<: *run_log_mem_use
+      - run:
+          <<: *run_env_change
+      - attach_workspace:
+          at: .
+      - run:
+          name: "Running self-test (3): L-O"
+          command: |
+            eval $PRE_TEST_COMMANDS;
+            ./meteor self-test \
+              --exclude "${SELF_TEST_EXCLUDE}" \
+              --headless \
+              --file '^[l-o]' \
+              --without-tag "custom-warehouse"
+          no_output_timeout: 20m
+      - run:
+          <<: *run_save_node_bin
+      - save_cache:
+          key: meteor-cache
+          <<: *meteor_cache_dirs
+      - store_artifacts:
+          path: /tmp/core_dumps
+      - store_artifacts:
+          path: /tmp/memuse.txt
+
+  Group 4:
+    <<: *build_machine_environment
+    steps:
+      - run:
+          <<: *run_log_mem_use
+      - run:
+          <<: *run_env_change
+      - attach_workspace:
+          at: .
+      - run:
+          name: "Running self-test (4): P"
+          command:  |
+            eval $PRE_TEST_COMMANDS;
+            ./meteor self-test \
+              --exclude "${SELF_TEST_EXCLUDE}" \
+              --headless \
+              --file '^p' \
+              --without-tag "custom-warehouse"
+          no_output_timeout: 20m
+      - run:
+          <<: *run_save_node_bin
+      - save_cache:
+          key: meteor-cache
+          <<: *meteor_cache_dirs
+      - store_artifacts:
+          path: /tmp/core_dumps
+      - store_artifacts:
+          path: /tmp/memuse.txt
+
+  Group 5:
+    <<: *build_machine_environment
+    steps:
+      - run:
+          <<: *run_log_mem_use
+      - run:
+          <<: *run_env_change
+      - attach_workspace:
+          at: .
+      - run:
+          name: "Running self-test (5): Run"
+          command: |
+            eval $PRE_TEST_COMMANDS;
+            ./meteor self-test \
+              --exclude "${SELF_TEST_EXCLUDE}" \
+              --headless \
+              --file '^run' \
+              --without-tag "custom-warehouse"
+          no_output_timeout: 20m
+      - run:
+          <<: *run_save_node_bin
+      - save_cache:
+          key: meteor-cache
+          <<: *meteor_cache_dirs
+      - store_artifacts:
+          path: /tmp/core_dumps
+      - store_artifacts:
+          path: /tmp/memuse.txt
+
+  Group 6:
+    <<: *build_machine_environment
+    steps:
+      - run:
+          <<: *run_log_mem_use
+      - run:
+          <<: *run_env_change
+      - attach_workspace:
+          at: .
+      - run:
+          name: "Running self-test (6): R-S"
+          command: |
+            eval "$PRE_TEST_COMMANDS";
+            ./meteor self-test \
+              --exclude "${SELF_TEST_EXCLUDE}" \
+              --headless \
+              --file '^r(?!un)|^s' \
+              --without-tag "custom-warehouse"
+          no_output_timeout: 20m
+      - run:
+          <<: *run_save_node_bin
+      - save_cache:
+          key: meteor-cache
+          <<: *meteor_cache_dirs
+      - store_artifacts:
+          path: /tmp/core_dumps
+      - store_artifacts:
+          path: /tmp/memuse.txt
+
+  Group 7:
+    <<: *build_machine_environment
+    steps:
+      - run:
+          <<: *run_log_mem_use
+      - run:
+          <<: *run_env_change
+      - attach_workspace:
+          at: .
+      - run:
+          name: "Running self-test (7): Sp-Z"
+          command: |
+            eval $PRE_TEST_COMMANDS;
+            ./meteor self-test \
+              --exclude "${SELF_TEST_EXCLUDE}" \
+              --headless \
+              --file '^[t-z]|^command-line' \
+              --without-tag "custom-warehouse"
+          no_output_timeout: 20m
+      - run:
+          <<: *run_save_node_bin
+      - save_cache:
+          key: meteor-cache
+          <<: *meteor_cache_dirs
+      - store_artifacts:
+          path: /tmp/core_dumps
+      - store_artifacts:
+          path: /tmp/memuse.txt
+
+workflows:
+  version: 2
+  Build and Test:
+    jobs:
+      - Get Ready
+      - Group 0:
+          requires:
+            - Get Ready
+      - Group 1:
+          requires:
+            - Get Ready
+      - Group 2:
+          requires:
+            - Get Ready
+      - Group 3:
+          requires:
+            - Get Ready
+      - Group 4:
+          requires:
+            - Get Ready
+      - Group 5:
+          requires:
+            - Get Ready
+      - Group 6:
+          requires:
+            - Get Ready
+      - Group 7:
+          requires:
+            - Get Ready

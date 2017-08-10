@@ -13,6 +13,8 @@ var Profile = require('./profile.js').Profile;
 // This code is duplicated in tools/main.js.
 var MIN_NODE_VERSION = 'v0.10.41';
 
+var hasOwn = Object.prototype.hasOwnProperty;
+
 if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
   process.stderr.write(
     'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.\n');
@@ -121,6 +123,34 @@ var startCheckForLiveParent = function (parentPid) {
         process.exit(1);
       }
     }, 3000);
+  }
+};
+
+var specialArgPaths = {
+  "packages/modules-runtime.js": function () {
+    return {
+      npmRequire: npmRequire,
+      Profile: Profile
+    };
+  },
+
+  "packages/dynamic-import.js": function (file) {
+    var dynamicImportInfo = {};
+
+    Object.keys(configJson.clientPaths).map(function (key) {
+      var programJsonPath = path.resolve(configJson.clientPaths[key]);
+      var programJson = require(programJsonPath);
+
+      dynamicImportInfo[key] = {
+        dynamicRoot: path.join(path.dirname(programJsonPath), "dynamic")
+      };
+    });
+
+    dynamicImportInfo.server = {
+      dynamicRoot: path.join(serverDir, "dynamic")
+    };
+
+    return { dynamicImportInfo: dynamicImportInfo };
   }
 };
 
@@ -269,13 +299,17 @@ var loadServerBundles = Profile("Load server bundles", function () {
       },
     };
 
-    var isModulesRuntime =
-      fileInfo.path === "packages/modules-runtime.js";
-
     var wrapParts = ["(function(Npm,Assets"];
-    if (isModulesRuntime) {
-      wrapParts.push(",npmRequire,Profile");
-    }
+
+    var specialArgs =
+      hasOwn.call(specialArgPaths, fileInfo.path) &&
+      specialArgPaths[fileInfo.path](fileInfo);
+
+    var specialKeys = Object.keys(specialArgs || {});
+    specialKeys.forEach(function (key) {
+      wrapParts.push("," + key);
+    });
+
     // \n is necessary in case final line is a //-comment
     wrapParts.push("){", code, "\n})");
     var wrapped = wrapParts.join("");
@@ -296,9 +330,10 @@ var loadServerBundles = Profile("Load server bundles", function () {
     // what require() uses to generate its errors.
     var func = require('vm').runInThisContext(wrapped, scriptPath, true);
     var args = [Npm, Assets];
-    if (isModulesRuntime) {
-      args.push(npmRequire, Profile);
-    }
+
+    specialKeys.forEach(function (key) {
+      args.push(specialArgs[key]);
+    });
 
     Profile(fileInfo.path, func).apply(global, args);
   });

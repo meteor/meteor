@@ -5,52 +5,60 @@
 // trying to use it throws.
 // Accessing window.localStorage can also immediately throw an error in IE (#1291).
 
+var hasOwn = Object.prototype.hasOwnProperty;
 var key = '_localstorage_test_' + Random.id();
 var retrieved;
+var storage;
+
 try {
-  if (window.localStorage) {
-    window.localStorage.setItem(key, key);
-    retrieved = window.localStorage.getItem(key);
-    window.localStorage.removeItem(key);
+  storage = global.localStorage;
+
+  if (storage) {
+    storage.setItem(key, key);
+    retrieved = storage.getItem(key);
+    storage.removeItem(key);
   }
-} catch (e) {
-  // ... ignore
-}
+} catch (ignored) {}
+
 if (key === retrieved) {
-  Meteor._localStorage = {
-    getItem: function (key) {
-      return window.localStorage.getItem(key);
-    },
-    setItem: function (key, value) {
-      window.localStorage.setItem(key, value);
-    },
-    removeItem: function (key) {
-      window.localStorage.removeItem(key);
-    }
-  };
+  if (Meteor.isServer) {
+    Meteor._localStorage = storage;
+  } else {
+    // Some browsers (e.g. IE11) don't properly handle attempts to change
+    // window.localStorage methods. By using proxy methods to expose
+    // window.localStorage functionality, developers can change the
+    // behavior of Meteor._localStorage methods without breaking
+    // window.localStorage.
+    ["getItem",
+     "setItem",
+     "removeItem",
+    ].forEach(function (name) {
+      this[name] = function () {
+        return storage[name].apply(storage, arguments);
+      };
+    }, Meteor._localStorage = {});
+  }
 }
 
-if (!Meteor._localStorage) {
-  Meteor._debug(
-    "You are running a browser with no localStorage or userData "
-      + "support. Logging in from one tab will not cause another "
-      + "tab to be logged in.");
+if (! Meteor._localStorage) {
+  if (Meteor.isClient) {
+    Meteor._debug(
+      "You are running a browser with no localStorage or userData "
+        + "support. Logging in from one tab will not cause another "
+        + "tab to be logged in.");
+  }
 
-  Meteor._localStorage = {
-    _data: {},
-
+  Meteor._localStorage = Object.create({
     setItem: function (key, val) {
-      this._data[key] = val;
+      this[key] = val;
     },
+
     removeItem: function (key) {
-      delete this._data[key];
+      delete this[key];
     },
+
     getItem: function (key) {
-      var value = this._data[key];
-      if (value === undefined)
-        return null;
-      else
-        return value;
+      return hasOwn.call(this, key) ? this[key] : null;
     }
-  };
+  });
 }

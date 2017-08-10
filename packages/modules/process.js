@@ -24,4 +24,9 @@ if (typeof process.env !== "object") {
   process.env = {};
 }
 
-_.extend(process.env, meteorEnv);
+var hasOwn = Object.prototype.hasOwnProperty;
+for (var key in meteorEnv) {
+  if (hasOwn.call(meteorEnv, key)) {
+    process.env[key] = meteorEnv[key];
+  }
+}

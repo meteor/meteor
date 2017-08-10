@@ -297,16 +297,20 @@ export default class Resolver {
       pkgSubset.version = pkg.version;
     }
 
-    let main = pkg.main;
-    if (has(pkg, "main")) {
-      pkgSubset.main = pkg.main;
+    let main;
+    function tryMain(name) {
+      const value = pkg[name];
+      if (isString(value)) {
+        main = main || value;
+        pkgSubset[name] = value;
+      }
     }
 
-    if (archMatches(this.targetArch, "web") &&
-        isString(pkg.browser)) {
-      main = pkg.browser;
-      pkgSubset.browser = pkg.browser;
+    if (archMatches(this.targetArch, "web")) {
+      tryMain("browser");
     }
+
+    tryMain("main");
 
     if (isString(main)) {
       // The "main" field of package.json does not have to begin with ./

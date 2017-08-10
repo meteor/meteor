@@ -25,9 +25,10 @@ LocalCollection._modify = function (doc, mod, options) {
   var newDoc;
 
   if (!isModifier) {
-    if (mod._id && !EJSON.equals(doc._id, mod._id))
-      throw MinimongoError("Cannot change the _id of a document");
-
+    if (mod._id && doc._id && !EJSON.equals(doc._id, mod._id)) {
+      throw MinimongoError(`The _id field cannot be changed from {_id: "${doc._id}"} to {_id: "${mod._id}"}`);
+    }
+    
     // replace the whole document
     assertHasValidFieldNames(mod);
     newDoc = mod;
@@ -45,10 +46,6 @@ LocalCollection._modify = function (doc, mod, options) {
       _.each(operand, function (arg, keypath) {
         if (keypath === '') {
           throw MinimongoError("An empty update path is not valid.");
-        }
-
-        if (keypath === '_id' && op !== '$setOnInsert') {
-          throw MinimongoError("Mod on _id not allowed");
         }
 
         var keyparts = keypath.split('.');
@@ -70,6 +67,12 @@ LocalCollection._modify = function (doc, mod, options) {
         modFunc(target, field, arg, keypath, newDoc);
       });
     });
+
+    if (doc._id && !EJSON.equals(doc._id, newDoc._id)) {
+      throw MinimongoError('After applying the update to the document {_id: ' +
+      `"${doc._id}" , ...}, the (immutable) field '_id' was found to have` +
+      ` been altered to _id: "${newDoc._id}"`);
+    }
   }
 
   // move new document into place.
