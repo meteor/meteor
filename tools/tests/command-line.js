@@ -430,7 +430,7 @@ selftest.define("old cli tests (converted)", function () {
   run = s.run("remove", "--help");
   run.match("Removes a package");
   run = s.run("list", "--help");
-  run.match("This will not list transitive dependencies");
+  run.match("Transitive dependencies are not listed unless");
   run = s.run("bundle", "--help");
   run.match("command has been deprecated");
   run = s.run("build", "--help");
