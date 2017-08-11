@@ -10,6 +10,7 @@ import {
   lstat,
   readFile,
   readdir,
+  dependOnPath,
 } from "./files.js";
 
 // When in doubt, the optimistic caching system can be completely disabled
@@ -18,7 +19,7 @@ const ENABLED = ! process.env.METEOR_DISABLE_OPTIMISTIC_CACHING;
 
 function makeOptimistic(name, fn) {
   const wrapper = wrap(ENABLED ? function (...args) {
-    maybeDependOnNodeModules(args[0]);
+    maybeDependOnPath(args[0]);
     return fn.apply(this, args);
   } : fn, {
     makeCacheKey(...args) {
@@ -114,6 +115,13 @@ export const shouldWatch = wrap(path => {
   // node_modules directories might have changed.
   return false;
 });
+
+function maybeDependOnPath(path) {
+  if (typeof path === "string") {
+    dependOnPath(path);
+    maybeDependOnNodeModules(path);
+  }
+}
 
 function maybeDependOnNodeModules(path) {
   if (typeof path !== "string") {
