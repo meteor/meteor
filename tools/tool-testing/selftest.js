@@ -38,8 +38,6 @@ const DEV_DEPENDENCY_VERSIONS = {
   'browserstack-webdriver': '2.41.1',
 };
 
-require("../tool-env/install-runtime.js");
-
 const hasOwn = Object.prototype.hasOwnProperty;
 
 import "../tool-env/install-runtime.js";
