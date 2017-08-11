@@ -1557,6 +1557,9 @@ function wrapFsFunc(fsFuncName, pathArgIndices, options) {
                          fsFuncName === 'rename' ||
                          fsFuncName === 'symlink');
 
+      const dirty = options && options.dirty;
+      const dirtyFn = typeof dirty === "function" ? dirty : null;
+
       if (canYield() &&
           shouldBeSync &&
           ! isQuickie) {
@@ -1576,6 +1579,10 @@ function wrapFsFunc(fsFuncName, pathArgIndices, options) {
 
         const result = promise.await();
 
+        if (dirtyFn) {
+          dirtyFn(...args);
+        }
+
         return options.modifyReturnValue
           ? options.modifyReturnValue(result)
           : result;
@@ -1584,6 +1591,11 @@ function wrapFsFunc(fsFuncName, pathArgIndices, options) {
         // Should be sync but can't yield: we are not in a Fiber.
         // Run the sync version of the fs.* method.
         const result = fsFuncSync.apply(fs, args);
+
+        if (dirtyFn) {
+          dirtyFn(...args);
+        }
+
         return options.modifyReturnValue ?
                options.modifyReturnValue(result) : result;
 
@@ -1600,12 +1612,20 @@ function wrapFsFunc(fsFuncName, pathArgIndices, options) {
           args.push((err, res) => {
             err ? reject(err) : resolve(res);
           });
+
           fsFunc.apply(fs, args);
+
         }).then(res => {
+          if (dirtyFn) {
+            dirtyFn(...args);
+          }
+
           if (options.modifyReturnValue) {
             res = options.modifyReturnValue(res);
           }
+
           cb && cb(null, res);
+
         }, cb);
 
         return;
@@ -1626,8 +1646,27 @@ function wrapFsFunc(fsFuncName, pathArgIndices, options) {
     Profile('wrapped.fs.' + fsFuncName + 'Sync', makeWrapper({ sync: true }));
 }
 
-wrapFsFunc("writeFile", [0]);
-wrapFsFunc("appendFile", [0]);
+let dependOnPathSalt = 0;
+export const dependOnPath = require("optimism").wrap(
+  // Always return something different to prevent optimism from
+  // second-guessing the dirtiness of this function.
+  path => ++dependOnPathSalt
+);
+
+function wrapDestructiveFsFunc(name, pathArgIndices) {
+  pathArgIndices = pathArgIndices || [0];
+  wrapFsFunc(name, pathArgIndices, {
+    dirty(...args) {
+      // Immediately reset all optimistic functions (defined in
+      // tools/fs/optimistic.js) that depend on these paths.
+      pathArgIndices.forEach(i => dependOnPath.dirty(args[i]));
+    }
+  });
+}
+
+wrapDestructiveFsFunc("writeFile");
+wrapDestructiveFsFunc("appendFile");
+
 wrapFsFunc("readFile", [0], {
   modifyReturnValue: function (fileData) {
     if (_.isString(fileData)) {
@@ -1637,9 +1676,11 @@ wrapFsFunc("readFile", [0], {
     return fileData;
   }
 });
+
 wrapFsFunc("stat", [0]);
 wrapFsFunc("lstat", [0]);
-wrapFsFunc("rename", [0, 1]);
+
+wrapDestructiveFsFunc("rename", [0, 1]);
 
 // After the outermost files.withCache call returns, the withCacheCache is
 // reset to null so that it does not survive server restarts.
@@ -1748,10 +1789,11 @@ wrapFsFunc("readdir", [0], {
   }
 });
 
-wrapFsFunc("rmdir", [0]);
-wrapFsFunc("mkdir", [0]);
-wrapFsFunc("unlink", [0]);
-wrapFsFunc("chmod", [0]);
+wrapDestructiveFsFunc("rmdir");
+wrapDestructiveFsFunc("mkdir");
+wrapDestructiveFsFunc("unlink");
+wrapDestructiveFsFunc("chmod");
+
 wrapFsFunc("open", [0]);
 
 // XXX this doesn't give you the second argument to the callback
