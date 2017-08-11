@@ -24,7 +24,7 @@ React is the most popular way to build UIs in JavaScript today, and a great comp
 
 1. Automatic selection of development vs. production build of React (completed)
 2. Abstraction for isomorphic server-side rendering
-3. Integration of [dynamic imports](https://blog.meteor.com/dynamic-imports-in-meteor-1-5-c6130419c3cd) with React SSR ([meteor-feature-requests](https://github.com/meteor/meteor-feature-requests/issues/151))
+3. Integration of [dynamic imports](https://blog.meteor.com/dynamic-imports-in-meteor-1-5-c6130419c3cd) with React SSR ([meteor-feature-requests/151](https://github.com/meteor/meteor-feature-requests/issues/151))
 4. Full support for optimized CSS-in-JS features of libraries like [styled-components](https://www.styled-components.com/)
 
 We think Meteor has a clear set of benefits when compared to other popular React frameworks like Create React App and Next.js.
