@@ -22,8 +22,6 @@ selftest.define("run", function () {
   var s = new Sandbox({ fakeMongo: true });
   var run;
 
-  s.set("METEOR_WATCH_PRIORITIZE_CHANGED", "false");
-
   // Starting a run
   s.createApp("myapp", "standard-app");
   s.cd("myapp");
@@ -264,7 +262,7 @@ selftest.define("update during run", ["checkout", 'custom-warehouse'], function 
   run.match('localhost:3000');
   s.write('.meteor/release', DEFAULT_RELEASE_TRACK + '@v2');
   s.write('empty.js', '');
-  run.waitSecs(2);
+  run.waitSecs(10);
   run.match('restarted');
   run.waitSecs(10);
   run.stop();
@@ -274,11 +272,11 @@ selftest.define("update during run", ["checkout", 'custom-warehouse'], function 
   s.write('.meteor/release', DEFAULT_RELEASE_TRACK + '@v1');
   run = s.run("--release", DEFAULT_RELEASE_TRACK + "@v1");
   run.tellMongo(MONGO_LISTENING);
-  run.waitSecs(2);
+  run.waitSecs(10);
   run.match('localhost:3000');
   s.write('.meteor/release', DEFAULT_RELEASE_TRACK + '@v2');
   s.write('empty.js', '');
-  run.waitSecs(2);
+  run.waitSecs(10);
   run.match('restarted');
   run.waitSecs(10);
   run.stop();
@@ -292,12 +290,12 @@ selftest.define("update during run", ["checkout", 'custom-warehouse'], function 
   s.write('.meteor/release', DEFAULT_RELEASE_TRACK + '@v1');
   run = s.run();
   run.tellMongo(MONGO_LISTENING);
-  run.waitSecs(2);
+  run.waitSecs(10);
   run.match('localhost:3000');
   run.waitSecs(10);
   s.write('.meteor/release', DEFAULT_RELEASE_TRACK + '@v2');
   s.write('empty.js', '');
-  run.waitSecs(2);
+  run.waitSecs(10);
   run.match('restarted');
   run.waitSecs(10);
   run.stop();
