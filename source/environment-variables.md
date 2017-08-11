@@ -27,7 +27,7 @@ Set this to however many number of proxies you have running before your Meteor a
 ## MAIL_URL
 (_development, production_)
 
-Use this variable to set the SMTP server for sending e-mails.  [Postmark](https://www.postmarkapp.com), [Mandrill](https://www.mandrillapp.com), [MailGun](https://www.mailgun.com) and [SendGrid](https://www.sendgrid.net) (among others) are companies who can provide this service.  The `MAIL_URL` contains all of the information for connecting to the SMTP server and, like a URL, should look like `smtp://user:pass@yourservice.com:587` or `smtps://user:pass@yourservice.com:465`.
+Use this variable to set the SMTP server for sending e-mails.  [Postmark](https://www.postmarkapp.com), [Mandrill](https://www.mandrillapp.com), [MailGun](https://www.mailgun.com) and [SendGrid](https://www.sendgrid.com) (among others) are companies who can provide this service.  The `MAIL_URL` contains all of the information for connecting to the SMTP server and, like a URL, should look like `smtp://user:pass@yourservice.com:587` or `smtps://user:pass@yourservice.com:465`.
 
 The `smtp://` form is for mail servers which support encryption via `STARTTLS` or those that do not use encryption at all and is most common for servers on port 587 and _sometimes_ port 25.  On the other hand, the `smtps://` form (the `s` stands for "secure") should be used if the server only supports TLS/SSL (and does not support connection upgrade with `STARTTLS`) and is most common for servers on port 465.
 
