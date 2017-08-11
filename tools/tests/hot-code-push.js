@@ -7,6 +7,8 @@ selftest.define("css hot code push", function (options) {
     clients: options.clients
   });
 
+  s.set("METEOR_WATCH_PRIORITIZE_CHANGED", "false");
+
   s.createApp("myapp", "css-injection-test");
   s.cd("myapp");
   s.testWithAllClients(function (run) {

@@ -239,6 +239,8 @@ selftest.define("update during run", ["checkout", 'custom-warehouse'], function 
   });
   var run;
 
+  s.set("METEOR_WATCH_PRIORITIZE_CHANGED", "false");
+
   s.createApp("myapp", "packageless", { release: DEFAULT_RELEASE_TRACK + '@v1' });
   s.cd("myapp");
 
