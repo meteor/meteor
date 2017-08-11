@@ -136,8 +136,6 @@ selftest.define("change cordova plugins", ["cordova"], function () {
   var s = new Sandbox();
   var run;
 
-  s.set("METEOR_WATCH_PRIORITIZE_CHANGED", "false");
-
   // Starting a run
   s.createApp("myapp", "package-tests");
   s.cd("myapp");

@@ -22,7 +22,6 @@ function startRun(sandbox) {
 // Tests the actual cache logic used by coffeescript.
 selftest.define("compiler plugin caching - coffee", () => {
   var s = new Sandbox({ fakeMongo: true });
-  s.set("METEOR_WATCH_PRIORITIZE_CHANGED", "false");
 
   s.createApp("myapp", "caching-coffee");
   s.cd("myapp");
@@ -92,7 +91,6 @@ selftest.define("compiler plugin caching - coffee", () => {
 
   selftest.define("compiler plugin caching - " + packageName, () => {
     var s = new Sandbox({ fakeMongo: true });
-    s.set("METEOR_WATCH_PRIORITIZE_CHANGED", "false");
 
     s.createApp("myapp", "caching-" + packageName);
     s.cd("myapp");
@@ -280,7 +278,6 @@ selftest.define("compiler plugin caching - local plugin", function () {
 // Test error on duplicate compiler plugins.
 selftest.define("compiler plugins - duplicate extension", () => {
   const s = new Sandbox({ fakeMongo: true });
-  s.set("METEOR_WATCH_PRIORITIZE_CHANGED", "false");
 
   s.createApp("myapp", "duplicate-compiler-extensions");
   s.cd("myapp");
