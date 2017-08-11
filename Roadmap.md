@@ -10,6 +10,16 @@ Contributors are encouraged to focus their efforts on work that aligns with the 
 
 Items can be added to this roadmap by first getting design approval for a solution to an open issue, as outlined by our [contributing guidelines](https://github.com/meteor/meteor/blob/devel/Contributing.md). Then, when a contributor has committed to solving the issue in the short to medium term, they can submit a PR to add that work to the roadmap. All other PRs to the roadmap will be rejected.
 
+## Out of the box support for advanced React features
+
+React is the most popular way to build UIs in JavaScript today, and a great companion to the rest of the features provided by Meteor. Meteor's zero-configuration environment provides a great opportunity to make features React apps depend on work out of the box. This includes features like:
+
+1. Automatic selection of development vs. production build of React (completed)
+2. Abstraction for isomorphic server-side rendering
+3. Integration of [dynamic imports](https://blog.meteor.com/dynamic-imports-in-meteor-1-5-c6130419c3cd) with React SSR
+4. Full support for optimized CSS-in-JS features of libraries like [styled-components](https://www.styled-components.com/)
+
+We think Meteor has a clear set of benefits when compared to other popular React frameworks like Create React App and Next.js.
 
 ## Page load performance improvements
 
