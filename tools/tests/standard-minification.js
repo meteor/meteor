@@ -29,8 +29,8 @@ selftest.define('standard-minifiers - CSS splitting', function (options) {
   color: blue
 `);
 
-    run.waitSecs(60);
     run.match('Client modified -- refreshing');
+    run.waitSecs(90);
     run.match('the number of stylesheets: <2>');
     run.match('the color of the tested 4097th property: <rgb(0, 0, 255)>');
 
