@@ -1,10 +1,10 @@
 <!--
-* ❓ Meteor Questions?
+* ❓ Questions?
           Use Stack Overflow (http://stackoverflow.com/questions/tagged/meteor)
           or start a discussion on the Meteor forums (https://forums.meteor.com/).
 * 💡 Feature requests?
           Visit the feature request repository (https://github.com/meteor/meteor-feature-requests).
-* ❗️ Meteor Bug?
+* ❗️ Bug?
           This is the right place!
 
 Before reporting a bug, please check for existing or closed issues
