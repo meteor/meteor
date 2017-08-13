@@ -845,21 +845,12 @@ _.extend(Roles, {
     else {
       query = {
         _id: id,
-        $or: [{
-          roles: {
-            $elemMatch: {
-              _id: {$in: roles},
-              scope: options.scope
-            }
+        roles: {
+          $elemMatch: {
+            _id: {$in: roles},
+            scope: {$in: [options.scope, null]}
           }
-        }, {
-          roles: {
-            $elemMatch: {
-              _id: {$in: roles},
-              scope: null
-            }
-          }
-        }]
+        }
       };
     }
 
@@ -1004,21 +995,12 @@ _.extend(Roles, {
     }
     else {
       query = {
-        $or: [{
-          roles: {
-            $elemMatch: {
-              _id: {$in: roles},
-              scope: options.scope
-            }
+        roles: {
+          $elemMatch: {
+            _id: {$in: roles},
+            scope: {$in: [options.scope, null]}
           }
-        }, {
-          roles: {
-            $elemMatch: {
-              _id: {$in: roles},
-              scope: null
-            }
-          }
-        }]
+        }
       };
     }
 
