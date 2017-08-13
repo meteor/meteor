@@ -37,6 +37,7 @@ Package.onTest(function (api) {
   api.use(['alanning:roles',
            'accounts-password',
            'underscore',
+           'mongo'
            'tinytest'], both);
 
   api.addFiles('roles/tests/client.js', 'client');
