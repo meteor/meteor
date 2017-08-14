@@ -5,7 +5,7 @@ Package.describe({
   // module, but now the Meteor package `coffeescript-compiler` tracks that
   // version; so in order for this to appear newer than the previous package
   // version 1.12.6_1, we jump to 10+.
-  version: '10.0.1'
+  version: '1.13.0'
 });
 
 Package.registerBuildPlugin({
