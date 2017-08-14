@@ -11,7 +11,7 @@ import connect from "connect";
 import parseRequest from "parseurl";
 import { lookup as lookupUserAgent } from "useragent";
 import send from "send";
-import net from "net";
+import { removeExistingSocketFile } from './socket_file';
 
 var SHORT_SOCKET_TIMEOUT = 5*1000;
 var LONG_SOCKET_TIMEOUT = 120*1000;
@@ -487,6 +487,20 @@ var getUrlPrefixForArch = function (arch) {
     '' : '/' + '__' + arch.replace(/^web\./, '');
 };
 
+// Parse the passed in port value. Return the port as-is if it's a String
+// (e.g. a Windows Server style named pipe), otherwise return the port as an
+// integer.
+//
+// DEPRECATED: Direct use of this function is not recommended; it is no
+// longer used internally, and will be removed in a future release.
+WebAppInternals.parsePort = port => {
+  let parsedPort = parseInt(port);
+  if (Number.isNaN(parsedPort)) {
+    parsedPort = port;
+  }
+  return parsedPort;
+}
+
 function runWebAppServer() {
   var shuttingDown = false;
   var syncQueue = new Meteor._SynchronousQueue();
@@ -873,66 +887,24 @@ function runWebAppServer() {
 
     localPort = isNaN(Number(localPort)) ? localPort : Number(localPort);
 
-    if (typeof localPort == "string") {
+    if (typeof localPort === "string") {
       var socketPath = localPort;
       var listenOptions = { path: socketPath };
-
-      // Test to see if the socket path is Windows Server-style named pipe with the
-      // format: \\.\pipe\{randomstring} or \\{servername}\pipe\{randomstring}
-      // Otherwise, treat it as a UNIX domain socket path pointing to a socket file
-      if ( /\\\\?.+\\pipe\\?.+/.test(socketPath)) {
+      if (/\\\\?.+\\pipe\\?.+/.test(socketPath)) {
+        // socketPath is a Windows Server style named pipe.
         startHttpServer(listenOptions);
       } else {
-        try {
-          if (fs.statSync(socketPath).isSocket()) {
-            var clientSocket = new net.Socket();
-            clientSocket.on('error', Meteor.bindEnvironment(function(e) {
-              //If there is an existing socket file that we cannot connect to,
-              //it must be stale as it is not associated with a running server
-              if (e.code == 'ECONNREFUSED') {
-                console.log("Deleting stale socket file");
-                fs.unlinkSync(socketPath);
-                startHttpServer(listenOptions);
-              }
-            }));
-            clientSocket.connect({ path: socketPath }, function() {
-              //If there is a running server listening on that socket file,
-              //we have to leave the file alone to avoid preventing other clients
-              //from connecting to it.
-              console.error("Another server is already listening on socket: " + socketPath + ", exiting.");
-              process.exit();
-            });
-          } else {
-            //There is an existing file at socketPath that is not a socket,
-            //so we will leave it alone and exit
-            console.error("Cannot listen on socket: " + socketPath + ", exiting.");
-            process.exit();
-          }
-        } catch (e) {
-          if (e.code === 'ENOENT') {
-            startHttpServer(listenOptions);
-          } else {
-            throw e;
-          }
-        }
-        //Clean up the socket file when we've finished to avoid leaving a stale one
-        //That situation should only be able to happen if the running node process is
-        //killed via signal 9 (SIGKILL).
-        process.on('exit', Meteor.bindEnvironment(function(e) {
-          fs.unlinkSync(socketPath);
-        }));
-        process.on('SIGINT', Meteor.bindEnvironment(function(e) {
-          process.exit();
-        }));
+        // socketPath is a UNIX domain socket path pointing to a socket file.
+        removeExistingSocketFile(socketPath);
+        startHttpServer(listenOptions);
       }
-    } else if (typeof localPort == "number") {
-      var listenOptions = { port: localPort, host: host };
-      startHttpServer(localPort);
+    } else if (typeof localPort === "number") {
+      startHttpServer({ port: localPort, host: host });
     } else {
-      console.error("Invalid PORT specified");
-      process.exit();
+      throw new Error("Invalid PORT specified");
     }
-    return 'DAEMON';
+
+    return "DAEMON";
   };
 }
 
