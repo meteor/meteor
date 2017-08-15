@@ -86,13 +86,6 @@ exports.getEnv = function (options) {
       env.NPM_CONFIG_PREFIX = devBundleDir;
     }
 
-    // Make sure we don't try to use the global ~/.npm cache accidentally.
-    if (! env.NPM_CONFIG_CACHE) {
-      env.NPM_CONFIG_CACHE = path.join(
-        // If the user set NPM_CONFIG_PREFIX, respect that.
-        env.NPM_CONFIG_PREFIX, ".npm");
-    }
-
     if (env.METEOR_ALLOW_SUPERUSER) {
       // Note that env.METEOR_ALLOW_SUPERUSER could be "0" or "false", which
       // should propagate falsy semantics to NPM_CONFIG_UNSAFE_PERM.
