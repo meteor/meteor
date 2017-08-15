@@ -1,6 +1,6 @@
 Package.describe({
   name: "modules",
-  version: "0.9.2",
+  version: "0.9.4",
   summary: "CommonJS module system",
   documentation: "README.md"
 });
@@ -14,5 +14,4 @@ Package.onUse(function(api) {
   api.mainModule("client.js", "client");
   api.mainModule("server.js", "server");
   api.export("meteorInstall");
-  api.export("process");
 });
