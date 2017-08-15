@@ -1,4 +1,4 @@
-import { statSync, unlinkSync } from 'fs';
+import { statSync, unlinkSync, existsSync } from 'fs';
 
 // Since a new socket file will be created when the HTTP server
 // starts up, if found remove the existing file.
@@ -45,3 +45,17 @@ export const removeExistingSocketFile = (socketPath) => {
     }
   }
 };
+
+// Remove the socket file when done to avoid leaving behind a stale one.
+// Note - a stale socket file is still left behind if the running node
+// process is killed via signal 9 - SIGKILL.
+export const registerSocketFileCleanup =
+  (socketPath, eventEmitter = process) => {
+    ['exit', 'SIGINT', 'SIGHUP', 'SIGTERM'].forEach(signal => {
+      eventEmitter.on(signal, Meteor.bindEnvironment(() => {
+        if (existsSync(socketPath)) {
+          unlinkSync(socketPath);
+        }
+      }));
+    });
+  };

@@ -1,6 +1,10 @@
 import { writeFileSync, unlinkSync, statSync } from 'fs';
 import { createServer } from 'net';
-import { removeExistingSocketFile } from './socket_file';
+import {
+  removeExistingSocketFile,
+  registerSocketFileCleanup,
+} from './socket_file';
+import { EventEmitter } from 'events';
 
 const testSocketFile = '/tmp/socket_file_tests';
 
@@ -12,7 +16,7 @@ const removeTestSocketFile = () => {
   }
 }
 
-Tinytest.add('socket file - file exists but is not a socket file', (test) => {
+Tinytest.add("socket file - don't remove a non-socket file", test => {
   writeFileSync(testSocketFile);
   test.throws(
     () => { removeExistingSocketFile(testSocketFile); },
@@ -22,7 +26,7 @@ Tinytest.add('socket file - file exists but is not a socket file', (test) => {
 });
 
 Tinytest.addAsync(
-  'socket file - existing socket file is removed',
+  'socket file - remove a previously existing socket file',
   (test, done) => {
     removeTestSocketFile();
     const server = createServer();
@@ -41,7 +45,24 @@ Tinytest.addAsync(
   }
 );
 
-Tinytest.add('socket file - no existing socket file', (test) => {
-  removeTestSocketFile();
-  removeExistingSocketFile(testSocketFile);
+Tinytest.add(
+  'socket file - no existing socket file, nothing to remove',
+  test => {
+    removeTestSocketFile();
+    removeExistingSocketFile(testSocketFile);
+  }
+);
+
+Tinytest.add('socket file - remove socket file on exit', test => {
+  const testEventEmitter = new EventEmitter();
+  registerSocketFileCleanup(testSocketFile, testEventEmitter);
+  ['exit', 'SIGINT', 'SIGHUP', 'SIGTERM'].forEach(signal => {
+    writeFileSync(testSocketFile);
+    test.isNotUndefined(statSync(testSocketFile));
+    testEventEmitter.emit(signal);
+    test.throws(
+      () => { statSync(testSocketFile); },
+      /ENOENT/
+    );
+  });
 });

@@ -11,7 +11,10 @@ import connect from "connect";
 import parseRequest from "parseurl";
 import { lookup as lookupUserAgent } from "useragent";
 import send from "send";
-import { removeExistingSocketFile } from './socket_file';
+import {
+  removeExistingSocketFile,
+  registerSocketFileCleanup,
+} from './socket_file';
 
 var SHORT_SOCKET_TIMEOUT = 5*1000;
 var LONG_SOCKET_TIMEOUT = 120*1000;
@@ -897,6 +900,7 @@ function runWebAppServer() {
         // socketPath is a UNIX domain socket path pointing to a socket file.
         removeExistingSocketFile(socketPath);
         startHttpServer(listenOptions);
+        registerSocketFileCleanup(socketPath);
       }
     } else if (typeof localPort === "number") {
       startHttpServer({ port: localPort, host: host });
