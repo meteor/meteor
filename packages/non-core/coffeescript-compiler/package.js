@@ -10,8 +10,8 @@ Npm.depends({
 });
 
 Package.onUse(function (api) {
-  api.use('babel-compiler');
-  api.use('ecmascript');
+  api.use('babel-compiler@6.19.4');
+  api.use('ecmascript@0.8.2');
 
   api.addFiles(['coffeescript-compiler.js'], 'server');
 
