@@ -1,41 +1,17 @@
-var fs = require("fs");
-var path = require("path");
-var files = require("../fs/mini-files.js");
-var isWindows = process.platform === "win32";
-var extensions = isWindows ? [".cmd", ".exe"] : [""];
-var hasOwn = Object.prototype.hasOwnProperty;
+"use strict";
+
+const fs = require("fs");
+const path = require("path");
+const files = require("../fs/mini-files.js");
+const finder = require("./file-finder.js");
+const hasOwn = Object.prototype.hasOwnProperty;
 
 function getDevBundle() {
   return require("./dev-bundle.js");
 }
 exports.getDevBundle = getDevBundle;
 
-exports.getCommand = function (name, devBundleDir) {
-  var result = null;
-
-  // Strip leading and/or trailing whitespace.
-  name = name.replace(/^\s+|\s+$/g, "");
-
-  if (! isValidCommand(name, devBundleDir)) {
-    return result;
-  }
-
-  extensions.some(function (ext) {
-    var cmd = path.join(devBundleDir, "bin", name + ext);
-    try {
-      if (fs.statSync(cmd).isFile()) {
-        result = cmd;
-        return true;
-      }
-    } catch (e) {
-      return false;
-    }
-  });
-
-  return result;
-};
-
-function isValidCommand(name, devBundleDir) {
+exports.isValidCommand = function(name, devBundleDir) {
   if (name === "node" ||
       name === "npm") {
     return true;
@@ -46,7 +22,7 @@ function isValidCommand(name, devBundleDir) {
     return false;
   }
 
-  var meteorCommandsJsonPath =
+  const meteorCommandsJsonPath =
     path.join(devBundleDir, "bin", ".meteor-commands.json");
 
   try {
@@ -58,24 +34,33 @@ function isValidCommand(name, devBundleDir) {
   // If `meteor <name>` is already a Meteor command, don't let anything in
   // dev_bundle/bin override it.
   return ! hasOwn.call(meteorCommands, name);
-}
+};
 
 exports.getEnv = function (options) {
-  var devBundle = options && options.devBundle;
-  var devBundlePromise = typeof devBundle === "string"
+  const devBundle = options && options.devBundle;
+  const devBundlePromise = typeof devBundle === "string"
     ? Promise.resolve(files.convertToOSPath(devBundle))
     : getDevBundle();
 
   return devBundlePromise.then(function (devBundleDir) {
-    var paths = [
+    const extraPaths = [
       // When npm looks for node, it must find dev_bundle/bin/node.
       path.join(devBundleDir, "bin"),
+    ];
+
+    // Include any local node_modules/.bin directories.
+    extraPaths.push.apply(
+      extraPaths,
+      finder.findNodeModulesDotBinDirs()
+    );
+
+    extraPaths.push(
       // Also make available any scripts installed by packages in
       // dev_bundle/lib/node_modules, such as node-gyp.
       path.join(devBundleDir, "lib", "node_modules", ".bin")
-    ];
+    );
 
-    var env = Object.create(process.env);
+    const env = Object.create(process.env);
 
     // Make sure notifications to update npm aren't presented to the user.
     env.NPM_CONFIG_NO_UPDATE_NOTIFIER = true;
@@ -103,7 +88,12 @@ exports.getEnv = function (options) {
     // dev_bundle/.node-gyp.
     env.USERPROFILE = devBundleDir;
 
-    var PATH = env.PATH || env.Path;
+    if (options) {
+      options.extraPaths = extraPaths;
+    }
+
+    const paths = extraPaths.slice(0);
+    const PATH = env.PATH || env.Path;
     if (PATH) {
       paths.push(PATH);
     }
@@ -120,7 +110,7 @@ exports.getEnv = function (options) {
 
 // Caching env.GYP_MSVS_VERSION allows us to avoid invoking Python every
 // time Meteor runs an npm command. TODO Store this on disk?
-var cachedMSVSVersion;
+let cachedMSVSVersion;
 
 function addWindowsVariables(devBundleDir, env) {
   // On Windows we provide a reliable version of python.exe for use by
@@ -144,11 +134,11 @@ function addWindowsVariables(devBundleDir, env) {
   // If $GYP_MSVS_VERSION was not provided, use the gyp Python library to
   // infer it, or default to 2015 if that doesn't work.
   return new Promise(function (resolve) {
-    var nodeGypPylibDir = path.join(
+    const nodeGypPylibDir = path.join(
       devBundleDir, "lib", "node_modules", "node-gyp", "gyp", "pylib"
     );
 
-    var child = require("child_process").spawn(env.PYTHON, ["-c", [
+    const child = require("child_process").spawn(env.PYTHON, ["-c", [
       "from gyp.MSVSVersion import SelectVisualStudioVersion",
       "try:",
       "  print SelectVisualStudioVersion(allow_fallback=False).short_name",
@@ -159,7 +149,7 @@ function addWindowsVariables(devBundleDir, env) {
       stdio: "pipe"
     });
 
-    var chunks = [];
+    const chunks = [];
     child.stdout.on("data", function (chunk) {
       chunks.push(chunk);
     });
