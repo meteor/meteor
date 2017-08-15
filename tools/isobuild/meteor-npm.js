@@ -830,9 +830,22 @@ Profile("meteorNpm.runNpmCommand", function (args, cwd) {
     isWindows ? "npm.cmd" : "npm"
   ));
 
+  // On Windows, `.cmd` and `.bat` files must be launched in a shell per:
+  // http://nodejs.org/api/child_process.html#child_process_spawning_bat_and_cmd_files_on_windows
+  //
+  // Additionally, the COMSPEC environment variable is meant to have the path to
+  // cmd.exe, but we'll use 'cmd.exe' if it's not set, in the same spirit as
+  // http://nodejs.org/api/child_process.html#child_process_shell_requirements.
+
+  let commandToRun = npmPath;
+  if (isWindows) {
+    args = ['/c', npmPath, ...args];
+    commandToRun = process.env.ComSpec || "cmd.exe";
+  }
+
   if (meteorNpm._printNpmCalls) {
     // only used by test-bundler.js
-    process.stdout.write('cd ' + cwd + ' && ' + npmPath + ' ' +
+    process.stdout.write('cd ' + cwd + ' && ' + commandToRun + ' ' +
                          args.join(' ') + ' ...\n');
   }
 
@@ -853,7 +866,7 @@ Profile("meteorNpm.runNpmCommand", function (args, cwd) {
 
     return new Promise(function (resolve) {
       require('child_process').execFile(
-        npmPath, args, opts, function (err, stdout, stderr) {
+        commandToRun, args, opts, function (err, stdout, stderr) {
           if (meteorNpm._printNpmCalls) {
             process.stdout.write(err ? 'failed\n' : 'done\n');
           }
