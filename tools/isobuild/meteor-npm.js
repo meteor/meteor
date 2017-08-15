@@ -22,7 +22,7 @@ import {
 import {
   convert as convertColonsInPath
 } from "../utils/colon-converter.js";
-
+import { promisify } from 'util';
 import { wrap as wrapOptimistic } from "optimism";
 import {
   dirtyNodeModulesDirectory,
@@ -848,26 +848,45 @@ Profile("meteorNpm.runNpmCommand", function (args, cwd) {
       opts.cwd = files.convertToOSPath(cwd);
     }
 
+    let execFunction;
+    if (isWindows) {
+      // On Windows, we use `exec` because it spawns a mandatory shell.
+      // For more info, see https://nodejs.org/api/child_process.html \
+      //          #child_process_spawning_bat_and_cmd_files_on_windows
+      execFunction = require('child_process').exec;
+    } else {
+      // execFile is faster because it does not spawn a shell.
+      execFunction = require('child_process').execFile;
+    }
+
+    execFunction = promisify(execFunction);
+
     // Make sure we don't honor any user-provided configuration files.
     env.npm_config_userconfig = npmUserConfigFile;
 
-    return new Promise(function (resolve) {
-      require('child_process').execFile(
-        npmPath, args, opts, function (err, stdout, stderr) {
-          if (meteorNpm._printNpmCalls) {
-            process.stdout.write(err ? 'failed\n' : 'done\n');
-          }
-
-          resolve({
-            success: ! err,
-            error: (err ? `${err.message}${stderr}` : stderr),
-            stdout: stdout,
-            stderr: stderr
-          });
+    return execFunction(npmPath, args, opts)
+      .then(success => {
+        if (meteorNpm._printNpmCalls) {
+          process.stdout.write('done\n');
         }
-      );
-    }).await();
+        return {
+          success: true,
+          stdout: success.stdout,
+          stderr: success.stderr,
+        }
+      })
+      .catch(err => {
+        if (meteorNpm._printNpmCalls) {
+          process.stdout.write('failed\n');
+        }
 
+        return {
+          success: false,
+          error: `${err.message}${err.stderr}`,
+          stdout: err.stdout,
+          stderr: err.stderr,
+        };
+      });
   }).await();
 });
 
