@@ -13,7 +13,7 @@ if (Error.METEOR_prepareStackTrace) {
 
 
 // The CompileResult for this CachingCompiler is a {source, sourceMap} object.
-CoffeeScriptCompiler = class CoffeeScriptCompiler {
+export class CoffeeScriptCompiler {
   constructor() {
     this.babelCompiler = new BabelCompiler({
       // Prevent Babel from importing helpers from babel-runtime, since
