@@ -560,7 +560,7 @@ Meteor.users.update(userId, {
 });
 ```
 
-You can use any field name other than those [used by the Accounts sytem](http://docs.meteor.com/api/accounts.html#Meteor-users).
+You can use any field name other than those [used by the Accounts system](http://docs.meteor.com/api/accounts.html#Meteor-users).
 
 <h3 id="adding-fields-on-registration">Adding fields on user registration</h3>
 
