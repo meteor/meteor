@@ -179,6 +179,15 @@ function authedRpc(options) {
   delete rpcOptions.printDeployURL;
 
   if (infoResult.statusCode === 401 && rpcOptions.promptIfAuthFails) {
+    Console.error("Authentication failed or login token expired.");
+
+    if (!Console.isInteractive()) {
+      return {
+        statusCode: 401,
+        errorMessage: "login failed."
+      };
+    }
+
     // Our authentication didn't validate, so prompt the user to log in
     // again, and resend the RPC if the login succeeds.
     var username = Console.readLine({
