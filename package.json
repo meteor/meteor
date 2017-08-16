@@ -62,7 +62,7 @@
     "eslint-config-prettier": "2.3.0",
     "eslint-plugin-import": "2.7.0",
     "eslint-plugin-jsx-a11y": "^6.0.2",
-    "eslint-plugin-prettier": "2.1.2",
+    "eslint-plugin-prettier": "2.2.0",
     "eslint-plugin-react": "7.2.1",
     "husky": "0.14.3",
     "mocha": "3.5.0",
