@@ -40,7 +40,7 @@
   "bugs": "https://github.com/dferber90/eslint-plugin-meteor/issues",
   "dependencies": {
     "babel-register": "6.24.1",
-    "babel-runtime": "6.25.0",
+    "babel-runtime": "6.26.0",
     "escope": "3.6.0",
     "invariant": "2.2.2",
     "lodash.find": "4.6.0",
