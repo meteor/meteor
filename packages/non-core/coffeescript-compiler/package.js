@@ -15,7 +15,7 @@ Package.onUse(function (api) {
   api.use('babel-compiler@6.19.4');
   api.use('ecmascript@0.8.2');
 
-  api.mainModule(['coffeescript-compiler.js'], 'server');
+  api.mainModule('coffeescript-compiler.js', 'server');
 
   api.export('CoffeeScriptCompiler', 'server');
 });
