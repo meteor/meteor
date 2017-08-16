@@ -1,6 +1,6 @@
 ## v.NEXT
 
-* Node has been upgraded to version 8.3.0.
+* Node has been upgraded to version 8.4.0.
 
 * The `npm` npm package has been upgraded to version 5.3.0, a major
   upgrade from 4.6.1, requiring internal updates to dependency management
