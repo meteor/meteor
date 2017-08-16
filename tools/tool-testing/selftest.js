@@ -1868,9 +1868,17 @@ class TestList {
   // Mark a test's file as having failures.  This prevents
   // saveTestState from saving its hash as a potentially
   // "unchanged" file to be skipped in a future run.
-  notifyFailed(test, failure) {
+  notifyFailed(test, failureObject) {
+    // Mark the file that this test lives in as having failures.
     this.fileInfo[test.file].hasFailures = true;
-    test.failure = failure || true;
+
+    // Mark that the specific test failed.
+    test.failed = true;
+
+    // If there is a failure object, store that for potential output.
+    if (failureObject) {
+      test.failureObject = failureObject;
+    }
   }
 
   saveJUnitOutput(path) {
@@ -1901,29 +1909,33 @@ class TestList {
 
         const testCaseAttrsString = testCaseAttrs.join(' ');
 
-        if (test.failure) {
+        if (test.failed) {
           let failureElement = "";
 
-          if (test.failure instanceof TestFailure) {
+          if (test.failureObject instanceof TestFailure) {
             countFailure++;
 
             failureElement = [
-              `<error type="${test.failure.reason}">`,
+              `<error type="${test.failureObject.reason}">`,
               '<![CDATA[',
-              inspect(test.failure.details, { depth: 4 }),
+              inspect(test.failureObject.details, { depth: 4 }),
               ']]>',
               '</error>',
             ].join('\n');
-          } else {
+          } else if (test.failureObject && test.failureObject.stack) {
             countError++;
 
             failureElement = [
               '<failure>',
               '<![CDATA[',
-              test.failure.stack,
+              test.failureObject.stack,
               ']]>',
               '</failure>',
             ].join('\n');
+          } else {
+            countError++;
+
+            failureElement = '<failure />';
           }
 
           testCases.push(
