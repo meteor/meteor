@@ -3,10 +3,11 @@ import { createServer } from 'net';
 import {
   removeExistingSocketFile,
   registerSocketFileCleanup,
-} from './socket_file';
+} from './socket_file.js';
 import { EventEmitter } from 'events';
+import { tmpdir } from 'os';
 
-const testSocketFile = '/tmp/socket_file_tests';
+const testSocketFile = `${tmpdir()}/socket_file_tests`;
 
 const removeTestSocketFile = () => {
   try {

@@ -14,7 +14,7 @@ import send from "send";
 import {
   removeExistingSocketFile,
   registerSocketFileCleanup,
-} from './socket_file';
+} from './socket_file.js';
 
 var SHORT_SOCKET_TIMEOUT = 5*1000;
 var LONG_SOCKET_TIMEOUT = 120*1000;
@@ -873,16 +873,15 @@ function runWebAppServer() {
     var host = process.env.BIND_IP;
     var localIp = host || '0.0.0.0';
 
-    var startHttpServer = function(listenOptions) {
-      httpServer.listen(listenOptions, Meteor.bindEnvironment(function() {
-        if (process.env.METEOR_PRINT_ON_LISTEN)
-          console.log("LISTENING"); // must match run-app.js
-
-        var callbacks = onListeningCallbacks;
+    const startHttpServer = listenOptions => {
+      httpServer.listen(listenOptions, Meteor.bindEnvironment(() => {
+        if (process.env.METEOR_PRINT_ON_LISTEN) {
+          console.log("LISTENING");
+        }
+        const callbacks = onListeningCallbacks;
         onListeningCallbacks = null;
-        _.each(callbacks, function (x) { x(); });
-
-      }, function (e) {
+        callbacks.forEach(callback => { callback(); });
+      }, e => {
         console.error("Error listening:", e);
         console.error(e && e.stack);
       }));
