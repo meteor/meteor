@@ -25,6 +25,8 @@ $BUNDLE_VERSION = Get-ShellScriptVariableFromFile -Path "${CHECKOUT_DIR}\meteor"
 # extract the major package versions from the build-dev-bundle-common script.
 $MONGO_VERSION = Get-ShellScriptVariableFromFile -Path $common_script -Name 'MONGO_VERSION'
 $NODE_VERSION = Get-ShellScriptVariableFromFile -Path $common_script -Name 'NODE_VERSION'
+$NODE_FROM_SRC = Get-ShellScriptVariableFromFile -Path $common_script -Name 'NODE_FROM_SRC'
+$NODE_COMMIT_HASH = Get-ShellScriptVariableFromFile -Path $common_script -Name 'NODE_COMMIT_HASH'
 $NPM_VERSION = Get-ShellScriptVariableFromFile -Path $common_script -Name 'NPM_VERSION'
 
 # generate-dev-bundle-xxxxxxxx shortly
@@ -54,11 +56,6 @@ ping -n 4 127.0.0.1 | out-null
 mv 7za.exe "$DIR\bin\7z.exe"
 cd "$DIR\bin"
 
-# download node
-# same node on 32bit vs 64bit?
-$node_link = "http://nodejs.org/dist/v${NODE_VERSION}/win-x86/node.exe"
-$webclient.DownloadFile($node_link, "$DIR\bin\node.exe")
-
 # On Windows we provide a reliable version of python.exe for use by
 # node-gyp (the tool that rebuilds binary node modules). #WinPy
 
@@ -71,8 +68,56 @@ rm -Recurse -Force "$py_archive"
 $env:PATH = "${DIR}\python;${env:PATH}"
 python --version
 
+# Download Node
+If ($NODE_FROM_SRC -Or $NODE_COMMIT_HASH) {
+  If ($NODE_COMMIT_HASH) {
+    if (-not (Test-Path NODE_FROM_SRC)) {
+      $NODE_FROM_SRC = "true"
+    }
+    echo ('Building Node source from Git hash {0}...' -f $NODE_COMMIT_HASH)
+    $node_link = ("https://github.com/meteor/node/archive/{0}.zip" -f $NODE_COMMIT_HASH)
+  } Else {
+    echo ('Build Node source from {0} source...' -f $NODE_VERSION)
+    $node_link = ("https://nodejs.org/dist/v{0}/node-v{0}.zip" -f $NODE_VERSION)
+  }
+} Else {
+  $node_link = ("https://nodejs.org/dist/v{0}/win-x86/node.exe" -f $NODE_VERSION)
+}
+
+echo ("Downloading Node from {0}" -f $node_link)
+
+If ($NODE_FROM_SRC) {
+  mkdir "$DIR\node-src-tmp"
+
+  $node_src_zip = "$DIR\node-src-tmp\src.zip"
+  $webclient.DownloadFile($node_link, $node_src_zip)
+  
+  & "C:\Program Files\7-Zip\7z.exe" x $node_src_zip -O"$DIR\node-src-tmp\output" -aos
+
+  # Go into the first directory.
+  $node_src_extracted_dir = (Get-ChildItem -Path "$DIR\node-src-tmp\output" | Select-Object -First 1).name
+
+  Move-Item "$DIR\node-src-tmp\output\$node_src_extracted_dir" "$DIR\node-src"
+
+  cd "$DIR\node-src"
+  rm -Recurse -Force "$DIR\node-src-tmp"
+
+  If ($NODE_FROM_SRC -eq "debug") {
+    .\vcbuild.bat debug
+  } Else {
+    .\vcbuild.bat
+  }
+
+  cd "$DIR"
+
+  $Env:npm_config_nodedir = "${DIR}\node-src"
+} Else {
+  $webclient.DownloadFile($node_link, "$DIR\bin\node.exe")
+}
+
 # download initial version of npm
 $npm_zip = "$DIR\bin\npm.zip"
+
 # These dist/npm archives were only published for 1.x versions of npm, and
 # this is the most recent one.
 $npm_link = "https://nodejs.org/dist/npm/npm-1.4.12.zip"
