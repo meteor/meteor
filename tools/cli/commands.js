@@ -2114,6 +2114,7 @@ main.registerCommand({
     'without-tag': { type: String },
     // Only run tests with this tag
     'with-tag': { type: String },
+    junit: { type: String },
   },
   hidden: true,
   catalogRefresh: new catalog.Refresh.Never()
@@ -2210,6 +2211,7 @@ main.registerCommand({
     // other options
     historyLines: options.history,
     clients: clients,
+    junit: options.junit && files.pathResolve(options.junit),
     'without-tag': options['without-tag'],
     'with-tag': options['with-tag']
   });
