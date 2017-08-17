@@ -1,21 +1,18 @@
 Package.describe({
   name: 'coffeescript',
   summary: 'Javascript dialect with fewer braces and semicolons',
-  // This package version used to track the version of the NPM `coffeescript`
-  // module, but now the Meteor package `coffeescript-compiler` tracks that
-  // version; so in order for this to appear newer than the previous package
-  // version 1.12.6_1, we jump to 10+.
-  version: '1.13.0'
+  // This package version should track the version of the `coffeescript-compiler`
+  // package, because people will likely only have this one added to their apps;
+  // so bumping the version of this package will be how they get newer versions
+  // of `coffeescript-compiler`. If you change this, make sure to also update
+  // ../coffeescript-compiler/package.js to match.
+  version: '1.12.7_1'
 });
 
 Package.registerBuildPlugin({
   name: 'compile-coffeescript',
-  use: ['caching-compiler', 'coffeescript-compiler', 'ecmascript'],
-  sources: ['compile-coffeescript.js'],
-  npmDependencies: {
-    'coffeescript': '1.12.7',
-    'source-map': '0.5.6'
-  }
+  use: ['caching-compiler@1.1.9', 'ecmascript@0.8.2', 'coffeescript-compiler@=1.12.7_1'],
+  sources: ['compile-coffeescript.js']
 });
 
 Package.onUse(function (api) {
@@ -25,11 +22,11 @@ Package.onUse(function (api) {
   // BabelCompiler.prototype.processOneFileForTarget for any ES2015+
   // JavaScript or JavaScript enclosed by backticks, it must provide the
   // same runtime environment that the 'ecmascript' package provides.
-  // The following api.imply calls should match those in ../ecmascript/package.js,
+  // The following api.imply calls should match those in ../../ecmascript/package.js,
   // except that coffeescript does not api.imply('modules').
-  api.imply('ecmascript-runtime', 'server');
-  api.imply('babel-runtime');
-  api.imply('promise');
+  api.imply('ecmascript-runtime@0.4.1', 'server');
+  api.imply('babel-runtime@1.0.1');
+  api.imply('promise@0.8.9');
 });
 
 Package.onTest(function (api) {

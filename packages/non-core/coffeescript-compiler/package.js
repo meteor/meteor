@@ -1,7 +1,9 @@
 Package.describe({
   name: 'coffeescript-compiler',
   summary: 'Compiler for CoffeeScript code, supporting the coffeescript package',
-  version: '1.12.7_1' // Tracks version of NPM `coffeescript` module, with _1, _2 etc.
+  // This version of NPM `coffeescript` module, with _1, _2 etc.
+  // If you change this, make sure to also update ../coffeescript/package.js to match.
+  version: '1.12.7_1'
 });
 
 Npm.depends({
@@ -10,10 +12,10 @@ Npm.depends({
 });
 
 Package.onUse(function (api) {
-  api.use('babel-compiler');
-  api.use('ecmascript');
+  api.use('babel-compiler@6.19.4');
+  api.use('ecmascript@0.8.2');
 
-  api.addFiles(['coffeescript-compiler.js'], 'server');
+  api.mainModule('coffeescript-compiler.js', 'server');
 
   api.export('CoffeeScriptCompiler', 'server');
 });

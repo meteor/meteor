@@ -55,5 +55,5 @@ to check out the Meteor repo and run `test-packages`.
 Once you can do that successfully, to test the `coffeescript` package run:
 
 ```bash
-./meteor test-packages coffeescript
+./meteor test-packages packages/non-core/coffeescript
 ```

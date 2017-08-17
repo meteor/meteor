@@ -13,5 +13,5 @@ the official `coffeescript` package can compile CoffeeScript code.
 Testing the `coffeescript` package also tests this one:
 
 ```bash
-./meteor test-packages coffeescript
+./meteor test-packages packages/non-core/coffeescript
 ```
