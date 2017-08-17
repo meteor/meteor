@@ -24,9 +24,9 @@ Package.onUse(function (api) {
   // same runtime environment that the 'ecmascript' package provides.
   // The following api.imply calls should match those in ../../ecmascript/package.js,
   // except that coffeescript does not api.imply('modules').
-  api.imply('ecmascript-runtime', 'server');
-  api.imply('babel-runtime');
-  api.imply('promise');
+  api.imply('ecmascript-runtime@0.4.1', 'server');
+  api.imply('babel-runtime@1.0.1');
+  api.imply('promise@0.8.9');
 });
 
 Package.onTest(function (api) {
