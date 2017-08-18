@@ -1,5 +1,15 @@
 ## v.NEXT
 
+* The `webapp` package has been updated to support UNIX domain sockets. If a
+  `UNIX_SOCKET_PATH` environment variable is set with a valid
+  UNIX socket file path (e.g. `UNIX_SOCKET_PATH=/tmp/socktest.sock`), Meteor's
+  HTTP server will use that socket file for inter-process communication,
+  instead of TCP. This can be useful in cases like using Nginx to proxy
+  requests back to an internal Meteor application. Leveraging UNIX domain
+  sockets for inter-process communication reduces the sometimes unnecessary
+  overhead required by TCP based communication.
+  [PR #8702](https://github.com/meteor/meteor/pull/8702)
+
 * The `star.json` manifest created within the root of a `meteor build` bundle
   will now contain `nodeVersion` and `npmVersion` which will specify the exact
   versions of Node.js and npm (respectively) which the Meteor release was

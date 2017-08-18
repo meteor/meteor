@@ -865,13 +865,8 @@ function runWebAppServer() {
   // Let the rest of the packages (and Meteor.startup hooks) insert connect
   // middlewares and update __meteor_runtime_config__, then keep going to set up
   // actually serving HTML.
-  exports.main = function (argv) {
+  exports.main = argv => {
     WebAppInternals.generateBoilerplate();
-
-    // only start listening after all the startup code has run.
-    var localPort = process.env.PORT || 0;
-    var host = process.env.BIND_IP;
-    var localIp = host || '0.0.0.0';
 
     const startHttpServer = listenOptions => {
       httpServer.listen(listenOptions, Meteor.bindEnvironment(() => {
@@ -887,24 +882,27 @@ function runWebAppServer() {
       }));
     };
 
-    localPort = isNaN(Number(localPort)) ? localPort : Number(localPort);
+    let localPort = process.env.PORT || 0;
+    const host = process.env.BIND_IP;
+    const localIp = host || "0.0.0.0";
+    const unixSocketPath = process.env.UNIX_SOCKET_PATH;
 
-    if (typeof localPort === "string") {
-      var socketPath = localPort;
-      var listenOptions = { path: socketPath };
-      if (/\\\\?.+\\pipe\\?.+/.test(socketPath)) {
-        // socketPath is a Windows Server style named pipe.
-        startHttpServer(listenOptions);
-      } else {
-        // socketPath is a UNIX domain socket path pointing to a socket file.
-        removeExistingSocketFile(socketPath);
-        startHttpServer(listenOptions);
-        registerSocketFileCleanup(socketPath);
-      }
-    } else if (typeof localPort === "number") {
-      startHttpServer({ port: localPort, host: host });
+    if (unixSocketPath) {
+      // Start the HTTP server using a socket file.
+      removeExistingSocketFile(unixSocketPath);
+      startHttpServer({ path: unixSocketPath });
+      registerSocketFileCleanup(unixSocketPath);
     } else {
-      throw new Error("Invalid PORT specified");
+      localPort = isNaN(Number(localPort)) ? localPort : Number(localPort);
+      if (/\\\\?.+\\pipe\\?.+/.test(localPort)) {
+        // Start the HTTP server using Windows Server style named pipe.
+        startHttpServer({ path: localPort });
+      } else if (typeof localPort === "number") {
+        // Start the HTTP server using TCP.
+        startHttpServer({ port: localPort, host: host });
+      } else {
+        throw new Error("Invalid PORT specified");
+      }
     }
 
     return "DAEMON";
