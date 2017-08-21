@@ -6,6 +6,7 @@ var Future = require('fibers/future');
 var _ = require('underscore');
 var files = require('../fs/files.js');
 var catalog = require('../packaging/catalog/catalog.js');
+var os = require('os');
 
 var DEFAULT_RELEASE_TRACK = catalog.DEFAULT_TRACK;
 
@@ -81,7 +82,7 @@ selftest.define("run", function () {
   run.match("restarted");
 
   // Crash just once, then restart successfully
-  s.write("crash.js", `
+  s.write("crash_then_restart.js", `
 var fs = Npm.require('fs');
 var path = Npm.require('path');
 var crashmark = path.join(process.env.METEOR_TEST_TMP, 'crashed');
@@ -96,7 +97,7 @@ try {
   run.waitSecs(5);
   run.match("restarted");
   run.stop();
-  s.unlink("crash.js");
+  s.unlink("crash_then_restart.js");
 
   run = s.run('--settings', 's.json');
   run.waitSecs(5);
@@ -108,6 +109,14 @@ try {
   s.write('s.json', '{}');
   run.waitSecs(15);
   run.match('App running at');
+  run.stop();
+
+  // Make sure a directory passed to --settings does not cause an infinite
+  // re-build loop (issue #3854).
+  run = s.run('--settings', os.tmpdir());
+  run.match(`${os.tmpdir()}: file not found (settings file)`);
+  run.match('Waiting for file change');
+  run.forbid('Modified -- restarting');
   run.stop();
 
   // How about a bundle failure right at startup
