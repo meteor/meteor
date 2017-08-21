@@ -29,6 +29,8 @@
   thanks to [@sdarnell](https://github.com/sdarnell).
   [meteor-feature-requests#160](https://github.com/meteor/meteor-feature-requests/issues/160)
 
+* The `uglify-js` npm package has been upgraded to version 3.0.28.
+
 * The `star.json` manifest created within the root of a `meteor build` bundle
   will now contain `nodeVersion` and `npmVersion` which will specify the exact
   versions of Node.js and npm (respectively) which the Meteor release was
