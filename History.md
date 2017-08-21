@@ -31,6 +31,12 @@
 
 * The `uglify-js` npm package has been upgraded to version 3.0.28.
 
+* `meteor list --tree` can now be used to list all transitive package
+  dependencies (and versions) in an application. Weakly referenced dependencies
+  can also be listed by using the `--weak` option. For more information, run
+  `meteor help list`.
+  [PR #8936](https://github.com/meteor/meteor/pull/8936)
+
 * The `star.json` manifest created within the root of a `meteor build` bundle
   will now contain `nodeVersion` and `npmVersion` which will specify the exact
   versions of Node.js and npm (respectively) which the Meteor release was
