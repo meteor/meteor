@@ -68,6 +68,15 @@ which node
 which npm
 npm version
 
+# Make node-gyp use Node headers and libraries from $DIR/include/node.
+export HOME="$DIR"
+export USERPROFILE="$DIR"
+export npm_config_nodedir="$DIR"
+
+INCLUDE_PATH="${DIR}/include/node"
+echo "Contents of ${INCLUDE_PATH}:"
+ls -al "$INCLUDE_PATH"
+
 # When adding new node modules (or any software) to the dev bundle,
 # remember to update LICENSE.txt! Also note that we include all the
 # packages that these depend on, so watch out for new dependencies when
@@ -114,15 +123,6 @@ cp -R node_modules/* "${DIR}/lib/node_modules/"
 # Also include node_modules/.bin, so that `meteor npm` can make use of
 # commands like node-gyp and node-pre-gyp.
 cp -R node_modules/.bin "${DIR}/lib/node_modules/"
-
-# Make node-gyp install Node headers and libraries in $DIR/.node-gyp/.
-# https://github.com/nodejs/node-gyp/blob/4ee31329e0/lib/node-gyp.js#L52
-export HOME="$DIR"
-export USERPROFILE="$DIR"
-node "${DIR}/lib/node_modules/node-gyp/bin/node-gyp.js" install
-INCLUDE_PATH="${DIR}/.node-gyp/${NODE_VERSION}/include/node"
-echo "Contents of ${INCLUDE_PATH}:"
-ls -al "$INCLUDE_PATH"
 
 cd "${DIR}/lib"
 
