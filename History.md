@@ -2,6 +2,15 @@
 
 ## v1.5.2, TBD
 
+* Node 4.8.4 has been patched to include
+  https://github.com/nodejs/node/pull/14829, an important PR implemented
+  by our own @abernix (:tada:), which fixes a faulty backport of garbage
+  collection-related logic in V8 that was causing occasional segmentation
+  faults during Meteor development and testing, ever since Node 4.6.2
+  (Meteor 1.4.2.3). When Node 4.8.5 is officially released with these
+  changes, we will immediately cut a small follow-up release.
+  [Issue #8648](https://github.com/meteor/meteor/issues/8648)
+
 * The `meteor-babel` package has been upgraded to version 0.23.1.
 
 * The `reify` npm package has been upgraded to version 0.12.0, which
