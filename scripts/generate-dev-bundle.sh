@@ -16,13 +16,33 @@ echo BUILDING DEV BUNDLE "$BUNDLE_VERSION" IN "$DIR"
 
 cd "$DIR"
 
-S3_HOST="s3.amazonaws.com/com.meteor.jenkins"
+extractNodeFromTarGz() {
+    LOCAL_TGZ="${CHECKOUT_DIR}/node_${PLATFORM}_v${NODE_VERSION}.tar.gz"
+    if [ -f "$LOCAL_TGZ" ]
+    then
+        echo "Skipping download and installing Node from $LOCAL_TGZ" >&2
+        tar zxf "$LOCAL_TGZ"
+        return 0
+    fi
+    return 1
+}
 
-# Update these values after building the dev-bundle-node Jenkins project.
-# Also make sure to update NODE_VERSION in generate-dev-bundle.ps1.
-NODE_URL="https://nodejs.org/dist/v${NODE_VERSION}/${NODE_TGZ}"
-echo "Downloading Node from ${NODE_URL}"
-curl "${NODE_URL}" | tar zx --strip-components 1
+downloadNodeFromS3() {
+    S3_HOST="s3.amazonaws.com/com.meteor.jenkins"
+    S3_TGZ="node_${UNAME}_${ARCH}_v${NODE_VERSION}.tar.gz"
+    NODE_URL="https://${S3_HOST}/dev-bundle-node-${NODE_BUILD_NUMBER}/${S3_TGZ}"
+    echo "Downloading Node from ${NODE_URL}" >&2
+    curl "${NODE_URL}" | tar zx
+}
+
+downloadOfficialNode() {
+    NODE_URL="https://nodejs.org/dist/v${NODE_VERSION}/${NODE_TGZ}"
+    echo "Downloading Node from ${NODE_URL}" >&2
+    curl "${NODE_URL}" | tar zx --strip-components 1
+}
+
+# Try each strategy in the following order:
+extractNodeFromTarGz || downloadNodeFromS3 || downloadOfficialNode
 
 # Download Mongo from mongodb.com
 MONGO_NAME="mongodb-${OS}-${ARCH}-${MONGO_VERSION}"
