@@ -33,7 +33,7 @@ function downloadNode {
 
 if [ ! -z ${NODE_FROM_SRC+x} ]
 then
-    mkdir node-src/ && cd node-src/
+    mkdir node-build && cd node-build
     downloadNode
     if [ "${NODE_FROM_SRC:-}" = "debug" ]
     then
@@ -45,7 +45,6 @@ then
     # PORTABLE=1 is a node hack to make npm look relative to itself instead
     # of hard coding the PREFIX.
     make install PORTABLE=1
-    export npm_config_nodedir="${DIR}/node-src"
     cd "$DIR"
 else
     downloadNode
@@ -63,7 +62,7 @@ npm version
 echo BUNDLING
 
 cd "$DIR"
-rm -rf build
+rm -rf node-build
 tar czvf "${CHECKOUT_DIR}/node_${PLATFORM}_v${NODE_VERSION}.tar.gz" .
 
 echo DONE
