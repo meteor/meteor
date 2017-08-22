@@ -35,12 +35,25 @@ if [ ! -z ${NODE_FROM_SRC+x} ]
 then
     mkdir node-build && cd node-build
     downloadNode
+
+    # Build with International Components for Unicode (ICU) Support...
+    # Node 4.x used 56.x. Node 8.x uses 59.x.   I believe the only
+    # reliable location to find the correct version of ICU for a Node.js
+    # release is to check `process.config.icu_ver_major` from an
+    # official, compiled Node.js release.
+    # https://github.com/nodejs/node/wiki/Intl#configure-node-with-specific-icu-source
+    echo "Downloading International Components for Unicode (ICU)..."
+    curl -sL http://download.icu-project.org/files/icu4c/56.1/icu4c-56_1-src.tgz | \
+      tar zx -C deps/
+
+    node_configure_flags=("--prefix=${DIR}" '--with-intl=small-icu')
+
     if [ "${NODE_FROM_SRC:-}" = "debug" ]
     then
-        ./configure --debug --prefix "${DIR}"
-    else
-        ./configure --prefix "${DIR}"
+        node_configure_flags+=('--debug')
     fi
+
+    ./configure "${node_configure_flags[@]}"
     make -j4
     # PORTABLE=1 is a node hack to make npm look relative to itself instead
     # of hard coding the PREFIX.
