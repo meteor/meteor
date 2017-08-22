@@ -67,7 +67,7 @@ build_machine_environment: &build_machine_environment
   machine: true
   environment:
     # This multiplier scales the waitSecs for selftests.
-    TIMEOUT_SCALE_FACTOR: 4
+    TIMEOUT_SCALE_FACTOR: 8
 
     # These, mostly overlapping, flags ensure that CircleCI is as pretty as
     # possible for a non-interactive environment.  See also: --headless.
