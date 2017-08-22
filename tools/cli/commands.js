@@ -1000,16 +1000,18 @@ ${Console.command("meteor build ../output")}`,
 
   if (!_.isEmpty(cordovaPlatforms)) {
 
-    import {
-      pluginVersionsFromStarManifest,
-      displayNameForPlatform,
-    } from '../cordova';
-
     let cordovaProject;
-
     main.captureAndExit('', () => {
-      buildmessage.enterJob({ title: "preparing Cordova project" }, () => {
 
+      import {
+        ensureDevBundleDependencies,
+        pluginVersionsFromStarManifest,
+        displayNameForPlatform,
+      } from '../cordova';
+
+      ensureDevBundleDependencies();
+
+      buildmessage.enterJob({ title: "preparing Cordova project" }, () => {
         import { CordovaProject } from '../cordova/project.js';
 
         cordovaProject = new CordovaProject(projectContext, {
@@ -1026,7 +1028,7 @@ ${Console.command("meteor build ../output")}`,
       for (platform of cordovaPlatforms) {
         buildmessage.enterJob(
           { title: `building Cordova app for \
-${cordova.displayNameForPlatform(platform)}` }, () => {
+${displayNameForPlatform(platform)}` }, () => {
             let buildOptions = { release: !options.debug };
 
             const buildPath = files.pathJoin(
@@ -1763,6 +1765,8 @@ function doTestCommand(options) {
   if (!_.isEmpty(runTargets)) {
     function prepareCordovaProject() {
       main.captureAndExit('', 'preparing Cordova project', () => {
+        import { CordovaProject } from '../cordova/project.js';
+
         const cordovaProject = new CordovaProject(projectContext, {
           settingsFile: options.settings,
           mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
