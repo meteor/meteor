@@ -715,21 +715,39 @@ export function readAndWatchDirectory(watchSet, options) {
 // *rely* on the hash being returned; merely that if the hash is
 // present, it is the correct hash of the contents.
 export function readAndWatchFileWithHash(watchSet, absPath) {
-  var contents = readFile(absPath);
-  var hash = null;
+  const result = {
+    contents: null,
+    hash: null,
+  };
 
-  var stat = files.statOrNull(absPath);
-  var isDirectory = stat && stat.isDirectory();
+  try {
+    result.contents = files.readFile(absPath);
+  } catch (e) {
+    if (e && e.code === "EISDIR") {
+      // Avoid adding directories to the watchSet as files.
+      return result;
+    }
+
+    if (e && e.code === "ENOENT") {
+      // Continue, leaving result.{contents,hash} both null.
+    } else {
+      // Throw all other errors.
+      throw e;
+    }
+  }
+
+  if (result.contents !== null) {
+    result.hash = sha1(result.contents);
+  }
 
   // Allow null watchSet, if we want to use readFile-style error handling in a
   // context where we might not always have a WatchSet (eg, reading
   // settings.json where we watch for "meteor run" but not for "meteor deploy").
-  if (! isDirectory && watchSet) {
-    hash = contents === null ? null : sha1(contents);
-    watchSet.addFile(absPath, hash);
+  if (watchSet) {
+    watchSet.addFile(absPath, result.hash);
   }
 
-  return { contents, hash };
+  return result;
 }
 
 export function readAndWatchFile(watchSet, absPath) {
