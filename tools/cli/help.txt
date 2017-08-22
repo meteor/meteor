@@ -584,6 +584,10 @@ Options:
                     test app rebuild.
   --extra-packages  Run with additional packages (comma separated, for example:
                     --extra-packages "package-name1, package-name2@1.2.3")
+  --driver-package  Name of the optional test driver package to use to run
+                    tests and display results. For example:
+                    --driver-package practicalmeteor:mocha
+
 >>> test
 Test the application
 Usage: meteor test --driver-package <driver> [options]
@@ -638,6 +642,9 @@ Options:
   --verbose         Print all output from builds logs.
   --extra-packages  Run with additional packages (comma separated, for example:
                     --extra-packages "package-name1, package-name2@1.2.3")
+  --driver-package  Name of the optional test driver package to use to run
+                    tests and display results. For example:
+                    --driver-package practicalmeteor:mocha
 
 >>> self-test
 Run tests of the 'meteor' tool.
