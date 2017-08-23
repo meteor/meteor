@@ -562,14 +562,6 @@ export class Watcher {
     });
   }
 
-  // XXX Erk! This is wrong!  A null entry in a WatchSet means "is not a file",
-  // not "does not exist"; if you look at readAndWatchFileWithHash, "a directory
-  // where a file was expected" leads to the entry being null.  Right now this
-  // leads to infinite watcher refresh loops if something that needs to be a
-  // directory ends up as a file.  This all needs to be changed so that null
-  // means "not a file" again. A simple way to reproduce is to run
-  //    $ meteor --settings /tmp
-  // See #3854.
   _mustNotExist(absPath) {
     var wsFiles = this.watchSet.files;
     if (_.has(wsFiles, absPath)) {
@@ -723,18 +715,39 @@ export function readAndWatchDirectory(watchSet, options) {
 // *rely* on the hash being returned; merely that if the hash is
 // present, it is the correct hash of the contents.
 export function readAndWatchFileWithHash(watchSet, absPath) {
-  var contents = readFile(absPath);
-  var hash = null;
+  const result = {
+    contents: null,
+    hash: null,
+  };
+
+  try {
+    result.contents = files.readFile(absPath);
+  } catch (e) {
+    if (e && e.code === "EISDIR") {
+      // Avoid adding directories to the watchSet as files.
+      return result;
+    }
+
+    if (e && e.code === "ENOENT") {
+      // Continue, leaving result.{contents,hash} both null.
+    } else {
+      // Throw all other errors.
+      throw e;
+    }
+  }
+
+  if (result.contents !== null) {
+    result.hash = sha1(result.contents);
+  }
 
   // Allow null watchSet, if we want to use readFile-style error handling in a
   // context where we might not always have a WatchSet (eg, reading
   // settings.json where we watch for "meteor run" but not for "meteor deploy").
   if (watchSet) {
-    hash = contents === null ? null : sha1(contents);
-    watchSet.addFile(absPath, hash);
+    watchSet.addFile(absPath, result.hash);
   }
 
-  return { contents, hash };
+  return result;
 }
 
 export function readAndWatchFile(watchSet, absPath) {

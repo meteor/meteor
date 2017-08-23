@@ -152,3 +152,7 @@ body {
   color: #ccc;
   margin-right: 15px;
 }
+
+.failedTests {
+  color: #900; /* red */
+}
