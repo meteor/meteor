@@ -35,6 +35,12 @@ var topLevelGroupsDep = new Tracker.Dependency;
 // - dep: Tracker.Dependency object for this test. fires when the test completes.
 var resultTree = [];
 
+Session.set("uncaughtErrors", []);
+window.onerror = (message, source, line) => {
+  const uncaughtErrors = new Set(Session.get("uncaughtErrors"));
+  uncaughtErrors.add(message);
+  Session.set("uncaughtErrors", Array.from(uncaughtErrors));
+};
 
 Session.setDefault("groupPath", ["tinytest"]);
 Session.set("rerunScheduled", false);
@@ -359,6 +365,13 @@ Template.groupNav.onRendered(function () {
   };
 });
 
+//// Template - uncaughtErrors
+
+Template.uncaughtErrors.helpers({
+  uncaughtErrors() {
+    return Session.get("uncaughtErrors");
+  }
+});
 
 //// Template - failedTests
 
