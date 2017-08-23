@@ -1,20 +1,32 @@
-**NOTE:** Issues in this repository are reserved for bugs only. To submit a feature request, please open a new issue in the [meteor/meteor-feature-requests](https://github.com/meteor/meteor-feature-requests) repository.
+<!--
+* ❓ Questions?
+          Use Stack Overflow (http://stackoverflow.com/questions/tagged/meteor)
+          or start a discussion on the Meteor forums (https://forums.meteor.com/).
+* 💡 Feature requests?
+          Visit the feature request repository (https://github.com/meteor/meteor-feature-requests).
+* ❗️ Bug?
+          This is the right place!
 
-Remember, an issue is not the place to ask questions. You can use [Stack Overflow](http://stackoverflow.com/questions/tagged/meteor) for that, or you may want to start a discussion on the [Meteor forum](https://forums.meteor.com/).
+Before reporting a bug, please check for existing or closed issues
+first and read the instructions for filing a bug report:
+https://github.com/meteor/meteor/blob/devel/Contributing.md#reporting-a-bug-in-meteor
 
-Before you open an issue, please check if a similar issue already exists or has been closed before.
-
-### When reporting a bug, please be sure to include the following:
+### This bug report should include:
 - [ ] A descriptive title
-- [ ] What version of Meteor you're using, and the platform(s) you're running it on
-- [ ] What packages or other dependencies you're using
-- [ ] The behavior you expect to see, and the actual behavior
-- [ ] An *isolated* way to reproduce the behavior (example: GitHub repository with code isolated to the issue that anyone can clone to observe the problem)
+- [ ] The version of Meteor showing the problem.
+- [ ] The last version of Meteor where the problem did _not_ occur (if applicable)
+- [ ] The operating system you're running Meteor on.
+- [ ] The expected behavior.
+- [ ] The actual behavior.
+- [ ] A **simple** reproduction!
+      (example: A GitHub repository that anyone can clone to observe the problem.)
 
-See [here](https://github.com/meteor/meteor/blob/devel/Contributing.md#reporting-a-bug-in-meteor) for more detail on what is expected of a bug report.
+### Independent packages
 
-### Independent core packages
+Please ensure your issue is opened in the appropriate repository:
 
-We've split some packages out of meteor/meteor in order to make it easier for community members to contribute and the MDG team to maintain a slimmer core (this enables us to untie package versions from Meteor releases). Please ensure your issue is opened against the appropriate repository. Packages that have been split from core and their repositories are:
-
-- Blaze: https://github.com/meteor/blaze
+* Feature Requests: https://github.com/meteor/meteor-feature-requests
+* Blaze: https://github.com/meteor/blaze/
+* Docs: https://github.com/meteor/docs/
+* Guide: https://github.com/meteor/guide
+-->

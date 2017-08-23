@@ -44,10 +44,16 @@ Here's how CoffeeScript works with Meteor's namespacing.
   for a value that is shared between all CoffeeScript code in a
   package, but doesn't escape that package.
 
-Heavy CoffeeScript users, please let us know how this arrangement
-works for you, whether `share` is helpful for you, and anything else
-you'd like to see changed.
-
 ### Modules and CoffeeScript
 
 See [Modules » CoffeeScript Syntax](http://docs.meteor.com/packages/modules.html#CoffeeScript).
+
+### Testing This Package
+
+Follow the [instructions](https://github.com/meteor/meteor/blob/devel/Development.md#tests)
+to check out the Meteor repo and run `test-packages`.
+Once you can do that successfully, to test the `coffeescript` package run:
+
+```bash
+./meteor test-packages packages/non-core/coffeescript
+```

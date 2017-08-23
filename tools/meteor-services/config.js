@@ -37,7 +37,7 @@ export function getBuildFarmUrl() {
 }
 
 export function getBuildFarmDomain() {
-  return url.parse(getBuildFarmUrl()).host;
+  return urlParse(getBuildFarmUrl()).host;
 }
 
 // URL for the DDP interface to the package server, typically
@@ -48,7 +48,7 @@ export function getPackageServerUrl() {
 }
 
 export function getPackageServerDomain() {
-  return url.parse(getPackageServerUrl()).host;
+  return urlParse(getPackageServerUrl()).host;
 }
 
 export function getPackageStatsServerUrl() {
@@ -57,7 +57,7 @@ export function getPackageStatsServerUrl() {
 }
 
 export function getPackageStatsServerDomain() {
-  return url.parse(getPackageStatsServerUrl()).host;
+  return urlParse(getPackageStatsServerUrl()).host;
 }
 
 // Note: this is NOT guaranteed to return a distinct prefix for every

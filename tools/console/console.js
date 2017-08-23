@@ -584,6 +584,10 @@ class Console extends ConsoleBase {
     });
   }
 
+  isInteractive() {
+    return !this._headless;
+  }
+
   setPretty(pretty) {
     // If we're being forced, do nothing.
     if (FORCE_PRETTY !== undefined) {
