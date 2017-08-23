@@ -125,8 +125,8 @@ jobs:
           command: |
             eval $PRE_TEST_COMMANDS;
             ./meteor --get-ready
-          # shouldn't take longer than 10 minutes
-          no_output_timeout: 10m
+          # shouldn't take longer than 20 minutes
+          no_output_timeout: 20m
       # Clear dev_bundle/.npm to ensure consistent test runs.
       - run:
           name: Clear npm cache
