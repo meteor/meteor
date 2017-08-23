@@ -179,17 +179,35 @@ export class CompilerPluginProcessor {
         buildmessage.enterJob({
           title: jobTitle
         }, function () {
-          var inputFiles = _.map(resourceSlots, function (resourceSlot) {
-            return new InputFile(resourceSlot);
-          });
+          let processOne = sourceProcessor.userPlugin.processOneFileForTarget;
+          if (typeof processOne === "function") {
+            // Instead of running the processOneFileForTarget method now,
+            // call the addLazyJavaScript method of the InputFile so that
+            // compilation can be performed when/if necessary. Compiler
+            // plugins can opt into this behavior by defining a method
+            // called processOneFileForTarget, which indicates they are
+            // willing to compile individual files, instead of a complete
+            // list of files all at once (processFilesForTarget).
+            resourceSlots.forEach(slot => {
+              new InputFile(slot).addLazyJavaScript(buildmessage.markBoundary(
+                processOne.bind(sourceProcessor.userPlugin)
+              ));
+            });
 
-          var markedMethod = buildmessage.markBoundary(
-            sourceProcessor.userPlugin.processFilesForTarget.bind(
-              sourceProcessor.userPlugin));
-          try {
-            markedMethod(inputFiles);
-          } catch (e) {
-            buildmessage.exception(e);
+          } else {
+            var inputFiles = _.map(
+              resourceSlots,
+              resourceSlot => new InputFile(resourceSlot)
+            );
+
+            var markedMethod = buildmessage.markBoundary(
+              sourceProcessor.userPlugin.processFilesForTarget.bind(
+                sourceProcessor.userPlugin));
+            try {
+              markedMethod(inputFiles);
+            } catch (e) {
+              buildmessage.exception(e);
+            }
           }
         });
       });
@@ -475,6 +493,20 @@ class InputFile extends buildPluginModule.InputFile {
   }
 
   /**
+   * @summary Add JavaScript code to be compiled later.
+   * @param {Function} processOneFileForTarget A function which takes an
+            InputFile and returns options appropriate for passing to the
+            addJavaScript method.
+   * @memberOf InputFile
+   * @instance
+   */
+  addLazyJavaScript(processOneFileForTarget) {
+    return this._resourceSlot.addLazyJavaScript(
+      () => processOneFileForTarget(this)
+    );
+  }
+
+  /**
    * @summary Add a file to serve as-is to the browser or to include on
    * the browser, depending on the target. On the web, it will be served
    * at the exact path requested. For server targets, it can be retrieved
@@ -678,7 +710,48 @@ class ResourceSlot {
     }
   }
 
-  addJavaScript(options) {
+  addLazyJavaScript(optionsGetter) {
+    const self = this;
+
+    self.addJavaScript({});
+    const index = self.jsOutputResources.length - 1;
+    const resource = self.jsOutputResources[index];
+
+    function force() {
+      if (optionsGetter) {
+        const options = optionsGetter();
+        if (options) {
+          self.addJavaScript(options, index);
+        } else {
+          self.jsOutputResources[index] = null;
+        }
+        optionsGetter = null;
+        return true;
+      }
+    }
+
+    function defineGetter(name) {
+      Object.defineProperty(resource, name, {
+        get() {
+          // Remove the getter property.
+          delete resource[name];
+          // Fully populate the resource.
+          force();
+          // Return the actual value, if populated.
+          return resource[name];
+        },
+
+        configurable: true,
+        enumerable: true
+      });
+    }
+
+    defineGetter("data");
+    defineGetter("hash");
+    defineGetter("sourceMap");
+  }
+
+  addJavaScript(options, index = this.jsOutputResources.length) {
     const self = this;
     // #HardcodeJs this gets called by constructor in the "js" case
     if (! self.sourceProcessor && self.inputResource.extension !== "js") {
@@ -693,26 +766,32 @@ class ResourceSlot {
 
     const targetPath = options.path || sourcePath;
 
-    var data = new Buffer(
-      files.convertToStandardLineEndings(options.data), 'utf8');
+    const resource = self.jsOutputResources[index] ||
+      (self.jsOutputResources[index] = {});
 
-    self.jsOutputResources.push({
-      type: "js",
-      data: data,
-      sourcePath,
-      targetPath,
-      servePath: self.packageSourceBatch.unibuild.pkg._getServePath(targetPath),
-      // XXX should we allow users to be trusted and specify a hash?
-      hash: sha1(data),
+    if (options.data) {
+      resource.data = new Buffer(
+        files.convertToStandardLineEndings(options.data), 'utf8');
+      resource.hash = sha1(resource.data);
+    }
+
+    resource.type = "js";
+    resource.sourcePath = sourcePath;
+    resource.targetPath = targetPath;
+    resource.servePath =
+      self.packageSourceBatch.unibuild.pkg._getServePath(targetPath);
       // XXX do we need to call convertSourceMapPaths here like we did
       //     in legacy handlers?
-      sourceMap: options.sourceMap,
-      // intentionally preserve a possible `undefined` value for files
-      // in apps, rather than convert it into `false` via `!!`
-      lazy: self._isLazy(options),
-      bare: !! self._getOption("bare", options),
-      mainModule: !! self._getOption("mainModule", options),
-    });
+
+    if (options.sourceMap) {
+      resource.sourceMap = options.sourceMap;
+    }
+
+    // intentionally preserve a possible `undefined` value for files
+    // in apps, rather than convert it into `false` via `!!`
+    resource.lazy = self._isLazy(options);
+    resource.bare = !! self._getOption("bare", options);
+    resource.mainModule = !! self._getOption("mainModule", options);
   }
 
   addAsset(options) {
@@ -945,7 +1024,17 @@ export class PackageSourceBatch {
       const inputFiles = [];
 
       batch.resourceSlots.forEach(slot => {
-        inputFiles.push(...slot.jsOutputResources);
+        slot.jsOutputResources.forEach(resource => {
+          if (resource &&
+              (batch.useMeteorInstall ||
+               // In case the resource was added with
+               // addLazyJavaScript, and will not be processed
+               // by the ImportScanner later, force its .data
+               // property to be computed now.
+               resource.data)) {
+            inputFiles.push(resource);
+          }
+        });
       });
 
       map.set(name, {
