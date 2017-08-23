@@ -31,6 +31,7 @@ require("core-js/es6/array");
 require("core-js/es6/function");
 require("core-js/es6/math");
 require("core-js/es6/object");
+require("core-js/es6/regexp");
 require("core-js/es6/string");
 require("core-js/es6/weak-map");
 require("core-js/es6/weak-set");
@@ -50,3 +51,7 @@ require('core-js/modules/es6.number.max-safe-integer');
 require('core-js/modules/es6.number.min-safe-integer');
 require('core-js/modules/es6.number.parse-float');
 require('core-js/modules/es6.number.parse-int');
+
+// Typed Arrays
+require('core-js/modules/es6.typed.uint8-array');
+require('core-js/modules/es6.typed.uint32-array');

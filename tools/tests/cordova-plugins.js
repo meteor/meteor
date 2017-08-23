@@ -1,6 +1,7 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 var files = require('../fs/files.js');
+import { execFileSync } from '../utils/processes.js';
 var _ = require('underscore');
 
 // Copy the contents of one file to another.  In these series of tests, we often
@@ -25,7 +26,7 @@ var getCordovaPluginsList = function(sand) {
   var env = files.currentEnvWithPathsAdded(files.getCurrentNodeBinDir());
   env.METEOR_WAREHOUSE_DIR = sand.warehouse;
 
-  var lines = selftest.execFileSync('cordova', ['plugins'],
+  var lines = execFileSync('cordova', ['plugins'],
     {
       cwd: files.pathJoin(sand.cwd, '.meteor', 'local', 'cordova-build'),
       env: env

@@ -499,6 +499,6 @@ function throwIfSelectorIsNotId(selector, methodName) {
 
 // Determine if we are in a DDP method simulation
 function alreadyInSimulation() {
-  const enclosing = DDP._CurrentInvocation.get();
+  const enclosing = DDP._CurrentMethodInvocation.get();
   return enclosing && enclosing.isSimulation;
 }

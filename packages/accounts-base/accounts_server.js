@@ -68,18 +68,15 @@ export class AccountsServer extends AccountsCommon {
 
   // @override of "abstract" non-implementation in accounts_common.js
   userId() {
-    // This function only works if called inside a method. In theory, it
-    // could also be called from publish statements, since they also
-    // have a userId associated with them. However, given that publish
-    // functions aren't reactive, using any of the infomation from
-    // Meteor.user() in a publish function will always use the value
-    // from when the function first runs. This is likely not what the
-    // user expects. The way to make this work in a publish is to do
-    // Meteor.find(this.userId).observe and recompute when the user
-    // record changes.
-    var currentInvocation = DDP._CurrentInvocation.get();
+    // This function only works if called inside a method or a pubication.
+    // Using any of the infomation from Meteor.user() in a method or
+    // publish function will always use the value from when the function first
+    // runs. This is likely not what the user expects. The way to make this work
+    // in a method or publish function is to do Meteor.find(this.userId).observe
+    // and recompute when the user record changes.
+    const currentInvocation = DDP._CurrentMethodInvocation.get() || DDP._CurrentPublicationInvocation.get();
     if (!currentInvocation)
-      throw new Error("Meteor.userId can only be invoked in method calls. Use this.userId in publish functions.");
+      throw new Error("Meteor.userId can only be invoked in method calls or publications.");
     return currentInvocation.userId;
   }
 

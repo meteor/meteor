@@ -194,6 +194,15 @@ describe("dynamic import(...)", function () {
       assert.deepEqual(m, {});
     });
   });
+
+  it("should work for package names containing colons", () => {
+    import("meteor/user:colon-name/dynamic.js").then(dynamic => {
+      assert.strictEqual(
+        dynamic.name,
+        "/node_modules/meteor/user:colon-name/dynamic.js"
+      );
+    });
+  });
 });
 
 function maybeClearDynamicImportCache() {

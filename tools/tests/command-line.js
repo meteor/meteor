@@ -315,6 +315,45 @@ selftest.define("argument parsing", function () {
   s.createApp('myapp', 'standard-app');
   s.cd('myapp', function () {
     run = s.run("list");
+    run.waitSecs(30);
+    run.expectExit(0);
+  });
+
+  s.createApp("app-with-extra-packages", "extra-packages-option", {
+    dontPrepareApp: true
+  });
+  s.cd("app-with-extra-packages", function () {
+    run = s.run("--extra-packages", "extra-package-1, extra-package-2@=0.0.2");
+    run.waitSecs(60);
+    run.match("extra-package-1: foobar");
+    run.match("extra-package-2: barfoo");
+    run.stop();
+  });
+
+  s.createApp("app-with-extra-packages", "extra-packages-option", {
+    dontPrepareApp: true
+  });
+  s.cd("app-with-extra-packages", function () {
+    run = s.run("test",
+      "--extra-packages", "practicalmeteor:mocha, extra-package-1, extra-package-2@=0.0.2",
+      "--driver-package", "practicalmeteor:mocha");
+    run.waitSecs(60);
+    run.match("extra-package-1: foobar");
+    run.match("extra-package-2: barfoo");
+    run.stop();
+  });
+
+  s.createApp("app-with-extra-packages", "extra-packages-option", {
+    dontPrepareApp: true
+  });
+  s.cd("app-with-extra-packages", function () {
+    run = s.run("test-packages", "--once",
+      "--driver-package", "test-server-tests-in-console-once",
+      "--extra-packages", "extra-package-1, extra-package-2@=0.0.2",
+      "extra-package-1", "extra-package-2");
+    run.waitSecs(60);
+    run.match("extra-package-1 - example test");
+    run.match("extra-package-2 - example test");
     run.expectExit(0);
   });
 });
@@ -391,7 +430,7 @@ selftest.define("old cli tests (converted)", function () {
   run = s.run("remove", "--help");
   run.match("Removes a package");
   run = s.run("list", "--help");
-  run.match("This will not list transitive dependencies");
+  run.match("Transitive dependencies are not listed unless");
   run = s.run("bundle", "--help");
   run.match("command has been deprecated");
   run = s.run("build", "--help");

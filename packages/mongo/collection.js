@@ -299,6 +299,8 @@ _.extend(Mongo.Collection.prototype, {
    * @param {Boolean} options.disableOplog (Server only) Pass true to disable oplog-tailing on this query. This affects the way server processes calls to `observe` on this query. Disabling the oplog can be useful when working with data that updates in large batches.
    * @param {Number} options.pollingIntervalMs (Server only) When oplog is disabled (through the use of `disableOplog` or when otherwise not available), the frequency (in milliseconds) of how often to poll this query when observing on the server. Defaults to 10000ms (10 seconds).
    * @param {Number} options.pollingThrottleMs (Server only) When oplog is disabled (through the use of `disableOplog` or when otherwise not available), the minimum time (in milliseconds) to allow between re-polling when observing on the server. Increasing this will save CPU and mongo load at the expense of slower updates to users. Decreasing this is not recommended. Defaults to 50ms.
+   * @param {Number} options.maxTimeMs (Server only) If set, instructs MongoDB to set a time limit for this cursor's operations. If the operation reaches the specified time limit (in milliseconds) without the having been completed, an exception will be thrown. Useful to prevent an (accidental or malicious) unoptimized query from causing a full collection scan that would disrupt other database users, at the expense of needing to handle the resulting error.
+   * @param {String|Object} options.hint (Server only) Overrides MongoDB's default index selection and query optimization process. Specify an index to force its use, either by its name or index specification. You can also specify `{ $natural : 1 }` to force a forwards collection scan, or `{ $natural : -1 }` for a reverse collection scan. Setting this is only recommended for advanced users.
    * @returns {Mongo.Cursor}
    */
   find: function (/* selector, options */) {
@@ -360,8 +362,7 @@ Mongo.Collection._publishCursor = function (cursor, sub, collection) {
 
 // protect against dangerous selectors.  falsey and {_id: falsey} are both
 // likely programmer error, and not what you want, particularly for destructive
-// operations.  JS regexps don't serialize over DDP but can be trivially
-// replaced by $regex. If a falsey _id is sent in, a new string _id will be
+// operations. If a falsey _id is sent in, a new string _id will be
 // generated and returned; if a fallbackId is provided, it will be returned
 // instead.
 Mongo.Collection._rewriteSelector = (selector, { fallbackId } = {}) => {
@@ -380,48 +381,8 @@ Mongo.Collection._rewriteSelector = (selector, { fallbackId } = {}) => {
     return { _id: fallbackId || Random.id() };
   }
 
-  var ret = {};
-  Object.keys(selector).forEach((key) => {
-    const value = selector[key];
-    // Mongo supports both {field: /foo/} and {field: {$regex: /foo/}}
-    if (value instanceof RegExp) {
-      ret[key] = convertRegexpToMongoSelector(value);
-    } else if (value && value.$regex instanceof RegExp) {
-      ret[key] = convertRegexpToMongoSelector(value.$regex);
-      // if value is {$regex: /foo/, $options: ...} then $options
-      // override the ones set on $regex.
-      if (value.$options !== undefined)
-        ret[key].$options = value.$options;
-    } else if (_.contains(['$or','$and','$nor'], key)) {
-      // Translate lower levels of $and/$or/$nor
-      ret[key] = _.map(value, function (v) {
-        return Mongo.Collection._rewriteSelector(v);
-      });
-    } else {
-      ret[key] = value;
-    }
-  });
-  return ret;
-};
-
-// convert a JS RegExp object to a Mongo {$regex: ..., $options: ...}
-// selector
-function convertRegexpToMongoSelector(regexp) {
-  check(regexp, RegExp); // safety belt
-
-  var selector = {$regex: regexp.source};
-  var regexOptions = '';
-  // JS RegExp objects support 'i', 'm', and 'g'. Mongo regex $options
-  // support 'i', 'm', 'x', and 's'. So we support 'i' and 'm' here.
-  if (regexp.ignoreCase)
-    regexOptions += 'i';
-  if (regexp.multiline)
-    regexOptions += 'm';
-  if (regexOptions)
-    selector.$options = regexOptions;
-
   return selector;
-}
+};
 
 // 'insert' immediately returns the inserted document's new _id.
 // The others return values immediately if you are in a stub, an in-memory
@@ -482,7 +443,7 @@ Mongo.Collection.prototype.insert = function insert(doc, callback) {
     // This optimization saves us passing both the randomSeed and the id
     // Passing both is redundant.
     if (this._isRemoteCollection()) {
-      const enclosing = DDP._CurrentInvocation.get();
+      const enclosing = DDP._CurrentMethodInvocation.get();
       if (!enclosing) {
         generateId = false;
       }
@@ -560,6 +521,7 @@ Mongo.Collection.prototype.update = function update(selector, modifier, ...optio
       insertedId = options.insertedId;
     } else if (!selector || !selector._id) {
       insertedId = this._makeNewID();
+      options.generatedId = true;
       options.insertedId = insertedId;
     }
   }

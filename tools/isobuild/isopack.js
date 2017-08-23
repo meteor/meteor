@@ -721,7 +721,7 @@ _.extend(Isopack.prototype, {
        * @param {Function} factory A function that returns an instance
        * of a compiler class.
        *
-       * More detailed documentation for build plugins is available [on the GitHub Wiki](https://github.com/meteor/meteor/wiki/Build-Plugins-API).
+       * More detailed documentation for build plugins is available [on the GitHub Wiki](https://docs.meteor.com/api/packagejs.html#build-plugin-api).
        * @memberOf Plugin
        * @locus Build Plugin
        */
@@ -769,7 +769,7 @@ _.extend(Isopack.prototype, {
        * @param {Function} factory A function that returns an instance
        * of a linter class.
        *
-       * More detailed documentation for build plugins is available [on the GitHub Wiki](https://github.com/meteor/meteor/wiki/Build-Plugins-API).
+       * More detailed documentation for build plugins is available [on the GitHub Wiki](https://docs.meteor.com/api/packagejs.html#build-plugin-api).
        * @memberOf Plugin
        * @locus Build Plugin
        */
@@ -821,7 +821,7 @@ _.extend(Isopack.prototype, {
        * @param {Function} factory A function that returns an instance
        * of a minifier class.
        *
-       * More detailed documentation for build plugins is available [on the GitHub Wiki](https://github.com/meteor/meteor/wiki/Build-Plugins-API).
+       * More detailed documentation for build plugins is available [on the GitHub Wiki](https://docs.meteor.com/api/packagejs.html#build-plugin-api).
        * @memberOf Plugin
        * @locus Build Plugin
        */

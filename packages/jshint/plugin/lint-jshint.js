@@ -1,5 +1,5 @@
-var util = Npm.require('util');
-var Future = Npm.require('fibers/future');
+/* globals Npm, Plugin */
+
 var jshint = Npm.require('jshint').JSHINT;
 
 Plugin.registerLinter({
@@ -14,7 +14,7 @@ function JsHintLinter () {
   // packageName -> { config (json),
   //                  files: { [pathInPackage,arch] -> { hash, errors }}}
   this._cacheByPackage = {};
-};
+}
 
 var DEFAULT_CONFIG = JSON.stringify({
   undef: true,
@@ -114,4 +114,3 @@ JsHintLinter.prototype.processFilesForPackage = function (files, options) {
     });
   }
 };
-

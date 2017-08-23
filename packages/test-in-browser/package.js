@@ -1,10 +1,11 @@
 Package.describe({
   summary: "Run tests interactively in the browser",
-  version: '1.0.13',
+  version: '1.0.14',
   documentation: null
 });
 
 Package.onUse(function (api) {
+  api.use('ecmascript');
   // XXX this should go away, and there should be a clean interface
   // that tinytest and the driver both implement?
   api.use('tinytest');

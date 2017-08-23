@@ -102,3 +102,51 @@ Tinytest.add('collection - call native find with sort function',
     }
   }
 );
+
+Tinytest.add('collection - calling native find with maxTimeMs should timeout',
+  function(test) {
+    var collectionName = 'findOptions1' + test.id;
+    var collection = new Mongo.Collection(collectionName);
+    collection.insert({a: 1});
+
+    function doTest() {
+      return collection.find({$where: "sleep(100) || true"}, {maxTimeMs: 50}).count();
+    }
+    if (Meteor.isServer) {
+      test.throws(doTest);
+    }
+  }
+);
+
+
+Tinytest.add('collection - calling native find with $reverse hint should reverse on server',
+  function(test) {
+    var collectionName = 'findOptions2' + test.id;
+    var collection = new Mongo.Collection(collectionName);
+    collection.insert({a: 1});
+    collection.insert({a: 2});
+
+    function m(doc) { return doc.a; }
+    var fwd = collection.find({}, {hint: {$natural: 1}}).map(m);
+    var rev = collection.find({}, {hint: {$natural: -1}}).map(m);
+    if (Meteor.isServer) {
+      test.equal(fwd, rev.reverse());
+    } else {
+      // NOTE: should be documented that hints don't work on client
+      test.equal(fwd, rev);
+    }
+  }
+);
+
+Tinytest.add('collection - calling native find with good hint and maxTimeMs should succeed',
+  function(test) {
+    var collectionName = 'findOptions3' + test.id;
+    var collection = new Mongo.Collection(collectionName);
+    collection.insert({a: 1});
+    if (Meteor.isServer) {
+      collection.rawCollection().createIndex({a: 1});
+    }
+
+    test.equal(collection.find({}, {hint: {a: 1}, maxTimeMs: 1000}).count(), 1);
+  }
+);

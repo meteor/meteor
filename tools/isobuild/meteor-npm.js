@@ -14,6 +14,7 @@ var buildmessage = require('../utils/buildmessage.js');
 var utils = require('../utils/utils.js');
 var runLog = require('../runners/run-log.js');
 var Profile = require('../tool-env/profile.js').Profile;
+import { version as npmVersion } from 'npm';
 import { execFileAsync } from "../utils/processes.js";
 import {
   get as getRebuildArgs
@@ -32,6 +33,9 @@ import {
 } from "../fs/optimistic.js";
 
 var meteorNpm = exports;
+
+// Expose the version of npm in use from the dev bundle.
+meteorNpm.npmVersion = npmVersion;
 
 // if a user exits meteor while we're trying to create a .npm
 // directory, we will have temporary directories that we clean up
@@ -646,10 +650,7 @@ var updateExistingNpmDirectory = function (packageName, newPackageNpmDir,
     // Otherwise install npmTree.dependencies as if we were creating a new
     // .npm/package directory, and leave preservedShrinkwrap empty.
     _.each(npmTree.dependencies, (info, name) => {
-      const installed = minInstalledTree.dependencies[name];
-      if (! installed || installed.version !== info.version) {
-        installNpmModule(name, info.version, newPackageNpmDir);
-      }
+      installNpmModule(name, info.version, newPackageNpmDir);
     });
 
     // Note: as of npm@4.0.0, npm-shrinkwrap.json files are regarded as
