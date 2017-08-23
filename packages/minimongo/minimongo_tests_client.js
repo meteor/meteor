@@ -220,6 +220,17 @@ Tinytest.add('minimongo - cursors', test => {
   // call it again, it still works
   test.length(q.fetch(), 20);
 
+  // iterator
+  count = 0;
+  for (let obj of q) {
+    test.equal(obj.i, count++);
+  };
+  test.equal(count, 20);
+  // call it again, it still works
+  test.length(q.fetch(), 20);
+  // test spread operator
+  test.equal([...q], q.fetch());
+
   // map
   res = q.map(function(obj, i, cursor) {
     test.equal(obj.i, i);

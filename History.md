@@ -1,5 +1,9 @@
 ## v.NEXT
 
+* Minimongo cursors are now JavaScript iterable objects and can now be iterated over
+  using `for...of` loops, spread operator, `yield*`, and destructuring assignments.
+  [PR #8888](https://github.com/meteor/meteor/pull/8888)
+
 * `meteor list --tree` can now be used to list all transitive package
   dependencies (and versions) in an application. Weakly referenced dependencies
   can also be listed by using the `--weak` option. For more information, run
