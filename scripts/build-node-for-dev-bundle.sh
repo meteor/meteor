@@ -46,7 +46,11 @@ then
     curl -sL http://download.icu-project.org/files/icu4c/56.1/icu4c-56_1-src.tgz | \
       tar zx -C deps/
 
-    node_configure_flags=("--prefix=${DIR}" '--with-intl=small-icu')
+    node_configure_flags=(\
+      '--prefix=/' \
+      '--with-intl=small-icu' \
+      '--release-urlbase=https://nodejs.org/download/release/' \
+    )
 
     if [ "${NODE_FROM_SRC:-}" = "debug" ]
     then
@@ -57,7 +61,9 @@ then
     make -j4
     # PORTABLE=1 is a node hack to make npm look relative to itself instead
     # of hard coding the PREFIX.
-    make install PORTABLE=1
+    # DESTDIR installs to the requested location, without using PREFIX.
+    # See tools/install.py in the Node source for more information.
+    make install PORTABLE=1 DESTDIR="${DIR}"
     cd "$DIR"
 else
     downloadNode
