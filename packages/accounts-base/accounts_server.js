@@ -119,6 +119,22 @@ export class AccountsServer extends AccountsCommon {
 
     this._onCreateUserHook = func;
   }
+
+
+  /**
+   * @summary Customize oauth user profile updates
+   * @locus Server
+   * @param {Function} func Called whenever a user is logged in via oauth. Return the profile object to be merged, or throw an `Error` to abort the creation.
+   */
+  onUpdateUser(func) {
+    if (this._onUpdateUserHook) {
+      throw new Error("Can only call onUpdateUser once");
+    }
+
+    this._onUpdateUserHook = func;
+  }
+
+
 };
 
 var Ap = AccountsServer.prototype;
@@ -1440,8 +1456,15 @@ Ap.updateOrCreateUserFromExternalService = function (
       setAttrs["services." + serviceName + "." + key] = value;
     });
 
+    var opts = {};
+
+    if (this._onUpdateUserHook) {
+      opts = this._onUpdateUserHook(options, user);
+    }
+
     // XXX Maybe we should re-use the selector above and notice if the update
     //     touches nothing?
+    setAttrs = _.extend({}, setAttrs, opts);
     this.users.update(user._id, {
       $set: setAttrs
     });
