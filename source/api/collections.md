@@ -178,7 +178,7 @@ Read more about collections and how to use them in the [Collections](http://guid
 documents.  Cursors provide `fetch` to return all matching documents, `map` and
 `forEach` to iterate over all matching documents, and `observe` and
 `observeChanges` to register callbacks when the set of matching documents
-changes.
+changes. Cursors also implement ES2015's [iteration protocols](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols).
 
 {% pullquote warning %}
 Collection cursors are not query snapshots.  If the database changes
@@ -542,7 +542,7 @@ if no `deny` rules return `true` and at least one `allow` rule returns
 <h2 id="mongo_cursor">Cursors</h2>
 
 To create a cursor, use [`find`](#find).  To access the documents in a
-cursor, use [`forEach`](#foreach), [`map`](#map), or [`fetch`](#fetch).
+cursor, use [`forEach`](#foreach), [`map`](#map), [`fetch`](#fetch), or ES2015's [iteration protocols](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocol).
 
 {% apibox "Mongo.Cursor#forEach" %}
 
