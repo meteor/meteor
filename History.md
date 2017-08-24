@@ -14,7 +14,7 @@
   Reference:
   [Mobile Chrome](https://developers.google.com/web/updates/2013/12/300ms-tap-delay-gone-away)
   [Mobile Safari](https://bugs.webkit.org/show_bug.cgi?id=150604)
-  [PR TODO]()
+  [PR #9039](https://github.com/meteor/meteor/pull/9039)
 
 * Minimongo cursors are now JavaScript iterable objects and can now be iterated over
   using `for...of` loops, spread operator, `yield*`, and destructuring assignments.
