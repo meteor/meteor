@@ -135,7 +135,7 @@ export class AccountsCommon {
     // validate option keys
     var VALID_KEYS = ["sendVerificationEmail", "forbidClientAccountCreation", "passwordEnrollTokenExpirationInDays",
                       "restrictCreationByEmailDomain", "loginExpirationInDays", "passwordResetTokenExpirationInDays",
-                      "ambiguousErrorMessages"];
+                      "ambiguousErrorMessages", "bcryptRounds"];
     _.each(_.keys(options), function (key) {
       if (!_.contains(VALID_KEYS, key)) {
         throw new Error("Accounts.config: Invalid key: " + key);
