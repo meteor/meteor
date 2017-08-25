@@ -13,6 +13,10 @@
   the customization of OAuth user profile updates.
   [PR #9042](https://github.com/meteor/meteor/pull/9042)
 
+* `Accounts.config` now supports a `bcryptRounds` option that
+  overrides the default 10 rounds currently used to secure passwords.
+  [PR #9044](https://github.com/meteor/meteor/pull/9044)
+
 ## v1.5.2.2, 2017-10-02
 
 * Fixes a regression in 1.5.2.1 which resulted in the macOS firewall
