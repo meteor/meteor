@@ -22,7 +22,7 @@ var bcryptCompare = Meteor.wrapAsync(bcrypt.compare);
 // "sha-256" and then passes the digest to bcrypt.
 
 
-Accounts._bcryptRounds = 10;
+Accounts._bcryptRounds = Accounts._options.bcryptRounds || 10;
 
 // Given a 'password' from the client, extract the string that we should
 // bcrypt. 'password' can be one of:
@@ -67,6 +67,15 @@ Accounts._checkPassword = function (user, password) {
 
   if (! bcryptCompare(password, user.services.password.bcrypt)) {
     result.error = handleError("Incorrect password", false);
+  } else {
+    // password checks out, but user bcrypt may need update
+    if (user.services.password.bcrypt && Accounts._bcryptRounds > Number(user.services.password.bcrypt.substring(4, 6))) {
+      Meteor.defer(() => {
+        Meteor.users.update({ _id: user._id }, {
+          $set: { 'services.password.bcrypt': bcryptHash(password, Accounts._bcryptRounds) }
+        });
+      });
+    }
   }
 
   return result;
