@@ -126,12 +126,12 @@ export class AccountsServer extends AccountsCommon {
    * @locus Server
    * @param {Function} func Called whenever a user is logged in via oauth. Return the profile object to be merged, or throw an `Error` to abort the creation.
    */
-  onUpdateUser(func) {
-    if (this._onUpdateUserHook) {
-      throw new Error("Can only call onUpdateUser once");
+  onExternalLogin(func) {
+    if (this._onExternalLoginHook) {
+      throw new Error("Can only call onExternalLogin once");
     }
 
-    this._onUpdateUserHook = func;
+    this._onExternalLoginHook = func;
   }
 
 
@@ -1449,7 +1449,7 @@ Ap.updateOrCreateUserFromExternalService = function (
     // We *don't* process options (eg, profile) for update, but we do replace
     // the serviceData (eg, so that we keep an unexpired access token and
     // don't cache old email addresses in serviceData.email).
-    // XXX provide an onUpdateUser hook which would let apps update
+    // XXX provide an onExternalLogin hook which would let apps update
     //     the profile too
     var setAttrs = {};
     _.each(serviceData, function (value, key) {
@@ -1458,8 +1458,8 @@ Ap.updateOrCreateUserFromExternalService = function (
 
     var opts = {};
 
-    if (this._onUpdateUserHook) {
-      opts = this._onUpdateUserHook(options, user);
+    if (this._onExternalLoginHook) {
+      opts = this._onExternalLoginHook(options, user);
     }
 
     // XXX Maybe we should re-use the selector above and notice if the update
