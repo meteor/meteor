@@ -138,6 +138,6 @@ $ meteor test-packages ./
 
 ## License
 
-MIT. (c) Percolate Studio, maintained by Zoltan Olah (@zol).
+MIT. (c) Percolate Studio, originally designed and built by Zoltan Olah (@zol), now community maintained.
 
 Synced Cron was developed as part of the [Verso](http://versoapp.com) project.
