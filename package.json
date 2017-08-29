@@ -16,7 +16,7 @@
     "coverage:report": "nyc report",
     "clean": "rimraf dist",
     "coveralls": "cat ./coverage/lcov.info | coveralls",
-    "format": "prettier --write --trailing-comma es5 --single-quote 'lib/**/*.js' 'tests/**/*.js' 'scripts/**/*.js'",
+    "format": "prettier --write 'lib/**/*.js' 'tests/**/*.js' 'scripts/**/*.js'",
     "lint": "eslint ./",
     "prebuild": "npm run clean && mkdir dist",
     "prepublishOnly": "npm run build",
