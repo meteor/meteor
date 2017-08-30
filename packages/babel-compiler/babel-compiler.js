@@ -160,8 +160,16 @@ BCp._inferFromBabelRc = function (inputFile, babelOptions, cacheDeps) {
   var babelrcPath = inputFile.findControlFile(".babelrc");
   if (babelrcPath) {
     if (! hasOwn.call(this._babelrcCache, babelrcPath)) {
-      this._babelrcCache[babelrcPath] =
-        JSON.parse(inputFile.readAndWatchFile(babelrcPath));
+      try {
+        this._babelrcCache[babelrcPath] =
+          JSON.parse(inputFile.readAndWatchFile(babelrcPath));
+      } catch (e) {
+        if (e instanceof SyntaxError) {
+          e.message = ".babelrc is not a valid JSON file: " + e.message;
+        }
+
+        throw e;
+      }
     }
 
     return this._inferHelper(
