@@ -1,5 +1,21 @@
 ## v.NEXT
 
+* The `fastclick` package (previously included by default in Cordova
+  applications through the `mobile-experience` package) has been deprecated.
+  This package is no longer maintained and has years of outstanding
+  unresolved issues, some of which are impacting Meteor users. Most modern
+  mobile web browsers have removed the 300ms tap delay that `fastclick` worked
+  around, as long as the following `<head />` `meta` element is set (which
+  is generally considered a mobile best practice regardless, and which the
+  Meteor boilerplate generator already sets by default for Cordova apps):
+  `<meta name="viewport" content="width=device-width">`
+  If anyone is still interested in using `fastclick` with their application,
+  it can be installed from npm directly (`meteor npm install --save fastclick`).
+  Reference:
+  [Mobile Chrome](https://developers.google.com/web/updates/2013/12/300ms-tap-delay-gone-away)
+  [Mobile Safari](https://bugs.webkit.org/show_bug.cgi?id=150604)
+  [PR #9039](https://github.com/meteor/meteor/pull/9039)
+
 * Minimongo cursors are now JavaScript iterable objects and can now be iterated over
   using `for...of` loops, spread operator, `yield*`, and destructuring assignments.
   [PR #8888](https://github.com/meteor/meteor/pull/8888)
