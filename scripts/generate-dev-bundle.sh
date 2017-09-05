@@ -154,7 +154,6 @@ delete () {
     rm -rf "$1"
 }
 
-delete npm/test
 delete npm/node_modules/node-gyp
 pushd npm/node_modules
 ln -s ../../node-gyp ./
