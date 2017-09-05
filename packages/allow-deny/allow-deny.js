@@ -499,6 +499,12 @@ function throwIfSelectorIsNotId(selector, methodName) {
 
 // Determine if we are in a DDP method simulation
 function alreadyInSimulation() {
-  const enclosing = DDP._CurrentMethodInvocation.get();
+  var CurrentInvocation =
+    DDP._CurrentMethodInvocation ||
+    // For backwards compatibility, as explained in this issue:
+    // https://github.com/meteor/meteor/issues/8947
+    DDP._CurrentInvocation;
+
+  const enclosing = CurrentInvocation.get();
   return enclosing && enclosing.isSimulation;
 }
