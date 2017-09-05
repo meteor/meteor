@@ -13,7 +13,6 @@ Package.describe({
 Package.onUse(function(api) {
   api.use([
     'ecmascript',
-    'underscore',
     'minimongo', // Just for LocalCollection.wrapTransform :[
     'check',
     'ejson',
