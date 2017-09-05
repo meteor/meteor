@@ -14,11 +14,11 @@ var packageJson = {
     npm: "4.6.1",
     "node-gyp": "3.6.0",
     "node-pre-gyp": "0.6.34",
-    "meteor-babel": "0.22.0",
-    reify: "0.11.24",
-    "meteor-promise": "0.8.4",
+    "meteor-babel": "0.23.1",
+    "meteor-promise": "0.8.5",
+    reify: "0.12.0",
+    promise: "8.0.1",
     fibers: "1.0.15",
-    promise: "7.1.1",
     // So that Babel 6 can emit require("babel-runtime/helpers/...") calls.
     "babel-runtime": "6.9.2",
     // For various ES2015 polyfills, such as Map and Set.
@@ -28,7 +28,7 @@ var packageJson = {
     // (and there are backwards-incompatible changes either way).
     underscore: "1.5.2",
     "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e",
-    semver: "4.1.0",
+    semver: "5.3.0",
     request: "2.47.0",
     fstream: "https://github.com/meteor/fstream/tarball/cf4ea6c175355cec7bee38311e170d08c4078a5d",
     tar: "2.2.1",
@@ -49,13 +49,12 @@ var packageJson = {
     // workaround from the tool.
     "commonmark": "0.15.0",
     escope: "3.2.0",
-    // 2.4.0 (more or less, the package.json change isn't committed) plus our PR
-    // https://github.com/williamwicks/node-eachline/pull/4
-    eachline: "https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da",
+    split2: "2.1.1",
+    multipipe: "1.0.2",
     pathwatcher: "6.7.1",
     optimism: "0.3.3",
     'lru-cache': '4.0.1',
-    'cordova-lib': "6.4.0",
+    'cordova-lib': "7.0.1",
     longjohn: '0.2.12'
   }
 };

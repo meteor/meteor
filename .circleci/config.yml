@@ -67,7 +67,7 @@ build_machine_environment: &build_machine_environment
   machine: true
   environment:
     # This multiplier scales the waitSecs for selftests.
-    TIMEOUT_SCALE_FACTOR: 4
+    TIMEOUT_SCALE_FACTOR: 8
 
     # These, mostly overlapping, flags ensure that CircleCI is as pretty as
     # possible for a non-interactive environment.  See also: --headless.
@@ -124,13 +124,13 @@ jobs:
           name: Get Ready
           command: |
             eval $PRE_TEST_COMMANDS;
-            ./meteor --help
-          # shouldn't take longer than 5 minutes
-          no_output_timeout: 5m
+            ./meteor --get-ready
+          # shouldn't take longer than 20 minutes
+          no_output_timeout: 20m
       # Clear dev_bundle/.npm to ensure consistent test runs.
       - run:
           name: Clear npm cache
-          command: ./meteor npm cache clear
+          command: ./meteor npm cache clear --force
       # Since PhantomJS has been removed from dev_bundle/lib/node_modules
       # (#6905), but self-test still needs it, install it now.
       - run:
@@ -165,6 +165,9 @@ jobs:
       - attach_workspace:
           at: .
       - run:
+          name: "Print environment"
+          command: printenv
+      - run:
           name: "Running warehouse self-tests"
           command: |
             eval $PRE_TEST_COMMANDS;
@@ -197,6 +200,9 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
+      - run:
+          name: "Print environment"
+          command: printenv
       - run:
           name: "Running self-test (1): A-Com"
           command: |
@@ -232,6 +238,9 @@ jobs:
       - attach_workspace:
           at: .
       - run:
+          name: "Print environment"
+          command: printenv
+      - run:
           name "Running self-test (2): Con-K"
           command: |
             eval $PRE_TEST_COMMANDS;
@@ -265,6 +274,9 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
+      - run:
+          name: "Print environment"
+          command: printenv
       - run:
           name: "Running self-test (3): L-O"
           command: |
@@ -300,6 +312,9 @@ jobs:
       - attach_workspace:
           at: .
       - run:
+          name: "Print environment"
+          command: printenv
+      - run:
           name: "Running self-test (4): P"
           command:  |
             eval $PRE_TEST_COMMANDS;
@@ -333,6 +348,9 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
+      - run:
+          name: "Print environment"
+          command: printenv
       - run:
           name: "Running self-test (5): Run"
           command: |
@@ -368,9 +386,12 @@ jobs:
       - attach_workspace:
           at: .
       - run:
+          name: "Print environment"
+          command: printenv
+      - run:
           name: "Running self-test (6): R-S"
           command: |
-            eval "$PRE_TEST_COMMANDS";
+            eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
@@ -401,6 +422,9 @@ jobs:
           <<: *run_env_change
       - attach_workspace:
           at: .
+      - run:
+          name: "Print environment"
+          command: printenv
       - run:
           name: "Running self-test (7): Sp-Z"
           command: |

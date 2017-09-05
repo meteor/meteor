@@ -29,7 +29,7 @@ export default class LocalCollection {
     //  resultsSnapshot: snapshot of results. null if not paused.
     //  cursor: Cursor object for the query.
     //  selector, sorter, (callbacks): functions
-    this.queries = {};
+    this.queries = Object.create(null);
 
     // null if not saving originals; an IdMap from id to original document value
     // if saving originals. See comments before saveOriginals().
@@ -111,11 +111,11 @@ export default class LocalCollection {
     const queriesToRecompute = [];
 
     // trigger live queries that match
-    for (let qid in this.queries) {
+    Object.keys(this.queries).forEach(qid => {
       const query = this.queries[qid];
 
       if (query.dirty) {
-        continue;
+        return;
       }
 
       const matchResult = query.matcher.documentMatches(doc);
@@ -131,7 +131,7 @@ export default class LocalCollection {
           LocalCollection._insertInResults(query, doc);
         }
       }
-    }
+    });
 
     queriesToRecompute.forEach(qid => {
       if (this.queries[qid]) {
@@ -164,11 +164,10 @@ export default class LocalCollection {
     this.paused = true;
 
     // Take a snapshot of the query results for each query.
-    for (let qid in this.queries) {
+    Object.keys(this.queries).forEach(qid => {
       const query = this.queries[qid];
-
       query.resultsSnapshot = EJSON.clone(query.results);
-    }
+    });
   }
 
   remove(selector, callback) {
@@ -180,7 +179,7 @@ export default class LocalCollection {
 
       this._docs.clear();
 
-      for (let qid in this.queries) {
+      Object.keys(this.queries).forEach(qid => {
         const query = this.queries[qid];
 
         if (query.ordered) {
@@ -188,7 +187,7 @@ export default class LocalCollection {
         } else {
           query.results.clear();
         }
-      }
+      });
 
       if (callback) {
         Meteor.defer(() => {
@@ -215,7 +214,7 @@ export default class LocalCollection {
       const removeId = remove[i];
       const removeDoc = this._docs.get(removeId);
 
-      for (let qid in this.queries) {
+      Object.keys(this.queries).forEach(qid => {
         const query = this.queries[qid];
 
         if (query.dirty) {
@@ -229,7 +228,7 @@ export default class LocalCollection {
             queryRemove.push({qid, doc: removeDoc});
           }
         }
-      }
+      });
 
       this._saveOriginal(removeId, removeDoc);
       this._docs.remove(removeId);
@@ -280,7 +279,7 @@ export default class LocalCollection {
     // observer methods won't actually fire when we trigger them.
     this.paused = false;
 
-    for (let qid in this.queries) {
+    Object.keys(this.queries).forEach(qid => {
       const query = this.queries[qid];
 
       if (query.dirty) {
@@ -302,7 +301,7 @@ export default class LocalCollection {
       }
 
       query.resultsSnapshot = null;
-    }
+    });
 
     this._observeQueue.drain();
   }
@@ -360,7 +359,7 @@ export default class LocalCollection {
     const docMap = new LocalCollection._IdMap;
     const idsMatched = LocalCollection._idsMatchedBySelector(selector);
 
-    for (let qid in this.queries) {
+    Object.keys(this.queries).forEach(qid => {
       const query = this.queries[qid];
 
       if ((query.cursor.skip || query.cursor.limit) && ! this.paused) {
@@ -399,7 +398,7 @@ export default class LocalCollection {
 
         qidToOriginalResults[qid] = query.results.map(memoizedCloneIfNeeded);
       }
-    }
+    });
 
     const recomputeQids = {};
 
@@ -515,11 +514,11 @@ export default class LocalCollection {
   _modifyAndNotify(doc, mod, recomputeQids, arrayIndices) {
     const matched_before = {};
 
-    for (let qid in this.queries) {
+    Object.keys(this.queries).forEach(qid => {
       const query = this.queries[qid];
 
       if (query.dirty) {
-        continue;
+        return;
       }
 
       if (query.ordered) {
@@ -529,17 +528,17 @@ export default class LocalCollection {
         // can just do a direct lookup.
         matched_before[qid] = query.results.has(doc._id);
       }
-    }
+    });
 
     const old_doc = EJSON.clone(doc);
 
     LocalCollection._modify(doc, mod, {arrayIndices});
 
-    for (let qid in this.queries) {
+    Object.keys(this.queries).forEach(qid => {
       const query = this.queries[qid];
 
       if (query.dirty) {
-        continue;
+        return;
       }
 
       const afterMatch = query.matcher.documentMatches(doc);
@@ -568,7 +567,7 @@ export default class LocalCollection {
       } else if (before && after) {
         LocalCollection._updateInResults(query, doc, old_doc);
       }
-    }
+    });
   }
 
   // Recomputes the results of a query and runs observe callbacks for the
@@ -1081,13 +1080,13 @@ LocalCollection._isModificationMod = mod => {
   let isModify = false;
   let isReplace = false;
 
-  for (const key in mod) {
+  Object.keys(mod).forEach(key => {
     if (key.substr(0, 1) === '$') {
       isModify = true;
     } else {
       isReplace = true;
     }
-  }
+  });
 
   if (isModify && isReplace) {
     throw new Error(

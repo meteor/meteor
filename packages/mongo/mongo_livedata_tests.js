@@ -2532,10 +2532,12 @@ if (Meteor.isServer) {
             self.events.push({evt: "a", id: id});
             Meteor._sleepForMs(200);
             self.events.push({evt: "b", id: id});
+            if (! self.two) {
+              self.two = self.C.insert({});
+            }
           }
         });
         self.one = self.C.insert({});
-        self.two = self.C.insert({});
         pollUntil(expect, function () {
           return self.events.length === 4;
         }, 10000);

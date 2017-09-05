@@ -20,6 +20,82 @@
   using `for...of` loops, spread operator, `yield*`, and destructuring assignments.
   [PR #8888](https://github.com/meteor/meteor/pull/8888)
 
+## v1.5.2, TBD
+
+* Node 4.8.4 has been patched to include
+  https://github.com/nodejs/node/pull/14829, an important PR implemented
+  by our own @abernix (:tada:), which fixes a faulty backport of garbage
+  collection-related logic in V8 that was causing occasional segmentation
+  faults during Meteor development and testing, ever since Node 4.6.2
+  (Meteor 1.4.2.3). When Node 4.8.5 is officially released with these
+  changes, we will immediately publish a small follow-up release.
+  [Issue #8648](https://github.com/meteor/meteor/issues/8648)
+
+* When Meteor writes to watched files during the build process, it no
+  longer relies on file watchers to detect the change and invalidate the
+  optimistic file system cache, which should fix a number of problems
+  related by the symptom of endless rebuilding.
+  [Issue #8988](https://github.com/meteor/meteor/issues/8988)
+  [Issue #8942](https://github.com/meteor/meteor/issues/8942)
+  [PR #9007](https://github.com/meteor/meteor/pull/9007)
+
+* The `cordova-lib` npm package has been updated to 7.0.1, along with
+  cordova-android (6.2.3) and cordova-ios (4.4.0), and various plugins.
+  [PR #8919](https://github.com/meteor/meteor/pull/8919) resolves the
+  umbrella [issue #8686](https://github.com/meteor/meteor/issues/8686), as
+  well as several Android build issues:
+  [#8408](https://github.com/meteor/meteor/issues/8408),
+  [#8424](https://github.com/meteor/meteor/issues/8424), and
+  [#8464](https://github.com/meteor/meteor/issues/8464).
+
+* The [`boilerplate-generator`](https://github.com/meteor/meteor/tree/release-1.5.2/packages/boilerplate-generator)
+  package responsible for generating initial HTML documents for Meteor
+  apps has been refactored by @stevenhao to avoid using the
+  `spacebars`-related packages, which means it is now possible to remove
+  Blaze as a dependency from the server as well as the client.
+  [PR #8820](https://github.com/meteor/meteor/pull/8820)
+
+* The `meteor-babel` package has been upgraded to version 0.23.1.
+
+* The `reify` npm package has been upgraded to version 0.12.0, which
+  includes a minor breaking
+  [change](https://github.com/benjamn/reify/commit/8defc645e556429283e0b522fd3afababf6525ea)
+  that correctly skips exports named `default` in `export * from "module"`
+  declarations. If you have any wrapper modules that re-export another
+  module's exports using `export * from "./wrapped/module"`, and the
+  wrapped module has a `default` export that you want to be included, you
+  should now explicitly re-export `default` using a second declaration:
+  ```js
+  export * from "./wrapped/module";
+  export { default } "./wrapped/module";
+  ```
+
+* The `meteor-promise` package has been upgraded to version 0.8.5,
+  and the `promise` polyfill package has been upgraded to 8.0.1.
+
+* The `semver` npm package has been upgraded to version 5.3.0.
+  [PR #8859](https://github.com/meteor/meteor/pull/8859)
+
+* The `faye-websocket` npm package has been upgraded to version 0.11.1,
+  and its dependency `websocket-driver` has been upgraded to a version
+  containing [this fix](https://github.com/faye/websocket-driver-node/issues/21),
+  thanks to [@sdarnell](https://github.com/sdarnell).
+  [meteor-feature-requests#160](https://github.com/meteor/meteor-feature-requests/issues/160)
+
+* The `uglify-js` npm package has been upgraded to version 3.0.28.
+
+* Thanks to PRs [#8960](https://github.com/meteor/meteor/pull/8960) and
+  [#9018](https://github.com/meteor/meteor/pull/9018) by @GeoffreyBooth, a
+  [`coffeescript-compiler`](https://github.com/meteor/meteor/tree/release-1.5.2/packages/non-core/coffeescript-compiler)
+  package has been extracted from the `coffeescript` package, similar to
+  how the `babel-compiler` package is separate from the `ecmascript`
+  package, so that other packages (such as
+  [`vue-coffee`](https://github.com/meteor-vue/vue-meteor/tree/master/packages/vue-coffee))
+  can make use of `coffeescript-compiler`. All `coffeescript`-related
+  packages have been moved to
+  [`packages/non-core`](https://github.com/meteor/meteor/tree/release-1.5.2/packages/non-core),
+  so that they can be published independently from Meteor releases.
+
 * `meteor list --tree` can now be used to list all transitive package
   dependencies (and versions) in an application. Weakly referenced dependencies
   can also be listed by using the `--weak` option. For more information, run
@@ -50,11 +126,21 @@
   [Issue #5121](https://github.com/meteor/meteor/issues/5121)
   [PR #8917](https://github.com/meteor/meteor/pull/8917)
 
+* The `"env"` field is now supported in `.babelrc` files.
+  [PR #8963](https://github.com/meteor/meteor/pull/8963)
+
 * Files contained by `client/compatibility/` directories or added with
   `api.addFiles(files, ..., { bare: true })` are now evaluated before
   importing modules with `require`, which may be a breaking change if you
   depend on the interleaving of `bare` files with eager module evaluation.
   [PR #8972](https://github.com/meteor/meteor/pull/8972)
+
+* When `meteor test-packages` runs in a browser, uncaught exceptions will
+  now be displayed above the test results, along with the usual summary of
+  test failures, in case those uncaught errors have something to do with
+  later test failures.
+  [Issue #4979](https://github.com/meteor/meteor/issues/4979)
+  [PR #9034](https://github.com/meteor/meteor/pull/9034)
 
 ## v1.5.1, 2017-07-12
 

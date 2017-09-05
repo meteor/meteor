@@ -100,8 +100,8 @@ exports.getEnv = function (options) {
     }
 
     // This allows node-gyp to find Node headers and libraries in
-    // dev_bundle/.node-gyp.
-    env.USERPROFILE = devBundleDir;
+    // dev_bundle/include/node.
+    env.NPM_CONFIG_NODEDIR = devBundleDir;
 
     var PATH = env.PATH || env.Path;
     if (PATH) {

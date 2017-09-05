@@ -273,10 +273,9 @@ LocalCollection._f = {
       const toArray = object => {
         const result = [];
 
-        for (let key in object) {
-          result.push(key);
-          result.push(object[key]);
-        }
+        Object.keys(object).forEach(key => {
+          result.push(key, object[key]);
+        });
 
         return result;
       };
