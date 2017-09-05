@@ -20,7 +20,7 @@
   using `for...of` loops, spread operator, `yield*`, and destructuring assignments.
   [PR #8888](https://github.com/meteor/meteor/pull/8888)
 
-## v1.5.2, TBD
+## v1.5.2, 2017-09-05
 
 * Node 4.8.4 has been patched to include
   https://github.com/nodejs/node/pull/14829, an important PR implemented
