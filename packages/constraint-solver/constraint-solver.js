@@ -186,6 +186,10 @@ CS.isConstraintSatisfied = function (pkg, vConstraint, version) {
       var cVersion = simpleConstraint.versionString;
       return (cVersion === version);
     } else if (type === 'compatible-with') {
+      if (typeof simpleConstraint.test === "function") {
+        return simpleConstraint.test(version);
+      }
+
       var cv = PV.parse(simpleConstraint.versionString);
       var v = PV.parse(version);
 

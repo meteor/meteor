@@ -2540,7 +2540,7 @@ function addSourceMappingURL(data, url) {
     // If data is a Buffer, convert it to a string.
     .toString("utf8")
     // Remove any existing source map comments.
-    .replace(/\n\/\/# sourceMappingURL=[^\n]+/g, "");
+    .replace(/\n\/\/# sourceMappingURL=[^\n]+/g, '\n');
   // Append the new source map comment to the end of the code.
   return dataString + "\n//# sourceMappingURL=" + url + "\n";
 }
@@ -2628,7 +2628,9 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", function (
       format: "site-archive-pre1",
       builtBy,
       programs: [],
-      meteorRelease: releaseName
+      meteorRelease: releaseName,
+      nodeVersion: process.versions.node,
+      npmVersion: meteorNpm.npmVersion,
     };
     var nodePath = [];
 

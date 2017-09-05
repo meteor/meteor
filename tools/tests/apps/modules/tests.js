@@ -446,6 +446,13 @@ describe("ecmascript miscellany", () => {
       [2, 1, 4, 3]
     );
   });
+
+  it('.babelrc "env" should be respected', () => {
+    assert.strictEqual(
+      require("./imports/babel-env.js").check(2),
+      4
+    );
+  });
 });
 
 Meteor.isClient &&

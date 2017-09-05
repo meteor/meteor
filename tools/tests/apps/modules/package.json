@@ -13,7 +13,8 @@
     "mssql": "^3.1.1",
     "regenerator-runtime": "^0.9.5",
     "stripe": "^4.4.0",
-    "winston": "^2.3.1"
+    "winston": "^2.3.1",
+    "babel-plugin-transform-do-expressions": "^6.22.0"
   },
   "scripts": {
     "test": "METEOR_PROFILE=100 ../../../../meteor test --full-app --driver-package dispatch:mocha-phantomjs",

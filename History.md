@@ -1,5 +1,127 @@
 ## v.NEXT
 
+## v1.5.2, TBD
+
+* Node 4.8.4 has been patched to include
+  https://github.com/nodejs/node/pull/14829, an important PR implemented
+  by our own @abernix (:tada:), which fixes a faulty backport of garbage
+  collection-related logic in V8 that was causing occasional segmentation
+  faults during Meteor development and testing, ever since Node 4.6.2
+  (Meteor 1.4.2.3). When Node 4.8.5 is officially released with these
+  changes, we will immediately publish a small follow-up release.
+  [Issue #8648](https://github.com/meteor/meteor/issues/8648)
+
+* When Meteor writes to watched files during the build process, it no
+  longer relies on file watchers to detect the change and invalidate the
+  optimistic file system cache, which should fix a number of problems
+  related by the symptom of endless rebuilding.
+  [Issue #8988](https://github.com/meteor/meteor/issues/8988)
+  [Issue #8942](https://github.com/meteor/meteor/issues/8942)
+  [PR #9007](https://github.com/meteor/meteor/pull/9007)
+
+* The `cordova-lib` npm package has been updated to 7.0.1, along with
+  cordova-android (6.2.3) and cordova-ios (4.4.0), and various plugins.
+  [PR #8919](https://github.com/meteor/meteor/pull/8919) resolves the
+  umbrella [issue #8686](https://github.com/meteor/meteor/issues/8686), as
+  well as several Android build issues:
+  [#8408](https://github.com/meteor/meteor/issues/8408),
+  [#8424](https://github.com/meteor/meteor/issues/8424), and
+  [#8464](https://github.com/meteor/meteor/issues/8464).
+
+* The [`boilerplate-generator`](https://github.com/meteor/meteor/tree/release-1.5.2/packages/boilerplate-generator)
+  package responsible for generating initial HTML documents for Meteor
+  apps has been refactored by @stevenhao to avoid using the
+  `spacebars`-related packages, which means it is now possible to remove
+  Blaze as a dependency from the server as well as the client.
+  [PR #8820](https://github.com/meteor/meteor/pull/8820)
+
+* The `meteor-babel` package has been upgraded to version 0.23.1.
+
+* The `reify` npm package has been upgraded to version 0.12.0, which
+  includes a minor breaking
+  [change](https://github.com/benjamn/reify/commit/8defc645e556429283e0b522fd3afababf6525ea)
+  that correctly skips exports named `default` in `export * from "module"`
+  declarations. If you have any wrapper modules that re-export another
+  module's exports using `export * from "./wrapped/module"`, and the
+  wrapped module has a `default` export that you want to be included, you
+  should now explicitly re-export `default` using a second declaration:
+  ```js
+  export * from "./wrapped/module";
+  export { default } "./wrapped/module";
+  ```
+
+* The `meteor-promise` package has been upgraded to version 0.8.5,
+  and the `promise` polyfill package has been upgraded to 8.0.1.
+
+* The `semver` npm package has been upgraded to version 5.3.0.
+  [PR #8859](https://github.com/meteor/meteor/pull/8859)
+
+* The `faye-websocket` npm package has been upgraded to version 0.11.1,
+  and its dependency `websocket-driver` has been upgraded to a version
+  containing [this fix](https://github.com/faye/websocket-driver-node/issues/21),
+  thanks to [@sdarnell](https://github.com/sdarnell).
+  [meteor-feature-requests#160](https://github.com/meteor/meteor-feature-requests/issues/160)
+
+* The `uglify-js` npm package has been upgraded to version 3.0.28.
+
+* Thanks to PRs [#8960](https://github.com/meteor/meteor/pull/8960) and
+  [#9018](https://github.com/meteor/meteor/pull/9018) by @GeoffreyBooth, a
+  [`coffeescript-compiler`](https://github.com/meteor/meteor/tree/release-1.5.2/packages/non-core/coffeescript-compiler)
+  package has been extracted from the `coffeescript` package, similar to
+  how the `babel-compiler` package is separate from the `ecmascript`
+  package, so that other packages (such as
+  [`vue-coffee`](https://github.com/meteor-vue/vue-meteor/tree/master/packages/vue-coffee))
+  can make use of `coffeescript-compiler`. All `coffeescript`-related
+  packages have been moved to
+  [`packages/non-core`](https://github.com/meteor/meteor/tree/release-1.5.2/packages/non-core),
+  so that they can be published independently from Meteor releases.
+
+* `meteor list --tree` can now be used to list all transitive package
+  dependencies (and versions) in an application. Weakly referenced dependencies
+  can also be listed by using the `--weak` option. For more information, run
+  `meteor help list`.
+  [PR #8936](https://github.com/meteor/meteor/pull/8936)
+
+* The `star.json` manifest created within the root of a `meteor build` bundle
+  will now contain `nodeVersion` and `npmVersion` which will specify the exact
+  versions of Node.js and npm (respectively) which the Meteor release was
+  bundled with.  The `.node_version.txt` file will still be written into the
+  root of the bundle, but it may be deprecated in a future version of Meteor.
+  [PR #8956](https://github.com/meteor/meteor/pull/8956)
+
+* A new package called `mongo-dev-server` has been created and wired into
+  `mongo` as a dependency. As long as this package is included in a Meteor
+  application (which it is by default since all new Meteor apps have `mongo`
+  as a dependency), a local development MongoDB server is started alongside
+  the application. This package was created to provide a way to disable the
+  local development Mongo server, when `mongo` isn't needed (e.g. when using
+  Meteor as a build system only). If an application has no dependency on
+  `mongo`, the `mongo-dev-server` package is not added, which means no local
+  development Mongo server is started.
+  [Feature Request #31](https://github.com/meteor/meteor-feature-requests/issues/31)
+  [PR #8853](https://github.com/meteor/meteor/pull/8853)
+
+* `Accounts.config` no longer mistakenly allows tokens to expire when
+  the `loginExpirationInDays` option is set to `null`.
+  [Issue #5121](https://github.com/meteor/meteor/issues/5121)
+  [PR #8917](https://github.com/meteor/meteor/pull/8917)
+
+* The `"env"` field is now supported in `.babelrc` files.
+  [PR #8963](https://github.com/meteor/meteor/pull/8963)
+
+* Files contained by `client/compatibility/` directories or added with
+  `api.addFiles(files, ..., { bare: true })` are now evaluated before
+  importing modules with `require`, which may be a breaking change if you
+  depend on the interleaving of `bare` files with eager module evaluation.
+  [PR #8972](https://github.com/meteor/meteor/pull/8972)
+
+* When `meteor test-packages` runs in a browser, uncaught exceptions will
+  now be displayed above the test results, along with the usual summary of
+  test failures, in case those uncaught errors have something to do with
+  later test failures.
+  [Issue #4979](https://github.com/meteor/meteor/issues/4979)
+  [PR #9034](https://github.com/meteor/meteor/pull/9034)
+
 ## v1.5.1, 2017-07-12
 
 * Node has been upgraded to version 4.8.4.
@@ -42,6 +164,11 @@
   [PR #8754](https://github.com/meteor/meteor/pull/8754)
   [Issue #1173](https://github.com/meteor/meteor/issues/1173)
 
+* The `minimongo` and `mongo` packages are now compliant with the upsert behavior
+  of MongoDB 2.6 and higher. **As a result support for MongoDB 2.4 has been dropped.**
+  This mainly changes the effect of the selector on newly inserted documents.
+  [PR #8815](https://github.com/meteor/meteor/pull/8815)
+
 * `reactive-dict` now supports setting initial data when defining a named
   `ReactiveDict`. No longer run migration logic when used on the server,
   this is to prevent duplicate name error on reloads. Initial data is now
@@ -54,6 +181,14 @@
   from `example.com`. Ensure that `Accounts.emailTemplates.from` is set to a
   proper domain in all applications.
   [PR #8760](https://github.com/meteor/meteor/issues/8760)
+
+* The `accounts-facebook` and `facebook-oauth` packages have been updated to
+  use the v2.9 of the Facebook Graph API for the Login Dialog since the v2.2
+  version will be deprecated by Facebook in July.  There shouldn't be a problem
+  regardless since Facebook simply rolls over to the next active version
+  (v2.3, in this case) however this should assist in avoiding deprecation
+  warnings and should enable any new functionality which has become available.
+  [PR #8858](https://github.com/meteor/meteor/pull/8858)
 
 * Add `DDP._CurrentPublicationInvocation` and `DDP._CurrentMethodInvocation`.
   `DDP._CurrentInvocation` remains for backwards-compatibility. This change

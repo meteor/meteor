@@ -660,8 +660,8 @@ main.registerCommand({
 
       // We do mind if there are non-hidden directories, because we don't want
       // to recursively check everything to do some crazy heuristic to see if
-      // we should try to creat an app.
-      var stats = files.stat(filePath);
+      // we should try to create an app.
+      var stats = files.stat(files.pathJoin(appPath, filePath));
       if (stats.isDirectory()) {
         // Could contain code
         return true;
@@ -1310,8 +1310,7 @@ main.registerCommand({
       "Setting passwords on apps is no longer supported. Now there are " +
         "user accounts and your apps are associated with your account so " +
         "that only you (and people you designate) can access them. See the " +
-        Console.command("'meteor claim'") + " and " +
-        Console.command("'meteor authorized'") + " commands.");
+        Console.command("'meteor authorized'") + " command.");
     return 1;
   }
 
@@ -1439,33 +1438,6 @@ main.registerCommand({
 });
 
 ///////////////////////////////////////////////////////////////////////////////
-// claim
-///////////////////////////////////////////////////////////////////////////////
-
-main.registerCommand({
-  name: 'claim',
-  minArgs: 1,
-  maxArgs: 1,
-  catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
-  auth.pollForRegistrationCompletion();
-  var site = qualifySitename(options.args[0]);
-
-  if (! auth.isLoggedIn()) {
-    Console.error(
-      "You must be logged in to claim sites. Use " +
-      Console.command("'meteor login'") + " to log in. If you don't have a " +
-      "Meteor developer account yet, create one by clicking " +
-      Console.command("'Sign in'") + " and then " +
-      Console.command("'Create account'") + " at www.meteor.com.");
-    Console.error();
-    return 1;
-  }
-
-  return deploy.claim(site);
-});
-
-///////////////////////////////////////////////////////////////////////////////
 // test and test-packages
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1579,8 +1551,31 @@ function doTestCommand(options) {
   // cleaned up on process exit. Using a temporary app dir means that we can
   // run multiple "test-packages" commands in parallel without them stomping
   // on each other.
-  var testRunnerAppDir =
-        options['test-app-path'] || files.mkdtemp('meteor-test-run');
+  let testRunnerAppDir;
+  const testAppPath = options['test-app-path'];
+  if (testAppPath) {
+    try {
+      if (files.mkdir_p(testAppPath, 0o700)) {
+        testRunnerAppDir = testAppPath;
+      } else {
+        Console.error(
+          'The specified --test-app-path directory could not be used, as ' +
+          `"${testAppPath}" already exists and it is not a directory.`
+        );
+        return 1;
+      }
+    } catch (error) {
+      Console.error(
+        'Unable to create the specified --test-app-path directory of ' +
+        `"${testAppPath}".`
+      );
+      throw error;
+    }
+  }
+
+  if (!testRunnerAppDir) {
+    testRunnerAppDir = files.mkdtemp('meteor-test-run');
+  }
 
   // Download packages for our architecture, and for the deploy server's
   // architecture if we're deploying.
@@ -1611,7 +1606,19 @@ function doTestCommand(options) {
     projectContextOptions.projectDir = testRunnerAppDir;
     projectContextOptions.projectDirForLocalPackages = options.appDir;
 
-    require("./default-npm-deps.js").install(testRunnerAppDir);
+    try {
+      require("./default-npm-deps.js").install(testRunnerAppDir);
+    } catch (error) {
+      if (error.code === 'EACCES' && options['test-app-path']) {
+        Console.error(
+          'The specified --test-app-path directory of ' +
+          `"${testRunnerAppDir}" exists, but the current user does not have ` +
+          `read/write permission in it.`
+        );
+      }
+      throw error;
+    }
+
     if (buildmessage.jobHasMessages()) {
       return;
     }
@@ -2107,6 +2114,7 @@ main.registerCommand({
     'without-tag': { type: String },
     // Only run tests with this tag
     'with-tag': { type: String },
+    junit: { type: String },
   },
   hidden: true,
   catalogRefresh: new catalog.Refresh.Never()
@@ -2203,6 +2211,7 @@ main.registerCommand({
     // other options
     historyLines: options.history,
     clients: clients,
+    junit: options.junit && files.pathResolve(options.junit),
     'without-tag': options['without-tag'],
     'with-tag': options['with-tag']
   });

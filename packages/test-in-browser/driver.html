@@ -1,6 +1,7 @@
 <template name="testInBrowserBody">
   <div class="container-fluid">
   {{> navBars}}
+  {{> uncaughtErrors}}
   {{> failedTests}}
   {{> testTable}}
   </div>
@@ -71,14 +72,38 @@
   </div>
 </template>
 
+<template name="uncaughtErrors">
+  {{#if uncaughtErrors}}
+    <div class="row-fluid">
+      <div class="span12">
+        <div class="alert alert-danger">
+          <p>
+            <strong>WARNING:</strong> The following uncaught errors might be
+            preventing some client tests from running.
+          </p>
+          <ul>
+            {{#each uncaughtErrors}}
+              <li>{{this}}</li>
+            {{/each}}
+          </ul>
+        </div>
+      </div>
+    </div>
+  {{/if}}
+</template>
+
 <template name="failedTests">
-  <div class="row-fluid"><div class="span12">
-  <ul class="failedTests">
-    {{#each failedTests}}
-      <li>{{this}}</li>
-    {{/each}}
-  </ul>
-  </div></div>
+  {{#if failedTests}}
+    <div class="row-fluid">
+      <div class="span12">
+        <ul class="failedTests">
+          {{#each failedTests}}
+            <li>{{this}}</li>
+          {{/each}}
+        </ul>
+      </div>
+    </div>
+  {{/if}}
 </template>
 
 <template name="testTable">

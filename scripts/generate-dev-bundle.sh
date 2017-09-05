@@ -16,13 +16,33 @@ echo BUILDING DEV BUNDLE "$BUNDLE_VERSION" IN "$DIR"
 
 cd "$DIR"
 
-S3_HOST="s3.amazonaws.com/com.meteor.jenkins"
+extractNodeFromTarGz() {
+    LOCAL_TGZ="${CHECKOUT_DIR}/node_${PLATFORM}_v${NODE_VERSION}.tar.gz"
+    if [ -f "$LOCAL_TGZ" ]
+    then
+        echo "Skipping download and installing Node from $LOCAL_TGZ" >&2
+        tar zxf "$LOCAL_TGZ"
+        return 0
+    fi
+    return 1
+}
 
-# Update these values after building the dev-bundle-node Jenkins project.
-# Also make sure to update NODE_VERSION in generate-dev-bundle.ps1.
-NODE_URL="https://nodejs.org/dist/v${NODE_VERSION}/${NODE_TGZ}"
-echo "Downloading Node from ${NODE_URL}"
-curl "${NODE_URL}" | tar zx --strip-components 1
+downloadNodeFromS3() {
+    S3_HOST="s3.amazonaws.com/com.meteor.jenkins"
+    S3_TGZ="node_${UNAME}_${ARCH}_v${NODE_VERSION}.tar.gz"
+    NODE_URL="https://${S3_HOST}/dev-bundle-node-${NODE_BUILD_NUMBER}/${S3_TGZ}"
+    echo "Downloading Node from ${NODE_URL}" >&2
+    curl "${NODE_URL}" | tar zx
+}
+
+downloadOfficialNode() {
+    NODE_URL="https://nodejs.org/dist/v${NODE_VERSION}/${NODE_TGZ}"
+    echo "Downloading Node from ${NODE_URL}" >&2
+    curl "${NODE_URL}" | tar zx --strip-components 1
+}
+
+# Try each strategy in the following order:
+extractNodeFromTarGz || downloadNodeFromS3 || downloadOfficialNode
 
 # Download Mongo from mongodb.com
 MONGO_NAME="mongodb-${OS}-${ARCH}-${MONGO_VERSION}"
@@ -47,6 +67,15 @@ npm install "npm@$NPM_VERSION"
 which node
 which npm
 npm version
+
+# Make node-gyp use Node headers and libraries from $DIR/include/node.
+export HOME="$DIR"
+export USERPROFILE="$DIR"
+export npm_config_nodedir="$DIR"
+
+INCLUDE_PATH="${DIR}/include/node"
+echo "Contents of ${INCLUDE_PATH}:"
+ls -al "$INCLUDE_PATH"
 
 # When adding new node modules (or any software) to the dev bundle,
 # remember to update LICENSE.txt! Also note that we include all the
@@ -94,15 +123,6 @@ cp -R node_modules/* "${DIR}/lib/node_modules/"
 # Also include node_modules/.bin, so that `meteor npm` can make use of
 # commands like node-gyp and node-pre-gyp.
 cp -R node_modules/.bin "${DIR}/lib/node_modules/"
-
-# Make node-gyp install Node headers and libraries in $DIR/.node-gyp/.
-# https://github.com/nodejs/node-gyp/blob/4ee31329e0/lib/node-gyp.js#L52
-export HOME="$DIR"
-export USERPROFILE="$DIR"
-node "${DIR}/lib/node_modules/node-gyp/bin/node-gyp.js" install
-INCLUDE_PATH="${DIR}/.node-gyp/${NODE_VERSION}/include/node"
-echo "Contents of ${INCLUDE_PATH}:"
-ls -al "$INCLUDE_PATH"
 
 cd "${DIR}/lib"
 
