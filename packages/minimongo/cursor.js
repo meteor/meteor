@@ -72,6 +72,35 @@ export default class Cursor {
     return result;
   }
 
+  [Symbol.iterator]() {
+    if (this.reactive) {
+      this._depend({
+        addedBefore: true,
+        removed: true,
+        changed: true,
+        movedBefore: true});
+    }
+
+    let index = 0;
+    const objects = this._getRawObjects({ordered: true});
+
+    return {
+      next: () => {
+        if (index < objects.length) {
+          // This doubles as a clone operation.
+          let element = this._projectionFn(objects[index++]);
+
+          if (this._transform)
+            element = this._transform(element);
+
+          return {value: element};
+        }
+
+        return {done: true};
+      }
+    };
+  }
+
   /**
    * @callback IterationCallback
    * @param {Object} doc

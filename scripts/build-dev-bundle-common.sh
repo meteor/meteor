@@ -10,7 +10,7 @@ NODE_VERSION=8.4.0
 NPM_VERSION=5.3.0
 
 # If we built Node from source on Jenkins, this is the build number.
-NODE_BUILD_NUMBER=33
+NODE_BUILD_NUMBER=35
 
 if [ "$UNAME" == "Linux" ] ; then
     if [ "$ARCH" != "i686" -a "$ARCH" != "x86_64" ] ; then
