@@ -2,7 +2,7 @@
 
 * Node has been upgraded to version 8.4.0.
 
-* The `npm` npm package has been upgraded to version 5.4.0, a major
+* The `npm` npm package has been upgraded to version 5.4.1, a major
   upgrade from 4.6.1, requiring internal updates to dependency management
   logic for Meteor packages that use `Npm.depends`. While these changes
   should be backwards-compatible for existing Meteor packages, if you are
