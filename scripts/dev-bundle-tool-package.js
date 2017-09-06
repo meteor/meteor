@@ -12,10 +12,6 @@ var packageJson = {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
     npm: "5.4.0",
-    // Temporarily fix https://github.com/npm/npm/issues/18324 by pulling
-    // in https://github.com/zkat/pacote/pull/117. Note that this will
-    // require removing node_modules/npm/node_modules/pacote.
-    pacote: "https://github.com/zkat/pacote/tarball/8d619787e9e937c7a22601b025f1aa043a33c853",
     "node-gyp": "3.6.2",
     "node-pre-gyp": "0.6.36",
     "meteor-babel": "0.24.6",

@@ -159,15 +159,6 @@ pushd npm/node_modules
 ln -s ../../node-gyp ./
 popd
 
-# Since we install a patched version of pacote in $DIR/lib/node_modules,
-# we need to remove npm's bundled version to make it use the new one.
-# https://github.com/npm/npm/issues/18324
-# https://github.com/zkat/pacote/pull/117
-if [ -d "pacote" ]
-then
-    delete npm/node_modules/pacote
-fi
-
 delete sqlite3/deps
 delete sqlite3/node_modules/node-pre-gyp
 delete wordwrap/test
