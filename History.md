@@ -1,5 +1,9 @@
 ## v.NEXT
 
+* `Accounts.config` now supports a `bcryptRounds` option which enabled
+  override of the default 10 rounds currently used to secure passwords.
+  [PR #9044](https://github.com/meteor/meteor/pull/9044) 
+
 * The `fastclick` package (previously included by default in Cordova
   applications through the `mobile-experience` package) has been deprecated.
   This package is no longer maintained and has years of outstanding
