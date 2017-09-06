@@ -88,7 +88,9 @@ export default class Matcher {
 
     // shorthand -- scalar _id and {_id}
     if (LocalCollection._selectorIsIdPerhapsAsObject(selector)) {
-      const _id = selector._id || selector;
+      const _id = hasOwn.call(selector, '_id')
+        ? selector._id
+        : selector;
 
       this._selector = {_id};
       this._recordPathUsed('_id');
