@@ -1,5 +1,16 @@
 ## v.NEXT
 
+* The `webapp` package has been updated to support UNIX domain sockets. If a
+  `UNIX_SOCKET_PATH` environment variable is set with a valid
+  UNIX socket file path (e.g. `UNIX_SOCKET_PATH=/tmp/socktest.sock`), Meteor's
+  HTTP server will use that socket file for inter-process communication,
+  instead of TCP. This can be useful in cases like using Nginx to proxy
+  requests back to an internal Meteor application. Leveraging UNIX domain
+  sockets for inter-process communication reduces the sometimes unnecessary
+  overhead required by TCP based communication.
+  [Issue #7392](https://github.com/meteor/meteor/issues/7392)
+  [PR #8702](https://github.com/meteor/meteor/pull/8702)
+
 * The `fastclick` package (previously included by default in Cordova
   applications through the `mobile-experience` package) has been deprecated.
   This package is no longer maintained and has years of outstanding

@@ -11,6 +11,10 @@ import connect from "connect";
 import parseRequest from "parseurl";
 import { lookup as lookupUserAgent } from "useragent";
 import send from "send";
+import {
+  removeExistingSocketFile,
+  registerSocketFileCleanup,
+} from './socket_file.js';
 
 var SHORT_SOCKET_TIMEOUT = 5*1000;
 var LONG_SOCKET_TIMEOUT = 120*1000;
@@ -266,7 +270,7 @@ WebAppInternals.registerBoilerplateDataCallback = function (key, callback) {
 //
 // If a previous connect middleware has rendered content for the head or body,
 // returns the boilerplate with that content patched in otherwise
-// memoizes on HTML attributes (used by, eg, appcache) and whether inline 
+// memoizes on HTML attributes (used by, eg, appcache) and whether inline
 // scripts are currently allowed.
 // XXX so far this function is always called with arch === 'web.browser'
 var memoizedBoilerplate = {};
@@ -486,14 +490,19 @@ var getUrlPrefixForArch = function (arch) {
     '' : '/' + '__' + arch.replace(/^web\./, '');
 };
 
-// parse port to see if its a Windows Server style named pipe. If so, return as-is (String), otherwise return as Int
-WebAppInternals.parsePort = function (port) {
-  if( /\\\\?.+\\pipe\\?.+/.test(port) ) {
-    return port;
+// Parse the passed in port value. Return the port as-is if it's a String
+// (e.g. a Windows Server style named pipe), otherwise return the port as an
+// integer.
+//
+// DEPRECATED: Direct use of this function is not recommended; it is no
+// longer used internally, and will be removed in a future release.
+WebAppInternals.parsePort = port => {
+  let parsedPort = parseInt(port);
+  if (Number.isNaN(parsedPort)) {
+    parsedPort = port;
   }
-
-  return parseInt(port);
-};
+  return parsedPort;
+}
 
 function runWebAppServer() {
   var shuttingDown = false;
@@ -856,28 +865,47 @@ function runWebAppServer() {
   // Let the rest of the packages (and Meteor.startup hooks) insert connect
   // middlewares and update __meteor_runtime_config__, then keep going to set up
   // actually serving HTML.
-  exports.main = function (argv) {
+  exports.main = argv => {
     WebAppInternals.generateBoilerplate();
 
-    // only start listening after all the startup code has run.
-    var localPort = WebAppInternals.parsePort(process.env.PORT) || 0;
-    var host = process.env.BIND_IP;
-    var localIp = host || '0.0.0.0';
-    httpServer.listen(localPort, localIp, Meteor.bindEnvironment(function() {
-      if (process.env.METEOR_PRINT_ON_LISTEN) {
-        console.log("LISTENING"); // must match run-app.js
+    const startHttpServer = listenOptions => {
+      httpServer.listen(listenOptions, Meteor.bindEnvironment(() => {
+        if (process.env.METEOR_PRINT_ON_LISTEN) {
+          console.log("LISTENING");
+        }
+        const callbacks = onListeningCallbacks;
+        onListeningCallbacks = null;
+        callbacks.forEach(callback => { callback(); });
+      }, e => {
+        console.error("Error listening:", e);
+        console.error(e && e.stack);
+      }));
+    };
+
+    let localPort = process.env.PORT || 0;
+    const host = process.env.BIND_IP;
+    const localIp = host || "0.0.0.0";
+    const unixSocketPath = process.env.UNIX_SOCKET_PATH;
+
+    if (unixSocketPath) {
+      // Start the HTTP server using a socket file.
+      removeExistingSocketFile(unixSocketPath);
+      startHttpServer({ path: unixSocketPath });
+      registerSocketFileCleanup(unixSocketPath);
+    } else {
+      localPort = isNaN(Number(localPort)) ? localPort : Number(localPort);
+      if (/\\\\?.+\\pipe\\?.+/.test(localPort)) {
+        // Start the HTTP server using Windows Server style named pipe.
+        startHttpServer({ path: localPort });
+      } else if (typeof localPort === "number") {
+        // Start the HTTP server using TCP.
+        startHttpServer({ port: localPort, host: host });
+      } else {
+        throw new Error("Invalid PORT specified");
       }
+    }
 
-      var callbacks = onListeningCallbacks;
-      onListeningCallbacks = null;
-      _.each(callbacks, function (x) { x(); });
-
-    }, function (e) {
-      console.error("Error listening:", e);
-      console.error(e && e.stack);
-    }));
-
-    return 'DAEMON';
+    return "DAEMON";
   };
 }
 
