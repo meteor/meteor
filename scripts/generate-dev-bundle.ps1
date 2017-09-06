@@ -164,6 +164,15 @@ cp "$DIR\mongodb\$mongo_name\bin\mongo.exe" $DIR\mongodb\bin
 rm -Recurse -Force $mongo_zip
 rm -Recurse -Force "$DIR\mongodb\$mongo_name"
 
+# Since we install a patched version of pacote in $DIR\lib\node_modules,
+# we need to remove npm's bundled version to make it use the new one.
+# https://github.com/npm/npm/issues/18324
+# https://github.com/zkat/pacote/pull/117
+cd "$DIR\lib\node_modules"
+if (Test-Path "pacote") {
+  rm -Recurse -Force "npm\node_modules\pacote"
+}
+
 cd $DIR
 
 # mark the version
