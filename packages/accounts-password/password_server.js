@@ -67,11 +67,18 @@ Accounts._checkPassword = function (user, password) {
 
   if (! bcryptCompare(password, user.services.password.bcrypt)) {
     result.error = handleError("Incorrect password", false);
-  } else if (user.services.password.bcrypt && Accounts._bcryptRounds > Number(user.services.password.bcrypt.substring(4, 6))) {
+  } else if (
+    user.services.password.bcrypt && 
+    Accounts._bcryptRounds > 
+      Number(user.services.password.bcrypt.substring(4, 6))
+  ) {
     // password checks out, but user bcrypt may need update
     Meteor.defer(() => {
       Meteor.users.update({ _id: user._id }, {
-        $set: { 'services.password.bcrypt': bcryptHash(password, Accounts._bcryptRounds) }
+        $set: { 
+          'services.password.bcrypt': 
+            bcryptHash(password, Accounts._bcryptRounds)
+        }
       });
     });
   }
