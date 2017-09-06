@@ -562,3 +562,75 @@ selftest.define("old cli tests (converted)", function () {
   run.expectExit(0);
   files.unlink(files.pathJoin(s.cwd, 'settings.js'));
 });
+
+// Added to address https://github.com/meteor/meteor/issues/8897.
+selftest.define(
+  'meteor test-packages --test-app-path directory',
+  function () {
+    var s = new Sandbox();
+    var run;
+
+    // If test-app-path doesn't exist, it should be created.
+    var testAppPath = '/tmp/meteor_test_app_path';
+    files.rm_recursive(testAppPath);
+    selftest.expectFalse(files.exists(testAppPath));
+    s.createApp('test-app-path-app', 'package-tests', {
+      dontPrepareApp: true
+    });
+    s.cd('test-app-path-app/packages/say-something', function () {
+      run = s.run(
+        'test-packages',
+        '--once',
+        { 'test-app-path': testAppPath },
+        './'
+      );
+      run.match('Started');
+      selftest.expectTrue(files.exists(testAppPath));
+      run.stop();
+      files.rm_recursive(testAppPath);
+    });
+
+    // If test-app-path already exists, make sure that directory is used.
+    var testAppPath = '/tmp/meteor_test_app_path';
+    files.rm_recursive(testAppPath);
+    files.mkdir_p(testAppPath);
+    selftest.expectTrue(files.exists(testAppPath));
+    selftest.expectFalse(files.exists(testAppPath + '/.meteor'));
+    s.createApp('test-app-path-app', 'package-tests', {
+      dontPrepareApp: true
+    });
+    s.cd('test-app-path-app/packages/say-something', function () {
+      run = s.run(
+        'test-packages',
+        '--once',
+        { 'test-app-path': testAppPath },
+        './'
+      );
+      run.match('Started');
+      selftest.expectTrue(files.exists(testAppPath + '/.meteor'));
+      run.stop();
+      files.rm_recursive(testAppPath);
+    });
+
+    // If test-app-path already exists but is a file instead of a directory,
+    // show a console error message explaining this, and exit.
+    var testAppPath = '/tmp/meteor_test_app_path';
+    files.rm_recursive(testAppPath);
+    files.writeFile(testAppPath, '<3 meteor');
+    selftest.expectTrue(files.exists(testAppPath));
+    s.createApp('test-app-path-app', 'package-tests', {
+      dontPrepareApp: true
+    });
+    s.cd('test-app-path-app/packages/say-something', function () {
+      run = s.run(
+        'test-packages',
+        '--once',
+        { 'test-app-path': testAppPath },
+        './'
+      );
+      run.matchErr('is not a directory');
+      run.expectExit(1);
+      files.rm_recursive(testAppPath);
+    });
+  }
+);

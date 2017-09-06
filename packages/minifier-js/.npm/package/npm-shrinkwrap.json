@@ -1,24 +1,19 @@
 {
   "dependencies": {
     "commander": {
-      "version": "2.9.0",
-      "resolved": "https://registry.npmjs.org/commander/-/commander-2.9.0.tgz",
-      "from": "commander@>=2.9.0 <2.10.0"
-    },
-    "graceful-readlink": {
-      "version": "1.0.1",
-      "resolved": "https://registry.npmjs.org/graceful-readlink/-/graceful-readlink-1.0.1.tgz",
-      "from": "graceful-readlink@>=1.0.0"
+      "version": "2.11.0",
+      "resolved": "https://registry.npmjs.org/commander/-/commander-2.11.0.tgz",
+      "from": "commander@>=2.11.0 <2.12.0"
     },
     "source-map": {
-      "version": "0.5.6",
-      "resolved": "https://registry.npmjs.org/source-map/-/source-map-0.5.6.tgz",
+      "version": "0.5.7",
+      "resolved": "https://registry.npmjs.org/source-map/-/source-map-0.5.7.tgz",
       "from": "source-map@>=0.5.1 <0.6.0"
     },
-    "uglify-js": {
-      "version": "3.0.18",
-      "resolved": "https://registry.npmjs.org/uglify-js/-/uglify-js-3.0.18.tgz",
-      "from": "uglify-js@3.0.18"
+    "uglify-es": {
+      "version": "3.0.28",
+      "resolved": "https://registry.npmjs.org/uglify-es/-/uglify-es-3.0.28.tgz",
+      "from": "uglify-es@3.0.28"
     }
   }
 }

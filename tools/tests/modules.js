@@ -17,6 +17,10 @@ function startRun(sandbox) {
 
 selftest.define("modules - test app", function () {
   const s = new Sandbox();
+
+  // Make sure we use the right "env" section of .babelrc.
+  s.set("NODE_ENV", "development");
+
   s.createApp("modules-test-app", "modules");
   s.cd("modules-test-app", function () {
     const run = s.run(
