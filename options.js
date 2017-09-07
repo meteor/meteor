@@ -3,7 +3,7 @@
 const babelPresetMeteor = require("babel-preset-meteor");
 const reifyPlugin = require("babel-plugin-transform-es2015-modules-reify");
 const strictModulesPluginFactory =
-  require("babel-plugin-transform-es2015-modules-commonjs");
+  require("babel-plugin-transform-es2015-modules-commonjs").default;
 
 const babelModulesPlugin = [function () {
   const plugin = strictModulesPluginFactory.apply(this, arguments);
