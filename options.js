@@ -160,8 +160,9 @@ exports.getMinifierDefaults = function getMinifierDefaults(features) {
     babelrc: false,
     // May be modified according to provided features below.
     plugins: [],
-    // Only include Babili, because we are only minifying, not compiling.
-    presets: [require("babel-preset-babili")]
+    // Only include the minifier plugins, since we've already compiled all
+    // the ECMAScript syntax we want.
+    presets: [require("babel-preset-minify")]
   };
 
   if (features) {
