@@ -182,7 +182,7 @@ To integrate the two systems, we've developed a [`react-meteor-data`](https://at
 
 <h3 id="using-withTracker">Using `withTracker`</h3>
 
-> Note that `withTracker` now replaces the previous `createContainer` function, however it remains as part of the package for backwards compatibility.
+> The `withTracker` function now replaces the previous function `createContainer`, however it remains as part of the package for backwards compatibility.
 
 To use data from a Meteor collection inside a React component, install [`react-meteor-data`](https://atmospherejs.com/meteor/react-meteor-data) alongside a NPM package it utilizes, [`react-addons-pure-render-mixin`](https://www.npmjs.com/package/react-addons-pure-render-mixin):
 
