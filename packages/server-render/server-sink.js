@@ -1,3 +1,6 @@
+const HEAD_REGEX = /<head[^>]*>((.|[\n\r])*)<\/head>/im
+const BODY_REGEX = /<body[^>]*>((.|[\n\r])*)<\/body>/im;
+
 export class ServerSink {
   constructor(request, arch) {
     this.request = request;
@@ -29,6 +32,16 @@ export class ServerSink {
   renderIntoElementById(id, html) {
     this.htmlById[id] = "";
     this.appendToElementById(id, html);
+  }
+
+  renderDocument(html){
+      // Extract head
+      const head = HEAD_REGEX.exec(html)[1];
+      this.appendToHead(head);
+
+      // Extract body
+      const body = BODY_REGEX.exec(html)[1];
+      this.appendToBody(body);
   }
 }
 
