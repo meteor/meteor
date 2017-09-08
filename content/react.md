@@ -180,7 +180,9 @@ React is a front-end rendering library and as such doesn't concern itself with h
 
 To integrate the two systems, we've developed a [`react-meteor-data`](https://atmospherejs.com/meteor/react-meteor-data) package which allows React components to respond to data changes via Meteor's [Tracker](https://www.meteor.com/tracker) reactivity system.
 
-<h3 id="using-createContainer">Using `createContainer`</h3>
+<h3 id="using-withTracker">Using `withTracker`</h3>
+
+> The `withTracker` function now replaces the previous function `createContainer`, however it remains as part of the package for backwards compatibility.
 
 To use data from a Meteor collection inside a React component, install [`react-meteor-data`](https://atmospherejs.com/meteor/react-meteor-data) alongside a NPM package it utilizes, [`react-addons-pure-render-mixin`](https://www.npmjs.com/package/react-addons-pure-render-mixin):
 
@@ -189,13 +191,13 @@ meteor npm install --save react-addons-pure-render-mixin
 meteor add react-meteor-data
 ```
 
-Once installed, you'll be able to import the `createContainer` function, which allows you to create a [container component](https://medium.com/@dan_abramov/smart-and-dumb-components-7ca2f9a7c7d0#.by86emv9b) which provides data to your presentational components.
+Once installed, you'll be able to import the `withTracker` function, which allows you to create a [container component](https://medium.com/@dan_abramov/smart-and-dumb-components-7ca2f9a7c7d0#.by86emv9b) which provides data to your presentational components.
 
 > Note that "container components" are analogous to the "smart components" and "presentational components" to the "reusable components" in the pattern we document in the [UI/UX article](http://guide.meteor.com/ui-ux.html#components), if you'd like to read more about how this philosophy relates to Meteor.
 
 For example, in the Todos example app, we have a `ListPage` component, which renders list metadata and the tasks in the list. In order to do so, it needs to [subscribe](data-loading.html#subscriptions) to the `todos.inList` publication, check that subscription's readiness, then fetch the list of todos from the `Todos` collection.
 
-It also needs to be responsive to reactive changes in the state of those actions (for instance if a todo changes due to the action of another user). All this data loading complexity is a typical use-case for a container-presentational component split, and the `createContainer()` function makes it simple to do this.
+It also needs to be responsive to reactive changes in the state of those actions (for instance if a todo changes due to the action of another user). All this data loading complexity is a typical use-case for a container-presentational component split, and the `withTracker` function makes it simple to do this.
 
 We simply define the `ListPage` component as a presentational component that expects its data to be passed in using React `props`:
 
@@ -219,10 +221,10 @@ Then we create a `ListPageContainer` container component which wraps it and prov
 ```js
 import { Meteor } from 'meteor/meteor';
 import { Lists } from '../../api/lists/lists.js';
-import { createContainer } from 'meteor/react-meteor-data';
+import { withTracker } from 'meteor/react-meteor-data';
 import ListPage from '../pages/ListPage.js';
 
-export default ListPageContainer = createContainer(({ id }) => {
+export default ListPageContainer = withTracker(({ id }) => {
   const todosHandle = Meteor.subscribe('todos.inList', id);
   const loading = !todosHandle.ready();
   const list = Lists.findOne(id);
@@ -233,12 +235,12 @@ export default ListPageContainer = createContainer(({ id }) => {
     listExists,
     todos: listExists ? list.todos().fetch() : [],
   };
-}, ListPage);
+})(ListPage);
 ```
 
 It's a good habit to name your container exactly like the component that it wraps, with the word “Container” tacked onto the end. This way, when you're attempting to track down issues in your code, it makes it much easier to locate the appropriate files/classes.
 
-The container component created by `createContainer()` will reactively rerender the wrapped component in response to any changes to [reactive data sources](https://atmospherejs.com/meteor/tracker) accessed from inside the function provided to it.
+The container component created by `withTracker` will reactively re-render the wrapped component in response to any changes to [reactive data sources](https://atmospherejs.com/meteor/tracker) accessed from inside the function provided to it.
 
 Although this `ListPageContainer` container is intended to be instantiated by the React Router (which passes in the props automatically), if we did ever want to create one manually, we would need to pass in the props to the container component (which then get passed into our data function above):
 
@@ -293,13 +295,13 @@ const App = (props) => (
   </div>
 );
 
-export default AppContainer = createContainer(props => {
+export default AppContainer = withTracker(props => {
   // props here will have `main`, passed from the router
   // anything we return from this function will be *added* to it
   return {
     user: Meteor.user(),
   };
-}, App);
+})(App);
 ```
 
 <h3 id="using-react-router">React Router</h3>
