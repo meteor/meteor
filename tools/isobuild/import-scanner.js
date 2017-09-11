@@ -16,13 +16,18 @@ import {
   pathJoin,
   pathRelative,
   pathNormalize,
-  pathDirname,
   pathBasename,
   pathExtname,
   pathIsAbsolute,
   convertToOSPath,
   convertToPosixPath,
 } from "../fs/files.js";
+
+const {
+  relative: posixRelative,
+  dirname: posixDirname,
+  sep: posixSep,
+} = require("path").posix;
 
 import {
   optimisticReadFile,
@@ -88,6 +93,29 @@ function canBeParsedAsPlainJS(dataString, hash) {
   }
 
   return result;
+}
+
+function stripLeadingSlash(path) {
+  if (typeof path === "string" &&
+      path.charAt(0) === "/") {
+    return path.slice(1);
+  }
+
+  return path;
+}
+
+function ensureLeadingSlash(path) {
+  if (typeof path !== "string") {
+    return path;
+  }
+
+  const posix = convertToPosixPath(path);
+
+  if (posix.charAt(0) !== "/") {
+    return "/" + posix;
+  }
+
+  return posix;
 }
 
 // Map from SHA (which is already calculated, so free for us)
@@ -219,7 +247,7 @@ export default class ImportScanner {
       // indicates that the file has been imported, but only dynamically).
       file.imported = false;
 
-      file.installPath = file.installPath || this._getInstallPath(absPath);
+      file.absModuleId = file.absModuleId || this._getAbsModuleId(absPath);
 
       if (! this._addFile(absPath, file)) {
         // Collisions can happen if a compiler plugin calls addJavaScript
@@ -246,6 +274,9 @@ export default class ImportScanner {
       const absSourcePath = pathJoin(this.sourceRoot, file.sourcePath);
       const absTargetPath = pathJoin(this.sourceRoot, file.targetPath);
 
+      const absSourceId = this._getAbsModuleId(absSourcePath);
+      const absTargetId = this._getAbsModuleId(absTargetPath);
+
       // If file.targetPath differs from file.sourcePath, generate a new
       // file object with that .sourcePath that imports the original file.
       // This allows either the .sourcePath or the .targetPath to be used
@@ -253,12 +284,11 @@ export default class ImportScanner {
       // to have the same .sourcePath but different .targetPaths.
       let sourceFile = this._getFile(absSourcePath);
       if (! sourceFile) {
-        const installPath = this._getInstallPath(absSourcePath);
         sourceFile = this._addFile(absSourcePath, {
           type: file.type,
           sourcePath: file.sourcePath,
-          servePath: installPath,
-          installPath,
+          servePath: stripLeadingSlash(absSourceId),
+          absModuleId: absSourceId,
           dataString: "",
           deps: {},
           lazy: true,
@@ -268,12 +298,12 @@ export default class ImportScanner {
 
       // Make sure the original file gets installed at the target path
       // instead of the source path.
-      file.installPath = this._getInstallPath(absTargetPath);
+      file.absModuleId = absTargetId;
       file.sourcePath = file.targetPath;
 
       const relativeId = this._getRelativeImportId(
-        absSourcePath,
-        absTargetPath,
+        absSourceId,
+        absTargetId,
       );
 
       // Set the contents of the source module to import the target
@@ -300,7 +330,7 @@ export default class ImportScanner {
       sourceFile.data = Buffer.from(sourceFile.dataString, "utf8");
       sourceFile.hash = sha1(sourceFile.data);
       sourceFile.deps[relativeId] = {
-        installPath: file.installPath,
+        absModuleId: file.absModuleId,
         possiblySpurious: false,
         dynamic: false
       };
@@ -512,7 +542,7 @@ export default class ImportScanner {
     // Return all installable output files that are either eager or
     // imported (statically or dynamically).
     return this.outputFiles.filter(file => {
-      return file.installPath &&
+      return file.absModuleId &&
         ! file[fakeSymbol] &&
         (! file.lazy ||
          file.imported === true ||
@@ -592,7 +622,7 @@ export default class ImportScanner {
         const packageJsonFile =
           this._addPkgJsonToOutput(path, pkg, forDynamicImport);
 
-        if (! parentFile.installPath) {
+        if (! parentFile.absModuleId) {
           // If parentFile is not installable, then we won't return it
           // from getOutputFiles, so we don't need to worry about
           // recording any parentFile.deps[id].helpers.
@@ -600,8 +630,8 @@ export default class ImportScanner {
         }
 
         const relativeId = this._getRelativeImportId(
-          parentFile.installPath,
-          packageJsonFile.installPath
+          parentFile.absModuleId,
+          packageJsonFile.absModuleId
         );
 
         // Although not explicitly imported, any package.json modules
@@ -614,11 +644,11 @@ export default class ImportScanner {
     return resolved;
   }
 
-  _getRelativeImportId(parentPath, childPath) {
-    const relativeId = convertToPosixPath(pathRelative(
-      pathDirname(parentPath),
-      childPath
-    ), true);
+  _getRelativeImportId(absParentId, absChildId) {
+    const relativeId = posixRelative(
+      posixDirname(absParentId),
+      absChildId
+    );
 
     // If the result of pathRelative does not already start with a "." or
     // a "/", prepend a "./" to make it a valid relative identifier
@@ -697,7 +727,7 @@ export default class ImportScanner {
         // If the module is an implicit package.json stub, update to the
         // explicit version now.
         if (depFile.jsonData &&
-            depFile.installPath.endsWith("/package.json") &&
+            depFile.absModuleId.endsWith("/package.json") &&
             depFile.implicit === true) {
           const file = this._readModule(absImportedPath);
           if (file) {
@@ -714,13 +744,13 @@ export default class ImportScanner {
         return;
       }
 
-      const installPath = this._getInstallPath(absImportedPath);
-      if (! installPath) {
+      const absModuleId = this._getAbsModuleId(absImportedPath);
+      if (! absModuleId) {
         // The given path cannot be installed on this architecture.
         return;
       }
 
-      info.installPath = installPath;
+      info.absModuleId = absModuleId;
 
       // If the module is not readable, _readModule may return
       // null. Otherwise it will return an object with .data, .dataString,
@@ -732,8 +762,8 @@ export default class ImportScanner {
 
       depFile.type = "js"; // TODO Is this correct?
       depFile.sourcePath = pathRelative(this.sourceRoot, absImportedPath);
-      depFile.installPath = installPath;
-      depFile.servePath = installPath;
+      depFile.absModuleId = absModuleId;
+      depFile.servePath = stripLeadingSlash(absModuleId);
       depFile.lazy = true;
       // Setting depFile.imported = false is necessary so that
       // this._scanFile(depFile, dynamic) doesn't think the file has been
@@ -747,7 +777,7 @@ export default class ImportScanner {
       // handled natively by Node, so we don't need to build a
       // meteorInstall-style bundle beyond the entry-point module.
       if (! this.isWeb() &&
-          depFile.installPath.startsWith("node_modules/") &&
+          depFile.absModuleId.startsWith("/node_modules/") &&
           // If optimistic functions care about this file, e.g. because it
           // resides in a linked npm package, then we should allow it to
           // be watched by including it in the server bundle by not
@@ -842,13 +872,13 @@ export default class ImportScanner {
     return info;
   }
 
-  // Returns a relative path indicating where to install the given file
-  // via meteorInstall. May return undefined if the file should not be
-  // installed on the current architecture.
-  _getInstallPath(absPath) {
+  // Returns an absolute module identifier indicating where to install the
+  // given file via meteorInstall. May return undefined if the file should
+  // not be installed on the current architecture.
+  _getAbsModuleId(absPath) {
     let path =
-      this._getNodeModulesInstallPath(absPath) ||
-      this._getSourceRootInstallPath(absPath);
+      this._getNodeModulesAbsModuleId(absPath) ||
+      this._getSourceRootAbsModuleId(absPath);
 
     if (! path) {
       return;
@@ -866,11 +896,11 @@ export default class ImportScanner {
     }
 
     // Install paths should always be delimited by /.
-    return convertToPosixPath(path);
+    return ensureLeadingSlash(path);
   }
 
-  _getNodeModulesInstallPath(absPath) {
-    let installPath;
+  _getNodeModulesAbsModuleId(absPath) {
+    let absModuleId;
 
     this.nodeModulesPaths.some(path => {
       const relPathWithinNodeModules = pathRelative(path, absPath);
@@ -882,24 +912,29 @@ export default class ImportScanner {
 
       // Install the module into the local node_modules directory within
       // this app or package.
-      return installPath = pathJoin(
+      return absModuleId = pathJoin(
         "node_modules",
         relPathWithinNodeModules
       );
     });
 
-    return installPath;
+    return ensureLeadingSlash(absModuleId);
   }
 
-  _getSourceRootInstallPath(absPath) {
-    const installPath = pathRelative(this.sourceRoot, absPath);
+  _getSourceRootAbsModuleId(absPath) {
+    const relPath = pathRelative(this.sourceRoot, absPath);
 
-    if (installPath.startsWith("..")) {
+    if (relPath.startsWith("..")) {
       // absPath is not a subdirectory of this.sourceRoot.
       return;
     }
 
-    const dirs = this._splitPath(pathDirname(installPath));
+    const dirs = relPath.split("/");
+    dirs.pop(); // Discard the module's filename.
+    while (dirs[0] === "") {
+      dirs.shift();
+    }
+
     const isApp = ! this.name;
     const bundlingForWeb = this.isWeb();
 
@@ -936,19 +971,11 @@ export default class ImportScanner {
 
       if (dir === "node_modules") {
         // Accept any file within a node_modules directory.
-        return installPath;
+        return ensureLeadingSlash(relPath);
       }
     }
 
-    return installPath;
-  }
-
-  _splitPath(path) {
-    const partsInReverse = [];
-    for (let dir; (dir = pathDirname(path)) !== path; path = dir) {
-      partsInReverse.push(pathBasename(path));
-    }
-    return partsInReverse.reverse();
+    return ensureLeadingSlash(relPath);
   }
 
   // Called by this.resolver when a module identifier cannot be resolved.
@@ -1045,6 +1072,7 @@ export default class ImportScanner {
     }).join(""));
 
     const relPkgJsonPath = pathRelative(this.sourceRoot, pkgJsonPath);
+    const absModuleId = this._getAbsModuleId(pkgJsonPath);
 
     const pkgFile = {
       type: "js", // We represent the JSON module with JS.
@@ -1052,8 +1080,8 @@ export default class ImportScanner {
       jsonData: pkg,
       deps: {}, // Avoid accidentally re-scanning this file.
       sourcePath: relPkgJsonPath,
-      installPath: this._getInstallPath(pkgJsonPath),
-      servePath: relPkgJsonPath,
+      absModuleId,
+      servePath: stripLeadingSlash(absModuleId),
       hash: sha1(data),
       lazy: true,
       imported: forDynamicImport ? "dynamic" : true,
@@ -1078,7 +1106,7 @@ export default class ImportScanner {
 }
 
 each(["_readFile", "_findImportedModuleIdentifiers",
-      "_getInstallPath"], funcName => {
+      "_getAbsModuleId"], funcName => {
   ImportScanner.prototype[funcName] = Profile(
     `ImportScanner#${funcName}`, ImportScanner.prototype[funcName]);
 });

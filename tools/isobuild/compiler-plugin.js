@@ -8,6 +8,7 @@ var linker = require('./linker.js');
 var util = require('util');
 var _ = require('underscore');
 var Profile = require('../tool-env/profile.js').Profile;
+import assert from "assert";
 import {sha1, readAndWatchFileWithHash} from  '../fs/watch.js';
 import LRU from 'lru-cache';
 import {sourceMapLength} from '../utils/utils.js';
@@ -1124,11 +1125,12 @@ export class PackageSourceBatch {
         const appFilesWithoutNodeModules = [];
 
         outputFiles.forEach(file => {
-          const parts = file.installPath.split("/");
+          const parts = file.absModuleId.split("/");
+          assert.strictEqual(parts[0], "");
           const nodeModulesIndex = parts.indexOf("node_modules");
 
-          if (nodeModulesIndex === -1 || (nodeModulesIndex === 0 &&
-                                          parts[1] === "meteor")) {
+          if (nodeModulesIndex === -1 || (nodeModulesIndex === 1 &&
+                                          parts[2] === "meteor")) {
             appFilesWithoutNodeModules.push(file);
           } else {
             // This file is going to be installed in a node_modules
@@ -1308,7 +1310,7 @@ export class PackageSourceBatch {
       files: jsResources.map((inputFile) => {
         fileHashes.push(inputFile.hash);
         return {
-          installPath: inputFile.installPath,
+          absModuleId: inputFile.absModuleId,
           sourceMap: !! inputFile.sourceMap,
           mainModule: inputFile.mainModule,
           imported: inputFile.imported,
