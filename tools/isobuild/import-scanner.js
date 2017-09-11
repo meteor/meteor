@@ -2,7 +2,7 @@ import assert from "assert";
 import {inspect} from "util";
 import {Script} from "vm";
 import {
-  isString, isEmpty, has, keys, each, map, omit,
+  isString, isObject, isEmpty, has, keys, each, map, omit,
 } from "underscore";
 import {sha1} from "../fs/watch.js";
 import {matches as archMatches} from "../utils/archinfo.js";
@@ -639,6 +639,20 @@ export default class ImportScanner {
         // implicit "helpers."
         info.helpers[relativeId] = forDynamicImport;
       });
+
+      // Any relevant package.json files must have already been added via
+      // this._addPkgJsonToOutput before we check whether this file has an
+      // .alias. In other words, the Resolver is responsible for including
+      // relevant package.json files in resolved.packageJsonMap so that
+      // they can be handled by the loop above.
+      const file = this._getFile(resolved.path);
+      if (file && file.alias) {
+        file.imported = forDynamicImport
+          ? file.imported || "dynamic"
+          : true;
+
+        return file.alias;
+      }
     }
 
     return resolved;
@@ -1101,12 +1115,122 @@ export default class ImportScanner {
       this.watchSet.addFile(pkgJsonPath, hash);
     }
 
+    this._resolvePkgJsonBrowserAliases(pkgFile, forDynamicImport);
+
     return pkgFile;
+  }
+
+  _resolvePkgJsonBrowserAliases(pkgFile, forDynamicImport = false) {
+    if (! this.isWeb()) {
+      return;
+    }
+
+    const browser = pkgFile.jsonData.browser;
+    if (! isObject(browser)) {
+      return;
+    }
+
+    const deps = pkgFile.deps;
+    const absPkgJsonPath = pathJoin(this.sourceRoot, pkgFile.sourcePath);
+
+    Object.keys(browser).forEach(sourceId => {
+      deps[sourceId] = deps[sourceId] || {};
+
+      // TODO What if sourceId is a top-level node_modules identifier?
+      const source = this.resolver.resolve(sourceId, absPkgJsonPath);
+      if (! source || source === "missing") {
+        return;
+      }
+
+      const file = this._getFile(source.path);
+      if (file && file.alias) {
+        // If we previously set an .alias for this file, assume it is
+        // complete and return early.
+        return;
+      }
+
+      const sourceAbsModuleId = this._getAbsModuleId(source.path);
+      const hasAuthorityToCreateAlias =
+        this._areAbsModuleIdsInSamePackage(
+          pkgFile.absModuleId,
+          sourceAbsModuleId
+        );
+
+      // A package.json file's "browser" field can only establish aliases
+      // for modules contained by the same package.
+      if (! hasAuthorityToCreateAlias) {
+        return;
+      }
+
+      const targetId = browser[sourceId];
+      const alias = {};
+
+      if (typeof targetId === "string") {
+        deps[targetId] = deps[targetId] || {};
+
+        const target = this.resolver.resolve(targetId, absPkgJsonPath);
+        if (! target || target === "missing") {
+          return;
+        }
+
+        Object.assign(alias, target);
+        alias.absModuleId = this._getAbsModuleId(target.path);
+
+      } else if (targetId === false) {
+        // This is supposed to indicate the alias refers to an empty stub.
+        alias.absModuleId = false;
+
+      } else {
+        return;
+      }
+
+      if (file) {
+        file.alias = alias;
+      } else {
+        const relSourcePath = pathRelative(this.sourceRoot, source.path);
+
+        this._addFile(source.path, {
+          alias,
+          data: Buffer.from("", "utf8"),
+          dataString: "",
+          sourcePath: relSourcePath,
+          absModuleId: sourceAbsModuleId,
+          servePath: stripLeadingSlash(sourceAbsModuleId),
+          lazy: true,
+          imported: false,
+          implicit: true,
+        });
+      }
+    });
+  }
+
+  _areAbsModuleIdsInSamePackage(path1, path2) {
+    if (! (isString(path1) && isString(path2))) {
+      return false;
+    }
+
+    // Enforce that the input paths look like absolute module identifiers.
+    assert.strictEqual(path1.charAt(0), "/");
+    assert.strictEqual(path2.charAt(0), "/");
+
+    function getPackageRoot(path) {
+      const parts = path.split("/");
+      assert.strictEqual(parts[0], "");
+      const nmi = parts.lastIndexOf("node_modules");
+      return parts.slice(0, nmi + 2).join("/");
+    }
+
+    return getPackageRoot(path1) === getPackageRoot(path2);
   }
 }
 
-each(["_readFile", "_findImportedModuleIdentifiers",
-      "_getAbsModuleId"], funcName => {
+each([
+  "_readFile",
+  "_findImportedModuleIdentifiers",
+  "_getAbsModuleId",
+  "_addPkgJsonToOutput",
+  "_resolvePkgJsonBrowserAliases",
+], funcName => {
   ImportScanner.prototype[funcName] = Profile(
     `ImportScanner#${funcName}`, ImportScanner.prototype[funcName]);
 });
