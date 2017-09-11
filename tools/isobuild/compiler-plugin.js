@@ -1314,6 +1314,7 @@ export class PackageSourceBatch {
           sourceMap: !! inputFile.sourceMap,
           mainModule: inputFile.mainModule,
           imported: inputFile.imported,
+          alias: inputFile.alias,
           lazy: inputFile.lazy,
           bare: inputFile.bare,
         };

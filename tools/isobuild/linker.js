@@ -245,6 +245,11 @@ _.extend(Module.prototype, {
         return;
       }
 
+      if (file.aliasId) {
+        addToTree(file.aliasId, file.absModuleId, tree);
+        return;
+      }
+
       if (file.isDynamic()) {
         const servePath = files.pathJoin("dynamic", file.absModuleId);
         const { code: source, map } =
@@ -270,7 +275,8 @@ _.extend(Module.prototype, {
 
           function tryMain(name) {
             const value = file.jsonData[name];
-            if (_.isString(value)) {
+            if (_.isString(value) ||
+                _.isObject(value)) {
               stub[name] = value;
             }
           }
@@ -309,6 +315,25 @@ _.extend(Module.prototype, {
       if (Array.isArray(t)) {
         ++moduleCount;
         chunks.push(JSON.stringify(t, null, 2));
+
+      } else if (typeof t === "string") {
+        // This case can happen if a package.json file has an
+        // object-valued "browser" field that aliases this module to a
+        // different module identifier string. Note that the runtime
+        // module system resolves string aliases relative to the original
+        // module identifier, so it's probably a good idea to make sure
+        // these identifiers are absolute (start with a '/') to avoid
+        // ambiguity, since identifiers in package.json "browser" fields
+        // are meant to be resolved relative to the package.json file.
+        ++moduleCount;
+        chunks.push(JSON.stringify(t));
+
+      } else if (t === false) {
+        // This case can happen if a package.json file has an
+        // object-valued "browser" field that maps this module to `false`,
+        // indicating it should be replaced by an empty stub.
+        ++moduleCount;
+        chunks.push("function(){}");
 
       } else if (t instanceof File) {
         ++moduleCount;
@@ -525,6 +550,10 @@ var File = function (inputFile, module) {
 
   // the path where this file would prefer to be served if possible
   self.servePath = inputFile.servePath;
+
+  if (inputFile.alias) {
+    self.aliasId = inputFile.alias.absModuleId;
+  }
 
   // Module identifiers imported or required by this module, if any.
   // Excludes dynamically imported dependencies, and may exclude
