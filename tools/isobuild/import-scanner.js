@@ -172,7 +172,9 @@ export default class ImportScanner {
       // If the old file is just an empty stub, let the new file take
       // precedence over it.
       if (old.implicit === true) {
-        return this.absPathToOutputIndex[absPath] = file;
+        return Object.assign(old, {
+          implicit: file.implicit || false
+        }, file);
       }
 
       // If the new file is just an empty stub, pretend the _addFile
