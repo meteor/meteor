@@ -8,7 +8,7 @@ Tinytest.add('force-ssl - check for a local connection', function (test) {
 
   // Remote address check (connection)
 
-  ['127.0.0.1', '::1'].forEach((ip) => {
+  ['127.0.0.1', '::1', '::ffff:127.0.0.1'].forEach((ip) => {
     req.connection.remoteAddress = ip;
     test.isTrue(isLocalConnection(req), 'Is a local connection');
   });
@@ -20,7 +20,7 @@ Tinytest.add('force-ssl - check for a local connection', function (test) {
 
   // Remote address check (socket)
 
-  ['127.0.0.1', '::1'].forEach((ip) => {
+  ['127.0.0.1', '::1', '::ffff:127.0.0.1'].forEach((ip) => {
     req.connection = {};
     req.socket.remoteAddress = ip;
     test.isTrue(isLocalConnection(req), 'Is a local connection');
