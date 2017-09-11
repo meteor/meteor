@@ -34,6 +34,8 @@ import {
   optimisticStatOrNull,
 } from "../fs/optimistic.js";
 
+import {filterIgnoredSources} from "./meteorignore/filter";
+
 // XXX: This is a medium-term hack, to avoid having the user set a package name
 // & test-name in package.describe. We will change this in the new control file
 // world in some way.
@@ -51,26 +53,26 @@ var loadOrderSort = function (sourceProcessorSet, arch) {
   const isTemplate = _.memoize((filename) => {
     const classification = sourceProcessorSet.classifyFilename(filename, arch);
     switch (classification.type) {
-    case 'extension':
-    case 'filename':
-      if (! classification.sourceProcessors) {
-        // This is *.js, not a template. #HardcodeJs
+      case 'extension':
+      case 'filename':
+        if (! classification.sourceProcessors) {
+          // This is *.js, not a template. #HardcodeJs
+          return false;
+        }
+        if (classification.sourceProcessors.length > 1) {
+          throw Error("conflicts in compiler?");
+        }
+        return classification.sourceProcessors[0].isTemplate;
+
+      case 'legacy-handler':
+        return classification.legacyIsTemplate;
+
+      case 'wrong-arch':
+      case 'unmatched':
         return false;
-      }
-      if (classification.sourceProcessors.length > 1) {
-        throw Error("conflicts in compiler?");
-      }
-      return classification.sourceProcessors[0].isTemplate;
 
-    case 'legacy-handler':
-      return classification.legacyIsTemplate;
-
-    case 'wrong-arch':
-    case 'unmatched':
-      return false;
-
-    default:
-      throw Error(`surprising type ${classification.type} for ${filename}`);
+      default:
+        throw Error(`surprising type ${classification.type} for ${filename}`);
     }
   });
 
@@ -98,9 +100,9 @@ var loadOrderSort = function (sourceProcessorSet, arch) {
 
     // /lib/ loaded first
     var islib_a = (a.indexOf(files.pathSep + 'lib' + files.pathSep) !== -1 ||
-                   a.indexOf('lib' + files.pathSep) === 0);
+      a.indexOf('lib' + files.pathSep) === 0);
     var islib_b = (b.indexOf(files.pathSep + 'lib' + files.pathSep) !== -1 ||
-                   b.indexOf('lib' + files.pathSep) === 0);
+      b.indexOf('lib' + files.pathSep) === 0);
     if (islib_a !== islib_b) {
       return (islib_a ? -1 : 1);
     }
@@ -139,7 +141,7 @@ var splitConstraint = function (c) {
   // XXX print error better (w/ buildmessage?)?
   var parsed = utils.parsePackageConstraint(c);
   return { package: parsed.package,
-           constraint: parsed.constraintString || null };
+    constraint: parsed.constraintString || null };
 };
 
 // Given the text of a README.md file, excerpts the text between the first and
@@ -343,6 +345,10 @@ var PackageSource = function () {
   // specify the correct restrictions at 0.90.
   // XXX: 0.90 package versions.
   self.isCore = false;
+
+  // Used by ./meteorignore/filter for cache .meteorignore files content,
+  // avoiding call fs.read* multiple times
+  self.meteorignoreData = {};
 };
 
 
@@ -385,9 +391,9 @@ _.extend(PackageSource.prototype, {
     self.name = name;
 
     if (options.sources && ! _.isEmpty(options.sources) &&
-        (! options.sourceRoot || ! options.serveRoot)) {
+      (! options.sourceRoot || ! options.serveRoot)) {
       throw new Error("When source files are given, sourceRoot and " +
-                      "serveRoot must be specified");
+        "serveRoot must be specified");
     }
 
     // sourceRoot is a relative file system path, one slash identifies a root
@@ -431,7 +437,7 @@ _.extend(PackageSource.prototype, {
 
     if (options.localNodeModulesDirs) {
       _.extend(sourceArch.localNodeModulesDirs,
-               options.localNodeModulesDirs);
+        options.localNodeModulesDirs);
     }
 
     self.architectures.push(sourceArch);
@@ -501,7 +507,7 @@ _.extend(PackageSource.prototype, {
     const pkgJsonPath = files.pathJoin(self.sourceRoot, 'package.json');
     const pkgJsonStat = optimisticStatOrNull(pkgJsonPath);
     if (pkgJsonStat &&
-        pkgJsonStat.isFile()) {
+      pkgJsonStat.isFile()) {
       packageFileHashes[pkgJsonPath] =
         optimisticHashOrNull(pkgJsonPath);
     }
@@ -646,8 +652,8 @@ _.extend(PackageSource.prototype, {
     var doNotDepOnSelf = function (dep) {
       if (dep.package === self.name) {
         buildmessage.error("Circular dependency found: "
-                           + self.name +
-                           " depends on itself.\n");
+          + self.name +
+          " depends on itself.\n");
       }
     };
     _.each(compiler.ALL_ARCHES, function (label) {
@@ -703,7 +709,7 @@ _.extend(PackageSource.prototype, {
         api.uses[label] = _.map(api.uses[label], setFromRel);
         api.implies[label] = _.map(api.implies[label], setFromRel);
       });
-     };
+    };
 
     // Make sure that if a dependency was specified in multiple
     // unibuilds, the constraint is exactly the same.
@@ -742,9 +748,9 @@ _.extend(PackageSource.prototype, {
         // dependency on meteor dating from when the .js extension handler was
         // in the "meteor" package).
         var alreadyDependsOnMeteor =
-              !! _.find(api.uses[arch], function (u) {
-                return u.package === "meteor";
-              });
+          !! _.find(api.uses[arch], function (u) {
+            return u.package === "meteor";
+          });
         if (! alreadyDependsOnMeteor) {
           api.uses[arch].unshift({ package: "meteor" });
         }
@@ -833,7 +839,7 @@ _.extend(PackageSource.prototype, {
     var uses = [];
     projectContext.projectConstraintsFile.eachConstraint(function (constraint) {
       uses.push({ package: constraint.package,
-                  constraint: constraint.constraintString });
+        constraint: constraint.constraintString });
     });
 
     var projectWatchSet = projectContext.getProjectWatchSet();
@@ -842,7 +848,7 @@ _.extend(PackageSource.prototype, {
       // We don't need to build a Cordova SourceArch if there are no Cordova
       // platforms.
       if (arch === 'web.cordova' &&
-          _.isEmpty(projectContext.platformList.getCordovaPlatforms())) {
+        _.isEmpty(projectContext.platformList.getCordovaPlatforms())) {
         return;
       }
 
@@ -894,7 +900,7 @@ _.extend(PackageSource.prototype, {
         files.statOrNull(origNodeModulesDir);
 
       if (origNodeModulesStat &&
-          origNodeModulesStat.isDirectory()) {
+        origNodeModulesStat.isDirectory()) {
         sourceArch.localNodeModulesDirs["node_modules"] = {
           // Override these properties when calling
           // addNodeModulesDirectory in compileUnibuild.
@@ -965,11 +971,11 @@ _.extend(PackageSource.prototype, {
       // Special case: in app code on the client, JavaScript files in a
       // `client/compatibility` directory don't get wrapped in a closure.
       if (i > 0 &&
-          dirs[i - 1] === "client" &&
-          dir === "compatibility" &&
-          isApp && // Skip this check for packages.
-          archinfo.matches(arch, "web") &&
-          relPath.endsWith(".js")) {
+        dirs[i - 1] === "client" &&
+        dir === "compatibility" &&
+        isApp && // Skip this check for packages.
+        archinfo.matches(arch, "web") &&
+        relPath.endsWith(".js")) {
         fileOptions.bare = true;
       }
     }
@@ -982,13 +988,13 @@ _.extend(PackageSource.prototype, {
   _findSourcesCache: Object.create(null),
 
   _findSources({
-    sourceProcessorSet,
-    watchSet,
-    isApp,
-    sourceArch,
-    loopChecker = new SymlinkLoopChecker(this.sourceRoot),
-    ignoreFiles = []
-  }) {
+                 sourceProcessorSet,
+                 watchSet,
+                 isApp,
+                 sourceArch,
+                 loopChecker = new SymlinkLoopChecker(this.sourceRoot),
+                 ignoreFiles = []
+               }) {
     const self = this;
     const arch = sourceArch.arch;
     const sourceReadOptions =
@@ -1067,7 +1073,7 @@ _.extend(PackageSource.prototype, {
       // find function for the duration of the process.
       const cacheKey = inNodeModules && makeCacheKey(dir);
       if (cacheKey &&
-          cacheKey in self._findSourcesCache) {
+        cacheKey in self._findSourcesCache) {
         return self._findSourcesCache[cacheKey];
       }
 
@@ -1113,8 +1119,8 @@ _.extend(PackageSource.prototype, {
       });
 
       if (isApp &&
-          nodeModulesDir &&
-          (! inNodeModules || sources.length > 0)) {
+        nodeModulesDir &&
+        (! inNodeModules || sources.length > 0)) {
         // If we found a node_modules subdirectory above, and either we
         // are not already inside another node_modules directory or we
         // found source files elsewhere in this directory or its other
@@ -1129,20 +1135,20 @@ _.extend(PackageSource.prototype, {
         self._findSourcesCache[cacheKey] = sources;
       }
 
-      return sources;
+      return filterIgnoredSources(sources, self);
     }
 
     return files.withCache(() => find("", 0, false));
   },
 
   _findAssets({
-    sourceProcessorSet,
-    watchSet,
-    isApp,
-    sourceArch,
-    loopChecker = new SymlinkLoopChecker(this.sourceRoot),
-    ignoreFiles = [],
-  }) {
+                sourceProcessorSet,
+                watchSet,
+                isApp,
+                sourceArch,
+                loopChecker = new SymlinkLoopChecker(this.sourceRoot),
+                ignoreFiles = [],
+              }) {
     // Now look for assets for this unibuild.
     const arch = sourceArch.arch;
     const assetDir = archinfo.matches(arch, "web") ? "public/" : "private/";
@@ -1308,12 +1314,12 @@ _.extend(PackageSource.prototype, {
         } else {
           ret[exp.name].push(arch.arch);
         }
-     });
+      });
     });
     return _.map(ret, function (arches, name) {
       return { name: name, architectures: arches };
     });
-   },
+  },
 
   // Processes the documentation provided in Package.describe. Returns an object
   // with the following keys:
@@ -1409,7 +1415,7 @@ _.extend(PackageSource.prototype, {
         // We can't really have a weak implies (what does that even mean?) but
         // we check for that elsewhere.
         if ((use.weak && options.skipWeak) ||
-            (use.unordered && options.skipUnordered)) {
+          (use.unordered && options.skipUnordered)) {
           return;
         }
 
@@ -1480,9 +1486,9 @@ _.extend(PackageSource.prototype, {
         if (constraints.length > 1) {
           buildmessage.error(
             "The version constraint for a dependency must be the same " +
-              "at every place it is mentioned in a package. " +
-              "'" + name + "' is constrained both as "  +
-              constraints.join(' and ') + ". Change them to match.");
+            "at every place it is mentioned in a package. " +
+            "'" + name + "' is constrained both as "  +
+            constraints.join(' and ') + ". Change them to match.");
           // recover by returning false (the caller had better detect
           // this and use its own recovery logic)
         }
