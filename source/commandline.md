@@ -72,6 +72,22 @@ Create a new Meteor project. By default, makes a subdirectory named *name*
 and copies in the template app. You can pass an absolute or relative
 path.
 
+Using the `meteor create` command installs the packages below
+
+* [autopublish](https://atmospherejs.com/meteor/autopublish)
+* [blaze-html-templates](https://atmospherejs.com/meteor/blaze-html-templates)
+* [ecmascript](https://atmospherejs.com/meteor/ecmascript)
+* [es5-shim](https://atmospherejs.com/meteor/es5-shim)
+* [insecure](https://atmospherejs.com/meteor/insecure)
+* [meteor-base](https://atmospherejs.com/meteor/meteor-base)
+* [mobile-experience](https://atmospherejs.com/meteor/mobile-experience)
+* [mongo](https://atmospherejs.com/meteor/mongo)
+* [reactive-var](https://atmospherejs.com/meteor/reactive-var)
+* [shell-server](https://atmospherejs.com/meteor/shell-server)
+* [standard-minifier-css](https://atmospherejs.com/meteor/standard-minifier-css)
+* [standard-minifier-js](https://atmospherejs.com/meteor/standard-minifier-js)
+* [tracker](https://atmospherejs.com/meteor/tracker)
+
 You can use the `--package` option, to create a new package. If used in an
 existing app, this command will create a package in the packages
 directory.
@@ -80,6 +96,45 @@ You can use `meteor create --bare` to scaffold a basic, empty project or
 `meteor create --full` for a more complete, imports-based project which
 closely matches the structure recommended by the
 [Meteor Guide](https://guide.meteor.com/).
+
+
+Using the `meteor create --full name` command installs the packages below
+
+* ~~autopublish~~
+* [blaze-html-templates](https://atmospherejs.com/meteor/blaze-html-templates)
+* [ecmascript](https://atmospherejs.com/meteor/ecmascript)
+* [es5-shim](https://atmospherejs.com/meteor/es5-shim)
+* ~~insecure~~
+* [johanbrook:publication-collector](https://atmospherejs.com/meteor/johanbrook:publication-collector)
+* [kadira:blaze-layout](https://atmospherejs.com/meteor/kadira:blaze-layout)
+* [kadira:flow-router](https://atmospherejs.com/meteor/kadira:flow-router)
+* [less](https://atmospherejs.com/meteor/less)
+* [meteor-base](https://atmospherejs.com/meteor/meteor-base)
+* [mobile-experience](https://atmospherejs.com/meteor/mobile-experience)
+* [mongo](https://atmospherejs.com/meteor/mongo)
+* [practicalmeteor:mocha](https://atmospherejs.com/meteor/practicalmeteor:mocha)
+* [reactive-var](https://atmospherejs.com/meteor/reactive-var)
+* ~~shell-server~~
+* [standard-minifier-css](https://atmospherejs.com/meteor/standard-minifier-css)
+* [standard-minifier-js](https://atmospherejs.com/meteor/standard-minifier-js)
+* [tracker](https://atmospherejs.com/meteor/tracker)
+
+Using the `meteor create --bare name` command installs the packages below
+
+* ~~autopublish~~
+* ~~blaze-html-templates~~
+* [ecmascript](https://atmospherejs.com/meteor/ecmascript)
+* [es5-shim](https://atmospherejs.com/meteor/es5-shim)
+* ~~insecure~~
+* [meteor-base](https://atmospherejs.com/meteor/meteor-base)
+* [mobile-experience](https://atmospherejs.com/meteor/mobile-experience)
+* [mongo](https://atmospherejs.com/meteor/mongo)
+* [reactive-var](https://atmospherejs.com/meteor/reactive-var)
+* [shell-server](https://atmospherejs.com/meteor/shell-server)
+* [standard-minifier-css](https://atmospherejs.com/meteor/standard-minifier-css)
+* [standard-minifier-js](https://atmospherejs.com/meteor/standard-minifier-js)
+* [static-html](https://atmospherejs.com/meteor/static-html)
+* [tracker](https://atmospherejs.com/meteor/tracker)
 
 <h2 id="meteorloginlogout">meteor login / logout</h2>
 
