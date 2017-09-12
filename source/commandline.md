@@ -72,7 +72,7 @@ Create a new Meteor project. By default, makes a subdirectory named *name*
 and copies in the template app. You can pass an absolute or relative
 path.
 
-Using the `meteor create` command installs the packages below
+**Packages**
 
 * [autopublish](https://atmospherejs.com/meteor/autopublish)
 * [blaze-html-templates](https://atmospherejs.com/meteor/blaze-html-templates)
@@ -87,6 +87,8 @@ Using the `meteor create` command installs the packages below
 * [standard-minifier-css](https://atmospherejs.com/meteor/standard-minifier-css)
 * [standard-minifier-js](https://atmospherejs.com/meteor/standard-minifier-js)
 * [tracker](https://atmospherejs.com/meteor/tracker)
+
+### Flags
 
 `--bare`
 
@@ -141,7 +143,8 @@ closely matches the [file structure](https://guide.meteor.com/structure.html#jav
 *The crossed out packages come with the unflagged command `meteor create name`*
 
  `--package`
-Createa a new package. If used in an
+
+Creates a new package. If used in an
 existing app, this command will create a package in the packages
 directory.
 
