@@ -210,9 +210,11 @@ CollectionPrototype._updateFetch = function (fields) {
 
   if (!self._validators.fetchAllFields) {
     if (fields) {
-      self._validators.fetch =
-        // union
-        Array.from(new Set([...self._validators.fetch, ...fields]));
+      const union = Object.create(null);
+      const add = names => names && names.forEach(name => union[name] = 1);
+      add(self._validators.fetch);
+      add(fields);
+      self._validators.fetch = Object.keys(union);
     } else {
       self._validators.fetchAllFields = true;
       // clear fetch just to make sure we don't accidentally read it
