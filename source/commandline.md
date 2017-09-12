@@ -88,11 +88,7 @@ Using the `meteor create` command installs the packages below
 * [standard-minifier-js](https://atmospherejs.com/meteor/standard-minifier-js)
 * [tracker](https://atmospherejs.com/meteor/tracker)
 
-You can use the `--package` option, to create a new package. If used in an
-existing app, this command will create a package in the packages
-directory.
-
-`meteor create --bare name`
+`--bare`
 
 Creates a basic, empty project.
 
@@ -115,7 +111,7 @@ Creates a basic, empty project.
 
 *The crossed out packages come with the unflagged command `meteor create name`*
 
-`meteor create --full`
+`--full`
 
 Creates a more complete, imports-based project which
 closely matches the [file structure](https://guide.meteor.com/structure.html#javascript-structure) recommended by the
@@ -143,6 +139,12 @@ closely matches the [file structure](https://guide.meteor.com/structure.html#jav
 * [tracker](https://atmospherejs.com/meteor/tracker)
 
 *The crossed out packages come with the unflagged command `meteor create name`*
+
+ `--package`
+Createa a new package. If used in an
+existing app, this command will create a package in the packages
+directory.
+
 
 <h2 id="meteorloginlogout">meteor login / logout</h2>
 
