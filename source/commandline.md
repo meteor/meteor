@@ -92,13 +92,36 @@ You can use the `--package` option, to create a new package. If used in an
 existing app, this command will create a package in the packages
 directory.
 
-You can use `meteor create --bare` to scaffold a basic, empty project or
-`meteor create --full` for a more complete, imports-based project which
-closely matches the structure recommended by the
-[Meteor Guide](https://guide.meteor.com/).
+`meteor create --bare name`
 
+Creates a basic, empty project.
 
-Using the `meteor create --full name` command installs the packages below
+***Packages***
+
+* ~~autopublish~~
+* ~~blaze-html-templates~~
+* [ecmascript](https://atmospherejs.com/meteor/ecmascript)
+* [es5-shim](https://atmospherejs.com/meteor/es5-shim)
+* ~~insecure~~
+* [meteor-base](https://atmospherejs.com/meteor/meteor-base)
+* [mobile-experience](https://atmospherejs.com/meteor/mobile-experience)
+* [mongo](https://atmospherejs.com/meteor/mongo)
+* [reactive-var](https://atmospherejs.com/meteor/reactive-var)
+* [shell-server](https://atmospherejs.com/meteor/shell-server)
+* [standard-minifier-css](https://atmospherejs.com/meteor/standard-minifier-css)
+* [standard-minifier-js](https://atmospherejs.com/meteor/standard-minifier-js)
+* [static-html](https://atmospherejs.com/meteor/static-html)
+* [tracker](https://atmospherejs.com/meteor/tracker)
+
+*The crossed out packages come with the unflagged command `meteor create name`*
+
+`meteor create --full`
+
+Creates a more complete, imports-based project which
+closely matches the [file structure](https://guide.meteor.com/structure.html#javascript-structure) recommended by the
+[Meteor Guide](https://guide.meteor.com/)
+
+***Packages***
 
 * ~~autopublish~~
 * [blaze-html-templates](https://atmospherejs.com/meteor/blaze-html-templates)
@@ -119,22 +142,7 @@ Using the `meteor create --full name` command installs the packages below
 * [standard-minifier-js](https://atmospherejs.com/meteor/standard-minifier-js)
 * [tracker](https://atmospherejs.com/meteor/tracker)
 
-Using the `meteor create --bare name` command installs the packages below
-
-* ~~autopublish~~
-* ~~blaze-html-templates~~
-* [ecmascript](https://atmospherejs.com/meteor/ecmascript)
-* [es5-shim](https://atmospherejs.com/meteor/es5-shim)
-* ~~insecure~~
-* [meteor-base](https://atmospherejs.com/meteor/meteor-base)
-* [mobile-experience](https://atmospherejs.com/meteor/mobile-experience)
-* [mongo](https://atmospherejs.com/meteor/mongo)
-* [reactive-var](https://atmospherejs.com/meteor/reactive-var)
-* [shell-server](https://atmospherejs.com/meteor/shell-server)
-* [standard-minifier-css](https://atmospherejs.com/meteor/standard-minifier-css)
-* [standard-minifier-js](https://atmospherejs.com/meteor/standard-minifier-js)
-* [static-html](https://atmospherejs.com/meteor/static-html)
-* [tracker](https://atmospherejs.com/meteor/tracker)
+*The crossed out packages come with the unflagged command `meteor create name`*
 
 <h2 id="meteorloginlogout">meteor login / logout</h2>
 
