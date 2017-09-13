@@ -6,13 +6,8 @@ Package.describe({
 
 Npm.depends({
   "faye-websocket": "0.11.1",
-  // TODO Remove this direct websocket-driver dependency when a new
-  // version gets published, though that may not happen very soon:
-  // https://github.com/faye/websocket-driver-node/issues/21
-  "websocket-driver": "https://github.com/faye/websocket-driver-node/" +
-    "tarball/1325828a9e8b5e29c7b4758995efdb84703919ad",
   "lolex": "1.4.0",
-  "permessage-deflate": "0.1.3"
+  "permessage-deflate": "0.1.6"
 });
 
 Package.onUse(function (api) {

@@ -2,7 +2,7 @@
 
 # Meteor Roadmap
 
-**Up to date as of August 11, 2017**
+**Up to date as of September 8, 2017**
 
 This document describes the high level features the Meteor project maintainers have decided to prioritize in the near- to medium-term future. A large fraction of the maintainers’ time will be dedicated to working on the features described here. As with any roadmap, this is a living document that will evolve as priorities and dependencies shift; we aim to update the roadmap with any changes or status updates on a monthly basis.
 
@@ -17,6 +17,20 @@ Items can be added to this roadmap by first getting design approval for a soluti
 Upgrading Node will allow Meteor to take better advantage of native support for new ECMAScript features on the server, which should speed up build performance and also improve runtime performance, thanks to performance improvements in Node itself.
 
 Perhaps even more importantly, newer versions of Node support a vastly improved debugging experience. Not only can you use native Chrome DevTools and many other debugging clients (WebStorm, VS Code, etc.) to debug your app (no more [`node-inspector`](https://www.npmjs.com/package/node-inspector)), but also the Node process runs at full speed while debugging, so you don't have to wait as long for problems to manifest themselves.
+
+## Upgrade to npm 5
+
+*Status: implemented since `1.6-beta.4`.*
+
+It’s been an interesting year for npm clients. Once unrivaled as the tool of choice for installing npm packages, the `npm` command-line tool faced some serious competition starting last September from an innovative tool called `yarn`, which promised fast, reproducible installs based on `yarn.lock` files.
+
+The popularity of `yarn` led Meteor to support `meteor yarn` in addition to `meteor npm` (though you had to `meteor npm install --global yarn` first, so `npm` still had an advantage). Our own  Galaxy Server and Optics apps, which are built with Meteor, switched over to `yarn` soon after its release. The appeal was undeniable.
+
+This competition was a good thing for JavaScript developers, first because yarn solved some long-standing problems with `npm`, and later because `npm@5` responded by shipping its own implementation of some similar features, with `package-lock.json` files and automatic addition of npm install-ed packages to `package.json`.
+
+These improvements to `npm` will benefit all Meteor developers, even those who keep using `yarn`, because package dependencies specified with `Npm.depends` are automatically installed using `npm`, and `npm@5` performs those installations much faster and more reliably.
+
+Meteor is careful to remain agnostic about how you choose to populate your `node_modules` directories, so we fully expect that `meteor npm` and `meteor yarn` will remain equally good alternatives for that purpose.
 
 ## Out of the box support for advanced React features
 

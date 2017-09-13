@@ -883,8 +883,6 @@ function runWebAppServer() {
     };
 
     let localPort = process.env.PORT || 0;
-    const host = process.env.BIND_IP;
-    const localIp = host || "0.0.0.0";
     const unixSocketPath = process.env.UNIX_SOCKET_PATH;
 
     if (unixSocketPath) {
@@ -899,7 +897,10 @@ function runWebAppServer() {
         startHttpServer({ path: localPort });
       } else if (typeof localPort === "number") {
         // Start the HTTP server using TCP.
-        startHttpServer({ port: localPort, host: host });
+        startHttpServer({
+          port: localPort,
+          host: process.env.BIND_IP || "0.0.0.0"
+        });
       } else {
         throw new Error("Invalid PORT specified");
       }

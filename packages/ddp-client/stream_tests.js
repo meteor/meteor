@@ -166,12 +166,12 @@ testAsyncMulti("stream - /websocket is a websocket endpoint", [
       test.equal(pageContent, result.content);
     });
 
-    HTTP.get(Meteor.absoluteUrl('/'), expect(function(error, result) {
+    HTTP.get(Meteor._relativeToSiteRootUrl('/'), expect(function(error, result) {
       test.isNull(error);
       pageContent = result.content;
 
       _.each(['/websockets', '/websockets/'], function(path) {
-        HTTP.get(Meteor.absoluteUrl(path), wrappedCallback);
+        HTTP.get(Meteor._relativeToSiteRootUrl(path), wrappedCallback);
       });
     }));
   }
