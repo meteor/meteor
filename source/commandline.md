@@ -73,6 +73,7 @@ and copies in the template app. You can pass an absolute or relative
 path.
 
 **Packages**
+
 || Default | `--bare`  | `--full`  |
 |--------------------|--------|---|---|
 |[autopublish](https://atmospherejs.com/meteor/autopublish)|    X    |   |   |
