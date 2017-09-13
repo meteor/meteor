@@ -73,74 +73,39 @@ and copies in the template app. You can pass an absolute or relative
 path.
 
 **Packages**
+|| Default | `--bare`  | `--full`  |
+|--------------------|--------|---|---|
+|[autopublish](https://atmospherejs.com/meteor/autopublish)|    X    |   |   |
+|[blaze-html-templates](https://atmospherejs.com/meteor/blaze-html-templates)| X | |X |
+|[ecmascript](https://atmospherejs.com/meteor/ecmascript)|X|X|X|
+|[es5-shim](https://atmospherejs.com/meteor/es5-shim)|X|X|X|
+|[insecure](https://atmospherejs.com/meteor/insecure)|X|||
+|[johanbrook:publication-collector](https://atmospherejs.com/meteor/johanbrook:publication-collector)|||X|
+|[kadira:blaze-layout](https://atmospherejs.com/meteor/kadira:blaze-layout)|||X|
+|[kadira:flow-router](https://atmospherejs.com/meteor/kadira:flow-router)|||X|
+|[less](https://atmospherejs.com/meteor/less)|||X|
+|[meteor-base](https://atmospherejs.com/meteor/meteor-base)|X|X|X|
+|[mobile-experience](https://atmospherejs.com/meteor/mobile-experience)|X|X|X|
+|[mongo](https://atmospherejs.com/meteor/mongo)|X|X|X|
+|[practicalmeteor:mocha](https://atmospherejs.com/meteor/practicalmeteor:mocha)|||X|
+|[reactive-var](https://atmospherejs.com/meteor/reactive-var)|X|X|X|
+|[shell-server](https://atmospherejs.com/meteor/shell-server)|X|X||
+|[standard-minifier-css](https://atmospherejs.com/meteor/standard-minifier-css)|X|X|X|
+|[standard-minifier-js](https://atmospherejs.com/meteor/standard-minifier-js)|X|X|X|
+|[static-html](https://atmospherejs.com/meteor/static-html)||X||
+|[tracker](https://atmospherejs.com/meteor/tracker)|X|X|X|
 
-* [autopublish](https://atmospherejs.com/meteor/autopublish)
-* [blaze-html-templates](https://atmospherejs.com/meteor/blaze-html-templates)
-* [ecmascript](https://atmospherejs.com/meteor/ecmascript)
-* [es5-shim](https://atmospherejs.com/meteor/es5-shim)
-* [insecure](https://atmospherejs.com/meteor/insecure)
-* [meteor-base](https://atmospherejs.com/meteor/meteor-base)
-* [mobile-experience](https://atmospherejs.com/meteor/mobile-experience)
-* [mongo](https://atmospherejs.com/meteor/mongo)
-* [reactive-var](https://atmospherejs.com/meteor/reactive-var)
-* [shell-server](https://atmospherejs.com/meteor/shell-server)
-* [standard-minifier-css](https://atmospherejs.com/meteor/standard-minifier-css)
-* [standard-minifier-js](https://atmospherejs.com/meteor/standard-minifier-js)
-* [tracker](https://atmospherejs.com/meteor/tracker)
-
-### Flags
+**Flags**
 
 `--bare`
 
 Creates a basic, empty project.
-
-***Packages***
-
-* ~~autopublish~~
-* ~~blaze-html-templates~~
-* [ecmascript](https://atmospherejs.com/meteor/ecmascript)
-* [es5-shim](https://atmospherejs.com/meteor/es5-shim)
-* ~~insecure~~
-* [meteor-base](https://atmospherejs.com/meteor/meteor-base)
-* [mobile-experience](https://atmospherejs.com/meteor/mobile-experience)
-* [mongo](https://atmospherejs.com/meteor/mongo)
-* [reactive-var](https://atmospherejs.com/meteor/reactive-var)
-* [shell-server](https://atmospherejs.com/meteor/shell-server)
-* [standard-minifier-css](https://atmospherejs.com/meteor/standard-minifier-css)
-* [standard-minifier-js](https://atmospherejs.com/meteor/standard-minifier-js)
-* [static-html](https://atmospherejs.com/meteor/static-html)
-* [tracker](https://atmospherejs.com/meteor/tracker)
-
-*The crossed out packages come with the unflagged command `meteor create name`*
 
 `--full`
 
 Creates a more complete, imports-based project which
 closely matches the [file structure](https://guide.meteor.com/structure.html#javascript-structure) recommended by the
 [Meteor Guide](https://guide.meteor.com/)
-
-***Packages***
-
-* ~~autopublish~~
-* [blaze-html-templates](https://atmospherejs.com/meteor/blaze-html-templates)
-* [ecmascript](https://atmospherejs.com/meteor/ecmascript)
-* [es5-shim](https://atmospherejs.com/meteor/es5-shim)
-* ~~insecure~~
-* [johanbrook:publication-collector](https://atmospherejs.com/meteor/johanbrook:publication-collector)
-* [kadira:blaze-layout](https://atmospherejs.com/meteor/kadira:blaze-layout)
-* [kadira:flow-router](https://atmospherejs.com/meteor/kadira:flow-router)
-* [less](https://atmospherejs.com/meteor/less)
-* [meteor-base](https://atmospherejs.com/meteor/meteor-base)
-* [mobile-experience](https://atmospherejs.com/meteor/mobile-experience)
-* [mongo](https://atmospherejs.com/meteor/mongo)
-* [practicalmeteor:mocha](https://atmospherejs.com/meteor/practicalmeteor:mocha)
-* [reactive-var](https://atmospherejs.com/meteor/reactive-var)
-* ~~shell-server~~
-* [standard-minifier-css](https://atmospherejs.com/meteor/standard-minifier-css)
-* [standard-minifier-js](https://atmospherejs.com/meteor/standard-minifier-js)
-* [tracker](https://atmospherejs.com/meteor/tracker)
-
-*The crossed out packages come with the unflagged command `meteor create name`*
 
  `--package`
 
