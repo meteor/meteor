@@ -6,8 +6,8 @@
       "from": "faye-websocket@0.11.1"
     },
     "http-parser-js": {
-      "version": "0.4.5",
-      "resolved": "https://registry.npmjs.org/http-parser-js/-/http-parser-js-0.4.5.tgz",
+      "version": "0.4.6",
+      "resolved": "https://registry.npmjs.org/http-parser-js/-/http-parser-js-0.4.6.tgz",
       "from": "http-parser-js@>=0.4.0"
     },
     "lolex": {
@@ -16,9 +16,9 @@
       "from": "lolex@1.4.0"
     },
     "permessage-deflate": {
-      "version": "0.1.3",
-      "resolved": "https://registry.npmjs.org/permessage-deflate/-/permessage-deflate-0.1.3.tgz",
-      "from": "permessage-deflate@0.1.3"
+      "version": "0.1.6",
+      "resolved": "https://registry.npmjs.org/permessage-deflate/-/permessage-deflate-0.1.6.tgz",
+      "from": "permessage-deflate@0.1.6"
     },
     "websocket-driver": {
       "version": "0.7.0",
