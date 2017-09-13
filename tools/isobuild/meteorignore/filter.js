@@ -40,9 +40,9 @@ export function filterIgnoredSources(sources, self) {
 
     // search one mig that ignores current src
     const ignores = matchedMigs.find(migPath => {
-      const migContent = readFileSync(`${CWD}/${migPath}`).toString();
       self.meteorignoreData.igCache[migPath] =
-        self.meteorignoreData.igCache[migPath] || ignore().add(migContent);
+        self.meteorignoreData.igCache[migPath] ||
+        ignore().add(readFileSync(`${CWD}/${migPath}`).toString());
       return self.meteorignoreData.igCache[migPath].ignores(src);
     });
 
