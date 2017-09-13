@@ -14,7 +14,7 @@ describe("meteor-babel", () => {
   it("should be able to parse non-standard syntax", () => {
     const ast = meteorBabel.parse("const copy = {...obj};");
     const prop = ast.program.body[0].declarations[0].init.properties[0];
-    assert.strictEqual(prop.type, "SpreadProperty");
+    assert.strictEqual(prop.type, "SpreadElement");
   });
 
   it("should not force strict mode", () => {
@@ -128,7 +128,7 @@ const val = "oyez";
 val = "zxcv";`;
 
     try {
-      transform(code, { presets: ["meteor"] });
+      Function(transform(code, { presets: ["meteor"] }).code)();
     } catch (error) {
       assert.ok(/"val" is read-only/.test(error.message));
       return;
