@@ -13,7 +13,7 @@ Package.registerBuildPlugin({
   name: 'compile-coffeescript',
   use: [
     'caching-compiler@1.1.9',
-    'ecmascript@0.9.0-beta.26',
+    'ecmascript@0.8.2',
     'coffeescript-compiler@=1.12.7_2'
   ],
   sources: ['compile-coffeescript.js']
@@ -29,8 +29,8 @@ Package.onUse(function (api) {
   // The following api.imply calls should match those in ../../ecmascript/package.js,
   // except that coffeescript does not api.imply('modules').
   api.imply('ecmascript-runtime@0.4.1', 'server');
-  api.imply('babel-runtime@1.0.1');
-  api.imply('promise@0.8.9');
+  api.imply('babel-runtime@7.0.0-beta.27');
+  api.imply('promise@0.9.0');
 });
 
 Package.onTest(function (api) {
