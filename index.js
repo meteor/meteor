@@ -47,7 +47,7 @@ function compile(source, options) {
 
     if (! generateCode) {
       optionsCopy.code = false;
-      optionsCopy.sourceMaps = false;
+      optionsCopy.sourceMap = false;
     }
 
     const result = babelCore.transformFromAst(ast, source, optionsCopy);
