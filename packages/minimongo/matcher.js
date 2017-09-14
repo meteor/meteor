@@ -86,14 +86,12 @@ export default class Matcher {
       return doc => ({result: !!selector.call(doc)});
     }
 
-    // shorthand -- scalar _id and {_id}
-    if (LocalCollection._selectorIsIdPerhapsAsObject(selector)) {
-      const _id = selector._id || selector;
-
-      this._selector = {_id};
+    // shorthand -- scalar _id
+    if (LocalCollection._selectorIsId(selector)) {
+      this._selector = {_id: selector};
       this._recordPathUsed('_id');
 
-      return doc => ({result: EJSON.equals(doc._id, _id)});
+      return doc => ({result: EJSON.equals(doc._id, selector)});
     }
 
     // protect against dangerous selectors.  falsey and {_id: falsey} are both

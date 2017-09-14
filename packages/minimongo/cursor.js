@@ -1,4 +1,5 @@
 import LocalCollection from './local_collection.js';
+import { hasOwn } from './common.js';
 
 // Cursor: a specification for a particular subset of documents, w/ a defined
 // order, limit, and offset.  creating a Cursor with LocalCollection.find(),
@@ -11,7 +12,9 @@ export default class Cursor {
 
     if (LocalCollection._selectorIsIdPerhapsAsObject(selector)) {
       // stash for fast _id and { _id }
-      this._selectorId = selector._id || selector;
+      this._selectorId = hasOwn.call(selector, '_id')
+        ? selector._id
+        : selector;
     } else {
       this._selectorId = undefined;
 
