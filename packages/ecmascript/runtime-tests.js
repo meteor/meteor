@@ -36,9 +36,10 @@ Tinytest.add("ecmascript - runtime - classes - basic", (test) => {
       }
     }
 
-    test.throws(() => {
-      Foo(); // called without `new`
-    });
+    // Babel 7 no longer forbids constructor calls in loose mode.
+    // test.throws(() => {
+    //   Foo(); // called without `new`
+    // });
 
     test.equal((new Foo(3)).x, 3);
   }
@@ -51,9 +52,10 @@ Tinytest.add("ecmascript - runtime - classes - basic", (test) => {
     }
     class Foo extends Bar {}
 
-    test.throws(() => {
-      Foo(); // called without `new`
-    });
+    // Babel 7 no longer forbids constructor calls in loose mode.
+    // test.throws(() => {
+    //   Foo(); // called without `new`
+    // });
 
     test.equal((new Foo(3)).x, 3);
     test.isTrue((new Foo(3)) instanceof Foo);
