@@ -39,8 +39,8 @@ Tinytest.add("ecmascript - transpilation - class methods", (test) => {
   // assigned in a simple matter that does rely on Object.defineProperty.
   test.isTrue(contains(output, 'Foo.staticMethod = function staticMethod('));
   test.isTrue(contains(output,
-                       'Foo.prototype.prototypeMethod = function prototypeMethod('));
-  test.isTrue(contains(output, 'Foo.prototype[computedMethod] = function ('));
+                       '.prototypeMethod = function prototypeMethod('));
+  test.isTrue(contains(output, '[computedMethod] = function ('));
   test.isFalse(contains(output, 'createClass'));
 });
 
@@ -52,8 +52,8 @@ class Foo {
   }
 }`);
 
-  // test that the classCallCheck helper is still in use
-  test.isTrue(contains(output, 'helpers/classCallCheck'));
+  // Babel 7 no longer uses classCallCheck in loose mode.
+  test.isFalse(contains(output, 'helpers/classCallCheck'));
 });
 
 Tinytest.add("ecmascript - transpilation - helpers - inherits", (test) => {
