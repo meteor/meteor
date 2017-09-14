@@ -284,7 +284,8 @@ CollectionPrototype._validatedUpdate = function(
   const mutatorKeys = Object.keys(mutator);
 
   // compute modified fields
-  const fields = [];
+  const modifiedFields = {};
+
   if (mutatorKeys.length === 0) {
     throw new Meteor.Error(403, noReplaceError);
   }
@@ -303,11 +304,12 @@ CollectionPrototype._validatedUpdate = function(
           field = field.substring(0, field.indexOf('.'));
 
         // record the field we are trying to change
-        if (!fields.includes(field))
-          fields.push(field);
+        modifiedFields[field] = true;
       });
     }
   });
+
+  const fields = Object.keys(modifiedFields);
 
   const findOptions = {transform: null};
   if (!self._validators.fetchAllFields) {
@@ -459,9 +461,9 @@ function docToValidate(validator, doc, generatedId) {
 
 function addValidator(collection, allowOrDeny, options) {
   // validate keys
-  const VALID_KEYS = ['insert', 'update', 'remove', 'fetch', 'transform'];
+  const validKeysRegEx = /^(?:insert|update|remove|fetch|transform)$/;
   Object.keys(options).forEach((key) => {
-    if (!VALID_KEYS.includes(key))
+    if (!validKeysRegEx.test(key))
       throw new Error(allowOrDeny + ": Invalid key: " + key);
   });
 
