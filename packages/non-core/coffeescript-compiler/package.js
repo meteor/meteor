@@ -13,7 +13,7 @@ Npm.depends({
 
 Package.onUse(function (api) {
   api.use('babel-compiler@7.0.0');
-  api.use('ecmascript@0.8.2');
+  api.use('ecmascript@0.9.0-beta.26');
 
   api.mainModule('coffeescript-compiler.js', 'server');
 
