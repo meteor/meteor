@@ -2,6 +2,8 @@
 /// Remote methods and access control.
 ///
 
+const hasOwn = Object.prototype.hasOwnProperty;
+
 // Restrict default mutators on collection. allow() and deny() take the
 // same options:
 //
@@ -108,7 +110,7 @@ CollectionPrototype._defineMutationMethods = function(options) {
   if (self._connection && (self._connection === Meteor.server || Meteor.isClient)) {
     const m = {};
 
-    _.each(['insert', 'update', 'remove'], function (method) {
+    ['insert', 'update', 'remove'].forEach((method) => {
       const methodName = self._prefix + method;
 
       if (options.useExisting) {
@@ -122,7 +124,7 @@ CollectionPrototype._defineMutationMethods = function(options) {
       m[methodName] = function (/* ... */) {
         // All the methods do their own validation, instead of using check().
         check(arguments, [Match.Any]);
-        const args = _.toArray(arguments);
+        const args = Array.from(arguments);
         try {
           // For an insert, if the client didn't specify an _id, generate one
           // now; because this uses DDP.randomStream, it will be consistent with
@@ -136,7 +138,7 @@ CollectionPrototype._defineMutationMethods = function(options) {
           // between arbitrary client-specified _id fields and merely
           // client-controlled-via-randomSeed fields.
           let generatedId = null;
-          if (method === "insert" && !_.has(args[0], '_id')) {
+          if (method === "insert" && !hasOwn.call(args[0], '_id')) {
             generatedId = self._makeNewID();
           }
 
@@ -208,7 +210,11 @@ CollectionPrototype._updateFetch = function (fields) {
 
   if (!self._validators.fetchAllFields) {
     if (fields) {
-      self._validators.fetch = _.union(self._validators.fetch, fields);
+      const union = Object.create(null);
+      const add = names => names && names.forEach(name => union[name] = 1);
+      add(self._validators.fetch);
+      add(fields);
+      self._validators.fetch = Object.keys(union);
     } else {
       self._validators.fetchAllFields = true;
       // clear fetch just to make sure we don't accidentally read it
@@ -230,13 +236,13 @@ CollectionPrototype._validatedInsert = function (userId, doc,
 
   // call user validators.
   // Any deny returns true means denied.
-  if (_.any(self._validators.insert.deny, function(validator) {
+  if (self._validators.insert.deny.some((validator) => {
     return validator(userId, docToValidate(validator, doc, generatedId));
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
   // Any allow returns true means proceed. Throw error if they all fail.
-  if (_.all(self._validators.insert.allow, function(validator) {
+  if (self._validators.insert.allow.every((validator) => {
     return !validator(userId, docToValidate(validator, doc, generatedId));
   })) {
     throw new Meteor.Error(403, "Access denied");
@@ -260,7 +266,7 @@ CollectionPrototype._validatedUpdate = function(
 
   check(mutator, Object);
 
-  options = _.clone(options) || {};
+  options = Object.assign(Object.create(null), options);
 
   if (!LocalCollection._selectorIsIdPerhapsAsObject(selector))
     throw new Error("validated update should be of a single ID");
@@ -275,35 +281,40 @@ CollectionPrototype._validatedUpdate = function(
         " update documents, not replace them. Use a Mongo update operator, such " +
         "as '$set'.";
 
+  const mutatorKeys = Object.keys(mutator);
+
   // compute modified fields
-  const fields = [];
-  if (_.isEmpty(mutator)) {
+  const modifiedFields = {};
+
+  if (mutatorKeys.length === 0) {
     throw new Meteor.Error(403, noReplaceError);
   }
-  _.each(mutator, function (params, op) {
+  mutatorKeys.forEach((op) => {
+    const params = mutator[op];
     if (op.charAt(0) !== '$') {
       throw new Meteor.Error(403, noReplaceError);
-    } else if (!_.has(ALLOWED_UPDATE_OPERATIONS, op)) {
+    } else if (!hasOwn.call(ALLOWED_UPDATE_OPERATIONS, op)) {
       throw new Meteor.Error(
         403, "Access denied. Operator " + op + " not allowed in a restricted collection.");
     } else {
-      _.each(_.keys(params), function (field) {
+      Object.keys(params).forEach((field) => {
         // treat dotted fields as if they are replacing their
         // top-level part
         if (field.indexOf('.') !== -1)
           field = field.substring(0, field.indexOf('.'));
 
         // record the field we are trying to change
-        if (!_.contains(fields, field))
-          fields.push(field);
+        modifiedFields[field] = true;
       });
     }
   });
 
+  const fields = Object.keys(modifiedFields);
+
   const findOptions = {transform: null};
   if (!self._validators.fetchAllFields) {
     findOptions.fields = {};
-    _.each(self._validators.fetch, function(fieldName) {
+    self._validators.fetch.forEach((fieldName) => {
       findOptions.fields[fieldName] = 1;
     });
   }
@@ -314,7 +325,7 @@ CollectionPrototype._validatedUpdate = function(
 
   // call user validators.
   // Any deny returns true means denied.
-  if (_.any(self._validators.update.deny, function(validator) {
+  if (self._validators.update.deny.some((validator) => {
     const factoriedDoc = transformDoc(validator, doc);
     return validator(userId,
                      factoriedDoc,
@@ -324,7 +335,7 @@ CollectionPrototype._validatedUpdate = function(
     throw new Meteor.Error(403, "Access denied");
   }
   // Any allow returns true means proceed. Throw error if they all fail.
-  if (_.all(self._validators.update.allow, function(validator) {
+  if (self._validators.update.allow.every((validator) => {
     const factoriedDoc = transformDoc(validator, doc);
     return !validator(userId,
                       factoriedDoc,
@@ -364,7 +375,7 @@ CollectionPrototype._validatedRemove = function(userId, selector) {
   const findOptions = {transform: null};
   if (!self._validators.fetchAllFields) {
     findOptions.fields = {};
-    _.each(self._validators.fetch, function(fieldName) {
+    self._validators.fetch.forEach((fieldName) => {
       findOptions.fields[fieldName] = 1;
     });
   }
@@ -375,13 +386,13 @@ CollectionPrototype._validatedRemove = function(userId, selector) {
 
   // call user validators.
   // Any deny returns true means denied.
-  if (_.any(self._validators.remove.deny, function(validator) {
+  if (self._validators.remove.deny.some((validator) => {
     return validator(userId, transformDoc(validator, doc));
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
   // Any allow returns true means proceed. Throw error if they all fail.
-  if (_.all(self._validators.remove.allow, function(validator) {
+  if (self._validators.remove.allow.every((validator) => {
     return !validator(userId, transformDoc(validator, doc));
   })) {
     throw new Meteor.Error(403, "Access denied");
@@ -450,16 +461,16 @@ function docToValidate(validator, doc, generatedId) {
 
 function addValidator(collection, allowOrDeny, options) {
   // validate keys
-  const VALID_KEYS = ['insert', 'update', 'remove', 'fetch', 'transform'];
-  _.each(_.keys(options), function (key) {
-    if (!_.contains(VALID_KEYS, key))
+  const validKeysRegEx = /^(?:insert|update|remove|fetch|transform)$/;
+  Object.keys(options).forEach((key) => {
+    if (!validKeysRegEx.test(key))
       throw new Error(allowOrDeny + ": Invalid key: " + key);
   });
 
   collection._restricted = true;
 
-  _.each(['insert', 'update', 'remove'], function (name) {
-    if (options.hasOwnProperty(name)) {
+  ['insert', 'update', 'remove'].forEach((name) => {
+    if (hasOwn.call(options, name)) {
       if (!(options[name] instanceof Function)) {
         throw new Error(allowOrDeny + ": Value for `" + name + "` must be a function");
       }
@@ -499,6 +510,12 @@ function throwIfSelectorIsNotId(selector, methodName) {
 
 // Determine if we are in a DDP method simulation
 function alreadyInSimulation() {
-  const enclosing = DDP._CurrentMethodInvocation.get();
+  var CurrentInvocation =
+    DDP._CurrentMethodInvocation ||
+    // For backwards compatibility, as explained in this issue:
+    // https://github.com/meteor/meteor/issues/8947
+    DDP._CurrentInvocation;
+
+  const enclosing = CurrentInvocation.get();
   return enclosing && enclosing.isSimulation;
 }
