@@ -26,4 +26,4 @@ Sublime Text is a nice text editor that gets out of your way at the right times 
 
 ## Version Control
 
-You might find it useful to use Git or a different version control system to collaborate on your projects. The simplest ones that we found for Windows are [msysgit](https://msysgit.github.io/), which is used from the command line, and [GitHub for Windows](https://windows.github.com/), which has a GUI but only supports GitHub.
+You might find it useful to use Git or a different version control system to collaborate on your projects. There are many different Windows-based version control tools available, like [msysgit](https://msysgit.github.io/) (Git, command line) and [GitHub for Windows](https://windows.github.com/) (Git, GUI). 
