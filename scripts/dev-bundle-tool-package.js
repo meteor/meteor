@@ -14,15 +14,13 @@ var packageJson = {
     npm: "5.4.1",
     "node-gyp": "3.6.2",
     "node-pre-gyp": "0.6.36",
-    "meteor-babel": "0.24.6",
+    "meteor-babel": "7.0.0-beta.0",
     "meteor-promise": "0.8.6",
     promise: "8.0.1",
-    reify: "0.12.0",
+    reify: "0.12.1",
     fibers: "2.0.0",
     // So that Babel 6 can emit require("babel-runtime/helpers/...") calls.
-    "babel-runtime": "6.9.2",
-    // For various ES2015 polyfills, such as Map and Set.
-    "meteor-ecmascript-runtime": "0.3.0",
+    "babel-runtime": "7.0.0-beta.0",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
     // in the package too) because we should consider using lodash instead
     // (and there are backwards-incompatible changes either way).
