@@ -15,7 +15,7 @@ makeInstallerOptions.fallback = function (id, parentId, error) {
   if (topLevelIdPattern.test(id)) {
     if (typeof Npm === "object" &&
         typeof Npm.require === "function") {
-      return Npm.require(id);
+      return Npm.require(id, error);
     }
   }
 
