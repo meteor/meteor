@@ -281,7 +281,10 @@ Ap.callLoginMethod = function (options) {
       // already logged in they will still get logged in on reconnect.
       // See issue #4970.
     } else {
-      self.connection.onReconnect = function () {
+      self._reconnectStopper = DDP.onReconnect(function (conn) {
+        if (conn != self.connection) {
+          return;
+        }
         reconnected = true;
         // If our token was updated in storage, use the latest one.
         var storedToken = self._storedLoginToken();
@@ -332,7 +335,7 @@ Ap.callLoginMethod = function (options) {
               loginCallbacks(error);
             }});
         }
-      };
+      });
     }
   };
 
@@ -389,7 +392,7 @@ Ap.makeClientLoggedOut = function () {
   }
   this._unstoreLoginToken();
   this.connection.setUserId(null);
-  this.connection.onReconnect = null;
+  this._reconnectStopper && this._reconnectStopper.stop();
 };
 
 Ap.makeClientLoggedIn = function (userId, token, tokenExpires) {

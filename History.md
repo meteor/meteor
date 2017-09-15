@@ -1,5 +1,13 @@
 ## v.NEXT
 
+* Deprecate use of `connection.onReconnect = func`. Instead, a new
+  `DDP.onReconnect(callback)` method should be used to register callbacks to
+  call when a connection reconnects. The connection that is reconnecting is
+  passed as the only argument to `callback`. This is used by the accounts system
+  to relogin on reconnects without interfering with other code which uses
+  `connection.onReconnect`.
+  [#5665](https://github.com/meteor/meteor/issues/5665)
+
 * The `webapp` package has been updated to support UNIX domain sockets. If a
   `UNIX_SOCKET_PATH` environment variable is set with a valid
   UNIX socket file path (e.g. `UNIX_SOCKET_PATH=/tmp/socktest.sock`), Meteor's
