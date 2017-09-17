@@ -120,6 +120,8 @@ function fetchMissing(missingTree) {
 }
 
 function getFromTree(tree, id) {
+  id = id.replace(":", "_");
+
   id.split("/").every(function (part) {
     return ! part || (tree = tree[part]);
   });
