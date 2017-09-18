@@ -1,7 +1,7 @@
 Package.describe({
   name: "babel-runtime",
   summary: "Runtime support for output of Babel transpiler",
-  version: '7.0.0-beta.29',
+  version: '7.0.0-beta.30',
   documentation: 'README.md'
 });
 
