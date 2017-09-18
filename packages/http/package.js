@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Make HTTP calls to remote servers",
-  version: '1.3.0-beta.28'
+  version: '1.3.0-beta.29'
 });
 
 Npm.depends({
