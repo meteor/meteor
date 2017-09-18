@@ -236,6 +236,10 @@ var loadServerBundles = Profile("Load server bundles", function () {
         if (nonLocalNodeModulesPaths.length > 0) {
           var fullPath;
 
+          // Replace all backslashes with forward slashes, just in case
+          // someone passes a Windows-y module identifier.
+          name = name.split("\\").join("/");
+
           nonLocalNodeModulesPaths.some(function (nodeModuleBase) {
             var packageBase = files.convertToOSPath(files.pathResolve(
               nodeModuleBase,

@@ -1,5 +1,5 @@
 Package.describe({
-  version: '1.0.3',
+  version: '1.0.4',
   summary: 'Meteor bundle analysis and visualization.',
   documentation: 'README.md',
 });
@@ -9,6 +9,7 @@ Npm.depends({
   "d3-shape": "1.0.6",
   "d3-hierarchy": "1.1.4",
   "d3-transition": "1.0.4",
+  "d3-collection": "1.0.4",
   "pretty-bytes": "4.0.2",
 });
 

@@ -1861,6 +1861,10 @@ class JsImage {
           }, function (name, error) {
             let fullPath;
 
+            // Replace all backslashes with forward slashes, just in case
+            // someone passes a Windows-y module identifier.
+            name = name.split("\\").join("/");
+
             function tryLookup(nodeModulesPath, name) {
               var nodeModulesTopDir = files.pathJoin(
                 nodeModulesPath,
