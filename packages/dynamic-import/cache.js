@@ -115,7 +115,7 @@ exports.checkMany = function (versions) {
       return new Promise(function (resolve, reject) {
         var version = versions[id];
         if (version) {
-          var sourceRequest = sourcesByVersion.get(versions[id]);
+          var sourceRequest = sourcesByVersion.get(version);
           sourceRequest.onerror = makeOnError(reject, "sourcesByVersion.get");
           sourceRequest.onsuccess = function (event) {
             var result = event.target.result;

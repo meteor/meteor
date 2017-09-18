@@ -196,11 +196,21 @@ describe("dynamic import(...)", function () {
   });
 
   it("should work for package names containing colons", () => {
+    const expectedAbsId =
+      "/node_modules/meteor/user:colon-name/dynamic.js";
+
+    const version = require(
+      "meteor/dynamic-import/dynamic-versions.js"
+    ).get(expectedAbsId);
+
+    if (Meteor.isClient) {
+      assert.strictEqual(typeof version, "string");
+    } else {
+      assert.strictEqual(version, null);
+    }
+
     import("meteor/user:colon-name/dynamic.js").then(dynamic => {
-      assert.strictEqual(
-        dynamic.name,
-        "/node_modules/meteor/user:colon-name/dynamic.js"
-      );
+      assert.strictEqual(dynamic.name, expectedAbsId);
     });
   });
 });
