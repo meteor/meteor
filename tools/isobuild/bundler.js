@@ -1836,9 +1836,9 @@ class JsImage {
       });
     });
 
-    const toolsNodeModulesDir = files.pathJoin(
-      files.getCurrentToolsDir(),
-      "tools",
+    const devBundleLibNodeModulesDir = files.pathJoin(
+      files.getDevBundle(),
+      "lib",
       "node_modules"
     );
 
@@ -1864,7 +1864,7 @@ class JsImage {
             function tryLookup(nodeModulesPath, name) {
               var nodeModulesTopDir = files.pathJoin(
                 nodeModulesPath,
-                name.split("/")[0]
+                name.split("/", 1)[0]
               );
 
               if (files.exists(nodeModulesTopDir)) {
@@ -1880,7 +1880,7 @@ class JsImage {
               return ! nmd.local && tryLookup(nmd.sourcePath, name);
             });
 
-            if (found || tryLookup(toolsNodeModulesDir, name)) {
+            if (found || tryLookup(devBundleLibNodeModulesDir, name)) {
               return require(fullPath);
             }
 
