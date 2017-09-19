@@ -23,7 +23,7 @@ Tinytest.add('accounts - config - token lifetime', function (test) {
 Tinytest.add('accounts - config - unexpiring tokens', function (test) {
   const loginExpirationInDays = Accounts._options.loginExpirationInDays;
 
-  // When settings loginExpirationInDays to null in the global Accounts
+  // When setting loginExpirationInDays to null in the global Accounts
   // config object, make sure the returned token lifetime represents an
   // unexpiring token date (is very far into the future).
   Accounts._options.loginExpirationInDays = null;
