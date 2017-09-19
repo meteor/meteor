@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Meteor's latency-compensated distributed data client",
-  version: '2.1.1',
+  version: '2.1.3',
   documentation: null
 });
 
@@ -15,7 +15,6 @@ Package.onUse(function (api) {
            'retry', 'id-map', 'ecmascript'],
           ['client', 'server']);
 
-  // for DDP.onReconnect
   api.use('callback-hook', ['client', 'server']);
 
   // common functionality

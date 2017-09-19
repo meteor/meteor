@@ -66,7 +66,7 @@ export class AccountsClient extends AccountsCommon {
   }
 
   /**
-   * @summary Register a new login function on the client. Intended for OAuth package authors. You can call the login function by using 
+   * @summary Register a new login function on the client. Intended for OAuth package authors. You can call the login function by using
    `Accounts.callLoginFunction` or `Accounts.callLoginFunction`.
    * @locus Client
    * @param {String} funcName The name of your login function. Used by `Accounts.callLoginFunction` and `Accounts.applyLoginFunction`.

@@ -49,8 +49,10 @@ var Connection = function (url, options) {
   }, options);
 
   // If set, called when we reconnect, queuing method calls _before_ the
-  // existing outstanding ones. This is the only data member that is part of the
-  // public API!
+  // existing outstanding ones.
+  // NOTE: This feature has been preserved for backwards compatibility. The
+  // preferred method of setting a callback on reconnect is to use
+  // DDP.onReconnect.
   self.onReconnect = null;
 
   // as a test hook, allow passing a stream instead of a url.
@@ -1761,19 +1763,19 @@ DDP.connect = function (url, options) {
 };
 
 DDP._reconnectHook = new Hook({ bindEnvironment: false });
+
 /**
  * @summary Register a function to call as the first step of
  * reconnecting. This function can call methods which will be executed before
  * any other outstanding methods. For example, this can be used to re-establish
  * the appropriate authentication context on the connection.
  * @locus Anywhere
- * @param {Function} callback The function to call. It will be called with a 
+ * @param {Function} callback The function to call. It will be called with a
  * single argument, the [connection object](#ddp_connect) that is reconnecting.
  */
 DDP.onReconnect = function (callback) {
   return DDP._reconnectHook.register(callback);
 };
-
 
 // Hack for `spiderable` package: a way to see if the page is done
 // loading all the data it needs.
