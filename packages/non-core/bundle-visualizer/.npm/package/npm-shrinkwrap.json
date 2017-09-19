@@ -1,79 +1,24 @@
 {
   "dependencies": {
-    "commander": {
-      "version": "2.9.0",
-      "resolved": "https://registry.npmjs.org/commander/-/commander-2.9.0.tgz",
-      "from": "commander@>=2.0.0 <3.0.0"
-    },
-    "d3": {
-      "version": "4.8.0",
-      "resolved": "https://registry.npmjs.org/d3/-/d3-4.8.0.tgz",
-      "from": "d3@4.8.0"
-    },
-    "d3-array": {
-      "version": "1.2.0",
-      "resolved": "https://registry.npmjs.org/d3-array/-/d3-array-1.2.0.tgz",
-      "from": "d3-array@1.2.0"
-    },
-    "d3-axis": {
-      "version": "1.0.6",
-      "resolved": "https://registry.npmjs.org/d3-axis/-/d3-axis-1.0.6.tgz",
-      "from": "d3-axis@1.0.6"
-    },
-    "d3-brush": {
-      "version": "1.0.4",
-      "resolved": "https://registry.npmjs.org/d3-brush/-/d3-brush-1.0.4.tgz",
-      "from": "d3-brush@1.0.4"
-    },
-    "d3-chord": {
-      "version": "1.0.4",
-      "resolved": "https://registry.npmjs.org/d3-chord/-/d3-chord-1.0.4.tgz",
-      "from": "d3-chord@1.0.4"
-    },
     "d3-collection": {
-      "version": "1.0.3",
-      "resolved": "https://registry.npmjs.org/d3-collection/-/d3-collection-1.0.3.tgz",
-      "from": "d3-collection@1.0.3"
+      "version": "1.0.4",
+      "resolved": "https://registry.npmjs.org/d3-collection/-/d3-collection-1.0.4.tgz",
+      "from": "d3-collection@1.0.4"
     },
     "d3-color": {
       "version": "1.0.3",
       "resolved": "https://registry.npmjs.org/d3-color/-/d3-color-1.0.3.tgz",
-      "from": "d3-color@1.0.3"
+      "from": "d3-color@>=1.0.0 <2.0.0"
     },
     "d3-dispatch": {
       "version": "1.0.3",
       "resolved": "https://registry.npmjs.org/d3-dispatch/-/d3-dispatch-1.0.3.tgz",
-      "from": "d3-dispatch@1.0.3"
-    },
-    "d3-drag": {
-      "version": "1.0.4",
-      "resolved": "https://registry.npmjs.org/d3-drag/-/d3-drag-1.0.4.tgz",
-      "from": "d3-drag@1.0.4"
-    },
-    "d3-dsv": {
-      "version": "1.0.5",
-      "resolved": "https://registry.npmjs.org/d3-dsv/-/d3-dsv-1.0.5.tgz",
-      "from": "d3-dsv@1.0.5"
+      "from": "d3-dispatch@>=1.0.0 <2.0.0"
     },
     "d3-ease": {
       "version": "1.0.3",
       "resolved": "https://registry.npmjs.org/d3-ease/-/d3-ease-1.0.3.tgz",
-      "from": "d3-ease@1.0.3"
-    },
-    "d3-force": {
-      "version": "1.0.6",
-      "resolved": "https://registry.npmjs.org/d3-force/-/d3-force-1.0.6.tgz",
-      "from": "d3-force@1.0.6"
-    },
-    "d3-format": {
-      "version": "1.2.0",
-      "resolved": "https://registry.npmjs.org/d3-format/-/d3-format-1.2.0.tgz",
-      "from": "d3-format@1.2.0"
-    },
-    "d3-geo": {
-      "version": "1.6.3",
-      "resolved": "https://registry.npmjs.org/d3-geo/-/d3-geo-1.6.3.tgz",
-      "from": "d3-geo@1.6.3"
+      "from": "d3-ease@>=1.0.0 <2.0.0"
     },
     "d3-hierarchy": {
       "version": "1.1.4",
@@ -81,44 +26,14 @@
       "from": "d3-hierarchy@1.1.4"
     },
     "d3-interpolate": {
-      "version": "1.1.4",
-      "resolved": "https://registry.npmjs.org/d3-interpolate/-/d3-interpolate-1.1.4.tgz",
-      "from": "d3-interpolate@1.1.4"
+      "version": "1.1.5",
+      "resolved": "https://registry.npmjs.org/d3-interpolate/-/d3-interpolate-1.1.5.tgz",
+      "from": "d3-interpolate@>=1.0.0 <2.0.0"
     },
     "d3-path": {
       "version": "1.0.5",
       "resolved": "https://registry.npmjs.org/d3-path/-/d3-path-1.0.5.tgz",
-      "from": "d3-path@1.0.5"
-    },
-    "d3-polygon": {
-      "version": "1.0.3",
-      "resolved": "https://registry.npmjs.org/d3-polygon/-/d3-polygon-1.0.3.tgz",
-      "from": "d3-polygon@1.0.3"
-    },
-    "d3-quadtree": {
-      "version": "1.0.3",
-      "resolved": "https://registry.npmjs.org/d3-quadtree/-/d3-quadtree-1.0.3.tgz",
-      "from": "d3-quadtree@1.0.3"
-    },
-    "d3-queue": {
-      "version": "3.0.5",
-      "resolved": "https://registry.npmjs.org/d3-queue/-/d3-queue-3.0.5.tgz",
-      "from": "d3-queue@3.0.5"
-    },
-    "d3-random": {
-      "version": "1.0.3",
-      "resolved": "https://registry.npmjs.org/d3-random/-/d3-random-1.0.3.tgz",
-      "from": "d3-random@1.0.3"
-    },
-    "d3-request": {
-      "version": "1.0.5",
-      "resolved": "https://registry.npmjs.org/d3-request/-/d3-request-1.0.5.tgz",
-      "from": "d3-request@1.0.5"
-    },
-    "d3-scale": {
-      "version": "1.0.5",
-      "resolved": "https://registry.npmjs.org/d3-scale/-/d3-scale-1.0.5.tgz",
-      "from": "d3-scale@1.0.5"
+      "from": "d3-path@>=1.0.0 <2.0.0"
     },
     "d3-selection": {
       "version": "1.0.5",
@@ -130,60 +45,20 @@
       "resolved": "https://registry.npmjs.org/d3-shape/-/d3-shape-1.0.6.tgz",
       "from": "d3-shape@1.0.6"
     },
-    "d3-time": {
-      "version": "1.0.6",
-      "resolved": "https://registry.npmjs.org/d3-time/-/d3-time-1.0.6.tgz",
-      "from": "d3-time@1.0.6"
-    },
-    "d3-time-format": {
-      "version": "2.0.5",
-      "resolved": "https://registry.npmjs.org/d3-time-format/-/d3-time-format-2.0.5.tgz",
-      "from": "d3-time-format@2.0.5"
-    },
     "d3-timer": {
-      "version": "1.0.5",
-      "resolved": "https://registry.npmjs.org/d3-timer/-/d3-timer-1.0.5.tgz",
-      "from": "d3-timer@1.0.5"
+      "version": "1.0.7",
+      "resolved": "https://registry.npmjs.org/d3-timer/-/d3-timer-1.0.7.tgz",
+      "from": "d3-timer@>=1.0.0 <2.0.0"
     },
     "d3-transition": {
       "version": "1.0.4",
       "resolved": "https://registry.npmjs.org/d3-transition/-/d3-transition-1.0.4.tgz",
       "from": "d3-transition@1.0.4"
     },
-    "d3-voronoi": {
-      "version": "1.1.2",
-      "resolved": "https://registry.npmjs.org/d3-voronoi/-/d3-voronoi-1.1.2.tgz",
-      "from": "d3-voronoi@1.1.2"
-    },
-    "d3-zoom": {
-      "version": "1.1.4",
-      "resolved": "https://registry.npmjs.org/d3-zoom/-/d3-zoom-1.1.4.tgz",
-      "from": "d3-zoom@1.1.4"
-    },
-    "graceful-readlink": {
-      "version": "1.0.1",
-      "resolved": "https://registry.npmjs.org/graceful-readlink/-/graceful-readlink-1.0.1.tgz",
-      "from": "graceful-readlink@>=1.0.0"
-    },
-    "iconv-lite": {
-      "version": "0.4.17",
-      "resolved": "https://registry.npmjs.org/iconv-lite/-/iconv-lite-0.4.17.tgz",
-      "from": "iconv-lite@>=0.4.0 <0.5.0"
-    },
     "pretty-bytes": {
       "version": "4.0.2",
       "resolved": "https://registry.npmjs.org/pretty-bytes/-/pretty-bytes-4.0.2.tgz",
       "from": "pretty-bytes@4.0.2"
-    },
-    "rw": {
-      "version": "1.3.3",
-      "resolved": "https://registry.npmjs.org/rw/-/rw-1.3.3.tgz",
-      "from": "rw@>=1.0.0 <2.0.0"
-    },
-    "xmlhttprequest": {
-      "version": "1.8.0",
-      "resolved": "https://registry.npmjs.org/xmlhttprequest/-/xmlhttprequest-1.8.0.tgz",
-      "from": "xmlhttprequest@>=1.0.0 <2.0.0"
     }
   }
 }

@@ -175,6 +175,9 @@ var loadServerBundles = Profile("Load server bundles", function () {
       });
     }
 
+    // Add dev_bundle/server-lib/node_modules.
+    addNodeModulesPath("node_modules");
+
     function statOrNull(path) {
       try {
         return fs.statSync(path);
@@ -193,47 +196,45 @@ var loadServerBundles = Profile("Load server bundles", function () {
        */
       require: Profile(function getBucketName(name) {
         return "Npm.require(" + JSON.stringify(name) + ")";
-      }, function (name) {
-        if (nonLocalNodeModulesPaths.length === 0) {
-          return require(name);
+      }, function (name, error) {
+        if (nonLocalNodeModulesPaths.length > 0) {
+          var fullPath;
+
+          // Replace all backslashes with forward slashes, just in case
+          // someone passes a Windows-y module identifier.
+          name = name.split("\\").join("/");
+
+          nonLocalNodeModulesPaths.some(function (nodeModuleBase) {
+            var packageBase = files.convertToOSPath(files.pathResolve(
+              nodeModuleBase,
+              name.split("/", 1)[0]
+            ));
+
+            if (statOrNull(packageBase)) {
+              return fullPath = files.convertToOSPath(
+                files.pathResolve(nodeModuleBase, name)
+              );
+            }
+          });
+
+          if (fullPath) {
+            return require(fullPath);
+          }
         }
 
-        var fullPath;
-
-        nonLocalNodeModulesPaths.some(function (nodeModuleBase) {
-          var packageBase = files.convertToOSPath(files.pathResolve(
-            nodeModuleBase,
-            name.split("/", 1)[0]
-          ));
-
-          if (statOrNull(packageBase)) {
-            return fullPath = files.convertToOSPath(
-              files.pathResolve(nodeModuleBase, name)
-            );
-          }
-        });
-
-        if (fullPath) {
-          return require(fullPath);
+        var resolved = require.resolve(name);
+        if (resolved === name && ! path.isAbsolute(resolved)) {
+          // If require.resolve(id) === id and id is not an absolute
+          // identifier, it must be a built-in module like fs or http.
+          return require(resolved);
         }
 
-        try {
-          return require(name);
-        } catch (e) {
-          // Try to guess the package name so we can print a nice
-          // error message
-          // fileInfo.path is a standard path, use files.pathSep
-          var filePathParts = fileInfo.path.split(files.pathSep);
-          var packageName = filePathParts[1].replace(/\.js$/, '');
-
-          // XXX better message
-          throw new Error(
-            "Can't find npm module '" + name +
-              "'. Did you forget to call 'Npm.depends' in package.js " +
-              "within the '" + packageName + "' package?");
-          }
+        throw error || new Error(
+          "Cannot find module " + JSON.stringify(name)
+        );
       })
     };
+
     var getAsset = function (assetPath, encoding, callback) {
       var fut;
       if (! callback) {

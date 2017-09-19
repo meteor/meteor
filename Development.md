@@ -68,13 +68,17 @@ When `meteor` is run from a checkout, a `dev_bundle` is automatically downloaded
 * Packages [used by `meteor-tool`](scripts/dev-bundle-tool-package.js)
 * Packages [used by the server bundle](scripts/dev-bundle-server-package.js)
 
-While it may be tempting to make changes to these variables, please consider the repercussions (including compatibility and stability) and make sure to test changes extensively.  For example, major version changes (especially to Node.js and MongoDB) usually requires substantial changes to other components.
+While it may be tempting to make changes to these variables, please consider the repercussions (including compatibility and stability) and make sure to test changes extensively.  For example, major version changes (especially to Node.js and MongoDB) usually require substantial changes to other components.
 
 ### "Dev Bundle" versions
 
-The working version number of the `dev_bundle` to be downloaded (or generated) is stored as `BUNDLE_VERSION` at the top of the [`meteor`](./meteor) script.  When submitting a pull request which changes components of the `dev_bundle`, the minor version should be bumped (at the very least).  In local development, it is advisable to use a different major version (e.g. `100.0.0`) so as not to clash with the official versions which cached locally.
+The working version number of the `dev_bundle` to be downloaded (or generated) is stored as `BUNDLE_VERSION` at the top of the [`meteor`](./meteor) script.  When submitting a pull request which changes components of the `dev_bundle`, the minor version should be bumped (at the very least).  In local development, it is advisable to use a different major version (e.g. `100.0.0`) so as not to clash with the official versions which are cached locally.
 
-Cached versions of the `dev_bundle` are stored in the root directory of the checkout.  Keeping them around will prevent the need to re-download them when switching between branches, but they do become quite large as they collect so delete them as necessary!
+To enable caching of downloaded `dev_bundle` versions, set the `SAVE_DEV_BUNDLE_TARBALL` environment variable before running Meteor, for example:
+
+    SAVE_DEV_BUNDLE_TARBALL=1 ./meteor
+
+Cached versions of the `dev_bundle` are stored in the root directory of the checkout.  Keeping them around will prevent the need to re-download them when switching between branches, but they do become quite large as they collect, so delete them as necessary!
 
 ### Rebuilding the "Dev Bundle"
 

@@ -2,9 +2,8 @@ import { DDP, LivedataTest } from "./namespace.js";
 import { MongoIDMap } from "./id_map.js";
 
 if (Meteor.isServer) {
-  var path = Npm.require('path');
   var Fiber = Npm.require('fibers');
-  var Future = Npm.require(path.join('fibers', 'future'));
+  var Future = Npm.require('fibers/future');
 }
 
 // @param url {String|Object} URL to Meteor app,
