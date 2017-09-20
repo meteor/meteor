@@ -1,5 +1,20 @@
 ## v.NEXT
 
+* DDP's `connection.onReconnect = func` feature has been deprecated. This
+  functionality was previously supported as a way to set a function to be
+  called as the first step of reconnecting. This approach has proven to be
+  inflexible as only one function can be defined to be called when
+  reconnecting. Meteor's accounts system was already setting an
+  `onReconnect` callback to be used internally, which means anyone setting
+  their own `onReconnect` callback was inadvertently overwriting code used
+  internally. Moving forward the `DDP.onReconnect(callback)` method should be
+  used to register callbacks to call when a connection reconnects. The
+  connection that is reconnecting is passed as the only argument to
+  `callback`. This is used by the accounts system to re-login on reconnects
+  without interfering with other code that uses `connection.onReconnect`.
+  [Issue #5665](https://github.com/meteor/meteor/issues/5665)
+  [PR #9092](https://github.com/meteor/meteor/pull/9092)
+
 * The `webapp` package has been updated to support UNIX domain sockets. If a
   `UNIX_SOCKET_PATH` environment variable is set with a valid
   UNIX socket file path (e.g. `UNIX_SOCKET_PATH=/tmp/socktest.sock`), Meteor's
