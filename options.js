@@ -17,7 +17,7 @@ const babelModulesPlugin = [function () {
   return plugin;
 }, {
   allowTopLevelThis: true,
-  strict: false,
+  strictMode: false,
   loose: true
 }];
 
