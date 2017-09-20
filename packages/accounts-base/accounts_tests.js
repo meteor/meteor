@@ -13,23 +13,49 @@ Tinytest.add('accounts - config validates keys', function (test) {
   });
 });
 
-// test the loginExpirationInDays config
-
-Tinytest.add( 'accounts - config - token limetime', function (test) {
-  var config = { loginExpirationInDays: 2 };
-  test.equal(Accounts._getTokenLifetimeMs(config), 2 * 24 * 60 * 60 * 1000);
+Tinytest.add('accounts - config - token lifetime', function (test) {
+  const loginExpirationInDays = Accounts._options.loginExpirationInDays;
+  Accounts._options.loginExpirationInDays = 2;
+  test.equal(Accounts._getTokenLifetimeMs(), 2 * 24 * 60 * 60 * 1000);
+  Accounts._options.loginExpirationInDays = loginExpirationInDays;
 });
 
-Tinytest.add( 'accounts - config - unexpiring tokens', function (test) {
-  var config = { loginExpirationInDays: null };
-  test.equal(Accounts._getTokenLifetimeMs(config), Infinity);
+Tinytest.add('accounts - config - unexpiring tokens', function (test) {
+  const loginExpirationInDays = Accounts._options.loginExpirationInDays;
+
+  // When setting loginExpirationInDays to null in the global Accounts
+  // config object, make sure the returned token lifetime represents an
+  // unexpiring token date (is very far into the future).
+  Accounts._options.loginExpirationInDays = null;
+  test.equal(
+    Accounts._getTokenLifetimeMs(),
+    Accounts.LOGIN_UNEXPIRING_TOKEN_DAYS * 24 * 60 * 60 * 1000,
+  );
+
+  // Verify token expiration date retrieval returns a Date.
+  // (verifies https://github.com/meteor/meteor/issues/9066)
+  test.isTrue(
+    !isNaN(Accounts._tokenExpiration(new Date())),
+    'Returned token expiration should be a Date',
+  );
+
+  // Verify the token expiration check works properly.
+  // (verifies https://github.com/meteor/meteor/issues/9066)
+  const futureDate = new Date();
+  futureDate.setDate(futureDate.getDate() + 200);
+  test.isFalse(Accounts._tokenExpiresSoon(futureDate));
+
+  Accounts._options.loginExpirationInDays = loginExpirationInDays;
 });
 
-Tinytest.add( 'accounts - config - default token limetime', function(test) {
-  var DEFAULT_LOGIN_EXPIRATION_DAYS = 90; // copied from accounts_common.js
-  var config1 = {};
-  var config2 = { loginExpirationInDays: DEFAULT_LOGIN_EXPIRATION_DAYS };
-  test.equal(Accounts._getTokenLifetimeMs(config1), Accounts._getTokenLifetimeMs(config2));
+Tinytest.add('accounts - config - default token lifetime', function (test) {
+  const options = Accounts._options;
+  Accounts._options = {};
+  test.equal(
+    Accounts._getTokenLifetimeMs(),
+    Accounts.DEFAULT_LOGIN_EXPIRATION_DAYS * 24 * 60 * 60 * 1000,
+  );
+  Accounts._options = options;
 });
 
 var idsInValidateNewUser = {};
