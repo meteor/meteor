@@ -213,7 +213,6 @@ export class AccountsCommon {
     }
   }
 
-  // The options argument is only used by tests.
   _getTokenLifetimeMs() {
     // When loginExpirationInDays is set to null, we'll use a really high
     // number of days (LOGIN_UNEXPIRABLE_TOKEN_DAYS) to simulate an
