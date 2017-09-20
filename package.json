@@ -31,6 +31,7 @@
   "dependencies": {
     "babel-core": "^7.0.0-beta.1",
     "babel-plugin-syntax-dynamic-import": "^7.0.0-beta.1",
+    "babel-plugin-syntax-flow": "^7.0.0-beta.1",
     "babel-plugin-transform-class-properties": "^7.0.0-beta.1",
     "babel-plugin-transform-es2015-modules-commonjs": "^7.0.0-beta.1",
     "babel-plugin-transform-es2015-modules-reify": "^0.12.4",
