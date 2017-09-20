@@ -694,7 +694,7 @@ var launchMongo = function (options) {
         }
 
         // Anything else for the intended primary is probably an error.
-        if (status.members[0].stateStr !== 'PRIMARY') {
+        if (firstMemberState !== 'PRIMARY') {
           throw Error("Unexpected Mongo status: " + JSON.stringify(status));
         }
 
