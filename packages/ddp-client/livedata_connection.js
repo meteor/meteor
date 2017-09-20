@@ -48,8 +48,10 @@ var Connection = function (url, options) {
   }, options);
 
   // If set, called when we reconnect, queuing method calls _before_ the
-  // existing outstanding ones. This is the only data member that is part of the
-  // public API!
+  // existing outstanding ones.
+  // NOTE: This feature has been preserved for backwards compatibility. The
+  // preferred method of setting a callback on reconnect is to use
+  // DDP.onReconnect.
   self.onReconnect = null;
 
   // as a test hook, allow passing a stream instead of a url.
@@ -347,10 +349,7 @@ var Connection = function (url, options) {
     // `onReconnect` get executed _before_ ones that were originally
     // outstanding (since `onReconnect` is used to re-establish auth
     // certificates)
-    if (self.onReconnect)
-      self._callOnReconnectAndSendAppropriateOutstandingMethods();
-    else
-      self._sendOutstandingMethods();
+    self._callOnReconnectAndSendAppropriateOutstandingMethods();
 
     // add new subscriptions at the end. this way they take effect after
     // the handlers and we don't see flicker.
@@ -1685,7 +1684,11 @@ _.extend(Connection.prototype, {
     var oldOutstandingMethodBlocks = self._outstandingMethodBlocks;
     self._outstandingMethodBlocks = [];
 
-    self.onReconnect();
+    self.onReconnect && self.onReconnect();
+    DDP._reconnectHook.each(function (callback) {
+      callback(self);
+      return true;
+    });
 
     if (_.isEmpty(oldOutstandingMethodBlocks))
       return;
@@ -1756,6 +1759,21 @@ DDP.connect = function (url, options) {
   var ret = new Connection(url, options);
   allConnections.push(ret); // hack. see below.
   return ret;
+};
+
+DDP._reconnectHook = new Hook({ bindEnvironment: false });
+
+/**
+ * @summary Register a function to call as the first step of
+ * reconnecting. This function can call methods which will be executed before
+ * any other outstanding methods. For example, this can be used to re-establish
+ * the appropriate authentication context on the connection.
+ * @locus Anywhere
+ * @param {Function} callback The function to call. It will be called with a
+ * single argument, the [connection object](#ddp_connect) that is reconnecting.
+ */
+DDP.onReconnect = function (callback) {
+  return DDP._reconnectHook.register(callback);
 };
 
 // Hack for `spiderable` package: a way to see if the page is done

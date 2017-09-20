@@ -15,6 +15,8 @@ Package.onUse(function (api) {
            'retry', 'id-map', 'ecmascript'],
           ['client', 'server']);
 
+  api.use('callback-hook', ['client', 'server']);
+
   // common functionality
   api.use('ddp-common', ['client', 'server']);
 

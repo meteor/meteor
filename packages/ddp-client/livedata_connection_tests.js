@@ -295,7 +295,7 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
   // subscription should call its new onReady callback, because we always
   // call onReady for a given reactively-saved subscription.
   // The completerHandle should have been reestablished to the ready handle.
-  rFoo.set("foo2"); 
+  rFoo.set("foo2");
   Tracker.flush();
   test.length(stream.sent, 3);
 
@@ -868,8 +868,31 @@ if (Meteor.isClient) {
   });
 }
 
+function addReconnectTests(name, testFunc) {
+  Tinytest.add(name + " (deprecated)", function (test) {
+    function deprecatedSetOnReconnect(conn, handler) {
+      conn.onReconnect = handler;
+    }
+    testFunc.call(this, test, deprecatedSetOnReconnect);
+  });
+
+  Tinytest.add(name, function (test) {
+    var stopper;
+    function setOnReconnect(conn, handler) {
+      stopper && stopper.stop();
+      stopper = DDP.onReconnect(function (reconnectingConn) {
+        if (reconnectingConn === conn) {
+          handler();
+        }
+      });
+    }
+    testFunc.call(this, test, setOnReconnect);
+    stopper && stopper.stop();
+  });
+}
+
 if (Meteor.isClient) {
-  Tinytest.add("livedata stub - reconnect method which only got result", function (test) {
+  addReconnectTests("livedata stub - reconnect method which only got result", function (test, setOnReconnect) {
     var stream = new StubStream;
     var conn = newConnection(stream);
     startAndConnect(test, stream);
@@ -992,11 +1015,11 @@ if (Meteor.isClient) {
     // Callback not called, but onResultReceived is.
     test.equal(callbackOutput, ['bla']);
     test.equal(onResultReceivedOutput, ['bla', 'blab']);
-    conn.onReconnect = function () {
+    setOnReconnect(conn, function () {
       conn.call('slowMethod', function (err, result) {
         callbackOutput.push(result);
       });
-    };
+    });
 
     // Reset stream. Method does NOT get resent, because its result is already in,
     // but slowMethod gets called via onReconnect. Reconnect quiescence is now
@@ -1485,7 +1508,7 @@ Tinytest.add("livedata connection - two wait methods", function (test) {
   test.equal(six_message.params, ['six!']);
 });
 
-Tinytest.add("livedata connection - onReconnect prepends messages correctly with a wait method", function(test) {
+addReconnectTests("livedata connection - onReconnect prepends messages correctly with a wait method", function(test, setOnReconnect) {
   var stream = new StubStream();
   var conn = newConnection(stream);
   startAndConnect(test, stream);
@@ -1493,12 +1516,12 @@ Tinytest.add("livedata connection - onReconnect prepends messages correctly with
   // setup method
   conn.methods({do_something: function (x) {}});
 
-  conn.onReconnect = function() {
+  setOnReconnect(conn, function() {
     conn.apply('do_something', ['reconnect zero'], _.identity);
     conn.apply('do_something', ['reconnect one'], _.identity);
     conn.apply('do_something', ['reconnect two'], {wait: true}, _.identity);
     conn.apply('do_something', ['reconnect three'], _.identity);
-  };
+  });
 
   conn.apply('do_something', ['one'], _.identity);
   conn.apply('do_something', ['two'], {wait: true}, _.identity);
@@ -1665,7 +1688,7 @@ Tinytest.addAsync("livedata connection - version negotiation error",
   });
 });
 
-Tinytest.add("livedata connection - onReconnect prepends messages correctly without a wait method", function(test) {
+addReconnectTests("livedata connection - onReconnect prepends messages correctly without a wait method", function(test, setOnReconnect) {
   var stream = new StubStream();
   var conn = newConnection(stream);
   startAndConnect(test, stream);
@@ -1673,11 +1696,11 @@ Tinytest.add("livedata connection - onReconnect prepends messages correctly with
   // setup method
   conn.methods({do_something: function (x) {}});
 
-  conn.onReconnect = function() {
+  setOnReconnect(conn, function() {
     conn.apply('do_something', ['reconnect one'], _.identity);
     conn.apply('do_something', ['reconnect two'], _.identity);
     conn.apply('do_something', ['reconnect three'], _.identity);
-  };
+  });
 
   conn.apply('do_something', ['one'], _.identity);
   conn.apply('do_something', ['two'], {wait: true}, _.identity);
@@ -1709,7 +1732,7 @@ Tinytest.add("livedata connection - onReconnect prepends messages correctly with
   ]);
 });
 
-Tinytest.add("livedata connection - onReconnect with sent messages", function(test) {
+addReconnectTests("livedata connection - onReconnect with sent messages", function(test, setOnReconnect) {
   var stream = new StubStream();
   var conn = newConnection(stream);
   startAndConnect(test, stream);
@@ -1717,9 +1740,9 @@ Tinytest.add("livedata connection - onReconnect with sent messages", function(te
   // setup method
   conn.methods({do_something: function (x) {}});
 
-  conn.onReconnect = function() {
+  setOnReconnect(conn, function() {
     conn.apply('do_something', ['login'], {wait: true}, _.identity);
-  };
+  });
 
   conn.apply('do_something', ['one'], _.identity);
 
@@ -1752,17 +1775,17 @@ Tinytest.add("livedata connection - onReconnect with sent messages", function(te
 
 
 
-Tinytest.add("livedata stub - reconnect double wait method", function (test) {
+addReconnectTests("livedata stub - reconnect double wait method", function (test, setOnReconnect) {
   var stream = new StubStream;
   var conn = newConnection(stream);
   startAndConnect(test, stream);
 
   var output = [];
-  conn.onReconnect = function () {
+  setOnReconnect(conn, function () {
     conn.apply('reconnectMethod', [], {wait: true}, function (err, result) {
       output.push('reconnect');
     });
-  };
+  });
 
   conn.apply('halfwayMethod', [], {wait: true}, function (err, result) {
     output.push('halfway');
