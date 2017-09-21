@@ -32,6 +32,7 @@ import {
   optimisticReadFile,
   optimisticHashOrNull,
   optimisticStatOrNull,
+  optimisticReadMeteorIgnore,
 } from "../fs/optimistic.js";
 
 // XXX: This is a medium-term hack, to avoid having the user set a package name
@@ -67,6 +68,7 @@ var loadOrderSort = function (sourceProcessorSet, arch) {
 
     case 'wrong-arch':
     case 'unmatched':
+    case 'meteor-ignore':
       return false;
 
     default:
@@ -993,9 +995,14 @@ _.extend(PackageSource.prototype, {
     const sourceReadOptions =
       sourceProcessorSet.appReadDirectoryOptions(arch);
 
+    // Adding, removing, or modifying a .meteorignore file should trigger
+    // a rebuild with the new rules applied.
+    sourceReadOptions.names.push(".meteorignore");
+
     // Ignore files starting with dot (unless they are explicitly in
-    // 'names').
+    // sourceReadOptions.names, e.g. .meteorignore, added above).
     sourceReadOptions.exclude.push(/^\./);
+
     // Ignore the usual ignorable files.
     sourceReadOptions.exclude.push(...ignoreFiles);
 
@@ -1058,6 +1065,8 @@ _.extend(PackageSource.prototype, {
       return baseCacheKey + "\0" + dir;
     }
 
+    const dotMeteorIgnoreFiles = Object.create(null);
+
     function find(dir, depth, inNodeModules) {
       // Remove trailing slash.
       dir = dir.replace(/\/$/, "");
@@ -1075,6 +1084,12 @@ _.extend(PackageSource.prototype, {
         return [];
       }
 
+      const absDir = files.pathJoin(self.sourceRoot, dir);
+      const ignore = optimisticReadMeteorIgnore(absDir);
+      if (ignore) {
+        dotMeteorIgnoreFiles[dir] = ignore;
+      }
+
       const readOptions = inNodeModules
         ? nodeModulesReadOptions
         : sourceReadOptions;
@@ -1089,6 +1104,26 @@ _.extend(PackageSource.prototype, {
         exclude: depth > 0
           ? anyLevelExcludes
           : topLevelExcludes
+      });
+
+      Object.keys(dotMeteorIgnoreFiles).forEach(ignoreDir => {
+        const ignore = dotMeteorIgnoreFiles[ignoreDir];
+
+        function removeIgnoredFiles(list) {
+          let target = 0;
+          list.forEach(item => {
+            const relPath = files.pathRelative(ignoreDir, item);
+            if (! ignore.ignores(relPath)) {
+              list[target++] = item;
+            } else {
+              console.log("ignoring " + item);
+            }
+          });
+          list.length = target;
+        }
+
+        removeIgnoredFiles(sources);
+        removeIgnoredFiles(subdirectories);
       });
 
       let nodeModulesDir;
@@ -1127,6 +1162,8 @@ _.extend(PackageSource.prototype, {
       if (cacheKey) {
         self._findSourcesCache[cacheKey] = sources;
       }
+
+      delete dotMeteorIgnoreFiles[absDir];
 
       return sources;
     }
