@@ -7,6 +7,7 @@ import {
   pathSep,
   pathDirname,
   pathIsAbsolute,
+  pathJoin,
   statOrNull,
   lstat,
   readFile,
@@ -250,6 +251,20 @@ makeOptimistic("readJsonOrNull", (path, options) => {
 
     throw e;
   }
+});
+
+export const optimisticReadMeteorIgnore = wrap(dir => {
+  const meteorIgnorePath = pathJoin(dir, ".meteorignore");
+  const meteorIgnoreStat = optimisticStatOrNull(meteorIgnorePath);
+
+  if (meteorIgnoreStat &&
+      meteorIgnoreStat.isFile()) {
+    return require("ignore")().add(
+      optimisticReadFile(meteorIgnorePath, "utf8")
+    );
+  }
+
+  return null;
 });
 
 const optimisticIsSymbolicLink = wrap(path => {
