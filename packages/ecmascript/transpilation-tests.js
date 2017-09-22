@@ -53,7 +53,7 @@ class Foo {
 }`);
 
   // Babel 7 no longer uses classCallCheck in loose mode.
-  test.isFalse(contains(output, 'helpers/classCallCheck'));
+  test.isTrue(contains(output, 'helpers/classCallCheck'));
 });
 
 Tinytest.add("ecmascript - transpilation - helpers - inherits", (test) => {

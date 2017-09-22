@@ -29,7 +29,7 @@ Package.onUse(function (api) {
   // The following api.imply calls should match those in ../../ecmascript/package.js,
   // except that coffeescript does not api.imply('modules').
   api.imply('ecmascript-runtime@0.4.1', 'server');
-  api.imply('babel-runtime@7.0.0-beta.27');
+  api.imply('babel-runtime@1.1.1-beta.30');
   api.imply('promise@0.9.0');
 });
 
