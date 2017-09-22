@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-BUNDLE_VERSION=4.8.35
+BUNDLE_VERSION=4.8.36
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
