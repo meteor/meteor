@@ -1,5 +1,14 @@
 ## v.NEXT
 
+* Meteor now supports `.meteorignore` files, which cause the build system
+  to ignore certain files and directories using the same pattern syntax as
+  [`.gitignore` files](https://git-scm.com/docs/gitignore). These files
+  may appear in any directory of your app or package, specifying rules for
+  the directory tree below them. Of course, `.meteorignore` files are also
+  fully integrated with Meteor's file watching system, so they can be
+  added, removed, or modified during development.
+  [Feature request #5](https://github.com/meteor/meteor-feature-requests/issues/5)
+
 * DDP's `connection.onReconnect = func` feature has been deprecated. This
   functionality was previously supported as a way to set a function to be
   called as the first step of reconnecting. This approach has proven to be
