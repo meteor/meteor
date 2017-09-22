@@ -79,11 +79,6 @@ build_machine_environment: &build_machine_environment
     # the mess of temp directories that Meteor makes.
     METEOR_SAVE_TMPDIRS: 1
 
-    # Disable the optimistic caching of file watchers, which incurs a slight
-    # polling delay which is less than ideal in a CI environment where file
-    # watchers should be plentiful.
-    METEOR_DISABLE_OPTIMISTIC_CACHING: 1
-
     # Skip these tests on every test run.
     # For readability, this is a regex wrapped across multiple lines in quotes.
     SELF_TEST_EXCLUDE: "\
