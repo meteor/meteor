@@ -1846,6 +1846,9 @@ class JsImage {
       "node_modules"
     );
 
+    const appDir = files.findAppDir();
+    const appNodeModules = appDir && files.pathJoin(appDir, "node_modules");
+
     // Eval each JavaScript file, providing a 'Npm' symbol in the same
     // way that the server environment would, a 'Package' symbol
     // so the loaded image has its own private universe of loaded
@@ -1892,10 +1895,23 @@ class JsImage {
               return require(fullPath);
             }
 
+            if (appNodeModules &&
+                tryLookup(appNodeModules, name)) {
+              return require(fullPath);
+            }
+
             const resolved = require.resolve(name);
+
             if (resolved === name && ! files.pathIsAbsolute(resolved)) {
               // If require.resolve(id) === id and id is not an absolute
               // identifier, it must be a built-in module like fs or http.
+              return require(resolved);
+            }
+
+            const isOutsideAppDir = appDir &&
+              files.pathRelative(appDir, resolved).startsWith("..");
+
+            if (! isOutsideAppDir) {
               return require(resolved);
             }
 
