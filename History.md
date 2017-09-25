@@ -1,5 +1,15 @@
 ## v.NEXT
 
+## v1.5.2.1, TBD
+
+* The command-line `meteor` tool no longer invokes `node` with the
+  `--expose-gc` flag. Although this flag allowed the build process to be
+  more aggressive about collecting garbage, it was also a source of
+  problems in Meteor 1.5.2 and Node 4.8.4, from increased segmentation
+  faults during (the more frequent) garbage collections to extreme
+  slowness in rebuilding local packages. The flag is likely to return in
+  Meteor 1.6, where it has not exhibited any of the same problems.
+
 * Meteor now supports `.meteorignore` files, which cause the build system
   to ignore certain files and directories using the same pattern syntax as
   [`.gitignore` files](https://git-scm.com/docs/gitignore). These files
