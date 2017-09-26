@@ -1,6 +1,6 @@
 ## v.NEXT
 
-## v1.5.2.1, TBD
+## v1.5.2.1, 2017-09-26
 
 * The command-line `meteor` tool no longer invokes `node` with the
   `--expose-gc` flag. Although this flag allowed the build process to be
