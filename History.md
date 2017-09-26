@@ -2,6 +2,17 @@
 
 ## v1.5.2.1, 2017-09-26
 
+* Updating to Meteor 1.5.2.1 will automatically patch a security
+  vulnerability in the `allow-deny` package, since `meteor-tool@1.5.2_1`
+  requires `allow-deny@1.0.9` or later. If for any reason you are not
+  ready or able to update to Meteor 1.5.2.1 by running `meteor update`,
+  please at least run
+  ```sh
+  meteor update allow-deny
+  ```
+  instead. More details about the security vulnerability can be found on
+  the Meteor forums.
+
 * The command-line `meteor` tool no longer invokes `node` with the
   `--expose-gc` flag. Although this flag allowed the build process to be
   more aggressive about collecting garbage, it was also a source of
@@ -423,6 +434,19 @@
   `install`, `preinstall`, or `postinstall`. Previously, a package was
   considered non-portable only if it contained any `.node` binary modules.
   [Issue #8225](https://github.com/meteor/meteor/issues/8225)
+
+## v1.4.4.4, 2017-09-26
+
+* Updating to Meteor 1.4.4.4 will automatically patch a security
+  vulnerability in the `allow-deny` package, since `meteor-tool@1.4.4_4`
+  requires `allow-deny@1.0.9` or later. If for any reason you are not
+  ready or able to update to Meteor 1.4.4.4 by running `meteor update`,
+  please at least run
+  ```sh
+  meteor update allow-deny
+  ```
+  instead. More details about the security vulnerability can be found on
+  the Meteor forums.
 
 ## v1.4.4.3, 2017-05-22
 
