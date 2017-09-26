@@ -159,7 +159,14 @@ class Runner {
 
     if (! self.stopped && ! self.quiet) {
       runLog.log("");
-      runLog.log("App running at: " + self.rootUrl,  { arrow: true });
+      if (process.env.UNIX_SOCKET_PATH) {
+        runLog.log(
+          `App running; UNIX domain socket: ${process.env.UNIX_SOCKET_PATH}`,
+          { arrow: true }
+        );
+      } else {
+        runLog.log("App running at: " + self.rootUrl,  { arrow: true });
+      }
 
       if (process.platform === "win32") {
         runLog.log("   Type Control-C twice to stop.");

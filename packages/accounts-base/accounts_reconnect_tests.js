@@ -8,6 +8,12 @@ if (Meteor.isServer) {
 
 if (Meteor.isClient) {
   Tinytest.addAsync('accounts - reconnect auto-login', function(test, done) {
+    var onReconnectCalls = 0;
+    var reconnectHandler = function () {
+      onReconnectCalls++;
+    };
+    Meteor.connection.onReconnect = reconnectHandler;
+    
     var username1 = 'testuser1-' + Random.id();
     var username2 = 'testuser2-' + Random.id();
     var password1 = 'password1-' + Random.id();
@@ -69,6 +75,9 @@ if (Meteor.isClient) {
       test.isUndefined(err, 'Unexpected error calling getConnectionUserId');
       test.equal(connectionUserId, Meteor.userId(),
         'userId is different on client and server');
+      test.equal(Meteor.connection.onReconnect, reconnectHandler,
+        'Meteor.connection.onReconnect changed');
+      test.equal(onReconnectCalls, 2, 'wrong # of reconnect handler calls');
       done();
     }
   });

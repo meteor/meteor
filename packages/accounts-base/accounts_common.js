@@ -213,19 +213,20 @@ export class AccountsCommon {
     }
   }
 
-  // The options argument is only used by tests.
-  _getTokenLifetimeMs(options) {
-    options = options || this._options;
-    if (options.loginExpirationInDays === null) {
-      // We disable login expiration by returning Infinity
-      return Infinity;
-    }
-    return (options.loginExpirationInDays ||
-            DEFAULT_LOGIN_EXPIRATION_DAYS) * 24 * 60 * 60 * 1000;
+  _getTokenLifetimeMs() {
+    // When loginExpirationInDays is set to null, we'll use a really high
+    // number of days (LOGIN_UNEXPIRABLE_TOKEN_DAYS) to simulate an
+    // unexpiring token.
+    const loginExpirationInDays =
+      (this._options.loginExpirationInDays === null)
+        ? LOGIN_UNEXPIRING_TOKEN_DAYS
+        : this._options.loginExpirationInDays;
+    return (loginExpirationInDays
+        || DEFAULT_LOGIN_EXPIRATION_DAYS) * 24 * 60 * 60 * 1000;
   }
 
   _getPasswordResetTokenLifetimeMs() {
-   return (this._options.passwordResetTokenExpirationInDays ||
+    return (this._options.passwordResetTokenExpirationInDays ||
             DEFAULT_PASSWORD_RESET_TOKEN_EXPIRATION_DAYS) * 24 * 60 * 60 * 1000;
   }
 
@@ -273,7 +274,10 @@ Meteor.user = function () {
 };
 
 // how long (in days) until a login token expires
-var DEFAULT_LOGIN_EXPIRATION_DAYS = 90;
+const DEFAULT_LOGIN_EXPIRATION_DAYS = 90;
+// Expose for testing.
+Ap.DEFAULT_LOGIN_EXPIRATION_DAYS = DEFAULT_LOGIN_EXPIRATION_DAYS;
+
 // how long (in days) until reset password token expires
 var DEFAULT_PASSWORD_RESET_TOKEN_EXPIRATION_DAYS = 3;
 // how long (in days) until enrol password token expires
@@ -287,6 +291,12 @@ EXPIRE_TOKENS_INTERVAL_MS = 600 * 1000; // 10 minutes
 // how long we wait before logging out clients when Meteor.logoutOtherClients is
 // called
 CONNECTION_CLOSE_DELAY_MS = 10 * 1000;
+
+// A large number of expiration days (approximately 100 years worth) that is
+// used when creating unexpiring tokens.
+const LOGIN_UNEXPIRING_TOKEN_DAYS = 365 * 100;
+// Expose for testing.
+Ap.LOGIN_UNEXPIRING_TOKEN_DAYS = LOGIN_UNEXPIRING_TOKEN_DAYS;
 
 // loginServiceConfiguration and ConfigError are maintained for backwards compatibility
 Meteor.startup(function () {

@@ -3,6 +3,7 @@ import { Profile } from "../tool-env/profile.js";
 import {
   statOrNull,
   pathDirname,
+  pathResolve,
   convertToOSPath,
   convertToStandardPath,
   watchFile,
@@ -160,18 +161,17 @@ function startNewWatcher(absPath) {
       safeUnwatch();
     }
 
-    // This is a no-op if we're not watching the file.
-    unwatchFile(absPath, watchFileWrapper);
+    // Since we're about to restart the stat-based file watcher, we don't
+    // want to miss any of its events because of the lastWatcherEventTime
+    // throttling that it attempts to do.
+    lastWatcherEventTime = 0;
 
     // We use files.watchFile in addition to watcher.watch as a fail-safe
     // to detect file changes even on network file systems.  However
     // (unless the user disabled watcher or this watcher call failed), we
     // use a relatively long default polling interval of 5000ms to save
     // CPU cycles.
-    watchFile(absPath, {
-      persistent: false,
-      interval: getPollingInterval(),
-    }, watchFileWrapper);
+    statWatch(absPath, getPollingInterval(), watchFileWrapper);
   }
 
   function watchFileWrapper(...args) {
@@ -248,6 +248,68 @@ export function closeAllWatchers() {
       entry.close();
     }
   });
+}
+
+const statWatchers = Object.create(null);
+
+function statWatch(absPath, interval, callback) {
+  const oldWatcher = statWatchers[absPath];
+
+  while (oldWatcher) {
+    // Make sure this callback no longer appears among the listeners for
+    // this StatWatcher.
+    const countBefore = oldWatcher.stat.listenerCount("change");
+
+    // This removes at most one occurrence of the callback from the
+    // listeners list...
+    oldWatcher.stat.removeListener("change", callback);
+
+    // ... so we have to keep calling it until the first time
+    // it removes nothing.
+    if (oldWatcher.stat.listenerCount("change") === countBefore) {
+      break;
+    }
+  }
+
+  // This doesn't actually call newStat.start again if there's already a
+  // watcher for this file, so it won't change any interval previously
+  // specified. In the rare event that the interval needs to change, we
+  // manually stop and restart the StatWatcher below.
+  const newStat = watchFile(absPath, {
+    persistent: false, // never persistent
+    interval,
+  }, callback);
+
+  if (! oldWatcher) {
+    const newWatcher = {
+      stat: newStat,
+      interval,
+    };
+
+    newStat.on("stop", () => {
+      if (statWatchers[absPath] === newWatcher) {
+        delete statWatchers[absPath];
+      }
+    });
+
+    return statWatchers[absPath] = newWatcher;
+  }
+
+  // These should be identical at this point, but just in case.
+  oldWatcher.stat = newStat;
+
+  // If the interval needs to be changed, manually stop and restart the
+  // StatWatcher using lower-level methods than unwatchFile and watchFile.
+  if (oldWatcher.interval !== interval) {
+    oldWatcher.stat.stop();
+    oldWatcher.stat.start(
+      convertToOSPath(pathResolve(absPath)),
+      false, // never persistent
+      oldWatcher.interval = interval,
+    );
+  }
+
+  return oldWatcher;
 }
 
 function watchLibraryWatch(absPath, callback) {
