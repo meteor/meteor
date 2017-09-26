@@ -128,7 +128,7 @@ signature = function (data, options) {
     //   `this`, we'll do the slightly weird thing of showing `this.foo` in both cases.
     if (data.scope === "instance") {
       // the class this method belongs to.
-      var memberOfData = apiData(data.memberof);
+      var memberOfData = apiData(data.memberof) || apiData(`${data.memberof}#${data.memberof}`);
 
       // Certain instances are provided to the user in scope with a specific name
       // TBH I'm not sure what else we use instanceName for (why we are setting for
