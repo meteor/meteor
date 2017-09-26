@@ -174,6 +174,7 @@ export const ELEMENT_OPERATORS = {
           .reduce((a, b) => Object.assign(a, {[b]: operand[b]}), {}),
         true);
 
+      let subMatcher;
       if (isDocMatcher) {
         // This is NOT the same as compileValueSelector(operand), and not just
         // because of the slightly different calling convention.
