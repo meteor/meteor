@@ -546,15 +546,15 @@ Valid platforms are: ios, android.`);
      * - `ios_spotlight` (40x40)
      * - `ios_spotlight_2x` (80x80)
      * - `ios_spotlight_3x` (120x120)
-     * - 'ios_notification': '20x20',
-     * - 'ios_notification_2x': '40x40',
-     * - 'ios_notification_3x': '60x60',
-     * - 'iphone_legacy': '57x57',
-     * - 'iphone_legacy_2x': '114x114',
-     * - 'ipad_spotlight_legacy': '50x50',
-     * - 'ipad_spotlight_legacy_2x': '100x100',
-     * - 'ipad_app_legacy': '72x72',
-     * - 'ipad_app_legacy_2x': '144x144',
+     * - `ios_notification` (20x20)
+     * - `ios_notification_2x` (40x40)
+     * - `ios_notification_3x` (60x60)
+     * - `iphone_legacy` (57x57)
+     * - `iphone_legacy_2x` (114x114)
+     * - `ipad_spotlight_legacy` (50x50)
+     * - `ipad_spotlight_legacy_2x` (100x100)
+     * - `ipad_app_legacy` (72x72)
+     * - `ipad_app_legacy_2x` (144x144)
      * - `android_mdpi` (48x48)
      * - `android_hdpi` (72x72)
      * - `android_xhdpi` (96x96)

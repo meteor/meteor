@@ -133,6 +133,5 @@ fi
 # screw up their meteor installs by have a ~/node_modules
 
 exec "$DEV_BUNDLE/bin/node" \
-     --expose-gc \
      ${TOOL_NODE_FLAGS} \
      "$METEOR" "$@"
