@@ -1423,6 +1423,31 @@ Tinytest.add('minimongo - selector_compiler', test => {
     {dogs: [{name: 'Fido', age: 5}, {name: 'Rex', age: 3}]});
   nomatch({dogs: {$elemMatch: {name: /e/, age: 5}}},
     {dogs: [{name: 'Fido', age: 5}, {name: 'Rex', age: 3}]});
+
+  // Tests for https://github.com/meteor/meteor/issues/9111.
+  match(
+    { dogs: { $elemMatch: { name: 'Rex' } } },
+    { dogs: [{ name: 'Rex', age: 3 }] });
+  nomatch(
+    { dogs: { $not: { $elemMatch: { name: 'Rex' } } } },
+    { dogs: [{ name: 'Rex', age: 3 }] });
+  match({
+    $or: [
+      { dogs: { $elemMatch: { name: 'Rex' } } },
+      { dogs: { $elemMatch: { name: 'Rex', age: 5 } } }
+    ]
+  }, {
+    dogs: [{ name: 'Rex', age: 3 }]
+  });
+  nomatch({
+    $or: [
+      { dogs: { $not: { $elemMatch: { name: 'Rex' } } } },
+      { dogs: { $elemMatch: { name: 'Rex', age: 5 } } }
+    ]
+  }, {
+    dogs: [{ name: 'Rex', age: 3 }]
+  });
+
   match({x: {$elemMatch: {y: 9}}}, {x: [{y: 9}]});
   nomatch({x: {$elemMatch: {y: 9}}}, {x: [[{y: 9}]]});
   match({x: {$elemMatch: {$gt: 5, $lt: 9}}}, {x: [8]});
