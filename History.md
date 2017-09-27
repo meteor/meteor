@@ -1,5 +1,11 @@
 ## v.NEXT
 
+* [`cordova-ios`](https://github.com/apache/cordova-ios) has been updated to
+  version 4.5.1, to add in iOS 11 / Xcode 9 compatibility.
+  [Issue #9098](https://github.com/meteor/meteor/issues/9098)
+  [Issue #9126](https://github.com/meteor/meteor/issues/9126)
+  [PR #9137](https://github.com/meteor/meteor/pull/9137)
+
 ## v1.5.2.1, 2017-09-26
 
 * Updating to Meteor 1.5.2.1 will automatically patch a security
