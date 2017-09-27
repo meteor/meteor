@@ -60,7 +60,4 @@ mv node-*.tar.gz "${TARBALL_PATH}"
 cd "$DIR"
 rm -rf node-build
 
-# Extract just the node binary for testing.
-tar xzfv "${TARBALL_PATH}" --strip-components=1 -C "${CHECKOUT_DIR}/" '*/bin/node'
-
 echo DONE
