@@ -153,12 +153,10 @@ sets, call `DDP.connect` with the URL of the application.
   See [Meteor.reconnect](#meteor_reconnect).
 * `disconnect` -
   See [Meteor.disconnect](#meteor_disconnect).
-* `onReconnect` - Set this to a function to be called as the first step of
-  reconnecting. This function can call methods which will be executed before
-  any other outstanding methods. For example, this can be used to re-establish
-  the appropriate authentication context on the new connection.
 
 By default, clients open a connection to the server from which they're loaded.
 When you call `Meteor.subscribe`, `Meteor.status`, `Meteor.call`, and
 `Meteor.apply`, you are using a connection back to that default
 server.
+
+{% apibox "DDP.onReconnect" %}
