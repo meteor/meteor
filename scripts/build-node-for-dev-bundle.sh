@@ -43,7 +43,7 @@ then
     # official, compiled Node.js release.
     # https://github.com/nodejs/node/wiki/Intl#configure-node-with-specific-icu-source
     echo "Downloading International Components for Unicode (ICU)..."
-    curl -sL http://download.icu-project.org/files/icu4c/56.1/icu4c-56_1-src.tgz | \
+    curl -sL https://s3.amazonaws.com/com.meteor.static/icu/icu4c-56_1-src.tgz | \
       tar zx -C deps/
 
     node_configure_flags=(\
