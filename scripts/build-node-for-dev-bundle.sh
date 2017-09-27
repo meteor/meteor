@@ -57,6 +57,7 @@ then
         node_configure_flags+=('--debug')
     fi
 
+    make clean
     ./configure "${node_configure_flags[@]}"
     make -j4
     # PORTABLE=1 is a node hack to make npm look relative to itself instead
