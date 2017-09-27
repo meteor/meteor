@@ -10,7 +10,6 @@ dependencies:
   cache_directories:
     - "node_modules"
   override:
-    - npm install -g hexo-cli
     - npm install
 
 test:
