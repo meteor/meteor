@@ -72,6 +72,24 @@ Create a new Meteor project. By default, makes a subdirectory named *name*
 and copies in the template app. You can pass an absolute or relative
 path.
 
+**Flags**
+
+`--bare`
+
+Creates a basic, empty project.
+
+`--full`
+
+Creates a more complete, imports-based project which
+closely matches the [file structure](https://guide.meteor.com/structure.html#javascript-structure) recommended by the
+[Meteor Guide](https://guide.meteor.com/)
+
+ `--package`
+
+Creates a new package. If used in an
+existing app, this command will create a package in the packages
+directory.
+
 **Packages**
 
 || Default | `--bare`  | `--full`  |
@@ -95,25 +113,6 @@ path.
 |[standard-minifier-js](https://atmospherejs.com/meteor/standard-minifier-js)|X|X|X|
 |[static-html](https://atmospherejs.com/meteor/static-html)||X||
 |[tracker](https://atmospherejs.com/meteor/tracker)|X|X|X|
-
-**Flags**
-
-`--bare`
-
-Creates a basic, empty project.
-
-`--full`
-
-Creates a more complete, imports-based project which
-closely matches the [file structure](https://guide.meteor.com/structure.html#javascript-structure) recommended by the
-[Meteor Guide](https://guide.meteor.com/)
-
- `--package`
-
-Creates a new package. If used in an
-existing app, this command will create a package in the packages
-directory.
-
 
 <h2 id="meteorloginlogout">meteor login / logout</h2>
 
