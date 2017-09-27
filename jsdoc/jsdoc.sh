@@ -6,6 +6,9 @@ TOPDIR=$(pwd)
 METEOR_DIR="./code"
 cd "$METEOR_DIR"
 
+# Ensure that jsdoc failure actually makes this script fail.
+set -o pipefail
+
 # Call git grep to find all js files with the appropriate comment tags,
 # and only then pass it to JSDoc which will parse the JS files.
 # This is a whole lot faster than calling JSDoc recursively.

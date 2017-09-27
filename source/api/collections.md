@@ -391,6 +391,15 @@ Meteor.startup(() => {
 
 {% apibox "Mongo.Collection#allow" %}
 
+{% pullquote warning %}
+While `allow` and `deny` make it easy to get started building an app, it's
+harder than it seems to write secure `allow` and `deny` rules. We recommend
+that developers avoid `allow` and `deny`, and switch directly to custom methods
+once they are ready to remove `insecure` mode from their app.  See
+[the Meteor Guide on security](https://guide.meteor.com/security.html#allow-deny)
+for more details.
+{% endpullquote %}
+
 When a client calls `insert`, `update`, or `remove` on a collection, the
 collection's `allow` and [`deny`](#deny) callbacks are called
 on the server to determine if the write should be allowed. If at least
@@ -524,6 +533,15 @@ meteor remove insecure
 ```
 
 {% apibox "Mongo.Collection#deny" %}
+
+{% pullquote warning %}
+While `allow` and `deny` make it easy to get started building an app, it's
+harder than it seems to write secure `allow` and `deny` rules. We recommend
+that developers avoid `allow` and `deny`, and switch directly to custom methods
+once they are ready to remove `insecure` mode from their app.  See
+[the Meteor Guide on security](https://guide.meteor.com/security.html#allow-deny)
+for more details.
+{% endpullquote %}
 
 This works just like [`allow`](#allow), except it lets you
 make sure that certain writes are definitely denied, even if there is an
