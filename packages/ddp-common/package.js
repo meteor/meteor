@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Code shared beween ddp-client and ddp-server",
-  version: '1.3.0-beta.32',
+  version: '1.3.0-rc.0',
   documentation: null
 });
 
