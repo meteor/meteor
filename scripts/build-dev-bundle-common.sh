@@ -6,7 +6,7 @@ set -u
 UNAME=$(uname)
 ARCH=$(uname -m)
 MONGO_VERSION=3.2.15
-NODE_VERSION=8.5.0
+NODE_VERSION=8.6.0
 NPM_VERSION=5.4.2
 
 # If we built Node from source on Jenkins, this is the build number.
