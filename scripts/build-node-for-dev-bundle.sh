@@ -47,6 +47,7 @@ then
     node_configure_flags+=('--debug')
 fi
 
+# "make binary" includes DESTDIR and PORTABLE=1 options.
 # Unsetting BUILD_DOWNLOAD_FLAGS allows the ICU download above to work.
 make -j4 binary \
   BUILD_DOWNLOAD_FLAGS= \
@@ -56,7 +57,6 @@ make -j4 binary \
 TARBALL_PATH="${CHECKOUT_DIR}/node_${PLATFORM}_v${NODE_VERSION}.tar.gz"
 mv node-*.tar.gz "${TARBALL_PATH}"
 
-# binary includes DESTDIR and PORTABLE=1 options!
 cd "$DIR"
 rm -rf node-build
 
