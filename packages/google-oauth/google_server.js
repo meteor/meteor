@@ -48,7 +48,7 @@ function getServiceDataFromTokens(tokens) {
   };
 }
 
-Accounts.registerLoginHandler(function (request) {
+Accounts.registerLoginHandler('google', function (request) {
   if (request.googleSignIn !== true) {
     return;
   }
