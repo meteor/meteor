@@ -68,11 +68,11 @@ Accounts.registerLoginHandler('google', function (request) {
   const result = getServiceDataFromTokens(tokens);
 
   return Accounts.updateOrCreateUserFromExternalService("google", {
-    id: request.userId,
+    id: result.serviceData.id,
     idToken: request.idToken,
     accessToken: request.accessToken,
-    email: request.email,
-    picture: request.imageUrl,
+    email: result.serviceData.email,
+    picture: result.serviceData.picture,
     ...result.serviceData,
   }, result.options);
 });
