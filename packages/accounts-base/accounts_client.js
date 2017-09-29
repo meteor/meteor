@@ -281,6 +281,13 @@ Ap.callLoginMethod = function (options) {
       // already logged in they will still get logged in on reconnect.
       // See issue #4970.
     } else {
+      // First clear out any previously set Acccounts login onReconnect
+      // callback (to make sure we don't keep piling up duplicate callbacks,
+      // which would then all be triggered when reconnecting).
+      if (self._reconnectStopper) {
+        self._reconnectStopper.stop();
+      }
+
       self._reconnectStopper = DDP.onReconnect(function (conn) {
         if (conn != self.connection) {
           return;
