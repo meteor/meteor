@@ -1,4 +1,4 @@
-## v1.5.2.2, TBD
+## v1.5.2.2, 2017-10-02
 
 * Fixes a regression in 1.5.2.1 which resulted in the macOS firewall
   repeatedly asking to "accept incoming network connections". While the
@@ -29,6 +29,9 @@
   was necessary after a change in 1.5.2.1 which reduced its scope.
   This resolves "Cannot find module crypto" and similar errors.
   [Issue #9136](https://github.com/meteor/meteor/issues/9136)
+
+* A bug that prevented building some binary npm packages on Windows has
+  been fixed. [Issue #9153](https://github.com/meteor/meteor/issues/9153)
 
 ## v1.5.2.1, 2017-09-26
 
