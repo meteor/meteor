@@ -1872,6 +1872,21 @@ class JsImage {
             // someone passes a Windows-y module identifier.
             name = name.split("\\").join("/");
 
+            let resolved;
+            try {
+              resolved = require.resolve(name);
+            } catch (e) {
+              error = error || e;
+            }
+
+            if (resolved &&
+                resolved === name &&
+                ! files.pathIsAbsolute(resolved)) {
+              // If require.resolve(id) === id and id is not an absolute
+              // identifier, it must be a built-in module like fs or http.
+              return require(resolved);
+            }
+
             function tryLookup(nodeModulesPath, name) {
               var nodeModulesTopDir = files.pathJoin(
                 nodeModulesPath,
@@ -1900,19 +1915,13 @@ class JsImage {
               return require(fullPath);
             }
 
-            const resolved = require.resolve(name);
+            if (appDir && resolved) {
+              const isOutsideAppDir =
+                files.pathRelative(appDir, resolved).startsWith("..");
 
-            if (resolved === name && ! files.pathIsAbsolute(resolved)) {
-              // If require.resolve(id) === id and id is not an absolute
-              // identifier, it must be a built-in module like fs or http.
-              return require(resolved);
-            }
-
-            const isOutsideAppDir = appDir &&
-              files.pathRelative(appDir, resolved).startsWith("..");
-
-            if (! isOutsideAppDir) {
-              return require(resolved);
+              if (! isOutsideAppDir) {
+                return require(resolved);
+              }
             }
 
             throw error || new Error(
