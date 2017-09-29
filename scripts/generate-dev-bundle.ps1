@@ -41,6 +41,9 @@ mkdir lib\node_modules
 mkdir bin
 cd bin
 
+# add bin to the front of the path so we can use our own node for building
+$env:PATH = "${DIR}\bin;${env:PATH}"
+
 $webclient = New-Object System.Net.WebClient
 $shell = New-Object -com shell.application
 
@@ -58,6 +61,33 @@ cd "$DIR\bin"
 # same node on 32bit vs 64bit?
 $node_link = "http://nodejs.org/dist/v${NODE_VERSION}/win-x86/node.exe"
 $webclient.DownloadFile($node_link, "$DIR\bin\node.exe")
+
+mkdir "$DIR\Release"
+cd "$DIR\Release"
+$nodeLibUrl = & "$DIR\bin\node.exe" -p process.release.libUrl
+echo "Downloading node.lib from ${nodeLibUrl}"
+$webclient.DownloadFile($nodeLibUrl, "$DIR\Release\node.lib")
+echo ""
+echo "Node lib:"
+dir
+
+mkdir "$DIR\include"
+cd "$DIR\include"
+$nodeHeadersUrl = & "$DIR\bin\node.exe" -p process.release.headersUrl
+$nodeHeadersTar = "node-v${NODE_VERSION}-headers.tar"
+$nodeHeadersTarGz = "${nodeHeadersTar}.gz"
+echo "Downloading ${nodeHeadersTarGz} from ${nodeHeadersUrl}"
+$webclient.DownloadFile($nodeHeadersUrl, "$DIR\include\$nodeHeadersTarGz")
+7z x "$nodeHeadersTarGz"
+7z x "$nodeHeadersTar"
+$nodeHeadersDir = "node-v${NODE_VERSION}"
+mv "$nodeHeadersDir\include\node" .
+rm "$nodeHeadersTarGz"
+rm "$nodeHeadersTar"
+rm -Recurse -Force "$nodeHeadersDir"
+echo ""
+echo "Node headers:"
+dir node
 
 # On Windows we provide a reliable version of python.exe for use by
 # node-gyp (the tool that rebuilds binary node modules). #WinPy
@@ -85,9 +115,6 @@ foreach($item in $zip.items()) {
 
 rm -Recurse -Force $npm_zip
 rm -Recurse -Force "$DIR\7z"
-
-# add bin to the front of the path so we can use our own node for building
-$env:PATH = "${DIR}\bin;${env:PATH}"
 
 # Install the version of npm that we're actually going to expose from the
 # dev bundle. Note that we use npm@1.4.12 to install npm@${NPM_VERSION}.

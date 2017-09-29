@@ -15,7 +15,7 @@ export const CORDOVA_DEV_BUNDLE_VERSIONS = {
 
 export const CORDOVA_PLATFORM_VERSIONS = {
   'android': '6.2.3',
-  'ios': '4.4.0'
+  'ios': '4.5.1'
 };
 
 const PLATFORM_TO_DISPLAY_NAME_MAP = {

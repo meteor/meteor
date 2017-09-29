@@ -24,64 +24,40 @@ else
     NODE_URL="https://nodejs.org/dist/v${NODE_VERSION}/${NODE_TGZ}"
 fi
 
-# Update these values after building the dev-bundle-node Jenkins project.
-# Also make sure to update NODE_VERSION in generate-dev-bundle.ps1.
-function downloadNode {
-    echo "Downloading Node from ${NODE_URL}"
-    curl -sL "${NODE_URL}" | tar zx --strip-components 1
-}
+mkdir node-build
+cd node-build
 
-if [ ! -z ${NODE_FROM_SRC+x} ]
+echo "Downloading Node from ${NODE_URL}"
+curl -sL "${NODE_URL}" | tar zx --strip-components 1
+
+# Build with International Components for Unicode (ICU) Support...
+# Node 4.x used 56.x. Node 8.x uses 59.x.   I believe the only
+# reliable location to find the correct version of ICU for a Node.js
+# release is to check `process.config.icu_ver_major` from an
+# official, compiled Node.js release.
+# https://github.com/nodejs/node/wiki/Intl#configure-node-with-specific-icu-source
+echo "Downloading International Components for Unicode (ICU)..."
+curl -sL https://s3.amazonaws.com/com.meteor.static/icu/icu4c-56_1-src.tgz | \
+  tar zx -C deps/
+
+node_configure_flags=()
+
+if [ "${NODE_FROM_SRC:-}" = "debug" ]
 then
-    mkdir node-build && cd node-build
-    downloadNode
-
-    # Build with International Components for Unicode (ICU) Support...
-    # Node 4.x used 56.x. Node 8.x uses 59.x.   I believe the only
-    # reliable location to find the correct version of ICU for a Node.js
-    # release is to check `process.config.icu_ver_major` from an
-    # official, compiled Node.js release.
-    # https://github.com/nodejs/node/wiki/Intl#configure-node-with-specific-icu-source
-    echo "Downloading International Components for Unicode (ICU)..."
-    curl -sL http://download.icu-project.org/files/icu4c/56.1/icu4c-56_1-src.tgz | \
-      tar zx -C deps/
-
-    node_configure_flags=(\
-      '--prefix=/' \
-      '--with-intl=small-icu' \
-      '--release-urlbase=https://nodejs.org/download/release/' \
-    )
-
-    if [ "${NODE_FROM_SRC:-}" = "debug" ]
-    then
-        node_configure_flags+=('--debug')
-    fi
-
-    ./configure "${node_configure_flags[@]}"
-    make -j4
-    # PORTABLE=1 is a node hack to make npm look relative to itself instead
-    # of hard coding the PREFIX.
-    # DESTDIR installs to the requested location, without using PREFIX.
-    # See tools/install.py in the Node source for more information.
-    make install PORTABLE=1 DESTDIR="${DIR}"
-    cd "$DIR"
-else
-    downloadNode
+    node_configure_flags+=('--debug')
 fi
 
-cd "$DIR"
-stripBinary bin/node
+# "make binary" includes DESTDIR and PORTABLE=1 options.
+# Unsetting BUILD_DOWNLOAD_FLAGS allows the ICU download above to work.
+make -j4 binary \
+  BUILD_DOWNLOAD_FLAGS= \
+  RELEASE_URLBASE=https://nodejs.org/download/release/ \
+  CONFIG_FLAGS="${node_configure_flags[@]+"${node_configure_flags[@]}"}"
 
-# export path so we use our new node for later builds
-PATH="$DIR/bin:$PATH"
-which node
-which npm
-npm version
-
-echo BUNDLING
+TARBALL_PATH="${CHECKOUT_DIR}/node_${PLATFORM}_v${NODE_VERSION}.tar.gz"
+mv node-*.tar.gz "${TARBALL_PATH}"
 
 cd "$DIR"
 rm -rf node-build
-tar czvf "${CHECKOUT_DIR}/node_${PLATFORM}_v${NODE_VERSION}.tar.gz" .
 
 echo DONE
