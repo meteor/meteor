@@ -49,6 +49,18 @@ var LEVEL_COLORS = {
 
 var META_COLOR = 'blue';
 
+// Default colors cause readability problems on Windows Powershell,
+// switch to bright variants.
+if ('win32' === process.platform) {
+  LEVEL_COLORS = {
+    debug: 'greenBright',
+    warn: 'magentaBright',
+    error: 'redBright'
+  };
+
+  META_COLOR = 'blueBright';
+}
+
 // XXX package
 var RESTRICTED_KEYS = ['time', 'timeInexact', 'level', 'file', 'line',
                         'program', 'originApp', 'satellite', 'stderr'];
