@@ -6,7 +6,7 @@ var runLog = require('./run-log.js');
 var child_process = require('child_process');
 
 var _ = require('underscore');
-var isopackets = require('../tool-env/isopackets.js');
+import { loadIsopackage } from '../tool-env/isopackets.js';
 var Console = require('../console/console.js').Console;
 
 // Given a Mongo URL, open an interative Mongo shell on this terminal
@@ -585,17 +585,19 @@ var launchMongo = function (options) {
   var initiateReplSetAndWaitForReady = function () {
     try {
       // Load mongo so we'll be able to talk to it.
-      var mongoNpmModule =
-            isopackets.load('mongo')['npm-mongo'].NpmModuleMongodb;
+      const { Db, Server } = loadIsopackage('npm-mongo').NpmModuleMongodb;
 
       // Connect to the intended primary and start a replset.
-      var db = new mongoNpmModule.Db(
+      var db = new Db(
         'meteor',
-        new mongoNpmModule.Server('127.0.0.1', options.port, {
+        new Server('127.0.0.1', options.port, {
           poolSize: 1,
-          socketOptions: {connectTimeoutMS: 60000},
+          socketOptions: {
+            connectTimeoutMS: 60000
+          }
         }),
-        {safe: true});
+        { safe: true }
+      );
 
       yieldingMethod(db, 'open');
       if (stopped) {

@@ -1,5 +1,5 @@
 var _ = require("underscore");
-var isopackets = require('../tool-env/isopackets.js');
+import { loadIsopackage } from '../tool-env/isopackets.js';
 var files = require('../fs/files.js');
 var fiberHelpers = require("../utils/fiber-helpers.js");
 
@@ -24,9 +24,8 @@ var fiberHelpers = require("../utils/fiber-helpers.js");
 //   ...and anything else you'd normally pass as options to DDP.connect
 //
 var ServiceConnection = function (endpointUrl, options) {
-  var self = this;
-
-  var Package = isopackets.load('ddp');
+  const self = this;
+  const ddpClient = loadIsopackage('ddp-client');
 
   // ServiceConnection never should retry connections: just one TCP connection
   // is enough, and any errors on it should be detected promptly.
@@ -60,7 +59,7 @@ var ServiceConnection = function (endpointUrl, options) {
     }
   }
 
-  self.connection = Package['ddp-client'].DDP.connect(endpointUrl, options);
+  self.connection = ddpClient.DDP.connect(endpointUrl, options);
 
   // Wait until we have some sort of initial connection or error (including the
   // 10-second timeout built into our DDP client).
@@ -87,7 +86,7 @@ var ServiceConnection = function (endpointUrl, options) {
       var promise = self.currentPromise;
       self.currentPromise = null;
       promise.reject(
-        error || new Package['ddp-client'].DDP.ConnectionError(
+        error || new ddpClient.DDP.ConnectionError(
           "DDP disconnected while connection in progress")
       );
     } else if (error) {
