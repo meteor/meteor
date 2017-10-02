@@ -1,5 +1,4 @@
 var _ = require('underscore');
-var isopackets = require('../tool-env/isopackets.js');
 var Console = require('../console/console.js').Console;
 var fiberHelpers = require('../utils/fiber-helpers.js');
 
@@ -20,7 +19,9 @@ var fiberHelpers = require('../utils/fiber-helpers.js');
 let _Log;
 function getLoggingPackage() {
   if (! _Log) {
-    _Log = isopackets.load('logging').logging.Log;
+    _Log = require("../tool-env/isopackets.js")
+      .loadIsopackage('logging')
+      .Log;
   }
 
   // Since no other process will be listening to stdout and parsing it,

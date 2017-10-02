@@ -1,10 +1,11 @@
-var isopackets = require('../tool-env/isopackets.js');
 var config = require('../meteor-services/config.js');
 var utils = require('../utils/utils.js');
 var auth = require('../meteor-services/auth.js');
 var selftest = require('./selftest.js');
 var httpHelpers = require('../utils/http-helpers.js');
 var _ = require('underscore');
+
+import { loadIsopackage } from '../tool-env/isopackets.js'
 
 var randomString = function (charsCount) {
   var chars = 'abcdefghijklmnopqrstuvwxyz';
@@ -52,14 +53,9 @@ var registrationUrlRegexp =
       /https:\/\/www\.meteor\.com\/setPassword\?([a-zA-Z0-9\+\/]+)/;
 exports.registrationUrlRegexp = registrationUrlRegexp;
 
-var getLoadedPackages = function () {
-  return isopackets.load('ddp');
-};
-
-var ddpConnect = function (url) {
-  var DDP = getLoadedPackages()['ddp-client'].DDP;
-  return DDP.connect(url);
-};
+function ddpConnect(url) {
+  return loadIsopackage('ddp-client').DDP.connect(url);
+}
 
 exports.ddpConnect = ddpConnect;
 
