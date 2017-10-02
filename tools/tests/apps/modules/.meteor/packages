@@ -13,7 +13,7 @@ jquery@1.11.10                  # Helpful client-side library
 tracker@1.1.3                 # Meteor's client-side reactive programming library
 
 es5-shim@4.6.15                # ECMAScript 5 compatibility for older browsers.
-ecmascript@0.8.2              # Enable ECMAScript2015+ syntax in app code
+ecmascript@0.8.3              # Enable ECMAScript2015+ syntax in app code
 
 coffeescript
 modules-test-package

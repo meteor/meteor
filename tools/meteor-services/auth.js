@@ -6,20 +6,20 @@ var httpHelpers = require('../utils/http-helpers.js');
 var fiberHelpers = require('../utils/fiber-helpers.js');
 var querystring = require('querystring');
 var url = require('url');
-var isopackets = require('../tool-env/isopackets.js');
 var Console = require('../console/console.js').Console;
 
 var auth = exports;
 
-var getLoadedPackages = function () {
-  return isopackets.load('ddp');
-};
+function loadDDP() {
+  return require("../tool-env/isopackets.js")
+    .loadIsopackage("ddp-client")
+    .DDP;
+}
 
 // Opens and returns a DDP connection to the accounts server. Remember
 // to close it when you're done with it!
 var openAccountsConnection = function () {
-  var DDP = getLoadedPackages()['ddp-client'].DDP;
-  return DDP.connect(config.getAuthDDPUrl(), {
+  return loadDDP().connect(config.getAuthDDPUrl(), {
     headers: { 'User-Agent': httpHelpers.getUserAgent() }
   });
 };
@@ -47,7 +47,7 @@ var withAccountsConnection = function (f) {
 // XXX if we reconnect we won't reauthenticate. Fix that before using
 // this for long-lived connections.
 var loggedInAccountsConnection = function (token) {
-  var connection = getLoadedPackages()['ddp-client'].DDP.connect(
+  var connection = loadDDP().connect(
     config.getAuthDDPUrl()
   );
 
