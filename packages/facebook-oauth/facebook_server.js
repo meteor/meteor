@@ -1,3 +1,5 @@
+var Accounts = require("meteor/accounts-base").Accounts;
+
 Facebook = {};
 var crypto = Npm.require('crypto');
 
@@ -22,6 +24,18 @@ Facebook.handleAuthFromAccessToken = function handleAuthFromAccessToken(accessTo
     options: {profile: {name: identity.name}}
   };
 };
+
+Accounts.registerLoginHandler('facebook', function (request) {
+  if (request.facebookSignIn !== true) {
+    return;
+  }
+
+  const identity = Facebook.handleAuthFromAccessToken(request.accessToken, (+new Date) + (1000 * request.expiresIn));
+
+  return Accounts.updateOrCreateUserFromExternalService("facebook", {
+    ...identity.serviceData,
+  }, identity.options);
+});
 
 OAuth.registerService('facebook', 2, null, function(query) {
   var response = getTokenResponse(query);
