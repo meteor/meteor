@@ -576,6 +576,11 @@ Accounts.onCreateUser((options, user) => {
   const { first_name, last_name } = user.services.facebook;
   user.initials = first_name[0].toUpperCase() + last_name[0].toUpperCase();
 
+  // We still want the default hook's 'profile' behavior.
+  if (options.profile) {
+    user.profile = options.profile;
+  }
+  
   // Don't forget to return the new user object at the end!
   return user;
 });
