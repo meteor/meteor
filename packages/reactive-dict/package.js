@@ -16,5 +16,6 @@ Package.onTest(function (api) {
   api.use('reactive-dict');
   api.use('tracker');
   api.use('underscore');
+  api.use('reload');
   api.addFiles('reactive-dict-tests.js');
 });
