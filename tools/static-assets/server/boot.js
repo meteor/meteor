@@ -47,7 +47,7 @@ const meteorDebugFuture =
 
 function maybeWaitForDebuggerToAttach() {
   if (meteorDebugFuture) {
-    const pause = require("./debug.js").pause;
+    const { pause } = require("./debug.js");
     const pauseThresholdMs = 50;
     const pollIntervalMs = 500;
     const waitStartTimeMs = +new Date;
