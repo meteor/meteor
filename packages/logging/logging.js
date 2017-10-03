@@ -55,7 +55,7 @@ var META_COLOR = 'blue';
 // ops per second (on Node 8) by caching "process.platform".
 var platform = process.platform;
 var platformColor = function (color) {
-  if (platform === 'win32') {
+  if (platform === 'win32' && !color.endsWith('Bright')) {
     return color + 'Bright';
   }
   return color;
