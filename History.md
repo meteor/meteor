@@ -1,10 +1,37 @@
-## v.NEXT
+## v1.5.2.2, 2017-10-02
+
+* Fixes a regression in 1.5.2.1 which resulted in the macOS firewall
+  repeatedly asking to "accept incoming network connections". While the
+  `node` binary in 1.5.2.1 was functionally the same as 1.5.2, it had
+  been recompiled on our build farm (which re-compiles all architectures
+  at the same time) to ensure compatibility with older (but still
+  supported) Linux distributions. Unfortunately, macOS took issue with
+  the binary having a different 'signature' (but same 'identifier') as
+  one it had already seen, and refused to permanently "allow" it in the
+  firewall. Our macOS `node` binaries are now signed with a certificate,
+  hopefully preventing this from occurring again.
+  [Issue #9139](https://github.com/meteor/meteor/issues/9139)
+
+* Fixes a regression in `accounts-base` caused by changes to the (now
+  deprecated) `connection.onReconnect` function which caused users to be
+  logged out shortly after logging in.
+  [Issue #9140](https://github.com/meteor/meteor/issues/9140)
+  [PR #](https://github.com/meteor/meteor/pull/9148)
 
 * [`cordova-ios`](https://github.com/apache/cordova-ios) has been updated to
   version 4.5.1, to add in iOS 11 / Xcode 9 compatibility.
   [Issue #9098](https://github.com/meteor/meteor/issues/9098)
   [Issue #9126](https://github.com/meteor/meteor/issues/9126)
   [PR #9137](https://github.com/meteor/meteor/pull/9137)
+
+* Includes a follow-up change to the (not commonly necessary)
+  `Npm.require` which ensures built-in modules are loaded first, which
+  was necessary after a change in 1.5.2.1 which reduced its scope.
+  This resolves "Cannot find module crypto" and similar errors.
+  [Issue #9136](https://github.com/meteor/meteor/issues/9136)
+
+* A bug that prevented building some binary npm packages on Windows has
+  been fixed. [Issue #9153](https://github.com/meteor/meteor/issues/9153)
 
 ## v1.5.2.1, 2017-09-26
 

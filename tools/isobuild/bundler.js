@@ -169,7 +169,7 @@ var colonConverter = require('../utils/colon-converter.js');
 var Profile = require('../tool-env/profile.js').Profile;
 var packageVersionParser = require('../packaging/package-version-parser.js');
 var release = require('../packaging/release.js');
-import { load as loadIsopacket } from '../tool-env/isopackets.js';
+import { loadIsopackage } from '../tool-env/isopackets.js';
 import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
 import { gzipSync } from "zlib";
 
@@ -1673,8 +1673,7 @@ class ClientTarget extends Target {
     };
 
     if (this.arch === 'web.cordova') {
-      const { WebAppHashing } =
-        loadIsopacket('cordova-support')['webapp-hashing'];
+      const { WebAppHashing } = loadIsopackage('webapp-hashing');
 
       const cordovaCompatibilityVersions =
         _.object(_.map(CORDOVA_PLATFORM_VERSIONS, (version, platform) => {
@@ -1872,6 +1871,21 @@ class JsImage {
             // someone passes a Windows-y module identifier.
             name = name.split("\\").join("/");
 
+            let resolved;
+            try {
+              resolved = require.resolve(name);
+            } catch (e) {
+              error = error || e;
+            }
+
+            if (resolved &&
+                resolved === name &&
+                ! files.pathIsAbsolute(resolved)) {
+              // If require.resolve(id) === id and id is not an absolute
+              // identifier, it must be a built-in module like fs or http.
+              return require(resolved);
+            }
+
             function tryLookup(nodeModulesPath, name) {
               var nodeModulesTopDir = files.pathJoin(
                 nodeModulesPath,
@@ -1900,19 +1914,13 @@ class JsImage {
               return require(fullPath);
             }
 
-            const resolved = require.resolve(name);
+            if (appDir && resolved) {
+              const isOutsideAppDir =
+                files.pathRelative(appDir, resolved).startsWith("..");
 
-            if (resolved === name && ! files.pathIsAbsolute(resolved)) {
-              // If require.resolve(id) === id and id is not an absolute
-              // identifier, it must be a built-in module like fs or http.
-              return require(resolved);
-            }
-
-            const isOutsideAppDir = appDir &&
-              files.pathRelative(appDir, resolved).startsWith("..");
-
-            if (! isOutsideAppDir) {
-              return require(resolved);
+              if (! isOutsideAppDir) {
+                return require(resolved);
+              }
             }
 
             throw error || new Error(
