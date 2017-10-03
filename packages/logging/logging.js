@@ -40,25 +40,25 @@ Log._intercepted = function () {
 // other process that will be reading its standard output.
 Log.outputFormat = 'json';
 
-var levelColors = {
+var LEVEL_COLORS = {
   debug: 'green',
   // leave info as the default color
   warn: 'magenta',
   error: 'red'
 };
 
-var metaColor = 'blue';
+var META_COLOR = 'blue';
 
 // Default colors cause readability problems on Windows Powershell,
 // switch to bright variants.
-if (process.platform === 'win32') {
-  levelColors = {
+if ('win32' === process.platform) {
+  LEVEL_COLORS = {
     debug: 'greenBright',
     warn: 'magentaBright',
     error: 'redBright'
   };
 
-  metaColor = 'blueBright';
+  META_COLOR = 'blueBright';
 }
 
 // XXX package
@@ -275,8 +275,8 @@ Log.format = function (obj, options) {
       require('cli-color')[color](line) : line;
   };
 
-  return prettify(metaPrefix, options.metaColor || metaColor) +
-    prettify(message, levelColors[level]);
+  return prettify(metaPrefix, options.metaColor || META_COLOR) +
+    prettify(message, LEVEL_COLORS[level]);
 };
 
 // Turn a line of text into a loggable object.
