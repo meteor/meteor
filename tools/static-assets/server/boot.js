@@ -45,34 +45,60 @@ var parsedSourceMaps = {};
 const meteorDebugFuture =
   process.env.METEOR_INSPECT_BRK ? new Future : null;
 
-if (meteorDebugFuture) {
-  process.on("message", function onDebugMessage(msg) {
-    if (msg && msg.meteorDebugCommand === "continue") {
-      process.removeListener("message", onDebugMessage);
-      // After the "continue" message is received, the Chrome DevTools
-      // debugger still needs a small amount of time to get ready to pause
-      // at the debugger statement in ./debug.js.
-      setTimeout(() => meteorDebugFuture.return(true), 500);
-    }
-  });
-}
-
 function maybeWaitForDebuggerToAttach() {
   if (meteorDebugFuture) {
-    // This setTimeout not only puts a reasonable time limit on the
-    // debugger attaching, but also keeps the process alive by preventing
-    // the event loop from running empty while the Fiber yields.
-    const timer = setTimeout(() => {
-      console.error("Debugger did not attach after 5 minutes; continuing.");
-      meteorDebugFuture.return(false);
-    }, 5 * 60 * 1000);
+    const { pause } = require("./debug.js");
+    const pauseThresholdMs = 50;
+    const pollIntervalMs = 500;
+    const waitStartTimeMs = +new Date;
+    const waitLimitMinutes = 5;
+    const waitLimitMs = waitLimitMinutes * 60 * 1000;
 
-    const shouldPause = meteorDebugFuture.wait();
-    clearTimeout(timer);
+    // This setTimeout not only waits for the debugger to attach, but also
+    // keeps the process alive by preventing the event loop from running
+    // empty while the main Fiber yields.
+    setTimeout(function poll() {
+      const pauseStartTimeMs = +new Date;
 
-    if (shouldPause) {
-      require("./debug.js");
-    }
+      if (pauseStartTimeMs - waitStartTimeMs > waitLimitMs) {
+        console.error(
+          `Debugger did not attach after ${waitLimitMinutes} minutes; continuing.`
+        );
+
+        meteorDebugFuture.return();
+
+      } else {
+        // This pause function contains a debugger keyword that will only
+        // act as a breakpoint once a debugging client has attached to the
+        // process, so we keep calling pause() until the first time it
+        // takes at least pauseThresholdMs, which indicates that a client
+        // must be attached. The only other signal of a client attaching
+        // is an unreliable "Debugger attached" message printed to stderr
+        // by native C++ code, which requires the parent process to listen
+        // for that message and then process.send a message back to this
+        // process. By comparison, this polling strategy tells us exactly
+        // what we want to know: "Is the debugger keyword enabled yet?"
+        pause();
+
+        if (new Date - pauseStartTimeMs > pauseThresholdMs) {
+          // If the pause() function call took a meaningful amount of
+          // time, we can conclude the debugger keyword must be active,
+          // which means a debugging client must be connected, which means
+          // we should stop polling and let the main Fiber continue.
+          meteorDebugFuture.return();
+
+        } else {
+          // If the pause() function call didn't take a meaningful amount
+          // of time to execute, then the debugger keyword must not have
+          // caused a pause, which means a debugging client must not be
+          // connected, which means we should keep polling.
+          setTimeout(poll, pollIntervalMs);
+        }
+      }
+    }, pollIntervalMs);
+
+    // The polling will continue while we wait here.
+    meteorDebugFuture.wait();
   }
 }
 

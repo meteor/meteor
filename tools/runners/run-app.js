@@ -99,13 +99,6 @@ _.extend(AppProcess.prototype, {
     });
 
     eachline(self.proc.stderr, function (line) {
-      if (self.debugPort &&
-          line.indexOf("Debugger attached") >= 0) {
-        self.proc.send({
-          meteorDebugCommand: "continue"
-        });
-      }
-
       runLog.logAppOutput(line, true);
     });
 
