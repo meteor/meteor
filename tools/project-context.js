@@ -8,7 +8,7 @@ var catalogLocal = require('./packaging/catalog/catalog-local.js');
 var Console = require('./console/console.js').Console;
 var files = require('./fs/files.js');
 var isopackCacheModule = require('./isobuild/isopack-cache.js');
-var isopackets = require('./tool-env/isopackets.js');
+import { loadIsopackage } from './tool-env/isopackets.js';
 var packageMapModule = require('./packaging/package-map.js');
 var release = require('./packaging/release.js');
 var tropohouse = require('./packaging/tropohouse.js');
@@ -789,20 +789,15 @@ _.extend(ProjectContext.prototype, {
   },
 
   _buildResolver: function () {
-    var self = this;
+    const { ConstraintSolver } = loadIsopackage('constraint-solver');
 
-    var constraintSolverPackage =
-          isopackets.load('constraint-solver')['constraint-solver'];
-    var resolver =
-          new constraintSolverPackage.ConstraintSolver.PackagesResolver(
-            self.projectCatalog, {
-              nudge: function () {
-                Console.nudge(true);
-              },
-              Profile: Profile,
-              resultCache: self._resolverResultCache
-            });
-    return resolver;
+    return new ConstraintSolver.PackagesResolver(this.projectCatalog, {
+      nudge() {
+        Console.nudge(true);
+      },
+      Profile: Profile,
+      resultCache: this._resolverResultCache
+    });
   },
 
   _downloadMissingPackages: Profile('_downloadMissingPackages', function () {
