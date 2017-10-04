@@ -13,7 +13,7 @@
   running on a 32-bit OS is limited to Mongo 3.2.15, whereas Meteor running
   on a 64-bit OS uses Mongo 3.4.9 by default.
   [FR #129](https://github.com/meteor/meteor-feature-requests/issues/129)
-  [PR TODO]()
+  [PR #9173](https://github.com/meteor/meteor/pull/9173)
 
 * The `npm` npm package has been upgraded to version 5.4.2, a major
   upgrade from 4.6.1, requiring internal updates to dependency management
