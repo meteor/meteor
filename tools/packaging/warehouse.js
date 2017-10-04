@@ -42,9 +42,10 @@ var _ = require("underscore");
 var files = require('../fs/files.js');
 var httpHelpers = require('../utils/http-helpers.js');
 var fiberHelpers = require('../utils/fiber-helpers.js');
+var utils = require('../utils/utils.js');
 
 // Use `METEOR_WAREHOUSE_URLBASE` to override the default warehouse
-// url base. 
+// url base.
 var WAREHOUSE_URLBASE = process.env.METEOR_WAREHOUSE_URLBASE || 'https://warehouse.meteor.com';
 
 var warehouse = exports;
@@ -408,15 +409,6 @@ _.extend(warehouse, {
   },
 
   _platform: function () {
-    // Normalize from Node "os.arch()" to "uname -m".
-    var arch = os.arch();
-    if (arch === "ia32") {
-      arch = "i686";
-    } else if (arch === "x64") {
-      arch = "x86_64";
-    } else {
-      throw new Error("Unsupported architecture " + arch);
-    }
-    return os.type() + "_" + arch;
+    return os.type() + "_" + utils.architecture();
   }
 });

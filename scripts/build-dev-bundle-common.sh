@@ -7,6 +7,8 @@ UNAME=$(uname)
 ARCH=$(uname -m)
 MONGO_VERSION=3.2.15
 NODE_VERSION=8.7.0
+MONGO_VERSION_64BIT=3.4.9
+MONGO_VERSION_32BIT=3.2.15
 NPM_VERSION=5.4.2
 
 # If we built Node from source on Jenkins, this is the build number.
