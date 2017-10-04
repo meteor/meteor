@@ -44,7 +44,13 @@ downloadOfficialNode() {
 # Try each strategy in the following order:
 extractNodeFromTarGz || downloadNodeFromS3 || downloadOfficialNode
 
-# Download Mongo from mongodb.com
+# Download Mongo from mongodb.com. Will download a 64-bit version of Mongo
+# by default. Will download a 32-bit version of Mongo if using a 32-bit based
+# OS.
+MONGO_VERSION=$MONGO_VERSION_64BIT
+if [ $ARCH = "i686" ]; then
+  MONGO_VERSION=$MONGO_VERSION_32BIT
+fi
 MONGO_NAME="mongodb-${OS}-${ARCH}-${MONGO_VERSION}"
 MONGO_TGZ="${MONGO_NAME}.tgz"
 MONGO_URL="http://fastdl.mongodb.org/${OS}/${MONGO_TGZ}"
@@ -52,9 +58,9 @@ echo "Downloading Mongo from ${MONGO_URL}"
 curl "${MONGO_URL}" | tar zx
 
 # Put Mongo binaries in the right spot (mongodb/bin)
-mkdir -p mongodb/bin
-mv "${MONGO_NAME}/bin/mongod" mongodb/bin
-mv "${MONGO_NAME}/bin/mongo" mongodb/bin
+mkdir -p "mongodb/${ARCH}/bin"
+mv "${MONGO_NAME}/bin/mongod" "mongodb/${ARCH}/bin"
+mv "${MONGO_NAME}/bin/mongo" "mongodb/${ARCH}/bin"
 rm -rf "${MONGO_NAME}"
 
 # export path so we use the downloaded node and npm

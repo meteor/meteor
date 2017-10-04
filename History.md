@@ -1,3 +1,13 @@
+## v.NEXT
+
+* Multiple architecture Mongo support has been added to the Meteor Tool.
+  32-bit versions of Mongo have been discontinued as of Mongo 3.4, so to
+  allow people running Meteor on a 64-bit OS to use Mongo 3.4, the Tool has
+  been updated to support both 32 and 64 bit versions of Mongo. Meteor
+  running on a 32-bit OS is limited to Mongo 3.2.15, whereas Meteor running
+  on a 64-bit OS uses Mongo 3.4.9 by default.
+  [FR #129](https://github.com/meteor/meteor-feature-requests/issues/129)
+  [PR TODO]()
 
 * Node has been upgraded to version 8.6.0.
 
