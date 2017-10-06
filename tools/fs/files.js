@@ -217,8 +217,9 @@ files.getCurrentNodeBinDir = function () {
 
 // Return the top-level directory for this meteor install or checkout
 files.getCurrentToolsDir = function () {
-  var dirname = files.convertToStandardPath(__dirname);
-  return files.pathJoin(dirname, '..', '..');
+  return files.pathDirname(
+    files.pathDirname(
+      files.convertToStandardPath(__dirname)));
 };
 
 // Read a settings file and sanity-check it. Returns a string on

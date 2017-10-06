@@ -21,7 +21,7 @@ meteorInstall.fetch = function (ids) {
   var missing;
 
   Object.keys(ids).forEach(function (id) {
-    var version = getFromTree(dynamicVersions, id);
+    var version = dynamicVersions.get(id);
     if (version) {
       versions[id] = version;
     } else {
@@ -50,7 +50,7 @@ meteorInstall.fetch = function (ids) {
 
         addToTree(tree, id, makeModuleFunction(id, source, info.options));
 
-        var version = getFromTree(dynamicVersions, id);
+        var version = dynamicVersions.get(id);
         if (version) {
           versionsAndSourcesById[id] = {
             version: version,
@@ -117,14 +117,6 @@ function fetchMissing(missingTree) {
       }
     );
   });
-}
-
-function getFromTree(tree, id) {
-  id.split("/").every(function (part) {
-    return ! part || (tree = tree[part]);
-  });
-
-  return tree;
 }
 
 function addToTree(tree, id, value) {

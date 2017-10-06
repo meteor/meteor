@@ -2,6 +2,8 @@
 /.meteor
 *~
 /dev_bundle
+/dev_bundle.xxx
+/dev_bundle_XXX
 /dev_bundle*.tar.gz
 /android_bundle
 /android_bundle*.tar.gz

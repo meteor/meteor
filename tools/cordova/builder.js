@@ -6,7 +6,7 @@ import files from '../fs/files.js';
 import bundler from '../isobuild/bundler.js';
 import archinfo from '../utils/archinfo.js';
 import release from '../packaging/release.js';
-import { load as loadIsopacket } from '../tool-env/isopackets.js';
+import { loadIsopackage } from '../tool-env/isopackets.js';
 import utils from '../utils/utils.js';
 
 import { CORDOVA_ARCH } from './index.js';
@@ -231,7 +231,7 @@ export class CordovaBuilder {
   }
 
   writeConfigXmlAndCopyResources(shouldCopyResources = true) {
-    const { XmlBuilder } = loadIsopacket('cordova-support')['xmlbuilder'];
+    const { XmlBuilder } = loadIsopackage('xmlbuilder');
 
     let config = XmlBuilder.create('widget');
 
@@ -409,8 +409,8 @@ export class CordovaBuilder {
     let configDummy = {};
     configDummy.PUBLIC_SETTINGS = publicSettings || {};
 
-    const { WebAppHashing } =
-      loadIsopacket('cordova-support')['webapp-hashing'];
+    const { WebAppHashing } = loadIsopackage('webapp-hashing');
+
     program.version =
       WebAppHashing.calculateClientHash(program.manifest, null, configDummy);
   }
@@ -442,8 +442,8 @@ export class CordovaBuilder {
       runtimeConfig.PUBLIC_SETTINGS = publicSettings;
     }
 
-    const { Boilerplate } =
-      loadIsopacket('cordova-support')['boilerplate-generator'];
+    const { Boilerplate } = loadIsopackage('boilerplate-generator');
+
     const boilerplate = new Boilerplate(CORDOVA_ARCH, manifest, {
       urlMapper: _.identity,
       pathMapper: (path) => files.convertToOSPath(
@@ -546,15 +546,15 @@ Valid platforms are: ios, android.`);
      * - `ios_spotlight` (40x40)
      * - `ios_spotlight_2x` (80x80)
      * - `ios_spotlight_3x` (120x120)
-     * - 'ios_notification': '20x20',
-     * - 'ios_notification_2x': '40x40',
-     * - 'ios_notification_3x': '60x60',
-     * - 'iphone_legacy': '57x57',
-     * - 'iphone_legacy_2x': '114x114',
-     * - 'ipad_spotlight_legacy': '50x50',
-     * - 'ipad_spotlight_legacy_2x': '100x100',
-     * - 'ipad_app_legacy': '72x72',
-     * - 'ipad_app_legacy_2x': '144x144',
+     * - `ios_notification` (20x20)
+     * - `ios_notification_2x` (40x40)
+     * - `ios_notification_3x` (60x60)
+     * - `iphone_legacy` (57x57)
+     * - `iphone_legacy_2x` (114x114)
+     * - `ipad_spotlight_legacy` (50x50)
+     * - `ipad_spotlight_legacy_2x` (100x100)
+     * - `ipad_app_legacy` (72x72)
+     * - `ipad_app_legacy_2x` (144x144)
      * - `android_mdpi` (48x48)
      * - `android_hdpi` (72x72)
      * - `android_xhdpi` (96x96)

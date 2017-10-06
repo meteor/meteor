@@ -562,6 +562,13 @@ api.addAssets('${relPath}', 'client').`);
 
     Console.nudge(true);
 
+    if (classification.type === "meteor-ignore") {
+      // Return after watching .meteorignore files but before adding them
+      // as resources to be processed by compiler plugins. To see how
+      // these files are handled, see PackageSource#_findSources.
+      return;
+    }
+
     if (contents === null) {
       // It really sucks to put this check here, since this isn't publish
       // code...
@@ -765,9 +772,12 @@ function runLinters({inputSourceArch, isopackCache, sources,
         classification.type === 'unmatched') {
       return;
     }
-    // We shouldn't ever add a legacy handler and we're not hardcoding JS for
-    // linters, so we should always have SourceProcessor if anything matches.
-    if (! classification.sourceProcessors) {
+
+    // We shouldn't ever add a legacy handler and we're not hardcoding JS
+    // for linters, so we should always have SourceProcessor if anything
+    // matches, unless this is a .meteorignore file.
+    if (classification.type !== "meteor-ignore" &&
+        ! classification.sourceProcessors) {
       throw Error(
         `Unexpected classification for ${ relPath }: ${ classification.type }`);
     }
@@ -776,6 +786,14 @@ function runLinters({inputSourceArch, isopackCache, sources,
     const {hash, contents} = watch.readAndWatchFileWithHash(
       watchSet,
       files.pathResolve(inputSourceArch.sourceRoot, relPath));
+
+    if (classification.type === "meteor-ignore") {
+      // Return after watching .meteorignore files but before adding them
+      // as resources to be processed by compiler plugins. To see how
+      // these files are handled, see PackageSource#_findSources.
+      return;
+    }
+
     const wrappedSource = {
       relPath, contents, hash, fileOptions,
       arch: inputSourceArch.arch,

@@ -66,7 +66,7 @@ export class AccountsClient extends AccountsCommon {
   }
 
   /**
-   * @summary Register a new login function on the client. Intended for OAuth package authors. You can call the login function by using 
+   * @summary Register a new login function on the client. Intended for OAuth package authors. You can call the login function by using
    `Accounts.callLoginFunction` or `Accounts.callLoginFunction`.
    * @locus Client
    * @param {String} funcName The name of your login function. Used by `Accounts.callLoginFunction` and `Accounts.applyLoginFunction`.
@@ -281,7 +281,17 @@ Ap.callLoginMethod = function (options) {
       // already logged in they will still get logged in on reconnect.
       // See issue #4970.
     } else {
-      self.connection.onReconnect = function () {
+      // First clear out any previously set Acccounts login onReconnect
+      // callback (to make sure we don't keep piling up duplicate callbacks,
+      // which would then all be triggered when reconnecting).
+      if (self._reconnectStopper) {
+        self._reconnectStopper.stop();
+      }
+
+      self._reconnectStopper = DDP.onReconnect(function (conn) {
+        if (conn != self.connection) {
+          return;
+        }
         reconnected = true;
         // If our token was updated in storage, use the latest one.
         var storedToken = self._storedLoginToken();
@@ -332,7 +342,7 @@ Ap.callLoginMethod = function (options) {
               loginCallbacks(error);
             }});
         }
-      };
+      });
     }
   };
 
@@ -389,7 +399,7 @@ Ap.makeClientLoggedOut = function () {
   }
   this._unstoreLoginToken();
   this.connection.setUserId(null);
-  this.connection.onReconnect = null;
+  this._reconnectStopper && this._reconnectStopper.stop();
 };
 
 Ap.makeClientLoggedIn = function (userId, token, tokenExpires) {

@@ -1,4 +1,82 @@
-## v.NEXT
+## v1.5.2.2, 2017-10-02
+
+* Fixes a regression in 1.5.2.1 which resulted in the macOS firewall
+  repeatedly asking to "accept incoming network connections". While the
+  `node` binary in 1.5.2.1 was functionally the same as 1.5.2, it had
+  been recompiled on our build farm (which re-compiles all architectures
+  at the same time) to ensure compatibility with older (but still
+  supported) Linux distributions. Unfortunately, macOS took issue with
+  the binary having a different 'signature' (but same 'identifier') as
+  one it had already seen, and refused to permanently "allow" it in the
+  firewall. Our macOS `node` binaries are now signed with a certificate,
+  hopefully preventing this from occurring again.
+  [Issue #9139](https://github.com/meteor/meteor/issues/9139)
+
+* Fixes a regression in `accounts-base` caused by changes to the (now
+  deprecated) `connection.onReconnect` function which caused users to be
+  logged out shortly after logging in.
+  [Issue #9140](https://github.com/meteor/meteor/issues/9140)
+  [PR #](https://github.com/meteor/meteor/pull/9148)
+
+* [`cordova-ios`](https://github.com/apache/cordova-ios) has been updated to
+  version 4.5.1, to add in iOS 11 / Xcode 9 compatibility.
+  [Issue #9098](https://github.com/meteor/meteor/issues/9098)
+  [Issue #9126](https://github.com/meteor/meteor/issues/9126)
+  [PR #9137](https://github.com/meteor/meteor/pull/9137)
+
+* Includes a follow-up change to the (not commonly necessary)
+  `Npm.require` which ensures built-in modules are loaded first, which
+  was necessary after a change in 1.5.2.1 which reduced its scope.
+  This resolves "Cannot find module crypto" and similar errors.
+  [Issue #9136](https://github.com/meteor/meteor/issues/9136)
+
+* A bug that prevented building some binary npm packages on Windows has
+  been fixed. [Issue #9153](https://github.com/meteor/meteor/issues/9153)
+
+## v1.5.2.1, 2017-09-26
+
+* Updating to Meteor 1.5.2.1 will automatically patch a security
+  vulnerability in the `allow-deny` package, since `meteor-tool@1.5.2_1`
+  requires `allow-deny@1.0.9` or later. If for any reason you are not
+  ready or able to update to Meteor 1.5.2.1 by running `meteor update`,
+  please at least run
+  ```sh
+  meteor update allow-deny
+  ```
+  instead. More details about the security vulnerability can be found on
+  the Meteor forums.
+
+* The command-line `meteor` tool no longer invokes `node` with the
+  `--expose-gc` flag. Although this flag allowed the build process to be
+  more aggressive about collecting garbage, it was also a source of
+  problems in Meteor 1.5.2 and Node 4.8.4, from increased segmentation
+  faults during (the more frequent) garbage collections to occasional
+  slowness in rebuilding local packages. The flag is likely to return in
+  Meteor 1.6, where it has not exhibited any of the same problems.
+
+* Meteor now supports `.meteorignore` files, which cause the build system
+  to ignore certain files and directories using the same pattern syntax as
+  [`.gitignore` files](https://git-scm.com/docs/gitignore). These files
+  may appear in any directory of your app or package, specifying rules for
+  the directory tree below them. Of course, `.meteorignore` files are also
+  fully integrated with Meteor's file watching system, so they can be
+  added, removed, or modified during development.
+  [Feature request #5](https://github.com/meteor/meteor-feature-requests/issues/5)
+
+* DDP's `connection.onReconnect = func` feature has been deprecated. This
+  functionality was previously supported as a way to set a function to be
+  called as the first step of reconnecting. This approach has proven to be
+  inflexible as only one function can be defined to be called when
+  reconnecting. Meteor's accounts system was already setting an
+  `onReconnect` callback to be used internally, which means anyone setting
+  their own `onReconnect` callback was inadvertently overwriting code used
+  internally. Moving forward the `DDP.onReconnect(callback)` method should be
+  used to register callbacks to call when a connection reconnects. The
+  connection that is reconnecting is passed as the only argument to
+  `callback`. This is used by the accounts system to re-login on reconnects
+  without interfering with other code that uses `connection.onReconnect`.
+  [Issue #5665](https://github.com/meteor/meteor/issues/5665)
+  [PR #9092](https://github.com/meteor/meteor/pull/9092)
 
 * `reactive-dict` now supports `destroy`. `destroy` will clear the `ReactiveDict`s
   data and unregister the `ReactiveDict` from data migration.  
@@ -396,6 +474,19 @@
   `install`, `preinstall`, or `postinstall`. Previously, a package was
   considered non-portable only if it contained any `.node` binary modules.
   [Issue #8225](https://github.com/meteor/meteor/issues/8225)
+
+## v1.4.4.4, 2017-09-26
+
+* Updating to Meteor 1.4.4.4 will automatically patch a security
+  vulnerability in the `allow-deny` package, since `meteor-tool@1.4.4_4`
+  requires `allow-deny@1.0.9` or later. If for any reason you are not
+  ready or able to update to Meteor 1.4.4.4 by running `meteor update`,
+  please at least run
+  ```sh
+  meteor update allow-deny
+  ```
+  instead. More details about the security vulnerability can be found on
+  the Meteor forums.
 
 ## v1.4.4.3, 2017-05-22
 

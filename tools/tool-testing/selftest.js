@@ -25,7 +25,7 @@ import Builder from '../isobuild/builder.js';
 import { DEFAULT_TRACK } from '../packaging/catalog/catalog.js';
 import { RemoteCatalog } from '../packaging/catalog/catalog-remote.js';
 import { IsopackCache } from '../isobuild/isopack-cache.js';
-import { load as isoPacketsLoad } from '../tool-env/isopackets.js';
+import { loadIsopackage } from '../tool-env/isopackets.js';
 import { Tropohouse } from '../packaging/tropohouse.js';
 import { PackageMap } from '../packaging/package-map.js';
 import { current as releaseCurrent } from '../packaging/release.js';
@@ -85,8 +85,7 @@ export const fail = markStack(function (reason) {
 // with 'actual' being the value that the test got and 'expected'
 // being the expected value
 export const expectEqual = markStack(function (actual, expected) {
-  const Package = isoPacketsLoad('ejson');
-  if (! Package.ejson.EJSON.equals(actual, expected)) {
+  if (! loadIsopackage('ejson').EJSON.equals(actual, expected)) {
     throw new TestFailure("not-equal", {
       expected: expected,
       actual: actual

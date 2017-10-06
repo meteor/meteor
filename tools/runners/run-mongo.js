@@ -6,7 +6,7 @@ var runLog = require('./run-log.js');
 var child_process = require('child_process');
 
 var _ = require('underscore');
-var isopackets = require('../tool-env/isopackets.js');
+import { loadIsopackage } from '../tool-env/isopackets.js';
 var Console = require('../console/console.js').Console;
 
 // Given a Mongo URL, open an interative Mongo shell on this terminal
@@ -585,17 +585,19 @@ var launchMongo = function (options) {
   var initiateReplSetAndWaitForReady = function () {
     try {
       // Load mongo so we'll be able to talk to it.
-      var mongoNpmModule =
-            isopackets.load('mongo')['npm-mongo'].NpmModuleMongodb;
+      const { Db, Server } = loadIsopackage('npm-mongo').NpmModuleMongodb;
 
       // Connect to the intended primary and start a replset.
-      var db = new mongoNpmModule.Db(
+      var db = new Db(
         'meteor',
-        new mongoNpmModule.Server('127.0.0.1', options.port, {
+        new Server('127.0.0.1', options.port, {
           poolSize: 1,
-          socketOptions: {connectTimeoutMS: 60000},
+          socketOptions: {
+            connectTimeoutMS: 60000
+          }
         }),
-        {safe: true});
+        { safe: true }
+      );
 
       yieldingMethod(db, 'open');
       if (stopped) {
@@ -651,6 +653,8 @@ var launchMongo = function (options) {
         return;
       }
 
+      let wasJustSecondary = false;
+
       // XXX timeout eventually?
       while (!stopped) {
         var status = yieldingMethod(
@@ -669,15 +673,30 @@ var launchMongo = function (options) {
           continue;
         }
 
+        const firstMemberState = status.members[0].stateStr;
+
         // Is the intended primary currently a secondary? (It passes through
         // that phase briefly.)
-        if (status.members[0].stateStr === 'SECONDARY') {
+        if (firstMemberState === 'SECONDARY') {
           utils.sleepMs(20);
+          wasJustSecondary = true;
+          continue;
+        }
+
+        // Mongo 3.2 introduced a new heartbeatIntervalMillis property
+        // on replica sets, used during "primary" negotiation.
+        //
+        // If the first member was _just_ promoted, we'll wait until
+        // the heartbeat interval has elapsed before proceeding since
+        // the decision is not official until the heartbeat has elapsed.
+        if (firstMemberState === 'PRIMARY' && wasJustSecondary) {
+          wasJustSecondary = false;
+          utils.sleepMs(status.heartbeatIntervalMillis);
           continue;
         }
 
         // Anything else for the intended primary is probably an error.
-        if (status.members[0].stateStr !== 'PRIMARY') {
+        if (firstMemberState !== 'PRIMARY') {
           throw Error("Unexpected Mongo status: " + JSON.stringify(status));
         }
 

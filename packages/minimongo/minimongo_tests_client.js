@@ -139,6 +139,11 @@ Tinytest.add('minimongo - basics', test => {
   test.equal(c.find().count(), 3);
   test.equal(c.find(1, {skip: 1}).count(), 0);
   test.equal(c.find({_id: 1}, {skip: 1}).count(), 0);
+  test.equal(c.find({_id: undefined}).count(), 0);
+  test.equal(c.find({_id: false}).count(), 0);
+  test.equal(c.find({_id: null}).count(), 0);
+  test.equal(c.find({_id: ''}).count(), 0);
+  test.equal(c.find({_id: 0}).count(), 0);
   test.equal(c.find({}, {skip: 1}).count(), 2);
   test.equal(c.find({}, {skip: 2}).count(), 1);
   test.equal(c.find({}, {limit: 2}).count(), 2);
@@ -379,6 +384,8 @@ Tinytest.add('minimongo - selector_compiler', test => {
   nomatch({_id: undefined}, {_id: 'foo'});
   nomatch({_id: false}, {_id: 'foo'});
   nomatch({_id: null}, {_id: 'foo'});
+  nomatch({_id: ''}, {_id: ''});
+  nomatch({_id: 0}, {_id: 0});
 
   // matching one or more keys
   nomatch({a: 12}, {});
@@ -1416,6 +1423,31 @@ Tinytest.add('minimongo - selector_compiler', test => {
     {dogs: [{name: 'Fido', age: 5}, {name: 'Rex', age: 3}]});
   nomatch({dogs: {$elemMatch: {name: /e/, age: 5}}},
     {dogs: [{name: 'Fido', age: 5}, {name: 'Rex', age: 3}]});
+
+  // Tests for https://github.com/meteor/meteor/issues/9111.
+  match(
+    { dogs: { $elemMatch: { name: 'Rex' } } },
+    { dogs: [{ name: 'Rex', age: 3 }] });
+  nomatch(
+    { dogs: { $not: { $elemMatch: { name: 'Rex' } } } },
+    { dogs: [{ name: 'Rex', age: 3 }] });
+  match({
+    $or: [
+      { dogs: { $elemMatch: { name: 'Rex' } } },
+      { dogs: { $elemMatch: { name: 'Rex', age: 5 } } }
+    ]
+  }, {
+    dogs: [{ name: 'Rex', age: 3 }]
+  });
+  nomatch({
+    $or: [
+      { dogs: { $not: { $elemMatch: { name: 'Rex' } } } },
+      { dogs: { $elemMatch: { name: 'Rex', age: 5 } } }
+    ]
+  }, {
+    dogs: [{ name: 'Rex', age: 3 }]
+  });
+
   match({x: {$elemMatch: {y: 9}}}, {x: [{y: 9}]});
   nomatch({x: {$elemMatch: {y: 9}}}, {x: [[{y: 9}]]});
   match({x: {$elemMatch: {$gt: 5, $lt: 9}}}, {x: [8]});

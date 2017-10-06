@@ -169,7 +169,7 @@ var colonConverter = require('../utils/colon-converter.js');
 var Profile = require('../tool-env/profile.js').Profile;
 var packageVersionParser = require('../packaging/package-version-parser.js');
 var release = require('../packaging/release.js');
-import { load as loadIsopacket } from '../tool-env/isopackets.js';
+import { loadIsopackage } from '../tool-env/isopackets.js';
 import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
 import { gzipSync } from "zlib";
 
@@ -1673,8 +1673,7 @@ class ClientTarget extends Target {
     };
 
     if (this.arch === 'web.cordova') {
-      const { WebAppHashing } =
-        loadIsopacket('cordova-support')['webapp-hashing'];
+      const { WebAppHashing } = loadIsopackage('webapp-hashing');
 
       const cordovaCompatibilityVersions =
         _.object(_.map(CORDOVA_PLATFORM_VERSIONS, (version, platform) => {
@@ -1840,6 +1839,15 @@ class JsImage {
       });
     });
 
+    const devBundleLibNodeModulesDir = files.pathJoin(
+      files.getDevBundle(),
+      "lib",
+      "node_modules"
+    );
+
+    const appDir = files.findAppDir();
+    const appNodeModules = appDir && files.pathJoin(appDir, "node_modules");
+
     // Eval each JavaScript file, providing a 'Npm' symbol in the same
     // way that the server environment would, a 'Package' symbol
     // so the loaded image has its own private universe of loaded
@@ -1856,40 +1864,68 @@ class JsImage {
         Npm: {
           require: Profile(function (name) {
             return "Npm.require(" + JSON.stringify(name) + ")";
-          }, function (name) {
+          }, function (name, error) {
             let fullPath;
 
-            _.some(item.nodeModulesDirectories, nmd => {
-              if (nmd.local) {
-                // Npm.require doesn't consider local node_modules
-                // directories.
-                return false;
-              }
+            // Replace all backslashes with forward slashes, just in case
+            // someone passes a Windows-y module identifier.
+            name = name.split("\\").join("/");
 
+            let resolved;
+            try {
+              resolved = require.resolve(name);
+            } catch (e) {
+              error = error || e;
+            }
+
+            if (resolved &&
+                resolved === name &&
+                ! files.pathIsAbsolute(resolved)) {
+              // If require.resolve(id) === id and id is not an absolute
+              // identifier, it must be a built-in module like fs or http.
+              return require(resolved);
+            }
+
+            function tryLookup(nodeModulesPath, name) {
               var nodeModulesTopDir = files.pathJoin(
-                nmd.sourcePath,
-                name.split("/")[0]
+                nodeModulesPath,
+                name.split("/", 1)[0]
               );
 
               if (files.exists(nodeModulesTopDir)) {
                 return fullPath = files.convertToOSPath(
-                  files.pathJoin(nmd.sourcePath, name)
+                  files.pathJoin(nodeModulesPath, name)
                 );
               }
+            }
+
+            const found = _.some(item.nodeModulesDirectories, nmd => {
+              // Npm.require doesn't consider local node_modules
+              // directories.
+              return ! nmd.local && tryLookup(nmd.sourcePath, name);
             });
 
-            if (fullPath) {
+            if (found || tryLookup(devBundleLibNodeModulesDir, name)) {
               return require(fullPath);
             }
 
-            try {
-              return require(name);
-            } catch (e) {
-              buildmessage.error(
-                "Can't load npm module '" + name + "' from " +
-                  item.targetPath + ". Check your Npm.depends().");
-              return undefined;
+            if (appNodeModules &&
+                tryLookup(appNodeModules, name)) {
+              return require(fullPath);
             }
+
+            if (appDir && resolved) {
+              const isOutsideAppDir =
+                files.pathRelative(appDir, resolved).startsWith("..");
+
+              if (! isOutsideAppDir) {
+                return require(resolved);
+              }
+            }
+
+            throw error || new Error(
+              "Cannot find module " + JSON.stringify(name)
+            );
           })
         },
 
