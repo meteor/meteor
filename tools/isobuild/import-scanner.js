@@ -204,10 +204,11 @@ export default class ImportScanner {
         file.data = Buffer.from(file.dataString, "utf8");
       }
 
-      // Files that are not eagerly evaluated (lazy) will only be included
-      // in the bundle if they are actually imported. Files that are
-      // eagerly evaluated are effectively "imported" as entry points.
-      file.imported = ! file.lazy;
+      // This property can have values false, true, "dynamic" (which
+      // indicates that the file has been imported, but only dynamically),
+      // or "fake" (which indicates it is a temporary file that should
+      // never be returned from getOutputFiles).
+      file.imported = false;
 
       file.installPath = file.installPath || this._getInstallPath(absPath);
 
@@ -353,8 +354,8 @@ export default class ImportScanner {
 
   scanImports() {
     this.outputFiles.forEach(file => {
-      if (! file.lazy || file.imported) {
-        this._scanFile(file, file.imported === "dynamic");
+      if (! file.lazy) {
+        this._scanFile(file);
       }
     });
 
@@ -538,6 +539,36 @@ export default class ImportScanner {
   }
 
   _scanFile(file, forDynamicImport = false) {
+    if (file.imported === true) {
+      // If we've already scanned this file non-dynamically, then we don't
+      // need to scan it again.
+      return;
+    }
+
+    if (forDynamicImport &&
+        file.imported === "dynamic") {
+      // If we've already scanned this file dynamically, then we don't
+      // need to scan it dynamically again.
+      return;
+    }
+
+    // Make sure file.imported is set to a truthy value, but allow values
+    // other than "dynamic" or true (e.g. "fake").
+    file.imported = file.imported || (
+      forDynamicImport ? "dynamic" : true
+    );
+
+    if (file.error) {
+      // Any errors reported to InputFile#error were saved but not
+      // reported at compilation time. Now that we know the file has been
+      // imported, it's time to report those errors.
+      buildmessage.error(
+        depFile.error.message,
+        depFile.error.info
+      );
+      return;
+    }
+
     const absPath = pathJoin(this.sourceRoot, file.sourcePath);
 
     try {
@@ -582,45 +613,7 @@ export default class ImportScanner {
           }
         }
 
-        // Avoid scanning files that we've scanned before, but mark them
-        // as imported so we know to include them in the bundle if they
-        // are lazy. Eager files and files that we have imported before do
-        // not need to be scanned again. Lazy files that we have not
-        // imported before still need to be scanned, however. Note that
-        // alreadyScanned will be "dynamic" (which is truthy) if the file
-        // has only been scanned because of a dynamic import(...).
-        const alreadyScanned = ! depFile.lazy || depFile.imported;
-
-        // Whether the file is eager or lazy, mark it as imported. For
-        // lazy files, this makes the difference between being included in
-        // or omitted from the bundle. For eager files, this just ensures
-        // we won't scan them again. If this scan began from a dynamic
-        // import(...), we set depFile.imported = "dynamic" unless it's
-        // already been set true.
-        depFile.imported = dynamic
-          ? depFile.imported || "dynamic"
-          : true;
-
-        const needsToBeScanned = ! alreadyScanned ||
-          // If the file has already been scanned, but only because of a
-          // dynamic import(...), then it needs to be scanned again, so that
-          // we mark it and its dependencies as non-dynamic. This will be
-          // cheaper than before because we've already computed depFile.deps.
-          (alreadyScanned === "dynamic" &&
-           depFile.imported === true);
-
-        if (needsToBeScanned) {
-          if (depFile.error) {
-            // Since this file is lazy, it might never have been imported,
-            // so any errors reported to InputFile#error were saved but
-            // not reported at compilation time. Now that we know the file
-            // has been imported, it's time to report those errors.
-            buildmessage.error(depFile.error.message,
-                               depFile.error.info);
-          } else {
-            this._scanFile(depFile, dynamic);
-          }
-        }
+        this._scanFile(depFile, dynamic);
 
         return;
       }
@@ -646,7 +639,7 @@ export default class ImportScanner {
       depFile.installPath = installPath;
       depFile.servePath = installPath;
       depFile.lazy = true;
-      depFile.imported = dynamic ? "dynamic" : true;
+      depFile.imported = false;
 
       // Append this file to the output array and record its index.
       this._addFile(absImportedPath, depFile);
@@ -664,6 +657,9 @@ export default class ImportScanner {
           // still evaluate this module natively on the server. What we
           // really care about is watching the file for changes.
           ! shouldWatch(absImportedPath)) {
+        // Since we're not going to call this._scanFile(depFile, dynamic)
+        // below, this is our last chance to update depFile.imported.
+        depFile.imported = dynamic ? "dynamic" : true;
         return;
       }
 
