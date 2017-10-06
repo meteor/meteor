@@ -119,7 +119,7 @@ export default class ImportScanner {
     this.nodeModulesPaths = nodeModulesPaths;
     this.watchSet = watchSet;
     this.absPathToOutputIndex = Object.create(null);
-    this.allMissingNodeModules = Object.create(null);
+    this.allMissingModules = Object.create(null);
     this.outputFiles = [];
 
     this.resolver = Resolver.getOrCreate({
@@ -339,7 +339,7 @@ export default class ImportScanner {
     // If either oldFile or newFile has been imported non-dynamically,
     // then oldFile.imported needs to be === true. Otherwise we simply set
     // oldFile.imported = oldFile.imported || newFile.imported, which
-    // could be either false, "dynamic", or "fake" (see addNodeModules).
+    // could be either false, "dynamic", or "fake" (see scanMissingModules).
     oldFile.imported =
       oldFile.imported === true ||
       newFile.imported === true ||
@@ -362,20 +362,22 @@ export default class ImportScanner {
     return this;
   }
 
-  addNodeModules(identifiers) {
-    assert.ok(identifiers);
-    assert.ok(typeof identifiers === "object");
-    assert.ok(! Array.isArray(identifiers));
+  scanMissingModules(missingModules) {
+    assert.ok(missingModules);
+    assert.ok(typeof missingModules === "object");
+    assert.ok(! Array.isArray(missingModules));
 
     const newlyMissing = Object.create(null);
     const newlyAdded = Object.create(null);
 
-    if (! isEmpty(identifiers)) {
-      const previousAllMissingNodeModules = this.allMissingNodeModules;
-      this.allMissingNodeModules = newlyMissing;
+    if (! isEmpty(missingModules)) {
+      const previousAllMissingModules = this.allMissingModules;
+      this.allMissingModules = newlyMissing;
 
-      try {
-        this._scanFile({
+      Object.keys(missingModules).forEach(id => {
+        // TODO Call this._scanFile fewer times in case missingModules[id]
+        // is a long and redundant list?
+        missingModules[id].forEach(importInfo => this._scanFile({
           sourcePath: "fake.js",
           // It's important that the fake.js file itself never gets
           // scanned or bundled. See the _scanFile and getOutputFiles
@@ -383,38 +385,63 @@ export default class ImportScanner {
           imported: "fake",
           lazy: true,
           // By specifying the .deps property of this fake file ahead of
-          // time, we can avoid calling findImportedModuleIdentifiers in the
-          // _scanFile method.
-          deps: identifiers,
-        });
+          // time, we can avoid calling findImportedModuleIdentifiers in
+          // the _scanFile method.
+          deps: { [id]: importInfo }
+        }));
+      });
 
-      } finally {
-        this.allMissingNodeModules = previousAllMissingNodeModules;
+      this.allMissingModules = previousAllMissingModules;
 
-        each(identifiers, (info, id) => {
-          if (! has(newlyMissing, id)) {
-            newlyAdded[id] = info;
-          }
-        });
+      Object.keys(missingModules).forEach(id => {
+        if (! has(newlyMissing, id)) {
+          newlyAdded[id] = missingModules[id];
+        }
+      });
 
-        // Remove previously seen missing module identifiers from
-        // newlyMissing and merge the new identifiers back into
-        // this.allMissingNodeModules.
-        each(keys(newlyMissing), key => {
-          if (has(previousAllMissingNodeModules, key)) {
-            delete newlyMissing[key];
-          } else {
-            previousAllMissingNodeModules[key] =
-              newlyMissing[key];
-          }
-        });
-      }
+      // Remove previously seen missing module identifiers from
+      // newlyMissing and merge the new identifiers back into
+      // this.allMissingModules.
+      Object.keys(newlyMissing).forEach(id => {
+        if (has(previousAllMissingModules, id)) {
+          delete newlyMissing[id];
+        } else {
+          ImportScanner.mergeMissing(
+            previousAllMissingModules,
+            { [id]: newlyMissing[id] }
+          );
+        }
+      });
     }
 
     return {
       newlyAdded,
       newlyMissing,
     };
+  }
+
+  static mergeMissing(target, source) {
+    keys(source).forEach(id => {
+      const importInfoList = source[id];
+      const pathToIndex = Object.create(null);
+
+      if (! has(target, id)) {
+        target[id] = [];
+      } else {
+        target[id].forEach((info, index) => {
+          pathToIndex[info.parentPath] = index;
+        });
+      }
+
+      importInfoList.forEach(info => {
+        const index = pathToIndex[info.parentPath];
+        if (typeof index === "number") {
+          target[id][index] = info;
+        } else {
+          target[id].push(info);
+        }
+      });
+    });
   }
 
   getOutputFiles() {
@@ -900,18 +927,16 @@ export default class ImportScanner {
     // missing dependency so that we can include it in the app bundle.
     if (parentFile) {
       const missing =
-        parentFile.missingNodeModules ||
+        parentFile.missingModules ||
         Object.create(null);
       missing[id] = info;
-      parentFile.missingNodeModules = missing;
+      parentFile.missingModules = missing;
     }
 
-    if (! has(this.allMissingNodeModules, id) ||
-        ! info.possiblySpurious) {
-      // Allow any non-spurious identifier to replace an existing
-      // possibly spurious identifier.
-      this.allMissingNodeModules[id] = info;
-    }
+    ImportScanner.mergeMissing(
+      this.allMissingModules,
+      { [id]: [info] }
+    );
   }
 
   _addPkgJsonToOutput(pkgJsonPath, pkg, forDynamicImport = false) {
