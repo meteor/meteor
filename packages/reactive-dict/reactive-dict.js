@@ -210,6 +210,13 @@ export class ReactiveDict {
     }
     return didRemove;
   }
+  
+  destroy() {
+    this.clear();
+    if (this.name && _.has(ReactiveDict._dictsToMigrate, this.name)) {
+      delete ReactiveDict._dictsToMigrate[this.name];
+    }
+  }
 
   _setObject(object) {
     _.each(object, (value, key) => {
