@@ -625,7 +625,9 @@ export default class ImportScanner {
       // browser (even though it works equally well on the server), so
       // it's better if forDynamicImport never becomes true on the server.
       const dynamic = this.isWebBrowser() &&
-        (forDynamicImport || info.dynamic);
+        (forDynamicImport ||
+         info.parentWasDynamic ||
+         info.dynamic);
 
       const resolved = this._resolve(file, id, dynamic);
       if (! resolved) {
@@ -919,6 +921,12 @@ export default class ImportScanner {
       bundleArch: this.bundleArch,
       possiblySpurious: false,
       dynamic: false,
+      // When we later attempt to resolve this id in the application's
+      // node_modules directory or in other packages, we need to remember
+      // if the parent module was imported dynamically, since that makes
+      // this import effectively dynamic, even if the parent module
+      // imported the given id with a static import or require.
+      parentWasDynamic: forDynamicImport,
     };
 
     if (parentFile &&
@@ -926,6 +934,12 @@ export default class ImportScanner {
         has(parentFile.deps, id)) {
       const importInfo = parentFile.deps[id];
       info.possiblySpurious = importInfo.possiblySpurious;
+      // Remember that this property only indicates whether or not the
+      // parent module used a dynamic import(...) to import this module.
+      // Even if info.dynamic is false (because the parent module used a
+      // static import or require for this import), this module may still
+      // be effectively dynamic if the parent was imported dynamically, as
+      // indicated by info.parentWasDynamic.
       info.dynamic = importInfo.dynamic;
     }
 
