@@ -43,6 +43,18 @@ const fakeFileStat = {
   }
 };
 
+// Used in ImportScanner#scanMissingModules.
+const fakeScanFileOptions = {
+  // A temporary file that does not really exist and will never be added
+  // to scanner.outputFiles or returned by scanner.getOutputFiles.
+  sourcePath: "fake.js",
+  // It's important that the fake.js file itself never gets scanned or
+  // bundled. See the _scanFile and getOutputFiles methods for logic that
+  // deals with file.imported values.
+  imported: "fake",
+  lazy: true,
+};
+
 // Default handlers for well-known file extensions.
 // Note that these function expect strings, not Buffer objects.
 const defaultExtensionHandlers = {
@@ -383,20 +395,44 @@ export default class ImportScanner {
       this.allMissingModules = newlyMissing;
 
       Object.keys(missingModules).forEach(id => {
-        // TODO Call this._scanFile fewer times in case missingModules[id]
-        // is a long and redundant list?
-        missingModules[id].forEach(importInfo => this._scanFile({
-          sourcePath: "fake.js",
-          // It's important that the fake.js file itself never gets
-          // scanned or bundled. See the _scanFile and getOutputFiles
-          // methods for logic that deals with file.imported values.
-          imported: "fake",
-          lazy: true,
-          // By specifying the .deps property of this fake file ahead of
-          // time, we can avoid calling findImportedModuleIdentifiers in
-          // the _scanFile method.
-          deps: { [id]: importInfo }
-        }));
+        let staticImportInfo = null;
+        let dynamicImportInfo = null;
+
+        // Although it would be logically valid to call this._scanFile for
+        // each and every importInfo object, there can be a lot of them
+        // (hundreds, maybe thousands). The only relevant difference is
+        // whether the file is being scanned as a dynamic import or not,
+        // so we can get away with calling this._scanFile at most twice,
+        // with a representative importInfo object of each kind.
+        missingModules[id].some(importInfo => {
+          if (importInfo.parentWasDynamic ||
+              importInfo.dynamic) {
+            dynamicImportInfo = dynamicImportInfo || importInfo;
+          } else {
+            staticImportInfo = staticImportInfo || importInfo;
+          }
+
+          // Stop when/if both variables have been initialized.
+          return staticImportInfo && dynamicImportInfo;
+        });
+
+        if (staticImportInfo) {
+          this._scanFile({
+            ...fakeScanFileOptions,
+            // By specifying the .deps property of this fake file ahead of
+            // time, we can avoid calling findImportedModuleIdentifiers in
+            // the _scanFile method, which is important because this file
+            // doesn't have a .data or .dataString property.
+            deps: { [id]: staticImportInfo }
+          }, false); // !forDynamicImport
+        }
+
+        if (dynamicImportInfo) {
+          this._scanFile({
+            ...fakeScanFileOptions,
+            deps: { [id]: dynamicImportInfo }
+          }, true); // forDynamicImport
+        }
       });
 
       this.allMissingModules = previousAllMissingModules;
