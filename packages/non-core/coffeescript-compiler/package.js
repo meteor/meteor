@@ -8,12 +8,12 @@ Package.describe({
 
 Npm.depends({
   'coffeescript': '1.12.7',
-  'source-map': '0.5.6'
+  'source-map': '0.6.1'
 });
 
 Package.onUse(function (api) {
   api.use('babel-compiler@6.19.4');
-  api.use('ecmascript@0.8.2');
+  api.use('ecmascript@0.8.3');
 
   api.mainModule('coffeescript-compiler.js', 'server');
 
