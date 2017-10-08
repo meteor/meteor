@@ -725,6 +725,16 @@ if (! process.env.METEOR_SAVE_TMPDIRS) {
   });
 }
 
+function isVerbose(options) {
+  if (options && typeof options === "object") {
+    if (_.has(options, "verbose")) {
+      return !! options.verbose;
+    }
+  }
+
+  return require("../console/console.js").Console.verbose;
+}
+
 // Takes a buffer containing `.tar.gz` data and extracts the archive
 // into a destination directory. destPath should not exist yet, and
 // the archive should contain a single top-level directory, which will
@@ -736,9 +746,7 @@ files.extractTarGz = function (buffer, destPath, options) {
   var tempDir = files.pathJoin(parentDir, '.tmp' + utils.randomToken());
   files.mkdir_p(tempDir);
 
-  if (! _.has(options, "verbose")) {
-    options.verbose = require("../console/console.js").Console.verbose;
-  }
+  options.verbose = isVerbose(options);
 
   const startTime = +new Date;
 
@@ -1772,9 +1780,64 @@ if (files.isWindowsLikeFilesystem()) {
         }
       }
     }
+
     if (! success) {
-      files.cp_r(from, to);
-      files.rm_recursive(from);
+      const osFrom = files.convertToOSPath(from);
+      const osTo = files.convertToOSPath(to);
+
+      // Despite previous failures, the top-level destination directory
+      // may have been successfully created, so we must remove it to avoid
+      // moving the source directory *into* the destination directory.
+      rimraf.sync(osTo);
+
+      function fallBack() {
+        if (isVerbose()) {
+          console.log(
+            `Warning: falling back to copying instead of renaming ${osFrom} to ${osTo}`
+          );
+        }
+
+        files.cp_r(from, to);
+        files.rm_recursive(from);
+      }
+
+      if (! canYield()) {
+        return fallBack();
+      }
+
+      const outChunks = [];
+      const errChunks = [];
+
+      new Promise((resolve, reject) => {
+        const child = spawn("cmd.exe", [
+          "/c", "move", osFrom, osTo
+        ], {
+          stdio: "pipe"
+        }).on("exit", code => {
+          if (code !== 0) {
+            throw new Error([
+              `Command failed with exit code ${code}:`,
+              `cmd.exe /c move ${osFrom} ${osTo}`
+            ].join("\n"));
+          }
+        }).on("error", reject);
+
+        child.stdout.on("data", chunk => outChunks.push(chunk));
+        child.stderr.on("data", chunk => errChunks.push(chunk));
+
+      }).catch(error => {
+        if (isVerbose()) {
+          console.log(Buffer.concat(outChunks).toString("utf8"));
+          console.log(Buffer.concat(errChunks).toString("utf8"));
+        }
+
+        if (error) {
+          console.error(error.stack || error);
+        }
+
+        fallBack();
+
+      }).await();
     }
   };
 }
