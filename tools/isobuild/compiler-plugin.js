@@ -8,6 +8,7 @@ var linker = require('./linker.js');
 var util = require('util');
 var _ = require('underscore');
 var Profile = require('../tool-env/profile.js').Profile;
+import assert from "assert";
 import {sha1, readAndWatchFileWithHash} from  '../fs/watch.js';
 import LRU from 'lru-cache';
 import {sourceMapLength} from '../utils/utils.js';
@@ -999,10 +1000,13 @@ export class PackageSourceBatch {
       return true;
     });
 
-    const allMissingNodeModules = Object.create(null);
-    // Records the subset of allMissingNodeModules that were successfully
+    // Map from module identifiers that previously could not be imported
+    // to lists of info objects describing the failed imports.
+    const allMissingModules = Object.create(null);
+
+    // Records the subset of allMissingModules that were successfully
     // relocated to a source batch that could handle them.
-    const allRelocatedNodeModules = Object.create(null);
+    const allRelocatedModules = Object.create(null);
     const scannerMap = new Map;
 
     sourceBatches.forEach(batch => {
@@ -1038,16 +1042,19 @@ export class PackageSourceBatch {
 
       if (batch.useMeteorInstall) {
         scanner.scanImports();
-        _.extend(allMissingNodeModules, scanner.allMissingNodeModules);
+        ImportScanner.mergeMissing(
+          allMissingModules,
+          scanner.allMissingModules
+        );
       }
 
       scannerMap.set(name, scanner);
     });
 
-    function handleMissing(missingNodeModules) {
+    function handleMissing(missingModules) {
       const missingMap = new Map;
 
-      _.each(missingNodeModules, (info, id) => {
+      _.each(missingModules, (importInfoList, id) => {
         const parts = id.split("/");
         let name = null;
 
@@ -1079,39 +1086,36 @@ export class PackageSourceBatch {
         }
 
         if (! missingMap.has(name)) {
-          missingMap.set(name, {});
+          missingMap.set(name, Object.create(null));
         }
 
-        const missing = missingMap.get(name);
-        if (! _.has(missing, id) ||
-            ! info.possiblySpurious) {
-          // Allow any non-spurious identifier to replace an existing
-          // possibly spurious identifier.
-          missing[id] = info;
-        }
+        ImportScanner.mergeMissing(
+          missingMap.get(name),
+          { [id]: importInfoList }
+        );
       });
 
-      const nextMissingNodeModules = Object.create(null);
+      const nextMissingModules = Object.create(null);
 
-      missingMap.forEach((ids, name) => {
+      missingMap.forEach((missing, name) => {
         const { newlyAdded, newlyMissing } =
-          scannerMap.get(name).addNodeModules(ids);
-        _.extend(allRelocatedNodeModules, newlyAdded);
-        _.extend(nextMissingNodeModules, newlyMissing);
+          scannerMap.get(name).scanMissingModules(missing);
+        ImportScanner.mergeMissing(allRelocatedModules, newlyAdded);
+        ImportScanner.mergeMissing(nextMissingModules, newlyMissing);
       });
 
-      if (! _.isEmpty(nextMissingNodeModules)) {
-        handleMissing(nextMissingNodeModules);
+      if (! _.isEmpty(nextMissingModules)) {
+        handleMissing(nextMissingModules);
       }
     }
 
-    handleMissing(allMissingNodeModules);
+    handleMissing(allMissingModules);
 
-    _.each(allRelocatedNodeModules, (info, id) => {
-      delete allMissingNodeModules[id];
+    Object.keys(allRelocatedModules).forEach(id => {
+      delete allMissingModules[id];
     });
 
-    this._warnAboutMissingModules(allMissingNodeModules);
+    this._warnAboutMissingModules(allMissingModules);
 
     scannerMap.forEach((scanner, name) => {
       const isApp = ! name;
@@ -1121,11 +1125,12 @@ export class PackageSourceBatch {
         const appFilesWithoutNodeModules = [];
 
         outputFiles.forEach(file => {
-          const parts = file.installPath.split("/");
+          const parts = file.absModuleId.split("/");
+          assert.strictEqual(parts[0], "");
           const nodeModulesIndex = parts.indexOf("node_modules");
 
-          if (nodeModulesIndex === -1 || (nodeModulesIndex === 0 &&
-                                          parts[1] === "meteor")) {
+          if (nodeModulesIndex === -1 || (nodeModulesIndex === 1 &&
+                                          parts[2] === "meteor")) {
             appFilesWithoutNodeModules.push(file);
           } else {
             // This file is going to be installed in a node_modules
@@ -1151,11 +1156,17 @@ export class PackageSourceBatch {
     return map;
   }
 
-  static _warnAboutMissingModules(missingNodeModules) {
+  static _warnAboutMissingModules(missingModules) {
     const topLevelMissingIDs = {};
     const warnings = [];
 
-    _.each(missingNodeModules, (info, id) => {
+    Object.keys(missingModules).forEach(id => {
+      // Issue at most one warning per module identifier, even if there
+      // are multiple parent modules that failed to import it.
+      missingModules[id].some(info => maybeWarn(id, info));
+    });
+
+    function maybeWarn(id, info) {
       if (info.packageName) {
         // Silence warnings generated by Meteor packages, since package
         // authors can be trusted to test their packages, and may have
@@ -1220,7 +1231,9 @@ export class PackageSourceBatch {
 
       warnings.push(`  ${JSON.stringify(id)} in ${
         info.parentPath} (${info.bundleArch})`);
-    });
+
+      return true;
+    }
 
     if (warnings.length > 0) {
       Console.rawWarn("\nUnable to resolve some modules:\n\n");
@@ -1297,7 +1310,7 @@ export class PackageSourceBatch {
       files: jsResources.map((inputFile) => {
         fileHashes.push(inputFile.hash);
         return {
-          installPath: inputFile.installPath,
+          absModuleId: inputFile.absModuleId,
           sourceMap: !! inputFile.sourceMap,
           mainModule: inputFile.mainModule,
           imported: inputFile.imported,
