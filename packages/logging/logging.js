@@ -53,9 +53,9 @@ var META_COLOR = 'blue';
 // switch to bright variants. While still capable of millions of
 // operations per second, the benchmark showed a 25%+ increase in
 // ops per second (on Node 8) by caching "process.platform".
-var platform = process.platform;
+var isWin32 = process && process.platform === 'win32';
 var platformColor = function (color) {
-  if (platform === 'win32' && !color.endsWith('Bright')) {
+  if (isWin32 && color.slice(-6) !== 'Bright') {
     return color + 'Bright';
   }
   return color;
