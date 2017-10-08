@@ -1755,15 +1755,21 @@ files.existsSync = function (path, callback) {
 };
 
 if (files.isWindowsLikeFilesystem()) {
-  var rename = files.rename;
+  const rename = files.rename;
 
   files.rename = function (from, to) {
-    // retries are necessarily only on Windows, because the rename call can fail
-    // with EBUSY, which means the file is "busy"
-    var maxTries = 10;
-    var success = false;
+    // Retries are necessary only on Windows, because the rename call can
+    // fail with EBUSY, which means the file is in use.
+    let maxTries = 10;
+    let success = false;
+    const osTo = files.convertToOSPath(to);
+
     while (! success && maxTries-- > 0) {
       try {
+        // Despite previous failures, the top-level destination directory
+        // may have been successfully created, so we must remove it to
+        // avoid moving the source file *into* the destination directory.
+        rimraf.sync(osTo);
         rename(from, to);
         success = true;
       } catch (err) {
@@ -1772,6 +1778,7 @@ if (files.isWindowsLikeFilesystem()) {
         }
       }
     }
+
     if (! success) {
       files.cp_r(from, to);
       files.rm_recursive(from);
