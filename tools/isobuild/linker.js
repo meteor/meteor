@@ -246,7 +246,7 @@ _.extend(Module.prototype, {
       }
 
       if (file.isDynamic()) {
-        const servePath = files.pathJoin("dynamic", file.absModuleId);
+        const servePath = "dynamic/" + file.installPath;
         const { code: source, map } =
           file.getPrelinkedOutput({
             sourceWidth: sourceWidth,
@@ -264,7 +264,7 @@ _.extend(Module.prototype, {
 
         const stubArray = file.deps.slice(0);
 
-        if (file.absModuleId.endsWith("/package.json") &&
+        if (file.installPath.endsWith("/package.json") &&
             file.jsonData) {
           const stub = {};
 
@@ -281,12 +281,12 @@ _.extend(Module.prototype, {
           stubArray.push(stub);
         }
 
-        addToTree(stubArray, file.absModuleId, tree);
+        addToTree(stubArray, file.installPath, tree);
 
       } else {
         // If the file is not dynamic, then it should be included in the
         // initial bundle, so we add it to the static tree.
-        addToTree(file, file.absModuleId, tree);
+        addToTree(file, file.installPath, tree);
       }
     });
 
@@ -420,7 +420,7 @@ _.extend(Module.prototype, {
         chunks.push(
           file.mainModule ? "\nvar " + exportsName + " = " : "\n",
           "require(",
-          JSON.stringify(file.absModuleId),
+          JSON.stringify("./" + file.installPath),
           ");"
         );
       });
@@ -437,10 +437,6 @@ export function addToTree(value, path, tree) {
   const parts = path.split("/");
   const lastIndex = parts.length - 1;
   parts.forEach((part, i) => {
-    if (part === "") {
-      return;
-    }
-
     tree = _.has(tree, part)
       ? tree[part]
       : tree[part] = i < lastIndex ? {} : value;
@@ -519,9 +515,9 @@ var File = function (inputFile, module) {
   self.sourcePath = inputFile.sourcePath;
 
   // Absolute module identifier to use when installing this file via
-  // meteorInstall. If the inputFile has no .absModuleId, then this file
+  // meteorInstall. If the inputFile has no .installPath, then this file
   // cannot be installed as a module.
-  self.absModuleId = inputFile.absModuleId || null;
+  self.installPath = inputFile.installPath || null;
 
   // the path where this file would prefer to be served if possible
   self.servePath = inputFile.servePath;
@@ -579,8 +575,8 @@ _.extend(File.prototype, {
   computeAssignedVariables: Profile("linker File#computeAssignedVariables", function () {
     var self = this;
 
-    if (self.absModuleId) {
-      const parts = self.absModuleId.split("/");
+    if (self.installPath) {
+      const parts = self.installPath.split("/");
       const nmi = parts.indexOf("node_modules");
       if (nmi >= 0 && parts[nmi + 1] !== "meteor") {
         // If this file is in a node_modules directory and is not part of
