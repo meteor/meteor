@@ -3,7 +3,7 @@ $ErrorActionPreference = "Stop"
 Import-Module "$PSScriptRoot\windows\dev-bundle-lib.psm1"
 $PLATFORM = Get-MeteorPlatform
 
-$PYTHON_VERSION = "2.7.12" # For node-gyp
+$PYTHON_VERSION = "2.7.14" # For node-gyp
 
 $script_path = Split-Path -parent $MyInvocation.MyCommand.Definition
 $CHECKOUT_DIR = Split-Path -parent $script_path
@@ -99,7 +99,7 @@ dir node
 # node-gyp (the tool that rebuilds binary node modules). #WinPy
 
 cd "$DIR"
-$py_s3_url = "https://s3.amazonaws.com/com.meteor.static/windows-python/python-${PYTHON_VERSION}.7z"
+$py_s3_url = "https://s3.amazonaws.com/com.meteor.static/windows-python/$PLATFORM/python-${PYTHON_VERSION}.7z"
 $py_archive = "${DIR}\python.7z"
 $webclient.DownloadFile($py_s3_url, $py_archive)
 & "$DIR\bin\7z.exe" x "$py_archive"
