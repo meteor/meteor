@@ -67,6 +67,17 @@ exports.retrieveSourceMap = function(filename) {
     return null;
   }
 
+  const babelCore = require("babel-core");
+  if (typeof babelCore.transformFromAst !== "function") {
+    // The retrieveSourceMap function can be called as a result of
+    // importing babel-core for the first time, at a point in time before
+    // babelCore.transformFromAst has been defined. The absence of that
+    // function will cause meteorBabel.compile to fail if we try to call
+    // getBabelResult here. Fortunately, we can just return null instead,
+    // which means we couldn't retrieve a source map, which is fine.
+    return null;
+  }
+
   var result = getBabelResult(filename);
   var converted = result && convertSourceMap.fromSource(result.code);
   var map = converted && converted.toJSON();
