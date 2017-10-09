@@ -638,8 +638,8 @@ export default class ImportScanner {
       // reported at compilation time. Now that we know the file has been
       // imported, it's time to report those errors.
       buildmessage.error(
-        depFile.error.message,
-        depFile.error.info
+        file.error.message,
+        file.error.info
       );
       return;
     }
