@@ -632,11 +632,14 @@ Fiber(function () {
   // tight timetable for 1.0 and there is no advantage to doing it now
   // rather than later. #ImprovingCrossVersionOptionParsing
 
+  const implicitValues = Object.create(null);
+
   var isBoolean = {
     "--help": true,
     "--unsafe-perm": true,
     "--allow-superuser": true,
   };
+
   var walkCommands = function (node) {
     _.each(node, function (value, key) {
       if (value instanceof Command) {
@@ -646,6 +649,9 @@ Fiber(function () {
             names.push("-" + optionInfo.short);
           }
           _.each(names, function (name) {
+            if (_.has(optionInfo, "implicitValue")) {
+              implicitValues[name] = optionInfo.implicitValue;
+            }
             var optionIsBoolean = (optionInfo.type === Boolean);
             if (_.has(isBoolean, name)) {
               if (isBoolean[name] !== optionIsBoolean)  {
@@ -726,6 +732,8 @@ Fiber(function () {
       } else if (value !== undefined) {
         // Handle '--foo=bar' and '--foo=' (which means "set to empty string").
         rawOptions[term].push(value);
+      } else if (_.has(implicitValues, term)) {
+        rawOptions[term].push(implicitValues[term]);
       } else if (i === argv.length - 1) {
         rawOptions[term].push(null);
       } else {

@@ -66,7 +66,7 @@ var AppProcess = function (options) {
   self.onListen = options.onListen;
   self.nodeOptions = options.nodeOptions || [];
   self.nodePath = options.nodePath || [];
-  self.debugPort = options.debugPort;
+  self.inspect = options.inspect;
   self.settings = options.settings;
   self.testMetadata = options.testMetadata;
 
@@ -205,8 +205,9 @@ _.extend(AppProcess.prototype, {
     env.HTTP_FORWARDED_COUNT =
       "" + ((parseInt(process.env['HTTP_FORWARDED_COUNT']) || 0) + 1);
 
-    if (self.debugPort) {
-      env.METEOR_INSPECT_BRK = self.debugPort;
+    if (self.inspect &&
+        self.inspect.break) {
+      env.METEOR_INSPECT_BRK = self.inspect.port;
     } else {
       delete env.METEOR_INSPECT_BRK;
     }
@@ -245,8 +246,15 @@ _.extend(AppProcess.prototype, {
     // Setting options
     var opts = _.clone(self.nodeOptions);
 
-    if (self.debugPort) {
-      opts.push("--inspect=" + self.debugPort);
+    if (self.inspect) {
+      // Always use --inspect rather than --inspect-brk, even when
+      // self.inspect.break is true, because --inspect-brk stops at the
+      // very first instruction executed by the child process, which is
+      // too early to set any meaningful breakpoints. Instead, we want to
+      // stop just after server code has loaded but before it begins to
+      // execute. See _computeEnvironment for logic that sets
+      // env.METEOR_INSPECT_BRK in that case.
+      opts.push("--inspect=" + self.inspect.port);
     }
 
     opts.push(entryPoint);
@@ -353,7 +361,7 @@ var AppRunner = function (options) {
   self.cordovaRunner = options.cordovaRunner;
   self.settingsFile = options.settingsFile;
   self.testMetadata = options.testMetadata;
-  self.debugPort = options.debugPort;
+  self.inspect = options.inspect;
   self.proxy = options.proxy;
   self.watchForChanges =
     options.watchForChanges === undefined ? true : options.watchForChanges;
@@ -718,7 +726,7 @@ _.extend(AppRunner.prototype, {
           watchSet: combinedWatchSetForBundleResult(bundleResult)
         });
       },
-      debugPort: self.debugPort,
+      inspect: self.inspect,
       onListen: function () {
         self.proxy.setMode("proxy");
         options.onListen && options.onListen();
