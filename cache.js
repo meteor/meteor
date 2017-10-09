@@ -98,9 +98,12 @@ Cp.get = function (source, options, deps) {
   if (typeof result === "object") {
     result.hash = cacheHash;
   } else {
-    result = this.cache[cacheFile] =
-      this.fillFn.call(null, source, options);
+    result = this.fillFn.call(null, source, options);
+    if (! result) {
+      return null;
+    }
 
+    this.cache[cacheFile] = result;
     result.hash = cacheHash;
 
     // Use the asynchronous version of fs.writeFile so that we don't slow
