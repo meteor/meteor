@@ -691,3 +691,47 @@ exports.sourceMapLength = function (sm) {
          return soFar + (current ? current.length : 0);
        }, 0);
 };
+
+// Find and return the current OS architecture, in "uname -m" format.
+//
+// For Linux and macOS (Darwin) this means first getting the current
+// architecture reported by Node using "os.arch()" (e.g. ia32, x64), then
+// converting it to a "uname -m" matching architecture label (e.g. i686,
+// x86_64).
+//
+// For Windows things are handled differently. Node's "os.arch()" will return
+// "ia32" for both 32-bit and 64-bit versions of Windows (since we're using
+// a 32-bit version of Node on Windows). Instead we'll look for the presence
+// of the PROCESSOR_ARCHITEW6432 environment variable to determine if the
+// Windows architecture is 64-bit, then convert to a "uname -m" matching
+// architecture label (e.g. i386, x86_64).
+exports.architecture = () => {
+  const supportedArchitectures = {
+    Darwin: {
+      x64: 'x86_64',
+    },
+    Linux: {
+      ia32: 'i686',
+      x64: 'x86_64',
+    },
+    Windows_NT: {
+      ia32: process.env.hasOwnProperty('PROCESSOR_ARCHITEW6432')
+              ? 'x86_64'
+              : 'i386',
+      x64: 'x86_64'
+    }
+  };
+
+  const osType = os.type();
+  const osArch = os.arch();
+
+  if (!supportedArchitectures[osType]) {
+    throw new Error(`Unsupported OS ${osType}`);
+  }
+
+  if (!supportedArchitectures[osType][osArch]) {
+    throw new Error(`Unsupported architecture ${osArch}`);
+  }
+
+  return supportedArchitectures[osType][osArch];
+};
