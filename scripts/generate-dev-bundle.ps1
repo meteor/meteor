@@ -1,14 +1,9 @@
 $ErrorActionPreference = "Stop"
 
-# determine the platform
-# use 32bit by default
-$PLATFORM = "windows_x86"
-$PYTHON_VERSION = "2.7.12" # For node-gyp
+Import-Module "$PSScriptRoot\windows\dev-bundle-lib.psm1"
+$PLATFORM = Get-MeteorPlatform
 
-# take it from the environment if exists
-if (Test-Path env:PLATFORM) {
-  $PLATFORM = (Get-Item env:PLATFORM).Value
-}
+$PYTHON_VERSION = "2.7.12" # For node-gyp
 
 $script_path = Split-Path -parent $MyInvocation.MyCommand.Definition
 $CHECKOUT_DIR = Split-Path -parent $script_path
@@ -55,14 +50,22 @@ cd "$DIR\7z"
 $webclient.DownloadFile("http://www.7-zip.org/a/7z1604.msi", "$DIR\7z\7z.msi")
 $webclient.DownloadFile("http://www.7-zip.org/a/7z1604-extra.7z", "$DIR\7z\extra.7z")
 msiexec /i 7z.msi /quiet /qn /norestart
-ping -n 4 127.0.0.1 | out-null
+Start-Sleep -s 5
 & "C:\Program Files\7-Zip\7z.exe" x extra.7z
-mv 7za.exe "$DIR\bin\7z.exe"
+
+if ($PLATFORM -eq "windows_x86") {
+  Move-Item 7za.exe "$DIR\bin\7z.exe"
+} else {
+  Move-Item "x64\7za.exe" "$DIR\bin\7z.exe"
+}
 cd "$DIR\bin"
 
-# download node
-# same node on 32bit vs 64bit?
-$node_link = "http://nodejs.org/dist/v${NODE_VERSION}/win-x86/node.exe"
+# download Node based on the current platform/architecture
+if ($PLATFORM -eq "windows_x86") {
+  $node_link = "http://nodejs.org/dist/v${NODE_VERSION}/win-x86/node.exe"
+} else {
+  $node_link = "http://nodejs.org/dist/v${NODE_VERSION}/win-x64/node.exe"
+}
 $webclient.DownloadFile($node_link, "$DIR\bin\node.exe")
 
 mkdir "$DIR\Release"
@@ -168,39 +171,35 @@ cmd /c robocopy "${DIR}\b\p\node_modules" "${DIR}\lib\node_modules" /e /nfl /ndl
 cd "$DIR"
 cmd /c rmdir "${DIR}\b" /s /q
 
-# Download and install both 32-bit (i386) and 64-bit (x86_64) versions of
-# Mongo. Even though we're currently only building 32-bit Windows Meteor
-# bundles, here we're adding both 32 and 64 bit Mongo versions, to let 64-bit
-# Windows users use the Meteor Tool with >= 3.4.x versions of Mongo (which
-# are 64-bit only).
+# Mongo 3.4 no longer supports 32-bit (x86) architectures, so we package
+# the latest 3.2 version of Mongo for those builds and 3.4+ for x64.
 $mongo_filenames = @{
-  i386 = "mongodb-win32-i386-${MONGO_VERSION_32BIT}";
-  x86_64 = "mongodb-win32-x86_64-2008plus-${MONGO_VERSION_64BIT}"
-}
-foreach ($arch in $mongo_filenames.Keys) {
-  cd "$DIR"
-  mkdir "$DIR\mongodb\$arch"
-  mkdir "$DIR\mongodb\$arch\bin"
-
-  $mongo_name = $mongo_filenames.Item($arch);
-  $mongo_link = "https://fastdl.mongodb.org/win32/${mongo_name}.zip"
-  $mongo_zip = "$DIR\mongodb\$arch\mongo.zip"
-
-  $webclient.DownloadFile($mongo_link, $mongo_zip)
-
-  $zip = $shell.NameSpace($mongo_zip)
-  foreach($item in $zip.items()) {
-    $shell.Namespace("$DIR\mongodb\$arch").copyhere($item, 0x14) # 0x10 - overwrite, 0x4 - no dialog
-  }
-
-  cp "$DIR\mongodb\$arch\$mongo_name\bin\mongod.exe" $DIR\mongodb\$arch\bin
-  cp "$DIR\mongodb\$arch\$mongo_name\bin\mongo.exe" $DIR\mongodb\$arch\bin
-
-  rm -Recurse -Force $mongo_zip
-  rm -Recurse -Force "$DIR\mongodb\$arch\$mongo_name"
+  windows_x86 = "mongodb-win32-i386-${MONGO_VERSION_32BIT}"
+  windows_x64 = "mongodb-win32-x86_64-2008plus-${MONGO_VERSION_64BIT}"
 }
 
-cd $DIR
+cd "$DIR"
+mkdir "$DIR\mongodb"
+mkdir "$DIR\mongodb\bin"
+
+$mongo_name = $mongo_filenames.Item($PLATFORM)
+$mongo_link = "https://fastdl.mongodb.org/win32/${mongo_name}.zip"
+$mongo_zip = "$DIR\mongodb\mongo.zip"
+
+$webclient.DownloadFile($mongo_link, $mongo_zip)
+
+$zip = $shell.NameSpace($mongo_zip)
+foreach($item in $zip.items()) {
+  $shell.Namespace("$DIR\mongodb").copyhere($item, 0x14) # 0x10 - overwrite, 0x4 - no dialog
+}
+
+cp "$DIR\mongodb\$mongo_name\bin\mongod.exe" $DIR\mongodb\bin
+cp "$DIR\mongodb\$mongo_name\bin\mongo.exe" $DIR\mongodb\bin
+
+rm -Recurse -Force $mongo_zip
+rm -Recurse -Force "$DIR\mongodb\$mongo_name"
+
+cd "$DIR"
 
 # mark the version
 echo "${BUNDLE_VERSION}" | Out-File .bundle_version.txt -Encoding ascii

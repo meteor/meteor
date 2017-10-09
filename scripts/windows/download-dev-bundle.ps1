@@ -1,5 +1,5 @@
-# XXX right now we only build 32-bit dev_bundles
-$PLATFORM = "windows_x86"
+Import-Module "$PSScriptRoot\dev-bundle-lib.psm1"
+$PLATFORM = Get-MeteorPlatform
 
 $windows_scripts = split-path -parent $MyInvocation.MyCommand.Definition
 $scripts_path = split-path -parent $windows_scripts
