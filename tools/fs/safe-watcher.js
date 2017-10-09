@@ -12,11 +12,9 @@ import {
 
 // Set METEOR_WATCH_FORCE_POLLING environment variable to a truthy value to
 // force the use of files.watchFile instead of watchLibrary.watch.
-// Enabled on Mac and Linux and disabled on Windows by default.
-var WATCHER_ENABLED = ! process.env.METEOR_WATCH_FORCE_POLLING;
-if (process.platform === "win32") {
-  WATCHER_ENABLED = false;
-}
+var WATCHER_ENABLED = ! JSON.parse(
+  process.env.METEOR_WATCH_FORCE_POLLING || "false"
+);
 
 // Default to prioritizing changed files, but disable that behavior (and
 // thus prioritize all files equally) if METEOR_WATCH_PRIORITIZE_CHANGED
