@@ -43,17 +43,9 @@ const fakeFileStat = {
   }
 };
 
-// Used in ImportScanner#scanMissingModules.
-const fakeScanFileOptions = {
-  // A temporary file that does not really exist and will never be added
-  // to scanner.outputFiles or returned by scanner.getOutputFiles.
-  sourcePath: "fake.js",
-  // It's important that the fake.js file itself never gets scanned or
-  // bundled. See the _scanFile and getOutputFiles methods for logic that
-  // deals with file.imported values.
-  imported: "fake",
-  lazy: true,
-};
+// Symbol used by scanMissingModules to mark certain files as temporary,
+// to prevent them from being added to scanner.outputFiles.
+const fakeSymbol = Symbol("fake");
 
 // Default handlers for well-known file extensions.
 // Note that these function expect strings, not Buffer objects.
@@ -168,6 +160,11 @@ export default class ImportScanner {
   }
 
   _addFile(absPath, file) {
+    if (! file || file[fakeSymbol]) {
+      // Return file without adding it to this.outputFiles.
+      return file;
+    }
+
     absPath = absPath.toLowerCase();
     const old = this.absPathToOutputIndex[absPath];
 
@@ -217,9 +214,7 @@ export default class ImportScanner {
       }
 
       // This property can have values false, true, "dynamic" (which
-      // indicates that the file has been imported, but only dynamically),
-      // or "fake" (which indicates it is a temporary file that should
-      // never be returned from getOutputFiles).
+      // indicates that the file has been imported, but only dynamically).
       file.imported = false;
 
       file.installPath = file.installPath || this._getInstallPath(absPath);
@@ -351,7 +346,7 @@ export default class ImportScanner {
     // If either oldFile or newFile has been imported non-dynamically,
     // then oldFile.imported needs to be === true. Otherwise we simply set
     // oldFile.imported = oldFile.imported || newFile.imported, which
-    // could be either false, "dynamic", or "fake" (see scanMissingModules).
+    // could be either "dynamic" or false.
     oldFile.imported =
       oldFile.imported === true ||
       newFile.imported === true ||
@@ -410,7 +405,8 @@ export default class ImportScanner {
 
         if (staticImportInfo) {
           this._scanFile({
-            ...fakeScanFileOptions,
+            sourcePath: "fake.js",
+            [fakeSymbol]: true,
             // By specifying the .deps property of this fake file ahead of
             // time, we can avoid calling findImportedModuleIdentifiers in
             // the _scanFile method, which is important because this file
@@ -421,7 +417,8 @@ export default class ImportScanner {
 
         if (dynamicImportInfo) {
           this._scanFile({
-            ...fakeScanFileOptions,
+            sourcePath: "fake.js",
+            [fakeSymbol]: true,
             deps: { [id]: dynamicImportInfo }
           }, true); // forDynamicImport
         }
@@ -497,6 +494,7 @@ export default class ImportScanner {
     // imported (statically or dynamically).
     return this.outputFiles.filter(file => {
       return file.installPath &&
+        ! file[fakeSymbol] &&
         (! file.lazy ||
          file.imported === true ||
          file.imported === "dynamic");
@@ -627,11 +625,8 @@ export default class ImportScanner {
       return;
     }
 
-    // Make sure file.imported is set to a truthy value, but allow values
-    // other than "dynamic" or true (e.g. "fake").
-    file.imported = file.imported || (
-      forDynamicImport ? "dynamic" : true
-    );
+    // Set file.imported to a truthy value (either "dynamic" or true).
+    file.imported = forDynamicImport ? "dynamic" : true;
 
     if (file.error) {
       // Any errors reported to InputFile#error were saved but not
@@ -643,8 +638,6 @@ export default class ImportScanner {
       );
       return;
     }
-
-    const absPath = pathJoin(this.sourceRoot, file.sourcePath);
 
     try {
       file.deps = file.deps || this._findImportedModuleIdentifiers(file);
@@ -678,6 +671,10 @@ export default class ImportScanner {
 
       let depFile = this._getFile(absImportedPath);
       if (depFile) {
+        // We should never have stored a fake file in this.outputFiles, so
+        // it's surprising if depFile[fakeSymbol] is true.
+        assert.notStrictEqual(depFile[fakeSymbol], true);
+
         // If the module is an implicit package.json stub, update to the
         // explicit version now.
         if (depFile.jsonData &&
