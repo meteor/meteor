@@ -12,9 +12,8 @@ var Console = require('../console/console.js').Console;
 // Given a Mongo URL, open an interative Mongo shell on this terminal
 // on that database.
 var runMongoShell = function (url) {
-  const architecture = utils.architecture();
   var mongoPath = files.pathJoin(
-    files.getDevBundle(), 'mongodb', architecture, 'bin', 'mongo'
+    files.getDevBundle(), 'mongodb', 'bin', 'mongo'
   );
   // XXX mongo URLs are not real URLs (notably, the comma-separation for
   // multiple hosts). We've had a little better luck using the mongodb-uri npm
@@ -60,8 +59,7 @@ function spawnMongod(mongodPath, port, dbPath, replSetName) {
   ];
 
   // Use mmapv1 on 32bit platforms, as our binary doesn't support WT
-  const architecture = utils.architecture();
-  if (architecture === 'i386' || architecture === 'i686') {
+  if (process.arch === 'ia32') {
     args.push('--storageEngine', 'mmapv1', '--smallfiles');
   } else {
     // The WT journal seems to be at least 300MB, which is just too much
@@ -364,9 +362,8 @@ var launchMongo = function (options) {
   var onExit = options.onExit || function () {};
 
   var noOplog = false;
-  const architecture = utils.architecture();
   var mongod_path = files.pathJoin(
-    files.getDevBundle(), 'mongodb', architecture, 'bin', 'mongod'
+    files.getDevBundle(), 'mongodb', 'bin', 'mongod'
   );
   var replSetName = 'meteor';
 
