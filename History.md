@@ -36,6 +36,9 @@
   `./meteor npm install -g phantomjs-prebuilt browserstack-webdriver`.
   These will now be installed automatically upon their use.
 
+* You can now run `meteor test --driver-package user:package` without
+  first running `meteor add user:package`.
+
 ## v1.5.2.2, 2017-10-02
 
 * Fixes a regression in 1.5.2.1 which resulted in the macOS firewall

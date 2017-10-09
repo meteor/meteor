@@ -1611,6 +1611,17 @@ function doTestCommand(options) {
     includePackages = options['extra-packages'].trim().split(/\s*,\s*/);
   }
 
+  if (options['driver-package']) {
+    includePackages.push(
+      global.testCommandMetadata.driverPackage =
+        options['driver-package'].trim()
+    );
+  } else if (options["test-packages"]) {
+    includePackages.push(
+      global.testCommandMetadata.driverPackage = "test-in-browser"
+    );
+  }
+
   var projectContextOptions = {
     serverArchitectures: serverArchitectures,
     allowIncompatibleUpdate: options['allow-incompatible-update'],
@@ -1620,7 +1631,6 @@ function doTestCommand(options) {
   var projectContext;
 
   if (options["test-packages"]) {
-    global.testCommandMetadata.driverPackage = options['driver-package'] || 'test-in-browser';
     projectContextOptions.projectDir = testRunnerAppDir;
     projectContextOptions.projectDirForLocalPackages = options.appDir;
 
