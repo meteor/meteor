@@ -100,19 +100,30 @@ function startNewWatcher(absPath) {
   let watcherCleanupTimer = null;
   let watcher;
 
+  // Determines the polling interval to be used for the fs.watchFile-based
+  // safety net that works on all platforms and file systems.
   function getPollingInterval() {
-    if (watcher) {
-      return DEFAULT_POLLING_INTERVAL;
-    }
-
     if (hasPriority(absPath)) {
+      // Regardless of whether we have a native file watcher and it works
+      // correctly on this file system, poll prioritized files (that is,
+      // files that have been changed at least once) at a higher frequency
+      // (every 500ms by default).
       return NO_WATCHER_POLLING_INTERVAL;
     }
 
-    if (WATCHER_ENABLED) {
+    if (WATCHER_ENABLED || PRIORITIZE_CHANGED) {
+      // As long as native file watching is enabled (even if it doesn't
+      // work correctly) and the developer hasn't explicitly opted out of
+      // the file watching priority system, poll unchanged files at a
+      // lower frequency (every 5000ms by default).
       return DEFAULT_POLLING_INTERVAL;
     }
 
+    // If native file watching is disabled and the developer has
+    // explicitly opted out of the priority system, poll everything at the
+    // higher frequency (every 500ms by default). Note that this leads to
+    // higher idle CPU usage, so the developer may want to adjust the
+    // METEOR_WATCH_POLLING_INTERVAL_MS environment variable.
     return NO_WATCHER_POLLING_INTERVAL;
   }
 
