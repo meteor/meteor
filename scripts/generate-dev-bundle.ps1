@@ -3,7 +3,7 @@
 $PLATFORM = "windows_x86"
 $PYTHON_VERSION = "2.7.12" # For node-gyp
 
-# take it form the environment if exists
+# take it from the environment if exists
 if (Test-Path env:PLATFORM) {
   $PLATFORM = (Get-Item env:PLATFORM).Value
 }
