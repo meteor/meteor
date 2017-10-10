@@ -244,6 +244,52 @@ main.registerCommand({
 // run
 ///////////////////////////////////////////////////////////////////////////////
 
+const inspectOptions = {
+  "inspect": { type: String, implicitValue: "9229" },
+  "inspect-brk": { type: String, implicitValue: "9229" },
+};
+
+function normalizeInspectOptions(options) {
+  const result = Object.create(null);
+
+  if (_.has(options, "debug-port")) {
+    console.log(
+      "The --debug-port option is deprecated; " +
+        "please use --inspect-brk=<port> instead."
+    );
+
+    if (! _.has(options, "inspect-brk")) {
+      options["inspect-brk"] = options["debug-port"];
+    }
+
+    delete options["debug-port"];
+  }
+
+  if (_.has(options, "inspect-brk")) {
+    result.inspect = {
+      port: options["inspect-brk"],
+      "break": true,
+    };
+
+    if (_.has(options, "inspect")) {
+      console.log(
+        "Both --inspect and --inspect-brk provided; " +
+          "ignoring --inspect."
+      );
+
+      delete options.inspect;
+    }
+
+  } else if (_.has(options, "inspect")) {
+    result.inspect = {
+      port: options.inspect,
+      "break": false,
+    };
+  }
+
+  return result;
+}
+
 var runCommandOptions = {
   requiresApp: true,
   maxArgs: Infinity,
@@ -254,6 +300,7 @@ var runCommandOptions = {
     'mobile-port': { type: String },
     'app-port': { type: String },
     'debug-port': { type: String },
+    ...inspectOptions,
     'no-release-check': { type: Boolean },
     production: { type: Boolean },
     'raw-logs': { type: Boolean },
@@ -377,7 +424,7 @@ function doRunCommand(options) {
     proxyHost: parsedServerUrl.hostname,
     appPort: appPort,
     appHost: appHost,
-    debugPort: options['debug-port'],
+    ...normalizeInspectOptions(options),
     settingsFile: options.settings,
     buildOptions: {
       minifyMode: options.production ? 'production' : 'development',
@@ -402,7 +449,7 @@ main.registerCommand(_.extend(
   { name: 'debug' },
   runCommandOptions
 ), function (options) {
-  options['debug-port'] = options['debug-port'] || '9229';
+  options["inspect-brk"] = options["inspect-brk"] || "9229";
   return doRunCommand(options);
 });
 
@@ -1468,6 +1515,7 @@ testCommandOptions = {
     // XXX COMPAT WITH 0.9.2.2
     'mobile-port': { type: String },
     'debug-port': { type: String },
+    ...inspectOptions,
     'no-release-check': { type: Boolean },
     deploy: { type: String },
     production: { type: Boolean },
@@ -1888,7 +1936,7 @@ var runTestAppForPackages = function (projectContext, options) {
       projectContext: projectContext,
       proxyPort: options.proxyPort,
       proxyHost: options.proxyHost,
-      debugPort: options['debug-port'],
+      ...normalizeInspectOptions(options),
       disableOplog: options['disable-oplog'],
       settingsFile: options.settings,
       testMetadata: global.testCommandMetadata,

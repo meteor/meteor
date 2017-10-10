@@ -11,6 +11,23 @@
   version of `npm` used by `meteor npm ...` commands.
   [PR #8835](https://github.com/meteor/meteor/pull/8835)
 
+* The `meteor debug` command has been superseded by the more flexible
+  `--inspect` and `--inspect-brk` command-line flags, which work for any
+  `run`, `test`, or `test-packages` command.
+
+  The syntax of these flags is the same as the equivalent Node.js
+  [flags](https://nodejs.org/en/docs/inspector/#command-line-options),
+  with two notable differences:
+
+  * The flags affect the server process spawned by the build process,
+    rather than affecting the build process itself.
+
+  * The `--inspect-brk` flag causes the server process to pause just after
+    server code has loaded but before it begins to execute, giving the
+    developer a chance to set breakpoints in server code.
+
+  [Feature Request #194](https://github.com/meteor/meteor-feature-requests/issues/194)
+
 * The `meteor-babel` package has been upgraded to version 0.24.6, to take
   better advantage of native language features in Node 8.
 
