@@ -3,12 +3,17 @@
 
 Package.describe({
   summary: "Wrapper around the mongo npm package",
-  version: '2.2.30',
+  version: '2.2.31',
   documentation: null
 });
 
 Npm.depends({
-  mongodb: "2.2.30"
+  // Fork of mongodb@2.2.31 whose only change is pointing at a mongodb-core
+  // with https://github.com/mongodb-js/mongodb-core/pull/224
+  // NOTE: For the time being, we have hard-coded "2.2.31" as the version
+  // number in wrapper.js. When reverting back to non-fork, revert that
+  // change too!
+  mongodb: "https://github.com/meteor/node-mongodb-native/tarball/0f54d887aef0f172fd48cf4eafd0cf7e5a2500af",
 });
 
 Package.onUse(function (api) {
