@@ -31,14 +31,14 @@
       "from": "isarray@>=1.0.0 <1.1.0"
     },
     "mongodb": {
-      "version": "2.2.30",
-      "resolved": "https://registry.npmjs.org/mongodb/-/mongodb-2.2.30.tgz",
-      "from": "mongodb@2.2.30"
+      "version": "2.2.31",
+      "resolved": "https://github.com/meteor/node-mongodb-native/tarball/0f54d887aef0f172fd48cf4eafd0cf7e5a2500af",
+      "from": "https://github.com/meteor/node-mongodb-native/tarball/0f54d887aef0f172fd48cf4eafd0cf7e5a2500af"
     },
     "mongodb-core": {
-      "version": "2.1.14",
-      "resolved": "https://registry.npmjs.org/mongodb-core/-/mongodb-core-2.1.14.tgz",
-      "from": "mongodb-core@2.1.14"
+      "version": "2.1.15",
+      "resolved": "https://github.com/meteor/mongodb-core/tarball/82608e807235ac744fc29d161ea1d75361a8f178",
+      "from": "https://github.com/meteor/mongodb-core/tarball/82608e807235ac744fc29d161ea1d75361a8f178"
     },
     "process-nextick-args": {
       "version": "1.0.7",
@@ -66,8 +66,8 @@
       "from": "safe-buffer@>=5.1.0 <5.2.0"
     },
     "semver": {
-      "version": "5.3.0",
-      "resolved": "https://registry.npmjs.org/semver/-/semver-5.3.0.tgz",
+      "version": "5.4.1",
+      "resolved": "https://registry.npmjs.org/semver/-/semver-5.4.1.tgz",
       "from": "semver@>=5.1.0 <6.0.0"
     },
     "string_decoder": {
