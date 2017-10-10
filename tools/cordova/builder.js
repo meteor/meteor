@@ -14,26 +14,28 @@ import { CORDOVA_ARCH } from './index.js';
 // Hard-coded size constants
 
 const iconsIosSizes = {
+  'app_store': '1024x1024',
   'iphone_2x': '120x120',
   'iphone_3x': '180x180',
-  'ipad': '76x76',
   'ipad_2x': '152x152',
   'ipad_pro': '167x167',
-  'ios_settings': '29x29',
   'ios_settings_2x': '58x58',
   'ios_settings_3x': '87x87',
-  'ios_spotlight': '40x40',
   'ios_spotlight_2x': '80x80',
   'ios_spotlight_3x': '120x120',
-  'ios_notification': '20x20',
   'ios_notification_2x': '40x40',
   'ios_notification_3x': '60x60',
+  // Legacy
+  'ipad': '76x76',
+  'ios_settings': '29x29',
+  'ios_spotlight': '40x40',
+  'ios_notification': '20x20',
   'iphone_legacy': '57x57',
   'iphone_legacy_2x': '114x114',
   'ipad_spotlight_legacy': '50x50',
   'ipad_spotlight_legacy_2x': '100x100',
   'ipad_app_legacy': '72x72',
-  'ipad_app_legacy_2x': '144x144',
+  'ipad_app_legacy_2x': '144x144'
 };
 
 const iconsAndroidSizes = {
@@ -45,15 +47,22 @@ const iconsAndroidSizes = {
 };
 
 const launchIosSizes = {
-  'iphone_2x': '640x960',
   'iphone5': '640x1136',
   'iphone6': '750x1334',
   'iphone6p_portrait': '1242x2208',
   'iphone6p_landscape': '2208x1242',
-  'ipad_portrait': '768x1024',
-  'ipad_landscape': '1024x768',
+  'iphoneX_portrait': '1125x2436',
+  'iphoneX_landscape': '2436x1125', 
   'ipad_portrait_2x': '1536x2048',
-  'ipad_landscape_2x': '2048x1536'
+  'ipad_landscape_2x': '2048x1536',
+  'ipad_portrait_pro_10_5': '1668x2224',
+  'ipad_landscape_pro_10_5': '2224x1668',
+  'ipad_portrait_pro_12_9': '2048x2732',
+  'ipad_landscape_pro_12_9': '2732x2048',
+  // Legacy
+  'iphone_2x': '640x960',
+  'ipad_portrait': '768x1024',
+  'ipad_landscape': '1024x768'
 };
 
 const launchAndroidSizes = {
@@ -66,7 +75,7 @@ const launchAndroidSizes = {
   'android_xxhdpi_portrait': '960x1600',
   'android_xxhdpi_landscape': '1600x960',
   'android_xxxhdpi_portrait': '1280x1920',
-  'android_xxxhdpi_landscape': '1920x1280',
+  'android_xxxhdpi_landscape': '1920x1280'
 };
 
 export class CordovaBuilder {
@@ -535,26 +544,27 @@ Valid platforms are: ios, android.`);
      * relative to the project root directory.
      *
      * Valid key values:
-     * - `iphone_2x` (120x120)
-     * - `iphone_3x` (180x180)
-     * - `ipad` (76x76)
-     * - `ipad_2x` (152x152)
-     * - `ipad_pro` (167x167)
-     * - `ios_settings` (29x29)
-     * - `ios_settings_2x` (58x58)
-     * - `ios_settings_3x` (87x87)
-     * - `ios_spotlight` (40x40)
-     * - `ios_spotlight_2x` (80x80)
-     * - `ios_spotlight_3x` (120x120)
-     * - `ios_notification` (20x20)
-     * - `ios_notification_2x` (40x40)
-     * - `ios_notification_3x` (60x60)
-     * - `iphone_legacy` (57x57)
-     * - `iphone_legacy_2x` (114x114)
-     * - `ipad_spotlight_legacy` (50x50)
-     * - `ipad_spotlight_legacy_2x` (100x100)
-     * - `ipad_app_legacy` (72x72)
-     * - `ipad_app_legacy_2x` (144x144)
+     * - `app_store` (1024x1024) // Apple App Store
+     * - `iphone_2x` (120x120) // iPhone 5, SE, 6, 6s, 7, 8
+     * - `iphone_3x` (180x180) // iPhone 6 Plus, 6s Plus, 7 Plus, 8 Plus, X
+     * - `ipad_2x` (152x152) // iPad, iPad mini
+     * - `ipad_pro` (167x167) // iPad Pro
+     * - `ios_settings_2x` (58x58) // iPhone 5, SE, 6, 6s, 7, 8, iPad, mini, Pro
+     * - `ios_settings_3x` (87x87) // iPhone 6 Plus, 6s Plus, 7 Plus, 8 Plus, X
+     * - `ios_spotlight_2x` (80x80) // iPhone 5, SE, 6, 6s, 7, 8, iPad, mini, Pro
+     * - `ios_spotlight_3x` (120x120) // iPhone 6 Plus, 6s Plus, 7 Plus, 8 Plus, X
+     * - `ios_notification_2x` (40x40) // iPhone 5, SE, 6, 6s, 7, 8, iPad, mini, Pro
+     * - `ios_notification_3x` (60x60 // iPhone 6 Plus, 6s Plus, 7 Plus, 8 Plus, X
+     * - `ipad` (76x76) // Legacy
+     * - `ios_settings` (29x29) // Legacy
+     * - `ios_spotlight` (40x40) // Legacy
+     * - `ios_notification` (20x20) // Legacy
+     * - `iphone_legacy` (57x57) // Legacy
+     * - `iphone_legacy_2x` (114x114) // Legacy
+     * - `ipad_spotlight_legacy` (50x50) // Legacy
+     * - `ipad_spotlight_legacy_2x` (100x100) // Legacy
+     * - `ipad_app_legacy` (72x72) // Legacy
+     * - `ipad_app_legacy_2x` (144x144) // Legacy
      * - `android_mdpi` (48x48)
      * - `android_hdpi` (72x72)
      * - `android_xhdpi` (96x96)
@@ -585,15 +595,21 @@ configuration. The key may be deprecated.`);
      * stretched. See the [Android docs](https://developer.android.com/guide/topics/graphics/2d-graphics.html#nine-patch).
      *
      * Valid key values:
-     * - `iphone_2x` (640x960)
-     * - `iphone5` (640x1136)
-     * - `iphone6` (750x1334)
-     * - `iphone6p_portrait` (1242x2208)
-     * - `iphone6p_landscape` (2208x1242)
-     * - `ipad_portrait` (768x1024)
-     * - `ipad_landscape` (1024x768)
-     * - `ipad_portrait_2x` (1536x2048)
-     * - `ipad_landscape_2x` (2048x1536)
+     * - `iphone5` (640x1136) // iPhone 5, SE
+     * - `iphone6` (750x1334) // iPhone 6, 6s, 7, 8
+     * - `iphone6p_portrait` (1242x2208) // iPhone 6 Plus, 6s Plus, 7 Plus, 8 Plus
+     * - `iphone6p_landscape` (2208x1242) // iPhone 6 Plus, 6s Plus, 7 Plus, 8 Plus
+     * - `iphoneX_portrait` (1125x2436) // iPhone X
+     * - `iphoneX_landscape` (2436x1125) // iPhone X
+     * - `ipad_portrait_2x` (1536x2048) // iPad, iPad mini
+     * - `ipad_landscape_2x` (2048x1536) // iPad, iPad mini
+     * - `ipad_portrait_pro_10_5` (1668x2224) // iPad Pro 10.5"
+     * - `ipad_landscape_pro_10_5` (2224x1668) // iPad Pro 10.5"
+     * - `ipad_portrait_pro_12_9` (2048x2732) // iPad Pro 12.9"
+     * - `ipad_landscape_pro_12_9` (2732x2048) // iPad Pro 12.9"
+     * - `iphone_2x` (640x960) // Legacy
+     * - `ipad_portrait` (768x1024) // Legacy
+     * - `ipad_landscape` (1024x768) // Legacy
      * - `android_mdpi_portrait` (320x480)
      * - `android_mdpi_landscape` (480x320)
      * - `android_hdpi_portrait` (480x800)
