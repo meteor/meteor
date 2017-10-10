@@ -69,7 +69,7 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
       // The documents waiting to be processed would hardly go beyond 1000
       // using mongo 3.2 with WiredTiger
       MongoInternals.defaultRemoteCollectionDriver().mongo
-      ._oplogHandle._defineTooFarBehind(800);
+      ._oplogHandle._defineTooFarBehind(300);
 
       self.IRRELEVANT_SIZE = 15000;
       self.RELEVANT_SIZE = 10;
