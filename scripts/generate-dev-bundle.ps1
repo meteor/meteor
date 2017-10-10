@@ -122,6 +122,13 @@ foreach($item in $zip.items()) {
 rm -Recurse -Force $npm_zip
 rm -Recurse -Force "$DIR\7z"
 
+# Make sure node-gyp knows how to find its build tools.
+$env:PYTHON = "${DIR}\python\python.exe"
+$env:GYP_MSVS_VERSION = "2015"
+$env:HOME = "$DIR"
+$env:USERPROFILE = "$DIR"
+$env:npm_config_nodedir = "$DIR"
+
 # Install the version of npm that we're actually going to expose from the
 # dev bundle. Note that we use npm@1.4.12 to install npm@${NPM_VERSION}.
 cd "${DIR}\lib"
@@ -129,21 +136,6 @@ npm install npm@${NPM_VERSION}
 rm -Recurse -Force "${DIR}\bin\node_modules"
 copy "${CHECKOUT_DIR}\scripts\npm.cmd" "${DIR}\bin\npm.cmd"
 npm version
-
-npm install node-gyp
-
-# Make sure node-gyp knows how to find its build tools.
-$env:PYTHON = "${DIR}\python\python.exe"
-$env:GYP_MSVS_VERSION = "2015"
-$env:HOME = "$DIR";
-$env:USERPROFILE = "$DIR";
-
-# Make node-gyp install Node headers and libraries in $DIR\.node-gyp\.
-# https://github.com/nodejs/node-gyp/blob/4ee31329e0/lib/node-gyp.js#L52
-& "${DIR}\bin\node.exe" node_modules\node-gyp\bin\node-gyp.js install
-$include_path = "${DIR}\.node-gyp\${NODE_VERSION}\include\node"
-echo "Contents of ${include_path}:"
-dir "$include_path"
 
 # install dev-bundle-package.json
 # use short folder names
