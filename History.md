@@ -78,6 +78,13 @@
   [Issue #5665](https://github.com/meteor/meteor/issues/5665)
   [PR #9092](https://github.com/meteor/meteor/pull/9092)
 
+* `reactive-dict` now supports `destroy`. `destroy` will clear the `ReactiveDict`s
+  data and unregister the `ReactiveDict` from data migration.  
+  i.e. When a `ReactiveDict` is instantiated with a name on the client and the
+  `reload` package is present in the project.
+  [Feature Request #76](https://github.com/meteor/meteor-feature-requests/issues/76)
+  [PR #9063](https://github.com/meteor/meteor/pull/9063)
+
 * The `webapp` package has been updated to support UNIX domain sockets. If a
   `UNIX_SOCKET_PATH` environment variable is set with a valid
   UNIX socket file path (e.g. `UNIX_SOCKET_PATH=/tmp/socktest.sock`), Meteor's

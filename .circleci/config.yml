@@ -236,7 +236,7 @@ jobs:
           name: "Print environment"
           command: printenv
       - run:
-          name "Running self-test (2): Con-K"
+          name: "Running self-test (2): Con-K"
           command: |
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
