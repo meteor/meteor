@@ -1,3 +1,5 @@
+$ErrorActionPreference = "Stop"
+
 # determine the platform
 # use 32bit by default
 $PLATFORM = "windows_x86"
