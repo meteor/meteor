@@ -777,8 +777,8 @@ function getValueBitmask(value, length) {
 function insertIntoDocument(document, key, value) {
   Object.keys(document).forEach(existingKey => {
     if (
-      (existingKey.length > key.length && existingKey.indexOf(key) === 0) ||
-      (key.length > existingKey.length && key.indexOf(existingKey) === 0)
+      (existingKey.length > key.length && existingKey.indexOf(`${key}.`) === 0) ||
+      (key.length > existingKey.length && key.indexOf(`${existingKey}.`) === 0)
     ) {
       throw new Error(
         `cannot infer query fields to set, both paths '${existingKey}' and ` +
