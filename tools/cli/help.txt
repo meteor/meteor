@@ -99,6 +99,46 @@ Options:
   --extra-packages Run with additional packages (comma separated, for example:
                    --extra-packages "package-name1, package-name2@1.2.3")
 
+>>> debug
+Run the project with server-side debugging enabled.
+
+Usage: meteor debug [run options] # deprecated
+       meteor --inspect[-brk][=<port>] [run | test | test-packages] [options]
+
+Enable server-side debugging via debugging clients like the Node.js
+command-line debugger, Chrome DevTools, or Visual Studio Code. With
+--inspect-brk, the server will be paused at startup, waiting for clients
+to attach to the process on the specified port (default: 9229).
+
+The 'meteor debug' command is deprecated in favor of 'meteor --inspect-brk'.
+
+The syntax of the --inspect and --inspect-brk flags is the same as the
+corresponding Node.js options:
+https://nodejs.org/en/docs/inspector/#command-line-options
+
+Two notable differences from the Node.js behavior:
+
+* The --inspect[-brk] flags affect the server process spawned by the build
+  process, rather than affecting the build process itself.
+
+* The --inspect-brk flag causes the server process to pause just after
+  server code has loaded but before it begins to execute, giving the
+  developer a chance to set breakpoints in server code.
+
+An alternative way to set breakpoints is to use the `debugger` keyword:
+https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/debugger
+
+Options:
+  --inspect
+  --inspect=<port>
+  --inspect-brk
+  --inspect-brk=<port>
+                 Enable server-side debugging via debugging clients like
+                 the Node.js command-line debugger, Chrome DevTools, or
+                 Visual Studio Code. With --inspect-brk, the server will
+                 be paused at startup, waiting for clients to attach to
+                 the process on the specified port (default: 9229).
+
 
 >>> create
 Create a new project.
