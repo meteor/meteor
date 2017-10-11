@@ -95,7 +95,7 @@ testAsyncMulti("ddp rate limiter - callbacks get passed correct arguments", [
     Meteor.call(
       "getLastRateLimitEvent", expect(function (error, result) {
         test.isTrue(result.reply.allowed);
-        test.isTrue(result.reply.timeToReset < RATE_LIMIT_INTERVAL_TIME_MS);
+        test.isTrue(result.reply.timeToReset < RATE_LIMIT_INTERVAL_TIME_MS + 100);
         test.equal(result.reply.numInvocationsLeft, 4);
 
         test.equal(result.ruleInput.userId, Meteor.userId());
@@ -118,7 +118,7 @@ testAsyncMulti("ddp rate limiter - callbacks get passed correct arguments", [
     Meteor.call(
       "getLastRateLimitEvent", expect(function (error, result) {
         test.isFalse(result.reply.allowed);
-        test.isTrue(result.reply.timeToReset < RATE_LIMIT_INTERVAL_TIME_MS);
+        test.isTrue(result.reply.timeToReset < RATE_LIMIT_INTERVAL_TIME_MS + 100);
         test.equal(result.reply.numInvocationsLeft, 0);
 
         test.equal(result.ruleInput.userId, Meteor.userId());
