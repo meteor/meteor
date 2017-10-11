@@ -1,3 +1,10 @@
+## v.NEXT
+
+* Enables passing `false` to `cursor.count()` on the client to prevent skip
+  and limit from having an effect on the result.
+  [Issue #1201](https://github.com/meteor/meteor/issues/1201)
+  [PR #9205](https://github.com/meteor/meteor/pull/9205)
+
 ## v1.5.2.2, 2017-10-02
 
 * Fixes a regression in 1.5.2.1 which resulted in the macOS firewall

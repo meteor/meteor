@@ -44,15 +44,16 @@ export default class Cursor {
    * @summary Returns the number of documents that match a query.
    * @memberOf Mongo.Cursor
    * @method  count
-   * @param {boolean} [applySkipLimit=false] If set to `true`, the value
-   *                                         returned will be limited to the
-   *                                         value supplied for `limit`, if one
-   *                                         was provided.
+   * @param {boolean} [applySkipLimit=true] If set to `false`, the value
+   *                                         returned will reflect the total
+   *                                         number of matching documents,
+   *                                         ignoring any value supplied for
+   *                                         limit
    * @instance
    * @locus Anywhere
    * @returns {Number}
    */
-  count(applySkipLimit = false) {
+  count(applySkipLimit = true) {
     if (this.reactive) {
       // allow the observe to be unordered
       this._depend({added: true, removed: true}, true);
