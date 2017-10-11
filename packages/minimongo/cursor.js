@@ -44,17 +44,24 @@ export default class Cursor {
    * @summary Returns the number of documents that match a query.
    * @memberOf Mongo.Cursor
    * @method  count
+   * @param {boolean} [applySkipLimit=false] If set to `true`, the value
+   *                                         returned will be limited to the
+   *                                         value supplied for `limit`, if one
+   *                                         was provided.
    * @instance
    * @locus Anywhere
    * @returns {Number}
    */
-  count() {
+  count(applySkipLimit = false) {
     if (this.reactive) {
       // allow the observe to be unordered
       this._depend({added: true, removed: true}, true);
     }
 
-    return this._getRawObjects({ordered: true}).length;
+    return this._getRawObjects({
+      ordered: true,
+      ignoreSkipLimit: !applySkipLimit
+    }).length;
   }
 
   /**
@@ -379,8 +386,8 @@ export default class Cursor {
   // Returns a collection of matching objects, but doesn't deep copy them.
   //
   // If ordered is set, returns a sorted array, respecting sorter, skip, and
-  // limit properties of the query.  if sorter is falsey, no sort -- you get the
-  // natural order.
+  // limit properties of the query provided that options.ignoreSkipLimit is
+  // falsey (#1201). If sorter is falsey, no sort -- you get the natural order.
   //
   // If ordered is not set, returns an object mapping from ID to doc (sorter,
   // skip and limit should not be set).
@@ -399,10 +406,10 @@ export default class Cursor {
 
     // fast path for single ID value
     if (this._selectorId !== undefined) {
-      // If you have non-zero skip and ask for a single id, you get
-      // nothing. This is so it matches the behavior of the '{_id: foo}'
-      // path.
-      if (this.skip) {
+      // If you have non-zero skip and ask for a single id, but did not set
+      // ignoreSkipLimit, you get nothing. This is so it matches the behavior
+      // of the '{_id: foo}' path.
+      if (this.skip && !options.ignoreSkipLimit) {
         return results;
       }
 
@@ -449,6 +456,11 @@ export default class Cursor {
         }
       }
 
+      // Override to ensure all results are matched if ignoring limit
+      if (options.ignoreSkipLimit) {
+        return true
+      }
+
       // Fast path for limited unsorted queries.
       // XXX 'length' check here seems wrong for ordered
       return (
@@ -467,7 +479,8 @@ export default class Cursor {
       results.sort(this.sorter.getComparator({distances}));
     }
 
-    if (!this.limit && !this.skip) {
+    // Return the full set of results the skip/limit is being ignored
+    if ((!this.limit && !this.skip) || (options.ignoreSkipLimit)) {
       return results;
     }
 
