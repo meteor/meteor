@@ -8,11 +8,11 @@ The project gains strength from a diversity of backgrounds and perspectives in o
 
 ### Using This Code
 
-This isn’t an exhaustive list of things that you can’t do. Rather, it’s a guide for participation in the community that outlines how each of us can work to keep Apollo a positive, successful, and growing project. 
+This isn’t an exhaustive list of things that you can’t do. Rather, it’s a guide for participation in the community that outlines how each of us can work to keep Meteor a positive, successful, and growing project. 
 
-This code of conduct applies to all spaces managed by the Apollo project or company. This includes Slack, GitHub issues, the GraphQL Summit and GraphQL SF events, and any other forums created by the Apollo team which the community uses for communication. Breaches of this code outside these spaces may affect a person's ability to participate within them. We expect it to be honored by everyone who represents or participates in the project, whether officially or informally.
+This code of conduct applies to all spaces managed by the Meteor project or company. This includes Slack, GitHub issues, and any other forums created by the Meteor team which the community uses for communication. Breaches of this code outside these spaces may affect a person's ability to participate within them. We expect it to be honored by everyone who represents or participates in the project, whether officially or informally.
 
-If you believe someone is violating the code of conduct, please report it by emailing [community@apollodata.com](mailto:community@apollostack.com). 
+If you believe someone is violating the code of conduct, please report it by emailing [community@meteor.com](mailto:community@meteor.com). 
 
 ### We Strive To:
 
@@ -22,7 +22,7 @@ If you believe someone is violating the code of conduct, please report it by ema
   
 - **Be considerate**
 
-    We are considerate of our peers: other Apollo users and contributors. We’re thoughtful when addressing others’ efforts, keeping in mind that work is often undertaken for the benefit of the community. We also value others’ time and appreciate that not every issue or comment will be responded to immediately. We strive to be mindful in our communications, whether in person or online, and we're tactful when approaching views that are different from our own.
+    We are considerate of our peers: other Meteor users and contributors. We’re thoughtful when addressing others’ efforts, keeping in mind that work is often undertaken for the benefit of the community. We also value others’ time and appreciate that not every issue or comment will be responded to immediately. We strive to be mindful in our communications, whether in person or online, and we're tactful when approaching views that are different from our own.
     
 - **Be respectful**
 
