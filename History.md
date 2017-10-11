@@ -7,7 +7,7 @@
   [deprecated](https://cordova.apache.org/news/2017/09/22/plugins-release.html)
   and will likely be removed in a future Meteor release.
   [Feature Request #196](https://github.com/meteor/meteor-feature-requests/issues/196)
-  [PR #TBD](https://github.com/meteor/meteor/pull/TBD)
+  [PR #9213](https://github.com/meteor/meteor/pull/9213)
 
 * iOS icons and launch screens have been updated to support iOS 11
   [Issue #9196](https://github.com/meteor/meteor/issues/9196)
