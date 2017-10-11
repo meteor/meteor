@@ -260,6 +260,7 @@ export default class ImportScanner {
           dataString: "",
           deps: {},
           lazy: true,
+          imported: false,
         });
       }
 
@@ -274,17 +275,33 @@ export default class ImportScanner {
       );
 
       // Set the contents of the source module to import the target
-      // module(s). Note that module.exports will be set to the exports of
-      // the last target module. This is not perfect, but (1) it's better
-      // than trying to merge exports, (2) it does the right thing when
-      // there's only one target module, (3) the plugin author can easily
-      // control which file comes last, and (4) it's always possible to
-      // import the target modules individually.
-      sourceFile.dataString += "module.exports = require(" +
-        JSON.stringify(relativeId) + ");\n";
+      // module(s), combining their exports on the source module's exports
+      // object using the module.watch live binding system. This is better
+      // than `Object.assign(exports, require(relativeId))` because it
+      // allows the exports to change in the future, and better than
+      // `module.exports = require(relativeId)` because it preserves the
+      // original module.exports object, avoiding problems with circular
+      // dependencies (#9176, #9190).
+      //
+      // If there could be only one target module, we could do something
+      // less clever here (like using an identifier string alias), but
+      // unfortunately we have to tolerate the possibility of a compiler
+      // plugin calling inputFile.addJavaScript multiple times for the
+      // same source file (see discussion in #9176), with different target
+      // paths, code, laziness, etc.
+      sourceFile.dataString += [
+        "module.watch(require(" + JSON.stringify(relativeId) + "), {",
+        '  "*": module.makeNsSetter()',
+        "});",
+        ""
+      ].join("\n");
       sourceFile.data = Buffer.from(sourceFile.dataString, "utf8");
       sourceFile.hash = sha1(sourceFile.data);
-      sourceFile.deps[relativeId] = {};
+      sourceFile.deps[relativeId] = {
+        installPath: file.installPath,
+        possiblySpurious: false,
+        dynamic: false
+      };
     }
   }
 
