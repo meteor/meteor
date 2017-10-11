@@ -1,3 +1,18 @@
+## v.NEXT
+
+* [`cordova-lib`](https://github.com/apache/cordova-cli) has been updated to
+  version 7.1.0 and [`cordova-android`](https://github.com/apache/cordova-android/)
+  has been updated to version 6.3.0. The cordova-plugins `cordova-plugin-console`,
+  `cordova-plugin-device-motion`, and `cordova-plugin-device-orientation` have been
+  [deprecated](https://cordova.apache.org/news/2017/09/22/plugins-release.html)
+  and will likely be removed in a future Meteor release.
+  [Feature Request #196](https://github.com/meteor/meteor-feature-requests/issues/196)
+  [PR #TBD](https://github.com/meteor/meteor/pull/TBD)
+
+* iOS icons and launch screens have been updated to support iOS 11
+  [Issue #9196](https://github.com/meteor/meteor/issues/9196)
+  [PR #9198](https://github.com/meteor/meteor/pull/9198)
+
 ## v1.5.2.2, 2017-10-02
 
 * Fixes a regression in 1.5.2.1 which resulted in the macOS firewall
