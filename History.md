@@ -1,6 +1,10 @@
 ## v.NEXT
 
-* Node has been upgraded to version 8.6.0.
+* Node.js has been upgraded to version 8.7.0, which will be entering
+  long-term support (LTS) coverage on 31 October 2017, lasting through
+  December 2019 ([full schedule](https://github.com/nodejs/Release#nodejs-release-working-group)).
+  This is a *major* upgrade from the previous version of Node.js used by
+  Meteor, 4.8.4.
 
 * The `npm` npm package has been upgraded to version 5.4.2, a major
   upgrade from 4.6.1, requiring internal updates to dependency management
