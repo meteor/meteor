@@ -173,6 +173,8 @@ import { loadIsopackage } from '../tool-env/isopackets.js';
 import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
 import { gzipSync } from "zlib";
 
+const SOURCE_URL_PREFIX = "meteor://\u{1f4bb}app";
+
 // files to ignore when bundling. node has no globs, so use regexps
 exports.ignoreFiles = [
     /~$/, /^\.#/,
@@ -1334,8 +1336,7 @@ class Target {
   rewriteSourceMaps() {
     const rewriteSourceMap = function (sm) {
       sm.sources = sm.sources.map(function (path) {
-        const prefix =  'meteor://\u{1f4bb}app';
-
+        const prefix = SOURCE_URL_PREFIX;
         if (path.slice(0, prefix.length) === prefix) {
           return path;
         }
@@ -2140,21 +2141,25 @@ class JsImage {
       }
 
       if (item.sourceMap) {
-        // Reference the source map in the source. Looked up later by
-        // node-inspector.
-        var sourceMapBaseName = item.targetPath + ".map";
+        const sourceMapBuffer =
+          Buffer.from(JSON.stringify(item.sourceMap), "utf8");
 
-        // Write the source map.
         loadItem.sourceMap = builder.writeToGeneratedFilename(
-          sourceMapBaseName,
-          { data: Buffer.from(JSON.stringify(item.sourceMap), 'utf8') }
+          item.targetPath + ".map",
+          { data: sourceMapBuffer }
         );
 
-        var sourceMapFileName = files.pathBasename(loadItem.sourceMap);
+        const sourceMappingURL =
+          "data:application/json;charset=utf8;base64," +
+          sourceMapBuffer.toString("base64");
 
         // Remove any existing sourceMappingURL line. (eg, if roundtripping
         // through JsImage.readFromDisk, don't end up with two!)
-        item.source = addSourceMappingURL(item.source, sourceMapFileName);
+        item.source = addSourceMappingURL(
+          item.source,
+          sourceMappingURL,
+          item.targetPath,
+        );
 
         if (item.sourceMapRoot) {
           loadItem.sourceMapRoot = item.sourceMapRoot;
@@ -2559,7 +2564,11 @@ var writeFile = Profile("bundler writeFile", function (file, builder, options) {
   const hash = file.hash();
 
   if (options && options.sourceMapUrl) {
-    data = addSourceMappingURL(data, options.sourceMapUrl);
+    data = addSourceMappingURL(
+      data,
+      options.sourceMapUrl,
+      file.targetPath,
+    );
   }
 
   if (! Buffer.isBuffer(data)) {
@@ -2571,14 +2580,24 @@ var writeFile = Profile("bundler writeFile", function (file, builder, options) {
 
 // The data argument may be either a Buffer or a string, but this function
 // always returns a string.
-function addSourceMappingURL(data, url) {
-  const dataString = data
+function addSourceMappingURL(data, url, targetPath) {
+  const parts = [
     // If data is a Buffer, convert it to a string.
-    .toString("utf8")
-    // Remove any existing source map comments.
-    .replace(/\n\/\/# sourceMappingURL=[^\n]+/g, '\n');
-  // Append the new source map comment to the end of the code.
-  return dataString + "\n//# sourceMappingURL=" + url + "\n";
+    data.toString("utf8")
+      // Remove any existing sourceURL or sourceMappingURL comments.
+      .replace(/\n\/\/# source(?:Mapping)?URL=[^\n]+/g, '\n')
+  ];
+
+  if (targetPath) {
+    // If a targetPath was provided, use it to add a sourceURL comment to
+    // help associate output files with mapped source files.
+    parts.push(`//# sourceURL=${SOURCE_URL_PREFIX}/${targetPath}`);
+  }
+
+  parts.push(`//# sourceMappingURL=${url}`);
+  parts.push(""); // Trailing newline.
+
+  return parts.join("\n");
 }
 
 // Writes a target a path in 'programs'
