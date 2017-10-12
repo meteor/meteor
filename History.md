@@ -667,7 +667,7 @@
   `$bitsAnyClear`.
   [#8350](https://github.com/meteor/meteor/pull/8350)
 
-* A new [Development.md](Development.md) document has been created to provide
+* A new [Development.md](DEVELOPMENT.md) document has been created to provide
   an easier path for developers looking to make contributions to Meteor Core
   (that is, the `meteor` tool itself) along with plenty of helpful reminders
   for those that have already done so!

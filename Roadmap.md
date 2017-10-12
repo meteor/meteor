@@ -8,7 +8,7 @@ This document describes the high level features the Meteor project maintainers h
 
 Contributors are encouraged to focus their efforts on work that aligns with the roadmap as maintainers will prioritize their time spent reviewing PRs and issues around these contributions. This however does not mean that PRs against other features and bugs will automatically be rejected.
 
-Items can be added to this roadmap by first getting design approval for a solution to an open issue, as outlined by our [contributing guidelines](https://github.com/meteor/meteor/blob/devel/Contributing.md). Then, when a contributor has committed to solving the issue in the short to medium term, they can submit a PR to add that work to the roadmap. All other PRs to the roadmap will be rejected.
+Items can be added to this roadmap by first getting design approval for a solution to an open issue, as outlined by our [contributing guidelines](https://github.com/meteor/meteor/blob/devel/CONTRIBUTING.md). Then, when a contributor has committed to solving the issue in the short to medium term, they can submit a PR to add that work to the roadmap. All other PRs to the roadmap will be rejected.
 
 ## Upgrade to Node 8
 
@@ -162,7 +162,7 @@ Our plans around the view layer are to maintain strong integrations (along with 
 
 ## Project Governance/Community Contribution
 
-*Status: Since this topic was added to the roadmap, we have introduced [completely new contribution guidelines](https://github.com/meteor/meteor/blob/devel/Contributing.md) that outline exactly how to contribute to Meteor in several ways, including triaging issues, improving documentation, submitting designs for new features, and submitting PRs for bug fixes and improvements. We encourage proposals about how to make the process better via new GitHub issues.*
+*Status: Since this topic was added to the roadmap, we have introduced [completely new contribution guidelines](https://github.com/meteor/meteor/blob/devel/CONTRIBUTING.md) that outline exactly how to contribute to Meteor in several ways, including triaging issues, improving documentation, submitting designs for new features, and submitting PRs for bug fixes and improvements. We encourage proposals about how to make the process better via new GitHub issues.*
 
 Currently, it’s difficult for external developers to make meaningful contributions to Meteor as there is no clear guidance on what to work on, how best to do that work and signals around what will/won’t get merged. We plan on fixing this by creating tight documentation around how the project is developed (e.g the [Swift contribution guidelines](https://swift.org/contributing/)) and giving contributors a path towards earning increased privileges that culminate in full commit access. We’re also aiming to move more sub-projects into their own repositories that can be released on their own release schedule and more easily maintained by the community.
 
@@ -170,4 +170,3 @@ Currently, it’s difficult for external developers to make meaningful contribut
 ## Other
 
 For more completed items, refer to the project history here: https://github.com/meteor/meteor/blob/devel/History.md
-
