@@ -52,8 +52,8 @@ Building an application with Meteor?
 
 Interested in helping or contributing to Meteor?  These resources will help:
 
-* [Core development guide](Development.md)
-* [Contribution guidelines](Contributing.md)
+* [Core development guide](DEVELOPMENT.md)
+* [Contribution guidelines](CONTRIBUTING.md)
 * [Feature requests](https://github.com/meteor/meteor-feature-requests/)
 * [Issue tracker](https://github.com/meteor/meteor/issues)
 

@@ -9,7 +9,7 @@
 
 Before reporting a bug, please check for existing or closed issues
 first and read the instructions for filing a bug report:
-https://github.com/meteor/meteor/blob/devel/Contributing.md#reporting-a-bug-in-meteor
+https://github.com/meteor/meteor/blob/devel/CONTRIBUTING.md#reporting-a-bug-in-meteor
 
 ### This bug report should include:
 - [ ] A descriptive title
