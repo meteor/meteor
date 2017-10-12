@@ -1488,7 +1488,10 @@ Fiber(function () {
       });
     }
 
-    var ret = command.func(options, {rawOptions});
+    var ret = Promise.resolve(
+      command.func(options, { rawOptions })
+    ).await();
+
   } catch (e) {
     Console.enableProgressDisplay(false);
 
