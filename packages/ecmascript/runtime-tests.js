@@ -281,14 +281,9 @@ Tinytest.add("ecmascript - runtime - destructuring", (test) => {
 
   const {} = {};
 
-  test.throws(
-    () => {
-      const {} = null;
-    },
-    isNode8OrLater
-      ? /Cannot match against 'undefined' or 'null'/
-      : /Cannot destructure undefined/
-  );
+  test.throws(() => {
+    const {} = null;
+  });
 
   const [x, y, z] = function*() {
     let x = 1;
