@@ -145,7 +145,10 @@ Function Add-NodeAndNpm {
   $tempNpmCmd = Join-Path $dirTempNode 'npm.cmd'
 
   # Get additional values we'll need to fetch to complete this release.
-  $nodeProcessRelease = & "$tempNodeExe" -p 'process.release' | ConvertFrom-Json
+  $nodeProcessRelease = @{
+    headersUrl = & "$tempNodeExe" -p 'process.release.headersUrl'
+    libUrl = & "$tempNodeExe" -p 'process.release.libUrl'
+  }
 
   if (!($nodeProcessRelease.headersUrl -And $nodeProcessRelease.libUrl)) {
     throw "No 'headersUrl' or 'libUrl' in Node.js's 'process.release' output."
