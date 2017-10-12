@@ -34,7 +34,7 @@ describe("app modules", () => {
 
   it("are eagerly evaluated if outside imports/", () => {
     assert.strictEqual(shared["/eager-jsx.jsx"], "eager jsx");
-    assert.strictEqual(shared["/eager-coffee.coffee.js"], "eager coffee");
+    assert.strictEqual(shared["/eager-coffee.coffee"], "eager coffee");
   });
 
   it("are lazily evaluated if inside imports/", (done) => {
