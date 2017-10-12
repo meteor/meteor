@@ -17,9 +17,9 @@
   [PR #8835](https://github.com/meteor/meteor/pull/8835)
 
 * Windows now supports a 64-bit architecture using native 64-bit binaries.
-  In addition to hopefully being faster, this should allow Windows users to take
-  better advantage of the new V8 inspector API, which appears to only support
-  64-bit platforms when debugging asynchronous operations.
+  In addition to being faster, this should allow Windows users to take better
+  advantage of the new V8 inspector API, which only supports 64-bit platforms
+  when debugging asynchronous operations.
   [PR #9218](https://github.com/meteor/meteor/pull/9218)
 
 * The `meteor debug` command has been superseded by the more flexible
@@ -39,7 +39,7 @@
 
   [Feature Request #194](https://github.com/meteor/meteor-feature-requests/issues/194)
 
-* To support developers running on a 32-bit OS, Meteor now supports both 32
+* To support developers running on a 32-bit OS, Meteor now supports both 32-
   and 64-bit versions of Mongo.  Mongo 3.2 is the last 32-bit version available
   from Mongo. Meteor running on a 32-bit OS will use a 32-bit version of Mongo
   3.2 and 64-bit platforms will receive newer Mongo versions in future releases.

@@ -705,7 +705,7 @@ exports.sourceMapLength = function (sm) {
 // of the PROCESSOR_ARCHITEW6432 environment variable to determine if the
 // Windows architecture is 64-bit, then convert to a "uname -m" matching
 // architecture label (e.g. i386, x86_64).
-exports.architecture = () => {
+export function architecture() {
   const supportedArchitectures = {
     Darwin: {
       x64: 'x86_64',
