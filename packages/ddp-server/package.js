@@ -6,7 +6,7 @@ Package.describe({
 
 Npm.depends({
   "permessage-deflate": "0.1.6",
-  sockjs: "0.3.18"
+  sockjs: "0.3.19"
 });
 
 Package.onUse(function (api) {
