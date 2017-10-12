@@ -45,9 +45,6 @@ New-Item -ItemType Directory -Force -Path $dirBin | Out-Null
 New-Item -ItemType Directory -Force -Path $dirLib | Out-Null
 New-Item -ItemType Directory -Force -Path $dirServerLib | Out-Null
 
-# add bin to the front of the path so we can use our own node for building
-Add-ToExistingEnvPath $dirBin
-
 $webclient = New-Object System.Net.WebClient
 $shell = New-Object -com shell.application
 

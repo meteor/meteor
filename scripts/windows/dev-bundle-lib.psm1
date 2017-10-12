@@ -101,16 +101,7 @@ Function Expand-7zToDirectory {
   & "$Binary" x "$Path" -o"$Destination" | Out-Null
 }
 
-Function Add-ToExistingEnvPath {
-  Param(
-    [Parameter(Mandatory=$True, Position=0)]
-    [string]$Path
-  )
-  $env:PATH = "$Path;${env:PATH}"
-}
-
 Export-ModuleMember -Function `
-  Add-ToExistingEnvPath, `
   Expand-7zToDirectory, `
   Expand-TarGzToDirectory, `
   Get-MeteorPlatform, `
