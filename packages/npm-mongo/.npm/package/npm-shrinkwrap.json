@@ -32,12 +32,14 @@
       "integrity": "sha1-u5NdSFgsuhaMBoNJV6VKPgcSTxE="
     },
     "mongodb": {
-      "version": "https://github.com/meteor/node-mongodb-native/tarball/0f54d887aef0f172fd48cf4eafd0cf7e5a2500af",
-      "integrity": "sha1-g85f5sJslDKIfoLc/mjbVoN05gA="
+      "version": "2.2.32",
+      "resolved": "https://registry.npmjs.org/mongodb/-/mongodb-2.2.32.tgz",
+      "integrity": "sha1-Yg6qoZlftFfE73BU5fVgJXppflg="
     },
     "mongodb-core": {
-      "version": "https://github.com/meteor/mongodb-core/tarball/82608e807235ac744fc29d161ea1d75361a8f178",
-      "integrity": "sha1-DPVyqXHyrpzf9pQLWLq11vOJfk8="
+      "version": "2.1.16",
+      "resolved": "https://registry.npmjs.org/mongodb-core/-/mongodb-core-2.1.16.tgz",
+      "integrity": "sha1-XcIKSLHwolFf1X2q6ixIU0Z0VOA="
     },
     "process-nextick-args": {
       "version": "1.0.7",
