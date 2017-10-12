@@ -3,12 +3,12 @@ Package.describe({
   summary: 'Compiler for CoffeeScript code, supporting the coffeescript package',
   // This version of NPM `coffeescript` module, with _1, _2 etc.
   // If you change this, make sure to also update ../coffeescript/package.js to match.
-  version: '1.12.7_2'
+  version: '1.12.7_3'
 });
 
 Npm.depends({
   'coffeescript': '1.12.7',
-  'source-map': '0.6.1'
+  'source-map': '0.5.7'
 });
 
 Package.onUse(function (api) {
