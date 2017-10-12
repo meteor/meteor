@@ -147,7 +147,7 @@ describe("dynamic import(...)", function () {
     assert.strictEqual(a.shared, b.shared);
     assertDeepEqual(a.shared, {
       "/node_modules/meteor/helper-package/dynamic/a.js": true,
-      "/node_modules/meteor/helper-package/dynamic/b.coffee.js": true
+      "/node_modules/meteor/helper-package/dynamic/b.coffee": true
     });
 
     assert.strictEqual(
