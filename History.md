@@ -6,15 +6,6 @@
   This is a *major* upgrade from the previous version of Node.js used by
   Meteor, 4.8.4.
 
-* Multiple architecture Mongo support has been added to the Meteor Tool.
-  32-bit versions of Mongo have been discontinued as of Mongo 3.4, so to
-  allow people running Meteor on a 64-bit OS to use Mongo 3.4, the Tool has
-  been updated to support both 32 and 64 bit versions of Mongo. Meteor
-  running on a 32-bit OS is limited to Mongo 3.2.15, whereas Meteor running
-  on a 64-bit OS uses Mongo 3.4.9 by default.
-  [FR #129](https://github.com/meteor/meteor-feature-requests/issues/129)
-  [PR #9173](https://github.com/meteor/meteor/pull/9173)
-
 * The `npm` npm package has been upgraded to version 5.4.2, a major
   upgrade from 4.6.1, requiring internal updates to dependency management
   logic for Meteor packages that use `Npm.depends`. While these changes
@@ -24,6 +15,12 @@
   normal Meteor application development, this change primarily affects the
   version of `npm` used by `meteor npm ...` commands.
   [PR #8835](https://github.com/meteor/meteor/pull/8835)
+
+* Windows now supports a 64-bit architecture using native 64-bit binaries.
+  In addition to hopefully being faster, this should allow Windows users to take
+  better advantage of the new V8 inspector API, which appears to only support
+  64-bit platforms when debugging asynchronous operations.
+  [PR #9218](https://github.com/meteor/meteor/pull/9218)
 
 * The `meteor debug` command has been superseded by the more flexible
   `--inspect` and `--inspect-brk` command-line flags, which work for any
@@ -41,6 +38,12 @@
     developer a chance to set breakpoints in server code.
 
   [Feature Request #194](https://github.com/meteor/meteor-feature-requests/issues/194)
+
+* To support developers running on a 32-bit OS, Meteor now supports both 32
+  and 64-bit versions of Mongo.  Mongo 3.2 is the last 32-bit version available
+  from Mongo. Meteor running on a 32-bit OS will use a 32-bit version of Mongo
+  3.2 and 64-bit platforms will receive newer Mongo versions in future releases.
+  [PR #9173](https://github.com/meteor/meteor/pull/9173)
 
 * The `meteor-babel` package has been upgraded to version 0.24.6, to take
   better advantage of native language features in Node 8.
