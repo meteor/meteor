@@ -2564,11 +2564,7 @@ var writeFile = Profile("bundler writeFile", function (file, builder, options) {
   const hash = file.hash();
 
   if (options && options.sourceMapUrl) {
-    data = addSourceMappingURL(
-      data,
-      options.sourceMapUrl,
-      file.targetPath,
-    );
+    data = addSourceMappingURL(data, options.sourceMapUrl);
   }
 
   if (! Buffer.isBuffer(data)) {
