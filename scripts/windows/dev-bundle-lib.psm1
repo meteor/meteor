@@ -4,8 +4,6 @@ $scriptsDir = (Get-Item $PSScriptRoot).parent.FullName
 # This is the root of the Meteor repository.
 $rootDir = (Get-Item $scriptsDir).parent.FullName
 
-echo "Root $rootDir"
-
 # This is the "meteor" shell script.
 $meteorSh = Join-Path $rootDir 'meteor'
 
@@ -52,12 +50,28 @@ Function Read-VariableFromShellScript {
   $v
 }
 
+<#
+  .Synopsis
+  Create and return a unique temporary directory.
+#>
 Function New-TemporaryDirectory {
-    $parent = [System.IO.Path]::GetTempPath()
-    [string] $name = [System.Guid]::NewGuid()
-    New-Item -ItemType Directory -Path (Join-Path $parent $name)
+  $parent = [System.IO.Path]::GetTempPath()
+  [string] $name = [System.Guid]::NewGuid()
+  New-Item -ItemType Directory -Path (Join-Path $parent $name)
 }
 
+<#
+  .Synopsis
+  Recursively remove a directory using force, and avoiding
+  filesystem tools.
+
+  .Description
+  Some of the more complex file structures created by npm node_modules'
+  directories pose a problem for native Windows filesystem tools.  This
+  command takes a different approach by using Windows' "Robocopy" tool to
+  clone the directory with an empty directory, and purge files which are
+  not present in the empty directory.
+#>
 Function Remove-DirectoryRecursively {
   Param (
     [Parameter(Mandatory=$True, Position=0)]
@@ -65,16 +79,20 @@ Function Remove-DirectoryRecursively {
   )
   if (Test-Path -LiteralPath $Path -PathType 'Container') {
     $emptyTempDir = New-TemporaryDirectory
-    # Quietly use Robocopy to sync the Path with an empty directory.
     & robocopy.exe $emptyTempDir $Path /purge | Out-Null
     Remove-Item $Path -Recurse -Force
     Remove-Item $emptyTempDir -Force
-    # # Get-ChildItem $(Join-Path $Path '*') -Recurse | Remove-Item -Force -Recurse
-    # del /f /s /q $Path 1>nul
-    # start /wait rmdir $Path /s /q | Out-Null
   }
 }
 
+<#
+  .Synopsis
+  Extract a .tar.gz file to a directory using 7z.
+
+  .Description
+  7z doesn't have the capability to deal with both tar and gz in a single
+  operation so this function chains them together in a piped operation.
+#>
 Function Expand-TarGzToDirectory {
   Param (
     [Parameter(Mandatory=$True, Position=0)]
@@ -90,6 +108,13 @@ Function Expand-TarGzToDirectory {
   $False
 }
 
+<#
+  .Synopsis
+  Extract a .7z archive to a directory using 7z.
+
+  .Description
+  Purely a shorthand function to simplify 7z extraction.
+#>
 Function Expand-7zToDirectory {
   Param (
     [Parameter(Mandatory=$True, Position=0)]
