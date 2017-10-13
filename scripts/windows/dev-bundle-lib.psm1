@@ -43,8 +43,8 @@ Function Read-VariableFromShellScript {
     [Parameter(Mandatory=$True, Position=1)]
     [string]$Name
   )
-  $v = Select-String -Path $Path -Pattern "^\s*${Name}=(\S+)" | `
-    % { $_.Matches[0].Groups[1].Value } | `
+  $v = Select-String -Path $Path -Pattern "^\s*${Name}=(\S+)" |
+    % { $_.Matches[0].Groups[1].Value } |
     Select-Object -First 1
   $v = $v.Trim()
   $v
@@ -127,8 +127,8 @@ Function Expand-7zToDirectory {
 }
 
 Export-ModuleMember -Function `
-  Expand-7zToDirectory, `
-  Expand-TarGzToDirectory, `
-  Get-MeteorPlatform, `
-  Read-VariableFromShellScript, `
+  Expand-7zToDirectory,
+  Expand-TarGzToDirectory,
+  Get-MeteorPlatform,
+  Read-VariableFromShellScript,
   Remove-DirectoryRecursively
