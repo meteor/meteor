@@ -31,14 +31,14 @@
       "from": "isarray@>=1.0.0 <1.1.0"
     },
     "mongodb": {
-      "version": "2.2.32",
-      "resolved": "https://registry.npmjs.org/mongodb/-/mongodb-2.2.32.tgz",
-      "from": "mongodb@2.2.32"
+      "version": "2.2.33",
+      "resolved": "https://registry.npmjs.org/mongodb/-/mongodb-2.2.33.tgz",
+      "from": "mongodb@2.2.33"
     },
     "mongodb-core": {
-      "version": "2.1.16",
-      "resolved": "https://registry.npmjs.org/mongodb-core/-/mongodb-core-2.1.16.tgz",
-      "from": "mongodb-core@2.1.16"
+      "version": "2.1.17",
+      "resolved": "https://registry.npmjs.org/mongodb-core/-/mongodb-core-2.1.17.tgz",
+      "from": "mongodb-core@2.1.17"
     },
     "process-nextick-args": {
       "version": "1.0.7",
