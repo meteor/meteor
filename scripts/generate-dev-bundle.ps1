@@ -319,14 +319,23 @@ $env:GYP_MSVS_VERSION = "2015"
 $env:npm_config_nodedir = "$DIR"
 $env:npm_config_cache = "$dirNpmCache"
 
+# Allow running $dirBin commands like node and npm.
+$env:PATH = "$env:PATH;$dirBin"
+
 # Install Node.js and npm and get their paths to use from here on.
 $toolCmds = Add-NodeAndNpm
 
+"Location of node.exe:"
+& Get-Command node | Select-Object -ExpandProperty Definition
+
 "Node process.versions:"
-& "$($toolCmds.node)" -p 'process.versions'
+& node -p 'process.versions'
+
+"Location of npm.cmd:"
+& Get-Command npm | Select-Object -ExpandProperty Definition
 
 "Npm 'version':"
-& "$($toolCmds.npm)" version
+& npm version
 
 npm config set loglevel error
 
