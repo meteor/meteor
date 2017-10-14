@@ -33,6 +33,7 @@ var VALID_ARCHITECTURES = {
   "os.osx.x86_64": true,
   "os.linux.x86_64": true,
   "os.linux.x86_32": true,
+  "os.windows.x86_64": true,
   "os.windows.x86_32": true
 };
 
