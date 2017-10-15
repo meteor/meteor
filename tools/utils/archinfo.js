@@ -182,6 +182,25 @@ var host = function () {
   return _host;
 };
 
+// In order to springboard to earlier Meteor releases that did not have
+// 64-bit Windows builds, Windows installations must be allowed to
+// download 32-bit builds of meteor-tool.
+exports.acceptableMeteorToolArches = function () {
+  if (os.platform() === "win32") {
+    switch (utils.architecture()) {
+    case "x86_32":
+      return ["os.windows.x86_32"];
+    case "x86_64":
+      return [
+        "os.windows.x86_64",
+        "os.windows.x86_32",
+      ];
+    }
+  }
+
+  return [host()];
+};
+
 // True if `host` (an architecture name such as 'os.linux.x86_64') can run
 // programs of architecture `program` (which might be something like 'os',
 // 'os.linux', or 'os.linux.x86_64').

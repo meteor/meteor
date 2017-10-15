@@ -201,8 +201,11 @@ export function updateMeteorToolSymlink(printErrors) {
       latestReleaseToolPackage,
       tropohouse.default.packagePath(latestReleaseToolPackage,
                                      latestReleaseToolVersion));
-    var toolRecord = _.findWhere(toolIsopack.toolsOnDisk,
-                                 {arch: archinfo.host()});
+
+    var toolRecord = null;
+    archinfo.acceptableMeteorToolArches().some(arch => {
+      return toolRecord = _.findWhere(toolIsopack.toolsOnDisk, { arch });
+    });
 
     // XXX maybe we shouldn't throw from this background thing
     // counter: this is super weird and should never ever happen.
