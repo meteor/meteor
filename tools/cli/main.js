@@ -15,6 +15,7 @@ var projectContextModule = require('../project-context.js');
 var catalog = require('../packaging/catalog/catalog.js');
 var buildmessage = require('../utils/buildmessage.js');
 var httpHelpers = require('../utils/http-helpers.js');
+const archinfo = require('../utils/archinfo.js');
 
 var main = exports;
 
@@ -425,7 +426,6 @@ var springboard = function (rel, options) {
     console.log("WILL SPRINGBOARD TO", rel.getToolsPackageAtVersion());
   }
 
-  const archinfo = require('../utils/archinfo.js');
   const toolsPkg = rel.getToolsPackage();
   const toolsVersion = rel.getToolsVersion();
   const serverArchitectures = catalog.official.filterArchesWithBuilds(
@@ -497,7 +497,22 @@ var springboard = function (rel, options) {
     throw Error("missing tool for " + archinfo.host() + " in " +
                 toolsPkg + "@" + toolsVersion);
   }
-  var executable = files.pathJoin(packagePath, toolRecord.path, 'meteor');
+
+  const newToolsDir = files.pathJoin(packagePath, toolRecord.path);
+  if (files.realpath(newToolsDir) ===
+      files.realpath(files.getCurrentToolsDir())) {
+    if (options.mayReturn) {
+      // Return instead of springboarding (or throwing an exception), if
+      // we are allowed to keep using the current tools.
+      return;
+    }
+
+    throw new Error(
+      "Cannot springboard to same tools directory: " + newToolsDir
+    );
+  }
+
+  const executable = files.pathJoin(newToolsDir, "meteor");
 
   // Strip off the "node" and "meteor.js" from argv and replace it with the
   // appropriate tools's meteor shell script.
@@ -1135,10 +1150,23 @@ Fiber(function () {
   // update, because the correct tools version will have been chosen
   // the first time around. It will also never happen if the current
   // release is a checkout, because that doesn't make any sense.
-  if (release.current && release.current.isProperRelease() &&
-      release.current.getToolsPackageAtVersion() !== files.getToolsVersion()) {
-    springboard(release.current, { fromApp: releaseFromApp });
-    // Does not return!
+  if (release.current &&
+      release.current.isProperRelease()) {
+    if (files.getToolsVersion() !==
+        release.current.getToolsPackageAtVersion()) {
+      springboard(release.current, {
+        fromApp: releaseFromApp,
+        mayReturn: false,
+      })
+      // Does not return!
+    } else if (archinfo.canSwitchTo64Bit()) {
+      springboard(release.current, {
+        fromApp: releaseFromApp,
+        // Switching to a 64-bit meteor-tool build may fail, in which case
+        // we should continue on as usual.
+        mayReturn: true,
+      });
+    }
   }
 
   // Check for the '--help' option.

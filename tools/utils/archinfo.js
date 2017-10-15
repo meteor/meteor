@@ -201,6 +201,14 @@ exports.acceptableMeteorToolArches = function () {
   return [host()];
 };
 
+// 64-bit Windows machines that have been using a 32-bit version of Meteor
+// are eligible to switch to 64-bit beginning with Meteor 1.6, which is
+// the first version of Meteor that contains this code.
+exports.canSwitchTo64Bit = function () {
+  return utils.architecture() === "x86_64" &&
+    host === "os.windows.x86_32";
+};
+
 // True if `host` (an architecture name such as 'os.linux.x86_64') can run
 // programs of architecture `program` (which might be something like 'os',
 // 'os.linux', or 'os.linux.x86_64').
