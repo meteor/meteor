@@ -10,9 +10,9 @@ branches:
 notifications:
   email: false
 node_js:
-  - 4
-  - 6
   - 8
+  - 6
+  - 4
 before_install:
   - npm i -g npm@^5.3.0
   - npm -v
