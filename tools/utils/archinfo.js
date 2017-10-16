@@ -206,7 +206,7 @@ exports.acceptableMeteorToolArches = function () {
 // the first version of Meteor that contains this code.
 exports.canSwitchTo64Bit = function () {
   return utils.architecture() === "x86_64" &&
-    host === "os.windows.x86_32";
+    host() === "os.windows.x86_32";
 };
 
 // True if `host` (an architecture name such as 'os.linux.x86_64') can run
