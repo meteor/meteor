@@ -1,3 +1,13 @@
+// The NPM `coffeescript` module requires Node 6+; but instead of checking for
+// a Node runtime version, detect support for async functions, which were
+// added in Node 7.6.
+try {
+  new Function('async () => {}')();
+} catch (exception) {
+  throw new Error('Your runtime does not support this version of CoffeeScript. Please upgrade to Meteor 1.6 or later, or use a 1.x version of CoffeeScript.');
+}
+
+
 Package.describe({
   name: 'coffeescript-compiler',
   summary: 'Compiler for CoffeeScript code, supporting the coffeescript package',
