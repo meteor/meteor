@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Unstyled version of login widgets",
-  version: "1.3.0-rc.10"
+  version: "1.3.0-rc.11"
 });
 
 Package.onUse(function (api) {
