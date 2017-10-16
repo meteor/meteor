@@ -6,6 +6,7 @@ import {Profile} from '../tool-env/profile.js';
 import {
   optimisticReadFile,
   optimisticReaddir,
+  optimisticStatOrNull,
   optimisticLStatOrNull,
 } from "../fs/optimistic.js";
 
@@ -550,7 +551,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         if (isDirectory) {
           walk(thisAbsFrom, thisRelTo, _currentRealRootDir);
 
-        } else if (fileStatus.isSymbolicLink()) {
+        } else if (symlink && fileStatus.isSymbolicLink()) {
           symlinkWithOverwrite(
             // Symbolic links pointing to relative external paths are less
             // portable than absolute links, so getExternalPath() is
@@ -564,6 +565,13 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           this.usedAsFile[thisRelTo] = true;
 
         } else {
+          // Fall back to copying the file, but make sure it's really a
+          // file first, just in case it was a forbidden symbolic link.
+          fileStatus = optimisticStatOrNull(thisAbsFrom);
+          if (! (fileStatus && fileStatus.isFile())) {
+            return;
+          }
+
           // XXX can't really optimize this copying without reading
           // the file into memory to calculate the hash.
           files.writeFile(
