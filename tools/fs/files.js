@@ -55,10 +55,13 @@ const YIELD_ALLOWED = !! (
   ! JSON.parse(process.env.METEOR_DISABLE_FS_FIBERS));
 
 function canYield() {
-  return YIELD_ALLOWED &&
-    Fiber.current &&
+  return Fiber.current &&
     Fiber.yield &&
     ! Fiber.yield.disallowed;
+}
+
+function mayYield() {
+  return YIELD_ALLOWED && canYield();
 }
 
 // given a predicate function and a starting path, traverse upwards
@@ -303,8 +306,7 @@ files.rm_recursive = Profile("files.rm_recursive", (path) => {
   try {
     rimraf.sync(files.convertToOSPath(path));
   } catch (e) {
-    if (e.code === "ENOTEMPTY" &&
-        canYield()) {
+    if (e.code === "ENOTEMPTY" && canYield()) {
       files.rm_recursive_async(path).await();
       return;
     }
@@ -1533,7 +1535,7 @@ function wrapFsFunc(fsFuncName, pathArgIndices, options) {
       const dirty = options && options.dirty;
       const dirtyFn = typeof dirty === "function" ? dirty : null;
 
-      if (canYield() &&
+      if (mayYield() &&
           shouldBeSync &&
           ! isQuickie) {
         const promise = new Promise((resolve, reject) => {
