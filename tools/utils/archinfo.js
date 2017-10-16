@@ -205,7 +205,12 @@ exports.acceptableMeteorToolArches = function () {
 // are eligible to switch to 64-bit beginning with Meteor 1.6, which is
 // the first version of Meteor that contains this code.
 exports.canSwitchTo64Bit = function () {
-  return utils.architecture() === "x86_64" &&
+  // Automatically switching from 32-bit to 64-bit Windows builds is
+  // disabled for the time being, since downloading additional builds of
+  // meteor-tool isn't stable enough at the moment (on Windows, at least)
+  // to introduce in a release candidate.
+  return false &&
+    utils.architecture() === "x86_64" &&
     host() === "os.windows.x86_32";
 };
 
