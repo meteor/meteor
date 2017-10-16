@@ -550,28 +550,32 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
         if (isDirectory) {
           walk(thisAbsFrom, thisRelTo, _currentRealRootDir);
+          return;
+        }
 
-        } else if (symlink && fileStatus.isSymbolicLink()) {
-          symlinkWithOverwrite(
-            // Symbolic links pointing to relative external paths are less
-            // portable than absolute links, so getExternalPath() is
-            // preferred if it returns a path.
-            getExternalPath() || files.readlink(thisAbsFrom),
-            files.pathResolve(this.buildPath, thisRelTo)
-          );
+        if (fileStatus.isSymbolicLink()) {
+          // Symbolic links pointing to relative external paths are less
+          // portable than absolute links, so getExternalPath() is
+          // preferred if it returns a path.
+          const linkSource = getExternalPath() ||
+            files.readlink(thisAbsFrom);
 
-          // A symlink counts as a file, as far as "can you put something under
-          // it" goes.
-          this.usedAsFile[thisRelTo] = true;
+          const linkTarget =
+            files.pathResolve(this.buildPath, thisRelTo);
 
-        } else {
-          // Fall back to copying the file, but make sure it's really a
-          // file first, just in case it was a forbidden symbolic link.
-          fileStatus = optimisticStatOrNull(thisAbsFrom);
-          if (! (fileStatus && fileStatus.isFile())) {
+          if (symlinkIfPossible(linkSource, linkTarget)) {
+            // A symlink counts as a file, as far as "can you put
+            // something under it" goes.
+            this.usedAsFile[thisRelTo] = true;
             return;
           }
+        }
 
+        // Fall back to copying the file, but make sure it's really a file
+        // first, just in case it was a symbolic link to a directory that
+        // could not be created above.
+        fileStatus = optimisticStatOrNull(thisAbsFrom);
+        if (fileStatus && fileStatus.isFile()) {
           // XXX can't really optimize this copying without reading
           // the file into memory to calculate the hash.
           files.writeFile(
@@ -723,6 +727,15 @@ function atomicallyRewriteFile(path, data, options) {
     } else {
       throw e;
     }
+  }
+}
+
+function symlinkIfPossible(source, target) {
+  try {
+    symlinkWithOverwrite(source, target);
+    return true;
+  } catch (e) {
+    return false;
   }
 }
 
