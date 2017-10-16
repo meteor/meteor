@@ -30,6 +30,11 @@ Tinytest.add "coffeescript - import local module exported by a CoffeeScript nati
   test.isTrue testingForNativeImportedModule123456789?
 
 
+# CoffeeScript 2 is active, with its conforming-to-ES2015 breaking changes
+Tinytest.add "coffeescript - ES2015 conformity", (test) ->
+	f = (a = 1) -> a
+	test.isTrue f(null) is null # `f(null)` would be 1 in CoffeeScript 1.x
+
 # JSX
 Tinytest.add "coffeescript - JSX", (test) ->
 	# Mock React
