@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Reactive dictionary",
-  version: '1.1.9'
+  version: '1.1.10'
 });
 
 Package.onUse(function (api) {
@@ -16,5 +16,6 @@ Package.onTest(function (api) {
   api.use('reactive-dict');
   api.use('tracker');
   api.use('underscore');
+  api.use('reload');
   api.addFiles('reactive-dict-tests.js');
 });

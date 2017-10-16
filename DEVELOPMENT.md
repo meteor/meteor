@@ -1,12 +1,12 @@
 # Development
 
-This document is intended to provide instructions and helpful information for developers who are [contributing](Contributing.md) [pull-requests](https://github.com/meteor/meteor/pulls/) (or otherwise making changes) to **Meteor Core itself (not Meteor apps)**.
+This document is intended to provide instructions and helpful information for developers who are [contributing](CONTRIBUTING.md) [pull-requests](https://github.com/meteor/meteor/pulls/) (or otherwise making changes) to **Meteor Core itself (not Meteor apps)**.
 
 As the first suggestion to the reader of this document: If, during the course of development, a Meteor-specific process is revealed which is helpful and not documented here, please consider editing this document and submitting a pull-request.  Another developer will be thankful!
 
 ## Running from a Git checkout
 
-If you want to run on the bleeding edge, or [help contribute to Meteor](Contributing.md), you
+If you want to run on the bleeding edge, or [help contribute to Meteor](CONTRIBUTING.md), you
 can run Meteor directly from a Git checkout using these steps:
 
 1. **Clone from GitHub**
@@ -55,7 +55,7 @@ can run Meteor directly from a Git checkout using these steps:
 The following are some distinct differences you must pay attention to when running Meteor from a checkout:
 
   * You cannot pin apps to specific Meteor releases or change the release using `--release`.
-  
+
 ## The "Dev Bundle"
 
 The "dev bundle" (identified as the `dev_bundle` in the folder structure) is a generated bundle of code, packages and tools which are essential to providing the functionality of the Meteor tool (`meteor`) and the app bundles which it builds.
@@ -68,13 +68,17 @@ When `meteor` is run from a checkout, a `dev_bundle` is automatically downloaded
 * Packages [used by `meteor-tool`](scripts/dev-bundle-tool-package.js)
 * Packages [used by the server bundle](scripts/dev-bundle-server-package.js)
 
-While it may be tempting to make changes to these variables, please consider the repercussions (including compatibility and stability) and make sure to test changes extensively.  For example, major version changes (especially to Node.js and MongoDB) usually requires substantial changes to other components.
+While it may be tempting to make changes to these variables, please consider the repercussions (including compatibility and stability) and make sure to test changes extensively.  For example, major version changes (especially to Node.js and MongoDB) usually require substantial changes to other components.
 
 ### "Dev Bundle" versions
 
-The working version number of the `dev_bundle` to be downloaded (or generated) is stored as `BUNDLE_VERSION` at the top of the [`meteor`](./meteor) script.  When submitting a pull request which changes components of the `dev_bundle`, the minor version should be bumped (at the very least).  In local development, it is advisable to use a different major version (e.g. `100.0.0`) so as not to clash with the official versions which cached locally.
+The working version number of the `dev_bundle` to be downloaded (or generated) is stored as `BUNDLE_VERSION` at the top of the [`meteor`](./meteor) script.  When submitting a pull request which changes components of the `dev_bundle`, the minor version should be bumped (at the very least).  In local development, it is advisable to use a different major version (e.g. `100.0.0`) so as not to clash with the official versions which are cached locally.
 
-Cached versions of the `dev_bundle` are stored in the root directory of the checkout.  Keeping them around will prevent the need to re-download them when switching between branches, but they do become quite large as they collect so delete them as necessary!
+To enable caching of downloaded `dev_bundle` versions, set the `SAVE_DEV_BUNDLE_TARBALL` environment variable before running Meteor, for example:
+
+    SAVE_DEV_BUNDLE_TARBALL=1 ./meteor
+
+Cached versions of the `dev_bundle` are stored in the root directory of the checkout.  Keeping them around will prevent the need to re-download them when switching between branches, but they do become quite large as they collect, so delete them as necessary!
 
 ### Rebuilding the "Dev Bundle"
 
@@ -90,7 +94,7 @@ This will generate a new tarball (`dev_bundle_<Platform>_<arch>_<version>.tar.gz
 
 ### Submitting "Dev Bundle" Pull Requests
 
-It's important to note that while `dev_bundle` pull requests are accepted/reviewed, a new `dev_bundle` can only be published to MDG's Meteor infrastructure by an MDG staff member. This means that the build tool and package tests of submitted `dev_bundle` pull requests will always initially fail (since the new `dev_bundle` hasn't yet been built/published by MDG, which means it can't be downloaded by Meteor's continuous integration environment). 
+It's important to note that while `dev_bundle` pull requests are accepted/reviewed, a new `dev_bundle` can only be published to MDG's Meteor infrastructure by an MDG staff member. This means that the build tool and package tests of submitted `dev_bundle` pull requests will always initially fail (since the new `dev_bundle` hasn't yet been built/published by MDG, which means it can't be downloaded by Meteor's continuous integration environment).
 
 Pull requests that contain `dev_bundle` changes will be noted by repo collaborators, and a request to have a new `dev_bundle` built/published will be forwarded to MDG.
 

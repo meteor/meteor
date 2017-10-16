@@ -4,7 +4,7 @@ import forwarded from 'forwarded-http';
 // received it on localhost, and all proxies involved received on
 // localhost (supports "forwarded" and "x-forwarded-for").
 const isLocalConnection = (req) => {
-  const localhostRegexp = /^\s*(127\.0\.0\.1|\[?::1\]?)\s*$/;
+  const localhostRegexp = /^\s*(.*127\.0\.0\.1|\[?::1\]?)\s*$/;
   const request = Object.create(req);
   request.connection = Object.assign(
     {},

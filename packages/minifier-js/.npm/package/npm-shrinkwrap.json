@@ -10,10 +10,10 @@
       "resolved": "https://registry.npmjs.org/source-map/-/source-map-0.5.7.tgz",
       "from": "source-map@>=0.5.1 <0.6.0"
     },
-    "uglify-es": {
+    "uglify-js": {
       "version": "3.0.28",
-      "resolved": "https://registry.npmjs.org/uglify-es/-/uglify-es-3.0.28.tgz",
-      "from": "uglify-es@3.0.28"
+      "resolved": "https://registry.npmjs.org/uglify-js/-/uglify-js-3.0.28.tgz",
+      "from": "uglify-js@3.0.28"
     }
   }
 }

@@ -208,6 +208,10 @@ export class SourceProcessorSet {
       });
     }
 
+    if (filename === ".meteorignore") {
+      return new SourceClassification("meteor-ignore");
+    }
+
     // Now check to see if a plugin registered for an extension. We prefer
     // longer extensions.
     const parts = filename.split('.');
@@ -303,8 +307,14 @@ class SourceClassification {
     legacyIsTemplate,
     arch,
   } = {}) {
-    const knownTypes = ['extension', 'filename', 'legacy-handler', 'wrong-arch',
-                        'unmatched'];
+    const knownTypes = [
+      'extension',
+      'filename',
+      'legacy-handler',
+      'wrong-arch',
+      'unmatched',
+      'meteor-ignore',
+    ];
     if (knownTypes.indexOf(type) === -1) {
       throw Error(`Unknown SourceClassification type ${ type }`);
     }

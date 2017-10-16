@@ -4,7 +4,7 @@ meteorJsMinify = function (source) {
   var result = {};
   var NODE_ENV = process.env.NODE_ENV || "development";
 
-  uglify = uglify || Npm.require("uglify-es");
+  uglify = uglify || Npm.require("uglify-js");
 
   try {
     var uglifyResult = uglify.minify(source, {

@@ -8,13 +8,16 @@ applications.
 
 With Meteor you write apps:
 
-* in pure JavaScript
+* in modern JavaScript
 * that send data over the wire, rather than HTML
 * using your choice of popular open-source libraries
 
-Try the getting started [tutorial](https://www.meteor.com/try).
+Try a getting started tutorial:
+ * [React](https://www.meteor.com/tutorials/react/creating-an-app)
+ * [Blaze](https://www.meteor.com/tutorials/blaze/creating-an-app)
+ * [Angular](https://www.meteor.com/tutorials/angular/creating-an-app)
 
-Next, read the [guide](http://guide.meteor.com) or the reference documentation at http://docs.meteor.com/.
+Next, read the [guide](https://guide.meteor.com) and the [documentation](https://docs.meteor.com/).
 
 ## Quick Start
 
@@ -49,8 +52,8 @@ Building an application with Meteor?
 
 Interested in helping or contributing to Meteor?  These resources will help:
 
-* [Core development guide](Development.md)
-* [Contribution guidelines](Contributing.md)
+* [Core development guide](DEVELOPMENT.md)
+* [Contribution guidelines](CONTRIBUTING.md)
 * [Feature requests](https://github.com/meteor/meteor-feature-requests/)
 * [Issue tracker](https://github.com/meteor/meteor/issues)
 

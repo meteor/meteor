@@ -94,7 +94,7 @@ const handleError = (msg, throwError = true) => {
   const error = new Meteor.Error(
     403, 
     Accounts._options.ambiguousErrorMessages
-      ? "Login failure. Please check your login credentials."
+      ? "Something went wrong. Please check your credentials."
       : msg
   );
   if (throwError) {

@@ -50,7 +50,7 @@ See [Modules » CoffeeScript Syntax](http://docs.meteor.com/packages/modules.htm
 
 ### Testing This Package
 
-Follow the [instructions](https://github.com/meteor/meteor/blob/devel/Development.md#tests)
+Follow the [instructions](https://github.com/meteor/meteor/blob/devel/DEVELOPMENT.md#tests)
 to check out the Meteor repo and run `test-packages`.
 Once you can do that successfully, to test the `coffeescript` package run:
 

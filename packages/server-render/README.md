@@ -64,7 +64,7 @@ import { onPageLoad } from "meteor/server-render";
 
 onPageLoad(async sink => {
   const App = (await import("/imports/Client.js")).default;
-  ReactDOM.render(
+  ReactDOM.hydrate(
     <App />,
     document.getElementById("app")
   );
@@ -76,7 +76,7 @@ Note that the `onPageLoad` callback function is allowed to return a
 implemented by an `async` function (as in the client case above).
 
 Note also that the client example does not end up calling any methods of
-the `sink` object, because `ReactDOM.render` has its own similar API. In
+the `sink` object, because `ReactDOM.hydrate` has its own similar API. In
 fact, you are not even required to use the `onPageLoad` API on the client,
 if you have your own ideas about how the client should do its rendering.
 

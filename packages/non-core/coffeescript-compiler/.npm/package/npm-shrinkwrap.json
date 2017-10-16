@@ -6,9 +6,9 @@
       "from": "coffeescript@1.12.7"
     },
     "source-map": {
-      "version": "0.5.6",
-      "resolved": "https://registry.npmjs.org/source-map/-/source-map-0.5.6.tgz",
-      "from": "source-map@0.5.6"
+      "version": "0.5.7",
+      "resolved": "https://registry.npmjs.org/source-map/-/source-map-0.5.7.tgz",
+      "from": "source-map@0.5.7"
     }
   }
 }
