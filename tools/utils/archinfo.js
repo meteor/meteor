@@ -128,6 +128,14 @@ var utils = require('./utils.js');
  * to some of these strings.
  */
 
+// Valid architectures that Meteor officially supports.
+export const VALID_ARCHITECTURES = {
+  "os.osx.x86_64": true,
+  "os.linux.x86_64": true,
+  "os.linux.x86_32": true,
+  "os.windows.x86_64": true,
+  "os.windows.x86_32": true,
+};
 
 // Returns the fully qualified arch of this host -- something like
 // "os.linux.x86_32" or "os.osx.x86_64". Must be called inside

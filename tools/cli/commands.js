@@ -28,15 +28,6 @@ var DEPLOY_ARCH = 'os.linux.x86_64';
 // The default port that the development server listens on.
 var DEFAULT_PORT = '3000';
 
-// Valid architectures that Meteor officially supports.
-export const VALID_ARCHITECTURES = {
-  "os.osx.x86_64": true,
-  "os.linux.x86_64": true,
-  "os.linux.x86_32": true,
-  "os.windows.x86_64": true,
-  "os.windows.x86_32": true,
-};
-
 // __dirname - the location of the current executing file
 var __dirnameConverted = files.convertToStandardPath(__dirname);
 
@@ -64,7 +55,7 @@ var qualifySitename = function (site) {
 var showInvalidArchMsg = function (arch) {
   Console.info("Invalid architecture: " + arch);
   Console.info("The following are valid Meteor architectures:");
-  _.each(_.keys(VALID_ARCHITECTURES), function (va) {
+  _.each(_.keys(archinfo.VALID_ARCHITECTURES), function (va) {
     Console.info(
       Console.command(va),
       Console.options({ indent: 2 }));
@@ -921,7 +912,7 @@ var buildCommand = function (options) {
   // architectures. See archinfo.js for more information on what the
   // architectures are, what they mean, et cetera.
   if (options.architecture &&
-      !_.has(VALID_ARCHITECTURES, options.architecture)) {
+      !_.has(archinfo.VALID_ARCHITECTURES, options.architecture)) {
     showInvalidArchMsg(options.architecture);
     return 1;
   }
@@ -2347,7 +2338,7 @@ main.registerCommand({
 
   // Check that we are asking for a valid architecture.
   var arch = options.args[0];
-  if (!_.has(VALID_ARCHITECTURES, arch)){
+  if (!_.has(archinfo.VALID_ARCHITECTURES, arch)){
     showInvalidArchMsg(arch);
     return 1;
   }

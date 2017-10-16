@@ -2517,8 +2517,7 @@ class ServerTarget extends JsImageTarget {
     // Script that fetches the dev_bundle and runs the server bootstrap
     // XXX this is #GalaxyLegacy, the generated start.sh is not really used by
     // anything anymore
-    const { VALID_ARCHITECTURES } = require("../cli/commands.js");
-    if (VALID_ARCHITECTURES[self.arch] !== true) {
+    if (archinfo.VALID_ARCHITECTURES[self.arch] !== true) {
       throw new Error(
         `MDG does not publish dev_bundles for arch: ${self.arch}`
       );
