@@ -291,6 +291,7 @@ selftest.define("compiler plugins - duplicate extension", () => {
   s.write('packages/local-plugin/plugin.js',
           s.read('packages/local-plugin/plugin.js').replace('myext', 'xext'));
   run.match('Modified -- restarting');
+  run.waitSecs(30);
 
   run.stop();
 });

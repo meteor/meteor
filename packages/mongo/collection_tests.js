@@ -138,15 +138,21 @@ Tinytest.add('collection - calling native find with $reverse hint should reverse
   }
 );
 
-Tinytest.add('collection - calling native find with good hint and maxTimeMs should succeed',
-  function(test) {
+Tinytest.addAsync('collection - calling native find with good hint and maxTimeMs should succeed',
+  function(test, done) {
     var collectionName = 'findOptions3' + test.id;
     var collection = new Mongo.Collection(collectionName);
     collection.insert({a: 1});
-    if (Meteor.isServer) {
-      collection.rawCollection().createIndex({a: 1});
-    }
 
-    test.equal(collection.find({}, {hint: {a: 1}, maxTimeMs: 1000}).count(), 1);
+    Promise.resolve(
+      Meteor.isServer &&
+        collection.rawCollection().createIndex({ a: 1 })
+    ).then(() => {
+      test.equal(collection.find({}, {
+        hint: {a: 1},
+        maxTimeMs: 1000
+      }).count(), 1);
+      done();
+    }).catch(error => test.fail(error.message));
   }
 );

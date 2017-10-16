@@ -1,9 +1,8 @@
 import _ from 'underscore';
 import chalk from 'chalk';
 import child_process from 'child_process';
-import eachline from 'eachline';
 
-import { load as loadIsopacket } from '../tool-env/isopackets.js';
+import { loadIsopackage } from '../tool-env/isopackets.js';
 import runLog from '../runners/run-log.js';
 import { Console } from '../console/console.js';
 import files from '../fs/files.js';
@@ -134,6 +133,8 @@ export class AndroidRunTarget extends CordovaRunTarget {
   }
 
   async tailLogs(cordovaProject, target) {
+    const { transform } = require("../utils/eachline.js");
+
     cordovaProject.runCommands(`tailing logs for ${this.displayName}`, async () => {
       await this.checkPlatformRequirementsAndSetEnv(cordovaProject);
 
@@ -143,10 +144,9 @@ export class AndroidRunTarget extends CordovaRunTarget {
         `CordovaLog:${logLevel}`, `chromium:${logLevel}`,
         `SystemWebViewClient:${logLevel}`, '*:F'];
 
-      const { Log } =
-          loadIsopacket('cordova-support')['logging'];
+      const { Log } = loadIsopackage('logging');
 
-      const logStream = eachline((line) => {
+      const logStream = transform(line => {
         const logEntry = logFromAndroidLogcatLine(Log, line);
         if (logEntry) {
           return `${logEntry}\n`;

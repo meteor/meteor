@@ -7,9 +7,8 @@
  * these outside of a fiber they will explode!
  */
 
-var path = Npm.require('path');
 var MongoDB = NpmModuleMongodb;
-var Future = Npm.require(path.join('fibers', 'future'));
+var Future = Npm.require('fibers/future');
 
 MongoInternals = {};
 MongoTest = {};

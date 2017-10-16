@@ -8,7 +8,7 @@ var catalogLocal = require('./packaging/catalog/catalog-local.js');
 var Console = require('./console/console.js').Console;
 var files = require('./fs/files.js');
 var isopackCacheModule = require('./isobuild/isopack-cache.js');
-var isopackets = require('./tool-env/isopackets.js');
+import { loadIsopackage } from './tool-env/isopackets.js';
 var packageMapModule = require('./packaging/package-map.js');
 var release = require('./packaging/release.js');
 var tropohouse = require('./packaging/tropohouse.js');
@@ -748,8 +748,9 @@ _.extend(ProjectContext.prototype, {
       var constraint = utils.parsePackageConstraint(
         // Note that this used to be an exact name@=version constraint,
         // before #7084 eliminated these constraints completely. They
-        // were reinstated in Meteor 1.4.3 as name@version constraints.
-        packageName + "@" + version);
+        // were reinstated in Meteor 1.4.3 as name@version constraints,
+        // and further refined to name@~version constraints in 1.5.2.
+        packageName + "@~" + version);
       // Add a constraint but no dependency (we don't automatically use
       // all local packages!):
       depsAndConstraints.constraints.push(constraint);
@@ -788,20 +789,15 @@ _.extend(ProjectContext.prototype, {
   },
 
   _buildResolver: function () {
-    var self = this;
+    const { ConstraintSolver } = loadIsopackage('constraint-solver');
 
-    var constraintSolverPackage =
-          isopackets.load('constraint-solver')['constraint-solver'];
-    var resolver =
-          new constraintSolverPackage.ConstraintSolver.PackagesResolver(
-            self.projectCatalog, {
-              nudge: function () {
-                Console.nudge(true);
-              },
-              Profile: Profile,
-              resultCache: self._resolverResultCache
-            });
-    return resolver;
+    return new ConstraintSolver.PackagesResolver(this.projectCatalog, {
+      nudge() {
+        Console.nudge(true);
+      },
+      Profile: Profile,
+      resultCache: this._resolverResultCache
+    });
   },
 
   _downloadMissingPackages: Profile('_downloadMissingPackages', function () {

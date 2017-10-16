@@ -14,6 +14,7 @@ var release = require('../packaging/release.js');
 import * as cordova from '../cordova';
 import { CordovaBuilder } from '../cordova/builder.js';
 import { closeAllWatchers } from "../fs/safe-watcher.js";
+import { eachline } from "../utils/eachline.js";
 
 // Parse out s as if it were a bash command line.
 var bashParse = function (s) {
@@ -86,13 +87,7 @@ _.extend(AppProcess.prototype, {
     // Start the app!
     self.proc = self._spawn();
 
-    // Send stdout and stderr to the runLog
-    var realEachline = require('eachline');
-    function eachline(stream, encoding, callback) {
-      realEachline(stream, encoding, (...args) => void(callback(...args)));
-    }
-
-    eachline(self.proc.stdout, 'utf8', async function (line) {
+    eachline(self.proc.stdout, function (line) {
       if (line.match(/^LISTENING\s*$/)) {
         // This is the child process telling us that it's ready to receive
         // connections.  (It does this because we told it to with
@@ -104,7 +99,7 @@ _.extend(AppProcess.prototype, {
       }
     });
 
-    eachline(self.proc.stderr, 'utf8', async function (line) {
+    eachline(self.proc.stderr, function (line) {
       if (self.debugPort &&
           line.indexOf("Debugger listening on") >= 0) {
         Console.enableProgressDisplay(false);

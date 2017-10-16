@@ -953,3 +953,149 @@ selftest.define("show readme excerpt",  function () {
   run.matchErr("Documentation not found");
   run.expectExit(1);
 });
+
+selftest.define("tilde version constraints", [], function () {
+  var s = new Sandbox();
+
+  s.set("METEOR_WATCH_PRIORITIZE_CHANGED", "false");
+
+  s.createApp("tilde-app", "package-tests");
+  s.cd("tilde-app");
+
+  var run = s.run();
+
+  run.match("tilde-app");
+  run.match("proxy");
+  run.waitSecs(10);
+  run.match("MongoDB");
+  run.waitSecs(10);
+  run.match("your app");
+  run.waitSecs(10);
+  run.match("running at");
+  run.waitSecs(60);
+
+  var packages = s.read(".meteor/packages")
+    .replace(/\n*$/m, "\n");
+
+  function setTopLevelConstraint(constraint) {
+    s.write(
+      ".meteor/packages",
+      packages + "tilde-constraints" + (
+        constraint ? "@" + constraint : ""
+      ) + "\n"
+    );
+  }
+
+  setTopLevelConstraint("");
+  run.match(/tilde-constraints.*added, version 0\.4\.2/);
+  run.match("tilde-constraints.js");
+  run.waitSecs(10);
+
+  setTopLevelConstraint("0.4.0");
+  run.match("tilde-constraints.js");
+  run.match("server restarted");
+  run.waitSecs(10);
+
+  setTopLevelConstraint("~0.4.0");
+  run.match("tilde-constraints.js");
+  run.match("server restarted");
+  run.waitSecs(10);
+
+  setTopLevelConstraint("0.4.3");
+  run.match("error: No version of tilde-constraints satisfies all constraints");
+  run.waitSecs(10);
+
+  setTopLevelConstraint("~0.4.3");
+  run.match("error: No version of tilde-constraints satisfies all constraints");
+  run.waitSecs(10);
+
+  setTopLevelConstraint("0.3.0");
+  run.match("tilde-constraints.js");
+  run.match("server restarted");
+  run.waitSecs(10);
+
+  setTopLevelConstraint("~0.3.0");
+  run.match("error: No version of tilde-constraints satisfies all constraints");
+  run.waitSecs(10);
+
+  setTopLevelConstraint("0.5.0");
+  run.match("error: No version of tilde-constraints satisfies all constraints");
+  run.waitSecs(10);
+
+  setTopLevelConstraint("~0.5.0");
+  run.match("error: No version of tilde-constraints satisfies all constraints");
+  run.waitSecs(10);
+
+  s.write(
+    ".meteor/packages",
+    packages
+  );
+  run.match(/tilde-constraints.*removed/);
+  run.waitSecs(10);
+
+  s.write(
+    ".meteor/packages",
+    packages + "tilde-dependent\n"
+  );
+  run.match(/tilde-constraints.*added, version 0\.4\.2/);
+  run.match(/tilde-dependent.*added, version 0\.1\.0/);
+  run.match("tilde-constraints.js");
+  run.match("tilde-dependent.js");
+  run.waitSecs(10);
+
+  var depPackageJsPath = "packages/tilde-dependent/package.js"
+  var depPackageJs = s.read(depPackageJsPath);
+
+  function setDepConstraint(constraint) {
+    s.write(
+      depPackageJsPath,
+      depPackageJs.replace(
+        /tilde-constraints[^"]*/g, // Syntax highlighting hack: "
+        "tilde-constraints" + (
+          constraint ? "@" + constraint : ""
+        )
+      )
+    );
+  }
+
+  setDepConstraint("0.4.0");
+  run.match("tilde-constraints.js");
+  run.match("tilde-dependent.js");
+  run.match("server restarted");
+  run.waitSecs(10);
+
+  setDepConstraint("~0.4.0");
+  run.match("tilde-constraints.js");
+  run.match("tilde-dependent.js");
+  run.match("server restarted");
+  run.waitSecs(10);
+
+  setDepConstraint("0.3.0");
+  run.match("tilde-constraints.js");
+  run.match("tilde-dependent.js");
+  run.match("server restarted");
+  run.waitSecs(10);
+
+  // TODO The rest of these tests should cause version conflicts, but it
+  // seems like version constraints between local packages are ignored,
+  // which is a larger (preexisting) problem we should investigate.
+  /*
+  setDepConstraint("=0.4.0");
+  run.match("error: No version of tilde-constraints satisfies all constraints");
+  run.waitSecs(10);
+
+  setDepConstraint("~0.3.0");
+  run.match("error: No version of tilde-constraints satisfies all constraints");
+  run.waitSecs(10);
+
+  setDepConstraint("0.4.3");
+  run.match("error: No version of tilde-constraints satisfies all constraints");
+  run.waitSecs(10);
+
+  setDepConstraint("~0.4.3");
+  run.match("error: No version of tilde-constraints satisfies all constraints");
+  run.waitSecs(10);
+  */
+
+  run.stop();
+});

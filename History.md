@@ -1,8 +1,202 @@
 ## v.NEXT
 
+* iOS icons and launch screens have been updated to support iOS 11
+  [Issue #9196](https://github.com/meteor/meteor/issues/9196)
+  [PR #9198](https://github.com/meteor/meteor/pull/9198)
+
+## v1.5.2.2, 2017-10-02
+
+* Fixes a regression in 1.5.2.1 which resulted in the macOS firewall
+  repeatedly asking to "accept incoming network connections". While the
+  `node` binary in 1.5.2.1 was functionally the same as 1.5.2, it had
+  been recompiled on our build farm (which re-compiles all architectures
+  at the same time) to ensure compatibility with older (but still
+  supported) Linux distributions. Unfortunately, macOS took issue with
+  the binary having a different 'signature' (but same 'identifier') as
+  one it had already seen, and refused to permanently "allow" it in the
+  firewall. Our macOS `node` binaries are now signed with a certificate,
+  hopefully preventing this from occurring again.
+  [Issue #9139](https://github.com/meteor/meteor/issues/9139)
+
+* Fixes a regression in `accounts-base` caused by changes to the (now
+  deprecated) `connection.onReconnect` function which caused users to be
+  logged out shortly after logging in.
+  [Issue #9140](https://github.com/meteor/meteor/issues/9140)
+  [PR #](https://github.com/meteor/meteor/pull/9148)
+
+* [`cordova-ios`](https://github.com/apache/cordova-ios) has been updated to
+  version 4.5.1, to add in iOS 11 / Xcode 9 compatibility.
+  [Issue #9098](https://github.com/meteor/meteor/issues/9098)
+  [Issue #9126](https://github.com/meteor/meteor/issues/9126)
+  [PR #9137](https://github.com/meteor/meteor/pull/9137)
+
+* Includes a follow-up change to the (not commonly necessary)
+  `Npm.require` which ensures built-in modules are loaded first, which
+  was necessary after a change in 1.5.2.1 which reduced its scope.
+  This resolves "Cannot find module crypto" and similar errors.
+  [Issue #9136](https://github.com/meteor/meteor/issues/9136)
+
+* A bug that prevented building some binary npm packages on Windows has
+  been fixed. [Issue #9153](https://github.com/meteor/meteor/issues/9153)
+
+## v1.5.2.1, 2017-09-26
+
+* Updating to Meteor 1.5.2.1 will automatically patch a security
+  vulnerability in the `allow-deny` package, since `meteor-tool@1.5.2_1`
+  requires `allow-deny@1.0.9` or later. If for any reason you are not
+  ready or able to update to Meteor 1.5.2.1 by running `meteor update`,
+  please at least run
+  ```sh
+  meteor update allow-deny
+  ```
+  instead. More details about the security vulnerability can be found on
+  the Meteor forums.
+
+* The command-line `meteor` tool no longer invokes `node` with the
+  `--expose-gc` flag. Although this flag allowed the build process to be
+  more aggressive about collecting garbage, it was also a source of
+  problems in Meteor 1.5.2 and Node 4.8.4, from increased segmentation
+  faults during (the more frequent) garbage collections to occasional
+  slowness in rebuilding local packages. The flag is likely to return in
+  Meteor 1.6, where it has not exhibited any of the same problems.
+
+* Meteor now supports `.meteorignore` files, which cause the build system
+  to ignore certain files and directories using the same pattern syntax as
+  [`.gitignore` files](https://git-scm.com/docs/gitignore). These files
+  may appear in any directory of your app or package, specifying rules for
+  the directory tree below them. Of course, `.meteorignore` files are also
+  fully integrated with Meteor's file watching system, so they can be
+  added, removed, or modified during development.
+  [Feature request #5](https://github.com/meteor/meteor-feature-requests/issues/5)
+
+* DDP's `connection.onReconnect = func` feature has been deprecated. This
+  functionality was previously supported as a way to set a function to be
+  called as the first step of reconnecting. This approach has proven to be
+  inflexible as only one function can be defined to be called when
+  reconnecting. Meteor's accounts system was already setting an
+  `onReconnect` callback to be used internally, which means anyone setting
+  their own `onReconnect` callback was inadvertently overwriting code used
+  internally. Moving forward the `DDP.onReconnect(callback)` method should be
+  used to register callbacks to call when a connection reconnects. The
+  connection that is reconnecting is passed as the only argument to
+  `callback`. This is used by the accounts system to re-login on reconnects
+  without interfering with other code that uses `connection.onReconnect`.
+  [Issue #5665](https://github.com/meteor/meteor/issues/5665)
+  [PR #9092](https://github.com/meteor/meteor/pull/9092)
+
+* `reactive-dict` now supports `destroy`. `destroy` will clear the `ReactiveDict`s
+  data and unregister the `ReactiveDict` from data migration.  
+  i.e. When a `ReactiveDict` is instantiated with a name on the client and the
+  `reload` package is present in the project.
+  [Feature Request #76](https://github.com/meteor/meteor-feature-requests/issues/76)
+  [PR #9063](https://github.com/meteor/meteor/pull/9063)
+
+* The `webapp` package has been updated to support UNIX domain sockets. If a
+  `UNIX_SOCKET_PATH` environment variable is set with a valid
+  UNIX socket file path (e.g. `UNIX_SOCKET_PATH=/tmp/socktest.sock`), Meteor's
+  HTTP server will use that socket file for inter-process communication,
+  instead of TCP. This can be useful in cases like using Nginx to proxy
+  requests back to an internal Meteor application. Leveraging UNIX domain
+  sockets for inter-process communication reduces the sometimes unnecessary
+  overhead required by TCP based communication.
+  [Issue #7392](https://github.com/meteor/meteor/issues/7392)
+  [PR #8702](https://github.com/meteor/meteor/pull/8702)
+
+* The `fastclick` package (previously included by default in Cordova
+  applications through the `mobile-experience` package) has been deprecated.
+  This package is no longer maintained and has years of outstanding
+  unresolved issues, some of which are impacting Meteor users. Most modern
+  mobile web browsers have removed the 300ms tap delay that `fastclick` worked
+  around, as long as the following `<head />` `meta` element is set (which
+  is generally considered a mobile best practice regardless, and which the
+  Meteor boilerplate generator already sets by default for Cordova apps):
+  `<meta name="viewport" content="width=device-width">`
+  If anyone is still interested in using `fastclick` with their application,
+  it can be installed from npm directly (`meteor npm install --save fastclick`).
+  Reference:
+  [Mobile Chrome](https://developers.google.com/web/updates/2013/12/300ms-tap-delay-gone-away)
+  [Mobile Safari](https://bugs.webkit.org/show_bug.cgi?id=150604)
+  [PR #9039](https://github.com/meteor/meteor/pull/9039)
+
 * Minimongo cursors are now JavaScript iterable objects and can now be iterated over
   using `for...of` loops, spread operator, `yield*`, and destructuring assignments.
   [PR #8888](https://github.com/meteor/meteor/pull/8888)
+
+## v1.5.2, 2017-09-05
+
+* Node 4.8.4 has been patched to include
+  https://github.com/nodejs/node/pull/14829, an important PR implemented
+  by our own @abernix (:tada:), which fixes a faulty backport of garbage
+  collection-related logic in V8 that was causing occasional segmentation
+  faults during Meteor development and testing, ever since Node 4.6.2
+  (Meteor 1.4.2.3). When Node 4.8.5 is officially released with these
+  changes, we will immediately publish a small follow-up release.
+  [Issue #8648](https://github.com/meteor/meteor/issues/8648)
+
+* When Meteor writes to watched files during the build process, it no
+  longer relies on file watchers to detect the change and invalidate the
+  optimistic file system cache, which should fix a number of problems
+  related by the symptom of endless rebuilding.
+  [Issue #8988](https://github.com/meteor/meteor/issues/8988)
+  [Issue #8942](https://github.com/meteor/meteor/issues/8942)
+  [PR #9007](https://github.com/meteor/meteor/pull/9007)
+
+* The `cordova-lib` npm package has been updated to 7.0.1, along with
+  cordova-android (6.2.3) and cordova-ios (4.4.0), and various plugins.
+  [PR #8919](https://github.com/meteor/meteor/pull/8919) resolves the
+  umbrella [issue #8686](https://github.com/meteor/meteor/issues/8686), as
+  well as several Android build issues:
+  [#8408](https://github.com/meteor/meteor/issues/8408),
+  [#8424](https://github.com/meteor/meteor/issues/8424), and
+  [#8464](https://github.com/meteor/meteor/issues/8464).
+
+* The [`boilerplate-generator`](https://github.com/meteor/meteor/tree/release-1.5.2/packages/boilerplate-generator)
+  package responsible for generating initial HTML documents for Meteor
+  apps has been refactored by @stevenhao to avoid using the
+  `spacebars`-related packages, which means it is now possible to remove
+  Blaze as a dependency from the server as well as the client.
+  [PR #8820](https://github.com/meteor/meteor/pull/8820)
+
+* The `meteor-babel` package has been upgraded to version 0.23.1.
+
+* The `reify` npm package has been upgraded to version 0.12.0, which
+  includes a minor breaking
+  [change](https://github.com/benjamn/reify/commit/8defc645e556429283e0b522fd3afababf6525ea)
+  that correctly skips exports named `default` in `export * from "module"`
+  declarations. If you have any wrapper modules that re-export another
+  module's exports using `export * from "./wrapped/module"`, and the
+  wrapped module has a `default` export that you want to be included, you
+  should now explicitly re-export `default` using a second declaration:
+  ```js
+  export * from "./wrapped/module";
+  export { default } "./wrapped/module";
+  ```
+
+* The `meteor-promise` package has been upgraded to version 0.8.5,
+  and the `promise` polyfill package has been upgraded to 8.0.1.
+
+* The `semver` npm package has been upgraded to version 5.3.0.
+  [PR #8859](https://github.com/meteor/meteor/pull/8859)
+
+* The `faye-websocket` npm package has been upgraded to version 0.11.1,
+  and its dependency `websocket-driver` has been upgraded to a version
+  containing [this fix](https://github.com/faye/websocket-driver-node/issues/21),
+  thanks to [@sdarnell](https://github.com/sdarnell).
+  [meteor-feature-requests#160](https://github.com/meteor/meteor-feature-requests/issues/160)
+
+* The `uglify-js` npm package has been upgraded to version 3.0.28.
+
+* Thanks to PRs [#8960](https://github.com/meteor/meteor/pull/8960) and
+  [#9018](https://github.com/meteor/meteor/pull/9018) by @GeoffreyBooth, a
+  [`coffeescript-compiler`](https://github.com/meteor/meteor/tree/release-1.5.2/packages/non-core/coffeescript-compiler)
+  package has been extracted from the `coffeescript` package, similar to
+  how the `babel-compiler` package is separate from the `ecmascript`
+  package, so that other packages (such as
+  [`vue-coffee`](https://github.com/meteor-vue/vue-meteor/tree/master/packages/vue-coffee))
+  can make use of `coffeescript-compiler`. All `coffeescript`-related
+  packages have been moved to
+  [`packages/non-core`](https://github.com/meteor/meteor/tree/release-1.5.2/packages/non-core),
+  so that they can be published independently from Meteor releases.
 
 * `meteor list --tree` can now be used to list all transitive package
   dependencies (and versions) in an application. Weakly referenced dependencies
@@ -34,11 +228,21 @@
   [Issue #5121](https://github.com/meteor/meteor/issues/5121)
   [PR #8917](https://github.com/meteor/meteor/pull/8917)
 
+* The `"env"` field is now supported in `.babelrc` files.
+  [PR #8963](https://github.com/meteor/meteor/pull/8963)
+
 * Files contained by `client/compatibility/` directories or added with
   `api.addFiles(files, ..., { bare: true })` are now evaluated before
   importing modules with `require`, which may be a breaking change if you
   depend on the interleaving of `bare` files with eager module evaluation.
   [PR #8972](https://github.com/meteor/meteor/pull/8972)
+
+* When `meteor test-packages` runs in a browser, uncaught exceptions will
+  now be displayed above the test results, along with the usual summary of
+  test failures, in case those uncaught errors have something to do with
+  later test failures.
+  [Issue #4979](https://github.com/meteor/meteor/issues/4979)
+  [PR #9034](https://github.com/meteor/meteor/pull/9034)
 
 ## v1.5.1, 2017-07-12
 
@@ -277,6 +481,19 @@
   considered non-portable only if it contained any `.node` binary modules.
   [Issue #8225](https://github.com/meteor/meteor/issues/8225)
 
+## v1.4.4.4, 2017-09-26
+
+* Updating to Meteor 1.4.4.4 will automatically patch a security
+  vulnerability in the `allow-deny` package, since `meteor-tool@1.4.4_4`
+  requires `allow-deny@1.0.9` or later. If for any reason you are not
+  ready or able to update to Meteor 1.4.4.4 by running `meteor update`,
+  please at least run
+  ```sh
+  meteor update allow-deny
+  ```
+  instead. More details about the security vulnerability can be found on
+  the Meteor forums.
+
 ## v1.4.4.3, 2017-05-22
 
 * Node has been upgraded to version 4.8.3.
@@ -456,7 +673,7 @@
   `$bitsAnyClear`.
   [#8350](https://github.com/meteor/meteor/pull/8350)
 
-* A new [Development.md](Development.md) document has been created to provide
+* A new [Development.md](DEVELOPMENT.md) document has been created to provide
   an easier path for developers looking to make contributions to Meteor Core
   (that is, the `meteor` tool itself) along with plenty of helpful reminders
   for those that have already done so!

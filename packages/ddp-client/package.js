@@ -1,19 +1,21 @@
 Package.describe({
   summary: "Meteor's latency-compensated distributed data client",
-  version: '2.0.0',
+  version: '2.1.3',
   documentation: null
 });
 
 Npm.depends({
-  "faye-websocket": "0.11.0",
+  "faye-websocket": "0.11.1",
   "lolex": "1.4.0",
-  "permessage-deflate": "0.1.3"
+  "permessage-deflate": "0.1.6"
 });
 
 Package.onUse(function (api) {
   api.use(['check', 'random', 'ejson', 'underscore', 'tracker',
            'retry', 'id-map', 'ecmascript'],
           ['client', 'server']);
+
+  api.use('callback-hook', ['client', 'server']);
 
   // common functionality
   api.use('ddp-common', ['client', 'server']);

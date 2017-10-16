@@ -1,19 +1,19 @@
 {
   "dependencies": {
     "asap": {
-      "version": "2.0.5",
-      "resolved": "https://registry.npmjs.org/asap/-/asap-2.0.5.tgz",
+      "version": "2.0.6",
+      "resolved": "https://registry.npmjs.org/asap/-/asap-2.0.6.tgz",
       "from": "asap@>=2.0.3 <2.1.0"
     },
     "meteor-promise": {
-      "version": "0.8.4",
-      "resolved": "https://registry.npmjs.org/meteor-promise/-/meteor-promise-0.8.4.tgz",
-      "from": "meteor-promise@0.8.4"
+      "version": "0.8.5",
+      "resolved": "https://registry.npmjs.org/meteor-promise/-/meteor-promise-0.8.5.tgz",
+      "from": "meteor-promise@0.8.5"
     },
     "promise": {
-      "version": "7.1.1",
-      "resolved": "https://registry.npmjs.org/promise/-/promise-7.1.1.tgz",
-      "from": "promise@7.1.1"
+      "version": "8.0.1",
+      "resolved": "https://registry.npmjs.org/promise/-/promise-8.0.1.tgz",
+      "from": "promise@8.0.1"
     }
   }
 }

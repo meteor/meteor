@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Serves a Meteor app over HTTP",
-  version: '1.3.17'
+  version: '1.3.19'
 });
 
 Npm.depends({connect: "2.30.2",
@@ -14,9 +14,9 @@ Npm.strip({
 });
 
 Cordova.depends({
-  'cordova-plugin-whitelist': '1.3.1',
-  'cordova-plugin-wkwebview-engine': '1.1.1',
-  'cordova-plugin-meteor-webapp': '1.4.1'
+  'cordova-plugin-whitelist': '1.3.2',
+  'cordova-plugin-wkwebview-engine': '1.1.3',
+  'cordova-plugin-meteor-webapp': '1.4.2'
 });
 
 Package.onUse(function (api) {
@@ -45,4 +45,5 @@ Package.onTest(function (api) {
   api.use(['tinytest', 'ecmascript', 'webapp', 'http', 'underscore']);
   api.addFiles('webapp_tests.js', 'server');
   api.addFiles('webapp_client_tests.js', 'client');
+  api.addFiles('socket_file_tests.js', 'server');
 });

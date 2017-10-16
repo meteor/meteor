@@ -32,6 +32,7 @@ import {
   optimisticReadFile,
   optimisticHashOrNull,
   optimisticStatOrNull,
+  optimisticReadMeteorIgnore,
 } from "../fs/optimistic.js";
 
 // XXX: This is a medium-term hack, to avoid having the user set a package name
@@ -67,6 +68,7 @@ var loadOrderSort = function (sourceProcessorSet, arch) {
 
     case 'wrong-arch':
     case 'unmatched':
+    case 'meteor-ignore':
       return false;
 
     default:
@@ -994,9 +996,14 @@ _.extend(PackageSource.prototype, {
     const sourceReadOptions =
       sourceProcessorSet.appReadDirectoryOptions(arch);
 
+    // Adding, removing, or modifying a .meteorignore file should trigger
+    // a rebuild with the new rules applied.
+    sourceReadOptions.names.push(".meteorignore");
+
     // Ignore files starting with dot (unless they are explicitly in
-    // 'names').
+    // sourceReadOptions.names, e.g. .meteorignore, added above).
     sourceReadOptions.exclude.push(/^\./);
+
     // Ignore the usual ignorable files.
     sourceReadOptions.exclude.push(...ignoreFiles);
 
@@ -1059,6 +1066,8 @@ _.extend(PackageSource.prototype, {
       return baseCacheKey + "\0" + dir;
     }
 
+    const dotMeteorIgnoreFiles = Object.create(null);
+
     function find(dir, depth, inNodeModules) {
       // Remove trailing slash.
       dir = dir.replace(/\/$/, "");
@@ -1076,6 +1085,14 @@ _.extend(PackageSource.prototype, {
         return [];
       }
 
+      const absDir = files.pathJoin(self.sourceRoot, dir);
+      if (! inNodeModules) {
+        const ignore = optimisticReadMeteorIgnore(absDir);
+        if (ignore) {
+          dotMeteorIgnoreFiles[dir] = ignore;
+        }
+      }
+
       const readOptions = inNodeModules
         ? nodeModulesReadOptions
         : sourceReadOptions;
@@ -1090,6 +1107,36 @@ _.extend(PackageSource.prototype, {
         exclude: depth > 0
           ? anyLevelExcludes
           : topLevelExcludes
+      });
+
+      Object.keys(dotMeteorIgnoreFiles).forEach(ignoreDir => {
+        const ignore = dotMeteorIgnoreFiles[ignoreDir];
+
+        function removeIgnoredFilesFrom(array) {
+          let target = 0;
+
+          array.forEach(item => {
+            let relPath = files.pathRelative(ignoreDir, item);
+
+            if (! relPath.startsWith("..")) {
+              if (item.endsWith("/")) {
+                // The trailing slash is discarded by files.pathRelative.
+                relPath += "/";
+              }
+
+              if (ignore.ignores(relPath)) {
+                return;
+              }
+            }
+
+            array[target++] = item;
+          });
+
+          array.length = target;
+        }
+
+        removeIgnoredFilesFrom(sources);
+        removeIgnoredFilesFrom(subdirectories);
       });
 
       let nodeModulesDir;
@@ -1111,6 +1158,9 @@ _.extend(PackageSource.prototype, {
           sources.push(...find(subdir, depth + 1, inNodeModules));
         }
       });
+
+      // Don't apply any .meteorignore rules to files inside node_modules.
+      delete dotMeteorIgnoreFiles[dir];
 
       if (isApp &&
           nodeModulesDir &&

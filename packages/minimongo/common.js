@@ -174,6 +174,7 @@ export const ELEMENT_OPERATORS = {
           .reduce((a, b) => Object.assign(a, {[b]: operand[b]}), {}),
         true);
 
+      let subMatcher;
       if (isDocMatcher) {
         // This is NOT the same as compileValueSelector(operand), and not just
         // because of the slightly different calling convention.
@@ -776,8 +777,8 @@ function getValueBitmask(value, length) {
 function insertIntoDocument(document, key, value) {
   Object.keys(document).forEach(existingKey => {
     if (
-      (existingKey.length > key.length && existingKey.indexOf(key) === 0) ||
-      (key.length > existingKey.length && key.indexOf(existingKey) === 0)
+      (existingKey.length > key.length && existingKey.indexOf(`${key}.`) === 0) ||
+      (key.length > existingKey.length && key.indexOf(`${existingKey}.`) === 0)
     ) {
       throw new Error(
         `cannot infer query fields to set, both paths '${existingKey}' and ` +

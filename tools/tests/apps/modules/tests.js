@@ -34,7 +34,7 @@ describe("app modules", () => {
 
   it("are eagerly evaluated if outside imports/", () => {
     assert.strictEqual(shared["/eager-jsx.jsx"], "eager jsx");
-    assert.strictEqual(shared["/eager-coffee.coffee.js"], "eager coffee");
+    assert.strictEqual(shared["/eager-coffee.coffee"], "eager coffee");
   });
 
   it("are lazily evaluated if inside imports/", (done) => {
@@ -444,6 +444,13 @@ describe("ecmascript miscellany", () => {
     assert.deepEqual(
       obj.method(1, 2, 3, 4),
       [2, 1, 4, 3]
+    );
+  });
+
+  it('.babelrc "env" should be respected', () => {
+    assert.strictEqual(
+      require("./imports/babel-env.js").check(2),
+      4
     );
   });
 });

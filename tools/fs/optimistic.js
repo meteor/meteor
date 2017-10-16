@@ -5,7 +5,9 @@ import { watch } from "./safe-watcher.js";
 import { sha1 } from "./watch.js";
 import {
   pathSep,
+  pathDirname,
   pathIsAbsolute,
+  pathJoin,
   statOrNull,
   lstat,
   readFile,
@@ -142,27 +144,17 @@ function maybeDependOnNodeModules(path) {
   }
 }
 
-let npmDepCount = 0;
+let dependOnDirectorySalt = 0;
 
-// Called by any optimistic function that receives a */node_modules/* path
-// as its first argument, so that we can later bulk-invalidate the results
-// of those calls if the contents of the node_modules directory change.
-// Note that this strategy will not detect changes within subdirectories
-// of this node_modules directory, but that's ok because the use case we
-// care about is adding or removing npm packages.
-const dependOnNodeModules = wrap(nodeModulesDir => {
-  assert(pathIsAbsolute(nodeModulesDir));
-  assert(nodeModulesDir.endsWith(pathSep + "node_modules"));
-
+const dependOnDirectory = wrap(dir => {
   // Always return something different to prevent optimism from
   // second-guessing the dirtiness of this function.
-  return ++npmDepCount;
-
+  return ++dependOnDirectorySalt;
 }, {
-  subscribe(nodeModulesDir) {
+  subscribe(dir) {
     let watcher = watch(
-      nodeModulesDir,
-      () => dependOnNodeModules.dirty(nodeModulesDir),
+      dir,
+      () => dependOnDirectory.dirty(dir),
     );
 
     return function () {
@@ -174,19 +166,52 @@ const dependOnNodeModules = wrap(nodeModulesDir => {
   }
 });
 
+// Called when an optimistic function detects the given file does not
+// exist, but needs to return null or false rather than throwing an
+// exception. When/if the file is eventually created, we might only get a
+// file change notification for the parent directory, so it's important to
+// depend on the parent directory using this function, so that we don't
+// cache the unsuccessful result forever.
+function dependOnParentDirectory(path) {
+  const parentDir = pathDirname(path);
+  if (parentDir !== path) {
+    dependOnDirectory(parentDir);
+  }
+}
+
+// Called by any optimistic function that receives a */node_modules/* path
+// as its first argument, so that we can later bulk-invalidate the results
+// of those calls if the contents of the node_modules directory change.
+// Note that this strategy will not detect changes within subdirectories
+// of this node_modules directory, but that's ok because the use case we
+// care about is adding or removing npm packages.
+const dependOnNodeModules = wrap(nodeModulesDir => {
+  assert(pathIsAbsolute(nodeModulesDir));
+  assert(nodeModulesDir.endsWith(pathSep + "node_modules"));
+  return dependOnDirectory(nodeModulesDir);
+});
+
 // Invalidate all optimistic results derived from paths involving the
 // given node_modules directory.
 export function dirtyNodeModulesDirectory(nodeModulesDir) {
   dependOnNodeModules.dirty(nodeModulesDir);
 }
 
-export const optimisticStatOrNull = makeOptimistic("statOrNull", statOrNull);
+export const optimisticStatOrNull = makeOptimistic("statOrNull", path => {
+  const result = statOrNull(path);
+  if (result === null) {
+    dependOnParentDirectory(path);
+  }
+  return result;
+});
+
 export const optimisticLStat = makeOptimistic("lstat", lstat);
 export const optimisticLStatOrNull = makeOptimistic("lstatOrNull", path => {
   try {
     return optimisticLStat(path);
   } catch (e) {
     if (e.code !== "ENOENT") throw e;
+    dependOnParentDirectory(path);
     return null;
   }
 });
@@ -203,6 +228,8 @@ export const optimisticHashOrNull = makeOptimistic("hashOrNull", (...args) => {
     }
   }
 
+  dependOnParentDirectory(args[0]);
+
   return null;
 });
 
@@ -213,6 +240,7 @@ makeOptimistic("readJsonOrNull", (path, options) => {
 
   } catch (e) {
     if (e.code === "ENOENT") {
+      dependOnParentDirectory(path);
       return null;
     }
 
@@ -225,11 +253,26 @@ makeOptimistic("readJsonOrNull", (path, options) => {
   }
 });
 
+export const optimisticReadMeteorIgnore = wrap(dir => {
+  const meteorIgnorePath = pathJoin(dir, ".meteorignore");
+  const meteorIgnoreStat = optimisticStatOrNull(meteorIgnorePath);
+
+  if (meteorIgnoreStat &&
+      meteorIgnoreStat.isFile()) {
+    return require("ignore")().add(
+      optimisticReadFile(meteorIgnorePath, "utf8")
+    );
+  }
+
+  return null;
+});
+
 const optimisticIsSymbolicLink = wrap(path => {
   try {
     return lstat(path).isSymbolicLink();
   } catch (e) {
     if (e.code !== "ENOENT") throw e;
+    dependOnParentDirectory(path);
     return false;
   }
 }, {
