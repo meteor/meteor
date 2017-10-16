@@ -28,3 +28,12 @@ Tinytest.add "coffeescript - import local module via native import statement", (
 import { testingForNativeImportedModule123456789 } from "./coffeescript_module.coffee";
 Tinytest.add "coffeescript - import local module exported by a CoffeeScript native export statement, via native import statement", (test) ->
   test.isTrue testingForNativeImportedModule123456789?
+
+
+# JSX
+Tinytest.add "coffeescript - JSX", (test) ->
+	# Mock React
+	React =
+		createElement: (tag, attributes, body) ->
+			"<#{tag}>#{body}</#{tag}>"
+	test.isTrue <div>Hello from JSX!</div> is '<div>Hello from JSX!</div>'

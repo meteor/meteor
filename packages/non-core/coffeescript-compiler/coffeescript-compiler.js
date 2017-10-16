@@ -22,7 +22,10 @@ export class CoffeeScriptCompiler {
       // prevents CoffeeScript projects from using the modules package and
       // putting require or import statements within backticks; it just
       // won't happen automatically because of Babel.
-      runtime: false
+      runtime: false,
+      // CoffeeScript 2 supports for JSX, which Meteor supports only for React,
+      // per packages/ecmascript/plugin.js.
+      react: true
     });
   }
 
