@@ -729,23 +729,19 @@ function atomicallyRewriteFile(path, data, options) {
 // create a symlink, overwriting the target link, file, or directory
 // if it exists
 function symlinkWithOverwrite(source, target) {
-  const args = [source, target];
-
-  if (process.platform === "win32") {
-    if (! files.stat(source).isDirectory()) {
-      throw new Error("symlink source must be a directory: " + source);
-    }
-
-    args[2] = "junction";
-  }
-
   try {
-    files.symlink(...args);
+    files.symlink(source, target);
   } catch (e) {
-    if (e.code === 'EEXIST') {
+    if (e.code === "EEXIST") {
       // overwrite existing link, file, or directory
       files.rm_recursive(target);
-      files.symlink(...args);
+      files.symlink(source, target);
+    } else if (e.code === "EPERM" &&
+               process.platform === "win32") {
+      files.rm_recursive(target);
+      // This will work only if source refers to a directory, but that's a
+      // chance worth taking.
+      files.symlink(source, target, "junction");
     } else {
       throw e;
     }
