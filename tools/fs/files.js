@@ -312,32 +312,6 @@ files.rm_recursive = Profile("files.rm_recursive", (path) => {
   }
 });
 
-// Makes all files in a tree read-only.
-var makeTreeReadOnly = function (p) {
-  try {
-    // the l in lstat is critical -- we want to ignore symbolic links
-    var stat = files.lstat(p);
-  } catch (e) {
-    if (e.code == "ENOENT") {
-      return;
-    }
-    throw e;
-  }
-
-  if (stat.isDirectory()) {
-    _.each(files.readdir(p), function (file) {
-      makeTreeReadOnly(files.pathJoin(p, file));
-    });
-  }
-  if (stat.isFile()) {
-    var permissions = stat.mode & 0o777;
-    var readOnlyPermissions = permissions & 0o555;
-    if (permissions !== readOnlyPermissions) {
-      files.chmod(p, readOnlyPermissions);
-    }
-  }
-};
-
 // Returns the base64 SHA256 of the given file.
 files.fileHash = function (filename) {
   var crypto = require('crypto');
@@ -728,8 +702,7 @@ if (! process.env.METEOR_SAVE_TMPDIRS) {
 // Takes a buffer containing `.tar.gz` data and extracts the archive
 // into a destination directory. destPath should not exist yet, and
 // the archive should contain a single top-level directory, which will
-// be renamed atomically to destPath. The entire tree will be made
-// readonly.
+// be renamed atomically to destPath.
 files.extractTarGz = function (buffer, destPath, options) {
   var options = options || {};
   var parentDir = files.pathDirname(destPath);
@@ -764,7 +737,6 @@ files.extractTarGz = function (buffer, destPath, options) {
   }
 
   var extractDir = files.pathJoin(tempDir, topLevelOfArchive[0]);
-  makeTreeReadOnly(extractDir);
   files.rename(extractDir, destPath);
   files.rm_recursive(tempDir);
 
