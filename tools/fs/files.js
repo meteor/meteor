@@ -614,7 +614,7 @@ var copyFileHelper = function (from, to, mode) {
 // directory. Only the current user is allowed to read or write the
 // files in the directory (or add files to it). The directory will
 // be cleaned up on exit.
-var tempDirs = [];
+const tempDirs = Object.create(null);
 files.mkdtemp = function (prefix) {
   var make = function () {
     prefix = prefix || 'mt-';
@@ -649,55 +649,43 @@ files.mkdtemp = function (prefix) {
     throw new Error("failed to make temporary directory in " + tmpDir);
   };
   var dir = make();
-  tempDirs.push(dir);
+  tempDirs[dir] = true;
   return dir;
 };
 
 // Call this if you're done using a temporary directory. It will asynchronously
 // be deleted.
-files.freeTempDir = function (tempDir) {
-  if (! _.contains(tempDirs, tempDir)) {
-    throw Error("not a tracked temp dir: " + tempDir);
+files.freeTempDir = function (dir) {
+  if (! tempDirs[dir]) {
+    throw Error("not a tracked temp dir: " + dir);
   }
+
   if (process.env.METEOR_SAVE_TMPDIRS) {
     return;
   }
-  setImmediate(function () {
-    // note: rm_recursive can yield, so it's possible that during this
-    // rm_recursive call, the onExit rm_recursive fires too.  (Or it could even
-    // start firing before the setImmediate handler is called.) But it should be
-    // OK for there to be overlapping rm_recursive calls, since rm_recursive
-    // ignores all ENOENT calls. And we don't remove tempDir from tempDirs until
-    // it's done, so that if mid-way through this rm_recursive the onExit one
-    // fires, it still gets removed.
 
-    try {
-      files.rm_recursive(tempDir);
-    } catch (err) {
-      // Don't crash and print a stack trace because we failed to delete a temp
-      // directory. This happens sometimes on Windows and seems to be
-      // unavoidable.
-      console.log(err);
-    }
+  delete tempDirs[dir];
 
-    tempDirs = _.without(tempDirs, tempDir);
+  // Attach a .catch handler so that any errors resulting from
+  // files.rm_recursive_async will not trigger an unhandled promise
+  // rejection warning.
+  return files.rm_recursive_async(dir).catch(error => {
+    console.log(error);
   });
 };
 
 if (! process.env.METEOR_SAVE_TMPDIRS) {
   cleanup.onExit(function (sig) {
-    _.each(tempDirs, function (tempDir) {
+    Object.keys(tempDirs).forEach(dir => {
+      delete tempDirs[dir];
       try {
-        files.rm_recursive(tempDir);
+        files.rm_recursive(dir);
       } catch (err) {
-        // Don't crash and print a stack trace because we failed to delete a temp
-        // directory. This happens sometimes on Windows and seems to be
-        // unavoidable.
-        console.log(err);
+        // Don't crash and print a stack trace because we failed to delete
+        // a temp directory. This happens sometimes on Windows and seems
+        // to be unavoidable.
       }
     });
-
-    tempDirs = [];
   });
 }
 
