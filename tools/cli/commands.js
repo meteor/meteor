@@ -29,14 +29,13 @@ var DEPLOY_ARCH = 'os.linux.x86_64';
 var DEFAULT_PORT = '3000';
 
 // Valid architectures that Meteor officially supports.
-var VALID_ARCHITECTURES = {
+export const VALID_ARCHITECTURES = {
   "os.osx.x86_64": true,
   "os.linux.x86_64": true,
   "os.linux.x86_32": true,
   "os.windows.x86_64": true,
-  "os.windows.x86_32": true
+  "os.windows.x86_32": true,
 };
-
 
 // __dirname - the location of the current executing file
 var __dirnameConverted = files.convertToStandardPath(__dirname);

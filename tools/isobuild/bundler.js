@@ -2517,16 +2517,11 @@ class ServerTarget extends JsImageTarget {
     // Script that fetches the dev_bundle and runs the server bootstrap
     // XXX this is #GalaxyLegacy, the generated start.sh is not really used by
     // anything anymore
-    var archToPlatform = {
-      'os.linux.x86_32': 'Linux_i686',
-      'os.linux.x86_64': 'Linux_x86_64',
-      'os.osx.x86_64': 'Darwin_x86_64',
-      'os.windows.x86_32': 'Windows_x86_32'
-    };
-    var platform = archToPlatform[self.arch];
-    if (! platform) {
-      throw new Error("MDG does not publish dev_bundles for arch: " +
-                         self.arch);
+    const { VALID_ARCHITECTURES } = require("../cli/commands.js");
+    if (VALID_ARCHITECTURES[self.arch] !== true) {
+      throw new Error(
+        `MDG does not publish dev_bundles for arch: ${self.arch}`
+      );
     }
 
     // Nothing actually pays attention to the `path` field for a server program
