@@ -502,14 +502,10 @@ var springboard = function (rel, options) {
   if (files.realpath(newToolsDir) ===
       files.realpath(files.getCurrentToolsDir())) {
     if (options.mayReturn) {
-      // Return instead of springboarding (or throwing an exception), if
-      // we are allowed to keep using the current tools.
+      // Return instead of springboarding, if we are allowed to keep using
+      // the current tools without restarting the process.
       return;
     }
-
-    throw new Error(
-      "Cannot springboard to same tools directory: " + newToolsDir
-    );
   }
 
   const executable = files.pathJoin(newToolsDir, "meteor");
