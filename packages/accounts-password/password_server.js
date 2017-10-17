@@ -52,6 +52,10 @@ var hashPassword = function (password) {
   return bcryptHash(password, Accounts._bcryptRounds);
 };
 
+// Extract the number of rounds used in the specified bcrypt hash.
+const getRoundsFromBcryptHash =
+  hash => hash ? Number(hash.substring(4, 6)) : null;
+
 // Check whether the provided password matches the bcrypt'ed password in
 // the database user record. `password` can be a string (in which case
 // it will be run through SHA256 before bcrypt) or an object with
@@ -63,21 +67,19 @@ Accounts._checkPassword = function (user, password) {
     userId: user._id
   };
 
-  password = getPasswordString(password);
+  const formattedPassword = getPasswordString(password);
+  const hash = user.services.password.bcrypt;
+  const hashRounds = getRoundsFromBcryptHash(hash);
 
-  if (! bcryptCompare(password, user.services.password.bcrypt)) {
+  if (! bcryptCompare(formattedPassword, hash)) {
     result.error = handleError("Incorrect password", false);
-  } else if (
-    user.services.password.bcrypt && 
-    Accounts._bcryptRounds > 
-      Number(user.services.password.bcrypt.substring(4, 6))
-  ) {
-    // password checks out, but user bcrypt may need update
+  } else if (hash && Accounts._bcryptRounds != hashRounds) {
+    // The password checks out, but the user's bcrypt hash needs to be updated.
     Meteor.defer(() => {
       Meteor.users.update({ _id: user._id }, {
-        $set: { 
-          'services.password.bcrypt': 
-            bcryptHash(password, Accounts._bcryptRounds)
+        $set: {
+          'services.password.bcrypt':
+            bcryptHash(formattedPassword, Accounts._bcryptRounds)
         }
       });
     });
@@ -92,7 +94,7 @@ var checkPassword = Accounts._checkPassword;
 ///
 const handleError = (msg, throwError = true) => {
   const error = new Meteor.Error(
-    403, 
+    403,
     Accounts._options.ambiguousErrorMessages
       ? "Something went wrong. Please check your credentials."
       : msg
