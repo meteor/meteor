@@ -203,6 +203,9 @@ Function Add-NodeAndNpm {
   $finalNodeExe = Join-Path $dirBin 'node.exe'
   $finalNpmCmd = Join-Path $dirBin 'npm.cmd'
 
+  # Uses process.execPath to infer dev_bundle\bin, npm location, &c.
+  & "$finalNodeExe" "${dirCheckout}\scripts\windows\link-npm-bin-commands.js"
+
   # We use our own npm.cmd.
   Copy-Item "${dirCheckout}\scripts\npm.cmd" $finalNpmCmd
 
