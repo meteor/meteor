@@ -3,8 +3,6 @@ module.exports = {
   plugins: [
     require("babel-plugin-check-es2015-constants"),
     require("babel-plugin-syntax-flow"),
-    require("babel-plugin-syntax-trailing-function-commas"),
-    require("babel-plugin-syntax-async-functions"),
     require("babel-plugin-syntax-async-generators"),
     require("babel-plugin-transform-es2015-arrow-functions"),
     require("babel-plugin-transform-es2015-block-scoped-functions"),
