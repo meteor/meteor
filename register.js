@@ -135,9 +135,9 @@ function getBabelResult(filename) {
 
       if (relativePath.slice(0, 2) !== "..") {
         // If the given filename is a path contained within
-        // config.sourceMapRootPath, use the relative path but prepend a
-        // '/' so that source maps work more reliably.
-        filename = "/" + relativePath;
+        // config.sourceMapRootPath, use the relative path but prepend
+        // path.sep so that source maps work more reliably.
+        filename = path.sep + relativePath;
       }
     }
 
