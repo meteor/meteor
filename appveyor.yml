@@ -1,6 +1,14 @@
 version: '{build}'
+
+branches:
+  except:
+    - /^dev-bundle-/
+
+skip_branch_with_pr: true
+
 clone_folder: C:\projects\meteor
-os: Visual Studio 2015
+image: Visual Studio 2015
+
 environment:
   METEOR_PRETTY_OUTPUT: 0
   SELF_TEST_TOOL_NODE_FLAGS: " "
