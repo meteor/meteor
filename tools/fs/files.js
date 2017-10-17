@@ -664,12 +664,14 @@ files.freeTempDir = function (dir) {
     return;
   }
 
-  delete tempDirs[dir];
-
-  // Attach a .catch handler so that any errors resulting from
-  // files.rm_recursive_async will not trigger an unhandled promise
-  // rejection warning.
-  return files.rm_recursive_async(dir).catch(error => {
+  return files.rm_recursive_async(dir).then(() => {
+    // Delete tempDirs[dir] only when the removal finishes, so that the
+    // cleanup.onExit handler can attempt the removal synchronously if it
+    // fires in the meantime.
+    delete tempDirs[dir];
+  }, error => {
+    // Leave tempDirs[dir] in place so the cleanup.onExit handler can try
+    // to delete it again when the process exits.
     console.log(error);
   });
 };
