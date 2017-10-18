@@ -542,7 +542,7 @@ if no `deny` rules return `true` and at least one `allow` rule returns
 <h2 id="mongo_cursor">Cursors</h2>
 
 To create a cursor, use [`find`](#find).  To access the documents in a
-cursor, use [`forEach`](#foreach), [`map`](#map), [`fetch`](#fetch), or ES2015's [iteration protocols](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocol).
+cursor, use [`forEach`](#foreach), [`map`](#map), [`fetch`](#fetch), or ES2015's [iteration protocols](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols).
 
 {% apibox "Mongo.Cursor#forEach" %}
 
