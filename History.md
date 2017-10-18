@@ -3,6 +3,7 @@
 * iOS icons and launch screens have been updated to support iOS 11
   [Issue #9196](https://github.com/meteor/meteor/issues/9196)
   [PR #9198](https://github.com/meteor/meteor/pull/9198)
+  [Issue #9236] Allow Npm.depends to specify any http or https URL [#9236](https://github.com/meteor/meteor/issues/9236)
 
 ## v1.5.2.2, 2017-10-02
 
