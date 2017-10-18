@@ -41,7 +41,7 @@ export class CoffeeScriptCompiler {
   }
 
   outputFilePath(inputFile) {
-    return inputFile.getPathInPackage() + '.js';
+    return inputFile.getPathInPackage();
   }
 
   compileOneFile(inputFile) {
