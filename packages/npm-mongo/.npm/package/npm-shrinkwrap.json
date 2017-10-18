@@ -31,14 +31,14 @@
       "from": "isarray@>=1.0.0 <1.1.0"
     },
     "mongodb": {
-      "version": "2.2.31",
-      "resolved": "https://github.com/meteor/node-mongodb-native/tarball/0f54d887aef0f172fd48cf4eafd0cf7e5a2500af",
-      "from": "https://github.com/meteor/node-mongodb-native/tarball/0f54d887aef0f172fd48cf4eafd0cf7e5a2500af"
+      "version": "2.2.33",
+      "resolved": "https://registry.npmjs.org/mongodb/-/mongodb-2.2.33.tgz",
+      "from": "mongodb@2.2.33"
     },
     "mongodb-core": {
-      "version": "2.1.15",
-      "resolved": "https://github.com/meteor/mongodb-core/tarball/82608e807235ac744fc29d161ea1d75361a8f178",
-      "from": "https://github.com/meteor/mongodb-core/tarball/82608e807235ac744fc29d161ea1d75361a8f178"
+      "version": "2.1.17",
+      "resolved": "https://registry.npmjs.org/mongodb-core/-/mongodb-core-2.1.17.tgz",
+      "from": "mongodb-core@2.1.17"
     },
     "process-nextick-args": {
       "version": "1.0.7",

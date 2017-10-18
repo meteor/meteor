@@ -8,6 +8,10 @@
   and will likely be removed in a future Meteor release.
   [Feature Request #196](https://github.com/meteor/meteor-feature-requests/issues/196)
   [PR #9213](https://github.com/meteor/meteor/pull/9213)
+  
+* iOS icons and launch screens have been updated to support iOS 11
+  [Issue #9196](https://github.com/meteor/meteor/issues/9196)
+  [PR #9198](https://github.com/meteor/meteor/pull/9198)
 
 ## v1.5.2.2, 2017-10-02
 
@@ -678,7 +682,7 @@
   `$bitsAnyClear`.
   [#8350](https://github.com/meteor/meteor/pull/8350)
 
-* A new [Development.md](Development.md) document has been created to provide
+* A new [Development.md](DEVELOPMENT.md) document has been created to provide
   an easier path for developers looking to make contributions to Meteor Core
   (that is, the `meteor` tool itself) along with plenty of helpful reminders
   for those that have already done so!

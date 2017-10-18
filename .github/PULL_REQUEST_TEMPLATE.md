@@ -15,7 +15,7 @@ Here are some important details to follow:
           please _try_ to add a test which verifies the fix.  If you cannot, you should
           still submit the PR but we may still ask you (and help you!) to create a test.
 * 📖 Contribution guidelines
-          Always follow https://github.com/meteor/meteor/blob/master/Contributing.md
+          Always follow https://github.com/meteor/meteor/blob/master/CONTRIBUTING.md
           when submitting a pull request.  Make sure existing tests still pass, and add
           tests for all new behavior.
 * ✏️ Explain your pull request

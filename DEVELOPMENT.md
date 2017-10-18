@@ -1,12 +1,12 @@
 # Development
 
-This document is intended to provide instructions and helpful information for developers who are [contributing](Contributing.md) [pull-requests](https://github.com/meteor/meteor/pulls/) (or otherwise making changes) to **Meteor Core itself (not Meteor apps)**.
+This document is intended to provide instructions and helpful information for developers who are [contributing](CONTRIBUTING.md) [pull-requests](https://github.com/meteor/meteor/pulls/) (or otherwise making changes) to **Meteor Core itself (not Meteor apps)**.
 
 As the first suggestion to the reader of this document: If, during the course of development, a Meteor-specific process is revealed which is helpful and not documented here, please consider editing this document and submitting a pull-request.  Another developer will be thankful!
 
 ## Running from a Git checkout
 
-If you want to run on the bleeding edge, or [help contribute to Meteor](Contributing.md), you
+If you want to run on the bleeding edge, or [help contribute to Meteor](CONTRIBUTING.md), you
 can run Meteor directly from a Git checkout using these steps:
 
 1. **Clone from GitHub**
@@ -55,7 +55,7 @@ can run Meteor directly from a Git checkout using these steps:
 The following are some distinct differences you must pay attention to when running Meteor from a checkout:
 
   * You cannot pin apps to specific Meteor releases or change the release using `--release`.
-  
+
 ## The "Dev Bundle"
 
 The "dev bundle" (identified as the `dev_bundle` in the folder structure) is a generated bundle of code, packages and tools which are essential to providing the functionality of the Meteor tool (`meteor`) and the app bundles which it builds.
@@ -94,7 +94,7 @@ This will generate a new tarball (`dev_bundle_<Platform>_<arch>_<version>.tar.gz
 
 ### Submitting "Dev Bundle" Pull Requests
 
-It's important to note that while `dev_bundle` pull requests are accepted/reviewed, a new `dev_bundle` can only be published to MDG's Meteor infrastructure by an MDG staff member. This means that the build tool and package tests of submitted `dev_bundle` pull requests will always initially fail (since the new `dev_bundle` hasn't yet been built/published by MDG, which means it can't be downloaded by Meteor's continuous integration environment). 
+It's important to note that while `dev_bundle` pull requests are accepted/reviewed, a new `dev_bundle` can only be published to MDG's Meteor infrastructure by an MDG staff member. This means that the build tool and package tests of submitted `dev_bundle` pull requests will always initially fail (since the new `dev_bundle` hasn't yet been built/published by MDG, which means it can't be downloaded by Meteor's continuous integration environment).
 
 Pull requests that contain `dev_bundle` changes will be noted by repo collaborators, and a request to have a new `dev_bundle` built/published will be forwarded to MDG.
 
