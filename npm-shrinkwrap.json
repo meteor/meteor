@@ -517,10 +517,9 @@
         "safe-buffer": "5.1.1"
       }
     },
-    "readable-stream-meteor": {
-      "version": "2.3.3",
-      "resolved": "https://registry.npmjs.org/readable-stream-meteor/-/readable-stream-meteor-2.3.3.tgz",
-      "integrity": "sha512-+YnXNZFXGmWdskIOpDINxHBzPwHy2+JhSgiSaINfkOasa0KQ4cghUMXIleyLrOyPTF6LgfhEMLWlljtfkwI82w==",
+    "readable-stream": {
+      "version": "file:files/readable-stream-2.3.3.tgz",
+      "integrity": "sha1-zoq9Zbf/zyi8wDkAbcChGKY6rec=",
       "requires": {
         "inherits": "2.0.3",
         "isarray": "1.0.0",
@@ -569,13 +568,13 @@
         "safe-buffer": "5.1.1"
       }
     },
-    "stream-meteor": {
+    "stream-browserify": {
       "version": "2.0.1",
-      "resolved": "https://registry.npmjs.org/stream-meteor/-/stream-meteor-2.0.1.tgz",
-      "integrity": "sha512-oV1Vyjce3Ptwu9dgLDvGKler7lLaUgpVLQgvVlNn3iiWD1w6BnYU6VypUhxeemAYo9N/V1GVA6C9Mkl5a/MfHQ==",
+      "resolved": "https://registry.npmjs.org/stream-browserify/-/stream-browserify-2.0.1.tgz",
+      "integrity": "sha1-ZiZu5fm9uZQKTkUUyvtDu3Hlyds=",
       "requires": {
         "inherits": "2.0.1",
-        "readable-stream-meteor": "2.3.3"
+        "readable-stream": "file:files/readable-stream-2.3.3.tgz"
       }
     },
     "string_decoder": {
