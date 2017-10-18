@@ -44,17 +44,25 @@ export default class Cursor {
    * @summary Returns the number of documents that match a query.
    * @memberOf Mongo.Cursor
    * @method  count
+   * @param {boolean} [applySkipLimit=true] If set to `false`, the value
+   *                                         returned will reflect the total
+   *                                         number of matching documents,
+   *                                         ignoring any value supplied for
+   *                                         limit
    * @instance
    * @locus Anywhere
    * @returns {Number}
    */
-  count() {
+  count(applySkipLimit = true) {
     if (this.reactive) {
       // allow the observe to be unordered
       this._depend({added: true, removed: true}, true);
     }
 
-    return this._getRawObjects({ordered: true}).length;
+    return this._getRawObjects({
+      ordered: true,
+      applySkipLimit
+    }).length;
   }
 
   /**
@@ -379,7 +387,8 @@ export default class Cursor {
   // Returns a collection of matching objects, but doesn't deep copy them.
   //
   // If ordered is set, returns a sorted array, respecting sorter, skip, and
-  // limit properties of the query.  if sorter is falsey, no sort -- you get the
+  // limit properties of the query provided that options.applySkipLimit is
+  // not set to false (#1201). If sorter is falsey, no sort -- you get the
   // natural order.
   //
   // If ordered is not set, returns an object mapping from ID to doc (sorter,
@@ -393,16 +402,21 @@ export default class Cursor {
   // implementation uses this to remember the distances after this function
   // returns.
   _getRawObjects(options = {}) {
+    // By default this method will respect skip and limit because .fetch(),
+    // .forEach() etc... expect this behaviour. It can be forced to ignore
+    // skip and limit by setting applySkipLimit to false (.count() does this,
+    // for example)
+    const applySkipLimit = options.applySkipLimit !== false;
+
     // XXX use OrderedDict instead of array, and make IdMap and OrderedDict
     // compatible
     const results = options.ordered ? [] : new LocalCollection._IdMap;
 
     // fast path for single ID value
     if (this._selectorId !== undefined) {
-      // If you have non-zero skip and ask for a single id, you get
-      // nothing. This is so it matches the behavior of the '{_id: foo}'
-      // path.
-      if (this.skip) {
+      // If you have non-zero skip and ask for a single id, you get nothing.
+      // This is so it matches the behavior of the '{_id: foo}' path.
+      if (applySkipLimit && this.skip) {
         return results;
       }
 
@@ -449,6 +463,11 @@ export default class Cursor {
         }
       }
 
+      // Override to ensure all docs are matched if ignoring skip & limit
+      if (!applySkipLimit) {
+        return true;
+      }
+
       // Fast path for limited unsorted queries.
       // XXX 'length' check here seems wrong for ordered
       return (
@@ -467,7 +486,9 @@ export default class Cursor {
       results.sort(this.sorter.getComparator({distances}));
     }
 
-    if (!this.limit && !this.skip) {
+    // Return the full set of results if there is no skip or limit or if we're
+    // ignoring them
+    if (!applySkipLimit || (!this.limit && !this.skip)) {
       return results;
     }
 

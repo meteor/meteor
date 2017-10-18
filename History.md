@@ -9,6 +9,11 @@
   [Feature Request #196](https://github.com/meteor/meteor-feature-requests/issues/196)
   [PR #9213](https://github.com/meteor/meteor/pull/9213)
   
+* Enables passing `false` to `cursor.count()` on the client to prevent skip
+  and limit from having an effect on the result.
+  [Issue #1201](https://github.com/meteor/meteor/issues/1201)
+  [PR #9205](https://github.com/meteor/meteor/pull/9205)
+
 * iOS icons and launch screens have been updated to support iOS 11
   [Issue #9196](https://github.com/meteor/meteor/issues/9196)
   [PR #9198](https://github.com/meteor/meteor/pull/9198)
