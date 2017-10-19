@@ -298,6 +298,13 @@ Function Add-NpmModulesFromJsBundleFile {
     }
   }
 
+  # Since we install a patched version of pacote in $Destination\lib\node_modules,
+  # we need to remove npm's bundled version to make it use the new one.
+  cd node_modules
+  if (Test-Path "pacote") {
+    Remove-DirectoryRecursively "npm\node_modules\pacote"
+  }
+
   cd "$previousCwd"
 }
 
