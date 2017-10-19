@@ -518,8 +518,7 @@
       }
     },
     "readable-stream": {
-      "version": "file:files/readable-stream-2.3.3.tgz",
-      "integrity": "sha1-zoq9Zbf/zyi8wDkAbcChGKY6rec=",
+      "version": "git+https://github.com/meteor/readable-stream.git#d64a64aa6061b9b6855feff4d09e58fb3b2e4502",
       "requires": {
         "inherits": "2.0.3",
         "isarray": "1.0.0",
@@ -574,7 +573,7 @@
       "integrity": "sha1-ZiZu5fm9uZQKTkUUyvtDu3Hlyds=",
       "requires": {
         "inherits": "2.0.1",
-        "readable-stream": "file:files/readable-stream-2.3.3.tgz"
+        "readable-stream": "git+https://github.com/meteor/readable-stream.git#d64a64aa6061b9b6855feff4d09e58fb3b2e4502"
       }
     },
     "string_decoder": {
