@@ -4,6 +4,11 @@
   overrides the default 10 rounds currently used to secure passwords.
   [PR #9044](https://github.com/meteor/meteor/pull/9044)
 
+* Enables passing `false` to `cursor.count()` on the client to prevent skip
+  and limit from having an effect on the result.
+  [Issue #1201](https://github.com/meteor/meteor/issues/1201)
+  [PR #9205](https://github.com/meteor/meteor/pull/9205)
+
 * iOS icons and launch screens have been updated to support iOS 11
   [Issue #9196](https://github.com/meteor/meteor/issues/9196)
   [PR #9198](https://github.com/meteor/meteor/pull/9198)

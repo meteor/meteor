@@ -137,30 +137,46 @@ Tinytest.add('minimongo - basics', test => {
   test.equal(c.find('abc').count(), 0);
   test.equal(c.find(undefined).count(), 0);
   test.equal(c.find().count(), 3);
+  test.equal(c.find(1, {skip: 1}).count(false), 1);
   test.equal(c.find(1, {skip: 1}).count(), 0);
+  test.equal(c.find({_id: 1}, {skip: 1}).count(false), 1);
   test.equal(c.find({_id: 1}, {skip: 1}).count(), 0);
   test.equal(c.find({_id: undefined}).count(), 0);
   test.equal(c.find({_id: false}).count(), 0);
   test.equal(c.find({_id: null}).count(), 0);
   test.equal(c.find({_id: ''}).count(), 0);
   test.equal(c.find({_id: 0}).count(), 0);
+  test.equal(c.find({}, {skip: 1}).count(false), 3);
   test.equal(c.find({}, {skip: 1}).count(), 2);
   test.equal(c.find({}, {skip: 2}).count(), 1);
+  test.equal(c.find({}, {limit: 2}).count(false), 3);
   test.equal(c.find({}, {limit: 2}).count(), 2);
   test.equal(c.find({}, {limit: 1}).count(), 1);
+  test.equal(c.find({}, {skip: 1, limit: 1}).count(false), 3);
   test.equal(c.find({}, {skip: 1, limit: 1}).count(), 1);
+  test.equal(c.find({tags: 'fruit'}, {skip: 1}).count(false), 2);
   test.equal(c.find({tags: 'fruit'}, {skip: 1}).count(), 1);
+  test.equal(c.find({tags: 'fruit'}, {limit: 1}).count(false), 2);
   test.equal(c.find({tags: 'fruit'}, {limit: 1}).count(), 1);
+  test.equal(c.find({tags: 'fruit'}, {skip: 1, limit: 1}).count(false), 2);
   test.equal(c.find({tags: 'fruit'}, {skip: 1, limit: 1}).count(), 1);
+  test.equal(c.find(1, {sort: ['_id', 'desc'], skip: 1}).count(false), 1);
   test.equal(c.find(1, {sort: ['_id', 'desc'], skip: 1}).count(), 0);
+  test.equal(c.find({_id: 1}, {sort: ['_id', 'desc'], skip: 1}).count(false), 1);
   test.equal(c.find({_id: 1}, {sort: ['_id', 'desc'], skip: 1}).count(), 0);
+  test.equal(c.find({}, {sort: ['_id', 'desc'], skip: 1}).count(false), 3);
   test.equal(c.find({}, {sort: ['_id', 'desc'], skip: 1}).count(), 2);
   test.equal(c.find({}, {sort: ['_id', 'desc'], skip: 2}).count(), 1);
+  test.equal(c.find({}, {sort: ['_id', 'desc'], limit: 2}).count(false), 3);
   test.equal(c.find({}, {sort: ['_id', 'desc'], limit: 2}).count(), 2);
   test.equal(c.find({}, {sort: ['_id', 'desc'], limit: 1}).count(), 1);
+  test.equal(c.find({}, {sort: ['_id', 'desc'], skip: 1, limit: 1}).count(false), 3);
   test.equal(c.find({}, {sort: ['_id', 'desc'], skip: 1, limit: 1}).count(), 1);
+  test.equal(c.find({tags: 'fruit'}, {sort: ['_id', 'desc'], skip: 1}).count(false), 2);
   test.equal(c.find({tags: 'fruit'}, {sort: ['_id', 'desc'], skip: 1}).count(), 1);
+  test.equal(c.find({tags: 'fruit'}, {sort: ['_id', 'desc'], limit: 1}).count(false), 2);
   test.equal(c.find({tags: 'fruit'}, {sort: ['_id', 'desc'], limit: 1}).count(), 1);
+  test.equal(c.find({tags: 'fruit'}, {sort: ['_id', 'desc'], skip: 1, limit: 1}).count(false), 2);
   test.equal(c.find({tags: 'fruit'}, {sort: ['_id', 'desc'], skip: 1, limit: 1}).count(), 1);
 
   // Regression test for #455.
@@ -3441,7 +3457,7 @@ Tinytest.add('minimongo - immediate invalidate', test => {
 
 Tinytest.add('minimongo - count on cursor with limit', test => {
   const coll = new LocalCollection();
-  let count;
+  let count, unlimitedCount;
 
   coll.insert({_id: 'A'});
   coll.insert({_id: 'B'});
@@ -3451,26 +3467,32 @@ Tinytest.add('minimongo - count on cursor with limit', test => {
   const c = Tracker.autorun(c => {
     const cursor = coll.find({_id: {$exists: true}}, {sort: {_id: 1}, limit: 3});
     count = cursor.count();
+    unlimitedCount = cursor.count(false);
   });
 
   test.equal(count, 3);
+  test.equal(unlimitedCount, 4);
 
   coll.remove('A'); // still 3 in the collection
   Tracker.flush();
   test.equal(count, 3);
+  test.equal(unlimitedCount, 3);
 
   coll.remove('B'); // expect count now 2
   Tracker.flush();
   test.equal(count, 2);
+  test.equal(unlimitedCount, 2);
 
 
   coll.insert({_id: 'A'}); // now 3 again
   Tracker.flush();
   test.equal(count, 3);
+  test.equal(unlimitedCount, 3);
 
   coll.insert({_id: 'B'}); // now 4 entries, but count should be 3 still
   Tracker.flush();
   test.equal(count, 3);
+  test.equal(unlimitedCount, 4); // unlimitedCount should be 4 now
 
   c.stop();
 });
@@ -3749,30 +3771,37 @@ Tinytest.add('minimongo - fine-grained reactivity of query with fields projectio
 Tinytest.add('minimongo - reactive skip/limit count while updating', test => {
   const X = new LocalCollection;
   let count = -1;
+  let unlimitedCount = -1;
 
   const c = Tracker.autorun(() => {
     count = X.find({}, {skip: 1, limit: 1}).count();
+    unlimitedCount = X.find({}, {skip: 1, limit: 1}).count(false);
   });
 
   test.equal(count, 0);
+  test.equal(unlimitedCount, 0);
 
   X.insert({});
   Tracker.flush({_throwFirstError: true});
   test.equal(count, 0);
+  test.equal(unlimitedCount, 1);
 
   X.insert({});
   Tracker.flush({_throwFirstError: true});
   test.equal(count, 1);
+  test.equal(unlimitedCount, 2);
 
   X.update({}, {$set: {foo: 1}});
   Tracker.flush({_throwFirstError: true});
   test.equal(count, 1);
-
+  test.equal(unlimitedCount, 2);
+  
   // Make sure a second update also works
   X.update({}, {$set: {foo: 2}});
   Tracker.flush({_throwFirstError: true});
   test.equal(count, 1);
-
+  test.equal(unlimitedCount, 2);
+  
   c.stop();
 });
 
