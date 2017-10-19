@@ -22,7 +22,7 @@ var bcryptCompare = Meteor.wrapAsync(bcrypt.compare);
 // "sha-256" and then passes the digest to bcrypt.
 
 
-Accounts._bcryptRounds = 10;
+Accounts._bcryptRounds = Accounts._options.bcryptRounds || 10;
 
 // Given a 'password' from the client, extract the string that we should
 // bcrypt. 'password' can be one of:
@@ -52,6 +52,18 @@ var hashPassword = function (password) {
   return bcryptHash(password, Accounts._bcryptRounds);
 };
 
+// Extract the number of rounds used in the specified bcrypt hash.
+const getRoundsFromBcryptHash = hash => {
+  let rounds;
+  if (hash) {
+    const hashSegments = hash.split('$');
+    if (hashSegments.length > 2) {
+      rounds = parseInt(hashSegments[2], 10);
+    }
+  }
+  return rounds;
+};
+
 // Check whether the provided password matches the bcrypt'ed password in
 // the database user record. `password` can be a string (in which case
 // it will be run through SHA256 before bcrypt) or an object with
@@ -63,10 +75,22 @@ Accounts._checkPassword = function (user, password) {
     userId: user._id
   };
 
-  password = getPasswordString(password);
+  const formattedPassword = getPasswordString(password);
+  const hash = user.services.password.bcrypt;
+  const hashRounds = getRoundsFromBcryptHash(hash);
 
-  if (! bcryptCompare(password, user.services.password.bcrypt)) {
+  if (! bcryptCompare(formattedPassword, hash)) {
     result.error = handleError("Incorrect password", false);
+  } else if (hash && Accounts._bcryptRounds != hashRounds) {
+    // The password checks out, but the user's bcrypt hash needs to be updated.
+    Meteor.defer(() => {
+      Meteor.users.update({ _id: user._id }, {
+        $set: {
+          'services.password.bcrypt':
+            bcryptHash(formattedPassword, Accounts._bcryptRounds)
+        }
+      });
+    });
   }
 
   return result;
@@ -78,7 +102,7 @@ var checkPassword = Accounts._checkPassword;
 ///
 const handleError = (msg, throwError = true) => {
   const error = new Meteor.Error(
-    403, 
+    403,
     Accounts._options.ambiguousErrorMessages
       ? "Something went wrong. Please check your credentials."
       : msg
