@@ -1,5 +1,9 @@
 ## v.NEXT
 
+* An `onExternalLogin` hook has been added to the accounts system, to allow
+  the customization of OAuth user profile updates.
+  [PR #9042](https://github.com/meteor/meteor/pull/9042)
+
 * Enables passing `false` to `cursor.count()` on the client to prevent skip
   and limit from having an effect on the result.
   [Issue #1201](https://github.com/meteor/meteor/issues/1201)
