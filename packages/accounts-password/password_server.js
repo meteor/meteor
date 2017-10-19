@@ -53,8 +53,16 @@ var hashPassword = function (password) {
 };
 
 // Extract the number of rounds used in the specified bcrypt hash.
-const getRoundsFromBcryptHash =
-  hash => hash ? Number(hash.substring(4, 6)) : null;
+const getRoundsFromBcryptHash = hash => {
+  let rounds;
+  if (hash) {
+    const hashSegments = hash.split('$');
+    if (hashSegments.length > 2) {
+      rounds = parseInt(hashSegments[2], 10);
+    }
+  }
+  return rounds;
+};
 
 // Check whether the provided password matches the bcrypt'ed password in
 // the database user record. `password` can be a string (in which case
