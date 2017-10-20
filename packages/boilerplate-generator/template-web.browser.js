@@ -1,5 +1,13 @@
 // Template function for rendering the boilerplate html for browsers
 
+const template = text => {
+  return _.template(text, null, {
+    evaluate    : /<%([\s\S]+?)%>/g,
+    interpolate : /<%=([\s\S]+?)%>/g,
+    escape      : /<%-([\s\S]+?)%>/g,
+  });
+};
+
 export default function({
   meteorRuntimeConfig,
   rootUrlPathPrefix,
@@ -17,7 +25,7 @@ export default function({
   return [].concat(
     [
       '<html' +_.map(htmlAttributes, (value, key) =>
-        _.template(' <%= attrName %>="<%- attrValue %>"')({
+        template(' <%= attrName %>="<%- attrValue %>"')({
           attrName: key,
           attrValue: value
         })
@@ -26,7 +34,7 @@ export default function({
     ],
 
     _.map(css, ({url}) =>
-      _.template('  <link rel="stylesheet" type="text/css" class="__meteor-css__" href="<%- href %>">')({
+      template('  <link rel="stylesheet" type="text/css" class="__meteor-css__" href="<%- href %>">')({
         href: bundledJsCssUrlRewriteHook(url)
       })
     ),
@@ -40,10 +48,10 @@ export default function({
       dynamicBody,
       '',
       (inlineScriptsAllowed
-        ? _.template('  <script type="text/javascript">__meteor_runtime_config__ = JSON.parse(decodeURIComponent(<%= conf %>))</script>')({
+        ? template('  <script type="text/javascript">__meteor_runtime_config__ = JSON.parse(decodeURIComponent(<%= conf %>))</script>')({
           conf: meteorRuntimeConfig
         })
-        : _.template('  <script type="text/javascript" src="<%- src %>/meteor_runtime_config.js"></script>')({
+        : template('  <script type="text/javascript" src="<%- src %>/meteor_runtime_config.js"></script>')({
           src: rootUrlPathPrefix
         })
       ) ,
@@ -51,17 +59,17 @@ export default function({
     ],
 
     _.map(js, ({url}) =>
-      _.template('  <script type="text/javascript" src="<%- src %>"></script>')({
+      template('  <script type="text/javascript" src="<%- src %>"></script>')({
         src: bundledJsCssUrlRewriteHook(url)
       })
     ),
 
     _.map(additionalStaticJs, ({contents, pathname}) => (
       (inlineScriptsAllowed
-        ? _.template('  <script><%= contents %></script>')({
+        ? template('  <script><%= contents %></script>')({
           contents: contents
         })
-        : _.template('  <script type="text/javascript" src="<%- src %>"></script>')({
+        : template('  <script type="text/javascript" src="<%- src %>"></script>')({
           src: rootUrlPathPrefix + pathname
         }))
     )),
@@ -73,4 +81,3 @@ export default function({
     ],
   ).join('\n');
 }
-
