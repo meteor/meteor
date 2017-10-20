@@ -1,19 +1,20 @@
 {
+  "lockfileVersion": 1,
   "dependencies": {
     "commander": {
       "version": "2.11.0",
       "resolved": "https://registry.npmjs.org/commander/-/commander-2.11.0.tgz",
-      "from": "commander@>=2.11.0 <2.12.0"
+      "integrity": "sha512-b0553uYA5YAEGgyYIGYROzKQ7X5RAqedkfjiZxwi0kL1g3bOaBNNZfYkzt/CL0umgD5wc9Jec2FbB98CjkMRvQ=="
     },
     "source-map": {
       "version": "0.5.7",
       "resolved": "https://registry.npmjs.org/source-map/-/source-map-0.5.7.tgz",
-      "from": "source-map@>=0.5.1 <0.6.0"
+      "integrity": "sha1-igOdLRAh0i0eoUyA2OpGi6LvP8w="
     },
-    "uglify-js": {
+    "uglify-es": {
       "version": "3.0.28",
-      "resolved": "https://registry.npmjs.org/uglify-js/-/uglify-js-3.0.28.tgz",
-      "from": "uglify-js@3.0.28"
+      "resolved": "https://registry.npmjs.org/uglify-es/-/uglify-es-3.0.28.tgz",
+      "integrity": "sha512-xw1hJsSp361OO0Sq0XvNyTI2wfQ4eKNljfSYyeYX/dz9lKEDj+DK+A8CzB0NmoCwWX1MnEx9f16HlkKXyG65CQ=="
     }
   }
 }
