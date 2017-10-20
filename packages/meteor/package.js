@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Core Meteor environment",
-  version: '1.8.0-rc.15'
+  version: '1.8.0-rc.16'
 });
 
 Package.registerBuildPlugin({
