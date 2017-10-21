@@ -76,8 +76,7 @@ In this article, we'll use the popular [Mocha](https://mochajs.org) test runner 
 There are several options. Choose the ones that makes sense for your app. You may depend on more than one and set up different test commands for different situations.
 
 * [practicalmeteor:mocha](https://atmospherejs.com/practicalmeteor/mocha) Runs client and server package or app tests and displays all results in a browser. Use [spacejam](https://www.npmjs.com/package/spacejam) for command line / CI support.
-* [dispatch:mocha](https://atmospherejs.com/dispatch/mocha) Runs client and/or server package or app tests and reports all results in the server console. Supports various browsers for running client tests, including PhantomJS, Selenium ChromeDriver, and Electron. Can be used for running tests on a CI server. Has a watch mode.
-* [dispatch:mocha-browser](https://atmospherejs.com/dispatch/mocha-browser) Runs client and server package or app tests with Mocha reporting client results in a web browser and server results in the server console. Has a watch mode.
+* [meteortesting:mocha](https://atmospherejs.com/meteortesting/mocha) Runs client and/or server package or app tests and reports all results in the server console. Supports various browsers for running client tests, including PhantomJS, Selenium ChromeDriver, and Electron. Can be used for running tests on a CI server. Has a watch mode.
 
 These packages don't do anything in development or production mode. They declare themselves `testOnly` so they are not even loaded outside of testing. But when our app is run in [test mode](#test-modes), the test driver package takes over, executing test code on both the client and server, and rendering results to the browser.
 
@@ -785,13 +784,13 @@ There are two principal ways to do it: on the developer's machine before allowin
 
 We've seen one example of running tests on the command line, using our `meteor npm run chimp-test` mode.
 
-We can also use a command-line driver for Mocha [`dispatch:mocha`](https://atmospherejs.com/dispatch/mocha) to run our standard tests on the command line.
+We can also use a command-line driver for Mocha [`meteortesting:mocha`](https://atmospherejs.com/meteortesting/mocha) to run our standard tests on the command line.
 
 Adding and using the package is straightforward:
 
 ```bash
-meteor add dispatch:mocha
-meteor test --once --driver-package dispatch:mocha
+meteor add meteortesting:mocha
+meteor test --once --driver-package meteortesting:mocha
 ```
 
 (The `--once` argument ensures the Meteor process stops once the test is done).
@@ -801,7 +800,7 @@ We can also add that command to our `package.json` as a `test` script:
 ```json
 {
   "scripts": {
-    "test": "meteor test --once --driver-package dispatch:mocha"
+    "test": "meteor test --once --driver-package meteortesting:mocha"
   }
 }
 ```
