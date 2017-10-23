@@ -16,6 +16,17 @@
   version of `npm` used by `meteor npm ...` commands.
   [PR #8835](https://github.com/meteor/meteor/pull/8835)
 
+* In addition to `meteor node` and `meteor npm`, which are convenient
+  shorthands for `node` and `npm`, `meteor npx <command>` can be used to
+  execute commands from a local `node_modules/.bin` directory or from the
+  `npm` cache, installing any packages needed to run the command. Try it!
+  ```sh
+  meteor npx cowsay mooooo
+  meteor npx uuid
+  meteor npx nyancat
+  meteor npx yarn
+  ```
+
 * The `meteor debug` command has been superseded by the more flexible
   `--inspect` and `--inspect-brk` command-line flags, which work for any
   `run`, `test`, or `test-packages` command.
@@ -33,12 +44,21 @@
 
   [Feature Request #194](https://github.com/meteor/meteor-feature-requests/issues/194)
 
-* Fresh installs of Meteor on 64-bit Windows machines will now use native
-  64-bit Node.js binaries, rather than a 32-bit version of Node.js. In
-  addition to being faster, native 64-bit support will enable Windows
+* On Windows, Meteor can now be installed or reinstalled from scratch
+  using the command `choco install meteor`, using the
+  [Chocolatey](https://chocolatey.org/) package manager. This method of
+  installation replaces the old `InstallMeteor.exe` installer, which had a
+  number of shortcomings, and will no longer be supported.
+
+* Fresh installs of Meteor 1.6 on 64-bit Windows machines will now use
+  native 64-bit Node.js binaries, rather than a 32-bit version of Node.js.
+  In addition to being faster, native 64-bit support will enable Windows
   developers to debug asynchronous stack traces more easily in the new
   Node.js inspector, which is only fully supported by native 64-bit
-  architectures. [PR #9218](https://github.com/meteor/meteor/pull/9218)
+  architectures. Note that merely running `meteor update` from a 32-bit
+  version of Meteor will still install a 32-bit version of Meteor 1.6, so
+  you should use `choco install meteor` to get a fresh 64-bit version.
+  [PR #9218](https://github.com/meteor/meteor/pull/9218)
 
 * To support developers running on a 32-bit OS, Meteor now supports both 32-
   and 64-bit versions of Mongo. Mongo 3.2 is the last 32-bit version available
