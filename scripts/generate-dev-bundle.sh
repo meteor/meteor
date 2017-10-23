@@ -182,7 +182,7 @@ echo BUNDLING
 
 cd "$DIR"
 echo "${BUNDLE_VERSION}" > .bundle_version.txt
-rm -rf build CHANGELOG.md ChangeLog LICENSE README.md
+rm -rf build CHANGELOG.md ChangeLog LICENSE README.md .npm
 
 tar czf "${CHECKOUT_DIR}/dev_bundle_${PLATFORM}_${BUNDLE_VERSION}.tar.gz" .
 
