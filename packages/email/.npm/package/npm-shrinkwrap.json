@@ -1,14 +1,15 @@
 {
+  "lockfileVersion": 1,
   "dependencies": {
     "node4mailer": {
       "version": "4.0.3",
       "resolved": "https://registry.npmjs.org/node4mailer/-/node4mailer-4.0.3.tgz",
-      "from": "node4mailer@4.0.3"
+      "integrity": "sha1-jwx6ZzdSehKFMBhaFMLoeZiaiRA="
     },
     "stream-buffers": {
       "version": "0.2.5",
       "resolved": "https://registry.npmjs.org/stream-buffers/-/stream-buffers-0.2.5.tgz",
-      "from": "stream-buffers@0.2.5"
+      "integrity": "sha1-+TBTnTzwjXSKNArWE5+Vss60jwU="
     }
   }
 }
