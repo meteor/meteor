@@ -6,6 +6,8 @@ import WebCordovaTemplate from './template-web.cordova';
 // Copied from webapp_server
 const readUtf8FileSync = filename => Meteor.wrapAsync(readFile)(filename, 'utf8');
 
+const identity = value => value;
+
 export class Boilerplate {
   constructor(arch, manifest, options = {}) {
     this.template = _getTemplate(arch);
@@ -38,8 +40,8 @@ export class Boilerplate {
   // Optionally takes pathMapper for resolving relative file system paths.
   // Optionally allows to override fields of the data context.
   _generateBoilerplateFromManifest(manifest, {
-    urlMapper = _.identity,
-    pathMapper = _.identity,
+    urlMapper = identity,
+    pathMapper = identity,
     baseDataExtension,
     inline,
   } = {}) {
@@ -53,7 +55,7 @@ export class Boilerplate {
       ...baseDataExtension,
     };
 
-    _.each(manifest, item => {
+    manifest.forEach(item => {
       const urlPath = urlMapper(item.url);
       const itemObj = { url: urlPath };
 

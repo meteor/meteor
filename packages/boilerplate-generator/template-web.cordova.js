@@ -26,7 +26,7 @@ export default function({
       '  <meta http-equiv="Content-Security-Policy" content="default-src * gap: data: blob: \'unsafe-inline\' \'unsafe-eval\' ws: wss:;">',
     ],
     // We are explicitly not using bundledJsCssUrlRewriteHook: in cordova we serve assets up directly from disk, so rewriting the URL does not make sense
-    _.map(css, ({url}) =>
+    css.map(({ url }) =>
       template('  <link rel="stylesheet" type="text/css" class="__meteor-css__" href="<%- href %>">')({
         href: url
       })
@@ -49,13 +49,13 @@ export default function({
       '',
       '  <script type="text/javascript" src="/cordova.js"></script>'
     ],
-    _.map(js, ({url}) =>
+    js.map(({ url }) =>
       template('  <script type="text/javascript" src="<%- src %>"></script>')({
         src: url
       })
     ),
 
-    _.map(additionalStaticJs, ({contents, pathname}) => (
+    additionalStaticJs.map(({ contents, pathname }) => (
       (inlineScriptsAllowed
         ? template('  <script><%= contents %></script>')({
           contents: contents

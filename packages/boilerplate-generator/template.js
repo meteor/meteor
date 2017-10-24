@@ -1,3 +1,5 @@
+import { _ } from 'meteor/underscore';
+
 // As identified in issue #9149, when an application overrides the default
 // _.template settings using _.templateSettings, those new settings are
 // used anywhere _.template is used, including within the
