@@ -119,6 +119,20 @@ export class AccountsServer extends AccountsCommon {
 
     this._onCreateUserHook = func;
   }
+
+  /**
+   * @summary Customize oauth user profile updates
+   * @locus Server
+   * @param {Function} func Called whenever a user is logged in via oauth. Return the profile object to be merged, or throw an `Error` to abort the creation.
+   */
+  onExternalLogin(func) {
+    if (this._onExternalLoginHook) {
+      throw new Error("Can only call onExternalLogin once");
+    }
+
+    this._onExternalLoginHook = func;
+  }
+
 };
 
 var Ap = AccountsServer.prototype;
@@ -1427,14 +1441,20 @@ Ap.updateOrCreateUserFromExternalService = function (
 
   var user = this.users.findOne(selector);
 
+  // When creating a new user we pass through all options. When updating an
+  // existing user, by default we only process/pass through the serviceData
+  // (eg, so that we keep an unexpired access token and don't cache old email
+  // addresses in serviceData.email). The onExternalLogin hook can be used when
+  // creating or updating a user, to modify or pass through more options as
+  // needed.
+  var opts = user ? {} : options;
+  if (this._onExternalLoginHook) {
+    opts = this._onExternalLoginHook(options, user);
+  }
+
   if (user) {
     pinEncryptedFieldsToUser(serviceData, user._id);
 
-    // We *don't* process options (eg, profile) for update, but we do replace
-    // the serviceData (eg, so that we keep an unexpired access token and
-    // don't cache old email addresses in serviceData.email).
-    // XXX provide an onUpdateUser hook which would let apps update
-    //     the profile too
     var setAttrs = {};
     _.each(serviceData, function (value, key) {
       setAttrs["services." + serviceName + "." + key] = value;
@@ -1442,6 +1462,7 @@ Ap.updateOrCreateUserFromExternalService = function (
 
     // XXX Maybe we should re-use the selector above and notice if the update
     //     touches nothing?
+    setAttrs = _.extend({}, setAttrs, opts);
     this.users.update(user._id, {
       $set: setAttrs
     });
@@ -1450,15 +1471,13 @@ Ap.updateOrCreateUserFromExternalService = function (
       type: serviceName,
       userId: user._id
     };
-
   } else {
-    // Create a new user with the service data. Pass other options through to
-    // insertUserDoc.
+    // Create a new user with the service data.
     user = {services: {}};
     user.services[serviceName] = serviceData;
     return {
       type: serviceName,
-      userId: this.insertUserDoc(options, user)
+      userId: this.insertUserDoc(opts, user)
     };
   }
 };
