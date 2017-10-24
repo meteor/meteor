@@ -17,7 +17,7 @@ export default function({
 }) {
   return [].concat(
     [
-      '<html' + Object.keys(htmlAttributes).map(key =>
+      '<html' + Object.keys(htmlAttributes || {}).map(key =>
         template(' <%= attrName %>="<%- attrValue %>"')({
           attrName: key,
           attrValue: htmlAttributes[key]
@@ -26,7 +26,7 @@ export default function({
       '<head>'
     ],
 
-    css.map(({ url }) =>
+    (css || []).map(({ url }) =>
       template('  <link rel="stylesheet" type="text/css" class="__meteor-css__" href="<%- href %>">')({
         href: bundledJsCssUrlRewriteHook(url)
       })
@@ -51,13 +51,13 @@ export default function({
       ''
     ],
 
-    js.map(({ url }) =>
+    (js || []).map(({ url }) =>
       template('  <script type="text/javascript" src="<%- src %>"></script>')({
         src: bundledJsCssUrlRewriteHook(url)
       })
     ),
 
-    additionalStaticJs.map(({ contents, pathname }) => (
+    (additionalStaticJs || []).map(({ contents, pathname }) => (
       (inlineScriptsAllowed
         ? template('  <script><%= contents %></script>')({
           contents: contents
