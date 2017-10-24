@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Common code for OAuth-based services",
-  version: "1.2.0-rc.16"
+  version: "1.2.0-rc.17"
 });
 
 Package.onUse(function (api) {
