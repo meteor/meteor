@@ -1,6 +1,6 @@
 ## v.NEXT
 
-* Node.js has been upgraded to version 8.7.0, which will be entering
+* Node.js has been upgraded to version 8.8.0, which will be entering
   long-term support (LTS) coverage on 31 October 2017, lasting through
   December 2019 ([full schedule](https://github.com/nodejs/Release#nodejs-release-working-group)).
   This is a *major* upgrade from the previous version of Node.js used by
