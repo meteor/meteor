@@ -4,7 +4,7 @@ if (process.env.ROOT_URL &&
   if (__meteor_runtime_config__.ROOT_URL) {
     var parsedUrl = Npm.require('url').parse(__meteor_runtime_config__.ROOT_URL);
     // Sometimes users try to pass, eg, ROOT_URL=mydomain.com.
-    if (!parsedUrl.host) {
+    if (!['http:', 'https:'].includes(parsedUrl.protocol) || !parsedUrl.host) {
       throw Error("$ROOT_URL, if specified, must be an URL");
     }
     var pathPrefix = parsedUrl.pathname;
