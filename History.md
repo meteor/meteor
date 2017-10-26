@@ -7,13 +7,14 @@
   Meteor, 4.8.4.
 
 * The `npm` npm package has been upgraded to version 5.4.2, a major
-  upgrade from 4.6.1, requiring internal updates to dependency management
-  logic for Meteor packages that use `Npm.depends`. While these changes
-  should be backwards-compatible for existing Meteor packages, if you are
-  the maintainer of any packages, you should pay close attention to your
-  `npm-shrinkwrap.json` files when first using this version of `npm`. For
-  normal Meteor application development, this change primarily affects the
-  version of `npm` used by `meteor npm ...` commands.
+  upgrade from 4.6.1. While this update should be backwards-compatible for
+  existing Meteor apps and packages, if you are the maintainer of any
+  Meteor packages, pay close attention to your `npm-shrinkwrap.json` files
+  when first using this version of `npm`. For normal Meteor application
+  development, this upgrade primarily affects the version of `npm` used by
+  `meteor npm ...` commands. A functional installation of `git` may be
+  required to support GitHub repository and/or tarball URLs.
+  [Troubleshooting](https://docs.npmjs.com/troubleshooting/common-errors).
   [PR #8835](https://github.com/meteor/meteor/pull/8835)
 
 * In addition to `meteor node` and `meteor npm`, which are convenient
@@ -65,6 +66,15 @@
   from Mongo. Meteor running on a 32-bit OS will use a 32-bit version of Mongo
   3.2 and 64-bit platforms will receive newer Mongo versions in future releases.
   [PR #9173](https://github.com/meteor/meteor/pull/9173)
+
+* After several reliability improvements, native file watching has been
+  un-disabled on Windows. Though native file change notifications will
+  probably never work with network or shared virtual file systems (e.g.,
+  NTFS or Vagrant-mounted disks), Meteor uses an efficient prioritized
+  polling system as a fallback for those file systems.
+
+* Various optimizations have reduced the on-disk size of the `meteor-tool`
+  package from 545MB (1.5.2.2) to 223MB.
 
 * The `meteor-babel` package has been upgraded to version 0.24.6, to take
   better advantage of native language features in Node 8.
