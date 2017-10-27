@@ -3,15 +3,18 @@
 
 Package.describe({
   summary: "Wrapper around the mongo npm package",
-  version: '2.2.30',
+  version: "2.2.33",
   documentation: null
 });
 
 Npm.depends({
-  mongodb: "2.2.30"
+  mongodb: "2.2.33"
 });
 
 Package.onUse(function (api) {
-  api.export(['NpmModuleMongodb', 'NpmModuleMongodbVersion'], 'server');
-  api.addFiles('wrapper.js', 'server');
+  api.addFiles("wrapper.js", "server");
+  api.export([
+    "NpmModuleMongodb",
+    "NpmModuleMongodbVersion",
+  ], "server");
 });

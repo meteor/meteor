@@ -6,13 +6,15 @@ var runLog = require('./run-log.js');
 var child_process = require('child_process');
 
 var _ = require('underscore');
-var isopackets = require('../tool-env/isopackets.js');
+import { loadIsopackage } from '../tool-env/isopackets.js';
 var Console = require('../console/console.js').Console;
 
 // Given a Mongo URL, open an interative Mongo shell on this terminal
 // on that database.
 var runMongoShell = function (url) {
-  var mongoPath = files.pathJoin(files.getDevBundle(), 'mongodb', 'bin', 'mongo');
+  var mongoPath = files.pathJoin(
+    files.getDevBundle(), 'mongodb', 'bin', 'mongo'
+  );
   // XXX mongo URLs are not real URLs (notably, the comma-separation for
   // multiple hosts). We've had a little better luck using the mongodb-uri npm
   // package.
@@ -52,12 +54,12 @@ function spawnMongod(mongodPath, port, dbPath, replSetName) {
     // Use an 8MB oplog rather than 256MB. Uses less space on disk and
     // initializes faster. (Not recommended for production!)
     '--oplogSize', '8',
-    '--replSet', replSetName
+    '--replSet', replSetName,
+    '--noauth'
   ];
 
   // Use mmapv1 on 32bit platforms, as our binary doesn't support WT
-  if (process.platform === "win32"
-      || (process.platform === "linux" && process.arch === "ia32")) {
+  if (process.arch === 'ia32') {
     args.push('--storageEngine', 'mmapv1', '--smallfiles');
   } else {
     // The WT journal seems to be at least 300MB, which is just too much
@@ -361,7 +363,8 @@ var launchMongo = function (options) {
 
   var noOplog = false;
   var mongod_path = files.pathJoin(
-    files.getDevBundle(), 'mongodb', 'bin', 'mongod');
+    files.getDevBundle(), 'mongodb', 'bin', 'mongod'
+  );
   var replSetName = 'meteor';
 
   // Automated testing: If this is set, instead of starting mongod, we
@@ -533,12 +536,12 @@ var launchMongo = function (options) {
       // note: don't use "else ifs" in this, because 'data' can have multiple
       // lines
       if (/\[initandlisten\] Did not find local replica set configuration document at startup/.test(data) ||
-          /\[ReplicationExecutor\] Locally stored replica set configuration does not have a valid entry for the current node/.test(data)) {
+          /\[.*\] Locally stored replica set configuration does not have a valid entry for the current node/.test(data)) {
         replSetReadyToBeInitiated = true;
         maybeReadyToTalk();
       }
 
-      if (/ \[initandlisten\] waiting for connections on port/.test(data)) {
+      if (/ \[.*\] waiting for connections on port/.test(data)) {
         listening = true;
         maybeReadyToTalk();
       }
@@ -585,17 +588,19 @@ var launchMongo = function (options) {
   var initiateReplSetAndWaitForReady = function () {
     try {
       // Load mongo so we'll be able to talk to it.
-      var mongoNpmModule =
-            isopackets.load('mongo')['npm-mongo'].NpmModuleMongodb;
+      const { Db, Server } = loadIsopackage('npm-mongo').NpmModuleMongodb;
 
       // Connect to the intended primary and start a replset.
-      var db = new mongoNpmModule.Db(
+      var db = new Db(
         'meteor',
-        new mongoNpmModule.Server('127.0.0.1', options.port, {
+        new Server('127.0.0.1', options.port, {
           poolSize: 1,
-          socketOptions: {connectTimeoutMS: 60000},
+          socketOptions: {
+            connectTimeoutMS: 60000
+          }
         }),
-        {safe: true});
+        { safe: true }
+      );
 
       yieldingMethod(db, 'open');
       if (stopped) {

@@ -25,10 +25,7 @@ try {
 
 // Make sure the npm finds this exact version of node in its $PATH.
 var binDir = path.dirname(process.execPath);
-var PATH = binDir + path.delimiter + process.env.PATH;
-var env = Object.create(process.env, {
-  PATH: { value: PATH }
-});
+process.env.PATH = binDir + path.delimiter + process.env.PATH;
 
 var npmCmd = "npm";
 if (process.platform === "win32") {
@@ -44,8 +41,7 @@ function rebuild(i) {
   if (! dir) {
     // Print Node/V8/etc. versions for diagnostic purposes.
     spawn(npmCmd, ["version", "--json"], {
-      stdio: "inherit",
-      env: env
+      stdio: "inherit"
     });
 
     return;
@@ -53,8 +49,7 @@ function rebuild(i) {
 
   spawn(npmCmd, rebuildArgs, {
     cwd: path.join(__dirname, dir),
-    stdio: "inherit",
-    env: env
+    stdio: "inherit"
   }).on("exit", function (code) {
     if (code !== 0) {
       process.exit(code);

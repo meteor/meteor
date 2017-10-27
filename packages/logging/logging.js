@@ -49,6 +49,18 @@ var LEVEL_COLORS = {
 
 var META_COLOR = 'blue';
 
+// Default colors cause readability problems on Windows Powershell,
+// switch to bright variants. While still capable of millions of
+// operations per second, the benchmark showed a 25%+ increase in
+// ops per second (on Node 8) by caching "process.platform".
+var isWin32 = typeof process === 'object' && process.platform === 'win32';
+var platformColor = function (color) {
+  if (isWin32 && typeof color === 'string' && color.slice(-6) !== 'Bright') {
+    return color + 'Bright';
+  }
+  return color;
+};
+
 // XXX package
 var RESTRICTED_KEYS = ['time', 'timeInexact', 'level', 'file', 'line',
                         'program', 'originApp', 'satellite', 'stderr'];
@@ -263,8 +275,8 @@ Log.format = function (obj, options) {
       require('cli-color')[color](line) : line;
   };
 
-  return prettify(metaPrefix, options.metaColor || META_COLOR) +
-    prettify(message, LEVEL_COLORS[level]);
+  return prettify(metaPrefix, platformColor(options.metaColor || META_COLOR)) +
+    prettify(message, platformColor(LEVEL_COLORS[level]));
 };
 
 // Turn a line of text into a loggable object.

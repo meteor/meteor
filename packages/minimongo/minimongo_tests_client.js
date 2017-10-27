@@ -3006,7 +3006,10 @@ Tinytest.add('minimongo - modify', test => {
   upsert({"_id": "foo", "foo": "bar"}, {"bar": "foo"}, {"_id": "foo", "bar": "foo"})
    // Replacement update keeps _id
   upsertUpdate({"_id": "foo", "bar": "baz"}, {"_id":"foo"}, {"bar": "crow"}, {"_id": "foo", "bar": "crow"});
-
+  // Test for https://github.com/meteor/meteor/issues/9167
+  upsert({key: 123, keyName: '321'}, {$set: {name: 'Todo'}}, {key: 123, keyName: '321', name: 'Todo'});
+  upsertException({key: 123, "key.name": '321'}, {$set:{}});
+  
   // Nested fields don't work with literal objects
   upsertException({"a": {}, "a.b": "foo"}, {});
    // You can't have an ambiguious ID

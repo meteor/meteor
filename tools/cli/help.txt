@@ -3,7 +3,8 @@
 Usage: meteor [--release <release>] [--help] <built-in command> [args]
        meteor help <built-in command>
        meteor [--version] [--arch]
-       meteor <node | npm | other> [args]
+       meteor [run | test | test-packages] --inspect[-brk][=<port>]
+       meteor <node | npm | other> [args]
 
 
 With no arguments, 'meteor' runs the project in the current
@@ -16,6 +17,9 @@ Built-in Commands:
 {{commands}}
 
 See 'meteor help <built-in command>' for details on a command.
+
+Passing '--inspect' or '--inspect-brk' to 'meteor run', 'meteor test', or
+'meteor test-packages' will enable debugging of the server process.
 
 Other Commands:
 
@@ -67,10 +71,14 @@ Targets:
 Options:
   --port, -p       Port to listen on (instead of the default 3000). Also
                    uses port N+1 and a port specified by --app-port.
-                   Specify as --port=host:port to bind to a specific interface.
-  --debug-port     Specify a port to enable server-side debugging. The
-                   server will be paused at startup, waiting for incoming
-                   connections from debugger clients on the specified port.
+                   Specify as --port=host:port to bind to a specific
+                   interface.
+  --inspect[-brk][=<port>]
+                   Enable server-side debugging via debugging clients like
+                   the Node.js command-line debugger, Chrome DevTools, or
+                   Visual Studio Code. With --inspect-brk, the server will
+                   be paused at startup, waiting for clients to attach to
+                   the process on the specified port (default: 9229).
   --mobile-server  Location where mobile builds connect to the Meteor server.
                    Defaults to your local IP and the port that the Meteor
                    server binds to. Can include a URL scheme (for
@@ -81,8 +89,10 @@ Options:
   --release        Specify the release of Meteor to use.
   --verbose        Print all output from builds logs.
   --no-lint        Don't run linters used by the app on every rebuild.
-  --no-release-check            Don't run the release updater to check for new releases.
-  --allow-incompatible-update   Allow packages in your project to be upgraded or
+  --no-release-check
+                   Don't run the release updater to check for new releases.
+  --allow-incompatible-update
+                   Allow packages in your project to be upgraded or
                    downgraded to versions that are potentially incompatible with
                    the current versions, if required to satisfy all package
                    version constraints.
@@ -90,26 +100,44 @@ Options:
                    --extra-packages "package-name1, package-name2@1.2.3")
 
 >>> debug
-Run the project, but suspend the server process for debugging.
+Run the project with server-side debugging enabled.
 
-Usage: meteor debug [--debug-port <port>] [run options]
-       meteor run --debug-port <port> [run options]
+Usage: meteor debug [run options] # deprecated
+       meteor --inspect[-brk][=<port>] [run | test | test-packages] [options]
 
-The server process will be suspended just before the first statement of
-server code that would normally execute. In order to continue execution of
-server code, use either the web-based Node Inspector or the command-line
-debugger (further instructions will be printed in the console).
+Enable server-side debugging via debugging clients like the Node.js
+command-line debugger, Chrome DevTools, or Visual Studio Code. With
+--inspect-brk, the server will be paused at startup, waiting for clients
+to attach to the process on the specified port (default: 9229).
 
-The easiest way to set breakpoints is to use the `debugger` keyword:
+The 'meteor debug' command is deprecated in favor of 'meteor --inspect-brk'.
+
+The syntax of the --inspect and --inspect-brk flags is the same as the
+corresponding Node.js options:
+https://nodejs.org/en/docs/inspector/#command-line-options
+
+Two notable differences from the Node.js behavior:
+
+* The --inspect[-brk] flags affect the server process spawned by the build
+  process, rather than affecting the build process itself.
+
+* The --inspect-brk flag causes the server process to pause just after
+  server code has loaded but before it begins to execute, giving the
+  developer a chance to set breakpoints in server code.
+
+An alternative way to set breakpoints is to use the `debugger` keyword:
 https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/debugger
 
-The options for 'meteor debug' are identical to those for 'meteor run',
-with one addition:
-
 Options:
-  --debug-port   Port on which the server process debugger should listen
-                 for incoming connections from debugging clients, such as
-                 node-inspector (default 5858).
+  --inspect
+  --inspect=<port>
+  --inspect-brk
+  --inspect-brk=<port>
+                 Enable server-side debugging via debugging clients like
+                 the Node.js command-line debugger, Chrome DevTools, or
+                 Visual Studio Code. With --inspect-brk, the server will
+                 be paused at startup, waiting for clients to attach to
+                 the process on the specified port (default: 9229).
 
 
 >>> create
@@ -560,9 +588,12 @@ with --port.
 Options:
   --port, -p        Port to listen on (instead of the default 3000). Also
                     uses port N+1 and N+2.
-  --debug-port      Specify a port to enable server-side debugging. The
-                    server will be paused before any tests run, waiting
-                    for incoming connections from debugger clients.
+  --inspect[-brk][=<port>]
+                    Enable server-side debugging via debugging clients like
+                    the Node.js command-line debugger, Chrome DevTools, or
+                    Visual Studio Code. With --inspect-brk, the server will
+                    be paused at startup, waiting for clients to attach to
+                    the process on the specified port (default: 9229).
   --mobile-server   If running tests in an emulator or on a mobile device,
                     the location where mobile builds connect to the
                     Meteor server. Defaults to your local IP and the
@@ -620,9 +651,12 @@ Meteor Guide - https://guide.meteor.com/testing.html
 Options:
   --port, -p        Port to listen on (instead of the default 3000). Also
                     uses port N+1 and N+2.
-  --debug-port      Specify a port to enable server-side debugging. The
-                    server will be paused before any tests run, waiting
-                    for incoming connections from debugger clients.
+  --inspect[-brk][=<port>]
+                    Enable server-side debugging via debugging clients like
+                    the Node.js command-line debugger, Chrome DevTools, or
+                    Visual Studio Code. With --inspect-brk, the server will
+                    be paused at startup, waiting for clients to attach to
+                    the process on the specified port (default: 9229).
   --mobile-server   If running tests in an emulator or on a mobile device,
                     the location where mobile builds connect to the
                     Meteor server. Defaults to your local IP and the

@@ -6,7 +6,7 @@ var buildmessage = require('../utils/buildmessage.js');
 var catalog = require('../packaging/catalog/catalog.js');
 var Console = require('../console/console.js').Console;
 var files = require('../fs/files.js');
-var isopackets = require('../tool-env/isopackets.js');
+import { loadIsopackage } from '../tool-env/isopackets.js';
 var main = require('./main.js');
 var packageVersionParser = require('../packaging/package-version-parser.js');
 var projectContextModule = require('../project-context.js');
@@ -111,10 +111,10 @@ var formatHiddenVersions = function (hiddenVersions, oldestShownVersion) {
 };
 
 // Converts an object to an EJSON string with the right spacing.
-var formatEJSON = function (data) {
-  var EJSON = isopackets.load('ejson').ejson.EJSON;
+function formatEJSON(data) {
+  const { EJSON } = loadIsopackage('ejson');
   return EJSON.stringify(data, { indent: true }) + "\n";
-};
+}
 
 // Takes in a string and pads it with whitespace to the length of the longest
 // possible date string.

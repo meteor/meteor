@@ -1,6 +1,6 @@
 Package.describe({
   name: "server-render",
-  version: "0.1.0",
+  version: "0.2.0",
   summary: "Generic support for server-side rendering in Meteor apps",
   documentation: "README.md"
 });
@@ -12,7 +12,7 @@ Npm.depends({
 
 Package.onUse(function(api) {
   api.use("ecmascript");
-  api.use("webapp@1.3.17");
+  api.use("webapp");
   api.mainModule("client.js", "client");
   api.mainModule("server.js", "server");
 });

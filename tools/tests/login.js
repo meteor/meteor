@@ -2,7 +2,7 @@ var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 var testUtils = require('../tool-testing/test-utils.js');
 
-var commandTimeoutSecs = testUtils.accountsCommandTimeoutSecs;
+var commandTimeoutSecs = 10;
 var loginTimeoutSecs = 2;
 
 selftest.define("login", ['net'], function () {
