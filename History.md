@@ -1,4 +1,4 @@
-## v.NEXT
+## v1.5, 2017-10-30
 
 * Node.js has been upgraded to version 8.8.1, which will be entering
   long-term support (LTS) coverage on 31 October 2017, lasting through
@@ -20,7 +20,9 @@
 * In addition to `meteor node` and `meteor npm`, which are convenient
   shorthands for `node` and `npm`, `meteor npx <command>` can be used to
   execute commands from a local `node_modules/.bin` directory or from the
-  `npm` cache, installing any packages needed to run the command. Try it!
+  `npm` cache. Any packages necessary to run the command will be
+  automatically downloaded. [Read](https://www.npmjs.com/package/npx)
+  about it, or just try some commands:
   ```sh
   meteor npx cowsay mooooo
   meteor npx uuid
@@ -74,7 +76,7 @@
   polling system as a fallback for those file systems.
 
 * Various optimizations have reduced the on-disk size of the `meteor-tool`
-  package from 545MB (1.5.2.2) to 223MB.
+  package from 545MB (1.5.2.2) to 219MB.
 
 * The `meteor-babel` package has been upgraded to version 0.24.6, to take
   better advantage of native language features in Node 8.
