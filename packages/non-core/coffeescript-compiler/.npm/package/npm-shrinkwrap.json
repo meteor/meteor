@@ -1,14 +1,15 @@
 {
+  "lockfileVersion": 1,
   "dependencies": {
     "coffeescript": {
       "version": "1.12.7",
       "resolved": "https://registry.npmjs.org/coffeescript/-/coffeescript-1.12.7.tgz",
-      "from": "coffeescript@1.12.7"
+      "integrity": "sha512-pLXHFxQMPklVoEekowk8b3erNynC+DVJzChxS/LCBBgR6/8AJkHivkm//zbowcfc7BTCAjryuhx6gPqPRfsFoA=="
     },
     "source-map": {
       "version": "0.5.7",
       "resolved": "https://registry.npmjs.org/source-map/-/source-map-0.5.7.tgz",
-      "from": "source-map@0.5.7"
+      "integrity": "sha1-igOdLRAh0i0eoUyA2OpGi6LvP8w="
     }
   }
 }

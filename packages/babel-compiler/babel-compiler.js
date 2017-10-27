@@ -72,6 +72,12 @@ BCp.processOneFileForTarget = function (inputFile, source) {
 
     var extraFeatures = Object.assign({}, this.extraFeatures);
 
+    if (inputFile.getArch().startsWith("os.")) {
+      // Start with a much simpler set of Babel presets and plugins if
+      // we're compiling for Node 8.
+      extraFeatures.nodeMajorVersion = parseInt(process.versions.node);
+    }
+
     if (! extraFeatures.hasOwnProperty("jscript")) {
       // Perform some additional transformations to improve compatibility
       // in older browsers (e.g. wrapping named function expressions, per

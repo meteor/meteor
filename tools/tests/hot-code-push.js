@@ -57,6 +57,7 @@ jquery
 my-package`);
     run.match(/my-package.*added,/);
     run.match("client connected");
+    run.waitSecs(45);
     run.match("numCssChanges: 0");
 
     s.write("packages/my-package/foo.css", "body { background-color: blue; }");
@@ -72,11 +73,13 @@ appcache`);
     run.match("server restarted");
     run.match("numCssChanges: 0");
     run.match(/background-color: (blue|rgb\(0, 0, 255\))/);
+    run.waitSecs(30);
 
     s.write("packages/my-package/foo.css", "body { background-color: red; }");
     run.match("Client modified -- refreshing");
     run.match("numCssChanges: 1");
     run.match(/background-color: (red|rgb\(255, 0, 0\))/);
+    run.waitSecs(20);
 
     // XXX: Remove me.  This shouldn't be needed, but sometimes
     // if we run too quickly on fast (or Linux?) machines, it looks
@@ -88,6 +91,7 @@ jquery`);
     run.match(/my-package.*removed from your project/);
     run.match("numCssChanges: 0");
     run.match(/background-color: (transparent|rgba\(0, 0, 0, 0\))/);
+    run.waitSecs(30);
 
     run.stop();
   });

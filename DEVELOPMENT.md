@@ -140,14 +140,6 @@ For more fine-grained control, if you're interested in running only the specific
 
 While TinyTest and the `test-packages` command can be used to test internal Meteor packages, they cannot be used to test the Meteor Tool itself. The Meteor Tool is a node app that uses a home-grown "self test" system.
 
-#### Prerequisites
-
-To reduce the size of the Meteor distribution, some parts of the self-test system must be installed separately, including `phantomjs-prebuilt` and `browserstack-webdriver`.
-
-A notification will be displayed when attempting to use the `self-test` commands if these dependencies are not installed.  Make sure to install them into your checkout when prompted:
-
-    ./meteor npm install -g phantomjs-prebuilt browserstack-webdriver
-
 #### Listing available tests
 
 To see a list of the tests which are included in the self-test system, list them with the `--list` option:

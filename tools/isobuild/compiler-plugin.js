@@ -61,7 +61,7 @@ import { isTestFilePath } from './test-files.js';
 // Cache the (slightly post-processed) results of linker.fullLink.
 const CACHE_SIZE = process.env.METEOR_LINKER_CACHE_SIZE || 1024*1024*100;
 const CACHE_DEBUG = !! process.env.METEOR_TEST_PRINT_LINKER_CACHE_DEBUG;
-const LINKER_CACHE_SALT = 17; // Increment this number to force relinking.
+const LINKER_CACHE_SALT = 18; // Increment this number to force relinking.
 const LINKER_CACHE = new LRU({
   max: CACHE_SIZE,
   // Cache is measured in bytes. We don't care about servePath.
@@ -645,7 +645,7 @@ class ResourceSlot {
       // when needed.
       resource.type = "js";
       resource.data =
-        new Buffer(cssToCommonJS(data, resource.hash), "utf8");
+        Buffer.from(cssToCommonJS(data, resource.hash), "utf8");
 
       self.jsOutputResources.push(resource);
 
@@ -657,7 +657,7 @@ class ResourceSlot {
       self.jsOutputResources.push({
         ...resource,
         type: "js",
-        data: new Buffer(
+        data: Buffer.from(
           "// These styles have already been applied to the document.\n",
           "utf8"),
         // If a compiler plugin calls addJavaScript with the same
@@ -668,7 +668,7 @@ class ResourceSlot {
       });
 
       resource.type = "css";
-      resource.data = new Buffer(data, 'utf8'),
+      resource.data = Buffer.from(data, 'utf8'),
 
       // XXX do we need to call convertSourceMapPaths here like we did
       //     in legacy handlers?
@@ -693,7 +693,7 @@ class ResourceSlot {
 
     const targetPath = options.path || sourcePath;
 
-    var data = new Buffer(
+    var data = Buffer.from(
       files.convertToStandardLineEndings(options.data), 'utf8');
 
     self.jsOutputResources.push({
@@ -723,7 +723,7 @@ class ResourceSlot {
 
     if (! (options.data instanceof Buffer)) {
       if (_.isString(options.data)) {
-        options.data = new Buffer(options.data);
+        options.data = Buffer.from(options.data);
       } else {
         throw new Error("'data' option to addAsset must be a Buffer or " +
                         "String: " + self.inputResource.path);
@@ -760,7 +760,7 @@ class ResourceSlot {
 
     self.outputResources.push({
       type: options.section,
-      data: new Buffer(files.convertToStandardLineEndings(options.data), 'utf8'),
+      data: Buffer.from(files.convertToStandardLineEndings(options.data), 'utf8'),
       lazy: self._isLazy(options),
     });
   }
@@ -774,7 +774,7 @@ class ResourceSlot {
       sourcePath: this.inputResource.path,
       targetPath: this.inputResource.path,
       servePath: this.inputResource.path,
-      data: new Buffer(
+      data: Buffer.from(
         "throw new Error(" + JSON.stringify(message) + ");\n",
         "utf8"),
       lazy: true,
@@ -988,7 +988,7 @@ export class PackageSourceBatch {
         return false;
       }
 
-      file.data = new Buffer(
+      file.data = Buffer.from(
         file.data.toString("utf8") + "\n" +
           meteorPackageInstalls.join(""),
         "utf8"
@@ -999,10 +999,13 @@ export class PackageSourceBatch {
       return true;
     });
 
-    const allMissingNodeModules = Object.create(null);
-    // Records the subset of allMissingNodeModules that were successfully
+    // Map from module identifiers that previously could not be imported
+    // to lists of info objects describing the failed imports.
+    const allMissingModules = Object.create(null);
+
+    // Records the subset of allMissingModules that were successfully
     // relocated to a source batch that could handle them.
-    const allRelocatedNodeModules = Object.create(null);
+    const allRelocatedModules = Object.create(null);
     const scannerMap = new Map;
 
     sourceBatches.forEach(batch => {
@@ -1038,16 +1041,19 @@ export class PackageSourceBatch {
 
       if (batch.useMeteorInstall) {
         scanner.scanImports();
-        _.extend(allMissingNodeModules, scanner.allMissingNodeModules);
+        ImportScanner.mergeMissing(
+          allMissingModules,
+          scanner.allMissingModules
+        );
       }
 
       scannerMap.set(name, scanner);
     });
 
-    function handleMissing(missingNodeModules) {
+    function handleMissing(missingModules) {
       const missingMap = new Map;
 
-      _.each(missingNodeModules, (info, id) => {
+      _.each(missingModules, (importInfoList, id) => {
         const parts = id.split("/");
         let name = null;
 
@@ -1079,39 +1085,36 @@ export class PackageSourceBatch {
         }
 
         if (! missingMap.has(name)) {
-          missingMap.set(name, {});
+          missingMap.set(name, Object.create(null));
         }
 
-        const missing = missingMap.get(name);
-        if (! _.has(missing, id) ||
-            ! info.possiblySpurious) {
-          // Allow any non-spurious identifier to replace an existing
-          // possibly spurious identifier.
-          missing[id] = info;
-        }
+        ImportScanner.mergeMissing(
+          missingMap.get(name),
+          { [id]: importInfoList }
+        );
       });
 
-      const nextMissingNodeModules = Object.create(null);
+      const nextMissingModules = Object.create(null);
 
-      missingMap.forEach((ids, name) => {
+      missingMap.forEach((missing, name) => {
         const { newlyAdded, newlyMissing } =
-          scannerMap.get(name).addNodeModules(ids);
-        _.extend(allRelocatedNodeModules, newlyAdded);
-        _.extend(nextMissingNodeModules, newlyMissing);
+          scannerMap.get(name).scanMissingModules(missing);
+        ImportScanner.mergeMissing(allRelocatedModules, newlyAdded);
+        ImportScanner.mergeMissing(nextMissingModules, newlyMissing);
       });
 
-      if (! _.isEmpty(nextMissingNodeModules)) {
-        handleMissing(nextMissingNodeModules);
+      if (! _.isEmpty(nextMissingModules)) {
+        handleMissing(nextMissingModules);
       }
     }
 
-    handleMissing(allMissingNodeModules);
+    handleMissing(allMissingModules);
 
-    _.each(allRelocatedNodeModules, (info, id) => {
-      delete allMissingNodeModules[id];
+    Object.keys(allRelocatedModules).forEach(id => {
+      delete allMissingModules[id];
     });
 
-    this._warnAboutMissingModules(allMissingNodeModules);
+    this._warnAboutMissingModules(allMissingModules);
 
     scannerMap.forEach((scanner, name) => {
       const isApp = ! name;
@@ -1151,11 +1154,17 @@ export class PackageSourceBatch {
     return map;
   }
 
-  static _warnAboutMissingModules(missingNodeModules) {
+  static _warnAboutMissingModules(missingModules) {
     const topLevelMissingIDs = {};
     const warnings = [];
 
-    _.each(missingNodeModules, (info, id) => {
+    Object.keys(missingModules).forEach(id => {
+      // Issue at most one warning per module identifier, even if there
+      // are multiple parent modules that failed to import it.
+      missingModules[id].some(info => maybeWarn(id, info));
+    });
+
+    function maybeWarn(id, info) {
       if (info.packageName) {
         // Silence warnings generated by Meteor packages, since package
         // authors can be trusted to test their packages, and may have
@@ -1220,7 +1229,9 @@ export class PackageSourceBatch {
 
       warnings.push(`  ${JSON.stringify(id)} in ${
         info.parentPath} (${info.bundleArch})`);
-    });
+
+      return true;
+    }
 
     if (warnings.length > 0) {
       Console.rawWarn("\nUnable to resolve some modules:\n\n");
@@ -1331,7 +1342,7 @@ export class PackageSourceBatch {
     // version to the Buffer version.
     function bufferifyJSONReturnValue(resources) {
       resources.forEach((r) => {
-        r.data = new Buffer(r.data, 'utf8');
+        r.data = Buffer.from(r.data, 'utf8');
       });
     }
 
