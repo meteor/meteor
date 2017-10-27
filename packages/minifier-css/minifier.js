@@ -193,7 +193,7 @@ const rewriteRules = (rules, mergedCssPath) => {
     const appDir = process.cwd();
     const sourceFile = rule.source.input.file;
     const sourceFileFromAppRoot =
-      sourceFile ? sourceFile.replace(appDir, '') : null;
+      sourceFile ? sourceFile.replace(appDir, '') : '';
     let basePath = pathJoin('/', pathDirname(sourceFileFromAppRoot));
 
     // Set the correct basePath based on how the linked asset will be served.
