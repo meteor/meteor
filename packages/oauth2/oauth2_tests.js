@@ -68,7 +68,7 @@ Tinytest.add("oauth2 - pendingCredential is stored and can be retrieved (without
 
 Tinytest.add("oauth2 - pendingCredential is stored and can be retrieved (with oauth encryption)", function (test) {
   try {
-    OAuthEncryption.loadKey(new Buffer([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]).toString("base64"));
+    OAuthEncryption.loadKey(Buffer.from([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]).toString("base64"));
     testPendingCredential(test);
   } finally {
     OAuthEncryption.loadKey(null);

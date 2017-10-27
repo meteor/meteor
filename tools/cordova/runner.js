@@ -28,7 +28,7 @@ export class CordovaRunner {
     let satisfied = true;
     const messages = buildmessage.capture(
       { title: `checking platform requirements` }, () => {
-      for (platform of this.platformsForRunTargets) {
+      for (const platform of this.platformsForRunTargets) {
         satisfied =
           this.cordovaProject.checkPlatformRequirements(platform) &&
           satisfied;
@@ -82,7 +82,7 @@ export class CordovaRunner {
         return;
       }
 
-      for (platform of this.platformsForRunTargets) {
+      for (let platform of this.platformsForRunTargets) {
         this.cordovaProject.prepareForPlatform(platform);
       }
     });
@@ -93,7 +93,7 @@ export class CordovaRunner {
   startRunTargets() {
     this.started = false;
 
-    for (runTarget of this.runTargets) {
+    for (let runTarget of this.runTargets) {
       const messages = buildmessage.capture({ title: `starting ${runTarget.title}` }, () => {
         Promise.await(runTarget.start(this.cordovaProject));
       });

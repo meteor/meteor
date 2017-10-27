@@ -142,7 +142,28 @@ class Runner {
     }
 
     var unblockAppRunner = self.appRunner.makeBeforeStartPromise();
-    self._startMongoAsync().then(unblockAppRunner);
+
+    function startMongo(tries = 3) {
+      self._startMongoAsync().then(
+        ok => unblockAppRunner(),
+        error => {
+          --tries;
+          const left = tries + (tries === 1 ? " try" : " tries");
+          Console.error(
+            `Error starting Mongo (${left} left): ${error.message}`
+          );
+
+          if (tries > 0) {
+            self.mongoRunner.stop();
+            setTimeout(() => startMongo(tries), 1000);
+          } else {
+            self.mongoRunner._fail();
+          }
+        }
+      );
+    }
+
+    startMongo();
 
     if (!self.noReleaseCheck && ! self.stopped) {
       self.updater.start();

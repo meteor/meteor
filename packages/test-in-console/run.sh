@@ -4,9 +4,6 @@ cd "`dirname "$0"`"
 cd ../..
 export METEOR_HOME=`pwd`
 
-# Clear dev_bundle/.npm to ensure consistent test runs.
-./meteor npm cache clear
-
 # Just in case these packages haven't been installed elsewhere.
 ./meteor npm install -g phantomjs-prebuilt browserstack-webdriver
 
