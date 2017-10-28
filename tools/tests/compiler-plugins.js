@@ -131,10 +131,10 @@ selftest.define("compiler plugin caching - coffee", () => {
       selftest.expectTrue(cssFile);
       var actual = s.read(
         files.pathJoin('.meteor/local/build/programs/web.browser', cssFile));
-      actual = actual.replace(/\s+/g, ' ');  // simplify whitespace
+      actual = actual.replace(/\s+/g, '');  // simplify whitespace
       var expected = _.map(borderStyleMap, (style, className) => {
-        return '.' + className + " { border-style: " + style + "; }";
-      }).join(' ');
+        return '.' + className + "{border-style:" + style + ";}";
+      }).join('');
       selftest.expectEqual(actual, expected);
     });
     var expectedBorderStyles = {

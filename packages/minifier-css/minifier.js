@@ -48,6 +48,8 @@ const CssTools = {
     const f = new Future;
     postcss().process(cssAst, options).then(result => {
       f.return(result);
+    }).catch(error => {
+      f.throw(error);
     });
     transformResult = f.wait();
     return {
@@ -66,6 +68,8 @@ const CssTools = {
     const f = new Future;
     postcss([ cssnano ]).process(cssText).then(result => {
       f.return(result.css);
+    }).catch(error => {
+      f.throw(error);
     });
     const minifiedCss = f.wait();
 
@@ -99,51 +103,55 @@ const CssTools = {
     const newAst = postcss.root();
 
     cssAsts.forEach((ast) => {
-      // Pick only the imports from the beginning of file ignoring @charset
-      // rules as every file is assumed to be in UTF-8.
-      const charsetRules = ast.nodes.filter(rulesPredicate('charset'));
+      if (ast.nodes) {
+        // Pick only the imports from the beginning of file ignoring @charset
+        // rules as every file is assumed to be in UTF-8.
+        const charsetRules = ast.nodes.filter(rulesPredicate('charset'));
 
-      if (charsetRules.some((rule) => {
-        // According to MDN, only 'UTF-8' and "UTF-8" are the correct encoding
-        // directives representing UTF-8.
-        return ! /^(['"])UTF-8\1$/.test(rule.params);
-      })) {
-        warnCb(
-          ast.filename,
-          '@charset rules in this file will be ignored as UTF-8 is the only ' +
-          'encoding supported'
-        );
-      }
-
-      ast.nodes = ast.nodes.filter(rulesPredicate('charset', true));
-      let importCount = 0;
-      for (let i = 0; i < ast.nodes.length; i++) {
-        if (! rulesPredicate(['import', 'comment'])(ast.nodes[i])) {
-          importCount = i;
-          break;
+        if (charsetRules.some((rule) => {
+          // According to MDN, only 'UTF-8' and "UTF-8" are the correct
+          // encoding directives representing UTF-8.
+          return ! /^(['"])UTF-8\1$/.test(rule.params);
+        })) {
+          warnCb(
+            ast.filename,
+            '@charset rules in this file will be ignored as UTF-8 is the ' +
+            'only encoding supported'
+          );
         }
-      }
 
-      CssTools.rewriteCssUrls(ast);
+        ast.nodes = ast.nodes.filter(rulesPredicate('charset', true));
+        let importCount = 0;
+        for (let i = 0; i < ast.nodes.length; i++) {
+          if (! rulesPredicate(['import', 'comment'])(ast.nodes[i])) {
+            importCount = i;
+            break;
+          }
+        }
 
-      const imports = ast.nodes.splice(0, importCount);
-      newAst.nodes = newAst.nodes.concat(imports);
+        CssTools.rewriteCssUrls(ast);
 
-      // If there are imports left in the middle of a file, warn users as it
-      // might be a potential bug (imports are only valid at the beginning of
-      // a file).
-      if (ast.nodes.some(rulesPredicate('import'))) {
-        warnCb(
-          ast.filename,
-          'There are some @import rules those are not taking effect as they ' +
-          'are required to be in the beginning of the file.'
-        );
+        const imports = ast.nodes.splice(0, importCount);
+        newAst.nodes = newAst.nodes.concat(imports);
+
+        // If there are imports left in the middle of a file, warn users as it
+        // might be a potential bug (imports are only valid at the beginning of
+        // a file).
+        if (ast.nodes.some(rulesPredicate('import'))) {
+          warnCb(
+            ast.filename,
+            'There are some @import rules those are not taking effect as ' +
+            'they are required to be in the beginning of the file.'
+          );
+        }
       }
     });
 
     // Now we can put the rest of CSS rules into new AST.
     cssAsts.forEach((ast) => {
-      newAst.nodes = newAst.nodes.concat(ast.nodes);
+      if (ast.nodes) {
+        newAst.nodes = newAst.nodes.concat(ast.nodes);
+      }
     });
 
     return newAst;
