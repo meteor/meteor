@@ -41,6 +41,7 @@ const CssTools = {
       options.map = {
         inline: false,
         annotation: false,
+        sourcesContent: false,
       };
       delete options.sourcemap;
     }
