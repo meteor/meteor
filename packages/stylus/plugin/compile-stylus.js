@@ -2,6 +2,7 @@ const stylus = Npm.require('stylus');
 const nib = Npm.require('nib');
 const autoprefixer = Npm.require('autoprefixer-stylus');
 const Future = Npm.require('fibers/future');
+const glob = Npm.require('glob');
 const fs = Plugin.fs;
 const path = Plugin.path;
 
@@ -89,16 +90,21 @@ class StylusCompiler extends MultiFileCachingCompiler {
     }
 
     const importer = {
-      find(importPath, paths) {
+      find(importPath, paths, filename) {
         const parsed = parseImportPath(importPath, paths[paths.length - 1]);
         if (! parsed) { return null; }
 
         if (importPath[0] !== '{') {
           // if it is not a custom syntax path, it could be a lookup in a folder
           for (let i = paths.length - 1; i >= 0; i--) {
-            const joined = path.join(paths[i], importPath);
-            if (statOrNull(joined)) {
-              return [joined];
+            let joined = path.join(paths[i], importPath);
+            // if we ended up with a custom syntax path, let's try without
+            if (joined.startsWith('{}/')) {
+              joined = joined.substr(3);
+            }
+            const resolvedPaths = resolvePath(joined);
+            if (resolvedPaths.length) {
+              return resolvedPaths;
             }
           }
         }
@@ -189,10 +195,6 @@ class StylusCompiler extends MultiFileCachingCompiler {
   }
 }
 
-function statOrNull(path) {
-  try {
-    return fs.statSync(path);
-  } catch (e) {
-    return null;
-  }
+function resolvePath(path) {
+  return glob.sync(path);
 }
