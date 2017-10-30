@@ -1,5 +1,9 @@
 ## v.NEXT
 
+* The `npm` npm package has been upgraded to version 5.5.1, which supports
+  several new features, including two-factor authentication, as described
+  in the [release notes](https://github.com/npm/npm/blob/latest/CHANGELOG.md#v551-2017-10-04).
+
 * iOS icons and launch screens have been updated to support iOS 11
   [Issue #9196](https://github.com/meteor/meteor/issues/9196)
   [PR #9198](https://github.com/meteor/meteor/pull/9198)
