@@ -3,12 +3,15 @@ import assert from 'assert';
 import utils from '../utils/utils.js';
 import buildmessage from '../utils/buildmessage.js';
 
-import { oldToNew as oldToNewPluginIds, newToOld as newToOldPluginIds }
-  from 'cordova-registry-mapper';
-
 export const CORDOVA_ARCH = "web.cordova";
 
 export const CORDOVA_PLATFORMS = ['ios', 'android'];
+
+export const CORDOVA_DEV_BUNDLE_VERSIONS = {
+  'cordova-lib': '7.0.1',
+  'cordova-common': '1.5.1',
+  'cordova-registry-mapper': '1.1.15',
+};
 
 export const CORDOVA_PLATFORM_VERSIONS = {
   'android': '6.2.3',
@@ -19,6 +22,18 @@ const PLATFORM_TO_DISPLAY_NAME_MAP = {
   'ios': 'iOS',
   'android': 'Android'
 };
+
+export function ensureDevBundleDependencies() {
+  buildmessage.enterJob(
+    {
+      title: 'Installing Cordova in Meteor tool',
+    },
+    () => {
+      require("../cli/dev-bundle-helpers.js")
+        .ensureDependencies(CORDOVA_DEV_BUNDLE_VERSIONS);
+    }
+  );
+}
 
 export function displayNameForPlatform(platform) {
   return PLATFORM_TO_DISPLAY_NAME_MAP[platform] || platform;
@@ -62,6 +77,7 @@ export function pluginVersionsFromStarManifest(star) {
 }
 
 export function newPluginId(id) {
+  import { oldToNew as oldToNewPluginIds } from 'cordova-registry-mapper';
   return oldToNewPluginIds[id];
 }
 

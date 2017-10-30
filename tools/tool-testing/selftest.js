@@ -32,26 +32,12 @@ import { current as releaseCurrent } from '../packaging/release.js';
 import { FinishedUpgraders } from '../project-context.js';
 import { allUpgraders } from '../upgraders.js';
 import { execFileSync } from '../utils/processes.js';
+import { ensureDependencies } from '../cli/dev-bundle-helpers.js';
 
-function checkTestOnlyDependency(name) {
-  try {
-    var absPath = require.resolve(name);
-  } catch (e) {
-    throw new Error([
-      "Please install " + name + " by running the following command:",
-      "",
-      "  /path/to/meteor npm install -g " + name,
-      "",
-      "Where `/path/to/meteor` is the executable you used to run this self-test.",
-      ""
-    ].join("\n"));
-  }
-
-  return require(absPath);
-}
-
-var phantomjs = checkTestOnlyDependency("phantomjs-prebuilt");
-var webdriver = checkTestOnlyDependency('browserstack-webdriver');
+const DEV_DEPENDENCY_VERSIONS = {
+  'phantomjs-prebuilt': '2.1.14',
+  'browserstack-webdriver': '2.41.1',
+};
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
@@ -997,6 +983,16 @@ class PhantomClient extends Client {
   constructor(options) {
     super(options);
 
+    enterJob({
+      title: 'Installing PhantomJS in Meteor tool',
+    }, () => {
+      ensureDependencies({
+        'phantomjs-prebuilt': DEV_DEPENDENCY_VERSIONS['phantomjs-prebuilt'],
+      });
+    });
+
+    this.npmPackageExports = require("phantomjs-prebuilt");
+
     this.name = "phantomjs";
     this.process = null;
 
@@ -1004,8 +1000,7 @@ class PhantomClient extends Client {
   }
 
   connect() {
-    const phantomPath = phantomjs.path;
-
+    const phantomPath = this.npmPackageExports.path;
     const scriptPath = files.pathJoin(files.getCurrentToolsDir(), "tools",
       "tool-testing", "phantom", "open-url.js");
     this.process = execFile(phantomPath, ["--load-images=no",
@@ -1037,6 +1032,16 @@ let browserStackKey = null;
 class BrowserStackClient extends Client {
   constructor(options) {
     super(options);
+
+    enterJob({
+      title: 'Installing BrowserStack WebDriver in Meteor tool',
+    }, () => {
+      ensureDependencies({
+        'browserstack-webdriver': DEV_DEPENDENCY_VERSIONS['browserstack-webdriver'],
+      });
+    });
+
+    this.npmPackageExports = require('browserstack-webdriver');
 
     this.tunnelProcess = null;
     this.driver = null;
@@ -1076,10 +1081,11 @@ class BrowserStackClient extends Client {
         throw error;
       }
 
-      this.driver = new webdriver.Builder().
+      this.driver = new this.npmPackageExports.Builder().
         usingServer('http://hub.browserstack.com/wd/hub').
         withCapabilities(capabilities).
         build();
+
       this.driver.get(this.url);
     });
   }

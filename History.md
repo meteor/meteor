@@ -17,6 +17,114 @@
   overrides the default 10 rounds currently used to secure passwords.
   [PR #9044](https://github.com/meteor/meteor/pull/9044)
 
+## v1.6, 2017-10-30
+
+* Node.js has been upgraded to version 8.8.1, which will be entering
+  long-term support (LTS) coverage on 31 October 2017, lasting through
+  December 2019 ([full schedule](https://github.com/nodejs/Release#nodejs-release-working-group)).
+  This is a *major* upgrade from the previous version of Node.js used by
+  Meteor, 4.8.4.
+
+* The `npm` npm package has been upgraded to version 5.4.2, a major
+  upgrade from 4.6.1. While this update should be backwards-compatible for
+  existing Meteor apps and packages, if you are the maintainer of any
+  Meteor packages, pay close attention to your `npm-shrinkwrap.json` files
+  when first using this version of `npm`. For normal Meteor application
+  development, this upgrade primarily affects the version of `npm` used by
+  `meteor npm ...` commands. A functional installation of `git` may be
+  required to support GitHub repository and/or tarball URLs.
+  [Troubleshooting](https://docs.npmjs.com/troubleshooting/common-errors).
+  [PR #8835](https://github.com/meteor/meteor/pull/8835)
+
+* In addition to `meteor node` and `meteor npm`, which are convenient
+  shorthands for `node` and `npm`, `meteor npx <command>` can be used to
+  execute commands from a local `node_modules/.bin` directory or from the
+  `npm` cache. Any packages necessary to run the command will be
+  automatically downloaded. [Read](https://www.npmjs.com/package/npx)
+  about it, or just try some commands:
+  ```sh
+  meteor npx cowsay mooooo
+  meteor npx uuid
+  meteor npx nyancat
+  meteor npx yarn
+  ```
+
+* The `meteor debug` command has been superseded by the more flexible
+  `--inspect` and `--inspect-brk` command-line flags, which work for any
+  `run`, `test`, or `test-packages` command.
+
+  The syntax of these flags is the same as the equivalent Node.js
+  [flags](https://nodejs.org/en/docs/inspector/#command-line-options),
+  with two notable differences:
+
+  * The flags affect the server process spawned by the build process,
+    rather than affecting the build process itself.
+
+  * The `--inspect-brk` flag causes the server process to pause just after
+    server code has loaded but before it begins to execute, giving the
+    developer a chance to set breakpoints in server code.
+
+  [Feature Request #194](https://github.com/meteor/meteor-feature-requests/issues/194)
+
+* On Windows, Meteor can now be installed or reinstalled from scratch
+  using the command `choco install meteor`, using the
+  [Chocolatey](https://chocolatey.org/) package manager. This method of
+  installation replaces the old `InstallMeteor.exe` installer, which had a
+  number of shortcomings, and will no longer be supported.
+
+* Fresh installs of Meteor 1.6 on 64-bit Windows machines will now use
+  native 64-bit Node.js binaries, rather than a 32-bit version of Node.js.
+  In addition to being faster, native 64-bit support will enable Windows
+  developers to debug asynchronous stack traces more easily in the new
+  Node.js inspector, which is only fully supported by native 64-bit
+  architectures. Note that merely running `meteor update` from a 32-bit
+  version of Meteor will still install a 32-bit version of Meteor 1.6, so
+  you should use `choco install meteor` to get a fresh 64-bit version.
+  [PR #9218](https://github.com/meteor/meteor/pull/9218)
+
+* To support developers running on a 32-bit OS, Meteor now supports both 32-
+  and 64-bit versions of Mongo. Mongo 3.2 is the last 32-bit version available
+  from Mongo. Meteor running on a 32-bit OS will use a 32-bit version of Mongo
+  3.2 and 64-bit platforms will receive newer Mongo versions in future releases.
+  [PR #9173](https://github.com/meteor/meteor/pull/9173)
+
+* After several reliability improvements, native file watching has been
+  un-disabled on Windows. Though native file change notifications will
+  probably never work with network or shared virtual file systems (e.g.,
+  NTFS or Vagrant-mounted disks), Meteor uses an efficient prioritized
+  polling system as a fallback for those file systems.
+
+* Various optimizations have reduced the on-disk size of the `meteor-tool`
+  package from 545MB (1.5.2.2) to 219MB.
+
+* The `meteor-babel` package has been upgraded to version 0.24.6, to take
+  better advantage of native language features in Node 8.
+
+* The `reify` npm package has been upgraded to version 0.12.3.
+
+* The `meteor-promise` package has been upgraded to version 0.8.6, to
+  enable better handling of `UnhandledPromiseRejectionWarning`s.
+
+* The `node-gyp` npm package has been upgraded to version 3.6.2.
+
+* The `node-pre-gyp` npm package has been updated to version 0.6.36.
+
+* The `fibers` npm package has been upgraded to version 2.0.0.
+
+* The `pathwatcher` npm package has been upgraded to version 7.1.0.
+
+* The `http-proxy` npm package has been upgraded to version 1.16.2.
+
+* The `semver` npm package has been upgraded to version 5.4.1.
+
+* When running Meteor tool tests (i.e. `./meteor self-test`) during the
+  course of developing Meteor itself, it is no longer necessary to
+  `./meteor npm install -g phantomjs-prebuilt browserstack-webdriver`.
+  These will now be installed automatically upon their use.
+
+* You can now run `meteor test --driver-package user:package` without
+  first running `meteor add user:package`.
+
 ## v1.5.2.2, 2017-10-02
 
 * Fixes a regression in 1.5.2.1 which resulted in the macOS firewall
@@ -573,7 +681,7 @@
 * The `node-gyp` npm package has been upgraded to 3.6.0 which
   adds support for VS2017 on Windows.
 
-* The `node-pre-gyp` npm package has been updated to 0.6.36.
+* The `node-pre-gyp` npm package has been updated to 0.6.34.
 
 * Thanks to the outstanding efforts of @sethmurphy18, the `minifier-js`
   package now uses [Babili](https://github.com/babel/babili) instead of

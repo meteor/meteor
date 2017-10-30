@@ -640,6 +640,12 @@ _.extend(RemoteCatalog.prototype, {
     return solution;  // might be null!
   },
 
+  filterArchesWithBuilds: function (name, version, arches) {
+    return arches.filter(arch => {
+      return !! this.getBuildsForArches(name, version, [arch]);
+    });
+  },
+
   // Returns general (non-version-specific) information about a
   // release track, or null if there is no such release track.
   getReleaseTrack: function (name) {

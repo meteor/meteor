@@ -1,9 +1,10 @@
 {
+  "lockfileVersion": 1,
   "dependencies": {
     "meteor-babel-helpers": {
       "version": "0.0.3",
       "resolved": "https://registry.npmjs.org/meteor-babel-helpers/-/meteor-babel-helpers-0.0.3.tgz",
-      "from": "meteor-babel-helpers@0.0.3"
+      "integrity": "sha1-8uXZ+HlvvS6JAQI9dpnlsgLqn7A="
     }
   }
 }

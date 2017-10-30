@@ -116,7 +116,7 @@ Tinytest.add("oauth - _endOfLoginResponse with redirect loginStyle supports unsp
       credentials: {},
       loginStyle: 'redirect',
       query: {
-        state: new Buffer(JSON.stringify({
+        state: Buffer.from(JSON.stringify({
           redirectUrl: __meteor_runtime_config__.ROOT_URL
         }), 'binary').toString('base64')
       }
@@ -144,7 +144,7 @@ Tinytest.add("oauth - _endOfLoginResponse with redirect loginStyle supports ROOT
       credentials: {},
       loginStyle: 'redirect',
       query: {
-        state: new Buffer(JSON.stringify({
+        state: Buffer.from(JSON.stringify({
           redirectUrl: __meteor_runtime_config__.ROOT_URL
         }), 'binary').toString('base64')
       }

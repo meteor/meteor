@@ -209,8 +209,24 @@ describe("dynamic import(...)", function () {
       assert.strictEqual(version, null);
     }
 
-    import("meteor/user:colon-name/dynamic.js").then(dynamic => {
+    return import("meteor/user:colon-name/dynamic.js").then(dynamic => {
       assert.strictEqual(dynamic.name, expectedAbsId);
+    });
+  });
+
+  it("should track dynamic peer imports from packages (#9187)", () => {
+    const version = require(
+      "meteor/dynamic-import/dynamic-versions.js"
+    ).get("/node_modules/optimism/lib/index.js");
+
+    if (Meteor.isClient) {
+      assert.strictEqual(typeof version, "string");
+    } else {
+      assert.strictEqual(version, null);
+    }
+
+    return import("meteor/helper-package/import-peer.js").then(m => {
+      assert.strictEqual(typeof m.wrap, "function");
     });
   });
 });

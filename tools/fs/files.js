@@ -55,10 +55,13 @@ const YIELD_ALLOWED = !! (
   ! JSON.parse(process.env.METEOR_DISABLE_FS_FIBERS));
 
 function canYield() {
-  return YIELD_ALLOWED &&
-    Fiber.current &&
+  return Fiber.current &&
     Fiber.yield &&
     ! Fiber.yield.disallowed;
+}
+
+function mayYield() {
+  return YIELD_ALLOWED && canYield();
 }
 
 // given a predicate function and a starting path, traverse upwards
@@ -303,40 +306,13 @@ files.rm_recursive = Profile("files.rm_recursive", (path) => {
   try {
     rimraf.sync(files.convertToOSPath(path));
   } catch (e) {
-    if (e.code === "ENOTEMPTY" &&
-        canYield()) {
+    if (e.code === "ENOTEMPTY" && canYield()) {
       files.rm_recursive_async(path).await();
       return;
     }
     throw e;
   }
 });
-
-// Makes all files in a tree read-only.
-var makeTreeReadOnly = function (p) {
-  try {
-    // the l in lstat is critical -- we want to ignore symbolic links
-    var stat = files.lstat(p);
-  } catch (e) {
-    if (e.code == "ENOENT") {
-      return;
-    }
-    throw e;
-  }
-
-  if (stat.isDirectory()) {
-    _.each(files.readdir(p), function (file) {
-      makeTreeReadOnly(files.pathJoin(p, file));
-    });
-  }
-  if (stat.isFile()) {
-    var permissions = stat.mode & 0o777;
-    var readOnlyPermissions = permissions & 0o555;
-    if (permissions !== readOnlyPermissions) {
-      files.chmod(p, readOnlyPermissions);
-    }
-  }
-};
 
 // Returns the base64 SHA256 of the given file.
 files.fileHash = function (filename) {
@@ -638,7 +614,7 @@ var copyFileHelper = function (from, to, mode) {
 // directory. Only the current user is allowed to read or write the
 // files in the directory (or add files to it). The directory will
 // be cleaned up on exit.
-var tempDirs = [];
+const tempDirs = Object.create(null);
 files.mkdtemp = function (prefix) {
   var make = function () {
     prefix = prefix || 'mt-';
@@ -673,63 +649,52 @@ files.mkdtemp = function (prefix) {
     throw new Error("failed to make temporary directory in " + tmpDir);
   };
   var dir = make();
-  tempDirs.push(dir);
+  tempDirs[dir] = true;
   return dir;
 };
 
 // Call this if you're done using a temporary directory. It will asynchronously
 // be deleted.
-files.freeTempDir = function (tempDir) {
-  if (! _.contains(tempDirs, tempDir)) {
-    throw Error("not a tracked temp dir: " + tempDir);
+files.freeTempDir = function (dir) {
+  if (! tempDirs[dir]) {
+    throw Error("not a tracked temp dir: " + dir);
   }
+
   if (process.env.METEOR_SAVE_TMPDIRS) {
     return;
   }
-  setImmediate(function () {
-    // note: rm_recursive can yield, so it's possible that during this
-    // rm_recursive call, the onExit rm_recursive fires too.  (Or it could even
-    // start firing before the setImmediate handler is called.) But it should be
-    // OK for there to be overlapping rm_recursive calls, since rm_recursive
-    // ignores all ENOENT calls. And we don't remove tempDir from tempDirs until
-    // it's done, so that if mid-way through this rm_recursive the onExit one
-    // fires, it still gets removed.
 
-    try {
-      files.rm_recursive(tempDir);
-    } catch (err) {
-      // Don't crash and print a stack trace because we failed to delete a temp
-      // directory. This happens sometimes on Windows and seems to be
-      // unavoidable.
-      console.log(err);
-    }
-
-    tempDirs = _.without(tempDirs, tempDir);
+  return files.rm_recursive_async(dir).then(() => {
+    // Delete tempDirs[dir] only when the removal finishes, so that the
+    // cleanup.onExit handler can attempt the removal synchronously if it
+    // fires in the meantime.
+    delete tempDirs[dir];
+  }, error => {
+    // Leave tempDirs[dir] in place so the cleanup.onExit handler can try
+    // to delete it again when the process exits.
+    console.log(error);
   });
 };
 
 if (! process.env.METEOR_SAVE_TMPDIRS) {
   cleanup.onExit(function (sig) {
-    _.each(tempDirs, function (tempDir) {
+    Object.keys(tempDirs).forEach(dir => {
+      delete tempDirs[dir];
       try {
-        files.rm_recursive(tempDir);
+        files.rm_recursive(dir);
       } catch (err) {
-        // Don't crash and print a stack trace because we failed to delete a temp
-        // directory. This happens sometimes on Windows and seems to be
-        // unavoidable.
-        console.log(err);
+        // Don't crash and print a stack trace because we failed to delete
+        // a temp directory. This happens sometimes on Windows and seems
+        // to be unavoidable.
       }
     });
-
-    tempDirs = [];
   });
 }
 
 // Takes a buffer containing `.tar.gz` data and extracts the archive
 // into a destination directory. destPath should not exist yet, and
 // the archive should contain a single top-level directory, which will
-// be renamed atomically to destPath. The entire tree will be made
-// readonly.
+// be renamed atomically to destPath.
 files.extractTarGz = function (buffer, destPath, options) {
   var options = options || {};
   var parentDir = files.pathDirname(destPath);
@@ -764,7 +729,6 @@ files.extractTarGz = function (buffer, destPath, options) {
   }
 
   var extractDir = files.pathJoin(tempDir, topLevelOfArchive[0]);
-  makeTreeReadOnly(extractDir);
   files.rename(extractDir, destPath);
   files.rm_recursive(tempDir);
 
@@ -1561,7 +1525,7 @@ function wrapFsFunc(fsFuncName, pathArgIndices, options) {
       const dirty = options && options.dirty;
       const dirtyFn = typeof dirty === "function" ? dirty : null;
 
-      if (canYield() &&
+      if (mayYield() &&
           shouldBeSync &&
           ! isQuickie) {
         const promise = new Promise((resolve, reject) => {
@@ -1755,15 +1719,21 @@ files.existsSync = function (path, callback) {
 };
 
 if (files.isWindowsLikeFilesystem()) {
-  var rename = files.rename;
+  const rename = files.rename;
 
   files.rename = function (from, to) {
-    // retries are necessarily only on Windows, because the rename call can fail
-    // with EBUSY, which means the file is "busy"
-    var maxTries = 10;
-    var success = false;
+    // Retries are necessary only on Windows, because the rename call can
+    // fail with EBUSY, which means the file is in use.
+    let maxTries = 10;
+    let success = false;
+    const osTo = files.convertToOSPath(to);
+
     while (! success && maxTries-- > 0) {
       try {
+        // Despite previous failures, the top-level destination directory
+        // may have been successfully created, so we must remove it to
+        // avoid moving the source file *into* the destination directory.
+        rimraf.sync(osTo);
         rename(from, to);
         success = true;
       } catch (err) {
@@ -1772,6 +1742,7 @@ if (files.isWindowsLikeFilesystem()) {
         }
       }
     }
+
     if (! success) {
       files.cp_r(from, to);
       files.rm_recursive(from);

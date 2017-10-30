@@ -138,8 +138,12 @@ outdated platforms`);
       // confused
       files.mkdir_p(files.pathJoin(templatePath, 'www'));
 
-      const builder = new CordovaBuilder(this.projectContext, templatePath,
-        { mobileServerUrl, settingsFile } = this.options);
+      const builder = new CordovaBuilder(
+        this.projectContext,
+        templatePath,
+        { mobileServerUrl: this.options.mobileServerUrl,
+          settingsFile: this.options.settingsFile }
+      );
 
       builder.processControlFile();
 
@@ -183,8 +187,12 @@ outdated platforms`);
 
     Console.debug('Preparing Cordova project from app bundle');
 
-    const builder = new CordovaBuilder(this.projectContext, this.projectRoot,
-      { mobileServerUrl, settingsFile } = this.options);
+    const builder = new CordovaBuilder(
+      this.projectContext,
+      this.projectRoot,
+      { mobileServerUrl: this.options.mobileServerUrl,
+        settingsFile: this.options.settingsFile }
+    );
 
     builder.processControlFile();
 
@@ -325,7 +333,7 @@ to build apps for ${displayNameForPlatform(platform)}.`);
       Console.info();
 
       Console.info("Status of the individual requirements:");
-      for (requirement of requirements) {
+      for (const requirement of requirements) {
         const name = requirement.name;
         if (requirement.installed) {
           Console.success(name, "installed");
@@ -395,7 +403,7 @@ from Cordova project`, async () => {
 
     const installedPlatforms = this.listInstalledPlatforms();
 
-    for (platform of platforms) {
+    for (let platform of platforms) {
       if (_.contains(installedPlatforms, platform)) {
         continue;
       }
@@ -403,7 +411,7 @@ from Cordova project`, async () => {
       this.addPlatform(platform);
     }
 
-    for (platform of installedPlatforms) {
+    for (let platform of installedPlatforms) {
       if (!_.contains(platforms, platform) &&
         _.contains(CORDOVA_PLATFORMS, platform)) {
         this.removePlatform(platform);
@@ -622,6 +630,8 @@ mobile-config.js accordingly.`);
         }
 
         this.removePlugins(pluginsToRemove);
+
+        let pluginVersionsToInstall;
 
         // Now install the necessary plugins.
         if (shouldReinstallAllPlugins) {
