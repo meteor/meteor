@@ -1,84 +1,85 @@
 {
+  "lockfileVersion": 1,
   "dependencies": {
     "bson": {
       "version": "1.0.4",
       "resolved": "https://registry.npmjs.org/bson/-/bson-1.0.4.tgz",
-      "from": "bson@>=1.0.4 <1.1.0"
+      "integrity": "sha1-k8ENOeqltYQVy8QFLz5T5WKwtyw="
     },
     "buffer-shims": {
       "version": "1.0.0",
       "resolved": "https://registry.npmjs.org/buffer-shims/-/buffer-shims-1.0.0.tgz",
-      "from": "buffer-shims@>=1.0.0 <1.1.0"
+      "integrity": "sha1-mXjOMXOIxkmth5MCjDR37wRKi1E="
     },
     "core-util-is": {
       "version": "1.0.2",
       "resolved": "https://registry.npmjs.org/core-util-is/-/core-util-is-1.0.2.tgz",
-      "from": "core-util-is@>=1.0.0 <1.1.0"
+      "integrity": "sha1-tf1UIgqivFq1eqtxQMlAdUUDwac="
     },
     "es6-promise": {
       "version": "3.2.1",
       "resolved": "https://registry.npmjs.org/es6-promise/-/es6-promise-3.2.1.tgz",
-      "from": "es6-promise@3.2.1"
+      "integrity": "sha1-7FYjOGgDKQkgcXDDlEjiREndH8Q="
     },
     "inherits": {
       "version": "2.0.3",
       "resolved": "https://registry.npmjs.org/inherits/-/inherits-2.0.3.tgz",
-      "from": "inherits@>=2.0.1 <2.1.0"
+      "integrity": "sha1-Yzwsg+PaQqUC9SRmAiSA9CCCYd4="
     },
     "isarray": {
       "version": "1.0.0",
       "resolved": "https://registry.npmjs.org/isarray/-/isarray-1.0.0.tgz",
-      "from": "isarray@>=1.0.0 <1.1.0"
+      "integrity": "sha1-u5NdSFgsuhaMBoNJV6VKPgcSTxE="
     },
     "mongodb": {
       "version": "2.2.33",
       "resolved": "https://registry.npmjs.org/mongodb/-/mongodb-2.2.33.tgz",
-      "from": "mongodb@2.2.33"
+      "integrity": "sha1-tTfEcdNKZlG0jzb9vyl1A0Dgi1A="
     },
     "mongodb-core": {
       "version": "2.1.17",
       "resolved": "https://registry.npmjs.org/mongodb-core/-/mongodb-core-2.1.17.tgz",
-      "from": "mongodb-core@2.1.17"
+      "integrity": "sha1-pBizN6FKFJkPtRC5I97mqBMXPfg="
     },
     "process-nextick-args": {
       "version": "1.0.7",
       "resolved": "https://registry.npmjs.org/process-nextick-args/-/process-nextick-args-1.0.7.tgz",
-      "from": "process-nextick-args@>=1.0.6 <1.1.0"
+      "integrity": "sha1-FQ4gt1ZZCtP5EJPyWk8q2L/zC6M="
     },
     "readable-stream": {
       "version": "2.2.7",
       "resolved": "https://registry.npmjs.org/readable-stream/-/readable-stream-2.2.7.tgz",
-      "from": "readable-stream@2.2.7"
+      "integrity": "sha1-BwV6y+JGeyIELTb5jFrVBwVOlbE="
     },
     "require_optional": {
       "version": "1.0.1",
       "resolved": "https://registry.npmjs.org/require_optional/-/require_optional-1.0.1.tgz",
-      "from": "require_optional@>=1.0.0 <1.1.0"
+      "integrity": "sha512-qhM/y57enGWHAe3v/NcwML6a3/vfESLe/sGM2dII+gEO0BpKRUkWZow/tyloNqJyN6kXSl3RyyM8Ll5D/sJP8g=="
     },
     "resolve-from": {
       "version": "2.0.0",
       "resolved": "https://registry.npmjs.org/resolve-from/-/resolve-from-2.0.0.tgz",
-      "from": "resolve-from@>=2.0.0 <3.0.0"
+      "integrity": "sha1-lICrIOlP+h2egKgEx+oUdhGWa1c="
     },
     "safe-buffer": {
       "version": "5.1.1",
       "resolved": "https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.1.1.tgz",
-      "from": "safe-buffer@>=5.1.0 <5.2.0"
+      "integrity": "sha512-kKvNJn6Mm93gAczWVJg7wH+wGYWNrDHdWvpUmHyEsgCtIwwo3bqPtV4tR5tuPaUhTOo/kvhVwd8XwwOllGYkbg=="
     },
     "semver": {
       "version": "5.4.1",
       "resolved": "https://registry.npmjs.org/semver/-/semver-5.4.1.tgz",
-      "from": "semver@>=5.1.0 <6.0.0"
+      "integrity": "sha512-WfG/X9+oATh81XtllIo/I8gOiY9EXRdv1cQdyykeXK17YcUW3EXUAi2To4pcH6nZtJPr7ZOpM5OMyWJZm+8Rsg=="
     },
     "string_decoder": {
       "version": "1.0.3",
       "resolved": "https://registry.npmjs.org/string_decoder/-/string_decoder-1.0.3.tgz",
-      "from": "string_decoder@>=1.0.0 <1.1.0"
+      "integrity": "sha512-4AH6Z5fzNNBcH+6XDMfA/BTt87skxqJlO0lAh3Dker5zThcAxG6mKz+iGu308UKoPPQ8Dcqx/4JhujzltRa+hQ=="
     },
     "util-deprecate": {
       "version": "1.0.2",
       "resolved": "https://registry.npmjs.org/util-deprecate/-/util-deprecate-1.0.2.tgz",
-      "from": "util-deprecate@>=1.0.1 <1.1.0"
+      "integrity": "sha1-RQ1Nyfpw3nMnYvvS1KKJgUGaDM8="
     }
   }
 }

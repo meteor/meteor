@@ -173,6 +173,8 @@ import { loadIsopackage } from '../tool-env/isopackets.js';
 import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
 import { gzipSync } from "zlib";
 
+const SOURCE_URL_PREFIX = "meteor://\u{1f4bb}app";
+
 // files to ignore when bundling. node has no globs, so use regexps
 exports.ignoreFiles = [
     /~$/, /^\.#/,
@@ -203,11 +205,6 @@ var stripLeadingSlash = function (p) {
 // tests.
 exports._mainJsContents = [
   "",
-  "// The debugger pauses here when you run `meteor debug`, because this is ",
-  "// the very first code to be executed by the server process. If you have ",
-  "// not already added any `debugger` statements to your code, feel free to ",
-  "// do so now, wait for the server to restart, then reload this page and ",
-  "// click the |\u25b6 button to continue.",
   "process.argv.splice(2, 0, 'program.json');",
   "process.chdir(require('path').join(__dirname, 'programs', 'server'));",
   "require('./programs/server/boot.js');",
@@ -1203,7 +1200,7 @@ class Target {
 
     dynamicImportFiles.forEach(file => {
       file.setContents(
-        new Buffer(file.contents("utf8").replace(
+        Buffer.from(file.contents("utf8").replace(
           "__DYNAMIC_VERSIONS__",
           () => JSON.stringify(versions.dynamic || {})
         ), "utf8")
@@ -1227,7 +1224,7 @@ class Target {
         // expression, which some minifiers (e.g. UglifyJS) either fail to
         // parse or mistakenly eliminate as dead code. To avoid these
         // problems, we temporarily name the function __minifyJs.
-        file._contents = new Buffer(
+        file._contents = Buffer.from(
           file.contents()
             .toString("utf8")
             .replace(/^\s*function\s*\(/,
@@ -1269,7 +1266,7 @@ class Target {
 
         const newFile = new File({
           info: 'minified js',
-          data: new Buffer(file.data, 'utf8'),
+          data: Buffer.from(file.data, 'utf8'),
         });
 
         if (file.sourceMap) {
@@ -1297,7 +1294,7 @@ class Target {
           const contents = newFile.contents();
           const statsFile = new File({
             info: "bundle size stats JSON",
-            data: new Buffer(JSON.stringify({
+            data: Buffer.from(JSON.stringify({
               minifier: {
                 name: minifierDef.isopack.name,
                 version: minifierDef.isopack.version,
@@ -1339,8 +1336,7 @@ class Target {
   rewriteSourceMaps() {
     const rewriteSourceMap = function (sm) {
       sm.sources = sm.sources.map(function (path) {
-        const prefix =  'meteor://\u{1f4bb}app';
-
+        const prefix = SOURCE_URL_PREFIX;
         if (path.slice(0, prefix.length) === prefix) {
           return path;
         }
@@ -1510,7 +1506,7 @@ class ClientTarget extends Target {
       return source._minifiedFiles.map((file) => {
         const newFile = new File({
           info: 'minified css',
-          data: new Buffer(file.data, 'utf8')
+          data: Buffer.from(file.data, 'utf8')
         });
         if (file.sourceMap) {
           newFile.setSourceMap(file.sourceMap, '/');
@@ -1572,7 +1568,7 @@ class ClientTarget extends Target {
         // three characters (not the single quote) and then strips everything up
         // to a newline.
         // https://groups.google.com/forum/#!topic/mozilla.dev.js-sourcemap/3QBr4FBng5g
-        return new Buffer(")]}'\n" + sourceMap, 'utf8');
+        return Buffer.from(")]}'\n" + sourceMap, 'utf8');
       });
 
       if (file.sourceMap) {
@@ -1582,7 +1578,7 @@ class ClientTarget extends Target {
         if (minifyMode === 'production') {
           mapData = antiXSSIPrepend(JSON.stringify(file.sourceMap));
         } else {
-          mapData = new Buffer(JSON.stringify(file.sourceMap), 'utf8');
+          mapData = Buffer.from(JSON.stringify(file.sourceMap), 'utf8');
         }
 
         manifestItem.sourceMap = builder.writeToGeneratedFilename(
@@ -1654,7 +1650,7 @@ class ClientTarget extends Target {
     ['head', 'body'].forEach((type) => {
       const data = this[type].join('\n');
       if (data) {
-        const dataBuffer = new Buffer(data, 'utf8');
+        const dataBuffer = Buffer.from(data, 'utf8');
         const dataFile = builder.writeToGeneratedFilename(
           type + '.html', { data: dataBuffer });
         manifest.push({
@@ -1673,6 +1669,7 @@ class ClientTarget extends Target {
     };
 
     if (this.arch === 'web.cordova') {
+      import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
       const { WebAppHashing } = loadIsopackage('webapp-hashing');
 
       const cordovaCompatibilityVersions =
@@ -2144,21 +2141,25 @@ class JsImage {
       }
 
       if (item.sourceMap) {
-        // Reference the source map in the source. Looked up later by
-        // node-inspector.
-        var sourceMapBaseName = item.targetPath + ".map";
+        const sourceMapBuffer =
+          Buffer.from(JSON.stringify(item.sourceMap), "utf8");
 
-        // Write the source map.
         loadItem.sourceMap = builder.writeToGeneratedFilename(
-          sourceMapBaseName,
-          { data: new Buffer(JSON.stringify(item.sourceMap), 'utf8') }
+          item.targetPath + ".map",
+          { data: sourceMapBuffer }
         );
 
-        var sourceMapFileName = files.pathBasename(loadItem.sourceMap);
+        const sourceMappingURL =
+          "data:application/json;charset=utf8;base64," +
+          sourceMapBuffer.toString("base64");
 
         // Remove any existing sourceMappingURL line. (eg, if roundtripping
         // through JsImage.readFromDisk, don't end up with two!)
-        item.source = addSourceMappingURL(item.source, sourceMapFileName);
+        item.source = addSourceMappingURL(
+          item.source,
+          sourceMappingURL,
+          item.targetPath,
+        );
 
         if (item.sourceMapRoot) {
           loadItem.sourceMapRoot = item.sourceMapRoot;
@@ -2167,7 +2168,7 @@ class JsImage {
 
       loadItem.path = builder.writeToGeneratedFilename(
         item.targetPath,
-        { data: new Buffer(item.source, 'utf8') });
+        { data: Buffer.from(item.source, 'utf8') });
 
       if (!_.isEmpty(item.assets)) {
         // For package code, static assets go inside a directory inside
@@ -2256,7 +2257,7 @@ class JsImage {
     // This JSON file will be read by npm-rebuild.js, which is executed to
     // trigger rebuilds for all non-portable npm packages.
     builder.write("npm-rebuilds.json", {
-      data: new Buffer(
+      data: Buffer.from(
         JSON.stringify(Object.keys(rebuildDirs), null, 2) + "\n",
         "utf8"
       )
@@ -2446,11 +2447,14 @@ class ServerTarget extends JsImageTarget {
     serverPkgJson.scripts = serverPkgJson.scripts || {};
     serverPkgJson.scripts.install = "node npm-rebuild.js";
 
-    serverPkgJson.dependencies["node-gyp"] = "3.6.0";
-    serverPkgJson.dependencies["node-pre-gyp"] = "0.6.34";
+    serverPkgJson.dependencies["node-gyp"] =
+      require("node-gyp/package.json").version;
+
+    serverPkgJson.dependencies["node-pre-gyp"] =
+      require("node-pre-gyp/package.json").version;
 
     builder.write('package.json', {
-      data: new Buffer(
+      data: Buffer.from(
         JSON.stringify(serverPkgJson, null, 2) + "\n",
         "utf8"
       )
@@ -2493,6 +2497,7 @@ class ServerTarget extends JsImageTarget {
     _.each([
       "boot.js",
       "boot-utils.js",
+      "debug.js",
       "server-json.js",
       "mini-files.js",
       "npm-require.js",
@@ -2512,16 +2517,10 @@ class ServerTarget extends JsImageTarget {
     // Script that fetches the dev_bundle and runs the server bootstrap
     // XXX this is #GalaxyLegacy, the generated start.sh is not really used by
     // anything anymore
-    var archToPlatform = {
-      'os.linux.x86_32': 'Linux_i686',
-      'os.linux.x86_64': 'Linux_x86_64',
-      'os.osx.x86_64': 'Darwin_x86_64',
-      'os.windows.x86_32': 'Windows_x86_32'
-    };
-    var platform = archToPlatform[self.arch];
-    if (! platform) {
-      throw new Error("MDG does not publish dev_bundles for arch: " +
-                         self.arch);
+    if (archinfo.VALID_ARCHITECTURES[self.arch] !== true) {
+      throw new Error(
+        `MDG does not publish dev_bundles for arch: ${self.arch}`
+      );
     }
 
     // Nothing actually pays attention to the `path` field for a server program
@@ -2563,7 +2562,7 @@ var writeFile = Profile("bundler writeFile", function (file, builder, options) {
   }
 
   if (! Buffer.isBuffer(data)) {
-    data = new Buffer(data, "utf8");
+    data = Buffer.from(data, "utf8");
   }
 
   builder.write(file.targetPath, { data, hash });
@@ -2571,14 +2570,24 @@ var writeFile = Profile("bundler writeFile", function (file, builder, options) {
 
 // The data argument may be either a Buffer or a string, but this function
 // always returns a string.
-function addSourceMappingURL(data, url) {
-  const dataString = data
+function addSourceMappingURL(data, url, targetPath) {
+  const parts = [
     // If data is a Buffer, convert it to a string.
-    .toString("utf8")
-    // Remove any existing source map comments.
-    .replace(/\n\/\/# sourceMappingURL=[^\n]+/g, '\n');
-  // Append the new source map comment to the end of the code.
-  return dataString + "\n//# sourceMappingURL=" + url + "\n";
+    data.toString("utf8")
+      // Remove any existing sourceURL or sourceMappingURL comments.
+      .replace(/\n\/\/# source(?:Mapping)?URL=[^\n]+/g, '\n')
+  ];
+
+  if (targetPath) {
+    // If a targetPath was provided, use it to add a sourceURL comment to
+    // help associate output files with mapped source files.
+    parts.push(`//# sourceURL=${SOURCE_URL_PREFIX}/${targetPath}`);
+  }
+
+  parts.push(`//# sourceMappingURL=${url}`);
+  parts.push(""); // Trailing newline.
+
+  return parts.join("\n");
 }
 
 // Writes a target a path in 'programs'
@@ -2680,17 +2689,17 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", function (
     });
 
     builder.write('.node_version.txt', {
-      data: new Buffer(process.version + '\n', 'utf8')
+      data: Buffer.from(process.version + '\n', 'utf8')
     });
 
     // Affordances for standalone use
     if (targets.server) {
       // add program.json as the first argument after "node main.js" to the boot script.
       builder.write('main.js', {
-        data: new Buffer(exports._mainJsContents, 'utf8')
+        data: Buffer.from(exports._mainJsContents, 'utf8')
       });
 
-      builder.write('README', { data: new Buffer(
+      builder.write('README', { data: Buffer.from(
 `This is a Meteor application bundle. It has only one external dependency:
 Node.js ${process.version}. To run the application:
 

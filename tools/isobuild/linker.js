@@ -676,10 +676,12 @@ _.extend(File.prototype, {
     var result;
 
     if (self.sourceMap) {
-      // If we have a source map, it is also important to annotate line
-      // numbers using that source map, since not all browsers support
-      // source maps.
-      noLineNumbers = false;
+      // If we have a source map, and options.noLineNumbers was not
+      // specified, it is important to annotate line numbers using that
+      // source map, since not all browsers support source maps.
+      if (typeof noLineNumbers === "undefined") {
+        noLineNumbers = false;
+      }
 
       // Honoring options.preserveLineNumbers is likely impossible if we
       // have a source map, since self.source has probably already been
@@ -688,6 +690,7 @@ _.extend(File.prototype, {
       // line numbers using comments (see above), just in case source maps
       // are not supported.
       preserveLineNumbers = false;
+
     } else if (preserveLineNumbers) {
       // If we don't have a source map, and we're supposed to be preserving line
       // numbers (ie, we are not linking multiple files into one file, because

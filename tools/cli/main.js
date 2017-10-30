@@ -15,6 +15,7 @@ var projectContextModule = require('../project-context.js');
 var catalog = require('../packaging/catalog/catalog.js');
 var buildmessage = require('../utils/buildmessage.js');
 var httpHelpers = require('../utils/http-helpers.js');
+const archinfo = require('../utils/archinfo.js');
 
 var main = exports;
 
@@ -425,44 +426,44 @@ var springboard = function (rel, options) {
     console.log("WILL SPRINGBOARD TO", rel.getToolsPackageAtVersion());
   }
 
-  var archinfo = require('../utils/archinfo.js');
-  var isopack = require('../isobuild/isopack.js');
+  const toolsPkg = rel.getToolsPackage();
+  const toolsVersion = rel.getToolsVersion();
+  const serverArchitectures = catalog.official.filterArchesWithBuilds(
+    toolsPkg,
+    toolsVersion,
+    archinfo.acceptableMeteorToolArches(),
+  );
 
-  var toolsPkg = rel.getToolsPackage();
-  var toolsVersion = rel.getToolsVersion();
-  var packageMapModule = require('../packaging/package-map.js');
-  var versionMap = {};
-  versionMap[toolsPkg] = toolsVersion;
-  var packageMap = new packageMapModule.PackageMap(versionMap);
+  if (serverArchitectures.length === 0) {
+    var release = catalog.official.getDefaultReleaseVersion();
+    var releaseName = release.track + "@" + release.version;
 
-  if (process.platform === "win32") {
-    // Make sure the tool we are trying to download has been built for Windows
-    var buildsForHostArch = catalog.official.getBuildsForArches(
-      rel.getToolsPackage(), rel.getToolsVersion(), [archinfo.host()]);
+    Console.error(
+      "This project uses " + rel.getDisplayName() + ", which isn't",
+      "available on this platform. To work with this app on all supported",
+      "platforms, use", Console.command("meteor update --release " + releaseName),
+      "to pin this app to the newest compatible release."
+    );
 
-    if (! buildsForHostArch) {
-      var release = catalog.official.getDefaultReleaseVersion();
-      var releaseName = release.track + "@" + release.version;
-
-      Console.error(
-        "This project uses " + rel.getDisplayName() + ", which isn't",
-        "available on Windows. To work with this app on all supported",
-        "platforms, use", Console.command("meteor update --release " + releaseName),
-        "to pin this app to the newest Windows-compatible release.");
-
-      process.exit(1);
-    }
+    process.exit(1);
   }
+
+  const packageMapModule = require('../packaging/package-map.js');
+  const packageMap = new packageMapModule.PackageMap({
+    [toolsPkg]: toolsVersion,
+  });
 
   // XXX split better
   Console.withProgressDisplayVisible(function () {
-    var messages = buildmessage.capture(
-      { title: "downloading the command-line tool" }, function () {
-        catalog.runAndRetryWithRefreshIfHelpful(function () {
-          tropohouse.default.downloadPackagesMissingFromMap(packageMap);
+    var messages = buildmessage.capture({
+      title: "downloading the command-line tool"
+    }, function () {
+      catalog.runAndRetryWithRefreshIfHelpful(function () {
+        tropohouse.default.downloadPackagesMissingFromMap(packageMap, {
+          serverArchitectures,
         });
-      }
-    );
+      });
+    });
 
     if (messages.hasMessages()) {
       // We have failed to download the tool that we are supposed to springboard
@@ -482,16 +483,32 @@ var springboard = function (rel, options) {
     }
   });
 
-  var packagePath = tropohouse.default.packagePath(toolsPkg, toolsVersion);
-  var toolIsopack = new isopack.Isopack;
+  const isopack = require('../isobuild/isopack.js');
+  const packagePath = tropohouse.default.packagePath(toolsPkg, toolsVersion);
+  const toolIsopack = new isopack.Isopack;
   toolIsopack.initFromPath(toolsPkg, packagePath);
-  var toolRecord = _.findWhere(toolIsopack.toolsOnDisk,
-                               {arch: archinfo.host()});
+
+  let toolRecord = null;
+  serverArchitectures.some(arch => {
+    return toolRecord = _.findWhere(toolIsopack.toolsOnDisk, { arch });
+  });
+
   if (!toolRecord) {
     throw Error("missing tool for " + archinfo.host() + " in " +
                 toolsPkg + "@" + toolsVersion);
   }
-  var executable = files.pathJoin(packagePath, toolRecord.path, 'meteor');
+
+  const newToolsDir = files.pathJoin(packagePath, toolRecord.path);
+  if (files.realpath(newToolsDir) ===
+      files.realpath(files.getCurrentToolsDir())) {
+    if (options.mayReturn) {
+      // Return instead of springboarding, if we are allowed to keep using
+      // the current tools without restarting the process.
+      return;
+    }
+  }
+
+  const executable = files.pathJoin(newToolsDir, "meteor");
 
   // Strip off the "node" and "meteor.js" from argv and replace it with the
   // appropriate tools's meteor shell script.
@@ -632,11 +649,14 @@ Fiber(function () {
   // tight timetable for 1.0 and there is no advantage to doing it now
   // rather than later. #ImprovingCrossVersionOptionParsing
 
+  const implicitValues = Object.create(null);
+
   var isBoolean = {
     "--help": true,
     "--unsafe-perm": true,
     "--allow-superuser": true,
   };
+
   var walkCommands = function (node) {
     _.each(node, function (value, key) {
       if (value instanceof Command) {
@@ -646,6 +666,9 @@ Fiber(function () {
             names.push("-" + optionInfo.short);
           }
           _.each(names, function (name) {
+            if (_.has(optionInfo, "implicitValue")) {
+              implicitValues[name] = optionInfo.implicitValue;
+            }
             var optionIsBoolean = (optionInfo.type === Boolean);
             if (_.has(isBoolean, name)) {
               if (isBoolean[name] !== optionIsBoolean)  {
@@ -726,6 +749,8 @@ Fiber(function () {
       } else if (value !== undefined) {
         // Handle '--foo=bar' and '--foo=' (which means "set to empty string").
         rawOptions[term].push(value);
+      } else if (_.has(implicitValues, term)) {
+        rawOptions[term].push(implicitValues[term]);
       } else if (i === argv.length - 1) {
         rawOptions[term].push(null);
       } else {
@@ -1121,10 +1146,23 @@ Fiber(function () {
   // update, because the correct tools version will have been chosen
   // the first time around. It will also never happen if the current
   // release is a checkout, because that doesn't make any sense.
-  if (release.current && release.current.isProperRelease() &&
-      release.current.getToolsPackageAtVersion() !== files.getToolsVersion()) {
-    springboard(release.current, { fromApp: releaseFromApp });
-    // Does not return!
+  if (release.current &&
+      release.current.isProperRelease()) {
+    if (files.getToolsVersion() !==
+        release.current.getToolsPackageAtVersion()) {
+      springboard(release.current, {
+        fromApp: releaseFromApp,
+        mayReturn: false,
+      })
+      // Does not return!
+    } else if (archinfo.canSwitchTo64Bit()) {
+      springboard(release.current, {
+        fromApp: releaseFromApp,
+        // Switching to a 64-bit meteor-tool build may fail, in which case
+        // we should continue on as usual.
+        mayReturn: true,
+      });
+    }
   }
 
   // Check for the '--help' option.
@@ -1480,7 +1518,10 @@ Fiber(function () {
       });
     }
 
-    var ret = command.func(options, {rawOptions});
+    var ret = Promise.resolve(
+      command.func(options, { rawOptions })
+    ).await();
+
   } catch (e) {
     Console.enableProgressDisplay(false);
 

@@ -62,7 +62,7 @@ testAsyncMulti("rate limit tests - Run multiple invocations and wait for one" +
       IPAddr: null,
       method: null
     };
-    self.r.addRule(self.restrictJustUserIdOneRule, 1, 1000);
+    self.r.addRule(self.restrictJustUserIdOneRule, 1, 500);
     self.connectionHandle = createTempConnectionHandle(123, '127.0.0.1')
     self.methodInvc1 = createTempMethodInvocation(self.userIdOne,
       self.connectionHandle, 'login');

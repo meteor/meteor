@@ -1,18 +1,28 @@
 // This file exists because it is the file in the tool that is not automatically
 // transpiled by Babel
 
+"use strict";
+
 function babelRegister() {
-  var meteorBabel = require("meteor-babel");
-  var path = require("path");
-  var toolsPath = path.dirname(__dirname);
-  var meteorPath = path.dirname(toolsPath);
-  var cacheDir = path.join(meteorPath, ".babel-cache");
+  const meteorBabel = require("meteor-babel");
+  const path = require("path");
+  const toolsPath = path.dirname(__dirname);
+  const meteorPath = path.dirname(toolsPath);
+  const cacheDir = path.join(meteorPath, ".babel-cache");
+  const babelOptions = meteorBabel.getDefaultOptions({
+    nodeMajorVersion: parseInt(process.versions.node)
+  });
+
+  // Make sure that source maps are included in the generated code for
+  // meteor/tools modules.
+  babelOptions.sourceMap = "inline";
 
   meteorBabel.setCacheDir(cacheDir);
 
   require('meteor-babel/register')
     .allowDirectory(toolsPath)
-    .setSourceMapRootPath(meteorPath);
+    .setSourceMapRootPath(meteorPath)
+    .setBabelOptions(babelOptions);
 }
 
 babelRegister(); // #RemoveInProd this line is removed in isopack.js

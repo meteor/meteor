@@ -439,7 +439,7 @@ function copyNpmPackageWithSymlinkedNodeModules(fromPkgDir, toPkgDir) {
 const portableCache = Object.create(null);
 
 // Increment this version to trigger the full portability check again.
-const portableVersion = 1;
+const portableVersion = 2;
 
 const isPortable = Profile("meteorNpm.isPortable", dir => {
   const lstat = optimisticLStat(dir);
@@ -649,9 +649,7 @@ var updateExistingNpmDirectory = function (packageName, newPackageNpmDir,
   } else {
     // Otherwise install npmTree.dependencies as if we were creating a new
     // .npm/package directory, and leave preservedShrinkwrap empty.
-    _.each(npmTree.dependencies, (info, name) => {
-      installNpmModule(name, info.version, newPackageNpmDir);
-    });
+    installNpmDependencies(npmDependencies, newPackageNpmDir);
 
     // Note: as of npm@4.0.0, npm-shrinkwrap.json files are regarded as
     // "canonical," meaning `npm install` (without a package argument)
@@ -677,10 +675,25 @@ var updateExistingNpmDirectory = function (packageName, newPackageNpmDir,
       JSON.stringify(preservedShrinkwrap, null, 2)
     );
 
+    const newPackageJsonFile = files.pathJoin(
+      newPackageNpmDir,
+      "package.json"
+    );
+
+    // We have to write out a minimal package.json file, else the results
+    // of installFromShrinkwrap may be incomplete in npm@5.
+    files.writeFile(
+      newPackageJsonFile,
+      JSON.stringify({
+        dependencies: npmDependencies
+      }, null, 2)
+    );
+
     // `npm install`
     installFromShrinkwrap(newPackageNpmDir);
 
     files.unlink(newShrinkwrapFile);
+    files.unlink(newPackageJsonFile);
   }
 
   completeNpmDirectory(packageName, newPackageNpmDir, packageNpmDir,
@@ -716,14 +729,33 @@ var createFreshNpmDirectory = function (packageName, newPackageNpmDir,
   }
 
   makeNewPackageNpmDir(newPackageNpmDir);
-  // install dependencies
-  _.each(npmDependencies, function (version, name) {
-    installNpmModule(name, version, newPackageNpmDir);
-  });
+
+  installNpmDependencies(npmDependencies, newPackageNpmDir);
 
   completeNpmDirectory(packageName, newPackageNpmDir, packageNpmDir,
                        npmDependencies);
 };
+
+function installNpmDependencies(dependencies, dir) {
+  const packageJsonPath = files.pathJoin(dir, "package.json");
+  const packageJsonExisted = files.exists(packageJsonPath);
+
+  files.writeFile(
+    packageJsonPath,
+    JSON.stringify({ dependencies }, null, 2)
+  );
+
+  try {
+    Object.keys(dependencies).forEach(name => {
+      const version = dependencies[name];
+      installNpmModule(name, version, dir);
+    });
+  } finally {
+    if (! packageJsonExisted) {
+      files.unlink(packageJsonPath);
+    }
+  }
+}
 
 // Shared code for updateExistingNpmDirectory and createFreshNpmDirectory.
 function completeNpmDirectory(
@@ -798,9 +830,22 @@ Profile("meteorNpm.runNpmCommand", function (args, cwd) {
     isWindows ? "npm.cmd" : "npm"
   ));
 
+  // On Windows, `.cmd` and `.bat` files must be launched in a shell per:
+  // http://nodejs.org/api/child_process.html#child_process_spawning_bat_and_cmd_files_on_windows
+  //
+  // Additionally, the COMSPEC environment variable is meant to have the path to
+  // cmd.exe, but we'll use 'cmd.exe' if it's not set, in the same spirit as
+  // http://nodejs.org/api/child_process.html#child_process_shell_requirements.
+
+  let commandToRun = npmPath;
+  if (isWindows) {
+    args = ['/c', npmPath, ...args];
+    commandToRun = process.env.ComSpec || "cmd.exe";
+  }
+
   if (meteorNpm._printNpmCalls) {
     // only used by test-bundler.js
-    process.stdout.write('cd ' + cwd + ' && ' + npmPath + ' ' +
+    process.stdout.write('cd ' + cwd + ' && ' + commandToRun + ' ' +
                          args.join(' ') + ' ...\n');
   }
 
@@ -821,7 +866,7 @@ Profile("meteorNpm.runNpmCommand", function (args, cwd) {
 
     return new Promise(function (resolve) {
       require('child_process').execFile(
-        npmPath, args, opts, function (err, stdout, stderr) {
+        commandToRun, args, opts, function (err, stdout, stderr) {
           if (meteorNpm._printNpmCalls) {
             process.stdout.write(err ? 'failed\n' : 'done\n');
           }
@@ -886,14 +931,21 @@ function getInstalledDependenciesTree(dir) {
         version: pkg.version
       };
 
+      const from = pkg._from || pkg.from;
+      if (from &&
+          utils.isNpmUrl(from) &&
+          ! utils.isNpmUrl(info.version)) {
+        info.version = from;
+      }
+
       const resolved = pkg._resolved || pkg.resolved;
-      if (resolved) {
+      if (resolved && resolved !== info.version) {
         info.resolved = resolved;
       }
 
-      const from = pkg._from || pkg.from;
-      if (from) {
-        info.from = from;
+      const integrity = pkg._integrity || pkg.integrity;
+      if (integrity) {
+        info.integrity = integrity;
       }
 
       const deps = ls(files.pathJoin(pkgDir, "node_modules"));
@@ -906,13 +958,17 @@ function getInstalledDependenciesTree(dir) {
   }
 
   return {
+    lockfileVersion: 1,
     dependencies: ls(files.pathJoin(dir, "node_modules"))
   };
 }
 
-var getShrinkwrappedDependenciesTree = function (dir) {
-  var shrinkwrapFile = files.readFile(files.pathJoin(dir, 'npm-shrinkwrap.json'));
-  return JSON.parse(shrinkwrapFile);
+function getShrinkwrappedDependenciesTree(dir) {
+  const shrinkwrap = JSON.parse(files.readFile(
+    files.pathJoin(dir, 'npm-shrinkwrap.json')
+  ));
+  shrinkwrap.lockfileVersion = 1;
+  return shrinkwrap;
 };
 
 // Maps a "dependency object" (a thing you find in `npm ls --json` or
@@ -949,8 +1005,21 @@ var getShrinkwrappedDependencies = function (dir) {
   return treeToDependencies(getShrinkwrappedDependenciesTree(dir));
 };
 
-const installNpmModule = meteorNpm.installNpmModule = (name, version, dir) => {
+const moduleDoesResolve = meteorNpm.moduleDoesResolve = (dep) => {
+  try {
+    require.resolve(dep);
+  } catch (e) {
+    if (e.code !== 'MODULE_NOT_FOUND') {
+      throw e;
+    }
 
+    return false;
+  }
+
+  return true;
+};
+
+const installNpmModule = meteorNpm.installNpmModule = (name, version, dir) => {
   const installArg = utils.isNpmUrl(version)
     ? version
     : `${name}@${version}`;
@@ -962,10 +1031,10 @@ const installNpmModule = meteorNpm.installNpmModule = (name, version, dir) => {
 
   if (! result.success) {
     const pkgNotFound =
-      `404  '${utils.quotemeta(name)}' is not in the npm registry`;
+      `404 Not Found: ${utils.quotemeta(name)}@${utils.quotemeta(version)}`;
 
     const versionNotFound =
-      "No compatible version found: " +
+      "No matching version found for " +
       `${utils.quotemeta(name)}@${utils.quotemeta(version)}`;
 
     if (result.stderr.match(new RegExp(pkgNotFound))) {
@@ -1018,24 +1087,15 @@ var installFromShrinkwrap = function (dir) {
       "Can't call `npm install` without a npm-shrinkwrap.json file present");
   }
 
-  const tempPkgJsonPath = files.pathJoin(dir, "package.json");
-  const pkgJsonExisted = files.exists(tempPkgJsonPath);
-  if (! pkgJsonExisted) {
-    // Writing an empty package.json file prevents ENOENT warnings about
-    // package.json not existing, which are noisy at best and sometimes
-    // seem to interfere with the install.
-    files.writeFile(tempPkgJsonPath, "{}\n", "utf8");
-  }
-
   // `npm install`, which reads npm-shrinkwrap.json.
   var result = runNpmCommand(["install"], dir);
 
-  if (! pkgJsonExisted) {
-    files.rm_recursive(tempPkgJsonPath);
-  }
-
   if (! result.success) {
-    buildmessage.error(`couldn't install npm packages from npm-shrinkwrap: ${result.error}`);
+    buildmessage.error(
+      "couldn't install npm packages from npm-shrinkwrap: " +
+        result.error
+    );
+
     // Recover by returning false from updateDependencies
     throw new NpmFailure;
   }
@@ -1058,7 +1118,15 @@ function shrinkwrap(dir) {
     JSON.stringify(tree, null, 2) + "\n"
   );
 
-  return tree;
+  const packageLockJsonPath =
+    files.pathJoin(dir, "package-lock.json");
+
+  // The normal `npm shrinkwrap` commands renames any package-lock.json
+  // file to npm-shrinkwrap.json, so this function should have the same
+  // side effect (i.e., removing package-lock.json if it exists).
+  if (files.exists(packageLockJsonPath)) {
+    files.unlink(packageLockJsonPath);
+  }
 }
 
 // Reduces a dependency tree (as read from a just-made npm-shrinkwrap.json or

@@ -450,7 +450,10 @@ _.extend(ProjectContext.prototype, {
     // If the file doesn't exist or has no non-empty lines, regenerate the
     // token.
     if (!appId) {
-      appId = utils.randomToken() + utils.randomToken() + utils.randomToken();
+      appId = [
+        utils.randomIdentifier(),
+        utils.randomIdentifier()
+      ].join(".");
 
       var comment = (
 "# This file contains a token that is unique to your project.\n" +
@@ -1193,7 +1196,7 @@ _.extend(exports.PackageMapFile.prototype, {
     _.each(packageNames, function (packageName) {
       lines.push(packageName + "@" + self._versions[packageName] + "\n");
     });
-    var fileContents = new Buffer(lines.join(''));
+    var fileContents = Buffer.from(lines.join(''));
     files.writeFileAtomically(self.filename, fileContents);
 
     // Replace our watchSet with one for the new contents of the file.

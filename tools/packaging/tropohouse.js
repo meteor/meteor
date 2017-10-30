@@ -88,7 +88,7 @@ exports._extractAndConvert = function (packageTarball, forceConvert) {
 
       files.writeFile(
         isopackJsonPath,
-        new Buffer(JSON.stringify(isopackFileData, null, 2), 'utf8'),
+        Buffer.from(JSON.stringify(isopackFileData, null, 2), 'utf8'),
         {mode: 0o444});
 
       // Step 3. Clean up old unipackage.json file if it exists
@@ -113,7 +113,7 @@ exports._extractAndConvert = function (packageTarball, forceConvert) {
         files.chmod(unibuildJsonPath, 0o777);
         files.writeFile(
           unibuildJsonPath,
-          new Buffer(JSON.stringify(convertedUnibuild, null, 2), 'utf8'),
+          Buffer.from(JSON.stringify(convertedUnibuild, null, 2), 'utf8'),
           {mode: 0o444});
         // Result: Now we are in a state where the unibuild file paths are
         // consistent with the paths in the downloaded tarball.
@@ -134,7 +134,7 @@ exports._extractAndConvert = function (packageTarball, forceConvert) {
         files.chmod(programJsonPath, 0o777);
         files.writeFile(
           programJsonPath,
-          new Buffer(JSON.stringify(convertedPlugin, null, 2), 'utf8'),
+          Buffer.from(JSON.stringify(convertedPlugin, null, 2), 'utf8'),
           {mode: 0o444});
         // Result: Now we are in a state where the build plugin file paths are
         // consistent with the paths in the downloaded tarball.

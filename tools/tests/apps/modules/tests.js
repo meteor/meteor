@@ -207,11 +207,6 @@ describe("native node_modules", () => {
     assert.strictEqual(typeof require("repl").start, "function");
   });
 
-  Meteor.isClient &&
-  it("can be overridden on the client", () => {
-    assert.strictEqual(require("repl").notEmpty, true);
-  });
-
   it("can be implemented by wrapper npm packages", () => {
     const Stream = require("stream");
     assert.strictEqual(typeof Stream, "function");
@@ -237,7 +232,6 @@ describe("native node_modules", () => {
     require("os");
     require("path");
     require("process");
-    require("punycode");
     require("querystring");
     require("readline");
     require("repl");
@@ -430,7 +424,6 @@ describe("ecmascript miscellany", () => {
   it("rest paramters in inner arrow functions (#6312)", () => {
     const rev = (...args) => args.reverse();
     assert.deepEqual(rev(1, 2, 3), [3, 2, 1]);
-    assert.ok(rev.toString().match(/\barguments\b/));
   });
 
   it("rest parameters in property arrow functions (#6514)", () => {

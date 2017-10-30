@@ -1,24 +1,25 @@
 {
+  "lockfileVersion": 1,
   "dependencies": {
     "lru-cache": {
       "version": "4.0.1",
       "resolved": "https://registry.npmjs.org/lru-cache/-/lru-cache-4.0.1.tgz",
-      "from": "lru-cache@4.0.1"
+      "integrity": "sha1-E0OVXtry432bnn7nJB4nxLn7cr4="
     },
     "pseudomap": {
       "version": "1.0.2",
       "resolved": "https://registry.npmjs.org/pseudomap/-/pseudomap-1.0.2.tgz",
-      "from": "pseudomap@>=1.0.1 <2.0.0"
+      "integrity": "sha1-8FKijacOYYkX7wqKw0wa5aaChrM="
     },
     "source-map": {
       "version": "0.5.6",
       "resolved": "https://registry.npmjs.org/source-map/-/source-map-0.5.6.tgz",
-      "from": "source-map@0.5.6"
+      "integrity": "sha1-dc449SvwczxafwwRjYEzSiu19BI="
     },
     "yallist": {
       "version": "2.0.0",
       "resolved": "https://registry.npmjs.org/yallist/-/yallist-2.0.0.tgz",
-      "from": "yallist@>=2.0.0 <3.0.0"
+      "integrity": "sha1-MGxUODXwnuGkyyO3vOmrNByRzdQ="
     }
   }
 }

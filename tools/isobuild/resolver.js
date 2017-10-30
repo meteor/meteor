@@ -32,8 +32,7 @@ const nativeNames = Object.keys(process.binding("natives"));
 nativeNames.push("process");
 
 nativeNames.forEach(id => {
-  if (id === "freelist" ||
-      id.startsWith("internal/")) {
+  if (id.startsWith("internal/")) {
     return;
   }
 

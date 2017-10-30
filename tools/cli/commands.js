@@ -16,8 +16,6 @@ var Console = require('../console/console.js').Console;
 var projectContextModule = require('../project-context.js');
 var release = require('../packaging/release.js');
 
-import * as cordova from '../cordova';
-import { CordovaProject } from '../cordova/project.js';
 import { CordovaRunner } from '../cordova/runner.js';
 import { iOSRunTarget, AndroidRunTarget } from '../cordova/run-targets.js';
 
@@ -29,15 +27,6 @@ var DEPLOY_ARCH = 'os.linux.x86_64';
 
 // The default port that the development server listens on.
 var DEFAULT_PORT = '3000';
-
-// Valid architectures that Meteor officially supports.
-var VALID_ARCHITECTURES = {
-  "os.osx.x86_64": true,
-  "os.linux.x86_64": true,
-  "os.linux.x86_32": true,
-  "os.windows.x86_32": true
-};
-
 
 // __dirname - the location of the current executing file
 var __dirnameConverted = files.convertToStandardPath(__dirname);
@@ -66,7 +55,7 @@ var qualifySitename = function (site) {
 var showInvalidArchMsg = function (arch) {
   Console.info("Invalid architecture: " + arch);
   Console.info("The following are valid Meteor architectures:");
-  _.each(_.keys(VALID_ARCHITECTURES), function (va) {
+  _.each(_.keys(archinfo.VALID_ARCHITECTURES), function (va) {
     Console.info(
       Console.command(va),
       Console.options({ indent: 2 }));
@@ -246,6 +235,52 @@ main.registerCommand({
 // run
 ///////////////////////////////////////////////////////////////////////////////
 
+const inspectOptions = {
+  "inspect": { type: String, implicitValue: "9229" },
+  "inspect-brk": { type: String, implicitValue: "9229" },
+};
+
+function normalizeInspectOptions(options) {
+  const result = Object.create(null);
+
+  if (_.has(options, "debug-port")) {
+    console.log(
+      "The --debug-port option is deprecated; " +
+        "please use --inspect-brk=<port> instead."
+    );
+
+    if (! _.has(options, "inspect-brk")) {
+      options["inspect-brk"] = options["debug-port"];
+    }
+
+    delete options["debug-port"];
+  }
+
+  if (_.has(options, "inspect-brk")) {
+    result.inspect = {
+      port: options["inspect-brk"],
+      "break": true,
+    };
+
+    if (_.has(options, "inspect")) {
+      console.log(
+        "Both --inspect and --inspect-brk provided; " +
+          "ignoring --inspect."
+      );
+
+      delete options.inspect;
+    }
+
+  } else if (_.has(options, "inspect")) {
+    result.inspect = {
+      port: options.inspect,
+      "break": false,
+    };
+  }
+
+  return result;
+}
+
 var runCommandOptions = {
   requiresApp: true,
   maxArgs: Infinity,
@@ -256,6 +291,7 @@ var runCommandOptions = {
     'mobile-port': { type: String },
     'app-port': { type: String },
     'debug-port': { type: String },
+    ...inspectOptions,
     'no-release-check': { type: Boolean },
     production: { type: Boolean },
     'raw-logs': { type: Boolean },
@@ -352,15 +388,24 @@ function doRunCommand(options) {
 
   let cordovaRunner;
   if (!_.isEmpty(runTargets)) {
-    main.captureAndExit('', 'preparing Cordova project', () => {
-      const cordovaProject = new CordovaProject(projectContext, {
-        settingsFile: options.settings,
-        mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
-      if (buildmessage.jobHasMessages()) return;
 
-      cordovaRunner = new CordovaRunner(cordovaProject, runTargets);
-      cordovaRunner.checkPlatformsForRunTargets();
-    });
+    function prepareCordovaProject() {
+      import { CordovaProject } from '../cordova/project.js';
+
+      main.captureAndExit('', 'preparing Cordova project', () => {
+        const cordovaProject = new CordovaProject(projectContext, {
+          settingsFile: options.settings,
+          mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
+        if (buildmessage.jobHasMessages()) return;
+
+        cordovaRunner = new CordovaRunner(cordovaProject, runTargets);
+        cordovaRunner.checkPlatformsForRunTargets();
+      });
+    }
+
+    import { ensureDevBundleDependencies } from '../cordova';
+    ensureDevBundleDependencies();
+    prepareCordovaProject();
   }
 
   var runAll = require('../runners/run-all.js');
@@ -370,7 +415,7 @@ function doRunCommand(options) {
     proxyHost: parsedServerUrl.hostname,
     appPort: appPort,
     appHost: appHost,
-    debugPort: options['debug-port'],
+    ...normalizeInspectOptions(options),
     settingsFile: options.settings,
     buildOptions: {
       minifyMode: options.production ? 'production' : 'development',
@@ -395,7 +440,7 @@ main.registerCommand(_.extend(
   { name: 'debug' },
   runCommandOptions
 ), function (options) {
-  options['debug-port'] = options['debug-port'] || '5858';
+  options["inspect-brk"] = options["inspect-brk"] || "9229";
   return doRunCommand(options);
 });
 
@@ -532,7 +577,7 @@ main.registerCommand({
         },
         transformContents: function (contents, f) {
           if ((/(\.html|\.js|\.css)/).test(f)) {
-            return new Buffer(transform(contents.toString()));
+            return Buffer.from(transform(contents.toString()));
           } else {
             return contents;
           }
@@ -700,7 +745,7 @@ main.registerCommand({
     },
     transformContents: function (contents, f) {
       if ((/(\.html|\.js|\.css)/).test(f)) {
-        return new Buffer(transform(contents.toString()));
+        return Buffer.from(transform(contents.toString()));
       } else {
         return contents;
       }
@@ -867,7 +912,7 @@ var buildCommand = function (options) {
   // architectures. See archinfo.js for more information on what the
   // architectures are, what they mean, et cetera.
   if (options.architecture &&
-      !_.has(VALID_ARCHITECTURES, options.architecture)) {
+      !_.has(archinfo.VALID_ARCHITECTURES, options.architecture)) {
     showInvalidArchMsg(options.architecture);
     return 1;
   }
@@ -992,16 +1037,27 @@ ${Console.command("meteor build ../output")}`,
   }
 
   if (!_.isEmpty(cordovaPlatforms)) {
-    let cordovaProject;
 
+    let cordovaProject;
     main.captureAndExit('', () => {
+
+      import {
+        ensureDevBundleDependencies,
+        pluginVersionsFromStarManifest,
+        displayNameForPlatform,
+      } from '../cordova';
+
+      ensureDevBundleDependencies();
+
       buildmessage.enterJob({ title: "preparing Cordova project" }, () => {
+        import { CordovaProject } from '../cordova/project.js';
+
         cordovaProject = new CordovaProject(projectContext, {
           settingsFile: options.settings,
           mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
         if (buildmessage.jobHasMessages()) return;
 
-        const pluginVersions = cordova.pluginVersionsFromStarManifest(
+        const pluginVersions = pluginVersionsFromStarManifest(
           bundleResult.starManifest);
 
         cordovaProject.prepareFromAppBundle(bundlePath, pluginVersions);
@@ -1010,7 +1066,7 @@ ${Console.command("meteor build ../output")}`,
       for (platform of cordovaPlatforms) {
         buildmessage.enterJob(
           { title: `building Cordova app for \
-${cordova.displayNameForPlatform(platform)}` }, () => {
+${displayNameForPlatform(platform)}` }, () => {
             let buildOptions = { release: !options.debug };
 
             const buildPath = files.pathJoin(
@@ -1265,10 +1321,11 @@ main.registerCommand({
     return 1;
   }
 
-  var localDir = files.pathJoin(options.appDir, '.meteor', 'local');
-  files.rm_recursive(localDir);
-
-  Console.info("Project reset.");
+  return files.rm_recursive_async(
+    files.pathJoin(options.appDir, '.meteor', 'local')
+  ).then(() => {
+    Console.info("Project reset.");
+  });
 });
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1450,6 +1507,7 @@ testCommandOptions = {
     // XXX COMPAT WITH 0.9.2.2
     'mobile-port': { type: String },
     'debug-port': { type: String },
+    ...inspectOptions,
     'no-release-check': { type: Boolean },
     deploy: { type: String },
     production: { type: Boolean },
@@ -1593,6 +1651,17 @@ function doTestCommand(options) {
     includePackages = options['extra-packages'].trim().split(/\s*,\s*/);
   }
 
+  if (options['driver-package']) {
+    includePackages.push(
+      global.testCommandMetadata.driverPackage =
+        options['driver-package'].trim()
+    );
+  } else if (options["test-packages"]) {
+    includePackages.push(
+      global.testCommandMetadata.driverPackage = "test-in-browser"
+    );
+  }
+
   var projectContextOptions = {
     serverArchitectures: serverArchitectures,
     allowIncompatibleUpdate: options['allow-incompatible-update'],
@@ -1602,7 +1671,6 @@ function doTestCommand(options) {
   var projectContext;
 
   if (options["test-packages"]) {
-    global.testCommandMetadata.driverPackage = options['driver-package'] || 'test-in-browser';
     projectContextOptions.projectDir = testRunnerAppDir;
     projectContextOptions.projectDirForLocalPackages = options.appDir;
 
@@ -1745,16 +1813,24 @@ function doTestCommand(options) {
   let cordovaRunner;
 
   if (!_.isEmpty(runTargets)) {
-    main.captureAndExit('', 'preparing Cordova project', () => {
-      const cordovaProject = new CordovaProject(projectContext, {
-        settingsFile: options.settings,
-        mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
-      if (buildmessage.jobHasMessages()) return;
+    function prepareCordovaProject() {
+      main.captureAndExit('', 'preparing Cordova project', () => {
+        import { CordovaProject } from '../cordova/project.js';
 
-      cordovaRunner = new CordovaRunner(cordovaProject, runTargets);
-      projectContext.platformList.write(cordovaRunner.platformsForRunTargets);
-      cordovaRunner.checkPlatformsForRunTargets();
-    });
+        const cordovaProject = new CordovaProject(projectContext, {
+          settingsFile: options.settings,
+          mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
+        if (buildmessage.jobHasMessages()) return;
+
+        cordovaRunner = new CordovaRunner(cordovaProject, runTargets);
+        projectContext.platformList.write(cordovaRunner.platformsForRunTargets);
+        cordovaRunner.checkPlatformsForRunTargets();
+      });
+    }
+
+    import { ensureDevBundleDependencies } from '../cordova';
+    ensureDevBundleDependencies();
+    prepareCordovaProject();
   }
 
   options.cordovaRunner = cordovaRunner;
@@ -1852,7 +1928,7 @@ var runTestAppForPackages = function (projectContext, options) {
       projectContext: projectContext,
       proxyPort: options.proxyPort,
       proxyHost: options.proxyHost,
-      debugPort: options['debug-port'],
+      ...normalizeInspectOptions(options),
       disableOplog: options['disable-oplog'],
       settingsFile: options.settings,
       testMetadata: global.testCommandMetadata,
@@ -2262,7 +2338,7 @@ main.registerCommand({
 
   // Check that we are asking for a valid architecture.
   var arch = options.args[0];
-  if (!_.has(VALID_ARCHITECTURES, arch)){
+  if (!_.has(archinfo.VALID_ARCHITECTURES, arch)){
     showInvalidArchMsg(arch);
     return 1;
   }
