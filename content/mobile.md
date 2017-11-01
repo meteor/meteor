@@ -508,7 +508,7 @@ What is often confusing to people is that setting `App.accessRule` is not enough
 
 To get around these restrictions, you'll have to use what is known as [Cross-Origin Resource Sharing (CORS)](https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS). In contrast to the whitelisting mechanism configured on the client, CORS relies on headers set by the server. In other words, in order to allow access to a remote resource, you may have to make configuration changes on the server, such as setting a `Access-Control-Allow-Origin` header.
 
-<h3 id="csp">System Permissions</h3>
+<h3 id="system-permissions">System Permissions</h3>
 As of Android Marshmallow, certain system features (e.g. camera, microphone, etc.) require additional permissions in order to access them. These must be listed in the manifest and **also requested at runtime**.
 
 To request them at runtime, consider using the [`cordova.plugins.diagnostic`](https://github.com/dpa99c/cordova-diagnostic-plugin) plugin.
@@ -540,7 +540,7 @@ if (Meteor.isCordova) {
 
 <h2 id="configuring-your-app">Configuring your app</h2>
 
-Meteor reads a [`mobile-config.js`](http://docs.meteor.com/api/mobile-config.html) file in the root of your app directory during build, and uses the settings specified there to generate Cordova's [`config.xml`](https://cordova.apache.org/docs/en/dev/config_ref/index.html).
+Meteor reads a [`mobile-config.js`](http://docs.meteor.com/api/mobile-config.html) file in the root of your app directory during build and uses the settings specified there to generate Cordova's [`config.xml`](https://cordova.apache.org/docs/en/dev/config_ref/index.html) file.
 
 <h3 id="configuring-metadata">Metadata</h3>
 
@@ -560,7 +560,7 @@ App.setPreference('Orientation', 'default');
 App.setPreference('Orientation', 'all', 'ios');
 ```
 
-Refer to the [preferences section](https://cordova.apache.org/docs/en/dev/config_ref/index.html#preference) of the Cordova documentation for more information about supported options.
+Refer to [Meteor's Mobile Configuration](http://docs.meteor.com/api/mobile-config.html) documentation and the [preferences section](https://cordova.apache.org/docs/en/dev/config_ref/index.html#preference) of the Cordova documentation for more information on Meteor's Cordova configuration API and the supported options.
 
 <h3 id="configuring-app-icons-and-launch-screens">App icons and launch screens</h3>
 
