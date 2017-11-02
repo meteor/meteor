@@ -66,7 +66,7 @@
     "eslint-plugin-react": "7.4.0",
     "husky": "0.14.3",
     "mocha": "4.0.1",
-    "nyc": "11.2.1",
+    "nyc": "11.3.0",
     "prettier": "1.7.4",
     "readline-sync": "1.4.7",
     "rewire": "2.5.2",
