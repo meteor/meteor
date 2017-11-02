@@ -12,7 +12,7 @@ export const CORDOVA_PLATFORMS = ['ios', 'android'];
 
 export const CORDOVA_PLATFORM_VERSIONS = {
   'android': '6.3.0',
-  'ios': '4.5.2'
+  'ios': '4.5.3'
 };
 
 const PLATFORM_TO_DISPLAY_NAME_MAP = {
