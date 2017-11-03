@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "hexo": {
-    "version": "3.2.0"
+    "version": "3.3.9"
   },
   "dependencies": {
-    "hexo": "^3.2.2",
+    "hexo": "^3.3.9",
     "hexo-autoprefixer": "^0.1.0",
     "hexo-generator-archive": "^0.1.2",
     "hexo-generator-category": "^0.1.2",
