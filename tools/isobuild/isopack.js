@@ -893,141 +893,28 @@ _.extend(Isopack.prototype, {
         return;
       }
 
-      var unibuildJson = JSON.parse(
-        files.readFile(files.pathJoin(dir, unibuildMeta.path)));
-
-      var unibuildBasePath =
-        files.pathDirname(files.pathJoin(dir, unibuildMeta.path));
-
-      if (unibuildJson.format !== "unipackage-unibuild-pre1" &&
-          unibuildJson.format !== "isopack-2-unibuild") {
-        throw new Error("Unsupported isopack unibuild format: " +
-                        JSON.stringify(unibuildJson.format));
-      }
-
-      // Is this unibuild the legacy pre-"compiler plugin" format which contains
-      // "prelink" resources of pre-processed JS files (as well as the
-      // "packageVariables" field) instead of individual "source" resources (and
-      // a "declaredExports" field)?
-      var unibuildHasPrelink =
-            unibuildJson.format === "unipackage-unibuild-pre1";
-
-      var resources = [];
-
-      _.each(unibuildJson.resources, function (resource) {
-        rejectBadPath(resource.file);
-        var data = files.readBufferWithLengthAndOffset(
-          files.pathJoin(unibuildBasePath, resource.file),
-          resource.length, resource.offset);
-
-        if (resource.type === "prelink") {
-          if (! unibuildHasPrelink) {
-            throw Error("Unexpected prelink resource in " +
-                        unibuildJson.format + " at " + dir);
-          }
-          // We found a "prelink" resource, because we're processing a package
-          // published with an older version of Meteor which did not create
-          // isopack-2 isopacks and which always preprocessed and linked all JS
-          // files instead of leaving that until bundle time.  Let's pretend it
-          // was just a single js source file, but leave a "legacyPrelink" field
-          // on it so we can not re-link that part (and not re-analyze for
-          // assigned variables).
-          var prelinkResource = {
-            type: "source",
-            extension: "js",
-            data: data,
-            path: resource.servePath,
-            // It's a shame to have to calculate the hash here instead of having
-            // it on disk, but this only runs for legacy packages anyway.
-            hash: watch.sha1(data),
-            // Legacy prelink files definitely don't have a source processor!
-            // They were created by an Isobuild that didn't even know about
-            // source processors!
-            usesDefaultSourceProcessor: true,
-            legacyPrelink: {
-              packageVariables: unibuildJson.packageVariables || []
-            }
-          };
-          if (resource.sourceMap) {
-            rejectBadPath(resource.sourceMap);
-            prelinkResource.legacyPrelink.sourceMap = files.readFile(
-              files.pathJoin(unibuildBasePath, resource.sourceMap), 'utf8');
-          }
-          resources.push(prelinkResource);
-        } else if (resource.type === "source") {
-          resources.push({
-            type: "source",
-            extension: resource.extension,
-            usesDefaultSourceProcessor:
-              !! resource.usesDefaultSourceProcessor,
-            data: data,
-            path: resource.path,
-            hash: resource.hash,
-            fileOptions: resource.fileOptions
-          });
-        } else if (_.contains(["head", "body", "css", "js", "asset"],
-                              resource.type)) {
-          resources.push({
-            type: resource.type,
-            data: data,
-            servePath: resource.servePath || undefined,
-            path: resource.path || undefined
-          });
-        } else {
-          throw new Error("bad resource type in isopack: " +
-                          JSON.stringify(resource.type));
-        }
-      });
-
-      var declaredExports;
-      if (unibuildHasPrelink) {
-        // Legacy unibuild; it stores packageVariables and says some of them
-        // are exports.
-        declaredExports = [];
-        _.each(unibuildJson.packageVariables, function (pv) {
-          if (pv.export) {
-            declaredExports.push({
-              name: pv.name,
-              testOnly: pv.export === 'tests'
-            });
-          }
-        });
-      } else {
-        declaredExports = unibuildJson.declaredExports || [];
-      }
-
-      unibuildJson.uses && unibuildJson.uses.forEach((use) => {
-        if (!use.weak && compiler.isIsobuildFeaturePackage(use.package) &&
-            self.isobuildFeatures.indexOf(use.package) === -1) {
-          self.isobuildFeatures.push(use.package);
-        }
-      });
-
-      // Rebuild binary npm packages if unibuild arch matches host arch.
-      const rebuildBinaries = archinfo.matches(
-        archinfo.host(),
-        unibuildMeta.arch
-      );
-
-      const nodeModulesDirectories = bundler.NodeModulesDirectory
-        .readDirsFromJSON(unibuildJson.node_modules, {
-          packageName: self.name,
-          sourceRoot: unibuildBasePath,
-          rebuildBinaries,
-        });
-
-      self.unibuilds.push(new Unibuild(self, {
-        // At some point we stopped writing 'kind's to the metadata file, so
-        // default to main.
-        kind: unibuildMeta.kind || 'main',
+      const unibuild = Unibuild.fromJSON(JSON.parse(
+        files.readFile(files.pathJoin(dir, unibuildMeta.path))
+      ), {
+        isopack: self,
+        kind: unibuildMeta.kind,
         arch: unibuildMeta.arch,
-        uses: unibuildJson.uses,
-        implies: unibuildJson.implies,
+        unibuildBasePath: files.pathDirname(
+          files.pathJoin(dir, unibuildMeta.path)),
         watchSet: unibuildWatchSets[unibuildMeta.path],
-        nodeModulesDirectories,
-        declaredExports: declaredExports,
-        resources: resources
-      }));
+      });
+
+      if (unibuild.uses) {
+        unibuild.uses.forEach(use => {
+          if (! use.weak &&
+              compiler.isIsobuildFeaturePackage(use.package) &&
+              self.isobuildFeatures.indexOf(use.package) === -1) {
+            self.isobuildFeatures.push(use.package);
+          }
+        });
+      }
+
+      self.unibuilds.push(unibuild);
     });
 
     self.cordovaDependencies = mainJson.cordovaDependencies || null;
