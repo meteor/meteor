@@ -1208,154 +1208,26 @@ _.extend(Isopack.prototype, {
             unibuild.watchSet.toJSON();
         }
 
-        // Figure out where the npm dependencies go.
-        let node_modules = {};
-        _.each(unibuild.nodeModulesDirectories, nmd => {
-          const bundlePath = _.has(npmDirsToCopy, nmd.sourcePath)
-            // We already have this npm directory from another unibuild.
-            ? npmDirsToCopy[nmd.sourcePath]
-            : npmDirsToCopy[nmd.sourcePath] = builder.generateFilename(
-              nmd.getPreferredBundlePath("isopack"),
-              { directory: true }
-            );
-          node_modules[bundlePath] = nmd.toJSON();
-        });
-
-        const preferredPaths = Object.keys(node_modules);
-        if (preferredPaths.length === 1) {
-          // For backwards compatibility, if there's only one node_modules
-          // directory, store it as a single string.
-          node_modules = preferredPaths[0];
-        }
-
-        // Construct unibuild metadata
-        var unibuildJson = {
-          format: "isopack-2-unibuild",
-          declaredExports: unibuild.declaredExports,
-          uses: _.map(unibuild.uses, function (u) {
-            return {
-              'package': u.package,
-              // For cosmetic value, leave false values for these options out of
-              // the JSON file.
-              constraint: u.constraint || undefined,
-              unordered: u.unordered || undefined,
-              weak: u.weak || undefined
-            };
-          }),
-          implies: (_.isEmpty(unibuild.implies) ? undefined : unibuild.implies),
-          resources: []
-        };
-
-        if (preferredPaths.length > 0) {
-          // If there are no node_modules directories, don't confuse older
-          // versions of Meteor by storing an empty object.
-          unibuildJson.node_modules = node_modules;
-        }
-
         const usesModules = ! isopackCache ||
           isopackCache.uses(self, "modules", unibuild.arch);
 
-        // Output 'head', 'body' resources nicely
-        var concat = { head: [], body: [] };
-        var offset = { head: 0, body: 0 };
-        _.each(unibuild.resources, function (resource) {
-          if (_.contains(["head", "body"], resource.type)) {
-            if (concat[resource.type].length) {
-              concat[resource.type].push(Buffer.from("\n", "utf8"));
-              offset[resource.type]++;
-            }
-            if (! (resource.data instanceof Buffer)) {
-              throw new Error("Resource data must be a Buffer");
-            }
-
-            if (! usesModules &&
-                resource.fileOptions &&
-                resource.fileOptions.lazy) {
-              // Omit lazy resources from the unibuild JSON file.
-              return;
-            }
-
-            unibuildJson.resources.push({
-              type: resource.type,
-              file: files.pathJoin(unibuildDir, resource.type),
-              length: resource.data.length,
-              offset: offset[resource.type]
-            });
-
-            concat[resource.type].push(resource.data);
-            offset[resource.type] += resource.data.length;
-          }
-        });
-
-        _.each(concat, function (parts, type) {
-          if (parts.length) {
-            builder.write(files.pathJoin(unibuildDir, type), {
-              data: Buffer.concat(concat[type], offset[type])
-            });
-          }
-        });
-
-        // Output other resources each to their own file
-        _.each(unibuild.resources, function (resource) {
-          if (_.contains(["head", "body"], resource.type)) {
-            // already did this one
-            return;
-          }
-
-          const generatedFilename =
-            builder.writeToGeneratedFilename(
-              files.pathJoin(unibuildDir,
-                             resource.servePath || resource.path),
-              { data: resource.data });
-
-          if (! usesModules &&
-              resource.fileOptions &&
-              resource.fileOptions.lazy) {
-            // Omit lazy resources from the unibuild JSON file, but only
-            // after they are copied into the bundle (immediately above).
-            return;
-          }
-
-          // If we're going to write a legacy prelink file later, track the
-          // original form of the resource object (with the source in a Buffer,
-          // etc) instead of the later version.  #HardcodeJs
-          if (writeLegacyBuilds &&
-              resource.type === "source" &&
-              resource.extension == "js") {
-            jsResourcesForLegacyPrelink.push({
-              data: resource.data,
-              hash: resource.hash,
-              servePath: unibuild.pkg._getServePath(resource.path),
-              bare: resource.fileOptions && resource.fileOptions.bare,
-              sourceMap: resource.sourceMap,
-              // If this file was actually read from a legacy isopack and is
-              // itself prelinked, this will be an object with some metadata
-              // about it, and we can skip re-running prelink later.
-              legacyPrelink: resource.legacyPrelink
-            });
-          }
-
-          unibuildJson.resources.push({
-            type: resource.type,
-            extension: resource.extension,
-            file: generatedFilename,
-            length: resource.data.length,
-            offset: 0,
-            usesDefaultSourceProcessor:
-              resource.usesDefaultSourceProcessor || undefined,
-            servePath: resource.servePath || undefined,
-            path: resource.path || undefined,
-            hash: resource.hash || undefined,
-            fileOptions: resource.fileOptions || undefined
-          });
+        const unibuildJson = unibuild.toJSON({
+          // TODO try to remove as many of these options as possible.
+          builder,
+          unibuildDir,
+          usesModules,
+          npmDirsToCopy,
+          writeLegacyBuilds,
+          jsResourcesForLegacyPrelink,
         });
 
         // Control file for unibuild
         builder.writeJson(unibuildJsonFile, unibuildJson);
+
         unibuildInfos.push({
-          unibuild: unibuild,
-          unibuildJson: unibuildJson,
-          jsResourcesForLegacyPrelink: jsResourcesForLegacyPrelink
+          unibuild,
+          unibuildJson,
+          jsResourcesForLegacyPrelink,
         });
       });
 
