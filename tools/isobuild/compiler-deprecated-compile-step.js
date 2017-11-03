@@ -302,7 +302,7 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
       }
       resources.push({
         type: options.section,
-        data: new Buffer(files.convertToStandardLineEndings(options.data), 'utf8'),
+        data: Buffer.from(files.convertToStandardLineEndings(options.data), 'utf8'),
         lazy: this._getOption("lazy", options),
       });
     },
@@ -337,7 +337,7 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
       resources.push({
         type: "css",
         refreshable: true,
-        data: new Buffer(files.convertToStandardLineEndings(options.data), 'utf8'),
+        data: Buffer.from(files.convertToStandardLineEndings(options.data), 'utf8'),
         servePath: colonConverter.convert(
           files.pathJoin(
             inputSourceArch.pkg.serveRoot,
@@ -380,7 +380,7 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
         throw new Error("'sourcePath' option must be supplied to addJavaScript. Consider passing inputPath.");
       }
 
-      var data = new Buffer(
+      var data = Buffer.from(
         files.convertToStandardLineEndings(options.data), 'utf8');
       resources.push({
         type: "js",
@@ -415,7 +415,7 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
     addAsset: function (options) {
       if (! (options.data instanceof Buffer)) {
         if (_.isString(options.data)) {
-          options.data = new Buffer(options.data);
+          options.data = Buffer.from(options.data);
         } else {
           throw new Error("'data' option to addAsset must be a Buffer or String.");
         }
@@ -457,7 +457,7 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
           sourcePath,
           targetPath: sourcePath,
           servePath: sourcePath,
-          data: new Buffer(
+          data: Buffer.from(
             "throw new Error(" + JSON.stringify(message) + ");\n",
             "utf8"),
           lazy: true,

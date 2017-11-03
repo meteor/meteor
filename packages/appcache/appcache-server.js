@@ -151,7 +151,7 @@ WebApp.connectHandlers.use(function (req, res, next) {
   manifest += "*" + "\n";
 
   // content length needs to be based on bytes
-  var body = new Buffer(manifest);
+  var body = Buffer.from(manifest);
 
   res.setHeader('Content-Type', 'text/cache-manifest');
   res.setHeader('Content-Length', body.length);

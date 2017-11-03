@@ -5,7 +5,7 @@ var utils = require('./utils.js');
 
 /* Meteor's current architecture scheme defines the following virtual
  * machine types, which are defined by specifying what is promised by
- * the host enviroment:
+ * the host environment:
  *
  * browser.w3c
  *   A web browser compliant with modern standards. This is
@@ -67,9 +67,17 @@ var utils = require('./utils.js');
  *   nobody has asked for it.
  *
  * os.windows.x86_32
- *   This is 32 and 64 bit Windows. It seems like there is not much of
- *   a benefit to using 64 bit Node on Windows, and 32 bit works properly
- *   even on 64 bit systems.
+ * os.windows.x86_64
+ *   Once, on the far side of yesterday, there was not a 64-bit
+ *   build of Meteor for Windows, due to the belief that Node didn't
+ *   take (enough?) advantage of a 64-bit platform.  As time has passed,
+ *   and as V8 engine improvements have been bestowed upon it, this is
+ *   no longer as clear as it may have once been.  Node.js Foundation
+ *   releases 64-bit versions themselves, likely for good reason.
+ *   Present-day operation of 64-bit binaries on 64-bit Windows
+ *   platforms show clear performance benefits over their 32-bit
+ *   siblings (e.g. 7-zip, et.al), so Meteor should also try to offer
+ *   that same benefit by building and offering a 64-bit version.
  *
  * To be (more but far from completely) precise, the ABI for os.*
  * architectures includes a CPU type, a mode in which the code will be
@@ -120,6 +128,14 @@ var utils = require('./utils.js');
  * to some of these strings.
  */
 
+// Valid architectures that Meteor officially supports.
+export const VALID_ARCHITECTURES = {
+  "os.osx.x86_64": true,
+  "os.linux.x86_64": true,
+  "os.linux.x86_32": true,
+  "os.windows.x86_64": true,
+  "os.windows.x86_32": true,
+};
 
 // Returns the fully qualified arch of this host -- something like
 // "os.linux.x86_32" or "os.osx.x86_64". Must be called inside
@@ -161,8 +177,11 @@ var host = function () {
     }
 
     else if (platform === "win32") {
-      // We also use 32 bit builds on 64 bit Windows architectures.
-      _host = "os.windows.x86_32";
+      if (process.arch === "x64") {
+        _host = "os.windows.x86_64";
+      } else {
+        _host = "os.windows.x86_32";
+      }
     } else {
       throw new Error("Unsupported operating system: " + platform);
     }
@@ -171,14 +190,46 @@ var host = function () {
   return _host;
 };
 
+// In order to springboard to earlier Meteor releases that did not have
+// 64-bit Windows builds, Windows installations must be allowed to
+// download 32-bit builds of meteor-tool.
+exports.acceptableMeteorToolArches = function () {
+  if (os.platform() === "win32") {
+    switch (utils.architecture()) {
+    case "x86_32":
+      return ["os.windows.x86_32"];
+    case "x86_64":
+      return [
+        "os.windows.x86_64",
+        "os.windows.x86_32",
+      ];
+    }
+  }
+
+  return [host()];
+};
+
+// 64-bit Windows machines that have been using a 32-bit version of Meteor
+// are eligible to switch to 64-bit beginning with Meteor 1.6, which is
+// the first version of Meteor that contains this code.
+exports.canSwitchTo64Bit = function () {
+  // Automatically switching from 32-bit to 64-bit Windows builds is
+  // disabled for the time being, since downloading additional builds of
+  // meteor-tool isn't stable enough at the moment (on Windows, at least)
+  // to introduce in a release candidate.
+  return false &&
+    utils.architecture() === "x86_64" &&
+    host() === "os.windows.x86_32";
+};
+
 // True if `host` (an architecture name such as 'os.linux.x86_64') can run
 // programs of architecture `program` (which might be something like 'os',
 // 'os.linux', or 'os.linux.x86_64').
 //
 // `host` and `program` are just mnemonics -- `host` does not
-// necessariy have to be a fully qualified architecture name. This
+// necessarily have to be a fully qualified architecture name. This
 // function just checks to see if `program` describes a set of
-// enviroments that is a (non-strict) superset of `host`.
+// environments that is a (non-strict) superset of `host`.
 var matches = function (host, program) {
   return host.substr(0, program.length) === program &&
     (host.length === program.length ||

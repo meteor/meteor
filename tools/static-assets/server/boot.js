@@ -42,6 +42,66 @@ if (!process.env.APP_ID) {
 // Map from load path to its source map.
 var parsedSourceMaps = {};
 
+const meteorDebugFuture =
+  process.env.METEOR_INSPECT_BRK ? new Future : null;
+
+function maybeWaitForDebuggerToAttach() {
+  if (meteorDebugFuture) {
+    const { pause } = require("./debug.js");
+    const pauseThresholdMs = 50;
+    const pollIntervalMs = 500;
+    const waitStartTimeMs = +new Date;
+    const waitLimitMinutes = 5;
+    const waitLimitMs = waitLimitMinutes * 60 * 1000;
+
+    // This setTimeout not only waits for the debugger to attach, but also
+    // keeps the process alive by preventing the event loop from running
+    // empty while the main Fiber yields.
+    setTimeout(function poll() {
+      const pauseStartTimeMs = +new Date;
+
+      if (pauseStartTimeMs - waitStartTimeMs > waitLimitMs) {
+        console.error(
+          `Debugger did not attach after ${waitLimitMinutes} minutes; continuing.`
+        );
+
+        meteorDebugFuture.return();
+
+      } else {
+        // This pause function contains a debugger keyword that will only
+        // act as a breakpoint once a debugging client has attached to the
+        // process, so we keep calling pause() until the first time it
+        // takes at least pauseThresholdMs, which indicates that a client
+        // must be attached. The only other signal of a client attaching
+        // is an unreliable "Debugger attached" message printed to stderr
+        // by native C++ code, which requires the parent process to listen
+        // for that message and then process.send a message back to this
+        // process. By comparison, this polling strategy tells us exactly
+        // what we want to know: "Is the debugger keyword enabled yet?"
+        pause();
+
+        if (new Date - pauseStartTimeMs > pauseThresholdMs) {
+          // If the pause() function call took a meaningful amount of
+          // time, we can conclude the debugger keyword must be active,
+          // which means a debugging client must be connected, which means
+          // we should stop polling and let the main Fiber continue.
+          meteorDebugFuture.return();
+
+        } else {
+          // If the pause() function call didn't take a meaningful amount
+          // of time to execute, then the debugger keyword must not have
+          // caused a pause, which means a debugging client must not be
+          // connected, which means we should keep polling.
+          setTimeout(poll, pollIntervalMs);
+        }
+      }
+    }, pollIntervalMs);
+
+    // The polling will continue while we wait here.
+    meteorDebugFuture.wait();
+  }
+}
+
 // Read all the source maps into memory once.
 _.each(serverJson.load, function (fileInfo) {
   if (fileInfo.sourceMap) {
@@ -155,6 +215,8 @@ var specialArgPaths = {
 };
 
 var loadServerBundles = Profile("Load server bundles", function () {
+  var infos = [];
+
   _.each(serverJson.load, function (fileInfo) {
     var code = fs.readFileSync(path.resolve(serverDir, fileInfo.path));
     var nonLocalNodeModulesPaths = [];
@@ -326,17 +388,30 @@ var loadServerBundles = Profile("Load server bundles", function () {
 
     var scriptPath =
       parsedSourceMaps[absoluteFilePath] ? absoluteFilePath : fileInfoOSPath;
-    // The final 'true' is an undocumented argument to runIn[Foo]Context that
-    // causes it to print out a descriptive error message on parse error. It's
-    // what require() uses to generate its errors.
-    var func = require('vm').runInThisContext(wrapped, scriptPath, true);
+
+    var script = new (require('vm').Script)(wrapped, {
+      filename: scriptPath,
+      displayErrors: true
+    });
+
+    var func = script.runInThisContext();
+
     var args = [Npm, Assets];
 
     specialKeys.forEach(function (key) {
       args.push(specialArgs[key]);
     });
 
-    Profile(fileInfo.path, func).apply(global, args);
+    infos.push({
+      fn: Profile(fileInfo.path, func),
+      args
+    });
+  });
+
+  maybeWaitForDebuggerToAttach();
+
+  infos.forEach(info => {
+    info.fn.apply(global, info.args);
   });
 });
 
