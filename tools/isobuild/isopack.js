@@ -18,98 +18,12 @@ var buildPluginModule = require('./build-plugin.js');
 var Console = require('../console/console.js').Console;
 var Profile = require('../tool-env/profile.js').Profile;
 import { requestGarbageCollection } from "../utils/gc.js";
+import { Unibuild } from "./unibuild.js";
 
 var rejectBadPath = function (p) {
   if (p.match(/\.\./)) {
     throw new Error("bad path: " + p);
   }
-};
-
-///////////////////////////////////////////////////////////////////////////////
-// Unibuild
-///////////////////////////////////////////////////////////////////////////////
-
-// Options:
-// - kind [required] (main/plugin/app)
-// - arch [required]
-// - uses
-// - implies
-// - watchSet
-// - nodeModulesDirectories
-// - declaredExports
-// - resources
-
-var nextBuildId = 1;
-var Unibuild = function (isopack, options) {
-  var self = this;
-  options = options || {};
-  self.pkg = isopack;
-
-  self.kind = options.kind;
-  self.arch = options.arch;
-
-  self.uses = options.uses;
-  self.implies = options.implies || [];
-
-  // This WatchSet will end up having the watch items from the
-  // SourceArch (such as package.js or .meteor/packages), plus all of
-  // the actual source files for the unibuild (including items that we
-  // looked at to find the source files, such as directories we
-  // scanned).
-  self.watchSet = options.watchSet || new watch.WatchSet();
-
-  // Each Unibuild is given a unique id when it's loaded (it is
-  // not saved to disk). This is just a convenience to make it easier
-  // to keep track of Unibuilds in a map; it's used by bundler
-  // and compiler. We put some human readable info in here too to make
-  // debugging easier.
-  self.id = self.pkg.name + "." + self.kind + "@" + self.arch + "#" +
-    (nextBuildId ++);
-
-  // 'declaredExports' are the variables which are exported from this package.
-  // A list of objects with keys 'name' (required) and 'testOnly' (boolean,
-  // defaults to false).
-  self.declaredExports = options.declaredExports;
-
-  // All of the data provided for eventual inclusion in the bundle,
-  // other than JavaScript that still needs to be fed through the
-  // final link stage. A list of objects with these keys:
-  //
-  // type: "source", "head", "body", "asset". (resources produced by
-  // legacy source handlers can also be "js" or "css".
-  //
-  // data: The contents of this resource, as a Buffer. For example,
-  // for "head", the data to insert in <head>; for "js", the
-  // JavaScript source code (which may be subject to further
-  // processing such as minification); for "asset", the contents of a
-  // static resource such as an image.
-  //
-  // servePath: The (absolute) path at which the resource would prefer
-  // to be served. Interpretation varies by type. For example, always
-  // honored for "asset", ignored for "head" and "body", sometimes
-  // honored for CSS but ignored if we are concatenating.
-  //
-  // sourceMap: Allowed only for "js". If present, a string.
-  //
-  // fileOptions: for "source", the options passed to `api.addFiles`.
-  // plugin-specific.
-  //
-  // extension: for "source", the file extension that this matched
-  // against at build time. null if matched against a specific filename.
-  self.resources = options.resources;
-
-  // Map from absolute paths of node_modules directories to
-  // NodeModulesDirectory objects.
-  self.nodeModulesDirectories = options.nodeModulesDirectories;
-
-  // Provided for backwards compatibility; please use
-  // unibuild.nodeModulesDirectories instead!
-  _.some(self.nodeModulesDirectories, (nmd, nodeModulesPath) => {
-    if (! nmd.local) {
-      self.nodeModulesPath = nodeModulesPath;
-      return true;
-    }
-  });
 };
 
 ///////////////////////////////////////////////////////////////////////////////
