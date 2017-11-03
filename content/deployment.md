@@ -151,18 +151,9 @@ Once you are setup with Galaxy, deployment is simple (just re-run the `meteor de
 
 <h3 id="mup">Meteor Up</h3>
 
-Meteor Up, often referred to as "mupx" or "mup", is a third-party open-source tool that can be used to deploy Meteor application to any online server over SSH. It handles some of the essential deployment requirements, but you will still need to do a lot of work to get your load balancing and version updates working smoothly.  It's essentially a way to automate the manual steps of using `meteor build` and putting that bundle on your server.
+[Meteor Up](http://meteor-up.com), often referred to as "mup", is a third-party open-source tool that can be used to deploy Meteor application to any online server over SSH. It handles some of the essential deployment requirements, but you will still need to do a lot of work to get your load balancing and version updates working smoothly.  It's essentially a way to automate the manual steps of using `meteor build` and putting that bundle on your server.
 
 You can obtain a server running Ubuntu or Debian from many generic hosting providers and Meteor Up can SSH into your server with the keys you provide in the config. You can also [watch this video](https://www.youtube.com/watch?v=WLGdXtZMmiI) for a more complete walkthrough on how to do it.
-
-Meteor Up has multiple projects so select what is best for your project:
-* Original [Meteor Up](https://github.com/arunoda/meteor-up) (not generally recommended any longer)
-* The [`mupx`](https://github.com/arunoda/meteor-up/tree/mupx) branch (best for pre-Meteor 1.4)
-* The [`kadirahq/mup`](https://github.com/kadirahq/meteor-up) fork _(best for Meteor 1.4 or higher)_
-
-> Currently, using Meteor Up with Meteor 1.4 requires `kadirahq/mup` (still in development) and a special docker image with the correct Node version.
-
-For further assistance, consult the documentation for the option you select.
 
 <h3 id="docker">Docker</h3>
 
@@ -190,9 +181,7 @@ meteor build /path/to/build --architecture os.linux.x86_64
 
 This will provide you with a bundled application `.tar.gz` which you can extract and run without the `meteor` tool.  The environment you choose will need the correct version of Node.js and connectivity to a MongoDB server.
 
-Depending on the version of Meteor you are using, you should install the proper version of `node` using the appropriate installation process for your platform.
-* Node 4.6.2 for *Meteor 1.4.x*
-* Node 0.10.43 for *Meteor 1.3.x and earlier*
+Depending on the version of Meteor you are using, you should install the proper version of `node` using the appropriate installation process for your platform. To find out which version of `node` you should use, run `meteor node -v`. For example, if you are using Meteor 1.6, the version of `node` you should use is 8.8.1.
 
 > If you use a mis-matched version of Node when deploying your application, you will encounter errors!
 
