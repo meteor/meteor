@@ -1199,8 +1199,6 @@ _.extend(Isopack.prototype, {
           path: unibuildJsonFile
         });
 
-        var jsResourcesForLegacyPrelink = [];
-
         // Save unibuild dependencies. Keyed by the json path rather than thinking
         // too hard about how to encode pair (name, arch).
         if (isopackBuildInfoJson) {
@@ -1212,14 +1210,17 @@ _.extend(Isopack.prototype, {
           isopackCache.uses(self, "modules", unibuild.arch);
 
         const unibuildJson = unibuild.toJSON({
-          // TODO try to remove as many of these options as possible.
           builder,
           unibuildDir,
           usesModules,
           npmDirsToCopy,
-          writeLegacyBuilds,
-          jsResourcesForLegacyPrelink,
         });
+
+        // If we're going to write a legacy prelink file later, track the
+        // original form of the resource object (with the source in a
+        // Buffer, etc) instead of the later version.  #HardcodeJs
+        const jsResourcesForLegacyPrelink =
+          writeLegacyBuilds ? unibuild.getLegacyJsResources() : [];
 
         // Control file for unibuild
         builder.writeJson(unibuildJsonFile, unibuildJson);

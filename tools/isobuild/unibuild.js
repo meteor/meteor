@@ -85,13 +85,10 @@ export class Unibuild {
   }
 
   toJSON({
-    // TODO Try to remove as many of these options as possible.
     builder,
     unibuildDir,
     usesModules,
     npmDirsToCopy,
-    writeLegacyBuilds,
-    jsResourcesForLegacyPrelink,
   }) {
     const unibuild = this;
     const unibuildJson = {
@@ -200,25 +197,6 @@ export class Unibuild {
         return;
       }
 
-      // If we're going to write a legacy prelink file later, track the
-      // original form of the resource object (with the source in a
-      // Buffer, etc) instead of the later version.  #HardcodeJs
-      if (writeLegacyBuilds &&
-          resource.type === "source" &&
-          resource.extension == "js") {
-        jsResourcesForLegacyPrelink.push({
-          data: resource.data,
-          hash: resource.hash,
-          servePath: unibuild.pkg._getServePath(resource.path),
-          bare: resource.fileOptions && resource.fileOptions.bare,
-          sourceMap: resource.sourceMap,
-          // If this file was actually read from a legacy isopack and is
-          // itself prelinked, this will be an object with some metadata
-          // about it, and we can skip re-running prelink later.
-          legacyPrelink: resource.legacyPrelink
-        });
-      }
-
       unibuildJson.resources.push({
         type: resource.type,
         extension: resource.extension,
@@ -235,5 +213,28 @@ export class Unibuild {
     });
 
     return unibuildJson;
+  }
+
+  getLegacyJsResources() {
+    const legacyJsResources = [];
+
+    this.resources.forEach(resource => {
+      if (resource.type === "source" &&
+          resource.extension === "js") {
+        legacyJsResources.push({
+          data: resource.data,
+          hash: resource.hash,
+          servePath: this.pkg._getServePath(resource.path),
+          bare: resource.fileOptions && resource.fileOptions.bare,
+          sourceMap: resource.sourceMap,
+          // If this file was actually read from a legacy isopack and is
+          // itself prelinked, this will be an object with some metadata
+          // about it, and we can skip re-running prelink later.
+          legacyPrelink: resource.legacyPrelink
+        });
+      }
+    });
+
+    return legacyJsResources;
   }
 }
