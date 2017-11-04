@@ -1,3 +1,22 @@
+## v1.5.3, 2017-11-04
+
+* Node has been upgraded to version 4.8.5, a recommended security
+  release: https://nodejs.org/en/blog/release/v4.8.5/. While it was
+  expected that Node 4.8.5 would also include our fix of a faulty
+  backport of garbage collection-related logic in V8, the timing
+  of this security release has caused that to be delayed until 4.8.6.
+  Therefore, this Node still includes our patch for this issue.
+  [Issue #8648](https://github.com/meteor/meteor/issues/8648)
+
+* Various backports from Meteor 1.6.  Consult the
+  [1.5.3 pull-request](https://github.com/meteor/meteor/pull/9266)
+  for additional details, but issues include:
+  * Child imports of dynamically imported modules within packages
+    [#9182](https://github.com/meteor/meteor/issues/9182)
+  * Unresolved circular dependencies
+    [#9176](https://github.com/meteor/meteor/issues/9176)
+  * Improvements to Windows temporary directory handling.
+
 ## v1.5.2.2, 2017-10-02
 
 * Fixes a regression in 1.5.2.1 which resulted in the macOS firewall
