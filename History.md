@@ -8,14 +8,14 @@
   Therefore, this Node still includes our patch for this issue.
   [Issue #8648](https://github.com/meteor/meteor/issues/8648)
 
-* Various backports from Meteor 1.6.  Consult the
-  [1.5.3 pull-request](https://github.com/meteor/meteor/pull/9266)
-  for additional details, but issues include:
-  * Child imports of dynamically imported modules within packages
+* Various backports from Meteor 1.6, as detailed in the
+  [PR for Meteor 1.5.3](https://github.com/meteor/meteor/pull/9266).
+  Briefly, these involve fixes for:
+  * Child imports of dynamically imported modules within packages.
     [#9182](https://github.com/meteor/meteor/issues/9182)
-  * Unresolved circular dependencies
+  * Unresolved circular dependencies.
     [#9176](https://github.com/meteor/meteor/issues/9176)
-  * Improvements to Windows temporary directory handling.
+  * Windows temporary directory handling.
 
 ## v1.5.2.2, 2017-10-02
 
