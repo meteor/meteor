@@ -1028,21 +1028,25 @@ var getFooter = function ({
 
   if (name && exported) {
     chunks.push("\n\n/* Exports */\n");
-    const pkgInit = packageDot(name) + " = " + (exportsName || "{}");
-    if (_.isEmpty(exported)) {
-      // Even if there are no exports, we need to define Package.foo,
-      // because the existence of Package.foo is how another package
-      // (e.g., one that weakly depends on foo) can tell if foo is loaded.
-      chunks.push(pkgInit, ";\n");
-    } else {
+
+    // Even if there are no exports, we need to define Package.foo,
+    // because the existence of Package.foo is how another package
+    // (e.g., one that weakly depends on foo) can tell if foo is loaded.
+    chunks.push("Package._define(" + JSON.stringify(name));
+
+    if (exportsName) {
+      // If we have an exports object, use it as Package[name].
+      chunks.push(", ", exportsName);
+    }
+
+    if (! _.isEmpty(exported)) {
       const scratch = {};
       _.each(exported, symbol => scratch[symbol] = symbol);
       const symbolTree = writeSymbolTree(buildSymbolTree(scratch));
-      chunks.push("(function (pkg, symbols) {\n",
-                  "  for (var s in symbols)\n",
-                  "    (s in pkg) || (pkg[s] = symbols[s]);\n",
-                  "})(", pkgInit, ", ", symbolTree, ");\n");
+      chunks.push(", ", symbolTree);
     }
+
+    chunks.push(");\n");
   }
 
   chunks.push("\n})();\n");
