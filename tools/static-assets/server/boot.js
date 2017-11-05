@@ -2,7 +2,6 @@ var Fiber = require("fibers");
 var fs = require("fs");
 var path = require("path");
 var Future = require("fibers/future");
-var _ = require('underscore');
 var sourcemap_support = require('source-map-support');
 
 var bootUtils = require('./boot-utils.js');
@@ -103,7 +102,7 @@ function maybeWaitForDebuggerToAttach() {
 }
 
 // Read all the source maps into memory once.
-_.each(serverJson.load, function (fileInfo) {
+serverJson.load.forEach(function (fileInfo) {
   if (fileInfo.sourceMap) {
     var rawSourceMap = fs.readFileSync(
       path.resolve(serverDir, fileInfo.sourceMap), 'utf8');
@@ -123,11 +122,12 @@ _.each(serverJson.load, function (fileInfo) {
   }
 });
 
-var retrieveSourceMap = function (pathForSourceMap) {
-  if (_.has(parsedSourceMaps, pathForSourceMap))
+function retrieveSourceMap(pathForSourceMap) {
+  if (hasOwn.call(parsedSourceMaps, pathForSourceMap)) {
     return { map: parsedSourceMaps[pathForSourceMap] };
+  }
   return null;
-};
+}
 
 var origWrapper = sourcemap_support.wrapCallSite;
 var wrapCallSite = function (frame) {
@@ -217,7 +217,7 @@ var specialArgPaths = {
 var loadServerBundles = Profile("Load server bundles", function () {
   var infos = [];
 
-  _.each(serverJson.load, function (fileInfo) {
+  serverJson.load.forEach(function (fileInfo) {
     var code = fs.readFileSync(path.resolve(serverDir, fileInfo.path));
     var nonLocalNodeModulesPaths = [];
 
@@ -230,7 +230,8 @@ var loadServerBundles = Profile("Load server bundles", function () {
     if (typeof fileInfo.node_modules === "string") {
       addNodeModulesPath(fileInfo.node_modules);
     } else if (fileInfo.node_modules) {
-      _.each(fileInfo.node_modules, function (info, path) {
+      Object.keys(fileInfo.node_modules).forEach(function (path) {
+        const info = fileInfo.node_modules[path];
         if (! info.local) {
           addNodeModulesPath(path);
         }
@@ -324,7 +325,7 @@ var loadServerBundles = Profile("Load server bundles", function () {
       // using this string elsewhere.
       assetPath = files.unicodeNormalizePath(assetPath);
 
-      if (!fileInfo.assets || !_.has(fileInfo.assets, assetPath)) {
+      if (! fileInfo.assets || ! hasOwn.call(fileInfo.assets, assetPath)) {
         _callback(new Error("Unknown asset: " + assetPath));
       } else {
         var filePath = path.join(serverDir, fileInfo.assets[assetPath]);
@@ -352,7 +353,7 @@ var loadServerBundles = Profile("Load server bundles", function () {
         // using this string elsewhere.
         assetPath = files.unicodeNormalizePath(assetPath);
 
-        if (!fileInfo.assets || !_.has(fileInfo.assets, assetPath)) {
+        if (! fileInfo.assets || ! hasOwn.call(fileInfo.assets, assetPath)) {
           throw new Error("Unknown asset: " + assetPath);
         }
 
@@ -435,11 +436,15 @@ var runMain = Profile("Run main()", function () {
     mains.push(main);
     globalMain = main;
   }
-  typeof Package !== 'undefined' && _.each(Package, function (p, n) {
-    if ('main' in p && p.main !== globalMain) {
-      mains.push(p.main);
-    }
-  });
+  if (typeof Package !== "undefined") {
+    Object.keys(Package).forEach(function (name) {
+      const { main } = Package[name];
+      if (typeof main === "function" &&
+          main !== globalMain) {
+        mains.push(main);
+      }
+    });
+  }
   if (! mains.length) {
     process.stderr.write("Program has no main() function.\n");
     process.exit(1);
