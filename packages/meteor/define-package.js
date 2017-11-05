@@ -24,3 +24,8 @@ PRp._define = function definePackage(name, pkg) {
 
 // Initialize the Package namespace used by all Meteor packages.
 global.Package = new PackageRegistry();
+
+if (typeof exports === "object") {
+  // This code is also used by meteor/tools/isobuild/bundler.js.
+  exports.PackageRegistry = PackageRegistry;
+}
