@@ -1265,10 +1265,11 @@ main.registerCommand({
     return 1;
   }
 
-  var localDir = files.pathJoin(options.appDir, '.meteor', 'local');
-  files.rm_recursive(localDir);
-
-  Console.info("Project reset.");
+  return files.rm_recursive_async(
+    files.pathJoin(options.appDir, '.meteor', 'local')
+  ).then(() => {
+    Console.info("Project reset.");
+  });
 });
 
 ///////////////////////////////////////////////////////////////////////////////

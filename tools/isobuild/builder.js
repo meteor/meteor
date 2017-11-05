@@ -6,6 +6,7 @@ import {Profile} from '../tool-env/profile.js';
 import {
   optimisticReadFile,
   optimisticReaddir,
+  optimisticStatOrNull,
   optimisticLStatOrNull,
 } from "../fs/optimistic.js";
 
@@ -554,21 +555,32 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
         if (isDirectory) {
           walk(thisAbsFrom, thisRelTo, _currentRealRootDir);
+          return;
+        }
 
-        } else if (fileStatus.isSymbolicLink()) {
-          symlinkWithOverwrite(
-            // Symbolic links pointing to relative external paths are less
-            // portable than absolute links, so getExternalPath() is
-            // preferred if it returns a path.
-            getExternalPath() || files.readlink(thisAbsFrom),
-            files.pathResolve(this.buildPath, thisRelTo)
-          );
+        if (fileStatus.isSymbolicLink()) {
+          // Symbolic links pointing to relative external paths are less
+          // portable than absolute links, so getExternalPath() is
+          // preferred if it returns a path.
+          const linkSource = getExternalPath() ||
+            files.readlink(thisAbsFrom);
 
-          // A symlink counts as a file, as far as "can you put something under
-          // it" goes.
-          this.usedAsFile[thisRelTo] = true;
+          const linkTarget =
+            files.pathResolve(this.buildPath, thisRelTo);
 
-        } else {
+          if (symlinkIfPossible(linkSource, linkTarget)) {
+            // A symlink counts as a file, as far as "can you put
+            // something under it" goes.
+            this.usedAsFile[thisRelTo] = true;
+            return;
+          }
+        }
+
+        // Fall back to copying the file, but make sure it's really a file
+        // first, just in case it was a symbolic link to a directory that
+        // could not be created above.
+        fileStatus = optimisticStatOrNull(thisAbsFrom);
+        if (fileStatus && fileStatus.isFile()) {
           // XXX can't really optimize this copying without reading
           // the file into memory to calculate the hash.
           files.writeFile(
@@ -723,26 +735,31 @@ function atomicallyRewriteFile(path, data, options) {
   }
 }
 
+function symlinkIfPossible(source, target) {
+  try {
+    symlinkWithOverwrite(source, target);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 // create a symlink, overwriting the target link, file, or directory
 // if it exists
 function symlinkWithOverwrite(source, target) {
-  const args = [source, target];
-
-  if (process.platform === "win32") {
-    if (! files.stat(source).isDirectory()) {
-      throw new Error("symlink source must be a directory: " + source);
-    }
-
-    args[2] = "junction";
-  }
-
   try {
-    files.symlink(...args);
+    files.symlink(source, target);
   } catch (e) {
-    if (e.code === 'EEXIST') {
+    if (e.code === "EEXIST") {
       // overwrite existing link, file, or directory
       files.rm_recursive(target);
-      files.symlink(...args);
+      files.symlink(source, target);
+    } else if (e.code === "EPERM" &&
+               process.platform === "win32") {
+      files.rm_recursive(target);
+      // This will work only if source refers to a directory, but that's a
+      // chance worth taking.
+      files.symlink(source, target, "junction");
     } else {
       throw e;
     }

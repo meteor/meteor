@@ -1,0 +1,46 @@
+version: '{build}'
+
+branches:
+  except:
+    - /^dev-bundle-/
+
+skip_branch_with_pr: true
+
+clone_folder: C:\projects\meteor
+image: Visual Studio 2015
+
+environment:
+  METEOR_PRETTY_OUTPUT: 0
+  SELF_TEST_TOOL_NODE_FLAGS: " "
+  TOOL_NODE_FLAGS: --expose-gc
+  TIMEOUT_SCALE_FACTOR: 8
+  METEOR_HEADLESS: true
+  SELF_TEST_EXCLUDE: "\
+      ^old cli tests|\
+      ^minifiers can't register non-js|\
+      ^minifiers: apps can't use|\
+      ^compiler plugins - addAssets|\
+      ^NULL-LEAVE-THIS-HERE-NULL$"
+platform:
+  - x64
+  - x86
+
+matrix:
+  fast_finish: true
+  allow_failures:
+    - platform: x64
+    - platform: x86
+
+# We don't need the actual "build", just the tests.
+build: off
+
+install:
+  - ps: C:\projects\meteor\scripts\windows\appveyor\install.ps1
+
+test_script:
+  - ps: C:\projects\meteor\scripts\windows\appveyor\test.ps1
+
+cache:
+  - dev_bundle -> meteor
+  - .babel-cache
+  - .meteor
