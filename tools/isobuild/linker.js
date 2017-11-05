@@ -1028,7 +1028,6 @@ var getFooter = function ({
 
   if (name && exported) {
     chunks.push("\n\n/* Exports */\n");
-    chunks.push("if (typeof Package === 'undefined') Package = {};\n");
     const pkgInit = packageDot(name) + " = " + (exportsName || "{}");
     if (_.isEmpty(exported)) {
       // Even if there are no exports, we need to define Package.foo,
