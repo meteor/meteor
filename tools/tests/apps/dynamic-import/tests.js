@@ -71,7 +71,7 @@ describe("dynamic import(...)", function () {
       import("react")
     ]).then(([{ name }, React]) => {
       assert.strictEqual(name, "react");
-      assert.strictEqual(typeof React.createClass, "function");
+      assert.strictEqual(typeof React.createElement, "function");
       assertDeepEqual(React, require("re" + "act"));
     });
   });
