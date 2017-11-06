@@ -80,6 +80,16 @@ export default class Resolver {
         return JSON.stringify([id, pathDirname(absParentPath)]);
       }
     });
+
+    this._cacheMethod("_findPkgJsonSubsetForPath");
+    this._cacheMethod("_getPkgJsonSubsetForDir");
+  }
+
+  _cacheMethod(name) {
+    const original = this[name];
+    this[name] = wrap(
+      (...args) => original.apply(this, args)
+    );
   }
 
   static isTopLevel(id) {
