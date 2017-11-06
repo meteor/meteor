@@ -2,7 +2,9 @@
 
 var fs = require('fs');
 var showdown  = require('showdown');
-var converter = new showdown.Converter();
+var converter = new showdown.Converter({
+  disableForced4SpacesIndentedSublists: true,
+});
 
 // Read the file given, strip of #vNEXT, render w/ markdown
 hexo.extend.tag.register('changelog', function(args) {
