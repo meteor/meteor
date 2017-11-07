@@ -22,7 +22,7 @@ var translateUrl =  function(url, newSchemeBase, subPath) {
     newSchemeBase = "http";
   }
 
-  if (startsWith(url, "/")) {
+  if (subPath !== "sockjs" && startsWith(url, "/")) {
     url = Meteor.absoluteUrl(url.substr(1));
   }
 
