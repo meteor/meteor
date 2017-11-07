@@ -19,6 +19,26 @@
 
 ## v1.6, 2017-10-30
 
+* **Important note for package maintainers:**
+
+  With the jump to Node 8, some packages published using Meteor 1.6 may no
+  longer be compatible with older Meteor versions. In order to maintain
+  compatibility with Meteor 1.5 apps when publishing your package, you can
+  specify a release version with the meteor publish command:
+
+  ```
+  meteor --release 1.5.3 publish
+  ```
+
+  If you're interested in taking advantage of Meteor 1.6 while still
+  supporting older Meteor versions, you can consider publishing for Meteor
+  1.6 from a new branch, with your package's minor or major version bumped.
+  You can then continue to publish for Meteor 1.5 from the original branch.
+  Note that the 1.6 branch version bump is important so that you can continue
+  publishing patch updates for Meteor 1.5 from the original branch.
+
+  [Issue #9308](https://github.com/meteor/meteor/issues/9308)
+
 * Node.js has been upgraded to version 8.8.1, which will be entering
   long-term support (LTS) coverage on 31 October 2017, lasting through
   December 2019 ([full schedule](https://github.com/nodejs/Release#nodejs-release-working-group)).
