@@ -1,6 +1,6 @@
 ## v.NEXT
 
-* Node.js has been upgraded to version 8.9.0.
+* Node.js has been upgraded to version 8.9.1.
 
 * The `npm` npm package has been upgraded to version 5.5.1, which supports
   several new features, including two-factor authentication, as described
