@@ -8,7 +8,11 @@ import {
 import { parse as parseUrl } from "url";
 import { createHash } from "crypto";
 import connect from "connect";
+import compress from "compression";
+import cookieParser from "cookie-parser";
+import query from "qs-middleware";
 import parseRequest from "parseurl";
+import basicAuth from "basic-auth-connect";
 import { lookup as lookupUserAgent } from "useragent";
 import send from "send";
 import {
@@ -22,10 +26,13 @@ var LONG_SOCKET_TIMEOUT = 120*1000;
 export const WebApp = {};
 export const WebAppInternals = {};
 
+// backwards compat to 2.0 of connect
+connect.basicAuth = basicAuth;
+
 WebAppInternals.NpmModules = {
   connect: {
     version: Npm.require('connect/package.json').version,
-    module: connect
+    module: connect,
   }
 };
 
@@ -654,7 +661,10 @@ function runWebAppServer() {
   app.use(rawConnectHandlers);
 
   // Auto-compress any json, javascript, or text.
-  app.use(connect.compress());
+  app.use(compress());
+
+  // parse cookies into an object
+  app.use(cookieParser());
 
   // We're not a proxy; reject (without crashing) attempts to treat us like
   // one. (See #1212.)
@@ -693,7 +703,7 @@ function runWebAppServer() {
 
   // Parse the query string into res.query. Used by oauth_server, but it's
   // generally pretty handy..
-  app.use(connect.query());
+  app.use(query());
 
   // Serve static files from the manifest.
   // This is inspired by the 'static' middleware.
