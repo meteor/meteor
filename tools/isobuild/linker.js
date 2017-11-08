@@ -50,7 +50,6 @@ var Module = function (options) {
   self.meteorInstallOptions = options.meteorInstallOptions;
   self.useGlobalNamespace = options.useGlobalNamespace;
   self.combinedServePath = options.combinedServePath;
-  self.noLineNumbers = options.noLineNumbers;
 };
 
 _.extend(Module.prototype, {
@@ -188,7 +187,6 @@ _.extend(Module.prototype, {
 
         chunks.push(file.getPrelinkedOutput({
           sourceWidth: sourceWidth,
-          noLineNumbers: self.noLineNumbers
         }));
 
         ++fileCount;
@@ -255,7 +253,6 @@ _.extend(Module.prototype, {
         const { code: source, map } =
           file.getPrelinkedOutput({
             sourceWidth: sourceWidth,
-            noLineNumbers: this.noLineNumbers
           }).toStringWithSourceMap({
             file: servePath,
           });
@@ -340,7 +337,6 @@ _.extend(Module.prototype, {
 
         chunks.push(t.getPrelinkedOutput({
           sourceWidth,
-          noLineNumbers: self.noLineNumbers
         }));
 
       } else if (_.isObject(t)) {
@@ -429,7 +425,6 @@ _.extend(Module.prototype, {
       if (file.bare) {
         chunks.push("\n", file.getPrelinkedOutput({
           sourceWidth,
-          noLineNumbers: this.noLineNumbers
         }));
       } else if (moduleCount > 0 && ! file.lazy) {
         eagerModuleFiles.push(file);
@@ -695,8 +690,6 @@ _.extend(File.prototype, {
   // - preserveLineNumbers: if true, decorate minimally so that line
   //   numbers don't change between input and output. In this case,
   //   sourceWidth is ignored.
-  // - noLineNumbers: We still include the banners and such, but
-  //   no line number suffix.
   // - sourceWidth: width in columns to use for the source code
   //
   // Returns a SourceNode.
@@ -704,18 +697,9 @@ _.extend(File.prototype, {
     var self = this;
     var width = options.sourceWidth || 70;
     var bannerWidth = width + 3;
-    var noLineNumbers = options.noLineNumbers;
     var preserveLineNumbers = options.preserveLineNumbers;
-    var result;
 
     if (self.sourceMap) {
-      // If we have a source map, and options.noLineNumbers was not
-      // specified, it is important to annotate line numbers using that
-      // source map, since not all browsers support source maps.
-      if (typeof noLineNumbers === "undefined") {
-        noLineNumbers = false;
-      }
-
       // Honoring options.preserveLineNumbers is likely impossible if we
       // have a source map, since self.source has probably already been
       // transformed in a way that does not preserve line numbers. That's
@@ -723,76 +707,12 @@ _.extend(File.prototype, {
       // line numbers using comments (see above), just in case source maps
       // are not supported.
       preserveLineNumbers = false;
-
-    } else if (preserveLineNumbers) {
-      // If we don't have a source map, and we're supposed to be preserving line
-      // numbers (ie, we are not linking multiple files into one file, because
-      // we're the app), then we can get away without annotating line numbers
-      // (or making a source map), because they won't add any helpful
-      // information.
-      noLineNumbers = true;
     }
 
-    let consumer;
-    let lines;
-
-    if (self.sourceMap) {
-      result = {
-        code: self.source,
-        map: self.sourceMap
-      };
-
-      consumer = new sourcemap.SourceMapConsumer(result.map);
-
-    } else {
-      result = {
-        code: self.source,
-        map: null,
-      };
-
-      // Generating line number comments for really big files is not
-      // really worth it when there's no meaningful self.sourceMap.
-      if (! noLineNumbers && result.code.length < 500000) {
-        consumer = {
-          originalPositionFor(pos) {
-            return pos;
-          }
-        };
-      }
-    }
-
-    if (consumer && ! noLineNumbers) {
-      var padding = bannerPadding(bannerWidth);
-
-      // We might have already done this split above.
-      lines = lines || result.code.split(/\r?\n/);
-
-      // Use the SourceMapConsumer object to compute the original line
-      // number for each line of result.code.
-      for (var i = 0, lineCount = lines.length; i < lineCount; ++i) {
-        var line = lines[i];
-        var len = line.length;
-        if (len < width &&
-            line[len - 1] !== "\\") {
-          var pos = consumer.originalPositionFor({
-            line: i + 1,
-            column: 0
-          });
-
-          if (pos) {
-            line += padding.slice(len, width) + " //";
-            // Not all source maps define a mapping for every line in the
-            // output. This is perfectly normal.
-            if (typeof pos.line === "number") {
-              line += " " + pos.line;
-            }
-            lines[i] = line;
-          }
-        }
-      }
-
-      result.code = lines.join("\n");
-    }
+    const result = {
+      code: self.source,
+      map: self.sourceMap || null,
+    };
 
     var chunks = [];
     var pathNoSlash = convertColons(self.servePath.replace(/^\//, ""));
@@ -827,11 +747,7 @@ _.extend(File.prototype, {
 
       let chunk = result.code;
 
-      if (consumer instanceof sourcemap.SourceMapConsumer) {
-        chunk = sourcemap.SourceNode.fromStringWithSourceMap(
-          result.code, consumer);
-
-      } else if (consumer && result.map) {
+      if (result.map) {
         chunk = sourcemap.SourceNode.fromStringWithSourceMap(
           result.code,
           new sourcemap.SourceMapConsumer(result.map),
@@ -943,7 +859,6 @@ export var prelink = Profile("linker.prelink", function (options) {
   var module = new Module({
     name: options.name,
     combinedServePath: options.combinedServePath,
-    noLineNumbers: options.noLineNumbers
   });
 
   _.each(options.inputFiles, function (inputFile) {
@@ -1100,7 +1015,6 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
   // True if JS files with source maps should have a comment explaining
   // how to use them in a browser.
   includeSourceMapInstructions,
-  noLineNumbers,
 }) {
   buildmessage.assertInJob();
 
@@ -1109,7 +1023,6 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
     meteorInstallOptions,
     useGlobalNamespace,
     combinedServePath,
-    noLineNumbers
   });
 
   _.each(inputFiles, file => module.addFile(file));
