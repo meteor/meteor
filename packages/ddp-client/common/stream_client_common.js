@@ -1,6 +1,5 @@
 import { Random } from 'meteor/random';
 import { Meteor } from 'meteor/meteor';
-import { _ } from 'meteor/underscore';
 import { Tracker } from 'meteor/tracker';
 import { Retry } from 'meteor/retry';
 
@@ -9,116 +8,109 @@ import { DDP, LivedataTest } from './namespace.js';
 export default class StreamClientCommon {
   // Register for callbacks.
   on(name, callback) {
-    var self = this;
-
     if (name !== 'message' && name !== 'reset' && name !== 'disconnect')
       throw new Error('unknown event type: ' + name);
 
-    if (!self.eventCallbacks[name]) self.eventCallbacks[name] = [];
-    self.eventCallbacks[name].push(callback);
+    if (!this.eventCallbacks[name]) this.eventCallbacks[name] = [];
+    this.eventCallbacks[name].push(callback);
   }
 
   _initCommon(options) {
-    var self = this;
     options = options || {};
 
     //// Constants
 
     // how long to wait until we declare the connection attempt
     // failed.
-    self.CONNECT_TIMEOUT = options.connectTimeoutMs || 10000;
+    this.CONNECT_TIMEOUT = options.connectTimeoutMs || 10000;
 
-    self.eventCallbacks = {}; // name -> [callback]
+    this.eventCallbacks = {}; // name -> [callback]
 
-    self._forcedToDisconnect = false;
+    this._forcedToDisconnect = false;
 
     //// Reactive status
-    self.currentStatus = {
+    this.currentStatus = {
       status: 'connecting',
       connected: false,
       retryCount: 0
     };
 
-    self.statusListeners =
+    this.statusListeners =
       typeof Tracker !== 'undefined' && new Tracker.Dependency();
-    self.statusChanged = function() {
-      if (self.statusListeners) self.statusListeners.changed();
+    this.statusChanged = () => {
+      if (this.statusListeners) this.statusListeners.changed();
     };
 
     //// Retry logic
-    self._retry = new Retry();
-    self.connectionTimer = null;
+    this._retry = new Retry();
+    this.connectionTimer = null;
   }
 
   // Trigger a reconnect.
   reconnect(options) {
-    var self = this;
     options = options || {};
 
     if (options.url) {
-      self._changeUrl(options.url);
+      this._changeUrl(options.url);
     }
 
     if (options._sockjsOptions) {
-      self.options._sockjsOptions = options._sockjsOptions;
+      this.options._sockjsOptions = options._sockjsOptions;
     }
 
-    if (self.currentStatus.connected) {
+    if (this.currentStatus.connected) {
       if (options._force || options.url) {
         // force reconnect.
-        self._lostConnection(new DDP.ForcedReconnectError());
+        this._lostConnection(new DDP.ForcedReconnectError());
       } // else, noop.
       return;
     }
 
     // if we're mid-connection, stop it.
-    if (self.currentStatus.status === 'connecting') {
+    if (this.currentStatus.status === 'connecting') {
       // Pretend it's a clean close.
-      self._lostConnection();
+      this._lostConnection();
     }
 
-    self._retry.clear();
-    self.currentStatus.retryCount -= 1; // don't count manual retries
-    self._retryNow();
+    this._retry.clear();
+    this.currentStatus.retryCount -= 1; // don't count manual retries
+    this._retryNow();
   }
 
   disconnect(options) {
-    var self = this;
     options = options || {};
 
     // Failed is permanent. If we're failed, don't let people go back
     // online by calling 'disconnect' then 'reconnect'.
-    if (self._forcedToDisconnect) return;
+    if (this._forcedToDisconnect) return;
 
     // If _permanent is set, permanently disconnect a stream. Once a stream
     // is forced to disconnect, it can never reconnect. This is for
     // error cases such as ddp version mismatch, where trying again
     // won't fix the problem.
     if (options._permanent) {
-      self._forcedToDisconnect = true;
+      this._forcedToDisconnect = true;
     }
 
-    self._cleanup();
-    self._retry.clear();
+    this._cleanup();
+    this._retry.clear();
 
-    self.currentStatus = {
+    this.currentStatus = {
       status: options._permanent ? 'failed' : 'offline',
       connected: false,
       retryCount: 0
     };
 
     if (options._permanent && options._error)
-      self.currentStatus.reason = options._error;
+      this.currentStatus.reason = options._error;
 
-    self.statusChanged();
+    this.statusChanged();
   }
 
   // maybeError is set unless it's a clean protocol-level close.
   _lostConnection(maybeError) {
-    var self = this;
-
-    self._cleanup(maybeError);
-    self._retryLater(maybeError); // sets status. no need to do it here.
+    this._cleanup(maybeError);
+    this._retryLater(maybeError); // sets status. no need to do it here.
   }
 
   // fired when we detect that we've gone online. try to reconnect
@@ -129,46 +121,41 @@ export default class StreamClientCommon {
   }
 
   _retryLater(maybeError) {
-    var self = this;
-
     var timeout = 0;
     if (
-      self.options.retry ||
+      this.options.retry ||
       (maybeError && maybeError.errorType === 'DDP.ForcedReconnectError')
     ) {
-      timeout = self._retry.retryLater(
-        self.currentStatus.retryCount,
-        _.bind(self._retryNow, self)
+      timeout = this._retry.retryLater(
+        this.currentStatus.retryCount,
+        this._retryNow.bind(this)
       );
-      self.currentStatus.status = 'waiting';
-      self.currentStatus.retryTime = new Date().getTime() + timeout;
+      this.currentStatus.status = 'waiting';
+      this.currentStatus.retryTime = new Date().getTime() + timeout;
     } else {
-      self.currentStatus.status = 'failed';
-      delete self.currentStatus.retryTime;
+      this.currentStatus.status = 'failed';
+      delete this.currentStatus.retryTime;
     }
 
-    self.currentStatus.connected = false;
-    self.statusChanged();
+    this.currentStatus.connected = false;
+    this.statusChanged();
   }
 
   _retryNow() {
-    var self = this;
+    if (this._forcedToDisconnect) return;
 
-    if (self._forcedToDisconnect) return;
+    this.currentStatus.retryCount += 1;
+    this.currentStatus.status = 'connecting';
+    this.currentStatus.connected = false;
+    delete this.currentStatus.retryTime;
+    this.statusChanged();
 
-    self.currentStatus.retryCount += 1;
-    self.currentStatus.status = 'connecting';
-    self.currentStatus.connected = false;
-    delete self.currentStatus.retryTime;
-    self.statusChanged();
-
-    self._launchConnection();
+    this._launchConnection();
   }
 
   // Get current status. Reactive.
   status() {
-    var self = this;
-    if (self.statusListeners) self.statusListeners.depend();
-    return self.currentStatus;
+    if (this.statusListeners) this.statusListeners.depend();
+    return this.currentStatus;
   }
 }
