@@ -1,5 +1,6 @@
-// Template function for rendering the boilerplate html for cordova
+import template from './template';
 
+// Template function for rendering the boilerplate html for cordova
 export default function({
   meteorRuntimeConfig,
   rootUrlPathPrefix,
@@ -25,14 +26,14 @@ export default function({
       '  <meta http-equiv="Content-Security-Policy" content="default-src * gap: data: blob: \'unsafe-inline\' \'unsafe-eval\' ws: wss:;">',
     ],
     // We are explicitly not using bundledJsCssUrlRewriteHook: in cordova we serve assets up directly from disk, so rewriting the URL does not make sense
-    _.map(css, ({url}) =>
-      _.template('  <link rel="stylesheet" type="text/css" class="__meteor-css__" href="<%- href %>">')({
+    (css || []).map(({ url }) =>
+      template('  <link rel="stylesheet" type="text/css" class="__meteor-css__" href="<%- href %>">')({
         href: url
       })
     ),
     [
       '  <script type="text/javascript">',
-      _.template('    __meteor_runtime_config__ = JSON.parse(decodeURIComponent(<%= conf %>));')({
+      template('    __meteor_runtime_config__ = JSON.parse(decodeURIComponent(<%= conf %>));')({
         conf: meteorRuntimeConfig
       }),
       '    if (/Android/i.test(navigator.userAgent)) {',
@@ -48,18 +49,18 @@ export default function({
       '',
       '  <script type="text/javascript" src="/cordova.js"></script>'
     ],
-    _.map(js, ({url}) =>
-      _.template('  <script type="text/javascript" src="<%- src %>"></script>')({
+    (js || []).map(({ url }) =>
+      template('  <script type="text/javascript" src="<%- src %>"></script>')({
         src: url
       })
     ),
 
-    _.map(additionalStaticJs, ({contents, pathname}) => (
+    (additionalStaticJs || []).map(({ contents, pathname }) => (
       (inlineScriptsAllowed
-        ? _.template('  <script><%= contents %></script>')({
+        ? template('  <script><%= contents %></script>')({
           contents: contents
         })
-        : _.template('  <script type="text/javascript" src="<%- src %>"></script>')({
+        : template('  <script type="text/javascript" src="<%- src %>"></script>')({
           src: rootUrlPathPrefix + pathname
         }))
     )),
@@ -76,4 +77,3 @@ export default function({
     ],
   ).join('\n');
 }
-
