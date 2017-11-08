@@ -3,7 +3,7 @@ import { Meteor } from 'meteor/meteor';
 
 import { DDP, LivedataTest } from '../common/namespace';
 import { toWebsocketUrl } from '../common/urlHelpers';
-import { addCommonMethodsToPrototype } from '../common/stream_client_common';
+import StreamClientCommon from '../common/stream_client_common';
 
 // @param endpoint {String} URL to Meteor app
 //   "http://subdomain.meteor.com/" or "/" or
@@ -16,8 +16,10 @@ import { addCommonMethodsToPrototype } from '../common/stream_client_common';
 // We don't do any heartbeating. (The logic that did this in sockjs was removed,
 // because it used a built-in sockjs mechanism. We could do it with WebSocket
 // ping frames or with DDP-level messages.)
-LivedataTest.ClientStream = class ClientStream {
+class ClientStream extends StreamClientCommon {
   constructor(endpoint, options) {
+    super();
+
     const self = this;
     options = options || {};
 
@@ -213,6 +215,6 @@ LivedataTest.ClientStream = class ClientStream {
       });
     });
   }
-};
+}
 
-addCommonMethodsToPrototype(LivedataTest.ClientStream.prototype);
+LivedataTest.ClientStream = ClientStream;

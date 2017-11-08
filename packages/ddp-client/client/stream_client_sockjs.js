@@ -6,70 +6,72 @@ import './sockjs-0.3.4';
 
 import { DDP, LivedataTest } from '../common/namespace.js';
 import { toSockjsUrl } from '../common/urlHelpers';
-import { addCommonMethodsToPrototype } from '../common/stream_client_common';
+import StreamClientCommon from '../common/stream_client_common';
 
-// @param url {String} URL to Meteor app
-//   "http://subdomain.meteor.com/" or "/" or
-//   "ddp+sockjs://foo-**.meteor.com/sockjs"
-LivedataTest.ClientStream = function(url, options) {
-  var self = this;
-  self.options = _.extend(
-    {
-      retry: true
-    },
-    options
-  );
-  self._initCommon(self.options);
+class ClientStream extends StreamClientCommon {
+  // @param url {String} URL to Meteor app
+  //   "http://subdomain.meteor.com/" or "/" or
+  //   "ddp+sockjs://foo-**.meteor.com/sockjs"
+  constructor(url, options) {
+    super();
 
-  //// Constants
-
-  // how long between hearing heartbeat from the server until we declare
-  // the connection dead. heartbeats come every 45s (stream_server.js)
-  //
-  // NOTE: this is a older timeout mechanism. We now send heartbeats at
-  // the DDP level (https://github.com/meteor/meteor/pull/1865), and
-  // expect those timeouts to kill a non-responsive connection before
-  // this timeout fires. This is kept around for compatibility (when
-  // talking to a server that doesn't support DDP heartbeats) and can be
-  // removed later.
-  self.HEARTBEAT_TIMEOUT = 100 * 1000;
-
-  self.rawUrl = url;
-  self.socket = null;
-
-  self.heartbeatTimer = null;
-
-  // Listen to global 'online' event if we are running in a browser.
-  // (IE8 does not support addEventListener)
-  if (typeof window !== 'undefined' && window.addEventListener)
-    window.addEventListener(
-      'online',
-      _.bind(self._online, self),
-      false /* useCapture. make FF3.6 happy. */
+    var self = this;
+    self.options = _.extend(
+      {
+        retry: true
+      },
+      options
     );
+    self._initCommon(self.options);
 
-  //// Kickoff!
-  self._launchConnection();
-};
+    //// Constants
 
-_.extend(LivedataTest.ClientStream.prototype, {
+    // how long between hearing heartbeat from the server until we declare
+    // the connection dead. heartbeats come every 45s (stream_server.js)
+    //
+    // NOTE: this is a older timeout mechanism. We now send heartbeats at
+    // the DDP level (https://github.com/meteor/meteor/pull/1865), and
+    // expect those timeouts to kill a non-responsive connection before
+    // this timeout fires. This is kept around for compatibility (when
+    // talking to a server that doesn't support DDP heartbeats) and can be
+    // removed later.
+    self.HEARTBEAT_TIMEOUT = 100 * 1000;
+
+    self.rawUrl = url;
+    self.socket = null;
+
+    self.heartbeatTimer = null;
+
+    // Listen to global 'online' event if we are running in a browser.
+    // (IE8 does not support addEventListener)
+    if (typeof window !== 'undefined' && window.addEventListener)
+      window.addEventListener(
+        'online',
+        _.bind(self._online, self),
+        false /* useCapture. make FF3.6 happy. */
+      );
+
+    //// Kickoff!
+    self._launchConnection();
+  }
+
   // data is a utf8 string. Data sent while not connected is dropped on
   // the floor, and it is up the user of this API to retransmit lost
   // messages on 'reset'
-  send: function(data) {
+  send(data) {
     var self = this;
     if (self.currentStatus.connected) {
       self.socket.send(data);
     }
-  },
+  }
 
   // Changes where this connection points
-  _changeUrl: function(url) {
+  _changeUrl(url) {
     var self = this;
     self.rawUrl = url;
-  },
+  }
 
-  _connected: function() {
+  _connected() {
     var self = this;
 
     if (self.connectionTimer) {
@@ -93,9 +95,9 @@ _.extend(LivedataTest.ClientStream.prototype, {
     _.each(self.eventCallbacks.reset, function(callback) {
       callback();
     });
-  },
+  }
 
-  _cleanup: function(maybeError) {
+  _cleanup(maybeError) {
     var self = this;
 
     self._clearConnectionAndHeartbeatTimers();
@@ -109,9 +111,9 @@ _.extend(LivedataTest.ClientStream.prototype, {
     _.each(self.eventCallbacks.disconnect, function(callback) {
       callback(maybeError);
     });
-  },
+  }
 
-  _clearConnectionAndHeartbeatTimers: function() {
+  _clearConnectionAndHeartbeatTimers() {
     var self = this;
     if (self.connectionTimer) {
       clearTimeout(self.connectionTimer);
@@ -121,15 +123,15 @@ _.extend(LivedataTest.ClientStream.prototype, {
       clearTimeout(self.heartbeatTimer);
       self.heartbeatTimer = null;
     }
-  },
+  }
 
-  _heartbeat_timeout: function() {
+  _heartbeat_timeout() {
     var self = this;
     Meteor._debug('Connection timeout. No sockjs heartbeat received.');
     self._lostConnection(new DDP.ConnectionError('Heartbeat timed out'));
-  },
+  }
 
-  _heartbeat_received: function() {
+  _heartbeat_received() {
     var self = this;
     // If we've already permanently shut down this stream, the timeout is
     // already cleared, and we don't need to set it again.
@@ -139,9 +141,9 @@ _.extend(LivedataTest.ClientStream.prototype, {
       _.bind(self._heartbeat_timeout, self),
       self.HEARTBEAT_TIMEOUT
     );
-  },
+  }
 
-  _sockjsProtocolsWhitelist: function() {
+  _sockjsProtocolsWhitelist() {
     // only allow polling protocols. no streaming.  streaming
     // makes safari spin.
     var protocolsWhitelist = [
@@ -166,9 +168,9 @@ _.extend(LivedataTest.ClientStream.prototype, {
       protocolsWhitelist = ['websocket'].concat(protocolsWhitelist);
 
     return protocolsWhitelist;
-  },
+  }
 
-  _launchConnection: function() {
+  _launchConnection() {
     var self = this;
     self._cleanup(); // cleanup the old socket, if there was one.
 
@@ -215,6 +217,6 @@ _.extend(LivedataTest.ClientStream.prototype, {
       self._lostConnection(new DDP.ConnectionError('DDP connection timed out'));
     }, self.CONNECT_TIMEOUT);
   }
-});
+}
 
-addCommonMethodsToPrototype(LivedataTest.ClientStream.prototype);
+LivedataTest.ClientStream = ClientStream;
