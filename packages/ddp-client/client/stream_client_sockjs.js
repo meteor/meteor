@@ -85,7 +85,7 @@ class ClientStream extends StreamClientCommon {
 
     // fire resets. This must come after status change so that clients
     // can call send from within a reset callback.
-    this.eventCallbacks.reset.forEach(callback => {
+    this.forEachCallback('reset', callback => {
       callback();
     });
   }
@@ -98,7 +98,7 @@ class ClientStream extends StreamClientCommon {
       this.socket = null;
     }
 
-    this.eventCallbacks.disconnect.forEach(callback => {
+    this.forEachCallback('disconnect', callback => {
       callback(maybeError);
     });
   }
@@ -176,7 +176,7 @@ class ClientStream extends StreamClientCommon {
       this._heartbeat_received();
 
       if (this.currentStatus.connected)
-        this.eventCallbacks.message.forEach(callback => {
+        this.forEachCallback('message', callback => {
           callback(data.data);
         });
     };
