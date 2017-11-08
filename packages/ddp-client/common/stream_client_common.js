@@ -15,6 +15,14 @@ export default class StreamClientCommon {
     this.eventCallbacks[name].push(callback);
   }
 
+  forEachCallback(name, cb) {
+    if (!this.eventCallbacks[name] || !this.eventCallbacks[name].length) {
+      return;
+    }
+
+    this.eventCallbacks[name].forEach(cb);
+  }
+
   _initCommon(options) {
     options = options || {};
 

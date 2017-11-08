@@ -174,10 +174,10 @@ class ClientStream extends StreamClientCommon {
     var clientOnIfCurrent = (event, description, f) => {
       this.client.on(
         event,
-        Meteor.bindEnvironment(() => {
+        Meteor.bindEnvironment((...args) => {
           // Ignore events from any connection we've already cleaned up.
           if (client !== this.client) return;
-          f.apply(this, arguments);
+          f.apply(this, args);
         }, description)
       );
     };
@@ -199,7 +199,7 @@ class ClientStream extends StreamClientCommon {
       // Ignore binary frames, where message.data is a Buffer
       if (typeof message.data !== 'string') return;
 
-      _.each(this.eventCallbacks.message, callback => {
+      this.forEachCallback('message', callback => {
         callback(message.data);
       });
     });
