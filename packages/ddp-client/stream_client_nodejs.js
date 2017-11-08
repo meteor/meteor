@@ -1,4 +1,7 @@
-import { DDP, LivedataTest } from "./namespace.js";
+import { DDP, LivedataTest } from "./namespace";
+import { _ } from 'meteor/underscore';
+import { toWebsocketUrl } from './urlHelpers';
+import { Meteor } from 'meteor/meteor';
 
 // @param endpoint {String} URL to Meteor app
 //   "http://subdomain.meteor.com/" or "/" or

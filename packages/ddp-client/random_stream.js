@@ -1,4 +1,5 @@
 import { DDP } from "./namespace.js";
+import { DDPCommon } from 'meteor/ddp-common';
 
 // Returns the named sequence of pseudo-random values.
 // The scope will be DDP._CurrentMethodInvocation.get(), so the stream will produce
