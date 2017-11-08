@@ -1,7 +1,7 @@
-import { DDP, LivedataTest } from '../common/namespace';
+import { DDP, LivedataTest } from "../common/namespace";
 
-import './stream_client_nodejs';
+import "./stream_client_nodejs";
 
-import '../common/livedata_connection';
+import "../common/livedata_connection";
 
 export { DDP, LivedataTest };

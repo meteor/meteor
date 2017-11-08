@@ -1,9 +1,9 @@
-import { _ } from 'meteor/underscore';
-import { Meteor } from 'meteor/meteor';
+import { _ } from "meteor/underscore";
+import { Meteor } from "meteor/meteor";
 
 import { DDP, LivedataTest } from "../common/namespace";
-import { toWebsocketUrl } from '../common/urlHelpers';
-import { addCommonMethodsToPrototype } from '../common/stream_client_common';
+import { toWebsocketUrl } from "../common/urlHelpers";
+import { addCommonMethodsToPrototype } from "../common/stream_client_common";
 
 // @param endpoint {String} URL to Meteor app
 //   "http://subdomain.meteor.com/" or "/" or
@@ -21,11 +21,14 @@ LivedataTest.ClientStream = class ClientStream {
     const self = this;
     options = options || {};
 
-    self.options = Object.assign({
-      retry: true
-    }, options);
+    self.options = Object.assign(
+      {
+        retry: true
+      },
+      options
+    );
 
-    self.client = null;  // created in _launchConnection
+    self.client = null; // created in _launchConnection
     self.endpoint = endpoint;
 
     self.headers = self.options.headers || {};
@@ -91,7 +94,9 @@ LivedataTest.ClientStream = class ClientStream {
 
     // fire resets. This must come after status change so that clients
     // can call send from within a reset callback.
-    _.each(self.eventCallbacks.reset, function (callback) { callback(); });
+    _.each(self.eventCallbacks.reset, function(callback) {
+      callback();
+    });
   }
 
   _cleanup(maybeError) {
@@ -103,7 +108,7 @@ LivedataTest.ClientStream = class ClientStream {
       self.client = null;
       client.close();
 
-      _.each(self.eventCallbacks.disconnect, function (callback) {
+      _.each(self.eventCallbacks.disconnect, function(callback) {
         callback(maybeError);
       });
     }
@@ -136,8 +141,8 @@ LivedataTest.ClientStream = class ClientStream {
     // Since server-to-server DDP is still an experimental feature, we only
     // require the module if we actually create a server-to-server
     // connection.
-    var FayeWebSocket = Npm.require('faye-websocket');
-    var deflate = Npm.require('permessage-deflate');
+    var FayeWebSocket = Npm.require("faye-websocket");
+    var deflate = Npm.require("permessage-deflate");
 
     var targetUrl = toWebsocketUrl(self.endpoint);
     var fayeOptions = {
@@ -148,7 +153,7 @@ LivedataTest.ClientStream = class ClientStream {
     var proxyUrl = self._getProxyUrl(targetUrl);
     if (proxyUrl) {
       fayeOptions.proxy = { origin: proxyUrl };
-    };
+    }
 
     // We would like to specify 'ddp' as the subprotocol here. The npm module we
     // used to use as a client would fail the handshake if we ask for a
@@ -157,31 +162,36 @@ LivedataTest.ClientStream = class ClientStream {
     // Faye is erroneous or not.  So for now, we don't specify protocols.
     var subprotocols = [];
 
-    var client = self.client = new FayeWebSocket.Client(
-      targetUrl, subprotocols, fayeOptions);
+    var client = (self.client = new FayeWebSocket.Client(
+      targetUrl,
+      subprotocols,
+      fayeOptions
+    ));
 
     self._clearConnectionTimer();
-    self.connectionTimer = Meteor.setTimeout(
-      function () {
-        self._lostConnection(
-          new DDP.ConnectionError("DDP connection timed out"));
-      },
-      self.CONNECT_TIMEOUT);
+    self.connectionTimer = Meteor.setTimeout(function() {
+      self._lostConnection(new DDP.ConnectionError("DDP connection timed out"));
+    }, self.CONNECT_TIMEOUT);
 
-    self.client.on('open', Meteor.bindEnvironment(function () {
-      return self._onConnect(client);
-    }, "stream connect callback"));
+    self.client.on(
+      "open",
+      Meteor.bindEnvironment(function() {
+        return self._onConnect(client);
+      }, "stream connect callback")
+    );
 
-    var clientOnIfCurrent = function (event, description, f) {
-      self.client.on(event, Meteor.bindEnvironment(function () {
-        // Ignore events from any connection we've already cleaned up.
-        if (client !== self.client)
-          return;
-        f.apply(this, arguments);
-      }, description));
+    var clientOnIfCurrent = function(event, description, f) {
+      self.client.on(
+        event,
+        Meteor.bindEnvironment(function() {
+          // Ignore events from any connection we've already cleaned up.
+          if (client !== self.client) return;
+          f.apply(this, arguments);
+        }, description)
+      );
     };
 
-    clientOnIfCurrent('error', 'stream error callback', function (error) {
+    clientOnIfCurrent("error", "stream error callback", function(error) {
       if (!self.options._dontPrintErrors)
         Meteor._debug("stream error", error.message);
 
@@ -190,18 +200,15 @@ LivedataTest.ClientStream = class ClientStream {
       self._lostConnection(new DDP.ConnectionError(error.message));
     });
 
-
-    clientOnIfCurrent('close', 'stream close callback', function () {
+    clientOnIfCurrent("close", "stream close callback", function() {
       self._lostConnection();
     });
 
-
-    clientOnIfCurrent('message', 'stream message callback', function (message) {
+    clientOnIfCurrent("message", "stream message callback", function(message) {
       // Ignore binary frames, where message.data is a Buffer
-      if (typeof message.data !== "string")
-        return;
+      if (typeof message.data !== "string") return;
 
-      _.each(self.eventCallbacks.message, function (callback) {
+      _.each(self.eventCallbacks.message, function(callback) {
         callback(message.data);
       });
     });
