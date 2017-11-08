@@ -1,4 +1,6 @@
 import { DDP, LivedataTest } from "./namespace.js";
+import { DDPCommon } from 'meteor/ddp-common';
+import { Meteor } from 'meteor/meteor';
 
 LivedataTest.SUPPORTED_DDP_VERSIONS = DDPCommon.SUPPORTED_DDP_VERSIONS;
 

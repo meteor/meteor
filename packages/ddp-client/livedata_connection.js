@@ -1,5 +1,11 @@
 import { DDP, LivedataTest } from "./namespace.js";
 import { MongoIDMap } from "./id_map.js";
+import { Meteor } from 'meteor/meteor';
+import { _ } from 'meteor/underscore';
+import { DDPCommon } from 'meteor/ddp-common';
+import { Tracker } from 'meteor/tracker';
+import { EJSON } from 'meteor/ejson';
+import { Random } from 'meteor/random';
 
 if (Meteor.isServer) {
   var Fiber = Npm.require('fibers');
