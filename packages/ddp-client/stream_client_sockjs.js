@@ -3,6 +3,11 @@ import { _ } from 'meteor/underscore';
 import { Meteor } from 'meteor/meteor';
 import { toSockjsUrl } from './urlHelpers';
 
+// This populates a global variable
+import './sockjs-0.3.4';
+
+import { addCommonMethodsToPrototype } from './stream_client_common';
+
 // @param url {String} URL to Meteor app
 //   "http://subdomain.meteor.com/" or "/" or
 //   "ddp+sockjs://foo-**.meteor.com/sockjs"
@@ -197,3 +202,5 @@ _.extend(LivedataTest.ClientStream.prototype, {
     }, self.CONNECT_TIMEOUT);
   }
 });
+
+addCommonMethodsToPrototype(LivedataTest.ClientStream.prototype);
