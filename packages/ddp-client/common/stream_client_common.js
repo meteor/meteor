@@ -1,9 +1,10 @@
-import { DDP, LivedataTest } from "./namespace.js";
 import { Random } from 'meteor/random';
 import { Meteor } from 'meteor/meteor';
 import { _ } from 'meteor/underscore';
 import { Tracker } from 'meteor/tracker';
 import { Retry } from 'meteor/retry';
+
+import { DDP, LivedataTest } from "./namespace.js";
 
 export function addCommonMethodsToPrototype(proto) {
   _.extend(proto, {

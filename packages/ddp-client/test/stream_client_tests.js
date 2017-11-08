@@ -1,4 +1,4 @@
-import { LivedataTest } from "./namespace.js";
+import { LivedataTest } from "../common/namespace.js";
 
 var Fiber = Npm.require('fibers');
 

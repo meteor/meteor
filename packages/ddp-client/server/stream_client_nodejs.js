@@ -1,9 +1,9 @@
-import { DDP, LivedataTest } from "./namespace";
 import { _ } from 'meteor/underscore';
-import { toWebsocketUrl } from './urlHelpers';
 import { Meteor } from 'meteor/meteor';
 
-import { addCommonMethodsToPrototype } from './stream_client_common';
+import { DDP, LivedataTest } from "../common/namespace";
+import { toWebsocketUrl } from '../common/urlHelpers';
+import { addCommonMethodsToPrototype } from '../common/stream_client_common';
 
 // @param endpoint {String} URL to Meteor app
 //   "http://subdomain.meteor.com/" or "/" or

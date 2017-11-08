@@ -29,8 +29,8 @@ Package.onUse(function (api) {
 
   // For backcompat where things use Package.ddp.DDP, etc
   api.export('DDP');
-  api.mainModule("client.js", "client");
-  api.mainModule("server.js", "server");
+  api.mainModule("client/client.js", "client");
+  api.mainModule("server/server.js", "server");
 });
 
 Package.onTest(function (api) {
@@ -49,14 +49,14 @@ Package.onTest(function (api) {
     'ejson'
   ]);
 
-  api.addFiles('stub_stream.js');
-  api.addFiles('livedata_connection_tests.js', ['client', 'server']);
-  api.addFiles('livedata_tests.js', ['client', 'server']);
-  api.addFiles('livedata_test_service.js', ['client', 'server']);
-  api.addFiles('random_stream_tests.js', ['client', 'server']);
+  api.addFiles('test/stub_stream.js');
+  api.addFiles('test/livedata_connection_tests.js', ['client', 'server']);
+  api.addFiles('test/livedata_tests.js', ['client', 'server']);
+  api.addFiles('test/livedata_test_service.js', ['client', 'server']);
+  api.addFiles('test/random_stream_tests.js', ['client', 'server']);
 
   api.use('http', 'client');
-  api.addFiles(['stream_tests.js'], 'client');
-  api.addFiles('stream_client_tests.js', 'server');
+  api.addFiles('test/stream_tests.js', 'client');
+  api.addFiles('test/stream_client_tests.js', 'server');
   api.use('check', ['client', 'server']);
 });
