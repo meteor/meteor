@@ -1,4 +1,5 @@
 import { LivedataTest } from '../common/namespace.js';
+import { toSockjsUrl } from '../common/urlHelpers';
 
 Tinytest.add('stream - status', function(test) {
   // Very basic test. Just see that it runs and returns something. Not a
@@ -126,7 +127,7 @@ testAsyncMulti('stream - disconnect remains offline', [
 
 Tinytest.add('stream - sockjs urls are computed correctly', function(test) {
   var testHasSockjsUrl = function(raw, expectedSockjsUrl) {
-    var actual = LivedataTest.toSockjsUrl(raw);
+    var actual = toSockjsUrl(raw);
     if (expectedSockjsUrl instanceof RegExp)
       test.isTrue(actual.match(expectedSockjsUrl), actual);
     else test.equal(actual, expectedSockjsUrl);

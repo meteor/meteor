@@ -20,8 +20,8 @@ var newConnection = function(stream, options) {
 var makeConnectMessage = function(session) {
   var msg = {
     msg: 'connect',
-    version: LivedataTest.SUPPORTED_DDP_VERSIONS[0],
-    support: LivedataTest.SUPPORTED_DDP_VERSIONS
+    version: DDPCommon.SUPPORTED_DDP_VERSIONS[0],
+    support: DDPCommon.SUPPORTED_DDP_VERSIONS
   };
 
   if (session) msg.session = session;
@@ -1825,7 +1825,7 @@ Tinytest.add('livedata connection - ping with id', function(test) {
   testGotMessage(test, stream, { msg: 'pong', id: id });
 });
 
-_.each(LivedataTest.SUPPORTED_DDP_VERSIONS, function(version) {
+_.each(DDPCommon.SUPPORTED_DDP_VERSIONS, function(version) {
   Tinytest.addAsync('livedata connection - ping from ' + version, function(
     test,
     onComplete
@@ -1938,13 +1938,13 @@ Tinytest.addAsync(
   function(test, onComplete) {
     var connection = new LivedataTest.Connection(getSelfConnectionUrl(), {
       reloadWithOutstanding: true,
-      supportedDDPVersions: ['garbled', LivedataTest.SUPPORTED_DDP_VERSIONS[0]],
+      supportedDDPVersions: ['garbled', DDPCommon.SUPPORTED_DDP_VERSIONS[0]],
       onDDPVersionNegotiationFailure: function() {
         test.fail();
         onComplete();
       },
       onConnected: function() {
-        test.equal(connection._version, LivedataTest.SUPPORTED_DDP_VERSIONS[0]);
+        test.equal(connection._version, DDPCommon.SUPPORTED_DDP_VERSIONS[0]);
         connection._stream.disconnect({ _permanent: true });
         onComplete();
       }
