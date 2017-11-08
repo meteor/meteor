@@ -5,6 +5,7 @@ import { Tracker } from 'meteor/tracker';
 import { EJSON } from 'meteor/ejson';
 import { Random } from 'meteor/random';
 import { Hook } from 'meteor/callback-hook';
+import { MongoID } from 'meteor/mongo-id';
 
 if (Meteor.isServer) {
   var Fiber = Npm.require('fibers');
@@ -12,7 +13,12 @@ if (Meteor.isServer) {
 }
 
 import { DDP, LivedataTest } from './namespace.js';
-import { MongoIDMap } from './id_map.js';
+
+class MongoIDMap extends IdMap {
+  constructor() {
+    super(MongoID.idStringify, MongoID.idParse);
+  }
+}
 
 // @param url {String|Object} URL to Meteor app,
 //   or an object as a test hook (see code)
