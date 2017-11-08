@@ -28,6 +28,7 @@ extractNodeFromTarGz() {
 }
 
 downloadNodeFromS3() {
+    test -n "${NODE_BUILD_NUMBER}" || return 1
     S3_HOST="s3.amazonaws.com/com.meteor.jenkins"
     S3_TGZ="node_${UNAME}_${ARCH}_v${NODE_VERSION}.tar.gz"
     NODE_URL="https://${S3_HOST}/dev-bundle-node-${NODE_BUILD_NUMBER}/${S3_TGZ}"
