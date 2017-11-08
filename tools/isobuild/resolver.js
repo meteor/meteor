@@ -1,5 +1,6 @@
 import {
   isString,
+  isObject,
   isFunction,
   each,
   has,
@@ -12,6 +13,7 @@ import {
   pathRelative,
   pathNormalize,
   pathDirname,
+  pathBasename,
   convertToOSPath,
   convertToPosixPath,
 } from "../fs/files.js";
@@ -78,6 +80,16 @@ export default class Resolver {
         return JSON.stringify([id, pathDirname(absParentPath)]);
       }
     });
+
+    this._cacheMethod("_findPkgJsonSubsetForPath");
+    this._cacheMethod("_getPkgJsonSubsetForDir");
+  }
+
+  _cacheMethod(name) {
+    const original = this[name];
+    this[name] = wrap(
+      (...args) => original.apply(this, args)
+    );
   }
 
   static isTopLevel(id) {
@@ -150,6 +162,18 @@ export default class Resolver {
     if (resolved) {
       if (packageJsonMap) {
         resolved.packageJsonMap = packageJsonMap;
+      }
+
+      // If the package.json file that governs resolved.path has a
+      // "browser" field, include it in resolved.packageJsonMap so that
+      // the ImportScanner can register the appropriate browser aliases.
+      const pkgJsonInfo = this._findPkgJsonSubsetForPath(resolved.path);
+      if (pkgJsonInfo &&
+          isObject(pkgJsonInfo.pkg.browser)) {
+        if (! resolved.packageJsonMap) {
+          resolved.packageJsonMap = Object.create(null);
+        }
+        resolved.packageJsonMap[pkgJsonInfo.path] = pkgJsonInfo.pkg;
       }
 
       resolved.id = convertToPosixPath(
@@ -278,6 +302,34 @@ export default class Resolver {
   }
 
   _resolvePkgJsonMain(dirPath, _seenDirPaths) {
+    const found = this._getPkgJsonSubsetForDir(dirPath);
+    if (! found) {
+      return null;
+    }
+
+    if (isString(found.main)) {
+      // The "main" field of package.json does not have to begin with ./
+      // to be considered relative, so first we try simply appending it to
+      // the directory path before falling back to a full resolve, which
+      // might return a package from a node_modules directory.
+      const resolved = this._joinAndStat(dirPath, found.main) ||
+        this._resolve(found.main, found.path, _seenDirPaths);
+
+      if (resolved && typeof resolved === "object") {
+        if (! resolved.packageJsonMap) {
+          resolved.packageJsonMap = Object.create(null);
+        }
+
+        resolved.packageJsonMap[found.path] = found.pkg;
+
+        return resolved;
+      }
+    }
+
+    return null;
+  }
+
+  _getPkgJsonSubsetForDir(dirPath) {
     const pkgJsonPath = pathJoin(dirPath, "package.json");
     const pkg = optimisticReadJsonOrNull(pkgJsonPath);
     if (! pkg) {
@@ -299,8 +351,13 @@ export default class Resolver {
     let main;
     function tryMain(name) {
       const value = pkg[name];
+
       if (isString(value)) {
         main = main || value;
+      }
+
+      if (isString(value) ||
+          isObject(value)) {
         pkgSubset[name] = value;
       }
     }
@@ -311,26 +368,38 @@ export default class Resolver {
 
     tryMain("main");
 
-    if (isString(main)) {
-      // The "main" field of package.json does not have to begin with ./
-      // to be considered relative, so first we try simply appending it to
-      // the directory path before falling back to a full resolve, which
-      // might return a package from a node_modules directory.
-      const resolved = this._joinAndStat(dirPath, main) ||
-        this._resolve(main, pkgJsonPath, _seenDirPaths);
+    return {
+      path: pkgJsonPath,
+      pkg: pkgSubset,
+      main,
+    };
+  }
 
-      if (resolved && typeof resolved === "object") {
-        if (! resolved.packageJsonMap) {
-          resolved.packageJsonMap = Object.create(null);
-        }
+  _findPkgJsonSubsetForPath(path) {
+    const stat = this.statOrNull(path);
 
-        resolved.packageJsonMap[pkgJsonPath] = pkgSubset;
+    if (stat && stat.isDirectory()) {
+      const found = this._getPkgJsonSubsetForDir(path);
+      if (found) {
+        return found;
+      }
 
-        return resolved;
+      if (path === this.sourceRoot) {
+        return null;
       }
     }
 
-    return null;
+    const parentDir = pathDirname(path);
+
+    if (parentDir === path) {
+      return null;
+    }
+
+    if (pathBasename(parentDir) === "node_modules") {
+      return null;
+    }
+
+    return this._findPkgJsonSubsetForPath(parentDir);
   }
 };
 
