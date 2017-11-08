@@ -15,14 +15,14 @@ class ClientStream extends StreamClientCommon {
   constructor(url, options) {
     super();
 
-    var self = this;
-    self.options = _.extend(
+    this.options = _.extend(
       {
         retry: true
       },
       options
     );
-    self._initCommon(self.options);
+
+    this._initCommon(this.options);
 
     //// Constants
 
@@ -35,111 +35,101 @@ class ClientStream extends StreamClientCommon {
     // this timeout fires. This is kept around for compatibility (when
     // talking to a server that doesn't support DDP heartbeats) and can be
     // removed later.
-    self.HEARTBEAT_TIMEOUT = 100 * 1000;
+    this.HEARTBEAT_TIMEOUT = 100 * 1000;
 
-    self.rawUrl = url;
-    self.socket = null;
+    this.rawUrl = url;
+    this.socket = null;
 
-    self.heartbeatTimer = null;
+    this.heartbeatTimer = null;
 
     // Listen to global 'online' event if we are running in a browser.
     // (IE8 does not support addEventListener)
     if (typeof window !== 'undefined' && window.addEventListener)
       window.addEventListener(
         'online',
-        _.bind(self._online, self),
+        _.bind(this._online, this),
         false /* useCapture. make FF3.6 happy. */
       );
 
     //// Kickoff!
-    self._launchConnection();
+    this._launchConnection();
   }
 
   // data is a utf8 string. Data sent while not connected is dropped on
   // the floor, and it is up the user of this API to retransmit lost
   // messages on 'reset'
   send(data) {
-    var self = this;
-    if (self.currentStatus.connected) {
-      self.socket.send(data);
+    if (this.currentStatus.connected) {
+      this.socket.send(data);
     }
   }
 
   // Changes where this connection points
   _changeUrl(url) {
-    var self = this;
-    self.rawUrl = url;
+    this.rawUrl = url;
   }
 
   _connected() {
-    var self = this;
-
-    if (self.connectionTimer) {
-      clearTimeout(self.connectionTimer);
-      self.connectionTimer = null;
+    if (this.connectionTimer) {
+      clearTimeout(this.connectionTimer);
+      this.connectionTimer = null;
     }
 
-    if (self.currentStatus.connected) {
+    if (this.currentStatus.connected) {
       // already connected. do nothing. this probably shouldn't happen.
       return;
     }
 
     // update status
-    self.currentStatus.status = 'connected';
-    self.currentStatus.connected = true;
-    self.currentStatus.retryCount = 0;
-    self.statusChanged();
+    this.currentStatus.status = 'connected';
+    this.currentStatus.connected = true;
+    this.currentStatus.retryCount = 0;
+    this.statusChanged();
 
     // fire resets. This must come after status change so that clients
     // can call send from within a reset callback.
-    _.each(self.eventCallbacks.reset, function(callback) {
+    _.each(this.eventCallbacks.reset, callback => {
       callback();
     });
   }
 
   _cleanup(maybeError) {
-    var self = this;
-
-    self._clearConnectionAndHeartbeatTimers();
-    if (self.socket) {
-      self.socket.onmessage = self.socket.onclose = () => {};
-      self.socket.onerror = self.socket.onheartbeat = () => {};
-      self.socket.close();
-      self.socket = null;
+    this._clearConnectionAndHeartbeatTimers();
+    if (this.socket) {
+      this.socket.onmessage = this.socket.onclose = this.socket.onerror = this.socket.onheartbeat = () => {};
+      this.socket.close();
+      this.socket = null;
     }
 
-    _.each(self.eventCallbacks.disconnect, function(callback) {
+    _.each(this.eventCallbacks.disconnect, callback => {
       callback(maybeError);
     });
   }
 
   _clearConnectionAndHeartbeatTimers() {
-    var self = this;
-    if (self.connectionTimer) {
-      clearTimeout(self.connectionTimer);
-      self.connectionTimer = null;
+    if (this.connectionTimer) {
+      clearTimeout(this.connectionTimer);
+      this.connectionTimer = null;
     }
-    if (self.heartbeatTimer) {
-      clearTimeout(self.heartbeatTimer);
-      self.heartbeatTimer = null;
+    if (this.heartbeatTimer) {
+      clearTimeout(this.heartbeatTimer);
+      this.heartbeatTimer = null;
     }
   }
 
   _heartbeat_timeout() {
-    var self = this;
     Meteor._debug('Connection timeout. No sockjs heartbeat received.');
-    self._lostConnection(new DDP.ConnectionError('Heartbeat timed out'));
+    this._lostConnection(new DDP.ConnectionError('Heartbeat timed out'));
   }
 
   _heartbeat_received() {
-    var self = this;
     // If we've already permanently shut down this stream, the timeout is
     // already cleared, and we don't need to set it again.
-    if (self._forcedToDisconnect) return;
-    if (self.heartbeatTimer) clearTimeout(self.heartbeatTimer);
-    self.heartbeatTimer = setTimeout(
-      _.bind(self._heartbeat_timeout, self),
-      self.HEARTBEAT_TIMEOUT
+    if (this._forcedToDisconnect) return;
+    if (this.heartbeatTimer) clearTimeout(this.heartbeatTimer);
+    this.heartbeatTimer = setTimeout(
+      _.bind(this._heartbeat_timeout, this),
+      this.HEARTBEAT_TIMEOUT
     );
   }
 
@@ -171,35 +161,34 @@ class ClientStream extends StreamClientCommon {
   }
 
   _launchConnection() {
-    var self = this;
-    self._cleanup(); // cleanup the old socket, if there was one.
+    this._cleanup(); // cleanup the old socket, if there was one.
 
     var options = _.extend(
       {
-        protocols_whitelist: self._sockjsProtocolsWhitelist()
+        protocols_whitelist: this._sockjsProtocolsWhitelist()
       },
-      self.options._sockjsOptions
+      this.options._sockjsOptions
     );
 
     // Convert raw URL to SockJS URL each time we open a connection, so that we
     // can connect to random hostnames and get around browser per-host
     // connection limits.
-    self.socket = new SockJS(toSockjsUrl(self.rawUrl), undefined, options);
-    self.socket.onopen = function(data) {
-      self._connected();
+    this.socket = new SockJS(toSockjsUrl(this.rawUrl), undefined, options);
+    this.socket.onopen = data => {
+      this._connected();
     };
-    self.socket.onmessage = function(data) {
-      self._heartbeat_received();
+    this.socket.onmessage = data => {
+      this._heartbeat_received();
 
-      if (self.currentStatus.connected)
-        _.each(self.eventCallbacks.message, function(callback) {
+      if (this.currentStatus.connected)
+        _.each(this.eventCallbacks.message, callback => {
           callback(data.data);
         });
     };
-    self.socket.onclose = function() {
-      self._lostConnection();
+    this.socket.onclose = () => {
+      this._lostConnection();
     };
-    self.socket.onerror = function() {
+    this.socket.onerror = () => {
       // XXX is this ever called?
       Meteor._debug(
         'stream error',
@@ -208,14 +197,14 @@ class ClientStream extends StreamClientCommon {
       );
     };
 
-    self.socket.onheartbeat = function() {
-      self._heartbeat_received();
+    this.socket.onheartbeat = () => {
+      this._heartbeat_received();
     };
 
-    if (self.connectionTimer) clearTimeout(self.connectionTimer);
-    self.connectionTimer = setTimeout(function() {
-      self._lostConnection(new DDP.ConnectionError('DDP connection timed out'));
-    }, self.CONNECT_TIMEOUT);
+    if (this.connectionTimer) clearTimeout(this.connectionTimer);
+    this.connectionTimer = setTimeout(() => {
+      this._lostConnection(new DDP.ConnectionError('DDP connection timed out'));
+    }, this.CONNECT_TIMEOUT);
   }
 }
 
