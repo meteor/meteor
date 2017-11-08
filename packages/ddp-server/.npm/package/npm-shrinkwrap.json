@@ -7,9 +7,9 @@
       "integrity": "sha1-TkkvjQTftviQA1B/btvy1QHnxvQ="
     },
     "http-parser-js": {
-      "version": "0.4.6",
-      "resolved": "https://registry.npmjs.org/http-parser-js/-/http-parser-js-0.4.6.tgz",
-      "integrity": "sha1-GVJz9YcExFLWcQdr4gEyndNB3FU="
+      "version": "0.4.9",
+      "resolved": "https://registry.npmjs.org/http-parser-js/-/http-parser-js-0.4.9.tgz",
+      "integrity": "sha1-6hoE+2St/wJC6ZdPKX3Uw8rSceE="
     },
     "permessage-deflate": {
       "version": "0.1.6",
@@ -17,14 +17,14 @@
       "integrity": "sha1-WB8c7fvUQPrEfQd3vohjM4a5kt4="
     },
     "sockjs": {
-      "version": "0.3.18",
-      "resolved": "https://registry.npmjs.org/sockjs/-/sockjs-0.3.18.tgz",
-      "integrity": "sha1-2bKJMWyn33dZXvKZ4HXw+TfrQgc="
+      "version": "0.3.19",
+      "resolved": "https://registry.npmjs.org/sockjs/-/sockjs-0.3.19.tgz",
+      "integrity": "sha512-V48klKZl8T6MzatbLlzzRNhMepEys9Y4oGFpypBFFn1gLI/QQ9HtLLyWJNbPlwGLelOVOEijUbTTJeLLI59jLw=="
     },
     "uuid": {
-      "version": "2.0.3",
-      "resolved": "https://registry.npmjs.org/uuid/-/uuid-2.0.3.tgz",
-      "integrity": "sha1-Z+LoY3lyFVMN/zGOW/nc6/1Hsho="
+      "version": "3.1.0",
+      "resolved": "https://registry.npmjs.org/uuid/-/uuid-3.1.0.tgz",
+      "integrity": "sha512-DIWtzUkw04M4k3bf1IcpS2tngXEL26YUD2M0tMDUpnUrz2hgzUBlD55a4FjdLGPvfHxS6uluGWvaVEqgBcVa+g=="
     },
     "websocket-driver": {
       "version": "0.7.0",
