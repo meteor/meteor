@@ -1,8 +1,7 @@
-import { DDP, LivedataTest } from './namespace';
-
+import { DDP, LivedataTest } from '../common/namespace';
 import './stream_client_sockjs';
 
-import './livedata_connection';
+import '../common/livedata_connection';
 
 import './client_convenience';
 

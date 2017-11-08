@@ -1,5 +1,3 @@
-import { DDP, LivedataTest } from "./namespace.js";
-import { MongoIDMap } from "./id_map.js";
 import { Meteor } from 'meteor/meteor';
 import { _ } from 'meteor/underscore';
 import { DDPCommon } from 'meteor/ddp-common';
@@ -12,6 +10,9 @@ if (Meteor.isServer) {
   var Fiber = Npm.require('fibers');
   var Future = Npm.require('fibers/future');
 }
+
+import { DDP, LivedataTest } from "./namespace.js";
+import { MongoIDMap } from "./id_map.js";
 
 // @param url {String|Object} URL to Meteor app,
 //   or an object as a test hook (see code)
