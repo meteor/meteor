@@ -3,6 +3,8 @@ import { _ } from 'meteor/underscore';
 import { toWebsocketUrl } from './urlHelpers';
 import { Meteor } from 'meteor/meteor';
 
+import { addCommonMethodsToPrototype } from './stream_client_common';
+
 // @param endpoint {String} URL to Meteor app
 //   "http://subdomain.meteor.com/" or "/" or
 //   "ddp+sockjs://foo-**.meteor.com/sockjs"
@@ -205,3 +207,5 @@ LivedataTest.ClientStream = class ClientStream {
     });
   }
 };
+
+addCommonMethodsToPrototype(LivedataTest.ClientStream.prototype);

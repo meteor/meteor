@@ -18,3 +18,12 @@ DDP._CurrentPublicationInvocation = new Meteor.EnvironmentVariable;
 
 // XXX: Keep DDP._CurrentInvocation for backwards-compatibility.
 DDP._CurrentInvocation = DDP._CurrentMethodInvocation;
+
+DDP.ConnectionError = Meteor.makeErrorType(
+  "DDP.ConnectionError", function (message) {
+    var self = this;
+    self.message = message;
+});
+
+DDP.ForcedReconnectError = Meteor.makeErrorType(
+  "DDP.ForcedReconnectError", function () {});
