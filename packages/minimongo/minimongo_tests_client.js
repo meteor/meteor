@@ -2079,6 +2079,10 @@ Tinytest.add('minimongo - sort', test => {
   for (let i = 0; i < 50; i++) {
     for (let j = 0; j < 2; j++) {c.insert({a: i, b: j, _id: `${i}_${j}`});}
   }
+  
+  test.equal(c.find(null, {sort: {b: -1, a: 1}, limit: 5}).fetch(), []);
+  test.equal(c.find(undefined, {sort: {b: -1, a: 1}, limit: 5}).fetch(), []);
+  test.equal(c.find(false, {sort: {b: -1, a: 1}, limit: 5}).fetch(), []);
 
   test.equal(
     c.find({a: {$gt: 10}}, {sort: {b: -1, a: 1}, limit: 5}).fetch(), [

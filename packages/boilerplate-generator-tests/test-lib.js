@@ -25,7 +25,7 @@ export function generateHTMLForArch(arch) {
   // webapp_server usually constructs a Boilerplate object similarly
   const inline = true;
   const inlineScriptsAllowed = true;
-  const additionalStaticJs = [];
+  const additionalStaticJs = [{ contents: 'var a' }];
   const meteorRuntimeConfig = 'config123';
   const rootUrlPathPrefix = 'rootUrlPathPrefix';
   const htmlAttributes = {

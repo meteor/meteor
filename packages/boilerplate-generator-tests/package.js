@@ -12,7 +12,11 @@ Npm.depends({
 
 Package.onTest(function (api) {
   api.use('ecmascript');
-  api.use(['tinytest', 'boilerplate-generator'], 'server');
+  api.use([
+    'underscore',
+    'tinytest',
+    'boilerplate-generator'
+  ], 'server');
   api.addFiles('web.browser-tests.js', 'server');
   api.addFiles('web.cordova-tests.js', 'server');
 });

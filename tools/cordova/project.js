@@ -53,11 +53,11 @@ const pinnedPlatformVersions = CORDOVA_PLATFORM_VERSIONS;
 const pinnedPluginVersions = {
   "cordova-plugin-battery-status": "1.2.4",
   "cordova-plugin-camera": "2.4.1",
-  "cordova-plugin-console": "1.0.7",
+  "cordova-plugin-console": "1.1.0", // Deprecated, remove in future
   "cordova-plugin-contacts": "2.3.1",
   "cordova-plugin-device": "1.1.6",
-  "cordova-plugin-device-motion": "1.2.5",
-  "cordova-plugin-device-orientation": "1.0.7",
+  "cordova-plugin-device-motion": "2.0.0", // Deprecated, remove in future
+  "cordova-plugin-device-orientation": "2.0.0", // Deprecated, remove in future
   "cordova-plugin-dialogs": "1.3.3",
   "cordova-plugin-file": "4.3.3",
   "cordova-plugin-file-transfer": "1.6.3",
