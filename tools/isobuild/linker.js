@@ -245,8 +245,13 @@ _.extend(Module.prototype, {
         return;
       }
 
+      if (file.aliasId) {
+        addToTree(file.aliasId, file.absModuleId, tree);
+        return;
+      }
+
       if (file.isDynamic()) {
-        const servePath = "dynamic/" + file.installPath;
+        const servePath = files.pathJoin("dynamic", file.absModuleId);
         const { code: source, map } =
           file.getPrelinkedOutput({
             sourceWidth: sourceWidth,
@@ -264,13 +269,14 @@ _.extend(Module.prototype, {
 
         const stubArray = file.deps.slice(0);
 
-        if (file.installPath.endsWith("/package.json") &&
+        if (file.absModuleId.endsWith("/package.json") &&
             file.jsonData) {
           const stub = {};
 
           function tryMain(name) {
             const value = file.jsonData[name];
-            if (_.isString(value)) {
+            if (_.isString(value) ||
+                _.isObject(value)) {
               stub[name] = value;
             }
           }
@@ -281,12 +287,12 @@ _.extend(Module.prototype, {
           stubArray.push(stub);
         }
 
-        addToTree(stubArray, file.installPath, tree);
+        addToTree(stubArray, file.absModuleId, tree);
 
       } else {
         // If the file is not dynamic, then it should be included in the
         // initial bundle, so we add it to the static tree.
-        addToTree(file, file.installPath, tree);
+        addToTree(file, file.absModuleId, tree);
       }
     });
 
@@ -309,6 +315,25 @@ _.extend(Module.prototype, {
       if (Array.isArray(t)) {
         ++moduleCount;
         chunks.push(JSON.stringify(t, null, 2));
+
+      } else if (typeof t === "string") {
+        // This case can happen if a package.json file has an
+        // object-valued "browser" field that aliases this module to a
+        // different module identifier string. Note that the runtime
+        // module system resolves string aliases relative to the original
+        // module identifier, so it's probably a good idea to make sure
+        // these identifiers are absolute (start with a '/') to avoid
+        // ambiguity, since identifiers in package.json "browser" fields
+        // are meant to be resolved relative to the package.json file.
+        ++moduleCount;
+        chunks.push(JSON.stringify(t));
+
+      } else if (t === false) {
+        // This case can happen if a package.json file has an
+        // object-valued "browser" field that maps this module to `false`,
+        // indicating it should be replaced by an empty stub.
+        ++moduleCount;
+        chunks.push("function(){}");
 
       } else if (t instanceof File) {
         ++moduleCount;
@@ -420,7 +445,7 @@ _.extend(Module.prototype, {
         chunks.push(
           file.mainModule ? "\nvar " + exportsName + " = " : "\n",
           "require(",
-          JSON.stringify("./" + file.installPath),
+          JSON.stringify(file.absModuleId),
           ");"
         );
       });
@@ -437,6 +462,10 @@ export function addToTree(value, path, tree) {
   const parts = path.split("/");
   const lastIndex = parts.length - 1;
   parts.forEach((part, i) => {
+    if (part === "") {
+      return;
+    }
+
     tree = _.has(tree, part)
       ? tree[part]
       : tree[part] = i < lastIndex ? {} : value;
@@ -515,12 +544,16 @@ var File = function (inputFile, module) {
   self.sourcePath = inputFile.sourcePath;
 
   // Absolute module identifier to use when installing this file via
-  // meteorInstall. If the inputFile has no .installPath, then this file
+  // meteorInstall. If the inputFile has no .absModuleId, then this file
   // cannot be installed as a module.
-  self.installPath = inputFile.installPath || null;
+  self.absModuleId = inputFile.absModuleId || null;
 
   // the path where this file would prefer to be served if possible
   self.servePath = inputFile.servePath;
+
+  if (inputFile.alias) {
+    self.aliasId = inputFile.alias.absModuleId;
+  }
 
   // Module identifiers imported or required by this module, if any.
   // Excludes dynamically imported dependencies, and may exclude
@@ -575,8 +608,8 @@ _.extend(File.prototype, {
   computeAssignedVariables: Profile("linker File#computeAssignedVariables", function () {
     var self = this;
 
-    if (self.installPath) {
-      const parts = self.installPath.split("/");
+    if (self.absModuleId) {
+      const parts = self.absModuleId.split("/");
       const nmi = parts.indexOf("node_modules");
       if (nmi >= 0 && parts[nmi + 1] !== "meteor") {
         // If this file is in a node_modules directory and is not part of
@@ -995,22 +1028,25 @@ var getFooter = function ({
 
   if (name && exported) {
     chunks.push("\n\n/* Exports */\n");
-    chunks.push("if (typeof Package === 'undefined') Package = {};\n");
-    const pkgInit = packageDot(name) + " = " + (exportsName || "{}");
-    if (_.isEmpty(exported)) {
-      // Even if there are no exports, we need to define Package.foo,
-      // because the existence of Package.foo is how another package
-      // (e.g., one that weakly depends on foo) can tell if foo is loaded.
-      chunks.push(pkgInit, ";\n");
-    } else {
+
+    // Even if there are no exports, we need to define Package.foo,
+    // because the existence of Package.foo is how another package
+    // (e.g., one that weakly depends on foo) can tell if foo is loaded.
+    chunks.push("Package._define(" + JSON.stringify(name));
+
+    if (exportsName) {
+      // If we have an exports object, use it as Package[name].
+      chunks.push(", ", exportsName);
+    }
+
+    if (! _.isEmpty(exported)) {
       const scratch = {};
       _.each(exported, symbol => scratch[symbol] = symbol);
       const symbolTree = writeSymbolTree(buildSymbolTree(scratch));
-      chunks.push("(function (pkg, symbols) {\n",
-                  "  for (var s in symbols)\n",
-                  "    (s in pkg) || (pkg[s] = symbols[s]);\n",
-                  "})(", pkgInit, ", ", symbolTree, ");\n");
+      chunks.push(", ", symbolTree);
     }
+
+    chunks.push(");\n");
   }
 
   chunks.push("\n})();\n");

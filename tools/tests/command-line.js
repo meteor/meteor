@@ -367,8 +367,8 @@ selftest.define("argument parsing", function () {
   });
   s.cd("app-with-extra-packages", function () {
     run = s.run("test",
-      "--extra-packages", "practicalmeteor:mocha, extra-package-1, extra-package-2@=0.0.2",
-      "--driver-package", "practicalmeteor:mocha");
+      "--extra-packages", "tmeasday:acceptance-test-driver, extra-package-1, extra-package-2@=0.0.2",
+      "--driver-package", "tmeasday:acceptance-test-driver");
     run.waitSecs(60);
     run.match("extra-package-1: foobar");
     run.match("extra-package-2: barfoo");
