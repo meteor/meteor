@@ -61,9 +61,6 @@ compiler.compile = Profile(function (packageSource, options) {
         "` in package `" + packageSource.name + "`",
       rootPath: packageSource.sourceRoot
     }, function () {
-      // XXX we should probably also pass options.noLineNumbers into
-      //     buildJsImage so it can pass it back to its call to
-      //     compiler.compile
       var buildResult = bundler.buildJsImage({
         name: info.name,
         packageMap: packageMap,
@@ -186,7 +183,6 @@ compiler.compile = Profile(function (packageSource, options) {
         sourceArch: architecture,
         isopackCache: isopackCache,
         nodeModulesPath: nodeModulesPath,
-        noLineNumbers: options.noLineNumbers
       });
 
       _.extend(pluginProviderPackageNames,
@@ -345,8 +341,6 @@ var compileUnibuild = Profile(function (options) {
   const inputSourceArch = options.sourceArch;
   const isopackCache = options.isopackCache;
   const nodeModulesPath = options.nodeModulesPath;
-  const noLineNumbers = options.noLineNumbers;
-
   const isApp = ! inputSourceArch.pkg.name;
   const resources = [];
   const pluginProviderPackageNames = {};

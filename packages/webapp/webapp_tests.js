@@ -146,7 +146,7 @@ Tinytest.add("webapp - generating boilerplate should not change runtime config",
 
   var boilerplate = WebAppInternals.generateBoilerplateInstance(
     "web.browser",
-    {}, // empty manifest
+    [], // empty manifest
     { runtimeConfigOverrides: { WEBAPP_TEST_KEY: true } }
   );
 

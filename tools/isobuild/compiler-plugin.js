@@ -1300,7 +1300,6 @@ export class PackageSourceBatch {
       imports: self.importedSymbolToPackageName,
       // XXX report an error if there is a package called global-imports
       includeSourceMapInstructions: isWeb,
-      noLineNumbers: !isWeb
     };
 
     const fileHashes = [];

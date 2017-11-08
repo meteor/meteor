@@ -20,12 +20,20 @@ meteorInstall.fetch = function (ids) {
   var dynamicVersions = require("./dynamic-versions.js");
   var missing;
 
+  function addSource(id, source) {
+    addToTree(tree, id, makeModuleFunction(id, source, ids[id].options));
+  }
+
+  function addMissing(id) {
+    addToTree(missing = missing || Object.create(null), id, 1);
+  }
+
   Object.keys(ids).forEach(function (id) {
     var version = dynamicVersions.get(id);
     if (version) {
       versions[id] = version;
     } else {
-      addToTree(missing = missing || Object.create(null), id, 1);
+      addMissing(id);
     }
   });
 
@@ -33,10 +41,9 @@ meteorInstall.fetch = function (ids) {
     Object.keys(sources).forEach(function (id) {
       var source = sources[id];
       if (source) {
-        var info = ids[id];
-        addToTree(tree, id, makeModuleFunction(id, source, info.options));
+        addSource(id, source);
       } else {
-        addToTree(missing = missing || Object.create(null), id, 1);
+        addMissing(id);
       }
     });
 
@@ -46,9 +53,7 @@ meteorInstall.fetch = function (ids) {
 
       Object.keys(flatResults).forEach(function (id) {
         var source = flatResults[id];
-        var info = ids[id];
-
-        addToTree(tree, id, makeModuleFunction(id, source, info.options));
+        addSource(id, source);
 
         var version = dynamicVersions.get(id);
         if (version) {

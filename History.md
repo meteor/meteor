@@ -6,6 +6,17 @@
   several new features, including two-factor authentication, as described
   in the [release notes](https://github.com/npm/npm/blob/latest/CHANGELOG.md#v551-2017-10-04).
 
+* [`cordova-lib`](https://github.com/apache/cordova-cli) has been updated to
+  version 7.1.0, [`cordova-android`](https://github.com/apache/cordova-android/)
+  has been updated to version 6.3.0, and
+  [`cordova-ios`](https://github.com/apache/cordova-ios/)
+  has been updated to version 4.5.3. The cordova-plugins `cordova-plugin-console`,
+  `cordova-plugin-device-motion`, and `cordova-plugin-device-orientation` have been
+  [deprecated](https://cordova.apache.org/news/2017/09/22/plugins-release.html)
+  and will likely be removed in a future Meteor release.
+  [Feature Request #196](https://github.com/meteor/meteor-feature-requests/issues/196)
+  [PR #9213](https://github.com/meteor/meteor/pull/9213)
+
 * iOS icons and launch screens have been updated to support iOS 11
   [Issue #9196](https://github.com/meteor/meteor/issues/9196)
   [PR #9198](https://github.com/meteor/meteor/pull/9198)
@@ -24,6 +35,26 @@
   [PR #9044](https://github.com/meteor/meteor/pull/9044)
 
 ## v1.6, 2017-10-30
+
+* **Important note for package maintainers:**
+
+  With the jump to Node 8, some packages published using Meteor 1.6 may no
+  longer be compatible with older Meteor versions. In order to maintain
+  compatibility with Meteor 1.5 apps when publishing your package, you can
+  specify a release version with the meteor publish command:
+
+  ```
+  meteor --release 1.5.3 publish
+  ```
+
+  If you're interested in taking advantage of Meteor 1.6 while still
+  supporting older Meteor versions, you can consider publishing for Meteor
+  1.6 from a new branch, with your package's minor or major version bumped.
+  You can then continue to publish for Meteor 1.5 from the original branch.
+  Note that the 1.6 branch version bump is important so that you can continue
+  publishing patch updates for Meteor 1.5 from the original branch.
+
+  [Issue #9308](https://github.com/meteor/meteor/issues/9308)
 
 * Node.js has been upgraded to version 8.8.1, which will be entering
   long-term support (LTS) coverage on 31 October 2017, lasting through
