@@ -171,7 +171,7 @@ outdated platforms`);
       this.runCommands('creating Cordova project', async () => {
         // No need to pass in appName and appId because these are set from
         // the generated config.xml
-        await cordova_lib.raw.create(files.convertToOSPath(this.projectRoot),
+        await cordova_lib.create(files.convertToOSPath(this.projectRoot),
           undefined, undefined, config);
       }, undefined, null);
     }
@@ -238,7 +238,7 @@ outdated platforms`);
 
     this.runCommands(`preparing Cordova project for platform \
 ${displayNameForPlatform(platform)}`, async () => {
-      await cordova_lib.raw.prepare(commandOptions);
+      await cordova_lib.prepare(commandOptions);
     });
   }
 
@@ -252,7 +252,7 @@ ${displayNameForPlatform(platform)}`, async () => {
 
     this.runCommands(`building Cordova app for platform \
 ${displayNameForPlatform(platform)}`, async () => {
-      await cordova_lib.raw.build(commandOptions);
+      await cordova_lib.build(commandOptions);
     });
   }
 
@@ -301,7 +301,7 @@ platform to your project first.`);
     const allRequirements = this.runCommands(`checking Cordova \
 requirements for platform ${displayNameForPlatform(platform)}`,
       async () => {
-        return await cordova_lib.raw.requirements([platform],
+        return await cordova_lib.requirements([platform],
           this.defaultOptions);
       });
     let requirements = allRequirements && allRequirements[platform];
@@ -372,7 +372,7 @@ to build apps for ${displayNameForPlatform(platform)}.`);
   updatePlatforms(platforms = this.listInstalledPlatforms()) {
     this.runCommands(`updating Cordova project for platforms \
 ${displayNamesForPlatforms(platforms)}`, async () => {
-      await cordova_lib.raw.platform('update', platforms, this.defaultOptions);
+      await cordova_lib.platform('update', platforms, this.defaultOptions);
     });
   }
 
@@ -381,14 +381,14 @@ ${displayNamesForPlatforms(platforms)}`, async () => {
 to Cordova project`, async () => {
       let version = pinnedPlatformVersions[platform];
       let platformSpec = version ? `${platform}@${version}` : platform;
-      await cordova_lib.raw.platform('add', platformSpec, this.defaultOptions);
+      await cordova_lib.platform('add', platformSpec, this.defaultOptions);
     });
   }
 
   removePlatform(platform) {
     this.runCommands(`removing platform ${displayNameForPlatform(platform)} \
 from Cordova project`, async () => {
-      await cordova_lib.raw.platform('rm', platform, this.defaultOptions);
+      await cordova_lib.platform('rm', platform, this.defaultOptions);
     });
   }
 
@@ -516,7 +516,7 @@ from Cordova project`, async () => {
 
       this.runCommands(`adding plugin ${target} \
 to Cordova project`, async () => {
-        await cordova_lib.raw.plugin('add', [target], commandOptions);
+        await cordova_lib.plugin('add', [target], commandOptions);
       });
     }
   }
@@ -529,7 +529,7 @@ to Cordova project`, async () => {
 
     this.runCommands(`removing plugins ${plugins} \
 from Cordova project`, async () => {
-      await cordova_lib.raw.plugin('rm', plugins, this.defaultOptions);
+      await cordova_lib.plugin('rm', plugins, this.defaultOptions);
     });
   }
 
