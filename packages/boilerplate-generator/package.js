@@ -5,9 +5,7 @@ Package.describe({
 
 Package.onUse(api => {
   api.use('ecmascript');
-  api.use([
-    'underscore',
-  ], 'server');
+  api.use('underscore', 'server');
   api.mainModule('generator.js', 'server');
   api.export('Boilerplate', 'server');
 });

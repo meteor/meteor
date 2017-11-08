@@ -1,4 +1,5 @@
 import { parse, serialize } from 'parse5';
+
 import { generateHTMLForArch } from './test-lib';
 
 const html = generateHTMLForArch('web.cordova');
@@ -31,3 +32,23 @@ Tinytest.add("boilerplate-generator-tests - web.cordova - do not call rewriteHoo
 Tinytest.add("boilerplate-generator-tests - web.cordova - include runtime config", function (test) {
   test.matches(html, /<script[^<>]*>[^<>]*\n[^<>]*__meteor_runtime_config__ =[^<>]*decodeURIComponent\(config123\)\)/);
 });
+
+// https://github.com/meteor/meteor/issues/9149
+Tinytest.add(
+  "boilerplate-generator-tests - web.cordova - properly render boilerplate " +
+  "elements when _.template settings are overridden",
+  function (test) {
+    import { _ } from 'meteor/underscore';
+    _.templateSettings = {
+      interpolate: /\{\{(.+?)\}\}/g
+    };
+    const newHtml = generateHTMLForArch('web.cordova');
+    test.matches(newHtml, /<link[^<>]*href="[^<>]*bootstrap[^<>]*">/);
+    test.matches(newHtml, /<script[^<>]*src="[^<>]*templating[^<>]*">/);
+    test.matches(newHtml, /<script>var a/);
+    test.matches(
+      newHtml,
+      /<script[^<>]*>[^<>]*__meteor_runtime_config__ =.*decodeURIComponent\(config123\)/
+    );
+  }
+);
