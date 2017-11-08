@@ -1301,7 +1301,6 @@ export class PackageSourceBatch {
       // XXX report an error if there is a package called global-imports
       importStubServePath: isApp && '/packages/global-imports.js',
       includeSourceMapInstructions: isWeb,
-      noLineNumbers: !isWeb
     };
 
     const fileHashes = [];

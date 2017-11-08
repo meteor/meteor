@@ -51,8 +51,6 @@ export class IsopackCache {
     // Map from package name to Isopack.
     self._isopacks = Object.create(null);
 
-    self._noLineNumbers = !! options.noLineNumbers;
-
     self._lintLocalPackages = !! options.lintLocalPackages;
     self._lintPackageWithSourceRoot = options.lintPackageWithSourceRoot;
 
@@ -362,7 +360,6 @@ export class IsopackCache {
           isopack = compiler.compile(packageInfo.packageSource, {
             packageMap: self._packageMap,
             isopackCache: self,
-            noLineNumbers: self._noLineNumbers,
             includeCordovaUnibuild: self._includeCordovaUnibuild,
             includePluginProviderPackageMap: true,
             pluginCacheDir: pluginCacheDir
