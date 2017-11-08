@@ -1,4 +1,3 @@
-import { _ } from 'meteor/underscore';
 import { Meteor } from 'meteor/meteor';
 
 // This populates a global variable
@@ -15,12 +14,10 @@ class ClientStream extends StreamClientCommon {
   constructor(url, options) {
     super();
 
-    this.options = _.extend(
-      {
-        retry: true
-      },
-      options
-    );
+    this.options = {
+      retry: true,
+      ...options
+    };
 
     this._initCommon(this.options);
 
@@ -47,7 +44,7 @@ class ClientStream extends StreamClientCommon {
     if (typeof window !== 'undefined' && window.addEventListener)
       window.addEventListener(
         'online',
-        _.bind(this._online, this),
+        this._online.bind(this),
         false /* useCapture. make FF3.6 happy. */
       );
 
@@ -88,7 +85,7 @@ class ClientStream extends StreamClientCommon {
 
     // fire resets. This must come after status change so that clients
     // can call send from within a reset callback.
-    _.each(this.eventCallbacks.reset, callback => {
+    this.eventCallbacks.reset.forEach(callback => {
       callback();
     });
   }
@@ -101,7 +98,7 @@ class ClientStream extends StreamClientCommon {
       this.socket = null;
     }
 
-    _.each(this.eventCallbacks.disconnect, callback => {
+    this.eventCallbacks.disconnect.forEach(callback => {
       callback(maybeError);
     });
   }
@@ -128,7 +125,7 @@ class ClientStream extends StreamClientCommon {
     if (this._forcedToDisconnect) return;
     if (this.heartbeatTimer) clearTimeout(this.heartbeatTimer);
     this.heartbeatTimer = setTimeout(
-      _.bind(this._heartbeat_timeout, this),
+      this._heartbeat_timeout.bind(this),
       this.HEARTBEAT_TIMEOUT
     );
   }
@@ -163,12 +160,10 @@ class ClientStream extends StreamClientCommon {
   _launchConnection() {
     this._cleanup(); // cleanup the old socket, if there was one.
 
-    var options = _.extend(
-      {
-        protocols_whitelist: this._sockjsProtocolsWhitelist()
-      },
-      this.options._sockjsOptions
-    );
+    var options = {
+      protocols_whitelist: this._sockjsProtocolsWhitelist(),
+      ...this.options._sockjsOptions
+    };
 
     // Convert raw URL to SockJS URL each time we open a connection, so that we
     // can connect to random hostnames and get around browser per-host
@@ -181,7 +176,7 @@ class ClientStream extends StreamClientCommon {
       this._heartbeat_received();
 
       if (this.currentStatus.connected)
-        _.each(this.eventCallbacks.message, callback => {
+        this.eventCallbacks.message.forEach(callback => {
           callback(data.data);
         });
     };
@@ -192,7 +187,7 @@ class ClientStream extends StreamClientCommon {
       // XXX is this ever called?
       Meteor._debug(
         'stream error',
-        _.toArray(arguments),
+        Array.prototype.slice.call(arguments),
         new Date().toDateString()
       );
     };
