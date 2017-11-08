@@ -2022,8 +2022,7 @@ main.registerCommand({
     let changed = false;
 
     for (target of pluginsToAdd) {
-      let [id, version] = target.split('@');
-
+      let [id, version] = [target.substring(0,target.lastIndexOf('@')), target.substring(target.lastIndexOf('@')+1)];
       const newId = cordova.newPluginId(id);
 
       if (!(version && utils.isValidVersion(version, {forCordova: true}))) {
