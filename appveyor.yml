@@ -23,13 +23,11 @@ environment:
       ^NULL-LEAVE-THIS-HERE-NULL$"
 platform:
   - x64
-  - x86
 
 matrix:
   fast_finish: true
   allow_failures:
     - platform: x64
-    - platform: x86
 
 # We don't need the actual "build", just the tests.
 build: off
