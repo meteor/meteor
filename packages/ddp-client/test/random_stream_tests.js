@@ -1,16 +1,16 @@
-Tinytest.add("livedata - DDP.randomStream", function (test) {
+Tinytest.add("livedata - DDP.randomStream", function(test) {
   var randomSeed = Random.id();
   var context = { randomSeed: randomSeed };
 
-  var sequence = DDP._CurrentMethodInvocation.withValue(context, function () {
-    return DDP.randomStream('1');
+  var sequence = DDP._CurrentMethodInvocation.withValue(context, function() {
+    return DDP.randomStream("1");
   });
 
   var seeds = sequence.alea.args;
 
   test.equal(seeds.length, 2);
   test.equal(seeds[0], randomSeed);
-  test.equal(seeds[1], '1');
+  test.equal(seeds[1], "1");
 
   var id1 = sequence.id();
 
@@ -21,13 +21,13 @@ Tinytest.add("livedata - DDP.randomStream", function (test) {
   test.equal(id1, id1Cloned);
 
   // We should get the same sequence when we use the same key
-  sequence = DDP._CurrentMethodInvocation.withValue(context, function () {
-    return DDP.randomStream('1');
+  sequence = DDP._CurrentMethodInvocation.withValue(context, function() {
+    return DDP.randomStream("1");
   });
   seeds = sequence.alea.args;
   test.equal(seeds.length, 2);
   test.equal(seeds[0], randomSeed);
-  test.equal(seeds[1], '1');
+  test.equal(seeds[1], "1");
 
   // But we should be at the 'next' position in the stream
   var id2 = sequence.id();
@@ -39,6 +39,6 @@ Tinytest.add("livedata - DDP.randomStream", function (test) {
   test.equal(id2, id2Cloned);
 });
 
-Tinytest.add("livedata - DDP.randomStream with no-args", function (test) {
+Tinytest.add("livedata - DDP.randomStream with no-args", function(test) {
   DDP.randomStream().id();
 });

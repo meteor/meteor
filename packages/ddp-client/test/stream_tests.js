@@ -1,6 +1,6 @@
 import { LivedataTest } from "../common/namespace.js";
 
-Tinytest.add("stream - status", function (test) {
+Tinytest.add("stream - status", function(test) {
   // Very basic test. Just see that it runs and returns something. Not a
   // lot of coverage, but enough that it would have caught a recent bug.
   var status = Meteor.status();
@@ -12,38 +12,40 @@ Tinytest.add("stream - status", function (test) {
 });
 
 testAsyncMulti("stream - reconnect", [
-  function (test, expect) {
-    var callback = _.once(expect(function() {
-      var status;
-      status = Meteor.status();
-      test.equal(status.status, "connected");
+  function(test, expect) {
+    var callback = _.once(
+      expect(function() {
+        var status;
+        status = Meteor.status();
+        test.equal(status.status, "connected");
 
-      Meteor.reconnect();
-      status = Meteor.status();
-      test.equal(status.status, "connected");
+        Meteor.reconnect();
+        status = Meteor.status();
+        test.equal(status.status, "connected");
 
-      Meteor.reconnect({_force: true});
-      status = Meteor.status();
-      test.equal(status.status, "waiting");
-    }));
+        Meteor.reconnect({ _force: true });
+        status = Meteor.status();
+        test.equal(status.status, "waiting");
+      })
+    );
 
     if (Meteor.status().status !== "connected")
-      Meteor.connection._stream.on('reset', callback);
-    else
-      callback();
+      Meteor.connection._stream.on("reset", callback);
+    else callback();
   }
 ]);
 
 // Disconnecting and reconnecting transitions through the correct statuses.
 testAsyncMulti("stream - basic disconnect", [
-  function (test, expect) {
+  function(test, expect) {
     var history = [];
     var stream = new LivedataTest.ClientStream("/");
-    var onTestComplete = expect(function (unexpectedHistory) {
+    var onTestComplete = expect(function(unexpectedHistory) {
       stream.disconnect();
       if (unexpectedHistory) {
-        test.fail("Unexpected status history: " +
-                  JSON.stringify(unexpectedHistory));
+        test.fail(
+          "Unexpected status history: " + JSON.stringify(unexpectedHistory)
+        );
       }
     });
 
@@ -59,11 +61,24 @@ testAsyncMulti("stream - basic disconnect", [
           stream.disconnect();
         } else if (_.isEqual(history, ["connecting", "connected", "offline"])) {
           stream.reconnect();
-        } else if (_.isEqual(history, ["connecting", "connected", "offline",
-                                       "connecting"])) {
+        } else if (
+          _.isEqual(history, [
+            "connecting",
+            "connected",
+            "offline",
+            "connecting"
+          ])
+        ) {
           // do nothing; wait for the next state
-        } else if (_.isEqual(history, ["connecting", "connected", "offline",
-                                "connecting", "connected"])) {
+        } else if (
+          _.isEqual(history, [
+            "connecting",
+            "connected",
+            "offline",
+            "connecting",
+            "connected"
+          ])
+        ) {
           onTestComplete();
         } else {
           onTestComplete(history);
@@ -75,14 +90,15 @@ testAsyncMulti("stream - basic disconnect", [
 
 // Remain offline if the online event is received while offline.
 testAsyncMulti("stream - disconnect remains offline", [
-  function (test, expect) {
+  function(test, expect) {
     var history = [];
     var stream = new LivedataTest.ClientStream("/");
-    var onTestComplete = expect(function (unexpectedHistory) {
+    var onTestComplete = expect(function(unexpectedHistory) {
       stream.disconnect();
       if (unexpectedHistory) {
-        test.fail("Unexpected status history: " +
-                  JSON.stringify(unexpectedHistory));
+        test.fail(
+          "Unexpected status history: " + JSON.stringify(unexpectedHistory)
+        );
       }
     });
 
@@ -113,33 +129,48 @@ Tinytest.add("stream - sockjs urls are computed correctly", function(test) {
     var actual = LivedataTest.toSockjsUrl(raw);
     if (expectedSockjsUrl instanceof RegExp)
       test.isTrue(actual.match(expectedSockjsUrl), actual);
-    else
-      test.equal(actual, expectedSockjsUrl);
+    else test.equal(actual, expectedSockjsUrl);
   };
 
-  testHasSockjsUrl("http://subdomain.meteor.com/",
-                   "http://subdomain.meteor.com/sockjs");
-  testHasSockjsUrl("http://subdomain.meteor.com",
-                   "http://subdomain.meteor.com/sockjs");
-  testHasSockjsUrl("subdomain.meteor.com/",
-                   "http://subdomain.meteor.com/sockjs");
-  testHasSockjsUrl("subdomain.meteor.com",
-                   "http://subdomain.meteor.com/sockjs");
+  testHasSockjsUrl(
+    "http://subdomain.meteor.com/",
+    "http://subdomain.meteor.com/sockjs"
+  );
+  testHasSockjsUrl(
+    "http://subdomain.meteor.com",
+    "http://subdomain.meteor.com/sockjs"
+  );
+  testHasSockjsUrl(
+    "subdomain.meteor.com/",
+    "http://subdomain.meteor.com/sockjs"
+  );
+  testHasSockjsUrl(
+    "subdomain.meteor.com",
+    "http://subdomain.meteor.com/sockjs"
+  );
   testHasSockjsUrl("/", Meteor._relativeToSiteRootUrl("/sockjs"));
 
   testHasSockjsUrl("http://localhost:3000/", "http://localhost:3000/sockjs");
   testHasSockjsUrl("http://localhost:3000", "http://localhost:3000/sockjs");
   testHasSockjsUrl("localhost:3000", "http://localhost:3000/sockjs");
 
-  testHasSockjsUrl("https://subdomain.meteor.com/",
-                   "https://subdomain.meteor.com/sockjs");
-  testHasSockjsUrl("https://subdomain.meteor.com",
-                   "https://subdomain.meteor.com/sockjs");
+  testHasSockjsUrl(
+    "https://subdomain.meteor.com/",
+    "https://subdomain.meteor.com/sockjs"
+  );
+  testHasSockjsUrl(
+    "https://subdomain.meteor.com",
+    "https://subdomain.meteor.com/sockjs"
+  );
 
-  testHasSockjsUrl("ddp+sockjs://ddp--****-foo.meteor.com/sockjs",
-                   /^https:\/\/ddp--\d\d\d\d-foo\.meteor\.com\/sockjs$/);
-  testHasSockjsUrl("ddpi+sockjs://ddp--****-foo.meteor.com/sockjs",
-                   /^http:\/\/ddp--\d\d\d\d-foo\.meteor\.com\/sockjs$/);
+  testHasSockjsUrl(
+    "ddp+sockjs://ddp--****-foo.meteor.com/sockjs",
+    /^https:\/\/ddp--\d\d\d\d-foo\.meteor\.com\/sockjs$/
+  );
+  testHasSockjsUrl(
+    "ddpi+sockjs://ddp--****-foo.meteor.com/sockjs",
+    /^http:\/\/ddp--\d\d\d\d-foo\.meteor\.com\/sockjs$/
+  );
 });
 
 testAsyncMulti("stream - /websocket is a websocket endpoint", [
@@ -147,11 +178,14 @@ testAsyncMulti("stream - /websocket is a websocket endpoint", [
     //
     // Verify that /websocket and /websocket/ don't return the main page
     //
-    _.each(['/websocket', '/websocket/'], function(path) {
-      HTTP.get(Meteor._relativeToSiteRootUrl(path), expect(function(error, result) {
-        test.isNotNull(error);
-        test.equal('Not a valid websocket request', result.content);
-      }));
+    _.each(["/websocket", "/websocket/"], function(path) {
+      HTTP.get(
+        Meteor._relativeToSiteRootUrl(path),
+        expect(function(error, result) {
+          test.isNotNull(error);
+          test.equal("Not a valid websocket request", result.content);
+        })
+      );
     });
 
     //
@@ -166,13 +200,16 @@ testAsyncMulti("stream - /websocket is a websocket endpoint", [
       test.equal(pageContent, result.content);
     });
 
-    HTTP.get(Meteor._relativeToSiteRootUrl('/'), expect(function(error, result) {
-      test.isNull(error);
-      pageContent = result.content;
+    HTTP.get(
+      Meteor._relativeToSiteRootUrl("/"),
+      expect(function(error, result) {
+        test.isNull(error);
+        pageContent = result.content;
 
-      _.each(['/websockets', '/websockets/'], function(path) {
-        HTTP.get(Meteor._relativeToSiteRootUrl(path), wrappedCallback);
-      });
-    }));
+        _.each(["/websockets", "/websockets/"], function(path) {
+          HTTP.get(Meteor._relativeToSiteRootUrl(path), wrappedCallback);
+        });
+      })
+    );
   }
 ]);
