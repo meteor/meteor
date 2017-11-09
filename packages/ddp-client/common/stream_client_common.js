@@ -1,27 +1,25 @@
-import { Random } from 'meteor/random';
-import { Meteor } from 'meteor/meteor';
-import { _ } from 'meteor/underscore';
-import { Tracker } from 'meteor/tracker';
-import { Retry } from 'meteor/retry';
+import { Random } from "meteor/random";
+import { Meteor } from "meteor/meteor";
+import { _ } from "meteor/underscore";
+import { Tracker } from "meteor/tracker";
+import { Retry } from "meteor/retry";
 
 import { DDP, LivedataTest } from "./namespace.js";
 
 export function addCommonMethodsToPrototype(proto) {
   _.extend(proto, {
     // Register for callbacks.
-    on: function (name, callback) {
+    on: function(name, callback) {
       var self = this;
 
-      if (name !== 'message' && name !== 'reset' && name !== 'disconnect')
+      if (name !== "message" && name !== "reset" && name !== "disconnect")
         throw new Error("unknown event type: " + name);
 
-      if (!self.eventCallbacks[name])
-        self.eventCallbacks[name] = [];
+      if (!self.eventCallbacks[name]) self.eventCallbacks[name] = [];
       self.eventCallbacks[name].push(callback);
     },
 
-
-    _initCommon: function (options) {
+    _initCommon: function(options) {
       var self = this;
       options = options || {};
 
@@ -42,21 +40,19 @@ export function addCommonMethodsToPrototype(proto) {
         retryCount: 0
       };
 
-
-      self.statusListeners = typeof Tracker !== 'undefined' && new Tracker.Dependency;
-      self.statusChanged = function () {
-        if (self.statusListeners)
-          self.statusListeners.changed();
+      self.statusListeners =
+        typeof Tracker !== "undefined" && new Tracker.Dependency();
+      self.statusChanged = function() {
+        if (self.statusListeners) self.statusListeners.changed();
       };
 
       //// Retry logic
-      self._retry = new Retry;
+      self._retry = new Retry();
       self.connectionTimer = null;
-
     },
 
     // Trigger a reconnect.
-    reconnect: function (options) {
+    reconnect: function(options) {
       var self = this;
       options = options || {};
 
@@ -71,7 +67,7 @@ export function addCommonMethodsToPrototype(proto) {
       if (self.currentStatus.connected) {
         if (options._force || options.url) {
           // force reconnect.
-          self._lostConnection(new DDP.ForcedReconnectError);
+          self._lostConnection(new DDP.ForcedReconnectError());
         } // else, noop.
         return;
       }
@@ -87,14 +83,13 @@ export function addCommonMethodsToPrototype(proto) {
       self._retryNow();
     },
 
-    disconnect: function (options) {
+    disconnect: function(options) {
       var self = this;
       options = options || {};
 
       // Failed is permanent. If we're failed, don't let people go back
       // online by calling 'disconnect' then 'reconnect'.
-      if (self._forcedToDisconnect)
-        return;
+      if (self._forcedToDisconnect) return;
 
       // If _permanent is set, permanently disconnect a stream. Once a stream
       // is forced to disconnect, it can never reconnect. This is for
@@ -108,7 +103,7 @@ export function addCommonMethodsToPrototype(proto) {
       self._retry.clear();
 
       self.currentStatus = {
-        status: (options._permanent ? "failed" : "offline"),
+        status: options._permanent ? "failed" : "offline",
         connected: false,
         retryCount: 0
       };
@@ -120,7 +115,7 @@ export function addCommonMethodsToPrototype(proto) {
     },
 
     // maybeError is set unless it's a clean protocol-level close.
-    _lostConnection: function (maybeError) {
+    _lostConnection: function(maybeError) {
       var self = this;
 
       self._cleanup(maybeError);
@@ -129,24 +124,25 @@ export function addCommonMethodsToPrototype(proto) {
 
     // fired when we detect that we've gone online. try to reconnect
     // immediately.
-    _online: function () {
+    _online: function() {
       // if we've requested to be offline by disconnecting, don't reconnect.
-      if (this.currentStatus.status != "offline")
-        this.reconnect();
+      if (this.currentStatus.status != "offline") this.reconnect();
     },
 
-    _retryLater: function (maybeError) {
+    _retryLater: function(maybeError) {
       var self = this;
 
       var timeout = 0;
-      if (self.options.retry ||
-          (maybeError && maybeError.errorType === "DDP.ForcedReconnectError")) {
+      if (
+        self.options.retry ||
+        (maybeError && maybeError.errorType === "DDP.ForcedReconnectError")
+      ) {
         timeout = self._retry.retryLater(
           self.currentStatus.retryCount,
           _.bind(self._retryNow, self)
         );
         self.currentStatus.status = "waiting";
-        self.currentStatus.retryTime = (new Date()).getTime() + timeout;
+        self.currentStatus.retryTime = new Date().getTime() + timeout;
       } else {
         self.currentStatus.status = "failed";
         delete self.currentStatus.retryTime;
@@ -156,11 +152,10 @@ export function addCommonMethodsToPrototype(proto) {
       self.statusChanged();
     },
 
-    _retryNow: function () {
+    _retryNow: function() {
       var self = this;
 
-      if (self._forcedToDisconnect)
-        return;
+      if (self._forcedToDisconnect) return;
 
       self.currentStatus.retryCount += 1;
       self.currentStatus.status = "connecting";
@@ -171,12 +166,10 @@ export function addCommonMethodsToPrototype(proto) {
       self._launchConnection();
     },
 
-
     // Get current status. Reactive.
-    status: function () {
+    status: function() {
       var self = this;
-      if (self.statusListeners)
-        self.statusListeners.depend();
+      if (self.statusListeners) self.statusListeners.depend();
       return self.currentStatus;
     }
   });
