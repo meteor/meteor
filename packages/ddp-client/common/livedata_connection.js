@@ -1611,7 +1611,7 @@ export class Connection {
           'DDP version negotiation failed; server requested version ' +
           msg.version;
         this._stream.disconnect({ _permanent: true, _error: description });
-        options.onDDPVersionNegotiationFailure(description);
+        this.options.onDDPVersionNegotiationFailure(description);
       }
     } else if (msg.msg === 'ping' && this.options.respondToPings) {
       this._send({ msg: 'pong', id: msg.id });
