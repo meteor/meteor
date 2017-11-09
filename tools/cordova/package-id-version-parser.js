@@ -5,23 +5,18 @@
 // some-cordova-plugin@1.0.0
 // @somescope/some-cordova-plugin@1.0.0
 exports.parse = packageIdAndVersion => {
-  const package = {};
+  const packageDetails = {};
   if (packageIdAndVersion) {
     const [
       _matchText,
       scope,
-      scopeSeparator,
       packageName,
-      versionSeparator,
       version,
     ] = packageIdAndVersion.match(
-      /^(@[^\/]*)?(\/)?([^@]*)(@)?(.*)?/
+      /^(?:@([^\/]+)\/)?([^\/@]+)@?(.+)?/
     );
-    package.id =
-      (scope ? scope : '') +
-      (scopeSeparator ? scopeSeparator : '') +
-      packageName;
-    package.version = version ? version : null;
+    packageDetails.id = (scope ? `@${scope}/` : '') + packageName;
+    packageDetails.version = version ? version : null;
   }
-  return package;
+  return packageDetails;
 };

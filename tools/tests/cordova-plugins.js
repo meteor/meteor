@@ -619,27 +619,27 @@ selftest.define(
     const parseCordovaIdVersion =
       require('../cordova/package-id-version-parser.js').parse;
 
-    let package = 'some-cordova-plugin';
+    let fullPackageId = 'some-cordova-plugin';
     selftest.expectEqual(
-      parseCordovaIdVersion(package),
+      parseCordovaIdVersion(fullPackageId),
       { id: 'some-cordova-plugin', version: null }
     );
 
-    package = 'some-cordova-plugin@1.0.0';
+    fullPackageId = 'some-cordova-plugin@1.0.0';
     selftest.expectEqual(
-      parseCordovaIdVersion(package),
+      parseCordovaIdVersion(fullPackageId),
       { id: 'some-cordova-plugin', version: '1.0.0' }
     );
 
-    package = '@somescope/some-cordova-plugin';
+    fullPackageId = '@somescope/some-cordova-plugin';
     selftest.expectEqual(
-      parseCordovaIdVersion(package),
+      parseCordovaIdVersion(fullPackageId),
       { id: '@somescope/some-cordova-plugin', version: null }
     );
 
-    package = '@somescope/some-cordova-plugin@1.0.0';
+    fullPackageId = '@somescope/some-cordova-plugin@1.0.0';
     selftest.expectEqual(
-      parseCordovaIdVersion(package),
+      parseCordovaIdVersion(fullPackageId),
       { id: '@somescope/some-cordova-plugin', version: '1.0.0' }
     );
   }
