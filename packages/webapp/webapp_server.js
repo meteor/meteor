@@ -11,6 +11,7 @@ import connect from "connect";
 import parseRequest from "parseurl";
 import { lookup as lookupUserAgent } from "useragent";
 import send from "send";
+import cluster from "cluster";
 import {
   removeExistingSocketFile,
   registerSocketFileCleanup,
@@ -886,6 +887,9 @@ function runWebAppServer() {
     const unixSocketPath = process.env.UNIX_SOCKET_PATH;
 
     if (unixSocketPath) {
+      if (cluster.isWorker) {
+        unixSocketPath += "." + cluster.worker.id.toString() + ".sock";
+      }
       // Start the HTTP server using a socket file.
       removeExistingSocketFile(unixSocketPath);
       startHttpServer({ path: unixSocketPath });
