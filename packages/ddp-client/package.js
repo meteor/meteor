@@ -5,22 +5,32 @@ Package.describe({
 });
 
 Npm.depends({
-  "faye-websocket": "0.11.1",
-  "lolex": "1.4.0",
-  "permessage-deflate": "0.1.6"
+  'faye-websocket': '0.11.1',
+  lolex: '1.4.0',
+  'permessage-deflate': '0.1.6'
 });
 
-Package.onUse(function (api) {
-  api.use(['check', 'random', 'ejson', 'underscore', 'tracker',
-           'retry', 'id-map', 'ecmascript'],
-          ['client', 'server']);
+Package.onUse(function(api) {
+  api.use(
+    [
+      'check',
+      'random',
+      'ejson',
+      'underscore',
+      'tracker',
+      'retry',
+      'id-map',
+      'ecmascript'
+    ],
+    ['client', 'server']
+  );
 
   api.use('callback-hook', ['client', 'server']);
 
   // common functionality
   api.use('ddp-common', ['client', 'server']);
 
-  api.use('reload', 'client', {weak: true});
+  api.use('reload', 'client', { weak: true });
 
   // we depend on _diffObjects, _applyChanges,
   api.use('diff-sequence', ['client', 'server']);
@@ -29,11 +39,11 @@ Package.onUse(function (api) {
 
   // For backcompat where things use Package.ddp.DDP, etc
   api.export('DDP');
-  api.mainModule("client/client.js", "client");
-  api.mainModule("server/server.js", "server");
+  api.mainModule('client/client.js', 'client');
+  api.mainModule('server/server.js', 'server');
 });
 
-Package.onTest(function (api) {
+Package.onTest(function(api) {
   api.use('livedata', ['client', 'server']);
   api.use('mongo', ['client', 'server']);
   api.use('test-helpers', ['client', 'server']);
