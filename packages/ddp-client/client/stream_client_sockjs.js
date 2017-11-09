@@ -1,4 +1,12 @@
-import { DDP, LivedataTest } from "./namespace.js";
+import { _ } from 'meteor/underscore';
+import { Meteor } from 'meteor/meteor';
+
+// This populates a global variable
+import './sockjs-0.3.4';
+
+import { DDP, LivedataTest } from "../common/namespace.js";
+import { toSockjsUrl } from '../common/urlHelpers';
+import { addCommonMethodsToPrototype } from '../common/stream_client_common';
 
 // @param url {String} URL to Meteor app
 //   "http://subdomain.meteor.com/" or "/" or
@@ -194,3 +202,5 @@ _.extend(LivedataTest.ClientStream.prototype, {
     }, self.CONNECT_TIMEOUT);
   }
 });
+
+addCommonMethodsToPrototype(LivedataTest.ClientStream.prototype);

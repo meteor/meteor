@@ -1,5 +1,5 @@
 import lolex from 'lolex';
-import { DDP, LivedataTest } from "./namespace.js";
+import { DDP, LivedataTest } from "../common/namespace.js";
 
 var newConnection = function (stream, options) {
   // Some of these tests leave outstanding methods with no result yet

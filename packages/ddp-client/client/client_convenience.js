@@ -1,4 +1,4 @@
-import { DDP } from "./namespace.js";
+import { DDP } from "../common/namespace.js";
 
 // Meteor.refresh can be called on the client (if you're in common code) but it
 // only has an effect on the server.

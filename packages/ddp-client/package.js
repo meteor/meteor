@@ -27,19 +27,10 @@ Package.onUse(function (api) {
   // _idParse, _idStringify.
   api.use('mongo-id', ['client', 'server']);
 
-  api.addFiles(['sockjs-0.3.4.js', 'stream_client_sockjs.js'], 'client');
-  api.addFiles('stream_client_nodejs.js', 'server');
-  api.addFiles('stream_client_common.js', ['client', 'server']);
-
-  api.addFiles('livedata_common.js', ['client', 'server']);
-  api.addFiles('random_stream.js', ['client', 'server']);
-
-  api.addFiles('livedata_connection.js', ['client', 'server']);
-
-  api.addFiles('client_convenience.js', 'client');
-
-  api.mainModule("namespace.js");
+  // For backcompat where things use Package.ddp.DDP, etc
   api.export('DDP');
+  api.mainModule("client/client.js", "client");
+  api.mainModule("server/server.js", "server");
 });
 
 Package.onTest(function (api) {
@@ -58,14 +49,14 @@ Package.onTest(function (api) {
     'ejson'
   ]);
 
-  api.addFiles('stub_stream.js');
-  api.addFiles('livedata_connection_tests.js', ['client', 'server']);
-  api.addFiles('livedata_tests.js', ['client', 'server']);
-  api.addFiles('livedata_test_service.js', ['client', 'server']);
-  api.addFiles('random_stream_tests.js', ['client', 'server']);
+  api.addFiles('test/stub_stream.js');
+  api.addFiles('test/livedata_connection_tests.js', ['client', 'server']);
+  api.addFiles('test/livedata_tests.js', ['client', 'server']);
+  api.addFiles('test/livedata_test_service.js', ['client', 'server']);
+  api.addFiles('test/random_stream_tests.js', ['client', 'server']);
 
   api.use('http', 'client');
-  api.addFiles(['stream_tests.js'], 'client');
-  api.addFiles('stream_client_tests.js', 'server');
+  api.addFiles('test/stream_tests.js', 'client');
+  api.addFiles('test/stream_client_tests.js', 'server');
   api.use('check', ['client', 'server']);
 });
