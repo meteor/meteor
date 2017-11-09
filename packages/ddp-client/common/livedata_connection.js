@@ -1606,12 +1606,17 @@ export class Connection {
       // noop, as we assume everything's a pong
     } else if (
       _.include(['added', 'changed', 'removed', 'ready', 'updated'], msg.msg)
-    )
+    ) {
       this._livedata_data(msg);
-    else if (msg.msg === 'nosub') this._livedata_nosub(msg);
-    else if (msg.msg === 'result') this._livedata_result(msg);
-    else if (msg.msg === 'error') this._livedata_error(msg);
-    else Meteor._debug('discarding unknown livedata message type', msg);
+    } else if (msg.msg === 'nosub') {
+      this._livedata_nosub(msg);
+    } else if (msg.msg === 'result') {
+      this._livedata_result(msg);
+    } else if (msg.msg === 'error') {
+      this._livedata_error(msg);
+    } else {
+      Meteor._debug('discarding unknown livedata message type', msg);
+    }
   }
 
   onReset() {
