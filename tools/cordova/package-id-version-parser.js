@@ -7,21 +7,21 @@
 exports.parse = packageIdAndVersion => {
   const package = {};
   if (packageIdAndVersion) {
-    const parts = packageIdAndVersion.match(
+    const [
+      _matchText,
+      scope,
+      scopeSeparator,
+      packageName,
+      versionSeparator,
+      version,
+    ] = packageIdAndVersion.match(
       /^(@[^\/]*)?(\/)?([^@]*)(@)?(.*)?/
     );
-    const details = {
-      scope: parts[1],
-      scopeSeparator: parts[2],
-      packageName: parts[3],
-      versionSeparator: parts[4],
-      version: parts[5],
-    };
     package.id =
-      (details.scope ? details.scope : '') +
-      (details.scopeSeparator ? details.scopeSeparator : '') +
-      details.packageName;
-    package.version = details.version ? details.version : null;
+      (scope ? scope : '') +
+      (scopeSeparator ? scopeSeparator : '') +
+      packageName;
+    package.version = version ? version : null;
   }
   return package;
 };
