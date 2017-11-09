@@ -1,5 +1,11 @@
 ## v.NEXT
 
+* Fixed an issue preventing the installation of scoped Cordova packages.
+  E.g. meteor add cordova:@somescope/some-cordova-plugin@1.0.0 will now
+  work properly.
+  [Issue #7336](https://github.com/meteor/meteor/issues/7336)
+  [PR TODO]()
+
 * [`cordova-lib`](https://github.com/apache/cordova-cli) has been updated to
   version 7.1.0, [`cordova-android`](https://github.com/apache/cordova-android/)
   has been updated to version 6.3.0, and [`cordova-ios`](https://github.com/apache/cordova-ios/)
