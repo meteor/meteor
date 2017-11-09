@@ -16,7 +16,7 @@ import StreamClientCommon from '../common/stream_client_common';
 // We don't do any heartbeating. (The logic that did this in sockjs was removed,
 // because it used a built-in sockjs mechanism. We could do it with WebSocket
 // ping frames or with DDP-level messages.)
-class ClientStream extends StreamClientCommon {
+export default class ClientStream extends StreamClientCommon {
   constructor(endpoint, options) {
     super();
 

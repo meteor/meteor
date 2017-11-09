@@ -6,13 +6,14 @@ import { EJSON } from 'meteor/ejson';
 import { Random } from 'meteor/random';
 import { Hook } from 'meteor/callback-hook';
 import { MongoID } from 'meteor/mongo-id';
+import { DDP } from './namespace';
+import getClientStreamClass from './getClientStreamClass';
 
 if (Meteor.isServer) {
   var Fiber = Npm.require('fibers');
   var Future = Npm.require('fibers/future');
 }
 
-import { DDP, LivedataTest } from './namespace.js';
 import MethodInvoker from './MethodInvoker';
 
 class MongoIDMap extends IdMap {
@@ -41,7 +42,7 @@ class MongoIDMap extends IdMap {
 // fails. We should have better usability in the latter case (while
 // still transparently reconnecting if it's just a transient failure
 // or the server migrating us).
-class Connection {
+export class Connection {
   constructor(url, options) {
     var self = this;
     options = _.extend(
@@ -77,7 +78,7 @@ class Connection {
     if (typeof url === 'object') {
       self._stream = url;
     } else {
-      self._stream = new LivedataTest.ClientStream(url, {
+      self._stream = new (getClientStreamClass())(url, {
         retry: options.retry,
         headers: options.headers,
         _sockjsOptions: options._sockjsOptions,
@@ -1698,50 +1699,3 @@ class Connection {
     }
   }
 }
-
-LivedataTest.Connection = Connection;
-
-// @param url {String} URL to Meteor app,
-//     e.g.:
-//     "subdomain.meteor.com",
-//     "http://subdomain.meteor.com",
-//     "/",
-//     "ddp+sockjs://ddp--****-foo.meteor.com/sockjs"
-
-/**
- * @summary Connect to the server of a different Meteor application to subscribe to its document sets and invoke its remote methods.
- * @locus Anywhere
- * @param {String} url The URL of another Meteor application.
- */
-DDP.connect = function(url, options) {
-  var ret = new Connection(url, options);
-  allConnections.push(ret); // hack. see below.
-  return ret;
-};
-
-DDP._reconnectHook = new Hook({ bindEnvironment: false });
-
-/**
- * @summary Register a function to call as the first step of
- * reconnecting. This function can call methods which will be executed before
- * any other outstanding methods. For example, this can be used to re-establish
- * the appropriate authentication context on the connection.
- * @locus Anywhere
- * @param {Function} callback The function to call. It will be called with a
- * single argument, the [connection object](#ddp_connect) that is reconnecting.
- */
-DDP.onReconnect = function(callback) {
-  return DDP._reconnectHook.register(callback);
-};
-
-// Hack for `spiderable` package: a way to see if the page is done
-// loading all the data it needs.
-//
-allConnections = [];
-DDP._allSubscriptionsReady = function() {
-  return _.all(allConnections, function(conn) {
-    return _.all(conn._subscriptions, function(sub) {
-      return sub.ready;
-    });
-  });
-};

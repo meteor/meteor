@@ -1,5 +1,5 @@
 export { DDP, LivedataTest } from '../common/namespace';
 
-import './stream_client_nodejs';
-
-import '../common/livedata_connection';
+if (false) {
+  import "./stream_client_nodejs";
+}

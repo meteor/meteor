@@ -1,6 +1,10 @@
 import { LivedataTest } from '../common/namespace.js';
 import { toSockjsUrl } from '../common/urlHelpers';
 
+import getClientStreamClass from '../common/getClientStreamClass';
+
+const ClientStream = getClientStreamClass();
+
 Tinytest.add('stream - status', function(test) {
   // Very basic test. Just see that it runs and returns something. Not a
   // lot of coverage, but enough that it would have caught a recent bug.
@@ -40,7 +44,7 @@ testAsyncMulti('stream - reconnect', [
 testAsyncMulti('stream - basic disconnect', [
   function(test, expect) {
     var history = [];
-    var stream = new LivedataTest.ClientStream('/');
+    var stream = new ClientStream('/');
     var onTestComplete = expect(function(unexpectedHistory) {
       stream.disconnect();
       if (unexpectedHistory) {
@@ -93,7 +97,7 @@ testAsyncMulti('stream - basic disconnect', [
 testAsyncMulti('stream - disconnect remains offline', [
   function(test, expect) {
     var history = [];
-    var stream = new LivedataTest.ClientStream('/');
+    var stream = new ClientStream('/');
     var onTestComplete = expect(function(unexpectedHistory) {
       stream.disconnect();
       if (unexpectedHistory) {

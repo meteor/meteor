@@ -7,7 +7,7 @@ import { DDP, LivedataTest } from '../common/namespace.js';
 import { toSockjsUrl } from '../common/urlHelpers';
 import StreamClientCommon from '../common/stream_client_common';
 
-class ClientStream extends StreamClientCommon {
+export default class ClientStream extends StreamClientCommon {
   // @param url {String} URL to Meteor app
   //   "http://subdomain.meteor.com/" or "/" or
   //   "ddp+sockjs://foo-**.meteor.com/sockjs"
@@ -202,5 +202,3 @@ class ClientStream extends StreamClientCommon {
     }, this.CONNECT_TIMEOUT);
   }
 }
-
-LivedataTest.ClientStream = ClientStream;
