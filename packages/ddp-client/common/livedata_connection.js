@@ -856,16 +856,14 @@ export class Connection {
 
   // Sends the DDP stringification of the given message object
   _send(obj) {
-    var self = this;
-    self._stream.send(DDPCommon.stringifyDDP(obj));
+    this._stream.send(DDPCommon.stringifyDDP(obj));
   }
 
   // We detected via DDP-level heartbeats that we've lost the
   // connection.  Unlike `disconnect` or `close`, a lost connection
   // will be automatically retried.
   _lostConnection(error) {
-    var self = this;
-    self._stream._lostConnection(error);
+    this._stream._lostConnection(error);
   }
 
   /**
@@ -874,9 +872,8 @@ export class Connection {
    * @memberOf Meteor
    * @importFromPackage meteor
    */
-  status(/*passthrough args*/) {
-    var self = this;
-    return self._stream.status.apply(self._stream, arguments);
+  status(...args) {
+    return this._stream.status(...args);
   }
 
   /**
@@ -887,9 +884,8 @@ export class Connection {
    * @memberOf Meteor
    * @importFromPackage meteor
    */
-  reconnect(/*passthrough args*/) {
-    var self = this;
-    return self._stream.reconnect.apply(self._stream, arguments);
+  reconnect(...args) {
+    return this._stream.reconnect(...args);
   }
 
   /**
@@ -898,49 +894,43 @@ export class Connection {
    * @memberOf Meteor
    * @importFromPackage meteor
    */
-  disconnect(/*passthrough args*/) {
-    var self = this;
-    return self._stream.disconnect.apply(self._stream, arguments);
+  disconnect(...args) {
+    return this._stream.disconnect(...args);
   }
 
   close() {
-    var self = this;
-    return self._stream.disconnect({ _permanent: true });
+    return this._stream.disconnect({ _permanent: true });
   }
 
   ///
   /// Reactive user system
   ///
   userId() {
-    var self = this;
-    if (self._userIdDeps) self._userIdDeps.depend();
-    return self._userId;
+    if (this._userIdDeps) this._userIdDeps.depend();
+    return this._userId;
   }
 
   setUserId(userId) {
-    var self = this;
     // Avoid invalidating dependents if setUserId is called with current value.
-    if (self._userId === userId) return;
-    self._userId = userId;
-    if (self._userIdDeps) self._userIdDeps.changed();
+    if (this._userId === userId) return;
+    this._userId = userId;
+    if (this._userIdDeps) this._userIdDeps.changed();
   }
 
   // Returns true if we are in a state after reconnect of waiting for subs to be
   // revived or early methods to finish their data, or we are waiting for a
   // "wait" method to finish.
   _waitingForQuiescence() {
-    var self = this;
     return (
-      !_.isEmpty(self._subsBeingRevived) ||
-      !_.isEmpty(self._methodsBlockingQuiescence)
+      !_.isEmpty(this._subsBeingRevived) ||
+      !_.isEmpty(this._methodsBlockingQuiescence)
     );
   }
 
   // Returns true if any method whose message has been sent to the server has
   // not yet invoked its user callback.
   _anyMethodsAreOutstanding() {
-    var self = this;
-    return _.any(_.pluck(self._methodInvokers, 'sentMessage'));
+    return _.any(_.pluck(this._methodInvokers, 'sentMessage'));
   }
 
   _livedata_connected(msg) {
@@ -1065,6 +1055,8 @@ export class Connection {
       this._process_ready(msg, updates);
     } else if (messageType === 'updated') {
       this._process_updated(msg, updates);
+    } else if (messageType === 'nosub') {
+      // ignore this
     } else {
       Meteor._debug('discarding unknown livedata data message type', msg);
     }
@@ -1418,14 +1410,6 @@ export class Connection {
     if (stopCallback) {
       stopCallback(meteorErrorFromMsg(msg));
     }
-  }
-
-  _process_nosub() {
-    // This is called as part of the "buffer until quiescence" process, but
-    // nosub's effect is always immediate. It only goes in the buffer at all
-    // because it's possible for a nosub to be the thing that triggers
-    // quiescence, if we were waiting for a sub to be revived and it dies
-    // instead.
   }
 
   _livedata_result(msg) {
