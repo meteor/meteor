@@ -45,27 +45,26 @@ class MongoIDMap extends IdMap {
 export class Connection {
   constructor(url, options) {
     var self = this;
-    options = _.extend(
-      {
-        onConnected() {},
-        onDDPVersionNegotiationFailure(description) {
-          Meteor._debug(description);
-        },
-        heartbeatInterval: 17500,
-        heartbeatTimeout: 15000,
-        npmFayeOptions: {},
-        // These options are only for testing.
-        reloadWithOutstanding: false,
-        supportedDDPVersions: DDPCommon.SUPPORTED_DDP_VERSIONS,
-        retry: true,
-        respondToPings: true,
-        // When updates are coming within this ms interval, batch them together.
-        bufferedWritesInterval: 5,
-        // Flush buffers immediately if writes are happening continuously for more than this many ms.
-        bufferedWritesMaxAge: 500
+    options = {
+      onConnected() {},
+      onDDPVersionNegotiationFailure(description) {
+        Meteor._debug(description);
       },
-      options
-    );
+      heartbeatInterval: 17500,
+      heartbeatTimeout: 15000,
+      npmFayeOptions: {},
+      // These options are only for testing.
+      reloadWithOutstanding: false,
+      supportedDDPVersions: DDPCommon.SUPPORTED_DDP_VERSIONS,
+      retry: true,
+      respondToPings: true,
+      // When updates are coming within this ms interval, batch them together.
+      bufferedWritesInterval: 5,
+      // Flush buffers immediately if writes are happening continuously for more than this many ms.
+      bufferedWritesMaxAge: 500,
+
+      ...options
+    };
 
     // If set, called when we reconnect, queuing method calls _before_ the
     // existing outstanding ones.
