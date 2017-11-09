@@ -91,7 +91,7 @@ export default class ClientStream extends StreamClientCommon {
 
     // fire resets. This must come after status change so that clients
     // can call send from within a reset callback.
-    _.each(this.eventCallbacks.reset, callback => {
+    this.forEachCallback('reset', callback => {
       callback();
     });
   }
@@ -103,7 +103,7 @@ export default class ClientStream extends StreamClientCommon {
       this.client = null;
       client.close();
 
-      _.each(this.eventCallbacks.disconnect, callback => {
+      this.forEachCallback('disconnect', callback => {
         callback(maybeError);
       });
     }
@@ -140,7 +140,7 @@ export default class ClientStream extends StreamClientCommon {
       headers: this.headers,
       extensions: [deflate]
     };
-    fayeOptions = _.extend(fayeOptions, this.npmFayeOptions);
+    fayeOptions = { ...fayeOptions, ...this.npmFayeOptions };
     var proxyUrl = this._getProxyUrl(targetUrl);
     if (proxyUrl) {
       fayeOptions.proxy = { origin: proxyUrl };
