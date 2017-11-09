@@ -41,9 +41,7 @@ function translateUrl(url, newSchemeBase, subPath) {
     // In the host (ONLY!), change '*' characters into random digits. This
     // allows different stream connections to connect to different hostnames
     // and avoid browser per-hostname connection limits.
-    host = host.replace(/\*/g, function() {
-      return Math.floor(Random.fraction() * 10);
-    });
+    host = host.replace(/\*/g, () => Math.floor(Random.fraction() * 10));
 
     return newScheme + '://' + host + rest;
   } else if (httpUrlMatch) {

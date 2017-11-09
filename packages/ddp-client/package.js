@@ -10,7 +10,7 @@ Npm.depends({
   'permessage-deflate': '0.1.6'
 });
 
-Package.onUse(function(api) {
+Package.onUse((api) => {
   api.use(
     [
       'check',
@@ -42,7 +42,7 @@ Package.onUse(function(api) {
   api.mainModule('server/server.js', 'server');
 });
 
-Package.onTest(function(api) {
+Package.onTest((api) => {
   api.use([
     'livedata',
     'mongo',

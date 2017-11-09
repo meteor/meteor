@@ -14,7 +14,7 @@ export default class MethodInvoker {
     self._callback = options.callback;
     self._connection = options.connection;
     self._message = options.message;
-    self._onResultReceived = options.onResultReceived || function() {};
+    self._onResultReceived = options.onResultReceived || (() => {});
     self._wait = options.wait;
     self.noRetry = options.noRetry;
     self._methodResult = null;

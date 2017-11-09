@@ -21,22 +21,26 @@ DDP._CurrentPublicationInvocation = new Meteor.EnvironmentVariable();
 // XXX: Keep DDP._CurrentInvocation for backwards-compatibility.
 DDP._CurrentInvocation = DDP._CurrentMethodInvocation;
 
-DDP.ConnectionError = Meteor.makeErrorType('DDP.ConnectionError', function(
-  message
-) {
-  var self = this;
-  self.message = message;
-});
+// This is passed into a weird `makeErrorType` function that expects its thing
+// to be a constructor
+function connectionErrorConstructor(message) {
+  this.message = message;
+}
+
+DDP.ConnectionError = Meteor.makeErrorType(
+  'DDP.ConnectionError',
+  connectionErrorConstructor
+);
 
 DDP.ForcedReconnectError = Meteor.makeErrorType(
   'DDP.ForcedReconnectError',
-  function() {}
+  () => {}
 );
 
 // Returns the named sequence of pseudo-random values.
 // The scope will be DDP._CurrentMethodInvocation.get(), so the stream will produce
 // consistent values for method calls on the client and server.
-DDP.randomStream = function(name) {
+DDP.randomStream = name => {
   var scope = DDP._CurrentMethodInvocation.get();
   return DDPCommon.RandomStream.get(scope, name);
 };
@@ -53,7 +57,7 @@ DDP.randomStream = function(name) {
  * @locus Anywhere
  * @param {String} url The URL of another Meteor application.
  */
-DDP.connect = function(url, options) {
+DDP.connect = (url, options) => {
   var ret = new Connection(url, options);
   allConnections.push(ret); // hack. see below.
   return ret;
@@ -70,7 +74,7 @@ DDP._reconnectHook = new Hook({ bindEnvironment: false });
  * @param {Function} callback The function to call. It will be called with a
  * single argument, the [connection object](#ddp_connect) that is reconnecting.
  */
-DDP.onReconnect = function(callback) {
+DDP.onReconnect = callback => {
   return DDP._reconnectHook.register(callback);
 };
 
@@ -78,9 +82,9 @@ DDP.onReconnect = function(callback) {
 // loading all the data it needs.
 //
 allConnections = [];
-DDP._allSubscriptionsReady = function() {
-  return _.all(allConnections, function(conn) {
-    return _.all(conn._subscriptions, function(sub) {
+DDP._allSubscriptionsReady = () => {
+  return _.all(allConnections, conn => {
+    return _.all(conn._subscriptions, sub => {
       return sub.ready;
     });
   });

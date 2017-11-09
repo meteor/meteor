@@ -3,7 +3,7 @@ import { Meteor } from 'meteor/meteor';
 
 // Meteor.refresh can be called on the client (if you're in common code) but it
 // only has an effect on the server.
-Meteor.refresh = function(notification) {};
+Meteor.refresh = () => {};
 
 // By default, try to connect back to the same endpoint as the page
 // was served from.
@@ -28,20 +28,20 @@ if (typeof __meteor_runtime_config__ !== 'undefined') {
 
 var retry = new Retry();
 
-var onDDPVersionNegotiationFailure = function(description) {
+function onDDPVersionNegotiationFailure(description) {
   Meteor._debug(description);
   if (Package.reload) {
     var migrationData = Package.reload.Reload._migrationData('livedata') || {};
     var failures = migrationData.DDPVersionNegotiationFailures || 0;
     ++failures;
-    Package.reload.Reload._onMigrate('livedata', function() {
+    Package.reload.Reload._onMigrate('livedata', () => {
       return [true, { DDPVersionNegotiationFailures: failures }];
     });
-    retry.retryLater(failures, function() {
+    retry.retryLater(failures, () => {
       Package.reload.Reload._reload();
     });
   }
-};
+}
 
 Meteor.connection = DDP.connect(ddpUrl, {
   onDDPVersionNegotiationFailure: onDDPVersionNegotiationFailure
@@ -57,7 +57,7 @@ Meteor.connection = DDP.connect(ddpUrl, {
   'status',
   'reconnect',
   'disconnect'
-].forEach(function(name) {
+].forEach(name => {
   Meteor[name] = Meteor.connection[name].bind(Meteor.connection);
 });
 
