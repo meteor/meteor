@@ -6,15 +6,15 @@ import { EJSON } from 'meteor/ejson';
 import { Random } from 'meteor/random';
 import { Hook } from 'meteor/callback-hook';
 import { MongoID } from 'meteor/mongo-id';
-import { DDP } from './namespace';
-import getClientStreamClass from './getClientStreamClass';
+import { DDP } from './namespace.js';
+import getClientStreamClass from './getClientStreamClass.js';
+import MethodInvoker from './MethodInvoker.js';
 
 if (Meteor.isServer) {
   var Fiber = Npm.require('fibers');
   var Future = Npm.require('fibers/future');
 }
 
-import MethodInvoker from './MethodInvoker';
 
 class MongoIDMap extends IdMap {
   constructor() {

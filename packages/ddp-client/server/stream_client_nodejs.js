@@ -1,9 +1,9 @@
 import { _ } from 'meteor/underscore';
 import { Meteor } from 'meteor/meteor';
 
-import { DDP, LivedataTest } from '../common/namespace';
-import { toWebsocketUrl } from '../common/urlHelpers';
-import StreamClientCommon from '../common/stream_client_common';
+import { DDP, LivedataTest } from '../common/namespace.js';
+import { toWebsocketUrl } from '../common/urlHelpers.js';
+import StreamClientCommon from '../common/stream_client_common.js';
 
 // @param endpoint {String} URL to Meteor app
 //   "http://subdomain.meteor.com/" or "/" or

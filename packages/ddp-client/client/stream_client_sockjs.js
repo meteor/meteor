@@ -4,8 +4,8 @@ import { Meteor } from 'meteor/meteor';
 import './sockjs-0.3.4';
 
 import { DDP, LivedataTest } from '../common/namespace.js';
-import { toSockjsUrl } from '../common/urlHelpers';
-import StreamClientCommon from '../common/stream_client_common';
+import { toSockjsUrl } from '../common/urlHelpers.js';
+import StreamClientCommon from '../common/stream_client_common.js';
 
 export default class ClientStream extends StreamClientCommon {
   // @param url {String} URL to Meteor app

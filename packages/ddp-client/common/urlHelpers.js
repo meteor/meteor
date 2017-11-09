@@ -1,4 +1,4 @@
-import { LivedataTest } from './namespace';
+import { LivedataTest } from './namespace.js';
 import { Random } from 'meteor/random';
 
 // XXX from Underscore.String (http://epeli.github.com/underscore.string/)

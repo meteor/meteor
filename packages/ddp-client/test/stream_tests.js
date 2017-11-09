@@ -1,7 +1,6 @@
 import { LivedataTest } from '../common/namespace.js';
-import { toSockjsUrl } from '../common/urlHelpers';
-
-import getClientStreamClass from '../common/getClientStreamClass';
+import { toSockjsUrl } from '../common/urlHelpers.js';
+import getClientStreamClass from '../common/getClientStreamClass.js';
 
 const ClientStream = getClientStreamClass();
 
