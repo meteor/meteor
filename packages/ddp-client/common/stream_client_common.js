@@ -45,6 +45,7 @@ export default class StreamClientCommon {
 
     this.statusListeners =
       typeof Tracker !== 'undefined' && new Tracker.Dependency();
+
     this.statusChanged = () => {
       if (this.statusListeners) this.statusListeners.changed();
     };

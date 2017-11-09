@@ -12,7 +12,7 @@ export default function getClientStreamClass() {
   if (Meteor.isClient) {
     return notRequire('../client/stream_client_sockjs').default;
   } else {
-    /* Meteor.isServer */ return notRequire('../server/stream_client_nodejs')
-      .default;
+    /* Meteor.isServer */
+    return notRequire('../server/stream_client_nodejs').default;
   }
 }
