@@ -1,4 +1,9 @@
-import { DDP, LivedataTest } from "./namespace.js";
+import { _ } from 'meteor/underscore';
+import { Meteor } from 'meteor/meteor';
+
+import { DDP, LivedataTest } from "../common/namespace";
+import { toWebsocketUrl } from '../common/urlHelpers';
+import { addCommonMethodsToPrototype } from '../common/stream_client_common';
 
 // @param endpoint {String} URL to Meteor app
 //   "http://subdomain.meteor.com/" or "/" or
@@ -202,3 +207,5 @@ LivedataTest.ClientStream = class ClientStream {
     });
   }
 };
+
+addCommonMethodsToPrototype(LivedataTest.ClientStream.prototype);

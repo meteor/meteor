@@ -810,9 +810,9 @@ version of the package to the package server.
 
 This will create at most one build of the package. If the package has an
 OS-dependent binary component, publishing will only register metadata about the
-package. To actually publish the package builds, use `meteor admin get-machine`
-and `meteor publish-for-arch`. Packages with no published builds cannot be added
-to applications.
+package. The binary component will be compiled when it is installed into an
+application with `meteor add`. To pre-build a package for a particular platform,
+use the `meteor publish-for-arch` command.
 
 This will mark you as the only maintainer of the package. You can use
 'meteor admin maintainers' to change package maintainers. For more information
@@ -1021,18 +1021,12 @@ Set the readme field on the latest published version of a core package to the
 readme at a given git commit, or the readme at a given git tag.
 
 >>> admin get-machine
-Open an ssh shell to a machine in the meteor build farm.
-Usage: meteor admin get-machine <arch> [--json] [--verbose] [--minutes min]
+The 'meteor admin get-machine' command has been disabled and the build farm has
+been discontinued. As of Meteor 1.4, packages with binary dependencies are
+automatically compiled when they are installed in an application, assuming the
+target machine has a basic compiler toolchain.
 
-Asks the meteor build farm for a build server and opens a secure shell to it.
+To see the requirements for this compilation step, consult the
+platform requirements for 'node-gyp':
 
-Valid machine architectures are:
-  os.osx.x86_64
-  os.linux.x86_64
-  os.linux.x86_32
-  os.windows.x86_32
-
-Options:
-  --json       return information in JSON form instead of opening a shell
-  --minutes    specify the length of the reservation
-  --verbose    print all output from commands
+  https://github.com/nodejs/node-gyp
