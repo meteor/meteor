@@ -83,8 +83,8 @@ DDP.onReconnect = callback => {
 //
 allConnections = [];
 DDP._allSubscriptionsReady = () => {
-  return _.all(allConnections, conn => {
-    return _.all(conn._subscriptions, sub => {
+  return allConnections.every(conn => {
+    return conn._subscriptions.every(sub => {
       return sub.ready;
     });
   });
