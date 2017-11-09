@@ -474,7 +474,7 @@ main.registerCommand({
       "the target machine has a basic compiler toolchain.");
     Console.info();
     Console.info("To see the requirements for this compilation step,",
-      "consult the platform requirements for  'node-gyp':");
+      "consult the platform requirements for 'node-gyp':");
     Console.info(
       Console.url("https://github.com/nodejs/node-gyp"),
       Console.options({ indent: 2 })
