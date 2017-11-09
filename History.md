@@ -4,7 +4,7 @@
   E.g. meteor add cordova:@somescope/some-cordova-plugin@1.0.0 will now
   work properly.
   [Issue #7336](https://github.com/meteor/meteor/issues/7336)
-  [PR TODO]()
+  [PR #9334](https://github.com/meteor/meteor/pull/9334)
 
 * [`cordova-lib`](https://github.com/apache/cordova-cli) has been updated to
   version 7.1.0, [`cordova-android`](https://github.com/apache/cordova-android/)
