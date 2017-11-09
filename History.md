@@ -12,6 +12,12 @@
   [Feature Request #196](https://github.com/meteor/meteor-feature-requests/issues/196)
   [PR #9213](https://github.com/meteor/meteor/pull/9213)
 
+* Fixed an issue preventing the installation of scoped Cordova packages.
+  E.g. meteor add cordova:@somescope/some-cordova-plugin@1.0.0 will now
+  work properly.
+  [Issue #7336](https://github.com/meteor/meteor/issues/7336)
+  [PR #9334](https://github.com/meteor/meteor/pull/9334)
+
 * iOS icons and launch screens have been updated to support iOS 11
   [Issue #9196](https://github.com/meteor/meteor/issues/9196)
   [PR #9198](https://github.com/meteor/meteor/pull/9198)
