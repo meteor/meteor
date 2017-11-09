@@ -15,7 +15,6 @@ if (Meteor.isServer) {
   var Future = Npm.require('fibers/future');
 }
 
-
 class MongoIDMap extends IdMap {
   constructor() {
     super(MongoID.idStringify, MongoID.idParse);
@@ -248,93 +247,6 @@ export class Connection {
       });
     }
 
-    var onReset = function() {
-      // Send a connect message at the beginning of the stream.
-      // NOTE: reset is called even on the first connection, so this is
-      // the only place we send this message.
-      var msg = { msg: 'connect' };
-      if (self._lastSessionId) msg.session = self._lastSessionId;
-      msg.version = self._versionSuggestion || self._supportedDDPVersions[0];
-      self._versionSuggestion = msg.version;
-      msg.support = self._supportedDDPVersions;
-      self._send(msg);
-
-      // Mark non-retry calls as failed. This has to be done early as getting these methods out of the
-      // current block is pretty important to making sure that quiescence is properly calculated, as
-      // well as possibly moving on to another useful block.
-
-      // Only bother testing if there is an outstandingMethodBlock (there might not be, especially if
-      // we are connecting for the first time.
-      if (self._outstandingMethodBlocks.length > 0) {
-        // If there is an outstanding method block, we only care about the first one as that is the
-        // one that could have already sent messages with no response, that are not allowed to retry.
-        const currentMethodBlock = self._outstandingMethodBlocks[0].methods;
-        self._outstandingMethodBlocks[0].methods = currentMethodBlock.filter(
-          methodInvoker => {
-            // Methods with 'noRetry' option set are not allowed to re-send after
-            // recovering dropped connection.
-            if (methodInvoker.sentMessage && methodInvoker.noRetry) {
-              // Make sure that the method is told that it failed.
-              methodInvoker.receiveResult(
-                new Meteor.Error(
-                  'invocation-failed',
-                  'Method invocation might have failed due to dropped connection. ' +
-                    'Failing because `noRetry` option was passed to Meteor.apply.'
-                )
-              );
-            }
-
-            // Only keep a method if it wasn't sent or it's allowed to retry.
-            // This may leave the block empty, but we don't move on to the next
-            // block until the callback has been delivered, in _outstandingMethodFinished.
-            return !(methodInvoker.sentMessage && methodInvoker.noRetry);
-          }
-        );
-      }
-
-      // Now, to minimize setup latency, go ahead and blast out all of
-      // our pending methods ands subscriptions before we've even taken
-      // the necessary RTT to know if we successfully reconnected. (1)
-      // They're supposed to be idempotent, and where they are not,
-      // they can block retry in apply; (2) even if we did reconnect,
-      // we're not sure what messages might have gotten lost
-      // (in either direction) since we were disconnected (TCP being
-      // sloppy about that.)
-
-      // If the current block of methods all got their results (but didn't all get
-      // their data visible), discard the empty block now.
-      if (
-        !_.isEmpty(self._outstandingMethodBlocks) &&
-        _.isEmpty(self._outstandingMethodBlocks[0].methods)
-      ) {
-        self._outstandingMethodBlocks.shift();
-      }
-
-      // Mark all messages as unsent, they have not yet been sent on this
-      // connection.
-      _.each(self._methodInvokers, function(m) {
-        m.sentMessage = false;
-      });
-
-      // If an `onReconnect` handler is set, call it first. Go through
-      // some hoops to ensure that methods that are called from within
-      // `onReconnect` get executed _before_ ones that were originally
-      // outstanding (since `onReconnect` is used to re-establish auth
-      // certificates)
-      self._callOnReconnectAndSendAppropriateOutstandingMethods();
-
-      // add new subscriptions at the end. this way they take effect after
-      // the handlers and we don't see flicker.
-      _.each(self._subscriptions, function(sub, id) {
-        self._send({
-          msg: 'sub',
-          id: id,
-          name: sub.name,
-          params: sub.params
-        });
-      });
-    };
-
     var onDisconnect = function() {
       if (self._heartbeat) {
         self._heartbeat.stop();
@@ -345,11 +257,14 @@ export class Connection {
     if (Meteor.isServer) {
       self._stream.on(
         'message',
-        Meteor.bindEnvironment(this.onMessage.bind(this), 'handling DDP message')
+        Meteor.bindEnvironment(
+          this.onMessage.bind(this),
+          'handling DDP message'
+        )
       );
       self._stream.on(
         'reset',
-        Meteor.bindEnvironment(onReset, 'handling DDP reset')
+        Meteor.bindEnvironment(this.onReset.bind(this), 'handling DDP reset')
       );
       self._stream.on(
         'disconnect',
@@ -357,7 +272,7 @@ export class Connection {
       );
     } else {
       self._stream.on('message', this.onMessage.bind(this));
-      self._stream.on('reset', onReset);
+      self._stream.on('reset', this.onReset.bind(this));
       self._stream.on('disconnect', onDisconnect);
     }
   }
@@ -437,7 +352,7 @@ export class Connection {
         // onStop with an error callback instead.
         _.any(
           [lastParam.onReady, lastParam.onError, lastParam.onStop],
-          (f) => typeof f === 'function'
+          f => typeof f === 'function'
         )
       ) {
         callbacks = params.pop();
@@ -1697,5 +1612,92 @@ export class Connection {
     else if (msg.msg === 'result') this._livedata_result(msg);
     else if (msg.msg === 'error') this._livedata_error(msg);
     else Meteor._debug('discarding unknown livedata message type', msg);
+  }
+
+  onReset() {
+    // Send a connect message at the beginning of the stream.
+    // NOTE: reset is called even on the first connection, so this is
+    // the only place we send this message.
+    var msg = { msg: 'connect' };
+    if (this._lastSessionId) msg.session = this._lastSessionId;
+    msg.version = this._versionSuggestion || this._supportedDDPVersions[0];
+    this._versionSuggestion = msg.version;
+    msg.support = this._supportedDDPVersions;
+    this._send(msg);
+
+    // Mark non-retry calls as failed. This has to be done early as getting these methods out of the
+    // current block is pretty important to making sure that quiescence is properly calculated, as
+    // well as possibly moving on to another useful block.
+
+    // Only bother testing if there is an outstandingMethodBlock (there might not be, especially if
+    // we are connecting for the first time.
+    if (this._outstandingMethodBlocks.length > 0) {
+      // If there is an outstanding method block, we only care about the first one as that is the
+      // one that could have already sent messages with no response, that are not allowed to retry.
+      const currentMethodBlock = this._outstandingMethodBlocks[0].methods;
+      this._outstandingMethodBlocks[0].methods = currentMethodBlock.filter(
+        methodInvoker => {
+          // Methods with 'noRetry' option set are not allowed to re-send after
+          // recovering dropped connection.
+          if (methodInvoker.sentMessage && methodInvoker.noRetry) {
+            // Make sure that the method is told that it failed.
+            methodInvoker.receiveResult(
+              new Meteor.Error(
+                'invocation-failed',
+                'Method invocation might have failed due to dropped connection. ' +
+                  'Failing because `noRetry` option was passed to Meteor.apply.'
+              )
+            );
+          }
+
+          // Only keep a method if it wasn't sent or it's allowed to retry.
+          // This may leave the block empty, but we don't move on to the next
+          // block until the callback has been delivered, in _outstandingMethodFinished.
+          return !(methodInvoker.sentMessage && methodInvoker.noRetry);
+        }
+      );
+    }
+
+    // Now, to minimize setup latency, go ahead and blast out all of
+    // our pending methods ands subscriptions before we've even taken
+    // the necessary RTT to know if we successfully reconnected. (1)
+    // They're supposed to be idempotent, and where they are not,
+    // they can block retry in apply; (2) even if we did reconnect,
+    // we're not sure what messages might have gotten lost
+    // (in either direction) since we were disconnected (TCP being
+    // sloppy about that.)
+
+    // If the current block of methods all got their results (but didn't all get
+    // their data visible), discard the empty block now.
+    if (
+      !_.isEmpty(this._outstandingMethodBlocks) &&
+      _.isEmpty(this._outstandingMethodBlocks[0].methods)
+    ) {
+      this._outstandingMethodBlocks.shift();
+    }
+
+    // Mark all messages as unsent, they have not yet been sent on this
+    // connection.
+    _.each(this._methodInvokers, m => {
+      m.sentMessage = false;
+    });
+
+    // If an `onReconnect` handler is set, call it first. Go through
+    // some hoops to ensure that methods that are called from within
+    // `onReconnect` get executed _before_ ones that were originally
+    // outstanding (since `onReconnect` is used to re-establish auth
+    // certificates)
+    this._callOnReconnectAndSendAppropriateOutstandingMethods();
+
+    // add new subscriptions at the end. this way they take effect after
+    // the handlers and we don't see flicker.
+    _.each(this._subscriptions, (sub, id) => {
+      this._send({
+        msg: 'sub',
+        id: id,
+        name: sub.name,
+        params: sub.params
+      });
+    });
   }
 }
