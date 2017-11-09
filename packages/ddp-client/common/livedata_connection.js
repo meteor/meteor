@@ -1618,7 +1618,7 @@ export class Connection {
     } else if (msg.msg === 'pong') {
       // noop, as we assume everything's a pong
     } else if (
-      _.include(['added', 'changed', 'removed', 'ready', 'updated'], msg.msg)
+      ['added', 'changed', 'removed', 'ready', 'updated'].includes(msg.msg)
     ) {
       this._livedata_data(msg);
     } else if (msg.msg === 'nosub') {
@@ -1688,16 +1688,16 @@ export class Connection {
     // If the current block of methods all got their results (but didn't all get
     // their data visible), discard the empty block now.
     if (
-      !_.isEmpty(this._outstandingMethodBlocks) &&
-      _.isEmpty(this._outstandingMethodBlocks[0].methods)
+      this._outstandingMethodBlocks.length > 0 &&
+      this._outstandingMethodBlocks[0].methods.length === 0
     ) {
       this._outstandingMethodBlocks.shift();
     }
 
     // Mark all messages as unsent, they have not yet been sent on this
     // connection.
-    _.each(this._methodInvokers, m => {
-      m.sentMessage = false;
+    Object.entries(this._methodInvokers).forEach(([id, methodInvoker]) => {
+      methodInvoker.sentMessage = false;
     });
 
     // If an `onReconnect` handler is set, call it first. Go through
@@ -1709,7 +1709,7 @@ export class Connection {
 
     // add new subscriptions at the end. this way they take effect after
     // the handlers and we don't see flicker.
-    _.each(this._subscriptions, (sub, id) => {
+    Object.entries(this._subscriptions).forEach(([id, sub]) => {
       this._send({
         msg: 'sub',
         id: id,
