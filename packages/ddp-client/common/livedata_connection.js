@@ -480,7 +480,7 @@ export class Connection {
     var callbacks = {};
     if (params.length) {
       var lastParam = params[params.length - 1];
-      if (_.isFunction(lastParam)) {
+      if (typeof lastParam === 'function') {
         callbacks.onReady = params.pop();
       } else if (
         lastParam &&
@@ -488,7 +488,7 @@ export class Connection {
         // onStop with an error callback instead.
         _.any(
           [lastParam.onReady, lastParam.onError, lastParam.onStop],
-          _.isFunction
+          (f) => typeof f === 'function'
         )
       ) {
         callbacks = params.pop();
