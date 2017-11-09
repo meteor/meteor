@@ -22,6 +22,10 @@ var translateUrl =  function(url, newSchemeBase, subPath) {
     newSchemeBase = "http";
   }
 
+  if (subPath !== "sockjs" && startsWith(url, "/")) {
+    url = Meteor.absoluteUrl(url.substr(1));
+  }
+
   var ddpUrlMatch = url.match(/^ddp(i?)\+sockjs:\/\//);
   var httpUrlMatch = url.match(/^http(s?):\/\//);
   var newScheme;
@@ -47,6 +51,8 @@ var translateUrl =  function(url, newSchemeBase, subPath) {
     var urlAfterHttp = url.substr(httpUrlMatch[0].length);
     url = newScheme + "://" + urlAfterHttp;
   }
+
+
 
   // Prefix FQDNs but not relative URLs
   if (url.indexOf("://") === -1 && !startsWith(url, "/")) {
@@ -82,7 +88,7 @@ toWebsocketUrl = function (url) {
 
 LivedataTest.toSockjsUrl = toSockjsUrl;
 
- 
+
 _.extend(LivedataTest.ClientStream.prototype, {
 
   // Register for callbacks.
