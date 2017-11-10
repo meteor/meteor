@@ -140,7 +140,7 @@ export default class ClientStream extends StreamClientCommon {
       headers: this.headers,
       extensions: [deflate]
     };
-    fayeOptions = { ...fayeOptions, ...this.npmFayeOptions };
+    fayeOptions = Object.assign(fayeOptions, this.npmFayeOptions);
     var proxyUrl = this._getProxyUrl(targetUrl);
     if (proxyUrl) {
       fayeOptions.proxy = { origin: proxyUrl };
