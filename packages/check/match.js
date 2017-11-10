@@ -379,14 +379,14 @@ var testSubtree = function (value, pattern) {
   for (var keys = allKeys(value), i = 0, length = keys.length; i < length; i++) {
     var key = keys[i];
     var subValue = value[key];
-    if (_.has(requiredPatterns, key)) {
+    if (Object.prototype.hasOwnProperty.call(requiredPatterns, key)) {
       var result = testSubtree(subValue, requiredPatterns[key]);
       if (result) {
         result.path = _prependPath(key, result.path);
         return result;
       }
       delete requiredPatterns[key];
-    } else if (_.has(optionalPatterns, key)) {
+    } else if (Object.prototype.hasOwnProperty.call(optionalPatterns, key)) {
       var result = testSubtree(subValue, optionalPatterns[key]);
       if (result) {
         result.path = _prependPath(key, result.path);
