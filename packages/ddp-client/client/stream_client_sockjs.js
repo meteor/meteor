@@ -3,7 +3,7 @@ import { Meteor } from 'meteor/meteor';
 // This populates a global variable
 import './sockjs-0.3.4';
 
-import { DDP, LivedataTest } from '../common/namespace.js';
+import { DDP } from '../common/namespace.js';
 import { toSockjsUrl } from '../common/urlHelpers.js';
 import StreamClientCommon from '../common/stream_client_common.js';
 

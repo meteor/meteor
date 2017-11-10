@@ -3,7 +3,7 @@ import { Meteor } from 'meteor/meteor';
 import { Tracker } from 'meteor/tracker';
 import { Retry } from 'meteor/retry';
 
-import { DDP, LivedataTest } from './namespace.js';
+import { DDP } from './namespace.js';
 
 export default class StreamClientCommon {
   // Register for callbacks.

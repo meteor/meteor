@@ -8,9 +8,6 @@ import { Connection } from './livedata_connection.js';
  * @summary Namespace for DDP-related methods/classes.
  */
 export const DDP = {};
-export const LivedataTest = {
-  Connection
-};
 
 // This is private but it's used in a few places. accounts-base uses
 // it to get the current user. Meteor.setTimeout and friends clear

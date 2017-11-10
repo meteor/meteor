@@ -1,4 +1,5 @@
-import { DDP, LivedataTest } from '../common/namespace.js';
+import { DDP } from '../common/namespace.js';
+import { Connection } from '../common/livedata_connection.js';
 
 // XXX should check error codes
 var failure = function(test, code, reason) {
@@ -704,7 +705,7 @@ if (Meteor.isClient) {
         function(test, expect) {
           // Use a separate connection so that we can safely check to see if
           // conn._subscriptions is empty.
-          conn = new LivedataTest.Connection('/', {
+          conn = new Connection('/', {
             reloadWithOutstanding: true
           });
           collName = Random.id();
@@ -800,7 +801,7 @@ if (Meteor.isClient) {
         function(test, expect) {
           // Use a separate connection so that we can safely check to see if
           // conn._subscriptions is empty.
-          conn = new LivedataTest.Connection('/', {
+          conn = new Connection('/', {
             reloadWithOutstanding: true
           });
           collName = Random.id();

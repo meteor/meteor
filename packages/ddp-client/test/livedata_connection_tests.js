@@ -1,11 +1,12 @@
 import lolex from 'lolex';
-import { DDP, LivedataTest } from '../common/namespace.js';
+import { DDP } from '../common/namespace.js';
+import { Connection } from '../common/livedata_connection.js';
 
 var newConnection = function(stream, options) {
   // Some of these tests leave outstanding methods with no result yet
   // returned. This should not block us from re-running tests when sources
   // change.
-  return new LivedataTest.Connection(
+  return new Connection(
     stream,
     _.extend(
       {
@@ -1830,7 +1831,7 @@ _.each(DDPCommon.SUPPORTED_DDP_VERSIONS, function(version) {
     test,
     onComplete
   ) {
-    var connection = new LivedataTest.Connection(getSelfConnectionUrl(), {
+    var connection = new Connection(getSelfConnectionUrl(), {
       reloadWithOutstanding: true,
       supportedDDPVersions: [version],
       onDDPVersionNegotiationFailure: function() {
@@ -1936,7 +1937,7 @@ testAsyncMulti('livedata connection - reconnect to a different server', [
 Tinytest.addAsync(
   'livedata connection - version negotiation requires renegotiating',
   function(test, onComplete) {
-    var connection = new LivedataTest.Connection(getSelfConnectionUrl(), {
+    var connection = new Connection(getSelfConnectionUrl(), {
       reloadWithOutstanding: true,
       supportedDDPVersions: ['garbled', DDPCommon.SUPPORTED_DDP_VERSIONS[0]],
       onDDPVersionNegotiationFailure: function() {
@@ -1956,7 +1957,7 @@ Tinytest.addAsync('livedata connection - version negotiation error', function(
   test,
   onComplete
 ) {
-  var connection = new LivedataTest.Connection(getSelfConnectionUrl(), {
+  var connection = new Connection(getSelfConnectionUrl(), {
     reloadWithOutstanding: true,
     supportedDDPVersions: ['garbled', 'more garbled'],
     onDDPVersionNegotiationFailure: function() {

@@ -1,4 +1,3 @@
-import { LivedataTest } from '../common/namespace.js';
 import { toSockjsUrl } from '../common/urlHelpers.js';
 import getClientStreamClass from '../common/getClientStreamClass.js';
 
