@@ -465,35 +465,18 @@ main.registerCommand({
   } else if (binary) {
     // Normal publish flow. Tell the user nicely.
     Console.warn();
-    Console.warn(
-      "You're not done publishing yet! This package contains binary code and",
-      "must be built on all of Meteor's architectures, including this",
-      "machine's architecture.");
+    Console.warn("This package contains binary code which must be",
+      "compiled on the architecture it will eventually run on.");
     Console.warn();
     Console.info(
-      "You can access Meteor provided build machines, pre-configured to",
-      "support older versions of MacOS and Linux, by running:");
-    _.each(["os.osx.x86_64", "os.linux.x86_64",
-            "os.linux.x86_32", "os.windows.x86_32"],
-      function (a) {
-        Console.info(
-          Console.command("meteor admin get-machine " + a),
-          Console.options({ indent: 2 }));
-    });
-
+      "Meteor 1.4 and higher will automatically compile packages",
+      "with binary dependencies when they are installed, assuming",
+      "the target machine has a basic compiler toolchain.");
     Console.info();
-    Console.info("On each machine, run:");
-    Console.info();
+    Console.info("To see the requirements for this compilation step,",
+      "consult the platform requirements for 'node-gyp':");
     Console.info(
-      Console.command(
-        "meteor publish-for-arch " +
-        packageSource.name + "@" + packageSource.version),
-      Console.options({ indent: 2 }));
-    Console.info();
-    Console.info(
-      "For more information on binary ABIs and consistent builds, see:");
-    Console.info(
-      Console.url("https://github.com/meteor/meteor/wiki/Build-Machines"),
+      Console.url("https://github.com/nodejs/node-gyp"),
       Console.options({ indent: 2 })
     );
     Console.info();
