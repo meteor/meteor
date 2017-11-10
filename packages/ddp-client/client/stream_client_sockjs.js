@@ -187,7 +187,7 @@ export default class ClientStream extends StreamClientCommon {
       // XXX is this ever called?
       Meteor._debug(
         'stream error',
-        Array.prototype.slice.call(arguments),
+        Array.from(arguments),
         new Date().toDateString()
       );
     };
