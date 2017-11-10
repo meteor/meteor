@@ -242,7 +242,7 @@ var testSubtree = function (value, pattern) {
         path: ""
       };
     }
-    if (!Array.isArray(value) && !_.isArguments(value)) {
+    if (!Array.isArray(value) && !isArguments(value)) {
       return {
         message: "Expected array, got " + stringForErrorMessage(value),
         path: ""
@@ -438,7 +438,7 @@ class ArgumentChecker {
     // Allow check(arguments, [String]) or check(arguments.slice(1), [String])
     // or check([foo, bar], [String]) to count... but only if value wasn't
     // itself an argument.
-    if (Array.isArray(value) || _.isArguments(value)) {
+    if (Array.isArray(value) || isArguments(value)) {
       _.each(value, self._checkingOneValue.bind(self));
     }
   }
@@ -488,3 +488,6 @@ var _prependPath = function (key, base) {
   return key + base;
 };
 
+function isArguments(item) {
+  return Object.prototype.toString.call(item) === '[object Arguments]';
+}
