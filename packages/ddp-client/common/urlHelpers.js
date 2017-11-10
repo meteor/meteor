@@ -1,12 +1,5 @@
 import { Random } from 'meteor/random';
 
-// XXX from Underscore.String (http://epeli.github.com/underscore.string/)
-function startsWith(str, starts) {
-  return (
-    str.length >= starts.length && str.substring(0, starts.length) === starts
-  );
-}
-
 function endsWith(str, ends) {
   return (
     str.length >= ends.length &&
@@ -50,7 +43,7 @@ function translateUrl(url, newSchemeBase, subPath) {
   }
 
   // Prefix FQDNs but not relative URLs
-  if (url.indexOf('://') === -1 && !startsWith(url, '/')) {
+  if (url.indexOf('://') === -1 && !url.startsWith('/')) {
     url = newSchemeBase + '://' + url;
   }
 
