@@ -602,15 +602,6 @@ export class Connection {
     // while because of a wait method).
     args = EJSON.clone(args);
 
-    // Lazily allocate method ID once we know that it'll be needed.
-    var methodId = (function() {
-      var id;
-      return function() {
-        if (id === undefined) id = '' + self._nextMethodId++;
-        return id;
-      };
-    })();
-
     var enclosing = DDP._CurrentMethodInvocation.get();
     var alreadyInSimulation = enclosing && enclosing.isSimulation;
 
@@ -682,8 +673,6 @@ export class Connection {
       } catch (e) {
         var exception = e;
       }
-
-      if (!alreadyInSimulation) self._retrieveAndStoreOriginals(methodId());
     }
 
     // If we're in a simulation, stop and return the result we have,
@@ -697,6 +686,24 @@ export class Connection {
       if (exception) throw exception;
       return stubReturnValue;
     }
+
+    // We only create the methodId here because we don't actually need one if
+    // we're already in a simulation
+    const methodId = '' + self._nextMethodId++;
+    if (stub) {
+      self._retrieveAndStoreOriginals(methodId);
+    }
+
+    // Generate the DDP message for the method call. Note that on the client,
+    // it is important that the stub have finished before we send the RPC, so
+    // that we know we have a complete list of which local documents the stub
+    // wrote.
+    var message = {
+      msg: 'method',
+      method: name,
+      params: args,
+      id: methodId
+    };
 
     // If an exception occurred in a stub, and we're ignoring it
     // because we're doing an RPC and want to use what the server
@@ -738,15 +745,6 @@ export class Connection {
         callback = future.resolver();
       }
     }
-    // Send the RPC. Note that on the client, it is important that the
-    // stub have finished before we send the RPC, so that we know we have
-    // a complete list of which local documents the stub wrote.
-    var message = {
-      msg: 'method',
-      method: name,
-      params: args,
-      id: methodId()
-    };
 
     // Send the randomSeed only if we used it
     if (randomSeed !== null) {
@@ -754,7 +752,7 @@ export class Connection {
     }
 
     var methodInvoker = new MethodInvoker({
-      methodId: methodId(),
+      methodId,
       callback: callback,
       connection: self,
       onResultReceived: options.onResultReceived,
