@@ -439,7 +439,7 @@ class ArgumentChecker {
     // or check([foo, bar], [String]) to count... but only if value wasn't
     // itself an argument.
     if (Array.isArray(value) || isArguments(value)) {
-      _.each(value, self._checkingOneValue.bind(self));
+      Array.prototype.forEach.call(value, self._checkingOneValue.bind(self));
     }
   }
 
