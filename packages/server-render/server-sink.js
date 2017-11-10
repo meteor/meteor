@@ -33,7 +33,7 @@ export class ServerSink {
     this.appendToElementById(id, html);
   }
 
-  redirect(location, code) {
+  redirect(location, code = 301) {
     this.maybeMadeChanges = true;
     this.statusCode = code;
     this.responseHeaders.Location = location;

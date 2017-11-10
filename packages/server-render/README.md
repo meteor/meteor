@@ -32,6 +32,24 @@ class Sink {
 
   // Replaces the content of the identified element.
   renderIntoElementById(id, content)
+
+  // Redirects request to new location.
+  redirect(location, code)
+
+
+  // server only methods
+
+  // sets the status code of the response.
+  setStatusCode(code)
+
+  // sets a header of the response.
+  setHeader(key, value)
+
+  // gets request headers
+  getHeaders()
+
+  // gets request cookies
+  getCookies()
 }
 ```
 
@@ -107,3 +125,57 @@ generated during rendering to the `<head>` of the response document.
 
 Although these examples have all involved React, the `onPageLoad` API is
 designed to be generically useful for any kind of server-side rendering.
+
+
+#### Meteor Accounts
+Meteor's authentication system uses cookies to store the login token for
+an authenticated user. To get access to this, you can use the `getCookies` method
+on the server sink and access the login token like so:
+
+```js
+import React from "react";
+import { Meteor } from "meteor/meteor";
+import { Accounts } from "meteor/accounts-server";
+import { renderToNodeStream } from "react-dom/server";
+import { onPageLoad } from "meteor/server-render";
+import App from "/imports/Server.js";
+
+onPageLoad(sink => {
+  const { meteor_login_token } = sink.getCookies();
+
+  let user;
+  if (meteor_login_token) {
+    const hashedToken = Accounts._hashLoginToken(meteor_login_token);
+    const query = {'services.resume.loginTokens.hashedToken': hashedToken };
+    const options = { fields: { _id: 1 } };
+    user = Meteor.users.findOne(query, options);
+  }
+                    
+  sink.renderIntoElementById("app", renderToNodeStream(
+    <App location={sink.request.url} user={user} />
+  ));
+});
+```
+
+
+
+#### React 16 renderToNodeStream
+Since React 16, it is possible to render a React app to a node stream which
+can be piped to the response. This can decrease time to first byte, and improve
+performance of server rendered apps.
+
+Here is a basic example of using streams:
+
+```js
+import React from "react";
+import { renderToNodeStream } from "react-dom/server";
+import { onPageLoad } from "meteor/server-render";
+import App from "/imports/Server.js";
+
+onPageLoad(sink => {
+  sink.renderIntoElementById("app", renderToNodeStream(
+    <App location={sink.request.url} />
+  ));
+});
+```
+
