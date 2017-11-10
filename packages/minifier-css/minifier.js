@@ -133,7 +133,7 @@ const CssTools = {
         CssTools.rewriteCssUrls(ast);
 
         const imports = ast.nodes.splice(0, importCount);
-        newAst.nodes = newAst.nodes.concat(imports);
+        newAst.nodes.push(...imports);
 
         // If there are imports left in the middle of a file, warn users as it
         // might be a potential bug (imports are only valid at the beginning of
@@ -151,7 +151,7 @@ const CssTools = {
     // Now we can put the rest of CSS rules into new AST.
     cssAsts.forEach((ast) => {
       if (ast.nodes) {
-        newAst.nodes = newAst.nodes.concat(ast.nodes);
+        newAst.nodes.push(...ast.nodes);
       }
     });
 
@@ -234,9 +234,9 @@ const rewriteRules = (rules, mergedCssPath) => {
       // We don't rewrite URLs starting with a protocol definition such as
       // http, https, or data, or those with network-path references
       // i.e. //img.domain.com/cat.gif
-      if (resource.protocol !== null
-          || resource.href.startsWith('//')
-          || resource.href.startsWith('#')) {
+      if (resource.protocol !== null ||
+          resource.href.startsWith('//') ||
+          resource.href.startsWith('#')) {
         continue;
       }
 
@@ -263,7 +263,7 @@ const rewriteRules = (rules, mergedCssPath) => {
       // the final resource links (by adding the application deployment
       // prefix, here `myapp/`, if applicable).
       const relativeToMergedCss = pathRelative(mergedCssPath, absolutePath);
-      const newCssUrl = 'url(' + quote + relativeToMergedCss + quote + ')';
+      const newCssUrl = `url(${quote}${relativeToMergedCss}${quote})`;
       value = value.replace(oldCssUrl, newCssUrl);
     }
 
