@@ -368,9 +368,9 @@ var testSubtree = function (value, pattern) {
   });
 
   //XXX: replace with underscore's _.allKeys if Meteor updates underscore to 1.8+ (or lodash)
-  var allKeys = function(obj){
+  function allKeys(obj) {
     var keys = [];
-    if (_.isObject(obj)){
+    if (obj) {
       for (var key in obj) keys.push(key);
     }
     return keys;
