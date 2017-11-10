@@ -120,7 +120,7 @@ function detectMobileServerUrl(parsedServerUrl, isRunOnDeviceRequested) {
     // Unless we are being asked to run on a device, use localhost as fallback
     if (isRunOnDeviceRequested) {
       Console.error(
-`Error detecting IP address for mobile app to connect to:
+        `Error detecting IP address for mobile app to connect to:
 ${error.message}
 Please specify the address that the mobile app should connect
 to with --mobile-server.`);
@@ -246,7 +246,7 @@ function normalizeInspectOptions(options) {
   if (_.has(options, "debug-port")) {
     console.log(
       "The --debug-port option is deprecated; " +
-        "please use --inspect-brk=<port> instead."
+      "please use --inspect-brk=<port> instead."
     );
 
     if (! _.has(options, "inspect-brk")) {
@@ -265,7 +265,7 @@ function normalizeInspectOptions(options) {
     if (_.has(options, "inspect")) {
       console.log(
         "Both --inspect and --inspect-brk provided; " +
-          "ignoring --inspect."
+        "ignoring --inspect."
       );
 
       delete options.inspect;
@@ -347,8 +347,8 @@ function doRunCommand(options) {
   if (release.explicit) {
     if (release.current.name !== projectContext.releaseFile.fullReleaseName) {
       console.log("=> Using %s as requested (overriding %s)",
-                  release.current.getDisplayName(),
-                  projectContext.releaseFile.displayReleaseName);
+        release.current.getDisplayName(),
+        projectContext.releaseFile.displayReleaseName);
       console.log();
     }
   }
@@ -693,34 +693,34 @@ main.registerCommand({
   // inside itself
   if (files.exists(appPath)) {
     destinationHasCodeFiles = _.any(files.readdir(appPath),
-        function thisPathCountsAsAFile(filePath) {
-      // We don't mind if there are hidden files or directories (this includes
-      // .git) and we don't need to check for .meteor here because the command
-      // will fail earlier
-      var isHidden = /^\./.test(filePath);
-      if (isHidden) {
-        // Not code
-        return false;
-      }
+      function thisPathCountsAsAFile(filePath) {
+        // We don't mind if there are hidden files or directories (this includes
+        // .git) and we don't need to check for .meteor here because the command
+        // will fail earlier
+        var isHidden = /^\./.test(filePath);
+        if (isHidden) {
+          // Not code
+          return false;
+        }
 
-      // We do mind if there are non-hidden directories, because we don't want
-      // to recursively check everything to do some crazy heuristic to see if
-      // we should try to create an app.
-      var stats = files.stat(files.pathJoin(appPath, filePath));
-      if (stats.isDirectory()) {
-        // Could contain code
+        // We do mind if there are non-hidden directories, because we don't want
+        // to recursively check everything to do some crazy heuristic to see if
+        // we should try to create an app.
+        var stats = files.stat(files.pathJoin(appPath, filePath));
+        if (stats.isDirectory()) {
+          // Could contain code
+          return true;
+        }
+
+        // Check against our file extension white list
+        var ext = files.pathExtname(filePath);
+        if (ext == '' || _.contains(nonCodeFileExts, ext)) {
+          return false;
+        }
+
+        // Everything not matched above is considered to be possible source code
         return true;
-      }
-
-      // Check against our file extension white list
-      var ext = files.pathExtname(filePath);
-      if (ext == '' || _.contains(nonCodeFileExts, ext)) {
-        return false;
-      }
-
-      // Everything not matched above is considered to be possible source code
-      return true;
-    });
+      });
   }
 
   var toIgnore = [/^local$/, /^\.id$/]
@@ -820,7 +820,7 @@ main.registerCommand({
     // Don't tell people to 'cd .'
     Console.info(
       Console.command("cd " + appPathWithQuotesIfSpaces),
-        Console.options({ indent: 2 }));
+      Console.options({ indent: 2 }));
   }
 
   Console.info(
@@ -830,7 +830,7 @@ main.registerCommand({
   Console.info("If you are new to Meteor, try some of the learning resources here:");
   Console.info(
     Console.url("https://www.meteor.com/tutorials"),
-      Console.options({ indent: 2 }));
+    Console.options({ indent: 2 }));
 
   if (!options.full && !options.bare){
     // Notice people about --bare and --full
@@ -874,25 +874,25 @@ var buildCommands = {
 main.registerCommand(_.extend({ name: 'build' }, buildCommands),
   function (options) {
     return buildCommand(options);
-});
+  });
 
 // Deprecated -- identical functionality to 'build' with one exception: it
 // doesn't output a directory with all builds but rather only one tarball with
 // server/client programs.
 // XXX COMPAT WITH 0.9.1.1
 main.registerCommand(_.extend({ name: 'bundle', hidden: true
-                              }, buildCommands),
-    function (options) {
+}, buildCommands),
+  function (options) {
 
-      Console.error(
+    Console.error(
       "This command has been deprecated in favor of " +
       Console.command("'meteor build'") + ", which allows you to " +
       "build for multiple platforms and outputs a directory instead of " +
       "a single tarball. See " + Console.command("'meteor help build'") + " " +
       "for more information.");
-      Console.error();
-      return buildCommand(_.extend(options, { _bundleOnly: true }));
-});
+    Console.error();
+    return buildCommand(_.extend(options, { _bundleOnly: true }));
+  });
 
 var buildCommand = function (options) {
   Console.setVerbose(!!options.verbose);
@@ -912,7 +912,7 @@ var buildCommand = function (options) {
   // architectures. See archinfo.js for more information on what the
   // architectures are, what they mean, et cetera.
   if (options.architecture &&
-      !_.has(archinfo.VALID_ARCHITECTURES, options.architecture)) {
+    !_.has(archinfo.VALID_ARCHITECTURES, options.architecture)) {
     showInvalidArchMsg(options.architecture);
     return 1;
   }
@@ -960,7 +960,7 @@ on an OS X system.");
         // XXX better error message?
         Console.error(
           "Supply the server hostname and port in the --server option " +
-            "for mobile app builds.");
+          "for mobile app builds.");
         return 1;
       }
       parsedMobileServerUrl = parseMobileServerOption(mobileServerOption,
@@ -988,9 +988,9 @@ ${Console.command("meteor build ../output")}`,
   }
 
   var bundlePath = options.directory ?
-      (options._bundleOnly ? outputPath :
+    (options._bundleOnly ? outputPath :
       files.pathJoin(outputPath, 'bundle')) :
-      files.pathJoin(buildDir, 'bundle');
+    files.pathJoin(buildDir, 'bundle');
 
   stats.recordPackages({
     what: "sdk.bundle",
@@ -1092,7 +1092,7 @@ ${displayNameForPlatform(platform)}` }, () => {
             if (platform === 'ios') {
               files.writeFile(
                 files.pathJoin(platformOutputPath, 'README'),
-`This is an auto-generated XCode project for your iOS application.
+                `This is an auto-generated XCode project for your iOS application.
 
 Instructions for publishing your iOS app to App Store can be found at:
 https://guide.meteor.com/mobile.html#submitting-ios
@@ -1102,19 +1102,19 @@ https://guide.meteor.com/mobile.html#submitting-ios
                 options.debug ? 'android-debug.apk' : 'android-release-unsigned.apk')
 
               if (files.exists(apkPath)) {
-              files.copyFile(apkPath, files.pathJoin(platformOutputPath,
-                options.debug ? 'debug.apk' : 'release-unsigned.apk'));
+                files.copyFile(apkPath, files.pathJoin(platformOutputPath,
+                  options.debug ? 'debug.apk' : 'release-unsigned.apk'));
               }
 
               files.writeFile(
                 files.pathJoin(platformOutputPath, 'README'),
-`This is an auto-generated Gradle project for your Android application.
+                `This is an auto-generated Gradle project for your Android application.
 
 Instructions for publishing your Android app to Play Store can be found at:
 https://guide.meteor.com/mobile.html#submitting-android
 `, "utf8");
             }
-        });
+          });
       }
     });
   }
@@ -1157,7 +1157,7 @@ main.registerCommand({
       projectContext.initializeCatalog()
     );
     const versionRecord =
-        projectContext.localCatalog.getVersionBySourceRoot(packageDir);
+      projectContext.localCatalog.getVersionBySourceRoot(packageDir);
     if (! versionRecord) {
       throw Error("explicitly added local package dir missing?");
     }
@@ -1304,8 +1304,8 @@ main.registerCommand({
 
   if (process.env.MONGO_URL) {
     Console.info("As a precaution, meteor reset only clears the local database that is " +
-                 "provided by meteor run for development. The database specified with " +
-                 "MONGO_URL will NOT be reset.");
+      "provided by meteor run for development. The database specified with " +
+      "MONGO_URL will NOT be reset.");
   }
 
   // XXX detect the case where Meteor is running the app, but
@@ -1365,9 +1365,9 @@ main.registerCommand({
   if (options.password) {
     Console.error(
       "Setting passwords on apps is no longer supported. Now there are " +
-        "user accounts and your apps are associated with your account so " +
-        "that only you (and people you designate) can access them. See the " +
-        Console.command("'meteor authorized'") + " command.");
+      "user accounts and your apps are associated with your account so " +
+      "that only you (and people you designate) can access them. See the " +
+      Console.command("'meteor authorized'") + " command.");
     return 1;
   }
 
@@ -1528,7 +1528,8 @@ testCommandOptions = {
     'disable-oplog': { type: Boolean },
     // Undocumented flag to use a different test driver.
     'driver-package': { type: String },
-
+    // Undocumented. Pattern to match for eagerly loaded test files
+    'test-match': { type: String },
     // Sets the path of where the temp app should be created
     'test-app-path': { type: String },
 
@@ -1654,12 +1655,16 @@ function doTestCommand(options) {
   if (options['driver-package']) {
     includePackages.push(
       global.testCommandMetadata.driverPackage =
-        options['driver-package'].trim()
+      options['driver-package'].trim()
     );
   } else if (options["test-packages"]) {
     includePackages.push(
       global.testCommandMetadata.driverPackage = "test-in-browser"
     );
+  }
+
+  if (options['test-match']) {
+    global.testCommandMetadata.testMatch = options['test-match'].trim();
   }
 
   var projectContextOptions = {
@@ -2079,7 +2084,7 @@ main.registerCommand({
   }
 
   if (result.response.statusCode === 401 &&
-      body && body.error === "invalid_credential") {
+    body && body.error === "invalid_credential") {
     Console.error("You must be logged in to list your organizations.");
     // XXX It would be nice to do a username/password prompt here like
     // we do for the other orgs commands.
@@ -2087,7 +2092,7 @@ main.registerCommand({
   }
 
   if (result.response.statusCode !== 200 ||
-      ! body || ! body.organizations) {
+    ! body || ! body.organizations) {
     Console.error("Error listing organizations.");
     return 1;
   }
@@ -2136,14 +2141,14 @@ main.registerCommand({
         options.args[0], username);
     } catch (err) {
       Console.error("Error " +
-                    (options.add ? "adding" : "removing") +
-                    " member: " + err.reason);
+        (options.add ? "adding" : "removing") +
+        " member: " + err.reason);
       return 1;
     }
 
     Console.info(username + " " +
-                         (options.add ? "added to" : "removed from") +
-                         " organization " + options.args[0] + ".");
+      (options.add ? "added to" : "removed from") +
+      " organization " + options.args[0] + ".");
   } else {
     // Showing the members of an org
     try {
@@ -2430,7 +2435,7 @@ main.registerCommand({
   };
 
   Console.info(p('ething') + " " + p('port') + " " + p('changed') +
-                       " " + p('args'));
+    " " + p('args'));
   if (options.url) {
     Console.info('url');
   }

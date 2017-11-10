@@ -926,7 +926,10 @@ _.extend(PackageSource.prototype, {
       && global.testCommandMetadata.isTest;
     const isAppTest = global.testCommandMetadata
       && global.testCommandMetadata.isAppTest;
-    const isTestFile = (isTest || isAppTest) && isTestFilePath(relPath);
+      const testMatch = global.testCommandMetadata
+      && global.testCommandMetadata.testMatch;
+    const isTestFile = (isTest || isAppTest) 
+      && isTestFilePath(relPath, testMatch);
 
     // If running in test mode (`meteor test`), all files other than
     // test files should be loaded lazily.
@@ -1006,13 +1009,26 @@ _.extend(PackageSource.prototype, {
     // Ignore the usual ignorable files.
     sourceReadOptions.exclude.push(...ignoreFiles);
 
-    // Unless we're running tests, ignore all test filenames and if we are, ignore the
-    // type of file we *aren't* running
-    if (!global.testCommandMetadata || global.testCommandMetadata.isTest) {
-      Array.prototype.push.apply(sourceReadOptions.exclude, APP_TEST_FILENAME_REGEXPS);
-    }
-    if (!global.testCommandMetadata || global.testCommandMetadata.isAppTest) {
-      Array.prototype.push.apply(sourceReadOptions.exclude, TEST_FILENAME_REGEXPS);
+    // Unless we're running tests, ignore all test filenames and if we are, 
+    // ignore the type of file we *aren't* running. Use the testMatch pattern, 
+    // if provided and ignore all other test patterns
+    if (global.testCommandMetadata && global.testCommandMetadata.testMatch) {
+      // For the case where testMatch has been specified as one of the defaults, 
+      // we need to be sure not to exclude those files
+      let patterns = [...TEST_FILENAME_REGEXPS, ...APP_TEST_FILENAME_REGEXPS];
+      const testMatch = global.testCommandMetadata.testMatch;
+      const index = patterns.findIndex(p => p.source === testMatch);
+      if (index !== -1) {
+        patterns.splice(index, 1);
+      }
+      Array.prototype.push.apply(sourceReadOptions.exclude, patterns);
+    } else {
+      if (!global.testCommandMetadata || global.testCommandMetadata.isTest) {
+        Array.prototype.push.apply(sourceReadOptions.exclude, APP_TEST_FILENAME_REGEXPS);
+      }
+      if (!global.testCommandMetadata || global.testCommandMetadata.isAppTest) {
+        Array.prototype.push.apply(sourceReadOptions.exclude, TEST_FILENAME_REGEXPS);
+      }
     }
 
     // Read top-level source files, excluding control files that were not
