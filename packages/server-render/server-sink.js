@@ -6,6 +6,8 @@ export class ServerSink {
     this.body = "";
     this.htmlById = Object.create(null);
     this.maybeMadeChanges = false;
+    this.statusCode = null;
+    this.responseHeaders = {};
   }
 
   appendToHead(html) {
@@ -31,17 +33,29 @@ export class ServerSink {
     this.appendToElementById(id, html);
   }
 
-  redirect(code, location) {
-    
+  redirect(location, code) {
+    this.maybeMadeChanges = true;
+    this.statusCode = code;
+    this.responseHeaders.Location = location;
   }
 
   // server only methods
   setStatusCode(code) {
-    
+    this.maybeMadeChanges = true;
+    this.statusCode = code;
+  }
+
+  setHeader(key, value) {
+    this.maybeMadeChanges = true;
+    this.responseHeaders[key] = value;
   }
 
   getHeaders() {
-    
+    return this.request.headers;
+  }
+
+  getCookies() {
+    return this.request.cookies;
   }
 }
 

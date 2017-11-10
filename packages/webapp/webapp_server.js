@@ -122,7 +122,7 @@ WebApp.categorizeRequest = function (req) {
   return _.extend({
     browser: identifyBrowser(req.headers['user-agent']),
     url: parseUrl(req.url, true)
-  }, _.pick(req, 'dynamicHead', 'dynamicBody'));
+  }, _.pick(req, 'dynamicHead', 'dynamicBody', 'headers', 'cookies'));
 };
 
 // HTML attribute hooks: functions to be called to determine any attributes to
@@ -315,7 +315,11 @@ function getBoilerplateAsync(request, arch) {
     );
 
     // if (! useMemoized) {
-      return boilerplate.toHTML(data);
+    return {
+      ...boilerplate.toHTML(data),
+      statusCode: data.statusCode,
+      headers: data.headers,
+    };
     // }
 
     // The only thing that changes from request to request (unless extra
@@ -799,8 +803,15 @@ function runWebAppServer() {
       return getBoilerplateAsync(
         request,
         archKey
-      ).then(({ start, stream, end }) => {
-        var statusCode = res.statusCode ? res.statusCode : 200;
+      ).then(({ start, stream, end, statusCode, headers: newHeaders }) => {
+        if (!statusCode) {
+          statusCode = res.statusCode ? res.statusCode : 200;
+        }
+        if (newHeaders) {
+          headers = {...headers, ...newHeaders };
+        }
+
+        console.log("setting status code")
         res.writeHead(statusCode, headers);
         res.write(start);
         stream.pipe(res, { end: false })

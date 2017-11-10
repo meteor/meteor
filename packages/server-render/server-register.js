@@ -81,6 +81,16 @@ WebAppInternals.registerBoilerplateDataCallback(
         reallyMadeChanges = true;
       }
 
+      if (sink.statusCode) {
+        data.statusCode = sink.statusCode;
+        reallyMadeChanges = true;
+      }
+
+      if (Object.keys(sink.responseHeaders)){
+        data.headers = sink.responseHeaders;
+        reallyMadeChanges = true;
+      }
+
       return reallyMadeChanges;
     });
   }

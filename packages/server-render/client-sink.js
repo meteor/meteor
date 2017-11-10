@@ -2,6 +2,10 @@ const doc = document;
 const head = doc.getElementsByTagName("head")[0];
 const body = doc.body;
 
+const isoError = (method) => {
+  return `sink.${method} was called on the client when
+    it should only be called on the server.`;
+}
 export class ClientSink {
   appendToHead(nodeOrHtml) {
     appendContent(head, nodeOrHtml);
@@ -22,7 +26,30 @@ export class ClientSink {
     }
     appendContent(element, nodeOrHtml);
   }
+
+  redirect(location) {
+    // code can't be set on the client
+    window.location = location;
+  }
+
+  // server only methods
+  setStatusCode() {
+    console.error(isoError("setStatusCode"));
+  }
+
+  setHeader() {
+    console.error(isoError("setHeader"));
+  }
+
+  getHeaders() {
+    console.error(isoError("getHeaders"));
+  }
+
+  getCookies() {
+    console.error(isoError("getCookies"));
+  }
 }
+
 
 function appendContent(destination, nodeOrHtml) {
   if (typeof nodeOrHtml === "string") {
