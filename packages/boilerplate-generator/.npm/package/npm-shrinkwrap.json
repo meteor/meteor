@@ -1,0 +1,10 @@
+{
+  "lockfileVersion": 1,
+  "dependencies": {
+    "combine-streams": {
+      "version": "1.0.0",
+      "resolved": "https://registry.npmjs.org/combine-streams/-/combine-streams-1.0.0.tgz",
+      "integrity": "sha1-U2W6BKdmGM8zshPDFtM+XBs8RgQ="
+    }
+  }
+}

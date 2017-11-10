@@ -3,6 +3,10 @@ Package.describe({
   version: '1.3.1'
 });
 
+Npm.depends({
+  "combine-streams": "1.0.0"
+});
+
 Package.onUse(api => {
   api.use('ecmascript');
   api.use('underscore', 'server');

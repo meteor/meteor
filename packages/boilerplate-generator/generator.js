@@ -1,5 +1,5 @@
 import { readFile } from 'fs';
-import { Readable } from 'stream';
+import combine from "combine-streams";
 
 import WebBrowserTemplate from './template-web.browser';
 import WebCordovaTemplate from './template-web.cordova';
@@ -22,21 +22,6 @@ export class Boilerplate {
     );
   }
 
-  stringToStream(str) {
-    if (!str) str = "";
-
-    // this is a stream
-    if (typeof str !== "string") return str;
-
-    const stream = new Readable();
-    stream._read = () => {};
-    stream.push(str);
-    // end the stream
-    stream.push(null);
-
-    return stream;
-  }
-
   // The 'extraData' argument can be used to extend 'self.baseData'. Its
   // purpose is to allow you to specify data that you might not know at
   // the time that you construct the Boilerplate object. (e.g. it is used
@@ -54,8 +39,10 @@ export class Boilerplate {
     const start = "<!DOCTYPE html>\n" + this.headTemplate(data);
 
     const { body, dynamicBody } = data;
-    const stream = this.stringToStream(body)
-        // .pipe(this.stringToStream(dynamicBody));
+    const stream = combine()
+      .append(body || "")
+      .append(dynamicBody || "")
+      .append(null);
 
     const end = this.closeTemplate(data);
 
