@@ -235,7 +235,7 @@ export class Connection {
 
     // Block auto-reload while we're waiting for method responses.
     if (Meteor.isClient && Package.reload && !options.reloadWithOutstanding) {
-      Package.reload.Reload._onMigrate((retry) => {
+      Package.reload.Reload._onMigrate(retry => {
         if (!self._readyToMigrate()) {
           if (self._retryMigrate)
             throw new Error('Two migrations in progress?');
@@ -298,7 +298,7 @@ export class Connection {
         'getDoc',
         '_getCollection'
       ],
-      (method) => {
+      method => {
         store[method] = (...args) => {
           return wrappedStore[method]
             ? wrappedStore[method].apply(wrappedStore, args)
@@ -312,7 +312,7 @@ export class Connection {
     var queued = self._updatesForUnknownStores[name];
     if (queued) {
       store.beginUpdate(queued.length, false);
-      _.each(queued, (msg) => {
+      _.each(queued, msg => {
         store.update(msg);
       });
       store.endUpdate();
@@ -377,7 +377,7 @@ export class Connection {
     // We only look for one such sub; if there are N apparently-identical subs
     // being invalidated, we will require N matching subscribe calls to keep
     // them all active.
-    var existing = _.find(self._subscriptions, (sub) => {
+    var existing = _.find(self._subscriptions, sub => {
       return (
         sub.inactive && sub.name === name && EJSON.equals(sub.params, params)
       );
@@ -471,7 +471,7 @@ export class Connection {
       // as a change to mark the subscription "inactive" so that it can
       // be reused from the rerun.  If it isn't reused, it's killed from
       // an afterFlush.
-      Tracker.onInvalidate((c) => {
+      Tracker.onInvalidate(c => {
         if (_.has(self._subscriptions, id))
           self._subscriptions[id].inactive = true;
 
@@ -646,7 +646,7 @@ export class Connection {
 
     var stub = self._methodHandlers[name];
     if (stub) {
-      var setUserId = (userId) => {
+      var setUserId = userId => {
         self.setUserId(userId);
       };
 
@@ -727,7 +727,7 @@ export class Connection {
         // only thing we can do is to return undefined and discard the
         // result of the RPC. If an error occurred then print the error
         // to the console.
-        callback = (err) => {
+        callback = err => {
           err &&
             Meteor._debug("Error invoking Method '" + name + "':", err.message);
         };
@@ -797,7 +797,7 @@ export class Connection {
   _saveOriginals() {
     var self = this;
     if (!self._waitingForQuiescence()) self._flushBufferedWrites();
-    _.each(self._stores, (s) => {
+    _.each(self._stores, s => {
       s.saveOriginals();
     });
   }
@@ -1003,7 +1003,7 @@ export class Connection {
     // that we drop here will be restored by the loop below.
     self._methodsBlockingQuiescence = {};
     if (self._resetStores) {
-      _.each(self._methodInvokers, (invoker) => {
+      _.each(self._methodInvokers, invoker => {
         if (invoker.gotResult()) {
           // This method already got its result, but it didn't call its callback
           // because its data didn't become visible. We did not resend the
@@ -1031,7 +1031,7 @@ export class Connection {
     // call the callbacks immediately.
     if (!self._waitingForQuiescence()) {
       if (self._resetStores) {
-        _.each(self._stores, (s) => {
+        _.each(self._stores, s => {
           s.beginUpdate(0, true);
           s.endUpdate();
         });
@@ -1070,10 +1070,10 @@ export class Connection {
 
       if (msg.msg === 'nosub') delete self._subsBeingRevived[msg.id];
 
-      _.each(msg.subs || [], (subId) => {
+      _.each(msg.subs || [], subId => {
         delete self._subsBeingRevived[subId];
       });
-      _.each(msg.methods || [], (methodId) => {
+      _.each(msg.methods || [], methodId => {
         delete self._methodsBlockingQuiescence[methodId];
       });
 
@@ -1082,7 +1082,7 @@ export class Connection {
       // No methods or subs are blocking quiescence!
       // We'll now process and all of our buffered messages, reset all stores,
       // and apply them all at once.
-      _.each(self._messagesBufferedUntilQuiescence, (bufferedMsg) => {
+      _.each(self._messagesBufferedUntilQuiescence, bufferedMsg => {
         self._processOneDataMessage(bufferedMsg, self._bufferedWrites);
       });
       self._messagesBufferedUntilQuiescence = [];
@@ -1148,7 +1148,7 @@ export class Connection {
       _.each(updates, (updateMessages, storeName) => {
         var store = self._stores[storeName];
         if (store) {
-          _.each(updateMessages, (updateMessage) => {
+          _.each(updateMessages, updateMessage => {
             store.update(updateMessage);
           });
         } else {
@@ -1167,7 +1167,7 @@ export class Connection {
       });
 
       // End update transaction.
-      _.each(self._stores, (s) => {
+      _.each(self._stores, s => {
         s.endUpdate();
       });
     }
@@ -1182,7 +1182,7 @@ export class Connection {
     var self = this;
     var callbacks = self._afterUpdateCallbacks;
     self._afterUpdateCallbacks = [];
-    _.each(callbacks, (c) => {
+    _.each(callbacks, c => {
       c();
     });
   }
@@ -1262,8 +1262,8 @@ export class Connection {
   _process_updated(msg, updates) {
     var self = this;
     // Process "method done" messages.
-    _.each(msg.methods, (methodId) => {
-      _.each(self._documentsWrittenByStub[methodId], (written) => {
+    _.each(msg.methods, methodId => {
+      _.each(self._documentsWrittenByStub[methodId], written => {
         var serverDoc = self._getServerDoc(written.collection, written.id);
         if (!serverDoc)
           throw new Error('Lost serverDoc for ' + JSON.stringify(written));
@@ -1290,7 +1290,7 @@ export class Connection {
             replace: serverDoc.document
           });
           // Call all flush callbacks.
-          _.each(serverDoc.flushCallbacks, (c) => {
+          _.each(serverDoc.flushCallbacks, c => {
             c();
           });
 
@@ -1318,7 +1318,7 @@ export class Connection {
     // Process "sub ready" messages. "sub ready" messages don't take effect
     // until all current server documents have been flushed to the local
     // database. We can use a write fence to implement this.
-    _.each(msg.subs, (subId) => {
+    _.each(msg.subs, subId => {
       self._runWhenAllServerDocsAreFlushed(() => {
         var subRecord = self._subscriptions[subId];
         // Did we already unsubscribe?
@@ -1349,8 +1349,8 @@ export class Connection {
         runFAfterUpdates();
       }
     };
-    _.each(self._serverDocuments, (collectionDocs) => {
-      collectionDocs.forEach((serverDoc) => {
+    _.each(self._serverDocuments, collectionDocs => {
+      collectionDocs.forEach(serverDoc => {
         var writtenByStubForAMethodWithSentMessage = _.any(
           serverDoc.writtenByStubs,
           (dummy, methodId) => {
@@ -1390,7 +1390,7 @@ export class Connection {
 
     self._subscriptions[msg.id].remove();
 
-    var meteorErrorFromMsg = (msgArg) => {
+    var meteorErrorFromMsg = msgArg => {
       return (
         msgArg &&
         msgArg.error &&
@@ -1488,7 +1488,7 @@ export class Connection {
   _sendOutstandingMethods() {
     var self = this;
     if (_.isEmpty(self._outstandingMethodBlocks)) return;
-    _.each(self._outstandingMethodBlocks[0].methods, (m) => {
+    _.each(self._outstandingMethodBlocks[0].methods, m => {
       m.sendMessage();
     });
   }
@@ -1504,7 +1504,7 @@ export class Connection {
     self._outstandingMethodBlocks = [];
 
     self.onReconnect && self.onReconnect();
-    DDP._reconnectHook.each((callback) => {
+    DDP._reconnectHook.each(callback => {
       callback(self);
       return true;
     });
@@ -1527,7 +1527,7 @@ export class Connection {
       !_.last(self._outstandingMethodBlocks).wait &&
       !oldOutstandingMethodBlocks[0].wait
     ) {
-      _.each(oldOutstandingMethodBlocks[0].methods, (m) => {
+      _.each(oldOutstandingMethodBlocks[0].methods, m => {
         _.last(self._outstandingMethodBlocks).methods.push(m);
 
         // If this "last block" is also the first block, send the message.
@@ -1538,7 +1538,7 @@ export class Connection {
     }
 
     // Now add the rest of the original blocks on.
-    _.each(oldOutstandingMethodBlocks, (block) => {
+    _.each(oldOutstandingMethodBlocks, block => {
       self._outstandingMethodBlocks.push(block);
     });
   }
