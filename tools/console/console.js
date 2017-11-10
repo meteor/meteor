@@ -66,6 +66,8 @@ var utils = require('../utils/utils.js');
 var wordwrap = require('wordwrap');
 
 var PROGRESS_DEBUG = !!process.env.METEOR_PROGRESS_DEBUG;
+// Recommended for better performance for Emacs shell users.
+var PROGRESS_STATUS_ONLY = !!process.env.METEOR_PROGRESS_STATUS_ONLY;
 var FORCE_PRETTY=undefined;
 // Set the default CR to \r unless we're running with cmd
 var CARRIAGE_RETURN = process.platform === 'win32' &&
@@ -1180,7 +1182,8 @@ class Console extends ConsoleBase {
     } else if ((! this._stream.isTTY) || (! this._pretty)) {
       // No progress bar if not in pretty / on TTY.
       newProgressDisplay = new ProgressDisplayNone(this);
-    } else if (this._stream.isTTY && ! this._stream.columns) {
+    } else if (PROGRESS_STATUS_ONLY ||
+               (this._stream.isTTY && ! this._stream.columns)) {
       // We might be in a pseudo-TTY that doesn't support
       // clearLine() and cursorTo(...).
       // It's important that we only enter status message mode
