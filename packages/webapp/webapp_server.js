@@ -314,9 +314,9 @@ function getBoilerplateAsync(request, arch) {
       madeChanges
     );
 
-    if (! useMemoized) {
+    // if (! useMemoized) {
       return boilerplate.toHTML(data);
-    }
+    // }
 
     // The only thing that changes from request to request (unless extra
     // content is added to the head or body, or boilerplateDataCallbacks
@@ -799,12 +799,16 @@ function runWebAppServer() {
       return getBoilerplateAsync(
         request,
         archKey
-      ).then(boilerplate => {
+      ).then(({ start, stream, end }) => {
         var statusCode = res.statusCode ? res.statusCode : 200;
         res.writeHead(statusCode, headers);
-        res.write(boilerplate);
-        res.end();
-      }, error => {
+        res.write(start);
+        stream.pipe(res, { end: false })
+        stream.on("end", () => {
+          res.write(end);
+          res.end();
+        })
+      }).catch(error => {
         Log.error("Error running template: " + error.stack);
         res.writeHead(500, headers);
         res.end();

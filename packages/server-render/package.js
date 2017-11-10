@@ -6,6 +6,7 @@ Package.describe({
 });
 
 Npm.depends({
+  "combine-streams": "1.0.0",
   "magic-string": "0.21.3",
   "parse5": "3.0.2"
 });

@@ -1,8 +1,18 @@
 import { WebAppInternals } from "meteor/webapp";
-import { SAXParser } from "parse5";
+import { Readable } from "stream";
 import MagicString from "magic-string";
-import { ServerSink } from "./server-sink.js";
+import { SAXParser } from "parse5";
+import combine from "combine-streams";
+import { ServerSink, isReadable } from "./server-sink.js";
 import { onPageLoad } from "./server.js";
+
+function stringToStream(str) {
+  const stream = new Readable();
+  stream._read = function() {};
+  stream.push(str);
+  stream.push(null);;
+  return stream;
+}
 
 WebAppInternals.registerBoilerplateDataCallback(
   "meteor/server-render",
@@ -29,22 +39,40 @@ WebAppInternals.registerBoilerplateDataCallback(
           locationInfo: true
         });
 
-        parser.on("startTag", (name, attrs, selfClosing, loc) => {
-          attrs.some(attr => {
-            if (attr.name === "id") {
-              const html = sink.htmlById[attr.value];
-              if (html) {
-                magic.appendRight(loc.endOffset, html);
-                reallyMadeChanges = true;
+        data[property] = parser;
+
+        if (Object.keys(sink.htmlById).length) {
+          // create an empty stream;
+          const stream = combine();
+
+          let lastStart = magic.start;
+          parser.on("startTag", (name, attrs, selfClosing, loc) => {
+            attrs.some(attr => {
+              if (attr.name === "id") {
+                let html = sink.htmlById[attr.value];
+                if (typeof html === "string") {
+                  html = stringToStream(html);
+                }
+                if (html && isReadable(html)) {
+                  reallyMadeChanges = true;
+                  const start = magic.slice(lastStart, loc.endOffset);
+                  const end = magic.slice(loc.endOffset);
+                  stream
+                    .append(start)
+                    .append(html)
+                    .append(end)
+                    .append(null);
+                  lastStart = loc.endOffset;
+                }
+                return true;
               }
-              return true;
-            }
+            });
           });
-        });
 
-        parser.write(html);
+          data[property] = stream;
+        }
 
-        data[property] = magic.toString();
+        parser.write(html, parser.end.bind(parser));
       }
 
       if (sink.head) {

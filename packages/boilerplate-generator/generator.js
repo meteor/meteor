@@ -1,4 +1,5 @@
 import { readFile } from 'fs';
+import { Readable } from 'stream';
 
 import WebBrowserTemplate from './template-web.browser';
 import WebCordovaTemplate from './template-web.cordova';
@@ -10,7 +11,9 @@ const identity = value => value;
 
 export class Boilerplate {
   constructor(arch, manifest, options = {}) {
-    this.template = _getTemplate(arch);
+    const { headTemplate, closeTemplate } = _getTemplate(arch);
+    this.headTemplate = headTemplate;
+    this.closeTemplate = closeTemplate;
     this.baseData = null;
 
     this._generateBoilerplateFromManifest(
@@ -19,17 +22,44 @@ export class Boilerplate {
     );
   }
 
+  stringToStream(str) {
+    if (!str) str = "";
+
+    // this is a stream
+    if (typeof str !== "string") return str;
+
+    const stream = new Readable();
+    stream._read = () => {};
+    stream.push(str);
+    // end the stream
+    stream.push(null);
+
+    return stream;
+  }
+
   // The 'extraData' argument can be used to extend 'self.baseData'. Its
   // purpose is to allow you to specify data that you might not know at
   // the time that you construct the Boilerplate object. (e.g. it is used
   // by 'webapp' to specify data that is only known at request-time).
+  // this returns three writeable objects:
+  // - a head that is a string for immediate flushing
+  // - a stream of the body
+  // - a closing body and scripts to flush and end the req
   toHTML(extraData) {
-    if (!this.baseData || !this.template) {
+    if (!this.baseData || !this.headTemplate || !this.closeTemplate) {
       throw new Error('Boilerplate did not instantiate correctly.');
     }
 
-    return  "<!DOCTYPE html>\n" +
-      this.template({ ...this.baseData, ...extraData });
+    const data = {...this.baseData, ...extraData};
+    const start = "<!DOCTYPE html>\n" + this.headTemplate(data);
+
+    const { body, dynamicBody } = data;
+    const stream = this.stringToStream(body)
+        // .pipe(this.stringToStream(dynamicBody));
+
+    const end = this.closeTemplate(data);
+
+    return { start, stream, end }
   }
 
   // XXX Exported to allow client-side only changes to rebuild the boilerplate

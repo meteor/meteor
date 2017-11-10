@@ -30,6 +30,30 @@ export class ServerSink {
     this.htmlById[id] = "";
     this.appendToElementById(id, html);
   }
+
+  redirect(code, location) {
+    
+  }
+
+  // server only methods
+  setStatusCode(code) {
+    
+  }
+
+  getHeaders() {
+    
+  }
+}
+
+export function isReadable(stream) {
+  return (
+    stream !== null &&
+    typeof stream === 'object' &&
+    typeof stream.pipe === 'function' &&
+    stream.readable !== false &&
+    typeof stream._read === 'function' &&
+    typeof stream._readableState === 'object'
+  );
 }
 
 function appendContent(object, property, content) {
@@ -41,10 +65,13 @@ function appendContent(object, property, content) {
         madeChanges = true;
       }
     });
+  } else if (isReadable(content)) {
+    object[property] = content;
+    madeChanges = true;
   } else if ((content = content && content.toString("utf8"))) {
     object[property] = (object[property] || "") + content;
     madeChanges = true;
-  }
-
+    // should we join streams here?
+  } 
   return madeChanges;
 }
