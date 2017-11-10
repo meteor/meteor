@@ -1,4 +1,4 @@
-export function generateHTMLForArch(arch) {
+export async function generateHTMLForArch(arch) {
   // Use a dummy manifest. None of these paths will be read from the filesystem, but css / js should be handled differently
   const manifest = [
     {
@@ -50,5 +50,29 @@ export function generateHTMLForArch(arch) {
     },
   });
 
-  return boilerplate.toHTML();
+
+  const { start, stream, end } = boilerplate.toHTML();
+
+  const body = await toString(stream);
+  
+  return start + body + end;
 };
+
+
+function toString(stream) {
+  return new Promise((success, fail) => {
+    var string = ''
+    stream.on('readable', function(buffer) {
+      var part = buffer.read().toString();
+      string += part;
+    });
+
+    stream.on('end', function() {
+      success(string)
+    });
+
+    stream.on('error', function(error) {
+      fail(error);
+    });
+  });
+}

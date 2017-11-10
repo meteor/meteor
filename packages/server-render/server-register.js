@@ -45,18 +45,22 @@ WebAppInternals.registerBoilerplateDataCallback(
                 if (html) {
                   reallyMadeChanges = true;
                   const start = magic.slice(lastStart, loc.endOffset);
-                  const end = magic.slice(loc.endOffset);
                   stream
                     .append(start)
                     .append(html)
-                    .append(end)
-                    .append(null);
                   lastStart = loc.endOffset;
                 }
                 return true;
               }
             });
           });
+          parser.on("endTag", (name, location) => {
+            if (location.endOffset === html.length) {
+              // reached the end of the template
+              const end = magic.slice(lastStart);
+              stream.append(end).append(null);
+            }
+          })
 
           data[property] = stream;
         }

@@ -85,7 +85,6 @@ function appendContent(object, property, content) {
   } else if ((content = content && content.toString("utf8"))) {
     object[property] = (object[property] || "") + content;
     madeChanges = true;
-    // should we join streams here?
   } 
   return madeChanges;
 }

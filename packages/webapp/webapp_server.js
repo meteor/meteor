@@ -811,7 +811,6 @@ function runWebAppServer() {
           headers = {...headers, ...newHeaders };
         }
 
-        console.log("setting status code")
         res.writeHead(statusCode, headers);
         res.write(start);
         stream.pipe(res, { end: false })

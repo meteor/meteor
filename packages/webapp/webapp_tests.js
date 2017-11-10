@@ -8,6 +8,24 @@ var hash = crypto.createHash('sha1');
 hash.update(additionalScript);
 var additionalScriptPathname = hash.digest('hex') + ".js";
 
+// convert a stream to a string via promise
+function toString(stream) {
+  return new Promise((success, fail) => {
+    var string = ''
+    stream.on('data', function(data) {
+      string += data.toString();
+    });
+
+    stream.on('end', function() {
+      success(string)
+    });
+
+    stream.on('error', function(error) {
+      fail(error);
+    });
+  });
+}
+
 // Mock the 'res' object that gets passed to connect handlers. This mock
 // just records any utf8 data written to the response and returns it
 // when you call `mockResponse.getBody()`.
@@ -66,132 +84,155 @@ Tinytest.add("webapp - content-type header", function (test) {
              "application/javascript; charset=utf-8");
 });
 
-Tinytest.add("webapp - additional static javascript", function (test) {
-  var origInlineScriptsAllowed = WebAppInternals.inlineScriptsAllowed();
+Tinytest.addAsync("webapp - additional static javascript", function (test, onComplete) {
+  const run = async () => {
+    var origInlineScriptsAllowed = WebAppInternals.inlineScriptsAllowed();
 
-  var staticFilesOpts = {
-    staticFiles: {},
-    clientDir: "/"
-  };
+    var staticFilesOpts = {
+      staticFiles: {},
+      clientDir: "/"
+    };
 
-  // It's okay to set this global state because we're not going to yield
-  // before settng it back to what it was originally.
-  WebAppInternals.setInlineScriptsAllowed(true);
+    // It's okay to set this global state because we're not going to yield
+    // before settng it back to what it was originally.
+    WebAppInternals.setInlineScriptsAllowed(true);
 
-  (function () {
-    var boilerplate = WebAppInternals.getBoilerplate({
-      browser: "doesn't-matter",
-      url: "also-doesnt-matter"
-    }, "web.browser");
+    await (async function () {
+      const { start, stream, end } = WebAppInternals.getBoilerplate({
+        browser: "doesn't-matter",
+        url: "also-doesnt-matter"
+      }, "web.browser");
 
-    // When inline scripts are allowed, the script should be inlined.
-    test.isTrue(boilerplate.indexOf(additionalScript) !== -1);
+      const body = await toString(stream);
+      const boilerplate = start + body + end;
 
-    // And the script should not be served as its own separate resource,
-    // meaning that the static file handler should pass on this request.
-    var res = new MockResponse();
-    var req = new http.IncomingMessage();
-    req.headers = {};
-    req.method = "GET";
-    req.url = "/" + additionalScriptPathname;
-    var nextCalled = false;
-    WebAppInternals.staticFilesMiddleware(
-      staticFilesOpts, req, res, function () {
-        nextCalled = true;
-      });
-    test.isTrue(nextCalled);
-  })();
+      // When inline scripts are allowed, the script should be inlined.
+      test.isTrue(boilerplate.indexOf(additionalScript) !== -1);
 
-  // When inline scripts are disallowed, the script body should not be
-  // inlined, and the script should be included in a <script src="..">
-  // tag.
-  WebAppInternals.setInlineScriptsAllowed(false);
+      // And the script should not be served as its own separate resource,
+      // meaning that the static file handler should pass on this request.
+      var res = new MockResponse();
+      var req = new http.IncomingMessage();
+      req.headers = {};
+      req.method = "GET";
+      req.url = "/" + additionalScriptPathname;
+      var nextCalled = false;
+      WebAppInternals.staticFilesMiddleware(
+        staticFilesOpts, req, res, function () {
+          nextCalled = true;
+        });
+      test.isTrue(nextCalled);
 
-  (function () {
-    var boilerplate = WebAppInternals.getBoilerplate({
-      browser: "doesn't-matter",
-      url: "also-doesnt-matter"
-    }, "web.browser");
+    })();
 
-    // The script contents itself should not be present; the pathname
-    // where the script is served should be.
-    test.isTrue(boilerplate.indexOf(additionalScript) === -1);
-    test.isTrue(boilerplate.indexOf(additionalScriptPathname) !== -1);
+    // When inline scripts are disallowed, the script body should not be
+    // inlined, and the script should be included in a <script src="..">
+    // tag.
+    WebAppInternals.setInlineScriptsAllowed(false);
 
-    // And the static file handler should serve the script at that pathname.
-    var res = new MockResponse();
-    var req = new http.IncomingMessage();
-    req.headers = {};
-    req.method = "GET";
-    req.url = "/" + additionalScriptPathname;
-    WebAppInternals.staticFilesMiddleware(staticFilesOpts, req, res,
-                                     function () { });
-    var resBody = res.getBody();
-    test.isTrue(resBody.indexOf(additionalScript) !== -1);
-    test.equal(res.statusCode, 200);
-  })();
+    await (async function () {
+      const { start, stream, end } = WebAppInternals.getBoilerplate({
+        browser: "doesn't-matter",
+        browser: "doesn't-matter",
+        url: "also-doesnt-matter"
+      }, "web.browser");
 
-  WebAppInternals.setInlineScriptsAllowed(origInlineScriptsAllowed);
+      const body = await toString(stream);
+      const boilerplate = start + body + end;
+
+      // The script contents itself should not be present; the pathname
+      // where the script is served should be.
+      test.isTrue(boilerplate.indexOf(additionalScript) === -1);
+      test.isTrue(boilerplate.indexOf(additionalScriptPathname) !== -1);
+
+      // And the static file handler should serve the script at that pathname.
+      var res = new MockResponse();
+      var req = new http.IncomingMessage();
+      req.headers = {};
+      req.method = "GET";
+      req.url = "/" + additionalScriptPathname;
+      WebAppInternals.staticFilesMiddleware(staticFilesOpts, req, res,
+                                       function () { });
+      var resBody = res.getBody();
+      test.isTrue(resBody.indexOf(additionalScript) !== -1);
+      test.equal(res.statusCode, 200);
+    })();
+
+    WebAppInternals.setInlineScriptsAllowed(origInlineScriptsAllowed);
+  }
+
+  run().then(onComplete);
 });
 
 // Regression test: `generateBoilerplateInstance` should not change
 // `__meteor_runtime_config__`.
-Tinytest.add("webapp - generating boilerplate should not change runtime config", function (test) {
-  // Set a dummy key in the runtime config served in the
-  // boilerplate. Test that the dummy key appears in the boilerplate,
-  // but not in __meteor_runtime_config__ after generating the
-  // boilerplate.
+Tinytest.addAsync("webapp - generating boilerplate should not change runtime config", function (test, onComplete) {
+  const run = async () => {
+    // Set a dummy key in the runtime config served in the
+    // boilerplate. Test that the dummy key appears in the boilerplate,
+    // but not in __meteor_runtime_config__ after generating the
+    // boilerplate.
 
-  test.isFalse(__meteor_runtime_config__.WEBAPP_TEST_KEY);
+    test.isFalse(__meteor_runtime_config__.WEBAPP_TEST_KEY);
 
-  var boilerplate = WebAppInternals.generateBoilerplateInstance(
-    "web.browser",
-    [], // empty manifest
-    { runtimeConfigOverrides: { WEBAPP_TEST_KEY: true } }
-  );
+    var boilerplate = WebAppInternals.generateBoilerplateInstance(
+      "web.browser",
+      [], // empty manifest
+      { runtimeConfigOverrides: { WEBAPP_TEST_KEY: true } }
+    );
 
-  var boilerplateHtml = boilerplate.toHTML();
-  test.isFalse(boilerplateHtml.indexOf("WEBAPP_TEST_KEY") === -1);
+    const { start, stream, end } = boilerplate.toHTML();
+    const body = await toString(stream);
+    const boilerplateHtml = start + stream + end;
+    test.isFalse(boilerplateHtml.indexOf("WEBAPP_TEST_KEY") === -1);
 
-  test.isFalse(__meteor_runtime_config__.WEBAPP_TEST_KEY);
+    test.isFalse(__meteor_runtime_config__.WEBAPP_TEST_KEY);
+  };
+  run().then(onComplete);
 });
 
-Tinytest.add("webapp - WebAppInternals.registerBoilerplateDataCallback", function (test) {
-  const key = "from webapp_tests.js";
-  let callCount = 0;
+Tinytest.addAsync("webapp - WebAppInternals.registerBoilerplateDataCallback", function (test, onComplete) {
+  const run = async () => {
+    const key = "from webapp_tests.js";
+    let callCount = 0;
 
-  function callback(request, data, arch) {
-    test.equal(arch, "web.browser");
-    test.equal(request.url, "http://example.com");
-    test.equal(data.dynamicHead.indexOf("so dynamic"), 0);
-    test.equal(data.body, "");
-    data.body = "<div>oyez</div>";
-    ++callCount;
-  }
+    function callback(request, data, arch) {
+      test.equal(arch, "web.browser");
+      test.equal(request.url, "http://example.com");
+      test.equal(data.dynamicHead.indexOf("so dynamic"), 0);
+      test.equal(data.body, "");
+      data.body = "<div>oyez</div>";
+      ++callCount;
+    }
 
-  WebAppInternals.registerBoilerplateDataCallback(key, callback);
+    WebAppInternals.registerBoilerplateDataCallback(key, callback);
 
-  test.equal(callCount, 0);
+    test.equal(callCount, 0);
 
-  const req = new http.IncomingMessage();
-  req.url = "http://example.com";
-  req.browser = { name: "headless" };
-  req.dynamicHead = "so dynamic";
+    const req = new http.IncomingMessage();
+    req.url = "http://example.com";
+    req.browser = { name: "headless" };
+    req.dynamicHead = "so dynamic";
 
-  const html = WebAppInternals.getBoilerplate(req, "web.browser");
+    const { start, stream, end } = WebAppInternals.getBoilerplate(req, "web.browser");
+    const body = await toString(stream);
 
-  test.equal(callCount, 1);
+    const html = start + "\n" + body + "\n" + end;
 
-  test.isTrue(html.indexOf([
-    "<body>",
-    "<div>oyez</div>"
-  ].join("\n")) >= 0);
+    test.equal(callCount, 1);
 
-  test.equal(
-    // Make sure this callback doesn't get called again after this test.
-    WebAppInternals.registerBoilerplateDataCallback(key, null),
-    callback
-  );
+    test.isTrue(html.indexOf([
+      "<body>",
+      "<div>oyez</div>"
+    ].join("\n")) >= 0);
+
+    test.equal(
+      // Make sure this callback doesn't get called again after this test.
+      WebAppInternals.registerBoilerplateDataCallback(key, null),
+      callback
+    );
+  };
+  run().then(onComplete);
 });
 
 // Support 'named pipes' (strings) as ports for support of Windows Server /
