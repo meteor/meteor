@@ -1,18 +1,10 @@
 import { WebAppInternals } from "meteor/webapp";
-import { Readable } from "stream";
 import MagicString from "magic-string";
 import { SAXParser } from "parse5";
 import combine from "combine-streams";
 import { ServerSink, isReadable } from "./server-sink.js";
 import { onPageLoad } from "./server.js";
 
-function stringToStream(str) {
-  const stream = new Readable();
-  stream._read = function() {};
-  stream.push(str);
-  stream.push(null);;
-  return stream;
-}
 
 WebAppInternals.registerBoilerplateDataCallback(
   "meteor/server-render",
@@ -50,10 +42,7 @@ WebAppInternals.registerBoilerplateDataCallback(
             attrs.some(attr => {
               if (attr.name === "id") {
                 let html = sink.htmlById[attr.value];
-                if (typeof html === "string") {
-                  html = stringToStream(html);
-                }
-                if (html && isReadable(html)) {
+                if (html) {
                   reallyMadeChanges = true;
                   const start = magic.slice(lastStart, loc.endOffset);
                   const end = magic.slice(loc.endOffset);
