@@ -171,13 +171,13 @@ export default class ClientStream extends StreamClientCommon {
       }, 'stream connect callback')
     );
 
-    var clientOnIfCurrent = (event, description, f) => {
+    var clientOnIfCurrent = (event, description, callback) => {
       this.client.on(
         event,
         Meteor.bindEnvironment((...args) => {
           // Ignore events from any connection we've already cleaned up.
           if (client !== this.client) return;
-          f.apply(this, args);
+          callback(...args);
         }, description)
       );
     };
