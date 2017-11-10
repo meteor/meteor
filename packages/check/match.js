@@ -121,7 +121,7 @@ var Maybe = function (pattern) {
 };
 
 var OneOf = function (choices) {
-  if (_.isEmpty(choices))
+  if (!choices || choices.length === 0)
     throw new Error("Must provide at least one choice to Match.OneOf");
   this.choices = choices;
 };
@@ -461,7 +461,7 @@ class ArgumentChecker {
 
   throwUnlessAllArgumentsHaveBeenChecked() {
     var self = this;
-    if (!_.isEmpty(self.args))
+    if (self.args.length > 0)
       throw new Error("Did not check() all arguments during " +
                       self.description);
   }
