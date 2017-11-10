@@ -5,14 +5,14 @@ import { Meteor } from 'meteor/meteor';
 // make sure that we require the right one.
 export default function getClientStreamClass() {
   // The static analyzer of the bundler specifically looks
-  // for direct calls to 'require', so it won't treat the
+  // for static calls to 'require', so it won't treat the
   // below calls as a request to include that module.
-  const notRequire = require;
+  //
+  // That means stream_client_nodejs won't be included on
+  // the client, as desired.
+  const modulePath = Meteor.isClient
+    ? '../client/stream_client_sockjs'
+    : '../server/stream_client_nodejs';
 
-  if (Meteor.isClient) {
-    return notRequire('../client/stream_client_sockjs').default;
-  } else {
-    /* Meteor.isServer */
-    return notRequire('../server/stream_client_nodejs').default;
-  }
+  return require(modulePath).default;
 }
