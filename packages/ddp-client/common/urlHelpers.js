@@ -1,12 +1,5 @@
 import { Random } from 'meteor/random';
 
-function endsWith(str, ends) {
-  return (
-    str.length >= ends.length &&
-    str.substring(str.length - ends.length) === ends
-  );
-}
-
 // @param url {String} URL to Meteor app, eg:
 //   "/" or "madewith.meteor.com" or "https://foo.meteor.com"
 //   or "ddp+sockjs://ddp--****-foo.meteor.com/sockjs"
@@ -59,7 +52,7 @@ function translateUrl(url, newSchemeBase, subPath) {
   // root. See also client_convenience.js #RationalizingRelativeDDPURLs
   url = Meteor._relativeToSiteRootUrl(url);
 
-  if (endsWith(url, '/')) return url + subPath;
+  if (url.endsWith('/')) return url + subPath;
   else return url + '/' + subPath;
 }
 
