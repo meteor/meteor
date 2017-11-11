@@ -1,6 +1,4 @@
-import { _ } from 'meteor/underscore';
 import { Meteor } from 'meteor/meteor';
-
 import { DDP } from '../common/namespace.js';
 import { toWebsocketUrl } from '../common/urlHelpers.js';
 import StreamClientCommon from '../common/stream_client_common.js';

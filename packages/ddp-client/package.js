@@ -11,28 +11,24 @@ Npm.depends({
 });
 
 Package.onUse((api) => {
-  api.use(
-    [
-      'check',
-      'random',
-      'ejson',
-      'underscore',
-      'tracker',
-      'retry',
-      'id-map',
-      'ecmascript',
-      'callback-hook',
-      'ddp-common',
-      'reload',
+  api.use([
+    'check',
+    'random',
+    'ejson',
+    'tracker',
+    'retry',
+    'id-map',
+    'ecmascript',
+    'callback-hook',
+    'ddp-common',
+    'reload',
 
-      // we depend on _diffObjects, _applyChanges,
-      'diff-sequence',
+    // we depend on _diffObjects, _applyChanges,
+    'diff-sequence',
 
-      // _idParse, _idStringify.
-      'mongo-id'
-    ],
-    ['client', 'server']
-  );
+    // _idParse, _idStringify.
+    'mongo-id'
+  ], ['client', 'server']);
 
   api.use('reload', 'client', { weak: true });
 
