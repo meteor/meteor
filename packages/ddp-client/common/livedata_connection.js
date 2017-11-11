@@ -14,7 +14,7 @@ import {
   keys,
   isEmpty,
   last,
-} from "./utils.js";
+} from "meteor/ddp-common/utils.js";
 
 if (Meteor.isServer) {
   var Fiber = Npm.require('fibers');
