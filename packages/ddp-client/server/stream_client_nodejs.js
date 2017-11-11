@@ -20,14 +20,10 @@ export default class ClientStream extends StreamClientCommon {
   constructor(endpoint, options) {
     super();
 
-    options = options || Object.create(null);
-
-    this.options = Object.assign(
-      {
-        retry: true
-      },
-      options
-    );
+    this.options = {
+      retry: true,
+      ...(options || null),
+    };
 
     this.client = null; // created in _launchConnection
     this.endpoint = endpoint;
