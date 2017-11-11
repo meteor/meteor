@@ -1678,8 +1678,8 @@ export class Connection {
 
     // Mark all messages as unsent, they have not yet been sent on this
     // connection.
-    Object.entries(this._methodInvokers).forEach(([id, methodInvoker]) => {
-      methodInvoker.sentMessage = false;
+    Object.keys(this._methodInvokers).forEach(id => {
+      this._methodInvokers[id].sentMessage = false;
     });
 
     // If an `onReconnect` handler is set, call it first. Go through
@@ -1691,7 +1691,8 @@ export class Connection {
 
     // add new subscriptions at the end. this way they take effect after
     // the handlers and we don't see flicker.
-    Object.entries(this._subscriptions).forEach(([id, sub]) => {
+    Object.keys(this._subscriptions).forEach(id => {
+      const sub = this._subscriptions[id];
       this._send({
         msg: 'sub',
         id: id,
