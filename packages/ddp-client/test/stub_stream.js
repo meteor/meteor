@@ -2,7 +2,7 @@ StubStream = function() {
   var self = this;
 
   self.sent = [];
-  self.callbacks = {};
+  self.callbacks = Object.create(null);
 };
 
 _.extend(StubStream.prototype, {

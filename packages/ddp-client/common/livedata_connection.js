@@ -52,7 +52,7 @@ export class Connection {
       },
       heartbeatInterval: 17500,
       heartbeatTimeout: 15000,
-      npmFayeOptions: {},
+      npmFayeOptions: Object.create(null),
       // These options are only for testing.
       reloadWithOutstanding: false,
       supportedDDPVersions: DDPCommon.SUPPORTED_DDP_VERSIONS,
@@ -95,8 +95,8 @@ export class Connection {
     self._lastSessionId = null;
     self._versionSuggestion = null; // The last proposed DDP version.
     self._version = null; // The DDP version agreed on by client and server.
-    self._stores = {}; // name -> object with methods
-    self._methodHandlers = {}; // name -> func
+    self._stores = Object.create(null); // name -> object with methods
+    self._methodHandlers = Object.create(null); // name -> func
     self._nextMethodId = 1;
     self._supportedDDPVersions = options.supportedDDPVersions;
 
@@ -107,7 +107,7 @@ export class Connection {
     // called their user callback (ie, they are waiting on their result or for all
     // of their writes to be written to the local cache). Map from method ID to
     // MethodInvoker object.
-    self._methodInvokers = {};
+    self._methodInvokers = Object.create(null);
 
     // Tracks methods which the user has called but whose result messages have not
     // arrived yet.
@@ -151,7 +151,7 @@ export class Connection {
     // documents written by a given method's stub. keys are associated with
     // methods whose stub wrote at least one document, and whose data-done message
     // has not yet been received.
-    self._documentsWrittenByStub = {};
+    self._documentsWrittenByStub = Object.create(null);
     // collection -> IdMap of "server document" object. A "server document" has:
     // - "document": the version of the document according the
     //   server (ie, the snapshot before a stub wrote it, amended by any changes
@@ -159,7 +159,7 @@ export class Connection {
     //   It is undefined if we think the document does not exist
     // - "writtenByStubs": a set of method IDs whose stubs wrote to the document
     //   whose "data done" messages have not yet been processed
-    self._serverDocuments = {};
+    self._serverDocuments = Object.create(null);
 
     // Array of callbacks to be called after the next update of the local
     // cache. Used for:
@@ -188,16 +188,16 @@ export class Connection {
     // Map from method ID -> true. Methods are removed from this when their
     // "data done" message is received, and we will not quiesce until it is
     // empty.
-    self._methodsBlockingQuiescence = {};
+    self._methodsBlockingQuiescence = Object.create(null);
     // map from sub ID -> true for subs that were ready (ie, called the sub
     // ready callback) before reconnect but haven't become ready again yet
-    self._subsBeingRevived = {}; // map from sub._id -> true
+    self._subsBeingRevived = Object.create(null); // map from sub._id -> true
     // if true, the next data update should reset all stores. (set during
     // reconnect.)
     self._resetStores = false;
 
     // name -> array of updates for (yet to be created) collections
-    self._updatesForUnknownStores = {};
+    self._updatesForUnknownStores = Object.create(null);
     // if we're blocking a migration, the retry func
     self._retryMigrate = null;
 
@@ -207,7 +207,7 @@ export class Connection {
       self
     );
     // Collection name -> array of messages.
-    self._bufferedWrites = {};
+    self._bufferedWrites = Object.create(null);
     // When current buffer of updates must be flushed at, in ms timestamp.
     self._bufferedWritesFlushAt = null;
     // Timeout handle for the next processing of all pending writes
@@ -227,7 +227,7 @@ export class Connection {
     //                    an error, XXX COMPAT WITH 1.0.3.1)
     //   - stopCallback (an optional callback to call when the sub terminates
     //     for any reason, with an error argument if an error triggered the stop)
-    self._subscriptions = {};
+    self._subscriptions = Object.create(null);
 
     // Reactive userId.
     self._userId = null;
@@ -287,7 +287,7 @@ export class Connection {
 
     // Wrap the input object in an object which makes any store method not
     // implemented by 'store' into a no-op.
-    var store = {};
+    var store = Object.create(null);
     _.each(
       [
         'update',
@@ -341,7 +341,7 @@ export class Connection {
     var self = this;
 
     var params = Array.prototype.slice.call(arguments, 1);
-    var callbacks = {};
+    var callbacks = Object.create(null);
     if (params.length) {
       var lastParam = params[params.length - 1];
       if (typeof lastParam === 'function') {
@@ -584,9 +584,9 @@ export class Connection {
     // or (name, args, callback)
     if (!callback && typeof options === 'function') {
       callback = options;
-      options = {};
+      options = Object.create(null);
     }
-    options = options || {};
+    options = options || Object.create(null);
 
     if (callback) {
       // XXX would it be better form to do the binding in stream.on,
@@ -816,7 +816,10 @@ export class Connection {
         docsWritten.push({ collection: collection, id: id });
         if (!_.has(self._serverDocuments, collection))
           self._serverDocuments[collection] = new MongoIDMap();
-        var serverDoc = self._serverDocuments[collection].setDefault(id, {});
+        var serverDoc = self._serverDocuments[collection].setDefault(
+          id,
+          Object.create(null)
+        );
         if (serverDoc.writtenByStubs) {
           // We're not the first stub to write this doc. Just add our method ID
           // to the record.
@@ -825,7 +828,7 @@ export class Connection {
           // First stub! Save the original value and our method ID.
           serverDoc.document = doc;
           serverDoc.flushCallbacks = [];
-          serverDoc.writtenByStubs = {};
+          serverDoc.writtenByStubs = Object.create(null);
           serverDoc.writtenByStubs[methodId] = true;
         }
       });
@@ -971,13 +974,13 @@ export class Connection {
 
     // Forget about messages we were buffering for unknown collections. They'll
     // be resent if still relevant.
-    self._updatesForUnknownStores = {};
+    self._updatesForUnknownStores = Object.create(null);
 
     if (self._resetStores) {
       // Forget about the effects of stubs. We'll be resetting all collections
       // anyway.
-      self._documentsWrittenByStub = {};
-      self._serverDocuments = {};
+      self._documentsWrittenByStub = Object.create(null);
+      self._serverDocuments = Object.create(null);
     }
 
     // Clear _afterUpdateCallbacks.
@@ -987,7 +990,7 @@ export class Connection {
     // ready callback) as needing to be revived.
     // XXX We should also block reconnect quiescence until unnamed subscriptions
     //     (eg, autopublish) are done re-publishing to avoid flicker!
-    self._subsBeingRevived = {};
+    self._subsBeingRevived = Object.create(null);
     _.each(self._subscriptions, (sub, id) => {
       if (sub.ready) self._subsBeingRevived[id] = true;
     });
@@ -999,7 +1002,7 @@ export class Connection {
     // Start by clearing _methodsBlockingQuiescence: methods sent before
     // reconnect don't matter, and any "wait" methods sent on the new connection
     // that we drop here will be restored by the loop below.
-    self._methodsBlockingQuiescence = {};
+    self._methodsBlockingQuiescence = Object.create(null);
     if (self._resetStores) {
       _.each(self._methodInvokers, invoker => {
         if (invoker.gotResult()) {
@@ -1126,7 +1129,7 @@ export class Connection {
     //  performWrites. As there's no guarantee that it
     //  will exit cleanly.
     var writes = self._bufferedWrites;
-    self._bufferedWrites = {};
+    self._bufferedWrites = Object.create(null);
     self._performWrites(writes);
   }
 
@@ -1208,7 +1211,7 @@ export class Connection {
       // Some outstanding stub wrote here.
       var isExisting = serverDoc.document !== undefined;
 
-      serverDoc.document = msg.fields || {};
+      serverDoc.document = msg.fields || Object.create(null);
       serverDoc.document._id = id;
 
       if (self._resetStores) {

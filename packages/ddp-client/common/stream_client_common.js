@@ -24,7 +24,7 @@ export default class StreamClientCommon {
   }
 
   _initCommon(options) {
-    options = options || {};
+    options = options || Object.create(null);
 
     //// Constants
 
@@ -32,7 +32,7 @@ export default class StreamClientCommon {
     // failed.
     this.CONNECT_TIMEOUT = options.connectTimeoutMs || 10000;
 
-    this.eventCallbacks = {}; // name -> [callback]
+    this.eventCallbacks = Object.create(null); // name -> [callback]
 
     this._forcedToDisconnect = false;
 
@@ -57,7 +57,7 @@ export default class StreamClientCommon {
 
   // Trigger a reconnect.
   reconnect(options) {
-    options = options || {};
+    options = options || Object.create(null);
 
     if (options.url) {
       this._changeUrl(options.url);
@@ -87,7 +87,7 @@ export default class StreamClientCommon {
   }
 
   disconnect(options) {
-    options = options || {};
+    options = options || Object.create(null);
 
     // Failed is permanent. If we're failed, don't let people go back
     // online by calling 'disconnect' then 'reconnect'.

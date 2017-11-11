@@ -20,7 +20,7 @@ export default class ClientStream extends StreamClientCommon {
   constructor(endpoint, options) {
     super();
 
-    options = options || {};
+    options = options || Object.create(null);
 
     this.options = Object.assign(
       {
@@ -32,8 +32,8 @@ export default class ClientStream extends StreamClientCommon {
     this.client = null; // created in _launchConnection
     this.endpoint = endpoint;
 
-    this.headers = this.options.headers || {};
-    this.npmFayeOptions = this.options.npmFayeOptions || {};
+    this.headers = this.options.headers || Object.create(null);
+    this.npmFayeOptions = this.options.npmFayeOptions || Object.create(null);
 
     this._initCommon(this.options);
 

@@ -31,7 +31,9 @@ var retry = new Retry();
 function onDDPVersionNegotiationFailure(description) {
   Meteor._debug(description);
   if (Package.reload) {
-    var migrationData = Package.reload.Reload._migrationData('livedata') || {};
+    var migrationData =
+      Package.reload.Reload._migrationData('livedata') ||
+      Object.create(null);
     var failures = migrationData.DDPVersionNegotiationFailures || 0;
     ++failures;
     Package.reload.Reload._onMigrate('livedata', () => {
