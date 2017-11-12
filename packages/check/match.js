@@ -51,8 +51,8 @@ var Match = exports.Match = {
   Maybe: function (pattern) {
     return new Maybe(pattern);
   },
-  OneOf: function (/*arguments*/) {
-    return new OneOf(_.toArray(arguments));
+  OneOf: function (...args) {
+    return new OneOf(args);
   },
   Any: ['__any__'],
   Where: function (condition) {
@@ -121,7 +121,7 @@ var Maybe = function (pattern) {
 };
 
 var OneOf = function (choices) {
-  if (_.isEmpty(choices))
+  if (!choices || choices.length === 0)
     throw new Error("Must provide at least one choice to Match.OneOf");
   this.choices = choices;
 };
@@ -242,7 +242,7 @@ var testSubtree = function (value, pattern) {
         path: ""
       };
     }
-    if (!_.isArray(value) && !_.isArguments(value)) {
+    if (!Array.isArray(value) && !isArguments(value)) {
       return {
         message: "Expected array, got " + stringForErrorMessage(value),
         path: ""
@@ -368,9 +368,9 @@ var testSubtree = function (value, pattern) {
   });
 
   //XXX: replace with underscore's _.allKeys if Meteor updates underscore to 1.8+ (or lodash)
-  var allKeys = function(obj){
+  function allKeys(obj) {
     var keys = [];
-    if (_.isObject(obj)){
+    if (obj) {
       for (var key in obj) keys.push(key);
     }
     return keys;
@@ -379,14 +379,14 @@ var testSubtree = function (value, pattern) {
   for (var keys = allKeys(value), i = 0, length = keys.length; i < length; i++) {
     var key = keys[i];
     var subValue = value[key];
-    if (_.has(requiredPatterns, key)) {
+    if (Object.prototype.hasOwnProperty.call(requiredPatterns, key)) {
       var result = testSubtree(subValue, requiredPatterns[key]);
       if (result) {
         result.path = _prependPath(key, result.path);
         return result;
       }
       delete requiredPatterns[key];
-    } else if (_.has(optionalPatterns, key)) {
+    } else if (Object.prototype.hasOwnProperty.call(optionalPatterns, key)) {
       var result = testSubtree(subValue, optionalPatterns[key]);
       if (result) {
         result.path = _prependPath(key, result.path);
@@ -409,7 +409,7 @@ var testSubtree = function (value, pattern) {
     }
   }
 
-  var keys = _.keys(requiredPatterns);
+  var keys = Object.keys(requiredPatterns);
   if (keys.length) {
     return {
       message: "Missing key '" + keys[0] + "'",
@@ -418,51 +418,54 @@ var testSubtree = function (value, pattern) {
   }
 };
 
-var ArgumentChecker = function (args, description) {
-  var self = this;
-  // Make a SHALLOW copy of the arguments. (We'll be doing identity checks
-  // against its contents.)
-  self.args = _.clone(args);
-  // Since the common case will be to check arguments in order, and we splice
-  // out arguments when we check them, make it so we splice out from the end
-  // rather than the beginning.
-  self.args.reverse();
-  self.description = description;
-};
+class ArgumentChecker {
+  constructor (args, description) {
+    var self = this;
+    // Make a SHALLOW copy of the arguments. (We'll be doing identity checks
+    // against its contents.)
+    self.args = [...args];
+    // Since the common case will be to check arguments in order, and we splice
+    // out arguments when we check them, make it so we splice out from the end
+    // rather than the beginning.
+    self.args.reverse();
+    self.description = description;
+  }
 
-_.extend(ArgumentChecker.prototype, {
-  checking: function (value) {
+  checking(value) {
     var self = this;
     if (self._checkingOneValue(value))
       return;
     // Allow check(arguments, [String]) or check(arguments.slice(1), [String])
     // or check([foo, bar], [String]) to count... but only if value wasn't
     // itself an argument.
-    if (_.isArray(value) || _.isArguments(value)) {
-      _.each(value, _.bind(self._checkingOneValue, self));
+    if (Array.isArray(value) || isArguments(value)) {
+      Array.prototype.forEach.call(value, self._checkingOneValue.bind(self));
     }
-  },
-  _checkingOneValue: function (value) {
+  }
+
+  _checkingOneValue(value) {
     var self = this;
     for (var i = 0; i < self.args.length; ++i) {
       // Is this value one of the arguments? (This can have a false positive if
       // the argument is an interned primitive, but it's still a good enough
       // check.)
       // (NaN is not === to itself, so we have to check specially.)
-      if (value === self.args[i] || (_.isNaN(value) && _.isNaN(self.args[i]))) {
+      if (value === self.args[i] ||
+          (Number.isNaN(value) && Number.isNaN(self.args[i]))) {
         self.args.splice(i, 1);
         return true;
       }
     }
     return false;
-  },
-  throwUnlessAllArgumentsHaveBeenChecked: function () {
+  }
+
+  throwUnlessAllArgumentsHaveBeenChecked() {
     var self = this;
-    if (!_.isEmpty(self.args))
+    if (self.args.length > 0)
       throw new Error("Did not check() all arguments during " +
                       self.description);
   }
-});
+}
 
 var _jsKeywords = ["do", "if", "in", "for", "let", "new", "try", "var", "case",
   "else", "enum", "eval", "false", "null", "this", "true", "void", "with",
@@ -477,7 +480,7 @@ var _jsKeywords = ["do", "if", "in", "for", "let", "new", "try", "var", "case",
 var _prependPath = function (key, base) {
   if ((typeof key) === "number" || key.match(/^[0-9]+$/))
     key = "[" + key + "]";
-  else if (!key.match(/^[a-z_$][0-9a-z_$]*$/i) || _.contains(_jsKeywords, key))
+  else if (!key.match(/^[a-z_$][0-9a-z_$]*$/i) || _jsKeywords.includes(key))
     key = JSON.stringify([key]);
 
   if (base && base[0] !== "[")
@@ -485,3 +488,6 @@ var _prependPath = function (key, base) {
   return key + base;
 };
 
+function isArguments(item) {
+  return Object.prototype.toString.call(item) === '[object Arguments]';
+}
