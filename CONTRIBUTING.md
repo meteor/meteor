@@ -168,7 +168,7 @@ A great way to contribute to Meteor is by helping keep the issues in the reposit
 
 ## Documentation
 
-If you'd like to contribution to Meteor's documentation, head over to https://github.com/meteor/docs and create issues or pull requests there.
+If you'd like to contribute to Meteor's documentation, head over to https://github.com/meteor/docs and create issues or pull requests there.
 
 ## Blaze
 
