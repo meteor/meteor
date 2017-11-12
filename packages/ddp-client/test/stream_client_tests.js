@@ -1,10 +1,10 @@
-import { LivedataTest } from '../common/namespace.js';
+import ClientStream from '../server/stream_client_nodejs.js';
 
 var Fiber = Npm.require('fibers');
 
 testAsyncMulti('stream client - callbacks run in a fiber', [
   function(test, expect) {
-    var stream = new LivedataTest.ClientStream(Meteor.absoluteUrl());
+    var stream = new ClientStream(Meteor.absoluteUrl());
 
     var messageFired = false;
     var resetFired = false;

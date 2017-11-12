@@ -1,18 +1,4 @@
-import { LivedataTest } from './namespace';
 import { Random } from 'meteor/random';
-
-// XXX from Underscore.String (http://epeli.github.com/underscore.string/)
-var startsWith = function(str, starts) {
-  return (
-    str.length >= starts.length && str.substring(0, starts.length) === starts
-  );
-};
-var endsWith = function(str, ends) {
-  return (
-    str.length >= ends.length &&
-    str.substring(str.length - ends.length) === ends
-  );
-};
 
 // @param url {String} URL to Meteor app, eg:
 //   "/" or "madewith.meteor.com" or "https://foo.meteor.com"
@@ -21,7 +7,7 @@ var endsWith = function(str, ends) {
 // for scheme "http" and subPath "sockjs"
 //   "http://subdomain.meteor.com/sockjs" or "/sockjs"
 //   or "https://ddp--1234-foo.meteor.com/sockjs"
-var translateUrl = function(url, newSchemeBase, subPath) {
+function translateUrl(url, newSchemeBase, subPath) {
   if (!newSchemeBase) {
     newSchemeBase = 'http';
   }
@@ -40,9 +26,7 @@ var translateUrl = function(url, newSchemeBase, subPath) {
     // In the host (ONLY!), change '*' characters into random digits. This
     // allows different stream connections to connect to different hostnames
     // and avoid browser per-hostname connection limits.
-    host = host.replace(/\*/g, function() {
-      return Math.floor(Random.fraction() * 10);
-    });
+    host = host.replace(/\*/g, () => Math.floor(Random.fraction() * 10));
 
     return newScheme + '://' + host + rest;
   } else if (httpUrlMatch) {
@@ -52,7 +36,7 @@ var translateUrl = function(url, newSchemeBase, subPath) {
   }
 
   // Prefix FQDNs but not relative URLs
-  if (url.indexOf('://') === -1 && !startsWith(url, '/')) {
+  if (url.indexOf('://') === -1 && !url.startsWith('/')) {
     url = newSchemeBase + '://' + url;
   }
 
@@ -68,9 +52,9 @@ var translateUrl = function(url, newSchemeBase, subPath) {
   // root. See also client_convenience.js #RationalizingRelativeDDPURLs
   url = Meteor._relativeToSiteRootUrl(url);
 
-  if (endsWith(url, '/')) return url + subPath;
+  if (url.endsWith('/')) return url + subPath;
   else return url + '/' + subPath;
-};
+}
 
 export function toSockjsUrl(url) {
   return translateUrl(url, 'http', 'sockjs');
@@ -80,5 +64,3 @@ export function toWebsocketUrl(url) {
   var ret = translateUrl(url, 'ws', 'websocket');
   return ret;
 }
-
-LivedataTest.toSockjsUrl = toSockjsUrl;

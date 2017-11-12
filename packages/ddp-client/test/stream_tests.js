@@ -1,4 +1,7 @@
-import { LivedataTest } from '../common/namespace.js';
+import { toSockjsUrl } from '../common/urlHelpers.js';
+import getClientStreamClass from '../common/getClientStreamClass.js';
+
+const ClientStream = getClientStreamClass();
 
 Tinytest.add('stream - status', function(test) {
   // Very basic test. Just see that it runs and returns something. Not a
@@ -39,7 +42,7 @@ testAsyncMulti('stream - reconnect', [
 testAsyncMulti('stream - basic disconnect', [
   function(test, expect) {
     var history = [];
-    var stream = new LivedataTest.ClientStream('/');
+    var stream = new ClientStream('/');
     var onTestComplete = expect(function(unexpectedHistory) {
       stream.disconnect();
       if (unexpectedHistory) {
@@ -92,7 +95,7 @@ testAsyncMulti('stream - basic disconnect', [
 testAsyncMulti('stream - disconnect remains offline', [
   function(test, expect) {
     var history = [];
-    var stream = new LivedataTest.ClientStream('/');
+    var stream = new ClientStream('/');
     var onTestComplete = expect(function(unexpectedHistory) {
       stream.disconnect();
       if (unexpectedHistory) {
@@ -126,7 +129,7 @@ testAsyncMulti('stream - disconnect remains offline', [
 
 Tinytest.add('stream - sockjs urls are computed correctly', function(test) {
   var testHasSockjsUrl = function(raw, expectedSockjsUrl) {
-    var actual = LivedataTest.toSockjsUrl(raw);
+    var actual = toSockjsUrl(raw);
     if (expectedSockjsUrl instanceof RegExp)
       test.isTrue(actual.match(expectedSockjsUrl), actual);
     else test.equal(actual, expectedSockjsUrl);

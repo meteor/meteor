@@ -5,9 +5,14 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
-  api.use(['check', 'random', 'ejson', 'underscore', 'tracker',
-           'retry'],
-          ['client', 'server']);
+  api.use([
+    'check',
+    'random',
+    'ecmascript',
+    'ejson',
+    'tracker',
+    'retry',
+  ], ['client', 'server']);
 
   api.addFiles('namespace.js');
 
