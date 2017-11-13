@@ -27,7 +27,6 @@ Package.onUse(function (api) {
   api.use([
     'random',
     'ejson',
-    'underscore',
     'minimongo',
     'ddp',
     'tracker',
@@ -37,6 +36,8 @@ Package.onUse(function (api) {
     'ecmascript',
     'mongo-dev-server',
   ]);
+
+  api.use('underscore', 'server');
 
   // Binary Heap data structure is used to optimize oplog observe driver
   // performance.
