@@ -12,12 +12,19 @@ const minimumMajorVersions = {
   firefox: 11,
   ie: 10,
   safari: 7,
+  phantomjs: 2,
 };
 
 onPageLoad(sink => {
-  const { browser } = sink.request;
+  const {
+    browser,
+    url,
+  } = sink.request;
 
-  if (browser &&
+  const query = url && url.query;
+  const forceSockJs = query && query.force_sockjs;
+  if (! forceSockJs &&
+      browser &&
       hasOwn.call(minimumMajorVersions, browser.name) &&
       browser.major >= minimumMajorVersions[browser.name]) {
     return;
