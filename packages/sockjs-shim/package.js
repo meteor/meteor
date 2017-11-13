@@ -9,7 +9,6 @@ Package.describe({
 Package.onUse(function(api) {
   api.use("ecmascript");
   api.use("server-render");
-  api.mainModule("client.js", "client");
   api.mainModule("server.js", "server");
   api.addAssets([
     "sockjs-0.3.4.js",

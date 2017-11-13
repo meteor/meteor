@@ -32,7 +32,8 @@ Package.onUse((api) => {
 
   api.use('reload', 'client', { weak: true });
 
-  // If the application is using sockjs-shim, then it needs to be loaded
+  // If the application is using sockjs-shim (e.g., by using meteor-base,
+  // which implies sockjs-shim), then sockjs-shim needs to be loaded
   // before ddp-client so that it can polyfill global.SockJS. However, we
   // don't want to force sockjs-shim to be loaded, since ddp-client is
   // part of an isopacket used by the Meteor command-line tool, and the

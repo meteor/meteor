@@ -163,7 +163,7 @@ Tinytest.add("webapp - WebAppInternals.registerBoilerplateDataCallback", functio
   function callback(request, data, arch) {
     test.equal(arch, "web.browser");
     test.equal(request.url, "http://example.com");
-    test.equal(data.dynamicHead, "so dynamic");
+    test.equal(data.dynamicHead.indexOf("so dynamic"), 0);
     test.equal(data.body, "");
     data.body = "<div>oyez</div>";
     ++callCount;
