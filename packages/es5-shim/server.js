@@ -14,8 +14,7 @@ onPageLoad(sink => {
     return;
   }
 
-  sink.appendToHead(makeScript("shim"));
-  sink.appendToHead(makeScript("sham"));
+  sink.appendToHead(makeScript("shim-sham"));
 });
 
 function doNotNeedShim(request) {
