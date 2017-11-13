@@ -451,8 +451,11 @@ Mongo.Collection = class Collection {
       throw new Error("insert requires an argument");
     }
 
-    // Shallow-copy the document and possibly generate an ID
-    doc = { ...doc };
+    // Make a shallow clone of the document, preserving its prototype.
+    doc = Object.create(
+      Object.getPrototypeOf(doc),
+      Object.getOwnPropertyDescriptors(doc)
+    );
 
     if ('_id' in doc) {
       if (! doc._id ||
