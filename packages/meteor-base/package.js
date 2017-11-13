@@ -28,6 +28,11 @@ Package.onUse(function(api) {
     // Runtime support for Meteor 1.5 dynamic import(...) syntax.
     'dynamic-import',
 
+    // This package uses the user agent of each incoming HTTP request to
+    // decide whether to inject a SockJS-loading <script> tag into the
+    // <head> of the response document.
+    'sockjs-shim',
+
     // Push code changes to the client and automatically reload the page
     'hot-code-push'
   ]);

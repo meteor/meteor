@@ -32,6 +32,16 @@ Package.onUse((api) => {
 
   api.use('reload', 'client', { weak: true });
 
+  // If the application is using sockjs-shim (e.g., by using meteor-base,
+  // which implies sockjs-shim), then sockjs-shim needs to be loaded
+  // before ddp-client so that it can polyfill global.SockJS. However, we
+  // don't want to force sockjs-shim to be loaded, since ddp-client is
+  // part of an isopacket used by the Meteor command-line tool, and the
+  // webapp package (used by server-render, which is used by sockjs-shim)
+  // is not safe to load as part of an isopacket, because it calls
+  // Fiber.yield during package initialization. Hence the weakness here.
+  api.use('sockjs-shim', ['client', 'server'], { weak: true });
+
   // For backcompat where things use Package.ddp.DDP, etc
   api.export('DDP');
   api.mainModule('client/client.js', 'client');

@@ -1,10 +1,9 @@
 import { Meteor } from 'meteor/meteor';
-
-// This populates a global variable
-import './sockjs-0.3.4';
-
 import { DDP } from '../common/namespace.js';
-import { toSockjsUrl } from '../common/urlHelpers.js';
+import {
+  toSockjsUrl,
+  toWebsocketUrl,
+} from '../common/urlHelpers.js';
 import StreamClientCommon from '../common/stream_client_common.js';
 
 export default class ClientStream extends StreamClientCommon {
@@ -165,10 +164,14 @@ export default class ClientStream extends StreamClientCommon {
       ...this.options._sockjsOptions
     };
 
-    // Convert raw URL to SockJS URL each time we open a connection, so that we
-    // can connect to random hostnames and get around browser per-host
-    // connection limits.
-    this.socket = new SockJS(toSockjsUrl(this.rawUrl), undefined, options);
+    // Convert raw URL to SockJS URL each time we open a connection, so
+    // that we can connect to random hostnames and get around browser
+    // per-host connection limits.
+    const { SockJS } = global;
+    this.socket = SockJS === "function"
+      ? new SockJS(toSockjsUrl(this.rawUrl), undefined, options)
+      : new WebSocket(toWebsocketUrl(this.rawUrl));
+
     this.socket.onopen = data => {
       this._connected();
     };
