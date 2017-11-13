@@ -11,6 +11,13 @@ Npm.depends({
 
 Package.onUse(function(api) {
   api.use("modules");
-  api.mainModule("client.js", "client");
+  api.use("server-render");
+  api.mainModule("console.js", "client");
   api.mainModule("server.js", "server");
+  api.addAssets([
+    "es5-shim.js",
+    "es5-shim.min.js",
+    "es5-sham.js",
+    "es5-sham.min.js",
+  ], "client");
 });
