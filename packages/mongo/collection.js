@@ -468,12 +468,18 @@ Mongo.Collection.prototype.insert = function insert(doc, callback) {
     throw new Error("insert requires an argument");
   }
 
-  // Shallow-copy the document and possibly generate an ID
-  doc = _.extend({}, doc);
+  // Make a shallow clone of the document, preserving its prototype.
+  doc = Object.create(
+    Object.getPrototypeOf(doc),
+    Object.getOwnPropertyDescriptors(doc)
+  );
 
   if ('_id' in doc) {
-    if (!doc._id || !(typeof doc._id === 'string' || doc._id instanceof Mongo.ObjectID)) {
-      throw new Error("Meteor requires document _id fields to be non-empty strings or ObjectIDs");
+    if (! doc._id ||
+        ! (typeof doc._id === 'string' ||
+           doc._id instanceof Mongo.ObjectID)) {
+      throw new Error(
+        "Meteor requires document _id fields to be non-empty strings or ObjectIDs");
     }
   } else {
     let generateId = true;
