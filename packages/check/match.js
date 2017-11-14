@@ -18,7 +18,7 @@ var hasOwn = Object.prototype.hasOwnProperty;
  * @param {MatchPattern} pattern The pattern to match
  * `value` against
  */
-var check = exports.check = function (value, pattern) {
+export const check = function (value, pattern) {
   // Record that check got called, if somebody cared.
   //
   // We use getOrNullIfOutsideFiber so that it's OK to call check()
@@ -45,7 +45,7 @@ var check = exports.check = function (value, pattern) {
  * @namespace Match
  * @summary The namespace for all Match types and methods.
  */
-var Match = exports.Match = {
+export const Match = {
   Optional(pattern) {
     return new Optional(pattern);
   },
