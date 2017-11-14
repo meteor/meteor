@@ -18,9 +18,6 @@ Package.onUse(function(api) {
     // removable
     'webapp',
 
-    // Most Meteor core packages depend on Underscore right now
-    'underscore',
-
     // The protocol and client/server libraries that Meteor uses to send data
     'ddp',
     'livedata', // XXX COMPAT WITH PACKAGES BUILT FOR 0.9.0.
