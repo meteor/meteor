@@ -168,7 +168,7 @@ export default class ClientStream extends StreamClientCommon {
     // that we can connect to random hostnames and get around browser
     // per-host connection limits.
     const { SockJS } = global;
-    this.socket = SockJS === "function"
+    this.socket = typeof SockJS === "function"
       ? new SockJS(toSockjsUrl(this.rawUrl), undefined, options)
       : new WebSocket(toWebsocketUrl(this.rawUrl));
 
