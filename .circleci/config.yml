@@ -126,11 +126,6 @@ jobs:
       - run:
           name: Clear npm cache
           command: ./meteor npm cache clear --force
-      # Since PhantomJS has been removed from dev_bundle/lib/node_modules
-      # (#6905), but self-test still needs it, install it now.
-      - run:
-          name: Test Prereqs
-          command: ./meteor npm install -g phantomjs-prebuilt browserstack-webdriver
       - run:
           <<: *run_save_node_bin
       - persist_to_workspace:
