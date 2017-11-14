@@ -1,7 +1,10 @@
 import { onPageLoad } from "meteor/server-render";
+import {
+  doNotNeedShim,
+  makeScript,
+} from "meteor/shim-common";
 
 const sockjsVersion = "0.3.4";
-const hasOwn = Object.prototype.hasOwnProperty;
 const minimumMajorVersions = {
   chrome: 16,
   firefox: 11,
@@ -11,29 +14,12 @@ const minimumMajorVersions = {
 };
 
 onPageLoad(sink => {
-  if (doNotNeedShim(sink.request)) {
+  if (doNotNeedShim(sink.request,
+                    minimumMajorVersions,
+                    "force_sockjs")) {
     return;
   }
-
-  sink.appendToHead(makeScript(sockjsVersion));
+  sink.appendToHead(
+    makeScript("sockjs-shim/sockjs-" + sockjsVersion)
+  );
 });
-
-function doNotNeedShim(request) {
-  const { browser, url } = request;
-  const query = url && url.query;
-  const forceSockJs = query && query.force_sockjs;
-  if (! forceSockJs &&
-      browser &&
-      hasOwn.call(minimumMajorVersions, browser.name) &&
-      browser.major >= minimumMajorVersions[browser.name]) {
-    return true;
-  }
-  return false;
-}
-
-function makeScript(version) {
-  return '\n<script src="/packages/sockjs-shim/sockjs-' +
-    version + (
-      Meteor.isProduction ? ".min.js" : ".js"
-    ) + '"></script>';
-}

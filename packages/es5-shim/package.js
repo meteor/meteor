@@ -8,6 +8,7 @@ Package.describe({
 Package.onUse(function(api) {
   api.use("modules");
   api.use("server-render");
+  api.use("shim-common");
   api.mainModule("console.js", "client");
   api.mainModule("server.js", "server");
   api.addAssets([
