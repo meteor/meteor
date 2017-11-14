@@ -1,11 +1,10 @@
 Package.describe({
   summary: "Check whether a value matches a pattern",
-  version: '1.2.5'
+  version: '1.3.0'
 });
 
 Package.onUse(function (api) {
-  api.use('modules');
-  api.use('underscore');
+  api.use('ecmascript');
   api.use('ejson');
 
   api.mainModule('match.js');

@@ -7,10 +7,6 @@ Package.describe({
 });
 
 Package.onUse(function(api) {
-  // If the es5-shim package is installed, make sure it loads before
-  // ecmascript-runtime-server, since the runtime uses some ES5 APIs like
-  // Object.defineProperties that are buggy in older browsers.
-  api.use("es5-shim", { weak: true });
   api.use("modules", "client");
   api.use("promise", "client");
   api.mainModule("runtime.js", "client");

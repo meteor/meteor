@@ -11,7 +11,7 @@ Before we jump into detailed guidelines for opening and triaging issues and subm
 There are many ways to contribute to the Meteor Project. Here’s a list of technical contributions with increasing levels of involvement and required knowledge of Meteor’s code and operations.  
 - [Reporting a bug](CONTRIBUTING.md#reporting-a-bug-in-meteor)
 - [Triaging issues](ISSUE_TRIAGE.md)
-- [Contributing to documentation](https://github.com/meteor/docs/blob/master/CONTRIBUTING.md)
+- [Contributing to documentation](CONTRIBUTING.md#documentation)
 - [Finding work](CONTRIBUTING.md#finding-work)
 - [Submitting pull requests](CONTRIBUTING.md#making-changes-to-meteor-core)
 - [Reviewing pull requests](CONTRIBUTING.md#reviewer)
@@ -168,7 +168,7 @@ A great way to contribute to Meteor is by helping keep the issues in the reposit
 
 ## Documentation
 
-If you'd like to contribution to Meteor's documentation, head over to https://github.com/meteor/docs and create issues or pull requests there.
+If you'd like to contribute to Meteor's documentation, head over to https://github.com/meteor/docs and create issues or pull requests there.
 
 ## Blaze
 
