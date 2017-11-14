@@ -7,203 +7,215 @@
 
 // constructs a new element struct
 // next and prev are whole elements, not keys.
-var element = function (key, value, next, prev) {
+function element(key, value, next, prev) {
   return {
     key: key,
     value: value,
     next: next,
     prev: prev
   };
-};
-OrderedDict = function (/* ... */) {
-  var self = this;
-  self._dict = {};
-  self._first = null;
-  self._last = null;
-  self._size = 0;
-  var args = _.toArray(arguments);
-  self._stringify = function (x) { return x; };
-  if (typeof args[0] === 'function')
-    self._stringify = args.shift();
-  _.each(args, function (kv) {
-    self.putBefore(kv[0], kv[1], null);
-  });
-};
+}
 
-_.extend(OrderedDict.prototype, {
+export class OrderedDict {
+  constructor(...args) {
+    this._dict = Object.create(null);
+    this._first = null;
+    this._last = null;
+    this._size = 0;
+
+    if (typeof args[0] === 'function') {
+      this._stringify = args.shift();
+    } else {
+      this._stringify = function (x) { return x; };
+    }
+
+    args.forEach(kv => this.putBefore(kv[0], kv[1], null));
+  }
+
   // the "prefix keys with a space" thing comes from here
   // https://github.com/documentcloud/underscore/issues/376#issuecomment-2815649
-  _k: function (key) { return " " + this._stringify(key); },
+  _k(key) {
+    return " " + this._stringify(key);
+  }
 
-  empty: function () {
-    var self = this;
-    return !self._first;
-  },
-  size: function () {
-    var self = this;
-    return self._size;
-  },
-  _linkEltIn: function (elt) {
-    var self = this;
+  empty() {
+    return !this._first;
+  }
+
+  size() {
+    return this._size;
+  }
+
+  _linkEltIn(elt) {
     if (!elt.next) {
-      elt.prev = self._last;
-      if (self._last)
-        self._last.next = elt;
-      self._last = elt;
+      elt.prev = this._last;
+      if (this._last)
+        this._last.next = elt;
+      this._last = elt;
     } else {
       elt.prev = elt.next.prev;
       elt.next.prev = elt;
       if (elt.prev)
         elt.prev.next = elt;
     }
-    if (self._first === null || self._first === elt.next)
-      self._first = elt;
-  },
-  _linkEltOut: function (elt) {
-    var self = this;
+    if (this._first === null || this._first === elt.next)
+      this._first = elt;
+  }
+
+  _linkEltOut(elt) {
     if (elt.next)
       elt.next.prev = elt.prev;
     if (elt.prev)
       elt.prev.next = elt.next;
-    if (elt === self._last)
-      self._last = elt.prev;
-    if (elt === self._first)
-      self._first = elt.next;
-  },
-  putBefore: function (key, item, before) {
-    var self = this;
-    if (self._dict[self._k(key)])
+    if (elt === this._last)
+      this._last = elt.prev;
+    if (elt === this._first)
+      this._first = elt.next;
+  }
+
+  putBefore(key, item, before) {
+    if (this._dict[this._k(key)])
       throw new Error("Item " + key + " already present in OrderedDict");
     var elt = before ?
-          element(key, item, self._dict[self._k(before)]) :
-          element(key, item, null);
-    if (elt.next === undefined)
+      element(key, item, this._dict[this._k(before)]) :
+      element(key, item, null);
+    if (typeof elt.next === "undefined")
       throw new Error("could not find item to put this one before");
-    self._linkEltIn(elt);
-    self._dict[self._k(key)] = elt;
-    self._size++;
-  },
-  append: function (key, item) {
-    var self = this;
-    self.putBefore(key, item, null);
-  },
-  remove: function (key) {
-    var self = this;
-    var elt = self._dict[self._k(key)];
-    if (elt === undefined)
+    this._linkEltIn(elt);
+    this._dict[this._k(key)] = elt;
+    this._size++;
+  }
+
+  append(key, item) {
+    this.putBefore(key, item, null);
+  }
+
+  remove(key) {
+    var elt = this._dict[this._k(key)];
+    if (typeof elt === "undefined")
       throw new Error("Item " + key + " not present in OrderedDict");
-    self._linkEltOut(elt);
-    self._size--;
-    delete self._dict[self._k(key)];
+    this._linkEltOut(elt);
+    this._size--;
+    delete this._dict[this._k(key)];
     return elt.value;
-  },
-  get: function (key) {
-    var self = this;
-    if (self.has(key))
-        return self._dict[self._k(key)].value;
-    return undefined;
-  },
-  has: function (key) {
-    var self = this;
-    return _.has(self._dict, self._k(key));
-  },
+  }
+
+  get(key) {
+    if (this.has(key)) {
+      return this._dict[this._k(key)].value;
+    }
+  }
+
+  has(key) {
+    return Object.prototype.hasOwnProperty.call(
+      this._dict,
+      this._k(key)
+    );
+  }
+
   // Iterate through the items in this dictionary in order, calling
   // iter(value, key, index) on each one.
 
   // Stops whenever iter returns OrderedDict.BREAK, or after the last element.
-  forEach: function (iter) {
-    var self = this;
+  forEach(iter, context = null) {
     var i = 0;
-    var elt = self._first;
+    var elt = this._first;
     while (elt !== null) {
-      var b = iter(elt.value, elt.key, i);
-      if (b === OrderedDict.BREAK)
-        return;
+      var b = iter.call(context, elt.value, elt.key, i);
+      if (b === OrderedDict.BREAK) return;
       elt = elt.next;
       i++;
     }
-  },
-  first: function () {
-    var self = this;
-    if (self.empty())
-      return undefined;
-    return self._first.key;
-  },
-  firstValue: function () {
-    var self = this;
-    if (self.empty())
-      return undefined;
-    return self._first.value;
-  },
-  last: function () {
-    var self = this;
-    if (self.empty())
-      return undefined;
-    return self._last.key;
-  },
-  lastValue: function () {
-    var self = this;
-    if (self.empty())
-      return undefined;
-    return self._last.value;
-  },
-  prev: function (key) {
-    var self = this;
-    if (self.has(key)) {
-      var elt = self._dict[self._k(key)];
+  }
+
+  first() {
+    if (this.empty()) {
+      return;
+    }
+    return this._first.key;
+  }
+
+  firstValue() {
+    if (this.empty()) {
+      return;
+    }
+    return this._first.value;
+  }
+
+  last() {
+    if (this.empty()) {
+      return;
+    }
+    return this._last.key;
+  }
+
+  lastValue() {
+    if (this.empty()) {
+      return;
+    }
+    return this._last.value;
+  }
+
+  prev(key) {
+    if (this.has(key)) {
+      var elt = this._dict[this._k(key)];
       if (elt.prev)
         return elt.prev.key;
     }
     return null;
-  },
-  next: function (key) {
-    var self = this;
-    if (self.has(key)) {
-      var elt = self._dict[self._k(key)];
+  }
+
+  next(key) {
+    if (this.has(key)) {
+      var elt = this._dict[this._k(key)];
       if (elt.next)
         return elt.next.key;
     }
     return null;
-  },
-  moveBefore: function (key, before) {
-    var self = this;
-    var elt = self._dict[self._k(key)];
-    var eltBefore = before ? self._dict[self._k(before)] : null;
-    if (elt === undefined)
+  }
+
+  moveBefore(key, before) {
+    var elt = this._dict[this._k(key)];
+    var eltBefore = before ? this._dict[this._k(before)] : null;
+    if (typeof elt === "undefined") {
       throw new Error("Item to move is not present");
-    if (eltBefore === undefined) {
+    }
+    if (typeof eltBefore === "undefined") {
       throw new Error("Could not find element to move this one before");
     }
     if (eltBefore === elt.next) // no moving necessary
       return;
     // remove from its old place
-    self._linkEltOut(elt);
+    this._linkEltOut(elt);
     // patch into its new place
     elt.next = eltBefore;
-    self._linkEltIn(elt);
-  },
+    this._linkEltIn(elt);
+  }
+
   // Linear, sadly.
-  indexOf: function (key) {
-    var self = this;
+  indexOf(key) {
     var ret = null;
-    self.forEach(function (v, k, i) {
-      if (self._k(k) === self._k(key)) {
+    this.forEach((v, k, i) => {
+      if (this._k(k) === this._k(key)) {
         ret = i;
         return OrderedDict.BREAK;
       }
-      return undefined;
+      return;
     });
     return ret;
-  },
-  _checkRep: function () {
-    var self = this;
-    _.each(self._dict, function (k, v) {
-      if (v.next === v)
-        throw new Error("Next is a loop");
-      if (v.prev === v)
-        throw new Error("Prev is a loop");
-    });
   }
 
-});
+  _checkRep() {
+    Object.keys(this._dict).forEach(k => {
+      const v = this._dict[k];
+      if (v.next === v) {
+        throw new Error("Next is a loop");
+      }
+      if (v.prev === v) {
+        throw new Error("Prev is a loop");
+      }
+    });
+  }
+}
+
 OrderedDict.BREAK = {"break": true};
