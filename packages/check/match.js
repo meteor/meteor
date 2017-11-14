@@ -415,39 +415,36 @@ var testSubtree = function (value, pattern) {
 
 class ArgumentChecker {
   constructor (args, description) {
-    var self = this;
     // Make a SHALLOW copy of the arguments. (We'll be doing identity checks
     // against its contents.)
-    self.args = [...args];
+    this.args = [...args];
     // Since the common case will be to check arguments in order, and we splice
     // out arguments when we check them, make it so we splice out from the end
     // rather than the beginning.
-    self.args.reverse();
-    self.description = description;
+    this.args.reverse();
+    this.description = description;
   }
 
   checking(value) {
-    var self = this;
-    if (self._checkingOneValue(value))
+    if (this._checkingOneValue(value))
       return;
     // Allow check(arguments, [String]) or check(arguments.slice(1), [String])
     // or check([foo, bar], [String]) to count... but only if value wasn't
     // itself an argument.
     if (Array.isArray(value) || isArguments(value)) {
-      Array.prototype.forEach.call(value, self._checkingOneValue.bind(self));
+      Array.prototype.forEach.call(value, this._checkingOneValue.bind(this));
     }
   }
 
   _checkingOneValue(value) {
-    var self = this;
-    for (var i = 0; i < self.args.length; ++i) {
+    for (var i = 0; i < this.args.length; ++i) {
       // Is this value one of the arguments? (This can have a false positive if
       // the argument is an interned primitive, but it's still a good enough
       // check.)
       // (NaN is not === to itself, so we have to check specially.)
-      if (value === self.args[i] ||
-          (Number.isNaN(value) && Number.isNaN(self.args[i]))) {
-        self.args.splice(i, 1);
+      if (value === this.args[i] ||
+          (Number.isNaN(value) && Number.isNaN(this.args[i]))) {
+        this.args.splice(i, 1);
         return true;
       }
     }
@@ -455,10 +452,9 @@ class ArgumentChecker {
   }
 
   throwUnlessAllArgumentsHaveBeenChecked() {
-    var self = this;
-    if (self.args.length > 0)
+    if (this.args.length > 0)
       throw new Error("Did not check() all arguments during " +
-                      self.description);
+                      this.description);
   }
 }
 
