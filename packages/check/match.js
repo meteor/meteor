@@ -5,6 +5,7 @@
 
 var currentArgumentChecker = new Meteor.EnvironmentVariable;
 var isPlainObject = require("./isPlainObject.js").isPlainObject;
+var hasOwn = Object.prototype.hasOwnProperty;
 
 /**
  * @summary Check that a value matches a [pattern](#matchpatterns).
@@ -45,23 +46,23 @@ var check = exports.check = function (value, pattern) {
  * @summary The namespace for all Match types and methods.
  */
 var Match = exports.Match = {
-  Optional: function (pattern) {
+  Optional(pattern) {
     return new Optional(pattern);
   },
-  Maybe: function (pattern) {
+  Maybe(pattern) {
     return new Maybe(pattern);
   },
-  OneOf: function (...args) {
+  OneOf(...args) {
     return new OneOf(args);
   },
   Any: ['__any__'],
-  Where: function (condition) {
+  Where(condition) {
     return new Where(condition);
   },
-  ObjectIncluding: function (pattern) {
+  ObjectIncluding(pattern) {
     return new ObjectIncluding(pattern);
   },
-  ObjectWithValues: function (pattern) {
+  ObjectWithValues(pattern) {
     return new ObjectWithValues(pattern);
   },
   // Matches only signed 32-bit integers
@@ -93,7 +94,7 @@ var Match = exports.Match = {
    * @param {Any} value The value to check
    * @param {MatchPattern} pattern The pattern to match `value` against
    */
-  test: function (value, pattern) {
+  test(value, pattern) {
     return !testSubtree(value, pattern);
   },
 
@@ -101,7 +102,7 @@ var Match = exports.Match = {
   // `args` (either directly or in the first level of an array), throws an error
   // (using `description` in the message).
   //
-  _failIfArgumentsAreNotAllChecked: function (f, context, args, description) {
+  _failIfArgumentsAreNotAllChecked(f, context, args, description) {
     var argChecker = new ArgumentChecker(args, description);
     var result = currentArgumentChecker.withValue(argChecker, function () {
       return f.apply(context, args);
@@ -360,33 +361,27 @@ var testSubtree = function (value, pattern) {
 
   var requiredPatterns = {};
   var optionalPatterns = {};
-  _.each(pattern, function (subPattern, key) {
-    if (subPattern instanceof Optional || subPattern instanceof Maybe)
+
+  Object.keys(pattern).forEach(key => {
+    const subPattern = pattern[key];
+    if (subPattern instanceof Optional ||
+        subPattern instanceof Maybe) {
       optionalPatterns[key] = subPattern.pattern;
-    else
+    } else {
       requiredPatterns[key] = subPattern;
+    }
   });
 
-  //XXX: replace with underscore's _.allKeys if Meteor updates underscore to 1.8+ (or lodash)
-  function allKeys(obj) {
-    var keys = [];
-    if (obj) {
-      for (var key in obj) keys.push(key);
-    }
-    return keys;
-  }
-
-  for (var keys = allKeys(value), i = 0, length = keys.length; i < length; i++) {
-    var key = keys[i];
+  for (var key in Object(value)) {
     var subValue = value[key];
-    if (Object.prototype.hasOwnProperty.call(requiredPatterns, key)) {
+    if (hasOwn.call(requiredPatterns, key)) {
       var result = testSubtree(subValue, requiredPatterns[key]);
       if (result) {
         result.path = _prependPath(key, result.path);
         return result;
       }
       delete requiredPatterns[key];
-    } else if (Object.prototype.hasOwnProperty.call(optionalPatterns, key)) {
+    } else if (hasOwn.call(optionalPatterns, key)) {
       var result = testSubtree(subValue, optionalPatterns[key]);
       if (result) {
         result.path = _prependPath(key, result.path);
@@ -477,17 +472,32 @@ var _jsKeywords = ["do", "if", "in", "for", "let", "new", "try", "var", "case",
 
 // Assumes the base of path is already escaped properly
 // returns key + base
-var _prependPath = function (key, base) {
-  if ((typeof key) === "number" || key.match(/^[0-9]+$/))
+function _prependPath(key, base) {
+  if ((typeof key) === "number" || key.match(/^[0-9]+$/)) {
     key = "[" + key + "]";
-  else if (!key.match(/^[a-z_$][0-9a-z_$]*$/i) || _jsKeywords.includes(key))
+  } else if (!key.match(/^[a-z_$][0-9a-z_$]*$/i) ||
+             _jsKeywords.indexOf(key) >= 0) {
     key = JSON.stringify([key]);
+  }
 
-  if (base && base[0] !== "[")
+  if (base && base[0] !== "[") {
     return key + '.' + base;
-  return key + base;
-};
+  }
 
-function isArguments(item) {
-  return Object.prototype.toString.call(item) === '[object Arguments]';
+  return key + base;
 }
+
+function isObject(value) {
+  return typeof value === "object" && value !== null;
+}
+
+function baseIsArguments(item) {
+  return isObject(item) &&
+    Object.prototype.toString.call(item) === '[object Arguments]';
+}
+
+var isArguments = baseIsArguments(function() {
+  return arguments;
+}()) ? baseIsArguments : function(value) {
+  return isObject(value) && typeof value.callee === "function";
+};

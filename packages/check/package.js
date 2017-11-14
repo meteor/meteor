@@ -4,8 +4,7 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
-  api.use('modules');
-  api.use('underscore');
+  api.use('ecmascript');
   api.use('ejson');
 
   api.mainModule('match.js');

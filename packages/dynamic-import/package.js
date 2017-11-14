@@ -15,7 +15,7 @@ Package.onUse(function (api) {
   api.use("modules");
   api.use("promise");
   api.use("ddp");
-  api.use("check");
+  api.use("check", "server");
   api.use("ecmascript", "server");
 
   api.mainModule("client.js", "client");
