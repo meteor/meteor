@@ -4,7 +4,8 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
-  api.use(['underscore', 'random'], ['client', 'server']);
+  api.use('ecmascript');
+  api.use('random');
+  api.mainModule('retry.js');
   api.export('Retry');
-  api.addFiles('retry.js', ['client', 'server']);
 });

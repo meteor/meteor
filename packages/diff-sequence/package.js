@@ -5,11 +5,10 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
+  api.use('ecmascript');
+  api.use('ejson');
+  api.mainModule('diff.js');
   api.export('DiffSequence');
-  api.use(['underscore', 'ejson']);
-  api.addFiles([
-    'diff.js'
-  ]);
 });
 
 Package.onTest(function (api) {

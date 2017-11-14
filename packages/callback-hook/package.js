@@ -4,11 +4,9 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
-  api.use('underscore', ['client', 'server']);
-
+  api.use('ecmascript');
+  api.mainModule('hook.js');
   api.export('Hook');
-
-  api.addFiles('hook.js', ['client', 'server']);
 });
 
 Package.onTest(function (api) {

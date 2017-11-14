@@ -4,7 +4,8 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
+  api.use('ecmascript');
+  api.use('ejson');
+  api.mainModule('id-map.js');
   api.export('IdMap');
-  api.use(['underscore', 'ejson']);
-  api.addFiles([ 'id-map.js' ]);
 });

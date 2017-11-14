@@ -4,11 +4,9 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
-  api.use('underscore');
   api.use('ecmascript');
   api.export('Random');
   api.addFiles('random.js');
-  api.addFiles('deprecated.js');
 });
 
 Package.onTest(function(api) {

@@ -5,7 +5,7 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
-  api.use('underscore');
+  api.use('ecmascript');
+  api.mainModule('ordered_dict.js');
   api.export('OrderedDict');
-  api.addFiles('ordered_dict.js', ['client', 'server']);
 });
