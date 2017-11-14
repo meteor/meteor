@@ -24,17 +24,3 @@ Write-Host "Running 'meteor --get-ready'..." -ForegroundColor Magenta
 If ($LASTEXITCODE -ne 0) {
   throw "Running .\meteor --get-ready failed."
 }
-
-# This should no longer be necessary with Meteor 1.6, which will
-# automatically install these dependencies when they're not found in the
-# dev bundle, but for good measure, we'll install them ahead of time,
-# and to also cover Meteor 1.5.
-Write-Host "Installing test npm dependencies..." `
-  -ForegroundColor Magenta
-& "$meteorBat" npm install --prefix "${dirCheckout}\dev_bundle\lib" `
-  phantomjs-prebuilt `
-  browserstack-webdriver
-
-If ($LASTEXITCODE -ne 0) {
-  throw "Installing npm dependencies required for testing has failed."
-}
