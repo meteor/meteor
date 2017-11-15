@@ -1,18 +1,31 @@
 import { Meteor } from 'meteor/meteor';
-import { _ } from 'meteor/underscore';
 import { DDPCommon } from 'meteor/ddp-common';
 import { Tracker } from 'meteor/tracker';
 import { EJSON } from 'meteor/ejson';
 import { Random } from 'meteor/random';
 import { Hook } from 'meteor/callback-hook';
+import { MongoID } from 'meteor/mongo-id';
+import { DDP } from './namespace.js';
+import getClientStreamClass from './getClientStreamClass.js';
+import MethodInvoker from './MethodInvoker.js';
+import {
+  hasOwn,
+  slice,
+  keys,
+  isEmpty,
+  last,
+} from "meteor/ddp-common/utils.js";
 
 if (Meteor.isServer) {
   var Fiber = Npm.require('fibers');
   var Future = Npm.require('fibers/future');
 }
 
-import { DDP, LivedataTest } from "./namespace.js";
-import { MongoIDMap } from "./id_map.js";
+class MongoIDMap extends IdMap {
+  constructor() {
+    super(MongoID.idStringify, MongoID.idParse);
+  }
+}
 
 // @param url {String|Object} URL to Meteor app,
 //   or an object as a test hook (see code)
@@ -34,484 +47,276 @@ import { MongoIDMap } from "./id_map.js";
 // fails. We should have better usability in the latter case (while
 // still transparently reconnecting if it's just a transient failure
 // or the server migrating us).
-var Connection = function (url, options) {
-  var self = this;
-  options = _.extend({
-    onConnected: function () {},
-    onDDPVersionNegotiationFailure: function (description) {
-      Meteor._debug(description);
-    },
-    heartbeatInterval: 17500,
-    heartbeatTimeout: 15000,
-    npmFayeOptions: {},
-    // These options are only for testing.
-    reloadWithOutstanding: false,
-    supportedDDPVersions: DDPCommon.SUPPORTED_DDP_VERSIONS,
-    retry: true,
-    respondToPings: true,
-    // When updates are coming within this ms interval, batch them together.
-    bufferedWritesInterval: 5,
-    // Flush buffers immediately if writes are happening continuously for more than this many ms.
-    bufferedWritesMaxAge: 500
-  }, options);
+export class Connection {
+  constructor(url, options) {
+    var self = this;
 
-  // If set, called when we reconnect, queuing method calls _before_ the
-  // existing outstanding ones.
-  // NOTE: This feature has been preserved for backwards compatibility. The
-  // preferred method of setting a callback on reconnect is to use
-  // DDP.onReconnect.
-  self.onReconnect = null;
+    this.options = options = {
+      onConnected() {},
+      onDDPVersionNegotiationFailure(description) {
+        Meteor._debug(description);
+      },
+      heartbeatInterval: 17500,
+      heartbeatTimeout: 15000,
+      npmFayeOptions: Object.create(null),
+      // These options are only for testing.
+      reloadWithOutstanding: false,
+      supportedDDPVersions: DDPCommon.SUPPORTED_DDP_VERSIONS,
+      retry: true,
+      respondToPings: true,
+      // When updates are coming within this ms interval, batch them together.
+      bufferedWritesInterval: 5,
+      // Flush buffers immediately if writes are happening continuously for more than this many ms.
+      bufferedWritesMaxAge: 500,
 
-  // as a test hook, allow passing a stream instead of a url.
-  if (typeof url === "object") {
-    self._stream = url;
-  } else {
-    self._stream = new LivedataTest.ClientStream(url, {
-      retry: options.retry,
-      headers: options.headers,
-      _sockjsOptions: options._sockjsOptions,
-      // Used to keep some tests quiet, or for other cases in which
-      // the right thing to do with connection errors is to silently
-      // fail (e.g. sending package usage stats). At some point we
-      // should have a real API for handling client-stream-level
-      // errors.
-      _dontPrintErrors: options._dontPrintErrors,
-      connectTimeoutMs: options.connectTimeoutMs,
-      npmFayeOptions: options.npmFayeOptions
-    });
-  }
+      ...options
+    };
 
-  self._lastSessionId = null;
-  self._versionSuggestion = null;  // The last proposed DDP version.
-  self._version = null;   // The DDP version agreed on by client and server.
-  self._stores = {}; // name -> object with methods
-  self._methodHandlers = {}; // name -> func
-  self._nextMethodId = 1;
-  self._supportedDDPVersions = options.supportedDDPVersions;
+    // If set, called when we reconnect, queuing method calls _before_ the
+    // existing outstanding ones.
+    // NOTE: This feature has been preserved for backwards compatibility. The
+    // preferred method of setting a callback on reconnect is to use
+    // DDP.onReconnect.
+    self.onReconnect = null;
 
-  self._heartbeatInterval = options.heartbeatInterval;
-  self._heartbeatTimeout = options.heartbeatTimeout;
-
-  // Tracks methods which the user has tried to call but which have not yet
-  // called their user callback (ie, they are waiting on their result or for all
-  // of their writes to be written to the local cache). Map from method ID to
-  // MethodInvoker object.
-  self._methodInvokers = {};
-
-  // Tracks methods which the user has called but whose result messages have not
-  // arrived yet.
-  //
-  // _outstandingMethodBlocks is an array of blocks of methods. Each block
-  // represents a set of methods that can run at the same time. The first block
-  // represents the methods which are currently in flight; subsequent blocks
-  // must wait for previous blocks to be fully finished before they can be sent
-  // to the server.
-  //
-  // Each block is an object with the following fields:
-  // - methods: a list of MethodInvoker objects
-  // - wait: a boolean; if true, this block had a single method invoked with
-  //         the "wait" option
-  //
-  // There will never be adjacent blocks with wait=false, because the only thing
-  // that makes methods need to be serialized is a wait method.
-  //
-  // Methods are removed from the first block when their "result" is
-  // received. The entire first block is only removed when all of the in-flight
-  // methods have received their results (so the "methods" list is empty) *AND*
-  // all of the data written by those methods are visible in the local cache. So
-  // it is possible for the first block's methods list to be empty, if we are
-  // still waiting for some objects to quiesce.
-  //
-  // Example:
-  //  _outstandingMethodBlocks = [
-  //    {wait: false, methods: []},
-  //    {wait: true, methods: [<MethodInvoker for 'login'>]},
-  //    {wait: false, methods: [<MethodInvoker for 'foo'>,
-  //                            <MethodInvoker for 'bar'>]}]
-  // This means that there were some methods which were sent to the server and
-  // which have returned their results, but some of the data written by
-  // the methods may not be visible in the local cache. Once all that data is
-  // visible, we will send a 'login' method. Once the login method has returned
-  // and all the data is visible (including re-running subs if userId changes),
-  // we will send the 'foo' and 'bar' methods in parallel.
-  self._outstandingMethodBlocks = [];
-
-  // method ID -> array of objects with keys 'collection' and 'id', listing
-  // documents written by a given method's stub. keys are associated with
-  // methods whose stub wrote at least one document, and whose data-done message
-  // has not yet been received.
-  self._documentsWrittenByStub = {};
-  // collection -> IdMap of "server document" object. A "server document" has:
-  // - "document": the version of the document according the
-  //   server (ie, the snapshot before a stub wrote it, amended by any changes
-  //   received from the server)
-  //   It is undefined if we think the document does not exist
-  // - "writtenByStubs": a set of method IDs whose stubs wrote to the document
-  //   whose "data done" messages have not yet been processed
-  self._serverDocuments = {};
-
-  // Array of callbacks to be called after the next update of the local
-  // cache. Used for:
-  //  - Calling methodInvoker.dataVisible and sub ready callbacks after
-  //    the relevant data is flushed.
-  //  - Invoking the callbacks of "half-finished" methods after reconnect
-  //    quiescence. Specifically, methods whose result was received over the old
-  //    connection (so we don't re-send it) but whose data had not been made
-  //    visible.
-  self._afterUpdateCallbacks = [];
-
-  // In two contexts, we buffer all incoming data messages and then process them
-  // all at once in a single update:
-  //   - During reconnect, we buffer all data messages until all subs that had
-  //     been ready before reconnect are ready again, and all methods that are
-  //     active have returned their "data done message"; then
-  //   - During the execution of a "wait" method, we buffer all data messages
-  //     until the wait method gets its "data done" message. (If the wait method
-  //     occurs during reconnect, it doesn't get any special handling.)
-  // all data messages are processed in one update.
-  //
-  // The following fields are used for this "quiescence" process.
-
-  // This buffers the messages that aren't being processed yet.
-  self._messagesBufferedUntilQuiescence = [];
-  // Map from method ID -> true. Methods are removed from this when their
-  // "data done" message is received, and we will not quiesce until it is
-  // empty.
-  self._methodsBlockingQuiescence = {};
-  // map from sub ID -> true for subs that were ready (ie, called the sub
-  // ready callback) before reconnect but haven't become ready again yet
-  self._subsBeingRevived = {}; // map from sub._id -> true
-  // if true, the next data update should reset all stores. (set during
-  // reconnect.)
-  self._resetStores = false;
-
-  // name -> array of updates for (yet to be created) collections
-  self._updatesForUnknownStores = {};
-  // if we're blocking a migration, the retry func
-  self._retryMigrate = null;
-
-  self.__flushBufferedWrites = Meteor.bindEnvironment(
-    self._flushBufferedWrites, "flushing DDP buffered writes", self);
-  // Collection name -> array of messages.
-  self._bufferedWrites = {};
-  // When current buffer of updates must be flushed at, in ms timestamp.
-  self._bufferedWritesFlushAt = null;
-  // Timeout handle for the next processing of all pending writes
-  self._bufferedWritesFlushHandle = null;
-
-  self._bufferedWritesInterval = options.bufferedWritesInterval;
-  self._bufferedWritesMaxAge = options.bufferedWritesMaxAge;
-
-  // metadata for subscriptions.  Map from sub ID to object with keys:
-  //   - id
-  //   - name
-  //   - params
-  //   - inactive (if true, will be cleaned up if not reused in re-run)
-  //   - ready (has the 'ready' message been received?)
-  //   - readyCallback (an optional callback to call when ready)
-  //   - errorCallback (an optional callback to call if the sub terminates with
-  //                    an error, XXX COMPAT WITH 1.0.3.1)
-  //   - stopCallback (an optional callback to call when the sub terminates
-  //     for any reason, with an error argument if an error triggered the stop)
-  self._subscriptions = {};
-
-  // Reactive userId.
-  self._userId = null;
-  self._userIdDeps = new Tracker.Dependency;
-
-  // Block auto-reload while we're waiting for method responses.
-  if (Meteor.isClient && Package.reload && !options.reloadWithOutstanding) {
-    Package.reload.Reload._onMigrate(function (retry) {
-      if (!self._readyToMigrate()) {
-        if (self._retryMigrate)
-          throw new Error("Two migrations in progress?");
-        self._retryMigrate = retry;
-        return false;
-      } else {
-        return [true];
-      }
-    });
-  }
-
-  var onMessage = function (raw_msg) {
-    try {
-      var msg = DDPCommon.parseDDP(raw_msg);
-    } catch (e) {
-      Meteor._debug("Exception while parsing DDP", e);
-      return;
+    // as a test hook, allow passing a stream instead of a url.
+    if (typeof url === 'object') {
+      self._stream = url;
+    } else {
+      self._stream = new (getClientStreamClass())(url, {
+        retry: options.retry,
+        headers: options.headers,
+        _sockjsOptions: options._sockjsOptions,
+        // Used to keep some tests quiet, or for other cases in which
+        // the right thing to do with connection errors is to silently
+        // fail (e.g. sending package usage stats). At some point we
+        // should have a real API for handling client-stream-level
+        // errors.
+        _dontPrintErrors: options._dontPrintErrors,
+        connectTimeoutMs: options.connectTimeoutMs,
+        npmFayeOptions: options.npmFayeOptions
+      });
     }
 
-    // Any message counts as receiving a pong, as it demonstrates that
-    // the server is still alive.
-    if (self._heartbeat) {
-      self._heartbeat.messageReceived();
-    }
+    self._lastSessionId = null;
+    self._versionSuggestion = null; // The last proposed DDP version.
+    self._version = null; // The DDP version agreed on by client and server.
+    self._stores = Object.create(null); // name -> object with methods
+    self._methodHandlers = Object.create(null); // name -> func
+    self._nextMethodId = 1;
+    self._supportedDDPVersions = options.supportedDDPVersions;
 
-    if (msg === null || !msg.msg) {
-      // XXX COMPAT WITH 0.6.6. ignore the old welcome message for back
-      // compat.  Remove this 'if' once the server stops sending welcome
-      // messages (stream_server.js).
-      if (! (msg && msg.server_id))
-        Meteor._debug("discarding invalid livedata message", msg);
-      return;
-    }
+    self._heartbeatInterval = options.heartbeatInterval;
+    self._heartbeatTimeout = options.heartbeatTimeout;
 
-    if (msg.msg === 'connected') {
-      self._version = self._versionSuggestion;
-      self._livedata_connected(msg);
-      options.onConnected();
-    }
-    else if (msg.msg === 'failed') {
-      if (_.contains(self._supportedDDPVersions, msg.version)) {
-        self._versionSuggestion = msg.version;
-        self._stream.reconnect({_force: true});
-      } else {
-        var description =
-              "DDP version negotiation failed; server requested version " + msg.version;
-        self._stream.disconnect({_permanent: true, _error: description});
-        options.onDDPVersionNegotiationFailure(description);
-      }
-    }
-    else if (msg.msg === 'ping' && options.respondToPings) {
-      self._send({msg: "pong", id: msg.id});
-    }
-    else if (msg.msg === 'pong') {
-      // noop, as we assume everything's a pong
-    }
-    else if (_.include(['added', 'changed', 'removed', 'ready', 'updated'], msg.msg))
-      self._livedata_data(msg);
-    else if (msg.msg === 'nosub')
-      self._livedata_nosub(msg);
-    else if (msg.msg === 'result')
-      self._livedata_result(msg);
-    else if (msg.msg === 'error')
-      self._livedata_error(msg);
-    else
-      Meteor._debug("discarding unknown livedata message type", msg);
-  };
+    // Tracks methods which the user has tried to call but which have not yet
+    // called their user callback (ie, they are waiting on their result or for all
+    // of their writes to be written to the local cache). Map from method ID to
+    // MethodInvoker object.
+    self._methodInvokers = Object.create(null);
 
-  var onReset = function () {
-    // Send a connect message at the beginning of the stream.
-    // NOTE: reset is called even on the first connection, so this is
-    // the only place we send this message.
-    var msg = {msg: 'connect'};
-    if (self._lastSessionId)
-      msg.session = self._lastSessionId;
-    msg.version = self._versionSuggestion || self._supportedDDPVersions[0];
-    self._versionSuggestion = msg.version;
-    msg.support = self._supportedDDPVersions;
-    self._send(msg);
+    // Tracks methods which the user has called but whose result messages have not
+    // arrived yet.
+    //
+    // _outstandingMethodBlocks is an array of blocks of methods. Each block
+    // represents a set of methods that can run at the same time. The first block
+    // represents the methods which are currently in flight; subsequent blocks
+    // must wait for previous blocks to be fully finished before they can be sent
+    // to the server.
+    //
+    // Each block is an object with the following fields:
+    // - methods: a list of MethodInvoker objects
+    // - wait: a boolean; if true, this block had a single method invoked with
+    //         the "wait" option
+    //
+    // There will never be adjacent blocks with wait=false, because the only thing
+    // that makes methods need to be serialized is a wait method.
+    //
+    // Methods are removed from the first block when their "result" is
+    // received. The entire first block is only removed when all of the in-flight
+    // methods have received their results (so the "methods" list is empty) *AND*
+    // all of the data written by those methods are visible in the local cache. So
+    // it is possible for the first block's methods list to be empty, if we are
+    // still waiting for some objects to quiesce.
+    //
+    // Example:
+    //  _outstandingMethodBlocks = [
+    //    {wait: false, methods: []},
+    //    {wait: true, methods: [<MethodInvoker for 'login'>]},
+    //    {wait: false, methods: [<MethodInvoker for 'foo'>,
+    //                            <MethodInvoker for 'bar'>]}]
+    // This means that there were some methods which were sent to the server and
+    // which have returned their results, but some of the data written by
+    // the methods may not be visible in the local cache. Once all that data is
+    // visible, we will send a 'login' method. Once the login method has returned
+    // and all the data is visible (including re-running subs if userId changes),
+    // we will send the 'foo' and 'bar' methods in parallel.
+    self._outstandingMethodBlocks = [];
 
-    // Mark non-retry calls as failed. This has to be done early as getting these methods out of the
-    // current block is pretty important to making sure that quiescence is properly calculated, as
-    // well as possibly moving on to another useful block.
+    // method ID -> array of objects with keys 'collection' and 'id', listing
+    // documents written by a given method's stub. keys are associated with
+    // methods whose stub wrote at least one document, and whose data-done message
+    // has not yet been received.
+    self._documentsWrittenByStub = Object.create(null);
+    // collection -> IdMap of "server document" object. A "server document" has:
+    // - "document": the version of the document according the
+    //   server (ie, the snapshot before a stub wrote it, amended by any changes
+    //   received from the server)
+    //   It is undefined if we think the document does not exist
+    // - "writtenByStubs": a set of method IDs whose stubs wrote to the document
+    //   whose "data done" messages have not yet been processed
+    self._serverDocuments = Object.create(null);
 
-    // Only bother testing if there is an outstandingMethodBlock (there might not be, especially if
-    // we are connecting for the first time.
-    if (self._outstandingMethodBlocks.length > 0) {
-      // If there is an outstanding method block, we only care about the first one as that is the
-      // one that could have already sent messages with no response, that are not allowed to retry.
-      const currentMethodBlock = self._outstandingMethodBlocks[0].methods;
-      self._outstandingMethodBlocks[0].methods = currentMethodBlock.filter((methodInvoker) => {
+    // Array of callbacks to be called after the next update of the local
+    // cache. Used for:
+    //  - Calling methodInvoker.dataVisible and sub ready callbacks after
+    //    the relevant data is flushed.
+    //  - Invoking the callbacks of "half-finished" methods after reconnect
+    //    quiescence. Specifically, methods whose result was received over the old
+    //    connection (so we don't re-send it) but whose data had not been made
+    //    visible.
+    self._afterUpdateCallbacks = [];
 
-        // Methods with 'noRetry' option set are not allowed to re-send after
-        // recovering dropped connection.
-        if (methodInvoker.sentMessage && methodInvoker.noRetry) {
-          // Make sure that the method is told that it failed.
-          methodInvoker.receiveResult(new Meteor.Error('invocation-failed',
-            'Method invocation might have failed due to dropped connection. ' +
-            'Failing because `noRetry` option was passed to Meteor.apply.'));
+    // In two contexts, we buffer all incoming data messages and then process them
+    // all at once in a single update:
+    //   - During reconnect, we buffer all data messages until all subs that had
+    //     been ready before reconnect are ready again, and all methods that are
+    //     active have returned their "data done message"; then
+    //   - During the execution of a "wait" method, we buffer all data messages
+    //     until the wait method gets its "data done" message. (If the wait method
+    //     occurs during reconnect, it doesn't get any special handling.)
+    // all data messages are processed in one update.
+    //
+    // The following fields are used for this "quiescence" process.
+
+    // This buffers the messages that aren't being processed yet.
+    self._messagesBufferedUntilQuiescence = [];
+    // Map from method ID -> true. Methods are removed from this when their
+    // "data done" message is received, and we will not quiesce until it is
+    // empty.
+    self._methodsBlockingQuiescence = Object.create(null);
+    // map from sub ID -> true for subs that were ready (ie, called the sub
+    // ready callback) before reconnect but haven't become ready again yet
+    self._subsBeingRevived = Object.create(null); // map from sub._id -> true
+    // if true, the next data update should reset all stores. (set during
+    // reconnect.)
+    self._resetStores = false;
+
+    // name -> array of updates for (yet to be created) collections
+    self._updatesForUnknownStores = Object.create(null);
+    // if we're blocking a migration, the retry func
+    self._retryMigrate = null;
+
+    self.__flushBufferedWrites = Meteor.bindEnvironment(
+      self._flushBufferedWrites,
+      'flushing DDP buffered writes',
+      self
+    );
+    // Collection name -> array of messages.
+    self._bufferedWrites = Object.create(null);
+    // When current buffer of updates must be flushed at, in ms timestamp.
+    self._bufferedWritesFlushAt = null;
+    // Timeout handle for the next processing of all pending writes
+    self._bufferedWritesFlushHandle = null;
+
+    self._bufferedWritesInterval = options.bufferedWritesInterval;
+    self._bufferedWritesMaxAge = options.bufferedWritesMaxAge;
+
+    // metadata for subscriptions.  Map from sub ID to object with keys:
+    //   - id
+    //   - name
+    //   - params
+    //   - inactive (if true, will be cleaned up if not reused in re-run)
+    //   - ready (has the 'ready' message been received?)
+    //   - readyCallback (an optional callback to call when ready)
+    //   - errorCallback (an optional callback to call if the sub terminates with
+    //                    an error, XXX COMPAT WITH 1.0.3.1)
+    //   - stopCallback (an optional callback to call when the sub terminates
+    //     for any reason, with an error argument if an error triggered the stop)
+    self._subscriptions = Object.create(null);
+
+    // Reactive userId.
+    self._userId = null;
+    self._userIdDeps = new Tracker.Dependency();
+
+    // Block auto-reload while we're waiting for method responses.
+    if (Meteor.isClient &&
+        Package.reload &&
+        ! options.reloadWithOutstanding) {
+      Package.reload.Reload._onMigrate(retry => {
+        if (! self._readyToMigrate()) {
+          if (self._retryMigrate)
+            throw new Error('Two migrations in progress?');
+          self._retryMigrate = retry;
+          return false;
+        } else {
+          return [true];
         }
-
-        // Only keep a method if it wasn't sent or it's allowed to retry.
-        // This may leave the block empty, but we don't move on to the next
-        // block until the callback has been delivered, in _outstandingMethodFinished.
-        return !(methodInvoker.sentMessage && methodInvoker.noRetry);
       });
     }
 
-    // Now, to minimize setup latency, go ahead and blast out all of
-    // our pending methods ands subscriptions before we've even taken
-    // the necessary RTT to know if we successfully reconnected. (1)
-    // They're supposed to be idempotent, and where they are not,
-    // they can block retry in apply; (2) even if we did reconnect,
-    // we're not sure what messages might have gotten lost
-    // (in either direction) since we were disconnected (TCP being
-    // sloppy about that.)
+    var onDisconnect = () => {
+      if (self._heartbeat) {
+        self._heartbeat.stop();
+        self._heartbeat = null;
+      }
+    };
 
-    // If the current block of methods all got their results (but didn't all get
-    // their data visible), discard the empty block now.
-    if (! _.isEmpty(self._outstandingMethodBlocks) &&
-        _.isEmpty(self._outstandingMethodBlocks[0].methods)) {
-      self._outstandingMethodBlocks.shift();
+    if (Meteor.isServer) {
+      self._stream.on(
+        'message',
+        Meteor.bindEnvironment(
+          this.onMessage.bind(this),
+          'handling DDP message'
+        )
+      );
+      self._stream.on(
+        'reset',
+        Meteor.bindEnvironment(this.onReset.bind(this), 'handling DDP reset')
+      );
+      self._stream.on(
+        'disconnect',
+        Meteor.bindEnvironment(onDisconnect, 'handling DDP disconnect')
+      );
+    } else {
+      self._stream.on('message', this.onMessage.bind(this));
+      self._stream.on('reset', this.onReset.bind(this));
+      self._stream.on('disconnect', onDisconnect);
     }
-
-    // Mark all messages as unsent, they have not yet been sent on this
-    // connection.
-    _.each(self._methodInvokers, function (m) {
-      m.sentMessage = false;
-    });
-
-    // If an `onReconnect` handler is set, call it first. Go through
-    // some hoops to ensure that methods that are called from within
-    // `onReconnect` get executed _before_ ones that were originally
-    // outstanding (since `onReconnect` is used to re-establish auth
-    // certificates)
-    self._callOnReconnectAndSendAppropriateOutstandingMethods();
-
-    // add new subscriptions at the end. this way they take effect after
-    // the handlers and we don't see flicker.
-    _.each(self._subscriptions, function (sub, id) {
-      self._send({
-        msg: 'sub',
-        id: id,
-        name: sub.name,
-        params: sub.params
-      });
-    });
-  };
-
-  var onDisconnect = function () {
-    if (self._heartbeat) {
-      self._heartbeat.stop();
-      self._heartbeat = null;
-    }
-  };
-
-  if (Meteor.isServer) {
-    self._stream.on('message', Meteor.bindEnvironment(onMessage, "handling DDP message"));
-    self._stream.on('reset', Meteor.bindEnvironment(onReset, "handling DDP reset"));
-    self._stream.on('disconnect', Meteor.bindEnvironment(onDisconnect, "handling DDP disconnect"));
-  } else {
-    self._stream.on('message', onMessage);
-    self._stream.on('reset', onReset);
-    self._stream.on('disconnect', onDisconnect);
   }
-};
 
-// A MethodInvoker manages sending a method to the server and calling the user's
-// callbacks. On construction, it registers itself in the connection's
-// _methodInvokers map; it removes itself once the method is fully finished and
-// the callback is invoked. This occurs when it has both received a result,
-// and the data written by it is fully visible.
-var MethodInvoker = function (options) {
-  var self = this;
-
-  // Public (within this file) fields.
-  self.methodId = options.methodId;
-  self.sentMessage = false;
-
-  self._callback = options.callback;
-  self._connection = options.connection;
-  self._message = options.message;
-  self._onResultReceived = options.onResultReceived || function () {};
-  self._wait = options.wait;
-  self.noRetry = options.noRetry;
-  self._methodResult = null;
-  self._dataVisible = false;
-
-  // Register with the connection.
-  self._connection._methodInvokers[self.methodId] = self;
-};
-_.extend(MethodInvoker.prototype, {
-  // Sends the method message to the server. May be called additional times if
-  // we lose the connection and reconnect before receiving a result.
-  sendMessage: function () {
-    var self = this;
-    // This function is called before sending a method (including resending on
-    // reconnect). We should only (re)send methods where we don't already have a
-    // result!
-    if (self.gotResult())
-      throw new Error("sendingMethod is called on method with result");
-
-
-    // If we're re-sending it, it doesn't matter if data was written the first
-    // time.
-    self._dataVisible = false;
-    self.sentMessage = true;
-
-    // If this is a wait method, make all data messages be buffered until it is
-    // done.
-    if (self._wait)
-      self._connection._methodsBlockingQuiescence[self.methodId] = true;
-
-    // Actually send the message.
-    self._connection._send(self._message);
-  },
-  // Invoke the callback, if we have both a result and know that all data has
-  // been written to the local cache.
-  _maybeInvokeCallback: function () {
-    var self = this;
-    if (self._methodResult && self._dataVisible) {
-      // Call the callback. (This won't throw: the callback was wrapped with
-      // bindEnvironment.)
-      self._callback(self._methodResult[0], self._methodResult[1]);
-
-      // Forget about this method.
-      delete self._connection._methodInvokers[self.methodId];
-
-      // Let the connection know that this method is finished, so it can try to
-      // move on to the next block of methods.
-      self._connection._outstandingMethodFinished();
-    }
-  },
-  // Call with the result of the method from the server. Only may be called
-  // once; once it is called, you should not call sendMessage again.
-  // If the user provided an onResultReceived callback, call it immediately.
-  // Then invoke the main callback if data is also visible.
-  receiveResult: function (err, result) {
-    var self = this;
-    if (self.gotResult())
-      throw new Error("Methods should only receive results once");
-    self._methodResult = [err, result];
-    self._onResultReceived(err, result);
-    self._maybeInvokeCallback();
-  },
-  // Call this when all data written by the method is visible. This means that
-  // the method has returns its "data is done" message *AND* all server
-  // documents that are buffered at that time have been written to the local
-  // cache. Invokes the main callback if the result has been received.
-  dataVisible: function () {
-    var self = this;
-    self._dataVisible = true;
-    self._maybeInvokeCallback();
-  },
-  // True if receiveResult has been called.
-  gotResult: function () {
-    var self = this;
-    return !!self._methodResult;
-  }
-});
-
-_.extend(Connection.prototype, {
   // 'name' is the name of the data on the wire that should go in the
   // store. 'wrappedStore' should be an object with methods beginUpdate, update,
   // endUpdate, saveOriginals, retrieveOriginals. see Collection for an example.
-  registerStore: function (name, wrappedStore) {
+  registerStore(name, wrappedStore) {
     var self = this;
 
-    if (name in self._stores)
-      return false;
+    if (name in self._stores) return false;
 
     // Wrap the input object in an object which makes any store method not
     // implemented by 'store' into a no-op.
-    var store = {};
-    _.each(['update', 'beginUpdate', 'endUpdate', 'saveOriginals',
-            'retrieveOriginals', 'getDoc',
-			'_getCollection'], function (method) {
-              store[method] = function () {
-                return (wrappedStore[method]
-                        ? wrappedStore[method].apply(wrappedStore, arguments)
-                        : undefined);
-              };
-            });
+    var store = Object.create(null);
+    [ 'update',
+      'beginUpdate',
+      'endUpdate',
+      'saveOriginals',
+      'retrieveOriginals',
+      'getDoc',
+      '_getCollection'
+    ].forEach(method => {
+      store[method] = (...args) => {
+        if (wrappedStore[method]) {
+          return wrappedStore[method](...args);
+        }
+      };
+    });
 
     self._stores[name] = store;
 
     var queued = self._updatesForUnknownStores[name];
     if (queued) {
       store.beginUpdate(queued.length, false);
-      _.each(queued, function (msg) {
+      queued.forEach(msg => {
         store.update(msg);
       });
       store.endUpdate();
@@ -519,7 +324,7 @@ _.extend(Connection.prototype, {
     }
 
     return true;
-  },
+  }
 
   /**
    * @memberOf Meteor
@@ -536,20 +341,22 @@ _.extend(Connection.prototype, {
    * argument to `onStop`. If a function is passed instead of an object, it
    * is interpreted as an `onReady` callback.
    */
-  subscribe: function (name /* .. [arguments] .. (callback|callbacks) */) {
+  subscribe(name /* .. [arguments] .. (callback|callbacks) */) {
     var self = this;
 
-    var params = Array.prototype.slice.call(arguments, 1);
-    var callbacks = {};
+    var params = slice.call(arguments, 1);
+    var callbacks = Object.create(null);
     if (params.length) {
       var lastParam = params[params.length - 1];
-      if (_.isFunction(lastParam)) {
+      if (typeof lastParam === 'function') {
         callbacks.onReady = params.pop();
-      } else if (lastParam &&
+      } else if (lastParam && [
+        lastParam.onReady,
         // XXX COMPAT WITH 1.0.3.1 onError used to exist, but now we use
         // onStop with an error callback instead.
-        _.any([lastParam.onReady, lastParam.onError, lastParam.onStop],
-          _.isFunction)) {
+        lastParam.onError,
+        lastParam.onStop
+      ].some(f => typeof f === "function")) {
         callbacks = params.pop();
       }
     }
@@ -572,9 +379,14 @@ _.extend(Connection.prototype, {
     // We only look for one such sub; if there are N apparently-identical subs
     // being invalidated, we will require N matching subscribe calls to keep
     // them all active.
-    var existing = _.find(self._subscriptions, function (sub) {
-      return sub.inactive && sub.name === name &&
-        EJSON.equals(sub.params, params);
+    var existing;
+    keys(self._subscriptions).some(id => {
+      const sub = self._subscriptions[id];
+      if (sub.inactive &&
+          sub.name === name &&
+          EJSON.equals(sub.params, params)) {
+        return existing = sub;
+      }
     });
 
     var id;
@@ -619,18 +431,18 @@ _.extend(Connection.prototype, {
         params: EJSON.clone(params),
         inactive: false,
         ready: false,
-        readyDeps: new Tracker.Dependency,
+        readyDeps: new Tracker.Dependency(),
         readyCallback: callbacks.onReady,
         // XXX COMPAT WITH 1.0.3.1 #errorCallback
         errorCallback: callbacks.onError,
         stopCallback: callbacks.onStop,
         connection: self,
-        remove: function() {
+        remove() {
           delete this.connection._subscriptions[this.id];
           this.ready && this.readyDeps.changed();
         },
-        stop: function() {
-          this.connection._send({msg: 'unsub', id: id});
+        stop() {
+          this.connection._send({ msg: 'unsub', id: id });
           this.remove();
 
           if (callbacks.onStop) {
@@ -638,21 +450,22 @@ _.extend(Connection.prototype, {
           }
         }
       };
-      self._send({msg: 'sub', id: id, name: name, params: params});
+      self._send({ msg: 'sub', id: id, name: name, params: params });
     }
 
     // return a handle to the application.
     var handle = {
-      stop: function () {
-        if (!_.has(self._subscriptions, id))
+      stop() {
+        if (! hasOwn.call(self._subscriptions, id)) {
           return;
-
+        }
         self._subscriptions[id].stop();
       },
-      ready: function () {
+      ready() {
         // return false if we've unsubscribed.
-        if (!_.has(self._subscriptions, id))
+        if (! hasOwn.call(self._subscriptions, id)) {
           return false;
+        }
         var record = self._subscriptions[id];
         record.readyDeps.depend();
         return record.ready;
@@ -667,58 +480,60 @@ _.extend(Connection.prototype, {
       // as a change to mark the subscription "inactive" so that it can
       // be reused from the rerun.  If it isn't reused, it's killed from
       // an afterFlush.
-      Tracker.onInvalidate(function (c) {
-        if (_.has(self._subscriptions, id))
+      Tracker.onInvalidate(c => {
+        if (hasOwn.call(self._subscriptions, id)) {
           self._subscriptions[id].inactive = true;
+        }
 
-        Tracker.afterFlush(function () {
-          if (_.has(self._subscriptions, id) &&
-              self._subscriptions[id].inactive)
+        Tracker.afterFlush(() => {
+          if (hasOwn.call(self._subscriptions, id) &&
+              self._subscriptions[id].inactive) {
             handle.stop();
+          }
         });
       });
     }
 
     return handle;
-  },
+  }
 
   // options:
   // - onLateError {Function(error)} called if an error was received after the ready event.
   //     (errors received before ready cause an error to be thrown)
-  _subscribeAndWait: function (name, args, options) {
+  _subscribeAndWait(name, args, options) {
     var self = this;
     var f = new Future();
     var ready = false;
     var handle;
     args = args || [];
     args.push({
-      onReady: function () {
+      onReady() {
         ready = true;
         f['return']();
       },
-      onError: function (e) {
-        if (!ready)
-          f['throw'](e);
-        else
-          options && options.onLateError && options.onLateError(e);
+      onError(e) {
+        if (!ready) f['throw'](e);
+        else options && options.onLateError && options.onLateError(e);
       }
     });
 
     handle = self.subscribe.apply(self, [name].concat(args));
     f.wait();
     return handle;
-  },
+  }
 
-  methods: function (methods) {
-    var self = this;
-    _.each(methods, function (func, name) {
-      if (typeof func !== 'function')
+  methods(methods) {
+    keys(methods).forEach(name => {
+      const func = methods[name];
+      if (typeof func !== 'function') {
         throw new Error("Method '" + name + "' must be a function");
-      if (self._methodHandlers[name])
+      }
+      if (this._methodHandlers[name]) {
         throw new Error("A method named '" + name + "' is already defined");
-      self._methodHandlers[name] = func;
+      }
+      this._methodHandlers[name] = func;
     });
-  },
+  }
 
   /**
    * @memberOf Meteor
@@ -729,14 +544,14 @@ _.extend(Connection.prototype, {
    * @param {EJSONable} [arg1,arg2...] Optional method arguments
    * @param {Function} [asyncCallback] Optional callback, which is called asynchronously with the error or result after the method is complete. If not provided, the method runs synchronously if possible (see below).
    */
-  call: function (name /* .. [arguments] .. callback */) {
+  call(name /* .. [arguments] .. callback */) {
     // if it's a function, the last argument is the result callback,
     // not a parameter to the remote method.
-    var args = Array.prototype.slice.call(arguments, 1);
-    if (args.length && typeof args[args.length - 1] === "function")
+    var args = slice.call(arguments, 1);
+    if (args.length && typeof args[args.length - 1] === 'function')
       var callback = args.pop();
     return this.apply(name, args, callback);
-  },
+  }
 
   // @param options {Optional Object}
   //   wait: Boolean - Should we wait to call this until all current methods
@@ -773,16 +588,16 @@ _.extend(Connection.prototype, {
    * @param {Boolean} options.throwStubExceptions (Client only) If true, exceptions thrown by method stubs will be thrown instead of logged, and the method will not be invoked on the server.
    * @param {Function} [asyncCallback] Optional callback; same semantics as in [`Meteor.call`](#meteor_call).
    */
-  apply: function (name, args, options, callback) {
+  apply(name, args, options, callback) {
     var self = this;
 
     // We were passed 3 arguments. They may be either (name, args, options)
     // or (name, args, callback)
     if (!callback && typeof options === 'function') {
       callback = options;
-      options = {};
+      options = Object.create(null);
     }
-    options = options || {};
+    options = options || Object.create(null);
 
     if (callback) {
       // XXX would it be better form to do the binding in stream.on,
@@ -798,16 +613,6 @@ _.extend(Connection.prototype, {
     // while because of a wait method).
     args = EJSON.clone(args);
 
-    // Lazily allocate method ID once we know that it'll be needed.
-    var methodId = (function () {
-      var id;
-      return function () {
-        if (id === undefined)
-          id = '' + (self._nextMethodId++);
-        return id;
-      };
-    })();
-
     var enclosing = DDP._CurrentMethodInvocation.get();
     var alreadyInSimulation = enclosing && enclosing.isSimulation;
 
@@ -822,7 +627,7 @@ _.extend(Connection.prototype, {
     // randomSeed to save bandwidth, and we don't even generate it to save a
     // bit of CPU and to avoid consuming entropy.
     var randomSeed = null;
-    var randomSeedGenerator = function () {
+    var randomSeedGenerator = () => {
       if (randomSeed === null) {
         randomSeed = DDPCommon.makeRpcSeed(enclosing, name);
       }
@@ -843,7 +648,7 @@ _.extend(Connection.prototype, {
 
     var stub = self._methodHandlers[name];
     if (stub) {
-      var setUserId = function(userId) {
+      var setUserId = userId => {
         self.setUserId(userId);
       };
 
@@ -851,34 +656,34 @@ _.extend(Connection.prototype, {
         isSimulation: true,
         userId: self.userId(),
         setUserId: setUserId,
-        randomSeed: function () { return randomSeedGenerator(); }
+        randomSeed() {
+          return randomSeedGenerator();
+        }
       });
 
-      if (!alreadyInSimulation)
-        self._saveOriginals();
+      if (!alreadyInSimulation) self._saveOriginals();
 
       try {
         // Note that unlike in the corresponding server code, we never audit
         // that stubs check() their arguments.
-        var stubReturnValue = DDP._CurrentMethodInvocation.withValue(invocation, function () {
-          if (Meteor.isServer) {
-            // Because saveOriginals and retrieveOriginals aren't reentrant,
-            // don't allow stubs to yield.
-            return Meteor._noYieldsAllowed(function () {
-              // re-clone, so that the stub can't affect our caller's values
+        var stubReturnValue = DDP._CurrentMethodInvocation.withValue(
+          invocation,
+          () => {
+            if (Meteor.isServer) {
+              // Because saveOriginals and retrieveOriginals aren't reentrant,
+              // don't allow stubs to yield.
+              return Meteor._noYieldsAllowed(() => {
+                // re-clone, so that the stub can't affect our caller's values
+                return stub.apply(invocation, EJSON.clone(args));
+              });
+            } else {
               return stub.apply(invocation, EJSON.clone(args));
-            });
-          } else {
-            return stub.apply(invocation, EJSON.clone(args));
+            }
           }
-        });
-      }
-      catch (e) {
+        );
+      } catch (e) {
         var exception = e;
       }
-
-      if (!alreadyInSimulation)
-        self._retrieveAndStoreOriginals(methodId());
     }
 
     // If we're in a simulation, stop and return the result we have,
@@ -889,10 +694,27 @@ _.extend(Connection.prototype, {
         callback(exception, stubReturnValue);
         return undefined;
       }
-      if (exception)
-        throw exception;
+      if (exception) throw exception;
       return stubReturnValue;
     }
+
+    // We only create the methodId here because we don't actually need one if
+    // we're already in a simulation
+    const methodId = '' + self._nextMethodId++;
+    if (stub) {
+      self._retrieveAndStoreOriginals(methodId);
+    }
+
+    // Generate the DDP message for the method call. Note that on the client,
+    // it is important that the stub have finished before we send the RPC, so
+    // that we know we have a complete list of which local documents the stub
+    // wrote.
+    var message = {
+      msg: 'method',
+      method: name,
+      params: args,
+      id: methodId
+    };
 
     // If an exception occurred in a stub, and we're ignoring it
     // because we're doing an RPC and want to use what the server
@@ -905,11 +727,13 @@ _.extend(Connection.prototype, {
       if (options.throwStubExceptions) {
         throw exception;
       } else if (!exception.expected) {
-        Meteor._debug("Exception while simulating the effect of invoking '" +
-          name + "'", exception, exception.stack);
+        Meteor._debug(
+          "Exception while simulating the effect of invoking '" + name + "'",
+          exception,
+          exception.stack
+        );
       }
     }
-
 
     // At this point we're definitely doing an RPC, and we're going to
     // return the value of the RPC to the caller.
@@ -921,26 +745,17 @@ _.extend(Connection.prototype, {
         // only thing we can do is to return undefined and discard the
         // result of the RPC. If an error occurred then print the error
         // to the console.
-        callback = function (err) {
-          err && Meteor._debug("Error invoking Method '" + name + "':",
-                               err.message);
+        callback = err => {
+          err &&
+            Meteor._debug("Error invoking Method '" + name + "':", err.message);
         };
       } else {
         // On the server, make the function synchronous. Throw on
         // errors, return on success.
-        var future = new Future;
+        var future = new Future();
         callback = future.resolver();
       }
     }
-    // Send the RPC. Note that on the client, it is important that the
-    // stub have finished before we send the RPC, so that we know we have
-    // a complete list of which local documents the stub wrote.
-    var message = {
-      msg: 'method',
-      method: name,
-      params: args,
-      id: methodId()
-    };
 
     // Send the randomSeed only if we used it
     if (randomSeed !== null) {
@@ -948,7 +763,7 @@ _.extend(Connection.prototype, {
     }
 
     var methodInvoker = new MethodInvoker({
-      methodId: methodId(),
+      methodId,
       callback: callback,
       connection: self,
       onResultReceived: options.onResultReceived,
@@ -959,20 +774,26 @@ _.extend(Connection.prototype, {
 
     if (options.wait) {
       // It's a wait method! Wait methods go in their own block.
-      self._outstandingMethodBlocks.push(
-        {wait: true, methods: [methodInvoker]});
+      self._outstandingMethodBlocks.push({
+        wait: true,
+        methods: [methodInvoker]
+      });
     } else {
       // Not a wait method. Start a new block if the previous block was a wait
       // block, and add it to the last block of methods.
-      if (_.isEmpty(self._outstandingMethodBlocks) ||
-          _.last(self._outstandingMethodBlocks).wait)
-        self._outstandingMethodBlocks.push({wait: false, methods: []});
-      _.last(self._outstandingMethodBlocks).methods.push(methodInvoker);
+      if (isEmpty(self._outstandingMethodBlocks) ||
+          last(self._outstandingMethodBlocks).wait) {
+        self._outstandingMethodBlocks.push({
+          wait: false,
+          methods: [],
+        });
+      }
+
+      last(self._outstandingMethodBlocks).methods.push(methodInvoker);
     }
 
     // If we added it to the first block, send it out now.
-    if (self._outstandingMethodBlocks.length === 1)
-      methodInvoker.sendMessage();
+    if (self._outstandingMethodBlocks.length === 1) methodInvoker.sendMessage();
 
     // If we're using the default callback on the server,
     // block waiting for the result.
@@ -980,38 +801,44 @@ _.extend(Connection.prototype, {
       return future.wait();
     }
     return options.returnStubValue ? stubReturnValue : undefined;
-  },
+  }
 
   // Before calling a method stub, prepare all stores to track changes and allow
   // _retrieveAndStoreOriginals to get the original versions of changed
   // documents.
-  _saveOriginals: function () {
-    var self = this;
-    if (!self._waitingForQuiescence())
-      self._flushBufferedWrites();
-    _.each(self._stores, function (s) {
-      s.saveOriginals();
+  _saveOriginals() {
+    if (! this._waitingForQuiescence()) {
+      this._flushBufferedWrites();
+    }
+
+    keys(this._stores).forEach(storeName => {
+      this._stores[storeName].saveOriginals();
     });
-  },
+  }
+
   // Retrieves the original versions of all documents modified by the stub for
   // method 'methodId' from all stores and saves them to _serverDocuments (keyed
   // by document) and _documentsWrittenByStub (keyed by method ID).
-  _retrieveAndStoreOriginals: function (methodId) {
+  _retrieveAndStoreOriginals(methodId) {
     var self = this;
     if (self._documentsWrittenByStub[methodId])
-      throw new Error("Duplicate methodId in _retrieveAndStoreOriginals");
+      throw new Error('Duplicate methodId in _retrieveAndStoreOriginals');
 
     var docsWritten = [];
-    _.each(self._stores, function (s, collection) {
-      var originals = s.retrieveOriginals();
+
+    keys(self._stores).forEach(collection => {
+      var originals = self._stores[collection].retrieveOriginals();
       // not all stores define retrieveOriginals
-      if (!originals)
-        return;
-      originals.forEach(function (doc, id) {
-        docsWritten.push({collection: collection, id: id});
-        if (!_.has(self._serverDocuments, collection))
-          self._serverDocuments[collection] = new MongoIDMap;
-        var serverDoc = self._serverDocuments[collection].setDefault(id, {});
+      if (! originals) return;
+      originals.forEach((doc, id) => {
+        docsWritten.push({ collection, id });
+        if (! hasOwn.call(self._serverDocuments, collection)) {
+          self._serverDocuments[collection] = new MongoIDMap();
+        }
+        var serverDoc = self._serverDocuments[collection].setDefault(
+          id,
+          Object.create(null)
+        );
         if (serverDoc.writtenByStubs) {
           // We're not the first stub to write this doc. Just add our method ID
           // to the record.
@@ -1020,21 +847,21 @@ _.extend(Connection.prototype, {
           // First stub! Save the original value and our method ID.
           serverDoc.document = doc;
           serverDoc.flushCallbacks = [];
-          serverDoc.writtenByStubs = {};
+          serverDoc.writtenByStubs = Object.create(null);
           serverDoc.writtenByStubs[methodId] = true;
         }
       });
     });
-    if (!_.isEmpty(docsWritten)) {
+    if (! isEmpty(docsWritten)) {
       self._documentsWrittenByStub[methodId] = docsWritten;
     }
-  },
+  }
 
   // This is very much a private function we use to make the tests
   // take up fewer server resources after they complete.
-  _unsubscribeAll: function () {
-    var self = this;
-    _.each(_.clone(self._subscriptions), function (sub, id) {
+  _unsubscribeAll() {
+    keys(this._subscriptions).forEach(id => {
+      const sub = this._subscriptions[id];
       // Avoid killing the autoupdate subscription so that developers
       // still get hot code pushes when writing tests.
       //
@@ -1042,24 +869,22 @@ _.extend(Connection.prototype, {
       // but it doesn't seem worth it yet to have a special API for
       // subscriptions to preserve after unit tests.
       if (sub.name !== 'meteor_autoupdate_clientVersions') {
-        self._subscriptions[id].stop();
+        sub.stop();
       }
     });
-  },
+  }
 
   // Sends the DDP stringification of the given message object
-  _send: function (obj) {
-    var self = this;
-    self._stream.send(DDPCommon.stringifyDDP(obj));
-  },
+  _send(obj) {
+    this._stream.send(DDPCommon.stringifyDDP(obj));
+  }
 
   // We detected via DDP-level heartbeats that we've lost the
   // connection.  Unlike `disconnect` or `close`, a lost connection
   // will be automatically retried.
-  _lostConnection: function (error) {
-    var self = this;
-    self._stream._lostConnection(error);
-  },
+  _lostConnection(error) {
+    this._stream._lostConnection(error);
+  }
 
   /**
    * @summary Get the current connection status. A reactive data source.
@@ -1067,10 +892,9 @@ _.extend(Connection.prototype, {
    * @memberOf Meteor
    * @importFromPackage meteor
    */
-  status: function (/*passthrough args*/) {
-    var self = this;
-    return self._stream.status.apply(self._stream, arguments);
-  },
+  status(...args) {
+    return this._stream.status(...args);
+  }
 
   /**
    * @summary Force an immediate reconnection attempt if the client is not connected to the server.
@@ -1080,10 +904,9 @@ _.extend(Connection.prototype, {
    * @memberOf Meteor
    * @importFromPackage meteor
    */
-  reconnect: function (/*passthrough args*/) {
-    var self = this;
-    return self._stream.reconnect.apply(self._stream, arguments);
-  },
+  reconnect(...args) {
+    return this._stream.reconnect(...args);
+  }
 
   /**
    * @summary Disconnect the client from the server.
@@ -1091,76 +914,72 @@ _.extend(Connection.prototype, {
    * @memberOf Meteor
    * @importFromPackage meteor
    */
-  disconnect: function (/*passthrough args*/) {
-    var self = this;
-    return self._stream.disconnect.apply(self._stream, arguments);
-  },
+  disconnect(...args) {
+    return this._stream.disconnect(...args);
+  }
 
-  close: function () {
-    var self = this;
-    return self._stream.disconnect({_permanent: true});
-  },
+  close() {
+    return this._stream.disconnect({ _permanent: true });
+  }
 
   ///
   /// Reactive user system
   ///
-  userId: function () {
-    var self = this;
-    if (self._userIdDeps)
-      self._userIdDeps.depend();
-    return self._userId;
-  },
+  userId() {
+    if (this._userIdDeps) this._userIdDeps.depend();
+    return this._userId;
+  }
 
-  setUserId: function (userId) {
-    var self = this;
+  setUserId(userId) {
     // Avoid invalidating dependents if setUserId is called with current value.
-    if (self._userId === userId)
-      return;
-    self._userId = userId;
-    if (self._userIdDeps)
-      self._userIdDeps.changed();
-  },
+    if (this._userId === userId) return;
+    this._userId = userId;
+    if (this._userIdDeps) this._userIdDeps.changed();
+  }
 
   // Returns true if we are in a state after reconnect of waiting for subs to be
   // revived or early methods to finish their data, or we are waiting for a
   // "wait" method to finish.
-  _waitingForQuiescence: function () {
-    var self = this;
-    return (! _.isEmpty(self._subsBeingRevived) ||
-            ! _.isEmpty(self._methodsBlockingQuiescence));
-  },
+  _waitingForQuiescence() {
+    return (
+      ! isEmpty(this._subsBeingRevived) ||
+      ! isEmpty(this._methodsBlockingQuiescence)
+    );
+  }
 
   // Returns true if any method whose message has been sent to the server has
   // not yet invoked its user callback.
-  _anyMethodsAreOutstanding: function () {
-    var self = this;
-    return _.any(_.pluck(self._methodInvokers, 'sentMessage'));
-  },
+  _anyMethodsAreOutstanding() {
+    const invokers = this._methodInvokers;
+    return keys(invokers).some(id => {
+      return invokers[id].sentMessage;
+    });
+  }
 
-  _livedata_connected: function (msg) {
+  _livedata_connected(msg) {
     var self = this;
 
     if (self._version !== 'pre1' && self._heartbeatInterval !== 0) {
       self._heartbeat = new DDPCommon.Heartbeat({
         heartbeatInterval: self._heartbeatInterval,
         heartbeatTimeout: self._heartbeatTimeout,
-        onTimeout: function () {
+        onTimeout() {
           self._lostConnection(
-            new DDP.ConnectionError("DDP heartbeat timed out"));
+            new DDP.ConnectionError('DDP heartbeat timed out')
+          );
         },
-        sendPing: function () {
-          self._send({msg: 'ping'});
+        sendPing() {
+          self._send({ msg: 'ping' });
         }
       });
       self._heartbeat.start();
     }
 
     // If this is a reconnect, we'll have to reset all stores.
-    if (self._lastSessionId)
-      self._resetStores = true;
+    if (self._lastSessionId) self._resetStores = true;
 
-    if (typeof (msg.session) === "string") {
-      var reconnectedToPreviousSession = (self._lastSessionId === msg.session);
+    if (typeof msg.session === 'string') {
+      var reconnectedToPreviousSession = self._lastSessionId === msg.session;
       self._lastSessionId = msg.session;
     }
 
@@ -1177,13 +996,13 @@ _.extend(Connection.prototype, {
 
     // Forget about messages we were buffering for unknown collections. They'll
     // be resent if still relevant.
-    self._updatesForUnknownStores = {};
+    self._updatesForUnknownStores = Object.create(null);
 
     if (self._resetStores) {
       // Forget about the effects of stubs. We'll be resetting all collections
       // anyway.
-      self._documentsWrittenByStub = {};
-      self._serverDocuments = {};
+      self._documentsWrittenByStub = Object.create(null);
+      self._serverDocuments = Object.create(null);
     }
 
     // Clear _afterUpdateCallbacks.
@@ -1193,10 +1012,11 @@ _.extend(Connection.prototype, {
     // ready callback) as needing to be revived.
     // XXX We should also block reconnect quiescence until unnamed subscriptions
     //     (eg, autopublish) are done re-publishing to avoid flicker!
-    self._subsBeingRevived = {};
-    _.each(self._subscriptions, function (sub, id) {
-      if (sub.ready)
+    self._subsBeingRevived = Object.create(null);
+    keys(self._subscriptions).forEach(id => {
+      if (self._subscriptions[id].ready) {
         self._subsBeingRevived[id] = true;
+      }
     });
 
     // Arrange for "half-finished" methods to have their callbacks run, and
@@ -1206,15 +1026,19 @@ _.extend(Connection.prototype, {
     // Start by clearing _methodsBlockingQuiescence: methods sent before
     // reconnect don't matter, and any "wait" methods sent on the new connection
     // that we drop here will be restored by the loop below.
-    self._methodsBlockingQuiescence = {};
+    self._methodsBlockingQuiescence = Object.create(null);
     if (self._resetStores) {
-      _.each(self._methodInvokers, function (invoker) {
+      const invokers = self._methodInvokers;
+      keys(invokers).forEach(id => {
+        const invoker = invokers[id];
         if (invoker.gotResult()) {
           // This method already got its result, but it didn't call its callback
           // because its data didn't become visible. We did not resend the
           // method RPC. We'll call its callback when we get a full quiesce,
           // since that's as close as we'll get to "data must be visible".
-          self._afterUpdateCallbacks.push(_.bind(invoker.dataVisible, invoker));
+          self._afterUpdateCallbacks.push(
+            (...args) => invoker.dataVisible(...args)
+          );
         } else if (invoker.sentMessage) {
           // This method has been sent on this connection (maybe as a resend
           // from the last connection, maybe from onReconnect, maybe just very
@@ -1234,9 +1058,10 @@ _.extend(Connection.prototype, {
 
     // If we're not waiting on any methods or subs, we can reset the stores and
     // call the callbacks immediately.
-    if (!self._waitingForQuiescence()) {
+    if (! self._waitingForQuiescence()) {
       if (self._resetStores) {
-        _.each(self._stores, function (s) {
+        keys(self._stores).forEach(storeName => {
+          const s = self._stores[storeName];
           s.beginUpdate(0, true);
           s.endUpdate();
         });
@@ -1244,42 +1069,69 @@ _.extend(Connection.prototype, {
       }
       self._runAfterUpdateCallbacks();
     }
-  },
+  }
 
+  _processOneDataMessage(msg, updates) {
+    const messageType = msg.msg;
 
-  _processOneDataMessage: function (msg, updates) {
-    var self = this;
-    // Using underscore here so as not to need to capitalize.
-    self['_process_' + msg.msg](msg, updates);
-  },
+    // msg is one of ['added', 'changed', 'removed', 'ready', 'updated']
+    if (messageType === 'added') {
+      this._process_added(msg, updates);
+    } else if (messageType === 'changed') {
+      this._process_changed(msg, updates);
+    } else if (messageType === 'removed') {
+      this._process_removed(msg, updates);
+    } else if (messageType === 'ready') {
+      this._process_ready(msg, updates);
+    } else if (messageType === 'updated') {
+      this._process_updated(msg, updates);
+    } else if (messageType === 'nosub') {
+      // ignore this
+    } else {
+      Meteor._debug('discarding unknown livedata data message type', msg);
+    }
+  }
 
-
-  _livedata_data: function (msg) {
+  _livedata_data(msg) {
     var self = this;
 
     if (self._waitingForQuiescence()) {
       self._messagesBufferedUntilQuiescence.push(msg);
 
-      if (msg.msg === "nosub")
+      if (msg.msg === 'nosub') {
         delete self._subsBeingRevived[msg.id];
+      }
 
-      _.each(msg.subs || [], function (subId) {
-        delete self._subsBeingRevived[subId];
-      });
-      _.each(msg.methods || [], function (methodId) {
-        delete self._methodsBlockingQuiescence[methodId];
-      });
+      if (msg.subs) {
+        msg.subs.forEach(subId => {
+          delete self._subsBeingRevived[subId];
+        });
+      }
 
-      if (self._waitingForQuiescence())
+      if (msg.methods) {
+        msg.methods.forEach(methodId => {
+          delete self._methodsBlockingQuiescence[methodId];
+        });
+      }
+
+      if (self._waitingForQuiescence()) {
         return;
+      }
 
       // No methods or subs are blocking quiescence!
       // We'll now process and all of our buffered messages, reset all stores,
       // and apply them all at once.
-      _.each(self._messagesBufferedUntilQuiescence, function (bufferedMsg) {
-        self._processOneDataMessage(bufferedMsg, self._bufferedWrites);
+
+      const bufferedMessages = self._messagesBufferedUntilQuiescence;
+      keys(bufferedMessages).forEach(id => {
+        self._processOneDataMessage(
+          bufferedMessages[id],
+          self._bufferedWrites
+        );
       });
+
       self._messagesBufferedUntilQuiescence = [];
+
     } else {
       self._processOneDataMessage(msg, self._bufferedWrites);
     }
@@ -1287,16 +1139,20 @@ _.extend(Connection.prototype, {
     // Immediately flush writes when:
     //  1. Buffering is disabled. Or;
     //  2. any non-(added/changed/removed) message arrives.
-    var standardWrite = _.include(['added', 'changed', 'removed'], msg.msg);
-    if (self._bufferedWritesInterval === 0 || !standardWrite) {
+    var standardWrite =
+      msg.msg === "added" ||
+      msg.msg === "changed" ||
+      msg.msg === "removed";
+
+    if (self._bufferedWritesInterval === 0 || ! standardWrite) {
       self._flushBufferedWrites();
       return;
     }
 
     if (self._bufferedWritesFlushAt === null) {
-      self._bufferedWritesFlushAt = new Date().valueOf() + self._bufferedWritesMaxAge;
-    }
-    else if (self._bufferedWritesFlushAt < new Date().valueOf()) {
+      self._bufferedWritesFlushAt =
+        new Date().valueOf() + self._bufferedWritesMaxAge;
+    } else if (self._bufferedWritesFlushAt < new Date().valueOf()) {
       self._flushBufferedWrites();
       return;
     }
@@ -1304,11 +1160,13 @@ _.extend(Connection.prototype, {
     if (self._bufferedWritesFlushHandle) {
       clearTimeout(self._bufferedWritesFlushHandle);
     }
-    self._bufferedWritesFlushHandle = setTimeout(self.__flushBufferedWrites,
-                                                      self._bufferedWritesInterval);
-  },
+    self._bufferedWritesFlushHandle = setTimeout(
+      self.__flushBufferedWrites,
+      self._bufferedWritesInterval
+    );
+  }
 
-  _flushBufferedWrites: function () {
+  _flushBufferedWrites() {
     var self = this;
     if (self._bufferedWritesFlushHandle) {
       clearTimeout(self._bufferedWritesFlushHandle);
@@ -1320,25 +1178,32 @@ _.extend(Connection.prototype, {
     //  performWrites. As there's no guarantee that it
     //  will exit cleanly.
     var writes = self._bufferedWrites;
-    self._bufferedWrites = {};
+    self._bufferedWrites = Object.create(null);
     self._performWrites(writes);
-  },
+  }
 
-  _performWrites: function(updates){
+  _performWrites(updates) {
     var self = this;
 
-    if (self._resetStores || !_.isEmpty(updates)) {
+    if (self._resetStores || ! isEmpty(updates)) {
       // Begin a transactional update of each store.
-      _.each(self._stores, function (s, storeName) {
-        s.beginUpdate(_.has(updates, storeName) ? updates[storeName].length : 0,
-                      self._resetStores);
+
+      keys(self._stores).forEach(storeName => {
+        self._stores[storeName].beginUpdate(
+          hasOwn.call(updates, storeName)
+            ? updates[storeName].length
+            : 0,
+          self._resetStores
+        );
       });
+
       self._resetStores = false;
 
-      _.each(updates, function (updateMessages, storeName) {
+      keys(updates).forEach(storeName => {
+        const updateMessages = updates[storeName];
         var store = self._stores[storeName];
         if (store) {
-          _.each(updateMessages, function (updateMessage) {
+          updateMessages.forEach(updateMessage => {
             store.update(updateMessage);
           });
         } else {
@@ -1347,57 +1212,62 @@ _.extend(Connection.prototype, {
           // XXX memory use will grow without bound if you forget to
           // create a collection or just don't care about it... going
           // to have to do something about that.
-          if (!_.has(self._updatesForUnknownStores, storeName))
-            self._updatesForUnknownStores[storeName] = [];
-          Array.prototype.push.apply(self._updatesForUnknownStores[storeName],
-                                     updateMessages);
+          const updates = self._updatesForUnknownStores;
+
+          if (! hasOwn.call(updates, storeName)) {
+            updates[storeName] = [];
+          }
+
+          updates[storeName].push(...updateMessages);
         }
       });
 
       // End update transaction.
-      _.each(self._stores, function (s) { s.endUpdate(); });
+      keys(self._stores).forEach(storeName => {
+        self._stores[storeName].endUpdate();
+      });
     }
 
     self._runAfterUpdateCallbacks();
-  },
+  }
 
   // Call any callbacks deferred with _runWhenAllServerDocsAreFlushed whose
   // relevant docs have been flushed, as well as dataVisible callbacks at
   // reconnect-quiescence time.
-  _runAfterUpdateCallbacks: function () {
+  _runAfterUpdateCallbacks() {
     var self = this;
     var callbacks = self._afterUpdateCallbacks;
     self._afterUpdateCallbacks = [];
-    _.each(callbacks, function (c) {
+    callbacks.forEach(c => {
       c();
     });
-  },
+  }
 
-  _pushUpdate: function (updates, collection, msg) {
-    var self = this;
-    if (!_.has(updates, collection)) {
+  _pushUpdate(updates, collection, msg) {
+    if (! hasOwn.call(updates, collection)) {
       updates[collection] = [];
     }
     updates[collection].push(msg);
-  },
+  }
 
-  _getServerDoc: function (collection, id) {
+  _getServerDoc(collection, id) {
     var self = this;
-    if (!_.has(self._serverDocuments, collection))
+    if (! hasOwn.call(self._serverDocuments, collection)) {
       return null;
+    }
     var serverDocsForCollection = self._serverDocuments[collection];
     return serverDocsForCollection.get(id) || null;
-  },
+  }
 
-  _process_added: function (msg, updates) {
+  _process_added(msg, updates) {
     var self = this;
     var id = MongoID.idParse(msg.id);
     var serverDoc = self._getServerDoc(msg.collection, id);
     if (serverDoc) {
       // Some outstanding stub wrote here.
-      var isExisting = (serverDoc.document !== undefined);
+      var isExisting = serverDoc.document !== undefined;
 
-      serverDoc.document = msg.fields || {};
+      serverDoc.document = msg.fields || Object.create(null);
       serverDoc.document._id = id;
 
       if (self._resetStores) {
@@ -1406,39 +1276,36 @@ _.extend(Connection.prototype, {
         // reset. Use current version of the document for this update, so
         // that stub-written values are preserved.
         var currentDoc = self._stores[msg.collection].getDoc(msg.id);
-        if (currentDoc !== undefined)
-          msg.fields = currentDoc;
+        if (currentDoc !== undefined) msg.fields = currentDoc;
 
         self._pushUpdate(updates, msg.collection, msg);
       } else if (isExisting) {
-        throw new Error("Server sent add for existing id: " + msg.id);
+        throw new Error('Server sent add for existing id: ' + msg.id);
       }
     } else {
       self._pushUpdate(updates, msg.collection, msg);
     }
-  },
+  }
 
-  _process_changed: function (msg, updates) {
+  _process_changed(msg, updates) {
     var self = this;
-    var serverDoc = self._getServerDoc(
-      msg.collection, MongoID.idParse(msg.id));
+    var serverDoc = self._getServerDoc(msg.collection, MongoID.idParse(msg.id));
     if (serverDoc) {
       if (serverDoc.document === undefined)
-        throw new Error("Server sent changed for nonexisting id: " + msg.id);
+        throw new Error('Server sent changed for nonexisting id: ' + msg.id);
       DiffSequence.applyChanges(serverDoc.document, msg.fields);
     } else {
       self._pushUpdate(updates, msg.collection, msg);
     }
-  },
+  }
 
-  _process_removed: function (msg, updates) {
+  _process_removed(msg, updates) {
     var self = this;
-    var serverDoc = self._getServerDoc(
-      msg.collection, MongoID.idParse(msg.id));
+    var serverDoc = self._getServerDoc(msg.collection, MongoID.idParse(msg.id));
     if (serverDoc) {
       // Some outstanding stub wrote here.
       if (serverDoc.document === undefined)
-        throw new Error("Server sent removed for nonexisting id:" + msg.id);
+        throw new Error('Server sent removed for nonexisting id:' + msg.id);
       serverDoc.document = undefined;
     } else {
       self._pushUpdate(updates, msg.collection, {
@@ -1447,21 +1314,30 @@ _.extend(Connection.prototype, {
         id: msg.id
       });
     }
-  },
+  }
 
-  _process_updated: function (msg, updates) {
+  _process_updated(msg, updates) {
     var self = this;
     // Process "method done" messages.
-    _.each(msg.methods, function (methodId) {
-      _.each(self._documentsWrittenByStub[methodId], function (written) {
-        var serverDoc = self._getServerDoc(written.collection, written.id);
-        if (!serverDoc)
-          throw new Error("Lost serverDoc for " + JSON.stringify(written));
-        if (!serverDoc.writtenByStubs[methodId])
-          throw new Error("Doc " + JSON.stringify(written) +
-                          " not written by  method " + methodId);
+
+    msg.methods.forEach(methodId => {
+      const docs = self._documentsWrittenByStub[methodId];
+      keys(docs).forEach(id => {
+        const written = docs[id];
+        const serverDoc = self._getServerDoc(written.collection, written.id);
+        if (! serverDoc) {
+          throw new Error('Lost serverDoc for ' + JSON.stringify(written));
+        }
+        if (! serverDoc.writtenByStubs[methodId]) {
+          throw new Error(
+            'Doc ' +
+              JSON.stringify(written) +
+              ' not written by  method ' +
+              methodId
+          );
+        }
         delete serverDoc.writtenByStubs[methodId];
-        if (_.isEmpty(serverDoc.writtenByStubs)) {
+        if (isEmpty(serverDoc.writtenByStubs)) {
           // All methods whose stubs wrote this method have completed! We can
           // now copy the saved document to the database (reverting the stub's
           // change if the server did not write to this object, or applying the
@@ -1476,7 +1352,8 @@ _.extend(Connection.prototype, {
             replace: serverDoc.document
           });
           // Call all flush callbacks.
-          _.each(serverDoc.flushCallbacks, function (c) {
+
+          serverDoc.flushCallbacks.forEach(c => {
             c();
           });
 
@@ -1490,45 +1367,47 @@ _.extend(Connection.prototype, {
 
       // We want to call the data-written callback, but we can't do so until all
       // currently buffered messages are flushed.
-      var callbackInvoker = self._methodInvokers[methodId];
-      if (!callbackInvoker)
-        throw new Error("No callback invoker for method " + methodId);
-      self._runWhenAllServerDocsAreFlushed(
-        _.bind(callbackInvoker.dataVisible, callbackInvoker));
-    });
-  },
+      const callbackInvoker = self._methodInvokers[methodId];
+      if (! callbackInvoker) {
+        throw new Error('No callback invoker for method ' + methodId);
+      }
 
-  _process_ready: function (msg, updates) {
+      self._runWhenAllServerDocsAreFlushed(
+        (...args) => callbackInvoker.dataVisible(...args)
+      );
+    });
+  }
+
+  _process_ready(msg, updates) {
     var self = this;
     // Process "sub ready" messages. "sub ready" messages don't take effect
     // until all current server documents have been flushed to the local
     // database. We can use a write fence to implement this.
-    _.each(msg.subs, function (subId) {
-      self._runWhenAllServerDocsAreFlushed(function () {
+
+    msg.subs.forEach(subId => {
+      self._runWhenAllServerDocsAreFlushed(() => {
         var subRecord = self._subscriptions[subId];
         // Did we already unsubscribe?
-        if (!subRecord)
-          return;
+        if (!subRecord) return;
         // Did we already receive a ready message? (Oops!)
-        if (subRecord.ready)
-          return;
+        if (subRecord.ready) return;
         subRecord.ready = true;
         subRecord.readyCallback && subRecord.readyCallback();
         subRecord.readyDeps.changed();
       });
     });
-  },
+  }
 
   // Ensures that "f" will be called after all documents currently in
   // _serverDocuments have been written to the local cache. f will not be called
   // if the connection is lost before then!
-  _runWhenAllServerDocsAreFlushed: function (f) {
+  _runWhenAllServerDocsAreFlushed(f) {
     var self = this;
-    var runFAfterUpdates = function () {
+    var runFAfterUpdates = () => {
       self._afterUpdateCallbacks.push(f);
     };
     var unflushedServerDocCount = 0;
-    var onServerDocFlush = function () {
+    var onServerDocFlush = () => {
       --unflushedServerDocCount;
       if (unflushedServerDocCount === 0) {
         // This was the last doc to flush! Arrange to run f after the updates
@@ -1536,13 +1415,15 @@ _.extend(Connection.prototype, {
         runFAfterUpdates();
       }
     };
-    _.each(self._serverDocuments, function (collectionDocs) {
-      collectionDocs.forEach(function (serverDoc) {
-        var writtenByStubForAMethodWithSentMessage = _.any(
-          serverDoc.writtenByStubs, function (dummy, methodId) {
+
+    keys(self._serverDocuments).forEach(collection => {
+      self._serverDocuments[collection].forEach(serverDoc => {
+        const writtenByStubForAMethodWithSentMessage =
+          keys(serverDoc.writtenByStubs).some(methodId => {
             var invoker = self._methodInvokers[methodId];
             return invoker && invoker.sentMessage;
           });
+
         if (writtenByStubForAMethodWithSentMessage) {
           ++unflushedServerDocCount;
           serverDoc.flushCallbacks.push(onServerDocFlush);
@@ -1554,9 +1435,9 @@ _.extend(Connection.prototype, {
       // round of updates is applied!
       runFAfterUpdates();
     }
-  },
+  }
 
-  _livedata_nosub: function (msg) {
+  _livedata_nosub(msg) {
     var self = this;
 
     // First pass it through _livedata_data, which only uses it to help get
@@ -1567,8 +1448,9 @@ _.extend(Connection.prototype, {
     // buffering-until-quiescence.
 
     // we weren't subbed anyway, or we initiated the unsub.
-    if (!_.has(self._subscriptions, msg.id))
+    if (! hasOwn.call(self._subscriptions, msg.id)) {
       return;
+    }
 
     // XXX COMPAT WITH 1.0.3.1 #errorCallback
     var errorCallback = self._subscriptions[msg.id].errorCallback;
@@ -1576,10 +1458,17 @@ _.extend(Connection.prototype, {
 
     self._subscriptions[msg.id].remove();
 
-    var meteorErrorFromMsg = function (msgArg) {
-      return msgArg && msgArg.error && new Meteor.Error(
-        msgArg.error.error, msgArg.error.reason, msgArg.error.details);
-    }
+    var meteorErrorFromMsg = msgArg => {
+      return (
+        msgArg &&
+        msgArg.error &&
+        new Meteor.Error(
+          msgArg.error.error,
+          msgArg.error.reason,
+          msgArg.error.details
+        )
+      );
+    };
 
     // XXX COMPAT WITH 1.0.3.1 #errorCallback
     if (errorCallback && msg.error) {
@@ -1589,38 +1478,29 @@ _.extend(Connection.prototype, {
     if (stopCallback) {
       stopCallback(meteorErrorFromMsg(msg));
     }
-  },
+  }
 
-  _process_nosub: function () {
-    // This is called as part of the "buffer until quiescence" process, but
-    // nosub's effect is always immediate. It only goes in the buffer at all
-    // because it's possible for a nosub to be the thing that triggers
-    // quiescence, if we were waiting for a sub to be revived and it dies
-    // instead.
-  },
-
-  _livedata_result: function (msg) {
+  _livedata_result(msg) {
     // id, result or error. error has error (code), reason, details
 
     var self = this;
 
     // Lets make sure there are no buffered writes before returning result.
-    if (!_.isEmpty(self._bufferedWrites)) {
+    if (! isEmpty(self._bufferedWrites)) {
       self._flushBufferedWrites();
     }
 
     // find the outstanding request
     // should be O(1) in nearly all realistic use cases
-    if (_.isEmpty(self._outstandingMethodBlocks)) {
-      Meteor._debug("Received method result but no methods outstanding");
+    if (isEmpty(self._outstandingMethodBlocks)) {
+      Meteor._debug('Received method result but no methods outstanding');
       return;
     }
     var currentMethodBlock = self._outstandingMethodBlocks[0].methods;
     var m;
     for (var i = 0; i < currentMethodBlock.length; i++) {
       m = currentMethodBlock[i];
-      if (m.methodId === msg.id)
-        break;
+      if (m.methodId === msg.id) break;
     }
 
     if (!m) {
@@ -1633,78 +1513,80 @@ _.extend(Connection.prototype, {
     // _outstandingMethodFinished.
     currentMethodBlock.splice(i, 1);
 
-    if (_.has(msg, 'error')) {
-      m.receiveResult(new Meteor.Error(
-        msg.error.error, msg.error.reason,
-        msg.error.details));
+    if (hasOwn.call(msg, 'error')) {
+      m.receiveResult(
+        new Meteor.Error(msg.error.error, msg.error.reason, msg.error.details)
+      );
     } else {
       // msg.result may be undefined if the method didn't return a
       // value
       m.receiveResult(undefined, msg.result);
     }
-  },
+  }
 
   // Called by MethodInvoker after a method's callback is invoked.  If this was
   // the last outstanding method in the current block, runs the next block. If
   // there are no more methods, consider accepting a hot code push.
-  _outstandingMethodFinished: function () {
+  _outstandingMethodFinished() {
     var self = this;
-    if (self._anyMethodsAreOutstanding())
-      return;
+    if (self._anyMethodsAreOutstanding()) return;
 
     // No methods are outstanding. This should mean that the first block of
     // methods is empty. (Or it might not exist, if this was a method that
     // half-finished before disconnect/reconnect.)
-    if (! _.isEmpty(self._outstandingMethodBlocks)) {
+    if (! isEmpty(self._outstandingMethodBlocks)) {
       var firstBlock = self._outstandingMethodBlocks.shift();
-      if (! _.isEmpty(firstBlock.methods))
-        throw new Error("No methods outstanding but nonempty block: " +
-                        JSON.stringify(firstBlock));
+      if (! isEmpty(firstBlock.methods))
+        throw new Error(
+          'No methods outstanding but nonempty block: ' +
+            JSON.stringify(firstBlock)
+        );
 
       // Send the outstanding methods now in the first block.
-      if (!_.isEmpty(self._outstandingMethodBlocks))
+      if (! isEmpty(self._outstandingMethodBlocks))
         self._sendOutstandingMethods();
     }
 
     // Maybe accept a hot code push.
     self._maybeMigrate();
-  },
+  }
 
   // Sends messages for all the methods in the first block in
   // _outstandingMethodBlocks.
-  _sendOutstandingMethods: function() {
+  _sendOutstandingMethods() {
     var self = this;
-    if (_.isEmpty(self._outstandingMethodBlocks))
+
+    if (isEmpty(self._outstandingMethodBlocks)) {
       return;
-    _.each(self._outstandingMethodBlocks[0].methods, function (m) {
+    }
+
+    self._outstandingMethodBlocks[0].methods.forEach(m => {
       m.sendMessage();
     });
-  },
+  }
 
-  _livedata_error: function (msg) {
-    Meteor._debug("Received error from server: ", msg.reason);
-    if (msg.offendingMessage)
-      Meteor._debug("For: ", msg.offendingMessage);
-  },
+  _livedata_error(msg) {
+    Meteor._debug('Received error from server: ', msg.reason);
+    if (msg.offendingMessage) Meteor._debug('For: ', msg.offendingMessage);
+  }
 
-  _callOnReconnectAndSendAppropriateOutstandingMethods: function() {
+  _callOnReconnectAndSendAppropriateOutstandingMethods() {
     var self = this;
     var oldOutstandingMethodBlocks = self._outstandingMethodBlocks;
     self._outstandingMethodBlocks = [];
 
     self.onReconnect && self.onReconnect();
-    DDP._reconnectHook.each(function (callback) {
+    DDP._reconnectHook.each(callback => {
       callback(self);
       return true;
     });
 
-    if (_.isEmpty(oldOutstandingMethodBlocks))
-      return;
+    if (isEmpty(oldOutstandingMethodBlocks)) return;
 
     // We have at least one block worth of old outstanding methods to try
     // again. First: did onReconnect actually send anything? If not, we just
     // restore all outstanding methods and run the first block.
-    if (_.isEmpty(self._outstandingMethodBlocks)) {
+    if (isEmpty(self._outstandingMethodBlocks)) {
       self._outstandingMethodBlocks = oldOutstandingMethodBlocks;
       self._sendOutstandingMethods();
       return;
@@ -1713,85 +1595,183 @@ _.extend(Connection.prototype, {
     // OK, there are blocks on both sides. Special case: merge the last block of
     // the reconnect methods with the first block of the original methods, if
     // neither of them are "wait" blocks.
-    if (!_.last(self._outstandingMethodBlocks).wait &&
-        !oldOutstandingMethodBlocks[0].wait) {
-      _.each(oldOutstandingMethodBlocks[0].methods, function (m) {
-        _.last(self._outstandingMethodBlocks).methods.push(m);
+    if (! last(self._outstandingMethodBlocks).wait &&
+        ! oldOutstandingMethodBlocks[0].wait) {
+      oldOutstandingMethodBlocks[0].methods.forEach(m => {
+        last(self._outstandingMethodBlocks).methods.push(m);
 
         // If this "last block" is also the first block, send the message.
-        if (self._outstandingMethodBlocks.length === 1)
+        if (self._outstandingMethodBlocks.length === 1) {
           m.sendMessage();
+        }
       });
 
       oldOutstandingMethodBlocks.shift();
     }
 
     // Now add the rest of the original blocks on.
-    _.each(oldOutstandingMethodBlocks, function (block) {
+    oldOutstandingMethodBlocks.forEach(block => {
       self._outstandingMethodBlocks.push(block);
     });
-  },
+  }
 
   // We can accept a hot code push if there are no methods in flight.
-  _readyToMigrate: function() {
-    var self = this;
-    return _.isEmpty(self._methodInvokers);
-  },
+  _readyToMigrate() {
+    return isEmpty(this._methodInvokers);
+  }
 
   // If we were blocking a migration, see if it's now possible to continue.
   // Call whenever the set of outstanding/blocked methods shrinks.
-  _maybeMigrate: function () {
+  _maybeMigrate() {
     var self = this;
     if (self._retryMigrate && self._readyToMigrate()) {
       self._retryMigrate();
       self._retryMigrate = null;
     }
   }
-});
 
-LivedataTest.Connection = Connection;
+  onMessage(raw_msg) {
+    try {
+      var msg = DDPCommon.parseDDP(raw_msg);
+    } catch (e) {
+      Meteor._debug('Exception while parsing DDP', e);
+      return;
+    }
 
-// @param url {String} URL to Meteor app,
-//     e.g.:
-//     "subdomain.meteor.com",
-//     "http://subdomain.meteor.com",
-//     "/",
-//     "ddp+sockjs://ddp--****-foo.meteor.com/sockjs"
+    // Any message counts as receiving a pong, as it demonstrates that
+    // the server is still alive.
+    if (this._heartbeat) {
+      this._heartbeat.messageReceived();
+    }
 
-/**
- * @summary Connect to the server of a different Meteor application to subscribe to its document sets and invoke its remote methods.
- * @locus Anywhere
- * @param {String} url The URL of another Meteor application.
- */
-DDP.connect = function (url, options) {
-  var ret = new Connection(url, options);
-  allConnections.push(ret); // hack. see below.
-  return ret;
-};
+    if (msg === null || !msg.msg) {
+      // XXX COMPAT WITH 0.6.6. ignore the old welcome message for back
+      // compat.  Remove this 'if' once the server stops sending welcome
+      // messages (stream_server.js).
+      if (!(msg && msg.server_id))
+        Meteor._debug('discarding invalid livedata message', msg);
+      return;
+    }
 
-DDP._reconnectHook = new Hook({ bindEnvironment: false });
+    if (msg.msg === 'connected') {
+      this._version = this._versionSuggestion;
+      this._livedata_connected(msg);
+      this.options.onConnected();
+    } else if (msg.msg === 'failed') {
+      if (this._supportedDDPVersions.indexOf(msg.version) >= 0) {
+        this._versionSuggestion = msg.version;
+        this._stream.reconnect({ _force: true });
+      } else {
+        var description =
+          'DDP version negotiation failed; server requested version ' +
+          msg.version;
+        this._stream.disconnect({ _permanent: true, _error: description });
+        this.options.onDDPVersionNegotiationFailure(description);
+      }
+    } else if (msg.msg === 'ping' && this.options.respondToPings) {
+      this._send({ msg: 'pong', id: msg.id });
+    } else if (msg.msg === 'pong') {
+      // noop, as we assume everything's a pong
+    } else if (
+      ['added', 'changed', 'removed', 'ready', 'updated'].includes(msg.msg)
+    ) {
+      this._livedata_data(msg);
+    } else if (msg.msg === 'nosub') {
+      this._livedata_nosub(msg);
+    } else if (msg.msg === 'result') {
+      this._livedata_result(msg);
+    } else if (msg.msg === 'error') {
+      this._livedata_error(msg);
+    } else {
+      Meteor._debug('discarding unknown livedata message type', msg);
+    }
+  }
 
-/**
- * @summary Register a function to call as the first step of
- * reconnecting. This function can call methods which will be executed before
- * any other outstanding methods. For example, this can be used to re-establish
- * the appropriate authentication context on the connection.
- * @locus Anywhere
- * @param {Function} callback The function to call. It will be called with a
- * single argument, the [connection object](#ddp_connect) that is reconnecting.
- */
-DDP.onReconnect = function (callback) {
-  return DDP._reconnectHook.register(callback);
-};
+  onReset() {
+    // Send a connect message at the beginning of the stream.
+    // NOTE: reset is called even on the first connection, so this is
+    // the only place we send this message.
+    var msg = { msg: 'connect' };
+    if (this._lastSessionId) msg.session = this._lastSessionId;
+    msg.version = this._versionSuggestion || this._supportedDDPVersions[0];
+    this._versionSuggestion = msg.version;
+    msg.support = this._supportedDDPVersions;
+    this._send(msg);
 
-// Hack for `spiderable` package: a way to see if the page is done
-// loading all the data it needs.
-//
-allConnections = [];
-DDP._allSubscriptionsReady = function () {
-  return _.all(allConnections, function (conn) {
-    return _.all(conn._subscriptions, function (sub) {
-      return sub.ready;
+    // Mark non-retry calls as failed. This has to be done early as getting these methods out of the
+    // current block is pretty important to making sure that quiescence is properly calculated, as
+    // well as possibly moving on to another useful block.
+
+    // Only bother testing if there is an outstandingMethodBlock (there might not be, especially if
+    // we are connecting for the first time.
+    if (this._outstandingMethodBlocks.length > 0) {
+      // If there is an outstanding method block, we only care about the first one as that is the
+      // one that could have already sent messages with no response, that are not allowed to retry.
+      const currentMethodBlock = this._outstandingMethodBlocks[0].methods;
+      this._outstandingMethodBlocks[0].methods = currentMethodBlock.filter(
+        methodInvoker => {
+          // Methods with 'noRetry' option set are not allowed to re-send after
+          // recovering dropped connection.
+          if (methodInvoker.sentMessage && methodInvoker.noRetry) {
+            // Make sure that the method is told that it failed.
+            methodInvoker.receiveResult(
+              new Meteor.Error(
+                'invocation-failed',
+                'Method invocation might have failed due to dropped connection. ' +
+                  'Failing because `noRetry` option was passed to Meteor.apply.'
+              )
+            );
+          }
+
+          // Only keep a method if it wasn't sent or it's allowed to retry.
+          // This may leave the block empty, but we don't move on to the next
+          // block until the callback has been delivered, in _outstandingMethodFinished.
+          return !(methodInvoker.sentMessage && methodInvoker.noRetry);
+        }
+      );
+    }
+
+    // Now, to minimize setup latency, go ahead and blast out all of
+    // our pending methods ands subscriptions before we've even taken
+    // the necessary RTT to know if we successfully reconnected. (1)
+    // They're supposed to be idempotent, and where they are not,
+    // they can block retry in apply; (2) even if we did reconnect,
+    // we're not sure what messages might have gotten lost
+    // (in either direction) since we were disconnected (TCP being
+    // sloppy about that.)
+
+    // If the current block of methods all got their results (but didn't all get
+    // their data visible), discard the empty block now.
+    if (
+      this._outstandingMethodBlocks.length > 0 &&
+      this._outstandingMethodBlocks[0].methods.length === 0
+    ) {
+      this._outstandingMethodBlocks.shift();
+    }
+
+    // Mark all messages as unsent, they have not yet been sent on this
+    // connection.
+    keys(this._methodInvokers).forEach(id => {
+      this._methodInvokers[id].sentMessage = false;
     });
-  });
-};
+
+    // If an `onReconnect` handler is set, call it first. Go through
+    // some hoops to ensure that methods that are called from within
+    // `onReconnect` get executed _before_ ones that were originally
+    // outstanding (since `onReconnect` is used to re-establish auth
+    // certificates)
+    this._callOnReconnectAndSendAppropriateOutstandingMethods();
+
+    // add new subscriptions at the end. this way they take effect after
+    // the handlers and we don't see flicker.
+    keys(this._subscriptions).forEach(id => {
+      const sub = this._subscriptions[id];
+      this._send({
+        msg: 'sub',
+        id: id,
+        name: sub.name,
+        params: sub.params
+      });
+    });
+  }
+}

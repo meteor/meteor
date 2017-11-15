@@ -1507,7 +1507,9 @@ testAsyncMulti('mongo-livedata - document with a custom type, ' + idGeneration, 
       Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
       Meteor.subscribe('c-' + this.collectionName, expect());
     }
-  }, function (test, expect) {
+  },
+
+  function (test, expect) {
     var self = this;
     self.coll = new Mongo.Collection(this.collectionName, collectionOptions);
     var docId;
@@ -1525,13 +1527,17 @@ testAsyncMulti('mongo-livedata - document with a custom type, ' + idGeneration, 
       test.isTrue(inColl);
       inColl && test.equal(inColl.d.speak(), "woof");
     }));
-  }, function (test, expect) {
+  },
+
+  function (test, expect) {
     var self = this;
     self.coll.insert(new Dog("rover", "orange"), expect(function (err, id) {
       test.isTrue(err);
       test.isFalse(id);
     }));
-  }, function (test, expect) {
+  },
+
+  function (test, expect) {
     var self = this;
     self.coll.update(
       self.docId, new Dog("rover", "orange"), expect(function (err) {

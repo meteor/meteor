@@ -5,6 +5,7 @@
 
 var currentArgumentChecker = new Meteor.EnvironmentVariable;
 var isPlainObject = require("./isPlainObject.js").isPlainObject;
+var hasOwn = Object.prototype.hasOwnProperty;
 
 /**
  * @summary Check that a value matches a [pattern](#matchpatterns).
@@ -17,7 +18,7 @@ var isPlainObject = require("./isPlainObject.js").isPlainObject;
  * @param {MatchPattern} pattern The pattern to match
  * `value` against
  */
-var check = exports.check = function (value, pattern) {
+export const check = function (value, pattern) {
   // Record that check got called, if somebody cared.
   //
   // We use getOrNullIfOutsideFiber so that it's OK to call check()
@@ -44,24 +45,24 @@ var check = exports.check = function (value, pattern) {
  * @namespace Match
  * @summary The namespace for all Match types and methods.
  */
-var Match = exports.Match = {
-  Optional: function (pattern) {
+export const Match = {
+  Optional(pattern) {
     return new Optional(pattern);
   },
-  Maybe: function (pattern) {
+  Maybe(pattern) {
     return new Maybe(pattern);
   },
-  OneOf: function (/*arguments*/) {
-    return new OneOf(_.toArray(arguments));
+  OneOf(...args) {
+    return new OneOf(args);
   },
   Any: ['__any__'],
-  Where: function (condition) {
+  Where(condition) {
     return new Where(condition);
   },
-  ObjectIncluding: function (pattern) {
+  ObjectIncluding(pattern) {
     return new ObjectIncluding(pattern);
   },
-  ObjectWithValues: function (pattern) {
+  ObjectWithValues(pattern) {
     return new ObjectWithValues(pattern);
   },
   // Matches only signed 32-bit integers
@@ -93,7 +94,7 @@ var Match = exports.Match = {
    * @param {Any} value The value to check
    * @param {MatchPattern} pattern The pattern to match `value` against
    */
-  test: function (value, pattern) {
+  test(value, pattern) {
     return !testSubtree(value, pattern);
   },
 
@@ -101,7 +102,7 @@ var Match = exports.Match = {
   // `args` (either directly or in the first level of an array), throws an error
   // (using `description` in the message).
   //
-  _failIfArgumentsAreNotAllChecked: function (f, context, args, description) {
+  _failIfArgumentsAreNotAllChecked(f, context, args, description) {
     var argChecker = new ArgumentChecker(args, description);
     var result = currentArgumentChecker.withValue(argChecker, function () {
       return f.apply(context, args);
@@ -121,7 +122,7 @@ var Maybe = function (pattern) {
 };
 
 var OneOf = function (choices) {
-  if (_.isEmpty(choices))
+  if (!choices || choices.length === 0)
     throw new Error("Must provide at least one choice to Match.OneOf");
   this.choices = choices;
 };
@@ -242,7 +243,7 @@ var testSubtree = function (value, pattern) {
         path: ""
       };
     }
-    if (!_.isArray(value) && !_.isArguments(value)) {
+    if (!Array.isArray(value) && !isArguments(value)) {
       return {
         message: "Expected array, got " + stringForErrorMessage(value),
         path: ""
@@ -360,33 +361,27 @@ var testSubtree = function (value, pattern) {
 
   var requiredPatterns = {};
   var optionalPatterns = {};
-  _.each(pattern, function (subPattern, key) {
-    if (subPattern instanceof Optional || subPattern instanceof Maybe)
+
+  Object.keys(pattern).forEach(key => {
+    const subPattern = pattern[key];
+    if (subPattern instanceof Optional ||
+        subPattern instanceof Maybe) {
       optionalPatterns[key] = subPattern.pattern;
-    else
+    } else {
       requiredPatterns[key] = subPattern;
+    }
   });
 
-  //XXX: replace with underscore's _.allKeys if Meteor updates underscore to 1.8+ (or lodash)
-  var allKeys = function(obj){
-    var keys = [];
-    if (_.isObject(obj)){
-      for (var key in obj) keys.push(key);
-    }
-    return keys;
-  }
-
-  for (var keys = allKeys(value), i = 0, length = keys.length; i < length; i++) {
-    var key = keys[i];
+  for (var key in Object(value)) {
     var subValue = value[key];
-    if (_.has(requiredPatterns, key)) {
+    if (hasOwn.call(requiredPatterns, key)) {
       var result = testSubtree(subValue, requiredPatterns[key]);
       if (result) {
         result.path = _prependPath(key, result.path);
         return result;
       }
       delete requiredPatterns[key];
-    } else if (_.has(optionalPatterns, key)) {
+    } else if (hasOwn.call(optionalPatterns, key)) {
       var result = testSubtree(subValue, optionalPatterns[key]);
       if (result) {
         result.path = _prependPath(key, result.path);
@@ -409,7 +404,7 @@ var testSubtree = function (value, pattern) {
     }
   }
 
-  var keys = _.keys(requiredPatterns);
+  var keys = Object.keys(requiredPatterns);
   if (keys.length) {
     return {
       message: "Missing key '" + keys[0] + "'",
@@ -418,51 +413,50 @@ var testSubtree = function (value, pattern) {
   }
 };
 
-var ArgumentChecker = function (args, description) {
-  var self = this;
-  // Make a SHALLOW copy of the arguments. (We'll be doing identity checks
-  // against its contents.)
-  self.args = _.clone(args);
-  // Since the common case will be to check arguments in order, and we splice
-  // out arguments when we check them, make it so we splice out from the end
-  // rather than the beginning.
-  self.args.reverse();
-  self.description = description;
-};
+class ArgumentChecker {
+  constructor (args, description) {
+    // Make a SHALLOW copy of the arguments. (We'll be doing identity checks
+    // against its contents.)
+    this.args = [...args];
+    // Since the common case will be to check arguments in order, and we splice
+    // out arguments when we check them, make it so we splice out from the end
+    // rather than the beginning.
+    this.args.reverse();
+    this.description = description;
+  }
 
-_.extend(ArgumentChecker.prototype, {
-  checking: function (value) {
-    var self = this;
-    if (self._checkingOneValue(value))
+  checking(value) {
+    if (this._checkingOneValue(value))
       return;
     // Allow check(arguments, [String]) or check(arguments.slice(1), [String])
     // or check([foo, bar], [String]) to count... but only if value wasn't
     // itself an argument.
-    if (_.isArray(value) || _.isArguments(value)) {
-      _.each(value, _.bind(self._checkingOneValue, self));
+    if (Array.isArray(value) || isArguments(value)) {
+      Array.prototype.forEach.call(value, this._checkingOneValue.bind(this));
     }
-  },
-  _checkingOneValue: function (value) {
-    var self = this;
-    for (var i = 0; i < self.args.length; ++i) {
+  }
+
+  _checkingOneValue(value) {
+    for (var i = 0; i < this.args.length; ++i) {
       // Is this value one of the arguments? (This can have a false positive if
       // the argument is an interned primitive, but it's still a good enough
       // check.)
       // (NaN is not === to itself, so we have to check specially.)
-      if (value === self.args[i] || (_.isNaN(value) && _.isNaN(self.args[i]))) {
-        self.args.splice(i, 1);
+      if (value === this.args[i] ||
+          (Number.isNaN(value) && Number.isNaN(this.args[i]))) {
+        this.args.splice(i, 1);
         return true;
       }
     }
     return false;
-  },
-  throwUnlessAllArgumentsHaveBeenChecked: function () {
-    var self = this;
-    if (!_.isEmpty(self.args))
-      throw new Error("Did not check() all arguments during " +
-                      self.description);
   }
-});
+
+  throwUnlessAllArgumentsHaveBeenChecked() {
+    if (this.args.length > 0)
+      throw new Error("Did not check() all arguments during " +
+                      this.description);
+  }
+}
 
 var _jsKeywords = ["do", "if", "in", "for", "let", "new", "try", "var", "case",
   "else", "enum", "eval", "false", "null", "this", "true", "void", "with",
@@ -474,14 +468,32 @@ var _jsKeywords = ["do", "if", "in", "for", "let", "new", "try", "var", "case",
 
 // Assumes the base of path is already escaped properly
 // returns key + base
-var _prependPath = function (key, base) {
-  if ((typeof key) === "number" || key.match(/^[0-9]+$/))
+function _prependPath(key, base) {
+  if ((typeof key) === "number" || key.match(/^[0-9]+$/)) {
     key = "[" + key + "]";
-  else if (!key.match(/^[a-z_$][0-9a-z_$]*$/i) || _.contains(_jsKeywords, key))
+  } else if (!key.match(/^[a-z_$][0-9a-z_$]*$/i) ||
+             _jsKeywords.indexOf(key) >= 0) {
     key = JSON.stringify([key]);
+  }
 
-  if (base && base[0] !== "[")
+  if (base && base[0] !== "[") {
     return key + '.' + base;
-  return key + base;
-};
+  }
 
+  return key + base;
+}
+
+function isObject(value) {
+  return typeof value === "object" && value !== null;
+}
+
+function baseIsArguments(item) {
+  return isObject(item) &&
+    Object.prototype.toString.call(item) === '[object Arguments]';
+}
+
+var isArguments = baseIsArguments(function() {
+  return arguments;
+}()) ? baseIsArguments : function(value) {
+  return isObject(value) && typeof value.callee === "function";
+};
