@@ -1,9 +1,7 @@
-import { _ } from 'meteor/underscore';
 import { Meteor } from 'meteor/meteor';
-
-import { DDP, LivedataTest } from '../common/namespace';
-import { toWebsocketUrl } from '../common/urlHelpers';
-import { addCommonMethodsToPrototype } from '../common/stream_client_common';
+import { DDP } from '../common/namespace.js';
+import { toWebsocketUrl } from '../common/urlHelpers.js';
+import StreamClientCommon from '../common/stream_client_common.js';
 
 // @param endpoint {String} URL to Meteor app
 //   "http://subdomain.meteor.com/" or "/" or
@@ -16,115 +14,103 @@ import { addCommonMethodsToPrototype } from '../common/stream_client_common';
 // We don't do any heartbeating. (The logic that did this in sockjs was removed,
 // because it used a built-in sockjs mechanism. We could do it with WebSocket
 // ping frames or with DDP-level messages.)
-LivedataTest.ClientStream = class ClientStream {
+export default class ClientStream extends StreamClientCommon {
   constructor(endpoint, options) {
-    const self = this;
-    options = options || {};
+    super();
 
-    self.options = Object.assign(
-      {
-        retry: true
-      },
-      options
-    );
+    this.options = {
+      retry: true,
+      ...(options || null),
+    };
 
-    self.client = null; // created in _launchConnection
-    self.endpoint = endpoint;
+    this.client = null; // created in _launchConnection
+    this.endpoint = endpoint;
 
-    self.headers = self.options.headers || {};
-    self.npmFayeOptions = self.options.npmFayeOptions || {};
+    this.headers = this.options.headers || Object.create(null);
+    this.npmFayeOptions = this.options.npmFayeOptions || Object.create(null);
 
-    self._initCommon(self.options);
+    this._initCommon(this.options);
 
     //// Kickoff!
-    self._launchConnection();
+    this._launchConnection();
   }
 
   // data is a utf8 string. Data sent while not connected is dropped on
   // the floor, and it is up the user of this API to retransmit lost
   // messages on 'reset'
   send(data) {
-    var self = this;
-    if (self.currentStatus.connected) {
-      self.client.send(data);
+    if (this.currentStatus.connected) {
+      this.client.send(data);
     }
   }
 
   // Changes where this connection points
   _changeUrl(url) {
-    var self = this;
-    self.endpoint = url;
+    this.endpoint = url;
   }
 
   _onConnect(client) {
-    var self = this;
-
-    if (client !== self.client) {
+    if (client !== this.client) {
       // This connection is not from the last call to _launchConnection.
       // But _launchConnection calls _cleanup which closes previous connections.
       // It's our belief that this stifles future 'open' events, but maybe
       // we are wrong?
-      throw new Error('Got open from inactive client ' + !!self.client);
+      throw new Error('Got open from inactive client ' + !!this.client);
     }
 
-    if (self._forcedToDisconnect) {
+    if (this._forcedToDisconnect) {
       // We were asked to disconnect between trying to open the connection and
       // actually opening it. Let's just pretend this never happened.
-      self.client.close();
-      self.client = null;
+      this.client.close();
+      this.client = null;
       return;
     }
 
-    if (self.currentStatus.connected) {
+    if (this.currentStatus.connected) {
       // We already have a connection. It must have been the case that we
       // started two parallel connection attempts (because we wanted to
       // 'reconnect now' on a hanging connection and we had no way to cancel the
       // connection attempt.) But this shouldn't happen (similarly to the client
-      // !== self.client check above).
+      // !== this.client check above).
       throw new Error('Two parallel connections?');
     }
 
-    self._clearConnectionTimer();
+    this._clearConnectionTimer();
 
     // update status
-    self.currentStatus.status = 'connected';
-    self.currentStatus.connected = true;
-    self.currentStatus.retryCount = 0;
-    self.statusChanged();
+    this.currentStatus.status = 'connected';
+    this.currentStatus.connected = true;
+    this.currentStatus.retryCount = 0;
+    this.statusChanged();
 
     // fire resets. This must come after status change so that clients
     // can call send from within a reset callback.
-    _.each(self.eventCallbacks.reset, function(callback) {
+    this.forEachCallback('reset', callback => {
       callback();
     });
   }
 
   _cleanup(maybeError) {
-    var self = this;
-
-    self._clearConnectionTimer();
-    if (self.client) {
-      var client = self.client;
-      self.client = null;
+    this._clearConnectionTimer();
+    if (this.client) {
+      var client = this.client;
+      this.client = null;
       client.close();
 
-      _.each(self.eventCallbacks.disconnect, function(callback) {
+      this.forEachCallback('disconnect', callback => {
         callback(maybeError);
       });
     }
   }
 
   _clearConnectionTimer() {
-    var self = this;
-
-    if (self.connectionTimer) {
-      clearTimeout(self.connectionTimer);
-      self.connectionTimer = null;
+    if (this.connectionTimer) {
+      clearTimeout(this.connectionTimer);
+      this.connectionTimer = null;
     }
   }
 
   _getProxyUrl(targetUrl) {
-    var self = this;
     // Similar to code in tools/http-helpers.js.
     var proxy = process.env.HTTP_PROXY || process.env.http_proxy || null;
     // if we're going to a secure url, try the https_proxy env variable first.
@@ -135,8 +121,7 @@ LivedataTest.ClientStream = class ClientStream {
   }
 
   _launchConnection() {
-    var self = this;
-    self._cleanup(); // cleanup the old socket, if there was one.
+    this._cleanup(); // cleanup the old socket, if there was one.
 
     // Since server-to-server DDP is still an experimental feature, we only
     // require the module if we actually create a server-to-server
@@ -144,13 +129,13 @@ LivedataTest.ClientStream = class ClientStream {
     var FayeWebSocket = Npm.require('faye-websocket');
     var deflate = Npm.require('permessage-deflate');
 
-    var targetUrl = toWebsocketUrl(self.endpoint);
+    var targetUrl = toWebsocketUrl(this.endpoint);
     var fayeOptions = {
-      headers: self.headers,
+      headers: this.headers,
       extensions: [deflate]
     };
-    fayeOptions = _.extend(fayeOptions, self.npmFayeOptions);
-    var proxyUrl = self._getProxyUrl(targetUrl);
+    fayeOptions = Object.assign(fayeOptions, this.npmFayeOptions);
+    var proxyUrl = this._getProxyUrl(targetUrl);
     if (proxyUrl) {
       fayeOptions.proxy = { origin: proxyUrl };
     }
@@ -162,57 +147,55 @@ LivedataTest.ClientStream = class ClientStream {
     // Faye is erroneous or not.  So for now, we don't specify protocols.
     var subprotocols = [];
 
-    var client = (self.client = new FayeWebSocket.Client(
+    var client = (this.client = new FayeWebSocket.Client(
       targetUrl,
       subprotocols,
       fayeOptions
     ));
 
-    self._clearConnectionTimer();
-    self.connectionTimer = Meteor.setTimeout(function() {
-      self._lostConnection(new DDP.ConnectionError('DDP connection timed out'));
-    }, self.CONNECT_TIMEOUT);
+    this._clearConnectionTimer();
+    this.connectionTimer = Meteor.setTimeout(() => {
+      this._lostConnection(new DDP.ConnectionError('DDP connection timed out'));
+    }, this.CONNECT_TIMEOUT);
 
-    self.client.on(
+    this.client.on(
       'open',
-      Meteor.bindEnvironment(function() {
-        return self._onConnect(client);
+      Meteor.bindEnvironment(() => {
+        return this._onConnect(client);
       }, 'stream connect callback')
     );
 
-    var clientOnIfCurrent = function(event, description, f) {
-      self.client.on(
+    var clientOnIfCurrent = (event, description, callback) => {
+      this.client.on(
         event,
-        Meteor.bindEnvironment(function() {
+        Meteor.bindEnvironment((...args) => {
           // Ignore events from any connection we've already cleaned up.
-          if (client !== self.client) return;
-          f.apply(this, arguments);
+          if (client !== this.client) return;
+          callback(...args);
         }, description)
       );
     };
 
-    clientOnIfCurrent('error', 'stream error callback', function(error) {
-      if (!self.options._dontPrintErrors)
+    clientOnIfCurrent('error', 'stream error callback', error => {
+      if (!this.options._dontPrintErrors)
         Meteor._debug('stream error', error.message);
 
       // Faye's 'error' object is not a JS error (and among other things,
       // doesn't stringify well). Convert it to one.
-      self._lostConnection(new DDP.ConnectionError(error.message));
+      this._lostConnection(new DDP.ConnectionError(error.message));
     });
 
-    clientOnIfCurrent('close', 'stream close callback', function() {
-      self._lostConnection();
+    clientOnIfCurrent('close', 'stream close callback', () => {
+      this._lostConnection();
     });
 
-    clientOnIfCurrent('message', 'stream message callback', function(message) {
+    clientOnIfCurrent('message', 'stream message callback', message => {
       // Ignore binary frames, where message.data is a Buffer
       if (typeof message.data !== 'string') return;
 
-      _.each(self.eventCallbacks.message, function(callback) {
+      this.forEachCallback('message', callback => {
         callback(message.data);
       });
     });
   }
-};
-
-addCommonMethodsToPrototype(LivedataTest.ClientStream.prototype);
+}
