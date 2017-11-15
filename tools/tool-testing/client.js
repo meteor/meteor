@@ -6,6 +6,7 @@ export default class Client {
       `http://${this.host}:${this.port}/`,
       (Math.random() * 0x100000000 + 1).toString(36),
     ].join('');
+    this.config = options.config || {};
     this.timeout = options.timeout || 40;
 
     if (! this.connect || ! this.stop) {

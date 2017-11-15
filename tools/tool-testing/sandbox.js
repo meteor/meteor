@@ -38,8 +38,8 @@
 //   - browserstack: true if browserstack clients should be used
 //   - port: the port that the clients should run on
 import * as files from '../fs/files.js';
-import PhantomClient from './clients/phantom.js';
-import BrowserStackClient from './clients/browserstack.js';
+import PhantomClient from './clients/phantom/index.js';
+import BrowserStackClient from './clients/browserstack/index.js';
 import Builder from '../isobuild/builder.js';
 import Run from './run.js';
 import { Console } from '../console/console.js';
@@ -62,9 +62,8 @@ import { capture, enterJob } from '../utils/buildmessage.js';
 const hasOwn = Object.prototype.hasOwnProperty;
 
 export default class Sandbox {
-  constructor(options) {
-    // default options
-    options = Object.assign({ clients: {} }, options);
+  constructor(options = {}) {
+    this.options = options;
 
     this.root = files.mkdtemp();
     this.warehouse = null;
@@ -73,46 +72,15 @@ export default class Sandbox {
     files.mkdir(this.home, 0o755);
     this.cwd = this.home;
     this.env = {};
-    this.fakeMongo = options.fakeMongo;
+    this.fakeMongo = this.options.fakeMongo;
 
-    if (hasOwn.call(options, 'warehouse')) {
+    if (hasOwn.call(this.options, 'warehouse')) {
       if (!files.inCheckout()) {
-        throw Error("make only use a fake warehouse in a checkout");
+        throw Error(
+          "Fake warehouses are only possible when running from a checkout");
       }
       this.warehouse = files.pathJoin(this.root, 'tropohouse');
-      this._makeWarehouse(options.warehouse);
-    }
-
-    this.clients = [new PhantomClient({
-      host: 'localhost',
-      port: options.clients.port || 3000,
-    })];
-
-    if (options.clients && options.clients.browserstack) {
-      const browsers = [
-        { browserName: 'firefox' },
-        { browserName: 'chrome' },
-        { browserName: 'internet explorer',
-          browserVersion: '11' },
-        { browserName: 'internet explorer',
-          browserVersion: '8',
-          timeout: 60 },
-        { browserName: 'safari' },
-        { browserName: 'android' },
-      ];
-
-      Object.keys(browsers).forEach((browserKey) => {
-        const browser = browsers[browserKey];
-        this.clients.push(new BrowserStackClient(
-          {
-            host: 'localhost',
-            port: 3000,
-            browserName: browser.browserName,
-            browserVersion: browser.browserVersion,
-            timeout: browser.timeout,
-          },
-        ));
-      });
+      this._makeWarehouse(this.options.warehouse);
     }
 
     const meteorScript = process.platform === "win32" ? "meteor.bat" : "meteor";
@@ -147,11 +115,32 @@ export default class Sandbox {
   testWithAllClients(f, ...args) {
     args = args.filter(arg => arg);
 
-    console.log("running test with " + this.clients.length + " client(s).");
+    // Lazy-populate the clients, only when this method is called.
+    if (typeof this.clients === "undefined") {
+      this.clients = [];
 
-    Object.keys(this.clients).forEach((clientKey) => {
+      const clientOptions = this.options.clients || {};
+
+      const appConfig = {
+        host: 'localhost',
+        port: clientOptions.port || 3000,
+      };
+
+      if (clientOptions.phantom) {
+        PhantomClient.pushClients(this.clients, appConfig);
+      }
+
+      if (clientOptions.browserstack && BrowserStackClient.prerequisitesMet()) {
+        BrowserStackClient.pushClients(this.clients, appConfig);
+      }
+    }
+
+    console.log(`Running test with ${this.clients.length} client(s)...`);
+
+    Object.keys(this.clients).forEach((clientKey, index, array) => {
       const client = this.clients[clientKey];
-      console.log("testing with " + client.name + "...");
+      console.log(
+        `(${index+1}/${array.length}) Testing with ${client.name}...`);
       const run = new Run(this.execPath, {
         sandbox: this,
         args,

@@ -2266,8 +2266,9 @@ main.registerCommand({
     return 0;
   }
 
-  var clients = {
-    browserstack: options.browserstack
+  const clients = {
+    phantom: true, // Phantom is always enabled.
+    browserstack: options.browserstack,
   };
 
   if (options.headless) {
