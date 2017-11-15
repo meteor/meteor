@@ -10,12 +10,7 @@ export class ClientStream extends StreamClientCommon {
   //   "http://subdomain.meteor.com/" or "/" or
   //   "ddp+sockjs://foo-**.meteor.com/sockjs"
   constructor(url, options) {
-    super();
-
-    this.options = {
-      retry: true,
-      ...options
-    };
+    super(options);
 
     this._initCommon(this.options);
 
@@ -114,7 +109,7 @@ export class ClientStream extends StreamClientCommon {
 
   _heartbeat_timeout() {
     console.log('Connection timeout. No sockjs heartbeat received.');
-    this._lostConnection(new Error("Heartbeat timed out"));
+    this._lostConnection(new this.ConnectionError("Heartbeat timed out"));
   }
 
   _heartbeat_received() {
@@ -200,7 +195,9 @@ export class ClientStream extends StreamClientCommon {
 
     if (this.connectionTimer) clearTimeout(this.connectionTimer);
     this.connectionTimer = setTimeout(() => {
-      this._lostConnection(new Error("DDP connection timed out"));
+      this._lostConnection(
+        new this.ConnectionError("DDP connection timed out")
+      );
     }, this.CONNECT_TIMEOUT);
   }
 }

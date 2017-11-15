@@ -3,6 +3,16 @@ import { Retry } from 'meteor/retry';
 const forcedReconnectError = new Error("forced reconnect");
 
 export class StreamClientCommon {
+  constructor(options) {
+    this.options = {
+      retry: true,
+      ...(options || null),
+    };
+
+    this.ConnectionError =
+      options && options.ConnectionError || Error;
+  }
+
   // Register for callbacks.
   on(name, callback) {
     if (name !== 'message' && name !== 'reset' && name !== 'disconnect')
