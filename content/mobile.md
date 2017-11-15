@@ -564,11 +564,22 @@ Refer to [Meteor's Mobile Configuration](http://docs.meteor.com/api/mobile-confi
 
 <h3 id="configuring-app-icons-and-launch-screens">App icons and launch screens</h3>
 
-Although Meteor includes a standard set of app icons and launch screens, you'll most likely want to configure your own images.
+Although Meteor includes a standard set of app icons and launch screens, you will want to configure your own images to match your app's branding in your `mobile-config.js` file.
 
-You configure these images with [`App.icons`](http://docs.meteor.com/api/mobile-config.html#App-icons) and [`App.launchScreens`](http://docs.meteor.com/api/mobile-config.html#App-launchScreens), which both use names to refer to the various supported image sizes (see API documentation).
+You can configure the icon and splash screen image sizes using the specific supported settings in [`App.icons`](http://docs.meteor.com/api/mobile-config.html#App-icons) and [`App.launchScreens`](http://docs.meteor.com/api/mobile-config.html#App-launchScreens).
 
-For iOS, you can also refer to the [Icon and image sizes](https://developer.apple.com/library/ios/documentation/UserExperience/Conceptual/MobileHIG/IconMatrix.html) in the iOS Human Interface Guidelines for more information about the way these different sizes are used.
+In addition, Cordova on iOS supports using [launch story board images](https://cordova.apache.org/docs/en/latest/reference/cordova-plugin-splashscreen/#launch-storyboard-images), which is now Apple's recommended approach for providing launch screens. This has the benefit of not requiring you to provide an image for every possible device screen size. Just remove all the iOS `App.launchScreens` directives from your `mobile-config.js` and use [`App.appendToConfig`](http://docs.meteor.com/api/mobile-config.html#App-appendToConfig) to add the paths to your universal images.
+
+```
+App.appendToConfig(`
+  <splash src="../../../app/path/to/Default@2x~universal~anyany.png" />
+  <splash src="../../../app/path/to/Default@3x~universal~anyany.png" />
+`);
+```
+
+See the [iOS Human Interface Guidelines for icon and image sizes](https://developer.apple.com/ios/human-interface-guidelines/icons-and-images/image-size-and-resolution/) for more information.
+
+> On [iPhone X](https://developer.apple.com/ios/human-interface-guidelines/overview/iphone-x/) it is likely required that you use launch story board images if you want the launch image to cover the entire screen. There are also other app layout issues that need to be adresssed such as "safe areas" and "rounded corners", see [Apple's iOS app updates for iPhone X](https://developer.apple.com/ios/update-apps-for-iphone-x/).
 
 <h3 id="advanced-build">Advanced build customization</h3>
 
