@@ -231,8 +231,8 @@ export default class Cursor {
     // XXX allow skip/limit with unordered observe
     if (!options._allow_unordered && !ordered && (this.skip || this.limit)) {
       throw new Error(
-        'must use ordered observe (ie, \'addedBefore\' instead of \'added\') ' +
-        'with skip or limit'
+        "Must use an ordered observe with skip or limit (i.e. 'addedBefore' " +
+        "for observeChanges or 'addedAt' for observe, instead of 'added')."
       );
     }
 
