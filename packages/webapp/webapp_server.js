@@ -888,7 +888,7 @@ function runWebAppServer() {
 
     if (unixSocketPath) {
       if (cluster.isWorker) {
-        unixSocketPath += "." + cluster.worker.id.toString() + ".sock";
+        unixSocketPath += "." + cluster.worker.id + ".sock";
       }
       // Start the HTTP server using a socket file.
       removeExistingSocketFile(unixSocketPath);
