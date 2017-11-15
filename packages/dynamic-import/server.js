@@ -1,16 +1,17 @@
-import assert from "assert";
-import { readFileSync } from "fs";
-import {
-  join as pathJoin,
-  normalize as pathNormalize,
-} from "path";
+"use strict";
 
-import { check } from "meteor/check";
-
-import "./security.js";
-import "./client.js";
-
+const assert = require("assert");
+const { readFileSync } = require("fs");
+const {
+  join: pathJoin,
+  normalize: pathNormalize,
+} = require("path");
 const hasOwn = Object.prototype.hasOwnProperty;
+
+const { WebApp } = require("meteor/webapp");
+
+require("./security.js");
+require("./client.js");
 
 Object.keys(dynamicImportInfo).forEach(platform => {
   const info = dynamicImportInfo[platform];
@@ -19,30 +20,40 @@ Object.keys(dynamicImportInfo).forEach(platform => {
   }
 });
 
-Meteor.methods({
-  __dynamicImport(tree) {
-    check(tree, Object);
-    this.unblock();
-
-    const platform = this.connection ? "web.browser" : "server";
-    const pathParts = [];
-
-    function walk(node) {
-      if (node && typeof node === "object") {
-        Object.keys(node).forEach(name => {
-          pathParts.push(name);
-          node[name] = walk(node[name]);
-          assert.strictEqual(pathParts.pop(), name);
-        });
-      } else {
-        return read(pathParts, platform);
-      }
-      return node;
-    }
-
-    return walk(tree);
+WebApp.connectHandlers.use(
+  "/__dynamicImport",
+  function (request, response) {
+    assert.strictEqual(request.method, "POST");
+    const chunks = [];
+    request.on("data", chunk => chunks.push(chunk));
+    request.on("end", () => {
+      response.setHeader("Content-Type", "application/json");
+      response.end(JSON.stringify(readTree(
+        JSON.parse(Buffer.concat(chunks)),
+        "web.browser"
+      )));
+    });
   }
-});
+);
+
+function readTree(tree, platform) {
+  const pathParts = [];
+
+  function walk(node) {
+    if (node && typeof node === "object") {
+      Object.keys(node).forEach(name => {
+        pathParts.push(name);
+        node[name] = walk(node[name]);
+        assert.strictEqual(pathParts.pop(), name);
+      });
+    } else {
+      return read(pathParts, platform);
+    }
+    return node;
+  }
+
+  return walk(tree);
+}
 
 function read(pathParts, platform) {
   const { dynamicRoot } = dynamicImportInfo[platform];
