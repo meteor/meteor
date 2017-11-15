@@ -6,7 +6,6 @@ import { Random } from 'meteor/random';
 import { Hook } from 'meteor/callback-hook';
 import { MongoID } from 'meteor/mongo-id';
 import { DDP } from './namespace.js';
-import getClientStreamClass from './getClientStreamClass.js';
 import MethodInvoker from './MethodInvoker.js';
 import {
   hasOwn,
@@ -83,7 +82,8 @@ export class Connection {
     if (typeof url === 'object') {
       self._stream = url;
     } else {
-      self._stream = new (getClientStreamClass())(url, {
+      const { ClientStream } = require("meteor/socket-stream-client");
+      self._stream = new ClientStream(url, {
         retry: options.retry,
         headers: options.headers,
         _sockjsOptions: options._sockjsOptions,

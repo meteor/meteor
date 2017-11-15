@@ -1,12 +1,11 @@
-import { Meteor } from 'meteor/meteor';
-import { DDP } from '../common/namespace.js';
 import {
   toSockjsUrl,
   toWebsocketUrl,
-} from '../common/urlHelpers.js';
-import StreamClientCommon from '../common/stream_client_common.js';
+} from "./urls.js";
 
-export default class ClientStream extends StreamClientCommon {
+import { StreamClientCommon } from "./common.js";
+
+export class ClientStream extends StreamClientCommon {
   // @param url {String} URL to Meteor app
   //   "http://subdomain.meteor.com/" or "/" or
   //   "ddp+sockjs://foo-**.meteor.com/sockjs"
@@ -114,8 +113,8 @@ export default class ClientStream extends StreamClientCommon {
   }
 
   _heartbeat_timeout() {
-    Meteor._debug('Connection timeout. No sockjs heartbeat received.');
-    this._lostConnection(new DDP.ConnectionError('Heartbeat timed out'));
+    console.log('Connection timeout. No sockjs heartbeat received.');
+    this._lostConnection(new Error("Heartbeat timed out"));
   }
 
   _heartbeat_received() {
@@ -186,11 +185,11 @@ export default class ClientStream extends StreamClientCommon {
     this.socket.onclose = () => {
       this._lostConnection();
     };
-    this.socket.onerror = () => {
+    this.socket.onerror = (...args) => {
       // XXX is this ever called?
-      Meteor._debug(
+      console.log(
         'stream error',
-        Array.from(arguments),
+        args,
         new Date().toDateString()
       );
     };
@@ -201,7 +200,7 @@ export default class ClientStream extends StreamClientCommon {
 
     if (this.connectionTimer) clearTimeout(this.connectionTimer);
     this.connectionTimer = setTimeout(() => {
-      this._lostConnection(new DDP.ConnectionError('DDP connection timed out'));
+      this._lostConnection(new Error("DDP connection timed out"));
     }, this.CONNECT_TIMEOUT);
   }
 }
