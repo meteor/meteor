@@ -108,6 +108,10 @@
 * You can now run `meteor test --driver-package user:package` without
   first running `meteor add user:package`.
 
+* iOS icons and launch screens have been updated to support iOS 11
+  [Issue #9196](https://github.com/meteor/meteor/issues/9196)
+  [PR #9198](https://github.com/meteor/meteor/pull/9198)
+
 ## v1.5.4, 2017-11-08
 
 * Node has been updated to version 4.8.6. This release officially
