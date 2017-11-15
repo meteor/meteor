@@ -5,9 +5,7 @@ Package.describe({
 });
 
 Npm.depends({
-  'faye-websocket': '0.11.1',
-  lolex: '1.4.0',
-  'permessage-deflate': '0.1.6'
+  lolex: '1.4.0'
 });
 
 Package.onUse((api) => {
@@ -22,6 +20,7 @@ Package.onUse((api) => {
     'callback-hook',
     'ddp-common',
     'reload',
+    'socket-stream-client',
 
     // we depend on _diffObjects, _applyChanges,
     'diff-sequence',
@@ -73,6 +72,4 @@ Package.onTest((api) => {
   api.addFiles('test/livedata_tests.js');
   api.addFiles('test/livedata_test_service.js');
   api.addFiles('test/random_stream_tests.js');
-  api.addFiles('test/stream_tests.js', 'client');
-  api.addFiles('test/stream_client_tests.js', 'server');
 });
