@@ -157,6 +157,19 @@
 * You can now run `meteor test --driver-package user:package` without
   first running `meteor add user:package`.
 
+* iOS icons and launch screens have been updated to support iOS 11
+  [Issue #9196](https://github.com/meteor/meteor/issues/9196)
+  [PR #9198](https://github.com/meteor/meteor/pull/9198)
+
+## v1.5.4, 2017-11-08
+
+* Node has been updated to version 4.8.6. This release officially
+  includes our fix of a faulty backport of garbage collection-related
+  logic in V8 and ends Meteor's use of a custom Node with that patch.
+  In addition, it includes small OpenSSL updates as announced on the
+  Node blog: https://nodejs.org/en/blog/release/v4.8.6/.
+  [Issue #8648](https://github.com/meteor/meteor/issues/8648)
+
 ## v1.5.3, 2017-11-04
 
 * Node has been upgraded to version 4.8.5, a recommended security
