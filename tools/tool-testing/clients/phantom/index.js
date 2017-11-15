@@ -1,18 +1,17 @@
 import { execFile } from 'child_process';
-import Client from '../client.js';
-import { enterJob } from '../../utils/buildmessage.js';
-import { ensureDependencies } from '../../cli/dev-bundle-helpers.js';
+import Client from '../../client.js';
+import { enterJob } from '../../../utils/buildmessage.js';
+import { ensureDependencies } from '../../../cli/dev-bundle-helpers.js';
 import {
   convertToOSPath,
   pathJoin,
   getCurrentToolsDir,
-} from '../../fs/files.js';
+} from '../../../fs/files.js';
 
 const NPM_DEPENDENCIES = {
   'phantomjs-prebuilt': '2.1.14',
 };
 
-// PhantomClient
 export default class PhantomClient extends Client {
   constructor(options) {
     super(options);
@@ -61,5 +60,9 @@ export default class PhantomClient extends Client {
     this._logError = false;
     this.process && this.process.kill();
     this.process = null;
+  }
+
+  static pushClients(clients, appConfig) {
+    clients.push(new PhantomClient(appConfig));
   }
 }
