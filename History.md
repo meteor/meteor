@@ -1,5 +1,7 @@
 ## v.NEXT
 
+* The `minifier-js` package has been updated to use `uglify-es` 3.1.9.
+
 * [`cordova-lib`](https://github.com/apache/cordova-cli) has been updated to
   version 7.1.0, [`cordova-android`](https://github.com/apache/cordova-android/)
   has been updated to version 6.3.0, and [`cordova-ios`](https://github.com/apache/cordova-ios/)
