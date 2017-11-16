@@ -8,15 +8,38 @@ const {
 } = require("path");
 const hasOwn = Object.prototype.hasOwnProperty;
 
-const { WebApp } = require("meteor/webapp");
-const { Random } = require("meteor/random");
-
 require("./security.js");
 
 const client = require("./client.js");
-const platforms = Object.keys(dynamicImportInfo);
 
-platforms.forEach(platform => {
+Meteor.startup(() => {
+  if (! Package.webapp) {
+    // If the webapp package is not in use, there's no way for the
+    // dynamic-import package to fetch dynamic modules, so we should
+    // abandon the rest of the logic in this module.
+    //
+    // If api.use("webapp") appeared in dynamic-import/package.js, then
+    // Package.webapp would always be defined here, of course, but that
+    // would be a bad idea, because the dynamic-import package should not
+    // single-handedly force a dependency on webapp if the program does
+    // not otherwise need a web server (e.g., when the program is an
+    // isopacket or build plugin instead of a web application).
+    //
+    // Note that the client.js module (imported above) still defines
+    // Module.prototype.dynamicImport, which will work as long as no
+    // modules need to be fetched.
+    return;
+  }
+
+  Object.keys(dynamicImportInfo).forEach(setUpPlatform);
+
+  Package.webapp.WebApp.connectHandlers.use(
+    "/__dynamicImport",
+    middleware
+  );
+});
+
+function setUpPlatform(platform) {
   const info = dynamicImportInfo[platform];
 
   if (info.dynamicRoot) {
@@ -24,25 +47,30 @@ platforms.forEach(platform => {
   }
 
   if (platform === "server") {
-    client.setSecretKey(info.key = Random.id(40));
+    client.setSecretKey(info.key = randomId(40));
   }
-});
+}
 
-WebApp.connectHandlers.use(
-  "/__dynamicImport",
-  function (request, response) {
-    assert.strictEqual(request.method, "POST");
-    const chunks = [];
-    request.on("data", chunk => chunks.push(chunk));
-    request.on("end", () => {
-      response.setHeader("Content-Type", "application/json");
-      response.end(JSON.stringify(readTree(
-        JSON.parse(Buffer.concat(chunks)),
-        getPlatform(request)
-      )));
-    });
+function randomId(n) {
+  let s = "";
+  while (s.length < n) {
+    s += Math.random().toString(36).slice(2);
   }
-);
+  return s.slice(0, n);
+}
+
+function middleware(request, response) {
+  assert.strictEqual(request.method, "POST");
+  const chunks = [];
+  request.on("data", chunk => chunks.push(chunk));
+  request.on("end", () => {
+    response.setHeader("Content-Type", "application/json");
+    response.end(JSON.stringify(readTree(
+      JSON.parse(Buffer.concat(chunks)),
+      getPlatform(request)
+    )));
+  });
+}
 
 function getPlatform(request) {
   let platform = "web.browser";
@@ -53,7 +81,7 @@ function getPlatform(request) {
   const secretKey = request.query.key;
 
   if (typeof secretKey === "string") {
-    platforms.some(p => {
+    Object.keys(dynamicImportInfo).some(p => {
       if (secretKey === dynamicImportInfo[p].key) {
         platform = p;
         return true;
