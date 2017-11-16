@@ -11,10 +11,6 @@ Npm.strip({
   "es5-ext": ["test/"]
 });
 
-Cordova.depends({
-  'cordova-plugin-console': '1.0.7'
-});
-
 Package.onUse(function (api) {
   api.export('Log');
   api.use(['underscore', 'ejson', 'modules']);
