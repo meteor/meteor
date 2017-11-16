@@ -12,9 +12,9 @@ first and read the instructions for filing a bug report:
 https://github.com/meteor/meteor/blob/devel/CONTRIBUTING.md#reporting-a-bug-in-meteor
 
 ### This bug report should include:
-- [ ] A descriptive title
+- [ ] A short, but descriptive title. The title doesn't need "Meteor" in it.
 - [ ] The version of Meteor showing the problem.
-- [ ] The last version of Meteor where the problem did _not_ occur (if applicable)
+- [ ] The last version of Meteor where the problem did _not_ occur, if applicable.
 - [ ] The operating system you're running Meteor on.
 - [ ] The expected behavior.
 - [ ] The actual behavior.
