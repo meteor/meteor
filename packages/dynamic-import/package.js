@@ -14,8 +14,10 @@ Package.onUse(function (api) {
 
   api.use("modules");
   api.use("promise");
-  api.use("webapp", "server");
   api.use("http");
+
+  api.use("webapp", "server");
+  api.use("random", "server");
 
   api.mainModule("client.js", "client");
   api.mainModule("server.js", "server");

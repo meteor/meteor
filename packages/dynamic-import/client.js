@@ -112,9 +112,15 @@ function makeModuleFunction(id, source, options) {
   };
 }
 
+var secretKey = null;
+exports.setSecretKey = function (key) {
+  secretKey = key;
+};
+
 function fetchMissing(missingTree) {
   return new Promise(function (resolve, reject) {
     HTTP.call("POST", Meteor.absoluteUrl("__dynamicImport"), {
+      query: secretKey ? "key=" + secretKey : void 0,
       data: missingTree
     }, function (error, result) {
       error ? reject(error) : resolve(result.data);

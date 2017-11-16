@@ -9,14 +9,22 @@ const {
 const hasOwn = Object.prototype.hasOwnProperty;
 
 const { WebApp } = require("meteor/webapp");
+const { Random } = require("meteor/random");
 
 require("./security.js");
-require("./client.js");
 
-Object.keys(dynamicImportInfo).forEach(platform => {
+const client = require("./client.js");
+const platforms = Object.keys(dynamicImportInfo);
+
+platforms.forEach(platform => {
   const info = dynamicImportInfo[platform];
+
   if (info.dynamicRoot) {
     info.dynamicRoot = pathNormalize(info.dynamicRoot);
+  }
+
+  if (platform === "server") {
+    client.setSecretKey(info.key = Random.id(40));
   }
 });
 
@@ -30,11 +38,31 @@ WebApp.connectHandlers.use(
       response.setHeader("Content-Type", "application/json");
       response.end(JSON.stringify(readTree(
         JSON.parse(Buffer.concat(chunks)),
-        "web.browser"
+        getPlatform(request)
       )));
     });
   }
 );
+
+function getPlatform(request) {
+  let platform = "web.browser";
+
+  // If the __dynamicImport request includes a secret key, and it matches
+  // dynamicImportInfo[platform].key, use platform instead of the default
+  // platform, web.browser.
+  const secretKey = request.query.key;
+
+  if (typeof secretKey === "string") {
+    platforms.some(p => {
+      if (secretKey === dynamicImportInfo[p].key) {
+        platform = p;
+        return true;
+      }
+    });
+  }
+
+  return platform;
+}
 
 function readTree(tree, platform) {
   const pathParts = [];
