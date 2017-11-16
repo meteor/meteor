@@ -1,7 +1,5 @@
-import { toSockjsUrl } from '../common/urlHelpers.js';
-import getClientStreamClass from '../common/getClientStreamClass.js';
-
-const ClientStream = getClientStreamClass();
+import { toSockjsUrl } from "./urls.js";
+import { ClientStream } from "meteor/socket-stream-client";
 
 Tinytest.add('stream - status', function(test) {
   // Very basic test. Just see that it runs and returns something. Not a
