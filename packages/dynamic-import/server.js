@@ -41,11 +41,25 @@ function readTree(tree, platform) {
 
   function walk(node) {
     if (node && typeof node === "object") {
+      let empty = true;
       Object.keys(node).forEach(name => {
         pathParts.push(name);
-        node[name] = walk(node[name]);
+        const result = walk(node[name]);
+        if (result === null) {
+          // If the read function returns null, omit this module from the
+          // resulting tree.
+          delete node[name];
+        } else {
+          node[name] = result;
+          empty = false;
+        }
         assert.strictEqual(pathParts.pop(), name);
       });
+      if (empty) {
+        // If every recursive call to walk(node[name]) returned null,
+        // remove this node from the resulting tree by returning null.
+        return null;
+      }
     } else {
       return read(pathParts, platform);
     }
@@ -63,13 +77,21 @@ function read(pathParts, platform) {
   ));
 
   if (! absPath.startsWith(dynamicRoot)) {
-    throw new Meteor.Error("bad dynamic module path");
+    console.error("bad dynamic import path:", absPath);
+    return null;
   }
 
   const cache = getCache(platform);
-  return hasOwn.call(cache, absPath)
-    ? cache[absPath]
-    : cache[absPath] = readFileSync(absPath, "utf8");
+  if (hasOwn.call(cache, absPath)) {
+    return cache[absPath];
+  }
+
+  try {
+    return cache[absPath] = readFileSync(absPath, "utf8");
+  } catch (e) {
+    console.error(e.stack || e);
+    return null;
+  }
 }
 
 const cachesByPlatform = Object.create(null);
