@@ -2,6 +2,17 @@
 
 * The `minifier-js` package has been updated to use `uglify-es` 3.1.9.
 
+* The `request` npm package used by the `http` package has been upgraded
+  to version 2.83.0.
+
+* The deprecated `Meteor.http` object has been removed. If your
+  application is still using `Meteor.http`, you should now use `HTTP`
+  instead:
+  ```js
+  import { HTTP } from "meteor/http";
+  HTTP.call("GET", url, ...);
+  ```
+
 * [`cordova-lib`](https://github.com/apache/cordova-cli) has been updated to
   version 7.1.0, [`cordova-android`](https://github.com/apache/cordova-android/)
   has been updated to version 6.3.0, and [`cordova-ios`](https://github.com/apache/cordova-ios/)

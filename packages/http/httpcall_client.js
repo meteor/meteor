@@ -1,3 +1,8 @@
+var URL = require("meteor/url").URL;
+var common = require("./httpcall_common.js");
+var HTTP = exports.HTTP = common.HTTP;
+var hasOwn = Object.prototype.hasOwnProperty;
+
 /**
  * @summary Perform an outbound HTTP request.
  * @locus Anywhere
@@ -53,7 +58,7 @@ HTTP.call = function(method, url, options, callback) {
   if (options.followRedirects === false)
     throw new Error("Option followRedirects:false not supported on client.");
 
-  if (_.has(options, 'npmRequestOptions')) {
+  if (hasOwn.call(options, 'npmRequestOptions')) {
     throw new Error("Option npmRequestOptions not supported on client.");
   }
 
@@ -70,23 +75,28 @@ HTTP.call = function(method, url, options, callback) {
     content = URL._encodeParams(params_for_body);
   }
 
-  _.extend(headers, options.headers || {});
+  if (options.headers) {
+    Object.keys(options.headers).forEach(function (key) {
+      headers[key] = options.headers[key];
+    });
+  }
 
   ////////// Callback wrapping //////////
 
   // wrap callback to add a 'response' property on an error, in case
   // we have both (http 4xx/5xx error, which has a response payload)
   callback = (function(callback) {
+    var called = false;
     return function(error, response) {
-      if (error && response)
-        error.response = response;
-      callback(error, response);
+      if (! called) {
+        called = true;
+        if (error && response) {
+          error.response = response;
+        }
+        callback(error, response);
+      }
     };
   })(callback);
-
-  // safety belt: only call the callback once.
-  callback = _.once(callback);
-
 
   ////////// Kickoff! //////////
 
@@ -157,17 +167,22 @@ HTTP.call = function(method, url, options, callback) {
             "content-type: " + xhr.getResponseHeader("content-type");
 
           var headers_raw = header_str.split(/\r?\n/);
-          _.each(headers_raw, function (h) {
+          headers_raw.forEach(function (h) {
             var m = /^(.*?):(?:\s+)(.*)$/.exec(h);
-            if (m && m.length === 3)
+            if (m && m.length === 3) {
               response.headers[m[1].toLowerCase()] = m[2];
+            }
           });
 
-          populateData(response);
+          common.populateData(response);
 
           var error = null;
-          if (response.statusCode >= 400)
-            error = makeErrorByStatus(response.statusCode, response.content);
+          if (response.statusCode >= 400) {
+            error = common.makeErrorByStatus(
+              response.statusCode,
+              response.content
+            );
+          }
 
           callback(error, response);
         }
@@ -175,12 +190,9 @@ HTTP.call = function(method, url, options, callback) {
     };
 
     // Allow custom control over XHR and abort early.
-    if (options.beforeSend) {
-      // Sanity
-      var beforeSend = _.once(options.beforeSend);
-
+    if (typeof options.beforeSend === "function") {
       // Call the callback and check to see if the request was aborted
-      if (false === beforeSend.call(null, xhr, options)) {
+      if (false === options.beforeSend.call(null, xhr, options)) {
         return xhr.abort();
       }
     }
@@ -191,5 +203,4 @@ HTTP.call = function(method, url, options, callback) {
   } catch (err) {
     callback(err);
   }
-
 };
