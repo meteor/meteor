@@ -1,5 +1,12 @@
 ## v.NEXT
 
+* Provide basic support for [iPhone X](https://developer.apple.com/ios/update-apps-for-iphone-x/)
+  status bar and launch screens, which includes updates to
+  [`cordova-plugin-statusbar@2.3.0`](https://github.com/apache/cordova-plugin-statusbar/blob/master/RELEASENOTES.md#230-nov-06-2017)
+  and [`cordova-plugin-splashscreen@4.1.0`](https://github.com/apache/cordova-plugin-splashscreen/blob/master/RELEASENOTES.md#410-nov-06-2017).
+  [Issue #9041](https://github.com/meteor/meteor/issues/9041)
+  [PR #TBD](https://github.com/meteor/meteor/pull/TBD)
+
 * [`cordova-lib`](https://github.com/apache/cordova-cli) has been updated to
   version 7.1.0, [`cordova-android`](https://github.com/apache/cordova-android/)
   has been updated to version 6.3.0, and [`cordova-ios`](https://github.com/apache/cordova-ios/)

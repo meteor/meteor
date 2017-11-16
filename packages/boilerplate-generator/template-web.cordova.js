@@ -21,7 +21,7 @@ export default function({
       '<head>',
       '  <meta charset="utf-8">',
       '  <meta name="format-detection" content="telephone=no">',
-      '  <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height">',
+      '  <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height, viewport-fit=cover">',
       '  <meta name="msapplication-tap-highlight" content="no">',
       '  <meta http-equiv="Content-Security-Policy" content="default-src * gap: data: blob: \'unsafe-inline\' \'unsafe-eval\' ws: wss:;">',
     ],
