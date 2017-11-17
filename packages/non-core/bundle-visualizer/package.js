@@ -17,6 +17,7 @@ Package.onUse(function(api) {
   api.use('isobuild:dynamic-import@1.5.0');
   api.use([
     'ecmascript',
+    'dynamic-import',
     'http',
   ]);
   api.mainModule('server.js', 'server');
