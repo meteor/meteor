@@ -1,8 +1,8 @@
-URL = {};
+var URL = exports.URL = {};
 
-var encodeString = function (str) {
+function encodeString(str) {
   return encodeURIComponent(str).replace(/\*/g, '%2A');
-};
+}
 
 // Encode URL paramaters into a query string, handling nested objects and
 // arrays properly.
@@ -25,7 +25,7 @@ URL._encodeParams = function (params, prefix) {
   return str.join('&').replace(/%20/g, '+');
 };
 
-buildUrl = function(before_qmark, from_qmark, opt_query, opt_params) {
+exports.buildUrl = function(before_qmark, from_qmark, opt_query, opt_params) {
   var url_without_query = before_qmark;
   var query = from_qmark ? from_qmark.slice(1) : null;
 

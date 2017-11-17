@@ -16,6 +16,7 @@ var Console = require('../console/console.js').Console;
 var projectContextModule = require('../project-context.js');
 var release = require('../packaging/release.js');
 
+import { ensureDevBundleDependencies } from '../cordova/index.js';
 import { CordovaRunner } from '../cordova/runner.js';
 import { iOSRunTarget, AndroidRunTarget } from '../cordova/run-targets.js';
 
@@ -403,7 +404,6 @@ function doRunCommand(options) {
       });
     }
 
-    import { ensureDevBundleDependencies } from '../cordova';
     ensureDevBundleDependencies();
     prepareCordovaProject();
   }
@@ -1042,10 +1042,9 @@ ${Console.command("meteor build ../output")}`,
     main.captureAndExit('', () => {
 
       import {
-        ensureDevBundleDependencies,
         pluginVersionsFromStarManifest,
         displayNameForPlatform,
-      } from '../cordova';
+      } from '../cordova/index.js';
 
       ensureDevBundleDependencies();
 
@@ -1828,7 +1827,6 @@ function doTestCommand(options) {
       });
     }
 
-    import { ensureDevBundleDependencies } from '../cordova';
     ensureDevBundleDependencies();
     prepareCordovaProject();
   }

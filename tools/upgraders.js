@@ -5,7 +5,7 @@ var files = require('./fs/files.js');
 var Console = require('./console/console.js').Console;
 import main from './cli/main.js';
 import buildmessage from './utils/buildmessage.js';
-import * as cordova from './cordova';
+import { convertPluginVersions } from './cordova/index.js';
 
 // This file implements "upgraders" --- functions which upgrade a Meteor app to
 // a new version. Each upgrader has a name (registered in upgradersByName).
@@ -183,7 +183,7 @@ var upgradersByName = {
       messages = buildmessage.capture(
         { title: `converting Cordova plugins` }, () => {
         let pluginVersions = pluginsFile.getPluginVersions();
-        pluginVersions = cordova.convertPluginVersions(pluginVersions);
+        pluginVersions = convertPluginVersions(pluginVersions);
         pluginsFile.write(pluginVersions);
       });
     }

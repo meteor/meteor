@@ -2,9 +2,43 @@
 
 * Node.js has been upgraded to version 8.9.1.
 
-* The `npm` npm package has been upgraded to version 5.5.1, which supports
+* The `npm` package has been upgraded to version 5.5.1, which supports
   several new features, including two-factor authentication, as described
   in the [release notes](https://github.com/npm/npm/blob/latest/CHANGELOG.md#v551-2017-10-04).
+
+* Dynamically `import()`ed modules will now be fetched from the
+  application server using an HTTP POST request, rather than a WebSocket
+  message. This strategy has all the benefits of the previous strategy,
+  except that it does not require establishing a WebSocket connection
+  before fetching dynamic modules, in exchange for slightly higher latency
+  per request. [PR #9384](https://github.com/meteor/meteor/pull/9384)
+
+* To reduce the total number of HTTP requests for dynamic modules, rapid
+  sequences of `import()` calls within the same tick of the event loop
+  will now be automatically batched into a single HTTP request. In other
+  words, the following code will result in only one HTTP request:
+  ```js
+  const [
+    React,
+    ReactDOM
+  ] = await Promise.all([
+    import("react"),
+    import("react-dom")
+  ]);
+  ```
+
+* The `minifier-js` package has been updated to use `uglify-es` 3.1.9.
+
+* The `request` npm package used by the `http` package has been upgraded
+  to version 2.83.0.
+
+* The deprecated `Meteor.http` object has been removed. If your
+  application is still using `Meteor.http`, you should now use `HTTP`
+  instead:
+  ```js
+  import { HTTP } from "meteor/http";
+  HTTP.call("GET", url, ...);
+  ```
 
 * [`cordova-lib`](https://github.com/apache/cordova-cli) has been updated to
   version 7.1.0, [`cordova-android`](https://github.com/apache/cordova-android/)
@@ -16,6 +50,12 @@
   and will likely be removed in a future Meteor release.
   [Feature Request #196](https://github.com/meteor/meteor-feature-requests/issues/196)
   [PR #9213](https://github.com/meteor/meteor/pull/9213)
+
+* Fixed an issue preventing the installation of scoped Cordova packages.
+  E.g. meteor add cordova:@somescope/some-cordova-plugin@1.0.0 will now
+  work properly.
+  [Issue #7336](https://github.com/meteor/meteor/issues/7336)
+  [PR #9334](https://github.com/meteor/meteor/pull/9334)
 
 * iOS icons and launch screens have been updated to support iOS 11
   [Issue #9196](https://github.com/meteor/meteor/issues/9196)
@@ -161,6 +201,19 @@
 
 * You can now run `meteor test --driver-package user:package` without
   first running `meteor add user:package`.
+
+* iOS icons and launch screens have been updated to support iOS 11
+  [Issue #9196](https://github.com/meteor/meteor/issues/9196)
+  [PR #9198](https://github.com/meteor/meteor/pull/9198)
+
+## v1.5.4, 2017-11-08
+
+* Node has been updated to version 4.8.6. This release officially
+  includes our fix of a faulty backport of garbage collection-related
+  logic in V8 and ends Meteor's use of a custom Node with that patch.
+  In addition, it includes small OpenSSL updates as announced on the
+  Node blog: https://nodejs.org/en/blog/release/v4.8.6/.
+  [Issue #8648](https://github.com/meteor/meteor/issues/8648)
 
 ## v1.5.3, 2017-11-04
 
