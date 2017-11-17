@@ -2006,11 +2006,11 @@ main.registerCommand({
 
   if (!_.isEmpty(pluginsToAdd)) {
     function cordovaPluginAdd() {
-      let plugins = projectContext.cordovaPluginsFile.getPluginVersions();
+      const plugins = projectContext.cordovaPluginsFile.getPluginVersions();
       let changed = false;
 
       for (target of pluginsToAdd) {
-        let { id, version } =
+        const { id, version } =
           require('../cordova/package-id-version-parser.js').parse(target);
         const newId = newPluginId(id);
 
@@ -2204,7 +2204,7 @@ main.registerCommand({
 
   if (!_.isEmpty(pluginsToRemove)) {
     function cordovaPluginRemove() {
-      let plugins = projectContext.cordovaPluginsFile.getPluginVersions();
+      const plugins = projectContext.cordovaPluginsFile.getPluginVersions();
       let changed = false;
 
       for (id of pluginsToRemove) {
