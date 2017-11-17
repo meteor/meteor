@@ -33,6 +33,7 @@ selftest.define("'meteor test --port' accepts/rejects proper values", function (
 });
 
 selftest.define("'meteor test' eagerly loads correct files", () => {
+  // Unit tests for test file match regexps
   expectEqual(isTestFilePath('/foo.test.js'), true);
   expectEqual(isTestFilePath('/foo.tests.js'), true);
   expectEqual(isTestFilePath('/foo.spec.js'), true);
@@ -67,4 +68,38 @@ selftest.define("'meteor test' eagerly loads correct files", () => {
   expectEqual(isTestFilePath('/foo.reapp-test.bar.js'), false);
   expectEqual(isTestFilePath('/foo.app-spectacular.bar.js'), false);
   expectEqual(isTestFilePath('/foo.reapp-spec.bar.js'), false);
+
+  // Integration tests for test file eager loading with `meteor test` and 
+  // `meteor test --full-app`
+  const s = new Sandbox();
+  let run;
+
+  s.createApp('myapp', 'test-eagerly-load');
+  s.cd('myapp');
+  s.set('');
+
+  // `meteor test` should load test files but not app files
+  run = s.run(
+    'test',
+    '--once',
+    '--driver-package',
+    'tmeasday:acceptance-test-driver'
+  );
+  run.waitSecs(120);
+  run.match('foo.test.js');
+  run.stop();
+  run.forbid('index.js');
+
+  // `meteor test --full-app` should load both test files and app files
+  run = s.run(
+    'test',
+    '--once',
+    '--driver-package',
+    'tmeasday:acceptance-test-driver',
+    '--full-app',
+  );
+  run.waitSecs(120);
+  run.match('foo.app-test.js');
+  run.match('index.js');
+  run.stop();
 })
