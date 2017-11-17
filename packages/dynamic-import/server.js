@@ -96,29 +96,36 @@ function readTree(tree, platform) {
   const pathParts = [];
 
   function walk(node) {
-    if (node && typeof node === "object") {
-      let empty = true;
-      Object.keys(node).forEach(name => {
-        pathParts.push(name);
-        const result = walk(node[name]);
-        if (result === null) {
-          // If the read function returns null, omit this module from the
-          // resulting tree.
-          delete node[name];
-        } else {
-          node[name] = result;
-          empty = false;
-        }
-        assert.strictEqual(pathParts.pop(), name);
-      });
-      if (empty) {
-        // If every recursive call to walk(node[name]) returned null,
-        // remove this node from the resulting tree by returning null.
-        return null;
-      }
-    } else {
+    if (! node) {
+      return null;
+    }
+
+    if (typeof node !== "object") {
       return read(pathParts, platform);
     }
+
+    let empty = true;
+
+    Object.keys(node).forEach(name => {
+      pathParts.push(name);
+      const result = walk(node[name]);
+      if (result === null) {
+        // If the read function returns null, omit this module from the
+        // resulting tree.
+        delete node[name];
+      } else {
+        node[name] = result;
+        empty = false;
+      }
+      assert.strictEqual(pathParts.pop(), name);
+    });
+
+    if (empty) {
+      // If every recursive call to walk(node[name]) returned null,
+      // remove this node from the resulting tree by returning null.
+      return null;
+    }
+
     return node;
   }
 
