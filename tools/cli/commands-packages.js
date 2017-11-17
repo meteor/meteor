@@ -24,9 +24,10 @@ var packageClient = require('../packaging/package-client.js');
 var tropohouse = require('../packaging/tropohouse.js');
 
 import {
+  ensureDevBundleDependencies,
   newPluginId,
   splitPluginsAndPackages,
-} from '../cordova';
+} from '../cordova/index.js';
 import { updateMeteorToolSymlink } from "../packaging/updater.js";
 
 // For each release (or package), we store a meta-record with its name,
@@ -2032,7 +2033,6 @@ main.registerCommand({
       changed && projectContext.cordovaPluginsFile.write(plugins);
     }
 
-    import { ensureDevBundleDependencies } from '../cordova';
     ensureDevBundleDependencies();
     cordovaPluginAdd();
   }
@@ -2231,7 +2231,6 @@ main.registerCommand({
       changed && projectContext.cordovaPluginsFile.write(plugins);
     }
 
-    import { ensureDevBundleDependencies } from '../cordova';
     ensureDevBundleDependencies();
     cordovaPluginRemove();
   }
