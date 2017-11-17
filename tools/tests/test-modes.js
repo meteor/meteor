@@ -78,22 +78,26 @@ selftest.define("'meteor test' eagerly loads correct files", () => {
   s.cd('myapp');
   s.set('');
 
-  // `meteor test` should load test files but not app files
-  run = s.run(
-    'test',
-    '--once',
-    '--driver-package',
-    'tmeasday:acceptance-test-driver'
-  );
+  // `meteor` should load app files, but not test files or app-test files
+  run = s.run();
+  run.waitSecs(120);
+  run.match('index.js');
+  run.stop();
+  run.forbid('foo.test.js');
+  run.forbid('foo.app-test.js');
+
+  // `meteor test` should load test files, but not app files or app-test files
+  run = s.run('test', '--driver-package', 'tmeasday:acceptance-test-driver');
   run.waitSecs(120);
   run.match('foo.test.js');
   run.stop();
   run.forbid('index.js');
+  run.forbid('foo.app-test.js');
 
-  // `meteor test --full-app` should load both test files and app files
+  // `meteor test --full-app` should load both test files and app-test files,
+  // but not test files
   run = s.run(
     'test',
-    '--once',
     '--driver-package',
     'tmeasday:acceptance-test-driver',
     '--full-app',
@@ -102,4 +106,5 @@ selftest.define("'meteor test' eagerly loads correct files", () => {
   run.match('foo.app-test.js');
   run.match('index.js');
   run.stop();
+  run.forbid('foo.test.js');  
 })
