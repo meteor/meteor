@@ -1386,7 +1386,7 @@ export class Run {
   //
   // Example:
   // run = s.run("--help");
-  // run.expectExit(1);  // <<-- improtant to actually run the command
+  // run.expectExit(1);  // <<-- important to actually run the command
   // run.forbidErr("unwanted string"); // <<-- important to run **after** the
   //                                   // command ran the process.
   forbid(pattern) {
