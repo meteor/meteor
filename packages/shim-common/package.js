@@ -1,6 +1,6 @@
 Package.describe({
   name: "shim-common",
-  version: "0.1.0-beta161.7",
+  version: "0.1.0-beta161.8",
   summary: "Shared utilities for packages like sockjs-shim and es5-shim",
   documentation: "README.md"
 });
