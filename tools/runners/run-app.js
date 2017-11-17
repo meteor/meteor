@@ -11,7 +11,7 @@ var Console = require('../console/console.js').Console;
 var catalog = require('../packaging/catalog/catalog.js');
 var Profile = require('../tool-env/profile.js').Profile;
 var release = require('../packaging/release.js');
-import * as cordova from '../cordova';
+import { pluginVersionsFromStarManifest } from '../cordova/index.js';
 import { CordovaBuilder } from '../cordova/builder.js';
 import { closeAllWatchers } from "../fs/safe-watcher.js";
 import { eachline } from "../utils/eachline.js";
@@ -662,7 +662,7 @@ _.extend(AppRunner.prototype, {
     const cordovaRunner = self.cordovaRunner;
     if (cordovaRunner) {
       const pluginVersions =
-        cordova.pluginVersionsFromStarManifest(bundleResult.starManifest);
+        pluginVersionsFromStarManifest(bundleResult.starManifest);
 
       if (!cordovaRunner.started) {
         const { settingsFile, mobileServerUrl } = self;
