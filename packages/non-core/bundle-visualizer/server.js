@@ -101,29 +101,46 @@ function d3TreeFromStats(stats) {
           stats.minifiedBytesByPackage[name]));
 }
 
-Meteor.methods({
-  [methodNameStats]() {
-    const statBundles = getStatBundles();
-
-    // Silently return no data if not simulating production.
-    if (! Meteor.isProduction) {
-      return null;
-    }
-
-    if (! (statBundles && statBundles.length)) {
-      throw new Meteor.Error("no-stats-bundles", "Unable to retrieve stats");
-    }
-
-    return {
-      name: "main",
-      children: statBundles.map((statBundle, index, array) => ({
-        // TODO: If multiple bundles, could
-        // show abbr. bundle names with:
-        //   `...${bundle.name.substr(-3)}`,
-        name: "bundle" + (array.length > 1 ? ` (${index + 1})` : ""),
-        type: typeBundle,
-        children: d3TreeFromStats(statBundle.stats),
-      })),
-    };
+Meteor.startup(() => {
+  if (! Package.webapp) {
+    return;
   }
+
+  Package.webapp.WebApp.connectHandlers.use(
+    "/" + methodNameStats,
+    statsMiddleware
+  );
 });
+
+function statsMiddleware(request, response) {
+  const statBundles = getStatBundles();
+
+  function sendJSON(data) {
+    response.setHeader("Content-Type", "application/json");
+    response.end(JSON.stringify(data));
+  }
+
+  // Silently return no data if not simulating production.
+  if (! Meteor.isProduction) {
+    return sendJSON(null);
+  }
+
+  if (! (statBundles && statBundles.length)) {
+    throw new Meteor.Error(
+      "no-stats-bundles",
+      "Unable to retrieve stats"
+    );
+  }
+
+  sendJSON({
+    name: "main",
+    children: statBundles.map((statBundle, index, array) => ({
+      // TODO: If multiple bundles, could
+      // show abbr. bundle names with:
+      //   `...${bundle.name.substr(-3)}`,
+      name: "bundle" + (array.length > 1 ? ` (${index + 1})` : ""),
+      type: typeBundle,
+      children: d3TreeFromStats(statBundle.stats),
+    }))
+  });
+}

@@ -1,6 +1,38 @@
 ## v.NEXT
 
+* Dynamically `import()`ed modules will now be fetched from the
+  application server using an HTTP POST request, rather than a WebSocket
+  message. This strategy has all the benefits of the previous strategy,
+  except that it does not require establishing a WebSocket connection
+  before fetching dynamic modules, in exchange for slightly higher latency
+  per request. [PR #9384](https://github.com/meteor/meteor/pull/9384)
+
+* To reduce the total number of HTTP requests for dynamic modules, rapid
+  sequences of `import()` calls within the same tick of the event loop
+  will now be automatically batched into a single HTTP request. In other
+  words, the following code will result in only one HTTP request:
+  ```js
+  const [
+    React,
+    ReactDOM
+  ] = await Promise.all([
+    import("react"),
+    import("react-dom")
+  ]);
+  ```
+
 * The `minifier-js` package has been updated to use `uglify-es` 3.1.9.
+
+* The `request` npm package used by the `http` package has been upgraded
+  to version 2.83.0.
+
+* The deprecated `Meteor.http` object has been removed. If your
+  application is still using `Meteor.http`, you should now use `HTTP`
+  instead:
+  ```js
+  import { HTTP } from "meteor/http";
+  HTTP.call("GET", url, ...);
+  ```
 
 * [`cordova-lib`](https://github.com/apache/cordova-cli) has been updated to
   version 7.1.0, [`cordova-android`](https://github.com/apache/cordova-android/)
