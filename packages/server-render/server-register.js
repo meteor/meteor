@@ -1,7 +1,7 @@
 import { WebAppInternals } from "meteor/webapp";
 import MagicString from "magic-string";
 import { SAXParser } from "parse5";
-import combine from "combine-streams";
+import streamer from "combined-stream2";
 import { ServerSink, isReadable } from "./server-sink.js";
 import { onPageLoad } from "./server.js";
 
@@ -35,7 +35,7 @@ WebAppInternals.registerBoilerplateDataCallback(
 
         if (Object.keys(sink.htmlById).length) {
           // create an empty stream;
-          const stream = combine();
+          const stream = streamer.create();
 
           let lastStart = magic.start;
           parser.on("startTag", (name, attrs, selfClosing, loc) => {
@@ -45,9 +45,8 @@ WebAppInternals.registerBoilerplateDataCallback(
                 if (html) {
                   reallyMadeChanges = true;
                   const start = magic.slice(lastStart, loc.endOffset);
-                  stream
-                    .append(start)
-                    .append(html)
+                  stream.append(Buffer.from(start));
+                  stream.append(typeof html === "string" ? Buffer.from(html) : html)
                   lastStart = loc.endOffset;
                 }
                 return true;
@@ -58,7 +57,7 @@ WebAppInternals.registerBoilerplateDataCallback(
             if (location.endOffset === html.length) {
               // reached the end of the template
               const end = magic.slice(lastStart);
-              stream.append(end).append(null);
+              stream.append(Buffer.from(end));
             }
           })
 

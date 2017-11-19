@@ -3,8 +3,8 @@ const head = doc.getElementsByTagName("head")[0];
 const body = doc.body;
 
 const isoError = (method) => {
-  return `sink.${method} was called on the client when
-    it should only be called on the server.`;
+  console.error(`sink.${method} was called on the client when
+    it should only be called on the server.`);
 }
 export class ClientSink {
   appendToHead(nodeOrHtml) {
@@ -34,19 +34,19 @@ export class ClientSink {
 
   // server only methods
   setStatusCode() {
-    console.error(isoError("setStatusCode"));
+    isoError("setStatusCode");
   }
 
   setHeader() {
-    console.error(isoError("setHeader"));
+    isoError("setHeader");
   }
 
   getHeaders() {
-    console.error(isoError("getHeaders"));
+    isoError("getHeaders");
   }
 
   getCookies() {
-    console.error(isoError("getCookies"));
+    isoError("getCookies");
   }
 }
 

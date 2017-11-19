@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Npm.depends({
-  "combine-streams": "1.0.0"
+  "combined-stream2": "1.1.2"
 });
 
 Package.onUse(api => {

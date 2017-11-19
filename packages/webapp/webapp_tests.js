@@ -1,6 +1,7 @@
 var url = Npm.require("url");
 var crypto = Npm.require("crypto");
 var http = Npm.require("http");
+var toString = Npm.require("stream-to-string");
 
 var additionalScript = "(function () { var foo = 1; })";
 WebAppInternals.addStaticJs(additionalScript);
@@ -8,23 +9,6 @@ var hash = crypto.createHash('sha1');
 hash.update(additionalScript);
 var additionalScriptPathname = hash.digest('hex') + ".js";
 
-// convert a stream to a string via promise
-function toString(stream) {
-  return new Promise((success, fail) => {
-    var string = ''
-    stream.on('data', function(data) {
-      string += data.toString();
-    });
-
-    stream.on('end', function() {
-      success(string)
-    });
-
-    stream.on('error', function(error) {
-      fail(error);
-    });
-  });
-}
 
 // Mock the 'res' object that gets passed to connect handlers. This mock
 // just records any utf8 data written to the response and returns it
@@ -98,13 +82,12 @@ Tinytest.addAsync("webapp - additional static javascript", function (test, onCom
     WebAppInternals.setInlineScriptsAllowed(true);
 
     await (async function () {
-      const { start, stream, end } = WebAppInternals.getBoilerplate({
+      const { stream } = WebAppInternals.getBoilerplate({
         browser: "doesn't-matter",
         url: "also-doesnt-matter"
       }, "web.browser");
 
-      const body = await toString(stream);
-      const boilerplate = start + body + end;
+      const boilerplate = await toString(stream);
 
       // When inline scripts are allowed, the script should be inlined.
       test.isTrue(boilerplate.indexOf(additionalScript) !== -1);
@@ -131,14 +114,12 @@ Tinytest.addAsync("webapp - additional static javascript", function (test, onCom
     WebAppInternals.setInlineScriptsAllowed(false);
 
     await (async function () {
-      const { start, stream, end } = WebAppInternals.getBoilerplate({
+      const { stream } = WebAppInternals.getBoilerplate({
         browser: "doesn't-matter",
         browser: "doesn't-matter",
         url: "also-doesnt-matter"
       }, "web.browser");
-
-      const body = await toString(stream);
-      const boilerplate = start + body + end;
+      const boilerplate = await toString(stream);
 
       // The script contents itself should not be present; the pathname
       // where the script is served should be.
@@ -181,9 +162,8 @@ Tinytest.addAsync("webapp - generating boilerplate should not change runtime con
       { runtimeConfigOverrides: { WEBAPP_TEST_KEY: true } }
     );
 
-    const { start, stream, end } = boilerplate.toHTML();
-    const body = await toString(stream);
-    const boilerplateHtml = start + stream + end;
+    const stream = boilerplate.toHTML();
+    const boilerplateHtml = await toString(stream)
     test.isFalse(boilerplateHtml.indexOf("WEBAPP_TEST_KEY") === -1);
 
     test.isFalse(__meteor_runtime_config__.WEBAPP_TEST_KEY);
@@ -214,17 +194,15 @@ Tinytest.addAsync("webapp - WebAppInternals.registerBoilerplateDataCallback", fu
     req.browser = { name: "headless" };
     req.dynamicHead = "so dynamic";
 
-    const { start, stream, end } = WebAppInternals.getBoilerplate(req, "web.browser");
-    const body = await toString(stream);
-
-    const html = start + "\n" + body + "\n" + end;
+    const { stream } = WebAppInternals.getBoilerplate(req, "web.browser");
+    const html = await toString(stream);
 
     test.equal(callCount, 1);
 
     test.isTrue(html.indexOf([
       "<body>",
       "<div>oyez</div>"
-    ].join("\n")) >= 0);
+    ].join("")) >= 0);
 
     test.equal(
       // Make sure this callback doesn't get called again after this test.

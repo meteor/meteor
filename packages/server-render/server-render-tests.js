@@ -2,26 +2,7 @@ import { Tinytest } from "meteor/tinytest";
 import { WebAppInternals } from "meteor/webapp";
 import { onPageLoad } from "meteor/server-render";
 import { parse } from "parse5";
-
-// convert a stream to a string via promise
-function toString(stream) {
-  return new Promise((success, fail) => {
-    var string = ''
-    stream.on('data', function(data) {
-      string += data.toString();
-    });
-
-    stream.on('end', function() {
-      success(string)
-    });
-
-    stream.on('error', function(error) {
-      fail(error);
-    });
-  });
-}
-
-
+import toString from "stream-to-string";
 
 const skeleton = `
   <h1>Look, Ma... static HTML!</h1>
@@ -69,15 +50,13 @@ Tinytest.addAsync('server-render - boilerplate', function (test, onComplete) {
     });
 
     try {
-      const { start, stream, end } = WebAppInternals.getBoilerplate({
+      const { stream } = WebAppInternals.getBoilerplate({
         isServerRenderTest: true,
         browser: { name: "fake" },
         url: "/server-render/test"
       }, "web.browser");
 
-
-      const body = await toString(stream);
-      const boilerplate = start + "\n" + body + "\n" + end;
+      const boilerplate = await toString(stream);
 
       const ids = [];
       const seen = new Set;

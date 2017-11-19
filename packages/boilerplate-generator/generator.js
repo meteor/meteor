@@ -1,5 +1,5 @@
 import { readFile } from 'fs';
-import combine from "combine-streams";
+import stream from "combined-stream2";
 
 import WebBrowserTemplate from './template-web.browser';
 import WebCordovaTemplate from './template-web.cordova';
@@ -26,10 +26,7 @@ export class Boilerplate {
   // purpose is to allow you to specify data that you might not know at
   // the time that you construct the Boilerplate object. (e.g. it is used
   // by 'webapp' to specify data that is only known at request-time).
-  // this returns three writeable objects:
-  // - a head that is a string for immediate flushing
-  // - a stream of the body
-  // - a closing body and scripts to flush and end the req
+  // this returns a stream
   toHTML(extraData) {
     if (!this.baseData || !this.headTemplate || !this.closeTemplate) {
       throw new Error('Boilerplate did not instantiate correctly.');
@@ -39,14 +36,20 @@ export class Boilerplate {
     const start = "<!DOCTYPE html>\n" + this.headTemplate(data);
 
     const { body, dynamicBody } = data;
-    const stream = combine()
-      .append(body || "")
-      .append(dynamicBody || "")
-      .append(null);
 
     const end = this.closeTemplate(data);
+    const response = stream.create();
+    
+    response.append(Buffer.from(start))
+    if (body) {
+      response.append(typeof body === "string" ? Buffer.from(body) : body)
+    }
+    if (dynamicBody) {
+      response.append(typeof dynamicBody === "string" ? Buffer.from(dynamicBody) : dynamicBody)
+    }
+    response.append(Buffer.from(end))
 
-    return { start, stream, end }
+    return response;
   }
 
   // XXX Exported to allow client-side only changes to rebuild the boilerplate

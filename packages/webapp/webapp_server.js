@@ -316,7 +316,7 @@ function getBoilerplateAsync(request, arch) {
 
     // if (! useMemoized) {
     return {
-      ...boilerplate.toHTML(data),
+      stream: boilerplate.toHTML(data),
       statusCode: data.statusCode,
       headers: data.headers,
     };
@@ -803,7 +803,7 @@ function runWebAppServer() {
       return getBoilerplateAsync(
         request,
         archKey
-      ).then(({ start, stream, end, statusCode, headers: newHeaders }) => {
+      ).then(({ stream,  statusCode, headers: newHeaders }) => {
         if (!statusCode) {
           statusCode = res.statusCode ? res.statusCode : 200;
         }
@@ -812,12 +812,7 @@ function runWebAppServer() {
         }
 
         res.writeHead(statusCode, headers);
-        res.write(start);
-        stream.pipe(res, { end: false })
-        stream.on("end", () => {
-          res.write(end);
-          res.end();
-        })
+        stream.pipe(res)
       }).catch(error => {
         Log.error("Error running template: " + error.stack);
         res.writeHead(500, headers);
