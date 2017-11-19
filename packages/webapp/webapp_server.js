@@ -280,8 +280,6 @@ WebAppInternals.registerBoilerplateDataCallback = function (key, callback) {
 // memoizes on HTML attributes (used by, eg, appcache) and whether inline
 // scripts are currently allowed.
 // XXX so far this function is always called with arch === 'web.browser'
-var memoizedBoilerplate = {};
-
 function getBoilerplate(request, arch) {
   return getBoilerplateAsync(request, arch).await();
 }
@@ -307,38 +305,11 @@ function getBoilerplateAsync(request, arch) {
     });
   });
 
-  return promise.then(() => {
-    const useMemoized = ! (
-      data.dynamicHead ||
-      data.dynamicBody ||
-      madeChanges
-    );
-
-    // if (! useMemoized) {
-    return {
-      stream: boilerplate.toHTML(data),
-      statusCode: data.statusCode,
-      headers: data.headers,
-    };
-    // }
-
-    // The only thing that changes from request to request (unless extra
-    // content is added to the head or body, or boilerplateDataCallbacks
-    // modified the data) are the HTML attributes (used by, eg, appcache)
-    // and whether inline scripts are allowed, so memoize based on that.
-    var memHash = JSON.stringify({
-      inlineScriptsAllowed,
-      htmlAttributes: data.htmlAttributes,
-      arch,
-    });
-
-    if (! memoizedBoilerplate[memHash]) {
-      memoizedBoilerplate[memHash] =
-        boilerplateByArch[arch].toHTML(data);
-    }
-
-    return memoizedBoilerplate[memHash];
-  });
+  return promise.then(() => ({
+    stream: boilerplate.toHTML(data),
+    statusCode: data.statusCode,
+    headers: data.headers,
+  }));
 }
 
 WebAppInternals.generateBoilerplateInstance = function (arch,
