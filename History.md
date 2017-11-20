@@ -1,5 +1,11 @@
 ## v.NEXT
 
+* The bundled version of MongoDB used by `meteor run` in development
+  on 64-bit architectures has been updated to 3.4.10. 32-bit architectures
+  will continue to use MongoDB 3.2.x versions since MongoDB is no longer
+  producing 32-bit versions of MongoDB for newer release tracks.
+  [PR #9396](https://github.com/meteor/meteor/pull/9396)
+
 * Dynamically `import()`ed modules will now be fetched from the
   application server using an HTTP POST request, rather than a WebSocket
   message. This strategy has all the benefits of the previous strategy,
