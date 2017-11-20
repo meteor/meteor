@@ -1136,7 +1136,8 @@ var minimizeDependencyTree = function (tree) {
   var minimizeModule = function (module) {
     var version;
     if (module.resolved &&
-        !module.resolved.match(/^https?:\/\/registry.npmjs.org\//)) {
+        !module.resolved.match(/^https?:\/\/registry.npmjs.org\//) &&
+        !module.resolved.startsWith(process.env.NPM_CONFIG_REGISTRY)) {
       version = module.resolved;
     } else if (utils.isNpmUrl(module.from)) {
       version = module.from;
