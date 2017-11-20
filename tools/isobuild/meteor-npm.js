@@ -920,6 +920,11 @@ function getInstalledDependenciesTree(dir) {
       const pkgDir = files.pathJoin(nodeModulesDir, item);
       const pkgJsonPath = files.pathJoin(pkgDir, "package.json");
 
+      if (item.startsWith("@")) {
+        Object.assign(result, ls(pkgDir));
+        return;
+      }
+
       let pkg;
       try {
         pkg = JSON.parse(files.readFile(pkgJsonPath));
@@ -927,7 +932,9 @@ function getInstalledDependenciesTree(dir) {
         if (! pkg) return;
       }
 
-      const info = result[item] = {
+      const name = pkg.name || item;
+
+      const info = result[name] = {
         version: pkg.version
       };
 
