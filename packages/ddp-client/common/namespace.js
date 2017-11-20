@@ -1,7 +1,13 @@
 import { DDPCommon } from 'meteor/ddp-common';
 import { Meteor } from 'meteor/meteor';
+import { keys } from "meteor/ddp-common/utils.js";
 
 import { Connection } from './livedata_connection.js';
+
+// This array allows the `_allSubscriptionsReady` method below, which
+// is used by the `spiderable` package, to keep track of whether all
+// data is ready.
+const allConnections = [];
 
 /**
  * @namespace DDP
@@ -78,11 +84,10 @@ DDP.onReconnect = callback => {
 // Hack for `spiderable` package: a way to see if the page is done
 // loading all the data it needs.
 //
-allConnections = [];
 DDP._allSubscriptionsReady = () => {
   return allConnections.every(conn => {
-    return conn._subscriptions.every(sub => {
-      return sub.ready;
+    return keys(conn._subscriptions).every(id => {
+      return conn._subscriptions[id].ready;
     });
   });
 };
