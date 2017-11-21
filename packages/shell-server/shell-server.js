@@ -5,6 +5,8 @@ var fs = require("fs");
 var net = require("net");
 var vm = require("vm");
 var _ = require("underscore");
+import { default as moduleRepl } from "repl";
+
 var INFO_FILE_MODE = parseInt("600", 8); // Only the owner can read or write.
 var EXITING_MESSAGE = "Shell exiting...";
 
@@ -151,6 +153,7 @@ class Server {
 
       // Immutable options.
       _.extend(options, {
+        eval: evalCommand,
         input: replInputSocket,
         output: socket
       });
@@ -177,7 +180,7 @@ class Server {
       options.output = null;
     });
 
-    var repl = self.repl = require("repl").start(options);
+    const repl = self.repl = moduleRepl.start(options);
 
     // History persists across shell sessions!
     self.initializeHistory();
@@ -243,31 +246,6 @@ class Server {
         process.exit(0);
       }
     });
-
-    // TODO: Node 6: Revisit this as repl._RecoverableError is now exported.
-    //       as `Recoverable` from `repl`.  Maybe revisit this entirely
-    //       as the docs have been updated too:
-    //       https://nodejs.org/api/repl.html#repl_custom_evaluation_functions
-    //       https://github.com/nodejs/node/blob/v6.x/lib/repl.js#L1398
-    // Trigger one recoverable error using the default eval function, just
-    // to capture the Recoverable error constructor, so that our custom
-    // evalCommand function can wrap recoverable errors properly.
-    repl.eval(
-      "{", null, "<meteor shell>",
-      function (error) {
-        // Capture the Recoverable error constructor.
-        repl._RecoverableError = error && error.constructor;
-
-        // Now set repl.eval to the actual evalCommand function that we want
-        // to use, bound to repl._domain if necessary.
-        repl.eval = repl._domain
-          ? repl._domain.bind(evalCommand)
-          : evalCommand;
-
-        // Terminate the partial evaluation of the { command.
-        repl.commands["break"].action.call(repl);
-      }
-    );
   }
 
   // This function allows a persistent history of shell commands to be saved
@@ -372,10 +350,9 @@ var evalCommandPromise = Promise.resolve();
 function evalCommand(command, context, filename, callback) {
   var repl = this;
 
-  function wrapErrorIfRecoverable(error) {
-    if (repl._RecoverableError &&
-        isRecoverableError(error, repl)) {
-      return new repl._RecoverableError(error);
+  function wrapErrorIfRecoverable(error, code) {
+    if (isRecoverableError(error, code)) {
+      return new moduleRepl.Recoverable(error);
     } else {
       return error;
     }
@@ -402,7 +379,7 @@ function evalCommand(command, context, filename, callback) {
     try {
       command = Package.ecmascript.ECMAScript.compileForShell(command);
     } catch (error) {
-      callback(wrapErrorIfRecoverable(error));
+      callback(wrapErrorIfRecoverable(error, command));
       return;
     }
   }
@@ -413,7 +390,7 @@ function evalCommand(command, context, filename, callback) {
       displayErrors: false
     });
   } catch (parseError) {
-    callback(wrapErrorIfRecoverable(parseError));
+    callback(wrapErrorIfRecoverable(parseError, command));
     return;
   }
 
@@ -437,17 +414,12 @@ function stripParens(command) {
   return command;
 }
 
-// The bailOnIllegalToken and isRecoverableError functions are taken from
-// https://github.com/nodejs/node/blob/c9e670ea2a/lib/repl.js#L1227-L1253
-function bailOnIllegalToken(parser) {
-  return parser._literal === null &&
-    ! parser.blockComment &&
-    ! parser.regExpLiteral;
-}
+// The isRecoverableError and isCodeRecoverable functions are taken from
+// https://github.com/nodejs/node/blob/3319b2092f/lib/repl.js#L1310-L1399
 
 // If the error is that we've unexpectedly ended the input,
 // then let the user try to recover by adding more input.
-function isRecoverableError(e) {
+function isRecoverableError(e, code) {
   if (e && e.name === 'SyntaxError') {
     var message = e.message;
     if (message === 'Unterminated template literal' ||
@@ -462,11 +434,81 @@ function isRecoverableError(e) {
     }
 
     if (message === 'Invalid or unexpected token') {
-      return ! bailOnIllegalToken(repl.lineParser);
+      return isCodeRecoverable(code);
     }
   }
 
   return false;
+}
+
+// Check whether a code snippet should be forced to fail in the REPL.
+function isCodeRecoverable(code) {
+  var current, previous, stringLiteral;
+  var isBlockComment = false;
+  var isSingleComment = false;
+  var isRegExpLiteral = false;
+  var lastChar = code.charAt(code.length - 2);
+  var prevTokenChar = null;
+
+  for (var i = 0; i < code.length; i++) {
+    previous = current;
+    current = code[i];
+
+    if (previous === '\\' && (stringLiteral || isRegExpLiteral)) {
+      current = null;
+      continue;
+    }
+
+    if (stringLiteral) {
+      if (stringLiteral === current) {
+        stringLiteral = null;
+      }
+      continue;
+    } else {
+      if (isRegExpLiteral && current === '/') {
+        isRegExpLiteral = false;
+        continue;
+      }
+
+      if (isBlockComment && previous === '*' && current === '/') {
+        isBlockComment = false;
+        continue;
+      }
+
+      if (isSingleComment && current === '\n') {
+        isSingleComment = false;
+        continue;
+      }
+
+      if (isBlockComment || isRegExpLiteral || isSingleComment) continue;
+
+      if (current === '/' && previous === '/') {
+        isSingleComment = true;
+        continue;
+      }
+
+      if (previous === '/') {
+        if (current === '*') {
+          isBlockComment = true;
+        } else if (
+          // Distinguish between a division operator and the start of a regex
+          // by examining the non-whitespace character that precedes the /
+          [null, '(', '[', '{', '}', ';'].includes(prevTokenChar)
+        ) {
+          isRegExpLiteral = true;
+        }
+        continue;
+      }
+
+      if (current.trim()) prevTokenChar = current;
+    }
+
+    if (current === '\'' || current === '"') {
+      stringLiteral = current;
+    }
+  }
+
+  return stringLiteral ? lastChar === '\\' : isBlockComment;
 }
 
 function setRequireAndModule(context) {
