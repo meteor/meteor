@@ -359,23 +359,6 @@ function evalCommand(command, context, filename, callback) {
   }
 
   if (Package.ecmascript) {
-    var noParens = stripParens(command);
-    if (noParens !== command) {
-      var classMatch = /^\s*class\s+(\w+)/.exec(noParens);
-      if (classMatch && classMatch[1] !== "extends") {
-        // If the command looks like a named ES2015 class, we remove the
-        // extra layer of parentheses added by the REPL so that the
-        // command will be evaluated as a class declaration rather than as
-        // a named class expression. Note that you can still type (class A
-        // {}) explicitly to evaluate a named class expression. The REPL
-        // code that calls evalCommand handles named function expressions
-        // similarly (first with and then without parentheses), but that
-        // code doesn't know about ES2015 classes, which is why we have to
-        // handle them here.
-        command = noParens;
-      }
-    }
-
     try {
       command = Package.ecmascript.ECMAScript.compileForShell(command);
     } catch (error) {
@@ -404,14 +387,6 @@ function evalCommand(command, context, filename, callback) {
       callback(null, script.runInThisContext());
     }
   }).catch(callback);
-}
-
-function stripParens(command) {
-  if (command.charAt(0) === "(" &&
-      command.charAt(command.length - 1) === ")") {
-    return command.slice(1, command.length - 1);
-  }
-  return command;
 }
 
 // The isRecoverableError and isCodeRecoverable functions are taken from
