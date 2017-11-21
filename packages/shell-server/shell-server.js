@@ -447,12 +447,11 @@ function bailOnIllegalToken(parser) {
 
 // If the error is that we've unexpectedly ended the input,
 // then let the user try to recover by adding more input.
-function isRecoverableError(e, repl) {
+function isRecoverableError(e) {
   if (e && e.name === 'SyntaxError') {
     var message = e.message;
     if (message === 'Unterminated template literal' ||
         message === 'Missing } in template expression') {
-      repl._inTemplateLiteral = true;
       return true;
     }
 
