@@ -116,7 +116,8 @@ export const ELEMENT_OPERATORS = {
         }
         operand = operandAliasMap[operand];
       } else if (typeof operand === 'number') {
-        if (operand === 0 || operand < -1 || (operand > 19 && operand !== 127)) {
+        if (operand === 0 || operand < -1
+          || (operand > 19 && operand !== 127)) {
           throw Error(`Invalid numerical $type code: ${operand}`);
         }
       } else {
