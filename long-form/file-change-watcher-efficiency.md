@@ -45,6 +45,6 @@ Some filesystems don't support `inotify`/`kqueue` at all, but also don't allow `
 
 The most common filesystems with this issue are network or shared filesystems like NFS or VirtualBox shared folders (vboxsf).  For example, if you are using Vagrant or a similar tool to run `meteor` inside a virtual machine, and you are sharing your app source directory between your host machine and the VM, `inotify` may be unable to detect changes made on your host machine.  The symptom will be that `meteor` doesn't even start trying to rebuild your app until up to 5 seconds after you make the change.
 
-To improve this situation, on the machine where you are running `meteor` (eg, inside your VM), set the `METEOR_WATCH_FORCE_POLLING` environment variable to any non-empty value.  For example, put the line `METEOR_WATCH_FORCE_POLLING=t` into the `.bashrc` file in your home directory.
+To improve this situation, on the machine where you are running `meteor` (eg, inside your VM), set the `METEOR_WATCH_FORCE_POLLING` environment variable to any non-empty value.  For example, put the line `METEOR_WATCH_FORCE_POLLING=true` into the `.bashrc` file in your home directory.
 
 If you would like finer control over the polling interval (to put it somewhere between the options of 5 seconds and 500 ms), set the `METEOR_WATCH_POLLING_INTERVAL_MS` environment variable to a number.
