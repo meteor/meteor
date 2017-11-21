@@ -155,6 +155,7 @@ class Server {
       _.extend(options, {
         eval: evalCommand,
         input: replInputSocket,
+        useGlobal: false,
         output: socket
       });
 
@@ -163,7 +164,6 @@ class Server {
         prompt: "> ",
         terminal: true,
         useColors: true,
-        useGlobal: true,
         ignoreUndefined: true,
       });
 
@@ -182,24 +182,24 @@ class Server {
 
     const repl = self.repl = moduleRepl.start(options);
 
+    // Change the context of the REPL after start to
+    // be global, so that Meteor globals (like, Underscore, Meteor,
+    // etc.) are available to the REPL (and it's tab completion!)
+    // without being potentially overridden by Node REPL special
+    // variables (namely, `_`).
+    repl.context = global;
+
     // History persists across shell sessions!
     self.initializeHistory();
 
-    // Save the global `_` object in the server.  This is probably defined by the
-    // underscore package.  It is unlikely to be the same object as the `var _ =
-    // require('underscore')` in this file!
-    var originalUnderscore = repl.context._;
-
-    Object.defineProperty(repl.context, "_", {
-      // Force the global _ variable to remain bound to underscore.
-      get: function () { return originalUnderscore; },
-
-      // Expose the last REPL result as __ instead of _.
-      set: function(lastResult) {
-        repl.context.__ = lastResult;
+    // Implement an alternate means of fetching the return value,
+    // via `__` (double underscore) as originally implemented in:
+    // https://github.com/meteor/meteor/commit/2443d832265c7d1c
+    Object.defineProperty(repl.context, "__", {
+      get: () => repl.last,
+      set: (val) => {
+        repl.last = val;
       },
-
-      enumerable: true,
 
       // Allow this property to be (re)defined more than once (e.g. each
       // time the server restarts).
