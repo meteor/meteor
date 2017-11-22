@@ -1,5 +1,3 @@
-import { Random } from 'meteor/random';
-
 // @param url {String} URL to Meteor app, eg:
 //   "/" or "madewith.meteor.com" or "https://foo.meteor.com"
 //   or "ddp+sockjs://ddp--****-foo.meteor.com/sockjs"
@@ -30,7 +28,7 @@ function translateUrl(url, newSchemeBase, subPath) {
     // In the host (ONLY!), change '*' characters into random digits. This
     // allows different stream connections to connect to different hostnames
     // and avoid browser per-hostname connection limits.
-    host = host.replace(/\*/g, () => Math.floor(Random.fraction() * 10));
+    host = host.replace(/\*/g, () => Math.floor(Math.random() * 10));
 
     return newScheme + '://' + host + rest;
   } else if (httpUrlMatch) {
@@ -65,6 +63,5 @@ export function toSockjsUrl(url) {
 }
 
 export function toWebsocketUrl(url) {
-  var ret = translateUrl(url, 'ws', 'websocket');
-  return ret;
+  return translateUrl(url, 'ws', 'websocket');
 }

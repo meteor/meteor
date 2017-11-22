@@ -1,7 +1,6 @@
-import { Meteor } from 'meteor/meteor';
-import { DDP } from '../common/namespace.js';
-import { toWebsocketUrl } from '../common/urlHelpers.js';
-import StreamClientCommon from '../common/stream_client_common.js';
+import { Meteor } from "meteor/meteor";
+import { toWebsocketUrl } from "./urls.js";
+import { StreamClientCommon } from "./common.js";
 
 // @param endpoint {String} URL to Meteor app
 //   "http://subdomain.meteor.com/" or "/" or
@@ -14,14 +13,9 @@ import StreamClientCommon from '../common/stream_client_common.js';
 // We don't do any heartbeating. (The logic that did this in sockjs was removed,
 // because it used a built-in sockjs mechanism. We could do it with WebSocket
 // ping frames or with DDP-level messages.)
-export default class ClientStream extends StreamClientCommon {
+export class ClientStream extends StreamClientCommon {
   constructor(endpoint, options) {
-    super();
-
-    this.options = {
-      retry: true,
-      ...(options || null),
-    };
+    super(options);
 
     this.client = null; // created in _launchConnection
     this.endpoint = endpoint;
@@ -155,7 +149,7 @@ export default class ClientStream extends StreamClientCommon {
 
     this._clearConnectionTimer();
     this.connectionTimer = Meteor.setTimeout(() => {
-      this._lostConnection(new DDP.ConnectionError('DDP connection timed out'));
+      this._lostConnection(new this.ConnectionError('DDP connection timed out'));
     }, this.CONNECT_TIMEOUT);
 
     this.client.on(
@@ -182,7 +176,7 @@ export default class ClientStream extends StreamClientCommon {
 
       // Faye's 'error' object is not a JS error (and among other things,
       // doesn't stringify well). Convert it to one.
-      this._lostConnection(new DDP.ConnectionError(error.message));
+      this._lostConnection(new this.ConnectionError(error.message));
     });
 
     clientOnIfCurrent('close', 'stream close callback', () => {

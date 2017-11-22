@@ -1,11 +1,18 @@
-import { Random } from 'meteor/random';
-import { Meteor } from 'meteor/meteor';
-import { Tracker } from 'meteor/tracker';
 import { Retry } from 'meteor/retry';
 
-import { DDP } from './namespace.js';
+const forcedReconnectError = new Error("forced reconnect");
 
-export default class StreamClientCommon {
+export class StreamClientCommon {
+  constructor(options) {
+    this.options = {
+      retry: true,
+      ...(options || null),
+    };
+
+    this.ConnectionError =
+      options && options.ConnectionError || Error;
+  }
+
   // Register for callbacks.
   on(name, callback) {
     if (name !== 'message' && name !== 'reset' && name !== 'disconnect')
@@ -43,11 +50,14 @@ export default class StreamClientCommon {
       retryCount: 0
     };
 
-    this.statusListeners =
-      typeof Tracker !== 'undefined' && new Tracker.Dependency();
+    if (Package.tracker) {
+      this.statusListeners = new Package.tracker.Tracker.Dependency();
+    }
 
     this.statusChanged = () => {
-      if (this.statusListeners) this.statusListeners.changed();
+      if (this.statusListeners) {
+        this.statusListeners.changed();
+      }
     };
 
     //// Retry logic
@@ -69,9 +79,8 @@ export default class StreamClientCommon {
 
     if (this.currentStatus.connected) {
       if (options._force || options.url) {
-        // force reconnect.
-        this._lostConnection(new DDP.ForcedReconnectError());
-      } // else, noop.
+        this._lostConnection(forcedReconnectError);
+      }
       return;
     }
 
@@ -131,10 +140,8 @@ export default class StreamClientCommon {
 
   _retryLater(maybeError) {
     var timeout = 0;
-    if (
-      this.options.retry ||
-      (maybeError && maybeError.errorType === 'DDP.ForcedReconnectError')
-    ) {
+    if (this.options.retry ||
+        maybeError === forcedReconnectError) {
       timeout = this._retry.retryLater(
         this.currentStatus.retryCount,
         this._retryNow.bind(this)
@@ -164,7 +171,9 @@ export default class StreamClientCommon {
 
   // Get current status. Reactive.
   status() {
-    if (this.statusListeners) this.statusListeners.depend();
+    if (this.statusListeners) {
+      this.statusListeners.depend();
+    }
     return this.currentStatus;
   }
 }
