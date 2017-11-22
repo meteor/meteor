@@ -1,70 +1,60 @@
 import { parse, serialize } from 'parse5';
-
 import { generateHTMLForArch } from './test-lib';
+import { _ } from 'meteor/underscore';
 
-const start = async () => {
-  const html = await generateHTMLForArch('web.browser');
+Tinytest.addAsync(
+  "boilerplate-generator-tests - web.browser - basic output",
+  async function (test) {
+    const html = await generateHTMLForArch("web.browser");
 
-  Tinytest.add("boilerplate-generator-tests - web.browser - well-formed html", function (test) {
+    // well-formed html
     const formatted = serialize(parse(html));
     test.isTrue(formatted.replace(/\s/g, '') === html.replace(/\s/g, ''));
-  });
 
-  Tinytest.add("boilerplate-generator-tests - web.browser - include htmlAttributes", function (test) {
+    // include htmlAttributes
     test.matches(html, /foo="foobar"/);
-  });
 
-  Tinytest.add("boilerplate-generator-tests - web.browser - escape htmlAttributes", function (test) {
+    // escape htmlAttributes
     test.matches(html, /gems="&amp;&quot;"/);
-  });
 
-  Tinytest.add("boilerplate-generator-tests - web.browser - include js", function (test) {
+    // include js
     test.matches(html, /<script[^<>]*src="[^<>]*templating[^<>]*">/);
-  });
 
-  Tinytest.add("boilerplate-generator-tests - web.browser - escape js", function (test) {
+    // escape js
     test.matches(html, /<script[^<>]*src="[^<>]*templating[^<>]*&amp;v=&quot;1&quot;[^<>]*">/);
-  });
 
-  Tinytest.add("boilerplate-generator-tests - web.browser - include css", function (test) {
+    // include css
     test.matches(html, /<link[^<>]*href="[^<>]*bootstrap[^<>]*">/);
-  });
 
-  Tinytest.add("boilerplate-generator-tests - web.browser - escape css", function (test) {
+    // escape css
     test.matches(html, /<link[^<>]*href="[^<>]*bootstrap[^<>]*&amp;v=&quot;1&quot;[^<>]*">/);
-  });
 
-  Tinytest.add("boilerplate-generator-tests - web.browser - call rewriteHook", function (test) {
+    // call rewriteHook
     test.matches(html, /\+rewritten_url=true/);
-  });
 
-  Tinytest.add("boilerplate-generator-tests - web.browser - include runtime config", function (test) {
+    // include runtime config
     test.matches(html, /<script[^<>]*>[^<>]*__meteor_runtime_config__ =.*decodeURIComponent\(config123\)/);
-  });
+  }
+);
 
-  // https://github.com/meteor/meteor/issues/9149
-  Tinytest.addAsync(
-    "boilerplate-generator-tests - web.browser - properly render boilerplate " +
+// https://github.com/meteor/meteor/issues/9149
+Tinytest.addAsync(
+  "boilerplate-generator-tests - web.browser - properly render boilerplate " +
     "elements when _.template settings are overridden",
-    function (test, onComplete) {
-      const run = async () => {
-        import { _ } from 'meteor/underscore';
-        _.templateSettings = {
-          interpolate: /\{\{(.+?)\}\}/g
-        };
-        const newHtml = await generateHTMLForArch('web.browser');
-        test.matches(newHtml, /foo="foobar"/);
-        test.matches(newHtml, /<link[^<>]*href="[^<>]*bootstrap[^<>]*">/);
-        test.matches(newHtml, /<script[^<>]*src="[^<>]*templating[^<>]*">/);
-        test.matches(newHtml, /<script>var a/);
-        test.matches(
-          newHtml,
-          /<script[^<>]*>[^<>]*__meteor_runtime_config__ =.*decodeURIComponent\(config123\)/
-        );
-      }
-      run().then(onComplete);
-    }
-  );
-};
+  async function (test) {
+    const newHtml = await generateHTMLForArch("web.browser");
 
-start();
+    _.templateSettings = {
+      interpolate: /\{\{(.+?)\}\}/g
+    };
+
+    test.matches(newHtml, /foo="foobar"/);
+    test.matches(newHtml, /<link[^<>]*href="[^<>]*bootstrap[^<>]*">/);
+    test.matches(newHtml, /<script[^<>]*src="[^<>]*templating[^<>]*">/);
+    test.matches(newHtml, /<script>var a/);
+    test.matches(
+      newHtml,
+        /<script[^<>]*>[^<>]*__meteor_runtime_config__ =.*decodeURIComponent\(config123\)/
+    );
+  }
+);

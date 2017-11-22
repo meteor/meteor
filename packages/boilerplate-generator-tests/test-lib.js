@@ -1,4 +1,4 @@
-import toString from "stream-to-string";
+import streamToString from "stream-to-string";
 
 export async function generateHTMLForArch(arch) {
   // Use a dummy manifest. None of these paths will be read from the filesystem, but css / js should be handled differently
@@ -52,7 +52,5 @@ export async function generateHTMLForArch(arch) {
     },
   });
 
-
-  return await toString(boilerplate.toHTML());
-};
-
+  return streamToString(boilerplate.toHTML());
+}
