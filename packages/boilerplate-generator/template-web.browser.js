@@ -6,29 +6,26 @@ export const headTemplate = ({
   bundledJsCssUrlRewriteHook,
   head,
   dynamicHead,
-}) => [].concat(
-  [
-    '<html' + Object.keys(htmlAttributes || {}).map(key =>
-      template(' <%= attrName %>="<%- attrValue %>"')({
-        attrName: key,
-        attrValue: htmlAttributes[key]
-      })
-    ).join('') + '>',
-    '<head>'
-  ],
+}) => [
+  '<html' + Object.keys(htmlAttributes || {}).map(
+    key => template(' <%= attrName %>="<%- attrValue %>"')({
+      attrName: key,
+      attrValue: htmlAttributes[key],
+    })
+  ).join('') + '>',
+  '<head>',
 
-  (css || []).map(({ url }) =>
+  ...(css || []).map(file =>
     template('  <link rel="stylesheet" type="text/css" class="__meteor-css__" href="<%- href %>">')({
-      href: bundledJsCssUrlRewriteHook(url)
+      href: bundledJsCssUrlRewriteHook(file.url),
     })
   ),
-  [
-    head,
-    dynamicHead,
-    '</head>',
-    '<body>',
-  ],
-).join('\n')
+
+  head,
+  dynamicHead,
+  '</head>',
+  '<body>',
+].join('\n');
 
 // Template function for rendering the boilerplate html for browsers
 export const closeTemplate = ({
@@ -38,39 +35,35 @@ export const closeTemplate = ({
   js,
   additionalStaticJs,
   bundledJsCssUrlRewriteHook,
-}) => [].concat(
-  [
-    '',
-    (inlineScriptsAllowed
-      ? template('  <script type="text/javascript">__meteor_runtime_config__ = JSON.parse(decodeURIComponent(<%= conf %>))</script>')({
-        conf: meteorRuntimeConfig
-      })
-      : template('  <script type="text/javascript" src="<%- src %>/meteor_runtime_config.js"></script>')({
-        src: rootUrlPathPrefix
-      })
-    ) ,
-    ''
-  ],
+}) => [
+  '',
+  inlineScriptsAllowed
+    ? template('  <script type="text/javascript">__meteor_runtime_config__ = JSON.parse(decodeURIComponent(<%= conf %>))</script>')({
+      conf: meteorRuntimeConfig,
+    })
+    : template('  <script type="text/javascript" src="<%- src %>/meteor_runtime_config.js"></script>')({
+      src: rootUrlPathPrefix,
+    }),
+  '',
 
-  (js || []).map(({ url }) =>
+  ...(js || []).map(file =>
     template('  <script type="text/javascript" src="<%- src %>"></script>')({
-      src: bundledJsCssUrlRewriteHook(url)
+      src: bundledJsCssUrlRewriteHook(file.url),
     })
   ),
 
-  (additionalStaticJs || []).map(({ contents, pathname }) => (
-    (inlineScriptsAllowed
+  ...(additionalStaticJs || []).map(({ contents, pathname }) => (
+    inlineScriptsAllowed
       ? template('  <script><%= contents %></script>')({
-        contents: contents
+        contents,
       })
       : template('  <script type="text/javascript" src="<%- src %>"></script>')({
-        src: rootUrlPathPrefix + pathname
-      }))
+        src: rootUrlPathPrefix + pathname,
+      })
   )),
 
-  [
-    '', '',
-    '</body>',
-    '</html>'
-  ],
-).join('\n');
+  '',
+  '',
+  '</body>',
+  '</html>'
+].join('\n');
