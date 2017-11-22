@@ -111,7 +111,7 @@ export const ELEMENT_OPERATORS = {
           'minKey': -1,
           'maxKey': 127,
         };
-        if (!operandAliasMap.hasOwnProperty(operand)) {
+        if (!hasOwn.call(operandAliasMap, operand)) {
           throw Error(`unknown string alias for $type: ${operand}`);
         }
         operand = operandAliasMap[operand];
