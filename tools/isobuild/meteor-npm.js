@@ -920,6 +920,11 @@ function getInstalledDependenciesTree(dir) {
       const pkgDir = files.pathJoin(nodeModulesDir, item);
       const pkgJsonPath = files.pathJoin(pkgDir, "package.json");
 
+      if (item.startsWith("@")) {
+        Object.assign(result, ls(pkgDir));
+        return;
+      }
+
       let pkg;
       try {
         pkg = JSON.parse(files.readFile(pkgJsonPath));
@@ -927,7 +932,9 @@ function getInstalledDependenciesTree(dir) {
         if (! pkg) return;
       }
 
-      const info = result[item] = {
+      const name = pkg.name || item;
+
+      const info = result[name] = {
         version: pkg.version
       };
 
@@ -1045,7 +1052,7 @@ const installNpmModule = meteorNpm.installNpmModule = (name, version, dir) => {
         `${name} version ${version} is not available in the npm registry`);
     } else {
       buildmessage.error(
-        `couldn't install npm package ${name}@${version}: ${result.error}`);
+        `couldn\'t install npm package ${name}@${version}: ${result.error}`);
     }
 
     // Recover by returning false from updateDependencies
@@ -1132,11 +1139,10 @@ function shrinkwrap(dir) {
 // Reduces a dependency tree (as read from a just-made npm-shrinkwrap.json or
 // from npm ls --json) to just the versions we want. Returns an object that does
 // not share state with its input
-var minimizeDependencyTree = function (tree) {
-  var minimizeModule = function (module) {
+function minimizeDependencyTree(tree) {
+  function minimizeModule(module) {
     var version;
-    if (module.resolved &&
-        !module.resolved.match(/^https?:\/\/registry.npmjs.org\//)) {
+    if (module.resolved && ! isUrlFromRegistry(module.resolved)) {
       version = module.resolved;
     } else if (utils.isNpmUrl(module.from)) {
       version = module.from;
@@ -1152,14 +1158,22 @@ var minimizeDependencyTree = function (tree) {
       });
     }
     return minimized;
-  };
+  }
 
   var newTopLevelDependencies = {};
   _.each(tree.dependencies, function (module, name) {
     newTopLevelDependencies[name] = minimizeModule(module);
   });
   return {dependencies: newTopLevelDependencies};
-};
+}
+
+function isUrlFromRegistry(url) {
+  if (url.match(/^https?:\/\/registry.npmjs.org\//)) {
+    return true;
+  }
+  const NCR = process.env.NPM_CONFIG_REGISTRY;
+  return NCR && url.startsWith(NCR);
+}
 
 var logUpdateDependencies = function (packageName, npmDependencies) {
   runLog.log(packageName + ': updating npm dependencies -- ' +

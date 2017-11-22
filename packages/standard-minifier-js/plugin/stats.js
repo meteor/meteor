@@ -9,16 +9,21 @@ const meteorInstallRegExp = new RegExp([
   /\b(meteorInstall)\(\{/,
   // If the meteorInstall function name has been minified, we can figure
   // out its mangled name by examining the import assingment.
-  /\b(\w+)=Package.modules.meteorInstall\b/,
+  /\b(\w+)=Package\.modules\.meteorInstall\b/,
   /\b(\w+)=Package\["modules-runtime"\].meteorInstall\b/,
+  // Sometimes uglify-es will inline (0,Package.modules.meteorInstall) as
+  // a call expression.
+  /\(0,Package\.modules\.(meteorInstall)\)\(/,
+  /\(0,Package\["modules-runtime"\]\.(meteorInstall)\)\(/,
 ].map(exp => exp.source).join("|"));
 
 export function extractModuleSizesTree(source) {
   const match = meteorInstallRegExp.exec(source);
   if (match) {
     const ast = Babel.parse(source);
-    const name = match[1] || match[2] || match[3];
-    meteorInstallVisitor.visit(ast, name, source);
+    let meteorInstallName = "meteorInstall";
+    match.some((name, i) => (i > 0 && (meteorInstallName = name)));
+    meteorInstallVisitor.visit(ast, meteorInstallName, source);
     return meteorInstallVisitor.tree;
   }
 }
@@ -35,7 +40,7 @@ const meteorInstallVisitor = new (class extends Visitor {
       return;
     }
 
-    if (isIdWithName(node.callee, this.name)) {
+    if (hasIdWithName(node.callee, this.name)) {
       const source = this.source;
 
       function walk(expr) {
@@ -63,10 +68,18 @@ const meteorInstallVisitor = new (class extends Visitor {
   }
 });
 
-function isIdWithName(node, name) {
-  return node &&
-    node.type === "Identifier" &&
-    node.name === name;
+function hasIdWithName(node, name) {
+  switch (node && node.type) {
+  case "SequenceExpression":
+    const last = node.expressions[node.expressions.length - 1];
+    return hasIdWithName(last, name);
+  case "MemberExpression":
+    return hasIdWithName(node.property, name);
+  case "Identifier":
+    return node.name === name;
+  default:
+    return false;
+  }
 }
 
 function getKeyName(key) {

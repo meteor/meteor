@@ -6,6 +6,33 @@
   several new features, including two-factor authentication, as described
   in the [release notes](https://github.com/npm/npm/blob/latest/CHANGELOG.md#v551-2017-10-04).
 
+* The bundled version of MongoDB used by `meteor run` in development
+  on 64-bit architectures has been updated to 3.4.10. 32-bit architectures
+  will continue to use MongoDB 3.2.x versions since MongoDB is no longer
+  producing 32-bit versions of MongoDB for newer release tracks.
+  [PR #9396](https://github.com/meteor/meteor/pull/9396)
+
+* Meteor's internal `minifier-css` package has been updated to use `postcss`
+  for CSS parsing and minifying, instead of the abandoned `css-parse` and
+  `css-stringify` packages. Changes made to the `CssTools` API exposed by the
+  `minifier-css` package are mostly backwards compatible (the
+  `standard-minifier-css` package that uses it didn't have to change for
+  example), but now that we're using `postcss` the AST accepted and returned
+  from certain functions is different. This could impact developers who are
+  tying into Meteor's internal `minifier-css` package directly. The AST based 
+  function changes are:
+  
+  * `CssTools.parseCss` now returns a PostCSS
+    [`Root`](http://api.postcss.org/Root.html) object.    
+  * `CssTools.stringifyCss` expects a PostCSS `Root` object as its first
+    parameter.    
+  * `CssTools.mergeCssAsts` expects an array of PostCSS `Root` objects as its
+    first parameter.    
+  * `CssTools.rewriteCssUrls` expects a PostCSS `Root` object as its first
+    parameter.
+    
+  [PR #9263](https://github.com/meteor/meteor/pull/9263)
+
 * Dynamically `import()`ed modules will now be fetched from the
   application server using an HTTP POST request, rather than a WebSocket
   message. This strategy has all the benefits of the previous strategy,
@@ -51,6 +78,13 @@
   [Feature Request #196](https://github.com/meteor/meteor-feature-requests/issues/196)
   [PR #9213](https://github.com/meteor/meteor/pull/9213)
 
+* Provide basic support for [iPhone X](https://developer.apple.com/ios/update-apps-for-iphone-x/)
+  status bar and launch screens, which includes updates to
+  [`cordova-plugin-statusbar@2.3.0`](https://github.com/apache/cordova-plugin-statusbar/blob/master/RELEASENOTES.md#230-nov-06-2017)
+  and [`cordova-plugin-splashscreen@4.1.0`](https://github.com/apache/cordova-plugin-splashscreen/blob/master/RELEASENOTES.md#410-nov-06-2017).
+  [Issue #9041](https://github.com/meteor/meteor/issues/9041)
+  [PR #9375](https://github.com/meteor/meteor/pull/9375)
+
 * Fixed an issue preventing the installation of scoped Cordova packages.
   E.g. meteor add cordova:@somescope/some-cordova-plugin@1.0.0 will now
   work properly.
@@ -73,6 +107,10 @@
 * `Accounts.config` now supports a `bcryptRounds` option that
   overrides the default 10 rounds currently used to secure passwords.
   [PR #9044](https://github.com/meteor/meteor/pull/9044)
+
+* `Npm.depends` can now specify any `http` or `https` URL.
+  [Issue #9236](https://github.com/meteor/meteor/issues/9236)
+  [PR #9237](https://github.com/meteor/meteor/pull/9237)
 
 ## v1.6, 2017-10-30
 

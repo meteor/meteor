@@ -73,7 +73,7 @@ selftest.define("run", function () {
   run.waitSecs(5);
   run.match("Modified");
   run.match("prevented startup");
-  run.match("End of comment missing");
+  run.match("Unclosed comment");
   run.match("file change");
 
   // Back to working
@@ -125,7 +125,7 @@ try {
   run.tellMongo(MONGO_LISTENING);
   run.waitSecs(5);
   run.match("prevented startup");
-  run.match("End of comment missing");
+  run.match("Unclosed comment");
   run.match("file change");
   s.unlink("junk.css");
   run.waitSecs(5);
@@ -165,7 +165,7 @@ selftest.define("run --once", ["yet-unsolved-windows-failure"], function () {
   run = s.run("--once");
   run.waitSecs(5);
   run.matchErr("Build failed");
-  run.matchErr("End of comment missing");
+  run.matchErr("Unclosed comment");
   run.expectExit(254);
   s.unlink("junk.css");
 
