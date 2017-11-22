@@ -2,7 +2,7 @@ import { Tinytest } from "meteor/tinytest";
 import { WebAppInternals } from "meteor/webapp";
 import { onPageLoad } from "meteor/server-render";
 import { parse } from "parse5";
-import toString from "stream-to-string";
+import streamToString from "stream-to-string";
 
 const skeleton = `
   <h1>Look, Ma... static HTML!</h1>
@@ -12,8 +12,9 @@ const skeleton = `
     </div>
   </p>`;
 
-Tinytest.addAsync('server-render - boilerplate', function (test, onComplete) {
-  const run = async () => {
+Tinytest.addAsync(
+  'server-render - boilerplate',
+  async function (test) {
     // This test is not a very good demonstration of the server-render
     // abstraction. In normal usage, you would call renderIntoElementById
     // and not think about the rest of this stuff. The extra complexity owes
@@ -53,10 +54,10 @@ Tinytest.addAsync('server-render - boilerplate', function (test, onComplete) {
       const { stream } = WebAppInternals.getBoilerplate({
         isServerRenderTest: true,
         browser: { name: "fake" },
-        url: "/server-render/test"
+        url: "/server-render/test",
       }, "web.browser");
 
-      const boilerplate = await toString(stream);
+      const boilerplate = await streamToString(stream);
 
       const ids = [];
       const seen = new Set;
@@ -106,6 +107,4 @@ Tinytest.addAsync('server-render - boilerplate', function (test, onComplete) {
       onPageLoad.remove(callback2);
     }
   }
-
-  run().then(onComplete).catch(console.error);
-});
+);
