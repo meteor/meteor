@@ -778,12 +778,18 @@ function runWebAppServer() {
         if (!statusCode) {
           statusCode = res.statusCode ? res.statusCode : 200;
         }
+
         if (newHeaders) {
-          headers = {...headers, ...newHeaders };
+          Object.assign(headers, newHeaders);
         }
 
         res.writeHead(statusCode, headers);
-        stream.pipe(res)
+
+        stream.pipe(res, {
+          // End the response when the stream ends.
+          end: true,
+        });
+
       }).catch(error => {
         Log.error("Error running template: " + error.stack);
         res.writeHead(500, headers);
