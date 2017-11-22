@@ -2191,6 +2191,7 @@ main.registerCommand({
     // Only run tests with this tag
     'with-tag': { type: String },
     junit: { type: String },
+    retries: { type: Number, default: 2 },
   },
   hidden: true,
   catalogRefresh: new catalog.Refresh.Never()
@@ -2285,6 +2286,7 @@ main.registerCommand({
     fileRegexp: fileRegexp,
     excludeRegexp: excludeRegexp,
     // other options
+    retries: options.retries,
     historyLines: options.history,
     clients: clients,
     junit: options.junit && files.pathResolve(options.junit),

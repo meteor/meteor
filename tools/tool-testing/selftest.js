@@ -563,16 +563,18 @@ export function runTests(options) {
   let totalRun = 0;
   const failedTests = [];
 
+  const totalTries = (options.retries || 0) + 1;
+
   testList.filteredTests.forEach((test) => {
     totalRun++;
     Console.error(test.file + ": " + test.name + " ... ");
-    runTest(test);
+    runTest(test, totalTries);
   });
 
   testList.endTime = new Date;
   testList.durationMs = testList.endTime - testList.startTime;
 
-  function runTest(test, tries = 3) {
+  function runTest(test, tries = 1) {
     let failure = null;
     let startTime;
     try {
