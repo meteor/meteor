@@ -1,5 +1,5 @@
 import { readFile } from 'fs';
-import stream from "combined-stream2";
+import { create as createStream } from "combined-stream2";
 
 import WebBrowserTemplate from './template-web.browser';
 import WebCordovaTemplate from './template-web.cordova';
@@ -8,6 +8,15 @@ import WebCordovaTemplate from './template-web.cordova';
 const readUtf8FileSync = filename => Meteor.wrapAsync(readFile)(filename, 'utf8');
 
 const identity = value => value;
+
+function appendToStream(chunk, stream) {
+  if (typeof chunk === "string") {
+    stream.append(Buffer.from(chunk, "utf8"));
+  } else if (Buffer.isBuffer(chunk) ||
+             typeof chunk.read === "function") {
+    stream.append(chunk);
+  }
+}
 
 export class Boilerplate {
   constructor(arch, manifest, options = {}) {
@@ -38,16 +47,19 @@ export class Boilerplate {
     const { body, dynamicBody } = data;
 
     const end = this.closeTemplate(data);
-    const response = stream.create();
-    
-    response.append(Buffer.from(start))
+    const response = createStream();
+
+    appendToStream(start, response);
+
     if (body) {
-      response.append(typeof body === "string" ? Buffer.from(body) : body)
+      appendToStream(body, response);
     }
+
     if (dynamicBody) {
-      response.append(typeof dynamicBody === "string" ? Buffer.from(dynamicBody) : dynamicBody)
+      appendToStream(dynamicBody, response);
     }
-    response.append(Buffer.from(end))
+
+    appendToStream(end, response);
 
     return response;
   }
