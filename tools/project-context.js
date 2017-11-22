@@ -1322,24 +1322,25 @@ _.extend(exports.CordovaPluginsFile.prototype, {
         return;
 
       // We just do a standard split here, not utils.parsePackageConstraint,
-      // since cordova plugins don't necessary obey the same naming conventions
-      // as Meteor packages.
-      var parts = line.split('@');
-      if (parts.length !== 2) {
+      // since cordova plugins don't necessarily obey the same naming
+      // conventions as Meteor packages.
+      let { id, version } =
+        require('./cordova/package-id-version-parser.js').parse(line);
+      if (! version) {
         buildmessage.error("Cordova plugin must specify version: " + line, {
           // XXX should this be relative?
           file: self.filename
         });
         return;  // recover by ignoring
       }
-      if (_.has(self._plugins, parts[0])) {
-        buildmessage.error("Plugin name appears twice: " + parts[0], {
+      if (_.has(self._plugins, id)) {
+        buildmessage.error("Plugin name appears twice: " + id, {
           // XXX should this be relative?
           file: self.filename
         });
         return;  // recover by ignoring
       }
-      self._plugins[parts[0]] = parts[1];
+      self._plugins[id] = version;
     });
   },
 

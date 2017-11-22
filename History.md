@@ -1,13 +1,59 @@
 ## v.NEXT
 
-* Provide basic support for [iPhone X](https://developer.apple.com/ios/update-apps-for-iphone-x/)
-  status bar and launch screens, which includes updates to
-  [`cordova-plugin-statusbar@2.3.0`](https://github.com/apache/cordova-plugin-statusbar/blob/master/RELEASENOTES.md#230-nov-06-2017)
-  and [`cordova-plugin-splashscreen@4.1.0`](https://github.com/apache/cordova-plugin-splashscreen/blob/master/RELEASENOTES.md#410-nov-06-2017).
-  [Issue #9041](https://github.com/meteor/meteor/issues/9041)
-  [PR #9375](https://github.com/meteor/meteor/pull/9375)
+* Meteor's internal `minifier-css` package has been updated to use `postcss`
+  for CSS parsing and minifying, instead of the abandoned `css-parse` and
+  `css-stringify` packages. Changes made to the `CssTools` API exposed by the
+  `minifier-css` package are mostly backwards compatible (the
+  `standard-minifier-css` package that uses it didn't have to change for
+  example), but now that we're using `postcss` the AST accepted and returned
+  from certain functions is different. This could impact developers who are
+  tying into Meteor's internal `minifier-css` package directly. The AST based 
+  function changes are:
+  
+  * `CssTools.parseCss` now returns a PostCSS
+    [`Root`](http://api.postcss.org/Root.html) object.    
+  * `CssTools.stringifyCss` expects a PostCSS `Root` object as its first
+    parameter.    
+  * `CssTools.mergeCssAsts` expects an array of PostCSS `Root` objects as its
+    first parameter.    
+  * `CssTools.rewriteCssUrls` expects a PostCSS `Root` object as its first
+    parameter.
+    
+  [PR #9263](https://github.com/meteor/meteor/pull/9263)
+
+* Dynamically `import()`ed modules will now be fetched from the
+  application server using an HTTP POST request, rather than a WebSocket
+  message. This strategy has all the benefits of the previous strategy,
+  except that it does not require establishing a WebSocket connection
+  before fetching dynamic modules, in exchange for slightly higher latency
+  per request. [PR #9384](https://github.com/meteor/meteor/pull/9384)
+
+* To reduce the total number of HTTP requests for dynamic modules, rapid
+  sequences of `import()` calls within the same tick of the event loop
+  will now be automatically batched into a single HTTP request. In other
+  words, the following code will result in only one HTTP request:
+  ```js
+  const [
+    React,
+    ReactDOM
+  ] = await Promise.all([
+    import("react"),
+    import("react-dom")
+  ]);
+  ```
 
 * The `minifier-js` package has been updated to use `uglify-es` 3.1.9.
+
+* The `request` npm package used by the `http` package has been upgraded
+  to version 2.83.0.
+
+* The deprecated `Meteor.http` object has been removed. If your
+  application is still using `Meteor.http`, you should now use `HTTP`
+  instead:
+  ```js
+  import { HTTP } from "meteor/http";
+  HTTP.call("GET", url, ...);
+  ```
 
 * [`cordova-lib`](https://github.com/apache/cordova-cli) has been updated to
   version 7.1.0, [`cordova-android`](https://github.com/apache/cordova-android/)
@@ -18,6 +64,19 @@
   and will likely be removed in a future Meteor release.
   [Feature Request #196](https://github.com/meteor/meteor-feature-requests/issues/196)
   [PR #9213](https://github.com/meteor/meteor/pull/9213)
+
+* Provide basic support for [iPhone X](https://developer.apple.com/ios/update-apps-for-iphone-x/)
+  status bar and launch screens, which includes updates to
+  [`cordova-plugin-statusbar@2.3.0`](https://github.com/apache/cordova-plugin-statusbar/blob/master/RELEASENOTES.md#230-nov-06-2017)
+  and [`cordova-plugin-splashscreen@4.1.0`](https://github.com/apache/cordova-plugin-splashscreen/blob/master/RELEASENOTES.md#410-nov-06-2017).
+  [Issue #9041](https://github.com/meteor/meteor/issues/9041)
+  [PR #9375](https://github.com/meteor/meteor/pull/9375)
+
+* Fixed an issue preventing the installation of scoped Cordova packages.
+  E.g. meteor add cordova:@somescope/some-cordova-plugin@1.0.0 will now
+  work properly.
+  [Issue #7336](https://github.com/meteor/meteor/issues/7336)
+  [PR #9334](https://github.com/meteor/meteor/pull/9334)
 
 * iOS icons and launch screens have been updated to support iOS 11
   [Issue #9196](https://github.com/meteor/meteor/issues/9196)
