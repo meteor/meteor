@@ -117,7 +117,7 @@ function statsMiddleware(request, response) {
 
   function sendJSON(data) {
     response.setHeader("Content-Type", "application/json");
-    response.end(JSON.stringify(data));
+    response.end(JSON.stringify(data, null, 2));
   }
 
   // Silently return no data if not simulating production.
