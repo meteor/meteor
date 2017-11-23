@@ -380,43 +380,40 @@ export class TestCase {
   // then call onComplete() on success, or else onException(e) if the
   // test raised (or voluntarily reported) an exception.
   run(onEvent, onComplete, onException, stop_at_offset) {
-    var completed = false;
-    var markComplete = function () {
-      if (completed) {
-        Meteor._debug("*** Test error -- test '" + this.name +
-                      "' returned multiple times.");
-        return false;
+    let completed = false;
+
+    return new Promise((resolve, reject) => {
+      const results = new TestCaseResults(
+        this,
+        event => {
+          // If this trace prints, it means you ran some test.* function
+          // after the test finished! Another symptom will be that the
+          // test will display as "waiting" even when it counts as passed
+          // or failed.
+          if (completed) {
+            console.trace("event after complete!");
+          }
+          return onEvent(event);
+        },
+        reject,
+        stop_at_offset
+      );
+
+      const result = this.func(results, resolve);
+      if (result && typeof result.then === "function") {
+        result.then(resolve);
       }
-      completed = true;
-      return true;
-    };
 
-    var wrappedOnEvent = function (e) {
-      // If this trace prints, it means you ran some test.* function after the
-      // test finished! Another symptom will be that the test will display as
-      // "waiting" even when it counts as passed or failed.
-      if (completed)
-        console.trace("event after complete!");
-      return onEvent(e);
-    };
-
-    var results = new TestCaseResults(this, wrappedOnEvent,
-                                      function (e) {
-                                        if (markComplete())
-                                          onException(e);
-                                      }, stop_at_offset);
-
-    Meteor.defer(() => {
-      try {
-        this.func(results, function () {
-          if (markComplete())
-            onComplete();
-        });
-      } catch (e) {
-        if (markComplete())
-          onException(e);
+    }).then(
+      () => {
+        completed = true;
+        onComplete();
+      },
+      error => {
+        completed = true;
+        onException(error);
       }
-    });
+    );
   }
 }
 
