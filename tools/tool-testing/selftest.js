@@ -10,10 +10,11 @@ import { Console } from '../console/console.js';
 import { loadIsopackage } from '../tool-env/isopackets.js';
 import TestFailure from './test-failure.js';
 import { setRunningTest } from './run.js';
+import Run from './run.js';
 
 // These are accessed through selftest directly on many tests.
 export { default as Sandbox } from './sandbox.js';
-export { default as Run } from './run.js';
+export { Run };
 
 import "../tool-env/install-runtime.js";
 
@@ -563,109 +564,23 @@ export function runTests(options) {
   let totalRun = 0;
   const failedTests = [];
 
-  const totalTries = (options.retries || 0) + 1;
-
   testList.filteredTests.forEach((test) => {
     totalRun++;
     Console.error(test.file + ": " + test.name + " ... ");
-    runTest(test, totalTries);
+
+    Run.runTest(
+      test,
+      parseStackMarkBottom(() => {
+        test.f(options);
+      }),
+      {
+        retries: options.retries,
+      }
+    );
   });
 
   testList.endTime = new Date;
   testList.durationMs = testList.endTime - testList.startTime;
-
-  function runTest(test, tries = 1) {
-    let failure = null;
-    let startTime;
-    try {
-      setRunningTest(test);
-      startTime = +(new Date);
-      // ensure we mark the bottom of the stack each time we start a new test
-      parseStackMarkBottom(() => {
-        test.f(options);
-      })();
-    } catch (e) {
-      failure = e;
-    } finally {
-      setRunningTest(null);
-      test.cleanup();
-    }
-
-    test.durationMs = +(new Date) - startTime;
-
-    if (failure) {
-      Console.error("... fail!", Console.options({ indent: 2 }));
-
-      if (--tries > 0) {
-        Console.error(
-          "... retrying (" + tries + (tries === 1 ? " try" : " tries") + " remaining) ...",
-          Console.options({ indent: 2 })
-        );
-
-        return runTest(test, tries);
-      }
-
-      if (failure instanceof TestFailure) {
-        const frames = parseStackParse(failure).outsideFiber;
-        const relpath = files.pathRelative(files.getCurrentToolsDir(),
-                                         frames[0].file);
-        Console.rawError("  => " + failure.reason + " at " +
-                         relpath + ":" + frames[0].line + "\n");
-        if (failure.reason === 'no-match' || failure.reason === 'junk-before' ||
-            failure.reason === 'match-timeout') {
-          Console.arrowError("Pattern: " + failure.details.pattern, 2);
-        }
-        if (failure.reason === "wrong-exit-code") {
-          const s = (status) => {
-            return status.signal || ('' + status.code) || "???";
-          };
-
-          Console.rawError(
-            "  => " + "Expected: " + s(failure.details.expected) +
-              "; actual: " + s(failure.details.actual) + "\n");
-        }
-        if (failure.reason === 'expected-exception') {
-        }
-        if (failure.reason === 'not-equal') {
-          Console.rawError(
-            "  => " + "Expected: " + JSON.stringify(failure.details.expected) +
-              "; actual: " + JSON.stringify(failure.details.actual) + "\n");
-        }
-
-        if (failure.details.run) {
-          failure.details.run.outputLog.end();
-          const lines = failure.details.run.outputLog.get();
-          if (! lines.length) {
-            Console.arrowError("No output", 2);
-          } else {
-            const historyLines = options.historyLines || 100;
-
-            Console.arrowError("Last " + historyLines + " lines:", 2);
-            lines.slice(-historyLines).forEach((line) => {
-              Console.rawError("  " +
-                               (line.channel === "stderr" ? "2| " : "1| ") +
-                               line.text +
-                               (line.bare ? "%" : "") + "\n");
-            });
-          }
-        }
-
-        if (failure.details.messages) {
-          Console.arrowError("Errors while building:", 2);
-          Console.rawError(failure.details.messages.formatMessages() + "\n");
-        }
-      } else {
-        Console.rawError("  => Test threw exception: " + failure.stack + "\n");
-      }
-
-      failedTests.push(test);
-      testList.notifyFailed(test, failure);
-    } else {
-      Console.error(
-        "... ok (" + test.durationMs + " ms)",
-        Console.options({ indent: 2 }));
-    }
-  }
 
   testList.saveTestState();
 
