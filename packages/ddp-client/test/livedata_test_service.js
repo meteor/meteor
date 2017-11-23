@@ -19,7 +19,7 @@ Meteor.methods({
         throwThroughFuture: Match.Optional(Boolean)
       })
     );
-    options = options || {};
+    options = options || Object.create(null);
     var shouldThrow =
       (Meteor.isServer && where === 'server') ||
       (Meteor.isClient && where === 'client') ||
@@ -57,7 +57,7 @@ Meteor.methods({
 if (Meteor.isServer) {
   // Keys are random tokens, used to isolate multiple test invocations from each
   // other.
-  var waiters = {};
+  var waiters = Object.create(null);
 
   var Future = Npm.require('fibers/future');
 
@@ -179,7 +179,7 @@ if (Meteor.isServer) {
   });
 
   (function() {
-    var userIdWhenStopped = {};
+    var userIdWhenStopped = Object.create(null);
     Meteor.publish('recordUserIdOnStop', function(key) {
       check(key, String);
       var self = this;
@@ -363,7 +363,7 @@ if (Meteor.isServer) {
 }
 
 /// Helper for "livedata - result by value"
-var resultByValueArrays = {};
+var resultByValueArrays = Object.create(null);
 Meteor.methods({
   getArray: function(testId) {
     if (!_.has(resultByValueArrays, testId)) resultByValueArrays[testId] = [];

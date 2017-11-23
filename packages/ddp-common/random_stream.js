@@ -21,12 +21,30 @@
 //                          If an array, will be used as-is
 //                          If a value, will be converted to a single-value array
 //                          If omitted, a random array will be used as the seed.
-DDPCommon.RandomStream = function (options) {
-  var self = this;
+DDPCommon.RandomStream = class RandomStream {
+  constructor(options) {
+    this.seed = [].concat(options.seed || randomToken());
+    this.sequences = Object.create(null);
+  }
 
-  this.seed = [].concat(options.seed || randomToken());
+  // Get a random sequence with the specified name, creating it if does not exist.
+  // New sequences are seeded with the seed concatenated with the name.
+  // By passing a seed into Random.create, we use the Alea generator.
+  _sequence(name) {
+    var self = this;
 
-  this.sequences = {};
+    var sequence = self.sequences[name] || null;
+    if (sequence === null) {
+      var sequenceSeed = self.seed.concat(name);
+      for (var i = 0; i < sequenceSeed.length; i++) {
+        if (typeof sequenceSeed[i] === "function") {
+          sequenceSeed[i] = sequenceSeed[i]();
+        }
+      }
+      self.sequences[name] = sequence = Random.createWithSeeds.apply(null, sequenceSeed);
+    }
+    return sequence;
+  }
 };
 
 // Returns a random string of sufficient length for a random seed.
@@ -65,7 +83,6 @@ DDPCommon.RandomStream.get = function (scope, name) {
   return randomStream._sequence(name);
 };
 
-
 // Creates a randomSeed for passing to a method call.
 // Note that we take enclosing as an argument,
 // though we expect it to be DDP._CurrentMethodInvocation.get()
@@ -76,24 +93,3 @@ DDPCommon.makeRpcSeed = function (enclosing, methodName) {
   var stream = DDPCommon.RandomStream.get(enclosing, '/rpc/' + methodName);
   return stream.hexString(20);
 };
-
-_.extend(DDPCommon.RandomStream.prototype, {
-  // Get a random sequence with the specified name, creating it if does not exist.
-  // New sequences are seeded with the seed concatenated with the name.
-  // By passing a seed into Random.create, we use the Alea generator.
-  _sequence: function (name) {
-    var self = this;
-
-    var sequence = self.sequences[name] || null;
-    if (sequence === null) {
-      var sequenceSeed = self.seed.concat(name);
-      for (var i = 0; i < sequenceSeed.length; i++) {
-        if (_.isFunction(sequenceSeed[i])) {
-          sequenceSeed[i] = sequenceSeed[i]();
-        }
-      }
-      self.sequences[name] = sequence = Random.createWithSeeds.apply(null, sequenceSeed);
-    }
-    return sequence;
-  }
-});

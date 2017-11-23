@@ -1,5 +1,7 @@
 var Module = module.constructor;
 var cache = require("./cache.js");
+var HTTP = require("meteor/http").HTTP;
+var meteorInstall = require("meteor/modules").meteorInstall;
 
 // Call module.dynamicImport(id) to fetch a module and any/all of its
 // dependencies that have not already been fetched, and evaluate them as
@@ -110,17 +112,19 @@ function makeModuleFunction(id, source, options) {
   };
 }
 
+var secretKey = null;
+exports.setSecretKey = function (key) {
+  secretKey = key;
+};
+
 function fetchMissing(missingTree) {
-  // Update lastFetchMissingPromise immediately, without waiting for
-  // the results to be delivered.
   return new Promise(function (resolve, reject) {
-    Meteor.call(
-      "__dynamicImport",
-      missingTree,
-      function (error, resultsTree) {
-        error ? reject(error) : resolve(resultsTree);
-      }
-    );
+    HTTP.call("POST", Meteor.absoluteUrl("__dynamicImport"), {
+      query: secretKey ? "key=" + secretKey : void 0,
+      data: missingTree
+    }, function (error, result) {
+      error ? reject(error) : resolve(result.data);
+    });
   });
 }
 

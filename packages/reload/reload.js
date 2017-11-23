@@ -31,7 +31,7 @@
 // useful for apps using `window.onbeforeunload`. See
 // https://github.com/meteor/meteor/pull/657
 
-Reload = {};
+export const Reload = {};
 
 var KEY_NAME = 'Meteor_Reload';
 
@@ -141,7 +141,7 @@ var pollProviders = function (tryReload, options) {
   options = options || {};
 
   var migrationData = {};
-  var remaining = _.clone(providers);
+  var remaining = providers.slice(0);
   var allReady = true;
   while (remaining.length) {
     var p = remaining.shift();
@@ -193,7 +193,7 @@ Reload._migrate = function (tryReload, options) {
 
 // Allows tests to isolate the list of providers.
 Reload._withFreshProvidersForTest = function (f) {
-  var originalProviders = _.clone(providers);
+  var originalProviders = providers.slice(0);
   providers = [];
   try {
     f();
@@ -216,7 +216,11 @@ Reload._reload = function (options) {
     return;
   reloading = true;
 
-  var tryReload = function () { _.defer(function () {
+  function tryReload() {
+    setTimeout(reload, 1);
+  }
+
+  function reload() {
     if (Reload._migrate(tryReload, options)) {
       // We'd like to make the browser reload the page using location.replace()
       // instead of location.reload(), because this avoids validating assets
@@ -229,7 +233,7 @@ Reload._reload = function (options) {
         window.location.replace(window.location.href);
       }
     }
-  }); };
+  }
 
   tryReload();
 };
