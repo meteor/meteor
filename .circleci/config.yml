@@ -173,6 +173,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
+              --browserstack \
               --junit /tmp/results/junit/0.xml \
               --with-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -210,6 +211,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
+              --browserstack \
               --junit /tmp/results/junit/1.xml \
               --file '^[a-b]|^c[a-n]|^co[a-l]|^compiler-plugins' \
               --without-tag "custom-warehouse"
@@ -248,6 +250,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
+              --browserstack \
               --junit /tmp/results/junit/2.xml \
               --file "^co[n-z]|^c[p-z]|^[d-k]" \
               --without-tag "custom-warehouse"
@@ -286,6 +289,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
+              --browserstack \
               --junit /tmp/results/junit/3.xml \
               --file '^[l-o]' \
               --without-tag "custom-warehouse"
@@ -324,6 +328,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
+              --browserstack \
               --junit /tmp/results/junit/4.xml \
               --file '^p' \
               --without-tag "custom-warehouse"
@@ -362,6 +367,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
+              --browserstack \
               --junit /tmp/results/junit/5.xml \
               --file '^run' \
               --without-tag "custom-warehouse"
@@ -400,6 +406,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
+              --browserstack \
               --junit /tmp/results/junit/6.xml \
               --file '^r(?!un)|^s' \
               --without-tag "custom-warehouse"
@@ -438,6 +445,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
+              --browserstack \
               --junit /tmp/results/junit/7.xml \
               --file '^[t-z]|^command-line' \
               --without-tag "custom-warehouse"
