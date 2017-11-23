@@ -48,6 +48,17 @@
   ]);
   ```
 
+* The `Tinytest.addAsync` API now accepts test functions that return
+  `Promise` objects, making the `onComplete` callback unnecessary:
+  ```js
+  Tinytest.addAsync("some async stuff", async function (test) {
+    test.equal(shouldReturnFoo(), "foo");
+    const bar = await shouldReturnBarAsync();
+    test.equal(bar, "bar");
+  });
+  ```
+  [PR #9409](https://github.com/meteor/meteor/pull/9409)
+
 * The `minifier-js` package has been updated to use `uglify-es` 3.1.9.
 
 * The `request` npm package used by the `http` package has been upgraded
