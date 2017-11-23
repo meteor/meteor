@@ -401,7 +401,7 @@ export class TestCase {
 
       const result = this.func(results, resolve);
       if (result && typeof result.then === "function") {
-        result.then(resolve);
+        result.then(resolve, reject);
       }
 
     }).then(
