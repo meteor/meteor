@@ -170,6 +170,11 @@
       "resolved": "https://registry.npmjs.org/parseurl/-/parseurl-1.3.2.tgz",
       "integrity": "sha1-/CidTtiZMRlGDBViUyYs3I3mW/M="
     },
+    "promise-polyfill": {
+      "version": "1.1.6",
+      "resolved": "https://registry.npmjs.org/promise-polyfill/-/promise-polyfill-1.1.6.tgz",
+      "integrity": "sha1-zQTv9G9clcOn0EVZHXm14+AfEtc="
+    },
     "qs": {
       "version": "6.4.0",
       "resolved": "https://registry.npmjs.org/qs/-/qs-6.4.0.tgz",
@@ -204,6 +209,11 @@
       "version": "1.3.1",
       "resolved": "https://registry.npmjs.org/statuses/-/statuses-1.3.1.tgz",
       "integrity": "sha1-+vUbnrdKrvOzrPStX2Gr8ky3uT4="
+    },
+    "stream-to-string": {
+      "version": "1.1.0",
+      "resolved": "https://registry.npmjs.org/stream-to-string/-/stream-to-string-1.1.0.tgz",
+      "integrity": "sha1-OSELATF+ars16FRTjgEwN7ajWUA="
     },
     "tmp": {
       "version": "0.0.33",

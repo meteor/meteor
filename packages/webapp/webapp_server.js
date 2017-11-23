@@ -122,7 +122,7 @@ WebApp.categorizeRequest = function (req) {
   return _.extend({
     browser: identifyBrowser(req.headers['user-agent']),
     url: parseUrl(req.url, true)
-  }, _.pick(req, 'dynamicHead', 'dynamicBody'));
+  }, _.pick(req, 'dynamicHead', 'dynamicBody', 'headers', 'cookies'));
 };
 
 // HTML attribute hooks: functions to be called to determine any attributes to
@@ -280,8 +280,6 @@ WebAppInternals.registerBoilerplateDataCallback = function (key, callback) {
 // memoizes on HTML attributes (used by, eg, appcache) and whether inline
 // scripts are currently allowed.
 // XXX so far this function is always called with arch === 'web.browser'
-var memoizedBoilerplate = {};
-
 function getBoilerplate(request, arch) {
   return getBoilerplateAsync(request, arch).await();
 }
@@ -307,34 +305,11 @@ function getBoilerplateAsync(request, arch) {
     });
   });
 
-  return promise.then(() => {
-    const useMemoized = ! (
-      data.dynamicHead ||
-      data.dynamicBody ||
-      madeChanges
-    );
-
-    if (! useMemoized) {
-      return boilerplate.toHTML(data);
-    }
-
-    // The only thing that changes from request to request (unless extra
-    // content is added to the head or body, or boilerplateDataCallbacks
-    // modified the data) are the HTML attributes (used by, eg, appcache)
-    // and whether inline scripts are allowed, so memoize based on that.
-    var memHash = JSON.stringify({
-      inlineScriptsAllowed,
-      htmlAttributes: data.htmlAttributes,
-      arch,
-    });
-
-    if (! memoizedBoilerplate[memHash]) {
-      memoizedBoilerplate[memHash] =
-        boilerplateByArch[arch].toHTML(data);
-    }
-
-    return memoizedBoilerplate[memHash];
-  });
+  return promise.then(() => ({
+    stream: boilerplate.toHTML(data),
+    statusCode: data.statusCode,
+    headers: data.headers,
+  }));
 }
 
 WebAppInternals.generateBoilerplateInstance = function (arch,
@@ -799,12 +774,23 @@ function runWebAppServer() {
       return getBoilerplateAsync(
         request,
         archKey
-      ).then(boilerplate => {
-        var statusCode = res.statusCode ? res.statusCode : 200;
+      ).then(({ stream,  statusCode, headers: newHeaders }) => {
+        if (!statusCode) {
+          statusCode = res.statusCode ? res.statusCode : 200;
+        }
+
+        if (newHeaders) {
+          Object.assign(headers, newHeaders);
+        }
+
         res.writeHead(statusCode, headers);
-        res.write(boilerplate);
-        res.end();
-      }, error => {
+
+        stream.pipe(res, {
+          // End the response when the stream ends.
+          end: true,
+        });
+
+      }).catch(error => {
         Log.error("Error running template: " + error.stack);
         res.writeHead(500, headers);
         res.end();

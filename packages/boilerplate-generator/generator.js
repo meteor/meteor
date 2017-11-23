@@ -1,4 +1,5 @@
 import { readFile } from 'fs';
+import { create as createStream } from "combined-stream2";
 
 import WebBrowserTemplate from './template-web.browser';
 import WebCordovaTemplate from './template-web.cordova';
@@ -8,9 +9,20 @@ const readUtf8FileSync = filename => Meteor.wrapAsync(readFile)(filename, 'utf8'
 
 const identity = value => value;
 
+function appendToStream(chunk, stream) {
+  if (typeof chunk === "string") {
+    stream.append(Buffer.from(chunk, "utf8"));
+  } else if (Buffer.isBuffer(chunk) ||
+             typeof chunk.read === "function") {
+    stream.append(chunk);
+  }
+}
+
 export class Boilerplate {
   constructor(arch, manifest, options = {}) {
-    this.template = _getTemplate(arch);
+    const { headTemplate, closeTemplate } = _getTemplate(arch);
+    this.headTemplate = headTemplate;
+    this.closeTemplate = closeTemplate;
     this.baseData = null;
 
     this._generateBoilerplateFromManifest(
@@ -23,13 +35,33 @@ export class Boilerplate {
   // purpose is to allow you to specify data that you might not know at
   // the time that you construct the Boilerplate object. (e.g. it is used
   // by 'webapp' to specify data that is only known at request-time).
+  // this returns a stream
   toHTML(extraData) {
-    if (!this.baseData || !this.template) {
+    if (!this.baseData || !this.headTemplate || !this.closeTemplate) {
       throw new Error('Boilerplate did not instantiate correctly.');
     }
 
-    return  "<!DOCTYPE html>\n" +
-      this.template({ ...this.baseData, ...extraData });
+    const data = {...this.baseData, ...extraData};
+    const start = "<!DOCTYPE html>\n" + this.headTemplate(data);
+
+    const { body, dynamicBody } = data;
+
+    const end = this.closeTemplate(data);
+    const response = createStream();
+
+    appendToStream(start, response);
+
+    if (body) {
+      appendToStream(body, response);
+    }
+
+    if (dynamicBody) {
+      appendToStream(dynamicBody, response);
+    }
+
+    appendToStream(end, response);
+
+    return response;
   }
 
   // XXX Exported to allow client-side only changes to rebuild the boilerplate
