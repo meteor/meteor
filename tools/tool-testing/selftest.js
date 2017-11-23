@@ -291,6 +291,7 @@ class TestList {
     tagsToSkip = (tagsToSkip || []);
     testState = (testState || null); // optional
     this.allTests = allTests;
+    this.failedTests = [];
     this.skippedTags = tagsToSkip;
     this.skipCounts = {};
     this.testState = testState;
@@ -340,6 +341,8 @@ class TestList {
   notifyFailed(test, failureObject) {
     // Mark the file that this test lives in as having failures.
     this.fileInfo[test.file].hasFailures = true;
+
+    this.failedTests.push(test);
 
     // Mark that the specific test failed.
     test.failed = true;
@@ -561,7 +564,6 @@ export function runTests(options) {
   testList.startTime = new Date;
 
   let totalRun = 0;
-  const failedTests = [];
 
   const totalTries = (options.retries || 0) + 1;
 
@@ -658,7 +660,6 @@ export function runTests(options) {
         Console.rawError("  => Test threw exception: " + failure.stack + "\n");
       }
 
-      failedTests.push(test);
       testList.notifyFailed(test, failure);
     } else {
       Console.error(
@@ -679,21 +680,22 @@ export function runTests(options) {
 
   Console.error(testList.generateSkipReport());
 
-  if (testList.filteredTests.length === 0) {
+  const failureCount = testList.failedTests.length;
+
+  if (!totalRun) {
     Console.error("No tests run.");
     return 0;
-  } else if (failedTests.length === 0) {
+  } else if (!failureCount) {
     let disclaimers = '';
-    if (testList.filteredTests.length < testList.allTests.length) {
+    if (totalRun < testList.allTests.length) {
       disclaimers += " other";
     }
     Console.error("All" + disclaimers + " tests passed.");
     return 0;
   } else {
-    const failureCount = failedTests.length;
     Console.error(failureCount + " failure" +
                   (failureCount > 1 ? "s" : "") + ":");
-    failedTests.forEach((test) => {
+    testList.failedTests.forEach((test) => {
       Console.rawError("  - " + test.file + ": " + test.name + "\n");
     });
     return 1;
