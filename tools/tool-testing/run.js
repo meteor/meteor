@@ -13,7 +13,11 @@
 // calling any of the 'files.*' methods on them is not safe.
 import { spawn } from 'child_process';
 import * as files from '../fs/files.js';
-import { markTop as parseStackMarkTop } from '../utils/parse-stack.js';
+import {
+  markTop as parseStackMarkTop,
+  parse as parseStackParse,
+} from '../utils/parse-stack.js';
+import { Console } from '../console/console.js';
 import Matcher from './matcher.js';
 import OutputLog from './output-log.js';
 import { randomPort, timeoutScaleFactor, sleepMs } from '../utils/utils.js';
@@ -21,10 +25,6 @@ import TestFailure from './test-failure.js';
 import { execFileSync } from '../utils/processes.js';
 
 let runningTest = null;
-
-export function setRunningTest(test) {
-  runningTest = test;
-}
 
 export default class Run {
   constructor(execPath, options) {
@@ -419,6 +419,103 @@ export default class Run {
     if (command.exit) {
       this.fakeMongoConnection.end();
       this.fakeMongoConnection = null;
+    }
+  }
+
+  static runTest(testList, test, testRunner, options = {}) {
+    options.retries = options.retries || 0;
+
+    let failure = null;
+    let startTime;
+    try {
+      runningTest = test;
+      startTime = +(new Date);
+      // ensure we mark the bottom of the stack each time we start a new test
+      testRunner();
+    } catch (e) {
+      failure = e;
+    } finally {
+      runningTest = null;
+      test.cleanup();
+    }
+
+    test.durationMs = +(new Date) - startTime;
+
+    if (failure) {
+      Console.error("... fail!", Console.options({ indent: 2 }));
+
+      if (options.retries > 0) {
+        Console.error(
+          "... retrying (" +
+          options.retries +
+          (options.retries === 1 ? " try" : " tries") +
+          " remaining) ...",
+          Console.options({ indent: 2 })
+        );
+
+        options.retries--;
+
+        return this.runTest(testList, test, testRunner, options);
+      }
+
+      if (failure instanceof TestFailure) {
+        const frames = parseStackParse(failure).outsideFiber;
+        const relpath = files.pathRelative(files.getCurrentToolsDir(),
+                                         frames[0].file);
+        Console.rawError("  => " + failure.reason + " at " +
+                         relpath + ":" + frames[0].line + "\n");
+        if (failure.reason === 'no-match' || failure.reason === 'junk-before' ||
+            failure.reason === 'match-timeout') {
+          Console.arrowError("Pattern: " + failure.details.pattern, 2);
+        }
+        if (failure.reason === "wrong-exit-code") {
+          const s = (status) => {
+            return status.signal || ('' + status.code) || "???";
+          };
+
+          Console.rawError(
+            "  => " + "Expected: " + s(failure.details.expected) +
+              "; actual: " + s(failure.details.actual) + "\n");
+        }
+        if (failure.reason === 'expected-exception') {
+        }
+        if (failure.reason === 'not-equal') {
+          Console.rawError(
+            "  => " + "Expected: " + JSON.stringify(failure.details.expected) +
+              "; actual: " + JSON.stringify(failure.details.actual) + "\n");
+        }
+
+        if (failure.details.run) {
+          failure.details.run.outputLog.end();
+          const lines = failure.details.run.outputLog.get();
+          if (! lines.length) {
+            Console.arrowError("No output", 2);
+          } else {
+            const historyLines = options.historyLines || 100;
+
+            Console.arrowError("Last " + historyLines + " lines:", 2);
+            lines.slice(-historyLines).forEach((line) => {
+              Console.rawError("  " +
+                               (line.channel === "stderr" ? "2| " : "1| ") +
+                               line.text +
+                               (line.bare ? "%" : "") + "\n");
+            });
+          }
+        }
+
+        if (failure.details.messages) {
+          Console.arrowError("Errors while building:", 2);
+          Console.rawError(failure.details.messages.formatMessages() + "\n");
+        }
+      } else {
+        Console.rawError("  => Test threw exception: " + failure.stack + "\n");
+      }
+
+      testList.notifyFailed(test, failure);
+    } else {
+      Console.error(
+        "... ok (" + test.durationMs + " ms)",
+        Console.options({ indent: 2 }));
     }
   }
 }
