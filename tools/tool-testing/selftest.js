@@ -613,7 +613,7 @@ export function runTests(options) {
     Console.error(failureCount + " failure" +
                   (failureCount > 1 ? "s" : "") + ":");
     testList.failedTests.forEach((test) => {
-      Console.rawError("  - " + test.file + ": " + test.name + "\n");
+      Console.rawError(`  - ${test.file}: ${test.name}\n`);
     });
     return 1;
   }

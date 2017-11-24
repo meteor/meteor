@@ -462,26 +462,24 @@ export default class Run {
         const frames = parseStackParse(failure).outsideFiber;
         const relpath = files.pathRelative(files.getCurrentToolsDir(),
                                          frames[0].file);
-        Console.rawError("  => " + failure.reason + " at " +
-                         relpath + ":" + frames[0].line + "\n");
+        Console.rawError(
+          `  => ${failure.reason} at ${relpath}:${frames[0].line}\n`);
         if (failure.reason === 'no-match' || failure.reason === 'junk-before' ||
             failure.reason === 'match-timeout') {
-          Console.arrowError("Pattern: " + failure.details.pattern, 2);
+          Console.arrowError(`Pattern: ${failure.details.pattern}`, 2);
         }
         if (failure.reason === "wrong-exit-code") {
-          const s = (status) => {
-            return status.signal || ('' + status.code) || "???";
-          };
+          const s = status => `${status.signal || status.code || "???"}`;
 
           Console.rawError(
-            "  => " + "Expected: " + s(failure.details.expected) +
-              "; actual: " + s(failure.details.actual) + "\n");
+            `  => Expected: ${s(failure.details.expected)}` +
+            `; actual: ${s(failure.details.actual)}\n`);
         }
         if (failure.reason === 'expected-exception') {
         }
         if (failure.reason === 'not-equal') {
           Console.rawError(
-            "  => " + "Expected: " + JSON.stringify(failure.details.expected) +
+            "  => Expected: " + JSON.stringify(failure.details.expected) +
               "; actual: " + JSON.stringify(failure.details.actual) + "\n");
         }
 
@@ -493,7 +491,7 @@ export default class Run {
           } else {
             const historyLines = options.historyLines || 100;
 
-            Console.arrowError("Last " + historyLines + " lines:", 2);
+            Console.arrowError(`Last ${historyLines} lines:`, 2);
             lines.slice(-historyLines).forEach((line) => {
               Console.rawError("  " +
                                (line.channel === "stderr" ? "2| " : "1| ") +
@@ -508,13 +506,12 @@ export default class Run {
           Console.rawError(failure.details.messages.formatMessages() + "\n");
         }
       } else {
-        Console.rawError("  => Test threw exception: " + failure.stack + "\n");
+        Console.rawError(`  => Test threw exception: ${failure.stack}\n`);
       }
 
       testList.notifyFailed(test, failure);
     } else {
-      Console.error(
-        "... ok (" + test.durationMs + " ms)",
+      Console.error(`... ok (${test.durationMs} ms)`,
         Console.options({ indent: 2 }));
     }
   }
