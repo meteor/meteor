@@ -10,6 +10,7 @@ Npm.depends({"basic-auth-connect": "1.0.0",
              errorhandler: "1.5.0",
              parseurl: "1.3.2",
              send: "0.16.1",
+             "stream-to-string": "1.1.0",
              "qs-middleware": "1.0.3",
              useragent: "2.2.1"});
 
