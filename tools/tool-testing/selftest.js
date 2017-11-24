@@ -598,12 +598,12 @@ export function runTests(options) {
 
   const failureCount = testList.failedTests.length;
 
-  if (testList.filteredTests.length === 0) {
+  if (!totalRun) {
     Console.error("No tests run.");
     return 0;
   } else if (!failureCount) {
     let disclaimers = '';
-    if (testList.filteredTests.length < testList.allTests.length) {
+    if (totalRun < testList.allTests.length) {
       disclaimers += " other";
     }
     Console.error("All" + disclaimers + " tests passed.");
