@@ -260,6 +260,8 @@ You can read more about testing in Meteor in the [Testing article](testing.html)
 
 To publish your package to Atmosphere, run [`meteor publish`](http://docs.meteor.com/#/full/meteorpublish) from the package directory. To publish a package the package name must follow the format of `username:my-package` and the package must contain a [SemVer version number](#version-constraints).
 
+> Note that if you have a local `node_modules` directory in your package, remove it before running `meteor publish`. While local `node_modules` directories are allowed in Meteor packages, their paths can collide with the paths of `Npm.depends` dependencies when published.
+
 <h3 id="local-vs-published">Cache format</h3>
 
 If you've ever looked inside Meteor's package cache at `~/.meteor/packages`, you know that the on-disk format of a built Meteor package is completely different from the way the source code looks when you're developing the package. The idea is that the target format of a package can remain consistent even if the API for development changes.
