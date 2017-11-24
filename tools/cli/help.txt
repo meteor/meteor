@@ -386,13 +386,14 @@ Options:
   --architecture      Builds the server for a different architecture than your
                       developer machine's architecture. Valid architectures
                       include os.osx.x86_64, os.linux.x86_64, os.linux.x86_32,
-                      and os.windows.x86_32. Note: This option selects the
-                      architecture of the binary-dependent Atmosphere packages
-                      you would like bundled into your application, when those
-                      packages were specifically published for multiple
-                      architectures (i.e. with meteor publish-for-arch). If
-                      your project doesn't use any Atmosphere packages that
-                      have binary dependencies, --architecture has no effect.
+                      os.windows.x86_32, and os.windows.x86_64. Note: This
+                      option selects the architecture of the binary-dependent
+                      Atmosphere packages you would like bundled into your
+                      application, when those packages were specifically
+                      published for multiple architectures (i.e. with meteor
+                      publish-for-arch). If your project doesn't use any
+                      Atmosphere packages that have binary dependencies,
+                      --architecture has no effect.
   --allow-incompatible-update   Allow packages in your project to be upgraded or
                       downgraded to versions that are potentially incompatible
                       with the current versions, if required to satisfy all
@@ -615,7 +616,7 @@ Options:
                     test app rebuild.
   --extra-packages  Run with additional packages (comma separated, for example:
                     --extra-packages "package-name1, package-name2@1.2.3")
-  --driver-package  Test driver package to use to run tests and display results. 
+  --driver-package  Test driver package to use to run tests and display results.
                     For example: --driver-package meteortesting:mocha
 
 >>> test
