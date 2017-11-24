@@ -511,7 +511,6 @@ export default class Run {
         Console.rawError("  => Test threw exception: " + failure.stack + "\n");
       }
 
-      failedTests.push(test);
       testList.notifyFailed(test, failure);
     } else {
       Console.error(
