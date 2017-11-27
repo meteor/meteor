@@ -37,6 +37,21 @@ run_env_change: &run_env_change
     # Reload sysctl so these are in effect.
     sudo sysctl -p
 
+run_browserstack: &run_browserstack
+  background: true
+  name: BrowserStack Setup
+  command: |
+    cd /tmp
+
+    # Download the browserstack binary file
+    wget -O bs_local.zip "https://www.browserstack.com/browserstack-local/BrowserStackLocal-linux-x64.zip"
+
+    # Unzip the browserstack binary file
+    unzip bs_local.zip
+
+    # Run the file with your access key
+    ./BrowserStackLocal $BROWSERSTACK_ACCESS_KEY
+
 # A reusable "run" snippet which enables the continued logging of memoryusage
 # to a file on disk which can be saved to build artifacts for later analysis.
 run_log_mem_use: &run_log_mem_use
@@ -160,6 +175,8 @@ jobs:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
+      - run:
+          <<: *run_browserstack
       - attach_workspace:
           at: .
       - run:
@@ -198,6 +215,8 @@ jobs:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
+      - run:
+          <<: *run_browserstack
       - attach_workspace:
           at: .
       - run:
@@ -237,6 +256,8 @@ jobs:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
+      - run:
+          <<: *run_browserstack
       - attach_workspace:
           at: .
       - run:
@@ -276,6 +297,8 @@ jobs:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
+      - run:
+          <<: *run_browserstack
       - attach_workspace:
           at: .
       - run:
@@ -315,6 +338,8 @@ jobs:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
+      - run:
+          <<: *run_browserstack
       - attach_workspace:
           at: .
       - run:
@@ -354,6 +379,8 @@ jobs:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
+      - run:
+          <<: *run_browserstack
       - attach_workspace:
           at: .
       - run:
@@ -393,6 +420,8 @@ jobs:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
+      - run:
+          <<: *run_browserstack
       - attach_workspace:
           at: .
       - run:
@@ -432,6 +461,8 @@ jobs:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
+      - run:
+          <<: *run_browserstack
       - attach_workspace:
           at: .
       - run:
