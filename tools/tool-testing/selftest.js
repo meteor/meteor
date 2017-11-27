@@ -571,6 +571,7 @@ export function runTests(options) {
     Console.error(test.file + ": " + test.name + " ... ");
 
     Run.runTest(
+      testList,
       test,
       parseStackMarkBottom(() => {
         test.f(options);

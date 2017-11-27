@@ -422,7 +422,7 @@ export default class Run {
     }
   }
 
-  static runTest(test, testRunner, options = {}) {
+  static runTest(testList, test, testRunner, options = {}) {
     options.retries = options.retries || 0;
 
     let failure = null;
@@ -455,7 +455,7 @@ export default class Run {
 
         options.retries--;
 
-        return this.runTest(test, testRunner, options);
+        return this.runTest(testList, test, testRunner, options);
       }
 
       if (failure instanceof TestFailure) {
