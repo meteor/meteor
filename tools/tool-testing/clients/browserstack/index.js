@@ -143,8 +143,9 @@ export default class BrowserStackClient extends Client {
 
     const options = {
       key: this.constructor._getBrowserStackKey(),
-      onlyAutomate: true,
+      // onlyAutomate: true,
       verbose: 2,
+      force: true,
       // The ",0" means "SSL off".  It's localhost, after all.
       only: `${this.host},${this.port},0`,
     }
@@ -152,8 +153,11 @@ export default class BrowserStackClient extends Client {
     // Use the local identifier flag to mark this specific instance.
     // https://git.io/vbe9E
     if (process.env.CIRCLECI === "true") {
-      options.localIdentifier = process.env.CIRCLE_BUILD_URL;
+      options.localIdentifier = process.env.CIRCLE_BUILD_NUM;
       options.logFile = "/tmp/results/browserstacklocal.log";
+      options['enable-logging-for-api'] = true;
+      // We're okay with BrowserStack having access to non-port 3000.
+      delete options.only;
     }
 
     return new Promise((resolve, reject) => {
