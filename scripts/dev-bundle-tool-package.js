@@ -15,13 +15,14 @@ var packageJson = {
     pacote: "https://github.com/meteor/pacote/tarball/dea6a20a68057237a498f6c047e9b3ecf5df749d",
     "node-gyp": "3.6.2",
     "node-pre-gyp": "0.6.36",
-    "meteor-babel": "7.0.0-beta.3-2",
+    "meteor-babel": "7.0.0-beta.32-1",
     "meteor-promise": "0.8.6",
     promise: "8.0.1",
-    reify: "0.12.3",
+    reify: "0.13.0",
     fibers: "2.0.0",
     // So that Babel 6 can emit require("babel-runtime/helpers/...") calls.
     "babel-runtime": "7.0.0-beta.3",
+    "@babel/runtime": "7.0.0-beta.32",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
     // in the package too) because we should consider using lodash instead
     // (and there are backwards-incompatible changes either way).
