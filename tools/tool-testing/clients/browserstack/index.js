@@ -95,7 +95,7 @@ export default class BrowserStackClient extends Client {
     }
 
     // this._launchBrowserStackTunnel()
-    Process.resolve()
+    Promise.resolve()
       .then(triggerRequest)
       .catch((e) => {
         // In the event of an error, shut down the daemon.
