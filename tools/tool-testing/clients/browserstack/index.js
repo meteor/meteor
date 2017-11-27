@@ -98,6 +98,7 @@ export default class BrowserStackClient extends Client {
       .then(triggerRequest)
       .catch((e) => {
         // In the event of an error, shut down the daemon.
+        console.log("An error occurred during connection. Stopping tunnel.", e);
         this.stop();
 
         throw e;
