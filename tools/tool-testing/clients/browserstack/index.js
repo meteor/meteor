@@ -154,7 +154,6 @@ export default class BrowserStackClient extends Client {
     // Use the local identifier flag to mark this specific instance.
     // https://git.io/vbe9E
     if (process.env.CIRCLECI === "true") {
-      options.localIdentifier = process.env.CIRCLE_BUILD_NUM;
       options.logFile = "/tmp/results/browserstacklocal.log";
       options['enable-logging-for-api'] = true;
       // We're okay with BrowserStack having access to non-port 3000.
