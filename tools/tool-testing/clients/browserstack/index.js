@@ -153,6 +153,7 @@ export default class BrowserStackClient extends Client {
     // https://git.io/vbe9E
     if (process.env.CIRCLECI === "true") {
       options.localIdentifier = process.env.CIRCLE_BUILD_URL;
+      options.logFile = "/tmp/results/browserstacklocal.log";
     }
 
     return new Promise((resolve, reject) => {
