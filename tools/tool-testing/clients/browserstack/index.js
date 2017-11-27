@@ -157,9 +157,9 @@ export default class BrowserStackClient extends Client {
     }
 
     return new Promise((resolve, reject) => {
-      this.tunnelProcess.start(options, (err, result) => {
+      this.tunnelProcess.start(options, (err) => {
         if (err) {
-          reject();
+          reject(err);
         } else {
           resolve();
         }
