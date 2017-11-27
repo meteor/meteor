@@ -49,6 +49,11 @@ export function disable(shellDir) {
   } catch (ignored) {}
 }
 
+// Shell commands need to be executed in a Fiber in case they call into
+// code that yields. Using a Promise is an even better idea, since it runs
+// its callbacks in Fibers drawn from a pool, so the Fibers are recycled.
+const evalCommandPromise = Promise.resolve();
+
 class Server {
   constructor(shellDir) {
     var self = this;
@@ -126,11 +131,36 @@ class Server {
       }
       delete options.columns;
 
+      // Immutable options.
+      _.extend(options, {
+        input: replInputSocket,
+        useGlobal: false,
+        output: socket
+      });
+
+      // Overridable options.
+      _.defaults(options, {
+        prompt: "> ",
+        terminal: true,
+        useColors: true,
+        ignoreUndefined: true,
+      });
+
+      // The prompt during an evaluateAndExit must be blank to ensure
+      // that the prompt doesn't inadvertently get parsed as part of
+      // the JSON communication channel.
       if (options.evaluateAndExit) {
-        evalCommand.call(
-          Object.create(null), // Dummy repl object without ._RecoverableError.
+        options.prompt = "";
+      }
+
+      // Start the REPL.
+      self.startREPL(options);
+
+      if (options.evaluateAndExit) {
+        self._wrappedDefaultEval.call(
+          Object.create(null),
           options.evaluateAndExit.command,
-          null, // evalCommand ignores the context parameter, anyway
+          global,
           options.evaluateAndExit.filename || "<meteor shell>",
           function (error, result) {
             if (socket) {
@@ -151,46 +181,64 @@ class Server {
       }
       delete options.evaluateAndExit;
 
-      // Immutable options.
-      _.extend(options, {
-        eval: evalCommand,
-        input: replInputSocket,
-        useGlobal: false,
-        output: socket
-      });
-
-      // Overridable options.
-      _.defaults(options, {
-        prompt: "> ",
-        terminal: true,
-        useColors: true,
-        ignoreUndefined: true,
-      });
-
-      self.startREPL(options);
+      self.enableInteractiveMode(options);
     });
   }
 
   startREPL(options) {
-    var self = this;
-
     // Make sure this function doesn't try to write anything to the output
     // stream after it has been closed.
     options.output.on("close", function() {
       options.output = null;
     });
 
-    const repl = self.repl = moduleRepl.start(options);
+    const repl = this.repl = moduleRepl.start(options);
 
-    // Change the context of the REPL after start to
-    // be global, so that Meteor globals (like, Underscore, Meteor,
-    // etc.) are available to the REPL (and it's tab completion!)
-    // without being potentially overridden by Node REPL special
-    // variables (namely, `_`).
+    // This is technique of setting `repl.context` is similar to how the
+    // `useGlobal` option would work during a normal `repl.start()` and
+    // allows shell access (and tab completion!) to Meteor globals (i.e.
+    // Underscore _, Meteor, etc.). By using this technique, which changes
+    // the context after startup, we avoid stomping on the special `_`
+    // variable (in `repl` this equals the value of the last command) from
+    // being overridden in the client/server socket-handshaking.  Furthermore,
+    // by setting `useGlobal` back to true, we allow the default eval function
+    // to use the desired `runInThisContext` method (https://git.io/vbvAB).
     repl.context = global;
+    repl.useGlobal = true;
 
+    // In order to avoid duplicating code here, specifically the complexities
+    // of catching so-called "Recoverable Errors" (https://git.io/vbvbl),
+    // we will wrap the default eval, run it in a Fiber (via a Promise), and
+    // give it the opportunity to decide if the user is mid-code-block.
+    const defaultEval = repl.eval;
+
+    function wrappedDefaultEval(code, context, file, callback) {
+      if (Package.ecmascript) {
+        try {
+          code = Package.ecmascript.ECMAScript.compileForShell(code);
+        } catch (err) {
+          // Any Babel error here might be just fine since it's
+          // possible the code was incomplete (multi-line code on the REPL).
+          // The defaultEval below will use its own functionality to determine
+          // if this error is "recoverable".
+        }
+      }
+
+      evalCommandPromise
+        .then(() => defaultEval(code, context, file, callback))
+        .catch(callback);
+    }
+
+    // Have the REPL use the newly wrapped function instead and store the
+    // _wrappedDefaultEval so that evalulateAndExit calls can use it directly.
+    repl.eval = this._wrappedDefaultEval = wrappedDefaultEval;
+  }
+
+  enableInteractiveMode(options) {
     // History persists across shell sessions!
-    self.initializeHistory();
+    this.initializeHistory();
+
+    const repl = this.repl;
 
     // Implement an alternate means of fetching the return value,
     // via `__` (double underscore) as originally implemented in:
@@ -342,149 +390,6 @@ function getHistoryFile(shellDir) {
   return path.join(shellDir, "history");
 }
 
-// Shell commands need to be executed in a Fiber in case they call into
-// code that yields. Using a Promise is an even better idea, since it runs
-// its callbacks in Fibers drawn from a pool, so the Fibers are recycled.
-var evalCommandPromise = Promise.resolve();
-
-function evalCommand(command, context, filename, callback) {
-  var repl = this;
-
-  function wrapErrorIfRecoverable(error, code) {
-    if (isRecoverableError(error, code)) {
-      return new moduleRepl.Recoverable(error);
-    } else {
-      return error;
-    }
-  }
-
-  if (Package.ecmascript) {
-    try {
-      command = Package.ecmascript.ECMAScript.compileForShell(command);
-    } catch (error) {
-      callback(wrapErrorIfRecoverable(error, command));
-      return;
-    }
-  }
-
-  try {
-    var script = new vm.Script(command, {
-      filename: filename,
-      displayErrors: false
-    });
-  } catch (parseError) {
-    callback(wrapErrorIfRecoverable(parseError, command));
-    return;
-  }
-
-  evalCommandPromise.then(function () {
-    if (repl.input) {
-      callback(null, script.runInThisContext());
-    } else {
-      // If repl didn't start, `require` and `module` are not visible
-      // in the vm context.
-      setRequireAndModule(global);
-      callback(null, script.runInThisContext());
-    }
-  }).catch(callback);
-}
-
-// The isRecoverableError and isCodeRecoverable functions are taken from
-// https://github.com/nodejs/node/blob/3319b2092f/lib/repl.js#L1310-L1399
-
-// If the error is that we've unexpectedly ended the input,
-// then let the user try to recover by adding more input.
-function isRecoverableError(e, code) {
-  if (e && e.name === 'SyntaxError') {
-    var message = e.message;
-    if (message === 'Unterminated template literal' ||
-        message === 'Missing } in template expression') {
-      return true;
-    }
-
-    if (message.startsWith('Unexpected end of input') ||
-        message.startsWith('missing ) after argument list') ||
-        message.startsWith('Unexpected token')) {
-      return true;
-    }
-
-    if (message === 'Invalid or unexpected token') {
-      return isCodeRecoverable(code);
-    }
-  }
-
-  return false;
-}
-
-// Check whether a code snippet should be forced to fail in the REPL.
-function isCodeRecoverable(code) {
-  var current, previous, stringLiteral;
-  var isBlockComment = false;
-  var isSingleComment = false;
-  var isRegExpLiteral = false;
-  var lastChar = code.charAt(code.length - 2);
-  var prevTokenChar = null;
-
-  for (var i = 0; i < code.length; i++) {
-    previous = current;
-    current = code[i];
-
-    if (previous === '\\' && (stringLiteral || isRegExpLiteral)) {
-      current = null;
-      continue;
-    }
-
-    if (stringLiteral) {
-      if (stringLiteral === current) {
-        stringLiteral = null;
-      }
-      continue;
-    } else {
-      if (isRegExpLiteral && current === '/') {
-        isRegExpLiteral = false;
-        continue;
-      }
-
-      if (isBlockComment && previous === '*' && current === '/') {
-        isBlockComment = false;
-        continue;
-      }
-
-      if (isSingleComment && current === '\n') {
-        isSingleComment = false;
-        continue;
-      }
-
-      if (isBlockComment || isRegExpLiteral || isSingleComment) continue;
-
-      if (current === '/' && previous === '/') {
-        isSingleComment = true;
-        continue;
-      }
-
-      if (previous === '/') {
-        if (current === '*') {
-          isBlockComment = true;
-        } else if (
-          // Distinguish between a division operator and the start of a regex
-          // by examining the non-whitespace character that precedes the /
-          [null, '(', '[', '{', '}', ';'].includes(prevTokenChar)
-        ) {
-          isRegExpLiteral = true;
-        }
-        continue;
-      }
-
-      if (current.trim()) prevTokenChar = current;
-    }
-
-    if (current === '\'' || current === '"') {
-      stringLiteral = current;
-    }
-  }
-
-  return stringLiteral ? lastChar === '\\' : isBlockComment;
-}
 
 function setRequireAndModule(context) {
   if (Package.modules) {
