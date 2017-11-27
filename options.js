@@ -3,16 +3,17 @@
 const babelPresetMeteor = require("babel-preset-meteor");
 const reifyPlugin = require("babel-plugin-transform-es2015-modules-reify");
 const strictModulesPluginFactory =
-  require("babel-plugin-transform-es2015-modules-commonjs").default;
+  require("@babel/plugin-transform-modules-commonjs").default;
 
 const babelModulesPlugin = [function () {
   const plugin = strictModulesPluginFactory.apply(this, arguments);
   // Since babel-preset-meteor uses an exact version of the
-  // babel-plugin-transform-es2015-modules-commonjs transform (6.8.0), we
-  // can be sure this plugin.inherits property is indeed the
-  // babel-plugin-transform-strict-mode transform that we wish to disable.
-  // Otherwise it would be difficult to know exactly what we're deleting
-  // here, since plugins don't provide much identifying information.
+  // @babel/plugin-transform-modules-commonjs transform (6.8.0), we can be
+  // sure this plugin.inherits property is indeed the
+  // @babel/plugin-transform-strict-mode transform that we wish to
+  // disable. Otherwise it would be difficult to know exactly what we're
+  // deleting here, since plugins don't provide much identifying
+  // information.
   delete plugin.inherits;
   return plugin;
 }, {
@@ -44,7 +45,7 @@ exports.getDefaults = function getDefaults(features) {
   if (! (features &&
          features.runtime === false)) {
     combined.plugins.push([
-      require("babel-plugin-transform-runtime"),
+      require("@babel/plugin-transform-runtime"),
       { // Avoid importing polyfills for things like Object.keys, which
         // Meteor already shims in other ways.
         polyfill: false }
@@ -53,9 +54,9 @@ exports.getDefaults = function getDefaults(features) {
 
   if (features) {
     if (features.react) {
-      combined.presets.push(require("babel-preset-react"));
+      combined.presets.push(require("@babel/preset-react"));
       combined.plugins.push(
-        require("babel-plugin-transform-class-properties")
+        require("@babel/plugin-proposal-class-properties")
       );
     }
 
@@ -85,8 +86,8 @@ exports.getDefaults = function getDefaults(features) {
 function getDefaultsForNode8(features) {
   const plugins = [
     // Support Flow type syntax by simply stripping it out.
-    require("babel-plugin-syntax-flow"),
-    require("babel-plugin-transform-flow-strip-types"),
+    require("@babel/plugin-syntax-flow"),
+    require("@babel/plugin-transform-flow-strip-types"),
 
     // Compile import/export syntax with Reify.
     [reifyPlugin, {
@@ -96,18 +97,18 @@ function getDefaultsForNode8(features) {
 
     // Import helpers from the babel-runtime package rather than
     // redefining them at the top of each module.
-    [require("babel-plugin-transform-runtime"), {
+    [require("@babel/plugin-transform-runtime"), {
       // Avoid importing polyfills for things like Object.keys, which
       // Meteor already shims in other ways.
       polyfill: false
     }],
 
     // Make assigning to imported symbols a syntax error.
-    require("babel-plugin-check-es2015-constants"),
+    require("@babel/plugin-check-constants"),
 
     // Not fully supported in Node 8 without the --harmony flag.
-    require("babel-plugin-syntax-object-rest-spread"),
-    require("babel-plugin-transform-object-rest-spread"),
+    require("@babel/plugin-syntax-object-rest-spread"),
+    require("@babel/plugin-proposal-object-rest-spread"),
 
     // Ensure that async functions run in a Fiber, while also taking
     // full advantage of native async/await support in Node 8.
@@ -121,7 +122,7 @@ function getDefaultsForNode8(features) {
     require("./plugins/dynamic-import.js"),
 
     // Enable class property syntax for server-side React code.
-    require("babel-plugin-transform-class-properties"),
+    require("@babel/plugin-proposal-class-properties"),
 
     // In case babel-plugin-transform-runtime generated any import
     // declarations after reifyPlugin ran, make sure to compile them.
@@ -135,7 +136,7 @@ function getDefaultsForNode8(features) {
   if (features) {
     if (features.react) {
       // Enable JSX syntax for server-side React code.
-      presets.push(require("babel-preset-react"));
+      presets.push(require("@babel/preset-react"));
     }
   }
 

@@ -1,5 +1,5 @@
 import assert from "assert";
-import {transform} from "babel-core";
+import { transform } from "@babel/core";
 import {
   default as testDefault,
   helper as testHelper,

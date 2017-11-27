@@ -35,7 +35,7 @@ function compile(source, options) {
   // destroy unreliable token information. Don't worry; Babel can cope.
   delete ast.tokens;
 
-  const babelCore = require("babel-core");
+  const babelCore = require("@babel/core");
   let result;
 
   function transform(presets, generateCode) {
@@ -79,7 +79,7 @@ function compile(source, options) {
 exports.minify = function minify(source, options) {
   // We are not compiling the code in this step, only minifying, so reify
   // is not used.
-  return require("babel-core").transformFromAst(
+  return require("@babel/core").transformFromAst(
     parse(source),
     source,
     options || getMinifierOptions()
