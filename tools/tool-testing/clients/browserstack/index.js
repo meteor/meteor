@@ -144,9 +144,7 @@ export default class BrowserStackClient extends Client {
 
     const options = {
       key: this.constructor._getBrowserStackKey(),
-      // onlyAutomate: true,
       verbose: 2,
-      force: true,
       // The ",0" means "SSL off".  It's localhost, after all.
       only: `${this.host},${this.port},0`,
     }
