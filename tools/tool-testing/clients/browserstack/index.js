@@ -94,7 +94,8 @@ export default class BrowserStackClient extends Client {
       this.driver.get(this.url);
     }
 
-    this._launchBrowserStackTunnel()
+    // this._launchBrowserStackTunnel()
+    Process.resolve()
       .then(triggerRequest)
       .catch((e) => {
         // In the event of an error, shut down the daemon.
