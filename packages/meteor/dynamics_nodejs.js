@@ -54,12 +54,10 @@ EVp.withValue = function (value, func) {
   var saved = currentValues[this.slot];
   try {
     currentValues[this.slot] = value;
-    var ret = func();
+    return Promise.await(func());
   } finally {
     currentValues[this.slot] = saved;
   }
-
-  return ret;
 };
 
 // Meteor application code is always supposed to be run inside a
