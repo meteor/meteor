@@ -1325,7 +1325,7 @@ main.registerCommand({
   }
 
   let path = files.pathJoin(options.appDir, '.meteor', 'local');
-  if (options['keep-db']) {
+  if (options['keep-db'] && !process.env.MONGO_URL) {
     path = `${files.convertToOSPath(path + '/')}!(db)`;
   }
 
