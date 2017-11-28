@@ -38,7 +38,12 @@ compiler.BUILT_BY = 'meteor/30';
 
 // This is a list of all possible architectures that a build can target. (Client
 // is expanded into 'web.browser' and 'web.cordova')
-compiler.ALL_ARCHES = [ "os", "web.browser", "web.cordova" ];
+compiler.ALL_ARCHES = [
+  "os",
+  "web.browser",
+  "web.browser.legacy",
+  "web.cordova"
+];
 
 compiler.compile = Profile(function (packageSource, options) {
   return `compiler.compile(${ packageSource.name || 'the app' })`;

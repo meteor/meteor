@@ -36,6 +36,7 @@ WebAppInternals.NpmModules = {
   }
 };
 
+// TODO Accommodate web.browser.legacy, too.
 WebApp.defaultArch = 'web.browser';
 
 // XXX maps archs to manifests

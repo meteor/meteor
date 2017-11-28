@@ -382,9 +382,12 @@ function doRunCommand(options) {
     runLog.setRawLogs(true);
   }
 
-  let webArchs = ['web.browser'];
-  if (!_.isEmpty(runTargets) || options['mobile-server']) {
-    webArchs.push("web.cordova");
+  let webArchs = projectContext.platformList.getWebArchs();
+  if (! _.isEmpty(runTargets) ||
+      options['mobile-server']) {
+    if (webArchs.indexOf("web.cordova") < 0) {
+      webArchs.push("web.cordova");
+    }
   }
 
   let cordovaRunner;
