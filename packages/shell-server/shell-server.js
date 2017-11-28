@@ -1,14 +1,19 @@
-var assert = require("assert");
-var path = require("path");
-var stream = require("stream");
-var fs = require("fs");
-var net = require("net");
-var vm = require("vm");
-var _ = require("underscore");
+import assert from "assert";
+import { join as pathJoin } from "path";
+import { PassThrough } from "stream";
+import {
+  closeSync,
+  openSync,
+  readFileSync,
+  unlink,
+  writeFileSync,
+  writeSync,
+} from "fs";
+import { createServer } from "net";
 import { default as moduleRepl } from "repl";
 
-var INFO_FILE_MODE = parseInt("600", 8); // Only the owner can read or write.
-var EXITING_MESSAGE = "Shell exiting...";
+const INFO_FILE_MODE = parseInt("600", 8); // Only the owner can read or write.
+const EXITING_MESSAGE = "Shell exiting...";
 
 // Invoked by the server process to listen for incoming connections from
 // shell clients. Each connection gets its own REPL instance.
@@ -22,7 +27,7 @@ export function listen(shellDir) {
   if (typeof Meteor === "object") {
     Meteor.startup(callback);
   } else if (typeof __meteor_bootstrap__ === "object") {
-    var hooks = __meteor_bootstrap__.startupHooks;
+    const hooks = __meteor_bootstrap__.startupHooks;
     if (hooks) {
       hooks.push(callback);
     } else {
@@ -38,7 +43,7 @@ export function disable(shellDir) {
     // Replace info.json with a file that says the shell server is
     // disabled, so that any connected shell clients will fail to
     // reconnect after the server process closes their sockets.
-    fs.writeFileSync(
+    writeFileSync(
       getInfoFile(shellDir),
       JSON.stringify({
         status: "disabled",
@@ -56,29 +61,29 @@ const evalCommandPromise = Promise.resolve();
 
 class Server {
   constructor(shellDir) {
-    var self = this;
-    assert.ok(self instanceof Server);
+    assert.ok(this instanceof Server);
 
-    self.shellDir = shellDir;
-    self.key = Math.random().toString(36).slice(2);
+    this.shellDir = shellDir;
+    this.key = Math.random().toString(36).slice(2);
 
-    self.server = net.createServer(function(socket) {
-      self.onConnection(socket);
-    }).on("error", function(err) {
-      console.error(err.stack);
-    });
+    this.server =
+      createServer((socket) => {
+        this.onConnection(socket);
+      })
+      .on("error", (err) => {
+        console.error(err.stack);
+      });
   }
 
   listen() {
-    var self = this;
-    var infoFile = getInfoFile(self.shellDir);
+    const infoFile = getInfoFile(this.shellDir);
 
-    fs.unlink(infoFile, function() {
-      self.server.listen(0, "127.0.0.1", function() {
-        fs.writeFileSync(infoFile, JSON.stringify({
+    unlink(infoFile, () => {
+      this.server.listen(0, "127.0.0.1", () => {
+        writeFileSync(infoFile, JSON.stringify({
           status: "enabled",
-          port: self.server.address().port,
-          key: self.key
+          port: this.server.address().port,
+          key: this.key
         }) + "\n", {
           mode: INFO_FILE_MODE
         });
@@ -87,8 +92,6 @@ class Server {
   }
 
   onConnection(socket) {
-    var self = this;
-
     // Make sure this function doesn't try to write anything to the socket
     // after it has been closed.
     socket.on("close", function() {
@@ -97,7 +100,7 @@ class Server {
 
     // If communication is not established within 1000ms of the first
     // connection, forcibly close the socket.
-    var timeout = setTimeout(function() {
+    const timeout = setTimeout(function() {
       if (socket) {
         socket.removeAllListeners("data");
         socket.end(EXITING_MESSAGE + "\n");
@@ -108,7 +111,7 @@ class Server {
     // JSON object over the socket. For example, only the client knows
     // whether it's running a TTY or an Emacs subshell or some other kind of
     // terminal, so the client must decide the value of options.terminal.
-    readJSONFromStream(socket, function (error, options, replInputSocket) {
+    readJSONFromStream(socket, (error, options, replInputSocket) => {
       clearTimeout(timeout);
 
       if (error) {
@@ -117,7 +120,7 @@ class Server {
         return;
       }
 
-      if (options.key !== self.key) {
+      if (options.key !== this.key) {
         if (socket) {
           socket.end(EXITING_MESSAGE + "\n");
         }
@@ -131,20 +134,27 @@ class Server {
       }
       delete options.columns;
 
-      // Immutable options.
-      _.extend(options, {
-        input: replInputSocket,
-        useGlobal: false,
-        output: socket
-      });
+      options = Object.assign(
+        Object.create(null),
 
-      // Overridable options.
-      _.defaults(options, {
-        prompt: "> ",
-        terminal: true,
-        useColors: true,
-        ignoreUndefined: true,
-      });
+        // Defaults for configurable options.
+        {
+          prompt: "> ",
+          terminal: true,
+          useColors: true,
+          ignoreUndefined: true,
+        },
+
+        // Configurable options
+        options,
+
+        // Immutable options.
+        {
+          input: replInputSocket,
+          useGlobal: false,
+          output: socket
+        }
+      );
 
       // The prompt during an evaluateAndExit must be blank to ensure
       // that the prompt doesn't inadvertently get parsed as part of
@@ -154,26 +164,32 @@ class Server {
       }
 
       // Start the REPL.
-      self.startREPL(options);
+      this.startREPL(options);
 
       if (options.evaluateAndExit) {
-        self._wrappedDefaultEval.call(
+        this._wrappedDefaultEval.call(
           Object.create(null),
           options.evaluateAndExit.command,
           global,
           options.evaluateAndExit.filename || "<meteor shell>",
           function (error, result) {
             if (socket) {
-              var message = error ? {
-                error: error + "",
-                code: 1
-              } : {
-                result: result
-              };
+              function sendResultToSocket(message) {
+                // Sending back a JSON payload allows the client to
+                // distinguish between errors and successful results.
+                socket.end(JSON.stringify(message) + "\n");
+              }
 
-              // Sending back a JSON payload allows the client to
-              // distinguish between errors and successful results.
-              socket.end(JSON.stringify(message) + "\n");
+              if (error) {
+                sendResultToSocket({
+                  error: error.toString(),
+                  code: 1
+                });
+              } else {
+                sendResultToSocket({
+                  result,
+                });
+              }
             }
           }
         );
@@ -181,7 +197,7 @@ class Server {
       }
       delete options.evaluateAndExit;
 
-      self.enableInteractiveMode(options);
+      this.enableInteractiveMode(options);
     });
   }
 
@@ -260,7 +276,7 @@ class Server {
 
     // Some improvements to the existing help messages.
     function addHelp(cmd, helpText) {
-      var info = repl.commands[cmd] || repl.commands["." + cmd];
+      const info = repl.commands[cmd] || repl.commands["." + cmd];
       if (info) {
         info.help = helpText;
       }
@@ -299,12 +315,11 @@ class Server {
   // This function allows a persistent history of shell commands to be saved
   // to and loaded from .meteor/local/shell-history.
   initializeHistory() {
-    var self = this;
-    var rli = self.repl.rli;
-    var historyFile = getHistoryFile(self.shellDir);
-    var historyFd = fs.openSync(historyFile, "a+");
-    var historyLines = fs.readFileSync(historyFile, "utf8").split("\n");
-    var seenLines = Object.create(null);
+    const rli = this.repl.rli;
+    const historyFile = getHistoryFile(this.shellDir);
+    let historyFd = openSync(historyFile, "a+");
+    const historyLines = readFileSync(historyFile, "utf8").split("\n");
+    const seenLines = Object.create(null);
 
     if (! rli.history) {
       rli.history = [];
@@ -312,7 +327,7 @@ class Server {
     }
 
     while (rli.history && historyLines.length > 0) {
-      var line = historyLines.pop();
+      const line = historyLines.pop();
       if (line && /\S/.test(line) && ! seenLines[line]) {
         rli.history.push(line);
         seenLines[line] = true;
@@ -321,29 +336,30 @@ class Server {
 
     rli.addListener("line", function(line) {
       if (historyFd >= 0 && /\S/.test(line)) {
-        fs.writeSync(historyFd, line + "\n");
+        writeSync(historyFd, line + "\n");
       }
     });
 
-    self.repl.on("exit", function() {
-      fs.closeSync(historyFd);
+    this.repl.on("exit", function() {
+      closeSync(historyFd);
       historyFd = -1;
     });
   }
 }
 
 function readJSONFromStream(inputStream, callback) {
-  var outputStream = new stream.PassThrough;
-  var dataSoFar = "";
+  const outputStream = new PassThrough();
+  let dataSoFar = "";
 
   function onData(buffer) {
-    var lines = buffer.toString("utf8").split("\n");
+    const lines = buffer.toString("utf8").split("\n");
 
     while (lines.length > 0) {
       dataSoFar += lines.shift();
 
+      let json;
       try {
-        var json = JSON.parse(dataSoFar);
+        json = JSON.parse(dataSoFar);
       } catch (error) {
         if (error instanceof SyntaxError) {
           continue;
@@ -366,7 +382,7 @@ function readJSONFromStream(inputStream, callback) {
     finish(new Error("stream unexpectedly closed"));
   }
 
-  var finished = false;
+  let finished = false;
   function finish(error, json) {
     if (! finished) {
       finished = true;
@@ -383,11 +399,11 @@ function readJSONFromStream(inputStream, callback) {
 }
 
 function getInfoFile(shellDir) {
-  return path.join(shellDir, "info.json");
+  return pathJoin(shellDir, "info.json");
 }
 
 function getHistoryFile(shellDir) {
-  return path.join(shellDir, "history");
+  return pathJoin(shellDir, "history");
 }
 
 
@@ -395,8 +411,8 @@ function setRequireAndModule(context) {
   if (Package.modules) {
     // Use the same `require` function and `module` object visible to the
     // application.
-    var toBeInstalled = {};
-    var shellModuleName = "meteor-shell-" +
+    const toBeInstalled = {};
+    const shellModuleName = "meteor-shell-" +
       Math.random().toString(36).slice(2) + ".js";
 
     toBeInstalled[shellModuleName] = function (require, exports, module) {
