@@ -1286,7 +1286,12 @@ main.registerCommand({
   // error message if they try to pass one.
   maxArgs: 1,
   requiresApp: true,
-  catalogRefresh: new catalog.Refresh.Never()
+  catalogRefresh: new catalog.Refresh.Never(),
+  options: {
+    'keep-db': {
+      type: Boolean
+    },
+  }
 }, function (options) {
   if (options.args.length !== 0) {
     Console.error("meteor reset only affects the locally stored database.");
@@ -1300,7 +1305,7 @@ main.registerCommand({
     return 1;
   }
 
-  if (process.env.MONGO_URL) {
+  if (process.env.MONGO_URL && !options['keep-db']) {
     Console.info("As a precaution, meteor reset only clears the local database that is " +
                  "provided by meteor run for development. The database specified with " +
                  "MONGO_URL will NOT be reset.");
@@ -1319,8 +1324,13 @@ main.registerCommand({
     return 1;
   }
 
+  let path = files.pathJoin(options.appDir, '.meteor', 'local');
+  if (options['keep-db']) {
+    path = `${files.convertToOSPath(path + '/')}!(db)`;
+  }
+
   return files.rm_recursive_async(
-    files.pathJoin(options.appDir, '.meteor', 'local')
+    path
   ).then(() => {
     Console.info("Project reset.");
   });
