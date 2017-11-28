@@ -222,6 +222,8 @@ class Server {
     repl.context = global;
     repl.useGlobal = true;
 
+    setRequireAndModule(repl.context);
+
     // In order to avoid duplicating code here, specifically the complexities
     // of catching so-called "Recoverable Errors" (https://git.io/vbvbl),
     // we will wrap the default eval, run it in a Fiber (via a Promise), and
@@ -269,8 +271,6 @@ class Server {
       // time the server restarts).
       configurable: true
     });
-
-    setRequireAndModule(repl.context);
 
     // Some improvements to the existing help messages.
     function addHelp(cmd, helpText) {
