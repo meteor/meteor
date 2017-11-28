@@ -3,6 +3,7 @@
 * The previously served `/manifest.json` application metadata file is now
   served from `/__meteor__/webapp/manifest.json`.
   [Issue #6674](https://github.com/meteor/meteor/issues/6674)
+  [PR #9424](https://github.com/meteor/meteor/pull/9424)
 
 * The bundled version of MongoDB used by `meteor run` in development
   on 64-bit architectures has been updated to 3.4.10. 32-bit architectures
