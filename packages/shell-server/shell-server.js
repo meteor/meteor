@@ -272,8 +272,6 @@ class Server {
 
     setRequireAndModule(repl.context);
 
-    repl.context.repl = repl;
-
     // Some improvements to the existing help messages.
     function addHelp(cmd, helpText) {
       const info = repl.commands[cmd] || repl.commands["." + cmd];
