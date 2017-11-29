@@ -27,6 +27,9 @@ Package.onTest(function (api) {
     'stylus_tests.html',
     'stylus_tests.styl',
     'stylus_tests.import.styl',
-    'stylus_tests.js'
+    'stylus_tests.js',
+    'test_files/direct/direct.import.styl',
+    'test_files/indirect/1/indirect1.import.styl',
+    'test_files/indirect/2/indirect2.import.styl',
   ],'client');
 });
