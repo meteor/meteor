@@ -286,6 +286,23 @@ describe("local node_modules", () => {
     const pkg = require("moment/package.json");
     assert.strictEqual(pkg.version, "2.11.1");
   });
+
+  it('should support object-valued package.json "browser" fields', () => {
+    const uuid = require("uuid");
+    const id = uuid();
+    assert.strictEqual(typeof id, "string");
+    assert.strictEqual(id.split("-").length, 5);
+
+    if (Meteor.isClient) {
+      assert.strictEqual(
+        require.resolve("uuid/lib/rng.js"),
+        "/node_modules/uuid/lib/rng-browser.js"
+      );
+
+      const { browser } = require(["uuid", "package.json"].join("/"));
+      assert.strictEqual(typeof browser, "object");
+    }
+  });
 });
 
 describe("Meteor packages", () => {

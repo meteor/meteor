@@ -8,7 +8,7 @@ import {
   CORDOVA_PLATFORMS,
   ensureDevBundleDependencies,
   filterPlatforms,
-} from '../cordova';
+} from '../cordova/index.js';
 
 function createProjectContext(appDir) {
   import { ProjectContext } from '../project-context.js';

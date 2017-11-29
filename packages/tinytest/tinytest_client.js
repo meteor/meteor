@@ -1,3 +1,13 @@
+import { Tinytest } from "./tinytest.js";
+import {
+  ServerTestResultsSubscription,
+  ServerTestResultsCollection,
+} from "./model.js";
+
+const hasOwn = Object.prototype.hasOwnProperty;
+
+export { Tinytest };
+
 // Like Tinytest._runTests, but runs the tests on both the client and
 // the server. Sets a 'server' flag on test results that came from the
 // server.
@@ -14,9 +24,11 @@ Tinytest._runTestsEverywhere = function (onReport, onComplete, pathPrefix, optio
   var remoteComplete = false;
   var done = false;
 
-  options = _.extend({
-    serial: true
-  }, options);
+  options = {
+    serial: true,
+    ...options,
+  };
+
   var serial = !!options.serial;
 
   var maybeDone = function () {
@@ -39,28 +51,36 @@ Tinytest._runTestsEverywhere = function (onReport, onComplete, pathPrefix, optio
 
   var handle;
 
-  Meteor.connection.registerStore(Meteor._ServerTestResultsCollection, {
-    update: function (msg) {
+  Meteor.connection.registerStore(ServerTestResultsCollection, {
+    update(msg) {
       // We only should call _runTestsEverywhere once per client-page-load, so
       // we really only should see one runId here.
-      if (msg.id !== runId)
+      if (msg.id !== runId) {
         return;
+      }
+
+      if (! msg.fields) {
+        return;
+      }
+
       // This will only work for added & changed messages.
       // hope that is all you get.
-      _.each(msg.fields, function (report, key) {
+      Object.keys(msg.fields).forEach(key => {
         // Skip the 'complete' report (deal with it last)
         if (key === 'complete') {
           return;
         }
-        _.each(report.events, function (event) {
+        const report = msg.fields[key];
+        report.events.forEach(event => {
           delete event.cookie; // can't debug a server test on the client..
         });
         report.server = true;
         onReport(report);
       });
+
       // Now that we've processed all the other messages,
       // check if we have the 'complete' message
-      if (msg.fields && _.has(msg.fields, 'complete')) {
+      if (hasOwn.call(msg.fields, 'complete')) {
         remoteComplete = true;
         handle.stop();
         Meteor.call('tinytest/clearResults', runId);
@@ -69,12 +89,13 @@ Tinytest._runTestsEverywhere = function (onReport, onComplete, pathPrefix, optio
     }
   });
 
-  handle = Meteor.subscribe(Meteor._ServerTestResultsSubscription, runId);
+  handle = Meteor.subscribe(ServerTestResultsSubscription, runId);
 
   Meteor.call('tinytest/run', runId, pathPrefix, function (error, result) {
-    if (error)
+    if (error) {
       // XXX better report error
       throw new Error("Test server returned an error");
+    }
   });
 
   if (!serial) {

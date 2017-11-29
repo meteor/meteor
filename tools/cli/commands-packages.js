@@ -23,7 +23,11 @@ var packageMapModule = require('../packaging/package-map.js');
 var packageClient = require('../packaging/package-client.js');
 var tropohouse = require('../packaging/tropohouse.js');
 
-import * as cordova from '../cordova';
+import {
+  ensureDevBundleDependencies,
+  newPluginId,
+  splitPluginsAndPackages,
+} from '../cordova/index.js';
 import { updateMeteorToolSymlink } from "../packaging/updater.js";
 
 // For each release (or package), we store a meta-record with its name,
@@ -465,35 +469,18 @@ main.registerCommand({
   } else if (binary) {
     // Normal publish flow. Tell the user nicely.
     Console.warn();
-    Console.warn(
-      "You're not done publishing yet! This package contains binary code and",
-      "must be built on all of Meteor's architectures, including this",
-      "machine's architecture.");
+    Console.warn("This package contains binary code which must be",
+      "compiled on the architecture it will eventually run on.");
     Console.warn();
     Console.info(
-      "You can access Meteor provided build machines, pre-configured to",
-      "support older versions of MacOS and Linux, by running:");
-    _.each(["os.osx.x86_64", "os.linux.x86_64",
-            "os.linux.x86_32", "os.windows.x86_32"],
-      function (a) {
-        Console.info(
-          Console.command("meteor admin get-machine " + a),
-          Console.options({ indent: 2 }));
-    });
-
+      "Meteor 1.4 and higher will automatically compile packages",
+      "with binary dependencies when they are installed, assuming",
+      "the target machine has a basic compiler toolchain.");
     Console.info();
-    Console.info("On each machine, run:");
-    Console.info();
+    Console.info("To see the requirements for this compilation step,",
+      "consult the platform requirements for 'node-gyp':");
     Console.info(
-      Console.command(
-        "meteor publish-for-arch " +
-        packageSource.name + "@" + packageSource.version),
-      Console.options({ indent: 2 }));
-    Console.info();
-    Console.info(
-      "For more information on binary ABIs and consistent builds, see:");
-    Console.info(
-      Console.url("https://github.com/meteor/meteor/wiki/Build-Machines"),
+      Console.url("https://github.com/nodejs/node-gyp"),
       Console.options({ indent: 2 })
     );
     Console.info();
@@ -2015,34 +2002,39 @@ main.registerCommand({
 
   // Split arguments into Cordova plugins and packages
   const { plugins: pluginsToAdd, packages: packagesToAdd } =
-    cordova.splitPluginsAndPackages(options.args);
+    splitPluginsAndPackages(options.args);
 
   if (!_.isEmpty(pluginsToAdd)) {
-    let plugins = projectContext.cordovaPluginsFile.getPluginVersions();
-    let changed = false;
+    function cordovaPluginAdd() {
+      const plugins = projectContext.cordovaPluginsFile.getPluginVersions();
+      let changed = false;
 
-    for (target of pluginsToAdd) {
-      let [id, version] = target.split('@');
+      for (target of pluginsToAdd) {
+        const { id, version } =
+          require('../cordova/package-id-version-parser.js').parse(target);
+        const newId = newPluginId(id);
 
-      const newId = cordova.newPluginId(id);
-
-      if (!(version && utils.isValidVersion(version, {forCordova: true}))) {
-        Console.error(`${id}: Meteor requires either an exact version \
-(e.g. ${id}@1.0.0), a Git URL with a SHA reference, or a local path.`);
-        exitCode = 1;
-      } else if (newId) {
-        plugins[newId] = version;
-        Console.info(`Added Cordova plugin ${newId}@${version} \
-(plugin has been renamed as part of moving to npm).`);
-        changed = true;
-      } else {
-        plugins[id] = version;
-        Console.info(`Added Cordova plugin ${id}@${version}.`);
-        changed = true;
+        if (!(version && utils.isValidVersion(version, {forCordova: true}))) {
+          Console.error(`${id}: Meteor requires either an exact version \
+  (e.g. ${id}@1.0.0), a Git URL with a SHA reference, or a local path.`);
+          exitCode = 1;
+        } else if (newId) {
+          plugins[newId] = version;
+          Console.info(`Added Cordova plugin ${newId}@${version} \
+  (plugin has been renamed as part of moving to npm).`);
+          changed = true;
+        } else {
+          plugins[id] = version;
+          Console.info(`Added Cordova plugin ${id}@${version}.`);
+          changed = true;
+        }
       }
+
+      changed && projectContext.cordovaPluginsFile.write(plugins);
     }
 
-    changed && projectContext.cordovaPluginsFile.write(plugins);
+    ensureDevBundleDependencies();
+    cordovaPluginAdd();
   }
 
   if (_.isEmpty(packagesToAdd)) {
@@ -2208,34 +2200,39 @@ main.registerCommand({
 
   // Split arguments into Cordova plugins and packages
   const { plugins: pluginsToRemove, packages }  =
-    cordova.splitPluginsAndPackages(options.args);
+    splitPluginsAndPackages(options.args);
 
   if (!_.isEmpty(pluginsToRemove)) {
-    let plugins = projectContext.cordovaPluginsFile.getPluginVersions();
-    let changed = false;
+    function cordovaPluginRemove() {
+      const plugins = projectContext.cordovaPluginsFile.getPluginVersions();
+      let changed = false;
 
-    for (id of pluginsToRemove) {
-      const newId = cordova.newPluginId(id);
+      for (id of pluginsToRemove) {
+        const newId = newPluginId(id);
 
-      if (/@/.test(id)) {
-        Console.error(`${id}: do not specify version constraints.`);
-        exitCode = 1;
-      } else if (_.has(plugins, id)) {
-        delete plugins[id];
-        Console.info(`Removed Cordova plugin ${id}.`);
-        changed = true;
-      } else if (newId && _.has(plugins, newId)) {
-        delete plugins[newId];
-        Console.info(`Removed Cordova plugin ${newId} \
-(plugin has been renamed as part of moving to npm).`);
-        changed = true;
-      } else {
-        Console.error(`Cordova plugin ${id} is not in this project.`);
-        exitCode = 1;
+        if (/@/.test(id)) {
+          Console.error(`${id}: do not specify version constraints.`);
+          exitCode = 1;
+        } else if (_.has(plugins, id)) {
+          delete plugins[id];
+          Console.info(`Removed Cordova plugin ${id}.`);
+          changed = true;
+        } else if (newId && _.has(plugins, newId)) {
+          delete plugins[newId];
+          Console.info(`Removed Cordova plugin ${newId} \
+  (plugin has been renamed as part of moving to npm).`);
+          changed = true;
+        } else {
+          Console.error(`Cordova plugin ${id} is not in this project.`);
+          exitCode = 1;
+        }
       }
+
+      changed && projectContext.cordovaPluginsFile.write(plugins);
     }
 
-    changed && projectContext.cordovaPluginsFile.write(plugins);
+    ensureDevBundleDependencies();
+    cordovaPluginRemove();
   }
 
   if (_.isEmpty(packages)) {

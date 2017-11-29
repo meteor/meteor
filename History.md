@@ -6,6 +6,101 @@
   [FR #211](https://github.com/meteor/meteor-feature-requests/issues/211)
   [PR #9272](https://github.com/meteor/meteor/pull/9272)
 
+* The bundled version of MongoDB used by `meteor run` in development
+  on 64-bit architectures has been updated to 3.4.10. 32-bit architectures
+  will continue to use MongoDB 3.2.x versions since MongoDB is no longer
+  producing 32-bit versions of MongoDB for newer release tracks.
+  [PR #9396](https://github.com/meteor/meteor/pull/9396)
+
+* Meteor's internal `minifier-css` package has been updated to use `postcss`
+  for CSS parsing and minifying, instead of the abandoned `css-parse` and
+  `css-stringify` packages. Changes made to the `CssTools` API exposed by the
+  `minifier-css` package are mostly backwards compatible (the
+  `standard-minifier-css` package that uses it didn't have to change for
+  example), but now that we're using `postcss` the AST accepted and returned
+  from certain functions is different. This could impact developers who are
+  tying into Meteor's internal `minifier-css` package directly. The AST based 
+  function changes are:
+  
+  * `CssTools.parseCss` now returns a PostCSS
+    [`Root`](http://api.postcss.org/Root.html) object.    
+  * `CssTools.stringifyCss` expects a PostCSS `Root` object as its first
+    parameter.    
+  * `CssTools.mergeCssAsts` expects an array of PostCSS `Root` objects as its
+    first parameter.    
+  * `CssTools.rewriteCssUrls` expects a PostCSS `Root` object as its first
+    parameter.
+    
+  [PR #9263](https://github.com/meteor/meteor/pull/9263)
+
+* Dynamically `import()`ed modules will now be fetched from the
+  application server using an HTTP POST request, rather than a WebSocket
+  message. This strategy has all the benefits of the previous strategy,
+  except that it does not require establishing a WebSocket connection
+  before fetching dynamic modules, in exchange for slightly higher latency
+  per request. [PR #9384](https://github.com/meteor/meteor/pull/9384)
+
+* To reduce the total number of HTTP requests for dynamic modules, rapid
+  sequences of `import()` calls within the same tick of the event loop
+  will now be automatically batched into a single HTTP request. In other
+  words, the following code will result in only one HTTP request:
+  ```js
+  const [
+    React,
+    ReactDOM
+  ] = await Promise.all([
+    import("react"),
+    import("react-dom")
+  ]);
+  ```
+
+* The `Tinytest.addAsync` API now accepts test functions that return
+  `Promise` objects, making the `onComplete` callback unnecessary:
+  ```js
+  Tinytest.addAsync("some async stuff", async function (test) {
+    test.equal(shouldReturnFoo(), "foo");
+    const bar = await shouldReturnBarAsync();
+    test.equal(bar, "bar");
+  });
+  ```
+  [PR #9409](https://github.com/meteor/meteor/pull/9409)
+
+* The `minifier-js` package has been updated to use `uglify-es` 3.1.9.
+
+* The `request` npm package used by the `http` package has been upgraded
+  to version 2.83.0.
+
+* The deprecated `Meteor.http` object has been removed. If your
+  application is still using `Meteor.http`, you should now use `HTTP`
+  instead:
+  ```js
+  import { HTTP } from "meteor/http";
+  HTTP.call("GET", url, ...);
+  ```
+
+* [`cordova-lib`](https://github.com/apache/cordova-cli) has been updated to
+  version 7.1.0, [`cordova-android`](https://github.com/apache/cordova-android/)
+  has been updated to version 6.3.0, and [`cordova-ios`](https://github.com/apache/cordova-ios/)
+  has been updated to version 4.5.3. The cordova-plugins `cordova-plugin-console`,
+  `cordova-plugin-device-motion`, and `cordova-plugin-device-orientation` have been
+  [deprecated](https://cordova.apache.org/news/2017/09/22/plugins-release.html)
+  and will likely be removed in a future Meteor release.
+  [Feature Request #196](https://github.com/meteor/meteor-feature-requests/issues/196)
+  [PR #9213](https://github.com/meteor/meteor/pull/9213)
+
+* Provide basic support for [iPhone X](https://developer.apple.com/ios/update-apps-for-iphone-x/)
+  status bar and launch screens, which includes updates to
+  [`cordova-plugin-statusbar@2.3.0`](https://github.com/apache/cordova-plugin-statusbar/blob/master/RELEASENOTES.md#230-nov-06-2017)
+  and [`cordova-plugin-splashscreen@4.1.0`](https://github.com/apache/cordova-plugin-splashscreen/blob/master/RELEASENOTES.md#410-nov-06-2017).
+  [Issue #9041](https://github.com/meteor/meteor/issues/9041)
+  [PR #9375](https://github.com/meteor/meteor/pull/9375)
+
+* Fixed an issue preventing the installation of scoped Cordova packages.
+  E.g. meteor add cordova:@somescope/some-cordova-plugin@1.0.0 will now
+  work properly.
+  [Issue #7336](https://github.com/meteor/meteor/issues/7336)
+  [PR #9334](https://github.com/meteor/meteor/pull/9334)
+
 * iOS icons and launch screens have been updated to support iOS 11
   [Issue #9196](https://github.com/meteor/meteor/issues/9196)
   [PR #9198](https://github.com/meteor/meteor/pull/9198)
@@ -23,7 +118,31 @@
   overrides the default 10 rounds currently used to secure passwords.
   [PR #9044](https://github.com/meteor/meteor/pull/9044)
 
+* `Npm.depends` can now specify any `http` or `https` URL.
+  [Issue #9236](https://github.com/meteor/meteor/issues/9236)
+  [PR #9237](https://github.com/meteor/meteor/pull/9237)
+
 ## v1.6, 2017-10-30
+
+* **Important note for package maintainers:**
+
+  With the jump to Node 8, some packages published using Meteor 1.6 may no
+  longer be compatible with older Meteor versions. In order to maintain
+  compatibility with Meteor 1.5 apps when publishing your package, you can
+  specify a release version with the meteor publish command:
+
+  ```
+  meteor --release 1.5.3 publish
+  ```
+
+  If you're interested in taking advantage of Meteor 1.6 while still
+  supporting older Meteor versions, you can consider publishing for Meteor
+  1.6 from a new branch, with your package's minor or major version bumped.
+  You can then continue to publish for Meteor 1.5 from the original branch.
+  Note that the 1.6 branch version bump is important so that you can continue
+  publishing patch updates for Meteor 1.5 from the original branch.
+
+  [Issue #9308](https://github.com/meteor/meteor/issues/9308)
 
 * Node.js has been upgraded to version 8.8.1, which will be entering
   long-term support (LTS) coverage on 31 October 2017, lasting through
@@ -130,6 +249,38 @@
 
 * You can now run `meteor test --driver-package user:package` without
   first running `meteor add user:package`.
+
+* iOS icons and launch screens have been updated to support iOS 11
+  [Issue #9196](https://github.com/meteor/meteor/issues/9196)
+  [PR #9198](https://github.com/meteor/meteor/pull/9198)
+
+## v1.5.4, 2017-11-08
+
+* Node has been updated to version 4.8.6. This release officially
+  includes our fix of a faulty backport of garbage collection-related
+  logic in V8 and ends Meteor's use of a custom Node with that patch.
+  In addition, it includes small OpenSSL updates as announced on the
+  Node blog: https://nodejs.org/en/blog/release/v4.8.6/.
+  [Issue #8648](https://github.com/meteor/meteor/issues/8648)
+
+## v1.5.3, 2017-11-04
+
+* Node has been upgraded to version 4.8.5, a recommended security
+  release: https://nodejs.org/en/blog/release/v4.8.5/. While it was
+  expected that Node 4.8.5 would also include our fix of a faulty
+  backport of garbage collection-related logic in V8, the timing
+  of this security release has caused that to be delayed until 4.8.6.
+  Therefore, this Node still includes our patch for this issue.
+  [Issue #8648](https://github.com/meteor/meteor/issues/8648)
+
+* Various backports from Meteor 1.6, as detailed in the
+  [PR for Meteor 1.5.3](https://github.com/meteor/meteor/pull/9266).
+  Briefly, these involve fixes for:
+  * Child imports of dynamically imported modules within packages.
+    [#9182](https://github.com/meteor/meteor/issues/9182)
+  * Unresolved circular dependencies.
+    [#9176](https://github.com/meteor/meteor/issues/9176)
+  * Windows temporary directory handling.
 
 ## v1.5.2.2, 2017-10-02
 

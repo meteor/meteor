@@ -354,6 +354,12 @@ export default class Sorter {
 
     const selector = matcher._selector;
 
+    // If the user just passed a falsey selector to find(),
+    // then we can't get a key filter from it.
+    if (!selector) {
+      return;
+    }
+
     // If the user just passed a literal function to find(), then we can't get a
     // key filter from it.
     if (selector instanceof Function) {

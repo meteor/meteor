@@ -172,6 +172,7 @@ var release = require('../packaging/release.js');
 import { loadIsopackage } from '../tool-env/isopackets.js';
 import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
 import { gzipSync } from "zlib";
+import { PackageRegistry } from "../../packages/meteor/define-package.js";
 
 const SOURCE_URL_PREFIX = "meteor://\u{1f4bb}app";
 
@@ -1771,7 +1772,7 @@ class JsImage {
   // in a compartment of Package
   load(bindings) {
     var self = this;
-    var ret = {};
+    var ret = new PackageRegistry();
 
     // XXX This is mostly duplicated from
     // static-assets/server/boot.js, as is Npm.require below.
