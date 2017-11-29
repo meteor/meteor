@@ -6,7 +6,7 @@
 
 - [x] Use the minimum versions in `webapp` to determine JS bundle.
 
-- [ ] Import different `core-js` polyfills in `ecmascript-runtime-client`
+- [x] Import different `core-js` polyfills in `ecmascript-runtime-client`
       depending on modern/legacy classification.
 
 - [ ] Really vet the set of imported `core-js` polyfills based on known
