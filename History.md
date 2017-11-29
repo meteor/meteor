@@ -1,5 +1,11 @@
 ## v.NEXT
 
+* The `stylus` package now supports
+  [glob imports](http://stylus-lang.com/docs/import.html#file-globbing) like
+  `@import './folder/*'`.
+  [FR #211](https://github.com/meteor/meteor-feature-requests/issues/211)
+  [PR #9272](https://github.com/meteor/meteor/pull/9272)
+
 * iOS icons and launch screens have been updated to support iOS 11
   [Issue #9196](https://github.com/meteor/meteor/issues/9196)
   [PR #9198](https://github.com/meteor/meteor/pull/9198)
