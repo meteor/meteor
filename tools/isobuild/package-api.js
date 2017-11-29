@@ -363,6 +363,15 @@ _.extend(PackageAPI.prototype, {
         // It's not an error to call api.mainModule multiple times, but
         // the last call takes precedence over the earlier calls.
         oldMain.fileOptions.mainModule = false;
+
+        if (! _.has(oldMain.fileOptions, "lazy")) {
+          // If the laziness of the old main module was not explicitly
+          // specified, then it would have been implicitly eager just
+          // because it was the main module. Since we are revoking its
+          // status as main module now, we should also explicitly revoke
+          // the eagerness that came with that status.
+          oldMain.fileOptions.lazy = true;
+        }
       }
 
       filesForArch.main = source;
