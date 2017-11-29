@@ -1,23 +1,16 @@
-import { Meteor } from 'meteor/meteor';
+import {
+  toSockjsUrl,
+  toWebsocketUrl,
+} from "./urls.js";
 
-// This populates a global variable
-import './sockjs-0.3.4';
+import { StreamClientCommon } from "./common.js";
 
-import { DDP } from '../common/namespace.js';
-import { toSockjsUrl } from '../common/urlHelpers.js';
-import StreamClientCommon from '../common/stream_client_common.js';
-
-export default class ClientStream extends StreamClientCommon {
+export class ClientStream extends StreamClientCommon {
   // @param url {String} URL to Meteor app
   //   "http://subdomain.meteor.com/" or "/" or
   //   "ddp+sockjs://foo-**.meteor.com/sockjs"
   constructor(url, options) {
-    super();
-
-    this.options = {
-      retry: true,
-      ...options
-    };
+    super(options);
 
     this._initCommon(this.options);
 
@@ -115,8 +108,8 @@ export default class ClientStream extends StreamClientCommon {
   }
 
   _heartbeat_timeout() {
-    Meteor._debug('Connection timeout. No sockjs heartbeat received.');
-    this._lostConnection(new DDP.ConnectionError('Heartbeat timed out'));
+    console.log('Connection timeout. No sockjs heartbeat received.');
+    this._lostConnection(new this.ConnectionError("Heartbeat timed out"));
   }
 
   _heartbeat_received() {
@@ -165,10 +158,14 @@ export default class ClientStream extends StreamClientCommon {
       ...this.options._sockjsOptions
     };
 
-    // Convert raw URL to SockJS URL each time we open a connection, so that we
-    // can connect to random hostnames and get around browser per-host
-    // connection limits.
-    this.socket = new SockJS(toSockjsUrl(this.rawUrl), undefined, options);
+    // Convert raw URL to SockJS URL each time we open a connection, so
+    // that we can connect to random hostnames and get around browser
+    // per-host connection limits.
+    const { SockJS } = global;
+    this.socket = typeof SockJS === "function"
+      ? new SockJS(toSockjsUrl(this.rawUrl), undefined, options)
+      : new WebSocket(toWebsocketUrl(this.rawUrl));
+
     this.socket.onopen = data => {
       this._connected();
     };
@@ -183,11 +180,11 @@ export default class ClientStream extends StreamClientCommon {
     this.socket.onclose = () => {
       this._lostConnection();
     };
-    this.socket.onerror = () => {
+    this.socket.onerror = (...args) => {
       // XXX is this ever called?
-      Meteor._debug(
+      console.log(
         'stream error',
-        Array.from(arguments),
+        args,
         new Date().toDateString()
       );
     };
@@ -198,7 +195,9 @@ export default class ClientStream extends StreamClientCommon {
 
     if (this.connectionTimer) clearTimeout(this.connectionTimer);
     this.connectionTimer = setTimeout(() => {
-      this._lostConnection(new DDP.ConnectionError('DDP connection timed out'));
+      this._lostConnection(
+        new this.ConnectionError("DDP connection timed out")
+      );
     }, this.CONNECT_TIMEOUT);
   }
 }

@@ -7,14 +7,14 @@
       "integrity": "sha512-b0553uYA5YAEGgyYIGYROzKQ7X5RAqedkfjiZxwi0kL1g3bOaBNNZfYkzt/CL0umgD5wc9Jec2FbB98CjkMRvQ=="
     },
     "source-map": {
-      "version": "0.5.7",
-      "resolved": "https://registry.npmjs.org/source-map/-/source-map-0.5.7.tgz",
-      "integrity": "sha1-igOdLRAh0i0eoUyA2OpGi6LvP8w="
+      "version": "0.6.1",
+      "resolved": "https://registry.npmjs.org/source-map/-/source-map-0.6.1.tgz",
+      "integrity": "sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g=="
     },
     "uglify-es": {
-      "version": "3.0.28",
-      "resolved": "https://registry.npmjs.org/uglify-es/-/uglify-es-3.0.28.tgz",
-      "integrity": "sha512-xw1hJsSp361OO0Sq0XvNyTI2wfQ4eKNljfSYyeYX/dz9lKEDj+DK+A8CzB0NmoCwWX1MnEx9f16HlkKXyG65CQ=="
+      "version": "3.1.9",
+      "resolved": "https://registry.npmjs.org/uglify-es/-/uglify-es-3.1.9.tgz",
+      "integrity": "sha512-wVSiJKHDgDDFmxTVVvnbAH6IpamAFHYDI+5JvwPdaqIMnk8kRTX2JKwq1Fx7gb2+Jj5Dus8kzvIpKkWOMNU51w=="
     }
   }
 }

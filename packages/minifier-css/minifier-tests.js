@@ -1,21 +1,100 @@
+import { CssTools } from './minifier';
 
-Tinytest.add("minifier-css - simple css minification", function (test) {
-  var t = function (css, expected, desc) {
-    test.equal(CssTools.minifyCss(css), [expected], desc);
+Tinytest.add(
+  'minifier-css - CSS can be parsed properly into an AST',
+  (test) => {
+    const ast = CssTools.parseCss('body { color: "red"}');
+    test.equal(ast.type, 'root');
+    test.equal(ast.nodes.length, 1);
+    const bodyNode = ast.nodes[0];
+    test.equal(bodyNode.type, 'rule');
+    test.equal(bodyNode.selector, 'body');
+    test.equal(bodyNode.nodes.length, 1);
+    const colorNode = bodyNode.nodes[0];
+    test.equal(colorNode.type, 'decl');
+    test.equal(colorNode.prop, 'color');
+    test.equal(colorNode.value, '"red"');
   }
+);
 
-  t('a \t\n{ color: red } \n', 'a{color:red}', 'whitespace check');
-  t('a \t\n{ color: red; margin: 1; } \n', 'a{color:red;margin:1}', 'only last one loses semicolon');
-  t('a \t\n{ color: red;;; margin: 1;;; } \n', 'a{color:red;margin:1}', 'more semicolons than needed');
-  t('a , p \t\n{ color: red; } \n', 'a,p{color:red}', 'multiple selectors');
-  t('body {}', '', 'removing empty rules');
-  t('*.my-class { color: #fff; }', '.my-class{color:#fff}', 'removing universal selector');
-  t('p > *.my-class { color: #fff; }', 'p>.my-class{color:#fff}', 'removing optional whitespace around ">" in selector');
-  t('p +  *.my-class { color: #fff; }', 'p+.my-class{color:#fff}', 'removing optional whitespace around "+" in selector');
-  // XXX url parsing is difficult to support at the moment
-  t('a {\n\
-  font:12px \'Helvetica\',"Arial",\'Nautica\';\n\
-  background:url("/some/nice/picture.png");\n}',
-  'a{font:12px Helvetica,Arial,Nautica;background:url("/some/nice/picture.png")}',  'removing quotes in font and url (if possible)');
-  t('/* no comments */ a { color: red; }', 'a{color:red}', 'remove comments');
+Tinytest.add(
+  'minifier-css - CSS AST can be converted back into a string',
+  (test) => {
+    const originalCss = 'body { color: "red"}';
+    const cssAst = CssTools.parseCss(originalCss);
+    const result = CssTools.stringifyCss(cssAst, { sourcemap: true });
+    test.equal(originalCss, result.code);
+    test.isNotNull(result.map);
+  }
+);
+
+Tinytest.add('minifier-css - simple CSS minification', (test) => {
+  const checkMinified = (css, expected, desc) => {
+    test.equal(CssTools.minifyCss(css)[0], expected, desc);
+  };
+
+  checkMinified(
+    'a \t\n{ color: red } \n',
+    'a{color:red}',
+    'whitespace check',
+  );
+  checkMinified(
+    'a \t\n{ color: red; margin: 1; } \n',
+    'a{color:red;margin:1}',
+    'only last one loses semicolon',
+  );
+  checkMinified(
+    'a \t\n{ color: red;;; margin: 1;;; } \n',
+    'a{color:red;margin:1}',
+    'more semicolons than needed',
+  );
+  checkMinified(
+    'a , p \t\n{ color: red; } \n',
+    'a,p{color:red}',
+    'multiple selectors',
+  );
+  checkMinified(
+    'body {}',
+    '',
+    'removing empty rules',
+  );
+  checkMinified(
+    '*.my-class { color: #fff; }',
+    '.my-class{color:#fff}',
+    'removing universal selector',
+  );
+  checkMinified(
+    'p > *.my-class { color: #fff; }',
+    'p>.my-class{color:#fff}',
+    'removing optional whitespace around ">" in selector',
+  );
+  checkMinified(
+    'p +  *.my-class { color: #fff; }',
+    'p+.my-class{color:#fff}',
+    'removing optional whitespace around "+" in selector',
+  );
+  checkMinified(
+    'a {\n\
+    font:12px \'Helvetica\',"Arial",\'Nautica\';\n\
+    background:url("/some/nice/picture.png");\n}',
+    'a{font:12px Helvetica,Arial,Nautica;background:url(/some/nice/picture.png)}',
+    'removing quotes in font and url (if possible)',
+  );
+  checkMinified(
+    '/* no comments */ a { color: red; }',
+    'a{color:red}',
+    'remove comments',
+  );
 });
+
+Tinytest.add(
+  "minifier-css - Multiple CSS AST's can be merged into a single CSS AST",
+  (test) => {
+    const css1 = '@import "custom.css"; body { color: "red"; }';
+    const css2 = 'body { color: "blue"; }';
+    const cssAst1 = CssTools.parseCss(css1);
+    const cssAst2 = CssTools.parseCss(css2);
+    const mergedAst = CssTools.mergeCssAsts([cssAst1, cssAst2]);
+    test.equal(mergedAst.nodes.length, 3);
+  }
+);

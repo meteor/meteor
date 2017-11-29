@@ -1,4 +1,6 @@
-export function generateHTMLForArch(arch) {
+import streamToString from "stream-to-string";
+
+export async function generateHTMLForArch(arch) {
   // Use a dummy manifest. None of these paths will be read from the filesystem, but css / js should be handled differently
   const manifest = [
     {
@@ -50,5 +52,5 @@ export function generateHTMLForArch(arch) {
     },
   });
 
-  return boilerplate.toHTML();
-};
+  return streamToString(boilerplate.toHTML());
+}

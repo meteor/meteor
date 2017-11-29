@@ -1903,8 +1903,8 @@ testAsyncMulti('livedata connection - reconnect to a different server', [
       },
       5000,
       100,
-      true
-    ); // poll until connected, but don't fail if we don't connect
+      false
+    );
   },
   function(test, expect) {
     var self = this;

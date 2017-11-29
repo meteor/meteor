@@ -38,6 +38,14 @@ install:
 test_script:
   - ps: C:\projects\meteor\scripts\windows\appveyor\test.ps1
 
+on_failure:
+    - ps: |
+        $npmLogsDir = "$($Env:AppData)\npm-cache\_logs"
+        If (Test-Path "$npmLogsDir") {
+          Get-ChildItem "${npmLogsDir}\*.log" |
+            % { Push-AppveyorArtifact $_.FullName -FileName $_.Name }
+        }
+
 cache:
   - dev_bundle -> meteor
   - .babel-cache

@@ -15,7 +15,7 @@ var packageJson = {
     pacote: "https://github.com/meteor/pacote/tarball/4e58fa55e2a0ba7dc75b26ff5273730d98335a85",
     "node-gyp": "3.6.2",
     "node-pre-gyp": "0.6.36",
-    "meteor-babel": "7.0.0-beta.3-1",
+    "meteor-babel": "7.0.0-beta.3-2",
     "meteor-promise": "0.8.6",
     promise: "8.0.1",
     reify: "0.12.3",

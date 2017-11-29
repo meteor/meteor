@@ -1,4 +1,15 @@
-DiffSequence = {};
+export const DiffSequence = {};
+
+const hasOwn = Object.prototype.hasOwnProperty;
+
+function isObjEmpty(obj) {
+  for (let key in Object(obj)) {
+    if (hasOwn.call(obj, key)) {
+      return false;
+    }
+  }
+  return true;
+}
 
 // ordered: bool.
 // old_results and new_results: collections of documents.
@@ -31,7 +42,7 @@ DiffSequence.diffQueryUnorderedChanges = function (oldResults, newResults,
         var projectedOld = projectionFn(oldDoc);
         var changedFields =
               DiffSequence.makeChangedFields(projectedNew, projectedOld);
-        if (! _.isEmpty(changedFields)) {
+        if (! isObjEmpty(changedFields)) {
           observer.changed(id, changedFields);
         }
       }
@@ -50,21 +61,20 @@ DiffSequence.diffQueryUnorderedChanges = function (oldResults, newResults,
   }
 };
 
-
 DiffSequence.diffQueryOrderedChanges = function (old_results, new_results,
                                                      observer, options) {
   options = options || {};
   var projectionFn = options.projectionFn || EJSON.clone;
 
   var new_presence_of_id = {};
-  _.each(new_results, function (doc) {
+  new_results.forEach(function (doc) {
     if (new_presence_of_id[doc._id])
       Meteor._debug("Duplicate _id in new_results");
     new_presence_of_id[doc._id] = true;
   });
 
   var old_index_of_id = {};
-  _.each(old_results, function (doc, i) {
+  old_results.forEach(function (doc, i) {
     if (doc._id in old_index_of_id)
       Meteor._debug("Duplicate _id in old_results");
     old_index_of_id[doc._id] = i;
@@ -155,19 +165,20 @@ DiffSequence.diffQueryOrderedChanges = function (old_results, new_results,
   // an id of "null"
   unmoved.push(new_results.length);
 
-  _.each(old_results, function (doc) {
+  old_results.forEach(function (doc) {
     if (!new_presence_of_id[doc._id])
       observer.removed && observer.removed(doc._id);
   });
+
   // for each group of things in the new_results that is anchored by an unmoved
   // element, iterate through the things before it.
   var startOfGroup = 0;
-  _.each(unmoved, function (endOfGroup) {
+  unmoved.forEach(function (endOfGroup) {
     var groupId = new_results[endOfGroup] ? new_results[endOfGroup]._id : null;
     var oldDoc, newDoc, fields, projectedNew, projectedOld;
     for (var i = startOfGroup; i < endOfGroup; i++) {
       newDoc = new_results[i];
-      if (!_.has(old_index_of_id, newDoc._id)) {
+      if (!hasOwn.call(old_index_of_id, newDoc._id)) {
         fields = projectionFn(newDoc);
         delete fields._id;
         observer.addedBefore && observer.addedBefore(newDoc._id, fields, groupId);
@@ -178,7 +189,7 @@ DiffSequence.diffQueryOrderedChanges = function (old_results, new_results,
         projectedNew = projectionFn(newDoc);
         projectedOld = projectionFn(oldDoc);
         fields = DiffSequence.makeChangedFields(projectedNew, projectedOld);
-        if (!_.isEmpty(fields)) {
+        if (!isObjEmpty(fields)) {
           observer.changed && observer.changed(newDoc._id, fields);
         }
         observer.movedBefore && observer.movedBefore(newDoc._id, groupId);
@@ -190,7 +201,7 @@ DiffSequence.diffQueryOrderedChanges = function (old_results, new_results,
       projectedNew = projectionFn(newDoc);
       projectedOld = projectionFn(oldDoc);
       fields = DiffSequence.makeChangedFields(projectedNew, projectedOld);
-      if (!_.isEmpty(fields)) {
+      if (!isObjEmpty(fields)) {
         observer.changed && observer.changed(newDoc._id, fields);
       }
     }
@@ -208,16 +219,21 @@ DiffSequence.diffQueryOrderedChanges = function (old_results, new_results,
 //   both: function (key, leftValue, rightValue) {...},
 // }
 DiffSequence.diffObjects = function (left, right, callbacks) {
-  _.each(left, function (leftValue, key) {
-    if (_.has(right, key))
+  Object.keys(left).forEach(key => {
+    const leftValue = left[key];
+    if (hasOwn.call(right, key)) {
       callbacks.both && callbacks.both(key, leftValue, right[key]);
-    else
+    } else {
       callbacks.leftOnly && callbacks.leftOnly(key, leftValue);
+    }
   });
+
   if (callbacks.rightOnly) {
-    _.each(right, function(rightValue, key) {
-      if (!_.has(left, key))
+    Object.keys(right).forEach(key => {
+      const rightValue = right[key];
+      if (! hasOwn.call(left, key)) {
         callbacks.rightOnly(key, rightValue);
+      }
     });
   }
 };
@@ -241,11 +257,13 @@ DiffSequence.makeChangedFields = function (newDoc, oldDoc) {
 };
 
 DiffSequence.applyChanges = function (doc, changeFields) {
-  _.each(changeFields, function (value, key) {
-    if (value === undefined)
+  Object.keys(changeFields).forEach(key => {
+    const value = changeFields[key];
+    if (typeof value === "undefined") {
       delete doc[key];
-    else
+    } else {
       doc[key] = value;
+    }
   });
 };
 

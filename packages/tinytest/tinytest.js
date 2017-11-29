@@ -1,54 +1,50 @@
-var Future;
-if (Meteor.isServer)
-  Future = Npm.require('fibers/future');
+const Future = Meteor.isServer && require('fibers/future');
 
 /******************************************************************************/
 /* TestCaseResults                                                            */
 /******************************************************************************/
 
-TestCaseResults = function (test_case, onEvent, onException, stop_at_offset) {
-  var self = this;
-  self.test_case = test_case;
-  self.onEvent = onEvent;
-  self.expecting_failure = false;
-  self.current_fail_count = 0;
-  self.stop_at_offset = stop_at_offset;
-  self.onException = onException;
-  self.id = Random.id();
-  self.extraDetails = {};
-};
+export class TestCaseResults {
+  constructor(test_case, onEvent, onException, stop_at_offset) {
+    this.test_case = test_case;
+    this.onEvent = onEvent;
+    this.expecting_failure = false;
+    this.current_fail_count = 0;
+    this.stop_at_offset = stop_at_offset;
+    this.onException = onException;
+    this.id = Random.id();
+    this.extraDetails = {};
+  }
 
-_.extend(TestCaseResults.prototype, {
-  ok: function (doc) {
-    var self = this;
+  ok(doc) {
     var ok = {type: "ok"};
     if (doc)
       ok.details = doc;
-    if (self.expecting_failure) {
+    if (this.expecting_failure) {
       ok.details = ok.details || {};
       ok.details["was_expecting_failure"] = true;
-      self.expecting_failure = false;
+      this.expecting_failure = false;
     }
-    self.onEvent(ok);
-  },
+    this.onEvent(ok);
+  }
 
-  expect_fail: function () {
-    var self = this;
-    self.expecting_failure = true;
-  },
+  expect_fail() {
+    this.expecting_failure = true;
+  }
 
-  fail: function (doc) {
-    var self = this;
-
+  fail(doc) {
     if (typeof doc === "string") {
       // Some very old code still tries to call fail() with a
       // string. Don't do this!
       doc = { type: "fail", message: doc };
     }
 
-    doc = _.extend({}, doc, self.extraDetails);
+    doc = {
+      ...doc,
+      ...this.extraDetails,
+    };
 
-    if (self.stop_at_offset === 0) {
+    if (this.stop_at_offset === 0) {
       if (Meteor.isClient) {
         // Only supported on the browser for now..
         var now = (+new Date);
@@ -56,10 +52,10 @@ _.extend(TestCaseResults.prototype, {
         if ((+new Date) - now < 100)
           alert("To use this feature, first enable your browser's debugger.");
       }
-      self.stop_at_offset = null;
+      this.stop_at_offset = null;
     }
-    if (self.stop_at_offset)
-      self.stop_at_offset--;
+    if (this.stop_at_offset)
+      this.stop_at_offset--;
 
     // Get filename and line number of failure if we're using v8 (Chrome or
     // Node).
@@ -82,16 +78,16 @@ _.extend(TestCaseResults.prototype, {
       }
     }
 
-    self.onEvent({
-        type: (self.expecting_failure ? "expected_fail" : "fail"),
+    this.onEvent({
+        type: (this.expecting_failure ? "expected_fail" : "fail"),
         details: doc,
-        cookie: {name: self.test_case.name, offset: self.current_fail_count,
-                 groupPath: self.test_case.groupPath,
-                 shortName: self.test_case.shortName}
+        cookie: {name: this.test_case.name, offset: this.current_fail_count,
+                 groupPath: this.test_case.groupPath,
+                 shortName: this.test_case.shortName}
     });
-    self.expecting_failure = false;
-    self.current_fail_count++;
-  },
+    this.expecting_failure = false;
+    this.current_fail_count++;
+  }
 
   // Call this to fail the test with an exception. Use this to record
   // exceptions that occur inside asynchronous callbacks in tests.
@@ -100,21 +96,20 @@ _.extend(TestCaseResults.prototype, {
   // this function, you should make sure that (1) the test doesn't
   // call its callback (onComplete function); (2) the test function
   // doesn't directly raise an exception.
-  exception: function (exception) {
+  exception(exception) {
     this.onException(exception);
-  },
+  }
 
   // returns a unique ID for this test run, for convenience use by
   // your tests
-  runId: function () {
+  runId() {
     return this.id;
-  },
+  }
 
   // === Following patterned after http://vowsjs.org/#reference ===
 
   // XXX eliminate 'message' and 'not' arguments
-  equal: function (actual, expected, message, not) {
-
+  equal(actual, expected, message, not) {
     if ((! not) && (typeof actual === 'string') &&
         (typeof expected === 'string')) {
       this._stringEqual(actual, expected, message);
@@ -154,41 +149,41 @@ _.extend(TestCaseResults.prototype, {
                  expected: JSON.stringify(expected), actual: JSON.stringify(actual), not: !!not});
     } else
       this.ok();
-  },
+  }
 
-  notEqual: function (actual, expected, message) {
+  notEqual(actual, expected, message) {
     this.equal(actual, expected, message, true);
-  },
+  }
 
-  instanceOf: function (obj, klass, message) {
+  instanceOf(obj, klass, message) {
     if (obj instanceof klass)
       this.ok();
     else
       this.fail({type: "instanceOf", message: message, not: false}); // XXX what other data?
-  },
+  }
 
-  notInstanceOf: function (obj, klass, message) {
+  notInstanceOf(obj, klass, message) {
     if (obj instanceof klass)
       this.fail({type: "instanceOf", message: message, not: true}); // XXX what other data?
     else
       this.ok();
-  },
+  }
 
-  matches: function (actual, regexp, message) {
+  matches(actual, regexp, message) {
     if (regexp.test(actual))
       this.ok();
     else
       this.fail({type: "matches", message: message,
                  actual: actual, regexp: regexp.toString(), not: false});
-  },
+  }
 
-  notMatches: function (actual, regexp, message) {
+  notMatches(actual, regexp, message) {
     if (regexp.test(actual))
       this.fail({type: "matches", message: message,
                  actual: actual, regexp: regexp.toString(), not: true});
     else
       this.ok();
-  },
+  }
 
   // expected can be:
   //  undefined: accept any exception.
@@ -207,26 +202,27 @@ _.extend(TestCaseResults.prototype, {
   // The upshot is, if you want to test whether an error is of a
   // particular class, use a predicate function.
   //
-  throws: function (f, expected) {
+  throws(f, expected) {
     var actual, predicate;
 
-    if (expected === undefined)
+    if (expected === undefined) {
       predicate = function (actual) {
         return true;
       };
-    else if (_.isString(expected))
+    } else if (typeof expected === "string") {
       predicate = function (actual) {
-        return _.isString(actual.message) &&
+        return typeof actual.message === "string" &&
                actual.message.indexOf(expected) !== -1;
       };
-    else if (expected instanceof RegExp)
+    } else if (expected instanceof RegExp) {
       predicate = function (actual) {
         return expected.test(actual.message);
       };
-    else if (typeof expected === 'function')
+    } else if (typeof expected === 'function') {
       predicate = expected;
-    else
+    } else {
       throw new Error('expected should be a string, regexp, or predicate function');
+    }
 
     try {
       f();
@@ -243,197 +239,197 @@ _.extend(TestCaseResults.prototype, {
           "wrong error thrown: " + actual.message :
           "did not throw an error as expected"
       });
-  },
+  }
 
-  isTrue: function (v, msg) {
+  isTrue(v, msg) {
     if (v)
       this.ok();
     else
       this.fail({type: "true", message: msg, not: false});
-  },
+  }
 
-  isFalse: function (v, msg) {
+  isFalse(v, msg) {
     if (v)
       this.fail({type: "true", message: msg, not: true});
     else
       this.ok();
-  },
+  }
 
-  isNull: function (v, msg) {
+  isNull(v, msg) {
     if (v === null)
       this.ok();
     else
       this.fail({type: "null", message: msg, not: false});
-  },
+  }
 
-  isNotNull: function (v, msg) {
+  isNotNull(v, msg) {
     if (v === null)
       this.fail({type: "null", message: msg, not: true});
     else
       this.ok();
-  },
+  }
 
-  isUndefined: function (v, msg) {
+  isUndefined(v, msg) {
     if (v === undefined)
       this.ok();
     else
       this.fail({type: "undefined", message: msg, not: false});
-  },
+  }
 
-  isNotUndefined: function (v, msg) {
+  isNotUndefined(v, msg) {
     if (v === undefined)
       this.fail({type: "undefined", message: msg, not: true});
     else
       this.ok();
-  },
+  }
 
-  isNaN: function (v, msg) {
+  isNaN(v, msg) {
     if (isNaN(v))
       this.ok();
     else
       this.fail({type: "NaN", message: msg, not: false});
-  },
+  }
 
-  isNotNaN: function (v, msg) {
+  isNotNaN(v, msg) {
     if (isNaN(v))
       this.fail({type: "NaN", message: msg, not: true});
     else
       this.ok();
-  },
+  }
 
-  include: function (s, v, message, not) {
+  include(s, v, message, not) {
     var pass = false;
-    if (s instanceof Array)
-      pass = _.any(s, function(it) {return _.isEqual(v, it);});
-    else if (typeof s === "object")
+    if (s instanceof Array) {
+      pass = s.some(it => _.isEqual(v, it));
+    } else if (s && typeof s === "object") {
       pass = v in s;
-    else if (typeof s === "string")
+    } else if (typeof s === "string") {
       if (s.indexOf(v) > -1) {
         pass = true;
       }
-    else
+    } else {
       /* fail -- not something that contains other things */;
-    if (pass === ! not)
-      this.ok();
-    else {
-      this.fail({type: "include", message: message,
-                 sequence: s, should_contain_value: v, not: !!not});
     }
-  },
 
-  notInclude: function (s, v, message) {
+    if (pass === ! not) {
+      this.ok();
+    } else {
+      this.fail({
+        type: "include",
+        message,
+        sequence: s,
+        should_contain_value: v,
+        not: !!not,
+      });
+    }
+  }
+
+  notInclude(s, v, message) {
     this.include(s, v, message, true);
-  },
+  }
 
   // XXX should change to lengthOf to match vowsjs
-  length: function (obj, expected_length, msg) {
-    if (obj.length === expected_length)
+  length(obj, expected_length, msg) {
+    if (obj.length === expected_length) {
       this.ok();
-    else
-      this.fail({type: "length", expected: expected_length,
-                 actual: obj.length, message: msg});
-  },
+    } else {
+      this.fail({
+        type: "length",
+        expected: expected_length,
+        actual: obj.length,
+        message: msg,
+      });
+    }
+  }
 
   // EXPERIMENTAL way to compare two strings that results in
   // a nicer display in the test runner, e.g. for multiline
   // strings
-  _stringEqual: function (actual, expected, message) {
+  _stringEqual(actual, expected, message) {
     if (actual !== expected) {
-      this.fail({type: "string_equal",
-                 message: message,
-                 expected: expected,
-                 actual: actual});
+      this.fail({
+        type: "string_equal",
+        message,
+        expected,
+        actual,
+      });
     } else {
       this.ok();
     }
   }
-
-
-});
+}
 
 /******************************************************************************/
 /* TestCase                                                                   */
 /******************************************************************************/
 
-TestCase = function (name, func) {
-  var self = this;
-  self.name = name;
-  self.func = func;
+export class TestCase {
+  constructor(name, func) {
+    this.name = name;
+    this.func = func;
 
-  var nameParts = _.map(name.split(" - "), function(s) {
-    return s.replace(/^\s*|\s*$/g, ""); // trim
-  });
-  self.shortName = nameParts.pop();
-  nameParts.unshift("tinytest");
-  self.groupPath = nameParts;
-};
+    var nameParts = name.split(" - ").map(s => {
+      return s.replace(/^\s*|\s*$/g, ""); // trim
+    });
+    this.shortName = nameParts.pop();
+    nameParts.unshift("tinytest");
+    this.groupPath = nameParts;
+  }
 
-_.extend(TestCase.prototype, {
   // Run the test asynchronously, delivering results via onEvent;
   // then call onComplete() on success, or else onException(e) if the
   // test raised (or voluntarily reported) an exception.
-  run: function (onEvent, onComplete, onException, stop_at_offset) {
-    var self = this;
+  run(onEvent, onComplete, onException, stop_at_offset) {
+    let completed = false;
 
-    var completed = false;
-    var markComplete = function () {
-      if (completed) {
-        Meteor._debug("*** Test error -- test '" + self.name +
-                      "' returned multiple times.");
-        return false;
+    return new Promise((resolve, reject) => {
+      const results = new TestCaseResults(
+        this,
+        event => {
+          // If this trace prints, it means you ran some test.* function
+          // after the test finished! Another symptom will be that the
+          // test will display as "waiting" even when it counts as passed
+          // or failed.
+          if (completed) {
+            console.trace("event after complete!");
+          }
+          return onEvent(event);
+        },
+        reject,
+        stop_at_offset
+      );
+
+      const result = this.func(results, resolve);
+      if (result && typeof result.then === "function") {
+        result.then(resolve, reject);
       }
-      completed = true;
-      return true;
-    };
 
-    var wrappedOnEvent = function (e) {
-      // If this trace prints, it means you ran some test.* function after the
-      // test finished! Another symptom will be that the test will display as
-      // "waiting" even when it counts as passed or failed.
-      if (completed)
-        console.trace("event after complete!");
-      return onEvent(e);
-    };
-
-    var results = new TestCaseResults(self, wrappedOnEvent,
-                                      function (e) {
-                                        if (markComplete())
-                                          onException(e);
-                                      }, stop_at_offset);
-
-    Meteor.defer(function () {
-      try {
-        self.func(results, function () {
-          if (markComplete())
-            onComplete();
-        });
-      } catch (e) {
-        if (markComplete())
-          onException(e);
+    }).then(
+      () => {
+        completed = true;
+        onComplete();
+      },
+      error => {
+        completed = true;
+        onException(error);
       }
-    });
+    );
   }
-});
+}
 
 /******************************************************************************/
 /* TestManager                                                                */
 /******************************************************************************/
 
-TestManager = function () {
-  var self = this;
-  self.tests = {};
-  self.ordered_tests = [];
-  self.testQueue = Meteor.isServer && new Meteor._SynchronousQueue();
-};
+export const TestManager = new (class TestManager {
+  constructor() {
+    this.tests = {};
+    this.ordered_tests = [];
+    this.testQueue = Meteor.isServer && new Meteor._SynchronousQueue();
+  }
 
-if (Meteor.isServer && process.env.TINYTEST_FILTER) {
-  __meteor_runtime_config__.tinytestFilter = process.env.TINYTEST_FILTER;
-}
-
-_.extend(TestManager.prototype, {
-  addCase: function (test) {
-    var self = this;
-    if (test.name in self.tests)
+  addCase(test) {
+    if (test.name in this.tests)
       throw new Error(
         "Every test needs a unique name, but there are two tests named '" +
           test.name + "'");
@@ -441,74 +437,69 @@ _.extend(TestManager.prototype, {
         test.name.indexOf(__meteor_runtime_config__.tinytestFilter) === -1) {
       return;
     }
-    self.tests[test.name] = test;
-    self.ordered_tests.push(test);
-  },
+    this.tests[test.name] = test;
+    this.ordered_tests.push(test);
+  }
 
-  createRun: function (onReport, pathPrefix) {
-    var self = this;
-    return new TestRun(self, onReport, pathPrefix);
+  createRun(onReport, pathPrefix) {
+    return new TestRun(this, onReport, pathPrefix);
   }
 });
 
-// singleton
-TestManager = new TestManager;
+if (Meteor.isServer && process.env.TINYTEST_FILTER) {
+  __meteor_runtime_config__.tinytestFilter = process.env.TINYTEST_FILTER;
+}
 
 /******************************************************************************/
 /* TestRun                                                                    */
 /******************************************************************************/
 
-TestRun = function (manager, onReport, pathPrefix) {
-  var self = this;
-  self.manager = manager;
-  self.onReport = onReport;
-  self.next_sequence_number = 0;
-  self._pathPrefix = pathPrefix || [];
-  _.each(self.manager.ordered_tests, function (test) {
-    if (self._prefixMatch(test.groupPath))
-      self._report(test);
-  });
-};
+export class TestRun {
+  constructor(manager, onReport, pathPrefix) {
+    this.manager = manager;
+    this.onReport = onReport;
+    this.next_sequence_number = 0;
+    this._pathPrefix = pathPrefix || [];
+    this.manager.ordered_tests.forEach(test => {
+      if (this._prefixMatch(test.groupPath))
+        this._report(test);
+    });
+  }
 
-_.extend(TestRun.prototype, {
-
-  _prefixMatch: function (testPath) {
-    var self = this;
-    for (var i = 0; i < self._pathPrefix.length; i++) {
-      if (!testPath[i] || self._pathPrefix[i] !== testPath[i]) {
+  _prefixMatch(testPath) {
+    for (var i = 0; i < this._pathPrefix.length; i++) {
+      if (!testPath[i] || this._pathPrefix[i] !== testPath[i]) {
         return false;
       }
     }
     return true;
-  },
+  }
 
-  _runTest: function (test, onComplete, stop_at_offset) {
-    var self = this;
-
+  _runTest(test, onComplete, stop_at_offset) {
     var startTime = (+new Date);
 
-    test.run(function (event) {
+    test.run(event => {
       /* onEvent */
       // Ignore result callbacks if the test has already been reported
       // as timed out.
       if (test.timedOut)
         return;
-      self._report(test, event);
-    }, function () {
+      this._report(test, event);
+    }, () => {
       /* onComplete */
       if (test.timedOut)
         return;
       var totalTime = (+new Date) - startTime;
-      self._report(test, {type: "finish", timeMs: totalTime});
+      this._report(test, {type: "finish", timeMs: totalTime});
       onComplete();
-    }, function (exception) {
+    }, exception => {
       /* onException */
       if (test.timedOut)
         return;
 
       // XXX you want the "name" and "message" fields on the
       // exception, to start with..
-      self._report(test, {
+      this._report(test, {
         type: "exception",
         details: {
           message: exception.message, // XXX empty???
@@ -518,17 +509,15 @@ _.extend(TestRun.prototype, {
 
       onComplete();
     }, stop_at_offset);
-  },
+  }
 
   // Run a single test.  On the server, ensure that only one test runs
   // at a time, even with multiple clients submitting tests.  However,
   // time out the test after three minutes to avoid locking up the
   // server if a test fails to complete.
   //
-  _runOne: function (test, onComplete, stop_at_offset) {
-    var self = this;
-
-    if (! self._prefixMatch(test.groupPath)) {
+  _runOne(test, onComplete, stop_at_offset) {
+    if (! this._prefixMatch(test.groupPath)) {
       onComplete && onComplete();
       return;
     }
@@ -536,16 +525,16 @@ _.extend(TestRun.prototype, {
     if (Meteor.isServer) {
       // On the server, ensure that only one test runs at a time, even
       // with multiple clients.
-      self.manager.testQueue.queueTask(function () {
+      this.manager.testQueue.queueTask(() => {
         // The future resolves when the test completes or times out.
         var future = new Future();
         Meteor.setTimeout(
-          function () {
+          () => {
             if (future.isResolved())
               // If the future has resolved the test has completed.
               return;
             test.timedOut = true;
-            self._report(test, {
+            this._report(test, {
               type: "exception",
               details: {
                 message: "test timed out"
@@ -555,7 +544,7 @@ _.extend(TestRun.prototype, {
           },
           3 * 60 * 1000  // 3 minutes
         );
-        self._runTest(test, function () {
+        this._runTest(test, () => {
           // The test can complete after it has timed out (it might
           // just be slow), so only resolve the future if the test
           // hasn't timed out.
@@ -568,25 +557,24 @@ _.extend(TestRun.prototype, {
       });
     } else {
       // client
-      self._runTest(test, function () {
+      this._runTest(test, () => {
         onComplete && onComplete();
       }, stop_at_offset);
     }
-  },
+  }
 
-  run: function (onComplete) {
-    var self = this;
-    var tests = _.clone(self.manager.ordered_tests);
+  run(onComplete) {
+    var tests = this.manager.ordered_tests.slice(0);
     var reportCurrent = function (name) {
       if (Meteor.isClient)
         Tinytest._onCurrentClientTest(name);
     };
 
-    var runNext = function () {
+    const runNext = () => {
       if (tests.length) {
         var t = tests.shift();
         reportCurrent(t.name);
-        self._runOne(t, runNext);
+        this._runOne(t, runNext);
       } else {
         reportCurrent(null);
         onComplete && onComplete();
@@ -594,38 +582,41 @@ _.extend(TestRun.prototype, {
     };
 
     runNext();
-  },
+  }
 
   // An alternative to run(). Given the 'cookie' attribute of a
   // failure record, try to rerun that particular test up to that
   // failure, and then open the debugger.
-  debug: function (cookie, onComplete) {
-    var self = this;
-    var test = self.manager.tests[cookie.name];
+  debug(cookie, onComplete) {
+    var test = this.manager.tests[cookie.name];
     if (!test)
       throw new Error("No such test '" + cookie.name + "'");
-    self._runOne(test, onComplete, cookie.offset);
-  },
+    this._runOne(test, onComplete, cookie.offset);
+  }
 
-  _report: function (test, event) {
-    var self = this;
-    if (event)
-      var events = [_.extend({sequence: self.next_sequence_number++}, event)];
-    else
-      var events = [];
-    self.onReport({
+  _report(test, event) {
+    let events;
+    if (event) {
+      events = [{
+        sequence: this.next_sequence_number++,
+        ...event
+      }];
+    } else {
+      events = [];
+    }
+    this.onReport({
       groupPath: test.groupPath,
       test: test.shortName,
-      events: events
+      events,
     });
   }
-});
+}
 
 /******************************************************************************/
 /* Public API                                                                 */
 /******************************************************************************/
 
-Tinytest = {};
+export const Tinytest = {};
 
 Tinytest.addAsync = function (name, func) {
   TestManager.addCase(new TestCase(name, func));

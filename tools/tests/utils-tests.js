@@ -60,6 +60,16 @@ selftest.define("url has scheme", function () {
   selftest.expectEqual(utils.hasScheme("example_com+http://"), false);
 });
 
+
+selftest.define("isNpmUrl", function () {
+    selftest.expectTrue(utils.isNpmUrl("https://github.com/caolan/async/archive/v2.3.0.tar.gz"));
+    selftest.expectTrue(utils.isNpmUrl("http://github.com/caolan/async/archive/v2.3.0.tar.gz"));
+    selftest.expectTrue(utils.isNpmUrl("git://github.com/foo/bar"));
+    selftest.expectTrue(utils.isNpmUrl("git+ssh://github.com/foo/bar"));
+    selftest.expectTrue(utils.isNpmUrl("git+http://github.com/foo/bar"));
+    selftest.expectTrue(utils.isNpmUrl("git+https://github.com/foo/bar"));
+});
+
 selftest.define("parse url", function () {
   selftest.expectEqual(utils.parseUrl("http://localhost:3000"), {
     hostname: "localhost",

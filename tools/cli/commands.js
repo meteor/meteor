@@ -16,6 +16,7 @@ var Console = require('../console/console.js').Console;
 var projectContextModule = require('../project-context.js');
 var release = require('../packaging/release.js');
 
+import { ensureDevBundleDependencies } from '../cordova/index.js';
 import { CordovaRunner } from '../cordova/runner.js';
 import { iOSRunTarget, AndroidRunTarget } from '../cordova/run-targets.js';
 
@@ -403,7 +404,6 @@ function doRunCommand(options) {
       });
     }
 
-    import { ensureDevBundleDependencies } from '../cordova';
     ensureDevBundleDependencies();
     prepareCordovaProject();
   }
@@ -908,9 +908,8 @@ var buildCommand = function (options) {
   // of the file, not a constant 'bundle' (a bit obnoxious for
   // machines, but worth it for humans)
 
-  // Error handling for options.architecture. We must pass in only one of three
-  // architectures. See archinfo.js for more information on what the
-  // architectures are, what they mean, et cetera.
+  // Error handling for options.architecture. See archinfo.js for more
+  // information on what the architectures are, what they mean, et cetera.
   if (options.architecture &&
       !_.has(archinfo.VALID_ARCHITECTURES, options.architecture)) {
     showInvalidArchMsg(options.architecture);
@@ -1042,10 +1041,9 @@ ${Console.command("meteor build ../output")}`,
     main.captureAndExit('', () => {
 
       import {
-        ensureDevBundleDependencies,
         pluginVersionsFromStarManifest,
         displayNameForPlatform,
-      } from '../cordova';
+      } from '../cordova/index.js';
 
       ensureDevBundleDependencies();
 
@@ -1828,7 +1826,6 @@ function doTestCommand(options) {
       });
     }
 
-    import { ensureDevBundleDependencies } from '../cordova';
     ensureDevBundleDependencies();
     prepareCordovaProject();
   }

@@ -1,4 +1,5 @@
 import { Meteor } from "meteor/meteor";
+import { HTTP } from "meteor/http";
 import {
   classPrefix,
   methodNameStats,
@@ -18,18 +19,22 @@ function main(builder) {
   document.body.appendChild(mask);
   document.body.appendChild(container);
 
-  Meteor.call(methodNameStats, (error, result) => {
+  HTTP.call("GET", Meteor.absoluteUrl(methodNameStats), {
+    params: {
+      cacheBuster: Math.random().toString(36).slice(2)
+    }
+  }, (error, { data }) => {
     if (error) {
       console.error([
-        `${packageName}: Couldn't load stats for visualization.`,
+        packageName + ": Couldn't load stats for visualization.",
         "Are you using standard-minifier-js >= 2.1.0 as the minifier?",
       ].join(" "));
       return;
     }
 
     // Load the JSON, which is `d3-hierarchy` digestible.
-    if (result) {
-      new builder({ container }).loadJson(result);
+    if (data) {
+      new builder({ container }).loadJson(data);
     }
   });
 }

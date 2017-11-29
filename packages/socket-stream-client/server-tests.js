@@ -1,6 +1,5 @@
-import ClientStream from '../server/stream_client_nodejs.js';
-
-var Fiber = Npm.require('fibers');
+import { ClientStream } from "meteor/socket-stream-client";
+import Fiber from "fibers";
 
 testAsyncMulti('stream client - callbacks run in a fiber', [
   function(test, expect) {
