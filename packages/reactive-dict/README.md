@@ -24,7 +24,7 @@ dict.set("weather", "sunny");
 ```
 
 For more information, see the [Tracker project
-page](https://www.meteor.com/tracker).
+page](http://docs.meteor.com/api/tracker.html).
 
 ## Future work
 

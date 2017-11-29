@@ -2080,6 +2080,10 @@ Tinytest.add('minimongo - sort', test => {
     for (let j = 0; j < 2; j++) {c.insert({a: i, b: j, _id: `${i}_${j}`});}
   }
 
+  test.equal(c.find(null, {sort: {b: -1, a: 1}, limit: 5}).fetch(), []);
+  test.equal(c.find(undefined, {sort: {b: -1, a: 1}, limit: 5}).fetch(), []);
+  test.equal(c.find(false, {sort: {b: -1, a: 1}, limit: 5}).fetch(), []);
+
   test.equal(
     c.find({a: {$gt: 10}}, {sort: {b: -1, a: 1}, limit: 5}).fetch(), [
       {a: 11, b: 1, _id: '11_1'},
@@ -3025,7 +3029,7 @@ Tinytest.add('minimongo - modify', test => {
   // Test for https://github.com/meteor/meteor/issues/9167
   upsert({key: 123, keyName: '321'}, {$set: {name: 'Todo'}}, {key: 123, keyName: '321', name: 'Todo'});
   upsertException({key: 123, "key.name": '321'}, {$set:{}});
-  
+
   // Nested fields don't work with literal objects
   upsertException({"a": {}, "a.b": "foo"}, {});
    // You can't have an ambiguious ID
@@ -3795,13 +3799,13 @@ Tinytest.add('minimongo - reactive skip/limit count while updating', test => {
   Tracker.flush({_throwFirstError: true});
   test.equal(count, 1);
   test.equal(unlimitedCount, 2);
-  
+
   // Make sure a second update also works
   X.update({}, {$set: {foo: 2}});
   Tracker.flush({_throwFirstError: true});
   test.equal(count, 1);
   test.equal(unlimitedCount, 2);
-  
+
   c.stop();
 });
 

@@ -8,14 +8,14 @@ export const CORDOVA_ARCH = "web.cordova";
 export const CORDOVA_PLATFORMS = ['ios', 'android'];
 
 export const CORDOVA_DEV_BUNDLE_VERSIONS = {
-  'cordova-lib': '7.0.1',
+  'cordova-lib': '7.1.0',
   'cordova-common': '1.5.1',
   'cordova-registry-mapper': '1.1.15',
 };
 
 export const CORDOVA_PLATFORM_VERSIONS = {
-  'android': '6.2.3',
-  'ios': '4.5.1'
+  'android': '6.3.0',
+  'ios': '4.5.3'
 };
 
 const PLATFORM_TO_DISPLAY_NAME_MAP = {

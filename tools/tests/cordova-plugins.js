@@ -611,3 +611,36 @@ selftest.define("cordova plugins in star.json, direct and transitive", ["slow", 
 
   buildAndCheckPluginInStar(s, "cordova-plugin-camera", "1.0.0");
 });
+
+selftest.define(
+  'parse cordova plugin ID and version',
+  ['cordova'],
+  function () {
+    const parseCordovaIdVersion =
+      require('../cordova/package-id-version-parser.js').parse;
+
+    let fullPackageId = 'some-cordova-plugin';
+    selftest.expectEqual(
+      parseCordovaIdVersion(fullPackageId),
+      { id: 'some-cordova-plugin', version: null }
+    );
+
+    fullPackageId = 'some-cordova-plugin@1.0.0';
+    selftest.expectEqual(
+      parseCordovaIdVersion(fullPackageId),
+      { id: 'some-cordova-plugin', version: '1.0.0' }
+    );
+
+    fullPackageId = '@somescope/some-cordova-plugin';
+    selftest.expectEqual(
+      parseCordovaIdVersion(fullPackageId),
+      { id: '@somescope/some-cordova-plugin', version: null }
+    );
+
+    fullPackageId = '@somescope/some-cordova-plugin@1.0.0';
+    selftest.expectEqual(
+      parseCordovaIdVersion(fullPackageId),
+      { id: '@somescope/some-cordova-plugin', version: '1.0.0' }
+    );
+  }
+);

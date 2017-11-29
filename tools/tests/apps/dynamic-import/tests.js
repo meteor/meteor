@@ -71,7 +71,7 @@ describe("dynamic import(...)", function () {
       import("react")
     ]).then(([{ name }, React]) => {
       assert.strictEqual(name, "react");
-      assert.strictEqual(typeof React.createClass, "function");
+      assert.strictEqual(typeof React.createElement, "function");
       assertDeepEqual(React, require("re" + "act"));
     });
   });
@@ -227,6 +227,24 @@ describe("dynamic import(...)", function () {
 
     return import("meteor/helper-package/import-peer.js").then(m => {
       assert.strictEqual(typeof m.wrap, "function");
+    });
+  });
+
+  it('should support object-valued package.json "browser" fields', () => {
+    return import("uuid").then(({ default: uuid }) => {
+      const id = uuid();
+      assert.strictEqual(typeof id, "string");
+      assert.strictEqual(id.split("-").length, 5);
+
+      if (Meteor.isClient) {
+        assert.strictEqual(
+          require.resolve("uuid/lib/rng.js"),
+          "/node_modules/uuid/lib/rng-browser.js"
+        );
+        const uuidPkgJsonId = ["uuid", "package.json"].join("/");
+        const { browser } = require(uuidPkgJsonId);
+        assert.strictEqual(typeof browser, "object");
+      }
     });
   });
 });

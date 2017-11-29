@@ -6,6 +6,8 @@ export class ServerSink {
     this.body = "";
     this.htmlById = Object.create(null);
     this.maybeMadeChanges = false;
+    this.statusCode = null;
+    this.responseHeaders = {};
   }
 
   appendToHead(html) {
@@ -30,6 +32,42 @@ export class ServerSink {
     this.htmlById[id] = "";
     this.appendToElementById(id, html);
   }
+
+  redirect(location, code = 301) {
+    this.maybeMadeChanges = true;
+    this.statusCode = code;
+    this.responseHeaders.Location = location;
+  }
+
+  // server only methods
+  setStatusCode(code) {
+    this.maybeMadeChanges = true;
+    this.statusCode = code;
+  }
+
+  setHeader(key, value) {
+    this.maybeMadeChanges = true;
+    this.responseHeaders[key] = value;
+  }
+
+  getHeaders() {
+    return this.request.headers;
+  }
+
+  getCookies() {
+    return this.request.cookies;
+  }
+}
+
+export function isReadable(stream) {
+  return (
+    stream !== null &&
+    typeof stream === 'object' &&
+    typeof stream.pipe === 'function' &&
+    stream.readable !== false &&
+    typeof stream._read === 'function' &&
+    typeof stream._readableState === 'object'
+  );
 }
 
 function appendContent(object, property, content) {
@@ -41,10 +79,12 @@ function appendContent(object, property, content) {
         madeChanges = true;
       }
     });
+  } else if (isReadable(content)) {
+    object[property] = content;
+    madeChanges = true;
   } else if ((content = content && content.toString("utf8"))) {
     object[property] = (object[property] || "") + content;
     madeChanges = true;
-  }
-
+  } 
   return madeChanges;
 }
