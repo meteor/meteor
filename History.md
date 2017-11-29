@@ -1,5 +1,7 @@
 ## v.NEXT
 
+* The `meteor reset` command now has a `--keep-db` option to save the database
+
 * The bundled version of MongoDB used by `meteor run` in development
   on 64-bit architectures has been updated to 3.4.10. 32-bit architectures
   will continue to use MongoDB 3.2.x versions since MongoDB is no longer

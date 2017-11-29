@@ -15,6 +15,7 @@ var crypto = require('crypto');
 var spawn = require("child_process").spawn;
 
 var rimraf = require('rimraf');
+var glob = require('glob');
 var sourcemap = require('source-map');
 var sourceMapRetrieverStack = require('../tool-env/source-map-retriever-stack.js');
 
@@ -295,7 +296,10 @@ function statOrNull(path, preserveSymlinks) {
 
 files.rm_recursive_async = (path) => {
   return new Promise((resolve, reject) => {
-    rimraf(files.convertToOSPath(path), err => err
+    if (!glob.hasMagic(path)) {
+      path = files.convertToOSPath(path);
+    }
+    rimraf(path, err => err
       ? reject(err)
       : resolve());
   });
@@ -304,7 +308,10 @@ files.rm_recursive_async = (path) => {
 // Like rm -r.
 files.rm_recursive = Profile("files.rm_recursive", (path) => {
   try {
-    rimraf.sync(files.convertToOSPath(path));
+    if (!glob.hasMagic(path)) {
+      path = files.convertToOSPath(path);
+    }
+    rimraf.sync(path);
   } catch (e) {
     if (e.code === "ENOTEMPTY" && canYield()) {
       files.rm_recursive_async(path).await();
