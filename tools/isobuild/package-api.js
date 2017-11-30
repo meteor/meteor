@@ -78,44 +78,41 @@ function forAllMatchingArchs (archs, f) {
  * @global
  * @summary Type of the API object passed into the `Package.onUse` function.
  */
-export function PackageAPI(options) {
-  var self = this;
-  assert.ok(self instanceof PackageAPI);
+export class PackageAPI {
+  constructor(options) {
+    options = options || {};
 
-  options = options || {};
+    this.buildingIsopackets = !!options.buildingIsopackets;
 
-  self.buildingIsopackets = !!options.buildingIsopackets;
+    // source files used.
+    // It's a multi-level map structured as:
+    //   arch -> sources|assets -> relPath -> {relPath, fileOptions}
+    this.files = {};
 
-  // source files used.
-  // It's a multi-level map structured as:
-  //   arch -> sources|assets -> relPath -> {relPath, fileOptions}
-  self.files = {};
+    // symbols exported
+    this.exports = {};
 
-  // symbols exported
-  self.exports = {};
+    // packages used and implied (keys are 'package', 'unordered', and
+    // 'weak').  an "implied" package is a package that will be used by a unibuild
+    // which uses us.
+    this.uses = {};
+    this.implies = {};
 
-  // packages used and implied (keys are 'package', 'unordered', and
-  // 'weak').  an "implied" package is a package that will be used by a unibuild
-  // which uses us.
-  self.uses = {};
-  self.implies = {};
+    _.each(compiler.ALL_ARCHES, arch => {
+      this.files[arch] = {
+        assets: [],
+        sources: [],
+        main: null,
+      };
 
-  _.each(compiler.ALL_ARCHES, function (arch) {
-    self.files[arch] = {
-      assets: [],
-      sources: [],
-      main: null,
-    };
+      this.exports[arch] = [];
+      this.uses[arch] = [];
+      this.implies[arch] = [];
+    });
 
-    self.exports[arch] = [];
-    self.uses[arch] = [];
-    self.implies[arch] = [];
-  });
+    this.releaseRecords = [];
+  }
 
-  self.releaseRecords = [];
-}
-
-_.extend(PackageAPI.prototype, {
   // Called when this package wants to make another package be
   // used. Can also take literal package objects, if you have
   // anonymous packages you want to use (eg, app packages)
@@ -183,7 +180,7 @@ _.extend(PackageAPI.prototype, {
    * are loaded before your package.) You can use this option to break
    * circular dependencies.
    */
-  use: function (names, arch, options) {
+  use(names, arch, options) {
     var self = this;
 
     // Support `api.use(package, {weak: true})` without arch.
@@ -231,7 +228,7 @@ _.extend(PackageAPI.prototype, {
         });
       });
     }
-  },
+  }
 
   // Called when this package wants packages using it to also use
   // another package.  eg, for umbrella packages which want packages
@@ -254,7 +251,7 @@ _.extend(PackageAPI.prototype, {
    * architectures by passing in an array, for example `['web.cordova',
    * 'os.linux']`.
    */
-  imply: function (names, arch) {
+  imply(names, arch) {
     var self = this;
 
     // We currently disallow build plugins in
@@ -306,7 +303,7 @@ _.extend(PackageAPI.prototype, {
         });
       });
     }
-  },
+  }
 
   // Top-level call to add a source file to a package. It will
   // be processed according to its extension (eg, *.coffee
@@ -332,7 +329,7 @@ _.extend(PackageAPI.prototype, {
    * resulting file in a closure. Has the same effect as putting a file into the
    * `client/compatibility` directory in an app.
    */
-  addFiles: function (paths, arch, fileOptions) {
+  addFiles(paths, arch, fileOptions) {
     if (fileOptions && fileOptions.isAsset) {
       // XXX it would be great to print a warning here, see the issue:
       // https://github.com/meteor/meteor/issues/5495
@@ -343,7 +340,7 @@ _.extend(PackageAPI.prototype, {
     // Watch out - we rely on the levels of stack traces inside this
     // function so don't wrap it in another function without changing that logic
     this._addFiles("sources", paths, arch, fileOptions);
-  },
+  }
 
   mainModule(path, arch, fileOptions = {}) {
     arch = toArchArray(arch);
@@ -379,7 +376,7 @@ _.extend(PackageAPI.prototype, {
 
       this._forbidExportWithLazyMain(a);
     });
-  },
+  }
 
   _forbidExportWithLazyMain(arch) {
     const filesForArch = this.files[arch];
@@ -391,7 +388,7 @@ _.extend(PackageAPI.prototype, {
           "export symbols and have a lazy main module"
       );
     }
-  },
+  }
 
   /**
    * @memberOf PackageAPI
@@ -418,7 +415,7 @@ _.extend(PackageAPI.prototype, {
     // Watch out - we rely on the levels of stack traces inside this
     // function so don't wrap it in another function without changing that logic
     this._addFiles("assets", paths, arch);
-  },
+  }
 
   /**
    * Internal method used by addFiles and addAssets.
@@ -485,7 +482,7 @@ _.extend(PackageAPI.prototype, {
     for (var i = 0; i < errors.length; ++i) {
       buildmessage.error(errors[i], { useMyCaller: 1 });
     }
-  },
+  }
 
   // Use this release to resolve unclear dependencies for this package. If
   // you don't fill in dependencies for some of your implies/uses, we will
@@ -511,7 +508,7 @@ _.extend(PackageAPI.prototype, {
    * track@version. Just 'version' (e.g. `"0.9.0"`) is sufficient if using the
    * default release track `METEOR`. Can be an array of specifications.
    */
-  versionsFrom: function (releases) {
+  versionsFrom(releases) {
     var self = this;
 
     // Packages in isopackets really ought to be in the core release, by
@@ -554,7 +551,7 @@ _.extend(PackageAPI.prototype, {
         self.releaseRecords.push(releaseRecord);
       }
     }
-  },
+  }
 
   // Export symbols from this package.
   //
@@ -588,7 +585,7 @@ _.extend(PackageAPI.prototype, {
    * @param {Boolean} exportOptions.testOnly If true, this symbol will only be
    * exported when running tests for this package.
    */
-  export: function (symbols, arch, options) {
+  "export"(symbols, arch, options) {
     var self = this;
 
     // Support `api.export("FooTest", {testOnly: true})` without
@@ -621,7 +618,7 @@ _.extend(PackageAPI.prototype, {
       });
     });
   }
-});
+}
 
 // XXX COMPAT WITH 0.8.x
 PackageAPI.prototype.add_files = PackageAPI.prototype.addFiles;
