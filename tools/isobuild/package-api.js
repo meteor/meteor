@@ -61,10 +61,11 @@ function mapWhereToArch (where) {
 // Iterates over the list of target archs and calls f(arch) for all archs
 // that match an element of self.allarchs.
 function forAllMatchingArchs (archs, f) {
-  _.each(archs, function (arch) {
-    _.each(compiler.ALL_ARCHES, function (matchArch) {
+  compiler.ALL_ARCHES.forEach(matchArch => {
+    archs.some(arch => {
       if (archinfo.matches(matchArch, arch)) {
         f(matchArch);
+        return true;
       }
     });
   });
