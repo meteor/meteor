@@ -10,7 +10,7 @@ import {
   writeSync,
 } from "fs";
 import { createServer } from "net";
-import { default as moduleRepl } from "repl";
+import { start as replStart } from "repl";
 
 const INFO_FILE_MODE = parseInt("600", 8); // Only the owner can read or write.
 const EXITING_MESSAGE = "Shell exiting...";
@@ -208,7 +208,7 @@ class Server {
       options.output = null;
     });
 
-    const repl = this.repl = moduleRepl.start(options);
+    const repl = this.repl = replStart(options);
 
     // This is technique of setting `repl.context` is similar to how the
     // `useGlobal` option would work during a normal `repl.start()` and
