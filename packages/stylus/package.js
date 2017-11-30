@@ -13,7 +13,7 @@ Package.registerBuildPlugin({
     stylus: "https://github.com/meteor/stylus/tarball/bb47a357d132ca843718c63998eb37b90013a449", // fork of 0.54.5
     nib: "1.1.2",
     "autoprefixer-stylus": "0.9.4",
-    glob: "7.1.2"
+    glob: "7.1.2",
   }
 });
 
@@ -31,5 +31,5 @@ Package.onTest(function (api) {
     'test_files/direct/direct.import.styl',
     'test_files/indirect/1/indirect1.import.styl',
     'test_files/indirect/2/indirect2.import.styl',
-  ],'client');
+  ], 'client');
 });

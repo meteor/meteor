@@ -129,7 +129,19 @@ class StylusCompiler extends MultiFileCachingCompiler {
           return fs.readFileSync(filePath, 'utf8');
         }
 
-        const parsed = parseImportPath(filePath);
+        // The `allFiles` Map references package files using a key that starts
+        // from the root of the package. If `filePath` includes a package
+        // path prefix (like "packages/[package name]"), we'll remove it to
+        // make sure the `filePath` can be properly matched to a key in the
+        // `allFiles` Map.
+        const packageName =
+          inputFile.getPackageName().replace('local-test:', '');
+        const cleanFilePath =
+          filePath.startsWith(`packages/${packageName}/`)
+            ? filePath.replace(`packages/${packageName}/`, '')
+            : filePath;
+
+        const parsed = parseImportPath(cleanFilePath);
         const absolutePath = absoluteImportPath(parsed);
 
         referencedImportPaths.push(absolutePath);
@@ -196,5 +208,9 @@ class StylusCompiler extends MultiFileCachingCompiler {
 }
 
 function resolvePath(path) {
-  return glob.sync(path);
+  let paths = glob.sync(path);
+  if (paths.length === 0) {
+    paths = glob.sync(`**/${path}`);
+  }
+  return paths;
 }
