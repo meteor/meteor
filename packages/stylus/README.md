@@ -52,6 +52,12 @@ The main app entry point for the styles, `app.styl`:
 // ... rest of app styles
 ```
 
+[File globbing](http://stylus-lang.com/docs/import.html#file-globbing) is also supported:
+
+```stylus
+// app/app.styl
+@import './components/*'
+```
 
 ## Cross-packages imports
 
@@ -94,7 +100,6 @@ To import a file from the app, leave the content of curly braces empty:
 Since this package uses custom code for `@import`s, some of the import syntax is
 not supported at the moment:
 
-- globbing: `@import './folder/*'`
+- Basic self-contained [file globbing](http://stylus-lang.com/docs/import.html#file-globbing) is supported (like `@import './component/*'`), but cross-package/app import globbing is not (like `@import '{some-package}/component/*'`).
 - importing `index.styl`: `@import ./folder/` - should automatically load
   `./folder/index.styl`
-

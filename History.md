@@ -1,5 +1,11 @@
 ## v.NEXT
 
+* The `stylus` package now supports
+  [glob imports](http://stylus-lang.com/docs/import.html#file-globbing) like
+  `@import './folder/*'`.
+  [FR #211](https://github.com/meteor/meteor-feature-requests/issues/211)
+  [PR #9272](https://github.com/meteor/meteor/pull/9272)
+
 * The bundled version of MongoDB used by `meteor run` in development
   on 64-bit architectures has been updated to 3.4.10. 32-bit architectures
   will continue to use MongoDB 3.2.x versions since MongoDB is no longer
