@@ -134,12 +134,15 @@ class StylusCompiler extends MultiFileCachingCompiler {
         // path prefix (like "packages/[package name]"), we'll remove it to
         // make sure the `filePath` can be properly matched to a key in the
         // `allFiles` Map.
-        const packageName =
-          inputFile.getPackageName().replace('local-test:', '');
-        const cleanFilePath =
-          filePath.startsWith(`packages/${packageName}/`)
-            ? filePath.replace(`packages/${packageName}/`, '')
-            : filePath;
+        let cleanFilePath = filePath;
+        let packageName = inputFile.getPackageName();
+        if (packageName) {
+          packageName = packageName.replace('local-test:', '');
+          const packagePathPrefix = `packages/${packageName}/`;
+          if (filePath.startsWith(packagePathPrefix)) {
+            cleanFilePath = filePath.replace(packagePathPrefix, '');
+          }
+        }
 
         const parsed = parseImportPath(cleanFilePath);
         const absolutePath = absoluteImportPath(parsed);
