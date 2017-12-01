@@ -6,6 +6,7 @@ const {
   join: pathJoin,
   normalize: pathNormalize,
 } = require("path");
+const { fetchURL } = require("./common.js");
 const hasOwn = Object.prototype.hasOwnProperty;
 
 require("./security.js");
@@ -34,7 +35,7 @@ Meteor.startup(() => {
   Object.keys(dynamicImportInfo).forEach(setUpPlatform);
 
   Package.webapp.WebApp.connectHandlers.use(
-    "/__dynamicImport",
+    fetchURL,
     middleware
   );
 });

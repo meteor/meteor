@@ -19,7 +19,11 @@ function main(builder) {
   document.body.appendChild(mask);
   document.body.appendChild(container);
 
-  HTTP.call("GET", Meteor.absoluteUrl(methodNameStats), {
+  // Always match the protocol (http or https) and the domain:port of the
+  // current page.
+  const url = "//" + location.host + methodNameStats;
+
+  HTTP.call("GET", url, {
     params: {
       cacheBuster: Math.random().toString(36).slice(2)
     }

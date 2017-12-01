@@ -550,9 +550,11 @@ function runWebAppServer() {
 
         WebApp.clientPrograms[arch] = program;
 
-        // Serve the program as a string at /foo/<arch>/manifest.json
-        // XXX change manifest.json -> program.json
-        staticFiles[urlPrefix + getItemPathname('/manifest.json')] = {
+        // Expose program details as a string reachable via the following
+        // URL.
+        const manifestUrl =
+          urlPrefix + getItemPathname("/__meteor__/webapp/manifest.json");
+        staticFiles[manifestUrl] = {
           content: JSON.stringify(program),
           cacheable: false,
           hash: program.version,

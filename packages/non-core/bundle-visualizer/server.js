@@ -107,7 +107,7 @@ Meteor.startup(() => {
   }
 
   Package.webapp.WebApp.connectHandlers.use(
-    "/" + methodNameStats,
+    methodNameStats,
     statsMiddleware
   );
 });

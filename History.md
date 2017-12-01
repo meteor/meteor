@@ -6,6 +6,11 @@
   several new features, including two-factor authentication, as described
   in the [release notes](https://github.com/npm/npm/blob/latest/CHANGELOG.md#v551-2017-10-04).
 
+* The previously served `/manifest.json` application metadata file is now
+  served from `/__meteor__/webapp/manifest.json`.
+  [Issue #6674](https://github.com/meteor/meteor/issues/6674)
+  [PR #9424](https://github.com/meteor/meteor/pull/9424)
+
 * The bundled version of MongoDB used by `meteor run` in development
   on 64-bit architectures has been updated to 3.4.10. 32-bit architectures
   will continue to use MongoDB 3.2.x versions since MongoDB is no longer
@@ -19,9 +24,9 @@
   `standard-minifier-css` package that uses it didn't have to change for
   example), but now that we're using `postcss` the AST accepted and returned
   from certain functions is different. This could impact developers who are
-  tying into Meteor's internal `minifier-css` package directly. The AST based 
+  tying into Meteor's internal `minifier-css` package directly. The AST based
   function changes are:
-  
+
   * `CssTools.parseCss` now returns a PostCSS
     [`Root`](http://api.postcss.org/Root.html) object.    
   * `CssTools.stringifyCss` expects a PostCSS `Root` object as its first
@@ -30,7 +35,7 @@
     first parameter.    
   * `CssTools.rewriteCssUrls` expects a PostCSS `Root` object as its first
     parameter.
-    
+
   [PR #9263](https://github.com/meteor/meteor/pull/9263)
 
 * Dynamically `import()`ed modules will now be fetched from the

@@ -1,6 +1,5 @@
-export const packageName = "bundle-visualizer";
 export const classPrefix = "meteorBundleVisualizer";
-export const methodNameStats = `_meteor/${packageName}/stats`;
+export const methodNameStats = "/__meteor__/bundle-visualizer/stats";
 export const typeBundle = "bundle";
 export const typePackage = "package";
 export const typeNodeModules = "node_modules";
