@@ -622,24 +622,25 @@ function runWebAppServer() {
     };
 
     syncQueue.runTask(function() {
+      const allCss = [];
+
       _.each(WebApp.clientPrograms, function (program, archName) {
         boilerplateByArch[archName] =
           WebAppInternals.generateBoilerplateInstance(
-            archName, program.manifest,
-            defaultOptionsForArch[archName]);
+            archName,
+            program.manifest,
+            defaultOptionsForArch[archName],
+          );
+
+        const cssFiles = boilerplateByArch[archName].baseData.css;
+        cssFiles.forEach(file => allCss.push({
+          url: bundledJsCssUrlRewriteHook(file.url),
+        }));
       });
 
       // Clear the memoized boilerplate cache.
       memoizedBoilerplate = {};
 
-      // Configure CSS injection for the default arch
-      // XXX implement the CSS injection for all archs?
-      var cssFiles = boilerplateByArch[WebApp.defaultArch].baseData.css;
-      // Rewrite all CSS files (which are written directly to <style> tags)
-      // by autoupdate_client to use the CDN prefix/etc
-      var allCss = _.map(cssFiles, function(cssFile) {
-        return { url: bundledJsCssUrlRewriteHook(cssFile.url) };
-      });
       WebAppInternals.refreshableAssets = { allCss };
     });
   };
