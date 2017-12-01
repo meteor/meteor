@@ -16,7 +16,7 @@
 
 - [ ] Add tests to the `modules` test app.
 
-- [ ] Expose `Meteor.isModern` on both client and server.
+- [x] Expose `Meteor.isModern` on both client and server.
 
 - [ ] Make sure in-browser tests run with both `web.browser` and
       `web.browser.legacy`.

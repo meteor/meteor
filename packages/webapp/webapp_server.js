@@ -606,7 +606,19 @@ function runWebAppServer() {
           ROOT_URL: process.env.MOBILE_ROOT_URL ||
             Meteor.absoluteUrl()
         }
-      }
+      },
+
+      "web.browser": {
+        runtimeConfigOverrides: {
+          isModern: true,
+        }
+      },
+
+      "web.browser.legacy": {
+        runtimeConfigOverrides: {
+          isModern: false,
+        }
+      },
     };
 
     syncQueue.runTask(function() {

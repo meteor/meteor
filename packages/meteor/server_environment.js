@@ -12,7 +12,10 @@ Meteor = {
   isDevelopment: meteorEnv.NODE_ENV !== "production",
   isClient: false,
   isServer: true,
-  isCordova: false
+  isCordova: false,
+  // Server code runs in Node 8+, which is decidedly "modern" by any
+  // reasonable definition.
+  isModern: true
 };
 
 Meteor.settings = {};
