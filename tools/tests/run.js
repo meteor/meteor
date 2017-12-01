@@ -498,3 +498,16 @@ selftest.define("run logging in order", function () {
     run.match(`line: ${i}.`);
   }
 });
+
+selftest.define("run ROOT_URL must be an URL", function () {
+  var s = new Sandbox();
+  var run;
+
+  s.set("ROOT_URL", "192.168.0.1");
+  s.createApp("myapp", "standard-app", { dontPrepareApp: true });
+  s.cd("myapp");
+
+  run = s.run();
+  run.matchErr("$ROOT_URL, if specified, must be an URL");
+  run.expectExit(1);
+});
