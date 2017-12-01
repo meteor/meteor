@@ -526,11 +526,14 @@ var compileUnibuild = Profile(function (options) {
       // though; that happens via compiler.lint.
 
       if (isApp) {
-        // This shouldn't happen, because initFromAppDir's getFiles
+        // This shouldn't normally happen, because initFromAppDir's getFiles
         // should only return assets or sources which match
-        // sourceProcessorSet.
-        throw Error("app contains non-asset files without plugin? " +
-                    relPath + " - " + filename);
+        // sourceProcessorSet. That being said, this can happen when sources
+        // are being watched by a build plugin, and that build plugin is
+        // removed while the Tool is running. Given that this is not a
+        // common occurrence however, we'll ignore this situation and let the
+        // Tool rebuild continue.
+        return;
       }
 
       const linterClassification = linterSourceProcessorSet.classifyFilename(
