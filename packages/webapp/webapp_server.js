@@ -324,35 +324,40 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
     _.clone(__meteor_runtime_config__),
     additionalOptions.runtimeConfigOverrides || {}
   );
-  return new Boilerplate(arch, manifest,
-    _.extend({
-      pathMapper: function (itemPath) {
-        return pathJoin(archPath[arch], itemPath); },
-      baseDataExtension: {
-        additionalStaticJs: _.map(
-          additionalStaticJs || [],
-          function (contents, pathname) {
-            return {
-              pathname: pathname,
-              contents: contents
-            };
-          }
-        ),
-        // Convert to a JSON string, then get rid of most weird characters, then
-        // wrap in double quotes. (The outermost JSON.stringify really ought to
-        // just be "wrap in double quotes" but we use it to be safe.) This might
-        // end up inside a <script> tag so we need to be careful to not include
-        // "</script>", but normal {{spacebars}} escaping escapes too much! See
-        // https://github.com/meteor/meteor/issues/3730
-        meteorRuntimeConfig: JSON.stringify(
-          encodeURIComponent(JSON.stringify(runtimeConfig))),
-        rootUrlPathPrefix: __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
-        bundledJsCssUrlRewriteHook: bundledJsCssUrlRewriteHook,
-        inlineScriptsAllowed: WebAppInternals.inlineScriptsAllowed(),
-        inline: additionalOptions.inline
-      }
-    }, additionalOptions)
-  );
+
+  const urlPrefix = getUrlPrefixForArch(arch);
+
+  return new Boilerplate(arch, manifest, _.extend({
+    urlMapper(itemPath) {
+      return urlPrefix + itemPath;
+    },
+    pathMapper(itemPath) {
+      return pathJoin(archPath[arch], itemPath);
+    },
+    baseDataExtension: {
+      additionalStaticJs: _.map(
+        additionalStaticJs || [],
+        function (contents, pathname) {
+          return {
+            pathname: pathname,
+            contents: contents
+          };
+        }
+      ),
+      // Convert to a JSON string, then get rid of most weird characters, then
+      // wrap in double quotes. (The outermost JSON.stringify really ought to
+      // just be "wrap in double quotes" but we use it to be safe.) This might
+      // end up inside a <script> tag so we need to be careful to not include
+      // "</script>", but normal {{spacebars}} escaping escapes too much! See
+      // https://github.com/meteor/meteor/issues/3730
+      meteorRuntimeConfig: JSON.stringify(
+        encodeURIComponent(JSON.stringify(runtimeConfig))),
+      rootUrlPathPrefix: __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
+      bundledJsCssUrlRewriteHook: bundledJsCssUrlRewriteHook,
+      inlineScriptsAllowed: WebAppInternals.inlineScriptsAllowed(),
+      inline: additionalOptions.inline
+    }
+  }, additionalOptions));
 };
 
 // A mapping from url path to "info". Where "info" has the following fields:
