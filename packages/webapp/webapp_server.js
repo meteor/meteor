@@ -470,15 +470,12 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
   }
 };
 
-var getUrlPrefixForArch = function (arch) {
+function getUrlPrefixForArch(arch) {
+  // We prepend '/__' to "scope" the url to Meteor internals.
   // XXX we rely on the fact that arch names don't contain slashes
   // in that case we would need to uri escape it
-
-  // We add '__' to the beginning of non-standard archs to "scope" the url
-  // to Meteor internals.
-  return arch === WebApp.defaultArch ?
-    '' : '/' + '__' + arch.replace(/^web\./, '');
-};
+  return "/__" + arch.replace(/^web\./, "");
+}
 
 // Parse the passed in port value. Return the port as-is if it's a String
 // (e.g. a Windows Server style named pipe), otherwise return the port as an
