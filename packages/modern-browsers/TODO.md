@@ -4,7 +4,7 @@
 
 - [x] Research minimum versions for key ECMAScript features.
 
-- [ ] Use the minimum versions in `webapp` to determine JS bundle.
+- [x] Use the minimum versions in `webapp` to determine JS bundle.
 
 - [ ] Import different `core-js` polyfills in `ecmascript-runtime-client`
       depending on modern/legacy classification.

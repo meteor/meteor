@@ -14,6 +14,7 @@ import query from "qs-middleware";
 import parseRequest from "parseurl";
 import basicAuth from "basic-auth-connect";
 import { lookup as lookupUserAgent } from "useragent";
+import { isModern } from "meteor/modern-browsers";
 import send from "send";
 import {
   removeExistingSocketFile,
@@ -36,8 +37,9 @@ WebAppInternals.NpmModules = {
   }
 };
 
-// TODO Accommodate web.browser.legacy, too.
-WebApp.defaultArch = 'web.browser';
+// Though we might prefer to use web.browser (modern) as the default
+// architecture, safety requires a more compatible defaultArch.
+WebApp.defaultArch = 'web.browser.legacy';
 
 // XXX maps archs to manifests
 WebApp.clientPrograms = {};
@@ -771,10 +773,14 @@ function runWebAppServer() {
       var archKey = pathname.split('/')[1];
       var archKeyCleaned = 'web.' + archKey.replace(/^__/, '');
 
-      if (!/^__/.test(archKey) || !_.has(archPath, archKeyCleaned)) {
-        archKey = WebApp.defaultArch;
-      } else {
+      if (/^__/.test(archKey) &&
+          _.has(archPath, archKeyCleaned)) {
         archKey = archKeyCleaned;
+      } else if (isModern(request.browser) &&
+                 _.has(WebApp.clientPrograms, "web.browser")) {
+        archKey = "web.browser";
+      } else {
+        archKey = WebApp.defaultArch;
       }
 
       return getBoilerplateAsync(
