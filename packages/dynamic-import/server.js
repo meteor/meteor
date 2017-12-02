@@ -69,7 +69,7 @@ function middleware(request, response) {
     response.end(JSON.stringify(readTree(
       JSON.parse(Buffer.concat(chunks)),
       getPlatform(request)
-    )));
+    ), null, 2));
   });
 }
 
