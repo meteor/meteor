@@ -32,7 +32,7 @@
 
 - [ ] Fix dynamic module source map URLs (prepend `/__arch`).
 
-- [ ] Fix tests failing because of changes to static resource URLs.
+- [x] Fix tests failing because of changes to static resource URLs.
 
 - [ ] In development, save time by only rebuilding `web.browser` (modern)?
 
