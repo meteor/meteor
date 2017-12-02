@@ -453,7 +453,7 @@ export class PackageAPI {
         const filesOfType = self.files[a][type];
 
         // Check if we have already added a file at this path
-        if (_.has(filesOfType, path)) {
+        if (filesOfType.some(source => source.relPath === path)) {
           // We want the singular form of the file type
           const typeName = {
             sources: 'source',
