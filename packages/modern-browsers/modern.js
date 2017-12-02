@@ -98,6 +98,8 @@ setMinimumBrowserVersions({
   mobile_safari: 10,
   opera: 26,
   safari: 10,
+  // Disallow any version of PhantomJS.
+  phantomjs: Infinity,
 });
 
 // ECMAScript 2015 Template Literals
