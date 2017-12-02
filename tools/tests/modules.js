@@ -82,11 +82,18 @@ selftest.define("modules - import chain for packages", () => {
   run.match("with-main-module: with-main-module");
 
   // On the client, we just check that install() is called correctly
-  const modules = getUrl("http://localhost:3000/packages/modules.js");
-  selftest.expectTrue(modules.includes('\ninstall("with-add-files");'));
-  selftest.expectTrue(modules.includes('\n' +
-    'install("with-main-module", "meteor/with-main-module/with-main-module.js");'
-  ));
+  checkModernAndLegacyUrls("/packages/modules.js", body => {
+    selftest.expectTrue(body.includes('\ninstall("with-add-files");'));
+    selftest.expectTrue(
+      body.includes('\ninstall("with-main-module", ' +
+                    '"meteor/with-main-module/with-main-module.js");')
+    );
+  });
 
   run.stop();
 });
+
+function checkModernAndLegacyUrls(path, test) {
+  test(getUrl("http://localhost:3000/__browser" + path));
+  test(getUrl("http://localhost:3000/__browser.legacy" + path));
+}
