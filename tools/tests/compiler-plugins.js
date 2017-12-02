@@ -393,6 +393,11 @@ selftest.define("compiler plugins - compiler throws", () => {
   run.expectExit(1);
 });
 
+function checkModernAndLegacyUrls(path, test) {
+  test(getUrl("http://localhost:3000/__browser" + path));
+  test(getUrl("http://localhost:3000/__browser.legacy" + path));
+}
+
 // Test that compiler plugins can add static assets. Also tests `filenames`
 // option to registerCompiler.
 selftest.define("compiler plugins - compiler addAsset", () => {
@@ -407,8 +412,9 @@ selftest.define("compiler plugins - compiler addAsset", () => {
   run.match("Asset says Print out foo");
 
   // Test client-side asset.
-  const body = getUrl('http://localhost:3000/foo.printme');
-  selftest.expectEqual(body, 'Print out foo\n');
+  checkModernAndLegacyUrls("/foo.printme", body => {
+    selftest.expectEqual(body, "Print out foo\n");
+  });
 
   run.stop();
 });
@@ -428,9 +434,14 @@ selftest.define("compiler plugins - addAssets", () => {
   run.match("Printing out my own source code!");
 
   // Test client-side asset.
-  let body = getUrl('http://localhost:3000/packages/' +
-    'asset-and-source/asset-and-source.js');
-  selftest.expectTrue(body.indexOf('Printing out my own source code!') !== -1);
+  checkModernAndLegacyUrls(
+    "/packages/asset-and-source/asset-and-source.js",
+    body => {
+      selftest.expectTrue(
+        body.indexOf("Printing out my own source code!") !== -1
+      );
+    }
+  );
 
   // Test that deprecated API still works (added in 1.2.1 in response to people
   // having trouble upgrading to 1.2)
@@ -450,9 +461,14 @@ selftest.define("compiler plugins - addAssets", () => {
   run.match("Printing out my own source code!");
 
   // Test client-side asset.
-  body = getUrl('http://localhost:3000/packages/' +
-    'asset-and-source/asset-and-source.js');
-  selftest.expectTrue(body.indexOf('Printing out my own source code!') !== -1);
+  checkModernAndLegacyUrls(
+    "/packages/asset-and-source/asset-and-source.js",
+    body => {
+      selftest.expectTrue(
+        body.indexOf('Printing out my own source code!') !== -1
+      );
+    }
+  );
 
   // Test error messages for malformed package files
   s.write("packages/asset-and-source/package.js", `Package.describe({
