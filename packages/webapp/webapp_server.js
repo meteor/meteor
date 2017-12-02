@@ -325,12 +325,7 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
     additionalOptions.runtimeConfigOverrides || {}
   );
 
-  const urlPrefix = getUrlPrefixForArch(arch);
-
   return new Boilerplate(arch, manifest, _.extend({
-    urlMapper(itemPath) {
-      return urlPrefix + itemPath;
-    },
     pathMapper(itemPath) {
       return pathJoin(archPath[arch], itemPath);
     },
@@ -470,13 +465,6 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
   }
 };
 
-function getUrlPrefixForArch(arch) {
-  // We prepend '/__' to "scope" the url to Meteor internals.
-  // XXX we rely on the fact that arch names don't contain slashes
-  // in that case we would need to uri escape it
-  return "/__" + arch.replace(/^web\./, "");
-}
-
 // Parse the passed in port value. Return the port as-is if it's a String
 // (e.g. a Windows Server style named pipe), otherwise return the port as an
 // integer.
@@ -515,12 +503,10 @@ function runWebAppServer() {
         if (! clientJsonPath || ! clientDir || ! clientJson)
           throw new Error("Client config file not parsed.");
 
-        var urlPrefix = getUrlPrefixForArch(arch);
-
         var manifest = clientJson.manifest;
         _.each(manifest, function (item) {
           if (item.url && item.where === "client") {
-            staticFiles[urlPrefix + getItemPathname(item.url)] = {
+            staticFiles[getItemPathname(item.url)] = {
               absolutePath: pathJoin(clientDir, item.path),
               cacheable: item.cacheable,
               hash: item.hash,
@@ -532,7 +518,7 @@ function runWebAppServer() {
             if (item.sourceMap) {
               // Serve the source map too, under the specified URL. We assume all
               // source maps are cacheable.
-              staticFiles[urlPrefix + getItemPathname(item.sourceMapUrl)] = {
+              staticFiles[getItemPathname(item.sourceMapUrl)] = {
                 absolutePath: pathJoin(clientDir, item.sourceMap),
                 cacheable: true
               };

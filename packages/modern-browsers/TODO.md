@@ -30,7 +30,7 @@
 
 - [ ] Use different plugins in babel-compiler for `web.browser.legacy`.
 
-- [ ] Fix dynamic module source map URLs (prepend `/__arch`).
+- [x] Fix dynamic module source map URLs (prepend `/__arch`).
 
 - [x] Fix tests failing because of changes to static resource URLs.
 
