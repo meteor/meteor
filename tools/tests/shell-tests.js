@@ -19,6 +19,19 @@ selftest.define("meteor shell", function () {
   shell.expectExit(0);
 
   shell = s.run("shell");
+  // Make sure that the special Node REPL _ variable is not stomping on any
+  // global `_` (i.e. Underscore) since the default `repl` behavior sets the
+  // special variable `_` to the result of the last operation. This method
+  // call to the server will make sure our special `_` remains intact after
+  // the shell is launched.
+  shell.write(
+    "Meteor.call('__meteor__/__self_test__/shell-tests/underscore')\n");
+  shell.proc.stdin.end();
+  shell.waitSecs(10);
+  shell.match('["_specialUnderscoreTestObject"]');
+  shell.expectExit(0);
+
+  shell = s.run("shell");
   // Now try with a bunch of newlines in the input.
   shell.write("500+\n4000\n+60\n\n+\n7\n");
   shell.proc.stdin.end();
