@@ -729,8 +729,20 @@ selftest.define("show and search local package",  function () {
     s.cp("package-with-exports.js", "package.js");
   });
 
-  var exportStr =
-    "A, B (server), C (web.browser, web.cordova), D (web.browser), E (web.cordova), G (server, web.cordova)";
+  const impRaw = {
+    A: "",
+    B: "server",
+    C: "web.browser, web.browser.legacy, web.cordova",
+    D: "web.browser, web.browser.legacy",
+    E: "web.cordova",
+    G: "server, web.cordova"
+  };
+
+  const exportStr = Object.keys(impRaw).map(key => {
+    const value = impRaw[key];
+    return key + (value ? " (" + value + ")" : "");
+  }).join(", ");
+
   var description = "Test package.";
 
   testShowPackage(s, name, {
@@ -753,14 +765,6 @@ selftest.define("show and search local package",  function () {
 
   // Test showing implies. Since we are not going to build the package, we don't
   // have to publish any of the things that we imply.
-  var impRaw = {
-    A: "",
-    B: "server",
-    C: "web.browser, web.cordova",
-    D: "web.browser",
-    E: "web.cordova",
-    G: "server, web.cordova"
-  };
   var impliesData = _.sortBy(_.map(impRaw, function (label, placeholder) {
     var name =  randomizedPackageName(username, placeholder.toLowerCase());
     return { placeholder: placeholder, name: name, label: label};
