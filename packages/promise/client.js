@@ -1,3 +1,2 @@
-require("meteor-promise").makeCompatible(
-  exports.Promise = require("./common.js").Promise
-);
+require("./done.js");
+require("meteor-promise").makeCompatible(Promise);
