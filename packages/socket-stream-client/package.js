@@ -13,6 +13,11 @@ Npm.depends({
 Package.onUse(function(api) {
   api.use("ecmascript");
   api.use("retry"); // TODO Try to remove this.
+
+  // This dependency will be removed in Meteor 1.6.2 once we can use the
+  // web.browser.legacy architecture instead.
+  api.use("sockjs-shim", "client", { weak: true });
+
   api.mainModule("browser.js", "client", { lazy: true });
   api.mainModule("node.js", "server", { lazy: true });
 });
