@@ -14,6 +14,7 @@ Package.onUse(function(api) {
   api.use("ecmascript");
   api.use("modern-browsers");
   api.use("retry"); // TODO Try to remove this.
+  api.use("dynamic-import");
 
   api.addFiles("sockjs-0.3.4.js", "web.browser.legacy");
   api.mainModule("browser.js", "client", { lazy: true });

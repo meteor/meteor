@@ -25,7 +25,7 @@
 
 - [x] Use `web.browser.legacy` to handle SockJS instead.
 
-- [ ] Load `SockJS` using dynamic `import()` if necessary in modern
+- [x] Load `SockJS` using dynamic `import()` if necessary in modern
       `web.browser` clients.
 
 - [ ] Use different plugins in babel-compiler for `web.browser.legacy`.
