@@ -15,7 +15,7 @@ function isModern(browser) {
       ~~browser.major,
       ~~browser.minor,
       ~~browser.patch,
-    ], minimumVersions[browser.name]);
+    ], minimumVersions[browser.name].version);
 }
 
 // Any package that depends on the modern-browsers package can call this
@@ -25,15 +25,31 @@ function isModern(browser) {
 // requested minimum versions for each browser.
 function setMinimumBrowserVersions(versions) {
   Object.keys(versions).forEach(browserName => {
-    const newMinVersion = versions[browserName];
-    if (hasOwn.call(minimumVersions, browserName)) {
-      if (greaterThan(newMinVersion, minimumVersions[browserName])) {
-        minimumVersions[browserName] = copy(newMinVersion);
-      }
-    } else {
-      minimumVersions[browserName] = copy(newMinVersion);
+    if (hasOwn.call(minimumVersions, browserName) &&
+        ! greaterThan(versions[browserName],
+                      minimumVersions[browserName].version)) {
+      return;
+    }
+
+    minimumVersions[browserName] = {
+      version: copy(versions[browserName]),
+      blame: getCaller("setMinimumBrowserVersions")
+    };
+  });
+}
+
+function getCaller(calleeName) {
+  const error = new Error;
+  Error.captureStackTrace(error);
+  const lines = error.stack.split("\n");
+  let caller;
+  lines.some((line, i) => {
+    if (line.indexOf(calleeName) >= 0) {
+      caller = lines[i + 1].trim();
+      return true;
     }
   });
+  return caller;
 }
 
 Object.assign(exports, {
