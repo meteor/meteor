@@ -84,50 +84,57 @@ exports.getDefaults = function getDefaults(features) {
 };
 
 function getDefaultsForNode8(features) {
-  const plugins = [
-    // Support Flow type syntax by simply stripping it out.
+  const plugins = [];
+
+  // Support Flow type syntax by simply stripping it out.
+  plugins.push(
     require("@babel/plugin-syntax-flow"),
-    require("@babel/plugin-transform-flow-strip-types"),
+    require("@babel/plugin-transform-flow-strip-types")
+  );
 
-    // Compile import/export syntax with Reify.
-    [reifyPlugin, {
-      generateLetDeclarations: true,
-      enforceStrictMode: false
-    }],
+  // Compile import/export syntax with Reify.
+  plugins.push([reifyPlugin, {
+    generateLetDeclarations: true,
+    enforceStrictMode: false
+  }]);
 
+  if (! (features &&
+         features.runtime === false)) {
     // Import helpers from the babel-runtime package rather than
     // redefining them at the top of each module.
-    [require("@babel/plugin-transform-runtime"), {
+    plugins.push([require("@babel/plugin-transform-runtime"), {
       // Avoid importing polyfills for things like Object.keys, which
       // Meteor already shims in other ways.
       polyfill: false
-    }],
+    }]);
+  }
 
-    // Make assigning to imported symbols a syntax error.
-    require("@babel/plugin-check-constants"),
+  // Make assigning to imported symbols a syntax error.
+  plugins.push(require("@babel/plugin-check-constants"));
 
-    // Not fully supported in Node 8 without the --harmony flag.
+  // Not fully supported in Node 8 without the --harmony flag.
+  plugins.push(
     require("@babel/plugin-syntax-object-rest-spread"),
-    require("@babel/plugin-proposal-object-rest-spread"),
+    require("@babel/plugin-proposal-object-rest-spread")
+  );
 
-    // Ensure that async functions run in a Fiber, while also taking
-    // full advantage of native async/await support in Node 8.
-    [require("./plugins/async-await.js"), {
-      // Do not transform `await x` to `Promise.await(x)`, since Node
-      // 8 has native support for await expressions.
-      useNativeAsyncAwait: false
-    }],
+  // Ensure that async functions run in a Fiber, while also taking
+  // full advantage of native async/await support in Node 8.
+  plugins.push([require("./plugins/async-await.js"), {
+    // Do not transform `await x` to `Promise.await(x)`, since Node
+    // 8 has native support for await expressions.
+    useNativeAsyncAwait: false
+  }]);
 
-    // Transform `import(id)` to `module.dynamicImport(id)`.
-    require("./plugins/dynamic-import.js"),
+  // Transform `import(id)` to `module.dynamicImport(id)`.
+  plugins.push(require("./plugins/dynamic-import.js"));
 
-    // Enable class property syntax for server-side React code.
-    require("@babel/plugin-proposal-class-properties"),
+  // Enable class property syntax for server-side React code.
+  plugins.push(require("@babel/plugin-proposal-class-properties"));
 
-    // In case babel-plugin-transform-runtime generated any import
-    // declarations after reifyPlugin ran, make sure to compile them.
-    babelModulesPlugin
-  ];
+  // In case babel-plugin-transform-runtime generated any import
+  // declarations after reifyPlugin ran, make sure to compile them.
+  plugins.push(babelModulesPlugin);
 
   const presets = [{
     plugins
