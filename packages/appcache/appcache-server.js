@@ -39,7 +39,7 @@ var browserDisabled = function (request) {
   return disabledBrowsers[request.browser.name];
 };
 
-function isDynamic (resource) {
+function isDynamic(resource) {
   return resource.type === 'dynamic js' ||
     (resource.type === 'json' &&
       resource.url.startsWith('/dynamic/') &&
@@ -105,7 +105,7 @@ WebApp.connectHandlers.use(function (req, res, next) {
   _.each(WebApp.clientPrograms[WebApp.defaultArch].manifest, function (resource) {
     if (resource.where === 'client' &&
         ! RoutePolicy.classify(resource.url) &&
-        !isDynamic(resource)) {
+        ! isDynamic(resource)) {
       manifest += resource.url;
       // If the resource is not already cacheable (has a query
       // parameter, presumably with a hash or version of some sort),
@@ -136,7 +136,7 @@ WebApp.connectHandlers.use(function (req, res, next) {
     if (resource.where === 'client' &&
         ! RoutePolicy.classify(resource.url) &&
         !resource.cacheable &&
-        !isDynamic(resource)) {
+        ! isDynamic(resource)) {
       manifest += resource.url + " " + resource.url +
         "?" + resource.hash + "\n";
     }
@@ -172,7 +172,7 @@ var sizeCheck = function () {
   _.each(WebApp.clientPrograms[WebApp.defaultArch].manifest, function (resource) {
     if (resource.where === 'client' &&
         ! RoutePolicy.classify(resource.url) &&
-        !isDynamic(resource)) {
+        ! isDynamic(resource)) {
       totalSize += resource.size;
     }
   });
