@@ -39,6 +39,13 @@ var browserDisabled = function (request) {
   return disabledBrowsers[request.browser.name];
 };
 
+function isDynamic (resource) {
+  return resource.type === 'dynamic js' ||
+    (resource.type === 'json' &&
+      resource.url.startsWith('/dynamic/') &&
+      resource.url.endsWith('.map'))
+}
+
 WebApp.addHtmlAttributeHook(function (request) {
   if (browserDisabled(request))
     return null;
@@ -97,7 +104,8 @@ WebApp.connectHandlers.use(function (req, res, next) {
   manifest += "/" + "\n";
   _.each(WebApp.clientPrograms[WebApp.defaultArch].manifest, function (resource) {
     if (resource.where === 'client' &&
-        ! RoutePolicy.classify(resource.url)) {
+        ! RoutePolicy.classify(resource.url) &&
+        !isDynamic(resource)) {
       manifest += resource.url;
       // If the resource is not already cacheable (has a query
       // parameter, presumably with a hash or version of some sort),
@@ -127,7 +135,8 @@ WebApp.connectHandlers.use(function (req, res, next) {
   _.each(WebApp.clientPrograms[WebApp.defaultArch].manifest, function (resource) {
     if (resource.where === 'client' &&
         ! RoutePolicy.classify(resource.url) &&
-        !resource.cacheable) {
+        !resource.cacheable &&
+        !isDynamic(resource)) {
       manifest += resource.url + " " + resource.url +
         "?" + resource.hash + "\n";
     }
@@ -162,7 +171,8 @@ var sizeCheck = function () {
   var totalSize = 0;
   _.each(WebApp.clientPrograms[WebApp.defaultArch].manifest, function (resource) {
     if (resource.where === 'client' &&
-        ! RoutePolicy.classify(resource.url)) {
+        ! RoutePolicy.classify(resource.url) &&
+        !isDynamic(resource)) {
       totalSize += resource.size;
     }
   });
