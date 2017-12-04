@@ -44,12 +44,7 @@ exports.getDefaults = function getDefaults(features) {
 
   if (! (features &&
          features.runtime === false)) {
-    combined.plugins.push([
-      require("@babel/plugin-transform-runtime"),
-      { // Avoid importing polyfills for things like Object.keys, which
-        // Meteor already shims in other ways.
-        polyfill: false }
-    ]);
+    combined.plugins.push(getRuntimeTransform());
   }
 
   if (features) {
@@ -83,6 +78,18 @@ exports.getDefaults = function getDefaults(features) {
   };
 };
 
+function getRuntimeTransform() {
+  return [require("@babel/plugin-transform-runtime"), {
+    // Avoid importing polyfills for things like Object.keys, which
+    // Meteor already shims in other ways.
+    polyfill: false,
+
+    // Use runtime helpers that do not import any core-js polyfills,
+    // since Meteor provides those polyfills in other ways.
+    useBuiltIns: true
+  }];
+}
+
 function getDefaultsForNode8(features) {
   const plugins = [];
 
@@ -102,11 +109,7 @@ function getDefaultsForNode8(features) {
          features.runtime === false)) {
     // Import helpers from the babel-runtime package rather than
     // redefining them at the top of each module.
-    plugins.push([require("@babel/plugin-transform-runtime"), {
-      // Avoid importing polyfills for things like Object.keys, which
-      // Meteor already shims in other ways.
-      polyfill: false
-    }]);
+    plugins.push(getRuntimeTransform());
   }
 
   // Make assigning to imported symbols a syntax error.
