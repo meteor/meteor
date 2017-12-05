@@ -42,8 +42,9 @@ var browserDisabled = function (request) {
 function isDynamic(resource) {
   return resource.type === 'dynamic js' ||
     (resource.type === 'json' &&
-      resource.url.startsWith('/dynamic/') &&
-      resource.url.endsWith('.map'))
+     // TODO Update this test with PR #9439.
+     resource.url.startsWith('/dynamic/') &&
+     resource.url.endsWith('.map'))
 }
 
 WebApp.addHtmlAttributeHook(function (request) {
@@ -126,8 +127,8 @@ WebApp.connectHandlers.use(function (req, res, next) {
   manifest += "/ /" + "\n";
   // Add a fallback entry for each uncacheable asset we added above.
   //
-  // This means requests for the bare url (/image.png instead of
-  // /image.png?hash) will work offline. Online, however, the browser
+  // This means requests for the bare url ("/image.png" instead of
+  // "/image.png?hash") will work offline. Online, however, the browser
   // will send a request to the server. Users can remove this extra
   // request to the server and have the asset served from cache by
   // specifying the full URL with hash in their code (manually, with
@@ -135,7 +136,7 @@ WebApp.connectHandlers.use(function (req, res, next) {
   _.each(WebApp.clientPrograms[WebApp.defaultArch].manifest, function (resource) {
     if (resource.where === 'client' &&
         ! RoutePolicy.classify(resource.url) &&
-        !resource.cacheable &&
+        ! resource.cacheable &&
         ! isDynamic(resource)) {
       manifest += resource.url + " " + resource.url +
         "?" + resource.hash + "\n";
