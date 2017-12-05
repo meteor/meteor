@@ -1,5 +1,22 @@
 ## v.NEXT
 
+* The `meteor-babel` npm package (along with its Babel-related
+  dependencies) has been updated to version 7.0.0-beta.34, a major update
+  from Babel 6. Thanks to the strong abstraction of the `meteor-babel`
+  package, the most noticeable consequence of the Babel 7 upgrade is that
+  the `babel-runtime` npm package has been replaced by `@babel/runtime`,
+  which can be installed by running
+  ```js
+  meteor npm install @babel/runtime
+  ```
+  in your application directory. There's a good chance that the old
+  `babel-runtime` package can be removed from your `package.json`
+  dependencies, though there's no harm in leaving it there. Please see
+  [this blog post](https://babeljs.io/blog/2017/09/12/planning-for-7.0)
+  for general information about updating to Babel 7 (note especially any
+  changes to plugins you've been using in any `.babelrc` files).
+  [PR #9440](https://github.com/meteor/meteor/pull/9440)
+
 * The previously served `/manifest.json` application metadata file is now
   served from `/__meteor__/webapp/manifest.json`.
   [Issue #6674](https://github.com/meteor/meteor/issues/6674)
