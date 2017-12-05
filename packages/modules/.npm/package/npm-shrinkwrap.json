@@ -2,9 +2,9 @@
   "lockfileVersion": 1,
   "dependencies": {
     "acorn": {
-      "version": "5.1.2",
-      "resolved": "https://registry.npmjs.org/acorn/-/acorn-5.1.2.tgz",
-      "integrity": "sha512-o96FZLJBPY1lvTuJylGA9Bk3t/GKPPJG8H0ydQQl01crzwJgspa4AEIq/pVTXigmK0PHVQhiAtn8WMBLL9D2WA=="
+      "version": "5.2.1",
+      "resolved": "https://registry.npmjs.org/acorn/-/acorn-5.2.1.tgz",
+      "integrity": "sha512-jG0u7c4Ly+3QkkW18V+NRDN+4bWHdln30NL1ZL2AvFZZmQe/BfopYCtghCKKVBUSetZ4QKcyA0pY6/4Gw8Pv8w=="
     },
     "minipass": {
       "version": "2.2.1",
@@ -12,14 +12,14 @@
       "integrity": "sha512-u1aUllxPJUI07cOqzR7reGmQxmCqlH88uIIsf6XZFEWgw7gXKpJdR+5R9Y3KEDmWYkdIz9wXZs3C0jOPxejk/Q=="
     },
     "minizlib": {
-      "version": "1.0.3",
-      "resolved": "https://registry.npmjs.org/minizlib/-/minizlib-1.0.3.tgz",
-      "integrity": "sha1-1cGr93vhVGGZUuJTM27Mq5sqMvU="
+      "version": "1.0.4",
+      "resolved": "https://registry.npmjs.org/minizlib/-/minizlib-1.0.4.tgz",
+      "integrity": "sha512-sN4U9tIJtBRwKbwgFh9qJfrPIQ/GGTRr1MGqkgOeMTLy8/lM0FcWU//FqlnZ3Vb7gJ+Mxh3FOg1EklibdajbaQ=="
     },
     "reify": {
-      "version": "0.12.3",
-      "resolved": "https://registry.npmjs.org/reify/-/reify-0.12.3.tgz",
-      "integrity": "sha512-s13k0kuZbhBzeRoJQGomWnLj2y10wK3FYXRXbZoydowAMmY0jTiFN98TgLkaE8uZkVCaoq3djnDo7mksWLsx4g=="
+      "version": "0.13.1",
+      "resolved": "https://registry.npmjs.org/reify/-/reify-0.13.1.tgz",
+      "integrity": "sha512-mwumMhtBZmKoDKamiCxufgUp7Jxugh9JFOlDYlZ7W3lEy9mXGNSHwasF0u9DDFd2ygqs3FRs/9iRp8uD8ClRqQ=="
     },
     "semver": {
       "version": "5.4.1",
