@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Meteor's latency-compensated distributed data server",
-  version: '2.1.2',
+  version: '2.1.3',
   documentation: null
 });
 
@@ -41,11 +41,7 @@ Package.onUse(function (api) {
 
   api.export('DDPServer', 'server');
 
-  api.addFiles('stream_server.js', 'server');
-
-  api.addFiles('livedata_server.js', 'server');
-  api.addFiles('writefence.js', 'server');
-  api.addFiles('crossbar.js', 'server');
+  api.mainModule('ddp-server.js', 'server');
 
   api.addFiles('server_convenience.js', 'server');
 });
