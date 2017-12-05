@@ -71,11 +71,24 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       ! excludedFileExtensionPattern.test(inputFilePath)) {
 
     var extraFeatures = Object.assign({}, this.extraFeatures);
+    var arch = inputFile.getArch();
 
-    if (inputFile.getArch().startsWith("os.")) {
+    if (arch.startsWith("os.")) {
       // Start with a much simpler set of Babel presets and plugins if
       // we're compiling for Node 8.
       extraFeatures.nodeMajorVersion = parseInt(process.versions.node);
+    }
+
+    if (arch !== "web.browser.legacy") {
+      extraFeatures.runtime = {
+        // Import Babel helpers from @babel/runtime/helpers/builtin/*
+        // instead of @babel/runtime/helpers/* to prevent those helper
+        // modules from importing anything from core-js. The polyfills and
+        // shims provided by core-js are not needed in modern JS
+        // environments (browsers and Node), and will be polyfilled by the
+        // ecmascript-runtime-{client,server} packages anyway.
+        useBuiltIns: true
+      };
     }
 
     if (! extraFeatures.hasOwnProperty("jscript")) {
