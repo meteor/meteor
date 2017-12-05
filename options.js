@@ -42,9 +42,9 @@ exports.getDefaults = function getDefaults(features) {
     require("./plugins/dynamic-import.js")
   );
 
-  if (! (features &&
-         features.runtime === false)) {
-    combined.plugins.push(getRuntimeTransform());
+  const rt = getRuntimeTransform(features);
+  if (rt) {
+    combined.plugins.push(rt);
   }
 
   if (features) {
@@ -78,7 +78,25 @@ exports.getDefaults = function getDefaults(features) {
   };
 };
 
-function getRuntimeTransform() {
+function isObject(value) {
+  return value !== null && typeof value === "object";
+}
+
+function getRuntimeTransform(features) {
+  let useBuiltIns = false;
+
+  if (isObject(features)) {
+    if (features.runtime === false) {
+      return null;
+    }
+
+    if (isObject(features.runtime)) {
+      useBuiltIns = !! features.runtime.useBuiltIns;
+    }
+  }
+
+  // Import helpers from the babel-runtime package rather than redefining
+  // them at the top of each module.
   return [require("@babel/plugin-transform-runtime"), {
     // Avoid importing polyfills for things like Object.keys, which
     // Meteor already shims in other ways.
@@ -86,7 +104,7 @@ function getRuntimeTransform() {
 
     // Use runtime helpers that do not import any core-js polyfills,
     // since Meteor provides those polyfills in other ways.
-    useBuiltIns: true
+    useBuiltIns: useBuiltIns
   }];
 }
 
@@ -105,11 +123,9 @@ function getDefaultsForNode8(features) {
     enforceStrictMode: false
   }]);
 
-  if (! (features &&
-         features.runtime === false)) {
-    // Import helpers from the babel-runtime package rather than
-    // redefining them at the top of each module.
-    plugins.push(getRuntimeTransform());
+  const rt = getRuntimeTransform(features);
+  if (rt) {
+    plugins.push(rt);
   }
 
   // Make assigning to imported symbols a syntax error.
