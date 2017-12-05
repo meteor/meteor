@@ -11,7 +11,7 @@ Package.describe({
 
 Package.registerBuildPlugin({
   name: 'compile-coffeescript',
-  use: ['caching-compiler@1.1.9', 'ecmascript@0.8.3', 'coffeescript-compiler@~2.0.3-2-beta161.13'],
+  use: ['caching-compiler@1.1.9', 'ecmascript@0.8.3', 'coffeescript-compiler@2.0.3-2-beta161.13'],
   sources: ['compile-coffeescript.js']
 });
 
