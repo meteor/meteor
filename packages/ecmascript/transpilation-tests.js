@@ -52,8 +52,12 @@ class Foo {
   }
 }`);
 
-  // Babel 7 no longer uses classCallCheck in loose mode.
-  test.isTrue(contains(output, 'helpers/classCallCheck'));
+  // Babel 7 no longer imports the classCallCheck helper in loose mode.
+  test.equal(output, [
+    "var Foo = function Foo(x) {",
+    "  this.x = x;",
+    "};"
+  ].join("\n"));
 });
 
 Tinytest.add("ecmascript - transpilation - helpers - inherits", (test) => {
@@ -62,7 +66,7 @@ class Foo {}
 class Bar extends Foo {}
 `);
 
-  test.isTrue(contains(output, 'helpers/inherits'));
+  test.isTrue(/helpers\/(builtin\/)?inherits/.test(output));
 });
 
 Tinytest.add("ecmascript - transpilation - helpers - bind", (test) => {
@@ -78,7 +82,7 @@ Tinytest.add("ecmascript - transpilation - helpers - extends", (test) => {
   var full = {a:1, ...middle, d:4};
 `);
 
-  test.isTrue(contains(output, 'helpers/extends'));
+  test.isTrue(/helpers\/(builtin\/)?extends/.test(output));
 });
 
 Tinytest.add("ecmascript - transpilation - helpers - objectWithoutProperties", (test) => {
@@ -86,7 +90,7 @@ Tinytest.add("ecmascript - transpilation - helpers - objectWithoutProperties", (
 var {a, ...rest} = obj;
 `);
 
-  test.isTrue(contains(output, 'helpers/objectWithoutProperties'));
+  test.isTrue(/helpers\/(builtin\/)?objectWithoutProperties/.test(output));
 });
 
 Tinytest.add("ecmascript - transpilation - helpers - objectDestructuringEmpty", (test) => {
@@ -94,7 +98,7 @@ Tinytest.add("ecmascript - transpilation - helpers - objectDestructuringEmpty", 
 var {} = null;
 `);
 
-  test.isTrue(contains(output, 'helpers/objectDestructuringEmpty'));
+  test.isTrue(/helpers\/(builtin\/)?objectDestructuringEmpty/.test(output));
 });
 
 Tinytest.add("ecmascript - transpilation - helpers - taggedTemplateLiteralLoose", (test) => {
@@ -102,7 +106,7 @@ Tinytest.add("ecmascript - transpilation - helpers - taggedTemplateLiteralLoose"
 var x = asdf\`A\${foo}C\`
 `);
 
-  test.isTrue(contains(output, 'helpers/taggedTemplateLiteralLoose'));
+  test.isTrue(/helpers\/(builtin\/)?taggedTemplateLiteralLoose/.test(output));
 });
 
 Tinytest.add("ecmascript - transpilation - helpers - createClass", (test) => {
@@ -112,7 +116,7 @@ class Foo {
 }
 `);
 
-  test.isTrue(contains(output, 'helpers/createClass'));
+  test.isTrue(/helpers\/(builtin\/)?createClass/.test(output));
 });
 
 Tinytest.add("ecmascript - transpilation - flow", (test) => {

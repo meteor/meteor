@@ -70,8 +70,9 @@ export class TestCaseResults {
         var frame = stack[i];
         // Heuristic: use the OUTERMOST line which is in a :tests.js
         // file (this is less likely to be a test helper function).
-        if (frame.getFileName().match(/:tests\.js/)) {
-          doc.filename = frame.getFileName();
+        const fileName = frame.getFileName();
+        if (fileName && fileName.match(/:tests\.js/)) {
+          doc.filename = fileName;
           doc.line = frame.getLineNumber();
           break;
         }
