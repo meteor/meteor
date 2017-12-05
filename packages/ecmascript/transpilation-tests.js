@@ -66,7 +66,7 @@ class Foo {}
 class Bar extends Foo {}
 `);
 
-  test.isTrue(contains(output, 'helpers/builtin/inherits'));
+  test.isTrue(/helpers\/(builtin\/)?inherits/.test(output));
 });
 
 Tinytest.add("ecmascript - transpilation - helpers - bind", (test) => {
@@ -82,7 +82,7 @@ Tinytest.add("ecmascript - transpilation - helpers - extends", (test) => {
   var full = {a:1, ...middle, d:4};
 `);
 
-  test.isTrue(contains(output, 'helpers/builtin/extends'));
+  test.isTrue(/helpers\/(builtin\/)?extends/.test(output));
 });
 
 Tinytest.add("ecmascript - transpilation - helpers - objectWithoutProperties", (test) => {
@@ -90,7 +90,7 @@ Tinytest.add("ecmascript - transpilation - helpers - objectWithoutProperties", (
 var {a, ...rest} = obj;
 `);
 
-  test.isTrue(contains(output, 'helpers/builtin/objectWithoutProperties'));
+  test.isTrue(/helpers\/(builtin\/)?objectWithoutProperties/.test(output));
 });
 
 Tinytest.add("ecmascript - transpilation - helpers - objectDestructuringEmpty", (test) => {
@@ -98,7 +98,7 @@ Tinytest.add("ecmascript - transpilation - helpers - objectDestructuringEmpty", 
 var {} = null;
 `);
 
-  test.isTrue(contains(output, 'helpers/builtin/objectDestructuringEmpty'));
+  test.isTrue(/helpers\/(builtin\/)?objectDestructuringEmpty/.test(output));
 });
 
 Tinytest.add("ecmascript - transpilation - helpers - taggedTemplateLiteralLoose", (test) => {
@@ -106,7 +106,7 @@ Tinytest.add("ecmascript - transpilation - helpers - taggedTemplateLiteralLoose"
 var x = asdf\`A\${foo}C\`
 `);
 
-  test.isTrue(contains(output, 'helpers/builtin/taggedTemplateLiteralLoose'));
+  test.isTrue(/helpers\/(builtin\/)?taggedTemplateLiteralLoose/.test(output));
 });
 
 Tinytest.add("ecmascript - transpilation - helpers - createClass", (test) => {
@@ -116,7 +116,7 @@ class Foo {
 }
 `);
 
-  test.isTrue(contains(output, 'helpers/builtin/createClass'));
+  test.isTrue(/helpers\/(builtin\/)?createClass/.test(output));
 });
 
 Tinytest.add("ecmascript - transpilation - flow", (test) => {

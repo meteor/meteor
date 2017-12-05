@@ -672,9 +672,9 @@
       "integrity": "sha1-0aitM/qc4OcT1l/dCsi3SNR4yEg="
     },
     "meteor-babel": {
-      "version": "7.0.0-beta.34",
-      "resolved": "https://registry.npmjs.org/meteor-babel/-/meteor-babel-7.0.0-beta.34.tgz",
-      "integrity": "sha512-DVyTivJcXVk6lFHEIe7/HFKQBrbKULaRWvLCWBWJD3GVP1SiyZFNoGhA3n2ZGXUzMGQCQJWpHUCfPDiuD5helw=="
+      "version": "7.0.0-beta.34-1",
+      "resolved": "https://registry.npmjs.org/meteor-babel/-/meteor-babel-7.0.0-beta.34-1.tgz",
+      "integrity": "sha512-+VJcfGDWMCF4aqCC0hbq4N2WOMnRW/uE1GUtmVomdyI+wAFsbmp2lGZyGCvU2M+K+76bLHw5BbJFvJNfRUSJBA=="
     },
     "meteor-babel-helpers": {
       "version": "0.0.3",
