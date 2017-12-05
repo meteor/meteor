@@ -9,7 +9,7 @@
 - [x] Import different `core-js` polyfills in `ecmascript-runtime-client`
       depending on modern/legacy classification.
 
-- [ ] Really vet the set of imported `core-js` polyfills based on known
+- [x] Really vet the set of imported `core-js` polyfills based on known
       minimum versions imposed by `setMinimumBrowserVersions`.
 
 - [ ] Create an `isobuild:web-browser-legacy` pseudopackage.

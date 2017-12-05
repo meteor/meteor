@@ -1,2 +1,9 @@
+require("core-js/modules/es6.object.is");
+require("core-js/modules/es6.function.name");
+require("core-js/modules/es6.number.is-finite");
+require("core-js/modules/es6.number.is-nan");
+require("core-js/modules/es7.object.values");
+require("core-js/modules/es7.object.entries");
+require("core-js/modules/es7.object.get-own-property-descriptors");
 require("core-js/modules/es7.string.pad-start");
 require("core-js/modules/es7.string.pad-end");

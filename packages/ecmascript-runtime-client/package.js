@@ -12,9 +12,11 @@ Package.onUse(function(api) {
   // Object.defineProperties that are buggy in older browsers.
   api.use("es5-shim", { weak: true });
 
-  api.use("modules", "client");
-  api.use("promise", "client");
+  api.use("modules");
+  api.use("promise");
+  api.use("modern-browsers");
 
+  api.mainModule("versions.js", "server");
   api.mainModule("modern.js", "client");
 
   api.mainModule("legacy.js", "web.browser.legacy");
