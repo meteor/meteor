@@ -79,7 +79,8 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       extraFeatures.nodeMajorVersion = parseInt(process.versions.node);
     }
 
-    if (arch !== "web.browser.legacy") {
+    if (arch !== "web.browser.legacy" &&
+        ! hasOwn.call(extraFeatures, "runtime")) {
       extraFeatures.runtime = {
         // Import Babel helpers from @babel/runtime/helpers/builtin/*
         // instead of @babel/runtime/helpers/* to prevent those helper
