@@ -70,6 +70,9 @@ build_machine_environment: &build_machine_environment
     # This multiplier scales the waitSecs for selftests.
     TIMEOUT_SCALE_FACTOR: 8
 
+    # Retry failed tests additional times.
+    METEOR_SELF_TEST_RETRIES: 2
+
     # These, mostly overlapping, flags ensure that CircleCI is as pretty as
     # possible for a non-interactive environment.  See also: --headless.
     EMACS: t
@@ -163,6 +166,7 @@ jobs:
           command: |
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
+              --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
               --junit /tmp/results/junit/0.xml \
@@ -199,6 +203,7 @@ jobs:
           command: |
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
+              --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
               --junit /tmp/results/junit/1.xml \
@@ -236,6 +241,7 @@ jobs:
           command: |
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
+              --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
               --junit /tmp/results/junit/2.xml \
@@ -273,6 +279,7 @@ jobs:
           command: |
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
+              --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
               --junit /tmp/results/junit/3.xml \
@@ -310,6 +317,7 @@ jobs:
           command:  |
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
+              --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
               --junit /tmp/results/junit/4.xml \
@@ -347,6 +355,7 @@ jobs:
           command: |
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
+              --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
               --junit /tmp/results/junit/5.xml \
@@ -384,6 +393,7 @@ jobs:
           command: |
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
+              --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
               --junit /tmp/results/junit/6.xml \
@@ -421,6 +431,7 @@ jobs:
           command: |
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
+              --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
               --junit /tmp/results/junit/7.xml \

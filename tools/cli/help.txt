@@ -684,7 +684,7 @@ Options:
 Run tests of the 'meteor' tool.
 Usage: meteor self-test [pattern] [--list] [--file pattern] [--changed]
                         [--slow] [--force-online] [--history n]
-                        [--browserstack]
+                        [--browserstack] [--retries n]
 
 Runs internal tests. Exits with status 0 on success.
 
@@ -714,13 +714,8 @@ shown on test failure. The default is 10.
 Pass --browserstack to enable client side tests using BrowserStack.
 --browserstack requires s3cmd credentials.
 
-
-
->>> open-ide
-Open mobile build project in associated IDE.
-Usage: meteor open-ide [ios]
-
-Open mobile build project in associated IDE.
+By default, failed tests are retried twice. Use --retries to change
+the number of retries, or disable retries by setting the value to 0.
 
 
 >>> admin
