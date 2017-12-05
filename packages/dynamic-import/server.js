@@ -7,6 +7,7 @@ const {
   normalize: pathNormalize,
 } = require("path");
 const { fetchURL } = require("./common.js");
+const { isModern } = require("meteor/modern-browsers");
 const hasOwn = Object.prototype.hasOwnProperty;
 
 require("./security.js");
@@ -74,7 +75,11 @@ function middleware(request, response) {
 }
 
 function getPlatform(request) {
-  let platform = "web.browser";
+  const { identifyBrowser } = Package.webapp.WebAppInternals;
+  const browser = identifyBrowser(request.headers["user-agent"]);
+  let platform = isModern(browser)
+    ? "web.browser"
+    : "web.browser.legacy";
 
   // If the __dynamicImport request includes a secret key, and it matches
   // dynamicImportInfo[platform].key, use platform instead of the default
