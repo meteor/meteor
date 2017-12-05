@@ -610,7 +610,7 @@ Fiber(function () {
   // meteor package, and that'll look a lot uglier.
   if (process.env.ROOT_URL) {
     var parsedUrl = require('url').parse(process.env.ROOT_URL);
-    if (!parsedUrl.host) {
+    if (!parsedUrl.host || ['http:', 'https:'].indexOf(parsedUrl.protocol) === -1) {
       Console.error('$ROOT_URL, if specified, must be an URL.');
       process.exit(1);
     }
