@@ -6,6 +6,7 @@
   values are not first converted to `null`, when inserted/updated. Fields
   with `undefined` values are now ignored when inserting/updating.
   [Issue #6051](https://github.com/meteor/meteor/issues/6051)
+  [PR #9444](https://github.com/meteor/meteor/pull/9444)
 
 * The `meteor-babel` npm package (along with its Babel-related
   dependencies) has been updated to version 7.0.0-beta.34, a major update
