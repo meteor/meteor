@@ -454,6 +454,10 @@ val = "zxcv";`;
     assert.strictEqual(versions.node, process.versions.node);
     assert.ok(/\b_extends\(/.test(callee));
   });
+
+  it("exponentiation operator", function () {
+    assert.strictEqual(2 ** 13, Math.pow(2, 13));
+  });
 });
 
 describe("Reify", function () {
