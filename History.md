@@ -1,5 +1,8 @@
 ## v.NEXT
 
+* The `stylus` package has been deprecated and will no longer be
+  supported/maintained.
+
 * The `meteor-babel` npm package (along with its Babel-related
   dependencies) has been updated to version 7.0.0-beta.34, a major update
   from Babel 6. Thanks to the strong abstraction of the `meteor-babel`
