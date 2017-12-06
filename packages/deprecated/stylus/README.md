@@ -6,8 +6,6 @@
 Meteor project. To continue using the last supported version of this package,
 pin your package version to 2.513.13 (`meteor add stylus@=2.513.13`).
 
-** DEPRECATED **
-
 [Stylus](http://learnboost.github.com/stylus/) is a CSS pre-processor with a
 simple syntax and expressive dynamic behavior. It allows for more compact
 stylesheets and helps reduce code duplication in CSS files.
