@@ -187,6 +187,9 @@ function getDefaultsForNode8(features) {
   // Enable class property syntax for server-side React code.
   plugins.push(require("@babel/plugin-proposal-class-properties"));
 
+  // Enable async generator functions proposal.
+  plugins.push(require("@babel/plugin-proposal-async-generator-functions"));
+
   // Compile import/export syntax with Reify.
   plugins.push([reifyPlugin, {
     generateLetDeclarations: true,

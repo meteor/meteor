@@ -409,6 +409,31 @@ val = "zxcv";`;
     );
   });
 
+  it("async generator functions", async () => {
+    async function *natRange(limit) {
+      for (let x = 1; x <= limit; x = await addOne(x)) {
+        yield x;
+      }
+    }
+
+    async function addOne(n) {
+      return n + 1;
+    }
+
+    let sum = 0;
+    let limit = 10;
+    let iter = natRange(limit);
+
+    // Alas, an actual for-await loop won't work here until this issue is
+    // resolved: https://github.com/babel/babel/issues/4969
+    let info;
+    while (! (info = await iter.next()).done) {
+      sum += info.value;
+    }
+
+    assert.strictEqual(sum, limit * (limit + 1) / 2);
+  });
+
   it("Promise.await", () => {
     var markers = [];
 
