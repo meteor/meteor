@@ -1,5 +1,9 @@
 ## v.NEXT
 
+## v1.6.0.1, 2017-12-08
+
+* Node has been upgraded to version 8.9.2.
+
 ## v1.6, 2017-10-30
 
 * Node.js has been upgraded to version 8.8.1, which will be entering
