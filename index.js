@@ -34,6 +34,7 @@ module.exports = function (api, options) {
       require("@babel/plugin-transform-property-literals"),
       require("@babel/plugin-transform-flow-strip-types"),
       require("@babel/plugin-transform-exponentiation-operator"),
+      require("@babel/plugin-proposal-async-generator-functions"),
       require("@babel/plugin-transform-regenerator")
     ]
   };
