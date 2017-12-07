@@ -2,30 +2,24 @@ const isNode8OrLater = Meteor.isServer &&
   parseInt(process.versions.node) >= 8;
 
 Tinytest.add("ecmascript - runtime - template literals", (test) => {
-  function dump(pieces) {
-    var copy = {};
-    // Can't use _.extend({}, pieces) because es5-shim adds enumerable
-    // methods to Array.prototype, and _.extend has no own property check.
-    _.each(_.keys(pieces), key => copy[key] = pieces[key]);
-    return [copy, _.toArray(arguments).slice(1)];
+  function dump(strings, ...expressions) {
+    const copy = Object.create(null);
+    Object.assign(copy, strings);
+    copy.raw = strings.raw;
+    return [copy, expressions];
   };
-  const foo = 'B';
-  // uses `babelHelpers.taggedTemplateLiteralLoose`
-  test.equal(`\u0041${foo}C`, 'ABC');
 
-  const expected = [{
-    0: 'A',
-    1: 'C',
-    raw: ['\\u0041', 'C']
+  const foo = "B";
+
+  test.equal(`\u0041${foo}C`, "ABC");
+
+  test.equal(dump`\u0041${foo}C`, [{
+    0: "A",
+    1: "C",
+    raw: ["\\u0041", "C"]
   }, [
-    'B'
-  ]];
-
-  if (isNode8OrLater) {
-    delete expected[0].raw;
-  }
-
-  test.equal(dump`\u0041${foo}C`, expected);
+    "B"
+  ]]);
 });
 
 Tinytest.add("ecmascript - runtime - classes - basic", (test) => {
