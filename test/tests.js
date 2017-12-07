@@ -414,7 +414,17 @@ val = "zxcv";`;
 
     async function f() {
       markers.push("before");
-      assert.strictEqual(Promise.await(Promise.resolve(1234)), 1234);
+      if (require("fibers").current) {
+        assert.strictEqual(
+          Promise.await(Promise.resolve(1234)),
+          1234
+        );
+      } else {
+        assert.strictEqual(
+          await Promise.resolve(1234),
+          1234
+        );
+      }
       markers.push("after");
       return "done";
     }
