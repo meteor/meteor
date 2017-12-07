@@ -1,10 +1,9 @@
 "use strict";
 
 const assert = require("assert");
-const getDefaultOptions = require("./options.js").getDefaults;
-const getMinifierOptions = require("./options.js").getMinifierDefaults;
 const Cache = require("./cache.js");
 let compileCache; // Lazily initialized.
+let options; // Lazily initialized.
 
 // Make sure that module.importSync and module.export are defined in the
 // current Node process.
@@ -14,7 +13,16 @@ require("reify/lib/runtime").enable(Module.prototype);
 // Options passed to compile will completely replace the default options,
 // so if you only want to modify the default options, call this function
 // first, modify the result, and then pass those options to compile.
+function getDefaultOptions(features) {
+  options = options || require("./options.js");
+  return options.getDefaults(features);
+}
 exports.getDefaultOptions = getDefaultOptions;
+
+function getMinifierOptions(features) {
+  options = options || require("./options.js");
+  return options.getMinifierDefaults(features);
+}
 exports.getMinifierOptions = getMinifierOptions;
 
 exports.getMinimumModernBrowserVersions = function () {
