@@ -9,6 +9,7 @@ exports.getPreset = function (api, options) {
         loose: true
       }],
       require("@babel/plugin-transform-literals"),
+      require("@babel/plugin-transform-template-literals"),
       // [require("@babel/plugin-transform-classes"), {
       //   loose: true
       // }],
