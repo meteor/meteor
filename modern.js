@@ -31,6 +31,7 @@ exports.minimumVersions = {
   edge: 13,
   firefox: 46,
   mobile_safari: 10,
+  node: 8,
   opera: 38,
   safari: 10
 };
@@ -43,6 +44,7 @@ exports.minimumVersions = {
   edge: 15,
   firefox: 52,
   mobile_safari: [10, 3],
+  node: 8,
   opera: 42,
   safari: [10, 1]
 };
