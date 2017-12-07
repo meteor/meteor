@@ -97,12 +97,14 @@
 * [`cordova-lib`](https://github.com/apache/cordova-cli) has been updated to
   version 7.1.0, [`cordova-android`](https://github.com/apache/cordova-android/)
   has been updated to version 6.3.0, and [`cordova-ios`](https://github.com/apache/cordova-ios/)
-  has been updated to version 4.5.3. The cordova-plugins `cordova-plugin-console`,
+  has been updated to version 4.5.4. The cordova-plugins `cordova-plugin-console`,
   `cordova-plugin-device-motion`, and `cordova-plugin-device-orientation` have been
   [deprecated](https://cordova.apache.org/news/2017/09/22/plugins-release.html)
   and will likely be removed in a future Meteor release.
   [Feature Request #196](https://github.com/meteor/meteor-feature-requests/issues/196)
   [PR #9213](https://github.com/meteor/meteor/pull/9213)
+  [Issue #9447](https://github.com/meteor/meteor/issues/9447)
+  [PR #9448](https://github.com/meteor/meteor/pull/9448)
 
 * Provide basic support for [iPhone X](https://developer.apple.com/ios/update-apps-for-iphone-x/)
   status bar and launch screens, which includes updates to
