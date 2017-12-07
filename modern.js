@@ -9,22 +9,40 @@ exports.getPreset = function (api, options) {
         loose: true
       }],
       require("@babel/plugin-transform-literals"),
+      // [require("@babel/plugin-transform-classes"), {
+      //   loose: true
+      // }],
       require("@babel/plugin-transform-parameters"),
-      require("@babel/plugin-transform-unicode-regex"),
+      // require("@babel/plugin-transform-unicode-regex"),
       require("@babel/plugin-proposal-object-rest-spread"),
       require("@babel/plugin-transform-flow-strip-types"),
       require("@babel/plugin-transform-exponentiation-operator"),
-      require("@babel/plugin-proposal-async-generator-functions"),
-      require("@babel/plugin-transform-async-to-generator"),
+      // require("@babel/plugin-proposal-async-generator-functions"),
+      // require("@babel/plugin-transform-async-to-generator"),
     ]
   };
-}
+};
 
-exports.versions = {
+// Minimum versions if we compile async functions to wrapped generator
+// functions (which necessitates the classes transform because of a bug
+// with async methods):
+exports.minimumVersions = {
   chrome: 49,
   edge: 13,
   firefox: 46,
   mobile_safari: 10,
   opera: 38,
   safari: 10
+};
+
+// Minimum versions if we assume native support for async functions.
+// Amazingly, this accounts for 70%+ of internet users!
+// https://caniuse.com/#feat=async-functions
+exports.minimumVersions = {
+  chrome: 55,
+  edge: 15,
+  firefox: 52,
+  mobile_safari: [10, 3],
+  opera: 42,
+  safari: [10, 1]
 };
