@@ -44,5 +44,9 @@ Babel = {
 
   getMinifierOptions: function (extraFeatures) {
     return getMeteorBabel().getMinifierOptions(extraFeatures);
+  },
+
+  getMinimumModernBrowserVersions: function () {
+    return Npm.require("meteor-babel/modern-versions.js").get();
   }
 };

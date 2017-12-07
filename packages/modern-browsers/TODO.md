@@ -28,7 +28,7 @@
 - [x] Load `SockJS` using dynamic `import()` if necessary in modern
       `web.browser` clients.
 
-- [ ] Use different plugins in babel-compiler for `web.browser.legacy`.
+- [x] Use different plugins in babel-compiler for `web.browser.legacy`.
 
 - [x] Fix dynamic module source map URLs (prepend `/__arch`).
 

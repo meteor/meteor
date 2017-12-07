@@ -4,12 +4,12 @@ import { isModern } from "meteor/modern-browsers";
 Tinytest.add('modern-browsers - versions - basic', function (test) {
   test.isTrue(isModern({
     name: "chrome",
-    major: 50,
+    major: 60,
   }));
 
   test.isFalse(isModern({
     name: "firefox",
-    major: 44,
+    major: 25,
   }));
 
   test.isTrue(isModern({
