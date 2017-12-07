@@ -17,6 +17,10 @@ require("reify/lib/runtime").enable(Module.prototype);
 exports.getDefaultOptions = getDefaultOptions;
 exports.getMinifierOptions = getMinifierOptions;
 
+exports.getMinimumModernBrowserVersions = function () {
+  return require("babel-preset-meteor/modern").minimumVersions;
+};
+
 const parse = exports.parse =
   require("reify/lib/parsers/babylon.js").parse;
 
