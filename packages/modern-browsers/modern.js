@@ -23,7 +23,7 @@ function isModern(browser) {
 // versions that qualify as "modern." The final decision between
 // web.browser.legacy and web.browser will be based on the maximum of all
 // requested minimum versions for each browser.
-function setMinimumBrowserVersions(versions) {
+function setMinimumBrowserVersions(versions, source) {
   Object.keys(versions).forEach(browserName => {
     if (hasOwn.call(minimumVersions, browserName) &&
         ! greaterThan(versions[browserName],
@@ -33,7 +33,7 @@ function setMinimumBrowserVersions(versions) {
 
     minimumVersions[browserName] = {
       version: copy(versions[browserName]),
-      blame: getCaller("setMinimumBrowserVersions")
+      source: source || getCaller("setMinimumBrowserVersions")
     };
   });
 }
@@ -96,7 +96,10 @@ function greaterThan(a, b) {
   return false;
 }
 
-// ECMAScript 2015 Classes
+function makeSource(feature) {
+  return module.id + " (" + feature + ")"
+}
+
 setMinimumBrowserVersions({
   chrome: 49,
   edge: 12,
@@ -104,9 +107,8 @@ setMinimumBrowserVersions({
   mobile_safari: [9, 2],
   opera: 36,
   safari: 9,
-});
+}, makeSource("classes"));
 
-// ECMAScript 2015 Generator Functions
 setMinimumBrowserVersions({
   chrome: 39,
   edge: 13,
@@ -116,9 +118,8 @@ setMinimumBrowserVersions({
   safari: 10,
   // Disallow any version of PhantomJS.
   phantomjs: Infinity,
-});
+}, makeSource("generator functions"));
 
-// ECMAScript 2015 Template Literals
 setMinimumBrowserVersions({
   chrome: 41,
   edge: 13,
@@ -126,9 +127,8 @@ setMinimumBrowserVersions({
   mobile_safari: [9, 2],
   opera: 29,
   safari: [9, 1],
-});
+}, makeSource("template literals"));
 
-// ECMAScript 2015 Symbols
 setMinimumBrowserVersions({
   chrome: 38,
   edge: 12,
@@ -136,4 +136,4 @@ setMinimumBrowserVersions({
   mobile_safari: 9,
   opera: 25,
   safari: 9,
-});
+}, makeSource("symbols"));

@@ -9,4 +9,4 @@ setMinimumBrowserVersions({
   mobile_safari: 10,
   opera: 38,
   safari: 10,
-});
+}, module.id);

@@ -10,4 +10,4 @@ setMinimumBrowserVersions({
   mobile_safari: [6, 1],
   phantomjs: 2,
   safari: 7,
-});
+}, module.id);

@@ -14,4 +14,4 @@ require("meteor/modern-browsers").setMinimumBrowserVersions({
   mobile_safari: 8,
   opera: 20,
   safari: [7, 1],
-});
+}, module.id);
