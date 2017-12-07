@@ -23,4 +23,9 @@ then
     echo
     export IGNORE_NODE_MAJOR_VERSION=1
     runTests
+
+    echo "Running tests again with modern browser options..."
+    echo
+    export COMPILE_FOR_MODERN_BROWSERS=1
+    runTests
 fi
