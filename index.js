@@ -25,8 +25,14 @@ function getMinifierOptions(features) {
 }
 exports.getMinifierOptions = getMinifierOptions;
 
+// If you have already imported meteor-babel as a package, and this file
+// (index.js) has been evaluated, then there is very little additional
+// cost to calling meteorBabel.getMinimumModernBrowserVersions. However,
+// if you want to avoid importing meteor-babel, but need to know the
+// minimum browser versions, you should import the modern-versions.js
+// module directly: require("meteor-babel/modern-versions.js").get().
 exports.getMinimumModernBrowserVersions = function () {
-  return require("babel-preset-meteor/modern").minimumVersions;
+  return require("./modern-versions.js").get();
 };
 
 const parse = exports.parse =
