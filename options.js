@@ -1,6 +1,7 @@
 "use strict";
 
 const babelPresetMeteor = require("babel-preset-meteor");
+const babelPresetMeteorModern = require("babel-preset-meteor/modern");
 const reifyPlugin = require("babel-plugin-transform-es2015-modules-reify");
 const strictModulesPluginFactory =
   require("@babel/plugin-transform-modules-commonjs").default;
@@ -23,9 +24,14 @@ const babelModulesPlugin = [function () {
 }];
 
 exports.getDefaults = function getDefaults(features) {
-  if (features &&
-      features.nodeMajorVersion >= 8) {
-    return getDefaultsForNode8(features);
+  if (features) {
+    if (features.nodeMajorVersion >= 8) {
+      return getDefaultsForNode8(features);
+    }
+
+    if (features.modernBrowsers) {
+      return getDefaultsForModernBrowsers(features);
+    }
   }
 
   const combined = {
@@ -42,7 +48,7 @@ exports.getDefaults = function getDefaults(features) {
     require("./plugins/dynamic-import.js")
   );
 
-  const rt = getRuntimeTransform(features);
+  const rt = getRuntimeTransform(features, false);
   if (rt) {
     combined.plugins.push(rt);
   }
@@ -69,22 +75,58 @@ exports.getDefaults = function getDefaults(features) {
   // compile those declarations.
   combined.plugins.push(babelModulesPlugin);
 
+  return finish([combined]);
+};
+
+function getDefaultsForModernBrowsers(features) {
+  const combined = {
+    presets: [babelPresetMeteorModern.getPreset],
+    plugins: []
+  };
+
+  combined.plugins.push(
+    require("./plugins/dynamic-import.js")
+  );
+
+  const rt = getRuntimeTransform(features, true);
+  if (rt) {
+    combined.plugins.push(rt);
+  }
+
+  if (features) {
+    if (features.react) {
+      combined.presets.push(require("@babel/preset-react"));
+      combined.plugins.push(
+        require("@babel/plugin-proposal-class-properties")
+      );
+    }
+  }
+
+  combined.plugins.push(
+    [reifyPlugin, {
+      generateLetDeclarations: true,
+      enforceStrictMode: false
+    }]
+  );
+
+  return finish([combined]);
+}
+
+function finish(presets) {
   return {
     compact: false,
     sourceMap: false,
     ast: false,
     babelrc: false,
-    presets: [combined]
+    presets: presets
   };
-};
+}
 
 function isObject(value) {
   return value !== null && typeof value === "object";
 }
 
-function getRuntimeTransform(features) {
-  let useBuiltIns = false;
-
+function getRuntimeTransform(features, useBuiltIns) {
   if (isObject(features)) {
     if (features.runtime === false) {
       return null;
@@ -123,7 +165,7 @@ function getDefaultsForNode8(features) {
     enforceStrictMode: false
   }]);
 
-  const rt = getRuntimeTransform(features);
+  const rt = getRuntimeTransform(features, true);
   if (rt) {
     plugins.push(rt);
   }
@@ -166,13 +208,7 @@ function getDefaultsForNode8(features) {
     }
   }
 
-  return {
-    compact: false,
-    sourceMap: false,
-    ast: false,
-    babelrc: false,
-    presets
-  };
+  return finish(presets);
 }
 
 exports.getMinifierDefaults = function getMinifierDefaults(features) {
