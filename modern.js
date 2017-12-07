@@ -18,7 +18,7 @@ exports.getPreset = function (api, options) {
       require("@babel/plugin-proposal-object-rest-spread"),
       require("@babel/plugin-transform-flow-strip-types"),
       require("@babel/plugin-transform-exponentiation-operator"),
-      // require("@babel/plugin-proposal-async-generator-functions"),
+      require("@babel/plugin-proposal-async-generator-functions"),
       // require("@babel/plugin-transform-async-to-generator"),
     ]
   };
