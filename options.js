@@ -159,12 +159,6 @@ function getDefaultsForNode8(features) {
     require("@babel/plugin-transform-flow-strip-types")
   );
 
-  // Compile import/export syntax with Reify.
-  plugins.push([reifyPlugin, {
-    generateLetDeclarations: true,
-    enforceStrictMode: false
-  }]);
-
   const rt = getRuntimeTransform(features, true);
   if (rt) {
     plugins.push(rt);
@@ -193,9 +187,11 @@ function getDefaultsForNode8(features) {
   // Enable class property syntax for server-side React code.
   plugins.push(require("@babel/plugin-proposal-class-properties"));
 
-  // In case babel-plugin-transform-runtime generated any import
-  // declarations after reifyPlugin ran, make sure to compile them.
-  plugins.push(babelModulesPlugin);
+  // Compile import/export syntax with Reify.
+  plugins.push([reifyPlugin, {
+    generateLetDeclarations: true,
+    enforceStrictMode: false
+  }]);
 
   const presets = [{
     plugins
