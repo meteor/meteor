@@ -449,6 +449,7 @@ Mongo.Collection = class Collection {
     // Make sure we were passed a document to insert
     if (!doc) {
       throw new Error("insert requires an argument");
+    }
 
     // Make a shallow clone of the document, preserving its prototype.
     doc = Object.create(
