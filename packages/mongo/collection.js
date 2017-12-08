@@ -469,9 +469,9 @@ Mongo.Collection.prototype.insert = function insert(doc, callback) {
   }
 
   // Make a shallow clone of the document, preserving its prototype.
-  doc = Object.create(
-    Object.getPrototypeOf(doc),
-    Object.getOwnPropertyDescriptors(doc)
+  doc = Object.assign(
+    Object.create(Object.getPrototypeOf(doc)),
+    doc
   );
 
   if ('_id' in doc) {
