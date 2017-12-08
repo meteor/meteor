@@ -1,5 +1,11 @@
 ## v.NEXT
 
+## v1.4.4.5, 2017-12-08
+
+* Node has been upgraded to version
+  [4.8.7](https://nodejs.org/en/blog/release/v4.8.7/), an important
+  [security release](https://nodejs.org/en/blog/vulnerability/december-2017-security-releases/).
+
 ## v1.4.4.3, 2017-05-22
 
 * Node has been upgraded to version 4.8.3.

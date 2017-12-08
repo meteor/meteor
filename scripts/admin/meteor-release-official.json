@@ -1,8 +1,24 @@
 {
   "track": "METEOR",
-  "version": "1.4.4.3",
+  "version": "1.4.4.5",
   "recommended": false,
   "official": true,
-  "patchFrom": ["1.4.4.2"],
+  "patchFrom": [
+    "1.4",
+    "1.4.0.1",
+    "1.4.1",
+    "1.4.1.1",
+    "1.4.1.2",
+    "1.4.1.3",
+    "1.4.2",
+    "1.4.2.1",
+    "1.4.2.3",
+    "1.4.2.7",
+    "1.4.3.1",
+    "1.4.3.2",
+    "1.4.4.1",
+    "1.4.4.3",
+    "1.4.4.4"
+  ],
   "description": "The Official Meteor Distribution"
 }
