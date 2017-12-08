@@ -112,6 +112,12 @@
   [Issue #9196](https://github.com/meteor/meteor/issues/9196)
   [PR #9198](https://github.com/meteor/meteor/pull/9198)
 
+## v1.5.4.1, 2017-12-08
+
+* Node has been upgraded to version
+  [4.8.7](https://nodejs.org/en/blog/release/v4.8.7/), an important
+  [security release](https://nodejs.org/en/blog/vulnerability/december-2017-security-releases/).
+
 ## v1.5.4, 2017-11-08
 
 * Node has been updated to version 4.8.6. This release officially
