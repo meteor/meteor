@@ -623,6 +623,12 @@
   considered non-portable only if it contained any `.node` binary modules.
   [Issue #8225](https://github.com/meteor/meteor/issues/8225)
 
+## v1.4.4.5, 2017-12-08
+
+* Node has been upgraded to version
+  [4.8.7](https://nodejs.org/en/blog/release/v4.8.7/), an important
+  [security release](https://nodejs.org/en/blog/vulnerability/december-2017-security-releases/).
+
 ## v1.4.4.4, 2017-09-26
 
 * Updating to Meteor 1.4.4.4 will automatically patch a security
