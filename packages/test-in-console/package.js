@@ -9,7 +9,11 @@ Package.onUse(function (api) {
 
   api.export('TEST_STATUS', 'client');
 
-  api.addFiles(['driver.js'], "client");
+  api.addFiles([
+    'driver.js',
+    'test.css'
+  ], "client");
+
   api.addFiles(['reporter.js'], "server");
 
   // This is to be run by phantomjs, not as part of normal package code.
