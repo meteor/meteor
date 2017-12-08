@@ -138,6 +138,14 @@
   [Issue #9236](https://github.com/meteor/meteor/issues/9236)
   [PR #9237](https://github.com/meteor/meteor/pull/9237)
 
+## v1.6.0.1, 2017-12-08
+
+* Node has been upgraded to version
+  [8.9.3](https://nodejs.org/en/blog/release/v8.9.3/), an important
+  [security release](https://nodejs.org/en/blog/vulnerability/december-2017-security-releases/).
+
+* The `npm` package has been upgraded to version 5.5.1.
+
 ## v1.6, 2017-10-30
 
 * **Important note for package maintainers:**
@@ -269,6 +277,12 @@
 * iOS icons and launch screens have been updated to support iOS 11
   [Issue #9196](https://github.com/meteor/meteor/issues/9196)
   [PR #9198](https://github.com/meteor/meteor/pull/9198)
+
+## v1.5.4.1, 2017-12-08
+
+* Node has been upgraded to version
+  [4.8.7](https://nodejs.org/en/blog/release/v4.8.7/), an important
+  [security release](https://nodejs.org/en/blog/vulnerability/december-2017-security-releases/).
 
 ## v1.5.4, 2017-11-08
 
@@ -774,6 +788,12 @@
   `install`, `preinstall`, or `postinstall`. Previously, a package was
   considered non-portable only if it contained any `.node` binary modules.
   [Issue #8225](https://github.com/meteor/meteor/issues/8225)
+
+## v1.4.4.5, 2017-12-08
+
+* Node has been upgraded to version
+  [4.8.7](https://nodejs.org/en/blog/release/v4.8.7/), an important
+  [security release](https://nodejs.org/en/blog/vulnerability/december-2017-security-releases/).
 
 ## v1.4.4.4, 2017-09-26
 
