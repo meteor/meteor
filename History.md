@@ -6,7 +6,7 @@
   [8.9.3](https://nodejs.org/en/blog/release/v8.9.3/), an important
   [security release](https://nodejs.org/en/blog/vulnerability/december-2017-security-releases/).
 
-* The `npm` package has ben upgraded to version 5.5.1.
+* The `npm` package has been upgraded to version 5.5.1.
 
 ## v1.6, 2017-10-30
 
