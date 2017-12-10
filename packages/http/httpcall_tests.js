@@ -487,7 +487,7 @@ if (Meteor.isServer) {
 
       function do_test(path, code, match) {
         const prefix = Meteor.isModern
-          ? "/__browser"
+          ? "" // No prefix for web.browser (modern).
           : "/__browser.legacy";
 
         HTTP.get(url_base() + prefix + path, {

@@ -418,7 +418,10 @@ selftest.define("compiler plugins - compiler throws", () => {
 });
 
 function checkModernAndLegacyUrls(path, test) {
-  test(getUrl("http://localhost:3000/__browser" + path));
+  if (! path.startsWith("/")) {
+    path = "/" + path;
+  }
+  test(getUrl("http://localhost:3000" + path));
   test(getUrl("http://localhost:3000/__browser.legacy" + path));
 }
 

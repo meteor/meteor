@@ -12,6 +12,9 @@
 - [x] Really vet the set of imported `core-js` polyfills based on known
       minimum versions imposed by `setMinimumBrowserVersions`.
 
+- [x] Make sure the new url prefixes aren't too disruptive for public
+      assets like images.
+
 - [ ] Create an `isobuild:web-browser-legacy` pseudopackage.
 
 - [ ] Add tests to the `modules` test app.

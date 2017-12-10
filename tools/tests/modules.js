@@ -11,6 +11,7 @@ function startRun(sandbox) {
   run.match("myapp");
   run.match("proxy");
   run.tellMongo(MONGO_LISTENING);
+  run.waitSecs(20);
   run.match("MongoDB");
   return run;
 };
@@ -94,6 +95,9 @@ selftest.define("modules - import chain for packages", () => {
 });
 
 function checkModernAndLegacyUrls(path, test) {
-  test(getUrl("http://localhost:3000/__browser" + path));
+  if (! path.startsWith("/")) {
+    path = "/" + path;
+  }
+  test(getUrl("http://localhost:3000" + path));
   test(getUrl("http://localhost:3000/__browser.legacy" + path));
 }
