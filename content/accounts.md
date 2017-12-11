@@ -418,7 +418,7 @@ Note that there is a benefit to restricting the places you access the current us
 
 <h4 id="current-user-server">On the server: this.userId</h4>
 
-On the server, each connection has a different logged in user, so there is no global logged-in user state by definition. Since Meteor tracks the environment for each Method call, you can still use the `Meteor.userId()` global, which returns a different value depending on which Method you call it from, but you can run into edge cases when dealing with asynchronous code. Also, `Meteor.userId()` won't work inside publications.
+On the server, each connection has a different logged in user, so there is no global logged-in user state by definition. Since Meteor tracks the environment for each Method call, you can still use the `Meteor.userId()` global, which returns a different value depending on which Method you call it from, but you can run into edge cases when dealing with asynchronous code.
 
 We suggest using the `this.userId` property on the context of Methods and publications instead, and passing that around through function arguments to wherever you need it.
 
