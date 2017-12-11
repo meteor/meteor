@@ -3,6 +3,7 @@
 * Byte order marks included in `--settings` files will no longer crash the
   Meteor Tool.
   [Issue #5180](https://github.com/meteor/meteor/issues/5180)
+  [PR #9459](https://github.com/meteor/meteor/pull/9459)
 
 * The `meteor-babel` npm package (along with its Babel-related
   dependencies) has been updated to version 7.0.0-beta.34, a major update
