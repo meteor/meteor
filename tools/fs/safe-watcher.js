@@ -366,7 +366,7 @@ async function maybeSuggestRaisingWatchLimit(error) {
         "It looks like a simple tweak to your system's configuration will " +
           "make many tools (including this Meteor command) more efficient. " +
           "To learn more, see " +
-          Console.url("https://github.com/meteor/meteor/wiki/File-Change-Watcher-Efficiency"));
+          Console.url("https://github.com/meteor/docs/blob/master/long-form/file-change-watcher-efficiency.md"));
     }
   }
 }
