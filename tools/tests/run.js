@@ -511,3 +511,17 @@ selftest.define("run ROOT_URL must be an URL", function () {
   run.matchErr("$ROOT_URL, if specified, must be an URL");
   run.expectExit(1);
 });
+
+selftest.define("app starts when settings file has BOM", function () {
+  var s = new Sandbox({ fakeMongo: true });
+  var run;
+  s.createApp("myapp", "standard-app");
+  s.cd("myapp");
+  files.writeFile(
+    files.pathJoin(s.cwd, "settings.json"),
+    "\ufeff" + JSON.stringify({ foo: "bar" }),
+  );
+  run = s.run("--settings", "settings.json", "--once");
+  run.tellMongo(MONGO_LISTENING);
+  run.forbid("Build failed");
+});
