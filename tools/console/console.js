@@ -66,8 +66,6 @@ var utils = require('../utils/utils.js');
 var wordwrap = require('wordwrap');
 
 var PROGRESS_DEBUG = !!process.env.METEOR_PROGRESS_DEBUG;
-// Recommended for better performance for Emacs shell users.
-var PROGRESS_STATUS_ONLY = !!process.env.METEOR_PROGRESS_STATUS_ONLY;
 var FORCE_PRETTY=undefined;
 // Set the default CR to \r unless we're running with cmd
 var CARRIAGE_RETURN = process.platform === 'win32' &&
@@ -1182,14 +1180,9 @@ class Console extends ConsoleBase {
     } else if ((! this._stream.isTTY) || (! this._pretty)) {
       // No progress bar if not in pretty / on TTY.
       newProgressDisplay = new ProgressDisplayNone(this);
-    } else if (PROGRESS_STATUS_ONLY ||
-               (this._stream.isTTY && ! this._stream.columns)) {
-      // We might be in a pseudo-TTY that doesn't support
-      // clearLine() and cursorTo(...).
-      // It's important that we only enter status message mode
-      // if this._pretty, so that we don't start displaying
-      // status messages too soon.
-      // XXX See note where ProgressDisplayStatus is defined.
+    } else if (utils.isEmacs() || this.isPseudoTTY()) {
+      // Resort to a more basic mode if we're in an environment which
+      // misbehaves when using clearLine() and cursorTo(...).
       newProgressDisplay = new ProgressDisplayStatus(this);
     } else {
       // Otherwise we can do the full progress bar
@@ -1213,6 +1206,10 @@ class Console extends ConsoleBase {
 
   isHeadless() {
     return this._headless;
+  }
+
+  isPseudoTTY() {
+    return this._stream && this._stream.isTTY && ! this._stream.columns;
   }
 
   setHeadless(headless = true) {
@@ -1264,7 +1261,7 @@ class Console extends ConsoleBase {
       output: options.echo ? options.stream : silentStream,
       // `terminal: options.stream.isTTY` is the default, but emacs shell users
       // don't want fancy ANSI.
-      terminal: options.stream.isTTY && process.env.EMACS !== 't'
+      terminal: options.stream.isTTY && ! utils.isEmacs()
     });
 
     if (! options.echo) {
