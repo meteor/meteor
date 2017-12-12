@@ -55,11 +55,6 @@ const launchIosSizes = {
   'iphoneX_landscape': '2436x1125', 
   'ipad_portrait_2x': '1536x2048',
   'ipad_landscape_2x': '2048x1536',
-  // Not yet supported in Xcode 9 or Cordova iOS 4.5.3
-  // 'ipad_portrait_pro_10_5': '1668x2224',
-  // 'ipad_landscape_pro_10_5': '2224x1668',
-  // 'ipad_portrait_pro_12_9': '2048x2732',
-  // 'ipad_landscape_pro_12_9': '2732x2048',
   // Legacy
   'iphone': '320x480',
   'iphone_2x': '640x960',
