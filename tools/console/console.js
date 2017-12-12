@@ -69,16 +69,14 @@ import {
   ThrottledYield,
 } from "../utils/utils.js";
 
-var PROGRESS_DEBUG = !!process.env.METEOR_PROGRESS_DEBUG;
-var FORCE_PRETTY=undefined;
+const PROGRESS_DEBUG = !!process.env.METEOR_PROGRESS_DEBUG;
 // Set the default CR to \r unless we're running with cmd
-var CARRIAGE_RETURN = process.platform === 'win32' &&
+const CARRIAGE_RETURN = process.platform === 'win32' &&
       process.stdout.isTTY &&
       process.argv[1].toLowerCase().includes('cmd') ? new Array(249).join('\b') : '\r';
 
-if (process.env.METEOR_PRETTY_OUTPUT) {
-  FORCE_PRETTY = process.env.METEOR_PRETTY_OUTPUT != '0';
-}
+const FORCE_PRETTY = process.env.METEOR_PRETTY_OUTPUT &&
+  process.env.METEOR_PRETTY_OUTPUT != '0';
 
 if (! process.env.METEOR_COLOR) {
   chalk.enabled = false;
