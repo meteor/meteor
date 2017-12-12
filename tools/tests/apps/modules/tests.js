@@ -303,6 +303,47 @@ describe("local node_modules", () => {
       assert.strictEqual(typeof browser, "object");
     }
   });
+
+  it('should support package.json without a "main" field', () => {
+    if (Meteor.isServer) {
+      // Only import mysql during server tests, but register the
+      // dependency in the client bundle, too.
+      assert.strictEqual(
+        typeof require("mysql").createQuery,
+        "function"
+      );
+    }
+
+    assert.strictEqual(
+      require.resolve("mysql"),
+      "/node_modules/mysql/index.js"
+    );
+
+    // Verify that the package.json stub is bundled even though it is not
+    // needed for looking up the index.js module (#9235).
+    const pkg = require(["mysql", "package.json"].join("/"));
+    assert.strictEqual(pkg.name, "mysql");
+    assert.strictEqual(pkg.main, void 0);
+  });
+
+  it('should support package.json with a directory "main" field', () => {
+    if (Meteor.isServer) {
+      assert.strictEqual(typeof require("cli-color"), "function");
+    }
+
+    assert.strictEqual(
+      require.resolve("cli-color"),
+      "/node_modules/cli-color/lib/index.js"
+    );
+
+    const pkg = require(["cli-color", "package.json"].join("/"));
+    assert.strictEqual(pkg.name, "cli-color");
+    assert.strictEqual(pkg.main, "lib");
+
+    // We have to use an older version of cli-color to get this unusual
+    // module layout, so we shouldn't let this change without notice.
+    assert.strictEqual(pkg.version, "0.2.3");
+  });
 });
 
 describe("Meteor packages", () => {
