@@ -131,20 +131,38 @@ export default class Resolver {
       // read the same package.json file again.
       if (! _seenDirPaths.has(dirPath)) {
         _seenDirPaths.add(dirPath);
-        resolved = this._resolvePkgJsonMain(dirPath, _seenDirPaths);
-        if (resolved) {
-          // The _resolvePkgJsonMain call above may have returned a
-          // directory, so first merge resolved.packageJsonMap into
-          // packageJsonMap so that we don't forget the package.json we
-          // just resolved, then continue the loop to make sure we fully
-          // resolve the "main" module identifier to a non-directory.
-          // Technically this could involve even more package.json files,
-          // but in practice the "main" property will almost always name a
-          // directory containing an index.js file.
+
+        const found = this._getPkgJsonSubsetForDir(dirPath);
+
+        // The "main" field of package.json does not have to begin with ./
+        // to be considered relative, so first we try simply appending it
+        // to the directory path before falling back to a full resolve,
+        // which might return a package from a node_modules directory.
+        resolved = found &&
+          isString(found.main) &&
+          (this._joinAndStat(dirPath, found.main) ||
+           this._resolve(found.main, found.path, _seenDirPaths));
+
+        if (resolved && typeof resolved === "object") {
+          if (! resolved.packageJsonMap) {
+            resolved.packageJsonMap = Object.create(null);
+          }
+
+          resolved.packageJsonMap[found.path] = found.pkg;
+
+          // The resolution above may have returned a directory, so we
+          // merge resolved.packageJsonMap into packageJsonMap so that we
+          // don't forget the package.json we just resolved, then continue
+          // the loop to make sure we fully resolve the "main" module
+          // identifier to a non-directory.  Technically this could
+          // involve even more package.json files, but in practice the
+          // "main" property will almost always name a directory
+          // containing an index.js file.
           Object.assign(
             packageJsonMap || (packageJsonMap = Object.create(null)),
             resolved.packageJsonMap,
           );
+
           continue;
         }
       }
@@ -299,34 +317,6 @@ export default class Resolver {
     // that determination until the code actually runs.
 
     return resolved || "missing";
-  }
-
-  _resolvePkgJsonMain(dirPath, _seenDirPaths) {
-    const found = this._getPkgJsonSubsetForDir(dirPath);
-    if (! found) {
-      return null;
-    }
-
-    if (isString(found.main)) {
-      // The "main" field of package.json does not have to begin with ./
-      // to be considered relative, so first we try simply appending it to
-      // the directory path before falling back to a full resolve, which
-      // might return a package from a node_modules directory.
-      const resolved = this._joinAndStat(dirPath, found.main) ||
-        this._resolve(found.main, found.path, _seenDirPaths);
-
-      if (resolved && typeof resolved === "object") {
-        if (! resolved.packageJsonMap) {
-          resolved.packageJsonMap = Object.create(null);
-        }
-
-        resolved.packageJsonMap[found.path] = found.pkg;
-
-        return resolved;
-      }
-    }
-
-    return null;
   }
 
   _getPkgJsonSubsetForDir(dirPath) {
