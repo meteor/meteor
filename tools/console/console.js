@@ -55,7 +55,6 @@
 ///
 /// In addition to printing functions, the Console class provides progress bar
 /// support, that is mostly handled through buildmessage.js.
-import _ from "underscore";
 import { createInterface } from "readline";
 import { format as utilFormat }  from "util";
 import { getRootProgress } from "../utils/buildmessage.js";
@@ -722,9 +721,10 @@ class Console extends ConsoleBase {
     // If the last argument is an instance of ConsoleOptions, then we should
     // separate it out, and only send the first N-1 arguments to be parsed as a
     // message.
-    if (_.last(args) instanceof ConsoleOptions) {
-      msgArgs = _.initial(args);
-      options = _.last(args).options;
+    const lastArg = args && args.length && args[args.length - 1];
+    if (lastArg instanceof ConsoleOptions) {
+      msgArgs = args.slice(0, -1);
+      options = lastArg.options;
     } else {
       msgArgs = args;
       options = Object.create(null);
@@ -1060,7 +1060,7 @@ class Console extends ConsoleBase {
     options = options || Object.create(null);
 
     var longest = '';
-    _.each(rows, row => {
+    rows.forEach(row => {
       var col0 = row[0] || '';
       if (col0.length > longest.length) {
         longest = col0;
@@ -1073,7 +1073,7 @@ class Console extends ConsoleBase {
       options.indent ? Array(options.indent + 1).join(' ') : "";
 
     var out = '';
-    _.each(rows, row => {
+    rows.forEach(row => {
       var col0 = row[0] || '';
       var col1 = row[1] || '';
       var line = indent + this.bold(col0) + pad.substr(col0.length);
@@ -1130,7 +1130,7 @@ class Console extends ConsoleBase {
       } else {
         wrappedText = text;
       }
-      wrappedText = _.map(wrappedText.split('\n'), s => {
+      wrappedText = wrappedText.split('\n').map(s => {
         if (s === "") {
           return "";
         }
@@ -1240,7 +1240,7 @@ class Console extends ConsoleBase {
   //   - prompt (string)
   //   - stream: defaults to process.stdout (you might want process.stderr)
   readLine(options) {
-    options = _.extend({
+    options = Object.assign(Object.create(null), {
       echo: true,
       stream: this._stream
     }, options);
