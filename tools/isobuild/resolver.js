@@ -165,6 +165,14 @@ export default class Resolver {
 
           continue;
         }
+
+        // Include the package.json stub in the bundle even if it was not
+        // used to resolve the "main" entry point, per this comment:
+        // https://github.com/meteor/meteor/issues/9235#issuecomment-340562285
+        if (found) {
+          packageJsonMap = packageJsonMap || Object.create(null);
+          packageJsonMap[found.path] = found.pkg;
+        }
       }
 
       // If we didn't find a `package.json` file, or it didn't have a
