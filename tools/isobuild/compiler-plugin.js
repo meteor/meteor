@@ -1203,7 +1203,10 @@ export class PackageSourceBatch {
       const parts = id.split("/");
 
       if ("./".indexOf(id.charAt(0)) < 0) {
-        const packageDir = parts[0];
+        const packageDir = parts[0].startsWith("@")
+          ? parts[0] + "/" + parts[1]
+          : parts[0];
+
         if (packageDir === "meteor") {
           // Don't print warnings for uninstalled Meteor packages.
           return;
