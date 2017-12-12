@@ -55,15 +55,20 @@
 ///
 /// In addition to printing functions, the Console class provides progress bar
 /// support, that is mostly handled through buildmessage.js.
-var _ = require('underscore');
-var readline = require('readline');
-var util = require('util');
-var buildmessage = require('../utils/buildmessage.js');
+import _ from "underscore";
+import { createInterface } from "readline";
+import { format as utilFormat }  from "util";
+import { getRootProgress } from "../utils/buildmessage.js";
 // XXX: Are we happy with chalk (and its sub-dependencies)?
-var chalk = require('chalk');
-var cleanup = require('../tool-env/cleanup.js');
-var utils = require('../utils/utils.js');
-var wordwrap = require('wordwrap');
+import chalk from "chalk";
+import { onExit as cleanupOnExit } from "../tool-env/cleanup.js";
+import wordwrap from "wordwrap";
+import {
+  isEmacs,
+  sleepMs,
+  Throttled,
+  ThrottledYield,
+} from "../utils/utils.js";
 
 var PROGRESS_DEBUG = !!process.env.METEOR_PROGRESS_DEBUG;
 var FORCE_PRETTY=undefined;
@@ -417,7 +422,7 @@ class StatusPoller {
     this._console = console;
 
     this._pollPromise = null;
-    this._throttledStatusPoll = new utils.Throttled({
+    this._throttledStatusPoll = new Throttled({
       interval: STATUS_INTERVAL_MS
     });
     this._startPoller();
@@ -430,10 +435,10 @@ class StatusPoller {
     }
 
     this._pollPromise = (async() => {
-      utils.sleepMs(STATUS_INTERVAL_MS);
+      sleepMs(STATUS_INTERVAL_MS);
       while (! this._stop) {
         this.statusPoll();
-        utils.sleepMs(STATUS_INTERVAL_MS);
+        sleepMs(STATUS_INTERVAL_MS);
       }
     })();
   }
@@ -451,7 +456,7 @@ class StatusPoller {
   _statusPoll() {
     // XXX: Early exit here if we're not showing status at all?
 
-    var rootProgress = buildmessage.getRootProgress();
+    var rootProgress = getRootProgress();
     if (PROGRESS_DEBUG) {
       // It can be handy for dev purposes to see all the executing tasks
       rootProgress.dump(process.stdout, {skipDone: true});
@@ -557,7 +562,7 @@ class Console extends ConsoleBase {
 
     this._statusPoller = null;
 
-    this._throttledYield = new utils.ThrottledYield();
+    this._throttledYield = new ThrottledYield();
 
     this.verbose = false;
 
@@ -579,7 +584,7 @@ class Console extends ConsoleBase {
       }
     }
 
-    cleanup.onExit((sig) => {
+    cleanupOnExit((sig) => {
       this.enableProgressDisplay(false);
     });
   }
@@ -1088,7 +1093,7 @@ class Console extends ConsoleBase {
 
   // Format logs according to the spec in utils.
   _format(logArguments) {
-    return util.format.apply(util, logArguments);
+    return utilFormat(...logArguments);
   }
 
   // Wraps long strings to the length of user's terminal. Inserts linebreaks
@@ -1180,7 +1185,7 @@ class Console extends ConsoleBase {
     } else if ((! this._stream.isTTY) || (! this._pretty)) {
       // No progress bar if not in pretty / on TTY.
       newProgressDisplay = new ProgressDisplayNone(this);
-    } else if (utils.isEmacs() || this.isPseudoTTY()) {
+    } else if (isEmacs() || this.isPseudoTTY()) {
       // Resort to a more basic mode if we're in an environment which
       // misbehaves when using clearLine() and cursorTo(...).
       newProgressDisplay = new ProgressDisplayStatus(this);
@@ -1256,12 +1261,12 @@ class Console extends ConsoleBase {
     this._setProgressDisplay(new ProgressDisplayNone());
 
     // Read a line, throwing away the echoed characters into our dummy stream.
-    var rl = readline.createInterface({
+    var rl = createInterface({
       input: process.stdin,
       output: options.echo ? options.stream : silentStream,
       // `terminal: options.stream.isTTY` is the default, but emacs shell users
       // don't want fancy ANSI.
-      terminal: options.stream.isTTY && ! utils.isEmacs()
+      terminal: options.stream.isTTY && ! isEmacs()
     });
 
     if (! options.echo) {
