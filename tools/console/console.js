@@ -238,7 +238,7 @@ class SpinnerRenderer {
 // Renders a progressbar.  Based on the npm 'progress' module, but tailored to our needs (i.e. renders to string)
 class ProgressBarRenderer {
   constructor(format, options) {
-    options = options || {};
+    options = options || Object.create(null);
 
     this.fmt = format;
     this.curr = 0;
@@ -550,7 +550,7 @@ class Console extends ConsoleBase {
   constructor(options) {
     super();
 
-    options = options || {};
+    options = options || Object.create(null);
 
     this._headless = !! (
       process.env.METEOR_HEADLESS &&
@@ -567,8 +567,8 @@ class Console extends ConsoleBase {
     this.verbose = false;
 
     // Legacy helpers
-    this.stdout = {};
-    this.stderr = {};
+    this.stdout = Object.create(null);
+    this.stderr = Object.create(null);
 
     this._stream = process.stdout;
 
@@ -727,7 +727,7 @@ class Console extends ConsoleBase {
       options = _.last(args).options;
     } else {
       msgArgs = args;
-      options = {};
+      options = Object.create(null);
     }
     var message = this._format(msgArgs);
     return { message: message, options: options };
@@ -1057,7 +1057,7 @@ class Console extends ConsoleBase {
   //        printing directories, for examle.
   //      - indent: indent the entire table by a given number of spaces.
   printTwoColumns(rows, options) {
-    options = options || {};
+    options = options || Object.create(null);
 
     var longest = '';
     _.each(rows, row => {
@@ -1106,7 +1106,7 @@ class Console extends ConsoleBase {
   //   - indent: (see: Console.options)
   //
   _wrapText(text, options) {
-    options = options || {};
+    options = options || Object.create(null);
 
     // Compute the maximum offset on the bulk of the message.
     var maxIndent = 0;
