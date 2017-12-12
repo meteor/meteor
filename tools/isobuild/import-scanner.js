@@ -323,7 +323,7 @@ export default class ImportScanner {
       // paths, code, laziness, etc.
       sourceFile.dataString += [
         "module.watch(require(" + JSON.stringify(relativeId) + "), {",
-        '  "*": module.makeNsSetter()',
+        '  "*": module.makeNsSetter(true)',
         "});",
         ""
       ].join("\n");
