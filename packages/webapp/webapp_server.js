@@ -690,6 +690,10 @@ function runWebAppServer() {
     });
   });
 
+  // Core Meteor packages like dynamic-import can add handlers before
+  // other handlers added by package and application code.
+  app.use(WebAppInternals.meteorInternalHandlers = connect());
+
   // Packages and apps can add handlers to this via WebApp.connectHandlers.
   // They are inserted before our default handler.
   var packageAndAppHandlers = connect();

@@ -132,7 +132,8 @@ MongoConnection = function (url, options) {
     autoReconnect: true,
     // Try to reconnect forever, instead of stopping after 30 tries (the
     // default), with each attempt separated by 1000ms.
-    reconnectTries: Infinity
+    reconnectTries: Infinity,
+    ignoreUndefined: true
   }, Mongo._connectionOptions);
 
   // Disable the native parser by default, unless specifically enabled
@@ -549,13 +550,13 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
         ! (options.insertedId instanceof Mongo.ObjectID &&
            options.generatedId)) {
       // In case of an upsert with a replacement, where there is no _id defined
-      // in either the query or the replacement doc, mongo will generate an id itself. 
+      // in either the query or the replacement doc, mongo will generate an id itself.
       // Therefore we need this special strategy if we want to control the id ourselves.
 
       // We don't need to do this when:
       // - This is not a replacement, so we can add an _id to $setOnInsert
       // - The id is defined by query or mod we can just add it to the replacement doc
-      // - The user did not specify any id preference and the id is a Mongo ObjectId, 
+      // - The user did not specify any id preference and the id is a Mongo ObjectId,
       //     then we can just let Mongo generate the id
 
       simulateUpsertWithInsertedId(
@@ -575,7 +576,7 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
         }
       );
     } else {
-      
+
       if (options.upsert && !knownId && options.insertedId && isModify) {
         if (!mongoMod.hasOwnProperty('$setOnInsert')) {
           mongoMod.$setOnInsert = {};
@@ -583,7 +584,7 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
         knownId = options.insertedId;
         Object.assign(mongoMod.$setOnInsert, replaceTypes({_id: options.insertedId}, replaceMeteorAtomWithMongo));
       }
-      
+
       collection.update(
         mongoSelector, mongoMod, mongoOpts,
         bindEnvironmentForWrite(function (err, result) {
@@ -666,7 +667,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
   // STRATEGY: First try doing an upsert with a generated ID.
   // If this throws an error about changing the ID on an existing document
   // then without affecting the database, we know we should probably try
-  // an update without the generated ID. If it affected 0 documents, 
+  // an update without the generated ID. If it affected 0 documents,
   // then without affecting the database, we the document that first
   // gave the error is probably removed and we need to try an insert again
   // We go back to step one and repeat.
@@ -925,13 +926,13 @@ Cursor.prototype.observeChanges = function (callbacks) {
   var ordered = LocalCollection._observeChangesCallbacksAreOrdered(callbacks);
 
   // XXX: Can we find out if callbacks are from observe?
-  var exceptionName = ' observe/observeChanges callback'; 
+  var exceptionName = ' observe/observeChanges callback';
   methods.forEach(function (method) {
     if (callbacks[method] && typeof callbacks[method] == "function") {
       callbacks[method] = Meteor.bindEnvironment(callbacks[method], method + exceptionName);
     }
   });
-  
+
   return self._mongo._observeChanges(
     self._cursorDescription, ordered, callbacks);
 };

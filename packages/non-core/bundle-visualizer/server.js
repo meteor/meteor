@@ -106,7 +106,7 @@ Meteor.startup(() => {
     return;
   }
 
-  Package.webapp.WebApp.connectHandlers.use(
+  Package.webapp.WebAppInternals.meteorInternalHandlers.use(
     methodNameStats,
     statsMiddleware
   );
