@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'DEPRECATED - Expressive, dynamic, robust CSS',
-  version: "2.513.14"
+  version: "2.999.0"
 });
 
 Package.onUse(function (api) {
