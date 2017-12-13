@@ -1,5 +1,13 @@
 ## v.NEXT
 
+* Meteor's Node Mongo driver is now configured with the
+  [`ignoreUndefined`](http://mongodb.github.io/node-mongodb-native/2.2/api/MongoClient.html#connect)
+  connection option set to `true`, to make sure fields with `undefined`
+  values are not first converted to `null`, when inserted/updated. Fields
+  with `undefined` values are now ignored when inserting/updating.
+  [Issue #6051](https://github.com/meteor/meteor/issues/6051)
+  [PR #9444](https://github.com/meteor/meteor/pull/9444)
+
 * The `accounts-ui-unstyled` package has been updated to use `<form />` and
   `<button />` tags with its login/signup form, instead of `<div />`'s. This
   change helps browser's notice login/signup requests, allowing them to
