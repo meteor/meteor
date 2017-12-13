@@ -1,33 +1,5 @@
 ## v.NEXT
 
-* Byte order marks included in `--settings` files will no longer crash the
-  Meteor Tool.
-  [Issue #5180](https://github.com/meteor/meteor/issues/5180)
-  [PR #9459](https://github.com/meteor/meteor/pull/9459)
-
-* Meteor's Node Mongo driver is now configured with the
-  [`ignoreUndefined`](http://mongodb.github.io/node-mongodb-native/2.2/api/MongoClient.html#connect)
-  connection option set to `true`, to make sure fields with `undefined`
-  values are not first converted to `null`, when inserted/updated. Fields
-  with `undefined` values are now ignored when inserting/updating.
-  [Issue #6051](https://github.com/meteor/meteor/issues/6051)
-  [PR #9444](https://github.com/meteor/meteor/pull/9444)
-
-* The `accounts-ui-unstyled` package has been updated to use `<form />` and
-  `<button />` tags with its login/signup form, instead of `<div />`'s. This
-  change helps browser's notice login/signup requests, allowing them to
-  trigger their "remember your login/password" functionality.
-
-  > **Note:** If your application is styling the login/signup form using a CSS
-    path that includes the replaced `div` elements (e.g.
-    `div.login-form { ...` or `div.login-button { ...`), your styles will
-    break. You can either update your CSS to use `form.` / `button.` or
-    adjust your CSS specificity by styling on `class` / `id` attributes
-    only.
-
-  [Issue #1746](https://github.com/meteor/meteor/issues/1746)
-  [PR #9442](https://github.com/meteor/meteor/pull/9442)
-
 * The `meteor-babel` npm package (along with its Babel-related
   dependencies) has been updated to version 7.0.0-beta.34, a major update
   from Babel 6. Thanks to the strong abstraction of the `meteor-babel`
@@ -167,6 +139,34 @@
 * `Npm.depends` can now specify any `http` or `https` URL.
   [Issue #9236](https://github.com/meteor/meteor/issues/9236)
   [PR #9237](https://github.com/meteor/meteor/pull/9237)
+
+* Byte order marks included in `--settings` files will no longer crash the
+  Meteor Tool.
+  [Issue #5180](https://github.com/meteor/meteor/issues/5180)
+  [PR #9459](https://github.com/meteor/meteor/pull/9459)
+
+* Meteor's Node Mongo driver is now configured with the
+  [`ignoreUndefined`](http://mongodb.github.io/node-mongodb-native/2.2/api/MongoClient.html#connect)
+  connection option set to `true`, to make sure fields with `undefined`
+  values are not first converted to `null`, when inserted/updated. Fields
+  with `undefined` values are now ignored when inserting/updating.
+  [Issue #6051](https://github.com/meteor/meteor/issues/6051)
+  [PR #9444](https://github.com/meteor/meteor/pull/9444)
+
+* The `accounts-ui-unstyled` package has been updated to use `<form />` and
+  `<button />` tags with its login/signup form, instead of `<div />`'s. This
+  change helps browser's notice login/signup requests, allowing them to
+  trigger their "remember your login/password" functionality.
+
+  > **Note:** If your application is styling the login/signup form using a CSS
+    path that includes the replaced `div` elements (e.g.
+    `div.login-form { ...` or `div.login-button { ...`), your styles will
+    break. You can either update your CSS to use `form.` / `button.` or
+    adjust your CSS specificity by styling on `class` / `id` attributes
+    only.
+
+  [Issue #1746](https://github.com/meteor/meteor/issues/1746)
+  [PR #9442](https://github.com/meteor/meteor/pull/9442)
 
 ## v1.6.0.1, 2017-12-08
 
