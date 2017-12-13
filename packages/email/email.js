@@ -134,7 +134,7 @@ EmailTest.hookSend = function (f) {
  * @param {String} [options.text|html] Mail body (in plain text and/or HTML)
  * @param {String} [options.watchHtml] Mail body in HTML specific for Apple Watch
  * @param {String} [options.icalEvent] iCalendar event attachment
- * @param {Object} [options.headers] Dictionary of custom headers
+ * @param {Object} [options.headers] Dictionary of custom headers - e.g. `{ "header name": "header value" }`. To set an object under a header name, use `JSON.stringify` - e.g. `{ "header name": JSON.stringify({ tracking: { level: 'full' } }) }`.
  * @param {Object[]} [options.attachments] Array of attachment objects, as
  * described in the [mailcomposer documentation](https://github.com/nodemailer/mailcomposer/blob/v4.0.1/README.md#attachments).
  * @param {MailComposer} [options.mailComposer] A [MailComposer](https://nodemailer.com/extras/mailcomposer/#e-mail-message-fields)
