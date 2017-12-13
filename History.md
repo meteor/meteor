@@ -26,6 +26,11 @@
 * `Accounts.config` now supports a `bcryptRounds` option that
   overrides the default 10 rounds currently used to secure passwords.
   [PR #9044](https://github.com/meteor/meteor/pull/9044)
+  
+* Developers running Meteor from an interactive shell within Emacs should
+  notice a substantial performance improvement thanks automatic disabling
+  of the progress spinner, which otherwise reacts slowly within Emacs.
+  [PR #9341](https://github.com/meteor/meteor/pull/9341)
 
 ## v1.6, 2017-10-30
 
