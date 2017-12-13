@@ -8,6 +8,21 @@
   [Issue #6051](https://github.com/meteor/meteor/issues/6051)
   [PR #9444](https://github.com/meteor/meteor/pull/9444)
 
+* The `accounts-ui-unstyled` package has been updated to use `<form />` and
+  `<button />` tags with its login/signup form, instead of `<div />`'s. This
+  change helps browser's notice login/signup requests, allowing them to
+  trigger their "remember your login/password" functionality.
+
+  > **Note:** If your application is styling the login/signup form using a CSS
+    path that includes the replaced `div` elements (e.g.
+    `div.login-form { ...` or `div.login-button { ...`), your styles will
+    break. You can either update your CSS to use `form.` / `button.` or
+    adjust your CSS specificity by styling on `class` / `id` attributes
+    only.
+
+  [Issue #1746](https://github.com/meteor/meteor/issues/1746)
+  [PR #9442](https://github.com/meteor/meteor/pull/9442)
+
 * The `meteor-babel` npm package (along with its Babel-related
   dependencies) has been updated to version 7.0.0-beta.34, a major update
   from Babel 6. Thanks to the strong abstraction of the `meteor-babel`
@@ -105,12 +120,14 @@
 * [`cordova-lib`](https://github.com/apache/cordova-cli) has been updated to
   version 7.1.0, [`cordova-android`](https://github.com/apache/cordova-android/)
   has been updated to version 6.3.0, and [`cordova-ios`](https://github.com/apache/cordova-ios/)
-  has been updated to version 4.5.3. The cordova-plugins `cordova-plugin-console`,
+  has been updated to version 4.5.4. The cordova-plugins `cordova-plugin-console`,
   `cordova-plugin-device-motion`, and `cordova-plugin-device-orientation` have been
   [deprecated](https://cordova.apache.org/news/2017/09/22/plugins-release.html)
   and will likely be removed in a future Meteor release.
   [Feature Request #196](https://github.com/meteor/meteor-feature-requests/issues/196)
   [PR #9213](https://github.com/meteor/meteor/pull/9213)
+  [Issue #9447](https://github.com/meteor/meteor/issues/9447)
+  [PR #9448](https://github.com/meteor/meteor/pull/9448)
 
 * Provide basic support for [iPhone X](https://developer.apple.com/ios/update-apps-for-iphone-x/)
   status bar and launch screens, which includes updates to
@@ -145,6 +162,14 @@
 * `Npm.depends` can now specify any `http` or `https` URL.
   [Issue #9236](https://github.com/meteor/meteor/issues/9236)
   [PR #9237](https://github.com/meteor/meteor/pull/9237)
+
+## v1.6.0.1, 2017-12-08
+
+* Node has been upgraded to version
+  [8.9.3](https://nodejs.org/en/blog/release/v8.9.3/), an important
+  [security release](https://nodejs.org/en/blog/vulnerability/december-2017-security-releases/).
+
+* The `npm` package has been upgraded to version 5.5.1.
 
 ## v1.6, 2017-10-30
 
@@ -277,6 +302,12 @@
 * iOS icons and launch screens have been updated to support iOS 11
   [Issue #9196](https://github.com/meteor/meteor/issues/9196)
   [PR #9198](https://github.com/meteor/meteor/pull/9198)
+
+## v1.5.4.1, 2017-12-08
+
+* Node has been upgraded to version
+  [4.8.7](https://nodejs.org/en/blog/release/v4.8.7/), an important
+  [security release](https://nodejs.org/en/blog/vulnerability/december-2017-security-releases/).
 
 ## v1.5.4, 2017-11-08
 
@@ -782,6 +813,12 @@
   `install`, `preinstall`, or `postinstall`. Previously, a package was
   considered non-portable only if it contained any `.node` binary modules.
   [Issue #8225](https://github.com/meteor/meteor/issues/8225)
+
+## v1.4.4.5, 2017-12-08
+
+* Node has been upgraded to version
+  [4.8.7](https://nodejs.org/en/blog/release/v4.8.7/), an important
+  [security release](https://nodejs.org/en/blog/vulnerability/december-2017-security-releases/).
 
 ## v1.4.4.4, 2017-09-26
 
