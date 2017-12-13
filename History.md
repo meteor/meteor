@@ -1,5 +1,20 @@
 ## v.NEXT
 
+* The `accounts-ui-unstyled` package has been updated to use `<form />` and
+  `<button />` tags with its login/signup form, instead of `<div />`'s. This
+  change helps browser's notice login/signup requests, allowing them to
+  trigger their "remember your login/password" functionality.
+
+  > **Note:** If your application is styling the login/signup form using a CSS
+    path that includes the replaced `div` elements (e.g.
+    `div.login-form { ...` or `div.login-button { ...`), your styles will
+    break. You can either update your CSS to use `form.` / `button.` or
+    adjust your CSS specificity by styling on `class` / `id` attributes
+    only.
+
+  [Issue #1746](https://github.com/meteor/meteor/issues/1746)
+  [PR #9442](https://github.com/meteor/meteor/pull/9442)
+
 * The `meteor-babel` npm package (along with its Babel-related
   dependencies) has been updated to version 7.0.0-beta.34, a major update
   from Babel 6. Thanks to the strong abstraction of the `meteor-babel`
