@@ -75,7 +75,6 @@ build_machine_environment: &build_machine_environment
 
     # These, mostly overlapping, flags ensure that CircleCI is as pretty as
     # possible for a non-interactive environment.  See also: --headless.
-    EMACS: t
     METEOR_HEADLESS: true
     METEOR_PRETTY_OUTPUT: 0
 

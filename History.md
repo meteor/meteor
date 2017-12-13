@@ -135,6 +135,11 @@
 * `Accounts.config` now supports a `bcryptRounds` option that
   overrides the default 10 rounds currently used to secure passwords.
   [PR #9044](https://github.com/meteor/meteor/pull/9044)
+  
+* Developers running Meteor from an interactive shell within Emacs should
+  notice a substantial performance improvement thanks to automatic
+  disabling of the progress spinner, which otherwise reacts slowly.
+  [PR #9341](https://github.com/meteor/meteor/pull/9341)
 
 * `Npm.depends` can now specify any `http` or `https` URL.
   [Issue #9236](https://github.com/meteor/meteor/issues/9236)

@@ -736,3 +736,15 @@ export function architecture() {
 
   return supportedArchitectures[osType][osArch];
 };
+
+let emacsDetected;
+export function isEmacs() {
+  // Checking `process.env` is expensive, so only check once.
+  if (typeof emacsDetected === "boolean") {
+    return emacsDetected;
+  }
+
+  // Prior to v22, Emacs only set EMACS. After v27, it only sets INSIDE_EMACS.
+  emacsDetected = !! (process.env.EMACS === "t" || process.env.INSIDE_EMACS);
+  return emacsDetected;
+}
