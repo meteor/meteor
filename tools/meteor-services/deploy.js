@@ -43,7 +43,7 @@ const CAPABILITIES = ['showDeployMessages', 'canTransferAuthorization'];
 //
 // Options include:
 // - method: GET, POST, or DELETE. default GET
-// - operation: "info", "logs", "mongo", "deploy", "authorized-apps"
+// - operation: "info", "mongo", "deploy", "authorized-apps"
 // - site: site name
 // - expectPayload: an array of key names. if present, then we expect
 //   the server to return JSON content on success and to return an
@@ -583,23 +583,6 @@ export function temporaryMongoUrl(site) {
     return result.message;
   } else {
     return null;
-  }
-};
-
-export function logs(site) {
-  site = canonicalizeSite(site);
-  if (! site) {
-    return 1;
-  }
-
-  var result = checkAuthThenSendRpc(site, 'logs', 'view logs');
-
-  if (result === null) {
-    return 1;
-  } else {
-    Console.info(result.message);
-    maybePrintRegistrationLink({ leadingNewline: true });
-    return 0;
   }
 };
 
