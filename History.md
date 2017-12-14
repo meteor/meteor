@@ -173,6 +173,10 @@
   [Issue #1746](https://github.com/meteor/meteor/issues/1746)
   [PR #9442](https://github.com/meteor/meteor/pull/9442)
 
+* The `stylus` package has been deprecated and will no longer be
+  supported/maintained.
+  [PR #9445](https://github.com/meteor/meteor/pull/9445)  
+
 ## v1.6.0.1, 2017-12-08
 
 * Node has been upgraded to version
