@@ -441,7 +441,7 @@ commands can be accessed by pressing the up arrow.
 
 >>> mongo
 Connect to the local Mongo database
-Usage: meteor mongo
+Usage: meteor mongo [--url]
 
 Opens a Mongo shell to view or manipulate collections.
 
