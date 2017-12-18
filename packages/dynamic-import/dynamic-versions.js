@@ -61,7 +61,7 @@ if (Package.appcache) {
     // If we call module.prefetch(id) multiple times in the same tick of
     // the event loop, all those modules will be fetched in one request.
     function prefetchInChunks(modules, amount) {
-      var promises = Promise.all(modules.splice(0, amount).map(function (id) {
+      Promise.all(modules.splice(0, amount).map(function (id) {
         return module.prefetch(id)
       })).then(function () {
         if (modules.length > 0) {
