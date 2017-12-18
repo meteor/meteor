@@ -30,3 +30,46 @@ exports.get = function (id) {
 
   return version;
 };
+
+function flattenModuleTree(tree) {
+  var parts = [""];
+  var result = Object.create(null);
+
+  function walk(t) {
+    if (t && typeof t === "object") {
+      Object.keys(t).forEach(function (key) {
+        parts.push(key);
+        walk(t[key]);
+        parts.pop();
+      });
+    } else if (typeof t === "string") {
+      result[parts.join("/")] = t;
+    }
+  }
+
+  walk(tree);
+
+  return result;
+}
+
+// If Package.appcache is loaded, preload additional modules after
+// the core bundle has been loaded
+if (Package.appcache) {
+  // Use window.onload to only prefetch after the main bundle has loaded
+  window.addEventListener('load', function (event) {
+    // prefetch in chunks to reduce overhead
+    // If we call module.prefetch(id) multiple times in the same tick of
+    // the event loop, all those modules will be fetched in one request.
+    function prefetchInChunks(modules, amount) {
+      var promises = Promise.all(modules.splice(0, amount).map(function (id) {
+        return module.prefetch(id)
+      })).then(function () {
+        if (modules.length > 0) {
+          prefetchInChunks(modules, amount);
+        }
+      })
+    }
+    // get a flat array of modules start prefetching
+    prefetchInChunks(Object.keys(flattenModuleTree(versions)), 20);
+  })
+}
