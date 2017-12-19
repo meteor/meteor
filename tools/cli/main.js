@@ -16,6 +16,7 @@ var catalog = require('../packaging/catalog/catalog.js');
 var buildmessage = require('../utils/buildmessage.js');
 var httpHelpers = require('../utils/http-helpers.js');
 const archinfo = require('../utils/archinfo.js');
+import { isEmacs } from "../utils/utils.js";
 
 var main = exports;
 
@@ -583,7 +584,7 @@ Fiber(function () {
   // reversing node's normal setting of O_NONBLOCK on the evaluation
   // of process.stdin (because Node unblocks stdio when forking). This
   // fixes execution of Mongo from within Emacs shell.
-  if (process.env.EMACS == "t") {
+  if (isEmacs()) {
     process.stdin;
     var child_process = require('child_process');
     child_process.spawn('true', [], {stdio: 'inherit'});
@@ -591,7 +592,7 @@ Fiber(function () {
 
   // Check required Node version.
   // This code is duplicated in tools/server/boot.js.
-  var MIN_NODE_VERSION = 'v0.10.41';
+  var MIN_NODE_VERSION = 'v8.0.0';
   if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
     Console.error(
       'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.');

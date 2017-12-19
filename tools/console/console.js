@@ -55,26 +55,28 @@
 ///
 /// In addition to printing functions, the Console class provides progress bar
 /// support, that is mostly handled through buildmessage.js.
-var _ = require('underscore');
-var readline = require('readline');
-var util = require('util');
-var buildmessage = require('../utils/buildmessage.js');
+import { createInterface } from "readline";
+import { format as utilFormat }  from "util";
+import { getRootProgress } from "../utils/buildmessage.js";
 // XXX: Are we happy with chalk (and its sub-dependencies)?
-var chalk = require('chalk');
-var cleanup = require('../tool-env/cleanup.js');
-var utils = require('../utils/utils.js');
-var wordwrap = require('wordwrap');
+import chalk from "chalk";
+import { onExit as cleanupOnExit } from "../tool-env/cleanup.js";
+import wordwrap from "wordwrap";
+import {
+  isEmacs,
+  sleepMs,
+  Throttled,
+  ThrottledYield,
+} from "../utils/utils.js";
 
-var PROGRESS_DEBUG = !!process.env.METEOR_PROGRESS_DEBUG;
-var FORCE_PRETTY=undefined;
+const PROGRESS_DEBUG = !!process.env.METEOR_PROGRESS_DEBUG;
 // Set the default CR to \r unless we're running with cmd
-var CARRIAGE_RETURN = process.platform === 'win32' &&
+const CARRIAGE_RETURN = process.platform === 'win32' &&
       process.stdout.isTTY &&
       process.argv[1].toLowerCase().includes('cmd') ? new Array(249).join('\b') : '\r';
 
-if (process.env.METEOR_PRETTY_OUTPUT) {
-  FORCE_PRETTY = process.env.METEOR_PRETTY_OUTPUT != '0';
-}
+const FORCE_PRETTY = process.env.METEOR_PRETTY_OUTPUT &&
+  process.env.METEOR_PRETTY_OUTPUT != '0';
 
 if (! process.env.METEOR_COLOR) {
   chalk.enabled = false;
@@ -233,7 +235,7 @@ class SpinnerRenderer {
 // Renders a progressbar.  Based on the npm 'progress' module, but tailored to our needs (i.e. renders to string)
 class ProgressBarRenderer {
   constructor(format, options) {
-    options = options || {};
+    options = options || Object.create(null);
 
     this.fmt = format;
     this.curr = 0;
@@ -417,7 +419,7 @@ class StatusPoller {
     this._console = console;
 
     this._pollPromise = null;
-    this._throttledStatusPoll = new utils.Throttled({
+    this._throttledStatusPoll = new Throttled({
       interval: STATUS_INTERVAL_MS
     });
     this._startPoller();
@@ -430,10 +432,10 @@ class StatusPoller {
     }
 
     this._pollPromise = (async() => {
-      utils.sleepMs(STATUS_INTERVAL_MS);
+      sleepMs(STATUS_INTERVAL_MS);
       while (! this._stop) {
         this.statusPoll();
-        utils.sleepMs(STATUS_INTERVAL_MS);
+        sleepMs(STATUS_INTERVAL_MS);
       }
     })();
   }
@@ -451,7 +453,7 @@ class StatusPoller {
   _statusPoll() {
     // XXX: Early exit here if we're not showing status at all?
 
-    var rootProgress = buildmessage.getRootProgress();
+    var rootProgress = getRootProgress();
     if (PROGRESS_DEBUG) {
       // It can be handy for dev purposes to see all the executing tasks
       rootProgress.dump(process.stdout, {skipDone: true});
@@ -545,7 +547,7 @@ class Console extends ConsoleBase {
   constructor(options) {
     super();
 
-    options = options || {};
+    options = options || Object.create(null);
 
     this._headless = !! (
       process.env.METEOR_HEADLESS &&
@@ -557,13 +559,13 @@ class Console extends ConsoleBase {
 
     this._statusPoller = null;
 
-    this._throttledYield = new utils.ThrottledYield();
+    this._throttledYield = new ThrottledYield();
 
     this.verbose = false;
 
     // Legacy helpers
-    this.stdout = {};
-    this.stderr = {};
+    this.stdout = Object.create(null);
+    this.stderr = Object.create(null);
 
     this._stream = process.stdout;
 
@@ -579,7 +581,7 @@ class Console extends ConsoleBase {
       }
     }
 
-    cleanup.onExit((sig) => {
+    cleanupOnExit((sig) => {
       this.enableProgressDisplay(false);
     });
   }
@@ -717,12 +719,13 @@ class Console extends ConsoleBase {
     // If the last argument is an instance of ConsoleOptions, then we should
     // separate it out, and only send the first N-1 arguments to be parsed as a
     // message.
-    if (_.last(args) instanceof ConsoleOptions) {
-      msgArgs = _.initial(args);
-      options = _.last(args).options;
+    const lastArg = args && args.length && args[args.length - 1];
+    if (lastArg instanceof ConsoleOptions) {
+      msgArgs = args.slice(0, -1);
+      options = lastArg.options;
     } else {
       msgArgs = args;
-      options = {};
+      options = Object.create(null);
     }
     var message = this._format(msgArgs);
     return { message: message, options: options };
@@ -1052,10 +1055,10 @@ class Console extends ConsoleBase {
   //        printing directories, for examle.
   //      - indent: indent the entire table by a given number of spaces.
   printTwoColumns(rows, options) {
-    options = options || {};
+    options = options || Object.create(null);
 
     var longest = '';
-    _.each(rows, row => {
+    rows.forEach(row => {
       var col0 = row[0] || '';
       if (col0.length > longest.length) {
         longest = col0;
@@ -1068,7 +1071,7 @@ class Console extends ConsoleBase {
       options.indent ? Array(options.indent + 1).join(' ') : "";
 
     var out = '';
-    _.each(rows, row => {
+    rows.forEach(row => {
       var col0 = row[0] || '';
       var col1 = row[1] || '';
       var line = indent + this.bold(col0) + pad.substr(col0.length);
@@ -1088,7 +1091,7 @@ class Console extends ConsoleBase {
 
   // Format logs according to the spec in utils.
   _format(logArguments) {
-    return util.format.apply(util, logArguments);
+    return utilFormat(...logArguments);
   }
 
   // Wraps long strings to the length of user's terminal. Inserts linebreaks
@@ -1101,7 +1104,7 @@ class Console extends ConsoleBase {
   //   - indent: (see: Console.options)
   //
   _wrapText(text, options) {
-    options = options || {};
+    options = options || Object.create(null);
 
     // Compute the maximum offset on the bulk of the message.
     var maxIndent = 0;
@@ -1125,7 +1128,7 @@ class Console extends ConsoleBase {
       } else {
         wrappedText = text;
       }
-      wrappedText = _.map(wrappedText.split('\n'), s => {
+      wrappedText = wrappedText.split('\n').map(s => {
         if (s === "") {
           return "";
         }
@@ -1180,13 +1183,9 @@ class Console extends ConsoleBase {
     } else if ((! this._stream.isTTY) || (! this._pretty)) {
       // No progress bar if not in pretty / on TTY.
       newProgressDisplay = new ProgressDisplayNone(this);
-    } else if (this._stream.isTTY && ! this._stream.columns) {
-      // We might be in a pseudo-TTY that doesn't support
-      // clearLine() and cursorTo(...).
-      // It's important that we only enter status message mode
-      // if this._pretty, so that we don't start displaying
-      // status messages too soon.
-      // XXX See note where ProgressDisplayStatus is defined.
+    } else if (isEmacs() || this.isPseudoTTY()) {
+      // Resort to a more basic mode if we're in an environment which
+      // misbehaves when using clearLine() and cursorTo(...).
       newProgressDisplay = new ProgressDisplayStatus(this);
     } else {
       // Otherwise we can do the full progress bar
@@ -1212,6 +1211,10 @@ class Console extends ConsoleBase {
     return this._headless;
   }
 
+  isPseudoTTY() {
+    return this._stream && this._stream.isTTY && ! this._stream.columns;
+  }
+
   setHeadless(headless = true) {
     this._headless = !! headless;
 
@@ -1235,7 +1238,7 @@ class Console extends ConsoleBase {
   //   - prompt (string)
   //   - stream: defaults to process.stdout (you might want process.stderr)
   readLine(options) {
-    options = _.extend({
+    options = Object.assign(Object.create(null), {
       echo: true,
       stream: this._stream
     }, options);
@@ -1256,12 +1259,12 @@ class Console extends ConsoleBase {
     this._setProgressDisplay(new ProgressDisplayNone());
 
     // Read a line, throwing away the echoed characters into our dummy stream.
-    var rl = readline.createInterface({
+    var rl = createInterface({
       input: process.stdin,
       output: options.echo ? options.stream : silentStream,
       // `terminal: options.stream.isTTY` is the default, but emacs shell users
       // don't want fancy ANSI.
-      terminal: options.stream.isTTY && process.env.EMACS !== 't'
+      terminal: options.stream.isTTY && ! isEmacs()
     });
 
     if (! options.echo) {
