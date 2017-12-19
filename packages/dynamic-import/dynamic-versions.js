@@ -31,9 +31,9 @@ exports.get = function (id) {
   return version;
 };
 
-function flattenModuleTree(tree) {
+function getFlatModuleArray(tree) {
   var parts = [""];
-  var result = Object.create(null);
+  var result = [];
 
   function walk(t) {
     if (t && typeof t === "object") {
@@ -43,7 +43,7 @@ function flattenModuleTree(tree) {
         parts.pop();
       });
     } else if (typeof t === "string") {
-      result[parts.join("/")] = t;
+      result.push(parts.join("/"));
     }
   }
 
@@ -57,24 +57,25 @@ function flattenModuleTree(tree) {
 function precacheOnLoad(event) {
   // Check inside onload to make sure Package.appcache has had a
   // chance to become available.
-  if (!Package.appcache) {
-    return
-  }
+  if (!Package.appcache) return;
+
   // prefetch in chunks to reduce overhead
   // If we call module.prefetch(id) multiple times in the same tick of
   // the event loop, all those modules will be fetched in one request.
   function prefetchInChunks(modules, amount) {
     Promise.all(modules.splice(0, amount).map(function (id) {
-      return module.prefetch(id)
+      return module.prefetch(id);
     })).then(function () {
       if (modules.length > 0) {
         prefetchInChunks(modules, amount);
       }
     })
   }
+
   // Get a flat array of modules and start prefetching.
-  prefetchInChunks(Object.keys(flattenModuleTree(versions)), 20);
+  prefetchInChunks(getFlatModuleArray(versions), 20);
 }
+
 // Use window.onload to only prefetch after the main bundle has loaded
 if (global.addEventListener) {
   global.addEventListener('load', precacheOnLoad, false);
