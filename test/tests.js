@@ -511,6 +511,11 @@ describe("Reify", function () {
     assert.strictEqual(value, "a");
   });
 
+  it("should support export-default-from syntax", function () {
+    import { a } from "./export-default-from.js";
+    assert.strictEqual(a, "value: a");
+  });
+
   it("should work for imports in generator functions", function () {
     function *g() {
       {
