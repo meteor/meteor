@@ -53,23 +53,31 @@ function flattenModuleTree(tree) {
 }
 
 // If Package.appcache is loaded, preload additional modules after
-// the core bundle has been loaded
-if (Package.appcache) {
-  // Use window.onload to only prefetch after the main bundle has loaded
-  window.addEventListener('load', function (event) {
-    // prefetch in chunks to reduce overhead
-    // If we call module.prefetch(id) multiple times in the same tick of
-    // the event loop, all those modules will be fetched in one request.
-    function prefetchInChunks(modules, amount) {
-      Promise.all(modules.splice(0, amount).map(function (id) {
-        return module.prefetch(id)
-      })).then(function () {
-        if (modules.length > 0) {
-          prefetchInChunks(modules, amount);
-        }
-      })
-    }
-    // get a flat array of modules start prefetching
-    prefetchInChunks(Object.keys(flattenModuleTree(versions)), 20);
-  })
+// the core bundle has been loaded.
+function precacheOnLoad(event) {
+  // Check inside onload to make sure Package.appcache has had a
+  // chance to become available.
+  if (!Package.appcache) {
+    return
+  }
+  // prefetch in chunks to reduce overhead
+  // If we call module.prefetch(id) multiple times in the same tick of
+  // the event loop, all those modules will be fetched in one request.
+  function prefetchInChunks(modules, amount) {
+    Promise.all(modules.splice(0, amount).map(function (id) {
+      return module.prefetch(id)
+    })).then(function () {
+      if (modules.length > 0) {
+        prefetchInChunks(modules, amount);
+      }
+    })
+  }
+  // Get a flat array of modules and start prefetching.
+  prefetchInChunks(Object.keys(flattenModuleTree(versions)), 20);
+}
+// Use window.onload to only prefetch after the main bundle has loaded
+if (global.addEventListener) {
+  global.addEventListener('load', precacheOnLoad, false);
+} else if (global.attachEvent) {
+  global.attachEvent('load', precacheOnLoad);
 }
