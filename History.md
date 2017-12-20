@@ -88,8 +88,28 @@
 
 * The `minifier-js` package has been updated to use `uglify-es` 3.2.2.
 
-* The `request` npm package used by the `http` package has been upgraded
-  to version 2.83.0.
+* The `request` npm package used by both the `http` package and the
+  `meteor` command-line tool has been upgraded to version 2.83.0.
+
+* The `kexec` npm package has been updated to version 3.0.0.
+
+* The `moment` npm package has been updated to version 2.20.1.
+
+* The `rimraf` npm package has been updated to version 2.6.2.
+
+* The `glob` npm package has been updated to version 7.1.2.
+
+* The `ignore` npm package has been updated to version 3.3.7.
+
+* The `escope` npm package has been updated to version 3.6.0.
+
+* The `split2` npm package has been updated to version 2.2.0.
+
+* The `multipipe` npm package has been updated to version 2.0.1.
+
+* The `pathwatcher` npm package has been updated to version 7.1.1.
+
+* The `lru-cache` npm package has been updated to version 4.1.1.
 
 * The deprecated `Meteor.http` object has been removed. If your
   application is still using `Meteor.http`, you should now use `HTTP`
