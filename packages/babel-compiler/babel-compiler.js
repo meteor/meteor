@@ -393,13 +393,13 @@ function requireWithPrefixes(inputFile, id, prefixes, controlFilePath) {
     };
   }
 
-  return {
+  return presetOrPlugin && {
     name: presetOrPluginMeta.name,
     version: presetOrPluginMeta.version,
     module: presetOrPlugin.__esModule
       ? presetOrPlugin.default
       : presetOrPlugin
-  };
+  } || null;
 }
 
 // 'react-hot-loader/babel' => 'react-hot-loader'
