@@ -81,6 +81,9 @@
   ```
   [PR #9409](https://github.com/meteor/meteor/pull/9409)
 
+* The `npm` package has been upgraded to version 5.6.0, and our fork of
+  its `pacote` dependency has been rebased against version 7.0.2.
+
 * The `reify` npm package has been updated to version 0.13.5.
 
 * The `minifier-js` package has been updated to use `uglify-es` 3.1.9.
