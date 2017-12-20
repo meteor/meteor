@@ -452,10 +452,10 @@ databases on deployed applications, the URL is valid for one hour.
 Options:
   --url, -U return a Mongo database URL
 
-Currently, this feature is only for local developments and the Mongo shell
-is the current project's local development database. The current working 
-directory must be a Meteor project directory, and the Meteor application 
-must already be running.
+Currently, this feature can only be used when developing locally.
+The opened Mongo shell connects to the current project's local
+development database. The current working directory must be a Meteor
+project directory, and the Meteor application must already be running.
 
 >>> reset
 Reset the project state. Erases the local database.
