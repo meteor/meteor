@@ -1,10 +1,17 @@
 "use strict";
 
+const { getESModule } = require("reify/lib/runtime/utils.js");
+const nodeRequire = require;
+require = function require(id) {
+  const exports = nodeRequire(id);
+  return getESModule(exports) && exports.default || exports;
+};
+
 const babelPresetMeteor = require("babel-preset-meteor");
 const babelPresetMeteorModern = require("babel-preset-meteor/modern");
 const reifyPlugin = require("babel-plugin-transform-es2015-modules-reify");
 const strictModulesPluginFactory =
-  require("@babel/plugin-transform-modules-commonjs").default;
+  require("@babel/plugin-transform-modules-commonjs");
 
 const babelModulesPlugin = [function () {
   const plugin = strictModulesPluginFactory.apply(this, arguments);
