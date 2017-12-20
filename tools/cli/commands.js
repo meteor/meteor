@@ -796,6 +796,11 @@ main.registerCommand({
   // the packages (or maybe an unpredictable subset based on what happens to be
   // in the template's versions file).
 
+  // Since some of the project skeletons include npm `devDependencies`, we need
+  // to make sure the current node environment is set to development (so those
+  // `devDependencies` are covered by `npm install`).
+  process.env.NODE_ENV = 'development';
+
   require("./default-npm-deps.js").install(appPath);
 
   var appNameToDisplay = appPathAsEntered === "." ?
