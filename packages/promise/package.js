@@ -15,7 +15,7 @@ Package.onUse(function(api) {
   api.use("modules");
   api.use("modern-browsers");
   api.addFiles("modern.js");
-  api.addFiles("legacy.js", "web.browser.legacy");
+  api.addFiles("legacy.js", "legacy");
   api.mainModule("client.js", "client");
   api.mainModule("server.js", "server");
   api.export("Promise");

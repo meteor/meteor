@@ -19,8 +19,8 @@ Package.onUse(function(api) {
   api.mainModule("versions.js", "server");
   api.mainModule("modern.js", "client");
 
-  api.mainModule("legacy.js", "web.browser.legacy");
-  api.export("Symbol", "web.browser.legacy");
-  api.export("Map", "web.browser.legacy");
-  api.export("Set", "web.browser.legacy");
+  api.mainModule("legacy.js", "legacy");
+  api.export("Symbol", "legacy");
+  api.export("Map", "legacy");
+  api.export("Set", "legacy");
 });

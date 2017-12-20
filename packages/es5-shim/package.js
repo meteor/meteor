@@ -11,5 +11,5 @@ Npm.depends({
 
 Package.onUse(function(api) {
   api.use("modules");
-  api.mainModule("client.js", "web.browser.legacy");
+  api.mainModule("client.js", "legacy");
 });

@@ -21,12 +21,39 @@ function toArray (x) {
   return x ? [x] : [];
 }
 
-function toArchArray (arch) {
-  if (! _.isArray(arch)) {
+function toArchArray(arch) {
+  if (! Array.isArray(arch)) {
     arch = arch ? [arch] : compiler.ALL_ARCHES;
   }
-  arch = _.uniq(arch);
-  arch = _.map(arch, mapWhereToArch);
+
+  const seen = Object.create(null);
+
+  arch.splice(0).forEach(where => {
+    if (seen[where]) return;
+    seen[where] = true;
+
+    // Shorthands for common arch prefixes:
+    // "server" => os.*
+    // "client" => web.*
+    // "legacy" => web.browser.legacy, web.cordova
+    if (where === "server") {
+      arch.push("os");
+    } else if (where === "client") {
+      arch.push("web");
+    } else if (where === "legacy") {
+      arch.push(
+        "web.browser.legacy",
+        // It's important to include web.browser.legacy resources in the
+        // Cordova bundle, since Cordova bundles are built into the mobile
+        // application, rather than being downloaded from a web server at
+        // runtime. This means we can't distinguish between clients at
+        // runtime, so we have to use code that works for all clients.
+        "web.cordova"
+      );
+    } else {
+      arch.push(where);
+    }
+  });
 
   // avoid using _.each so as to not add more frames to skip
   for (var i = 0; i < arch.length; ++i) {
@@ -42,20 +69,6 @@ function toArchArray (arch) {
     }
   }
   return arch;
-}
-
-// We currently have a 1 to 1 mapping between 'where' and 'arch'.
-// 'client' -> 'web'
-// 'server' -> 'os'
-// '*' -> '*'
-function mapWhereToArch (where) {
-  if (where === 'server') {
-    return 'os';
-  } else if (where === 'client') {
-    return 'web';
-  } else {
-    return where;
-  }
 }
 
 // Iterates over the list of target archs and calls f(arch) for all archs

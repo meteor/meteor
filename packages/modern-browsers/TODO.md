@@ -15,6 +15,9 @@
 - [x] Make sure the new url prefixes aren't too disruptive for public
       assets like images.
 
+- [x] Make sure Cordova isn't automatically treated as a modern
+      environment.
+
 - [ ] Create an `isobuild:web-browser-legacy` pseudopackage.
 
 - [ ] Add tests to the `modules` test app.

@@ -16,7 +16,7 @@ Package.onUse(function(api) {
   api.use("retry"); // TODO Try to remove this.
   api.use("dynamic-import");
 
-  api.addFiles("sockjs-0.3.4.js", "web.browser.legacy");
+  api.addFiles("sockjs-0.3.4.js", "legacy");
   api.mainModule("browser.js", "client", { lazy: true });
 
   api.addFiles("server.js", "server");
