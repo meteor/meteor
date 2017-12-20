@@ -707,9 +707,9 @@
       "integrity": "sha1-0aitM/qc4OcT1l/dCsi3SNR4yEg="
     },
     "meteor-babel": {
-      "version": "7.0.0-beta.35",
-      "resolved": "https://registry.npmjs.org/meteor-babel/-/meteor-babel-7.0.0-beta.35.tgz",
-      "integrity": "sha512-rpWAkFAxQsNsEuic/uUYolGv1SQP1PvOBJ6OBKy3vEbI03kjjsIc2fK7kM7OvLPqQruB4EkCtX0AeiU6DhfZHw=="
+      "version": "7.0.0-beta.35-1",
+      "resolved": "https://registry.npmjs.org/meteor-babel/-/meteor-babel-7.0.0-beta.35-1.tgz",
+      "integrity": "sha512-3hcdC41rQyn6jnBEVldZ5u02I2FQ/ecjhJ/G3mibUPpARDGzOKZtGdhuhyFQrU+eEX9qjrRqNlPU6wjeIAfUYw=="
     },
     "meteor-babel-helpers": {
       "version": "0.0.3",

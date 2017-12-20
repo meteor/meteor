@@ -1,11 +1,11 @@
 ## v.NEXT
 
 * The `meteor-babel` npm package (along with its Babel-related
-  dependencies) has been updated to version 7.0.0-beta.35, a major update
-  from Babel 6. Thanks to the strong abstraction of the `meteor-babel`
-  package, the most noticeable consequence of the Babel 7 upgrade is that
-  the `babel-runtime` npm package has been replaced by `@babel/runtime`,
-  which can be installed by running
+  dependencies) has been updated to version 7.0.0-beta.35-1, a major
+  update from Babel 6. Thanks to the strong abstraction of the
+  `meteor-babel` package, the most noticeable consequence of the Babel 7
+  upgrade is that the `babel-runtime` npm package has been replaced by
+  `@babel/runtime`, which can be installed by running
   ```js
   meteor npm install @babel/runtime
   ```
