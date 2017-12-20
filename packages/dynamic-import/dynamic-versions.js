@@ -80,5 +80,5 @@ function precacheOnLoad(event) {
 if (global.addEventListener) {
   global.addEventListener('load', precacheOnLoad, false);
 } else if (global.attachEvent) {
-  global.attachEvent('load', precacheOnLoad);
+  global.attachEvent('onload', precacheOnLoad);
 }
