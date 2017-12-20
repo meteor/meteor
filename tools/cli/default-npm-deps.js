@@ -8,7 +8,7 @@ import {
 
 const INSTALL_JOB_MESSAGE = "installing npm dependencies";
 
-export function install(appDir) {
+export function install(appDir, options) {
   const packageJsonPath = pathJoin(appDir, "package.json");
   const needTempPackageJson = ! statOrNull(packageJsonPath);
 
@@ -25,9 +25,13 @@ export function install(appDir) {
   }
 
   const ok = buildmessage.enterJob(INSTALL_JOB_MESSAGE, function () {
-    const { runNpmCommand } = require("../isobuild/meteor-npm.js");
+    const npmCommand = ["install"];
+    if (options && options.includeDevDependencies) {
+      npmCommand.push("--production=false");
+    }
 
-    const installResult = runNpmCommand(["install"], appDir);
+    const { runNpmCommand } = require("../isobuild/meteor-npm.js");
+    const installResult = runNpmCommand(npmCommand, appDir);
     if (! installResult.success) {
       buildmessage.error(
         "Could not install npm dependencies for test-packages: " +
