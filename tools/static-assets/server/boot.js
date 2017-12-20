@@ -10,7 +10,7 @@ var npmRequire = require('./npm-require.js').require;
 var Profile = require('./profile.js').Profile;
 
 // This code is duplicated in tools/main.js.
-var MIN_NODE_VERSION = 'v0.10.41';
+var MIN_NODE_VERSION = 'v8.0.0';
 
 var hasOwn = Object.prototype.hasOwnProperty;
 

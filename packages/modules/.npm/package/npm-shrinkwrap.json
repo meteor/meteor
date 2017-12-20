@@ -17,9 +17,9 @@
       "integrity": "sha512-sN4U9tIJtBRwKbwgFh9qJfrPIQ/GGTRr1MGqkgOeMTLy8/lM0FcWU//FqlnZ3Vb7gJ+Mxh3FOg1EklibdajbaQ=="
     },
     "reify": {
-      "version": "0.13.3",
-      "resolved": "https://registry.npmjs.org/reify/-/reify-0.13.3.tgz",
-      "integrity": "sha512-gIEzdATAGecCFSJgAqb7xyqdoTC9cXp4fOEP8IqyFrza91FIMSmvyvzM3pl2CLtc3ijP7bnDLjAe0eAsgKHwJA=="
+      "version": "0.13.5",
+      "resolved": "https://registry.npmjs.org/reify/-/reify-0.13.5.tgz",
+      "integrity": "sha512-otgYV6ZBmDILI2o1wjHgSoLNkxqf8YyVevw81em5QJ+6LjyRfVqBIdsef6/iFvS+7pBVixUdMsrK5x55frzpdQ=="
     },
     "semver": {
       "version": "5.4.1",
