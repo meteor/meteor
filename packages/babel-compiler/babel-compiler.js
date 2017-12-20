@@ -277,16 +277,19 @@ BCp._inferHelper = function (
   }
 
   function requireWithPath(id, path) {
-    var prefix;
-    var lastInPath = path[path.length - 1];
+    const prefixes = [];
+    const lastInPath = path[path.length - 1];
     if (lastInPath === "presets") {
-      prefix = "babel-preset-";
+      prefixes.push("@babel/preset-", "babel-preset-");
     } else if (lastInPath === "plugins") {
-      prefix = "babel-plugin-";
+      prefixes.push("@babel/plugin-", "babel-plugin-");
     }
 
+    // Try without a prefix if the prefixes fail.
+    prefixes.push("");
+
     try {
-      return requireWithPrefix(inputFile, id, prefix, controlFilePath);
+      return requireWithPrefixes(inputFile, id, prefixes, controlFilePath);
     } catch (e) {
       if (e.code !== "MODULE_NOT_FOUND") {
         throw e;
@@ -336,31 +339,25 @@ function merge(babelOptions, babelrc, name) {
   }
 }
 
-function requireWithPrefix(inputFile, id, prefix, controlFilePath) {
+function requireWithPrefixes(inputFile, id, prefixes, controlFilePath) {
   var isTopLevel = "./".indexOf(id.charAt(0)) < 0;
   var presetOrPlugin;
   var presetOrPluginMeta;
 
   if (isTopLevel) {
-    if (! prefix) {
-      throw new Error("missing babelrc prefix");
-    }
-
-    try {
-      // If the identifier is top-level, try to prefix it with
-      // "babel-plugin-" or "babel-preset-".
-      presetOrPlugin = inputFile.require(prefix + id);
-      presetOrPluginMeta = inputFile.require(
-        packageNameFromTopLevelModuleId(prefix + id) + '/package.json');
-    } catch (e) {
-      if (e.code !== "MODULE_NOT_FOUND") {
-        throw e;
+    prefixes.some(function (prefix) {
+      try {
+        presetOrPlugin = inputFile.require(prefix + id);
+        presetOrPluginMeta = inputFile.require(
+          packageNameFromTopLevelModuleId(prefix + id) + "/package.json");
+        return true;
+      } catch (e) {
+        if (e.code !== "MODULE_NOT_FOUND") {
+          throw e;
+        }
+        return false;
       }
-      // Fall back to requiring the plugin as-is if the prefix failed.
-      presetOrPlugin = inputFile.require(id);
-      presetOrPluginMeta = inputFile.require(
-        packageNameFromTopLevelModuleId(id) + '/package.json');
-    }
+    });
 
   } else {
     // If the identifier is not top-level, but relative or absolute,
