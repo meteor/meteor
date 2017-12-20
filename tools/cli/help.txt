@@ -440,26 +440,22 @@ commands can be accessed by pressing the up arrow.
 
 
 >>> mongo
-Connect to the Mongo database for the specified site.
+Connect to the local Mongo database
 Usage: meteor mongo [--url]
 
 Opens a Mongo shell to view or manipulate collections.
-
-If site is specified, this is the hosted Mongo database for the deployed
-Meteor site.
-
-If no site is specified, this is the current project's local development
-database. In this case, the current working directory must be a
-Meteor project directory, and the Meteor application must already be
-running.
 
 Instead of opening a shell, specifying --url (-U) will return a URL
 suitable for an external program to connect to the database. For remote
 databases on deployed applications, the URL is valid for one hour.
 
 Options:
-  --url, -U  return a Mongo database URL
+  --url, -U return a Mongo database URL
 
+Currently, this feature can only be used when developing locally.
+The opened Mongo shell connects to the current project's local
+development database. The current working directory must be a Meteor
+project directory, and the Meteor application must already be running.
 
 >>> reset
 Reset the project state. Erases the local database.
@@ -474,11 +470,11 @@ Usage: meteor deploy <site> [--settings settings.json] [--debug] [--delete]
 
 Deploys the project in your current directory to Meteor's servers.
 
-You can deploy to any available name under 'meteor.com'
+You can deploy to any available name under 'meteorapp.com'
 without any additional configuration, for example,
-'myapp.meteor.com'. If you deploy to a custom domain, such as
+'myapp.meteorapp.com'. If you deploy to a custom domain, such as
 'myapp.mydomain.com', then you'll also need to configure your domain's
-DNS records. See the Meteor docs for details.
+DNS records. See the Meteor / Galaxy docs (http://galaxy-guide.meteor.com/dns.html) for details.
 
 The --settings flag can be used to pass deploy-specific information to
 the application. It will be available at runtime in Meteor.settings, but only
@@ -500,14 +496,6 @@ Options:
                   the current versions, if required to satisfy all package version
                   constraints.
 
-
->>> logs
-Show logs for specified site.
-Usage: meteor logs <site>
-
-Retrieves the server logs for the requested site.
-
-
 >>> authorized
 View or change authorized users and organizations for a site.
 Usage: meteor authorized <site> [--list]
@@ -518,7 +506,7 @@ Usage: meteor authorized <site> [--list]
 Without an argument (or with --list), list the users and organizations that are
 administrators for a particular site that was deployed with 'meteor deploy'
 
-For free hosting:
+For hosting:
 
 With --add, add an authorized user or organization to a site. Use this to give
 your collaborators the ability to work with your sites.
@@ -534,8 +522,8 @@ With --transfer, transfer the ownership of the application to a new user or
 organization.
 
 Options:
-  --add         add an authorized user or organization (for free hosting)
-  --remove      remove an authorized user or organization (for free hosting)
+  --add         add an authorized user or organization
+  --remove      remove an authorized user or organization
   --transfer    transfer the (Galaxy) app to a new user or organization
   --list        list authorized users and organizations (the default)
 
@@ -755,12 +743,14 @@ Usage: meteor cordova <command>
 
 
 >>> list-sites
-List sites for which you are authorized.
+List sites for which you are authorized. Lists by region, default is us-east-1.
 Usage: meteor list-sites
 
 List the sites that you have deployed with 'meteor deploy', and sites
 for which other users have authorized you with the 'meteor authorized'
-command.
+command. To see sites in a region other than us-east-1, set the DEPLOY_HOSTNAME
+environment variable. For example, 
+`DEPLOY_HOSTNAME=eu-west-1.galaxy-deploy.meteor.com meteor list-sites`
 
 
 >>> publish-release
