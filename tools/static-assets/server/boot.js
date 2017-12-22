@@ -390,12 +390,10 @@ var loadServerBundles = Profile("Load server bundles", function () {
     var scriptPath =
       parsedSourceMaps[absoluteFilePath] ? absoluteFilePath : fileInfoOSPath;
 
-    var script = new (require('vm').Script)(wrapped, {
+    var func = require('vm').runInThisContext(wrapped, {
       filename: scriptPath,
       displayErrors: true
     });
-
-    var func = script.runInThisContext();
 
     var args = [Npm, Assets];
 
@@ -403,10 +401,15 @@ var loadServerBundles = Profile("Load server bundles", function () {
       args.push(specialArgs[key]);
     });
 
-    infos.push({
-      fn: Profile(fileInfo.path, func),
-      args
-    });
+    if (meteorDebugFuture) {
+      infos.push({
+        fn: Profile(fileInfo.path, func),
+        args
+      });
+    } else {
+      // Allows us to use code-coverage if the debugger is not enabled
+      Profile(fileInfo.path, func).apply(global, args);
+    }
   });
 
   maybeWaitForDebuggerToAttach();
