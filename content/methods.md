@@ -378,7 +378,7 @@ As you can see, there is a fair amount of boilerplate to handle errors nicely in
 
 Since Methods can work as general purpose RPCs, they can also be used to fetch data instead of publications. There are some advantages and some disadvantages to this approach compared with loading data through publications, and at the end of the day we recommend always using publications to load data.
 
-Methods can be useful to fetch the result of a complex computation from the server that doesn't need to update when the server data changes. The biggest disadvantage of fetching data through Methods is that the data won't be automatically loaded into Minimongo, Meteor's client-side data cache, so you'll need to manage the lifecycle of that data manually.
+Methods can be useful to fetch the result of a complex computation from the server that doesn't need to update when the server data changes. The biggest disadvantage of fetching data through Methods is that the data won't be automatically loaded into Minimongo, Meteor's client-side data cache, so you'll need to manage the lifecycle of that data manually. Another disadvantage is that database queries are not shared between clients like publication cursors often are—the Method (and any queries it contains) will run once for each client that calls it.
 
 <h4 id="local-collection">Using a local collection to store and display data fetched from a Method</h4>
 
