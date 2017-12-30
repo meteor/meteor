@@ -25,6 +25,7 @@ script:
   - npm run test
 after_success:
   - codeclimate-test-reporter < ./coverage/lcov.info
+  - npm run coveralls
   - npm run semantic-release
 addons:
   code_climate:
