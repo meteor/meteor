@@ -1,6 +1,8 @@
 ## v.NEXT
 
-* Node has been upgraded to version
+## v1.6.1, TBD
+
+* Node has been updated to version
   [8.9.4](https://nodejs.org/en/blog/release/v8.9.4/).
 
 * The `meteor-babel` npm package (along with its Babel-related
@@ -19,6 +21,35 @@
   for general information about updating to Babel 7 (note especially any
   changes to plugins you've been using in any `.babelrc` files).
   [PR #9440](https://github.com/meteor/meteor/pull/9440)
+
+* Because `babel-compiler@7.0.0` is a major version bump for a core
+  package, any package that explicitly depends on `babel-compiler` with
+  `api.use` or `api.imply` will need to be updated and republished in
+  order to remain compatible with Meteor 1.6.1. One notable example is the
+  `practicalmeteor:mocha` package. If you have been using this test-driver
+  package, we strongly recommend switching to `meteortesting:mocha`
+  instead. If you are the author of a package that depends on
+  `babel-compiler`, we recommend publishing your updated version using a
+  new major or minor version, so that you can continue releasing patch
+  updates compatible with older versions of Meteor, if necessary.
+
+* The `server-render` package now supports passing a `Stream` object to
+  `ServerSink` methods that previously expected a string, which enables
+  [streaming server-side rendering with React
+  16](https://hackernoon.com/whats-new-with-server-side-rendering-in-react-16-9b0d78585d67):
+  ```js
+  import React from "react";
+  import { renderToNodeStream } from "react-dom/server";
+  import { onPageLoad } from "meteor/server-render";
+  import App from "/imports/Server.js";
+
+  onPageLoad(sink => {
+    sink.renderIntoElementById("app", renderToNodeStream(
+      <App location={sink.request.url} />
+    ));
+  });
+  ```
+  [PR #9343](https://github.com/meteor/meteor/pull/9343)
 
 * The previously served `/manifest.json` application metadata file is now
   served from `/__meteor__/webapp/manifest.json`.
@@ -52,6 +83,10 @@
 
   [PR #9263](https://github.com/meteor/meteor/pull/9263)
 
+* The `_` variable will once again remain bound to `underscore` (if
+  installed) in `meteor shell`, fixing a regression introduced by Node 8.
+  [PR #9406](https://github.com/meteor/meteor/pull/9406)
+
 * Dynamically `import()`ed modules will now be fetched from the
   application server using an HTTP POST request, rather than a WebSocket
   message. This strategy has all the benefits of the previous strategy,
@@ -73,6 +108,31 @@
   ]);
   ```
 
+* Thanks to a feature request and pull request from
+  [@CaptainN](https://github.com/CaptainN), all available dynamic modules
+  will be automatically prefetched after page load and permanently cached
+  in IndexedDB when the `appcache` package is in use, ensuring that
+  dynamic `import()` will work for offline apps. Although the HTML5
+  Application Cache was deliberately *not* used for this prefetching, the
+  new behavior matches the spirit/intention of the `appcache` package.
+  [Feature Request #236](https://github.com/meteor/meteor-feature-requests/issues/236)
+  [PR #9482](https://github.com/meteor/meteor/pull/9482)
+  [PR #9434](https://github.com/meteor/meteor/pull/9434)
+
+* The SockJS and `es5-shim` libraries are no longer included in the
+  initial JavaScript bundle, but are instead injected using `<script>`
+  tags in older browsers that are missing adequate support for WebSockets
+  or ECMAScript 5. For the vast majority of modern browsers that do not
+  need these libraries, this change will reduce the bundle size by as much
+  as 60KB (minified, pre-gzip). If the native WebSocket connection fails
+  with an error in a modern browser (for example, because of a restrictive
+  firewall or proxy), the SockJS library will be loaded as a fallback
+  using dynamic `import()`. For testing purposes, the `<script>` tag
+  injection can be triggered in any browser by appending `?force_sockjs=1`
+  and/or `?force_es5_shim=1` to the application URL.
+  [PR #9353](https://github.com/meteor/meteor/pull/9353)
+  [PR #9360](https://github.com/meteor/meteor/pull/9360)
+
 * The `Tinytest.addAsync` API now accepts test functions that return
   `Promise` objects, making the `onComplete` callback unnecessary:
   ```js
@@ -83,6 +143,38 @@
   });
   ```
   [PR #9409](https://github.com/meteor/meteor/pull/9409)
+
+* Line number comments are no longer added to bundled JavaScript files on
+  the client or the server. Several years ago, before all major browsers
+  supported source maps, we felt it was important to provide line number
+  information in generated files using end-of-line comments like
+  ```js
+  some.code(1234); // 123
+  more.code(5, 6); // 124
+  ```
+  Adding all these comments was always slower than leaving the code
+  unmodified, but recently the comments have begun interacting badly with
+  certain newer ECMAScript syntax, such as multi-line template strings.
+  Since source maps are well supported in most browsers that developers
+  are likely to be using for development, and the line number comments are
+  now causing substantive problems beyond the performance cost, we
+  concluded it was time to stop using them.
+  [PR #9323](https://github.com/meteor/meteor/pull/9323)
+  [Issue #9160](https://github.com/meteor/meteor/issues/9160)
+
+* Since Meteor 1.3, Meteor has supported string-valued `"browser"` fields
+  in `package.json` files, to enable alternate entry points for packages
+  in client JavaScript bundles. In Meteor 1.6.1, we are expanding support
+  to include object-valued `"browser"` fields, according to this
+  unofficial and woefully incomplete (but widely-implemented) "[spec
+  document](https://github.com/defunctzombie/package-browser-field-spec)."
+  We are only supporting the "relative style" of browser replacements,
+  however, and not the "package style" (as detailed in this
+  [comment](https://github.com/meteor/meteor/issues/6890#issuecomment-339817703)),
+  because supporting the package style would have imposed an unacceptable
+  runtime cost on all imports (not just those overridden by a `"browser"`
+  field). [PR #9311](https://github.com/meteor/meteor/pull/9311) [Issue
+  #6890](https://github.com/meteor/meteor/issues/6890)
 
 * The `npm` package has been upgraded to version 5.6.0, and our fork of
   its `pacote` dependency has been rebased against version 7.0.2.
@@ -142,8 +234,11 @@
   [PR #9375](https://github.com/meteor/meteor/pull/9375)
 
 * Fixed an issue preventing the installation of scoped Cordova packages.
-  E.g. meteor add cordova:@somescope/some-cordova-plugin@1.0.0 will now
-  work properly.
+  For example,
+  ```sh
+  meteor add cordova:@somescope/some-cordova-plugin@1.0.0
+  ```
+  will now work properly.
   [Issue #7336](https://github.com/meteor/meteor/issues/7336)
   [PR #9334](https://github.com/meteor/meteor/pull/9334)
 
@@ -203,7 +298,15 @@
 
 * The `stylus` package has been deprecated and will no longer be
   supported/maintained.
-  [PR #9445](https://github.com/meteor/meteor/pull/9445)  
+  [PR #9445](https://github.com/meteor/meteor/pull/9445)
+
+* Support for the `meteor admin get-machine` command has been removed, and
+  the build farm has been discontinued. Ever since Meteor 1.4, packages
+  with binary dependencies have been automatically (re)compiled when they
+  are installed in an application, assuming the target machine has a basic
+  compiler toolchain. To see the requirements for this compilation step,
+  consult the [platform requirements for
+  `node-gyp`](https://github.com/nodejs/node-gyp#installation).
 
 ## v1.6.0.1, 2017-12-08
 
