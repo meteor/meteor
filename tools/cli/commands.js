@@ -796,7 +796,12 @@ main.registerCommand({
   // the packages (or maybe an unpredictable subset based on what happens to be
   // in the template's versions file).
 
-  require("./default-npm-deps.js").install(appPath);
+  // Since some of the project skeletons include npm `devDependencies`, we need
+  // to make sure they're included when running `npm install`.
+  require("./default-npm-deps.js").install(
+    appPath,
+    { includeDevDependencies: true }
+  );
 
   var appNameToDisplay = appPathAsEntered === "." ?
     "current directory" : `'${appPathAsEntered}'`;
@@ -1426,21 +1431,6 @@ main.registerCommand({
   }
 
   return deployResult;
-});
-
-///////////////////////////////////////////////////////////////////////////////
-// logs
-///////////////////////////////////////////////////////////////////////////////
-
-main.registerCommand({
-  name: 'logs',
-  minArgs: 1,
-  maxArgs: 1,
-  catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
-  var site = qualifySitename(options.args[0]);
-
-  return deploy.logs(site);
 });
 
 ///////////////////////////////////////////////////////////////////////////////
