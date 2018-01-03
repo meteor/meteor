@@ -179,6 +179,12 @@
   supported/maintained.
   [PR #9445](https://github.com/meteor/meteor/pull/9445)  
 
+* Client side `Accounts.onLogin` callbacks now receive a login details
+  object, with the attempted login type (e.g. `{ type: password }` after a
+  successful password based login, `{ type: resume }` after a DDP reconnect,
+  etc.).
+  [Issue #5127](https://github.com/meteor/meteor/issues/5127)
+
 ## v1.6.0.1, 2017-12-08
 
 * Node has been upgraded to version
