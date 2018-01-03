@@ -1,5 +1,8 @@
 ## v.NEXT
 
+* Node has been upgraded to version
+  [8.9.4](https://nodejs.org/en/blog/release/v8.9.4/).
+
 * The `meteor-babel` npm package (along with its Babel-related
   dependencies) has been updated to version 7.0.0-beta.36, a major
   update from Babel 6. Thanks to the strong abstraction of the
