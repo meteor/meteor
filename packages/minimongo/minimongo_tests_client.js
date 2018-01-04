@@ -192,6 +192,21 @@ Tinytest.add('minimongo - basics', test => {
   test.equal(c.find({a: 'a', b: noop}).count(), 1);
   test.equal(c.find({c: noop}).count(), 1);
   test.equal(c.find({a: noop, c: 'c'}).count(), 0);
+
+  // Regression test for #4260
+  // Only insert enumerable, own properties from the object
+  c.remove({});
+  function Thing() {
+    this.a = 1;
+  }
+  Thing.prototype.b = 2;
+  Thing.prototype.c = () => null;
+  const before = new Thing();
+  c.insert(before);
+  const after = c.findOne();
+  test.equal(after.a, 1);
+  test.equal(after.b, undefined);
+  test.equal(after.c, undefined);
 });
 
 Tinytest.add('minimongo - error - no options', test => {
