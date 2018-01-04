@@ -30,9 +30,13 @@ class ArsonCompiler {
       encoded = arson.encode(decoded);
 
       file.addJavaScript({
-        path: file.getPathInPackage(),
-        data: 'module.exports = require("arson").decode(' +
-          '  ' + JSON.stringify(encoded) + ");",
+        path: file.getPathInPackage() + ".js",
+        data: [
+          'module.exportDefault(require("arson").decode(',
+          "  " + JSON.stringify(encoded),
+          "));",
+          ""
+        ].join("\n"),
         hash: file.getSourceHash()
       });
     });

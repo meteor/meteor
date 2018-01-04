@@ -39,6 +39,14 @@ var browserDisabled = function (request) {
   return disabledBrowsers[request.browser.name];
 };
 
+function isDynamic(resource) {
+  return resource.type === 'dynamic js' ||
+    (resource.type === 'json' &&
+     // TODO Update this test with PR #9439.
+     resource.url.startsWith('/dynamic/') &&
+     resource.url.endsWith('.map'))
+}
+
 WebApp.addHtmlAttributeHook(function (request) {
   if (browserDisabled(request))
     return null;
@@ -97,7 +105,8 @@ WebApp.connectHandlers.use(function (req, res, next) {
   manifest += "/" + "\n";
   _.each(WebApp.clientPrograms[WebApp.defaultArch].manifest, function (resource) {
     if (resource.where === 'client' &&
-        ! RoutePolicy.classify(resource.url)) {
+        ! RoutePolicy.classify(resource.url) &&
+        ! isDynamic(resource)) {
       manifest += resource.url;
       // If the resource is not already cacheable (has a query
       // parameter, presumably with a hash or version of some sort),
@@ -118,8 +127,8 @@ WebApp.connectHandlers.use(function (req, res, next) {
   manifest += "/ /" + "\n";
   // Add a fallback entry for each uncacheable asset we added above.
   //
-  // This means requests for the bare url (/image.png instead of
-  // /image.png?hash) will work offline. Online, however, the browser
+  // This means requests for the bare url ("/image.png" instead of
+  // "/image.png?hash") will work offline. Online, however, the browser
   // will send a request to the server. Users can remove this extra
   // request to the server and have the asset served from cache by
   // specifying the full URL with hash in their code (manually, with
@@ -127,7 +136,8 @@ WebApp.connectHandlers.use(function (req, res, next) {
   _.each(WebApp.clientPrograms[WebApp.defaultArch].manifest, function (resource) {
     if (resource.where === 'client' &&
         ! RoutePolicy.classify(resource.url) &&
-        !resource.cacheable) {
+        ! resource.cacheable &&
+        ! isDynamic(resource)) {
       manifest += resource.url + " " + resource.url +
         "?" + resource.hash + "\n";
     }
@@ -162,7 +172,8 @@ var sizeCheck = function () {
   var totalSize = 0;
   _.each(WebApp.clientPrograms[WebApp.defaultArch].manifest, function (resource) {
     if (resource.where === 'client' &&
-        ! RoutePolicy.classify(resource.url)) {
+        ! RoutePolicy.classify(resource.url) &&
+        ! isDynamic(resource)) {
       totalSize += resource.size;
     }
   });

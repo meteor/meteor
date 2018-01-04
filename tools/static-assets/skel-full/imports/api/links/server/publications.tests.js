@@ -2,7 +2,7 @@
 //
 // https://guide.meteor.com/testing.html
 
-import { assert } from 'meteor/practicalmeteor:chai';
+import { assert } from 'chai';
 import { Links } from '../links.js';
 import { PublicationCollector } from 'meteor/johanbrook:publication-collector';
 import './publications.js';

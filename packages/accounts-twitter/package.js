@@ -1,9 +1,10 @@
 Package.describe({
   summary: "Login service for Twitter accounts",
-  version: "1.4.0"
+  version: "1.4.1"
 });
 
 Package.onUse(function(api) {
+  api.use('ecmascript');
   api.use('underscore', ['server']);
   api.use('accounts-base', ['client', 'server']);
   // Export Accounts (etc) to packages using this one.

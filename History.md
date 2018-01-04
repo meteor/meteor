@@ -1,5 +1,27 @@
 ## v.NEXT
 
+* The `meteor-babel` npm package (along with its Babel-related
+  dependencies) has been updated to version 7.0.0-beta.35, a major update
+  from Babel 6. Thanks to the strong abstraction of the `meteor-babel`
+  package, the most noticeable consequence of the Babel 7 upgrade is that
+  the `babel-runtime` npm package has been replaced by `@babel/runtime`,
+  which can be installed by running
+  ```js
+  meteor npm install @babel/runtime
+  ```
+  in your application directory. There's a good chance that the old
+  `babel-runtime` package can be removed from your `package.json`
+  dependencies, though there's no harm in leaving it there. Please see
+  [this blog post](https://babeljs.io/blog/2017/09/12/planning-for-7.0)
+  for general information about updating to Babel 7 (note especially any
+  changes to plugins you've been using in any `.babelrc` files).
+  [PR #9440](https://github.com/meteor/meteor/pull/9440)
+
+* The previously served `/manifest.json` application metadata file is now
+  served from `/__meteor__/webapp/manifest.json`.
+  [Issue #6674](https://github.com/meteor/meteor/issues/6674)
+  [PR #9424](https://github.com/meteor/meteor/pull/9424)
+
 * The bundled version of MongoDB used by `meteor run` in development
   on 64-bit architectures has been updated to 3.4.10. 32-bit architectures
   will continue to use MongoDB 3.2.x versions since MongoDB is no longer
@@ -13,9 +35,9 @@
   `standard-minifier-css` package that uses it didn't have to change for
   example), but now that we're using `postcss` the AST accepted and returned
   from certain functions is different. This could impact developers who are
-  tying into Meteor's internal `minifier-css` package directly. The AST based 
+  tying into Meteor's internal `minifier-css` package directly. The AST based
   function changes are:
-  
+
   * `CssTools.parseCss` now returns a PostCSS
     [`Root`](http://api.postcss.org/Root.html) object.    
   * `CssTools.stringifyCss` expects a PostCSS `Root` object as its first
@@ -24,7 +46,7 @@
     first parameter.    
   * `CssTools.rewriteCssUrls` expects a PostCSS `Root` object as its first
     parameter.
-    
+
   [PR #9263](https://github.com/meteor/meteor/pull/9263)
 
 * Dynamically `import()`ed modules will now be fetched from the
@@ -48,7 +70,20 @@
   ]);
   ```
 
-* The `minifier-js` package has been updated to use `uglify-es` 3.1.9.
+* The `Tinytest.addAsync` API now accepts test functions that return
+  `Promise` objects, making the `onComplete` callback unnecessary:
+  ```js
+  Tinytest.addAsync("some async stuff", async function (test) {
+    test.equal(shouldReturnFoo(), "foo");
+    const bar = await shouldReturnBarAsync();
+    test.equal(bar, "bar");
+  });
+  ```
+  [PR #9409](https://github.com/meteor/meteor/pull/9409)
+
+* The `reify` npm package has been updated to version 0.13.5.
+
+* The `minifier-js` package has been updated to use `uglify-es` 3.2.2.
 
 * The `request` npm package used by the `http` package has been upgraded
   to version 2.83.0.
@@ -64,12 +99,14 @@
 * [`cordova-lib`](https://github.com/apache/cordova-cli) has been updated to
   version 7.1.0, [`cordova-android`](https://github.com/apache/cordova-android/)
   has been updated to version 6.3.0, and [`cordova-ios`](https://github.com/apache/cordova-ios/)
-  has been updated to version 4.5.3. The cordova-plugins `cordova-plugin-console`,
+  has been updated to version 4.5.4. The cordova-plugins `cordova-plugin-console`,
   `cordova-plugin-device-motion`, and `cordova-plugin-device-orientation` have been
   [deprecated](https://cordova.apache.org/news/2017/09/22/plugins-release.html)
   and will likely be removed in a future Meteor release.
   [Feature Request #196](https://github.com/meteor/meteor-feature-requests/issues/196)
   [PR #9213](https://github.com/meteor/meteor/pull/9213)
+  [Issue #9447](https://github.com/meteor/meteor/issues/9447)
+  [PR #9448](https://github.com/meteor/meteor/pull/9448)
 
 * Provide basic support for [iPhone X](https://developer.apple.com/ios/update-apps-for-iphone-x/)
   status bar and launch screens, which includes updates to
@@ -101,9 +138,54 @@
   overrides the default 10 rounds currently used to secure passwords.
   [PR #9044](https://github.com/meteor/meteor/pull/9044)
 
+* Developers running Meteor from an interactive shell within Emacs should
+  notice a substantial performance improvement thanks to automatic
+  disabling of the progress spinner, which otherwise reacts slowly.
+  [PR #9341](https://github.com/meteor/meteor/pull/9341)
+
 * `Npm.depends` can now specify any `http` or `https` URL.
   [Issue #9236](https://github.com/meteor/meteor/issues/9236)
   [PR #9237](https://github.com/meteor/meteor/pull/9237)
+
+* Byte order marks included in `--settings` files will no longer crash the
+  Meteor Tool.
+  [Issue #5180](https://github.com/meteor/meteor/issues/5180)
+  [PR #9459](https://github.com/meteor/meteor/pull/9459)
+
+* Meteor's Node Mongo driver is now configured with the
+  [`ignoreUndefined`](http://mongodb.github.io/node-mongodb-native/2.2/api/MongoClient.html#connect)
+  connection option set to `true`, to make sure fields with `undefined`
+  values are not first converted to `null`, when inserted/updated. Fields
+  with `undefined` values are now ignored when inserting/updating.
+  [Issue #6051](https://github.com/meteor/meteor/issues/6051)
+  [PR #9444](https://github.com/meteor/meteor/pull/9444)
+
+* The `accounts-ui-unstyled` package has been updated to use `<form />` and
+  `<button />` tags with its login/signup form, instead of `<div />`'s. This
+  change helps browser's notice login/signup requests, allowing them to
+  trigger their "remember your login/password" functionality.
+
+  > **Note:** If your application is styling the login/signup form using a CSS
+    path that includes the replaced `div` elements (e.g.
+    `div.login-form { ...` or `div.login-button { ...`), your styles will
+    break. You can either update your CSS to use `form.` / `button.` or
+    adjust your CSS specificity by styling on `class` / `id` attributes
+    only.
+
+  [Issue #1746](https://github.com/meteor/meteor/issues/1746)
+  [PR #9442](https://github.com/meteor/meteor/pull/9442)
+
+* The `stylus` package has been deprecated and will no longer be
+  supported/maintained.
+  [PR #9445](https://github.com/meteor/meteor/pull/9445)  
+
+## v1.6.0.1, 2017-12-08
+
+* Node has been upgraded to version
+  [8.9.3](https://nodejs.org/en/blog/release/v8.9.3/), an important
+  [security release](https://nodejs.org/en/blog/vulnerability/december-2017-security-releases/).
+
+* The `npm` package has been upgraded to version 5.5.1.
 
 ## v1.6, 2017-10-30
 
@@ -236,6 +318,12 @@
 * iOS icons and launch screens have been updated to support iOS 11
   [Issue #9196](https://github.com/meteor/meteor/issues/9196)
   [PR #9198](https://github.com/meteor/meteor/pull/9198)
+
+## v1.5.4.1, 2017-12-08
+
+* Node has been upgraded to version
+  [4.8.7](https://nodejs.org/en/blog/release/v4.8.7/), an important
+  [security release](https://nodejs.org/en/blog/vulnerability/december-2017-security-releases/).
 
 ## v1.5.4, 2017-11-08
 
@@ -741,6 +829,12 @@
   `install`, `preinstall`, or `postinstall`. Previously, a package was
   considered non-portable only if it contained any `.node` binary modules.
   [Issue #8225](https://github.com/meteor/meteor/issues/8225)
+
+## v1.4.4.5, 2017-12-08
+
+* Node has been upgraded to version
+  [4.8.7](https://nodejs.org/en/blog/release/v4.8.7/), an important
+  [security release](https://nodejs.org/en/blog/vulnerability/december-2017-security-releases/).
 
 ## v1.4.4.4, 2017-09-26
 

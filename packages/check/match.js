@@ -113,31 +113,43 @@ export const Match = {
   }
 };
 
-var Optional = function (pattern) {
-  this.pattern = pattern;
-};
+class Optional {
+  constructor(pattern) {
+    this.pattern = pattern;
+  }
+}
 
-var Maybe = function (pattern) {
-  this.pattern = pattern;
-};
+class Maybe {
+  constructor(pattern) {
+    this.pattern = pattern;
+  }
+}
 
-var OneOf = function (choices) {
-  if (!choices || choices.length === 0)
-    throw new Error("Must provide at least one choice to Match.OneOf");
-  this.choices = choices;
-};
+class OneOf {
+  constructor(choices) {
+    if (!choices || choices.length === 0)
+      throw new Error("Must provide at least one choice to Match.OneOf");
+    this.choices = choices;
+  }
+}
 
-var Where = function (condition) {
-  this.condition = condition;
-};
+class Where {
+  constructor(condition) {
+    this.condition = condition;
+  }
+}
 
-var ObjectIncluding = function (pattern) {
-  this.pattern = pattern;
-};
+class ObjectIncluding {
+  constructor(pattern) {
+    this.pattern = pattern;
+  }
+}
 
-var ObjectWithValues = function (pattern) {
-  this.pattern = pattern;
-};
+class ObjectWithValues {
+  constructor(pattern) {
+    this.pattern = pattern;
+  }
+}
 
 var stringForErrorMessage = function (value, options) {
   options = options || {};

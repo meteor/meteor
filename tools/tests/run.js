@@ -498,3 +498,30 @@ selftest.define("run logging in order", function () {
     run.match(`line: ${i}.`);
   }
 });
+
+selftest.define("run ROOT_URL must be an URL", function () {
+  var s = new Sandbox();
+  var run;
+
+  s.set("ROOT_URL", "192.168.0.1");
+  s.createApp("myapp", "standard-app", { dontPrepareApp: true });
+  s.cd("myapp");
+
+  run = s.run();
+  run.matchErr("$ROOT_URL, if specified, must be an URL");
+  run.expectExit(1);
+});
+
+selftest.define("app starts when settings file has BOM", function () {
+  var s = new Sandbox({ fakeMongo: true });
+  var run;
+  s.createApp("myapp", "standard-app");
+  s.cd("myapp");
+  files.writeFile(
+    files.pathJoin(s.cwd, "settings.json"),
+    "\ufeff" + JSON.stringify({ foo: "bar" }),
+  );
+  run = s.run("--settings", "settings.json", "--once");
+  run.tellMongo(MONGO_LISTENING);
+  run.forbid("Build failed");
+});

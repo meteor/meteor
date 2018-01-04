@@ -9,13 +9,13 @@ export const CORDOVA_PLATFORMS = ['ios', 'android'];
 
 export const CORDOVA_DEV_BUNDLE_VERSIONS = {
   'cordova-lib': '7.1.0',
-  'cordova-common': '1.5.1',
+  'cordova-common': '2.1.1',
   'cordova-registry-mapper': '1.1.15',
 };
 
 export const CORDOVA_PLATFORM_VERSIONS = {
   'android': '6.3.0',
-  'ios': '4.5.3'
+  'ios': '4.5.4'
 };
 
 const PLATFORM_TO_DISPLAY_NAME_MAP = {

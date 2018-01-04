@@ -1,33 +1,24 @@
 exports.meteorBabelHelpers = require("meteor-babel-helpers");
 
-// Returns true if a given absolute identifier will be provided at runtime
-// by the babel-runtime package.
-exports.checkHelper = function checkHelper(id) {
-  // There used to be more complicated logic here, when the babel-runtime
-  // package provided helper implementations of its own, but now this
-  // function exists just for backwards compatibility.
-  return false;
-};
-
 try {
-  var babelRuntimeVersion = require("babel-runtime/package.json").version;
-  var regeneratorRuntime = require("babel-runtime/regenerator");
+  var babelRuntimeVersion = require("@babel/runtime/package.json").version;
+  var regeneratorRuntime = require("@babel/runtime/regenerator");
 } catch (e) {
   throw new Error([
-    "The babel-runtime npm package could not be found in your node_modules ",
+    "The @babel/runtime npm package could not be found in your node_modules ",
     "directory. Please run the following command to install it:",
     "",
-    "  meteor npm install --save babel-runtime",
+    "  meteor npm install --save @babel/runtime",
     ""
   ].join("\n"));
 }
 
 if (parseInt(babelRuntimeVersion, 10) < 6) {
   throw new Error([
-    "The version of babel-runtime installed in your node_modules directory ",
+    "The version of @babel/runtime installed in your node_modules directory ",
     "(" + babelRuntimeVersion + ") is out of date. Please upgrade it by running ",
     "",
-    "  meteor npm install --save babel-runtime",
+    "  meteor npm install --save @babel/runtime",
     "",
     "in your application directory.",
     ""

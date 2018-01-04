@@ -106,8 +106,8 @@ Meteor.startup(() => {
     return;
   }
 
-  Package.webapp.WebApp.connectHandlers.use(
-    "/" + methodNameStats,
+  Package.webapp.WebAppInternals.meteorInternalHandlers.use(
+    methodNameStats,
     statsMiddleware
   );
 });

@@ -21,8 +21,8 @@ selftest.define("create", function () {
   }
 
   const packageJson = JSON.parse(s.read("package.json"));
-  if (! packageJson.dependencies.hasOwnProperty("babel-runtime")) {
-    selftest.fail("New app package.json does not depend on babel-runtime");
+  if (! packageJson.dependencies.hasOwnProperty("@babel/runtime")) {
+    selftest.fail("New app package.json does not depend on @babel/runtime");
   }
 
   // Install basic packages like babel-runtime and meteor-node-stubs from

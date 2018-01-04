@@ -1,17 +1,18 @@
-var url = Npm.require("url");
-var crypto = Npm.require("crypto");
-var http = Npm.require("http");
+const url = require("url");
+const crypto = require("crypto");
+const http = require("http");
+const streamToString = require("stream-to-string");
 
-var additionalScript = "(function () { var foo = 1; })";
+const additionalScript = "(function () { var foo = 1; })";
 WebAppInternals.addStaticJs(additionalScript);
-var hash = crypto.createHash('sha1');
+const hash = crypto.createHash('sha1');
 hash.update(additionalScript);
-var additionalScriptPathname = hash.digest('hex') + ".js";
+const additionalScriptPathname = hash.digest('hex') + ".js";
 
 // Mock the 'res' object that gets passed to connect handlers. This mock
 // just records any utf8 data written to the response and returns it
 // when you call `mockResponse.getBody()`.
-var MockResponse = function () {
+const MockResponse = function () {
   this.buffer = "";
   this.statusCode = null;
 };
@@ -42,23 +43,21 @@ MockResponse.prototype.getBody = function () {
   return this.buffer;
 };
 
-
-
 Tinytest.add("webapp - content-type header", function (test) {
-  var cssResource = _.find(
+  const cssResource = _.find(
     _.keys(WebAppInternals.staticFiles),
     function (url) {
       return WebAppInternals.staticFiles[url].type === "css";
     }
   );
-  var jsResource = _.find(
+  const jsResource = _.find(
     _.keys(WebAppInternals.staticFiles),
     function (url) {
       return WebAppInternals.staticFiles[url].type === "js";
     }
   );
 
-  var resp = HTTP.get(url.resolve(Meteor.absoluteUrl(), cssResource));
+  let resp = HTTP.get(url.resolve(Meteor.absoluteUrl(), cssResource));
   test.equal(resp.headers["content-type"].toLowerCase(),
              "text/css; charset=utf-8");
   resp = HTTP.get(url.resolve(Meteor.absoluteUrl(), jsResource));
@@ -66,133 +65,148 @@ Tinytest.add("webapp - content-type header", function (test) {
              "application/javascript; charset=utf-8");
 });
 
-Tinytest.add("webapp - additional static javascript", function (test) {
-  var origInlineScriptsAllowed = WebAppInternals.inlineScriptsAllowed();
+Tinytest.addAsync(
+  "webapp - additional static javascript",
+  async function (test) {
+    const origInlineScriptsAllowed = WebAppInternals.inlineScriptsAllowed();
 
-  var staticFilesOpts = {
-    staticFiles: {},
-    clientDir: "/"
-  };
+    const staticFilesOpts = {
+      staticFiles: {},
+      clientDir: "/"
+    };
 
-  // It's okay to set this global state because we're not going to yield
-  // before settng it back to what it was originally.
-  WebAppInternals.setInlineScriptsAllowed(true);
+    // It's okay to set this global state because we're not going to yield
+    // before settng it back to what it was originally.
+    WebAppInternals.setInlineScriptsAllowed(true);
 
-  (function () {
-    var boilerplate = WebAppInternals.getBoilerplate({
-      browser: "doesn't-matter",
-      url: "also-doesnt-matter"
-    }, "web.browser");
+    {
+      const { stream } = WebAppInternals.getBoilerplate({
+        browser: "doesn't-matter",
+        url: "also-doesnt-matter"
+      }, "web.browser");
 
-    // When inline scripts are allowed, the script should be inlined.
-    test.isTrue(boilerplate.indexOf(additionalScript) !== -1);
+      const boilerplate = await streamToString(stream);
 
-    // And the script should not be served as its own separate resource,
-    // meaning that the static file handler should pass on this request.
-    var res = new MockResponse();
-    var req = new http.IncomingMessage();
-    req.headers = {};
-    req.method = "GET";
-    req.url = "/" + additionalScriptPathname;
-    var nextCalled = false;
-    WebAppInternals.staticFilesMiddleware(
-      staticFilesOpts, req, res, function () {
-        nextCalled = true;
-      });
-    test.isTrue(nextCalled);
-  })();
+      // When inline scripts are allowed, the script should be inlined.
+      test.isTrue(boilerplate.indexOf(additionalScript) !== -1);
 
-  // When inline scripts are disallowed, the script body should not be
-  // inlined, and the script should be included in a <script src="..">
-  // tag.
-  WebAppInternals.setInlineScriptsAllowed(false);
+      // And the script should not be served as its own separate resource,
+      // meaning that the static file handler should pass on this request.
+      const res = new MockResponse();
+      const req = new http.IncomingMessage();
+      req.headers = {};
+      req.method = "GET";
+      req.url = "/" + additionalScriptPathname;
+      let nextCalled = false;
+      WebAppInternals.staticFilesMiddleware(
+        staticFilesOpts, req, res, function () {
+          nextCalled = true;
+        });
+      test.isTrue(nextCalled);
 
-  (function () {
-    var boilerplate = WebAppInternals.getBoilerplate({
-      browser: "doesn't-matter",
-      url: "also-doesnt-matter"
-    }, "web.browser");
+      // When inline scripts are disallowed, the script body should not be
+      // inlined, and the script should be included in a <script src="..">
+      // tag.
+      WebAppInternals.setInlineScriptsAllowed(false);
+    }
 
-    // The script contents itself should not be present; the pathname
-    // where the script is served should be.
-    test.isTrue(boilerplate.indexOf(additionalScript) === -1);
-    test.isTrue(boilerplate.indexOf(additionalScriptPathname) !== -1);
+    {
+      const { stream } = WebAppInternals.getBoilerplate({
+        browser: "doesn't-matter",
+        browser: "doesn't-matter",
+        url: "also-doesnt-matter"
+      }, "web.browser");
+      const boilerplate = await streamToString(stream);
+
+      // The script contents itself should not be present; the pathname
+      // where the script is served should be.
+      test.isTrue(boilerplate.indexOf(additionalScript) === -1);
+      test.isTrue(boilerplate.indexOf(additionalScriptPathname) !== -1);
+    }
 
     // And the static file handler should serve the script at that pathname.
-    var res = new MockResponse();
-    var req = new http.IncomingMessage();
+    const res = new MockResponse();
+    const req = new http.IncomingMessage();
     req.headers = {};
     req.method = "GET";
     req.url = "/" + additionalScriptPathname;
     WebAppInternals.staticFilesMiddleware(staticFilesOpts, req, res,
-                                     function () { });
-    var resBody = res.getBody();
+                                          function () { });
+    const resBody = res.getBody();
     test.isTrue(resBody.indexOf(additionalScript) !== -1);
     test.equal(res.statusCode, 200);
-  })();
 
-  WebAppInternals.setInlineScriptsAllowed(origInlineScriptsAllowed);
-});
+    WebAppInternals.setInlineScriptsAllowed(origInlineScriptsAllowed);
+  }
+);
 
 // Regression test: `generateBoilerplateInstance` should not change
 // `__meteor_runtime_config__`.
-Tinytest.add("webapp - generating boilerplate should not change runtime config", function (test) {
-  // Set a dummy key in the runtime config served in the
-  // boilerplate. Test that the dummy key appears in the boilerplate,
-  // but not in __meteor_runtime_config__ after generating the
-  // boilerplate.
+Tinytest.addAsync(
+  "webapp - generating boilerplate should not change runtime config",
+  async function (test) {
+    // Set a dummy key in the runtime config served in the
+    // boilerplate. Test that the dummy key appears in the boilerplate,
+    // but not in __meteor_runtime_config__ after generating the
+    // boilerplate.
 
-  test.isFalse(__meteor_runtime_config__.WEBAPP_TEST_KEY);
+    test.isFalse(__meteor_runtime_config__.WEBAPP_TEST_KEY);
 
-  var boilerplate = WebAppInternals.generateBoilerplateInstance(
-    "web.browser",
-    [], // empty manifest
-    { runtimeConfigOverrides: { WEBAPP_TEST_KEY: true } }
-  );
+    const boilerplate = WebAppInternals.generateBoilerplateInstance(
+      "web.browser",
+      [], // empty manifest
+      { runtimeConfigOverrides: { WEBAPP_TEST_KEY: true } }
+    );
 
-  var boilerplateHtml = boilerplate.toHTML();
-  test.isFalse(boilerplateHtml.indexOf("WEBAPP_TEST_KEY") === -1);
+    const stream = boilerplate.toHTML();
+    const boilerplateHtml = await streamToString(stream)
+    test.isFalse(boilerplateHtml.indexOf("WEBAPP_TEST_KEY") === -1);
 
-  test.isFalse(__meteor_runtime_config__.WEBAPP_TEST_KEY);
-});
-
-Tinytest.add("webapp - WebAppInternals.registerBoilerplateDataCallback", function (test) {
-  const key = "from webapp_tests.js";
-  let callCount = 0;
-
-  function callback(request, data, arch) {
-    test.equal(arch, "web.browser");
-    test.equal(request.url, "http://example.com");
-    test.equal(data.dynamicHead.indexOf("so dynamic"), 0);
-    test.equal(data.body, "");
-    data.body = "<div>oyez</div>";
-    ++callCount;
+    test.isFalse(__meteor_runtime_config__.WEBAPP_TEST_KEY);
   }
+);
 
-  WebAppInternals.registerBoilerplateDataCallback(key, callback);
+Tinytest.addAsync(
+  "webapp - WebAppInternals.registerBoilerplateDataCallback",
+  async function (test) {
+    const key = "from webapp_tests.js";
+    let callCount = 0;
 
-  test.equal(callCount, 0);
+    function callback(request, data, arch) {
+      test.equal(arch, "web.browser");
+      test.equal(request.url, "http://example.com");
+      test.equal(data.dynamicHead.indexOf("so dynamic"), 0);
+      test.equal(data.body, "");
+      data.body = "<div>oyez</div>";
+      ++callCount;
+    }
 
-  const req = new http.IncomingMessage();
-  req.url = "http://example.com";
-  req.browser = { name: "headless" };
-  req.dynamicHead = "so dynamic";
+    WebAppInternals.registerBoilerplateDataCallback(key, callback);
 
-  const html = WebAppInternals.getBoilerplate(req, "web.browser");
+    test.equal(callCount, 0);
 
-  test.equal(callCount, 1);
+    const req = new http.IncomingMessage();
+    req.url = "http://example.com";
+    req.browser = { name: "headless" };
+    req.dynamicHead = "so dynamic";
 
-  test.isTrue(html.indexOf([
-    "<body>",
-    "<div>oyez</div>"
-  ].join("\n")) >= 0);
+    const { stream } = WebAppInternals.getBoilerplate(req, "web.browser");
+    const html = await streamToString(stream);
 
-  test.equal(
-    // Make sure this callback doesn't get called again after this test.
-    WebAppInternals.registerBoilerplateDataCallback(key, null),
-    callback
-  );
-});
+    test.equal(callCount, 1);
+
+    test.isTrue(html.indexOf([
+      "<body>",
+      "<div>oyez</div>"
+    ].join("")) >= 0);
+
+    test.equal(
+      // Make sure this callback doesn't get called again after this test.
+      WebAppInternals.registerBoilerplateDataCallback(key, null),
+      callback
+    );
+  }
+);
 
 // Support 'named pipes' (strings) as ports for support of Windows Server /
 // Azure deployments
@@ -201,8 +215,8 @@ Tinytest.add(
   function (test) {
     // Named pipes on Windows Server follow the format:
     // \\.\pipe\{randomstring} or \\{servername}\pipe\{randomstring}
-    var namedPipe = "\\\\.\\pipe\\b27429e9-61e3-4c12-8bfe-950fa3295f74";
-    var namedPipeServer =
+    const namedPipe = "\\\\.\\pipe\\b27429e9-61e3-4c12-8bfe-950fa3295f74";
+    const namedPipeServer =
       "\\\\SERVERNAME-1234\\pipe\\6e157e98-faef-49e4-a0cf-241037223308";
 
     test.equal(

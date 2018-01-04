@@ -796,7 +796,12 @@ main.registerCommand({
   // the packages (or maybe an unpredictable subset based on what happens to be
   // in the template's versions file).
 
-  require("./default-npm-deps.js").install(appPath);
+  // Since some of the project skeletons include npm `devDependencies`, we need
+  // to make sure they're included when running `npm install`.
+  require("./default-npm-deps.js").install(
+    appPath,
+    { includeDevDependencies: true }
+  );
 
   var appNameToDisplay = appPathAsEntered === "." ?
     "current directory" : `'${appPathAsEntered}'`;
@@ -908,9 +913,8 @@ var buildCommand = function (options) {
   // of the file, not a constant 'bundle' (a bit obnoxious for
   // machines, but worth it for humans)
 
-  // Error handling for options.architecture. We must pass in only one of three
-  // architectures. See archinfo.js for more information on what the
-  // architectures are, what they mean, et cetera.
+  // Error handling for options.architecture. See archinfo.js for more
+  // information on what the architectures are, what they mean, et cetera.
   if (options.architecture &&
       !_.has(archinfo.VALID_ARCHITECTURES, options.architecture)) {
     showInvalidArchMsg(options.architecture);
@@ -1427,21 +1431,6 @@ main.registerCommand({
   }
 
   return deployResult;
-});
-
-///////////////////////////////////////////////////////////////////////////////
-// logs
-///////////////////////////////////////////////////////////////////////////////
-
-main.registerCommand({
-  name: 'logs',
-  minArgs: 1,
-  maxArgs: 1,
-  catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
-  var site = qualifySitename(options.args[0]);
-
-  return deploy.logs(site);
 });
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2189,6 +2178,7 @@ main.registerCommand({
     // Only run tests with this tag
     'with-tag': { type: String },
     junit: { type: String },
+    retries: { type: Number, default: 2 },
   },
   hidden: true,
   catalogRefresh: new catalog.Refresh.Never()
@@ -2263,8 +2253,9 @@ main.registerCommand({
     return 0;
   }
 
-  var clients = {
-    browserstack: options.browserstack
+  const clients = {
+    phantom: true, // Phantom is always enabled.
+    browserstack: options.browserstack,
   };
 
   if (options.headless) {
@@ -2283,6 +2274,7 @@ main.registerCommand({
     fileRegexp: fileRegexp,
     excludeRegexp: excludeRegexp,
     // other options
+    retries: options.retries,
     historyLines: options.history,
     clients: clients,
     junit: options.junit && files.pathResolve(options.junit),
