@@ -29,6 +29,7 @@ export class ClientStream extends StreamClientCommon {
 
     this.rawUrl = url;
     this.socket = null;
+    this.lastError = null;
 
     this.heartbeatTimer = null;
 
@@ -159,7 +160,6 @@ export class ClientStream extends StreamClientCommon {
     };
 
     const hasSockJS = typeof SockJS === "function";
-    let lastError = null;
 
     this.socket = hasSockJS
       // Convert raw URL to SockJS URL each time we open a connection, so
@@ -169,12 +169,12 @@ export class ClientStream extends StreamClientCommon {
       : new WebSocket(toWebsocketUrl(this.rawUrl));
 
     this.socket.onopen = data => {
-      lastError = null;
+      this.lastError = null;
       this._connected();
     };
 
     this.socket.onmessage = data => {
-      lastError = null;
+      this.lastError = null;
       this._heartbeat_received();
       if (this.currentStatus.connected) {
         this.forEachCallback('message', callback => {
@@ -188,23 +188,29 @@ export class ClientStream extends StreamClientCommon {
         // If the socket is closing because there was an error, and we
         // didn't load SockJS before, try loading it dynamically before
         // retrying the connection.
-        lastError && ! hasSockJS && Package["sockjs-shim"] &&
-          require("meteor/sockjs-shim").importSockJS()
-      ).done(() => {
-        this._lostConnection();
-      });
+        this.lastError &&
+        ! hasSockJS &&
+        Package["sockjs-shim"] &&
+        require("meteor/sockjs-shim").importSockJS()
+      ).then(
+        result => this._lostConnection(),
+        error => this._lostConnection(error)
+      );
     };
 
     this.socket.onerror = error => {
+      const { lastError } = this;
+      this.lastError = error;
+      if (lastError) return;
       console.log(
         'stream error',
-        lastError = error,
+        error,
         new Date().toDateString()
       );
     };
 
     this.socket.onheartbeat = () => {
-      lastError = null;
+      this.lastError = null;
       this._heartbeat_received();
     };
 
