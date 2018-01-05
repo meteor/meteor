@@ -198,15 +198,18 @@ Tinytest.add('minimongo - basics', test => {
   c.remove({});
   function Thing() {
     this.a = 1;
+    this.b = 2;
+    Object.defineProperty(this, 'b', { enumerable: false });
   }
-  Thing.prototype.b = 2;
-  Thing.prototype.c = () => null;
+  Thing.prototype.c = 3;
+  Thing.prototype.d = () => null;
   const before = new Thing();
   c.insert(before);
   const after = c.findOne();
   test.equal(after.a, 1);
   test.equal(after.b, undefined);
   test.equal(after.c, undefined);
+  test.equal(after.d, undefined);
 });
 
 Tinytest.add('minimongo - error - no options', test => {
