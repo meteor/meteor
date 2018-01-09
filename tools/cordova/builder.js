@@ -52,7 +52,7 @@ const launchIosSizes = {
   'iphone6p_portrait': '1242x2208',
   'iphone6p_landscape': '2208x1242',
   'iphoneX_portrait': '1125x2436',
-  'iphoneX_landscape': '2436x1125', 
+  'iphoneX_landscape': '2436x1125',
   'ipad_portrait_2x': '1536x2048',
   'ipad_landscape_2x': '2048x1536',
   // Legacy
@@ -407,8 +407,11 @@ export class CordovaBuilder {
     files.writeFile(programJsonPath, JSON.stringify(program), 'utf8');
 
     const bootstrapPage = this.generateBootstrapPage(applicationPath, program, publicSettings);
-    files.writeFile(files.pathJoin(applicationPath, 'index.html'),
-      bootstrapPage, 'utf8');
+    const bootstrapPageWriteStream = files.createWriteStream(
+      files.pathJoin(applicationPath, 'index.html')
+    );
+    bootstrapPage.pipe(bootstrapPageWriteStream)
+
   }
 
   appendVersion(program, publicSettings) {
@@ -677,7 +680,7 @@ configuration. The key may be deprecated.`);
      *
      * `App.appendToConfig('<any-xml-content/>');`
      *
-     * @param  {String} element The XML you want to include 
+     * @param  {String} element The XML you want to include
      * @memberOf App
      */
     appendToConfig: function (xml) {
