@@ -306,7 +306,7 @@ function getBoilerplateAsync(request, arch) {
   });
 
   return promise.then(() => ({
-    stream: boilerplate.toHTML(data),
+    stream: boilerplate.toHTMLStream(data),
     statusCode: data.statusCode,
     headers: data.headers,
   }));

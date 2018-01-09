@@ -176,6 +176,13 @@
   field). [PR #9311](https://github.com/meteor/meteor/pull/9311) [Issue
   #6890](https://github.com/meteor/meteor/issues/6890)
 
+* The `Boilerplate#toHTML` method from the `boilerplate-generator` package
+  has been deprecated in favor of `toHTMLAsync` (which returns a `Promise`
+  that resolves to a string of HTML) or `toHTMLStream` (which returns a
+  `Stream` of HTML). Although direct usage of `toHTML` is unlikely, please
+  update any code that calls this method if you see deprecation warnings
+  in development. [Issue #9521](https://github.com/meteor/meteor/issues/9521).
+
 * The `npm` package has been upgraded to version 5.6.0, and our fork of
   its `pacote` dependency has been rebased against version 7.0.2.
 

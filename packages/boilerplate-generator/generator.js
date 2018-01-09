@@ -18,6 +18,8 @@ function appendToStream(chunk, stream) {
   }
 }
 
+let shouldWarnAboutToHTMLDeprecation = ! Meteor.isProduction;
+
 export class Boilerplate {
   constructor(arch, manifest, options = {}) {
     const { headTemplate, closeTemplate } = _getTemplate(arch);
@@ -31,12 +33,39 @@ export class Boilerplate {
     );
   }
 
+  toHTML(extraData) {
+    if (shouldWarnAboutToHTMLDeprecation) {
+      shouldWarnAboutToHTMLDeprecation = false;
+      console.error(
+        "The Boilerplate#toHTML method has been deprecated. " +
+          "Please use Boilerplate#toHTMLStream instead."
+      );
+      console.trace();
+    }
+
+    // Calling .await() requires a Fiber.
+    return toHTMLAsync(extraData).await();
+  }
+
+  // Returns a Promise that resolves to a string of HTML.
+  toHTMLAsync(extraData) {
+    return new Promise((resolve, reject) => {
+      const stream = this.toHTMLStream(extraData);
+      const chunks = [];
+      stream.on("data", chunk => chunks.push(chunk));
+      stream.on("end", () => {
+        resolve(Buffer.concat(chunks).toString("utf8"));
+      });
+      stream.on("error", reject);
+    });
+  }
+
   // The 'extraData' argument can be used to extend 'self.baseData'. Its
   // purpose is to allow you to specify data that you might not know at
   // the time that you construct the Boilerplate object. (e.g. it is used
   // by 'webapp' to specify data that is only known at request-time).
   // this returns a stream
-  toHTML(extraData) {
+  toHTMLStream(extraData) {
     if (!this.baseData || !this.headTemplate || !this.closeTemplate) {
       throw new Error('Boilerplate did not instantiate correctly.');
     }

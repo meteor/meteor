@@ -52,5 +52,5 @@ export async function generateHTMLForArch(arch) {
     },
   });
 
-  return streamToString(boilerplate.toHTML());
+  return streamToString(boilerplate.toHTMLStream());
 }

@@ -158,7 +158,7 @@ Tinytest.addAsync(
       { runtimeConfigOverrides: { WEBAPP_TEST_KEY: true } }
     );
 
-    const stream = boilerplate.toHTML();
+    const stream = boilerplate.toHTMLStream();
     const boilerplateHtml = await streamToString(stream)
     test.isFalse(boilerplateHtml.indexOf("WEBAPP_TEST_KEY") === -1);
 
