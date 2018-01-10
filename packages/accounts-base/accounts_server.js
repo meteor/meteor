@@ -364,6 +364,7 @@ Ap._attemptLogin = function (
       ),
       result.options || {}
     );
+    ret.type = attempt.type;
     this._successfulLogin(methodInvocation.connection, attempt);
     return ret;
   }

@@ -160,6 +160,12 @@ export class AccountsCommon {
    * @summary Register a callback to be called after a login attempt succeeds.
    * @locus Anywhere
    * @param {Function} func The callback to be called when login is successful.
+   *                        The callback receives a single object that
+   *                        holds login details. This object contains the login
+   *                        result type (password, resume, etc.) on both the
+   *                        client and server. `onLogin` callbacks registered
+   *                        on the server also receive extra data, such
+   *                        as user details, connection information, etc.
    */
   onLogin(func) {
     return this._onLoginHook.register(func);

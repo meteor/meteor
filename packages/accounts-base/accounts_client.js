@@ -244,10 +244,10 @@ Ap.callLoginMethod = function (options) {
   });
 
   // Prepare callbacks: user provided and onLogin/onLoginFailure hooks.
-  var loginCallbacks = _.once(function (error) {
+  var loginCallbacks = _.once(function ({ error, loginDetails }) {
     if (!error) {
       self._onLoginHook.each(function (callback) {
-        callback();
+        callback(loginDetails);
         return true;
       });
     } else {
@@ -256,7 +256,7 @@ Ap.callLoginMethod = function (options) {
         return true;
       });
     }
-    options.userCallback.apply(this, arguments);
+    options.userCallback(error, loginDetails);
   });
 
   var reconnected = false;
@@ -312,7 +312,7 @@ Ap.callLoginMethod = function (options) {
             // intermediate state before the login method finishes. So we don't
             // need to show a logging-in animation.
             _suppressLoggingIn: true,
-            userCallback: function (error) {
+            userCallback: function (error, loginDetails) {
               var storedTokenNow = self._storedLoginToken();
               if (error) {
                 // If we had a login error AND the current stored token is the
@@ -339,7 +339,7 @@ Ap.callLoginMethod = function (options) {
               // Possibly a weird callback to call, but better than nothing if
               // there is a reconnect between "login result received" and "data
               // ready".
-              loginCallbacks(error);
+              loginCallbacks({ error, loginDetails });
             }});
         }
       });
@@ -365,19 +365,23 @@ Ap.callLoginMethod = function (options) {
     if (error || !result) {
       error = error || new Error(
         "No result from call to " + options.methodName);
-      loginCallbacks(error);
+      loginCallbacks({ error });
       return;
     }
     try {
       options.validateResult(result);
     } catch (e) {
-      loginCallbacks(e);
+      loginCallbacks({ error: e });
       return;
     }
 
     // Make the client logged in. (The user data should already be loaded!)
     self.makeClientLoggedIn(result.id, result.token, result.tokenExpires);
-    loginCallbacks();
+    loginCallbacks({
+      loginDetails: {
+        type: result.type,
+      },
+    });
   };
 
   if (!options._suppressLoggingIn)
