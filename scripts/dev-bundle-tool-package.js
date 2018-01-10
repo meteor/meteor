@@ -19,7 +19,7 @@ var packageJson = {
     "meteor-promise": "0.8.6",
     promise: "8.0.1",
     reify: "0.13.5",
-    fibers: "2.0.0",
+    fibers: "https://github.com/laverdet/node-fibers/tarball/c6fec5c378dc94f290382a44d60802541c0ac9c8",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
     "@babel/runtime": "7.0.0-beta.35",
     // For backwards compatibility with isopackets that still depend on
