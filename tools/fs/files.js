@@ -727,6 +727,14 @@ files.extractTarGz = function (buffer, destPath, options) {
     // PaxHeader directory.
     .filter(file => ! file.startsWith("PaxHeader"));
 
+  // Sometimes windows fs does not catch up in time which makes readdir
+  // to return a wrong list of folders / files so we wait until
+  // the file system is in sync
+  if (topLevelOfArchive.length > 1 && process.platform === "win32") {
+	  waitFSToSync(tempDir);
+	  topLevelOfArchive = files.readdir(tempDir);
+  }
+
   if (topLevelOfArchive.length !== 1) {
     throw new Error(
       "Extracted archive '" + tempDir + "' should only contain one entry");
@@ -740,6 +748,32 @@ files.extractTarGz = function (buffer, destPath, options) {
     console.log("Finished extracting in", new Date - startTime, "ms");
   }
 };
+
+function waitFSToSync(dir) {
+	let waitToSync = true;
+
+	while (waitToSync) {
+		try {
+			// After a successful unlink operation, sometimes windows fs takes longer than expected to sync
+			// so readdir would still return already deleted files
+			const filesInTempDirArray = files.readdir(dir);
+
+			// If stat doesn't throw a known error, it means that any queued operations have already been performed
+			// and committed, so the list returned by readdir is the actual file list of the directory
+			filesInTempDirArray.forEach(file => files.stat(files.pathJoin(dir, file)));
+
+			waitToSync = false;
+		} catch (e) {
+			// EPERM is thrown eg after a successful unlink operation and readdir still returns it
+			// ENOENT is thrown if the file deletion is commited by fs between readdir and stat
+			if (e.code === 'EPERM' || e.code === 'ENOENT') {
+				waitToSync = true;
+			} else {
+				throw e;
+			}
+		}
+	}
+}
 
 function ensureDirectoryEmpty(dir) {
   files.readdir(dir).forEach(file => {
