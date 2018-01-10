@@ -21,6 +21,10 @@ run_env_change: &run_env_change
     sudo mkdir -p /tmp/results/junit
     sudo chmod -R a+rwx /tmp/results/
 
+    # Bake the locale we expect into the image.
+    echo "en_US.UTF-8 UTF-8" | sudo tee /etc/locale.gen
+    sudo locale-gen
+
     # The commands below don't work in Docker images, but might be worth
     # reenabling if we switch back to machine:true instead of Docker.
 
