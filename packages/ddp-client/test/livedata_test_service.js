@@ -30,7 +30,7 @@ Meteor.methods({
       if (options.intended)
         e = new Meteor.Error(999, 'Client-visible test exception');
       else e = new Error('Test method throwing an exception');
-      e.expected = true;
+      e._expectedByTest = true;
 
       // We used to improperly serialize errors that were thrown through a
       // future first.
@@ -307,7 +307,7 @@ if (Meteor.isServer) {
     var error;
     if (options.internalError) {
       error = new Error('Egads!');
-      error.expected = true; // don't log
+      error._expectedByTest = true; // don't log
     } else {
       error = new Meteor.Error(412, 'Explicit error');
     }

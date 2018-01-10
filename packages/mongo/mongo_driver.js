@@ -340,7 +340,7 @@ MongoConnection.prototype._insert = function (collection_name, document,
 
   if (collection_name === "___meteor_failure_test_collection") {
     var e = new Error("Failure test");
-    e.expected = true;
+    e._expectedByTest = true;
     sendError(e);
     return;
   }
@@ -391,7 +391,7 @@ MongoConnection.prototype._remove = function (collection_name, selector,
 
   if (collection_name === "___meteor_failure_test_collection") {
     var e = new Error("Failure test");
-    e.expected = true;
+    e._expectedByTest = true;
     if (callback) {
       return callback(e);
     } else {
@@ -467,7 +467,7 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
 
   if (collection_name === "___meteor_failure_test_collection") {
     var e = new Error("Failure test");
-    e.expected = true;
+    e._expectedByTest = true;
     if (callback) {
       return callback(e);
     } else {
