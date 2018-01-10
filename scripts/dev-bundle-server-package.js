@@ -10,7 +10,7 @@ var packageJson = {
   version: "0.0.0",
   dependencies: {
     "meteor-promise": "0.8.6",
-    fibers: "2.0.0",
+    fibers: "https://github.com/laverdet/node-fibers/tarball/c6fec5c378dc94f290382a44d60802541c0ac9c8",
     promise: "8.0.1",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
     // in the package too) because we should consider using lodash instead
