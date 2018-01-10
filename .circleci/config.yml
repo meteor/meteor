@@ -69,7 +69,7 @@ run_save_node_bin: &run_save_node_bin
 build_machine_environment: &build_machine_environment
   # Specify that we want an actual machine (ala Circle 1.0), not a Docker image.
   docker:
-    - image: circleci/android:api-26-node8-alpha
+    - image: meteor/circleci
   environment:
     # This multiplier scales the waitSecs for selftests.
     TIMEOUT_SCALE_FACTOR: 8
