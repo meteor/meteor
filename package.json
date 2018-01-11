@@ -67,7 +67,7 @@
     "husky": "0.14.3",
     "mocha": "4.1.0",
     "nyc": "11.4.1",
-    "prettier": "1.9.2",
+    "prettier": "1.10.2",
     "readline-sync": "1.4.7",
     "rewire": "3.0.2",
     "rimraf": "2.6.2",
