@@ -3,6 +3,10 @@ Package.describe({
   version: "3.0.10"
 });
 
+Npm.depends({
+  semver: "5.4.1"
+});
+
 Package.onUse(function (api) {
   api.use('modules');
   api.mainModule('package-version-parser.js');
