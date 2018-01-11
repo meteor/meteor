@@ -221,6 +221,12 @@
   HTTP.call("GET", url, ...);
   ```
 
+* The log-suppressing flags on errors in `ddp-client` and `ddp-server` have been
+  changed from `expected` to `_expectedByTest` in order to avoid inadvertently
+  silencing errors in production.
+  [Issue #6912](https://github.com/meteor/meteor/issues/6912)
+  [PR #9515](https://github.com/meteor/meteor/pull/9515)
+
 * [`cordova-lib`](https://github.com/apache/cordova-cli) has been updated to
   version 7.1.0, [`cordova-android`](https://github.com/apache/cordova-android/)
   has been updated to version 6.3.0, and [`cordova-ios`](https://github.com/apache/cordova-ios/)
@@ -314,6 +320,13 @@
   compiler toolchain. To see the requirements for this compilation step,
   consult the [platform requirements for
   `node-gyp`](https://github.com/nodejs/node-gyp#installation).
+
+* Client side `Accounts.onLogin` callbacks now receive a login details
+  object, with the attempted login type (e.g. `{ type: password }` after a
+  successful password based login, `{ type: resume }` after a DDP reconnect,
+  etc.).
+  [Issue #5127](https://github.com/meteor/meteor/issues/5127)
+  [PR #9512](https://github.com/meteor/meteor/pull/9512)
 
 ## v1.6.0.1, 2017-12-08
 

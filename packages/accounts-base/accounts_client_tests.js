@@ -71,3 +71,32 @@ Tinytest.addAsync(
     });
   }
 );
+
+Tinytest.addAsync(
+  'accounts - onLogin callback receives { type: "password" } param on login',
+  (test, done) => {
+    const onLogin = Accounts.onLogin((loginDetails) => {
+      test.equal('password', loginDetails.type);
+      onLogin.stop();
+      removeTestUser(done);
+    });
+    logoutAndCreateUser(test, done, () => {});
+  }
+);
+
+Tinytest.addAsync(
+  'accounts - onLogin callback receives { type: "resume" } param on ' +
+  'reconnect, if already logged in',
+  (test, done) => {
+    logoutAndCreateUser(test, done, () => {
+      const onLogin = Accounts.onLogin((loginDetails) => {
+        test.equal('resume', loginDetails.type);
+        onLogin.stop();
+        removeTestUser(done);
+      });
+
+      Meteor.disconnect();
+      Meteor.reconnect();
+    });
+  }
+);

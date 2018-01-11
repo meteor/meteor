@@ -722,12 +722,12 @@ export class Connection {
     // returns instead, log it so the developer knows
     // (unless they explicitly ask to see the error).
     //
-    // Tests can set the 'expected' flag on an exception so it won't
+    // Tests can set the '_expectedByTest' flag on an exception so it won't
     // go to log.
     if (exception) {
       if (options.throwStubExceptions) {
         throw exception;
-      } else if (!exception.expected) {
+      } else if (!exception._expectedByTest) {
         Meteor._debug(
           "Exception while simulating the effect of invoking '" + name + "'",
           exception,
