@@ -82,6 +82,7 @@ Package.onUse(function (api) {
 Package.onTest(function (api) {
   api.use('mongo');
   api.use('check');
+  api.use('ecmascript');
   api.use(['tinytest', 'underscore', 'test-helpers', 'ejson', 'random',
            'ddp', 'base64']);
   // XXX test order dependency: the allow_tests "partial allow" test
