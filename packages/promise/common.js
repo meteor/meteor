@@ -3,7 +3,8 @@ var global = this;
 if (typeof global.Promise === "function") {
   exports.Promise = global.Promise;
 } else {
-  exports.Promise = require("promise/lib/es6-extensions");
+  exports.Promise = global.Promise =
+    require("promise/lib/es6-extensions");
 }
 
 exports.Promise.prototype.done = function (onFulfilled, onRejected) {
