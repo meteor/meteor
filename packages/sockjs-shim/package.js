@@ -1,6 +1,6 @@
 Package.describe({
   name: "sockjs-shim",
-  version: "0.1.0-rc161.2",
+  version: "0.1.0-rc161.3",
   summary: "Selectively server-side renders a SockJS polyfill <script> " +
     "for older browsers",
   documentation: "README.md"
