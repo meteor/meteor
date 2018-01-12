@@ -119,18 +119,13 @@
   [PR #9482](https://github.com/meteor/meteor/pull/9482)
   [PR #9434](https://github.com/meteor/meteor/pull/9434)
 
-* The SockJS and `es5-shim` libraries are no longer included in the
-  initial JavaScript bundle, but are instead injected using `<script>`
-  tags in older browsers that are missing adequate support for WebSockets
-  or ECMAScript 5. For the vast majority of modern browsers that do not
-  need these libraries, this change will reduce the bundle size by as much
-  as 60KB (minified, pre-gzip). If the native WebSocket connection fails
-  with an error in a modern browser (for example, because of a restrictive
-  firewall or proxy), the SockJS library will be loaded as a fallback
-  using dynamic `import()`. For testing purposes, the `<script>` tag
-  injection can be triggered in any browser by appending `?force_sockjs=1`
-  and/or `?force_es5_shim=1` to the application URL.
-  [PR #9353](https://github.com/meteor/meteor/pull/9353)
+* The `es5-shim` library is no longer included in the initial JavaScript
+  bundle, but is instead injected using a `<script>` tag in older browsers
+  that may be missing full support for ECMAScript 5. For the vast majority
+  of modern browsers that do not need `es5-shim`, this change will reduce
+  the bundle size by about 10KB (minified, pre-gzip). For testing
+  purposes, the `<script>` tag injection can be triggered in any browser
+  by appending `?force_es5_shim=1` to the application URL.
   [PR #9360](https://github.com/meteor/meteor/pull/9360)
 
 * The `Tinytest.addAsync` API now accepts test functions that return

@@ -2,7 +2,7 @@ import {
   toSockjsUrl,
   toWebsocketUrl,
 } from "./urls.js";
-
+import "./sockjs-0.3.4.js";
 import { StreamClientCommon } from "./common.js";
 
 export class ClientStream extends StreamClientCommon {
@@ -184,18 +184,11 @@ export class ClientStream extends StreamClientCommon {
     };
 
     this.socket.onclose = () => {
-      Promise.resolve(
-        // If the socket is closing because there was an error, and we
-        // didn't load SockJS before, try loading it dynamically before
-        // retrying the connection.
-        this.lastError &&
-        ! hasSockJS &&
-        Package["sockjs-shim"] &&
-        require("meteor/sockjs-shim").importSockJS()
-      ).then(
-        result => this._lostConnection(),
-        error => this._lostConnection(error)
-      );
+      if (this.lastError) {
+        this._lostConnection(this.lastError);
+      } else {
+        this._lostConnection();
+      }
     };
 
     this.socket.onerror = error => {
