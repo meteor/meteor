@@ -6,7 +6,7 @@
   [8.9.4](https://nodejs.org/en/blog/release/v8.9.4/).
 
 * The `meteor-babel` npm package (along with its Babel-related
-  dependencies) has been updated to version 7.0.0-beta.37, a major
+  dependencies) has been updated to version 7.0.0-beta.37-1, a major
   update from Babel 6. Thanks to the strong abstraction of the
   `meteor-babel` package, the most noticeable consequence of the Babel 7
   upgrade is that the `babel-runtime` npm package has been replaced by
@@ -186,7 +186,7 @@
 * The `npm` package has been upgraded to version 5.6.0, and our fork of
   its `pacote` dependency has been rebased against version 7.0.2.
 
-* The `reify` npm package has been updated to version 0.13.6.
+* The `reify` npm package has been updated to version 0.13.7.
 
 * The `minifier-js` package has been updated to use `uglify-es` 3.2.2.
 
