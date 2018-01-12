@@ -49,11 +49,14 @@ extractNodeFromTarGz || downloadNodeFromS3 || downloadOfficialNode
 # by default. Will download a 32-bit version of Mongo if using a 32-bit based
 # OS.
 MONGO_VERSION=$MONGO_VERSION_64BIT
+MONGO_SSL="-ssl"
 if [ $ARCH = "i686" ]; then
   MONGO_VERSION=$MONGO_VERSION_32BIT
+  MONGO_SSL=""
 fi
 MONGO_NAME="mongodb-${OS}-${ARCH}-${MONGO_VERSION}"
-MONGO_TGZ="${MONGO_NAME}.tgz"
+MONGO_NAME_SSL="mongodb-${OS}${MONGO_SSL}-${ARCH}-${MONGO_VERSION}"
+MONGO_TGZ="${MONGO_NAME_SSL}.tgz"
 MONGO_URL="http://fastdl.mongodb.org/${OS}/${MONGO_TGZ}"
 echo "Downloading Mongo from ${MONGO_URL}"
 curl "${MONGO_URL}" | tar zx
