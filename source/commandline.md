@@ -49,6 +49,21 @@ Run `meteor help run` to see the full list of options.
 
 Run the project, but suspend the server process for debugging.
 
+> **NOTE:** The `meteor debug` command has been superseded by the more flexible
+> `--inspect` and `--inspect-brk` command-line flags, which work for any `run`,
+> `test`, or `test-packages` command.
+>
+> The syntax of these flags is the same as the equivalent Node.js
+> [flags](https://nodejs.org/en/docs/inspector/#command-line-options),
+> with two notable differences:
+>
+> * The flags affect the server process spawned by the build process,
+>   rather than affecting the build process itself.
+>
+> * The `--inspect-brk` flag causes the server process to pause just after
+>   server code has loaded but before it begins to execute, giving the
+>   developer a chance to set breakpoints in server code.
+
 The server process will be suspended just before the first statement of
 server code that would normally execute. In order to continue execution of
 server code, use either the web-based Node Inspector or the command-line
