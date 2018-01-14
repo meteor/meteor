@@ -939,10 +939,18 @@ function getInstalledDependenciesTree(dir) {
       };
 
       const from = pkg._from || pkg.from;
-      if (from &&
-          utils.isNpmUrl(from) &&
-          ! utils.isNpmUrl(info.version)) {
-        info.version = from;
+      if (from) {
+        // Fix for https://github.com/meteor/meteor/issues/9477:
+        const prefix = name + "@";
+        let fromUrl = from;
+        if (fromUrl.startsWith(prefix)) {
+          fromUrl = fromUrl.slice(prefix.length);
+        }
+
+        if (utils.isNpmUrl(fromUrl) &&
+            ! utils.isNpmUrl(info.version)) {
+          info.version = fromUrl;
+        }
       }
 
       const resolved = pkg._resolved || pkg.resolved;
