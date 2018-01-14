@@ -279,9 +279,14 @@ CachingCompiler = class CachingCompiler extends CachingCompilerBase {
   // superclass implementation from within your method.
   processFilesForTarget(inputFiles) {
     const cacheMisses = [];
+    const arches = this._cacheDebugEnabled && Object.create(null);
 
     const future = new Future;
     async.eachLimit(inputFiles, this._maxParallelism, (inputFile, cb) => {
+      if (arches) {
+        arches[inputFile.getArch()] = 1;
+      }
+
       let error = null;
       try {
         const cacheKey = this._deepHash(this.getCacheKey(inputFile));
@@ -321,7 +326,14 @@ CachingCompiler = class CachingCompiler extends CachingCompilerBase {
     if (this._cacheDebugEnabled) {
       cacheMisses.sort();
       this._cacheDebug(
-        `Ran (#${ ++this._callCount }) on: ${ JSON.stringify(cacheMisses) }`);
+        `Ran (#${
+          ++this._callCount
+        }) on: ${
+          JSON.stringify(cacheMisses)
+        } ${
+          JSON.stringify(Object.keys(arches).sort())
+        }`
+      );
     }
   }
 
