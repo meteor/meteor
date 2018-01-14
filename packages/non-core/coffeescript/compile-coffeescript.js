@@ -16,6 +16,7 @@ class CachedCoffeeScriptCompiler extends CachingCompiler {
 
   getCacheKey(inputFile) {
     return [
+      inputFile.getArch(),
       inputFile.getSourceHash(),
       inputFile.getDeclaredExports(),
       this.coffeeScriptCompiler.getCompileOptions(inputFile),

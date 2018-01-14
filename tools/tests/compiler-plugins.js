@@ -3,6 +3,8 @@ var selftest = require('../tool-testing/selftest.js');
 var files = require('../fs/files.js');
 import { getUrl } from '../utils/http-helpers.js';
 import { sleepMs } from '../utils/utils.js';
+import { host } from '../utils/archinfo.js';
+const osArch = host();
 
 var Sandbox = selftest.Sandbox;
 
@@ -30,21 +32,43 @@ selftest.define("compiler plugin caching - coffee", () => {
   s.set('METEOR_COFFEESCRIPT_CACHE_DEBUG', 't');
   var run = startRun(s);
 
+  let nextRunOrdinal = 1;
+  function matchRun(files, arch) {
+    let text = "CACHE(coffeescript): Ran (#" +
+      nextRunOrdinal++ + ") on: " +
+      JSON.stringify(files);
+
+    if (arch) {
+      text += " " + JSON.stringify([arch]);
+    }
+
+    run.match(text);
+  }
+
   // First program built (server or web.browser) compiles everything.
-  run.match('CACHE(coffeescript): Ran (#1) on: ' + JSON.stringify(
-    ['/f1.coffee', '/f2.coffee', '/f3.coffee', '/packages/local-pack/p.coffee']
-  ));
-  // Second program doesn't need to compile anything because compilation works
-  // the same on both programs.
-  run.match("CACHE(coffeescript): Ran (#2) on: []");
+  matchRun([
+    '/f1.coffee',
+    '/f2.coffee',
+    '/f3.coffee',
+    '/packages/local-pack/p.coffee'
+  ], "web.browser");
+
+  matchRun([
+    '/f1.coffee',
+    '/f2.coffee',
+    '/f3.coffee',
+    '/packages/local-pack/p.coffee'
+  ], osArch);
+
   // App prints this:
   run.match("Coffeescript X is 2 Y is 1 FromPackage is 4");
 
   s.write("f2.coffee", "share.Y = 'Y is 3'\n");
+
   // Only recompiles f2.
-  run.match('CACHE(coffeescript): Ran (#3) on: ["/f2.coffee"]');
-  // And other program doesn't even need to do f2.
-  run.match("CACHE(coffeescript): Ran (#4) on: []");
+  matchRun(["/f2.coffee"], "web.browser");
+  matchRun(["/f2.coffee"], osArch);
+
   // Program prints this:
   run.match("Coffeescript X is 2 Y is 3 FromPackage is 4");
 
@@ -52,15 +76,19 @@ selftest.define("compiler plugin caching - coffee", () => {
   // coffeescript file in it. This should not require us to coffee.compile
   // anything (for either program).
   s.append("packages/local-pack/package.js", "\n// foo\n");
-  run.match("CACHE(coffeescript): Ran (#5) on: []");
-  run.match("CACHE(coffeescript): Ran (#6) on: []");
+
+  matchRun([], "web.browser");
+  matchRun([], osArch);
+
   run.match("Coffeescript X is 2 Y is 3 FromPackage is 4");
 
   // But writing to the actual source file in the local package should
   // recompile.
   s.write("packages/local-pack/p.coffee", "FromPackage = 'FromPackage is 5'");
-  run.match('CACHE(coffeescript): Ran (#7) on: ["/packages/local-pack/p.coffee"]');
-  run.match('CACHE(coffeescript): Ran (#8) on: []');
+
+  matchRun(["/packages/local-pack/p.coffee"], "web.browser");
+  matchRun(["/packages/local-pack/p.coffee"], osArch);
+
   run.match("Coffeescript X is 2 Y is 3 FromPackage is 5");
 
   // We never should have loaded cache from disk, since we only made
@@ -77,8 +105,11 @@ selftest.define("compiler plugin caching - coffee", () => {
   run.match('CACHE(coffeescript): Loaded /f1.coffee');
   run.match('CACHE(coffeescript): Loaded /f3.coffee');
   // And we only need to re-compiler the changed file, even though we restarted.
-  run.match('CACHE(coffeescript): Ran (#1) on: ["/f2.coffee"]');
-  run.match('CACHE(coffeescript): Ran (#2) on: []');
+
+  nextRunOrdinal = 1;
+
+  matchRun(["/f2.coffee"], "web.browser");
+  matchRun(["/f2.coffee"], osArch);
 
   run.match('Coffeescript X is 2 Y is edited FromPackage is 5');
 
@@ -99,19 +130,36 @@ selftest.define("compiler plugin caching - coffee", () => {
     s.set(`METEOR_${ packageName.toUpperCase() }_CACHE_DEBUG`, "t");
     var run = startRun(s);
 
-    const cacheMatch = selftest.markStack((message) => {
-      run.match(`CACHE(${ packageName }): ${ message }`);
+    const cacheMatch = selftest.markStack((message, arch) => {
+      run.match(`CACHE(${
+        packageName
+      }): ${
+        message
+      }${
+        arch ? " " + JSON.stringify([arch]) : ""
+      }`);
       run.waitSecs(30);
     });
 
+    let nextRunOrdinal = 1;
+    function matchRun(files, arch) {
+      cacheMatch(
+        "Ran (#" + nextRunOrdinal++ + ") on: " +
+          JSON.stringify(files) +
+          ((arch && packageName !== "stylus")
+           ? " " + JSON.stringify([arch]) : "")
+      );
+    }
+
     // First program built (web.browser) compiles everything.
-    cacheMatch('Ran (#1) on: ' + JSON.stringify([
+    matchRun([
       // Though files in imports directories are compiled, they are marked
       // as lazy so they will not be loaded unless imported.
       "/imports/dotdot." + extension,
       "/subdir/nested-root." + extension,
       "/top." + extension
-    ]));
+    ], "web.browser");
+
     // There is no render execution in the server program, because it has
     // archMatching:'web'.  We'll see this more clearly when the next call later
     // is "#2" --- we didn't miss a call!
@@ -144,7 +192,7 @@ selftest.define("compiler plugin caching - coffee", () => {
     // Force a rebuild of the local package without actually changing the
     // preprocessor file in it. This should not require us to render anything.
     s.append("packages/local-pack/package.js", "\n// foo\n");
-    cacheMatch('Ran (#2) on: []');
+    matchRun([], "web.browser");
     run.waitSecs(15);
     run.match("Hello world");
 
@@ -169,7 +217,7 @@ selftest.define("compiler plugin caching - coffee", () => {
     s.write('packages/local-pack/p.' + extension,
             setVariable('el4-style', 'inset'));
     expectedBorderStyles.el4 = 'inset';
-    cacheMatch(`Ran (#3) on: ["/top.${ extension }"]`);
+    matchRun([`/top.${ extension }`], "web.browser");
     run.match("Client modified -- refreshing");
     checkCSS(expectedBorderStyles);
 
@@ -177,7 +225,7 @@ selftest.define("compiler plugin caching - coffee", () => {
     s.write('subdir/nested-root.' + extension,
             '.el0 { border-style: double; }\n');
     expectedBorderStyles.el0 = 'double';
-    cacheMatch(`Ran (#4) on: ["/subdir/nested-root.${ extension }"]`);
+    matchRun([`/subdir/nested-root.${ extension }`], "web.browser");
     run.match("Client modified -- refreshing");
     checkCSS(expectedBorderStyles);
 
@@ -185,7 +233,7 @@ selftest.define("compiler plugin caching - coffee", () => {
     s.write('yet-another-root.' + extension,
             '.el6 { border-style: solid; }\n');
     expectedBorderStyles.el6 = 'solid';
-    cacheMatch(`Ran (#5) on: ["/yet-another-root.${ extension }"]`);
+    matchRun([`/yet-another-root.${ extension }`], "web.browser");
     run.match("Client modified -- refreshing");
     checkCSS(expectedBorderStyles);
 
@@ -207,7 +255,10 @@ selftest.define("compiler plugin caching - coffee", () => {
     cacheMatch('Loaded {}/subdir/nested-root.' + extension);
     cacheMatch('Loaded {}/top.' + extension);
     cacheMatch('Loaded {}/yet-another-root.' + extension);
-    cacheMatch(`Ran (#1) on: ["/top.${ extension }"]`);
+
+    nextRunOrdinal = 1;
+
+    matchRun([`/top.${ extension }`], "web.browser");
     run.waitSecs(15);
     run.match('Hello world');
     checkCSS(expectedBorderStyles);

@@ -13,7 +13,7 @@ Package.describe({
   summary: 'Compiler for CoffeeScript code, supporting the coffeescript package',
   // This version of NPM `coffeescript` module, with _1, _2 etc.
   // If you change this, make sure to also update ../coffeescript/package.js to match.
-  version: '2.0.3-2-rc161.0'
+  version: '2.0.3-3-rc161.3'
 });
 
 Npm.depends({

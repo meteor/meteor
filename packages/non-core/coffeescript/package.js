@@ -6,12 +6,12 @@ Package.describe({
   // so bumping the version of this package will be how they get newer versions
   // of `coffeescript-compiler`. If you change this, make sure to also update
   // ../coffeescript-compiler/package.js to match.
-  version: '2.0.3-2-rc161.0'
+  version: '2.0.3-3-rc161.3'
 });
 
 Package.registerBuildPlugin({
   name: 'compile-coffeescript',
-  use: ['caching-compiler@1.1.9', 'ecmascript@0.8.3', 'coffeescript-compiler@2.0.3-2-rc161.0'],
+  use: ['caching-compiler@1.1.9', 'ecmascript@0.8.3', 'coffeescript-compiler@2.0.3-3-rc161.3'],
   sources: ['compile-coffeescript.js']
 });
 
