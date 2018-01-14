@@ -552,8 +552,10 @@ function runWebAppServer() {
 
         // Expose program details as a string reachable via the following
         // URL.
-        const manifestUrl =
-          urlPrefix + getItemPathname("/__meteor__/webapp/manifest.json");
+        const manifestUrlPrefix = "/__" + arch.replace(/^web\./, "");
+        const manifestUrl = manifestUrlPrefix +
+          getItemPathname("/manifest.json");
+
         staticFiles[manifestUrl] = {
           content: JSON.stringify(program),
           cacheable: false,

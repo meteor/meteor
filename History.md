@@ -51,9 +51,11 @@
   ```
   [PR #9343](https://github.com/meteor/meteor/pull/9343)
 
-* The previously served `/manifest.json` application metadata file is now
-  served from `/__meteor__/webapp/manifest.json`.
-  [Issue #6674](https://github.com/meteor/meteor/issues/6674)
+* The previously-served `/manifest.json` application metadata file is now
+  served from `/__browser/manifest.json` for web browsers, to avoid
+  confusion with other kinds of `manifest.json` files. Cordova clients
+  will continue to load the manifest file from `/__cordova/manifest.json`,
+  as before. [Issue #6674](https://github.com/meteor/meteor/issues/6674)
   [PR #9424](https://github.com/meteor/meteor/pull/9424)
 
 * The bundled version of MongoDB used by `meteor run` in development
