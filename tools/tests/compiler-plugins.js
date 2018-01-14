@@ -146,7 +146,8 @@ selftest.define("compiler plugin caching - coffee", () => {
       cacheMatch(
         "Ran (#" + nextRunOrdinal++ + ") on: " +
           JSON.stringify(files) +
-          (arch ? " " + JSON.stringify([arch]) : "")
+          ((arch && packageName !== "stylus")
+           ? " " + JSON.stringify([arch]) : "")
       );
     }
 
