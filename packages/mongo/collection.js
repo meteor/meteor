@@ -26,6 +26,27 @@ The default id generation technique is `'STRING'`.
  */
 Mongo.Collection = class Collection {
   constructor(name, options) {
+    this.init(name, options);
+  }
+
+  // Allow function-based subclasses to invoke the body of the
+  // Mongo.Collection constructor using .call or .apply, since that's how
+  // super(...) was implemented before native ECMAScript class syntax.
+  static call(obj, ...args) {
+    if (obj instanceof this) {
+      return this.prototype.init.apply(obj, args);
+    }
+    throw new Error("Called Mongo.Collection constructor with non-instance");
+  }
+
+  static apply(obj, args) {
+    if (obj instanceof this) {
+      return this.prototype.init.apply(obj, args);
+    }
+    throw new Error("Applied Mongo.Collection constructor with non-instance");
+  }
+
+  init(name, options) {
     if (!name && (name !== null)) {
       Meteor._debug("Warning: creating anonymous collection. It will not be " +
                     "saved or synchronized over the network. (Pass null for " +
@@ -701,6 +722,28 @@ Mongo.Collection = class Collection {
     return self._driver.mongo.db;
   }
 };
+
+// Make static methods of Mongo.Collection enumerable, so that code
+// attempting to subclass Mongo.Collection without using native ECMAScript
+// class syntax can more easily inherit static properties. For example:
+// https://github.com/matb33/meteor-collection-hooks/blob/d791a697a5a4c92dbb17b6e62ad265400e0ed162/collection-hooks.js#L280-L284
+
+const staticDescriptors =
+  Object.getOwnPropertyDescriptors(Mongo.Collection);
+
+Object.keys(staticDescriptors).forEach(name => {
+  if (name === "call" ||
+      name === "apply") {
+    // Don't bother making Mongo.Collection.{call,apply} enumerable, since
+    // they need not be inherited by non-native function-based classes.
+    return;
+  }
+  const desc = staticDescriptors[name];
+  if (desc.configurable && ! desc.enumerable) {
+    desc.enumerable = true;
+    Object.defineProperty(Mongo.Collection, name, desc);
+  }
+});
 
 // Convert the callback to not return a result if there is an error
 function wrapCallback(callback, convertResult) {
