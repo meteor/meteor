@@ -26,9 +26,6 @@ The default id generation technique is `'STRING'`.
  */
 Mongo.Collection = class Collection {
   constructor(name, options) {
-    if (! (this instanceof Mongo.Collection))
-      throw new Error('use "new" to construct a Mongo.Collection');
-
     if (!name && (name !== null)) {
       Meteor._debug("Warning: creating anonymous collection. It will not be " +
                     "saved or synchronized over the network. (Pass null for " +
