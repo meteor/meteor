@@ -310,7 +310,9 @@ files.rm_recursive = Profile("files.rm_recursive", (path) => {
   try {
     rimraf.sync(files.convertToOSPath(path));
   } catch (e) {
-    if (e.code === "ENOTEMPTY" && canYield()) {
+    if ((e.code === "ENOTEMPTY" ||
+         e.code === "EPERM") &&
+        canYield()) {
       files.rm_recursive_async(path).await();
       return;
     }
