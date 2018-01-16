@@ -6,8 +6,7 @@
 
 var packageJson = {
   name: "meteor-dev-bundle-tool",
-  // Version is not important but is needed to prevent warnings.
-  version: "0.0.0",
+  private: true,
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
