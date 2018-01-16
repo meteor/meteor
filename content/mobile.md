@@ -105,6 +105,15 @@ In order to build and run Android apps, you will need to:
 - Install the Android SDK and download the required tools, platforms, and other components (which is done most easily by installing Android Studio)
 - Set `ANDROID_HOME` and add the tools directories to your `PATH`
 - Optionally: Create an Android Virtual Device to run apps on an emulator
+- If Gradle cannot be found: try using a package manager such as [Homebrew](https://brew.sh/), `apt-get`, or `yum` to install a system-wide, standalone version of `gradle`:
+  ```sh
+  # On Mac OSX:
+  brew install gradle
+  
+  # On Debian/Ubuntu:
+  sudo apt-get install gradle
+  ```
+  More information about installing Gradle can be found [here](https://gradle.org/install/#install).
 
 <h4>Installing the Java Development Kit (JDK)</h4>
 
