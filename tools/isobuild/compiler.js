@@ -840,7 +840,9 @@ function runLinters({inputSourceArch, isopackCache, sources,
       try {
         var markedLinter = buildmessage.markBoundary(linter.bind(
           sourceProcessor.userPlugin));
-        markedLinter(sourcesToLint, { globals: globalImports });
+        Promise.await(markedLinter(sourcesToLint, {
+          globals: globalImports
+        }));
       } catch (e) {
         buildmessage.exception(e);
       }
@@ -1041,4 +1043,9 @@ export const KNOWN_ISOBUILD_FEATURE_PACKAGES = {
   // This package requires functionality introduced in meteor-tool@1.5.0
   // to enable dynamic module fetching via import(...).
   'isobuild:dynamic-import': ['1.5.0'],
+
+  // This package ensures that processFilesFor{Bundle,Target,Package} are
+  // allowed to return a Promise instead of having to await async
+  // compilation using fibers and/or futures.
+  'isobuild:async-plugins': ['1.6.1'],
 };

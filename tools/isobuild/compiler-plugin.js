@@ -187,8 +187,9 @@ export class CompilerPluginProcessor {
           var markedMethod = buildmessage.markBoundary(
             sourceProcessor.userPlugin.processFilesForTarget.bind(
               sourceProcessor.userPlugin));
+
           try {
-            markedMethod(inputFiles);
+            Promise.await(markedMethod(inputFiles));
           } catch (e) {
             buildmessage.exception(e);
           }
