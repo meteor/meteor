@@ -59,6 +59,6 @@
 
     <source-file src="src/android/WebAppMockRemoteServer.java" target-dir="src/com/meteor/webapp" />
 
-    <framework src="com.squareup.okhttp3:mockwebserver:3.1.2" />
+    <framework src="com.squareup.okhttp3:mockwebserver:3.9.1" />
   </platform>
 </plugin>
