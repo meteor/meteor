@@ -173,6 +173,9 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
     if let lastDownloadedVersion = configuration.lastDownloadedVersion,
       let downloadedAssetBundle = assetBundleManager.downloadedAssetBundleWithVersion(lastDownloadedVersion) {
         currentAssetBundle = downloadedAssetBundle
+        if configuration.lastKnownGoodVersion != lastDownloadedVersion {
+            startStartupTimer()
+        }
     } else {
       currentAssetBundle = initialAssetBundle
     }
@@ -194,6 +197,10 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
       self.pendingAssetBundle = nil
     }
 
+    startStartupTimer()
+  }
+    
+  func startStartupTimer() {
     // Don't start the startup timer if the app started up in the background
     if UIApplication.shared.applicationState == UIApplicationState.active {
       startupTimer?.start(withTimeInterval: startupTimeoutInterval)

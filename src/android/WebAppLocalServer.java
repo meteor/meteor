@@ -160,6 +160,8 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
             currentAssetBundle = assetBundleManager.downloadedAssetBundleWithVersion(lastDownloadedVersion);
             if (currentAssetBundle == null) {
                 currentAssetBundle = initialAssetBundle;
+            } else if (!configuration.getLastKnownGoodVersion().equals(lastDownloadedVersion)) {
+                startStartupTimer();
             }
         } else {
             currentAssetBundle = initialAssetBundle;
