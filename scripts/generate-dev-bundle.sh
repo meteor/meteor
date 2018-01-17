@@ -50,10 +50,18 @@ extractNodeFromTarGz || downloadNodeFromS3 || downloadOfficialNode
 # OS.
 MONGO_VERSION=$MONGO_VERSION_64BIT
 MONGO_SSL="-ssl"
-if [ $ARCH = "i686" ]; then
-  MONGO_VERSION=$MONGO_VERSION_32BIT
+
+# The MongoDB "Generic" Linux option is not offered with SSL, which is reserved
+# for named distributions.  This works out better since the SSL support adds
+# size to the dev bundle though isn't necessary for local development.
+if [ $UNAME = "Linux" ]; then
   MONGO_SSL=""
 fi
+
+if [ $ARCH = "i686" ]; then
+  MONGO_VERSION=$MONGO_VERSION_32BIT
+fi
+
 MONGO_NAME="mongodb-${OS}-${ARCH}-${MONGO_VERSION}"
 MONGO_NAME_SSL="mongodb-${OS}${MONGO_SSL}-${ARCH}-${MONGO_VERSION}"
 MONGO_TGZ="${MONGO_NAME_SSL}.tgz"
