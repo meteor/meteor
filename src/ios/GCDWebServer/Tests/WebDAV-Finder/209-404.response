@@ -1,8 +1,0 @@
-HTTP/1.1 404 Not Found
-Content-Length: 192
-Content-Type: text/html; charset=utf-8
-Connection: Close
-Server: GCDWebDAVServer
-Date: Sat, 12 Apr 2014 05:11:37 GMT
-
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>HTTP Error 404</title></head><body><h1>HTTP Error 404: &quot;/._Apple Reports&quot; does not exist</h1><h3></h3></body></html>

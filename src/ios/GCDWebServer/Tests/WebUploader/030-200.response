@@ -1,9 +1,0 @@
-HTTP/1.1 200 OK
-Cache-Control: no-cache
-Content-Length: 197
-Content-Type: application/json
-Connection: Close
-Server: GCDWebUploader
-Date: Sat, 12 Apr 2014 05:37:14 GMT
-
-[{"path":"\/Apple Reports\/","name":"Apple Reports"},{"path":"\/images\/","name":"images"},{"path":"\/Test File.txt","name":"Test File.txt","size":21},{"path":"\/Text Files\/","name":"Text Files"}]

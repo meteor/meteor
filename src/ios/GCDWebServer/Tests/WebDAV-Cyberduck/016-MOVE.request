@@ -1,8 +1,0 @@
-MOVE /Copy%20%284%3A11%3A14%2C%209%3A52%20PM%29.txt HTTP/1.1
-Destination: http://localhost:8080/Test.txt
-Overwrite: T
-Host: localhost:8080
-Connection: Keep-Alive
-User-Agent: Cyberduck/4.4.3 (Mac OS X/10.9.2) (x86_64)
-Accept-Encoding: gzip,deflate
-

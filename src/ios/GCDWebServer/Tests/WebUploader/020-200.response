@@ -1,9 +1,0 @@
-HTTP/1.1 200 OK
-Cache-Control: no-cache
-Content-Length: 128
-Content-Type: application/json
-Connection: Close
-Server: GCDWebUploader
-Date: Sat, 12 Apr 2014 05:36:19 GMT
-
-[{"path":"\/PDF Reports\/Apple Economic Impact on Cupertino.pdf","name":"Apple Economic Impact on Cupertino.pdf","size":181952}]
