@@ -1119,9 +1119,8 @@ SynchronousCursor.prototype[Symbol.iterator] = function () {
       if (!doc) {
         return {done: true};
       }
-      else {
-        return {value: doc};
-      }
+
+      return {value: doc};
     }
   };
 };
