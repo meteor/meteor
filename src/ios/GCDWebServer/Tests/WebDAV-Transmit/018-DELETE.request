@@ -1,6 +1,0 @@
-DELETE /Apple%20PDF%20Reports/Apple%20Economic%20Impact.pdf HTTP/1.1
-User-Agent: Transmit/4.4.6 neon/0.29.3
-Connection: TE
-TE: trailers
-Host: localhost:8080
-

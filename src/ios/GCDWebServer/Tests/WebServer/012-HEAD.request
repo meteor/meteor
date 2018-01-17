@@ -1,5 +1,0 @@
-HEAD / HTTP/1.1
-User-Agent: curl/7.30.0
-Host: localhost:8080
-Accept: */*
-

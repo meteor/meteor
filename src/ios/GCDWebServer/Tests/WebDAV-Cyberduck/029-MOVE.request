@@ -1,8 +1,0 @@
-MOVE /Copy.txt HTTP/1.1
-Destination: http://localhost:8080/Text%20Files/Copy.txt
-Overwrite: T
-Host: localhost:8080
-Connection: Keep-Alive
-User-Agent: Cyberduck/4.4.3 (Mac OS X/10.9.2) (x86_64)
-Accept-Encoding: gzip,deflate
-

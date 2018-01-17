@@ -1,9 +1,0 @@
-HTTP/1.1 200 OK
-Cache-Control: no-cache
-Content-Length: 47
-Content-Type: text/html; charset=utf-8
-Connection: Close
-Server: GCDWebServer
-Date: Fri, 25 Apr 2014 14:12:20 GMT
-
-<html><body><p>Hellø Wörld!</p></body></html>

@@ -1,0 +1,4 @@
+[submodule "src/ios/GCDWebServer"]
+	path = src/ios/GCDWebServer
+	url = git@github.com:meteor/GCDWebServer.git
+	branch = master
