@@ -233,6 +233,18 @@
   HTTP.call("GET", url, ...);
   ```
 
+* The deprecated `Meteor.uuid` function has been removed. If your
+  application is still using `Meteor.uuid`, you should run
+  ```sh
+  meteor npm install uuid
+  ```
+  to install the widely used [`uuid`](https://www.npmjs.com/package/uuid)
+  package from npm. Example usage:
+  ```js
+  import uuid from "uuid";
+  console.log(uuid());
+  ```
+
 * The log-suppressing flags on errors in `ddp-client` and `ddp-server` have been
   changed from `expected` to `_expectedByTest` in order to avoid inadvertently
   silencing errors in production.
