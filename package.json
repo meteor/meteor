@@ -65,7 +65,7 @@
     "eslint-plugin-prettier": "2.5.0",
     "eslint-plugin-react": "7.5.1",
     "husky": "0.14.3",
-    "mocha": "4.1.0",
+    "mocha": "5.0.0",
     "nyc": "11.4.1",
     "prettier": "1.10.2",
     "readline-sync": "1.4.7",
