@@ -276,25 +276,52 @@ function rebuildVersionsAreCompatible(pkgPath) {
     optimisticReadJsonOrNull(versionFile));
 }
 
+function isDirectory(path) {
+  const stat = optimisticStatOrNull(path);
+  return !! (stat && stat.isDirectory());
+}
+
 // Rebuilds any binary dependencies in the given node_modules directory,
 // and returns true iff anything was rebuilt.
 meteorNpm.rebuildIfNonPortable =
 Profile("meteorNpm.rebuildIfNonPortable", function (nodeModulesDir) {
   const dirsToRebuild = [];
 
-  files.readdir(nodeModulesDir).forEach(function (pkg) {
-    const pkgPath = files.pathJoin(nodeModulesDir, pkg);
-
-    if (isPortable(pkgPath)) {
+  function scan(dir, scoped) {
+    if (! isDirectory(dir)) {
       return;
     }
 
-    if (rebuildVersionsAreCompatible(pkgPath)) {
-      return;
-    }
+    files.readdir(dir).forEach(item => {
+      if (item.startsWith(".")) {
+        // Ignore "hidden" files, such as node_modules/.bin directories.
+        return;
+      }
 
-    dirsToRebuild.push(pkgPath);
-  });
+      const path = files.pathJoin(dir, item);
+
+      if (! scoped &&
+          item.startsWith("@")) {
+        return scan(path, true);
+      }
+
+      if (! isDirectory(path)) {
+        return;
+      }
+
+      if (isPortable(path)) {
+        return;
+      }
+
+      if (rebuildVersionsAreCompatible(path)) {
+        return;
+      }
+
+      dirsToRebuild.push(path);
+    });
+  }
+
+  scan(nodeModulesDir);
 
   if (dirsToRebuild.length === 0) {
     return false;
@@ -319,7 +346,7 @@ Profile("meteorNpm.rebuildIfNonPortable", function (nodeModulesDir) {
   dirsToRebuild.forEach(function (pkgPath) {
     const tempPkgDir = tempPkgDirs[pkgPath] = files.pathJoin(
       tempNodeModules,
-      files.pathBasename(pkgPath)
+      files.pathRelative(nodeModulesDir, pkgPath)
     );
 
     // Copy the package directory instead of renaming it, so that the
