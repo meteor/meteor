@@ -104,7 +104,7 @@
 
 * [`cordova-lib`](https://github.com/apache/cordova-cli) has been updated to
   version 7.1.0, [`cordova-android`](https://github.com/apache/cordova-android/)
-  has been updated to version 6.3.0, and [`cordova-ios`](https://github.com/apache/cordova-ios/)
+  has been updated to a [`custom version`](https://github.com/meteor/cordova-android/tree/v6.4.0-with-pr-417) of 6.4.0 which includes [`apache/cordova-android#417`](https://github.com/apache/cordova-android/pull/417), and [`cordova-ios`](https://github.com/apache/cordova-ios/)
   has been updated to version 4.5.4. The cordova-plugins `cordova-plugin-console`,
   `cordova-plugin-device-motion`, and `cordova-plugin-device-orientation` have been
   [deprecated](https://cordova.apache.org/news/2017/09/22/plugins-release.html)
