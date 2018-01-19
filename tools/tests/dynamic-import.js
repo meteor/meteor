@@ -56,5 +56,6 @@ function run(isProduction) {
   run.match("App running at");
   run.match("SERVER FAILURES: 0");
   run.match("CLIENT FAILURES: 0");
+  run.waitSecs(30);
   run.expectExit(0);
 }
