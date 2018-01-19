@@ -496,7 +496,7 @@ const isPortable = Profile("meteorNpm.isPortable", dir => {
           allowSyntaxError: true
         });
 
-    if (result) {
+    if (typeof result === "boolean") {
       return result;
     }
 
@@ -528,17 +528,18 @@ const isPortable = Profile("meteorNpm.isPortable", dir => {
         isPortable(files.pathJoin(dir, itemName)));
 
   if (canCache) {
-    try {
-      files.writeFile(
-        portableFile,
-        JSON.stringify(result) + "\n",
-        "utf8"
-      );
-    } catch (ignored) {
-      // Don't worry if the write fails, e.g. because the file system is
-      // read-only (#6591). Failing to write the file only means more work
-      // next time.
-    }
+    // Write the .meteor-portable file asynchronously, and don't worry
+    // if it fails, e.g. because the file system is read-only (#6591).
+    // Failing to write the file only means more work next time.
+    fs.writeFile(
+      portableFile,
+      JSON.stringify(result) + "\n",
+      error => {
+        // Once the asynchronous write finishes (successful or not), we no
+        // longer need to cache the written value in memory.
+        delete portableCache[portableFile];
+      },
+    );
 
     // Cache the result immediately in memory so we don't have to wait for
     // file change notifications to invalidate optimisticReadJsonOrNull.
