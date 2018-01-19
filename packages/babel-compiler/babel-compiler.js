@@ -363,19 +363,34 @@ function requireWithPrefixes(inputFile, id, prefixes, controlFilePath) {
   var presetOrPluginMeta;
 
   if (isTopLevel) {
-    prefixes.some(function (prefix) {
+    var presetOrPluginId;
+
+    var found = prefixes.some(function (prefix) {
       try {
-        presetOrPlugin = inputFile.require(prefix + id);
+        // Call inputFile.resolve here rather than inputFile.require so
+        // that the import doesn't fail due to missing transitive
+        // dependencies imported by the preset or plugin.
+        if (inputFile.resolve(prefix + id)) {
+          presetOrPluginId = prefix + id;
+        }
+
         presetOrPluginMeta = inputFile.require(
           packageNameFromTopLevelModuleId(prefix + id) + "/package.json");
+
         return true;
+
       } catch (e) {
         if (e.code !== "MODULE_NOT_FOUND") {
           throw e;
         }
+
         return false;
       }
     });
+
+    if (found) {
+      presetOrPlugin = inputFile.require(presetOrPluginId);
+    }
 
   } else {
     // If the identifier is not top-level, but relative or absolute,
@@ -395,13 +410,18 @@ function requireWithPrefixes(inputFile, id, prefixes, controlFilePath) {
     };
   }
 
-  return presetOrPlugin && {
-    name: presetOrPluginMeta.name,
-    version: presetOrPluginMeta.version,
-    module: presetOrPlugin.__esModule
-      ? presetOrPlugin.default
-      : presetOrPlugin
-  } || null;
+  if (presetOrPlugin &&
+      presetOrPluginMeta) {
+    return {
+      name: presetOrPluginMeta.name,
+      version: presetOrPluginMeta.version,
+      module: presetOrPlugin.__esModule
+        ? presetOrPlugin.default
+        : presetOrPlugin
+    };
+  }
+
+  return null;
 }
 
 // react-hot-loader/babel => react-hot-loader
