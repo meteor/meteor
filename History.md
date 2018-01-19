@@ -1,6 +1,6 @@
 ## v.NEXT
 
-## v1.6.1, TBD
+## v1.6.1, 2018-01-19
 
 * Node has been updated to version
   [8.9.4](https://nodejs.org/en/blog/release/v8.9.4/).
