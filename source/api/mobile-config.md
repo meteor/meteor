@@ -76,6 +76,9 @@ App.accessRule('https://example.com', { type: 'navigation' });
 ```
 
 {% apibox "App.configurePlugin" %}
+
+> Note: When using `App.configurePlugin` to re-configure a plugin which has been previously configured, the changes may not be reflected without manually clearing the existing Cordova build.  To clear the existing Cordova build, remove the `.meteor/local/cordova-build` directory and re-build the application using either `meteor run` or `meteor build`.
+
 {% apibox "App.icons" %}
 {% apibox "App.launchScreens" %}
 {% apibox "App.appendToConfig" %}
