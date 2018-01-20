@@ -16,6 +16,7 @@ var Console = require('../console/console.js').Console;
 var projectContextModule = require('../project-context.js');
 var release = require('../packaging/release.js');
 
+import { ensureDevBundleDependencies } from '../cordova/index.js';
 import { CordovaRunner } from '../cordova/runner.js';
 import { iOSRunTarget, AndroidRunTarget } from '../cordova/run-targets.js';
 
@@ -403,7 +404,6 @@ function doRunCommand(options) {
       });
     }
 
-    import { ensureDevBundleDependencies } from '../cordova';
     ensureDevBundleDependencies();
     prepareCordovaProject();
   }
@@ -796,7 +796,12 @@ main.registerCommand({
   // the packages (or maybe an unpredictable subset based on what happens to be
   // in the template's versions file).
 
-  require("./default-npm-deps.js").install(appPath);
+  // Since some of the project skeletons include npm `devDependencies`, we need
+  // to make sure they're included when running `npm install`.
+  require("./default-npm-deps.js").install(
+    appPath,
+    { includeDevDependencies: true }
+  );
 
   var appNameToDisplay = appPathAsEntered === "." ?
     "current directory" : `'${appPathAsEntered}'`;
@@ -1041,10 +1046,9 @@ ${Console.command("meteor build ../output")}`,
     main.captureAndExit('', () => {
 
       import {
-        ensureDevBundleDependencies,
         pluginVersionsFromStarManifest,
         displayNameForPlatform,
-      } from '../cordova';
+      } from '../cordova/index.js';
 
       ensureDevBundleDependencies();
 
@@ -1430,21 +1434,6 @@ main.registerCommand({
 });
 
 ///////////////////////////////////////////////////////////////////////////////
-// logs
-///////////////////////////////////////////////////////////////////////////////
-
-main.registerCommand({
-  name: 'logs',
-  minArgs: 1,
-  maxArgs: 1,
-  catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
-  var site = qualifySitename(options.args[0]);
-
-  return deploy.logs(site);
-});
-
-///////////////////////////////////////////////////////////////////////////////
 // authorized
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1827,7 +1816,6 @@ function doTestCommand(options) {
       });
     }
 
-    import { ensureDevBundleDependencies } from '../cordova';
     ensureDevBundleDependencies();
     prepareCordovaProject();
   }
@@ -2190,6 +2178,7 @@ main.registerCommand({
     // Only run tests with this tag
     'with-tag': { type: String },
     junit: { type: String },
+    retries: { type: Number, default: 2 },
   },
   hidden: true,
   catalogRefresh: new catalog.Refresh.Never()
@@ -2264,8 +2253,9 @@ main.registerCommand({
     return 0;
   }
 
-  var clients = {
-    browserstack: options.browserstack
+  const clients = {
+    phantom: true, // Phantom is always enabled.
+    browserstack: options.browserstack,
   };
 
   if (options.headless) {
@@ -2284,6 +2274,7 @@ main.registerCommand({
     fileRegexp: fileRegexp,
     excludeRegexp: excludeRegexp,
     // other options
+    retries: options.retries,
     historyLines: options.history,
     clients: clients,
     junit: options.junit && files.pathResolve(options.junit),
@@ -2334,125 +2325,22 @@ main.registerCommand({
   pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
-
-  // Check that we are asking for a valid architecture.
-  var arch = options.args[0];
-  if (!_.has(archinfo.VALID_ARCHITECTURES, arch)){
-    showInvalidArchMsg(arch);
-    return 1;
-  }
-
-  // Set the minutes. We will check validity on the server.
-  var minutes = options.minutes || 5;
-
-  // In verbose mode, we let you know what is going on.
-  var maybeLog = function (string) {
-    if (options.verbose) {
-      Console.info(string);
-    }
-  };
-
-  try {
-    maybeLog("Logging into the get-machines server ...");
-    var conn = authClient.loggedInConnection(
-      config.getBuildFarmUrl(),
-      config.getBuildFarmDomain(),
-      "build-farm");
-  } catch (err) {
-    authClient.handleConnectionError(err, "get-machines server");
-    return 1;
-  }
-
-  try {
-    maybeLog("Reserving machine ...");
-
-    // The server returns to us an object with the following keys:
-    // username & sshKey : use this to log in.
-    // host: what you login into
-    // port: port you should use
-    // hostKey: RSA key to compare for safety.
-    var ret = conn.call('createBuildServer', arch, minutes);
-  } catch (err) {
-    authClient.handleConnectionError(err, "build farm");
-    return 1;
-  }
-  conn.close();
-
-  // Possibly, the user asked us to return a JSON of the data and is going to process it
-  // themselves. In that case, let's do that and exit.
-  if (options.json) {
-    var retJson = {
-      'username': ret.username,
-      'host' : ret.host,
-      'port' : ret.port,
-      'key' : ret.sshKey,
-      'hostKey' : ret.hostKey
-    };
-    Console.rawInfo(JSON.stringify(retJson, null, 2) + "\n");
-    return 0;
-  }
-
-  // Record the SSH Key in a temporary file on disk and give it the permissions
-  // that ssh-agent requires it to have.
-  var tmpDir = files.mkdtemp('meteor-ssh-');
-  var idpath = tmpDir + '/id';
-  maybeLog("Writing ssh key to " + idpath);
-  files.writeFile(idpath, ret.sshKey, {encoding: 'utf8', mode: 0o400});
-
-  // Add the known host key to a custom known hosts file.
-  var hostpath = tmpDir + '/host';
-  var addendum = ret.host + " " + ret.hostKey + "\n";
-  maybeLog("Writing host key to " + hostpath);
-  files.writeFile(hostpath, addendum, 'utf8');
-
-  // Finally, connect to the machine.
-  var login = ret.username + "@" + ret.host;
-  var maybeVerbose = options.verbose ? "-v" : "-q";
-
-  var connOptions = [
-    login,
-     "-i" + idpath,
-     "-p" + ret.port,
-     "-oUserKnownHostsFile=" + hostpath,
-     maybeVerbose];
-
-  var printOptions = connOptions.join(' ');
-  maybeLog("Connecting: " + Console.command("ssh " + printOptions));
-
-  var child_process = require('child_process');
-
-  if (arch.match(/win/)) {
-    // The ssh output from Windows machines is buggy, it can overlay your
-    // existing output on the top of the screen which is very ugly. Force the
-    // screen cleaning to assist.
-    Console.clear();
-  }
-
-  var sshCommand = child_process.spawn(
-    "ssh", connOptions,
-    { stdio: 'inherit' }); // Redirect spawn stdio to process
-
-  return new Promise(function (resolve) {
-    sshCommand.on('error', function (err) {
-      if (err.code === "ENOENT") {
-        if (process.platform === "win32") {
-          Console.error("Could not find the `ssh` command in your PATH.",
-                        "Please read this page about using the get-machine command on Windows:",
-                        Console.url("https://github.com/meteor/meteor/wiki/Accessing-Meteor-provided-build-machines-from-Windows"));
-        } else {
-          Console.error("Could not find the `ssh` command in your PATH.");
-        }
-
-        resolve(1);
-      }
-    });
-
-    sshCommand.on('exit', function (code, signal) {
-      // XXX: We should process the signal in some way, but I am not sure we
-      // care right now.
-      resolve(signal ? 1 : code);
-    });
-  }).await();
+  Console.warn();
+  Console.warn("The 'meteor admin get-machine' command has been disabled and",
+    "the build farm has been discontinued.");
+  Console.warn();
+  Console.info("As of Meteor 1.4, packages with binary dependencies are",
+    "automatically compiled when they are installed in an application,",
+    "assuming the target machine has a basic compiler toolchain.");
+  Console.info();
+  Console.info("To see the requirements for this compilation step,",
+    "consult the platform requirements for 'node-gyp':");
+  Console.info(
+    Console.url("https://github.com/nodejs/node-gyp"),
+    Console.options({ indent: 2 })
+  );
+  Console.info();
+  return 1;
 });
 
 

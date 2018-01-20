@@ -50,7 +50,6 @@ var Module = function (options) {
   self.meteorInstallOptions = options.meteorInstallOptions;
   self.useGlobalNamespace = options.useGlobalNamespace;
   self.combinedServePath = options.combinedServePath;
-  self.noLineNumbers = options.noLineNumbers;
 };
 
 _.extend(Module.prototype, {
@@ -188,7 +187,6 @@ _.extend(Module.prototype, {
 
         chunks.push(file.getPrelinkedOutput({
           sourceWidth: sourceWidth,
-          noLineNumbers: self.noLineNumbers
         }));
 
         ++fileCount;
@@ -245,12 +243,16 @@ _.extend(Module.prototype, {
         return;
       }
 
+      if (file.aliasId) {
+        addToTree(file.aliasId, file.absModuleId, tree);
+        return;
+      }
+
       if (file.isDynamic()) {
-        const servePath = "dynamic/" + file.installPath;
+        const servePath = files.pathJoin("dynamic", file.absModuleId);
         const { code: source, map } =
           file.getPrelinkedOutput({
             sourceWidth: sourceWidth,
-            noLineNumbers: this.noLineNumbers
           }).toStringWithSourceMap({
             file: servePath,
           });
@@ -264,13 +266,14 @@ _.extend(Module.prototype, {
 
         const stubArray = file.deps.slice(0);
 
-        if (file.installPath.endsWith("/package.json") &&
+        if (file.absModuleId.endsWith("/package.json") &&
             file.jsonData) {
           const stub = {};
 
           function tryMain(name) {
             const value = file.jsonData[name];
-            if (_.isString(value)) {
+            if (_.isString(value) ||
+                _.isObject(value)) {
               stub[name] = value;
             }
           }
@@ -281,12 +284,12 @@ _.extend(Module.prototype, {
           stubArray.push(stub);
         }
 
-        addToTree(stubArray, file.installPath, tree);
+        addToTree(stubArray, file.absModuleId, tree);
 
       } else {
         // If the file is not dynamic, then it should be included in the
         // initial bundle, so we add it to the static tree.
-        addToTree(file, file.installPath, tree);
+        addToTree(file, file.absModuleId, tree);
       }
     });
 
@@ -310,12 +313,30 @@ _.extend(Module.prototype, {
         ++moduleCount;
         chunks.push(JSON.stringify(t, null, 2));
 
+      } else if (typeof t === "string") {
+        // This case can happen if a package.json file has an
+        // object-valued "browser" field that aliases this module to a
+        // different module identifier string. Note that the runtime
+        // module system resolves string aliases relative to the original
+        // module identifier, so it's probably a good idea to make sure
+        // these identifiers are absolute (start with a '/') to avoid
+        // ambiguity, since identifiers in package.json "browser" fields
+        // are meant to be resolved relative to the package.json file.
+        ++moduleCount;
+        chunks.push(JSON.stringify(t));
+
+      } else if (t === false) {
+        // This case can happen if a package.json file has an
+        // object-valued "browser" field that maps this module to `false`,
+        // indicating it should be replaced by an empty stub.
+        ++moduleCount;
+        chunks.push("function(){}");
+
       } else if (t instanceof File) {
         ++moduleCount;
 
         chunks.push(t.getPrelinkedOutput({
           sourceWidth,
-          noLineNumbers: self.noLineNumbers
         }));
 
       } else if (_.isObject(t)) {
@@ -404,7 +425,6 @@ _.extend(Module.prototype, {
       if (file.bare) {
         chunks.push("\n", file.getPrelinkedOutput({
           sourceWidth,
-          noLineNumbers: this.noLineNumbers
         }));
       } else if (moduleCount > 0 && ! file.lazy) {
         eagerModuleFiles.push(file);
@@ -420,7 +440,7 @@ _.extend(Module.prototype, {
         chunks.push(
           file.mainModule ? "\nvar " + exportsName + " = " : "\n",
           "require(",
-          JSON.stringify("./" + file.installPath),
+          JSON.stringify(file.absModuleId),
           ");"
         );
       });
@@ -437,6 +457,10 @@ export function addToTree(value, path, tree) {
   const parts = path.split("/");
   const lastIndex = parts.length - 1;
   parts.forEach((part, i) => {
+    if (part === "") {
+      return;
+    }
+
     tree = _.has(tree, part)
       ? tree[part]
       : tree[part] = i < lastIndex ? {} : value;
@@ -515,12 +539,16 @@ var File = function (inputFile, module) {
   self.sourcePath = inputFile.sourcePath;
 
   // Absolute module identifier to use when installing this file via
-  // meteorInstall. If the inputFile has no .installPath, then this file
+  // meteorInstall. If the inputFile has no .absModuleId, then this file
   // cannot be installed as a module.
-  self.installPath = inputFile.installPath || null;
+  self.absModuleId = inputFile.absModuleId || null;
 
   // the path where this file would prefer to be served if possible
   self.servePath = inputFile.servePath;
+
+  if (inputFile.alias) {
+    self.aliasId = inputFile.alias.absModuleId;
+  }
 
   // Module identifiers imported or required by this module, if any.
   // Excludes dynamically imported dependencies, and may exclude
@@ -575,8 +603,8 @@ _.extend(File.prototype, {
   computeAssignedVariables: Profile("linker File#computeAssignedVariables", function () {
     var self = this;
 
-    if (self.installPath) {
-      const parts = self.installPath.split("/");
+    if (self.absModuleId) {
+      const parts = self.absModuleId.split("/");
       const nmi = parts.indexOf("node_modules");
       if (nmi >= 0 && parts[nmi + 1] !== "meteor") {
         // If this file is in a node_modules directory and is not part of
@@ -662,8 +690,6 @@ _.extend(File.prototype, {
   // - preserveLineNumbers: if true, decorate minimally so that line
   //   numbers don't change between input and output. In this case,
   //   sourceWidth is ignored.
-  // - noLineNumbers: We still include the banners and such, but
-  //   no line number suffix.
   // - sourceWidth: width in columns to use for the source code
   //
   // Returns a SourceNode.
@@ -671,18 +697,9 @@ _.extend(File.prototype, {
     var self = this;
     var width = options.sourceWidth || 70;
     var bannerWidth = width + 3;
-    var noLineNumbers = options.noLineNumbers;
     var preserveLineNumbers = options.preserveLineNumbers;
-    var result;
 
     if (self.sourceMap) {
-      // If we have a source map, and options.noLineNumbers was not
-      // specified, it is important to annotate line numbers using that
-      // source map, since not all browsers support source maps.
-      if (typeof noLineNumbers === "undefined") {
-        noLineNumbers = false;
-      }
-
       // Honoring options.preserveLineNumbers is likely impossible if we
       // have a source map, since self.source has probably already been
       // transformed in a way that does not preserve line numbers. That's
@@ -690,76 +707,12 @@ _.extend(File.prototype, {
       // line numbers using comments (see above), just in case source maps
       // are not supported.
       preserveLineNumbers = false;
-
-    } else if (preserveLineNumbers) {
-      // If we don't have a source map, and we're supposed to be preserving line
-      // numbers (ie, we are not linking multiple files into one file, because
-      // we're the app), then we can get away without annotating line numbers
-      // (or making a source map), because they won't add any helpful
-      // information.
-      noLineNumbers = true;
     }
 
-    let consumer;
-    let lines;
-
-    if (self.sourceMap) {
-      result = {
-        code: self.source,
-        map: self.sourceMap
-      };
-
-      consumer = new sourcemap.SourceMapConsumer(result.map);
-
-    } else {
-      result = {
-        code: self.source,
-        map: null,
-      };
-
-      // Generating line number comments for really big files is not
-      // really worth it when there's no meaningful self.sourceMap.
-      if (! noLineNumbers && result.code.length < 500000) {
-        consumer = {
-          originalPositionFor(pos) {
-            return pos;
-          }
-        };
-      }
-    }
-
-    if (consumer && ! noLineNumbers) {
-      var padding = bannerPadding(bannerWidth);
-
-      // We might have already done this split above.
-      lines = lines || result.code.split(/\r?\n/);
-
-      // Use the SourceMapConsumer object to compute the original line
-      // number for each line of result.code.
-      for (var i = 0, lineCount = lines.length; i < lineCount; ++i) {
-        var line = lines[i];
-        var len = line.length;
-        if (len < width &&
-            line[len - 1] !== "\\") {
-          var pos = consumer.originalPositionFor({
-            line: i + 1,
-            column: 0
-          });
-
-          if (pos) {
-            line += padding.slice(len, width) + " //";
-            // Not all source maps define a mapping for every line in the
-            // output. This is perfectly normal.
-            if (typeof pos.line === "number") {
-              line += " " + pos.line;
-            }
-            lines[i] = line;
-          }
-        }
-      }
-
-      result.code = lines.join("\n");
-    }
+    const result = {
+      code: self.source,
+      map: self.sourceMap || null,
+    };
 
     var chunks = [];
     var pathNoSlash = convertColons(self.servePath.replace(/^\//, ""));
@@ -794,11 +747,7 @@ _.extend(File.prototype, {
 
       let chunk = result.code;
 
-      if (consumer instanceof sourcemap.SourceMapConsumer) {
-        chunk = sourcemap.SourceNode.fromStringWithSourceMap(
-          result.code, consumer);
-
-      } else if (consumer && result.map) {
+      if (result.map) {
         chunk = sourcemap.SourceNode.fromStringWithSourceMap(
           result.code,
           new sourcemap.SourceMapConsumer(result.map),
@@ -910,7 +859,6 @@ export var prelink = Profile("linker.prelink", function (options) {
   var module = new Module({
     name: options.name,
     combinedServePath: options.combinedServePath,
-    noLineNumbers: options.noLineNumbers
   });
 
   _.each(options.inputFiles, function (inputFile) {
@@ -961,7 +909,7 @@ var getHeader = function (options) {
   return chunks.join('');
 };
 
-var getImportCode = function (imports, header, omitvar) {
+function getImportCode(imports, header, omitVar) {
   var self = this;
 
   if (_.isEmpty(imports)) {
@@ -978,13 +926,13 @@ var getImportCode = function (imports, header, omitvar) {
   // Generate output
   var buf = header;
   _.each(tree, function (node, key) {
-    buf += (omitvar ? "" : "var " ) +
+    buf += (omitVar ? "" : "var " ) +
       key + " = " + writeSymbolTree(node) + ";\n";
   });
   buf += "\n";
 
   return buf;
-};
+}
 
 var getFooter = function ({
   name,
@@ -995,22 +943,25 @@ var getFooter = function ({
 
   if (name && exported) {
     chunks.push("\n\n/* Exports */\n");
-    chunks.push("if (typeof Package === 'undefined') Package = {};\n");
-    const pkgInit = packageDot(name) + " = " + (exportsName || "{}");
-    if (_.isEmpty(exported)) {
-      // Even if there are no exports, we need to define Package.foo,
-      // because the existence of Package.foo is how another package
-      // (e.g., one that weakly depends on foo) can tell if foo is loaded.
-      chunks.push(pkgInit, ";\n");
-    } else {
+
+    // Even if there are no exports, we need to define Package.foo,
+    // because the existence of Package.foo is how another package
+    // (e.g., one that weakly depends on foo) can tell if foo is loaded.
+    chunks.push("Package._define(" + JSON.stringify(name));
+
+    if (exportsName) {
+      // If we have an exports object, use it as Package[name].
+      chunks.push(", ", exportsName);
+    }
+
+    if (! _.isEmpty(exported)) {
       const scratch = {};
       _.each(exported, symbol => scratch[symbol] = symbol);
       const symbolTree = writeSymbolTree(buildSymbolTree(scratch));
-      chunks.push("(function (pkg, symbols) {\n",
-                  "  for (var s in symbols)\n",
-                  "    (s in pkg) || (pkg[s] = symbols[s]);\n",
-                  "})(", pkgInit, ", ", symbolTree, ");\n");
+      chunks.push(", ", symbolTree);
     }
+
+    chunks.push(");\n");
   }
 
   chunks.push("\n})();\n");
@@ -1037,11 +988,12 @@ var getFooter = function ({
 // Output is an array of output files: objects with keys source, servePath,
 // sourceMap.
 export var fullLink = Profile("linker.fullLink", function (inputFiles, {
-  // If true, make the top level namespace be the same as the global
-  // namespace, so that symbols are accessible from the console, and don't
-  // actually combine files into a single file. used when linking apps (as
-  // opposed to packages).
-  useGlobalNamespace,
+  // True if we're linking the application (as opposed to a
+  // package). Among other consequences, this makes the top level
+  // namespace be the same as the global namespace, so that symbols are
+  // accessible from the console, and avoids actually combining files into
+  // a single file.
+  isApp,
   // Options to pass as the second argument to meteorInstall. Falsy if
   // meteorInstall is disabled.
   meteorInstallOptions,
@@ -1058,22 +1010,17 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
   // a map from imported symbol to the name of the package that it is
   // imported from
   imports,
-  // If useGlobalNamespace is set, this is the name of the file to create
-  // with imports into the global namespace.
-  importStubServePath,
   // True if JS files with source maps should have a comment explaining
   // how to use them in a browser.
   includeSourceMapInstructions,
-  noLineNumbers,
 }) {
   buildmessage.assertInJob();
 
   var module = new Module({
     name,
     meteorInstallOptions,
-    useGlobalNamespace,
+    useGlobalNamespace: isApp,
     combinedServePath,
-    noLineNumbers
   });
 
   _.each(inputFiles, file => module.addFile(file));
@@ -1082,12 +1029,15 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
 
   // If we're in the app, then we just add the import code as its own file in
   // the front.
-  if (useGlobalNamespace) {
-    if (!_.isEmpty(imports)) {
+  if (isApp) {
+    if (! _.isEmpty(imports)) {
       prelinkedFiles.unshift({
-        source: getImportCode(imports,
-                              "/* Imports for global scope */\n\n", true),
-        servePath: importStubServePath
+        source: getImportCode(
+          imports,
+          "/* Imports for global scope */\n\n",
+          true, // Omit the var keyword.
+        ),
+        servePath: "/global-imports.js"
       });
     }
     return prelinkedFiles;

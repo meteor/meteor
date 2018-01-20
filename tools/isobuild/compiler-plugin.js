@@ -8,6 +8,7 @@ var linker = require('./linker.js');
 var util = require('util');
 var _ = require('underscore');
 var Profile = require('../tool-env/profile.js').Profile;
+import assert from "assert";
 import {sha1, readAndWatchFileWithHash} from  '../fs/watch.js';
 import LRU from 'lru-cache';
 import {sourceMapLength} from '../utils/utils.js';
@@ -61,7 +62,7 @@ import { isTestFilePath } from './test-files.js';
 // Cache the (slightly post-processed) results of linker.fullLink.
 const CACHE_SIZE = process.env.METEOR_LINKER_CACHE_SIZE || 1024*1024*100;
 const CACHE_DEBUG = !! process.env.METEOR_TEST_PRINT_LINKER_CACHE_DEBUG;
-const LINKER_CACHE_SALT = 18; // Increment this number to force relinking.
+const LINKER_CACHE_SALT = 19; // Increment this number to force relinking.
 const LINKER_CACHE = new LRU({
   max: CACHE_SIZE,
   // Cache is measured in bytes. We don't care about servePath.
@@ -186,8 +187,9 @@ export class CompilerPluginProcessor {
           var markedMethod = buildmessage.markBoundary(
             sourceProcessor.userPlugin.processFilesForTarget.bind(
               sourceProcessor.userPlugin));
+
           try {
-            markedMethod(inputFiles);
+            Promise.await(markedMethod(inputFiles));
           } catch (e) {
             buildmessage.exception(e);
           }
@@ -1124,11 +1126,12 @@ export class PackageSourceBatch {
         const appFilesWithoutNodeModules = [];
 
         outputFiles.forEach(file => {
-          const parts = file.installPath.split("/");
+          const parts = file.absModuleId.split("/");
+          assert.strictEqual(parts[0], "");
           const nodeModulesIndex = parts.indexOf("node_modules");
 
-          if (nodeModulesIndex === -1 || (nodeModulesIndex === 0 &&
-                                          parts[1] === "meteor")) {
+          if (nodeModulesIndex === -1 || (nodeModulesIndex === 1 &&
+                                          parts[2] === "meteor")) {
             appFilesWithoutNodeModules.push(file);
           } else {
             // This file is going to be installed in a node_modules
@@ -1201,7 +1204,10 @@ export class PackageSourceBatch {
       const parts = id.split("/");
 
       if ("./".indexOf(id.charAt(0)) < 0) {
-        const packageDir = parts[0];
+        const packageDir = parts[0].startsWith("@")
+          ? parts[0] + "/" + parts[1]
+          : parts[0];
+
         if (packageDir === "meteor") {
           // Don't print warnings for uninstalled Meteor packages.
           return;
@@ -1283,7 +1289,7 @@ export class PackageSourceBatch {
     const isApp = ! self.unibuild.pkg.name;
     const isWeb = archinfo.matches(self.unibuild.arch, "web");
     const linkerOptions = {
-      useGlobalNamespace: isApp,
+      isApp,
       meteorInstallOptions,
       // I was confused about this, so I am leaving a comment -- the
       // combinedServePath is either [pkgname].js or [pluginName]:plugin.js.
@@ -1297,9 +1303,7 @@ export class PackageSourceBatch {
       declaredExports: _.pluck(self.unibuild.declaredExports, 'name'),
       imports: self.importedSymbolToPackageName,
       // XXX report an error if there is a package called global-imports
-      importStubServePath: isApp && '/packages/global-imports.js',
       includeSourceMapInstructions: isWeb,
-      noLineNumbers: !isWeb
     };
 
     const fileHashes = [];
@@ -1308,10 +1312,11 @@ export class PackageSourceBatch {
       files: jsResources.map((inputFile) => {
         fileHashes.push(inputFile.hash);
         return {
-          installPath: inputFile.installPath,
+          absModuleId: inputFile.absModuleId,
           sourceMap: !! inputFile.sourceMap,
           mainModule: inputFile.mainModule,
           imported: inputFile.imported,
+          alias: inputFile.alias,
           lazy: inputFile.lazy,
           bare: inputFile.bare,
         };

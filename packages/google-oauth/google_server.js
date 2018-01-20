@@ -17,7 +17,7 @@ function getServiceDataFromTokens(tokens) {
     scope: scopes
   };
 
-  if (hasOwn.call(tokens, "expiresAt")) {
+  if (hasOwn.call(tokens, "expiresIn")) {
     serviceData.expiresAt =
       Date.now() + 1000 * parseInt(tokens.expiresIn, 10);
   }

@@ -4,6 +4,6 @@
 # but you can also edit it by hand.
 
 meteor-base
-stylus
+stylus@~2.513.13
 local-pack
 standard-minifiers

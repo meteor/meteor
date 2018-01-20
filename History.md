@@ -1,14 +1,376 @@
 ## v.NEXT
 
+## v1.6.1, 2018-01-19
+
+* Node has been updated to version
+  [8.9.4](https://nodejs.org/en/blog/release/v8.9.4/).
+
+* The `meteor-babel` npm package (along with its Babel-related
+  dependencies) has been updated to version 7.0.0-beta.38, a major
+  update from Babel 6. Thanks to the strong abstraction of the
+  `meteor-babel` package, the most noticeable consequence of the Babel 7
+  upgrade is that the `babel-runtime` npm package has been replaced by
+  `@babel/runtime`, which can be installed by running
+  ```js
+  meteor npm install @babel/runtime
+  ```
+  in your application directory. There's a good chance that the old
+  `babel-runtime` package can be removed from your `package.json`
+  dependencies, though there's no harm in leaving it there. Please see
+  [this blog post](https://babeljs.io/blog/2017/09/12/planning-for-7.0)
+  for general information about updating to Babel 7 (note especially any
+  changes to plugins you've been using in any `.babelrc` files).
+  [PR #9440](https://github.com/meteor/meteor/pull/9440)
+
+* Because `babel-compiler@7.0.0` is a major version bump for a core
+  package, any package that explicitly depends on `babel-compiler` with
+  `api.use` or `api.imply` will need to be updated and republished in
+  order to remain compatible with Meteor 1.6.1. One notable example is the
+  `practicalmeteor:mocha` package. If you have been using this test-driver
+  package, we strongly recommend switching to `meteortesting:mocha`
+  instead. If you are the author of a package that depends on
+  `babel-compiler`, we recommend publishing your updated version using a
+  new major or minor version, so that you can continue releasing patch
+  updates compatible with older versions of Meteor, if necessary.
+
+* The `server-render` package now supports passing a `Stream` object to
+  `ServerSink` methods that previously expected a string, which enables
+  [streaming server-side rendering with React
+  16](https://hackernoon.com/whats-new-with-server-side-rendering-in-react-16-9b0d78585d67):
+  ```js
+  import React from "react";
+  import { renderToNodeStream } from "react-dom/server";
+  import { onPageLoad } from "meteor/server-render";
+  import App from "/imports/Server.js";
+
+  onPageLoad(sink => {
+    sink.renderIntoElementById("app", renderToNodeStream(
+      <App location={sink.request.url} />
+    ));
+  });
+  ```
+  [PR #9343](https://github.com/meteor/meteor/pull/9343)
+
+* The [`cordova-lib`](https://github.com/apache/cordova-cli) package has
+  been updated to version 7.1.0,
+  [`cordova-android`](https://github.com/apache/cordova-android/) has been
+  updated to version 6.4.0 (plus one additional
+  [commit](https://github.com/meteor/cordova-android/commit/317db7df0f7a054444197bc6d28453cf4ab23280)),
+  and [`cordova-ios`](https://github.com/apache/cordova-ios/) has been
+  updated to version 4.5.4. The cordova plugins `cordova-plugin-console`,
+  `cordova-plugin-device-motion`, and `cordova-plugin-device-orientation`
+  have been [deprecated](https://cordova.apache.org/news/2017/09/22/plugins-release.html)
+  and will likely be removed in a future Meteor release.
+  [Feature Request #196](https://github.com/meteor/meteor-feature-requests/issues/196)
+  [PR #9213](https://github.com/meteor/meteor/pull/9213)
+  [Issue #9447](https://github.com/meteor/meteor/issues/9447)
+  [PR #9448](https://github.com/meteor/meteor/pull/9448)
+
+* The previously-served `/manifest.json` application metadata file is now
+  served from `/__browser/manifest.json` for web browsers, to avoid
+  confusion with other kinds of `manifest.json` files. Cordova clients
+  will continue to load the manifest file from `/__cordova/manifest.json`,
+  as before. [Issue #6674](https://github.com/meteor/meteor/issues/6674)
+  [PR #9424](https://github.com/meteor/meteor/pull/9424)
+
+* The bundled version of MongoDB used by `meteor run` in development
+  on 64-bit architectures has been updated to 3.4.10. 32-bit architectures
+  will continue to use MongoDB 3.2.x versions since MongoDB is no longer
+  producing 32-bit versions of MongoDB for newer release tracks.
+  [PR #9396](https://github.com/meteor/meteor/pull/9396)
+
+* Meteor's internal `minifier-css` package has been updated to use `postcss`
+  for CSS parsing and minifying, instead of the abandoned `css-parse` and
+  `css-stringify` packages. Changes made to the `CssTools` API exposed by the
+  `minifier-css` package are mostly backwards compatible (the
+  `standard-minifier-css` package that uses it didn't have to change for
+  example), but now that we're using `postcss` the AST accepted and returned
+  from certain functions is different. This could impact developers who are
+  tying into Meteor's internal `minifier-css` package directly. The AST based
+  function changes are:
+
+  * `CssTools.parseCss` now returns a PostCSS
+    [`Root`](http://api.postcss.org/Root.html) object.    
+  * `CssTools.stringifyCss` expects a PostCSS `Root` object as its first
+    parameter.    
+  * `CssTools.mergeCssAsts` expects an array of PostCSS `Root` objects as its
+    first parameter.    
+  * `CssTools.rewriteCssUrls` expects a PostCSS `Root` object as its first
+    parameter.
+
+  [PR #9263](https://github.com/meteor/meteor/pull/9263)
+
+* The `_` variable will once again remain bound to `underscore` (if
+  installed) in `meteor shell`, fixing a regression introduced by Node 8.
+  [PR #9406](https://github.com/meteor/meteor/pull/9406)
+
+* Dynamically `import()`ed modules will now be fetched from the
+  application server using an HTTP POST request, rather than a WebSocket
+  message. This strategy has all the benefits of the previous strategy,
+  except that it does not require establishing a WebSocket connection
+  before fetching dynamic modules, in exchange for slightly higher latency
+  per request. [PR #9384](https://github.com/meteor/meteor/pull/9384)
+
+* To reduce the total number of HTTP requests for dynamic modules, rapid
+  sequences of `import()` calls within the same tick of the event loop
+  will now be automatically batched into a single HTTP request. In other
+  words, the following code will result in only one HTTP request:
+  ```js
+  const [
+    React,
+    ReactDOM
+  ] = await Promise.all([
+    import("react"),
+    import("react-dom")
+  ]);
+  ```
+
+* Thanks to a feature request and pull request from
+  [@CaptainN](https://github.com/CaptainN), all available dynamic modules
+  will be automatically prefetched after page load and permanently cached
+  in IndexedDB when the `appcache` package is in use, ensuring that
+  dynamic `import()` will work for offline apps. Although the HTML5
+  Application Cache was deliberately *not* used for this prefetching, the
+  new behavior matches the spirit/intention of the `appcache` package.
+  [Feature Request #236](https://github.com/meteor/meteor-feature-requests/issues/236)
+  [PR #9482](https://github.com/meteor/meteor/pull/9482)
+  [PR #9434](https://github.com/meteor/meteor/pull/9434)
+
+* The `es5-shim` library is no longer included in the initial JavaScript
+  bundle, but is instead injected using a `<script>` tag in older browsers
+  that may be missing full support for ECMAScript 5. For the vast majority
+  of modern browsers that do not need `es5-shim`, this change will reduce
+  the bundle size by about 10KB (minified, pre-gzip). For testing
+  purposes, the `<script>` tag injection can be triggered in any browser
+  by appending `?force_es5_shim=1` to the application URL.
+  [PR #9360](https://github.com/meteor/meteor/pull/9360)
+
+* The `Tinytest.addAsync` API now accepts test functions that return
+  `Promise` objects, making the `onComplete` callback unnecessary:
+  ```js
+  Tinytest.addAsync("some async stuff", async function (test) {
+    test.equal(shouldReturnFoo(), "foo");
+    const bar = await shouldReturnBarAsync();
+    test.equal(bar, "bar");
+  });
+  ```
+  [PR #9409](https://github.com/meteor/meteor/pull/9409)
+
+* Line number comments are no longer added to bundled JavaScript files on
+  the client or the server. Several years ago, before all major browsers
+  supported source maps, we felt it was important to provide line number
+  information in generated files using end-of-line comments like
+  ```js
+  some.code(1234); // 123
+  more.code(5, 6); // 124
+  ```
+  Adding all these comments was always slower than leaving the code
+  unmodified, but recently the comments have begun interacting badly with
+  certain newer ECMAScript syntax, such as multi-line template strings.
+  Since source maps are well supported in most browsers that developers
+  are likely to be using for development, and the line number comments are
+  now causing substantive problems beyond the performance cost, we
+  concluded it was time to stop using them.
+  [PR #9323](https://github.com/meteor/meteor/pull/9323)
+  [Issue #9160](https://github.com/meteor/meteor/issues/9160)
+
+* Since Meteor 1.3, Meteor has supported string-valued `"browser"` fields
+  in `package.json` files, to enable alternate entry points for packages
+  in client JavaScript bundles. In Meteor 1.6.1, we are expanding support
+  to include object-valued `"browser"` fields, according to this
+  unofficial and woefully incomplete (but widely-implemented) "[spec
+  document](https://github.com/defunctzombie/package-browser-field-spec)."
+  We are only supporting the "relative style" of browser replacements,
+  however, and not the "package style" (as detailed in this
+  [comment](https://github.com/meteor/meteor/issues/6890#issuecomment-339817703)),
+  because supporting the package style would have imposed an unacceptable
+  runtime cost on all imports (not just those overridden by a `"browser"`
+  field). [PR #9311](https://github.com/meteor/meteor/pull/9311) [Issue
+  #6890](https://github.com/meteor/meteor/issues/6890)
+
+* The `Boilerplate#toHTML` method from the `boilerplate-generator` package
+  has been deprecated in favor of `toHTMLAsync` (which returns a `Promise`
+  that resolves to a string of HTML) or `toHTMLStream` (which returns a
+  `Stream` of HTML). Although direct usage of `toHTML` is unlikely, please
+  update any code that calls this method if you see deprecation warnings
+  in development. [Issue #9521](https://github.com/meteor/meteor/issues/9521).
+
+* The `npm` package has been upgraded to version 5.6.0, and our fork of
+  its `pacote` dependency has been rebased against version 7.0.2.
+
+* The `reify` npm package has been updated to version 0.13.7.
+
+* The `minifier-js` package has been updated to use `uglify-es` 3.2.2.
+
+* The `request` npm package used by both the `http` package and the
+  `meteor` command-line tool has been upgraded to version 2.83.0.
+
+* The `kexec` npm package has been updated to version 3.0.0.
+
+* The `moment` npm package has been updated to version 2.20.1.
+
+* The `rimraf` npm package has been updated to version 2.6.2.
+
+* The `glob` npm package has been updated to version 7.1.2.
+
+* The `ignore` npm package has been updated to version 3.3.7.
+
+* The `escope` npm package has been updated to version 3.6.0.
+
+* The `split2` npm package has been updated to version 2.2.0.
+
+* The `multipipe` npm package has been updated to version 2.0.1.
+
+* The `pathwatcher` npm package has been updated to version 7.1.1.
+
+* The `lru-cache` npm package has been updated to version 4.1.1.
+
+* The deprecated `Meteor.http` object has been removed. If your
+  application is still using `Meteor.http`, you should now use `HTTP`
+  instead:
+  ```js
+  import { HTTP } from "meteor/http";
+  HTTP.call("GET", url, ...);
+  ```
+
+* The deprecated `Meteor.uuid` function has been removed. If your
+  application is still using `Meteor.uuid`, you should run
+  ```sh
+  meteor npm install uuid
+  ```
+  to install the widely used [`uuid`](https://www.npmjs.com/package/uuid)
+  package from npm. Example usage:
+  ```js
+  import uuid from "uuid";
+  console.log(uuid());
+  ```
+
+* The log-suppressing flags on errors in `ddp-client` and `ddp-server` have been
+  changed from `expected` to `_expectedByTest` in order to avoid inadvertently
+  silencing errors in production.
+  [Issue #6912](https://github.com/meteor/meteor/issues/6912)
+  [PR #9515](https://github.com/meteor/meteor/pull/9515)
+
+* Provide basic support for [iPhone X](https://developer.apple.com/ios/update-apps-for-iphone-x/)
+  status bar and launch screens, which includes updates to
+  [`cordova-plugin-statusbar@2.3.0`](https://github.com/apache/cordova-plugin-statusbar/blob/master/RELEASENOTES.md#230-nov-06-2017)
+  and [`cordova-plugin-splashscreen@4.1.0`](https://github.com/apache/cordova-plugin-splashscreen/blob/master/RELEASENOTES.md#410-nov-06-2017).
+  [Issue #9041](https://github.com/meteor/meteor/issues/9041)
+  [PR #9375](https://github.com/meteor/meteor/pull/9375)
+
+* Fixed an issue preventing the installation of scoped Cordova packages.
+  For example,
+  ```sh
+  meteor add cordova:@somescope/some-cordova-plugin@1.0.0
+  ```
+  will now work properly.
+  [Issue #7336](https://github.com/meteor/meteor/issues/7336)
+  [PR #9334](https://github.com/meteor/meteor/pull/9334)
+
+* iOS icons and launch screens have been updated to support iOS 11
+  [Issue #9196](https://github.com/meteor/meteor/issues/9196)
+  [PR #9198](https://github.com/meteor/meteor/pull/9198)
+
+* Enables passing `false` to `cursor.count()` on the client to prevent skip
+  and limit from having an effect on the result.
+  [Issue #1201](https://github.com/meteor/meteor/issues/1201)
+  [PR #9205](https://github.com/meteor/meteor/pull/9205)
+
+* An `onExternalLogin` hook has been added to the accounts system, to allow
+  the customization of OAuth user profile updates.
+  [PR #9042](https://github.com/meteor/meteor/pull/9042)
+
+* `Accounts.config` now supports a `bcryptRounds` option that
+  overrides the default 10 rounds currently used to secure passwords.
+  [PR #9044](https://github.com/meteor/meteor/pull/9044)
+
+* Developers running Meteor from an interactive shell within Emacs should
+  notice a substantial performance improvement thanks to automatic
+  disabling of the progress spinner, which otherwise reacts slowly.
+  [PR #9341](https://github.com/meteor/meteor/pull/9341)
+
+* `Npm.depends` can now specify any `http` or `https` URL.
+  [Issue #9236](https://github.com/meteor/meteor/issues/9236)
+  [PR #9237](https://github.com/meteor/meteor/pull/9237)
+
+* Byte order marks included in `--settings` files will no longer crash the
+  Meteor Tool.
+  [Issue #5180](https://github.com/meteor/meteor/issues/5180)
+  [PR #9459](https://github.com/meteor/meteor/pull/9459)
+
+* Meteor's Node Mongo driver is now configured with the
+  [`ignoreUndefined`](http://mongodb.github.io/node-mongodb-native/2.2/api/MongoClient.html#connect)
+  connection option set to `true`, to make sure fields with `undefined`
+  values are not first converted to `null`, when inserted/updated. Fields
+  with `undefined` values are now ignored when inserting/updating.
+  [Issue #6051](https://github.com/meteor/meteor/issues/6051)
+  [PR #9444](https://github.com/meteor/meteor/pull/9444)
+
+* The `accounts-ui-unstyled` package has been updated to use `<form />` and
+  `<button />` tags with its login/signup form, instead of `<div />`'s. This
+  change helps browser's notice login/signup requests, allowing them to
+  trigger their "remember your login/password" functionality.
+
+  > **Note:** If your application is styling the login/signup form using a CSS
+    path that includes the replaced `div` elements (e.g.
+    `div.login-form { ...` or `div.login-button { ...`), your styles will
+    break. You can either update your CSS to use `form.` / `button.` or
+    adjust your CSS specificity by styling on `class` / `id` attributes
+    only.
+
+  [Issue #1746](https://github.com/meteor/meteor/issues/1746)
+  [PR #9442](https://github.com/meteor/meteor/pull/9442)
+
+* The `stylus` package has been deprecated and will no longer be
+  supported/maintained.
+  [PR #9445](https://github.com/meteor/meteor/pull/9445)
+
+* Support for the `meteor admin get-machine` command has been removed, and
+  the build farm has been discontinued. Ever since Meteor 1.4, packages
+  with binary dependencies have been automatically (re)compiled when they
+  are installed in an application, assuming the target machine has a basic
+  compiler toolchain. To see the requirements for this compilation step,
+  consult the [platform requirements for
+  `node-gyp`](https://github.com/nodejs/node-gyp#installation).
+
+* Client side `Accounts.onLogin` callbacks now receive a login details
+  object, with the attempted login type (e.g. `{ type: password }` after a
+  successful password based login, `{ type: resume }` after a DDP reconnect,
+  etc.).
+  [Issue #5127](https://github.com/meteor/meteor/issues/5127)
+  [PR #9512](https://github.com/meteor/meteor/pull/9512)
+
 ## v1.6.0.1, 2017-12-08
 
 * Node has been upgraded to version
   [8.9.3](https://nodejs.org/en/blog/release/v8.9.3/), an important
   [security release](https://nodejs.org/en/blog/vulnerability/december-2017-security-releases/).
 
-* The `npm` package has been upgraded to version 5.5.1.
+* The `npm` package has been upgraded to version 5.5.1, which supports
+  several new features, including two-factor authentication, as described
+  in the [release notes](https://github.com/npm/npm/blob/latest/CHANGELOG.md#v551-2017-10-04).
 
 ## v1.6, 2017-10-30
+
+* **Important note for package maintainers:**
+
+  With the jump to Node 8, some packages published using Meteor 1.6 may no
+  longer be compatible with older Meteor versions. In order to maintain
+  compatibility with Meteor 1.5 apps when publishing your package, you can
+  specify a release version with the meteor publish command:
+
+  ```
+  meteor --release 1.5.3 publish
+  ```
+
+  If you're interested in taking advantage of Meteor 1.6 while still
+  supporting older Meteor versions, you can consider publishing for Meteor
+  1.6 from a new branch, with your package's minor or major version bumped.
+  You can then continue to publish for Meteor 1.5 from the original branch.
+  Note that the 1.6 branch version bump is important so that you can continue
+  publishing patch updates for Meteor 1.5 from the original branch.
+
+  [Issue #9308](https://github.com/meteor/meteor/issues/9308)
 
 * Node.js has been upgraded to version 8.8.1, which will be entering
   long-term support (LTS) coverage on 31 October 2017, lasting through

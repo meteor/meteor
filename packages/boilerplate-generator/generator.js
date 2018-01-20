@@ -1,4 +1,5 @@
 import { readFile } from 'fs';
+import { create as createStream } from "combined-stream2";
 
 import WebBrowserTemplate from './template-web.browser';
 import WebCordovaTemplate from './template-web.cordova';
@@ -6,9 +7,24 @@ import WebCordovaTemplate from './template-web.cordova';
 // Copied from webapp_server
 const readUtf8FileSync = filename => Meteor.wrapAsync(readFile)(filename, 'utf8');
 
+const identity = value => value;
+
+function appendToStream(chunk, stream) {
+  if (typeof chunk === "string") {
+    stream.append(Buffer.from(chunk, "utf8"));
+  } else if (Buffer.isBuffer(chunk) ||
+             typeof chunk.read === "function") {
+    stream.append(chunk);
+  }
+}
+
+let shouldWarnAboutToHTMLDeprecation = ! Meteor.isProduction;
+
 export class Boilerplate {
   constructor(arch, manifest, options = {}) {
-    this.template = _getTemplate(arch);
+    const { headTemplate, closeTemplate } = _getTemplate(arch);
+    this.headTemplate = headTemplate;
+    this.closeTemplate = closeTemplate;
     this.baseData = null;
 
     this._generateBoilerplateFromManifest(
@@ -17,17 +33,64 @@ export class Boilerplate {
     );
   }
 
+  toHTML(extraData) {
+    if (shouldWarnAboutToHTMLDeprecation) {
+      shouldWarnAboutToHTMLDeprecation = false;
+      console.error(
+        "The Boilerplate#toHTML method has been deprecated. " +
+          "Please use Boilerplate#toHTMLStream instead."
+      );
+      console.trace();
+    }
+
+    // Calling .await() requires a Fiber.
+    return toHTMLAsync(extraData).await();
+  }
+
+  // Returns a Promise that resolves to a string of HTML.
+  toHTMLAsync(extraData) {
+    return new Promise((resolve, reject) => {
+      const stream = this.toHTMLStream(extraData);
+      const chunks = [];
+      stream.on("data", chunk => chunks.push(chunk));
+      stream.on("end", () => {
+        resolve(Buffer.concat(chunks).toString("utf8"));
+      });
+      stream.on("error", reject);
+    });
+  }
+
   // The 'extraData' argument can be used to extend 'self.baseData'. Its
   // purpose is to allow you to specify data that you might not know at
   // the time that you construct the Boilerplate object. (e.g. it is used
   // by 'webapp' to specify data that is only known at request-time).
-  toHTML(extraData) {
-    if (!this.baseData || !this.template) {
+  // this returns a stream
+  toHTMLStream(extraData) {
+    if (!this.baseData || !this.headTemplate || !this.closeTemplate) {
       throw new Error('Boilerplate did not instantiate correctly.');
     }
 
-    return  "<!DOCTYPE html>\n" +
-      this.template({ ...this.baseData, ...extraData });
+    const data = {...this.baseData, ...extraData};
+    const start = "<!DOCTYPE html>\n" + this.headTemplate(data);
+
+    const { body, dynamicBody } = data;
+
+    const end = this.closeTemplate(data);
+    const response = createStream();
+
+    appendToStream(start, response);
+
+    if (body) {
+      appendToStream(body, response);
+    }
+
+    if (dynamicBody) {
+      appendToStream(dynamicBody, response);
+    }
+
+    appendToStream(end, response);
+
+    return response;
   }
 
   // XXX Exported to allow client-side only changes to rebuild the boilerplate
@@ -38,8 +101,8 @@ export class Boilerplate {
   // Optionally takes pathMapper for resolving relative file system paths.
   // Optionally allows to override fields of the data context.
   _generateBoilerplateFromManifest(manifest, {
-    urlMapper = _.identity,
-    pathMapper = _.identity,
+    urlMapper = identity,
+    pathMapper = identity,
     baseDataExtension,
     inline,
   } = {}) {
@@ -53,7 +116,7 @@ export class Boilerplate {
       ...baseDataExtension,
     };
 
-    _.each(manifest, item => {
+    manifest.forEach(item => {
       const urlPath = urlMapper(item.url);
       const itemObj = { url: urlPath };
 

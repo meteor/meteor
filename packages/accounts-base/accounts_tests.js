@@ -467,3 +467,53 @@ Tinytest.add(
     onLoginFailureStopper.stop();
   }
 );
+
+Tinytest.add(
+  'accounts - verify onExternalLogin hook can update oauth user profiles',
+  function (test) {
+    // Verify user profile data is saved properly when not using the
+    // onExternalLogin hook.
+    let facebookId = Random.id();
+    const uid1 = Accounts.updateOrCreateUserFromExternalService(
+      'facebook',
+      { id: facebookId },
+      { profile: { foo: 1 } },
+    ).id;
+    let users =
+      Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
+    test.length(users, 1);
+    test.equal(users[0].profile.foo, 1);
+
+    // Verify user profile data can be modified using the onExternalLogin
+    // hook, for existing users.
+    Accounts.onExternalLogin((options) => {
+      options.profile.foo = 2;
+      return options;
+    });
+    Accounts.updateOrCreateUserFromExternalService(
+      'facebook',
+      { id: facebookId },
+      { profile: { foo: 1 } },
+    );
+    users = Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
+    test.length(users, 1);
+    test.equal(users[0].profile.foo, 2);
+
+    // Verify user profile data can be modified using the onExternalLogin
+    // hook, for new users.
+    facebookId = Random.id();
+    const uid2 = Accounts.updateOrCreateUserFromExternalService(
+      'facebook',
+      { id: facebookId },
+      { profile: { foo: 3 } },
+    ).id;
+    users = Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
+    test.length(users, 1);
+    test.equal(users[0].profile.foo, 2);
+
+    // Cleanup
+    Meteor.users.remove(uid1);
+    Meteor.users.remove(uid2);
+    Accounts._onExternalLoginHook = null;
+  }
+);

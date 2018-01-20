@@ -114,7 +114,7 @@ var runTest = function () {
       unregisteredExtensionPath = files.pathJoin(
         tmpOutputDir, "programs", "server", item.assets["test.notregistered"]);
     }
-    if (item.path === "app/main.js") {
+    if (item.path === "app/app.js") {
       testTxtPath = files.pathJoin(
         tmpOutputDir, "programs", "server", item.assets['test.txt']);
       nestedTxtPath = files.pathJoin(

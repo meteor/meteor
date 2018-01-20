@@ -84,6 +84,7 @@ extends CachingCompilerBase {
     const allFiles = new Map;
     const cacheKeyMap = new Map;
     const cacheMisses = [];
+    const arches = this._cacheDebugEnabled && Object.create(null);
 
     inputFiles.forEach((inputFile) => {
       const importPath = this.getAbsoluteImportPath(inputFile);
@@ -93,6 +94,10 @@ extends CachingCompilerBase {
 
     const allProcessedFuture = new Future;
     async.eachLimit(inputFiles, this._maxParallelism, (inputFile, cb) => {
+      if (arches) {
+        arches[inputFile.getArch()] = 1;
+      }
+
       let error = null;
       try {
         // If this isn't a root, skip it (and definitely don't waste time
@@ -153,7 +158,13 @@ extends CachingCompilerBase {
     if (this._cacheDebugEnabled) {
       cacheMisses.sort();
       this._cacheDebug(
-        `Ran (#${ ++this._callCount }) on: ${ JSON.stringify(cacheMisses) }`);
+        `Ran (#${
+          ++this._callCount
+        }) on: ${
+          JSON.stringify(cacheMisses)
+        } ${
+          JSON.stringify(Object.keys(arches).sort())
+        }`);
     }
   }
 

@@ -172,6 +172,7 @@ var release = require('../packaging/release.js');
 import { loadIsopackage } from '../tool-env/isopackets.js';
 import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
 import { gzipSync } from "zlib";
+import { PackageRegistry } from "../../packages/meteor/define-package.js";
 
 const SOURCE_URL_PREFIX = "meteor://\u{1f4bb}app";
 
@@ -1245,10 +1246,12 @@ class Target {
     buildmessage.enterJob('minifying app code', function () {
       try {
         var markedMinifier = buildmessage.markBoundary(minifier);
-        markedMinifier(staticFiles, { minifyMode });
-        dynamicFiles.forEach(file => {
-          markedMinifier([file], { minifyMode });
-        });
+        Promise.all([
+          markedMinifier(staticFiles, { minifyMode }),
+          ...dynamicFiles.map(
+            file => markedMinifier([file], { minifyMode })
+          ),
+        ]).await();
       } catch (e) {
         buildmessage.exception(e);
       }
@@ -1496,7 +1499,7 @@ class ClientTarget extends Target {
     buildmessage.enterJob('minifying app stylesheet', function () {
       try {
         const markedMinifier = buildmessage.markBoundary(minifier);
-        markedMinifier(sources, { minifyMode });
+        Promise.await(markedMinifier(sources, { minifyMode }));
       } catch (e) {
         buildmessage.exception(e);
       }
@@ -1771,7 +1774,7 @@ class JsImage {
   // in a compartment of Package
   load(bindings) {
     var self = this;
-    var ret = {};
+    var ret = new PackageRegistry();
 
     // XXX This is mostly duplicated from
     // static-assets/server/boot.js, as is Npm.require below.

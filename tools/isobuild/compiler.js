@@ -61,9 +61,6 @@ compiler.compile = Profile(function (packageSource, options) {
         "` in package `" + packageSource.name + "`",
       rootPath: packageSource.sourceRoot
     }, function () {
-      // XXX we should probably also pass options.noLineNumbers into
-      //     buildJsImage so it can pass it back to its call to
-      //     compiler.compile
       var buildResult = bundler.buildJsImage({
         name: info.name,
         packageMap: packageMap,
@@ -186,7 +183,6 @@ compiler.compile = Profile(function (packageSource, options) {
         sourceArch: architecture,
         isopackCache: isopackCache,
         nodeModulesPath: nodeModulesPath,
-        noLineNumbers: options.noLineNumbers
       });
 
       _.extend(pluginProviderPackageNames,
@@ -345,8 +341,6 @@ var compileUnibuild = Profile(function (options) {
   const inputSourceArch = options.sourceArch;
   const isopackCache = options.isopackCache;
   const nodeModulesPath = options.nodeModulesPath;
-  const noLineNumbers = options.noLineNumbers;
-
   const isApp = ! inputSourceArch.pkg.name;
   const resources = [];
   const pluginProviderPackageNames = {};
@@ -532,11 +526,14 @@ var compileUnibuild = Profile(function (options) {
       // though; that happens via compiler.lint.
 
       if (isApp) {
-        // This shouldn't happen, because initFromAppDir's getFiles
+        // This shouldn't normally happen, because initFromAppDir's getFiles
         // should only return assets or sources which match
-        // sourceProcessorSet.
-        throw Error("app contains non-asset files without plugin? " +
-                    relPath + " - " + filename);
+        // sourceProcessorSet. That being said, this can happen when sources
+        // are being watched by a build plugin, and that build plugin is
+        // removed while the Tool is running. Given that this is not a
+        // common occurrence however, we'll ignore this situation and let the
+        // Tool rebuild continue.
+        return;
       }
 
       const linterClassification = linterSourceProcessorSet.classifyFilename(
@@ -843,7 +840,9 @@ function runLinters({inputSourceArch, isopackCache, sources,
       try {
         var markedLinter = buildmessage.markBoundary(linter.bind(
           sourceProcessor.userPlugin));
-        markedLinter(sourcesToLint, { globals: globalImports });
+        Promise.await(markedLinter(sourcesToLint, {
+          globals: globalImports
+        }));
       } catch (e) {
         buildmessage.exception(e);
       }
@@ -1044,4 +1043,9 @@ export const KNOWN_ISOBUILD_FEATURE_PACKAGES = {
   // This package requires functionality introduced in meteor-tool@1.5.0
   // to enable dynamic module fetching via import(...).
   'isobuild:dynamic-import': ['1.5.0'],
+
+  // This package ensures that processFilesFor{Bundle,Target,Package} are
+  // allowed to return a Promise instead of having to await async
+  // compilation using fibers and/or futures.
+  'isobuild:async-plugins': ['1.6.1'],
 };

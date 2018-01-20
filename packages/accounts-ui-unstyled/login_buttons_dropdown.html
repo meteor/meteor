@@ -97,20 +97,23 @@
   {{#if inForgotPasswordFlow}}
     {{> _forgotPasswordForm}}
   {{else}}
-    <div class="login-form login-password-form">
+    <form class="login-form login-password-form">
       {{#each fields}}
         {{> _loginButtonsFormField}}
       {{/each}}
 
       {{> _loginButtonsMessages}}
 
-      <div class="login-button login-button-form-submit" id="login-buttons-password">
+      <button
+        class="login-button login-button-form-submit"
+        id="login-buttons-password"
+      >
         {{#if inSignupFlow}}
           Create account
         {{else}}
           Sign in
         {{/if}}
-      </div>
+      </button>
 
       {{#if inLoginFlow}}
         {{#if showCreateAccountLink}}
@@ -129,7 +132,7 @@
       {{#if inSignupFlow}}
         {{> _loginButtonsBackToLoginLink}}
       {{/if}}
-    </div>
+    </form>
   {{/if}}
 </template>
 
@@ -155,26 +158,6 @@
     <a id="back-to-login-link" class="additional-link">Sign in</a>
   </div>
 </template>
-
-
-<!--
-This strategy for login forms means that browsers' "Remember password"
-functionality does not work. Different browsers have different
-requirements for remembering passwords:
-
-- Firefox: Must be an actual form (with a submit button), but you can
-cancel the submit with onsubmit='return false'.
-
-- Safari: Must be an actual form, and the form must actually be
-submitted somewhere (though it can target a hidden iframe and go to a
-bogus URL)
-
-- Chrome: Must be an actual form, and the the form elements must be
-present in the initial HTML, not added to the page with javascript. This
-basically rules out using normal meteor templates.
-
-https://gist.github.com/968927
--->
 
 <template name="_loginButtonsFormField">
   {{#if visible}}

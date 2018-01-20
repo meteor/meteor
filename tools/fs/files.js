@@ -246,6 +246,10 @@ files.getSettings = function (filename, watchSet) {
 
   var str = buffer.toString('utf8');
 
+  // The use of a byte order mark crashes JSON parsing. Since a BOM is not
+  // required (or recommended) when using UTF-8, let's remove it if it exists.
+  str = str.charCodeAt(0) === 0xFEFF ? str.slice(1) : str;
+
   // Ensure that the string is parseable in JSON, but there's no reason to use
   // the object value of it yet.
   if (str.match(/\S/)) {
@@ -306,7 +310,9 @@ files.rm_recursive = Profile("files.rm_recursive", (path) => {
   try {
     rimraf.sync(files.convertToOSPath(path));
   } catch (e) {
-    if (e.code === "ENOTEMPTY" && canYield()) {
+    if ((e.code === "ENOTEMPTY" ||
+         e.code === "EPERM") &&
+        canYield()) {
       files.rm_recursive_async(path).await();
       return;
     }

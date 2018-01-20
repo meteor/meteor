@@ -1,14 +1,12 @@
 Package.describe({
   summary: "Random number generator and utilities",
-  version: '1.0.10'
+  version: '1.1.0'
 });
 
 Package.onUse(function (api) {
-  api.use('underscore');
   api.use('ecmascript');
   api.export('Random');
   api.addFiles('random.js');
-  api.addFiles('deprecated.js');
 });
 
 Package.onTest(function(api) {

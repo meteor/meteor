@@ -8,14 +8,17 @@ export const CORDOVA_ARCH = "web.cordova";
 export const CORDOVA_PLATFORMS = ['ios', 'android'];
 
 export const CORDOVA_DEV_BUNDLE_VERSIONS = {
-  'cordova-lib': '7.0.1',
-  'cordova-common': '1.5.1',
+  'cordova-lib': '7.1.0',
+  'cordova-common': '2.1.1',
   'cordova-registry-mapper': '1.1.15',
 };
 
 export const CORDOVA_PLATFORM_VERSIONS = {
-  'android': '6.2.3',
-  'ios': '4.5.1'
+  // This commit represents cordova-android@6.4.0 plus
+  // https://github.com/apache/cordova-android/pull/417, aka
+  // https://github.com/meteor/cordova-android/tree/v6.4.0-with-pr-417:
+  'android': 'https://github.com/meteor/cordova-android/tarball/317db7df0f7a054444197bc6d28453cf4ab23280',
+  'ios': '4.5.4'
 };
 
 const PLATFORM_TO_DISPLAY_NAME_MAP = {

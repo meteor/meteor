@@ -24,7 +24,7 @@ export class PackageNpm {
    * @param  {Object} dependencies An object where the keys are package
    * names and the values are one of:
    *   1. Version numbers in string form
-   *   2. Http(s) URLs to a git commit by SHA.
+   *   2. http(s) URLs of npm packages
    *   3. Git URLs in the format described [here](https://docs.npmjs.com/files/package.json#git-urls-as-dependencies)
    *
    * Https URL example:

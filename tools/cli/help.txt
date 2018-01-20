@@ -440,26 +440,22 @@ commands can be accessed by pressing the up arrow.
 
 
 >>> mongo
-Connect to the Mongo database for the specified site.
+Connect to the local Mongo database
 Usage: meteor mongo [--url]
 
 Opens a Mongo shell to view or manipulate collections.
-
-If site is specified, this is the hosted Mongo database for the deployed
-Meteor site.
-
-If no site is specified, this is the current project's local development
-database. In this case, the current working directory must be a
-Meteor project directory, and the Meteor application must already be
-running.
 
 Instead of opening a shell, specifying --url (-U) will return a URL
 suitable for an external program to connect to the database. For remote
 databases on deployed applications, the URL is valid for one hour.
 
 Options:
-  --url, -U  return a Mongo database URL
+  --url, -U return a Mongo database URL
 
+Currently, this feature can only be used when developing locally.
+The opened Mongo shell connects to the current project's local
+development database. The current working directory must be a Meteor
+project directory, and the Meteor application must already be running.
 
 >>> reset
 Reset the project state. Erases the local database.
@@ -474,11 +470,11 @@ Usage: meteor deploy <site> [--settings settings.json] [--debug] [--delete]
 
 Deploys the project in your current directory to Meteor's servers.
 
-You can deploy to any available name under 'meteor.com'
+You can deploy to any available name under 'meteorapp.com'
 without any additional configuration, for example,
-'myapp.meteor.com'. If you deploy to a custom domain, such as
+'myapp.meteorapp.com'. If you deploy to a custom domain, such as
 'myapp.mydomain.com', then you'll also need to configure your domain's
-DNS records. See the Meteor docs for details.
+DNS records. See the Meteor / Galaxy docs (http://galaxy-guide.meteor.com/dns.html) for details.
 
 The --settings flag can be used to pass deploy-specific information to
 the application. It will be available at runtime in Meteor.settings, but only
@@ -500,14 +496,6 @@ Options:
                   the current versions, if required to satisfy all package version
                   constraints.
 
-
->>> logs
-Show logs for specified site.
-Usage: meteor logs <site>
-
-Retrieves the server logs for the requested site.
-
-
 >>> authorized
 View or change authorized users and organizations for a site.
 Usage: meteor authorized <site> [--list]
@@ -518,7 +506,7 @@ Usage: meteor authorized <site> [--list]
 Without an argument (or with --list), list the users and organizations that are
 administrators for a particular site that was deployed with 'meteor deploy'
 
-For free hosting:
+For hosting:
 
 With --add, add an authorized user or organization to a site. Use this to give
 your collaborators the ability to work with your sites.
@@ -534,8 +522,8 @@ With --transfer, transfer the ownership of the application to a new user or
 organization.
 
 Options:
-  --add         add an authorized user or organization (for free hosting)
-  --remove      remove an authorized user or organization (for free hosting)
+  --add         add an authorized user or organization
+  --remove      remove an authorized user or organization
   --transfer    transfer the (Galaxy) app to a new user or organization
   --list        list authorized users and organizations (the default)
 
@@ -684,7 +672,7 @@ Options:
 Run tests of the 'meteor' tool.
 Usage: meteor self-test [pattern] [--list] [--file pattern] [--changed]
                         [--slow] [--force-online] [--history n]
-                        [--browserstack]
+                        [--browserstack] [--retries n]
 
 Runs internal tests. Exits with status 0 on success.
 
@@ -714,13 +702,8 @@ shown on test failure. The default is 10.
 Pass --browserstack to enable client side tests using BrowserStack.
 --browserstack requires s3cmd credentials.
 
-
-
->>> open-ide
-Open mobile build project in associated IDE.
-Usage: meteor open-ide [ios]
-
-Open mobile build project in associated IDE.
+By default, failed tests are retried twice. Use --retries to change
+the number of retries, or disable retries by setting the value to 0.
 
 
 >>> admin
@@ -760,12 +743,14 @@ Usage: meteor cordova <command>
 
 
 >>> list-sites
-List sites for which you are authorized.
+List sites for which you are authorized. Lists by region, default is us-east-1.
 Usage: meteor list-sites
 
 List the sites that you have deployed with 'meteor deploy', and sites
 for which other users have authorized you with the 'meteor authorized'
-command.
+command. To see sites in a region other than us-east-1, set the DEPLOY_HOSTNAME
+environment variable. For example, 
+`DEPLOY_HOSTNAME=eu-west-1.galaxy-deploy.meteor.com meteor list-sites`
 
 
 >>> publish-release
@@ -810,9 +795,9 @@ version of the package to the package server.
 
 This will create at most one build of the package. If the package has an
 OS-dependent binary component, publishing will only register metadata about the
-package. To actually publish the package builds, use `meteor admin get-machine`
-and `meteor publish-for-arch`. Packages with no published builds cannot be added
-to applications.
+package. The binary component will be compiled when it is installed into an
+application with `meteor add`. To pre-build a package for a particular platform,
+use the `meteor publish-for-arch` command.
 
 This will mark you as the only maintainer of the package. You can use
 'meteor admin maintainers' to change package maintainers. For more information
@@ -1022,17 +1007,13 @@ readme at a given git commit, or the readme at a given git tag.
 
 >>> admin get-machine
 Open an ssh shell to a machine in the meteor build farm.
-Usage: meteor admin get-machine <arch> [--json] [--verbose] [--minutes min]
 
-Asks the meteor build farm for a build server and opens a secure shell to it.
+The 'meteor admin get-machine' command has been disabled and the build farm has
+been discontinued. As of Meteor 1.4, packages with binary dependencies are
+automatically compiled when they are installed in an application, assuming the
+target machine has a basic compiler toolchain.
 
-Valid machine architectures are:
-  os.osx.x86_64
-  os.linux.x86_64
-  os.linux.x86_32
-  os.windows.x86_32
+To see the requirements for this compilation step, consult the
+platform requirements for 'node-gyp':
 
-Options:
-  --json       return information in JSON form instead of opening a shell
-  --minutes    specify the length of the reservation
-  --verbose    print all output from commands
+  https://github.com/nodejs/node-gyp

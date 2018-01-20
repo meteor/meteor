@@ -55,11 +55,8 @@ const launchIosSizes = {
   'iphoneX_landscape': '2436x1125', 
   'ipad_portrait_2x': '1536x2048',
   'ipad_landscape_2x': '2048x1536',
-  'ipad_portrait_pro_10_5': '1668x2224',
-  'ipad_landscape_pro_10_5': '2224x1668',
-  'ipad_portrait_pro_12_9': '2048x2732',
-  'ipad_landscape_pro_12_9': '2732x2048',
   // Legacy
+  'iphone': '320x480',
   'iphone_2x': '640x960',
   'ipad_portrait': '768x1024',
   'ipad_landscape': '1024x768'
@@ -409,7 +406,10 @@ export class CordovaBuilder {
     // Write program.json
     files.writeFile(programJsonPath, JSON.stringify(program), 'utf8');
 
-    const bootstrapPage = this.generateBootstrapPage(applicationPath, program, publicSettings);
+    const bootstrapPage = this.generateBootstrapPage(
+      applicationPath, program, publicSettings
+    ).await();
+
     files.writeFile(files.pathJoin(applicationPath, 'index.html'),
       bootstrapPage, 'utf8');
   }
@@ -463,7 +463,7 @@ export class CordovaBuilder {
       }
     });
 
-    return boilerplate.toHTML();
+    return boilerplate.toHTMLAsync();
   }
 
   copyBuildOverride() {
@@ -603,10 +603,7 @@ configuration. The key may be deprecated.`);
      * - `iphoneX_landscape` (2436x1125) // iPhone X
      * - `ipad_portrait_2x` (1536x2048) // iPad, iPad mini
      * - `ipad_landscape_2x` (2048x1536) // iPad, iPad mini
-     * - `ipad_portrait_pro_10_5` (1668x2224) // iPad Pro 10.5"
-     * - `ipad_landscape_pro_10_5` (2224x1668) // iPad Pro 10.5"
-     * - `ipad_portrait_pro_12_9` (2048x2732) // iPad Pro 12.9"
-     * - `ipad_landscape_pro_12_9` (2732x2048) // iPad Pro 12.9"
+     * - `iphone` (320x480) // Legacy
      * - `iphone_2x` (640x960) // Legacy
      * - `ipad_portrait` (768x1024) // Legacy
      * - `ipad_landscape` (1024x768) // Legacy

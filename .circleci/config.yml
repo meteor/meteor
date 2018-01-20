@@ -21,9 +21,16 @@ run_env_change: &run_env_change
     sudo mkdir -p /tmp/results/junit
     sudo chmod -R a+rwx /tmp/results/
 
+    # Bake the locale we expect into the image.
+    echo "en_US.UTF-8 UTF-8" | sudo tee /etc/locale.gen
+    sudo locale-gen
+
+    # The commands below don't work in Docker images, but might be worth
+    # reenabling if we switch back to machine:true instead of Docker.
+
     # Set the pattern for core dumps, so we can find them.
-    echo kernel.core_pattern="/tmp/core_dumps/core.%e.%p.%h.%t" | \
-        sudo tee -a /etc/sysctl.conf
+    # echo kernel.core_pattern="/tmp/core_dumps/core.%e.%p.%h.%t" | \
+    #     sudo tee -a /etc/sysctl.conf
 
     # Note that since every "run" command starts its own shell, and I wasn't
     # able to set this at a system wide level for all users, it's necessary to
@@ -31,11 +38,11 @@ run_env_change: &run_env_change
     # output a core dump.
 
     # Raise inotify user watches up higher.
-    echo fs.inotify.max_user_watches=524288 | \
-        sudo tee -a /etc/sysctl.conf
+    # echo fs.inotify.max_user_watches=524288 | \
+    #     sudo tee -a /etc/sysctl.conf
 
     # Reload sysctl so these are in effect.
-    sudo sysctl -p
+    # sudo sysctl -p
 
 # A reusable "run" snippet which enables the continued logging of memoryusage
 # to a file on disk which can be saved to build artifacts for later analysis.
@@ -46,7 +53,8 @@ run_log_mem_use: &run_log_mem_use
     # Log memory usage throughout entire build.
     MEMUSELOG=/tmp/memuse.txt /bin/bash -c '\
         while true; do\
-          ps -u $USER eo pid,%cpu,%mem,rss:10,vsz:10,args:20 --sort=-%mem >> $MEMUSELOG; \
+          ps -u $USER -e -o pid,%cpu,%mem,rss:10,vsz:10,command:20 \
+            --sort=-%mem >> $MEMUSELOG; \
           echo "----------" >> $MEMUSELOG; \
           sleep 1; \
         done'
@@ -64,14 +72,17 @@ run_save_node_bin: &run_save_node_bin
 # This environment is set to every job (and the initial build).
 build_machine_environment: &build_machine_environment
   # Specify that we want an actual machine (ala Circle 1.0), not a Docker image.
-  machine: true
+  docker:
+    - image: meteor/circleci
   environment:
     # This multiplier scales the waitSecs for selftests.
     TIMEOUT_SCALE_FACTOR: 8
 
+    # Retry failed tests additional times.
+    METEOR_SELF_TEST_RETRIES: 2
+
     # These, mostly overlapping, flags ensure that CircleCI is as pretty as
     # possible for a non-interactive environment.  See also: --headless.
-    EMACS: t
     METEOR_HEADLESS: true
     METEOR_PRETTY_OUTPUT: 0
 
@@ -126,11 +137,6 @@ jobs:
       - run:
           name: Clear npm cache
           command: ./meteor npm cache clear --force
-      # Since PhantomJS has been removed from dev_bundle/lib/node_modules
-      # (#6905), but self-test still needs it, install it now.
-      - run:
-          name: Test Prereqs
-          command: ./meteor npm install -g phantomjs-prebuilt browserstack-webdriver
       - run:
           <<: *run_save_node_bin
       - persist_to_workspace:
@@ -167,6 +173,7 @@ jobs:
           command: |
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
+              --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
               --junit /tmp/results/junit/0.xml \
@@ -203,6 +210,7 @@ jobs:
           command: |
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
+              --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
               --junit /tmp/results/junit/1.xml \
@@ -240,6 +248,7 @@ jobs:
           command: |
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
+              --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
               --junit /tmp/results/junit/2.xml \
@@ -277,6 +286,7 @@ jobs:
           command: |
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
+              --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
               --junit /tmp/results/junit/3.xml \
@@ -314,6 +324,7 @@ jobs:
           command:  |
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
+              --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
               --junit /tmp/results/junit/4.xml \
@@ -351,6 +362,7 @@ jobs:
           command: |
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
+              --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
               --junit /tmp/results/junit/5.xml \
@@ -388,6 +400,7 @@ jobs:
           command: |
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
+              --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
               --junit /tmp/results/junit/6.xml \
@@ -425,6 +438,7 @@ jobs:
           command: |
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
+              --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
               --junit /tmp/results/junit/7.xml \

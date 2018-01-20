@@ -89,6 +89,9 @@ export class AccountsCommon {
   // - ambiguousErrorMessages {Boolean}
   //     Return ambiguous error messages from login failures to prevent
   //     user enumeration.
+  // - bcryptRounds {Number}
+  //     Allows override of number of bcrypt rounds (aka work factor) used
+  //     to store passwords.
 
   /**
    * @summary Set global accounts options.
@@ -135,7 +138,7 @@ export class AccountsCommon {
     // validate option keys
     var VALID_KEYS = ["sendVerificationEmail", "forbidClientAccountCreation", "passwordEnrollTokenExpirationInDays",
                       "restrictCreationByEmailDomain", "loginExpirationInDays", "passwordResetTokenExpirationInDays",
-                      "ambiguousErrorMessages"];
+                      "ambiguousErrorMessages", "bcryptRounds"];
     _.each(_.keys(options), function (key) {
       if (!_.contains(VALID_KEYS, key)) {
         throw new Error("Accounts.config: Invalid key: " + key);
@@ -157,6 +160,12 @@ export class AccountsCommon {
    * @summary Register a callback to be called after a login attempt succeeds.
    * @locus Anywhere
    * @param {Function} func The callback to be called when login is successful.
+   *                        The callback receives a single object that
+   *                        holds login details. This object contains the login
+   *                        result type (password, resume, etc.) on both the
+   *                        client and server. `onLogin` callbacks registered
+   *                        on the server also receive extra data, such
+   *                        as user details, connection information, etc.
    */
   onLogin(func) {
     return this._onLoginHook.register(func);

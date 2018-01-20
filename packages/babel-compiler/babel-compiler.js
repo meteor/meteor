@@ -222,25 +222,40 @@ BCp._inferHelper = function (
 
   function walkBabelRC(obj, path) {
     if (obj && typeof obj === "object") {
+      const copy = Object.create(null);
+
       path = path || [];
-      var index = path.push("presets") - 1;
-      walkHelper(obj.presets, path);
-      path[index] = "plugins";
-      walkHelper(obj.plugins, path);
+      const index = path.length;
+
+      if (obj.presets) {
+        path[index] = "presets";
+        copy.presets = walkHelper(obj.presets, path);
+      }
+
+      if (obj.plugins) {
+        path[index] = "plugins";
+        copy.plugins = walkHelper(obj.plugins, path);
+      }
+
       path.pop();
+
+      return copy;
     }
+
+    return obj;
   }
 
   function walkHelper(list, path) {
-    if (list) {
-      // Empty the list and then refill it with resolved values.
-      list.splice(0).forEach(function (pluginOrPreset) {
-        var res = resolveHelper(pluginOrPreset, path);
-        if (res) {
-          list.push(res);
-        }
-      });
-    }
+    const copy = [];
+
+    list.forEach(function (pluginOrPreset) {
+      const res = resolveHelper(pluginOrPreset, path);
+      if (res) {
+        copy.push(res);
+      }
+    });
+
+    return copy;
   }
 
   function resolveHelper(value, path) {
@@ -252,24 +267,24 @@ BCp._inferHelper = function (
 
       if (Array.isArray(value)) {
         // The value is a [plugin, options] pair.
-        var res = value[0] = resolveHelper(value[0], path);
+        const res = resolveHelper(value[0], path);
         if (res) {
-          return value;
+          const copy = value.slice(0);
+          copy[0] = res;
+          return copy;
         }
 
       } else if (typeof value === "string") {
         // The value is a string that we need to require.
-        var result = requireWithPath(value, path);
+        const result = requireWithPath(value, path);
         if (result && result.module) {
           cacheDeps[result.name] = result.version;
-          walkBabelRC(result.module, path);
-          return result.module;
+          return walkBabelRC(result.module, path);
         }
 
       } else if (typeof value === "object") {
         // The value is a { presets?, plugins? } preset object.
-        walkBabelRC(value, path);
-        return value;
+        return walkBabelRC(value, path);
       }
     }
 
@@ -277,16 +292,19 @@ BCp._inferHelper = function (
   }
 
   function requireWithPath(id, path) {
-    var prefix;
-    var lastInPath = path[path.length - 1];
+    const prefixes = [];
+    const lastInPath = path[path.length - 1];
     if (lastInPath === "presets") {
-      prefix = "babel-preset-";
+      prefixes.push("@babel/preset-", "babel-preset-");
     } else if (lastInPath === "plugins") {
-      prefix = "babel-plugin-";
+      prefixes.push("@babel/plugin-", "babel-plugin-");
     }
 
+    // Try without a prefix if the prefixes fail.
+    prefixes.push("");
+
     try {
-      return requireWithPrefix(inputFile, id, prefix, controlFilePath);
+      return requireWithPrefixes(inputFile, id, prefixes, controlFilePath);
     } catch (e) {
       if (e.code !== "MODULE_NOT_FOUND") {
         throw e;
@@ -299,33 +317,36 @@ BCp._inferHelper = function (
           "Warning: unable to resolve " +
             JSON.stringify(id) +
             " in " + path.join(".") +
-            " of " + controlFilePath
+            " of " + controlFilePath + ", due to:"
         );
+
+        console.error(e.stack || e);
       }
 
       return null;
     }
   }
 
-  babelrc = JSON.parse(JSON.stringify(babelrc));
+  const clean = walkBabelRC(babelrc);
+  merge(babelOptions, clean, "presets");
+  merge(babelOptions, clean, "plugins");
 
-  walkBabelRC(babelrc);
+  if (babelrc && babelrc.env) {
+    const envKey =
+      process.env.BABEL_ENV ||
+      process.env.NODE_ENV ||
+      "development";
 
-  merge(babelOptions, babelrc, "presets");
-  merge(babelOptions, babelrc, "plugins");
+    const clean = walkBabelRC(babelrc.env[envKey]);
 
-  const babelEnv = (process.env.BABEL_ENV ||
-                    process.env.NODE_ENV ||
-                    "development");
-  if (babelrc && babelrc.env && babelrc.env[babelEnv]) {
-    const env = babelrc.env[babelEnv];
-    walkBabelRC(env);
-    merge(babelOptions, env, "presets");
-    merge(babelOptions, env, "plugins");
+    if (clean) {
+      merge(babelOptions, clean, "presets");
+      merge(babelOptions, clean, "plugins");
+    }
   }
 
-  return !! (babelrc.presets ||
-             babelrc.plugins);
+  return !! (babelOptions.presets ||
+             babelOptions.plugins);
 };
 
 function merge(babelOptions, babelrc, name) {
@@ -336,30 +357,39 @@ function merge(babelOptions, babelrc, name) {
   }
 }
 
-function requireWithPrefix(inputFile, id, prefix, controlFilePath) {
+function requireWithPrefixes(inputFile, id, prefixes, controlFilePath) {
   var isTopLevel = "./".indexOf(id.charAt(0)) < 0;
   var presetOrPlugin;
   var presetOrPluginMeta;
 
   if (isTopLevel) {
-    if (! prefix) {
-      throw new Error("missing babelrc prefix");
-    }
+    var presetOrPluginId;
 
-    try {
-      // If the identifier is top-level, try to prefix it with
-      // "babel-plugin-" or "babel-preset-".
-      presetOrPlugin = inputFile.require(prefix + id);
-      presetOrPluginMeta = inputFile.require(
-        packageNameFromTopLevelModuleId(prefix + id) + '/package.json');
-    } catch (e) {
-      if (e.code !== "MODULE_NOT_FOUND") {
-        throw e;
+    var found = prefixes.some(function (prefix) {
+      try {
+        // Call inputFile.resolve here rather than inputFile.require so
+        // that the import doesn't fail due to missing transitive
+        // dependencies imported by the preset or plugin.
+        if (inputFile.resolve(prefix + id)) {
+          presetOrPluginId = prefix + id;
+        }
+
+        presetOrPluginMeta = inputFile.require(
+          packageNameFromTopLevelModuleId(prefix + id) + "/package.json");
+
+        return true;
+
+      } catch (e) {
+        if (e.code !== "MODULE_NOT_FOUND") {
+          throw e;
+        }
+
+        return false;
       }
-      // Fall back to requiring the plugin as-is if the prefix failed.
-      presetOrPlugin = inputFile.require(id);
-      presetOrPluginMeta = inputFile.require(
-        packageNameFromTopLevelModuleId(id) + '/package.json');
+    });
+
+    if (found) {
+      presetOrPlugin = inputFile.require(presetOrPluginId);
     }
 
   } else {
@@ -380,16 +410,26 @@ function requireWithPrefix(inputFile, id, prefix, controlFilePath) {
     };
   }
 
-  return {
-    name: presetOrPluginMeta.name,
-    version: presetOrPluginMeta.version,
-    module: presetOrPlugin.__esModule
-      ? presetOrPlugin.default
-      : presetOrPlugin
-  };
+  if (presetOrPlugin &&
+      presetOrPluginMeta) {
+    return {
+      name: presetOrPluginMeta.name,
+      version: presetOrPluginMeta.version,
+      module: presetOrPlugin.__esModule
+        ? presetOrPlugin.default
+        : presetOrPlugin
+    };
+  }
+
+  return null;
 }
 
-// 'react-hot-loader/babel' => 'react-hot-loader'
+// react-hot-loader/babel => react-hot-loader
+// @babel/preset-env/lib/index.js => @babel/preset-env
 function packageNameFromTopLevelModuleId(id) {
-  return id.split("/", 1)[0];
+  const parts = id.split("/", 2);
+  if (parts[0].charAt(0) === "@") {
+    return parts.join("/");
+  }
+  return parts[0];
 }

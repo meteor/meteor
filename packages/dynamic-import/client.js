@@ -1,5 +1,7 @@
 var Module = module.constructor;
 var cache = require("./cache.js");
+var HTTP = require("meteor/http").HTTP;
+var meteorInstall = require("meteor/modules").meteorInstall;
 
 // Call module.dynamicImport(id) to fetch a module and any/all of its
 // dependencies that have not already been fetched, and evaluate them as
@@ -20,12 +22,20 @@ meteorInstall.fetch = function (ids) {
   var dynamicVersions = require("./dynamic-versions.js");
   var missing;
 
+  function addSource(id, source) {
+    addToTree(tree, id, makeModuleFunction(id, source, ids[id].options));
+  }
+
+  function addMissing(id) {
+    addToTree(missing = missing || Object.create(null), id, 1);
+  }
+
   Object.keys(ids).forEach(function (id) {
     var version = dynamicVersions.get(id);
     if (version) {
       versions[id] = version;
     } else {
-      addToTree(missing = missing || Object.create(null), id, 1);
+      addMissing(id);
     }
   });
 
@@ -33,10 +43,9 @@ meteorInstall.fetch = function (ids) {
     Object.keys(sources).forEach(function (id) {
       var source = sources[id];
       if (source) {
-        var info = ids[id];
-        addToTree(tree, id, makeModuleFunction(id, source, info.options));
+        addSource(id, source);
       } else {
-        addToTree(missing = missing || Object.create(null), id, 1);
+        addMissing(id);
       }
     });
 
@@ -46,9 +55,7 @@ meteorInstall.fetch = function (ids) {
 
       Object.keys(flatResults).forEach(function (id) {
         var source = flatResults[id];
-        var info = ids[id];
-
-        addToTree(tree, id, makeModuleFunction(id, source, info.options));
+        addSource(id, source);
 
         var version = dynamicVersions.get(id);
         if (version) {
@@ -105,17 +112,25 @@ function makeModuleFunction(id, source, options) {
   };
 }
 
+var secretKey = null;
+exports.setSecretKey = function (key) {
+  secretKey = key;
+};
+
+var fetchURL = require("./common.js").fetchURL;
+
 function fetchMissing(missingTree) {
-  // Update lastFetchMissingPromise immediately, without waiting for
-  // the results to be delivered.
   return new Promise(function (resolve, reject) {
-    Meteor.call(
-      "__dynamicImport",
-      missingTree,
-      function (error, resultsTree) {
-        error ? reject(error) : resolve(resultsTree);
-      }
-    );
+    // Always match the protocol (http or https) and the domain:port of
+    // the current page.
+    var url = "//" + location.host + fetchURL;
+
+    HTTP.call("POST", url, {
+      query: secretKey ? "key=" + secretKey : void 0,
+      data: missingTree
+    }, function (error, result) {
+      error ? reject(error) : resolve(result.data);
+    });
   });
 }
 

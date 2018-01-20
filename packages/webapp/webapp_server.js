@@ -7,8 +7,12 @@ import {
 } from "path";
 import { parse as parseUrl } from "url";
 import { createHash } from "crypto";
-import connect from "connect";
+import { connect } from "./connect.js";
+import compress from "compression";
+import cookieParser from "cookie-parser";
+import query from "qs-middleware";
 import parseRequest from "parseurl";
+import basicAuth from "basic-auth-connect";
 import { lookup as lookupUserAgent } from "useragent";
 import send from "send";
 import {
@@ -22,10 +26,13 @@ var LONG_SOCKET_TIMEOUT = 120*1000;
 export const WebApp = {};
 export const WebAppInternals = {};
 
+// backwards compat to 2.0 of connect
+connect.basicAuth = basicAuth;
+
 WebAppInternals.NpmModules = {
   connect: {
     version: Npm.require('connect/package.json').version,
-    module: connect
+    module: connect,
   }
 };
 
@@ -115,7 +122,7 @@ WebApp.categorizeRequest = function (req) {
   return _.extend({
     browser: identifyBrowser(req.headers['user-agent']),
     url: parseUrl(req.url, true)
-  }, _.pick(req, 'dynamicHead', 'dynamicBody'));
+  }, _.pick(req, 'dynamicHead', 'dynamicBody', 'headers', 'cookies'));
 };
 
 // HTML attribute hooks: functions to be called to determine any attributes to
@@ -273,8 +280,6 @@ WebAppInternals.registerBoilerplateDataCallback = function (key, callback) {
 // memoizes on HTML attributes (used by, eg, appcache) and whether inline
 // scripts are currently allowed.
 // XXX so far this function is always called with arch === 'web.browser'
-var memoizedBoilerplate = {};
-
 function getBoilerplate(request, arch) {
   return getBoilerplateAsync(request, arch).await();
 }
@@ -300,34 +305,11 @@ function getBoilerplateAsync(request, arch) {
     });
   });
 
-  return promise.then(() => {
-    const useMemoized = ! (
-      data.dynamicHead ||
-      data.dynamicBody ||
-      madeChanges
-    );
-
-    if (! useMemoized) {
-      return boilerplate.toHTML(data);
-    }
-
-    // The only thing that changes from request to request (unless extra
-    // content is added to the head or body, or boilerplateDataCallbacks
-    // modified the data) are the HTML attributes (used by, eg, appcache)
-    // and whether inline scripts are allowed, so memoize based on that.
-    var memHash = JSON.stringify({
-      inlineScriptsAllowed,
-      htmlAttributes: data.htmlAttributes,
-      arch,
-    });
-
-    if (! memoizedBoilerplate[memHash]) {
-      memoizedBoilerplate[memHash] =
-        boilerplateByArch[arch].toHTML(data);
-    }
-
-    return memoizedBoilerplate[memHash];
-  });
+  return promise.then(() => ({
+    stream: boilerplate.toHTMLStream(data),
+    statusCode: data.statusCode,
+    headers: data.headers,
+  }));
 }
 
 WebAppInternals.generateBoilerplateInstance = function (arch,
@@ -568,9 +550,13 @@ function runWebAppServer() {
 
         WebApp.clientPrograms[arch] = program;
 
-        // Serve the program as a string at /foo/<arch>/manifest.json
-        // XXX change manifest.json -> program.json
-        staticFiles[urlPrefix + getItemPathname('/manifest.json')] = {
+        // Expose program details as a string reachable via the following
+        // URL.
+        const manifestUrlPrefix = "/__" + arch.replace(/^web\./, "");
+        const manifestUrl = manifestUrlPrefix +
+          getItemPathname("/manifest.json");
+
+        staticFiles[manifestUrl] = {
           content: JSON.stringify(program),
           cacheable: false,
           hash: program.version,
@@ -654,7 +640,10 @@ function runWebAppServer() {
   app.use(rawConnectHandlers);
 
   // Auto-compress any json, javascript, or text.
-  app.use(connect.compress());
+  app.use(compress());
+
+  // parse cookies into an object
+  app.use(cookieParser());
 
   // We're not a proxy; reject (without crashing) attempts to treat us like
   // one. (See #1212.)
@@ -693,15 +682,17 @@ function runWebAppServer() {
 
   // Parse the query string into res.query. Used by oauth_server, but it's
   // generally pretty handy..
-  app.use(connect.query());
+  app.use(query());
 
   // Serve static files from the manifest.
   // This is inspired by the 'static' middleware.
   app.use(function (req, res, next) {
-    Promise.resolve().then(() => {
-      WebAppInternals.staticFilesMiddleware(staticFiles, req, res, next);
-    });
+    WebAppInternals.staticFilesMiddleware(staticFiles, req, res, next);
   });
+
+  // Core Meteor packages like dynamic-import can add handlers before
+  // other handlers added by package and application code.
+  app.use(WebAppInternals.meteorInternalHandlers = connect());
 
   // Packages and apps can add handlers to this via WebApp.connectHandlers.
   // They are inserted before our default handler.
@@ -722,11 +713,10 @@ function runWebAppServer() {
   });
 
   app.use(function (req, res, next) {
-    Promise.resolve().then(() => {
-      if (! appUrl(req.url)) {
-        return next();
-      }
+    if (! appUrl(req.url)) {
+      return next();
 
+    } else {
       var headers = {
         'Content-Type': 'text/html; charset=utf-8'
       };
@@ -789,17 +779,28 @@ function runWebAppServer() {
       return getBoilerplateAsync(
         request,
         archKey
-      ).then(boilerplate => {
-        var statusCode = res.statusCode ? res.statusCode : 200;
+      ).then(({ stream,  statusCode, headers: newHeaders }) => {
+        if (!statusCode) {
+          statusCode = res.statusCode ? res.statusCode : 200;
+        }
+
+        if (newHeaders) {
+          Object.assign(headers, newHeaders);
+        }
+
         res.writeHead(statusCode, headers);
-        res.write(boilerplate);
-        res.end();
-      }, error => {
+
+        stream.pipe(res, {
+          // End the response when the stream ends.
+          end: true,
+        });
+
+      }).catch(error => {
         Log.error("Error running template: " + error.stack);
         res.writeHead(500, headers);
         res.end();
       });
-    });
+    }
   });
 
   // Return 404 by default, if no other handlers serve this URL.

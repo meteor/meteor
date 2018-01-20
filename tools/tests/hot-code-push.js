@@ -98,21 +98,22 @@ jquery`);
 });
 
 selftest.define("versioning hot code push", function (options) {
-  var s = new Sandbox();
+  var s = new Sandbox({
+    clients: options.clients,
+  });
 
   s.set("AUTOUPDATE_VERSION", "1.0");
   s.createApp("myapp", "hot-code-push-test");
   s.cd("myapp");
 
   s.testWithAllClients(function (run) {
-    run.baseTimeout = 20;
     run.match("myapp");
     run.match("proxy");
     run.match("MongoDB");
     run.match("running at");
     run.match("localhost");
     run.connectClient();
-    run.waitSecs(20);
+    run.waitSecs(40);
 
     run.match("client connected: 0");
 
@@ -122,7 +123,7 @@ selftest.define("versioning hot code push", function (options) {
   });
 });
 
-selftest.define("javascript hot code push", ["slow"], function (options) {
+selftest.define("javascript hot code push", function (options) {
   var s = new Sandbox({
     clients: options.clients
   });

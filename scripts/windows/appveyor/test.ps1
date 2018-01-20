@@ -4,13 +4,18 @@ $jUnit = Join-Path $env:TEMP 'self-test-junit-0.xml'
 $tests = @(
   '^assets'
   '^autoupdate'
-  '^dynamic import'
+  '^dynamic import.*development'
 ) -Join '|'
 
 Write-Host "Running: $tests" -ForegroundColor Yellow
 Write-Host "Excluded: $env:SELF_TEST_EXCLUDE" -ForegroundColor Yellow
 
-.\meteor.bat self-test --junit "$jUnit" "$tests" --exclude "$env:SELF_TEST_EXCLUDE" '2>&1'
+.\meteor.bat self-test `
+  --retries 2 `
+  --junit "$jUnit" `
+  --exclude "$env:SELF_TEST_EXCLUDE" `
+  "$tests" `
+  '2>&1'
 $selfTestExitCode = $LASTEXITCODE
 
 If ($selfTestExitCode -eq 0) {
