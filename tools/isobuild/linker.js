@@ -909,7 +909,7 @@ var getHeader = function (options) {
   return chunks.join('');
 };
 
-var getImportCode = function (imports, header, omitvar) {
+function getImportCode(imports, header, omitVar) {
   var self = this;
 
   if (_.isEmpty(imports)) {
@@ -926,13 +926,13 @@ var getImportCode = function (imports, header, omitvar) {
   // Generate output
   var buf = header;
   _.each(tree, function (node, key) {
-    buf += (omitvar ? "" : "var " ) +
+    buf += (omitVar ? "" : "var " ) +
       key + " = " + writeSymbolTree(node) + ";\n";
   });
   buf += "\n";
 
   return buf;
-};
+}
 
 var getFooter = function ({
   name,
@@ -988,11 +988,12 @@ var getFooter = function ({
 // Output is an array of output files: objects with keys source, servePath,
 // sourceMap.
 export var fullLink = Profile("linker.fullLink", function (inputFiles, {
-  // If true, make the top level namespace be the same as the global
-  // namespace, so that symbols are accessible from the console, and don't
-  // actually combine files into a single file. used when linking apps (as
-  // opposed to packages).
-  useGlobalNamespace,
+  // True if we're linking the application (as opposed to a
+  // package). Among other consequences, this makes the top level
+  // namespace be the same as the global namespace, so that symbols are
+  // accessible from the console, and avoids actually combining files into
+  // a single file.
+  isApp,
   // Options to pass as the second argument to meteorInstall. Falsy if
   // meteorInstall is disabled.
   meteorInstallOptions,
@@ -1009,9 +1010,6 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
   // a map from imported symbol to the name of the package that it is
   // imported from
   imports,
-  // If useGlobalNamespace is set, this is the name of the file to create
-  // with imports into the global namespace.
-  importStubServePath,
   // True if JS files with source maps should have a comment explaining
   // how to use them in a browser.
   includeSourceMapInstructions,
@@ -1021,7 +1019,7 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
   var module = new Module({
     name,
     meteorInstallOptions,
-    useGlobalNamespace,
+    useGlobalNamespace: isApp,
     combinedServePath,
   });
 
@@ -1031,12 +1029,15 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
 
   // If we're in the app, then we just add the import code as its own file in
   // the front.
-  if (useGlobalNamespace) {
-    if (!_.isEmpty(imports)) {
+  if (isApp) {
+    if (! _.isEmpty(imports)) {
       prelinkedFiles.unshift({
-        source: getImportCode(imports,
-                              "/* Imports for global scope */\n\n", true),
-        servePath: importStubServePath
+        source: getImportCode(
+          imports,
+          "/* Imports for global scope */\n\n",
+          true, // Omit the var keyword.
+        ),
+        servePath: "/global-imports.js"
       });
     }
     return prelinkedFiles;

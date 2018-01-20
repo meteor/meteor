@@ -109,6 +109,12 @@ export class CordovaProject {
           return true;
         }
 
+        if (! semver.valid(pinnedVersion)) {
+          // If pinnedVersion is not a semantic version but instead
+          // something like a GitHub tarball URL, assume not outdated.
+          return false;
+        }
+
         return semver.lt(installedVersion, pinnedVersion);
       });
 

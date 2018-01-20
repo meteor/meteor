@@ -504,6 +504,24 @@ describe("ecmascript miscellany", () => {
       4
     );
   });
+
+  it("should support plugins like proposal-optional-chaining", () => {
+    const { check } = require("./imports/chaining.js");
+
+    assert.strictEqual(check({
+      oyez: true
+    }), void 0);
+
+    assert.strictEqual(check({
+      foo: {
+        bar: {
+          baz: {
+            qux: 1234
+          }
+        }
+      }
+    }), 1234);
+  });
 });
 
 Meteor.isClient &&

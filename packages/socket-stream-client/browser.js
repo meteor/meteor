@@ -2,7 +2,7 @@ import {
   toSockjsUrl,
   toWebsocketUrl,
 } from "./urls.js";
-
+import "./sockjs-0.3.4.js";
 import { StreamClientCommon } from "./common.js";
 
 export class ClientStream extends StreamClientCommon {
@@ -29,6 +29,7 @@ export class ClientStream extends StreamClientCommon {
 
     this.rawUrl = url;
     this.socket = null;
+    this.lastError = null;
 
     this.heartbeatTimer = null;
 
@@ -158,38 +159,51 @@ export class ClientStream extends StreamClientCommon {
       ...this.options._sockjsOptions
     };
 
-    // Convert raw URL to SockJS URL each time we open a connection, so
-    // that we can connect to random hostnames and get around browser
-    // per-host connection limits.
-    const { SockJS } = global;
-    this.socket = typeof SockJS === "function"
+    const hasSockJS = typeof SockJS === "function";
+
+    this.socket = hasSockJS
+      // Convert raw URL to SockJS URL each time we open a connection, so
+      // that we can connect to random hostnames and get around browser
+      // per-host connection limits.
       ? new SockJS(toSockjsUrl(this.rawUrl), undefined, options)
       : new WebSocket(toWebsocketUrl(this.rawUrl));
 
     this.socket.onopen = data => {
+      this.lastError = null;
       this._connected();
     };
-    this.socket.onmessage = data => {
-      this._heartbeat_received();
 
-      if (this.currentStatus.connected)
+    this.socket.onmessage = data => {
+      this.lastError = null;
+      this._heartbeat_received();
+      if (this.currentStatus.connected) {
         this.forEachCallback('message', callback => {
           callback(data.data);
         });
+      }
     };
+
     this.socket.onclose = () => {
-      this._lostConnection();
+      if (this.lastError) {
+        this._lostConnection(this.lastError);
+      } else {
+        this._lostConnection();
+      }
     };
-    this.socket.onerror = (...args) => {
-      // XXX is this ever called?
+
+    this.socket.onerror = error => {
+      const { lastError } = this;
+      this.lastError = error;
+      if (lastError) return;
       console.log(
         'stream error',
-        args,
+        error,
         new Date().toDateString()
       );
     };
 
     this.socket.onheartbeat = () => {
+      this.lastError = null;
       this._heartbeat_received();
     };
 

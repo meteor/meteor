@@ -163,6 +163,38 @@ if (Meteor.isServer) {
   });
 }
 
+export const testExport = "oyez";
+
+Tinytest.add("ecmascript - runtime - classes - properties", (test) => {
+  class ClassWithProperties {
+    property = ["prop", "rty"].join("e");
+    static staticProp = 1234;
+
+    check = (self) => {
+      import { testExport as oyez } from "./runtime-tests.js";
+      test.equal(oyez, "oyez");
+      test.isTrue(self === this);
+      test.equal(this.property, "property");
+    };
+
+    method() {
+      import { testExport as oyez } from "./runtime-tests.js";
+      test.equal(oyez, "oyez");
+    }
+  }
+
+  test.equal(ClassWithProperties.staticProp, 1234);
+
+  const cwp = new ClassWithProperties();
+
+  cwp.check(cwp);
+
+  // Check binding of arrow function.
+  cwp.check.call(null, cwp);
+
+  cwp.method();
+});
+
 Tinytest.add("ecmascript - runtime - block scope", (test) => {
   {
     const buf = [];
@@ -271,9 +303,6 @@ Tinytest.add("ecmascript - runtime - Set spread", (test) => {
 });
 
 Tinytest.add("ecmascript - runtime - destructuring", (test) => {
-  // uses `babelHelpers.objectWithoutProperties` and
-  // `babelHelpers.objectDestructuringEmpty`
-
   const obj = {a:1, b:2};
   const {a, ...rest} = obj;
   test.equal(a, 1);
@@ -286,9 +315,9 @@ Tinytest.add("ecmascript - runtime - destructuring", (test) => {
   });
 
   const [x, y, z] = function*() {
-    let x = 1;
+    let n = 1;
     while (true) {
-      yield x++;
+      yield n++;
     }
   }();
 

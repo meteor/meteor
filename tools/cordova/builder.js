@@ -406,7 +406,10 @@ export class CordovaBuilder {
     // Write program.json
     files.writeFile(programJsonPath, JSON.stringify(program), 'utf8');
 
-    const bootstrapPage = this.generateBootstrapPage(applicationPath, program, publicSettings);
+    const bootstrapPage = this.generateBootstrapPage(
+      applicationPath, program, publicSettings
+    ).await();
+
     files.writeFile(files.pathJoin(applicationPath, 'index.html'),
       bootstrapPage, 'utf8');
   }
@@ -460,7 +463,7 @@ export class CordovaBuilder {
       }
     });
 
-    return boilerplate.toHTML();
+    return boilerplate.toHTMLAsync();
   }
 
   copyBuildOverride() {

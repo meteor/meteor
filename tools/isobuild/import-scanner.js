@@ -731,6 +731,9 @@ export default class ImportScanner {
       }
 
       const absImportedPath = resolved.path;
+      if (! absImportedPath) {
+        return;
+      }
 
       let depFile = this._getFile(absImportedPath);
       if (depFile) {

@@ -46,23 +46,23 @@ export const check = function (value, pattern) {
  * @summary The namespace for all Match types and methods.
  */
 export const Match = {
-  Optional(pattern) {
+  Optional: function (pattern) {
     return new Optional(pattern);
   },
-  Maybe(pattern) {
+  Maybe: function (pattern) {
     return new Maybe(pattern);
   },
-  OneOf(...args) {
+  OneOf: function (...args) {
     return new OneOf(args);
   },
   Any: ['__any__'],
-  Where(condition) {
+  Where: function (condition) {
     return new Where(condition);
   },
-  ObjectIncluding(pattern) {
+  ObjectIncluding: function (pattern) {
     return new ObjectIncluding(pattern);
   },
-  ObjectWithValues(pattern) {
+  ObjectWithValues: function (pattern) {
     return new ObjectWithValues(pattern);
   },
   // Matches only signed 32-bit integers

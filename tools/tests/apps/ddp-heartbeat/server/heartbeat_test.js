@@ -12,7 +12,7 @@ var waitReactive = function (fn) {
     },
     60000
   );
-  Deps.autorun(function (c) {
+  Tracker.autorun(function (c) {
     var ret = fn();
     if (ret) {
       c.stop();

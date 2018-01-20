@@ -21,9 +21,16 @@ run_env_change: &run_env_change
     sudo mkdir -p /tmp/results/junit
     sudo chmod -R a+rwx /tmp/results/
 
+    # Bake the locale we expect into the image.
+    echo "en_US.UTF-8 UTF-8" | sudo tee /etc/locale.gen
+    sudo locale-gen
+
+    # The commands below don't work in Docker images, but might be worth
+    # reenabling if we switch back to machine:true instead of Docker.
+
     # Set the pattern for core dumps, so we can find them.
-    echo kernel.core_pattern="/tmp/core_dumps/core.%e.%p.%h.%t" | \
-        sudo tee -a /etc/sysctl.conf
+    # echo kernel.core_pattern="/tmp/core_dumps/core.%e.%p.%h.%t" | \
+    #     sudo tee -a /etc/sysctl.conf
 
     # Note that since every "run" command starts its own shell, and I wasn't
     # able to set this at a system wide level for all users, it's necessary to
@@ -31,11 +38,11 @@ run_env_change: &run_env_change
     # output a core dump.
 
     # Raise inotify user watches up higher.
-    echo fs.inotify.max_user_watches=524288 | \
-        sudo tee -a /etc/sysctl.conf
+    # echo fs.inotify.max_user_watches=524288 | \
+    #     sudo tee -a /etc/sysctl.conf
 
     # Reload sysctl so these are in effect.
-    sudo sysctl -p
+    # sudo sysctl -p
 
 # A reusable "run" snippet which enables the continued logging of memoryusage
 # to a file on disk which can be saved to build artifacts for later analysis.
@@ -65,7 +72,8 @@ run_save_node_bin: &run_save_node_bin
 # This environment is set to every job (and the initial build).
 build_machine_environment: &build_machine_environment
   # Specify that we want an actual machine (ala Circle 1.0), not a Docker image.
-  machine: true
+  docker:
+    - image: meteor/circleci
   environment:
     # This multiplier scales the waitSecs for selftests.
     TIMEOUT_SCALE_FACTOR: 8

@@ -25,10 +25,9 @@ Package.onUse(function(api) {
     'ddp',
     'livedata', // XXX COMPAT WITH PACKAGES BUILT FOR 0.9.0.
 
-    // These packages use the user agent of each incoming HTTP request to
+    // This package uses the user agent of each incoming HTTP request to
     // decide whether to inject <script> tags into the <head> of the
-    // response document to polyfill Web Sockets and/or ES5 support.
-    'sockjs-shim',
+    // response document to polyfill ECMAScript 5 support.
     'es5-shim',
 
     // Push code changes to the client and automatically reload the page

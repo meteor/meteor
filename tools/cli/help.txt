@@ -1006,6 +1006,8 @@ Set the readme field on the latest published version of a core package to the
 readme at a given git commit, or the readme at a given git tag.
 
 >>> admin get-machine
+Open an ssh shell to a machine in the meteor build farm.
+
 The 'meteor admin get-machine' command has been disabled and the build farm has
 been discontinued. As of Meteor 1.4, packages with binary dependencies are
 automatically compiled when they are installed in an application, assuming the

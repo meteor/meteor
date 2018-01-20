@@ -187,8 +187,9 @@ export class CompilerPluginProcessor {
           var markedMethod = buildmessage.markBoundary(
             sourceProcessor.userPlugin.processFilesForTarget.bind(
               sourceProcessor.userPlugin));
+
           try {
-            markedMethod(inputFiles);
+            Promise.await(markedMethod(inputFiles));
           } catch (e) {
             buildmessage.exception(e);
           }
@@ -1288,7 +1289,7 @@ export class PackageSourceBatch {
     const isApp = ! self.unibuild.pkg.name;
     const isWeb = archinfo.matches(self.unibuild.arch, "web");
     const linkerOptions = {
-      useGlobalNamespace: isApp,
+      isApp,
       meteorInstallOptions,
       // I was confused about this, so I am leaving a comment -- the
       // combinedServePath is either [pkgname].js or [pluginName]:plugin.js.
@@ -1302,7 +1303,6 @@ export class PackageSourceBatch {
       declaredExports: _.pluck(self.unibuild.declaredExports, 'name'),
       imports: self.importedSymbolToPackageName,
       // XXX report an error if there is a package called global-imports
-      importStubServePath: isApp && '/packages/global-imports.js',
       includeSourceMapInstructions: isWeb,
     };
 

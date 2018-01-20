@@ -7,7 +7,7 @@ import {
 } from "path";
 import { parse as parseUrl } from "url";
 import { createHash } from "crypto";
-import connect from "connect";
+import { connect } from "./connect.js";
 import compress from "compression";
 import cookieParser from "cookie-parser";
 import query from "qs-middleware";
@@ -306,7 +306,7 @@ function getBoilerplateAsync(request, arch) {
   });
 
   return promise.then(() => ({
-    stream: boilerplate.toHTML(data),
+    stream: boilerplate.toHTMLStream(data),
     statusCode: data.statusCode,
     headers: data.headers,
   }));
@@ -552,8 +552,10 @@ function runWebAppServer() {
 
         // Expose program details as a string reachable via the following
         // URL.
-        const manifestUrl =
-          urlPrefix + getItemPathname("/__meteor__/webapp/manifest.json");
+        const manifestUrlPrefix = "/__" + arch.replace(/^web\./, "");
+        const manifestUrl = manifestUrlPrefix +
+          getItemPathname("/manifest.json");
+
         staticFiles[manifestUrl] = {
           content: JSON.stringify(program),
           cacheable: false,
@@ -685,9 +687,7 @@ function runWebAppServer() {
   // Serve static files from the manifest.
   // This is inspired by the 'static' middleware.
   app.use(function (req, res, next) {
-    Promise.resolve().then(() => {
-      WebAppInternals.staticFilesMiddleware(staticFiles, req, res, next);
-    });
+    WebAppInternals.staticFilesMiddleware(staticFiles, req, res, next);
   });
 
   // Core Meteor packages like dynamic-import can add handlers before
@@ -713,11 +713,10 @@ function runWebAppServer() {
   });
 
   app.use(function (req, res, next) {
-    Promise.resolve().then(() => {
-      if (! appUrl(req.url)) {
-        return next();
-      }
+    if (! appUrl(req.url)) {
+      return next();
 
+    } else {
       var headers = {
         'Content-Type': 'text/html; charset=utf-8'
       };
@@ -801,7 +800,7 @@ function runWebAppServer() {
         res.writeHead(500, headers);
         res.end();
       });
-    });
+    }
   });
 
   // Return 404 by default, if no other handlers serve this URL.
