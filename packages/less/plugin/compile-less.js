@@ -19,7 +19,10 @@ class LessCompiler extends MultiFileCachingCompiler {
   }
 
   getCacheKey(inputFile) {
-    return inputFile.getSourceHash();
+    return [
+      inputFile.getArch(),
+      inputFile.getSourceHash(),
+    ];
   }
 
   compileResultSize(compileResult) {
