@@ -1,11 +1,11 @@
 extension Data {
   func SHA1() -> String {
     var digest = [UInt8](repeating: 0, count: Int(CC_SHA1_DIGEST_LENGTH))
-    
+
     withUnsafeBytes { (bytes) -> Void in
       CC_SHA1(bytes, CC_LONG(count), &digest)
     }
-    
+
     var hexString = ""
     for index in 0..<digest.count {
       hexString += String(format: "%02x", digest[index])
@@ -73,25 +73,25 @@ class WebAppMockRemoteServer: CDVPlugin, GCDWebServerTestingDelegate {
 
     server.addHandler(match: {(requestMethod, requestURL, requestHeaders, URLPath, URLQuery) -> GCDWebServerRequest! in
       if requestMethod != "GET" { return nil }
-      if !(URLPath?.hasPrefix(basePath))! { return nil }
+      if !(URLPath.hasPrefix(basePath)) { return nil }
 
       let request = GCDWebServerRequest(method: requestMethod, url: requestURL, headers: requestHeaders, path: URLPath, query: URLQuery)
       return request
       }) { (request) -> GCDWebServerResponse! in
-        let URLPath = request?.path.substring(from: basePath.endIndex)
-        let fileURL = self.versionDirectoryURL.appendingPathComponent(URLPath!)
+        let URLPath = request.path.substring(from: basePath.endIndex)
+        let fileURL = self.versionDirectoryURL.appendingPathComponent(URLPath)
 
         var response: GCDWebServerResponse
 
         var isDirectory = ObjCBool(false)
         if fileManager.fileExists(atPath: fileURL.path, isDirectory: &isDirectory)
             && !isDirectory.boolValue {
-          response = GCDWebServerFileResponse(file: fileURL.path)
+          response = GCDWebServerFileResponse(file: fileURL.path)!
           let fileHash = (try! Data(contentsOf: fileURL)).SHA1()
           response.eTag = "\"\(fileHash)\""
-        } else if request?.query["meteor_dont_serve_index"] == nil {
+        } else if request.query!["meteor_dont_serve_index"] == nil {
           let indexFileURL = self.versionDirectoryURL.appendingPathComponent("index.html")
-          response = GCDWebServerFileResponse(file: indexFileURL.path)
+          response = GCDWebServerFileResponse(file: indexFileURL.path)!
         } else {
           response = GCDWebServerResponse(statusCode: GCDWebServerClientErrorHTTPStatusCode.httpStatusCode_NotFound.rawValue)
         }
