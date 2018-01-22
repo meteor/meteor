@@ -518,7 +518,7 @@ What is often confusing to people is that setting `App.accessRule` is not enough
 To get around these restrictions, you'll have to use what is known as [Cross-Origin Resource Sharing (CORS)](https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS). In contrast to the whitelisting mechanism configured on the client, CORS relies on headers set by the server. In other words, in order to allow access to a remote resource, you may have to make configuration changes on the server, such as setting a `Access-Control-Allow-Origin` header.
 
 <h3 id="system-permissions">System Permissions</h3>
-As of Android Marshmallow, certain system features (e.g. camera, microphone, etc.) require additional permissions in order to access them. These must be listed in the manifest and **also requested at runtime**.
+Since the release of iOS 8.0 and Android 6.0 (Android Marshmallow), certain system features (e.g. camera, microphone, location, photos, etc.) typically require additional permissions in order to access them, and for iOS 10+ you must also provide a customized privacy usage notification prompt. These values for Android are specified in your app's `AndroidManifest.xml` file and are **also requested at runtime**. For iOS they are specified in your apps `Info.plist` file.
 
 To request them at runtime, consider using the [`cordova.plugins.diagnostic`](https://github.com/dpa99c/cordova-diagnostic-plugin) plugin.
 
@@ -545,6 +545,17 @@ if (Meteor.isCordova) {
     error => { console.error(error); }
   );
 }
+```
+
+Alternatively for iOS you can specify the required privacy usage notification prompts in your `mobile-config.js` by using [`App.appendToConfig`](https://docs.meteor.com/api/mobile-config.html#App-appendToConfig) along with the correct [Cocoa Keys](https://developer.apple.com/library/content/documentation/General/Reference/InfoPlistKeyReference/Articles/CocoaKeys.html). 
+
+Here is an example to access iOS geolocation data:
+```
+App.appendToConfig(`
+  <edit-config target="NSLocationWhenInUseUsageDescription" file="*-Info.plist" mode="merge">
+    <string>My app needs access to your location for navigation purposes</string>
+  </edit-config>
+`);
 ```
 
 <h2 id="configuring-your-app">Configuring your app</h2>
