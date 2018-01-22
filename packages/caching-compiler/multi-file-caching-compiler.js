@@ -174,9 +174,8 @@ extends CachingCompilerBase {
   // this.getAbsoluteImportPath(inputFile), since the file path might be
   // relevant to the compiled output when using MultiFileCachingCompiler.
   _getCacheKeyWithPath(inputFile) {
-    const absoluteImportPath = this.getAbsoluteImportPath(inputFile);
     return this._deepHash([
-      absoluteImportPath,
+      this.getAbsoluteImportPath(inputFile),
       this.getCacheKey(inputFile),
     ]);
   }
