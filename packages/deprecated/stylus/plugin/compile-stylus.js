@@ -21,6 +21,7 @@ class StylusCompiler extends MultiFileCachingCompiler {
 
   getCacheKey(inputFile) {
     return [
+      inputFile.getArch(),
       inputFile.getSourceHash(),
       inputFile.getFileOptions(),
     ];
