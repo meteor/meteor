@@ -349,9 +349,32 @@ _.extend(Isopack.prototype, {
 
   // A sorted plus-separated string of all the architectures included in this
   // package.
-  buildArchitectures: function () {
-    var self = this;
-    return self.architectures().join('+');
+  buildArchitectures(simplify) {
+    const arches = this.architectures();
+
+    if (simplify) {
+      const simpler = [];
+
+      arches.forEach(arch => {
+        const parts = arch.split(".");
+        while (parts.length > 1) {
+          parts.pop();
+          if (arches.indexOf(parts.join(".")) >= 0) {
+            // If the arches array contains a strict prefix of this arch,
+            // omit this arch from the result, since it should be covered
+            // by the prefix. For example, if arches contains "web" or
+            // "web.browser" then it shouldn't need to contain
+            // "web.browser.legacy" as well.
+            return;
+          }
+        }
+        simpler.push(arch);
+      });
+
+      return simpler.join("+");
+    }
+
+    return arches.join("+");
   },
 
   // Returns true if we think that this isopack is platform specific (contains
