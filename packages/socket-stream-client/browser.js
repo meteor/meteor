@@ -2,7 +2,7 @@ import {
   toSockjsUrl,
   toWebsocketUrl,
 } from "./urls.js";
-import "./sockjs-0.3.4.js";
+
 import { StreamClientCommon } from "./common.js";
 
 export class ClientStream extends StreamClientCommon {
