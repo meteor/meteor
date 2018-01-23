@@ -27,8 +27,14 @@ Cordova.depends({
 
 Package.onUse(function (api) {
   api.use('ecmascript');
-  api.use(['logging', 'underscore', 'routepolicy', 'boilerplate-generator',
-           'webapp-hashing'], 'server');
+  api.use([
+    'logging',
+    'underscore',
+    'routepolicy',
+    'modern-browsers',
+    'boilerplate-generator',
+    'webapp-hashing'
+  ], 'server');
 
   // At response serving time, webapp uses browser-policy if it is loaded. If
   // browser-policy is loaded, then it must be loaded after webapp

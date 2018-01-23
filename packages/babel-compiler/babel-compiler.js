@@ -71,11 +71,14 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       ! excludedFileExtensionPattern.test(inputFilePath)) {
 
     var extraFeatures = Object.assign({}, this.extraFeatures);
+    var arch = inputFile.getArch();
 
-    if (inputFile.getArch().startsWith("os.")) {
+    if (arch.startsWith("os.")) {
       // Start with a much simpler set of Babel presets and plugins if
       // we're compiling for Node 8.
       extraFeatures.nodeMajorVersion = parseInt(process.versions.node);
+    } else if (arch === "web.browser") {
+      extraFeatures.modernBrowsers = true;
     }
 
     if (! extraFeatures.hasOwnProperty("jscript")) {
