@@ -17,9 +17,12 @@ There are many ways to contribute to the Meteor Project. Here’s a list of tech
 - [Reviewing pull requests](CONTRIBUTING.md#reviewer)
 - [Maintaining a community package](CONTRIBUTING.md#community-package-maintainer)
 
-There are also several ways to contribute to the Meteor Project outside of GitHub, like organizing or speaking at [Meetups](https://www.meetup.com/topics/meteor/) and events and helping to moderate our [forums](https://forums.meteor.com/).
+There are also several ways to contribute to the Meteor Project outside of GitHub, like organizing or speaking at [Meetups](https://www.meetup.com/topics/meteor/) and events and helping to moderate our [forums](https://forums.meteor.com/).  
 
-If you can think of any changes to the project, [documentation](https://github.com/meteor/docs), or [guide](https://github.com/meteor/guide) that would improve the contributor experience, let us know by opening an issue in the correct repository!
+If you can think of any changes to the project, [documentation](https://github.com/meteor/docs), or [guide](https://github.com/meteor/guide) that would improve the contributor experience, let us know by opening an issue in the correct repository! 
+
+### Rewarding Contributors
+Also, we now have the option of rewarding contributors through the new Utopian.io platform. Simply write a short post about your contribution to meteor/meteor <a href="https://utopian.io/project/meteor/meteor/github/3214406/task-development">here</a> and be rewarded by the Utopian.io community. Acceptable contributions include: suggestions, sub-project contributions, development, bug-hunting, translations, graphics, analysis, visbility & marketing efforts, documentation, written & video tutorials, and lastly copyrighting.
 
 ### Finding work
 
