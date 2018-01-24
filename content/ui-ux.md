@@ -253,7 +253,7 @@ To set and change the language that a user is seeing, you should call `TAPi18n.s
 export const CurrentLanguage = new ReactiveVar('en');
 
 
-import CurrentLanguage from '../stores/current-language.js';
+import { CurrentLanguage } from '../stores/current-language.js';
 TAPi18n.setLanguage(() => {
   CurrentLanguage.get();
 });
