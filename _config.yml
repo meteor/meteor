@@ -17,6 +17,7 @@ apis:
     apiKey: bdf6b09d12024f6bae3631a0dfdd4a7f
     indexName: meteor_api_guide
 versions:
+  - '1.6.1'
   - '1.6'
   - '1.5.4'
   - '1.5.3'
