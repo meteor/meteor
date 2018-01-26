@@ -3,23 +3,23 @@
   "version": "0.0.0",
   "private": true,
   "hexo": {
-    "version": "3.4.3"
+    "version": "3.5.0"
   },
   "dependencies": {
     "canonical-json": "0.0.4",
     "handlebars": "^4.0.11",
-    "hexo": "^3.4.3",
+    "hexo": "^3.5.0",
     "hexo-generator-archive": "^0.1.5",
     "hexo-generator-category": "^0.1.2",
     "hexo-generator-index": "^0.2.0",
     "hexo-generator-tag": "^0.2.0",
     "hexo-renderer-ejs": "^0.3.1",
     "hexo-renderer-less": "^0.2.0",
-    "hexo-renderer-marked": "^0.3.0",
+    "hexo-renderer-marked": "^0.3.2",
     "hexo-renderer-stylus": "^0.3.0",
-    "hexo-server": "^0.2.0",
+    "hexo-server": "^0.3.1",
     "jsdoc": "^3.5.5",
-    "showdown": "^1.8.5",
+    "showdown": "^1.8.6",
     "underscore": "^1.8.3"
   },
   "devDependencies": {
