@@ -445,7 +445,7 @@ selftest.define("rails reminders", function () {
   run.expectExit(1);
 });
 
-selftest.define("old cli tests (converted)", function () {
+selftest.skip.define("old cli tests (converted)", function () {
   var s = new Sandbox;
   var run;
 

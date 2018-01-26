@@ -416,7 +416,7 @@ selftest.define("compiler plugins - compiler addAsset", () => {
 
 // Test that a package can have a single file that is both source code and an
 // asset
-selftest.define("compiler plugins - addAssets", () => {
+selftest.skip.define("compiler plugins - addAssets", () => {
   const s = new Sandbox({ fakeMongo: true });
 
   s.createApp('myapp', 'compiler-plugin-asset-and-source');

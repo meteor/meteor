@@ -91,13 +91,10 @@ build_machine_environment: &build_machine_environment
     METEOR_SAVE_TMPDIRS: 1
 
     # Skip these tests on every test run.
-    # For readability, this is a regex wrapped across multiple lines in quotes.
-    SELF_TEST_EXCLUDE: "\
-        ^old cli tests|\
-        ^minifiers can't register non-js|\
-        ^minifiers: apps can't use|\
-        ^compiler plugins - addAssets\
-        "
+    # If needed, for readability this should be a regex wrapped across
+    # multiple lines in quotes.
+    SELF_TEST_EXCLUDE: ""
+
     # These will be evaled before each command.
     PRE_TEST_COMMANDS: |-
         ulimit -c unlimited; # Set core dump size as Ubuntu 14.04 lacks prlimit.
