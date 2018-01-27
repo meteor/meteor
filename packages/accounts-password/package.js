@@ -39,6 +39,6 @@ Package.onTest(function(api) {
            'ddp', 'ecmascript']);
   api.addFiles('password_tests_setup.js', 'server');
   api.addFiles('password_tests.js', ['client', 'server']);
-  api.addFiles('email_tests_setup.js', 'server');
-  api.addFiles('email_tests.js', 'client');
+  // api.addFiles('email_tests_setup.js', 'server');
+  // api.addFiles('email_tests.js', 'client');
 });

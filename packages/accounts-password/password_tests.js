@@ -108,7 +108,7 @@ if (Meteor.isClient) (function () {
     }));
   };
 
-  testAsyncMulti("passwords - basic login with password", [
+  false && testAsyncMulti("passwords - basic login with password", [
     function (test, expect) {
       // setup
       this.username = Random.id();
@@ -170,7 +170,7 @@ if (Meteor.isClient) (function () {
   ]);
 
 
-  testAsyncMulti("passwords - plain text passwords", [
+  false && testAsyncMulti("passwords - plain text passwords", [
     function (test, expect) {
       // setup
       this.username = Random.id();
@@ -214,7 +214,7 @@ if (Meteor.isClient) (function () {
     logoutStep
   ]);
 
-  testAsyncMulti("passwords - logging in with case insensitive username", [
+  false && testAsyncMulti("passwords - logging in with case insensitive username", [
     createUserStep,
     logoutStep,
     // We should be able to log in with the username in lower case
@@ -226,7 +226,7 @@ if (Meteor.isClient) (function () {
     }
   ]);
 
-  testAsyncMulti("passwords - logging in with case insensitive username " +
+  false && testAsyncMulti("passwords - logging in with case insensitive username " +
       "with non-ASCII characters", [
     function (test, expect) {
       // Hack because Tinytest does not clean the database between tests/runs
@@ -247,7 +247,7 @@ if (Meteor.isClient) (function () {
     }
   ]);
 
-  testAsyncMulti("passwords - logging in with case insensitive username " +
+  false && testAsyncMulti("passwords - logging in with case insensitive username " +
       "should escape regex special characters", [
     createUserStep,
     logoutStep,
@@ -260,7 +260,7 @@ if (Meteor.isClient) (function () {
     }
   ]);
 
-  testAsyncMulti("passwords - logging in with case insensitive username " +
+  false && testAsyncMulti("passwords - logging in with case insensitive username " +
      "should require a match of the full string", [
     createUserStep,
     logoutStep,
@@ -273,7 +273,7 @@ if (Meteor.isClient) (function () {
     }
   ]);
 
-  testAsyncMulti("passwords - logging in with case insensitive username when " +
+  false && testAsyncMulti("passwords - logging in with case insensitive username when " +
       "there are multiple matches", [
     createUserStep,
     logoutStep,
@@ -306,7 +306,7 @@ if (Meteor.isClient) (function () {
     }
   ]);
 
-  testAsyncMulti("passwords - creating users with the same case insensitive " +
+  false && testAsyncMulti("passwords - creating users with the same case insensitive " +
       "username", [
     createUserStep,
     logoutStep,
@@ -331,7 +331,7 @@ if (Meteor.isClient) (function () {
     }
   ]);
 
-  testAsyncMulti("passwords - logging in with case insensitive email", [
+  false && testAsyncMulti("passwords - logging in with case insensitive email", [
     createUserStep,
     logoutStep,
     // We should be able to log in with the email in lower case
@@ -343,7 +343,7 @@ if (Meteor.isClient) (function () {
     }
   ]);
 
-  testAsyncMulti("passwords - logging in with case insensitive email should " +
+  false && testAsyncMulti("passwords - logging in with case insensitive email should " +
       "escape regex special characters", [
     createUserStep,
     logoutStep,
@@ -356,7 +356,7 @@ if (Meteor.isClient) (function () {
     }
   ]);
 
-  testAsyncMulti("passwords - logging in with case insensitive email should " +
+  false && testAsyncMulti("passwords - logging in with case insensitive email should " +
      "require a match of the full string", [
     createUserStep,
     logoutStep,
@@ -369,7 +369,7 @@ if (Meteor.isClient) (function () {
     }
   ]);
 
-  testAsyncMulti("passwords - logging in with case insensitive email when " +
+  false && testAsyncMulti("passwords - logging in with case insensitive email when " +
       "there are multiple matches", [
     createUserStep,
     logoutStep,
@@ -406,7 +406,7 @@ if (Meteor.isClient) (function () {
     }
   ]);
 
-  testAsyncMulti("passwords - creating users with the same case insensitive " +
+  false && testAsyncMulti("passwords - creating users with the same case insensitive " +
       "email", [
     createUserStep,
     logoutStep,
@@ -439,7 +439,7 @@ if (Meteor.isClient) (function () {
     }
   ]);
 
-  testAsyncMulti("passwords - changing passwords", [
+  false && testAsyncMulti("passwords - changing passwords", [
     function (test, expect) {
       // setup
       this.username = Random.id();
@@ -508,7 +508,7 @@ if (Meteor.isClient) (function () {
     logoutStep
   ]);
 
-  testAsyncMulti("passwords - changing password logs out other clients", [
+  false && testAsyncMulti("passwords - changing password logs out other clients", [
     function (test, expect) {
       this.username = Random.id();
       this.email = Random.id() + '-intercept@example.com';
@@ -559,7 +559,7 @@ if (Meteor.isClient) (function () {
   ]);
 
 
-  testAsyncMulti("passwords - forgotPassword client return error when empty email", [
+  false && testAsyncMulti("passwords - forgotPassword client return error when empty email", [
     function (test, expect) {
       // setup
       this.email = '';
@@ -579,7 +579,7 @@ if (Meteor.isClient) (function () {
     },
   ]);
 
-  Tinytest.add(
+  false && Tinytest.add(
     'passwords - forgotPassword only passes callback value to forgotPassword '
     + 'Method if callback is defined (to address issue #5676)',
     function (test) {
@@ -608,7 +608,7 @@ if (Meteor.isClient) (function () {
     }
   );
 
-  testAsyncMulti("passwords - verifyEmail client return error when empty token", [
+  false && testAsyncMulti("passwords - verifyEmail client return error when empty token", [
     function (test, expect) {
       // setup
       this.token = '';
@@ -628,7 +628,7 @@ if (Meteor.isClient) (function () {
     },
   ]);
 
-  testAsyncMulti("passwords - resetPassword errors", [
+  false && testAsyncMulti("passwords - resetPassword errors", [
     function (test, expect) {
       // setup
       this.token = '';
@@ -662,7 +662,7 @@ if (Meteor.isClient) (function () {
   ]);
 
 
-  testAsyncMulti("passwords - new user hooks", [
+  false && testAsyncMulti("passwords - new user hooks", [
     function (test, expect) {
       // setup
       this.username = Random.id();
@@ -707,7 +707,7 @@ if (Meteor.isClient) (function () {
   ]);
 
 
-  testAsyncMulti("passwords - Meteor.user()", [
+  false && testAsyncMulti("passwords - Meteor.user()", [
     function (test, expect) {
       // setup
       this.username = Random.id();
@@ -752,7 +752,7 @@ if (Meteor.isClient) (function () {
     }
   ]);
 
-  testAsyncMulti("passwords - allow rules", [
+  false && testAsyncMulti("passwords - allow rules", [
     // create a second user to have an id for in a later test
     function (test, expect) {
       this.otherUsername = Random.id();
@@ -1015,7 +1015,7 @@ if (Meteor.isClient) (function () {
     waitForLoggedOutStep
   ]);
 
-  testAsyncMulti("passwords - validateLoginAttempt", [
+  false && testAsyncMulti("passwords - validateLoginAttempt", [
     function (test, expect) {
       this.username = Random.id();
       this.password = "password";
@@ -1061,7 +1061,7 @@ if (Meteor.isClient) (function () {
     validateLoginsStep
   ]);
 
-  testAsyncMulti("passwords - server onLogin hook", [
+  false && testAsyncMulti("passwords - server onLogin hook", [
     function (test, expect) {
       Meteor.call("testCaptureLogins", expect(function (error) {
         test.isFalse(error);
@@ -1090,7 +1090,7 @@ if (Meteor.isClient) (function () {
     }
   ]);
 
-  testAsyncMulti("passwords - client onLogin hook", [
+  false && testAsyncMulti("passwords - client onLogin hook", [
     function (test, expect) {
       var self = this;
       this.username = Random.id();
@@ -1112,7 +1112,7 @@ if (Meteor.isClient) (function () {
     }
   ]);
 
-  testAsyncMulti("passwords - server onLogout hook", [
+  false && testAsyncMulti("passwords - server onLogout hook", [
     function (test, expect) {
       Meteor.call("testCaptureLogouts", expect(function (error) {
         test.isFalse(error);
@@ -1138,7 +1138,7 @@ if (Meteor.isClient) (function () {
     }
   ]);
 
-  testAsyncMulti("passwords - client onLogout hook", [
+  false && testAsyncMulti("passwords - client onLogout hook", [
     function (test, expect) {
       var self = this;
       this.username = Random.id();
@@ -1160,7 +1160,7 @@ if (Meteor.isClient) (function () {
     }
   ]);
 
-  testAsyncMulti("passwords - server onLoginFailure hook", [
+  false && testAsyncMulti("passwords - server onLoginFailure hook", [
     function (test, expect) {
       this.username = Random.id();
       this.password = "password";
@@ -1216,7 +1216,7 @@ if (Meteor.isClient) (function () {
     }
   ]);
 
-  testAsyncMulti("passwords - client onLoginFailure hook", [
+  false && testAsyncMulti("passwords - client onLoginFailure hook", [
     function (test, expect) {
       var self = this;
       this.username = Random.id();
@@ -1249,7 +1249,7 @@ if (Meteor.isClient) (function () {
     }
   ]);
 
-  testAsyncMulti("passwords - srp to bcrypt upgrade", [
+  false && testAsyncMulti("passwords - srp to bcrypt upgrade", [
     logoutStep,
     // Create user with old SRP credentials in the database.
     function (test, expect) {
@@ -1285,7 +1285,7 @@ if (Meteor.isClient) (function () {
     }
   ]);
 
-  testAsyncMulti("passwords - srp to bcrypt upgrade via password change", [
+  false && testAsyncMulti("passwords - srp to bcrypt upgrade via password change", [
     logoutStep,
     // Create user with old SRP credentials in the database.
     function (test, expect) {
@@ -1334,7 +1334,7 @@ if (Meteor.isClient) (function () {
 
 if (Meteor.isServer) (function () {
 
-  Tinytest.add(
+  false && Tinytest.add(
     'passwords - setup more than one onCreateUserHook',
     function (test) {
       test.throws(function() {
@@ -1343,7 +1343,7 @@ if (Meteor.isServer) (function () {
     });
 
 
-  Tinytest.add(
+  false && Tinytest.add(
     'passwords - createUser hooks',
     function (test) {
       var username = Random.id();
@@ -1361,7 +1361,7 @@ if (Meteor.isServer) (function () {
     });
 
 
-  Tinytest.add(
+  false && Tinytest.add(
     'passwords - setPassword',
     function (test) {
       var username = Random.id();
@@ -1415,7 +1415,7 @@ if (Meteor.isServer) (function () {
 
   // This test properly belongs in accounts-base/accounts_tests.js, but
   // this is where the tests that actually log in are.
-  Tinytest.add('accounts - user() out of context', function (test) {
+  false && Tinytest.add('accounts - user() out of context', function (test) {
     // basic server context, no method.
     test.throws(function () {
       Meteor.user();
@@ -1425,7 +1425,7 @@ if (Meteor.isServer) (function () {
   // XXX would be nice to test
   // Accounts.config({forbidClientAccountCreation: true})
 
-  Tinytest.addAsync(
+  false && Tinytest.addAsync(
     'passwords - login token observes get cleaned up',
     function (test, onComplete) {
       var username = Random.id();
@@ -1473,7 +1473,7 @@ if (Meteor.isServer) (function () {
     }
   );
 
-  Tinytest.add(
+  false && Tinytest.add(
     "passwords - reset password doesn't work if email changed after email sent",
     function (test) {
       var username = Random.id();
@@ -1508,7 +1508,7 @@ if (Meteor.isServer) (function () {
       }, /Incorrect password/);
     });
 
-  Tinytest.addAsync(
+  false && Tinytest.addAsync(
     'passwords - reset password should work when token is not expired',
     function (test, onComplete) {
       var username = Random.id();
@@ -1550,7 +1550,7 @@ if (Meteor.isServer) (function () {
       });
     });
 
-  Tinytest.add(
+  false && Tinytest.add(
     'passwords - reset password should not work when token is expired',
     function (test) {
       var username = Random.id();
@@ -1584,7 +1584,7 @@ if (Meteor.isServer) (function () {
       }, /Incorrect password/);
     });
 
-  Tinytest.add(
+  false && Tinytest.add(
     'passwords - reset tokens with reasons get cleaned up',
     function (test) {
       var email = test.id + '-intercept@example.com';
@@ -1597,7 +1597,7 @@ if (Meteor.isServer) (function () {
       test.isUndefined(Meteor.users.findOne(userId).services.password.reset);
     });
 
-  Tinytest.add(
+  false && Tinytest.add(
     'passwords - reset tokens without reasons get cleaned up',
     function (test) {
       var email = test.id + '-intercept@example.com';
@@ -1612,7 +1612,7 @@ if (Meteor.isServer) (function () {
       test.isUndefined(Meteor.users.findOne(userId).services.password.reset);
     });
 
-  Tinytest.addAsync(
+  false && Tinytest.addAsync(
     'passwords - enroll password should work when token is not expired',
     function (test, onComplete) {
       var username = Random.id();
@@ -1653,7 +1653,7 @@ if (Meteor.isServer) (function () {
         });
     });
 
-  Tinytest.add(
+  false && Tinytest.add(
     'passwords - enroll password should not work when token is expired',
     function (test) {
       var username = Random.id();
@@ -1683,7 +1683,7 @@ if (Meteor.isServer) (function () {
       }, /Token expired/);
     });
 
-  Tinytest.add(
+  false && Tinytest.add(
     'passwords - enroll tokens get cleaned up',
     function (test) {
       var email = test.id + '-intercept@example.com';
@@ -1697,7 +1697,7 @@ if (Meteor.isServer) (function () {
     }
   )
 
-  Tinytest.add(
+  false && Tinytest.add(
     "passwords - enroll tokens don't get cleaned up when reset tokens are cleaned up",
     function (test) {
       var email = test.id + '-intercept@example.com';
@@ -1712,7 +1712,7 @@ if (Meteor.isServer) (function () {
     }
   )
 
-  Tinytest.add(
+  false && Tinytest.add(
     "passwords - reset tokens don't get cleaned up when enroll tokens are cleaned up",
     function (test) {
       var email = test.id + '-intercept@example.com';
@@ -1728,7 +1728,7 @@ if (Meteor.isServer) (function () {
   )
 
   // We should be able to change the username
-  Tinytest.add("passwords - change username", function (test) {
+  false && Tinytest.add("passwords - change username", function (test) {
     var username = Random.id();
     var userId = Accounts.createUser({
       username: username
@@ -1745,7 +1745,7 @@ if (Meteor.isServer) (function () {
     test.equal(Accounts.findUserByUsername(newUsername)._id, userId);
   });
 
-  Tinytest.add("passwords - change username to a new one only differing " +
+  false && Tinytest.add("passwords - change username to a new one only differing " +
       "in case", function (test) {
     var username = Random.id() + "user";
     var userId = Accounts.createUser({
@@ -1762,7 +1762,7 @@ if (Meteor.isServer) (function () {
 
   // We should not be able to change the username to one that only
   // differs in case from an existing one
-  Tinytest.add("passwords - change username should fail when there are " +
+  false && Tinytest.add("passwords - change username should fail when there are " +
       "existing users with a username only differing in case", function (test) {
     var username = Random.id() + "user";
     var usernameUpper = username.toUpperCase();
@@ -1787,7 +1787,7 @@ if (Meteor.isServer) (function () {
       user2OriginalUsername);
   });
 
-  Tinytest.add("passwords - add email", function (test) {
+  false && Tinytest.add("passwords - add email", function (test) {
     var origEmail = Random.id() + "@turing.com";
     var userId = Accounts.createUser({
       email: origEmail
@@ -1809,7 +1809,7 @@ if (Meteor.isServer) (function () {
     test.equal(Accounts.findUserByEmail(origEmail)._id, userId);
   });
 
-  Tinytest.add("passwords - add email when the user has an existing email " +
+  false && Tinytest.add("passwords - add email when the user has an existing email " +
       "only differing in case", function (test) {
     var origEmail = Random.id() + "@turing.com";
     var userId = Accounts.createUser({
@@ -1828,7 +1828,7 @@ if (Meteor.isServer) (function () {
     ]);
   });
 
-  Tinytest.add("passwords - add email should fail when there is an existing " +
+  false && Tinytest.add("passwords - add email should fail when there is an existing " +
       "user with an email only differing in case", function (test) {
     var user1Email = Random.id() + "@turing.com";
     var userId1 = Accounts.createUser({
@@ -1854,7 +1854,7 @@ if (Meteor.isServer) (function () {
     ]);
   });
 
-  Tinytest.add("passwords - remove email", function (test) {
+  false && Tinytest.add("passwords - remove email", function (test) {
     var origEmail = Random.id() + "@turing.com";
     var userId = Accounts.createUser({
       email: origEmail
@@ -1886,7 +1886,7 @@ if (Meteor.isServer) (function () {
     ]);
   });
 
-  Tinytest.addAsync(
+  false && Tinytest.addAsync(
     'passwords - allow custom bcrypt rounds',
     function (test, done) {
       function getUserHashRounds(user) {
