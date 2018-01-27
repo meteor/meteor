@@ -1,11 +1,11 @@
 Package.describe({
   summary: "Common code for OAuth-based services",
-  version: "1.2.1"
+  version: "1.2.2",
 });
 
-Package.onUse(function (api) {
+Package.onUse(api => {
   api.use('check');
-  api.use('underscore');
+  api.use('ecmascript');
 
   api.use('routepolicy', 'server');
   api.use('webapp', 'server');
@@ -48,7 +48,7 @@ Package.onUse(function (api) {
 });
 
 
-Package.onTest(function (api) {
+Package.onTest(api => {
   api.use('tinytest');
   api.use('random');
   api.use('service-configuration', 'server');
