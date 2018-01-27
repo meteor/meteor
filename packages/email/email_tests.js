@@ -1,4 +1,5 @@
 var streamBuffers = Npm.require('stream-buffers');
+var nodemailer = Npm.require('node4mailer');
 
 var devWarningBanner = "(Mail not sent; to enable " +
   "sending, set the MAIL_URL environment variable.)\n";
@@ -23,6 +24,32 @@ function canonicalize(string) {
   return string.replace(/Message-ID: <[^<>]*>\r\n/, "Message-ID: <...>\r\n")
                .replace(/Date: (?!dummy).*\r\n/, "Date: ...\r\n")
                .replace(/(boundary="|^--)--[^\s"]+?(-Part|")/mg, "$1--...$2");
+}
+
+function smokeTransport(testFunction) {
+  const returnObject = {
+    envelopeId: 'my id',
+  };
+  process.env.MAIL_URL = 'smtp://my.test.com';
+
+  const originalCreateTransport = nodemailer.createTransport;
+  nodemailer.createTransport = function () {
+    return {
+      sendMail: function(mail, cb) {
+        setTimeout(function () {
+          cb(null, returnObject);
+        }, 50);
+      }
+    };
+  };
+
+  try {
+    testFunction(returnObject);
+  } finally {
+    nodemailer.createTransport = originalCreateTransport;
+    process.env.MAIL_URL = undefined;
+  }
+
 }
 
 Tinytest.add("email - fully customizable", function (test) {
@@ -237,4 +264,19 @@ Tinytest.add("email - text and html", function (test) {
                "----...-Part_1--\r\n" +
                "====== END MAIL #0 ======\n");
   });
+});
+
+Tinytest.add("email - send() returns value", function (test) {
+  smokeTransport(function (returnObject) {
+    // Test return value of Email.send on successful request
+    const res = Email.send({
+      from: "foo@example.com",
+      to: "bar@example.com",
+      subject: "This is the subject",
+      text: "This is the body",
+    });
+
+    test.equal(returnObject, res);
+  });
+
 });

@@ -95,7 +95,7 @@ var devModeSend = function (mail) {
 };
 
 var smtpSend = function (transport, mail) {
-  transport._syncSendMail(mail);
+  return transport._syncSendMail(mail);
 };
 
 /**
@@ -153,7 +153,7 @@ Email.send = function (options) {
 
   var transport = getTransport();
   if (transport) {
-    smtpSend(transport, options);
+    return smtpSend(transport, options);
   } else {
     devModeSend(options);
   }
