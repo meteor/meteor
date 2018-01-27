@@ -151,7 +151,7 @@ export function define(name, tagsList, f) {
   }));
 }
 
-// Prevent specific self-test's from being defined and run.
+// Prevent specific self-test's from being run.
 // e.g. `selftest.skip.define("some test", ...` will skip running "some test".
 const selftestDefine = define;
 export const skip = {
