@@ -1,12 +1,8 @@
 Template.configureLoginServiceDialogForFacebook.helpers({
-  siteUrl: function () {
-    return Meteor.absoluteUrl();
-  }
+  siteUrl: () => Meteor.absoluteUrl(),
 });
 
-Template.configureLoginServiceDialogForFacebook.fields = function () {
-  return [
-    {property: 'appId', label: 'App ID'},
-    {property: 'secret', label: 'App Secret'}
-  ];
-};
+Template.configureLoginServiceDialogForFacebook.fields = () => [
+  {property: 'appId', label: 'App ID'},
+  {property: 'secret', label: 'App Secret'}
+];
