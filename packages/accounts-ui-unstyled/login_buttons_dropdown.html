@@ -137,10 +137,10 @@
 </template>
 
 <template name="_forgotPasswordForm">
-  <div class="login-form">
+  <form class="login-form">
     <div id="forgot-password-email-label-and-input"> {{! XXX we should probably use loginButtonsFormField }}
       <label id="forgot-password-email-label" for="forgot-password-email">Email</label>
-      <input id="forgot-password-email" type="email"/>
+      <input id="forgot-password-email" type="email" autocomplete="email"/>
     </div>
 
     {{> _loginButtonsMessages}}
@@ -150,7 +150,7 @@
     </div>
 
     {{> _loginButtonsBackToLoginLink}}
-  </div>
+  </form>
 </template>
 
 <template name="_loginButtonsBackToLoginLink">
@@ -161,23 +161,31 @@
 
 <template name="_loginButtonsFormField">
   {{#if visible}}
-    <div id="login-{{fieldName}}-label-and-input">
+    <div id="login-{{fieldName}}-label-and-input" style="{{fieldStyle}}">
       <label id="login-{{fieldName}}-label" for="login-{{fieldName}}">
         {{fieldLabel}}
       </label>
-      <input id="login-{{fieldName}}" type="{{inputType}}" />
+      <input
+        id="login-{{fieldName}}"
+        type="{{inputType}}"
+        value="{{fieldValue}}"
+        autocomplete="{{autocomplete}}" 
+      />
     </div>
   {{/if}}
 </template>
 
 <template name="_loginButtonsChangePassword">
-  {{#each fields}}
-    {{> _loginButtonsFormField}}
-  {{/each}}
+  <form class="login-form">
 
-  {{> _loginButtonsMessages}}
+    {{#each fields}}
+      {{> _loginButtonsFormField}}
+    {{/each}}
 
-  <div class="login-button login-button-form-submit" id="login-buttons-do-change-password">
-    Change password
-  </div>
+    {{> _loginButtonsMessages}}
+
+    <div class="login-button login-button-form-submit" id="login-buttons-do-change-password">
+      Change password
+    </div>
+  </form>
 </template>
