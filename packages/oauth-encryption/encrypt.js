@@ -1,11 +1,9 @@
-var crypto = require("crypto");
-var gcmKey = null;
-var OAuthEncryption = exports.OAuthEncryption = {};
-var objToStr = Object.prototype.toString;
+import crypto from 'crypto';
+let gcmKey = null;
+const OAuthEncryption = exports.OAuthEncryption = {};
+const objToStr = Object.prototype.toString;
 
-function isString(value) {
-  return objToStr.call(value) === "[object String]";
-}
+const isString = value => objToStr.call(value) === "[object String]";
 
 // Node leniently ignores non-base64 characters when parsing a base64
 // string, but we want to provide a more informative error message if
@@ -15,9 +13,8 @@ function isString(value) {
 //
 // Exported for the convenience of tests.
 //
-OAuthEncryption._isBase64 = function (str) {
-  return isString(str) && /^[A-Za-z0-9\+\/]*\={0,2}$/.test(str);
-};
+OAuthEncryption._isBase64 = str =>
+  isString(str) && /^[A-Za-z0-9\+\/]*\={0,2}$/.test(str);
 
 
 // Loads the OAuth secret key, which must be 16 bytes in length
@@ -26,7 +23,7 @@ OAuthEncryption._isBase64 = function (str) {
 // The key may be `null` which reverts to having no key (mainly used
 // by tests).
 //
-OAuthEncryption.loadKey = function (key) {
+OAuthEncryption.loadKey = key => {
   if (key === null) {
     gcmKey = null;
     return;
@@ -35,7 +32,7 @@ OAuthEncryption.loadKey = function (key) {
   if (! OAuthEncryption._isBase64(key))
     throw new Error("The OAuth encryption key must be encoded in base64");
 
-  var buf = Buffer.from(key, "base64");
+  const buf = Buffer.from(key, "base64");
 
   if (buf.length !== 16)
     throw new Error("The OAuth encryption AES-128-GCM key must be 16 bytes in length");
@@ -58,22 +55,22 @@ OAuthEncryption.loadKey = function (key) {
 // and it's not clear that we want to incur the compatibility issues of
 // relying on that feature, even though it's now supported by Node 4.
 //
-OAuthEncryption.seal = function (data, userId) {
+OAuthEncryption.seal = (data, userId) => {
   if (! gcmKey) {
     throw new Error("No OAuth encryption key loaded");
   }
 
-  var plaintext = Buffer.from(EJSON.stringify({
-    data: data,
-    userId: userId
+  const plaintext = Buffer.from(EJSON.stringify({
+    data,
+    userId,
   }));
 
-  var iv = crypto.randomBytes(12);
-  var cipher = crypto.createCipheriv("aes-128-gcm", gcmKey, iv);
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv("aes-128-gcm", gcmKey, iv);
   cipher.setAAD(Buffer.from([]));
-  var chunks = [cipher.update(plaintext)];
+  const chunks = [cipher.update(plaintext)];
   chunks.push(cipher.final());
-  var encrypted = Buffer.concat(chunks);
+  const encrypted = Buffer.concat(chunks);
 
   return {
     iv: iv.toString("base64"),
@@ -93,7 +90,7 @@ OAuthEncryption.seal = function (data, userId) {
 // To prevent an attacker from breaking the encryption key by
 // observing the result of sending manipulated ciphertexts, `open`
 // throws "decryption unsuccessful" on any error.
-OAuthEncryption.open = function (ciphertext, userId) {
+OAuthEncryption.open = (ciphertext, userId) => {
   if (! gcmKey)
     throw new Error("No OAuth encryption key loaded");
 
@@ -102,7 +99,7 @@ OAuthEncryption.open = function (ciphertext, userId) {
       throw new Error();
     }
 
-    var decipher = crypto.createDecipheriv(
+    const decipher = crypto.createDecipheriv(
       "aes-128-gcm",
       gcmKey,
       Buffer.from(ciphertext.iv, "base64")
@@ -110,13 +107,13 @@ OAuthEncryption.open = function (ciphertext, userId) {
 
     decipher.setAAD(Buffer.from([]));
     decipher.setAuthTag(Buffer.from(ciphertext.authTag, "base64"));
-    var chunks = [decipher.update(
+    const chunks = [decipher.update(
       Buffer.from(ciphertext.ciphertext, "base64"))];
     chunks.push(decipher.final());
-    var plaintext = Buffer.concat(chunks).toString("utf8");
+    const plaintext = Buffer.concat(chunks).toString("utf8");
 
-    var err;
-    var data;
+    let err;
+    let data;
 
     try {
       data = EJSON.parse(plaintext);
@@ -139,15 +136,12 @@ OAuthEncryption.open = function (ciphertext, userId) {
 };
 
 
-OAuthEncryption.isSealed = function (maybeCipherText) {
-  return maybeCipherText &&
+OAuthEncryption.isSealed = maybeCipherText =>
+  maybeCipherText &&
     OAuthEncryption._isBase64(maybeCipherText.iv) &&
     OAuthEncryption._isBase64(maybeCipherText.ciphertext) &&
     OAuthEncryption._isBase64(maybeCipherText.authTag) &&
     isString(maybeCipherText.algorithm);
-};
 
 
-OAuthEncryption.keyIsLoaded = function () {
-  return !! gcmKey;
-};
+OAuthEncryption.keyIsLoaded = () => !! gcmKey;
