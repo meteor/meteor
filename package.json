@@ -71,7 +71,7 @@
     "readline-sync": "1.4.7",
     "rewire": "3.0.2",
     "rimraf": "2.6.2",
-    "semantic-release": "12.2.4",
+    "semantic-release": "12.4.0",
     "validate-commit-msg": "2.14.0"
   },
   "peerDependencies": {
