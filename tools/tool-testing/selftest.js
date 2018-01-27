@@ -154,8 +154,8 @@ export function define(name, tagsList, f) {
 // Prevent specific self-test's from being defined and run.
 // e.g. `selftest.skip.define("some test", ...` will skip running "some test".
 export const skip = {
-  define() {
-    /* no-op */
+  define(testName) {
+    Console.info(`Ignoring "${testName}" test (excluded by selftest.skip)`);
   }
 };
 
