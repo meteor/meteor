@@ -1,5 +1,10 @@
 ## v.NEXT
 
+* Individual Meteor `self-test`'s can now be skipped by adjusting their
+  `define` call to be prefixed by `skip`. For example,
+  `selftest.skip.define('some test', ...` will skip running "some test".
+  [PR #9579](https://github.com/meteor/meteor/pull/9579)
+
 ## v1.6.1, 2018-01-19
 
 * Node has been updated to version
