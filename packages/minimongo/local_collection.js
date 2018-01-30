@@ -1848,6 +1848,7 @@ const MODIFIERS = {
     // native javascript numbers (doubles) so far, so we can't support $bit
     throw MinimongoError('$bit is not supported', {field});
   },
+  $v() {}
 };
 
 const NO_CREATE_MODIFIERS = {

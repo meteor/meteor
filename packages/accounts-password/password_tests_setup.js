@@ -131,6 +131,7 @@ Meteor.methods({
   },
 
   expireTokens: function () {
+    console.log("expireTokens", this.userId);
     Accounts._expireTokens(new Date(), this.userId);
   },
   removeUser: function (username) {

@@ -1562,6 +1562,10 @@ export class Connection {
     }
 
     self._outstandingMethodBlocks[0].methods.forEach(m => {
+      if (m._message.method === "expireTokens") {
+        console.trace();
+        console.log(m._message);
+      }
       m.sendMessage();
     });
   }

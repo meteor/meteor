@@ -234,6 +234,12 @@ var Session = function (server, version, socket, options) {
   self.initialized = false;
   self.socket = socket;
 
+  const { close } = socket;
+  socket.close = function (...args) {
+    console.trace();
+    return close.apply(this, args);
+  };
+
   // set to null when the session is destroyed. multiple places below
   // use this to determine if the session is alive or not.
   self.inQueue = new Meteor._DoubleEndedQueue();

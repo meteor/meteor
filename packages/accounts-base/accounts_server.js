@@ -937,8 +937,9 @@ Ap._setLoginToken = function (userId, connection, newToken) {
         added: function () {
           foundMatchingUser = true;
         },
-        removed: function () {
+        removed() {
           connection.close();
+
           // The onClose callback for the connection takes care of
           // cleaning up the observe handle and any other state we have
           // lying around.
