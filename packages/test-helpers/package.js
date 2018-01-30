@@ -1,11 +1,11 @@
 Package.describe({
   summary: "Utility functions for tests",
-  version: '1.0.11'
+  version: '1.0.12'
 });
 
 Package.onUse(function (api) {
   api.use(['underscore', 'tracker', 'ejson', 'tinytest', 'random', 'blaze']);
-  api.use(['jquery'], 'client');
+  api.use(['jquery@1.12.1'], 'client');
 
   // XXX for connection.js. Not sure this really belongs in
   // test-helpers. It probably would be better off in livedata. But it's
