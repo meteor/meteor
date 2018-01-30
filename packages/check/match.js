@@ -15,10 +15,9 @@ var hasOwn = Object.prototype.hasOwnProperty;
  * types and structure.
  * @locus Anywhere
  * @param {Any} value The value to check
- * @param {MatchPattern} pattern The pattern to match
- * `value` against
+ * @param {MatchPattern} pattern The pattern to match `value` against
  */
-export const check = function (value, pattern) {
+export function check(value, pattern) {
   // Record that check got called, if somebody cared.
   //
   // We use getOrNullIfOutsideFiber so that it's OK to call check()
