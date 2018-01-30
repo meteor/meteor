@@ -345,10 +345,6 @@
   [Issue #5127](https://github.com/meteor/meteor/issues/5127)
   [PR #9512](https://github.com/meteor/meteor/pull/9512)
 
-* Mongo has been upgraded to version 3.6.2 for 64-bit OS', and 3.2.18 for
-  32-bit OS'.
-  [PR #9533](https://github.com/meteor/meteor/pull/9533)
-
 ## v1.6.0.1, 2017-12-08
 
 * Node has been upgraded to version

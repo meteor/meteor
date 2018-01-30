@@ -32,14 +32,14 @@
       "integrity": "sha1-u5NdSFgsuhaMBoNJV6VKPgcSTxE="
     },
     "mongodb": {
-      "version": "2.2.34",
-      "resolved": "https://registry.npmjs.org/mongodb/-/mongodb-2.2.34.tgz",
-      "integrity": "sha1-o09Zu+thdUrsQy3nLD/iFSakTBo="
+      "version": "2.2.33",
+      "resolved": "https://registry.npmjs.org/mongodb/-/mongodb-2.2.33.tgz",
+      "integrity": "sha1-tTfEcdNKZlG0jzb9vyl1A0Dgi1A="
     },
     "mongodb-core": {
-      "version": "2.1.18",
-      "resolved": "https://registry.npmjs.org/mongodb-core/-/mongodb-core-2.1.18.tgz",
-      "integrity": "sha1-TEYTm986HwMt7ZHbSfOO7AFlkFA="
+      "version": "2.1.17",
+      "resolved": "https://registry.npmjs.org/mongodb-core/-/mongodb-core-2.1.17.tgz",
+      "integrity": "sha1-pBizN6FKFJkPtRC5I97mqBMXPfg="
     },
     "process-nextick-args": {
       "version": "1.0.7",
