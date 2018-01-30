@@ -44,7 +44,7 @@ const Alea = (seeds) => {
   let s1 = 0;
   let s2 = 0;
   let c = 1;
-  if (seeds.length == 0) {
+  if (seeds.length === 0) {
     seeds = [+new Date];
   }
   let mash = Mash();
@@ -69,7 +69,7 @@ const Alea = (seeds) => {
   mash = null;
 
   const random = () => {
-    const t = 2091639 * s0 + c * 2.3283064365386963e-10; // 2^-32
+    const t = (2091639 * s0) + (c * 2.3283064365386963e-10); // 2^-32
     s0 = s1;
     s1 = s2;
     return s2 = t - (c = t | 0);
@@ -77,8 +77,8 @@ const Alea = (seeds) => {
 
   random.uint32 = () => random() * 0x100000000; // 2^32
   random.fract53 = () => random() +
-        (random() * 0x200000 | 0) * 1.1102230246251565e-16; // 2^-53
-  
+        ((random() * 0x200000 | 0) * 1.1102230246251565e-16); // 2^-53
+
   random.version = 'Alea 0.9';
   random.args = seeds;
   return random;
@@ -117,17 +117,19 @@ class RandomGenerator {
    */
   fraction () {
     switch (this.type) {
-      case RandomGenerator.Type.ALEA:
-        return this.alea();
-      case RandomGenerator.Type.NODE_CRYPTO:
-        const numerator = Number.parseInt(this.hexString(8), 16);
-        return numerator * 2.3283064365386963e-10; // 2^-32
-      case RandomGenerator.Type.BROWSER_CRYPTO:
-        const array = new Uint32Array(1);
-        window.crypto.getRandomValues(array);
-        return array[0] * 2.3283064365386963e-10; // 2^-32
-      default:
-        throw new Error(`Unknown random generator type: ${this.type}`);
+    case RandomGenerator.Type.ALEA:
+      return this.alea();
+    case RandomGenerator.Type.NODE_CRYPTO: {
+      const numerator = Number.parseInt(this.hexString(8), 16);
+      return numerator * 2.3283064365386963e-10; // 2^-32
+    }
+    case RandomGenerator.Type.BROWSER_CRYPTO: {
+      const array = new Uint32Array(1);
+      window.crypto.getRandomValues(array);
+      return array[0] * 2.3283064365386963e-10; // 2^-32
+    }
+    default:
+      throw new Error(`Unknown random generator type: ${this.type}`);
     }
   }
 
@@ -209,9 +211,8 @@ class RandomGenerator {
     const index = Math.floor(this.fraction() * arrayOrString.length);
     if (typeof arrayOrString === 'string') {
       return arrayOrString.substr(index, 1);
-    } else {
-      return arrayOrString[index];
-    }  
+    }
+    return arrayOrString[index];
   }
 }
 
@@ -260,24 +261,23 @@ const agent = (typeof navigator !== 'undefined' && navigator.userAgent) || '';
 function createAleaGeneratorWithGeneratedSeed() {
   return new RandomGenerator(
     RandomGenerator.Type.ALEA,
-    { seeds: [new Date, height, width, agent, Math.random()] });
-};
+    { seeds: [new Date, height, width, agent, Math.random()] },
+  );
+}
 
 let Random;
 if (Meteor.isServer) {
   Random = new RandomGenerator(RandomGenerator.Type.NODE_CRYPTO);
+} else if (typeof window !== 'undefined' && window.crypto &&
+  window.crypto.getRandomValues) {
+  Random = new RandomGenerator(RandomGenerator.Type.BROWSER_CRYPTO);
 } else {
-  if (typeof window !== 'undefined' && window.crypto &&
-      window.crypto.getRandomValues) {
-    Random = new RandomGenerator(RandomGenerator.Type.BROWSER_CRYPTO);
-  } else {
-    // On IE 10 and below, there's no browser crypto API
-    // available. Fall back to Alea
-    //
-    // XXX looks like at the moment, we use Alea in IE 11 as well,
-    // which has `window.msCrypto` instead of `window.crypto`.
-    Random = createAleaGeneratorWithGeneratedSeed();
-  }
+  // On IE 10 and below, there's no browser crypto API
+  // available. Fall back to Alea
+  //
+  // XXX looks like at the moment, we use Alea in IE 11 as well,
+  // which has `window.msCrypto` instead of `window.crypto`.
+  Random = createAleaGeneratorWithGeneratedSeed();
 }
 
 // Create a non-cryptographically secure PRNG with a given seed (using
