@@ -31,7 +31,7 @@
   </config-file>
 
   <platform name="ios">
-    <hook type="after_plugin_install" src="../scripts/iosAddBridgingHeader.js" />
+    <hook type="after_plugin_install" src="../cordova-plugin-meteor-webapp/scripts/iosAddBridgingHeader.js" />
 
     <config-file target="config.xml" parent="/*">
       <feature name="WebAppMockRemoteServer">
