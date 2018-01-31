@@ -1,5 +1,10 @@
 ## v.NEXT
 
+* Individual Meteor `self-test`'s can now be skipped by adjusting their
+  `define` call to be prefixed by `skip`. For example,
+  `selftest.skip.define('some test', ...` will skip running "some test".
+  [PR #9579](https://github.com/meteor/meteor/pull/9579)
+
 ## v1.6.1, 2018-01-19
 
 * Node has been updated to version
@@ -339,10 +344,6 @@
   etc.).
   [Issue #5127](https://github.com/meteor/meteor/issues/5127)
   [PR #9512](https://github.com/meteor/meteor/pull/9512)
-
-* Mongo has been upgraded to version 3.6.2 for 64-bit OS', and 3.2.18 for
-  32-bit OS'.
-  [PR #9533](https://github.com/meteor/meteor/pull/9533)
 
 ## v1.6.0.1, 2017-12-08
 

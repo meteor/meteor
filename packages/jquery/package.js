@@ -1,16 +1,15 @@
 Package.describe({
   summary: "Manipulate the DOM using CSS selectors",
-
-  // This is actually jQuery 1.11.2, but because of people bumping the
-  // patch number instead of the wrap number, we're higher than that.
-  // In fairness, there's no way to make an RC of a new version without
-  // bumping the patch number.
-  version: '1.11.10'
+  // This package currently uses jQuery 1.12.1 (due to #9605).
+  version: '1.12.1'
 });
 
 Package.onUse(function (api) {
   api.use('modules');
 
+  // Note that you can `meteor npm install jquery` (any version) into your
+  // application's node_modules directory, and the meteor/jquery package
+  // will use that version instead of 1.12.1.
   api.mainModule('main.js', 'client');
 
   api.export('$', 'client');

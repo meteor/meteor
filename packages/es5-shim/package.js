@@ -6,7 +6,7 @@ Package.describe({
 });
 
 Npm.depends({
-  "es5-shim": "4.5.9"
+  "es5-shim": "4.5.10"
 });
 
 Package.onUse(function(api) {
