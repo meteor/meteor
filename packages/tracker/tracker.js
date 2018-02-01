@@ -26,12 +26,12 @@ Tracker.active = false;
  */
 Tracker.currentComputation = null;
 
-var setCurrentComputation = function (c) {
+function setCurrentComputation(c) {
   Tracker.currentComputation = c;
   Tracker.active = !! c;
-};
+}
 
-var _debugFunc = function () {
+function _debugFunc() {
   // We want this code to work without Meteor, and also without
   // "console" (which is technically non-standard and may be missing
   // on some browser we come across, like it was on IE 7).
@@ -41,9 +41,9 @@ var _debugFunc = function () {
           ((typeof console !== "undefined") && console.error ?
            function () { console.error.apply(console, arguments); } :
            function () {}));
-};
+}
 
-var _maybeSuppressMoreLogs = function (messagesLength) {
+function _maybeSuppressMoreLogs(messagesLength) {
   // Sometimes when running tests, we intentionally suppress logs on expected
   // printed errors. Since the current implementation of _throwOrLog can log
   // multiple separate log messages, suppress all of them if at least one suppress
@@ -53,9 +53,9 @@ var _maybeSuppressMoreLogs = function (messagesLength) {
       Meteor._suppress_log(messagesLength - 1);
     }
   }
-};
+}
 
-var _throwOrLog = function (from, e) {
+function _throwOrLog(from, e) {
   if (throwFirstError) {
     throw e;
   } else {
@@ -75,14 +75,14 @@ var _throwOrLog = function (from, e) {
       _debugFunc()(printArgs[i]);
     }
   }
-};
+}
 
 // Takes a function `f`, and wraps it in a `Meteor._noYieldsAllowed`
 // block if we are running on the server. On the client, returns the
 // original function (since `Meteor._noYieldsAllowed` is a
 // no-op). This has the benefit of not adding an unnecessary stack
 // frame on the client.
-var withNoYieldsAllowed = function (f) {
+function withNoYieldsAllowed(f) {
   if ((typeof Meteor === 'undefined') || Meteor.isClient) {
     return f;
   } else {
@@ -93,7 +93,7 @@ var withNoYieldsAllowed = function (f) {
       });
     };
   }
-};
+}
 
 var nextId = 1;
 // computations whose callbacks we should call at flush time
@@ -116,7 +116,7 @@ var throwFirstError = false;
 
 var afterFlushCallbacks = [];
 
-var requireFlush = function () {
+function requireFlush() {
   if (! willFlush) {
     // We want this code to work without Meteor, see debugFunc above
     if (typeof Meteor !== "undefined")
@@ -125,7 +125,7 @@ var requireFlush = function () {
       setTimeout(Tracker._runFlush, 0);
     willFlush = true;
   }
-};
+}
 
 // Tracker.Computation constructor is visible but private
 // (throws an error if you try to call it)
@@ -143,228 +143,214 @@ var constructingComputation = false;
  * computation.
  * @instancename computation
  */
-Tracker.Computation = function (f, parent, onError) {
-  if (! constructingComputation)
-    throw new Error(
-      "Tracker.Computation constructor is private; use Tracker.autorun");
-  constructingComputation = false;
+Tracker.Computation = class Computation {
+  constructor(f, parent, onError) {
+    if (! constructingComputation)
+      throw new Error(
+        "Tracker.Computation constructor is private; use Tracker.autorun");
+    constructingComputation = false;
 
-  var self = this;
+    // http://docs.meteor.com/#computation_stopped
 
-  // http://docs.meteor.com/#computation_stopped
+    /**
+     * @summary True if this computation has been stopped.
+     * @locus Client
+     * @memberOf Tracker.Computation
+     * @instance
+     * @name  stopped
+     */
+    this.stopped = false;
 
-  /**
-   * @summary True if this computation has been stopped.
-   * @locus Client
-   * @memberOf Tracker.Computation
-   * @instance
-   * @name  stopped
-   */
-  self.stopped = false;
+    // http://docs.meteor.com/#computation_invalidated
 
-  // http://docs.meteor.com/#computation_invalidated
+    /**
+     * @summary True if this computation has been invalidated (and not yet rerun), or if it has been stopped.
+     * @locus Client
+     * @memberOf Tracker.Computation
+     * @instance
+     * @name  invalidated
+     * @type {Boolean}
+     */
+    this.invalidated = false;
 
-  /**
-   * @summary True if this computation has been invalidated (and not yet rerun), or if it has been stopped.
-   * @locus Client
-   * @memberOf Tracker.Computation
-   * @instance
-   * @name  invalidated
-   * @type {Boolean}
-   */
-  self.invalidated = false;
+    // http://docs.meteor.com/#computation_firstrun
 
-  // http://docs.meteor.com/#computation_firstrun
+    /**
+     * @summary True during the initial run of the computation at the time `Tracker.autorun` is called, and false on subsequent reruns and at other times.
+     * @locus Client
+     * @memberOf Tracker.Computation
+     * @instance
+     * @name  firstRun
+     * @type {Boolean}
+     */
+    this.firstRun = true;
 
-  /**
-   * @summary True during the initial run of the computation at the time `Tracker.autorun` is called, and false on subsequent reruns and at other times.
-   * @locus Client
-   * @memberOf Tracker.Computation
-   * @instance
-   * @name  firstRun
-   * @type {Boolean}
-   */
-  self.firstRun = true;
+    this._id = nextId++;
+    this._onInvalidateCallbacks = [];
+    this._onStopCallbacks = [];
+    // the plan is at some point to use the parent relation
+    // to constrain the order that computations are processed
+    this._parent = parent;
+    this._func = f;
+    this._onError = onError;
+    this._recomputing = false;
 
-  self._id = nextId++;
-  self._onInvalidateCallbacks = [];
-  self._onStopCallbacks = [];
-  // the plan is at some point to use the parent relation
-  // to constrain the order that computations are processed
-  self._parent = parent;
-  self._func = f;
-  self._onError = onError;
-  self._recomputing = false;
-
-  var errored = true;
-  try {
-    self._compute();
-    errored = false;
-  } finally {
-    self.firstRun = false;
-    if (errored)
-      self.stop();
-  }
-};
-
-// http://docs.meteor.com/#computation_oninvalidate
-
-/**
- * @summary Registers `callback` to run when this computation is next invalidated, or runs it immediately if the computation is already invalidated.  The callback is run exactly once and not upon future invalidations unless `onInvalidate` is called again after the computation becomes valid again.
- * @locus Client
- * @param {Function} callback Function to be called on invalidation. Receives one argument, the computation that was invalidated.
- */
-Tracker.Computation.prototype.onInvalidate = function (f) {
-  var self = this;
-
-  if (typeof f !== 'function')
-    throw new Error("onInvalidate requires a function");
-
-  if (self.invalidated) {
-    Tracker.nonreactive(function () {
-      withNoYieldsAllowed(f)(self);
-    });
-  } else {
-    self._onInvalidateCallbacks.push(f);
-  }
-};
-
-/**
- * @summary Registers `callback` to run when this computation is stopped, or runs it immediately if the computation is already stopped.  The callback is run after any `onInvalidate` callbacks.
- * @locus Client
- * @param {Function} callback Function to be called on stop. Receives one argument, the computation that was stopped.
- */
-Tracker.Computation.prototype.onStop = function (f) {
-  var self = this;
-
-  if (typeof f !== 'function')
-    throw new Error("onStop requires a function");
-
-  if (self.stopped) {
-    Tracker.nonreactive(function () {
-      withNoYieldsAllowed(f)(self);
-    });
-  } else {
-    self._onStopCallbacks.push(f);
-  }
-};
-
-// http://docs.meteor.com/#computation_invalidate
-
-/**
- * @summary Invalidates this computation so that it will be rerun.
- * @locus Client
- */
-Tracker.Computation.prototype.invalidate = function () {
-  var self = this;
-  if (! self.invalidated) {
-    // if we're currently in _recompute(), don't enqueue
-    // ourselves, since we'll rerun immediately anyway.
-    if (! self._recomputing && ! self.stopped) {
-      requireFlush();
-      pendingComputations.push(this);
+    var errored = true;
+    try {
+      this._compute();
+      errored = false;
+    } finally {
+      this.firstRun = false;
+      if (errored)
+        this.stop();
     }
+  }
 
-    self.invalidated = true;
+  // http://docs.meteor.com/#computation_oninvalidate
 
-    // callbacks can't add callbacks, because
-    // self.invalidated === true.
-    for(var i = 0, f; f = self._onInvalidateCallbacks[i]; i++) {
-      Tracker.nonreactive(function () {
-        withNoYieldsAllowed(f)(self);
+  /**
+   * @summary Registers `callback` to run when this computation is next invalidated, or runs it immediately if the computation is already invalidated.  The callback is run exactly once and not upon future invalidations unless `onInvalidate` is called again after the computation becomes valid again.
+   * @locus Client
+   * @param {Function} callback Function to be called on invalidation. Receives one argument, the computation that was invalidated.
+   */
+  onInvalidate(f) {
+    if (typeof f !== 'function')
+      throw new Error("onInvalidate requires a function");
+
+    if (this.invalidated) {
+      Tracker.nonreactive(() => {
+        withNoYieldsAllowed(f)(this);
       });
+    } else {
+      this._onInvalidateCallbacks.push(f);
     }
-    self._onInvalidateCallbacks = [];
   }
-};
 
-// http://docs.meteor.com/#computation_stop
+  /**
+   * @summary Registers `callback` to run when this computation is stopped, or runs it immediately if the computation is already stopped.  The callback is run after any `onInvalidate` callbacks.
+   * @locus Client
+   * @param {Function} callback Function to be called on stop. Receives one argument, the computation that was stopped.
+   */
+  onStop(f) {
+    if (typeof f !== 'function')
+      throw new Error("onStop requires a function");
 
-/**
- * @summary Prevents this computation from rerunning.
- * @locus Client
- */
-Tracker.Computation.prototype.stop = function () {
-  var self = this;
-
-  if (! self.stopped) {
-    self.stopped = true;
-    self.invalidate();
-    for(var i = 0, f; f = self._onStopCallbacks[i]; i++) {
-      Tracker.nonreactive(function () {
-        withNoYieldsAllowed(f)(self);
+    if (this.stopped) {
+      Tracker.nonreactive(() => {
+        withNoYieldsAllowed(f)(this);
       });
+    } else {
+      this._onStopCallbacks.push(f);
     }
-    self._onStopCallbacks = [];
   }
-};
 
-Tracker.Computation.prototype._compute = function () {
-  var self = this;
-  self.invalidated = false;
+  // http://docs.meteor.com/#computation_invalidate
 
-  var previous = Tracker.currentComputation;
-  setCurrentComputation(self);
-  var previousInCompute = inCompute;
-  inCompute = true;
-  try {
-    withNoYieldsAllowed(self._func)(self);
-  } finally {
-    setCurrentComputation(previous);
-    inCompute = previousInCompute;
+  /**
+   * @summary Invalidates this computation so that it will be rerun.
+   * @locus Client
+   */
+  invalidate() {
+    if (! this.invalidated) {
+      // if we're currently in _recompute(), don't enqueue
+      // ourselves, since we'll rerun immediately anyway.
+      if (! this._recomputing && ! this.stopped) {
+        requireFlush();
+        pendingComputations.push(this);
+      }
+
+      this.invalidated = true;
+
+      // callbacks can't add callbacks, because
+      // this.invalidated === true.
+      for(var i = 0, f; f = this._onInvalidateCallbacks[i]; i++) {
+        Tracker.nonreactive(() => {
+          withNoYieldsAllowed(f)(this);
+        });
+      }
+      this._onInvalidateCallbacks = [];
+    }
   }
-};
 
-Tracker.Computation.prototype._needsRecompute = function () {
-  var self = this;
-  return self.invalidated && ! self.stopped;
-};
+  // http://docs.meteor.com/#computation_stop
 
-Tracker.Computation.prototype._recompute = function () {
-  var self = this;
+  /**
+   * @summary Prevents this computation from rerunning.
+   * @locus Client
+   */
+  stop() {
+    if (! this.stopped) {
+      this.stopped = true;
+      this.invalidate();
+      for(var i = 0, f; f = this._onStopCallbacks[i]; i++) {
+        Tracker.nonreactive(() => {
+          withNoYieldsAllowed(f)(this);
+        });
+      }
+      this._onStopCallbacks = [];
+    }
+  }
 
-  self._recomputing = true;
-  try {
-    if (self._needsRecompute()) {
-      try {
-        self._compute();
-      } catch (e) {
-        if (self._onError) {
-          self._onError(e);
-        } else {
-          _throwOrLog("recompute", e);
+  _compute() {
+    this.invalidated = false;
+
+    var previous = Tracker.currentComputation;
+    setCurrentComputation(this);
+    var previousInCompute = inCompute;
+    inCompute = true;
+    try {
+      withNoYieldsAllowed(this._func)(this);
+    } finally {
+      setCurrentComputation(previous);
+      inCompute = previousInCompute;
+    }
+  }
+
+  _needsRecompute() {
+    return this.invalidated && ! this.stopped;
+  }
+
+  _recompute() {
+    this._recomputing = true;
+    try {
+      if (this._needsRecompute()) {
+        try {
+          this._compute();
+        } catch (e) {
+          if (this._onError) {
+            this._onError(e);
+          } else {
+            _throwOrLog("recompute", e);
+          }
         }
       }
+    } finally {
+      this._recomputing = false;
     }
-  } finally {
-    self._recomputing = false;
   }
-};
 
-/**
- * @summary Process the reactive updates for this computation immediately
- * and ensure that the computation is rerun. The computation is rerun only
- * if it is invalidated.
- * @locus Client
- */
-Tracker.Computation.prototype.flush = function () {
-  var self = this;
+  /**
+   * @summary Process the reactive updates for this computation immediately
+   * and ensure that the computation is rerun. The computation is rerun only
+   * if it is invalidated.
+   * @locus Client
+   */
+  flush() {
+    if (this._recomputing)
+      return;
 
-  if (self._recomputing)
-    return;
+    this._recompute();
+  }
 
-  self._recompute();
-};
-
-/**
- * @summary Causes the function inside this computation to run and
- * synchronously process all reactive updtes.
- * @locus Client
- */
-Tracker.Computation.prototype.run = function () {
-  var self = this;
-  self.invalidate();
-  self.flush();
+  /**
+   * @summary Causes the function inside this computation to run and
+   * synchronously process all reactive updtes.
+   * @locus Client
+   */
+  run() {
+    this.invalidate();
+    this.flush();
+  }
 };
 
 //
@@ -379,70 +365,69 @@ Tracker.Computation.prototype.run = function () {
  * @class
  * @instanceName dependency
  */
-Tracker.Dependency = function () {
-  this._dependentsById = {};
-};
-
-// http://docs.meteor.com/#dependency_depend
-//
-// Adds `computation` to this set if it is not already
-// present.  Returns true if `computation` is a new member of the set.
-// If no argument, defaults to currentComputation, or does nothing
-// if there is no currentComputation.
-
-/**
- * @summary Declares that the current computation (or `fromComputation` if given) depends on `dependency`.  The computation will be invalidated the next time `dependency` changes.
-
-If there is no current computation and `depend()` is called with no arguments, it does nothing and returns false.
-
-Returns true if the computation is a new dependent of `dependency` rather than an existing one.
- * @locus Client
- * @param {Tracker.Computation} [fromComputation] An optional computation declared to depend on `dependency` instead of the current computation.
- * @returns {Boolean}
- */
-Tracker.Dependency.prototype.depend = function (computation) {
-  if (! computation) {
-    if (! Tracker.active)
-      return false;
-
-    computation = Tracker.currentComputation;
+Tracker.Dependency = class Dependency {
+  constructor() {
+    this._dependentsById = Object.create(null);
   }
-  var self = this;
-  var id = computation._id;
-  if (! (id in self._dependentsById)) {
-    self._dependentsById[id] = computation;
-    computation.onInvalidate(function () {
-      delete self._dependentsById[id];
-    });
-    return true;
+
+  // http://docs.meteor.com/#dependency_depend
+  //
+  // Adds `computation` to this set if it is not already
+  // present.  Returns true if `computation` is a new member of the set.
+  // If no argument, defaults to currentComputation, or does nothing
+  // if there is no currentComputation.
+
+  /**
+   * @summary Declares that the current computation (or `fromComputation` if given) depends on `dependency`.  The computation will be invalidated the next time `dependency` changes.
+
+   If there is no current computation and `depend()` is called with no arguments, it does nothing and returns false.
+
+   Returns true if the computation is a new dependent of `dependency` rather than an existing one.
+   * @locus Client
+   * @param {Tracker.Computation} [fromComputation] An optional computation declared to depend on `dependency` instead of the current computation.
+   * @returns {Boolean}
+   */
+  depend(computation) {
+    if (! computation) {
+      if (! Tracker.active)
+        return false;
+
+      computation = Tracker.currentComputation;
+    }
+    var id = computation._id;
+    if (! (id in this._dependentsById)) {
+      this._dependentsById[id] = computation;
+      computation.onInvalidate(() => {
+        delete this._dependentsById[id];
+      });
+      return true;
+    }
+    return false;
   }
-  return false;
-};
 
-// http://docs.meteor.com/#dependency_changed
+  // http://docs.meteor.com/#dependency_changed
 
-/**
- * @summary Invalidate all dependent computations immediately and remove them as dependents.
- * @locus Client
- */
-Tracker.Dependency.prototype.changed = function () {
-  var self = this;
-  for (var id in self._dependentsById)
-    self._dependentsById[id].invalidate();
-};
+  /**
+   * @summary Invalidate all dependent computations immediately and remove them as dependents.
+   * @locus Client
+   */
+  changed() {
+    for (var id in this._dependentsById)
+      this._dependentsById[id].invalidate();
+  }
 
-// http://docs.meteor.com/#dependency_hasdependents
+  // http://docs.meteor.com/#dependency_hasdependents
 
-/**
- * @summary True if this Dependency has one or more dependent Computations, which would be invalidated if this Dependency were to change.
- * @locus Client
- * @returns {Boolean}
- */
-Tracker.Dependency.prototype.hasDependents = function () {
-  var self = this;
-  for(var id in self._dependentsById)
-    return true;
-  return false;
+  /**
+   * @summary True if this Dependency has one or more dependent Computations, which would be invalidated if this Dependency were to change.
+   * @locus Client
+   * @returns {Boolean}
+   */
+  hasDependents() {
+    for (var id in this._dependentsById)
+      return true;
+    return false;
+  }
 };
 
 // http://docs.meteor.com/#tracker_flush

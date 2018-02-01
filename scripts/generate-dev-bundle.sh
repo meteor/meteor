@@ -49,22 +49,11 @@ extractNodeFromTarGz || downloadNodeFromS3 || downloadOfficialNode
 # by default. Will download a 32-bit version of Mongo if using a 32-bit based
 # OS.
 MONGO_VERSION=$MONGO_VERSION_64BIT
-MONGO_SSL="-ssl"
-
-# The MongoDB "Generic" Linux option is not offered with SSL, which is reserved
-# for named distributions.  This works out better since the SSL support adds
-# size to the dev bundle though isn't necessary for local development.
-if [ $UNAME = "Linux" ]; then
-  MONGO_SSL=""
-fi
-
 if [ $ARCH = "i686" ]; then
   MONGO_VERSION=$MONGO_VERSION_32BIT
 fi
-
 MONGO_NAME="mongodb-${OS}-${ARCH}-${MONGO_VERSION}"
-MONGO_NAME_SSL="mongodb-${OS}${MONGO_SSL}-${ARCH}-${MONGO_VERSION}"
-MONGO_TGZ="${MONGO_NAME_SSL}.tgz"
+MONGO_TGZ="${MONGO_NAME}.tgz"
 MONGO_URL="http://fastdl.mongodb.org/${OS}/${MONGO_TGZ}"
 echo "Downloading Mongo from ${MONGO_URL}"
 curl "${MONGO_URL}" | tar zx

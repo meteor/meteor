@@ -36,6 +36,13 @@ require("core-js/es6/string");
 require("core-js/es6/weak-map");
 require("core-js/es6/weak-set");
 
+// If the Reflect global namespace is missing or undefined, explicitly
+// initialize it as undefined, so that expressions like _typeof(Reflect)
+// won't throw in older browsers. Fixes #9598.
+if (typeof Reflect === "undefined") {
+  global.Reflect = void 0;
+}
+
 // ECMAScript 2017 polyfills.
 require("core-js/es7/array");
 require("core-js/es7/object");
