@@ -35,12 +35,13 @@
 //
 // You can allow content type sniffing by calling
 // `BrowserPolicy.content.allowContentTypeSniffing()`.
+import { BrowserPolicy } from 'meteor/browser-policy-common';
 
-var cspSrcs;
-var cachedCsp; // Avoid constructing the header out of cspSrcs when possible.
+let cspSrcs;
+let cachedCsp; // Avoid constructing the header out of cspSrcs when possible.
 
 // CSP keywords have to be single-quoted.
-var keywords = {
+const keywords = {
   unsafeInline: "'unsafe-inline'",
   unsafeEval: "'unsafe-eval'",
   self: "'self'",
@@ -48,46 +49,53 @@ var keywords = {
 };
 
 // If false, we set the X-Content-Type-Options header to 'nosniff'.
-var contentSniffingAllowed = false;
+let contentSniffingAllowed = false;
 
-const BrowserPolicy = require("meteor/browser-policy-common").BrowserPolicy;
 BrowserPolicy.content = {};
 
-var parseCsp = function (csp) {
-  var policies = csp.split("; ");
+const parseCsp = csp => {
+  const policies = csp.split("; ");
   cspSrcs = {};
-  _.each(policies, function (policy) {
-    if (policy[policy.length - 1] === ";")
+  policies.forEach(policy => {
+    if (policy[policy.length - 1] === ";") {
       policy = policy.substring(0, policy.length - 1);
-    var srcs = policy.split(" ");
-    var directive = srcs[0];
-    if (_.indexOf(srcs, keywords.none) !== -1)
+    }
+    const srcs = policy.split(" ");
+    const directive = srcs[0];
+    if (srcs.includes(keywords.none)) {
       cspSrcs[directive] = null;
-    else
+    } else {
       cspSrcs[directive] = srcs.slice(1);
+    }
   });
 
-  if (cspSrcs["default-src"] === undefined)
+  if (cspSrcs["default-src"] === undefined) {
     throw new Error("Content Security Policies used with " +
                     "browser-policy must specify a default-src.");
+  }
 
   // Copy default-src sources to other directives.
-  _.each(cspSrcs, function (sources, directive) {
-    cspSrcs[directive] = _.union(sources || [], cspSrcs["default-src"] || []);
+  Object.keys(cspSrcs).forEach(directive => {
+    const sources = cspSrcs[directive] || [];
+    cspSrcs[directive] = [
+      ...sources,
+      ...(cspSrcs["default-src"] || []).filter(source => !sources.includes(source)),
+    ];
   });
 };
 
-var removeCspSrc = function (directive, src) {
-  cspSrcs[directive] = _.without(cspSrcs[directive] || [], src);
-};
+const removeCspSrc = (directive, src) =>
+  cspSrcs[directive] = 
+    (cspSrcs[directive] || []).filter(source => source !== src);
 
 // Prepare for a change to cspSrcs. Ensure that we have a key in the dictionary
 // and clear any cached CSP.
-var prepareForCspDirective = function (directive) {
+const prepareForCspDirective = directive => {
   cspSrcs = cspSrcs || {};
   cachedCsp = null;
-  if (! _.has(cspSrcs, directive))
-    cspSrcs[directive] = _.clone(cspSrcs["default-src"]);
+  if (! cspSrcs.hasOwnProperty(directive)) {
+    cspSrcs[directive] = [...cspSrcs["default-src"]];
+  }
 };
 
 // Add `src` to the list of allowed sources for `directive`, with the
@@ -99,11 +107,11 @@ var prepareForCspDirective = function (directive) {
 //   and https://<src>
 // - Trim trailing slashes from `src`, since some browsers interpret
 //   "foo.com/" as "foo.com" and some don't.
-var addSourceForDirective = function (directive, src) {
-  if (_.contains(_.values(keywords), src)) {
+const addSourceForDirective = (directive, src) => {
+  if (Object.values(keywords).includes(src)) {
     cspSrcs[directive].push(src);
   } else {
-    var toAdd = [];
+    const toAdd = [];
 
     //Only add single quotes to CSP2 script digests
     if (/^(sha(256|384|512)-)/i.test(src)) {
@@ -116,20 +124,18 @@ var addSourceForDirective = function (directive, src) {
 
       // If there is no protocol, add both http:// and https://.
       if (! /^([a-z0-9.+-]+:)/.test(src)) {
-        toAdd.push("http://" + src);
-        toAdd.push("https://" + src);
+        toAdd.push(`http://${src}`);
+        toAdd.push(`https://${src}`);
       } else {
         toAdd.push(src);
       }
     }
 
-    _.each(toAdd, function (s) {
-      cspSrcs[directive].push(s);
-    });
+    cspSrcs[directive] = [...cspSrcs[directive], ...toAdd];
   }
 };
 
-var setDefaultPolicy = function () {
+const setDefaultPolicy = () => {
   // By default, unsafe inline scripts and styles are allowed, since we expect
   // many apps will use them for analytics, etc. Unsafe eval is disallowed, and
   // the only allowable content source is the same origin or data, except for
@@ -143,41 +149,44 @@ var setDefaultPolicy = function () {
   contentSniffingAllowed = false;
 };
 
-var setWebAppInlineScripts = function (value) {
-  if (! BrowserPolicy._runningTest())
+const setWebAppInlineScripts = value =>
+  ! BrowserPolicy._runningTest() &&
     WebAppInternals.setInlineScriptsAllowed(value);
-};
 
-_.extend(BrowserPolicy.content, {
-  allowContentTypeSniffing: function () {
-    contentSniffingAllowed = true;
-  },
+Object.assign(BrowserPolicy.content, {
+  allowContentTypeSniffing: () =>contentSniffingAllowed = true,
   // Exported for tests and browser-policy-common.
-  _constructCsp: function () {
-    if (! cspSrcs || _.isEmpty(cspSrcs))
+  _constructCsp: () => {
+    if (! cspSrcs || Object.keys(cspSrcs).lenth === 0) {
       return null;
+    }
 
-    if (cachedCsp)
+    if (cachedCsp) {
       return cachedCsp;
+    }
 
-    var header = _.map(cspSrcs, function (srcs, directive) {
-      srcs = srcs || [];
-      if (_.isEmpty(srcs))
+    let header = Object.keys(cspSrcs).map(directive => {
+      srcs = cspSrcs[directive] || [];
+      if (srcs.length === 0) {
         srcs = [keywords.none];
-      var directiveCsp = _.uniq(srcs).join(" ");
-      return directive + " " + directiveCsp + ";";
+      }
+      const directiveCsp = srcs.reduce(
+        (prev, src) => !prev.includes(src) ? [...prev, src] : prev,
+        []
+      ).join(" ");
+      return `${directive} ${directiveCsp};`;
     });
 
     header = header.join(" ");
     cachedCsp = header;
     return header;
   },
-  _reset: function () {
+  _reset: () => {
     cachedCsp = null;
     setDefaultPolicy();
   },
 
-  setPolicy: function (csp) {
+  setPolicy: csp => {
     cachedCsp = null;
     parseCsp(csp);
     setWebAppInlineScripts(
@@ -185,54 +194,50 @@ _.extend(BrowserPolicy.content, {
     );
   },
 
-  _keywordAllowed: function (directive, keyword) {
-    return (cspSrcs[directive] &&
-            _.indexOf(cspSrcs[directive], keyword) !== -1);
-  },
+  _keywordAllowed: (directive, keyword) =>
+    cspSrcs[directive] && cspSrcs[directive].includes(keyword),
 
   // Helpers for creating content security policies
 
-  allowInlineScripts: function () {
+  allowInlineScripts: () => {
     prepareForCspDirective("script-src");
     cspSrcs["script-src"].push(keywords.unsafeInline);
     setWebAppInlineScripts(true);
   },
-  disallowInlineScripts: function () {
+  disallowInlineScripts: () => {
     prepareForCspDirective("script-src");
     removeCspSrc("script-src", keywords.unsafeInline);
     setWebAppInlineScripts(false);
   },
-  allowEval: function () {
+  allowEval: () => {
     prepareForCspDirective("script-src");
     cspSrcs["script-src"].push(keywords.unsafeEval);
   },
-  disallowEval: function () {
+  disallowEval: () => {
     prepareForCspDirective("script-src");
     removeCspSrc("script-src", keywords.unsafeEval);
   },
-  allowInlineStyles: function () {
+  allowInlineStyles: () => {
     prepareForCspDirective("style-src");
     cspSrcs["style-src"].push(keywords.unsafeInline);
   },
-  disallowInlineStyles: function () {
+  disallowInlineStyles: () => {
     prepareForCspDirective("style-src");
     removeCspSrc("style-src", keywords.unsafeInline);
   },
 
   // Functions for setting defaults
-  allowSameOriginForAll: function () {
-    BrowserPolicy.content.allowOriginForAll(keywords.self);
-  },
-  allowDataUrlForAll: function () {
-    BrowserPolicy.content.allowOriginForAll("data:");
-  },
-  allowOriginForAll: function (origin) {
+  allowSameOriginForAll: () =>
+    BrowserPolicy.content.allowOriginForAll(keywords.self),
+  allowDataUrlForAll: () =>
+    BrowserPolicy.content.allowOriginForAll("data:"),
+  allowOriginForAll: origin => {
     prepareForCspDirective("default-src");
-    _.each(_.keys(cspSrcs), function (directive) {
-      addSourceForDirective(directive, origin);
-    });
+    Object.keys(cspSrcs).forEach(
+      directive => addSourceForDirective(directive, origin)
+    );
   },
-  disallowAll: function () {
+  disallowAll: () => {
     cachedCsp = null;
     cspSrcs = {
       "default-src": []
@@ -240,7 +245,7 @@ _.extend(BrowserPolicy.content, {
     setWebAppInlineScripts(false);
   },
 
-  _xContentTypeOptions: function () {
+  _xContentTypeOptions: () => {
     if (! contentSniffingAllowed) {
       return "nosniff";
     }
@@ -249,7 +254,7 @@ _.extend(BrowserPolicy.content, {
 
 // allow<Resource>Origin, allow<Resource>Data, allow<Resource>self, and
 // disallow<Resource> methods for each type of resource.
-var resources = [
+const resources = [
   { methodResource: "Script", directive: "script-src" },
   { methodResource: "Object", directive: "object-src" },
   { methodResource: "Image", directive: "img-src" },
@@ -260,41 +265,40 @@ var resources = [
   { methodResource: "Frame", directive: "frame-src" },
   { methodResource: "FrameAncestors", directive: "frame-ancestors" }
 ];
-_.each(resources,  function (resource) {
-  var directive = resource.directive; 
-  var methodResource = resource.methodResource; 
-  var allowMethodName = "allow" + methodResource + "Origin";
-  var disallowMethodName = "disallow" + methodResource;
-  var allowDataMethodName = "allow" + methodResource + "DataUrl"; 
-  var allowBlobMethodName = "allow" + methodResource + "BlobUrl";
-  var allowSelfMethodName = "allow" + methodResource + "SameOrigin";
+resources.forEach(resource => {
+  const { directive, methodResource } = resource;
+  const allowMethodName = `allow${methodResource}Origin`;
+  const disallowMethodName = `disallow${methodResource}`;
+  const allowDataMethodName = `allow${methodResource}DataUrl`;
+  const allowBlobMethodName = `allow${methodResource}BlobUrl`;
+  const allowSelfMethodName = `allow${methodResource}SameOrigin`;
 
-  var disallow = function () {
+  const disallow = () => {
     cachedCsp = null;
     cspSrcs[directive] = [];
   };
 
-  BrowserPolicy.content[allowMethodName] = function (src) {
+  BrowserPolicy.content[allowMethodName] = src => {
     prepareForCspDirective(directive);
     addSourceForDirective(directive, src);
   };
   if (resource === "script") {
-    BrowserPolicy.content[disallowMethodName] = function () {
+    BrowserPolicy.content[disallowMethodName] = () => {
       disallow();
       setWebAppInlineScripts(false);
     };
   } else {
     BrowserPolicy.content[disallowMethodName] = disallow;
   }
-  BrowserPolicy.content[allowDataMethodName] = function () {
+  BrowserPolicy.content[allowDataMethodName] = () => {
     prepareForCspDirective(directive);
     cspSrcs[directive].push("data:");
   };
-  BrowserPolicy.content[allowBlobMethodName] = function () {
+  BrowserPolicy.content[allowBlobMethodName] = () => {
     prepareForCspDirective(directive);
     cspSrcs[directive].push("blob:");
   };
-  BrowserPolicy.content[allowSelfMethodName] = function () {
+  BrowserPolicy.content[allowSelfMethodName] = () => {
     prepareForCspDirective(directive);
     cspSrcs[directive].push(keywords.self);
   };
@@ -302,4 +306,4 @@ _.each(resources,  function (resource) {
 
 setDefaultPolicy();
 
-exports.BrowserPolicy = BrowserPolicy;
+export { BrowserPolicy };
