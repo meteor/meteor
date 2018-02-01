@@ -1228,11 +1228,15 @@ export default class ImportScanner {
 }
 
 each([
-  "_readFile",
+  "_addPkgJsonToOutput",
   "_findImportedModuleIdentifiers",
   "_getAbsModuleId",
-  "_addPkgJsonToOutput",
+  "_readFile",
+  "_resolve",
   "_resolvePkgJsonBrowserAliases",
+  "_scanFile",
+  "scanImports",
+  "scanMissingModules",
 ], funcName => {
   ImportScanner.prototype[funcName] = Profile(
     `ImportScanner#${funcName}`, ImportScanner.prototype[funcName]);
