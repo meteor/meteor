@@ -219,11 +219,11 @@ Function Add-NodeAndNpm {
 }
 
 Function Add-Mongo {
-  # Mongo 3.4 no longer supports 32-bit (x86) architectures, so we package
-  # the latest 3.2 version of Mongo for those builds and 3.4+ for x64.
+  # Mongo >= 3.4 no longer supports 32-bit (x86) architectures, so we package
+  # the latest 3.2 version of Mongo for those builds and >= 3.4 for x64.
   $mongo_filenames = @{
     windows_x86 = "mongodb-win32-i386-${MONGO_VERSION_32BIT}"
-    windows_x64 = "mongodb-win32-x86_64-2008plus-${MONGO_VERSION_64BIT}"
+    windows_x64 = "mongodb-win32-x86_64-2008plus-ssl-${MONGO_VERSION_64BIT}"
   }
 
   $previousCwd = $PWD
