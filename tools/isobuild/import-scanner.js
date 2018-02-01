@@ -1227,17 +1227,28 @@ export default class ImportScanner {
   }
 }
 
-each([
-  "_addPkgJsonToOutput",
+const ISp = ImportScanner.prototype;
+
+[ "_addPkgJsonToOutput",
   "_findImportedModuleIdentifiers",
   "_getAbsModuleId",
   "_readFile",
   "_resolve",
   "_resolvePkgJsonBrowserAliases",
-  "_scanFile",
+  // We avoid profiling _scanFile here because it doesn't typically have
+  // much "own time," and it gets called recursively, resulting in deeply
+  // nested METEOR_PROFILE output, which often obscures actual problems.
+  // "_scanFile",
+].forEach(name => {
+  ISp[name] = Profile(`ImportScanner#${name}`, ISp[name]);
+});
+
+[ // Include the package name in METEOR_PROFILE output for the following
+  // public methods:
   "scanImports",
   "scanMissingModules",
-], funcName => {
-  ImportScanner.prototype[funcName] = Profile(
-    `ImportScanner#${funcName}`, ImportScanner.prototype[funcName]);
+].forEach(name => {
+  ISp[name] = Profile(function (...args) {
+    return `ImportScanner#${name} for ${this.name || "the app"}`;
+  }, ISp[name]);
 });
