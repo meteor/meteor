@@ -20,6 +20,7 @@ meteorJsMinify = function (source) {
 
     if (typeof uglifyResult.code === "string") {
       result.code = uglifyResult.code;
+      result.minifier = 'uglify-es';
     } else {
       throw uglifyResult.error ||
         new Error("unknown uglify.minify failure");
@@ -33,6 +34,7 @@ meteorJsMinify = function (source) {
       inlineNodeEnv: NODE_ENV
     });
     result.code = Babel.minify(source, options).code;
+    result.minifier = 'babeli';
   }
 
   return result;
