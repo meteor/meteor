@@ -317,9 +317,9 @@
       "integrity": "sha512-SAtyEjmA7KiEoL2eAOAUM6M9arQJGWxJKK0S9x0WyPOosHS420RXoxPhn57u/8orRnK8Kxm0nHQQNTX203cP1Q=="
     },
     "acorn": {
-      "version": "5.3.0",
-      "resolved": "https://registry.npmjs.org/acorn/-/acorn-5.3.0.tgz",
-      "integrity": "sha512-Yej+zOJ1Dm/IMZzzj78OntP/r3zHEaKcyNoU2lAaxPtrseM6rF0xwqoz5Q5ysAiED9hTjI2hgtvLXitlCN1/Ug=="
+      "version": "5.4.1",
+      "resolved": "https://registry.npmjs.org/acorn/-/acorn-5.4.1.tgz",
+      "integrity": "sha512-XLmq3H/BVvW6/GbxKryGxWORz1ebilSsUDlyC27bXhWGWAZWkGwS6FLHjOlwFXNFoWFQEO/Df4u0YYd0K3BQgQ=="
     },
     "ansi-styles": {
       "version": "3.2.0",
@@ -442,24 +442,24 @@
       "integrity": "sha512-GlhOuLOQ28ua9prg0hT33HslCrEmz9xWXy9ZNZSACppCyRxxRW+haYtRgm7uYXCcd0q8ggCWD2pfWEJp5iiZfQ=="
     },
     "babel-plugin-transform-member-expression-literals": {
-      "version": "6.8.5",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-member-expression-literals/-/babel-plugin-transform-member-expression-literals-6.8.5.tgz",
-      "integrity": "sha512-Ux3ligf+ukzWaCbBYOstDuFBhRgMiJHlpJBKV4P47qtzVkd0lg1ddPj9fqIJqAM0n+CvxipyrZrnNnw3CdtQCg=="
+      "version": "6.9.0",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-member-expression-literals/-/babel-plugin-transform-member-expression-literals-6.9.0.tgz",
+      "integrity": "sha512-bxtac+8w755ctVeDs4vU98RhWY49eW1wO02HAN+eirZYSKk/dVrKONIznXbHmxWKxT4UX1rpTKOCyezuzLpbTw=="
     },
     "babel-plugin-transform-merge-sibling-variables": {
-      "version": "6.8.6",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-merge-sibling-variables/-/babel-plugin-transform-merge-sibling-variables-6.8.6.tgz",
-      "integrity": "sha512-o5Jioq553HtEAUN5uty7ELJMenXIxHI3PIs1yLqYWYQwP6mg6IPVAJ+U7i4zr9XGF/kb2RGsdehglGTV+vngqA=="
+      "version": "6.9.0",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-merge-sibling-variables/-/babel-plugin-transform-merge-sibling-variables-6.9.0.tgz",
+      "integrity": "sha512-9G1URVEEKoQLDqe0GwqYudECN7kE/q0OCNo5TiD1iwWnnaKi97xY915l5r2KKUvNflXEm9c3faNWknSXYQ7h6Q=="
     },
     "babel-plugin-transform-minify-booleans": {
-      "version": "6.8.3",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-minify-booleans/-/babel-plugin-transform-minify-booleans-6.8.3.tgz",
-      "integrity": "sha512-bPbUhkeN2Nc0KH0/A19GwQGj8w+CvdJzyu8t59VoEDgsNMQ9Bopzi5DrVkrSsVjbYUaZpzq/DYLrH+wD5K2Tig=="
+      "version": "6.9.0",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-minify-booleans/-/babel-plugin-transform-minify-booleans-6.9.0.tgz",
+      "integrity": "sha512-JtpyTRyF+wF/r7GSxpRbNCrVve5M/aCC8xoGcnFItaPUDqjxKmFYvBzMc9u+g0lgo8NWjuZLc16MYaIwkHKD/A=="
     },
     "babel-plugin-transform-property-literals": {
-      "version": "6.8.5",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-property-literals/-/babel-plugin-transform-property-literals-6.8.5.tgz",
-      "integrity": "sha512-MmiQsQ5AcIaRZMJD0zY5C4H3xuHm06/nWgtOsz7AXV44VEIXIlPiJ39IFYJ4Qx67/fEm8zJAedzR8t+B7d10Bg=="
+      "version": "6.9.0",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-property-literals/-/babel-plugin-transform-property-literals-6.9.0.tgz",
+      "integrity": "sha512-B8s+71+4DPye9+pmZiPGgLPy3YqcmIuvE/9UcZLczPlwL5ALwF6qRUdLC3Fk17NhL6jxp4u33ZVZ8R4kvASPzw=="
     },
     "babel-plugin-transform-regexp-constructors": {
       "version": "0.2.0",
@@ -467,14 +467,14 @@
       "integrity": "sha512-7IsQ6aQx6LAaOqy97/PthTf+5Nx9grZww3r6E62IdWe76Yr8KsuwVjxzqSPQvESJqTE3EMADQ9S0RtwWDGNG9Q=="
     },
     "babel-plugin-transform-remove-console": {
-      "version": "6.8.5",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-remove-console/-/babel-plugin-transform-remove-console-6.8.5.tgz",
-      "integrity": "sha512-uuCKvtweCyIvvC8fi92EcWRtO2Kt5KMNMRK6BhpDXdeb3sxvGM7453RSmgeu4DlKns3OlvY9Ep5Q9m5a7RQAgg=="
+      "version": "6.9.0",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-remove-console/-/babel-plugin-transform-remove-console-6.9.0.tgz",
+      "integrity": "sha512-mck9//yGTwObqqqDzY/sISO88/5/XfIB3ILb4uJLXk2xq124NT4yQVjFSRgVSbLcNq8OyBAn2acxKUqg4W/okQ=="
     },
     "babel-plugin-transform-remove-debugger": {
-      "version": "6.8.5",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-remove-debugger/-/babel-plugin-transform-remove-debugger-6.8.5.tgz",
-      "integrity": "sha512-InDQDdHPOLJKM+G6oXrEesf+P29QFBmcTXID+TAvZziVz+38xe2VO/Bn3FcRcRtnOOycbgsJkUNp9jIK+ist6g=="
+      "version": "6.9.0",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-remove-debugger/-/babel-plugin-transform-remove-debugger-6.9.0.tgz",
+      "integrity": "sha512-i/HWGjsmL2d1N2dl+eIzf44XpSP5v7hi1/GXB0xzom9kjrU8js3T8Kadizn95ZxfHK592Vg8P4JJWP/fvimEWw=="
     },
     "babel-plugin-transform-remove-undefined": {
       "version": "0.2.0",
@@ -482,19 +482,19 @@
       "integrity": "sha512-O8v57tPMHkp89kA4ZfQEYds/pzgvz/QYerBJjIuL5/Jc7RnvMVRA5gJY9zFKP7WayW8WOSBV4vh8Y8FJRio+ow=="
     },
     "babel-plugin-transform-simplify-comparison-operators": {
-      "version": "6.8.5",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-simplify-comparison-operators/-/babel-plugin-transform-simplify-comparison-operators-6.8.5.tgz",
-      "integrity": "sha512-B3HlBZb+Uq86nRj5yNPO6pJ3noEdqHvzYkEYoUWtrsWTv48ZIRatYlumoOiif/v8llF13YjYjx9zhyznDx+N9g=="
+      "version": "6.9.0",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-simplify-comparison-operators/-/babel-plugin-transform-simplify-comparison-operators-6.9.0.tgz",
+      "integrity": "sha512-EJyfYeph0CSekwQuwWVwJqy2go/bETkR95iaWQ/HTUis7tkCGNYmXngaFzuIXdmoPXfvmXYCvAXR4/93hqHVjw=="
     },
     "babel-plugin-transform-undefined-to-void": {
-      "version": "6.8.3",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-undefined-to-void/-/babel-plugin-transform-undefined-to-void-6.8.3.tgz",
-      "integrity": "sha512-goYwp8dMrzHD6x9GjZ2M85Mk2vxf1h85CnUgAjfftUnlJvzF4uj5MrbReHBTbjQ96C8CuRzvhYZ3tv8H3Sc1ZA=="
+      "version": "6.9.0",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-undefined-to-void/-/babel-plugin-transform-undefined-to-void-6.9.0.tgz",
+      "integrity": "sha512-AVDVEmp0S9mbF1O8zekWbsOOmqnR08PZah5NRZJqSvJnFgiL0ep4Lwo4EymH8OieJR2QgQdR3q71TNW+wiVn4g=="
     },
     "babel-preset-meteor": {
-      "version": "7.0.0-beta.38",
-      "resolved": "https://registry.npmjs.org/babel-preset-meteor/-/babel-preset-meteor-7.0.0-beta.38.tgz",
-      "integrity": "sha512-i1F2VIBwrUq2hUxcyA1BukmtAcxhqs84ftQqXbX/YAsS9VQHSEJfjgruxPirJgMGrA8WKa0UYtEAU803795xgQ=="
+      "version": "7.0.0-beta.38-1",
+      "resolved": "https://registry.npmjs.org/babel-preset-meteor/-/babel-preset-meteor-7.0.0-beta.38-1.tgz",
+      "integrity": "sha512-l49ynehN6GF+R/8tSZBwkpoyYtC5cXG+csY1OC2HgRR6/DrgmHX3YGGBGCGsjNGlIADA1WheIjr1OVMhqqQpHg=="
     },
     "babel-preset-minify": {
       "version": "0.2.0",
@@ -597,9 +597,9 @@
       "integrity": "sha1-gTg9ctsFT8zPUzbaqQLxgvbtuyg="
     },
     "globals": {
-      "version": "11.1.0",
-      "resolved": "https://registry.npmjs.org/globals/-/globals-11.1.0.tgz",
-      "integrity": "sha512-uEuWt9mqTlPDwSqi+sHjD4nWU/1N+q0fiWI9T1mZpD2UENqX20CFD5T/ziLZvztPaBKl7ZylUi1q6Qfm7E2CiQ=="
+      "version": "11.3.0",
+      "resolved": "https://registry.npmjs.org/globals/-/globals-11.3.0.tgz",
+      "integrity": "sha512-kkpcKNlmQan9Z5ZmgqKH/SMbSmjxQ7QjyNqfXVc8VJcoBV2UEg+sxQD15GQofGRh2hfpwUb70VC31DR7Rq5Hdw=="
     },
     "has-flag": {
       "version": "2.0.0",
@@ -707,9 +707,9 @@
       "integrity": "sha1-0aitM/qc4OcT1l/dCsi3SNR4yEg="
     },
     "meteor-babel": {
-      "version": "7.0.0-beta.38",
-      "resolved": "https://registry.npmjs.org/meteor-babel/-/meteor-babel-7.0.0-beta.38.tgz",
-      "integrity": "sha512-YMOlAPVQ/er3vaJM389+mwb//7KZyQ+EfgbRCWlX5aWHkJLmnfTyZBw2Zy47oFQ7kw3p5eqYfRuteDHVFOUZ+Q=="
+      "version": "7.0.0-beta.38-2",
+      "resolved": "https://registry.npmjs.org/meteor-babel/-/meteor-babel-7.0.0-beta.38-2.tgz",
+      "integrity": "sha512-XAeczY/vuFvypODDFVZRrctZKBXM5tzFQJKzBiIpBLWH89R11F4E0LqTYgVLvVwnCmYU6Ql4u3mWCs/x0b8R2A=="
     },
     "meteor-babel-helpers": {
       "version": "0.0.3",
