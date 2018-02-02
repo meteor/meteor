@@ -1,4 +1,4 @@
-Accounts._noConnectionCloseDelayForTest = true;
+Accounts._connectionCloseDelayMsForTests = 1000;
 
 if (Meteor.isServer) {
   Accounts.removeDefaultRateLimit();
