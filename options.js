@@ -60,20 +60,13 @@ exports.getDefaults = function getDefaults(features) {
     combined.plugins.push(rt);
   }
 
-  if (features) {
-    if (features.react) {
-      combined.presets.push(require("@babel/preset-react"));
-      combined.plugins.push(
-        require("@babel/plugin-proposal-class-properties")
-      );
-    }
+  maybeAddReactPlugins(features, combined);
 
-    if (features.jscript) {
-      combined.plugins.push(
-        require("./plugins/named-function-expressions.js"),
-        require("./plugins/sanitize-for-in-objects.js")
-      );
-    }
+  if (features && features.jscript) {
+    combined.plugins.push(
+      require("./plugins/named-function-expressions.js"),
+      require("./plugins/sanitize-for-in-objects.js")
+    );
   }
 
   // Even though we use Reify to transpile `import` and `export`
@@ -84,6 +77,17 @@ exports.getDefaults = function getDefaults(features) {
 
   return finish([combined]);
 };
+
+function maybeAddReactPlugins(features, options) {
+  if (features && features.react) {
+    options.presets.push(require("@babel/preset-react"));
+    options.plugins.push(
+      [require("@babel/plugin-proposal-class-properties"), {
+        loose: true
+      }]
+    );
+  }
+}
 
 function getDefaultsForModernBrowsers(features) {
   const combined = {
@@ -100,14 +104,7 @@ function getDefaultsForModernBrowsers(features) {
     combined.plugins.push(rt);
   }
 
-  if (features) {
-    if (features.react) {
-      combined.presets.push(require("@babel/preset-react"));
-      combined.plugins.push(
-        require("@babel/plugin-proposal-class-properties")
-      );
-    }
-  }
+  maybeAddReactPlugins(features, combined);
 
   combined.plugins.push(
     [reifyPlugin, {
@@ -191,9 +188,6 @@ function getDefaultsForNode8(features) {
   // Transform `import(id)` to `module.dynamicImport(id)`.
   plugins.push(require("./plugins/dynamic-import.js"));
 
-  // Enable class property syntax for server-side React code.
-  plugins.push(require("@babel/plugin-proposal-class-properties"));
-
   // Enable async generator functions proposal.
   plugins.push(require("@babel/plugin-proposal-async-generator-functions"));
 
@@ -207,12 +201,7 @@ function getDefaultsForNode8(features) {
     plugins
   }];
 
-  if (features) {
-    if (features.react) {
-      // Enable JSX syntax for server-side React code.
-      presets.push(require("@babel/preset-react"));
-    }
-  }
+  maybeAddReactPlugins(features, { plugins, presets });
 
   return finish(presets);
 }
