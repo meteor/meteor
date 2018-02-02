@@ -7,14 +7,16 @@ const asciiToArray = str => {
     if (c > 0xFF) {
       throw new Error("Not ascii");
     }
+
     arr[i] = c;
   }
+  
   return arr;
 };
 
-const arrayToAscii = arr =>
-  arr.reduce(
-    (prev, charCode) => [...prev, String.fromCharCode(charCode)], []
+const arrayToAscii = arr => arr
+  .reduce(
+    (prev, charCode) => prev.push(String.fromCharCode(charCode)) && prev, []
   ).join('');
 
 Tinytest.add("base64 - testing the test", test => {
