@@ -108,6 +108,7 @@
 
 * Mongo has been upgraded to version 3.6.2 for 64-bit OS', and 3.2.18 for
   32-bit OS'.
+  [PR #9632](https://github.com/meteor/meteor/pull/9632)
 
 ## v1.6.1, 2018-01-19
 
