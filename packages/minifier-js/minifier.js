@@ -34,7 +34,7 @@ meteorJsMinify = function (source) {
       inlineNodeEnv: NODE_ENV
     });
     result.code = Babel.minify(source, options).code;
-    result.minifier = 'babeli';
+    result.minifier = 'babel-minify';
   }
 
   return result;
