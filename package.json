@@ -21,5 +21,15 @@
     "cordova-ios"
   ],
   "author": "Meteor Development Group",
-  "license": "MIT"
+  "license": "MIT",
+  "scripts": {
+    "pretest": "ios-sim start --devicetypeid=iPhone-X",
+    "test": "cordova-paramedic --config ./.paramedic.config.js"
+  },
+  "devDependencies": {
+    "cordova": "^8.0.0",
+    "cordova-paramedic": "github:meteor/cordova-paramedic#d54206a041838d6a9a69319730bda2a14c75718e",
+    "ios-deploy": "^1.9.2",
+    "ios-sim": "^6.1.2"
+  }
 }
