@@ -156,7 +156,7 @@ Tinytest.add('check - check', test => {
   const F = function () {
     this.x = 123;
   };
-  
+
   fails(new F, { x: 123 });
 
   matches({}, Match.ObjectWithValues(Number));
@@ -462,3 +462,19 @@ Meteor.isServer && Tinytest.addAsync('check - non-fiber check works', (test, onC
     report(success);
   });
 });
+
+Tinytest.add(
+  'check - Match methods that return class instances can be called as ' + 
+  'constructors', 
+  test => {
+
+    // Existing code sometimes uses these properties as constructors, so we can't
+    // switch them to arrow functions or method shorthand.
+    test.equal(new Match.Optional(), Match.Optional());
+    test.equal(new Match.Maybe(), Match.Maybe());
+    test.equal(new Match.OneOf([1]), Match.OneOf([1])); // Needs a non-empty array
+    test.equal(new Match.Where(), Match.Where());
+    test.equal(new Match.ObjectIncluding(), Match.ObjectIncluding());
+    test.equal(new Match.ObjectWithValues(), Match.ObjectWithValues());
+  }
+);

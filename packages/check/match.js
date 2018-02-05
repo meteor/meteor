@@ -50,13 +50,30 @@ export const check = (value, pattern) => {
  * @summary The namespace for all Match types and methods.
  */
 export const Match = {
-  Optional: pattern => new Optional(pattern),
-  Maybe: pattern => new Maybe(pattern),
-  OneOf: (...args) => new OneOf(args),
+  Optional: function(pattern) {
+    return new Optional(pattern);
+  },
+
+  Maybe: function(pattern) {
+    return new Maybe(pattern);
+  },
+
+  OneOf: function(...args) {
+    return new OneOf(args);
+  },
+
   Any: ['__any__'],
-  Where: condition => new Where(condition),
-  ObjectIncluding: pattern => new ObjectIncluding(pattern),
-  ObjectWithValues: pattern => new ObjectWithValues(pattern),
+  Where: function(condition) {
+    return new Where(condition);
+  },
+
+  ObjectIncluding: function(pattern) {
+    return new ObjectIncluding(pattern)
+  },
+
+  ObjectWithValues: function(pattern) {
+    return new ObjectWithValues(pattern);
+  },
 
   // Matches only signed 32-bit integers
   Integer: ['__integer__'],
