@@ -43,7 +43,7 @@ export class ReactiveVar {
     this.dep = new Tracker.Dependency;
   }
 
-  _isEqual(oldValue, newValue) {
+  static _isEqual(oldValue, newValue) {
     const a = oldValue;
     const b = newValue;
     // Two values are "equal" here if they are `===` and are
