@@ -330,6 +330,7 @@ export class Connection {
   /**
    * @memberOf Meteor
    * @importFromPackage meteor
+   * @alias Meteor.subscribe
    * @summary Subscribe to a record set.  Returns a handle that provides
    * `stop()` and `ready()` methods.
    * @locus Client
@@ -539,6 +540,7 @@ export class Connection {
   /**
    * @memberOf Meteor
    * @importFromPackage meteor
+   * @alias Meteor.call
    * @summary Invokes a method passing any number of arguments.
    * @locus Anywhere
    * @param {String} name Name of method to invoke
@@ -578,6 +580,7 @@ export class Connection {
   /**
    * @memberOf Meteor
    * @importFromPackage meteor
+   * @alias Meteor.apply
    * @summary Invoke a method passing an array of arguments.
    * @locus Anywhere
    * @param {String} name Name of method to invoke
@@ -888,10 +891,11 @@ export class Connection {
   }
 
   /**
-   * @summary Get the current connection status. A reactive data source.
-   * @locus Client
    * @memberOf Meteor
    * @importFromPackage meteor
+   * @alias Meteor.status
+   * @summary Get the current connection status. A reactive data source.
+   * @locus Client
    */
   status(...args) {
     return this._stream.status(...args);
@@ -901,19 +905,21 @@ export class Connection {
    * @summary Force an immediate reconnection attempt if the client is not connected to the server.
 
   This method does nothing if the client is already connected.
-   * @locus Client
    * @memberOf Meteor
    * @importFromPackage meteor
+   * @alias Meteor.reconnect
+   * @locus Client
    */
   reconnect(...args) {
     return this._stream.reconnect(...args);
   }
 
   /**
-   * @summary Disconnect the client from the server.
-   * @locus Client
    * @memberOf Meteor
    * @importFromPackage meteor
+   * @alias Meteor.disconnect
+   * @summary Disconnect the client from the server.
+   * @locus Client
    */
   disconnect(...args) {
     return this._stream.disconnect(...args);
