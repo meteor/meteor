@@ -12,11 +12,6 @@ dependencies:
   override:
     - npm install
 
-test:
-  override:
-    # maybe we will need tests in the future
-    - echo 'ok!'
-
 deployment:
   s3:
     branch: /^(master|version-.*)/
