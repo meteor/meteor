@@ -102,6 +102,8 @@ Tinytest.add("core-js - String", function (test) {
   test.equal(typeof "asdf".endsWith, "function");
   test.equal(typeof "asdf".repeat, "function");
   test.equal(typeof "asdf".trim, "function");
+  test.equal(typeof "asdf".padStart, "function");
+  test.equal(typeof "asdf".padEnd, "function");
 });
 
 Tinytest.add("core-js - Symbol", function (test) {
