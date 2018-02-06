@@ -9,6 +9,11 @@
   32-bit OS'.
   [PR #9632](https://github.com/meteor/meteor/pull/9632)
 
+* The `@babel/plugin-proposal-class-properties` plugin provided by
+  `meteor-babel` now runs with the `loose:true` option, as required by
+  other (optional) plugins like `@babel/plugin-proposal-decorators`.
+  [Issue #9628](https://github.com/meteor/meteor/issues/9628)
+
 ## v1.6.1, 2018-01-19
 
 * Node has been updated to version
