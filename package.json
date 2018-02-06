@@ -26,6 +26,7 @@
     "hexo-s3-deploy": "^1.2.2"
   },
   "scripts": {
+    "test":"hexo clean; rm data/data.js data/names.json; jsdoc/jsdoc.sh; hexo generate",
     "predeploy": "jsdoc/jsdoc.sh",
     "deploy": "hexo-s3-deploy",
     "prestart": "jsdoc/jsdoc.sh",
