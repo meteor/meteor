@@ -492,8 +492,7 @@ jobs:
           command: |
             cd ${CHECKOUT_METEOR_DOCS}
             npm install
-            npm run predeploy
-            npx hexo generate
+            npm test
 
 workflows:
   version: 2
