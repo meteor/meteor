@@ -20,8 +20,12 @@
     "hexo-server": "^0.2.0"
   },
   "scripts": {
+    "build": "hexo generate",
+    "clean": "hexo clean",
+    "test":"npm run clean; npm run build",
+    "predeploy": "npm run build",
     "deploy": "hexo-s3-deploy",
-    "start": "hexo generate && hexo server"
+    "start": "npm run build && hexo server"
   },
   "devDependencies": {
     "hexo-s3-deploy": "^1.2.2"
