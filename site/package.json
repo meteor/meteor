@@ -17,12 +17,13 @@
     "hexo-renderer-less": "^0.2.0",
     "hexo-renderer-marked": "^0.3.2",
     "hexo-renderer-stylus": "^0.3.0",
-    "hexo-server": "^0.2.0"
+    "hexo-server": "^0.2.0",
+    "hexo-versioned-netlify-redirects": "^1.0.2"
   },
   "scripts": {
     "build": "hexo generate",
     "clean": "hexo clean",
-    "test":"npm run clean; npm run build",
+    "test": "npm run clean; npm run build",
     "predeploy": "npm run build",
     "deploy": "hexo-s3-deploy",
     "start": "npm run build && hexo server"
