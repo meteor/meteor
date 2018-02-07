@@ -18,7 +18,7 @@
     "hexo-renderer-marked": "0.3.2",
     "hexo-renderer-stylus": "0.3.3",
     "hexo-server": "0.3.1",
-    "hexo-versioned-netlify-redirects": "1.0.0",
+    "hexo-versioned-netlify-redirects": "1.0.1",
     "jsdoc": "3.5.5",
     "showdown": "1.8.6",
     "underscore": "1.8.3"
