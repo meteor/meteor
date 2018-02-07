@@ -51,7 +51,10 @@ const CAPABILITIES = ['showDeployMessages', 'canTransferAuthorization'];
 // - method: GET, POST, or DELETE. default GET
 // - operation: "info", "logs", "mongo", "deploy", "authorized-apps",
 //   "version-status"
-// - site: site name, version ID
+// - site: site name. Pass this even if the site isn't part of the URL
+//   so that Galaxy discovery works properly
+// - operand: the part of the URL after the operation. If not set,
+//   defaults to site
 // - expectPayload: an array of key names. if present, then we expect
 //   the server to return JSON content on success and to return an
 //   object with all of these key names.
@@ -96,11 +99,18 @@ function deployRpc(options) {
     Console.info("Talking to Galaxy servers at " + deployURLBase);
   }
 
+  let operand = '';
+  if (options.operand) {
+    operand = `/${options.operand}`;
+  } else if (options.site) {
+    operand = `/${options.site}`;
+  }
+
   // XXX: Reintroduce progress for upload
   try {
     var result = request(Object.assign(options, {
       url: deployURLBase + '/' + options.operation +
-        (options.site ? ('/' + options.site) : ''),
+        operand,
       method: options.method || 'GET',
       bodyStream: options.bodyStream,
       useAuthHeader: true,
@@ -337,13 +347,13 @@ function canonicalizeSite(site) {
 
 // Executes the poll to check for deployment success and outputs proper messages
 // to user about the status of their app during the polling process
-async function pollForDeploymentSuccess(versionId, deployPollTimeout, result) {
+async function pollForDeploymentSuccess(versionId, deployPollTimeout, result, site) {
   // Create a default polling configuration for polling for deploy / build
   // In the future, we may change this to be user-configurable or smart
   // The user can only currently configure the polling timeout via a flag
   const pollingState = new PollingState(deployPollTimeout);
   await sleepForMilliseconds(pollingState.initialWaitTimeMs);
-  const deploymentPollResult = await pollForDeploy(pollingState, versionId);
+  const deploymentPollResult = await pollForDeploy(pollingState, versionId, site);
   if (deploymentPollResult && deploymentPollResult.isActive) {
     return 0;
   }
@@ -384,7 +394,7 @@ class PollingState {
 // messages pertaining to the status of the version, which will then be reported
 // directly to the user. When the poll is complete, it will return an object
 // with information about the final state of the version and the app.
-async function pollForDeploy(pollingState, versionId, galaxyUrl) {
+async function pollForDeploy(pollingState, versionId, site) {
   const {
     deadline,
     initialWaitTimeMs,
@@ -397,7 +407,8 @@ async function pollForDeploy(pollingState, versionId, galaxyUrl) {
   const versionStatusResult = deployRpc({
     method: 'GET',
     operation: 'version-status',
-    site: versionId,
+    site,
+    operand: versionId,
     expectPayload: ['message', 'finishStatus'],
     printDeployURL: false,
   });
@@ -423,7 +434,7 @@ async function pollForDeploy(pollingState, versionId, galaxyUrl) {
       return 1;
     } else if (new Date() < deadline) {
       await sleepForMilliseconds(pollIntervalMs);
-      return await pollForDeploy(pollingState, versionId);
+      return await pollForDeploy(pollingState, versionId, site);
     }
   }
 
@@ -432,7 +443,7 @@ async function pollForDeploy(pollingState, versionId, galaxyUrl) {
   if(new Date() < deadline && !finishStatus.isFinished) {
     // Wait for a set interval and then poll again
     await sleepForMilliseconds(pollIntervalMs);
-    return await pollForDeploy(pollingState, versionId);
+    return await pollForDeploy(pollingState, versionId, site);
   } else if (!finishStatus.isFinished) {
     Console.info(`Polling timed out. To check the status of your app, visit
     ${versionStatusResult.payload.galaxyUrl}. To wait longer, pass a timeout
@@ -581,7 +592,8 @@ export async function bundleAndDeploy(options) {
     return await pollForDeploymentSuccess(
       result.payload.newVersionId,
       options.deployPollingTimeoutMs,
-      result);
+      result,
+      site);
   }
   return 0;
 };
