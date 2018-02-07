@@ -339,7 +339,7 @@ export class NodeModulesDirectory {
     // Options consumed by readDirsFromJSON are listed above. Any other
     // options will be passed on to NodeModulesDirectory constructor via
     // this callerInfo object:
-    ...callerInfo,
+    ...callerInfo
   }) {
     assert.strictEqual(typeof callerInfo.sourceRoot, "string");
 
