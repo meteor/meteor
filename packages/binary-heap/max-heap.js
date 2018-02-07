@@ -36,8 +36,9 @@ export class MaxHeap {
     // If the initial array is passed, we can build the heap in linear time
     // complexity (O(N)) compared to linearithmic time complexity (O(nlogn)) if
     // we push elements one by one.
-    if (Array.isArray(options.initData))
+    if (Array.isArray(options.initData)) {
       this._initFromData(options.initData);
+    }
   }
 
   // Builds a new heap in-place in linear time based on passed data
@@ -65,6 +66,7 @@ export class MaxHeap {
       if (left < this.size()) {
         largest = this._maxIndex(largest, left);
       }
+
       if (right < this.size()) {
         largest = this._maxIndex(largest, right);
       }
@@ -185,6 +187,7 @@ export class MaxHeap {
     if (this.has(id)) {
       return this.get(id);
     }
+
     this.set(id, def);
     return def;
   }
@@ -199,11 +202,13 @@ export class MaxHeap {
   }
 
   _selfCheck() {
-    for (let i = 1; i < this._heap.length; i++)
-      if (this._maxIndex(parentIdx(i), i) !== parentIdx(i))
+    for (let i = 1; i < this._heap.length; i++) {
+      if (this._maxIndex(parentIdx(i), i) !== parentIdx(i)) {
           throw new Error(`An item with id ${this._heap[i].id}` +
                           " has a parent younger than it: " +
                           this._heap[parentIdx(i)].id);
+      }
+    }
   }
 }
 

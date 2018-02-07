@@ -1,3 +1,3 @@
-export { MaxHeap } from './max-heap';
-export { MinHeap } from './min-heap';
+export { MaxHeap } from './max-heap.js';
+export { MinHeap } from './min-heap.js';
 export { MinMaxHeap } from './min-max-heap.js';

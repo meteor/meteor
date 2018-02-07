@@ -1,5 +1,5 @@
-import { MaxHeap } from './max-heap';
-import { MinHeap } from './min-heap';
+import { MaxHeap } from './max-heap.js';
+import { MinHeap } from './min-heap.js';
 
 // This implementation of Min/Max-Heap is just a subclass of Max-Heap
 // with a Min-Heap as an encapsulated property.

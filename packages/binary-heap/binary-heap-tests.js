@@ -1,5 +1,5 @@
-import { MaxHeap } from './max-heap';
-import { MinMaxHeap } from './min-max-heap';
+import { MaxHeap } from './max-heap.js';
+import { MinMaxHeap } from './min-max-heap.js';
 
 // Based on underscore implementation (Fisher-Yates shuffle)
 const shuffle = arr => {
@@ -13,6 +13,7 @@ const shuffle = arr => {
     array[i] = array[j];
     array[j] = temp;
   }
+  
   return array;
 }
 
