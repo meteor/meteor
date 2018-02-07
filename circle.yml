@@ -13,6 +13,11 @@ dependencies:
     - npm install:
         pwd: site
 
+test:
+  override:
+    - npm test:
+        pwd: site
+
 deployment:
   s3:
     branch: /^(master|version-.*|translation-.*)/
