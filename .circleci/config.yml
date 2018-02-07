@@ -173,8 +173,20 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --junit /tmp/results/junit/0.xml \
+              --junit /tmp/results/junit/0-1.xml \
               --with-tag "custom-warehouse"
+          no_output_timeout: 20m
+      - run:
+          name: "Running self-test (0): A-Comm"
+          command: |
+            eval $PRE_TEST_COMMANDS;
+            ./meteor self-test \
+              --retries ${METEOR_SELF_TEST_RETRIES} \
+              --exclude "${SELF_TEST_EXCLUDE}" \
+              --headless \
+              --junit /tmp/results/junit/0-2.xml \
+              --file '^[a-b]|^c[a-n]|^co[a-l]|^comm' \
+              --without-tag "custom-warehouse"
           no_output_timeout: 20m
       - run:
           <<: *run_save_node_bin
@@ -203,7 +215,7 @@ jobs:
           name: "Print environment"
           command: printenv
       - run:
-          name: "Running self-test (1): A-Com"
+          name: "Running self-test (1): Comn-Comz"
           command: |
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
@@ -211,7 +223,7 @@ jobs:
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
               --junit /tmp/results/junit/1.xml \
-              --file '^[a-b]|^c[a-n]|^co[a-l]|^compiler-plugins' \
+              --file '^com[n-z]' \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
       - run:
@@ -241,7 +253,7 @@ jobs:
           name: "Print environment"
           command: printenv
       - run:
-          name: "Running self-test (2): Con-K"
+          name: "Running self-test (2): Con-Coz"
           command: |
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
@@ -249,7 +261,7 @@ jobs:
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
               --junit /tmp/results/junit/2.xml \
-              --file "^co[n-z]|^c[p-z]|^[d-k]" \
+              --file '^co[n-z]' \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
       - run:
@@ -279,7 +291,7 @@ jobs:
           name: "Print environment"
           command: printenv
       - run:
-          name: "Running self-test (3): L-O"
+          name: "Running self-test (3): Cp-He"
           command: |
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
@@ -287,7 +299,7 @@ jobs:
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
               --junit /tmp/results/junit/3.xml \
-              --file '^[l-o]' \
+              --file '^c[p-z]|^[d-g]|^h[a-e]' \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
       - run:
@@ -317,7 +329,7 @@ jobs:
           name: "Print environment"
           command: printenv
       - run:
-          name: "Running self-test (4): P"
+          name: "Running self-test (4): Hf-Hz"
           command:  |
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
@@ -325,7 +337,7 @@ jobs:
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
               --junit /tmp/results/junit/4.xml \
-              --file '^p' \
+              --file '^h[f-z]' \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
       - run:
@@ -355,7 +367,7 @@ jobs:
           name: "Print environment"
           command: printenv
       - run:
-          name: "Running self-test (5): Run"
+          name: "Running self-test (5): I-L"
           command: |
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
@@ -363,7 +375,7 @@ jobs:
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
               --junit /tmp/results/junit/5.xml \
-              --file '^run' \
+              --file '^[i-l]' \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
       - run:
@@ -393,7 +405,7 @@ jobs:
           name: "Print environment"
           command: printenv
       - run:
-          name: "Running self-test (6): R-S"
+          name: "Running self-test (6): Ma-Mod"
           command: |
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
@@ -401,7 +413,7 @@ jobs:
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
               --junit /tmp/results/junit/6.xml \
-              --file '^r(?!un)|^s' \
+              --file '^m[a-n]|^mo[a-d]' \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
       - run:
@@ -431,7 +443,7 @@ jobs:
           name: "Print environment"
           command: printenv
       - run:
-          name: "Running self-test (7): Sp-Z"
+          name: "Running self-test (7): Moe-O"
           command: |
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
@@ -439,7 +451,159 @@ jobs:
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
               --junit /tmp/results/junit/7.xml \
-              --file '^[t-z]|^command-line' \
+              --file '^mo[e-z]|^m[p-z]|^[n-o]' \
+              --without-tag "custom-warehouse"
+          no_output_timeout: 20m
+      - run:
+          <<: *run_save_node_bin
+      - save_cache:
+          key: meteor-cache
+          <<: *meteor_cache_dirs
+      - store_test_results:
+          path: /tmp/results
+      - store_artifacts:
+          path: /tmp/results
+      - store_artifacts:
+          path: /tmp/core_dumps
+      - store_artifacts:
+          path: /tmp/memuse.txt
+
+  Group 8:
+    <<: *build_machine_environment
+    steps:
+      - run:
+          <<: *run_log_mem_use
+      - run:
+          <<: *run_env_change
+      - attach_workspace:
+          at: .
+      - run:
+          name: "Print environment"
+          command: printenv
+      - run:
+          name: "Running self-test (8): P-Re"
+          command: |
+            eval $PRE_TEST_COMMANDS;
+            ./meteor self-test \
+              --retries ${METEOR_SELF_TEST_RETRIES} \
+              --exclude "${SELF_TEST_EXCLUDE}" \
+              --headless \
+              --junit /tmp/results/junit/8.xml \
+              --file '^[p-q]|^r[a-e]' \
+              --without-tag "custom-warehouse"
+          no_output_timeout: 20m
+      - run:
+          <<: *run_save_node_bin
+      - save_cache:
+          key: meteor-cache
+          <<: *meteor_cache_dirs
+      - store_test_results:
+          path: /tmp/results
+      - store_artifacts:
+          path: /tmp/results
+      - store_artifacts:
+          path: /tmp/core_dumps
+      - store_artifacts:
+          path: /tmp/memuse.txt
+
+  Group 9:
+    <<: *build_machine_environment
+    steps:
+      - run:
+          <<: *run_log_mem_use
+      - run:
+          <<: *run_env_change
+      - attach_workspace:
+          at: .
+      - run:
+          name: "Print environment"
+          command: printenv
+      - run:
+          name: "Running self-test (9): Rf-Rz"
+          command: |
+            eval $PRE_TEST_COMMANDS;
+            ./meteor self-test \
+              --retries ${METEOR_SELF_TEST_RETRIES} \
+              --exclude "${SELF_TEST_EXCLUDE}" \
+              --headless \
+              --junit /tmp/results/junit/9.xml \
+              --file '^r[f-z]' \
+              --without-tag "custom-warehouse"
+          no_output_timeout: 20m
+      - run:
+          <<: *run_save_node_bin
+      - save_cache:
+          key: meteor-cache
+          <<: *meteor_cache_dirs
+      - store_test_results:
+          path: /tmp/results
+      - store_artifacts:
+          path: /tmp/results
+      - store_artifacts:
+          path: /tmp/core_dumps
+      - store_artifacts:
+          path: /tmp/memuse.txt
+
+  Group 10:
+    <<: *build_machine_environment
+    steps:
+      - run:
+          <<: *run_log_mem_use
+      - run:
+          <<: *run_env_change
+      - attach_workspace:
+          at: .
+      - run:
+          name: "Print environment"
+          command: printenv
+      - run:
+          name: "Running self-test (10): S"
+          command: |
+            eval $PRE_TEST_COMMANDS;
+            ./meteor self-test \
+              --retries ${METEOR_SELF_TEST_RETRIES} \
+              --exclude "${SELF_TEST_EXCLUDE}" \
+              --headless \
+              --junit /tmp/results/junit/10.xml \
+              --file '^s' \
+              --without-tag "custom-warehouse"
+          no_output_timeout: 20m
+      - run:
+          <<: *run_save_node_bin
+      - save_cache:
+          key: meteor-cache
+          <<: *meteor_cache_dirs
+      - store_test_results:
+          path: /tmp/results
+      - store_artifacts:
+          path: /tmp/results
+      - store_artifacts:
+          path: /tmp/core_dumps
+      - store_artifacts:
+          path: /tmp/memuse.txt
+
+  Group 11:
+    <<: *build_machine_environment
+    steps:
+      - run:
+          <<: *run_log_mem_use
+      - run:
+          <<: *run_env_change
+      - attach_workspace:
+          at: .
+      - run:
+          name: "Print environment"
+          command: printenv
+      - run:
+          name: "Running self-test (11): T-Z"
+          command: |
+            eval $PRE_TEST_COMMANDS;
+            ./meteor self-test \
+              --retries ${METEOR_SELF_TEST_RETRIES} \
+              --exclude "${SELF_TEST_EXCLUDE}" \
+              --headless \
+              --junit /tmp/results/junit/11.xml \
+              --file '^[t-z]' \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
       - run:
@@ -522,5 +686,17 @@ workflows:
           requires:
             - Get Ready
       - Group 7:
+          requires:
+            - Get Ready
+      - Group 8:
+          requires:
+            - Get Ready
+      - Group 9:
+          requires:
+            - Get Ready
+      - Group 10:
+          requires:
+            - Get Ready
+      - Group 11:
           requires:
             - Get Ready
