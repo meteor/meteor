@@ -39,14 +39,14 @@
     "@babel/template": "7.0.0-beta.38",
     "@babel/traverse": "7.0.0-beta.38",
     "@babel/types": "7.0.0-beta.38",
-    "babel-plugin-transform-es2015-modules-reify": "^0.14.0",
+    "babel-plugin-transform-es2015-modules-reify": "^0.14.2",
     "babel-preset-meteor": "7.0.0-beta.38-1",
     "babel-preset-minify": "^0.2.0",
     "babylon": "7.0.0-beta.38",
     "convert-source-map": "1.5.0",
     "lodash": "4.17.4",
     "meteor-babel-helpers": "0.0.3",
-    "reify": "^0.13.7"
+    "reify": "^0.14.1"
   },
   "devDependencies": {
     "fibers": "^1.0.15",
