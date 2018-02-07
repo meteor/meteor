@@ -26,6 +26,8 @@ versions:
   - '1.5'
   - '1.4.4'
   - '1.3.5'
+versioned-netlify-redirects:
+  netlify_site_id: meteor-docs
 sidebar_categories:
   null:
     - index

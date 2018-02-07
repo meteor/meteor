@@ -18,6 +18,7 @@
     "hexo-renderer-marked": "0.3.2",
     "hexo-renderer-stylus": "0.3.3",
     "hexo-server": "0.3.1",
+    "hexo-versioned-netlify-redirects": "^1.0.0",
     "jsdoc": "3.5.5",
     "showdown": "1.8.6",
     "underscore": "1.8.3"
@@ -28,7 +29,7 @@
   "scripts": {
     "build": "jsdoc/jsdoc.sh && hexo generate",
     "clean": "hexo clean; rm data/data.js data/names.json",
-    "test":"npm run clean; npm run build",
+    "test": "npm run clean; npm run build",
     "predeploy": "npm run build",
     "deploy": "hexo-s3-deploy",
     "start": "npm run build && hexo server"
