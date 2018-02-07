@@ -22,6 +22,8 @@ versions:
   - '1.4'
   - '1.3'
   - '1.2'
+versioned-netlify-redirects:
+    netlify_site_id: meteor-guide
 
 # This setting also defines the page order used to generate the Previous/Next links at the bottom of each page
 sidebar_categories:
