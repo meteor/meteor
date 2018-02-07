@@ -140,8 +140,16 @@ var Db = function (dbFile, options) {
   });
 
   // WAL mode copes much better with (multi-process) concurrency
+  // Windows Subsystem for Linux cannot work with WAL mode
+  // https://github.com/meteor/meteor-feature-requests/issues/154
+  // So if any of the filesystems are a windows filesystem (e.g. WSL)
+  // Then we will run with TRUNCATE mode.
   self._retry(function () {
-    self._execute('PRAGMA journal_mode=WAL');
+    if(files.isWindowsLikeFilesystem()) {
+      self._execute('PRAGMA journal_mode=TRUNCATE');
+    } else {
+      self._execute('PRAGMA journal_mode=WAL');
+    }
   });
 };
 
