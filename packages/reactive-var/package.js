@@ -1,12 +1,12 @@
 Package.describe({
-  summary: "Reactive variable",
-  version: '1.0.11'
+  summary: 'Reactive variable',
+  version: '1.0.12'
 });
 
 Package.onUse(function (api) {
   api.export('ReactiveVar');
 
-  api.use('tracker');
+  api.use(['tracker', 'ecmascript']);
 
-  api.addFiles('reactive-var.js');
+  api.mainModule('reactive-var.js');
 });
