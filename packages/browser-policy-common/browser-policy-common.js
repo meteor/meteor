@@ -4,11 +4,18 @@ const BrowserPolicy = {};
 
 let inTest = false;
 
-BrowserPolicy._runningTest = () => inTest;
+Object.assign(BrowserPolicy, {
+  _runningTest() {
+    return inTest;
+  },
 
-BrowserPolicy._setRunningTest = () => inTest = true;
+  _setRunningTest() {
+    inTest = true;
+  },
+})
 
 WebApp.connectHandlers.use((req, res, next) => {
+  
   // Never set headers inside tests because they could break other tests.
   if (BrowserPolicy._runningTest()) {
     return next();
@@ -21,9 +28,11 @@ WebApp.connectHandlers.use((req, res, next) => {
   if (xFrameOptions) {
     res.setHeader("X-Frame-Options", xFrameOptions);
   }
+
   if (csp) {
     res.setHeader("Content-Security-Policy", csp);
   }
+  
   next();
 });
 
@@ -43,6 +52,7 @@ WebApp.rawConnectHandlers.use((req, res, next) => {
   if (contentTypeOptions) {
     res.setHeader("X-Content-Type-Options", contentTypeOptions);
   }
+
   next();
 });
 

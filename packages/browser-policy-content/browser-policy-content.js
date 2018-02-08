@@ -60,6 +60,7 @@ const parseCsp = csp => {
     if (policy[policy.length - 1] === ";") {
       policy = policy.substring(0, policy.length - 1);
     }
+
     const srcs = policy.split(" ");
     const directive = srcs[0];
     if (srcs.includes(keywords.none)) {
@@ -154,9 +155,12 @@ const setWebAppInlineScripts = value =>
     WebAppInternals.setInlineScriptsAllowed(value);
 
 Object.assign(BrowserPolicy.content, {
-  allowContentTypeSniffing: () =>contentSniffingAllowed = true,
+  allowContentTypeSniffing() {
+    contentSniffingAllowed = true
+  },
+
   // Exported for tests and browser-policy-common.
-  _constructCsp: () => {
+  _constructCsp() {
     if (! cspSrcs || Object.keys(cspSrcs).lenth === 0) {
       return null;
     }
@@ -170,6 +174,7 @@ Object.assign(BrowserPolicy.content, {
       if (srcs.length === 0) {
         srcs = [keywords.none];
       }
+
       const directiveCsp = srcs.reduce(
         (prev, src) => !prev.includes(src) ? [...prev, src] : prev,
         []
@@ -181,12 +186,13 @@ Object.assign(BrowserPolicy.content, {
     cachedCsp = header;
     return header;
   },
-  _reset: () => {
+
+  _reset() {
     cachedCsp = null;
     setDefaultPolicy();
   },
 
-  setPolicy: csp => {
+  setPolicy(csp) {
     cachedCsp = null;
     parseCsp(csp);
     setWebAppInlineScripts(
@@ -194,50 +200,61 @@ Object.assign(BrowserPolicy.content, {
     );
   },
 
-  _keywordAllowed: (directive, keyword) =>
-    cspSrcs[directive] && cspSrcs[directive].includes(keyword),
+  _keywordAllowed(directive, keyword) {
+    return cspSrcs[directive] && cspSrcs[directive].includes(keyword);
+  },
 
   // Helpers for creating content security policies
 
-  allowInlineScripts: () => {
+  allowInlineScripts() {
     prepareForCspDirective("script-src");
     cspSrcs["script-src"].push(keywords.unsafeInline);
     setWebAppInlineScripts(true);
   },
-  disallowInlineScripts: () => {
+
+  disallowInlineScripts() {
     prepareForCspDirective("script-src");
     removeCspSrc("script-src", keywords.unsafeInline);
     setWebAppInlineScripts(false);
   },
-  allowEval: () => {
+
+  allowEval() {
     prepareForCspDirective("script-src");
     cspSrcs["script-src"].push(keywords.unsafeEval);
   },
-  disallowEval: () => {
+
+  disallowEval() {
     prepareForCspDirective("script-src");
     removeCspSrc("script-src", keywords.unsafeEval);
   },
-  allowInlineStyles: () => {
+
+  allowInlineStyles() {
     prepareForCspDirective("style-src");
     cspSrcs["style-src"].push(keywords.unsafeInline);
   },
-  disallowInlineStyles: () => {
+
+  disallowInlineStyles() {
     prepareForCspDirective("style-src");
     removeCspSrc("style-src", keywords.unsafeInline);
   },
 
   // Functions for setting defaults
-  allowSameOriginForAll: () =>
-    BrowserPolicy.content.allowOriginForAll(keywords.self),
-  allowDataUrlForAll: () =>
-    BrowserPolicy.content.allowOriginForAll("data:"),
-  allowOriginForAll: origin => {
+  allowSameOriginForAll() {
+    BrowserPolicy.content.allowOriginForAll(keywords.self);
+  },
+
+  allowDataUrlForAll() {
+    BrowserPolicy.content.allowOriginForAll("data:");
+  },
+
+  allowOriginForAll(origin) {
     prepareForCspDirective("default-src");
     Object.keys(cspSrcs).forEach(
       directive => addSourceForDirective(directive, origin)
     );
   },
-  disallowAll: () => {
+
+  disallowAll() {
     cachedCsp = null;
     cspSrcs = {
       "default-src": []
@@ -245,7 +262,7 @@ Object.assign(BrowserPolicy.content, {
     setWebAppInlineScripts(false);
   },
 
-  _xContentTypeOptions: () => {
+  _xContentTypeOptions() {
     if (! contentSniffingAllowed) {
       return "nosniff";
     }
@@ -278,30 +295,42 @@ resources.forEach(resource => {
     cspSrcs[directive] = [];
   };
 
-  BrowserPolicy.content[allowMethodName] = src => {
-    prepareForCspDirective(directive);
-    addSourceForDirective(directive, src);
-  };
+  Object.assign(BrowserPolicy.content, {
+    [allowMethodName](src) {
+      prepareForCspDirective(directive);
+      addSourceForDirective(directive, src);
+    },
+
+    [allowDataMethodName]() {
+      prepareForCspDirective(directive);
+      cspSrcs[directive].push("data:");
+    },
+
+    [allowBlobMethodName]() {
+      prepareForCspDirective(directive);
+      cspSrcs[directive].push("blob:");
+    },
+
+    [allowSelfMethodName]() {
+      prepareForCspDirective(directive);
+      cspSrcs[directive].push(keywords.self);
+    },
+  })
+
   if (resource === "script") {
-    BrowserPolicy.content[disallowMethodName] = () => {
-      disallow();
-      setWebAppInlineScripts(false);
-    };
+    Object.assign(BrowserPolicy.content, {
+      [disallowMethodName]() {
+        disallow();
+        setWebAppInlineScripts(false);
+      },
+    });
   } else {
-    BrowserPolicy.content[disallowMethodName] = disallow;
+    Object.assign(BrowserPolicy.content, {
+      [disallowMethodName]() {
+        disallow();
+      },
+    });
   }
-  BrowserPolicy.content[allowDataMethodName] = () => {
-    prepareForCspDirective(directive);
-    cspSrcs[directive].push("data:");
-  };
-  BrowserPolicy.content[allowBlobMethodName] = () => {
-    prepareForCspDirective(directive);
-    cspSrcs[directive].push("blob:");
-  };
-  BrowserPolicy.content[allowSelfMethodName] = () => {
-    prepareForCspDirective(directive);
-    cspSrcs[directive].push(keywords.self);
-  };
 });
 
 setDefaultPolicy();

@@ -1,4 +1,4 @@
-import { BrowserPolicy } from './browser-policy';
+import { BrowserPolicy } from './browser-policy.js';
 
 BrowserPolicy._setRunningTest();
 
