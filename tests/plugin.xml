@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
   id="cordova-plugin-meteor-webapp-tests"
-  version="1.3.0">
+  version="1.3.1">
   <name>Meteor Webapp Tests</name>
   <author>Meteor Development Group</author>
   <license>MIT</license>
@@ -31,7 +31,7 @@
   </config-file>
 
   <platform name="ios">
-    <hook type="after_plugin_install" src="../scripts/iosAddBridgingHeader.js" />
+    <hook type="after_plugin_install" src="../cordova-plugin-meteor-webapp/scripts/iosAddBridgingHeader.js" />
 
     <config-file target="config.xml" parent="/*">
       <feature name="WebAppMockRemoteServer">
