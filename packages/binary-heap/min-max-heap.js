@@ -19,24 +19,24 @@ export class MinMaxHeap extends MaxHeap {
     this._minHeap = new MinHeap(comparator, options);
   }
 
-  set(id, value) {
-    MaxHeap.prototype.set.apply(this, arguments);
-    this._minHeap.set(id, value);
+  set(...args) {
+    super.set(...args);
+    this._minHeap.set(...args);
   }
 
-  remove(id) {
-    MaxHeap.prototype.remove.apply(this, arguments);
-    this._minHeap.remove(id);
+  remove(...args) {
+    super.remove(...args);
+    this._minHeap.remove(...args);
   }
 
-  clear() {
-    MaxHeap.prototype.clear.apply(this, arguments);
-    this._minHeap.clear();
+  clear(...args) {
+    super.clear(...args);
+    this._minHeap.clear(...args);
   }
 
-  setDefault(id, def) {
-    MaxHeap.prototype.setDefault.apply(this, arguments);
-    return this._minHeap.setDefault(id, def);
+  setDefault(...args) {
+    super.setDefault(...args);
+    return this._minHeap.setDefault(...args);
   }
 
   clone() {

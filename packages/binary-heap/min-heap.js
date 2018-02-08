@@ -10,6 +10,6 @@ export class MinHeap extends MaxHeap {
   }
 
   minElementId() {
-    return MaxHeap.prototype.maxElementId.call(this);
+    return super.maxElementId();
   }
 };

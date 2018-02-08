@@ -10,7 +10,7 @@
 //       mappings internally. Standard IdMap is used by default.
 export class MaxHeap { 
   constructor(comparator, options = {}) {
-    if (toString.call(comparator) !== '[object Function]') {
+    if (typeof comparator !== 'function') {
       throw new Error('Passed comparator is invalid, should be a comparison function');
     }
 

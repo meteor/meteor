@@ -3,19 +3,18 @@ import { MinMaxHeap } from './min-max-heap.js';
 
 // Based on underscore implementation (Fisher-Yates shuffle)
 const shuffle = arr => {
-  const array = [...arr];
   let j = 0;
   let temp = null;
 
-  for (let i = array.length - 1; i > 0; i -= 1) {
+  for (let i = arr.length - 1; i > 0; i -= 1) {
     j = Math.floor(Math.random() * (i + 1));
-    temp = array[i];
-    array[i] = array[j];
-    array[j] = temp;
+    temp = arr[i];
+    arr[i] = arr[j];
+    arr[j] = temp;
   }
-  
-  return array;
-}
+
+  return arr;
+};
 
 // Based on underscore implementation
 const range = (start, stop, step = 1) => {
@@ -67,7 +66,7 @@ Tinytest.add("binary-heap - simple max-heap tests", test => {
 Tinytest.add("binary-heap - big test for max-heap", test => {
   const positiveNumbers = shuffle(range(1, 41));
   const negativeNumbers = shuffle(range(-1, -41, -1));
-  let allNumbers = [...negativeNumbers, ...positiveNumbers];
+  const allNumbers = [...negativeNumbers, ...positiveNumbers];
 
   const heap = new MaxHeap((a, b) => a - b);
   const output = [];
@@ -121,7 +120,7 @@ Tinytest.add("binary-heap - big test for min-max-heap", test => {
   const N = 500;
   const positiveNumbers = shuffle(range(1, N + 1));
   const negativeNumbers = shuffle(range(-1, -N - 1, -1));
-  let allNumbers = [...positiveNumbers, ...negativeNumbers];
+  const allNumbers = [...positiveNumbers, ...negativeNumbers];
 
   const heap = new MinMaxHeap((a, b) => a - b);
   let output = [];
@@ -133,7 +132,7 @@ Tinytest.add("binary-heap - big test for min-max-heap", test => {
     heap._minHeap._selfCheck();
   });
 
-  allNumbers = shuffle(allNumbers);
+  shuffle(allNumbers);
   const secondarySets = [...allNumbers];
 
   allNumbers.forEach(n => {
