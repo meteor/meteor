@@ -465,7 +465,7 @@ Reset the current project to a fresh state. Removes all local data.
 
 
 >>> deploy
-Deploy this project to Meteor.
+Deploy this project to Galaxy, Meteor's hosting service.
 Usage: meteor deploy <site> [--settings settings.json] [--debug] [--delete]
 
 Deploys the project in your current directory to Meteor's servers.
@@ -495,6 +495,11 @@ Options:
                   downgraded to versions that are potentially incompatible with
                   the current versions, if required to satisfy all package version
                   constraints.
+  --deploy-polling-timeout  The number of milliseconds to wait for build/deploy
+                  success or failure after a successful upload of your app's
+                  minified code; defaults to 15 minutes.
+  --no-wait       Exits when Meteor has uploaded the app's code instead of
+                  waiting for the deploy to conclude.
 
 >>> authorized
 View or change authorized users and organizations for a site.
