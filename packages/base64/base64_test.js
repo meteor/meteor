@@ -1,4 +1,4 @@
-import { Base64 } from './base64';
+import { Base64 } from './base64.js';
 
 const asciiToArray = str => {
   const arr = Base64.newBinary(str.length);
