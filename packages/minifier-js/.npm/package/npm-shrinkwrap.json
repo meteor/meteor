@@ -2,9 +2,9 @@
   "lockfileVersion": 1,
   "dependencies": {
     "commander": {
-      "version": "2.12.2",
-      "resolved": "https://registry.npmjs.org/commander/-/commander-2.12.2.tgz",
-      "integrity": "sha512-BFnaq5ZOGcDN7FlrtBT4xxkgIToalIIxwjxLWVJ8bGTpe1LroqMiqQXdA7ygc7CRvaYS+9zfPGFnJqFSayx+AA=="
+      "version": "2.14.1",
+      "resolved": "https://registry.npmjs.org/commander/-/commander-2.14.1.tgz",
+      "integrity": "sha512-+YR16o3rK53SmWHU3rEM3tPAh2rwb1yPcQX5irVn7mb0gXbwuCCrnkbV5+PBfETdfg1vui07nM6PCG1zndcjQw=="
     },
     "source-map": {
       "version": "0.6.1",
@@ -12,9 +12,9 @@
       "integrity": "sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g=="
     },
     "uglify-es": {
-      "version": "3.2.2",
-      "resolved": "https://registry.npmjs.org/uglify-es/-/uglify-es-3.2.2.tgz",
-      "integrity": "sha512-l+s5VLzFwGJfS+fbqaGf/Dfwo1MF13jLOF2ekL0PytzqEqQ6cVppvHf4jquqFok+35USMpKjqkYxy6pQyUcuug=="
+      "version": "3.3.10",
+      "resolved": "https://registry.npmjs.org/uglify-es/-/uglify-es-3.3.10.tgz",
+      "integrity": "sha512-rPzPisCzW68Okj1zNrfa2dR9uEm43SevDmpR6FChoZABFk9dANGnzzBMgHYUXI3609//63fnVkyQ1SQmAMyjww=="
     }
   }
 }
