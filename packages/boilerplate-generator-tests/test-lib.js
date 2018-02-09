@@ -1,6 +1,6 @@
 import streamToString from "stream-to-string";
 
-export async function generateHTMLForArch(arch) {
+export async function generateHTMLForArch(arch, includeHead) {
   // Use a dummy manifest. None of these paths will be read from the filesystem, but css / js should be handled differently
   const manifest = [
     {
@@ -34,6 +34,9 @@ export async function generateHTMLForArch(arch) {
     foo: 'foobar',
     gems: '&"',
   };
+  const head = includeHead
+    ? '<meta name="1" content="">\n<meteor-bundled-css>\n<meta name="2" content="">\n'
+    : '';
 
   // A dummy rewrite hook to test ampersands
   function bundledJsCssUrlRewriteHook(url) {
@@ -48,7 +51,8 @@ export async function generateHTMLForArch(arch) {
       rootUrlPathPrefix,
       bundledJsCssUrlRewriteHook,
       inlineScriptsAllowed,
-      inline
+      inline,
+      head
     },
   });
 

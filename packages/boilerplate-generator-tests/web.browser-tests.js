@@ -5,11 +5,10 @@ import { _ } from 'meteor/underscore';
 Tinytest.addAsync(
   "boilerplate-generator-tests - web.browser - basic output",
   async function (test) {
-    const html = await generateHTMLForArch("web.browser");
+    const html = await generateHTMLForArch("web.browser", false);
 
     // well-formed html
     const formatted = serialize(parse(html));
-    console.log("html =", html);
     test.isTrue(formatted.replace(/\s/g, '') === html.replace(/\s/g, ''));
 
     // include htmlAttributes
@@ -35,6 +34,28 @@ Tinytest.addAsync(
 
     // include runtime config
     test.matches(html, /<script[^<>]*>[^<>]*__meteor_runtime_config__ =.*decodeURIComponent\(config123\)/);
+  }
+);
+
+// https://github.com/meteor/meteor-feature-requests/issues/24
+Tinytest.addAsync(
+  "boilerplate-generator-tests - web.browser - meteor-bundled-css",
+  async function (test) {
+    const html = await generateHTMLForArch("web.browser", true);
+
+    // include CSS
+    test.matches(html, /<link[^<>]*href="[^<>]*bootstrap[^<>]*">/, "include CSS");
+
+    // css in correct location
+    const meta1 = html.indexOf('<meta name="1"');
+    const meta2 = html.indexOf('<meta name="2"');
+    const css = html.search(/<link[^<>]*href="[^<>]*bootstrap[^<>]*">/);
+
+    // CSS is after meta1
+    test.isTrue(meta1 < css, "CSS is NOT after meta1");
+
+    // CSS is before meta2
+    test.isTrue(css < meta2, "CSS is NOT before meta2");
   }
 );
 
