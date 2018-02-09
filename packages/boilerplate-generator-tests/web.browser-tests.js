@@ -9,6 +9,7 @@ Tinytest.addAsync(
 
     // well-formed html
     const formatted = serialize(parse(html));
+    console.log("html =", html);
     test.isTrue(formatted.replace(/\s/g, '') === html.replace(/\s/g, ''));
 
     // include htmlAttributes

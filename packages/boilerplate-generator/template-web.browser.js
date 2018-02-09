@@ -6,7 +6,20 @@ export const headTemplate = ({
   bundledJsCssUrlRewriteHook,
   head,
   dynamicHead,
-}) => [
+}) => {
+	var headSections = head.split('<meteor-bundled-css', 2);
+  if (headSections.length > 1) {
+    headSections[1] = headSections[1].substr(headSections[1].indexOf('>')+1);
+  }
+	var cssBundle = [...(css || []).map(file =>
+    template('  <link rel="stylesheet" type="text/css" class="__meteor-css__" href="<%- href %>">')({
+      href: bundledJsCssUrlRewriteHook(file.url),
+    })
+	)].join('\n');
+
+console.log('headSections =', headSections);
+
+  return [
   '<html' + Object.keys(htmlAttributes || {}).map(
     key => template(' <%= attrName %>="<%- attrValue %>"')({
       attrName: key,
@@ -15,17 +28,14 @@ export const headTemplate = ({
   ).join('') + '>',
   '<head>',
 
-  ...(css || []).map(file =>
-    template('  <link rel="stylesheet" type="text/css" class="__meteor-css__" href="<%- href %>">')({
-      href: bundledJsCssUrlRewriteHook(file.url),
-    })
-  ),
-
-  head,
+  (headSections.length === 1)
+    ? [cssBundle, headSections[0]].join('\n')
+    : [headSections[0], cssBundle, headSections[1]].join('\n'),
   dynamicHead,
   '</head>',
   '<body>',
 ].join('\n');
+};
 
 // Template function for rendering the boilerplate html for browsers
 export const closeTemplate = ({
