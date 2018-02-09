@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Display internal app statistics",
-  version: '0.0.1'
+  version: '1.0.0'
 });
 
 Package.onUse(function (api) {
@@ -12,6 +12,10 @@ Package.onUse(function (api) {
     'underscore',
   ], 'client');
 
+  api.imply('facts-base');
+
   api.addFiles('facts_ui.html', 'client');
   api.mainModule('facts_ui_client.js', 'client');
+
+  api.export('Facts', 'client');
 });

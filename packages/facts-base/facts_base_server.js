@@ -1,8 +1,6 @@
-import { Facts, FACTS_COLLECTION, FACTS_PUBLICATION } from './facts_base_both';
+import { Facts, FACTS_COLLECTION, FACTS_PUBLICATION } from './facts_base_common';
 
-console.log('Facts base server');
-
-// This file is only used server-side, so no need to test Meteor.isServer.
+// This file is only used server-side, so no need to check Meteor.isServer.
 
 // By default, we publish facts to no user if autopublish is off, and to all
 // users if autopublish is on.
