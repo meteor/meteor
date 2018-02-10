@@ -1354,7 +1354,9 @@ main.registerCommand({
     // people to deploy from checkout or do other weird shit. We are not
     // responsible for the consequences.
     'override-architecture-with-local' : { type: Boolean },
-    'allow-incompatible-update': { type: Boolean }
+    'allow-incompatible-update': { type: Boolean },
+    'deploy-polling-timeout': { type: Number },
+    'no-wait': { type: Boolean },
   },
   allowUnrecognizedOptions: true,
   requiresApp: function (options) {
@@ -1415,12 +1417,21 @@ main.registerCommand({
     serverArch: buildArch
   };
 
+  let deployPollingTimeoutMs = null;
+  if (options['deploy-polling-timeout']) {
+    deployPollingTimeoutMs = options['deploy-polling-timeout'];
+  }
+
+  const waitForDeploy = !options['no-wait'];
+
   var deployResult = deploy.bundleAndDeploy({
     projectContext: projectContext,
     site: site,
     settingsFile: options.settings,
     buildOptions: buildOptions,
-    rawOptions
+    rawOptions,
+    deployPollingTimeoutMs,
+    waitForDeploy,
   });
 
   if (deployResult === 0) {

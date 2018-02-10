@@ -432,9 +432,9 @@
       "integrity": "sha512-NiOvvA9Pq6bki6nP4BayXwT5GZadw7DJFDDzHmkpnOQpENWe8RtHtKZM44MG1R6EQ5XxgbLdsdhswIzTkFlO5g=="
     },
     "babel-plugin-transform-es2015-modules-reify": {
-      "version": "0.14.1",
-      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-modules-reify/-/babel-plugin-transform-es2015-modules-reify-0.14.1.tgz",
-      "integrity": "sha512-8/htPOUinU51fEzefHQhEInkj5zHTjkkO/K/Zl+L1eeaaN4ejAqCT/EwNl1O0a/cnqHFNIscMB51YNoFVOrE9g=="
+      "version": "0.14.2",
+      "resolved": "https://registry.npmjs.org/babel-plugin-transform-es2015-modules-reify/-/babel-plugin-transform-es2015-modules-reify-0.14.2.tgz",
+      "integrity": "sha512-EPMKQetvssxoe47ilW7YfT3fIvIkpPZaasyk4teuH/SNYCg8/QAtA9i7r/zPu8pQG0nQ7+dUM6M5J4MJ9NEcaw=="
     },
     "babel-plugin-transform-inline-consecutive-adds": {
       "version": "0.2.0",
@@ -707,9 +707,9 @@
       "integrity": "sha1-0aitM/qc4OcT1l/dCsi3SNR4yEg="
     },
     "meteor-babel": {
-      "version": "7.0.0-beta.38-2",
-      "resolved": "https://registry.npmjs.org/meteor-babel/-/meteor-babel-7.0.0-beta.38-2.tgz",
-      "integrity": "sha512-XAeczY/vuFvypODDFVZRrctZKBXM5tzFQJKzBiIpBLWH89R11F4E0LqTYgVLvVwnCmYU6Ql4u3mWCs/x0b8R2A=="
+      "version": "7.0.0-beta.38-3",
+      "resolved": "https://registry.npmjs.org/meteor-babel/-/meteor-babel-7.0.0-beta.38-3.tgz",
+      "integrity": "sha512-nK/IUhwRZUs56eDbGfzg32JQEkwMeYoKXp+KIBrMew+Dfsyt9Mu4DLAkN0qAaRrMF53YqUpwQNaMt1MUZ8+aFg=="
     },
     "meteor-babel-helpers": {
       "version": "0.0.3",
@@ -838,9 +838,9 @@
       }
     },
     "reify": {
-      "version": "0.13.7",
-      "resolved": "https://registry.npmjs.org/reify/-/reify-0.13.7.tgz",
-      "integrity": "sha512-jA6C/TdOf0g1A9WlQL7enh8yfGXgCmU3qbOpgc98vzRNEgu4TrAnSGec+uLxHdci96lftdBow3q0X3pbXnzmGQ=="
+      "version": "0.14.1",
+      "resolved": "https://registry.npmjs.org/reify/-/reify-0.14.1.tgz",
+      "integrity": "sha512-HAKYzqlCCWsfAcOTm8gsJZ6FE5I06kvjzHRQTCDD6xqUJaY8Mh4ve9oiCDe8yiYXOqZqpt03gn8yS4+bokRmhQ=="
     },
     "remove-trailing-separator": {
       "version": "1.1.0",

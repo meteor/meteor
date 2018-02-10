@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-BUNDLE_VERSION=8.9.21
+BUNDLE_VERSION=8.9.22
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.

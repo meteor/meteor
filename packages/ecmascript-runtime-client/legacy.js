@@ -46,6 +46,8 @@ if (typeof Reflect === "undefined") {
 // ECMAScript 2017 polyfills.
 require("core-js/es7/array");
 require("core-js/es7/object");
+require("core-js/modules/es7.string.pad-start");
+require("core-js/modules/es7.string.pad-end");
 
 // We want everything from the core-js/es6/number module except
 // es6.number.constructor.

@@ -1,5 +1,11 @@
 ## v.NEXT
 
+* The `reify` npm package has been updated to version 0.14.1.
+
+* The `optimism` npm package has been updated to version 0.4.0.
+
+* The `minifier-js` package has been updated to use `uglify-es` 3.3.10.
+
 * Individual Meteor `self-test`'s can now be skipped by adjusting their
   `define` call to be prefixed by `skip`. For example,
   `selftest.skip.define('some test', ...` will skip running "some test".

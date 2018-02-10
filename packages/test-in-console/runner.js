@@ -3,8 +3,9 @@ var system = require("system");
 var platform = system.args[1] || "local";
 var platformUrl = system.env.URL + platform;
 var testUrls = [
+  // Additional application URLs can be added here to re-run tests in
+  // PhantomJS with different query parameter-based configurations.
   platformUrl,
-  platformUrl + "?force_sockjs=1",
 ];
 
 function runNextUrl() {

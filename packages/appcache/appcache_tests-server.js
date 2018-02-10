@@ -8,9 +8,7 @@
 // real hook. We point to a non-existent file to clear the appcache in
 // case there was previously a site running with appcache on
 // localhost:3000.
-WebApp.addHtmlAttributeHook(function (request) {
-  return { manifest: "/no-such-file" };
-});
+WebApp.addHtmlAttributeHook(request => ({ manifest: "/no-such-file" }));
 
 
 // Let's add some resources in the 'NETWORK' section

@@ -48,7 +48,7 @@ function spawnMongod(mongodPath, port, dbPath, replSetName) {
   const args = [
     // nb: cli-test.sh and findMongoPids make strong assumptions about the
     // order of the arguments! Check them before changing any arguments.
-    '--bind_ip', '127.0.0.1',
+    '--bind_ip', (process.env.METEOR_MONGO_BIND_IP || '127.0.0.1'),
     '--port', port,
     '--dbpath', dbPath,
     // Use an 8MB oplog rather than 256MB. Uses less space on disk and
