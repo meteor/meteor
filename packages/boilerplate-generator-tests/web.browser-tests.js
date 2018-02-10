@@ -47,8 +47,8 @@ Tinytest.addAsync(
     test.matches(html, /<link[^<>]*href="[^<>]*bootstrap[^<>]*">/, "include CSS");
 
     // css in correct location
-    const meta1 = html.indexOf('<meta name="1"');
-    const meta2 = html.indexOf('<meta name="2"');
+    const meta1 = html.search(/<meta name="1"[^<>]*>/);
+    const meta2 = html.search(/<meta name="2"[^<>]*>/);
     const css = html.search(/<link[^<>]*href="[^<>]*bootstrap[^<>]*">/);
 
     // CSS is after meta1
