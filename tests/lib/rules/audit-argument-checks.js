@@ -46,6 +46,23 @@ ruleTester.run('audit-argument-checks', rule, {
     { code: 'Meteor.methods({ x () {} })', parserOptions: { ecmaVersion: 6 } },
     'Meteor.methods({ x: function (bar) { check(bar, Match.Any); } })',
     'Meteor.methods({ x: function (bar, baz) { check(bar, Match.Any); check(baz, Match.Any); } })',
+    `
+      Meteor.methods({
+        sendEmail: function (to, from, subject, text) {
+          check([to, from, subject, text], [String]);
+        },
+      })
+    `,
+    {
+      code: `
+        Meteor.methods({
+          sendEmail (to, from, subject, text) {
+            check([to, from, subject, text], [String]);
+          },
+        })
+      `,
+      parserOptions: { ecmaVersion: 6 },
+    },
   ],
 
   invalid: [
@@ -137,6 +154,53 @@ ruleTester.run('audit-argument-checks', rule, {
       code: `
         Meteor.methods({
           foo: (bar) => 2
+        })
+      `,
+      errors: [
+        {
+          message: '"bar" is not checked',
+          type: 'Identifier',
+        },
+      ],
+      parserOptions: { ecmaVersion: 6 },
+    },
+    {
+      code: `
+        Meteor.methods({
+          sendEmail: function (to, from, subject, bar) {
+            check([to, from, subject], [String]);
+          }
+        })
+      `,
+      errors: [
+        {
+          message: '"bar" is not checked',
+          type: 'Identifier',
+        },
+      ],
+    },
+    {
+      code: `
+        Meteor.methods({
+          sendEmail (to, from, subject, bar) {
+            check([to, from, subject], [String]);
+          }
+        })
+      `,
+      errors: [
+        {
+          message: '"bar" is not checked',
+          type: 'Identifier',
+        },
+      ],
+      parserOptions: { ecmaVersion: 6 },
+    },
+    {
+      code: `
+        Meteor.methods({
+          sendEmail (to, from, subject, bar) {
+            check([to, from, subject, 'bar'], [String]);
+          }
         })
       `,
       errors: [
