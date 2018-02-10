@@ -1,6 +1,6 @@
 {
   "name": "eslint-plugin-meteor",
-  "version": "4.1.6",
+  "version": "0.0.0-development",
   "author": "Dominik Ferber <dominik.ferber+npm@gmail.com>",
   "description": "Meteor specific linting rules for ESLint",
   "main": "dist/index.js",
@@ -71,7 +71,8 @@
     "readline-sync": "1.4.8",
     "rewire": "3.0.2",
     "rimraf": "2.6.2",
-    "semantic-release": "12.4.0",
+    "semantic-release": "^12.4.1",
+    "travis-deploy-once": "4.3.4",
     "validate-commit-msg": "2.14.0"
   },
   "peerDependencies": {
