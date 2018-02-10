@@ -22,7 +22,6 @@
     "prepublishOnly": "npm run build",
     "pretest": "npm run lint",
     "rule": "babel scripts/new-rule.js | node",
-    "semantic-release": "semantic-release pre && npm publish && semantic-release post",
     "test": "npm run unit-test && npm run coverage:report && npm run coverage:check",
     "unit-test": "nyc --require=babel-register --reporter=lcov mocha tests --recursive",
     "unit-test:w": "npm run unit-test -s -- --watch"

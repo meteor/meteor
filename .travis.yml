@@ -26,7 +26,7 @@ script:
 after_success:
   - codeclimate-test-reporter < ./coverage/lcov.info
   - npm run coveralls
-  - npm run semantic-release
+  - semantic-release
 addons:
   code_climate:
     repo_token: c2f5565ff4d312c27c2864e45d361d9767f9f6cba820bd705b422ca75f69c706
