@@ -37,6 +37,10 @@ Package.onUse(function (api) {
     'mongo-dev-server',
   ]);
 
+  // Make weak use of Decimal type on client
+  api.use('mongo-decimal', 'client', {weak: true});
+  api.use('mongo-decimal', 'server');
+
   api.use('underscore', 'server');
 
   // Binary Heap data structure is used to optimize oplog observe driver
