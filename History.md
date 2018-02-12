@@ -16,6 +16,10 @@
   other (optional) plugins like `@babel/plugin-proposal-decorators`.
   [Issue #9628](https://github.com/meteor/meteor/issues/9628)
 
+* Meteor's `promise` package has been updated to support
+  [`Promise.prototype.finally`](https://github.com/tc39/proposal-promise-finally).
+  [Issue 9639](https://github.com/meteor/meteor/issues/9639)
+
 ## v1.6.1, 2018-01-19
 
 * Node has been updated to version

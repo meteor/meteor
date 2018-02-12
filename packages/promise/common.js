@@ -20,3 +20,17 @@ exports.Promise.prototype.done = function (onFulfilled, onRejected) {
     });
   });
 };
+
+if (! exports.Promise.prototype.hasOwnProperty("finally")) {
+  exports.Promise.prototype.finally = function (f) {
+    return this.then(function (value) {
+      return exports.Promise.resolve(f()).then(function () {
+        return value;
+      });
+    }, function (err) {
+      return exports.Promise.resolve(f()).then(function () {
+        throw err;
+      });
+    });
+  };
+}
