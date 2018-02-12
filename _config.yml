@@ -159,7 +159,6 @@ pagination_dir: page
 # Extensions
 ## Plugins: http://hexo.io/plugins/
 ## Themes: http://hexo.io/themes/
-theme: meteor
 api_box:
   data_file: 'data/data.js'
 marked:
