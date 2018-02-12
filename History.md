@@ -19,6 +19,7 @@
 * Meteor's `promise` package has been updated to support
   [`Promise.prototype.finally`](https://github.com/tc39/proposal-promise-finally).
   [Issue 9639](https://github.com/meteor/meteor/issues/9639)
+  [PR #9663](https://github.com/meteor/meteor/pull/9663)
 
 ## v1.6.1, 2018-01-19
 
