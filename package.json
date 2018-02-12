@@ -5,7 +5,7 @@
   "hexo": {
     "version": "3.5.0"
   },
-  "dependencies": {
+  "devDependencies": {
     "canonical-json": "0.0.4",
     "handlebars": "4.0.11",
     "hexo": "3.5.0",
@@ -21,9 +21,7 @@
     "hexo-versioned-netlify-redirects": "1.0.2",
     "jsdoc": "3.5.5",
     "showdown": "1.8.6",
-    "underscore": "1.8.3"
-  },
-  "devDependencies": {
+    "underscore": "1.8.3",
     "hexo-s3-deploy": "1.2.2"
   },
   "scripts": {
