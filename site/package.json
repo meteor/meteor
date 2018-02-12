@@ -5,7 +5,7 @@
   "hexo": {
     "version": "3.5.0"
   },
-  "dependencies": {
+  "devDependencies": {
     "hexo": "3.5.0",
     "hexo-autoprefixer": "1.0.0",
     "hexo-generator-archive": "0.1.5",
@@ -18,17 +18,15 @@
     "hexo-renderer-marked": "0.3.2",
     "hexo-renderer-stylus": "0.3.3",
     "hexo-server": "0.3.1",
-    "hexo-versioned-netlify-redirects": "1.0.2"
+    "hexo-versioned-netlify-redirects": "1.0.2",
+    "meteor-hexo-config": "^1.0.1",
+    "meteor-theme-hexo": "^1.0.0"
   },
   "scripts": {
-    "build": "hexo generate",
+    "build": "hexo generate --config node_modules/meteor-hexo-config/_config.yml,_config.yml",
     "clean": "hexo clean",
     "test": "npm run clean; npm run build",
     "predeploy": "npm run build",
-    "deploy": "hexo-s3-deploy",
-    "start": "npm run build && hexo server"
-  },
-  "devDependencies": {
-    "hexo-s3-deploy": "1.2.2"
+    "start": "npm run build && hexo server --config node_modules/meteor-hexo-config/_config.yml,_config.yml"
   }
 }
