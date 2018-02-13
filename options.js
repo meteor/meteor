@@ -168,9 +168,6 @@ function getDefaultsForNode8(features) {
     plugins.push(rt);
   }
 
-  // Make assigning to imported symbols a syntax error.
-  plugins.push(require("@babel/plugin-check-constants"));
-
   // Not fully supported in Node 8 without the --harmony flag.
   plugins.push(
     require("@babel/plugin-syntax-object-rest-spread"),
