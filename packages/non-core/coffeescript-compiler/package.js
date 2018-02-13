@@ -22,8 +22,8 @@ Npm.depends({
 });
 
 Package.onUse(function (api) {
-  api.use('babel-compiler@6.19.4||7.0.0');
-  api.use('ecmascript@0.8.3');
+  api.use('babel-compiler@6.19.4||7.0.3');
+  api.use('ecmascript@0.10.3');
 
   api.mainModule('coffeescript-compiler.js', 'server');
 
