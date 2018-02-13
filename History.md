@@ -16,6 +16,11 @@
   other (optional) plugins like `@babel/plugin-proposal-decorators`.
   [Issue #9628](https://github.com/meteor/meteor/issues/9628)
 
+* Meteor's `promise` package has been updated to support
+  [`Promise.prototype.finally`](https://github.com/tc39/proposal-promise-finally).
+  [Issue 9639](https://github.com/meteor/meteor/issues/9639)
+  [PR #9663](https://github.com/meteor/meteor/pull/9663)
+
 ## v1.6.1, 2018-01-19
 
 * Node has been updated to version
@@ -201,8 +206,9 @@
   [comment](https://github.com/meteor/meteor/issues/6890#issuecomment-339817703)),
   because supporting the package style would have imposed an unacceptable
   runtime cost on all imports (not just those overridden by a `"browser"`
-  field). [PR #9311](https://github.com/meteor/meteor/pull/9311) [Issue
-  #6890](https://github.com/meteor/meteor/issues/6890)
+  field).
+  [PR #9311](https://github.com/meteor/meteor/pull/9311)
+  [Issue #6890](https://github.com/meteor/meteor/issues/6890)
 
 * The `Boilerplate#toHTML` method from the `boilerplate-generator` package
   has been deprecated in favor of `toHTMLAsync` (which returns a `Promise`
