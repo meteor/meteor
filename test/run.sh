@@ -11,7 +11,7 @@ runTests() {
         --reporter spec \
         --full-trace \
         --require ../runtime.js \
-        --compilers js:${TEST_DIR}/register.js \
+        --require ${TEST_DIR}/register.js \
         tests.js
 }
 
