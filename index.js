@@ -2,7 +2,6 @@
 module.exports = function (api, options) {
   return {
     plugins: [
-      require("@babel/plugin-check-constants"),
       require("@babel/plugin-syntax-flow"),
       require("@babel/plugin-syntax-async-generators"),
       require("@babel/plugin-transform-arrow-functions"),

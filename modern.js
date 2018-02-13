@@ -4,7 +4,6 @@ exports.getPreset = function (api, options) {
       require("@babel/plugin-syntax-flow"),
       require("@babel/plugin-syntax-async-generators"),
       require("@babel/plugin-syntax-object-rest-spread"),
-      require("@babel/plugin-check-constants"),
       [require("@babel/plugin-transform-for-of"), {
         loose: true
       }],
