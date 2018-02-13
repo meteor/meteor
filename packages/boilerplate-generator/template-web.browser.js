@@ -7,10 +7,10 @@ export const headTemplate = ({
   head,
   dynamicHead,
 }) => {
-  var headSections = head.split('<meteor-bundled-css', 2);
-  if (headSections.length > 1) {
-    headSections[1] = headSections[1].substr(headSections[1].indexOf('>')+1);
-  }
+  var headSections = head.split(/<meteor-bundled-css[^<>]*>/, 2);
+  // if (headSections.length > 1) {
+  //   headSections[1] = headSections[1].substr(headSections[1].indexOf('>')+1);
+  // }
   var cssBundle = [...(css || []).map(file =>
     template('  <link rel="stylesheet" type="text/css" class="__meteor-css__" href="<%- href %>">')({
       href: bundledJsCssUrlRewriteHook(file.url),
