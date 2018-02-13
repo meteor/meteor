@@ -865,7 +865,7 @@ _.extend(PackageSource.prototype, {
             sourceArch: this,
             ignoreFiles,
             isApp: true,
-            loopChecker: new SymlinkLoopChecker(self.sourceRoot)
+            //loopChecker: new SymlinkLoopChecker(self.sourceRoot)
           };
 
           return {
