@@ -134,10 +134,10 @@ signature = function (data, options) {
       // TBH I'm not sure what else we use instanceName for (why we are setting for
       // e.g. `reactiveVar` if we don't want to show it here) but we opt into showing it
       if (memberOfData.showinstancename) {
-        escapedLongname = "<em>" + memberOfData.instancename + "</em>." + data.name;
+        escapedLongname = memberOfData.instancename + "." + data.name;
       } else if (options.short) {
         // Something#foo => #foo
-        return '<em>' + options.instanceDelimiter + '</em>' + escapedLongname.split('#')[1];
+        return options.instanceDelimiter + escapedLongname.split('#')[1];
       }
     }
 
@@ -145,7 +145,7 @@ signature = function (data, options) {
     // we are probably underneath a heading that defines the object (e.g. DDPRateLimiter)
     if (data.scope === "static" && options.instanceDelimiter && options.short) {
       // Something.foo => .foo
-      return '<em>' + options.instanceDelimiter + '</em>' + escapedLongname.split('.')[1];
+      return options.instanceDelimiter + escapedLongname.split('.')[1];
     }
 
     return escapedLongname + paramsStr;
