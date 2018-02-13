@@ -79,9 +79,6 @@ sidebar_categories:
 github_repo: 'meteor/docs'
 content_root: 'source'
 
-# themeing
-favicon: '../images/favicon.png'
-
 logo:
   nav_mobile: '../images/logo-coralspace-left.svg'
   url: 'http://www.meteor.com/developers'
