@@ -14,7 +14,6 @@ export const headTemplate = ({
   dynamicHead,
 }) => {
   var headSections = head.split(/<meteor-bundled-css[^<>]*>/, 2);
-// console.log('headSections =', headSections);
   var cssBundle = [
     // We are explicitly not using bundledJsCssUrlRewriteHook: in cordova we serve assets up directly from disk, so rewriting the URL does not make sense
     ...(css || []).map(file =>
@@ -32,12 +31,6 @@ export const headTemplate = ({
     '  <meta name="msapplication-tap-highlight" content="no">',
     '  <meta http-equiv="Content-Security-Policy" content="default-src * gap: data: blob: \'unsafe-inline\' \'unsafe-eval\' ws: wss:;">',
 
-    // // We are explicitly not using bundledJsCssUrlRewriteHook: in cordova we serve assets up directly from disk, so rewriting the URL does not make sense
-    // ...(css || []).map(file =>
-    //   template('  <link rel="stylesheet" type="text/css" class="__meteor-css__" href="<%- href %>">')({
-    //     href: file.url,
-    //   })
-    // ),
   (headSections.length === 1)
     ? [cssBundle, headSections[0]].join('\n')
     : [headSections[0], cssBundle, headSections[1]].join('\n'),
