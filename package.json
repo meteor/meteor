@@ -49,7 +49,7 @@
     "reify": "^0.14.1"
   },
   "devDependencies": {
-    "fibers": "^1.0.15",
+    "fibers": "^2.0.0",
     "meteor-promise": "^0.8.5",
     "mocha": "^5.0.0",
     "promise": "^8.0.1"
