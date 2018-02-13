@@ -2,6 +2,9 @@
 
 * The `reify` npm package has been updated to version 0.14.1.
 
+* The `meteor-babel` npm package has been updated to version
+  7.0.0-beta.40-1.
+
 * The `optimism` npm package has been updated to version 0.4.0.
 
 * The `minifier-js` package has been updated to use `uglify-es` 3.3.10.
