@@ -201,8 +201,9 @@
   [comment](https://github.com/meteor/meteor/issues/6890#issuecomment-339817703)),
   because supporting the package style would have imposed an unacceptable
   runtime cost on all imports (not just those overridden by a `"browser"`
-  field). [PR #9311](https://github.com/meteor/meteor/pull/9311) [Issue
-  #6890](https://github.com/meteor/meteor/issues/6890)
+  field).
+  [PR #9311](https://github.com/meteor/meteor/pull/9311)
+  [Issue #6890](https://github.com/meteor/meteor/issues/6890)
 
 * The `Boilerplate#toHTML` method from the `boilerplate-generator` package
   has been deprecated in favor of `toHTMLAsync` (which returns a `Promise`
