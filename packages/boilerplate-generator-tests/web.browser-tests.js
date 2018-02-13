@@ -64,7 +64,7 @@ Tinytest.addAsync(
   "boilerplate-generator-tests - web.browser - properly render boilerplate " +
     "elements when _.template settings are overridden",
   async function (test) {
-    const newHtml = await generateHTMLForArch("web.browser");
+    const newHtml = await generateHTMLForArch("web.browser", false);
 
     _.templateSettings = {
       interpolate: /\{\{(.+?)\}\}/g
