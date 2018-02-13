@@ -203,7 +203,9 @@ function getDefaultsForNode8(features) {
   return finish(presets);
 }
 
-exports.getMinifierDefaults = function getMinifierDefaults({ inlineNodeEnv, keepFnName = false } = {}) {
+exports.getMinifierDefaults = function getMinifierDefaults(features) {
+  const inlineNodeEnv = features && features.inlineNodeEnv;
+  const keepFnName = !! (features && features.keepFnName);
   const options = {
     // Generate code in loose mode
     compact: false,
@@ -217,7 +219,12 @@ exports.getMinifierDefaults = function getMinifierDefaults({ inlineNodeEnv, keep
     plugins: [],
     // Only include the minifier plugins, since we've already compiled all
     // the ECMAScript syntax we want.
-    presets: [[require("babel-preset-minify"), { keepClassName: keepFnName, keepFnName }]]
+    presets: [
+      [require("babel-preset-minify"), {
+        keepClassName: keepFnName,
+        keepFnName
+      }]
+    ]
   };
 
   if (inlineNodeEnv) {
