@@ -1,6 +1,6 @@
 "use strict";
 
-const { getESModule } = require("reify/lib/runtime/utils.js");
+const getESModule = require("reify/lib/runtime/utils.js").getESModule;
 const nodeRequire = require;
 require = function require(id) {
   const exports = nodeRequire(id);
