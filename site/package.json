@@ -19,8 +19,8 @@
     "hexo-renderer-stylus": "0.3.3",
     "hexo-server": "0.3.1",
     "hexo-versioned-netlify-redirects": "1.0.2",
-    "meteor-hexo-config": "^1.0.1",
-    "meteor-theme-hexo": "^1.0.0"
+    "meteor-hexo-config": "^1.0.5",
+    "meteor-theme-hexo": "^1.0.1"
   },
   "scripts": {
     "build": "hexo generate --config node_modules/meteor-hexo-config/_config.yml,_config.yml",
