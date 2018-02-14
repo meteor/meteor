@@ -262,6 +262,8 @@ See [this article](https://developers.google.com/web/tools/chrome-devtools/debug
 
 - Because you can only connect to your app after it has started up, you sometimes miss startup warnings and errors. You can invoke `location.reload()` in the DevTools console to reload a running app, this time with the remote debugger connected.
 
+- An .apk built by `meteor build` cannot be remotely debugged unless you make a debug build via `meteor build --debug`.
+
 <h2 id="hot-code-push">Hot code push on mobile</h2>
 
 During development, the Meteor [build tool](build-tool.html) detects any relevant file changes, recompiles the necessary files, and notifies all connected clients a new version is available. Clients can then automatically reload the app, switching over to the new version of the code. This is referred to as *hot code push*.
@@ -620,6 +622,8 @@ Use `meteor build <build-output-directory> --server=<host>:<port>` to build your
 The `<host>` and `<port>` should be the address of the server you want your app to connect to.
 
 This will generate a directory at `<build-output-directory>`, which includes a server bundle tarball and the project source for each targeted mobile platform in the `/ios` and `/android` directories.
+
+If you pass `--debug`, the bundles will be compiled in Cordova's debug mode instead of release mode.  On Android, this produces a `<build-output-directory>/android/debug.apk` file that can be installed without signing.
 
 You can pass `--server-only` to only build the server bundle. This allows you to build your app without installing the mobile SDKs on the build machine. This is useful if you use an automated deployment setup for instance. (If you remove the mobile platforms before building instead, hot code push will be disabled because the assets for Cordova included in the server bundle will not be generated.)
 
