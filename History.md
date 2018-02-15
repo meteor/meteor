@@ -2,6 +2,9 @@
 
 * The `reify` npm package has been updated to version 0.14.1.
 
+* The `meteor-babel` npm package has been updated to version
+  7.0.0-beta.40-1.
+
 * The `optimism` npm package has been updated to version 0.4.0.
 
 * The `minifier-js` package has been updated to use `uglify-es` 3.3.10.
@@ -16,6 +19,11 @@
   other (optional) plugins like `@babel/plugin-proposal-decorators`.
   [Issue #9628](https://github.com/meteor/meteor/issues/9628)
 
+* Meteor's `promise` package has been updated to support
+  [`Promise.prototype.finally`](https://github.com/tc39/proposal-promise-finally).
+  [Issue 9639](https://github.com/meteor/meteor/issues/9639)
+  [PR #9663](https://github.com/meteor/meteor/pull/9663)
+
 * `Mongo.Collection` has been updated to strip `undefined` fields set in
   documents/selectors passed to `find`, `findOne`, `insert`, `update`, etc.
   This lines the codebase up with the changes made in
@@ -23,13 +31,6 @@
   and helps prevent "The Mongo server and the Meteor query disagree on how
   many documents match your query" errors.
   [Issue #9619](https://github.com/meteor/meteor/issues/9619)
-
-* The changes made in
-
-+  // The Mongo Node driver is configured to `ignoreUndefined`
-+  // fields in documents/selectors. This function can be used to remove
-+  // `undefined` fields, to keep things consistent, and help avoid any
-+  // unwarranted side effects (such as issue #9619).
 
 ## v1.6.1, 2018-01-19
 
@@ -216,8 +217,9 @@
   [comment](https://github.com/meteor/meteor/issues/6890#issuecomment-339817703)),
   because supporting the package style would have imposed an unacceptable
   runtime cost on all imports (not just those overridden by a `"browser"`
-  field). [PR #9311](https://github.com/meteor/meteor/pull/9311) [Issue
-  #6890](https://github.com/meteor/meteor/issues/6890)
+  field).
+  [PR #9311](https://github.com/meteor/meteor/pull/9311)
+  [Issue #6890](https://github.com/meteor/meteor/issues/6890)
 
 * The `Boilerplate#toHTML` method from the `boilerplate-generator` package
   has been deprecated in favor of `toHTMLAsync` (which returns a `Promise`
