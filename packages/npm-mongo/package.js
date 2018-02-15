@@ -3,12 +3,12 @@
 
 Package.describe({
   summary: "Wrapper around the mongo npm package",
-  version: "2.2.33",
+  version: "3.0.2",
   documentation: null
 });
 
 Npm.depends({
-  mongodb: "2.2.33"
+  mongodb: "3.0.2"
 });
 
 Package.onUse(function (api) {
