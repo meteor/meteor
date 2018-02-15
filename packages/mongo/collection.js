@@ -276,10 +276,7 @@ Object.assign(Mongo.Collection.prototype, {
   ///
 
   _getFindSelector(args) {
-    if (args.length == 0)
-      return {};
-    else
-      return args[0];
+    return args.length == 0 ? {} : this._removeUndefinedFields(args[0]);
   },
 
   _getFindOptions(args) {
@@ -299,6 +296,24 @@ Object.assign(Mongo.Collection.prototype, {
         ...args[1],
       };
     }
+  },
+
+  // The Mongo Node driver is configured to `ignoreUndefined`
+  // fields in documents/selectors. This function can be used to remove
+  // `undefined` fields, to keep things consistent, and help avoid any
+  // unwarranted side effects (such as issue #9619).
+  _removeUndefinedFields(selector) {
+    const cleanSelector = selector;
+    if (cleanSelector) {
+      Object.keys(cleanSelector).forEach((key) => {
+        if (cleanSelector[key] && typeof cleanSelector[key] === 'object') {
+          this._removeUndefinedFields(cleanSelector[key]);
+        } else if (cleanSelector[key] === undefined) {
+          delete cleanSelector[key];
+        }
+      });
+    }
+    return cleanSelector;
   },
 
   /**
@@ -452,6 +467,8 @@ Object.assign(Mongo.Collection.prototype, {
       throw new Error("insert requires an argument");
     }
 
+    doc = this._removeUndefinedFields(doc);
+
     // Make a shallow clone of the document, preserving its prototype.
     doc = Object.create(
       Object.getPrototypeOf(doc),
@@ -537,6 +554,7 @@ Object.assign(Mongo.Collection.prototype, {
    * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
    */
   update(selector, modifier, ...optionsAndCallback) {
+    selector = this._removeUndefinedFields(selector);
     const callback = popCallbackFromArgs(optionsAndCallback);
 
     // We've already popped off the callback, so we are left with an array
@@ -598,7 +616,9 @@ Object.assign(Mongo.Collection.prototype, {
    * @param {Function} [callback] Optional.  If present, called with an error object as its argument.
    */
   remove(selector, callback) {
-    selector = Mongo.Collection._rewriteSelector(selector);
+    selector = Mongo.Collection._rewriteSelector(
+      this._removeUndefinedFields(selector)
+    );
 
     const wrappedCallback = wrapCallback(callback);
 

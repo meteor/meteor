@@ -16,6 +16,21 @@
   other (optional) plugins like `@babel/plugin-proposal-decorators`.
   [Issue #9628](https://github.com/meteor/meteor/issues/9628)
 
+* `Mongo.Collection` has been updated to strip `undefined` fields set in
+  documents/selectors passed to `find`, `findOne`, `insert`, `update`, etc.
+  This lines the codebase up with the changes made in
+  https://github.com/meteor/meteor/commit/ce3885b6df10f9f69f425af8698642a388efa6f2,
+  and helps prevent "The Mongo server and the Meteor query disagree on how
+  many documents match your query" errors.
+  [Issue #9619](https://github.com/meteor/meteor/issues/9619)
+
+* The changes made in
+
++  // The Mongo Node driver is configured to `ignoreUndefined`
++  // fields in documents/selectors. This function can be used to remove
++  // `undefined` fields, to keep things consistent, and help avoid any
++  // unwarranted side effects (such as issue #9619).
+
 ## v1.6.1, 2018-01-19
 
 * Node has been updated to version
