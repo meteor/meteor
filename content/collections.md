@@ -435,6 +435,53 @@ As we discussed earlier, it's very common in Meteor applications to have associa
 
 To make this easier, we can attach functions to the prototype of the documents that belong to a given collection, to give us "methods" on the documents (in the object oriented sense). We can then use these methods to create new queries to find related documents.
 
+To make things even easier, we can use the [`cultofcoders:grapher`](https://atmospherejs.com/cultofcoders/grapher) package to easily associate collections and easily fetch their relations for example:
+
+```js
+// Configure how collections relate to each other
+Todos.addLinks({
+    list: {
+        type: 'one',
+        field: 'listId',
+        collection: Lists
+    }
+});
+
+Lists.addLinks({
+    todos: {
+        collection: Todos,
+        inversedBy: 'list' // This represents the name of the link we defined in Todos
+    }
+});
+```
+
+This would allow us to properly fetch a list along with it's todos:
+
+```js
+// With Grapher you must always specify the fields you want
+const listsAndTodos = Lists.createQuery({
+    name: 1,
+    todos: {
+        text: 1
+    }
+}).fetch();
+```
+
+`listsAndTodos` will look like this:
+
+```
+[
+  {
+    name: 'My List',
+    todos: [
+      {text: 'Do something'}
+    ],
+  }
+]
+```
+
+Grapher supports isomorphic queries (reactive and non-reactive), has built-in security features, works with many type of relationships, you can find more in its [official documentation](https://github.com/cult-of-coders/grapher/blob/master/docs/index.md).
+
 <h3 id="collection-helpers">Collection helpers</h3>
 
 We can use the [`dburles:collection-helpers`](https://atmospherejs.com/dburles/collection-helpers) package to easily attach such methods (or "helpers") to documents. For instance:
