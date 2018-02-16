@@ -1,0 +1,10 @@
+os: osx
+osx_image: xcode9.2
+git:
+  depth: 2
+node_js:
+  - 8
+install:
+  - npm install
+script:
+  - npm test
