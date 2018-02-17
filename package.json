@@ -68,7 +68,7 @@
     "mocha": "5.0.1",
     "nyc": "11.4.1",
     "prettier": "1.10.2",
-    "readline-sync": "1.4.8",
+    "readline-sync": "1.4.9",
     "rewire": "3.0.2",
     "rimraf": "2.6.2",
     "semantic-release": "^12.4.1",
