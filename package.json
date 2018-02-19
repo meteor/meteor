@@ -42,7 +42,7 @@
     "babel-register": "6.26.0",
     "babel-runtime": "6.26.0",
     "escope": "3.6.0",
-    "invariant": "2.2.2",
+    "invariant": "2.2.3",
     "lodash.find": "4.6.0",
     "lodash.memoize": "4.1.2",
     "path-exists": "3.0.0"
