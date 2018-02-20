@@ -8,9 +8,6 @@ export const headTemplate = ({
   dynamicHead,
 }) => {
   var headSections = head.split(/<meteor-bundled-css[^<>]*>/, 2);
-  // if (headSections.length > 1) {
-  //   headSections[1] = headSections[1].substr(headSections[1].indexOf('>')+1);
-  // }
   var cssBundle = [...(css || []).map(file =>
     template('  <link rel="stylesheet" type="text/css" class="__meteor-css__" href="<%- href %>">')({
       href: bundledJsCssUrlRewriteHook(file.url),
@@ -18,21 +15,23 @@ export const headTemplate = ({
   )].join('\n');
 
   return [
-  '<html' + Object.keys(htmlAttributes || {}).map(
-    key => template(' <%= attrName %>="<%- attrValue %>"')({
-      attrName: key,
-      attrValue: htmlAttributes[key],
-    })
-  ).join('') + '>',
-  '<head>',
+    '<html' + Object.keys(htmlAttributes || {}).map(
+      key => template(' <%= attrName %>="<%- attrValue %>"')({
+        attrName: key,
+        attrValue: htmlAttributes[key],
+      })
+    ).join('') + '>',
+    
+    '<head>',
 
-  (headSections.length === 1)
-    ? [cssBundle, headSections[0]].join('\n')
-    : [headSections[0], cssBundle, headSections[1]].join('\n'),
-  dynamicHead,
-  '</head>',
-  '<body>',
-].join('\n');
+    (headSections.length === 1)
+      ? [cssBundle, headSections[0]].join('\n')
+      : [headSections[0], cssBundle, headSections[1]].join('\n'),
+
+    dynamicHead,
+    '</head>',
+    '<body>',
+  ].join('\n');
 };
 
 // Template function for rendering the boilerplate html for browsers
