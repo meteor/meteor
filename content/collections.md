@@ -154,7 +154,7 @@ Lists.schema = new SimpleSchema({
 });
 ```
 
-The issue with this schema is that due to the DDP behavior just mentioned, each change to *any* todo item in a list will require sending the *entire* set of todos for that list over the network. This is because DDP has no concept of "change the `text` field of the 3rd item in the field called `todos`", simply "change the field called `todos` to a totally new array".
+The issue with this schema is that due to the DDP behavior just mentioned, each change to *any* todo item in a list will require sending the *entire* set of todos for that list over the network. This is because DDP has no concept of "change the `text` field of the 3rd item in the field called `todos`". It can only "change the field called `todos` to a totally new array".
 
 <h3 id="denormalization">Denormalization and multiple collections</h3>
 
