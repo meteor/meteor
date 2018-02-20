@@ -45,12 +45,13 @@ export default class RoutePolicy {
     if (urlPrefix === '/') {
       return 'a route URL prefix cannot be /';
     }
- 
+
     const existingType = this.urlPrefixTypes[urlPrefix];
     if (existingType && existingType !== type) {
-      return `the route URL prefix ${urlPrefix} has already been declared to be of type ${existingType}`;
+      return `the route URL prefix ${urlPrefix} has already been declared ` +
+        `to be of type ${existingType}`;
     }
-      
+
     return null;
   }
 
@@ -58,10 +59,12 @@ export default class RoutePolicy {
     if (type === 'static-online') {
       return null;
     }
-   
-    if (!Package.webapp || !Package.webapp.WebApp
-        || !Package.webapp.WebApp.clientPrograms
-        || !Package.webapp.WebApp.clientPrograms[Package.webapp.WebApp.defaultArch].manifest) {
+
+    if (!Package.webapp ||
+        !Package.webapp.WebApp ||
+        !Package.webapp.WebApp.clientPrograms ||
+        !Package.webapp.WebApp.clientPrograms[
+          Package.webapp.WebApp.defaultArch].manifest) {
       // Hack: If we don't have a manifest, deal with it
       // gracefully. This lets us load livedata into a nodejs
       // environment that doesn't have a HTTP server (eg, a
@@ -69,23 +72,27 @@ export default class RoutePolicy {
       return null;
     }
 
-    const manifest = _testManifest ||
-      Package.webapp.WebApp.clientPrograms[Package.webapp.WebApp.defaultArch].manifest;
-    const conflict = manifest.find(resource => (resource.type === 'static' &&
-              resource.where === 'client' &&
-              this.urlPrefixMatches(urlPrefix, resource.url)));
+    const WebApp = Package.webapp.WebApp;
+    const manifest =
+      _testManifest || WebApp.clientPrograms[WebApp.defaultArch].manifest;
+    const conflict = manifest.find(resource => (
+      resource.type === 'static' &&
+      resource.where === 'client' &&
+      this.urlPrefixMatches(urlPrefix, resource.url)
+    ));
 
     if (conflict) {
-      return (`static resource ${conflict.url} conflicts with ` +
-      `${type} route ${urlPrefix}`);
+      return `static resource ${conflict.url} conflicts with ${type} ` +
+        `route ${urlPrefix}`;
     }
     return null;
   }
 
   declare(urlPrefix, type) {
-    const problem = this.checkType(type) ||
-                  this.checkUrlPrefix(urlPrefix, type) ||
-                  this.checkForConflictWithStatic(urlPrefix, type);
+    const problem =
+      this.checkType(type) ||
+      this.checkUrlPrefix(urlPrefix, type) ||
+      this.checkForConflictWithStatic(urlPrefix, type);
     if (problem) {
       throw new Error(problem);
     }
@@ -101,10 +108,11 @@ export default class RoutePolicy {
     if (!this.isValidUrl(url)) {
       throw new Error(`url must be a relative URL: ${url}`);
     }
-    
-    const prefix = Object.keys(this.urlPrefixTypes)
-      .find(prefix => this.urlPrefixMatches(prefix, url));
-    
+
+    const prefix = Object.keys(this.urlPrefixTypes).find(prefix =>
+      this.urlPrefixMatches(prefix, url)
+    );
+
     return prefix ? this.urlPrefixTypes[prefix] : null;
   }
 
