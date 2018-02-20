@@ -26,7 +26,6 @@
     "build": "hexo generate --config node_modules/meteor-hexo-config/_config.yml,_config.yml",
     "clean": "hexo clean",
     "test": "npm run clean; npm run build",
-    "predeploy": "npm run build",
     "start": "npm run build && hexo server --config node_modules/meteor-hexo-config/_config.yml,_config.yml"
   }
 }
