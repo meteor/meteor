@@ -17,10 +17,3 @@ test:
   override:
     - npm test:
         pwd: site
-
-deployment:
-  s3:
-    branch: /^(master|version-.*|translation-.*)/
-    commands:
-      - npm run deploy:
-          pwd: site
