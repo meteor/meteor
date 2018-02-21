@@ -6,6 +6,7 @@
 title: Meteor Guide
 subtitle: The Official Guide
 github_repo: meteor/guide
+content_root: content
 versions:
   - '1.6'
   - '1.5'
