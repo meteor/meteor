@@ -28,6 +28,13 @@
   original `facts` package has been deprecated.
   [PR #9629](https://github.com/meteor/meteor/pull/9629)
 
+* If the new pseudo tag `<meteor-bundled-css />` is used anywhere in the
+  `<head />` of an app, it will be replaced by the `link` to Meteor's bundled
+  CSS. If the new tag isn't used, the bundle will be placed at the top of
+  the `<head />` section as before (for backwards compatibility).
+  [FR #24](https://github.com/meteor/meteor/pull/24)
+  [PR #9657](https://github.com/meteor/meteor/pull/9657)
+
 ## v1.6.1, 2018-01-19
 
 * Node has been updated to version
