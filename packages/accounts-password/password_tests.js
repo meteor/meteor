@@ -1900,21 +1900,20 @@ if (Meteor.isServer) (function () {
       const userId1 = Accounts.createUser({ username, password });
       let user1 = Meteor.users.findOne(userId1);
       let rounds = getUserHashRounds(user1);
-      test.equal(rounds, Accounts._bcryptRounds);
+      test.equal(rounds, Accounts._bcryptRounds());
 
       // When a custom number of bcrypt rounds is set via Accounts.config,
       // and an account was already created using the default number of rounds,
       // make sure that a new hash is created (and stored) using the new number
       // of rounds, the next time the password is checked.
-      const defaultRounds = Accounts._bcryptRounds;
+      const defaultRounds = Accounts._bcryptRounds();
       const customRounds = 11;
-      Accounts._bcryptRounds = customRounds;
+      Accounts._options.bcryptRounds = customRounds;
       Accounts._checkPassword(user1, password);
       Meteor.setTimeout(() => {
         user1 = Meteor.users.findOne(userId1);
         rounds = getUserHashRounds(user1);
         test.equal(rounds, customRounds);
-        Accounts._options.bcryptRounds = null;
 
         // When a custom number of bcrypt rounds is set, make sure it's
         // used for new bcrypt password hashes.
@@ -1925,7 +1924,7 @@ if (Meteor.isServer) (function () {
         test.equal(rounds, customRounds);
 
         // Cleanup
-        Accounts._bcryptRounds = defaultRounds;
+        Accounts._options.bcryptRounds = defaultRounds;
         Meteor.users.remove(userId1);
         Meteor.users.remove(userId2);
         done();

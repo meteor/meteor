@@ -24,6 +24,25 @@
   [Issue 9639](https://github.com/meteor/meteor/issues/9639)
   [PR #9663](https://github.com/meteor/meteor/pull/9663)
 
+* Assets made available via symlinks in the `public` and `private` directories
+  of an application are now copied into Meteor application bundles when
+  using `meteor build`. This means npm package assets that need to be made
+  available publicly can now be symlinked from their `node_modules` location,
+  in the `public` directory, and remain available in production bundles.
+  [Issue #7013](https://github.com/meteor/meteor/issues/7013)
+  [PR #9666](https://github.com/meteor/meteor/pull/9666)
+
+* The `facts` package has been split into `facts-base` and `facts-ui`. The
+  original `facts` package has been deprecated.
+  [PR #9629](https://github.com/meteor/meteor/pull/9629)
+
+* If the new pseudo tag `<meteor-bundled-css />` is used anywhere in the
+  `<head />` of an app, it will be replaced by the `link` to Meteor's bundled
+  CSS. If the new tag isn't used, the bundle will be placed at the top of
+  the `<head />` section as before (for backwards compatibility).
+  [Feature #24](https://github.com/meteor/meteor/pull/24)
+  [PR #9657](https://github.com/meteor/meteor/pull/9657)
+
 ## v1.6.1, 2018-01-19
 
 * Node has been updated to version

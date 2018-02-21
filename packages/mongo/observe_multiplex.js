@@ -6,7 +6,7 @@ ObserveMultiplexer = function (options) {
   if (!options || !_.has(options, 'ordered'))
     throw Error("must specified ordered");
 
-  Package.facts && Package.facts.Facts.incrementServerFact(
+  Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
     "mongo-livedata", "observe-multiplexers", 1);
 
   self._ordered = options.ordered;
@@ -40,7 +40,7 @@ _.extend(ObserveMultiplexer.prototype, {
       throw new Error("Can't call observeChanges from an observe callback on the same query");
     ++self._addHandleTasksScheduledButNotPerformed;
 
-    Package.facts && Package.facts.Facts.incrementServerFact(
+    Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
       "mongo-livedata", "observe-handles", 1);
 
     self._queue.runTask(function () {
@@ -71,7 +71,7 @@ _.extend(ObserveMultiplexer.prototype, {
 
     delete self._handles[id];
 
-    Package.facts && Package.facts.Facts.incrementServerFact(
+    Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
       "mongo-livedata", "observe-handles", -1);
 
     if (_.isEmpty(self._handles) &&
@@ -91,7 +91,7 @@ _.extend(ObserveMultiplexer.prototype, {
     // Call stop callback (which kills the underlying process which sends us
     // callbacks and removes us from the connection's dictionary).
     self._onStop();
-    Package.facts && Package.facts.Facts.incrementServerFact(
+    Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
       "mongo-livedata", "observe-multiplexers", -1);
 
     // Cause future addHandleAndSendInitialAdds calls to throw (but the onStop
