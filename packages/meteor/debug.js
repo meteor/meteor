@@ -61,7 +61,7 @@ Meteor._debug = function(...arguments) {
   }
 };
 
-// Suppress the next 'count' Meteor._debug messsages. Use this to
+// Suppress the next 'count' Meteor._debug messages. Use this to
 // stop tests from spamming the console.
 //
 Meteor._suppress_log = function(count) {
