@@ -24,6 +24,10 @@
   [Issue 9639](https://github.com/meteor/meteor/issues/9639)
   [PR #9663](https://github.com/meteor/meteor/pull/9663)
 
+* The `facts` package has been split into `facts-base` and `facts-ui`. The
+  original `facts` package has been deprecated.
+  [PR #9629](https://github.com/meteor/meteor/pull/9629)
+
 * If the new pseudo tag `<meteor-bundled-css />` is used anywhere in the
   `<head />` of an app, it will be replaced by the `link` to Meteor's bundled
   CSS. If the new tag isn't used, the bundle will be placed at the top of
