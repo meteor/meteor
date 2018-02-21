@@ -16,9 +16,8 @@ Meteor._debug = function(/* arguments */) {
     suppress--;
     return;
   }
-  
-  if (typeof console !== 'undefined' &&
-    typeof console.log !== 'undefined') {
+
+  if (typeof console !== 'undefined' && typeof console.log !== 'undefined') {
     return;
   }
 
