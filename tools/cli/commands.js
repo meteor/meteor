@@ -489,8 +489,9 @@ main.registerCommand({
     list: { type: Boolean },
     example: { type: String },
     package: { type: Boolean },
+    bare: { type: Boolean },
+    minimal: { type: Boolean },
     full: { type: Boolean },
-    bare: { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -733,13 +734,13 @@ main.registerCommand({
     toIgnore.push(/(\.html|\.js|\.css)/)
   }
 
-  let skelName = 'skel';
-
-  if(options.bare){
-    skelName += '-bare';
-  }
-  else if(options.full){
-    skelName += '-full';
+  let skelName = "skel";
+  if (options.minimal) {
+    skelName += "-minimal";
+  } else if (options.bare) {
+    skelName += "-bare";
+  } else if (options.full) {
+    skelName += "-full";
   }
 
   files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets', skelName), appPath, {
@@ -819,6 +820,12 @@ main.registerCommand({
   // do next.
   Console.info("To run your new app:");
 
+  function cmd(text) {
+    Console.info(Console.command(text), Console.options({
+      indent: 2
+    }));
+  }
+
   if (appPathAsEntered !== ".") {
     // Wrap the app path in quotes if it contains spaces
     const appPathWithQuotesIfSpaces = appPathAsEntered.indexOf(' ') === -1 ?
@@ -826,13 +833,10 @@ main.registerCommand({
       `'${appPathAsEntered}'`;
 
     // Don't tell people to 'cd .'
-    Console.info(
-      Console.command("cd " + appPathWithQuotesIfSpaces),
-        Console.options({ indent: 2 }));
+    cmd("cd " + appPathWithQuotesIfSpaces);
   }
 
-  Console.info(
-    Console.command("meteor"), Console.options({ indent: 2 }));
+  cmd("meteor");
 
   Console.info("");
   Console.info("If you are new to Meteor, try some of the learning resources here:");
@@ -840,13 +844,21 @@ main.registerCommand({
     Console.url("https://www.meteor.com/tutorials"),
       Console.options({ indent: 2 }));
 
-  if (!options.full && !options.bare){
-    // Notice people about --bare and --full
-    const bareOptionNotice = 'meteor create --bare to create an empty app.';
-    const fullOptionNotice = 'meteor create --full to create a scaffolded app.';
+  if (! options.bare &&
+      ! options.minimal &&
+      ! options.full) {
+    // Notify people about --bare, --minimal, and --full.
+    Console.info([
+      "",
+      "To start with a different app template, try one of the following:",
+      "",
+    ].join("\n"));
 
-    Console.info("");
-    Console.info(bareOptionNotice + '\n' + fullOptionNotice);
+    cmd("meteor create --bare    # to create an empty app");
+    cmd("meteor create --minimal # to create an empty app with as " +
+        "few Meteor packages as possible");
+    cmd("meteor create --full    # to create a more complete " +
+        "scaffolded app");
   }
 
   Console.info("");
