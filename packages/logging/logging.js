@@ -107,7 +107,7 @@ Log._getCallerDetails = () => {
   // looking for the first line outside the logging package (or an
   // eval if we find that first)
   let line;
-  const [_, ...lines] = stack.split('\n');
+  const lines = stack.split('\n').slice(1);
   for (line of lines) {
     if (line.match(/^\s*at eval \(eval/)) {
       return {file: "eval"};
