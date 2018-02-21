@@ -120,7 +120,7 @@ function dontBindEnvironment(func, onException, _this) {
     onException = function (error) {
       Meteor._debug(
         "Exception in " + description + ":",
-        error && error.stack || error
+        error
       );
     };
   }

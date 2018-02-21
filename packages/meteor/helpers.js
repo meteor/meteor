@@ -162,7 +162,7 @@ function logErr(err) {
   if (err) {
     return Meteor._debug(
       "Exception in callback of async function",
-      err.stack ? err.stack : err
+      err
     );
   }
 }

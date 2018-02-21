@@ -713,8 +713,7 @@ export class Connection {
       } else if (!exception._expectedByTest) {
         Meteor._debug(
           "Exception while simulating the effect of invoking '" + name + "'",
-          exception,
-          exception.stack
+          exception
         );
       }
     }
@@ -731,7 +730,7 @@ export class Connection {
         // to the console.
         callback = err => {
           err &&
-            Meteor._debug("Error invoking Method '" + name + "':", err.message);
+            Meteor._debug("Error invoking Method '" + name + "':", err);
         };
       } else {
         // On the server, make the function synchronous. Throw on
