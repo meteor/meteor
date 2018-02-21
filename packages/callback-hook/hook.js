@@ -119,7 +119,7 @@ function dontBindEnvironment(func, onException, _this) {
     var description = onException || "callback of async function";
     onException = function (error) {
       Meteor._debug(
-        "Exception in " + description + ":",
+        "Exception in " + description,
         error
       );
     };

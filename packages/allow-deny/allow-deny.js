@@ -418,7 +418,7 @@ CollectionPrototype._callMutatorMethod = function _callMutatorMethod(name, args,
     // not force a callback.
     callback = function (err) {
       if (err)
-        Meteor._debug(name + " failed: ", err);
+        Meteor._debug(name + " failed", err);
     };
   }
 
