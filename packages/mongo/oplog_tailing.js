@@ -143,7 +143,7 @@ _.extend(OplogHandle.prototype, {
       } catch (e) {
         // During failover (eg) if we get an exception we should log and retry
         // instead of crashing.
-        Meteor._debug("Got exception while reading last entry: " + e);
+        Meteor._debug("Got exception while reading last entry", e);
         Meteor._sleepForMs(100);
       }
     }
