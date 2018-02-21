@@ -2,6 +2,9 @@
 
 * The `reify` npm package has been updated to version 0.14.1.
 
+* The `meteor-babel` npm package has been updated to version
+  7.0.0-beta.40-1.
+
 * The `optimism` npm package has been updated to version 0.4.0.
 
 * The `minifier-js` package has been updated to use `uglify-es` 3.3.10.
@@ -28,6 +31,17 @@
   in the `public` directory, and remain available in production bundles.
   [Issue #7013](https://github.com/meteor/meteor/issues/7013)
   [PR #9666](https://github.com/meteor/meteor/pull/9666)
+
+* The `facts` package has been split into `facts-base` and `facts-ui`. The
+  original `facts` package has been deprecated.
+  [PR #9629](https://github.com/meteor/meteor/pull/9629)
+
+* If the new pseudo tag `<meteor-bundled-css />` is used anywhere in the
+  `<head />` of an app, it will be replaced by the `link` to Meteor's bundled
+  CSS. If the new tag isn't used, the bundle will be placed at the top of
+  the `<head />` section as before (for backwards compatibility).
+  [Feature #24](https://github.com/meteor/meteor/pull/24)
+  [PR #9657](https://github.com/meteor/meteor/pull/9657)
 
 ## v1.6.1, 2018-01-19
 

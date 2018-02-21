@@ -31,7 +31,7 @@ Package.onUse(function (api) {
   api.use('autopublish', 'server', {weak: true});
 
   // If the facts package is loaded, publish some statistics.
-  api.use('facts', 'server', {weak: true});
+  api.use('facts-base', 'server', {weak: true});
 
   api.use('callback-hook', 'server');
 

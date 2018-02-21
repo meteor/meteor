@@ -1881,7 +1881,8 @@ var getTestPackageNames = function (projectContext, packageNames) {
           version = projectContext.localCatalog.getVersionBySourceRoot(
             files.pathResolve(p));
           if (! version) {
-            throw Error("should have been caught when initializing catalog?");
+            buildmessage.error("Package not found in local catalog");
+            return;
           }
           if (version.testName) {
             testPackages.push(version.testName);
