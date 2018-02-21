@@ -11,7 +11,7 @@ let suppress = 0;
 // be very visible. if you change _debug to go someplace else, etc,
 // please fix the autopublish code to do something reasonable.
 //
-Meteor._debug = function(/* arguments */) {
+Meteor._debug = function(...arguments) {
   if (suppress) {
     suppress--;
     return;
