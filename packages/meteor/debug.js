@@ -1,7 +1,7 @@
 let suppress = 0;
 
 /**
- * replacement for console.log. This is a temporary API. We should
+ * Replacement for console.log. This is a temporary API. We should
  * provide a real logging API soon (possibly just a polyfill for
  * console?)
  *
