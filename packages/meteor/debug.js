@@ -1,4 +1,4 @@
-var suppress = 0;
+let suppress = 0;
 
 // replacement for console.log. This is a temporary API. We should
 // provide a real logging API soon (possibly just a polyfill for
@@ -35,8 +35,8 @@ Meteor._debug = function(/* arguments */) {
       // console.log, so try to call it with one argument if possible.
       // Approach taken here: If all arguments are strings, join them on space.
       // See https://github.com/meteor/meteor/pull/732#issuecomment-13975991
-      var allArgumentsOfTypeString = true;
-      for (var i = 0; i < arguments.length; i++) {
+      let allArgumentsOfTypeString = true;
+      for (let i = 0; i < arguments.length; i++) {
         if (typeof arguments[i] !== 'string') {
           allArgumentsOfTypeString = false;
         }
@@ -50,7 +50,7 @@ Meteor._debug = function(/* arguments */) {
 
     } else if (typeof Function.prototype.bind === 'function') {
       // IE9
-      var log = Function.prototype.bind.call(console.log, console);
+      const log = Function.prototype.bind.call(console.log, console);
       log.apply(console, arguments);
     } else {
       // IE8
