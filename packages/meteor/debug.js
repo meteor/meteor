@@ -12,7 +12,7 @@ let suppress = 0;
  * be very visible. if you change _debug to go someplace else, etc,
  * please fix the autopublish code to do something reasonable.
  */
-Meteor._debug = function(...arguments) {
+Meteor._debug = function(...args) {
   if (suppress) {
     suppress--;
     return;
@@ -22,7 +22,7 @@ Meteor._debug = function(...arguments) {
     return;
   }
 
-  if (arguments.length === 0) { // IE Companion breaks otherwise
+  if (args.length === 0) { // IE Companion breaks otherwise
     // IE10 PP4 requires at least one argument
     console.log('');
   }
@@ -38,26 +38,26 @@ Meteor._debug = function(...arguments) {
       // Approach taken here: If all arguments are strings, join them on space.
       // See https://github.com/meteor/meteor/pull/732#issuecomment-13975991
       let allArgumentsOfTypeString = true;
-      for (let i = 0; i < arguments.length; i++) {
-        if (typeof arguments[i] !== 'string') {
+      for (let i = 0; i < args.length; i++) {
+        if (typeof args[i] !== 'string') {
           allArgumentsOfTypeString = false;
         }
       }
 
       if (allArgumentsOfTypeString) {
-        console.log.apply(console, [Array.prototype.join.call(arguments, ' ')]);
+        console.log.apply(console, [Array.prototype.join.call(args, ' ')]);
       } else {
-        console.log.apply(console, arguments);
+        console.log.apply(console, args);
       }
     }
     else if (typeof Function.prototype.bind === 'function') {
       // IE9
       const log = Function.prototype.bind.call(console.log, console);
-      log.apply(console, arguments);
+      log.apply(console, args);
     }
     else {
       // IE8
-      Function.prototype.call.call(console.log, console, Array.prototype.slice.call(arguments));
+      Function.prototype.call.call(console.log, console, Array.prototype.slice.call(args));
     }
   }
 };
