@@ -6,7 +6,7 @@
     "test": "meteor test --full-app --driver-package dispatch:mocha-browser"
   },
   "dependencies": {
-    "@babel/runtime": "^7.0.0-beta.36",
+    "@babel/runtime": "^7.0.0-beta.40",
     "acorn": "^4.0.11",
     "arson": "^0.2.3",
     "meteor-node-stubs": "^0.3.2",
