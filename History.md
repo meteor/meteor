@@ -24,6 +24,10 @@
   [Issue 9639](https://github.com/meteor/meteor/issues/9639)
   [PR #9663](https://github.com/meteor/meteor/pull/9663)
 
+* The `facts` package has been split into `facts-base` and `facts-ui`. The
+  original `facts` package has been deprecated.
+  [PR #9629](https://github.com/meteor/meteor/pull/9629)
+
 ## v1.6.1, 2018-01-19
 
 * Node has been updated to version
