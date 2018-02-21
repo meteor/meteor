@@ -11,7 +11,7 @@ var suppress = 0;
 // be very visible. if you change _debug to go someplace else, etc,
 // please fix the autopublish code to do something reasonable.
 //
-Meteor._debug = function (/* arguments */) {
+Meteor._debug = function(/* arguments */) {
   if (suppress) {
     suppress--;
     return;
@@ -25,7 +25,7 @@ Meteor._debug = function (/* arguments */) {
       // IE doesn't have console.log.apply, it's not a real Object.
       // http://stackoverflow.com/questions/5538972/console-log-apply-not-working-in-ie9
       // http://patik.com/blog/complete-cross-browser-console-log/
-      if (typeof console.log.apply === "function") {
+      if (typeof console.log.apply === 'function') {
         // Most browsers
 
         // Chrome and Safari only hyperlink URLs to source files in first argument of
@@ -33,16 +33,19 @@ Meteor._debug = function (/* arguments */) {
         // Approach taken here: If all arguments are strings, join them on space.
         // See https://github.com/meteor/meteor/pull/732#issuecomment-13975991
         var allArgumentsOfTypeString = true;
-        for (var i = 0; i < arguments.length; i++)
-          if (typeof arguments[i] !== "string")
+        for (var i = 0; i < arguments.length; i++) {
+          if (typeof arguments[i] !== 'string') {
             allArgumentsOfTypeString = false;
+          }
+        }
 
-        if (allArgumentsOfTypeString)
-          console.log.apply(console, [Array.prototype.join.call(arguments, " ")]);
-        else
+        if (allArgumentsOfTypeString) {
+          console.log.apply(console, [Array.prototype.join.call(arguments, ' ')]);
+        } else {
           console.log.apply(console, arguments);
+        }
 
-      } else if (typeof Function.prototype.bind === "function") {
+      } else if (typeof Function.prototype.bind === 'function') {
         // IE9
         var log = Function.prototype.bind.call(console.log, console);
         log.apply(console, arguments);
@@ -57,11 +60,11 @@ Meteor._debug = function (/* arguments */) {
 // Suppress the next 'count' Meteor._debug messsages. Use this to
 // stop tests from spamming the console.
 //
-Meteor._suppress_log = function (count) {
+Meteor._suppress_log = function(count) {
   suppress += count;
 };
 
-Meteor._suppressed_log_expected = function () {
+Meteor._suppressed_log_expected = function() {
   return suppress !== 0;
 };
 
