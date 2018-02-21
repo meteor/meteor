@@ -2,9 +2,9 @@
   "lockfileVersion": 1,
   "dependencies": {
     "acorn": {
-      "version": "5.3.0",
-      "resolved": "https://registry.npmjs.org/acorn/-/acorn-5.3.0.tgz",
-      "integrity": "sha512-Yej+zOJ1Dm/IMZzzj78OntP/r3zHEaKcyNoU2lAaxPtrseM6rF0xwqoz5Q5ysAiED9hTjI2hgtvLXitlCN1/Ug=="
+      "version": "5.4.1",
+      "resolved": "https://registry.npmjs.org/acorn/-/acorn-5.4.1.tgz",
+      "integrity": "sha512-XLmq3H/BVvW6/GbxKryGxWORz1ebilSsUDlyC27bXhWGWAZWkGwS6FLHjOlwFXNFoWFQEO/Df4u0YYd0K3BQgQ=="
     },
     "minipass": {
       "version": "2.2.1",
@@ -17,9 +17,9 @@
       "integrity": "sha512-4T6Ur/GctZ27nHfpt9THOdRZNgyJ9FZchYO1ceg5S8Q3DNLCKYy44nCZzgCJgcvx2UM8czmqak5BCxJMrq37lA=="
     },
     "reify": {
-      "version": "0.13.7",
-      "resolved": "https://registry.npmjs.org/reify/-/reify-0.13.7.tgz",
-      "integrity": "sha512-jA6C/TdOf0g1A9WlQL7enh8yfGXgCmU3qbOpgc98vzRNEgu4TrAnSGec+uLxHdci96lftdBow3q0X3pbXnzmGQ=="
+      "version": "0.14.1",
+      "resolved": "https://registry.npmjs.org/reify/-/reify-0.14.1.tgz",
+      "integrity": "sha512-HAKYzqlCCWsfAcOTm8gsJZ6FE5I06kvjzHRQTCDD6xqUJaY8Mh4ve9oiCDe8yiYXOqZqpt03gn8yS4+bokRmhQ=="
     },
     "semver": {
       "version": "5.4.1",

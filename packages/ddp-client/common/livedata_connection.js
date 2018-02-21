@@ -330,6 +330,7 @@ export class Connection {
   /**
    * @memberOf Meteor
    * @importFromPackage meteor
+   * @alias Meteor.subscribe
    * @summary Subscribe to a record set.  Returns a handle that provides
    * `stop()` and `ready()` methods.
    * @locus Client
@@ -539,6 +540,7 @@ export class Connection {
   /**
    * @memberOf Meteor
    * @importFromPackage meteor
+   * @alias Meteor.call
    * @summary Invokes a method passing any number of arguments.
    * @locus Anywhere
    * @param {String} name Name of method to invoke
@@ -554,30 +556,10 @@ export class Connection {
     return this.apply(name, args, callback);
   }
 
-  // @param options {Optional Object}
-  //   wait: Boolean - Should we wait to call this until all current methods
-  //                   are fully finished, and block subsequent method calls
-  //                   until this method is fully finished?
-  //                   (does not affect methods called from within this method)
-  //   onResultReceived: Function - a callback to call as soon as the method
-  //                                result is received. the data written by
-  //                                the method may not yet be in the cache!
-  //   returnStubValue: Boolean - If true then in cases where we would have
-  //                              otherwise discarded the stub's return value
-  //                              and returned undefined, instead we go ahead
-  //                              and return it.  Specifically, this is any
-  //                              time other than when (a) we are already
-  //                              inside a stub or (b) we are in Node and no
-  //                              callback was provided.  Currently we require
-  //                              this flag to be explicitly passed to reduce
-  //                              the likelihood that stub return values will
-  //                              be confused with server return values; we
-  //                              may improve this in future.
-  // @param callback {Optional Function}
-
   /**
    * @memberOf Meteor
    * @importFromPackage meteor
+   * @alias Meteor.apply
    * @summary Invoke a method passing an array of arguments.
    * @locus Anywhere
    * @param {String} name Name of method to invoke
@@ -587,6 +569,7 @@ export class Connection {
    * @param {Function} options.onResultReceived (Client only) This callback is invoked with the error or result of the method (just like `asyncCallback`) as soon as the error or result is available. The local cache may not yet reflect the writes performed by the method.
    * @param {Boolean} options.noRetry (Client only) if true, don't send this method again on reload, simply call the callback an error with the error code 'invocation-failed'.
    * @param {Boolean} options.throwStubExceptions (Client only) If true, exceptions thrown by method stubs will be thrown instead of logged, and the method will not be invoked on the server.
+   * @param {Boolean} options.returnStubValue (Client only) If true then in cases where we would have otherwise discarded the stub's return value and returned undefined, instead we go ahead and return it. Specifically, this is any time other than when (a) we are already inside a stub or (b) we are in Node and no callback was provided. Currently we require this flag to be explicitly passed to reduce the likelihood that stub return values will be confused with server return values; we may improve this in future.
    * @param {Function} [asyncCallback] Optional callback; same semantics as in [`Meteor.call`](#meteor_call).
    */
   apply(name, args, options, callback) {
@@ -888,10 +871,11 @@ export class Connection {
   }
 
   /**
-   * @summary Get the current connection status. A reactive data source.
-   * @locus Client
    * @memberOf Meteor
    * @importFromPackage meteor
+   * @alias Meteor.status
+   * @summary Get the current connection status. A reactive data source.
+   * @locus Client
    */
   status(...args) {
     return this._stream.status(...args);
@@ -901,19 +885,21 @@ export class Connection {
    * @summary Force an immediate reconnection attempt if the client is not connected to the server.
 
   This method does nothing if the client is already connected.
-   * @locus Client
    * @memberOf Meteor
    * @importFromPackage meteor
+   * @alias Meteor.reconnect
+   * @locus Client
    */
   reconnect(...args) {
     return this._stream.reconnect(...args);
   }
 
   /**
-   * @summary Disconnect the client from the server.
-   * @locus Client
    * @memberOf Meteor
    * @importFromPackage meteor
+   * @alias Meteor.disconnect
+   * @summary Disconnect the client from the server.
+   * @locus Client
    */
   disconnect(...args) {
     return this._stream.disconnect(...args);
