@@ -20,6 +20,7 @@ meteorJsMinify = function (source) {
 
     if (typeof uglifyResult.code === "string") {
       result.code = uglifyResult.code;
+      result.minifier = 'uglify-es';
     } else {
       throw uglifyResult.error ||
         new Error("unknown uglify.minify failure");
@@ -29,14 +30,11 @@ meteorJsMinify = function (source) {
     // Although Babel.minify can handle a wider variety of ECMAScript
     // 2015+ syntax, it is substantially slower than UglifyJS, so we use
     // it only as a fallback.
-    if (Babel.getMinifierOptions) {
-      var options = Babel.getMinifierOptions({
-        inlineNodeEnv: NODE_ENV
-      });
-      result.code = Babel.minify(source, options).code;
-    } else {
-      result.code = Babel.minify(source).code;
-    }
+    var options = Babel.getMinifierOptions({
+      inlineNodeEnv: NODE_ENV
+    });
+    result.code = Babel.minify(source, options).code;
+    result.minifier = 'babel-minify';
   }
 
   return result;

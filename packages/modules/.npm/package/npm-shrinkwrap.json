@@ -17,14 +17,14 @@
       "integrity": "sha512-4T6Ur/GctZ27nHfpt9THOdRZNgyJ9FZchYO1ceg5S8Q3DNLCKYy44nCZzgCJgcvx2UM8czmqak5BCxJMrq37lA=="
     },
     "reify": {
-      "version": "0.14.1",
-      "resolved": "https://registry.npmjs.org/reify/-/reify-0.14.1.tgz",
-      "integrity": "sha512-HAKYzqlCCWsfAcOTm8gsJZ6FE5I06kvjzHRQTCDD6xqUJaY8Mh4ve9oiCDe8yiYXOqZqpt03gn8yS4+bokRmhQ=="
+      "version": "0.14.2",
+      "resolved": "https://registry.npmjs.org/reify/-/reify-0.14.2.tgz",
+      "integrity": "sha512-gJA67pCidAROSmr4/8SQuMQXtZwtSvoVIDR6KjoWxnO4LSD8iYNjMcRrHuQQ/c8cXYaoCpEQh0rO9CNNu1z5lA=="
     },
     "semver": {
-      "version": "5.4.1",
-      "resolved": "https://registry.npmjs.org/semver/-/semver-5.4.1.tgz",
-      "integrity": "sha512-WfG/X9+oATh81XtllIo/I8gOiY9EXRdv1cQdyykeXK17YcUW3EXUAi2To4pcH6nZtJPr7ZOpM5OMyWJZm+8Rsg=="
+      "version": "5.5.0",
+      "resolved": "https://registry.npmjs.org/semver/-/semver-5.5.0.tgz",
+      "integrity": "sha512-4SJ3dm0WAwWy/NVeioZh5AntkdJoWKxHxcmyP622fOkgHa4z3R0TdBJICINyaSDE6uNwVc8gZr+ZinwZAH4xIA=="
     },
     "yallist": {
       "version": "3.0.2",
