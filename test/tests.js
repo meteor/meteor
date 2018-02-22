@@ -512,8 +512,10 @@ describe("Reify", function () {
   });
 
   it("should support export-default-from syntax", function () {
-    import { a } from "./export-default-from.js";
+    import { a, aNs as aNsReexported } from "./export-default-from.js";
+    import * as aNsOriginal from "./export-value-a.js";
     assert.strictEqual(a, "value: a");
+    assert.strictEqual(aNsOriginal, aNsReexported);
   });
 
   it("should work for imports in generator functions", function () {
