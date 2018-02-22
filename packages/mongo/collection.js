@@ -303,17 +303,26 @@ Object.assign(Mongo.Collection.prototype, {
   // `undefined` fields, to keep things consistent, and help avoid any
   // unwarranted side effects (such as issue #9619).
   _removeUndefinedFields(selector) {
-    const cleanSelector = selector;
-    if (cleanSelector) {
-      Object.keys(cleanSelector).forEach((key) => {
-        if (cleanSelector[key] && typeof cleanSelector[key] === 'object') {
-          this._removeUndefinedFields(cleanSelector[key]);
-        } else if (cleanSelector[key] === undefined) {
-          delete cleanSelector[key];
-        }
-      });
+    if (typeof selector !== 'object') {
+      return selector;
     }
-    return cleanSelector;
+
+    const selectorCopy = EJSON.clone(selector);
+    const seen = new Set();
+    (function removeUndefinedRecursively(cleanSelector) {
+      if (!seen.has(cleanSelector)) {
+        seen.add(cleanSelector);
+        Object.keys(cleanSelector).forEach((key) => {
+          if (cleanSelector[key] && typeof cleanSelector[key] === 'object') {
+            removeUndefinedRecursively(cleanSelector[key]);
+          } else if (typeof cleanSelector[key] === 'undefined') {
+            delete cleanSelector[key];
+          }
+        });
+      }
+    })(selectorCopy);
+
+    return selectorCopy;
   },
 
   /**
