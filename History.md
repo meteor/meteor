@@ -1,9 +1,26 @@
 ## v.NEXT
 
-* The `reify` npm package has been updated to version 0.14.1.
+* Applications may now specify client and server entry point modules in a
+  newly-supported `"meteor"` section of `package.json`:
+  ```js
+  "meteor": {
+    "mainModule": {
+      "client": "client/main.js",
+      "server": "server/main.js"
+    }
+  }
+  ```
+  When specified, these entry points override Meteor's default module
+  loading semantics, rendering `imports` directories unnecessary. If
+  `mainModule` is left unspecified for either client or server, the
+  default rules will apply for that architecture, as before.
+  [Feature #135](https://github.com/meteor/meteor-feature-requests/issues/135)
+  [PR #9690](https://github.com/meteor/meteor/pull/9690)
+
+* The `reify` npm package has been updated to version 0.14.2.
 
 * The `meteor-babel` npm package has been updated to version
-  7.0.0-beta.40-1.
+  7.0.0-beta.40-2.
 
 * The `optimism` npm package has been updated to version 0.4.0.
 

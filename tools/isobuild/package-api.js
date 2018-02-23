@@ -31,28 +31,7 @@ function toArchArray(arch) {
   arch.splice(0).forEach(where => {
     if (seen[where]) return;
     seen[where] = true;
-
-    // Shorthands for common arch prefixes:
-    // "server" => os.*
-    // "client" => web.*
-    // "legacy" => web.browser.legacy, web.cordova
-    if (where === "server") {
-      arch.push("os");
-    } else if (where === "client") {
-      arch.push("web");
-    } else if (where === "legacy") {
-      arch.push(
-        "web.browser.legacy",
-        // It's important to include web.browser.legacy resources in the
-        // Cordova bundle, since Cordova bundles are built into the mobile
-        // application, rather than being downloaded from a web server at
-        // runtime. This means we can't distinguish between clients at
-        // runtime, so we have to use code that works for all clients.
-        "web.cordova"
-      );
-    } else {
-      arch.push(where);
-    }
+    arch.push(...mapWhereToArches(where));
   });
 
   // avoid using _.each so as to not add more frames to skip
@@ -69,6 +48,34 @@ function toArchArray(arch) {
     }
   }
   return arch;
+}
+
+export function mapWhereToArches(where) {
+  const arches = [];
+
+  // Shorthands for common arch prefixes:
+  // "server" => os.*
+  // "client" => web.*
+  // "legacy" => web.browser.legacy, web.cordova
+  if (where === "server") {
+    arches.push("os");
+  } else if (where === "client") {
+    arches.push("web");
+  } else if (where === "legacy") {
+    arches.push(
+      "web.browser.legacy",
+      // It's important to include web.browser.legacy resources in the
+      // Cordova bundle, since Cordova bundles are built into the mobile
+      // application, rather than being downloaded from a web server at
+      // runtime. This means we can't distinguish between clients at
+      // runtime, so we have to use code that works for all clients.
+      "web.cordova"
+    );
+  } else {
+    arches.push(where);
+  }
+
+  return arches;
 }
 
 // Iterates over the list of target archs and calls f(arch) for all archs

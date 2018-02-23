@@ -591,7 +591,7 @@ class ResourceSlot {
     return fileOptions && fileOptions[name];
   }
 
-  _isLazy(options) {
+  _isLazy(options, isJavaScript) {
     let lazy = this._getOption("lazy", options);
 
     if (typeof lazy === "boolean") {
@@ -607,18 +607,36 @@ class ResourceSlot {
       return false;
     }
 
+    const runningTests = global.testCommandMetadata &&
+      (global.testCommandMetadata.isTest ||
+       global.testCommandMetadata.isAppTest);
+
+    if (runningTests &&
+        isTestFilePath(this.inputResource.path)) {
+      // Test files are never lazy if we're running tests.
+      return false;
+    }
+
+    if (isJavaScript) {
+      // PackageSource#_inferFileOptions (in package-source.js) sets the
+      // mainModule option to false to indicate a meteor.mainModule was
+      // configured for this architecture, but this module was not it.
+      // It's important to wait until this point (ResourceSlot#_isLazy) to
+      // make the final call, because we can finally tell whether the
+      // output resource is JavaScript or not (non-JS resources are not
+      // affected by the meteor.mainModule option).
+      const mainModule = this._getOption("mainModule", options);
+      if (typeof mainModule === "boolean") {
+        return ! mainModule;
+      }
+    }
+
+    // In other words, the imports directory remains relevant for non-JS
+    // resources, and for JS resources in the absence of an explicit
+    // meteor.mainModule configuration in package.json.
     const splitPath = this.inputResource.path.split(files.pathSep);
     const isInImports = splitPath.indexOf("imports") >= 0;
-
-    if (global.testCommandMetadata &&
-        (global.testCommandMetadata.isTest ||
-         global.testCommandMetadata.isAppTest)) {
-      // test files should always be included, if we're running app
-      // tests.
-      return isInImports && !isTestFilePath(this.inputResource.path);
-    } else {
-      return isInImports;
-    }
+    return isInImports;
   }
 
   addStylesheet(options) {
@@ -637,7 +655,7 @@ class ResourceSlot {
       targetPath,
       servePath: self.packageSourceBatch.unibuild.pkg._getServePath(targetPath),
       hash: sha1(data),
-      lazy: this._isLazy(options),
+      lazy: this._isLazy(options, false),
     };
 
     if (useMeteorInstall && resource.lazy) {
@@ -711,7 +729,7 @@ class ResourceSlot {
       sourceMap: options.sourceMap,
       // intentionally preserve a possible `undefined` value for files
       // in apps, rather than convert it into `false` via `!!`
-      lazy: self._isLazy(options),
+      lazy: self._isLazy(options, true),
       bare: !! self._getOption("bare", options),
       mainModule: !! self._getOption("mainModule", options),
     });
@@ -739,7 +757,7 @@ class ResourceSlot {
       servePath: self.packageSourceBatch.unibuild.pkg._getServePath(
         options.path),
       hash: sha1(options.data),
-      lazy: self._isLazy(options),
+      lazy: self._isLazy(options, false),
     });
   }
 
@@ -763,7 +781,7 @@ class ResourceSlot {
     self.outputResources.push({
       type: options.section,
       data: Buffer.from(files.convertToStandardLineEndings(options.data), 'utf8'),
-      lazy: self._isLazy(options),
+      lazy: self._isLazy(options, false),
     });
   }
 
