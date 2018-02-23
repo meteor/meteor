@@ -17,6 +17,17 @@ var watch = require('./fs/watch.js');
 var Profile = require('./tool-env/profile.js').Profile;
 import { KNOWN_ISOBUILD_FEATURE_PACKAGES } from './isobuild/compiler.js';
 
+import {
+  optimisticReadJsonOrNull,
+  optimisticHashOrNull,
+} from "./fs/optimistic.js";
+
+import {
+  mapWhereToArch,
+} from "./isobuild/package-api.js";
+
+import Resolver from "./isobuild/resolver.js";
+
 // The ProjectContext represents all the context associated with an app:
 // metadata files in the `.meteor` directory, the choice of package versions
 // used by it, etc.  Any time you want to work with an app, create a
@@ -363,6 +374,13 @@ _.extend(ProjectContext.prototype, {
       });
       if (buildmessage.jobHasMessages())
         return;
+
+      self.meteorConfig = new MeteorConfig({
+        appDirectory: self.projectDir,
+      });
+      if (buildmessage.jobHasMessages()) {
+        return;
+      }
     });
 
     self._completedStage = STAGE.READ_PROJECT_METADATA;
@@ -1580,3 +1598,100 @@ _.extend(exports.FinishedUpgraders.prototype, {
     files.appendFile(self.filename, appendText);
   }
 });
+
+export class MeteorConfig {
+  constructor({
+    appDirectory,
+  }) {
+    this.appDirectory = appDirectory;
+    this.packageJsonPath = files.pathJoin(appDirectory, "package.json");
+    this.watchSet = new watch.WatchSet;
+    this._resolversByArch = Object.create(null);
+  }
+
+  _ensureInitialized() {
+    if (! _.has(this, "_config")) {
+      const json = optimisticReadJsonOrNull(this.packageJsonPath);
+      this._config = json && json.meteor || null;
+      this.watchSet.addFile(
+        this.packageJsonPath,
+        optimisticHashOrNull(this.packageJsonPath)
+      );
+    }
+
+    return this._config;
+  }
+
+  // General utility for querying the "meteor" section of package.json.
+  // TODO Implement an API for setting these values?
+  get(...keys) {
+    let config = this._ensureInitialized();
+    if (config) {
+      keys.every(key => {
+        if (config && _.has(config, key)) {
+          config = config[key];
+          return true;
+        }
+      });
+      return config;
+    }
+  }
+
+  // Call this first if you plan to call getMainModuleForArch multiple
+  // times, so that you can avoid repeating this work each time.
+  getMainModulesByArch(arch) {
+    const configMainModule = this.get("mainModule");
+    const mainModulesByArch = Object.create(null);
+
+    if (configMainModule) {
+      if (typeof configMainModule === "string") {
+        // If packageJson.meteor.mainModule is a string, use that string
+        // as the mainModule for all architectures.
+        mainModulesByArch["os"] = configMainModule;
+        mainModulesByArch["web"] = configMainModule;
+      } else if (typeof configMainModule === "object") {
+        // If packageJson.meteor.mainModule is an object, use its
+        // properties to select a mainModule for each architecture.
+        Object.keys(configMainModule).forEach(where => {
+          mainModulesByArch[mapWhereToArch(where)] = configMainModule[where];
+        });
+      }
+    }
+
+    return mainModulesByArch;
+  }
+
+  // Given an architecture like web.browser, get the best mainModule for
+  // that architecture. For example, if this.config.mainModule.client is
+  // defined, then because mapWhereToArch("client") === "web", and "web"
+  // matches web.browser, return this.config.mainModule.client.
+  getMainModuleForArch(
+    arch,
+    mainModulesByArch = this.getMainModulesByArch(),
+  ) {
+    const mainMatch = archinfo.mostSpecificMatch(
+      arch, Object.keys(mainModulesByArch));
+
+    if (mainMatch) {
+      if (! this._resolversByArch[arch]) {
+        this._resolversByArch[arch] = new Resolver({
+          sourceRoot: this.appDirectory,
+          targetArch: arch,
+        });
+      }
+
+      // Use a Resolver to allow the mainModule strings to omit .js or
+      // .json file extensions, and to enable resolving directories
+      // containing package.json or index.js files.
+      const res = this._resolversByArch[arch].resolve(
+        // Only relative paths are allowed (not top-level packages).
+        "./" + files.pathNormalize(mainModulesByArch[mainMatch]),
+        this.packageJsonPath
+      );
+
+      if (res && typeof res === "object") {
+        return files.pathRelative(this.appDirectory, res.path);
+      }
+    }
+  }
+}
