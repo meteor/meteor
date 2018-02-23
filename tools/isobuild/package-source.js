@@ -837,7 +837,10 @@ _.extend(PackageSource.prototype, {
                   constraint: constraint.constraintString });
     });
 
-    var projectWatchSet = projectContext.getProjectWatchSet();
+    const projectWatchSet = projectContext.getProjectWatchSet();
+    const mainModulesByArch =
+      projectContext.meteorConfig.getMainModulesByArch();
+    projectWatchSet.merge(projectContext.meteorConfig.watchSet);
 
     _.each(compiler.ALL_ARCHES, function (arch) {
       // We don't need to build a Cordova SourceArch if there are no Cordova
@@ -846,6 +849,9 @@ _.extend(PackageSource.prototype, {
           _.isEmpty(projectContext.platformList.getCordovaPlatforms())) {
         return;
       }
+
+      const mainModule = projectContext.meteorConfig
+        .getMainModuleForArch(arch, mainModulesByArch);
 
       // XXX what about /web.browser/* etc, these directories could also
       // be for specific client targets.
@@ -867,20 +873,42 @@ _.extend(PackageSource.prototype, {
             isApp: true,
           };
 
-          return {
-            sources: self._findSources(findOptions).sort(
-              loadOrderSort(sourceProcessorSet, arch)
-            ).map(relPath => {
-              return {
-                relPath,
-                fileOptions: self._inferFileOptions(relPath, {
-                  arch,
-                  isApp: true,
-                }),
-              };
-            }),
+          // If this architecture has a mainModule defined in
+          // package.json, it's an error if _findSources doesn't find that
+          // module. If no mainModule is defined, anything goes.
+          let missingMainModule = !! mainModule;
 
-            assets: self._findAssets(findOptions),
+          const sources = self._findSources(findOptions).sort(
+            loadOrderSort(sourceProcessorSet, arch)
+          ).map(relPath => {
+            if (relPath === mainModule) {
+              missingMainModule = false;
+            }
+
+            const fileOptions = self._inferFileOptions(relPath, {
+              arch,
+              isApp: true,
+              mainModule,
+            });
+
+            return {
+              relPath,
+              fileOptions,
+            };
+          });
+
+          if (missingMainModule) {
+            buildmessage.error([
+              "Could not find mainModule for '" + arch + "' architecture: " + mainModule,
+              'Check the "meteor" section of your package.json file?'
+            ].join("\n"));
+          }
+
+          const assets = self._findAssets(findOptions);
+
+          return {
+            sources,
+            assets,
           };
         }
       });
@@ -919,7 +947,11 @@ _.extend(PackageSource.prototype, {
     }
   }),
 
-  _inferFileOptions(relPath, {arch, isApp}) {
+  _inferFileOptions(relPath, {
+    arch,
+    isApp,
+    mainModule,
+  }) {
     const fileOptions = {};
     const isTest = global.testCommandMetadata
       && global.testCommandMetadata.isTest;
@@ -971,6 +1003,17 @@ _.extend(PackageSource.prototype, {
           archinfo.matches(arch, "web") &&
           relPath.endsWith(".js")) {
         fileOptions.bare = true;
+      }
+    }
+
+    if (isApp && mainModule) {
+      if (relPath === mainModule) {
+        fileOptions.lazy = false;
+        fileOptions.mainModule = true;
+      } else if (typeof fileOptions.lazy === "undefined") {
+        // Used in ResourceSlot#_isLazy (in compiler-plugin.js) to make a
+        // final determination of whether the file should be lazy.
+        fileOptions.mainModule = false;
       }
     }
 
