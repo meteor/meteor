@@ -607,31 +607,35 @@ class ResourceSlot {
       return false;
     }
 
-    const splitPath = this.inputResource.path.split(files.pathSep);
-    const isInImports = splitPath.indexOf("imports") >= 0;
+    const runningTests = global.testCommandMetadata &&
+      (global.testCommandMetadata.isTest ||
+       global.testCommandMetadata.isAppTest);
 
-    if (global.testCommandMetadata &&
-        (global.testCommandMetadata.isTest ||
-         global.testCommandMetadata.isAppTest)) {
-      // test files should always be included, if we're running app
-      // tests.
-      return isInImports && !isTestFilePath(this.inputResource.path);
+    if (runningTests &&
+        isTestFilePath(this.inputResource.path)) {
+      // Test files are never lazy if we're running tests.
+      return false;
     }
 
-    if (isJavaScript &&
-        // Set in PackageSource#_inferFileOptions (in package-source.js)
-        // to indicate that there was a mainModule, but this module was
-        // not the mainModule. It's important to wait until this point to
-        // make the final call, because we can finally tell whether the
-        // file was JavaScript or not (non-JS resources are not affected
-        // by the meteor.mainModule configuration option).
-        this._getOption("mainModule") === false) {
-      return true;
+    if (isJavaScript) {
+      // PackageSource#_inferFileOptions (in package-source.js) sets the
+      // mainModule option to false to indicate a meteor.mainModule was
+      // configured for this architecture, but this module was not it.
+      // It's important to wait until this point (ResourceSlot#_isLazy) to
+      // make the final call, because we can finally tell whether the
+      // output resource is JavaScript or not (non-JS resources are not
+      // affected by the meteor.mainModule option).
+      const mainModule = this._getOption("mainModule", options);
+      if (typeof mainModule === "boolean") {
+        return ! mainModule;
+      }
     }
 
     // In other words, the imports directory remains relevant for non-JS
     // resources, and for JS resources in the absence of an explicit
-    // meteor.mainModule configuration.
+    // meteor.mainModule configuration in package.json.
+    const splitPath = this.inputResource.path.split(files.pathSep);
+    const isInImports = splitPath.indexOf("imports") >= 0;
     return isInImports;
   }
 
