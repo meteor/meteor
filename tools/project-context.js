@@ -26,6 +26,8 @@ import {
   mapWhereToArch,
 } from "./isobuild/package-api.js";
 
+import Resolver from "./isobuild/resolver.js";
+
 // The ProjectContext represents all the context associated with an app:
 // metadata files in the `.meteor` directory, the choice of package versions
 // used by it, etc.  Any time you want to work with an app, create a
@@ -374,7 +376,7 @@ _.extend(ProjectContext.prototype, {
         return;
 
       self.meteorConfig = new MeteorConfig({
-        packageJsonPath: files.pathJoin(self.projectDir, "package.json")
+        appDirectory: self.projectDir,
       });
       if (buildmessage.jobHasMessages()) {
         return;
@@ -1599,23 +1601,25 @@ _.extend(exports.FinishedUpgraders.prototype, {
 
 export class MeteorConfig {
   constructor({
-    packageJsonPath,
+    appDirectory,
   }) {
-    this.packageJsonPath = packageJsonPath;
+    this.appDirectory = appDirectory;
+    this.packageJsonPath = files.pathJoin(appDirectory, "package.json");
     this.watchSet = new watch.WatchSet;
+    this._resolversByArch = Object.create(null);
   }
 
   _ensureInitialized() {
-    if (! _.has(this, "config")) {
+    if (! _.has(this, "_config")) {
       const json = optimisticReadJsonOrNull(this.packageJsonPath);
-      this.config = json && json.meteor || null;
+      this._config = json && json.meteor || null;
       this.watchSet.addFile(
         this.packageJsonPath,
         optimisticHashOrNull(this.packageJsonPath)
       );
     }
 
-    return this.config;
+    return this._config;
   }
 
   // General utility for querying the "meteor" section of package.json.
@@ -1649,8 +1653,7 @@ export class MeteorConfig {
         // If packageJson.meteor.mainModule is an object, use its
         // properties to select a mainModule for each architecture.
         Object.keys(configMainModule).forEach(where => {
-          mainModulesByArch[mapWhereToArch(where)] =
-            files.pathNormalize(configMainModule[where]);
+          mainModulesByArch[mapWhereToArch(where)] = configMainModule[where];
         });
       }
     }
@@ -1670,7 +1673,25 @@ export class MeteorConfig {
       arch, Object.keys(mainModulesByArch));
 
     if (mainMatch) {
-      return mainModulesByArch[mainMatch];
+      if (! this._resolversByArch[arch]) {
+        this._resolversByArch[arch] = new Resolver({
+          sourceRoot: this.appDirectory,
+          targetArch: arch,
+        });
+      }
+
+      // Use a Resolver to allow the mainModule strings to omit .js or
+      // .json file extensions, and to enable resolving directories
+      // containing package.json or index.js files.
+      const res = this._resolversByArch[arch].resolve(
+        // Only relative paths are allowed (not top-level packages).
+        "./" + files.pathNormalize(mainModulesByArch[mainMatch]),
+        this.packageJsonPath
+      );
+
+      if (res && typeof res === "object") {
+        return files.pathRelative(this.appDirectory, res.path);
+      }
     }
   }
 }
