@@ -44,12 +44,12 @@ To help keep issues in this repository under control, and make sure the most imp
 ##### Issues Labelled with `bug` and `confirmed`
 
 - Open `bug` + `confirmed` issues should be closed after two months of inactivity, unless someone has clearly identified that they are interested in working on the issue.
-- Triager's should do everything possible to help get `bug` + `confirmed` issues to `pull-requests-encouraged`. This means helping clearly identify where the problem is, pointing towards parts of the codebase that someone might want to look into, documenting what a potential solution looks like, etc.
+- Triagers should do everything possible to help get `bug` + `confirmed` issues to `pull-requests-encouraged`. This means helping clearly identify where the problem is, pointing towards parts of the codebase that someone might want to look into, documenting what a potential solution looks like, etc.
 
 ##### All Other Issues 
 
 - All open issues that can’t be labelled as `bug` + `confirmed` and/or `pull-requests-encouraged`, should be closed after one month of inactivity.
-- Triager's should do everything possible to help get `bug` + `confirmed` issues to `pull-requests-encouraged`. 
+- Triagers should do everything possible to help get `bug` + `confirmed` issues to `pull-requests-encouraged`. 
 
 ### Help questions
 
