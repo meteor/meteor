@@ -6,6 +6,7 @@
     "version": "3.5.0"
   },
   "devDependencies": {
+    "chexo": "^1.0.3",
     "hexo": "3.5.0",
     "hexo-autoprefixer": "1.0.0",
     "hexo-generator-archive": "0.1.5",
@@ -23,9 +24,9 @@
     "meteor-theme-hexo": "1.0.1"
   },
   "scripts": {
-    "build": "hexo generate --config node_modules/meteor-hexo-config/_config.yml,_config.yml",
+    "build": "chexo meteor-hexo-config -- generate",
     "clean": "hexo clean",
     "test": "npm run clean; npm run build",
-    "start": "npm run build && hexo server --config node_modules/meteor-hexo-config/_config.yml,_config.yml"
+    "start": "npm run build && chexo meteor-hexo-config -- server"
   }
 }
