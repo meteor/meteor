@@ -5,9 +5,3 @@ machine:
 checkout:
   post:
     - git submodule update --init
-
-dependencies:
-  cache_directories:
-    - "node_modules"
-  override:
-    - npm install
