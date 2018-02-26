@@ -11,9 +11,3 @@ dependencies:
     - "node_modules"
   override:
     - npm install
-
-deployment:
-  s3:
-    branch: /^(master|version-.*)/
-    commands:
-      - npm run deploy
