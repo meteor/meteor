@@ -4,4 +4,5 @@ machine:
 
 checkout:
   post:
+    # We need to bring in the `code` submodule, from `meteor/meteor`.
     - git submodule update --init
