@@ -7,6 +7,7 @@
   },
   "devDependencies": {
     "canonical-json": "0.0.4",
+    "chexo": "^1.0.3",
     "handlebars": "4.0.11",
     "hexo": "3.5.0",
     "hexo-generator-archive": "0.1.5",
@@ -26,11 +27,11 @@
     "underscore": "1.8.3"
   },
   "scripts": {
-    "build": "jsdoc/jsdoc.sh && hexo generate --config ./node_modules/meteor-hexo-config/_config.yml,./_config.yml",
+    "build": "jsdoc/jsdoc.sh && chexo meteor-hexo-config -- generate",
     "clean": "hexo clean; rm data/data.js data/names.json",
     "test": "npm run clean; npm run build",
     "predeploy": "npm run build",
     "deploy": "hexo-s3-deploy",
-    "start": "npm run build && hexo server --config ./node_modules/meteor-hexo-config/_config.yml,./_config.yml"
+    "start": "npm run build && chexo meteor-hexo-config -- server"
   }
 }
