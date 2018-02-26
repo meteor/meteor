@@ -376,7 +376,7 @@ Migrations.add({
 });
 ```
 
-Note that we could make this migration faster by using an [Aggregation](https://docs.mongodb.org/v2.6/aggregation/) to gather the initial set of todo counts.
+Note that we could make this migration faster by using an [Aggregation](https://docs.mongodb.org/v3.4/aggregation/) to gather the initial set of todo counts.
 
 <h3 id="running-migrations">Running migrations</h3>
 
