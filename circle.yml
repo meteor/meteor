@@ -4,16 +4,5 @@ machine:
 
 checkout:
   post:
+    # We need to bring in the `code` submodule, from `meteor/meteor`.
     - git submodule update --init
-
-dependencies:
-  cache_directories:
-    - "node_modules"
-  override:
-    - npm install
-
-deployment:
-  s3:
-    branch: /^(master|version-.*)/
-    commands:
-      - npm run deploy
