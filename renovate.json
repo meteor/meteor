@@ -2,6 +2,15 @@
   "extends": [
     "config:base"
   ],
+  "packageRules": [
+    {
+      "packagePatterns": [
+        "meteor-theme-hexo",
+        "meteor-hexo-config"
+      ],
+      "automerge": true
+    }
+  ],
   "baseBranches": [
     "master",
     "version-1.5",
