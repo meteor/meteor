@@ -57,7 +57,7 @@
   `<head />` of an app, it will be replaced by the `link` to Meteor's bundled
   CSS. If the new tag isn't used, the bundle will be placed at the top of
   the `<head />` section as before (for backwards compatibility).
-  [Feature #24](https://github.com/meteor/meteor/pull/24)
+  [Feature #24](https://github.com/meteor/meteor-feature-requests/issues/24)
   [PR #9657](https://github.com/meteor/meteor/pull/9657)
 
 ## v1.6.1, 2018-01-19
