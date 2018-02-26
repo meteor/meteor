@@ -6,7 +6,7 @@
     "version": "3.5.0"
   },
   "devDependencies": {
-    "chexo": "^1.0.3",
+    "chexo": "1.0.3",
     "hexo": "3.5.0",
     "hexo-autoprefixer": "1.0.0",
     "hexo-generator-archive": "0.1.5",
