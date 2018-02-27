@@ -1014,6 +1014,12 @@ _.extend(PackageSource.prototype, {
     }
 
     if (typeof mainModule !== "undefined") {
+      // Note: if mainModule === false, no JavaScript modules will be
+      // loaded eagerly unless explicitly added with !fileOptions.lazy by
+      // a compiler plugin. This can be useful for building an app that
+      // does not run any application JS on the client (or the server). Of
+      // course, Meteor packages may still run JS on startup, but they
+      // have their own rules for lazy/eager loading of modules.
       if (relPath === mainModule) {
         fileOptions.lazy = false;
         fileOptions.mainModule = true;

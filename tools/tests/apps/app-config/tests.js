@@ -9,6 +9,8 @@ const startupPromise = new Promise(resolve => {
   Meteor.startup(resolve);
 });
 
+const hasOwn = Object.prototype.hasOwnProperty;
+
 describe("meteor.mainModule", () => {
   // These tests test the consequences of having various meteor.mainModule
   // configurations in package.json.
@@ -50,7 +52,13 @@ describe("meteor.mainModule", () => {
   it("loads the right files", async () => {
     await startupPromise;
 
-    function checkNoMainModule() {
+    if (Meteor.isClient) {
+      console.log("client config:", config);
+    } else {
+      console.log("server config:", config);
+    }
+
+    function checkDefaultLoadRules() {
       assert.deepEqual(ids, [
         "/a.js",
         "/b.js",
@@ -61,9 +69,22 @@ describe("meteor.mainModule", () => {
       ]);
     }
 
+    function checkEagerLoadingDisabled() {
+      // Eager loading of all modules is disabled.
+      assert.deepEqual(ids, []);
+    }
+
     if (! config ||
-        ! config.mainModule) {
-      return checkNoMainModule();
+        ! hasOwn.call(config, "mainModule")) {
+      return checkDefaultLoadRules();
+    }
+
+    if (config.mainModule === false) {
+      return checkEagerLoadingDisabled();
+    }
+
+    if (! config.mainModule) {
+      return checkDefaultLoadRules();
     }
 
     let mainId;
@@ -72,16 +93,18 @@ describe("meteor.mainModule", () => {
       mainId =
         config.mainModule.client ||
         config.mainModule.web;
-      console.log("client config:", config);
     } else if (Meteor.isServer) {
       mainId =
         config.mainModule.server ||
         config.mainModule.os;
-      console.log("server config:", config);
+    }
+
+    if (mainId === false) {
+      return checkEagerLoadingDisabled();
     }
 
     if (! mainId) {
-      return checkNoMainModule();
+      return checkDefaultLoadRules();
     }
 
     const absId = require.resolve("./" + mainId);

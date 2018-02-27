@@ -46,6 +46,26 @@ selftest.define("mainModule", function () {
 
   check({});
 
+  check(false);
+
+  check({
+    client: false,
+    server: "abc",
+  });
+
+  check({
+    client: "abc",
+    server: false,
+  });
+
+  check({
+    web: false,
+  });
+
+  check({
+    os: false,
+  });
+
   check({
     client: "a",
     os: "bc",

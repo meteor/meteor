@@ -1643,19 +1643,19 @@ export class MeteorConfig {
     const configMainModule = this.get("mainModule");
     const mainModulesByArch = Object.create(null);
 
-    if (configMainModule) {
-      if (typeof configMainModule === "string") {
-        // If packageJson.meteor.mainModule is a string, use that string
-        // as the mainModule for all architectures.
-        mainModulesByArch["os"] = configMainModule;
-        mainModulesByArch["web"] = configMainModule;
-      } else if (typeof configMainModule === "object") {
-        // If packageJson.meteor.mainModule is an object, use its
-        // properties to select a mainModule for each architecture.
-        Object.keys(configMainModule).forEach(where => {
-          mainModulesByArch[mapWhereToArch(where)] = configMainModule[where];
-        });
-      }
+    if (typeof configMainModule === "string" ||
+        configMainModule === false) {
+      // If packageJson.meteor.mainModule is a string or false, use that
+      // value as the mainModule for all architectures.
+      mainModulesByArch["os"] = configMainModule;
+      mainModulesByArch["web"] = configMainModule;
+    } else if (configMainModule &&
+               typeof configMainModule === "object") {
+      // If packageJson.meteor.mainModule is an object, use its properties
+      // to select a mainModule for each architecture.
+      Object.keys(configMainModule).forEach(where => {
+        mainModulesByArch[mapWhereToArch(where)] = configMainModule[where];
+      });
     }
 
     return mainModulesByArch;
@@ -1673,6 +1673,19 @@ export class MeteorConfig {
       arch, Object.keys(mainModulesByArch));
 
     if (mainMatch) {
+      const mainModule = mainModulesByArch[mainMatch];
+
+      if (mainModule === false) {
+        // If meteor.mainModule.{client,server,...} === false, no modules
+        // will be loaded eagerly on the {client,server...}. This is useful
+        // if you have an app with no special app/{client,server} directory
+        // structure and you want to specify an entry point for just the
+        // client (or just the server), without accidentally loading
+        // everything on the other architecture. Instead of omitting
+        // meteor.mainModule for the other architecture, set it to false.
+        return mainModule;
+      }
+
       if (! this._resolversByArch[arch]) {
         this._resolversByArch[arch] = new Resolver({
           sourceRoot: this.appDirectory,
@@ -1685,7 +1698,7 @@ export class MeteorConfig {
       // containing package.json or index.js files.
       const res = this._resolversByArch[arch].resolve(
         // Only relative paths are allowed (not top-level packages).
-        "./" + files.pathNormalize(mainModulesByArch[mainMatch]),
+        "./" + files.pathNormalize(mainModule),
         this.packageJsonPath
       );
 
