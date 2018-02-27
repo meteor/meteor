@@ -4,10 +4,8 @@
   ],
   "packageRules": [
     {
-      "packagePatterns": [
-        "meteor-theme-hexo",
-        "meteor-hexo-config"
-      ],
+      "packagePatterns": ["\bhexo\b", "chexo"],
+      "groupName": "Hexo-related packages",
       "automerge": true
     }
   ],
