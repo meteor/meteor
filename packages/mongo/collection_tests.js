@@ -153,3 +153,19 @@ Tinytest.addAsync('collection - calling native find with good hint and maxTimeMs
     }).catch(error => test.fail(error.message));
   }
 );
+
+Tinytest.add(
+  'collection - undefined fields are stripped from selectors',
+  function (test) {
+    const collection = new Mongo.Collection(null);
+    let cursor = collection.find({ name: undefined });
+    test.equal(cursor.matcher._selector, {});
+
+    cursor = collection.find({
+      name: {
+        category: undefined
+      }
+    });
+    test.equal(cursor.matcher._selector, { name: {} });
+  }
+);
