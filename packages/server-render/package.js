@@ -1,6 +1,6 @@
 Package.describe({
   name: "server-render",
-  version: "0.4.0",
+  version: "0.3.1",
   summary: "Generic support for server-side rendering in Meteor apps",
   documentation: "README.md"
 });
@@ -10,7 +10,7 @@ Npm.depends({
   "magic-string": "0.21.3",
   "stream-to-string": "1.1.0",
   "parse5": "3.0.2",
-  "cheerio": "^1.0.0-rc.2"
+  "cheerio": "1.0.0-rc.2"
 });
 
 Package.onUse(function(api) {
