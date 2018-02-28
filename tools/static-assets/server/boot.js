@@ -285,19 +285,7 @@ var loadServerBundles = Profile("Load server bundles", function () {
           }
         }
 
-        try {
-          var resolved = require.resolve(name);
-        } catch (err) {
-          const nameParts = name.split("/");
-          // If it looks like `meteor/xxx`, the user may forgot to add the
-          // package before importing it.
-          if (nameParts.length === 2 && nameParts[0] === "meteor") {
-            const meteorAddTip = ". Try `meteor add " + nameParts[1] + "` " +
-              "as it looks like you tried to import it without adding " +
-              "to the project.";
-            throw new Error("Cannot find module " + JSON.stringify(name) + meteorAddTip);
-          }
-        }
+        var resolved = require.resolve(name);
         if (resolved === name && ! path.isAbsolute(resolved)) {
           // If require.resolve(id) === id and id is not an absolute
           // identifier, it must be a built-in module like fs or http.
