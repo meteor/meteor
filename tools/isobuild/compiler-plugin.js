@@ -616,20 +616,45 @@ class ResourceSlot {
       return false;
     }
 
-    const runningTests = global.testCommandMetadata &&
-      (global.testCommandMetadata.isTest ||
-       global.testCommandMetadata.isAppTest);
+    const {
+      isTest = false,
+      isAppTest = false,
+    } = global.testCommandMetadata || {};
 
-    if (runningTests &&
-        isTestFilePath(this.inputResource.path)) {
-      // Test files are never lazy if we're running tests.
-      return false;
-    }
+    const runningTests = isTest || isAppTest;
 
     if (isJavaScript) {
+      if (runningTests) {
+        const testModule = this._getOption("testModule", options);
+
+        // If we set fileOptions.testModule = true in _inferFileOptions,
+        // then consider this module an eager entry point for tests. If we
+        // set it to false (rather than leaving it undefined), that means
+        // a meteor.testModule was configured in package.json, and this
+        // test module was not it. In that case, we fall through to the
+        // mainModule check, ignoring isTestFilePath, because we can
+        // assume this is not an eager test module. If testModule was not
+        // set to a boolean, then isTestFilePath should determine if this
+        // is an eager test module.
+        const isEagerTestModule = typeof testModule === "boolean"
+          ? testModule
+          : isTestFilePath(this.inputResource.path);
+
+        if (isEagerTestModule) {
+          // If we know it's eager, then it isn't lazy.
+          return false;
+        }
+
+        if (! isAppTest) {
+          // If running `meteor test` without the --full-app option, then
+          // any JS modules that are not eager test modules must be lazy.
+          return true;
+        }
+      }
+
       // PackageSource#_inferFileOptions (in package-source.js) sets the
-      // mainModule option to false to indicate a meteor.mainModule was
-      // configured for this architecture, but this module was not it.
+      // mainModule option to false to indicate that a meteor.mainModule
+      // was configured for this architecture, but this module was not it.
       // It's important to wait until this point (ResourceSlot#_isLazy) to
       // make the final call, because we can finally tell whether the
       // output resource is JavaScript or not (non-JS resources are not

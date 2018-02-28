@@ -18,22 +18,21 @@ selftest.define("mainModule", function () {
   function check(mainModule) {
     const json = JSON.parse(s.read("package.json"));
 
-    let shouldWrite = true;
+    json.meteor = {
+      // Make sure the tests.js module is always loaded eagerly.
+      testModule: "tests.js"
+    };
+
     if (typeof mainModule === "undefined") {
-      if ("meteor" in json) {
-        delete json.meteor;
-      } else {
-        shouldWrite = false;
-      }
+      delete json.meteor.mainModule;
     } else {
-      json.meteor = { mainModule };
+      json.meteor.mainModule = mainModule;
     }
 
-    if (shouldWrite) {
-      s.write("package.json", JSON.stringify(json, null, 2) + "\n");
-    }
+    s.write("package.json", JSON.stringify(json, null, 2) + "\n");
 
     run.waitSecs(10);
+    run.forbid(" 0 passing ");
     run.match("SERVER FAILURES: 0");
     run.match("CLIENT FAILURES: 0");
   }
