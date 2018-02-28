@@ -1,9 +1,57 @@
 import { WebAppInternals } from "meteor/webapp";
+import cheerio from "cheerio";
 import MagicString from "magic-string";
 import { SAXParser } from "parse5";
 import { create as createStream } from "combined-stream2";
 import { ServerSink, isReadable } from "./server-sink.js";
 import { onPageLoad } from "./server.js";
+
+function updateContent(data, section, selector, itemArray) {
+  let reallyMadeChanges = false;
+  const content = section === "head" ?
+    `<head>${data.head}</head>` :
+    `<body>${data.body}</body>`;
+  $ = cheerio.load(content,
+    { 
+      withDomLvl1: true,
+      normalizeWhitespace: false,
+      xmlMode: true,
+      decodeEntities: true
+    }
+  );
+
+  itemArray.forEach((item) => {
+    let searchField = "";
+    if (selector === "id") {
+      searchField = `#${item.id}`;
+    } else {
+      searchField = item.searchAttribute && item.searchAttributeValue ?
+        `${item.tag}[${item.searchAttribute}=${item.searchAttributeValue}]` :
+        item.tag;
+    }
+    if (!item.value) {
+      $(searchField).remove();
+    } else {
+      if (item.updateAttribute) {
+        $(searchField).attr(item.updateAttribute, item.value);
+      } else {
+        if (item.updateType === 'prepend') {
+          $(searchField).prepend(item.value);
+        } else if (item.updateType === 'append') {
+          $(searchField).append(item.value);
+        } else {
+          $(searchField).html(item.value);
+        }
+      }
+      reallyMadeChanges = true;
+    }
+  });
+  if (reallyMadeChanges) {
+    data[section] = $(section).html();
+  }
+
+  return reallyMadeChanges;
+}
 
 WebAppInternals.registerBoilerplateDataCallback(
   "meteor/server-render",
@@ -95,6 +143,14 @@ WebAppInternals.registerBoilerplateDataCallback(
       if (Object.keys(sink.responseHeaders)){
         data.headers = sink.responseHeaders;
         reallyMadeChanges = true;
+      }
+
+      if (sink.headHtmlByTag) {
+        reallyMadeChanges = updateContent(data, "head", "tag", sink.headHtmlByTag);
+      }
+
+      if (sink.bodyHtmlById) {
+        reallyMadeChanges = updateContent(data, "body", "id", sink.bodyHtmlById);
       }
 
       return reallyMadeChanges;
