@@ -766,13 +766,13 @@ _.extend(PackageSource.prototype, {
         implies: api.implies[arch],
         getFiles(sourceProcessorSet, watchSet) {
           const result = api.files[arch];
-          const relPathToSourceObj = {};
+          const relPathToSourceObj = Object.create(null);
           const sources = result.sources;
 
           // Files explicitly passed to api.addFiles remain at the
           // beginning of api.files[arch].sources in their given order.
-          sources.forEach(sourceObj => {
-            relPathToSourceObj[sourceObj.relPath] = sourceObj;
+          sources.forEach(source => {
+            relPathToSourceObj[source.relPath] = source;
           });
 
           self._findSources({
@@ -781,11 +781,21 @@ _.extend(PackageSource.prototype, {
             sourceArch: this,
             isApp: false
           }).forEach(relPath => {
-            if (! _.has(relPathToSourceObj, relPath)) {
-              const fileOptions = self._inferFileOptions(relPath, {
-                arch,
-                isApp: false,
-              });
+            const source = relPathToSourceObj[relPath];
+
+            if (source) {
+              const fileOptions = source.fileOptions ||
+                (source.fileOptions = Object.create(null));
+
+              // Since this file was explicitly added with api.addFiles or
+              // api.mainModule, it should be loaded eagerly unless the
+              // caller specified a boolean fileOptions.lazy value.
+              if (typeof fileOptions.lazy !== "boolean") {
+                fileOptions.lazy = false;
+              }
+
+            } else {
+              const fileOptions = Object.create(null);
 
               // Since this file was not explicitly added with
               // api.addFiles, it should not be evaluated eagerly.
@@ -885,9 +895,8 @@ _.extend(PackageSource.prototype, {
               missingMainModule = false;
             }
 
-            const fileOptions = self._inferFileOptions(relPath, {
+            const fileOptions = self._inferAppFileOptions(relPath, {
               arch,
-              isApp: true,
               mainModule,
             });
 
@@ -947,9 +956,8 @@ _.extend(PackageSource.prototype, {
     }
   }),
 
-  _inferFileOptions(relPath, {
+  _inferAppFileOptions(relPath, {
     arch,
-    isApp,
     mainModule,
   }) {
     const fileOptions = {};
@@ -980,7 +988,7 @@ _.extend(PackageSource.prototype, {
       }
 
       // Files in `imports/` should be lazily loaded *apart* from tests
-      if (isApp && dir === "imports" && !isTestFile) {
+      if (dir === "imports" && ! isTestFile) {
         fileOptions.lazy = true;
       }
 
@@ -999,18 +1007,17 @@ _.extend(PackageSource.prototype, {
       if (i > 0 &&
           dirs[i - 1] === "client" &&
           dir === "compatibility" &&
-          isApp && // Skip this check for packages.
           archinfo.matches(arch, "web") &&
           relPath.endsWith(".js")) {
         fileOptions.bare = true;
       }
     }
 
-    if (isApp && mainModule) {
+    if (typeof mainModule !== "undefined") {
       if (relPath === mainModule) {
         fileOptions.lazy = false;
         fileOptions.mainModule = true;
-      } else if (typeof fileOptions.lazy === "undefined") {
+      } else {
         // Used in ResourceSlot#_isLazy (in compiler-plugin.js) to make a
         // final determination of whether the file should be lazy.
         fileOptions.mainModule = false;

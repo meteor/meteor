@@ -426,7 +426,9 @@ describe("Meteor packages", () => {
       assert.deepEqual(os.resources.map(function (res) {
         return res.path;
       }), ["server.js"]);
-      assert.deepEqual(os.resources[0].fileOptions, {});
+      assert.deepEqual(os.resources[0].fileOptions, {
+        lazy: false
+      });
 
       assert.deepEqual(ServerTypeof, {
         require: "undefined",
