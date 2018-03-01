@@ -731,7 +731,11 @@ export class Connection {
         // to the console.
         callback = err => {
           err &&
-            Meteor._debug("Error invoking Method '" + name + "':", err.message);
+            Meteor._debug(
+              "Error invoking Method '" + name + "':",
+              err,
+              err.stack
+            );
         };
       } else {
         // On the server, make the function synchronous. Throw on
