@@ -598,12 +598,21 @@ class ResourceSlot {
       return lazy;
     }
 
-    // If file.lazy was not previously defined, mark the file lazy if
-    // it is contained by an imports directory. Note that any files
-    // contained by a node_modules directory will already have been
-    // marked lazy in PackageSource#_inferFileOptions. Same for
-    // non-test files if running (non-full-app) tests (`meteor test`)
-    if (!this.packageSourceBatch.useMeteorInstall) {
+    const isApp = ! this.packageSourceBatch.unibuild.pkg.name;
+    if (! isApp) {
+      // Meteor package files must be explicitly added by api.addFiles or
+      // api.mainModule, and are implicitly eager unless specified
+      // otherwise via this.inputResource.fileOptions.lazy, which we
+      // already checked above.
+      return false;
+    }
+
+    // The rest of this method assumes we're considering a resource in an
+    // application rather than a Meteor package.
+
+    if (! this.packageSourceBatch.useMeteorInstall) {
+      // If this application is somehow still not using the module system,
+      // then everything is eagerly loaded.
       return false;
     }
 
