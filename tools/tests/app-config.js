@@ -1,7 +1,7 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 
-selftest.define("meteor.mainModule", function () {
+selftest.define("mainModule", function () {
   const s = new Sandbox();
   s.createApp("app-config-mainModule", "app-config");
   s.cd("app-config-mainModule");
@@ -134,7 +134,7 @@ function writeConfig(s, run, mainModule) {
   run.match("CLIENT FAILURES: 0");
 }
 
-selftest.define("meteor.testModule", function () {
+selftest.define("testModule", function () {
   const s = new Sandbox();
   s.createApp("app-config-mainModule", "app-config");
   s.cd("app-config-mainModule");
