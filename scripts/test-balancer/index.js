@@ -26,7 +26,8 @@ for (let i = 0; i < numGroups; i++) {
 // Try to load previous test balance
 let previousBuildResults = [];
 try {
-  previousBuildResults = JSON.parse(fs.readFileSync(`../../tmp/test-groups/data.json`));
+  previousBuildResults = 
+    JSON.parse(fs.readFileSync(`../../tmp/test-groups/data.json`));
 } catch (err) {
   console.log([
     'No historical data found! Perhaps the test groups cache key format has ',
@@ -122,4 +123,7 @@ console.log(`Total Tests Balanced: ${averageResults.length}`)
 
 // Write the results so we can use them for calculating averages in the next
 // build
-fs.writeFileSync('../../tmp/test-groups/data.json', JSON.stringify(allBuildResults)); 
+fs.writeFileSync(
+  '../../tmp/test-groups/data.json', 
+  JSON.stringify(allBuildResults)
+); 

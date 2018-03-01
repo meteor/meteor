@@ -128,7 +128,7 @@ jobs:
             - test-groups-v1-{{ .Branch }}
             - test-groups-v1
       - run:
-          name: Create Test Results Directory If Missing
+          name: Create Test Results Directory
           command: |
             sudo mkdir -p ./tmp/results/junit
             sudo chmod a+rwx ./tmp/results/junit
@@ -688,7 +688,7 @@ jobs:
       - attach_workspace:
           at: .
       - run:
-          name: Create ./test-groups
+          name: Create Test Groups Directory
           command: |
             sudo mkdir -p ./tmp/test-groups
             sudo chmod a+rwx ./tmp/test-groups
