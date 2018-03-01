@@ -89,14 +89,19 @@ describe("meteor.mainModule", () => {
 
     let mainId;
 
+    function tryArches(obj, arches) {
+      arches.some(arch => {
+        if (hasOwn.call(obj, arch)) {
+          mainId = obj[arch];
+          return true;
+        }
+      });
+    }
+
     if (Meteor.isClient) {
-      mainId =
-        config.mainModule.client ||
-        config.mainModule.web;
+      tryArches(config.mainModule, ["client", "web"]);
     } else if (Meteor.isServer) {
-      mainId =
-        config.mainModule.server ||
-        config.mainModule.os;
+      tryArches(config.mainModule, ["server", "os"]);
     }
 
     if (mainId === false) {
