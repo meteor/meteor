@@ -57,4 +57,4 @@ of included packages and run `meteor` as normal.
 
 > If you've added `bundle-visualizer` permanently with `meteor add`, it is
 > important to remove this package prior to bundling or deploying to
-> production with `meteor remove `bundle-visualizer`.
+> production with `meteor remove bundle-visualizer`.

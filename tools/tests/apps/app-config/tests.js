@@ -9,12 +9,14 @@ const startupPromise = new Promise(resolve => {
   Meteor.startup(resolve);
 });
 
-describe("meteor.mainModule", () => {
+const hasOwn = Object.prototype.hasOwnProperty;
+
+describe("meteor.{mainModule,testModule}", () => {
   // These tests test the consequences of having various meteor.mainModule
   // configurations in package.json.
   const config = require("./package.json").meteor;
 
-  if (Meteor.isClient) {
+  if (Meteor.isClient && Meteor.isAppTest) {
     it("always loads static HTML", () => {
       assert.strictEqual(
         document.getElementsByTagName("h1").item(0).innerText,
@@ -50,38 +52,70 @@ describe("meteor.mainModule", () => {
   it("loads the right files", async () => {
     await startupPromise;
 
-    function checkNoMainModule() {
-      assert.deepEqual(ids, [
-        "/a.js",
-        "/b.js",
-        "/c.js",
-        Meteor.isClient
-          ? "/client/main.js"
-          : "/server/main.js"
-      ]);
+    if (Meteor.isClient) {
+      console.log("client config:", config);
+    } else {
+      console.log("server config:", config);
+    }
+
+    function checkDefaultLoadRules() {
+      if (Meteor.isAppTest) {
+        assert.deepEqual(ids, [
+          "/a.js",
+          "/b.js",
+          "/c.js",
+          Meteor.isClient
+            ? "/client/main.js"
+            : "/server/main.js"
+        ]);
+      } else {
+        // If we're running `meteor test` without --full-app, non-test
+        // modules do not load unless imported by tests.
+        assert.deepEqual(ids, []);
+      }
+    }
+
+    function checkEagerLoadingDisabled() {
+      // Eager loading of all modules is disabled.
+      assert.deepEqual(ids, []);
     }
 
     if (! config ||
-        ! config.mainModule) {
-      return checkNoMainModule();
+        ! hasOwn.call(config, "mainModule")) {
+      return checkDefaultLoadRules();
+    }
+
+    if (config.mainModule === false) {
+      return checkEagerLoadingDisabled();
+    }
+
+    if (! config.mainModule) {
+      return checkDefaultLoadRules();
     }
 
     let mainId;
 
-    if (Meteor.isClient) {
-      mainId =
-        config.mainModule.client ||
-        config.mainModule.web;
-      console.log("client config:", config);
-    } else if (Meteor.isServer) {
-      mainId =
-        config.mainModule.server ||
-        config.mainModule.os;
-      console.log("server config:", config);
+    function tryArches(obj, arches) {
+      arches.some(arch => {
+        if (hasOwn.call(obj, arch)) {
+          mainId = obj[arch];
+          return true;
+        }
+      });
     }
 
-    if (! mainId) {
-      return checkNoMainModule();
+    if (Meteor.isClient) {
+      tryArches(config.mainModule, ["client", "web"]);
+    } else if (Meteor.isServer) {
+      tryArches(config.mainModule, ["server", "os"]);
+    }
+
+    if (mainId === false) {
+      return checkEagerLoadingDisabled();
+    }
+
+    if (! mainId || ! Meteor.isAppTest) {
+      return checkDefaultLoadRules();
     }
 
     const absId = require.resolve("./" + mainId);

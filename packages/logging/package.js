@@ -12,7 +12,7 @@ Npm.strip({
 });
 
 Cordova.depends({
-  'cordova-plugin-console': '1.1.0' // Dreprecated, remove in future
+  'cordova-plugin-console': '1.1.0' // Deprecated, remove in future
 });
 
 Package.onUse(function (api) {

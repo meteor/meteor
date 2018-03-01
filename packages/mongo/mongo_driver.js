@@ -29,7 +29,7 @@ MongoInternals.NpmModule = MongoDB;
 // This is used to add or remove EJSON from the beginning of everything nested
 // inside an EJSON custom type. It should only be called on pure JSON!
 var replaceNames = function (filter, thing) {
-  if (typeof thing === "object") {
+  if (typeof thing === "object" && thing !== null) {
     if (_.isArray(thing)) {
       return _.map(thing, _.bind(replaceNames, null, filter));
     }
