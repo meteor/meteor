@@ -51,7 +51,7 @@
   check `Meteor.isAppTest`. The module(s) specified by `meteor.testModule`
   can import other test modules at runtime, so you can still distribute
   test files across your codebase; just make sure you import the ones you
-  want to run.
+  want to run. [PR #9714](https://github.com/meteor/meteor/pull/9714)
 
 * The `reify` npm package has been updated to version 0.14.2.
 
