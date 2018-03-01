@@ -13,9 +13,45 @@
   When specified, these entry points override Meteor's default module
   loading semantics, rendering `imports` directories unnecessary. If
   `mainModule` is left unspecified for either client or server, the
-  default rules will apply for that architecture, as before.
+  default rules will apply for that architecture, as before. To disable
+  eager loading of modules on a given architecture, simply provide a
+  `mainModule` value of `false`:
+  ```js
+  "meteor": {
+    "mainModule": {
+      "client": false,
+      "server": "server/main.js"
+    }
+  }
+  ```
   [Feature #135](https://github.com/meteor/meteor-feature-requests/issues/135)
   [PR #9690](https://github.com/meteor/meteor/pull/9690)
+
+* In addition to `meteor.mainModule`, the `"meteor"` section of
+  `package.json` may also specify `meteor.testModule` to control which
+  test modules are loaded by `meteor test` or `meteor test --full-app`:
+  ```js
+  "meteor": {
+    "mainModule": {...},
+    "testModule": "tests.js"
+  }
+  ```
+  If your client and server test files are different, you can expand the
+  `testModule` configuration using the same syntax as `mainModule`:
+  ```js
+  "meteor": {
+    "testModule": {
+      "client": "client/tests.js",
+      "server": "server/tests.js"
+    }
+  }
+  ```
+  The same test module will be loaded whether or not you use the
+  `--full-app` option. Any tests that need to detect `--full-app` should
+  check `Meteor.isAppTest`. The module(s) specified by `meteor.testModule`
+  can import other test modules at runtime, so you can still distribute
+  test files across your codebase; just make sure you import the ones you
+  want to run. [PR #9714](https://github.com/meteor/meteor/pull/9714)
 
 * The `reify` npm package has been updated to version 0.14.2.
 

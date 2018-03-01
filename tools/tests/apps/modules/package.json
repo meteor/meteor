@@ -25,5 +25,8 @@
     "test": "METEOR_PROFILE=100 ../../../../meteor test --full-app --driver-package dispatch:mocha-phantomjs",
     "browser": "METEOR_PROFILE=100 ../../../../meteor test --full-app --driver-package dispatch:mocha-browser",
     "test-packages": "../../../../meteor test-packages --driver-package dispatch:mocha-phantomjs packages/modules-test-package"
+  },
+  "meteor": {
+    "testModule": "tests.js"
   }
 }

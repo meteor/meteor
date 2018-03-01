@@ -1640,25 +1640,7 @@ export class MeteorConfig {
   // Call this first if you plan to call getMainModuleForArch multiple
   // times, so that you can avoid repeating this work each time.
   getMainModulesByArch(arch) {
-    const configMainModule = this.get("mainModule");
-    const mainModulesByArch = Object.create(null);
-
-    if (configMainModule) {
-      if (typeof configMainModule === "string") {
-        // If packageJson.meteor.mainModule is a string, use that string
-        // as the mainModule for all architectures.
-        mainModulesByArch["os"] = configMainModule;
-        mainModulesByArch["web"] = configMainModule;
-      } else if (typeof configMainModule === "object") {
-        // If packageJson.meteor.mainModule is an object, use its
-        // properties to select a mainModule for each architecture.
-        Object.keys(configMainModule).forEach(where => {
-          mainModulesByArch[mapWhereToArch(where)] = configMainModule[where];
-        });
-      }
-    }
-
-    return mainModulesByArch;
+    return this._getEntryModulesByArch("mainModule");
   }
 
   // Given an architecture like web.browser, get the best mainModule for
@@ -1669,10 +1651,65 @@ export class MeteorConfig {
     arch,
     mainModulesByArch = this.getMainModulesByArch(),
   ) {
-    const mainMatch = archinfo.mostSpecificMatch(
-      arch, Object.keys(mainModulesByArch));
+    return this._getEntryModuleForArch(arch, mainModulesByArch);
+  }
 
-    if (mainMatch) {
+  // Analogous to getMainModulesByArch, except for this.config.testModule.
+  getTestModulesByArch(arch) {
+    return this._getEntryModulesByArch("testModule");
+  }
+
+  // Analogous to getMainModuleForArch, except for this.config.testModule.
+  getTestModuleForArch(
+    arch,
+    testModulesByArch = this.getTestModulesByArch(),
+  ) {
+    return this._getEntryModuleForArch(arch, testModulesByArch);
+  }
+
+  _getEntryModulesByArch(...keys) {
+    const configEntryModule = this.get(...keys);
+    const entryModulesByArch = Object.create(null);
+
+    if (typeof configEntryModule === "string" ||
+        configEntryModule === false) {
+      // If the top-level config value is a string or false, use that
+      // value as the entry module for all architectures.
+      entryModulesByArch["os"] = configEntryModule;
+      entryModulesByArch["web"] = configEntryModule;
+    } else if (configEntryModule && typeof configEntryModule === "object") {
+      // If the top-level config value is an object, use its properties to
+      // select an entry module for each architecture.
+      Object.keys(configEntryModule).forEach(where => {
+        entryModulesByArch[mapWhereToArch(where)] = configEntryModule[where];
+      });
+    }
+
+    return entryModulesByArch;
+  }
+
+  _getEntryModuleForArch(
+    arch,
+    entryModulesByArch,
+  ) {
+    const entryMatch = archinfo.mostSpecificMatch(
+      arch, Object.keys(entryModulesByArch));
+
+    if (entryMatch) {
+      const entryModule = entryModulesByArch[entryMatch];
+
+      if (entryModule === false) {
+        // If meteor.{main,test}Module.{client,server,...} === false, no
+        // modules will be loaded eagerly on the client or server. This is
+        // useful if you have an app with no special app/{client,server}
+        // directory structure and you want to specify an entry point for
+        // just the client (or just the server), without accidentally
+        // loading everything on the other architecture. Instead of
+        // omitting the entry module for the other architecture, simply
+        // set it to false.
+        return entryModule;
+      }
+
       if (! this._resolversByArch[arch]) {
         this._resolversByArch[arch] = new Resolver({
           sourceRoot: this.appDirectory,
@@ -1685,7 +1722,7 @@ export class MeteorConfig {
       // containing package.json or index.js files.
       const res = this._resolversByArch[arch].resolve(
         // Only relative paths are allowed (not top-level packages).
-        "./" + files.pathNormalize(mainModulesByArch[mainMatch]),
+        "./" + files.pathNormalize(entryModule),
         this.packageJsonPath
       );
 
