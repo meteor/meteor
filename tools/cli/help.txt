@@ -618,25 +618,47 @@ Usage: meteor test --driver-package <driver> [options]
        meteor test --full-app --driver-package <driver> [options]
 
 Runs tests against the application.
-Will start a special app based on a test driver (specified with
---driver-package -- read more about driver packages at
-http://guide.meteor.com/testing.html#driver-packages) which handles the
-task of running tests and displaying the results in the browser when you
-visit it.
+Will start a temporary app based on a test driver (specified with
+--driver-package: http://guide.meteor.com/testing.html#driver-packages) which
+handles the task of running tests and displaying the results in the browser.
 
-In normal test mode, no files in your application are eagerly loaded, aside
-from test files (files named *.test[s].* or *.spec[s].* placed anywhere
-in your application). You can import your app's modules from within your
-tests and use them as normal.
+In normal 'meteor test' mode, no files in your application are eagerly loaded,
+aside from test files (files named *.test[s].* or *.spec[s].* placed anywhere
+in your application). These eagerly-loaded test modules can import application
+modules in order to test application logic.
 
-In "full app" test mode, your app is loaded as usual, and then made hidden,
-and your tests can inspect and effect the running state. Test files are
-loaded similarly to unit test mode, but must be called *.app-test[s].* or
-*.app-spec[s].*.
+In 'meteor test --full-app' mode, your app is loaded as usual, then hidden, so
+that your tests can inspect and interact with the full running application.
+Test files are loaded similarly to 'meteor test' mode, but must be called
+*.app-test[s].* or *.app-spec[s].*.
 
-Open the test dashboard in your browser to run the tests and see the
-results. By default the URL is localhost:3000 but that can be changed
-with --port.
+Note: as of Meteor 1.6.2, you can override the default test loading rules
+described in the previous two paragraphs by including a meteor.testModule
+section in your package.json file:
+
+  "meteor": {
+    "testModule": {
+      "client": "client/tests.js",
+      "server": "server/tests.js"
+    }
+  }
+
+If your client and server test files are the same, this can be simplified to
+
+  "meteor": {
+    "testModule": "tests.js"
+  }
+
+When meteor.testModule is defined in package.json, the same test module will
+be loaded whether or not you use the --full-app option. Any tests that need to
+know whether the --full-app option was used may check Meteor.isAppTest, which
+is true when running 'meteor test --full-app'. The module specified by
+meteor.testModule can import other test modules at runtime, so it is still
+possible to distribute test files across your codebase.
+
+Once your application starts up in testing mode, open the test dashboard in
+your browser to run the tests and see the results. By default the URL is
+localhost:3000 but that can be changed with --port.
 
 Read more about testing your application in the Testing Article of the
 Meteor Guide - https://guide.meteor.com/testing.html
