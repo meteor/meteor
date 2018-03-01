@@ -11,12 +11,12 @@ const startupPromise = new Promise(resolve => {
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
-describe("meteor.mainModule", () => {
+describe("meteor.{mainModule,testModule}", () => {
   // These tests test the consequences of having various meteor.mainModule
   // configurations in package.json.
   const config = require("./package.json").meteor;
 
-  if (Meteor.isClient) {
+  if (Meteor.isClient && Meteor.isAppTest) {
     it("always loads static HTML", () => {
       assert.strictEqual(
         document.getElementsByTagName("h1").item(0).innerText,
@@ -59,14 +59,20 @@ describe("meteor.mainModule", () => {
     }
 
     function checkDefaultLoadRules() {
-      assert.deepEqual(ids, [
-        "/a.js",
-        "/b.js",
-        "/c.js",
-        Meteor.isClient
-          ? "/client/main.js"
-          : "/server/main.js"
-      ]);
+      if (Meteor.isAppTest) {
+        assert.deepEqual(ids, [
+          "/a.js",
+          "/b.js",
+          "/c.js",
+          Meteor.isClient
+            ? "/client/main.js"
+            : "/server/main.js"
+        ]);
+      } else {
+        // If we're running `meteor test` without --full-app, non-test
+        // modules do not load unless imported by tests.
+        assert.deepEqual(ids, []);
+      }
     }
 
     function checkEagerLoadingDisabled() {
@@ -108,7 +114,7 @@ describe("meteor.mainModule", () => {
       return checkEagerLoadingDisabled();
     }
 
-    if (! mainId) {
+    if (! mainId || ! Meteor.isAppTest) {
       return checkDefaultLoadRules();
     }
 

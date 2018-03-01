@@ -1,7 +1,7 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 
-selftest.define("mainModule", function () {
+selftest.define("meteor.mainModule", function () {
   const s = new Sandbox();
   s.createApp("app-config-mainModule", "app-config");
   s.cd("app-config-mainModule");
@@ -16,25 +16,7 @@ selftest.define("mainModule", function () {
   run.match("App running at");
 
   function check(mainModule) {
-    const json = JSON.parse(s.read("package.json"));
-
-    json.meteor = {
-      // Make sure the tests.js module is always loaded eagerly.
-      testModule: "tests.js"
-    };
-
-    if (typeof mainModule === "undefined") {
-      delete json.meteor.mainModule;
-    } else {
-      json.meteor.mainModule = mainModule;
-    }
-
-    s.write("package.json", JSON.stringify(json, null, 2) + "\n");
-
-    run.waitSecs(10);
-    run.forbid(" 0 passing ");
-    run.match("SERVER FAILURES: 0");
-    run.match("CLIENT FAILURES: 0");
+    writeConfig(s, run, mainModule);
   }
 
   check();
@@ -126,4 +108,77 @@ selftest.define("mainModule", function () {
   check(null);
 
   check();
+
+  run.stop();
+});
+
+function writeConfig(s, run, mainModule) {
+  const json = JSON.parse(s.read("package.json"));
+
+  json.meteor = {
+    // Make sure the tests.js module is always loaded eagerly.
+    testModule: "tests.js"
+  };
+
+  if (typeof mainModule === "undefined") {
+    delete json.meteor.mainModule;
+  } else {
+    json.meteor.mainModule = mainModule;
+  }
+
+  s.write("package.json", JSON.stringify(json, null, 2) + "\n");
+
+  run.waitSecs(10);
+  run.forbid(" 0 passing ");
+  run.match("SERVER FAILURES: 0");
+  run.match("CLIENT FAILURES: 0");
+}
+
+selftest.define("meteor.testModule", function () {
+  const s = new Sandbox();
+  s.createApp("app-config-mainModule", "app-config");
+  s.cd("app-config-mainModule");
+
+  const run = s.run(
+    "test",
+    // Not running with the --full-app option here, in order to exercise
+    // the normal `meteor test` behavior.
+    "--driver-package", "dispatch:mocha-phantomjs"
+  );
+
+  run.waitSecs(60);
+  run.match("App running at");
+
+  function check(mainModule) {
+    writeConfig(s, run, mainModule);
+  }
+
+  check();
+
+  check(false);
+
+  check({
+    client: "abc"
+  });
+
+  check({
+    server: "abc"
+  });
+
+  check({
+    client: "abc",
+    server: "abc"
+  });
+
+  check({
+    client: "abc",
+    server: false
+  });
+
+  check({
+    client: false,
+    server: "abc"
+  });
+
+  run.stop();
 });
