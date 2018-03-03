@@ -3,7 +3,7 @@ title: Changelog
 order: 1001
 description: A log of significant changes to the Meteor Guide.
 ---
-
+- 2018/03/03: Added HTTP Headers to the production security section and made Helmet the official recommendation. Update Mobile section to refer to HTTP header section for CSP instead of Browser Policy package.
 - 2017/10/28: Removed mention of `react-addons-pure-render-mixin` package from "Using Meteor's data system" section as it is no longer needed.
 - 2017/09/08: Updated "Using Meteor's data system" section to describe the new `withTracker` function as it now replaces `createContainer`.
 - 2017/03/22: Added Docker section within Deployment and Monitoring.
