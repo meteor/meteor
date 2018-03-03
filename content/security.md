@@ -453,6 +453,82 @@ It's best to handle the redirection from HTTP to HTTPS on the platform which han
 
 In the event that a platform does not offer the ability to configure this, the `force-ssl` package can be added to the project and Meteor will attempt to intelligently redirect based on the presence of the `x-forwarded-for` header.
 
+<h2 id="httpheaders">HTTP Headers</h2>
+
+HTTP headers can be used to improve the security of apps, although these are not a silver bullet, they will assist developers in mitigating more common attacks.  
+
+<h4 id="helmet">Recommended: Helmet</h4>
+
+Although there are many great open source solutions for setting HTTP headers, Meteor recommends [Helmet](https://helmetjs.github.io/). Helmet is a collection of 12 smaller middleware functions that set HTTP headers.
+
+First, install helmet.
+
+```js
+  meteor npm install helmet --save
+```
+
+By default, Helmet can be used to set various HTTP headers (see link above). These are a good starting point for mitigating common attacks. To use the default headers, developers should use the following code anywhere in their server side meteor startup code.     
+
+```js
+// With other import statements
+import helmet from "helmet";
+
+// Within server side Meter.startup()
+WebApp.connectHandlers.use(helmet())
+```
+
+At a minimum, Meteor recommends developers to set the following headers. Note that code examples shown below are specific to Helmet.
+
+<h3 id="csp">Content Security Policy</h3>
+
+> Note: Content Security Policy is not configured using Helmet's default header configuration.
+
+From MDN, Content Security Policy (CSP) is an added layer of security that helps to detect and mitigate certain types of attacks, including Cross Site Scripting (XSS) and data injection attacks. These attacks are used for everything from data theft to site defacement or distribution of malware.
+
+It is recommended  that developers use CSP to protect their apps from access by third parties. CSP assists to control how resources are loaded into your application.
+
+By default, we recommend unsafe inline scripts and styles are allowed, since we expect many apps will use them for analytics, etc. Unsafe eval is disallowed, and the only allowable content source is the same origin or data, except for connect which allows anything (since meteor apps make websocket connections to a lot of different origins). Browsers will also be told not to sniff content types away from declared content types.
+
+```js
+// With other import statements
+import helmet from "helmet";
+
+// Within server side Meter.startup()
+WebApp.connectHandlers.use(
+  helmet.contentSecurityPolicy({
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      connectSrc: ["*"],
+      imgSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+    },
+    browserSniff: false
+  })
+);
+```
+
+Helmet supports a large number of directives, developers should further customise their CSP based on their needs. For more detail please read the following guide: [Content Security Policy](https://helmetjs.github.io/docs/csp/).
+
+<h3 id="xframeoptions">X-Frame-Options</h3>
+
+> Note: The X-Frame Options header is configured using Helmet's default header configuration.
+
+From MDN, the X-Frame-Options HTTP response header can be used to indicate whether or not a browser should be allowed to render a page in a <frame>, <iframe> or <object> . Sites can use this to avoid clickjacking attacks, by ensuring that their content is not embedded into other sites.
+
+Meteor recommend developers configure the X-Frame-Options header for same origin only. This tells browsers to prevent your webpage from being put in an iframe. By using this config, you will set your policy where only web pages on the same origin as your app can frame your app.
+
+With Helmet, Frameguard sets the X-Frame-Options header.
+
+```js
+// With other import statements
+import helmet from "helmet";
+
+// Within server side Meter.startup()
+WebApp.connectHandlers.use(helmet.frameguard());  // defaults to sameorigin
+```
+For more detail please read the following guide: [Frameguard](https://helmetjs.github.io/docs/frameguard/).
+
 <h2 id="checklist">Security checklist</h2>
 
 This is a collection of points to check about your app that might catch common errors. However, it's not an exhaustive list yet---if we missed something, please let us know or file a pull request!
