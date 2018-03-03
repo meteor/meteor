@@ -147,7 +147,7 @@ You can see that this Method does a _very specific thing_ - it just makes a sing
 However, this doesn't mean you can't have any flexibility in your Methods. Let's look at an example:
 
 ```js
-const Meteor.users.methods.setUserData = new ValidatedMethod({
+Meteor.users.methods.setUserData = new ValidatedMethod({
   name: 'Meteor.users.methods.setUserData',
   validate: new SimpleSchema({
     fullName: { type: String, optional: true },
@@ -338,8 +338,8 @@ Secret business logic in your app should be located in code that is only loaded 
 If you have a Meteor Method in your app that has secret business logic, you might want to split the Method into two functions - the optimistic UI part that will run on the client, and the secret part that runs on the server. Most of the time, putting the entire Method on the server doesn't result in the best user experience. Let's look at an example, where you have a secret algorithm for calculating someone's MMR (ranking) in a game:
 
 ```js
-// In a server-only file
-MMR = {
+// In a server-only file, for example /imports/server/mmr.js
+export const MMR = {
   updateWithSecretAlgorithm(userId) {
     // your secret code here
   }
@@ -348,13 +348,14 @@ MMR = {
 
 ```js
 // In a file loaded on client and server
-const Meteor.users.methods.updateMMR = new ValidatedMethod({
+Meteor.users.methods.updateMMR = new ValidatedMethod({
   name: 'Meteor.users.methods.updateMMR',
   validate: null,
   run() {
     if (this.isSimulation) {
       // Simulation code for the client (optional)
     } else {
+      const { MMR } = require('/imports/server/mmr.js');
       MMR.updateWithSecretAlgorithm(this.userId);
     }
   }
@@ -469,7 +470,7 @@ First, install helmet.
 
 By default, Helmet can be used to set various HTTP headers (see link above). These are a good starting point for mitigating common attacks. To use the default headers, users should use the following code anywhere in their server side meteor startup code.     
 
--> Note: Meteor has not extensively tested each header for compatibility with Meteor. Only headers listed below have been tested. 
+> Note: Meteor has not extensively tested each header for compatibility with Meteor. Only headers listed below have been tested.
 
 ```js
 // With other import statements
@@ -516,7 +517,7 @@ Helmet supports a large number of directives, users should further customise the
 
 > Note: The X-Frame Options header is configured using Helmet's default header configuration.
 
-From MDN, the X-Frame-Options HTTP response header can be used to indicate whether or not a browser should be allowed to render a page in a <frame>, <iframe> or <object> . Sites can use this to avoid clickjacking attacks, by ensuring that their content is not embedded into other sites.
+From MDN, the X-Frame-Options HTTP response header can be used to indicate whether or not a browser should be allowed to render a page in a `<frame>`, `<iframe>` or `<object>`. Sites can use this to avoid clickjacking attacks, by ensuring that their content is not embedded into other sites.
 
 Meteor recommend users configure the X-Frame-Options header for same origin only. This tells browsers to prevent your webpage from being put in an iframe. By using this config, you will set your policy where only web pages on the same origin as your app can frame your app.
 
