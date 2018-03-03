@@ -511,7 +511,7 @@ App.accessRule('data:*', { type: 'navigation' });
 
 <h3 id="csp">Content Security Policy (CSP)</h3>
 
-In addition to the domain whitelisting mechanism Cordova implements, the web view itself may also enforce access rules through [Content Security Policy (CSP)](https://developer.mozilla.org/en-US/docs/Web/Security/CSP). For now, Meteor adds a permissive `<meta http-equiv="Content-Security-Policy" content="..."` header to the generated index page. If user want more fine grained control, Meteor recommends Helmet. See the [`guide`](https://guide.meteor.com/security.html#httpheaders) for more details.
+In addition to the domain whitelisting mechanism Cordova implements, the web view itself may also enforce access rules through [Content Security Policy (CSP)](https://developer.mozilla.org/en-US/docs/Web/Security/CSP). For now, Meteor adds a permissive `<meta http-equiv="Content-Security-Policy" content="..."` header to the generated index page. If users want more fine grained control, Meteor recommends Helmet. See the [`guide`](https://guide.meteor.com/security.html#httpheaders) for more details.
 
 <h3 id="cors">Cross-Origin Resource Sharing (CORS)</h3>
 
