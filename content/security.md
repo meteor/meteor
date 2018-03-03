@@ -455,7 +455,7 @@ In the event that a platform does not offer the ability to configure this, the `
 
 <h2 id="httpheaders">HTTP Headers</h2>
 
-HTTP headers can be used to improve the security of apps, although these are not a silver bullet, they will assist developers in mitigating more common attacks.  
+HTTP headers can be used to improve the security of apps, although these are not a silver bullet, they will assist users in mitigating more common attacks.  
 
 <h4 id="helmet">Recommended: Helmet</h4>
 
@@ -467,7 +467,7 @@ First, install helmet.
   meteor npm install helmet --save
 ```
 
-By default, Helmet can be used to set various HTTP headers (see link above). These are a good starting point for mitigating common attacks. To use the default headers, developers should use the following code anywhere in their server side meteor startup code.     
+By default, Helmet can be used to set various HTTP headers (see link above). These are a good starting point for mitigating common attacks. To use the default headers, users should use the following code anywhere in their server side meteor startup code.     
 
 ```js
 // With other import statements
@@ -477,7 +477,7 @@ import helmet from "helmet";
 WebApp.connectHandlers.use(helmet())
 ```
 
-At a minimum, Meteor recommends developers to set the following headers. Note that code examples shown below are specific to Helmet.
+At a minimum, Meteor recommends users to set the following headers. Note that code examples shown below are specific to Helmet.
 
 <h3 id="csp">Content Security Policy</h3>
 
@@ -485,9 +485,9 @@ At a minimum, Meteor recommends developers to set the following headers. Note th
 
 From MDN, Content Security Policy (CSP) is an added layer of security that helps to detect and mitigate certain types of attacks, including Cross Site Scripting (XSS) and data injection attacks. These attacks are used for everything from data theft to site defacement or distribution of malware.
 
-It is recommended  that developers use CSP to protect their apps from access by third parties. CSP assists to control how resources are loaded into your application.
+It is recommended  that users use CSP to protect their apps from access by third parties. CSP assists to control how resources are loaded into your application.
 
-By default, we recommend unsafe inline scripts and styles are allowed, since we expect many apps will use them for analytics, etc. Unsafe eval is disallowed, and the only allowable content source is the same origin or data, except for connect which allows anything (since meteor apps make websocket connections to a lot of different origins). Browsers will also be told not to sniff content types away from declared content types.
+By default, Meteor recommends unsafe inline scripts and styles are allowed, since many apps typically use them for analytics, etc. Unsafe eval is disallowed, and the only allowable content source is same origin or data, except for connect which allows anything (since meteor apps make websocket connections to a lot of different origins). Browsers will also be told not to sniff content types away from declared content types.
 
 ```js
 // With other import statements
@@ -508,7 +508,7 @@ WebApp.connectHandlers.use(
 );
 ```
 
-Helmet supports a large number of directives, developers should further customise their CSP based on their needs. For more detail please read the following guide: [Content Security Policy](https://helmetjs.github.io/docs/csp/).
+Helmet supports a large number of directives, users should further customise their CSP based on their needs. For more detail please read the following guide: [Content Security Policy](https://helmetjs.github.io/docs/csp/).
 
 <h3 id="xframeoptions">X-Frame-Options</h3>
 
@@ -516,7 +516,7 @@ Helmet supports a large number of directives, developers should further customis
 
 From MDN, the X-Frame-Options HTTP response header can be used to indicate whether or not a browser should be allowed to render a page in a <frame>, <iframe> or <object> . Sites can use this to avoid clickjacking attacks, by ensuring that their content is not embedded into other sites.
 
-Meteor recommend developers configure the X-Frame-Options header for same origin only. This tells browsers to prevent your webpage from being put in an iframe. By using this config, you will set your policy where only web pages on the same origin as your app can frame your app.
+Meteor recommend users configure the X-Frame-Options header for same origin only. This tells browsers to prevent your webpage from being put in an iframe. By using this config, you will set your policy where only web pages on the same origin as your app can frame your app.
 
 With Helmet, Frameguard sets the X-Frame-Options header.
 
