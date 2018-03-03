@@ -94,7 +94,7 @@ After the download and installation completes, you will need to accept the licen
 
 A shortcut is to run `sudo xcodebuild -license accept` from the command line. (You will still be expected to have read and understood the [Xcode and Apple SDKs Agreement](https://www.apple.com/legal/sla/docs/xcode.pdf)).
 
-> As of [Cordova iOS 4.3.0](https://cordova.apache.org/announcements/2016/10/24/ios-release.html) you may also need to `sudo gem install cocoapods` to resolve a dependency with [PhoneGap Push Plugin](https://github.com/phonegap/phonegap-plugin-push/blob/master/docs/INSTALLATION.md). 
+> As of [Cordova iOS 4.3.0](https://cordova.apache.org/announcements/2016/10/24/ios-release.html) you may also need to `sudo gem install cocoapods` to resolve a dependency with [PhoneGap Push Plugin](https://github.com/phonegap/phonegap-plugin-push/blob/master/docs/INSTALLATION.md).
 
 
 <h3 id="installing-prerequisites-android">Android</h3>
@@ -109,7 +109,7 @@ In order to build and run Android apps, you will need to:
   ```sh
   # On Mac OSX:
   brew install gradle
-  
+
   # On Debian/Ubuntu:
   sudo apt-get install gradle
   ```
@@ -293,7 +293,7 @@ The compatibility version can be found in the `cordovaCompatibilityVersions` att
 
 ![cordovaCompatibilityVersions](http://i.imgur.com/Wx7iOWu.png)
 
-You may want to override the compatibility version if you want hot code push to reach older apps that don't have the latest version of your native code from the app store. Let's say you're developing an iOS app, you have the plugin `cordova-plugin-camera@2.4.0`, and your app has the compatibility version pictured above, `3ed5b9318b2916b595f7721759ead4d708dfbd46`. If you were to update to version `2.4.1` of `cordova-plugin-camera`, your server would generate a new compatibility version and your users' apps would stop receiving hot code pushes. However, you can tell your server to use the old compatilibity version: 
+You may want to override the compatibility version if you want hot code push to reach older apps that don't have the latest version of your native code from the app store. Let's say you're developing an iOS app, you have the plugin `cordova-plugin-camera@2.4.0`, and your app has the compatibility version pictured above, `3ed5b9318b2916b595f7721759ead4d708dfbd46`. If you were to update to version `2.4.1` of `cordova-plugin-camera`, your server would generate a new compatibility version and your users' apps would stop receiving hot code pushes. However, you can tell your server to use the old compatilibity version:
 
 ```sh
 METEOR_CORDOVA_COMPAT_VERSION_IOS=3ed5b9318b2916b595f7721759ead4d708dfbd46 meteor run ios-device
@@ -315,9 +315,9 @@ your compatibility version would not change.
 
 The `METEOR_CORDOVA_COMPAT_VERSION_*` env vars must be present __while building__ your app through `run`, `build` or `deploy`.
 
-<h4 id="access-versions-inside-app">Access compatibility versions inside your app</h4> 
+<h4 id="access-versions-inside-app">Access compatibility versions inside your app</h4>
 
-The `version` attribute of `manifest.json`, which reflects the version of only your JS bundle, is accessible from JS at `__meteor_runtime_config__.autoupdateVersionCordova`. 
+The `version` attribute of `manifest.json`, which reflects the version of only your JS bundle, is accessible from JS at `__meteor_runtime_config__.autoupdateVersionCordova`.
 
 The `cordovaCompatibilityVersions.*` attributes can be read from the manifest file with `cordova-plugin-file`.
 
@@ -511,7 +511,7 @@ App.accessRule('data:*', { type: 'navigation' });
 
 <h3 id="csp">Content Security Policy (CSP)</h3>
 
-In addition to the domain whitelisting mechanism Cordova implements, the web view itself may also enforce access rules through [Content Security Policy (CSP)](https://developer.mozilla.org/en-US/docs/Web/Security/CSP). For now, Meteor adds a permissive `<meta http-equiv="Content-Security-Policy" content="..."` header to the generated index page. We may want to allow more fine grained control in the future (through integrating with the `browser-policy` package for instance.)
+In addition to the domain whitelisting mechanism Cordova implements, the web view itself may also enforce access rules through [Content Security Policy (CSP)](https://developer.mozilla.org/en-US/docs/Web/Security/CSP). For now, Meteor adds a permissive `<meta http-equiv="Content-Security-Policy" content="..."` header to the generated index page. If user want more fine grained control, Meteor recommends Helmet. See the [`guide`](https://guide.meteor.com/security.html#httpheaders) for more details.
 
 <h3 id="cors">Cross-Origin Resource Sharing (CORS)</h3>
 
@@ -549,7 +549,7 @@ if (Meteor.isCordova) {
 }
 ```
 
-Alternatively for iOS you can specify the required privacy usage notification prompts in your `mobile-config.js` by using [`App.appendToConfig`](https://docs.meteor.com/api/mobile-config.html#App-appendToConfig) along with the correct [Cocoa Keys](https://developer.apple.com/library/content/documentation/General/Reference/InfoPlistKeyReference/Articles/CocoaKeys.html). 
+Alternatively for iOS you can specify the required privacy usage notification prompts in your `mobile-config.js` by using [`App.appendToConfig`](https://docs.meteor.com/api/mobile-config.html#App-appendToConfig) along with the correct [Cocoa Keys](https://developer.apple.com/library/content/documentation/General/Reference/InfoPlistKeyReference/Articles/CocoaKeys.html).
 
 Here is an example to access iOS geolocation data:
 ```
