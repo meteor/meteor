@@ -469,6 +469,8 @@ First, install helmet.
 
 By default, Helmet can be used to set various HTTP headers (see link above). These are a good starting point for mitigating common attacks. To use the default headers, users should use the following code anywhere in their server side meteor startup code.     
 
+-> Note: Meteor has not extensively tested each header for compatibility with Meteor. Only headers listed below have been tested. 
+
 ```js
 // With other import statements
 import helmet from "helmet";
