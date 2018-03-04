@@ -40,12 +40,7 @@
   "bugs": "https://github.com/dferber90/eslint-plugin-meteor/issues",
   "dependencies": {
     "babel-register": "6.26.0",
-    "babel-runtime": "6.26.0",
-    "escope": "3.6.0",
-    "invariant": "2.2.3",
-    "lodash.find": "4.6.0",
-    "lodash.memoize": "4.1.2",
-    "path-exists": "3.0.0"
+    "invariant": "2.2.3"
   },
   "devDependencies": {
     "babel-cli": "6.26.0",
@@ -69,7 +64,6 @@
     "nyc": "11.4.1",
     "prettier": "1.11.1",
     "readline-sync": "1.4.9",
-    "rewire": "3.0.2",
     "rimraf": "2.6.2",
     "semantic-release": "^12.4.1",
     "travis-deploy-once": "4.3.4",
