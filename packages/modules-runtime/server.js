@@ -24,9 +24,9 @@ makeInstallerOptions.fallback = function (id, parentId, error) {
             `Cannot find package "${packageName}". ` +
             `Try "meteor add ${packageName}".`
           );
-        } else {
-          throw error;
         }
+
+        throw err;
       }
     }
   }
