@@ -4,10 +4,10 @@ makeInstallerOptions.browser = true;
 
 makeInstallerOptions.fallback = function (id, parentId, error) {
   if (id && id.startsWith('meteor/')) {
-    const [meteorPrefix, packageName] = id.split('/', 2);
+    var packageName = id.split('/', 2)[1];
     throw new Error(
-      `Cannot find package "${packageName}". ` +
-      `Try "meteor add ${packageName}".`
+      'Cannot find package "' + packageName + '". ' +
+      'Try "meteor add ' + packageName + '".'
     );
   }
 
