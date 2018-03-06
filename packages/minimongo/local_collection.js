@@ -414,7 +414,8 @@ export default class LocalCollection {
           doc,
           mod,
           recomputeQids,
-          queryResult.arrayIndices
+          queryResult.arrayIndices,
+          options.arrayFilters,
         );
 
         ++updateCount;
@@ -511,7 +512,7 @@ export default class LocalCollection {
     }
   }
 
-  _modifyAndNotify(doc, mod, recomputeQids, arrayIndices) {
+  _modifyAndNotify(doc, mod, recomputeQids, arrayIndices, arrayFilters) {
     const matched_before = {};
 
     Object.keys(this.queries).forEach(qid => {
@@ -532,7 +533,7 @@ export default class LocalCollection {
 
     const old_doc = EJSON.clone(doc);
 
-    LocalCollection._modify(doc, mod, {arrayIndices});
+    LocalCollection._modify(doc, mod, {arrayIndices, arrayFilters});
 
     Object.keys(this.queries).forEach(qid => {
       const query = this.queries[qid];
@@ -1147,21 +1148,114 @@ LocalCollection._modify = (doc, modifier, options = {}) => {
         }
 
         const keyparts = keypath.split('.');
-
-        if (!keyparts.every(Boolean)) {
-          throw MinimongoError(
-            `The update path '${keypath}' contains an empty field name, ` +
-            'which is not allowed.'
-          );
-        }
-
-        const target = findModTarget(newDoc, keyparts, {
+        const findModTargetOpts = {
           arrayIndices: options.arrayIndices,
           forbidArray: operator === '$rename',
-          noCreate: NO_CREATE_MODIFIERS[operator]
+          noCreate: NO_CREATE_MODIFIERS[operator],
+        };
+        const matchedArrayFilters = [];
+        let arraysToModify = [[newDoc]];
+        let filter;
+
+        keyparts.forEach((key, index) => {
+          if (!key) {
+            throw MinimongoError(
+              `The update path '${keypath}' contains an empty field name, ` +
+              'which is not allowed.'
+            );
+          }
+
+          const match = key.match(/^\$\[(.*)\]$/);
+          if (match) {
+            matchedArrayFilters.push({ match, index });
+          }
         });
 
-        modFunc(target, keyparts.pop(), arg, keypath, newDoc);
+        if (matchedArrayFilters.length) {
+          const arrayFilters = matchedArrayFilters.reduce((prev, filter) => {
+            const filterKeyparts = keyparts.splice(0, filter.index + 1 - prev.position).slice(0, -1);
+            const key = filterKeyparts[filterKeyparts.length - 1];
+            const filterId = filter.match[1];
+            let matcher;
+
+            if (filterId && filterId.length) {
+              const selector = options.arrayFilters.find(f => f[filterId]);
+              if (!selector) {
+                throw MinimongoError(
+                  `No array filter found for identifier '${filterId}' ` +
+                  `in path ${keypath}`
+                );
+              }
+
+              matcher = new Minimongo.Matcher(selector);
+            }
+
+            return {
+              position: prev.position + filter.index + 1,
+              result: prev.result.concat([{
+                keyparts: filterKeyparts,
+                id: filterId,
+                key,
+                matcher,
+              }])
+            };
+          }, {
+            position: 0,
+            result: [],
+          }).result;
+
+          // Last array filter in a path might work with literal values (strings, numbers etc.)
+          // thus it can't be used to save references (in javascript only compound values can
+          // be assigned by reference). So we use it later when we modify matching array items.
+          filter = arrayFilters.pop();
+
+          arraysToModify = arrayFilters.reduce((arraysToModify, filter) => {
+            return arraysToModify.reduce((result, items) => {
+              return result.concat(items.reduce((arrays, item) => {
+                const target = findModTarget(item, filter.keyparts, findModTargetOpts)[filter.key];
+
+                if (!Array.isArray(target)) {
+                  return arrays;
+                }
+
+                const matchingItems = filter.matcher
+                  ? target.filter(doc =>
+                      filter.matcher.documentMatches({ [filter.id]: doc }).result)
+                  : target;
+                return arrays.concat([matchingItems]);
+              }, []));
+            }, []);
+          }, arraysToModify);
+        }
+
+        arraysToModify.forEach(array => {
+          array.forEach(item => {
+            const items = filter
+              ? findModTarget(item, filter.keyparts, findModTargetOpts)[filter.key]
+              : [item];
+
+            if (!Array.isArray(items)) {
+              return;
+            }
+
+            items.forEach((item, index) => {
+              if (
+                filter &&
+                filter.matcher &&
+                !filter.matcher.documentMatches({ [filter.id]: item }).result
+              ) {
+                return;
+              }
+
+              const target = keyparts.length
+                ? findModTarget(item, keyparts, findModTargetOpts)
+                : items;
+              const key = keyparts.length ? keyparts[keyparts.length - 1] : index;
+
+              modFunc(target, key, arg, keypath, newDoc);
+            });
+          });
+        });
       });
     });
 
