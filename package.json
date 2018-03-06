@@ -26,7 +26,7 @@
     "readable-stream": "git+https://github.com/meteor/readable-stream.git",
     "stream-browserify": "^2.0.1",
     "stream-http": "^2.8.0",
-    "string_decoder": "^1.0.1",
+    "string_decoder": "^1.1.0",
     "timers-browserify": "^1.4.2",
     "tty-browserify": "0.0.0",
     "url": "^0.11.0",
