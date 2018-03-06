@@ -6,7 +6,7 @@ const parser = new xml2js.Parser();
 // Grab the command options
 const args = process.argv.slice(2);
 const numGroups = +args[args.indexOf('--num-groups') + 1];
-const runningAvgLenth = +args[args.indexOf('--running-avg-length') + 1];
+const runningAvgLength = +args[args.indexOf('--running-avg-length') + 1];
 
 // Load the junit results from the various groups on this build
 const currentBuildResults = [];
@@ -38,7 +38,7 @@ try {
 // Add new results and limit the record to the specified number for the running
 // average
 const allBuildResults =
-  [currentBuildResults, ...previousBuildResults].slice(0, runningAvgLenth);
+  [currentBuildResults, ...previousBuildResults].slice(0, runningAvgLength);
 
 let averageResults = [];
 
