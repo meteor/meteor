@@ -11,7 +11,7 @@
   "domain": "domain-browser",
   "events": "events/",
   "fs": null,
-  "http": "http-browserify",
+  "http": "stream-http",
   "https": "https-browserify",
   "module": "../wrappers/module.js",
   "net": null,
