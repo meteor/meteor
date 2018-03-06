@@ -1,6 +1,6 @@
 {
   "name": "meteor-node-stubs",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "lockfileVersion": 1,
   "requires": true,
   "dependencies": {
