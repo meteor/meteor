@@ -868,7 +868,12 @@ function runWebAppServer() {
         onListeningCallbacks.push(f);
       else
         f();
-    }
+    },
+    // This can be overridden by users who want to modify how listening works
+    // (eg, to run a proxy like Apollo Engine Proxy in front of the server).
+    startListening: function (httpServer, listenOptions, cb) {
+      httpServer.listen(listenOptions, cb);
+    },
   });
 
   // Let the rest of the packages (and Meteor.startup hooks) insert connect
@@ -878,7 +883,7 @@ function runWebAppServer() {
     WebAppInternals.generateBoilerplate();
 
     const startHttpServer = listenOptions => {
-      httpServer.listen(listenOptions, Meteor.bindEnvironment(() => {
+      WebApp.startListening(httpServer, listenOptions, Meteor.bindEnvironment(() => {
         if (process.env.METEOR_PRINT_ON_LISTEN) {
           console.log("LISTENING");
         }
