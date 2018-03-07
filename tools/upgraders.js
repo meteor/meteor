@@ -291,7 +291,7 @@ be removed if there is no need for the Blaze configuration interface.`,
     packagesFile.writeIfModified();
   },
 
-  '1.6.2-split-underscore-from-meteor-base': projectContext => {
+  '1.6.2-split-underscore-from-meteor-base': function (projectContext) {
     const packagesFile = projectContext.projectConstraintsFile;
     if (! packagesFile.getConstraint(`underscore`) &&
       packagesFile.getConstraint(`meteor-base`)) {
