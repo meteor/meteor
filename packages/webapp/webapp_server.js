@@ -871,7 +871,7 @@ function runWebAppServer() {
     },
     // This can be overridden by users who want to modify how listening works
     // (eg, to run a proxy like Apollo Engine Proxy in front of the server).
-    startListening: function(httpServer, listenOptions, cb) {
+    startListening: function (httpServer, listenOptions, cb) {
       httpServer.listen(listenOptions, cb);
     },
   });
