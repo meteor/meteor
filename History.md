@@ -1,5 +1,8 @@
 ## v.NEXT
 
+* Node has been updated to version
+  [8.10.0](https://nodejs.org/en/blog/release/v8.10.0/).
+
 * Applications may now specify client and server entry point modules in a
   newly-supported `"meteor"` section of `package.json`:
   ```js
