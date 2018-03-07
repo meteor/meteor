@@ -17,10 +17,6 @@ run_env_change: &run_env_change
     sudo mkdir -p /tmp/core_dumps
     sudo chmod a+rwx /tmp/core_dumps
 
-    # Make a place for JUnit tests to live.
-    sudo mkdir -p /tmp/results/junit
-    sudo chmod -R a+rwx /tmp/results/
-
     # Bake the locale we expect into the image.
     echo "en_US.UTF-8 UTF-8" | sudo tee /etc/locale.gen
     sudo locale-gen
@@ -93,7 +89,7 @@ build_machine_environment: &build_machine_environment
     # Skip these tests on every test run.
     # If needed, for readability this should be a regex wrapped across
     # multiple lines in quotes.
-    SELF_TEST_EXCLUDE: ""
+    SELF_TEST_EXCLUDE: "add debugOnly and prodOnly packages"
 
     # These will be evaled before each command.
     PRE_TEST_COMMANDS: |-
@@ -107,6 +103,10 @@ build_machine_environment: &build_machine_environment
     # This is only to make Meteor self-test not remind us that we can set
     # this argument for self-tests.
     SELF_TEST_TOOL_NODE_FLAGS: " "
+
+    # Variables for load-balancing
+    NUM_GROUPS: 11
+    RUNNING_AVG_LENGTH: 5
 
 jobs:
   Get Ready:
@@ -123,6 +123,15 @@ jobs:
           command: (git submodule sync && git submodule update --init --recursive) || (rm -fr .git/config .git/modules && git submodule deinit -f . && git submodule update --init --recursive)
       - restore_cache:
           key: meteor-cache
+      - restore_cache:
+          keys: 
+            - test-groups-v1-{{ .Branch }}
+            - test-groups-v1
+      - run:
+          name: Create Test Results Directory
+          command: |
+            sudo mkdir -p ./tmp/results/junit
+            sudo chmod a+rwx ./tmp/results/junit
       - run:
           name: Get Ready
           command: |
@@ -153,7 +162,7 @@ jobs:
           key: meteor-cache
           <<: *meteor_cache_dirs
 
-  Group 0:
+  Isolated Tests:
     <<: *build_machine_environment
     steps:
       - run:
@@ -166,43 +175,36 @@ jobs:
           name: "Print environment"
           command: printenv
       - run:
-          name: "Running warehouse self-tests"
+          name: "Running self-test ('package-tests: add debugOnly and prodOnly packages')"
+          command: |
+            eval $PRE_TEST_COMMANDS;
+            ./meteor self-test \
+              'add debugOnly and prodOnly packages' \
+              --retries ${METEOR_SELF_TEST_RETRIES} \
+              --headless
+          no_output_timeout: 20m
+      - run:
+          name: "Running self-test (Custom Warehouse Tests)"
           command: |
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --junit /tmp/results/junit/0-1.xml \
               --with-tag "custom-warehouse"
           no_output_timeout: 20m
       - run:
-          name: "Running self-test (0): A-Comm"
-          command: |
-            eval $PRE_TEST_COMMANDS;
-            ./meteor self-test \
-              --retries ${METEOR_SELF_TEST_RETRIES} \
-              --exclude "${SELF_TEST_EXCLUDE}" \
-              --headless \
-              --junit /tmp/results/junit/0-2.xml \
-              --file '^[a-b]|^c[a-n]|^co[a-l]|^comm' \
-              --without-tag "custom-warehouse"
-          no_output_timeout: 20m
-      - run:
           <<: *run_save_node_bin
-      - save_cache:
-          key: meteor-cache
-          <<: *meteor_cache_dirs
       - store_test_results:
-          path: /tmp/results
+          path: ./tmp/results
       - store_artifacts:
-          path: /tmp/results
+          path: ./tmp/results
       - store_artifacts:
           path: /tmp/core_dumps
       - store_artifacts:
           path: /tmp/memuse.txt
 
-  Group 1:
+  Test Group 0:
     <<: *build_machine_environment
     steps:
       - run:
@@ -215,32 +217,34 @@ jobs:
           name: "Print environment"
           command: printenv
       - run:
-          name: "Running self-test (1): Comn-Comz"
+          name: "Running self-test (Test Group 0)"
           command: |
+            if [ -f ./tmp/test-groups/0.txt ]; then TEST_GROUP=$(<./tmp/test-groups/0.txt); else TEST_GROUP='^[a-b]|^c[a-n]|^co[a-l]|^comm'; fi
+            echo $TEST_GROUP;
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
+              "$TEST_GROUP" \
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --junit /tmp/results/junit/1.xml \
-              --file '^com[n-z]' \
+              --junit ./tmp/results/junit/0.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
       - run:
           <<: *run_save_node_bin
-      - save_cache:
-          key: meteor-cache
-          <<: *meteor_cache_dirs
       - store_test_results:
-          path: /tmp/results
+          path: ./tmp/results
+      - persist_to_workspace:
+          root: .
+          paths: ./tmp/results/junit
       - store_artifacts:
-          path: /tmp/results
+          path: ./tmp/results
       - store_artifacts:
           path: /tmp/core_dumps
       - store_artifacts:
           path: /tmp/memuse.txt
 
-  Group 2:
+  Test Group 1:
     <<: *build_machine_environment
     steps:
       - run:
@@ -253,32 +257,34 @@ jobs:
           name: "Print environment"
           command: printenv
       - run:
-          name: "Running self-test (2): Con-Coz"
+          name: "Running self-test (Test Group 1)"
           command: |
+            if [ -f ./tmp/test-groups/1.txt ]; then TEST_GROUP=$(<./tmp/test-groups/1.txt); elif [ -f ./tmp/test-groups/0.txt ]; then TEST_GROUP=XXXXX; else TEST_GROUP='^com[n-z]'; fi
+            echo $TEST_GROUP;
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
+              "$TEST_GROUP" \
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --junit /tmp/results/junit/2.xml \
-              --file '^co[n-z]' \
+              --junit ./tmp/results/junit/1.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
       - run:
           <<: *run_save_node_bin
-      - save_cache:
-          key: meteor-cache
-          <<: *meteor_cache_dirs
       - store_test_results:
-          path: /tmp/results
+          path: ./tmp/results
+      - persist_to_workspace:
+          root: .
+          paths: ./tmp/results/junit
       - store_artifacts:
-          path: /tmp/results
+          path: ./tmp/results
       - store_artifacts:
           path: /tmp/core_dumps
       - store_artifacts:
           path: /tmp/memuse.txt
 
-  Group 3:
+  Test Group 2:
     <<: *build_machine_environment
     steps:
       - run:
@@ -291,32 +297,34 @@ jobs:
           name: "Print environment"
           command: printenv
       - run:
-          name: "Running self-test (3): Cp-He"
+          name: "Running self-test (Test Group 2)"
           command: |
+            if [ -f ./tmp/test-groups/2.txt ]; then TEST_GROUP=$(<./tmp/test-groups/2.txt); elif [ -f ./tmp/test-groups/0.txt ]; then TEST_GROUP=XXXXX; else TEST_GROUP='^co[n-z]'; fi
+            echo $TEST_GROUP;
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
+              "$TEST_GROUP" \
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --junit /tmp/results/junit/3.xml \
-              --file '^c[p-z]|^[d-g]|^h[a-e]' \
+              --junit ./tmp/results/junit/2.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
       - run:
           <<: *run_save_node_bin
-      - save_cache:
-          key: meteor-cache
-          <<: *meteor_cache_dirs
       - store_test_results:
-          path: /tmp/results
+          path: ./tmp/results
+      - persist_to_workspace:
+          root: .
+          paths: ./tmp/results/junit
       - store_artifacts:
-          path: /tmp/results
+          path: ./tmp/results
       - store_artifacts:
           path: /tmp/core_dumps
       - store_artifacts:
           path: /tmp/memuse.txt
 
-  Group 4:
+  Test Group 3:
     <<: *build_machine_environment
     steps:
       - run:
@@ -329,32 +337,34 @@ jobs:
           name: "Print environment"
           command: printenv
       - run:
-          name: "Running self-test (4): Hf-Hz"
-          command:  |
+          name: "Running self-test (Test Group 3)"
+          command: |
+            if [ -f ./tmp/test-groups/3.txt ]; then TEST_GROUP=$(<./tmp/test-groups/3.txt); elif [ -f ./tmp/test-groups/0.txt ]; then TEST_GROUP=XXXXX; else TEST_GROUP='^c[p-z]|^[d-g]|^h[a-e]'; fi
+            echo $TEST_GROUP;
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
+              "$TEST_GROUP" \
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --junit /tmp/results/junit/4.xml \
-              --file '^h[f-z]' \
+              --junit ./tmp/results/junit/3.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
       - run:
           <<: *run_save_node_bin
-      - save_cache:
-          key: meteor-cache
-          <<: *meteor_cache_dirs
       - store_test_results:
-          path: /tmp/results
+          path: ./tmp/results
+      - persist_to_workspace:
+          root: .
+          paths: ./tmp/results/junit
       - store_artifacts:
-          path: /tmp/results
+          path: ./tmp/results
       - store_artifacts:
           path: /tmp/core_dumps
       - store_artifacts:
           path: /tmp/memuse.txt
 
-  Group 5:
+  Test Group 4:
     <<: *build_machine_environment
     steps:
       - run:
@@ -367,32 +377,34 @@ jobs:
           name: "Print environment"
           command: printenv
       - run:
-          name: "Running self-test (5): I-L"
+          name: "Running self-test (Test Group 4)"
           command: |
+            if [ -f ./tmp/test-groups/4.txt ]; then TEST_GROUP=$(<./tmp/test-groups/4.txt); elif [ -f ./tmp/test-groups/0.txt ]; then TEST_GROUP=XXXXX; else TEST_GROUP='^h[f-z]|^[i-l]'; fi
+            echo $TEST_GROUP;
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
+              "$TEST_GROUP" \
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --junit /tmp/results/junit/5.xml \
-              --file '^[i-l]' \
+              --junit ./tmp/results/junit/4.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
       - run:
           <<: *run_save_node_bin
-      - save_cache:
-          key: meteor-cache
-          <<: *meteor_cache_dirs
       - store_test_results:
-          path: /tmp/results
+          path: ./tmp/results
+      - persist_to_workspace:
+          root: .
+          paths: ./tmp/results/junit
       - store_artifacts:
-          path: /tmp/results
+          path: ./tmp/results
       - store_artifacts:
           path: /tmp/core_dumps
       - store_artifacts:
           path: /tmp/memuse.txt
 
-  Group 6:
+  Test Group 5:
     <<: *build_machine_environment
     steps:
       - run:
@@ -405,32 +417,34 @@ jobs:
           name: "Print environment"
           command: printenv
       - run:
-          name: "Running self-test (6): Ma-Mod"
+          name: "Running self-test (Test Group 5)"
           command: |
+            if [ -f ./tmp/test-groups/5.txt ]; then TEST_GROUP=$(<./tmp/test-groups/5.txt); elif [ -f ./tmp/test-groups/0.txt ]; then TEST_GROUP=XXXXX; else TEST_GROUP='^m[a-n]|^mo[a-d]'; fi
+            echo $TEST_GROUP;
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
+              "$TEST_GROUP" \
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --junit /tmp/results/junit/6.xml \
-              --file '^m[a-n]|^mo[a-d]' \
+              --junit ./tmp/results/junit/5.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
       - run:
           <<: *run_save_node_bin
-      - save_cache:
-          key: meteor-cache
-          <<: *meteor_cache_dirs
       - store_test_results:
-          path: /tmp/results
+          path: ./tmp/results
+      - persist_to_workspace:
+          root: .
+          paths: ./tmp/results/junit
       - store_artifacts:
-          path: /tmp/results
+          path: ./tmp/results
       - store_artifacts:
           path: /tmp/core_dumps
       - store_artifacts:
           path: /tmp/memuse.txt
-
-  Group 7:
+ 
+  Test Group 6:
     <<: *build_machine_environment
     steps:
       - run:
@@ -443,32 +457,34 @@ jobs:
           name: "Print environment"
           command: printenv
       - run:
-          name: "Running self-test (7): Moe-O"
+          name: "Running self-test (Test Group 6)"
           command: |
+            if [ -f ./tmp/test-groups/6.txt ]; then TEST_GROUP=$(<./tmp/test-groups/6.txt); elif [ -f ./tmp/test-groups/0.txt ]; then TEST_GROUP=XXXXX; else TEST_GROUP='^mo[e-z]|^m[p-z]|^[n-o]'; fi
+            echo $TEST_GROUP;
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
+              "$TEST_GROUP" \
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --junit /tmp/results/junit/7.xml \
-              --file '^mo[e-z]|^m[p-z]|^[n-o]' \
+              --junit ./tmp/results/junit/6.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
       - run:
           <<: *run_save_node_bin
-      - save_cache:
-          key: meteor-cache
-          <<: *meteor_cache_dirs
       - store_test_results:
-          path: /tmp/results
+          path: ./tmp/results
+      - persist_to_workspace:
+          root: .
+          paths: ./tmp/results/junit
       - store_artifacts:
-          path: /tmp/results
+          path: ./tmp/results
       - store_artifacts:
           path: /tmp/core_dumps
       - store_artifacts:
           path: /tmp/memuse.txt
 
-  Group 8:
+  Test Group 7:
     <<: *build_machine_environment
     steps:
       - run:
@@ -481,32 +497,34 @@ jobs:
           name: "Print environment"
           command: printenv
       - run:
-          name: "Running self-test (8): P-Re"
+          name: "Running self-test (Test Group 7)"
           command: |
+            if [ -f ./tmp/test-groups/7.txt ]; then TEST_GROUP=$(<./tmp/test-groups/7.txt); elif [ -f ./tmp/test-groups/0.txt ]; then TEST_GROUP=XXXXX; else TEST_GROUP='^[p-q]|^r[a-e]'; fi
+            echo $TEST_GROUP;
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
+              "$TEST_GROUP" \
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --junit /tmp/results/junit/8.xml \
-              --file '^[p-q]|^r[a-e]' \
+              --junit ./tmp/results/junit/7.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
       - run:
           <<: *run_save_node_bin
-      - save_cache:
-          key: meteor-cache
-          <<: *meteor_cache_dirs
       - store_test_results:
-          path: /tmp/results
+          path: ./tmp/results
+      - persist_to_workspace:
+          root: .
+          paths: ./tmp/results/junit
       - store_artifacts:
-          path: /tmp/results
+          path: ./tmp/results
       - store_artifacts:
           path: /tmp/core_dumps
       - store_artifacts:
           path: /tmp/memuse.txt
 
-  Group 9:
+  Test Group 8:
     <<: *build_machine_environment
     steps:
       - run:
@@ -519,32 +537,34 @@ jobs:
           name: "Print environment"
           command: printenv
       - run:
-          name: "Running self-test (9): Rf-Rz"
+          name: "Running self-test (Test Group 8)"
           command: |
+            if [ -f ./tmp/test-groups/8.txt ]; then TEST_GROUP=$(<./tmp/test-groups/8.txt); elif [ -f ./tmp/test-groups/0.txt ]; then TEST_GROUP=XXXXX; else TEST_GROUP='^r[f-z]'; fi
+            echo $TEST_GROUP;
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
+              "$TEST_GROUP" \
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --junit /tmp/results/junit/9.xml \
-              --file '^r[f-z]' \
+              --junit ./tmp/results/junit/8.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
       - run:
           <<: *run_save_node_bin
-      - save_cache:
-          key: meteor-cache
-          <<: *meteor_cache_dirs
       - store_test_results:
-          path: /tmp/results
+          path: ./tmp/results
+      - persist_to_workspace:
+          root: .
+          paths: ./tmp/results/junit
       - store_artifacts:
-          path: /tmp/results
+          path: ./tmp/results
       - store_artifacts:
           path: /tmp/core_dumps
       - store_artifacts:
           path: /tmp/memuse.txt
 
-  Group 10:
+  Test Group 9:
     <<: *build_machine_environment
     steps:
       - run:
@@ -557,32 +577,34 @@ jobs:
           name: "Print environment"
           command: printenv
       - run:
-          name: "Running self-test (10): S"
+          name: "Running self-test (Test Group 9)"
           command: |
+            if [ -f ./tmp/test-groups/9.txt ]; then TEST_GROUP=$(<./tmp/test-groups/9.txt); elif [ -f ./tmp/test-groups/0.txt ]; then TEST_GROUP=XXXXX; else TEST_GROUP='^s'; fi
+            echo $TEST_GROUP;
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
+              "$TEST_GROUP" \
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --junit /tmp/results/junit/10.xml \
-              --file '^s' \
+              --junit ./tmp/results/junit/9.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
       - run:
           <<: *run_save_node_bin
-      - save_cache:
-          key: meteor-cache
-          <<: *meteor_cache_dirs
       - store_test_results:
-          path: /tmp/results
+          path: ./tmp/results
+      - persist_to_workspace:
+          root: .
+          paths: ./tmp/results/junit
       - store_artifacts:
-          path: /tmp/results
+          path: ./tmp/results
       - store_artifacts:
           path: /tmp/core_dumps
       - store_artifacts:
           path: /tmp/memuse.txt
 
-  Group 11:
+  Test Group 10:
     <<: *build_machine_environment
     steps:
       - run:
@@ -595,26 +617,28 @@ jobs:
           name: "Print environment"
           command: printenv
       - run:
-          name: "Running self-test (11): T-Z"
+          name: "Running self-test (Test Group 10)"
           command: |
+            if [ -f ./tmp/test-groups/10.txt ]; then TEST_GROUP=$(<./tmp/test-groups/10.txt); elif [ -f ./tmp/test-groups/0.txt ]; then TEST_GROUP=XXXXX; else TEST_GROUP='^[t-z]'; fi
+            echo $TEST_GROUP;
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
+              "$TEST_GROUP" \
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --junit /tmp/results/junit/11.xml \
-              --file '^[t-z]' \
+              --junit ./tmp/results/junit/10.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
       - run:
           <<: *run_save_node_bin
-      - save_cache:
-          key: meteor-cache
-          <<: *meteor_cache_dirs
       - store_test_results:
-          path: /tmp/results
+          path: ./tmp/results
+      - persist_to_workspace:
+          root: .
+          paths: ./tmp/results/junit
       - store_artifacts:
-          path: /tmp/results
+          path: ./tmp/results
       - store_artifacts:
           path: /tmp/core_dumps
       - store_artifacts:
@@ -658,45 +682,80 @@ jobs:
             npm install
             npm test
 
+  Clean Up:
+    <<: *build_machine_environment
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Create Test Groups Directory
+          command: |
+            sudo mkdir -p ./tmp/test-groups
+            sudo chmod a+rwx ./tmp/test-groups
+      - run:
+          name: Calculate Balanced Test Groups
+          command: |
+            npm install --prefix ./scripts/test-balancer
+            npm start --prefix ./scripts/test-balancer --num-groups ${NUM_GROUPS} --running-avg-length ${RUNNING_AVG_LENGTH}
+      - save_cache:
+          key: test-groups-v1-{{ .Branch }}-{{ .BuildNum }}
+          paths:
+            - ./tmp/test-groups
+          when: on_success
+
 workflows:
   version: 2
   Build and Test:
     jobs:
       - Docs
       - Get Ready
-      - Group 0:
+      - Isolated Tests:
           requires:
             - Get Ready
-      - Group 1:
+      - Test Group 0:
           requires:
             - Get Ready
-      - Group 2:
+      - Test Group 1:
           requires:
             - Get Ready
-      - Group 3:
+      - Test Group 2:
           requires:
             - Get Ready
-      - Group 4:
+      - Test Group 3:
           requires:
             - Get Ready
-      - Group 5:
+      - Test Group 4:
           requires:
             - Get Ready
-      - Group 6:
+      - Test Group 5:
           requires:
             - Get Ready
-      - Group 7:
+      - Test Group 6:
           requires:
             - Get Ready
-      - Group 8:
+      - Test Group 7:
           requires:
             - Get Ready
-      - Group 9:
+      - Test Group 8:
           requires:
             - Get Ready
-      - Group 10:
+      - Test Group 9:
           requires:
             - Get Ready
-      - Group 11:
+      - Test Group 10:
           requires:
             - Get Ready
+      - Clean Up:
+          requires:
+            - Isolated Tests
+            - Test Group 0
+            - Test Group 1
+            - Test Group 2
+            - Test Group 3
+            - Test Group 4
+            - Test Group 5
+            - Test Group 6
+            - Test Group 7
+            - Test Group 8
+            - Test Group 9
+            - Test Group 10
