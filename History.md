@@ -71,6 +71,16 @@
   `meteor-babel` now runs with the `loose:true` option, as required by
   other (optional) plugins like `@babel/plugin-proposal-decorators`.
   [Issue #9628](https://github.com/meteor/meteor/issues/9628)
+  
+* The `underscore` package has been removed as a dependency from `meteor-base`.
+  This opens up the possibility of removing 14.4 kb from production bundles.
+  Since this would be a breaking change for any apps that may have been 
+  using `_` without having any packages that depend on `underscore` 
+  besides `meteor-base`, we have added an upgrader that will automatically 
+  add `underscore` to the `.meteor/packages` file of any project which 
+  lists `meteor-base`, but not `underscore`. Apps which do not require this 
+  package can safely remove it using `meteor remove underscore`.
+  [PR #9596](https://github.com/meteor/meteor/pull/9596)
 
 * Meteor's `promise` package has been updated to support
   [`Promise.prototype.finally`](https://github.com/tc39/proposal-promise-finally).

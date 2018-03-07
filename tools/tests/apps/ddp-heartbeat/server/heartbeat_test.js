@@ -54,7 +54,7 @@ var expectConnectAndReconnect = function (clientConnection) {
 var testClientTimeout = function () {
   console.log("Test client timeout");
 
-  var savedServerOptions = _.clone(Meteor.server.options);
+  var savedServerOptions = { ...Meteor.server.options };
   Meteor.server.options.heartbeatInterval = 0;
   Meteor.server.options.respondToPings = false;
 
