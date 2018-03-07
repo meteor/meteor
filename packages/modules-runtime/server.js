@@ -15,19 +15,15 @@ makeInstallerOptions.fallback = function (id, parentId, error) {
   if (topLevelIdPattern.test(id)) {
     if (typeof Npm === "object" &&
         typeof Npm.require === "function") {
-      try {
-        return Npm.require(id, error);
-      } catch(err) {
-        if (id && id.startsWith('meteor/')) {
-          const [meteorPrefix, packageName] = id.split('/', 2);
-          throw new Error(
-            `Cannot find package "${packageName}". ` +
-            `Try "meteor add ${packageName}".`
-          );
-        }
-
-        throw err;
+      if (id && id.startsWith('meteor/')) {
+        const [meteorPrefix, packageName] = id.split('/', 2);
+        throw new Error(
+          `Cannot find package "${packageName}". ` +
+          `Try "meteor add ${packageName}".`
+        );
       }
+      
+      return Npm.require(id, error);
     }
   }
 
