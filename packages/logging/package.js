@@ -1,14 +1,14 @@
 Package.describe({
-  summary: "Logging facility.",
-  version: '1.1.19'
+  summary: 'Logging facility.',
+  version: '1.1.20'
 });
 
 Npm.depends({
-  "cli-color": "0.2.3"
+  'cli-color': '0.2.3'
 });
 
 Npm.strip({
-  "es5-ext": ["test/"]
+  'es5-ext': ['test/']
 });
 
 Cordova.depends({
@@ -17,13 +17,17 @@ Cordova.depends({
 
 Package.onUse(function (api) {
   api.export('Log');
-  api.use(['underscore', 'ejson', 'modules']);
-  api.addFiles('logging.js');
-  api.addFiles('logging_cordova.js', 'web.cordova');
+  // The `ecmascript-runtime-client` package is explicitly depended upon
+  // here due to this package's dependency on
+  // `String.prototype.padRight` which is polyfilled only in
+  // `ecmascript-runtime-client@0.6.2` or newer.
+  api.use(['ejson', 'ecmascript', 'ecmascript-runtime-client@0.6.2']);
+  api.mainModule('logging.js');
+  api.mainModule('logging_cordova.js', 'web.cordova');
 });
 
 Package.onTest(function (api) {
-  api.use(['tinytest', 'underscore', 'ejson']);
+  api.use(['tinytest', 'ejson', 'ecmascript']);
   api.use('logging', ['client', 'server']);
-  api.addFiles('logging_test.js', ['server', 'client']);
+  api.mainModule('logging_test.js', ['server', 'client']);
 });
