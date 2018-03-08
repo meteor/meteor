@@ -65,7 +65,7 @@
     "prettier": "1.11.1",
     "readline-sync": "1.4.9",
     "rimraf": "2.6.2",
-    "semantic-release": "^12.4.1",
+    "semantic-release": "^15.0.2",
     "travis-deploy-once": "4.3.4",
     "validate-commit-msg": "2.14.0"
   },
