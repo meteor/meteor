@@ -66,7 +66,7 @@
     "readline-sync": "1.4.9",
     "rimraf": "2.6.2",
     "semantic-release": "^12.4.1",
-    "travis-deploy-once": "4.3.4",
+    "travis-deploy-once": "4.4.0",
     "validate-commit-msg": "2.14.0"
   },
   "peerDependencies": {
