@@ -1,1 +1,1 @@
-exports.BrowserPolicy = require("meteor/browser-policy-common").BrowserPolicy;
+export { BrowserPolicy } from 'meteor/browser-policy-common';

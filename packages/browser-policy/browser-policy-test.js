@@ -1,17 +1,15 @@
+import { BrowserPolicy } from './browser-policy.js';
+
 BrowserPolicy._setRunningTest();
 
-var cspsEqual = function (csp1, csp2) {
-  var cspToObj = function (csp) {
+const cspsEqual = (csp1, csp2) => {
+  const cspToObj = csp => {
     csp = csp.substring(0, csp.length - 1);
-    var parts = _.map(csp.split("; "), function (part) {
-      return part.split(" ");
-    });
-    var keys = _.map(parts, _.first);
-    var values = _.map(parts, _.rest);
-    _.each(values, function (value) {
-      value.sort();
-    });
-    return _.object(keys, values);
+    const parts = csp.split('; ').map(part => part.split(' '));
+    const keys = parts.map(part => part[0]);
+    const values = parts.map(part => part.slice(1));
+    values.forEach(value => value.sort());
+    return keys.reduce((prev, key, i) => ({ ...prev, [key]: values[i] }), {});
   };
 
   return EJSON.equals(cspToObj(csp1), cspToObj(csp2));
@@ -20,8 +18,8 @@ var cspsEqual = function (csp1, csp2) {
 // It's important to call _reset() at the beginnning of these tests; otherwise
 // the headers left over at the end of the last test run will be used.
 
-Tinytest.add("browser-policy - csp", function (test) {
-  var defaultCsp = "default-src 'self'; script-src 'self' 'unsafe-inline'; " +
+Tinytest.add("browser-policy - csp", test => {
+  const defaultCsp = "default-src 'self'; script-src 'self' 'unsafe-inline'; " +
         "connect-src * 'self'; img-src data: 'self'; style-src 'self' 'unsafe-inline';"
 
   BrowserPolicy.content._reset();
@@ -137,15 +135,15 @@ Tinytest.add("browser-policy - csp", function (test) {
                         "default-src 'none'; frame-src https://foo.com; " +
                         "object-src http://foo.com https://foo.com;"));
 
-  // Check that frame-ancestors property is set correctly. 
-  BrowserPolicy.content.allowFrameAncestorsOrigin("https://foo.com/"); 
-  test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(), 
-                        "default-src 'none'; frame-src https://foo.com; " + 
-                        "object-src http://foo.com https://foo.com; " + 
+  // Check that frame-ancestors property is set correctly.
+  BrowserPolicy.content.allowFrameAncestorsOrigin("https://foo.com/");
+  test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(),
+                        "default-src 'none'; frame-src https://foo.com; " +
+                        "object-src http://foo.com https://foo.com; " +
                         "frame-ancestors https://foo.com;"));
 });
 
-Tinytest.add("browser-policy - x-frame-options", function (test) {
+Tinytest.add("browser-policy - x-frame-options", test => {
   BrowserPolicy.framing._reset();
   test.equal(BrowserPolicy.framing._constructXFrameOptions(), "SAMEORIGIN");
   BrowserPolicy.framing.disallow();
@@ -154,12 +152,10 @@ Tinytest.add("browser-policy - x-frame-options", function (test) {
   test.equal(BrowserPolicy.framing._constructXFrameOptions(), null);
   BrowserPolicy.framing.restrictToOrigin("foo.com");
   test.equal(BrowserPolicy.framing._constructXFrameOptions(), "ALLOW-FROM foo.com");
-  test.throws(function () {
-    BrowserPolicy.framing.restrictToOrigin("bar.com");
-  });
+  test.throws(() => BrowserPolicy.framing.restrictToOrigin("bar.com"));
 });
 
-Tinytest.add("browser-policy - X-Content-Type-Options", function (test) {
+Tinytest.add("browser-policy - X-Content-Type-Options", test => {
   BrowserPolicy.content._reset();
   test.equal(BrowserPolicy.content._xContentTypeOptions(), "nosniff");
   BrowserPolicy.content.allowContentTypeSniffing();

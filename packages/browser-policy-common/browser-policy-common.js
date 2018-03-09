@@ -1,30 +1,38 @@
-BrowserPolicy = {};
+import { Webapp } from 'meteor/webapp';
 
-var inTest = false;
+const BrowserPolicy = {};
 
-BrowserPolicy._runningTest = function () {
-  return inTest;
-};
+let inTest = false;
 
-BrowserPolicy._setRunningTest = function () {
-  inTest = true;
-};
+Object.assign(BrowserPolicy, {
+  _runningTest() {
+    return inTest;
+  },
 
-WebApp.connectHandlers.use(function (req, res, next) {
+  _setRunningTest() {
+    inTest = true;
+  },
+})
+
+WebApp.connectHandlers.use((req, res, next) => {
+  
   // Never set headers inside tests because they could break other tests.
-  if (BrowserPolicy._runningTest())
+  if (BrowserPolicy._runningTest()) {
     return next();
+  }
 
-  var xFrameOptions = BrowserPolicy.framing &&
+  const xFrameOptions = BrowserPolicy.framing &&
         BrowserPolicy.framing._constructXFrameOptions();
-  var csp = BrowserPolicy.content &&
+  const csp = BrowserPolicy.content &&
         BrowserPolicy.content._constructCsp();
   if (xFrameOptions) {
     res.setHeader("X-Frame-Options", xFrameOptions);
   }
+
   if (csp) {
     res.setHeader("Content-Security-Policy", csp);
   }
+  
   next();
 });
 
@@ -34,14 +42,18 @@ WebApp.connectHandlers.use(function (req, res, next) {
 // and Content-Security-Policy too, but let's make sure that doesn't
 // break anything first (e.g. the OAuth popup flow won't work well with
 // a CSP that disallows inline scripts).
-WebApp.rawConnectHandlers.use(function (req, res, next) {
-  if (BrowserPolicy._runningTest())
+WebApp.rawConnectHandlers.use((req, res, next) => {
+  if (BrowserPolicy._runningTest()) {
     return next();
+  }
 
-  var contentTypeOptions = BrowserPolicy.content &&
+  const contentTypeOptions = BrowserPolicy.content &&
         BrowserPolicy.content._xContentTypeOptions();
   if (contentTypeOptions) {
     res.setHeader("X-Content-Type-Options", contentTypeOptions);
   }
+
   next();
 });
+
+export { BrowserPolicy };

@@ -5,38 +5,46 @@
 // BrowserPolicy.framing.disallow()
 // BrowserPolicy.framing.restrictToOrigin(origin)
 // BrowserPolicy.framing.allowByAnyOrigin()
+import { BrowserPolicy } from 'meteor/browser-policy-common';
 
-var defaultXFrameOptions = "SAMEORIGIN";
-var xFrameOptions = defaultXFrameOptions;
+const defaultXFrameOptions = 'SAMEORIGIN';
+let xFrameOptions = defaultXFrameOptions;
 
-const BrowserPolicy = require("meteor/browser-policy-common").BrowserPolicy;
 BrowserPolicy.framing = {};
 
-_.extend(BrowserPolicy.framing, {
+Object.assign(BrowserPolicy.framing, {
+
   // Exported for tests and browser-policy-common.
-  _constructXFrameOptions: function () {
+  _constructXFrameOptions() {
     return xFrameOptions;
   },
-  _reset: function () {
+
+  _reset() {
     xFrameOptions = defaultXFrameOptions;
   },
 
-  disallow: function () {
+  disallow() {
     xFrameOptions = "DENY";
   },
+
   // ALLOW-FROM not supported in Chrome or Safari.
-  restrictToOrigin: function (origin) {
+  restrictToOrigin(origin) {
+
     // Trying to specify two allow-from throws to prevent users from
     // accidentally overwriting an allow-from origin when they think they are
     // adding multiple origins.
-    if (xFrameOptions && xFrameOptions.indexOf("ALLOW-FROM") === 0)
+    if (xFrameOptions && xFrameOptions.indexOf("ALLOW-FROM") === 0) {
       throw new Error("You can only specify one origin that is allowed to" +
                       " frame this app.");
-    xFrameOptions = "ALLOW-FROM " + origin;
+    }
+
+    xFrameOptions = `ALLOW-FROM ${origin}`;
   },
-  allowAll: function () {
+
+  allowAll() {
     xFrameOptions = null;
-  }
+  },
+  
 });
 
-exports.BrowserPolicy = BrowserPolicy;
+export { BrowserPolicy };
