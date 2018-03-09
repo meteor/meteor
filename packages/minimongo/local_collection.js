@@ -1172,7 +1172,7 @@ LocalCollection._modify = (doc, modifier, options = {}) => {
         });
 
         if (matchedArrayFilters.length) {
-          const arrayFilters = matchedArrayFilters.reduce((prev, filter) => {
+          const arrayFilters = matchedArrayFilters.reduce((prev, filter, index) => {
             const filterKeyparts = keyparts.splice(0, filter.index + 1 - prev.position).slice(0, -1);
             const key = filterKeyparts[filterKeyparts.length - 1];
             const filterId = filter.match[1];
@@ -1188,6 +1188,10 @@ LocalCollection._modify = (doc, modifier, options = {}) => {
               }
 
               matcher = new Minimongo.Matcher(selector);
+            }
+
+            if (index !== matchedArrayFilters.length - 1) {
+              keyparts.pop();
             }
 
             return {
@@ -1212,7 +1216,9 @@ LocalCollection._modify = (doc, modifier, options = {}) => {
           arraysToModify = arrayFilters.reduce((arraysToModify, filter) => {
             return arraysToModify.reduce((result, items) => {
               return result.concat(items.reduce((arrays, item) => {
-                const target = findModTarget(item, filter.keyparts, findModTargetOpts)[filter.key];
+                const target = filter.keyparts && filter.keyparts.length
+                  ? findModTarget(item, filter.keyparts, findModTargetOpts)[filter.key]
+                  : item;
 
                 if (!Array.isArray(target)) {
                   return arrays;
@@ -1230,12 +1236,14 @@ LocalCollection._modify = (doc, modifier, options = {}) => {
 
         arraysToModify.forEach(array => {
           array.forEach(item => {
-            const items = filter
-              ? findModTarget(item, filter.keyparts, findModTargetOpts)[filter.key]
-              : [item];
-
-            if (!Array.isArray(items)) {
-              return;
+            let items;
+            if (filter && filter.keyparts && filter.keyparts.length) {
+              items = findModTarget(item, filter.keyparts, findModTargetOpts)[filter.key];
+              if (!Array.isArray(items)) {
+                return;
+              }
+            } else {
+              items = Array.isArray(item) ? item : [item];
             }
 
             items.forEach((item, index) => {

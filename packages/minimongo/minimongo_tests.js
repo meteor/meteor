@@ -58,3 +58,34 @@ Tinytest.add('minimongo - wrapTransform', test => {
   });
   handle.stop();
 });
+
+Tinytest.add('minimongo - array filters', test => {
+  const coll = new LocalCollection();
+
+  function U(doc, modifier, arrayFilters) {
+    const _id = coll.insert(doc);
+    coll.update(_id, modifier, { arrayFilters });
+    const { _id: _, ...ret } = coll.findOne(_id);
+    coll.remove(_id);
+    return ret;
+  }
+
+  // test parsing
+  test.equal(U({}, {$set: {'arr.$[]': 0}}), {});
+  test.throws(() => U({}, {$set: {'arr.$[i]': 0}}));
+
+  // test update all array items
+  test.equal(U({arr: [1,2,3]}, {$set: {'arr.$[]': 9}}), {arr: [9,9,9]});
+  test.equal(U({o: {arr: [1,2,3]}}, {$set: {'o.arr.$[]': 9}}), {o:{arr: [9,9,9]}});
+  test.equal(U({arr: [{o: 1},{o: 2},{o: 3}]}, {$set: {'arr.$[].o': 9}}), {arr: [{o: 9},{o: 9},{o: 9}]});
+  test.equal(U({arr: [{o:{o: 1}},{o:{o: 2}},{o:{o: 3}}]}, {$set: {'arr.$[].o.o': 9}}), {arr: [{o: {o: 9}},{o: {o: 9}},{o: {o: 9}}]});
+
+  // test update all array items - nested
+  test.equal(U({arr: [[1,2,3],[3,2,1]]}, {$set: {'arr.$[].$[]': 9}}), {arr: [[9,9,9],[9,9,9]]});
+  test.equal(U({arr: [[[1,2,3],[3,2,1]]]}, {$set: {'arr.$[].$[].$[]': 9}}), {arr: [[[9,9,9],[9,9,9]]]});
+
+  // test array filters
+  test.equal(U({arr: [1,2,3,4]}, {$set:{'arr.$[i]': 9}}, [{i: {$gt: 2}}]), {arr: [1,2,9,9]});
+  test.equal(U({o:{arr: [1,2,3,4]}}, {$set:{'o.arr.$[i]': 9}}, [{i: {$gt: 2}}]), {o:{arr: [1,2,9,9]}});
+  test.equal(U({arr: [{o: 1},{o: 2},{o: 3},{o: 4}]}, {$set:{'arr.$[i].o': 9}}, [{'i.o': {$gt: 2}}]), {arr: [{o: 1},{o: 2},{o: 9},{o: 9}]});
+});
