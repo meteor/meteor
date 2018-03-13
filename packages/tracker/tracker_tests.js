@@ -216,7 +216,7 @@ Tinytest.add("tracker - flush", function (test) {
   test.equal(buf, 'a*a*');
 
   /////
-  // Can flush a diferent run from a run;
+  // Can flush a different run from a run;
   // no current computation in afterFlush
 
   buf = "";

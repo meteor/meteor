@@ -48,7 +48,7 @@ function toArchArray (arch) {
 // 'client' -> 'web'
 // 'server' -> 'os'
 // '*' -> '*'
-function mapWhereToArch (where) {
+export function mapWhereToArch(where) {
   if (where === 'server') {
     return 'os';
   } else if (where === 'client') {

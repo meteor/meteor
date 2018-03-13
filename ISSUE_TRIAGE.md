@@ -29,6 +29,28 @@ The first step is in determining whether the issue is a bug, help question or fe
 4. A reproduction should be confirmed by at least one person other than the original reporter. Run the reproduction and validate that the bug exists; then make a note of your findings on the issue. If a reproduction is supplied but doesn't work, add the `can't-reproduce` label and make a comment describing what happened.
 5. Finally, once you've confirmed the reproduction add the `confirmed` label and [classify](#classification) the issue (removing the `can't-reproduce` label if it exists).
 
+#### Bug issue lifespan
+
+To help keep issues in this repository under control, and make sure the most important problems are visible to maintainers, unresolved issues (lacking recent activity) should be closed after a certain amount of time has elapsed. 
+
+##### Issues labelled with `pull-requests-encouraged`
+
+- Open `pull-requests-encouraged` issues should be closed after one month of inactivity, unless someone has clearly identified that they are interested in working on the issue.
+- When closing, the `not-implemented` label should be added.
+- A message similar to the following should be included:
+
+> While we think resolving this issue would be a great addition to the Meteor project, we're going to close it for now due to inactivity. If anyone comes across this issue in the future, and is interested in working on resolving it, please let us know by posting here and we'll consider re-opening this issue. Thanks!
+
+##### Issues labelled with `bug` and `confirmed`
+
+- Open `bug` + `confirmed` issues should be closed after two months of inactivity, unless someone has clearly identified that they are interested in working on the issue.
+- Triagers should do everything possible to help get `bug` + `confirmed` issues to `pull-requests-encouraged`. This means helping clearly identify where the problem is, pointing towards parts of the codebase that someone might want to look into, documenting what a potential solution looks like, etc.
+
+##### All other issues 
+
+- All open issues that can’t be labelled as `bug` + `confirmed` and/or `pull-requests-encouraged`, should be closed after one month of inactivity.
+- Triagers should do everything possible to help get `bug` + `confirmed` issues to `pull-requests-encouraged`. 
+
 ### Help questions
 
 [Stack Overflow](http://stackoverflow.com/questions/tagged/meteor) and our [forums](https://forums.meteor.com/c/help) are the place to ask for help on using the framework. Close issues that are help requests and politely refer the author to the above locations.

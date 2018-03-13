@@ -1,6 +1,6 @@
 Package.describe({
   name: 'meteor-base',
-  version: '1.3.0',
+  version: '1.4.0',
   // Brief, one-line summary of the package.
   summary: 'Packages that every Meteor app needs',
   // By default, Meteor will default to using README.md for documentation.
@@ -17,9 +17,6 @@ Package.onUse(function(api) {
     // only supports building client/server web applications so this is not
     // removable
     'webapp',
-
-    // Most Meteor core packages depend on Underscore right now
-    'underscore',
 
     // The protocol and client/server libraries that Meteor uses to send data
     'ddp',

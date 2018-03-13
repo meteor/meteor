@@ -1,9 +1,62 @@
 ## v.NEXT
 
-* The `reify` npm package has been updated to version 0.14.1.
+* Applications may now specify client and server entry point modules in a
+  newly-supported `"meteor"` section of `package.json`:
+  ```js
+  "meteor": {
+    "mainModule": {
+      "client": "client/main.js",
+      "server": "server/main.js"
+    }
+  }
+  ```
+  When specified, these entry points override Meteor's default module
+  loading semantics, rendering `imports` directories unnecessary. If
+  `mainModule` is left unspecified for either client or server, the
+  default rules will apply for that architecture, as before. To disable
+  eager loading of modules on a given architecture, simply provide a
+  `mainModule` value of `false`:
+  ```js
+  "meteor": {
+    "mainModule": {
+      "client": false,
+      "server": "server/main.js"
+    }
+  }
+  ```
+  [Feature #135](https://github.com/meteor/meteor-feature-requests/issues/135)
+  [PR #9690](https://github.com/meteor/meteor/pull/9690)
+
+* In addition to `meteor.mainModule`, the `"meteor"` section of
+  `package.json` may also specify `meteor.testModule` to control which
+  test modules are loaded by `meteor test` or `meteor test --full-app`:
+  ```js
+  "meteor": {
+    "mainModule": {...},
+    "testModule": "tests.js"
+  }
+  ```
+  If your client and server test files are different, you can expand the
+  `testModule` configuration using the same syntax as `mainModule`:
+  ```js
+  "meteor": {
+    "testModule": {
+      "client": "client/tests.js",
+      "server": "server/tests.js"
+    }
+  }
+  ```
+  The same test module will be loaded whether or not you use the
+  `--full-app` option. Any tests that need to detect `--full-app` should
+  check `Meteor.isAppTest`. The module(s) specified by `meteor.testModule`
+  can import other test modules at runtime, so you can still distribute
+  test files across your codebase; just make sure you import the ones you
+  want to run. [PR #9714](https://github.com/meteor/meteor/pull/9714)
+
+* The `reify` npm package has been updated to version 0.14.2.
 
 * The `meteor-babel` npm package has been updated to version
-  7.0.0-beta.40-1.
+  7.0.0-beta.40-2.
 
 * The `optimism` npm package has been updated to version 0.4.0.
 
@@ -18,6 +71,16 @@
   `meteor-babel` now runs with the `loose:true` option, as required by
   other (optional) plugins like `@babel/plugin-proposal-decorators`.
   [Issue #9628](https://github.com/meteor/meteor/issues/9628)
+  
+* The `underscore` package has been removed as a dependency from `meteor-base`.
+  This opens up the possibility of removing 14.4 kb from production bundles.
+  Since this would be a breaking change for any apps that may have been 
+  using `_` without having any packages that depend on `underscore` 
+  besides `meteor-base`, we have added an upgrader that will automatically 
+  add `underscore` to the `.meteor/packages` file of any project which 
+  lists `meteor-base`, but not `underscore`. Apps which do not require this 
+  package can safely remove it using `meteor remove underscore`.
+  [PR #9596](https://github.com/meteor/meteor/pull/9596)
 
 * Meteor's `promise` package has been updated to support
   [`Promise.prototype.finally`](https://github.com/tc39/proposal-promise-finally).
@@ -40,7 +103,7 @@
   `<head />` of an app, it will be replaced by the `link` to Meteor's bundled
   CSS. If the new tag isn't used, the bundle will be placed at the top of
   the `<head />` section as before (for backwards compatibility).
-  [Feature #24](https://github.com/meteor/meteor/pull/24)
+  [Feature #24](https://github.com/meteor/meteor-feature-requests/issues/24)
   [PR #9657](https://github.com/meteor/meteor/pull/9657)
 
 ## v1.6.1, 2018-01-19
