@@ -299,7 +299,7 @@ Log.format = (obj, options = {}) => {
   ];
   const metaPrefix = [
     level.charAt(0).toUpperCase(),
-    ...(Meteor.isProduction ? datePrefix : []),
+    ...(Meteor.isProduction ? datePrefix : [' ']),
     appInfo,
     sourceInfo,
     stderrIndicator].join('');
