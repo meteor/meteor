@@ -288,7 +288,7 @@ Log.format = (obj, options = {}) => {
   if (satellite)
     sourceInfo += `[${satellite}]`;
 
-  const stderrIndicator = stderr ? '(STDERR) ' : '';
+  const stderrIndicator = stderr ? 'STDERR ' : '';
 
   const datePrefix = [
     dateStamp,
