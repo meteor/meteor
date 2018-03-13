@@ -291,7 +291,6 @@ Log.format = (obj, options = {}) => {
   const stderrIndicator = stderr ? '(STDERR) ' : '';
 
   const datePrefix = [
-    level.charAt(0).toUpperCase(),
     dateStamp,
     '-',
     timeStamp,
@@ -299,6 +298,7 @@ Log.format = (obj, options = {}) => {
     timeInexact ? '? ' : ' ',
   ];
   const metaPrefix = [
+    level.charAt(0).toUpperCase(),
     ...(Meteor.isProduction ? datePrefix : []),
     appInfo,
     sourceInfo,
