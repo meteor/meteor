@@ -60,7 +60,7 @@ function openXcodeProject(projectDir) {
 
 
   try {
-    execFileSync('open', ['-a', 'Xcode',projectDir]);
+    execFileSync('open', ['-a', 'Xcode', projectDir]);
 
     Console.info();
     Console.info(
