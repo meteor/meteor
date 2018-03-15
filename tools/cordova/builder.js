@@ -124,6 +124,9 @@ export class CordovaBuilder {
 
     // Custom elements that will be appended into config.xml's widgets
     this.custom = [];
+    
+    // Resource files that will be appended to platform bundle and config.xml
+    this.resourceFiles = [];
 
     const packageMap = this.projectContext.packageMap;
 
@@ -320,6 +323,8 @@ export class CordovaBuilder {
       this.configureAndCopyImages(launchAndroidSizes, platformElement.android, 'splash');
     }
 
+    this.configureAndCopyResourceFiles(this.resourceFiles, platformElement.ios, platformElement.android);
+
     Console.debug('Writing new config.xml');
 
     const configXmlPath = files.pathJoin(this.projectRoot, 'config.xml');
@@ -372,6 +377,23 @@ export class CordovaBuilder {
 
       // Set it to the xml tree
       xmlElement.element(tag, imageAttributes(name, width, height, src));
+    });
+  }
+
+  configureAndCopyResourceFiles(resourceFiles, iosElement, androidElement) {
+    _.each(resourceFiles, resourceFile => {
+      // copy file in cordova project root directory
+      var filename = resourceFile.src.split('\\').pop().split('/').pop();
+      files.copyFile(
+        files.pathResolve(this.projectContext.projectDir, resourceFile.src),
+        files.pathJoin(this.projectRoot, filename));
+      // and entry in config.xml
+      if(!resourceFile.platform  || (resourceFile.platform && resourceFile.platform== "android")) {
+        androidElement.element('resource-file', { src : resourceFile.src, target : resourceFile.target});
+      }
+      if(!resourceFile.platform  || (resourceFile.platform && resourceFile.platform== "ios")) {
+        iosElement.element('resource-file', { src : resourceFile.src, target : resourceFile.target});
+      }
     });
   }
 
@@ -686,5 +708,22 @@ configuration. The key may be deprecated.`);
     appendToConfig: function (xml) {
       builder.custom.push(xml);
     },
+
+    /**
+     * @summary Add a resource file for your build as described in the
+     * [Cordova documentation](http://cordova.apache.org/docs/en/7.x/config_ref/index.html#resource-file).
+     * @param {String} src The project resource path.
+     * `config.xml`.
+     * @param {String} target Resource destination in build
+     * @param {String} [platform] Optional. A platform name (either `ios` or `android`, both if ommited) to add a resource-file entry.
+     * @memberOf App
+     */
+    addResourceFile: function (src, target, platform) {
+      builder.resourceFiles.push({
+        src : src,
+        target: target,
+        platform : platform
+      });
+    }
   };
 }
