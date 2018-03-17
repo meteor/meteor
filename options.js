@@ -96,6 +96,13 @@ function getDefaultsForModernBrowsers(features) {
   };
 
   combined.plugins.push(
+    [reifyPlugin, {
+      generateLetDeclarations: true,
+      enforceStrictMode: false
+    }]
+  );
+
+  combined.plugins.push(
     require("./plugins/dynamic-import.js")
   );
 
@@ -106,12 +113,11 @@ function getDefaultsForModernBrowsers(features) {
 
   maybeAddReactPlugins(features, combined);
 
-  combined.plugins.push(
-    [reifyPlugin, {
-      generateLetDeclarations: true,
-      enforceStrictMode: false
-    }]
-  );
+  // Even though we use Reify to transpile `import` and `export`
+  // declarations in the original source, Babel sometimes inserts its own
+  // `import` declarations later on, and of course Babel knows best how to
+  // compile those declarations.
+  combined.plugins.push(babelModulesPlugin);
 
   return finish([combined]);
 }
@@ -157,6 +163,12 @@ function getRuntimeTransform(features, useBuiltIns) {
 function getDefaultsForNode8(features) {
   const plugins = [];
 
+  // Compile import/export syntax with Reify.
+  plugins.push([reifyPlugin, {
+    generateLetDeclarations: true,
+    enforceStrictMode: false
+  }]);
+
   // Support Flow type syntax by simply stripping it out.
   plugins.push(
     require("@babel/plugin-syntax-flow"),
@@ -188,11 +200,11 @@ function getDefaultsForNode8(features) {
   // Enable async generator functions proposal.
   plugins.push(require("@babel/plugin-proposal-async-generator-functions"));
 
-  // Compile import/export syntax with Reify.
-  plugins.push([reifyPlugin, {
-    generateLetDeclarations: true,
-    enforceStrictMode: false
-  }]);
+  // Even though we use Reify to transpile `import` and `export`
+  // declarations in the original source, Babel sometimes inserts its own
+  // `import` declarations later on, and of course Babel knows best how to
+  // compile those declarations.
+  plugins.push(babelModulesPlugin);
 
   const presets = [{
     plugins
