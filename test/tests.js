@@ -484,10 +484,9 @@ val = "zxcv";`;
     isSelf: true
   }));
 
-  it("object ...spread uses _extends", function callee() {
+  it("object ...spread works", function () {
     const versions = { ...process.versions };
     assert.strictEqual(versions.node, process.versions.node);
-    assert.ok(/\b_extends\(/.test(callee));
   });
 
   it("exponentiation operator", function () {
