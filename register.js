@@ -142,7 +142,6 @@ function getBabelResult(filename) {
     }
 
     babelOptions.sourceFileName = filename;
-    babelOptions.sourceMapTarget = filename + ".map";
   }
 
   babelOptions.filename = filename;
