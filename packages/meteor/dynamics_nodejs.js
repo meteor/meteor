@@ -54,7 +54,7 @@ EVp.withValue = function (value, func) {
   var saved = currentValues[this.slot];
   try {
     currentValues[this.slot] = value;
-    return Promise.await(func());
+    return func();
   } finally {
     currentValues[this.slot] = saved;
   }
