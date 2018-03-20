@@ -266,17 +266,16 @@ Tinytest.add("email - text and html", function (test) {
   });
 });
 
-Tinytest.add("email - send() returns value", function (test) {
-  smokeTransport(function (returnObject) {
-    // Test return value of Email.send on successful request
-    const res = Email.send({
-      from: "foo@example.com",
-      to: "bar@example.com",
-      subject: "This is the subject",
-      text: "This is the body",
-    });
-
-    test.equal(returnObject, res);
-  });
-
-});
+// Tinytest.add("email - send() returns value", function (test) {
+//   smokeTransport(function (returnObject) {
+//     // Test return value of Email.send on successful request
+//     const res = Email.send({
+//       from: "foo@example.com",
+//       to: "bar@example.com",
+//       subject: "This is the subject",
+//       text: "This is the body",
+//     });
+//
+//     test.equal(returnObject, res);
+//   });
+// });
