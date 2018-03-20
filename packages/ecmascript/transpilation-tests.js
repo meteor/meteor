@@ -82,7 +82,7 @@ Tinytest.add("ecmascript - transpilation - helpers - extends", (test) => {
   var full = {a:1, ...middle, d:4};
 `);
 
-  test.isTrue(/helpers\/(builtin\/)?extends/.test(output));
+  test.isTrue(/helpers\/(builtin\/)?(extends|objectSpread)/.test(output));
 });
 
 Tinytest.add("ecmascript - transpilation - helpers - objectWithoutProperties", (test) => {
