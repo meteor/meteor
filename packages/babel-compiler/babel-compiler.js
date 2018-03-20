@@ -95,8 +95,6 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       ? "packages/" + packageName + "/" + inputFilePath
       : inputFilePath;
 
-    babelOptions.sourceMapTarget = babelOptions.filename + ".map";
-
     try {
       var result = profile('Babel.compile', function () {
         return Babel.compile(source, babelOptions, cacheDeps);
