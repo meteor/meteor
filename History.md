@@ -11,6 +11,10 @@
   [problem](https://github.com/nodejs/node/issues/19274) that was
   introduced in Node 8.10.0.
 
+* The `meteor-babel` npm package has been updated to version
+  7.0.0-beta.42, which may require updating any custom Babel plugins
+  you've enabled in a `.babelrc` file.
+
 ## v1.6.1, 2018-01-19
 
 * Node has been updated to version
