@@ -20,7 +20,7 @@
     "hexo-renderer-stylus": "0.3.3",
     "hexo-server": "0.3.1",
     "hexo-versioned-netlify-redirects": "1.0.2",
-    "meteor-hexo-config": "1.0.6",
+    "meteor-hexo-config": "1.0.7",
     "meteor-theme-hexo": "1.0.2"
   },
   "scripts": {
