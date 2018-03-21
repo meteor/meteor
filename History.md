@@ -56,7 +56,8 @@
 * The `reify` npm package has been updated to version 0.14.2.
 
 * The `meteor-babel` npm package has been updated to version
-  7.0.0-beta.40-2.
+  7.0.0-beta.42, which may require updating any custom Babel plugins
+  you've enabled in a `.babelrc` file.
 
 * The `optimism` npm package has been updated to version 0.4.0.
 

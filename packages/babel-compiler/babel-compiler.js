@@ -95,8 +95,6 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       ? "packages/" + packageName + "/" + inputFilePath
       : inputFilePath;
 
-    babelOptions.sourceMapTarget = babelOptions.filename + ".map";
-
     try {
       var result = profile('Babel.compile', function () {
         return Babel.compile(source, babelOptions, cacheDeps);
@@ -130,6 +128,11 @@ BCp.processOneFileForTarget = function (inputFile, source) {
 
     toBeAdded.data = result.code;
     toBeAdded.hash = result.hash;
+
+    // The babelOptions.sourceMapTarget option was deprecated in Babel
+    // 7.0.0-beta.41: https://github.com/babel/babel/pull/7500
+    result.map.file = babelOptions.filename + ".map";
+
     toBeAdded.sourceMap = result.map;
   }
 
