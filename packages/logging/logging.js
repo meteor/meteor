@@ -290,13 +290,16 @@ Log.format = (obj, options = {}) => {
 
   const stderrIndicator = stderr ? '(STDERR) ' : '';
 
-  const metaPrefix = [
-    level.charAt(0).toUpperCase(),
+  const datePrefix = [
     dateStamp,
     '-',
     timeStamp,
     utcOffsetStr,
     timeInexact ? '? ' : ' ',
+  ];
+  const metaPrefix = [
+    level.charAt(0).toUpperCase(),
+    ...(Meteor.isProduction ? datePrefix : [' ']),
     appInfo,
     sourceInfo,
     stderrIndicator].join('');
