@@ -1,13 +1,5 @@
 version: 2
 
-# These directories are cached across all builds, currently with no
-# hashing mechanism, but we should consider doing it off dev_bundle.
-meteor_cache_dirs: &meteor_cache_dirs
-  paths:
-    - "dev_bundle"
-    - ".babel-cache"
-    - ".meteor"
-
 # A reusable "run" snippet which is ran before each test to setup the
 # environment for user-limits, core-dumps, etc.
 run_env_change: &run_env_change
@@ -122,7 +114,14 @@ jobs:
           name: Git Submodules.
           command: (git submodule sync && git submodule update --init --recursive) || (rm -fr .git/config .git/modules && git submodule deinit -f . && git submodule update --init --recursive)
       - restore_cache:
-          key: meteor-cache
+          keys:
+            - dev-bundle-cache-{{ checksum "meteor" }}
+            - dev-bundle-cache
+      - restore_cache:
+          keys:
+            - other-deps-cache-{{ .Branch }}-{{ .Revision }}
+            - other-deps-cache-{{ .Branch }}
+            - other-deps-cache
       - restore_cache:
           keys: 
             - test-groups-v1-{{ .Branch }}
@@ -152,15 +151,6 @@ jobs:
           path: /tmp/core_dumps
       - store_artifacts:
           path: /tmp/memuse.txt
-
-  save_caches:
-    <<: *build_machine_environment
-    steps:
-      - attach_workspace:
-          at: .
-      - save_cache:
-          key: meteor-cache
-          <<: *meteor_cache_dirs
 
   Isolated Tests:
     <<: *build_machine_environment
@@ -702,6 +692,15 @@ jobs:
           paths:
             - ./tmp/test-groups
           when: on_success
+      - save_cache:
+          key: dev-bundle-cache-{{ checksum "meteor" }}
+          paths:
+            - "dev_bundle"
+      - save_cache:
+          key: other-deps-cache-{{ .Branch }}-{{ .Revision }}
+          paths:
+            - ".babel-cache"
+            - ".meteor"
 
 workflows:
   version: 2
