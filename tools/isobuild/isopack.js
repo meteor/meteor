@@ -1468,7 +1468,6 @@ _.extend(Isopack.prototype, {
       _.extend(babelOptions, {
         filename: path,
         sourceFileName: "/" + path,
-        sourceMapTarget: path + ".map",
         sourceMap: true
       });
 
@@ -1480,7 +1479,12 @@ _.extend(Isopack.prototype, {
         data: Buffer.from(transpiled.code + "\n" + sourceMapUrlComment, 'utf8')
       });
 
-      builder.write(path + ".map", {
+      // The babelOptions.sourceMapTarget option was deprecated in Babel
+      // 7.0.0-beta.41: https://github.com/babel/babel/pull/7500
+      const sourceMapTarget = path + ".map";
+      transpiled.map.file = sourceMapTarget;
+
+      builder.write(sourceMapTarget, {
         data: Buffer.from(JSON.stringify(transpiled.map), 'utf8')
       });
     });

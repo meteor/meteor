@@ -6,7 +6,7 @@
   "dependencies": {
     "@babel/core": "^7.0.0-beta.40",
     "@babel/plugin-proposal-optional-chaining": "^7.0.0-beta.40",
-    "@babel/runtime": "^7.0.0-beta.40",
+    "@babel/runtime": "^7.0.0-beta.42",
     "aws-sdk": "^2.2.41",
     "babel-plugin-transform-do-expressions": "^6.22.0",
     "cli-color": "^0.2.3",

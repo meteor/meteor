@@ -2,7 +2,7 @@
 
 # Meteor Roadmap
 
-**Up to date as of September 8, 2017**
+**Up to date as of March 9, 2018**
 
 This document describes the high level features the Meteor project maintainers have decided to prioritize in the near- to medium-term future. A large fraction of the maintainers’ time will be dedicated to working on the features described here. As with any roadmap, this is a living document that will evolve as priorities and dependencies shift; we aim to update the roadmap with any changes or status updates on a monthly basis.
 
@@ -10,27 +10,17 @@ Contributors are encouraged to focus their efforts on work that aligns with the 
 
 Items can be added to this roadmap by first getting design approval for a solution to an open issue, as outlined by our [contributing guidelines](https://github.com/meteor/meteor/blob/devel/CONTRIBUTING.md). Then, when a contributor has committed to solving the issue in the short to medium term, they can submit a PR to add that work to the roadmap. All other PRs to the roadmap will be rejected.
 
-## Upgrade to Node 8
+## Different JS bundles for modern versus legacy browsers
 
-*Tracking pull request: https://github.com/meteor/meteor/pull/8728*
+*Pull request: https://github.com/meteor/meteor/pull/9439*
 
-Upgrading Node will allow Meteor to take better advantage of native support for new ECMAScript features on the server, which should speed up build performance and also improve runtime performance, thanks to performance improvements in Node itself.
+Despite amazing progress in the latest versions of popular web browsers to support the vast majority of the ECMAScript specification, most web applications are still forced to compile their JavaScript for the oldest browsers they want to support, which means native support for the latest features is usually off-limits.
 
-Perhaps even more importantly, newer versions of Node support a vastly improved debugging experience. Not only can you use native Chrome DevTools and many other debugging clients (WebStorm, VS Code, etc.) to debug your app (no more [`node-inspector`](https://www.npmjs.com/package/node-inspector)), but also the Node process runs at full speed while debugging, so you don't have to wait as long for problems to manifest themselves.
+Starting in Meteor 1.6.2, Meteor will build two different client JS bundles, one for modern browsers (`web.browser`) and another for legacy browsers (`web.browser.legacy` and `web.cordova`), in addition to the server bundle which targets Node 8. Package authors can use these architectures to include files only in legacy browsers, or only in modern browsers, while also setting minimum browser versions for the native features they require. As of this writing, modern browsers are loosely defined as any browsers with native support for `async` functions and `await` expressions, which represents [more than 80% of web usage today](https://caniuse.com/#feat=async-functions).
 
-## Upgrade to npm 5
+While it was tempting to compile even more bundles for different categories of browser support, the reality of the web today is that most users have access to self-updating "evergreen" browsers, with nearly complete ECMAScript support, and the market share of evergreen browsers is only going to increase with time. For everyone else, Meteor will automatically provide the same level of compilation provided to everyone by Meteor 1.6.1 and before. It's also a lot easier to test two different bundles in representative browsers than it is to test a whole matrix of possibilities.
 
-*Status: implemented since `1.6-beta.4`.*
-
-It’s been an interesting year for npm clients. Once unrivaled as the tool of choice for installing npm packages, the `npm` command-line tool faced some serious competition starting last September from an innovative tool called `yarn`, which promised fast, reproducible installs based on `yarn.lock` files.
-
-The popularity of `yarn` led Meteor to support `meteor yarn` in addition to `meteor npm` (though you had to `meteor npm install --global yarn` first, so `npm` still had an advantage). Our own  Galaxy Server and Optics apps, which are built with Meteor, switched over to `yarn` soon after its release. The appeal was undeniable.
-
-This competition was a good thing for JavaScript developers, first because yarn solved some long-standing problems with `npm`, and later because `npm@5` responded by shipping its own implementation of some similar features, with `package-lock.json` files and automatic addition of npm install-ed packages to `package.json`.
-
-These improvements to `npm` will benefit all Meteor developers, even those who keep using `yarn`, because package dependencies specified with `Npm.depends` are automatically installed using `npm`, and `npm@5` performs those installations much faster and more reliably.
-
-Meteor is careful to remain agnostic about how you choose to populate your `node_modules` directories, so we fully expect that `meteor npm` and `meteor yarn` will remain equally good alternatives for that purpose.
+As a result of these changes, a typical new Meteor app will have a modern client JS bundle that is one quarter to one third the size of the legacy JS bundle. A new app created with `meteor create --release 1.6.2-beta.12 --minimal new-app` will have a modern JS bundle just 15KB in size (minified + gzip), for example.
 
 ## Out of the box support for advanced React features
 
@@ -45,19 +35,16 @@ We think Meteor has a clear set of benefits when compared to other popular React
 
 ## Remove blockers to Meteor adoption
 
-### Support the latest version of Node
+### Support the latest stable version of Node
 
 *Tracking pull request: https://github.com/meteor/meteor/pull/8728*
 
 See [above](https://github.com/meteor/meteor/blob/devel/Roadmap.md#upgrade-to-node-8). Developers deserve to use the latest underlying technologies, and Meteor is uniquely able to smooth over any rough edges in early/experimental versions of technologies like Node. A number of developers are already using beta versions of Meteor 1.6 to deploy their apps, because the benefits outweigh the risks for them. Just as Meteor 1.5 climbed to more than 50% usage in less than two months, we expect Meteor 1.6 to become the most widely used version of Meteor soon after its release.
 
-### Make Mongo more optional
+### Eliminate the need for an `imports` directory
 
-*Preliminary solution: https://github.com/meteor/meteor/pull/8999*
-
-Meteor has depended on Mongo for as long as the Meteor project has existed. However, we care deeply about supporting other data storage systems (especially via [GraphQL](https://www.apollodata.com/)), and would like to make it possible to avoid using Mongo altogether.
-
-### Get rid of the `imports` directory
+*Status: possible using `meteor.mainModule` in `package.json` in `1.6.2-beta.12`.*
+*Pull requests: https://github.com/meteor/meteor/pull/9690, https://github.com/meteor/meteor/pull/9714, https://github.com/meteor/meteor/pull/9715*
 
 When Meteor 1.3 first introduced a module system based on [CommonJS](http://wiki.commonjs.org/wiki/Modules/1.1) and [ECMAScript module syntax](2ality.com/2014/09/es6-modules-final.html), we had to provide a way for developers to migrate their apps from the old ways of loading code, whereby all files were evaluated eagerly during application startup.
 
@@ -119,6 +106,37 @@ Even though Apollo could eventually be a complete replacement for Meteor’s inc
 
 
 # **Recently completed**
+
+## Make Mongo more optional
+
+*Pull request: https://github.com/meteor/meteor/pull/8999*
+
+Meteor has depended on Mongo for as long as the Meteor project has existed. However, we care deeply about supporting other data storage systems (especially via [GraphQL](https://www.apollodata.com/)), and would like to make it possible to avoid using Mongo altogether.
+
+Since Meteor 1.6.2-beta.9, `meteor create --minimal minimal-app` will create an app with very few packages, without any dependency on Mongo.
+
+## Upgrade to Node 8
+
+*Status: shipped in Meteor 1.6.*
+*Pull request: https://github.com/meteor/meteor/pull/8728*
+
+Upgrading Node will allow Meteor to take better advantage of native support for new ECMAScript features on the server, which should speed up build performance and also improve runtime performance, thanks to performance improvements in Node itself.
+
+Perhaps even more importantly, newer versions of Node support a vastly improved debugging experience. Not only can you use native Chrome DevTools and many other debugging clients (WebStorm, VS Code, etc.) to debug your app (no more [`node-inspector`](https://www.npmjs.com/package/node-inspector)), but also the Node process runs at full speed while debugging, so you don't have to wait as long for problems to manifest themselves.
+
+## Upgrade to npm 5
+
+*Status: implemented since `1.6-beta.4`.*
+
+It’s been an interesting year for npm clients. Once unrivaled as the tool of choice for installing npm packages, the `npm` command-line tool faced some serious competition starting last September from an innovative tool called `yarn`, which promised fast, reproducible installs based on `yarn.lock` files.
+
+The popularity of `yarn` led Meteor to support `meteor yarn` in addition to `meteor npm` (though you had to `meteor npm install --global yarn` first, so `npm` still had an advantage). Our own  Galaxy Server and Optics apps, which are built with Meteor, switched over to `yarn` soon after its release. The appeal was undeniable.
+
+This competition was a good thing for JavaScript developers, first because yarn solved some long-standing problems with `npm`, and later because `npm@5` responded by shipping its own implementation of some similar features, with `package-lock.json` files and automatic addition of npm install-ed packages to `package.json`.
+
+These improvements to `npm` will benefit all Meteor developers, even those who keep using `yarn`, because package dependencies specified with `Npm.depends` are automatically installed using `npm`, and `npm@5` performs those installations much faster and more reliably.
+
+Meteor is careful to remain agnostic about how you choose to populate your `node_modules` directories, so we fully expect that `meteor npm` and `meteor yarn` will remain equally good alternatives for that purpose.
 
 ## Dynamic `import(...)`
 

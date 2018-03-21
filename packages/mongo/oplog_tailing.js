@@ -99,7 +99,7 @@ _.extend(OplogHandle.prototype, {
       // XXX can we avoid this clone by making oplog.js careful?
       originalCallback(EJSON.clone(notification));
     }, function (err) {
-      Meteor._debug("Error in oplog callback", err.stack);
+      Meteor._debug("Error in oplog callback", err);
     });
     var listenHandle = self._crossbar.listen(trigger, callback);
     return {
@@ -143,7 +143,7 @@ _.extend(OplogHandle.prototype, {
       } catch (e) {
         // During failover (eg) if we get an exception we should log and retry
         // instead of crashing.
-        Meteor._debug("Got exception while reading last entry: " + e);
+        Meteor._debug("Got exception while reading last entry", e);
         Meteor._sleepForMs(100);
       }
     }
