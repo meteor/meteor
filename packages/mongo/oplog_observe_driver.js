@@ -511,7 +511,7 @@ _.extend(OplogObserveDriver.prototype, {
               finishIfNeedToPollQuery(function (err, doc) {
                 try {
                   if (err) {
-                    Meteor._debug("Got exception while fetching documents: " +
+                    Meteor._debug("Got exception while fetching documents",
                                   err);
                     // If we get an error from the fetcher (eg, trouble
                     // connecting to Mongo), let's just abandon the fetch phase
@@ -747,7 +747,7 @@ _.extend(OplogObserveDriver.prototype, {
 
         // During failover (eg) if we get an exception we should log and retry
         // instead of crashing.
-        Meteor._debug("Got exception while polling query: " + e);
+        Meteor._debug("Got exception while polling query", e);
         Meteor._sleepForMs(100);
       }
     }

@@ -173,7 +173,7 @@ _.extend(PollingObserveDriver.prototype, {
       // "cancel" the observe from the inside in this case.
       Array.prototype.push.apply(self._pendingWrites, writesForCycle);
       Meteor._debug("Exception while polling query " +
-                    JSON.stringify(self._cursorDescription) + ": " + e.stack);
+                    JSON.stringify(self._cursorDescription), e);
       return;
     }
 

@@ -1399,8 +1399,7 @@ Server = function (options) {
         socket._meteorSession.processMessage(msg);
       } catch (e) {
         // XXX print stack nicely
-        Meteor._debug("Internal exception while processing message", msg,
-                      e.message, e.stack);
+        Meteor._debug("Internal exception while processing message", msg, e);
       }
     });
 
@@ -1735,9 +1734,9 @@ var wrapInternalException = function (exception, context) {
   // Tests can set the '_expectedByTest' flag on an exception so it won't go to
   // the server log.
   if (!exception._expectedByTest) {
-    Meteor._debug("Exception " + context, exception.stack);
+    Meteor._debug("Exception " + context, exception);
     if (exception.sanitizedError) {
-      Meteor._debug("Sanitized and reported to the client as:", exception.sanitizedError.message);
+      Meteor._debug("Sanitized and reported to the client as:", exception.sanitizedError);
       Meteor._debug();
     }
   }

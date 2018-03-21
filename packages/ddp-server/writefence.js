@@ -99,7 +99,7 @@ _.extend(DDPServer._WriteFence.prototype, {
         try {
           func(self);
         } catch (err) {
-          Meteor._debug("exception in write fence callback:", err);
+          Meteor._debug("exception in write fence callback", err);
         }
       }
 
