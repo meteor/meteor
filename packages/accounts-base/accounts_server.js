@@ -556,8 +556,9 @@ Ap._initServerMethods = function () {
 
   // Delete all the current user's tokens and close all open connections logged
   // in as this user. Returns a fresh new login token that this client can
-  // use. Tests set Accounts._noConnectionCloseDelayForTest to delete tokens
-  // immediately instead of using a delay.
+  // use. Tests can override the default connection close delay
+  // (stored in CONNECTION_CLOSE_DELAY_MS) by setting
+  // Accounts._connectionCloseDelayMsForTests.
   //
   // XXX COMPAT WITH 0.7.2
   // This single `logoutOtherClients` method has been replaced with two
@@ -594,12 +595,15 @@ Ap._initServerMethods = function () {
         },
         $push: { "services.resume.loginTokens": accounts._hashStampedToken(newToken) }
       });
+      const connectionCloseDelay =
+        accounts._connectionCloseDelayMsForTests
+          ? accounts._connectionCloseDelayMsForTests
+          : CONNECTION_CLOSE_DELAY_MS;
       Meteor.setTimeout(function () {
         // The observe on Meteor.users will take care of closing the connections
         // associated with `tokens`.
         accounts._deleteSavedTokensForUser(userId, tokens);
-      }, accounts._noConnectionCloseDelayForTest ? 0 :
-                        CONNECTION_CLOSE_DELAY_MS);
+      }, connectionCloseDelay);
       // We do not set the login token on this connection, but instead the
       // observe closes the connection and the client will reconnect with the
       // new token.
