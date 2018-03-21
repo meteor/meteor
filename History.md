@@ -68,6 +68,26 @@
   `selftest.skip.define('some test', ...` will skip running "some test".
   [PR #9579](https://github.com/meteor/meteor/pull/9579)
 
+* Mongo has been upgraded to version 3.6.3 for 64-bit OS', and 3.2.19 for
+  32-bit OS'.
+  [PR #9632](https://github.com/meteor/meteor/pull/9632)
+
+  **NOTE:** After upgrading an application to use Mongo 3.6.2, it has been
+  observed ([#9591](https://github.com/meteor/meteor/issues/9591))
+  that attempting to run that application with an older version of
+  Meteor (via `meteor --release X`), that uses an older version of Mongo, can
+  prevent the application from starting. This can be fixed by either
+  running `meteor reset`, or by repairing the Mongo database. To repair the
+  database, find the `mongod` binary on your system that lines up with the
+  Meteor release you're jumping back to, and run
+  `mongodb --dbpath your-apps-db --repair`. For example:
+
+  ```
+  /my-home/.meteor/packages/meteor-tool/1.6.0_1/mt-os.osx.x86_64/dev_bundle/mongodb/bin/mongod --dbpath /my-app/.meteor/local/db --repair
+  ```
+
+  [PR #9632](https://github.com/meteor/meteor/pull/9632)
+
 * The `@babel/plugin-proposal-class-properties` plugin provided by
   `meteor-babel` now runs with the `loose:true` option, as required by
   other (optional) plugins like `@babel/plugin-proposal-decorators`.
@@ -106,6 +126,10 @@
   the `<head />` section as before (for backwards compatibility).
   [Feature #24](https://github.com/meteor/meteor-feature-requests/issues/24)
   [PR #9657](https://github.com/meteor/meteor/pull/9657)
+
+* Mongo has been upgraded to version 3.6.2 for 64-bit OS', and 3.2.18 for
+  32-bit OS'.
+  [PR #9632](https://github.com/meteor/meteor/pull/9632)
 
 ## v1.6.1, 2018-01-19
 
