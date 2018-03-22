@@ -713,8 +713,7 @@ configuration. The key may be deprecated.`);
      * @summary Add a resource file for your build as described in the
      * [Cordova documentation](http://cordova.apache.org/docs/en/7.x/config_ref/index.html#resource-file).
      * @param {String} src The project resource path.
-     * `config.xml`.
-     * @param {String} target Resource destination in build
+     * @param {String} target Resource destination in build.
      * @param {String} [platform] Optional. A platform name (either `ios` or `android`, both if ommited) to add a resource-file entry.
      * @memberOf App
      */
