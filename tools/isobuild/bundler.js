@@ -482,7 +482,7 @@ export class NodeModulesDirectory {
           return true;
         }
 
-        const real = realpathOrNull(path);
+        const real = files.realpathOrNull(path);
         if (typeof real === "string" &&
             real !== path) {
           // If node_modules/.bin/command is a symlink, determine the
@@ -519,15 +519,6 @@ export class NodeModulesDirectory {
 
       return true;
     };
-  }
-}
-
-function realpathOrNull(path) {
-  try {
-    return files.realpath(path);
-  } catch (e) {
-    if (e.code !== "ENOENT") throw e;
-    return null;
   }
 }
 

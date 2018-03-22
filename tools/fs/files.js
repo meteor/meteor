@@ -297,6 +297,15 @@ function statOrNull(path, preserveSymlinks) {
   }
 }
 
+export function realpathOrNull(path) {
+  try {
+    return files.realpath(path);
+  } catch (e) {
+    if (e.code !== "ENOENT") throw e;
+    return null;
+  }
+}
+
 files.rm_recursive_async = (path) => {
   return new Promise((resolve, reject) => {
     rimraf(files.convertToOSPath(path), err => err
