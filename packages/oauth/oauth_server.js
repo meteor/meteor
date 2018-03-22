@@ -1,4 +1,3 @@
-var Fiber = Npm.require('fibers');
 var url = Npm.require('url');
 
 OAuth = {};
