@@ -82,3 +82,6 @@ App.accessRule('https://example.com', { type: 'navigation' });
 {% apibox "App.icons" %}
 {% apibox "App.launchScreens" %}
 {% apibox "App.appendToConfig" %}
+{% apibox "App.addResourceFile" %}
+
+> Note: The resource file is copied in two steps : from the **src** of your meteor project to the root of the cordova project, then to the **target**  
