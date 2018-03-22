@@ -134,6 +134,18 @@ const IMPORT_SCANNER_CACHE = new LRU({
   }
 });
 
+// Stub used for entry point modules within node_modules directories on
+// the server. These stub modules delegate to native Node evaluation by
+// calling module.useNode() immediately, but it's important that we have
+// something to include in the bundle so that parent modules have
+// something to resolve.
+const useNodeStub = {
+  dataString: "module.useNode();",
+  deps: Object.create(null),
+};
+useNodeStub.data = Buffer.from(useNodeStub.dataString, "utf8");
+useNodeStub.hash = sha1(useNodeStub.data);
+
 export default class ImportScanner {
   constructor({
     name,
@@ -769,12 +781,35 @@ export default class ImportScanner {
 
       info.absModuleId = absModuleId;
 
-      // If the module is not readable, _readModule may return
-      // null. Otherwise it will return an object with .data, .dataString,
-      // and .hash properties.
-      depFile = this._readModule(absImportedPath);
-      if (! depFile) {
-        return;
+      if (! this.isWeb() &&
+          absModuleId.startsWith("/node_modules/")) {
+        // On the server, modules in node_modules directories will be
+        // handled natively by Node, so we just need to generate a stub
+        // module that calls module.useNode(), rather than calling
+        // this._readModule to read the actual module file. Note that
+        // useNodeStub includes an empty .deps property, which will make
+        // this._scanFile(depFile, dynamic) return immediately.
+        depFile = { ...useNodeStub };
+
+        // If optimistic functions care about this file, e.g. because it
+        // resides in a linked npm package, then we should allow it to
+        // be watched even though we are replacing it with a stub that
+        // merely calls module.useNode().
+        if (shouldWatch(absImportedPath)) {
+          this.watchSet.addFile(
+            absImportedPath,
+            optimisticHashOrNull(absImportedPath),
+          );
+        }
+
+      } else {
+        // If the module is not readable, _readModule may return
+        // null. Otherwise it will return an object with .data,
+        // .dataString, and .hash properties.
+        depFile = this._readModule(absImportedPath);
+        if (! depFile) {
+          return;
+        }
       }
 
       depFile.type = "js"; // TODO Is this correct?
@@ -790,25 +825,7 @@ export default class ImportScanner {
       // Append this file to the output array and record its index.
       this._addFile(absImportedPath, depFile);
 
-      // On the server, modules in node_modules directories will be
-      // handled natively by Node, so we don't need to build a
-      // meteorInstall-style bundle beyond the entry-point module.
-      if (! this.isWeb() &&
-          depFile.absModuleId.startsWith("/node_modules/") &&
-          // If optimistic functions care about this file, e.g. because it
-          // resides in a linked npm package, then we should allow it to
-          // be watched by including it in the server bundle by not
-          // returning here. Note that inclusion in the server bundle is
-          // an unnecessary consequence of this logic, since Node will
-          // still evaluate this module natively on the server. What we
-          // really care about is watching the file for changes.
-          ! shouldWatch(absImportedPath)) {
-        // Since we're not going to call this._scanFile(depFile, dynamic)
-        // below, this is our last chance to update depFile.imported.
-        depFile.imported = dynamic ? "dynamic" : true;
-        return;
-      }
-
+      // Recursively scan the module's imported dependencies.
       this._scanFile(depFile, dynamic);
     });
   }
