@@ -264,7 +264,6 @@ Object.assign(Mongo.Collection.prototype, {
         // for now we will skip the error only when _suppressSameNameError
         // is `true`, allowing people to opt in and give this some real
         // world testing.
-        console.warn ? console.warn(message) : console.log(message);
       } else {
         throw new Error(message);
       }
