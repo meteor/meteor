@@ -123,28 +123,55 @@ var runTest = function () {
 
   if (process.platform !== "win32") { // Windows doesn't have symlinks
     console.log("includeNodeModules");
-    assert.doesNotThrow(function () {
-      var tmpOutputDir = tmpDir();
-      var result = bundler.bundle({
-        projectContext: projectContext,
-        outputPath: tmpOutputDir,
-        includeNodeModules: 'symlink'
-      });
-      assert.strictEqual(result.errors, false);
 
-      // sanity check -- main.js has expected contents.
-      assert.strictEqual(files.readFile(files.pathJoin(tmpOutputDir, "main.js"), "utf8"),
-                         bundler._mainJsContents);
-      // node_modules directory exists and is a symlink
-      assert(files.lstat(files.pathJoin(tmpOutputDir, "programs", "server", "node_modules")).isSymbolicLink());
-      // node_modules contains fibers
-      assert(files.exists(files.pathJoin(tmpOutputDir, "programs", "server", "node_modules", "fibers")));
-      // package node_modules directory also a symlink
-      // XXX might be breaking this
-      assert(files.lstat(files.pathJoin(
-        tmpOutputDir, "programs", "server", "npm", "node_modules", "meteor", "ddp-server", "node_modules"))
-             .isSymbolicLink());
+    var tmpOutputDir = tmpDir();
+    var result = bundler.bundle({
+      projectContext: projectContext,
+      outputPath: tmpOutputDir,
+      includeNodeModules: 'symlink'
     });
+
+    console.log("after bundler.bundle");
+
+    assert.strictEqual(result.errors, false);
+
+    console.log("before bundler._mainJsContents");
+
+    // sanity check -- main.js has expected contents.
+    assert.strictEqual(
+      files.readFile(files.pathJoin(tmpOutputDir, "main.js"), "utf8"),
+      bundler._mainJsContents
+    );
+
+    console.log("before programs/server/node_modules check");
+
+    // node_modules directory exists and is a symlink
+    assert(files.lstat(files.pathJoin(
+      tmpOutputDir, "programs", "server", "node_modules"
+    )).isSymbolicLink());
+
+    console.log("before programs/server/node_modules/fibers check");
+
+    // node_modules contains fibers as a symlink
+    assert(files.lstat(files.pathJoin(
+      tmpOutputDir, "programs", "server", "node_modules", "fibers"
+    )).isDirectory());
+
+    console.log("before ddp-server/node_modules check")
+
+    // package node_modules directory also a directory
+    assert(files.lstat(files.pathJoin(
+      tmpOutputDir, "programs", "server", "npm", "node_modules",
+      "meteor", "ddp-server", "node_modules"
+    )).isDirectory());
+
+    console.log("before ddp-server/node_modules/sockjs check");
+
+    // ddp-server/node_modules/sockjs is a symlink
+    assert(files.lstat(files.pathJoin(
+      tmpOutputDir, "programs", "server", "npm", "node_modules",
+      "meteor", "ddp-server", "node_modules", "sockjs"
+    )).isSymbolicLink());
   }
 };
 
