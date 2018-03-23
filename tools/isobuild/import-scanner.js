@@ -205,10 +205,12 @@ export default class ImportScanner {
       return file;
     }
 
-    absPath = absPath.toLowerCase();
-    const old = this.absPathToOutputIndex[absPath];
+    const absLowerPath = absPath.toLowerCase();
 
-    if (old) {
+    if (has(this.absPathToOutputIndex, absLowerPath)) {
+      const old = this.outputFiles[
+        this.absPathToOutputIndex[absLowerPath]];
+
       // If the old file is just an empty stub, let the new file take
       // precedence over it.
       if (old.implicit === true) {
@@ -225,7 +227,7 @@ export default class ImportScanner {
       }
 
     } else {
-      this.absPathToOutputIndex[absPath] =
+      this.absPathToOutputIndex[absLowerPath] =
         this.outputFiles.push(file) - 1;
 
       return file;
