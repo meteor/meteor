@@ -2284,7 +2284,7 @@ class JsImage {
           copyOptions.filter = prodPackagePredicate;
         }
 
-        builder.copyDirectory(copyOptions);
+        builder.copyNodeModulesDirectory(copyOptions);
       }
     });
 

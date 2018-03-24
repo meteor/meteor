@@ -390,6 +390,56 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     return generated;
   }
 
+  // A version of copyDirectory that works better for copying node_modules
+  // directories when symlinks are involved.
+  copyNodeModulesDirectory(options) {
+    assert.strictEqual(files.pathBasename(options.from), "node_modules");
+    assert.strictEqual(files.pathBasename(options.to), "node_modules");
+
+    if (options.symlink) {
+      // If we're going to use symlinks to speed up this copy, then we
+      // need to make sure we've reserved all directories that are not
+      // package directories, such as the node_modules directory itself,
+      // as well as node_modules/meteor and the parent directories of any
+      // scoped npm packages.
+      this._ensureAllNonPackageDirectories(
+        files.realpath(options.from),
+        options.to
+      );
+    }
+
+    // Call this._copyDirectory rather than this.copyDirectory so that the
+    // subBuilder hacks from Builder#enter won't apply a second time.
+    return this._copyDirectory(options);
+  }
+
+  _ensureAllNonPackageDirectories(absFromDir, relToDir) {
+    const dirStat = optimisticStatOrNull(absFromDir);
+    if (! (dirStat && dirStat.isDirectory())) {
+      return;
+    }
+
+    const absFromPackageJson =
+      files.pathJoin(absFromDir, "package.json");
+
+    const stat = optimisticStatOrNull(absFromPackageJson);
+    if (stat && stat.isFile()) {
+      // If the directory has a package.json file, it's a package
+      // directory, and we should not call this._ensureDirectory, so that
+      // the package directory can later be symlinked in copyDirectory.
+      return;
+    }
+
+    this._ensureDirectory(relToDir);
+
+    optimisticReaddir(absFromDir).forEach(item => {
+      this._ensureAllNonPackageDirectories(
+        files.pathJoin(absFromDir, item),
+        files.pathJoin(relToDir, item)
+      );
+    });
+  }
+
   // Recursively copy a directory and all of its contents into the
   // bundle. But if the symlink option was passed to the Builder
   // constructor, then make a symlink instead, if possible.
@@ -408,7 +458,13 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   //   entries that end with a slash if it's a directory.
   // - specificFiles: just copy these paths (specified as relative to 'to').
   // - symlink: true if the directory should be symlinked instead of copying
-  copyDirectory({
+  copyDirectory(options) {
+    // TODO(benjamn) Remove this wrapper when Builder#enter is no longer
+    // implemented using ridiculous hacks.
+    return this._copyDirectory(options);
+  }
+
+  _copyDirectory({
     from, to,
     ignore,
     specificFiles,
@@ -608,21 +664,31 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   // The sub-builder returned does not have all Builder methods (for
   // example, complete() wouldn't make sense) and you should not rely
   // on it being instanceof Builder.
+  //
+  // TODO(benjamn) This nonsense should be ripped out by any means
+  // necessary... whenever someone has the time.
   enter(relPath) {
-    const methods = ["write", "writeJson", "reserve", "generateFilename",
-                   "copyDirectory", "enter"];
     const subBuilder = {};
     const relPathWithSep = relPath + files.pathSep;
+    const methods = [
+      "write",
+      "writeJson",
+      "reserve",
+      "generateFilename",
+      "copyDirectory",
+      "copyNodeModulesDirectory",
+      "enter",
+    ];
 
     methods.forEach(method => {
       subBuilder[method] = (...args) => {
-        if (method !== "copyDirectory") {
-          // Normal method (relPath as first argument)
-          args[0] = files.pathJoin(relPath, args[0]);
-        } else {
-          // with copyDirectory the path we have to fix up is inside
-          // an options hash
+        if (method === "copyDirectory" ||
+            method === "copyNodeModulesDirectory") {
+          // The copy methods take their relative paths via options.to.
           args[0].to = files.pathJoin(relPath, args[0].to);
+        } else {
+          // Other methods have relPath as the first argument.
+          args[0] = files.pathJoin(relPath, args[0]);
         }
 
         let ret = this[method](...args);
@@ -763,7 +829,13 @@ function symlinkWithOverwrite(source, target) {
 
 // Wrap slow methods into Profiler calls
 const slowBuilderMethods = [
-  '_ensureDirectory', 'write', 'enter', 'copyDirectory', 'enter', 'complete'
+  "_ensureDirectory",
+  "write",
+  "enter",
+  "copyDirectory",
+  "copyNodeModulesDirectory",
+  "enter",
+  "complete",
 ];
 
 slowBuilderMethods.forEach(method => {

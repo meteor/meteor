@@ -1144,7 +1144,7 @@ _.extend(Isopack.prototype, {
 
       // If unibuilds included node_modules, copy them in.
       _.each(npmDirsToCopy, (bundlePath, sourcePath) => {
-        builder.copyDirectory({
+        builder.copyNodeModulesDirectory({
           from: sourcePath,
           to: bundlePath,
           npmDiscards: self.npmDiscards,
