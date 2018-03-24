@@ -1,6 +1,8 @@
 import assert from "assert";
 import {WatchSet, readAndWatchFile, sha1} from '../fs/watch.js';
-import files from '../fs/files.js';
+import files, {
+  symlinkWithOverwrite,
+} from '../fs/files.js';
 import NpmDiscards from './npm-discards.js';
 import {Profile} from '../tool-env/profile.js';
 import {
@@ -802,28 +804,6 @@ function symlinkIfPossible(source, target) {
     return true;
   } catch (e) {
     return false;
-  }
-}
-
-// create a symlink, overwriting the target link, file, or directory
-// if it exists
-function symlinkWithOverwrite(source, target) {
-  try {
-    files.symlink(source, target);
-  } catch (e) {
-    if (e.code === "EEXIST") {
-      // overwrite existing link, file, or directory
-      files.rm_recursive(target);
-      files.symlink(source, target);
-    } else if (e.code === "EPERM" &&
-               process.platform === "win32") {
-      files.rm_recursive(target);
-      // This will work only if source refers to a directory, but that's a
-      // chance worth taking.
-      files.symlink(source, target, "junction");
-    } else {
-      throw e;
-    }
   }
 }
 
