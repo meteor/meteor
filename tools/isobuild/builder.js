@@ -395,7 +395,10 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   // A version of copyDirectory that works better for copying node_modules
   // directories when symlinks are involved.
   copyNodeModulesDirectory(options) {
-    assert.strictEqual(files.pathBasename(options.from), "node_modules");
+    // Although the options.from directory should probably be a
+    // node_modules directory, the only essential precondition here is
+    // that the destination directory is a node_modules directory.
+    // assert.strictEqual(files.pathBasename(options.from), "node_modules");
     assert.strictEqual(files.pathBasename(options.to), "node_modules");
 
     if (options.symlink) {
