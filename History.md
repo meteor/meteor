@@ -1,5 +1,14 @@
 ## v.NEXT
 
+* Although Meteor does not recompile packages installed in `node_modules`
+  by default, npm package code can now be selectively compiled by creating
+  symbolic links to those packages within your application, outside of
+  `node_modules`. Meteor will compile the exposed code as if it was part
+  of your application, using whatever compiler plugins you have installed,
+  and also guarantee that you get the compiled code when you import from
+  `node_modules`. [PR #9771](https://github.com/meteor/meteor/pull/9771)
+  [Feature #6](https://github.com/meteor/meteor-feature-requests/issues/6)
+
 * Applications may now specify client and server entry point modules in a
   newly-supported `"meteor"` section of `package.json`:
   ```js
