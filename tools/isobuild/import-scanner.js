@@ -740,11 +740,7 @@ export default class ImportScanner {
          info.dynamic);
 
       const resolved = this._resolve(file, id, dynamic);
-      if (! resolved) {
-        return;
-      }
-
-      const absImportedPath = resolved.path;
+      const absImportedPath = resolved && resolved.path;
       if (! absImportedPath) {
         return;
       }
@@ -775,54 +771,10 @@ export default class ImportScanner {
         return;
       }
 
-      const absModuleId = this._getAbsModuleId(absImportedPath);
-      if (! absModuleId) {
-        // The given path cannot be installed on this architecture.
+      depFile = this._readDepFile(absImportedPath);
+      if (! depFile) {
         return;
       }
-
-      info.absModuleId = absModuleId;
-
-      if (! this.isWeb() &&
-          absModuleId.startsWith("/node_modules/")) {
-        // On the server, modules in node_modules directories will be
-        // handled natively by Node, so we just need to generate a stub
-        // module that calls module.useNode(), rather than calling
-        // this._readModule to read the actual module file. Note that
-        // useNodeStub includes an empty .deps property, which will make
-        // this._scanFile(depFile, dynamic) return immediately.
-        depFile = { ...useNodeStub };
-
-        // If optimistic functions care about this file, e.g. because it
-        // resides in a linked npm package, then we should allow it to
-        // be watched even though we are replacing it with a stub that
-        // merely calls module.useNode().
-        if (shouldWatch(absImportedPath)) {
-          this.watchSet.addFile(
-            absImportedPath,
-            optimisticHashOrNull(absImportedPath),
-          );
-        }
-
-      } else {
-        // If the module is not readable, _readModule may return
-        // null. Otherwise it will return an object with .data,
-        // .dataString, and .hash properties.
-        depFile = this._readModule(absImportedPath);
-        if (! depFile) {
-          return;
-        }
-      }
-
-      depFile.type = "js"; // TODO Is this correct?
-      depFile.sourcePath = pathRelative(this.sourceRoot, absImportedPath);
-      depFile.absModuleId = absModuleId;
-      depFile.servePath = stripLeadingSlash(absModuleId);
-      depFile.lazy = true;
-      // Setting depFile.imported = false is necessary so that
-      // this._scanFile(depFile, dynamic) doesn't think the file has been
-      // scanned already and return immediately.
-      depFile.imported = false;
 
       // Append this file to the output array and record its index.
       this._addFile(absImportedPath, depFile);
@@ -906,6 +858,59 @@ export default class ImportScanner {
     }
 
     return info;
+  }
+
+  _readDepFile(absPath) {
+    const absModuleId = this._getAbsModuleId(absPath);
+    if (! absModuleId) {
+      // The given path cannot be installed on this architecture.
+      return null;
+    }
+
+    let depFile = null;
+
+    if (! this.isWeb() &&
+        absModuleId.startsWith("/node_modules/")) {
+      // On the server, modules in node_modules directories will be
+      // handled natively by Node, so we just need to generate a stub
+      // module that calls module.useNode(), rather than calling
+      // this._readModule to read the actual module file. Note that
+      // useNodeStub includes an empty .deps property, which will make
+      // this._scanFile(depFile, dynamic) return immediately.
+      depFile = { ...useNodeStub };
+
+      // If optimistic functions care about this file, e.g. because it
+      // resides in a linked npm package, then we should allow it to
+      // be watched even though we are replacing it with a stub that
+      // merely calls module.useNode().
+      if (shouldWatch(absPath)) {
+        this.watchSet.addFile(
+          absPath,
+          optimisticHashOrNull(absPath),
+        );
+      }
+
+    } else {
+      // If the module is not readable, _readModule may return
+      // null. Otherwise it will return an object with .data,
+      // .dataString, and .hash properties.
+      depFile = this._readModule(absPath);
+      if (! depFile) {
+        return null;
+      }
+    }
+
+    depFile.type = "js"; // TODO Is this correct?
+    depFile.sourcePath = pathRelative(this.sourceRoot, absPath);
+    depFile.absModuleId = absModuleId;
+    depFile.servePath = stripLeadingSlash(absModuleId);
+    depFile.lazy = true;
+    // Setting depFile.imported = false is necessary so that
+    // this._scanFile(depFile, dynamic) doesn't think the file has been
+    // scanned already and return immediately.
+    depFile.imported = false;
+
+    return depFile;
   }
 
   // Returns an absolute module identifier indicating where to install the
