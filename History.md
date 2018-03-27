@@ -6,14 +6,14 @@
   enabled in one of two ways:
 
   * Clone the package repository into your application's `imports`
-    directory, make any modifications necessary, then run
+    directory, make any modifications necessary, then use `npm install` to
+    link `the-package` into `node_modules`:
     ```sh
     meteor npm install imports/the-package
     ```
-    to link `the-package` into `node_modules`. Meteor will compile the
-    contents of the package exposed via `imports/the-package`, and this
-    compiled code will be used when you import `the-package` in any of the
-    usual ways:
+    Meteor will compile the contents of the package exposed via
+    `imports/the-package`, and this compiled code will be used when you
+    import `the-package` in any of the usual ways:
     ```js
     import stuff from "the-package"
     require("the-package") === require("/imports/the-package")
