@@ -460,6 +460,44 @@ describe("Meteor packages", () => {
   });
 });
 
+describe("symlinking node_modules", () => {
+  it("should allow selective compilation of npm packages", () => {
+    import each from "lodash-es/each";
+    import range from "lodash-es/range";
+    const n = 100;
+    let sum = 0;
+    each(range(1, n + 1), n => sum += n);
+    assert.strictEqual(sum, n * (n + 1) / 2);
+  });
+
+  it("should preserve equivalence for require", async () => {
+    const pkg1 = require("immutable-tuple/package.json");
+    const pkg2 = require("./imports/links/immutable-tuple/package");
+    assert.strictEqual(pkg1.author.name, "Ben Newman");
+    assert.strictEqual(pkg1.author, pkg2.author);
+  });
+
+  it("should preserve equivalence for dynamic import()", async () => {
+    const { default: tuple1 } = await import("immutable-tuple/src/tuple");
+    const { tuple: tuple2 } =
+      await import("/imports/links/immutable-tuple/src/tuple");
+    assert.strictEqual(tuple1, tuple2);
+  });
+
+  it("should support application-compiled `npm link`ed packages", () => {
+    assert.strictEqual(
+      require.resolve("acorn"),
+      "/node_modules/acorn/src/index.js"
+    );
+    const { parse } = require("acorn");
+    assert.strictEqual(typeof parse, "function");
+    assert.strictEqual(
+      parse,
+      require("./imports/links/acorn").parse
+    );
+  });
+});
+
 describe("ecmascript miscellany", () => {
   it("JSX should work in .js files on both client and server", () => {
     const React = {

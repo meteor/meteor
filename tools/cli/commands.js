@@ -586,7 +586,8 @@ main.registerCommand({
             return contents;
           }
         },
-        ignore: [/^local$/]
+        ignore: [/^local$/],
+        preserveSymlinks: true,
       });
     } catch (err) {
       Console.error("Could not create package: " + err.message);
@@ -754,7 +755,8 @@ main.registerCommand({
         return contents;
       }
     },
-    ignore: toIgnore
+    ignore: toIgnore,
+    preserveSymlinks: true,
   });
 
   // We are actually working with a new meteor project at this point, so
