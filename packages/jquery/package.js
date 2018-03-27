@@ -1,7 +1,7 @@
 Package.describe({
   summary: "Manipulate the DOM using CSS selectors",
   // This package currently uses jQuery 1.12.1 (due to #9605).
-  version: '1.12.1-beta162.13'
+  version: '1.12.1-beta162.14'
 });
 
 Package.onUse(function (api) {
