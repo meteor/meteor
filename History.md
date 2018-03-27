@@ -112,9 +112,8 @@
   `selftest.skip.define('some test', ...` will skip running "some test".
   [PR #9579](https://github.com/meteor/meteor/pull/9579)
 
-* Mongo has been upgraded to version 3.6.3 for 64-bit OS', and 3.2.19 for
-  32-bit OS'.
-  [PR #9632](https://github.com/meteor/meteor/pull/9632)
+* Mongo has been upgraded to version 3.6.3 for 64-bit systems, and 3.2.19
+  for 32-bit systems. [PR #9632](https://github.com/meteor/meteor/pull/9632)
 
   **NOTE:** After upgrading an application to use Mongo 3.6.2, it has been
   observed ([#9591](https://github.com/meteor/meteor/issues/9591))
@@ -125,12 +124,14 @@
   database, find the `mongod` binary on your system that lines up with the
   Meteor release you're jumping back to, and run
   `mongodb --dbpath your-apps-db --repair`. For example:
-
+  ```sh
+  ~/.meteor/packages/meteor-tool/1.6.0_1/mt-os.osx.x86_64/dev_bundle/mongodb/bin/mongod --dbpath /my-app/.meteor/local/db --repair
   ```
-  /my-home/.meteor/packages/meteor-tool/1.6.0_1/mt-os.osx.x86_64/dev_bundle/mongodb/bin/mongod --dbpath /my-app/.meteor/local/db --repair
-  ```
-
   [PR #9632](https://github.com/meteor/meteor/pull/9632)
+
+* The `cordova-plugin-meteor-webapp` package depended on by the Meteor
+  `webapp` package has been updated to version 1.6.0.
+  [PR #9761](https://github.com/meteor/meteor/pull/9761)
 
 * The `@babel/plugin-proposal-class-properties` plugin provided by
   `meteor-babel` now runs with the `loose:true` option, as required by
@@ -170,10 +171,6 @@
   the `<head />` section as before (for backwards compatibility).
   [Feature #24](https://github.com/meteor/meteor-feature-requests/issues/24)
   [PR #9657](https://github.com/meteor/meteor/pull/9657)
-
-* Mongo has been upgraded to version 3.6.2 for 64-bit OS', and 3.2.18 for
-  32-bit OS'.
-  [PR #9632](https://github.com/meteor/meteor/pull/9632)
 
 ## v1.6.1, 2018-01-19
 
