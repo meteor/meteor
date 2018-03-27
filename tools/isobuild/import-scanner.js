@@ -18,9 +18,11 @@ import {
   pathNormalize,
   pathBasename,
   pathExtname,
+  pathDirname,
   pathIsAbsolute,
   convertToOSPath,
   convertToPosixPath,
+  realpathOrNull,
 } from "../fs/files.js";
 
 const {
@@ -32,6 +34,7 @@ const {
 import {
   optimisticReadFile,
   optimisticStatOrNull,
+  optimisticLStatOrNull,
   optimisticHashOrNull,
   shouldWatch,
 } from "../fs/optimistic.js";
@@ -134,6 +137,18 @@ const IMPORT_SCANNER_CACHE = new LRU({
   }
 });
 
+// Stub used for entry point modules within node_modules directories on
+// the server. These stub modules delegate to native Node evaluation by
+// calling module.useNode() immediately, but it's important that we have
+// something to include in the bundle so that parent modules have
+// something to resolve.
+const useNodeStub = {
+  dataString: "module.useNode();",
+  deps: Object.create(null),
+};
+useNodeStub.data = Buffer.from(useNodeStub.dataString, "utf8");
+useNodeStub.hash = sha1(useNodeStub.data);
+
 export default class ImportScanner {
   constructor({
     name,
@@ -151,6 +166,8 @@ export default class ImportScanner {
     this.nodeModulesPaths = nodeModulesPaths;
     this.watchSet = watchSet;
     this.absPathToOutputIndex = Object.create(null);
+    this.realPathToFiles = Object.create(null);
+    this.realPathCache = Object.create(null);
     this.allMissingModules = Object.create(null);
     this.outputFiles = [];
 
@@ -193,10 +210,12 @@ export default class ImportScanner {
       return file;
     }
 
-    absPath = absPath.toLowerCase();
-    const old = this.absPathToOutputIndex[absPath];
+    const absLowerPath = absPath.toLowerCase();
 
-    if (old) {
+    if (has(this.absPathToOutputIndex, absLowerPath)) {
+      const old = this.outputFiles[
+        this.absPathToOutputIndex[absLowerPath]];
+
       // If the old file is just an empty stub, let the new file take
       // precedence over it.
       if (old.implicit === true) {
@@ -213,7 +232,7 @@ export default class ImportScanner {
       }
 
     } else {
-      this.absPathToOutputIndex[absPath] =
+      this.absPathToOutputIndex[absLowerPath] =
         this.outputFiles.push(file) - 1;
 
       return file;
@@ -254,9 +273,80 @@ export default class ImportScanner {
         // multiple times with the same sourcePath. #6422
         this._combineFiles(this._getFile(absPath), file);
       }
+
+      this._addFileByRealPath(file, this._realPath(absPath));
     });
 
     return this;
+  }
+
+  _addFileByRealPath(file, realPath) {
+    assert.ok(isObject(file));
+    assert.strictEqual(typeof realPath, "string");
+
+    if (! has(this.realPathToFiles, realPath)) {
+      this.realPathToFiles[realPath] = [];
+    }
+
+    const files = this.realPathToFiles[realPath];
+
+    if (files.indexOf(file) < 0) {
+      files.push(file);
+    }
+
+    return file;
+  }
+
+  _getInfoByRealPath(realPath) {
+    assert.strictEqual(typeof realPath, "string");
+    const files = this.realPathToFiles[realPath];
+    if (files && files.length > 0) {
+      const firstFile = files[0];
+      return {
+        data: firstFile.data,
+        dataString: firstFile.dataString,
+        hash: firstFile.hash,
+      };
+    }
+    return null;
+  }
+
+  _realPath(absPath) {
+    if (has(this.realPathCache, absPath)) {
+      return this.realPathCache[absPath];
+    }
+
+    let relativePath = pathRelative(this.sourceRoot, absPath);
+    if (relativePath.startsWith("..")) {
+      // If the absPath is outside this.sourceRoot, assume it's real.
+      return this.realPathCache[absPath] = absPath;
+    }
+
+    let foundSymbolicLink = false;
+
+    while (! foundSymbolicLink) {
+      const testPath = pathJoin(this.sourceRoot, relativePath);
+      if (testPath === this.sourceRoot) {
+        // Don't test the sourceRoot itself.
+        break;
+      }
+
+      const lstat = optimisticLStatOrNull(testPath);
+      if (lstat && lstat.isSymbolicLink()) {
+        foundSymbolicLink = true;
+        break
+      }
+
+      relativePath = pathDirname(relativePath);
+    }
+
+    if (foundSymbolicLink) {
+      // Call the actual realpathOrNull function only if there were any
+      // symlinks involved in the relative path within this.sourceRoot.
+      return this.realPathCache[absPath] = realpathOrNull(absPath);
+    }
+
+    return this.realPathCache[absPath] = absPath;
   }
 
   // Make sure file.sourcePath is defined, and handle the possibility that
@@ -538,7 +628,45 @@ export default class ImportScanner {
     });
   }
 
+  _mergeFilesWithSameRealPath() {
+    Object.keys(this.realPathToFiles).forEach(realPath => {
+      const files = this.realPathToFiles[realPath];
+      if (! files || files.length < 2) {
+        return;
+      }
+
+      // We have multiple files that share the same realPath, so we need
+      // to figure out which one should actually contain the data, and
+      // which one(s) should merely be aliases to the data container.
+
+      let container = files[0];
+
+      // Take the first file inside node_modules as the container. If none
+      // found, default to the first file in the list. It's important to
+      // let node_modules files be the containers if possible, since some
+      // npm packages rely on having module IDs that appear to be within a
+      // node_modules directory.
+      files.some(file => {
+        if (file.absModuleId &&
+            file.absModuleId.startsWith("/node_modules/")) {
+          container = file;
+          return true;
+        }
+      });
+
+      // Alias every non-container file to container.absModuleId.
+      files.forEach(file => {
+        if (file !== container) {
+          file.alias = file.alias || {};
+          file.alias.absModuleId = container.absModuleId;
+        }
+      });
+    });
+  }
+
   getOutputFiles() {
+    this._mergeFilesWithSameRealPath();
+
     // Return all installable output files that are either eager or
     // imported (statically or dynamically).
     return this.outputFiles.filter(file => {
@@ -726,11 +854,7 @@ export default class ImportScanner {
          info.dynamic);
 
       const resolved = this._resolve(file, id, dynamic);
-      if (! resolved) {
-        return;
-      }
-
-      const absImportedPath = resolved.path;
+      const absImportedPath = resolved && resolved.path;
       if (! absImportedPath) {
         return;
       }
@@ -761,54 +885,15 @@ export default class ImportScanner {
         return;
       }
 
-      const absModuleId = this._getAbsModuleId(absImportedPath);
-      if (! absModuleId) {
-        // The given path cannot be installed on this architecture.
-        return;
-      }
-
-      info.absModuleId = absModuleId;
-
-      // If the module is not readable, _readModule may return
-      // null. Otherwise it will return an object with .data, .dataString,
-      // and .hash properties.
-      depFile = this._readModule(absImportedPath);
+      depFile = this._readDepFile(absImportedPath);
       if (! depFile) {
         return;
       }
 
-      depFile.type = "js"; // TODO Is this correct?
-      depFile.sourcePath = pathRelative(this.sourceRoot, absImportedPath);
-      depFile.absModuleId = absModuleId;
-      depFile.servePath = stripLeadingSlash(absModuleId);
-      depFile.lazy = true;
-      // Setting depFile.imported = false is necessary so that
-      // this._scanFile(depFile, dynamic) doesn't think the file has been
-      // scanned already and return immediately.
-      depFile.imported = false;
-
       // Append this file to the output array and record its index.
       this._addFile(absImportedPath, depFile);
 
-      // On the server, modules in node_modules directories will be
-      // handled natively by Node, so we don't need to build a
-      // meteorInstall-style bundle beyond the entry-point module.
-      if (! this.isWeb() &&
-          depFile.absModuleId.startsWith("/node_modules/") &&
-          // If optimistic functions care about this file, e.g. because it
-          // resides in a linked npm package, then we should allow it to
-          // be watched by including it in the server bundle by not
-          // returning here. Note that inclusion in the server bundle is
-          // an unnecessary consequence of this logic, since Node will
-          // still evaluate this module natively on the server. What we
-          // really care about is watching the file for changes.
-          ! shouldWatch(absImportedPath)) {
-        // Since we're not going to call this._scanFile(depFile, dynamic)
-        // below, this is our last chance to update depFile.imported.
-        depFile.imported = dynamic ? "dynamic" : true;
-        return;
-      }
-
+      // Recursively scan the module's imported dependencies.
       this._scanFile(depFile, dynamic);
     });
   }
@@ -887,6 +972,73 @@ export default class ImportScanner {
     }
 
     return info;
+  }
+
+  _readDepFile(absPath) {
+    const absModuleId = this._getAbsModuleId(absPath);
+    if (! absModuleId) {
+      // The given path cannot be installed on this architecture.
+      return null;
+    }
+
+    const realPath = this._realPath(absPath);
+
+    let depFile = this._getInfoByRealPath(realPath);
+    if (depFile) {
+      // If we already have a file with the same real path, use its data
+      // rather than reading the file again, or generating a stub. This
+      // logic enables selective compilation of node_modules in an elegant
+      // way: just expose the package directory within the application
+      // (outside of node_modules) using a symlink, so that it will be
+      // compiled as application code. When the package is imported from
+      // node_modules, the compiled version will be used instead of the
+      // raw version found in node_modules. See also:
+      // https://github.com/meteor/meteor-feature-requests/issues/6
+
+    } else if (! this.isWeb() &&
+               absModuleId.startsWith("/node_modules/")) {
+      // On the server, modules in node_modules directories will be
+      // handled natively by Node, so we just need to generate a stub
+      // module that calls module.useNode(), rather than calling
+      // this._readModule to read the actual module file. Note that
+      // useNodeStub includes an empty .deps property, which will make
+      // this._scanFile(depFile, dynamic) return immediately.
+      depFile = { ...useNodeStub };
+
+      // If optimistic functions care about this file, e.g. because it
+      // resides in a linked npm package, then we should allow it to
+      // be watched even though we are replacing it with a stub that
+      // merely calls module.useNode().
+      if (shouldWatch(absPath)) {
+        this.watchSet.addFile(
+          absPath,
+          optimisticHashOrNull(absPath),
+        );
+      }
+
+    } else {
+      // If the module is not readable, _readModule may return
+      // null. Otherwise it will return an object with .data,
+      // .dataString, and .hash properties.
+      depFile = this._readModule(absPath);
+      if (! depFile) {
+        return null;
+      }
+    }
+
+    depFile.type = "js"; // TODO Is this correct?
+    depFile.sourcePath = pathRelative(this.sourceRoot, absPath);
+    depFile.absModuleId = absModuleId;
+    depFile.servePath = stripLeadingSlash(absModuleId);
+    depFile.lazy = true;
+    // Setting depFile.imported = false is necessary so that
+    // this._scanFile(depFile, dynamic) doesn't think the file has been
+    // scanned already and return immediately.
+    depFile.imported = false;
+
+    this._addFileByRealPath(depFile, realPath);
+
+    return depFile;
   }
 
   // Returns an absolute module identifier indicating where to install the
@@ -1232,6 +1384,7 @@ each([
   "_findImportedModuleIdentifiers",
   "_getAbsModuleId",
   "_addPkgJsonToOutput",
+  "_realPath",
   "_resolvePkgJsonBrowserAliases",
 ], funcName => {
   ImportScanner.prototype[funcName] = Profile(

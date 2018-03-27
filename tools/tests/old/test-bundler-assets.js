@@ -23,7 +23,9 @@ var makeProjectContext = function (appName) {
 
   var projectDir = files.mkdtemp("test-bundler-assets");
 
-  files.cp_r(testAppDir, projectDir);
+  files.cp_r(testAppDir, projectDir, {
+    preserveSymlinks: true,
+  });
 
   require("../../cli/default-npm-deps.js").install(projectDir);
 

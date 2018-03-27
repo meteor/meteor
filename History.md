@@ -1,5 +1,49 @@
 ## v.NEXT
 
+* Although Meteor does not recompile packages installed in `node_modules`
+  by default, compilation of specific npm packages (for example, to
+  support older browsers that the package author neglected) can now be
+  enabled in one of two ways:
+
+  * Clone the package repository into your application's `imports`
+    directory, make any modifications necessary, then use `npm install` to
+    link `the-package` into `node_modules`:
+    ```sh
+    meteor npm install imports/the-package
+    ```
+    Meteor will compile the contents of the package exposed via
+    `imports/the-package`, and this compiled code will be used when you
+    import `the-package` in any of the usual ways:
+    ```js
+    import stuff from "the-package"
+    require("the-package") === require("/imports/the-package")
+    import("the-package").then(...)
+    ```
+    This reuse of compiled code is the critical new feature that was added
+    in Meteor 1.6.2.
+
+  * Install the package normally with `meteor npm install the-package`,
+    then create a symbolic link *to* the installed package elsewhere in
+    your application, outside of `node_modules`:
+    ```sh
+    meteor npm install the-package
+    cd imports
+    ln -s ../node_modules/the-package .
+    ```
+    Again, Meteor will compile the contents of the package because they
+    are exposed outside of `node_modules`, and the compiled code will be
+    used whenever `the-package` is imported from `node_modules`.
+
+    > Note: this technique also works if you create symbolic links to
+      individual files, rather than linking the entire package directory.
+
+  In both cases, Meteor will compile the exposed code as if it was part of
+  your application, using whatever compiler plugins you have installed.
+  You can influence this compilation using `.babelrc` files or any other
+  techniques you would normally use to configure compilation of
+  application code. [PR #9771](https://github.com/meteor/meteor/pull/9771)
+  [Feature #6](https://github.com/meteor/meteor-feature-requests/issues/6)
+
 * Applications may now specify client and server entry point modules in a
   newly-supported `"meteor"` section of `package.json`:
   ```js
