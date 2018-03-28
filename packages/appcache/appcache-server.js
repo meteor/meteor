@@ -38,10 +38,27 @@ Meteor.AppCache = {
 
 const browserDisabled = request => disabledBrowsers[request.browser.name];
 
-const isDynamicOrMap = resource =>
+const shouldSkip = resource =>
   resource.type === 'dynamic js' ||
     (resource.type === 'json' &&
-     resource.url.endsWith('.map'));
+     (resource.url.endsWith('.map') ||
+      resource.url.endsWith('.stats.json?meteor_js_resource=true')));
+
+const maybeRewriteUrl = resource => {
+  // If the asset comes from the public directory, and we are building
+  // a web.browser.legacy manifest, then we need to do a little url rewriting.
+  // This also fixes some other urls, such as /webapp-manifest.json
+  const legacyPrefix = '/__browser.legacy/';
+  if (resource.where === 'client' &&
+      resource.type === 'asset' &&
+      resource.url.startsWith(legacyPrefix)) {
+    const url = resource.url.substr(legacyPrefix.length);
+    if ('app/' + url === resource.path) {
+      return '/' + url;
+    }
+  }
+  return resource.url;
+};
 
 WebApp.addHtmlAttributeHook(request =>
   browserDisabled(request) ?
@@ -102,10 +119,13 @@ WebApp.connectHandlers.use((req, res, next) => {
   manifest += "/\n";
   const reqArch = isModern(request.browser) ? 'web.browser' : 'web.browser.legacy';
   WebApp.clientPrograms[reqArch].manifest.forEach(resource => {
+    // some public URLs have to be rewritten before RoutePolicy.classify is called
+    const url = maybeRewriteUrl(resource);
     if (resource.where === 'client' &&
-        ! RoutePolicy.classify(resource.url) &&
-        ! isDynamicOrMap(resource)) {
-      manifest += resource.url;
+        ! RoutePolicy.classify(url) &&
+        ! shouldSkip(resource)) {
+      manifest += url;
+
       // If the resource is not already cacheable (has a query
       // parameter, presumably with a hash or version of some sort),
       // put a version with a hash in the cache.
@@ -132,11 +152,13 @@ WebApp.connectHandlers.use((req, res, next) => {
   // specifying the full URL with hash in their code (manually, with
   // some sort of URL rewriting helper)
   WebApp.clientPrograms[reqArch].manifest.forEach(resource => {
+    // some public URLs have to be rewritten before RoutePolicy.classify is called
+    const url = maybeRewriteUrl(resource)
     if (resource.where === 'client' &&
-        ! RoutePolicy.classify(resource.url) &&
+        ! RoutePolicy.classify(url) &&
         ! resource.cacheable &&
-        ! isDynamicOrMap(resource)) {
-      manifest += `${resource.url} ${resource.url}?${resource.hash}\n`;
+        ! shouldSkip(resource)) {
+      manifest += `${url} ${url}?${resource.hash}\n`;
     }
   });
 
@@ -167,7 +189,7 @@ const sizeCheck = () => WebApp.connectHandlers.use((req, res, next) => {
   WebApp.clientPrograms[reqArch].manifest.forEach(resource => {
     if (resource.where === 'client' &&
         ! RoutePolicy.classify(resource.url) &&
-        ! isDynamicOrMap(resource)) {
+        ! shouldSkip(resource)) {
       totalSize += resource.size;
     }
   });
