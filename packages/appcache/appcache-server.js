@@ -38,12 +38,10 @@ Meteor.AppCache = {
 
 const browserDisabled = request => disabledBrowsers[request.browser.name];
 
-const isDynamic = resource =>
+const isDynamicOrMap = resource =>
   resource.type === 'dynamic js' ||
     (resource.type === 'json' &&
-     resource.url.endsWith('.map') &&
-     (resource.url.startsWith('/dynamic/') ||
-      resource.url.startsWith('/__browser.legacy/dynamic/')));
+     resource.url.endsWith('.map'));
 
 WebApp.addHtmlAttributeHook(request =>
   browserDisabled(request) ?
@@ -106,7 +104,7 @@ WebApp.connectHandlers.use((req, res, next) => {
   WebApp.clientPrograms[reqArch].manifest.forEach(resource => {
     if (resource.where === 'client' &&
         ! RoutePolicy.classify(resource.url) &&
-        ! isDynamic(resource)) {
+        ! isDynamicOrMap(resource)) {
       manifest += resource.url;
       // If the resource is not already cacheable (has a query
       // parameter, presumably with a hash or version of some sort),
@@ -137,7 +135,7 @@ WebApp.connectHandlers.use((req, res, next) => {
     if (resource.where === 'client' &&
         ! RoutePolicy.classify(resource.url) &&
         ! resource.cacheable &&
-        ! isDynamic(resource)) {
+        ! isDynamicOrMap(resource)) {
       manifest += `${resource.url} ${resource.url}?${resource.hash}\n`;
     }
   });
@@ -169,7 +167,7 @@ const sizeCheck = () => WebApp.connectHandlers.use((req, res, next) => {
   WebApp.clientPrograms[reqArch].manifest.forEach(resource => {
     if (resource.where === 'client' &&
         ! RoutePolicy.classify(resource.url) &&
-        ! isDynamic(resource)) {
+        ! isDynamicOrMap(resource)) {
       totalSize += resource.size;
     }
   });
