@@ -158,11 +158,6 @@ delete () {
     rm -rf "$1"
 }
 
-delete npm/node_modules/node-gyp
-pushd npm/node_modules
-ln -s ../../node-gyp ./
-popd
-
 # Since we install a patched version of pacote in $DIR/lib/node_modules,
 # we need to remove npm's bundled version to make it use the new one.
 if [ -d "pacote" ]
