@@ -134,5 +134,6 @@ fi
 
 exec "$DEV_BUNDLE/bin/node" \
      --expose-gc \
+     --max-old-space-size=4096 \
      ${TOOL_NODE_FLAGS} \
      "$METEOR" "$@"
