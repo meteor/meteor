@@ -44,6 +44,10 @@
   application code. [PR #9771](https://github.com/meteor/meteor/pull/9771)
   [Feature #6](https://github.com/meteor/meteor-feature-requests/issues/6)
 
+* The `npm` package has been upgraded to version 5.8.0, and our
+  [fork](https://github.com/meteor/pacote/tree/v7.6.1-meteor) of its
+  `pacote` dependency has been rebased against version 7.6.1.
+
 * Applications may now specify client and server entry point modules in a
   newly-supported `"meteor"` section of `package.json`:
   ```js
