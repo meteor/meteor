@@ -105,7 +105,7 @@
 
 * The `optimism` npm package has been updated to version 0.4.0.
 
-* The `minifier-js` package has been updated to use `uglify-es` 3.3.10.
+* The `minifier-js` package has been updated to use `uglify-es` 3.3.9.
 
 * Individual Meteor `self-test`'s can now be skipped by adjusting their
   `define` call to be prefixed by `skip`. For example,
