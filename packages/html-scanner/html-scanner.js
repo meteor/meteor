@@ -3,7 +3,7 @@ export const scanHtmlForTags = function scanHtmlForTags(options) {
   return scan.getTags();
 };
 
-export class CompileError {};
+export class CompileError extends Error {};
 
 /**
  * Scan an HTML file for top-level tags and extract their contents. Pass them to

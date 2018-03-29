@@ -14,7 +14,7 @@ Package.onUse(function (api) {
 Package.onTest(function (api) {
   api.use('ecmascript');
   api.use('tinytest');
-  api.use('templating-tools')
+  api.use('templating-tools');
   api.use('html-scanner');
   api.mainModule('html-scanner-tests.js', 'server');
 });

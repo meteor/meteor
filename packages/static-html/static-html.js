@@ -18,7 +18,7 @@ function compileTagsToStaticHtml(tags) {
   return handler.getResults();
 };
 
-class CompileError {};
+class CompileError extends Error {};
 
 class StaticHtmlTagHandler {
   constructor() {
@@ -94,8 +94,9 @@ class StaticHtmlTagHandler {
         : this.tag.tagStartIndex;
     const err = new CompileError();
     err.message = message || "bad formatting in template file";
-    err.file = tag.sourceName;
-    err.line = tag.fileContents.substring(0, finalIndex).split('\n').length;
+    err.file = this.tag.sourceName;
+    err.line =
+      this.tag.fileContents.substring(0, finalIndex).split('\n').length;
     throw err;
   }
 }
