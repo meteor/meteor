@@ -45,9 +45,9 @@
   [Feature #6](https://github.com/meteor/meteor-feature-requests/issues/6)
 
 * Node has been updated to version
-  [8.11.0](https://nodejs.org/en/blog/release/v8.11.0/), with a critical
+  [8.11.1](https://nodejs.org/en/blog/release/v8.11.1/), with a critical
   [patch](https://github.com/nodejs/node/pull/19477)
-  [applied](https://github.com/meteor/node/commits/v8.11.0-meteor) to
+  [applied](https://github.com/meteor/node/commits/v8.11.1-meteor) to
   solve a segmentation fault
   [problem](https://github.com/nodejs/node/issues/19274) that was
   introduced in Node 8.10.0.
