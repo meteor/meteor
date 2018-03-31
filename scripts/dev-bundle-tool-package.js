@@ -11,7 +11,7 @@ var packageJson = {
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
-    npm: "4.5.0",
+    npm: "4.6.1",
     "node-gyp": "3.6.0",
     "node-pre-gyp": "0.6.34",
     "meteor-babel": "0.20.1",
@@ -27,7 +27,7 @@ var packageJson = {
     // (and there are backwards-incompatible changes either way).
     underscore: "1.5.2",
     "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e",
-    semver: "4.1.0",
+    semver: "5.3.0",
     request: "2.47.0",
     fstream: "https://github.com/meteor/fstream/tarball/cf4ea6c175355cec7bee38311e170d08c4078a5d",
     tar: "2.2.1",
