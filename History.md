@@ -1,4 +1,4 @@
-## v1.4.4.6, TBD
+## v1.4.4.6, 2018-04-02
 
 * Node has been upgraded to version
   [4.9.0](https://nodejs.org/en/blog/release/v4.9.0/), an important
