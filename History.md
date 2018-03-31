@@ -44,6 +44,14 @@
   application code. [PR #9771](https://github.com/meteor/meteor/pull/9771)
   [Feature #6](https://github.com/meteor/meteor-feature-requests/issues/6)
 
+* Node has been updated to version
+  [8.11.1](https://nodejs.org/en/blog/release/v8.11.1/), with a critical
+  [patch](https://github.com/nodejs/node/pull/19477)
+  [applied](https://github.com/meteor/node/commits/v8.11.1-meteor) to
+  solve a segmentation fault
+  [problem](https://github.com/nodejs/node/issues/19274) that was
+  introduced in Node 8.10.0.
+
 * The `npm` package has been upgraded to version 5.8.0, and our
   [fork](https://github.com/meteor/pacote/tree/v7.6.1-meteor) of its
   `pacote` dependency has been rebased against version 7.6.1.
