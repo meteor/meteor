@@ -480,6 +480,12 @@
   [Issue #9196](https://github.com/meteor/meteor/issues/9196)
   [PR #9198](https://github.com/meteor/meteor/pull/9198)
 
+## v1.5.4.2, 2018-04-02
+
+* Node has been upgraded to version
+  [4.9.0](https://nodejs.org/en/blog/release/v4.9.0/), an important
+  [security release](https://nodejs.org/en/blog/vulnerability/march-2018-security-releases/).
+
 ## v1.5.4.1, 2017-12-08
 
 * Node has been upgraded to version
