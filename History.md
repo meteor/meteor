@@ -1,5 +1,3 @@
-## v.NEXT
-
 ## v1.6.1, 2018-01-19
 
 * Node has been updated to version
@@ -992,6 +990,20 @@
   `install`, `preinstall`, or `postinstall`. Previously, a package was
   considered non-portable only if it contained any `.node` binary modules.
   [Issue #8225](https://github.com/meteor/meteor/issues/8225)
+
+## v1.4.4.6, 2018-04-02
+
+* Node has been upgraded to version
+  [4.9.0](https://nodejs.org/en/blog/release/v4.9.0/), an important
+  [security release](https://nodejs.org/en/blog/vulnerability/march-2018-security-releases/).
+  The Node v4.x release line will exit the Node.js Foundation's
+  [long-term support (LTS) status](https://github.com/nodejs/LTS) on April 30,
+  2018. We strongly advise updating to a version of Meteor using a newer
+  version of Node which is still under LTS status, such as Meteor 1.6.x
+  which uses Node 8.x.
+
+* The `npm` package has been upgraded to version
+  [4.6.1](https://github.com/npm/npm/releases/tag/v4.6.1).
 
 ## v1.4.4.5, 2017-12-08
 
