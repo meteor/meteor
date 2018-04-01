@@ -170,10 +170,14 @@ MongoConnection = function (url, options) {
     url,
     mongoOptions,
     Meteor.bindEnvironment(
-      function (err, db) {
+      function (err, client) {
         if (err) {
           throw err;
         }
+
+        // Use the internal `s` object to get the database name from the
+        // connection URL (parsed by the driver).
+        var db = client.db(client.s.options.dbName);
 
         // First, figure out what the current primary is, if any.
         if (db.serverConfig.isMasterDoc) {
@@ -201,14 +205,15 @@ MongoConnection = function (url, options) {
           }));
 
         // Allow the constructor to return.
-        connectFuture['return'](db);
+        connectFuture['return']({ client, db });
       },
       connectFuture.resolver()  // onException
     )
   );
 
-  // Wait for the connection to be successful; throws on failure.
-  self.db = connectFuture.wait();
+  // Wait for the connection to be successful (throws on failure) and assign the
+  // results (`client` and `db`) to `self`.
+  Object.assign(self, connectFuture.wait());
 
   if (options.oplogUrl && ! Package['disable-oplog']) {
     self._oplogHandle = new OplogHandle(options.oplogUrl, self.db.databaseName);
@@ -231,7 +236,7 @@ MongoConnection.prototype.close = function() {
   // Use Future.wrap so that errors get thrown. This happens to
   // work even outside a fiber since the 'close' method is not
   // actually asynchronous.
-  Future.wrap(_.bind(self.db.close, self.db))(true).wait();
+  Future.wrap(_.bind(self.client.close, self.client))(true).wait();
 };
 
 // Returns the Mongo Collection object; may yield.
@@ -947,7 +952,8 @@ MongoConnection.prototype._createSynchronousCursor = function(
   var mongoOptions = {
     sort: cursorOptions.sort,
     limit: cursorOptions.limit,
-    skip: cursorOptions.skip
+    skip: cursorOptions.skip,
+    projection: cursorOptions.fields
   };
 
   // Do we want a tailable cursor (which only works on capped collections)?
@@ -973,7 +979,7 @@ MongoConnection.prototype._createSynchronousCursor = function(
 
   var dbCursor = collection.find(
     replaceTypes(cursorDescription.selector, replaceMeteorAtomWithMongo),
-    cursorOptions.fields, mongoOptions);
+    mongoOptions);
 
   if (typeof cursorOptions.maxTimeMs !== 'undefined') {
     dbCursor = dbCursor.maxTimeMS(cursorOptions.maxTimeMs);
@@ -1001,11 +1007,11 @@ var SynchronousCursor = function (dbCursor, cursorDescription, options) {
     self._transform = null;
   }
 
-  // Need to specify that the callback is the first argument to nextObject,
+  // Need to specify that the callback is the first argument to `next`,
   // since otherwise when we try to call it with no args the driver will
   // interpret "undefined" first arg as an options hash and crash.
   self._synchronousNextObject = Future.wrap(
-    dbCursor.nextObject.bind(dbCursor), 0);
+    dbCursor.next.bind(dbCursor), 0);
   self._synchronousCount = Future.wrap(dbCursor.count.bind(dbCursor));
   self._visitedIds = new LocalCollection._IdMap;
 };
