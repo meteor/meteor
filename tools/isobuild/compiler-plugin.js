@@ -18,6 +18,7 @@ import {cssToCommonJS} from "./css-modules.js";
 import Resolver from "./resolver.js";
 import {
   optimisticStatOrNull,
+  optimisticReadJsonOrNull,
 } from "../fs/optimistic.js";
 
 import { isTestFilePath } from './test-files.js';
@@ -1406,7 +1407,7 @@ export class PackageSourceBatch {
     if (cacheFilename) {
       let diskCached = null;
       try {
-        diskCached = files.readJSONOrNull(cacheFilename);
+        diskCached = optimisticReadJsonOrNull(cacheFilename);
       } catch (e) {
         // Ignore JSON parse errors; pretend there was no cache.
         if (!(e instanceof SyntaxError)) {
