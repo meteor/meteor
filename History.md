@@ -101,7 +101,10 @@
   test files across your codebase; just make sure you import the ones you
   want to run. [PR #9714](https://github.com/meteor/meteor/pull/9714)
 
-* The `reify` npm package has been updated to version 0.14.2.
+* The `meteor-babel` npm package has been updated to version
+  7.0.0-beta.44.
+
+* The `reify` npm package has been updated to version 0.15.1.
 
 * The `optimism` npm package has been updated to version 0.4.0.
 
