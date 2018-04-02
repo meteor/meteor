@@ -103,10 +103,6 @@
 
 * The `reify` npm package has been updated to version 0.14.2.
 
-* The `meteor-babel` npm package has been updated to version
-  7.0.0-beta.42, which may require updating any custom Babel plugins
-  you've enabled in a `.babelrc` file.
-
 * The `optimism` npm package has been updated to version 0.4.0.
 
 * The `minifier-js` package has been updated to use `uglify-es` 3.3.9.
@@ -175,6 +171,25 @@
   the `<head />` section as before (for backwards compatibility).
   [Feature #24](https://github.com/meteor/meteor-feature-requests/issues/24)
   [PR #9657](https://github.com/meteor/meteor/pull/9657)
+
+## v1.6.1.1, 2018-04-02
+
+* Node has been updated to version
+  [8.11.1](https://nodejs.org/en/blog/release/v8.11.1/), an important
+  [security release](https://nodejs.org/en/blog/vulnerability/march-2018-security-releases/),
+  with a critical [patch](https://github.com/nodejs/node/pull/19477)
+  [applied](https://github.com/meteor/node/commits/v8.11.1-meteor) to
+  solve a segmentation fault
+  [problem](https://github.com/nodejs/node/issues/19274) that was
+  introduced in Node 8.10.0.
+
+* The `meteor-babel` npm package has been updated to version
+  7.0.0-beta.42, which may require updating any custom Babel plugins
+  you've enabled in a `.babelrc` file, and/or running the following
+  command to update `@babel/runtime`:
+  ```sh
+  meteor npm install @babel/runtime@latest
+  ```
 
 ## v1.6.1, 2018-01-19
 

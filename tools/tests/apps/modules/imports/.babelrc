@@ -2,13 +2,13 @@
   "env": {
     "development": {
       "plugins": [
-        "transform-do-expressions",
+        "proposal-do-expressions",
         "proposal-optional-chaining"
       ]
     },
     "production": {
       "plugins": [
-        "transform-do-expressions",
+        "proposal-do-expressions",
         "proposal-optional-chaining"
       ]
     }
