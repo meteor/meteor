@@ -103,10 +103,6 @@
 
 * The `reify` npm package has been updated to version 0.14.2.
 
-* The `meteor-babel` npm package has been updated to version
-  7.0.0-beta.42, which may require updating any custom Babel plugins
-  you've enabled in a `.babelrc` file.
-
 * The `optimism` npm package has been updated to version 0.4.0.
 
 * The `minifier-js` package has been updated to use `uglify-es` 3.3.9.
@@ -179,6 +175,25 @@
 * The `meteor create` command now supports a `--minimal` option, which
   creates an empty app (like `--bare`) with as few Meteor packages as
   possible, to minimize client-side application size.
+
+## v1.6.1.1, 2018-04-02
+
+* Node has been updated to version
+  [8.11.1](https://nodejs.org/en/blog/release/v8.11.1/), an important
+  [security release](https://nodejs.org/en/blog/vulnerability/march-2018-security-releases/),
+  with a critical [patch](https://github.com/nodejs/node/pull/19477)
+  [applied](https://github.com/meteor/node/commits/v8.11.1-meteor) to
+  solve a segmentation fault
+  [problem](https://github.com/nodejs/node/issues/19274) that was
+  introduced in Node 8.10.0.
+
+* The `meteor-babel` npm package has been updated to version
+  7.0.0-beta.42, which may require updating any custom Babel plugins
+  you've enabled in a `.babelrc` file, and/or running the following
+  command to update `@babel/runtime`:
+  ```sh
+  meteor npm install @babel/runtime@latest
+  ```
 
 ## v1.6.1, 2018-01-19
 
@@ -662,6 +677,12 @@
 * iOS icons and launch screens have been updated to support iOS 11
   [Issue #9196](https://github.com/meteor/meteor/issues/9196)
   [PR #9198](https://github.com/meteor/meteor/pull/9198)
+
+## v1.5.4.2, 2018-04-02
+
+* Node has been upgraded to version
+  [4.9.0](https://nodejs.org/en/blog/release/v4.9.0/), an important
+  [security release](https://nodejs.org/en/blog/vulnerability/march-2018-security-releases/).
 
 ## v1.5.4.1, 2017-12-08
 
@@ -1173,6 +1194,20 @@
   `install`, `preinstall`, or `postinstall`. Previously, a package was
   considered non-portable only if it contained any `.node` binary modules.
   [Issue #8225](https://github.com/meteor/meteor/issues/8225)
+
+## v1.4.4.6, 2018-04-02
+
+* Node has been upgraded to version
+  [4.9.0](https://nodejs.org/en/blog/release/v4.9.0/), an important
+  [security release](https://nodejs.org/en/blog/vulnerability/march-2018-security-releases/).
+  The Node v4.x release line will exit the Node.js Foundation's
+  [long-term support (LTS) status](https://github.com/nodejs/LTS) on April 30,
+  2018. We strongly advise updating to a version of Meteor using a newer
+  version of Node which is still under LTS status, such as Meteor 1.6.x
+  which uses Node 8.x.
+
+* The `npm` package has been upgraded to version
+  [4.6.1](https://github.com/npm/npm/releases/tag/v4.6.1).
 
 ## v1.4.4.5, 2017-12-08
 
