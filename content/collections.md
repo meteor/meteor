@@ -435,35 +435,35 @@ As we discussed earlier, it's very common in Meteor applications to have associa
 
 To make this easier, we can attach functions to the prototype of the documents that belong to a given collection, to give us "methods" on the documents (in the object oriented sense). We can then use these methods to create new queries to find related documents.
 
-To make things even easier, we can use the [`cultofcoders:grapher`](https://atmospherejs.com/cultofcoders/grapher) package to easily associate collections and easily fetch their relations for example:
+To make things even easier, we can use the [`cultofcoders:grapher`](https://atmospherejs.com/cultofcoders/grapher) package to associate collections and fetch their relations. For example:
 
 ```js
 // Configure how collections relate to each other
 Todos.addLinks({
-    list: {
-        type: 'one',
-        field: 'listId',
-        collection: Lists
-    }
+  list: {
+    type: 'one',
+    field: 'listId',
+    collection: Lists
+  }
 });
 
 Lists.addLinks({
-    todos: {
-        collection: Todos,
-        inversedBy: 'list' // This represents the name of the link we defined in Todos
-    }
+  todos: {
+    collection: Todos,
+    inversedBy: 'list' // This represents the name of the link we defined in Todos
+  }
 });
 ```
 
-This would allow us to properly fetch a list along with it's todos:
+This allows us to properly fetch a list along with its todos:
 
 ```js
 // With Grapher you must always specify the fields you want
 const listsAndTodos = Lists.createQuery({
-    name: 1,
-    todos: {
-        text: 1
-    }
+  name: 1,
+  todos: {
+      text: 1
+  }
 }).fetch();
 ```
 
@@ -480,7 +480,7 @@ const listsAndTodos = Lists.createQuery({
 ]
 ```
 
-Grapher supports isomorphic queries (reactive and non-reactive), has built-in security features, works with many type of relationships, you can find more in its [official documentation](https://github.com/cult-of-coders/grapher/blob/master/docs/index.md).
+Grapher supports isomorphic queries (reactive and non-reactive), has built-in security features, works with many types of relationships, and more. Refer to the [Grapher documentation]((https://github.com/cult-of-coders/grapher/blob/master/docs/index.md) for more details.
 
 <h3 id="collection-helpers">Collection helpers</h3>
 
