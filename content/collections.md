@@ -480,7 +480,7 @@ const listsAndTodos = Lists.createQuery({
 ]
 ```
 
-Grapher supports isomorphic queries (reactive and non-reactive), has built-in security features, works with many types of relationships, and more. Refer to the [Grapher documentation]((https://github.com/cult-of-coders/grapher/blob/master/docs/index.md) for more details.
+Grapher supports isomorphic queries (reactive and non-reactive), has built-in security features, works with many types of relationships, and more. Refer to the [Grapher documentation](https://github.com/cult-of-coders/grapher/blob/master/docs/index.md) for more details.
 
 <h3 id="collection-helpers">Collection helpers</h3>
 
