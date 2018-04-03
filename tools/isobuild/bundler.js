@@ -690,8 +690,11 @@ class File {
   // Given a relative path like 'a/b/c' (where '/' is this system's
   // path component separator), produce a URL that always starts with
   // a forward slash and that uses a literal forward slash as the
-  // component separator.
-  setUrlFromRelPath(relPath) {
+  // component separator. Also optionally add browser.legacy prefix.
+  // NOTE Files which come from /public must not contain legacy prefixes
+  // since users expect a fixed URL. These must match what the user
+  // uses for packages like Cordova and appcache to work properly.
+  setUrlFromRelPath(relPath, usePrefix = true) {
     var url = relPath;
 
     if (url.charAt(0) !== '/') {
@@ -701,7 +704,11 @@ class File {
     // XXX replacing colons with underscores as colon is hard to escape later
     // on different targets and generally is not a good separator for web.
     url = colonConverter.convert(url);
-    this.url = this.urlPrefix + url;
+    if (usePrefix) {
+      this.url = this.urlPrefix + url;
+    } else {
+      this.url = url;
+    }
   }
 
   setTargetPathFromRelPath(relPath) {
@@ -1115,7 +1122,7 @@ class Target {
         f.setTargetPathFromRelPath(relPath);
 
         if (isWeb) {
-          f.setUrlFromRelPath(resource.servePath);
+          f.setUrlFromRelPath(resource.servePath, false);
         } else {
           unibuildAssets[resource.path] = resource.data;
         }
