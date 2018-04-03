@@ -44,22 +44,6 @@ const shouldSkip = resource =>
      (resource.url.endsWith('.map') ||
       resource.url.endsWith('.stats.json?meteor_js_resource=true')));
 
-const maybeRewriteUrl = resource => {
-  // If the asset comes from the public directory, and we are building
-  // a web.browser.legacy manifest, then we need to do a little url rewriting.
-  // This also fixes some other urls, such as /webapp-manifest.json
-  const legacyPrefix = '/__browser.legacy/';
-  if (resource.where === 'client' &&
-      resource.type === 'asset' &&
-      resource.url.startsWith(legacyPrefix)) {
-    const url = resource.url.substr(legacyPrefix.length);
-    if ('app/' + url === resource.path) {
-      return '/' + url;
-    }
-  }
-  return resource.url;
-};
-
 WebApp.addHtmlAttributeHook(request =>
   browserDisabled(request) ?
     null :
@@ -119,8 +103,7 @@ WebApp.connectHandlers.use((req, res, next) => {
   manifest += "/\n";
   const reqArch = isModern(request.browser) ? 'web.browser' : 'web.browser.legacy';
   WebApp.clientPrograms[reqArch].manifest.forEach(resource => {
-    // some public URLs have to be rewritten before RoutePolicy.classify is called
-    const url = maybeRewriteUrl(resource);
+    const {url} = resource
     if (resource.where === 'client' &&
         ! RoutePolicy.classify(url) &&
         ! shouldSkip(resource)) {
@@ -152,8 +135,7 @@ WebApp.connectHandlers.use((req, res, next) => {
   // specifying the full URL with hash in their code (manually, with
   // some sort of URL rewriting helper)
   WebApp.clientPrograms[reqArch].manifest.forEach(resource => {
-    // some public URLs have to be rewritten before RoutePolicy.classify is called
-    const url = maybeRewriteUrl(resource)
+    const {url} = resource
     if (resource.where === 'client' &&
         ! RoutePolicy.classify(url) &&
         ! resource.cacheable &&
