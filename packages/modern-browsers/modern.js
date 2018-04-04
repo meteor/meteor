@@ -1,5 +1,8 @@
 const minimumVersions = Object.create(null);
 const hasOwn = Object.prototype.hasOwnProperty;
+const browserAliases = {
+  chrome: ['chromeMobile'],
+}
 
 // TODO Should it be possible for callers to setMinimumBrowserVersions to
 // forbid any version of a particular browser?
@@ -35,6 +38,12 @@ function setMinimumBrowserVersions(versions, source) {
       version: copy(versions[browserName]),
       source: source || getCaller("setMinimumBrowserVersions")
     };
+
+    if (hasOwn.call(browserAliases, browserName)) {
+      browserAliases[browserName].forEach(browserAlias => {
+        minimumVersions[browserAlias] = minimumVersions[browserName];
+      });
+    }
   });
 }
 
