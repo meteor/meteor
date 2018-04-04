@@ -623,7 +623,7 @@ main.registerCommand({
   if (options.list) {
     Console.info("Available examples:");
     _.each(EXAMPLE_REPOSITORIES, function (repoInfo, name) {
-      const branchInfo = repoInfo.branch ? `#${repoInfo.branch}` : '';
+      const branchInfo = repoInfo.branch ? `/tree/${repoInfo.branch}` : '';
       Console.info(
         Console.command(`${name}: ${repoInfo.repo}${branchInfo}`),
         Console.options({ indent: 2 }));
