@@ -1,7 +1,29 @@
 const minimumVersions = Object.create(null);
 const hasOwn = Object.prototype.hasOwnProperty;
+
+// By default, any minimum versions specified for chrome should apply to
+// chromeMobile too, per https://github.com/meteor/meteor/pull/9793,
+// though it should also be possible to specify minimum versions
+// specifically for chromeMobile. This map defines that aliasing behavior
+// in a generic way that could work for other browsers as well.
 const browserAliases = {
-  chrome: ['chromeMobile'],
+  chrome: ["chromeMobile"],
+};
+
+// Expand the given minimum versions by reusing chrome versions for
+// chromeMobile (according to browserAliases above).
+function applyAliases(versions) {
+  Object.keys(browserAliases).forEach(original => {
+    if (hasOwn.call(versions, original)) {
+      browserAliases[original].forEach(alias => {
+        if (! hasOwn.call(versions, alias)) {
+          versions[alias] = versions[original];
+        }
+      });
+    }
+  });
+
+  return versions;
 }
 
 // TODO Should it be possible for callers to setMinimumBrowserVersions to
@@ -27,6 +49,8 @@ function isModern(browser) {
 // web.browser.legacy and web.browser will be based on the maximum of all
 // requested minimum versions for each browser.
 function setMinimumBrowserVersions(versions, source) {
+  applyAliases(versions);
+
   Object.keys(versions).forEach(browserName => {
     if (hasOwn.call(minimumVersions, browserName) &&
         ! greaterThan(versions[browserName],
@@ -38,12 +62,6 @@ function setMinimumBrowserVersions(versions, source) {
       version: copy(versions[browserName]),
       source: source || getCaller("setMinimumBrowserVersions")
     };
-
-    if (hasOwn.call(browserAliases, browserName)) {
-      browserAliases[browserName].forEach(browserAlias => {
-        minimumVersions[browserAlias] = minimumVersions[browserName];
-      });
-    }
   });
 }
 
