@@ -1,5 +1,6 @@
 import _ from 'underscore';
 import util from 'util';
+import path from 'path';
 import { Console } from '../console/console.js';
 import buildmessage from '../utils/buildmessage.js';
 import files from '../fs/files.js';
@@ -383,7 +384,7 @@ export class CordovaBuilder {
   configureAndCopyResourceFiles(resourceFiles, iosElement, androidElement) {
     _.each(resourceFiles, resourceFile => {
       // copy file in cordova project root directory
-      var filename = resourceFile.src.split('\\').pop().split('/').pop();
+      var filename = path.parse(resourceFile.src).base;
       files.copyFile(
         files.pathResolve(this.projectContext.projectDir, resourceFile.src),
         files.pathJoin(this.projectRoot, filename));
