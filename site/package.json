@@ -14,7 +14,7 @@
     "hexo-server": "0.3.1",
     "hexo-versioned-netlify-redirects": "1.0.2",
     "meteor-hexo-config": "1.0.7",
-    "meteor-theme-hexo": "1.0.3"
+    "meteor-theme-hexo": "1.0.4"
   },
   "scripts": {
     "build": "chexo meteor-hexo-config -- generate",
