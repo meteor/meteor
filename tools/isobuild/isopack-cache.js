@@ -539,3 +539,14 @@ export class IsopackCache {
     return messages;
   }
 }
+
+const ICp = IsopackCache.prototype;
+[ // Include any methods here that need profiling and take a package name
+  // string as their first argument.
+  "_ensurePackageLoaded",
+].forEach(method => {
+  ICp[method] = Profile(
+    packageName => method + "(" + packageName + ")",
+    ICp[method],
+  );
+});
