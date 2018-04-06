@@ -8,7 +8,7 @@ Package.describe({
 });
 
 Npm.depends({
-  mongodb: "2.2.34"
+  mongodb: "3.0.5"
 });
 
 Package.onUse(function (api) {
