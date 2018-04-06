@@ -14,7 +14,7 @@ Package.onUse(function (api) {
 
   api.use('session');
   api.use('reload');
-  api.use('jquery@1.12.1');
+  api.use('jquery@1.11.1');
 
   api.use(['webapp', 'blaze@2.1.8', 'templating@1.2.13', 'spacebars@1.0.12',
            'ddp', 'tracker'], 'client');
