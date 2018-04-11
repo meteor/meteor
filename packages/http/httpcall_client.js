@@ -66,7 +66,7 @@ HTTP.call = function(method, url, options, callback) {
   if (options.auth) {
     var colonLoc = options.auth.indexOf(':');
     if (colonLoc < 0)
-      throw new Error('auth option should be of the form "username:password"');
+      throw new Error('Option auth should be of the form "username:password"');
     username = options.auth.substring(0, colonLoc);
     password = options.auth.substring(colonLoc+1);
   }
@@ -136,10 +136,10 @@ HTTP.call = function(method, url, options, callback) {
           Meteor.clearTimeout(timer);
 
         if (timed_out) {
-          callback(new Error("timeout"));
+          callback(new Error("Connection timeout"));
         } else if (! xhr.status) {
           // no HTTP response
-          callback(new Error("network"));
+          callback(new Error("Connection lost"));
         } else {
 
           var response = {};
