@@ -110,11 +110,11 @@ generated during rendering to the `<head>` of the response document.
 Although these examples have all involved React, the `onPageLoad` API is
 designed to be generically useful for any kind of server-side rendering.
 
-### Stream html
+### Streaming HTML
 
-React 16 instroduces `renderToNodeStream`, which allows to read the rendered html in chunks. This reduces TTFB (time to first byte).
+React 16 introduced [`renderToNodeStream`](https://reactjs.org/docs/react-dom-server.html#rendertonodestream), which enables the reading of rendered HTML in chunks. This reduces the [TTFB](https://en.wikipedia.org/wiki/Time_to_first_byte) (time to first byte).
 
-Here is an example using styled-components. Be aware to not use `sink.appendToHead(sheet.getStyleTags());` when using `renderToNodeStream`:
+Here is a `renderToNodeStream` example using [styled-components](https://www.styled-components.com). Note the use of `ServerStyleSheet` instead of `sink.appendToHead(sheet.getStyleTags());`:
 
 ```js
 import React from "react";
