@@ -114,7 +114,7 @@ designed to be generically useful for any kind of server-side rendering.
 
 React 16 introduced [`renderToNodeStream`](https://reactjs.org/docs/react-dom-server.html#rendertonodestream), which enables the reading of rendered HTML in chunks. This reduces the [TTFB](https://en.wikipedia.org/wiki/Time_to_first_byte) (time to first byte).
 
-Here is a `renderToNodeStream` example using [styled-components](https://www.styled-components.com). Note the use of `ServerStyleSheet` instead of `sink.appendToHead(sheet.getStyleTags());`:
+Here is a `renderToNodeStream` example using [styled-components](https://www.styled-components.com). Note the use of `sheet.interleaveWithNodeStream` instead of `sink.appendToHead(sheet.getStyleTags());`:
 
 ```js
 import React from "react";
