@@ -47,6 +47,7 @@ Here is a basic example of `onPageLoad` usage on the server:
 import React from "react";
 import { renderToString } from "react-dom/server";
 import { onPageLoad } from "meteor/server-render";
+
 import App from "/imports/Server.js";
 
 onPageLoad(sink => {
@@ -108,3 +109,28 @@ generated during rendering to the `<head>` of the response document.
 
 Although these examples have all involved React, the `onPageLoad` API is
 designed to be generically useful for any kind of server-side rendering.
+
+### Stream html
+
+React 16 instroduces `renderToNodeStream`, which allows to read the rendered html in chunks. This reduces TTFB (time to first byte).
+
+Here is an example using styled-components. Be aware to not use `sink.appendToHead(sheet.getStyleTags());` when using `renderToNodeStream`:
+
+```js
+import React from "react";
+import { onPageLoad } from "meteor/server-render";
+import { renderToNodeStream } from "react-dom/server";
+import { ServerStyleSheet } from "styled-components"
+import App from "/imports/Server";
+
+onPageLoad(sink => {
+  const sheet = new ServerStyleSheet();
+  const appJSX = sheet.collectStyles(
+    <App location={sink.request.url} />
+  );
+  const htmlStream = sheet.interleaveWithNodeStream(
+    renderToNodeStream(appJSX)
+  );
+  sink.renderIntoElementById("app", htmlStream);
+});
+```
