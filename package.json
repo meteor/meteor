@@ -62,7 +62,7 @@
     "husky": "~0.14.3",
     "mocha": "~5.0.4",
     "nyc": "~11.6.0",
-    "prettier": "~1.11.1",
+    "prettier": "~1.12.0",
     "readline-sync": "~1.4.9",
     "rimraf": "~2.6.2",
     "semantic-release": "~15.1.2",
