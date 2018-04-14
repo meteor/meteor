@@ -11,6 +11,7 @@ env:
   - CXX=g++-4.8
 addons:
   apt:
+    chrome: stable
     sources:
       - ubuntu-toolchain-r-test
     packages:
