@@ -38,7 +38,7 @@
 //   - browserstack: true if browserstack clients should be used
 //   - port: the port that the clients should run on
 import * as files from '../fs/files.js';
-import PhantomClient from './clients/phantom/index.js';
+import PuppeteerClient from './clients/puppeteer/index.js';
 import BrowserStackClient from './clients/browserstack/index.js';
 import Builder from '../isobuild/builder.js';
 import Run from './run.js';
@@ -126,8 +126,8 @@ export default class Sandbox {
         port: clientOptions.port || 3000,
       };
 
-      if (clientOptions.phantom) {
-        PhantomClient.pushClients(this.clients, appConfig);
+      if (clientOptions.puppeteer) {
+        PuppeteerClient.pushClients(this.clients, appConfig);
       }
 
       if (clientOptions.browserstack && BrowserStackClient.prerequisitesMet()) {
