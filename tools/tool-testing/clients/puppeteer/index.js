@@ -33,8 +33,11 @@ export default class PuppeteerClient extends Client {
     this.page.goto(`http://${this.host}:${this.port}`);
   }
 
-  stop() {
-    this.browser && this.browser.close();
+  async stop() {
+    this.page && await this.page.close();
+    this.page = null;
+
+    this.browser && await this.browser.close();
     this.browser = null;
   }
 

@@ -6,7 +6,8 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.0.0-beta.42",
-    "meteor-node-stubs": "^0.3.2"
+    "meteor-node-stubs": "^0.3.2",
+    "puppeteer": "^1.3.0"
   },
   "meteor": {
     "testModule": "tests.js"
