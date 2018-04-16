@@ -2268,7 +2268,7 @@ main.registerCommand({
   }
 
   const clients = {
-    phantom: true, // Phantom is always enabled.
+    puppeteer: true, // Puppeteer is always enabled.
     browserstack: options.browserstack,
   };
 
