@@ -163,7 +163,11 @@ const dependOnDirectory = wrap(dir => {
         watcher = null;
       }
     };
-  }
+  },
+
+  // This function is disposable because we don't care about its result,
+  // only its role in optimistic dependency tracking/dirtying.
+  disposable: true
 });
 
 // Called when an optimistic function detects the given file does not
@@ -189,6 +193,10 @@ const dependOnNodeModules = wrap(nodeModulesDir => {
   assert(pathIsAbsolute(nodeModulesDir));
   assert(nodeModulesDir.endsWith(pathSep + "node_modules"));
   return dependOnDirectory(nodeModulesDir);
+}, {
+  // This function is disposable because we don't care about its result,
+  // only its role in optimistic dependency tracking/dirtying.
+  disposable: true
 });
 
 // Invalidate all optimistic results derived from paths involving the

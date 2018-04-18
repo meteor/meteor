@@ -1654,7 +1654,10 @@ let dependOnPathSalt = 0;
 export const dependOnPath = require("optimism").wrap(
   // Always return something different to prevent optimism from
   // second-guessing the dirtiness of this function.
-  path => ++dependOnPathSalt
+  path => ++dependOnPathSalt,
+  // This function is disposable because we don't care about its result,
+  // only its role in optimistic dependency tracking/dirtying.
+  { disposable: true }
 );
 
 function wrapDestructiveFsFunc(name, pathArgIndices) {
