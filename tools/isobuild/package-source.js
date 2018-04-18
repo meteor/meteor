@@ -1071,10 +1071,6 @@ _.extend(PackageSource.prototype, {
     return fileOptions;
   },
 
-  // This cache survives for the duration of the process, and stores the
-  // complete list of source files for directories within node_modules.
-  _findSourcesCache: Object.create(null),
-
   _findSources: Profile("PackageSource#_findSources", function ({
     sourceProcessorSet,
     watchSet,
@@ -1133,31 +1129,6 @@ _.extend(PackageSource.prototype, {
       /^acceptance-tests\/$/,
     ] : anyLevelExcludes;
 
-    const nodeModulesReadOptions = {
-      ...sourceReadOptions,
-      // When we're in a node_modules directory, we can avoid collecting
-      // .js and .json files, because (unlike .less or .coffee files) they
-      // are allowed to be imported later by the ImportScanner, as they do
-      // not require custom processing by compiler plugins.
-      exclude: sourceReadOptions.exclude.concat(/\.js(on)?$/i),
-    };
-
-    const baseCacheKey = JSON.stringify({
-      isApp,
-      arch,
-      sourceRoot: self.sourceRoot,
-      excludes: anyLevelExcludes,
-    }, (key, value) => {
-      if (_.isRegExp(value)) {
-        return [value.source, value.flags];
-      }
-      return value;
-    });
-
-    function makeCacheKey(dir) {
-      return baseCacheKey + "\0" + dir;
-    }
-
     const dotMeteorIgnoreFiles = Object.create(null);
 
     function removeIgnoredFilesFrom(array) {
@@ -1188,17 +1159,9 @@ _.extend(PackageSource.prototype, {
       return array;
     }
 
-    function find(dir, depth, inNodeModules) {
+    function find(dir, depth) {
       // Remove trailing slash.
       dir = dir.replace(/\/$/, "");
-
-      // If we're in a node_modules directory, cache the results of the
-      // find function for the duration of the process.
-      const cacheKey = inNodeModules && makeCacheKey(dir);
-      if (cacheKey &&
-          cacheKey in self._findSourcesCache) {
-        return self._findSourcesCache[cacheKey];
-      }
 
       if (loopChecker.check(dir)) {
         // Pretend we found no files.
@@ -1206,19 +1169,13 @@ _.extend(PackageSource.prototype, {
       }
 
       const absDir = files.pathJoin(self.sourceRoot, dir);
-      if (! inNodeModules) {
-        const ignore = optimisticReadMeteorIgnore(absDir);
-        if (ignore) {
-          dotMeteorIgnoreFiles[dir] = ignore;
-        }
+      const ignore = optimisticReadMeteorIgnore(absDir);
+      if (ignore) {
+        dotMeteorIgnoreFiles[dir] = ignore;
       }
 
-      const readOptions = inNodeModules
-        ? nodeModulesReadOptions
-        : sourceReadOptions;
-
       const sources = _.difference(
-        self._readAndWatchDirectory(dir, watchSet, readOptions),
+        self._readAndWatchDirectory(dir, watchSet, sourceReadOptions),
         depth > 0 ? [] : controlFiles
       );
 
@@ -1232,49 +1189,20 @@ _.extend(PackageSource.prototype, {
       removeIgnoredFilesFrom(sources);
       removeIgnoredFilesFrom(subdirectories);
 
-      let nodeModulesDir;
-
       subdirectories.forEach(subdir => {
         if (/(^|\/)node_modules\/$/.test(subdir)) {
-          if (! inNodeModules) {
-            sourceArch.localNodeModulesDirs[subdir] = true;
-          }
-
-          // Defer handling node_modules until after we handle all other
-          // subdirectories, so that we know whether we need to descend
-          // further. If sources is still empty after we handle everything
-          // else in dir, then nothing in this node_modules subdir can be
-          // imported by anthing outside of it, so we can ignore it.
-          nodeModulesDir = subdir;
-
+          sourceArch.localNodeModulesDirs[subdir] = true;
         } else {
-          sources.push(...find(subdir, depth + 1, inNodeModules));
+          sources.push(...find(subdir, depth + 1));
         }
       });
 
-      if (isApp &&
-          nodeModulesDir &&
-          (! inNodeModules || sources.length > 0)) {
-        // If we found a node_modules subdirectory above, and either we
-        // are not already inside another node_modules directory or we
-        // found source files elsewhere in this directory or its other
-        // subdirectories, and we're building an app (as opposed to a
-        // Meteor package), continue searching this node_modules
-        // directory, so that any non-.js(on) files it contains can be
-        // imported by the app (#6037).
-        sources.push(...find(nodeModulesDir, depth + 1, true));
-      }
-
       delete dotMeteorIgnoreFiles[dir];
-
-      if (cacheKey) {
-        self._findSourcesCache[cacheKey] = sources;
-      }
 
       return sources;
     }
 
-    return files.withCache(() => find("", 0, false));
+    return files.withCache(() => find("", 0));
   }),
 
   _findAssets({
