@@ -113,7 +113,7 @@
 
 * The `reify` npm package has been updated to version 0.15.1.
 
-* The `optimism` npm package has been updated to version 0.4.0.
+* The `optimism` npm package has been updated to version 0.6.3.
 
 * The `minifier-js` package has been updated to use `uglify-es` 3.3.9.
 
