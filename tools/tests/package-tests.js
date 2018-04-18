@@ -193,6 +193,7 @@ selftest.define("add debugOnly and prodOnly packages", [], function () {
     // Add a debugOnly package. It should work during a normal run, but print
   // nothing in production mode.
   run = s.run("add", "debug-only");
+  run.waitSecs(30);
   run.match("debug-only");
   run.expectExit(0);
 
@@ -201,11 +202,11 @@ selftest.define("add debugOnly and prodOnly packages", [], function () {
           "process.exit(global.DEBUG_ONLY_LOADED ? 234 : 235)");
 
   run = s.run("--once");
-  run.waitSecs(15);
+  run.waitSecs(30);
   run.expectExit(234);
 
   run = s.run("--once", "--production");
-  run.waitSecs(15);
+  run.waitSecs(30);
   run.expectExit(235);
 
   // Add prod-only package, which sets GLOBAL.PROD_ONLY_LOADED.
@@ -218,11 +219,11 @@ selftest.define("add debugOnly and prodOnly packages", [], function () {
           "process.exit(global.PROD_ONLY_LOADED ? 234 : 235)");
 
   run = s.run("--once");
-  run.waitSecs(15);
+  run.waitSecs(30);
   run.expectExit(235);
 
   run = s.run("--once", "--production");
-  run.waitSecs(15);
+  run.waitSecs(30);
   run.expectExit(234);
 });
 
