@@ -149,10 +149,10 @@ Copyright (c) 2011, Danny Coates
 
 
 ----------
-puppeteer: https://github.com/GoogleChrome/puppeteer
+phantomjs: https://github.com/Medium/phantomjs (npm installer)
 ----------
 
-Copyright 2017 Google Inc.
+Copyright 2012 The Obvious Corporation.
 
 
 ----------
