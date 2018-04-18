@@ -44,6 +44,13 @@
   application code. [PR #9771](https://github.com/meteor/meteor/pull/9771)
   [Feature #6](https://github.com/meteor/meteor-feature-requests/issues/6)
 
+  > Note: since compilation of npm packages can now be enabled using the
+    techniques described above, Meteor will no longer automatically scan
+    `node_modules` directories for modules that can be compiled by
+    compiler plugins. If you have been using that functionality to import
+    compiled-to-JS modules from `node_modules`, you should start using the
+    symlinking strategy instead.
+
 * The `npm` package has been upgraded to version 5.8.0, and our
   [fork](https://github.com/meteor/pacote/tree/v7.6.1-meteor) of its
   `pacote` dependency has been rebased against version 7.6.1.
