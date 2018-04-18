@@ -18,6 +18,7 @@ import {cssToCommonJS} from "./css-modules.js";
 import Resolver from "./resolver.js";
 import {
   optimisticStatOrNull,
+  optimisticReadJsonOrNull,
 } from "../fs/optimistic.js";
 
 import { isTestFilePath } from './test-files.js';
@@ -591,34 +592,86 @@ class ResourceSlot {
     return fileOptions && fileOptions[name];
   }
 
-  _isLazy(options) {
+  _isLazy(options, isJavaScript) {
     let lazy = this._getOption("lazy", options);
 
     if (typeof lazy === "boolean") {
       return lazy;
     }
 
-    // If file.lazy was not previously defined, mark the file lazy if
-    // it is contained by an imports directory. Note that any files
-    // contained by a node_modules directory will already have been
-    // marked lazy in PackageSource#_inferFileOptions. Same for
-    // non-test files if running (non-full-app) tests (`meteor test`)
-    if (!this.packageSourceBatch.useMeteorInstall) {
+    const isApp = ! this.packageSourceBatch.unibuild.pkg.name;
+    if (! isApp) {
+      // Meteor package files must be explicitly added by api.addFiles or
+      // api.mainModule, and are implicitly eager unless specified
+      // otherwise via this.inputResource.fileOptions.lazy, which we
+      // already checked above.
       return false;
     }
 
+    // The rest of this method assumes we're considering a resource in an
+    // application rather than a Meteor package.
+
+    if (! this.packageSourceBatch.useMeteorInstall) {
+      // If this application is somehow still not using the module system,
+      // then everything is eagerly loaded.
+      return false;
+    }
+
+    const {
+      isTest = false,
+      isAppTest = false,
+    } = global.testCommandMetadata || {};
+
+    const runningTests = isTest || isAppTest;
+
+    if (isJavaScript) {
+      if (runningTests) {
+        const testModule = this._getOption("testModule", options);
+
+        // If we set fileOptions.testModule = true in _inferFileOptions,
+        // then consider this module an eager entry point for tests. If we
+        // set it to false (rather than leaving it undefined), that means
+        // a meteor.testModule was configured in package.json, and this
+        // test module was not it. In that case, we fall through to the
+        // mainModule check, ignoring isTestFilePath, because we can
+        // assume this is not an eager test module. If testModule was not
+        // set to a boolean, then isTestFilePath should determine if this
+        // is an eager test module.
+        const isEagerTestModule = typeof testModule === "boolean"
+          ? testModule
+          : isTestFilePath(this.inputResource.path);
+
+        if (isEagerTestModule) {
+          // If we know it's eager, then it isn't lazy.
+          return false;
+        }
+
+        if (! isAppTest) {
+          // If running `meteor test` without the --full-app option, then
+          // any JS modules that are not eager test modules must be lazy.
+          return true;
+        }
+      }
+
+      // PackageSource#_inferFileOptions (in package-source.js) sets the
+      // mainModule option to false to indicate that a meteor.mainModule
+      // was configured for this architecture, but this module was not it.
+      // It's important to wait until this point (ResourceSlot#_isLazy) to
+      // make the final call, because we can finally tell whether the
+      // output resource is JavaScript or not (non-JS resources are not
+      // affected by the meteor.mainModule option).
+      const mainModule = this._getOption("mainModule", options);
+      if (typeof mainModule === "boolean") {
+        return ! mainModule;
+      }
+    }
+
+    // In other words, the imports directory remains relevant for non-JS
+    // resources, and for JS resources in the absence of an explicit
+    // meteor.mainModule configuration in package.json.
     const splitPath = this.inputResource.path.split(files.pathSep);
     const isInImports = splitPath.indexOf("imports") >= 0;
-
-    if (global.testCommandMetadata &&
-        (global.testCommandMetadata.isTest ||
-         global.testCommandMetadata.isAppTest)) {
-      // test files should always be included, if we're running app
-      // tests.
-      return isInImports && !isTestFilePath(this.inputResource.path);
-    } else {
-      return isInImports;
-    }
+    return isInImports;
   }
 
   addStylesheet(options) {
@@ -637,7 +690,7 @@ class ResourceSlot {
       targetPath,
       servePath: self.packageSourceBatch.unibuild.pkg._getServePath(targetPath),
       hash: sha1(data),
-      lazy: this._isLazy(options),
+      lazy: this._isLazy(options, false),
     };
 
     if (useMeteorInstall && resource.lazy) {
@@ -711,7 +764,7 @@ class ResourceSlot {
       sourceMap: options.sourceMap,
       // intentionally preserve a possible `undefined` value for files
       // in apps, rather than convert it into `false` via `!!`
-      lazy: self._isLazy(options),
+      lazy: self._isLazy(options, true),
       bare: !! self._getOption("bare", options),
       mainModule: !! self._getOption("mainModule", options),
     });
@@ -739,7 +792,7 @@ class ResourceSlot {
       servePath: self.packageSourceBatch.unibuild.pkg._getServePath(
         options.path),
       hash: sha1(options.data),
-      lazy: self._isLazy(options),
+      lazy: self._isLazy(options, false),
     });
   }
 
@@ -763,7 +816,7 @@ class ResourceSlot {
     self.outputResources.push({
       type: options.section,
       data: Buffer.from(files.convertToStandardLineEndings(options.data), 'utf8'),
-      lazy: self._isLazy(options),
+      lazy: self._isLazy(options, false),
     });
   }
 
@@ -1354,7 +1407,7 @@ export class PackageSourceBatch {
     if (cacheFilename) {
       let diskCached = null;
       try {
-        diskCached = files.readJSONOrNull(cacheFilename);
+        diskCached = optimisticReadJsonOrNull(cacheFilename);
       } catch (e) {
         // Ignore JSON parse errors; pretend there was no cache.
         if (!(e instanceof SyntaxError)) {

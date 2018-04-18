@@ -2,9 +2,9 @@
   "lockfileVersion": 1,
   "dependencies": {
     "coffeescript": {
-      "version": "2.0.3",
-      "resolved": "https://registry.npmjs.org/coffeescript/-/coffeescript-2.0.3.tgz",
-      "integrity": "sha512-iIfUN+71IyI2FQABXh1luzZeQgqwUPeWh6lDovJatQQs+30bvyGnBY0r4BnD0hoMAasNuZVHlL1U09Oy1ZfSeg=="
+      "version": "2.2.1",
+      "resolved": "https://registry.npmjs.org/coffeescript/-/coffeescript-2.2.1.tgz",
+      "integrity": "sha512-UFSs0WDed7ZiQGtWZ401PZnlgnP5jtlr4Gk+aPMTIkFkKY6Kz2gRp+WIu0QzllR30nV2XheicAhKwDJQcor6lg=="
     },
     "source-map": {
       "version": "0.5.7",

@@ -14,6 +14,7 @@ import query from "qs-middleware";
 import parseRequest from "parseurl";
 import basicAuth from "basic-auth-connect";
 import { lookup as lookupUserAgent } from "useragent";
+import { isModern } from "meteor/modern-browsers";
 import send from "send";
 import {
   removeExistingSocketFile,
@@ -36,7 +37,9 @@ WebAppInternals.NpmModules = {
   }
 };
 
-WebApp.defaultArch = 'web.browser';
+// Though we might prefer to use web.browser (modern) as the default
+// architecture, safety requires a more compatible defaultArch.
+WebApp.defaultArch = 'web.browser.legacy';
 
 // XXX maps archs to manifests
 WebApp.clientPrograms = {};
@@ -321,35 +324,35 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
     _.clone(__meteor_runtime_config__),
     additionalOptions.runtimeConfigOverrides || {}
   );
-  return new Boilerplate(arch, manifest,
-    _.extend({
-      pathMapper: function (itemPath) {
-        return pathJoin(archPath[arch], itemPath); },
-      baseDataExtension: {
-        additionalStaticJs: _.map(
-          additionalStaticJs || [],
-          function (contents, pathname) {
-            return {
-              pathname: pathname,
-              contents: contents
-            };
-          }
-        ),
-        // Convert to a JSON string, then get rid of most weird characters, then
-        // wrap in double quotes. (The outermost JSON.stringify really ought to
-        // just be "wrap in double quotes" but we use it to be safe.) This might
-        // end up inside a <script> tag so we need to be careful to not include
-        // "</script>", but normal {{spacebars}} escaping escapes too much! See
-        // https://github.com/meteor/meteor/issues/3730
-        meteorRuntimeConfig: JSON.stringify(
-          encodeURIComponent(JSON.stringify(runtimeConfig))),
-        rootUrlPathPrefix: __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
-        bundledJsCssUrlRewriteHook: bundledJsCssUrlRewriteHook,
-        inlineScriptsAllowed: WebAppInternals.inlineScriptsAllowed(),
-        inline: additionalOptions.inline
-      }
-    }, additionalOptions)
-  );
+
+  return new Boilerplate(arch, manifest, _.extend({
+    pathMapper(itemPath) {
+      return pathJoin(archPath[arch], itemPath);
+    },
+    baseDataExtension: {
+      additionalStaticJs: _.map(
+        additionalStaticJs || [],
+        function (contents, pathname) {
+          return {
+            pathname: pathname,
+            contents: contents
+          };
+        }
+      ),
+      // Convert to a JSON string, then get rid of most weird characters, then
+      // wrap in double quotes. (The outermost JSON.stringify really ought to
+      // just be "wrap in double quotes" but we use it to be safe.) This might
+      // end up inside a <script> tag so we need to be careful to not include
+      // "</script>", but normal {{spacebars}} escaping escapes too much! See
+      // https://github.com/meteor/meteor/issues/3730
+      meteorRuntimeConfig: JSON.stringify(
+        encodeURIComponent(JSON.stringify(runtimeConfig))),
+      rootUrlPathPrefix: __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
+      bundledJsCssUrlRewriteHook: bundledJsCssUrlRewriteHook,
+      inlineScriptsAllowed: WebAppInternals.inlineScriptsAllowed(),
+      inline: additionalOptions.inline
+    }
+  }, additionalOptions));
 };
 
 // A mapping from url path to "info". Where "info" has the following fields:
@@ -462,16 +465,6 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
   }
 };
 
-var getUrlPrefixForArch = function (arch) {
-  // XXX we rely on the fact that arch names don't contain slashes
-  // in that case we would need to uri escape it
-
-  // We add '__' to the beginning of non-standard archs to "scope" the url
-  // to Meteor internals.
-  return arch === WebApp.defaultArch ?
-    '' : '/' + '__' + arch.replace(/^web\./, '');
-};
-
 // Parse the passed in port value. Return the port as-is if it's a String
 // (e.g. a Windows Server style named pipe), otherwise return the port as an
 // integer.
@@ -510,12 +503,10 @@ function runWebAppServer() {
         if (! clientJsonPath || ! clientDir || ! clientJson)
           throw new Error("Client config file not parsed.");
 
-        var urlPrefix = getUrlPrefixForArch(arch);
-
         var manifest = clientJson.manifest;
         _.each(manifest, function (item) {
           if (item.url && item.where === "client") {
-            staticFiles[urlPrefix + getItemPathname(item.url)] = {
+            staticFiles[getItemPathname(item.url)] = {
               absolutePath: pathJoin(clientDir, item.path),
               cacheable: item.cacheable,
               hash: item.hash,
@@ -527,7 +518,7 @@ function runWebAppServer() {
             if (item.sourceMap) {
               // Serve the source map too, under the specified URL. We assume all
               // source maps are cacheable.
-              staticFiles[urlPrefix + getItemPathname(item.sourceMapUrl)] = {
+              staticFiles[getItemPathname(item.sourceMapUrl)] = {
                 absolutePath: pathJoin(clientDir, item.sourceMap),
                 cacheable: true
               };
@@ -603,28 +594,41 @@ function runWebAppServer() {
           ROOT_URL: process.env.MOBILE_ROOT_URL ||
             Meteor.absoluteUrl()
         }
-      }
+      },
+
+      "web.browser": {
+        runtimeConfigOverrides: {
+          isModern: true,
+        }
+      },
+
+      "web.browser.legacy": {
+        runtimeConfigOverrides: {
+          isModern: false,
+        }
+      },
     };
 
     syncQueue.runTask(function() {
+      const allCss = [];
+
       _.each(WebApp.clientPrograms, function (program, archName) {
         boilerplateByArch[archName] =
           WebAppInternals.generateBoilerplateInstance(
-            archName, program.manifest,
-            defaultOptionsForArch[archName]);
+            archName,
+            program.manifest,
+            defaultOptionsForArch[archName],
+          );
+
+        const cssFiles = boilerplateByArch[archName].baseData.css;
+        cssFiles.forEach(file => allCss.push({
+          url: bundledJsCssUrlRewriteHook(file.url),
+        }));
       });
 
       // Clear the memoized boilerplate cache.
       memoizedBoilerplate = {};
 
-      // Configure CSS injection for the default arch
-      // XXX implement the CSS injection for all archs?
-      var cssFiles = boilerplateByArch[WebApp.defaultArch].baseData.css;
-      // Rewrite all CSS files (which are written directly to <style> tags)
-      // by autoupdate_client to use the CDN prefix/etc
-      var allCss = _.map(cssFiles, function(cssFile) {
-        return { url: bundledJsCssUrlRewriteHook(cssFile.url) };
-      });
       WebAppInternals.refreshableAssets = { allCss };
     });
   };
@@ -770,10 +774,14 @@ function runWebAppServer() {
       var archKey = pathname.split('/')[1];
       var archKeyCleaned = 'web.' + archKey.replace(/^__/, '');
 
-      if (!/^__/.test(archKey) || !_.has(archPath, archKeyCleaned)) {
-        archKey = WebApp.defaultArch;
-      } else {
+      if (/^__/.test(archKey) &&
+          _.has(archPath, archKeyCleaned)) {
         archKey = archKeyCleaned;
+      } else if (isModern(request.browser) &&
+                 _.has(WebApp.clientPrograms, "web.browser")) {
+        archKey = "web.browser";
+      } else {
+        archKey = WebApp.defaultArch;
       }
 
       return getBoilerplateAsync(
@@ -860,7 +868,12 @@ function runWebAppServer() {
         onListeningCallbacks.push(f);
       else
         f();
-    }
+    },
+    // This can be overridden by users who want to modify how listening works
+    // (eg, to run a proxy like Apollo Engine Proxy in front of the server).
+    startListening: function (httpServer, listenOptions, cb) {
+      httpServer.listen(listenOptions, cb);
+    },
   });
 
   // Let the rest of the packages (and Meteor.startup hooks) insert connect
@@ -870,7 +883,7 @@ function runWebAppServer() {
     WebAppInternals.generateBoilerplate();
 
     const startHttpServer = listenOptions => {
-      httpServer.listen(listenOptions, Meteor.bindEnvironment(() => {
+      WebApp.startListening(httpServer, listenOptions, Meteor.bindEnvironment(() => {
         if (process.env.METEOR_PRINT_ON_LISTEN) {
           console.log("LISTENING");
         }

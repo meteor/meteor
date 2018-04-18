@@ -1,90 +1,93 @@
-MongoID = {};
+import { EJSON } from 'meteor/ejson';
+import { Random } from 'meteor/random';
 
-MongoID._looksLikeObjectID = function (str) {
-  return str.length === 24 && str.match(/^[0-9a-f]*$/);
-};
+const MongoID = {};
 
-MongoID.ObjectID = function (hexString) {
-  //random-based impl of Mongo ObjectID
-  var self = this;
-  if (hexString) {
-    hexString = hexString.toLowerCase();
-    if (!MongoID._looksLikeObjectID(hexString)) {
-      throw new Error("Invalid hexadecimal string for creating an ObjectID");
+MongoID._looksLikeObjectID = str => str.length === 24 && str.match(/^[0-9a-f]*$/);
+
+MongoID.ObjectID = class ObjectID {
+  constructor (hexString) {
+    //random-based impl of Mongo ObjectID
+    if (hexString) {
+      hexString = hexString.toLowerCase();
+      if (!MongoID._looksLikeObjectID(hexString)) {
+        throw new Error('Invalid hexadecimal string for creating an ObjectID');
+      }
+      // meant to work with _.isEqual(), which relies on structural equality
+      this._str = hexString;
+    } else {
+      this._str = Random.hexString(24);
     }
-    // meant to work with _.isEqual(), which relies on structural equality
-    self._str = hexString;
-  } else {
-    self._str = Random.hexString(24);
   }
-};
 
-MongoID.ObjectID.prototype.toString = function () {
-  var self = this;
-  return "ObjectID(\"" + self._str + "\")";
-};
+  equals(other) {
+    return other instanceof MongoID.ObjectID &&
+    this.valueOf() === other.valueOf();
+  }
 
-MongoID.ObjectID.prototype.equals = function (other) {
-  var self = this;
-  return other instanceof MongoID.ObjectID &&
-    self.valueOf() === other.valueOf();
-};
+  toString() {
+    return `ObjectID("${this._str}")`;
+  }
 
-MongoID.ObjectID.prototype.clone = function () {
-  var self = this;
-  return new MongoID.ObjectID(self._str);
-};
+  clone() {
+    return new MongoID.ObjectID(this._str);
+  }
 
-MongoID.ObjectID.prototype.typeName = function() {
-  return "oid";
-};
+  typeName() {
+    return 'oid';
+  }
+  
+  getTimestamp() {
+    return Number.parseInt(this._str.substr(0, 8), 16);
+  }
 
-MongoID.ObjectID.prototype.getTimestamp = function() {
-  var self = this;
-  return parseInt(self._str.substr(0, 8), 16);
-};
+  valueOf() {
+    return this._str;
+  }
 
-MongoID.ObjectID.prototype.valueOf =
-    MongoID.ObjectID.prototype.toJSONValue =
-    MongoID.ObjectID.prototype.toHexString =
-    function () { return this._str; };
+  toJSONValue() {
+    return this.valueOf();
+  }
 
-EJSON.addType("oid",  function (str) {
-  return new MongoID.ObjectID(str);
-});
+  toHexString() {
+    return this.valueOf();
+  }
 
-MongoID.idStringify = function (id) {
+}
+
+EJSON.addType('oid', str => new MongoID.ObjectID(str));
+
+MongoID.idStringify = (id) => {
   if (id instanceof MongoID.ObjectID) {
     return id.valueOf();
   } else if (typeof id === 'string') {
-    if (id === "") {
+    if (id === '') {
       return id;
-    } else if (id.substr(0, 1) === "-" || // escape previously dashed strings
-               id.substr(0, 1) === "~" || // escape escaped numbers, true, false
+    } else if (id.startsWith('-') || // escape previously dashed strings
+               id.startsWith('~') || // escape escaped numbers, true, false
                MongoID._looksLikeObjectID(id) || // escape object-id-form strings
-               id.substr(0, 1) === '{') { // escape object-form strings, for maybe implementing later
-      return "-" + id;
+               id.startsWith('{')) { // escape object-form strings, for maybe implementing later
+      return `-${id}`;
     } else {
       return id; // other strings go through unchanged.
     }
   } else if (id === undefined) {
     return '-';
   } else if (typeof id === 'object' && id !== null) {
-    throw new Error("Meteor does not currently support objects other than ObjectID as ids");
+    throw new Error('Meteor does not currently support objects other than ObjectID as ids');
   } else { // Numbers, true, false, null
-    return "~" + JSON.stringify(id);
+    return `~${JSON.stringify(id)}`;
   }
 };
 
-
-MongoID.idParse = function (id) {
-  if (id === "") {
+MongoID.idParse = (id) => {
+  if (id === '') {
     return id;
   } else if (id === '-') {
     return undefined;
-  } else if (id.substr(0, 1) === '-') {
+  } else if (id.startsWith('-')) {
     return id.substr(1);
-  } else if (id.substr(0, 1) === '~') {
+  } else if (id.startsWith('~')) {
     return JSON.parse(id.substr(1));
   } else if (MongoID._looksLikeObjectID(id)) {
     return new MongoID.ObjectID(id);
@@ -93,3 +96,4 @@ MongoID.idParse = function (id) {
   }
 };
 
+export { MongoID };

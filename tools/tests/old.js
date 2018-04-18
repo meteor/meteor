@@ -87,7 +87,7 @@ selftest.define("bundler-npm", ["slow", "net", "checkout"], function () {
 // in release mode. If we're not running from a checkout, just run it
 // against the installed copy.
 
-selftest.define("old cli tests (bash)", ["slow", "net", "yet-unsolved-windows-failure"], function () {
+selftest.skip.define("old cli tests (bash)", ["slow", "net", "yet-unsolved-windows-failure"], function () {
   var s = new Sandbox;
   var scriptToRun = files.pathJoin(files.convertToStandardPath(__dirname),
     'old', 'cli-test.sh');

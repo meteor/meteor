@@ -15,12 +15,7 @@ environment:
   TOOL_NODE_FLAGS: --expose-gc
   TIMEOUT_SCALE_FACTOR: 8
   METEOR_HEADLESS: true
-  SELF_TEST_EXCLUDE: "\
-      ^old cli tests|\
-      ^minifiers can't register non-js|\
-      ^minifiers: apps can't use|\
-      ^compiler plugins - addAssets|\
-      ^NULL-LEAVE-THIS-HERE-NULL$"
+  SELF_TEST_EXCLUDE: "^NULL-LEAVE-THIS-HERE-NULL$"
 platform:
   - x64
 

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Serves a Meteor app over HTTP",
-  version: '1.5.0'
+  version: '1.6.0-beta162.21'
 });
 
 Npm.depends({"basic-auth-connect": "1.0.0",
@@ -22,13 +22,19 @@ Npm.strip({
 Cordova.depends({
   'cordova-plugin-whitelist': '1.3.2',
   'cordova-plugin-wkwebview-engine': '1.1.3',
-  'cordova-plugin-meteor-webapp': '1.4.2'
+  'cordova-plugin-meteor-webapp': '1.6.0'
 });
 
 Package.onUse(function (api) {
   api.use('ecmascript');
-  api.use(['logging', 'underscore', 'routepolicy', 'boilerplate-generator',
-           'webapp-hashing'], 'server');
+  api.use([
+    'logging',
+    'underscore',
+    'routepolicy',
+    'modern-browsers',
+    'boilerplate-generator',
+    'webapp-hashing'
+  ], 'server');
 
   // At response serving time, webapp uses browser-policy if it is loaded. If
   // browser-policy is loaded, then it must be loaded after webapp

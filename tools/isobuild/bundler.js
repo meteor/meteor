@@ -482,7 +482,7 @@ export class NodeModulesDirectory {
           return true;
         }
 
-        const real = realpathOrNull(path);
+        const real = files.realpathOrNull(path);
         if (typeof real === "string" &&
             real !== path) {
           // If node_modules/.bin/command is a symlink, determine the
@@ -519,15 +519,6 @@ export class NodeModulesDirectory {
 
       return true;
     };
-  }
-}
-
-function realpathOrNull(path) {
-  try {
-    return files.realpath(path);
-  } catch (e) {
-    if (e.code !== "ENOENT") throw e;
-    return null;
   }
 }
 
@@ -574,6 +565,27 @@ class File {
     // the base URL at which the target is being served (ignored if this
     // file is not intended to be served over HTTP).
     this.url = null;
+
+    // A prefix that will be prepended to this.url.
+    if (options.arch.startsWith("web.") &&
+        // Use /__browser.legacy/... as a prefix for web.browser.legacy
+        // URLs, but avoid adding a special prefix to resource URLs for
+        // modern browsers. Though boilerplate-generator will happily use
+        // whatever URLs we invent here, it's important that assets like
+        // images are available from predictable URLs (without any
+        // arch-specific prefixes), since humans might use those URLs in
+        // hand-written code. Moreover, non-JS assets are typically the
+        // same for both modern and legacy browsers, so the URL prefix
+        // doesn't actually make a difference. In the unlikely event that
+        // someone adds different assets with the same path to web.browser
+        // and web.browser.legacy, the legacy version can always be
+        // fetched from the /__browser.legacy/... URL.
+        options.arch !== "web.browser") {
+      this.urlPrefix = "/__" +
+        options.arch.split(".").slice(1).join(".");
+    } else {
+      this.urlPrefix = "";
+    }
 
     // Is this file guaranteed to never change, so that we can let it be
     // cached forever? Only makes sense of self.url is set.
@@ -653,7 +665,8 @@ class File {
   // url, useful for query parameters.
   setUrlToHash(fileAndUrlSuffix, urlSuffix) {
     urlSuffix = urlSuffix || "";
-    this.url = "/" + this.hash() + fileAndUrlSuffix + urlSuffix;
+    this.url = this.urlPrefix + "/" +
+      this.hash() + fileAndUrlSuffix + urlSuffix;
     this.cacheable = true;
     this.targetPath = this.hash() + fileAndUrlSuffix;
   }
@@ -688,7 +701,7 @@ class File {
     // XXX replacing colons with underscores as colon is hard to escape later
     // on different targets and generally is not a good separator for web.
     url = colonConverter.convert(url);
-    this.url = url;
+    this.url = this.urlPrefix + url;
   }
 
   setTargetPathFromRelPath(relPath) {
@@ -1090,9 +1103,10 @@ class Target {
 
         const f = new File({
           info: 'unbuild ' + resource,
+          arch: this.arch,
           data: resource.data,
           cacheable: false,
-          hash: resource.hash
+          hash: resource.hash,
         });
 
         const relPath = isOs
@@ -1134,7 +1148,12 @@ class Target {
             return;
           }
 
-          const f = new File({ info: 'resource ' + resource.servePath, data: resource.data, cacheable: false});
+          const f = new File({
+            info: 'resource ' + resource.servePath,
+            arch: this.arch,
+            data: resource.data,
+            cacheable: false,
+          });
 
           const relPath = stripLeadingSlash(resource.servePath);
           f.setTargetPathFromRelPath(relPath);
@@ -1213,9 +1232,10 @@ class Target {
   minifyJs(minifierDef, minifyMode) {
     const staticFiles = [];
     const dynamicFiles = [];
+    const { arch } = this;
 
     this.js.forEach(file => {
-      const jsf = new JsFile(file, { arch: this.arch });
+      const jsf = new JsFile(file, { arch });
 
       if (file.targetPath.startsWith("dynamic/")) {
         // Make sure file._hash is cached.
@@ -1269,6 +1289,7 @@ class Target {
 
         const newFile = new File({
           info: 'minified js',
+          arch,
           data: Buffer.from(file.data, 'utf8'),
         });
 
@@ -1297,6 +1318,7 @@ class Target {
           const contents = newFile.contents();
           const statsFile = new File({
             info: "bundle size stats JSON",
+            arch,
             data: Buffer.from(JSON.stringify({
               minifier: {
                 name: minifierDef.isopack.name,
@@ -1488,10 +1510,9 @@ class ClientTarget extends Target {
 
   // Minify the CSS in this target
   minifyCss(minifierDef, minifyMode) {
+    const { arch } = this;
     const sources = this.css.map((file) => {
-      return new CssFile(file, {
-        arch: this.arch
-      });
+      return new CssFile(file, { arch });
     });
     const minifier = minifierDef.userPlugin.processFilesForBundle.bind(
       minifierDef.userPlugin);
@@ -1509,6 +1530,7 @@ class ClientTarget extends Target {
       return source._minifiedFiles.map((file) => {
         const newFile = new File({
           info: 'minified css',
+          arch,
           data: Buffer.from(file.data, 'utf8')
         });
         if (file.sourceMap) {
@@ -2253,7 +2275,7 @@ class JsImage {
           copyOptions.filter = prodPackagePredicate;
         }
 
-        builder.copyDirectory(copyOptions);
+        builder.copyNodeModulesDirectory(copyOptions);
       }
     });
 

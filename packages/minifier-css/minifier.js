@@ -67,7 +67,7 @@ const CssTools = {
    */
   minifyCss(cssText) {
     const f = new Future;
-    postcss([ cssnano ]).process(cssText).then(result => {
+    postcss([ cssnano({ safe: true }) ]).process(cssText).then(result => {
       f.return(result.css);
     }).catch(error => {
       f.throw(error);

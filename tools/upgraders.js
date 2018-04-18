@@ -291,6 +291,25 @@ be removed if there is no need for the Blaze configuration interface.`,
     packagesFile.writeIfModified();
   },
 
+  '1.6.2-split-underscore-from-meteor-base': function (projectContext) {
+    const packagesFile = projectContext.projectConstraintsFile;
+    if (! packagesFile.getConstraint(`underscore`) &&
+      packagesFile.getConstraint(`meteor-base`)) {
+
+      maybePrintNoticeHeader();
+      Console.info(
+`The underscore package has been removed as a dependency of all packages in \
+meteor-base. Since some apps may have been using underscore through this \
+dependency without having it listed in their .meteor/packages files, it has \
+been added automatically. If your app is not using underscore, then you can \
+safely remove it using 'meteor remove underscore'.`,
+        Console.options({ bulletPoint: "1.6.2: " })
+      );
+      packagesFile.addPackages([`underscore`]);
+      packagesFile.writeIfModified();
+    }
+  }
+
   ////////////
   // PLEASE. When adding new upgraders that print mesasges, follow the
   // examples for 0.9.0 and 0.9.1 above. Specifically, formatting

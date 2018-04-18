@@ -1,22 +1,23 @@
-var crypto = Npm.require('crypto');
-var fs = Npm.require('fs');
-var path = Npm.require('path');
+import { Meteor } from 'meteor/meteor'
+import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
 
-var _disableSizeCheck = false;
+let _disableSizeCheck = false;
+let disabledBrowsers = {};
 
 Meteor.AppCache = {
-  config: function (options) {
-    _.each(options, function (value, option) {
+  config: options => {
+    Object.keys(options).forEach(option => {
+      value = options[option];
       if (option === 'browsers') {
         disabledBrowsers = {};
-        _.each(value, function (browser) {
-          disabledBrowsers[browser] = false;
-        });
+        value.each(browser => disabledBrowsers[browser] = false);
       }
       else if (option === 'onlineOnly') {
-        _.each(value, function (urlPrefix) {
-          RoutePolicy.declare(urlPrefix, 'static-online');
-        });
+        value.forEach(urlPrefix =>
+          RoutePolicy.declare(urlPrefix, 'static-online')
+        );
       }
       // option to suppress warnings for tests.
       else if (option === '_disableSizeCheck') {
@@ -34,27 +35,22 @@ Meteor.AppCache = {
   }
 };
 
-var disabledBrowsers = {};
-var browserDisabled = function (request) {
-  return disabledBrowsers[request.browser.name];
-};
+const browserDisabled = request => disabledBrowsers[request.browser.name];
 
-function isDynamic(resource) {
-  return resource.type === 'dynamic js' ||
+const isDynamic = resource =>
+  resource.type === 'dynamic js' ||
     (resource.type === 'json' &&
      // TODO Update this test with PR #9439.
      resource.url.startsWith('/dynamic/') &&
-     resource.url.endsWith('.map'))
-}
+     resource.url.endsWith('.map'));
 
-WebApp.addHtmlAttributeHook(function (request) {
-  if (browserDisabled(request))
-    return null;
-  else
-    return { manifest: "/app.manifest" };
-});
+WebApp.addHtmlAttributeHook(request =>
+  browserDisabled(request) ?
+    null :
+    { manifest: "/app.manifest" }
+);
 
-WebApp.connectHandlers.use(function (req, res, next) {
+WebApp.connectHandlers.use((req, res, next) => {
   if (req.url !== '/app.manifest') {
     return next();
   }
@@ -75,7 +71,7 @@ WebApp.connectHandlers.use(function (req, res, next) {
     return;
   }
 
-  var manifest = "CACHE MANIFEST\n\n";
+  let manifest = "CACHE MANIFEST\n\n";
 
   // After the browser has downloaded the app files from the server and
   // has populated the browser's application cache, the browser will
@@ -85,7 +81,7 @@ WebApp.connectHandlers.use(function (req, res, next) {
   // So to ensure that the client updates if client resources change,
   // include a hash of client resources in the manifest.
 
-  manifest += "# " + WebApp.clientHash() + "\n";
+  manifest += `# ${WebApp.clientHash()}\n`;
 
   // When using the autoupdate package, also include
   // AUTOUPDATE_VERSION.  Otherwise the client will get into an
@@ -94,16 +90,16 @@ WebApp.connectHandlers.use(function (req, res, next) {
   // reload again trying to get the new code.
 
   if (Package.autoupdate) {
-    var version = Package.autoupdate.Autoupdate.autoupdateVersion;
+    const version = Package.autoupdate.Autoupdate.autoupdateVersion;
     if (version !== WebApp.clientHash())
-      manifest += "# " + version + "\n";
+      manifest += `# ${version}\n`;
   }
 
   manifest += "\n";
 
-  manifest += "CACHE:" + "\n";
-  manifest += "/" + "\n";
-  _.each(WebApp.clientPrograms[WebApp.defaultArch].manifest, function (resource) {
+  manifest += "CACHE:\n";
+  manifest += "/\n";
+  WebApp.clientPrograms[WebApp.defaultArch].manifest.forEach(resource => {
     if (resource.where === 'client' &&
         ! RoutePolicy.classify(resource.url) &&
         ! isDynamic(resource)) {
@@ -116,7 +112,7 @@ WebApp.connectHandlers.use(function (req, res, next) {
       // the user can't modify the asset until the cache headers
       // expire.
       if (!resource.cacheable)
-        manifest += "?" + resource.hash;
+        manifest += `?${resource.hash}`;
 
       manifest += "\n";
     }
@@ -124,7 +120,7 @@ WebApp.connectHandlers.use(function (req, res, next) {
   manifest += "\n";
 
   manifest += "FALLBACK:\n";
-  manifest += "/ /" + "\n";
+  manifest += "/ /\n";
   // Add a fallback entry for each uncacheable asset we added above.
   //
   // This means requests for the bare url ("/image.png" instead of
@@ -133,13 +129,12 @@ WebApp.connectHandlers.use(function (req, res, next) {
   // request to the server and have the asset served from cache by
   // specifying the full URL with hash in their code (manually, with
   // some sort of URL rewriting helper)
-  _.each(WebApp.clientPrograms[WebApp.defaultArch].manifest, function (resource) {
+  WebApp.clientPrograms[WebApp.defaultArch].manifest.forEach(resource => {
     if (resource.where === 'client' &&
         ! RoutePolicy.classify(resource.url) &&
         ! resource.cacheable &&
         ! isDynamic(resource)) {
-      manifest += resource.url + " " + resource.url +
-        "?" + resource.hash + "\n";
+      manifest += `${resource.url} ${resource.url}?${resource.hash}\n`;
     }
   });
 
@@ -148,29 +143,24 @@ WebApp.connectHandlers.use(function (req, res, next) {
   manifest += "NETWORK:\n";
   // TODO adding the manifest file to NETWORK should be unnecessary?
   // Want more testing to be sure.
-  manifest += "/app.manifest" + "\n";
-  _.each(
-    [].concat(
-      RoutePolicy.urlPrefixesFor('network'),
-      RoutePolicy.urlPrefixesFor('static-online')
-    ),
-    function (urlPrefix) {
-      manifest += urlPrefix + "\n";
-    }
-  );
-  manifest += "*" + "\n";
+  manifest += "/app.manifest\n";
+  [
+    ...RoutePolicy.urlPrefixesFor('network'),
+    ...RoutePolicy.urlPrefixesFor('static-online')
+  ].forEach(urlPrefix => manifest += `${urlPrefix}\n`);
+  manifest += "*\n";
 
   // content length needs to be based on bytes
-  var body = Buffer.from(manifest);
+  const body = Buffer.from(manifest);
 
   res.setHeader('Content-Type', 'text/cache-manifest');
   res.setHeader('Content-Length', body.length);
   return res.end(body);
 });
 
-var sizeCheck = function () {
-  var totalSize = 0;
-  _.each(WebApp.clientPrograms[WebApp.defaultArch].manifest, function (resource) {
+const sizeCheck = () => {
+  let totalSize = 0;
+  WebApp.clientPrograms[WebApp.defaultArch].manifest.forEach(resource => {
     if (resource.where === 'client' &&
         ! RoutePolicy.classify(resource.url) &&
         ! isDynamic(resource)) {
@@ -181,7 +171,7 @@ var sizeCheck = function () {
     Meteor._debug(
       "** You are using the appcache package but the total size of the\n" +
       "** cached resources is " +
-      (totalSize / 1024 / 1024).toFixed(1) + "MB.\n" +
+      `${(totalSize / 1024 / 1024).toFixed(1)}MB.\n` +
       "**\n" +
       "** This is over the recommended maximum of 5 MB and may break your\n" +
       "** app in some browsers! See http://docs.meteor.com/#appcache\n" +
@@ -195,7 +185,4 @@ var sizeCheck = function () {
 // want cached. Otherwise, the size check warning will still print even
 // if the user excludes their large files with
 // `Meteor.AppCache.config({onlineOnly: files})`.
-Meteor.startup(function () {
-  if (! _disableSizeCheck)
-    sizeCheck();
-});
+Meteor.startup(() => ! _disableSizeCheck ? sizeCheck() : null);

@@ -1,5 +1,195 @@
 ## v.NEXT
 
+* Although Meteor does not recompile packages installed in `node_modules`
+  by default, compilation of specific npm packages (for example, to
+  support older browsers that the package author neglected) can now be
+  enabled in one of two ways:
+
+  * Clone the package repository into your application's `imports`
+    directory, make any modifications necessary, then use `npm install` to
+    link `the-package` into `node_modules`:
+    ```sh
+    meteor npm install imports/the-package
+    ```
+    Meteor will compile the contents of the package exposed via
+    `imports/the-package`, and this compiled code will be used when you
+    import `the-package` in any of the usual ways:
+    ```js
+    import stuff from "the-package"
+    require("the-package") === require("/imports/the-package")
+    import("the-package").then(...)
+    ```
+    This reuse of compiled code is the critical new feature that was added
+    in Meteor 1.6.2.
+
+  * Install the package normally with `meteor npm install the-package`,
+    then create a symbolic link *to* the installed package elsewhere in
+    your application, outside of `node_modules`:
+    ```sh
+    meteor npm install the-package
+    cd imports
+    ln -s ../node_modules/the-package .
+    ```
+    Again, Meteor will compile the contents of the package because they
+    are exposed outside of `node_modules`, and the compiled code will be
+    used whenever `the-package` is imported from `node_modules`.
+
+    > Note: this technique also works if you create symbolic links to
+      individual files, rather than linking the entire package directory.
+
+  In both cases, Meteor will compile the exposed code as if it was part of
+  your application, using whatever compiler plugins you have installed.
+  You can influence this compilation using `.babelrc` files or any other
+  techniques you would normally use to configure compilation of
+  application code. [PR #9771](https://github.com/meteor/meteor/pull/9771)
+  [Feature #6](https://github.com/meteor/meteor-feature-requests/issues/6)
+
+  > Note: since compilation of npm packages can now be enabled using the
+    techniques described above, Meteor will no longer automatically scan
+    `node_modules` directories for modules that can be compiled by
+    compiler plugins. If you have been using that functionality to import
+    compiled-to-JS modules from `node_modules`, you should start using the
+    symlinking strategy instead.
+
+* The `npm` package has been upgraded to version 5.8.0, and our
+  [fork](https://github.com/meteor/pacote/tree/v7.6.1-meteor) of its
+  `pacote` dependency has been rebased against version 7.6.1.
+
+* Applications may now specify client and server entry point modules in a
+  newly-supported `"meteor"` section of `package.json`:
+  ```js
+  "meteor": {
+    "mainModule": {
+      "client": "client/main.js",
+      "server": "server/main.js"
+    }
+  }
+  ```
+  When specified, these entry points override Meteor's default module
+  loading semantics, rendering `imports` directories unnecessary. If
+  `mainModule` is left unspecified for either client or server, the
+  default rules will apply for that architecture, as before. To disable
+  eager loading of modules on a given architecture, simply provide a
+  `mainModule` value of `false`:
+  ```js
+  "meteor": {
+    "mainModule": {
+      "client": false,
+      "server": "server/main.js"
+    }
+  }
+  ```
+  [Feature #135](https://github.com/meteor/meteor-feature-requests/issues/135)
+  [PR #9690](https://github.com/meteor/meteor/pull/9690)
+
+* In addition to `meteor.mainModule`, the `"meteor"` section of
+  `package.json` may also specify `meteor.testModule` to control which
+  test modules are loaded by `meteor test` or `meteor test --full-app`:
+  ```js
+  "meteor": {
+    "mainModule": {...},
+    "testModule": "tests.js"
+  }
+  ```
+  If your client and server test files are different, you can expand the
+  `testModule` configuration using the same syntax as `mainModule`:
+  ```js
+  "meteor": {
+    "testModule": {
+      "client": "client/tests.js",
+      "server": "server/tests.js"
+    }
+  }
+  ```
+  The same test module will be loaded whether or not you use the
+  `--full-app` option. Any tests that need to detect `--full-app` should
+  check `Meteor.isAppTest`. The module(s) specified by `meteor.testModule`
+  can import other test modules at runtime, so you can still distribute
+  test files across your codebase; just make sure you import the ones you
+  want to run. [PR #9714](https://github.com/meteor/meteor/pull/9714)
+
+* The `meteor-babel` npm package has been updated to version
+  7.0.0-beta.44.
+
+* The `reify` npm package has been updated to version 0.15.1.
+
+* The `optimism` npm package has been updated to version 0.6.3.
+
+* The `minifier-js` package has been updated to use `uglify-es` 3.3.9.
+
+* Individual Meteor `self-test`'s can now be skipped by adjusting their
+  `define` call to be prefixed by `skip`. For example,
+  `selftest.skip.define('some test', ...` will skip running "some test".
+  [PR #9579](https://github.com/meteor/meteor/pull/9579)
+
+* Mongo has been upgraded to version 3.6.3 for 64-bit systems, and 3.2.19
+  for 32-bit systems. [PR #9632](https://github.com/meteor/meteor/pull/9632)
+
+  **NOTE:** After upgrading an application to use Mongo 3.6.2, it has been
+  observed ([#9591](https://github.com/meteor/meteor/issues/9591))
+  that attempting to run that application with an older version of
+  Meteor (via `meteor --release X`), that uses an older version of Mongo, can
+  prevent the application from starting. This can be fixed by either
+  running `meteor reset`, or by repairing the Mongo database. To repair the
+  database, find the `mongod` binary on your system that lines up with the
+  Meteor release you're jumping back to, and run
+  `mongodb --dbpath your-apps-db --repair`. For example:
+  ```sh
+  ~/.meteor/packages/meteor-tool/1.6.0_1/mt-os.osx.x86_64/dev_bundle/mongodb/bin/mongod --dbpath /my-app/.meteor/local/db --repair
+  ```
+  [PR #9632](https://github.com/meteor/meteor/pull/9632)
+
+* The `mongodb` driver package has been updated from version 2.2.34 to
+  version 3.0.5. [PR #9790](https://github.com/meteor/meteor/pull/9790)
+  [Feature #268](https://github.com/meteor/meteor-feature-requests/issues/268)
+
+* The `cordova-plugin-meteor-webapp` package depended on by the Meteor
+  `webapp` package has been updated to version 1.6.0.
+  [PR #9761](https://github.com/meteor/meteor/pull/9761)
+
+* The `@babel/plugin-proposal-class-properties` plugin provided by
+  `meteor-babel` now runs with the `loose:true` option, as required by
+  other (optional) plugins like `@babel/plugin-proposal-decorators`.
+  [Issue #9628](https://github.com/meteor/meteor/issues/9628)
+  
+* The `underscore` package has been removed as a dependency from `meteor-base`.
+  This opens up the possibility of removing 14.4 kb from production bundles.
+  Since this would be a breaking change for any apps that may have been 
+  using `_` without having any packages that depend on `underscore` 
+  besides `meteor-base`, we have added an upgrader that will automatically 
+  add `underscore` to the `.meteor/packages` file of any project which 
+  lists `meteor-base`, but not `underscore`. Apps which do not require this 
+  package can safely remove it using `meteor remove underscore`.
+  [PR #9596](https://github.com/meteor/meteor/pull/9596)
+
+* Meteor's `promise` package has been updated to support
+  [`Promise.prototype.finally`](https://github.com/tc39/proposal-promise-finally).
+  [Issue 9639](https://github.com/meteor/meteor/issues/9639)
+  [PR #9663](https://github.com/meteor/meteor/pull/9663)
+
+* Assets made available via symlinks in the `public` and `private` directories
+  of an application are now copied into Meteor application bundles when
+  using `meteor build`. This means npm package assets that need to be made
+  available publicly can now be symlinked from their `node_modules` location,
+  in the `public` directory, and remain available in production bundles.
+  [Issue #7013](https://github.com/meteor/meteor/issues/7013)
+  [PR #9666](https://github.com/meteor/meteor/pull/9666)
+
+* The `facts` package has been split into `facts-base` and `facts-ui`. The
+  original `facts` package has been deprecated.
+  [PR #9629](https://github.com/meteor/meteor/pull/9629)
+
+* If the new pseudo tag `<meteor-bundled-css />` is used anywhere in the
+  `<head />` of an app, it will be replaced by the `link` to Meteor's bundled
+  CSS. If the new tag isn't used, the bundle will be placed at the top of
+  the `<head />` section as before (for backwards compatibility).
+  [Feature #24](https://github.com/meteor/meteor-feature-requests/issues/24)
+  [PR #9657](https://github.com/meteor/meteor/pull/9657)
+
+* The `meteor create` command now supports a `--minimal` option, which
+  creates an empty app (like `--bare`) with as few Meteor packages as
+  possible, to minimize client-side application size.
+
 ## v1.6.1.1, 2018-04-02
 
 * Node has been updated to version
@@ -204,8 +394,9 @@
   [comment](https://github.com/meteor/meteor/issues/6890#issuecomment-339817703)),
   because supporting the package style would have imposed an unacceptable
   runtime cost on all imports (not just those overridden by a `"browser"`
-  field). [PR #9311](https://github.com/meteor/meteor/pull/9311) [Issue
-  #6890](https://github.com/meteor/meteor/issues/6890)
+  field).
+  [PR #9311](https://github.com/meteor/meteor/pull/9311)
+  [Issue #6890](https://github.com/meteor/meteor/issues/6890)
 
 * The `Boilerplate#toHTML` method from the `boilerplate-generator` package
   has been deprecated in favor of `toHTMLAsync` (which returns a `Promise`
