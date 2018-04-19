@@ -1,37 +1,30 @@
-var createPage = require("webpage").create;
-var system = require("system");
-var platform = system.args[1] || "local";
-var platformUrl = system.env.URL + platform;
-var testUrls = [
-  // Additional application URLs can be added here to re-run tests in
-  // PhantomJS with different query parameter-based configurations.
-  platformUrl,
-];
+const puppeteer = require('puppeteer');
 
-function runNextUrl() {
-  var url = testUrls.shift();
-  if (! url) {
-    phantom.exit(0);
+async function runNextUrl(browser) {
+  const page = await browser.newPage();
+
+  page.on('console', msg => {
+    console.log(msg._text);
+  });
+
+  if (!process.env.URL) {
+    await page.close();
+    await browser.close();
+    process.exit(0);
     return;
   }
 
-  console.log("Running Meteor tests in PhantomJS... " + url);
+  await page.goto(process.env.URL);
 
-  var page = createPage();
-
-  page.onConsoleMessage = function (message) {
-    console.log(message);
-  };
-
-  page.open(url);
-
-  function poll() {
-    if (isDone(page)) {
-      var failCount = getFailCount(page);
+  async function poll() {
+    if (await isDone(page)) {
+      let failCount = await getFailCount(page);
       if (failCount > 0) {
-        phantom.exit(1);
+        await page.close();
+        await browser.close();
+        process.exit(1);
       } else {
-        page.close();
+        await page.close();
         setTimeout(runNextUrl, 1000);
       }
     } else {
@@ -42,23 +35,23 @@ function runNextUrl() {
   poll();
 }
 
-function isDone(page) {
-  return page.evaluate(function () {
-    if (typeof TEST_STATUS !== "undefined") {
+async function isDone(page) {
+  return await page.evaluate(function() {
+    if (typeof TEST_STATUS !== 'undefined') {
       return TEST_STATUS.DONE;
     }
 
-    return typeof DONE !== "undefined" && DONE;
+    return typeof DONE !== 'undefined' && DONE;
   });
 }
 
-function getFailCount(page) {
-  return page.evaluate(function () {
-    if (typeof TEST_STATUS !== "undefined") {
+async function getFailCount(page) {
+  return await page.evaluate(function() {
+    if (typeof TEST_STATUS !== 'undefined') {
       return TEST_STATUS.FAILURES;
     }
 
-    if (typeof FAILURES === "undefined") {
+    if (typeof FAILURES === 'undefined') {
       return 1;
     }
 
@@ -66,4 +59,13 @@ function getFailCount(page) {
   });
 }
 
-runNextUrl();
+async function runTests() {
+  console.log(`Running test with Puppeteer at ${process.env.URL}`);
+
+  // --no-sandbox and --disable-setuid-sandbox must be disabled for CI compatibility
+  const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+  console.log(`Using version: ${await browser.version()}`);
+  runNextUrl(browser);
+}
+
+runTests();
