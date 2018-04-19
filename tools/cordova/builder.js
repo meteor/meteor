@@ -53,7 +53,7 @@ const launchIosSizes = {
   'iphone6p_portrait': '1242x2208',
   'iphone6p_landscape': '2208x1242',
   'iphoneX_portrait': '1125x2436',
-  'iphoneX_landscape': '2436x1125', 
+  'iphoneX_landscape': '2436x1125',
   'ipad_portrait_2x': '1536x2048',
   'ipad_landscape_2x': '2048x1536',
   // Legacy
@@ -125,7 +125,7 @@ export class CordovaBuilder {
 
     // Custom elements that will be appended into config.xml's widgets
     this.custom = [];
-    
+
     // Resource files that will be appended to platform bundle and config.xml
     this.resourceFiles = [];
 
@@ -324,7 +324,11 @@ export class CordovaBuilder {
       this.configureAndCopyImages(launchAndroidSizes, platformElement.android, 'splash');
     }
 
-    this.configureAndCopyResourceFiles(this.resourceFiles, platformElement.ios, platformElement.android);
+    this.configureAndCopyResourceFiles(
+      this.resourceFiles,
+      platformElement.ios,
+      platformElement.android
+    );
 
     Console.debug('Writing new config.xml');
 
@@ -383,17 +387,25 @@ export class CordovaBuilder {
 
   configureAndCopyResourceFiles(resourceFiles, iosElement, androidElement) {
     _.each(resourceFiles, resourceFile => {
-      // copy file in cordova project root directory
+      // Copy file in cordova project root directory
       var filename = path.parse(resourceFile.src).base;
       files.copyFile(
         files.pathResolve(this.projectContext.projectDir, resourceFile.src),
         files.pathJoin(this.projectRoot, filename));
-      // and entry in config.xml
-      if(!resourceFile.platform  || (resourceFile.platform && resourceFile.platform== "android")) {
-        androidElement.element('resource-file', { src : resourceFile.src, target : resourceFile.target});
+      // And entry in config.xml
+      if (!resourceFile.platform ||
+          (resourceFile.platform && resourceFile.platform === "android")) {
+        androidElement.element('resource-file', {
+          src: resourceFile.src,
+          target: resourceFile.target
+        });
       }
-      if(!resourceFile.platform  || (resourceFile.platform && resourceFile.platform== "ios")) {
-        iosElement.element('resource-file', { src : resourceFile.src, target : resourceFile.target});
+      if (!resourceFile.platform ||
+          (resourceFile.platform && resourceFile.platform === "ios")) {
+        iosElement.element('resource-file', {
+          src: resourceFile.src,
+          target: resourceFile.target
+        });
       }
     });
   }
@@ -703,7 +715,7 @@ configuration. The key may be deprecated.`);
      *
      * `App.appendToConfig('<any-xml-content/>');`
      *
-     * @param  {String} element The XML you want to include 
+     * @param  {String} element The XML you want to include
      * @memberOf App
      */
     appendToConfig: function (xml) {
@@ -720,9 +732,9 @@ configuration. The key may be deprecated.`);
      */
     addResourceFile: function (src, target, platform) {
       builder.resourceFiles.push({
-        src : src,
+        src: src,
         target: target,
-        platform : platform
+        platform: platform
       });
     }
   };
