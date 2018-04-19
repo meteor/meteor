@@ -2179,6 +2179,7 @@ main.registerCommand({
     slow: { type: Boolean },
     galaxy: { type: Boolean },
     browserstack: { type: Boolean },
+    phantom: { type: Boolean },
     // Indicates whether these self-tests are running headless, e.g. in a
     // continuous integration testing environment, where visual niceties
     // like progress bars and spinners are unimportant.
@@ -2269,6 +2270,7 @@ main.registerCommand({
 
   const clients = {
     puppeteer: true, // Puppeteer is always enabled.
+    phantom: options.phantom,
     browserstack: options.browserstack,
   };
 
