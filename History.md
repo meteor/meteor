@@ -175,6 +175,10 @@
   [Feature #24](https://github.com/meteor/meteor-feature-requests/issues/24)
   [PR #9657](https://github.com/meteor/meteor/pull/9657)
 
+* Meteor's test runners have been updated to use headless Chrome instead for 
+browser tests. Test can still be run using PhantomJS by passing --phantom 
+to the self test command. 
+
 ## v1.6.1.1, 2018-04-02
 
 * Node has been updated to version
