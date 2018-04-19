@@ -5,6 +5,8 @@ export class ServerSink {
     this.head = "";
     this.body = "";
     this.htmlById = Object.create(null);
+    this.headHtmlByTag = [];
+    this.bodyHtmlById = [];
     this.maybeMadeChanges = false;
     this.statusCode = null;
     this.responseHeaders = {};
@@ -31,6 +33,44 @@ export class ServerSink {
   renderIntoElementById(id, html) {
     this.htmlById[id] = "";
     this.appendToElementById(id, html);
+  }
+
+  updateHeadElementByTag(
+    tag, 
+    value, 
+    updateType = "replace", 
+    updateAttribute, 
+    searchAttribute, 
+    searchAttributeValue
+  ) {
+    if (tag) {
+      this.headHtmlByTag.push({
+        tag,
+        value,
+        updateType,
+        updateAttribute,
+        searchAttribute,
+        searchAttributeValue
+      });
+      this.maybeMadeChanges = true;
+    }
+  }
+
+  updateBodyElementById(
+    id, 
+    value, 
+    updateType = "replace", 
+    updateAttribute
+  ) {
+    if (id) {
+      this.bodyHtmlById.push({
+        id, 
+        value, 
+        updateType, 
+        updateAttribute
+      });
+      this.maybeMadeChanges = true;
+    }
   }
 
   redirect(location, code = 301) {
