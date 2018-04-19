@@ -177,7 +177,11 @@ MongoConnection = function (url, options) {
 
         // Use the internal `s` object to get the database name from the
         // connection URL (parsed by the driver).
-        var db = client.db(client.s.options.dbName);
+        var db = client.db(
+          client.s.databaseName ||
+          // An older way of getting the name, supported as a fallback.
+          client.s.options.dbName
+        );
 
         // First, figure out what the current primary is, if any.
         if (db.serverConfig.isMasterDoc) {
