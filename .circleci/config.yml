@@ -119,9 +119,8 @@ jobs:
             - v1-dev-bundle-cache-
       - restore_cache:
           keys:
-            - v1-other-deps-cache-{{ .Branch }}-{{ .Revision }}
-            - v1-other-deps-cache-{{ .Branch }}
-            - v1-other-deps-cache-
+            - v2-other-deps-cache-{{ .Branch }}-{{ .Revision }}
+            - v2-other-deps-cache-{{ .Branch }}-
       - restore_cache:
           keys: 
             - v1-test-groups-{{ .Branch }}
@@ -697,7 +696,7 @@ jobs:
           paths:
             - "dev_bundle"
       - save_cache:
-          key: v1-other-deps-cache-{{ .Branch }}-{{ .Revision }}
+          key: v2-other-deps-cache-{{ .Branch }}-{{ .Revision }}
           paths:
             - ".babel-cache"
             - ".meteor"
