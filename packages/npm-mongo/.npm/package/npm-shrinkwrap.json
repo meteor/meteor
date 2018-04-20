@@ -7,14 +7,14 @@
       "integrity": "sha512-D8zmlb46xfuK2gGvKmUjIklQEouN2nQ0LEHHeZ/NoHM2LDiMk2EYzZ5Ntw/Urk+bgMDosOZxaRzXxvhI5TcAVQ=="
     },
     "mongodb": {
-      "version": "3.0.5",
-      "resolved": "https://registry.npmjs.org/mongodb/-/mongodb-3.0.5.tgz",
-      "integrity": "sha512-8ioTyyc8tkNwZCTDa1FPWvmpJFfvE484DnugC8KpVrw4AKAE03OOAlORl2yYTNtz3TX4Ab7FRo00vzgexB/67A=="
+      "version": "3.0.7",
+      "resolved": "https://registry.npmjs.org/mongodb/-/mongodb-3.0.7.tgz",
+      "integrity": "sha512-n/14kMJEoARXz1qhpNPhUocqy+z5130jhqgEIX1Tsl8UVpHrndQ8et+VmgC4yPK/I8Tcgc93JEMQCHTekBUnNA=="
     },
     "mongodb-core": {
-      "version": "3.0.5",
-      "resolved": "https://registry.npmjs.org/mongodb-core/-/mongodb-core-3.0.5.tgz",
-      "integrity": "sha512-4A1nx/xAU5d/NPICjiyzVxzNrIdJQQsYRe3xQkV1O638t+fHHfAOLK+SQagqGnu1m0aeSxb1ixp/P0FGSQWIGA=="
+      "version": "3.0.7",
+      "resolved": "https://registry.npmjs.org/mongodb-core/-/mongodb-core-3.0.7.tgz",
+      "integrity": "sha512-z6YufO7s40wLiv2ssFshqoLS4+Kf+huhHq6KZ7gDArsKNzXYjAwTMnhEIJ9GQ8fIfBGs5tBLNPfbIDoCKGPmOw=="
     },
     "require_optional": {
       "version": "1.0.1",

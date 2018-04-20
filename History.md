@@ -140,7 +140,8 @@
   [PR #9632](https://github.com/meteor/meteor/pull/9632)
 
 * The `mongodb` driver package has been updated from version 2.2.34 to
-  version 3.0.5. [PR #9790](https://github.com/meteor/meteor/pull/9790)
+  version 3.0.7. [PR #9790](https://github.com/meteor/meteor/pull/9790)
+  [PR #9831](https://github.com/meteor/meteor/pull/9831)
   [Feature #268](https://github.com/meteor/meteor-feature-requests/issues/268)
 
 * The `cordova-plugin-meteor-webapp` package depended on by the Meteor
