@@ -22,11 +22,11 @@ Meteor._debug = function(...args) {
     return;
   }
 
-  if (args.length === 0) { // IE Companion breaks otherwise
+  if (args.length === 0) {
+    // IE Companion breaks otherwise
     // IE10 PP4 requires at least one argument
     console.log('');
-  }
-  else {
+  } else {
     // IE doesn't have console.log.apply, it's not a real Object.
     // http://stackoverflow.com/questions/5538972/console-log-apply-not-working-in-ie9
     // http://patik.com/blog/complete-cross-browser-console-log/
@@ -49,15 +49,17 @@ Meteor._debug = function(...args) {
       } else {
         console.log.apply(console, args);
       }
-    }
-    else if (typeof Function.prototype.bind === 'function') {
+    } else if (typeof Function.prototype.bind === 'function') {
       // IE9
       const log = Function.prototype.bind.call(console.log, console);
       log.apply(console, args);
-    }
-    else {
+    } else {
       // IE8
-      Function.prototype.call.call(console.log, console, Array.prototype.slice.call(args));
+      Function.prototype.call.call(
+        console.log,
+        console,
+        Array.prototype.slice.call(args)
+      );
     }
   }
 };
@@ -73,4 +75,3 @@ Meteor._suppress_log = function(count) {
 Meteor._suppressed_log_expected = function() {
   return suppress !== 0;
 };
-
