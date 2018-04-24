@@ -86,7 +86,7 @@ build_machine_environment: &build_machine_environment
     # These will be evaled before each command.
     PRE_TEST_COMMANDS: |-
         ulimit -c unlimited; # Set core dump size as Ubuntu 14.04 lacks prlimit.
-        ulimit -n 4096; # CircleCI default is soft 1024, hard 4096. Take it all.
+        ulimit -a # Display all ulimit settings for transparency.
 
     # Enable the Garbage Collection `gc` object to be exposed so we can try
     # to our own, hopefully more graceful, technique.
