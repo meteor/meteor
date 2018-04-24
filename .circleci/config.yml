@@ -88,10 +88,6 @@ build_machine_environment: &build_machine_environment
         ulimit -c unlimited; # Set core dump size as Ubuntu 14.04 lacks prlimit.
         ulimit -a # Display all ulimit settings for transparency.
 
-    # Enable the Garbage Collection `gc` object to be exposed so we can try
-    # to our own, hopefully more graceful, technique.
-    TOOL_NODE_FLAGS: --expose-gc
-
     # This is only to make Meteor self-test not remind us that we can set
     # this argument for self-tests.
     SELF_TEST_TOOL_NODE_FLAGS: " "
