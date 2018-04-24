@@ -145,7 +145,7 @@ var Db = function (dbFile, options) {
   // So if any of the filesystems are a windows filesystem (e.g. WSL)
   // Then we will run with TRUNCATE mode.
   self._retry(function () {
-    if(files.isWindowsLikeFilesystem()) {
+    if (files.isWindowsLikeFilesystem()) {
       self._execute('PRAGMA journal_mode=TRUNCATE');
     } else {
       self._execute('PRAGMA journal_mode=WAL');
@@ -249,9 +249,9 @@ _.extend(Db.prototype, {
       } catch (err) {
         var retry = false;
         // Grr... doesn't expose error code; must string-match
-        if (err.message
-            && (   err.message == "SQLITE_BUSY: database is locked"
-                || err.message == "SQLITE_BUSY: cannot commit transaction - SQL statements in progress")) {
+        if (err.message &&
+            (err.message === "SQLITE_BUSY: database is locked" ||
+             err.message === "SQLITE_BUSY: cannot commit transaction - SQL statements in progress")) {
           if (attempt < BUSY_RETRY_ATTEMPTS) {
             retry = true;
           }
