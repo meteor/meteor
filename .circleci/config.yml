@@ -41,7 +41,7 @@ run_log_mem_use: &run_log_mem_use
     # Log memory usage throughout entire build.
     MEMUSELOG=/tmp/memuse.txt /bin/bash -c '\
         while true; do\
-          ps -u $USER -e -o pid,%cpu,%mem,rss:10,vsz:10,command:20 \
+          ps -e -o user,%cpu,%mem,rss:10,vsz:10,command:20 \
             --sort=-%mem >> $MEMUSELOG; \
           echo "----------" >> $MEMUSELOG; \
           sleep 1; \
