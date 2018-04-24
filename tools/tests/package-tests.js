@@ -190,16 +190,27 @@ selftest.define("add debugOnly and prodOnly packages", [], function () {
   s.cd("myapp");
   s.set("METEOR_OFFLINE_CATALOG", "t");
 
-    // Add a debugOnly package. It should work during a normal run, but print
+  // Add a debugOnly package. It should work during a normal run, but print
   // nothing in production mode.
   run = s.run("add", "debug-only");
   run.waitSecs(30);
   run.match("debug-only");
   run.expectExit(0);
 
-  s.mkdir("server");
-  s.write("server/exit-test.js",
-          "process.exit(global.DEBUG_ONLY_LOADED ? 234 : 235)");
+  function onStartup(property) {
+    s.mkdir("server");
+    s.write("server/exit-test.js", [
+      "Meteor.startup(() => {",
+      "  console.log('Meteor.isDevelopment', Meteor.isDevelopment);",
+      "  console.log('Meteor.isProduction', Meteor.isProduction);",
+      `  console.log('${property}', global.${property});`,
+      `  process.exit(global.${property} ? 234 : 235);`,
+      "});",
+      ""
+    ].join("\n"));
+  }
+
+  onStartup("DEBUG_ONLY_LOADED");
 
   run = s.run("--once");
   run.waitSecs(30);
@@ -214,9 +225,7 @@ selftest.define("add debugOnly and prodOnly packages", [], function () {
   run.match("prod-only");
   run.expectExit(0);
 
-  s.mkdir("server");
-  s.write("server/exit-test.js", // overwrite
-          "process.exit(global.PROD_ONLY_LOADED ? 234 : 235)");
+  onStartup("PROD_ONLY_LOADED");
 
   run = s.run("--once");
   run.waitSecs(30);
