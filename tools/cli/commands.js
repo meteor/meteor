@@ -422,7 +422,7 @@ function doRunCommand(options) {
     settingsFile: options.settings,
     buildOptions: {
       minifyMode: options.production ? 'production' : 'development',
-      buildMode: options.production && 'production',
+      buildMode: options.production ? 'production' : 'development',
       webArchs: webArchs
     },
     rootUrl: process.env.ROOT_URL,
