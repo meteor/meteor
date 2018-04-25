@@ -245,10 +245,22 @@ Function Add-Mongo {
     $shell.Namespace("$DIR\mongodb").copyhere($item, 0x14) # 0x10 - overwrite, 0x4 - no dialog
   }
 
-  Write-Host "Putting MongoDB mongod.exe in \mongodb\bin\" -ForegroundColor Magenta
+  Write-Host "Putting MongoDB mongod.exe in mongodb\bin" -ForegroundColor Magenta
   cp "$DIR\mongodb\$mongo_name\bin\mongod.exe" $DIR\mongodb\bin
-  Write-Host "Putting MongoDB mongo.exe in \mongodb\bin\" -ForegroundColor Magenta
+  Write-Host "Putting MongoDB mongo.exe in mongodb\bin" -ForegroundColor Magenta
   cp "$DIR\mongodb\$mongo_name\bin\mongo.exe" $DIR\mongodb\bin
+
+  # https://jira.mongodb.org/browse/SERVER-19086
+  $libeay32dll = "$DIR\mongodb\$mongo_name\bin\libeay32.dll"
+  if (Test-Path $libeay32dll) {
+    Write-Host "Putting MongoDB libeay32.dll in mongodb\bin" -ForegroundColor Magenta
+    cp $libeay32dll $DIR\mongodb\bin
+  }
+  $ssleay32dll = "$DIR\mongodb\$mongo_name\bin\ssleay32.dll"
+  if (Test-Path $ssleay32dll) {
+    Write-Host "Putting MongoDB ssleay32.dll in mongodb\bin" -ForegroundColor Magenta
+    cp $ssleay32dll $DIR\mongodb\bin
+  }
 
   Write-Host "Removing the old Mongo zip..." -ForegroundColor Magenta
   rm -Recurse -Force $mongo_zip
