@@ -122,10 +122,10 @@
   `selftest.skip.define('some test', ...` will skip running "some test".
   [PR #9579](https://github.com/meteor/meteor/pull/9579)
 
-* Mongo has been upgraded to version 3.6.3 for 64-bit systems, and 3.2.19
+* Mongo has been upgraded to version 3.6.4 for 64-bit systems, and 3.2.19
   for 32-bit systems. [PR #9632](https://github.com/meteor/meteor/pull/9632)
 
-  **NOTE:** After upgrading an application to use Mongo 3.6.2, it has been
+  **NOTE:** After upgrading an application to use Mongo 3.6.4, it has been
   observed ([#9591](https://github.com/meteor/meteor/issues/9591))
   that attempting to run that application with an older version of
   Meteor (via `meteor --release X`), that uses an older version of Mongo, can
