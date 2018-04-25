@@ -8,6 +8,11 @@ const hasOwn = Object.prototype.hasOwnProperty;
 // in a generic way that could work for other browsers as well.
 const browserAliases = {
   chrome: ["chromeMobile"],
+  // If a call to setMinimumBrowserVersions specifies Edge 12 as a minimum
+  // version, that means no version of Internet Explorer pre-Edge should
+  // be classified as modern. This edge:["ie"] alias effectively enforces
+  // that logic, because there is no IE12. #9818 #9839
+  edge: ["ie"],
 };
 
 // Expand the given minimum versions by reusing chrome versions for

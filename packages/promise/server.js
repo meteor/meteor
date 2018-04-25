@@ -11,6 +11,9 @@ require("meteor-promise").makeCompatible(
 require("meteor/modern-browsers").setMinimumBrowserVersions({
   chrome: 32,
   edge: 12,
+  // Since there is no IE11, this effectively excludes Internet Explorer
+  // (pre-Edge) from the modern classification. #9818 #9839
+  ie: 12,
   firefox: 29,
   mobile_safari: 8,
   opera: 20,
