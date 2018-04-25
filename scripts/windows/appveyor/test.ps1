@@ -4,6 +4,8 @@ $jUnit = Join-Path $env:TEMP 'self-test-junit-0.xml'
 $tests = @(
   '^assets'
   '^autoupdate'
+  '^create$'
+  'mongo'
   '^dynamic import.*development'
 ) -Join '|'
 
