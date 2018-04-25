@@ -102,7 +102,7 @@
   want to run. [PR #9714](https://github.com/meteor/meteor/pull/9714)
 
 * The `meteor-babel` npm package has been updated to version
-  7.0.0-beta.44.
+  7.0.0-beta.46.
 
 * The `reify` npm package has been updated to version 0.15.1.
 

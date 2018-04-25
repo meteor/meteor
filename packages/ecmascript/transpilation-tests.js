@@ -70,11 +70,11 @@ class Bar extends Foo {}
 });
 
 Tinytest.add("ecmascript - transpilation - helpers - bind", (test) => {
-  const output = transform(`
-  var foo = new Foo(...oneTwo, 3);
-`);
+  const output = transform(
+    "var foo = new Foo(...oneTwo, 3);"
+  );
 
-  test.isTrue(output.match(/\.bind\b/));
+  test.isTrue(output.match(/@babel\/runtime\/helpers\/construct\b/));
 });
 
 Tinytest.add("ecmascript - transpilation - helpers - extends", (test) => {
