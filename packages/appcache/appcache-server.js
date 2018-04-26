@@ -1,4 +1,5 @@
 import { Meteor } from 'meteor/meteor'
+import { isModern } from "meteor/modern-browsers";
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
@@ -37,12 +38,11 @@ Meteor.AppCache = {
 
 const browserDisabled = request => disabledBrowsers[request.browser.name];
 
-const isDynamic = resource =>
+const shouldSkip = resource =>
   resource.type === 'dynamic js' ||
     (resource.type === 'json' &&
-     // TODO Update this test with PR #9439.
-     resource.url.startsWith('/dynamic/') &&
-     resource.url.endsWith('.map'));
+     (resource.url.endsWith('.map') ||
+      resource.url.endsWith('.stats.json?meteor_js_resource=true')));
 
 WebApp.addHtmlAttributeHook(request =>
   browserDisabled(request) ?
@@ -55,6 +55,8 @@ WebApp.connectHandlers.use((req, res, next) => {
     return next();
   }
 
+  const request = WebApp.categorizeRequest(req);
+
   // Browsers will get confused if we unconditionally serve the
   // manifest and then disable the app cache for that browser.  If
   // the app cache had previously been enabled for a browser, it
@@ -65,7 +67,7 @@ WebApp.connectHandlers.use((req, res, next) => {
   // use").  Returning a 404 gets the browser to really turn off the
   // app cache.
 
-  if (browserDisabled(WebApp.categorizeRequest(req))) {
+  if (browserDisabled(request)) {
     res.writeHead(404);
     res.end();
     return;
@@ -99,11 +101,14 @@ WebApp.connectHandlers.use((req, res, next) => {
 
   manifest += "CACHE:\n";
   manifest += "/\n";
-  WebApp.clientPrograms[WebApp.defaultArch].manifest.forEach(resource => {
+  const reqArch = isModern(request.browser) ? 'web.browser' : 'web.browser.legacy';
+  WebApp.clientPrograms[reqArch].manifest.forEach(resource => {
+    const {url} = resource
     if (resource.where === 'client' &&
-        ! RoutePolicy.classify(resource.url) &&
-        ! isDynamic(resource)) {
-      manifest += resource.url;
+        ! RoutePolicy.classify(url) &&
+        ! shouldSkip(resource)) {
+      manifest += url;
+
       // If the resource is not already cacheable (has a query
       // parameter, presumably with a hash or version of some sort),
       // put a version with a hash in the cache.
@@ -129,12 +134,13 @@ WebApp.connectHandlers.use((req, res, next) => {
   // request to the server and have the asset served from cache by
   // specifying the full URL with hash in their code (manually, with
   // some sort of URL rewriting helper)
-  WebApp.clientPrograms[WebApp.defaultArch].manifest.forEach(resource => {
+  WebApp.clientPrograms[reqArch].manifest.forEach(resource => {
+    const {url} = resource
     if (resource.where === 'client' &&
-        ! RoutePolicy.classify(resource.url) &&
+        ! RoutePolicy.classify(url) &&
         ! resource.cacheable &&
-        ! isDynamic(resource)) {
-      manifest += `${resource.url} ${resource.url}?${resource.hash}\n`;
+        ! shouldSkip(resource)) {
+      manifest += `${url} ${url}?${resource.hash}\n`;
     }
   });
 
@@ -158,12 +164,14 @@ WebApp.connectHandlers.use((req, res, next) => {
   return res.end(body);
 });
 
-const sizeCheck = () => {
+const sizeCheck = () => WebApp.connectHandlers.use((req, res, next) => {
   let totalSize = 0;
-  WebApp.clientPrograms[WebApp.defaultArch].manifest.forEach(resource => {
+  const request = WebApp.categorizeRequest(req);
+  const reqArch = isModern(request.browser) ? 'web.browser' : 'web.browser.legacy';
+  WebApp.clientPrograms[reqArch].manifest.forEach(resource => {
     if (resource.where === 'client' &&
         ! RoutePolicy.classify(resource.url) &&
-        ! isDynamic(resource)) {
+        ! shouldSkip(resource)) {
       totalSize += resource.size;
     }
   });
@@ -178,7 +186,7 @@ const sizeCheck = () => {
       "** for more information and fixes.\n"
     );
   }
-};
+});
 
 // Run the size check after user code has had a chance to run. That way,
 // the size check can take into account files that the user does not
