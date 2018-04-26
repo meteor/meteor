@@ -186,6 +186,8 @@ Currently, Meteor doesn't have a separate build step for post-processing CSS, so
 
 <h3 id="juliancwirko-postcss">juliancwirko:postcss</h3>
 
+>Note: This package is no longer actively maintained, therefore compatibility with newer versions of Meteor is not guaranteed. If you encouter problems with this, please let us know by [opening an issue on the Guide](https://github.com/meteor/guide/issues).
+
 Use the package [juliancwirko:postcss](https://atmospherejs.com/juliancwirko/postcss) to your app to enable PostCSS for your Meteor app. To do so, we remove the standard CSS minifier and replace it with the postcss package:
 
 ```
