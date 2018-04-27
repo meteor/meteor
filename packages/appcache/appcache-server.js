@@ -177,33 +177,37 @@ function eachResource(request, callback) {
   WebApp.clientPrograms[arch].manifest.forEach(callback);
 }
 
-const sizeCheck = () => WebApp.connectHandlers.use((req, res, next) => {
-  let totalSize = 0;
+function sizeCheck() {
+  [ // Check size of each known architecture independently.
+    "web.browser",
+    "web.browser.legacy",
+  ].forEach(arch => {
+    let totalSize = 0;
 
-  eachResource(req, resource => {
-    if (resource.where === 'client' &&
-        ! RoutePolicy.classify(resource.url) &&
-        ! shouldSkip(resource)) {
-      totalSize += resource.size;
+    WebApp.clientPrograms[arch].manifest.forEach(resource => {
+      if (resource.where === 'client' &&
+          ! RoutePolicy.classify(resource.url) &&
+          ! shouldSkip(resource)) {
+        totalSize += resource.size;
+      }
+    });
+
+    if (totalSize > 5 * 1024 * 1024) {
+      Meteor._debug([
+        "** You are using the appcache package but the total size of the",
+        `** cached resources is ${(totalSize / 1024 / 1024).toFixed(1)}MB.`,
+        "**",
+        "** This is over the recommended maximum of 5MB and may break your",
+        "** app in some browsers! See http://docs.meteor.com/#appcache",
+        "** for more information and fixes."
+      ].join("\n"));
     }
   });
-
-  if (totalSize > 5 * 1024 * 1024) {
-    Meteor._debug(
-      "** You are using the appcache package but the total size of the\n" +
-      "** cached resources is " +
-      `${(totalSize / 1024 / 1024).toFixed(1)}MB.\n` +
-      "**\n" +
-      "** This is over the recommended maximum of 5 MB and may break your\n" +
-      "** app in some browsers! See http://docs.meteor.com/#appcache\n" +
-      "** for more information and fixes.\n"
-    );
-  }
-});
+}
 
 // Run the size check after user code has had a chance to run. That way,
 // the size check can take into account files that the user does not
 // want cached. Otherwise, the size check warning will still print even
 // if the user excludes their large files with
 // `Meteor.AppCache.config({onlineOnly: files})`.
-Meteor.startup(() => ! _disableSizeCheck ? sizeCheck() : null);
+Meteor.startup(() => _disableSizeCheck || sizeCheck());
