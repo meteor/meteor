@@ -27,6 +27,8 @@ var LONG_SOCKET_TIMEOUT = 120*1000;
 export const WebApp = {};
 export const WebAppInternals = {};
 
+const hasOwn = Object.prototype.hasOwnProperty;
+
 // backwards compat to 2.0 of connect
 connect.basicAuth = basicAuth;
 
@@ -489,8 +491,20 @@ function runWebAppServer() {
 
   WebAppInternals.reloadClientPrograms = function () {
     syncQueue.runTask(function() {
-      staticFiles = {};
+      staticFiles = Object.create(null);
+
       var generateClientProgram = function (clientPath, arch) {
+        function addStaticFile(path, item) {
+          // If there are duplicate static file paths, always let the
+          // web.browser item win, and otherwise avoid overwriting the
+          // first instance of the item (which typically will be the
+          // web.browser item, but let's not take any risks).
+          if (arch === "web.browser" ||
+              ! hasOwn.call(staticFiles, path)) {
+            staticFiles[path] = item;
+          }
+        }
+
         // read the control for the client we'll be serving up
         var clientJsonPath = pathJoin(__meteor_bootstrap__.serverDir,
                                    clientPath);
@@ -506,22 +520,22 @@ function runWebAppServer() {
         var manifest = clientJson.manifest;
         _.each(manifest, function (item) {
           if (item.url && item.where === "client") {
-            staticFiles[getItemPathname(item.url)] = {
+            addStaticFile(getItemPathname(item.url), {
               absolutePath: pathJoin(clientDir, item.path),
               cacheable: item.cacheable,
               hash: item.hash,
               // Link from source to its map
               sourceMapUrl: item.sourceMapUrl,
               type: item.type
-            };
+            });
 
             if (item.sourceMap) {
               // Serve the source map too, under the specified URL. We assume all
               // source maps are cacheable.
-              staticFiles[getItemPathname(item.sourceMapUrl)] = {
+              addStaticFile(getItemPathname(item.sourceMapUrl), {
                 absolutePath: pathJoin(clientDir, item.sourceMap),
                 cacheable: true
-              };
+              });
             }
           }
         });
@@ -547,12 +561,12 @@ function runWebAppServer() {
         const manifestUrl = manifestUrlPrefix +
           getItemPathname("/manifest.json");
 
-        staticFiles[manifestUrl] = {
+        addStaticFile(manifestUrl, {
           content: JSON.stringify(program),
           cacheable: false,
           hash: program.version,
           type: "json"
-        };
+        });
       };
 
       try {
