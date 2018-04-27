@@ -21,7 +21,7 @@ if (process.env.METEOR_SETTINGS) {
   try {
     Meteor.settings = JSON.parse(process.env.METEOR_SETTINGS);
   } catch (e) {
-    throw new Error("METEOR_SETTINGS are not valid JSON: " + process.env.METEOR_SETTINGS);
+    throw new Error("METEOR_SETTINGS are not valid JSON.");
   }
 }
 
