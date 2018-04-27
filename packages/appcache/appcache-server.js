@@ -1,5 +1,6 @@
 import { Meteor } from 'meteor/meteor'
 import { isModern } from "meteor/modern-browsers";
+import { WebApp } from "meteor/webapp";
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
@@ -101,9 +102,10 @@ WebApp.connectHandlers.use((req, res, next) => {
 
   manifest += "CACHE:\n";
   manifest += "/\n";
-  const reqArch = isModern(request.browser) ? 'web.browser' : 'web.browser.legacy';
-  WebApp.clientPrograms[reqArch].manifest.forEach(resource => {
-    const {url} = resource
+
+  eachResource(request, resource => {
+    const { url } = resource;
+
     if (resource.where === 'client' &&
         ! RoutePolicy.classify(url) &&
         ! shouldSkip(resource)) {
@@ -134,8 +136,8 @@ WebApp.connectHandlers.use((req, res, next) => {
   // request to the server and have the asset served from cache by
   // specifying the full URL with hash in their code (manually, with
   // some sort of URL rewriting helper)
-  WebApp.clientPrograms[reqArch].manifest.forEach(resource => {
-    const {url} = resource
+  eachResource(request, resource => {
+    const { url } = resource;
     if (resource.where === 'client' &&
         ! RoutePolicy.classify(url) &&
         ! resource.cacheable &&
@@ -164,17 +166,28 @@ WebApp.connectHandlers.use((req, res, next) => {
   return res.end(body);
 });
 
+function eachResource(request, callback) {
+  const browser = request.browser ||
+    WebApp.categorizeRequest(request).browser;
+
+  const arch = isModern(browser)
+    ? "web.browser"
+    : "web.browser.legacy";
+
+  WebApp.clientPrograms[arch].manifest.forEach(callback);
+}
+
 const sizeCheck = () => WebApp.connectHandlers.use((req, res, next) => {
   let totalSize = 0;
-  const request = WebApp.categorizeRequest(req);
-  const reqArch = isModern(request.browser) ? 'web.browser' : 'web.browser.legacy';
-  WebApp.clientPrograms[reqArch].manifest.forEach(resource => {
+
+  eachResource(req, resource => {
     if (resource.where === 'client' &&
         ! RoutePolicy.classify(resource.url) &&
         ! shouldSkip(resource)) {
       totalSize += resource.size;
     }
   });
+
   if (totalSize > 5 * 1024 * 1024) {
     Meteor._debug(
       "** You are using the appcache package but the total size of the\n" +
