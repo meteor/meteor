@@ -15,6 +15,7 @@ node_js:
   - 8
   - 6
   - 4
+  - 10
 before_install:
   - npm i -g npm@^5.3.0
   - npm -v
