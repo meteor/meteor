@@ -422,7 +422,10 @@ function checkModernAndLegacyUrls(path, test) {
     path = "/" + path;
   }
   test(getUrl("http://localhost:3000" + path));
-  test(getUrl("http://localhost:3000/__browser.legacy" + path));
+  // Asset URLs are no longer prefixed with /__browser.legacy because the
+  // developer has full control over the path where an asset is served, so
+  // there's not much value in serving a legacy version of every asset.
+  // test(getUrl("http://localhost:3000/__browser.legacy" + path));
 }
 
 // Test that compiler plugins can add static assets. Also tests `filenames`
@@ -449,7 +452,7 @@ selftest.define("compiler plugins - compiler addAsset", () => {
 
 // Test that a package can have a single file that is both source code and an
 // asset
-selftest.skip.define("compiler plugins - addAssets", () => {
+selftest.define("compiler plugins - addAssets", () => {
   const s = new Sandbox({ fakeMongo: true });
 
   s.createApp('myapp', 'compiler-plugin-asset-and-source');
