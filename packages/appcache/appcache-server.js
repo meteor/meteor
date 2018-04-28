@@ -39,6 +39,9 @@ Meteor.AppCache = {
 
 const browserDisabled = request => disabledBrowsers[request.browser.name];
 
+// Cache of previously computed app.manifest files.
+const manifestCache = new Map;
+
 const shouldSkip = resource =>
   resource.type === 'dynamic js' ||
     (resource.type === 'json' &&
@@ -74,6 +77,38 @@ WebApp.connectHandlers.use((req, res, next) => {
     return;
   }
 
+  const cacheInfo = {
+    modern: isModern(request.browser),
+  };
+
+  cacheInfo.arch = cacheInfo.modern
+    ? "web.browser"
+    : "web.browser.legacy";
+
+  cacheInfo.clientHash = WebApp.clientHash(cacheInfo.arch);
+
+  if (Package.autoupdate) {
+    const version = Package.autoupdate.Autoupdate.autoupdateVersion;
+    if (version !== cacheInfo.clientHash) {
+      cacheInfo.autoupdateVersion = version;
+    }
+  }
+
+  const cacheKey = JSON.stringify(cacheInfo);
+
+  if (! manifestCache.has(cacheKey)) {
+    manifestCache.set(cacheKey, computeManifest(cacheInfo));
+  }
+
+  const manifest = manifestCache.get(cacheKey);
+
+  res.setHeader('Content-Type', 'text/cache-manifest');
+  res.setHeader('Content-Length', manifest.length);
+
+  return res.end(manifest);
+});
+
+function computeManifest(cacheInfo) {
   let manifest = "CACHE MANIFEST\n\n";
 
   // After the browser has downloaded the app files from the server and
@@ -83,19 +118,15 @@ WebApp.connectHandlers.use((req, res, next) => {
   //
   // So to ensure that the client updates if client resources change,
   // include a hash of client resources in the manifest.
-
-  manifest += `# ${WebApp.clientHash()}\n`;
+  manifest += `# ${cacheInfo.clientHash}\n`;
 
   // When using the autoupdate package, also include
   // AUTOUPDATE_VERSION.  Otherwise the client will get into an
   // infinite loop of reloads when the browser doesn't fetch the new
   // app HTML which contains the new version, and autoupdate will
   // reload again trying to get the new code.
-
-  if (Package.autoupdate) {
-    const version = Package.autoupdate.Autoupdate.autoupdateVersion;
-    if (version !== WebApp.clientHash())
-      manifest += `# ${version}\n`;
+  if (cacheInfo.autoupdateVersion) {
+    manifest += `# ${cacheInfo.autoupdateVersion}\n`;
   }
 
   manifest += "\n";
@@ -103,32 +134,34 @@ WebApp.connectHandlers.use((req, res, next) => {
   manifest += "CACHE:\n";
   manifest += "/\n";
 
-  eachResource(request, resource => {
+  eachResource(cacheInfo, resource => {
     const { url } = resource;
 
-    if (resource.where === 'client' &&
-        ! RoutePolicy.classify(url) &&
-        ! shouldSkip(resource)) {
-      manifest += url;
-
-      // If the resource is not already cacheable (has a query
-      // parameter, presumably with a hash or version of some sort),
-      // put a version with a hash in the cache.
-      //
-      // Avoid putting a non-cacheable asset into the cache, otherwise
-      // the user can't modify the asset until the cache headers
-      // expire.
-      if (!resource.cacheable)
-        manifest += `?${resource.hash}`;
-
-      manifest += "\n";
+    if (resource.where !== 'client' ||
+        RoutePolicy.classify(url) ||
+        shouldSkip(resource)) {
+      return;
     }
+
+    manifest += url;
+
+    // If the resource is not already cacheable (has a query parameter,
+    // presumably with a hash or version of some sort), put a version with
+    // a hash in the cache.
+    //
+    // Avoid putting a non-cacheable asset into the cache, otherwise the
+    // user can't modify the asset until the cache headers expire.
+    if (! resource.cacheable) {
+      manifest += `?${resource.hash}`;
+    }
+
+    manifest += "\n";
   });
   manifest += "\n";
 
   manifest += "FALLBACK:\n";
   manifest += "/ /\n";
-  eachResource(request, (resource, arch, prefix) => {
+  eachResource(cacheInfo, (resource, arch, prefix) => {
     const { url } = resource;
 
     if (resource.where !== 'client' ||
@@ -177,23 +210,13 @@ WebApp.connectHandlers.use((req, res, next) => {
   manifest += "*\n";
 
   // content length needs to be based on bytes
-  const body = Buffer.from(manifest);
+  return Buffer.from(manifest, "utf8");
+}
 
-  res.setHeader('Content-Type', 'text/cache-manifest');
-  res.setHeader('Content-Length', body.length);
-  return res.end(body);
-});
-
-function eachResource(request, callback) {
-  const browser = request.browser ||
-    WebApp.categorizeRequest(request).browser;
-
-  const modern = isModern(browser);
-
-  const arch = modern
-    ? "web.browser"
-    : "web.browser.legacy";
-
+function eachResource({
+  modern,
+  arch,
+}, callback) {
   const manifest = WebApp.clientPrograms[arch].manifest;
 
   let prefix = "";
