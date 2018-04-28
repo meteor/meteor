@@ -7,6 +7,7 @@ Package.onUse(function (api) {
   api.use("ecmascript");
   api.addFiles("tracker.js");
   api.export("Tracker");
+  api.export("Deps");
 });
 
 Package.onTest(function (api) {
