@@ -128,21 +128,39 @@ WebApp.connectHandlers.use((req, res, next) => {
 
   manifest += "FALLBACK:\n";
   manifest += "/ /\n";
-  // Add a fallback entry for each uncacheable asset we added above.
-  //
-  // This means requests for the bare url ("/image.png" instead of
-  // "/image.png?hash") will work offline. Online, however, the browser
-  // will send a request to the server. Users can remove this extra
-  // request to the server and have the asset served from cache by
-  // specifying the full URL with hash in their code (manually, with
-  // some sort of URL rewriting helper)
-  eachResource(request, resource => {
+  eachResource(request, (resource, arch, prefix) => {
     const { url } = resource;
-    if (resource.where === 'client' &&
-        ! RoutePolicy.classify(url) &&
-        ! resource.cacheable &&
-        ! shouldSkip(resource)) {
+
+    if (resource.where !== 'client' ||
+        RoutePolicy.classify(url) ||
+        shouldSkip(resource)) {
+      return;
+    }
+
+    if (! resource.cacheable) {
+      // Add a fallback entry for each uncacheable asset we added above.
+      //
+      // This means requests for the bare url ("/image.png" instead of
+      // "/image.png?hash") will work offline. Online, however, the
+      // browser will send a request to the server. Users can remove this
+      // extra request to the server and have the asset served from cache
+      // by specifying the full URL with hash in their code (manually,
+      // with some sort of URL rewriting helper)
       manifest += `${url} ${url}?${resource.hash}\n`;
+    }
+
+    if (resource.type === 'asset' &&
+        prefix.length > 0 &&
+        url.startsWith(prefix)) {
+      // If the URL has a prefix like /__browser.legacy or /__cordova, add
+      // a fallback from the un-prefixed URL to the fully prefixed URL, so
+      // that legacy/cordova browsers can load assets offline without
+      // using an explicit prefix. When the client is online, these assets
+      // will simply come from the modern web.browser bundle, which does
+      // not prefix its asset URLs. Using a fallback rather than just
+      // duplicating the resources in the manifest is important because of
+      // appcache size limits.
+      manifest += `${url.slice(prefix.length)} ${url}?${resource.hash}\n`;
     }
   });
 
