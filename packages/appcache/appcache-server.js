@@ -170,11 +170,27 @@ function eachResource(request, callback) {
   const browser = request.browser ||
     WebApp.categorizeRequest(request).browser;
 
-  const arch = isModern(browser)
+  const modern = isModern(browser);
+
+  const arch = modern
     ? "web.browser"
     : "web.browser.legacy";
 
-  WebApp.clientPrograms[arch].manifest.forEach(callback);
+  const manifest = WebApp.clientPrograms[arch].manifest;
+
+  let prefix = "";
+  if (! modern) {
+    manifest.some(({ url }) => {
+      if (url && url.startsWith("/__")) {
+        prefix = url.split("/", 2).join("/");
+        return true;
+      }
+    });
+  }
+
+  manifest.forEach(resource => {
+    callback(resource, arch, prefix);
+  });
 }
 
 function sizeCheck() {
