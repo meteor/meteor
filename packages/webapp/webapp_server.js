@@ -357,7 +357,8 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
   }, additionalOptions));
 };
 
-// A mapping from url path to "info". Where "info" has the following fields:
+// A mapping from url path to architecture (e.g. "web.browser") to static
+// file information with the following fields:
 // - type: the type of file to be served
 // - cacheable: optionally, whether the file should be cached or not
 // - sourceMapUrl: optionally, the url of the source map
@@ -366,11 +367,11 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
 // - content: the stringified content that should be served at this path
 // - absolutePath: the absolute path on disk to the file
 
-var staticFiles;
+var staticFilesByArch;
 
 // Serve static files from the manifest or added with
 // `addStaticJs`. Exported for tests.
-WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
+WebAppInternals.staticFilesMiddleware = function (staticFilesByArch, req, res, next) {
   if ('GET' != req.method && 'HEAD' != req.method && 'OPTIONS' != req.method) {
     next();
     return;
@@ -402,7 +403,12 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
     return;
   }
 
-  if (!_.has(staticFiles, pathname)) {
+  const info = getStaticFileInfo(
+    pathname,
+    identifyBrowser(req.headers["user-agent"]),
+  );
+
+  if (! info) {
     next();
     return;
   }
@@ -410,8 +416,6 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
   // We don't need to call pause because, unlike 'static', once we call into
   // 'send' and yield to the event loop, we never call another handler with
   // 'next'.
-
-  var info = staticFiles[pathname];
 
   // Cacheable files are files that should never change. Typically
   // named by their hash (eg meteor bundled js and css files).
@@ -467,6 +471,63 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
   }
 };
 
+function getStaticFileInfo(originalPath, browser) {
+  const { arch, path } = getArchAndPath(originalPath, browser);
+
+  if (! hasOwn.call(WebApp.clientPrograms, arch)) {
+    return null;
+  }
+
+  if (hasOwn.call(staticFilesByArch, arch)) {
+    const staticFiles = staticFilesByArch[arch];
+
+    // If staticFiles contains originalPath with the arch inferred above,
+    // use that information.
+    if (hasOwn.call(staticFiles, originalPath)) {
+      return staticFiles[originalPath];
+    }
+
+    // If getArchAndPath returned an alternate path, try that instead.
+    if (path !== originalPath &&
+        hasOwn.call(staticFiles, path)) {
+      return staticFiles[path];
+    }
+  }
+
+  return null;
+}
+
+function getArchAndPath(path, browser) {
+  const pathParts = path.split("/");
+  const archKey = pathParts[1];
+
+  if (archKey.startsWith("__")) {
+    const archCleaned = "web." + archKey.slice(2);
+    if (hasOwn.call(WebApp.clientPrograms, archCleaned)) {
+      pathParts.splice(1, 1); // Remove the archKey part.
+      return {
+        arch: archCleaned,
+        path: pathParts.join("/"),
+      };
+    }
+  }
+
+  // TODO Perhaps one day we could infer Cordova clients here, so that we
+  // wouldn't have to use prefixed "/__cordova/..." URLs.
+  const arch = isModern(browser)
+    ? "web.browser"
+    : "web.browser.legacy";
+
+  if (hasOwn.call(WebApp.clientPrograms, arch)) {
+    return { arch, path };
+  }
+
+  return {
+    arch: WebApp.defaultArch,
+    path,
+  };
+}
+
 // Parse the passed in port value. Return the port as-is if it's a String
 // (e.g. a Windows Server style named pipe), otherwise return the port as an
 // integer.
@@ -491,18 +552,14 @@ function runWebAppServer() {
 
   WebAppInternals.reloadClientPrograms = function () {
     syncQueue.runTask(function() {
-      staticFiles = Object.create(null);
+      staticFilesByArch = Object.create(null);
 
-      var generateClientProgram = function (clientPath, arch) {
+      function generateClientProgram(clientPath, arch) {
         function addStaticFile(path, item) {
-          // If there are duplicate static file paths, always let the
-          // web.browser item win, and otherwise avoid overwriting the
-          // first instance of the item (which typically will be the
-          // web.browser item, but let's not take any risks).
-          if (arch === "web.browser" ||
-              ! hasOwn.call(staticFiles, path)) {
-            staticFiles[path] = item;
+          if (! hasOwn.call(staticFilesByArch, arch)) {
+            staticFilesByArch[arch] = Object.create(null);
           }
+          staticFilesByArch[arch][path] = item;
         }
 
         // read the control for the client we'll be serving up
@@ -567,7 +624,7 @@ function runWebAppServer() {
           hash: program.version,
           type: "json"
         });
-      };
+      }
 
       try {
         var clientPaths = __meteor_bootstrap__.configJson.clientPaths;
@@ -577,7 +634,7 @@ function runWebAppServer() {
         });
 
         // Exported for tests.
-        WebAppInternals.staticFiles = staticFiles;
+        WebAppInternals.staticFilesByArch = staticFilesByArch;
       } catch (e) {
         Log.error("Error reloading the client program: " + e.stack);
         process.exit(1);
@@ -705,7 +762,7 @@ function runWebAppServer() {
   // Serve static files from the manifest.
   // This is inspired by the 'static' middleware.
   app.use(function (req, res, next) {
-    WebAppInternals.staticFilesMiddleware(staticFiles, req, res, next);
+    WebAppInternals.staticFilesMiddleware(staticFilesByArch, req, res, next);
   });
 
   // Core Meteor packages like dynamic-import can add handlers before
@@ -783,25 +840,13 @@ function runWebAppServer() {
         return;
       }
 
-      // /packages/asdfsad ... /__cordova/dafsdf.js
-      var pathname = parseRequest(req).pathname;
-      var archKey = pathname.split('/')[1];
-      var archKeyCleaned = 'web.' + archKey.replace(/^__/, '');
-
-      if (/^__/.test(archKey) &&
-          _.has(archPath, archKeyCleaned)) {
-        archKey = archKeyCleaned;
-      } else if (isModern(request.browser) &&
-                 _.has(WebApp.clientPrograms, "web.browser")) {
-        archKey = "web.browser";
-      } else {
-        archKey = WebApp.defaultArch;
-      }
-
       return getBoilerplateAsync(
         request,
-        archKey
-      ).then(({ stream,  statusCode, headers: newHeaders }) => {
+        getArchAndPath(
+          parseRequest(req).pathname,
+          request.browser,
+        ).arch,
+      ).then(({ stream, statusCode, headers: newHeaders }) => {
         if (!statusCode) {
           statusCode = res.statusCode ? res.statusCode : 200;
         }
