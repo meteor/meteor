@@ -567,8 +567,16 @@ class File {
     this.url = null;
 
     // A prefix that will be prepended to this.url.
-    // Prefixing is currently restricted to Cordova URLs.
-    if (options.arch === "web.cordova") {
+    // Prefixing is currently restricted to web.cordova URLs.
+    if (options.arch.startsWith("web.") &&
+        // Using the isModern function from the modern-browsers package,
+        // the webapp and dynamic-import packages can automatically
+        // determine whether a client should receive resources from the
+        // web.browser or web.browser.legacy architecture, so those
+        // architectures do not need a URL prefix. Other architectures,
+        // such as web.cordova, still need a prefix like /__cordova/.
+        options.arch !== "web.browser" &&
+        options.arch !== "web.browser.legacy") {
       this.urlPrefix = "/__" +
         options.arch.split(".").slice(1).join(".");
     } else {
