@@ -420,9 +420,17 @@ WebAppInternals.staticFilesMiddleware = function (staticFilesByArch, req, res, n
   // Cacheable files are files that should never change. Typically
   // named by their hash (eg meteor bundled js and css files).
   // We cache them ~forever (1yr).
-  var maxAge = info.cacheable
-        ? 1000 * 60 * 60 * 24 * 365
-        : 0;
+  const maxAge = info.cacheable
+    ? 1000 * 60 * 60 * 24 * 365
+    : 0;
+
+  if (info.cacheable) {
+    // Since we use req.headers["user-agent"] to determine whether the
+    // client should receive modern or legacy resources, tell the client
+    // to invalidate cached resources when/if its user agent string
+    // changes in the future.
+    res.setHeader("Vary", "User-Agent");
+  }
 
   // Set the X-SourceMap header, which current Chrome, FireFox, and Safari
   // understand.  (The SourceMap header is slightly more spec-correct but FF
@@ -454,20 +462,18 @@ WebAppInternals.staticFilesMiddleware = function (staticFilesByArch, req, res, n
     res.end();
   } else {
     send(req, info.absolutePath, {
-        maxage: maxAge,
-        dotfiles: 'allow', // if we specified a dotfile in the manifest, serve it
-        lastModified: false // don't set last-modified based on the file date
-      }).on('error', function (err) {
-        Log.error("Error serving static file " + err);
-        res.writeHead(500);
-        res.end();
-      })
-      .on('directory', function () {
-        Log.error("Unexpected directory " + info.absolutePath);
-        res.writeHead(500);
-        res.end();
-      })
-      .pipe(res);
+      maxage: maxAge,
+      dotfiles: 'allow', // if we specified a dotfile in the manifest, serve it
+      lastModified: false // don't set last-modified based on the file date
+    }).on('error', function (err) {
+      Log.error("Error serving static file " + err);
+      res.writeHead(500);
+      res.end();
+    }).on('directory', function () {
+      Log.error("Unexpected directory " + info.absolutePath);
+      res.writeHead(500);
+      res.end();
+    }).pipe(res);
   }
 };
 
