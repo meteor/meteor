@@ -1,10 +1,19 @@
 Package.describe({
   summary: "Utility functions for tests",
-  version: '1.0.12'
+  version: '1.1.0'
 });
 
 Package.onUse(function (api) {
-  api.use(['underscore', 'tracker', 'ejson', 'tinytest', 'random', 'blaze']);
+  api.use([
+    'ecmascript',
+    'underscore',
+    'tracker',
+    'ejson',
+    'tinytest',
+    'random',
+    'blaze',
+  ]);
+
   api.use(['jquery@1.11.1'], 'client');
 
   // XXX for connection.js. Not sure this really belongs in
