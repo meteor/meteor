@@ -567,20 +567,16 @@ class File {
     this.url = null;
 
     // A prefix that will be prepended to this.url.
+    // Prefixing is currently restricted to web.cordova URLs.
     if (options.arch.startsWith("web.") &&
-        // Use /__browser.legacy/... as a prefix for web.browser.legacy
-        // URLs, but avoid adding a special prefix to resource URLs for
-        // modern browsers. Though boilerplate-generator will happily use
-        // whatever URLs we invent here, it's important that assets like
-        // images are available from predictable URLs (without any
-        // arch-specific prefixes), since humans might use those URLs in
-        // hand-written code. Moreover, non-JS assets are typically the
-        // same for both modern and legacy browsers, so the URL prefix
-        // doesn't actually make a difference. In the unlikely event that
-        // someone adds different assets with the same path to web.browser
-        // and web.browser.legacy, the legacy version can always be
-        // fetched from the /__browser.legacy/... URL.
-        options.arch !== "web.browser") {
+        // Using the isModern function from the modern-browsers package,
+        // the webapp and dynamic-import packages can automatically
+        // determine whether a client should receive resources from the
+        // web.browser or web.browser.legacy architecture, so those
+        // architectures do not need a URL prefix. Other architectures,
+        // such as web.cordova, still need a prefix like /__cordova/.
+        options.arch !== "web.browser" &&
+        options.arch !== "web.browser.legacy") {
       this.urlPrefix = "/__" +
         options.arch.split(".").slice(1).join(".");
     } else {
