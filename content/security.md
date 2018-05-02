@@ -513,7 +513,7 @@ WebApp.connectHandlers.use(
 
 Helmet supports a large number of directives, users should further customise their CSP based on their needs. For more detail please read the following guide: [Content Security Policy](https://helmetjs.github.io/docs/csp/). CSP can be complex, so in addition there are some excellent tools out there to help, including [Google's CSP Evaluator](https://csp-evaluator.withgoogle.com/), [Report-URI's CSP Builder](https://report-uri.com/home/generate), [CSP documentation](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src) from Mozilla and [CSPValidator](https://cspvalidator.org/).
 
-A great example of CSP being used in a Production Meteor Application has been provided by the [LegalRobot Team](https://gist.github.com/dhrubins/31248506873a006ba5e6b459a81855c2).
+A great example of CSP and other Security Headers used in a Production Meteor Application has been provided by the [LegalRobot Team](https://gist.github.com/dhrubins/31248506873a006ba5e6b459a81855c2).
 
 <h3 id="xframeoptions">X-Frame-Options</h3>
 
