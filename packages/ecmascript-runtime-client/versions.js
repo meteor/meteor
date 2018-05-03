@@ -12,4 +12,7 @@ setMinimumBrowserVersions({
   mobile_safari: 10,
   opera: 38,
   safari: 10,
+  // Electron 1.6.0+ matches Chromium 55, per
+  // https://github.com/Kilian/electron-to-chromium/blob/master/full-versions.js
+  electron: [1, 6],
 }, module.id);

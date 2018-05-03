@@ -139,6 +139,9 @@ setMinimumBrowserVersions({
   mobile_safari: [9, 2],
   opera: 36,
   safari: 9,
+  // Electron 1.0.0+ matches Chromium 49, per
+  // https://github.com/Kilian/electron-to-chromium/blob/master/full-versions.js
+  electron: 1,
 }, makeSource("classes"));
 
 setMinimumBrowserVersions({
@@ -150,6 +153,7 @@ setMinimumBrowserVersions({
   safari: 10,
   // Disallow any version of PhantomJS.
   phantomjs: Infinity,
+  electron: [0, 20],
 }, makeSource("generator functions"));
 
 setMinimumBrowserVersions({
@@ -159,6 +163,7 @@ setMinimumBrowserVersions({
   mobile_safari: [9, 2],
   opera: 29,
   safari: [9, 1],
+  electron: [0, 24],
 }, makeSource("template literals"));
 
 setMinimumBrowserVersions({
@@ -168,4 +173,5 @@ setMinimumBrowserVersions({
   mobile_safari: 9,
   opera: 25,
   safari: 9,
+  electron: [0, 20],
 }, makeSource("symbols"));

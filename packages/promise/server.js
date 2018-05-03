@@ -18,4 +18,6 @@ require("meteor/modern-browsers").setMinimumBrowserVersions({
   mobile_safari: 8,
   opera: 20,
   safari: [7, 1],
+  // https://github.com/Kilian/electron-to-chromium/blob/master/full-versions.js
+  electron: [0, 20],
 }, module.id);
