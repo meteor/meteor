@@ -265,6 +265,20 @@ var Session = function (server, version, socket, options) {
   // List of callbacks to call when this connection is closed.
   self._closeCallbacks = [];
 
+  // A queue for outgoing messages
+  self._bufferedWrites = [];
+
+  // The timeoutHandle for the outgoing messages queue
+  self._bufferedWritesFlushHandle = null;
+
+  // Date at which writes should be flushed, regardless of any setTimeout
+  self._bufferedWritesFlushAt = null;
+
+  // When updates are coming within this ms interval, batch them together.
+  self.bufferedWritesInterval = 50;
+
+  // Flush buffers immediately if writes are happening continuously for more than this many ms.
+  self.bufferedWritesMaxAge = 500;
 
   // XXX HACK: If a sockjs connection, save off the URL. This is
   // temporary and will go away in the near future.
@@ -460,14 +474,52 @@ _.extend(Session.prototype, {
     self.server._removeSession(self);
   },
 
+  _flushBufferedWrites: function() {
+    var self = this;
+
+    if (self._bufferedWritesFlushHandle) {
+      clearTimeout(self._bufferedWritesFlushHandle);
+
+      self._bufferedWritesFlushHandle = null;
+    }
+
+    self._bufferedWritesFlushAt = null;
+
+    var writes = self._bufferedWrites;
+
+    self._bufferedWrites = [];
+
+    self.socket.send(DDPCommon.stringifyDDP(writes));
+
+    if (Meteor._printSentDDP) {
+      Meteor._debug("Sent DDP", DDPCommon.stringifyDDP(writes));
+    }
+  },
+
   // Send a message (doing nothing if no socket is connected right now.)
   // It should be a JSON object (it will be stringified.)
   send: function (msg) {
     var self = this;
+
     if (self.socket) {
-      if (Meteor._printSentDDP)
-        Meteor._debug("Sent DDP", DDPCommon.stringifyDDP(msg));
-      self.socket.send(DDPCommon.stringifyDDP(msg));
+      self._bufferedWrites.push(msg);
+      
+      if (self._bufferedWritesFlushAt === null) {
+        self._bufferedWritesFlushAt =
+          new Date().valueOf() + self._bufferedWritesMaxAge;
+      } else if (self._bufferedWritesFlushAt < new Date().valueOf()) {
+        self._flushBufferedWrites();
+        return;
+      }
+      
+      if (self._bufferedWritesFlushHandle) {
+        clearTimeout(self._bufferedWritesFlushHandle);
+      }
+
+      self._bufferedWritesFlushHandle = setTimeout(
+        self.__flushBufferedWrites,
+        self._bufferedWritesInterval
+      );
     }
   },
 
@@ -509,6 +561,8 @@ _.extend(Session.prototype, {
     // needs a Fiber. We could actually use regular setTimeout and avoid
     // these new fibers, but it is easier to just make everything use
     // Meteor.setTimeout and not think too hard.
+    //
+    // TODO: reconsider the logic above, possible source of Fiber bombs
     //
     // Any message counts as receiving a pong, as it demonstrates that
     // the client is still alive.
