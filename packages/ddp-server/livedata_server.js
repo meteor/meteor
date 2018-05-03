@@ -275,7 +275,7 @@ var Session = function (server, version, socket, options) {
   self._bufferedWritesFlushAt = null;
 
   // When updates are coming within this ms interval, batch them together.
-  self.bufferedWritesInterval = 50;
+  self.bufferedWritesInterval = 5;
 
   // Flush buffers immediately if writes are happening continuously for more than this many ms.
   self.bufferedWritesMaxAge = 500;
