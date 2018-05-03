@@ -23,19 +23,6 @@ exports.getPreset = function (api, options) {
   };
 };
 
-// Minimum versions if we compile async functions to wrapped generator
-// functions (which necessitates the classes transform because of a bug
-// with async methods):
-exports.minimumVersions = {
-  chrome: 49,
-  edge: 13,
-  firefox: 46,
-  mobile_safari: 10,
-  node: 8,
-  opera: 38,
-  safari: 10
-};
-
 // Minimum versions if we assume native support for async functions.
 // Amazingly, this accounts for 70%+ of internet users!
 // https://caniuse.com/#feat=async-functions
@@ -46,5 +33,8 @@ exports.minimumVersions = {
   mobile_safari: [10, 3],
   node: 8,
   opera: 42,
-  safari: [10, 1]
+  safari: [10, 1],
+  // Electron 1.6.0 uses Chromium 56.0.2924.87, per
+  // https://github.com/Kilian/electron-to-chromium/blob/master/full-versions.js
+  electron: [1, 6]
 };
