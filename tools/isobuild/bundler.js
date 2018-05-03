@@ -1097,26 +1097,40 @@ class Target {
           return;
         }
 
-        const f = new File({
+        const fileOptions = {
           info: 'unbuild ' + resource,
           arch: this.arch,
           data: resource.data,
           cacheable: false,
           hash: resource.hash,
-        });
+        };
 
-        const relPath = isOs
-              ? files.pathJoin('assets', resource.servePath)
-              : stripLeadingSlash(resource.servePath);
-        f.setTargetPathFromRelPath(relPath);
+        const file = new File(fileOptions);
+        const assetFiles = [file];
 
-        if (isWeb) {
-          f.setUrlFromRelPath(resource.servePath);
-        } else {
-          unibuildAssets[resource.path] = resource.data;
+        if (file.urlPrefix.length > 0) {
+          const noPrefix = new File(fileOptions);
+          noPrefix.urlPrefix = "";
+          // If the file has a URL prefix, add another resource for this
+          // asset without the prefix.
+          assetFiles.push(noPrefix);
         }
 
-        this.asset.push(f);
+        assetFiles.forEach(f => {
+          const relPath = isOs
+            ? files.pathJoin('assets', resource.servePath)
+            : stripLeadingSlash(resource.servePath);
+
+          f.setTargetPathFromRelPath(relPath);
+
+          if (isWeb) {
+            f.setUrlFromRelPath(resource.servePath);
+          } else {
+            unibuildAssets[resource.path] = resource.data;
+          }
+
+          this.asset.push(f);
+        });
       });
 
       // Now look for the other kinds of resources.
@@ -1566,9 +1580,28 @@ class ClientTarget extends Target {
 
     // Reserve all file names from the manifest, so that interleaved
     // generateFilename calls don't overlap with them.
-    eachResource((file, type) =>
-      builder.reserve(file.targetPath)
-    );
+
+    const targetPathToHash = new Map;
+    eachResource((file, type) => {
+      const hash = targetPathToHash.get(file.targetPath);
+      if (hash) {
+        // When we add assets that have a URL prefix like /__cordova, we
+        // also add them without the prefix, which means there could be
+        // collisions between target paths, causing builder.reserve to
+        // throw an exception. However, we tolerate collisions (and call
+        // builder.reserve only once) if the hashes of the two assets are
+        // identical, which should always be the case when we register a
+        // single asset using multiple target paths. If the hashes do not
+        // match for some reason, we just call builder.reserve again and
+        // let it throw.
+        if (file.hash() === hash) {
+          return;
+        }
+      } else {
+        targetPathToHash.set(file.targetPath, file.hash());
+      }
+      builder.reserve(file.targetPath);
+    });
 
     // Build up a manifest of all resources served via HTTP.
     const manifest = [];
