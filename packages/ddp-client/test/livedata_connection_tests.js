@@ -1842,7 +1842,8 @@ _.each(DDPCommon.SUPPORTED_DDP_VERSIONS, function(version) {
         test.equal(connection._version, version);
         // It's a little naughty to access _stream and _send, but it works...
         connection._stream.on('message', function(json) {
-          var msg = JSON.parse(json);
+          var messages = JSON.parse(json);
+          var msg = messages.constructor === Array ? messages[0] : messages;
           var done = false;
           if (msg.msg === 'pong') {
             test.notEqual(version, 'pre1');
