@@ -34,6 +34,14 @@ These days, the landscape of JavaScript tools and frameworks is constantly shift
 
 The `ecmascript` package (which is installed into all new apps and packages by default, but can be removed), allows support for many ES2015 features. We recommend using it. You can read more about it in the [Code Style](code-style.html#ecmascript) article.
 
+<h3 id="es2015">Babel</h3>
+
+Babeljs is a configurable transpiler, which allows you write code in the latest version of JavaScript even when your supported environments don't support certain features natively. Babel will compile those features down to a supported version.
+
+ Meteor provides a set appropriate core plugins for each environment (Node 8, modern browsers, and legacy browsers) and React to support most modern Javascript code practices. In addition, Meteor (as of 1.3.3) supports custom .babelrc files which allows developers to further customise their Babel configuration to suit there needs (e.g. Stage 0 proposals).
+
+ Developers are encouraged to avoid adding large presets (such as babel-preset-env &  babel-preset-react) and adding specific plugins as needed (even though it seems to work). You will avoid unnecessary Babel compilation and you'll be less likely to experience plugin ordering issues.
+
 <h3 id="coffeescript">CoffeeScript</h3>
 
 While we recommend using ES2015 with the `ecmascript` package as the best development experience for Meteor, everything in the platform is 100% compatible with [CoffeeScript](http://coffeescript.org/) and many people in the Meteor community prefer it.
