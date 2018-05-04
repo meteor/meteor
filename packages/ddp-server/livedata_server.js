@@ -265,20 +265,20 @@ var Session = function (server, version, socket, options) {
   // List of callbacks to call when this connection is closed.
   self._closeCallbacks = [];
 
-  // A queue for outgoing messages
+  // A buffer for outgoing messages
   self._bufferedWrites = [];
 
-  // The timeoutHandle for the outgoing messages queue
+  // The timeoutHandle for the outgoing message buffer
   self._bufferedWritesFlushHandle = null;
 
   // Date at which writes should be flushed, regardless of any setTimeout
   self._bufferedWritesFlushAt = null;
 
   // When updates are coming within this ms interval, batch them together.
-  self.bufferedWritesInterval = 5;
+  self._bufferedWritesInterval = options.bufferedWritesInterval || 0;
 
   // Flush buffers immediately if writes are happening continuously for more than this many ms.
-  self.bufferedWritesMaxAge = 500;
+  self._bufferedWritesMaxAge = 500;
 
   // XXX HACK: If a sockjs connection, save off the URL. This is
   // temporary and will go away in the near future.
@@ -503,6 +503,16 @@ _.extend(Session.prototype, {
 
     if (self.socket) {
       self._bufferedWrites.push(msg);
+
+      var standardWrite =
+        msg.msg === "added" ||
+        msg.msg === "changed" ||
+        msg.msg === "removed";
+
+      if (self._bufferedWritesInterval === 0 || ! standardWrite) {
+        self._flushBufferedWrites();
+        return;
+      }
       
       if (self._bufferedWritesFlushAt === null) {
         self._bufferedWritesFlushAt =
