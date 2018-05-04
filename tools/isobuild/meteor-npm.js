@@ -69,7 +69,7 @@ meteorNpm.updateDependencies = function (packageName,
   // randomize the name, in case we're bundling this package
   // multiple times in parallel.
   var newPackageNpmDir =
-    convertColonsInPath(packageNpmDir) + '-new-' + utils.randomToken();
+    packageNpmDir + '-new-' + utils.randomToken();
 
   if (! npmDependencies || _.isEmpty(npmDependencies)) {
     // No NPM dependencies? Delete the .npm directory if it exists (because,
