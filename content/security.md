@@ -147,7 +147,7 @@ You can see that this Method does a _very specific thing_ - it just makes a sing
 However, this doesn't mean you can't have any flexibility in your Methods. Let's look at an example:
 
 ```js
-const Meteor.users.methods.setUserData = new ValidatedMethod({
+Meteor.users.methods.setUserData = new ValidatedMethod({
   name: 'Meteor.users.methods.setUserData',
   validate: new SimpleSchema({
     fullName: { type: String, optional: true },
@@ -338,8 +338,8 @@ Secret business logic in your app should be located in code that is only loaded 
 If you have a Meteor Method in your app that has secret business logic, you might want to split the Method into two functions - the optimistic UI part that will run on the client, and the secret part that runs on the server. Most of the time, putting the entire Method on the server doesn't result in the best user experience. Let's look at an example, where you have a secret algorithm for calculating someone's MMR (ranking) in a game:
 
 ```js
-// In a server-only file
-MMR = {
+// In a server-only file, for example /imports/server/mmr.js
+export const MMR = {
   updateWithSecretAlgorithm(userId) {
     // your secret code here
   }
@@ -348,13 +348,14 @@ MMR = {
 
 ```js
 // In a file loaded on client and server
-const Meteor.users.methods.updateMMR = new ValidatedMethod({
+Meteor.users.methods.updateMMR = new ValidatedMethod({
   name: 'Meteor.users.methods.updateMMR',
   validate: null,
   run() {
     if (this.isSimulation) {
       // Simulation code for the client (optional)
     } else {
+      const { MMR } = require('/imports/server/mmr.js');
       MMR.updateWithSecretAlgorithm(this.userId);
     }
   }

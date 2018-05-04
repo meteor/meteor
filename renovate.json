@@ -1,13 +1,6 @@
 {
   "extends": [
-    "config:base"
-  ],
-  "packageRules": [
-    {
-      "packagePatterns": ["\bhexo\b", "chexo"],
-      "groupName": "Hexo-related packages",
-      "automerge": true
-    }
+    "meteor-docs"
   ],
   "baseBranches": [
     "master",

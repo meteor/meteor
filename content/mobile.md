@@ -643,7 +643,7 @@ From this point on, the process for building the app archive and submitting it t
 
 In order to build your app for Android, you will need to [configure your app](#configuring-your-app) with at least a version number, and the required set of app icons and launch screens.
 
-After running `meteor build` the generated APK will be copied from the `<build-output-directory>/android/project/build/outputs/apk` directory to `<build-output-directory>/android/release-unsigned.apk`.
+After running `meteor build` the generated APK will be copied from the `<build-output-directory>/android/project/build/outputs/apk/release` directory to `<build-output-directory>/android/release-unsigned.apk`.
 > If you have installed the [Crosswalk plugin](https://crosswalk-project.org/) you will need to manually copy the APK file `cp ~/build-output-directory/android/project/build/outputs/apk/android-armv7-release-unsigned.apk ~/build-output-directory/android/release-unsigned.apk`
 
 Before submitting the APK(s) to the Play Store, you will need to sign the APK and run [`zipalign`](http://developer.android.com/tools/help/zipalign.html) on it to optimize the archive.
