@@ -14,7 +14,7 @@
     "hexo-renderer-ejs": "0.3.1",
     "hexo-renderer-less": "0.2.0",
     "hexo-renderer-marked": "0.3.2",
-    "hexo-server": "0.3.1",
+    "hexo-server": "0.3.2",
     "hexo-versioned-netlify-redirects": "1.0.7",
     "jsdoc": "3.5.5",
     "meteor-hexo-config": "1.0.8",
