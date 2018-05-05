@@ -309,7 +309,7 @@ Using React Router is also straightforward. Once you `meteor npm install --save 
 
 ```js
 import React from 'react';
-import { Router, Route } from 'react-router';
+import { Router, Route, Switch } from 'react-router';
 import createBrowserHistory from 'history/createBrowserHistory';
 
 // route components
@@ -323,13 +323,13 @@ const browserHistory = createBrowserHistory();
 
 export const renderRoutes = () => (
   <Router history={browserHistory}>
-    <div>
+    <Switch>
       <Route exact path="/" component={AppContainer}/>
-      <Route path="lists/:id" component={ListPageContainer}/>
-      <Route path="signin" component={AuthPageSignIn}/>
-      <Route path="join" component={AuthPageJoin}/>
-      <Route path="*" component={NotFoundPage}/>
-    </div>
+      <Route exact path="/lists/:id" component={ListPageContainer}/>
+      <Route exact path="/signin" component={AuthPageSignIn}/>
+      <Route exact path="/join" component={AuthPageJoin}/>
+      <Route component={NotFoundPage}/>
+    </Switch>
   </Router>
 );
 ```
