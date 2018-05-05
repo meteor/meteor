@@ -77,31 +77,40 @@ export default class Server {
         }
         try {
           try {
-            var msg = DDPCommon.parseDDP(raw_msg);
+            var messages = DDPCommon.parseDDP(raw_msg);
           } catch (err) {
             sendError('Parse error');
             return;
           }
-          if (msg === null || !msg.msg) {
-            sendError('Bad request', msg);
-            return;
-          }
 
-          if (msg.msg === 'connect') {
-            if (socket._meteorSession) {
-              sendError("Already connected", msg);
+          // Convert all DDP messages to Array form
+          messages = messages.constructor === Array ? messages : [messages];
+
+          keys(messages).forEach(i => {
+            var msg = messages[i];
+
+            if (msg === null || !msg.msg) {
+              sendError('Bad request', msg);
               return;
             }
-            Fiber(function () {
-              self._handleConnect(socket, msg);
-            }).run();
-            return;
-          }
+
+            if (msg.msg === 'connect') {
+              if (socket._meteorSession) {
+                sendError("Already connected", msg);
+                return;
+              }
+              Fiber(function () {
+                self._handleConnect(socket, msg);
+              }).run();
+              return;
+            }
+          });
 
           if (!socket._meteorSession) {
             sendError('Must connect first', msg);
             return;
           }
+
           socket._meteorSession.processMessage(msg);
         } catch (e) {
           // XXX print stack nicely
@@ -172,10 +181,12 @@ export default class Server {
       return;
     }
 
+    var allowBatching = msg.allowBatching;
+
     // Yay, version matches! Create a new session.
     // Note: Troposphere depends on the ability to mutate
     // Meteor.server.options.heartbeatTimeout! This is a hack, but it's life.
-    socket._meteorSession = new Session(self, version, socket, self.options);
+    socket._meteorSession = new Session(self, version, socket, self.options, allowBatching);
     self.sessions[socket._meteorSession.id] = socket._meteorSession;
     self.onConnectionHook.each(function (callback) {
       if (socket._meteorSession)

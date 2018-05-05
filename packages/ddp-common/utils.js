@@ -42,38 +42,46 @@ DDPCommon.SUPPORTED_DDP_VERSIONS = [ '1', 'pre2', 'pre1' ];
 
 DDPCommon.parseDDP = function (stringMessage) {
   try {
-    var msg = JSON.parse(stringMessage);
+    var messages = JSON.parse(stringMessage);
   } catch (e) {
     Meteor._debug("Discarding message with invalid JSON", stringMessage);
     return null;
   }
-  // DDP messages must be objects.
-  if (msg === null || typeof msg !== 'object') {
-    Meteor._debug("Discarding non-object DDP message", stringMessage);
-    return null;
-  }
 
-  // massage msg to get it into "abstract ddp" rather than "wire ddp" format.
+  // Convert all DDP messages to Array form
+  messages = messages.constructor === Array ? messages : [messages];
 
-  // switch between "cleared" rep of unsetting fields and "undefined"
-  // rep of same
-  if (hasOwn.call(msg, 'cleared')) {
-    if (! hasOwn.call(msg, 'fields')) {
-      msg.fields = {};
+  keys(messages).forEach(i => {
+    var msg = messages[i];
+
+    // Each individual DDP message must be an object.
+    if (msg === null || typeof msg !== 'object') {
+      Meteor._debug("Discarding non-object DDP message", stringMessage);
+      return null;
     }
-    msg.cleared.forEach(clearKey => {
-      msg.fields[clearKey] = undefined;
+
+    // massage msg to get it into "abstract ddp" rather than "wire ddp" format.
+
+    // switch between "cleared" rep of unsetting fields and "undefined"
+    // rep of same
+    if (hasOwn.call(msg, 'cleared')) {
+      if (! hasOwn.call(msg, 'fields')) {
+        msg.fields = {};
+      }
+      msg.cleared.forEach(clearKey => {
+        msg.fields[clearKey] = undefined;
+      });
+      delete msg.cleared;
+    }
+
+    ['fields', 'params', 'result'].forEach(field => {
+      if (hasOwn.call(msg, field)) {
+        msg[field] = EJSON._adjustTypesFromJSONValue(msg[field]);
+      }
     });
-    delete msg.cleared;
-  }
-
-  ['fields', 'params', 'result'].forEach(field => {
-    if (hasOwn.call(msg, field)) {
-      msg[field] = EJSON._adjustTypesFromJSONValue(msg[field]);
-    }
   });
 
-  return msg;
+  return messages;
 };
 
 DDPCommon.stringifyDDP = function (msg) {

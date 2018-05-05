@@ -47,7 +47,7 @@ function wrapInternalException(exception, context) {
 }
 
 export default class Session {
-  constructor(server, version, socket, options) {
+  constructor(server, version, socket, options, allowBatching) {
     var self = this;
     self.id = Random.id();
 
@@ -88,6 +88,23 @@ export default class Session {
     // List of callbacks to call when this connection is closed.
     self._closeCallbacks = [];
 
+    // Whether we allow batching 
+    self._allowBatching = allowBatching || false;
+    
+    // When updates are coming within this ms interval, batch them together.
+    self._bufferedMessagesInterval = options.bufferedMessagesInterval || 5;
+    
+    // Flush buffers immediately if messages are happening continuously for more than this many ms.
+    self._bufferedMessagesMaxAge = options.bufferedMessagesMaxAge || 500;
+    
+    // The timeoutHandle for the outgoing message buffer
+    self._bufferedMessagesFlushHandle = null;
+    
+    // Date at which messages should be flushed, regardless of any setTimeout
+    self._bufferedMessagesFlushAt = null;
+
+    // A buffer for outgoing messages
+    self._bufferedMessages = [];
 
     // XXX HACK: If a sockjs connection, save off the URL. This is
     // temporary and will go away in the near future.
@@ -286,11 +303,59 @@ export default class Session {
   // It should be a JSON object (it will be stringified.)
   send(msg) {
     var self = this;
+    
     if (self.socket) {
-      if (Meteor._printSentDDP)
-        Meteor._debug("Sent DDP", DDPCommon.stringifyDDP(msg));
-      self.socket.send(DDPCommon.stringifyDDP(msg));
+      self._bufferedMessages.push(msg);
+
+      var standardWrite =
+        msg.msg === "added" ||
+        msg.msg === "changed" ||
+        msg.msg === "removed";
+
+      if (self._bufferedMessagesInterval === 0 || ! standardWrite) {
+        self._flushBufferedMessages();
+        return;
+      }
+      
+      if (self._bufferedMessagesFlushAt === null) {
+        self._bufferedMessagesFlushAt =
+          new Date().valueOf()  self._bufferedMessagesMaxAge;
+      } else if (self._bufferedMessagesFlushAt < new Date().valueOf()) {
+        self._flushBufferedMessages();
+        return;
+      }
+      
+      if (self._bufferedMessagesFlushHandle) {
+        clearTimeout(self._bufferedMessagesFlushHandle);
+      }
+
+      self._bufferedMessagesFlushHandle = setTimeout(
+        self._flushBufferedMessages,
+        self._bufferedMessagesInterval
+      );
     }
+  }
+
+  _flushBufferedMessages() {
+    var self = this;
+  
+    if (self._bufferedMessagesFlushHandle) {
+      clearTimeout(self._bufferedMessagesFlushHandle);
+  
+      self._bufferedMessagesFlushHandle = null;
+    }
+  
+    self._bufferedMessagesFlushAt = null;
+  
+    var messages = self._bufferedMessages;
+  
+    self._bufferedMessages = [];
+  
+    if (Meteor._printSentDDP) {
+      Meteor._debug("Sent DDP", DDPCommon.stringifyDDP(messages));
+    }
+  
+    self.socket.send(DDPCommon.stringifyDDP(messages));
   }
 
   // Send a connection error.
