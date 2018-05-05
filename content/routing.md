@@ -99,12 +99,6 @@ In our example of the list page from the Todos app, we access the current list's
 
 One situation where it is sensible to access the global `FlowRouter` singleton to access the current route's information deeper in the component hierarchy is when rendering links via a navigation component. It's often required to highlight the "active" route in some way (this is the route or section of the site that the user is currently looking at).
 
-A convenient package for this is [`zimme:active-route`](https://atmospherejs.com/zimme/active-route):
-
-```bash
-meteor add zimme:active-route
-```
-
 In the Todos example app, we link to each list the user knows about in the `App_body` template:
 
 ```html
@@ -281,14 +275,7 @@ Multiple behaviors of this type can be composed by wrapping a template in multip
 
 <h2 id="changing-routes">Changing Routes</h2>
 
-Rendering an updated UI when a user reaches a new route is not that useful without giving the user some way to reach a new route! The simplest way is with the trusty `<a>` tag and a URL. You can generate the URLs yourself using `FlowRouter.pathFor`, but it is more convenient to use the [`arillo:flow-router-helpers`](https://github.com/arillo/meteor-flow-router-helpers/) package that defines some helpers for you:
-
-
-```
-meteor add arillo:flow-router-helpers
-```
-
-Now that you have this package, you can use helpers in your templates to display a link to a certain route. For example, in the Todos example app, our nav links look like:
+Rendering an updated UI when a user reaches a new route is not that useful without giving the user some way to reach a new route! The simplest way is with the trusty `<a>` tag and a URL. You can generate the URLs yourself using helps such as `FlowRouter.pathFor` to display a link to a certain route. For example, in the Todos example app, our nav links look like:
 
 
 ```html
