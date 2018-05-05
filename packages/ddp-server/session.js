@@ -319,7 +319,7 @@ export default class Session {
       
       if (self._bufferedMessagesFlushAt === null) {
         self._bufferedMessagesFlushAt =
-          new Date().valueOf()  self._bufferedMessagesMaxAge;
+          new Date().valueOf() + self._bufferedMessagesMaxAge;
       } else if (self._bufferedMessagesFlushAt < new Date().valueOf()) {
         self._flushBufferedMessages();
         return;
