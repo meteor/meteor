@@ -253,55 +253,9 @@ Sometimes changes in your data can trigger re-computations which you know won't 
 
 <h2 id="routing">Routing</h2>
 
-There are two main options for routing with Meteor and React. Either way, we recommend consulting our [Routing article](routing.html) for some general principles of routing in Meteor before writing your app.
-
-- [`kadira:flow-router`](https://atmospherejs.com/kadira/flow-router) is a Meteor specific router that can be used both with React and Blaze. It is documented in detail in the [Routing article](routing.html).
+Although there are many solutions for routing with Meteor and React, react-router is one of the most popular packages right now. Before you continue, we recommend consulting our [Routing article](routing.html) for some general principles of routing in Meteor before writing your app.
 
 - [`react-router`](https://www.npmjs.com/package/react-router) is a React-specific router very popular in the React community. It can also be used easily with Meteor.
-
-<h3 id="using-flow-router">Flow Router</h3>
-
-Using Flow Router with React is very similar to using it with Blaze. The only difference is that in your route actions, you should use the [`react-mounter`](https://www.npmjs.com/package/react-mounter) package to mount components with a layout. Once you `meteor npm install --save react-mounter`, you can do the following:
-
-```js
-import React from 'react';
-import { FlowRouter } from 'meteor/kadira:flow-router';
-import { mount } from 'react-mounter';
-
-import AppContainer from '../../ui/containers/AppContainer.js';
-import ListPageContainer from '../../ui/containers/ListPageContainer.js';
-
-
-FlowRouter.route('/lists/:_id', {
-  name: 'Lists.show',
-  action() {
-    mount(AppContainer, {
-      main: <ListPageContainer/>,
-    });
-  },
-});
-```
-
-Note that `react-mounter` automatically mounts the layout component on a `#react-root` node, which you can change by using the `withOptions()` function.
-
-In the below example, your `App` component would receive a `main` prop with a instantiated React Element to render:
-
-```js
-const App = (props) => (
-  <div>
-    <section id="menu"><..></section>
-    {props.main}
-  </div>
-);
-
-export default AppContainer = withTracker(props => {
-  // props here will have `main`, passed from the router
-  // anything we return from this function will be *added* to it
-  return {
-    user: Meteor.user(),
-  };
-})(App);
-```
 
 <h3 id="using-react-router">React Router</h3>
 

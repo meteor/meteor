@@ -27,10 +27,10 @@ However, most of the user-facing features of URLs listed above are still relevan
 
 <h2 id="flow-router">Using Flow Router</h2>
 
-To add routing to your app, install the [`kadira:flow-router`](https://atmospherejs.com/kadira/flow-router) package:
+To add routing to your app, install the [`ostrio:flow-router-extra`](https://atmospherejs.com/ostrio/flow-router-extra) package:
 
 ```
-meteor add kadira:flow-router
+meteor add ostrio:flow-router-extra
 ```
 
 Flow Router is a community routing package for Meteor. 
