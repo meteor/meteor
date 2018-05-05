@@ -275,7 +275,7 @@ Multiple behaviors of this type can be composed by wrapping a template in multip
 
 <h2 id="changing-routes">Changing Routes</h2>
 
-Rendering an updated UI when a user reaches a new route is not that useful without giving the user some way to reach a new route! The simplest way is with the trusty `<a>` tag and a URL. You can generate the URLs yourself using helps such as `FlowRouter.pathFor` to display a link to a certain route. For example, in the Todos example app, our nav links look like:
+Rendering an updated UI when a user reaches a new route is not that useful without giving the user some way to reach a new route! The simplest way is with the trusty `<a>` tag and a URL. You can generate the URLs yourself using helpers such as `FlowRouter.pathFor` to display a link to a certain route. For example, in the Todos example app, our nav links look like:
 
 
 ```html
@@ -444,5 +444,3 @@ If you need more control, you can use the comprehensive [`nimble:restivus`](http
 <h4 id="server-side-rendering">Server Rendering</h4>
 
 The Blaze UI library does not have support for server-side rendering, so it's not possible to render your pages on the server if you use Blaze. However, the React UI library does. This means it is possible to render HTML on the server if you use React as your rendering framework.
-
-Although Flow Router can be used to render React components more or less as we've described above for Blaze, at the time of this writing Flow Router's support for SSR is [still experimental](https://kadira.io/blog/meteor/meteor-ssr-support-using-flow-router-and-react). However, it's probably the best approach right now if you want to use SSR for Meteor.
