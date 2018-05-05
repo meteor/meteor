@@ -84,42 +84,52 @@ DDPCommon.parseDDP = function (stringMessage) {
   return messages;
 };
 
-DDPCommon.stringifyDDP = function (msg) {
-  const copy = EJSON.clone(msg);
+DDPCommon.stringifyDDP = function (messages) {
+  messages = messages.constructor === Array ? messages : [messages];
 
-  // swizzle 'changed' messages from 'fields undefined' rep to 'fields
-  // and cleared' rep
-  if (hasOwn.call(msg, 'fields')) {
-    const cleared = [];
+  const clonedMessages = [];
 
-    Object.keys(msg.fields).forEach(key => {
-      const value = msg.fields[key];
+  keys(messages).forEach(i => {
+    const msg = messages[i];
+    
+    const copy = EJSON.clone(msg);
 
-      if (typeof value === "undefined") {
-        cleared.push(key);
-        delete copy.fields[key];
+    // swizzle 'changed' messages from 'fields undefined' rep to 'fields
+    // and cleared' rep
+    if (hasOwn.call(msg, 'fields')) {
+      const cleared = [];
+
+      Object.keys(msg.fields).forEach(key => {
+        const value = msg.fields[key];
+
+        if (typeof value === "undefined") {
+          cleared.push(key);
+          delete copy.fields[key];
+        }
+      });
+
+      if (! isEmpty(cleared)) {
+        copy.cleared = cleared;
+      }
+
+      if (isEmpty(copy.fields)) {
+        delete copy.fields;
+      }
+    }
+
+    // adjust types to basic
+    ['fields', 'params', 'result'].forEach(field => {
+      if (hasOwn.call(copy, field)) {
+        copy[field] = EJSON._adjustTypesToJSONValue(copy[field]);
       }
     });
 
-    if (! isEmpty(cleared)) {
-      copy.cleared = cleared;
+    if (msg.id && typeof msg.id !== 'string') {
+      throw new Error("Message id is not a string");
     }
 
-    if (isEmpty(copy.fields)) {
-      delete copy.fields;
-    }
-  }
-
-  // adjust types to basic
-  ['fields', 'params', 'result'].forEach(field => {
-    if (hasOwn.call(copy, field)) {
-      copy[field] = EJSON._adjustTypesToJSONValue(copy[field]);
-    }
+    clonedMessages.push(copy);
   });
 
-  if (msg.id && typeof msg.id !== 'string') {
-    throw new Error("Message id is not a string");
-  }
-
-  return JSON.stringify(copy);
+  return JSON.stringify(clonedMessages);
 };
