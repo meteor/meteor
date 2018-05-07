@@ -20,8 +20,13 @@ $BUNDLE_VERSION = Read-VariableFromShellScript "${dirCheckout}\meteor" 'BUNDLE_V
 # extract the major package versions from the build-dev-bundle-common script.
 $MONGO_VERSION_64BIT = Read-VariableFromShellScript $shCommon 'MONGO_VERSION_64BIT'
 $MONGO_VERSION_32BIT = Read-VariableFromShellScript $shCommon 'MONGO_VERSION_32BIT'
-$NODE_VERSION = Read-VariableFromShellScript $shCommon 'NODE_VERSION'
+
 $NPM_VERSION = Read-VariableFromShellScript $shCommon 'NPM_VERSION'
+
+# TODO Revert this change once 8.11.2 is available for Windows:
+# https://github.com/nodejs/node/pull/20478#issuecomment-387181249
+# $NODE_VERSION = Read-VariableFromShellScript $shCommon 'NODE_VERSION'
+$NODE_VERSION = "8.11.1"
 
 # 7-zip path.
 $system7zip = "C:\Program Files\7-zip\7z.exe"
