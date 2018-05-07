@@ -174,7 +174,7 @@ Less is maintained as a [Meteor core package called `less`](https://atmospherejs
 
 <h3 id="stylus">Stylus</h3>
 
-Stylus is maintained as a [Meteor core package called `stylus`](https://atmospherejs.com/meteor/stylus).
+The best Stylus build plugin for Meteor is [coagmano:stylus](https://atmospherejs.com/coagmano/stylus)
 
 <h2 id="postcss">PostCSS and Autoprefixer</h2>
 
