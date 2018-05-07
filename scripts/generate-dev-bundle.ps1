@@ -107,7 +107,11 @@ Function Add-Python {
 }
 
 Function Add-NodeAndNpm {
-  $nodeUrlBase = 'https://nodejs.org/dist'
+  if ("${NODE_VERSION}" -match "-rc\.\d+$") {
+    $nodeUrlBase = 'https://nodejs.org/download/rc'
+  } else {
+    $nodeUrlBase = 'https://nodejs.org/dist'
+  }
 
   if ($PLATFORM -eq "windows_x86") {
     $nodeArchitecture = 'win-x86'

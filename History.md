@@ -51,6 +51,13 @@
     compiled-to-JS modules from `node_modules`, you should start using the
     symlinking strategy instead.
 
+* Node has been updated to version
+  [8.11.2](https://nodejs.org/en/blog/release/v8.11.2/), officially fixing
+  a [cause](https://github.com/nodejs/node/issues/19274) of frequent
+  segmentation faults in Meteor applications that was introduced in Node
+  8.10.0. Meteor 1.6.1.1 shipped with a custom build of Node that patched
+  this problem, but that approach was never intended to be permanent.
+
 * The `npm` package has been upgraded to version 5.8.0, and our
   [fork](https://github.com/meteor/pacote/tree/v7.6.1-meteor) of its
   `pacote` dependency has been rebased against version 7.6.1.

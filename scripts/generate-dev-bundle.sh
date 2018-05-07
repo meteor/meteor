@@ -42,8 +42,15 @@ downloadOfficialNode() {
     curl "${NODE_URL}" | tar zx --strip-components 1
 }
 
+downloadReleaseCandidateNode() {
+    NODE_URL="https://nodejs.org/download/rc/v${NODE_VERSION}/${NODE_TGZ}"
+    echo "Downloading Node from ${NODE_URL}" >&2
+    curl "${NODE_URL}" | tar zx --strip-components 1
+}
+
 # Try each strategy in the following order:
-extractNodeFromTarGz || downloadNodeFromS3 || downloadOfficialNode
+extractNodeFromTarGz || downloadNodeFromS3 || \
+  downloadOfficialNode || downloadReleaseCandidateNode
 
 # Download Mongo from mongodb.com. Will download a 64-bit version of Mongo
 # by default. Will download a 32-bit version of Mongo if using a 32-bit based
