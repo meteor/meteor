@@ -1,5 +1,7 @@
 ## v.NEXT
 
+## v1.7, TBD
+
 * Although Meteor does not recompile packages installed in `node_modules`
   by default, compilation of specific npm packages (for example, to
   support older browsers that the package author neglected) can now be
