@@ -33,7 +33,7 @@ if (typeof global.Buffer !== "function") {
   try {
     // Use (0, require)(...) to avoid registering a dependency on the
     // "buffer" stub, in case it is not otherwise bundled.
-    global.Buffer = (0, require)("buffer");
+    global.Buffer = (0, require)("buffer").Buffer;
   } catch (ok) {
     // Failure to import "buffer" is fine as long as the Buffer global
     // variable is not used.
