@@ -2,6 +2,96 @@
 
 ## v1.7, TBD
 
+* More than 80% of internet users worldwide have access to a web browser
+  that natively supports the latest ECMAScript features and keeps itself
+  updated automatically, which means new features become available almost
+  as soon as they ship. In other words, the future we envisioned when we
+  first began [compiling code with
+  Babel](https://blog.meteor.com/how-much-does-ecmascript-2015-cost-2ded41d70914)
+  is finally here, and yet most web frameworks and applications still
+  compile a single client-side JavaScript bundle that must function
+  simultaneously in the oldest and the newest browsers the application
+  developer wishes to support.
+
+  Frustrated by this growing chasm between evergreen modern browsers and
+  stuck-in-the-past legacy browsers, some developers decide simply to drop
+  support for older browsers. That choice is understandable, because the
+  alternative is pretty daunting: not only must you build multiple
+  JavaScript and CSS bundles for different browsers, with different
+  dependency graphs and compilation rules and webpack configurations, but
+  your server must also be able to detect which browser each visitor is
+  using, so that the appropriate assets can be delivered at
+  runtime. Testing a matrix of different browsers and application versions
+  gets cumbersome quickly, so it's equally understandable that a
+  responsible developer would rather ship a single, well-tested bundle,
+  and forget about taking advantage of modern features until legacy
+  browsers have disappeared completely.
+
+  **With Meteor 1.7, the long wait is over**, because Meteor 1.7 will
+  automatically build two sets of client-side assets, one tailored to the
+  capabilities of modern browsers, and the other designed to keep legacy
+  browsers working exactly as they did before. Best of all, the entire
+  Meteor community relies on the same system, so any bugs or differences
+  in behavior can be identified and fixed quickly.
+
+  As of today, a "modern" browser can be loosely defined as any browser
+  with full native support for `async` functions and `await` expressions,
+  which includes more than 80% of the world market, and 85% of the US
+  market ([source](https://caniuse.com/#feat=async-functions)). This is an
+  incredibly high standard, since `async`/`await` was [just finalized in
+  ECMAScript 2017](http://2ality.com/2016/10/async-function-tips.html),
+  but the statistics clearly justify it.
+
+  As another example, any modern browser can use the native `WebSocket`
+  API for DDP traffic, whereas a legacy browser will continue to use the
+  SockJS polyfill. And of course you can assume any modern browser has a
+  native `Promise` implementation. The list goes on.
+
+  The line between modern and legacy browsers is designed to be tuned over
+  time, not only by the Meteor framework itself but also by each
+  individual application. For example, here's how the minimum versions for
+  native ECMAScript `class` support might be expressed:
+
+  ```js
+  import { setMinimumBrowserVersions } from "meteor/modern-browsers";
+
+  setMinimumBrowserVersions({
+    chrome: 49,
+    firefox: 45,
+    edge: 12,
+    ie: Infinity, // Sorry, IE11.
+    mobile_safari: [9, 2], // 9.2.0+
+    opera: 36,
+    safari: 9,
+    electron: 1,
+  }, "classes");
+  ```
+
+  The minimum modern version for each browser is simply the maximum of all
+  versions passed to `setMinimumBrowserVersions` for that browser. The
+  Meteor development server decides which assets to deliver to each client
+  based on the `User-Agent` string of the HTTP request. In production,
+  different bundles are named with unique hashes, which prevents cache
+  collisions, though Meteor also sets the `Vary: User-Agent` HTTP response
+  header to let well-behaved clients know they should cache modern and
+  legacy resources separately.
+
+  For the most part, the modern/legacy system will transparently determine
+  how your code is compiled, bundled, and delivered (it even [works with
+  the `appcache` package](https://github.com/meteor/meteor/pull/9776)!);
+  however, you can use the boolean `Meteor.isModern` flag to detect the
+  current browser's status dynamically. If you're writing a Meteor
+  package, you can call `api.addFiles(file, "legacy")` to add extra files
+  to the legacy bundle. Just make sure to call `setMinimumBrowserVersions`
+  to enforce your assumptions about ECMAScript feature support.
+
+  We believe this modern/legacy system is one of the most powerful
+  features we've added to Meteor since we first introduced the
+  `ecmascript` package in Meteor 1.2, and we look forward to other
+  frameworks attempting to catch up.
+
+  [PR #9439](https://github.com/meteor/meteor/pull/9439)
+
 * Although Meteor does not recompile packages installed in `node_modules`
   by default, compilation of specific npm packages (for example, to
   support older browsers that the package author neglected) can now be
