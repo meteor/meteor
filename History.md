@@ -216,6 +216,14 @@
 
 * The `reify` npm package has been updated to version 0.15.1.
 
+* The `meteor-node-stubs` package, which provides stub implementations for
+  any Node built-in modules used by the client (such as `path` and
+  `http`), has a new minor version (0.4.1) that may help with Windows
+  installation problems. To install the new version, run
+  ```sh
+  meteor npm install meteor-node-stubs@latest
+  ```
+
 * The `optimism` npm package has been updated to version 0.6.3.
 
 * The `minifier-js` package has been updated to use `uglify-es` 3.3.9.
