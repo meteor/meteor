@@ -173,55 +173,62 @@ BCp._inferFromBabelRc = function (inputFile, babelOptions, cacheDeps) {
   if (babelrcPath) {
     if (! hasOwn.call(this._babelrcCache, babelrcPath)) {
       try {
-        this._babelrcCache[babelrcPath] =
-          JSON.parse(inputFile.readAndWatchFile(babelrcPath));
+        this._babelrcCache[babelrcPath] = {
+          controlFilePath: babelrcPath,
+          controlFileData: JSON.parse(
+            inputFile.readAndWatchFile(babelrcPath)),
+          deps: Object.create(null),
+        };
       } catch (e) {
         if (e instanceof SyntaxError) {
           e.message = ".babelrc is not a valid JSON file: " + e.message;
         }
-
         throw e;
       }
     }
 
-    return this._inferHelper(
-      inputFile,
-      babelOptions,
-      babelrcPath,
-      this._babelrcCache[babelrcPath],
-      cacheDeps
-    );
+    const cacheEntry = this._babelrcCache[babelrcPath];
+
+    if (this._inferHelper(inputFile, cacheEntry)) {
+      merge(babelOptions, cacheEntry, "presets");
+      merge(babelOptions, cacheEntry, "plugins");
+      Object.assign(cacheDeps, cacheEntry.deps);
+      return true;
+    }
   }
 };
 
 BCp._inferFromPackageJson = function (inputFile, babelOptions, cacheDeps) {
   var pkgJsonPath = inputFile.findControlFile("package.json");
   if (pkgJsonPath) {
-    if (! hasOwn.call(this._babelrcCache, pkgJsonPath)) {
-      this._babelrcCache[pkgJsonPath] = JSON.parse(
-        inputFile.readAndWatchFile(pkgJsonPath)
-      ).babel || null;
-    }
+    const cacheEntry = hasOwn.call(this._babelrcCache, pkgJsonPath)
+      ? this._babelrcCache[pkgJsonPath]
+      : this._babelrcCache[pkgJsonPath] = {
+          controlFilePath: pkgJsonPath,
+          controlFileData: JSON.parse(
+            inputFile.readAndWatchFile(pkgJsonPath)
+          ).babel || null,
+          deps: Object.create(null),
+        };
 
-    return this._inferHelper(
-      inputFile,
-      babelOptions,
-      pkgJsonPath,
-      this._babelrcCache[pkgJsonPath],
-      cacheDeps
-    );
+    if (this._inferHelper(inputFile, cacheEntry)) {
+      merge(babelOptions, cacheEntry, "presets");
+      merge(babelOptions, cacheEntry, "plugins");
+      Object.assign(cacheDeps, cacheEntry.deps);
+      return true;
+    }
   }
 };
 
-BCp._inferHelper = function (
-  inputFile,
-  babelOptions,
-  controlFilePath,
-  babelrc,
-  cacheDeps
-) {
-  if (! babelrc) {
+BCp._inferHelper = function (inputFile, cacheEntry) {
+  if (! cacheEntry.controlFileData) {
     return false;
+  }
+
+  if (hasOwn.call(cacheEntry, "finalInferHelperResult")) {
+    // We've already run _inferHelper and populated
+    // cacheEntry.{presets,plugins}, so we can return early here.
+    return cacheEntry.finalInferHelperResult;
   }
 
   var compiler = this;
@@ -284,7 +291,7 @@ BCp._inferHelper = function (
         // The value is a string that we need to require.
         const result = requireWithPath(value, path);
         if (result && result.module) {
-          cacheDeps[result.name] = result.version;
+          cacheEntry.deps[result.name] = result.version;
           return walkBabelRC(result.module, path);
         }
 
@@ -310,20 +317,23 @@ BCp._inferHelper = function (
     prefixes.push("");
 
     try {
-      return requireWithPrefixes(inputFile, id, prefixes, controlFilePath);
+      return requireWithPrefixes(
+        inputFile, id, prefixes,
+        cacheEntry.controlFilePath
+      );
     } catch (e) {
       if (e.code !== "MODULE_NOT_FOUND") {
         throw e;
       }
 
       if (! hasOwn.call(compiler._babelrcWarnings, id)) {
-        compiler._babelrcWarnings[id] = controlFilePath;
+        compiler._babelrcWarnings[id] = cacheEntry.controlFilePath;
 
         console.error(
           "Warning: unable to resolve " +
             JSON.stringify(id) +
             " in " + path.join(".") +
-            " of " + controlFilePath + ", due to:"
+            " of " + cacheEntry.controlFilePath + ", due to:"
         );
 
         console.error(e.stack || e);
@@ -333,26 +343,29 @@ BCp._inferHelper = function (
     }
   }
 
-  const clean = walkBabelRC(babelrc);
-  merge(babelOptions, clean, "presets");
-  merge(babelOptions, clean, "plugins");
+  const { controlFileData } = cacheEntry;
+  const clean = walkBabelRC(controlFileData);
+  merge(cacheEntry, clean, "presets");
+  merge(cacheEntry, clean, "plugins");
 
-  if (babelrc && babelrc.env) {
+  if (controlFileData &&
+      controlFileData.env) {
     const envKey =
       process.env.BABEL_ENV ||
       process.env.NODE_ENV ||
       "development";
 
-    const clean = walkBabelRC(babelrc.env[envKey]);
+    const clean = walkBabelRC(controlFileData.env[envKey]);
 
     if (clean) {
-      merge(babelOptions, clean, "presets");
-      merge(babelOptions, clean, "plugins");
+      merge(cacheEntry, clean, "presets");
+      merge(cacheEntry, clean, "plugins");
     }
   }
 
-  return !! (babelOptions.presets ||
-             babelOptions.plugins);
+  return cacheEntry.finalInferHelperResult =
+    !! (cacheEntry.presets ||
+        cacheEntry.plugins);
 };
 
 function merge(babelOptions, babelrc, name) {
@@ -376,12 +389,14 @@ function requireWithPrefixes(inputFile, id, prefixes, controlFilePath) {
         // Call inputFile.resolve here rather than inputFile.require so
         // that the import doesn't fail due to missing transitive
         // dependencies imported by the preset or plugin.
-        if (inputFile.resolve(prefix + id)) {
+        if (inputFile.resolve(prefix + id, controlFilePath)) {
           presetOrPluginId = prefix + id;
         }
 
         presetOrPluginMeta = inputFile.require(
-          packageNameFromTopLevelModuleId(prefix + id) + "/package.json");
+          packageNameFromTopLevelModuleId(prefix + id) + "/package.json",
+          controlFilePath
+        );
 
         return true;
 
@@ -406,7 +421,11 @@ function requireWithPrefixes(inputFile, id, prefixes, controlFilePath) {
         // to compile application code the same way Meteor does.
         return null;
       }
-      presetOrPlugin = inputFile.require(presetOrPluginId);
+
+      presetOrPlugin = inputFile.require(
+        presetOrPluginId,
+        controlFilePath
+      );
     }
 
   } else {
