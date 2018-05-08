@@ -23,7 +23,7 @@
     "process": "^0.11.9",
     "punycode": "^1.4.1",
     "querystring-es3": "^0.2.1",
-    "readable-stream": "git+https://github.com/meteor/readable-stream.git",
+    "readable-stream": "^2.3.6",
     "stream-browserify": "^2.0.1",
     "stream-http": "^2.8.0",
     "string_decoder": "^1.1.0",
