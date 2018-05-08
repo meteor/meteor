@@ -78,13 +78,17 @@
   how your code is compiled, bundled, and delivered&mdash;and yes, it
   works with every existing part of Meteor, including dynamic `import()`
   and even [the old `appcache`
-  package](https://github.com/meteor/meteor/pull/9776)). However, when
-  writing dynamic code that depends on modern features, you can check the
-  boolean `Meteor.isModern` flag to detect the current browser's status
-  (Node 8 is modern, too, of course). If you're writing a Meteor package,
-  you can call `api.addFiles(files, "legacy")` to add extra files to the
-  legacy bundle. Just make sure to call `setMinimumBrowserVersions` to
-  enforce your assumptions about ECMAScript feature support.
+  package](https://github.com/meteor/meteor/pull/9776). However, if you're
+  writing dynamic code that depends on modern features, you can use the
+  boolean `Meteor.isModern` flag to detect the status of the current
+  environment (Node 8 is modern, too, of course). If you're writing a
+  Meteor package, you can call `api.addFiles(files, "legacy")` in your
+  `package.js` configuration file to add extra files to the legacy bundle,
+  or `api.addFiles(files, "client")` to add files to all client bundles,
+  or `api.addFiles(files, "web.browser")` to add files only to the modern
+  bundle, and the same rules apply to `api.mainModule`. Just be sure to
+  call `setMinimumBrowserVersions` (in server startup code) to enforce
+  your assumptions about ECMAScript feature support.
 
   We think this modern/legacy system is one of the most powerful features
   we've added since we first introduced the `ecmascript` package in Meteor
