@@ -5,8 +5,8 @@
  * See LICENSE file in root directory for full license.
  */
 
-import { RuleTester } from 'eslint';
-import rule from '../../../lib/rules/scope-dom-lookups';
+const { RuleTester } = require('eslint');
+const rule = require('../../../lib/rules/scope-dom-lookups');
 
 const ruleTester = new RuleTester();
 

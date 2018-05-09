@@ -1,5 +1,5 @@
-import assert from 'assert';
-import filterExecutorsByAncestors from '../../../../lib/util/executors/filterExecutorsByAncestors';
+const assert = require('assert');
+const filterExecutorsByAncestors = require('../../../../lib/util/executors/filterExecutorsByAncestors');
 
 describe('filterExecutorsByAncestors', () => {
   it('filters on MemberExpression for isClient', () => {

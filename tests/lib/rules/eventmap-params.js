@@ -9,8 +9,8 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-import { RuleTester } from 'eslint';
-import rule from '../../../lib/rules/eventmap-params';
+const { RuleTester } = require('eslint');
+const rule = require('../../../lib/rules/eventmap-params');
 
 // -----------------------------------------------------------------------------
 // Tests

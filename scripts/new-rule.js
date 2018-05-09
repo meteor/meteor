@@ -61,25 +61,28 @@ const rule = `/**
  * See LICENSE file in root directory for full license.
  */
 
-export default (context) => {
-  // ---------------------------------------------------------------------------
-  // Helpers
-  // ---------------------------------------------------------------------------
 
-  // any helper functions should go here or else delete this section
+ module.exports = {
+   meta: {
+     schema: [],
+   },
+   create: (context) => {
+    // ---------------------------------------------------------------------------
+    // Helpers
+    // ---------------------------------------------------------------------------
 
-  // ---------------------------------------------------------------------------
-  // Public
-  // ---------------------------------------------------------------------------
+    // any helper functions should go here or else delete this section
 
-  return {
-    // give me methods
-  }
-}
+    // ---------------------------------------------------------------------------
+    // Public
+    // ---------------------------------------------------------------------------
 
-export const schema = [
-  // fill in your schema
-]
+    return {
+      // give me methods
+    }
+   }
+ }
+
 
 `;
 
@@ -90,8 +93,8 @@ const test = `/**
  * See LICENSE file in root directory for full license.
  */
 
-import { RuleTester } from 'eslint'
-import rule from '../../../lib/rules/${ruleId}'
+const { RuleTester } = require('eslint')
+const rule = require('../../../lib/rules/${ruleId}')
 
 const ruleTester = new RuleTester()
 

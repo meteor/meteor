@@ -9,8 +9,8 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-import { RuleTester } from 'eslint';
-import rule from '../../../lib/rules/prefer-session-equals';
+const { RuleTester } = require('eslint');
+const rule = require('../../../lib/rules/prefer-session-equals');
 
 const ruleTester = new RuleTester();
 

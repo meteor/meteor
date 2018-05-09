@@ -1,5 +1,5 @@
-import assert from 'assert';
-import getExecutorsFromTest from '../../../../lib/util/executors/getExecutorsFromTest';
+const assert = require('assert');
+const getExecutorsFromTest = require('../../../../lib/util/executors/getExecutorsFromTest');
 
 describe('getExecutorsFromTest', () => {
   it('throws for unkown type', () => {

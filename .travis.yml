@@ -17,11 +17,9 @@ node_js:
   - 4
   - 10
 before_install:
-  - npm i -g npm@^5.3.0
+  - npm i -g npm@^6.0.0
   - npm -v
   - npm i -g codeclimate-test-reporter
-before_script:
-  - npm prune
 script:
   - npm run test
 after_success:

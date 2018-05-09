@@ -9,8 +9,8 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-import { RuleTester } from 'eslint';
-import rule from '../../../lib/rules/template-names';
+const { RuleTester } = require('eslint');
+const rule = require('../../../lib/rules/template-names');
 
 const ruleTester = new RuleTester();
 

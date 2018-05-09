@@ -1,9 +1,9 @@
-import assert from 'assert';
-import {
+const assert = require('assert');
+const {
   difference,
   union,
   intersection,
-} from '../../../../lib/util/executors/sets';
+} = require('../../../../lib/util/executors/sets');
 
 describe('executors', () => {
   describe('union', () => {

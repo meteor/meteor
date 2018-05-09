@@ -3,7 +3,7 @@
   "version": "0.0.0-development",
   "author": "Dominik Ferber <dominik.ferber+npm@gmail.com>",
   "description": "Meteor specific linting rules for ESLint",
-  "main": "dist/index.js",
+  "main": "lib/index.js",
   "publishConfig": {
     "tag": "next"
   },
@@ -11,26 +11,21 @@
     "branch": "master"
   },
   "scripts": {
-    "build": "babel lib -d dist",
-    "build:w": "npm run build -- --watch",
     "coverage:check": "nyc check-coverage --lines 100 --functions 100 --branches 100",
     "coverage:report": "nyc report",
-    "clean": "rimraf dist",
     "coveralls": "cat ./coverage/lcov.info | coveralls",
     "format": "prettier --write 'lib/**/*.js' 'tests/**/*.js' 'scripts/**/*.js'",
     "lint": "eslint ./",
-    "prebuild": "npm run clean && mkdir dist",
-    "prepublishOnly": "npm run build",
     "pretest": "npm run lint",
-    "rule": "babel scripts/new-rule.js | node",
+    "rule": "node scripts/new-rule.js",
     "test": "npm run unit-test && npm run coverage:report && npm run coverage:check",
-    "unit-test": "nyc --require=babel-register --reporter=lcov mocha tests --recursive",
-    "unit-test:w": "npm run unit-test -s -- --watch"
+    "unit-test": "nyc --reporter=lcov mocha tests --recursive",
+    "unit-test:watch": "npm run unit-test -s -- --watch"
   },
   "files": [
     "LICENSE",
     "README.md",
-    "dist"
+    "lib"
   ],
   "repository": {
     "type": "git",
@@ -42,13 +37,6 @@
     "invariant": "2.2.4"
   },
   "devDependencies": {
-    "babel-cli": "~6.26.0",
-    "babel-core": "6.26.3",
-    "babel-plugin-transform-object-rest-spread": "~6.26.0",
-    "babel-plugin-transform-runtime": "~6.23.0",
-    "babel-preset-es2015": "~6.24.1",
-    "babel-preset-stage-3": "~6.24.1",
-    "babel-register": "~6.26.0",
     "colors": "~1.2.0",
     "coveralls": "3.0.1",
     "cz-conventional-changelog": "~2.1.0",
@@ -64,7 +52,6 @@
     "nyc": "~11.7.1",
     "prettier": "~1.12.0",
     "readline-sync": "~1.4.9",
-    "rimraf": "~2.6.2",
     "semantic-release": "~15.4.0",
     "travis-deploy-once": "4.4.1",
     "validate-commit-msg": "~2.14.0"

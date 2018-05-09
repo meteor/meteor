@@ -1,7 +1,7 @@
-import assert from 'assert';
-import getExecutorsByEnv from '../../../../lib/util/executors/getExecutorsByEnv';
+const assert = require('assert');
+const getExecutorsByEnv = require('../../../../lib/util/executors/getExecutorsByEnv');
 
-import {
+const {
   PUBLIC,
   PRIVATE,
   CLIENT,
@@ -14,7 +14,7 @@ import {
   MOBILE_CONFIG,
   COMPATIBILITY,
   NON_METEOR,
-} from '../../../../lib/util/environment';
+} = require('../../../../lib/util/environment');
 
 describe('getExecutorsByEnv', () => {
   it('public', () => {
