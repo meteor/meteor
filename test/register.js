@@ -17,6 +17,7 @@ if (process.env.COMPILE_FOR_MODERN_BROWSERS) {
 var babelOptions = require("../options").getDefaults(features);
 
 require("../register")
+  .setCacheDirectory(process.env.BABEL_CACHE_DIR)
   .setSourceMapRootPath(meteorBabelPath)
   .allowDirectory(meteorBabelTestPath)
   .setBabelOptions(babelOptions);

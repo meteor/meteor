@@ -44,8 +44,8 @@ let didWarnAboutNoCache = false;
 exports.compile = function (source, options, deps) {
   options = options || getDefaultOptions();
 
-  if (typeof options.cacheDir === "string") {
-    return getOrCreateCache(options.cacheDir).get(source, options, deps);
+  if (deps && typeof deps.cacheDirectory === "string") {
+    return getOrCreateCache(deps.cacheDirectory).get(source, options, deps);
   }
 
   // If no options.cacheDir was provided, but the BABEL_CACHE_DIR
@@ -56,8 +56,8 @@ exports.compile = function (source, options, deps) {
 
   // If neither options.cacheDir nor BABEL_CACHE_DIR were provided, use
   // the first cache directory registered so far.
-  for (var cacheDir in cachesByDir) {
-    return getOrCreateCache(cacheDir).get(source, options, deps);
+  for (var cacheDirectory in cachesByDir) {
+    return getOrCreateCache(cacheDirectory).get(source, options, deps);
   }
 
   // Otherwise fall back to compiling without a cache.

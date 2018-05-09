@@ -11,6 +11,7 @@ require("reify/lib/runtime").enable(Module.prototype);
 
 var config = {
   sourceMapRootPath: null,
+  cacheDirectory: process.env.BABEL_CACHE_DIR,
   allowedDirectories: Object.create(null),
   babelOptions: null
 };
@@ -32,6 +33,11 @@ exports.setBabelOptions = setBabelOptions;
 
 exports.setSourceMapRootPath = function (smrp) {
   config.sourceMapRootPath = smrp;
+  return exports;
+};
+
+exports.setCacheDirectory = function (dir) {
+  config.cacheDirectory = dir;
   return exports;
 };
 
@@ -146,5 +152,7 @@ function getBabelResult(filename) {
 
   babelOptions.filename = filename;
 
-  return meteorBabel.compile(source, babelOptions);
+  return meteorBabel.compile(source, babelOptions, {
+    cacheDirectory: config.cacheDirectory
+  });
 }
