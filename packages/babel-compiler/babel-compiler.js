@@ -56,9 +56,11 @@ BCp.processOneFileForTarget = function (inputFile, source) {
     sourceMap: null,
     bare: !! fileOptions.bare
   };
-  var cacheDeps = {
-    sourceHash: toBeAdded.hash,
-    cacheDirectory: this.cacheDirectory
+  var cacheOptions = {
+    cacheDirectory: this.cacheDirectory,
+    cacheDeps: {
+      sourceHash: toBeAdded.hash,
+    },
   };
 
   // If you need to exclude a specific file within a package from Babel
@@ -92,7 +94,11 @@ BCp.processOneFileForTarget = function (inputFile, source) {
 
     var babelOptions = Babel.getDefaultOptions(extraFeatures);
 
-    this.inferExtraBabelOptions(inputFile, babelOptions, cacheDeps);
+    this.inferExtraBabelOptions(
+      inputFile,
+      babelOptions,
+      cacheOptions.cacheDeps,
+    );
 
     babelOptions.sourceMap = true;
     babelOptions.filename =
@@ -102,7 +108,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
 
     try {
       var result = profile('Babel.compile', function () {
-        return Babel.compile(source, babelOptions, cacheDeps);
+        return Babel.compile(source, babelOptions, cacheOptions);
       });
     } catch (e) {
       if (e.loc) {

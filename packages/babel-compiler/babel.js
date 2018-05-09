@@ -28,9 +28,12 @@ Babel = {
     return getMeteorBabel().parse(source);
   },
 
-  compile: function (source, options, cacheDeps) {
-    options = options || getDefaultOptions();
-    return getMeteorBabel().compile(source, options, cacheDeps);
+  compile: function (source, babelOptions, cacheOptions) {
+    return getMeteorBabel().compile(
+      source,
+      babelOptions || getDefaultOptions(),
+      cacheOptions,
+    );
   },
 
   // This method is deprecated in favor of passing
