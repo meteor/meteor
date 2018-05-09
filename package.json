@@ -60,7 +60,7 @@
     "eslint": ">= 3.7.0 < 5"
   },
   "engines": {
-    "node": ">=4"
+    "node": ">=6"
   },
   "keywords": [
     "eslint",
