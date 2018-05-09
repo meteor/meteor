@@ -84,7 +84,7 @@ export default class Server {
           }
 
           // Convert all DDP messages to Array form
-          messages = messages.constructor === Array ? messages : [messages];
+          messages = Array.isArray(messages) ? messages : [messages];
 
           keys(messages).forEach(i => {
             var msg = messages[i];

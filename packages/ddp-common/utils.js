@@ -85,14 +85,13 @@ DDPCommon.parseDDP = function (stringMessage) {
 };
 
 DDPCommon.stringifyDDP = function (messages) {
-  messages = messages.constructor === Array ? messages : [messages];
+  messages = Array.isArray(messages) ? messages : [messages];
 
-  const clonedMessages = [];
+  const clonedMessages = EJSON.clone(messages);
 
-  keys(messages).forEach(i => {
+  for (let i = 0; i < messages.length; i++) {
     const msg = messages[i];
-    
-    const copy = EJSON.clone(msg);
+    const copy = clonedMessages[i];
 
     // swizzle 'changed' messages from 'fields undefined' rep to 'fields
     // and cleared' rep
@@ -127,9 +126,7 @@ DDPCommon.stringifyDDP = function (messages) {
     if (msg.id && typeof msg.id !== 'string') {
       throw new Error("Message id is not a string");
     }
-
-    clonedMessages.push(copy);
-  });
+  }
 
   return JSON.stringify(clonedMessages);
 };
