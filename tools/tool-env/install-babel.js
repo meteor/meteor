@@ -17,9 +17,8 @@ function babelRegister() {
   // meteor/tools modules.
   babelOptions.sourceMap = "inline";
 
-  meteorBabel.setCacheDir(cacheDir);
-
   require('meteor-babel/register')
+    .setCacheDirectory(cacheDir)
     .allowDirectory(toolsPath)
     .setSourceMapRootPath(meteorPath)
     .setBabelOptions(babelOptions);
