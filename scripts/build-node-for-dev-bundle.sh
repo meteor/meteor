@@ -16,6 +16,11 @@ then
         NODE_FROM_SRC=${NODE_FROM_SRC:=true}
         echo "Building Node source from Git hash ${NODE_COMMIT_HASH}...";
         NODE_URL="https://github.com/meteor/node/archive/${NODE_COMMIT_HASH}.tar.gz"
+
+        # Temporary additions to get Node 8.11.2-rc.1 to build from checkout:
+        export DISTTYPE=nightly
+        export DATESTRING=$(date +%s)
+        export COMMIT=${NODE_COMMIT_HASH}
     else
         echo "Building Node source from ${NODE_VERSION} src tarball...";
         NODE_URL="https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}.tar.gz"
