@@ -1,31 +1,52 @@
 sudo: false
 language: node_js
+
 env:
   - NODE_ENV=development
+
 cache:
   directories:
     - node_modules
-branches:
-  only:
-    - master
-    - /^greenkeeper/.*$/
+
 notifications:
   email: false
+
 node_js:
-  - 8
   - 6
+  - 8
   - 10
+
 before_install:
-  - npm -v
   - npm i -g codeclimate-test-reporter
+
 script:
   - npm run test
+
 after_success:
   - nvm install 8
   - nvm use 8
   - codeclimate-test-reporter < ./coverage/lcov.info
   - npm run coveralls
-  - semantic-release
+
+jobs:
+  include:
+    # Define the release stage that runs semantic-release
+    - stage: release
+      node_js: lts/*
+      before_install: skip
+      script: skip
+      # after_success:
+        # We can't use "after_success: skip" as that would skip the deploy step
+        # as well, and then we'd never run semantic-release.
+        # Instead, we overwrite after_success to ensure that the original
+        # stuff is not executed.
+        # - echo skip
+      deploy:
+        provider: script
+        skip_cleanup: true
+        script:
+          - npx semantic-release
+
 addons:
   code_climate:
     repo_token: c2f5565ff4d312c27c2864e45d361d9767f9f6cba820bd705b422ca75f69c706
