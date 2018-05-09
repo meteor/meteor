@@ -28,11 +28,13 @@ Babel = {
     return getMeteorBabel().parse(source);
   },
 
-  compile: function (source, options) {
+  compile: function (source, options, cacheDeps) {
     options = options || getDefaultOptions();
-    return getMeteorBabel().compile(source, options);
+    return getMeteorBabel().compile(source, options, cacheDeps);
   },
 
+  // This method is deprecated in favor of passing
+  // cacheDeps.cacheDirectory to Babel.compile (see above).
   setCacheDir: function (cacheDir) {
     getMeteorBabel().setCacheDir(cacheDir);
   },

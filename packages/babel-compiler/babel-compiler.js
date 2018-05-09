@@ -9,6 +9,7 @@ BabelCompiler = function BabelCompiler(extraFeatures) {
   this.extraFeatures = extraFeatures;
   this._babelrcCache = null;
   this._babelrcWarnings = Object.create(null);
+  this.cacheDirectory = null;
 };
 
 var BCp = BabelCompiler.prototype;
@@ -56,7 +57,8 @@ BCp.processOneFileForTarget = function (inputFile, source) {
     bare: !! fileOptions.bare
   };
   var cacheDeps = {
-    sourceHash: toBeAdded.hash
+    sourceHash: toBeAdded.hash,
+    cacheDirectory: this.cacheDirectory
   };
 
   // If you need to exclude a specific file within a package from Babel
@@ -143,7 +145,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
 };
 
 BCp.setDiskCacheDirectory = function (cacheDir) {
-  Babel.setCacheDir(cacheDir);
+  this.cacheDirectory = cacheDir;
 };
 
 function profile(name, func) {
