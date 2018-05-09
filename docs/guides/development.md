@@ -2,7 +2,6 @@
 
 This document describes how developers can contribute by adding rules for ESLint-plugin-Meteor. Before implementing a rule, create an issue to discuss the proposed rule. After getting some feedback, you can develop the rule. Every rule must have adequate tests and documentation. Reading the [ESLint developer guide](http://eslint.org/docs/developer-guide/) is a good start.
 
-
 Run the following commands to set up ESLint-plugin-Meteor in development mode.
 
 ```bash
@@ -15,16 +14,25 @@ $ npm install
 
 ## Development Setup
 
-This plugin uses ES2015 which is transpiled to ES5 by Babel. All files in `lib/` are transpiled to `dist/`.
+This plugin runs untranspiled. The source code needs to be compatible with node version 4 and upwards.
+
+Run `npm run` to see the available scripts for tests, unit-tests and so on.
 
 ```bash
-# start transpiling continuously
-$ npm run build:w
-
-# make some changes to the code
-
-# run tests
+# run unit-tests only
 $ npm run unit-test
+
+# run linter only
+$ npm run lint
+
+# run unit-tests only
+$ npm run unit-test
+
+# run unit-tests in watch mode
+$ npm run unit-test:watch
+
+# run complete test suite
+$ npm test
 ```
 
 ## Linking
@@ -33,6 +41,7 @@ npm can link packages. This makes version set up for development available in ot
 
 ```bash
 # Make this package available globally
+# by running this command from the root of this package
 $ npm link
 
 # In a project using this plugin, install the linked version
@@ -40,7 +49,6 @@ $ npm link eslint-plugin-meteor
 ```
 
 Read more about linking [here](https://docs.npmjs.com/cli/link).
-
 
 ## Creating rules
 
@@ -55,16 +63,15 @@ This will scaffold all required files for the new rule. Add the implementation, 
 After implementation, the rule has to be exported from `lib/index.js`.
 Recommended options for the rule should be set as well (also in `lib/index.js`).
 
-
 ## Give back
 
 After making sure all tests pass and the test-coverage is at 100%, please send a PR to [dferber90/eslint-plugin-meteor](https://github.com/dferber90/eslint-plugin-meteor).
-Git commits messages must follow the [conventional changelog](https://github.com/angular/angular.js/blob/master/CONTRIBUTING.md#-git-commit-guidelines) format.
-
+Git commits messages must follow the [conventional changelog](https://github.com/angular/angular.js/blob/master/CONTRIBUTING.md#-git-commit-guidelines) format. This is important as we're releasing automatically and the next version is determined upon the commit messages.
 
 ## Essential Development Resources
 
 These specs and tools help enormously when developing new rules.
+
 * [ESTree Spec](https://github.com/estree/estree/blob/master/spec.md)
 * [Espree Parser](http://eslint.org/parser/)
 * [JS AST Explorer](http://astexplorer.net/)

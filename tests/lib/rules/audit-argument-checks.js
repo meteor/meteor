@@ -7,8 +7,8 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-import { RuleTester } from 'eslint';
-import rule from '../../../lib/rules/audit-argument-checks';
+const { RuleTester } = require('eslint');
+const rule = require('../../../lib/rules/audit-argument-checks');
 
 // -----------------------------------------------------------------------------
 // Tests

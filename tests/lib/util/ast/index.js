@@ -1,5 +1,5 @@
-import assert from 'assert';
-import * as astUtils from '../../../../lib/util/ast/index';
+const assert = require('assert');
+const astUtils = require('../../../../lib/util/ast/index');
 
 describe('ast utils', () => {
   it('exports isMeteorCall', () => {

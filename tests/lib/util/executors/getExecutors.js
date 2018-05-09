@@ -1,6 +1,6 @@
-import assert from 'assert';
-import getExecutors from '../../../../lib/util/executors/getExecutors';
-import { UNIVERSAL } from '../../../../lib/util/environment';
+const assert = require('assert');
+const getExecutors = require('../../../../lib/util/executors/getExecutors');
+const { UNIVERSAL } = require('../../../../lib/util/environment');
 
 describe('getExecutors', () => {
   it('returns executors for no ancestors', () => {

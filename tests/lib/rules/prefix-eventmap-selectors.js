@@ -5,8 +5,8 @@
  * See LICENSE file in root directory for full license.
  */
 
-import { RuleTester } from 'eslint';
-import rule from '../../../lib/rules/prefix-eventmap-selectors';
+const { RuleTester } = require('eslint');
+const rule = require('../../../lib/rules/prefix-eventmap-selectors');
 
 const ruleTester = new RuleTester();
 

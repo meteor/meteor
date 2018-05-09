@@ -1,5 +1,5 @@
-import assert from 'assert';
-import isMeteorCall from '../../../../lib/util/ast/isMeteorCall';
+const assert = require('assert');
+const isMeteorCall = require('../../../../lib/util/ast/isMeteorCall');
 
 describe('isMeteorCall', () => {
   it('returns true if node is a Meteor call', () => {

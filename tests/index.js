@@ -1,7 +1,7 @@
-import assert from 'assert';
-import fs from 'fs';
-import path from 'path';
-import { rules, configs } from '../lib/index';
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+const { rules, configs } = require('../lib/index');
 
 const ruleNames = fs
   .readdirSync(path.resolve(__dirname, '../lib/rules/'))

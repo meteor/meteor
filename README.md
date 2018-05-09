@@ -36,7 +36,7 @@ $ npm install eslint-plugin-meteor --save-dev
 
 ## Configuration
 
-Add these keys to your `.eslintrc.json` file:
+Create an `.eslintrc.json` file with this content at the root of your project:
 
 ```json
 {
@@ -79,7 +79,7 @@ An article with detailed setup instructions can be found [here](https://medium.c
 This plugin exports a recommended configuration which enforces good Meteor practices.
 The rules enabled in this configuration can be found in [`lib/index.js`](https://github.com/dferber90/eslint-plugin-meteor/blob/master/lib/index.js).
 
-To enable the recommended configuration use the extends property in your `.eslintrc` config file:
+To enable the recommended configuration use the extends property in your `.eslintrc.json` config file:
 
 ```json
 {
@@ -87,6 +87,22 @@ To enable the recommended configuration use the extends property in your `.eslin
     "meteor"
   ],
   "extends": ["eslint:recommended", "plugin:meteor/recommended"]
+}
+```
+
+You probably also want to enable ESLint to parse ECMAScript 2015 and to support React templates.
+
+Add the following to your `.eslintrc.json` config file
+
+```json
+{
+  "parserOptions": {
+    "ecmaVersion": 6,
+    "sourceType": "module",
+    "ecmaFeatures": {
+        "jsx": true
+    }
+  }
 }
 ```
 
