@@ -41,34 +41,44 @@ const parse = exports.parse =
 
 let didWarnAboutNoCache = false;
 
-exports.compile = function (source, options, deps) {
-  options = options || getDefaultOptions();
+exports.compile = function (source, babelOptions, cacheOptions) {
+  babelOptions = babelOptions || getDefaultOptions();
 
-  if (deps && typeof deps.cacheDirectory === "string") {
-    return getOrCreateCache(deps.cacheDirectory).get(source, options, deps);
+  if (cacheOptions &&
+      typeof cacheOptions.cacheDirectory === "string") {
+    return getOrCreateCache(
+      cacheOptions.cacheDirectory
+    ).get(source, babelOptions, cacheOptions.cacheDeps);
   }
 
-  // If no options.cacheDir was provided, but the BABEL_CACHE_DIR
+  // If cacheOptions.cacheDirectory was not provided, and cacheOptions
+  // does not have a cacheDeps property, use the whole cacheOptions object
+  // as cacheDeps when computing the cache key.
+  const cacheDeps = cacheOptions && cacheOptions.cacheDeps || cacheOptions;
+
+  // If no babelOptions.cacheDir was provided, but the BABEL_CACHE_DIR
   // environment variable is set, then respect that.
   if (BABEL_CACHE_DIR) {
-    return getOrCreateCache(BABEL_CACHE_DIR).get(source, options, deps);
+    return getOrCreateCache(BABEL_CACHE_DIR)
+      .get(source, babelOptions, cacheDeps);
   }
 
-  // If neither options.cacheDir nor BABEL_CACHE_DIR were provided, use
-  // the first cache directory registered so far.
+  // If neither babelOptions.cacheDir nor BABEL_CACHE_DIR were provided,
+  // use the first cache directory registered so far.
   for (var cacheDirectory in cachesByDir) {
-    return getOrCreateCache(cacheDirectory).get(source, options, deps);
+    return getOrCreateCache(cacheDirectory)
+      .get(source, babelOptions, cacheDeps);
   }
 
   // Otherwise fall back to compiling without a cache.
   if (! didWarnAboutNoCache) {
-    console.warn("Compiling " + options.filename +
+    console.warn("Compiling " + babelOptions.filename +
                  " with meteor-babel without a cache");
     console.trace();
     didWarnAboutNoCache = true;
   }
 
-  return compile(source, options);
+  return compile(source, babelOptions);
 };
 
 function compile(source, options) {
