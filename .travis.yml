@@ -16,12 +16,13 @@ node_js:
   - 6
   - 10
 before_install:
-  - npm i -g npm@^6.0.0
   - npm -v
   - npm i -g codeclimate-test-reporter
 script:
   - npm run test
 after_success:
+  - nvm install 8
+  - nvm use 8
   - codeclimate-test-reporter < ./coverage/lcov.info
   - npm run coveralls
   - semantic-release
